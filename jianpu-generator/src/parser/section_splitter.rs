@@ -1,5 +1,4 @@
 use crate::error::{JianPuError, Span};
-use itertools::Itertools;
 
 pub struct RawSection {
     pub kind: SectionKind,
@@ -18,74 +17,56 @@ pub enum SectionKind {
 pub fn split_sections(
     input: &str,
 ) -> Result<Vec<RawSection>, JianPuError> {
-    // Create indexed lines with their byte offsets
-    let line_items: Vec<_> = input
-        .lines()
-        .scan(0usize, |byte_offset, line| {
-            let offset = *byte_offset;
-            *byte_offset += line.len() + 1; // +1 for '\n'
-            Some((offset, line))
-        })
-        .collect();
+    let mut sections: Vec<RawSection> = Vec::new();
+    let mut current_kind: Option<SectionKind> = None;
+    let mut current_content = String::new();
+    let mut current_content_offset: usize = 0;
+    let mut byte_offset: usize = 0;
 
-    // Group consecutive lines by whether they start a section header
-    let grouped: Vec<_> = line_items
-        .iter()
-        .chunk_by(|(_, line)| line.starts_with('[') && line.ends_with(']'))
-        .into_iter()
-        .map(|(is_header, group)| (is_header, group.collect::<Vec<_>>()))
-        .collect();
+    for line in input.lines() {
+        let line_len = line.len() + 1; // +1 for '\n'
 
-    // Process pairs: header group followed by content group
-    grouped
-        .into_iter()
-        .tuples()
-        .map(|((is_header, header_items), (_is_content, content_items))| {
-            if !is_header || header_items.is_empty() {
-                return Err(JianPuError::new(
-                    Span::new(0, 0),
-                    "internal error: expected header group".to_string(),
-                ));
+        if line.starts_with('[') && line.ends_with(']') {
+            if let Some(kind) = current_kind.take() {
+                sections.push(RawSection {
+                    kind,
+                    content: current_content.clone(),
+                    content_offset: current_content_offset,
+                });
+                current_content.clear();
             }
+            let kind_str = &line[1..line.len() - 1];
+            current_kind = Some(match kind_str {
+                "metadata" => SectionKind::Metadata,
+                "score" => SectionKind::Score,
+                "lyrics" => SectionKind::Lyrics,
+                _ => {
+                    return Err(JianPuError::new(
+                        Span::new(byte_offset, byte_offset + line.len()),
+                        format!("unknown section: [{}]", kind_str),
+                    ))
+                }
+            });
+            current_content_offset = byte_offset + line_len;
+        } else if current_kind.is_some() {
+            current_content.push_str(line);
+            current_content.push('\n');
+        }
 
-            let (byte_offset, header_line) = header_items[0];
-            let kind_str = &header_line[1..header_line.len() - 1];
-            let kind = parse_section_kind(kind_str, *byte_offset)?;
-            let content_offset = byte_offset + header_line.len() + 1;
-
-            let content = content_items
-                .iter()
-                .map(|(_, line)| *line)
-                .join("\n");
-            let content = if content.is_empty() {
-                content
-            } else {
-                content + "\n"
-            };
-
-            Ok(RawSection {
-                kind,
-                content,
-                content_offset,
-            })
-        })
-        .collect()
-}
-
-fn parse_section_kind(
-    kind_str: &str,
-    byte_offset: usize,
-) -> Result<SectionKind, JianPuError> {
-    match kind_str {
-        "metadata" => Ok(SectionKind::Metadata),
-        "score" => Ok(SectionKind::Score),
-        "lyrics" => Ok(SectionKind::Lyrics),
-        _ => Err(JianPuError::new(
-            Span::new(byte_offset, byte_offset + kind_str.len() + 2), // +2 for '[]'
-            format!("unknown section: [{}]", kind_str),
-        )),
+        byte_offset += line_len;
     }
+
+    if let Some(kind) = current_kind {
+        sections.push(RawSection {
+            kind,
+            content: current_content,
+            content_offset: current_content_offset,
+        });
+    }
+
+    Ok(sections)
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -128,5 +109,26 @@ title = "hi"
         let sections = split_sections(input).unwrap();
         // "[metadata]\n" is 11 bytes
         assert_eq!(sections[0].content_offset, 11);
+    }
+
+    #[test]
+    fn handles_header_with_no_content() {
+        let input = "[metadata]\ntitle = \"hi\"\n\n[score]\n";
+        let sections = split_sections(input).unwrap();
+        assert_eq!(sections.len(), 2);
+        assert_eq!(sections[1].kind, SectionKind::Score);
+        assert_eq!(sections[1].content.trim(), "");
+    }
+
+    #[test]
+    fn handles_consecutive_headers() {
+        // [score] immediately after [metadata] with no content in between
+        let input = "[metadata]\n[score]\n1 2 3\n[lyrics]\nfoo\n";
+        let sections = split_sections(input).unwrap();
+        assert_eq!(sections.len(), 3);
+        assert_eq!(sections[0].kind, SectionKind::Metadata);
+        assert_eq!(sections[0].content.trim(), "");
+        assert_eq!(sections[1].kind, SectionKind::Score);
+        assert_eq!(sections[1].content.trim(), "1 2 3");
     }
 }
