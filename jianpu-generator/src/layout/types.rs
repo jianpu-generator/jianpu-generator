@@ -77,4 +77,6 @@ pub enum GridContent {
     LowerOctaveDots { count: u32 },
     BarLine,
     Extension,
+    TimeSignatureLabel { numerator: u8, denominator: u8 },
+    BpmLabel { bpm: u32 },
 }

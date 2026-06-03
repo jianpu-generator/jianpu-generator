@@ -134,6 +134,12 @@ fn render_page(page: &Page, cell_size: u32) -> String {
                         line_x, line_y1, line_x, line_y2
                     ));
                 }
+                GridContent::TimeSignatureLabel { .. } => {
+                    todo!("TimeSignatureLabel rendering not yet implemented")
+                }
+                GridContent::BpmLabel { .. } => {
+                    todo!("BpmLabel rendering not yet implemented")
+                }
             }
         }
     }
