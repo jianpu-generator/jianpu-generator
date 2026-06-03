@@ -65,6 +65,7 @@ pub enum NoteName { A, B, C, D, E, F, G }
 #[derive(Debug, Clone, PartialEq)]
 pub enum Accidental { Flat, Sharp, Natural }
 
+#[derive(Clone)]
 pub struct Syllable {
     pub text: String,
     /// True if `-` follows this syllable in the lyrics section.
