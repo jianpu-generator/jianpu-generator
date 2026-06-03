@@ -56,6 +56,7 @@ fn compute_underline_levels(buffer: &[BeamBufferEntry]) -> Vec<UnderlineSpan> {
     if let Some(start) = run_start {
         levels.push(UnderlineSpan { from_column: start, to_column: run_end });
     }
+    levels.dedup();
     levels
 }
 
