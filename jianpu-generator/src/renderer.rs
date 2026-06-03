@@ -92,6 +92,12 @@ fn render_page(page: &Page, cell_size: u32) -> String {
                         x1, y, (x1 + x2) / 2.0, cy, x2, y
                     ));
                 }
+                GridContent::Extension => {
+                    elements.push_str(&format!(
+                        r#"<text x="{:.1}" y="{:.1}" font-size="{:.1}" text-anchor="middle" dominant-baseline="middle" font-family="monospace">-</text>"#,
+                        x, y, base_font_size
+                    ));
+                }
                 GridContent::BarLine => {
                     let line_x = base_x;
                     let line_y1 = base_y;

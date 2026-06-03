@@ -91,6 +91,20 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                         });
                     }
 
+                    // Extension dashes (row 1): one `-` per additional beat (every 4 quarter-beats).
+                    if note.duration > 4 {
+                        let extra_beats = (note.duration - 4) / 4;
+                        for i in 0..extra_beats {
+                            let ext_col = current_col + 4 + i * 4;
+                            current_elements.push(GridElement {
+                                position: GridPosition { column: ext_col, row: current_row_offset + 1 },
+                                horizontal_alignment: HorizontalAlignment::Center,
+                                vertical_alignment: VerticalAlignment::Center,
+                                content: GridContent::Extension,
+                            });
+                        }
+                    }
+
                     // Chain tracking for tie/slur arcs.
                     if pending_chain.is_empty() {
                         chain_row = current_row_offset + 1;
@@ -104,15 +118,13 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                     let is_tie_continuation = prev_tie && prev_pitch.as_ref() == Some(&note.pitch);
                     if !is_tie_continuation {
                         if let Some(syllable) = lyrics_iter.next() {
-                            if syllable.text != "-" {
-                                let is_cjk = syllable.text.chars().next().map(|c| is_cjk_char(c)).unwrap_or(false);
-                                current_elements.push(GridElement {
-                                    position: GridPosition { column: current_col, row: current_row_offset + 3 },
-                                    horizontal_alignment: HorizontalAlignment::Center,
-                                    vertical_alignment: VerticalAlignment::Top,
-                                    content: GridContent::Lyric { text: syllable.text.clone(), is_cjk },
-                                });
-                            }
+                            let is_cjk = syllable.text.chars().next().map(|c| is_cjk_char(c)).unwrap_or(false);
+                            current_elements.push(GridElement {
+                                position: GridPosition { column: current_col, row: current_row_offset + 3 },
+                                horizontal_alignment: HorizontalAlignment::Center,
+                                vertical_alignment: VerticalAlignment::Top,
+                                content: GridContent::Lyric { text: syllable.text.clone(), is_cjk },
+                            });
                         }
                     }
                     prev_tie = note.tie;
@@ -356,6 +368,17 @@ mod tests {
         assert_eq!(
             collect_lyric_positions(&pages),
             vec![(0, "a".to_string()), (4, "b".to_string()), (12, "c".to_string())],
+        );
+    }
+
+    #[test]
+    fn dash_lyric_is_rendered() {
+        // "1 2 3 4" with lyrics "你 - 好 a": note 1→"你", note 2→"-", note 3→"好", note 4→"a"
+        let score = make_score("1 2 3 4", "你 - 好 a");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        assert_eq!(
+            collect_lyric_positions(&pages),
+            vec![(0, "你".to_string()), (4, "-".to_string()), (8, "好".to_string()), (12, "a".to_string())],
         );
     }
 
