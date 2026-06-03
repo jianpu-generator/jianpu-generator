@@ -9,6 +9,7 @@ pub struct ParsedDocument {
 
 pub struct ParsedMetadata {
     pub title: String,
+    pub subtitle: Option<String>,
     pub author: String,
     pub cell_size: Option<u32>,
 }
