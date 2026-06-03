@@ -38,7 +38,7 @@ fn render_page(page: &Page, cell_size: u32) -> String {
                         r#"<text x="{:.1}" y="{:.1}" font-size="{:.1}" text-anchor="middle" dominant-baseline="middle" font-family="monospace">{}</text>"#,
                         x, y, base_font_size, digit
                     ));
-                    // Octave markers
+                    // Upper octave markers (dots above the note)
                     let dot_radius = cell * 0.08;
                     let dot_spacing = dot_radius * 3.0;
                     for i in 0..*octave {
@@ -48,13 +48,7 @@ fn render_page(page: &Page, cell_size: u32) -> String {
                             x, dot_y, dot_radius
                         ));
                     }
-                    for i in 0..(-*octave) {
-                        let dot_y = base_y + cell + dot_radius + (i as f32) * dot_spacing;
-                        elements.push_str(&format!(
-                            r#"<circle cx="{:.1}" cy="{:.1}" r="{:.1}" fill="black"/>"#,
-                            x, dot_y, dot_radius
-                        ));
-                    }
+                    // Lower octave dots are rendered by LowerOctaveDots elements (layout/mod.rs)
                 }
                 GridContent::Rest => {
                     elements.push_str(&format!(
@@ -62,14 +56,27 @@ fn render_page(page: &Page, cell_size: u32) -> String {
                         x, y, base_font_size
                     ));
                 }
-                GridContent::DurationUnderlines { count } => {
-                    let line_x1 = base_x + cell * 0.1;
-                    let line_x2 = base_x + cell * 0.9;
-                    for i in 0..*count {
+                GridContent::DurationUnderlines { levels } => {
+                    let _ = x; // x is unused; line endpoints come from span column coordinates
+                    for (i, span) in levels.iter().enumerate() {
+                        let line_x1 = span.from_column as f32 * cell + cell * 0.1;
+                        let line_x2 = span.to_column as f32 * cell - cell * 0.1;
                         let line_y = base_y + cell * 0.1 + (i as f32) * (cell * 0.15);
                         elements.push_str(&format!(
                             r#"<line x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}" stroke="black" stroke-width="1"/>"#,
                             line_x1, line_y, line_x2, line_y
+                        ));
+                    }
+                }
+                GridContent::LowerOctaveDots { count } => {
+                    let dot_radius = cell * 0.08;
+                    let dot_spacing = dot_radius * 3.0;
+                    for i in 0..*count {
+                        // y is base_y + cell (VerticalAlignment::Bottom); dots go upward from there
+                        let dot_y = y - dot_radius - (i as f32) * dot_spacing;
+                        elements.push_str(&format!(
+                            r#"<circle cx="{:.1}" cy="{:.1}" r="{:.1}" fill="black"/>"#,
+                            x, dot_y, dot_radius
                         ));
                     }
                 }
@@ -206,5 +213,12 @@ mod tests {
         let svgs = render_score("1 2 3 4", "a b c d");
         assert!(svgs[0].starts_with("<svg"));
         assert!(svgs[0].ends_with("</svg>"));
+    }
+
+    #[test]
+    fn lower_octave_note_renders_dot_below_note() {
+        // "1." = pitch 1, octave -1; should produce a circle element
+        let svgs = render_score("1. 2 3 4", "a b c d");
+        assert!(svgs[0].contains("<circle"), "expected SVG circle for lower octave dot");
     }
 }
