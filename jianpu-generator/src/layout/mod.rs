@@ -360,6 +360,61 @@ mod tests {
             .collect()
     }
 
+    fn collect_underline_levels(pages: &[Page]) -> Vec<Vec<UnderlineSpan>> {
+        pages.iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter_map(|e| match &e.content {
+                GridContent::DurationUnderlines { levels } => Some(levels.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn consecutive_eighth_notes_at_beat_start_share_one_underline() {
+        // _2 _2 fills beat 1 (qb 0–3); 0 0 0 are quarter rests filling the rest of 4/4
+        // Total: 2+2+4+4+4 = 16 quarter-beats ✓
+        let score = make_score("_2 _2 0 0 0", "a b");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let groups = collect_underline_levels(&pages);
+        assert_eq!(groups.len(), 1, "expected one beam group");
+        assert_eq!(groups[0].len(), 1, "expected one underline level");
+        assert_eq!(groups[0][0].from_column, 0);
+        assert_eq!(groups[0][0].to_column, 4);
+    }
+
+    #[test]
+    fn eighth_notes_straddling_beat_boundary_produce_separate_underlines() {
+        // 0(4qb) _0(2qb) _2(2qb) _2(2qb) _0(2qb) 0(4qb) = 16qb ✓
+        // First _2 starts at qb 6 (mid-beat-2), ends at qb 8 (beat boundary) → flushed alone
+        // Second _2 starts at qb 8, ends at qb 10 → flushed alone when _0 rest arrives
+        let score = make_score("0 _0 _2 _2 _0 0", "a b");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let groups = collect_underline_levels(&pages);
+        assert_eq!(groups.len(), 2, "expected two separate underline groups");
+        assert_eq!(groups[0][0].from_column, 6);
+        assert_eq!(groups[0][0].to_column, 8);
+        assert_eq!(groups[1][0].from_column, 8);
+        assert_eq!(groups[1][0].to_column, 10);
+    }
+
+    #[test]
+    fn mixed_eighth_and_sixteenth_notes_produce_two_underline_levels() {
+        // _1(2qb) =2(1qb) =3(1qb) fills beat 1 exactly; 0 0 0 fill 12 more qb = 16 total ✓
+        // Level 1: spans all three notes (col 0–4)
+        // Level 2: spans only the sixteenth sub-run =2,=3 (col 2–4)
+        let score = make_score("_1 =2 =3 0 0 0", "a b c");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let groups = collect_underline_levels(&pages);
+        assert_eq!(groups.len(), 1, "expected one beam group");
+        assert_eq!(groups[0].len(), 2, "expected two underline levels");
+        assert_eq!(groups[0][0].from_column, 0);
+        assert_eq!(groups[0][0].to_column, 4);
+        assert_eq!(groups[0][1].from_column, 2);
+        assert_eq!(groups[0][1].to_column, 4);
+    }
+
     #[test]
     fn tied_notes_share_one_lyric_syllable() {
         // 3~3 is a tie (same pitch): both notes share one syllable.
