@@ -76,7 +76,7 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                         },
                     });
 
-                    // Duration underlines (row 2)
+                    // Duration underlines (row 2) — single-level per note; beam grouping added in a later task
                     let underline_count = match note.duration {
                         1 => 2, // sixteenth note (= prefix) — 2 underlines
                         2 => 1, // eighth note (_ prefix) — 1 underline
@@ -85,9 +85,24 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                     if underline_count > 0 {
                         current_elements.push(GridElement {
                             position: GridPosition { column: current_col, row: current_row_offset + 2 },
-                            horizontal_alignment: HorizontalAlignment::Center,
+                            horizontal_alignment: HorizontalAlignment::Left,
                             vertical_alignment: VerticalAlignment::Top,
-                            content: GridContent::DurationUnderlines { count: underline_count },
+                            content: GridContent::DurationUnderlines {
+                                levels: vec![UnderlineSpan {
+                                    from_column: current_col,
+                                    to_column: current_col + note.duration,
+                                }],
+                            },
+                        });
+                    }
+
+                    // Lower octave dots (row 2, below any underlines)
+                    if note.octave < 0 {
+                        current_elements.push(GridElement {
+                            position: GridPosition { column: current_col, row: current_row_offset + 2 },
+                            horizontal_alignment: HorizontalAlignment::Center,
+                            vertical_alignment: VerticalAlignment::Bottom,
+                            content: GridContent::LowerOctaveDots { count: (-note.octave) as u32 },
                         });
                     }
 
@@ -345,6 +360,61 @@ mod tests {
             .collect()
     }
 
+    fn collect_underline_levels(pages: &[Page]) -> Vec<Vec<UnderlineSpan>> {
+        pages.iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter_map(|e| match &e.content {
+                GridContent::DurationUnderlines { levels } => Some(levels.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn consecutive_eighth_notes_at_beat_start_share_one_underline() {
+        // _2 _2 fills beat 1 (qb 0–3); 0 0 0 are quarter rests filling the rest of 4/4
+        // Total: 2+2+4+4+4 = 16 quarter-beats ✓
+        let score = make_score("_2 _2 0 0 0", "a b");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let groups = collect_underline_levels(&pages);
+        assert_eq!(groups.len(), 1, "expected one beam group");
+        assert_eq!(groups[0].len(), 1, "expected one underline level");
+        assert_eq!(groups[0][0].from_column, 0);
+        assert_eq!(groups[0][0].to_column, 4);
+    }
+
+    #[test]
+    fn eighth_notes_straddling_beat_boundary_produce_separate_underlines() {
+        // 0(4qb) _0(2qb) _2(2qb) _2(2qb) _0(2qb) 0(4qb) = 16qb ✓
+        // First _2 starts at qb 6 (mid-beat-2), ends at qb 8 (beat boundary) → flushed alone
+        // Second _2 starts at qb 8, ends at qb 10 → flushed alone when _0 rest arrives
+        let score = make_score("0 _0 _2 _2 _0 0", "a b");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let groups = collect_underline_levels(&pages);
+        assert_eq!(groups.len(), 2, "expected two separate underline groups");
+        assert_eq!(groups[0][0].from_column, 6);
+        assert_eq!(groups[0][0].to_column, 8);
+        assert_eq!(groups[1][0].from_column, 8);
+        assert_eq!(groups[1][0].to_column, 10);
+    }
+
+    #[test]
+    fn mixed_eighth_and_sixteenth_notes_produce_two_underline_levels() {
+        // _1(2qb) =2(1qb) =3(1qb) fills beat 1 exactly; 0 0 0 fill 12 more qb = 16 total ✓
+        // Level 1: spans all three notes (col 0–4)
+        // Level 2: spans only the sixteenth sub-run =2,=3 (col 2–4)
+        let score = make_score("_1 =2 =3 0 0 0", "a b c");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let groups = collect_underline_levels(&pages);
+        assert_eq!(groups.len(), 1, "expected one beam group");
+        assert_eq!(groups[0].len(), 2, "expected two underline levels");
+        assert_eq!(groups[0][0].from_column, 0);
+        assert_eq!(groups[0][0].to_column, 4);
+        assert_eq!(groups[0][1].from_column, 2);
+        assert_eq!(groups[0][1].to_column, 4);
+    }
+
     #[test]
     fn tied_notes_share_one_lyric_syllable() {
         // 3~3 is a tie (same pitch): both notes share one syllable.
@@ -390,8 +460,27 @@ mod tests {
             .flat_map(|rg| rg.elements.iter())
             .collect();
         let underlines: Vec<_> = all_elements.iter()
-            .filter(|e| matches!(e.content, GridContent::DurationUnderlines { count: 1 }))
+            .filter(|e| matches!(&e.content, GridContent::DurationUnderlines { levels } if levels.len() == 1))
             .collect();
         assert_eq!(underlines.len(), 2); // _1 and _4
+    }
+
+    #[test]
+    fn lower_octave_note_emits_lower_octave_dots_element() {
+        // "1." means pitch 1 with one trailing dot = octave -1
+        let score = make_score("1. 2 3 4", "a b c d");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let all_elements: Vec<_> = pages[0].row_groups.iter()
+            .flat_map(|rg| rg.elements.iter())
+            .collect();
+        let lower_dots: Vec<_> = all_elements.iter()
+            .filter(|e| matches!(e.content, GridContent::LowerOctaveDots { .. }))
+            .collect();
+        assert_eq!(lower_dots.len(), 1, "expected one LowerOctaveDots element");
+        if let GridContent::LowerOctaveDots { count } = &lower_dots[0].content {
+            assert_eq!(*count, 1);
+        }
+        assert_eq!(lower_dots[0].position.row, 2, "LowerOctaveDots must be in row 2 (underline row)");
+        assert_eq!(lower_dots[0].vertical_alignment, VerticalAlignment::Bottom);
     }
 }
