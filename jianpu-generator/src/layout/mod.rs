@@ -136,8 +136,6 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
             }
             current_col = 0;
             current_row_offset += row_group_height;
-            previous_time_signature = None;
-            previous_bpm = None;
 
             if current_page_row_groups.len() >= row_groups_per_page as usize {
                 if !current_page_row_groups.is_empty() {
@@ -462,10 +460,8 @@ mod tests {
 
     #[test]
     fn unchanged_time_signature_emits_no_second_label() {
-        // Use a wide page so both measures fit on the same line (no wrap).
-        // Two 4/4 measures: (2+2+16+1) + (0+0+16+1) = 38 columns; need page_width >= 38*24 = 912pt.
         let score = make_score("1 2 3 4 5 6 7 1", "a b c d e f g h");
-        let pages = layout(&score, 1000.0, A4_HEIGHT);
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let labels: Vec<_> = pages.iter()
             .flat_map(|p| p.row_groups.iter())
             .flat_map(|rg| rg.elements.iter())
@@ -476,10 +472,8 @@ mod tests {
 
     #[test]
     fn unchanged_bpm_emits_no_second_label() {
-        // Use a wide page so both measures fit on the same line (no wrap).
-        // Two 4/4 measures: (2+2+16+1) + (0+0+16+1) = 38 columns; need page_width >= 38*24 = 912pt.
         let score = make_score("1 2 3 4 5 6 7 1", "a b c d e f g h");
-        let pages = layout(&score, 1000.0, A4_HEIGHT);
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let labels: Vec<_> = pages.iter()
             .flat_map(|p| p.row_groups.iter())
             .flat_map(|rg| rg.elements.iter())
@@ -795,37 +789,25 @@ mod tests {
     }
 
     #[test]
-    fn labels_appear_at_start_of_each_wrapped_line() {
-        // Use a very narrow page width so that the first measure wraps onto a second line.
-        // page_width = 200 → columns = 200 / 24 = 8 (with default cell_size=24)
-        // First measure: time sig (2) + bpm (2) + 4 quarter notes (16) + barline (1) = 21 columns → wraps.
-        // After wrap, the same measure continues on the new line. The new line should still
-        // have a TimeSignatureLabel and a BpmLabel because state was reset on wrap.
-        //
-        // Actually the wrap happens BEFORE placing the measure's notes, so the measure is placed
-        // on the new line. With a narrow width of, say, 300pt → 12 columns.
-        // First measure: 2+2+16+1 = 21 > 12 → wraps immediately. On the new row: labels re-emitted.
-        // Second measure: same time sig, same BPM → no new labels.
-        // So across 2 row groups we expect 2 TimeSignatureLabels (one per line).
+    fn unchanged_labels_do_not_repeat_after_line_wrap() {
+        // Use a narrow page so measures wrap across multiple row groups.
+        // With cell_size=24 and page_width=300: columns_per_page = 12.
+        // First measure: 2+2+16+1 = 21 > 12 → wraps before placing notes.
+        // After wrap the first measure is placed (still same time sig, same BPM).
+        // Second measure: same time sig, same BPM → no prefix labels.
+        // Total TimeSignatureLabel count across the whole score should be exactly 1.
         let score = make_score("1 2 3 4 5 6 7 1", "a b c d e f g h");
-        // Use a very narrow width so the first measure forces a wrap onto a second row group.
-        // With cell_size=24 and page_width=300: columns_per_page = 300/24 = 12
-        // First measure total width: 2+2+16+1=21 > 12 → wraps.
-        // On the new row group: state reset, so labels re-emitted for the same time sig / BPM.
         let pages = layout(&score, 300.0, A4_HEIGHT);
-        let all_time_sig_labels: Vec<_> = pages.iter()
+        let time_sig_labels: Vec<_> = pages.iter()
             .flat_map(|p| p.row_groups.iter())
             .flat_map(|rg| rg.elements.iter())
             .filter(|e| matches!(e.content, GridContent::TimeSignatureLabel { .. }))
             .collect();
-        // Every row group that starts a new line should have a label.
-        // With two measures and a narrow page, each measure starts on its own row group,
-        // so there should be a TimeSignatureLabel in each row group (2 total).
         assert_eq!(
-            all_time_sig_labels.len(),
-            2,
-            "expected one time signature label per wrapped line, got {}",
-            all_time_sig_labels.len()
+            time_sig_labels.len(),
+            1,
+            "time signature label must not repeat on wrapped lines, got {}",
+            time_sig_labels.len()
         );
     }
 }
