@@ -53,4 +53,6 @@ pub enum GridContent {
     /// count=1 → half beat, count=2 → quarter beat.
     DurationUnderlines { count: u32 },
     BarLine,
+    /// A `-` dash drawn at each additional beat of a multi-beat note.
+    Extension,
 }
