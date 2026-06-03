@@ -61,6 +61,23 @@ fn compute_underline_levels(buffer: &[BeamBufferEntry]) -> Vec<UnderlineSpan> {
     levels
 }
 
+fn compute_prefix_width(
+    measure: &crate::ast::grouped::Measure,
+    previous_time_signature: Option<(u8, u8)>,
+    previous_bpm: Option<u32>,
+) -> u32 {
+    let mut width = 0;
+    if previous_time_signature
+        != Some((measure.time_signature.numerator, measure.time_signature.denominator))
+    {
+        width += 2;
+    }
+    if previous_bpm != Some(measure.bpm) {
+        width += 2;
+    }
+    width
+}
+
 /// A4 in points: 595 × 842.
 /// Column width = cell_size, row height = cell_size.
 pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Page> {
@@ -102,10 +119,13 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
     let mut prev_pitch: Option<JianPuPitch> = None;
 
     let mut beam_buffer: Vec<BeamBufferEntry> = Vec::new();
+    let mut previous_time_signature: Option<(u8, u8)> = None;
+    let mut previous_bpm: Option<u32> = None;
 
     for measure in &score.measures {
+        let prefix_width = compute_prefix_width(measure, previous_time_signature, previous_bpm);
         let measure_width = measure_column_width(measure);
-        if current_col + measure_width > columns_per_page {
+        if current_col + prefix_width + measure_width > columns_per_page {
             flush_beam_buffer(&mut beam_buffer, current_row_offset, &mut current_elements);
             pending_chain.clear();
             prev_tie = false;
@@ -132,6 +152,38 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
 
         // Flush any leftover buffer from the previous measure (partial-beat edge case)
         flush_beam_buffer(&mut beam_buffer, current_row_offset, &mut current_elements);
+
+        // Emit time signature label if new or changed
+        if previous_time_signature
+            != Some((measure.time_signature.numerator, measure.time_signature.denominator))
+        {
+            current_elements.push(GridElement {
+                position: GridPosition { column: current_col, row: current_row_offset + 1 },
+                horizontal_alignment: HorizontalAlignment::Left,
+                vertical_alignment: VerticalAlignment::Center,
+                content: GridContent::TimeSignatureLabel {
+                    numerator: measure.time_signature.numerator,
+                    denominator: measure.time_signature.denominator,
+                },
+            });
+            current_col += 2;
+            previous_time_signature = Some((
+                measure.time_signature.numerator,
+                measure.time_signature.denominator,
+            ));
+        }
+
+        // Emit BPM label if new or changed
+        if previous_bpm != Some(measure.bpm) {
+            current_elements.push(GridElement {
+                position: GridPosition { column: current_col, row: current_row_offset + 1 },
+                horizontal_alignment: HorizontalAlignment::Left,
+                vertical_alignment: VerticalAlignment::Center,
+                content: GridContent::BpmLabel { bpm: measure.bpm },
+            });
+            current_col += 2;
+            previous_bpm = Some(measure.bpm);
+        }
 
         let measure_col_start = current_col;
 
@@ -352,6 +404,109 @@ mod tests {
         grouper::group(doc).unwrap()
     }
 
+    fn make_score_raw(score_section: &str, lyrics_str: &str) -> Score {
+        let input = format!(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[score]\n{}\n\n[lyrics]\n{}\n",
+            score_section, lyrics_str
+        );
+        let doc = parser::parse(&input, "test.jianpu").unwrap();
+        grouper::group(doc).unwrap()
+    }
+
+    #[test]
+    fn first_measure_emits_time_signature_label_at_column_zero() {
+        let score = make_score("1 2 3 4", "a b c d");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let labels: Vec<_> = pages[0].row_groups.iter()
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(e.content, GridContent::TimeSignatureLabel { .. }))
+            .collect();
+        assert_eq!(labels.len(), 1);
+        assert_eq!(labels[0].position.column, 0);
+        if let GridContent::TimeSignatureLabel { numerator, denominator } = &labels[0].content {
+            assert_eq!(*numerator, 4);
+            assert_eq!(*denominator, 4);
+        } else {
+            panic!("expected TimeSignatureLabel");
+        }
+    }
+
+    #[test]
+    fn first_measure_emits_bpm_label_at_column_two() {
+        let score = make_score("1 2 3 4", "a b c d");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let labels: Vec<_> = pages[0].row_groups.iter()
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(e.content, GridContent::BpmLabel { .. }))
+            .collect();
+        assert_eq!(labels.len(), 1);
+        assert_eq!(labels[0].position.column, 2);
+        if let GridContent::BpmLabel { bpm } = &labels[0].content {
+            assert_eq!(*bpm, 120);
+        } else {
+            panic!("expected BpmLabel");
+        }
+    }
+
+    #[test]
+    fn note_heads_start_after_both_label_columns() {
+        let score = make_score("1 2 3 4", "a b c d");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let note_heads: Vec<_> = pages[0].row_groups.iter()
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(e.content, GridContent::NoteHead { .. }))
+            .collect();
+        assert_eq!(note_heads[0].position.column, 4);
+    }
+
+    #[test]
+    fn unchanged_time_signature_emits_no_second_label() {
+        let score = make_score("1 2 3 4 5 6 7 1", "a b c d e f g h");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let labels: Vec<_> = pages.iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(e.content, GridContent::TimeSignatureLabel { .. }))
+            .collect();
+        assert_eq!(labels.len(), 1, "only one time signature label expected for two measures with identical time signature");
+    }
+
+    #[test]
+    fn unchanged_bpm_emits_no_second_label() {
+        let score = make_score("1 2 3 4 5 6 7 1", "a b c d e f g h");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let labels: Vec<_> = pages.iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(e.content, GridContent::BpmLabel { .. }))
+            .collect();
+        assert_eq!(labels.len(), 1, "only one BPM label expected for two measures with identical BPM");
+    }
+
+    #[test]
+    fn time_signature_change_emits_second_label() {
+        let score = make_score_raw("4/4 1 2 3 4 3/4 1 2 3", "a b c d e f g");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let labels: Vec<_> = pages.iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(e.content, GridContent::TimeSignatureLabel { .. }))
+            .collect();
+        assert_eq!(labels.len(), 2, "expected one label per distinct time signature");
+    }
+
+    #[test]
+    fn bpm_change_emits_second_label() {
+        let score = make_score_raw("4/4 bpm=120 1 2 3 4 bpm=90 5 6 7 1", "a b c d e f g h");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let labels: Vec<_> = pages.iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(e.content, GridContent::BpmLabel { .. }))
+            .collect();
+        assert_eq!(labels.len(), 2, "expected one BPM label per distinct BPM value");
+    }
+
     const A4_WIDTH: f32 = 595.0;  // points
     const A4_HEIGHT: f32 = 842.0; // points
 
@@ -418,7 +573,7 @@ mod tests {
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let curves = collect_curves(&pages);
         assert_eq!(curves.len(), 1);
-        assert_eq!(curves[0], (0, 4));
+        assert_eq!(curves[0], (4, 8));
     }
 
     #[test]
@@ -428,7 +583,7 @@ mod tests {
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let curves = collect_curves(&pages);
         assert_eq!(curves.len(), 1);
-        assert_eq!(curves[0], (0, 8));
+        assert_eq!(curves[0], (4, 12));
     }
 
     #[test]
@@ -441,8 +596,8 @@ mod tests {
         let mut curves = collect_curves(&pages);
         curves.sort();
         assert_eq!(curves.len(), 2);
-        assert_eq!(curves[0], (0, 8)); // slur
-        assert_eq!(curves[1], (4, 8)); // tie
+        assert_eq!(curves[0], (4, 12)); // slur
+        assert_eq!(curves[1], (8, 12)); // tie
     }
 
     #[test]
@@ -452,7 +607,7 @@ mod tests {
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let curves = collect_curves(&pages);
         assert_eq!(curves.len(), 1);
-        assert_eq!(curves[0], (0, 4));
+        assert_eq!(curves[0], (4, 8));
     }
 
     fn collect_curves(pages: &[Page]) -> Vec<(u32, u32)> {
@@ -497,8 +652,8 @@ mod tests {
         let groups = collect_underline_levels(&pages);
         assert_eq!(groups.len(), 1, "expected one beam group");
         assert_eq!(groups[0].len(), 1, "expected one underline level");
-        assert_eq!(groups[0][0].from_column, 0);
-        assert_eq!(groups[0][0].to_column, 4);
+        assert_eq!(groups[0][0].from_column, 4);
+        assert_eq!(groups[0][0].to_column, 8);
     }
 
     #[test]
@@ -510,10 +665,10 @@ mod tests {
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let groups = collect_underline_levels(&pages);
         assert_eq!(groups.len(), 2, "expected two separate underline groups");
-        assert_eq!(groups[0][0].from_column, 6);
-        assert_eq!(groups[0][0].to_column, 8);
-        assert_eq!(groups[1][0].from_column, 8);
-        assert_eq!(groups[1][0].to_column, 10);
+        assert_eq!(groups[0][0].from_column, 10);
+        assert_eq!(groups[0][0].to_column, 12);
+        assert_eq!(groups[1][0].from_column, 12);
+        assert_eq!(groups[1][0].to_column, 14);
     }
 
     #[test]
@@ -526,10 +681,10 @@ mod tests {
         let groups = collect_underline_levels(&pages);
         assert_eq!(groups.len(), 1, "expected one beam group");
         assert_eq!(groups[0].len(), 2, "expected two underline levels");
-        assert_eq!(groups[0][0].from_column, 0);
-        assert_eq!(groups[0][0].to_column, 4);
-        assert_eq!(groups[0][1].from_column, 2);
-        assert_eq!(groups[0][1].to_column, 4);
+        assert_eq!(groups[0][0].from_column, 4);
+        assert_eq!(groups[0][0].to_column, 8);
+        assert_eq!(groups[0][1].from_column, 6);
+        assert_eq!(groups[0][1].to_column, 8);
     }
 
     #[test]
@@ -547,8 +702,8 @@ mod tests {
         let groups = collect_underline_levels(&pages);
         assert_eq!(groups.len(), 1, "expected one beam group for the lone sixteenth");
         assert_eq!(groups[0].len(), 2, "lone sixteenth must produce two underline levels");
-        assert_eq!(groups[0][0], UnderlineSpan { from_column: 0, to_column: 1 });
-        assert_eq!(groups[0][1], UnderlineSpan { from_column: 0, to_column: 1 });
+        assert_eq!(groups[0][0], UnderlineSpan { from_column: 4, to_column: 5 });
+        assert_eq!(groups[0][1], UnderlineSpan { from_column: 4, to_column: 5 });
     }
 
     #[test]
@@ -560,8 +715,8 @@ mod tests {
         let groups = collect_underline_levels(&pages);
         assert_eq!(groups.len(), 1, "expected one beam group spanning the beat");
         assert_eq!(groups[0].len(), 2, "pure-sixteenth group must produce two underline levels");
-        assert_eq!(groups[0][0], UnderlineSpan { from_column: 0, to_column: 4 });
-        assert_eq!(groups[0][1], UnderlineSpan { from_column: 0, to_column: 4 });
+        assert_eq!(groups[0][0], UnderlineSpan { from_column: 4, to_column: 8 });
+        assert_eq!(groups[0][1], UnderlineSpan { from_column: 4, to_column: 8 });
     }
 
     #[test]
@@ -573,7 +728,7 @@ mod tests {
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         assert_eq!(
             collect_lyric_positions(&pages),
-            vec![(0, "a".to_string()), (8, "b".to_string()), (12, "c".to_string())],
+            vec![(4, "a".to_string()), (12, "b".to_string()), (16, "c".to_string())],
         );
     }
 
@@ -586,7 +741,7 @@ mod tests {
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         assert_eq!(
             collect_lyric_positions(&pages),
-            vec![(0, "a".to_string()), (4, "b".to_string()), (12, "c".to_string())],
+            vec![(4, "a".to_string()), (8, "b".to_string()), (16, "c".to_string())],
         );
     }
 
@@ -597,7 +752,7 @@ mod tests {
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         assert_eq!(
             collect_lyric_positions(&pages),
-            vec![(0, "你".to_string()), (4, "-".to_string()), (8, "好".to_string()), (12, "a".to_string())],
+            vec![(4, "你".to_string()), (8, "-".to_string()), (12, "好".to_string()), (16, "a".to_string())],
         );
     }
 
