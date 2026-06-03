@@ -49,10 +49,12 @@ pub enum JianPuPitch {
     Seven,
 }
 
+#[derive(Clone)]
 pub struct KeyChange {
     pub note: Note,
 }
 
+#[derive(Clone)]
 pub struct Note {
     pub name: NoteName,
     pub octave: u8,

@@ -13,11 +13,12 @@ pub fn group(doc: ParsedDocument) -> Result<Score, JianPuError> {
     let mut current_key = default_key;
     let mut current_time_sig = TimeSignature { numerator: 4, denominator: 4 };
 
-    // capacity in quarter-beats = numerator * (4 / denominator) * 4
-    // For 4/4: 4 beats * 4 quarter-beats/beat = 16 quarter-beats
-    // For 3/4: 3 * 4 = 12 quarter-beats
+    // capacity in sixteenth-note units ("quarter-beats") per measure = numerator * 16 / denominator
+    // For 4/4: 4 * 16 / 4 = 16 (four quarter notes × 4 sixteenths each)
+    // For 3/4: 3 * 16 / 4 = 12
+    // For 6/8: 6 * 16 / 8 = 12 (six eighth notes × 2 sixteenths each)
     let measure_capacity = |ts: &TimeSignature| -> u32 {
-        (ts.numerator as u32) * 4 * (4 / ts.denominator as u32)
+        (ts.numerator as u32) * 16 / (ts.denominator as u32)
     };
 
     let mut measures: Vec<Measure> = Vec::new();
@@ -39,13 +40,7 @@ pub fn group(doc: ParsedDocument) -> Result<Score, JianPuError> {
                         denominator: current_time_sig.denominator,
                     },
                     bpm: current_bpm,
-                    key: KeyChange {
-                        note: Note {
-                            name: current_key.note.name.clone(),
-                            octave: current_key.note.octave,
-                            accidental: current_key.note.accidental.clone(),
-                        },
-                    },
+                    key: current_key.clone(),
                     notes: std::mem::take(current_notes),
                 });
                 *current_beat = 0;
@@ -55,9 +50,25 @@ pub fn group(doc: ParsedDocument) -> Result<Score, JianPuError> {
     for spanned in doc.score_events {
         match spanned.value {
             ScoreEvent::BpmChange(bpm) => {
+                flush_measure(
+                    &mut measures,
+                    &mut current_notes,
+                    &mut current_beat,
+                    current_bpm,
+                    &current_key,
+                    &current_time_sig,
+                );
                 current_bpm = bpm;
             }
             ScoreEvent::KeyChange(kc) => {
+                flush_measure(
+                    &mut measures,
+                    &mut current_notes,
+                    &mut current_beat,
+                    current_bpm,
+                    &current_key,
+                    &current_time_sig,
+                );
                 current_key = kc;
             }
             ScoreEvent::TimeSignatureChange { numerator, denominator } => {
@@ -86,7 +97,7 @@ pub fn group(doc: ParsedDocument) -> Result<Score, JianPuError> {
                     None => {
                         return Err(JianPuError::new(
                             spanned.span,
-                            "extension `-` without a preceding note or rest".to_string(),
+                            "extension `-` without a preceding note or rest; if it follows a measure boundary, cross-measure extension is not supported".to_string(),
                         ));
                     }
                 }
@@ -113,14 +124,24 @@ pub fn group(doc: ParsedDocument) -> Result<Score, JianPuError> {
                         &current_time_sig,
                     );
                 }
-                current_beat += pn.duration;
+                let note_duration = pn.duration;
                 current_notes.push(NoteEvent::Note(GroupedNote {
                     pitch: pn.pitch,
                     octave: pn.octave,
                     duration: pn.duration,
                     tie: pn.tie,
                 }));
-                if current_beat >= capacity {
+                current_beat += note_duration;
+                if current_beat > capacity {
+                    return Err(JianPuError::new(
+                        spanned.span,
+                        format!(
+                            "note duration {} overflows the current measure (capacity {} quarter-beats, {} used)",
+                            note_duration, capacity, current_beat
+                        ),
+                    ));
+                }
+                if current_beat == capacity {
                     flush_measure(
                         &mut measures,
                         &mut current_notes,
@@ -142,9 +163,19 @@ pub fn group(doc: ParsedDocument) -> Result<Score, JianPuError> {
                         &current_time_sig,
                     );
                 }
-                current_beat += pr.duration;
+                let rest_duration = pr.duration;
                 current_notes.push(NoteEvent::Rest(GroupedRest { duration: pr.duration }));
-                if current_beat >= capacity {
+                current_beat += rest_duration;
+                if current_beat > capacity {
+                    return Err(JianPuError::new(
+                        spanned.span,
+                        format!(
+                            "rest duration {} overflows the current measure (capacity {} quarter-beats, {} used)",
+                            rest_duration, capacity, current_beat
+                        ),
+                    ));
+                }
+                if current_beat == capacity {
                     flush_measure(
                         &mut measures,
                         &mut current_notes,
@@ -189,6 +220,14 @@ mod tests {
     fn parse_and_group(input: &str) -> Score {
         let doc = parser::parse(input, "test.jianpu").unwrap();
         group(doc).unwrap()
+    }
+
+    fn parse_and_group_err(input: &str) -> JianPuError {
+        let doc = parser::parse(input, "test.jianpu").unwrap();
+        match group(doc) {
+            Err(e) => e,
+            Ok(_) => panic!("expected group() to return Err, but it returned Ok"),
+        }
     }
 
     #[test]
@@ -259,5 +298,51 @@ mod tests {
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[score]\n4/4 _1 _2 _3 _4 _5 _6 _7 _1\n\n[lyrics]\na b c d e f g h\n",
         );
         assert_eq!(score.measures.len(), 1); // 8 * 2 = 16 quarter-beats = one 4/4 measure
+    }
+
+    #[test]
+    fn overflow_note_errors() {
+        // In 4/4 (capacity=16), three quarter notes fill 12 beats; adding a whole-note (=1, duration 4)
+        // would reach 16 — that's fine. But a note with duration > remaining space should error.
+        // Use a dotted note workaround: put 4 quarter notes (fills measure), then try one more.
+        // Actually let's put 3 quarter notes (12 qb) then a note of duration > 4.
+        // The parser only produces durations 1, 2, 4 via prefixes. The Extension token adds 4.
+        // Simplest: in 2/4 (capacity=8), place two quarter notes (8 qb fills) then one more — that
+        // would overflow. But flush happens at ==capacity before the next note, so no overflow.
+        // To actually overflow: place a half note (duration=4) when only 2 qb remain.
+        // In 4/4: 3 quarter notes = 12 qb used, 4 remain. Now place a note that is duration 4 — OK (==16).
+        // We need remaining < note_duration: 3 quarter notes + 1 quarter note triggers flush... hmm.
+        // Best approach: switch to 3/4 (capacity=12). Place two quarter notes (8 qb). 4 remain.
+        // A whole-note (duration=4) fits exactly. Need something > 4 remaining.
+        // The only way to create an oversized note via the text format is using extension `-`.
+        // Place one note `1 - -` in 2/4: note=4, ext=4 (total 8 = capacity, fine).
+        // In 2/4, place note `1 -` (total 8) then another note 2 (duration 4): new measure, fine.
+        // Actually the simplest overflow: use a 3/4 time (capacity=12 qb).
+        // Notes: 1 2 (8 qb) then a note extended via - to become 8 qb -> total 16 > 12.
+        // But extension flushes at >= capacity... let's think differently.
+        // The overflow guard added is specifically for a *single note* duration > remaining space
+        // (not a flush boundary). Current_beat starts at 0 in new measure after flush.
+        // In 4/4 (cap=16): place notes that leave e.g. 2 qb, then place a quarter note (dur=4).
+        // To have 2 qb remaining: use duration=14 total. 14 = 3*4 + 2 = three quarters + one eighth (dur=2).
+        // Let's try: _1 _1 _1 _1 _1 _1 _1 (seven * 2 = 14 qb) then place `1` (quarter, dur=4) -> total 18 > 16.
+        let err = parse_and_group_err(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[score]\n4/4 _1 _1 _1 _1 _1 _1 _1 1\n\n[lyrics]\na b c d e f g h\n",
+        );
+        assert!(err.message.contains("overflows"), "expected overflow error, got: {}", err.message);
+    }
+
+    #[test]
+    fn bpm_change_creates_new_measure() {
+        // bpm change mid-measure should flush the accumulated notes first,
+        // producing a partial measure before the bpm change takes effect.
+        let score = parse_and_group(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[score]\n4/4 1 2 bpm=90 3 4\n\n[lyrics]\na b c d\n",
+        );
+        // The bpm change after 2 notes should create a new measure boundary.
+        assert_eq!(score.measures.len(), 2);
+        assert_eq!(score.measures[0].bpm, 120);
+        assert_eq!(score.measures[0].notes.len(), 2);
+        assert_eq!(score.measures[1].bpm, 90);
+        assert_eq!(score.measures[1].notes.len(), 2);
     }
 }
