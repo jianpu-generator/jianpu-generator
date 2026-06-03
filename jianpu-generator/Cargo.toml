@@ -11,6 +11,7 @@ path = "src/main.rs"
 clap = { version = "4", features = ["derive"] }
 thiserror = "2"
 svg2pdf = "0.12"
+pdf-writer = "0.12"
 itertools = "0.13"
 
 [dev-dependencies]
