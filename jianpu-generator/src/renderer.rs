@@ -11,6 +11,32 @@ fn render_page(page: &Page, cell_size: u32) -> String {
 
     let mut elements = String::new();
 
+    // --- Header ---
+    let title_y = cell * 0.75;
+    elements.push_str(&format!(
+        r#"<text x="297.5" y="{:.1}" font-size="{:.1}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">{}</text>"#,
+        title_y,
+        cell * 1.5,
+        escape_xml(&page.header.title)
+    ));
+
+    let subtitle_author_y = cell * 1.5;
+    if let Some(subtitle) = &page.header.subtitle {
+        elements.push_str(&format!(
+            r#"<text x="297.5" y="{:.1}" font-size="{:.1}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">{}</text>"#,
+            subtitle_author_y,
+            base_font_size,
+            escape_xml(subtitle)
+        ));
+    }
+    elements.push_str(&format!(
+        r#"<text x="570.0" y="{:.1}" font-size="{:.1}" text-anchor="end" dominant-baseline="middle" font-family="sans-serif">{}</text>"#,
+        subtitle_author_y,
+        base_font_size,
+        escape_xml(&page.header.author)
+    ));
+
+    // --- Row groups ---
     for row_group in &page.row_groups {
         for element in &row_group.elements {
             let col = element.position.column as f32;
@@ -19,7 +45,6 @@ fn render_page(page: &Page, cell_size: u32) -> String {
             let base_x = col * cell;
             let base_y = row * cell;
 
-            // Apply alignment offsets
             let x = match element.horizontal_alignment {
                 HorizontalAlignment::Left => base_x,
                 HorizontalAlignment::Center => base_x + cell / 2.0,
@@ -38,7 +63,6 @@ fn render_page(page: &Page, cell_size: u32) -> String {
                         r#"<text x="{:.1}" y="{:.1}" font-size="{:.1}" text-anchor="middle" dominant-baseline="middle" font-family="monospace">{}</text>"#,
                         x, y, base_font_size, digit
                     ));
-                    // Upper octave markers (dots above the note)
                     let dot_radius = cell * 0.08;
                     let dot_spacing = dot_radius * 3.0;
                     for i in 0..*octave {
@@ -48,7 +72,6 @@ fn render_page(page: &Page, cell_size: u32) -> String {
                             x, dot_y, dot_radius
                         ));
                     }
-                    // Lower octave dots are rendered by LowerOctaveDots elements (layout/mod.rs)
                 }
                 GridContent::Rest => {
                     elements.push_str(&format!(
@@ -57,7 +80,7 @@ fn render_page(page: &Page, cell_size: u32) -> String {
                     ));
                 }
                 GridContent::DurationUnderlines { levels } => {
-                    let _ = x; // x is unused; line endpoints come from span column coordinates
+                    let _ = x;
                     for (i, span) in levels.iter().enumerate() {
                         let line_x1 = span.from_column as f32 * cell + cell * 0.1;
                         let line_x2 = span.to_column as f32 * cell - cell * 0.1;
@@ -72,8 +95,6 @@ fn render_page(page: &Page, cell_size: u32) -> String {
                     let dot_radius = cell * 0.08;
                     let dot_spacing = dot_radius * 3.0;
                     for i in 0..*count {
-                        // Start from the top of the underline row (base_y) and stack downward,
-                        // so dot 0 is closest to the note and dot 1 is below it.
                         let dot_y = base_y + dot_radius + (i as f32) * dot_spacing;
                         elements.push_str(&format!(
                             r#"<circle cx="{:.1}" cy="{:.1}" r="{:.1}" fill="black"/>"#,
@@ -89,9 +110,7 @@ fn render_page(page: &Page, cell_size: u32) -> String {
                     ));
                 }
                 GridContent::TieOrSlurCurve { from_column, to_column } => {
-                    // x/y alignment is intentionally bypassed here: the curve spans two columns,
-                    // so we compute start/end positions from the column indices directly.
-                    let _ = x; // x is unused in this branch; curve positions come from column indices
+                    let _ = x;
                     let x1 = (*from_column as f32 + 0.5) * cell;
                     let x2 = (*to_column as f32 + 0.5) * cell;
                     let cy = base_y - cell * 0.3;
@@ -118,6 +137,16 @@ fn render_page(page: &Page, cell_size: u32) -> String {
             }
         }
     }
+
+    // --- Footer ---
+    let footer_y = 842.0 - cell * 0.5;
+    elements.push_str(&format!(
+        r#"<text x="297.5" y="{:.1}" font-size="{:.1}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">{}/{}</text>"#,
+        footer_y,
+        cell * 0.75,
+        page.footer.page,
+        page.footer.total
+    ));
 
     format!(
         r#"<svg xmlns="http://www.w3.org/2000/svg" width="210mm" height="297mm" viewBox="0 0 595 842">{}</svg>"#,
@@ -221,5 +250,18 @@ mod tests {
         // "1." = pitch 1, octave -1; should produce a circle element
         let svgs = render_score("1. 2 3 4", "a b c d");
         assert!(svgs[0].contains("<circle"), "expected SVG circle for lower octave dot");
+    }
+
+    #[test]
+    fn svg_contains_title_and_author() {
+        let svgs = render_score("1 2 3 4", "a b c d");
+        assert!(svgs[0].contains(">t<"), "expected title 't' in SVG");
+        assert!(svgs[0].contains(">a<"), "expected author 'a' in SVG");
+    }
+
+    #[test]
+    fn svg_contains_page_number() {
+        let svgs = render_score("1 2 3 4", "a b c d");
+        assert!(svgs[0].contains("1/1"), "expected page number '1/1' in SVG");
     }
 }
