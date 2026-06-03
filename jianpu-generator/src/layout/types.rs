@@ -46,7 +46,7 @@ pub struct UnderlineSpan {
     pub to_column: u32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum GridContent {
     NoteHead { pitch: JianPuPitch, octave: i8 },
     Rest,
