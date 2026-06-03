@@ -81,6 +81,9 @@ fn render_page(page: &Page, cell_size: u32) -> String {
                     ));
                 }
                 GridContent::TieOrSlurCurve { from_column, to_column } => {
+                    // x/y alignment is intentionally bypassed here: the curve spans two columns,
+                    // so we compute start/end positions from the column indices directly.
+                    let _ = x; // x is unused in this branch; curve positions come from column indices
                     let x1 = (*from_column as f32 + 0.5) * cell;
                     let x2 = (*to_column as f32 + 0.5) * cell;
                     let cy = base_y - cell * 0.3;
@@ -180,9 +183,16 @@ mod tests {
     #[test]
     fn cjk_lyric_has_larger_font() {
         let svgs = render_score("1 2", "你 a");
-        // CJK syllable should have a font-size attribute larger than non-CJK
-        // We check that the SVG contains two different font sizes
-        assert!(svgs[0].contains("font-size"));
+        let svg = &svgs[0];
+        // Extract all font-size values from the SVG
+        // CJK font = base * 1.2, non-CJK = base
+        // With default cell_size=24: base = 24*0.6 = 14.4, cjk = 14.4*1.2 = 17.3
+        // Just verify two different font-size values appear
+        let font_size_14 = svg.contains("font-size=\"14.4\"");
+        let font_size_17 = svg.contains("font-size=\"17.3\"");
+        assert!(font_size_14 && font_size_17,
+            "Expected both base (14.4) and CJK (17.3) font sizes in SVG, got: {}",
+            &svg[..svg.len().min(500)]);
     }
 
     #[test]
