@@ -6,6 +6,7 @@ pub fn parse_metadata(
     base_offset: usize,
 ) -> Result<ParsedMetadata, JianPuError> {
     let mut title: Option<String> = None;
+    let mut subtitle: Option<String> = None;
     let mut author: Option<String> = None;
     let mut cell_size: Option<u32> = None;
     let mut byte_offset = base_offset;
@@ -28,6 +29,7 @@ pub fn parse_metadata(
 
         match key {
             "title" => title = Some(value.to_string()),
+            "subtitle" => subtitle = Some(value.to_string()),
             "author" => author = Some(value.to_string()),
             "cell_size" => {
                 let parsed = value.parse::<u32>().map_err(|_| {
@@ -60,6 +62,7 @@ pub fn parse_metadata(
     Ok(ParsedMetadata {
         title: title
             .ok_or_else(|| JianPuError::new(zero_span.clone(), "missing required field: title"))?,
+        subtitle,
         author: author
             .ok_or_else(|| JianPuError::new(zero_span, "missing required field: author"))?,
         cell_size,
@@ -108,5 +111,19 @@ mod tests {
     fn rejects_invalid_cell_size() {
         let content = "title = \"t\"\nauthor = \"a\"\ncell_size = abc\n";
         assert!(parse_metadata(content, 0).is_err());
+    }
+
+    #[test]
+    fn parses_optional_subtitle() {
+        let content = "title = \"hello\"\nauthor = \"foo\"\nsubtitle = \"sub\"\n";
+        let meta = parse_metadata(content, 0).unwrap();
+        assert_eq!(meta.subtitle, Some("sub".to_string()));
+    }
+
+    #[test]
+    fn subtitle_defaults_to_none() {
+        let content = "title = \"t\"\nauthor = \"a\"\n";
+        let meta = parse_metadata(content, 0).unwrap();
+        assert_eq!(meta.subtitle, None);
     }
 }
