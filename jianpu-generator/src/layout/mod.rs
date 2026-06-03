@@ -17,6 +17,8 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
     let mut current_page_row_groups: Vec<RowGroup> = Vec::new();
     let mut current_elements: Vec<GridElement> = Vec::new();
     let mut current_col: u32 = 0;
+    // current_row_offset is the absolute grid row where the current row-group starts.
+    // Row-group rows are: +0 (octave up, via NoteHead.octave), +1 (note head), +2 (duration underlines / octave down), +3 (lyrics)
     let mut current_row_offset: u32 = 0;
 
     let mut lyrics_iter = score.lyrics.iter();
@@ -61,9 +63,9 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
 
                     // Duration underlines (row 2)
                     let underline_count = match note.duration {
-                        1 => 2, // quarter-beat = 2 underlines
-                        2 => 1, // half-beat = 1 underline
-                        _ => 0,
+                        1 => 2, // sixteenth note (= prefix) — 2 underlines
+                        2 => 1, // eighth note (_ prefix) — 1 underline
+                        _ => 0, // quarter note or longer — no underlines
                     };
                     if underline_count > 0 {
                         current_elements.push(GridElement {
@@ -76,13 +78,15 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
 
                     // Lyric (row 3)
                     if let Some(syllable) = lyrics_iter.next() {
-                        let is_cjk = syllable.text.chars().next().map(|c| is_cjk_char(c)).unwrap_or(false);
-                        current_elements.push(GridElement {
-                            position: GridPosition { column: current_col, row: current_row_offset + 3 },
-                            horizontal_alignment: HorizontalAlignment::Center,
-                            vertical_alignment: VerticalAlignment::Top,
-                            content: GridContent::Lyric { text: syllable.text.clone(), is_cjk },
-                        });
+                        if syllable.text != "-" {
+                            let is_cjk = syllable.text.chars().next().map(|c| is_cjk_char(c)).unwrap_or(false);
+                            current_elements.push(GridElement {
+                                position: GridPosition { column: current_col, row: current_row_offset + 3 },
+                                horizontal_alignment: HorizontalAlignment::Center,
+                                vertical_alignment: VerticalAlignment::Top,
+                                content: GridContent::Lyric { text: syllable.text.clone(), is_cjk },
+                            });
+                        }
                     }
 
                     current_col += note.duration; // each quarter-beat = 1 column
@@ -95,13 +99,15 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                         content: GridContent::Rest,
                     });
                     if let Some(syllable) = lyrics_iter.next() {
-                        let is_cjk = syllable.text.chars().next().map(|c| is_cjk_char(c)).unwrap_or(false);
-                        current_elements.push(GridElement {
-                            position: GridPosition { column: current_col, row: current_row_offset + 3 },
-                            horizontal_alignment: HorizontalAlignment::Center,
-                            vertical_alignment: VerticalAlignment::Top,
-                            content: GridContent::Lyric { text: syllable.text.clone(), is_cjk },
-                        });
+                        if syllable.text != "-" {
+                            let is_cjk = syllable.text.chars().next().map(|c| is_cjk_char(c)).unwrap_or(false);
+                            current_elements.push(GridElement {
+                                position: GridPosition { column: current_col, row: current_row_offset + 3 },
+                                horizontal_alignment: HorizontalAlignment::Center,
+                                vertical_alignment: VerticalAlignment::Top,
+                                content: GridContent::Lyric { text: syllable.text.clone(), is_cjk },
+                            });
+                        }
                     }
                     current_col += rest.duration;
                 }
