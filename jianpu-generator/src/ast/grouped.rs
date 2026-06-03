@@ -8,6 +8,7 @@ pub struct Score {
 
 pub struct Metadata {
     pub title: String,
+    pub subtitle: Option<String>,
     pub author: String,
     /// Grid cell size in points. Default: 24.
     pub cell_size: u32,

@@ -204,6 +204,7 @@ pub fn group(doc: ParsedDocument) -> Result<Score, JianPuError> {
     Ok(Score {
         metadata: Metadata {
             title: doc.metadata.title,
+            subtitle: doc.metadata.subtitle,
             author: doc.metadata.author,
             cell_size: doc.metadata.cell_size.unwrap_or(24),
         },
