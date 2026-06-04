@@ -1012,4 +1012,41 @@ mod tests {
             .collect();
         assert_eq!(bottom_bars.len(), 2, "expected one bottom bar per system line");
     }
+
+    #[test]
+    fn left_bar_line_emitted_at_correct_column_for_named_parts() {
+        // Named two-part score: label_cols = ceil(label_width / row_height) = ceil(40/24) = 2
+        // Left bar at column=2, height_in_rows = 1 + (2-1)*4 = 5
+        let score = make_two_part_score("1 2 3 4", "5 6 7 1");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let left_bars: Vec<_> = pages.iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(&e.content, GridContent::BarLine { .. }) && e.position.column == 2)
+            .collect();
+        assert_eq!(left_bars.len(), 1, "expected one left bar for named two-part score");
+        assert_eq!(left_bars[0].position.row, 3, "left bar should be at row header_rows+1 = 3");
+        if let GridContent::BarLine { height_in_rows } = &left_bars[0].content {
+            assert_eq!(*height_in_rows, 5, "left bar height should be 1 + (2-1)*4 = 5 for two-part score");
+        } else {
+            panic!("expected BarLine");
+        }
+    }
+
+    #[test]
+    fn left_bar_line_has_correct_height_for_single_part() {
+        let score = make_score("1 2 3 4", "a b c d");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let left_bars: Vec<_> = pages.iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(&e.content, GridContent::BarLine { .. }) && e.position.column == 0)
+            .collect();
+        assert_eq!(left_bars.len(), 1);
+        if let GridContent::BarLine { height_in_rows } = &left_bars[0].content {
+            assert_eq!(*height_in_rows, 1, "single-part left bar height should be 1 + (1-1)*4 = 1");
+        } else {
+            panic!("expected BarLine");
+        }
+    }
 }
