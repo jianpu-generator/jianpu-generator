@@ -84,6 +84,7 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
 
     let num_parts = score.measures.first().map(|m| m.parts.len()).unwrap_or(1).max(1) as u32;
     let row_group_height: u32 = 4 * num_parts;
+    let bar_height: u32 = 1 + (num_parts - 1) * 4;
 
     let has_named_parts = score.measures.first()
         .map(|m| m.parts.iter().any(|p| p.name.is_some()))
@@ -143,6 +144,14 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
             // Drop any open chains on wrap — cross-line tie arcs are not supported.
             for chain in per_part_pending_chain.iter_mut() { chain.clear(); }
 
+            // Bottom system bar for the row group being flushed
+            current_elements.push(GridElement {
+                position: GridPosition { column: 0, row: current_row_offset + row_group_height },
+                horizontal_alignment: HorizontalAlignment::Left,
+                vertical_alignment: VerticalAlignment::Top,
+                content: GridContent::HorizontalBar { from_column: 0, to_column: current_col },
+            });
+
             if let Some(elements) = nonempty::NonEmpty::from_vec(std::mem::take(&mut current_elements)) {
                 current_page_row_groups.push(RowGroup {
                     elements,
@@ -167,6 +176,15 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
             }
         }
 
+        // Left system bar at start of each system line
+        if is_line_start {
+            current_elements.push(GridElement {
+                position: GridPosition { column: label_cols, row: current_row_offset + 1 },
+                horizontal_alignment: HorizontalAlignment::Left,
+                vertical_alignment: VerticalAlignment::Center,
+                content: GridContent::BarLine { height_in_rows: bar_height },
+            });
+        }
         // Emit part labels at start of each system line
         if is_line_start && has_named_parts {
             for (part_idx, name_opt) in part_names.iter().enumerate() {
@@ -345,7 +363,6 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
 
         // Bar line spanning all parts
         let bar_col = note_col_start + max_notes_width;
-        let bar_height = 1 + (num_parts - 1) * 4;
         current_elements.push(GridElement {
             position: GridPosition { column: bar_col, row: current_row_offset + 1 },
             horizontal_alignment: HorizontalAlignment::Left,
@@ -355,6 +372,15 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
         current_col = bar_col + 1;
     }
 
+    // Bottom system bar for the last row group
+    if !current_elements.is_empty() {
+        current_elements.push(GridElement {
+            position: GridPosition { column: 0, row: current_row_offset + row_group_height },
+            horizontal_alignment: HorizontalAlignment::Left,
+            vertical_alignment: VerticalAlignment::Top,
+            content: GridContent::HorizontalBar { from_column: 0, to_column: current_col },
+        });
+    }
     // Flush remaining elements
     if let Some(elements) = nonempty::NonEmpty::from_vec(std::mem::take(&mut current_elements)) {
         current_page_row_groups.push(RowGroup {
@@ -924,5 +950,103 @@ mod tests {
     #[test]
     fn horizontal_bar_variant_exists() {
         let _ = GridContent::HorizontalBar { from_column: 0, to_column: 10 };
+    }
+
+    #[test]
+    fn left_bar_line_emitted_at_start_of_first_system_line() {
+        let score = make_score("1 2 3 4", "a b c d");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        // label_cols=0 (unnamed single part), header_rows=2 → row = 2+1 = 3
+        let left_bars: Vec<_> = pages.iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(&e.content, GridContent::BarLine { .. }) && e.position.column == 0)
+            .collect();
+        assert_eq!(left_bars.len(), 1, "expected one left bar for a single system line");
+        assert_eq!(left_bars[0].position.row, 3, "left bar should be at row header_rows+1 = 3");
+    }
+
+    #[test]
+    fn left_bar_line_emitted_for_each_system_line_on_wrap() {
+        // First measure: 4 (directives) + 16 (notes) + 1 (bar) = 21 cols
+        // Second measure: 0 + 16 + 1 = 17 cols; 21+17=38 > 28 → wraps → 2 system lines
+        let score = make_score("1 2 3 4 5 6 7 1", "a b c d e f g h");
+        let pages = layout(&score, 300.0, A4_HEIGHT);
+        let left_bars: Vec<_> = pages.iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(&e.content, GridContent::BarLine { .. }) && e.position.column == 0)
+            .collect();
+        assert_eq!(left_bars.len(), 2, "expected one left bar per system line");
+    }
+
+    #[test]
+    fn bottom_bar_emitted_at_end_of_system_line() {
+        let score = make_score("1 2 3 4", "a b c d");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let bottom_bars: Vec<_> = pages.iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(&e.content, GridContent::HorizontalBar { .. }))
+            .collect();
+        assert_eq!(bottom_bars.len(), 1, "expected one bottom bar for a single system line");
+        // row_group_height = 4*1 = 4; row = header_rows + row_group_height = 2+4 = 6
+        assert_eq!(bottom_bars[0].position.row, 6, "bottom bar row should be current_row_offset + row_group_height");
+        if let GridContent::HorizontalBar { from_column, to_column } = &bottom_bars[0].content {
+            assert_eq!(*from_column, 0);
+            // 4 (directives) + 16 (notes) + 1 (bar) = 21
+            assert_eq!(*to_column, 21, "to_column should equal current_col at flush time");
+        } else {
+            panic!("expected HorizontalBar");
+        }
+    }
+
+    #[test]
+    fn bottom_bar_emitted_for_each_system_line_on_wrap() {
+        let score = make_score("1 2 3 4 5 6 7 1", "a b c d e f g h");
+        let pages = layout(&score, 300.0, A4_HEIGHT);
+        let bottom_bars: Vec<_> = pages.iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(&e.content, GridContent::HorizontalBar { .. }))
+            .collect();
+        assert_eq!(bottom_bars.len(), 2, "expected one bottom bar per system line");
+    }
+
+    #[test]
+    fn left_bar_line_emitted_at_correct_column_for_named_parts() {
+        // Named two-part score: label_cols = ceil(label_width / row_height) = ceil(40/24) = 2
+        // Left bar at column=2, height_in_rows = 1 + (2-1)*4 = 5
+        let score = make_two_part_score("1 2 3 4", "5 6 7 1");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let left_bars: Vec<_> = pages.iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(&e.content, GridContent::BarLine { .. }) && e.position.column == 2)
+            .collect();
+        assert_eq!(left_bars.len(), 1, "expected one left bar for named two-part score");
+        assert_eq!(left_bars[0].position.row, 3, "left bar should be at row header_rows+1 = 3");
+        if let GridContent::BarLine { height_in_rows } = &left_bars[0].content {
+            assert_eq!(*height_in_rows, 5, "left bar height should be 1 + (2-1)*4 = 5 for two-part score");
+        } else {
+            panic!("expected BarLine");
+        }
+    }
+
+    #[test]
+    fn left_bar_line_has_correct_height_for_single_part() {
+        let score = make_score("1 2 3 4", "a b c d");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let left_bars: Vec<_> = pages.iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(&e.content, GridContent::BarLine { .. }) && e.position.column == 0)
+            .collect();
+        assert_eq!(left_bars.len(), 1);
+        if let GridContent::BarLine { height_in_rows } = &left_bars[0].content {
+            assert_eq!(*height_in_rows, 1, "single-part left bar height should be 1 + (1-1)*4 = 1");
+        } else {
+            panic!("expected BarLine");
+        }
     }
 }
