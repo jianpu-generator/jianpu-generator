@@ -23,6 +23,10 @@ pub fn group(doc: ParsedDocument) -> Result<Score, JianPuError> {
     })
 }
 
+// The flush_measure! macro resets directive flags that are immediately overwritten
+// at directive-change call sites; the resulting assignments are never read before
+// the overwrite, which is intentional, not a bug.
+#[allow(unused_assignments)]
 fn group_part(part: ParsedPart) -> Result<GroupedPart, JianPuError> {
     use crate::ast::parsed::{KeyChange, Note, ScoreEvent};
 
@@ -160,8 +164,22 @@ fn group_part(part: ParsedPart) -> Result<GroupedPart, JianPuError> {
         }
     }
 
-    // Flush any remaining notes as a partial measure
-    flush_measure!();
+    // Flush any remaining notes as a partial measure (inline to avoid spurious unused-assignment warnings)
+    if !current_notes.is_empty() {
+        measures.push(GroupedMeasure {
+            time_signature: if time_sig_changed {
+                Some(TimeSignature {
+                    numerator: current_time_sig.numerator,
+                    denominator: current_time_sig.denominator,
+                })
+            } else {
+                None
+            },
+            bpm: if bpm_changed { Some(current_bpm) } else { None },
+            key: if key_changed { Some(current_key.clone()) } else { None },
+            notes: Notes { events: std::mem::take(&mut current_notes) },
+        });
+    }
 
     Ok(GroupedPart {
         name: part.name,

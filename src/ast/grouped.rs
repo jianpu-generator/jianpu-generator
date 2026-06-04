@@ -29,6 +29,7 @@ pub struct PartSlice {
 pub struct MultiPartMeasure {
     pub time_signature: Option<TimeSignature>,
     pub bpm: Option<u32>,
+    // TODO: key-change rendering (1=X label) is not yet implemented in layout/renderer
     pub key: Option<KeyChange>,
     pub parts: Vec<PartSlice>,
 }

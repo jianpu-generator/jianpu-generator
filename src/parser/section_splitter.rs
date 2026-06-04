@@ -35,7 +35,7 @@ pub fn split_sections(input: &str) -> Result<Vec<RawSection>, JianPuError> {
             }
             let kind_str = &line[1..line.len() - 1];
             current_kind = Some(match kind_str.split_once(':') {
-                Some(("metadata", _)) | None if kind_str == "metadata" => SectionKind::Metadata,
+                None if kind_str == "metadata" => SectionKind::Metadata,
                 Some(("score", name)) => SectionKind::Score { name: Some(name.to_string()) },
                 None if kind_str == "score" => SectionKind::Score { name: None },
                 Some(("lyrics", name)) => SectionKind::Lyrics { name: Some(name.to_string()) },

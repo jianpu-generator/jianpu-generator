@@ -120,10 +120,13 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
     let mut current_row_offset: u32 = header_rows;
     let mut is_line_start = true;
 
-    // Per-part state for tie/chain tracking (one set per part)
+    // Per-part state that persists across measure boundaries
     let mut per_part_prev_tie: Vec<bool> = vec![false; num_parts as usize];
     let mut per_part_prev_pitch: Vec<Option<JianPuPitch>> = vec![None; num_parts as usize];
     let mut per_part_beam_buffer: Vec<Vec<BeamBufferEntry>> = (0..num_parts).map(|_| Vec::new()).collect();
+    // pending_chain must persist across measures so cross-measure tie/slur arcs are emitted
+    let mut per_part_pending_chain: Vec<Vec<(u32, JianPuPitch)>> = vec![Vec::new(); num_parts as usize];
+    let mut per_part_chain_row: Vec<u32> = vec![0; num_parts as usize];
 
     for measure in &score.measures {
         let prefix_width = compute_prefix_width(measure);
@@ -138,6 +141,8 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
             // Reset tie flag on wrap; prev_pitch is not reset because it is only
             // consulted when prev_tie is true, so the stale value is never reached.
             for ppt in per_part_prev_tie.iter_mut() { *ppt = false; }
+            // Drop any open chains on wrap — cross-line tie arcs are not supported.
+            for chain in per_part_pending_chain.iter_mut() { chain.clear(); }
 
             if !current_elements.is_empty() {
                 current_page_row_groups.push(RowGroup {
@@ -229,8 +234,9 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
             let mut col = note_col_start;
             let measure_col_start_for_part = note_col_start;
 
-            let mut pending_chain: Vec<(u32, JianPuPitch)> = Vec::new();
-            let mut chain_row = part_row + 1;
+            let pending_chain = &mut per_part_pending_chain[part_idx];
+            let chain_row_ref = &mut per_part_chain_row[part_idx];
+            if pending_chain.is_empty() { *chain_row_ref = part_row + 1; }
             let beam_buf = &mut per_part_beam_buffer[part_idx];
             let prev_tie = &mut per_part_prev_tie[part_idx];
             let prev_pitch = &mut per_part_prev_pitch[part_idx];
@@ -281,7 +287,6 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                             flush_beam_buffer(beam_buf, part_row, &mut current_elements);
                         }
 
-                        if pending_chain.is_empty() { chain_row = part_row + 1; }
                         pending_chain.push((col, note.pitch.clone()));
 
                         // Lyric (row +3)
@@ -318,7 +323,7 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                         }
 
                         if !note.tie {
-                            flush_chain(&pending_chain, chain_row, &mut current_elements);
+                            flush_chain(pending_chain, *chain_row_ref, &mut current_elements);
                             pending_chain.clear();
                         }
                     }
