@@ -135,7 +135,8 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                 let part_row = current_row_offset + part_idx as u32 * 4;
                 flush_beam_buffer(beam_buf, part_row, &mut current_elements);
             }
-            // Clear tie/chain state on wrap
+            // Reset tie flag on wrap; prev_pitch is not reset because it is only
+            // consulted when prev_tie is true, so the stale value is never reached.
             for ppt in per_part_prev_tie.iter_mut() { *ppt = false; }
 
             if !current_elements.is_empty() {
@@ -177,12 +178,6 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
             }
         }
         is_line_start = false;
-
-        // Flush leftover beam buffers from previous measure for all parts
-        for (part_idx, beam_buf) in per_part_beam_buffer.iter_mut().enumerate() {
-            let part_row = current_row_offset + part_idx as u32 * 4;
-            flush_beam_buffer(beam_buf, part_row, &mut current_elements);
-        }
 
         // Emit directives for every part at their respective row offsets
         let directive_col_start = current_col;
