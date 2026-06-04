@@ -12,6 +12,7 @@ pub struct ParsedMetadata {
     pub subtitle: Option<String>,
     pub author: String,
     pub cell_size: Option<u32>,
+    pub label_width: Option<u32>,
 }
 
 pub enum ScoreEvent {
