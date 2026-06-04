@@ -191,6 +191,9 @@ fn render_page(page: &Page, row_height: u32) -> String {
                         x1, line_y, x2, line_y
                     ));
                 }
+                GridContent::BarNumber { .. } => {
+                    // stub — rendered in Task 3
+                }
             }
         }
     }
