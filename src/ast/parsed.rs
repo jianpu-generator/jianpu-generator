@@ -24,6 +24,12 @@ pub struct ParsedDocument {
     pub parts: Vec<ParsedPart>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum PartColumn {
+    Notes { name: String },
+    Lyrics { name: String },
+}
+
 #[derive(Debug)]
 pub struct ParsedMetadata {
     pub title: String,
@@ -32,6 +38,7 @@ pub struct ParsedMetadata {
     pub row_height: Option<u32>,
     pub max_columns: Option<u32>,
     pub label_width: Option<u32>,
+    pub parts: Vec<PartColumn>,
 }
 
 #[derive(Debug)]

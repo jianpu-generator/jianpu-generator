@@ -80,6 +80,7 @@ pub fn parse_metadata(
         row_height,
         max_columns,
         label_width,
+        parts: vec![],
     })
 }
 
