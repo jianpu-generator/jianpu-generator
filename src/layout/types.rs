@@ -85,4 +85,5 @@ pub enum GridContent {
     TimeSignatureLabel { numerator: u8, denominator: u8 },
     BpmLabel { bpm: u32 },
     PartLabel { text: String },
+    HorizontalBar { from_column: u32, to_column: u32 },
 }
