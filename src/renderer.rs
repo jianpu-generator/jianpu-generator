@@ -191,8 +191,11 @@ fn render_page(page: &Page, row_height: u32) -> String {
                         x1, line_y, x2, line_y
                     ));
                 }
-                GridContent::BarNumber { .. } => {
-                    // stub — rendered in Task 3
+                GridContent::BarNumber { number } => {
+                    elements.push_str(&format!(
+                        r#"<text x="{:.1}" y="{:.1}" font-size="{:.1}" text-anchor="start" dominant-baseline="auto" font-family="sans-serif">{}</text>"#,
+                        x, y, base_font_size * 0.6, number
+                    ));
                 }
             }
         }
@@ -397,5 +400,30 @@ mod tests {
             "expected horizontal line at y=169.0 spanning full content width;\nSVG snippet: {}",
             &svgs[0][..svgs[0].len().min(800)]
         );
+    }
+
+    #[test]
+    fn bar_number_renders_as_small_text_above_left_bar() {
+        // Two measures force a row wrap → two row groups → two bar numbers in SVG.
+        // row_height=24, base_font_size=24*0.6=14.4, bar_number_font=14.4*0.6=8.6 (rounded to 1dp)
+        let input = concat!(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+            "[score]\n4/4 1 2 3 4 5 6 7 1\n\n",
+            "[lyrics]\na b c d e f g h\n",
+        );
+        let doc = crate::parser::parse(input, "test.jianpu").unwrap();
+        let score = crate::grouper::group(doc).unwrap();
+        let pages = crate::layout::layout(&score, A4_W, A4_H);
+        let svgs = render(&pages, score.metadata.row_height);
+        let svg = &svgs[0];
+        // Bar 1 appears in the SVG
+        assert!(svg.contains(">1<") || svg.contains(">1 <"),
+            "expected bar number 1 in SVG output");
+        // Bar 2 appears in the SVG
+        assert!(svg.contains(">2<") || svg.contains(">2 <"),
+            "expected bar number 2 in SVG output");
+        // Small font size 8.6 is used for bar numbers
+        assert!(svg.contains("font-size=\"8.6\""),
+            "expected bar number font-size 8.6 in SVG; snippet: {}", &svg[..svg.len().min(800)]);
     }
 }
