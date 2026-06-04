@@ -283,6 +283,14 @@ mod tests {
     }
 
     #[test]
+    fn max_columns_defaults_to_28() {
+        let score = parse_and_group(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[score]\n4/4 1 2 3 4\n\n[lyrics]\na b c d\n",
+        );
+        assert_eq!(score.metadata.max_columns, 28);
+    }
+
+    #[test]
     fn half_beat_notes_accumulate_correctly() {
         let score = parse_and_group(
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[score]\n4/4 _1 _2 _3 _4 _5 _6 _7 _1\n\n[lyrics]\na b c d e f g h\n",
