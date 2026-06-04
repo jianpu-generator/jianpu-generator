@@ -182,7 +182,7 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                 position: GridPosition { column: label_cols, row: current_row_offset + 1 },
                 horizontal_alignment: HorizontalAlignment::Left,
                 vertical_alignment: VerticalAlignment::Center,
-                content: GridContent::BarLine { height_in_rows: bar_height },
+                content: GridContent::BarLine { height_in_rows: row_group_height - 1 },
             });
         }
         // Emit part labels at start of each system line
@@ -1027,7 +1027,7 @@ mod tests {
         assert_eq!(left_bars.len(), 1, "expected one left bar for named two-part score");
         assert_eq!(left_bars[0].position.row, 3, "left bar should be at row header_rows+1 = 3");
         if let GridContent::BarLine { height_in_rows } = &left_bars[0].content {
-            assert_eq!(*height_in_rows, 5, "left bar height should be 1 + (2-1)*4 = 5 for two-part score");
+            assert_eq!(*height_in_rows, 7, "left bar height should be row_group_height-1 = 8-1 = 7 for two-part score");
         } else {
             panic!("expected BarLine");
         }
@@ -1044,7 +1044,7 @@ mod tests {
             .collect();
         assert_eq!(left_bars.len(), 1);
         if let GridContent::BarLine { height_in_rows } = &left_bars[0].content {
-            assert_eq!(*height_in_rows, 1, "single-part left bar height should be 1 + (1-1)*4 = 1");
+            assert_eq!(*height_in_rows, 3, "single-part left bar height should be row_group_height-1 = 4-1 = 3");
         } else {
             panic!("expected BarLine");
         }
