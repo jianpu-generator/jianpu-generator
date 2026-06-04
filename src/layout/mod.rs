@@ -128,6 +128,8 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
     // pending_chain must persist across measures so cross-measure tie/slur arcs are emitted
     let mut per_part_pending_chain: Vec<Vec<(u32, JianPuPitch)>> = vec![Vec::new(); num_parts as usize];
     let mut per_part_chain_row: Vec<u32> = vec![0; num_parts as usize];
+    // Tracks a tie pitch that crossed a line boundary, so a left-half arc can be drawn on the new line.
+    let mut per_part_cross_line_tie: Vec<Option<JianPuPitch>> = vec![None; num_parts as usize];
 
     for measure in &score.measures {
         let prefix_width = compute_prefix_width(measure);
@@ -139,10 +141,28 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                 let part_row = current_row_offset + part_idx as u32 * 4;
                 flush_beam_buffer(beam_buf, part_row, &mut current_elements);
             }
-            // Reset tie flag on wrap; prev_pitch is not reset because it is only
-            // consulted when prev_tie is true, so the stale value is never reached.
-            for ppt in per_part_prev_tie.iter_mut() { *ppt = false; }
-            // Drop any open chains on wrap — cross-line tie arcs are not supported.
+            // Emit right-half tie arcs for open chains crossing the line boundary.
+            // prev_tie is intentionally NOT reset here — it persists to the next line
+            // so that the continuation note skips consuming a lyric syllable.
+            for (part_idx, chain) in per_part_pending_chain.iter().enumerate() {
+                if !chain.is_empty() {
+                    let chain_row = per_part_chain_row[part_idx];
+                    let last = chain.last().unwrap();
+                    let to_col = current_col.saturating_sub(1);
+                    if last.0 < to_col {
+                        current_elements.push(GridElement {
+                            position: GridPosition { column: last.0, row: chain_row },
+                            horizontal_alignment: HorizontalAlignment::Left,
+                            vertical_alignment: VerticalAlignment::Top,
+                            content: GridContent::TieOrSlurCurve {
+                                from_column: last.0,
+                                to_column: to_col,
+                            },
+                        });
+                    }
+                    per_part_cross_line_tie[part_idx] = Some(last.1.clone());
+                }
+            }
             for chain in per_part_pending_chain.iter_mut() { chain.clear(); }
 
             // Bottom system bar for the row group being flushed
@@ -264,6 +284,7 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
             let beam_buf = &mut per_part_beam_buffer[part_idx];
             let prev_tie = &mut per_part_prev_tie[part_idx];
             let prev_pitch = &mut per_part_prev_pitch[part_idx];
+            let cross_line_tie = &mut per_part_cross_line_tie[part_idx];
 
             let mut lyrics_iter = part_slice.lyrics.as_ref().map(|l| l.syllables.iter());
 
@@ -315,6 +336,23 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
 
                         // Lyric (row +3)
                         let is_tie_continuation = *prev_tie && prev_pitch.as_ref() == Some(&note.pitch);
+
+                        // Left-half arc for a tie that crossed a line boundary
+                        if cross_line_tie.is_some() {
+                            if is_tie_continuation && col > label_cols {
+                                current_elements.push(GridElement {
+                                    position: GridPosition { column: label_cols, row: *chain_row_ref },
+                                    horizontal_alignment: HorizontalAlignment::Left,
+                                    vertical_alignment: VerticalAlignment::Top,
+                                    content: GridContent::TieOrSlurCurve {
+                                        from_column: label_cols,
+                                        to_column: col,
+                                    },
+                                });
+                            }
+                            *cross_line_tie = None;
+                        }
+
                         if !is_tie_continuation {
                             if let Some(ref mut iter) = lyrics_iter {
                                 if let Some(syllable) = iter.next() {
@@ -361,6 +399,7 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                         });
                         col += rest.duration;
                         *prev_tie = false;
+                        *cross_line_tie = None;
                     }
                 }
             }
@@ -1112,5 +1151,33 @@ mod tests {
         assert_eq!(bar_numbers[0].position.row, 2, "row = header_rows = 2");
         assert_eq!(bar_numbers[0].horizontal_alignment, HorizontalAlignment::Left);
         assert_eq!(bar_numbers[0].vertical_alignment, VerticalAlignment::Bottom);
+    }
+
+    #[test]
+    fn cross_measure_tie_emits_right_half_arc_on_line_wrap() {
+        // With default max_columns=28:
+        // Measure 1: 4 (directives) + 16 (notes) + 1 (bar) = 21 cols
+        // Measure 2: 0 + 16 + 1 = 17 cols → 21+17=38 > 28 → wraps to new line
+        // 3~ at col 16 in measure 1 should produce a right-half arc ending at the bar line (col 20).
+        let score = make_score("0 0 0 3~ | 3 0 0 0", "a");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let curves = collect_curves(&pages);
+        assert!(!curves.is_empty(), "expected right-half tie arc when cross-measure tie wraps to new line");
+        // The right-half arc starts at the tied note (col 16) and ends at the bar line (col 20 = 21-1).
+        assert!(curves.iter().any(|&(from, to)| from == 16 && to == 20),
+            "expected right-half arc from col 16 to col 20; got: {:?}", curves);
+    }
+
+    #[test]
+    fn cross_measure_tie_continuation_does_not_consume_lyric_on_line_wrap() {
+        // The continuation note (3 in measure 2) must NOT consume a lyric syllable
+        // because prev_tie is preserved across the line boundary.
+        // Only the 3~ note in measure 1 should consume a lyric.
+        let score = make_score("0 0 0 3~ | 3 0 0 0", "a b");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let lyrics = collect_lyric_positions(&pages);
+        assert_eq!(lyrics.len(), 1,
+            "continuation note across line break must not consume a lyric syllable; got: {:?}", lyrics);
+        assert_eq!(lyrics[0].1, "a");
     }
 }
