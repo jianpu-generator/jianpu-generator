@@ -84,7 +84,7 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
 
     let num_parts = score.measures.first().map(|m| m.parts.len()).unwrap_or(1).max(1) as u32;
     let row_group_height: u32 = 4 * num_parts;
-    let bar_height: u32 = 1 + (num_parts - 1) * 4;
+    let bar_height: u32 = row_group_height - 1;
 
     let has_named_parts = score.measures.first()
         .map(|m| m.parts.iter().any(|p| p.name.is_some()))
@@ -182,7 +182,7 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                 position: GridPosition { column: label_cols, row: current_row_offset + 1 },
                 horizontal_alignment: HorizontalAlignment::Left,
                 vertical_alignment: VerticalAlignment::Center,
-                content: GridContent::BarLine { height_in_rows: row_group_height - 1 },
+                content: GridContent::BarLine { height_in_rows: bar_height },
             });
         }
         // Emit part labels at start of each system line
