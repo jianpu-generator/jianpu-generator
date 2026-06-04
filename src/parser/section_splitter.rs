@@ -10,8 +10,7 @@ pub struct RawSection {
 #[derive(Debug, PartialEq)]
 pub enum SectionKind {
     Metadata,
-    Score { name: Option<String> },
-    Lyrics { name: Option<String> },
+    Score,
 }
 
 pub fn split_sections(input: &str) -> Result<Vec<RawSection>, JianPuError> {
@@ -34,12 +33,9 @@ pub fn split_sections(input: &str) -> Result<Vec<RawSection>, JianPuError> {
                 current_content.clear();
             }
             let kind_str = &line[1..line.len() - 1];
-            current_kind = Some(match kind_str.split_once(':') {
-                None if kind_str == "metadata" => SectionKind::Metadata,
-                Some(("score", name)) => SectionKind::Score { name: Some(name.to_string()) },
-                None if kind_str == "score" => SectionKind::Score { name: None },
-                Some(("lyrics", name)) => SectionKind::Lyrics { name: Some(name.to_string()) },
-                None if kind_str == "lyrics" => SectionKind::Lyrics { name: None },
+            current_kind = Some(match kind_str {
+                "metadata" => SectionKind::Metadata,
+                "score" => SectionKind::Score,
                 _ => {
                     return Err(JianPuError::new(
                         Span::new(byte_offset, byte_offset + line.len()),
@@ -72,41 +68,37 @@ mod tests {
     use super::*;
 
     #[test]
-    fn splits_three_sections() {
-        let input = r#"[metadata]
-title = "hi"
-
-[score]
-1 2 3
-
-[lyrics]
-你好
-"#;
+    fn splits_metadata_and_score() {
+        let input = "[metadata]\ntitle = \"hi\"\n\n[score]\n1 2 3\n";
         let sections = split_sections(input).unwrap();
-        assert_eq!(sections.len(), 3);
+        assert_eq!(sections.len(), 2);
         assert_eq!(sections[0].kind, SectionKind::Metadata);
-        assert_eq!(sections[0].content.trim(), "title = \"hi\"");
-        assert_eq!(sections[1].kind, SectionKind::Score { name: None });
+        assert_eq!(sections[1].kind, SectionKind::Score);
         assert_eq!(sections[1].content.trim(), "1 2 3");
-        assert_eq!(sections[2].kind, SectionKind::Lyrics { name: None });
-        assert_eq!(sections[2].content.trim(), "你好");
+    }
+
+    #[test]
+    fn rejects_lyrics_section() {
+        let input = "[metadata]\ntitle=\"t\"\n[lyrics]\nfoo\n";
+        assert!(split_sections(input).is_err());
+    }
+
+    #[test]
+    fn rejects_named_score_section() {
+        let input = "[score:Soprano]\n1 2 3\n";
+        assert!(split_sections(input).is_err());
     }
 
     #[test]
     fn rejects_unknown_section() {
-        let input = r#"[unknown]
-foo
-"#;
+        let input = "[unknown]\nfoo\n";
         assert!(split_sections(input).is_err());
     }
 
     #[test]
     fn content_offset_points_past_header_line() {
-        let input = r#"[metadata]
-title = "hi"
-"#;
+        let input = "[metadata]\ntitle = \"hi\"\n";
         let sections = split_sections(input).unwrap();
-        // "[metadata]\n" is 11 bytes
         assert_eq!(sections[0].content_offset, 11);
     }
 
@@ -115,40 +107,7 @@ title = "hi"
         let input = "[metadata]\ntitle = \"hi\"\n\n[score]\n";
         let sections = split_sections(input).unwrap();
         assert_eq!(sections.len(), 2);
-        assert_eq!(sections[1].kind, SectionKind::Score { name: None });
+        assert_eq!(sections[1].kind, SectionKind::Score);
         assert_eq!(sections[1].content.trim(), "");
-    }
-
-    #[test]
-    fn handles_consecutive_headers() {
-        // [score] immediately after [metadata] with no content in between
-        let input = "[metadata]\n[score]\n1 2 3\n[lyrics]\nfoo\n";
-        let sections = split_sections(input).unwrap();
-        assert_eq!(sections.len(), 3);
-        assert_eq!(sections[0].kind, SectionKind::Metadata);
-        assert_eq!(sections[0].content.trim(), "");
-        assert_eq!(sections[1].kind, SectionKind::Score { name: None });
-        assert_eq!(sections[1].content.trim(), "1 2 3");
-    }
-
-    #[test]
-    fn parses_named_score_section() {
-        let input = "[score:Soprano]\n1 2 3\n";
-        let sections = split_sections(input).unwrap();
-        assert_eq!(sections[0].kind, SectionKind::Score { name: Some("Soprano".to_string()) });
-    }
-
-    #[test]
-    fn parses_unnamed_score_section_remains_compatible() {
-        let input = "[score]\n1 2 3\n";
-        let sections = split_sections(input).unwrap();
-        assert_eq!(sections[0].kind, SectionKind::Score { name: None });
-    }
-
-    #[test]
-    fn parses_named_lyrics_section() {
-        let input = "[lyrics:Alto]\ndo re mi\n";
-        let sections = split_sections(input).unwrap();
-        assert_eq!(sections[0].kind, SectionKind::Lyrics { name: Some("Alto".to_string()) });
     }
 }
