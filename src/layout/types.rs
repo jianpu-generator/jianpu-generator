@@ -86,4 +86,19 @@ pub enum GridContent {
     BpmLabel { bpm: u32 },
     PartLabel { text: String },
     HorizontalBar { from_column: u32, to_column: u32 },
+    BarNumber { number: u32 },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bar_number_variant_exists() {
+        let c = GridContent::BarNumber { number: 5 };
+        match c {
+            GridContent::BarNumber { number } => assert_eq!(number, 5),
+            _ => panic!("unexpected variant"),
+        }
+    }
 }
