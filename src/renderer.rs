@@ -181,8 +181,15 @@ fn render_page(page: &Page, row_height: u32) -> String {
                         x, y, base_font_size * 0.8, escape_xml(text)
                     ));
                 }
-                GridContent::HorizontalBar { .. } => {
-                    // rendered in Task 2
+                GridContent::HorizontalBar { from_column, to_column } => {
+                    let _ = x;
+                    let x1 = *from_column as f32 * column_width + PAGE_MARGIN;
+                    let x2 = *to_column as f32 * column_width + PAGE_MARGIN;
+                    let line_y = base_y;
+                    elements.push_str(&format!(
+                        r#"<line x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}" stroke="black" stroke-width="1"/>"#,
+                        x1, line_y, x2, line_y
+                    ));
                 }
             }
         }
@@ -357,5 +364,35 @@ mod tests {
         let svgs = render(&pages, score.metadata.row_height);
         assert!(svgs[0].contains("Soprano"), "expected 'Soprano' label in SVG");
         assert!(svgs[0].contains("Alto"), "expected 'Alto' label in SVG");
+    }
+
+    #[test]
+    fn horizontal_bar_renders_horizontal_line() {
+        use crate::layout::types::*;
+        use nonempty::nonempty;
+        let page = Page {
+            header: Header { title: "t".to_string(), subtitle: None, author: "a".to_string() },
+            footer: Footer { page: 1, total: 1 },
+            page_width_pt: A4_W,
+            row_groups: vec![RowGroup {
+                height_in_rows: 4,
+                width_in_columns: 16,
+                elements: nonempty![GridElement {
+                    position: GridPosition { column: 0, row: 6 },
+                    horizontal_alignment: HorizontalAlignment::Left,
+                    vertical_alignment: VerticalAlignment::Top,
+                    content: GridContent::HorizontalBar { from_column: 0, to_column: 16 },
+                }],
+            }],
+        };
+        let svgs = render(&[page], 24);
+        // column_width = (595 - 2*25) / 16 = 34.0625
+        // x1 = 0*34.0625 + 25 = 25.0, x2 = 16*34.0625 + 25 = 570.0
+        // y = PAGE_MARGIN + row*row_height = 25 + 6*24 = 169.0 (VerticalAlignment::Top → y = base_y)
+        assert!(
+            svgs[0].contains(r#"x1="25.0" y1="169.0" x2="570.0" y2="169.0""#),
+            "expected horizontal line at y=169.0 spanning full content width;\nSVG snippet: {}",
+            &svgs[0][..svgs[0].len().min(800)]
+        );
     }
 }
