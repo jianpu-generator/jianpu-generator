@@ -193,7 +193,7 @@ fn render_page(page: &Page, row_height: u32) -> String {
                 }
                 GridContent::BarNumber { number } => {
                     elements.push_str(&format!(
-                        r#"<text x="{:.1}" y="{:.1}" font-size="{:.1}" text-anchor="start" dominant-baseline="auto" font-family="sans-serif">{}</text>"#,
+                        r#"<text x="{:.1}" y="{:.1}" font-size="{:.1}" text-anchor="start" dominant-baseline="ideographic" font-family="sans-serif">{}</text>"#,
                         x, y, base_font_size * 0.6, number
                     ));
                 }
