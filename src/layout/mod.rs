@@ -920,4 +920,9 @@ mod tests {
             .collect();
         assert_eq!(labels.len(), 0);
     }
+
+    #[test]
+    fn horizontal_bar_variant_exists() {
+        let _ = GridContent::HorizontalBar { from_column: 0, to_column: 10 };
+    }
 }

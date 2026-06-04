@@ -181,6 +181,9 @@ fn render_page(page: &Page, row_height: u32) -> String {
                         x, y, base_font_size * 0.8, escape_xml(text)
                     ));
                 }
+                GridContent::HorizontalBar { .. } => {
+                    // rendered in Task 2
+                }
             }
         }
     }
