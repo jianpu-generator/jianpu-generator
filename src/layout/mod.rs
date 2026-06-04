@@ -1090,4 +1090,27 @@ mod tests {
         assert_eq!(bar_numbers[1].position.column, 0);
         assert_eq!(bar_numbers[1].position.row, 6, "row = 2 + 4 = 6");
     }
+
+    #[test]
+    fn bar_number_emitted_on_first_row_group_even_without_wrap() {
+        // A single measure fits in one row group — no wrap occurs.
+        // Bar number 1 should still be emitted at the start of that row group.
+        let score = make_score("1 2 3 4", "a b c d");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+
+        let bar_numbers: Vec<_> = pages.iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(e.content, GridContent::BarNumber { .. }))
+            .collect();
+
+        assert_eq!(bar_numbers.len(), 1, "expected one BarNumber for a single row group");
+        if let GridContent::BarNumber { number } = bar_numbers[0].content {
+            assert_eq!(number, 1, "bar number must be 1 for the first row group");
+        }
+        assert_eq!(bar_numbers[0].position.column, 0);
+        assert_eq!(bar_numbers[0].position.row, 2, "row = header_rows = 2");
+        assert_eq!(bar_numbers[0].horizontal_alignment, HorizontalAlignment::Left);
+        assert_eq!(bar_numbers[0].vertical_alignment, VerticalAlignment::Bottom);
+    }
 }
