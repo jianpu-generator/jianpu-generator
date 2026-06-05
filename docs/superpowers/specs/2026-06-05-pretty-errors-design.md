@@ -24,7 +24,8 @@ error: expected pitch digit 0-7, got: x
 
 ### `src/error.rs`
 
-- Add `path: PathBuf` to `JianPuError` (owned, so no lifetime needed).
+- Add `path: Option<PathBuf>` to `JianPuError` (defaults to `None`; owned, so no lifetime needed).
+- Add a `.with_path(path: impl AsRef<Path>) -> Self` builder method for attaching the path after construction.
 - Drop `Location::Bar { bar, note }` — unused in the current codebase (only tested against itself).
 - `Location` becomes just a wrapper around `Span`, or is inlined directly.
 - `Display` impl remains as a simple fallback (`message` only), used in tests and non-terminal contexts.
@@ -61,12 +62,17 @@ No source threading required — `render` re-reads the file itself.
 
 ## Error Construction Sites
 
-All callers of `JianPuError::new` must supply the `path`. The path is available at:
-- `parser::parse` — receives `filename: &str`, becomes `path: &Path`
-- `grouper::group` — called from `parse_and_group` which has the input path
-- `main.rs` file I/O errors — path is in scope
+Deep parser internals (`tokenizer`, `token_parser`, `metadata_parser`, etc.) create errors without access to the file path. Rather than threading the path through every function, the path is attached once at the boundary via `.with_path()` and `map_err`:
 
-The `parse_and_group` helper in `main.rs` already receives `input: &Path` and passes it down — constructors that currently omit the path will need it threaded in.
+```rust
+// in parse_and_group (main.rs)
+parser::parse(&content, &filename)
+    .map_err(|e| e.with_path(input))?;
+grouper::group(doc)
+    .map_err(|e| e.with_path(input))?;
+```
+
+File I/O errors in `main.rs` already have the path in scope and can call `.with_path()` directly. No changes needed to any parser internals.
 
 ## Out of Scope
 
