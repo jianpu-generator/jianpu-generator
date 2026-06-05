@@ -518,7 +518,14 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                         }
                     }
                     NoteEvent::Rest(rest) => {
-                        flush_beam_buffer(beam_buf, part_row, &mut current_elements);
+                        let rest_underline_count = match rest.duration {
+                            1 => 2,
+                            2 => 1,
+                            _ => 0,
+                        };
+                        if rest_underline_count == 0 {
+                            flush_beam_buffer(beam_buf, part_row, &mut current_elements);
+                        }
                         current_elements.push(GridElement {
                             position: GridPosition {
                                 column: col,
@@ -528,34 +535,20 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                             vertical_alignment: VerticalAlignment::Center,
                             content: GridContent::Rest,
                         });
-                        let rest_underline_count = match rest.duration {
-                            1 => 2,
-                            2 => 1,
-                            _ => 0,
-                        };
                         if rest_underline_count > 0 {
-                            let span = UnderlineSpan {
-                                from_column: col,
-                                to_column: col + rest.duration,
-                                last_head_column: col,
-                            };
-                            let mut levels = vec![span.clone()];
-                            if rest_underline_count >= 2 {
-                                levels.push(span);
-                            }
-                            current_elements.push(GridElement {
-                                position: GridPosition {
-                                    column: col,
-                                    row: part_row + 2,
-                                },
-                                horizontal_alignment: HorizontalAlignment::Left,
-                                vertical_alignment: VerticalAlignment::Top,
-                                content: GridContent::DurationUnderlines { levels },
+                            beam_buf.push(BeamBufferEntry {
+                                column: col,
+                                underline_count: rest_underline_count,
+                                duration: rest.duration,
                             });
                         }
                         col += rest.duration;
                         *prev_tie = false;
                         *cross_line_tie = None;
+                        let beat_position = col - measure_col_start_for_part;
+                        if rest_underline_count > 0 && beat_position % 4 == 0 {
+                            flush_beam_buffer(beam_buf, part_row, &mut current_elements);
+                        }
                     }
                 }
             }
@@ -1038,30 +1031,24 @@ mod tests {
     }
 
     #[test]
-    fn eighth_notes_straddling_beat_boundary_produce_separate_underlines() {
+    fn eighth_rest_and_note_within_same_beat_share_one_underline() {
         // 0(4qb) _0(2qb) _2(2qb) _2(2qb) _0(2qb) 0(4qb) = 16qb ✓
-        // First _2 starts at qb 6 (mid-beat-2), ends at qb 8 (beat boundary) → flushed alone
-        // Second _2 starts at qb 8, ends at qb 10 → flushed alone when _0 rest arrives
-        // The two _0 rests also produce their own underlines (groups[0] and groups[3]).
+        // Beat 2: _0 rest + _2 note → share one underline (same beat, rest joins beam buffer)
+        // Beat 3: _2 note + _0 rest → share one underline (same beat)
         let score = make_score("0 _0 _2 _2 _0 0", "a b");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let groups = collect_underline_levels(&pages);
         assert_eq!(
             groups.len(),
-            4,
-            "expected four underline groups (2 rests + 2 notes)"
+            2,
+            "expected two underline groups (one per beat)"
         );
-        // groups[0]: first _0 rest underline
+        // group[0]: beat 2 — _0 rest + _2 note
         assert_eq!(groups[0][0].from_column, 8);
-        assert_eq!(groups[0][0].to_column, 10);
-        // groups[1] and groups[2]: note underlines
-        assert_eq!(groups[1][0].from_column, 10);
-        assert_eq!(groups[1][0].to_column, 12);
-        assert_eq!(groups[2][0].from_column, 12);
-        assert_eq!(groups[2][0].to_column, 14);
-        // groups[3]: second _0 rest underline
-        assert_eq!(groups[3][0].from_column, 14);
-        assert_eq!(groups[3][0].to_column, 16);
+        assert_eq!(groups[0][0].to_column, 12);
+        // group[1]: beat 3 — _2 note + _0 rest
+        assert_eq!(groups[1][0].from_column, 12);
+        assert_eq!(groups[1][0].to_column, 16);
     }
 
     #[test]
@@ -1081,75 +1068,52 @@ mod tests {
     }
 
     #[test]
-    fn lone_sixteenth_note_has_two_underlines() {
-        // =1(1qb) and fill with quarter rests: need 15 more qb but rests are 4qb each = can't hit 16.
-        // Use: =1 =0 =0 =0 0 0 0 = 1+1+1+1+4+4+4 = 16qb ✓
-        // Only =1 is a note (pitch); =0 are sixteenth rests → flush before each rest.
-        // So =1 is a lone sixteenth in the buffer → produces level-1 and level-2 spans both {0,1}.
-        // Each =0 rest also produces its own two-level underline.
+    fn sixteenth_note_and_sixteenth_rests_share_one_beat_group() {
+        // =1(1qb) =0(1qb) =0(1qb) =0(1qb) fills beat 1; 0 0 0 fills the remaining 12qb = 16 total ✓
+        // All four fit within beat 1 → joined in one beam group with two underline levels.
         let score = make_score("=1 =0 =0 =0 0 0 0", "a");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let groups = collect_underline_levels(&pages);
         assert_eq!(
             groups.len(),
-            4,
-            "expected four underline groups (1 note + 3 sixteenth rests)"
+            1,
+            "expected one beam group (note + rests share a beat)"
         );
-        // groups[0]: lone =1 note — two levels at same span
-        assert_eq!(
-            groups[0].len(),
-            2,
-            "lone sixteenth must produce two underline levels"
-        );
+        assert_eq!(groups[0].len(), 2, "expected two underline levels");
+        // Level 1 and level 2 both span the whole beat (cols 4–8)
         assert_eq!(
             groups[0][0],
             UnderlineSpan {
                 from_column: 4,
-                to_column: 5,
-                last_head_column: 4
+                to_column: 8,
+                last_head_column: 7
             }
         );
         assert_eq!(
             groups[0][1],
             UnderlineSpan {
                 from_column: 4,
-                to_column: 5,
-                last_head_column: 4
-            }
-        );
-        // groups[1..3]: =0 rests — each two levels at their own span
-        assert_eq!(
-            groups[1][0],
-            UnderlineSpan {
-                from_column: 5,
-                to_column: 6,
-                last_head_column: 5
-            }
-        );
-        assert_eq!(
-            groups[1][1],
-            UnderlineSpan {
-                from_column: 5,
-                to_column: 6,
-                last_head_column: 5
-            }
-        );
-        assert_eq!(
-            groups[2][0],
-            UnderlineSpan {
-                from_column: 6,
-                to_column: 7,
-                last_head_column: 6
-            }
-        );
-        assert_eq!(
-            groups[3][0],
-            UnderlineSpan {
-                from_column: 7,
                 to_column: 8,
                 last_head_column: 7
             }
         );
+    }
+
+    #[test]
+    fn eighth_rest_underline_connects_to_following_sixteenth_notes() {
+        // _0(2qb) =1(1qb) =2(1qb) fills beat 1 exactly (2+1+1=4qb); 0 0 0 fills 12 more = 16 total ✓
+        // _0 rest should join the beam buffer and share the level-1 underline with =1 and =2.
+        let score = make_score("_0 =1 =2 0 0 0", "a b");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let groups = collect_underline_levels(&pages);
+        assert_eq!(groups.len(), 1, "expected one beam group spanning the beat");
+        assert_eq!(groups[0].len(), 2, "expected two underline levels");
+        // Level 1 spans all three (col 4–8)
+        assert_eq!(groups[0][0].from_column, 4);
+        assert_eq!(groups[0][0].to_column, 8);
+        // Level 2 spans only =1 and =2 (col 6–8)
+        assert_eq!(groups[0][1].from_column, 6);
+        assert_eq!(groups[0][1].to_column, 8);
     }
 
     #[test]
