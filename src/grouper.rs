@@ -59,6 +59,7 @@ fn group_part(part: ParsedPart) -> Result<GroupedPart, JianPuError> {
     let mut current_notes: Vec<NoteEvent> = Vec::new();
     let mut current_beat: u32 = 0;
     let mut capacity = measure_capacity(&current_time_sig);
+    let mut pending_label: Option<String> = None;
 
     macro_rules! flush_measure {
         () => {
@@ -78,6 +79,7 @@ fn group_part(part: ParsedPart) -> Result<GroupedPart, JianPuError> {
                     } else {
                         None
                     },
+                    label: pending_label.take(),
                     notes: Notes {
                         events: std::mem::take(&mut current_notes),
                     },
@@ -160,7 +162,10 @@ fn group_part(part: ParsedPart) -> Result<GroupedPart, JianPuError> {
                     flush_measure!();
                 }
             }
-            ScoreEvent::LabelChange(_) => {}
+            ScoreEvent::LabelChange(text) => {
+                flush_measure!();
+                pending_label = Some(text);
+            }
             ScoreEvent::Rest(pr) => {
                 if current_beat >= capacity {
                     flush_measure!();
@@ -203,6 +208,7 @@ fn group_part(part: ParsedPart) -> Result<GroupedPart, JianPuError> {
             } else {
                 None
             },
+            label: pending_label.take(),
             notes: Notes {
                 events: std::mem::take(&mut current_notes),
             },
@@ -377,6 +383,44 @@ mod tests {
         assert_eq!(score.measures[0].parts.len(), 2);
         assert_eq!(score.measures[0].parts[0].name, Some("Soprano".to_string()));
         assert_eq!(score.measures[0].parts[1].name, Some("Alto".to_string()));
+    }
+
+    #[test]
+    fn label_directive_propagates_to_measure() {
+        let score = parse_and_group(concat!(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\nparts = notes:\n\n",
+            "[score]\n(time=4/4 key=C4 bpm=120 label=\"Verse 1\")\n1 2 3 4\n",
+        ));
+        assert_eq!(score.measures[0].label, Some("Verse 1".to_string()));
+    }
+
+    #[test]
+    fn label_is_none_when_not_declared() {
+        let score = parse_and_group(concat!(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\nparts = notes:\n\n",
+            "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\n",
+        ));
+        assert_eq!(score.measures[0].label, None);
+    }
+
+    #[test]
+    fn label_does_not_persist_to_next_measure() {
+        let score = parse_and_group(concat!(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\nparts = notes:\n\n",
+            "[score]\n(time=4/4 key=C4 bpm=120 label=\"Verse 1\")\n1 2 3 4\n\n5 6 7 1\n",
+        ));
+        assert_eq!(score.measures[0].label, Some("Verse 1".to_string()));
+        assert_eq!(score.measures[1].label, None);
+    }
+
+    #[test]
+    fn label_on_second_measure_not_first() {
+        let score = parse_and_group(concat!(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\nparts = notes:\n\n",
+            "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\n\n(label=\"Chorus\")\n5 6 7 1\n",
+        ));
+        assert_eq!(score.measures[0].label, None);
+        assert_eq!(score.measures[1].label, Some("Chorus".to_string()));
     }
 
     #[test]

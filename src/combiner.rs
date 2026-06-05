@@ -59,6 +59,7 @@ pub fn combine(parts: Vec<GroupedPart>) -> Result<Vec<MultiPartMeasure>, JianPuE
             time_signature: first.time_signature.clone(),
             bpm: first.bpm,
             key: first.key.clone(),
+            label: first.label.clone(),
             parts: part_slices,
         });
     }
