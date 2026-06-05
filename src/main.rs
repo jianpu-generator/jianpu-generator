@@ -10,7 +10,7 @@ mod renderer;
 mod utils;
 
 use clap::{Parser, Subcommand};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
 #[command(name = "jianpu", about = "Generate JianPu notation files")]
@@ -106,7 +106,7 @@ fn run_generate(format: GenerateFormat) -> Result<(), error::JianPuError> {
     }
 }
 
-fn parse_and_group(input: &PathBuf) -> Result<ast::grouped::Score, error::JianPuError> {
+fn parse_and_group(input: &Path) -> Result<ast::grouped::Score, error::JianPuError> {
     let content = std::fs::read_to_string(input).map_err(|e| {
         error::JianPuError::new(error::Span::new(0, 0), format!("could not read {:?}: {}", input, e))
     })?;
@@ -126,7 +126,7 @@ fn filter_tracks(score: &mut ast::grouped::Score, tracks: &[String]) {
     }
 }
 
-fn write_file(path: &PathBuf, data: &[u8]) -> Result<(), error::JianPuError> {
+fn write_file(path: &Path, data: &[u8]) -> Result<(), error::JianPuError> {
     std::fs::write(path, data).map_err(|e| {
         error::JianPuError::new(error::Span::new(0, 0), format!("could not write {:?}: {}", path, e))
     })
