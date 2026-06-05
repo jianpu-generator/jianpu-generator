@@ -88,9 +88,8 @@ pub fn parse(content: &str, parts: &[PartColumn]) -> Result<Vec<ParsedPart>, Jia
             .filter(|p| matches!(p, PartColumn::Notes { .. }))
             .count();
         if data_lines.len() < notes_cols_count {
-            return Err(JianPuError::at_bar(
-                bar,
-                0,
+            return Err(JianPuError::new(
+                Span::new(0, 0),
                 format!(
                     "expected {} lines (one per parts column), got {}",
                     parts.len(),
@@ -99,9 +98,8 @@ pub fn parse(content: &str, parts: &[PartColumn]) -> Result<Vec<ParsedPart>, Jia
             ));
         }
         if data_lines.len() > parts.len() {
-            return Err(JianPuError::at_bar(
-                bar,
-                0,
+            return Err(JianPuError::new(
+                Span::new(0, 0),
                 format!(
                     "expected {} lines (one per parts column), got {}",
                     parts.len(),
@@ -180,14 +178,13 @@ fn collect_groups(content: &str) -> Vec<Vec<String>> {
 
 fn split_directive(
     lines: &[String],
-    bar: usize,
+    _bar: usize,
 ) -> Result<(Vec<Spanned<ScoreEvent>>, &[String]), JianPuError> {
     if lines.first().map(|l| l.starts_with('(')).unwrap_or(false) {
         let directive_line = &lines[0];
         if !directive_line.ends_with(')') {
-            return Err(JianPuError::at_bar(
-                bar,
-                0,
+            return Err(JianPuError::new(
+                Span::new(0, 0),
                 "directive row must end with ')'",
             ));
         }
@@ -366,10 +363,9 @@ fn beats_per_measure(num: u8, den: u8) -> u32 {
 fn validate_beats(
     events: &[Spanned<ScoreEvent>],
     expected: u32,
-    bar: usize,
+    _bar: usize,
 ) -> Result<(), JianPuError> {
     let mut total = 0u32;
-    let mut note_idx = 0usize;
 
     for e in events {
         let beats = match &e.value {
@@ -379,10 +375,9 @@ fn validate_beats(
             _ => 0,
         };
         if beats > 0 {
-            note_idx += 1;
             total += beats;
             if total > expected {
-                return Err(JianPuError::at_bar(bar, note_idx, format!(
+                return Err(JianPuError::new(Span::new(0, 0), format!(
                     "note exceeds measure boundary: measure has {} quarter-beats, cumulative is now {}",
                     expected, total
                 )));
@@ -391,9 +386,8 @@ fn validate_beats(
     }
 
     if total < expected {
-        return Err(JianPuError::at_bar(
-            bar,
-            0,
+        return Err(JianPuError::new(
+            Span::new(0, 0),
             format!(
                 "incomplete measure: expected {} quarter-beats, got {}",
                 expected, total
@@ -466,10 +460,7 @@ mod tests {
         let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c d\nextra line\n";
         let parts = vec![notes_col(""), lyrics_col("")];
         let err = parse(content, &parts).unwrap_err();
-        assert!(matches!(
-            err.location,
-            crate::error::Location::Bar { bar: 1, .. }
-        ));
+        assert!(err.message.contains("expected") && err.message.contains("got"));
     }
 
     #[test]
@@ -491,10 +482,7 @@ mod tests {
         let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4 5\n";
         let parts = vec![notes_col("")];
         let err = parse(content, &parts).unwrap_err();
-        assert!(matches!(
-            err.location,
-            crate::error::Location::Bar { bar: 1, note: 5 }
-        ));
+        assert!(err.message.contains("note exceeds measure boundary"));
     }
 
     #[test]
@@ -502,10 +490,7 @@ mod tests {
         let content = "(time=4/4 key=C4 bpm=120)\n1 2 3\n";
         let parts = vec![notes_col("")];
         let err = parse(content, &parts).unwrap_err();
-        assert!(matches!(
-            err.location,
-            crate::error::Location::Bar { bar: 1, note: 0 }
-        ));
+        assert!(err.message.contains("incomplete measure"));
     }
 
     #[test]
