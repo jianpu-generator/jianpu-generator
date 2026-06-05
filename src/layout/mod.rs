@@ -228,6 +228,16 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
         }
         is_line_start = false;
 
+        // Emit section label above the row group (row +0) if present for this measure
+        if let Some(label_text) = &measure.label {
+            current_elements.push(GridElement {
+                position: GridPosition { column: current_col, row: current_row_offset },
+                horizontal_alignment: HorizontalAlignment::Left,
+                vertical_alignment: VerticalAlignment::Bottom,
+                content: GridContent::SectionLabel { text: label_text.clone() },
+            });
+        }
+
         // Emit directives for every part at their respective row offsets
         let directive_col_start = current_col;
         let mut directive_advance = 0u32;

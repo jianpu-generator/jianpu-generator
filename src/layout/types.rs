@@ -87,6 +87,7 @@ pub enum GridContent {
     PartLabel { text: String },
     HorizontalBar { from_column: u32, to_column: u32 },
     BarNumber { number: u32 },
+    SectionLabel { text: String },
 }
 
 #[cfg(test)]
