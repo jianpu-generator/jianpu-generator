@@ -197,6 +197,12 @@ fn render_page(page: &Page, row_height: u32) -> String {
                         x, y, base_font_size * 0.6, number
                     ));
                 }
+                GridContent::SectionLabel { text } => {
+                    elements.push_str(&format!(
+                        r#"<text x="{:.1}" y="{:.1}" font-size="{:.1}" text-anchor="start" dominant-baseline="ideographic" font-style="italic" font-family="sans-serif">{}</text>"#,
+                        x, y, base_font_size * 0.7, escape_xml(text)
+                    ));
+                }
             }
         }
     }
@@ -255,6 +261,20 @@ mod tests {
         let score = grouper::group(doc).unwrap();
         let pages = layout::layout(&score, A4_W, A4_H);
         render(&pages, score.metadata.row_height)
+    }
+
+    #[test]
+    fn section_label_renders_in_svg() {
+        let input = concat!(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\nparts = notes: lyrics:\n\n",
+            "[score]\n(time=4/4 key=C4 bpm=120 label=\"Verse 1\")\n1 2 3 4\na b c d\n",
+        );
+        let doc = crate::parser::parse(input, "test.jianpu").unwrap();
+        let score = crate::grouper::group(doc).unwrap();
+        let pages = crate::layout::layout(&score, A4_W, A4_H);
+        let svgs = render(&pages, score.metadata.row_height);
+        assert!(svgs[0].contains("Verse 1"), "expected section label 'Verse 1' in SVG");
+        assert!(svgs[0].contains("font-style=\"italic\""), "expected italic style on section label");
     }
 
     #[test]
