@@ -426,6 +426,20 @@ mod tests {
     }
 
     #[test]
+    fn section_label_escapes_xml_special_chars() {
+        let input = concat!(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\nparts = notes: lyrics:\n\n",
+            "[score]\n(time=4/4 key=C4 bpm=120 label=\"A&B\")\n1 2 3 4\na b c d\n",
+        );
+        let doc = crate::parser::parse(input, "test.jianpu").unwrap();
+        let score = crate::grouper::group(doc).unwrap();
+        let pages = crate::layout::layout(&score, A4_W, A4_H);
+        let svgs = render(&pages, score.metadata.row_height);
+        assert!(svgs[0].contains("A&amp;B"), "expected XML-escaped label in SVG");
+        assert!(!svgs[0].contains("A&B\""), "expected raw & to be escaped");
+    }
+
+    #[test]
     fn bar_number_renders_as_small_text_above_left_bar() {
         // Two measures force a row wrap → two row groups → two bar numbers in SVG.
         // row_height=24, base_font_size=24*0.6=14.4, bar_number_font=14.4*0.6=8.6 (rounded to 1dp)

@@ -205,12 +205,15 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                 vertical_alignment: VerticalAlignment::Center,
                 content: GridContent::BarLine { height_in_rows: bar_height },
             });
-            current_elements.push(GridElement {
-                position: GridPosition { column: label_cols, row: current_row_offset },
-                horizontal_alignment: HorizontalAlignment::Left,
-                vertical_alignment: VerticalAlignment::Bottom,
-                content: GridContent::BarNumber { number: bar_number },
-            });
+            // Only emit bar number when no section label occupies the same position
+            if measure.label.is_none() {
+                current_elements.push(GridElement {
+                    position: GridPosition { column: label_cols, row: current_row_offset },
+                    horizontal_alignment: HorizontalAlignment::Left,
+                    vertical_alignment: VerticalAlignment::Bottom,
+                    content: GridContent::BarNumber { number: bar_number },
+                });
+            }
         }
         // Emit part labels at start of each system line
         if is_line_start && has_named_parts {
@@ -1254,5 +1257,43 @@ mod tests {
         assert_eq!(lyrics.len(), 1,
             "continuation note across line break must not consume a lyric syllable; got: {:?}", lyrics);
         assert_eq!(lyrics[0].1, "a");
+    }
+
+    fn parse_and_layout(input: &str) -> Vec<Page> {
+        let doc = parser::parse(input, "test.jianpu").unwrap();
+        let score = grouper::group(doc).unwrap();
+        layout(&score, A4_WIDTH, A4_HEIGHT)
+    }
+
+    #[test]
+    fn section_label_element_emitted_at_correct_position() {
+        let input = concat!(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\nparts = notes:\n\n",
+            "[score]\n(time=4/4 key=C4 bpm=120 label=\"Verse 1\")\n1 2 3 4\n",
+        );
+        let pages = parse_and_layout(input);
+        let all_elements: Vec<_> = pages[0].row_groups.iter()
+            .flat_map(|rg| rg.elements.iter())
+            .collect();
+        let label_el = all_elements.iter().find(|e| {
+            matches!(&e.content, GridContent::SectionLabel { text } if text == "Verse 1")
+        });
+        assert!(label_el.is_some(), "expected SectionLabel element");
+        let el = label_el.unwrap();
+        assert_eq!(el.horizontal_alignment, HorizontalAlignment::Left);
+        assert_eq!(el.vertical_alignment, VerticalAlignment::Bottom);
+    }
+
+    #[test]
+    fn no_section_label_when_not_declared() {
+        let input = concat!(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\nparts = notes:\n\n",
+            "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\n",
+        );
+        let pages = parse_and_layout(input);
+        let has_label = pages[0].row_groups.iter()
+            .flat_map(|rg| rg.elements.iter())
+            .any(|e| matches!(&e.content, GridContent::SectionLabel { .. }));
+        assert!(!has_label, "expected no SectionLabel element");
     }
 }
