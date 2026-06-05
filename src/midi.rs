@@ -32,6 +32,10 @@ pub fn write_midi(score: &Score) -> Vec<u8> {
 
     let mut current_tick: u32 = 0;
 
+    // Per-part pending ties: part_index → (midi_note → scheduled NoteOff tick).
+    // Lives outside the measure loop so ties crossing measure boundaries are preserved.
+    let mut per_part_ties: Vec<HashMap<u8, u32>> = Vec::new();
+
     // Track active key across measures; grouper guarantees first measure always has Some(key)
     let mut active_key = KeyChange {
         note: crate::ast::parsed::Note {
@@ -53,10 +57,14 @@ pub fn write_midi(score: &Score) -> Vec<u8> {
 
         let mut measure_duration: u32 = 0;
 
-        for part in &measure.parts {
+        // Grow per_part_ties to cover any new parts introduced in this measure
+        while per_part_ties.len() < measure.parts.len() {
+            per_part_ties.push(HashMap::new());
+        }
+
+        for (part_idx, part) in measure.parts.iter().enumerate() {
+            let pending_ties = &mut per_part_ties[part_idx];
             let mut part_tick = current_tick;
-            // midi_note → scheduled NoteOff tick, deferred while the note is tied
-            let mut pending_ties: HashMap<u8, u32> = HashMap::new();
 
             for event in &part.notes.events {
                 match event {
@@ -85,10 +93,7 @@ pub fn write_midi(score: &Score) -> Vec<u8> {
                 }
             }
 
-            // Flush any notes still held at end of part (e.g. trailing tie)
-            for (midi_note, note_off_tick) in pending_ties {
-                raw.push(RawEvent { tick: note_off_tick, kind: RawKind::NoteOff(midi_note) });
-            }
+            // Do NOT flush pending_ties here — ties may continue into the next measure
 
             let part_duration = part_tick - current_tick;
             if part_duration > measure_duration {
@@ -97,6 +102,13 @@ pub fn write_midi(score: &Score) -> Vec<u8> {
         }
 
         current_tick += measure_duration;
+    }
+
+    // Flush any ties still held at end of score (e.g. trailing tied note on last measure)
+    for pending_ties in per_part_ties {
+        for (midi_note, note_off_tick) in pending_ties {
+            raw.push(RawEvent { tick: note_off_tick, kind: RawKind::NoteOff(midi_note) });
+        }
     }
 
     // Sort by tick; NoteOff before NoteOn at the same tick to avoid clicks
