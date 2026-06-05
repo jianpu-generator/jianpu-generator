@@ -317,11 +317,16 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
 
                         // Lower octave dots (row +2)
                         if note.octave < 0 {
+                            let dot_underline_count = match note.duration {
+                                1 => 2u8,
+                                2 => 1u8,
+                                _ => 0u8,
+                            };
                             current_elements.push(GridElement {
                                 position: GridPosition { column: col, row: part_row + 2 },
                                 horizontal_alignment: HorizontalAlignment::Center,
-                                vertical_alignment: VerticalAlignment::Bottom,
-                                content: GridContent::LowerOctaveDots { count: (-note.octave) as u32, underline_count: 0 },
+                                vertical_alignment: VerticalAlignment::Top,
+                                content: GridContent::LowerOctaveDots { count: (-note.octave) as u32, underline_count: dot_underline_count },
                             });
                         }
 
@@ -972,7 +977,8 @@ mod tests {
 
     #[test]
     fn lower_octave_note_emits_lower_octave_dots_element() {
-        // "1." means pitch 1 with one trailing dot = octave -1
+        // "1." = pitch 1, 1-beat note (duration=4), octave -1
+        // underline_count for duration=4 is 0
         let score = make_score("1. 2 3 4", "a b c d");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let all_elements: Vec<_> = pages[0].row_groups.iter()
@@ -984,11 +990,10 @@ mod tests {
         assert_eq!(lower_dots.len(), 1, "expected one LowerOctaveDots element");
         if let GridContent::LowerOctaveDots { count, underline_count } = &lower_dots[0].content {
             assert_eq!(*count, 1);
-            let _ = underline_count; // checked in Task 2
+            assert_eq!(*underline_count, 0, "1-beat note has 0 underlines");
         }
-        // First row-group starts at row offset = header_rows (2), so underline sub-row (+2) → absolute row 4
-        assert_eq!(lower_dots[0].position.row, 4, "LowerOctaveDots must be in absolute row 4 (header_rows + underline sub-row)");
-        assert_eq!(lower_dots[0].vertical_alignment, VerticalAlignment::Bottom);
+        assert_eq!(lower_dots[0].position.row, 4, "LowerOctaveDots must be in absolute row 4");
+        assert_eq!(lower_dots[0].vertical_alignment, VerticalAlignment::Top);
     }
 
     #[test]
