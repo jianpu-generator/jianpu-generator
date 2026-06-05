@@ -105,15 +105,14 @@ fn render_page(page: &Page, row_height: u32, note_number_width: u32) -> String {
                 }
                 GridContent::LowerOctaveDots { count, underline_count } => {
                     let dot_radius = row_height * 0.08;
-                    let dot_spacing = dot_radius * 3.0;
                     for i in 0..*count {
-                        let dot_y = base_y + dot_radius + (i as f32) * dot_spacing;
+                        let slot = *underline_count as f32 + i as f32;
+                        let dot_y = base_y + row_height * 0.1 + slot * (row_height * 0.15);
                         elements.push_str(&format!(
                             r#"<circle cx="{:.1}" cy="{:.1}" r="{:.1}" fill="black"/>"#,
                             x, dot_y, dot_radius
                         ));
                     }
-                    let _ = underline_count; // silenced until Task 3
                 }
                 GridContent::Lyric { text, is_cjk } => {
                     let font_size = if *is_cjk { cjk_font_size } else { base_font_size };
@@ -333,9 +332,23 @@ mod tests {
 
     #[test]
     fn lower_octave_note_renders_dot_below_note() {
-        // "1." = pitch 1, octave -1; should produce a circle element
+        // "1." = 1-beat note, octave -1 → underline_count=0, slot 0
+        // row_height=24, PAGE_MARGIN=25, row=4 → base_y=121.0
+        // dot_y = 121.0 + 24*0.1 + 0*(24*0.15) = 123.4
         let svgs = render_score("1. 2 3 4", "a b c d");
-        assert!(svgs[0].contains("<circle"), "expected SVG circle for lower octave dot");
+        assert!(svgs[0].contains(r#"cy="123.4""#), "1-beat lower-octave dot must be at slot 0 (cy=123.4)");
+    }
+
+    #[test]
+    fn quarter_beat_lower_octave_dot_is_below_two_underlines() {
+        // "=1." = quarter-beat note (duration=1), octave -1 → underline_count=2, slot 2
+        // row_height=24, PAGE_MARGIN=25, row=4 → base_y=121.0
+        // dot_y = 121.0 + 24*0.1 + 2*(24*0.15) = 130.6
+        // Need 16 quarter-beat notes to fill a 4/4 bar.
+        let score_str = "=1. =1 =1 =1 =1 =1 =1 =1 =1 =1 =1 =1 =1 =1 =1 =1";
+        let lyrics_str = "a b c d e f g h i j k l m n o p";
+        let svgs = render_score(score_str, lyrics_str);
+        assert!(svgs[0].contains(r#"cy="130.6""#), "quarter-beat lower-octave dot must be at slot 2 (cy=130.6)");
     }
 
     #[test]
