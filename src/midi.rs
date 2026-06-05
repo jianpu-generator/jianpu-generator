@@ -6,7 +6,7 @@ use midly::num::{u15, u24, u28, u4, u7};
 use crate::ast::grouped::{NoteEvent, Score};
 use crate::ast::parsed::{Accidental, JianPuPitch, KeyChange, NoteName};
 
-const TPQ: u16 = 1;       // 1 tick per quarter note
+const TPQ: u16 = 480;     // ticks per quarter note
 const VELOCITY: u8 = 80;
 const CHANNEL: u8 = 0;
 const PIANO: u8 = 0;
@@ -190,8 +190,7 @@ pub(crate) fn resolve_midi_note(pitch: &JianPuPitch, octave: i8, key: &KeyChange
 }
 
 pub(crate) fn duration_to_ticks(quarter_beats: u32) -> u32 {
-    // 1 tick = 1 quarter note = 4 quarter-beats; minimum 1 tick
-    (quarter_beats / 4).max(1)
+    quarter_beats * (TPQ as u32) / 4
 }
 
 #[cfg(test)]
@@ -224,17 +223,17 @@ mod tests {
     }
 
     #[test]
-    fn duration_quarter_note_is_one_tick() {
-        assert_eq!(duration_to_ticks(4), 1);
+    fn duration_quarter_note_is_480_ticks() {
+        assert_eq!(duration_to_ticks(4), 480);
     }
 
     #[test]
-    fn duration_eighth_note_rounds_up_to_one_tick() {
-        assert_eq!(duration_to_ticks(2), 1);
+    fn duration_eighth_note_is_240_ticks() {
+        assert_eq!(duration_to_ticks(2), 240);
     }
 
     #[test]
-    fn duration_half_note_is_two_ticks() {
-        assert_eq!(duration_to_ticks(8), 2);
+    fn duration_half_note_is_960_ticks() {
+        assert_eq!(duration_to_ticks(8), 960);
     }
 }
