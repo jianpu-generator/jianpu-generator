@@ -73,11 +73,18 @@ pub fn write_midi(score: &Score) -> Vec<u8> {
                         let midi_note = resolve_midi_note(&note.pitch, note.octave, &active_key);
                         let note_off_tick = part_tick + ticks;
 
-                        if pending_ties.remove(&midi_note).is_none() {
-                            // Not a tied continuation — start a fresh note
+                        // Check if this note continues a same-pitch tie
+                        let is_tie_continuation = pending_ties.remove(&midi_note).is_some();
+
+                        // Flush any other pending ties/slurs: their NoteOff lands at the
+                        // start of the current note (legato cutoff for slurs)
+                        for (slurred_note, _) in pending_ties.drain() {
+                            raw.push(RawEvent { tick: part_tick, kind: RawKind::NoteOff(slurred_note) });
+                        }
+
+                        if !is_tie_continuation {
                             raw.push(RawEvent { tick: part_tick, kind: RawKind::NoteOn(midi_note) });
                         }
-                        // else: tied continuation — NoteOn already emitted, just extend duration
 
                         if note.tie {
                             pending_ties.insert(midi_note, note_off_tick);
@@ -88,6 +95,10 @@ pub fn write_midi(score: &Score) -> Vec<u8> {
                         part_tick += ticks;
                     }
                     NoteEvent::Rest(rest) => {
+                        // A rest ends any held notes
+                        for (slurred_note, _) in pending_ties.drain() {
+                            raw.push(RawEvent { tick: part_tick, kind: RawKind::NoteOff(slurred_note) });
+                        }
                         part_tick += duration_to_ticks(rest.duration);
                     }
                 }
