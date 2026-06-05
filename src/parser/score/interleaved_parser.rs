@@ -175,11 +175,11 @@ fn tokenize_directive_tokens(inner: &str) -> Result<Vec<String>, String> {
             current.push(ch);
         }
     }
-    if !current.is_empty() {
-        tokens.push(current);
-    }
     if in_quote {
         return Err("unclosed quote in directive line".to_string());
+    }
+    if !current.is_empty() {
+        tokens.push(current);
     }
     Ok(tokens)
 }
@@ -211,6 +211,9 @@ fn parse_directive_line(line: &str) -> Result<Vec<Spanned<ScoreEvent>>, JianPuEr
                 ));
             }
             let text = rest[1..rest.len() - 1].to_string();
+            if text.is_empty() {
+                return Err(JianPuError::new(span, "label value must not be empty".to_string()));
+            }
             ScoreEvent::LabelChange(text)
         } else {
             return Err(JianPuError::new(span, format!("unknown directive: '{}'", token)));
@@ -456,6 +459,13 @@ mod tests {
     #[test]
     fn label_directive_rejects_unclosed_quote() {
         let content = "(label=\"Verse 1)\n1 2 3 4\n";
+        let parts = vec![notes_col("")];
+        assert!(parse(content, &parts).is_err());
+    }
+
+    #[test]
+    fn label_directive_rejects_empty_label() {
+        let content = "(label=\"\")\n1 2 3 4\n";
         let parts = vec![notes_col("")];
         assert!(parse(content, &parts).is_err());
     }
