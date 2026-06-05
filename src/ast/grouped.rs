@@ -33,6 +33,7 @@ pub struct MultiPartMeasure {
     pub bpm: Option<u32>,
     // TODO: key-change rendering (1=X label) is not yet implemented in layout/renderer
     pub key: Option<KeyChange>,
+    pub label: Option<String>,
     pub parts: Vec<PartSlice>,
 }
 
@@ -47,6 +48,7 @@ pub(crate) struct GroupedMeasure {
     pub(crate) time_signature: Option<TimeSignature>,
     pub(crate) bpm: Option<u32>,
     pub(crate) key: Option<KeyChange>,
+    pub(crate) label: Option<String>,
     pub(crate) notes: Notes,
 }
 
