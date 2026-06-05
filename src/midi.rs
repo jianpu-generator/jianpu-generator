@@ -3,6 +3,8 @@ use midly::{
 };
 use midly::num::{u15, u24, u28, u4, u7};
 
+use std::collections::HashMap;
+
 use crate::ast::grouped::{NoteEvent, Score};
 use crate::ast::parsed::{Accidental, JianPuPitch, KeyChange, NoteName};
 
@@ -53,20 +55,39 @@ pub fn write_midi(score: &Score) -> Vec<u8> {
 
         for part in &measure.parts {
             let mut part_tick = current_tick;
+            // midi_note → scheduled NoteOff tick, deferred while the note is tied
+            let mut pending_ties: HashMap<u8, u32> = HashMap::new();
 
             for event in &part.notes.events {
                 match event {
                     NoteEvent::Note(note) => {
                         let ticks = duration_to_ticks(note.duration);
                         let midi_note = resolve_midi_note(&note.pitch, note.octave, &active_key);
-                        raw.push(RawEvent { tick: part_tick, kind: RawKind::NoteOn(midi_note) });
-                        raw.push(RawEvent { tick: part_tick + ticks, kind: RawKind::NoteOff(midi_note) });
+                        let note_off_tick = part_tick + ticks;
+
+                        if pending_ties.remove(&midi_note).is_none() {
+                            // Not a tied continuation — start a fresh note
+                            raw.push(RawEvent { tick: part_tick, kind: RawKind::NoteOn(midi_note) });
+                        }
+                        // else: tied continuation — NoteOn already emitted, just extend duration
+
+                        if note.tie {
+                            pending_ties.insert(midi_note, note_off_tick);
+                        } else {
+                            raw.push(RawEvent { tick: note_off_tick, kind: RawKind::NoteOff(midi_note) });
+                        }
+
                         part_tick += ticks;
                     }
                     NoteEvent::Rest(rest) => {
                         part_tick += duration_to_ticks(rest.duration);
                     }
                 }
+            }
+
+            // Flush any notes still held at end of part (e.g. trailing tie)
+            for (midi_note, note_off_tick) in pending_ties {
+                raw.push(RawEvent { tick: note_off_tick, kind: RawKind::NoteOff(midi_note) });
             }
 
             let part_duration = part_tick - current_tick;
