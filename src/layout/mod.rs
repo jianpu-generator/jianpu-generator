@@ -1282,6 +1282,9 @@ mod tests {
         let el = label_el.unwrap();
         assert_eq!(el.horizontal_alignment, HorizontalAlignment::Left);
         assert_eq!(el.vertical_alignment, VerticalAlignment::Bottom);
+        let has_bar_number = all_elements.iter()
+            .any(|e| matches!(&e.content, GridContent::BarNumber { .. }));
+        assert!(!has_bar_number, "bar number must be suppressed when section label is present");
     }
 
     #[test]
