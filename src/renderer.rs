@@ -156,11 +156,11 @@ fn render_page(page: &Page, row_height: u32, note_number_width: u32) -> String {
                     ));
                 }
                 GridContent::BarLine { height_in_rows } => {
-                    let line_x = base_x;
+                    let line_x = x;
                     let line_y1 = base_y;
                     let line_y2 = base_y + *height_in_rows as f32 * row_height;
                     elements.push_str(&format!(
-                        r#"<line x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}" stroke="black" stroke-width="1.5"/>"#,
+                        r#"<line x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}" stroke="black" stroke-width="0.5"/>"#,
                         line_x, line_y1, line_x, line_y2
                     ));
                 }
@@ -212,7 +212,7 @@ fn render_page(page: &Page, row_height: u32, note_number_width: u32) -> String {
                     let x2 = *to_column as f32 * column_width + PAGE_MARGIN;
                     let line_y = base_y;
                     elements.push_str(&format!(
-                        r#"<line x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}" stroke="black" stroke-width="1"/>"#,
+                        r#"<line x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}" stroke="black" stroke-width="0.35"/>"#,
                         x1, line_y, x2, line_y
                     ));
                 }
