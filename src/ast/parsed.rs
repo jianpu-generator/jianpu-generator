@@ -23,6 +23,8 @@ pub struct ParsedDocument {
     pub filename: String,
     pub metadata: ParsedMetadata,
     pub parts: Vec<ParsedPart>,
+    #[allow(dead_code)]
+    pub chord_parts: Vec<ParsedChordPart>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

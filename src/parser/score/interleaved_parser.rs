@@ -1,6 +1,6 @@
 use crate::ast::parsed::{
-    Accidental, KeyChange, Note, NoteName, ParsedLyrics, ParsedPart, ParsedScore, PartColumn,
-    ScoreEvent,
+    Accidental, KeyChange, Note, NoteName, ParsedChordEvent, ParsedChordPart, ParsedLyrics,
+    ParsedPart, ParsedScore, PartColumn, ScoreEvent,
 };
 use crate::error::{JianPuError, Span, Spanned};
 use crate::parser::score::{token_parser, tokenizer};
@@ -10,7 +10,7 @@ pub fn parse(
     content: &str,
     base_offset: usize,
     parts: &[PartColumn],
-) -> Result<Vec<ParsedPart>, JianPuError> {
+) -> Result<(Vec<ParsedPart>, Vec<ParsedChordPart>), JianPuError> {
     let groups = collect_groups(content);
 
     let notes_names: Vec<String> = parts
@@ -28,12 +28,21 @@ pub fn parse(
         ));
     }
 
+    let chord_names: Vec<String> = parts
+        .iter()
+        .filter_map(|p| match p {
+            PartColumn::Chord { name } => Some(name.clone()),
+            _ => None,
+        })
+        .collect();
+
     enum ColAction {
         Notes(usize),
         Lyrics(usize),
-        Chord,
+        Chord(usize),
     }
 
+    let mut chord_name_idx = 0usize;
     let col_actions: Vec<ColAction> = parts
         .iter()
         .map(|p| match p {
@@ -50,7 +59,11 @@ pub fn parse(
                     });
                 ColAction::Lyrics(idx)
             }
-            PartColumn::Chord { .. } => ColAction::Chord,
+            PartColumn::Chord { .. } => {
+                let idx = chord_name_idx;
+                chord_name_idx += 1;
+                ColAction::Chord(idx)
+            }
         })
         .collect();
 
@@ -58,6 +71,8 @@ pub fn parse(
         (0..notes_names.len()).map(|_| Vec::new()).collect();
     let mut syllables_acc: Vec<Option<Vec<crate::ast::parsed::Syllable>>> =
         (0..notes_names.len()).map(|_| None).collect();
+    let mut chord_events_acc: Vec<Vec<Vec<ParsedChordEvent>>> =
+        (0..chord_names.len()).map(|_| Vec::new()).collect();
 
     for p in parts {
         if let PartColumn::Lyrics { name } = p {
@@ -137,16 +152,17 @@ pub fn parse(
                     let syllables = tokenize_lyrics(line);
                     syllables_acc[idx].as_mut().unwrap().extend(syllables);
                 }
-                ColAction::Chord => {
-                    // Chord column parsing not yet implemented; skip for now.
+                ColAction::Chord(chord_idx) => {
+                    let events = crate::parser::score::chord_parser::parse(line)?;
+                    chord_events_acc[chord_idx].push(events);
                 }
             }
         }
     }
 
-    let mut result = Vec::new();
+    let mut notes_result = Vec::new();
     for (i, name) in notes_names.iter().enumerate() {
-        result.push(ParsedPart {
+        notes_result.push(ParsedPart {
             name: if name.is_empty() {
                 None
             } else {
@@ -161,7 +177,16 @@ pub fn parse(
         });
     }
 
-    Ok(result)
+    let chord_parts: Vec<ParsedChordPart> = chord_names
+        .into_iter()
+        .zip(chord_events_acc)
+        .map(|(name, events_per_measure)| ParsedChordPart {
+            name: if name.is_empty() { None } else { Some(name) },
+            events_per_measure,
+        })
+        .collect();
+
+    Ok((notes_result, chord_parts))
 }
 
 /// Returns groups of `(trimmed_line, byte_offset_within_content)` pairs.
@@ -464,10 +489,43 @@ mod tests {
     }
 
     #[test]
+    fn chord_column_events_are_parsed() {
+        use crate::ast::parsed::{
+            Accidental, JianPuPitch, ParsedChordEvent, ParsedChordSymbol, PartColumn, TriadQuality,
+        };
+        let parts = vec![
+            PartColumn::Chord {
+                name: "main".to_string(),
+            },
+            PartColumn::Notes {
+                name: "main".to_string(),
+            },
+        ];
+        let content = "(time=4/4 key=C4 bpm=120)\n1 - - -\n1 - - -\n";
+        let (note_parts, chord_parts) = parse(content, 0, &parts).unwrap();
+        assert_eq!(chord_parts.len(), 1);
+        assert_eq!(chord_parts[0].events_per_measure.len(), 1);
+        let events = &chord_parts[0].events_per_measure[0];
+        assert_eq!(
+            events[0],
+            ParsedChordEvent::Chord(ParsedChordSymbol {
+                degree: JianPuPitch::One,
+                accidental: Accidental::Natural,
+                triad: TriadQuality::Major,
+                extension: None,
+                bass: None,
+            })
+        );
+        assert_eq!(events[1], ParsedChordEvent::Extend);
+        // note_parts should contain the notes column
+        assert_eq!(note_parts.len(), 1);
+    }
+
+    #[test]
     fn single_unnamed_part_no_lyrics() {
         let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\n";
         let parts = vec![notes_col("")];
-        let result = parse(content, 0, &parts).unwrap();
+        let (result, _) = parse(content, 0, &parts).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].name, None);
         assert!(result[0].lyrics.is_none());
@@ -478,7 +536,7 @@ mod tests {
     fn single_part_with_lyrics() {
         let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\ndo re mi fa\n";
         let parts = vec![notes_col(""), lyrics_col("")];
-        let result = parse(content, 0, &parts).unwrap();
+        let (result, _) = parse(content, 0, &parts).unwrap();
         assert_eq!(result.len(), 1);
         assert!(result[0].lyrics.is_some());
         assert_eq!(result[0].lyrics.as_ref().unwrap().syllables.len(), 4);
@@ -495,7 +553,7 @@ mod tests {
             "5 6 7 1\n",
         );
         let parts = vec![notes_col("Soprano"), notes_col("Alto")];
-        let result = parse(content, 0, &parts).unwrap();
+        let (result, _) = parse(content, 0, &parts).unwrap();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].name, Some("Soprano".to_string()));
         assert_eq!(result[1].name, Some("Alto".to_string()));
@@ -521,7 +579,7 @@ mod tests {
             "5 6 7 1\n",
         );
         let parts = vec![notes_col(""), lyrics_col("")];
-        let result = parse(content, 0, &parts).unwrap();
+        let (result, _) = parse(content, 0, &parts).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].lyrics.as_ref().unwrap().syllables.len(), 4);
     }
@@ -586,7 +644,7 @@ mod tests {
     fn directive_row_is_optional() {
         let content = concat!("(time=4/4 key=C4 bpm=120)\n1 2 3 4\n", "\n", "5 6 7 1\n",);
         let parts = vec![notes_col("")];
-        let result = parse(content, 0, &parts).unwrap();
+        let (result, _) = parse(content, 0, &parts).unwrap();
         assert_eq!(result[0].score.events.len(), 11);
     }
 
@@ -598,7 +656,7 @@ mod tests {
             "(time=3/4)\n1 2 3\n",
         );
         let parts = vec![notes_col("")];
-        let result = parse(content, 0, &parts).unwrap();
+        let (result, _) = parse(content, 0, &parts).unwrap();
         assert!(result[0].score.events.len() > 0);
     }
 
@@ -613,7 +671,7 @@ mod tests {
     fn key_directive_parses_flat() {
         let content = "(time=4/4 key=Bb4 bpm=120)\n1 2 3 4\n";
         let parts = vec![notes_col("")];
-        let result = parse(content, 0, &parts).unwrap();
+        let (result, _) = parse(content, 0, &parts).unwrap();
         use crate::ast::parsed::{Accidental, ScoreEvent};
         let key_event = result[0]
             .score
@@ -630,7 +688,7 @@ mod tests {
     fn label_directive_parsed() {
         let content = "(time=4/4 key=C4 bpm=120 label=\"Verse 1\")\n1 2 3 4\n";
         let parts = vec![notes_col("")];
-        let result = parse(content, 0, &parts).unwrap();
+        let (result, _) = parse(content, 0, &parts).unwrap();
         use crate::ast::parsed::ScoreEvent;
         let label_event = result[0]
             .score
@@ -661,7 +719,7 @@ mod tests {
     fn key_directive_parses_sharp() {
         let content = "(time=4/4 key=F#3 bpm=120)\n1 2 3 4\n";
         let parts = vec![notes_col("")];
-        let result = parse(content, 0, &parts).unwrap();
+        let (result, _) = parse(content, 0, &parts).unwrap();
         use crate::ast::parsed::{Accidental, ScoreEvent};
         let key_event = result[0]
             .score
