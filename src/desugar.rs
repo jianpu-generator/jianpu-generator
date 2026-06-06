@@ -139,4 +139,30 @@ mod tests {
         let result = desugar_groups(groups, &parts).unwrap();
         assert_eq!(result[0][1].0, "1 2 3 4");
     }
+
+    #[test]
+    fn lyrics_ditto_copies_preceding_lyrics_line() {
+        let groups = vec![group(&["1 2 3 4", "hello world", "5 6 7 1", "\""])];
+        let parts = vec![notes("A"), lyrics("A"), notes("B"), lyrics("B")];
+        let result = desugar_groups(groups, &parts).unwrap();
+        assert_eq!(result[0][3].0, "hello world");
+    }
+
+    #[test]
+    fn chord_ditto_copies_preceding_chord_line() {
+        let groups = vec![group(&["1 - - -", "1 2 3 4", "\"", "5 6 7 1"])];
+        let parts = vec![chord("main"), notes("A"), chord("main2"), notes("B")];
+        let result = desugar_groups(groups, &parts).unwrap();
+        assert_eq!(result[0][2].0, "1 - - -");
+    }
+
+    #[test]
+    fn notes_ditto_does_not_copy_lyrics_line() {
+        // A `"` on a notes line must NOT match a preceding lyrics line.
+        // Only the notes line before it counts.
+        let groups = vec![group(&["1 2 3 4", "hello world", "\""])];
+        let parts = vec![notes("A"), lyrics("A"), notes("B")];
+        let result = desugar_groups(groups, &parts).unwrap();
+        assert_eq!(result[0][2].0, "1 2 3 4");
+    }
 }
