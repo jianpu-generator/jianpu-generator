@@ -72,12 +72,24 @@ fn render_page(page: &Page, row_height: u32, note_number_width: u32) -> String {
             };
 
             match &element.content {
-                GridContent::NoteHead { pitch, octave } => {
+                GridContent::NoteHead {
+                    pitch,
+                    octave,
+                    dotted,
+                } => {
                     let digit = pitch_to_digit(pitch);
                     elements.push_str(&format!(
                         r#"<text x="{:.1}" y="{:.1}" font-size="{:.1}" text-anchor="middle" dominant-baseline="middle" font-family="monospace">{}</text>"#,
                         x, y, base_font_size, digit
                     ));
+                    if *dotted {
+                        let dot_radius = row_height * 0.06;
+                        let dot_x = x + column_width * 0.5;
+                        elements.push_str(&format!(
+                            r#"<circle cx="{:.1}" cy="{:.1}" r="{:.1}" fill="black"/>"#,
+                            dot_x, y, dot_radius
+                        ));
+                    }
                     let dot_radius = row_height * 0.08;
                     let dot_spacing = dot_radius * 3.0;
                     for i in 0..*octave {

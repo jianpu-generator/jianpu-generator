@@ -89,10 +89,15 @@ pub struct GroupedNote {
     pub duration: u32,
     /// True if this note is tied/slurred to the next note.
     pub tie: bool,
+    /// True if this note was written with `*` (dotted duration).
+    pub dotted: bool,
 }
 
 #[derive(Clone)]
 pub struct GroupedRest {
     /// Duration in quarter-beats, including any beats added by `-` extensions.
     pub duration: u32,
+    /// True if this rest was written with `*` (dotted duration). Reserved for future use.
+    #[allow(dead_code)]
+    pub dotted: bool,
 }

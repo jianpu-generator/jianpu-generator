@@ -76,6 +76,7 @@ pub enum GridContent {
     NoteHead {
         pitch: JianPuPitch,
         octave: i8,
+        dotted: bool,
     },
     Rest,
     Lyric {
