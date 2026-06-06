@@ -21,9 +21,9 @@ fn basic_jianpu_input() -> &'static str {
 
 #[test]
 fn generate_pdf_produces_pdf() {
-    let input_path = "/tmp/test_score.jianpu";
-    let output_stem_arg = "/tmp/test_score";
-    let output_path = "/tmp/test_score.pdf";
+    let input_path = "/tmp/test_pdf_basic.jianpu";
+    let output_stem_arg = "/tmp/test_pdf_basic";
+    let output_path = "/tmp/test_pdf_basic.pdf";
     fs::write(input_path, basic_jianpu_input()).unwrap();
 
     let status = jianpu_cmd()

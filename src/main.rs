@@ -33,28 +33,28 @@ enum Commands {
 enum GenerateFormat {
     Pdf {
         input: PathBuf,
-        #[arg(long)]
+        #[arg(long, help = "Output file stem (extension is added automatically)")]
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0..)]
         tracks: Vec<String>,
     },
     Svg {
         input: PathBuf,
-        #[arg(long)]
+        #[arg(long, help = "Output file stem (extension is added automatically)")]
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0..)]
         tracks: Vec<String>,
     },
     Midi {
         input: PathBuf,
-        #[arg(long)]
+        #[arg(long, help = "Output file stem (extension is added automatically)")]
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0..)]
         tracks: Vec<String>,
     },
     Wav {
         input: PathBuf,
-        #[arg(long)]
+        #[arg(long, help = "Output file stem (extension is added automatically)")]
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0..)]
         tracks: Vec<String>,
@@ -76,7 +76,7 @@ fn main() {
 
 fn output_stem(input: &Path, tracks: &[String], output: Option<&Path>) -> PathBuf {
     match output {
-        Some(out) => out.to_path_buf(),
+        Some(out) => out.with_extension(""),
         None => {
             let stem = input.file_stem().unwrap_or_default().to_string_lossy();
             let suffix = if tracks.is_empty() {
