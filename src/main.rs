@@ -33,24 +33,28 @@ enum Commands {
 enum GenerateFormat {
     Pdf {
         input: PathBuf,
+        #[arg(long)]
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0..)]
         tracks: Vec<String>,
     },
     Svg {
         input: PathBuf,
+        #[arg(long)]
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0..)]
         tracks: Vec<String>,
     },
     Midi {
         input: PathBuf,
+        #[arg(long)]
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0..)]
         tracks: Vec<String>,
     },
     Wav {
         input: PathBuf,
+        #[arg(long)]
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0..)]
         tracks: Vec<String>,
@@ -70,14 +74,19 @@ fn main() {
     }
 }
 
-fn default_output(input: &Path, tracks: &[String], ext: &str) -> PathBuf {
-    let stem = input.file_stem().unwrap_or_default().to_string_lossy();
-    let suffix = if tracks.is_empty() {
-        stem.into_owned()
-    } else {
-        format!("{} - {}", stem, tracks.join(","))
-    };
-    input.with_file_name(suffix).with_extension(ext)
+fn output_stem(input: &Path, tracks: &[String], output: Option<&Path>) -> PathBuf {
+    match output {
+        Some(out) => out.to_path_buf(),
+        None => {
+            let stem = input.file_stem().unwrap_or_default().to_string_lossy();
+            let suffix = if tracks.is_empty() {
+                stem.into_owned()
+            } else {
+                format!("{} - {}", stem, tracks.join("&"))
+            };
+            input.with_file_name(suffix)
+        }
+    }
 }
 
 fn run_generate(format: GenerateFormat) -> Result<(), error::JianPuError> {
@@ -87,7 +96,7 @@ fn run_generate(format: GenerateFormat) -> Result<(), error::JianPuError> {
             output,
             tracks,
         } => {
-            let output_path = output.unwrap_or_else(|| default_output(&input, &tracks, "pdf"));
+            let output_path = output_stem(&input, &tracks, output.as_deref()).with_extension("pdf");
             let mut score = parse_and_group(&input)?;
             filter_tracks(&mut score, &tracks);
             let row_height = score.metadata.row_height;
@@ -104,7 +113,7 @@ fn run_generate(format: GenerateFormat) -> Result<(), error::JianPuError> {
             output,
             tracks,
         } => {
-            let output_path = output.unwrap_or_else(|| default_output(&input, &tracks, "svg"));
+            let output_path = output_stem(&input, &tracks, output.as_deref()).with_extension("svg");
             let mut score = parse_and_group(&input)?;
             filter_tracks(&mut score, &tracks);
             let row_height = score.metadata.row_height;
@@ -127,7 +136,7 @@ fn run_generate(format: GenerateFormat) -> Result<(), error::JianPuError> {
             output,
             tracks,
         } => {
-            let output_path = output.unwrap_or_else(|| default_output(&input, &tracks, "mid"));
+            let output_path = output_stem(&input, &tracks, output.as_deref()).with_extension("mid");
             let mut score = parse_and_group(&input)?;
             filter_tracks(&mut score, &tracks);
             let midi_bytes = midi::write_midi(&score);
@@ -140,7 +149,7 @@ fn run_generate(format: GenerateFormat) -> Result<(), error::JianPuError> {
             output,
             tracks,
         } => {
-            let output_path = output.unwrap_or_else(|| default_output(&input, &tracks, "wav"));
+            let output_path = output_stem(&input, &tracks, output.as_deref()).with_extension("wav");
             let mut score = parse_and_group(&input)?;
             filter_tracks(&mut score, &tracks);
             let midi_bytes = midi::write_midi(&score);

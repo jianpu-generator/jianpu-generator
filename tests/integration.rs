@@ -22,11 +22,12 @@ fn basic_jianpu_input() -> &'static str {
 #[test]
 fn generate_pdf_produces_pdf() {
     let input_path = "/tmp/test_score.jianpu";
+    let output_stem_arg = "/tmp/test_score";
     let output_path = "/tmp/test_score.pdf";
     fs::write(input_path, basic_jianpu_input()).unwrap();
 
     let status = jianpu_cmd()
-        .args(["generate", "pdf", input_path, output_path])
+        .args(["generate", "pdf", input_path, "--output", output_stem_arg])
         .status()
         .unwrap();
 
@@ -41,11 +42,12 @@ fn generate_pdf_produces_pdf() {
 #[test]
 fn generate_midi_produces_midi() {
     let input_path = "/tmp/test_score_midi.jianpu";
-    let output_path = "/tmp/test_score.mid";
+    let output_stem_arg = "/tmp/test_score_midi_out";
+    let output_path = "/tmp/test_score_midi_out.mid";
     fs::write(input_path, basic_jianpu_input()).unwrap();
 
     let status = jianpu_cmd()
-        .args(["generate", "midi", input_path, output_path])
+        .args(["generate", "midi", input_path, "--output", output_stem_arg])
         .status()
         .unwrap();
 
@@ -56,6 +58,50 @@ fn generate_midi_produces_midi() {
         bytes.starts_with(b"MThd"),
         "output is not a valid MIDI file"
     );
+
+    let _ = fs::remove_file(input_path);
+    let _ = fs::remove_file(output_path);
+}
+
+#[test]
+fn output_stem_appends_extension() {
+    let input_path = "/tmp/test_stem.jianpu";
+    let output_stem = "/tmp/test_stem_out";
+    let expected_output = "/tmp/test_stem_out.pdf";
+    fs::write(input_path, basic_jianpu_input()).unwrap();
+    let _ = fs::remove_file(expected_output);
+
+    let status = jianpu_cmd()
+        .args(["generate", "pdf", input_path, "--output", output_stem])
+        .status()
+        .unwrap();
+
+    assert!(status.success(), "generate pdf command failed");
+    let bytes = fs::read(expected_output).expect("output file not found at expected stem path");
+    assert!(bytes.starts_with(b"%PDF"), "output is not a valid PDF");
+
+    let _ = fs::remove_file(input_path);
+    let _ = fs::remove_file(expected_output);
+}
+
+#[test]
+fn generate_wav_produces_wav() {
+    let input_path = "/tmp/test_score_wav.jianpu";
+    let output_stem_arg = "/tmp/test_score_wav_out";
+    let output_path = "/tmp/test_score_wav_out.wav";
+    fs::write(input_path, basic_jianpu_input()).unwrap();
+
+    let status = jianpu_cmd()
+        .args(["generate", "wav", input_path, "--output", output_stem_arg])
+        .status()
+        .unwrap();
+
+    assert!(status.success(), "generate wav command failed");
+    let bytes = fs::read(output_path).unwrap();
+    assert_eq!(&bytes[0..4], b"RIFF", "output is not a valid WAV file");
+    assert_eq!(&bytes[8..12], b"WAVE", "output is not a valid WAV file");
+    // Expect meaningful audio data (>100 KB for a few seconds of stereo 16-bit 44100 Hz)
+    assert!(bytes.len() > 100_000, "WAV output is suspiciously small");
 
     let _ = fs::remove_file(input_path);
     let _ = fs::remove_file(output_path);
