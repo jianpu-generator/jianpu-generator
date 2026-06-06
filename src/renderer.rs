@@ -243,7 +243,7 @@ fn render_page(page: &Page, row_height: u32, note_number_width: u32) -> String {
                 GridContent::ChordSymbol { text } => {
                     elements.push_str(&format!(
                         r#"<text x="{:.1}" y="{:.1}" font-size="{:.1}" text-anchor="start" dominant-baseline="middle" font-family="sans-serif">{}</text>"#,
-                        x, y, base_font_size * 0.8, escape_xml(text)
+                        x, y, base_font_size * 0.75, escape_xml(text)
                     ));
                 }
             }
@@ -589,5 +589,36 @@ mod tests {
             "expected bar number font-size 8.6 in SVG; snippet: {}",
             &svg[..svg.len().min(800)]
         );
+    }
+
+    #[test]
+    fn chord_symbol_renders_as_svg_text() {
+        let input = "[metadata]\ntitle=\"t\"\nauthor=\"a\"\nparts = chord: notes:\n\n[score]\n(time=4/4 key=C4 bpm=120)\n1m7 - 4 5\n1 - 1 1\n";
+        let doc = crate::parser::parse(input, "test.jianpu").unwrap();
+        let score = crate::grouper::group(doc).unwrap();
+        let pages = crate::layout::layout(&score, A4_W, A4_H);
+        let svgs = render(
+            &pages,
+            score.metadata.row_height,
+            score.metadata.note_number_width,
+        );
+        assert!(
+            svgs[0].contains("1m⁷"),
+            "expected rendered chord symbol '1m⁷' in SVG"
+        );
+    }
+
+    #[test]
+    fn chord_symbol_with_sharp_renders_unicode() {
+        let input = "[metadata]\ntitle=\"t\"\nauthor=\"a\"\nparts = chord: notes:\n\n[score]\n(time=4/4 key=C4 bpm=120)\n1# - - -\n1 - - -\n";
+        let doc = crate::parser::parse(input, "test.jianpu").unwrap();
+        let score = crate::grouper::group(doc).unwrap();
+        let pages = crate::layout::layout(&score, A4_W, A4_H);
+        let svgs = render(
+            &pages,
+            score.metadata.row_height,
+            score.metadata.note_number_width,
+        );
+        assert!(svgs[0].contains("1♯"), "expected '1♯' in SVG");
     }
 }
