@@ -396,6 +396,7 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                             content: GridContent::NoteHead {
                                 pitch: note.pitch.clone(),
                                 octave: note.octave,
+                                dotted: note.dotted,
                             },
                         });
 
@@ -403,7 +404,7 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                         if note.octave < 0 {
                             let dot_underline_count = match note.duration {
                                 1 => 2u8,
-                                2 => 1u8,
+                                2 | 3 => 1u8,
                                 _ => 0u8,
                             };
                             current_elements.push(GridElement {
@@ -438,7 +439,7 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
 
                         let underline_count = match note.duration {
                             1 => 2,
-                            2 => 1,
+                            2 | 3 => 1,
                             _ => 0,
                         };
 
@@ -1213,6 +1214,48 @@ mod tests {
             .filter(|e| matches!(&e.content, GridContent::DurationUnderlines { levels } if levels.len() == 1))
             .collect();
         assert_eq!(underlines.len(), 2); // one for _1, one for _4
+    }
+
+    #[test]
+    fn dotted_half_beat_note_has_one_underline() {
+        // _1* = dotted eighth (duration 3). Should get 1 underline like a plain eighth.
+        // 3 + 1 + 4 + 4 + 4 = 16 quarter-beats = one full 4/4 bar.
+        let score = make_score("_1* =2 3 3 3", "a b c d e");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let all_elements: Vec<_> = pages[0]
+            .row_groups
+            .iter()
+            .flat_map(|rg| rg.elements.iter())
+            .collect();
+        let underlines: Vec<_> = all_elements
+            .iter()
+            .filter(|e| matches!(&e.content, GridContent::DurationUnderlines { levels } if levels.len() >= 1))
+            .collect();
+        assert!(
+            !underlines.is_empty(),
+            "dotted eighth note must produce at least one underline"
+        );
+    }
+
+    #[test]
+    fn dotted_note_head_has_dotted_flag() {
+        // _1* note head should have dotted=true in the layout element.
+        let score = make_score("_1* =2 3 3 3", "a b c d e");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let all_elements: Vec<_> = pages[0]
+            .row_groups
+            .iter()
+            .flat_map(|rg| rg.elements.iter())
+            .collect();
+        let dotted_heads: Vec<_> = all_elements
+            .iter()
+            .filter(|e| matches!(&e.content, GridContent::NoteHead { dotted: true, .. }))
+            .collect();
+        assert_eq!(
+            dotted_heads.len(),
+            1,
+            "exactly one note head should be dotted"
+        );
     }
 
     #[test]

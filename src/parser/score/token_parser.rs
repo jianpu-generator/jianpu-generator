@@ -88,13 +88,26 @@ fn parse_note_or_rest(text: &str, span: Span) -> Result<ScoreEvent, JianPuError>
         ));
     }
 
-    // Trailing octave dots and tie
+    // Trailing octave dots, then optional dotted-duration marker (*), then optional tie (~)
     let mut trailing_dots = 0i8;
+    let mut dotted = false;
     let mut tie = false;
     while let Some(&(idx, c)) = chars.peek() {
         match c {
             '.' => {
                 trailing_dots += 1;
+                chars.next();
+            }
+            '*' => {
+                if duration % 2 != 0 {
+                    let pos = span.start + idx;
+                    return Err(JianPuError::new(
+                        Span::new(pos, pos + 1),
+                        "cannot dot a quarter-beat (=) note; use _ or no duration prefix"
+                            .to_string(),
+                    ));
+                }
+                dotted = true;
                 chars.next();
             }
             '~' => {
@@ -112,6 +125,12 @@ fn parse_note_or_rest(text: &str, span: Span) -> Result<ScoreEvent, JianPuError>
         }
     }
 
+    let duration = if dotted {
+        duration + duration / 2
+    } else {
+        duration
+    };
+
     if leading_dots > 0 && trailing_dots > 0 {
         return Err(JianPuError::new(
             span,
@@ -127,7 +146,7 @@ fn parse_note_or_rest(text: &str, span: Span) -> Result<ScoreEvent, JianPuError>
     };
 
     if pitch_char == '0' {
-        return Ok(ScoreEvent::Rest(ParsedRest { duration }));
+        return Ok(ScoreEvent::Rest(ParsedRest { duration, dotted }));
     }
 
     let pitch = match pitch_char {
@@ -146,6 +165,7 @@ fn parse_note_or_rest(text: &str, span: Span) -> Result<ScoreEvent, JianPuError>
         octave,
         duration,
         tie,
+        dotted,
     }))
 }
 
@@ -350,5 +370,50 @@ mod tests {
     fn parses_sequence() {
         let events = parse("1 _2 3").unwrap();
         assert_eq!(events.len(), 3);
+    }
+
+    #[test]
+    fn parses_dotted_half_beat_note() {
+        let events = parse("_1*").unwrap();
+        let n = note(&events, 0);
+        assert_eq!(n.duration, 3);
+        assert!(n.dotted);
+    }
+
+    #[test]
+    fn parses_dotted_full_beat_note() {
+        let events = parse("1*").unwrap();
+        let n = note(&events, 0);
+        assert_eq!(n.duration, 6);
+        assert!(n.dotted);
+    }
+
+    #[test]
+    fn parses_dotted_note_with_lower_octave() {
+        let events = parse("_1.*").unwrap();
+        let n = note(&events, 0);
+        assert_eq!(n.duration, 3);
+        assert_eq!(n.octave, -1);
+        assert!(n.dotted);
+    }
+
+    #[test]
+    fn parses_dotted_half_beat_rest() {
+        let events = parse("_0*").unwrap();
+        let r = rest(&events, 0);
+        assert_eq!(r.duration, 3);
+        assert!(r.dotted);
+    }
+
+    #[test]
+    fn rejects_dotted_quarter_beat_note() {
+        assert!(parse("=1*").is_err());
+    }
+
+    #[test]
+    fn non_dotted_note_has_dotted_false() {
+        let events = parse("_1").unwrap();
+        let n = note(&events, 0);
+        assert!(!n.dotted);
     }
 }

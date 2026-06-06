@@ -166,6 +166,7 @@ fn group_part(part: ParsedPart) -> Result<GroupedPart, JianPuError> {
                     octave: pn.octave,
                     duration: pn.duration,
                     tie: pn.tie,
+                    dotted: pn.dotted,
                 }));
                 current_beat += note_duration;
                 if current_beat > capacity {
@@ -192,6 +193,7 @@ fn group_part(part: ParsedPart) -> Result<GroupedPart, JianPuError> {
                 let rest_duration = pr.duration;
                 current_notes.push(NoteEvent::Rest(GroupedRest {
                     duration: pr.duration,
+                    dotted: pr.dotted,
                 }));
                 current_beat += rest_duration;
                 if current_beat > capacity {
