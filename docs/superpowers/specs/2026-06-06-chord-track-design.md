@@ -32,14 +32,14 @@ Duration works identically to notes: each token is one beat (4 quarter-beats), `
 ### Chord Symbol Grammar
 
 ```
-<chord>      ::= <degree> <accidental>? <triad>? <extension>?
+<chord>      ::= <degree> <accidental>? <triad>? <extension>? ("/" <degree> <accidental>?)?
 <degree>     ::= 1–7
 <accidental> ::= "#" | "b"
 <triad>      ::= "m" | "o" | "+"
 <extension>  ::= "M7" | "7"
 ```
 
-Parsing order for suffix: check `M7` before `7` (longest match first), check `m` before attempting extension.
+Parsing order for suffix: check `M7` before `7` (longest match first), check `m` before attempting extension. The optional `/` suffix denotes a **slash chord** — the degree after `/` is the bass note, which may differ from the chord root.
 
 `0` = rest, `-` = extend previous chord.
 
@@ -47,15 +47,17 @@ Parsing order for suffix: check `M7` before `7` (longest match first), check `m`
 
 | Input  | Meaning                          |
 |--------|----------------------------------|
-| `1`    | I major                          |
-| `1m`   | I minor                          |
-| `1o`   | I diminished                     |
-| `1+`   | I augmented                      |
-| `17`   | I dominant 7th                   |
-| `1M7`  | I major 7th                      |
-| `1m7`  | I minor triad + dominant 7th     |
-| `1#m7` | I♯ minor triad + dominant 7th    |
-| `3b`   | III♭ major                       |
+| `1`    | I major                                      |
+| `1m`   | I minor                                      |
+| `1o`   | I diminished                                 |
+| `1+`   | I augmented                                  |
+| `17`   | I dominant 7th                               |
+| `1M7`  | I major 7th                                  |
+| `1m7`  | I minor triad + dominant 7th                 |
+| `1#m7` | I♯ minor triad + dominant 7th                |
+| `3b`   | III♭ major                                   |
+| `1/5`  | I major, 5th scale degree in bass (e.g. C/G) |
+| `6m/5` | VI minor, 5th in bass (e.g. Am/G)            |
 
 ---
 
@@ -72,10 +74,16 @@ enum TriadQuality { Major, Minor, Augmented, Diminished }
 enum Extension { DominantSeventh, MajorSeventh }
 
 struct ParsedChordSymbol {
-    degree: JianPuPitch,   // reuse existing enum (One–Seven)
-    accidental: Accidental, // reuse existing enum (Flat, Sharp, Natural)
+    degree: JianPuPitch,        // reuse existing enum (One–Seven)
+    accidental: Accidental,      // reuse existing enum (Flat, Sharp, Natural)
     triad: TriadQuality,
     extension: Option<Extension>,
+    bass: Option<BassDegree>,    // slash chord bass note, if present
+}
+
+struct BassDegree {
+    degree: JianPuPitch,
+    accidental: Accidental,
 }
 
 enum ParsedChordEvent { Chord(ParsedChordSymbol), Rest, Extend }
@@ -85,11 +93,12 @@ enum ParsedChordEvent { Chord(ParsedChordSymbol), Rest, Extend }
 
 ```rust
 struct GroupedChord {
-    degree: JianPuPitch,   // reuse existing enum
+    degree: JianPuPitch,        // reuse existing enum
     accidental: Accidental,
     triad: TriadQuality,
     extension: Option<Extension>,
-    duration: u32,   // quarter-beats, same unit as notes
+    bass: Option<BassDegree>,   // slash chord bass note, if present
+    duration: u32,              // quarter-beats, same unit as notes
 }
 
 enum GroupedChordEvent { Chord(GroupedChord), Rest(u32) }
@@ -173,6 +182,8 @@ For each `PartRow::Chord(slice)` in a measure, iterate `GroupedChordEvent`s:
 | DominantSeventh  | +10                 |
 | MajorSeventh     | +11                 |
 
+**Slash chord bass note:** if `bass` is `Some`, resolve the bass degree + accidental using `resolve_midi_note` with octave offset -1 (one octave below the chord tones). Emit it alongside the other chord notes as a `NoteOn`/`NoteOff` pair.
+
 All chord notes emit `NoteOn` simultaneously at the chord's start tick, `NoteOff` at start + duration ticks. Chord parts use the same MIDI channel (0) and instrument (piano) as melody parts.
 
 ---
@@ -199,6 +210,8 @@ Full examples:
 - `3bM7` → `3♭△⁷`
 - `1o` → `1°`
 - `1+` → `1⁺`
+
+Slash chords render as `<chord>/<bass>` with both parts subject to the same symbol transformations (e.g. `6m/5` → `6m/5`, `1#/4b` → `1♯/4♭`).
 
 A rest (`0`) renders as empty space. Extensions (`-`) render nothing (the previous symbol already occupies the column space).
 
