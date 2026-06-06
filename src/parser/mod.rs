@@ -45,12 +45,14 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, JianPuError>
 
     let metadata = metadata_parser::parse_metadata(&meta_content, meta_offset)?;
     let parts_decl = metadata.parts.clone();
-    let parts = score::interleaved_parser::parse(&score_content, score_offset, &parts_decl)?;
+    let (parts, chord_parts) =
+        score::interleaved_parser::parse(&score_content, score_offset, &parts_decl)?;
 
     Ok(ParsedDocument {
         filename: filename.to_string(),
         metadata,
         parts,
+        chord_parts,
     })
 }
 
