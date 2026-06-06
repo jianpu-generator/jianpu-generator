@@ -181,7 +181,7 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
             // prev_tie is intentionally NOT reset here — it persists to the next line
             // so that the continuation note skips consuming a lyric syllable.
             let mut notes_idx_tie = 0usize;
-            for (part_idx, part_row) in measure.parts.iter().enumerate() {
+            for part_row in measure.parts.iter() {
                 if let PartRow::Notes(_) = part_row {
                     let chain = &per_part_pending_chain[notes_idx_tie];
                     let chain_row = per_part_chain_row[notes_idx_tie];
@@ -204,7 +204,6 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                         }
                         per_part_cross_line_tie[notes_idx_tie] = Some(last.1.clone());
                     }
-                    let _ = part_idx; // suppress unused warning
                     notes_idx_tie += 1;
                 }
             }
