@@ -422,6 +422,70 @@ mod tests {
     }
 
     #[test]
+    fn parses_sharp_with_dominant_seventh() {
+        let events = parse("1#7").unwrap();
+        assert_eq!(
+            events,
+            vec![chord(
+                JianPuPitch::One,
+                Accidental::Sharp,
+                TriadQuality::Major,
+                Some(Extension::DominantSeventh),
+                None
+            )]
+        );
+    }
+
+    #[test]
+    fn parses_flat_with_major_seventh() {
+        let events = parse("3bM7").unwrap();
+        assert_eq!(
+            events,
+            vec![chord(
+                JianPuPitch::Three,
+                Accidental::Flat,
+                TriadQuality::Major,
+                Some(Extension::MajorSeventh),
+                None
+            )]
+        );
+    }
+
+    #[test]
+    fn parses_sharp_minor_dominant_seventh() {
+        let events = parse("1#m7").unwrap();
+        assert_eq!(
+            events,
+            vec![chord(
+                JianPuPitch::One,
+                Accidental::Sharp,
+                TriadQuality::Minor,
+                Some(Extension::DominantSeventh),
+                None
+            )]
+        );
+    }
+
+    #[test]
+    fn parses_sharp_with_slash_chord() {
+        let events = parse("1#/5").unwrap();
+        let bass = BassDegree {
+            degree: JianPuPitch::Five,
+            accidental: Accidental::Natural,
+        };
+        assert_eq!(
+            events,
+            vec![chord(
+                JianPuPitch::One,
+                Accidental::Sharp,
+                TriadQuality::Major,
+                None,
+                Some(bass)
+            )]
+        );
+    }
+
+    #[test]
     fn rejects_invalid_token() {
         assert!(parse("X").is_err());
     }
