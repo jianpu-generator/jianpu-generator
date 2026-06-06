@@ -83,3 +83,26 @@ fn output_stem_appends_extension() {
     let _ = fs::remove_file(input_path);
     let _ = fs::remove_file(expected_output);
 }
+
+#[test]
+fn generate_wav_produces_wav() {
+    let input_path = "/tmp/test_score_wav.jianpu";
+    let output_stem_arg = "/tmp/test_score_wav_out";
+    let output_path = "/tmp/test_score_wav_out.wav";
+    fs::write(input_path, basic_jianpu_input()).unwrap();
+
+    let status = jianpu_cmd()
+        .args(["generate", "wav", input_path, "--output", output_stem_arg])
+        .status()
+        .unwrap();
+
+    assert!(status.success(), "generate wav command failed");
+    let bytes = fs::read(output_path).unwrap();
+    assert_eq!(&bytes[0..4], b"RIFF", "output is not a valid WAV file");
+    assert_eq!(&bytes[8..12], b"WAVE", "output is not a valid WAV file");
+    // Expect meaningful audio data (>100 KB for a few seconds of stereo 16-bit 44100 Hz)
+    assert!(bytes.len() > 100_000, "WAV output is suspiciously small");
+
+    let _ = fs::remove_file(input_path);
+    let _ = fs::remove_file(output_path);
+}
