@@ -35,36 +35,48 @@ enum GenerateFormat {
         input: PathBuf,
         #[arg(long, help = "Output file stem (extension is added automatically)")]
         output: Option<PathBuf>,
-        #[arg(long, value_delimiter = ',', num_args = 0..)]
+        #[arg(long, value_delimiter = ',', num_args = 0.., help = "Comma-separated list of track names to include (e.g. --tracks S1,S2)")]
         tracks: Vec<String>,
-        #[arg(long)]
+        #[arg(
+            long,
+            help = "Generate one file per track instead of a single combined file"
+        )]
         split_tracks: bool,
     },
     Svg {
         input: PathBuf,
         #[arg(long, help = "Output file stem (extension is added automatically)")]
         output: Option<PathBuf>,
-        #[arg(long, value_delimiter = ',', num_args = 0..)]
+        #[arg(long, value_delimiter = ',', num_args = 0.., help = "Comma-separated list of track names to include (e.g. --tracks S1,S2)")]
         tracks: Vec<String>,
-        #[arg(long)]
+        #[arg(
+            long,
+            help = "Generate one file per track instead of a single combined file"
+        )]
         split_tracks: bool,
     },
     Midi {
         input: PathBuf,
         #[arg(long, help = "Output file stem (extension is added automatically)")]
         output: Option<PathBuf>,
-        #[arg(long, value_delimiter = ',', num_args = 0..)]
+        #[arg(long, value_delimiter = ',', num_args = 0.., help = "Comma-separated list of track names to include (e.g. --tracks S1,S2)")]
         tracks: Vec<String>,
-        #[arg(long)]
+        #[arg(
+            long,
+            help = "Generate one file per track instead of a single combined file"
+        )]
         split_tracks: bool,
     },
     Wav {
         input: PathBuf,
         #[arg(long, help = "Output file stem (extension is added automatically)")]
         output: Option<PathBuf>,
-        #[arg(long, value_delimiter = ',', num_args = 0..)]
+        #[arg(long, value_delimiter = ',', num_args = 0.., help = "Comma-separated list of track names to include (e.g. --tracks S1,S2)")]
         tracks: Vec<String>,
-        #[arg(long)]
+        #[arg(
+            long,
+            help = "Generate one file per track instead of a single combined file"
+        )]
         split_tracks: bool,
     },
 }
