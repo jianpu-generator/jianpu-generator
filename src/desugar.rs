@@ -165,4 +165,75 @@ mod tests {
         let result = desugar_groups(groups, &parts).unwrap();
         assert_eq!(result[0][2].0, "1 2 3 4");
     }
+
+    #[test]
+    fn chained_ditto_resolves_transitively() {
+        // Third line dittos the second, which dittos the first.
+        let groups = vec![group(&["1 2 3 4", "\"", "\""])];
+        let parts = vec![notes("A"), notes("B"), notes("C")];
+        let result = desugar_groups(groups, &parts).unwrap();
+        assert_eq!(result[0][1].0, "1 2 3 4");
+        assert_eq!(result[0][2].0, "1 2 3 4");
+    }
+
+    #[test]
+    fn ditto_with_no_preceding_line_is_an_error() {
+        let groups = vec![group(&["\""])];
+        let parts = vec![notes("A")];
+        let err = desugar_groups(groups, &parts).unwrap_err();
+        assert!(
+            err.message.contains("no preceding notes line"),
+            "got: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn ditto_with_no_preceding_line_of_same_type_is_an_error() {
+        // lyrics `"` with only a notes line before it — no preceding lyrics.
+        let groups = vec![group(&["1 2 3 4", "\""])];
+        let parts = vec![notes("A"), lyrics("A")];
+        let err = desugar_groups(groups, &parts).unwrap_err();
+        assert!(
+            err.message.contains("no preceding lyrics line"),
+            "got: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn directive_line_is_not_a_ditto_target() {
+        // Group starts with a directive — ditto on the first data line
+        // should still error (no preceding notes line in data lines).
+        let groups = vec![group(&["(time=4/4)", "\""])];
+        let parts = vec![notes("A")];
+        let err = desugar_groups(groups, &parts).unwrap_err();
+        assert!(
+            err.message.contains("no preceding notes line"),
+            "got: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn non_ditto_lines_are_passed_through_unchanged() {
+        let groups = vec![group(&["1 2 3 4", "hello"])];
+        let parts = vec![notes("A"), lyrics("A")];
+        let result = desugar_groups(groups, &parts).unwrap();
+        assert_eq!(result[0][0].0, "1 2 3 4");
+        assert_eq!(result[0][1].0, "hello");
+    }
+
+    #[test]
+    fn multiple_groups_are_desugared_independently() {
+        // Ditto in group 2 must NOT copy from group 1.
+        let groups = vec![group(&["1 2 3 4"]), group(&["\""])];
+        let parts = vec![notes("A")];
+        let err = desugar_groups(groups, &parts).unwrap_err();
+        assert!(
+            err.message.contains("no preceding notes line"),
+            "got: {}",
+            err.message
+        );
+    }
 }
