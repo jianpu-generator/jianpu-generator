@@ -106,3 +106,98 @@ fn generate_wav_produces_wav() {
     let _ = fs::remove_file(input_path);
     let _ = fs::remove_file(output_path);
 }
+
+fn multi_track_jianpu_input() -> &'static str {
+    concat!(
+        "[metadata]\n",
+        "title = \"test score\"\n",
+        "author = \"tester\"\n",
+        "parts = notes:S1 lyrics:S1 notes:S2 lyrics:S2\n",
+        "\n",
+        "[score]\n",
+        "(time=4/4 key=C4 bpm=120)\n",
+        "1 2 3 4\n",
+        "do re mi fa\n",
+        "5 6 7 1\n",
+        "sol la ti do\n",
+    )
+}
+
+#[test]
+fn split_tracks_generates_one_pdf_per_track() {
+    let input_path = "/tmp/test_split.jianpu";
+    let s1_path = "/tmp/test_split - S1.pdf";
+    let s2_path = "/tmp/test_split - S2.pdf";
+    fs::write(input_path, multi_track_jianpu_input()).unwrap();
+    let _ = fs::remove_file(s1_path);
+    let _ = fs::remove_file(s2_path);
+
+    let status = jianpu_cmd()
+        .args(["generate", "pdf", input_path, "--split-tracks"])
+        .status()
+        .unwrap();
+
+    assert!(
+        status.success(),
+        "generate pdf --split-tracks command failed"
+    );
+
+    let s1_bytes = fs::read(s1_path).expect("S1 output file not found");
+    assert!(
+        s1_bytes.starts_with(b"%PDF"),
+        "S1 output is not a valid PDF"
+    );
+
+    let s2_bytes = fs::read(s2_path).expect("S2 output file not found");
+    assert!(
+        s2_bytes.starts_with(b"%PDF"),
+        "S2 output is not a valid PDF"
+    );
+
+    let _ = fs::remove_file(input_path);
+    let _ = fs::remove_file(s1_path);
+    let _ = fs::remove_file(s2_path);
+}
+
+#[test]
+fn split_tracks_with_output_stem() {
+    let input_path = "/tmp/test_split_out.jianpu";
+    let s1_path = "/tmp/split_out - S1.pdf";
+    let s2_path = "/tmp/split_out - S2.pdf";
+    fs::write(input_path, multi_track_jianpu_input()).unwrap();
+    let _ = fs::remove_file(s1_path);
+    let _ = fs::remove_file(s2_path);
+
+    let status = jianpu_cmd()
+        .args([
+            "generate",
+            "pdf",
+            input_path,
+            "--output",
+            "/tmp/split_out",
+            "--split-tracks",
+        ])
+        .status()
+        .unwrap();
+
+    assert!(
+        status.success(),
+        "generate pdf --output --split-tracks command failed"
+    );
+
+    let s1_bytes = fs::read(s1_path).expect("S1 output file not found");
+    assert!(
+        s1_bytes.starts_with(b"%PDF"),
+        "S1 output is not a valid PDF"
+    );
+
+    let s2_bytes = fs::read(s2_path).expect("S2 output file not found");
+    assert!(
+        s2_bytes.starts_with(b"%PDF"),
+        "S2 output is not a valid PDF"
+    );
+
+    let _ = fs::remove_file(input_path);
+    let _ = fs::remove_file(s1_path);
+    let _ = fs::remove_file(s2_path);
+}
