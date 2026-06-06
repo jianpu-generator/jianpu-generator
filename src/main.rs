@@ -37,6 +37,8 @@ enum GenerateFormat {
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0..)]
         tracks: Vec<String>,
+        #[arg(long)]
+        split_tracks: bool,
     },
     Svg {
         input: PathBuf,
@@ -44,6 +46,8 @@ enum GenerateFormat {
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0..)]
         tracks: Vec<String>,
+        #[arg(long)]
+        split_tracks: bool,
     },
     Midi {
         input: PathBuf,
@@ -51,6 +55,8 @@ enum GenerateFormat {
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0..)]
         tracks: Vec<String>,
+        #[arg(long)]
+        split_tracks: bool,
     },
     Wav {
         input: PathBuf,
@@ -58,6 +64,8 @@ enum GenerateFormat {
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0..)]
         tracks: Vec<String>,
+        #[arg(long)]
+        split_tracks: bool,
     },
 }
 
@@ -95,15 +103,47 @@ fn run_generate(format: GenerateFormat) -> Result<(), error::JianPuError> {
             input,
             output,
             tracks,
+            split_tracks,
         } => {
-            let output_path = output_stem(&input, &tracks, output.as_deref()).with_extension("pdf");
             let mut score = parse_and_group(&input)?;
+            let effective_tracks = if !tracks.is_empty() {
+                tracks.clone()
+            } else {
+                collect_track_names(&score)
+            };
+            if split_tracks && !effective_tracks.is_empty() {
+                let base = output_stem(&input, &[], output.as_deref());
+                let base_name = base
+                    .file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned();
+                for track in &effective_tracks {
+                    let mut score_clone = score.clone();
+                    filter_tracks(&mut score_clone, std::slice::from_ref(track));
+                    let row_height = score_clone.metadata.row_height;
+                    let note_number_width = score_clone.metadata.note_number_width;
+                    let pages = layout::layout(&score_clone, 595.0, 842.0);
+                    let svgs = renderer::render(&pages, row_height, note_number_width);
+                    let pdf_bytes = pdf::write_pdf(&svgs)?;
+                    let track_path = base
+                        .with_file_name(format!("{} - {}", base_name, track))
+                        .with_extension("pdf");
+                    write_file(&track_path, &pdf_bytes)?;
+                    println!("written to {:?}", track_path);
+                }
+                return Ok(());
+            }
+            if split_tracks {
+                eprintln!("warning: --split-tracks given but score has no named tracks; generating single file");
+            }
             filter_tracks(&mut score, &tracks);
             let row_height = score.metadata.row_height;
             let note_number_width = score.metadata.note_number_width;
             let pages = layout::layout(&score, 595.0, 842.0);
             let svgs = renderer::render(&pages, row_height, note_number_width);
             let pdf_bytes = pdf::write_pdf(&svgs)?;
+            let output_path = output_stem(&input, &tracks, output.as_deref()).with_extension("pdf");
             write_file(&output_path, &pdf_bytes)?;
             println!("written to {:?}", output_path);
             Ok(())
@@ -112,14 +152,50 @@ fn run_generate(format: GenerateFormat) -> Result<(), error::JianPuError> {
             input,
             output,
             tracks,
+            split_tracks,
         } => {
-            let output_path = output_stem(&input, &tracks, output.as_deref()).with_extension("svg");
             let mut score = parse_and_group(&input)?;
+            let effective_tracks = if !tracks.is_empty() {
+                tracks.clone()
+            } else {
+                collect_track_names(&score)
+            };
+            if split_tracks && !effective_tracks.is_empty() {
+                let base = output_stem(&input, &[], output.as_deref());
+                let base_name = base
+                    .file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned();
+                for track in &effective_tracks {
+                    let mut score_clone = score.clone();
+                    filter_tracks(&mut score_clone, std::slice::from_ref(track));
+                    let row_height = score_clone.metadata.row_height;
+                    let note_number_width = score_clone.metadata.note_number_width;
+                    let pages = layout::layout(&score_clone, 595.0, 842.0);
+                    let svgs = renderer::render(&pages, row_height, note_number_width);
+                    let track_base = base.with_file_name(format!("{} - {}", base_name, track));
+                    for (i, svg) in svgs.iter().enumerate() {
+                        let path = if svgs.len() == 1 {
+                            track_base.with_extension("svg")
+                        } else {
+                            track_base.with_extension(format!("{}.svg", i + 1))
+                        };
+                        write_file(&path, svg.as_bytes())?;
+                        println!("written to {:?}", path);
+                    }
+                }
+                return Ok(());
+            }
+            if split_tracks {
+                eprintln!("warning: --split-tracks given but score has no named tracks; generating single file");
+            }
             filter_tracks(&mut score, &tracks);
             let row_height = score.metadata.row_height;
             let note_number_width = score.metadata.note_number_width;
             let pages = layout::layout(&score, 595.0, 842.0);
             let svgs = renderer::render(&pages, row_height, note_number_width);
+            let output_path = output_stem(&input, &tracks, output.as_deref()).with_extension("svg");
             for (i, svg) in svgs.iter().enumerate() {
                 let path = if svgs.len() == 1 {
                     output_path.clone()
@@ -135,11 +211,39 @@ fn run_generate(format: GenerateFormat) -> Result<(), error::JianPuError> {
             input,
             output,
             tracks,
+            split_tracks,
         } => {
-            let output_path = output_stem(&input, &tracks, output.as_deref()).with_extension("mid");
             let mut score = parse_and_group(&input)?;
+            let effective_tracks = if !tracks.is_empty() {
+                tracks.clone()
+            } else {
+                collect_track_names(&score)
+            };
+            if split_tracks && !effective_tracks.is_empty() {
+                let base = output_stem(&input, &[], output.as_deref());
+                let base_name = base
+                    .file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned();
+                for track in &effective_tracks {
+                    let mut score_clone = score.clone();
+                    filter_tracks(&mut score_clone, std::slice::from_ref(track));
+                    let midi_bytes = midi::write_midi(&score_clone);
+                    let track_path = base
+                        .with_file_name(format!("{} - {}", base_name, track))
+                        .with_extension("mid");
+                    write_file(&track_path, &midi_bytes)?;
+                    println!("written to {:?}", track_path);
+                }
+                return Ok(());
+            }
+            if split_tracks {
+                eprintln!("warning: --split-tracks given but score has no named tracks; generating single file");
+            }
             filter_tracks(&mut score, &tracks);
             let midi_bytes = midi::write_midi(&score);
+            let output_path = output_stem(&input, &tracks, output.as_deref()).with_extension("mid");
             write_file(&output_path, &midi_bytes)?;
             println!("written to {:?}", output_path);
             Ok(())
@@ -148,12 +252,41 @@ fn run_generate(format: GenerateFormat) -> Result<(), error::JianPuError> {
             input,
             output,
             tracks,
+            split_tracks,
         } => {
-            let output_path = output_stem(&input, &tracks, output.as_deref()).with_extension("wav");
             let mut score = parse_and_group(&input)?;
+            let effective_tracks = if !tracks.is_empty() {
+                tracks.clone()
+            } else {
+                collect_track_names(&score)
+            };
+            if split_tracks && !effective_tracks.is_empty() {
+                let base = output_stem(&input, &[], output.as_deref());
+                let base_name = base
+                    .file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned();
+                for track in &effective_tracks {
+                    let mut score_clone = score.clone();
+                    filter_tracks(&mut score_clone, std::slice::from_ref(track));
+                    let midi_bytes = midi::write_midi(&score_clone);
+                    let wav_bytes = wav::write_wav(&midi_bytes);
+                    let track_path = base
+                        .with_file_name(format!("{} - {}", base_name, track))
+                        .with_extension("wav");
+                    write_file(&track_path, &wav_bytes)?;
+                    println!("written to {:?}", track_path);
+                }
+                return Ok(());
+            }
+            if split_tracks {
+                eprintln!("warning: --split-tracks given but score has no named tracks; generating single file");
+            }
             filter_tracks(&mut score, &tracks);
             let midi_bytes = midi::write_midi(&score);
             let wav_bytes = wav::write_wav(&midi_bytes);
+            let output_path = output_stem(&input, &tracks, output.as_deref()).with_extension("wav");
             write_file(&output_path, &wav_bytes)?;
             println!("written to {:?}", output_path);
             Ok(())
@@ -182,6 +315,21 @@ fn filter_tracks(score: &mut ast::grouped::Score, tracks: &[String]) {
             .parts
             .retain(|part| part.name.as_ref().is_some_and(|name| tracks.contains(name)));
     }
+}
+
+fn collect_track_names(score: &ast::grouped::Score) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    let mut names = Vec::new();
+    for measure in &score.measures {
+        for part in &measure.parts {
+            if let Some(name) = &part.name {
+                if seen.insert(name.clone()) {
+                    names.push(name.clone());
+                }
+            }
+        }
+    }
+    names
 }
 
 fn write_file(path: &Path, data: &[u8]) -> Result<(), error::JianPuError> {
