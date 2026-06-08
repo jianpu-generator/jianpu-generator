@@ -1395,7 +1395,7 @@ mod tests {
             .collect();
         let underlines: Vec<_> = all_elements
             .iter()
-            .filter(|e| matches!(&e.content, GridContent::DurationUnderlines { levels } if levels.len() >= 1))
+            .filter(|e| matches!(&e.content, GridContent::DurationUnderlines { levels } if !levels.is_empty()))
             .collect();
         assert!(
             !underlines.is_empty(),

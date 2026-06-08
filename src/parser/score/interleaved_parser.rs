@@ -664,7 +664,7 @@ mod tests {
         );
         let parts = vec![notes_col("")];
         let (result, _) = parse(content, 0, &parts).unwrap();
-        assert!(result[0].score.events.len() > 0);
+        assert!(!result[0].score.events.is_empty());
     }
 
     #[test]

@@ -1,0 +1,33 @@
+# Clippy configuration for jianpu-generator.
+# Lint levels live in Cargo.toml [lints]; this file sets thresholds and test allowances.
+
+# --- Complexity / size limits ---
+# Slightly tighter than Clippy defaults to discourage sprawling generated code.
+
+cognitive-complexity-threshold = 25
+too-many-lines-threshold = 100
+too-many-arguments-threshold = 7
+type-complexity-threshold = 250
+
+# --- Test allowances ---
+# Production code should use proper error handling; tests may use shortcuts.
+
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-dbg-in-tests = true
+allow-panic-in-tests = true
+allow-print-in-tests = true
+allow-indexing-slicing-in-tests = true
+
+# --- AI-agent hygiene ---
+# Reject placeholder identifiers commonly left behind by generated code.
+
+disallowed-names = ["foo", "baz", "quux"]
+
+# Block stub/debug macros in non-test code (mirrors Cargo.toml restriction lints).
+
+disallowed-macros = [
+    { path = "std::todo", reason = "do not commit stub code; implement or return a proper error" },
+    { path = "std::unimplemented", reason = "do not commit stub code; implement or return a proper error" },
+    { path = "std::dbg", reason = "remove debug macros before committing" },
+]

@@ -19,3 +19,16 @@ oxisynth = "0.0.5"
 hound = "3"
 
 [dev-dependencies]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+# Hard-block common AI-agent shortcuts and stub code.
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+mem_forget = "deny"
+
+# Promoted to errors by `cargo clippy --all-targets -- -D warnings` in the pre-commit hook.
+len_zero = "warn"
