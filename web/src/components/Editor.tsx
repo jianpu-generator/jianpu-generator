@@ -77,11 +77,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     })
 
     monacoApi.editor.setModelMarkers(model, MARKER_OWNER, markers)
-
-    const primary = diagnostics[0]
-    const range = diagnosticRange(model, source, primary, monacoApi)
-    ed.revealRangeInCenter(range, monacoApi.editor.ScrollType.Smooth)
-    ed.setSelection(range)
   }, [diagnostics])
 
   useImperativeHandle(ref, () => ({
