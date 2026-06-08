@@ -254,7 +254,7 @@ fn run_generate(format: GenerateFormat) -> Result<(), error::JianPuError> {
                     for track in &effective_tracks {
                         let mut score_clone = score.clone();
                         filter_tracks(&mut score_clone, std::slice::from_ref(track));
-                        let midi_bytes = midi::write_midi(&score_clone);
+                        let midi_bytes = midi::write_midi(&score_clone)?;
                         let safe_track = sanitize_track_name(track);
                         let track_path = base
                             .with_file_name(format!("{} - {}", base_name, safe_track))
@@ -266,7 +266,7 @@ fn run_generate(format: GenerateFormat) -> Result<(), error::JianPuError> {
                 }
             }
             filter_tracks(&mut score, &tracks);
-            let midi_bytes = midi::write_midi(&score);
+            let midi_bytes = midi::write_midi(&score)?;
             let output_path = output_stem(&input, &tracks, output.as_deref()).with_extension("mid");
             write_file(&output_path, &midi_bytes)?;
             println!("written to {:?}", output_path);
@@ -297,8 +297,8 @@ fn run_generate(format: GenerateFormat) -> Result<(), error::JianPuError> {
                     for track in &effective_tracks {
                         let mut score_clone = score.clone();
                         filter_tracks(&mut score_clone, std::slice::from_ref(track));
-                        let midi_bytes = midi::write_midi(&score_clone);
-                        let wav_bytes = wav::write_wav(&midi_bytes);
+                        let midi_bytes = midi::write_midi(&score_clone)?;
+                        let wav_bytes = wav::write_wav(&midi_bytes)?;
                         let safe_track = sanitize_track_name(track);
                         let track_path = base
                             .with_file_name(format!("{} - {}", base_name, safe_track))
@@ -310,8 +310,8 @@ fn run_generate(format: GenerateFormat) -> Result<(), error::JianPuError> {
                 }
             }
             filter_tracks(&mut score, &tracks);
-            let midi_bytes = midi::write_midi(&score);
-            let wav_bytes = wav::write_wav(&midi_bytes);
+            let midi_bytes = midi::write_midi(&score)?;
+            let wav_bytes = wav::write_wav(&midi_bytes)?;
             let output_path = output_stem(&input, &tracks, output.as_deref()).with_extension("wav");
             write_file(&output_path, &wav_bytes)?;
             println!("written to {:?}", output_path);

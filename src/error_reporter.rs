@@ -23,12 +23,18 @@ fn render_to_writer(e: &JianPuError, mut writer: impl std::io::Write) {
     let char_end = source[..e.span.end.min(source.len())].chars().count();
     let span = (filename.clone(), char_start..char_end);
 
-    Report::build(ReportKind::Error, span.clone())
+    if Report::build(ReportKind::Error, span.clone())
         .with_message(&e.message)
         .with_label(Label::new(span).with_message(&e.message))
         .finish()
-        .write((filename.clone(), Source::from(source.as_str())), writer)
-        .unwrap();
+        .write(
+            (filename.clone(), Source::from(source.as_str())),
+            &mut writer,
+        )
+        .is_err()
+    {
+        writeln!(writer, "error: {}", e.message).ok();
+    }
 }
 
 #[cfg(test)]

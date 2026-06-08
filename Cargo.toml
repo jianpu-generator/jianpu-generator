@@ -29,6 +29,9 @@ todo = "deny"
 unimplemented = "deny"
 dbg_macro = "deny"
 mem_forget = "deny"
+panic = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
 
 # Promoted to errors by `cargo clippy --all-targets -- -D warnings` in the pre-commit hook.
 len_zero = "warn"

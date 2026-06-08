@@ -253,8 +253,7 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
                 if let PartRow::Notes(_) = part_row {
                     let chain = &per_part_pending_chain[notes_idx_tie];
                     let chain_row = per_part_chain_row[notes_idx_tie];
-                    if !chain.is_empty() {
-                        let last = chain.last().unwrap();
+                    if let Some(last) = chain.last() {
                         let to_col = current_col.saturating_sub(1);
                         if last.0 < to_col {
                             current_elements.push(GridElement {
@@ -808,7 +807,7 @@ fn flush_chain(chain: &[(u32, JianPuPitch)], chain_row: u32, elements: &mut Vec<
             vertical_alignment: VerticalAlignment::Top,
             content: GridContent::TieOrSlurCurve {
                 from_column: chain[0].0,
-                to_column: chain.last().unwrap().0,
+                to_column: chain[chain.len() - 1].0,
             },
         });
     }

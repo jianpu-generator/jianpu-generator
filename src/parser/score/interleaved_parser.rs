@@ -44,29 +44,34 @@ pub fn parse(
     }
 
     let mut chord_name_idx = 0usize;
-    let col_actions: Vec<ColAction> = parts
-        .iter()
-        .map(|p| match p {
+    let mut col_actions = Vec::with_capacity(parts.len());
+    let parts_span = Span::new(base_offset, base_offset + content.len());
+    for p in parts {
+        match p {
             PartColumn::Notes { name } => {
-                let idx = notes_names.iter().position(|n| n == name).unwrap();
-                ColAction::Notes(idx)
+                let idx = notes_names.iter().position(|n| n == name).ok_or_else(|| {
+                    JianPuError::new(
+                        parts_span.clone(),
+                        format!("notes column '{name}' is not declared in parts"),
+                    )
+                })?;
+                col_actions.push(ColAction::Notes(idx));
             }
             PartColumn::Lyrics { name } => {
-                let idx = notes_names
-                    .iter()
-                    .position(|n| n == name)
-                    .unwrap_or_else(|| {
-                        panic!("lyrics column '{}' has no matching notes column", name)
-                    });
-                ColAction::Lyrics(idx)
+                let idx = notes_names.iter().position(|n| n == name).ok_or_else(|| {
+                    JianPuError::new(
+                        parts_span.clone(),
+                        format!("lyrics column '{name}' has no matching notes column"),
+                    )
+                })?;
+                col_actions.push(ColAction::Lyrics(idx));
             }
             PartColumn::Chord { .. } => {
-                let idx = chord_name_idx;
+                col_actions.push(ColAction::Chord(chord_name_idx));
                 chord_name_idx += 1;
-                ColAction::Chord(idx)
             }
-        })
-        .collect();
+        }
+    }
 
     let mut events_acc: Vec<Vec<Spanned<ScoreEvent>>> =
         (0..notes_names.len()).map(|_| Vec::new()).collect();
@@ -155,7 +160,17 @@ pub fn parse(
                 }
                 ColAction::Lyrics(idx) => {
                     let syllables = tokenize_lyrics(line);
-                    syllables_acc[idx].as_mut().unwrap().extend(syllables);
+                    let line_span = Span::new(
+                        base_offset + line_offset,
+                        base_offset + line_offset + line.len(),
+                    );
+                    let Some(acc) = syllables_acc[idx].as_mut() else {
+                        return Err(JianPuError::new(
+                            line_span,
+                            "lyrics column has no matching notes column",
+                        ));
+                    };
+                    acc.extend(syllables);
                 }
                 ColAction::Chord(chord_idx) => {
                     let events =

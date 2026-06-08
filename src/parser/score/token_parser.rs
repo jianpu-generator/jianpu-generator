@@ -157,7 +157,12 @@ fn parse_note_or_rest(text: &str, span: Span) -> Result<ScoreEvent, JianPuError>
         '5' => JianPuPitch::Five,
         '6' => JianPuPitch::Six,
         '7' => JianPuPitch::Seven,
-        _ => unreachable!(),
+        _ => {
+            return Err(JianPuError::new(
+                span,
+                format!("expected pitch digit 0-7, got: {pitch_char}"),
+            ));
+        }
     };
 
     Ok(ScoreEvent::Note(ParsedNote {
@@ -170,7 +175,12 @@ fn parse_note_or_rest(text: &str, span: Span) -> Result<ScoreEvent, JianPuError>
 }
 
 fn parse_key_change(text: &str, span: Span) -> Result<ScoreEvent, JianPuError> {
-    let after_eq = text.strip_prefix("1=").unwrap();
+    let after_eq = text.strip_prefix("1=").ok_or_else(|| {
+        JianPuError::new(
+            span.clone(),
+            format!("expected key change starting with '1=', got: {text}"),
+        )
+    })?;
     let mut chars = after_eq.chars().peekable();
 
     let name_char = chars.next().ok_or_else(|| {

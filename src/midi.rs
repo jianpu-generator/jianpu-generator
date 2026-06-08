@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 use crate::ast::grouped::{NoteEvent, Score};
 use crate::ast::parsed::{Accidental, JianPuPitch, KeyChange, NoteName};
+use crate::error::{JianPuError, Span};
 
 const TPQ: u16 = 480; // ticks per quarter note
 const VELOCITY: u8 = 80;
@@ -23,7 +24,7 @@ enum RawKind {
     ProgramChange(u8),
 }
 
-pub fn write_midi(score: &Score) -> Vec<u8> {
+pub fn write_midi(score: &Score) -> Result<Vec<u8>, JianPuError> {
     let mut raw: Vec<RawEvent> = Vec::new();
 
     raw.push(RawEvent {
@@ -310,8 +311,9 @@ pub fn write_midi(score: &Score) -> Vec<u8> {
     };
 
     let mut buf = Vec::new();
-    smf.write_std(&mut buf).expect("MIDI write failed");
-    buf
+    smf.write_std(&mut buf)
+        .map_err(|_| JianPuError::new(Span::new(0, 0), "failed to write MIDI data"))?;
+    Ok(buf)
 }
 
 fn note_name_to_semitone(name: &NoteName) -> i32 {
@@ -412,7 +414,7 @@ mod tests {
                 })],
             }],
         };
-        let midi_bytes = write_midi(&score);
+        let midi_bytes = write_midi(&score).unwrap();
         // MIDI bytes must be non-empty and start with MThd
         assert!(midi_bytes.starts_with(b"MThd"), "expected MIDI header");
         assert!(midi_bytes.len() > 20);
