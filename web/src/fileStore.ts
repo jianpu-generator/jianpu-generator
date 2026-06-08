@@ -312,7 +312,10 @@ export function restoreFile(
   const fileIds =
     restoreName === name
       ? state.fileIds
-      : { ...state.fileIds, [restoreName]: state.fileIds[name] ?? generateFileId() }
+      : {
+          ...state.fileIds,
+          [restoreName]: state.fileIds[name] ?? generateFileId(),
+        }
 
   return {
     ...state,

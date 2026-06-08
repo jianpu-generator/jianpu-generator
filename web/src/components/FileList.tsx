@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import {
   DEMO_FILE_NAME,
+  type FileStoreState,
   isReadOnlyFile,
   sortedBinNames,
   sortedFileNames,
-  type FileStoreState,
 } from '../fileStore'
 
 export interface FileListProps {

@@ -166,6 +166,10 @@ pub struct ParsedNote {
     pub duration: u32,
     /// Whether this note is tied/slurred to the next note (from a `(…)` group).
     pub tie: bool,
+    /// Number of nested `(…)` groups this note belongs to.
+    pub group_membership: u8,
+    /// Number of those groups that continue past this note.
+    pub group_continuation: u8,
     /// Whether `.` was present as a dotted-note suffix.
     pub dotted: bool,
 }

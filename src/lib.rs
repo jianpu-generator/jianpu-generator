@@ -275,13 +275,13 @@ pub fn zip_split_pdfs(entries: &[SplitPdfEntry]) -> Result<Vec<u8>, JianPuError>
             writer.start_file(&entry.filename, options).map_err(|e| {
                 JianPuError::new(error::Span::new(0, 0), format!("zip start_file: {e}"))
             })?;
-            writer.write_all(&entry.pdf).map_err(|e| {
-                JianPuError::new(error::Span::new(0, 0), format!("zip write: {e}"))
-            })?;
+            writer
+                .write_all(&entry.pdf)
+                .map_err(|e| JianPuError::new(error::Span::new(0, 0), format!("zip write: {e}")))?;
         }
-        writer.finish().map_err(|e| {
-            JianPuError::new(error::Span::new(0, 0), format!("zip finish: {e}"))
-        })?;
+        writer
+            .finish()
+            .map_err(|e| JianPuError::new(error::Span::new(0, 0), format!("zip finish: {e}")))?;
     }
     Ok(buffer)
 }
@@ -529,13 +529,9 @@ mod tests {
 
         #[test]
         fn write_split_pdfs_from_source_produces_one_pdf_per_track() {
-            let entries = write_split_pdfs_from_source(
-                multi_track_input(),
-                "test.jianpu",
-                "test_split",
-                &[],
-            )
-            .unwrap();
+            let entries =
+                write_split_pdfs_from_source(multi_track_input(), "test.jianpu", "test_split", &[])
+                    .unwrap();
             assert_eq!(entries.len(), 2);
             assert_eq!(entries[0].track_name, "S1");
             assert_eq!(entries[0].filename, "test_split - Soprano 1.pdf");
@@ -560,8 +556,7 @@ mod tests {
                 "1 2 3 4\n",
                 "a b c d\n",
             );
-            let entries =
-                write_split_pdfs_from_source(input, "test.jianpu", "song", &[]).unwrap();
+            let entries = write_split_pdfs_from_source(input, "test.jianpu", "song", &[]).unwrap();
             assert_eq!(entries.len(), 1);
             assert_eq!(entries[0].filename, "song - Melody.pdf");
             assert_eq!(&entries[0].pdf[0..4], b"%PDF");
@@ -576,13 +571,9 @@ mod tests {
 
         #[test]
         fn zip_split_pdfs_contains_named_entries() {
-            let entries = write_split_pdfs_from_source(
-                multi_track_input(),
-                "test.jianpu",
-                "test_split",
-                &[],
-            )
-            .unwrap();
+            let entries =
+                write_split_pdfs_from_source(multi_track_input(), "test.jianpu", "test_split", &[])
+                    .unwrap();
             let zip_bytes = zip_split_pdfs(&entries).unwrap();
             assert_eq!(&zip_bytes[0..2], b"PK");
 

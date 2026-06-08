@@ -1,3 +1,5 @@
+#![allow(clippy::indexing_slicing)]
+
 use crate::ast::parsed::{
     Accidental, JianPuPitch, KeyChange, Note, NoteName, ParsedNote, ParsedRest, ScoreEvent,
 };
@@ -82,7 +84,8 @@ struct ParsedAtom {
     duration: u32,
     octave: i8,
     dotted: bool,
-    tie: bool,
+    group_membership: u8,
+    group_continuation: u8,
 }
 
 fn parse_note_token(
@@ -92,13 +95,6 @@ fn parse_note_token(
 ) -> Result<Vec<ScoreEvent>, JianPuError> {
     if text.is_empty() {
         return Err(JianPuError::new(span, "empty note token".to_string()));
-    }
-
-    if group_state.open && text.starts_with('(') {
-        return Err(JianPuError::new(
-            span,
-            "cannot start a new '(' group while a previous group is still open".to_string(),
-        ));
     }
 
     let mut events = Vec::new();
@@ -142,7 +138,7 @@ fn parse_note_token(
         }
 
         let (atom, next_i) = parse_one_atom(&chars, i, &span)?;
-        events.push(atom_to_event(atom));
+        events.push(atom_to_event(&atom));
         i = next_i;
     }
 
@@ -157,32 +153,14 @@ fn parse_closing_group_segment(
     span: &Span,
     group_state: &mut GroupParseState,
 ) -> Result<usize, JianPuError> {
-    let mut atoms = Vec::new();
-
-    while i < chars.len() && chars[i] != ')' {
-        if chars[i] == '(' {
-            return Err(JianPuError::new(
-                span.clone(),
-                "nested '(' groups are not supported".to_string(),
-            ));
-        }
-        if !matches!(chars[i], '0'..='7') {
-            let pos = span.start + byte_offset_at_char_index(text, i);
-            return Err(JianPuError::new(
-                Span::new(pos, pos + chars[i].len_utf8()),
-                format!("expected pitch digit (0-7), got: {}", chars[i]),
-            ));
-        }
-        let (atom, next_i) = parse_one_atom(chars, i, span)?;
-        atoms.push(atom);
-        i = next_i;
-    }
-
-    apply_closing_group_ties(&mut atoms);
+    let (mut atoms, next_i) = parse_atoms_from_chars(chars, text, span, i, true)?;
+    i = next_i;
+    let closes_group = i < chars.len() && chars[i] == ')';
+    apply_closing_segment_depth(&mut atoms, !closes_group);
     let atom_count = atoms.len();
-    events.extend(atoms.into_iter().map(atom_to_event));
+    events.extend(atoms.iter().map(atom_to_event));
 
-    if i < chars.len() && chars[i] == ')' {
+    if closes_group {
         validate_group_note_count(group_state.open_note_count + atom_count, span)?;
         group_state.open = false;
         group_state.open_note_count = 0;
@@ -199,33 +177,13 @@ fn parse_open_group_continuation(
     events: &mut Vec<ScoreEvent>,
     chars: &[char],
     text: &str,
-    mut i: usize,
+    i: usize,
     span: &Span,
 ) -> Result<usize, JianPuError> {
-    let mut atoms = Vec::new();
-
-    while i < chars.len() {
-        if chars[i] == '(' {
-            return Err(JianPuError::new(
-                span.clone(),
-                "nested '(' groups are not supported".to_string(),
-            ));
-        }
-        if !matches!(chars[i], '0'..='7') {
-            let pos = span.start + byte_offset_at_char_index(text, i);
-            return Err(JianPuError::new(
-                Span::new(pos, pos + chars[i].len_utf8()),
-                format!("expected pitch digit (0-7), got: {}", chars[i]),
-            ));
-        }
-        let (atom, next_i) = parse_one_atom(chars, i, span)?;
-        atoms.push(atom);
-        i = next_i;
-    }
-
-    apply_open_group_ties(&mut atoms);
+    let (mut atoms, _) = parse_atoms_from_chars(chars, text, span, i, false)?;
+    apply_open_group_depth(&mut atoms);
     let added = atoms.len();
-    events.extend(atoms.into_iter().map(atom_to_event));
+    events.extend(atoms.iter().map(atom_to_event));
 
     Ok(added)
 }
@@ -251,16 +209,37 @@ fn find_closing_paren(chars: &[char], start: usize) -> Option<usize> {
 
 fn parse_atoms_from_text(text: &str, span: &Span) -> Result<Vec<ParsedAtom>, JianPuError> {
     let chars: Vec<char> = text.chars().collect();
+    let (atoms, _) = parse_atoms_from_chars(&chars, text, span, 0, false)?;
+    Ok(atoms)
+}
+
+fn parse_atoms_from_chars(
+    chars: &[char],
+    text: &str,
+    span: &Span,
+    mut i: usize,
+    stop_at_close: bool,
+) -> Result<(Vec<ParsedAtom>, usize), JianPuError> {
     let mut atoms = Vec::new();
-    let mut i = 0;
 
     while i < chars.len() {
-        if chars[i] == '(' {
-            return Err(JianPuError::new(
-                span.clone(),
-                "nested '(' groups are not supported".to_string(),
-            ));
+        if stop_at_close && chars[i] == ')' {
+            return Ok((atoms, i));
         }
+
+        if chars[i] == '(' {
+            let inner_start = i + 1;
+            let inner_end = find_closing_paren(chars, inner_start)
+                .ok_or_else(|| JianPuError::new(span.clone(), "unclosed '(' group".to_string()))?;
+            let inner: String = chars[inner_start..inner_end].iter().collect();
+            let mut inner_atoms = parse_atoms_from_text(&inner, span)?;
+            validate_group_note_count(inner_atoms.len(), span)?;
+            apply_closed_group_depth(&mut inner_atoms);
+            atoms.extend(inner_atoms);
+            i = inner_end + 1;
+            continue;
+        }
+
         if !matches!(chars[i], '0'..='7') {
             let pos = span.start + byte_offset_at_char_index(text, i);
             return Err(JianPuError::new(
@@ -268,50 +247,56 @@ fn parse_atoms_from_text(text: &str, span: &Span) -> Result<Vec<ParsedAtom>, Jia
                 format!("expected pitch digit (0-7), got: {}", chars[i]),
             ));
         }
-        let (atom, next_i) = parse_one_atom(&chars, i, span)?;
+
+        let (atom, next_i) = parse_one_atom(chars, i, span)?;
         atoms.push(atom);
         i = next_i;
     }
 
-    Ok(atoms)
+    Ok((atoms, i))
 }
 
 fn parse_closed_group(inner: &str, span: &Span) -> Result<Vec<ScoreEvent>, JianPuError> {
     let mut atoms = parse_atoms_from_text(inner, span)?;
     validate_group_note_count(atoms.len(), span)?;
-    apply_closed_group_ties(&mut atoms);
-    Ok(atoms.into_iter().map(atom_to_event).collect())
+    apply_closed_group_depth(&mut atoms);
+    Ok(atoms.iter().map(atom_to_event).collect())
 }
 
 fn parse_open_group(inner: &str, span: &Span) -> Result<Vec<ScoreEvent>, JianPuError> {
     let mut atoms = parse_atoms_from_text(inner, span)?;
-    apply_open_group_ties(&mut atoms);
-    Ok(atoms.into_iter().map(atom_to_event).collect())
+    apply_open_group_depth(&mut atoms);
+    Ok(atoms.iter().map(atom_to_event).collect())
 }
 
-fn apply_closed_group_ties(atoms: &mut [ParsedAtom]) {
+fn apply_closed_group_depth(atoms: &mut [ParsedAtom]) {
+    let continuation_count = atoms.len().saturating_sub(1);
     for atom in atoms.iter_mut() {
-        atom.tie = true;
+        atom.group_membership = atom.group_membership.saturating_add(1);
     }
-    if atoms.len() > 1 {
-        if let Some(last) = atoms.last_mut() {
-            last.tie = false;
-        }
-    }
-}
-
-fn apply_open_group_ties(atoms: &mut [ParsedAtom]) {
-    for atom in atoms.iter_mut() {
-        atom.tie = true;
+    for atom in atoms.iter_mut().take(continuation_count) {
+        atom.group_continuation = atom.group_continuation.saturating_add(1);
     }
 }
 
-fn apply_closing_group_ties(atoms: &mut [ParsedAtom]) {
+fn apply_open_group_depth(atoms: &mut [ParsedAtom]) {
     for atom in atoms.iter_mut() {
-        atom.tie = true;
+        atom.group_membership = atom.group_membership.saturating_add(1);
+        atom.group_continuation = atom.group_continuation.saturating_add(1);
     }
-    if let Some(last) = atoms.last_mut() {
-        last.tie = false;
+}
+
+fn apply_closing_segment_depth(atoms: &mut [ParsedAtom], group_still_open: bool) {
+    for atom in atoms.iter_mut() {
+        atom.group_membership = atom.group_membership.saturating_add(1);
+    }
+    let continuation_count = if group_still_open {
+        atoms.len()
+    } else {
+        atoms.len().saturating_sub(1)
+    };
+    for atom in atoms.iter_mut().take(continuation_count) {
+        atom.group_continuation = atom.group_continuation.saturating_add(1);
     }
 }
 
@@ -404,13 +389,14 @@ fn parse_one_atom(
             duration,
             octave,
             dotted,
-            tie: false,
+            group_membership: 0,
+            group_continuation: 0,
         },
         i,
     ))
 }
 
-fn atom_to_event(atom: ParsedAtom) -> ScoreEvent {
+fn atom_to_event(atom: &ParsedAtom) -> ScoreEvent {
     if atom.pitch_char == '0' {
         ScoreEvent::Rest(ParsedRest {
             duration: atom.duration,
@@ -421,7 +407,9 @@ fn atom_to_event(atom: ParsedAtom) -> ScoreEvent {
             pitch: pitch_char_to_jianpu(atom.pitch_char),
             octave: atom.octave,
             duration: atom.duration,
-            tie: atom.tie,
+            tie: atom.group_continuation > 0,
+            group_membership: atom.group_membership,
+            group_continuation: atom.group_continuation,
             dotted: atom.dotted,
         })
     }
@@ -818,6 +806,34 @@ mod tests {
         assert_eq!(events.len(), 1);
         assert!(note(&events, 0).pitch == JianPuPitch::Seven);
         assert!(note(&events, 0).tie);
+    }
+
+    #[test]
+    fn parses_nested_tie_group() {
+        let mut state = GroupParseState::default();
+        let events1 = parse_with_state("(3=", &mut state).unwrap();
+        assert_eq!(events1.len(), 1);
+        assert!(state.open);
+        let events2 = parse_with_state("(2_1_))", &mut state).unwrap();
+        assert_eq!(events2.len(), 2);
+        assert!(!state.open);
+        let events = parse("(3= (2_1_))").unwrap();
+        assert_eq!(events.len(), 3);
+        let n0 = note(&events, 0);
+        assert_eq!(n0.pitch, JianPuPitch::Three);
+        assert_eq!(n0.duration, 1);
+        assert_eq!(n0.group_membership, 1);
+        assert_eq!(n0.group_continuation, 1);
+        let n1 = note(&events, 1);
+        assert_eq!(n1.pitch, JianPuPitch::Two);
+        assert_eq!(n1.duration, 2);
+        assert_eq!(n1.group_membership, 2);
+        assert_eq!(n1.group_continuation, 2);
+        let n2 = note(&events, 2);
+        assert_eq!(n2.pitch, JianPuPitch::One);
+        assert_eq!(n2.duration, 2);
+        assert_eq!(n2.group_membership, 2);
+        assert_eq!(n2.group_continuation, 0);
     }
 
     #[test]

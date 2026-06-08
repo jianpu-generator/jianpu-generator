@@ -1,11 +1,13 @@
+#[cfg(feature = "wav")]
+use jianpu_generator::write_wav_from_source_filtered;
 use jianpu_generator::{
     error::JianPuError, error_reporter, list_parts_from_source,
     render_svgs_from_source_filtered_with_lyrics,
 };
 #[cfg(feature = "pdf")]
-use jianpu_generator::{write_pdf_from_source_filtered_with_lyrics, write_split_pdfs_from_source, zip_split_pdfs};
-#[cfg(feature = "wav")]
-use jianpu_generator::write_wav_from_source_filtered;
+use jianpu_generator::{
+    write_pdf_from_source_filtered_with_lyrics, write_split_pdfs_from_source, zip_split_pdfs,
+};
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -212,13 +214,7 @@ fn generate_wav_to_js(source: &str, enabled_tracks: Option<Vec<String>>) -> JsVa
     match generate_wav_response(source, enabled_tracks) {
         GenerateWavResponse::Ok { wav } => {
             let obj = Object::new();
-            if Reflect::set(
-                &obj,
-                &JsValue::from_str("status"),
-                &JsValue::from_str("ok"),
-            )
-            .is_err()
-            {
+            if Reflect::set(&obj, &JsValue::from_str("status"), &JsValue::from_str("ok")).is_err() {
                 return JsValue::from_str("failed to build wav response");
             }
             if Reflect::set(
@@ -261,13 +257,7 @@ fn generate_pdf_to_js(
     match generate_pdf_response(source, enabled_tracks, disabled_lyrics) {
         GeneratePdfResponse::Ok { pdf } => {
             let obj = Object::new();
-            if Reflect::set(
-                &obj,
-                &JsValue::from_str("status"),
-                &JsValue::from_str("ok"),
-            )
-            .is_err()
-            {
+            if Reflect::set(&obj, &JsValue::from_str("status"), &JsValue::from_str("ok")).is_err() {
                 return JsValue::from_str("failed to build pdf response");
             }
             if Reflect::set(
@@ -310,13 +300,7 @@ fn generate_split_pdfs_to_js(source: &str, base_name: &str) -> JsValue {
     match generate_split_pdfs_response(source, base_name) {
         GenerateSplitPdfsResponse::Ok { zip } => {
             let obj = Object::new();
-            if Reflect::set(
-                &obj,
-                &JsValue::from_str("status"),
-                &JsValue::from_str("ok"),
-            )
-            .is_err()
-            {
+            if Reflect::set(&obj, &JsValue::from_str("status"), &JsValue::from_str("ok")).is_err() {
                 return JsValue::from_str("failed to build split pdf response");
             }
             if Reflect::set(
@@ -428,11 +412,10 @@ mod tests {
             RenderResponse::Ok { svgs } => svgs,
             RenderResponse::Err { .. } => panic!("expected ok"),
         };
-        let alto_lyrics_hidden =
-            match render_response(input, None, Some(vec!["Alto".into()])) {
-                RenderResponse::Ok { svgs } => svgs,
-                RenderResponse::Err { .. } => panic!("expected ok"),
-            };
+        let alto_lyrics_hidden = match render_response(input, None, Some(vec!["Alto".into()])) {
+            RenderResponse::Ok { svgs } => svgs,
+            RenderResponse::Err { .. } => panic!("expected ok"),
+        };
         assert!(all[0].contains("sop"));
         assert!(all[0].contains("alt"));
         assert!(alto_lyrics_hidden[0].contains("sop"));

@@ -156,6 +156,10 @@ pub struct GroupedNote {
     pub duration: u32,
     /// True if this note is tied/slurred to the next note.
     pub tie: bool,
+    /// Number of nested `(…)` groups this note belongs to.
+    pub group_membership: u8,
+    /// Number of those groups that continue past this note.
+    pub group_continuation: u8,
     /// True if this note was written with `*` (dotted duration).
     pub dotted: bool,
 }
