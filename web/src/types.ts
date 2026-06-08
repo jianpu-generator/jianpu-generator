@@ -30,6 +30,12 @@ type ListPartsErr = { status: 'err'; diagnostics: Diagnostic[] }
 
 export type ListPartsResult = ListPartsOk | ListPartsErr
 
+type GenerateWavOk = { status: 'ok'; wav: Uint8Array | number[] }
+
+type GenerateWavErr = { status: 'err'; diagnostics: Diagnostic[] }
+
+export type GenerateWavResult = GenerateWavOk | GenerateWavErr
+
 interface EditorSelection {
   start: number
   end: number

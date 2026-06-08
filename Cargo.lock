@@ -488,6 +488,7 @@ name = "jianpu-wasm"
 version = "0.1.0"
 dependencies = [
  "jianpu-generator",
+ "js-sys",
  "serde",
  "serde-wasm-bindgen",
  "wasm-bindgen",

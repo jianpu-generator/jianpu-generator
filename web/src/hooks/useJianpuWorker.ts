@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Diagnostic, PartInfo } from '../types'
 import type { WorkerRequest, WorkerResponse } from '../worker/jianpu.worker'
 
@@ -18,6 +18,8 @@ interface JianpuWorkerState {
   parts: PartInfo[]
   partsLoading: boolean
   svgs: string[]
+  wavUrl: string | null
+  audioAvailable: boolean
   diagnostics: Diagnostic[]
   rendering: boolean
 }
@@ -30,10 +32,13 @@ export function useJianpuWorker(
   const [parts, setParts] = useState<PartInfo[]>([])
   const [partsLoading, setPartsLoading] = useState(false)
   const [svgs, setSvgs] = useState<string[]>([])
+  const [wavUrl, setWavUrl] = useState<string | null>(null)
+  const [audioAvailable, setAudioAvailable] = useState(false)
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([])
   const [rendering, setRendering] = useState(false)
 
   const workerRef = useRef<Worker | null>(null)
+  const wavUrlRef = useRef<string | null>(null)
   const partsRequestIdRef = useRef(0)
   const renderRequestIdRef = useRef(0)
   const latestPartsIdRef = useRef(0)
@@ -44,6 +49,14 @@ export function useJianpuWorker(
     [parts, disabledParts],
   )
 
+  const setNextWavUrl = useCallback((next: string | null) => {
+    if (wavUrlRef.current) {
+      URL.revokeObjectURL(wavUrlRef.current)
+    }
+    wavUrlRef.current = next
+    setWavUrl(next)
+  }, [])
+
   useEffect(() => {
     const worker = new Worker(
       new URL('../worker/jianpu.worker.ts', import.meta.url),
@@ -53,7 +66,10 @@ export function useJianpuWorker(
 
     worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
       const msg = event.data
-      if (msg.type === 'ready') return
+      if (msg.type === 'ready') {
+        setAudioAvailable(msg.audioAvailable)
+        return
+      }
 
       if (msg.type === 'parts') {
         if (msg.id !== latestPartsIdRef.current) return
@@ -68,8 +84,16 @@ export function useJianpuWorker(
       if (msg.type === 'ok') {
         setSvgs(msg.svgs)
         setDiagnostics([])
+        if (msg.wav) {
+          setNextWavUrl(
+            URL.createObjectURL(new Blob([msg.wav], { type: 'audio/wav' })),
+          )
+        } else {
+          setNextWavUrl(null)
+        }
       } else {
         setSvgs([])
+        setNextWavUrl(null)
         setDiagnostics(msg.diagnostics)
       }
     }
@@ -77,8 +101,12 @@ export function useJianpuWorker(
     return () => {
       worker.terminate()
       workerRef.current = null
+      if (wavUrlRef.current) {
+        URL.revokeObjectURL(wavUrlRef.current)
+        wavUrlRef.current = null
+      }
     }
-  }, [])
+  }, [setNextWavUrl])
 
   useEffect(() => {
     const worker = workerRef.current
@@ -117,5 +145,13 @@ export function useJianpuWorker(
     return () => window.clearTimeout(timer)
   }, [source, enabledTracks, debounceMs])
 
-  return { parts, partsLoading, svgs, diagnostics, rendering }
+  return {
+    parts,
+    partsLoading,
+    svgs,
+    wavUrl,
+    audioAvailable,
+    diagnostics,
+    rendering,
+  }
 }

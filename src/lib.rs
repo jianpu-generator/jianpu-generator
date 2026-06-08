@@ -98,6 +98,22 @@ pub fn filter_tracks(score: &mut Score, tracks: &[String]) {
     apply_track_filter(score, Some(tracks));
 }
 
+/// Parse, group, optionally filter tracks, and synthesize WAV bytes.
+///
+/// When `enabled_tracks` is `None`, all parts are included.
+/// When `Some(tracks)` is empty, no parts are included.
+#[cfg(feature = "wav")]
+pub fn write_wav_from_source_filtered(
+    source: &str,
+    filename: &str,
+    enabled_tracks: Option<&[String]>,
+) -> Result<Vec<u8>, JianPuError> {
+    let mut score = compile(source, filename)?;
+    apply_track_filter(&mut score, enabled_tracks);
+    let midi_bytes = midi::write_midi(&score)?;
+    wav::write_wav(&midi_bytes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
