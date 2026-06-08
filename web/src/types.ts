@@ -1,13 +1,26 @@
+export type DiagnosticSeverity = 'error' | 'warning'
+
+/** UTF-8 byte offsets into the source string. */
 export interface ByteSpan {
   start: number
   end: number
 }
 
-export interface RenderError {
+export interface Diagnostic {
+  severity: DiagnosticSeverity
   message: string
   span: ByteSpan
   report?: string
 }
+
+export type RenderOk = { status: 'ok'; svgs: string[] }
+
+export type RenderErr = { status: 'err'; diagnostics: Diagnostic[] }
+
+export type RenderResult = RenderOk | RenderErr
+
+/** @deprecated Use Diagnostic[] from RenderErr instead. */
+export type RenderError = Diagnostic
 
 export interface EditorSelection {
   start: number
@@ -20,5 +33,5 @@ export interface EditorHandle {
   getSelection: () => EditorSelection
   setSelection: (start: number, end: number) => void
   focus: () => void
-  getTextarea: () => HTMLTextAreaElement | null
+  getEditor: () => import('monaco-editor').editor.IStandaloneCodeEditor | null
 }

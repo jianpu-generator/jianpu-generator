@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import type { WorkerRequest, WorkerResponse } from '../worker/jianpu.worker'
-import type { RenderError } from '../types'
+import type { Diagnostic } from '../types'
 
 interface RenderState {
   svgs: string[]
-  error: RenderError | null
+  diagnostics: Diagnostic[]
   rendering: boolean
 }
 
 export function useJianpuRender(source: string, debounceMs = 300): RenderState {
   const [svgs, setSvgs] = useState<string[]>([])
-  const [error, setError] = useState<RenderError | null>(null)
+  const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([])
   const [rendering, setRendering] = useState(false)
 
   const workerRef = useRef<Worker | null>(null)
@@ -32,10 +32,10 @@ export function useJianpuRender(source: string, debounceMs = 300): RenderState {
       setRendering(false)
       if (msg.type === 'ok') {
         setSvgs(msg.svgs)
-        setError(null)
+        setDiagnostics([])
       } else {
         setSvgs([])
-        setError(msg.error)
+        setDiagnostics(msg.diagnostics)
       }
     }
 
@@ -61,5 +61,5 @@ export function useJianpuRender(source: string, debounceMs = 300): RenderState {
     return () => window.clearTimeout(timer)
   }, [source, debounceMs])
 
-  return { svgs, error, rendering }
+  return { svgs, diagnostics, rendering }
 }

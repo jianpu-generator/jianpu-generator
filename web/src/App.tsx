@@ -28,7 +28,7 @@ function saveSource(source: string) {
 export default function App() {
   const [source, setSource] = useState(loadSource)
   const editorRef = useRef<EditorHandle>(null)
-  const { svgs, error, rendering } = useJianpuRender(source)
+  const { svgs, diagnostics, rendering } = useJianpuRender(source)
 
   useEffect(() => {
     saveSource(source)
@@ -46,9 +46,9 @@ export default function App() {
             ref={editorRef}
             value={source}
             onChange={setSource}
-            errorSpan={error?.span ?? null}
+            diagnostics={diagnostics}
           />
-          <ErrorPanel error={error} />
+          <ErrorPanel diagnostics={diagnostics} />
         </section>
         <div className="pane-divider" aria-hidden="true" />
         <section className="pane pane--preview">
