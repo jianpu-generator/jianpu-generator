@@ -265,6 +265,17 @@ Lyrics lines are plain text tokenised into syllables:
 | CJK (Chinese, Japanese, Korean) | Each character is one syllable |
 | Latin | Space-separated words/syllables |
 
+### Syllable break (`-` attached to a word)
+
+A `-` **attached** to the end of a Latin syllable marks a word split across notes — the hyphen is part of the syllable text:
+
+```
+1 1 5 5
+twin- kle twin- kle     ← "twinkle" split across two notes each
+```
+
+This is distinct from a **standalone** `-` surrounded by whitespace (held syllable, below).
+
 ### Held syllable (`-` within lyrics)
 
 A `-` **inside** a lyrics line marks the **preceding** syllable as *held* — it stretches across tied notes:

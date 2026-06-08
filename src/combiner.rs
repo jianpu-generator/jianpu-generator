@@ -4,7 +4,9 @@ use crate::ast::grouped::{
 use crate::ast::parsed::{JianPuPitch, Syllable};
 use crate::error::{JianPuError, Span};
 
-pub fn combine(grouped_tracks: &[GroupedTrack]) -> Result<Vec<MultiPartMeasure>, JianPuError> {
+pub(crate) fn combine(
+    grouped_tracks: &[GroupedTrack],
+) -> Result<Vec<MultiPartMeasure>, JianPuError> {
     if grouped_tracks.is_empty() {
         return Ok(Vec::new());
     }
