@@ -147,6 +147,38 @@ pub fn sanitize_track_name(name: &str) -> String {
     name.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-")
 }
 
+/// Abbreviation → display name from `[parts]` declarations.
+pub fn part_display_name_map(
+    source: &str,
+    filename: &str,
+) -> Result<std::collections::HashMap<String, String>, JianPuError> {
+    Ok(list_parts_from_source(source, filename)?
+        .into_iter()
+        .map(|part| (part.abbreviation, part.display_name))
+        .collect())
+}
+
+/// Resolve the filename label for a track (display name when declared, else abbreviation).
+pub fn split_track_label(
+    display_names: &std::collections::HashMap<String, String>,
+    abbreviation: &str,
+) -> String {
+    display_names
+        .get(abbreviation)
+        .cloned()
+        .unwrap_or_else(|| abbreviation.to_string())
+}
+
+/// Build a split-track filename: `{base_name} - {label}.{extension}`.
+pub fn split_track_filename(base_name: &str, label: &str, extension: &str) -> String {
+    format!(
+        "{} - {}.{}",
+        base_name,
+        sanitize_track_name(label),
+        extension
+    )
+}
+
 /// Collect unique part names from score measures (order of first appearance).
 pub fn collect_track_names(score: &Score) -> Vec<String> {
     let mut seen = std::collections::HashSet::new();
@@ -163,9 +195,9 @@ pub fn collect_track_names(score: &Score) -> Vec<String> {
     names
 }
 
-/// Build a split-track PDF filename: `{base_name} - {track}.pdf`.
-pub fn split_pdf_filename(base_name: &str, track: &str) -> String {
-    format!("{} - {}.pdf", base_name, sanitize_track_name(track))
+/// Build a split-track PDF filename: `{base_name} - {label}.pdf`.
+pub fn split_pdf_filename(base_name: &str, label: &str) -> String {
+    split_track_filename(base_name, label, "pdf")
 }
 
 /// Track list for split export. Empty `tracks_filter` → all score tracks;
@@ -211,15 +243,17 @@ pub fn write_split_pdfs_from_source(
 ) -> Result<Vec<SplitPdfEntry>, JianPuError> {
     let score = compile(source, filename)?;
     let track_names = split_track_names(source, filename, &score, tracks_filter)?;
+    let display_names = part_display_name_map(source, filename)?;
     let mut entries = Vec::with_capacity(track_names.len());
     for track in track_names {
         let mut score_clone = score.clone();
         filter_tracks(&mut score_clone, std::slice::from_ref(&track));
         let svgs = render_svgs(&score_clone);
         let pdf = pdf::write_pdf(&svgs)?;
+        let label = split_track_label(&display_names, &track);
         entries.push(SplitPdfEntry {
             track_name: track.clone(),
-            filename: split_pdf_filename(base_name, &track),
+            filename: split_pdf_filename(base_name, &label),
             pdf,
         });
     }
@@ -458,7 +492,10 @@ mod tests {
 
     #[test]
     fn split_pdf_filename_sanitizes_track_name() {
-        assert_eq!(split_pdf_filename("song", "A1&T"), "song - A1&T.pdf");
+        assert_eq!(
+            split_pdf_filename("song", "Alto 1 & Tenor"),
+            "song - Alto 1 & Tenor.pdf"
+        );
         assert_eq!(
             split_pdf_filename("song", "bad/name"),
             "song - bad-name.pdf"
@@ -501,9 +538,9 @@ mod tests {
             .unwrap();
             assert_eq!(entries.len(), 2);
             assert_eq!(entries[0].track_name, "S1");
-            assert_eq!(entries[0].filename, "test_split - S1.pdf");
+            assert_eq!(entries[0].filename, "test_split - Soprano 1.pdf");
             assert_eq!(entries[1].track_name, "S2");
-            assert_eq!(entries[1].filename, "test_split - S2.pdf");
+            assert_eq!(entries[1].filename, "test_split - Soprano 2.pdf");
             assert_eq!(&entries[0].pdf[0..4], b"%PDF");
             assert_eq!(&entries[1].pdf[0..4], b"%PDF");
         }
@@ -559,12 +596,12 @@ mod tests {
             assert_eq!(
                 names,
                 vec![
-                    "test_split - S1.pdf".to_string(),
-                    "test_split - S2.pdf".to_string()
+                    "test_split - Soprano 1.pdf".to_string(),
+                    "test_split - Soprano 2.pdf".to_string()
                 ]
             );
 
-            let mut first = archive.by_name("test_split - S1.pdf").unwrap();
+            let mut first = archive.by_name("test_split - Soprano 1.pdf").unwrap();
             let mut buf = Vec::new();
             first.read_to_end(&mut buf).unwrap();
             assert_eq!(&buf[0..4], b"%PDF");
