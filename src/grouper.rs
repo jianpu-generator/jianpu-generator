@@ -273,12 +273,12 @@ fn group_chord_part(part: ParsedChordPart) -> Result<GroupedChordPart, JianPuErr
                 ParsedChordEvent::Rest => {
                     grouped.push(GroupedChordEvent::Rest(4));
                 }
-                ParsedChordEvent::Extend => match grouped.last_mut() {
+                ParsedChordEvent::Extend(span) => match grouped.last_mut() {
                     Some(GroupedChordEvent::Chord(c)) => c.duration += 4,
                     Some(GroupedChordEvent::Rest(d)) => *d += 4,
                     None => {
                         return Err(JianPuError::new(
-                            crate::error::Span::new(0, 0),
+                            span,
                             "chord extension '-' with no preceding event",
                         ));
                     }
@@ -562,6 +562,22 @@ mod tests {
             NoteEvent::Note(n) => assert_eq!(n.pitch, crate::ast::parsed::JianPuPitch::Seven),
             _ => panic!("expected Note"),
         }
+    }
+
+    #[test]
+    fn chord_extend_with_no_preceding_event_reports_token_span() {
+        let input = concat!(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\nparts = chord:c notes:n\n\n",
+            "[score]\n(time=4/4 key=C4 bpm=120)\n- 1 - -\n1 2 3 4\n",
+        );
+        let err = parse_and_group_err(input);
+        assert!(
+            err.span.start > 0 || err.span.end > 0,
+            "expected a non-zero span for the '-' token, got start={} end={}",
+            err.span.start,
+            err.span.end,
+        );
+        assert!(err.message.contains("chord extension"));
     }
 
     #[test]

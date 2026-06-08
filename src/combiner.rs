@@ -20,8 +20,9 @@ pub fn combine(
 
     for part in &parts[1..] {
         if part.measures.len() != expected_len {
+            // structurally unreachable: interleaved parser produces equal measure counts for all parts
             return Err(JianPuError::new(
-                Span::new(0, 0),
+                Span::new(0, 1),
                 format!(
                     "part {:?} has {} measures but the first part has {}; all parts must have the same number of measures",
                     part.name, part.measures.len(), expected_len
@@ -31,8 +32,9 @@ pub fn combine(
     }
     for cp in &chord_parts {
         if cp.measures.len() != expected_len {
+            // structurally unreachable: interleaved parser produces equal measure counts for all parts
             return Err(JianPuError::new(
-                Span::new(0, 0),
+                Span::new(0, 1),
                 format!(
                     "chord part {:?} has {} measures but notes parts have {}",
                     cp.name,

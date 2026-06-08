@@ -465,7 +465,8 @@ fn validate_beats(
                 )
             })
             .map(|e| e.span.clone())
-            .unwrap_or(Span::new(0, 0));
+            // structurally unreachable: a data line always has at least one token
+            .unwrap_or(Span::new(0, 1));
         return Err(JianPuError::new(
             span,
             format!(
@@ -522,7 +523,7 @@ mod tests {
                 bass: None,
             })
         );
-        assert_eq!(events[1], ParsedChordEvent::Extend);
+        assert!(matches!(events[1], ParsedChordEvent::Extend(_)));
         // note_parts should contain the notes column
         assert_eq!(note_parts.len(), 1);
     }

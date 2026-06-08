@@ -77,7 +77,7 @@ pub struct ParsedChordSymbol {
 pub enum ParsedChordEvent {
     Chord(ParsedChordSymbol),
     Rest,
-    Extend,
+    Extend(crate::error::Span),
 }
 
 #[allow(dead_code)]

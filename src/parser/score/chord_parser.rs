@@ -26,7 +26,7 @@ pub fn parse(line: &str, line_file_offset: usize) -> Result<Vec<ParsedChordEvent
         }
         let event = match token {
             "0" => ParsedChordEvent::Rest,
-            "-" => ParsedChordEvent::Extend,
+            "-" => ParsedChordEvent::Extend(span),
             _ => ParsedChordEvent::Chord(parse_chord_symbol(token, span)?),
         };
         events.push(event);
@@ -370,18 +370,16 @@ mod tests {
     fn parses_extend() {
         let events = parse("1 -", 0).unwrap();
         assert_eq!(
-            events,
-            vec![
-                chord(
-                    JianPuPitch::One,
-                    Accidental::Natural,
-                    TriadQuality::Major,
-                    None,
-                    None
-                ),
-                ParsedChordEvent::Extend,
-            ]
+            events[0],
+            chord(
+                JianPuPitch::One,
+                Accidental::Natural,
+                TriadQuality::Major,
+                None,
+                None
+            )
         );
+        assert!(matches!(events[1], ParsedChordEvent::Extend(_)));
     }
 
     #[test]
