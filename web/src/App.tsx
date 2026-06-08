@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { DEFAULT_SOURCE, STORAGE_KEY } from './defaultSource'
-import { useJianpuRender } from './hooks/useJianpuRender'
 import { Editor } from './components/Editor'
 import { ErrorPanel } from './components/ErrorPanel'
 import { Preview } from './components/Preview'
+import { DEFAULT_SOURCE, STORAGE_KEY } from './defaultSource'
+import { useJianpuRender } from './hooks/useJianpuRender'
 import type { EditorHandle } from './types'
 import './App.css'
 
@@ -28,7 +28,7 @@ function saveSource(source: string) {
 export default function App() {
   const [source, setSource] = useState(loadSource)
   const editorRef = useRef<EditorHandle>(null)
-  const { svgs, error, rendering } = useJianpuRender(source)
+  const { svgs, diagnostics, rendering } = useJianpuRender(source)
 
   useEffect(() => {
     saveSource(source)
@@ -46,9 +46,9 @@ export default function App() {
             ref={editorRef}
             value={source}
             onChange={setSource}
-            errorSpan={error?.span ?? null}
+            diagnostics={diagnostics}
           />
-          <ErrorPanel error={error} />
+          <ErrorPanel diagnostics={diagnostics} />
         </section>
         <div className="pane-divider" aria-hidden="true" />
         <section className="pane pane--preview">

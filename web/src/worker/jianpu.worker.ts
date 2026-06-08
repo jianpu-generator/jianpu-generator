@@ -1,12 +1,12 @@
 import init, { render } from 'jianpu-wasm'
-import type { RenderError } from '../types'
+import type { Diagnostic, RenderResult } from '../types'
 
 export type WorkerRequest = { type: 'render'; source: string; id: number }
 
 export type WorkerResponse =
   | { type: 'ready' }
   | { type: 'ok'; id: number; svgs: string[] }
-  | { type: 'err'; id: number; error: RenderError }
+  | { type: 'err'; id: number; diagnostics: Diagnostic[] }
 
 let initialized = false
 
@@ -24,23 +24,19 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
   await ensureInit()
 
-  try {
-    const result = render(msg.source) as { svgs: string[] }
+  const result = render(msg.source) as RenderResult
+  if (result.status === 'ok') {
     postMessage({
       type: 'ok',
       id: msg.id,
       svgs: result.svgs,
     } satisfies WorkerResponse)
-  } catch (thrown) {
-    const error = thrown as RenderError
-    postMessage({
-      type: 'err',
-      id: msg.id,
-      error: {
-        message: error.message ?? String(thrown),
-        span: error.span ?? { start: 0, end: 0 },
-        report: error.report,
-      },
-    } satisfies WorkerResponse)
+    return
   }
+
+  postMessage({
+    type: 'err',
+    id: msg.id,
+    diagnostics: result.diagnostics,
+  } satisfies WorkerResponse)
 }

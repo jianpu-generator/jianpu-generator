@@ -1,96 +1,188 @@
+import MonacoEditor, { type Monaco, type OnMount } from '@monaco-editor/react'
+import type { editor } from 'monaco-editor'
 import {
   forwardRef,
+  type ReactNode,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
-  type ReactNode,
 } from 'react'
-import type { ByteSpan, EditorHandle } from '../types'
+import type { Diagnostic, EditorHandle } from '../types'
+import { byteOffsetToStringIndex } from '../utils/byteSpan'
 
 export interface EditorProps {
   value: string
   onChange: (value: string) => void
-  /** Byte span from the WASM parser — used for scroll-to-error now, overlay later. */
-  errorSpan?: ByteSpan | null
-  /** Slot for a future formatting toolbar (WYSIWYG-style insert buttons). */
+  diagnostics?: Diagnostic[]
   toolbar?: ReactNode
 }
 
-function scrollToByteOffset(textarea: HTMLTextAreaElement, offset: number) {
-  const before = textarea.value.slice(0, offset)
-  const line = before.split('\n').length
-  const lineHeight =
-    Number.parseFloat(getComputedStyle(textarea).lineHeight) || 20
-  textarea.scrollTop = Math.max(0, (line - 4) * lineHeight)
-  textarea.focus()
+const MARKER_OWNER = 'jianpu'
+
+function diagnosticRange(
+  model: editor.ITextModel,
+  source: string,
+  diagnostic: Diagnostic,
+  monacoApi: Monaco,
+) {
+  const startIndex = byteOffsetToStringIndex(source, diagnostic.span.start)
+  const endIndex = Math.max(
+    startIndex + 1,
+    byteOffsetToStringIndex(source, diagnostic.span.end),
+  )
+  const startPos = model.getPositionAt(startIndex)
+  const endPos = model.getPositionAt(endIndex)
+  return new monacoApi.Range(
+    startPos.lineNumber,
+    startPos.column,
+    endPos.lineNumber,
+    endPos.column,
+  )
 }
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
-  { value, onChange, errorSpan, toolbar },
+  { value, onChange, diagnostics = [], toolbar },
   ref,
 ) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
+  const monacoRef = useRef<Monaco | null>(null)
+
+  const applyDiagnostics = useCallback(() => {
+    const ed = editorRef.current
+    const monacoApi = monacoRef.current
+    const model = ed?.getModel()
+    if (!ed || !monacoApi || !model) return
+
+    const source = model.getValue()
+
+    if (diagnostics.length === 0) {
+      monacoApi.editor.setModelMarkers(model, MARKER_OWNER, [])
+      return
+    }
+
+    const markers = diagnostics.map((d) => {
+      const range = diagnosticRange(model, source, d, monacoApi)
+      return {
+        severity:
+          d.severity === 'warning'
+            ? monacoApi.MarkerSeverity.Warning
+            : monacoApi.MarkerSeverity.Error,
+        message: d.message,
+        startLineNumber: range.startLineNumber,
+        startColumn: range.startColumn,
+        endLineNumber: range.endLineNumber,
+        endColumn: range.endColumn,
+      }
+    })
+
+    monacoApi.editor.setModelMarkers(model, MARKER_OWNER, markers)
+
+    const primary = diagnostics[0]
+    const range = diagnosticRange(model, source, primary, monacoApi)
+    ed.revealRangeInCenter(range, monacoApi.editor.ScrollType.Smooth)
+    ed.setSelection(range)
+  }, [diagnostics])
 
   useImperativeHandle(ref, () => ({
     insertAtCursor(text: string) {
-      const el = textareaRef.current
-      if (!el) return
-      const start = el.selectionStart
-      const end = el.selectionEnd
-      const next = value.slice(0, start) + text + value.slice(end)
-      onChange(next)
-      const cursor = start + text.length
-      requestAnimationFrame(() => {
-        el.focus()
-        el.setSelectionRange(cursor, cursor)
-      })
+      const ed = editorRef.current
+      const model = ed?.getModel()
+      if (!ed || !model) return
+
+      const selection = ed.getSelection()
+      if (!selection) return
+
+      ed.executeEdits('insertAtCursor', [
+        {
+          range: selection,
+          text,
+          forceMoveMarkers: true,
+        },
+      ])
+      ed.focus()
     },
     getSelection() {
-      const el = textareaRef.current
+      const ed = editorRef.current
+      const model = ed?.getModel()
+      const selection = ed?.getSelection()
+      if (!model || !selection) return { start: 0, end: 0 }
+
       return {
-        start: el?.selectionStart ?? 0,
-        end: el?.selectionEnd ?? 0,
+        start: model.getOffsetAt(selection.getStartPosition()),
+        end: model.getOffsetAt(selection.getEndPosition()),
       }
     },
     setSelection(start: number, end: number) {
-      const el = textareaRef.current
-      if (!el) return
-      el.focus()
-      el.setSelectionRange(start, end)
+      const ed = editorRef.current
+      const model = ed?.getModel()
+      const monacoApi = monacoRef.current
+      if (!ed || !model || !monacoApi) return
+
+      const startPos = model.getPositionAt(start)
+      const endPos = model.getPositionAt(end)
+      ed.setSelection(
+        new monacoApi.Selection(
+          startPos.lineNumber,
+          startPos.column,
+          endPos.lineNumber,
+          endPos.column,
+        ),
+      )
+      ed.focus()
     },
     focus() {
-      textareaRef.current?.focus()
+      editorRef.current?.focus()
     },
-    getTextarea() {
-      return textareaRef.current
+    getEditor() {
+      return editorRef.current
     },
   }))
 
-  useEffect(() => {
-    if (!errorSpan || !textareaRef.current) return
-    scrollToByteOffset(textareaRef.current, errorSpan.start)
-  }, [errorSpan?.start, errorSpan?.end])
+  const handleMount: OnMount = (ed, monacoApi) => {
+    editorRef.current = ed
+    monacoRef.current = monacoApi
+    applyDiagnostics()
+  }
 
-  const hasError = errorSpan != null
+  useEffect(() => {
+    applyDiagnostics()
+  }, [applyDiagnostics])
 
   return (
     <div className="editor">
       {toolbar ? <div className="editor-toolbar">{toolbar}</div> : null}
-      <div
-        className={`editor-surface${hasError ? ' editor-surface--error' : ''}`}
-        data-error-start={errorSpan?.start}
-        data-error-end={errorSpan?.end}
-      >
-        {/* Overlay layer reserved for future syntax highlights / error ranges */}
-        <div className="editor-overlay" aria-hidden="true" />
-        <textarea
-          ref={textareaRef}
-          className="editor-input"
+      <div className="editor-surface">
+        <MonacoEditor
+          height="100%"
+          language="plaintext"
+          theme="vs"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          spellCheck={false}
-          autoCapitalize="off"
-          autoCorrect="off"
+          onChange={(next) => onChange(next ?? '')}
+          onMount={handleMount}
+          options={{
+            minimap: { enabled: false },
+            fontFamily: 'var(--mono)',
+            fontSize: 14,
+            lineHeight: 21,
+            padding: { top: 16, bottom: 16 },
+            scrollBeyondLastLine: false,
+            wordWrap: 'off',
+            tabSize: 2,
+            renderLineHighlight: 'none',
+            renderValidationDecorations: 'on',
+            overviewRulerLanes: 2,
+            hideCursorInOverviewRuler: true,
+            overviewRulerBorder: false,
+            glyphMargin: false,
+            folding: false,
+            lineNumbers: 'on',
+            lineNumbersMinChars: 3,
+            scrollbar: {
+              verticalScrollbarSize: 10,
+              horizontalScrollbarSize: 10,
+            },
+          }}
         />
       </div>
     </div>

@@ -1,17 +1,30 @@
 use crate::error::JianPuError;
+use ariadne::Config;
 
 pub fn render(e: &JianPuError) {
-    render_to_writer(e, std::io::stderr(), None);
+    render_to_writer(e, std::io::stderr(), None, Config::default());
 }
 
 /// Render a pretty error using an in-memory source string (for WASM and other non-FS hosts).
+///
+/// Uses plain text (no ANSI color codes) so the output is safe to display in a web UI.
 pub fn render_with_source(source: &str, e: &JianPuError) -> String {
     let mut buf = Vec::new();
-    render_to_writer(e, &mut buf, Some(source));
+    render_to_writer(
+        e,
+        &mut buf,
+        Some(source),
+        Config::default().with_color(false),
+    );
     String::from_utf8_lossy(&buf).into_owned()
 }
 
-fn render_to_writer(e: &JianPuError, mut writer: impl std::io::Write, source: Option<&str>) {
+fn render_to_writer(
+    e: &JianPuError,
+    mut writer: impl std::io::Write,
+    source: Option<&str>,
+    config: Config,
+) {
     use ariadne::{Label, Report, ReportKind, Source};
 
     let source_text = match source {
@@ -42,6 +55,7 @@ fn render_to_writer(e: &JianPuError, mut writer: impl std::io::Write, source: Op
     let span = (filename.clone(), char_start..char_end);
 
     if Report::build(ReportKind::Error, span.clone())
+        .with_config(config)
         .with_message(&e.message)
         .with_label(Label::new(span).with_message(&e.message))
         .finish()
@@ -70,7 +84,7 @@ mod tests {
         let e = JianPuError::new(Span::new(4, 5), "expected pitch digit 0-7").with_path(&path);
 
         let mut buf = Vec::new();
-        render_to_writer(&e, &mut buf, None);
+        render_to_writer(&e, &mut buf, None, Config::default());
         let output = String::from_utf8_lossy(&buf);
         assert!(
             output.contains("expected pitch digit 0-7"),
@@ -92,6 +106,18 @@ mod tests {
     }
 
     #[test]
+    fn render_with_source_has_no_ansi_codes() {
+        let source = "1 2 x 4\n";
+        let e = JianPuError::new(Span::new(4, 5), "expected pitch digit 0-7");
+
+        let output = render_with_source(source, &e);
+        assert!(
+            !output.contains('\x1b'),
+            "web report must not contain ANSI escapes, got: {output}"
+        );
+    }
+
+    #[test]
     fn render_shows_code_block_when_source_contains_multibyte_unicode() {
         // Each Chinese character is 3 bytes. The error token "x" is at byte offset 12
         // (3 bytes × 4 chars = 12), but at character offset 4.
@@ -107,7 +133,7 @@ mod tests {
         .with_path(&path);
 
         let mut buf = Vec::new();
-        render_to_writer(&e, &mut buf, None);
+        render_to_writer(&e, &mut buf, None, Config::default());
         let output = String::from_utf8_lossy(&buf);
         // The code block must appear — presence of '│' confirms ariadne rendered it.
         assert!(
@@ -121,7 +147,7 @@ mod tests {
     fn render_falls_back_when_path_is_none() {
         let e = JianPuError::new(Span::new(0, 1), "some error");
         let mut buf = Vec::new();
-        render_to_writer(&e, &mut buf, None);
+        render_to_writer(&e, &mut buf, None, Config::default());
         let output = String::from_utf8_lossy(&buf);
         assert!(output.contains("some error"), "output was: {output}");
     }
@@ -131,7 +157,7 @@ mod tests {
         let e =
             JianPuError::new(Span::new(0, 1), "some error").with_path("/nonexistent/path.jianpu");
         let mut buf = Vec::new();
-        render_to_writer(&e, &mut buf, None);
+        render_to_writer(&e, &mut buf, None, Config::default());
         let output = String::from_utf8_lossy(&buf);
         assert!(output.contains("some error"), "output was: {output}");
     }
