@@ -380,6 +380,23 @@
   font-style: italic;
 }
 
+.preview-audio {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.preview-audio-player {
+  display: block;
+  width: 100%;
+}
+
+.preview-audio-empty {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
 .preview-pages {
   flex: 1;
   overflow: auto;

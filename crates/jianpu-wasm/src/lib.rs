@@ -1,6 +1,8 @@
 use jianpu_generator::{
     error::JianPuError, error_reporter, list_parts_from_source, render_svgs_from_source_filtered,
 };
+#[cfg(feature = "wav")]
+use jianpu_generator::write_wav_from_source_filtered;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -49,6 +51,14 @@ enum ListPartsResponse {
     Err { diagnostics: Vec<DiagnosticOut> },
 }
 
+#[cfg(feature = "wav")]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(tag = "status", rename_all = "camelCase")]
+enum GenerateWavResponse {
+    Ok { wav: Vec<u8> },
+    Err { diagnostics: Vec<DiagnosticOut> },
+}
+
 fn diagnostic_from_error(source: &str, e: JianPuError) -> DiagnosticOut {
     let report = error_reporter::render_with_source(source, &e);
     DiagnosticOut {
@@ -89,6 +99,17 @@ fn list_parts_response(source: &str) -> ListPartsResponse {
     }
 }
 
+#[cfg(feature = "wav")]
+fn generate_wav_response(source: &str, enabled_tracks: Option<Vec<String>>) -> GenerateWavResponse {
+    let tracks = enabled_tracks.as_deref();
+    match write_wav_from_source_filtered(source, "input.jianpu", tracks) {
+        Ok(wav) => GenerateWavResponse::Ok { wav },
+        Err(e) => GenerateWavResponse::Err {
+            diagnostics: vec![diagnostic_from_error(source, e)],
+        },
+    }
+}
+
 fn to_js_value<T: Serialize>(value: &T) -> JsValue {
     match serde_wasm_bindgen::to_value(value) {
         Ok(v) => v,
@@ -119,6 +140,51 @@ pub fn render(source: &str, enabled_tracks: Option<Vec<String>>) -> JsValue {
 #[wasm_bindgen]
 pub fn list_parts(source: &str) -> JsValue {
     to_js_value(&list_parts_response(source))
+}
+
+#[cfg(feature = "wav")]
+fn generate_wav_to_js(source: &str, enabled_tracks: Option<Vec<String>>) -> JsValue {
+    use js_sys::{Object, Reflect, Uint8Array};
+
+    match generate_wav_response(source, enabled_tracks) {
+        GenerateWavResponse::Ok { wav } => {
+            let obj = Object::new();
+            if Reflect::set(
+                &obj,
+                &JsValue::from_str("status"),
+                &JsValue::from_str("ok"),
+            )
+            .is_err()
+            {
+                return JsValue::from_str("failed to build wav response");
+            }
+            if Reflect::set(
+                &obj,
+                &JsValue::from_str("wav"),
+                &Uint8Array::from(wav.as_slice()),
+            )
+            .is_err()
+            {
+                return JsValue::from_str("failed to attach wav bytes");
+            }
+            obj.into()
+        }
+        GenerateWavResponse::Err { diagnostics } => {
+            to_js_value(&GenerateWavResponse::Err { diagnostics })
+        }
+    }
+}
+
+/// Parse `.jianpu` source and synthesize WAV audio bytes.
+///
+/// Available only when the `wav` feature is enabled at build time.
+/// Returns the same structured `{ status, ... }` envelope as [`render`]:
+/// - `{ "status": "ok", "wav": Uint8Array }`
+/// - `{ "status": "err", "diagnostics": [...] }`
+#[cfg(feature = "wav")]
+#[wasm_bindgen]
+pub fn generate_wav(source: &str, enabled_tracks: Option<Vec<String>>) -> JsValue {
+    generate_wav_to_js(source, enabled_tracks)
 }
 
 #[cfg(test)]
@@ -235,6 +301,25 @@ mod tests {
             RenderResponse::Err { diagnostics } => {
                 panic!(
                     "demo.jianpu failed in wasm render path: {}",
+                    diagnostics[0].message
+                );
+            }
+        }
+    }
+
+    #[cfg(feature = "wav")]
+    #[test]
+    fn demo_jianpu_generates_wav() {
+        let source = include_str!("../../../demo.jianpu");
+        let resp = generate_wav_response(source, None);
+        match resp {
+            GenerateWavResponse::Ok { wav } => {
+                assert!(wav.len() > 4);
+                assert_eq!(&wav[0..4], b"RIFF");
+            }
+            GenerateWavResponse::Err { diagnostics } => {
+                panic!(
+                    "demo.jianpu failed in wasm wav path: {}",
                     diagnostics[0].message
                 );
             }

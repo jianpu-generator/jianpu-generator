@@ -29,10 +29,8 @@ export default function App() {
     () => new Set(),
   )
   const editorRef = useRef<EditorHandle>(null)
-  const { parts, partsLoading, svgs, diagnostics, rendering } = useJianpuWorker(
-    source,
-    disabledParts,
-  )
+  const { parts, partsLoading, svgs, wavUrl, audioAvailable, diagnostics, rendering } =
+    useJianpuWorker(source, disabledParts)
 
   useEffect(() => {
     const abbreviations = new Set(parts.map((part) => part.abbreviation))
@@ -134,6 +132,8 @@ export default function App() {
           <Preview
             svgs={svgs}
             rendering={rendering}
+            wavUrl={wavUrl}
+            audioAvailable={audioAvailable}
             emptyMessage={
               noPartsSelected ? 'No parts selected.' : 'No preview yet.'
             }
