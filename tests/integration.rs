@@ -131,8 +131,8 @@ fn multi_track_jianpu_input() -> &'static str {
 #[test]
 fn split_tracks_generates_one_pdf_per_track() {
     let input_path = "/tmp/test_split.jianpu";
-    let s1_path = "/tmp/test_split - S1.pdf";
-    let s2_path = "/tmp/test_split - S2.pdf";
+    let s1_path = "/tmp/test_split - Soprano 1.pdf";
+    let s2_path = "/tmp/test_split - Soprano 2.pdf";
     fs::write(input_path, multi_track_jianpu_input()).unwrap();
     let _ = fs::remove_file(s1_path);
     let _ = fs::remove_file(s2_path);
@@ -167,8 +167,8 @@ fn split_tracks_generates_one_pdf_per_track() {
 #[test]
 fn split_tracks_with_output_stem() {
     let input_path = "/tmp/test_split_out.jianpu";
-    let s1_path = "/tmp/split_out - S1.pdf";
-    let s2_path = "/tmp/split_out - S2.pdf";
+    let s1_path = "/tmp/split_out - Soprano 1.pdf";
+    let s2_path = "/tmp/split_out - Soprano 2.pdf";
     fs::write(input_path, multi_track_jianpu_input()).unwrap();
     let _ = fs::remove_file(s1_path);
     let _ = fs::remove_file(s2_path);
