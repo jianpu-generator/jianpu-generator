@@ -5,16 +5,29 @@ use crate::ast::parsed::{
 use crate::error::{JianPuError, Span};
 
 #[allow(dead_code)]
-pub fn parse(line: &str) -> Result<Vec<ParsedChordEvent>, JianPuError> {
+pub fn parse(line: &str, line_file_offset: usize) -> Result<Vec<ParsedChordEvent>, JianPuError> {
     let mut events = Vec::new();
-    for token in line.split_whitespace() {
+    let mut byte_pos = 0usize;
+
+    while byte_pos < line.len() {
+        if line.as_bytes()[byte_pos].is_ascii_whitespace() {
+            byte_pos += 1;
+            continue;
+        }
+        let token_start = byte_pos;
+        while byte_pos < line.len() && !line.as_bytes()[byte_pos].is_ascii_whitespace() {
+            byte_pos += 1;
+        }
+        let token = &line[token_start..byte_pos];
+        let span = Span::new(line_file_offset + token_start, line_file_offset + byte_pos);
+
         if token == "|" {
             continue;
         }
         let event = match token {
             "0" => ParsedChordEvent::Rest,
             "-" => ParsedChordEvent::Extend,
-            _ => ParsedChordEvent::Chord(parse_chord_symbol(token)?),
+            _ => ParsedChordEvent::Chord(parse_chord_symbol(token, span)?),
         };
         events.push(event);
     }
@@ -22,11 +35,11 @@ pub fn parse(line: &str) -> Result<Vec<ParsedChordEvent>, JianPuError> {
 }
 
 #[allow(dead_code)]
-fn parse_chord_symbol(token: &str) -> Result<ParsedChordSymbol, JianPuError> {
+fn parse_chord_symbol(token: &str, span: Span) -> Result<ParsedChordSymbol, JianPuError> {
     let mut chars = token.chars();
 
     let degree = chars.next().and_then(char_to_pitch).ok_or_else(|| {
-        JianPuError::new(Span::new(0, 0), format!("invalid chord token '{}'", token))
+        JianPuError::new(span.clone(), format!("invalid chord token '{}'", token))
     })?;
 
     // Peek at remaining string
@@ -72,13 +85,18 @@ fn parse_chord_symbol(token: &str) -> Result<ParsedChordSymbol, JianPuError> {
         None
     } else {
         return Err(JianPuError::new(
-            Span::new(0, 0),
+            span.clone(),
             format!("unknown chord suffix '{}' in token '{}'", ext_str, token),
         ));
     };
 
-    // Bass note
-    let bass = bass_str.map(parse_bass).transpose()?;
+    // Bass note — compute a precise span starting at the bass substring within the token
+    let bass = bass_str
+        .map(|s| {
+            let bass_start = span.start + (token.len() - s.len());
+            parse_bass(s, Span::new(bass_start, span.end))
+        })
+        .transpose()?;
 
     Ok(ParsedChordSymbol {
         degree,
@@ -90,26 +108,26 @@ fn parse_chord_symbol(token: &str) -> Result<ParsedChordSymbol, JianPuError> {
 }
 
 #[allow(dead_code)]
-fn parse_bass(s: &str) -> Result<BassDegree, JianPuError> {
+fn parse_bass(s: &str, span: Span) -> Result<BassDegree, JianPuError> {
     let mut chars = s.chars();
     let degree = chars
         .next()
         .and_then(char_to_pitch)
-        .ok_or_else(|| JianPuError::new(Span::new(0, 0), format!("invalid bass note '{}'", s)))?;
+        .ok_or_else(|| JianPuError::new(span.clone(), format!("invalid bass note '{}'", s)))?;
     let accidental = match chars.next() {
         Some('#') => Accidental::Sharp,
         Some('b') => Accidental::Flat,
         None => Accidental::Natural,
         Some(c) => {
             return Err(JianPuError::new(
-                Span::new(0, 0),
+                span.clone(),
                 format!("unexpected character '{}' in bass note '{}'", c, s),
             ))
         }
     };
     if chars.next().is_some() {
         return Err(JianPuError::new(
-            Span::new(0, 0),
+            span,
             format!("bass note '{}' has trailing characters", s),
         ));
     }
@@ -152,7 +170,7 @@ mod tests {
 
     #[test]
     fn parses_major_chord() {
-        let events = parse("1").unwrap();
+        let events = parse("1", 0).unwrap();
         assert_eq!(
             events,
             vec![chord(
@@ -167,7 +185,7 @@ mod tests {
 
     #[test]
     fn parses_minor_chord() {
-        let events = parse("1m").unwrap();
+        let events = parse("1m", 0).unwrap();
         assert_eq!(
             events,
             vec![chord(
@@ -182,7 +200,7 @@ mod tests {
 
     #[test]
     fn parses_diminished() {
-        let events = parse("1o").unwrap();
+        let events = parse("1o", 0).unwrap();
         assert_eq!(
             events,
             vec![chord(
@@ -197,7 +215,7 @@ mod tests {
 
     #[test]
     fn parses_augmented() {
-        let events = parse("1+").unwrap();
+        let events = parse("1+", 0).unwrap();
         assert_eq!(
             events,
             vec![chord(
@@ -212,7 +230,7 @@ mod tests {
 
     #[test]
     fn parses_dominant_seventh() {
-        let events = parse("17").unwrap();
+        let events = parse("17", 0).unwrap();
         assert_eq!(
             events,
             vec![chord(
@@ -227,7 +245,7 @@ mod tests {
 
     #[test]
     fn parses_major_seventh() {
-        let events = parse("1M7").unwrap();
+        let events = parse("1M7", 0).unwrap();
         assert_eq!(
             events,
             vec![chord(
@@ -242,7 +260,7 @@ mod tests {
 
     #[test]
     fn parses_minor_dominant_seventh() {
-        let events = parse("1m7").unwrap();
+        let events = parse("1m7", 0).unwrap();
         assert_eq!(
             events,
             vec![chord(
@@ -257,7 +275,7 @@ mod tests {
 
     #[test]
     fn parses_sharp_accidental() {
-        let events = parse("1#").unwrap();
+        let events = parse("1#", 0).unwrap();
         assert_eq!(
             events,
             vec![chord(
@@ -272,7 +290,7 @@ mod tests {
 
     #[test]
     fn parses_flat_accidental() {
-        let events = parse("3b").unwrap();
+        let events = parse("3b", 0).unwrap();
         assert_eq!(
             events,
             vec![chord(
@@ -287,7 +305,7 @@ mod tests {
 
     #[test]
     fn parses_slash_chord() {
-        let events = parse("1/5").unwrap();
+        let events = parse("1/5", 0).unwrap();
         let bass = BassDegree {
             degree: JianPuPitch::Five,
             accidental: Accidental::Natural,
@@ -306,7 +324,7 @@ mod tests {
 
     #[test]
     fn parses_slash_chord_with_accidental_bass() {
-        let events = parse("1/4b").unwrap();
+        let events = parse("1/4b", 0).unwrap();
         let bass = BassDegree {
             degree: JianPuPitch::Four,
             accidental: Accidental::Flat,
@@ -325,7 +343,7 @@ mod tests {
 
     #[test]
     fn parses_complex_slash_chord() {
-        let events = parse("6m/5").unwrap();
+        let events = parse("6m/5", 0).unwrap();
         let bass = BassDegree {
             degree: JianPuPitch::Five,
             accidental: Accidental::Natural,
@@ -344,13 +362,13 @@ mod tests {
 
     #[test]
     fn parses_rest() {
-        let events = parse("0").unwrap();
+        let events = parse("0", 0).unwrap();
         assert_eq!(events, vec![ParsedChordEvent::Rest]);
     }
 
     #[test]
     fn parses_extend() {
-        let events = parse("1 -").unwrap();
+        let events = parse("1 -", 0).unwrap();
         assert_eq!(
             events,
             vec![
@@ -368,7 +386,7 @@ mod tests {
 
     #[test]
     fn parses_multiple_tokens() {
-        let events = parse("1 4m 5").unwrap();
+        let events = parse("1 4m 5", 0).unwrap();
         assert_eq!(
             events,
             vec![
@@ -399,7 +417,7 @@ mod tests {
 
     #[test]
     fn skips_bar_lines() {
-        let events = parse("1 | 4m").unwrap();
+        let events = parse("1 | 4m", 0).unwrap();
         assert_eq!(
             events,
             vec![
@@ -423,7 +441,7 @@ mod tests {
 
     #[test]
     fn parses_sharp_with_dominant_seventh() {
-        let events = parse("1#7").unwrap();
+        let events = parse("1#7", 0).unwrap();
         assert_eq!(
             events,
             vec![chord(
@@ -438,7 +456,7 @@ mod tests {
 
     #[test]
     fn parses_flat_with_major_seventh() {
-        let events = parse("3bM7").unwrap();
+        let events = parse("3bM7", 0).unwrap();
         assert_eq!(
             events,
             vec![chord(
@@ -453,7 +471,7 @@ mod tests {
 
     #[test]
     fn parses_sharp_minor_dominant_seventh() {
-        let events = parse("1#m7").unwrap();
+        let events = parse("1#m7", 0).unwrap();
         assert_eq!(
             events,
             vec![chord(
@@ -468,7 +486,7 @@ mod tests {
 
     #[test]
     fn parses_sharp_with_slash_chord() {
-        let events = parse("1#/5").unwrap();
+        let events = parse("1#/5", 0).unwrap();
         let bass = BassDegree {
             degree: JianPuPitch::Five,
             accidental: Accidental::Natural,
@@ -487,11 +505,11 @@ mod tests {
 
     #[test]
     fn rejects_invalid_token() {
-        assert!(parse("X").is_err());
+        assert!(parse("X", 0).is_err());
     }
 
     #[test]
     fn rejects_unknown_suffix() {
-        assert!(parse("1z").is_err());
+        assert!(parse("1z", 0).is_err());
     }
 }

@@ -24,7 +24,7 @@ pub fn parse(
 
     if notes_names.is_empty() {
         return Err(JianPuError::new(
-            Span::new(0, 0),
+            Span::new(base_offset, base_offset + content.len()),
             "parts declaration has no 'notes:' columns",
         ));
     }
@@ -109,9 +109,13 @@ pub fn parse(
             .iter()
             .filter(|p| matches!(p, PartColumn::Notes { .. }))
             .count();
+        let group_first_span = {
+            let (line, off) = &group_lines[0];
+            Span::new(base_offset + off, base_offset + off + line.len())
+        };
         if data_lines.len() < notes_cols_count {
             return Err(JianPuError::new(
-                Span::new(0, 0),
+                group_first_span.clone(),
                 format!(
                     "expected {} lines (one per parts column), got {}",
                     parts.len(),
@@ -121,7 +125,7 @@ pub fn parse(
         }
         if data_lines.len() > parts.len() {
             return Err(JianPuError::new(
-                Span::new(0, 0),
+                group_first_span,
                 format!(
                     "expected {} lines (one per parts column), got {}",
                     parts.len(),
@@ -155,11 +159,7 @@ pub fn parse(
                 }
                 ColAction::Chord(chord_idx) => {
                     let events =
-                        crate::parser::score::chord_parser::parse(line).map_err(|mut e| {
-                            e.span.start += base_offset;
-                            e.span.end += base_offset;
-                            e
-                        })?;
+                        crate::parser::score::chord_parser::parse(line, base_offset + line_offset)?;
                     chord_events_acc[chord_idx].push(events);
                 }
             }
