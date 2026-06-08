@@ -183,9 +183,8 @@ impl PartGrouper {
                 n.duration += 4;
                 self.current_beat += 4;
             }
-            Some(NoteEvent::Rest(r)) => {
-                r.duration += 4;
-                self.current_beat += 4;
+            Some(NoteEvent::Rest(_)) => {
+                return Err(JianPuError::dash_after_rest(span));
             }
             None => {
                 return Err(JianPuError::new(
@@ -428,6 +427,16 @@ mod tests {
             NoteEvent::Note(n) => assert_eq!(n.duration, 8),
             NoteEvent::Rest(_) => panic!("expected Note"),
         }
+    }
+
+    #[test]
+    fn rejects_standalone_dash_after_rest() {
+        use crate::error::ErrorKind;
+        let err = parse_and_group_err(concat!(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n",
+            "[score]\n(time=4/4 key=C4 bpm=120)\n0 - - -\n_\n",
+        ));
+        assert_eq!(err.kind, ErrorKind::DashAfterRest);
     }
 
     #[test]

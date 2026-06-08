@@ -24,10 +24,27 @@ impl<T> Spanned<T> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ErrorKind {
+    General,
+    /// `-` used to extend a rest (`0-`, `0---`, or standalone `-` after `0`).
+    DashAfterRest,
+}
+
+impl ErrorKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::General => "general",
+            Self::DashAfterRest => "dash_after_rest",
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct JianPuError {
     pub span: Span,
     pub message: String,
+    pub kind: ErrorKind,
     pub path: Option<PathBuf>,
 }
 
@@ -36,6 +53,16 @@ impl JianPuError {
         Self {
             span,
             message: message.into(),
+            kind: ErrorKind::General,
+            path: None,
+        }
+    }
+
+    pub fn dash_after_rest(span: Span) -> Self {
+        Self {
+            span,
+            message: "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)".to_string(),
+            kind: ErrorKind::DashAfterRest,
             path: None,
         }
     }
@@ -74,5 +101,12 @@ mod tests {
     fn without_path_is_none() {
         let e = JianPuError::new(Span::new(0, 1), "oops");
         assert!(e.path.is_none());
+    }
+
+    #[test]
+    fn dash_after_rest_has_kind_and_message() {
+        let e = JianPuError::dash_after_rest(Span::new(5, 6));
+        assert_eq!(e.kind, ErrorKind::DashAfterRest);
+        assert!(e.message.contains("repeated `0`"));
     }
 }

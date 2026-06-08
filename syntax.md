@@ -202,11 +202,18 @@ Examples: `1'` (octave up), `1,,` (two octaves down), `3_,'` (eighth note, up on
 | Suffix | Meaning |
 |--------|---------|
 | `.` | Dotted (add half the base duration). Cannot combine with `=` (sixteenth) notes. |
-| `-` | Extend the previous note or rest by one beat (4 quarter-beats) |
+| `-` | Extend the previous **note** by one beat (4 quarter-beats) |
 
 Example: `2 - - -` is a whole note in 4/4 (equivalent to `2---`).
 
-You can also attach dashes as suffixes on the note itself (`2---`). Both forms may be mixed in one measure.
+You can also attach dashes as suffixes on a note (`2---`). Both forms may be mixed in one measure.
+
+**Rests cannot use `-`.** Conventional 简谱 lengthens rests by repeating `0`, not增时线. These are errors:
+
+- `0-`, `0---` (suffix dashes on a rest)
+- `0 -`, `0 - - -` (standalone dashes after a rest)
+
+Use repeated rests instead: `0 0` (half rest in 4/4), `0 0 0 0` (whole rest). Shorter rests still use `_`, `=`, or `.` on a single `0` (`0_`, `0=`, `0.`).
 
 ### Tie and slur groups
 
@@ -257,6 +264,8 @@ measure capacity = N × (16 / D) quarter-beats
 | `(12)` | Quarter notes 1 and 2, slurred/tied |
 | `6,` | Degree 6, one octave down |
 | `0` | Quarter rest |
+| `0 0` | Half rest (two quarter rests) |
+| `0 0 0 0` | Whole rest in 4/4 |
 | `0_` | Eighth rest |
 | `1. 1= 6=, (2_=2_)` | Mixed durations, octaves, and a slur group |
 

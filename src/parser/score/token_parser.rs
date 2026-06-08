@@ -57,7 +57,7 @@ fn parse_single_token(
         return Ok(vec![parse_time_signature(text, span)?]);
     }
 
-    // Standalone `-` extends the previous note/rest by one beat (4 quarter-beats).
+    // Standalone `-` extends the previous note by one beat (4 quarter-beats).
     if text == "-" {
         return Ok(vec![ScoreEvent::Extension]);
     }
@@ -334,6 +334,10 @@ fn parse_one_atom(
                 i += 1;
             }
             '-' => {
+                if pitch_char == '0' {
+                    let pos = span.start + byte_offset_at_char_index_from_chars(chars, start, i);
+                    return Err(JianPuError::dash_after_rest(Span::new(pos, pos + 1)));
+                }
                 duration += 4;
                 i += 1;
             }
@@ -696,6 +700,29 @@ mod tests {
         let r = rest(&events, 0);
         assert_eq!(r.duration, 3);
         assert!(r.dotted);
+    }
+
+    #[test]
+    fn rejects_dash_suffix_on_rest() {
+        use crate::error::ErrorKind;
+        let err = parse("0---").unwrap_err();
+        assert_eq!(err.kind, ErrorKind::DashAfterRest);
+    }
+
+    #[test]
+    fn rejects_dash_suffix_on_rest_in_group() {
+        use crate::error::ErrorKind;
+        let err = parse("(0-1)").unwrap_err();
+        assert_eq!(err.kind, ErrorKind::DashAfterRest);
+    }
+
+    #[test]
+    fn parses_repeated_quarter_rests() {
+        let events = parse("0 0 0 0").unwrap();
+        assert_eq!(events.len(), 4);
+        for i in 0..4 {
+            assert_eq!(rest(&events, i).duration, 4);
+        }
     }
 
     #[test]
