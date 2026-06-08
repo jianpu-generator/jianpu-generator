@@ -150,7 +150,7 @@ pub enum ScoreEvent {
         numerator: u8,
         denominator: u8,
     },
-    /// Internal or explicit padding: extends the previous note/rest by one full beat (4 quarter-beats).
+    /// Internal or explicit padding: extends the previous note by one full beat (4 quarter-beats).
     Extension,
     /// Legacy tie marker retained for lyric-slot counting paths; use `(…)` groups in input.
     TieMarker,
