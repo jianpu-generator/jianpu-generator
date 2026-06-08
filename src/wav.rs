@@ -1,3 +1,4 @@
+use crate::error::{JianPuError, Span};
 use hound::{SampleFormat, WavSpec, WavWriter};
 use midly::{MetaMessage, MidiMessage, Smf, Timing, TrackEventKind};
 use oxisynth::{MidiEvent, SoundFont, Synth, SynthDescriptor};
@@ -8,27 +9,35 @@ const CHOIR_AAHS_PROGRAM: u8 = 52;
 
 static SF2_BYTES: &[u8] = include_bytes!("../fonts/GeneralUser_GS.sf2");
 
-pub fn write_wav(midi_bytes: &[u8]) -> Vec<u8> {
-    let smf = Smf::parse(midi_bytes).expect("invalid MIDI bytes");
+pub fn write_wav(midi_bytes: &[u8]) -> Result<Vec<u8>, JianPuError> {
+    let smf = Smf::parse(midi_bytes)
+        .map_err(|_| JianPuError::new(Span::new(0, 0), "invalid MIDI bytes"))?;
     let tpq = match smf.header.timing {
         Timing::Metrical(t) => t.as_int() as u32,
-        _ => 480,
+        Timing::Timecode(..) => 480,
     };
 
     let mut synth = Synth::new(SynthDescriptor {
         sample_rate: SAMPLE_RATE as f32,
         ..Default::default()
     })
-    .expect("synth init failed");
+    .map_err(|_| JianPuError::new(Span::new(0, 0), "failed to initialize synthesizer"))?;
 
-    let sf = SoundFont::load(&mut Cursor::new(SF2_BYTES)).expect("soundfont load failed");
+    let sf = SoundFont::load(&mut Cursor::new(SF2_BYTES))
+        .map_err(|_| JianPuError::new(Span::new(0, 0), "failed to load soundfont"))?;
     synth.add_font(sf, true);
 
     let mut micros_per_beat: u32 = 500_000; // default 120 BPM
     let mut all_l: Vec<f32> = Vec::new();
     let mut all_r: Vec<f32> = Vec::new();
 
-    for event in smf.tracks[0].iter() {
+    let track = smf.tracks.first().ok_or_else(|| {
+        JianPuError::new(
+            Span::new(0, 0),
+            "internal invariant: MIDI file has no tracks",
+        )
+    })?;
+    for event in track.iter() {
         let delta = event.delta.as_int();
         if delta > 0 {
             let n = ticks_to_samples(delta, tpq, micros_per_beat);
@@ -93,10 +102,12 @@ fn render_samples(synth: &mut Synth, n: usize, l: &mut Vec<f32>, r: &mut Vec<f32
     let prev = l.len();
     l.resize(prev + n, 0.0);
     r.resize(prev + n, 0.0);
-    synth.write_f32(n, &mut l[prev..], 0, 1, &mut r[prev..], 0, 1);
+    let (_, l_tail) = l.split_at_mut(prev);
+    let (_, r_tail) = r.split_at_mut(prev);
+    synth.write_f32(n, l_tail, 0, 1, r_tail, 0, 1);
 }
 
-fn encode_wav(l: &[f32], r: &[f32]) -> Vec<u8> {
+fn encode_wav(l: &[f32], r: &[f32]) -> Result<Vec<u8>, JianPuError> {
     let spec = WavSpec {
         channels: 2,
         sample_rate: SAMPLE_RATE,
@@ -104,17 +115,25 @@ fn encode_wav(l: &[f32], r: &[f32]) -> Vec<u8> {
         sample_format: SampleFormat::Int,
     };
     let mut buf: Vec<u8> = Vec::new();
-    let mut writer = WavWriter::new(Cursor::new(&mut buf), spec).unwrap();
+    let mut writer = WavWriter::new(Cursor::new(&mut buf), spec).map_err(|e| {
+        JianPuError::new(Span::new(0, 0), format!("failed to create WAV writer: {e}"))
+    })?;
     for (ls, rs) in l.iter().zip(r.iter()) {
         writer
             .write_sample((ls.clamp(-1.0, 1.0) * i16::MAX as f32) as i16)
-            .unwrap();
+            .map_err(|e| {
+                JianPuError::new(Span::new(0, 0), format!("failed to write WAV sample: {e}"))
+            })?;
         writer
             .write_sample((rs.clamp(-1.0, 1.0) * i16::MAX as f32) as i16)
-            .unwrap();
+            .map_err(|e| {
+                JianPuError::new(Span::new(0, 0), format!("failed to write WAV sample: {e}"))
+            })?;
     }
-    writer.finalize().unwrap();
-    buf
+    writer.finalize().map_err(|e| {
+        JianPuError::new(Span::new(0, 0), format!("failed to finalize WAV file: {e}"))
+    })?;
+    Ok(buf)
 }
 
 #[cfg(test)]
@@ -137,7 +156,7 @@ mod tests {
     fn encode_wav_has_riff_wave_header() {
         let l = vec![0.0f32; 44100];
         let r = vec![0.0f32; 44100];
-        let bytes = encode_wav(&l, &r);
+        let bytes = encode_wav(&l, &r).unwrap();
         assert_eq!(&bytes[0..4], b"RIFF");
         assert_eq!(&bytes[8..12], b"WAVE");
     }
@@ -146,7 +165,7 @@ mod tests {
     fn encode_wav_stereo_16bit_44100() {
         let l = vec![0.0f32; 100];
         let r = vec![0.0f32; 100];
-        let bytes = encode_wav(&l, &r);
+        let bytes = encode_wav(&l, &r).unwrap();
         // WAV spec chunk: channels=2, sample_rate=44100, bits=16
         // bytes 22-23: channels (little-endian u16)
         assert_eq!(u16::from_le_bytes([bytes[22], bytes[23]]), 2);

@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
@@ -61,7 +61,7 @@ mod tests {
     #[test]
     fn display_shows_message() {
         let e = JianPuError::new(Span::new(10, 20), "bad token");
-        assert_eq!(format!("{}", e), "error: bad token");
+        assert_eq!(format!("{e}"), "error: bad token");
     }
 
     #[test]
