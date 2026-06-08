@@ -159,7 +159,7 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
     layout_engine::LayoutEngine::new(score, page_width_pt, page_height_pt).layout()
 }
 
-/// Emit tie/slur arcs for a completed chain of `~`-connected notes.
+/// Emit tie/slur arcs for a completed chain of tied notes (from `(…)` groups).
 ///
 /// Rules:
 /// - If the chain contains any pitch change → one **slur** arc from first to last note.
@@ -275,7 +275,8 @@ mod tests {
             score_content.push_str(bar);
             score_content.push('\n');
             let tokens = tokenizer::tokenize(bar, 0);
-            let events = token_parser::parse_tokens(tokens).expect("test score tokens");
+            let events = token_parser::parse_tokens(tokens, &mut token_parser::GroupParseState::default())
+                .expect("test score tokens");
             let slots = count_lyric_slots_in_events(&events, &mut tie_state) as usize;
             if slots == 0 {
                 score_content.push_str("_\n");
@@ -509,7 +510,7 @@ mod tests {
     #[test]
     fn two_different_notes_emit_one_slur() {
         // 1~ 2: different pitches → one slur from col 5 to col 9
-        let score = make_score("1~ 2 3 4", "a b c d");
+        let score = make_score("(12) 3 4", "a b c d");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let curves = collect_curves(&pages);
         assert_eq!(curves.len(), 1);
@@ -519,7 +520,7 @@ mod tests {
     #[test]
     fn three_note_slur_emits_one_curve() {
         // 3~2~1: all different pitches → one slur from col 5 to col 13
-        let score = make_score("3~2~1 4", "a b c d");
+        let score = make_score("(321) 4", "a b c d");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let curves = collect_curves(&pages);
         assert_eq!(curves.len(), 1);
@@ -528,10 +529,10 @@ mod tests {
 
     #[test]
     fn mixed_chain_emits_slur_and_tie() {
-        // 4~3~3 2: chain [4@5, 3@9, 3@13]
+        // (433) 2: chain [4@5, 3@9, 3@13]
         // → one slur from 5 to 13 (pitch change exists)
         // → one tie from 9 to 13 (same-pitch pair 3~3)
-        let score = make_score("4~3~3 2", "a b c d");
+        let score = make_score("(433) 2", "a b c d");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let mut curves = collect_curves(&pages);
         curves.sort();
@@ -542,8 +543,8 @@ mod tests {
 
     #[test]
     fn same_pitch_chain_emits_only_tie() {
-        // 1~1 2 3: same pitches → one tie, no slur
-        let score = make_score("1~1 2 3", "a b c");
+        // (11) 2 3: same pitches → one tie, no slur
+        let score = make_score("(11) 2 3", "a b c");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let curves = collect_curves(&pages);
         assert_eq!(curves.len(), 1);
@@ -593,7 +594,7 @@ mod tests {
     fn consecutive_eighth_notes_at_beat_start_share_one_underline() {
         // _2 _2 fills beat 1 (qb 0–3); 0 0 0 are quarter rests filling the rest of 4/4
         // Total: 2+2+4+4+4 = 16 quarter-beats ✓
-        let score = make_score("_2 _2 0 0 0", "a b");
+        let score = make_score("2_ 2_ 0 0 0", "a b");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let groups = collect_underline_levels(&pages);
         assert_eq!(groups.len(), 1, "expected one beam group");
@@ -607,7 +608,7 @@ mod tests {
         // 0(4qb) _0(2qb) _2(2qb) _2(2qb) _0(2qb) 0(4qb) = 16qb ✓
         // Beat 2: _0 rest + _2 note → share one underline (same beat, rest joins beam buffer)
         // Beat 3: _2 note + _0 rest → share one underline (same beat)
-        let score = make_score("0 _0 _2 _2 _0 0", "a b");
+        let score = make_score("0 0_ 2_ 2_ 0_ 0", "a b");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let groups = collect_underline_levels(&pages);
         assert_eq!(
@@ -628,7 +629,7 @@ mod tests {
         // _1(2qb) =2(1qb) =3(1qb) fills beat 1 exactly; 0 0 0 fill 12 more qb = 16 total ✓
         // Level 1: spans all three notes (col 5–9)
         // Level 2: spans only the sixteenth sub-run =2,=3 (col 7–9)
-        let score = make_score("_1 =2 =3 0 0 0", "a b c");
+        let score = make_score("1_ 2= 3= 0 0 0", "a b c");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let groups = collect_underline_levels(&pages);
         assert_eq!(groups.len(), 1, "expected one beam group");
@@ -643,7 +644,7 @@ mod tests {
     fn sixteenth_note_and_sixteenth_rests_share_one_beat_group() {
         // =1(1qb) =0(1qb) =0(1qb) =0(1qb) fills beat 1; 0 0 0 fills the remaining 12qb = 16 total ✓
         // All four fit within beat 1 → joined in one beam group with two underline levels.
-        let score = make_score("=1 =0 =0 =0 0 0 0", "a");
+        let score = make_score("1= 0= 0= 0= 0 0 0", "a");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let groups = collect_underline_levels(&pages);
         assert_eq!(
@@ -675,7 +676,7 @@ mod tests {
     fn eighth_rest_underline_connects_to_following_sixteenth_notes() {
         // _0(2qb) =1(1qb) =2(1qb) fills beat 1 exactly (2+1+1=4qb); 0 0 0 fills 12 more = 16 total ✓
         // _0 rest should join the beam buffer and share the level-1 underline with =1 and =2.
-        let score = make_score("_0 =1 =2 0 0 0", "a b");
+        let score = make_score("0_ 1= 2= 0 0 0", "a b");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let groups = collect_underline_levels(&pages);
         assert_eq!(groups.len(), 1, "expected one beam group spanning the beat");
@@ -692,7 +693,7 @@ mod tests {
     fn pure_sixteenth_beat_group_has_two_underlines() {
         // =1 =2 =3 =4 fills one beat exactly (4×1qb = 4qb); 0 0 0 fills 12 more qb = 16 total ✓
         // All four notes are sixteenth (underline_count=2): level-1 spans 5–9, level-2 also 5–9.
-        let score = make_score("=1 =2 =3 =4 0 0 0", "a b c d");
+        let score = make_score("1= 2= 3= 4= 0 0 0", "a b c d");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let groups = collect_underline_levels(&pages);
         assert_eq!(groups.len(), 1, "expected one beam group spanning the beat");
@@ -722,9 +723,9 @@ mod tests {
     #[test]
     fn tied_notes_share_one_lyric_syllable() {
         // 3~3 is a tie (same pitch): both notes share one syllable.
-        // 3~3 1 2 with lyrics "a b c":
+        // (33) 1 2 with lyrics "a b c":
         //   3 (col 5) → "a",  second 3 (col 9) → no lyric,  1 (col 13) → "b",  2 (col 17) → "c"
-        let score = make_score("3~3 1 2", "a b c");
+        let score = make_score("(33) 1 2", "a b c");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         assert_eq!(
             collect_lyric_positions(&pages),
@@ -740,8 +741,8 @@ mod tests {
     fn slurred_notes_each_get_a_lyric_syllable() {
         // 4~3~3: 4→3 is a slur (different pitch, each gets a syllable),
         //        3→3 is a tie (same pitch, second 3 shares the syllable of first 3).
-        // So "4~3~3 2" with lyrics "a b c" assigns: 4→"a", first 3→"b", second 3→no lyric, 2→"c"
-        let score = make_score("4~3~3 2", "a b c");
+        // So "(433) 2" with lyrics "a b c" assigns: 4→"a", first 3→"b", second 3→no lyric, 2→"c"
+        let score = make_score("(433) 2", "a b c");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         assert_eq!(
             collect_lyric_positions(&pages),
@@ -772,8 +773,8 @@ mod tests {
     #[test]
     fn half_beat_note_has_duration_underline() {
         // Full 4/4 bar: 2 eighth notes separated by 3 quarter notes = 2+4+4+4+2 = 16 quarter-beats.
-        // _1 and _4 are each flushed as separate beam groups → 2 DurationUnderlines elements.
-        let score = make_score("_1 3 3 3 _4", "a b c d e");
+        // _1 and 4_ are each flushed as separate beam groups → 2 DurationUnderlines elements.
+        let score = make_score("1_ 3 3 3 4_", "a b c d e");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let all_elements: Vec<_> = pages[0]
             .row_groups
@@ -783,14 +784,14 @@ mod tests {
         let underlines: Vec<_> = all_elements.iter()
             .filter(|e| matches!(&e.content, GridContent::DurationUnderlines { levels } if levels.len() == 1))
             .collect();
-        assert_eq!(underlines.len(), 2); // one for _1, one for _4
+        assert_eq!(underlines.len(), 2); // one for _1, one for 4_
     }
 
     #[test]
     fn dotted_half_beat_note_has_one_underline() {
         // _1* = dotted eighth (duration 3). Should get 1 underline like a plain eighth.
         // 3 + 1 + 4 + 4 + 4 = 16 quarter-beats = one full 4/4 bar.
-        let score = make_score("_1* =2 3 3 3", "a b c d e");
+        let score = make_score("1_. 2= 3 3 3", "a b c d e");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let all_elements: Vec<_> = pages[0]
             .row_groups
@@ -810,7 +811,7 @@ mod tests {
     #[test]
     fn dotted_note_head_has_dotted_flag() {
         // _1* note head should have dotted=true in the layout element.
-        let score = make_score("_1* =2 3 3 3", "a b c d e");
+        let score = make_score("1_. 2= 3 3 3", "a b c d e");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let all_elements: Vec<_> = pages[0]
             .row_groups
@@ -832,7 +833,7 @@ mod tests {
     fn lower_octave_note_emits_lower_octave_dots_element() {
         // "1." = pitch 1, 1-beat note (duration=4), octave -1
         // underline_count for duration=4 is 0
-        let score = make_score("1. 2 3 4", "a b c d");
+        let score = make_score("1, 2 3 4", "a b c d");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let all_elements: Vec<_> = pages[0]
             .row_groups
@@ -1183,7 +1184,7 @@ mod tests {
         // Measure 1: 1 (left bar col) + 4 (directives) + 16 (notes) + 1 (end bar) = 22 cols
         // Measure 2: 1 (left bar col) + 0 + 16 + 1 = 18 cols → 22+16=38 > 28 → wraps to new line
         // 3~ at col 17 in measure 1 should produce a right-half arc ending at the bar line (col 21 = 22-1).
-        let score = make_score("0 0 0 3~ | 3 0 0 0", "a");
+        let score = make_score("0 0 0 (3) | 3 0 0 0", "a");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let curves = collect_curves(&pages);
         assert!(
@@ -1202,7 +1203,7 @@ mod tests {
         // The continuation note (3 in measure 2) must NOT consume a lyric syllable
         // because prev_tie is preserved across the line boundary.
         // Only the 3~ note in measure 1 should consume a lyric.
-        let score = make_score("0 0 0 3~ | 3 0 0 0", "a");
+        let score = make_score("0 0 0 (3) | 3 0 0 0", "a");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let lyrics = collect_lyric_positions(&pages);
         assert_eq!(
@@ -1250,7 +1251,7 @@ mod tests {
     #[test]
     fn chord_row_emits_chord_symbol_element() {
         use crate::layout::types::GridContent;
-        let input = "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nchord = chord\nMelody = notes\n\n[score]\n(time=4/4 key=C4 bpm=120)\n1 - - -\n1 - - -\n";
+        let input = "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nchord = chord\nMelody = notes\n\n[score]\n(time=4/4 key=C4 bpm=120)\n1 - - -\n1---\n";
         let doc = crate::parser::parse(input, "test.jianpu").unwrap();
         let score = crate::grouper::group(doc).unwrap();
         let pages = layout(&score, 595.0, 842.0);

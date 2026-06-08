@@ -560,7 +560,7 @@ mod tests {
 
     #[test]
     fn lower_octave_note_renders_dot_below_note() {
-        let svgs = render_score("1. 2 3 4", "a b c d");
+        let svgs = render_score("1, 2 3 4", "a b c d");
         assert!(
             svgs[0].contains(r#"cy="123.4""#),
             "1-beat lower-octave dot must be at slot 0 (cy=123.4)"
@@ -569,7 +569,7 @@ mod tests {
 
     #[test]
     fn quarter_beat_lower_octave_dot_is_below_two_underlines() {
-        let score_str = "=1. =1 =1 =1 =1 =1 =1 =1 =1 =1 =1 =1 =1 =1 =1 =1";
+        let score_str = "1=, 1=, 1=, 1=, 1=, 1=, 1=, 1=, 1=, 1=, 1=, 1=, 1=, 1=, 1=, 1=,";
         let lyrics_str = "a b c d e f g h i j k l m n o p";
         let svgs = render_score(score_str, lyrics_str);
         assert!(
@@ -745,7 +745,7 @@ mod tests {
 
     #[test]
     fn chord_symbol_uses_same_font_size_as_note_head() {
-        let input = "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nchord = chord\nMelody = notes\n\n[score]\n(time=4/4 key=C4 bpm=120)\n1m7 - 4 5\n1 - 1 1\n";
+        let input = "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nchord = chord\nMelody = notes\n\n[score]\n(time=4/4 key=C4 bpm=120)\n1m7 - 4 5\n1- 1 1\n";
         let doc = crate::parser::parse(input, "test.jianpu").unwrap();
         let score = crate::grouper::group(doc).unwrap();
         let pages = crate::layout::layout(&score, A4_W, A4_H);
@@ -773,7 +773,7 @@ mod tests {
 
     #[test]
     fn chord_symbol_renders_as_svg_text() {
-        let input = "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nchord = chord\nMelody = notes\n\n[score]\n(time=4/4 key=C4 bpm=120)\n1m7 - 4 5\n1 - 1 1\n";
+        let input = "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nchord = chord\nMelody = notes\n\n[score]\n(time=4/4 key=C4 bpm=120)\n1m7 - 4 5\n1- 1 1\n";
         let doc = crate::parser::parse(input, "test.jianpu").unwrap();
         let score = crate::grouper::group(doc).unwrap();
         let pages = crate::layout::layout(&score, A4_W, A4_H);
@@ -790,7 +790,7 @@ mod tests {
 
     #[test]
     fn chord_symbol_with_sharp_renders_unicode() {
-        let input = "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nchord = chord\nMelody = notes\n\n[score]\n(time=4/4 key=C4 bpm=120)\n1# - - -\n1 - - -\n";
+        let input = "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nchord = chord\nMelody = notes\n\n[score]\n(time=4/4 key=C4 bpm=120)\n1# - - -\n1---\n";
         let doc = crate::parser::parse(input, "test.jianpu").unwrap();
         let score = crate::grouper::group(doc).unwrap();
         let pages = crate::layout::layout(&score, A4_W, A4_H);

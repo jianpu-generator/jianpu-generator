@@ -17,7 +17,7 @@ Melody = notes lyrics
 twin- kle twin- kle
 
 5 - - -
-6 6 5 -
+6 6 5-
 lit- tle star
 
 4 - - -
@@ -25,7 +25,7 @@ lit- tle star
 how I won- der
 
 4 - - -
-2 2 1 -
+2 2 1-
 what you are
 
 5 - - -
@@ -33,7 +33,7 @@ what you are
 up a- bove the
 
 5 - - -
-3 3 2 -
+3 3 2-
 world so high
 
 4 - - -
@@ -41,7 +41,7 @@ world so high
 like a dia- mond
 
 4 - - -
-3 3 2 -
+3 3 2-
 in the sky
 
 1 - - -
@@ -49,7 +49,7 @@ in the sky
 twin- kle twin- kle
 
 5 - - -
-6 6 5 -
+6 6 5-
 lit- tle star
 
 4 - - -
@@ -57,6 +57,6 @@ lit- tle star
 how I won- der
 
 1 - - -
-2 2 1 -
+2 2 1-
 what you are
 `

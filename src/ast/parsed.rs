@@ -150,9 +150,9 @@ pub enum ScoreEvent {
         numerator: u8,
         denominator: u8,
     },
-    /// The `-` token: extends the previous note/rest by one full beat (4 quarter-beats).
+    /// Internal or explicit padding: extends the previous note/rest by one full beat (4 quarter-beats).
     Extension,
-    /// The standalone `~` token: ties the previous note to the next one.
+    /// Legacy tie marker retained for lyric-slot counting paths; use `(…)` groups in input.
     TieMarker,
     LabelChange(String),
 }
@@ -164,9 +164,9 @@ pub struct ParsedNote {
     pub octave: i8,
     /// Duration in quarter-beats. For dotted notes this already includes the added half-value.
     pub duration: u32,
-    /// Whether `~` follows this note (tie or slur, determined later by pitch comparison).
+    /// Whether this note is tied/slurred to the next note (from a `(…)` group).
     pub tie: bool,
-    /// Whether `*` was present, meaning this is a dotted note.
+    /// Whether `.` was present as a dotted-note suffix.
     pub dotted: bool,
 }
 
@@ -174,7 +174,7 @@ pub struct ParsedNote {
 pub struct ParsedRest {
     /// Duration in quarter-beats. For dotted rests this already includes the added half-value.
     pub duration: u32,
-    /// Whether `*` was present, meaning this is a dotted rest.
+    /// Whether `.` was present as a dotted-rest suffix.
     pub dotted: bool,
 }
 
