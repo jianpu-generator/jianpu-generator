@@ -189,12 +189,8 @@ fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::JianPuError> {
         })?;
         let filename = opts.input.to_string_lossy();
         let (_, base_name) = split_track_base(&opts.input, opts.output.as_deref());
-        let entries = jg::write_split_pdfs_from_source(
-            &content,
-            &filename,
-            &base_name,
-            &opts.tracks,
-        )?;
+        let entries =
+            jg::write_split_pdfs_from_source(&content, &filename, &base_name, &opts.tracks)?;
         if entries.is_empty() {
             eprintln!(
                 "warning: --split-tracks given but score has no named tracks; generating single file"
@@ -222,7 +218,9 @@ fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::JianPuError> {
     Ok(())
 }
 
-fn read_display_names(input: &Path) -> Result<std::collections::HashMap<String, String>, jg::error::JianPuError> {
+fn read_display_names(
+    input: &Path,
+) -> Result<std::collections::HashMap<String, String>, jg::error::JianPuError> {
     let content = std::fs::read_to_string(input).map_err(|e| {
         jg::error::JianPuError::new(
             jg::error::Span::new(0, 0),

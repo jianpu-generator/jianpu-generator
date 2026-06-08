@@ -754,7 +754,10 @@ mod tests {
             score.metadata.row_height,
             score.metadata.note_number_width,
         );
-        let expected = format!("font-size=\"{:.1}\"", score.metadata.row_height as f32 * 0.6);
+        let expected = format!(
+            "font-size=\"{:.1}\"",
+            score.metadata.row_height as f32 * 0.6
+        );
         assert!(
             svgs[0].contains(&format!(
                 "{expected} text-anchor=\"start\" dominant-baseline=\"middle\" font-family=\"monospace\">1m"

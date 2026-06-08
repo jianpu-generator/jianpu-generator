@@ -10,7 +10,7 @@ use crate::layout::types::{
 use crate::utils::is_cjk_char;
 
 use super::{
-    compute_prefix_width, flush_beam_buffer, flush_chain, format_chord_symbol,
+    compute_prefix_width, extend_note_chains, flush_beam_buffer, format_chord_symbol,
     measure_column_width, part_row_height, BeamBufferEntry, PAGE_MARGIN,
 };
 
@@ -38,7 +38,7 @@ struct PerPartLayoutState {
     prev_tie: bool,
     prev_pitch: Option<JianPuPitch>,
     beam_buffer: Vec<BeamBufferEntry>,
-    pending_chain: Vec<(u32, JianPuPitch)>,
+    pending_chains: Vec<Vec<(u32, JianPuPitch)>>,
     chain_row: u32,
     cross_line_tie: Option<JianPuPitch>,
 }
@@ -113,7 +113,7 @@ impl<'a> LayoutEngine<'a> {
                     prev_tie: false,
                     prev_pitch: None,
                     beam_buffer: Vec::new(),
-                    pending_chain: Vec::new(),
+                    pending_chains: Vec::new(),
                     chain_row: 0,
                     cross_line_tie: None,
                 })
@@ -212,30 +212,32 @@ impl<'a> LayoutEngine<'a> {
         for part_row in measure.parts.iter() {
             if let PartRow::Notes(_) = part_row {
                 if let Some(state) = self.per_part_states.get_mut(notes_idx_tie) {
-                    if let Some(last) = state.pending_chain.last() {
-                        let to_col = self.current_col.saturating_sub(1);
-                        if last.0 < to_col {
-                            self.current_elements.push(GridElement {
-                                position: GridPosition {
-                                    column: last.0,
-                                    row: state.chain_row,
-                                },
-                                horizontal_alignment: HorizontalAlignment::Left,
-                                vertical_alignment: VerticalAlignment::Top,
-                                content: GridContent::TieOrSlurCurve {
-                                    from_column: last.0,
-                                    to_column: to_col,
-                                },
-                            });
+                    for chain in &state.pending_chains {
+                        if let Some(last) = chain.last() {
+                            let to_col = self.current_col.saturating_sub(1);
+                            if last.0 < to_col {
+                                self.current_elements.push(GridElement {
+                                    position: GridPosition {
+                                        column: last.0,
+                                        row: state.chain_row,
+                                    },
+                                    horizontal_alignment: HorizontalAlignment::Left,
+                                    vertical_alignment: VerticalAlignment::Top,
+                                    content: GridContent::TieOrSlurCurve {
+                                        from_column: last.0,
+                                        to_column: to_col,
+                                    },
+                                });
+                            }
+                            state.cross_line_tie = Some(last.1.clone());
                         }
-                        state.cross_line_tie = Some(last.1.clone());
                     }
                 }
                 notes_idx_tie += 1;
             }
         }
         for state in self.per_part_states.iter_mut() {
-            state.pending_chain.clear();
+            state.pending_chains.clear();
         }
 
         self.push_bottom_system_bar();
@@ -404,7 +406,7 @@ impl<'a> LayoutEngine<'a> {
                             elements: &mut self.current_elements,
                             label_cols: self.label_cols,
                             beam_buf: &mut state.beam_buffer,
-                            pending_chain: &mut state.pending_chain,
+                            pending_chains: &mut state.pending_chains,
                             chain_row: &mut state.chain_row,
                             prev_tie: &mut state.prev_tie,
                             prev_pitch: &mut state.prev_pitch,
@@ -516,7 +518,7 @@ struct PartNoteState<'a> {
     elements: &'a mut Vec<GridElement>,
     label_cols: u32,
     beam_buf: &'a mut Vec<BeamBufferEntry>,
-    pending_chain: &'a mut Vec<(u32, JianPuPitch)>,
+    pending_chains: &'a mut Vec<Vec<(u32, JianPuPitch)>>,
     chain_row: &'a mut u32,
     prev_tie: &'a mut bool,
     prev_pitch: &'a mut Option<JianPuPitch>,
@@ -532,7 +534,7 @@ fn emit_notes_part(
     let mut col = note_col_start;
     let measure_col_start_for_part = note_col_start;
 
-    if state.pending_chain.is_empty() {
+    if state.pending_chains.is_empty() || state.pending_chains.iter().all(|c| c.is_empty()) {
         *state.chain_row = part_row_offset + 1;
     }
 
@@ -641,7 +643,15 @@ fn emit_grouped_note(
         flush_beam_buffer(state.beam_buf, part_row_offset, state.elements);
     }
 
-    state.pending_chain.push((*col, note.pitch.clone()));
+    extend_note_chains(
+        state.pending_chains,
+        note.group_membership,
+        note.group_continuation,
+        *state.chain_row,
+        *col,
+        &note.pitch,
+        state.elements,
+    );
 
     let is_tie_continuation = *state.prev_tie && state.prev_pitch.as_ref() == Some(&note.pitch);
 
@@ -703,11 +713,6 @@ fn emit_grouped_note(
     let beat_position = *col - measure_col_start_for_part;
     if underline_count > 0 && beat_position % 4 == 0 {
         flush_beam_buffer(state.beam_buf, part_row_offset, state.elements);
-    }
-
-    if !note.tie {
-        flush_chain(state.pending_chain, *state.chain_row, state.elements);
-        state.pending_chain.clear();
     }
 }
 

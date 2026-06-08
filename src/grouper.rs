@@ -226,6 +226,8 @@ impl PartGrouper {
                 octave: pn.octave,
                 duration: pn.duration,
                 tie: pn.tie,
+                group_membership: pn.group_membership,
+                group_continuation: pn.group_continuation,
                 dotted: pn.dotted,
             }),
             "note",

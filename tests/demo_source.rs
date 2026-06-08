@@ -1,3 +1,5 @@
+#![allow(clippy::panic)]
+
 use std::path::PathBuf;
 
 fn repo_root() -> PathBuf {

@@ -165,6 +165,34 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
     layout_engine::LayoutEngine::new(score, page_width_pt, page_height_pt).layout()
 }
 
+/// Extend nested tie/slur chains for one note and flush any groups that end here.
+pub(crate) fn extend_note_chains(
+    chains: &mut Vec<Vec<(u32, JianPuPitch)>>,
+    membership: u8,
+    continuation: u8,
+    chain_row: u32,
+    col: u32,
+    pitch: &JianPuPitch,
+    elements: &mut Vec<GridElement>,
+) {
+    while chains.len() < membership as usize {
+        chains.push(Vec::new());
+    }
+    for chain in chains.iter_mut().take(membership as usize) {
+        chain.push((col, pitch.clone()));
+    }
+    for depth in (continuation as usize)..membership as usize {
+        if let Some(chain) = chains.get(depth) {
+            if chain.len() > 1 {
+                flush_chain(chain, chain_row, elements);
+            }
+        }
+        if let Some(chain) = chains.get_mut(depth) {
+            chain.clear();
+        }
+    }
+}
+
 /// Emit tie/slur arcs for a completed chain of tied notes (from `(…)` groups).
 ///
 /// Rules:
@@ -282,8 +310,8 @@ mod tests {
             score_content.push_str(bar);
             score_content.push('\n');
             let tokens = tokenizer::tokenize(bar, 0);
-            let events = token_parser::parse_tokens(tokens, &mut group_state)
-                .expect("test score tokens");
+            let events =
+                token_parser::parse_tokens(tokens, &mut group_state).expect("test score tokens");
             let slots = count_lyric_slots_in_events(&events, &mut tie_state) as usize;
             if slots == 0 {
                 score_content.push_str("_\n");
@@ -546,6 +574,22 @@ mod tests {
         assert_eq!(curves.len(), 2);
         assert_eq!(curves[0], (7, 15)); // slur
         assert_eq!(curves[1], (11, 15)); // tie
+    }
+
+    #[test]
+    fn nested_group_emits_outer_and_inner_slurs() {
+        let score = make_score_raw(
+            "(time=3/4 key=C4 bpm=120)\n(3= (2_1_)) 2_ 2_ 2_ 1=\na b c d e f g\n",
+            "",
+        );
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let mut curves = collect_curves(&pages);
+        curves.sort_by_key(|(from, to)| (to - from, *from));
+        assert_eq!(curves.len(), 2);
+        let (inner_from, inner_to) = curves[0];
+        let (outer_from, outer_to) = curves[1];
+        assert!(inner_to - inner_from < outer_to - outer_from);
+        assert!(inner_from >= outer_from && inner_to <= outer_to);
     }
 
     #[test]

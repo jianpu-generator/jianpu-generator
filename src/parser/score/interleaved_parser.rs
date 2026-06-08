@@ -4,8 +4,8 @@ use crate::ast::parsed::{
     ScoreEvent, ScoreLineRole, ScoreLineSlot,
 };
 use crate::error::{JianPuError, Span, Spanned};
-use crate::parser::score::{token_parser, tokenizer};
 use crate::parser::score::token_parser::GroupParseState;
+use crate::parser::score::{token_parser, tokenizer};
 use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics, LyricTieState};
 
 enum SlotAction {
@@ -693,7 +693,7 @@ fn last_timed_event_span(events: &[Spanned<ScoreEvent>]) -> Span {
 }
 
 fn timed_beats_before_last(events: &[Spanned<ScoreEvent>]) -> (u32, u32) {
-    let mut timed = events
+    let timed = events
         .iter()
         .filter_map(|e| {
             let beats = timed_beats(&e.value);
@@ -701,12 +701,11 @@ fn timed_beats_before_last(events: &[Spanned<ScoreEvent>]) -> (u32, u32) {
         })
         .collect::<Vec<_>>();
 
-    if timed.is_empty() {
+    let Some(&last) = timed.last() else {
         return (0, 0);
-    }
-
-    let last = timed.pop().unwrap();
-    (timed.iter().sum(), last)
+    };
+    let before_last: u32 = timed.iter().take(timed.len().saturating_sub(1)).sum();
+    (before_last, last)
 }
 
 /// Implicit trailing `-` extensions apply only when earlier content fills whole beats
@@ -750,9 +749,11 @@ fn validate_and_pad_beats(
                 format!("incomplete measure: expected {expected} quarter-beats, got {total}"),
             ));
         }
-        if let Some(last) = events.iter_mut().rev().find(|e| {
-            matches!(&e.value, ScoreEvent::Note(_) | ScoreEvent::Rest(_))
-        }) {
+        if let Some(last) = events
+            .iter_mut()
+            .rev()
+            .find(|e| matches!(&e.value, ScoreEvent::Note(_) | ScoreEvent::Rest(_)))
+        {
             match &mut last.value {
                 ScoreEvent::Note(n) => n.duration += deficit,
                 ScoreEvent::Rest(r) => r.duration += deficit,
@@ -799,7 +800,7 @@ fn validate_and_pad_chord_beats(
         total += chord_timed_beats(event);
         if total > expected {
             return Err(JianPuError::new(
-                last_chord_event_span(&events, &line_span),
+                last_chord_event_span(&events, line_span),
                 format!(
                     "chord exceeds measure boundary: measure has {expected} quarter-beats, cumulative is now {total}"
                 ),
@@ -811,7 +812,7 @@ fn validate_and_pad_chord_beats(
         let deficit = expected - total;
         if deficit % 4 != 0 || !has_extendable_chord_event(&events) {
             return Err(JianPuError::new(
-                last_chord_event_span(&events, &line_span),
+                last_chord_event_span(&events, line_span),
                 format!("incomplete measure: expected {expected} quarter-beats, got {total}"),
             ));
         }
@@ -978,12 +979,7 @@ mod tests {
 
     #[test]
     fn cross_measure_paren_group_parses() {
-        let content = concat!(
-            "(time=4/4 key=C4 bpm=120)\n",
-            "111(1\n",
-            "\n",
-            "2)345\n",
-        );
+        let content = concat!("(time=4/4 key=C4 bpm=120)\n", "111(1\n", "\n", "2)345\n",);
         let declarations = vec![decl("", PartKind::Notes)];
         let tracks = parse(content, 0, &declarations).unwrap();
         let notes = notes_track(&tracks, "");
@@ -1227,7 +1223,7 @@ mod tests {
                 .iter()
                 .find_map(|p| match p {
                     PartRow::Chord(c) => Some(c),
-                    _ => None,
+                    PartRow::Notes(_) => None,
                 })
                 .unwrap();
             match &chord.events[0] {
@@ -1262,7 +1258,7 @@ mod tests {
                 .iter()
                 .find_map(|p| match p {
                     PartRow::Chord(c) => Some(c),
-                    _ => None,
+                    PartRow::Notes(_) => None,
                 })
                 .unwrap();
             match chord.events.last().unwrap() {
