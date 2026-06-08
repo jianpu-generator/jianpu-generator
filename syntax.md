@@ -104,11 +104,11 @@ The `[score]` body is split into **measure groups** by **blank lines**. Each gro
 ```
 (bpm=92 key=C4 time=4/4 label="Verse 1")
 1 - - -
-_5 _5 _5 =5 =5 _5 _3 _2 _3~
+5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_)
 白陽旗旛在大道盛宏
 
 6m - - -
-_3 _1~1 - _0 =1 =1
+3_ (1_1) 0_- 1= 1=
 昌花花
 ```
 
@@ -174,53 +174,55 @@ Note lines are whitespace-separated **tokens**. The `|` character is accepted bu
 | `1`–`7` | Scale degree (movable do) |
 | `0` | Rest |
 
-### Duration prefix
+### Duration suffixes
 
 Duration is measured in **quarter-beats** (sixteenth-note units). In 4/4, one full beat = 4 quarter-beats; a full 4/4 bar = 16 quarter-beats.
 
-| Prefix | Quarter-beats | Typical name (4/4) |
+| Suffix | Quarter-beats | Typical name (4/4) |
 |--------|---------------|---------------------|
 | *(none)* | 4 | Quarter note (one beat) |
 | `_` | 2 | Eighth note |
 | `=` | 1 | Sixteenth note |
 
-Each token fills one **beat slot** by default; `-` (see below) extends the previous note/rest into the next beat slot.
+Suffix order is flexible (`1_,'` and `1',_` are equivalent).
 
-### Octave dots
+### Octave markers
 
-| Position | Meaning |
-|----------|---------|
-| Leading `.` | Raise octave (each `.` = one octave up) |
-| Trailing `.` | Lower octave (each `.` = one octave down) |
+| Suffix | Meaning |
+|--------|---------|
+| `'` | Raise octave (each `'` = one octave up) |
+| `,` | Lower octave (each `,` = one octave down) |
 
-Leading and trailing dots **cannot be mixed** on the same token.
+`'` and `,` **cannot be mixed** on the same note.
 
-Examples: `.1` (octave up), `1..` (two octaves down), `.._3` (up two octaves, eighth note).
+Examples: `1'` (octave up), `1,,` (two octaves down), `3_,'` (eighth note, up one octave).
 
 ### Modifiers
 
 | Suffix | Meaning |
 |--------|---------|
-| `*` | Dotted (add half the base duration). Cannot combine with `=` (sixteenth) tokens. |
-| `~` | Tie/slur attached to this note (connects to the next note) |
-
-A standalone `~` token ties/slurs into the **preceding** note, including across a `-` extension:
-
-```
-6 - ~ 7 0      ← 6 extended one beat, then slurred into 7
-```
-
-The tokenizer splits on `~`, so `4~3~3` becomes three tokens: `4~`, `3~`, `3`.
-
-### Extension
-
-| Token | Meaning |
-|-------|---------|
+| `.` | Dotted (add half the base duration). Cannot combine with `=` (sixteenth) notes. |
 | `-` | Extend the previous note or rest by one beat (4 quarter-beats) |
 
-Example: `1 - - -` is a whole note in 4/4 (one quarter-note token plus three extensions).
+Example: `2 - - -` is a whole note in 4/4 (equivalent to `2---`).
 
-Trailing `-` tokens may be omitted when the remaining measure beats are all extensions of the last note or rest. In 4/4, `1` is equivalent to `1 - - -`; `1 2` is equivalent to `1 2 - -`. Middle extensions cannot be skipped (`1 - 2` must keep the `-`). If the missing duration is not a whole number of beats, or there is no note/rest to extend, the measure is still an error.
+You can also attach dashes as suffixes on the note itself (`2---`). Both forms may be mixed in one measure.
+
+### Tie and slur groups
+
+Parentheses connect notes with tie/slur arcs (happi123-style 连音符). A group may span measures: the opening `(` can appear at the end of one bar and the closing `)` at the start of the next.
+
+| Form | Meaning |
+|------|---------|
+| `(12)` | Slur/tie from 1 into 2 |
+| `(433)` | Slur chain across 4→3→3 |
+| `(3)` | Outgoing tie/slur to the next note (including across a bar line) |
+| `(6-7)` | Note 6 extended one beat (`6-`), slurred into 7 |
+| `111(1` … `2)345` | Cross-measure slur: `(1` opens in bar 1, `2)` closes in bar 2 |
+
+Adjacent digits without spaces also start new notes: `505` is three quarter notes; `(12)31` is a group plus two more notes.
+
+Trailing duration may be omitted when the remaining measure beats extend the last note. In 4/4, `1` is equivalent to `1---`; `1 2` is equivalent to `1 2--`.
 
 ### Inline directives (notes row)
 
@@ -229,8 +231,10 @@ These tokens may also appear in a notes line (uncommon; usually placed in `(...)
 | Token | Meaning |
 |-------|---------|
 | `bpm=N` | Tempo change |
-| `1=<Note><octave>` | Key change, e.g. `1=C4`, `1=Bb4` |
+| `1=<Note><octave>` | Key change, e.g. `1=C4`, `1=Bb4` (only when followed by A–G) |
 | `N/N` | Time signature change, e.g. `4/4` |
+
+Note: `1=` followed by a digit pitch (e.g. `1=,`) is a sixteenth note, not a key change.
 
 ### Measure validation
 
@@ -240,21 +244,21 @@ Note and rest durations in a row must fill the measure capacity. For time signat
 measure capacity = N × (16 / D) quarter-beats
 ```
 
-(e.g. 4/4 → 16, 3/4 → 12). Too many quarter-beats is a parse error. A shortfall is filled with implicit trailing `-` extensions when possible (see [Extension](#extension)); otherwise it is a parse error.
+(e.g. 4/4 → 16, 3/4 → 12). Too many quarter-beats is a parse error. A shortfall extends the last note/rest when possible; otherwise it is a parse error.
 
 ### Examples
 
 | Token | Meaning |
 |-------|---------|
 | `1` | Quarter note on degree 1 |
-| `_3` | Eighth note on degree 3 |
-| `=5` | Sixteenth note on degree 5 |
-| `_1*` | Dotted eighth note |
-| `1~` | Quarter note tied to next |
-| `6.` | Degree 6, one octave down |
+| `3_` | Eighth note on degree 3 |
+| `5=` | Sixteenth note on degree 5 |
+| `1_.` | Dotted eighth note |
+| `(12)` | Quarter notes 1 and 2, slurred/tied |
+| `6,` | Degree 6, one octave down |
 | `0` | Quarter rest |
-| `_0` | Eighth rest |
-| `1* =1 =6.` | Mixed durations and octaves |
+| `0_` | Eighth rest |
+| `1. 1= 6=, (2_=2_)` | Mixed durations, octaves, and a slur group |
 
 ---
 
@@ -363,7 +367,7 @@ Example:
 
 ```
 1 - 6m -
-_1 _1 _1 =1 =1 _1 6. _6~
+_1 _1 _1 =1 =1 1_ 6, (6_)
 ```
 
 ---
@@ -373,7 +377,7 @@ _1 _1 _1 =1 =1 _1 6. _6~
 A line whose entire trimmed content is `"` means **same content as the closest preceding line of the same column type** within this measure group.
 
 ```
-_5 _5 _5 =5 =5 _5 _3 _2 _3~    ← A1&T notes
+5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_)    ← A1&T notes
 白陽旗旛在大道盛宏               ← A1&T lyrics
 "                                ← A2 notes  (= A1&T notes)
 "                                ← A2 lyrics (= A1&T lyrics)
@@ -401,7 +405,7 @@ Verse example — three lines instead of nine:
 
 ```
 1 - - -
-_5 _5 _5 =5 =5 _5 _3 _2 _3~
+5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_)
 白陽旗旛在大道盛宏
 ```
 
@@ -412,7 +416,7 @@ The omitted A2/S1/S2 notes and lyrics lines are padded as implicit ditto.
 Because lines map **positionally**, you can only omit **trailing** columns. If a middle column would be ditto but later columns have explicit content, the middle `"` must still be written:
 
 ```
-4* =4 =4 _4 _3 =1 =2~_2       ← A2 notes (explicit, diverges)
+4. 4= 4= 4_ 3_ 1= (2_=2_)       ← A2 notes (explicit, diverges)
 "                              ← A2 lyrics (still required — S1 follows)
 6 - 5 -                       ← S1 notes (explicit)
 一個                          ← S1 lyrics (explicit)

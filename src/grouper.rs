@@ -422,7 +422,7 @@ mod tests {
     fn extension_adds_to_previous_note_duration() {
         let score = parse_and_group(concat!(
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n",
-            "[score]\n(time=4/4 key=C4 bpm=120)\n1 - 3 4\na - b\n",
+            "[score]\n(time=4/4 key=C4 bpm=120)\n1- 3 4\na - b\n",
         ));
         match &first_part_notes(&score, 0)[0] {
             NoteEvent::Note(n) => assert_eq!(n.duration, 8),
@@ -493,7 +493,7 @@ mod tests {
     fn half_beat_notes_accumulate_correctly() {
         let score = parse_and_group(concat!(
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n",
-            "[score]\n(time=4/4 key=C4 bpm=120)\n_1 _2 _3 _4 _5 _6 _7 _1\na b c d e f g h\n",
+            "[score]\n(time=4/4 key=C4 bpm=120)\n1_ 2_ 3_ 4_ 5_ 6_ 7_ 1_\na b c d e f g h\n",
         ));
         assert_eq!(score.measures.len(), 1);
     }
@@ -503,7 +503,7 @@ mod tests {
         // The interleaved parser validates beats per bar — overfull bar is rejected at parse time.
         let input = concat!(
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n",
-            "[score]\n(time=4/4 key=C4 bpm=120)\n_1 _1 _1 _1 _1 _1 _1 1\na b c d e f g h\n",
+            "[score]\n(time=4/4 key=C4 bpm=120)\n1_ 1_ 1_ 1_ 1_ 1_ 1_ 1\na b c d e f g h\n",
         );
         assert!(
             parser::parse(input, "test.jianpu").is_err(),
@@ -604,11 +604,11 @@ mod tests {
 
     #[test]
     fn standalone_tie_marker_after_extension_that_flushes_measure() {
-        // `6 - - -` fills a 4/4 measure exactly; `~ 7 0 0 0` starts the next group.
-        // The `~` must reach back into the flushed measure and set tie=true on note 6.
+        // `(6---)` fills a 4/4 measure exactly; `7 0 0 0` starts the next group.
+        // The outgoing tie on 6 must carry into the next measure.
         let score = parse_and_group(concat!(
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes\n\n",
-            "[score]\n(time=4/4 key=C4 bpm=120)\n6 - - -\n\n~ 7 0 0 0\n",
+            "[score]\n(time=4/4 key=C4 bpm=120)\n(6---)\n\n7 0 0 0\n",
         ));
         let notes_m0 = first_part_notes(&score, 0);
         match notes_m0.last().unwrap() {
@@ -619,10 +619,10 @@ mod tests {
 
     #[test]
     fn standalone_tie_marker_sets_tie_on_preceding_note() {
-        // `6 - ~ 7` means note 6 extended by one beat, slurred into note 7
+        // `(6-7)` means note 6 extended by one beat, slurred into note 7
         let score = parse_and_group(concat!(
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes\n\n",
-            "[score]\n(time=4/4 key=C4 bpm=120)\n6 - ~ 7 0\n",
+            "[score]\n(time=4/4 key=C4 bpm=120)\n(6-7) 0\n",
         ));
         let notes = first_part_notes(&score, 0);
         match &notes[0] {
@@ -657,7 +657,7 @@ mod tests {
     #[test]
     fn chord_part_produces_one_chord_event_per_measure() {
         use crate::ast::grouped::PartRow;
-        let input = "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nchord = chord\nMelody = notes\n\n[score]\n(time=4/4 key=C4 bpm=120)\n1 - - -\n1 - - -\n";
+        let input = "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nchord = chord\nMelody = notes\n\n[score]\n(time=4/4 key=C4 bpm=120)\n1 - - -\n1---\n";
         let doc = parser::parse(input, "test.jianpu").unwrap();
         let score = group(doc).unwrap();
         let measure = &score.measures[0];

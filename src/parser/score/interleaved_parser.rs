@@ -5,6 +5,7 @@ use crate::ast::parsed::{
 };
 use crate::error::{JianPuError, Span, Spanned};
 use crate::parser::score::{token_parser, tokenizer};
+use crate::parser::score::token_parser::GroupParseState;
 use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics, LyricTieState};
 
 enum SlotAction {
@@ -33,6 +34,7 @@ struct BarGroupContext<'a> {
     time_den: &'a mut u8,
     accumulators: &'a mut [TrackAccumulator],
     lyric_tie_states: &'a mut [LyricTieState],
+    group_states: &'a mut [GroupParseState],
     bar_lyric_slots: &'a mut [Option<u32>],
 }
 
@@ -61,6 +63,7 @@ pub fn parse(
     let mut time_num: u8 = 4;
     let mut time_den: u8 = 4;
     let mut lyric_tie_states = vec![LyricTieState::default(); declarations.len()];
+    let mut group_states = vec![GroupParseState::default(); declarations.len()];
     let mut bar_lyric_slots = vec![None; declarations.len()];
 
     let mut ctx = BarGroupContext {
@@ -73,11 +76,25 @@ pub fn parse(
         time_den: &mut time_den,
         accumulators: &mut accumulators,
         lyric_tie_states: &mut lyric_tie_states,
+        group_states: &mut group_states,
         bar_lyric_slots: &mut bar_lyric_slots,
     };
 
     for (bar_idx, group_lines) in groups.iter().enumerate() {
         process_bar_group(group_lines, bar_idx + 1, &mut ctx)?;
+    }
+
+    for (track_index, state) in group_states.iter().enumerate() {
+        if state.open {
+            let part_label = declarations
+                .get(track_index)
+                .map(|d| d.abbreviation.as_str())
+                .unwrap_or("unknown");
+            return Err(JianPuError::new(
+                Span::new(base_offset, base_offset + content.len()),
+                format!("unclosed '(' group at end of score in part '{part_label}'"),
+            ));
+        }
     }
 
     build_parse_result(declarations, accumulators)
@@ -301,8 +318,16 @@ fn process_column_line(
                 ));
             }
             let tokens = tokenizer::tokenize(line, ctx.base_offset + line_offset);
-            let events =
-                validate_and_pad_beats(token_parser::parse_tokens(tokens)?, beats_expected)?;
+            let group_state = ctx.group_states.get_mut(*track_index).ok_or_else(|| {
+                JianPuError::new(
+                    line_span.clone(),
+                    "internal error: group state index out of range",
+                )
+            })?;
+            let events = validate_and_pad_beats(
+                token_parser::parse_tokens(tokens, group_state)?,
+                beats_expected,
+            )?;
             if let Some(tie_state) = ctx.lyric_tie_states.get_mut(*track_index) {
                 let slots = count_lyric_slots_in_events(&events, tie_state);
                 if let Some(bar_slot) = ctx.bar_lyric_slots.get_mut(*track_index) {
@@ -700,12 +725,12 @@ fn validate_and_pad_beats(
                 format!("incomplete measure: expected {expected} quarter-beats, got {total}"),
             ));
         }
-        let pad_end = last_timed_event_span(&events).end;
-        for _ in 0..(deficit / 4) {
-            events.push(Spanned::new(
-                ScoreEvent::Extension,
-                Span::new(pad_end, pad_end),
-            ));
+        if let Some(last) = events.iter_mut().rev().find(|e| timed_beats(&e.value) > 0) {
+            match &mut last.value {
+                ScoreEvent::Note(n) => n.duration += deficit,
+                ScoreEvent::Rest(r) => r.duration += deficit,
+                _ => {}
+            }
         }
     }
 
@@ -748,7 +773,7 @@ mod tests {
     #[test]
     fn chord_column_events_are_parsed() {
         let declarations = vec![decl("main", PartKind::Chord), decl("main", PartKind::Notes)];
-        let content = "(time=4/4 key=C4 bpm=120)\n1 - - -\n1 - - -\n";
+        let content = "(time=4/4 key=C4 bpm=120)\n1 - - -\n1---\n";
         let tracks = parse(content, 0, &declarations).unwrap();
         assert_eq!(tracks.len(), 2);
         let chord = chord_track(&tracks, "main");
@@ -765,7 +790,7 @@ mod tests {
             })
         );
         assert!(matches!(events[1], ParsedChordEvent::Extend(_)));
-        assert_eq!(notes_track(&tracks, "main").score.events.len(), 7);
+        assert_eq!(notes_track(&tracks, "main").score.events.len(), 4);
     }
 
     #[test]
@@ -866,8 +891,41 @@ mod tests {
     }
 
     #[test]
+    fn cross_measure_paren_group_parses() {
+        let content = concat!(
+            "(time=4/4 key=C4 bpm=120)\n",
+            "111(1\n",
+            "\n",
+            "2)345\n",
+        );
+        let declarations = vec![decl("", PartKind::Notes)];
+        let tracks = parse(content, 0, &declarations).unwrap();
+        let notes = notes_track(&tracks, "");
+        let note_events: Vec<_> = notes
+            .score
+            .events
+            .iter()
+            .filter_map(|e| match &e.value {
+                ScoreEvent::Note(n) => Some(n),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(note_events.len(), 8);
+        assert!(note_events[3].tie);
+        assert!(!note_events[4].tie);
+    }
+
+    #[test]
+    fn rejects_unclosed_paren_group_at_eof() {
+        let content = "(time=4/4 key=C4 bpm=120)\n111(1\n";
+        let declarations = vec![decl("", PartKind::Notes)];
+        let err = parse(content, 0, &declarations).unwrap_err();
+        assert!(err.message.contains("unclosed '(' group"));
+    }
+
+    #[test]
     fn tied_notes_share_one_lyric_slot_in_bar() {
-        let content = "(time=4/4 key=C4 bpm=120)\n3~3 1 2\na b c\n";
+        let content = "(time=4/4 key=C4 bpm=120)\n(33) 1 2\na b c\n";
         let declarations = vec![decl("", PartKind::NotesWithLyrics)];
         let tracks = parse(content, 0, &declarations).unwrap();
         assert_eq!(
@@ -884,7 +942,7 @@ mod tests {
     #[test]
     fn cross_measure_tie_continuation_needs_fewer_lyrics() {
         let content = concat!(
-            "(time=4/4 key=C4 bpm=120)\n0 0 0 3~\na\n",
+            "(time=4/4 key=C4 bpm=120)\n0 0 0 (3)\na\n",
             "\n",
             "3 0 0 0\n",
             "_\n",
@@ -900,6 +958,27 @@ mod tests {
                 .len(),
             1
         );
+    }
+
+    #[test]
+    fn spaced_open_group_cross_measure_lyrics() {
+        let content = concat!(
+            "(time=4/4 key=C4 bpm=120)\n",
+            "1 - 6m -\n",
+            "(6 - 7 -\n",
+            "慈 -\n",
+            "\n",
+            "1 - 6m -\n",
+            "7) 1\n",
+            "光\n",
+        );
+        let declarations = vec![
+            decl("main", PartKind::Chord),
+            decl("S1", PartKind::NotesWithLyrics),
+        ];
+        let tracks = parse(content, 0, &declarations).unwrap();
+        let s1 = notes_track(&tracks, "S1");
+        assert_eq!(s1.lyrics.as_ref().unwrap().syllables.len(), 3);
     }
 
     #[test]
@@ -923,11 +1002,11 @@ mod tests {
         let content = concat!(
             "(time=4/4 key=C4 bpm=120)\n",
             "1 - 6m -\n",
-            "6* =6 =6 _6 _5 =3 =2~_2\n",
+            "6. 6= 6= 6_ 5_ 3= (2_=2_)\n",
             "a b c d e f g\n",
-            "4* =4 =4 _4 _3 =1 =2~_2\n",
+            "4. 4= 4= 4_ 3_ 1= (2_=2_)\n",
             "\"\n",
-            "6 - 5 -\n",
+            "6- 5-\n",
             "alto lyrics\n",
         );
         let declarations = vec![
@@ -1001,7 +1080,7 @@ mod tests {
     #[test]
     fn implicit_trailing_extensions_match_explicit() {
         let declarations = vec![decl("", PartKind::Notes)];
-        let explicit = "(time=4/4 key=C4 bpm=120)\n1 - - -\n";
+        let explicit = "(time=4/4 key=C4 bpm=120)\n1---\n";
         let implicit = "(time=4/4 key=C4 bpm=120)\n1\n";
         let explicit_parsed = parse(explicit, 0, &declarations).unwrap();
         let implicit_parsed = parse(implicit, 0, &declarations).unwrap();
@@ -1027,7 +1106,7 @@ mod tests {
     #[test]
     fn implicit_trailing_extensions_after_partial_fill() {
         let declarations = vec![decl("", PartKind::Notes)];
-        let explicit = "(time=4/4 key=C4 bpm=120)\n1 2 - -\n";
+        let explicit = "(time=4/4 key=C4 bpm=120)\n1 2--\n";
         let implicit = "(time=4/4 key=C4 bpm=120)\n1 2\n";
         let explicit_parsed = parse(explicit, 0, &declarations).unwrap();
         let implicit_parsed = parse(implicit, 0, &declarations).unwrap();
@@ -1041,7 +1120,7 @@ mod tests {
 
     #[test]
     fn rejects_underfull_measure_that_cannot_be_padded_with_extensions() {
-        let content = "(time=4/4 key=C4 bpm=120)\n_4\n";
+        let content = "(time=4/4 key=C4 bpm=120)\n4_\n";
         let declarations = vec![decl("", PartKind::Notes)];
         let err = parse(content, 0, &declarations).unwrap_err();
         assert!(err.message.contains("incomplete measure"));
@@ -1049,21 +1128,21 @@ mod tests {
 
     #[test]
     fn underfull_measure_span_points_to_last_note() {
-        let content = "(time=4/4 key=C4 bpm=120)\n4 4 4 _4\n";
+        let content = "(time=4/4 key=C4 bpm=120)\n4 4 4 4_\n";
         let declarations = vec![decl("", PartKind::Notes)];
         let err = parse(content, 0, &declarations).unwrap_err();
-        assert_eq!(err.span.start, 32, "span must point to the last note '_4'");
+        assert_eq!(err.span.start, 32, "span must point to the last note '4_'");
         assert_eq!(err.span.end, 34);
     }
 
     #[test]
     fn underfull_measure_in_second_bar_span_points_to_last_note() {
-        let content = "(time=4/4 key=C4 bpm=120)\n5 5 5 5\n\n4 4 4 _4\n";
+        let content = "(time=4/4 key=C4 bpm=120)\n5 5 5 5\n\n4 4 4 4_\n";
         let declarations = vec![decl("", PartKind::Notes)];
         let err = parse(content, 0, &declarations).unwrap_err();
         assert_eq!(
             err.span.start, 41,
-            "span must point to the last note '_4' in the second bar"
+            "span must point to the last note '4_' in the second bar"
         );
         assert_eq!(err.span.end, 43);
     }
