@@ -1,33 +1,51 @@
 use crate::error::JianPuError;
 
 pub fn render(e: &JianPuError) {
-    render_to_writer(e, std::io::stderr());
+    render_to_writer(e, std::io::stderr(), None);
 }
 
-fn render_to_writer(e: &JianPuError, mut writer: impl std::io::Write) {
+/// Render a pretty error using an in-memory source string (for WASM and other non-FS hosts).
+pub fn render_with_source(source: &str, e: &JianPuError) -> String {
+    let mut buf = Vec::new();
+    render_to_writer(e, &mut buf, Some(source));
+    String::from_utf8_lossy(&buf).into_owned()
+}
+
+fn render_to_writer(e: &JianPuError, mut writer: impl std::io::Write, source: Option<&str>) {
     use ariadne::{Label, Report, ReportKind, Source};
 
-    let Some(path) = &e.path else {
+    let source_text = match source {
+        Some(s) => Some(s.to_owned()),
+        None => e
+            .path
+            .as_ref()
+            .and_then(|path| std::fs::read_to_string(path).ok()),
+    };
+
+    let Some(source_text) = source_text else {
         writeln!(writer, "error: {}", e.message).ok();
         return;
     };
 
-    let Ok(source) = std::fs::read_to_string(path) else {
-        writeln!(writer, "error: {}", e.message).ok();
-        return;
-    };
-
-    let filename = path.to_string_lossy().into_owned();
+    let filename = e
+        .path
+        .as_ref()
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "input".to_owned());
     // ariadne indexes by Unicode character count, not by byte offset.
-    let char_start = source[..e.span.start.min(source.len())].chars().count();
-    let char_end = source[..e.span.end.min(source.len())].chars().count();
+    let char_start = source_text[..e.span.start.min(source_text.len())]
+        .chars()
+        .count();
+    let char_end = source_text[..e.span.end.min(source_text.len())]
+        .chars()
+        .count();
     let span = (filename.clone(), char_start..char_end);
 
     if Report::build(ReportKind::Error, span.clone())
         .with_message(&e.message)
         .with_label(Label::new(span).with_message(&e.message))
         .finish()
-        .write((filename, Source::from(source.as_str())), &mut writer)
+        .write((filename, Source::from(source_text.as_str())), &mut writer)
         .is_err()
     {
         writeln!(writer, "error: {}", e.message).ok();
@@ -52,12 +70,25 @@ mod tests {
         let e = JianPuError::new(Span::new(4, 5), "expected pitch digit 0-7").with_path(&path);
 
         let mut buf = Vec::new();
-        render_to_writer(&e, &mut buf);
+        render_to_writer(&e, &mut buf, None);
         let output = String::from_utf8_lossy(&buf);
         assert!(
             output.contains("expected pitch digit 0-7"),
             "output was: {output}"
         );
+    }
+
+    #[test]
+    fn render_with_source_shows_code_block() {
+        let source = "1 2 x 4\n";
+        let e = JianPuError::new(Span::new(4, 5), "expected pitch digit 0-7");
+
+        let output = render_with_source(source, &e);
+        assert!(
+            output.contains('│'),
+            "expected ariadne code block, got: {output}"
+        );
+        assert!(output.contains("expected pitch digit 0-7"));
     }
 
     #[test]
@@ -76,7 +107,7 @@ mod tests {
         .with_path(&path);
 
         let mut buf = Vec::new();
-        render_to_writer(&e, &mut buf);
+        render_to_writer(&e, &mut buf, None);
         let output = String::from_utf8_lossy(&buf);
         // The code block must appear — presence of '│' confirms ariadne rendered it.
         assert!(
@@ -90,7 +121,7 @@ mod tests {
     fn render_falls_back_when_path_is_none() {
         let e = JianPuError::new(Span::new(0, 1), "some error");
         let mut buf = Vec::new();
-        render_to_writer(&e, &mut buf);
+        render_to_writer(&e, &mut buf, None);
         let output = String::from_utf8_lossy(&buf);
         assert!(output.contains("some error"), "output was: {output}");
     }
@@ -100,7 +131,7 @@ mod tests {
         let e =
             JianPuError::new(Span::new(0, 1), "some error").with_path("/nonexistent/path.jianpu");
         let mut buf = Vec::new();
-        render_to_writer(&e, &mut buf);
+        render_to_writer(&e, &mut buf, None);
         let output = String::from_utf8_lossy(&buf);
         assert!(output.contains("some error"), "output was: {output}");
     }

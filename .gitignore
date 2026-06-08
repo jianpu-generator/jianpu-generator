@@ -1,1 +1,7 @@
 /target
+/node_modules
+/web/node_modules
+package-lock.json
+/web/package-lock.json
+/web/dist
+/crates/jianpu-wasm/pkg

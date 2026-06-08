@@ -74,14 +74,17 @@ pub fn tokenize_lyrics(content: &str) -> Vec<Syllable> {
                 held: false,
             });
         } else if c == '-' {
-            // `-` is a special delimiter — flush any pending latin, then push a
-            // dedicated dash syllable.  Do NOT accumulate it into current_latin
-            // so that consecutive dashes each produce their own token.
-            flush(&mut current_latin, &mut raw);
-            raw.push(Syllable {
-                text: "-".to_string(),
-                held: false,
-            });
+            if current_latin.is_empty() {
+                // Standalone `-` (surrounded by whitespace): held-syllable delimiter.
+                raw.push(Syllable {
+                    text: "-".to_string(),
+                    held: false,
+                });
+            } else {
+                // Trailing `-` attached to a word: syllable break across notes (e.g. `twin-`).
+                current_latin.push('-');
+                flush(&mut current_latin, &mut raw);
+            }
         } else if c.is_whitespace() {
             flush(&mut current_latin, &mut raw);
         } else {
@@ -201,6 +204,17 @@ mod tests {
         assert!(syllables[0].held);
         assert_eq!(syllables[1].text, "-");
         assert!(!syllables[1].held);
+    }
+
+    #[test]
+    fn trailing_dash_on_word_is_syllable_break() {
+        let syllables = tokenize_lyrics("twin- kle twin- kle");
+        assert_eq!(syllables.len(), 4);
+        assert_eq!(syllables[0].text, "twin-");
+        assert!(!syllables[0].held);
+        assert_eq!(syllables[1].text, "kle");
+        assert_eq!(syllables[2].text, "twin-");
+        assert_eq!(syllables[3].text, "kle");
     }
 
     #[test]

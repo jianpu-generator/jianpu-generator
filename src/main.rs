@@ -1,18 +1,5 @@
-mod ast;
-mod combiner;
-mod desugar;
-mod error;
-mod error_reporter;
-mod grouper;
-mod layout;
-mod midi;
-mod parser;
-mod pdf;
-mod renderer;
-mod utils;
-mod wav;
-
 use clap::{Parser, Subcommand};
+use jianpu_generator::{self as jg, error_reporter};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -125,7 +112,7 @@ struct GenerateInput {
     split_tracks: bool,
 }
 
-fn effective_tracks(tracks: &[String], score: &ast::grouped::Score) -> Vec<String> {
+fn effective_tracks(tracks: &[String], score: &jg::ast::grouped::Score) -> Vec<String> {
     if tracks.is_empty() {
         collect_track_names(score)
     } else {
@@ -150,14 +137,14 @@ fn track_output_path(base: &Path, base_name: &str, track: &str, extension: &str)
 
 /// Returns `true` when split-track output was written and the caller should return early.
 fn try_split_tracks<F>(
-    score: &ast::grouped::Score,
+    score: &jg::ast::grouped::Score,
     input: &Path,
     output: Option<&Path>,
     tracks: &[String],
     mut write_track: F,
-) -> Result<bool, error::JianPuError>
+) -> Result<bool, jg::error::JianPuError>
 where
-    F: FnMut(&ast::grouped::Score, &str, &Path, &str) -> Result<(), error::JianPuError>,
+    F: FnMut(&jg::ast::grouped::Score, &str, &Path, &str) -> Result<(), jg::error::JianPuError>,
 {
     let effective_tracks = effective_tracks(tracks, score);
     if effective_tracks.is_empty() {
@@ -170,20 +157,13 @@ where
     let (base, base_name) = split_track_base(input, output);
     for track in &effective_tracks {
         let mut score_clone = score.clone();
-        filter_tracks(&mut score_clone, std::slice::from_ref(track));
+        jg::filter_tracks(&mut score_clone, std::slice::from_ref(track));
         write_track(&score_clone, track, &base, &base_name)?;
     }
     Ok(true)
 }
 
-fn render_score_svgs(score: &ast::grouped::Score) -> Vec<String> {
-    let row_height = score.metadata.row_height;
-    let note_number_width = score.metadata.note_number_width;
-    let pages = layout::layout(score, 595.0, 842.0);
-    renderer::render(&pages, row_height, note_number_width)
-}
-
-fn write_svgs_to_path(svgs: &[String], output_path: &Path) -> Result<(), error::JianPuError> {
+fn write_svgs_to_path(svgs: &[String], output_path: &Path) -> Result<(), jg::error::JianPuError> {
     for (i, svg) in svgs.iter().enumerate() {
         let path = if svgs.len() == 1 {
             output_path.to_path_buf()
@@ -196,7 +176,7 @@ fn write_svgs_to_path(svgs: &[String], output_path: &Path) -> Result<(), error::
     Ok(())
 }
 
-fn generate_pdf(opts: &GenerateInput) -> Result<(), error::JianPuError> {
+fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::JianPuError> {
     let score = parse_and_group(&opts.input)?;
     if opts.split_tracks {
         let split = try_split_tracks(
@@ -205,8 +185,8 @@ fn generate_pdf(opts: &GenerateInput) -> Result<(), error::JianPuError> {
             opts.output.as_deref(),
             &opts.tracks,
             |score_clone, track, base, base_name| {
-                let svgs = render_score_svgs(score_clone);
-                let pdf_bytes = pdf::write_pdf(&svgs)?;
+                let svgs = jg::render_svgs(score_clone);
+                let pdf_bytes = jg::pdf::write_pdf(&svgs)?;
                 let track_path = track_output_path(base, base_name, track, "pdf");
                 write_file(&track_path, &pdf_bytes)?;
                 println!("written to {track_path:?}");
@@ -219,9 +199,9 @@ fn generate_pdf(opts: &GenerateInput) -> Result<(), error::JianPuError> {
     }
 
     let mut score = score;
-    filter_tracks(&mut score, &opts.tracks);
-    let svgs = render_score_svgs(&score);
-    let pdf_bytes = pdf::write_pdf(&svgs)?;
+    jg::filter_tracks(&mut score, &opts.tracks);
+    let svgs = jg::render_svgs(&score);
+    let pdf_bytes = jg::pdf::write_pdf(&svgs)?;
     let output_path =
         output_stem(&opts.input, &opts.tracks, opts.output.as_deref()).with_extension("pdf");
     write_file(&output_path, &pdf_bytes)?;
@@ -229,7 +209,7 @@ fn generate_pdf(opts: &GenerateInput) -> Result<(), error::JianPuError> {
     Ok(())
 }
 
-fn generate_svg(opts: &GenerateInput) -> Result<(), error::JianPuError> {
+fn generate_svg(opts: &GenerateInput) -> Result<(), jg::error::JianPuError> {
     let score = parse_and_group(&opts.input)?;
     if opts.split_tracks {
         let split = try_split_tracks(
@@ -238,7 +218,7 @@ fn generate_svg(opts: &GenerateInput) -> Result<(), error::JianPuError> {
             opts.output.as_deref(),
             &opts.tracks,
             |score_clone, track, base, base_name| {
-                let svgs = render_score_svgs(score_clone);
+                let svgs = jg::render_svgs(score_clone);
                 let track_base =
                     base.with_file_name(format!("{} - {}", base_name, sanitize_track_name(track)));
                 for (i, svg) in svgs.iter().enumerate() {
@@ -259,14 +239,14 @@ fn generate_svg(opts: &GenerateInput) -> Result<(), error::JianPuError> {
     }
 
     let mut score = score;
-    filter_tracks(&mut score, &opts.tracks);
-    let svgs = render_score_svgs(&score);
+    jg::filter_tracks(&mut score, &opts.tracks);
+    let svgs = jg::render_svgs(&score);
     let output_path =
         output_stem(&opts.input, &opts.tracks, opts.output.as_deref()).with_extension("svg");
     write_svgs_to_path(&svgs, &output_path)
 }
 
-fn generate_midi(opts: &GenerateInput) -> Result<(), error::JianPuError> {
+fn generate_midi(opts: &GenerateInput) -> Result<(), jg::error::JianPuError> {
     let score = parse_and_group(&opts.input)?;
     if opts.split_tracks {
         let split = try_split_tracks(
@@ -275,7 +255,7 @@ fn generate_midi(opts: &GenerateInput) -> Result<(), error::JianPuError> {
             opts.output.as_deref(),
             &opts.tracks,
             |score_clone, track, base, base_name| {
-                let midi_bytes = midi::write_midi(score_clone)?;
+                let midi_bytes = jg::midi::write_midi(score_clone)?;
                 let track_path = track_output_path(base, base_name, track, "mid");
                 write_file(&track_path, &midi_bytes)?;
                 println!("written to {track_path:?}");
@@ -288,8 +268,8 @@ fn generate_midi(opts: &GenerateInput) -> Result<(), error::JianPuError> {
     }
 
     let mut score = score;
-    filter_tracks(&mut score, &opts.tracks);
-    let midi_bytes = midi::write_midi(&score)?;
+    jg::filter_tracks(&mut score, &opts.tracks);
+    let midi_bytes = jg::midi::write_midi(&score)?;
     let output_path =
         output_stem(&opts.input, &opts.tracks, opts.output.as_deref()).with_extension("mid");
     write_file(&output_path, &midi_bytes)?;
@@ -297,7 +277,7 @@ fn generate_midi(opts: &GenerateInput) -> Result<(), error::JianPuError> {
     Ok(())
 }
 
-fn generate_wav(opts: &GenerateInput) -> Result<(), error::JianPuError> {
+fn generate_wav(opts: &GenerateInput) -> Result<(), jg::error::JianPuError> {
     let score = parse_and_group(&opts.input)?;
     if opts.split_tracks {
         let split = try_split_tracks(
@@ -306,8 +286,8 @@ fn generate_wav(opts: &GenerateInput) -> Result<(), error::JianPuError> {
             opts.output.as_deref(),
             &opts.tracks,
             |score_clone, track, base, base_name| {
-                let midi_bytes = midi::write_midi(score_clone)?;
-                let wav_bytes = wav::write_wav(&midi_bytes)?;
+                let midi_bytes = jg::midi::write_midi(score_clone)?;
+                let wav_bytes = jg::wav::write_wav(&midi_bytes)?;
                 let track_path = track_output_path(base, base_name, track, "wav");
                 write_file(&track_path, &wav_bytes)?;
                 println!("written to {track_path:?}");
@@ -320,9 +300,9 @@ fn generate_wav(opts: &GenerateInput) -> Result<(), error::JianPuError> {
     }
 
     let mut score = score;
-    filter_tracks(&mut score, &opts.tracks);
-    let midi_bytes = midi::write_midi(&score)?;
-    let wav_bytes = wav::write_wav(&midi_bytes)?;
+    jg::filter_tracks(&mut score, &opts.tracks);
+    let midi_bytes = jg::midi::write_midi(&score)?;
+    let wav_bytes = jg::wav::write_wav(&midi_bytes)?;
     let output_path =
         output_stem(&opts.input, &opts.tracks, opts.output.as_deref()).with_extension("wav");
     write_file(&output_path, &wav_bytes)?;
@@ -330,7 +310,7 @@ fn generate_wav(opts: &GenerateInput) -> Result<(), error::JianPuError> {
     Ok(())
 }
 
-fn run_generate(format: GenerateFormat) -> Result<(), error::JianPuError> {
+fn run_generate(format: GenerateFormat) -> Result<(), jg::error::JianPuError> {
     match format {
         GenerateFormat::Pdf {
             input,
@@ -379,32 +359,19 @@ fn run_generate(format: GenerateFormat) -> Result<(), error::JianPuError> {
     }
 }
 
-fn parse_and_group(input: &Path) -> Result<ast::grouped::Score, error::JianPuError> {
+fn parse_and_group(input: &Path) -> Result<jg::ast::grouped::Score, jg::error::JianPuError> {
     let content = std::fs::read_to_string(input).map_err(|e| {
-        error::JianPuError::new(
-            error::Span::new(0, 0),
+        jg::error::JianPuError::new(
+            jg::error::Span::new(0, 0),
             format!("could not read {input:?}: {e}"),
         )
     })?;
     let filename = input.to_string_lossy().to_string();
-    let doc = parser::parse(&content, &filename).map_err(|e| e.with_path(input))?;
-    grouper::group(doc).map_err(|e| e.with_path(input))
+    let doc = jg::parser::parse(&content, &filename).map_err(|e| e.with_path(input))?;
+    jg::grouper::group(doc).map_err(|e| e.with_path(input))
 }
 
-fn filter_tracks(score: &mut ast::grouped::Score, tracks: &[String]) {
-    if tracks.is_empty() {
-        return;
-    }
-    for measure in &mut score.measures {
-        measure.parts.retain(|part| {
-            part.name()
-                .as_ref()
-                .is_some_and(|name| tracks.contains(name))
-        });
-    }
-}
-
-fn collect_track_names(score: &ast::grouped::Score) -> Vec<String> {
+fn collect_track_names(score: &jg::ast::grouped::Score) -> Vec<String> {
     let mut seen = std::collections::HashSet::new();
     let mut names = Vec::new();
     for measure in &score.measures {
@@ -419,10 +386,10 @@ fn collect_track_names(score: &ast::grouped::Score) -> Vec<String> {
     names
 }
 
-fn write_file(path: &Path, data: &[u8]) -> Result<(), error::JianPuError> {
+fn write_file(path: &Path, data: &[u8]) -> Result<(), jg::error::JianPuError> {
     std::fs::write(path, data).map_err(|e| {
-        error::JianPuError::new(
-            error::Span::new(0, 0),
+        jg::error::JianPuError::new(
+            jg::error::Span::new(0, 0),
             format!("could not write {path:?}: {e}"),
         )
     })
