@@ -290,8 +290,8 @@ fn render_section_label(
 
 fn render_chord_symbol(text: &str, x: f32, y: f32, ctx: &PageRenderContext, elements: &mut String) {
     elements.push_str(&format!(
-        r#"<text x="{:.1}" y="{:.1}" font-size="{:.1}" text-anchor="start" dominant-baseline="middle" font-family="sans-serif">{}</text>"#,
-        x, y, ctx.base_font_size * 0.75, escape_xml(text)
+        r#"<text x="{:.1}" y="{:.1}" font-size="{:.1}" text-anchor="start" dominant-baseline="middle" font-family="monospace">{}</text>"#,
+        x, y, ctx.base_font_size, escape_xml(text)
     ));
 }
 
@@ -740,6 +740,34 @@ mod tests {
             svg.contains("font-size=\"8.6\""),
             "expected bar number font-size 8.6 in SVG; snippet: {}",
             &svg[..svg.len().min(800)]
+        );
+    }
+
+    #[test]
+    fn chord_symbol_uses_same_font_size_as_note_head() {
+        let input = "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nchord = chord\nMelody = notes\n\n[score]\n(time=4/4 key=C4 bpm=120)\n1m7 - 4 5\n1 - 1 1\n";
+        let doc = crate::parser::parse(input, "test.jianpu").unwrap();
+        let score = crate::grouper::group(doc).unwrap();
+        let pages = crate::layout::layout(&score, A4_W, A4_H);
+        let svgs = render(
+            &pages,
+            score.metadata.row_height,
+            score.metadata.note_number_width,
+        );
+        let expected = format!("font-size=\"{:.1}\"", score.metadata.row_height as f32 * 0.6);
+        assert!(
+            svgs[0].contains(&format!(
+                "{expected} text-anchor=\"start\" dominant-baseline=\"middle\" font-family=\"monospace\">1m"
+            )),
+            "expected chord symbol to use the same font size as note heads; snippet: {}",
+            &svgs[0][..svgs[0].len().min(800)]
+        );
+        assert!(
+            svgs[0].contains(&format!(
+                "{expected} text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"monospace\">1</text>"
+            )),
+            "expected note head to use base font size; snippet: {}",
+            &svgs[0][..svgs[0].len().min(800)]
         );
     }
 
