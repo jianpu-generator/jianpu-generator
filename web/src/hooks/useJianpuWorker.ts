@@ -221,8 +221,6 @@ export function useJianpuWorker(
         if (msg.id !== latestRenderIdRef.current) return
         setRendering(false)
         setAudioGenerating(false)
-        setSvgs([])
-        setNextWavUrl(null)
         setDiagnostics(msg.diagnostics)
       }
     }
@@ -236,6 +234,12 @@ export function useJianpuWorker(
       }
     }
   }, [setNextWavUrl])
+
+  useEffect(() => {
+    setSvgs([])
+    setNextWavUrl(null)
+    setDiagnostics([])
+  }, [activeFile, setNextWavUrl])
 
   useEffect(() => {
     const worker = workerRef.current
