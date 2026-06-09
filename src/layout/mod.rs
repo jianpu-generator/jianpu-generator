@@ -941,9 +941,9 @@ mod tests {
 
     #[test]
     fn half_beat_note_has_duration_underline() {
-        // Full 4/4 bar: 2 eighth notes separated by 3 quarter notes = 2+4+4+4+2 = 16 quarter-beats.
+        // 3/4 bar avoids 4/4 grouping rules: 2 eighth notes separated by 2 quarter notes.
         // _1 and 4_ are each flushed as separate beam groups → 2 DurationUnderlines elements.
-        let score = make_score("1_ 3 3 3 4_", "a b c d e");
+        let score = make_score_raw("(time=3/4 key=C4 bpm=120)\n1_ 3 3 4_\na b c d\n", "");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
         let all_elements: Vec<_> = pages[0]
             .row_groups

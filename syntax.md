@@ -261,6 +261,15 @@ measure capacity = N × (16 / D) quarter-beats
 
 (e.g. 4/4 → 16, 3/4 → 12). Too many quarter-beats is a parse error. A shortfall extends the last note/rest when possible; otherwise it is a parse error.
 
+#### Grouping validation (4/4 only)
+
+In 4/4, the parser rejects rhythm spellings that cross metrical boundaries without exposing the split:
+
+1. **Half-bar boundary:** after beat 1, no single note/rest may span from before beat 3 into beat 3 or beyond (quarter-beat position 8). Use a beam group such as `(2_ 2_)` or a tie instead of a single long value (e.g. `1. 2. 3_ 4_` is invalid; `1. (2_ 2_) 3_ 4_ 0_` is valid). Long notes/rests starting on beat 1 (including a fully extended `1` or `1---`) are allowed.
+2. **Dotted-eighth tail:** a dotted eighth note/rest at the start of a beat must be followed immediately by a sixteenth note/rest filling the remaining sixteenth (e.g. `1_. 2= 3_ …`); `1_. 2_ 3_ 4_` is invalid (`2_.` is a dotted eighth, not an eighth).
+
+Other time signatures skip these checks for now. Violations are parse errors.
+
 ### Examples
 
 | Token | Meaning |

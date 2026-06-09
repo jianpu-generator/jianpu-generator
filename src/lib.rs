@@ -4,6 +4,7 @@ pub mod desugar;
 pub mod error;
 pub mod error_reporter;
 pub mod grouper;
+pub mod grouping;
 pub mod layout;
 pub mod parser;
 pub mod renderer;

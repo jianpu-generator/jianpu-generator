@@ -52,7 +52,7 @@ Walk timed events (notes and rests) left-to-right, tracking `pos` (quarter-beats
 
 ### Rule 1 — Half-bar boundary
 
-**Reject** any timed event where `pos < 8` and `pos + duration > 8`.
+**Reject** any timed event (including trailing `-` extensions) where `pos > 0`, `pos < 8`, and `pos + duration > 8`. Values starting on beat 1 (`pos == 0`) are allowed.
 
 This catches spellings like `1. 2. 3 4` where `2.` (dotted quarter, 6 qb) starts at 6 and crosses the beat-2/beat-3 midpoint.
 
@@ -67,12 +67,11 @@ This catches spellings like `1. 2. 3 4` where `2.` (dotted quarter, 6 qb) starts
 When a **dotted eighth** note or rest appears (`dotted == true` and `duration == 3`) at a **beat-aligned** position (`pos % 4 == 0`):
 
 - It consumes 3 qb of a 4-qb beat, leaving exactly **1 qb** before the next beat.
-- The **next timed event** must be the opening note/rest of a `(…)` group (`group_membership > 0` on that note).
-- All timed events belonging to that group (until `group_continuation` returns to 0 on the closing note) must sum to **exactly 1 qb**.
+- The **next timed event** must be a sixteenth note/rest (`duration == 1`).
 
-This catches `1_. 2_. 3_ 4_` and the rest equivalent `0_. 1_ …`.
+This catches `1_. 2_ 3_ 4_` (note: `2_.` is itself a dotted eighth, not an eighth) and the rest equivalent `0_. 1_ …`.
 
-**Accept** `1_. (2=) 3_ 4_ …` — a parenthesized sixteenth group filling the 1-qb tail. (The author's example used `(2= 2_)`; implementation tests should verify the exact canonical tail against parsed durations and adjust if the example was informal.)
+**Accept** `1_. 2= 3_ 4_ …` — a sixteenth filling the 1-qb tail. Parentheses are optional; `(…)` groups require ≥2 notes in the parser, so a lone `(2=)` is invalid syntax.
 
 **Error message:** `dotted eighth must be followed by a beam group filling the remaining sixteenth`
 
