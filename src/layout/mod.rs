@@ -1238,8 +1238,8 @@ mod tests {
         );
         if let GridContent::BarLine { height_in_rows } = &left_bars[0].content {
             assert_eq!(
-                *height_in_rows, 6,
-                "left bar height should be effective_row_group_height-1 = 7-1 = 6 for two-part score with directive row"
+                *height_in_rows, 5,
+                "left bar height should be bar_height = row_group_height-1 = 6-1 = 5 (directive row is above the staff)"
             );
         } else {
             panic!("expected BarLine");
@@ -1259,8 +1259,8 @@ mod tests {
         assert_eq!(left_bars.len(), 1);
         if let GridContent::BarLine { height_in_rows } = &left_bars[0].content {
             assert_eq!(
-                *height_in_rows, 4,
-                "single-part left bar height should be effective_row_group_height-1 = 5-1 = 4 with directive row"
+                *height_in_rows, 3,
+                "single-part left bar height should be bar_height = row_group_height-1 = 4-1 = 3 (directive row is above the staff)"
             );
         } else {
             panic!("expected BarLine");
