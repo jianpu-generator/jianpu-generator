@@ -194,10 +194,6 @@ impl<'a> LayoutEngine<'a> {
         self.current_row_offset + 1 + u32::from(self.line_has_directive_row)
     }
 
-    fn effective_bar_height(&self) -> u32 {
-        self.effective_row_group_height - 1
-    }
-
     fn flush_page(&mut self) {
         if self.current_page_row_groups.is_empty() {
             return;
@@ -329,7 +325,6 @@ impl<'a> LayoutEngine<'a> {
         }
 
         let part_base = self.part_row_base();
-        let bar_h = self.effective_bar_height();
 
         self.current_elements.push(GridElement {
             position: GridPosition {
@@ -339,7 +334,7 @@ impl<'a> LayoutEngine<'a> {
             horizontal_alignment: HorizontalAlignment::Center,
             vertical_alignment: VerticalAlignment::Center,
             content: GridContent::BarLine {
-                height_in_rows: bar_h,
+                height_in_rows: self.bar_height,
             },
         });
         if measure.label.is_none() {
