@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 interface PreviewProps {
   svgs: string[]
   rendering: boolean
@@ -10,6 +12,7 @@ interface PreviewProps {
   onExportSplitPdf?: () => void
   partsCount?: number
   emptyMessage?: string
+  toolbar?: ReactNode
 }
 
 export function Preview({
@@ -24,6 +27,7 @@ export function Preview({
   onExportSplitPdf,
   partsCount = 0,
   emptyMessage = 'No preview yet.',
+  toolbar,
 }: PreviewProps) {
   const exporting = pdfExporting || splitPdfExporting
   const canExportPdf =
@@ -61,6 +65,7 @@ export function Preview({
           ) : null}
         </div>
       </div>
+      {toolbar ? <div className="preview-toolbar">{toolbar}</div> : null}
       {audioAvailable ? (
         <div className="preview-audio">
           {wavUrl ? (
