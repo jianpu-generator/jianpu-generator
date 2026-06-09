@@ -38,6 +38,7 @@ interface JianpuWorkerState {
   splitPdfExporting: boolean
   diagnostics: Diagnostic[]
   rendering: boolean
+  audioGenerating: boolean
   exportPdf: () => void
   exportSplitPdf: () => void
 }
@@ -102,21 +103,25 @@ export function useJianpuWorker(
   const [splitPdfExporting, setSplitPdfExporting] = useState(false)
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([])
   const [rendering, setRendering] = useState(false)
+  const [audioGenerating, setAudioGenerating] = useState(false)
 
   const workerRef = useRef<Worker | null>(null)
   const wavUrlRef = useRef<string | null>(null)
   const partsRequestIdRef = useRef(0)
   const renderRequestIdRef = useRef(0)
+  const audioRequestIdRef = useRef(0)
   const pdfRequestIdRef = useRef(0)
   const splitPdfRequestIdRef = useRef(0)
   const latestPartsIdRef = useRef(0)
   const latestRenderIdRef = useRef(0)
+  const latestAudioIdRef = useRef(0)
   const latestPdfIdRef = useRef(0)
   const latestSplitPdfIdRef = useRef(0)
   const sourceRef = useRef(source)
   const activeFileRef = useRef(activeFile)
   const enabledTracksRef = useRef<string[] | undefined>(undefined)
   const disabledLyricsRef = useRef<string[] | undefined>(undefined)
+  const audioAvailableRef = useRef(false)
 
   const enabledTracks = useMemo(
     () => enabledTracksForRender(parts, disabledParts),
@@ -150,6 +155,7 @@ export function useJianpuWorker(
     worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
       const msg = event.data
       if (msg.type === 'ready') {
+        audioAvailableRef.current = msg.audioAvailable
         setAudioAvailable(msg.audioAvailable)
         setPdfAvailable(msg.pdfAvailable)
         return
@@ -190,22 +196,32 @@ export function useJianpuWorker(
         return
       }
 
-      if (msg.id !== latestRenderIdRef.current) return
-
-      setRendering(false)
       if (msg.type === 'ok') {
+        if (msg.id !== latestRenderIdRef.current) return
+        setRendering(false)
         setSvgs(msg.svgs)
         setDiagnostics([])
-        if (msg.wav) {
-          setNextWavUrl(
-            URL.createObjectURL(new Blob([msg.wav], { type: 'audio/wav' })),
-          )
-        } else {
-          setNextWavUrl(null)
-        }
-      } else {
-        setSvgs([])
-        setNextWavUrl(null)
+        return
+      }
+
+      if (msg.type === 'audio') {
+        if (msg.id !== latestAudioIdRef.current) return
+        setAudioGenerating(false)
+        setNextWavUrl(
+          URL.createObjectURL(new Blob([msg.wav], { type: 'audio/wav' })),
+        )
+        return
+      }
+
+      if (msg.type === 'audioErr') {
+        if (msg.id !== latestAudioIdRef.current) return
+        setAudioGenerating(false)
+        return
+      }
+
+      if (msg.type === 'err') {
+        if (msg.id !== latestRenderIdRef.current) return
+        setRendering(false)
         setDiagnostics(msg.diagnostics)
       }
     }
@@ -219,6 +235,12 @@ export function useJianpuWorker(
       }
     }
   }, [setNextWavUrl])
+
+  useEffect(() => {
+    setSvgs([])
+    setNextWavUrl(null)
+    setDiagnostics([])
+  }, [activeFile, setNextWavUrl])
 
   useEffect(() => {
     const worker = workerRef.current
@@ -244,19 +266,38 @@ export function useJianpuWorker(
     latestRenderIdRef.current = id
     setRendering(true)
 
+    const payload: WorkerRequest = {
+      type: 'render',
+      source,
+      id,
+      enabledTracks,
+      disabledLyrics: disabledLyricsTracks,
+    }
+    worker.postMessage(payload)
+  }, [source, enabledTracks, disabledLyricsTracks])
+
+  useEffect(() => {
+    if (!audioAvailable) return
+
+    const worker = workerRef.current
+    if (!worker) return
+
     const timer = window.setTimeout(() => {
+      const id = ++audioRequestIdRef.current
+      latestAudioIdRef.current = id
+      setAudioGenerating(true)
+
       const payload: WorkerRequest = {
-        type: 'render',
+        type: 'generateAudio',
         source,
         id,
         enabledTracks,
-        disabledLyrics: disabledLyricsTracks,
       }
       worker.postMessage(payload)
     }, debounceMs)
 
     return () => window.clearTimeout(timer)
-  }, [source, enabledTracks, disabledLyricsTracks, debounceMs])
+  }, [source, enabledTracks, debounceMs, audioAvailable])
 
   const exportPdf = useCallback(() => {
     const worker = workerRef.current
@@ -304,6 +345,7 @@ export function useJianpuWorker(
     splitPdfExporting,
     diagnostics,
     rendering,
+    audioGenerating,
     exportPdf,
     exportSplitPdf,
   }

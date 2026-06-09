@@ -60,10 +60,18 @@ export type WorkerRequest =
       id: number
       baseName: string
     }
+  | {
+      type: 'generateAudio'
+      source: string
+      id: number
+      enabledTracks?: string[]
+    }
 
 export type WorkerResponse =
   | { type: 'ready'; audioAvailable: boolean; pdfAvailable: boolean }
-  | { type: 'ok'; id: number; svgs: string[]; wav?: ArrayBuffer }
+  | { type: 'ok'; id: number; svgs: string[] }
+  | { type: 'audio'; id: number; wav: ArrayBuffer }
+  | { type: 'audioErr'; id: number }
   | { type: 'err'; id: number; diagnostics: Diagnostic[] }
   | { type: 'parts'; id: number; parts: PartInfo[] }
   | { type: 'pdf'; id: number; pdf: ArrayBuffer }
@@ -199,6 +207,36 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     return
   }
 
+  if (msg.type === 'generateAudio') {
+    if (!generateWav) {
+      postMessage({
+        type: 'audioErr',
+        id: msg.id,
+      } satisfies WorkerResponse)
+      return
+    }
+
+    const wavResult = generateWav(msg.source, msg.enabledTracks)
+    if (wavResult.status === 'ok') {
+      const wavBuffer = binaryBufferFromResult(wavResult.wav)
+      postMessage(
+        {
+          type: 'audio',
+          id: msg.id,
+          wav: wavBuffer,
+        } satisfies WorkerResponse,
+        { transfer: [wavBuffer] },
+      )
+      return
+    }
+
+    postMessage({
+      type: 'audioErr',
+      id: msg.id,
+    } satisfies WorkerResponse)
+    return
+  }
+
   if (msg.type !== 'render') return
 
   const result = render(
@@ -207,27 +245,6 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     msg.disabledLyrics,
   ) as RenderResult
   if (result.status === 'ok') {
-    let wavBuffer: ArrayBuffer | undefined
-    if (generateWav) {
-      const wavResult = generateWav(msg.source, msg.enabledTracks)
-      if (wavResult.status === 'ok') {
-        wavBuffer = binaryBufferFromResult(wavResult.wav)
-      }
-    }
-
-    if (wavBuffer) {
-      postMessage(
-        {
-          type: 'ok',
-          id: msg.id,
-          svgs: result.svgs,
-          wav: wavBuffer,
-        } satisfies WorkerResponse,
-        { transfer: [wavBuffer] },
-      )
-      return
-    }
-
     postMessage({
       type: 'ok',
       id: msg.id,

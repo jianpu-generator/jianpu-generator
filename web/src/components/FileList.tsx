@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   DEMO_FILE_NAME,
   type FileStoreState,
@@ -17,7 +17,7 @@ export interface FileListProps {
   onRestore: (name: string) => void
 }
 
-function FileNameField({
+function FileTabName({
   name,
   active,
   onSelect,
@@ -30,44 +30,73 @@ function FileNameField({
 }) {
   const readOnly = isReadOnlyFile(name)
   const [draft, setDraft] = useState(name)
+  const [editing, setEditing] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setDraft(name)
   }, [name])
 
+  useEffect(() => {
+    if (!active) setEditing(false)
+  }, [active])
+
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus()
+      inputRef.current?.select()
+    }
+  }, [editing])
+
+  if (active && editing && !readOnly) {
+    return (
+      <input
+        ref={inputRef}
+        type="text"
+        className="file-tab-name"
+        value={draft}
+        aria-current="true"
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => {
+          const trimmed = draft.trim()
+          if (trimmed && trimmed !== name) {
+            onRename(name, trimmed)
+          } else {
+            setDraft(name)
+          }
+          setEditing(false)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.currentTarget.blur()
+          } else if (e.key === 'Escape') {
+            setDraft(name)
+            setEditing(false)
+            e.currentTarget.blur()
+          }
+        }}
+      />
+    )
+  }
+
   return (
-    <input
-      type="text"
-      className="file-list-name"
-      value={draft}
-      readOnly={readOnly}
+    <button
+      type="button"
+      className="file-tab-name"
       aria-current={active ? 'true' : undefined}
-      onFocus={() => {
+      onClick={() => {
         if (!active) onSelect(name)
       }}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => {
-        if (readOnly) return
-        const trimmed = draft.trim()
-        if (trimmed && trimmed !== name) {
-          onRename(name, trimmed)
-        } else {
-          setDraft(name)
-        }
+      onDoubleClick={() => {
+        if (active && !readOnly) setEditing(true)
       }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          e.currentTarget.blur()
-        } else if (e.key === 'Escape') {
-          setDraft(name)
-          e.currentTarget.blur()
-        }
-      }}
-    />
+    >
+      {name}
+    </button>
   )
 }
 
-export function FileList({
+export function FileTabBar({
   store,
   onSelect,
   onCreate,
@@ -78,60 +107,71 @@ export function FileList({
 }: FileListProps) {
   const names = sortedFileNames(store)
   const binNames = sortedBinNames(store)
+  const showHint = names.length === 1 && names[0] === DEMO_FILE_NAME
 
   return (
-    <aside className="file-list" aria-label="Files">
-      <div className="file-list-actions">
-        <button type="button" className="file-list-btn" onClick={onCreate}>
+    <div className="file-tab-bar">
+      <div className="file-tab-bar-actions">
+        <button type="button" className="file-tab-bar-btn" onClick={onCreate}>
           New
         </button>
-        <button type="button" className="file-list-btn" onClick={onDuplicate}>
+        <button
+          type="button"
+          className="file-tab-bar-btn"
+          onClick={onDuplicate}
+        >
           Duplicate
         </button>
       </div>
-      <ul className="file-list-items">
-        {names.map((name) => {
-          const active = name === store.active
-          const readOnly = isReadOnlyFile(name)
-
-          return (
-            <li
-              key={name}
-              className={`file-list-item${active ? ' file-list-item--active' : ''}`}
-            >
-              <FileNameField
-                name={name}
-                active={active}
-                onSelect={onSelect}
-                onRename={onRename}
-              />
-              {!readOnly ? (
-                <button
-                  type="button"
-                  className="file-list-delete"
-                  aria-label={`Move ${name} to bin`}
-                  onClick={() => onDelete(name)}
-                >
-                  ×
-                </button>
-              ) : null}
-            </li>
-          )
-        })}
-      </ul>
-      {names.length === 1 && names[0] === DEMO_FILE_NAME ? (
-        <p className="file-list-hint">Demo is read-only — duplicate to edit.</p>
+      {showHint ? (
+        <p className="file-tab-bar-hint">
+          Demo is read-only — duplicate to edit.
+        </p>
       ) : null}
+      <div className="file-tab-bar-tabs-scroll">
+        <ul className="file-tabs" aria-label="Files">
+          {names.map((name) => {
+            const active = name === store.active
+            const readOnly = isReadOnlyFile(name)
+
+            return (
+              <li
+                key={name}
+                className={`file-tab${active ? ' file-tab--active' : ''}`}
+              >
+                <FileTabName
+                  name={name}
+                  active={active}
+                  onSelect={onSelect}
+                  onRename={onRename}
+                />
+                {!readOnly ? (
+                  <button
+                    type="button"
+                    className="file-tab-close"
+                    aria-label={`Move ${name} to bin`}
+                    onClick={() => onDelete(name)}
+                  >
+                    ×
+                  </button>
+                ) : null}
+              </li>
+            )
+          })}
+        </ul>
+      </div>
       {binNames.length > 0 ? (
-        <section className="file-list-bin" aria-label="Bin">
-          <h2 className="file-list-bin-title">Bin</h2>
-          <ul className="file-list-bin-items">
+        <details className="file-tab-bar-bin">
+          <summary className="file-tab-bar-bin-summary">
+            Bin ({binNames.length})
+          </summary>
+          <ul className="file-tab-bar-bin-items">
             {binNames.map((name) => (
-              <li key={name} className="file-list-bin-item">
-                <span className="file-list-bin-name">{name}</span>
+              <li key={name} className="file-tab-bar-bin-item">
+                <span className="file-tab-bar-bin-name">{name}</span>
                 <button
                   type="button"
-                  className="file-list-restore"
+                  className="file-tab-bar-restore"
                   aria-label={`Restore ${name}`}
                   onClick={() => onRestore(name)}
                 >
@@ -140,8 +180,8 @@ export function FileList({
               </li>
             ))}
           </ul>
-        </section>
+        </details>
       ) : null}
-    </aside>
+    </div>
   )
 }

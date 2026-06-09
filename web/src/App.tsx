@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Editor } from './components/Editor'
 import { ErrorPanel } from './components/ErrorPanel'
-import { FileList } from './components/FileList'
+import { FileTabBar } from './components/FileList'
 import { PartToggles } from './components/PartToggles'
 import { Preview } from './components/Preview'
 import {
@@ -51,6 +51,7 @@ export default function App() {
     pdfExporting,
     diagnostics,
     rendering,
+    audioGenerating,
     exportPdf,
     splitPdfExporting,
     exportSplitPdf,
@@ -170,18 +171,18 @@ export default function App() {
         <h1>簡譜</h1>
         <span className="app-subtitle">live preview</span>
       </header>
+      <FileTabBar
+        store={store}
+        onSelect={handleSelect}
+        onCreate={handleCreate}
+        onDuplicate={handleDuplicate}
+        onRename={handleRename}
+        onDelete={handleDelete}
+        onRestore={handleRestore}
+      />
       <main className="workspace">
         <section className="pane pane--editor">
           <div className="editor-layout">
-            <FileList
-              store={store}
-              onSelect={handleSelect}
-              onCreate={handleCreate}
-              onDuplicate={handleDuplicate}
-              onRename={handleRename}
-              onDelete={handleDelete}
-              onRestore={handleRestore}
-            />
             <div className="editor-main">
               <Editor
                 ref={editorRef}
@@ -189,16 +190,6 @@ export default function App() {
                 onChange={handleSourceChange}
                 readOnly={readOnly}
                 diagnostics={diagnostics}
-                toolbar={
-                  <PartToggles
-                    parts={parts}
-                    disabledParts={disabledParts}
-                    disabledLyrics={disabledLyrics}
-                    onPartToggle={handlePartToggle}
-                    onLyricsToggle={handleLyricsToggle}
-                    loading={partsLoading}
-                  />
-                }
               />
               <ErrorPanel diagnostics={diagnostics} />
             </div>
@@ -209,6 +200,7 @@ export default function App() {
           <Preview
             svgs={svgs}
             rendering={rendering}
+            audioGenerating={audioGenerating}
             wavUrl={wavUrl}
             audioAvailable={audioAvailable}
             pdfAvailable={pdfAvailable}
@@ -219,6 +211,16 @@ export default function App() {
             partsCount={parts.length}
             emptyMessage={
               noPartsSelected ? 'No parts selected.' : 'No preview yet.'
+            }
+            toolbar={
+              <PartToggles
+                parts={parts}
+                disabledParts={disabledParts}
+                disabledLyrics={disabledLyrics}
+                onPartToggle={handlePartToggle}
+                onLyricsToggle={handleLyricsToggle}
+                loading={partsLoading}
+              />
             }
           />
         </section>
