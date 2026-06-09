@@ -422,9 +422,9 @@ fn render_bpm_label(
 ) {
     let slot_width = 2.0 * column_width;
     let center_x = base_x + slot_width / 2.0;
-    let small_font_size = ctx.base_font_size * 0.6;
     elements.push_str(&format!(
-        r#"<text x="{center_x:.1}" y="{y:.1}" font-size="{small_font_size:.1}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">♩={bpm}</text>"#
+        r#"<text x="{center_x:.1}" y="{y:.1}" font-size="{:.1}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">♩={bpm}</text>"#,
+        ctx.base_font_size
     ));
 }
 
