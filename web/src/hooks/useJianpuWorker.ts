@@ -109,10 +109,12 @@ export function useJianpuWorker(
   const wavUrlRef = useRef<string | null>(null)
   const partsRequestIdRef = useRef(0)
   const renderRequestIdRef = useRef(0)
+  const audioRequestIdRef = useRef(0)
   const pdfRequestIdRef = useRef(0)
   const splitPdfRequestIdRef = useRef(0)
   const latestPartsIdRef = useRef(0)
   const latestRenderIdRef = useRef(0)
+  const latestAudioIdRef = useRef(0)
   const latestPdfIdRef = useRef(0)
   const latestSplitPdfIdRef = useRef(0)
   const sourceRef = useRef(source)
@@ -203,7 +205,7 @@ export function useJianpuWorker(
       }
 
       if (msg.type === 'audio') {
-        if (msg.id !== latestRenderIdRef.current) return
+        if (msg.id !== latestAudioIdRef.current) return
         setAudioGenerating(false)
         setNextWavUrl(
           URL.createObjectURL(new Blob([msg.wav], { type: 'audio/wav' })),
@@ -212,7 +214,7 @@ export function useJianpuWorker(
       }
 
       if (msg.type === 'audioErr') {
-        if (msg.id !== latestRenderIdRef.current) return
+        if (msg.id !== latestAudioIdRef.current) return
         setAudioGenerating(false)
         return
       }
@@ -220,7 +222,6 @@ export function useJianpuWorker(
       if (msg.type === 'err') {
         if (msg.id !== latestRenderIdRef.current) return
         setRendering(false)
-        setAudioGenerating(false)
         setDiagnostics(msg.diagnostics)
       }
     }
@@ -264,23 +265,39 @@ export function useJianpuWorker(
     const id = ++renderRequestIdRef.current
     latestRenderIdRef.current = id
     setRendering(true)
-    if (audioAvailableRef.current) {
-      setAudioGenerating(true)
+
+    const payload: WorkerRequest = {
+      type: 'render',
+      source,
+      id,
+      enabledTracks,
+      disabledLyrics: disabledLyricsTracks,
     }
+    worker.postMessage(payload)
+  }, [source, enabledTracks, disabledLyricsTracks])
+
+  useEffect(() => {
+    if (!audioAvailable) return
+
+    const worker = workerRef.current
+    if (!worker) return
 
     const timer = window.setTimeout(() => {
+      const id = ++audioRequestIdRef.current
+      latestAudioIdRef.current = id
+      setAudioGenerating(true)
+
       const payload: WorkerRequest = {
-        type: 'render',
+        type: 'generateAudio',
         source,
         id,
         enabledTracks,
-        disabledLyrics: disabledLyricsTracks,
       }
       worker.postMessage(payload)
     }, debounceMs)
 
     return () => window.clearTimeout(timer)
-  }, [source, enabledTracks, disabledLyricsTracks, debounceMs])
+  }, [source, enabledTracks, debounceMs, audioAvailable])
 
   const exportPdf = useCallback(() => {
     const worker = workerRef.current

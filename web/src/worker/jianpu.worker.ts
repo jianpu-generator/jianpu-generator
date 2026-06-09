@@ -60,6 +60,12 @@ export type WorkerRequest =
       id: number
       baseName: string
     }
+  | {
+      type: 'generateAudio'
+      source: string
+      id: number
+      enabledTracks?: string[]
+    }
 
 export type WorkerResponse =
   | { type: 'ready'; audioAvailable: boolean; pdfAvailable: boolean }
@@ -201,6 +207,36 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     return
   }
 
+  if (msg.type === 'generateAudio') {
+    if (!generateWav) {
+      postMessage({
+        type: 'audioErr',
+        id: msg.id,
+      } satisfies WorkerResponse)
+      return
+    }
+
+    const wavResult = generateWav(msg.source, msg.enabledTracks)
+    if (wavResult.status === 'ok') {
+      const wavBuffer = binaryBufferFromResult(wavResult.wav)
+      postMessage(
+        {
+          type: 'audio',
+          id: msg.id,
+          wav: wavBuffer,
+        } satisfies WorkerResponse,
+        { transfer: [wavBuffer] },
+      )
+      return
+    }
+
+    postMessage({
+      type: 'audioErr',
+      id: msg.id,
+    } satisfies WorkerResponse)
+    return
+  }
+
   if (msg.type !== 'render') return
 
   const result = render(
@@ -214,26 +250,6 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       id: msg.id,
       svgs: result.svgs,
     } satisfies WorkerResponse)
-
-    if (generateWav) {
-      const wavResult = generateWav(msg.source, msg.enabledTracks)
-      if (wavResult.status === 'ok') {
-        const wavBuffer = binaryBufferFromResult(wavResult.wav)
-        postMessage(
-          {
-            type: 'audio',
-            id: msg.id,
-            wav: wavBuffer,
-          } satisfies WorkerResponse,
-          { transfer: [wavBuffer] },
-        )
-      } else {
-        postMessage({
-          type: 'audioErr',
-          id: msg.id,
-        } satisfies WorkerResponse)
-      }
-    }
     return
   }
 
