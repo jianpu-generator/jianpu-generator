@@ -14,6 +14,31 @@ use super::{
     measure_column_width, part_row_height, BeamBufferEntry, PAGE_MARGIN,
 };
 
+fn measure_has_directive_labels(measure: &MultiPartMeasure) -> bool {
+    measure.time_signature.is_some() || measure.bpm.is_some()
+}
+
+fn line_has_any_directive_labels(
+    measures: &[MultiPartMeasure],
+    start_idx: usize,
+    columns_per_row: u32,
+    line_start_col: u32,
+) -> bool {
+    let mut col = line_start_col;
+    for measure in measures.get(start_idx..).into_iter().flatten() {
+        if measure_has_directive_labels(measure) {
+            return true;
+        }
+        let prefix = compute_prefix_width(measure);
+        let width = measure_column_width(measure);
+        if col.saturating_add(prefix).saturating_add(width) > columns_per_row {
+            break;
+        }
+        col = col.saturating_add(prefix).saturating_add(width);
+    }
+    false
+}
+
 pub(crate) struct LayoutEngine<'a> {
     score: &'a Score,
     page_width_pt: f32,
@@ -23,7 +48,6 @@ pub(crate) struct LayoutEngine<'a> {
     has_named_parts: bool,
     label_cols: u32,
     header_rows: u32,
-    row_groups_per_page: u32,
     pages: Vec<Page>,
     current_page_row_groups: Vec<RowGroup>,
     current_elements: Vec<GridElement>,
@@ -31,6 +55,11 @@ pub(crate) struct LayoutEngine<'a> {
     current_row_offset: u32,
     is_line_start: bool,
     bar_number: u32,
+    measure_index: usize,
+    line_has_directive_row: bool,
+    effective_row_group_height: u32,
+    current_page_rows_used: u32,
+    max_rows_per_page: u32,
     per_part_states: Vec<PerPartLayoutState>,
 }
 
@@ -87,8 +116,7 @@ impl<'a> LayoutEngine<'a> {
         let footer_rows: u32 = 1;
         let reserved_rows = header_rows + footer_rows;
         let usable_height = page_height_pt - 2.0 * PAGE_MARGIN;
-        let row_groups_per_page =
-            ((usable_height / row_height) as u32 - reserved_rows) / row_group_height;
+        let max_rows_per_page = ((usable_height / row_height) as u32).saturating_sub(reserved_rows);
 
         let num_notes_parts_usize = num_notes_parts as usize;
         Self {
@@ -100,7 +128,6 @@ impl<'a> LayoutEngine<'a> {
             has_named_parts,
             label_cols,
             header_rows,
-            row_groups_per_page,
             pages: Vec::new(),
             current_page_row_groups: Vec::new(),
             current_elements: Vec::new(),
@@ -108,6 +135,11 @@ impl<'a> LayoutEngine<'a> {
             current_row_offset: header_rows,
             is_line_start: true,
             bar_number: 1,
+            measure_index: 0,
+            line_has_directive_row: false,
+            effective_row_group_height: row_group_height,
+            current_page_rows_used: 0,
+            max_rows_per_page,
             per_part_states: (0..num_notes_parts_usize)
                 .map(|_| PerPartLayoutState {
                     prev_tie: false,
@@ -122,14 +154,65 @@ impl<'a> LayoutEngine<'a> {
     }
 
     pub(crate) fn layout(mut self) -> Vec<Page> {
-        for measure in &self.score.measures {
+        while let Some(measure) = self.score.measures.get(self.measure_index) {
             self.wrap_line_if_needed(measure);
+            self.refresh_line_row_state();
             self.emit_line_start_elements(measure);
             self.emit_section_label(measure);
             let note_col_start = self.emit_measure_directives(measure);
             self.emit_measure_content(measure, note_col_start);
+            self.measure_index += 1;
         }
         self.finalize_pages()
+    }
+
+    fn refresh_line_row_state(&mut self) {
+        if !self.is_line_start {
+            return;
+        }
+        self.line_has_directive_row = line_has_any_directive_labels(
+            &self.score.measures,
+            self.measure_index,
+            self.columns_per_row,
+            self.label_cols,
+        );
+        self.effective_row_group_height =
+            self.row_group_height + u32::from(self.line_has_directive_row);
+        if !self.current_page_row_groups.is_empty()
+            && self.current_page_rows_used + self.effective_row_group_height
+                > self.max_rows_per_page
+        {
+            self.flush_page();
+        }
+    }
+
+    fn meta_row(&self) -> u32 {
+        self.current_row_offset + u32::from(self.line_has_directive_row)
+    }
+
+    fn part_row_base(&self) -> u32 {
+        self.current_row_offset + 1 + u32::from(self.line_has_directive_row)
+    }
+
+    fn effective_bar_height(&self) -> u32 {
+        self.effective_row_group_height - 1
+    }
+
+    fn flush_page(&mut self) {
+        if self.current_page_row_groups.is_empty() {
+            return;
+        }
+        self.pages.push(Page {
+            header: self.make_header(),
+            footer: Footer {
+                page: self.pages.len() as u32 + 1,
+                total: 0,
+            },
+            row_groups: std::mem::take(&mut self.current_page_row_groups),
+            page_width_pt: self.page_width_pt,
+        });
+        self.current_row_offset = self.header_rows;
+        self.current_page_rows_used = 0;
     }
 
     fn make_header(&self) -> Header {
@@ -144,7 +227,7 @@ impl<'a> LayoutEngine<'a> {
         self.current_elements.push(GridElement {
             position: GridPosition {
                 column: 0,
-                row: self.current_row_offset + self.row_group_height,
+                row: self.current_row_offset + self.effective_row_group_height,
             },
             horizontal_alignment: HorizontalAlignment::Left,
             vertical_alignment: VerticalAlignment::Top,
@@ -161,26 +244,16 @@ impl<'a> LayoutEngine<'a> {
         {
             self.current_page_row_groups.push(RowGroup {
                 elements,
-                height_in_rows: self.row_group_height,
+                height_in_rows: self.effective_row_group_height,
                 width_in_columns: self.current_col,
             });
+            self.current_page_rows_used += self.effective_row_group_height;
         }
     }
 
     fn maybe_start_new_page(&mut self) {
-        if self.current_page_row_groups.len() >= self.row_groups_per_page as usize {
-            if !self.current_page_row_groups.is_empty() {
-                self.pages.push(Page {
-                    header: self.make_header(),
-                    footer: Footer {
-                        page: self.pages.len() as u32 + 1,
-                        total: 0,
-                    },
-                    row_groups: std::mem::take(&mut self.current_page_row_groups),
-                    page_width_pt: self.page_width_pt,
-                });
-            }
-            self.current_row_offset = self.header_rows;
+        if self.current_page_rows_used >= self.max_rows_per_page {
+            self.flush_page();
         }
     }
 
@@ -243,8 +316,10 @@ impl<'a> LayoutEngine<'a> {
         self.push_bottom_system_bar();
         self.commit_row_group();
         self.current_col = self.label_cols;
-        self.current_row_offset += self.row_group_height;
+        self.current_row_offset += self.effective_row_group_height;
         self.is_line_start = true;
+        self.line_has_directive_row = false;
+        self.effective_row_group_height = self.row_group_height;
         self.maybe_start_new_page();
     }
 
@@ -253,22 +328,25 @@ impl<'a> LayoutEngine<'a> {
             return;
         }
 
+        let part_base = self.part_row_base();
+        let bar_h = self.effective_bar_height();
+
         self.current_elements.push(GridElement {
             position: GridPosition {
                 column: self.label_cols,
-                row: self.current_row_offset + 1,
+                row: part_base,
             },
             horizontal_alignment: HorizontalAlignment::Center,
             vertical_alignment: VerticalAlignment::Center,
             content: GridContent::BarLine {
-                height_in_rows: self.bar_height,
+                height_in_rows: bar_h,
             },
         });
         if measure.label.is_none() {
             self.current_elements.push(GridElement {
                 position: GridPosition {
                     column: self.label_cols,
-                    row: self.current_row_offset,
+                    row: self.meta_row(),
                 },
                 horizontal_alignment: HorizontalAlignment::Left,
                 vertical_alignment: VerticalAlignment::Bottom,
@@ -280,7 +358,7 @@ impl<'a> LayoutEngine<'a> {
         self.current_col = self.label_cols + 1;
 
         if self.has_named_parts {
-            let mut row_cursor = self.current_row_offset;
+            let mut row_cursor = self.part_row_base() - 1;
             for part_row in &measure.parts {
                 if let Some(name) = part_row.name() {
                     self.current_elements.push(GridElement {
@@ -304,7 +382,7 @@ impl<'a> LayoutEngine<'a> {
             self.current_elements.push(GridElement {
                 position: GridPosition {
                     column: self.current_col,
-                    row: self.current_row_offset,
+                    row: self.meta_row(),
                 },
                 horizontal_alignment: HorizontalAlignment::Left,
                 vertical_alignment: VerticalAlignment::Bottom,
@@ -318,49 +396,40 @@ impl<'a> LayoutEngine<'a> {
     fn emit_measure_directives(&mut self, measure: &MultiPartMeasure) -> u32 {
         let directive_col_start = self.current_col;
         let mut directive_advance = 0u32;
-        let mut directive_row_cursor = self.current_row_offset;
-        let mut is_first_directive_part = true;
 
-        for part_row_enum in measure.parts.iter() {
-            if let PartRow::Notes(_) = part_row_enum {
-                let mut dc = directive_col_start;
+        if self.line_has_directive_row {
+            let directive_row = self.current_row_offset;
+            let mut dc = directive_col_start;
 
-                if let Some(ts) = &measure.time_signature {
-                    self.current_elements.push(GridElement {
-                        position: GridPosition {
-                            column: dc,
-                            row: directive_row_cursor + 1,
-                        },
-                        horizontal_alignment: HorizontalAlignment::Center,
-                        vertical_alignment: VerticalAlignment::Center,
-                        content: GridContent::TimeSignatureLabel {
-                            numerator: ts.numerator,
-                            denominator: ts.denominator,
-                        },
-                    });
-                    dc += 2;
-                    if is_first_directive_part {
-                        directive_advance += 2;
-                    }
-                }
-
-                if let Some(bpm) = measure.bpm {
-                    self.current_elements.push(GridElement {
-                        position: GridPosition {
-                            column: dc,
-                            row: directive_row_cursor + 1,
-                        },
-                        horizontal_alignment: HorizontalAlignment::Center,
-                        vertical_alignment: VerticalAlignment::Center,
-                        content: GridContent::BpmLabel { bpm },
-                    });
-                    if is_first_directive_part {
-                        directive_advance += 2;
-                    }
-                }
-                is_first_directive_part = false;
+            if let Some(ts) = &measure.time_signature {
+                self.current_elements.push(GridElement {
+                    position: GridPosition {
+                        column: dc,
+                        row: directive_row,
+                    },
+                    horizontal_alignment: HorizontalAlignment::Center,
+                    vertical_alignment: VerticalAlignment::Center,
+                    content: GridContent::TimeSignatureLabel {
+                        numerator: ts.numerator,
+                        denominator: ts.denominator,
+                    },
+                });
+                dc += 2;
+                directive_advance += 2;
             }
-            directive_row_cursor += part_row_height(part_row_enum);
+
+            if let Some(bpm) = measure.bpm {
+                self.current_elements.push(GridElement {
+                    position: GridPosition {
+                        column: dc,
+                        row: directive_row,
+                    },
+                    horizontal_alignment: HorizontalAlignment::Center,
+                    vertical_alignment: VerticalAlignment::Center,
+                    content: GridContent::BpmLabel { bpm },
+                });
+                directive_advance += 2;
+            }
         }
 
         self.current_col = directive_col_start + directive_advance;
@@ -395,7 +464,7 @@ impl<'a> LayoutEngine<'a> {
     fn emit_measure_content(&mut self, measure: &MultiPartMeasure, note_col_start: u32) {
         let max_notes_width = Self::max_notes_width(measure);
         let mut notes_idx = 0usize;
-        let mut main_row_cursor = self.current_row_offset;
+        let mut main_row_cursor = self.part_row_base() - 1;
 
         for part_row_enum in measure.parts.iter() {
             let part_row_offset = main_row_cursor;
@@ -438,7 +507,7 @@ impl<'a> LayoutEngine<'a> {
         self.current_elements.push(GridElement {
             position: GridPosition {
                 column: bar_col,
-                row: self.current_row_offset + 1,
+                row: self.part_row_base(),
             },
             horizontal_alignment: HorizontalAlignment::Center,
             vertical_alignment: VerticalAlignment::Center,

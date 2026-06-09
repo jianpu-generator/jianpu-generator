@@ -350,6 +350,52 @@ mod tests {
     }
 
     #[test]
+    fn time_and_bpm_labels_emit_on_directive_row_above_meta_row() {
+        let score = make_score("1 2 3 4", "a b c d");
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let time_labels = collect_time_sig_labels(&pages);
+        let bpm_labels = collect_bpm_labels(&pages);
+        assert_eq!(time_labels.len(), 1);
+        assert_eq!(bpm_labels.len(), 1);
+        assert_eq!(
+            time_labels[0].position.row, 2,
+            "time signature should be on directive row (header_rows)"
+        );
+        assert_eq!(
+            bpm_labels[0].position.row, 2,
+            "BPM should be on directive row (header_rows)"
+        );
+        let bar_numbers: Vec<_> = pages[0].row_groups[0]
+            .elements
+            .iter()
+            .filter(|e| matches!(e.content, GridContent::BarNumber { .. }))
+            .collect();
+        assert_eq!(bar_numbers.len(), 1);
+        assert_eq!(
+            bar_numbers[0].position.row, 3,
+            "bar number should be on meta row (header_rows + 1)"
+        );
+    }
+
+    #[test]
+    fn continuation_line_without_directive_changes_omits_directive_row() {
+        let score = make_score("1 2 3 4 | 5 6 7 1", "a b c d e f g h");
+        let pages = layout(&score, 300.0, A4_HEIGHT);
+        let bar_numbers: Vec<_> = pages
+            .iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(e.content, GridContent::BarNumber { .. }))
+            .collect();
+        assert_eq!(bar_numbers.len(), 2);
+        assert_eq!(bar_numbers[0].position.row, 3, "first line bar on meta row");
+        assert_eq!(
+            bar_numbers[1].position.row, 7,
+            "wrapped line without directive changes should not add extra row"
+        );
+    }
+
+    #[test]
     fn first_measure_emits_time_signature_label_at_column_zero() {
         let score = make_score("1 2 3 4", "a b c d");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
@@ -436,6 +482,43 @@ mod tests {
     }
 
     #[test]
+    fn mid_line_time_signature_change_uses_directive_row_for_whole_line() {
+        // Wide max_columns keeps both measures on one system line.
+        let input = concat!(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\nmax columns = 48\n\n[parts]\nMelody = notes\n\n",
+            "[score]\n(time=4/4 key=C4 bpm=120)\n1= 1= 1= 1= 1= 1= 1= 1= 1= 1= 1= 1= 1= 1= 1= 1=\n",
+            "\n(time=3/4)\n1= 1= 1= 1= 1= 1= 1= 1= 1= 1= 1= 1=\n",
+        );
+        let pages = parse_and_layout(input);
+        let time_labels = collect_time_sig_labels(&pages);
+        assert_eq!(time_labels.len(), 2);
+        assert_eq!(
+            time_labels[0].position.row, time_labels[1].position.row,
+            "both time labels on same directive row when measures share a system line"
+        );
+        assert!(
+            time_labels[1].position.column > time_labels[0].position.column,
+            "second time label at later measure column"
+        );
+    }
+
+    #[test]
+    fn wrapped_time_signature_change_gets_directive_row_on_new_line() {
+        let score = make_score_raw(
+            "(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c d\n\n(time=3/4)\n1 2 3\ne f g\n",
+            "",
+        );
+        let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
+        let time_labels = collect_time_sig_labels(&pages);
+        assert_eq!(time_labels.len(), 2);
+        assert_eq!(time_labels[0].position.row, 2, "first line directive row");
+        assert_eq!(
+            time_labels[1].position.row, 7,
+            "wrapped line directive row after first row group with directive row"
+        );
+    }
+
+    #[test]
     fn time_signature_change_emits_second_label() {
         // Two bars: first 4/4 (4 quarter notes), second 3/4 (3 quarter notes), each with lyrics.
         let score = make_score_raw(
@@ -452,7 +535,11 @@ mod tests {
         assert_eq!(
             labels.len(),
             2,
-            "expected one label per distinct time signature"
+            "expected one label per distinct time signature, got positions: {:?}",
+            labels
+                .iter()
+                .map(|e| (e.position.column, e.position.row))
+                .collect::<Vec<_>>()
         );
     }
 
@@ -600,6 +687,24 @@ mod tests {
         let curves = collect_curves(&pages);
         assert_eq!(curves.len(), 1);
         assert_eq!(curves[0], (7, 11));
+    }
+
+    fn collect_time_sig_labels(pages: &[Page]) -> Vec<&GridElement> {
+        pages
+            .iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(e.content, GridContent::TimeSignatureLabel { .. }))
+            .collect()
+    }
+
+    fn collect_bpm_labels(pages: &[Page]) -> Vec<&GridElement> {
+        pages
+            .iter()
+            .flat_map(|p| p.row_groups.iter())
+            .flat_map(|rg| rg.elements.iter())
+            .filter(|e| matches!(e.content, GridContent::BpmLabel { .. }))
+            .collect()
     }
 
     fn collect_curves(pages: &[Page]) -> Vec<(u32, u32)> {
@@ -905,8 +1010,8 @@ mod tests {
             assert_eq!(*underline_count, 0, "1-beat note has 0 underlines");
         }
         assert_eq!(
-            lower_dots[0].position.row, 4,
-            "LowerOctaveDots must be in absolute row 4"
+            lower_dots[0].position.row, 5,
+            "LowerOctaveDots must be in absolute row 5 with directive row"
         );
         assert_eq!(lower_dots[0].vertical_alignment, VerticalAlignment::Top);
     }
@@ -977,19 +1082,20 @@ mod tests {
     }
 
     #[test]
-    fn two_part_layout_emits_directives_on_both_parts_rows() {
+    fn two_part_layout_emits_directives_once_on_directive_row() {
         let score = make_two_part_score("1 2 3 4", "5 6 7 1");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
-        let time_sig_labels: Vec<_> = pages
-            .iter()
-            .flat_map(|p| p.row_groups.iter())
-            .flat_map(|rg| rg.elements.iter())
-            .filter(|e| matches!(e.content, GridContent::TimeSignatureLabel { .. }))
-            .collect();
+        let time_sig_labels = collect_time_sig_labels(&pages);
+        let bpm_labels = collect_bpm_labels(&pages);
         assert_eq!(
             time_sig_labels.len(),
-            2,
-            "time signature label should appear on both parts' rows"
+            1,
+            "time signature label should appear once per change, not per notes part"
+        );
+        assert_eq!(
+            bpm_labels.len(),
+            1,
+            "BPM label should appear once per change, not per notes part"
         );
     }
 
@@ -1023,7 +1129,7 @@ mod tests {
     fn left_bar_line_emitted_at_start_of_first_system_line() {
         let score = make_score("1 2 3 4", "a b c d");
         let pages = layout(&score, A4_WIDTH, A4_HEIGHT);
-        // label_cols=2 (named single part), header_rows=2 → row = 2+1 = 3
+        // label_cols=2 (named single part), header_rows=2, directive row → part_row_base = 4
         let left_bars: Vec<_> = pages
             .iter()
             .flat_map(|p| p.row_groups.iter())
@@ -1036,8 +1142,8 @@ mod tests {
             "expected one left bar for a single system line"
         );
         assert_eq!(
-            left_bars[0].position.row, 3,
-            "left bar should be at row header_rows+1 = 3"
+            left_bars[0].position.row, 4,
+            "left bar should be at part_row_base when directive row is present"
         );
     }
 
@@ -1071,10 +1177,10 @@ mod tests {
             1,
             "expected one bottom bar for a single system line"
         );
-        // row_group_height = 4*1 = 4; row = header_rows + row_group_height = 2+4 = 6
+        // effective_row_group_height = 4 + 1 directive row = 5; row = header_rows + 5 = 7
         assert_eq!(
-            bottom_bars[0].position.row, 6,
-            "bottom bar row should be current_row_offset + row_group_height"
+            bottom_bars[0].position.row, 7,
+            "bottom bar row should be current_row_offset + effective_row_group_height"
         );
         if let GridContent::HorizontalBar {
             from_column,
@@ -1127,13 +1233,13 @@ mod tests {
             "expected one left bar for named two-part score"
         );
         assert_eq!(
-            left_bars[0].position.row, 3,
-            "left bar should be at row header_rows+1 = 3"
+            left_bars[0].position.row, 4,
+            "left bar should be at part_row_base when directive row is present"
         );
         if let GridContent::BarLine { height_in_rows } = &left_bars[0].content {
             assert_eq!(
-                *height_in_rows, 5,
-                "left bar height should be row_group_height-1 = 6-1 = 5 for two-part score"
+                *height_in_rows, 6,
+                "left bar height should be effective_row_group_height-1 = 7-1 = 6 for two-part score with directive row"
             );
         } else {
             panic!("expected BarLine");
@@ -1153,8 +1259,8 @@ mod tests {
         assert_eq!(left_bars.len(), 1);
         if let GridContent::BarLine { height_in_rows } = &left_bars[0].content {
             assert_eq!(
-                *height_in_rows, 3,
-                "single-part left bar height should be row_group_height-1 = 4-1 = 3"
+                *height_in_rows, 4,
+                "single-part left bar height should be effective_row_group_height-1 = 5-1 = 4 with directive row"
             );
         } else {
             panic!("expected BarLine");
@@ -1178,24 +1284,30 @@ mod tests {
         // One BarNumber per row group (2 row groups total)
         assert_eq!(bar_numbers.len(), 2, "expected one BarNumber per row group");
 
-        // First row group: bar 1, at column 2 (label_cols=2), row = header_rows = 2
+        // First row group: bar 1, at column 2 (label_cols=2), meta row with directive row = 3
         if let GridContent::BarNumber { number } = bar_numbers[0].content {
             assert_eq!(number, 1, "first row group must start at bar 1");
         }
         assert_eq!(bar_numbers[0].position.column, 2);
-        assert_eq!(bar_numbers[0].position.row, 2, "row = header_rows = 2");
+        assert_eq!(
+            bar_numbers[0].position.row, 3,
+            "row = header_rows + 1 with directive row"
+        );
         assert_eq!(
             bar_numbers[0].horizontal_alignment,
             HorizontalAlignment::Left
         );
         assert_eq!(bar_numbers[0].vertical_alignment, VerticalAlignment::Bottom);
 
-        // Second row group: bar 2, at column 2, row = header_rows + row_group_height = 2 + 4 = 6
+        // Second row group: bar 2, no directive row; row = header_rows + first effective height = 2 + 5 = 7
         if let GridContent::BarNumber { number } = bar_numbers[1].content {
             assert_eq!(number, 2, "second row group must start at bar 2");
         }
         assert_eq!(bar_numbers[1].position.column, 2);
-        assert_eq!(bar_numbers[1].position.row, 6, "row = 2 + 4 = 6");
+        assert_eq!(
+            bar_numbers[1].position.row, 7,
+            "row = 2 + 5 after first row group with directive row"
+        );
     }
 
     #[test]
@@ -1221,7 +1333,10 @@ mod tests {
             assert_eq!(number, 1, "bar number must be 1 for the first row group");
         }
         assert_eq!(bar_numbers[0].position.column, 2);
-        assert_eq!(bar_numbers[0].position.row, 2, "row = header_rows = 2");
+        assert_eq!(
+            bar_numbers[0].position.row, 3,
+            "row = header_rows + 1 with directive row"
+        );
         assert_eq!(
             bar_numbers[0].horizontal_alignment,
             HorizontalAlignment::Left
@@ -1269,6 +1384,32 @@ mod tests {
         let doc = parser::parse(input, "test.jianpu").unwrap();
         let score = grouper::group(doc).unwrap();
         layout(&score, A4_WIDTH, A4_HEIGHT)
+    }
+
+    #[test]
+    fn section_label_renders_below_directive_row_when_both_present() {
+        let input = concat!(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes\n\n",
+            "[score]\n(time=4/4 key=C4 bpm=120 label=\"Verse 1\")\n1 2 3 4\n",
+        );
+        let pages = parse_and_layout(input);
+        let all: Vec<_> = pages[0].row_groups[0].elements.iter().collect();
+        let time_row = all
+            .iter()
+            .find(|e| matches!(e.content, GridContent::TimeSignatureLabel { .. }))
+            .unwrap()
+            .position
+            .row;
+        let label_row = all
+            .iter()
+            .find(|e| matches!(&e.content, GridContent::SectionLabel { text } if text == "Verse 1"))
+            .unwrap()
+            .position
+            .row;
+        assert!(
+            label_row > time_row,
+            "section label must be below directive row"
+        );
     }
 
     #[test]

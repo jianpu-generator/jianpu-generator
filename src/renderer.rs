@@ -562,8 +562,8 @@ mod tests {
     fn lower_octave_note_renders_dot_below_note() {
         let svgs = render_score("1, 2 3 4", "a b c d");
         assert!(
-            svgs[0].contains(r#"cy="123.4""#),
-            "1-beat lower-octave dot must be at slot 0 (cy=123.4)"
+            svgs[0].contains(r#"cy="147.4""#),
+            "1-beat lower-octave dot must be at slot 0 (cy=147.4) with directive row"
         );
     }
 
@@ -573,8 +573,8 @@ mod tests {
         let lyrics_str = "a b c d e f g h i j k l m n o p";
         let svgs = render_score(score_str, lyrics_str);
         assert!(
-            svgs[0].contains(r#"cy="130.6""#),
-            "quarter-beat lower-octave dot must be at slot 2 (cy=130.6)"
+            svgs[0].contains(r#"cy="154.6""#),
+            "quarter-beat lower-octave dot must be at slot 2 (cy=154.6) with directive row"
         );
     }
 

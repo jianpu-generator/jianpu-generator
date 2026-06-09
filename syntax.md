@@ -159,6 +159,10 @@ Rules:
 - `label` applies only to the measure where it is declared (does not persist to the next bar).
 - `bpm`, `key`, and `time` persist until the next directive line overrides them.
 
+### Rendering
+
+When `time=` or `bpm=` changes on a measure, the generator may add a **directive row** above the bar-number / section-label row for that system line. Time signature and BPM appear once on that row (not on each part row). If neither value changes on any measure in the line, the directive row is omitted.
+
 Note names: `A` `B` `C` `D` `E` `F` `G`, with optional `#` or `b` accidental, followed by octave digit (e.g. `4`).
 
 ---
