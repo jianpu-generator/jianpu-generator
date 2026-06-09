@@ -51,6 +51,7 @@ export default function App() {
     pdfExporting,
     diagnostics,
     rendering,
+    audioGenerating,
     exportPdf,
     splitPdfExporting,
     exportSplitPdf,
@@ -199,6 +200,7 @@ export default function App() {
           <Preview
             svgs={svgs}
             rendering={rendering}
+            audioGenerating={audioGenerating}
             wavUrl={wavUrl}
             audioAvailable={audioAvailable}
             pdfAvailable={pdfAvailable}

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 interface PreviewProps {
   svgs: string[]
   rendering: boolean
+  audioGenerating?: boolean
   wavUrl?: string | null
   audioAvailable?: boolean
   pdfAvailable?: boolean
@@ -18,6 +19,7 @@ interface PreviewProps {
 export function Preview({
   svgs,
   rendering,
+  audioGenerating = false,
   wavUrl = null,
   audioAvailable = false,
   pdfAvailable = false,
@@ -67,15 +69,30 @@ export function Preview({
       </div>
       {toolbar ? <div className="preview-toolbar">{toolbar}</div> : null}
       {audioAvailable ? (
-        <div className="preview-audio">
-          {wavUrl ? (
-            // biome-ignore lint/a11y/useMediaCaption: synthesized score preview has no captions track
-            <audio className="preview-audio-player" controls src={wavUrl} />
-          ) : (
-            <span className="preview-audio-empty">
-              {rendering ? 'Generating audio…' : 'No audio yet.'}
-            </span>
-          )}
+        <div
+          className="preview-audio"
+          aria-busy={audioGenerating || undefined}
+        >
+          <div className="preview-audio-frame">
+            {wavUrl ? (
+              <div className="preview-audio-player-wrap">
+                {/* biome-ignore lint/a11y/useMediaCaption: synthesized score preview has no captions track */}
+                <audio className="preview-audio-player" controls src={wavUrl} />
+              </div>
+            ) : (
+              <div className="preview-audio-placeholder">
+                {!audioGenerating ? (
+                  <span className="preview-audio-empty">No audio yet.</span>
+                ) : null}
+              </div>
+            )}
+            {audioGenerating ? (
+              <div className="preview-audio-generating" role="status">
+                <span className="preview-audio-spinner" aria-hidden="true" />
+                <span className="preview-audio-status">Generating audio…</span>
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
       <div className="preview-pages">

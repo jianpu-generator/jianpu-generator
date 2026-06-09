@@ -42,3 +42,9 @@ repos:
         language: system
         files: ^web/
         pass_filenames: false
+      - id: check-max-file-lines
+        name: check max file lines (600)
+        entry: python3 scripts/check-max-file-lines.py
+        language: system
+        files: \.(rs|ts|tsx|js|jsx|py|css|html)$
+        exclude: ^(crates/jianpu-wasm/pkg/|target/)
