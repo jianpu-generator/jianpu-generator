@@ -327,6 +327,8 @@ fn process_column_line(
             let events = validate_and_pad_beats(
                 token_parser::parse_tokens(tokens, group_state)?,
                 beats_expected,
+                *ctx.time_num,
+                *ctx.time_den,
             )?;
             if let Some(tie_state) = ctx.lyric_tie_states.get_mut(*track_index) {
                 let slots = count_lyric_slots_in_events(&events, tie_state);
@@ -723,6 +725,8 @@ fn can_implicitly_pad(events: &[Spanned<ScoreEvent>], deficit: u32) -> bool {
 fn validate_and_pad_beats(
     mut events: Vec<Spanned<ScoreEvent>>,
     expected: u32,
+    time_num: u8,
+    time_den: u8,
 ) -> Result<Vec<Spanned<ScoreEvent>>, JianPuError> {
     let mut total = 0u32;
 
@@ -761,6 +765,8 @@ fn validate_and_pad_beats(
             }
         }
     }
+
+    crate::grouping::validate_measure_grouping(&events, time_num, time_den)?;
 
     Ok(events)
 }
@@ -1047,12 +1053,12 @@ mod tests {
         let content = concat!(
             "(time=4/4 key=C4 bpm=120)\n",
             "1 - 6m -\n",
-            "(6 - 7 -\n",
+            "(6- 7-\n",
             "慈 -\n",
             "\n",
             "1 - 6m -\n",
-            "7) 1\n",
-            "光\n",
+            "7) 1 2 3\n",
+            "光 - 光\n",
         );
         let declarations = vec![
             decl("main", PartKind::Chord),
@@ -1060,7 +1066,7 @@ mod tests {
         ];
         let tracks = parse(content, 0, &declarations).unwrap();
         let s1 = notes_track(&tracks, "S1");
-        assert_eq!(s1.lyrics.as_ref().unwrap().syllables.len(), 3);
+        assert_eq!(s1.lyrics.as_ref().unwrap().syllables.len(), 5);
     }
 
     #[test]
@@ -1188,8 +1194,8 @@ mod tests {
     #[test]
     fn implicit_trailing_extensions_after_partial_fill() {
         let declarations = vec![decl("", PartKind::Notes)];
-        let explicit = "(time=4/4 key=C4 bpm=120)\n1 2--\n";
-        let implicit = "(time=4/4 key=C4 bpm=120)\n1 2\n";
+        let explicit = "(time=4/4 key=C4 bpm=120)\n1 2 3-\n";
+        let implicit = "(time=4/4 key=C4 bpm=120)\n1 2 3\n";
         let explicit_parsed = parse(explicit, 0, &declarations).unwrap();
         let implicit_parsed = parse(implicit, 0, &declarations).unwrap();
         let explicit_track = notes_track(&explicit_parsed, "");
@@ -1242,12 +1248,12 @@ mod tests {
         let explicit = concat!(
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\n",
             "chord = chord\nMelody = notes\n\n[score]\n",
-            "(time=4/4 key=C4 bpm=120)\n1m 2m - -\n1 2\n",
+            "(time=4/4 key=C4 bpm=120)\n1m 2m - -\n1 2 3 4\n",
         );
         let implicit = concat!(
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\n",
             "chord = chord\nMelody = notes\n\n[score]\n",
-            "(time=4/4 key=C4 bpm=120)\n1m 2m\n1 2\n",
+            "(time=4/4 key=C4 bpm=120)\n1m 2m\n1 2 3 4\n",
         );
         let explicit_score = grouper::group(parser::parse(explicit, "t.jianpu").unwrap()).unwrap();
         let implicit_score = grouper::group(parser::parse(implicit, "t.jianpu").unwrap()).unwrap();
