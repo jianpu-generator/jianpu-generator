@@ -1,18 +1,18 @@
-use crate::ast::grouped::{MultiPartMeasure, NoteEvent, PartRow, Score};
-use crate::ast::parsed::JianPuPitch;
+use crate::ast::grouped::{MultiPartMeasure, PartRow, Score};
 use crate::layout::types::{
     Footer, GridContent, GridElement, GridPosition, Header, HorizontalAlignment, Page, RowGroup,
     VerticalAlignment,
 };
 
 use super::{
-    flush_beam_buffer, measure_column_width, part_row_height, BeamBufferEntry, PAGE_MARGIN,
+    flush_beam_buffer, measure_beat_width, measure_column_width, part_row_height, BeamBufferEntry,
+    SlurKey, PAGE_MARGIN,
 };
 
 #[path = "part_emit.rs"]
 mod part_emit;
 
-use part_emit::{emit_chord_part, emit_notes_part, PartNoteState};
+use part_emit::{emit_timed_part, PartNoteState};
 
 fn measure_has_directive_labels(measure: &MultiPartMeasure) -> bool {
     measure.time_signature.is_some() || measure.bpm.is_some()
@@ -64,11 +64,11 @@ pub(crate) struct LayoutEngine<'a> {
 
 struct PerPartLayoutState {
     prev_tie: bool,
-    prev_pitch: Option<JianPuPitch>,
+    prev_slur_key: Option<SlurKey>,
     beam_buffer: Vec<BeamBufferEntry>,
-    pending_chains: Vec<Vec<(u32, JianPuPitch)>>,
+    pending_chains: Vec<Vec<(u32, SlurKey)>>,
     chain_row: u32,
-    cross_line_tie: Option<JianPuPitch>,
+    cross_line_tie: Option<SlurKey>,
 }
 
 impl<'a> LayoutEngine<'a> {
@@ -87,12 +87,7 @@ impl<'a> LayoutEngine<'a> {
         let num_notes_parts = score
             .measures
             .first()
-            .map(|m| {
-                m.parts
-                    .iter()
-                    .filter(|p| matches!(p, PartRow::Notes(_)))
-                    .count()
-            })
+            .map(|m| m.parts.len())
             .unwrap_or(1)
             .max(1) as u32;
 
@@ -142,7 +137,7 @@ impl<'a> LayoutEngine<'a> {
             per_part_states: (0..num_notes_parts_usize)
                 .map(|_| PerPartLayoutState {
                     prev_tie: false,
-                    prev_pitch: None,
+                    prev_slur_key: None,
                     beam_buffer: Vec::new(),
                     pending_chains: Vec::new(),
                     chain_row: 0,
@@ -259,48 +254,40 @@ impl<'a> LayoutEngine<'a> {
             return;
         }
 
-        let mut notes_idx_flush = 0usize;
         let mut flush_row_cursor = self.current_row_offset;
-        for part_row in measure.parts.iter() {
-            if let PartRow::Notes(_) = part_row {
-                if let Some(state) = self.per_part_states.get_mut(notes_idx_flush) {
-                    flush_beam_buffer(
-                        &mut state.beam_buffer,
-                        flush_row_cursor,
-                        &mut self.current_elements,
-                    );
-                }
-                notes_idx_flush += 1;
+        for (part_idx_flush, _part_row) in measure.parts.iter().enumerate() {
+            if let Some(state) = self.per_part_states.get_mut(part_idx_flush) {
+                flush_beam_buffer(
+                    &mut state.beam_buffer,
+                    flush_row_cursor,
+                    &mut self.current_elements,
+                );
             }
-            flush_row_cursor += part_row_height(part_row);
+            flush_row_cursor += part_row_height(_part_row);
         }
 
-        let mut notes_idx_tie = 0usize;
-        for part_row in measure.parts.iter() {
-            if let PartRow::Notes(_) = part_row {
-                if let Some(state) = self.per_part_states.get_mut(notes_idx_tie) {
-                    for chain in &state.pending_chains {
-                        if let Some(last) = chain.last() {
-                            let to_col = self.current_col.saturating_sub(1);
-                            if last.0 < to_col {
-                                self.current_elements.push(GridElement {
-                                    position: GridPosition {
-                                        column: last.0,
-                                        row: state.chain_row,
-                                    },
-                                    horizontal_alignment: HorizontalAlignment::Left,
-                                    vertical_alignment: VerticalAlignment::Top,
-                                    content: GridContent::TieOrSlurCurve {
-                                        from_column: last.0,
-                                        to_column: to_col,
-                                    },
-                                });
-                            }
-                            state.cross_line_tie = Some(last.1.clone());
+        for (part_idx_tie, _part_row) in measure.parts.iter().enumerate() {
+            if let Some(state) = self.per_part_states.get_mut(part_idx_tie) {
+                for chain in &state.pending_chains {
+                    if let Some(last) = chain.last() {
+                        let to_col = self.current_col.saturating_sub(1);
+                        if last.0 < to_col {
+                            self.current_elements.push(GridElement {
+                                position: GridPosition {
+                                    column: last.0,
+                                    row: state.chain_row,
+                                },
+                                horizontal_alignment: HorizontalAlignment::Left,
+                                vertical_alignment: VerticalAlignment::Top,
+                                content: GridContent::TieOrSlurCurve {
+                                    from_column: last.0,
+                                    to_column: to_col,
+                                },
+                            });
                         }
+                        state.cross_line_tie = Some(last.1.clone());
                     }
                 }
-                notes_idx_tie += 1;
             }
         }
         for state in self.per_part_states.iter_mut() {
@@ -429,22 +416,9 @@ impl<'a> LayoutEngine<'a> {
         measure
             .parts
             .iter()
-            .filter_map(|row| {
-                if let PartRow::Notes(p) = row {
-                    Some(p)
-                } else {
-                    None
-                }
-            })
-            .map(|part| {
-                part.notes
-                    .events
-                    .iter()
-                    .map(|n| match n {
-                        NoteEvent::Note(note) => note.duration,
-                        NoteEvent::Rest(rest) => rest.duration,
-                    })
-                    .sum::<u32>()
+            .map(|row| {
+                let PartRow::Timed(p) = row;
+                measure_beat_width(p)
             })
             .max()
             .unwrap_or(0)
@@ -452,44 +426,25 @@ impl<'a> LayoutEngine<'a> {
 
     fn emit_measure_content(&mut self, measure: &MultiPartMeasure, note_col_start: u32) {
         let max_notes_width = Self::max_notes_width(measure);
-        let mut notes_idx = 0usize;
         let mut main_row_cursor = self.part_row_base() - 1;
 
-        for part_row_enum in measure.parts.iter() {
+        for (notes_idx, part_row_enum) in measure.parts.iter().enumerate() {
             let part_row_offset = main_row_cursor;
-            match part_row_enum {
-                PartRow::Notes(part_slice) => {
-                    if let Some(state) = self.per_part_states.get_mut(notes_idx) {
-                        let mut part_state = PartNoteState {
-                            elements: &mut self.current_elements,
-                            label_cols: self.label_cols,
-                            beam_buf: &mut state.beam_buffer,
-                            pending_chains: &mut state.pending_chains,
-                            chain_row: &mut state.chain_row,
-                            prev_tie: &mut state.prev_tie,
-                            prev_pitch: &mut state.prev_pitch,
-                            cross_line_tie: &mut state.cross_line_tie,
-                        };
-                        emit_notes_part(
-                            &mut part_state,
-                            part_slice,
-                            part_row_offset,
-                            note_col_start,
-                        );
-                    }
-                    notes_idx += 1;
-                    main_row_cursor += part_row_height(part_row_enum);
-                }
-                PartRow::Chord(chord_slice) => {
-                    emit_chord_part(
-                        &mut self.current_elements,
-                        chord_slice,
-                        main_row_cursor,
-                        note_col_start,
-                    );
-                    main_row_cursor += 2;
-                }
+            let PartRow::Timed(part_slice) = part_row_enum;
+            if let Some(state) = self.per_part_states.get_mut(notes_idx) {
+                let mut part_state = PartNoteState {
+                    elements: &mut self.current_elements,
+                    label_cols: self.label_cols,
+                    beam_buf: &mut state.beam_buffer,
+                    pending_chains: &mut state.pending_chains,
+                    chain_row: &mut state.chain_row,
+                    prev_tie: &mut state.prev_tie,
+                    prev_slur_key: &mut state.prev_slur_key,
+                    cross_line_tie: &mut state.cross_line_tie,
+                };
+                emit_timed_part(&mut part_state, part_slice, part_row_offset, note_col_start);
             }
+            main_row_cursor += part_row_height(part_row_enum);
         }
 
         let bar_col = note_col_start + max_notes_width;

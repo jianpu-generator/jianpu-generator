@@ -1,10 +1,10 @@
 use crate::ast::grouped::{
-    ChordSlice, GroupedChord, GroupedChordEvent, GroupedChordPart, GroupedMeasure, GroupedNote,
-    GroupedPart, GroupedRest, GroupedTrack, Metadata, NoteEvent, Notes, Score, TimeSignature,
+    GroupedChordNote, GroupedMeasure, GroupedNote, GroupedPart, GroupedRest, GroupedTrack,
+    Metadata, NoteEvent, Notes, Score, TimeSignature,
 };
 use crate::ast::parsed::{
-    Accidental, KeyChange, Note, NoteName, ParsedChordEvent, ParsedChordTrack, ParsedDocument,
-    ParsedNote, ParsedNotesTrack, ParsedRest, ParsedTrack, ScoreEvent, Syllable,
+    Accidental, KeyChange, Note, NoteName, ParsedChordNote, ParsedDocument, ParsedNote, ParsedRest,
+    ParsedTimedTrack, ParsedTrack, PartKind, ScoreEvent, Syllable,
 };
 use crate::combiner;
 use crate::error::{JianPuError, Span};
@@ -14,8 +14,7 @@ pub fn group(doc: ParsedDocument) -> Result<Score, JianPuError> {
     let mut grouped_tracks = Vec::new();
     for track in doc.tracks {
         grouped_tracks.push(match track {
-            ParsedTrack::Notes(part) => GroupedTrack::Notes(group_notes_track(part)?),
-            ParsedTrack::Chord(part) => GroupedTrack::Chord(group_chord_track(part)?),
+            ParsedTrack::Timed(part) => GroupedTrack::Timed(group_timed_track(part)?),
         });
     }
 
@@ -36,6 +35,7 @@ pub fn group(doc: ParsedDocument) -> Result<Score, JianPuError> {
 }
 
 struct PartGrouper {
+    part_kind: PartKind,
     current_bpm: u32,
     current_key: KeyChange,
     current_time_sig: TimeSignature,
@@ -52,7 +52,7 @@ struct PartGrouper {
 }
 
 impl PartGrouper {
-    fn new(part: &ParsedNotesTrack) -> Self {
+    fn new(part: &ParsedTimedTrack) -> Self {
         let default_key = KeyChange {
             note: Note {
                 name: NoteName::C,
@@ -67,6 +67,7 @@ impl PartGrouper {
         let capacity = Self::measure_capacity(&current_time_sig);
 
         Self {
+            part_kind: part.kind,
             current_bpm: 120,
             current_key: default_key,
             current_time_sig,
@@ -183,14 +184,20 @@ impl PartGrouper {
                 n.duration += 4;
                 self.current_beat += 4;
             }
+            Some(NoteEvent::Chord(c)) => {
+                c.duration += 4;
+                self.current_beat += 4;
+            }
             Some(NoteEvent::Rest(_)) => {
                 return Err(JianPuError::dash_after_rest(span));
             }
             None => {
-                return Err(JianPuError::new(
-                    span,
-                    "extension `-` without a preceding note or rest; if it follows a measure boundary, cross-measure extension is not supported".to_string(),
-                ));
+                let message = if self.part_kind == PartKind::Chord {
+                    "chord extension '-' with no preceding event".to_string()
+                } else {
+                    "extension `-` without a preceding note or rest; if it follows a measure boundary, cross-measure extension is not supported".to_string()
+                };
+                return Err(JianPuError::new(span, message));
             }
         }
         if self.current_beat >= self.capacity {
@@ -200,14 +207,18 @@ impl PartGrouper {
     }
 
     fn handle_tie_marker(&mut self, span: Span) -> Result<(), JianPuError> {
-        let last_note = self.current_notes.last_mut().or_else(|| {
+        let last_event = self.current_notes.last_mut().or_else(|| {
             self.measures
                 .last_mut()
                 .and_then(|m| m.notes.events.last_mut())
         });
-        match last_note {
+        match last_event {
             Some(NoteEvent::Note(n)) => {
                 n.tie = true;
+                Ok(())
+            }
+            Some(NoteEvent::Chord(c)) => {
+                c.tie = true;
                 Ok(())
             }
             _ => Err(JianPuError::new(
@@ -231,6 +242,26 @@ impl PartGrouper {
                 dotted: pn.dotted,
             }),
             "note",
+        )
+    }
+
+    fn handle_chord(&mut self, span: Span, pc: ParsedChordNote) -> Result<(), JianPuError> {
+        self.push_timed_event(
+            span,
+            pc.duration,
+            NoteEvent::Chord(GroupedChordNote {
+                degree: pc.degree,
+                accidental: pc.accidental,
+                triad: pc.triad,
+                extension: pc.extension,
+                bass: pc.bass,
+                duration: pc.duration,
+                tie: pc.tie,
+                group_membership: pc.group_membership,
+                group_continuation: pc.group_continuation,
+                dotted: pc.dotted,
+            }),
+            "chord",
         )
     }
 
@@ -274,6 +305,7 @@ impl PartGrouper {
             ScoreEvent::Extension => self.handle_extension(spanned.span),
             ScoreEvent::TieMarker => self.handle_tie_marker(spanned.span),
             ScoreEvent::Note(pn) => self.handle_note(spanned.span, pn),
+            ScoreEvent::Chord(pc) => self.handle_chord(spanned.span, pc),
             ScoreEvent::LabelChange(text) => {
                 self.handle_label_change(text);
                 Ok(())
@@ -312,65 +344,19 @@ impl PartGrouper {
 
         GroupedPart {
             name: self.part_name,
+            kind: self.part_kind,
             measures: self.measures,
             lyrics: self.part_lyrics,
         }
     }
 }
 
-fn group_notes_track(part: ParsedNotesTrack) -> Result<GroupedPart, JianPuError> {
+fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, JianPuError> {
     let mut grouper = PartGrouper::new(&part);
     for spanned in part.score.events {
         grouper.process_event(spanned)?;
     }
     Ok(grouper.finish())
-}
-
-fn group_chord_track(part: ParsedChordTrack) -> Result<GroupedChordPart, JianPuError> {
-    let track_name = Some(part.abbreviation.clone());
-    let mut measures: Vec<ChordSlice> = Vec::new();
-
-    for measure_events in part.events_per_measure {
-        let mut grouped: Vec<GroupedChordEvent> = Vec::new();
-
-        for event in measure_events {
-            match event {
-                ParsedChordEvent::Chord(sym) => {
-                    grouped.push(GroupedChordEvent::Chord(GroupedChord {
-                        degree: sym.degree,
-                        accidental: sym.accidental,
-                        triad: sym.triad,
-                        extension: sym.extension,
-                        bass: sym.bass,
-                        duration: 4,
-                    }));
-                }
-                ParsedChordEvent::Rest => {
-                    grouped.push(GroupedChordEvent::Rest(4));
-                }
-                ParsedChordEvent::Extend(span) => match grouped.last_mut() {
-                    Some(GroupedChordEvent::Chord(c)) => c.duration += 4,
-                    Some(GroupedChordEvent::Rest(d)) => *d += 4,
-                    None => {
-                        return Err(JianPuError::new(
-                            span,
-                            "chord extension '-' with no preceding event",
-                        ));
-                    }
-                },
-            }
-        }
-
-        measures.push(ChordSlice {
-            name: track_name.clone(),
-            events: grouped,
-        });
-    }
-
-    Ok(GroupedChordPart {
-        name: track_name,
-        measures,
-    })
 }
 
 #[cfg(test)]
@@ -395,8 +381,7 @@ mod tests {
     fn first_part_notes(score: &Score, measure_idx: usize) -> &Vec<NoteEvent> {
         use crate::ast::grouped::PartRow;
         match &score.measures[measure_idx].parts[0] {
-            PartRow::Notes(p) => &p.notes.events,
-            PartRow::Chord(_) => panic!("expected Notes part"),
+            PartRow::Timed(p) => &p.notes.events,
         }
     }
 
@@ -427,7 +412,7 @@ mod tests {
         ));
         match &first_part_notes(&score, 0)[0] {
             NoteEvent::Note(n) => assert_eq!(n.duration, 8),
-            NoteEvent::Rest(_) => panic!("expected Note"),
+            NoteEvent::Rest(_) | NoteEvent::Chord(_) => panic!("expected Note"),
         }
     }
 
@@ -602,12 +587,10 @@ mod tests {
         assert_eq!(score.measures.len(), 2);
         use crate::ast::grouped::PartRow;
         let m0_lyrics = match &score.measures[0].parts[0] {
-            PartRow::Notes(p) => p.lyrics.as_ref().unwrap(),
-            PartRow::Chord(_) => panic!("expected Notes part"),
+            PartRow::Timed(p) => p.lyrics.as_ref().unwrap(),
         };
         let m1_lyrics = match &score.measures[1].parts[0] {
-            PartRow::Notes(p) => p.lyrics.as_ref().unwrap(),
-            PartRow::Chord(_) => panic!("expected Notes part"),
+            PartRow::Timed(p) => p.lyrics.as_ref().unwrap(),
         };
         assert_eq!(m0_lyrics.syllables.len(), 4);
         assert_eq!(m1_lyrics.syllables.len(), 4);
@@ -624,7 +607,7 @@ mod tests {
         let notes_m0 = first_part_notes(&score, 0);
         match notes_m0.last().unwrap() {
             NoteEvent::Note(n) => assert!(n.tie, "note 6 in measure 0 should be tied"),
-            NoteEvent::Rest(_) => panic!("expected Note"),
+            NoteEvent::Rest(_) | NoteEvent::Chord(_) => panic!("expected Note"),
         }
     }
 
@@ -641,11 +624,11 @@ mod tests {
                 assert_eq!(n.duration, 8, "note 6 should be extended to 2 beats");
                 assert!(n.tie, "note 6 should have tie=true");
             }
-            NoteEvent::Rest(_) => panic!("expected Note"),
+            NoteEvent::Rest(_) | NoteEvent::Chord(_) => panic!("expected Note"),
         }
         match &notes[1] {
             NoteEvent::Note(n) => assert_eq!(n.pitch, crate::ast::parsed::JianPuPitch::Seven),
-            NoteEvent::Rest(_) => panic!("expected Note"),
+            NoteEvent::Rest(_) | NoteEvent::Chord(_) => panic!("expected Note"),
         }
     }
 
@@ -675,16 +658,20 @@ mod tests {
         let chord_row = measure
             .parts
             .iter()
-            .find(|r| matches!(r, PartRow::Chord(_)))
+            .find(|r| {
+                matches!(
+                    r,
+                    PartRow::Timed(p) if p.kind == crate::ast::parsed::PartKind::Chord
+                )
+            })
             .unwrap();
-        if let PartRow::Chord(slice) = chord_row {
-            assert_eq!(slice.events.len(), 1);
-            match &slice.events[0] {
-                GroupedChordEvent::Chord(c) => {
-                    assert_eq!(c.duration, 16); // 4 tokens * 4 quarter-beats
-                }
-                GroupedChordEvent::Rest(_) => panic!("expected Chord event"),
+        let PartRow::Timed(slice) = chord_row;
+        assert_eq!(slice.notes.events.len(), 1);
+        match &slice.notes.events[0] {
+            NoteEvent::Chord(c) => {
+                assert_eq!(c.duration, 16); // 4 tokens * 4 quarter-beats
             }
+            NoteEvent::Note(_) | NoteEvent::Rest(_) => panic!("expected Chord event"),
         }
     }
 }

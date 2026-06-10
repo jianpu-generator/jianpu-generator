@@ -58,26 +58,17 @@ pub fn flatten_score_line_slots(declarations: &[PartDecl]) -> Vec<ScoreLineSlot>
 }
 
 #[derive(Debug)]
-pub struct ParsedNotesTrack {
+pub enum ParsedTrack {
+    Timed(ParsedTimedTrack),
+}
+
+#[derive(Debug)]
+pub struct ParsedTimedTrack {
     pub abbreviation: String,
-    #[allow(dead_code)] // reserved for future legend rendering
     pub display_name: String,
+    pub kind: PartKind,
     pub score: ParsedScore,
     pub lyrics: Option<ParsedLyrics>,
-}
-
-#[derive(Debug)]
-pub struct ParsedChordTrack {
-    pub abbreviation: String,
-    #[allow(dead_code)] // reserved for future legend rendering
-    pub display_name: String,
-    pub events_per_measure: Vec<Vec<ParsedChordEvent>>,
-}
-
-#[derive(Debug)]
-pub enum ParsedTrack {
-    Chord(ParsedChordTrack),
-    Notes(ParsedNotesTrack),
 }
 
 #[derive(Debug)]
@@ -121,14 +112,6 @@ pub struct ParsedChordSymbol {
     pub bass: Option<BassDegree>,
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone, PartialEq)]
-pub enum ParsedChordEvent {
-    Chord(ParsedChordSymbol),
-    Rest,
-    Extend(crate::error::Span),
-}
-
 #[derive(Debug)]
 pub struct ParsedMetadata {
     pub title: String,
@@ -140,9 +123,10 @@ pub struct ParsedMetadata {
     pub note_number_width: Option<u32>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ScoreEvent {
     Note(ParsedNote),
+    Chord(ParsedChordNote),
     Rest(ParsedRest),
     BpmChange(u32),
     KeyChange(KeyChange),
@@ -157,7 +141,7 @@ pub enum ScoreEvent {
     LabelChange(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ParsedNote {
     pub pitch: JianPuPitch,
     /// Octave offset from the default octave. 0 = default, positive = up, negative = down.
@@ -174,7 +158,21 @@ pub struct ParsedNote {
     pub dotted: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParsedChordNote {
+    pub degree: JianPuPitch,
+    pub accidental: Accidental,
+    pub triad: TriadQuality,
+    pub extension: Option<Extension>,
+    pub bass: Option<BassDegree>,
+    pub duration: u32,
+    pub tie: bool,
+    pub group_membership: u8,
+    pub group_continuation: u8,
+    pub dotted: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct ParsedRest {
     /// Duration in quarter-beats. For dotted rests this already includes the added half-value.
     pub duration: u32,
@@ -193,12 +191,12 @@ pub enum JianPuPitch {
     Seven,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct KeyChange {
     pub note: Note,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Note {
     pub name: NoteName,
     pub octave: u8,

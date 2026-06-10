@@ -62,14 +62,22 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, JianPuError>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::parsed::{ParsedNotesTrack, ParsedTrack};
+    use crate::ast::parsed::{ParsedTimedTrack, ParsedTrack};
 
-    fn notes_track(doc: &ParsedDocument) -> &ParsedNotesTrack {
+    fn notes_track(doc: &ParsedDocument) -> &ParsedTimedTrack {
         doc.tracks
             .iter()
             .find_map(|t| match t {
-                ParsedTrack::Notes(n) => Some(n),
-                ParsedTrack::Chord(_) => None,
+                ParsedTrack::Timed(n) if n.lyrics.is_none() && n.abbreviation != "Chord" => Some(n),
+                ParsedTrack::Timed(_) => None,
+            })
+            .or_else(|| {
+                doc.tracks
+                    .iter()
+                    .map(|t| match t {
+                        ParsedTrack::Timed(n) => n,
+                    })
+                    .next()
             })
             .expect("expected a notes track")
     }
@@ -133,16 +141,16 @@ mod tests {
             .tracks
             .iter()
             .find_map(|t| match t {
-                ParsedTrack::Notes(n) if n.abbreviation == "Soprano" => Some(n),
-                _ => None,
+                ParsedTrack::Timed(n) if n.abbreviation == "Soprano" => Some(n),
+                ParsedTrack::Timed(_) => None,
             })
             .unwrap();
         let alto = doc
             .tracks
             .iter()
             .find_map(|t| match t {
-                ParsedTrack::Notes(n) if n.abbreviation == "Alto" => Some(n),
-                _ => None,
+                ParsedTrack::Timed(n) if n.abbreviation == "Alto" => Some(n),
+                ParsedTrack::Timed(_) => None,
             })
             .unwrap();
         assert!(soprano.lyrics.is_none());

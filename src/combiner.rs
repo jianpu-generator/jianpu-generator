@@ -1,7 +1,7 @@
 use crate::ast::grouped::{
     GroupedMeasure, GroupedTrack, Lyrics, MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice,
 };
-use crate::ast::parsed::{JianPuPitch, Syllable};
+use crate::ast::parsed::{JianPuPitch, PartKind, Syllable};
 use crate::error::{JianPuError, Span};
 
 pub(crate) fn combine(
@@ -20,35 +20,38 @@ pub(crate) fn combine(
     let lyrics_per_track: Vec<Vec<Vec<Syllable>>> = grouped_tracks
         .iter()
         .map(|track| match track {
-            GroupedTrack::Notes(part) => part
-                .lyrics
-                .as_deref()
-                .map(|lyrics| distribute_lyrics(&part.measures, lyrics))
-                .unwrap_or_else(|| vec![vec![]; part.measures.len()]),
-            GroupedTrack::Chord(_) => vec![vec![]; expected_len],
+            GroupedTrack::Timed(part) => match part.kind {
+                PartKind::NotesWithLyrics => part
+                    .lyrics
+                    .as_deref()
+                    .map(|lyrics| distribute_lyrics(&part.measures, lyrics))
+                    .unwrap_or_else(|| vec![vec![]; part.measures.len()]),
+                PartKind::Chord | PartKind::Notes => {
+                    vec![vec![]; part.measures.len()]
+                }
+            },
         })
         .collect();
 
     let mut combined = Vec::with_capacity(expected_len);
     for measure_idx in 0..expected_len {
-        let first_notes_measure = grouped_tracks
+        let first_measure = grouped_tracks
             .iter()
             .find_map(|track| match track {
-                GroupedTrack::Notes(part) => part.measures.get(measure_idx),
-                GroupedTrack::Chord(_) => None,
+                GroupedTrack::Timed(part) => part.measures.get(measure_idx),
             })
             .ok_or_else(|| {
                 JianPuError::new(
                     Span::new(0, 0),
-                    "internal invariant: no notes track for measure metadata",
+                    "internal invariant: no timed track for measure metadata",
                 )
             })?;
         let part_rows = build_part_rows(grouped_tracks, measure_idx, &lyrics_per_track)?;
         combined.push(MultiPartMeasure {
-            time_signature: first_notes_measure.time_signature.clone(),
-            bpm: first_notes_measure.bpm,
-            key: first_notes_measure.key.clone(),
-            label: first_notes_measure.label.clone(),
+            time_signature: first_measure.time_signature.clone(),
+            bpm: first_measure.bpm,
+            key: first_measure.key.clone(),
+            label: first_measure.label.clone(),
             parts: part_rows,
         });
     }
@@ -85,11 +88,11 @@ fn build_part_rows(
 
     for (track_idx, track) in grouped_tracks.iter().enumerate() {
         match track {
-            GroupedTrack::Notes(part) => {
+            GroupedTrack::Timed(part) => {
                 let measure = part.measures.get(measure_idx).ok_or_else(|| {
                     JianPuError::new(
                         Span::new(0, 0),
-                        "internal invariant: notes part measure missing",
+                        "internal invariant: timed part measure missing",
                     )
                 })?;
                 let syllables = lyrics_per_track
@@ -102,27 +105,18 @@ fn build_part_rows(
                         )
                     })?
                     .clone();
-                let lyrics = if part.lyrics.is_some() {
-                    Some(Lyrics { syllables })
-                } else {
-                    None
+                let lyrics = match part.kind {
+                    PartKind::NotesWithLyrics => Some(Lyrics { syllables }),
+                    PartKind::Chord | PartKind::Notes => None,
                 };
-                part_rows.push(PartRow::Notes(PartSlice {
+                part_rows.push(PartRow::Timed(PartSlice {
                     name: part.name.clone(),
+                    kind: part.kind,
                     notes: Notes {
                         events: measure.notes.events.clone(),
                     },
                     lyrics,
                 }));
-            }
-            GroupedTrack::Chord(part) => {
-                let chord_measure = part.measures.get(measure_idx).ok_or_else(|| {
-                    JianPuError::new(
-                        Span::new(0, 0),
-                        "internal invariant: chord part measure missing",
-                    )
-                })?;
-                part_rows.push(PartRow::Chord(chord_measure.clone()));
             }
         }
     }
@@ -151,7 +145,7 @@ fn distribute_lyrics(measures: &[GroupedMeasure], lyrics: &[Syllable]) -> Vec<Ve
                     prev_tie = note.tie;
                     prev_pitch = Some(note.pitch.clone());
                 }
-                NoteEvent::Rest(_) => {
+                NoteEvent::Rest(_) | NoteEvent::Chord(_) => {
                     prev_tie = false;
                 }
             }

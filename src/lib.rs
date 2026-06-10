@@ -130,14 +130,13 @@ pub fn apply_lyrics_filter(score: &mut Score, disabled_lyrics: Option<&[String]>
     }
     for measure in &mut score.measures {
         for part in &mut measure.parts {
-            if let PartRow::Notes(part_slice) = part {
-                if part_slice
-                    .name
-                    .as_ref()
-                    .is_some_and(|name| tracks.contains(name))
-                {
-                    part_slice.lyrics = None;
-                }
+            let PartRow::Timed(part_slice) = part;
+            if part_slice
+                .name
+                .as_ref()
+                .is_some_and(|name| tracks.contains(name))
+            {
+                part_slice.lyrics = None;
             }
         }
     }

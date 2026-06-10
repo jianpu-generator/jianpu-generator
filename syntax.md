@@ -389,6 +389,14 @@ Parsing checks longest suffix first (`M7` before `7`; `m` before extension).
 | `1/5` | I major, 5 in bass (e.g. C/G) |
 | `6m/5` | vi minor, 5 in bass (e.g. Am/G) |
 
+### Duration suffixes
+
+Chord heads accept the same suffixes as notes: `_`, `=`, `.`, and suffix `-`. Octave markers (`'`, `,`) are not allowed on chord lines.
+
+### Tie and slur groups
+
+Parentheses work identically to notes lines. Spaces inside groups are ignored. Examples: `(1-6m-)`, `(1 - 6m -)`.
+
 Example:
 
 ```

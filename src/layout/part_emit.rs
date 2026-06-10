@@ -1,55 +1,26 @@
-use crate::ast::grouped::{
-    ChordSlice, GroupedChordEvent, GroupedNote, GroupedRest, NoteEvent, PartSlice,
-};
-use crate::ast::parsed::{JianPuPitch, Syllable};
+use crate::ast::grouped::{GroupedChordNote, GroupedNote, GroupedRest, NoteEvent, PartSlice};
+use crate::ast::parsed::Syllable;
 use crate::layout::types::{
     GridContent, GridElement, GridPosition, HorizontalAlignment, VerticalAlignment,
 };
 use crate::utils::is_cjk_char;
 
-use super::super::{extend_note_chains, flush_beam_buffer, format_chord_symbol, BeamBufferEntry};
+use super::super::{
+    extend_note_chains, flush_beam_buffer, format_chord_symbol, BeamBufferEntry, SlurKey,
+};
 
 pub(crate) struct PartNoteState<'a> {
     pub elements: &'a mut Vec<GridElement>,
     pub label_cols: u32,
     pub beam_buf: &'a mut Vec<BeamBufferEntry>,
-    pub pending_chains: &'a mut Vec<Vec<(u32, JianPuPitch)>>,
+    pub pending_chains: &'a mut Vec<Vec<(u32, SlurKey)>>,
     pub chain_row: &'a mut u32,
     pub prev_tie: &'a mut bool,
-    pub prev_pitch: &'a mut Option<JianPuPitch>,
-    pub cross_line_tie: &'a mut Option<JianPuPitch>,
+    pub prev_slur_key: &'a mut Option<SlurKey>,
+    pub cross_line_tie: &'a mut Option<SlurKey>,
 }
 
-pub(crate) fn emit_chord_part(
-    elements: &mut Vec<GridElement>,
-    chord_slice: &ChordSlice,
-    main_row_cursor: u32,
-    note_col_start: u32,
-) {
-    let mut col = note_col_start;
-    for event in &chord_slice.events {
-        match event {
-            GroupedChordEvent::Chord(chord) => {
-                let text = format_chord_symbol(chord);
-                elements.push(GridElement {
-                    position: GridPosition {
-                        column: col,
-                        row: main_row_cursor + 1,
-                    },
-                    horizontal_alignment: HorizontalAlignment::Left,
-                    vertical_alignment: VerticalAlignment::Center,
-                    content: GridContent::ChordSymbol { text },
-                });
-                col += chord.duration;
-            }
-            GroupedChordEvent::Rest(dur) => {
-                col += dur;
-            }
-        }
-    }
-}
-
-pub(crate) fn emit_notes_part(
+pub(crate) fn emit_timed_part(
     state: &mut PartNoteState<'_>,
     part_slice: &PartSlice,
     part_row_offset: u32,
@@ -85,10 +56,36 @@ pub(crate) fn emit_notes_part(
                     measure_col_start_for_part,
                 );
             }
+            NoteEvent::Chord(chord) => {
+                emit_grouped_chord(
+                    state,
+                    chord,
+                    &mut col,
+                    part_row_offset,
+                    measure_col_start_for_part,
+                );
+            }
         }
     }
 
     flush_beam_buffer(state.beam_buf, part_row_offset, state.elements);
+}
+
+fn push_duration_extensions(elements: &mut Vec<GridElement>, col: u32, duration: u32, row: u32) {
+    if duration > 4 {
+        let extra_beats = (duration - 4) / 4;
+        for i in 0..extra_beats {
+            elements.push(GridElement {
+                position: GridPosition {
+                    column: col + 4 + i * 4,
+                    row,
+                },
+                horizontal_alignment: HorizontalAlignment::Center,
+                vertical_alignment: VerticalAlignment::Center,
+                content: GridContent::Extension,
+            });
+        }
+    }
 }
 
 fn push_note_head_elements(
@@ -131,20 +128,77 @@ fn push_note_head_elements(
         });
     }
 
-    if note.duration > 4 {
-        let extra_beats = (note.duration - 4) / 4;
-        for i in 0..extra_beats {
-            elements.push(GridElement {
-                position: GridPosition {
-                    column: col + 4 + i * 4,
-                    row: part_row_offset + 1,
-                },
-                horizontal_alignment: HorizontalAlignment::Center,
-                vertical_alignment: VerticalAlignment::Center,
-                content: GridContent::Extension,
-            });
-        }
+    push_duration_extensions(elements, col, note.duration, part_row_offset + 1);
+}
+
+fn emit_grouped_chord(
+    state: &mut PartNoteState<'_>,
+    chord: &GroupedChordNote,
+    col: &mut u32,
+    part_row_offset: u32,
+    measure_col_start_for_part: u32,
+) {
+    let text = format_chord_symbol(chord);
+    elements_push_chord_symbol(state.elements, &text, *col, part_row_offset);
+    push_duration_extensions(state.elements, *col, chord.duration, part_row_offset + 1);
+
+    let underline_count = match chord.duration {
+        1 => 2,
+        2 | 3 => 1,
+        _ => 0,
+    };
+
+    if underline_count == 0 {
+        flush_beam_buffer(state.beam_buf, part_row_offset, state.elements);
     }
+
+    let slur_key = SlurKey::from_chord(chord);
+    extend_note_chains(
+        state.pending_chains,
+        chord.group_membership,
+        chord.group_continuation,
+        *state.chain_row,
+        *col,
+        &slur_key,
+        state.elements,
+    );
+
+    *state.prev_tie = chord.tie;
+    *state.prev_slur_key = Some(slur_key);
+
+    if underline_count > 0 {
+        state.beam_buf.push(BeamBufferEntry {
+            column: *col,
+            underline_count,
+            duration: chord.duration,
+        });
+    }
+
+    *col += chord.duration;
+
+    let beat_position = *col - measure_col_start_for_part;
+    if underline_count > 0 && beat_position % 4 == 0 {
+        flush_beam_buffer(state.beam_buf, part_row_offset, state.elements);
+    }
+}
+
+fn elements_push_chord_symbol(
+    elements: &mut Vec<GridElement>,
+    text: &str,
+    col: u32,
+    part_row_offset: u32,
+) {
+    elements.push(GridElement {
+        position: GridPosition {
+            column: col,
+            row: part_row_offset + 1,
+        },
+        horizontal_alignment: HorizontalAlignment::Left,
+        vertical_alignment: VerticalAlignment::Center,
+        content: GridContent::ChordSymbol {
+            text: text.to_string(),
+        },
+    });
 }
 
 fn emit_grouped_note(
@@ -167,17 +221,18 @@ fn emit_grouped_note(
         flush_beam_buffer(state.beam_buf, part_row_offset, state.elements);
     }
 
+    let slur_key = SlurKey::Pitch(note.pitch.clone());
     extend_note_chains(
         state.pending_chains,
         note.group_membership,
         note.group_continuation,
         *state.chain_row,
         *col,
-        &note.pitch,
+        &slur_key,
         state.elements,
     );
 
-    let is_tie_continuation = *state.prev_tie && state.prev_pitch.as_ref() == Some(&note.pitch);
+    let is_tie_continuation = *state.prev_tie && state.prev_slur_key.as_ref() == Some(&slur_key);
 
     if state.cross_line_tie.is_some() {
         if is_tie_continuation && *col > state.label_cols {
@@ -222,7 +277,7 @@ fn emit_grouped_note(
         }
     }
     *state.prev_tie = note.tie;
-    *state.prev_pitch = Some(note.pitch.clone());
+    *state.prev_slur_key = Some(slur_key);
 
     if underline_count > 0 {
         state.beam_buf.push(BeamBufferEntry {
@@ -273,6 +328,7 @@ fn emit_grouped_rest(
     }
     *col += rest.duration;
     *state.prev_tie = false;
+    *state.prev_slur_key = None;
     *state.cross_line_tie = None;
     let beat_position = *col - measure_col_start_for_part;
     if rest_underline_count > 0 && beat_position % 4 == 0 {

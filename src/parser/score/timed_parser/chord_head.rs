@@ -1,62 +1,134 @@
+use super::TimedUnitHead;
 use crate::ast::parsed::{
-    Accidental, BassDegree, Extension, JianPuPitch, ParsedChordEvent, ParsedChordSymbol,
+    Accidental, BassDegree, Extension, JianPuPitch, ParsedChordNote, ParsedRest, ScoreEvent,
     TriadQuality,
 };
 use crate::error::{JianPuError, Span};
 
-#[allow(dead_code)]
-pub fn parse(line: &str, line_file_offset: usize) -> Result<Vec<ParsedChordEvent>, JianPuError> {
-    let mut events = Vec::new();
-    let mut byte_pos = 0usize;
-
-    let bytes = line.as_bytes();
-    while byte_pos < line.len() {
-        let byte = *bytes.get(byte_pos).ok_or_else(|| {
-            JianPuError::new(
-                Span::new(line_file_offset + byte_pos, line_file_offset + byte_pos + 1),
-                "invalid byte index while parsing chord line",
-            )
-        })?;
-        if byte.is_ascii_whitespace() {
-            byte_pos += 1;
-            continue;
-        }
-        let token_start = byte_pos;
-        while byte_pos < line.len() {
-            let byte = *bytes.get(byte_pos).ok_or_else(|| {
-                JianPuError::new(
-                    Span::new(line_file_offset + byte_pos, line_file_offset + byte_pos + 1),
-                    "invalid byte index while parsing chord line",
-                )
-            })?;
-            if byte.is_ascii_whitespace() {
-                break;
-            }
-            byte_pos += 1;
-        }
-        let token = line.get(token_start..byte_pos).ok_or_else(|| {
-            JianPuError::new(
-                Span::new(line_file_offset + token_start, line_file_offset + byte_pos),
-                "invalid token range in chord line",
-            )
-        })?;
-        let span = Span::new(line_file_offset + token_start, line_file_offset + byte_pos);
-
-        if token == "|" {
-            continue;
-        }
-        let event = match token {
-            "0" => ParsedChordEvent::Rest,
-            "-" => ParsedChordEvent::Extend(span),
-            _ => ParsedChordEvent::Chord(parse_chord_symbol(token, span)?),
-        };
-        events.push(event);
-    }
-    Ok(events)
+pub struct ChordHead {
+    degree: JianPuPitch,
+    accidental: Accidental,
+    triad: TriadQuality,
+    extension: Option<Extension>,
+    bass: Option<BassDegree>,
+    is_rest: bool,
 }
 
-#[allow(dead_code)]
-fn parse_chord_symbol(token: &str, span: Span) -> Result<ParsedChordSymbol, JianPuError> {
+impl TimedUnitHead for ChordHead {
+    fn parse_head(
+        chars: &[char],
+        start: usize,
+        span: &Span,
+    ) -> Result<(Self, usize, bool), JianPuError> {
+        let degree_char = chars[start];
+        if !matches!(degree_char, '0'..='7') {
+            let pos = span.start + byte_offset_at_char_index_from_chars(chars, start);
+            return Err(JianPuError::new(
+                Span::new(pos, pos + degree_char.len_utf8()),
+                format!("expected chord degree digit (0-7), got: {degree_char}"),
+            ));
+        }
+
+        if degree_char == '0' {
+            return Ok((
+                ChordHead {
+                    degree: JianPuPitch::One,
+                    accidental: Accidental::Natural,
+                    triad: TriadQuality::Major,
+                    extension: None,
+                    bass: None,
+                    is_rest: true,
+                },
+                start + 1,
+                true,
+            ));
+        }
+
+        let head_end = find_symbol_end(chars, start, span)?;
+        let token: String = chars[start..head_end].iter().collect();
+        let symbol = parse_chord_symbol(&token, span.clone())?;
+
+        Ok((
+            ChordHead {
+                degree: symbol.degree,
+                accidental: symbol.accidental,
+                triad: symbol.triad,
+                extension: symbol.extension,
+                bass: symbol.bass,
+                is_rest: false,
+            },
+            head_end,
+            false,
+        ))
+    }
+
+    fn head_boundary(chars: &[char], i: usize) -> bool {
+        matches!(chars[i], '0'..='7')
+    }
+
+    fn allows_octave_suffixes() -> bool {
+        false
+    }
+
+    fn to_event(
+        head: &Self,
+        duration: u32,
+        dotted: bool,
+        _octave: i8,
+        group_membership: u8,
+        group_continuation: u8,
+    ) -> ScoreEvent {
+        if head.is_rest {
+            ScoreEvent::Rest(ParsedRest { duration, dotted })
+        } else {
+            ScoreEvent::Chord(ParsedChordNote {
+                degree: head.degree.clone(),
+                accidental: head.accidental.clone(),
+                triad: head.triad.clone(),
+                extension: head.extension.clone(),
+                bass: head.bass.clone(),
+                duration,
+                tie: group_continuation > 0,
+                group_membership,
+                group_continuation,
+                dotted,
+            })
+        }
+    }
+}
+
+struct ParsedChordSymbolFields {
+    degree: JianPuPitch,
+    accidental: Accidental,
+    triad: TriadQuality,
+    extension: Option<Extension>,
+    bass: Option<BassDegree>,
+}
+
+fn find_symbol_end(chars: &[char], start: usize, span: &Span) -> Result<usize, JianPuError> {
+    let max_end = chars.len().min(
+        chars[start..]
+            .iter()
+            .position(|&c| matches!(c, '_' | '=' | '.' | '-' | '\'' | ',' | '(' | ')'))
+            .map(|p| start + p)
+            .unwrap_or(chars.len()),
+    );
+
+    for end in (start + 1..=max_end).rev() {
+        let token: String = chars[start..end].iter().collect();
+        if parse_chord_symbol(&token, span.clone()).is_ok() {
+            return Ok(end);
+        }
+    }
+
+    let token: String = chars[start..start + 1].iter().collect();
+    Err(JianPuError::new(
+        span.clone(),
+        format!("invalid chord token '{token}'"),
+    ))
+}
+
+fn parse_chord_symbol(token: &str, span: Span) -> Result<ParsedChordSymbolFields, JianPuError> {
     let mut chars = token.chars();
 
     let degree = chars
@@ -64,30 +136,24 @@ fn parse_chord_symbol(token: &str, span: Span) -> Result<ParsedChordSymbol, Jian
         .and_then(char_to_pitch)
         .ok_or_else(|| JianPuError::new(span.clone(), format!("invalid chord token '{token}'")))?;
 
-    // Peek at remaining string
     let rest: String = chars.collect();
     let mut rest = rest.as_str();
 
-    // Accidental
     let accidental = if let Some(stripped) = rest.strip_prefix('#') {
         rest = stripped;
         Accidental::Sharp
     } else if let Some(stripped) = rest.strip_prefix('b') {
-        // 'b' is always consumed as flat before '/' split —
-        // bass accidentals only appear after '/', so no ambiguity
         rest = stripped;
         Accidental::Flat
     } else {
         Accidental::Natural
     };
 
-    // Split on first '/' for slash chord
     let (chord_part, bass_str) = match rest.find('/') {
         Some(pos) => (&rest[..pos], Some(&rest[pos + 1..])),
         None => (rest, None),
     };
 
-    // Triad quality — check 'm' before 'o'/'+' to handle 'm7'
     let (triad, ext_str) = if let Some(stripped) = chord_part.strip_prefix('m') {
         (TriadQuality::Minor, stripped)
     } else if let Some(stripped) = chord_part.strip_prefix('o') {
@@ -98,7 +164,6 @@ fn parse_chord_symbol(token: &str, span: Span) -> Result<ParsedChordSymbol, Jian
         (TriadQuality::Major, chord_part)
     };
 
-    // Extension — check 'M7' before '7'
     let extension = if ext_str == "M7" {
         Some(Extension::MajorSeventh)
     } else if ext_str == "7" {
@@ -112,15 +177,9 @@ fn parse_chord_symbol(token: &str, span: Span) -> Result<ParsedChordSymbol, Jian
         ));
     };
 
-    // Bass note — compute a precise span starting at the bass substring within the token
-    let bass = bass_str
-        .map(|s| {
-            let bass_start = span.start + (token.len() - s.len());
-            parse_bass(s, Span::new(bass_start, span.end))
-        })
-        .transpose()?;
+    let bass = bass_str.map(|s| parse_bass(s, span.clone())).transpose()?;
 
-    Ok(ParsedChordSymbol {
+    Ok(ParsedChordSymbolFields {
         degree,
         accidental,
         triad,
@@ -129,7 +188,6 @@ fn parse_chord_symbol(token: &str, span: Span) -> Result<ParsedChordSymbol, Jian
     })
 }
 
-#[allow(dead_code)]
 fn parse_bass(s: &str, span: Span) -> Result<BassDegree, JianPuError> {
     let mut chars = s.chars();
     let degree = chars
@@ -156,7 +214,6 @@ fn parse_bass(s: &str, span: Span) -> Result<BassDegree, JianPuError> {
     Ok(BassDegree { degree, accidental })
 }
 
-#[allow(dead_code)]
 fn char_to_pitch(c: char) -> Option<JianPuPitch> {
     match c {
         '1' => Some(JianPuPitch::One),
@@ -170,9 +227,16 @@ fn char_to_pitch(c: char) -> Option<JianPuPitch> {
     }
 }
 
+fn byte_offset_at_char_index_from_chars(chars: &[char], char_index: usize) -> usize {
+    chars[..char_index].iter().map(|c| c.len_utf8()).sum()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::score::timed_parser::{parse_timed_token, GroupParseState};
+    use crate::parser::score::token_parser::parse_chord_tokens;
+    use crate::parser::score::tokenizer::tokenize;
 
     fn chord(
         degree: JianPuPitch,
@@ -180,217 +244,238 @@ mod tests {
         triad: TriadQuality,
         ext: Option<Extension>,
         bass: Option<BassDegree>,
-    ) -> ParsedChordEvent {
-        ParsedChordEvent::Chord(ParsedChordSymbol {
+    ) -> ScoreEvent {
+        ScoreEvent::Chord(ParsedChordNote {
             degree,
             accidental: acc,
             triad,
             extension: ext,
             bass,
+            duration: 4,
+            tie: false,
+            group_membership: 0,
+            group_continuation: 0,
+            dotted: false,
         })
+    }
+
+    fn try_parse_symbol(token: &str) -> Result<ScoreEvent, JianPuError> {
+        let events = parse_timed_token::<ChordHead>(
+            token,
+            Span::new(0, token.len()),
+            &mut GroupParseState::default(),
+        )?;
+        if events.len() != 1 {
+            return Err(JianPuError::new(
+                Span::new(0, token.len()),
+                format!("expected one event, got {}", events.len()),
+            ));
+        }
+        Ok(events.into_iter().next().unwrap())
+    }
+
+    fn parse_symbol(token: &str) -> ScoreEvent {
+        try_parse_symbol(token).unwrap()
+    }
+
+    fn parse_line(line: &str) -> Vec<ScoreEvent> {
+        parse_chord_tokens(tokenize(line, 0), &mut GroupParseState::default())
+            .unwrap()
+            .into_iter()
+            .map(|e| e.value)
+            .collect()
     }
 
     #[test]
     fn parses_major_chord() {
-        let events = parse("1", 0).unwrap();
         assert_eq!(
-            events,
-            vec![chord(
+            parse_symbol("1"),
+            chord(
                 JianPuPitch::One,
                 Accidental::Natural,
                 TriadQuality::Major,
                 None,
                 None
-            )]
+            )
         );
     }
 
     #[test]
     fn parses_minor_chord() {
-        let events = parse("1m", 0).unwrap();
         assert_eq!(
-            events,
-            vec![chord(
+            parse_symbol("1m"),
+            chord(
                 JianPuPitch::One,
                 Accidental::Natural,
                 TriadQuality::Minor,
                 None,
                 None
-            )]
+            )
         );
     }
 
     #[test]
     fn parses_diminished() {
-        let events = parse("1o", 0).unwrap();
         assert_eq!(
-            events,
-            vec![chord(
+            parse_symbol("1o"),
+            chord(
                 JianPuPitch::One,
                 Accidental::Natural,
                 TriadQuality::Diminished,
                 None,
                 None
-            )]
+            )
         );
     }
 
     #[test]
     fn parses_augmented() {
-        let events = parse("1+", 0).unwrap();
         assert_eq!(
-            events,
-            vec![chord(
+            parse_symbol("1+"),
+            chord(
                 JianPuPitch::One,
                 Accidental::Natural,
                 TriadQuality::Augmented,
                 None,
                 None
-            )]
+            )
         );
     }
 
     #[test]
     fn parses_dominant_seventh() {
-        let events = parse("17", 0).unwrap();
         assert_eq!(
-            events,
-            vec![chord(
+            parse_symbol("17"),
+            chord(
                 JianPuPitch::One,
                 Accidental::Natural,
                 TriadQuality::Major,
                 Some(Extension::DominantSeventh),
                 None
-            )]
+            )
         );
     }
 
     #[test]
     fn parses_major_seventh() {
-        let events = parse("1M7", 0).unwrap();
         assert_eq!(
-            events,
-            vec![chord(
+            parse_symbol("1M7"),
+            chord(
                 JianPuPitch::One,
                 Accidental::Natural,
                 TriadQuality::Major,
                 Some(Extension::MajorSeventh),
                 None
-            )]
+            )
         );
     }
 
     #[test]
     fn parses_minor_dominant_seventh() {
-        let events = parse("1m7", 0).unwrap();
         assert_eq!(
-            events,
-            vec![chord(
+            parse_symbol("1m7"),
+            chord(
                 JianPuPitch::One,
                 Accidental::Natural,
                 TriadQuality::Minor,
                 Some(Extension::DominantSeventh),
                 None
-            )]
+            )
         );
     }
 
     #[test]
     fn parses_sharp_accidental() {
-        let events = parse("1#", 0).unwrap();
         assert_eq!(
-            events,
-            vec![chord(
+            parse_symbol("1#"),
+            chord(
                 JianPuPitch::One,
                 Accidental::Sharp,
                 TriadQuality::Major,
                 None,
                 None
-            )]
+            )
         );
     }
 
     #[test]
     fn parses_flat_accidental() {
-        let events = parse("3b", 0).unwrap();
         assert_eq!(
-            events,
-            vec![chord(
+            parse_symbol("3b"),
+            chord(
                 JianPuPitch::Three,
                 Accidental::Flat,
                 TriadQuality::Major,
                 None,
                 None
-            )]
+            )
         );
     }
 
     #[test]
     fn parses_slash_chord() {
-        let events = parse("1/5", 0).unwrap();
         let bass = BassDegree {
             degree: JianPuPitch::Five,
             accidental: Accidental::Natural,
         };
         assert_eq!(
-            events,
-            vec![chord(
+            parse_symbol("1/5"),
+            chord(
                 JianPuPitch::One,
                 Accidental::Natural,
                 TriadQuality::Major,
                 None,
                 Some(bass)
-            )]
+            )
         );
     }
 
     #[test]
     fn parses_slash_chord_with_accidental_bass() {
-        let events = parse("1/4b", 0).unwrap();
         let bass = BassDegree {
             degree: JianPuPitch::Four,
             accidental: Accidental::Flat,
         };
         assert_eq!(
-            events,
-            vec![chord(
+            parse_symbol("1/4b"),
+            chord(
                 JianPuPitch::One,
                 Accidental::Natural,
                 TriadQuality::Major,
                 None,
                 Some(bass)
-            )]
+            )
         );
     }
 
     #[test]
     fn parses_complex_slash_chord() {
-        let events = parse("6m/5", 0).unwrap();
         let bass = BassDegree {
             degree: JianPuPitch::Five,
             accidental: Accidental::Natural,
         };
         assert_eq!(
-            events,
-            vec![chord(
+            parse_symbol("6m/5"),
+            chord(
                 JianPuPitch::Six,
                 Accidental::Natural,
                 TriadQuality::Minor,
                 None,
                 Some(bass)
-            )]
+            )
         );
     }
 
     #[test]
     fn parses_rest() {
-        let events = parse("0", 0).unwrap();
-        assert_eq!(events, vec![ParsedChordEvent::Rest]);
+        let events = parse_line("0");
+        assert_eq!(events.len(), 1);
+        assert!(matches!(events[0], ScoreEvent::Rest(_)));
     }
 
     #[test]
     fn parses_extend() {
-        let events = parse("1 -", 0).unwrap();
+        let events = parse_line("1 -");
         assert_eq!(
             events[0],
             chord(
@@ -401,14 +486,13 @@ mod tests {
                 None
             )
         );
-        assert!(matches!(events[1], ParsedChordEvent::Extend(_)));
+        assert!(matches!(events[1], ScoreEvent::Extension));
     }
 
     #[test]
     fn parses_multiple_tokens() {
-        let events = parse("1 4m 5", 0).unwrap();
         assert_eq!(
-            events,
+            parse_line("1 4m 5"),
             vec![
                 chord(
                     JianPuPitch::One,
@@ -437,9 +521,8 @@ mod tests {
 
     #[test]
     fn skips_bar_lines() {
-        let events = parse("1 | 4m", 0).unwrap();
         assert_eq!(
-            events,
+            parse_line("1 | 4m"),
             vec![
                 chord(
                     JianPuPitch::One,
@@ -461,75 +544,112 @@ mod tests {
 
     #[test]
     fn parses_sharp_with_dominant_seventh() {
-        let events = parse("1#7", 0).unwrap();
         assert_eq!(
-            events,
-            vec![chord(
+            parse_symbol("1#7"),
+            chord(
                 JianPuPitch::One,
                 Accidental::Sharp,
                 TriadQuality::Major,
                 Some(Extension::DominantSeventh),
                 None
-            )]
+            )
         );
     }
 
     #[test]
     fn parses_flat_with_major_seventh() {
-        let events = parse("3bM7", 0).unwrap();
         assert_eq!(
-            events,
-            vec![chord(
+            parse_symbol("3bM7"),
+            chord(
                 JianPuPitch::Three,
                 Accidental::Flat,
                 TriadQuality::Major,
                 Some(Extension::MajorSeventh),
                 None
-            )]
+            )
         );
     }
 
     #[test]
     fn parses_sharp_minor_dominant_seventh() {
-        let events = parse("1#m7", 0).unwrap();
         assert_eq!(
-            events,
-            vec![chord(
+            parse_symbol("1#m7"),
+            chord(
                 JianPuPitch::One,
                 Accidental::Sharp,
                 TriadQuality::Minor,
                 Some(Extension::DominantSeventh),
                 None
-            )]
+            )
         );
     }
 
     #[test]
     fn parses_sharp_with_slash_chord() {
-        let events = parse("1#/5", 0).unwrap();
         let bass = BassDegree {
             degree: JianPuPitch::Five,
             accidental: Accidental::Natural,
         };
         assert_eq!(
-            events,
-            vec![chord(
+            parse_symbol("1#/5"),
+            chord(
                 JianPuPitch::One,
                 Accidental::Sharp,
                 TriadQuality::Major,
                 None,
                 Some(bass)
-            )]
+            )
         );
     }
 
     #[test]
     fn rejects_invalid_token() {
-        assert!(parse("X", 0).is_err());
+        assert!(parse_timed_token::<ChordHead>(
+            "X",
+            Span::new(0, 1),
+            &mut GroupParseState::default()
+        )
+        .is_err());
     }
 
     #[test]
     fn rejects_unknown_suffix() {
-        assert!(parse("1z", 0).is_err());
+        assert!(try_parse_symbol("1z").is_err());
+    }
+
+    #[test]
+    fn rejects_octave_suffix() {
+        assert!(try_parse_symbol("1'").is_err());
+        assert!(try_parse_symbol("1,").is_err());
+    }
+
+    #[test]
+    fn parses_compact_slur_group() {
+        let events = parse_timed_token::<ChordHead>(
+            "(1-6m-)",
+            Span::new(0, 7),
+            &mut GroupParseState::default(),
+        )
+        .unwrap();
+        let chord_count = events
+            .iter()
+            .filter(|e| matches!(e, ScoreEvent::Chord(_)))
+            .count();
+        assert_eq!(chord_count, 2, "expected chord 1 and 6m in group");
+    }
+
+    #[test]
+    fn parses_spaced_slur_group_across_tokens() {
+        let mut state = GroupParseState::default();
+        let mut chord_count = 0usize;
+        for token in ["(1", "-", "6m", "-)"] {
+            let events = parse_chord_tokens(tokenize(token, 0), &mut state).unwrap();
+            chord_count += events
+                .iter()
+                .filter(|e| matches!(e.value, ScoreEvent::Chord(_)))
+                .count();
+        }
+        assert_eq!(chord_count, 2, "expected chord 1 and 6m in group");
+        assert!(!state.open);
     }
 }

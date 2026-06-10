@@ -1,27 +1,11 @@
 #![allow(clippy::indexing_slicing)]
 
-use crate::ast::parsed::{
-    Accidental, JianPuPitch, KeyChange, Note, NoteName, ParsedNote, ParsedRest, ScoreEvent,
-};
+use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName, ScoreEvent};
 use crate::error::{JianPuError, Span, Spanned};
+use crate::parser::score::timed_parser::{parse_timed_token, ChordHead, NoteHead};
+
+pub use crate::parser::score::timed_parser::GroupParseState;
 use crate::parser::score::tokenizer::RawToken;
-
-/// Tracks an unfinished `(…` group that continues in a later measure.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct GroupParseState {
-    pub open: bool,
-    pub open_note_count: usize,
-}
-
-fn validate_group_note_count(count: usize, span: &Span) -> Result<(), JianPuError> {
-    if count < 2 {
-        return Err(JianPuError::new(
-            span.clone(),
-            "tie/slur group `(…)` must contain at least 2 notes".to_string(),
-        ));
-    }
-    Ok(())
-}
 
 pub fn parse_tokens(
     tokens: Vec<RawToken>,
@@ -31,7 +15,7 @@ pub fn parse_tokens(
 
     for token in tokens {
         let span = Span::new(token.offset, token.offset + token.text.len());
-        let parsed = parse_single_token(&token.text, span.clone(), group_state)?;
+        let parsed = parse_single_token_with_directives(&token.text, span.clone(), group_state)?;
         for event in parsed {
             events.push(Spanned::new(event, span.clone()));
         }
@@ -40,12 +24,32 @@ pub fn parse_tokens(
     Ok(events)
 }
 
-fn parse_single_token(
+pub fn parse_chord_tokens(
+    tokens: Vec<RawToken>,
+    group_state: &mut GroupParseState,
+) -> Result<Vec<Spanned<ScoreEvent>>, JianPuError> {
+    let mut events = Vec::new();
+
+    for token in tokens {
+        let span = Span::new(token.offset, token.offset + token.text.len());
+        let parsed = if token.text == "-" {
+            vec![ScoreEvent::Extension]
+        } else {
+            parse_timed_token::<ChordHead>(&token.text, span.clone(), group_state)?
+        };
+        for event in parsed {
+            events.push(Spanned::new(event, span.clone()));
+        }
+    }
+
+    Ok(events)
+}
+
+fn parse_single_token_with_directives(
     text: &str,
     span: Span,
     group_state: &mut GroupParseState,
 ) -> Result<Vec<ScoreEvent>, JianPuError> {
-    // BPM directive: bpm=N
     if let Some(rest) = text.strip_prefix("bpm=") {
         let bpm = rest
             .parse::<u32>()
@@ -53,7 +57,6 @@ fn parse_single_token(
         return Ok(vec![ScoreEvent::BpmChange(bpm)]);
     }
 
-    // Key change directive: 1=C4, 1=Bb4, 1=F#3 (pitch digit 1= is a sixteenth note)
     if text.starts_with("1=") {
         let after_eq = text.get(2..).unwrap_or("");
         if after_eq
@@ -65,378 +68,15 @@ fn parse_single_token(
         }
     }
 
-    // Time signature: N/N
     if text.contains('/') {
         return Ok(vec![parse_time_signature(text, span)?]);
     }
 
-    // Standalone `-` extends the previous note by one beat (4 quarter-beats).
     if text == "-" {
         return Ok(vec![ScoreEvent::Extension]);
     }
 
-    // Note or rest (happi123-style: suffix modifiers, optional () groups)
-    parse_note_token(text, span, group_state)
-}
-
-struct ParsedAtom {
-    pitch_char: char,
-    duration: u32,
-    octave: i8,
-    dotted: bool,
-    group_membership: u8,
-    group_continuation: u8,
-}
-
-fn parse_note_token(
-    text: &str,
-    span: Span,
-    group_state: &mut GroupParseState,
-) -> Result<Vec<ScoreEvent>, JianPuError> {
-    if text.is_empty() {
-        return Err(JianPuError::new(span, "empty note token".to_string()));
-    }
-
-    let mut events = Vec::new();
-    let mut i = 0;
-    let chars: Vec<char> = text.chars().collect();
-
-    if group_state.open {
-        if text.contains(')') {
-            i = parse_closing_group_segment(&mut events, &chars, text, i, &span, group_state)?;
-        } else {
-            let added = parse_open_group_continuation(&mut events, &chars, text, i, &span)?;
-            group_state.open_note_count += added;
-            return Ok(events);
-        }
-    }
-
-    while i < chars.len() {
-        if chars[i] == '(' {
-            let inner_start = i + 1;
-            if let Some(inner_end) = find_closing_paren(&chars, inner_start) {
-                let inner: String = chars[inner_start..inner_end].iter().collect();
-                events.extend(parse_closed_group(&inner, &span)?);
-                i = inner_end + 1;
-            } else {
-                let inner: String = chars[inner_start..].iter().collect();
-                let group_events = parse_open_group(&inner, &span)?;
-                group_state.open_note_count = group_events.len();
-                events.extend(group_events);
-                group_state.open = true;
-                break;
-            }
-            continue;
-        }
-
-        if !matches!(chars[i], '0'..='7') {
-            let pos = span.start + byte_offset_at_char_index(text, i);
-            return Err(JianPuError::new(
-                Span::new(pos, pos + chars[i].len_utf8()),
-                format!("expected pitch digit (0-7), got: {}", chars[i]),
-            ));
-        }
-
-        let (atom, next_i) = parse_one_atom(&chars, i, &span)?;
-        events.push(atom_to_event(&atom));
-        i = next_i;
-    }
-
-    Ok(events)
-}
-
-fn parse_closing_group_segment(
-    events: &mut Vec<ScoreEvent>,
-    chars: &[char],
-    text: &str,
-    mut i: usize,
-    span: &Span,
-    group_state: &mut GroupParseState,
-) -> Result<usize, JianPuError> {
-    let (mut atoms, next_i) = parse_atoms_from_chars(chars, text, span, i, true)?;
-    i = next_i;
-    let closes_group = i < chars.len() && chars[i] == ')';
-    apply_closing_segment_depth(&mut atoms, !closes_group);
-    let atom_count = atoms.len();
-    events.extend(atoms.iter().map(atom_to_event));
-
-    if closes_group {
-        validate_group_note_count(group_state.open_note_count + atom_count, span)?;
-        group_state.open = false;
-        group_state.open_note_count = 0;
-        i += 1;
-    } else {
-        group_state.open_note_count += atom_count;
-        group_state.open = true;
-    }
-
-    Ok(i)
-}
-
-fn parse_open_group_continuation(
-    events: &mut Vec<ScoreEvent>,
-    chars: &[char],
-    text: &str,
-    i: usize,
-    span: &Span,
-) -> Result<usize, JianPuError> {
-    let (mut atoms, _) = parse_atoms_from_chars(chars, text, span, i, false)?;
-    apply_open_group_depth(&mut atoms);
-    let added = atoms.len();
-    events.extend(atoms.iter().map(atom_to_event));
-
-    Ok(added)
-}
-
-fn find_closing_paren(chars: &[char], start: usize) -> Option<usize> {
-    let mut depth = 1usize;
-    let mut i = start;
-    while i < chars.len() {
-        match chars[i] {
-            '(' => depth += 1,
-            ')' => {
-                depth -= 1;
-                if depth == 0 {
-                    return Some(i);
-                }
-            }
-            _ => {}
-        }
-        i += 1;
-    }
-    None
-}
-
-fn parse_atoms_from_text(text: &str, span: &Span) -> Result<Vec<ParsedAtom>, JianPuError> {
-    let chars: Vec<char> = text.chars().collect();
-    let (atoms, _) = parse_atoms_from_chars(&chars, text, span, 0, false)?;
-    Ok(atoms)
-}
-
-fn parse_atoms_from_chars(
-    chars: &[char],
-    text: &str,
-    span: &Span,
-    mut i: usize,
-    stop_at_close: bool,
-) -> Result<(Vec<ParsedAtom>, usize), JianPuError> {
-    let mut atoms = Vec::new();
-
-    while i < chars.len() {
-        if stop_at_close && chars[i] == ')' {
-            return Ok((atoms, i));
-        }
-
-        if chars[i] == '(' {
-            let inner_start = i + 1;
-            let inner_end = find_closing_paren(chars, inner_start)
-                .ok_or_else(|| JianPuError::new(span.clone(), "unclosed '(' group".to_string()))?;
-            let inner: String = chars[inner_start..inner_end].iter().collect();
-            let mut inner_atoms = parse_atoms_from_text(&inner, span)?;
-            validate_group_note_count(inner_atoms.len(), span)?;
-            apply_closed_group_depth(&mut inner_atoms);
-            atoms.extend(inner_atoms);
-            i = inner_end + 1;
-            continue;
-        }
-
-        if !matches!(chars[i], '0'..='7') {
-            let pos = span.start + byte_offset_at_char_index(text, i);
-            return Err(JianPuError::new(
-                Span::new(pos, pos + chars[i].len_utf8()),
-                format!("expected pitch digit (0-7), got: {}", chars[i]),
-            ));
-        }
-
-        let (atom, next_i) = parse_one_atom(chars, i, span)?;
-        atoms.push(atom);
-        i = next_i;
-    }
-
-    Ok((atoms, i))
-}
-
-fn parse_closed_group(inner: &str, span: &Span) -> Result<Vec<ScoreEvent>, JianPuError> {
-    let mut atoms = parse_atoms_from_text(inner, span)?;
-    validate_group_note_count(atoms.len(), span)?;
-    apply_closed_group_depth(&mut atoms);
-    Ok(atoms.iter().map(atom_to_event).collect())
-}
-
-fn parse_open_group(inner: &str, span: &Span) -> Result<Vec<ScoreEvent>, JianPuError> {
-    let mut atoms = parse_atoms_from_text(inner, span)?;
-    apply_open_group_depth(&mut atoms);
-    Ok(atoms.iter().map(atom_to_event).collect())
-}
-
-fn apply_closed_group_depth(atoms: &mut [ParsedAtom]) {
-    let continuation_count = atoms.len().saturating_sub(1);
-    for atom in atoms.iter_mut() {
-        atom.group_membership = atom.group_membership.saturating_add(1);
-    }
-    for atom in atoms.iter_mut().take(continuation_count) {
-        atom.group_continuation = atom.group_continuation.saturating_add(1);
-    }
-}
-
-fn apply_open_group_depth(atoms: &mut [ParsedAtom]) {
-    for atom in atoms.iter_mut() {
-        atom.group_membership = atom.group_membership.saturating_add(1);
-        atom.group_continuation = atom.group_continuation.saturating_add(1);
-    }
-}
-
-fn apply_closing_segment_depth(atoms: &mut [ParsedAtom], group_still_open: bool) {
-    for atom in atoms.iter_mut() {
-        atom.group_membership = atom.group_membership.saturating_add(1);
-    }
-    let continuation_count = if group_still_open {
-        atoms.len()
-    } else {
-        atoms.len().saturating_sub(1)
-    };
-    for atom in atoms.iter_mut().take(continuation_count) {
-        atom.group_continuation = atom.group_continuation.saturating_add(1);
-    }
-}
-
-fn parse_one_atom(
-    chars: &[char],
-    start: usize,
-    span: &Span,
-) -> Result<(ParsedAtom, usize), JianPuError> {
-    let pitch_char = chars[start];
-    let mut i = start + 1;
-    let mut duration = 4u32;
-    let mut dotted = false;
-    let mut octave_up = 0i8;
-    let mut octave_down = 0i8;
-
-    while i < chars.len() {
-        if matches!(chars[i], '0'..='7') {
-            break;
-        }
-
-        match chars[i] {
-            '_' => {
-                duration = duration.min(2);
-                i += 1;
-            }
-            '=' => {
-                duration = 1;
-                i += 1;
-            }
-            '\'' => {
-                octave_up += 1;
-                i += 1;
-            }
-            ',' => {
-                octave_down += 1;
-                i += 1;
-            }
-            '.' => {
-                dotted = true;
-                i += 1;
-            }
-            '-' => {
-                if pitch_char == '0' {
-                    let pos = span.start + byte_offset_at_char_index_from_chars(chars, start, i);
-                    return Err(JianPuError::dash_after_rest(Span::new(pos, pos + 1)));
-                }
-                duration += 4;
-                i += 1;
-            }
-            ')' | '(' => break,
-            c => {
-                let pos = span.start + byte_offset_at_char_index_from_chars(chars, start, i);
-                return Err(JianPuError::new(
-                    Span::new(pos, pos + c.len_utf8()),
-                    format!("unexpected character in note: {c}"),
-                ));
-            }
-        }
-    }
-
-    if octave_up > 0 && octave_down > 0 {
-        return Err(JianPuError::new(
-            span.clone(),
-            "mixed octave markers are invalid (use ' for up, , for down)".to_string(),
-        ));
-    }
-
-    let octave = if octave_up > 0 {
-        octave_up
-    } else {
-        -octave_down
-    };
-
-    if dotted && duration == 1 {
-        return Err(JianPuError::new(
-            span.clone(),
-            "cannot dot a quarter-beat (=) note; use _ or no duration suffix".to_string(),
-        ));
-    }
-
-    let duration = if dotted {
-        duration + duration / 2
-    } else {
-        duration
-    };
-
-    Ok((
-        ParsedAtom {
-            pitch_char,
-            duration,
-            octave,
-            dotted,
-            group_membership: 0,
-            group_continuation: 0,
-        },
-        i,
-    ))
-}
-
-fn atom_to_event(atom: &ParsedAtom) -> ScoreEvent {
-    if atom.pitch_char == '0' {
-        ScoreEvent::Rest(ParsedRest {
-            duration: atom.duration,
-            dotted: atom.dotted,
-        })
-    } else {
-        ScoreEvent::Note(ParsedNote {
-            pitch: pitch_char_to_jianpu(atom.pitch_char),
-            octave: atom.octave,
-            duration: atom.duration,
-            tie: atom.group_continuation > 0,
-            group_membership: atom.group_membership,
-            group_continuation: atom.group_continuation,
-            dotted: atom.dotted,
-        })
-    }
-}
-
-fn pitch_char_to_jianpu(pitch_char: char) -> JianPuPitch {
-    match pitch_char {
-        '1' => JianPuPitch::One,
-        '2' => JianPuPitch::Two,
-        '3' => JianPuPitch::Three,
-        '4' => JianPuPitch::Four,
-        '5' => JianPuPitch::Five,
-        '6' => JianPuPitch::Six,
-        '7' => JianPuPitch::Seven,
-        _ => unreachable!("validated pitch digit"),
-    }
-}
-
-fn byte_offset_at_char_index(text: &str, char_index: usize) -> usize {
-    text.char_indices()
-        .nth(char_index)
-        .map(|(b, _)| b)
-        .unwrap_or(text.len())
-}
-
-fn byte_offset_at_char_index_from_chars(chars: &[char], start: usize, i: usize) -> usize {
-    chars[start..=i].iter().map(|c| c.len_utf8()).sum()
+    parse_timed_token::<NoteHead>(text, span, group_state)
 }
 
 fn parse_key_change(text: &str, span: &Span) -> Result<ScoreEvent, JianPuError> {
@@ -541,6 +181,7 @@ fn parse_time_signature(text: &str, span: Span) -> Result<ScoreEvent, JianPuErro
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ast::parsed::{JianPuPitch, ParsedNote, ParsedRest};
     use crate::parser::score::tokenizer::tokenize;
 
     fn parse(input: &str) -> Result<Vec<Spanned<ScoreEvent>>, JianPuError> {

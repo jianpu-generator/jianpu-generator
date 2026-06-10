@@ -1,6 +1,6 @@
 use crate::ast::parsed::{
-    flatten_score_line_slots, ParsedChordEvent, ParsedChordTrack, ParsedLyrics, ParsedNotesTrack,
-    ParsedScore, ParsedTrack, PartDecl, PartKind, ScoreEvent, ScoreLineRole, ScoreLineSlot,
+    flatten_score_line_slots, ParsedLyrics, ParsedScore, ParsedTimedTrack, ParsedTrack, PartDecl,
+    PartKind, ScoreEvent, ScoreLineRole, ScoreLineSlot,
 };
 use crate::error::{JianPuError, Span, Spanned};
 use crate::parser::score::token_parser::GroupParseState;
@@ -12,7 +12,7 @@ mod beat_padding;
 #[path = "interleaved_directives.rs"]
 mod directives;
 
-use beat_padding::{beats_per_measure, validate_and_pad_beats, validate_and_pad_chord_beats};
+use beat_padding::{beats_per_measure, validate_and_pad_beats};
 use directives::{collect_groups, split_directive};
 
 enum SlotAction {
@@ -22,12 +22,9 @@ enum SlotAction {
 }
 
 enum TrackAccumulator {
-    Notes {
+    Timed {
         events: Vec<Spanned<ScoreEvent>>,
         syllables: Option<Vec<crate::ast::parsed::Syllable>>,
-    },
-    Chord {
-        events_per_measure: Vec<Vec<ParsedChordEvent>>,
     },
 }
 
@@ -127,17 +124,12 @@ fn build_slot_actions(slots: &[ScoreLineSlot]) -> Vec<SlotAction> {
 fn init_accumulators(declarations: &[PartDecl]) -> Vec<TrackAccumulator> {
     declarations
         .iter()
-        .map(|decl| match decl.kind {
-            PartKind::Chord => TrackAccumulator::Chord {
-                events_per_measure: Vec::new(),
-            },
-            PartKind::Notes => TrackAccumulator::Notes {
-                events: Vec::new(),
-                syllables: None,
-            },
-            PartKind::NotesWithLyrics => TrackAccumulator::Notes {
-                events: Vec::new(),
-                syllables: Some(Vec::new()),
+        .map(|decl| TrackAccumulator::Timed {
+            events: Vec::new(),
+            syllables: if matches!(decl.kind, PartKind::NotesWithLyrics) {
+                Some(Vec::new())
+            } else {
+                None
             },
         })
         .collect()
@@ -169,7 +161,7 @@ fn process_bar_group(
     }
 
     if !directive_events.is_empty() {
-        let events_acc = notes_events_mut(
+        let events_acc = timed_events_mut(
             ctx.accumulators
                 .get_mut(ctx.first_notes_track_index)
                 .ok_or_else(|| {
@@ -186,15 +178,11 @@ fn process_bar_group(
     process_padded_columns(&padded_data, bar, beats_expected, ctx)
 }
 
-fn notes_events_mut(
+fn timed_events_mut(
     acc: &mut TrackAccumulator,
 ) -> Result<&mut Vec<Spanned<ScoreEvent>>, JianPuError> {
     match acc {
-        TrackAccumulator::Notes { events, .. } => Ok(events),
-        TrackAccumulator::Chord { .. } => Err(JianPuError::new(
-            Span::new(0, 0),
-            "internal error: expected notes accumulator",
-        )),
+        TrackAccumulator::Timed { events, .. } => Ok(events),
     }
 }
 
@@ -202,23 +190,7 @@ fn notes_syllables_mut(
     acc: &mut TrackAccumulator,
 ) -> Result<Option<&mut Vec<crate::ast::parsed::Syllable>>, JianPuError> {
     match acc {
-        TrackAccumulator::Notes { syllables, .. } => Ok(syllables.as_mut()),
-        TrackAccumulator::Chord { .. } => Err(JianPuError::new(
-            Span::new(0, 0),
-            "internal error: expected notes accumulator",
-        )),
-    }
-}
-
-fn chord_events_mut(
-    acc: &mut TrackAccumulator,
-) -> Result<&mut Vec<Vec<ParsedChordEvent>>, JianPuError> {
-    match acc {
-        TrackAccumulator::Chord { events_per_measure } => Ok(events_per_measure),
-        TrackAccumulator::Notes { .. } => Err(JianPuError::new(
-            Span::new(0, 0),
-            "internal error: expected chord accumulator",
-        )),
+        TrackAccumulator::Timed { syllables, .. } => Ok(syllables.as_mut()),
     }
 }
 
@@ -349,7 +321,7 @@ fn process_column_line(
                     "internal error: notes accumulator index out of range",
                 )
             })?;
-            notes_events_mut(acc)?.extend(events);
+            timed_events_mut(acc)?.extend(events);
         }
         SlotAction::Lyrics { track_index } => {
             process_lyrics_column_line(*track_index, line, line_span, bar, ctx)?;
@@ -361,10 +333,18 @@ fn process_column_line(
                     "'_' is only valid on lyrics lines".to_string(),
                 ));
             }
-            let events = validate_and_pad_chord_beats(
-                crate::parser::score::chord_parser::parse(line, ctx.base_offset + line_offset)?,
+            let tokens = tokenizer::tokenize(line, ctx.base_offset + line_offset);
+            let group_state = ctx.group_states.get_mut(*track_index).ok_or_else(|| {
+                JianPuError::new(
+                    line_span.clone(),
+                    "internal error: group state index out of range",
+                )
+            })?;
+            let events = validate_and_pad_beats(
+                token_parser::parse_chord_tokens(tokens, group_state)?,
                 beats_expected,
-                &line_span,
+                *ctx.time_num,
+                *ctx.time_den,
             )?;
             let acc = ctx.accumulators.get_mut(*track_index).ok_or_else(|| {
                 JianPuError::new(
@@ -372,7 +352,7 @@ fn process_column_line(
                     "internal error: chord accumulator index out of range",
                 )
             })?;
-            chord_events_mut(acc)?.push(events);
+            timed_events_mut(acc)?.extend(events);
         }
     }
     Ok(())
@@ -423,30 +403,22 @@ fn build_parse_result(
     declarations
         .iter()
         .zip(accumulators)
-        .map(|(decl, acc)| match (&decl.kind, acc) {
-            (PartKind::Chord, TrackAccumulator::Chord { events_per_measure }) => {
-                Ok(ParsedTrack::Chord(ParsedChordTrack {
-                    abbreviation: decl.abbreviation.clone(),
-                    display_name: decl.display_name.clone(),
-                    events_per_measure,
-                }))
-            }
-            (
-                PartKind::Notes | PartKind::NotesWithLyrics,
-                TrackAccumulator::Notes { events, syllables },
-            ) => Ok(ParsedTrack::Notes(ParsedNotesTrack {
+        .map(|(decl, acc)| {
+            let TrackAccumulator::Timed { events, syllables } = acc;
+            Ok(ParsedTrack::Timed(ParsedTimedTrack {
                 abbreviation: decl.abbreviation.clone(),
                 display_name: decl.display_name.clone(),
+                kind: decl.kind,
                 score: ParsedScore { events },
                 lyrics: syllables.map(|s| ParsedLyrics { syllables: s }),
-            })),
-            _ => Err(JianPuError::new(
-                Span::new(0, 0),
-                "internal error: track kind/accumulator mismatch",
-            )),
+            }))
         })
         .collect()
 }
+
+#[cfg(test)]
+#[path = "interleaved_parser_test_helpers.rs"]
+mod test_helpers;
 
 #[cfg(test)]
 #[path = "interleaved_parser_tests.rs"]

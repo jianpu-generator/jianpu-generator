@@ -1,4 +1,6 @@
-use crate::ast::parsed::{Accidental, Extension, JianPuPitch, KeyChange, Syllable, TriadQuality};
+use crate::ast::parsed::{
+    Accidental, BassDegree, Extension, JianPuPitch, KeyChange, Syllable, TriadQuality,
+};
 
 // ── Public final types ────────────────────────────────────────────────────────
 
@@ -30,6 +32,7 @@ pub struct Lyrics {
 #[derive(Clone)]
 pub struct PartSlice {
     pub name: Option<String>,
+    pub kind: crate::ast::parsed::PartKind,
     pub notes: Notes,
     pub lyrics: Option<Lyrics>,
 }
@@ -44,69 +47,33 @@ pub struct MultiPartMeasure {
     pub parts: Vec<PartRow>,
 }
 
-#[allow(dead_code)]
-#[derive(Clone)]
-pub struct GroupedChord {
-    pub degree: JianPuPitch,
-    pub accidental: Accidental,
-    pub triad: TriadQuality,
-    pub extension: Option<Extension>,
-    pub bass: Option<crate::ast::parsed::BassDegree>,
-    pub duration: u32,
-}
-
-#[allow(dead_code)]
-#[derive(Clone)]
-pub enum GroupedChordEvent {
-    Chord(GroupedChord),
-    Rest(u32),
-}
-
-#[derive(Clone)]
-pub struct ChordSlice {
-    pub name: Option<String>,
-    #[allow(dead_code)]
-    pub events: Vec<GroupedChordEvent>,
-}
-
 #[derive(Clone)]
 pub enum PartRow {
-    Notes(PartSlice),
-    Chord(ChordSlice),
+    Timed(PartSlice),
 }
 
 impl PartRow {
     pub fn name(&self) -> Option<&String> {
         match self {
-            PartRow::Notes(s) => s.name.as_ref(),
-            PartRow::Chord(s) => s.name.as_ref(),
+            PartRow::Timed(s) => s.name.as_ref(),
         }
     }
 }
 
-// Intermediate type for the chord grouper:
-pub(crate) struct GroupedChordPart {
-    pub(crate) name: Option<String>,
-    pub(crate) measures: Vec<ChordSlice>,
-}
-
 pub(crate) enum GroupedTrack {
-    Chord(GroupedChordPart),
-    Notes(GroupedPart),
+    Timed(GroupedPart),
 }
 
 impl GroupedTrack {
     pub(crate) fn measure_count(&self) -> usize {
         match self {
-            GroupedTrack::Notes(part) => part.measures.len(),
-            GroupedTrack::Chord(part) => part.measures.len(),
+            GroupedTrack::Timed(part) => part.measures.len(),
         }
     }
 
     pub(crate) fn track_name(&self) -> &Option<String> {
         match self {
-            GroupedTrack::Notes(part) => &part.name,
-            GroupedTrack::Chord(part) => &part.name,
+            GroupedTrack::Timed(part) => &part.name,
         }
     }
 }
@@ -129,6 +96,7 @@ pub(crate) struct GroupedMeasure {
 
 pub(crate) struct GroupedPart {
     pub(crate) name: Option<String>,
+    pub(crate) kind: crate::ast::parsed::PartKind,
     pub(crate) measures: Vec<GroupedMeasure>,
     /// Flat lyrics list. `None` means no [lyrics] section was provided.
     pub(crate) lyrics: Option<Vec<Syllable>>,
@@ -146,6 +114,21 @@ pub struct TimeSignature {
 pub enum NoteEvent {
     Note(GroupedNote),
     Rest(GroupedRest),
+    Chord(GroupedChordNote),
+}
+
+#[derive(Clone)]
+pub struct GroupedChordNote {
+    pub degree: JianPuPitch,
+    pub accidental: Accidental,
+    pub triad: TriadQuality,
+    pub extension: Option<Extension>,
+    pub bass: Option<BassDegree>,
+    pub duration: u32,
+    pub tie: bool,
+    pub group_membership: u8,
+    pub group_continuation: u8,
+    pub dotted: bool,
 }
 
 #[derive(Clone)]

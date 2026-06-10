@@ -22,10 +22,11 @@ pub fn validate_measure_grouping(
         match &event.value {
             ScoreEvent::Note(note) => {
                 let total_duration = timed_cluster_duration(events, index);
+                let head_duration = timed_head_duration(events, index);
                 if note.group_membership == 0
                     && pos > 0
                     && pos < HALF_BAR_BOUNDARY
-                    && pos + total_duration > HALF_BAR_BOUNDARY
+                    && pos + head_duration > HALF_BAR_BOUNDARY
                 {
                     return Err(half_bar_error(&event.span));
                 }
@@ -41,9 +42,32 @@ pub fn validate_measure_grouping(
                 pos += total_duration;
                 index += timed_cluster_len(events, index);
             }
+            ScoreEvent::Chord(chord) => {
+                let total_duration = timed_cluster_duration(events, index);
+                let head_duration = timed_head_duration(events, index);
+                if chord.group_membership == 0
+                    && pos > 0
+                    && pos < HALF_BAR_BOUNDARY
+                    && pos + head_duration > HALF_BAR_BOUNDARY
+                {
+                    return Err(half_bar_error(&event.span));
+                }
+
+                if is_dotted_eighth_at_beat_start(chord.dotted, chord.duration, pos) {
+                    let next_timed = next_timed_index(events, index);
+                    validate_dotted_eighth_tail(events, next_timed, &event.span)?;
+                    pos += chord.duration + 1;
+                    index = next_timed.map(|next| next + 1).unwrap_or(events.len());
+                    continue;
+                }
+
+                pos += total_duration;
+                index += timed_cluster_len(events, index);
+            }
             ScoreEvent::Rest(rest) => {
                 let total_duration = timed_cluster_duration(events, index);
-                if pos > 0 && pos < HALF_BAR_BOUNDARY && pos + total_duration > HALF_BAR_BOUNDARY {
+                let head_duration = timed_head_duration(events, index);
+                if pos > 0 && pos < HALF_BAR_BOUNDARY && pos + head_duration > HALF_BAR_BOUNDARY {
                     return Err(half_bar_error(&event.span));
                 }
 
@@ -65,12 +89,22 @@ pub fn validate_measure_grouping(
     Ok(())
 }
 
+fn timed_head_duration(events: &[Spanned<ScoreEvent>], start: usize) -> u32 {
+    match events.get(start).map(|e| &e.value) {
+        Some(ScoreEvent::Note(note)) => note.duration,
+        Some(ScoreEvent::Chord(chord)) => chord.duration,
+        Some(ScoreEvent::Rest(rest)) => rest.duration,
+        _ => 0,
+    }
+}
+
 fn timed_cluster_duration(events: &[Spanned<ScoreEvent>], start: usize) -> u32 {
     let Some(event) = events.get(start) else {
         return 0;
     };
     let mut duration = match &event.value {
         ScoreEvent::Note(note) => note.duration,
+        ScoreEvent::Chord(chord) => chord.duration,
         ScoreEvent::Rest(rest) => rest.duration,
         _ => return 0,
     };
@@ -106,7 +140,10 @@ fn next_timed_index(events: &[Spanned<ScoreEvent>], start: usize) -> Option<usiz
     let mut index = start + timed_cluster_len(events, start);
     while index < events.len() {
         if let Some(event) = events.get(index) {
-            if matches!(event.value, ScoreEvent::Note(_) | ScoreEvent::Rest(_)) {
+            if matches!(
+                event.value,
+                ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::Rest(_)
+            ) {
                 return Some(index);
             }
         }
@@ -133,6 +170,7 @@ fn validate_dotted_eighth_tail(
 
     let tail_duration = match &event.value {
         ScoreEvent::Note(note) => note.duration,
+        ScoreEvent::Chord(chord) => chord.duration,
         ScoreEvent::Rest(rest) => rest.duration,
         _ => return Err(dotted_eighth_error(span)),
     };
@@ -173,6 +211,25 @@ mod tests {
             notes_line = notes_line
         );
         parser::parse(&input, "test.jianpu").map(|_| ())
+    }
+
+    #[test]
+    fn chord_half_bar_boundary_validation_matches_notes() {
+        let input = concat!(
+            "[metadata]\n",
+            "title = \"t\"\n",
+            "author = \"a\"\n",
+            "\n",
+            "[parts]\n",
+            "c = chord\n",
+            "n = notes\n",
+            "\n",
+            "[score]\n",
+            "(time=4/4 key=C4 bpm=120)\n",
+            "1. 2. 3_ 4_\n",
+            "1 2 3 4\n",
+        );
+        assert!(parser::parse(input, "t.jianpu").is_err());
     }
 
     #[test]

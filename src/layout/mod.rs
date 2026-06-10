@@ -1,5 +1,5 @@
-use crate::ast::grouped::{NoteEvent, Score};
-use crate::ast::parsed::JianPuPitch;
+use crate::ast::grouped::{GroupedChordNote, NoteEvent, Score};
+use crate::ast::parsed::{Extension, JianPuPitch, PartKind, TriadQuality};
 use crate::layout::types::{
     GridContent, GridElement, GridPosition, HorizontalAlignment, Page, UnderlineSpan,
     VerticalAlignment,
@@ -8,6 +8,28 @@ use crate::layout::types::{
 mod layout_engine;
 
 pub mod types;
+
+#[derive(Clone, PartialEq)]
+pub(crate) enum SlurKey {
+    Pitch(JianPuPitch),
+    Chord {
+        degree: JianPuPitch,
+        triad: TriadQuality,
+        extension: Option<Extension>,
+        bass_degree: Option<JianPuPitch>,
+    },
+}
+
+impl SlurKey {
+    pub(crate) fn from_chord(chord: &GroupedChordNote) -> Self {
+        SlurKey::Chord {
+            degree: chord.degree.clone(),
+            triad: chord.triad.clone(),
+            extension: chord.extension.clone(),
+            bass_degree: chord.bass.as_ref().map(|b| b.degree.clone()),
+        }
+    }
+}
 
 struct BeamBufferEntry {
     column: u32,
@@ -77,7 +99,7 @@ fn compute_underline_levels(buffer: &[BeamBufferEntry]) -> Vec<UnderlineSpan> {
     levels
 }
 
-fn format_chord_symbol(chord: &crate::ast::grouped::GroupedChord) -> String {
+fn format_chord_symbol(chord: &crate::ast::grouped::GroupedChordNote) -> String {
     use crate::ast::parsed::{Accidental, Extension, JianPuPitch, TriadQuality};
 
     let degree = match chord.degree {
@@ -133,15 +155,24 @@ fn format_chord_symbol(chord: &crate::ast::grouped::GroupedChord) -> String {
 fn part_row_height(row: &crate::ast::grouped::PartRow) -> u32 {
     use crate::ast::grouped::PartRow;
     match row {
-        PartRow::Notes(part) => {
-            if part.lyrics.is_some() {
-                4
-            } else {
-                3
-            }
-        }
-        PartRow::Chord(_) => 2,
+        PartRow::Timed(part) => match part.kind {
+            PartKind::Chord => 2,
+            PartKind::Notes => 3,
+            PartKind::NotesWithLyrics => 4,
+        },
     }
+}
+
+fn event_duration(event: &NoteEvent) -> u32 {
+    match event {
+        NoteEvent::Note(note) => note.duration,
+        NoteEvent::Rest(rest) => rest.duration,
+        NoteEvent::Chord(chord) => chord.duration,
+    }
+}
+
+pub(crate) fn measure_beat_width(part: &crate::ast::grouped::PartSlice) -> u32 {
+    part.notes.events.iter().map(event_duration).sum()
 }
 
 /// Margin on every edge of the page in points (~9 mm).
@@ -156,19 +187,19 @@ pub fn layout(score: &Score, page_width_pt: f32, page_height_pt: f32) -> Vec<Pag
 
 /// Extend nested tie/slur chains for one note and flush any groups that end here.
 pub(crate) fn extend_note_chains(
-    chains: &mut Vec<Vec<(u32, JianPuPitch)>>,
+    chains: &mut Vec<Vec<(u32, SlurKey)>>,
     membership: u8,
     continuation: u8,
     chain_row: u32,
     col: u32,
-    pitch: &JianPuPitch,
+    key: &SlurKey,
     elements: &mut Vec<GridElement>,
 ) {
     while chains.len() < membership as usize {
         chains.push(Vec::new());
     }
     for chain in chains.iter_mut().take(membership as usize) {
-        chain.push((col, pitch.clone()));
+        chain.push((col, key.clone()));
     }
     for depth in (continuation as usize)..membership as usize {
         if let Some(chain) = chains.get(depth) {
@@ -187,16 +218,16 @@ pub(crate) fn extend_note_chains(
 /// Rules:
 /// - If the chain contains any pitch change → one **slur** arc from first to last note.
 /// - For every consecutive same-pitch pair within the chain → one **tie** arc between them.
-fn flush_chain(chain: &[(u32, JianPuPitch)], chain_row: u32, elements: &mut Vec<GridElement>) {
+fn flush_chain(chain: &[(u32, SlurKey)], chain_row: u32, elements: &mut Vec<GridElement>) {
     if chain.len() <= 1 {
         return;
     }
 
-    let has_pitch_change = chain
+    let has_key_change = chain
         .windows(2)
         .any(|w| matches!((w.first(), w.get(1)), (Some(a), Some(b)) if a.1 != b.1));
 
-    if has_pitch_change {
+    if has_key_change {
         let (Some(first), Some(last)) = (chain.first(), chain.last()) else {
             return;
         };
@@ -242,22 +273,9 @@ fn measure_column_width(measure: &crate::ast::grouped::MultiPartMeasure) -> u32 
     let max_notes: u32 = measure
         .parts
         .iter()
-        .filter_map(|row| {
-            if let PartRow::Notes(p) = row {
-                Some(p)
-            } else {
-                None
-            }
-        })
-        .map(|part| {
-            part.notes
-                .events
-                .iter()
-                .map(|n| match n {
-                    NoteEvent::Note(note) => note.duration,
-                    NoteEvent::Rest(rest) => rest.duration,
-                })
-                .sum::<u32>()
+        .map(|row| {
+            let PartRow::Timed(p) = row;
+            measure_beat_width(p)
         })
         .max()
         .unwrap_or(0);
