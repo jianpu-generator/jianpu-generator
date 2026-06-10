@@ -183,6 +183,10 @@ fn try_lex_key_change(
         .take_while(|b| b.is_ascii_digit())
         .count();
 
+    if octave_len == 0 {
+        return Ok(None);
+    }
+
     let consumed = 2 + head_len + octave_len; // "1=" + head + octave digits
     let text = &line[i..i + consumed];
     let span = Span::new(start, start + consumed);
