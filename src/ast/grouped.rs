@@ -86,6 +86,20 @@ pub struct Score {
 
 // ── Intermediate grouper types (not part of the public API) ─────────────────
 
+#[allow(dead_code)]
+pub(crate) struct MeasureDirectives {
+    pub(crate) time_signature: Option<TimeSignature>,
+    pub(crate) bpm: Option<u32>,
+    pub(crate) key: Option<KeyChange>,
+    pub(crate) label: Option<String>,
+}
+
+#[allow(dead_code)]
+pub(crate) struct GroupedScore {
+    pub(crate) measure_directives: Vec<MeasureDirectives>,
+    pub(crate) parts: Vec<GroupedTrack>,
+}
+
 pub(crate) struct GroupedMeasure {
     pub(crate) time_signature: Option<TimeSignature>,
     pub(crate) bpm: Option<u32>,
