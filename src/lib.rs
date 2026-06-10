@@ -137,7 +137,9 @@ pub fn apply_lyrics_filter(score: &mut Score, disabled_lyrics: Option<&[String]>
                 .is_some_and(|name| tracks.contains(name))
             {
                 part_slice.lyrics = None;
-                part_slice.kind = PartKind::Notes;
+                if part_slice.kind == PartKind::NotesWithLyrics {
+                    part_slice.kind = PartKind::Notes;
+                }
             }
         }
     }
@@ -512,11 +514,14 @@ mod tests {
             "\n",
             "[parts]\n",
             "Soprano = notes lyrics\n",
+            "Alto = notes lyrics\n",
             "\n",
             "[score]\n",
             "(time=4/4 key=C4 bpm=120)\n",
             "1 2 3 4\n",
             "do re mi fa\n",
+            "5 6 7 1\n",
+            "alt alt alt alt\n",
         );
         let mut score = compile(input, "test.jianpu").unwrap();
         apply_lyrics_filter(&mut score, Some(&["Soprano".into()]));
@@ -525,6 +530,12 @@ mod tests {
             part_slice.kind,
             PartKind::Notes,
             "apply_lyrics_filter should downgrade kind to Notes when lyrics are hidden"
+        );
+        let PartRow::Timed(alto_slice) = &score.measures[0].parts[1];
+        assert_eq!(
+            alto_slice.kind,
+            PartKind::NotesWithLyrics,
+            "apply_lyrics_filter should leave untouched parts as NotesWithLyrics"
         );
     }
 
