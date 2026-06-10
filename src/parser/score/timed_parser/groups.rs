@@ -2,21 +2,45 @@
 
 use crate::error::{JianPuError, Span};
 
-/// Tracks an unfinished `(…` group that continues in a later measure.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct GroupStack {
+    pub frames: Vec<GroupFrame>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GroupFrame {
+    pub note_count: usize,
+    pub segment_start: usize,
+}
+
+impl GroupStack {
+    pub fn is_open(&self) -> bool {
+        !self.frames.is_empty()
+    }
+
+    pub fn push(&mut self, segment_start: usize) {
+        self.frames.push(GroupFrame {
+            note_count: 0,
+            segment_start,
+        });
+    }
+
+    pub fn pop(&mut self) -> Option<GroupFrame> {
+        self.frames.pop()
+    }
+
+    pub fn increment_note_count(&mut self) {
+        if let Some(frame) = self.frames.last_mut() {
+            frame.note_count += 1;
+        }
+    }
+}
+
+/// Legacy cross-measure group state; kept for call-site compatibility until later refactor tasks.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct GroupParseState {
     pub open: bool,
     pub open_note_count: usize,
-}
-
-pub fn validate_group_note_count(count: usize, span: &Span) -> Result<(), JianPuError> {
-    if count < 2 {
-        return Err(JianPuError::new(
-            span.clone(),
-            "tie/slur group `(…)` must contain at least 2 notes".to_string(),
-        ));
-    }
-    Ok(())
 }
 
 pub fn find_closing_paren(chars: &[char], start: usize) -> Option<usize> {
@@ -36,6 +60,16 @@ pub fn find_closing_paren(chars: &[char], start: usize) -> Option<usize> {
         i += 1;
     }
     None
+}
+
+pub fn validate_group_note_count(count: usize, span: &Span) -> Result<(), JianPuError> {
+    if count < 2 {
+        return Err(JianPuError::new(
+            span.clone(),
+            "tie/slur group `(…)` must contain at least 2 notes".to_string(),
+        ));
+    }
+    Ok(())
 }
 
 pub trait HasGroupDepth {

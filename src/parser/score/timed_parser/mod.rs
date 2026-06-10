@@ -19,7 +19,8 @@ pub use note_head::NoteHead;
 pub use duration::{parse_duration_suffixes, DurationParse};
 pub use groups::{
     apply_closed_group_depth, apply_closing_segment_depth, apply_open_group_depth,
-    find_closing_paren, validate_group_note_count, GroupParseState, HasGroupDepth,
+    find_closing_paren, validate_group_note_count, GroupFrame, GroupParseState, GroupStack,
+    HasGroupDepth,
 };
 
 use crate::ast::parsed::ScoreEvent;
