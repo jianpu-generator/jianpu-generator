@@ -1,9 +1,13 @@
 #![allow(clippy::indexing_slicing)]
 
 mod chord_head;
+mod directives;
 mod duration;
 mod groups;
 mod note_head;
+mod timed_lexer;
+
+pub use timed_lexer::{lex_line, TimedLexToken};
 
 pub use chord_head::ChordHead;
 pub use note_head::NoteHead;
