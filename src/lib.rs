@@ -137,6 +137,7 @@ pub fn apply_lyrics_filter(score: &mut Score, disabled_lyrics: Option<&[String]>
                 .is_some_and(|name| tracks.contains(name))
             {
                 part_slice.lyrics = None;
+                part_slice.kind = PartKind::Notes;
             }
         }
     }
@@ -499,6 +500,31 @@ mod tests {
         assert_eq!(
             split_pdf_filename("song", "bad/name"),
             "song - bad-name.pdf"
+        );
+    }
+
+    #[test]
+    fn apply_lyrics_filter_downgrades_kind_to_notes() {
+        let input = concat!(
+            "[metadata]\n",
+            "title = \"t\"\n",
+            "author = \"a\"\n",
+            "\n",
+            "[parts]\n",
+            "Soprano = notes lyrics\n",
+            "\n",
+            "[score]\n",
+            "(time=4/4 key=C4 bpm=120)\n",
+            "1 2 3 4\n",
+            "do re mi fa\n",
+        );
+        let mut score = compile(input, "test.jianpu").unwrap();
+        apply_lyrics_filter(&mut score, Some(&["Soprano".into()]));
+        let PartRow::Timed(part_slice) = &score.measures[0].parts[0];
+        assert_eq!(
+            part_slice.kind,
+            PartKind::Notes,
+            "apply_lyrics_filter should downgrade kind to Notes when lyrics are hidden"
         );
     }
 
