@@ -65,6 +65,7 @@ fn render_element(
         AbsoluteContent::Underline { width, level: _ } => render_underline(elem, width),
         AbsoluteContent::TieOrSlur { width } => render_tie_or_slur(elem, width, row_height),
         AbsoluteContent::BarLine { height } => render_bar_line(elem, height),
+        AbsoluteContent::HorizontalLine { width } => render_horizontal_line(elem, width),
         AbsoluteContent::Lyric(s) => render_lyric(elem, s, base_font_size, cjk_font_size),
         AbsoluteContent::Text {
             content,
@@ -210,6 +211,18 @@ fn render_chord_symbol(elem: &AbsoluteElement, s: &str, base_font_size: &f32) ->
             font: FontFamily::Monospace,
             weight: FontWeight::Normal,
             italic: false,
+        },
+    }]
+}
+
+fn render_horizontal_line(elem: &AbsoluteElement, width: &f32) -> Vec<SvgElement> {
+    vec![SvgElement {
+        x: elem.x,
+        y: elem.y,
+        kind: SvgKind::Line {
+            x2: elem.x + width,
+            y2: elem.y,
+            stroke_width: 0.5,
         },
     }]
 }

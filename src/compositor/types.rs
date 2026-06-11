@@ -35,6 +35,9 @@ pub enum AbsoluteContent {
     BarLine {
         height: f32,
     },
+    HorizontalLine {
+        width: f32,
+    },
     Lyric(String),
     Text {
         content: String,

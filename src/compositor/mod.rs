@@ -465,11 +465,13 @@ pub fn compose(pages: &[Page], config: &RenderConfig) -> Vec<AbsolutePage> {
             emit_header(page, row_height_pt, base_font_size, &mut elements);
             emit_footer(page, row_height_pt, base_font_size, &mut elements);
 
+            let non_empty_systems: Vec<_> = page
+                .systems
+                .iter()
+                .filter(|s| !s.measures.is_empty())
+                .collect();
             let mut system_y = PAGE_MARGIN + header_rows as f32 * row_height_pt;
-            for system in &page.systems {
-                if system.measures.is_empty() {
-                    continue;
-                }
+            for (i, system) in non_empty_systems.iter().enumerate() {
                 let first_block = system.measures.first();
                 let sys_note_rows = first_block.map(system_row_height).unwrap_or(0);
                 let directive_extra = first_block
@@ -479,6 +481,16 @@ pub fn compose(pages: &[Page], config: &RenderConfig) -> Vec<AbsolutePage> {
 
                 emit_system(system, system_y, config, page.page_width_pt, &mut elements);
                 system_y += system_total_rows as f32 * row_height_pt;
+
+                if i + 1 < non_empty_systems.len() {
+                    elements.push(AbsoluteElement {
+                        x: PAGE_MARGIN,
+                        y: system_y,
+                        content: AbsoluteContent::HorizontalLine {
+                            width: page.page_width_pt - 2.0 * PAGE_MARGIN,
+                        },
+                    });
+                }
             }
 
             AbsolutePage {
