@@ -6,21 +6,62 @@ use crate::ast::grouped::{
 };
 use crate::ast::parsed::{Extension, JianPuPitch, PartKind, TriadQuality};
 
+/// Per-part state carried across measure boundaries.
+struct PartCrossState {
+    prev_tie: bool,
+    prev_slur_key: Option<SlurKey>,
+}
+
 pub fn compile(score: &Score) -> Vec<MeasureBlock> {
+    let max_parts = score
+        .measures
+        .iter()
+        .map(|m| m.parts.len())
+        .max()
+        .unwrap_or(0);
+    let mut cross_states: Vec<PartCrossState> = (0..max_parts)
+        .map(|_| PartCrossState {
+            prev_tie: false,
+            prev_slur_key: None,
+        })
+        .collect();
+
     score
         .measures
         .iter()
         .enumerate()
-        .map(|(idx, measure)| compile_measure(measure, idx + 1))
+        .map(|(idx, measure)| compile_measure(measure, idx + 1, &mut cross_states))
         .collect()
 }
 
-fn compile_measure(measure: &MultiPartMeasure, bar_number: usize) -> MeasureBlock {
+fn compile_measure(
+    measure: &MultiPartMeasure,
+    bar_number: usize,
+    cross_states: &mut Vec<PartCrossState>,
+) -> MeasureBlock {
+    while cross_states.len() < measure.parts.len() {
+        cross_states.push(PartCrossState {
+            prev_tie: false,
+            prev_slur_key: None,
+        });
+    }
+
     let decorations = collect_decorations(measure, bar_number);
     let mut rows: Vec<MeasureRow> = Vec::new();
     for (part_idx, part_row) in measure.parts.iter().enumerate() {
+        let (init_tie, init_key) = cross_states
+            .get(part_idx)
+            .map(|cs| (cs.prev_tie, cs.prev_slur_key.clone()))
+            .unwrap_or((false, None));
+        let (elements, final_tie, final_key) =
+            compile_part_slice(part_row.slice(), init_tie, init_key);
+        if let Some(cs) = cross_states.get_mut(part_idx) {
+            cs.prev_tie = final_tie;
+            cs.prev_slur_key = final_key;
+        }
+
         match part_row.rendered_slice() {
-            Some(slice) => {
+            Some(_) => {
                 let label = part_row.name().cloned().unwrap_or_default();
                 let id = RowId(
                     part_row
@@ -28,7 +69,6 @@ fn compile_measure(measure: &MultiPartMeasure, bar_number: usize) -> MeasureBloc
                         .cloned()
                         .unwrap_or_else(|| format!("__anon_{part_idx}")),
                 );
-                let elements = compile_part_slice(slice);
                 rows.push(MeasureRow {
                     id,
                     label,
@@ -244,16 +284,24 @@ struct PartState<'a> {
     prev_tie: &'a mut bool,
     prev_slur_key: &'a mut Option<SlurKey>,
     col: &'a mut u32,
+    /// True when this measure started with an inherited open tie from the previous measure.
+    /// Consumed (set false) after the first close-arc is emitted.
+    cross_measure_open: &'a mut bool,
 }
 
-fn compile_part_slice(slice: &PartSlice) -> Vec<ColumnElement> {
+fn compile_part_slice(
+    slice: &PartSlice,
+    initial_prev_tie: bool,
+    initial_prev_slur_key: Option<SlurKey>,
+) -> (Vec<ColumnElement>, bool, Option<SlurKey>) {
     let mut elements: Vec<ColumnElement> = Vec::new();
     let mut beam_buf: Vec<BeamEntry> = Vec::new();
     let mut pending_chains: Vec<Vec<(u32, SlurKey)>> = Vec::new();
-    let mut prev_tie = false;
-    let mut prev_slur_key: Option<SlurKey> = None;
+    let mut prev_tie = initial_prev_tie;
+    let mut prev_slur_key: Option<SlurKey> = initial_prev_slur_key;
     let mut col: u32 = 0;
     let measure_col_start: u32 = 0;
+    let mut cross_measure_open = initial_prev_tie;
 
     let mut lyrics_iter = slice.lyrics.as_ref().map(|l| l.syllables.iter());
 
@@ -264,6 +312,7 @@ fn compile_part_slice(slice: &PartSlice) -> Vec<ColumnElement> {
         prev_tie: &mut prev_tie,
         prev_slur_key: &mut prev_slur_key,
         col: &mut col,
+        cross_measure_open: &mut cross_measure_open,
     };
 
     for event in &slice.notes.events {
@@ -289,12 +338,25 @@ fn compile_part_slice(slice: &PartSlice) -> Vec<ColumnElement> {
     // Flush any remaining beam
     flush_beam_buffer(state.beam_buf, state.elements);
 
-    // Flush any remaining chains (end of measure)
+    // Flush any remaining chains (end of measure).
+    // Open chains (len == 1) are cross-measure: emit an arc from the tied note to the barline.
+    let barline_col = *state.col;
     for chain in state.pending_chains.iter() {
         if chain.len() > 1 {
             flush_chain(chain, state.elements);
+        } else if let Some((chain_col, _)) = chain.first() {
+            state.elements.push(ColumnElement {
+                column: *chain_col,
+                content: ElementContent::TieOrSlur {
+                    from_column: *chain_col,
+                    to_column: barline_col,
+                },
+            });
         }
     }
+
+    let final_tie = *state.prev_tie;
+    let final_key = state.prev_slur_key.clone();
 
     // Bar line at end
     elements.push(ColumnElement {
@@ -302,7 +364,7 @@ fn compile_part_slice(slice: &PartSlice) -> Vec<ColumnElement> {
         content: ElementContent::BarLine,
     });
 
-    elements
+    (elements, final_tie, final_key)
 }
 
 fn compile_note(
@@ -342,6 +404,17 @@ fn compile_note(
     );
 
     let is_tie_continuation = *state.prev_tie && state.prev_slur_key.as_ref() == Some(&slur_key);
+
+    // Emit close arc for cross-measure tie continuation (first continuation note only).
+    if *state.cross_measure_open && is_tie_continuation {
+        state.elements.push(ColumnElement {
+            column: *state.col,
+            content: ElementContent::TieOrSlurClose {
+                to_column: *state.col,
+            },
+        });
+        *state.cross_measure_open = false;
+    }
 
     // Emit lyric for NotesWithLyrics parts (skip tie-continuation notes)
     if kind == PartKind::NotesWithLyrics && !is_tie_continuation {

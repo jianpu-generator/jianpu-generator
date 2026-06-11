@@ -7,6 +7,13 @@ fn score_from(source: &str) -> crate::ast::grouped::Score {
     group(doc).unwrap()
 }
 
+/// Lyrics-part document with one track.
+fn lyrics_doc(score_content: &str) -> String {
+    format!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nS = notes lyrics\n\n[score]\n{score_content}"
+    )
+}
+
 /// Minimal one-part (notes) document. `score_content` is everything after `[score]\n`.
 fn notes_doc(score_content: &str) -> String {
     format!(
@@ -216,4 +223,78 @@ fn note_head_column_is_zero_indexed() {
         .find(|e| matches!(e.content, ElementContent::NoteHead { .. }))
         .unwrap();
     assert_eq!(note_head.column, 0);
+}
+
+#[test]
+fn cross_measure_tie_does_not_consume_lyric_slot_for_continuation_note() {
+    // Bar 1: "1 2 3 (4" has 4 lyric slots → "ha ta ba na"
+    // Bar 2: "4) 5 6 7" → note 4 is a tie continuation, only 3 lyric slots → "sa da ko"
+    // "sa" must be assigned to note 5 (column 4), not note 4) (column 0).
+    let score = score_from(&lyrics_doc(concat!(
+        "(time=4/4 key=C4 bpm=120)\n",
+        "1 2 3 (4\n",
+        "ha ta ba na\n",
+        "\n",
+        "4) 5 6 7\n",
+        "sa da ko\n",
+    )));
+    let blocks = compile(&score);
+    let bar2 = &blocks[1].rows[0];
+    // "sa" should be at column 4 (note 5, after the tied note 4 at column 0)
+    let lyrics: Vec<_> = bar2
+        .elements
+        .iter()
+        .filter_map(|e| {
+            if let ElementContent::Lyric(text) = &e.content {
+                Some((e.column, text.as_str()))
+            } else {
+                None
+            }
+        })
+        .collect();
+    assert_eq!(
+        lyrics,
+        vec![(4, "sa"), (8, "da"), (12, "ko")],
+        "lyrics should be assigned to notes 5, 6, 7 (columns 4, 8, 12), not to the tied continuation note 4"
+    );
+}
+
+#[test]
+fn cross_measure_tie_emits_slur_arc_at_end_of_bar_and_start_of_next() {
+    // Bar 1: "1 2 3 (4" — the tied note 4 is at column 12; a slur arc should be
+    //   emitted from column 12 toward the barline (column 16).
+    // Bar 2: "4) 5 6 7" — a close arc should be emitted for the tie continuation
+    //   note at column 0.
+    let score = score_from(&notes_doc(concat!(
+        "(time=4/4 key=C4 bpm=120)\n",
+        "1 2 3 (4\n",
+        "\n",
+        "4) 5 6 7\n",
+    )));
+    let blocks = compile(&score);
+
+    let bar1_row = &blocks[0].rows[0];
+    let open_arc = bar1_row.elements.iter().find(|e| {
+        matches!(
+            &e.content,
+            ElementContent::TieOrSlur {
+                from_column: 12,
+                to_column: 16
+            }
+        )
+    });
+    assert!(
+        open_arc.is_some(),
+        "bar 1 should have a TieOrSlur arc from column 12 (note 4) to column 16 (barline)"
+    );
+
+    let bar2_row = &blocks[1].rows[0];
+    let close_arc = bar2_row
+        .elements
+        .iter()
+        .find(|e| matches!(&e.content, ElementContent::TieOrSlurClose { to_column: 0 }));
+    assert!(
+        close_arc.is_some(),
+        "bar 2 should have a TieOrSlurClose arc to column 0 (the continuation note)"
+    );
 }

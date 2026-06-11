@@ -259,6 +259,17 @@ fn emit_row_content(
                     content: AbsoluteContent::TieOrSlur { width: x2 - x1 },
                 });
             }
+            ElementContent::TieOrSlurClose { to_column } => {
+                let x2 = ctx.x_col(measure_start, *to_column) + ctx.column_width * 0.5;
+                let x1 = ctx.x_col(measure_start, *to_column);
+                if x2 > x1 {
+                    out.push(AbsoluteElement {
+                        x: x1,
+                        y: part_y_base + rh,
+                        content: AbsoluteContent::TieOrSlur { width: x2 - x1 },
+                    });
+                }
+            }
             ElementContent::BarLine => {
                 // Only emit from first part to avoid duplicates
                 if part_idx == 0 {
