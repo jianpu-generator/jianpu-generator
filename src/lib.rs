@@ -1,5 +1,7 @@
 pub mod ast;
 pub mod combiner;
+pub mod compiler;
+pub mod compositor;
 pub mod desugar;
 pub mod error;
 pub mod error_reporter;
@@ -7,7 +9,9 @@ pub mod grouper;
 pub mod grouping;
 pub mod layout;
 pub mod parser;
+pub mod render_config;
 pub mod renderer;
+pub mod serializer;
 pub mod utils;
 
 #[cfg(feature = "midi")]
@@ -40,10 +44,18 @@ pub fn compile(source: &str, filename: &str) -> Result<Score, JianPuError> {
 
 /// Layout and render a [`Score`] into one SVG string per page.
 pub fn render_svgs(score: &Score) -> Vec<String> {
-    let row_height = score.metadata.row_height;
-    let note_number_width = score.metadata.note_number_width;
-    let pages = layout::layout(score, 595.0, 842.0);
-    renderer::render(&pages, row_height, note_number_width)
+    use layout::new_types::Header;
+    let config = render_config::RenderConfig::from_metadata(&score.metadata);
+    let header = Header {
+        title: score.metadata.title.clone(),
+        subtitle: score.metadata.subtitle.clone(),
+        author: score.metadata.author.clone(),
+    };
+    let blocks = compiler::compile(score);
+    let pages = layout::new_layout::layout_new(&blocks, &config, &header, 595.0, 842.0);
+    let abs = compositor::compose(&pages, &config);
+    let docs = renderer::new_renderer::render_new(&abs, &config);
+    serializer::serialize(&docs)
 }
 
 /// Parse, group, and render a `.jianpu` source string into SVG page strings.

@@ -191,6 +191,61 @@ pub struct GroupedNote {
     pub dotted: bool,
 }
 
+impl GroupedChordNote {
+    pub fn format_symbol(&self) -> String {
+        use crate::ast::parsed::{Accidental, Extension, JianPuPitch, TriadQuality};
+
+        let degree = match self.degree {
+            JianPuPitch::One => '1',
+            JianPuPitch::Two => '2',
+            JianPuPitch::Three => '3',
+            JianPuPitch::Four => '4',
+            JianPuPitch::Five => '5',
+            JianPuPitch::Six => '6',
+            JianPuPitch::Seven => '7',
+        };
+        let accidental = match self.accidental {
+            Accidental::Sharp => "♯",
+            Accidental::Flat => "♭",
+            Accidental::Natural => "",
+        };
+        let triad = match self.triad {
+            TriadQuality::Major => "",
+            TriadQuality::Minor => "m",
+            TriadQuality::Diminished => "°",
+            TriadQuality::Augmented => "⁺",
+        };
+        let extension = match &self.extension {
+            Some(Extension::DominantSeventh) => "⁷",
+            Some(Extension::MajorSeventh) => "△⁷",
+            None => "",
+        };
+        let mut result = format!("{degree}{accidental}{triad}{extension}");
+
+        if let Some(bass) = &self.bass {
+            let bass_degree = match bass.degree {
+                JianPuPitch::One => '1',
+                JianPuPitch::Two => '2',
+                JianPuPitch::Three => '3',
+                JianPuPitch::Four => '4',
+                JianPuPitch::Five => '5',
+                JianPuPitch::Six => '6',
+                JianPuPitch::Seven => '7',
+            };
+            let bass_acc = match bass.accidental {
+                Accidental::Sharp => "♯",
+                Accidental::Flat => "♭",
+                Accidental::Natural => "",
+            };
+            result.push('/');
+            result.push(bass_degree);
+            result.push_str(bass_acc);
+        }
+
+        result
+    }
+}
+
 #[derive(Clone)]
 pub struct GroupedRest {
     /// Duration in quarter-beats, including any beats added by `-` extensions.
