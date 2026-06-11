@@ -112,3 +112,32 @@ fn ditto_parts_produce_smaller_svg_than_non_ditto() {
         "SVG with ditto Alto should be smaller than SVG with explicit Alto notes"
     );
 }
+
+#[test]
+fn ditto_part_label_is_merged_into_source_row_label() {
+    let input = concat!(
+        "[metadata]\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "[parts]\n",
+        "Soprano (S) = notes\n",
+        "Alto (A) = notes\n",
+        "\n",
+        "[score]\n",
+        "(time=4/4 key=C4 bpm=120)\n",
+        "1 2 3 4\n",
+        "\"\n",
+    );
+    let score = compile(input, "test.jianpu").unwrap();
+    let blocks = crate::compiler::compile(&score);
+    assert_eq!(
+        blocks[0].rows.len(),
+        1,
+        "ditto Alto should produce no separate row"
+    );
+    assert_eq!(
+        blocks[0].rows[0].label, "S, A",
+        "source row label should include ditto part label"
+    );
+}
