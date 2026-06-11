@@ -1,5 +1,22 @@
 use crate::compiler::types::{Decoration, ElementContent, MeasureBlock, RowId};
 use crate::layout::new_types::{Footer, Header, Page, RowLabel, System};
+
+fn build_row_labels(block: &MeasureBlock, row_height_pt: f32) -> Vec<RowLabel> {
+    let mut y_offset_pt = 0.0f32;
+    block
+        .rows
+        .iter()
+        .map(|r| {
+            let label = RowLabel {
+                id: r.id.clone(),
+                text: r.label.clone(),
+                y_offset_pt,
+            };
+            y_offset_pt += infer_row_height(r) as f32 * row_height_pt;
+            label
+        })
+        .collect()
+}
 use crate::render_config::RenderConfig;
 
 use super::PAGE_MARGIN;
@@ -81,6 +98,8 @@ pub fn layout_new(
     page_width_pt: f32,
     page_height_pt: f32,
 ) -> Vec<Page> {
+    let row_height_pt = config.row_height as f32;
+
     // --- Phase 1: break blocks into systems ---
     let mut systems: Vec<System> = Vec::new();
     let mut current_measures: Vec<MeasureBlock> = Vec::new();
@@ -101,14 +120,7 @@ pub fn layout_new(
         if needs_new_system {
             // Flush current system
             if let Some(first) = current_measures.first() {
-                let row_labels = first
-                    .rows
-                    .iter()
-                    .map(|r| RowLabel {
-                        id: r.id.clone(),
-                        text: r.label.clone(),
-                    })
-                    .collect();
+                let row_labels = build_row_labels(first, row_height_pt);
                 systems.push(System {
                     row_labels,
                     measures: std::mem::take(&mut current_measures),
@@ -123,14 +135,7 @@ pub fn layout_new(
 
     // Flush any remaining measures into a final system
     if let Some(first) = current_measures.first() {
-        let row_labels = first
-            .rows
-            .iter()
-            .map(|r| RowLabel {
-                id: r.id.clone(),
-                text: r.label.clone(),
-            })
-            .collect();
+        let row_labels = build_row_labels(first, row_height_pt);
         systems.push(System {
             row_labels,
             measures: current_measures,
@@ -141,7 +146,6 @@ pub fn layout_new(
     let has_subtitle = header.subtitle.is_some();
     let header_rows: u32 = if has_subtitle { 3 } else { 2 };
     let footer_rows: u32 = 1;
-    let row_height_pt = config.row_height as f32;
     let usable_height = page_height_pt - 2.0 * PAGE_MARGIN;
     let max_rows_per_page =
         (usable_height / row_height_pt).floor() as u32 - header_rows - footer_rows;

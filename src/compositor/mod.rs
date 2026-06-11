@@ -331,17 +331,11 @@ fn emit_system(
     });
 
     // Row labels
-    let mut part_y_offset = 0.0f32;
-    for (row_idx, label) in system.row_labels.iter().enumerate() {
-        let part_height = first_block
-            .rows
-            .get(row_idx)
-            .map(infer_row_height)
-            .unwrap_or(3) as f32;
+    for label in &system.row_labels {
         if !label.text.is_empty() {
             out.push(AbsoluteElement {
                 x: PAGE_MARGIN + label_width_pt * 0.5,
-                y: system_y + directive_extra_y + part_y_offset + row_height_pt * 1.5,
+                y: system_y + directive_extra_y + label.y_offset_pt + row_height_pt * 1.5,
                 content: AbsoluteContent::Text {
                     content: label.text.clone(),
                     font_size: ctx.base_font_size * 0.8,
@@ -353,7 +347,6 @@ fn emit_system(
                 },
             });
         }
-        part_y_offset += part_height;
     }
 
     // Decorations for each measure

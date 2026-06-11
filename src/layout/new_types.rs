@@ -19,6 +19,7 @@ pub struct System {
 pub struct RowLabel {
     pub id: RowId,
     pub text: String,
+    pub y_offset_pt: f32,
 }
 
 #[derive(Debug, Clone)]

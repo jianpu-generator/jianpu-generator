@@ -1,3 +1,4 @@
+use crate::ast::parsed::JianPuPitch;
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
 use crate::layout::new_layout::layout_new;
 use crate::layout::new_types::Header;
@@ -76,6 +77,65 @@ fn row_labels_come_from_first_block_in_system() {
         .map(|l| l.text.as_str())
         .collect();
     assert_eq!(labels, vec!["Soprano"]);
+}
+
+#[test]
+fn multi_part_row_labels_have_distinct_y_offsets() {
+    // Regression: y_offset_pt was not accumulated, causing all labels to have y=0.
+    let block = MeasureBlock {
+        rows: vec![
+            MeasureRow {
+                id: RowId("S".to_string()),
+                label: "Soprano".to_string(),
+                elements: vec![
+                    ColumnElement {
+                        column: 0,
+                        content: ElementContent::NoteHead {
+                            pitch: JianPuPitch::One,
+                            octave: 0,
+                            dotted: false,
+                        },
+                    },
+                    ColumnElement {
+                        column: 3,
+                        content: ElementContent::BarLine,
+                    },
+                ],
+            },
+            MeasureRow {
+                id: RowId("A".to_string()),
+                label: "Alto".to_string(),
+                elements: vec![
+                    ColumnElement {
+                        column: 0,
+                        content: ElementContent::NoteHead {
+                            pitch: JianPuPitch::Three,
+                            octave: 0,
+                            dotted: false,
+                        },
+                    },
+                    ColumnElement {
+                        column: 3,
+                        content: ElementContent::BarLine,
+                    },
+                ],
+            },
+        ],
+        decorations: vec![],
+    };
+    let pages = layout_new(&[block], &config(), &header(), 595.0, 842.0);
+    let labels = &pages[0].systems[0].row_labels;
+    assert_eq!(labels.len(), 2);
+    assert_eq!(
+        labels[0].y_offset_pt, 0.0,
+        "first label should start at y=0"
+    );
+    assert!(
+        labels[1].y_offset_pt > labels[0].y_offset_pt,
+        "second label y_offset_pt ({}) must be greater than first ({})",
+        labels[1].y_offset_pt,
+        labels[0].y_offset_pt
+    );
 }
 
 #[test]
