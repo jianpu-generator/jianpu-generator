@@ -17,27 +17,36 @@ pub fn compile(score: &Score) -> Vec<MeasureBlock> {
 
 fn compile_measure(measure: &MultiPartMeasure, bar_number: usize) -> MeasureBlock {
     let decorations = collect_decorations(measure, bar_number);
-    let rows = measure
-        .parts
-        .iter()
-        .enumerate()
-        .filter_map(|(part_idx, part_row)| {
-            let slice = part_row.rendered_slice()?;
-            let label = part_row.name().cloned().unwrap_or_default();
-            let id = RowId(
-                part_row
-                    .name()
-                    .cloned()
-                    .unwrap_or_else(|| format!("__anon_{part_idx}")),
-            );
-            let elements = compile_part_slice(slice);
-            Some(MeasureRow {
-                id,
-                label,
-                elements,
-            })
-        })
-        .collect();
+    let mut rows: Vec<MeasureRow> = Vec::new();
+    for (part_idx, part_row) in measure.parts.iter().enumerate() {
+        match part_row.rendered_slice() {
+            Some(slice) => {
+                let label = part_row.name().cloned().unwrap_or_default();
+                let id = RowId(
+                    part_row
+                        .name()
+                        .cloned()
+                        .unwrap_or_else(|| format!("__anon_{part_idx}")),
+                );
+                let elements = compile_part_slice(slice);
+                rows.push(MeasureRow {
+                    id,
+                    label,
+                    elements,
+                });
+            }
+            None => {
+                // Ditto row: append its label to the source row's label.
+                if let Some(last) = rows.last_mut() {
+                    let ditto_label = part_row.name().map(String::as_str).unwrap_or("");
+                    if !ditto_label.is_empty() {
+                        last.label.push_str(", ");
+                        last.label.push_str(ditto_label);
+                    }
+                }
+            }
+        }
+    }
     MeasureBlock { rows, decorations }
 }
 
