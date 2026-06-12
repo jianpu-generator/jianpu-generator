@@ -329,12 +329,19 @@ fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow {
     let total_musical_cols: u32 = system.iter().map(block_column_width).sum();
     let column_count = LABEL_COLS + total_musical_cols;
     let mut elements: Vec<GridElement> = Vec::new();
+    // Each decoration is h-stacked by advancing this cursor.
+    // column_span of 4 gives each item roughly the same width as the label area.
+    let mut dec_col = LABEL_COLS;
+    const DEC_SPAN: u32 = LABEL_COLS;
 
     for dec in &first.decorations {
+        let col = dec_col;
+        let span = (column_count.saturating_sub(col)).max(DEC_SPAN);
+        dec_col += DEC_SPAN;
         match dec {
             Decoration::Bpm(bpm) => elements.push(GridElement {
-                column: LABEL_COLS,
-                column_span: column_count - LABEL_COLS,
+                column: col,
+                column_span: span,
                 halign: HAlign::Start,
                 valign: VAlign::Center,
                 content: GridContent::Bpm(*bpm),
@@ -343,8 +350,8 @@ fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow {
                 numerator,
                 denominator,
             } => elements.push(GridElement {
-                column: LABEL_COLS,
-                column_span: column_count - LABEL_COLS,
+                column: col,
+                column_span: span,
                 halign: HAlign::Start,
                 valign: VAlign::Center,
                 content: GridContent::TimeSignature {
@@ -353,15 +360,15 @@ fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow {
                 },
             }),
             Decoration::SectionLabel(s) => elements.push(GridElement {
-                column: LABEL_COLS,
-                column_span: column_count - LABEL_COLS,
+                column: col,
+                column_span: span,
                 halign: HAlign::Start,
                 valign: VAlign::Center,
                 content: GridContent::SectionLabel(s.clone()),
             }),
             Decoration::BarNumber(n) => elements.push(GridElement {
-                column: LABEL_COLS,
-                column_span: column_count - LABEL_COLS,
+                column: col,
+                column_span: span,
                 halign: HAlign::Start,
                 valign: VAlign::Bottom,
                 content: GridContent::BarNumber(*n),
