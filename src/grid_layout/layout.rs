@@ -318,30 +318,37 @@ fn has_any_decoration(block: &MeasureBlock) -> bool {
     !block.decorations.is_empty()
 }
 
+const DECO_COLS: u32 = 12;
+
 fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow {
     let Some(first) = system.first() else {
         return GridRow {
             height_pt: decoration_row_height(base),
-            column_count: 1,
+            column_count: DECO_COLS,
             elements: vec![],
         };
     };
-    let total_musical_cols: u32 = system.iter().map(block_column_width).sum();
-    let column_count = LABEL_COLS + total_musical_cols;
     let mut elements: Vec<GridElement> = Vec::new();
-    // Each decoration is h-stacked by advancing this cursor.
-    // column_span of 4 gives each item roughly the same width as the label area.
-    let mut dec_col = LABEL_COLS;
-    const DEC_SPAN: u32 = LABEL_COLS;
+    let mut dec_col: u32 = 1;
 
-    for dec in &first.decorations {
+    fn deco_order(d: &Decoration) -> u8 {
+        match d {
+            Decoration::SectionLabel(_) => 0,
+            Decoration::Bpm(_) => 1,
+            Decoration::TimeSignature { .. } => 2,
+            Decoration::BarNumber(_) => 3,
+        }
+    }
+    let mut sorted_decorations = first.decorations.clone();
+    sorted_decorations.sort_by_key(deco_order);
+
+    for dec in &sorted_decorations {
         let col = dec_col;
-        let span = (column_count.saturating_sub(col)).max(DEC_SPAN);
-        dec_col += DEC_SPAN;
+        dec_col += 1;
         match dec {
             Decoration::Bpm(bpm) => elements.push(GridElement {
                 column: col,
-                column_span: span,
+                column_span: 1,
                 halign: HAlign::Start,
                 valign: VAlign::Center,
                 content: GridContent::Bpm(*bpm),
@@ -351,7 +358,7 @@ fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow {
                 denominator,
             } => elements.push(GridElement {
                 column: col,
-                column_span: span,
+                column_span: 1,
                 halign: HAlign::Start,
                 valign: VAlign::Center,
                 content: GridContent::TimeSignature {
@@ -361,14 +368,14 @@ fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow {
             }),
             Decoration::SectionLabel(s) => elements.push(GridElement {
                 column: col,
-                column_span: span,
+                column_span: 1,
                 halign: HAlign::Start,
                 valign: VAlign::Center,
                 content: GridContent::SectionLabel(s.clone()),
             }),
             Decoration::BarNumber(n) => elements.push(GridElement {
                 column: col,
-                column_span: span,
+                column_span: 1,
                 halign: HAlign::Start,
                 valign: VAlign::Bottom,
                 content: GridContent::BarNumber(*n),
@@ -378,7 +385,7 @@ fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow {
 
     GridRow {
         height_pt: decoration_row_height(base),
-        column_count,
+        column_count: DECO_COLS,
         elements,
     }
 }
