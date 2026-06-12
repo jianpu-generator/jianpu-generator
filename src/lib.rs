@@ -2,9 +2,11 @@ pub mod ast;
 pub mod combiner;
 pub mod compiler;
 pub mod compositor;
+pub mod coordinate_resolver;
 pub mod desugar;
 pub mod error;
 pub mod error_reporter;
+pub mod grid_layout;
 pub mod grouper;
 pub mod grouping;
 pub mod layout;
@@ -44,16 +46,15 @@ pub fn compile(source: &str, filename: &str) -> Result<Score, JianPuError> {
 
 /// Layout and render a [`Score`] into one SVG string per page.
 pub fn render_svgs(score: &Score) -> Vec<String> {
-    use layout::new_types::Header;
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
-    let header = Header {
+    let header = grid_layout::types::Header {
         title: score.metadata.title.clone(),
         subtitle: score.metadata.subtitle.clone(),
         author: score.metadata.author.clone(),
     };
     let blocks = compiler::compile(score);
-    let pages = layout::new_layout::layout_new(&blocks, &config, &header, 595.0, 842.0);
-    let abs = compositor::compose(&pages, &config);
+    let grid_pages = grid_layout::layout(&blocks, &config, &header, 595.0, 842.0);
+    let abs = coordinate_resolver::resolve(&grid_pages);
     let docs = renderer::new_renderer::render_new(&abs, &config);
     serializer::serialize(&docs)
 }
