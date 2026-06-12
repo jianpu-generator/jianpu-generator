@@ -129,7 +129,7 @@ fn emit_decorations(
                         italic: false,
                     },
                 });
-                let line_width = slot_width * 0.6;
+                let line_width = ctx.base_font_size;
                 out.push(AbsoluteElement {
                     x: x - line_width * 0.5,
                     y: directive_y,
