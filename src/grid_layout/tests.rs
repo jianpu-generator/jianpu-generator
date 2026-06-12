@@ -210,6 +210,35 @@ fn column_count_is_label_cols_plus_musical_cols() {
     assert_eq!(rows[0].column_count, 8);
 }
 
+// ── decoration row helpers ────────────────────────────────────────────────────
+
+fn make_block_with_decorations(
+    decorations: Vec<crate::compiler::types::Decoration>,
+) -> MeasureBlock {
+    use crate::compiler::types::MeasureBlock;
+    MeasureBlock {
+        rows: vec![MeasureRow {
+            id: RowId("S".to_string()),
+            label: "S".to_string(),
+            elements: vec![
+                ColumnElement {
+                    column: 0,
+                    content: ElementContent::NoteHead {
+                        pitch: JianPuPitch::One,
+                        octave: 0,
+                        dotted: false,
+                    },
+                },
+                ColumnElement {
+                    column: 3,
+                    content: ElementContent::BarLine,
+                },
+            ],
+        }],
+        decorations,
+    }
+}
+
 // ── layout() tests ────────────────────────────────────────────────────────────
 
 fn hdr() -> Header {
@@ -297,4 +326,96 @@ fn layout_with_bpm_decoration_has_decoration_row() {
         .flat_map(|r| r.elements.iter())
         .any(|e| matches!(e.content, GridContent::Bpm(120)));
     assert!(has_bpm, "should have Bpm(120) element");
+}
+
+#[test]
+fn decoration_row_has_fixed_column_count() {
+    use crate::compiler::types::Decoration;
+    let block = make_block_with_decorations(vec![Decoration::Bpm(120)]);
+    let pages = layout(&[block], &cfg_wide(), &hdr(), 595.0, 842.0);
+    let deco_row = pages[0]
+        .rows
+        .iter()
+        .find(|r| {
+            r.elements
+                .iter()
+                .any(|e| matches!(e.content, GridContent::Bpm(_)))
+        })
+        .expect("should have a decoration row with Bpm");
+    assert_eq!(
+        deco_row.column_count, 12,
+        "decoration row should use fixed DECO_COLS=12"
+    );
+}
+
+#[test]
+fn decoration_items_start_at_column_1() {
+    use crate::compiler::types::Decoration;
+    let block = make_block_with_decorations(vec![Decoration::Bpm(120)]);
+    let pages = layout(&[block], &cfg_wide(), &hdr(), 595.0, 842.0);
+    let bpm_el = pages[0]
+        .rows
+        .iter()
+        .flat_map(|r| r.elements.iter())
+        .find(|e| matches!(e.content, GridContent::Bpm(_)))
+        .expect("should have Bpm element");
+    assert_eq!(bpm_el.column, 1, "first decoration should be at column 1");
+}
+
+#[test]
+fn section_label_ordered_before_bpm_regardless_of_declaration_order() {
+    use crate::compiler::types::Decoration;
+    // Bpm declared first — SectionLabel should still win column 1
+    let block = make_block_with_decorations(vec![
+        Decoration::Bpm(120),
+        Decoration::SectionLabel("A".to_string()),
+    ]);
+    let pages = layout(&[block], &cfg_wide(), &hdr(), 595.0, 842.0);
+    let section_col = pages[0]
+        .rows
+        .iter()
+        .flat_map(|r| r.elements.iter())
+        .find(|e| matches!(e.content, GridContent::SectionLabel(_)))
+        .expect("should have SectionLabel element")
+        .column;
+    let bpm_col = pages[0]
+        .rows
+        .iter()
+        .flat_map(|r| r.elements.iter())
+        .find(|e| matches!(e.content, GridContent::Bpm(_)))
+        .expect("should have Bpm element")
+        .column;
+    assert!(
+        section_col < bpm_col,
+        "SectionLabel (col {section_col}) should come before Bpm (col {bpm_col})"
+    );
+}
+
+#[test]
+fn multiple_decorations_occupy_consecutive_columns_starting_at_1() {
+    use crate::compiler::types::Decoration;
+    let block = make_block_with_decorations(vec![
+        Decoration::Bpm(120),
+        Decoration::TimeSignature {
+            numerator: 4,
+            denominator: 4,
+        },
+    ]);
+    let pages = layout(&[block], &cfg_wide(), &hdr(), 595.0, 842.0);
+    let bpm_col = pages[0]
+        .rows
+        .iter()
+        .flat_map(|r| r.elements.iter())
+        .find(|e| matches!(e.content, GridContent::Bpm(_)))
+        .expect("should have Bpm element")
+        .column;
+    let time_col = pages[0]
+        .rows
+        .iter()
+        .flat_map(|r| r.elements.iter())
+        .find(|e| matches!(e.content, GridContent::TimeSignature { .. }))
+        .expect("should have TimeSignature element")
+        .column;
+    assert_eq!(bpm_col, 1, "Bpm should be at column 1");
+    assert_eq!(time_col, 2, "TimeSignature should be at column 2");
 }
