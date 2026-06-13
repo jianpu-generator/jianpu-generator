@@ -49,6 +49,35 @@ fn resolve_page(page: &GridPage, note_number_width: f32) -> AbsolutePage {
                 });
                 continue;
             }
+            // Arc variants bypass HAlign; x and width are computed from column positions.
+            if matches!(
+                el.content,
+                GridContent::TieOrSlur | GridContent::TieOrSlurTail | GridContent::TieOrSlurHead
+            ) {
+                let arc_x = match &el.content {
+                    GridContent::TieOrSlur | GridContent::TieOrSlurTail => {
+                        x_start + col_width * 0.5
+                    }
+                    GridContent::TieOrSlurHead => x_start,
+                    _ => unreachable!(),
+                };
+                let arc_width = match &el.content {
+                    GridContent::TieOrSlur => (el.column_span as f32 - 1.0) * col_width,
+                    GridContent::TieOrSlurTail => {
+                        el.column_span as f32 * col_width - col_width * 0.5
+                    }
+                    GridContent::TieOrSlurHead => {
+                        (el.column_span as f32 - 1.0) * col_width + col_width * 0.5
+                    }
+                    _ => unreachable!(),
+                };
+                elements.push(AbsoluteElement {
+                    x: arc_x,
+                    y,
+                    content: AbsoluteContent::TieOrSlur { width: arc_width },
+                });
+                continue;
+            }
             if let Some(content) = grid_to_absolute(&el.content, span_width, el.halign) {
                 elements.push(AbsoluteElement { x, y, content });
             }
@@ -103,9 +132,9 @@ fn grid_to_absolute(
             width: span_width,
             level: *level,
         }),
-        GridContent::TieOrSlur => Some(AbsoluteContent::TieOrSlur { width: span_width }),
-        GridContent::TieOrSlurTail => Some(AbsoluteContent::TieOrSlur { width: span_width }),
-        GridContent::TieOrSlurHead => Some(AbsoluteContent::TieOrSlur { width: span_width }),
+        GridContent::TieOrSlur | GridContent::TieOrSlurTail | GridContent::TieOrSlurHead => {
+            unreachable!("arc variants are handled as special cases before grid_to_absolute")
+        }
         GridContent::BarLine { height_pt } => Some(AbsoluteContent::BarLine { height: *height_pt }),
         GridContent::HorizontalLine => Some(AbsoluteContent::HorizontalLine { width: span_width }),
         GridContent::RowLabel(s) => Some(AbsoluteContent::Text {
