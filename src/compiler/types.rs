@@ -57,7 +57,7 @@ pub struct SlurSpan {
 }
 
 /// Return value of `compiler::compile`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CompileResult {
     pub blocks: Vec<MeasureBlock>,
     pub slur_spans: Vec<SlurSpan>,
