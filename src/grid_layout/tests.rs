@@ -65,7 +65,7 @@ fn lyric_row(id: &str) -> MeasureRow {
 use crate::compiler::types::{CompileResult, MeasureBlock};
 use crate::grid_layout::layout::{
     chord_part_sub_row_heights, expand_system_to_rows, is_chord_only_row, is_lyric_row, layout,
-    note_part_sub_row_heights, pack_into_systems,
+    note_part_sub_row_heights, pack_into_systems, system_lyric_height_pt, system_musical_height_pt,
 };
 use std::collections::HashMap;
 
@@ -189,6 +189,63 @@ fn bar_line_element_has_positive_height_pt() {
     if let GridContent::BarLine { height_pt } = bar.content {
         assert!(height_pt > 0.0, "height_pt={height_pt}");
     }
+}
+
+fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
+    MeasureBlock {
+        rows: vec![
+            MeasureRow {
+                id: RowId("note".to_string()),
+                label: "note".to_string(),
+                elements: vec![
+                    ColumnElement {
+                        column: 0,
+                        content: ElementContent::NoteHead {
+                            pitch: JianPuPitch::One,
+                            octave: 0,
+                            dotted: false,
+                        },
+                    },
+                    ColumnElement {
+                        column: bar_col,
+                        content: ElementContent::BarLine,
+                    },
+                ],
+            },
+            MeasureRow {
+                id: RowId("lyric".to_string()),
+                label: "lyric".to_string(),
+                elements: vec![ColumnElement {
+                    column: 0,
+                    content: ElementContent::Lyric("la".to_string()),
+                }],
+            },
+        ],
+        decorations: vec![],
+    }
+}
+
+#[test]
+fn bar_line_height_includes_lyric_rows() {
+    let base = 30.0_f32;
+    let system = vec![make_block_with_lyric_part(3)];
+    let first = system.first().unwrap();
+    let expected_height =
+        system_musical_height_pt(first, base) + system_lyric_height_pt(first, base);
+
+    let rows = expand_system_to_rows(&system, base, &HashMap::new());
+    let bar = rows
+        .iter()
+        .flat_map(|r| r.elements.iter())
+        .find(|e| matches!(e.content, GridContent::BarLine { .. }))
+        .expect("should have a BarLine element");
+    let GridContent::BarLine { height_pt } = bar.content else {
+        panic!("expected BarLine content");
+    };
+    assert!(
+        (height_pt - expected_height).abs() < 0.001,
+        "bar height={height_pt}, expected={expected_height} (musical + lyric)"
+    );
 }
 
 #[test]

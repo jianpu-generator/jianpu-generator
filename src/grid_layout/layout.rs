@@ -172,18 +172,7 @@ pub(crate) fn pack_into_systems(
 }
 
 fn compute_bar_height(first: &MeasureBlock, base: f32) -> f32 {
-    first
-        .rows
-        .iter()
-        .filter(|r| !is_lyric_row(r))
-        .map(|r| {
-            if is_chord_only_row(r) {
-                chord_part_sub_row_heights(base).iter().sum::<f32>()
-            } else {
-                note_part_sub_row_heights(base).iter().sum::<f32>()
-            }
-        })
-        .sum()
+    system_musical_height_pt(first, base) + system_lyric_height_pt(first, base)
 }
 
 fn expand_lyric_part(
