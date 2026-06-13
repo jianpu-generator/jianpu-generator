@@ -1,24 +1,13 @@
 pub mod types;
 pub use types::*;
 
+mod slur_chains;
+use slur_chains::{extend_note_chains, flush_chain, PartCrossState, PendingSlurOpen, SlurKey};
+
 use crate::ast::grouped::{
     GroupedChordNote, GroupedNote, GroupedRest, MultiPartMeasure, NoteEvent, PartSlice, Score,
 };
-use crate::ast::parsed::{Extension, JianPuPitch, PartKind, TriadQuality};
-
-struct PendingSlurOpen {
-    measure_index: usize,
-    from_column: u32,
-}
-
-/// Per-part state carried across measure boundaries.
-struct PartCrossState {
-    prev_tie: bool,
-    prev_tie_column: Option<u32>,
-    prev_tie_measure: Option<usize>,
-    prev_slur_key: Option<SlurKey>,
-    pending_slur_opens: Vec<Option<PendingSlurOpen>>,
-}
+use crate::ast::parsed::PartKind;
 
 pub fn compile(score: &Score) -> CompileResult {
     let max_parts = score
@@ -27,15 +16,8 @@ pub fn compile(score: &Score) -> CompileResult {
         .map(|m| m.parts.len())
         .max()
         .unwrap_or(0);
-    let mut cross_states: Vec<PartCrossState> = (0..max_parts)
-        .map(|_| PartCrossState {
-            prev_tie: false,
-            prev_tie_column: None,
-            prev_tie_measure: None,
-            prev_slur_key: None,
-            pending_slur_opens: Vec::new(),
-        })
-        .collect();
+    let mut cross_states: Vec<PartCrossState> =
+        (0..max_parts).map(|_| PartCrossState::new()).collect();
 
     let mut slur_spans: Vec<SlurSpan> = Vec::new();
     let blocks = score
@@ -43,7 +25,13 @@ pub fn compile(score: &Score) -> CompileResult {
         .iter()
         .enumerate()
         .map(|(measure_index, measure)| {
-            compile_measure(measure, measure_index + 1, measure_index, &mut cross_states, &mut slur_spans)
+            compile_measure(
+                measure,
+                measure_index + 1,
+                measure_index,
+                &mut cross_states,
+                &mut slur_spans,
+            )
         })
         .collect();
 
@@ -58,48 +46,43 @@ fn compile_measure(
     slur_spans: &mut Vec<SlurSpan>,
 ) -> MeasureBlock {
     while cross_states.len() < measure.parts.len() {
-        cross_states.push(PartCrossState {
-            prev_tie: false,
-            prev_tie_column: None,
-            prev_tie_measure: None,
-            prev_slur_key: None,
-            pending_slur_opens: Vec::new(),
-        });
+        cross_states.push(PartCrossState::new());
     }
 
     let decorations = collect_decorations(measure, bar_number);
     let mut rows: Vec<MeasureRow> = Vec::new();
     for (part_idx, part_row) in measure.parts.iter().enumerate() {
-        let cs = &cross_states[part_idx];
+        let Some(cs) = cross_states.get(part_idx) else {
+            continue;
+        };
         let init_tie = cs.prev_tie;
         let init_tie_column = cs.prev_tie_column;
         let init_tie_measure = cs.prev_tie_measure;
         let init_key = cs.prev_slur_key.clone();
-        let init_pending_opens: Vec<Option<PendingSlurOpen>> = cs
-            .pending_slur_opens
-            .iter()
-            .map(|opt| {
-                opt.as_ref().map(|o| PendingSlurOpen {
-                    measure_index: o.measure_index,
-                    from_column: o.from_column,
-                })
-            })
-            .collect();
+        let init_pending_opens = cs.clone_pending_opens();
 
-        let (elements, final_tie, final_tie_column, final_tie_measure, final_key, final_pending_opens) =
-            compile_part_slice(
-                part_row.slice(),
-                init_tie,
-                init_tie_column,
-                init_tie_measure,
-                init_key,
-                init_pending_opens,
-                measure_index,
-                part_idx,
-                slur_spans,
-            );
+        let (
+            elements,
+            final_tie,
+            final_tie_column,
+            final_tie_measure,
+            final_key,
+            final_pending_opens,
+        ) = compile_part_slice(
+            part_row.slice(),
+            init_tie,
+            init_tie_column,
+            init_tie_measure,
+            init_key,
+            init_pending_opens,
+            measure_index,
+            part_idx,
+            slur_spans,
+        );
 
-        let cs = &mut cross_states[part_idx];
+        let Some(cs) = cross_states.get_mut(part_idx) else {
+            continue;
+        };
         cs.prev_tie = final_tie;
         cs.prev_tie_column = final_tie_column;
         cs.prev_tie_measure = final_tie_measure;
@@ -115,7 +98,11 @@ fn compile_measure(
                         .cloned()
                         .unwrap_or_else(|| format!("__anon_{part_idx}")),
                 );
-                rows.push(MeasureRow { id, label, elements });
+                rows.push(MeasureRow {
+                    id,
+                    label,
+                    elements,
+                });
             }
             None => {
                 if let Some(last) = rows.last_mut() {
@@ -226,128 +213,6 @@ fn compute_underline_levels(buffer: &[BeamEntry]) -> Vec<ColumnElement> {
     result
 }
 
-// ── Slur / tie chain state ────────────────────────────────────────────────────
-
-#[derive(Clone, PartialEq)]
-enum SlurKey {
-    Pitch(JianPuPitch),
-    Chord {
-        degree: JianPuPitch,
-        triad: TriadQuality,
-        extension: Option<Extension>,
-        bass_degree: Option<JianPuPitch>,
-    },
-    Rest,
-}
-
-impl SlurKey {
-    fn from_chord(chord: &GroupedChordNote) -> Self {
-        SlurKey::Chord {
-            degree: chord.degree.clone(),
-            triad: chord.triad.clone(),
-            extension: chord.extension.clone(),
-            bass_degree: chord.bass.as_ref().map(|b| b.degree.clone()),
-        }
-    }
-}
-
-/// Emit a `SlurSpan` for a completed chain.
-///
-/// `pending_open`: if `Some`, the chain started in a previous measure; use it as the origin
-/// instead of `chain.first()`. Passing `None` treats the whole chain as same-measure.
-fn flush_chain(
-    chain: &[(u32, SlurKey)],
-    pending_open: Option<&PendingSlurOpen>,
-    slur_spans: &mut Vec<SlurSpan>,
-    measure_index: usize,
-    part_index: usize,
-) {
-    if chain.len() <= 1 {
-        return;
-    }
-
-    let has_key_change = chain
-        .windows(2)
-        .any(|w| matches!((w.first(), w.get(1)), (Some(a), Some(b)) if a.1 != b.1));
-
-    if has_key_change {
-        if let (Some(first), Some(last)) = (chain.first(), chain.last()) {
-            let (from_measure, from_column) = pending_open
-                .map(|o| (o.measure_index, o.from_column))
-                .unwrap_or((measure_index, first.0));
-            slur_spans.push(SlurSpan {
-                part_index,
-                from_measure,
-                from_column,
-                to_measure: measure_index,
-                to_column: last.0,
-            });
-        }
-    }
-
-    for (w_idx, w) in chain.windows(2).enumerate() {
-        if let (Some(prev), Some(next)) = (w.first(), w.get(1)) {
-            if prev.1 == next.1 {
-                let (from_measure, from_column) = if w_idx == 0 {
-                    pending_open
-                        .map(|o| (o.measure_index, o.from_column))
-                        .unwrap_or((measure_index, prev.0))
-                } else {
-                    (measure_index, prev.0)
-                };
-                slur_spans.push(SlurSpan {
-                    part_index,
-                    from_measure,
-                    from_column,
-                    to_measure: measure_index,
-                    to_column: next.0,
-                });
-            }
-        }
-    }
-}
-
-fn extend_note_chains(
-    chains: &mut Vec<Vec<(u32, SlurKey)>>,
-    pending_slur_opens: &mut Vec<Option<PendingSlurOpen>>,
-    membership: u8,
-    continuation: u8,
-    col: u32,
-    key: &SlurKey,
-    slur_spans: &mut Vec<SlurSpan>,
-    measure_index: usize,
-    part_index: usize,
-) {
-    while chains.len() < membership as usize {
-        chains.push(Vec::new());
-    }
-    for chain in chains.iter_mut().take(membership as usize) {
-        chain.push((col, key.clone()));
-    }
-    for depth in (continuation as usize)..(membership as usize) {
-        if let Some(chain) = chains.get(depth) {
-            if chain.len() > 1 {
-                let pending_open = pending_slur_opens.get_mut(depth).and_then(|o| o.take());
-                flush_chain(chain, pending_open.as_ref(), slur_spans, measure_index, part_index);
-            } else if chain.len() == 1 {
-                // Cross-measure close: origin is in pending_slur_opens[depth]
-                if let Some(open) = pending_slur_opens.get_mut(depth).and_then(|o| o.take()) {
-                    slur_spans.push(SlurSpan {
-                        part_index,
-                        from_measure: open.measure_index,
-                        from_column: open.from_column,
-                        to_measure: measure_index,
-                        to_column: col,
-                    });
-                }
-            }
-        }
-        if let Some(chain) = chains.get_mut(depth) {
-            chain.clear();
-        }
-    }
-}
-
 // ── Part slice compiler ───────────────────────────────────────────────────────
 
 struct PartState<'a> {
@@ -366,6 +231,15 @@ struct PartState<'a> {
     part_index: usize,
 }
 
+type PartSliceResult = (
+    Vec<ColumnElement>,
+    bool,
+    Option<u32>,
+    Option<usize>,
+    Option<SlurKey>,
+    Vec<Option<PendingSlurOpen>>,
+);
+
 #[allow(clippy::too_many_arguments)]
 fn compile_part_slice(
     slice: &PartSlice,
@@ -377,14 +251,7 @@ fn compile_part_slice(
     measure_index: usize,
     part_index: usize,
     slur_spans: &mut Vec<SlurSpan>,
-) -> (
-    Vec<ColumnElement>,
-    bool,
-    Option<u32>,
-    Option<usize>,
-    Option<SlurKey>,
-    Vec<Option<PendingSlurOpen>>,
-) {
+) -> PartSliceResult {
     let mut elements: Vec<ColumnElement> = Vec::new();
     let mut beam_buf: Vec<BeamEntry> = Vec::new();
     let mut pending_chains: Vec<Vec<(u32, SlurKey)>> = Vec::new();
@@ -418,7 +285,13 @@ fn compile_part_slice(
     for event in &slice.notes.events {
         match event {
             NoteEvent::Note(note) => {
-                compile_note(&mut state, note, measure_col_start, &mut lyrics_iter, slice.kind);
+                compile_note(
+                    &mut state,
+                    note,
+                    measure_col_start,
+                    &mut lyrics_iter,
+                    slice.kind,
+                );
             }
             NoteEvent::Rest(rest) => {
                 compile_rest(&mut state, rest, measure_col_start);
@@ -436,8 +309,8 @@ fn compile_part_slice(
     let final_tie_column = *state.prev_tie_column;
     let final_tie_measure = *state.prev_tie_measure;
     let final_key = state.prev_slur_key.clone();
-    // Drop `state` so we can access `pending_slur_opens`, `pending_chains`, etc. directly.
-    drop(state);
+    // End state borrow so we can access `pending_slur_opens`, `pending_chains`, etc. directly.
+    let _ = state;
 
     // Flush remaining chains at end of measure.
     // Multi-note chains (len > 1) close as same-measure spans.
@@ -445,15 +318,23 @@ fn compile_part_slice(
     for (depth, chain) in pending_chains.iter().enumerate() {
         if chain.len() > 1 {
             let pending_open = pending_slur_opens.get_mut(depth).and_then(|o| o.take());
-            flush_chain(chain, pending_open.as_ref(), slur_spans, measure_index, part_index);
+            flush_chain(
+                chain,
+                pending_open.as_ref(),
+                slur_spans,
+                measure_index,
+                part_index,
+            );
         } else if let Some((chain_col, _)) = chain.first() {
             while pending_slur_opens.len() <= depth {
                 pending_slur_opens.push(None);
             }
-            pending_slur_opens[depth] = Some(PendingSlurOpen {
-                measure_index,
-                from_column: *chain_col,
-            });
+            if let Some(slot) = pending_slur_opens.get_mut(depth) {
+                *slot = Some(PendingSlurOpen {
+                    measure_index,
+                    from_column: *chain_col,
+                });
+            }
         }
     }
 
@@ -462,7 +343,14 @@ fn compile_part_slice(
         content: ElementContent::BarLine,
     });
 
-    (elements, final_tie, final_tie_column, final_tie_measure, final_key, pending_slur_opens)
+    (
+        elements,
+        final_tie,
+        final_tie_column,
+        final_tie_measure,
+        final_key,
+        pending_slur_opens,
+    )
 }
 
 fn compile_note(
@@ -598,7 +486,9 @@ fn compile_rest(state: &mut PartState<'_>, rest: &GroupedRest, measure_col_start
 
     state.elements.push(ColumnElement {
         column: *state.col,
-        content: ElementContent::Rest { dotted: rest.dotted },
+        content: ElementContent::Rest {
+            dotted: rest.dotted,
+        },
     });
 
     if rest.group_membership > 0 {

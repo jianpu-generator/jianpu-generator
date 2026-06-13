@@ -1,7 +1,11 @@
-use crate::compiler::types::{Decoration, ElementContent, MeasureBlock, MeasureRow, RowId};
+use crate::compiler::types::{
+    CompileResult, Decoration, ElementContent, MeasureBlock, MeasureRow, RowId,
+};
+use crate::grid_layout::slur_placement::{build_measure_placements, resolve_slur_spans};
 use crate::grid_layout::types::Header;
 use crate::grid_layout::types::{GridContent, GridElement, GridPage, GridRow, HAlign, VAlign};
 use crate::render_config::RenderConfig;
+use std::collections::HashMap;
 
 // ── Row classification ────────────────────────────────────────────────────────
 
@@ -226,6 +230,7 @@ fn expand_note_part(
     base: f32,
     column_count: u32,
     bar_height: f32,
+    part_arcs: &[GridElement],
 ) -> Vec<GridRow> {
     let (sub_heights, sub_count): (Vec<f32>, usize) = if is_chord_only_row(part_template) {
         (chord_part_sub_row_heights(base).to_vec(), 4)
@@ -281,12 +286,17 @@ fn expand_note_part(
         }
         measure_col_offset += col_w;
     }
+    sub_rows[0].elements.extend_from_slice(part_arcs);
     sub_rows
 }
 
 /// Convert a system's measures into flat GridRows.
 /// Does not include decoration, separator, header, or footer rows.
-pub(crate) fn expand_system_to_rows(system: &[MeasureBlock], base: f32) -> Vec<GridRow> {
+pub(crate) fn expand_system_to_rows(
+    system: &[MeasureBlock],
+    base: f32,
+    system_arcs: &HashMap<usize, Vec<GridElement>>,
+) -> Vec<GridRow> {
     let Some(first) = system.first() else {
         return vec![];
     };
@@ -298,6 +308,8 @@ pub(crate) fn expand_system_to_rows(system: &[MeasureBlock], base: f32) -> Vec<G
         if is_lyric_row(part_template) {
             all_rows.push(expand_lyric_part(system, part_idx, base, column_count));
         } else {
+            let part_arcs: &[GridElement] =
+                system_arcs.get(&part_idx).map_or(&[], |v| v.as_slice());
             all_rows.extend(expand_note_part(
                 system,
                 part_template,
@@ -305,6 +317,7 @@ pub(crate) fn expand_system_to_rows(system: &[MeasureBlock], base: f32) -> Vec<G
                 base,
                 column_count,
                 bar_height,
+                part_arcs,
             ));
             if has_lyrics(part_template) {
                 all_rows.push(expand_lyric_part(system, part_idx, base, column_count));
@@ -491,7 +504,13 @@ fn system_total_height(system: &[MeasureBlock], base: f32) -> f32 {
     musical + lyric + deco
 }
 
-fn build_page_rows(systems: &[Vec<MeasureBlock>], header: &Header, base: f32) -> Vec<GridRow> {
+fn build_page_rows(
+    systems: &[Vec<MeasureBlock>],
+    header: &Header,
+    base: f32,
+    arc_map: &HashMap<(usize, usize), Vec<GridElement>>,
+    abs_system_index_start: usize,
+) -> Vec<GridRow> {
     let mut rows: Vec<GridRow> = make_header_rows(header, base);
     for (sys_idx, system) in systems.iter().enumerate() {
         if sys_idx > 0 {
@@ -503,21 +522,34 @@ fn build_page_rows(systems: &[Vec<MeasureBlock>], header: &Header, base: f32) ->
         if has_any_decoration(first) {
             rows.push(make_decoration_row(system, base));
         }
-        rows.extend(expand_system_to_rows(system, base));
+        let abs_sys = abs_system_index_start + sys_idx;
+        let part_count = first.rows.len();
+        let system_arcs: HashMap<usize, Vec<GridElement>> = (0..part_count)
+            .filter_map(|part_idx| {
+                arc_map
+                    .get(&(abs_sys, part_idx))
+                    .map(|arcs| (part_idx, arcs.clone()))
+            })
+            .collect();
+        rows.extend(expand_system_to_rows(system, base, &system_arcs));
     }
     rows
 }
 
 /// Public entry point: convert compiler blocks to GridPages.
 pub fn layout(
-    blocks: &[MeasureBlock],
+    compile_result: &CompileResult,
     config: &RenderConfig,
     header: &Header,
     page_width_pt: f32,
     page_height_pt: f32,
 ) -> Vec<GridPage> {
     let base = config.row_height as f32;
+    let blocks = &compile_result.blocks;
     let systems = pack_into_systems(blocks, config);
+
+    let measure_placements = build_measure_placements(&systems);
+    let arc_map = resolve_slur_spans(&compile_result.slur_spans, &measure_placements, &systems);
 
     let header_h: f32 = make_header_rows(header, base)
         .iter()
@@ -547,17 +579,17 @@ pub fn layout(
     page_systems.push(current_page);
 
     let total_pages = page_systems.len() as u32;
-    page_systems
-        .into_iter()
-        .enumerate()
-        .map(|(page_idx, systems)| {
-            let mut rows = build_page_rows(&systems, header, base);
-            rows.push(make_footer_row(page_idx as u32 + 1, total_pages, base));
-            GridPage {
-                width_pt: page_width_pt,
-                height_pt: page_height_pt,
-                rows,
-            }
-        })
-        .collect()
+    let mut abs_system_index_start: usize = 0;
+    let mut pages: Vec<GridPage> = Vec::new();
+    for (page_idx, page_sys) in page_systems.into_iter().enumerate() {
+        let mut rows = build_page_rows(&page_sys, header, base, &arc_map, abs_system_index_start);
+        rows.push(make_footer_row(page_idx as u32 + 1, total_pages, base));
+        abs_system_index_start += page_sys.len();
+        pages.push(GridPage {
+            width_pt: page_width_pt,
+            height_pt: page_height_pt,
+            rows,
+        });
+    }
+    pages
 }

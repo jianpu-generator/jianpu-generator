@@ -217,8 +217,8 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
         subtitle: score.metadata.subtitle.clone(),
         author: score.metadata.author.clone(),
     };
-    let blocks = compiler::compile(&score);
-    let grid_pages = grid_layout::layout(&blocks, &config, &header, 595.0, 842.0);
+    let compile_result = compiler::compile(&score);
+    let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0);
     let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32);
 
     let mut underlines: Vec<(f32, f32)> = abs[0]

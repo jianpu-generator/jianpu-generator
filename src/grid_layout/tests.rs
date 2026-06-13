@@ -62,11 +62,12 @@ fn lyric_row(id: &str) -> MeasureRow {
     }
 }
 
-use crate::compiler::types::MeasureBlock;
+use crate::compiler::types::{CompileResult, MeasureBlock};
 use crate::grid_layout::layout::{
     chord_part_sub_row_heights, expand_system_to_rows, is_chord_only_row, is_lyric_row, layout,
     note_part_sub_row_heights, pack_into_systems,
 };
+use std::collections::HashMap;
 
 fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
     MeasureBlock {
@@ -161,14 +162,14 @@ fn make_system_single_note_block() -> Vec<MeasureBlock> {
 
 #[test]
 fn note_block_expands_to_six_sub_rows() {
-    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0);
+    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new());
     // 1 note part × 6 sub-rows, no lyric
     assert_eq!(rows.len(), 6);
 }
 
 #[test]
 fn note_head_element_is_in_sub_row_index_2() {
-    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0);
+    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new());
     let note_row = &rows[2]; // note-head sub-row
     let has_note = note_row
         .elements
@@ -179,7 +180,7 @@ fn note_head_element_is_in_sub_row_index_2() {
 
 #[test]
 fn bar_line_element_has_positive_height_pt() {
-    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0);
+    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new());
     let bar = rows
         .iter()
         .flat_map(|r| r.elements.iter())
@@ -192,7 +193,7 @@ fn bar_line_element_has_positive_height_pt() {
 
 #[test]
 fn row_label_is_in_note_head_sub_row_at_column_0_span_4() {
-    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0);
+    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new());
     let note_row = &rows[2];
     let label = note_row
         .elements
@@ -205,7 +206,7 @@ fn row_label_is_in_note_head_sub_row_at_column_0_span_4() {
 
 #[test]
 fn column_count_is_label_cols_plus_musical_cols() {
-    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0);
+    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new());
     // 4 label cols + 4 musical cols (bar at col 3 → block width=4)
     assert_eq!(rows[0].column_count, 8);
 }
@@ -261,14 +262,22 @@ fn cfg_wide() -> RenderConfig {
 #[test]
 fn layout_single_block_produces_one_page() {
     let blocks = vec![make_block("S", 3)];
-    let pages = layout(&blocks, &cfg_wide(), &hdr(), 595.0, 842.0);
+    let compile_result = CompileResult {
+        blocks,
+        slur_spans: vec![],
+    };
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0);
     assert_eq!(pages.len(), 1);
 }
 
 #[test]
 fn layout_page_has_correct_dimensions() {
     let blocks = vec![make_block("S", 3)];
-    let pages = layout(&blocks, &cfg_wide(), &hdr(), 595.0, 842.0);
+    let compile_result = CompileResult {
+        blocks,
+        slur_spans: vec![],
+    };
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0);
     assert!((pages[0].width_pt - 595.0).abs() < 0.001);
     assert!((pages[0].height_pt - 842.0).abs() < 0.001);
 }
@@ -276,7 +285,11 @@ fn layout_page_has_correct_dimensions() {
 #[test]
 fn layout_rows_include_header_and_footer() {
     let blocks = vec![make_block("S", 3)];
-    let pages = layout(&blocks, &cfg_wide(), &hdr(), 595.0, 842.0);
+    let compile_result = CompileResult {
+        blocks,
+        slur_spans: vec![],
+    };
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0);
     // At minimum: header title row, header subtitle+author row, footer row
     assert!(pages[0].rows.len() >= 3, "len={}", pages[0].rows.len());
 }
@@ -284,7 +297,11 @@ fn layout_rows_include_header_and_footer() {
 #[test]
 fn layout_page_total_height_does_not_exceed_page_height() {
     let blocks: Vec<_> = (0..10).map(|_| make_block("S", 3)).collect();
-    let pages = layout(&blocks, &cfg_wide(), &hdr(), 595.0, 842.0);
+    let compile_result = CompileResult {
+        blocks,
+        slur_spans: vec![],
+    };
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0);
     for page in &pages {
         let total: f32 = page.rows.iter().map(|r| r.height_pt).sum();
         assert!(
@@ -319,7 +336,11 @@ fn layout_with_bpm_decoration_has_decoration_row() {
         }],
         decorations: vec![Decoration::Bpm(120)],
     };
-    let pages = layout(&[block], &cfg_wide(), &hdr(), 595.0, 842.0);
+    let compile_result = CompileResult {
+        blocks: vec![block],
+        slur_spans: vec![],
+    };
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0);
     let has_bpm = pages[0]
         .rows
         .iter()
@@ -332,7 +353,11 @@ fn layout_with_bpm_decoration_has_decoration_row() {
 fn decoration_row_has_fixed_column_count() {
     use crate::compiler::types::Decoration;
     let block = make_block_with_decorations(vec![Decoration::Bpm(120)]);
-    let pages = layout(&[block], &cfg_wide(), &hdr(), 595.0, 842.0);
+    let compile_result = CompileResult {
+        blocks: vec![block],
+        slur_spans: vec![],
+    };
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0);
     let deco_row = pages[0]
         .rows
         .iter()
@@ -352,7 +377,11 @@ fn decoration_row_has_fixed_column_count() {
 fn decoration_items_start_at_column_1() {
     use crate::compiler::types::Decoration;
     let block = make_block_with_decorations(vec![Decoration::Bpm(120)]);
-    let pages = layout(&[block], &cfg_wide(), &hdr(), 595.0, 842.0);
+    let compile_result = CompileResult {
+        blocks: vec![block],
+        slur_spans: vec![],
+    };
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0);
     let bpm_el = pages[0]
         .rows
         .iter()
@@ -370,7 +399,11 @@ fn section_label_ordered_before_bpm_regardless_of_declaration_order() {
         Decoration::Bpm(120),
         Decoration::SectionLabel("A".to_string()),
     ]);
-    let pages = layout(&[block], &cfg_wide(), &hdr(), 595.0, 842.0);
+    let compile_result = CompileResult {
+        blocks: vec![block],
+        slur_spans: vec![],
+    };
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0);
     let section_col = pages[0]
         .rows
         .iter()
@@ -401,7 +434,11 @@ fn multiple_decorations_occupy_consecutive_columns_starting_at_1() {
             denominator: 4,
         },
     ]);
-    let pages = layout(&[block], &cfg_wide(), &hdr(), 595.0, 842.0);
+    let compile_result = CompileResult {
+        blocks: vec![block],
+        slur_spans: vec![],
+    };
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0);
     let bpm_col = pages[0]
         .rows
         .iter()

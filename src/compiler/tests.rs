@@ -339,7 +339,10 @@ fn cross_measure_slur_emits_single_slur_span() {
         result.slur_spans
     );
     assert!(
-        result.slur_spans.iter().all(|s| s.from_column != 16 && s.to_column != 16),
+        result
+            .slur_spans
+            .iter()
+            .all(|s| s.from_column != 16 && s.to_column != 16),
         "no slur span should touch barline col 16, got: {:?}",
         result.slur_spans
     );

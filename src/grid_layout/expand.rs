@@ -95,27 +95,6 @@ pub(crate) fn expand_measure_elements(
                     });
                 }
             }
-            ElementContent::TieOrSlur {
-                from_column,
-                to_column,
-            } => {
-                let span = to_column.saturating_sub(*from_column) + 1;
-                sub_rows[0].elements.push(GridElement {
-                    column: LABEL_COLS + measure_col_offset + from_column,
-                    column_span: span,
-                    halign: HAlign::Center,
-                    valign: VAlign::Center,
-                    content: GridContent::TieOrSlur,
-                });
-            }
-            ElementContent::TieOrSlurClose { to_column } => {
-                sub_rows[0].elements.push(grid_el(
-                    LABEL_COLS + measure_col_offset + to_column,
-                    GridContent::TieOrSlurClose,
-                    HAlign::Start,
-                    VAlign::Center,
-                ));
-            }
             ElementContent::BarLine => {
                 if part_idx == 0 {
                     sub_rows[0].elements.push(grid_el(

@@ -1,5 +1,6 @@
 pub(crate) mod expand;
 pub mod layout;
+pub(crate) mod slur_placement;
 pub mod types;
 
 pub use layout::layout;

@@ -104,9 +104,8 @@ fn grid_to_absolute(
             level: *level,
         }),
         GridContent::TieOrSlur => Some(AbsoluteContent::TieOrSlur { width: span_width }),
-        GridContent::TieOrSlurClose => Some(AbsoluteContent::TieOrSlur {
-            width: span_width * 0.5,
-        }),
+        GridContent::TieOrSlurTail => Some(AbsoluteContent::TieOrSlur { width: span_width }),
+        GridContent::TieOrSlurHead => Some(AbsoluteContent::TieOrSlur { width: span_width }),
         GridContent::BarLine { height_pt } => Some(AbsoluteContent::BarLine { height: *height_pt }),
         GridContent::HorizontalLine => Some(AbsoluteContent::HorizontalLine { width: span_width }),
         GridContent::RowLabel(s) => Some(AbsoluteContent::Text {
