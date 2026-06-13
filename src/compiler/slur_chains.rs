@@ -1,6 +1,6 @@
 use crate::ast::grouped::GroupedChordNote;
 use crate::ast::parsed::{Extension, JianPuPitch, TriadQuality};
-use crate::compiler::types::{SlurSpan, SlurSpanList};
+use crate::compiler::types::SlurSpan;
 
 pub(super) struct PendingSlurOpen {
     pub(super) measure_index: usize,
@@ -70,7 +70,7 @@ impl SlurKey {
 pub(super) fn flush_chain(
     chain: &[(u32, SlurKey)],
     pending_open: Option<&PendingSlurOpen>,
-    slur_spans: &mut SlurSpanList,
+    slur_spans: &mut Vec<SlurSpan>,
     measure_index: usize,
     part_index: usize,
 ) {
@@ -127,7 +127,7 @@ pub(super) fn extend_note_chains(
     continuation: u8,
     col: u32,
     key: &SlurKey,
-    slur_spans: &mut SlurSpanList,
+    slur_spans: &mut Vec<SlurSpan>,
     measure_index: usize,
     part_index: usize,
 ) {

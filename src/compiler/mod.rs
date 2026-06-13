@@ -9,6 +9,15 @@ use crate::ast::grouped::{
 };
 use crate::ast::parsed::PartKind;
 
+type PartSliceResult = (
+    Vec<ColumnElement>,
+    bool,
+    Option<u32>,
+    Option<usize>,
+    Option<SlurKey>,
+    Vec<Option<PendingSlurOpen>>,
+);
+
 pub fn compile(score: &Score) -> CompileResult {
     let max_parts = score
         .measures
@@ -230,15 +239,6 @@ struct PartState<'a> {
     measure_index: usize,
     part_index: usize,
 }
-
-type PartSliceResult = (
-    Vec<ColumnElement>,
-    bool,
-    Option<u32>,
-    Option<usize>,
-    Option<SlurKey>,
-    Vec<Option<PendingSlurOpen>>,
-);
 
 #[allow(clippy::too_many_arguments)]
 fn compile_part_slice(

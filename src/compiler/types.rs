@@ -56,9 +56,6 @@ pub struct SlurSpan {
     pub to_column: u32, // measure-relative column of the closing note
 }
 
-/// Convenience alias used internally by the compiler and slur-chain modules.
-pub(crate) type SlurSpanList = Vec<SlurSpan>;
-
 /// Return value of `compiler::compile`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CompileResult {
