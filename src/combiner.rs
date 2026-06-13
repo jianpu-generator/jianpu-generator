@@ -53,7 +53,9 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> Result<Vec<MultiPartMeasu
                 GroupedTrack::Timed(part) => part.measures.get(measure_idx),
             })
             .map(|m| m.source_span.clone())
-            .unwrap_or_else(|| Span::new(0, 0));
+            .unwrap_or_else(|| {
+                unreachable!("combiner: source_span missing for measure {measure_idx}")
+            });
         combined.push(MultiPartMeasure {
             time_signature: directives.time_signature.clone(),
             bpm: directives.bpm,

@@ -356,5 +356,10 @@ fn second_measure_span_covers_its_first_note() {
         second_note_offset
     );
     // Second measure span must not overlap with first
-    assert!(span.start > score.measures[0].source_span.start);
+    assert!(
+        span.start >= score.measures[0].source_span.end,
+        "measure spans must not overlap: measure[0] ends at {}, measure[1] starts at {}",
+        score.measures[0].source_span.end,
+        span.start,
+    );
 }

@@ -469,7 +469,7 @@ mod tests {
                     },
                     lyrics: None,
                 })],
-                source_span: crate::error::Span::new(0, 0),
+                source_span: crate::error::Span::new(0, 0), // dummy — midi output ignores span
             }],
         };
         let midi_bytes = write_midi(&score).unwrap();

@@ -222,6 +222,7 @@ impl PartGrouper {
     }
 
     fn handle_extension(&mut self, span: Span) -> Result<(), JianPuError> {
+        self.measure_span_end = span.end.max(self.measure_span_end);
         match self.current_notes.last_mut() {
             Some(NoteEvent::Note(n)) => {
                 n.duration += 4;
