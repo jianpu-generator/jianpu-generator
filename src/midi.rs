@@ -53,6 +53,49 @@ pub fn write_midi(score: &Score) -> Result<Vec<u8>, JianPuError> {
     write_smf(track)
 }
 
+/// Generate MIDI bytes for a single measure, carrying BPM and key context
+/// accumulated from all preceding measures.
+pub fn write_midi_for_measure(score: &Score, measure_index: usize) -> Result<Vec<u8>, JianPuError> {
+    let Some(target) = score.measures.get(measure_index) else {
+        return Err(JianPuError::new(
+            Span::new(0, 0),
+            format!(
+                "measure index {} out of range (score has {} measures)",
+                measure_index,
+                score.measures.len()
+            ),
+        ));
+    };
+
+    // Accumulate BPM and key from all measures before the target
+    let mut accumulated_bpm: Option<u32> = None;
+    let mut accumulated_key: Option<KeyChange> = None;
+    for measure in score.measures.iter().take(measure_index) {
+        if let Some(bpm) = measure.bpm {
+            accumulated_bpm = Some(bpm);
+        }
+        if let Some(key) = &measure.key {
+            accumulated_key = Some(key.clone());
+        }
+    }
+
+    // Clone target and inject accumulated context for fields the target doesn't override
+    let mut patched = target.clone();
+    if patched.bpm.is_none() {
+        patched.bpm = accumulated_bpm;
+    }
+    if patched.key.is_none() {
+        patched.key = accumulated_key;
+    }
+
+    let single_score = Score {
+        metadata: score.metadata.clone(),
+        measures: vec![patched],
+    };
+
+    write_midi(&single_score)
+}
+
 fn default_active_key() -> KeyChange {
     KeyChange {
         note: crate::ast::parsed::Note {

@@ -166,6 +166,17 @@ pub fn apply_lyrics_filter(score: &mut Score, disabled_lyrics: Option<&[String]>
     }
 }
 
+/// Find the index of the measure whose `source_span` contains `byte_offset`.
+///
+/// Returns `None` when `byte_offset` falls outside all measure spans
+/// (e.g. in `[metadata]`, `[parts]`, or a directive line).
+pub fn find_measure_at_byte_offset(score: &Score, byte_offset: usize) -> Option<usize> {
+    score
+        .measures
+        .iter()
+        .position(|m| m.source_span.start <= byte_offset && byte_offset < m.source_span.end)
+}
+
 /// Sanitize a track name for use in filenames (mirrors CLI).
 pub fn sanitize_track_name(name: &str) -> String {
     name.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-")
@@ -323,6 +334,23 @@ pub fn write_wav_from_source_filtered(
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     let midi_bytes = midi::write_midi(&score)?;
+    wav::write_wav(&midi_bytes)
+}
+
+/// Parse, group, optionally filter tracks, and synthesize WAV for a single measure.
+///
+/// BPM and key context is accumulated from all preceding measures so
+/// that mid-piece measures sound correct even without explicit directives.
+#[cfg(feature = "wav")]
+pub fn write_wav_for_measure_from_source(
+    source: &str,
+    filename: &str,
+    measure_index: usize,
+    enabled_tracks: Option<&[String]>,
+) -> Result<Vec<u8>, JianPuError> {
+    let mut score = compile(source, filename)?;
+    apply_track_filter(&mut score, enabled_tracks);
+    let midi_bytes = midi::write_midi_for_measure(&score, measure_index)?;
     wav::write_wav(&midi_bytes)
 }
 
