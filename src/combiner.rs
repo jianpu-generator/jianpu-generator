@@ -225,4 +225,16 @@ mod tests {
         );
         assert!(parser::parse(input, "test.jianpu").is_err());
     }
+
+    #[test]
+    fn measure_source_span_is_nonzero_after_combine() {
+        let measures = make_two_part_score("1 2 3 4", "5 6 7 1");
+        assert_eq!(measures.len(), 1);
+        // span should not be the dummy (0, 0)
+        assert!(
+            measures[0].source_span.end > 0,
+            "source_span.end should be > 0, got {:?}",
+            measures[0].source_span
+        );
+    }
 }
