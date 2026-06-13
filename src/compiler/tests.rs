@@ -31,7 +31,8 @@ fn two_part_doc(score_content: &str) -> String {
 #[test]
 fn single_quarter_note_produces_one_note_head_element() {
     let score = score_from(&notes_doc("(time=4/4 key=C4 bpm=120)\n1\n"));
-    let blocks = compile(&score);
+    let result = compile(&score);
+    let blocks = result.blocks;
     assert!(!blocks.is_empty());
     let row = &blocks[0].rows[0];
     let note_heads: Vec<_> = row
@@ -45,7 +46,8 @@ fn single_quarter_note_produces_one_note_head_element() {
 #[test]
 fn bar_line_is_last_element_in_row() {
     let score = score_from(&notes_doc("(time=4/4 key=C4 bpm=120)\n1\n"));
-    let blocks = compile(&score);
+    let result = compile(&score);
+    let blocks = result.blocks;
     let row = &blocks[0].rows[0];
     let last = row.elements.last().unwrap();
     assert_eq!(last.content, ElementContent::BarLine);
@@ -54,7 +56,8 @@ fn bar_line_is_last_element_in_row() {
 #[test]
 fn bpm_decoration_on_first_measure() {
     let score = score_from(&notes_doc("(time=4/4 key=C4 bpm=100)\n1\n"));
-    let blocks = compile(&score);
+    let result = compile(&score);
+    let blocks = result.blocks;
     let has_bpm = blocks[0]
         .decorations
         .iter()
@@ -65,7 +68,8 @@ fn bpm_decoration_on_first_measure() {
 #[test]
 fn two_measures_produce_two_blocks() {
     let score = score_from(&notes_doc("(time=4/4 key=C4 bpm=120)\n1\n\n2\n"));
-    let blocks = compile(&score);
+    let result = compile(&score);
+    let blocks = result.blocks;
     assert_eq!(blocks.len(), 2);
 }
 
@@ -74,7 +78,8 @@ fn eighth_notes_produce_underline_elements() {
     // 2_ means eighth note (duration=2 quarter-beats) in jianpu syntax
     // Two eighth notes fill one beat; padded with rests to complete 4/4
     let score = score_from(&notes_doc("(time=4/4 key=C4 bpm=120)\n2_ 2_ 0 0 0\n"));
-    let blocks = compile(&score);
+    let result = compile(&score);
+    let blocks = result.blocks;
     let row = &blocks[0].rows[0];
     let underlines: Vec<_> = row
         .elements
@@ -87,7 +92,8 @@ fn eighth_notes_produce_underline_elements() {
 #[test]
 fn time_signature_appears_as_decoration() {
     let score = score_from(&notes_doc("(time=4/4 key=C4 bpm=120)\n1\n"));
-    let blocks = compile(&score);
+    let result = compile(&score);
+    let blocks = result.blocks;
     let has_ts = blocks[0].decorations.iter().any(|d| {
         matches!(
             d,
@@ -104,7 +110,8 @@ fn time_signature_appears_as_decoration() {
 fn ditto_rows_are_skipped() {
     // Two parts rendered in both measures (no ditto)
     let score = score_from(&two_part_doc("(time=4/4 key=C4 bpm=120)\n1\n3\n\n2\n4\n"));
-    let blocks = compile(&score);
+    let result = compile(&score);
+    let blocks = result.blocks;
     assert_eq!(blocks.len(), 2);
     assert_eq!(blocks[0].rows.len(), 2);
 }
@@ -112,7 +119,8 @@ fn ditto_rows_are_skipped() {
 #[test]
 fn bar_number_decoration_without_label() {
     let score = score_from(&notes_doc("(time=4/4 key=C4 bpm=120)\n1\n\n2\n"));
-    let blocks = compile(&score);
+    let result = compile(&score);
+    let blocks = result.blocks;
     let bar1_num = blocks[0]
         .decorations
         .iter()
@@ -136,7 +144,8 @@ fn section_label_measure_has_no_bar_number() {
     let score = score_from(&notes_doc(
         "(time=4/4 key=C4 bpm=120 label=\"Verse 1\")\n1\n",
     ));
-    let blocks = compile(&score);
+    let result = compile(&score);
+    let blocks = result.blocks;
     let has_bar_num = blocks[0]
         .decorations
         .iter()
@@ -152,7 +161,8 @@ fn section_label_measure_has_no_bar_number() {
 #[test]
 fn rest_produces_rest_element() {
     let score = score_from(&notes_doc("(time=4/4 key=C4 bpm=120)\n0\n"));
-    let blocks = compile(&score);
+    let result = compile(&score);
+    let blocks = result.blocks;
     let row = &blocks[0].rows[0];
     let rests: Vec<_> = row
         .elements
@@ -167,7 +177,8 @@ fn bar_line_column_equals_total_duration() {
     // "1 2 3 4" = four quarter notes, each duration=4 → total 16 quarter-beats
     // Bar line should appear at column 16
     let score = score_from(&notes_doc("(time=4/4 key=C4 bpm=120)\n1 2 3 4\n"));
-    let blocks = compile(&score);
+    let result = compile(&score);
+    let blocks = result.blocks;
     let row = &blocks[0].rows[0];
     let bar_line = row
         .elements
@@ -199,7 +210,8 @@ Tenor (T) = notes
 \"
 ",
     );
-    let blocks = compile(&score);
+    let result = compile(&score);
+    let blocks = result.blocks;
     assert_eq!(
         blocks[0].rows.len(),
         1,
@@ -216,7 +228,8 @@ fn extended_note_produces_note_dash_at_each_extra_beat() {
     // "1- 2-" = two half notes filling a 4/4 measure (8+8=16 quarter-beats).
     // Each half note should produce one NoteDash at the beat following the note head.
     let score = score_from(&notes_doc("(time=4/4 key=C4 bpm=120)\n1- 2-\n"));
-    let blocks = compile(&score);
+    let result = compile(&score);
+    let blocks = result.blocks;
     let row = &blocks[0].rows[0];
     let dashes: Vec<_> = row
         .elements
@@ -239,7 +252,8 @@ fn extended_note_produces_note_dash_at_each_extra_beat() {
 fn note_head_column_is_zero_indexed() {
     // First note in measure should be at column 0
     let score = score_from(&notes_doc("(time=4/4 key=C4 bpm=120)\n1\n"));
-    let blocks = compile(&score);
+    let result = compile(&score);
+    let blocks = result.blocks;
     let row = &blocks[0].rows[0];
     let note_head = row
         .elements
@@ -262,7 +276,8 @@ fn cross_measure_tie_does_not_consume_lyric_slot_for_continuation_note() {
         "4) 5 6 7\n",
         "sa da ko\n",
     )));
-    let blocks = compile(&score);
+    let result = compile(&score);
+    let blocks = result.blocks;
     let bar2 = &blocks[1].rows[0];
     // "sa" should be at column 4 (note 5, after the tied note 4 at column 0)
     let lyrics: Vec<_> = bar2
@@ -284,86 +299,100 @@ fn cross_measure_tie_does_not_consume_lyric_slot_for_continuation_note() {
 }
 
 #[test]
-fn cross_system_slur_closing_on_rest_ends_at_rest_not_barline() {
-    // Bar 1: "1 2 3 (4" — slur opens on note 4 (col 12); arc to barline (col 16).
-    // Bar 2: "5 -) - -" — slur closes at the first extension dash (col 4); arc from note 5
-    //   (col 0) to col 4, NOT to the barline (col 16). The `-` before `)` is an
-    //   extension of note 5, not a rest.
-    let score = score_from(&notes_doc(concat!(
-        "(time=4/4 key=C4 bpm=120)\n",
-        "1 2 3 (4\n",
-        "\n",
-        "5 -) - -\n",
-    )));
-    let blocks = compile(&score);
-
-    let bar2_row = &blocks[1].rows[0];
-    // There must be a slur arc from note 5 (col 0) to the rest (col 4).
-    let close_arc = bar2_row.elements.iter().find(|e| {
-        matches!(
-            &e.content,
-            ElementContent::TieOrSlur {
-                from_column: 0,
-                to_column: 4
-            }
-        )
-    });
+fn same_measure_slur_emits_slur_span() {
+    // "(4 5)" open on note 4 (col 0), close on note 5 (col 4).
+    let score = score_from(&notes_doc("(time=4/4 key=C4 bpm=120)\n(4 5) 0 0\n"));
+    let result = compile(&score);
     assert!(
-        close_arc.is_some(),
-        "bar 2 should have a TieOrSlur arc from col 0 (note 5) to col 4 (closing rest), got: {:?}",
-        bar2_row
-            .elements
-            .iter()
-            .map(|e| &e.content)
-            .collect::<Vec<_>>()
-    );
-    // No slur arc should extend to the barline (col 16) in bar 2.
-    let barline_arc = bar2_row
-        .elements
-        .iter()
-        .find(|e| matches!(&e.content, ElementContent::TieOrSlur { to_column: 16, .. }));
-    assert!(
-        barline_arc.is_none(),
-        "bar 2 should NOT have a slur arc reaching the barline (col 16)"
+        result.slur_spans.iter().any(|s| {
+            s.part_index == 0
+                && s.from_measure == 0
+                && s.from_column == 0
+                && s.to_measure == 0
+                && s.to_column == 4
+        }),
+        "expected SlurSpan (measure=0, col=0) → (measure=0, col=4), got: {:?}",
+        result.slur_spans
     );
 }
 
 #[test]
-fn cross_measure_tie_emits_slur_arc_at_end_of_bar_and_start_of_next() {
-    // Bar 1: "1 2 3 (4" — the tied note 4 is at column 12; a slur arc should be
-    //   emitted from column 12 toward the barline (column 16).
-    // Bar 2: "4) 5 6 7" — a close arc should be emitted for the tie continuation
-    //   note at column 0.
+fn cross_measure_slur_emits_single_slur_span() {
+    // Bar 1: "1 2 3 (4" — slur opens on note 4 at col 12.
+    // Bar 2: "5) 6 7 1" — slur closes on note 5 at col 0.
+    let score = score_from(&notes_doc(concat!(
+        "(time=4/4 key=C4 bpm=120)\n",
+        "1 2 3 (4\n",
+        "\n",
+        "5) 6 7 1\n",
+    )));
+    let result = compile(&score);
+    assert!(
+        result.slur_spans.iter().any(|s| {
+            s.part_index == 0
+                && s.from_measure == 0
+                && s.from_column == 12
+                && s.to_measure == 1
+                && s.to_column == 0
+        }),
+        "expected SlurSpan (measure=0, col=12) → (measure=1, col=0), got: {:?}",
+        result.slur_spans
+    );
+    assert!(
+        result.slur_spans.iter().all(|s| s.from_column != 16 && s.to_column != 16),
+        "no slur span should touch barline col 16, got: {:?}",
+        result.slur_spans
+    );
+}
+
+#[test]
+fn cross_measure_tie_emits_single_slur_span() {
+    // Bar 1: "1 2 3 (4" — note 4 at col 12 has tie=true (same pitch on both sides).
+    // Bar 2: "4) 5 6 7" — note 4 at col 0 closes the tie.
     let score = score_from(&notes_doc(concat!(
         "(time=4/4 key=C4 bpm=120)\n",
         "1 2 3 (4\n",
         "\n",
         "4) 5 6 7\n",
     )));
-    let blocks = compile(&score);
-
-    let bar1_row = &blocks[0].rows[0];
-    let open_arc = bar1_row.elements.iter().find(|e| {
-        matches!(
-            &e.content,
-            ElementContent::TieOrSlur {
-                from_column: 12,
-                to_column: 16
-            }
-        )
-    });
+    let result = compile(&score);
     assert!(
-        open_arc.is_some(),
-        "bar 1 should have a TieOrSlur arc from column 12 (note 4) to column 16 (barline)"
+        result.slur_spans.iter().any(|s| {
+            s.part_index == 0
+                && s.from_measure == 0
+                && s.from_column == 12
+                && s.to_measure == 1
+                && s.to_column == 0
+        }),
+        "expected SlurSpan (measure=0, col=12) → (measure=1, col=0), got: {:?}",
+        result.slur_spans
     );
+}
 
-    let bar2_row = &blocks[1].rows[0];
-    let close_arc = bar2_row
-        .elements
-        .iter()
-        .find(|e| matches!(&e.content, ElementContent::TieOrSlurClose { to_column: 0 }));
+#[test]
+fn cross_measure_slur_closing_on_extension_dash() {
+    // Bar 1: "1 2 3 (4" — slur opens on note 4 at col 12.
+    // Bar 2: "5 -) - -" — slur closes at the extension dash at col 4.
+    let score = score_from(&notes_doc(concat!(
+        "(time=4/4 key=C4 bpm=120)\n",
+        "1 2 3 (4\n",
+        "\n",
+        "5 -) - -\n",
+    )));
+    let result = compile(&score);
     assert!(
-        close_arc.is_some(),
-        "bar 2 should have a TieOrSlurClose arc to column 0 (the continuation note)"
+        result.slur_spans.iter().any(|s| {
+            s.part_index == 0
+                && s.from_measure == 0
+                && s.from_column == 12
+                && s.to_measure == 1
+                && s.to_column == 4
+        }),
+        "expected SlurSpan (measure=0, col=12) → (measure=1, col=4), got: {:?}",
+        result.slur_spans
+    );
+    assert!(
+        result.slur_spans.iter().all(|s| s.to_column != 16),
+        "no slur span should end at barline col 16"
     );
 }
