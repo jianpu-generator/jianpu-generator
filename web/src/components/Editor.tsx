@@ -17,6 +17,7 @@ export interface EditorProps {
   readOnly?: boolean
   diagnostics?: Diagnostic[]
   toolbar?: ReactNode
+  onCursorByteOffsetChange?: (offset: number) => void
 }
 
 const MARKER_OWNER = 'jianpu'
@@ -43,7 +44,14 @@ function diagnosticRange(
 }
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
-  { value, onChange, readOnly = false, diagnostics = [], toolbar },
+  {
+    value,
+    onChange,
+    readOnly = false,
+    diagnostics = [],
+    toolbar,
+    onCursorByteOffsetChange,
+  },
   ref,
 ) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
@@ -139,6 +147,16 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     editorRef.current = ed
     monacoRef.current = monacoApi
     applyDiagnostics()
+
+    if (onCursorByteOffsetChange) {
+      ed.onDidChangeCursorPosition(() => {
+        const model = ed.getModel()
+        if (!model) return
+        const position = ed.getPosition()
+        if (!position) return
+        onCursorByteOffsetChange(model.getOffsetAt(position))
+      })
+    }
   }
 
   useEffect(() => {
