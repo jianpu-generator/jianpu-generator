@@ -15,8 +15,8 @@ use jianpu_generator::{
 #[cfg(feature = "wav")]
 use types::GenerateWavResponse;
 use types::{
-    diagnostic_from_error, to_js_value, DiagnosticSeverity, ListPartsResponse,
-    MeasureAtOffsetResponse, PartOut, RenderResponse,
+    diagnostic_from_error, to_js_value, ListPartsResponse, MeasureAtOffsetResponse, PartOut,
+    RenderResponse,
 };
 #[cfg(feature = "pdf")]
 use types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
