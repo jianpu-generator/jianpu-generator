@@ -1,10 +1,33 @@
 use super::*;
-use crate::ast::parsed::{Accidental, JianPuPitch, ParsedChordSymbol, TriadQuality};
+use crate::ast::parsed::{Accidental, JianPuPitch, ParsedChordNote, ScoreEvent, TriadQuality};
 
-#[path = "interleaved_parser_test_helpers.rs"]
-mod test_helpers;
+use super::test_helpers::{chord_track, decl, notes_track, parse};
 
-use test_helpers::{chord_track, decl, notes_track};
+#[test]
+fn chord_line_parses_spaced_slur_group() {
+    let input = concat!(
+        "[metadata]\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "[parts]\n",
+        "Chord = chord\n",
+        "Melody = notes\n",
+        "\n",
+        "[score]\n",
+        "(time=4/4 key=C4 bpm=120)\n",
+        "(1 - 6m -)\n",
+        "1 1 5 5\n",
+    );
+    let doc = crate::parser::parse(input, "test.jianpu").unwrap();
+    let chord_events: Vec<_> = chord_track(&doc.tracks, "Chord")
+        .score
+        .events
+        .iter()
+        .filter(|e| matches!(e.value, ScoreEvent::Chord(_)))
+        .collect();
+    assert_eq!(chord_events.len(), 2, "expected chord 1 and 6m in group");
+}
 
 #[test]
 fn chord_column_events_are_parsed() {
@@ -13,19 +36,24 @@ fn chord_column_events_are_parsed() {
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(tracks.len(), 2);
     let chord = chord_track(&tracks, "main");
-    assert_eq!(chord.events_per_measure.len(), 1);
-    let events = &chord.events_per_measure[0];
+    let events: Vec<_> = chord.score.events.iter().map(|e| &e.value).collect();
     assert_eq!(
         events[0],
-        ParsedChordEvent::Chord(ParsedChordSymbol {
+        &ScoreEvent::Chord(ParsedChordNote {
             degree: JianPuPitch::One,
             accidental: Accidental::Natural,
             triad: TriadQuality::Major,
             extension: None,
             bass: None,
+            duration: 4,
+            tie: false,
+            group_membership: 0,
+            group_continuation: 0,
+            dotted: false,
+            slur_group_close_at_duration: None,
         })
     );
-    assert!(matches!(events[1], ParsedChordEvent::Extend(_)));
+    assert!(matches!(events[1], ScoreEvent::Extension));
     assert_eq!(notes_track(&tracks, "main").score.events.len(), 4);
 }
 
@@ -76,7 +104,7 @@ fn rejects_too_many_lines_in_group() {
     let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c d\nextra line\n";
     let declarations = vec![decl("", PartKind::NotesWithLyrics)];
     let err = parse(content, 0, &declarations).unwrap_err();
-    assert!(err.message.contains("expected") && err.message.contains("got"));
+    assert!(err.message.contains("lines") && err.message.contains("expected"));
 }
 
 #[test]

@@ -41,6 +41,10 @@ interface JianpuWorkerState {
   audioGenerating: boolean
   exportPdf: () => void
   exportSplitPdf: () => void
+  currentMeasureIndex: number | null
+  measureAudioGenerating: boolean
+  notifyCursorOffset: (offset: number) => void
+  playCurrentMeasure: () => void
 }
 
 function downloadPdf(bytes: ArrayBuffer, filename: string) {
@@ -104,6 +108,10 @@ export function useJianpuWorker(
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([])
   const [rendering, setRendering] = useState(false)
   const [audioGenerating, setAudioGenerating] = useState(false)
+  const [currentMeasureIndex, setCurrentMeasureIndex] = useState<number | null>(
+    null,
+  )
+  const [measureAudioGenerating, setMeasureAudioGenerating] = useState(false)
 
   const workerRef = useRef<Worker | null>(null)
   const wavUrlRef = useRef<string | null>(null)
@@ -122,6 +130,13 @@ export function useJianpuWorker(
   const enabledTracksRef = useRef<string[] | undefined>(undefined)
   const disabledLyricsRef = useRef<string[] | undefined>(undefined)
   const audioAvailableRef = useRef(false)
+  const cursorRequestIdRef = useRef(0)
+  const latestCursorIdRef = useRef(0)
+  const cursorOffsetTimerRef = useRef<number | null>(null)
+  const lastCursorByteOffsetRef = useRef<number | null>(null)
+  const measureAudioRequestIdRef = useRef(0)
+  const latestMeasureAudioIdRef = useRef(0)
+  const measureWavUrlRef = useRef<string | null>(null)
 
   const enabledTracks = useMemo(
     () => enabledTracksForRender(parts, disabledParts),
@@ -143,6 +158,17 @@ export function useJianpuWorker(
     }
     wavUrlRef.current = next
     setWavUrl(next)
+  }, [])
+
+  const setNextMeasureWavUrl = useCallback((next: string | null) => {
+    if (measureWavUrlRef.current) {
+      URL.revokeObjectURL(measureWavUrlRef.current)
+    }
+    measureWavUrlRef.current = next
+    if (next) {
+      const audio = new Audio(next)
+      audio.play().catch(() => {})
+    }
   }, [])
 
   useEffect(() => {
@@ -219,6 +245,27 @@ export function useJianpuWorker(
         return
       }
 
+      if (msg.type === 'measureAtOffset') {
+        if (msg.id !== latestCursorIdRef.current) return
+        setCurrentMeasureIndex(msg.measureIndex)
+        return
+      }
+
+      if (msg.type === 'measureAudio') {
+        if (msg.id !== latestMeasureAudioIdRef.current) return
+        setMeasureAudioGenerating(false)
+        setNextMeasureWavUrl(
+          URL.createObjectURL(new Blob([msg.wav], { type: 'audio/wav' })),
+        )
+        return
+      }
+
+      if (msg.type === 'measureAudioErr') {
+        if (msg.id !== latestMeasureAudioIdRef.current) return
+        setMeasureAudioGenerating(false)
+        return
+      }
+
       if (msg.type === 'err') {
         if (msg.id !== latestRenderIdRef.current) return
         setRendering(false)
@@ -233,14 +280,39 @@ export function useJianpuWorker(
         URL.revokeObjectURL(wavUrlRef.current)
         wavUrlRef.current = null
       }
+      if (measureWavUrlRef.current) {
+        URL.revokeObjectURL(measureWavUrlRef.current)
+        measureWavUrlRef.current = null
+      }
+      if (cursorOffsetTimerRef.current !== null) {
+        window.clearTimeout(cursorOffsetTimerRef.current)
+      }
     }
-  }, [setNextWavUrl])
+  }, [setNextWavUrl, setNextMeasureWavUrl])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: activeFile is intentional trigger
   useEffect(() => {
     setSvgs([])
     setNextWavUrl(null)
     setDiagnostics([])
   }, [activeFile, setNextWavUrl])
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: source is intentional trigger
+  useEffect(() => {
+    setCurrentMeasureIndex(null)
+    const byteOffset = lastCursorByteOffsetRef.current
+    if (byteOffset === null) return
+    const worker = workerRef.current
+    if (!worker) return
+    const id = ++cursorRequestIdRef.current
+    latestCursorIdRef.current = id
+    worker.postMessage({
+      type: 'getMeasureAtOffset',
+      source,
+      id,
+      byteOffset,
+    } satisfies WorkerRequest)
+  }, [source])
 
   useEffect(() => {
     const worker = workerRef.current
@@ -299,6 +371,46 @@ export function useJianpuWorker(
     return () => window.clearTimeout(timer)
   }, [source, enabledTracks, debounceMs, audioAvailable])
 
+  const notifyCursorOffset = useCallback(
+    (byteOffset: number) => {
+      lastCursorByteOffsetRef.current = byteOffset
+      if (cursorOffsetTimerRef.current !== null) {
+        window.clearTimeout(cursorOffsetTimerRef.current)
+      }
+      cursorOffsetTimerRef.current = window.setTimeout(() => {
+        cursorOffsetTimerRef.current = null
+        const worker = workerRef.current
+        if (!worker) return
+        const id = ++cursorRequestIdRef.current
+        latestCursorIdRef.current = id
+        worker.postMessage({
+          type: 'getMeasureAtOffset',
+          source: sourceRef.current,
+          id,
+          byteOffset,
+        } satisfies WorkerRequest)
+      }, debounceMs)
+    },
+    [debounceMs],
+  )
+
+  const playCurrentMeasure = useCallback(() => {
+    const worker = workerRef.current
+    if (!worker || currentMeasureIndex === null) return
+
+    const id = ++measureAudioRequestIdRef.current
+    latestMeasureAudioIdRef.current = id
+    setMeasureAudioGenerating(true)
+
+    worker.postMessage({
+      type: 'generateMeasureAudio',
+      source: sourceRef.current,
+      id,
+      measureIndex: currentMeasureIndex,
+      enabledTracks: enabledTracksRef.current,
+    } satisfies WorkerRequest)
+  }, [currentMeasureIndex])
+
   const exportPdf = useCallback(() => {
     const worker = workerRef.current
     if (!worker || pdfExporting || splitPdfExporting) return
@@ -348,5 +460,9 @@ export function useJianpuWorker(
     audioGenerating,
     exportPdf,
     exportSplitPdf,
+    currentMeasureIndex,
+    measureAudioGenerating,
+    notifyCursorOffset,
+    playCurrentMeasure,
   }
 }

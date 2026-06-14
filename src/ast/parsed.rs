@@ -8,6 +8,9 @@ pub struct ParsedScore {
 #[derive(Debug)]
 pub struct ParsedLyrics {
     pub syllables: Vec<Syllable>,
+    /// Byte offset of the end of the lyrics line for each measure, in order.
+    /// Used to extend the measure's source span to cover the lyrics line.
+    pub measure_ends: Vec<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -58,26 +61,24 @@ pub fn flatten_score_line_slots(declarations: &[PartDecl]) -> Vec<ScoreLineSlot>
 }
 
 #[derive(Debug)]
-pub struct ParsedNotesTrack {
+pub enum ParsedTrack {
+    Timed(ParsedTimedTrack),
+}
+
+#[derive(Debug)]
+pub struct ParsedTimedTrack {
     pub abbreviation: String,
-    #[allow(dead_code)] // reserved for future legend rendering
     pub display_name: String,
+    pub kind: PartKind,
     pub score: ParsedScore,
     pub lyrics: Option<ParsedLyrics>,
-}
-
-#[derive(Debug)]
-pub struct ParsedChordTrack {
-    pub abbreviation: String,
-    #[allow(dead_code)] // reserved for future legend rendering
-    pub display_name: String,
-    pub events_per_measure: Vec<Vec<ParsedChordEvent>>,
-}
-
-#[derive(Debug)]
-pub enum ParsedTrack {
-    Chord(ParsedChordTrack),
-    Notes(ParsedNotesTrack),
+    /// Per-measure flag: true when every score line of this track in that
+    /// measure group was a `"` ditto (explicit or implicit trailing omission).
+    pub ditto_measures: Vec<bool>,
+    /// Per-measure flag: true when this track's lyric line in that measure
+    /// group was a `"` ditto (explicit or implicit trailing omission).
+    /// Always false for tracks without a lyrics line.
+    pub lyrics_ditto_measures: Vec<bool>,
 }
 
 #[derive(Debug)]
@@ -88,6 +89,7 @@ pub struct ParsedDocument {
     #[allow(dead_code)] // reserved for future legend rendering
     pub declarations: Vec<PartDecl>,
     pub tracks: Vec<ParsedTrack>,
+    pub directive_events_per_measure: Vec<Vec<Spanned<ScoreEvent>>>,
 }
 
 #[allow(dead_code)]
@@ -121,14 +123,6 @@ pub struct ParsedChordSymbol {
     pub bass: Option<BassDegree>,
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone, PartialEq)]
-pub enum ParsedChordEvent {
-    Chord(ParsedChordSymbol),
-    Rest,
-    Extend(crate::error::Span),
-}
-
 #[derive(Debug)]
 pub struct ParsedMetadata {
     pub title: String,
@@ -140,9 +134,10 @@ pub struct ParsedMetadata {
     pub note_number_width: Option<u32>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ScoreEvent {
     Note(ParsedNote),
+    Chord(ParsedChordNote),
     Rest(ParsedRest),
     BpmChange(u32),
     KeyChange(KeyChange),
@@ -157,7 +152,7 @@ pub enum ScoreEvent {
     LabelChange(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ParsedNote {
     pub pitch: JianPuPitch,
     /// Octave offset from the default octave. 0 = default, positive = up, negative = down.
@@ -172,14 +167,35 @@ pub struct ParsedNote {
     pub group_continuation: u8,
     /// Whether `.` was present as a dotted-note suffix.
     pub dotted: bool,
+    /// When the slur group closes on an extension within this note (e.g. `(5 -)`),
+    /// this holds the offset in quarter-beats from the note's start where the slur arc
+    /// should end. `None` means the slur closes at the note's head position (normal case).
+    pub slur_group_close_at_duration: Option<u32>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParsedChordNote {
+    pub degree: JianPuPitch,
+    pub accidental: Accidental,
+    pub triad: TriadQuality,
+    pub extension: Option<Extension>,
+    pub bass: Option<BassDegree>,
+    pub duration: u32,
+    pub tie: bool,
+    pub group_membership: u8,
+    pub group_continuation: u8,
+    pub dotted: bool,
+    pub slur_group_close_at_duration: Option<u32>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct ParsedRest {
     /// Duration in quarter-beats. For dotted rests this already includes the added half-value.
     pub duration: u32,
     /// Whether `.` was present as a dotted-rest suffix.
     pub dotted: bool,
+    pub group_membership: u8,
+    pub group_continuation: u8,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -193,12 +209,12 @@ pub enum JianPuPitch {
     Seven,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct KeyChange {
     pub note: Note,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Note {
     pub name: NoteName,
     pub octave: u8,

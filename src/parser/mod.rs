@@ -49,27 +49,37 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, JianPuError>
 
     let metadata = metadata_parser::parse_metadata(&meta_content, meta_offset)?;
     let declarations = parts_parser::parse_parts(&parts_content, parts_offset)?;
-    let tracks = score::interleaved_parser::parse(&score_content, score_offset, &declarations)?;
+    let (tracks, directive_events_per_measure) =
+        score::interleaved_parser::parse(&score_content, score_offset, &declarations)?;
 
     Ok(ParsedDocument {
         filename: filename.to_string(),
         metadata,
         declarations,
         tracks,
+        directive_events_per_measure,
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::parsed::{ParsedNotesTrack, ParsedTrack};
+    use crate::ast::parsed::{ParsedTimedTrack, ParsedTrack};
 
-    fn notes_track(doc: &ParsedDocument) -> &ParsedNotesTrack {
+    fn notes_track(doc: &ParsedDocument) -> &ParsedTimedTrack {
         doc.tracks
             .iter()
             .find_map(|t| match t {
-                ParsedTrack::Notes(n) => Some(n),
-                ParsedTrack::Chord(_) => None,
+                ParsedTrack::Timed(n) if n.lyrics.is_none() && n.abbreviation != "Chord" => Some(n),
+                ParsedTrack::Timed(_) => None,
+            })
+            .or_else(|| {
+                doc.tracks
+                    .iter()
+                    .map(|t| match t {
+                        ParsedTrack::Timed(n) => n,
+                    })
+                    .next()
             })
             .expect("expected a notes track")
     }
@@ -133,20 +143,68 @@ mod tests {
             .tracks
             .iter()
             .find_map(|t| match t {
-                ParsedTrack::Notes(n) if n.abbreviation == "Soprano" => Some(n),
-                _ => None,
+                ParsedTrack::Timed(n) if n.abbreviation == "Soprano" => Some(n),
+                ParsedTrack::Timed(_) => None,
             })
             .unwrap();
         let alto = doc
             .tracks
             .iter()
             .find_map(|t| match t {
-                ParsedTrack::Notes(n) if n.abbreviation == "Alto" => Some(n),
-                _ => None,
+                ParsedTrack::Timed(n) if n.abbreviation == "Alto" => Some(n),
+                ParsedTrack::Timed(_) => None,
             })
             .unwrap();
         assert!(soprano.lyrics.is_none());
         assert!(alto.lyrics.is_none());
+    }
+
+    #[test]
+    fn error_span_points_to_absolute_file_position() {
+        // One notes part but two data lines in a group → "expected at most 1 lines, got 2".
+        // The span must point to the second line's position in the *full* input, not its
+        // offset within the score section.
+        let input = concat!(
+            "[metadata]\n",
+            "title=\"t\"\n",
+            "author=\"a\"\n",
+            "\n",
+            "[parts]\n",
+            "Melody = notes\n",
+            "\n",
+            "[score]\n",
+            "1 2 3 4\n",
+            "5 6 7 1\n",
+        );
+        let expected_offset = input.find("5 6 7 1").unwrap();
+        let err = parse(input, "test.jianpu").unwrap_err();
+        assert_eq!(
+            err.span.start, expected_offset,
+            "error span should point to the absolute file position of the extra line"
+        );
+    }
+
+    #[test]
+    fn too_many_lines_error_lists_declared_parts() {
+        // One notes part but two data lines → error should name the declared part.
+        let input = concat!(
+            "[metadata]\n",
+            "title=\"t\"\n",
+            "author=\"a\"\n",
+            "\n",
+            "[parts]\n",
+            "Melody = notes\n",
+            "\n",
+            "[score]\n",
+            "1 2 3 4\n",
+            "5 6 7 1\n",
+        );
+        let err = parse(input, "test.jianpu").unwrap_err();
+        assert!(
+            err.message.contains("Melody"),
+            "error message should list the declared part 'Melody', got: {}",
+            err.message
+        );
     }
 
     #[test]

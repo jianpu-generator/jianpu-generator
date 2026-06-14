@@ -69,10 +69,7 @@ export function Preview({
       </div>
       {toolbar ? <div className="preview-toolbar">{toolbar}</div> : null}
       {audioAvailable ? (
-        <div
-          className="preview-audio"
-          aria-busy={audioGenerating || undefined}
-        >
+        <div className="preview-audio" aria-busy={audioGenerating || undefined}>
           <div className="preview-audio-frame">
             {wavUrl ? (
               <div className="preview-audio-player-wrap">

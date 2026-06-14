@@ -1,10 +1,7 @@
 use super::*;
-use crate::ast::parsed::Accidental;
+use crate::ast::parsed::{Accidental, ParsedTrack};
 
-#[path = "interleaved_parser_test_helpers.rs"]
-mod test_helpers;
-
-use test_helpers::{chord_track, decl, notes_track};
+use super::test_helpers::{chord_track, decl, notes_track, parse};
 
 #[test]
 fn rejects_overfull_measure() {
@@ -64,74 +61,77 @@ fn implicit_trailing_extensions_after_partial_fill() {
     );
 }
 
-#[test]
-fn implicit_trailing_chord_extensions_match_explicit() {
-    use crate::grouper;
-    use crate::parser;
-    let explicit = concat!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\n",
-        "chord = chord\nMelody = notes\n\n[score]\n",
-        "(time=4/4 key=C4 bpm=120)\n1 - - -\n1\n",
-    );
-    let implicit = concat!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\n",
-        "chord = chord\nMelody = notes\n\n[score]\n",
-        "(time=4/4 key=C4 bpm=120)\n1\n1\n",
-    );
-    let explicit_score = grouper::group(parser::parse(explicit, "t.jianpu").unwrap()).unwrap();
-    let implicit_score = grouper::group(parser::parse(implicit, "t.jianpu").unwrap()).unwrap();
-    fn chord_duration(score: &crate::ast::grouped::Score) -> u32 {
-        use crate::ast::grouped::{GroupedChordEvent, PartRow};
-        let chord = score.measures[0]
-            .parts
-            .iter()
-            .find_map(|p| match p {
-                PartRow::Chord(c) => Some(c),
-                PartRow::Notes(_) => None,
-            })
-            .unwrap();
-        match &chord.events[0] {
-            GroupedChordEvent::Chord(c) => c.duration,
-            GroupedChordEvent::Rest(d) => *d,
+fn timed_cluster_duration(
+    events: &[crate::error::Spanned<crate::ast::parsed::ScoreEvent>],
+    start: usize,
+) -> u32 {
+    use crate::ast::parsed::ScoreEvent;
+    let Some(event) = events.get(start) else {
+        return 0;
+    };
+    let mut duration = match &event.value {
+        ScoreEvent::Chord(c) => c.duration,
+        ScoreEvent::Rest(r) => r.duration,
+        _ => return 0,
+    };
+    let mut index = start + 1;
+    while let Some(event) = events.get(index) {
+        if matches!(event.value, ScoreEvent::Extension) {
+            duration += 4;
+            index += 1;
+        } else {
+            break;
         }
     }
-    assert_eq!(chord_duration(&explicit_score), 16);
-    assert_eq!(chord_duration(&implicit_score), 16);
+    duration
+}
+
+fn chord_event_duration(tracks: &[ParsedTrack], abbrev: &str) -> u32 {
+    use crate::ast::parsed::ScoreEvent;
+    let events = &chord_track(tracks, abbrev).score.events;
+    let start = events
+        .iter()
+        .position(|e| matches!(e.value, ScoreEvent::Chord(_) | ScoreEvent::Rest(_)))
+        .expect("expected a chord or rest event");
+    timed_cluster_duration(events, start)
+}
+
+fn last_chord_event_duration(tracks: &[ParsedTrack], abbrev: &str) -> u32 {
+    use crate::ast::parsed::ScoreEvent;
+    let events = &chord_track(tracks, abbrev).score.events;
+    let start = events
+        .iter()
+        .rposition(|e| matches!(e.value, ScoreEvent::Chord(_) | ScoreEvent::Rest(_)))
+        .expect("expected a chord or rest event");
+    timed_cluster_duration(events, start)
+}
+
+#[test]
+fn implicit_trailing_chord_extensions_match_explicit() {
+    let declarations = vec![
+        decl("chord", PartKind::Chord),
+        decl("Melody", PartKind::Notes),
+    ];
+    let explicit = "(time=4/4 key=C4 bpm=120)\n1 - - -\n1\n";
+    let implicit = "(time=4/4 key=C4 bpm=120)\n1\n1\n";
+    let explicit_parsed = parse(explicit, 0, &declarations).unwrap();
+    let implicit_parsed = parse(implicit, 0, &declarations).unwrap();
+    assert_eq!(chord_event_duration(&explicit_parsed, "chord"), 16);
+    assert_eq!(chord_event_duration(&implicit_parsed, "chord"), 16);
 }
 
 #[test]
 fn implicit_trailing_chord_extensions_after_partial_fill() {
-    use crate::grouper;
-    use crate::parser;
-    let explicit = concat!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\n",
-        "chord = chord\nMelody = notes\n\n[score]\n",
-        "(time=4/4 key=C4 bpm=120)\n1m 2m - -\n1 2 3 4\n",
-    );
-    let implicit = concat!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\n",
-        "chord = chord\nMelody = notes\n\n[score]\n",
-        "(time=4/4 key=C4 bpm=120)\n1m 2m\n1 2 3 4\n",
-    );
-    let explicit_score = grouper::group(parser::parse(explicit, "t.jianpu").unwrap()).unwrap();
-    let implicit_score = grouper::group(parser::parse(implicit, "t.jianpu").unwrap()).unwrap();
-    fn last_chord_duration(score: &crate::ast::grouped::Score) -> u32 {
-        use crate::ast::grouped::{GroupedChordEvent, PartRow};
-        let chord = score.measures[0]
-            .parts
-            .iter()
-            .find_map(|p| match p {
-                PartRow::Chord(c) => Some(c),
-                PartRow::Notes(_) => None,
-            })
-            .unwrap();
-        match chord.events.last().unwrap() {
-            GroupedChordEvent::Chord(c) => c.duration,
-            GroupedChordEvent::Rest(d) => *d,
-        }
-    }
-    assert_eq!(last_chord_duration(&explicit_score), 12);
-    assert_eq!(last_chord_duration(&implicit_score), 12);
+    let declarations = vec![
+        decl("chord", PartKind::Chord),
+        decl("Melody", PartKind::Notes),
+    ];
+    let explicit = "(time=4/4 key=C4 bpm=120)\n1m 2m - -\n1 2 3 4\n";
+    let implicit = "(time=4/4 key=C4 bpm=120)\n1m 2m\n1 2 3 4\n";
+    let explicit_parsed = parse(explicit, 0, &declarations).unwrap();
+    let implicit_parsed = parse(implicit, 0, &declarations).unwrap();
+    assert_eq!(last_chord_event_duration(&explicit_parsed, "chord"), 12);
+    assert_eq!(last_chord_event_duration(&implicit_parsed, "chord"), 12);
 }
 
 #[test]

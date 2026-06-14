@@ -1,13 +1,19 @@
 pub mod ast;
 pub mod combiner;
+pub mod compiler;
+pub mod compositor;
+pub mod coordinate_resolver;
 pub mod desugar;
 pub mod error;
 pub mod error_reporter;
+pub mod grid_layout;
 pub mod grouper;
 pub mod grouping;
 pub mod layout;
 pub mod parser;
+pub mod render_config;
 pub mod renderer;
+pub mod serializer;
 pub mod utils;
 
 #[cfg(feature = "midi")]
@@ -40,10 +46,17 @@ pub fn compile(source: &str, filename: &str) -> Result<Score, JianPuError> {
 
 /// Layout and render a [`Score`] into one SVG string per page.
 pub fn render_svgs(score: &Score) -> Vec<String> {
-    let row_height = score.metadata.row_height;
-    let note_number_width = score.metadata.note_number_width;
-    let pages = layout::layout(score, 595.0, 842.0);
-    renderer::render(&pages, row_height, note_number_width)
+    let config = render_config::RenderConfig::from_metadata(&score.metadata);
+    let header = grid_layout::types::Header {
+        title: score.metadata.title.clone(),
+        subtitle: score.metadata.subtitle.clone(),
+        author: score.metadata.author.clone(),
+    };
+    let compile_result = compiler::compile(score);
+    let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0);
+    let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32);
+    let docs = renderer::new_renderer::render_new(&abs, &config);
+    serializer::serialize(&docs)
 }
 
 /// Parse, group, and render a `.jianpu` source string into SVG page strings.
@@ -107,6 +120,14 @@ pub fn apply_track_filter(score: &mut Score, enabled_tracks: Option<&[String]>) 
                 .as_ref()
                 .is_some_and(|name| tracks.contains(name))
         });
+        // If the source part was filtered out, a leading ditto has no row to
+        // merge into and its content would silently disappear. Promote the
+        // first ditto part to Timed so it renders independently.
+        if let Some(first) = measure.parts.first_mut() {
+            if let PartRow::Ditto(slice) = first {
+                *first = PartRow::Timed(slice.clone());
+            }
+        }
     }
 }
 
@@ -130,17 +151,49 @@ pub fn apply_lyrics_filter(score: &mut Score, disabled_lyrics: Option<&[String]>
     }
     for measure in &mut score.measures {
         for part in &mut measure.parts {
-            if let PartRow::Notes(part_slice) = part {
-                if part_slice
-                    .name
-                    .as_ref()
-                    .is_some_and(|name| tracks.contains(name))
-                {
-                    part_slice.lyrics = None;
+            let part_slice = part.slice_mut();
+            if part_slice
+                .name
+                .as_ref()
+                .is_some_and(|name| tracks.contains(name))
+            {
+                part_slice.lyrics = None;
+                if part_slice.kind == PartKind::NotesWithLyrics {
+                    part_slice.kind = PartKind::Notes;
                 }
             }
         }
     }
+}
+
+/// Find the index of the measure whose `source_span` contains `byte_offset`.
+///
+/// Returns `None` when `byte_offset` falls outside all measure spans
+/// (e.g. in `[metadata]`, `[parts]`, or a directive line).
+pub fn find_measure_at_byte_offset(score: &Score, byte_offset: usize) -> Option<usize> {
+    score
+        .measures
+        .iter()
+        .position(|m| m.source_span.start <= byte_offset && byte_offset <= m.source_span.end)
+}
+
+/// Find the index of the measure that contains the given 0-based line number.
+///
+/// Converts `line_number` to the byte offset of the first character on that
+/// line, then delegates to [`find_measure_at_byte_offset`].  Returns `None`
+/// when the line falls outside all measure spans (e.g. `[metadata]`,
+/// `[parts]`, directive lines, or blank separator lines).
+pub fn find_measure_at_line_number(
+    score: &Score,
+    source: &str,
+    line_number: usize,
+) -> Option<usize> {
+    let byte_offset: usize = source
+        .split('\n')
+        .take(line_number)
+        .map(|line| line.len() + 1) // +1 for the '\n' byte
+        .sum();
+    find_measure_at_byte_offset(score, byte_offset)
 }
 
 /// Sanitize a track name for use in filenames (mirrors CLI).
@@ -303,6 +356,23 @@ pub fn write_wav_from_source_filtered(
     wav::write_wav(&midi_bytes)
 }
 
+/// Parse, group, optionally filter tracks, and synthesize WAV for a single measure.
+///
+/// BPM and key context is accumulated from all preceding measures so
+/// that mid-piece measures sound correct even without explicit directives.
+#[cfg(feature = "wav")]
+pub fn write_wav_for_measure_from_source(
+    source: &str,
+    filename: &str,
+    measure_index: usize,
+    enabled_tracks: Option<&[String]>,
+) -> Result<Vec<u8>, JianPuError> {
+    let mut score = compile(source, filename)?;
+    apply_track_filter(&mut score, enabled_tracks);
+    let midi_bytes = midi::write_midi_for_measure(&score, measure_index)?;
+    wav::write_wav(&midi_bytes)
+}
+
 /// Parse, group, optionally filter tracks, and write PDF bytes.
 ///
 /// When `enabled_tracks` is `None`, all parts are included.
@@ -332,271 +402,4 @@ pub fn write_pdf_from_source_filtered_with_lyrics(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn list_parts_from_source_returns_declarations() {
-        let input = concat!(
-            "[metadata]\n",
-            "title = \"t\"\n",
-            "author = \"a\"\n",
-            "\n",
-            "[parts]\n",
-            "main = chord\n",
-            "Alto 1 & Tenor (A1&T) = notes lyrics\n",
-            "\n",
-            "[score]\n",
-            "(time=4/4 key=C4 bpm=120)\n",
-            "1m\n",
-            "1 2 3 4\n",
-            "a b c d\n",
-        );
-        let parts = list_parts_from_source(input, "test.jianpu").unwrap();
-        assert_eq!(parts.len(), 2);
-        assert_eq!(parts[0].abbreviation, "main");
-        assert_eq!(parts[0].display_name, "main");
-        assert_eq!(parts[1].abbreviation, "A1&T");
-        assert_eq!(parts[1].display_name, "Alto 1 & Tenor");
-        assert!(!parts[0].has_lyrics);
-        assert!(parts[1].has_lyrics);
-    }
-
-    #[test]
-    fn hidden_lyrics_do_not_reserve_lyric_row_space() {
-        let input = concat!(
-            "[metadata]\n",
-            "title = \"t\"\n",
-            "author = \"a\"\n",
-            "\n",
-            "[parts]\n",
-            "Soprano = notes lyrics\n",
-            "Alto = notes lyrics\n",
-            "\n",
-            "[score]\n",
-            "(time=4/4 key=C4 bpm=120)\n",
-            "1 2 3 4\n",
-            "sop sop sop sop\n",
-            "5 6 7 1\n",
-            "alt alt alt alt\n",
-        );
-        let all = render_svgs_from_source(input, "test.jianpu").unwrap();
-        let alto_lyrics_hidden = render_svgs_from_source_filtered_with_lyrics(
-            input,
-            "test.jianpu",
-            None,
-            Some(&["Alto".into()]),
-        )
-        .unwrap();
-        assert_ne!(
-            all[0].len(),
-            alto_lyrics_hidden[0].len(),
-            "hiding one part's lyrics should change rendered SVG size"
-        );
-    }
-
-    #[test]
-    fn render_svgs_from_source_filtered_can_hide_lyrics_per_part() {
-        let input = concat!(
-            "[metadata]\n",
-            "title = \"t\"\n",
-            "author = \"a\"\n",
-            "\n",
-            "[parts]\n",
-            "Soprano = notes lyrics\n",
-            "Alto = notes lyrics\n",
-            "\n",
-            "[score]\n",
-            "(time=4/4 key=C4 bpm=120)\n",
-            "1 2 3 4\n",
-            "sop sop sop sop\n",
-            "5 6 7 1\n",
-            "alt alt alt alt\n",
-        );
-        let all = render_svgs_from_source(input, "test.jianpu").unwrap();
-        let alto_lyrics_hidden = render_svgs_from_source_filtered_with_lyrics(
-            input,
-            "test.jianpu",
-            None,
-            Some(&["Alto".into()]),
-        )
-        .unwrap();
-        assert!(all[0].contains("sop"));
-        assert!(all[0].contains("alt"));
-        assert!(alto_lyrics_hidden[0].contains("sop"));
-        assert!(!alto_lyrics_hidden[0].contains("alt"));
-    }
-
-    #[test]
-    fn render_svgs_from_source_filtered_can_hide_parts() {
-        let input = concat!(
-            "[metadata]\n",
-            "title = \"t\"\n",
-            "author = \"a\"\n",
-            "\n",
-            "[parts]\n",
-            "Soprano = notes\n",
-            "Alto = notes\n",
-            "\n",
-            "[score]\n",
-            "(time=4/4 key=C4 bpm=120)\n",
-            "1 2 3 4\n",
-            "5 6 7 1\n",
-        );
-        let all = render_svgs_from_source(input, "test.jianpu").unwrap();
-        let soprano_only =
-            render_svgs_from_source_filtered(input, "test.jianpu", Some(&["Soprano".into()]))
-                .unwrap();
-        assert_ne!(all[0], soprano_only[0]);
-    }
-
-    #[test]
-    fn render_svgs_from_source_smoke() {
-        let input = concat!(
-            "[metadata]\n",
-            "title = \"t\"\n",
-            "author = \"a\"\n",
-            "\n",
-            "[parts]\n",
-            "Melody = notes lyrics\n",
-            "\n",
-            "[score]\n",
-            "(time=4/4 key=C4 bpm=120)\n",
-            "1 2 3 4\n",
-            "a b c d\n",
-        );
-        let svgs = render_svgs_from_source(input, "test.jianpu").unwrap();
-        assert_eq!(svgs.len(), 1);
-        assert!(svgs[0].starts_with("<svg"));
-        assert!(svgs[0].ends_with("</svg>"));
-    }
-
-    #[test]
-    fn split_track_names_falls_back_to_part_declarations() {
-        let input = concat!(
-            "[metadata]\n",
-            "title = \"t\"\n",
-            "author = \"a\"\n",
-            "\n",
-            "[parts]\n",
-            "Melody = notes lyrics\n",
-            "\n",
-            "[score]\n",
-            "(time=4/4 key=C4 bpm=120)\n",
-            "1 2 3 4\n",
-            "a b c d\n",
-        );
-        let score = compile(input, "test.jianpu").unwrap();
-        let names = split_track_names(input, "test.jianpu", &score, &[]).unwrap();
-        assert_eq!(names, vec!["Melody"]);
-    }
-
-    #[test]
-    fn split_pdf_filename_sanitizes_track_name() {
-        assert_eq!(
-            split_pdf_filename("song", "Alto 1 & Tenor"),
-            "song - Alto 1 & Tenor.pdf"
-        );
-        assert_eq!(
-            split_pdf_filename("song", "bad/name"),
-            "song - bad-name.pdf"
-        );
-    }
-
-    #[cfg(feature = "pdf")]
-    mod split_pdf_tests {
-        use super::*;
-        use std::io::Read;
-        use zip::ZipArchive;
-
-        fn multi_track_input() -> &'static str {
-            concat!(
-                "[metadata]\n",
-                "title = \"test score\"\n",
-                "author = \"tester\"\n",
-                "\n",
-                "[parts]\n",
-                "Soprano 1 (S1) = notes lyrics\n",
-                "Soprano 2 (S2) = notes lyrics\n",
-                "\n",
-                "[score]\n",
-                "(time=4/4 key=C4 bpm=120)\n",
-                "1 2 3 4\n",
-                "do re mi fa\n",
-                "5 6 7 1\n",
-                "sol la ti do\n",
-            )
-        }
-
-        #[test]
-        fn write_split_pdfs_from_source_produces_one_pdf_per_track() {
-            let entries =
-                write_split_pdfs_from_source(multi_track_input(), "test.jianpu", "test_split", &[])
-                    .unwrap();
-            assert_eq!(entries.len(), 2);
-            assert_eq!(entries[0].track_name, "S1");
-            assert_eq!(entries[0].filename, "test_split - Soprano 1.pdf");
-            assert_eq!(entries[1].track_name, "S2");
-            assert_eq!(entries[1].filename, "test_split - Soprano 2.pdf");
-            assert_eq!(&entries[0].pdf[0..4], b"%PDF");
-            assert_eq!(&entries[1].pdf[0..4], b"%PDF");
-        }
-
-        #[test]
-        fn write_split_pdfs_from_source_single_part_uses_split_naming() {
-            let input = concat!(
-                "[metadata]\n",
-                "title = \"t\"\n",
-                "author = \"a\"\n",
-                "\n",
-                "[parts]\n",
-                "Melody = notes lyrics\n",
-                "\n",
-                "[score]\n",
-                "(time=4/4 key=C4 bpm=120)\n",
-                "1 2 3 4\n",
-                "a b c d\n",
-            );
-            let entries = write_split_pdfs_from_source(input, "test.jianpu", "song", &[]).unwrap();
-            assert_eq!(entries.len(), 1);
-            assert_eq!(entries[0].filename, "song - Melody.pdf");
-            assert_eq!(&entries[0].pdf[0..4], b"%PDF");
-        }
-
-        #[test]
-        fn write_split_pdfs_from_source_invalid_source_errors() {
-            let err =
-                write_split_pdfs_from_source("not valid", "test.jianpu", "song", &[]).unwrap_err();
-            assert!(!err.message.is_empty());
-        }
-
-        #[test]
-        fn zip_split_pdfs_contains_named_entries() {
-            let entries =
-                write_split_pdfs_from_source(multi_track_input(), "test.jianpu", "test_split", &[])
-                    .unwrap();
-            let zip_bytes = zip_split_pdfs(&entries).unwrap();
-            assert_eq!(&zip_bytes[0..2], b"PK");
-
-            let cursor = std::io::Cursor::new(zip_bytes);
-            let mut archive = ZipArchive::new(cursor).unwrap();
-            assert_eq!(archive.len(), 2);
-            let mut names: Vec<String> = (0..archive.len())
-                .map(|i| archive.by_index(i).unwrap().name().to_string())
-                .collect();
-            names.sort();
-            assert_eq!(
-                names,
-                vec![
-                    "test_split - Soprano 1.pdf".to_string(),
-                    "test_split - Soprano 2.pdf".to_string()
-                ]
-            );
-
-            let mut first = archive.by_name("test_split - Soprano 1.pdf").unwrap();
-            let mut buf = Vec::new();
-            first.read_to_end(&mut buf).unwrap();
-            assert_eq!(&buf[0..4], b"%PDF");
-        }
-    }
-}
+mod tests;

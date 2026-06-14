@@ -1,4 +1,7 @@
-use crate::ast::parsed::{Accidental, Extension, JianPuPitch, KeyChange, Syllable, TriadQuality};
+use crate::ast::parsed::{
+    Accidental, BassDegree, Extension, JianPuPitch, KeyChange, Syllable, TriadQuality,
+};
+use crate::error::Span;
 
 // ── Public final types ────────────────────────────────────────────────────────
 
@@ -30,6 +33,7 @@ pub struct Lyrics {
 #[derive(Clone)]
 pub struct PartSlice {
     pub name: Option<String>,
+    pub kind: crate::ast::parsed::PartKind,
     pub notes: Notes,
     pub lyrics: Option<Lyrics>,
 }
@@ -42,71 +46,65 @@ pub struct MultiPartMeasure {
     pub key: Option<KeyChange>,
     pub label: Option<String>,
     pub parts: Vec<PartRow>,
-}
-
-#[allow(dead_code)]
-#[derive(Clone)]
-pub struct GroupedChord {
-    pub degree: JianPuPitch,
-    pub accidental: Accidental,
-    pub triad: TriadQuality,
-    pub extension: Option<Extension>,
-    pub bass: Option<crate::ast::parsed::BassDegree>,
-    pub duration: u32,
-}
-
-#[allow(dead_code)]
-#[derive(Clone)]
-pub enum GroupedChordEvent {
-    Chord(GroupedChord),
-    Rest(u32),
-}
-
-#[derive(Clone)]
-pub struct ChordSlice {
-    pub name: Option<String>,
-    #[allow(dead_code)]
-    pub events: Vec<GroupedChordEvent>,
+    /// Byte range of this measure's note events in the original source.
+    /// Used to map editor cursor position to a measure index.
+    pub source_span: Span,
 }
 
 #[derive(Clone)]
 pub enum PartRow {
-    Notes(PartSlice),
-    Chord(ChordSlice),
+    Timed(PartSlice),
+    /// All of this part's input lines were `"` (or implicit trailing omission)
+    /// in this measure. Carries the resolved content so audio output still
+    /// includes it, but the renderer skips the row entirely.
+    Ditto(PartSlice),
 }
 
 impl PartRow {
     pub fn name(&self) -> Option<&String> {
+        self.slice().name.as_ref()
+    }
+
+    /// The resolved content, whether rendered or not.
+    pub fn slice(&self) -> &PartSlice {
         match self {
-            PartRow::Notes(s) => s.name.as_ref(),
-            PartRow::Chord(s) => s.name.as_ref(),
+            PartRow::Timed(s) | PartRow::Ditto(s) => s,
         }
+    }
+
+    pub fn slice_mut(&mut self) -> &mut PartSlice {
+        match self {
+            PartRow::Timed(s) | PartRow::Ditto(s) => s,
+        }
+    }
+
+    /// Content to render; `None` for ditto rows.
+    pub fn rendered_slice(&self) -> Option<&PartSlice> {
+        match self {
+            PartRow::Timed(s) => Some(s),
+            PartRow::Ditto(_) => None,
+        }
+    }
+
+    pub fn is_ditto(&self) -> bool {
+        matches!(self, PartRow::Ditto(_))
     }
 }
 
-// Intermediate type for the chord grouper:
-pub(crate) struct GroupedChordPart {
-    pub(crate) name: Option<String>,
-    pub(crate) measures: Vec<ChordSlice>,
-}
-
 pub(crate) enum GroupedTrack {
-    Chord(GroupedChordPart),
-    Notes(GroupedPart),
+    Timed(GroupedPart),
 }
 
 impl GroupedTrack {
     pub(crate) fn measure_count(&self) -> usize {
         match self {
-            GroupedTrack::Notes(part) => part.measures.len(),
-            GroupedTrack::Chord(part) => part.measures.len(),
+            GroupedTrack::Timed(part) => part.measures.len(),
         }
     }
 
     pub(crate) fn track_name(&self) -> &Option<String> {
         match self {
-            GroupedTrack::Notes(part) => &part.name,
-            GroupedTrack::Chord(part) => &part.name,
+            GroupedTrack::Timed(part) => &part.name,
         }
     }
 }
@@ -119,19 +117,38 @@ pub struct Score {
 
 // ── Intermediate grouper types (not part of the public API) ─────────────────
 
-pub(crate) struct GroupedMeasure {
+#[allow(dead_code)]
+pub(crate) struct MeasureDirectives {
     pub(crate) time_signature: Option<TimeSignature>,
     pub(crate) bpm: Option<u32>,
     pub(crate) key: Option<KeyChange>,
     pub(crate) label: Option<String>,
+}
+
+#[allow(dead_code)]
+pub(crate) struct GroupedScore {
+    pub(crate) measure_directives: Vec<MeasureDirectives>,
+    pub(crate) parts: Vec<GroupedTrack>,
+}
+
+pub(crate) struct GroupedMeasure {
     pub(crate) notes: Notes,
+    pub(crate) source_span: Span,
 }
 
 pub(crate) struct GroupedPart {
     pub(crate) name: Option<String>,
+    pub(crate) kind: crate::ast::parsed::PartKind,
     pub(crate) measures: Vec<GroupedMeasure>,
     /// Flat lyrics list. `None` means no [lyrics] section was provided.
     pub(crate) lyrics: Option<Vec<Syllable>>,
+    /// Per-measure flag: true when every input line of this part in that
+    /// measure was a `"` ditto (explicit or implicit trailing omission).
+    pub(crate) ditto_measures: Vec<bool>,
+    /// Per-measure flag: true when this part's lyric line in that measure
+    /// was a `"` ditto. The copied lyrics duplicate the part above, so the
+    /// lyric row is not rendered and its space is reclaimed.
+    pub(crate) lyrics_ditto_measures: Vec<bool>,
 }
 
 // ── Shared note types ─────────────────────────────────────────────────────────
@@ -146,6 +163,22 @@ pub struct TimeSignature {
 pub enum NoteEvent {
     Note(GroupedNote),
     Rest(GroupedRest),
+    Chord(GroupedChordNote),
+}
+
+#[derive(Clone)]
+pub struct GroupedChordNote {
+    pub degree: JianPuPitch,
+    pub accidental: Accidental,
+    pub triad: TriadQuality,
+    pub extension: Option<Extension>,
+    pub bass: Option<BassDegree>,
+    pub duration: u32,
+    pub tie: bool,
+    pub group_membership: u8,
+    pub group_continuation: u8,
+    pub dotted: bool,
+    pub slur_group_close_at_duration: Option<u32>,
 }
 
 #[derive(Clone)]
@@ -162,6 +195,62 @@ pub struct GroupedNote {
     pub group_continuation: u8,
     /// True if this note was written with `*` (dotted duration).
     pub dotted: bool,
+    pub slur_group_close_at_duration: Option<u32>,
+}
+
+impl GroupedChordNote {
+    pub fn format_symbol(&self) -> String {
+        use crate::ast::parsed::{Accidental, Extension, JianPuPitch, TriadQuality};
+
+        let degree = match self.degree {
+            JianPuPitch::One => '1',
+            JianPuPitch::Two => '2',
+            JianPuPitch::Three => '3',
+            JianPuPitch::Four => '4',
+            JianPuPitch::Five => '5',
+            JianPuPitch::Six => '6',
+            JianPuPitch::Seven => '7',
+        };
+        let accidental = match self.accidental {
+            Accidental::Sharp => "♯",
+            Accidental::Flat => "♭",
+            Accidental::Natural => "",
+        };
+        let triad = match self.triad {
+            TriadQuality::Major => "",
+            TriadQuality::Minor => "m",
+            TriadQuality::Diminished => "°",
+            TriadQuality::Augmented => "⁺",
+        };
+        let extension = match &self.extension {
+            Some(Extension::DominantSeventh) => "⁷",
+            Some(Extension::MajorSeventh) => "△⁷",
+            None => "",
+        };
+        let mut result = format!("{degree}{accidental}{triad}{extension}");
+
+        if let Some(bass) = &self.bass {
+            let bass_degree = match bass.degree {
+                JianPuPitch::One => '1',
+                JianPuPitch::Two => '2',
+                JianPuPitch::Three => '3',
+                JianPuPitch::Four => '4',
+                JianPuPitch::Five => '5',
+                JianPuPitch::Six => '6',
+                JianPuPitch::Seven => '7',
+            };
+            let bass_acc = match bass.accidental {
+                Accidental::Sharp => "♯",
+                Accidental::Flat => "♭",
+                Accidental::Natural => "",
+            };
+            result.push('/');
+            result.push(bass_degree);
+            result.push_str(bass_acc);
+        }
+
+        result
+    }
 }
 
 #[derive(Clone)]
@@ -171,4 +260,6 @@ pub struct GroupedRest {
     /// True if this rest was written with `*` (dotted duration). Reserved for future use.
     #[allow(dead_code)]
     pub dotted: bool,
+    pub group_membership: u8,
+    pub group_continuation: u8,
 }
