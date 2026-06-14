@@ -1,4 +1,4 @@
-use crate::ast::parsed::{ParsedChordEvent, ScoreEvent};
+use crate::ast::parsed::ScoreEvent;
 use crate::error::{JianPuError, Span, Spanned};
 
 pub(super) fn beats_per_measure(num: u8, den: u8) -> u32 {
@@ -8,6 +8,7 @@ pub(super) fn beats_per_measure(num: u8, den: u8) -> u32 {
 fn timed_beats(event: &ScoreEvent) -> u32 {
     match event {
         ScoreEvent::Note(n) => n.duration,
+        ScoreEvent::Chord(c) => c.duration,
         ScoreEvent::Rest(r) => r.duration,
         ScoreEvent::Extension => 4,
         _ => 0,
@@ -37,6 +38,68 @@ fn timed_beats_before_last(events: &[Spanned<ScoreEvent>]) -> (u32, u32) {
     };
     let before_last: u32 = timed.iter().take(timed.len().saturating_sub(1)).sum();
     (before_last, last)
+}
+
+fn timed_cluster_duration_at(events: &[Spanned<ScoreEvent>], start: usize) -> u32 {
+    let Some(event) = events.get(start) else {
+        return 0;
+    };
+    let mut duration = timed_beats(&event.value);
+    if duration == 0 {
+        return 0;
+    }
+    let mut index = start + 1;
+    while let Some(event) = events.get(index) {
+        if matches!(event.value, ScoreEvent::Extension) {
+            duration += 4;
+            index += 1;
+        } else {
+            break;
+        }
+    }
+    duration
+}
+
+fn timed_cluster_len_at(events: &[Spanned<ScoreEvent>], start: usize) -> usize {
+    let mut len = 1usize;
+    let mut index = start + 1;
+    while let Some(event) = events.get(index) {
+        if matches!(event.value, ScoreEvent::Extension) {
+            len += 1;
+            index += 1;
+        } else {
+            break;
+        }
+    }
+    len
+}
+
+fn last_timed_cluster_start_and_duration(events: &[Spanned<ScoreEvent>]) -> Option<(u32, u32)> {
+    let mut pos = 0u32;
+    let mut index = 0usize;
+    let mut last_cluster = None;
+    while index < events.len() {
+        let Some(event) = events.get(index) else {
+            break;
+        };
+        if timed_beats(&event.value) > 0 {
+            let duration = timed_cluster_duration_at(events, index);
+            last_cluster = Some((pos, duration));
+            pos += duration;
+            index += timed_cluster_len_at(events, index);
+        } else {
+            index += 1;
+        }
+    }
+    last_cluster
+}
+
+/// True when extending the last timed cluster by `deficit` would cross the 4/4 half-bar boundary.
+fn extending_last_crosses_half_bar(events: &[Spanned<ScoreEvent>], deficit: u32) -> bool {
+    let Some((start, duration)) = last_timed_cluster_start_and_duration(events) else {
+        return false;
+    };
+    start > 0 && start < 8 && start + duration + deficit > 8
 }
 
 /// Implicit trailing `-` extensions apply only when earlier content fills whole beats
@@ -82,13 +145,30 @@ pub(super) fn validate_and_pad_beats(
                 format!("incomplete measure: expected {expected} quarter-beats, got {total}"),
             ));
         }
-        if let Some(last) = events
-            .iter_mut()
-            .rev()
-            .find(|e| matches!(&e.value, ScoreEvent::Note(_) | ScoreEvent::Rest(_)))
-        {
+        if extending_last_crosses_half_bar(&events, deficit) {
+            let pad_span = events
+                .iter()
+                .rev()
+                .find(|e| {
+                    matches!(
+                        &e.value,
+                        ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::Rest(_)
+                    )
+                })
+                .map(|e| e.span.clone())
+                .unwrap_or_else(|| Span::new(0, 1));
+            for _ in 0..(deficit / 4) {
+                events.push(Spanned::new(ScoreEvent::Extension, pad_span.clone()));
+            }
+        } else if let Some(last) = events.iter_mut().rev().find(|e| {
+            matches!(
+                &e.value,
+                ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::Rest(_)
+            )
+        }) {
             match &mut last.value {
                 ScoreEvent::Note(n) => n.duration += deficit,
+                ScoreEvent::Chord(c) => c.duration += deficit,
                 ScoreEvent::Rest(r) => r.duration += deficit,
                 _ => {}
             }
@@ -96,65 +176,6 @@ pub(super) fn validate_and_pad_beats(
     }
 
     crate::grouping::validate_measure_grouping(&events, time_num, time_den)?;
-
-    Ok(events)
-}
-
-fn chord_timed_beats(event: &ParsedChordEvent) -> u32 {
-    match event {
-        ParsedChordEvent::Chord(_) | ParsedChordEvent::Rest | ParsedChordEvent::Extend(_) => 4,
-    }
-}
-
-fn has_extendable_chord_event(events: &[ParsedChordEvent]) -> bool {
-    events
-        .iter()
-        .any(|e| matches!(e, ParsedChordEvent::Chord(_) | ParsedChordEvent::Rest))
-}
-
-fn last_chord_event_span(events: &[ParsedChordEvent], line_span: &Span) -> Span {
-    events
-        .iter()
-        .rev()
-        .find_map(|e| match e {
-            ParsedChordEvent::Extend(span) => Some(span.clone()),
-            _ => None,
-        })
-        .unwrap_or_else(|| line_span.clone())
-}
-
-/// Validates measure capacity and pads omitted trailing `-` extensions when possible.
-pub(super) fn validate_and_pad_chord_beats(
-    mut events: Vec<ParsedChordEvent>,
-    expected: u32,
-    line_span: &Span,
-) -> Result<Vec<ParsedChordEvent>, JianPuError> {
-    let mut total = 0u32;
-
-    for event in &events {
-        total += chord_timed_beats(event);
-        if total > expected {
-            return Err(JianPuError::new(
-                last_chord_event_span(&events, line_span),
-                format!(
-                    "chord exceeds measure boundary: measure has {expected} quarter-beats, cumulative is now {total}"
-                ),
-            ));
-        }
-    }
-
-    if total < expected {
-        let deficit = expected - total;
-        if deficit % 4 != 0 || !has_extendable_chord_event(&events) {
-            return Err(JianPuError::new(
-                last_chord_event_span(&events, line_span),
-                format!("incomplete measure: expected {expected} quarter-beats, got {total}"),
-            ));
-        }
-        for _ in 0..(deficit / 4) {
-            events.push(ParsedChordEvent::Extend(line_span.clone()));
-        }
-    }
 
     Ok(events)
 }

@@ -94,18 +94,12 @@ pub fn write_pdf(svgs: &[String]) -> Result<Vec<u8>, JianPuError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{grouper, layout, parser, renderer};
 
     fn make_pdf(score_str: &str, lyrics_str: &str) -> Vec<u8> {
         let input = format!(
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n[score]\n(time=4/4 key=C4 bpm=120)\n{score_str}\n{lyrics_str}\n"
         );
-        let doc = parser::parse(&input, "test.jianpu").unwrap();
-        let score = grouper::group(doc).unwrap();
-        let row_height = score.metadata.row_height;
-        let note_number_width = score.metadata.note_number_width;
-        let pages = layout::layout(&score, 595.0, 842.0);
-        let svgs = renderer::render(&pages, row_height, note_number_width);
+        let svgs = crate::render_svgs_from_source(&input, "test.jianpu").unwrap();
         write_pdf(&svgs).unwrap()
     }
 

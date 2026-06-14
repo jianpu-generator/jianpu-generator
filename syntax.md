@@ -169,7 +169,9 @@ Note names: `A` `B` `C` `D` `E` `F` `G`, with optional `#` or `b` accidental, fo
 
 ## Notes syntax
 
-Note lines are whitespace-separated **tokens**. The `|` character is accepted but ignored (legacy bar separator).
+Note lines are a sequence of **atoms** (notes, rests, chords, extensions, groups). Whitespace is optional between atoms and is ignored inside `(…)` groups. The `|` character is accepted but ignored (legacy bar separator).
+
+Example: `((1 1) 5 5)` is equivalent to `((11)55)`.
 
 ### Pitch and rest
 
@@ -389,6 +391,14 @@ Parsing checks longest suffix first (`M7` before `7`; `m` before extension).
 | `1/5` | I major, 5 in bass (e.g. C/G) |
 | `6m/5` | vi minor, 5 in bass (e.g. Am/G) |
 
+### Duration suffixes
+
+Chord heads accept the same suffixes as notes: `_`, `=`, `.`, and suffix `-`. Octave markers (`'`, `,`) are not allowed on chord lines.
+
+### Tie and slur groups
+
+Parentheses work identically to notes lines. Spaces inside groups are ignored. Examples: `(1-6m-)`, `(1 - 6m -)`.
+
 Example:
 
 ```
@@ -420,6 +430,16 @@ Resolution rules:
 - The `(...)` directive line is never a ditto source or target.
 - Ditto chains resolve top-to-bottom (`"` copying `"` is fine).
 - `"` with no preceding line of the same type in the group is an error.
+
+### Rendering
+
+When **all** lines of a part in a measure are dittos (explicit `"` or implicit trailing omission), that part's row is **not rendered** for that measure — the vertical space is reclaimed and the rows below move up. The part still sounds in MIDI/WAV output.
+
+When only the **lyric line** of a `notes lyrics` part is a ditto (explicit `"` or implicit omission), the notes row still renders but the lyric row is suppressed and its vertical space is reclaimed. The part is displayed as if it were a plain `notes` part for that measure.
+
+- A part with explicit content on any of its lines (e.g. ditto notes but explicit lyrics) still renders normally.
+- All measures sharing a system line must render identical rows. A measure whose rendered shape differs (different parts visible, or lyric row present vs absent) starts a new system line.
+- The first part of a measure group can never be fully ditto (a `"` needs a preceding same-type line), so every measure renders at least one part.
 
 ---
 

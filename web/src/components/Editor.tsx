@@ -9,7 +9,10 @@ import {
   useRef,
 } from 'react'
 import type { Diagnostic, EditorHandle } from '../types'
-import { byteOffsetToStringIndex } from '../utils/byteSpan'
+import {
+  byteOffsetToStringIndex,
+  stringIndexToByteOffset,
+} from '../utils/byteSpan'
 
 export interface EditorProps {
   value: string
@@ -17,6 +20,8 @@ export interface EditorProps {
   readOnly?: boolean
   diagnostics?: Diagnostic[]
   toolbar?: ReactNode
+  onCursorByteOffsetChange?: (offset: number) => void
+  onCursorLineChange?: (line: number) => void
 }
 
 const MARKER_OWNER = 'jianpu'
@@ -43,11 +48,25 @@ function diagnosticRange(
 }
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
-  { value, onChange, readOnly = false, diagnostics = [], toolbar },
+  {
+    value,
+    onChange,
+    readOnly = false,
+    diagnostics = [],
+    toolbar,
+    onCursorByteOffsetChange,
+    onCursorLineChange,
+  },
   ref,
 ) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<Monaco | null>(null)
+  const onCursorByteOffsetChangeRef = useRef(onCursorByteOffsetChange)
+  const onCursorLineChangeRef = useRef(onCursorLineChange)
+  useEffect(() => {
+    onCursorByteOffsetChangeRef.current = onCursorByteOffsetChange
+    onCursorLineChangeRef.current = onCursorLineChange
+  })
 
   const applyDiagnostics = useCallback(() => {
     const ed = editorRef.current
@@ -139,6 +158,21 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     editorRef.current = ed
     monacoRef.current = monacoApi
     applyDiagnostics()
+
+    const notifyCursor = () => {
+      const model = ed.getModel()
+      if (!model) return
+      const position = ed.getPosition()
+      if (!position) return
+      if (onCursorByteOffsetChangeRef.current) {
+        const charIndex = model.getOffsetAt(position)
+        const byteOffset = stringIndexToByteOffset(model.getValue(), charIndex)
+        onCursorByteOffsetChangeRef.current(byteOffset)
+      }
+      onCursorLineChangeRef.current?.(position.lineNumber)
+    }
+    ed.onDidChangeCursorPosition(notifyCursor)
+    notifyCursor()
   }
 
   useEffect(() => {

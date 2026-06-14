@@ -3,6 +3,7 @@ import { Editor } from './components/Editor'
 import { ErrorPanel } from './components/ErrorPanel'
 import { FileTabBar } from './components/FileList'
 import { PartToggles } from './components/PartToggles'
+import { PlayMeasureButton } from './components/PlayMeasureButton'
 import { Preview } from './components/Preview'
 import {
   createFile,
@@ -41,6 +42,7 @@ export default function App() {
   })
   const editorRef = useRef<EditorHandle>(null)
   const skipToggleSaveRef = useRef(false)
+  const [currentLine, setCurrentLine] = useState<number | null>(null)
   const {
     parts,
     partsLoading,
@@ -55,6 +57,10 @@ export default function App() {
     exportPdf,
     splitPdfExporting,
     exportSplitPdf,
+    currentMeasureIndex,
+    measureAudioGenerating,
+    notifyCursorOffset,
+    playCurrentMeasure,
   } = useJianpuWorker(source, disabledParts, disabledLyrics, store.active)
 
   useEffect(() => {
@@ -190,6 +196,29 @@ export default function App() {
                 onChange={handleSourceChange}
                 readOnly={readOnly}
                 diagnostics={diagnostics}
+                onCursorByteOffsetChange={notifyCursorOffset}
+                onCursorLineChange={setCurrentLine}
+                toolbar={
+                  audioAvailable ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <PlayMeasureButton
+                        disabled={
+                          currentMeasureIndex === null || measureAudioGenerating
+                        }
+                        loading={measureAudioGenerating}
+                        measureNumber={
+                          currentMeasureIndex !== null
+                            ? currentMeasureIndex + 1
+                            : null
+                        }
+                        onClick={playCurrentMeasure}
+                      />
+                      <span style={{ fontSize: '0.75rem', color: '#888', fontFamily: 'monospace' }}>
+                        line {currentLine ?? '?'} | measure {currentMeasureIndex !== null ? currentMeasureIndex + 1 : 'null'}
+                      </span>
+                    </div>
+                  ) : null
+                }
               />
               <ErrorPanel diagnostics={diagnostics} />
             </div>

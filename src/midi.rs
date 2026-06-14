@@ -3,8 +3,8 @@ use midly::{Format, Header, MetaMessage, MidiMessage, Smf, Timing, TrackEvent, T
 
 use std::collections::HashMap;
 
-use crate::ast::grouped::{NoteEvent, PartRow, Score};
-use crate::ast::parsed::{Accidental, JianPuPitch, KeyChange, NoteName};
+use crate::ast::grouped::{NoteEvent, Score};
+use crate::ast::parsed::{Accidental, JianPuPitch, KeyChange, NoteName, PartKind};
 use crate::error::{JianPuError, Span};
 
 const TPQ: u16 = 480; // ticks per quarter note
@@ -53,6 +53,49 @@ pub fn write_midi(score: &Score) -> Result<Vec<u8>, JianPuError> {
     write_smf(track)
 }
 
+/// Generate MIDI bytes for a single measure, carrying BPM and key context
+/// accumulated from all preceding measures.
+pub fn write_midi_for_measure(score: &Score, measure_index: usize) -> Result<Vec<u8>, JianPuError> {
+    let Some(target) = score.measures.get(measure_index) else {
+        return Err(JianPuError::new(
+            Span::new(0, 0),
+            format!(
+                "measure index {} out of range (score has {} measures)",
+                measure_index,
+                score.measures.len()
+            ),
+        ));
+    };
+
+    // Accumulate BPM and key from all measures before the target
+    let mut accumulated_bpm: Option<u32> = None;
+    let mut accumulated_key: Option<KeyChange> = None;
+    for measure in score.measures.iter().take(measure_index) {
+        if let Some(bpm) = measure.bpm {
+            accumulated_bpm = Some(bpm);
+        }
+        if let Some(key) = &measure.key {
+            accumulated_key = Some(key.clone());
+        }
+    }
+
+    // Clone target and inject accumulated context for fields the target doesn't override
+    let mut patched = target.clone();
+    if patched.bpm.is_none() {
+        patched.bpm = accumulated_bpm;
+    }
+    if patched.key.is_none() {
+        patched.key = accumulated_key;
+    }
+
+    let single_score = Score {
+        metadata: score.metadata.clone(),
+        measures: vec![patched],
+    };
+
+    write_midi(&single_score)
+}
+
 fn default_active_key() -> KeyChange {
     KeyChange {
         note: crate::ast::parsed::Note {
@@ -88,7 +131,9 @@ fn process_measure(
         .parts
         .iter()
         .filter_map(|r| {
-            if let PartRow::Notes(p) = r {
+            // Ditto parts still sound — only rendering skips them.
+            let p = r.slice();
+            if p.kind != PartKind::Chord {
                 Some(p)
             } else {
                 None
@@ -109,8 +154,10 @@ fn process_measure(
     }
 
     for row in &measure.parts {
-        if let PartRow::Chord(chord_slice) = row {
-            let chord_duration = process_chord_events(chord_slice, current_tick, raw, active_key);
+        let part = row.slice();
+        if part.kind == PartKind::Chord {
+            let chord_duration =
+                process_chord_events(&part.notes.events, current_tick, raw, active_key);
             if chord_duration > measure_duration {
                 measure_duration = chord_duration;
             }
@@ -168,6 +215,7 @@ fn process_measure_notes(
                 flush_pending_ties_at_tick(pending_ties, part_tick, raw);
                 part_tick += duration_to_ticks(rest.duration);
             }
+            NoteEvent::Chord(_) => {}
         }
     }
 
@@ -188,16 +236,16 @@ fn flush_pending_ties_at_tick(
 }
 
 fn process_chord_events(
-    chord_slice: &crate::ast::grouped::ChordSlice,
+    events: &[NoteEvent],
     current_tick: u32,
     raw: &mut Vec<RawEvent>,
     active_key: &KeyChange,
 ) -> u32 {
     let mut chord_tick = current_tick;
 
-    for event in &chord_slice.events {
+    for event in events {
         match event {
-            crate::ast::grouped::GroupedChordEvent::Chord(chord) => {
+            NoteEvent::Chord(chord) => {
                 let ticks = duration_to_ticks(chord.duration);
                 let notes_to_play = chord_midi_notes(chord, active_key);
 
@@ -217,16 +265,20 @@ fn process_chord_events(
 
                 chord_tick += ticks;
             }
-            crate::ast::grouped::GroupedChordEvent::Rest(dur) => {
-                chord_tick += duration_to_ticks(*dur);
+            NoteEvent::Rest(rest) => {
+                chord_tick += duration_to_ticks(rest.duration);
             }
+            NoteEvent::Note(_) => {}
         }
     }
 
     chord_tick - current_tick
 }
 
-fn chord_midi_notes(chord: &crate::ast::grouped::GroupedChord, active_key: &KeyChange) -> Vec<u8> {
+fn chord_midi_notes(
+    chord: &crate::ast::grouped::GroupedChordNote,
+    active_key: &KeyChange,
+) -> Vec<u8> {
     let base_root = resolve_midi_note(&chord.degree, 0, active_key);
     let acc_delta = accidental_offset(&chord.accidental);
     let root = (base_root as i32 + acc_delta).clamp(0, 127) as u8;
@@ -407,11 +459,11 @@ mod tests {
     #[test]
     fn chord_major_expands_to_three_notes() {
         use crate::ast::grouped::{
-            ChordSlice, GroupedChord, GroupedChordEvent, Metadata, MultiPartMeasure, PartRow,
-            Score, TimeSignature,
+            GroupedChordNote, Metadata, MultiPartMeasure, Notes, PartRow, PartSlice, Score,
+            TimeSignature,
         };
         use crate::ast::parsed::{
-            Accidental, JianPuPitch, KeyChange, Note, NoteName, TriadQuality,
+            Accidental, JianPuPitch, KeyChange, Note, NoteName, PartKind, TriadQuality,
         };
 
         let key = KeyChange {
@@ -421,13 +473,18 @@ mod tests {
                 accidental: Accidental::Natural,
             },
         };
-        let chord = GroupedChord {
+        let chord = GroupedChordNote {
             degree: JianPuPitch::One,
             accidental: Accidental::Natural,
             triad: TriadQuality::Major,
             extension: None,
             bass: None,
             duration: 16,
+            tie: false,
+            group_membership: 0,
+            group_continuation: 0,
+            dotted: false,
+            slur_group_close_at_duration: None,
         };
         let score = Score {
             metadata: Metadata {
@@ -447,10 +504,15 @@ mod tests {
                 bpm: Some(120),
                 key: Some(key),
                 label: None,
-                parts: vec![PartRow::Chord(ChordSlice {
+                parts: vec![PartRow::Timed(PartSlice {
                     name: None,
-                    events: vec![GroupedChordEvent::Chord(chord)],
+                    kind: PartKind::Chord,
+                    notes: Notes {
+                        events: vec![NoteEvent::Chord(chord)],
+                    },
+                    lyrics: None,
                 })],
+                source_span: crate::error::Span::new(0, 0), // dummy — midi output ignores span
             }],
         };
         let midi_bytes = write_midi(&score).unwrap();

@@ -1,4 +1,25 @@
-use crate::ast::parsed::{ParsedChordTrack, ParsedNotesTrack, ParsedTrack, PartDecl, PartKind};
+use crate::ast::parsed::{ParsedTimedTrack, ParsedTrack, PartDecl, PartKind};
+use crate::error::JianPuError;
+
+/// Convenience wrapper that calls `parse` and returns only the tracks,
+/// discarding the directive-events accumulator. Used in unit tests.
+pub(super) fn parse(
+    content: &str,
+    base_offset: usize,
+    declarations: &[PartDecl],
+) -> Result<Vec<ParsedTrack>, JianPuError> {
+    super::parse(content, base_offset, declarations).map(|(tracks, _)| tracks)
+}
+
+/// Like `parse`, but also returns the directive-events-per-measure accumulator.
+#[allow(dead_code)]
+pub(super) fn parse_with_directives(
+    content: &str,
+    base_offset: usize,
+    declarations: &[PartDecl],
+) -> Result<(Vec<ParsedTrack>, super::DirectiveEventsPerMeasure), JianPuError> {
+    super::parse(content, base_offset, declarations)
+}
 
 pub(super) fn decl(name: &str, kind: PartKind) -> PartDecl {
     PartDecl {
@@ -8,22 +29,20 @@ pub(super) fn decl(name: &str, kind: PartKind) -> PartDecl {
     }
 }
 
-pub(super) fn notes_track<'a>(tracks: &'a [ParsedTrack], abbrev: &str) -> &'a ParsedNotesTrack {
+pub(super) fn timed_track<'a>(tracks: &'a [ParsedTrack], abbrev: &str) -> &'a ParsedTimedTrack {
     tracks
         .iter()
         .find_map(|t| match t {
-            ParsedTrack::Notes(n) if n.abbreviation == abbrev => Some(n),
-            _ => None,
+            ParsedTrack::Timed(n) if n.abbreviation == abbrev => Some(n),
+            ParsedTrack::Timed(_) => None,
         })
-        .unwrap_or_else(|| panic!("notes track '{abbrev}' not found"))
+        .unwrap_or_else(|| panic!("timed track '{abbrev}' not found"))
 }
 
-pub(super) fn chord_track<'a>(tracks: &'a [ParsedTrack], abbrev: &str) -> &'a ParsedChordTrack {
-    tracks
-        .iter()
-        .find_map(|t| match t {
-            ParsedTrack::Chord(c) if c.abbreviation == abbrev => Some(c),
-            _ => None,
-        })
-        .unwrap_or_else(|| panic!("chord track '{abbrev}' not found"))
+pub(super) fn notes_track<'a>(tracks: &'a [ParsedTrack], abbrev: &str) -> &'a ParsedTimedTrack {
+    timed_track(tracks, abbrev)
+}
+
+pub(super) fn chord_track<'a>(tracks: &'a [ParsedTrack], abbrev: &str) -> &'a ParsedTimedTrack {
+    timed_track(tracks, abbrev)
 }

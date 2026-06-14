@@ -1,10 +1,9 @@
 use crate::ast::parsed::{
-    flatten_score_line_slots, ParsedChordEvent, ParsedChordTrack, ParsedLyrics, ParsedNotesTrack,
-    ParsedScore, ParsedTrack, PartDecl, PartKind, ScoreEvent, ScoreLineRole, ScoreLineSlot,
+    flatten_score_line_slots, ParsedLyrics, ParsedScore, ParsedTimedTrack, ParsedTrack, PartDecl,
+    PartKind, ScoreEvent, ScoreLineRole, ScoreLineSlot,
 };
 use crate::error::{JianPuError, Span, Spanned};
-use crate::parser::score::token_parser::GroupParseState;
-use crate::parser::score::{token_parser, tokenizer};
+use crate::parser::score::token_parser::{self, GroupStack};
 use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics, LyricTieState};
 
 #[path = "interleaved_beat_padding.rs"]
@@ -12,8 +11,11 @@ mod beat_padding;
 #[path = "interleaved_directives.rs"]
 mod directives;
 
-use beat_padding::{beats_per_measure, validate_and_pad_beats, validate_and_pad_chord_beats};
+use beat_padding::{beats_per_measure, validate_and_pad_beats};
 use directives::{collect_groups, split_directive};
+
+/// One entry per bar group: all directive events emitted by that group's directive row.
+pub(super) type DirectiveEventsPerMeasure = Vec<Vec<Spanned<ScoreEvent>>>;
 
 enum SlotAction {
     Chord { track_index: usize },
@@ -22,12 +24,11 @@ enum SlotAction {
 }
 
 enum TrackAccumulator {
-    Notes {
+    Timed {
         events: Vec<Spanned<ScoreEvent>>,
         syllables: Option<Vec<crate::ast::parsed::Syllable>>,
-    },
-    Chord {
-        events_per_measure: Vec<Vec<ParsedChordEvent>>,
+        /// End byte offset of the lyrics line for each measure, in order.
+        lyrics_line_ends: Vec<usize>,
     },
 }
 
@@ -41,17 +42,19 @@ struct BarGroupContext<'a> {
     time_den: &'a mut u8,
     accumulators: &'a mut [TrackAccumulator],
     lyric_tie_states: &'a mut [LyricTieState],
-    group_states: &'a mut [GroupParseState],
+    group_states: &'a mut [GroupStack],
     bar_lyric_slots: &'a mut [Option<u32>],
+    directive_events_per_measure: &'a mut DirectiveEventsPerMeasure,
 }
 
 pub fn parse(
     content: &str,
     base_offset: usize,
     declarations: &[PartDecl],
-) -> Result<Vec<ParsedTrack>, JianPuError> {
+) -> Result<(Vec<ParsedTrack>, DirectiveEventsPerMeasure), JianPuError> {
     let groups = collect_groups(content);
-    let groups = crate::desugar::desugar_groups(groups, declarations)?;
+    let ditto_measures_per_track = compute_ditto_measures(&groups, declarations);
+    let groups = crate::desugar::desugar_groups(groups, declarations, base_offset)?;
 
     let first_notes_track_index = declarations
         .iter()
@@ -70,8 +73,9 @@ pub fn parse(
     let mut time_num: u8 = 4;
     let mut time_den: u8 = 4;
     let mut lyric_tie_states = vec![LyricTieState::default(); declarations.len()];
-    let mut group_states = vec![GroupParseState::default(); declarations.len()];
+    let mut group_states = vec![GroupStack::default(); declarations.len()];
     let mut bar_lyric_slots = vec![None; declarations.len()];
+    let mut directive_events_per_measure: DirectiveEventsPerMeasure = Vec::new();
 
     let mut ctx = BarGroupContext {
         base_offset,
@@ -85,6 +89,7 @@ pub fn parse(
         lyric_tie_states: &mut lyric_tie_states,
         group_states: &mut group_states,
         bar_lyric_slots: &mut bar_lyric_slots,
+        directive_events_per_measure: &mut directive_events_per_measure,
     };
 
     for (bar_idx, group_lines) in groups.iter().enumerate() {
@@ -92,7 +97,7 @@ pub fn parse(
     }
 
     for (track_index, state) in group_states.iter().enumerate() {
-        if state.open {
+        if state.is_open() {
             let part_label = declarations
                 .get(track_index)
                 .map(|d| d.abbreviation.as_str())
@@ -104,7 +109,66 @@ pub fn parse(
         }
     }
 
-    build_parse_result(declarations, accumulators)
+    let tracks = build_parse_result(declarations, accumulators, ditto_measures_per_track)?;
+    Ok((tracks, directive_events_per_measure))
+}
+
+/// Ditto flags per track, per measure group, computed from the raw groups
+/// before desugaring erases the distinction. A line is a ditto when it is an
+/// explicit `"` or an omitted trailing line (which desugaring pads as
+/// implicit ditto).
+struct DittoMeasures {
+    /// `[track][measure]`: every score line of the track was a ditto.
+    full: Vec<Vec<bool>>,
+    /// `[track][measure]`: the track's lyric line was a ditto. Always false
+    /// for tracks without a lyrics line.
+    lyrics: Vec<Vec<bool>>,
+}
+
+fn compute_ditto_measures(
+    groups: &[Vec<(String, usize)>],
+    declarations: &[PartDecl],
+) -> DittoMeasures {
+    let slots = flatten_score_line_slots(declarations);
+    let mut full = vec![Vec::with_capacity(groups.len()); declarations.len()];
+    let mut lyrics = vec![Vec::with_capacity(groups.len()); declarations.len()];
+
+    for group in groups {
+        let directive_count = usize::from(
+            group
+                .first()
+                .map(|(l, _)| l.starts_with('('))
+                .unwrap_or(false),
+        );
+        let data_lines = group.get(directive_count..).unwrap_or(&[]);
+        let line_is_ditto = |slot_idx: usize| {
+            data_lines
+                .get(slot_idx)
+                .map(|(line, _)| line == "\"")
+                .unwrap_or(true)
+        };
+
+        for (track_index, (track_full, track_lyrics)) in
+            full.iter_mut().zip(lyrics.iter_mut()).enumerate()
+        {
+            let mut all_lines_ditto = true;
+            let mut lyric_line_ditto = false;
+            for (slot_idx, slot) in slots.iter().enumerate() {
+                if slot.track_index != track_index {
+                    continue;
+                }
+                let is_ditto = line_is_ditto(slot_idx);
+                all_lines_ditto &= is_ditto;
+                if matches!(slot.role, ScoreLineRole::Lyrics) {
+                    lyric_line_ditto = is_ditto;
+                }
+            }
+            track_full.push(all_lines_ditto);
+            track_lyrics.push(lyric_line_ditto);
+        }
+    }
+
+    DittoMeasures { full, lyrics }
 }
 
 fn build_slot_actions(slots: &[ScoreLineSlot]) -> Vec<SlotAction> {
@@ -127,18 +191,14 @@ fn build_slot_actions(slots: &[ScoreLineSlot]) -> Vec<SlotAction> {
 fn init_accumulators(declarations: &[PartDecl]) -> Vec<TrackAccumulator> {
     declarations
         .iter()
-        .map(|decl| match decl.kind {
-            PartKind::Chord => TrackAccumulator::Chord {
-                events_per_measure: Vec::new(),
+        .map(|decl| TrackAccumulator::Timed {
+            events: Vec::new(),
+            syllables: if matches!(decl.kind, PartKind::NotesWithLyrics) {
+                Some(Vec::new())
+            } else {
+                None
             },
-            PartKind::Notes => TrackAccumulator::Notes {
-                events: Vec::new(),
-                syllables: None,
-            },
-            PartKind::NotesWithLyrics => TrackAccumulator::Notes {
-                events: Vec::new(),
-                syllables: Some(Vec::new()),
-            },
+            lyrics_line_ends: Vec::new(),
         })
         .collect()
 }
@@ -168,8 +228,15 @@ fn process_bar_group(
         *slot = None;
     }
 
+    // Collect directive events into the dedicated per-measure accumulator.
+    // Also forward ALL directive events to the first notes track so the existing
+    // pipeline (PartGrouper, layout, renderer) continues to function.
+    // Future tasks will remove the notes-track forwarding once DirectiveGrouper
+    // consumes directive_events_per_measure directly.
+    ctx.directive_events_per_measure
+        .push(directive_events.clone());
     if !directive_events.is_empty() {
-        let events_acc = notes_events_mut(
+        let events_acc = timed_events_mut(
             ctx.accumulators
                 .get_mut(ctx.first_notes_track_index)
                 .ok_or_else(|| {
@@ -186,39 +253,23 @@ fn process_bar_group(
     process_padded_columns(&padded_data, bar, beats_expected, ctx)
 }
 
-fn notes_events_mut(
+fn timed_events_mut(
     acc: &mut TrackAccumulator,
 ) -> Result<&mut Vec<Spanned<ScoreEvent>>, JianPuError> {
     match acc {
-        TrackAccumulator::Notes { events, .. } => Ok(events),
-        TrackAccumulator::Chord { .. } => Err(JianPuError::new(
-            Span::new(0, 0),
-            "internal error: expected notes accumulator",
-        )),
+        TrackAccumulator::Timed { events, .. } => Ok(events),
     }
 }
 
 fn notes_syllables_mut(
     acc: &mut TrackAccumulator,
-) -> Result<Option<&mut Vec<crate::ast::parsed::Syllable>>, JianPuError> {
+) -> Result<Option<(&mut Vec<crate::ast::parsed::Syllable>, &mut Vec<usize>)>, JianPuError> {
     match acc {
-        TrackAccumulator::Notes { syllables, .. } => Ok(syllables.as_mut()),
-        TrackAccumulator::Chord { .. } => Err(JianPuError::new(
-            Span::new(0, 0),
-            "internal error: expected notes accumulator",
-        )),
-    }
-}
-
-fn chord_events_mut(
-    acc: &mut TrackAccumulator,
-) -> Result<&mut Vec<Vec<ParsedChordEvent>>, JianPuError> {
-    match acc {
-        TrackAccumulator::Chord { events_per_measure } => Ok(events_per_measure),
-        TrackAccumulator::Notes { .. } => Err(JianPuError::new(
-            Span::new(0, 0),
-            "internal error: expected chord accumulator",
-        )),
+        TrackAccumulator::Timed {
+            syllables,
+            lyrics_line_ends,
+            ..
+        } => Ok(syllables.as_mut().map(|s| (s, lyrics_line_ends))),
     }
 }
 
@@ -297,7 +348,9 @@ fn process_lyrics_column_line(
             format!("lyrics line for '{abbrev}' has no matching notes track"),
         ));
     };
-    syllables_acc.extend(syllables);
+    let (syllables_vec, line_ends) = syllables_acc;
+    syllables_vec.extend(syllables);
+    line_ends.push(line_span.end);
     Ok(())
 }
 
@@ -324,7 +377,6 @@ fn process_column_line(
                     "'_' is only valid on lyrics lines; use '-' for rests in notes".to_string(),
                 ));
             }
-            let tokens = tokenizer::tokenize(line, ctx.base_offset + line_offset);
             let group_state = ctx.group_states.get_mut(*track_index).ok_or_else(|| {
                 JianPuError::new(
                     line_span.clone(),
@@ -332,7 +384,7 @@ fn process_column_line(
                 )
             })?;
             let events = validate_and_pad_beats(
-                token_parser::parse_tokens(tokens, group_state)?,
+                token_parser::parse_notes_line(line, ctx.base_offset + line_offset, group_state)?,
                 beats_expected,
                 *ctx.time_num,
                 *ctx.time_den,
@@ -349,7 +401,7 @@ fn process_column_line(
                     "internal error: notes accumulator index out of range",
                 )
             })?;
-            notes_events_mut(acc)?.extend(events);
+            timed_events_mut(acc)?.extend(events);
         }
         SlotAction::Lyrics { track_index } => {
             process_lyrics_column_line(*track_index, line, line_span, bar, ctx)?;
@@ -361,10 +413,17 @@ fn process_column_line(
                     "'_' is only valid on lyrics lines".to_string(),
                 ));
             }
-            let events = validate_and_pad_chord_beats(
-                crate::parser::score::chord_parser::parse(line, ctx.base_offset + line_offset)?,
+            let group_state = ctx.group_states.get_mut(*track_index).ok_or_else(|| {
+                JianPuError::new(
+                    line_span.clone(),
+                    "internal error: group state index out of range",
+                )
+            })?;
+            let events = validate_and_pad_beats(
+                token_parser::parse_chord_line(line, ctx.base_offset + line_offset, group_state)?,
                 beats_expected,
-                &line_span,
+                *ctx.time_num,
+                *ctx.time_den,
             )?;
             let acc = ctx.accumulators.get_mut(*track_index).ok_or_else(|| {
                 JianPuError::new(
@@ -372,7 +431,7 @@ fn process_column_line(
                     "internal error: chord accumulator index out of range",
                 )
             })?;
-            chord_events_mut(acc)?.push(events);
+            timed_events_mut(acc)?.extend(events);
         }
     }
     Ok(())
@@ -412,6 +471,7 @@ fn validate_and_pad_group_lines(
 fn build_parse_result(
     declarations: &[PartDecl],
     accumulators: Vec<TrackAccumulator>,
+    mut ditto_measures_per_track: DittoMeasures,
 ) -> Result<Vec<ParsedTrack>, JianPuError> {
     if declarations.len() != accumulators.len() {
         return Err(JianPuError::new(
@@ -423,30 +483,33 @@ fn build_parse_result(
     declarations
         .iter()
         .zip(accumulators)
-        .map(|(decl, acc)| match (&decl.kind, acc) {
-            (PartKind::Chord, TrackAccumulator::Chord { events_per_measure }) => {
-                Ok(ParsedTrack::Chord(ParsedChordTrack {
-                    abbreviation: decl.abbreviation.clone(),
-                    display_name: decl.display_name.clone(),
-                    events_per_measure,
-                }))
-            }
-            (
-                PartKind::Notes | PartKind::NotesWithLyrics,
-                TrackAccumulator::Notes { events, syllables },
-            ) => Ok(ParsedTrack::Notes(ParsedNotesTrack {
+        .enumerate()
+        .map(|(track_index, (decl, acc))| {
+            let TrackAccumulator::Timed { events, syllables, lyrics_line_ends } = acc;
+            Ok(ParsedTrack::Timed(ParsedTimedTrack {
                 abbreviation: decl.abbreviation.clone(),
                 display_name: decl.display_name.clone(),
+                kind: decl.kind,
                 score: ParsedScore { events },
-                lyrics: syllables.map(|s| ParsedLyrics { syllables: s }),
-            })),
-            _ => Err(JianPuError::new(
-                Span::new(0, 0),
-                "internal error: track kind/accumulator mismatch",
-            )),
+                lyrics: syllables.map(|s| ParsedLyrics { syllables: s, measure_ends: lyrics_line_ends }),
+                ditto_measures: ditto_measures_per_track
+                    .full
+                    .get_mut(track_index)
+                    .map(std::mem::take)
+                    .unwrap_or_default(),
+                lyrics_ditto_measures: ditto_measures_per_track
+                    .lyrics
+                    .get_mut(track_index)
+                    .map(std::mem::take)
+                    .unwrap_or_default(),
+            }))
         })
         .collect()
 }
+
+#[cfg(test)]
+#[path = "interleaved_parser_test_helpers.rs"]
+mod test_helpers;
 
 #[cfg(test)]
 #[path = "interleaved_parser_tests.rs"]
