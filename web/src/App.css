@@ -559,3 +559,42 @@ input.file-tab-name:focus {
   max-width: 100%;
   height: auto;
 }
+
+.play-measure-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  font-size: 12px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  min-width: 28px;
+  height: 24px;
+}
+
+.play-measure-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.play-measure-btn:not(:disabled):hover {
+  background: #f0f0f0;
+}
+
+.play-measure-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #aaa;
+  border-top-color: #333;
+  border-radius: 50%;
+  animation: play-measure-spin 0.6s linear infinite;
+}
+
+@keyframes play-measure-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
