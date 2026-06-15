@@ -125,24 +125,72 @@ fn find_measure_at_byte_offset_covers_all_lines_in_twinkle_star() {
     };
 
     // Measure 0: chord "1 - - -", melody "1 1 5 5", lyrics "twin- kle twin- kle"
-    check("measure 0 chord line", source.find("1 - - -").unwrap(), Some(0));
-    check("measure 0 melody line", source.find("1 1 5 5").unwrap(), Some(0));
-    check("measure 0 lyrics line", source.find("twin- kle twin- kle").unwrap(), Some(0));
+    check(
+        "measure 0 chord line",
+        source.find("1 - - -").unwrap(),
+        Some(0),
+    );
+    check(
+        "measure 0 melody line",
+        source.find("1 1 5 5").unwrap(),
+        Some(0),
+    );
+    check(
+        "measure 0 lyrics line",
+        source.find("twin- kle twin- kle").unwrap(),
+        Some(0),
+    );
 
     // Measure 1: chord "5 - - -", melody "6 6 5-", lyrics "lit- tle star"
-    check("measure 1 chord line", source.find("5 - - -").unwrap(), Some(1));
-    check("measure 1 melody line", source.find("6 6 5-").unwrap(), Some(1));
-    check("measure 1 lyrics line", source.find("lit- tle star").unwrap(), Some(1));
+    check(
+        "measure 1 chord line",
+        source.find("5 - - -").unwrap(),
+        Some(1),
+    );
+    check(
+        "measure 1 melody line",
+        source.find("6 6 5-").unwrap(),
+        Some(1),
+    );
+    check(
+        "measure 1 lyrics line",
+        source.find("lit- tle star").unwrap(),
+        Some(1),
+    );
 
     // Measure 2: first "4 - - -", melody "4 4 3 3", lyrics "how I won- der"
-    check("measure 2 chord line", source.find("4 - - -").unwrap(), Some(2));
-    check("measure 2 melody line", source.find("4 4 3 3").unwrap(), Some(2));
-    check("measure 2 lyrics line", source.find("how I won- der").unwrap(), Some(2));
+    check(
+        "measure 2 chord line",
+        source.find("4 - - -").unwrap(),
+        Some(2),
+    );
+    check(
+        "measure 2 melody line",
+        source.find("4 4 3 3").unwrap(),
+        Some(2),
+    );
+    check(
+        "measure 2 lyrics line",
+        source.find("how I won- der").unwrap(),
+        Some(2),
+    );
 
     // Measure 3: second "4 - - -", melody "2 2 1-", lyrics "what you are"
-    check("measure 3 chord line", source.rfind("4 - - -").unwrap(), Some(3));
-    check("measure 3 melody line", source.find("2 2 1-").unwrap(), Some(3));
-    check("measure 3 lyrics line", source.find("what you are").unwrap(), Some(3));
+    check(
+        "measure 3 chord line",
+        source.rfind("4 - - -").unwrap(),
+        Some(3),
+    );
+    check(
+        "measure 3 melody line",
+        source.find("2 2 1-").unwrap(),
+        Some(3),
+    );
+    check(
+        "measure 3 lyrics line",
+        source.find("what you are").unwrap(),
+        Some(3),
+    );
 }
 
 #[test]
@@ -166,7 +214,7 @@ fn find_measure_at_line_number_covers_all_lines_in_twinkle_star() {
     }
 
     // Measure 0: chord "1 - - -" (11), melody "1 1 5 5" (12), lyrics "twin- kle twin- kle" (13)
-    check("measure 0 chord line",  11, Some(0));
+    check("measure 0 chord line", 11, Some(0));
     check("measure 0 melody line", 12, Some(0));
     check("measure 0 lyrics line", 13, Some(0));
 
@@ -174,7 +222,7 @@ fn find_measure_at_line_number_covers_all_lines_in_twinkle_star() {
     check("blank separator after measure 0", 14, None);
 
     // Measure 1: chord "5 - - -" (15), melody "6 6 5-" (16), lyrics "lit- tle star" (17)
-    check("measure 1 chord line",  15, Some(1));
+    check("measure 1 chord line", 15, Some(1));
     check("measure 1 melody line", 16, Some(1));
     check("measure 1 lyrics line", 17, Some(1));
 
@@ -182,7 +230,7 @@ fn find_measure_at_line_number_covers_all_lines_in_twinkle_star() {
     check("blank separator after measure 1", 18, None);
 
     // Measure 2: chord "4 - - -" (19), melody "4 4 3 3" (20), lyrics "how I won- der" (21)
-    check("measure 2 chord line",  19, Some(2));
+    check("measure 2 chord line", 19, Some(2));
     check("measure 2 melody line", 20, Some(2));
     check("measure 2 lyrics line", 21, Some(2));
 
@@ -190,7 +238,7 @@ fn find_measure_at_line_number_covers_all_lines_in_twinkle_star() {
     check("blank separator after measure 2", 22, None);
 
     // Measure 3: chord "4 - - -" (23), melody "2 2 1-" (24), lyrics "what you are" (25)
-    check("measure 3 chord line",  23, Some(3));
+    check("measure 3 chord line", 23, Some(3));
     check("measure 3 melody line", 24, Some(3));
     check("measure 3 lyrics line", 25, Some(3));
 }

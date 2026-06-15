@@ -1,4 +1,5 @@
 pub(crate) mod expand;
+pub(crate) mod highlight;
 pub mod layout;
 pub(crate) mod slur_placement;
 pub mod types;

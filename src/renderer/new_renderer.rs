@@ -91,6 +91,15 @@ fn render_element(
                 },
             }]
         }
+        AbsoluteContent::MeasureHighlight { width, height } => vec![SvgElement {
+            x: elem.x,
+            y: elem.y,
+            variant: "measure-highlight",
+            kind: SvgKind::Rect {
+                width: *width,
+                height: *height,
+            },
+        }],
     }
 }
 

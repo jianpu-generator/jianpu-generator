@@ -23,7 +23,9 @@ export function PlayMeasureButton({
           : 'Play current measure'
       }
       aria-label={
-        measureNumber !== null ? `Play measure ${measureNumber}` : 'Play current measure'
+        measureNumber !== null
+          ? `Play measure ${measureNumber}`
+          : 'Play current measure'
       }
     >
       {loading ? (

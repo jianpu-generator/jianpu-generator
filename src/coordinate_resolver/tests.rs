@@ -12,6 +12,7 @@ fn single_row_page(element: GridElement) -> GridPage {
             column_count: 10,
             elements: vec![element],
         }],
+        measure_highlight: None,
     }
 }
 
@@ -75,6 +76,7 @@ fn valign_top_places_y_at_row_top() {
                 elements: vec![el],
             },
         ],
+        measure_highlight: None,
     };
     let abs = resolve(&[page], 12.0);
     let line = abs[0]
@@ -133,4 +135,62 @@ fn octave_dot_grid_content_emits_nothing() {
         abs[0].elements.is_empty(),
         "OctaveDot should emit no AbsoluteElement"
     );
+}
+
+#[test]
+fn measure_highlight_produces_prepended_rect_element() {
+    use crate::grid_layout::types::MeasureHighlight;
+
+    let page = crate::grid_layout::types::GridPage {
+        width_pt: 595.0,
+        height_pt: 842.0,
+        rows: vec![
+            GridRow {
+                height_pt: 30.0,
+                column_count: 10,
+                elements: vec![],
+            },
+            GridRow {
+                height_pt: 20.0,
+                column_count: 10,
+                elements: vec![],
+            },
+        ],
+        measure_highlight: Some(MeasureHighlight {
+            row_start: 0,
+            row_end: 1,
+            column_start: 4,
+            column_end: 6,
+        }),
+    };
+    let abs = resolve(&[page], 12.0);
+    assert!(!abs[0].elements.is_empty(), "should have elements");
+    let first = &abs[0].elements[0];
+    assert!(
+        matches!(first.content, AbsoluteContent::MeasureHighlight { .. }),
+        "first element should be MeasureHighlight, got {:?}",
+        first.content
+    );
+    if let AbsoluteContent::MeasureHighlight { width, height } = first.content {
+        assert!((width - 109.0).abs() < 0.1, "width={width}");
+        assert!((height - 50.0).abs() < 0.1, "height={height}");
+    }
+    assert!((first.x - 243.0).abs() < 0.1, "x={}", first.x);
+    assert!((first.y - 25.0).abs() < 0.1, "y={}", first.y);
+}
+
+#[test]
+fn page_with_no_highlight_produces_no_extra_element() {
+    let page = crate::grid_layout::types::GridPage {
+        width_pt: 595.0,
+        height_pt: 842.0,
+        rows: vec![GridRow {
+            height_pt: 30.0,
+            column_count: 10,
+            elements: vec![],
+        }],
+        measure_highlight: None,
+    };
+    let abs = resolve(&[page], 12.0);
+    assert!(abs[0].elements.is_empty());
 }

@@ -53,7 +53,7 @@ pub fn render_svgs(score: &Score) -> Vec<String> {
         author: score.metadata.author.clone(),
     };
     let compile_result = compiler::compile(score);
-    let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0);
+    let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
     let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32);
     let docs = renderer::new_renderer::render_new(&abs, &config);
     serializer::serialize(&docs)
@@ -105,6 +105,42 @@ pub fn render_svgs_from_source_filtered_with_lyrics(
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
     Ok(render_svgs(&score))
+}
+
+/// Parse, group, optionally filter tracks and lyrics, and render SVG page strings with a highlighted measure.
+///
+/// When `enabled_tracks` is `None`, all parts are rendered.
+/// When `Some(tracks)` is empty, no parts are rendered.
+/// When `disabled_lyrics` lists part abbreviations, lyrics are hidden for those parts.
+/// `highlighted_measure_index` is passed to the layout engine to visually highlight the specified measure.
+pub fn render_svgs_with_highlight(
+    source: &str,
+    filename: &str,
+    highlighted_measure_index: Option<usize>,
+    enabled_tracks: Option<&[String]>,
+    disabled_lyrics: Option<&[String]>,
+) -> Result<Vec<String>, JianPuError> {
+    let mut score = compile(source, filename)?;
+    apply_track_filter(&mut score, enabled_tracks);
+    apply_lyrics_filter(&mut score, disabled_lyrics);
+    let config = render_config::RenderConfig::from_metadata(&score.metadata);
+    let header = grid_layout::types::Header {
+        title: score.metadata.title.clone(),
+        subtitle: score.metadata.subtitle.clone(),
+        author: score.metadata.author.clone(),
+    };
+    let compile_result = compiler::compile(&score);
+    let grid_pages = grid_layout::layout(
+        &compile_result,
+        &config,
+        &header,
+        595.0,
+        842.0,
+        highlighted_measure_index,
+    );
+    let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32);
+    let docs = renderer::new_renderer::render_new(&abs, &config);
+    Ok(serializer::serialize(&docs))
 }
 
 /// Retain only parts whose names appear in `enabled_tracks`.

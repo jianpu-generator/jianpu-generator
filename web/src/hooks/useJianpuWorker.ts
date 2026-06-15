@@ -45,6 +45,7 @@ interface JianpuWorkerState {
   measureAudioGenerating: boolean
   notifyCursorOffset: (offset: number) => void
   playCurrentMeasure: () => void
+  highlightedSvgs: string[]
 }
 
 function downloadPdf(bytes: ArrayBuffer, filename: string) {
@@ -112,6 +113,9 @@ export function useJianpuWorker(
     null,
   )
   const [measureAudioGenerating, setMeasureAudioGenerating] = useState(false)
+  const [highlightedSvgs, setHighlightedSvgs] = useState<string[]>([])
+  const highlightRenderRequestIdRef = useRef(0)
+  const latestHighlightRenderIdRef = useRef(0)
 
   const workerRef = useRef<Worker | null>(null)
   const wavUrlRef = useRef<string | null>(null)
@@ -266,6 +270,17 @@ export function useJianpuWorker(
         return
       }
 
+      if (msg.type === 'highlightOk') {
+        if (msg.id !== latestHighlightRenderIdRef.current) return
+        setHighlightedSvgs(msg.svgs)
+        return
+      }
+
+      if (msg.type === 'highlightErr') {
+        if (msg.id !== latestHighlightRenderIdRef.current) return
+        return
+      }
+
       if (msg.type === 'err') {
         if (msg.id !== latestRenderIdRef.current) return
         setRendering(false)
@@ -297,7 +312,6 @@ export function useJianpuWorker(
     setDiagnostics([])
   }, [activeFile, setNextWavUrl])
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: source is intentional trigger
   useEffect(() => {
     setCurrentMeasureIndex(null)
     const byteOffset = lastCursorByteOffsetRef.current
@@ -394,6 +408,27 @@ export function useJianpuWorker(
     [debounceMs],
   )
 
+  useEffect(() => {
+    if (currentMeasureIndex === null) {
+      setHighlightedSvgs([])
+      return
+    }
+    const worker = workerRef.current
+    if (!worker) return
+
+    const id = ++highlightRenderRequestIdRef.current
+    latestHighlightRenderIdRef.current = id
+
+    worker.postMessage({
+      type: 'renderWithHighlight',
+      source: sourceRef.current,
+      id,
+      highlightedMeasureIndex: currentMeasureIndex,
+      enabledTracks: enabledTracksRef.current,
+      disabledLyrics: disabledLyricsRef.current,
+    } satisfies WorkerRequest)
+  }, [currentMeasureIndex])
+
   const playCurrentMeasure = useCallback(() => {
     const worker = workerRef.current
     if (!worker || currentMeasureIndex === null) return
@@ -464,5 +499,6 @@ export function useJianpuWorker(
     measureAudioGenerating,
     notifyCursorOffset,
     playCurrentMeasure,
+    highlightedSvgs,
   }
 }

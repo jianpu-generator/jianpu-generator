@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 
 interface PreviewProps {
   svgs: string[]
+  highlightedSvgs?: string[]
   rendering: boolean
   audioGenerating?: boolean
   wavUrl?: string | null
@@ -18,6 +19,7 @@ interface PreviewProps {
 
 export function Preview({
   svgs,
+  highlightedSvgs = [],
   rendering,
   audioGenerating = false,
   wavUrl = null,
@@ -93,10 +95,10 @@ export function Preview({
         </div>
       ) : null}
       <div className="preview-pages">
-        {svgs.length === 0 && !rendering ? (
+        {svgs.length === 0 && highlightedSvgs.length === 0 && !rendering ? (
           <p className="preview-empty">{emptyMessage}</p>
         ) : null}
-        {svgs.map((svg) => (
+        {(highlightedSvgs.length > 0 ? highlightedSvgs : svgs).map((svg) => (
           <div
             key={svg}
             className="preview-page"

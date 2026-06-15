@@ -312,7 +312,7 @@ pub(crate) fn expand_system_to_rows(
     all_rows
 }
 
-fn has_any_decoration(block: &MeasureBlock) -> bool {
+pub(crate) fn has_any_decoration(block: &MeasureBlock) -> bool {
     !block.decorations.is_empty()
 }
 
@@ -402,7 +402,7 @@ fn make_separator_row() -> GridRow {
     }
 }
 
-fn make_header_rows(header: &Header, base: f32) -> Vec<GridRow> {
+pub(crate) fn make_header_rows(header: &Header, base: f32) -> Vec<GridRow> {
     let title_row = GridRow {
         height_pt: header_title_row_height(base),
         column_count: 1,
@@ -456,24 +456,7 @@ fn make_header_rows(header: &Header, base: f32) -> Vec<GridRow> {
     vec![title_row, subtitle_author_row]
 }
 
-fn make_footer_row(page_num: u32, total_pages: u32, base: f32, height_pt: f32) -> GridRow {
-    GridRow {
-        height_pt,
-        column_count: 1,
-        elements: vec![GridElement {
-            column: 0,
-            column_span: 1,
-            halign: HAlign::Center,
-            valign: VAlign::Bottom,
-            content: GridContent::Text {
-                content: format!("{page_num} / {total_pages}"),
-                font_size: base * 0.6,
-                bold: false,
-                italic: false,
-            },
-        }],
-    }
-}
+use super::expand::make_footer_row;
 
 fn system_total_height(system: &[MeasureBlock], base: f32) -> f32 {
     let Some(first) = system.first() else {
@@ -521,6 +504,8 @@ fn build_page_rows(
     rows
 }
 
+pub(crate) use super::highlight::compute_measure_highlight_location;
+
 /// Public entry point: convert compiler blocks to GridPages.
 pub fn layout(
     compile_result: &CompileResult,
@@ -528,6 +513,7 @@ pub fn layout(
     header: &Header,
     page_width_pt: f32,
     page_height_pt: f32,
+    highlighted_measure_index: Option<usize>,
 ) -> Vec<GridPage> {
     let base = config.row_height as f32;
     let blocks = &compile_result.blocks;
@@ -563,6 +549,10 @@ pub fn layout(
     }
     page_systems.push(current_page);
 
+    let highlight_info: Option<(usize, crate::grid_layout::types::MeasureHighlight)> =
+        highlighted_measure_index
+            .and_then(|idx| compute_measure_highlight_location(&page_systems, idx, header, base));
+
     let total_pages = page_systems.len() as u32;
     let mut abs_system_index_start: usize = 0;
     let mut pages: Vec<GridPage> = Vec::new();
@@ -577,11 +567,25 @@ pub fn layout(
             remaining_height,
         ));
         abs_system_index_start += page_sys.len();
+        let measure_highlight = highlight_info
+            .as_ref()
+            .and_then(|(highlight_page, highlight)| {
+                if *highlight_page == page_idx {
+                    Some(highlight.clone())
+                } else {
+                    None
+                }
+            });
         pages.push(GridPage {
             width_pt: page_width_pt,
             height_pt: page_height_pt,
             rows,
+            measure_highlight,
         });
     }
     pages
 }
+
+#[cfg(test)]
+#[path = "tests_highlight.rs"]
+mod tests_highlight;

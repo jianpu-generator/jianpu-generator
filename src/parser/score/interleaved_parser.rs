@@ -261,9 +261,14 @@ fn timed_events_mut(
     }
 }
 
+type SyllablesAndLineEnds<'a> = (
+    &'a mut Vec<crate::ast::parsed::Syllable>,
+    &'a mut Vec<usize>,
+);
+
 fn notes_syllables_mut(
     acc: &mut TrackAccumulator,
-) -> Result<Option<(&mut Vec<crate::ast::parsed::Syllable>, &mut Vec<usize>)>, JianPuError> {
+) -> Result<Option<SyllablesAndLineEnds<'_>>, JianPuError> {
     match acc {
         TrackAccumulator::Timed {
             syllables,
@@ -485,13 +490,20 @@ fn build_parse_result(
         .zip(accumulators)
         .enumerate()
         .map(|(track_index, (decl, acc))| {
-            let TrackAccumulator::Timed { events, syllables, lyrics_line_ends } = acc;
+            let TrackAccumulator::Timed {
+                events,
+                syllables,
+                lyrics_line_ends,
+            } = acc;
             Ok(ParsedTrack::Timed(ParsedTimedTrack {
                 abbreviation: decl.abbreviation.clone(),
                 display_name: decl.display_name.clone(),
                 kind: decl.kind,
                 score: ParsedScore { events },
-                lyrics: syllables.map(|s| ParsedLyrics { syllables: s, measure_ends: lyrics_line_ends }),
+                lyrics: syllables.map(|s| ParsedLyrics {
+                    syllables: s,
+                    measure_ends: lyrics_line_ends,
+                }),
                 ditto_measures: ditto_measures_per_track
                     .full
                     .get_mut(track_index)

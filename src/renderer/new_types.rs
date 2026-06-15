@@ -39,4 +39,8 @@ pub enum SvgKind {
         end_y: f32,
         stroke_width: f32,
     },
+    Rect {
+        width: f32,
+        height: f32,
+    },
 }
