@@ -16,8 +16,10 @@ fn resolve_page(page: &GridPage, note_number_width: f32) -> AbsolutePage {
     let usable_width = page.width_pt - 2.0 * PAGE_MARGIN;
     let mut elements: Vec<AbsoluteElement> = Vec::new();
     let mut row_y = PAGE_MARGIN;
+    let mut row_tops: Vec<f32> = Vec::with_capacity(page.rows.len());
 
     for row in &page.rows {
+        row_tops.push(row_y);
         let col_width = row.column_width_pt(usable_width);
         for el in &row.elements {
             let x_start = PAGE_MARGIN + el.column as f32 * col_width;
@@ -85,11 +87,46 @@ fn resolve_page(page: &GridPage, note_number_width: f32) -> AbsolutePage {
         row_y += row.height_pt;
     }
 
+    if let Some(element) =
+        resolve_measure_highlight(&page.measure_highlight, &page.rows, &row_tops, usable_width)
+    {
+        elements.insert(0, element);
+    }
+
     AbsolutePage {
         width_pt: page.width_pt,
         height_pt: page.height_pt,
         elements,
     }
+}
+
+fn resolve_measure_highlight(
+    highlight: &Option<crate::grid_layout::types::MeasureHighlight>,
+    rows: &[crate::grid_layout::types::GridRow],
+    row_tops: &[f32],
+    usable_width: f32,
+) -> Option<AbsoluteElement> {
+    let highlight = highlight.as_ref()?;
+    let start_row = rows.get(highlight.row_start)?;
+    let highlight_y = row_tops.get(highlight.row_start)?;
+    if highlight.row_end >= rows.len() {
+        return None;
+    }
+    let col_width = start_row.column_width_pt(usable_width);
+    let highlight_x = PAGE_MARGIN + highlight.column_start as f32 * col_width;
+    let highlight_width = (highlight.column_end - highlight.column_start) as f32 * col_width;
+    let highlight_height = rows
+        .get(highlight.row_start..=highlight.row_end)
+        .map(|slice| slice.iter().map(|row| row.height_pt).sum())
+        .unwrap_or(0.0);
+    Some(AbsoluteElement {
+        x: highlight_x,
+        y: *highlight_y,
+        content: AbsoluteContent::MeasureHighlight {
+            width: highlight_width,
+            height: highlight_height,
+        },
+    })
 }
 
 fn text_anchor(halign: HAlign) -> TextAnchor {

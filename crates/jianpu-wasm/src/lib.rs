@@ -6,7 +6,7 @@ use jianpu_generator::write_wav_for_measure_from_source;
 use jianpu_generator::write_wav_from_source_filtered;
 use jianpu_generator::{
     compile, find_measure_at_byte_offset, list_parts_from_source,
-    render_svgs_from_source_filtered_with_lyrics,
+    render_svgs_from_source_filtered_with_lyrics, render_svgs_with_highlight,
 };
 #[cfg(feature = "pdf")]
 use jianpu_generator::{
@@ -30,6 +30,28 @@ fn render_response(
     let tracks = enabled_tracks.as_deref();
     let lyrics = disabled_lyrics.as_deref();
     match render_svgs_from_source_filtered_with_lyrics(source, "input.jianpu", tracks, lyrics) {
+        Ok(svgs) => RenderResponse::Ok { svgs },
+        Err(e) => RenderResponse::Err {
+            diagnostics: vec![diagnostic_from_error(source, e)],
+        },
+    }
+}
+
+fn render_with_highlight_response(
+    source: &str,
+    highlighted_measure_index: usize,
+    enabled_tracks: Option<Vec<String>>,
+    disabled_lyrics: Option<Vec<String>>,
+) -> RenderResponse {
+    let tracks = enabled_tracks.as_deref();
+    let lyrics = disabled_lyrics.as_deref();
+    match render_svgs_with_highlight(
+        source,
+        "input.jianpu",
+        Some(highlighted_measure_index),
+        tracks,
+        lyrics,
+    ) {
         Ok(svgs) => RenderResponse::Ok { svgs },
         Err(e) => RenderResponse::Err {
             diagnostics: vec![diagnostic_from_error(source, e)],
@@ -142,6 +164,26 @@ pub fn render(
     disabled_lyrics: Option<Vec<String>>,
 ) -> JsValue {
     to_js_value(&render_response(source, enabled_tracks, disabled_lyrics))
+}
+
+/// Render `.jianpu` source with a specific measure highlighted.
+///
+/// Returns the same structured value as [`render`]:
+/// - `{ "status": "ok", "svgs": ["<svg>...</svg>", ...] }`
+/// - `{ "status": "err", "diagnostics": [...] }`
+#[wasm_bindgen]
+pub fn render_with_highlight(
+    source: &str,
+    highlighted_measure_index: usize,
+    enabled_tracks: Option<Vec<String>>,
+    disabled_lyrics: Option<Vec<String>>,
+) -> JsValue {
+    to_js_value(&render_with_highlight_response(
+        source,
+        highlighted_measure_index,
+        enabled_tracks,
+        disabled_lyrics,
+    ))
 }
 
 /// Parse `.jianpu` source and return declared parts from the `[parts]` section.

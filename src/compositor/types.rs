@@ -48,6 +48,10 @@ pub enum AbsoluteContent {
         weight: FontWeight,
         italic: bool,
     },
+    MeasureHighlight {
+        width: f32,
+        height: f32,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

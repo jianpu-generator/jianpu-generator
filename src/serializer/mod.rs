@@ -84,6 +84,12 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
                 el.x, el.y, control_x, control_y, end_x, end_y, el.variant, stroke_width
             ));
         }
+        SvgKind::Rect { width, height } => {
+            out.push_str(&format!(
+                r#"<rect data-testid="measure-highlight" x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" fill="rgba(255,200,0,0.25)" rx="2"/>"#,
+                el.x, el.y, width, height
+            ));
+        }
     }
 }
 
@@ -257,5 +263,37 @@ mod tests {
         };
         let result = serialize(&[doc]);
         assert!(result[0].contains(r#"data-variant="tie-or-slur""#));
+    }
+
+    #[test]
+    fn rect_serializes_with_amber_fill() {
+        let doc = SvgDocument {
+            width_pt: 100.0,
+            height_pt: 100.0,
+            elements: vec![SvgElement {
+                x: 10.0,
+                y: 20.0,
+                variant: "measure-highlight",
+                kind: SvgKind::Rect {
+                    width: 50.0,
+                    height: 30.0,
+                },
+            }],
+        };
+        let result = serialize(&[doc]);
+        assert!(result[0].contains("<rect"), "should contain rect");
+        assert!(
+            result[0].contains(r#"data-testid="measure-highlight""#),
+            "should have testid"
+        );
+        assert!(result[0].contains(r#"x="10.0""#), "should have x");
+        assert!(result[0].contains(r#"y="20.0""#), "should have y");
+        assert!(result[0].contains(r#"width="50.0""#), "should have width");
+        assert!(result[0].contains(r#"height="30.0""#), "should have height");
+        assert!(
+            result[0].contains("rgba(255,200,0,0.25)"),
+            "should have amber fill"
+        );
+        assert!(result[0].contains(r#"rx="2""#), "should have corner radius");
     }
 }

@@ -111,3 +111,27 @@ pub(crate) fn expand_measure_elements(
         }
     }
 }
+
+pub(crate) fn make_footer_row(
+    page_num: u32,
+    total_pages: u32,
+    base: f32,
+    height_pt: f32,
+) -> GridRow {
+    GridRow {
+        height_pt,
+        column_count: 1,
+        elements: vec![GridElement {
+            column: 0,
+            column_span: 1,
+            halign: HAlign::Center,
+            valign: VAlign::Bottom,
+            content: GridContent::Text {
+                content: format!("{page_num} / {total_pages}"),
+                font_size: base * 0.6,
+                bold: false,
+                italic: false,
+            },
+        }],
+    }
+}

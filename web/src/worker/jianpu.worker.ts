@@ -27,6 +27,16 @@ const generateWavForMeasure =
       ) => GenerateWavResult)
     : null
 
+const renderWithHighlight =
+  'render_with_highlight' in jianpuWasm
+    ? (jianpuWasm.render_with_highlight as (
+        source: string,
+        highlightedMeasureIndex: number,
+        enabledTracks?: string[],
+        disabledLyrics?: string[],
+      ) => RenderResult)
+    : null
+
 const generatePdf =
   'generate_pdf' in jianpuWasm
     ? (jianpuWasm.generate_pdf as (
@@ -89,6 +99,14 @@ export type WorkerRequest =
       measureIndex: number
       enabledTracks?: string[]
     }
+  | {
+      type: 'renderWithHighlight'
+      source: string
+      id: number
+      highlightedMeasureIndex: number
+      enabledTracks?: string[]
+      disabledLyrics?: string[]
+    }
 
 export type WorkerResponse =
   | { type: 'ready'; audioAvailable: boolean; pdfAvailable: boolean }
@@ -104,6 +122,8 @@ export type WorkerResponse =
   | { type: 'measureAtOffset'; id: number; measureIndex: number | null }
   | { type: 'measureAudio'; id: number; wav: ArrayBuffer }
   | { type: 'measureAudioErr'; id: number }
+  | { type: 'highlightOk'; id: number; svgs: string[] }
+  | { type: 'highlightErr'; id: number; diagnostics: Diagnostic[] }
 
 let initialized = false
 
@@ -304,6 +324,43 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     postMessage({
       type: 'measureAudioErr',
       id: msg.id,
+    } satisfies WorkerResponse)
+    return
+  }
+
+  if (msg.type === 'renderWithHighlight') {
+    if (!renderWithHighlight) {
+      postMessage({
+        type: 'highlightErr',
+        id: msg.id,
+        diagnostics: [
+          {
+            severity: 'error',
+            message: 'render_with_highlight is not available in this build.',
+            span: { start: 0, end: 0 },
+          },
+        ],
+      } satisfies WorkerResponse)
+      return
+    }
+    const result = renderWithHighlight(
+      msg.source,
+      msg.highlightedMeasureIndex,
+      msg.enabledTracks,
+      msg.disabledLyrics,
+    )
+    if (result.status === 'ok') {
+      postMessage({
+        type: 'highlightOk',
+        id: msg.id,
+        svgs: result.svgs,
+      } satisfies WorkerResponse)
+      return
+    }
+    postMessage({
+      type: 'highlightErr',
+      id: msg.id,
+      diagnostics: result.diagnostics,
     } satisfies WorkerResponse)
     return
   }

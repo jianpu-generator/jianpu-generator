@@ -61,6 +61,7 @@ export default function App() {
     measureAudioGenerating,
     notifyCursorOffset,
     playCurrentMeasure,
+    highlightedSvgs,
   } = useJianpuWorker(source, disabledParts, disabledLyrics, store.active)
 
   useEffect(() => {
@@ -139,33 +140,48 @@ export default function App() {
     [],
   )
 
-  const handleSourceChange = useCallback((value: string) => {
-    setStore((prev) => updateActiveContent(prev, value))
-  }, [])
+  const handleSourceChange = useCallback(
+    (value: string) => {
+      setStore((prev) => updateActiveContent(prev, value))
+    },
+    [setStore],
+  )
 
-  const handleSelect = useCallback((name: string) => {
-    setStore((prev) => selectFile(prev, name))
-  }, [])
+  const handleSelect = useCallback(
+    (name: string) => {
+      setStore((prev) => selectFile(prev, name))
+    },
+    [setStore],
+  )
 
   const handleCreate = useCallback(() => {
     setStore((prev) => createFile(prev))
-  }, [])
+  }, [setStore])
 
   const handleDuplicate = useCallback(() => {
     setStore((prev) => duplicateFile(prev))
-  }, [])
+  }, [setStore])
 
-  const handleRename = useCallback((from: string, to: string) => {
-    setStore((prev) => renameFile(prev, from, to))
-  }, [])
+  const handleRename = useCallback(
+    (from: string, to: string) => {
+      setStore((prev) => renameFile(prev, from, to))
+    },
+    [setStore],
+  )
 
-  const handleDelete = useCallback((name: string) => {
-    setStore((prev) => deleteFile(prev, name))
-  }, [])
+  const handleDelete = useCallback(
+    (name: string) => {
+      setStore((prev) => deleteFile(prev, name))
+    },
+    [setStore],
+  )
 
-  const handleRestore = useCallback((name: string) => {
-    setStore((prev) => restoreFile(prev, name))
-  }, [])
+  const handleRestore = useCallback(
+    (name: string) => {
+      setStore((prev) => restoreFile(prev, name))
+    },
+    [setStore],
+  )
 
   const noPartsSelected =
     parts.length > 0 &&
@@ -200,7 +216,13 @@ export default function App() {
                 onCursorLineChange={setCurrentLine}
                 toolbar={
                   audioAvailable ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                      }}
+                    >
                       <PlayMeasureButton
                         disabled={
                           currentMeasureIndex === null || measureAudioGenerating
@@ -213,8 +235,17 @@ export default function App() {
                         }
                         onClick={playCurrentMeasure}
                       />
-                      <span style={{ fontSize: '0.75rem', color: '#888', fontFamily: 'monospace' }}>
-                        line {currentLine ?? '?'} | measure {currentMeasureIndex !== null ? currentMeasureIndex + 1 : 'null'}
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          color: '#888',
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        line {currentLine ?? '?'} | measure{' '}
+                        {currentMeasureIndex !== null
+                          ? currentMeasureIndex + 1
+                          : 'null'}
                       </span>
                     </div>
                   ) : null
@@ -228,6 +259,7 @@ export default function App() {
         <section className="pane pane--preview">
           <Preview
             svgs={svgs}
+            highlightedSvgs={highlightedSvgs}
             rendering={rendering}
             audioGenerating={audioGenerating}
             wavUrl={wavUrl}
