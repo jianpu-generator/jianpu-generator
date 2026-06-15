@@ -55,6 +55,7 @@ interface JianpuWorkerState {
   audioGenerating: boolean
   exportPdf: () => void
   exportSplitPdf: () => void
+  generateFullAudio: () => void
   selectedMeasureRange: { start: number; end: number } | null
   measureAudioGenerating: boolean
   notifySelection: (startOffset: number, endOffset: number) => void
@@ -162,6 +163,7 @@ export function useJianpuWorker(
   const measureAudioRequestIdRef = useRef(0)
   const latestMeasureAudioIdRef = useRef(0)
   const measureWavUrlRef = useRef<string | null>(null)
+  const autoPlayAudioRef = useRef(false)
 
   const enabledTracks = useMemo(
     () => enabledTracksForRender(parts, disabledParts),
@@ -259,9 +261,14 @@ export function useJianpuWorker(
       if (msg.type === 'audio') {
         if (msg.id !== latestAudioIdRef.current) return
         setAudioGenerating(false)
-        setNextWavUrl(
-          URL.createObjectURL(new Blob([msg.wav], { type: 'audio/wav' })),
+        const url = URL.createObjectURL(
+          new Blob([msg.wav], { type: 'audio/wav' }),
         )
+        setNextWavUrl(url)
+        if (autoPlayAudioRef.current) {
+          autoPlayAudioRef.current = false
+          new Audio(url).play().catch(() => {})
+        }
         return
       }
 
@@ -375,28 +382,20 @@ export function useJianpuWorker(
     worker.postMessage(payload)
   }, [source, enabledTracks, disabledLyricsTracks])
 
-  useEffect(() => {
-    if (!audioAvailable) return
-
+  const generateFullAudio = useCallback(() => {
     const worker = workerRef.current
-    if (!worker) return
-
-    const timer = window.setTimeout(() => {
-      const id = ++audioRequestIdRef.current
-      latestAudioIdRef.current = id
-      setAudioGenerating(true)
-
-      const payload: WorkerRequest = {
-        type: 'generateAudio',
-        source,
-        id,
-        enabledTracks,
-      }
-      worker.postMessage(payload)
-    }, debounceMs)
-
-    return () => window.clearTimeout(timer)
-  }, [source, enabledTracks, debounceMs, audioAvailable])
+    if (!worker || audioGenerating) return
+    const id = ++audioRequestIdRef.current
+    latestAudioIdRef.current = id
+    setAudioGenerating(true)
+    autoPlayAudioRef.current = true
+    worker.postMessage({
+      type: 'generateAudio',
+      source: sourceRef.current,
+      id,
+      enabledTracks: enabledTracksRef.current,
+    } satisfies WorkerRequest)
+  }, [audioGenerating])
 
   const notifySelection = useCallback(
     (startOffset: number, endOffset: number) => {
@@ -525,6 +524,7 @@ export function useJianpuWorker(
     audioGenerating,
     exportPdf,
     exportSplitPdf,
+    generateFullAudio,
     selectedMeasureRange,
     measureAudioGenerating,
     notifySelection,

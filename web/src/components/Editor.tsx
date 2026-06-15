@@ -1,5 +1,5 @@
 import MonacoEditor, { type Monaco, type OnMount } from '@monaco-editor/react'
-import type { editor } from 'monaco-editor'
+import type { editor, IDisposable, languages } from 'monaco-editor'
 import {
   forwardRef,
   type ReactNode,
@@ -8,7 +8,7 @@ import {
   useImperativeHandle,
   useRef,
 } from 'react'
-import type { Diagnostic, EditorHandle } from '../types'
+import type { Diagnostic, EditorHandle, PartInfo } from '../types'
 import {
   byteOffsetToStringIndex,
   stringIndexToByteOffset,
@@ -20,12 +20,60 @@ export interface EditorProps {
   readOnly?: boolean
   diagnostics?: Diagnostic[]
   measureSpans?: Array<{ start: number; end: number }>
+  parts?: PartInfo[]
   toolbar?: ReactNode
   onSelectionChange?: (startOffset: number, endOffset: number) => void
   onCursorLineChange?: (line: number) => void
 }
 
 const MARKER_OWNER = 'jianpu'
+
+function buildPartInlayHints(
+  model: editor.ITextModel,
+  measureSpans: Array<{ start: number; end: number }>,
+  parts: PartInfo[],
+  monacoApi: Monaco,
+): languages.InlayHint[] {
+  if (parts.length === 0 || measureSpans.length === 0) return []
+  const source = model.getValue()
+  const hints: languages.InlayHint[] = []
+
+  for (const span of measureSpans) {
+    const startCharIndex = byteOffsetToStringIndex(source, span.start)
+    const endCharIndex = byteOffsetToStringIndex(source, span.end)
+    const measureText = source.slice(startCharIndex, endCharIndex)
+    const startPos = model.getPositionAt(startCharIndex)
+    const lines = measureText.split('\n')
+
+    // Skip directive line if present (e.g. "(bpm=120 key=C4)")
+    let dataLineIndex = 0
+    if (lines.length > 0) {
+      const first = lines[0].trim()
+      if (first.startsWith('(') && first.endsWith(')')) {
+        dataLineIndex = 1
+      }
+    }
+
+    for (const part of parts) {
+      if (dataLineIndex >= lines.length) break
+      hints.push({
+        position: new monacoApi.Position(
+          startPos.lineNumber + dataLineIndex,
+          1,
+        ),
+        label: `[${part.abbreviation}]`,
+        kind: monacoApi.languages.InlayHintKind.Type,
+        paddingRight: true,
+      })
+      dataLineIndex++ // notes line
+      if (part.has_lyrics) {
+        dataLineIndex++ // lyrics line — no separate hint
+      }
+    }
+  }
+
+  return hints
+}
 
 function diagnosticRange(
   model: editor.ITextModel,
@@ -55,6 +103,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     readOnly = false,
     diagnostics = [],
     measureSpans = [],
+    parts = [],
     toolbar,
     onSelectionChange,
     onCursorLineChange,
@@ -64,6 +113,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<Monaco | null>(null)
   const viewZoneIdsRef = useRef<string[]>([])
+  const inlayHintsDisposableRef = useRef<IDisposable | null>(null)
+  const measureSpansForHintsRef = useRef(measureSpans)
+  const partsForHintsRef = useRef(parts)
   const onSelectionChangeRef = useRef(onSelectionChange)
   const onCursorLineChangeRef = useRef(onCursorLineChange)
   useEffect(() => {
@@ -201,11 +253,32 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     },
   }))
 
+  const applyInlayHints = useCallback(() => {
+    const monacoApi = monacoRef.current
+    if (!monacoApi) return
+    inlayHintsDisposableRef.current?.dispose()
+    inlayHintsDisposableRef.current =
+      monacoApi.languages.registerInlayHintsProvider('plaintext', {
+        provideInlayHints(model, _range, _token) {
+          return {
+            hints: buildPartInlayHints(
+              model,
+              measureSpansForHintsRef.current,
+              partsForHintsRef.current,
+              monacoApi,
+            ),
+            dispose: () => {},
+          }
+        },
+      })
+  }, [])
+
   const handleMount: OnMount = (ed, monacoApi) => {
     editorRef.current = ed
     monacoRef.current = monacoApi
     applyDiagnostics()
     applyMeasureViewZones()
+    applyInlayHints()
 
     const notifyCursor = () => {
       const model = ed.getModel()
@@ -233,6 +306,19 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   useEffect(() => {
     applyMeasureViewZones()
   }, [applyMeasureViewZones])
+
+  useEffect(() => {
+    measureSpansForHintsRef.current = measureSpans
+    partsForHintsRef.current = parts
+    applyInlayHints()
+  }, [measureSpans, parts, applyInlayHints])
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: disposable cleanup on unmount only
+  useEffect(() => {
+    return () => {
+      inlayHintsDisposableRef.current?.dispose()
+    }
+  }, [])
 
   return (
     <div className="editor">

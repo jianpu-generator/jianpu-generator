@@ -57,6 +57,7 @@ export default function App() {
     exportPdf,
     splitPdfExporting,
     exportSplitPdf,
+    generateFullAudio,
     selectedMeasureRange,
     measureAudioGenerating,
     measureSpans,
@@ -214,6 +215,7 @@ export default function App() {
                 readOnly={readOnly}
                 diagnostics={diagnostics}
                 measureSpans={measureSpans}
+                parts={parts}
                 onSelectionChange={notifySelection}
                 onCursorLineChange={setCurrentLine}
                 toolbar={
@@ -266,6 +268,7 @@ export default function App() {
             audioGenerating={audioGenerating}
             wavUrl={wavUrl}
             audioAvailable={audioAvailable}
+            onGenerateAudio={generateFullAudio}
             pdfAvailable={pdfAvailable}
             pdfExporting={pdfExporting}
             onExportPdf={exportPdf}

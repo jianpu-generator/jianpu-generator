@@ -7,6 +7,7 @@ interface PreviewProps {
   audioGenerating?: boolean
   wavUrl?: string | null
   audioAvailable?: boolean
+  onGenerateAudio?: () => void
   pdfAvailable?: boolean
   pdfExporting?: boolean
   onExportPdf?: () => void
@@ -24,6 +25,7 @@ export function Preview({
   audioGenerating = false,
   wavUrl = null,
   audioAvailable = false,
+  onGenerateAudio,
   pdfAvailable = false,
   pdfExporting = false,
   onExportPdf,
@@ -94,22 +96,25 @@ export function Preview({
       {audioAvailable ? (
         <div className="preview-audio" aria-busy={audioGenerating || undefined}>
           <div className="preview-audio-frame">
+            <button
+              type="button"
+              className="preview-audio-play-btn"
+              disabled={audioGenerating}
+              onClick={onGenerateAudio}
+            >
+              {audioGenerating ? (
+                <>
+                  <span className="preview-audio-spinner" aria-hidden="true" />
+                  <span>Generating…</span>
+                </>
+              ) : (
+                <span>▶ Play</span>
+              )}
+            </button>
             {wavUrl ? (
               <div className="preview-audio-player-wrap">
                 {/* biome-ignore lint/a11y/useMediaCaption: synthesized score preview has no captions track */}
                 <audio className="preview-audio-player" controls src={wavUrl} />
-              </div>
-            ) : (
-              <div className="preview-audio-placeholder">
-                {!audioGenerating ? (
-                  <span className="preview-audio-empty">No audio yet.</span>
-                ) : null}
-              </div>
-            )}
-            {audioGenerating ? (
-              <div className="preview-audio-generating" role="status">
-                <span className="preview-audio-spinner" aria-hidden="true" />
-                <span className="preview-audio-status">Generating audio…</span>
               </div>
             ) : null}
           </div>
