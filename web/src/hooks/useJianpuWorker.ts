@@ -437,10 +437,10 @@ export function useJianpuWorker(
       id,
       startMeasureIndex: selectedMeasureRange.start,
       endMeasureIndex: selectedMeasureRange.end,
-      enabledTracks: enabledTracksRef.current,
-      disabledLyrics: disabledLyricsRef.current,
+      enabledTracks,
+      disabledLyrics: disabledLyricsTracks,
     } satisfies WorkerRequest)
-  }, [selectedMeasureRange])
+  }, [selectedMeasureRange, enabledTracks, disabledLyricsTracks])
 
   useEffect(() => {
     const worker = workerRef.current
