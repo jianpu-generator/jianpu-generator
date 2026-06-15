@@ -55,6 +55,13 @@ pub(crate) enum MeasureAtOffsetResponse {
     NotInMeasure,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "status", rename_all = "camelCase")]
+pub(crate) enum ListMeasureSpansResponse {
+    Ok { spans: Vec<SpanOut> },
+    Err,
+}
+
 #[cfg(feature = "wav")]
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]

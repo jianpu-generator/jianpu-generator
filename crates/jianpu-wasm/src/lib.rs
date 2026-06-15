@@ -5,7 +5,7 @@ use jianpu_generator::write_wav_for_measure_from_source;
 #[cfg(feature = "wav")]
 use jianpu_generator::write_wav_from_source_filtered;
 use jianpu_generator::{
-    compile, find_measure_at_byte_offset, list_parts_from_source,
+    compile, find_measure_at_byte_offset, list_measure_spans_from_source, list_parts_from_source,
     render_svgs_from_source_filtered_with_lyrics, render_svgs_with_highlight,
 };
 #[cfg(feature = "pdf")]
@@ -15,8 +15,8 @@ use jianpu_generator::{
 #[cfg(feature = "wav")]
 use types::GenerateWavResponse;
 use types::{
-    diagnostic_from_error, to_js_value, ListPartsResponse, MeasureAtOffsetResponse, PartOut,
-    RenderResponse,
+    diagnostic_from_error, to_js_value, ListMeasureSpansResponse, ListPartsResponse,
+    MeasureAtOffsetResponse, PartOut, RenderResponse,
 };
 #[cfg(feature = "pdf")]
 use types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
@@ -85,6 +85,30 @@ fn get_measure_at_offset_response(source: &str, byte_offset: usize) -> MeasureAt
         },
         Err(_) => MeasureAtOffsetResponse::NotInMeasure,
     }
+}
+
+fn list_measure_spans_response(source: &str) -> ListMeasureSpansResponse {
+    match list_measure_spans_from_source(source, "input.jianpu") {
+        Ok(spans) => ListMeasureSpansResponse::Ok {
+            spans: spans
+                .into_iter()
+                .map(|s| types::SpanOut {
+                    start: s.start,
+                    end: s.end,
+                })
+                .collect(),
+        },
+        Err(_) => ListMeasureSpansResponse::Err,
+    }
+}
+
+/// Return the byte span of every measure in the source.
+///
+/// - `{ "status": "ok", "spans": [{ "start": N, "end": N }, ...] }` on success
+/// - `{ "status": "err" }` on parse failure
+#[wasm_bindgen]
+pub fn list_measure_spans(source: &str) -> JsValue {
+    to_js_value(&list_measure_spans_response(source))
 }
 
 #[cfg(feature = "wav")]

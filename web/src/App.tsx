@@ -59,6 +59,7 @@ export default function App() {
     exportSplitPdf,
     currentMeasureIndex,
     measureAudioGenerating,
+    measureSpans,
     notifyCursorOffset,
     playCurrentMeasure,
     highlightedSvgs,
@@ -212,6 +213,7 @@ export default function App() {
                 onChange={handleSourceChange}
                 readOnly={readOnly}
                 diagnostics={diagnostics}
+                measureSpans={measureSpans}
                 onCursorByteOffsetChange={notifyCursorOffset}
                 onCursorLineChange={setCurrentLine}
                 toolbar={

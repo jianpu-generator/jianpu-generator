@@ -1,9 +1,15 @@
 import init, * as jianpuWasm from 'jianpu-wasm'
-import { get_measure_index_at_offset, list_parts, render } from 'jianpu-wasm'
+import {
+  get_measure_index_at_offset,
+  list_measure_spans,
+  list_parts,
+  render,
+} from 'jianpu-wasm'
 import type {
   Diagnostic,
   GeneratePdfResult,
   GenerateWavResult,
+  ListMeasureSpansResult,
   ListPartsResult,
   MeasureAtOffsetResult,
   PartInfo,
@@ -107,6 +113,7 @@ export type WorkerRequest =
       enabledTracks?: string[]
       disabledLyrics?: string[]
     }
+  | { type: 'listMeasureSpans'; source: string; id: number }
 
 export type WorkerResponse =
   | { type: 'ready'; audioAvailable: boolean; pdfAvailable: boolean }
@@ -124,6 +131,12 @@ export type WorkerResponse =
   | { type: 'measureAudioErr'; id: number }
   | { type: 'highlightOk'; id: number; svgs: string[] }
   | { type: 'highlightErr'; id: number; diagnostics: Diagnostic[] }
+  | {
+      type: 'measureSpans'
+      id: number
+      status: 'ok' | 'err'
+      spans: Array<{ start: number; end: number }>
+    }
 
 let initialized = false
 
@@ -361,6 +374,17 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       type: 'highlightErr',
       id: msg.id,
       diagnostics: result.diagnostics,
+    } satisfies WorkerResponse)
+    return
+  }
+
+  if (msg.type === 'listMeasureSpans') {
+    const result = list_measure_spans(msg.source) as ListMeasureSpansResult
+    postMessage({
+      type: 'measureSpans',
+      id: msg.id,
+      status: result.status,
+      spans: result.status === 'ok' ? result.spans : [],
     } satisfies WorkerResponse)
     return
   }

@@ -51,6 +51,13 @@ export type MeasureAtOffsetResult =
   | MeasureAtOffsetOk
   | MeasureAtOffsetNotInMeasure
 
+type ListMeasureSpansOk = {
+  status: 'ok'
+  spans: Array<{ start: number; end: number }>
+}
+type ListMeasureSpansErr = { status: 'err' }
+export type ListMeasureSpansResult = ListMeasureSpansOk | ListMeasureSpansErr
+
 interface EditorSelection {
   start: number
   end: number
