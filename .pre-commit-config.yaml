@@ -42,6 +42,12 @@ repos:
         language: system
         files: ^web/
         pass_filenames: false
+      - id: web-typecheck
+        name: web typecheck (wasm + tsc)
+        entry: bash -c 'cd web && pnpm run build:wasm && pnpm exec tsc -b'
+        language: system
+        files: ^(crates/jianpu-wasm/|web/)
+        pass_filenames: false
       - id: check-max-file-lines
         name: check max file lines (600)
         entry: python3 scripts/check-max-file-lines.py

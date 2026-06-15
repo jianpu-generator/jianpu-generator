@@ -5,64 +5,26 @@ import {
   list_parts,
   render,
 } from 'jianpu-wasm'
-import type {
-  Diagnostic,
-  GeneratePdfResult,
-  GenerateWavResult,
-  ListMeasureSpansResult,
-  ListPartsResult,
-  MeasureAtOffsetResult,
-  PartInfo,
-  RenderResult,
-} from '../types'
+import type { Diagnostic, PartInfo } from '../types'
 
 const generateWav =
-  'generate_wav' in jianpuWasm
-    ? (jianpuWasm.generate_wav as (
-        source: string,
-        enabledTracks?: string[],
-      ) => GenerateWavResult)
-    : null
+  'generate_wav' in jianpuWasm ? jianpuWasm.generate_wav : null
 
 const generateWavForMeasure =
   'generate_wav_for_measure' in jianpuWasm
-    ? (jianpuWasm.generate_wav_for_measure as (
-        source: string,
-        measureIndex: number,
-        enabledTracks?: string[],
-      ) => GenerateWavResult)
+    ? jianpuWasm.generate_wav_for_measure
     : null
 
 const renderWithHighlight =
   'render_with_highlight' in jianpuWasm
-    ? (jianpuWasm.render_with_highlight as (
-        source: string,
-        highlightedMeasureIndex: number,
-        enabledTracks?: string[],
-        disabledLyrics?: string[],
-      ) => RenderResult)
+    ? jianpuWasm.render_with_highlight
     : null
 
 const generatePdf =
-  'generate_pdf' in jianpuWasm
-    ? (jianpuWasm.generate_pdf as (
-        source: string,
-        enabledTracks?: string[],
-        disabledLyrics?: string[],
-      ) => GeneratePdfResult)
-    : null
-
-type GenerateSplitPdfResult =
-  | { status: 'ok'; zip: Uint8Array | number[] }
-  | { status: 'err'; diagnostics: Diagnostic[] }
+  'generate_pdf' in jianpuWasm ? jianpuWasm.generate_pdf : null
 
 const generateSplitPdfs =
-  'generate_split_pdfs' in jianpuWasm
-    ? (jianpuWasm.generate_split_pdfs as (
-        source: string,
-        baseName: string,
-      ) => GenerateSplitPdfResult)
-    : null
+  'generate_split_pdfs' in jianpuWasm ? jianpuWasm.generate_split_pdfs : null
 
 export type WorkerRequest =
   | {
@@ -152,14 +114,13 @@ async function ensureInit() {
   }
 }
 
-function binaryBufferFromResult(bytes: Uint8Array | number[]): ArrayBuffer {
-  const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
-  if (view.byteOffset === 0 && view.byteLength === view.buffer.byteLength) {
-    return view.buffer as ArrayBuffer
+function binaryBufferFromResult(bytes: Uint8Array): ArrayBuffer {
+  if (bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength) {
+    return bytes.buffer as ArrayBuffer
   }
-  return view.buffer.slice(
-    view.byteOffset,
-    view.byteOffset + view.byteLength,
+  return bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
   ) as ArrayBuffer
 }
 
@@ -168,7 +129,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   await ensureInit()
 
   if (msg.type === 'listParts') {
-    const result = list_parts(msg.source) as ListPartsResult
+    const result = list_parts(msg.source)
     if (result.status === 'ok') {
       postMessage({
         type: 'parts',
@@ -297,10 +258,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'getMeasureAtOffset') {
-    const result = get_measure_index_at_offset(
-      msg.source,
-      msg.byteOffset,
-    ) as MeasureAtOffsetResult
+    const result = get_measure_index_at_offset(msg.source, msg.byteOffset)
     postMessage({
       type: 'measureAtOffset',
       id: msg.id,
@@ -379,7 +337,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'listMeasureSpans') {
-    const result = list_measure_spans(msg.source) as ListMeasureSpansResult
+    const result = list_measure_spans(msg.source)
     postMessage({
       type: 'measureSpans',
       id: msg.id,
@@ -391,11 +349,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
   if (msg.type !== 'render') return
 
-  const result = render(
-    msg.source,
-    msg.enabledTracks,
-    msg.disabledLyrics,
-  ) as RenderResult
+  const result = render(msg.source, msg.enabledTracks, msg.disabledLyrics)
   if (result.status === 'ok') {
     postMessage({
       type: 'ok',

@@ -1,62 +1,15 @@
-type DiagnosticSeverity = 'error' | 'warning'
-
-/** UTF-8 byte offsets into the source string. */
-interface ByteSpan {
-  start: number
-  end: number
-}
-
-export interface Diagnostic {
-  severity: DiagnosticSeverity
-  message: string
-  span: ByteSpan
-  report?: string
-}
-
-type RenderOk = { status: 'ok'; svgs: string[] }
-
-type RenderErr = { status: 'err'; diagnostics: Diagnostic[] }
-
-export type RenderResult = RenderOk | RenderErr
-
-export interface PartInfo {
-  abbreviation: string
-  display_name: string
-  has_lyrics: boolean
-}
-
-type ListPartsOk = { status: 'ok'; parts: PartInfo[] }
-
-type ListPartsErr = { status: 'err'; diagnostics: Diagnostic[] }
-
-export type ListPartsResult = ListPartsOk | ListPartsErr
-
-type GenerateWavOk = { status: 'ok'; wav: Uint8Array | number[] }
-
-type GenerateWavErr = { status: 'err'; diagnostics: Diagnostic[] }
-
-export type GenerateWavResult = GenerateWavOk | GenerateWavErr
-
-type GeneratePdfOk = { status: 'ok'; pdf: Uint8Array | number[] }
-
-type GeneratePdfErr = { status: 'err'; diagnostics: Diagnostic[] }
-
-export type GeneratePdfResult = GeneratePdfOk | GeneratePdfErr
-
-type MeasureAtOffsetOk = { status: 'ok'; measure_index: number }
-
-type MeasureAtOffsetNotInMeasure = { status: 'notInMeasure' }
-
-export type MeasureAtOffsetResult =
-  | MeasureAtOffsetOk
-  | MeasureAtOffsetNotInMeasure
-
-type ListMeasureSpansOk = {
-  status: 'ok'
-  spans: Array<{ start: number; end: number }>
-}
-type ListMeasureSpansErr = { status: 'err' }
-export type ListMeasureSpansResult = ListMeasureSpansOk | ListMeasureSpansErr
+export type {
+  DiagnosticOut as Diagnostic,
+  GeneratePdfResponse as GeneratePdfResult,
+  GenerateSplitPdfsResponse as GenerateSplitPdfResult,
+  GenerateWavResponse as GenerateWavResult,
+  ListMeasureSpansResponse as ListMeasureSpansResult,
+  ListPartsResponse as ListPartsResult,
+  MeasureAtOffsetResponse as MeasureAtOffsetResult,
+  PartOut as PartInfo,
+  RenderResponse as RenderResult,
+  SpanOut as ByteSpan,
+} from 'jianpu-wasm'
 
 interface EditorSelection {
   start: number

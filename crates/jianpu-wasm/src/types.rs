@@ -1,89 +1,115 @@
 use jianpu_generator::{error::JianPuError, error_reporter};
 use serde::Serialize;
-use wasm_bindgen::prelude::*;
+use tsify::Tsify;
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-pub(crate) struct SpanOut {
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[tsify(into_wasm_abi)]
+pub struct SpanOut {
     /// UTF-8 byte offset (inclusive).
-    pub(crate) start: usize,
+    pub start: usize,
     /// UTF-8 byte offset (exclusive).
-    pub(crate) end: usize,
+    pub end: usize,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
+#[tsify(into_wasm_abi)]
 #[allow(dead_code)]
-pub(crate) enum DiagnosticSeverity {
+pub enum DiagnosticSeverity {
     Error,
     Warning,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-pub(crate) struct DiagnosticOut {
-    pub(crate) severity: DiagnosticSeverity,
-    pub(crate) message: String,
-    pub(crate) span: SpanOut,
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[tsify(into_wasm_abi)]
+pub struct DiagnosticOut {
+    pub severity: DiagnosticSeverity,
+    pub message: String,
+    pub span: SpanOut,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) report: Option<String>,
+    pub report: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-pub(crate) struct PartOut {
-    pub(crate) abbreviation: String,
-    pub(crate) display_name: String,
-    pub(crate) has_lyrics: bool,
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[tsify(into_wasm_abi)]
+pub struct PartOut {
+    pub abbreviation: String,
+    pub display_name: String,
+    pub has_lyrics: bool,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-pub(crate) enum RenderResponse {
+#[tsify(into_wasm_abi)]
+pub enum RenderResponse {
     Ok { svgs: Vec<String> },
     Err { diagnostics: Vec<DiagnosticOut> },
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-pub(crate) enum ListPartsResponse {
+#[tsify(into_wasm_abi)]
+pub enum ListPartsResponse {
     Ok { parts: Vec<PartOut> },
     Err { diagnostics: Vec<DiagnosticOut> },
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Tsify, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
-pub(crate) enum MeasureAtOffsetResponse {
+#[tsify(into_wasm_abi)]
+pub enum MeasureAtOffsetResponse {
     Ok { measure_index: usize },
     NotInMeasure,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Tsify, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
-pub(crate) enum ListMeasureSpansResponse {
+#[tsify(into_wasm_abi)]
+pub enum ListMeasureSpansResponse {
     Ok { spans: Vec<SpanOut> },
     Err,
 }
 
 #[cfg(feature = "wav")]
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-pub(crate) enum GenerateWavResponse {
-    Ok { wav: Vec<u8> },
-    Err { diagnostics: Vec<DiagnosticOut> },
+#[tsify(into_wasm_abi)]
+pub enum GenerateWavResponse {
+    Ok {
+        #[tsify(type = "Uint8Array")]
+        wav: Vec<u8>,
+    },
+    Err {
+        diagnostics: Vec<DiagnosticOut>,
+    },
 }
 
 #[cfg(feature = "pdf")]
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-pub(crate) enum GeneratePdfResponse {
-    Ok { pdf: Vec<u8> },
-    Err { diagnostics: Vec<DiagnosticOut> },
+#[tsify(into_wasm_abi)]
+pub enum GeneratePdfResponse {
+    Ok {
+        #[tsify(type = "Uint8Array")]
+        pdf: Vec<u8>,
+    },
+    Err {
+        diagnostics: Vec<DiagnosticOut>,
+    },
 }
 
 #[cfg(feature = "pdf")]
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-pub(crate) enum GenerateSplitPdfsResponse {
-    Ok { zip: Vec<u8> },
-    Err { diagnostics: Vec<DiagnosticOut> },
+#[tsify(into_wasm_abi)]
+pub enum GenerateSplitPdfsResponse {
+    Ok {
+        #[tsify(type = "Uint8Array")]
+        zip: Vec<u8>,
+    },
+    Err {
+        diagnostics: Vec<DiagnosticOut>,
+    },
 }
 
 pub(crate) fn diagnostic_from_error(source: &str, e: JianPuError) -> DiagnosticOut {
@@ -96,12 +122,5 @@ pub(crate) fn diagnostic_from_error(source: &str, e: JianPuError) -> DiagnosticO
             end: e.span.end,
         },
         report: Some(report),
-    }
-}
-
-pub(crate) fn to_js_value<T: Serialize>(value: &T) -> JsValue {
-    match serde_wasm_bindgen::to_value(value) {
-        Ok(v) => v,
-        Err(err) => JsValue::from_str(&format!("serialization failed: {err}")),
     }
 }

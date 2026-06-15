@@ -15,8 +15,8 @@ use jianpu_generator::{
 #[cfg(feature = "wav")]
 use types::GenerateWavResponse;
 use types::{
-    diagnostic_from_error, to_js_value, ListMeasureSpansResponse, ListPartsResponse,
-    MeasureAtOffsetResponse, PartOut, RenderResponse,
+    diagnostic_from_error, ListMeasureSpansResponse, ListPartsResponse, MeasureAtOffsetResponse,
+    PartOut, RenderResponse,
 };
 #[cfg(feature = "pdf")]
 use types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
@@ -107,8 +107,8 @@ fn list_measure_spans_response(source: &str) -> ListMeasureSpansResponse {
 /// - `{ "status": "ok", "spans": [{ "start": N, "end": N }, ...] }` on success
 /// - `{ "status": "err" }` on parse failure
 #[wasm_bindgen]
-pub fn list_measure_spans(source: &str) -> JsValue {
-    to_js_value(&list_measure_spans_response(source))
+pub fn list_measure_spans(source: &str) -> ListMeasureSpansResponse {
+    list_measure_spans_response(source)
 }
 
 #[cfg(feature = "wav")]
@@ -186,8 +186,8 @@ pub fn render(
     source: &str,
     enabled_tracks: Option<Vec<String>>,
     disabled_lyrics: Option<Vec<String>>,
-) -> JsValue {
-    to_js_value(&render_response(source, enabled_tracks, disabled_lyrics))
+) -> RenderResponse {
+    render_response(source, enabled_tracks, disabled_lyrics)
 }
 
 /// Render `.jianpu` source with a specific measure highlighted.
@@ -201,13 +201,13 @@ pub fn render_with_highlight(
     highlighted_measure_index: usize,
     enabled_tracks: Option<Vec<String>>,
     disabled_lyrics: Option<Vec<String>>,
-) -> JsValue {
-    to_js_value(&render_with_highlight_response(
+) -> RenderResponse {
+    render_with_highlight_response(
         source,
         highlighted_measure_index,
         enabled_tracks,
         disabled_lyrics,
-    ))
+    )
 }
 
 /// Parse `.jianpu` source and return declared parts from the `[parts]` section.
@@ -215,8 +215,8 @@ pub fn render_with_highlight(
 /// - `{ "status": "ok", "parts": [{ "abbreviation", "display_name" }, ...] }`
 /// - `{ "status": "err", "diagnostics": [...] }`
 #[wasm_bindgen]
-pub fn list_parts(source: &str) -> JsValue {
-    to_js_value(&list_parts_response(source))
+pub fn list_parts(source: &str) -> ListPartsResponse {
+    list_parts_response(source)
 }
 
 /// Find the measure index at a UTF-8 byte offset in the source.
@@ -225,35 +225,8 @@ pub fn list_parts(source: &str) -> JsValue {
 /// inside a measure's note events, or `{ "status": "notInMeasure" }` otherwise
 /// (e.g. when the cursor is in `[metadata]`, `[parts]`, or a directive line).
 #[wasm_bindgen]
-pub fn get_measure_index_at_offset(source: &str, byte_offset: usize) -> JsValue {
-    to_js_value(&get_measure_at_offset_response(source, byte_offset))
-}
-
-#[cfg(feature = "wav")]
-fn generate_wav_to_js(source: &str, enabled_tracks: Option<Vec<String>>) -> JsValue {
-    use js_sys::{Object, Reflect, Uint8Array};
-
-    match generate_wav_response(source, enabled_tracks) {
-        GenerateWavResponse::Ok { wav } => {
-            let obj = Object::new();
-            if Reflect::set(&obj, &JsValue::from_str("status"), &JsValue::from_str("ok")).is_err() {
-                return JsValue::from_str("failed to build wav response");
-            }
-            if Reflect::set(
-                &obj,
-                &JsValue::from_str("wav"),
-                &Uint8Array::from(wav.as_slice()),
-            )
-            .is_err()
-            {
-                return JsValue::from_str("failed to attach wav bytes");
-            }
-            obj.into()
-        }
-        GenerateWavResponse::Err { diagnostics } => {
-            to_js_value(&GenerateWavResponse::Err { diagnostics })
-        }
-    }
+pub fn get_measure_index_at_offset(source: &str, byte_offset: usize) -> MeasureAtOffsetResponse {
+    get_measure_at_offset_response(source, byte_offset)
 }
 
 /// Parse `.jianpu` source and synthesize WAV audio bytes.
@@ -264,8 +237,8 @@ fn generate_wav_to_js(source: &str, enabled_tracks: Option<Vec<String>>) -> JsVa
 /// - `{ "status": "err", "diagnostics": [...] }`
 #[cfg(feature = "wav")]
 #[wasm_bindgen]
-pub fn generate_wav(source: &str, enabled_tracks: Option<Vec<String>>) -> JsValue {
-    generate_wav_to_js(source, enabled_tracks)
+pub fn generate_wav(source: &str, enabled_tracks: Option<Vec<String>>) -> GenerateWavResponse {
+    generate_wav_response(source, enabled_tracks)
 }
 
 /// Synthesize WAV audio for a single measure, with BPM/key context from preceding measures.
@@ -280,60 +253,8 @@ pub fn generate_wav_for_measure(
     source: &str,
     measure_index: usize,
     enabled_tracks: Option<Vec<String>>,
-) -> JsValue {
-    use js_sys::{Object, Reflect, Uint8Array};
-    match generate_wav_for_measure_response(source, measure_index, enabled_tracks) {
-        GenerateWavResponse::Ok { wav } => {
-            let obj = Object::new();
-            if Reflect::set(&obj, &JsValue::from_str("status"), &JsValue::from_str("ok")).is_err() {
-                return JsValue::from_str("failed to build wav response");
-            }
-            if Reflect::set(
-                &obj,
-                &JsValue::from_str("wav"),
-                &Uint8Array::from(wav.as_slice()),
-            )
-            .is_err()
-            {
-                return JsValue::from_str("failed to attach wav bytes");
-            }
-            obj.into()
-        }
-        GenerateWavResponse::Err { diagnostics } => {
-            to_js_value(&GenerateWavResponse::Err { diagnostics })
-        }
-    }
-}
-
-#[cfg(feature = "pdf")]
-fn generate_pdf_to_js(
-    source: &str,
-    enabled_tracks: Option<Vec<String>>,
-    disabled_lyrics: Option<Vec<String>>,
-) -> JsValue {
-    use js_sys::{Object, Reflect, Uint8Array};
-
-    match generate_pdf_response(source, enabled_tracks, disabled_lyrics) {
-        GeneratePdfResponse::Ok { pdf } => {
-            let obj = Object::new();
-            if Reflect::set(&obj, &JsValue::from_str("status"), &JsValue::from_str("ok")).is_err() {
-                return JsValue::from_str("failed to build pdf response");
-            }
-            if Reflect::set(
-                &obj,
-                &JsValue::from_str("pdf"),
-                &Uint8Array::from(pdf.as_slice()),
-            )
-            .is_err()
-            {
-                return JsValue::from_str("failed to attach pdf bytes");
-            }
-            obj.into()
-        }
-        GeneratePdfResponse::Err { diagnostics } => {
-            to_js_value(&GeneratePdfResponse::Err { diagnostics })
-        }
-    }
+) -> GenerateWavResponse {
+    generate_wav_for_measure_response(source, measure_index, enabled_tracks)
 }
 
 /// Parse `.jianpu` source and write PDF bytes.
@@ -348,35 +269,8 @@ pub fn generate_pdf(
     source: &str,
     enabled_tracks: Option<Vec<String>>,
     disabled_lyrics: Option<Vec<String>>,
-) -> JsValue {
-    generate_pdf_to_js(source, enabled_tracks, disabled_lyrics)
-}
-
-#[cfg(feature = "pdf")]
-fn generate_split_pdfs_to_js(source: &str, base_name: &str) -> JsValue {
-    use js_sys::{Object, Reflect, Uint8Array};
-
-    match generate_split_pdfs_response(source, base_name) {
-        GenerateSplitPdfsResponse::Ok { zip } => {
-            let obj = Object::new();
-            if Reflect::set(&obj, &JsValue::from_str("status"), &JsValue::from_str("ok")).is_err() {
-                return JsValue::from_str("failed to build split pdf response");
-            }
-            if Reflect::set(
-                &obj,
-                &JsValue::from_str("zip"),
-                &Uint8Array::from(zip.as_slice()),
-            )
-            .is_err()
-            {
-                return JsValue::from_str("failed to attach zip bytes");
-            }
-            obj.into()
-        }
-        GenerateSplitPdfsResponse::Err { diagnostics } => {
-            to_js_value(&GenerateSplitPdfsResponse::Err { diagnostics })
-        }
-    }
+) -> GeneratePdfResponse {
+    generate_pdf_response(source, enabled_tracks, disabled_lyrics)
 }
 
 /// Parse `.jianpu` source and write one PDF per part as a ZIP archive.
@@ -387,8 +281,8 @@ fn generate_split_pdfs_to_js(source: &str, base_name: &str) -> JsValue {
 /// - `{ "status": "err", "diagnostics": [...] }`
 #[cfg(feature = "pdf")]
 #[wasm_bindgen]
-pub fn generate_split_pdfs(source: &str, base_name: &str) -> JsValue {
-    generate_split_pdfs_to_js(source, base_name)
+pub fn generate_split_pdfs(source: &str, base_name: &str) -> GenerateSplitPdfsResponse {
+    generate_split_pdfs_response(source, base_name)
 }
 
 #[cfg(test)]
