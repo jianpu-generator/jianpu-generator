@@ -1,16 +1,24 @@
 interface PlayMeasureButtonProps {
   disabled: boolean
   loading: boolean
-  measureNumber: number | null
+  measureRange: { start: number; end: number } | null
   onClick: () => void
+}
+
+function measureLabel(range: { start: number; end: number }): string {
+  if (range.start === range.end) {
+    return `▶ Measure ${range.start + 1}`
+  }
+  return `▶ Measures ${range.start + 1}–${range.end + 1}`
 }
 
 export function PlayMeasureButton({
   disabled,
   loading,
-  measureNumber,
+  measureRange,
   onClick,
 }: PlayMeasureButtonProps) {
+  const label = measureRange !== null ? measureLabel(measureRange) : null
   return (
     <button
       type="button"
@@ -18,20 +26,16 @@ export function PlayMeasureButton({
       disabled={disabled}
       onClick={onClick}
       title={
-        measureNumber === null
+        measureRange === null
           ? 'Move cursor into a measure to enable'
-          : 'Play current measure'
+          : 'Play selected measure(s)'
       }
-      aria-label={
-        measureNumber !== null
-          ? `Play measure ${measureNumber}`
-          : 'Play current measure'
-      }
+      aria-label={label ?? 'Play selected measure(s)'}
     >
       {loading ? (
         <span className="play-measure-spinner" aria-hidden="true" />
-      ) : measureNumber !== null ? (
-        `▶ ${measureNumber}`
+      ) : label !== null ? (
+        label
       ) : (
         '▶'
       )}

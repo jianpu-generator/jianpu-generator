@@ -5,7 +5,7 @@ pub struct GridPage {
     pub width_pt: f32,
     pub height_pt: f32,
     pub rows: Vec<GridRow>,
-    pub measure_highlight: Option<MeasureHighlight>,
+    pub measure_highlights: Vec<MeasureHighlight>,
 }
 
 #[derive(Debug, Clone)]

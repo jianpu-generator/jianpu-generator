@@ -87,26 +87,27 @@ fn resolve_page(page: &GridPage, note_number_width: f32) -> AbsolutePage {
         row_y += row.height_pt;
     }
 
-    if let Some(element) =
-        resolve_measure_highlight(&page.measure_highlight, &page.rows, &row_tops, usable_width)
-    {
-        elements.insert(0, element);
-    }
+    let mut highlight_elements = resolve_measure_highlights(
+        &page.measure_highlights,
+        &page.rows,
+        &row_tops,
+        usable_width,
+    );
+    highlight_elements.extend(elements);
 
     AbsolutePage {
         width_pt: page.width_pt,
         height_pt: page.height_pt,
-        elements,
+        elements: highlight_elements,
     }
 }
 
-fn resolve_measure_highlight(
-    highlight: &Option<crate::grid_layout::types::MeasureHighlight>,
+fn resolve_single_measure_highlight(
+    highlight: &crate::grid_layout::types::MeasureHighlight,
     rows: &[crate::grid_layout::types::GridRow],
     row_tops: &[f32],
     usable_width: f32,
 ) -> Option<AbsoluteElement> {
-    let highlight = highlight.as_ref()?;
     let start_row = rows.get(highlight.row_start)?;
     let highlight_y = row_tops.get(highlight.row_start)?;
     if highlight.row_end >= rows.len() {
@@ -127,6 +128,18 @@ fn resolve_measure_highlight(
             height: highlight_height,
         },
     })
+}
+
+fn resolve_measure_highlights(
+    highlights: &[crate::grid_layout::types::MeasureHighlight],
+    rows: &[crate::grid_layout::types::GridRow],
+    row_tops: &[f32],
+    usable_width: f32,
+) -> Vec<AbsoluteElement> {
+    highlights
+        .iter()
+        .filter_map(|h| resolve_single_measure_highlight(h, rows, row_tops, usable_width))
+        .collect()
 }
 
 fn text_anchor(halign: HAlign) -> TextAnchor {

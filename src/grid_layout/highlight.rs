@@ -33,6 +33,57 @@ pub(crate) fn system_musical_row_count(system: &[MeasureBlock], _base: f32) -> u
         .sum()
 }
 
+pub(crate) fn compute_measure_highlights_for_range(
+    page_systems: &[Vec<Vec<MeasureBlock>>],
+    start_index: usize,
+    end_index: usize,
+    header: &Header,
+    base: f32,
+) -> Vec<(usize, MeasureHighlight)> {
+    let header_row_count = make_header_rows(header, base).len();
+    let mut global_measure_index: usize = 0;
+    let mut results: Vec<(usize, MeasureHighlight)> = Vec::new();
+
+    for (page_idx, page_sys) in page_systems.iter().enumerate() {
+        let mut row_offset = header_row_count;
+        for (sys_idx, system) in page_sys.iter().enumerate() {
+            if sys_idx > 0 {
+                row_offset += 1;
+            }
+            let Some(first) = system.first() else {
+                continue;
+            };
+            if has_any_decoration(first) {
+                row_offset += 1;
+            }
+            let musical_row_count = system_musical_row_count(system, base);
+            let row_start = row_offset;
+            let row_end = row_offset + musical_row_count.saturating_sub(1);
+
+            let mut col_offset: u32 = LABEL_COLS;
+            for block in system {
+                let col_w = block_column_width(block);
+                if global_measure_index >= start_index && global_measure_index <= end_index {
+                    results.push((
+                        page_idx,
+                        MeasureHighlight {
+                            row_start,
+                            row_end,
+                            column_start: col_offset,
+                            column_end: col_offset + col_w,
+                        },
+                    ));
+                }
+                col_offset += col_w;
+                global_measure_index += 1;
+            }
+            row_offset += musical_row_count;
+        }
+    }
+    results
+}
+
+#[cfg(test)]
 pub(crate) fn compute_measure_highlight_location(
     page_systems: &[Vec<Vec<MeasureBlock>>],
     highlighted_measure_index: usize,

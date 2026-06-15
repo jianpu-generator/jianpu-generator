@@ -1,0 +1,129 @@
+.part-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.part-toggles-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0;
+  margin: 0;
+}
+
+.part-toggles-status {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.part-toggles-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.part-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.part-toggle-connector {
+  flex-shrink: 0;
+  width: 0.5rem;
+  height: 2px;
+  margin: 0 0.12rem;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--muted) 35%, var(--border));
+}
+
+.part-toggle-group:has(> .part-toggle:not(.part-toggle--lyrics) input:checked)
+  .part-toggle-connector {
+  background: var(--accent-selected-border);
+}
+
+.part-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.4rem;
+  min-height: 1.75rem;
+  padding: 0.25rem 0.55rem 0.25rem 0.45rem;
+  border: 1px dashed color-mix(in srgb, var(--muted) 55%, var(--border));
+  border-radius: 4px;
+  background: var(--editor-bg);
+  font-size: 0.75rem;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.part-toggle:hover:not(:has(input:disabled)):not(:has(input:checked)) {
+  background: var(--preview-bg);
+  border-color: var(--muted);
+  color: var(--muted);
+}
+
+.part-toggle:has(input:checked) {
+  border-style: solid;
+  border-width: 1.5px;
+  background: var(--accent-selected-bg);
+  border-color: var(--accent-selected-border);
+  color: var(--accent-selected-text);
+  font-weight: 600;
+}
+
+.part-toggle:has(input:checked):hover:not(:has(input:disabled)) {
+  background: var(--accent-selected-bg-hover);
+  border-color: var(--accent);
+}
+
+.part-toggle:has(input:focus-visible) {
+  outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  outline-offset: 1px;
+}
+
+.part-toggle:has(input:disabled) {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.part-toggle input[type="checkbox"] {
+  flex-shrink: 0;
+  width: 0.9rem;
+  height: 0.9rem;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: inherit;
+}
+
+.part-toggle:has(input:checked) input[type="checkbox"] {
+  accent-color: var(--accent-selected-border);
+}
+
+.part-toggle-label {
+  font-family: var(--mono);
+  line-height: 1.2;
+}
+
+.part-toggle--lyrics .part-toggle-label {
+  font-family: inherit;
+}

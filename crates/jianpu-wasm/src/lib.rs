@@ -1,12 +1,12 @@
 mod types;
 
 #[cfg(feature = "wav")]
-use jianpu_generator::write_wav_for_measure_from_source;
+use jianpu_generator::write_wav_for_measure_range_from_source;
 #[cfg(feature = "wav")]
 use jianpu_generator::write_wav_from_source_filtered;
 use jianpu_generator::{
     compile, find_measure_at_byte_offset, list_measure_spans_from_source, list_parts_from_source,
-    render_svgs_from_source_filtered_with_lyrics, render_svgs_with_highlight,
+    render_svgs_from_source_filtered_with_lyrics, render_svgs_with_highlight_range,
 };
 #[cfg(feature = "pdf")]
 use jianpu_generator::{
@@ -37,18 +37,20 @@ fn render_response(
     }
 }
 
-fn render_with_highlight_response(
+fn render_with_highlight_range_response(
     source: &str,
-    highlighted_measure_index: usize,
+    start_index: usize,
+    end_index: usize,
     enabled_tracks: Option<Vec<String>>,
     disabled_lyrics: Option<Vec<String>>,
 ) -> RenderResponse {
     let tracks = enabled_tracks.as_deref();
     let lyrics = disabled_lyrics.as_deref();
-    match render_svgs_with_highlight(
+    match render_svgs_with_highlight_range(
         source,
         "input.jianpu",
-        Some(highlighted_measure_index),
+        start_index,
+        end_index,
         tracks,
         lyrics,
     ) {
@@ -123,13 +125,20 @@ fn generate_wav_response(source: &str, enabled_tracks: Option<Vec<String>>) -> G
 }
 
 #[cfg(feature = "wav")]
-fn generate_wav_for_measure_response(
+fn generate_wav_for_measure_range_response(
     source: &str,
-    measure_index: usize,
+    start_index: usize,
+    end_index: usize,
     enabled_tracks: Option<Vec<String>>,
 ) -> GenerateWavResponse {
     let tracks = enabled_tracks.as_deref();
-    match write_wav_for_measure_from_source(source, "input.jianpu", measure_index, tracks) {
+    match write_wav_for_measure_range_from_source(
+        source,
+        "input.jianpu",
+        start_index,
+        end_index,
+        tracks,
+    ) {
         Ok(wav) => GenerateWavResponse::Ok { wav },
         Err(e) => GenerateWavResponse::Err {
             diagnostics: vec![diagnostic_from_error(source, e)],
@@ -190,21 +199,23 @@ pub fn render(
     render_response(source, enabled_tracks, disabled_lyrics)
 }
 
-/// Render `.jianpu` source with a specific measure highlighted.
+/// Render `.jianpu` source with a range of measures highlighted.
 ///
 /// Returns the same structured value as [`render`]:
 /// - `{ "status": "ok", "svgs": ["<svg>...</svg>", ...] }`
 /// - `{ "status": "err", "diagnostics": [...] }`
 #[wasm_bindgen]
-pub fn render_with_highlight(
+pub fn render_with_highlight_range(
     source: &str,
-    highlighted_measure_index: usize,
+    start_index: usize,
+    end_index: usize,
     enabled_tracks: Option<Vec<String>>,
     disabled_lyrics: Option<Vec<String>>,
 ) -> RenderResponse {
-    render_with_highlight_response(
+    render_with_highlight_range_response(
         source,
-        highlighted_measure_index,
+        start_index,
+        end_index,
         enabled_tracks,
         disabled_lyrics,
     )
@@ -241,7 +252,7 @@ pub fn generate_wav(source: &str, enabled_tracks: Option<Vec<String>>) -> Genera
     generate_wav_response(source, enabled_tracks)
 }
 
-/// Synthesize WAV audio for a single measure, with BPM/key context from preceding measures.
+/// Synthesize WAV audio for a consecutive measure range, with BPM/key context from preceding measures.
 ///
 /// Available only when the `wav` feature is enabled at build time.
 /// Returns the same structured envelope as [`generate_wav`]:
@@ -249,12 +260,13 @@ pub fn generate_wav(source: &str, enabled_tracks: Option<Vec<String>>) -> Genera
 /// - `{ "status": "err", "diagnostics": [...] }`
 #[cfg(feature = "wav")]
 #[wasm_bindgen]
-pub fn generate_wav_for_measure(
+pub fn generate_wav_for_measure_range(
     source: &str,
-    measure_index: usize,
+    start_index: usize,
+    end_index: usize,
     enabled_tracks: Option<Vec<String>>,
 ) -> GenerateWavResponse {
-    generate_wav_for_measure_response(source, measure_index, enabled_tracks)
+    generate_wav_for_measure_range_response(source, start_index, end_index, enabled_tracks)
 }
 
 /// Parse `.jianpu` source and write PDF bytes.

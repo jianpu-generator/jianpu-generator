@@ -107,16 +107,17 @@ pub fn render_svgs_from_source_filtered_with_lyrics(
     Ok(render_svgs(&score))
 }
 
-/// Parse, group, optionally filter tracks and lyrics, and render SVG page strings with a highlighted measure.
+/// Parse, group, optionally filter tracks and lyrics, and render SVG page strings with a highlighted measure range.
 ///
 /// When `enabled_tracks` is `None`, all parts are rendered.
 /// When `Some(tracks)` is empty, no parts are rendered.
 /// When `disabled_lyrics` lists part abbreviations, lyrics are hidden for those parts.
-/// `highlighted_measure_index` is passed to the layout engine to visually highlight the specified measure.
-pub fn render_svgs_with_highlight(
+/// `start_index` and `end_index` define the inclusive range of measures to highlight.
+pub fn render_svgs_with_highlight_range(
     source: &str,
     filename: &str,
-    highlighted_measure_index: Option<usize>,
+    start_index: usize,
+    end_index: usize,
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
 ) -> Result<Vec<String>, JianPuError> {
@@ -136,7 +137,7 @@ pub fn render_svgs_with_highlight(
         &header,
         595.0,
         842.0,
-        highlighted_measure_index,
+        Some((start_index, end_index)),
     );
     let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32);
     let docs = renderer::new_renderer::render_new(&abs, &config);
@@ -421,6 +422,23 @@ pub fn write_wav_for_measure_from_source(
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     let midi_bytes = midi::write_midi_for_measure(&score, measure_index)?;
+    wav::write_wav(&midi_bytes)
+}
+
+/// Parse, group, optionally filter tracks, and synthesize WAV for a consecutive measure range.
+///
+/// BPM and key context is accumulated from all measures before `start_index`.
+#[cfg(feature = "wav")]
+pub fn write_wav_for_measure_range_from_source(
+    source: &str,
+    filename: &str,
+    start_index: usize,
+    end_index: usize,
+    enabled_tracks: Option<&[String]>,
+) -> Result<Vec<u8>, JianPuError> {
+    let mut score = compile(source, filename)?;
+    apply_track_filter(&mut score, enabled_tracks);
+    let midi_bytes = midi::write_midi_for_measure_range(&score, start_index, end_index)?;
     wav::write_wav(&midi_bytes)
 }
 

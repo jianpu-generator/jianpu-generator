@@ -21,7 +21,7 @@ export interface EditorProps {
   diagnostics?: Diagnostic[]
   measureSpans?: Array<{ start: number; end: number }>
   toolbar?: ReactNode
-  onCursorByteOffsetChange?: (offset: number) => void
+  onSelectionChange?: (startOffset: number, endOffset: number) => void
   onCursorLineChange?: (line: number) => void
 }
 
@@ -56,7 +56,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     diagnostics = [],
     measureSpans = [],
     toolbar,
-    onCursorByteOffsetChange,
+    onSelectionChange,
     onCursorLineChange,
   },
   ref,
@@ -64,10 +64,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<Monaco | null>(null)
   const viewZoneIdsRef = useRef<string[]>([])
-  const onCursorByteOffsetChangeRef = useRef(onCursorByteOffsetChange)
+  const onSelectionChangeRef = useRef(onSelectionChange)
   const onCursorLineChangeRef = useRef(onCursorLineChange)
   useEffect(() => {
-    onCursorByteOffsetChangeRef.current = onCursorByteOffsetChange
+    onSelectionChangeRef.current = onSelectionChange
     onCursorLineChangeRef.current = onCursorLineChange
   })
 
@@ -210,14 +210,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     const notifyCursor = () => {
       const model = ed.getModel()
       if (!model) return
-      const position = ed.getPosition()
-      if (!position) return
-      if (onCursorByteOffsetChangeRef.current) {
-        const charIndex = model.getOffsetAt(position)
-        const byteOffset = stringIndexToByteOffset(model.getValue(), charIndex)
-        onCursorByteOffsetChangeRef.current(byteOffset)
+      const selection = ed.getSelection()
+      if (!selection) return
+      const source = model.getValue()
+      if (onSelectionChangeRef.current) {
+        const startCharIndex = model.getOffsetAt(selection.getStartPosition())
+        const endCharIndex = model.getOffsetAt(selection.getEndPosition())
+        const startOffset = stringIndexToByteOffset(source, startCharIndex)
+        const endOffset = stringIndexToByteOffset(source, endCharIndex)
+        onSelectionChangeRef.current(startOffset, endOffset)
       }
-      onCursorLineChangeRef.current?.(position.lineNumber)
+      onCursorLineChangeRef.current?.(selection.startLineNumber)
     }
     ed.onDidChangeCursorPosition(notifyCursor)
     notifyCursor()

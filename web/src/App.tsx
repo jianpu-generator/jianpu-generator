@@ -57,11 +57,11 @@ export default function App() {
     exportPdf,
     splitPdfExporting,
     exportSplitPdf,
-    currentMeasureIndex,
+    selectedMeasureRange,
     measureAudioGenerating,
     measureSpans,
-    notifyCursorOffset,
-    playCurrentMeasure,
+    notifySelection,
+    playSelectedMeasures,
     highlightedSvgs,
   } = useJianpuWorker(source, disabledParts, disabledLyrics, store.active)
 
@@ -214,7 +214,7 @@ export default function App() {
                 readOnly={readOnly}
                 diagnostics={diagnostics}
                 measureSpans={measureSpans}
-                onCursorByteOffsetChange={notifyCursorOffset}
+                onSelectionChange={notifySelection}
                 onCursorLineChange={setCurrentLine}
                 toolbar={
                   audioAvailable ? (
@@ -227,15 +227,12 @@ export default function App() {
                     >
                       <PlayMeasureButton
                         disabled={
-                          currentMeasureIndex === null || measureAudioGenerating
+                          selectedMeasureRange === null ||
+                          measureAudioGenerating
                         }
                         loading={measureAudioGenerating}
-                        measureNumber={
-                          currentMeasureIndex !== null
-                            ? currentMeasureIndex + 1
-                            : null
-                        }
-                        onClick={playCurrentMeasure}
+                        measureRange={selectedMeasureRange}
+                        onClick={playSelectedMeasures}
                       />
                       <span
                         style={{
@@ -244,10 +241,13 @@ export default function App() {
                           fontFamily: 'monospace',
                         }}
                       >
-                        line {currentLine ?? '?'} | measure{' '}
-                        {currentMeasureIndex !== null
-                          ? currentMeasureIndex + 1
-                          : 'null'}
+                        line {currentLine ?? '?'} |{' '}
+                        {selectedMeasureRange !== null
+                          ? selectedMeasureRange.start ===
+                            selectedMeasureRange.end
+                            ? `measure ${selectedMeasureRange.start + 1}`
+                            : `measures ${selectedMeasureRange.start + 1}–${selectedMeasureRange.end + 1}`
+                          : 'measure null'}
                       </span>
                     </div>
                   ) : null

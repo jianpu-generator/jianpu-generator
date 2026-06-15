@@ -504,7 +504,9 @@ fn build_page_rows(
     rows
 }
 
+#[cfg(test)]
 pub(crate) use super::highlight::compute_measure_highlight_location;
+pub(crate) use super::highlight::compute_measure_highlights_for_range;
 
 /// Public entry point: convert compiler blocks to GridPages.
 pub fn layout(
@@ -513,7 +515,7 @@ pub fn layout(
     header: &Header,
     page_width_pt: f32,
     page_height_pt: f32,
-    highlighted_measure_index: Option<usize>,
+    highlighted_measure_range: Option<(usize, usize)>,
 ) -> Vec<GridPage> {
     let base = config.row_height as f32;
     let blocks = &compile_result.blocks;
@@ -549,9 +551,12 @@ pub fn layout(
     }
     page_systems.push(current_page);
 
-    let highlight_info: Option<(usize, crate::grid_layout::types::MeasureHighlight)> =
-        highlighted_measure_index
-            .and_then(|idx| compute_measure_highlight_location(&page_systems, idx, header, base));
+    let highlight_infos: Vec<(usize, crate::grid_layout::types::MeasureHighlight)> =
+        highlighted_measure_range
+            .map(|(start, end)| {
+                compute_measure_highlights_for_range(&page_systems, start, end, header, base)
+            })
+            .unwrap_or_default();
 
     let total_pages = page_systems.len() as u32;
     let mut abs_system_index_start: usize = 0;
@@ -567,20 +572,16 @@ pub fn layout(
             remaining_height,
         ));
         abs_system_index_start += page_sys.len();
-        let measure_highlight = highlight_info
-            .as_ref()
-            .and_then(|(highlight_page, highlight)| {
-                if *highlight_page == page_idx {
-                    Some(highlight.clone())
-                } else {
-                    None
-                }
-            });
+        let measure_highlights: Vec<_> = highlight_infos
+            .iter()
+            .filter(|(p, _)| *p == page_idx)
+            .map(|(_, h)| h.clone())
+            .collect();
         pages.push(GridPage {
             width_pt: page_width_pt,
             height_pt: page_height_pt,
             rows,
-            measure_highlight,
+            measure_highlights,
         });
     }
     pages

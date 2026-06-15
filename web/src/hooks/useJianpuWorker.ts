@@ -1,6 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { findIndex, findLastIndex } from 'remeda'
 import type { Diagnostic, PartInfo } from '../types'
 import type { WorkerRequest, WorkerResponse } from '../worker/jianpu.worker'
+
+function measureRangeInSpan(
+  spans: Array<{ start: number; end: number }>,
+  selStart: number,
+  selEnd: number,
+): { start: number; end: number } | null {
+  const effective = selStart === selEnd ? selEnd + 1 : selEnd
+  const overlaps = (span: { start: number; end: number }) =>
+    span.start < effective && span.end > selStart
+  const start = findIndex(spans, overlaps)
+  const end = findLastIndex(spans, overlaps)
+  return start === -1 ? null : { start, end }
+}
 
 function enabledTracksForRender(
   parts: PartInfo[],
@@ -41,10 +55,10 @@ interface JianpuWorkerState {
   audioGenerating: boolean
   exportPdf: () => void
   exportSplitPdf: () => void
-  currentMeasureIndex: number | null
+  selectedMeasureRange: { start: number; end: number } | null
   measureAudioGenerating: boolean
-  notifyCursorOffset: (offset: number) => void
-  playCurrentMeasure: () => void
+  notifySelection: (startOffset: number, endOffset: number) => void
+  playSelectedMeasures: () => void
   highlightedSvgs: string[]
   measureSpans: Array<{ start: number; end: number }>
 }
@@ -110,9 +124,10 @@ export function useJianpuWorker(
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([])
   const [rendering, setRendering] = useState(false)
   const [audioGenerating, setAudioGenerating] = useState(false)
-  const [currentMeasureIndex, setCurrentMeasureIndex] = useState<number | null>(
-    null,
-  )
+  const [selectedMeasureRange, setSelectedMeasureRange] = useState<{
+    start: number
+    end: number
+  } | null>(null)
   const [measureAudioGenerating, setMeasureAudioGenerating] = useState(false)
   const [highlightedSvgs, setHighlightedSvgs] = useState<string[]>([])
   const [measureSpans, setMeasureSpans] = useState<
@@ -122,6 +137,8 @@ export function useJianpuWorker(
   const latestHighlightRenderIdRef = useRef(0)
   const measureSpansRequestIdRef = useRef(0)
   const latestMeasureSpansIdRef = useRef(0)
+
+  const measureSpansRef = useRef<Array<{ start: number; end: number }>>([])
 
   const workerRef = useRef<Worker | null>(null)
   const wavUrlRef = useRef<string | null>(null)
@@ -140,10 +157,8 @@ export function useJianpuWorker(
   const enabledTracksRef = useRef<string[] | undefined>(undefined)
   const disabledLyricsRef = useRef<string[] | undefined>(undefined)
   const audioAvailableRef = useRef(false)
-  const cursorRequestIdRef = useRef(0)
-  const latestCursorIdRef = useRef(0)
   const cursorOffsetTimerRef = useRef<number | null>(null)
-  const lastCursorByteOffsetRef = useRef<number | null>(null)
+  const lastSelectionRef = useRef<{ start: number; end: number } | null>(null)
   const measureAudioRequestIdRef = useRef(0)
   const latestMeasureAudioIdRef = useRef(0)
   const measureWavUrlRef = useRef<string | null>(null)
@@ -161,6 +176,7 @@ export function useJianpuWorker(
   activeFileRef.current = activeFile
   enabledTracksRef.current = enabledTracks
   disabledLyricsRef.current = disabledLyricsTracks
+  measureSpansRef.current = measureSpans
 
   const setNextWavUrl = useCallback((next: string | null) => {
     if (wavUrlRef.current) {
@@ -255,13 +271,7 @@ export function useJianpuWorker(
         return
       }
 
-      if (msg.type === 'measureAtOffset') {
-        if (msg.id !== latestCursorIdRef.current) return
-        setCurrentMeasureIndex(msg.measureIndex)
-        return
-      }
-
-      if (msg.type === 'measureAudio') {
+      if (msg.type === 'measureRangeAudio') {
         if (msg.id !== latestMeasureAudioIdRef.current) return
         setMeasureAudioGenerating(false)
         setNextMeasureWavUrl(
@@ -270,19 +280,19 @@ export function useJianpuWorker(
         return
       }
 
-      if (msg.type === 'measureAudioErr') {
+      if (msg.type === 'measureRangeAudioErr') {
         if (msg.id !== latestMeasureAudioIdRef.current) return
         setMeasureAudioGenerating(false)
         return
       }
 
-      if (msg.type === 'highlightOk') {
+      if (msg.type === 'highlightRangeOk') {
         if (msg.id !== latestHighlightRenderIdRef.current) return
         setHighlightedSvgs(msg.svgs)
         return
       }
 
-      if (msg.type === 'highlightErr') {
+      if (msg.type === 'highlightRangeErr') {
         if (msg.id !== latestHighlightRenderIdRef.current) return
         return
       }
@@ -326,20 +336,9 @@ export function useJianpuWorker(
     setDiagnostics([])
   }, [activeFile, setNextWavUrl])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: source is intentional trigger
   useEffect(() => {
-    setCurrentMeasureIndex(null)
-    const byteOffset = lastCursorByteOffsetRef.current
-    if (byteOffset === null) return
-    const worker = workerRef.current
-    if (!worker) return
-    const id = ++cursorRequestIdRef.current
-    latestCursorIdRef.current = id
-    worker.postMessage({
-      type: 'getMeasureAtOffset',
-      source,
-      id,
-      byteOffset,
-    } satisfies WorkerRequest)
+    setSelectedMeasureRange(null)
   }, [source])
 
   useEffect(() => {
@@ -399,49 +398,49 @@ export function useJianpuWorker(
     return () => window.clearTimeout(timer)
   }, [source, enabledTracks, debounceMs, audioAvailable])
 
-  const notifyCursorOffset = useCallback(
-    (byteOffset: number) => {
-      lastCursorByteOffsetRef.current = byteOffset
+  const notifySelection = useCallback(
+    (startOffset: number, endOffset: number) => {
+      lastSelectionRef.current = { start: startOffset, end: endOffset }
       if (cursorOffsetTimerRef.current !== null) {
         window.clearTimeout(cursorOffsetTimerRef.current)
       }
       cursorOffsetTimerRef.current = window.setTimeout(() => {
         cursorOffsetTimerRef.current = null
-        const worker = workerRef.current
-        if (!worker) return
-        const id = ++cursorRequestIdRef.current
-        latestCursorIdRef.current = id
-        worker.postMessage({
-          type: 'getMeasureAtOffset',
-          source: sourceRef.current,
-          id,
-          byteOffset,
-        } satisfies WorkerRequest)
+        setSelectedMeasureRange(
+          measureRangeInSpan(measureSpansRef.current, startOffset, endOffset),
+        )
       }, debounceMs)
     },
     [debounceMs],
   )
 
   useEffect(() => {
-    if (currentMeasureIndex === null) {
+    const sel = lastSelectionRef.current
+    if (!sel) return
+    setSelectedMeasureRange(
+      measureRangeInSpan(measureSpans, sel.start, sel.end),
+    )
+  }, [measureSpans])
+
+  useEffect(() => {
+    if (selectedMeasureRange === null) {
       setHighlightedSvgs([])
       return
     }
     const worker = workerRef.current
     if (!worker) return
-
     const id = ++highlightRenderRequestIdRef.current
     latestHighlightRenderIdRef.current = id
-
     worker.postMessage({
-      type: 'renderWithHighlight',
+      type: 'renderWithHighlightRange',
       source: sourceRef.current,
       id,
-      highlightedMeasureIndex: currentMeasureIndex,
+      startMeasureIndex: selectedMeasureRange.start,
+      endMeasureIndex: selectedMeasureRange.end,
       enabledTracks: enabledTracksRef.current,
       disabledLyrics: disabledLyricsRef.current,
     } satisfies WorkerRequest)
-  }, [currentMeasureIndex])
+  }, [selectedMeasureRange])
 
   useEffect(() => {
     const worker = workerRef.current
@@ -461,22 +460,21 @@ export function useJianpuWorker(
     return () => window.clearTimeout(timer)
   }, [source, debounceMs])
 
-  const playCurrentMeasure = useCallback(() => {
+  const playSelectedMeasures = useCallback(() => {
     const worker = workerRef.current
-    if (!worker || currentMeasureIndex === null) return
-
+    if (!worker || selectedMeasureRange === null) return
     const id = ++measureAudioRequestIdRef.current
     latestMeasureAudioIdRef.current = id
     setMeasureAudioGenerating(true)
-
     worker.postMessage({
-      type: 'generateMeasureAudio',
+      type: 'generateMeasureRangeAudio',
       source: sourceRef.current,
       id,
-      measureIndex: currentMeasureIndex,
+      startMeasureIndex: selectedMeasureRange.start,
+      endMeasureIndex: selectedMeasureRange.end,
       enabledTracks: enabledTracksRef.current,
     } satisfies WorkerRequest)
-  }, [currentMeasureIndex])
+  }, [selectedMeasureRange])
 
   const exportPdf = useCallback(() => {
     const worker = workerRef.current
@@ -527,10 +525,10 @@ export function useJianpuWorker(
     audioGenerating,
     exportPdf,
     exportSplitPdf,
-    currentMeasureIndex,
+    selectedMeasureRange,
     measureAudioGenerating,
-    notifyCursorOffset,
-    playCurrentMeasure,
+    notifySelection,
+    playSelectedMeasures,
     highlightedSvgs,
     measureSpans,
   }

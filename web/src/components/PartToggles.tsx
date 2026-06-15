@@ -1,4 +1,5 @@
 import type { PartInfo } from '../types'
+import './PartToggles.css'
 
 interface PartTogglesProps {
   parts: PartInfo[]
@@ -46,21 +47,23 @@ export function PartToggles({
                 />
                 <span className="part-toggle-label">{part.abbreviation}</span>
               </label>
-              {part.has_lyrics ? (
-                <label
-                  className="part-toggle part-toggle--lyrics"
-                  title={`${title} lyrics`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={lyricsEnabled}
-                    disabled={!enabled}
-                    onChange={(event) =>
-                      onLyricsToggle(part.abbreviation, event.target.checked)
-                    }
-                  />
-                  <span className="part-toggle-label">lyrics</span>
-                </label>
+              {part.has_lyrics && enabled ? (
+                <>
+                  <span className="part-toggle-connector" aria-hidden="true" />
+                  <label
+                    className="part-toggle part-toggle--lyrics"
+                    title={`${title} lyrics`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={lyricsEnabled}
+                      onChange={(event) =>
+                        onLyricsToggle(part.abbreviation, event.target.checked)
+                      }
+                    />
+                    <span className="part-toggle-label">lyrics</span>
+                  </label>
+                </>
               ) : null}
             </li>
           )

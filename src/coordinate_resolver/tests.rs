@@ -12,7 +12,7 @@ fn single_row_page(element: GridElement) -> GridPage {
             column_count: 10,
             elements: vec![element],
         }],
-        measure_highlight: None,
+        measure_highlights: vec![],
     }
 }
 
@@ -76,7 +76,7 @@ fn valign_top_places_y_at_row_top() {
                 elements: vec![el],
             },
         ],
-        measure_highlight: None,
+        measure_highlights: vec![],
     };
     let abs = resolve(&[page], 12.0);
     let line = abs[0]
@@ -156,12 +156,12 @@ fn measure_highlight_produces_prepended_rect_element() {
                 elements: vec![],
             },
         ],
-        measure_highlight: Some(MeasureHighlight {
+        measure_highlights: vec![MeasureHighlight {
             row_start: 0,
             row_end: 1,
             column_start: 4,
             column_end: 6,
-        }),
+        }],
     };
     let abs = resolve(&[page], 12.0);
     assert!(!abs[0].elements.is_empty(), "should have elements");
@@ -189,7 +189,7 @@ fn page_with_no_highlight_produces_no_extra_element() {
             column_count: 10,
             elements: vec![],
         }],
-        measure_highlight: None,
+        measure_highlights: vec![],
     };
     let abs = resolve(&[page], 12.0);
     assert!(abs[0].elements.is_empty());

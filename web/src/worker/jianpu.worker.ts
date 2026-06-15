@@ -1,23 +1,18 @@
 import init, * as jianpuWasm from 'jianpu-wasm'
-import {
-  get_measure_index_at_offset,
-  list_measure_spans,
-  list_parts,
-  render,
-} from 'jianpu-wasm'
+import { list_measure_spans, list_parts, render } from 'jianpu-wasm'
 import type { Diagnostic, PartInfo } from '../types'
 
 const generateWav =
   'generate_wav' in jianpuWasm ? jianpuWasm.generate_wav : null
 
-const generateWavForMeasure =
-  'generate_wav_for_measure' in jianpuWasm
-    ? jianpuWasm.generate_wav_for_measure
+const generateWavForMeasureRange =
+  'generate_wav_for_measure_range' in jianpuWasm
+    ? jianpuWasm.generate_wav_for_measure_range
     : null
 
-const renderWithHighlight =
-  'render_with_highlight' in jianpuWasm
-    ? jianpuWasm.render_with_highlight
+const renderWithHighlightRange =
+  'render_with_highlight_range' in jianpuWasm
+    ? jianpuWasm.render_with_highlight_range
     : null
 
 const generatePdf =
@@ -55,23 +50,19 @@ export type WorkerRequest =
       enabledTracks?: string[]
     }
   | {
-      type: 'getMeasureAtOffset'
+      type: 'generateMeasureRangeAudio'
       source: string
       id: number
-      byteOffset: number
-    }
-  | {
-      type: 'generateMeasureAudio'
-      source: string
-      id: number
-      measureIndex: number
+      startMeasureIndex: number
+      endMeasureIndex: number
       enabledTracks?: string[]
     }
   | {
-      type: 'renderWithHighlight'
+      type: 'renderWithHighlightRange'
       source: string
       id: number
-      highlightedMeasureIndex: number
+      startMeasureIndex: number
+      endMeasureIndex: number
       enabledTracks?: string[]
       disabledLyrics?: string[]
     }
@@ -88,11 +79,10 @@ export type WorkerResponse =
   | { type: 'pdfErr'; id: number; diagnostics: Diagnostic[] }
   | { type: 'splitPdf'; id: number; zip: ArrayBuffer }
   | { type: 'splitPdfErr'; id: number; diagnostics: Diagnostic[] }
-  | { type: 'measureAtOffset'; id: number; measureIndex: number | null }
-  | { type: 'measureAudio'; id: number; wav: ArrayBuffer }
-  | { type: 'measureAudioErr'; id: number }
-  | { type: 'highlightOk'; id: number; svgs: string[] }
-  | { type: 'highlightErr'; id: number; diagnostics: Diagnostic[] }
+  | { type: 'measureRangeAudio'; id: number; wav: ArrayBuffer }
+  | { type: 'measureRangeAudioErr'; id: number }
+  | { type: 'highlightRangeOk'; id: number; svgs: string[] }
+  | { type: 'highlightRangeErr'; id: number; diagnostics: Diagnostic[] }
   | {
       type: 'measureSpans'
       id: number
@@ -114,14 +104,14 @@ async function ensureInit() {
   }
 }
 
-function binaryBufferFromResult(bytes: Uint8Array): ArrayBuffer {
-  if (bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength) {
-    return bytes.buffer as ArrayBuffer
+function binaryBufferFromResult(
+  bytes: Uint8Array | ArrayBuffer | ArrayLike<number>,
+): ArrayBuffer {
+  if (bytes instanceof ArrayBuffer) {
+    return bytes.slice(0)
   }
-  return bytes.buffer.slice(
-    bytes.byteOffset,
-    bytes.byteOffset + bytes.byteLength,
-  ) as ArrayBuffer
+  const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
+  return view.slice().buffer
 }
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
@@ -237,7 +227,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     }
 
     const wavResult = generateWav(msg.source, msg.enabledTracks)
-    if (wavResult.status === 'ok') {
+    if (wavResult.status === 'ok' && wavResult.wav != null) {
       const wavBuffer = binaryBufferFromResult(wavResult.wav)
       postMessage(
         {
@@ -257,34 +247,25 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     return
   }
 
-  if (msg.type === 'getMeasureAtOffset') {
-    const result = get_measure_index_at_offset(msg.source, msg.byteOffset)
-    postMessage({
-      type: 'measureAtOffset',
-      id: msg.id,
-      measureIndex: result.status === 'ok' ? result.measure_index : null,
-    } satisfies WorkerResponse)
-    return
-  }
-
-  if (msg.type === 'generateMeasureAudio') {
-    if (!generateWavForMeasure) {
+  if (msg.type === 'generateMeasureRangeAudio') {
+    if (!generateWavForMeasureRange) {
       postMessage({
-        type: 'measureAudioErr',
+        type: 'measureRangeAudioErr',
         id: msg.id,
       } satisfies WorkerResponse)
       return
     }
-    const wavResult = generateWavForMeasure(
+    const wavResult = generateWavForMeasureRange(
       msg.source,
-      msg.measureIndex,
+      msg.startMeasureIndex,
+      msg.endMeasureIndex,
       msg.enabledTracks,
     )
-    if (wavResult.status === 'ok') {
+    if (wavResult.status === 'ok' && wavResult.wav != null) {
       const wavBuffer = binaryBufferFromResult(wavResult.wav)
       postMessage(
         {
-          type: 'measureAudio',
+          type: 'measureRangeAudio',
           id: msg.id,
           wav: wavBuffer,
         } satisfies WorkerResponse,
@@ -293,43 +274,45 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       return
     }
     postMessage({
-      type: 'measureAudioErr',
+      type: 'measureRangeAudioErr',
       id: msg.id,
     } satisfies WorkerResponse)
     return
   }
 
-  if (msg.type === 'renderWithHighlight') {
-    if (!renderWithHighlight) {
+  if (msg.type === 'renderWithHighlightRange') {
+    if (!renderWithHighlightRange) {
       postMessage({
-        type: 'highlightErr',
+        type: 'highlightRangeErr',
         id: msg.id,
         diagnostics: [
           {
             severity: 'error',
-            message: 'render_with_highlight is not available in this build.',
+            message:
+              'render_with_highlight_range is not available in this build.',
             span: { start: 0, end: 0 },
           },
         ],
       } satisfies WorkerResponse)
       return
     }
-    const result = renderWithHighlight(
+    const result = renderWithHighlightRange(
       msg.source,
-      msg.highlightedMeasureIndex,
+      msg.startMeasureIndex,
+      msg.endMeasureIndex,
       msg.enabledTracks,
       msg.disabledLyrics,
     )
     if (result.status === 'ok') {
       postMessage({
-        type: 'highlightOk',
+        type: 'highlightRangeOk',
         id: msg.id,
         svgs: result.svgs,
       } satisfies WorkerResponse)
       return
     }
     postMessage({
-      type: 'highlightErr',
+      type: 'highlightRangeErr',
       id: msg.id,
       diagnostics: result.diagnostics,
     } satisfies WorkerResponse)

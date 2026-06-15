@@ -233,12 +233,12 @@ fn get_measure_at_offset_not_in_measure_for_header() {
 
 #[cfg(feature = "wav")]
 #[test]
-fn generate_wav_for_measure_response_returns_riff_wav() {
+fn generate_wav_for_measure_range_response_returns_riff_wav() {
     let source = concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes\n\n",
         "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\n",
     );
-    let resp = generate_wav_for_measure_response(source, 0, None);
+    let resp = generate_wav_for_measure_range_response(source, 0, 0, None);
     match resp {
         GenerateWavResponse::Ok { wav } => {
             assert!(wav.len() > 4);

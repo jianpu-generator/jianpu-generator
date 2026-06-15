@@ -1,5 +1,6 @@
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
 use crate::grid_layout::layout::compute_measure_highlight_location;
+use crate::grid_layout::layout::compute_measure_highlights_for_range;
 use crate::grid_layout::types::Header;
 
 fn simple_block(col_count: u32) -> MeasureBlock {
@@ -83,4 +84,53 @@ fn measure_on_second_page_returns_correct_page_index() {
         .expect("should find measure 1");
     let (page_idx, _) = result;
     assert_eq!(page_idx, 1, "measure 1 is on page 1");
+}
+
+#[test]
+fn range_with_single_index_returns_one_highlight_matching_location() {
+    let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
+        vec![vec![vec![simple_block(4), simple_block(4)]]];
+    let highlights = compute_measure_highlights_for_range(&page_systems, 0, 0, &no_header(), 20.0);
+    assert_eq!(highlights.len(), 1);
+    let (page_idx, h) = highlights
+        .into_iter()
+        .next()
+        .expect("should have one highlight");
+    assert_eq!(page_idx, 0);
+    assert_eq!(h.column_start, 4);
+    assert_eq!(h.column_end, 9);
+}
+
+#[test]
+fn range_spanning_two_measures_returns_two_highlights() {
+    let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
+        vec![vec![vec![simple_block(4), simple_block(4)]]];
+    let highlights = compute_measure_highlights_for_range(&page_systems, 0, 1, &no_header(), 20.0);
+    assert_eq!(highlights.len(), 2);
+    let mut iter = highlights.into_iter();
+    let (_, first_h) = iter.next().expect("first highlight");
+    let (_, second_h) = iter.next().expect("second highlight");
+    assert_eq!(first_h.column_start, 4);
+    assert_eq!(second_h.column_start, 9);
+}
+
+#[test]
+fn range_out_of_bounds_returns_empty_vec() {
+    let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
+        vec![vec![vec![simple_block(4), simple_block(4)]]];
+    let highlights = compute_measure_highlights_for_range(&page_systems, 5, 5, &no_header(), 20.0);
+    assert!(highlights.is_empty());
+}
+
+#[test]
+fn range_spanning_two_pages_reports_correct_page_indices() {
+    let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
+        vec![vec![vec![simple_block(4)]], vec![vec![simple_block(4)]]];
+    let highlights = compute_measure_highlights_for_range(&page_systems, 0, 1, &no_header(), 20.0);
+    assert_eq!(highlights.len(), 2);
+    let mut iter = highlights.into_iter();
+    let (first_page, _) = iter.next().expect("first highlight");
+    let (second_page, _) = iter.next().expect("second highlight");
+    assert_eq!(first_page, 0);
+    assert_eq!(second_page, 1);
 }

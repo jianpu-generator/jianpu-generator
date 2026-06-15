@@ -31,7 +31,7 @@ test('shows measure number when cursor is placed on a note line', async ({
   await page.keyboard.type('12')
   await page.keyboard.press('Enter')
 
-  // Allow the 300 ms debounce in notifyCursorOffset plus worker round-trip.
+  // Allow the 300 ms debounce in notifySelection plus worker round-trip.
   await page.waitForTimeout(700)
 
   // The label should show "measure 1", not "measure null".
@@ -63,7 +63,7 @@ test('detects measure when cursor is at end of last character of a note line', a
   await page.keyboard.press('Enter')
   await page.keyboard.press('End')
 
-  // Allow the 300 ms debounce in notifyCursorOffset plus worker round-trip.
+  // Allow the 300 ms debounce in notifySelection plus worker round-trip.
   await page.waitForTimeout(700)
 
   // Should still detect measure 1, not "measure null".
