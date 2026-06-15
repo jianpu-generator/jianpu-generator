@@ -19,6 +19,7 @@ export interface EditorProps {
   onChange: (value: string) => void
   readOnly?: boolean
   diagnostics?: Diagnostic[]
+  measureSpans?: Array<{ start: number; end: number }>
   toolbar?: ReactNode
   onCursorByteOffsetChange?: (offset: number) => void
   onCursorLineChange?: (line: number) => void
@@ -53,6 +54,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onChange,
     readOnly = false,
     diagnostics = [],
+    measureSpans = [],
     toolbar,
     onCursorByteOffsetChange,
     onCursorLineChange,
@@ -61,6 +63,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 ) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<Monaco | null>(null)
+  const viewZoneIdsRef = useRef<string[]>([])
   const onCursorByteOffsetChangeRef = useRef(onCursorByteOffsetChange)
   const onCursorLineChangeRef = useRef(onCursorLineChange)
   useEffect(() => {
@@ -98,6 +101,50 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
     monacoApi.editor.setModelMarkers(model, MARKER_OWNER, markers)
   }, [diagnostics])
+
+  const applyMeasureViewZones = useCallback(() => {
+    const ed = editorRef.current
+    const model = ed?.getModel()
+    if (!ed || !model) return
+
+    ed.changeViewZones((accessor) => {
+      for (const id of viewZoneIdsRef.current) {
+        accessor.removeZone(id)
+      }
+      viewZoneIdsRef.current = []
+
+      const source = model.getValue()
+
+      measureSpans.forEach((span, index) => {
+        const stringIndex = byteOffsetToStringIndex(source, span.start)
+        const position = model.getPositionAt(stringIndex)
+        const lineNumber = position.lineNumber
+
+        const domNode = document.createElement('div')
+        domNode.style.cssText = [
+          'width: 100%',
+          'height: 21px',
+          'background: #dbeafe',
+          'color: #1e40af',
+          'font-family: var(--mono)',
+          'font-size: 14px',
+          'font-weight: bold',
+          'display: flex',
+          'align-items: center',
+          'padding-left: 8px',
+          'box-sizing: border-box',
+        ].join(';')
+        domNode.textContent = `[Measure ${index + 1}]`
+
+        const id = accessor.addZone({
+          afterLineNumber: lineNumber - 1,
+          heightInLines: 1,
+          domNode,
+        })
+        viewZoneIdsRef.current.push(id)
+      })
+    })
+  }, [measureSpans])
 
   useImperativeHandle(ref, () => ({
     insertAtCursor(text: string) {
@@ -158,6 +205,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     editorRef.current = ed
     monacoRef.current = monacoApi
     applyDiagnostics()
+    applyMeasureViewZones()
 
     const notifyCursor = () => {
       const model = ed.getModel()
@@ -178,6 +226,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   useEffect(() => {
     applyDiagnostics()
   }, [applyDiagnostics])
+
+  useEffect(() => {
+    applyMeasureViewZones()
+  }, [applyMeasureViewZones])
 
   return (
     <div className="editor">

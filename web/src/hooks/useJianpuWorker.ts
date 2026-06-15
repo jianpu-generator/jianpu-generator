@@ -46,6 +46,7 @@ interface JianpuWorkerState {
   notifyCursorOffset: (offset: number) => void
   playCurrentMeasure: () => void
   highlightedSvgs: string[]
+  measureSpans: Array<{ start: number; end: number }>
 }
 
 function downloadPdf(bytes: ArrayBuffer, filename: string) {
@@ -114,8 +115,13 @@ export function useJianpuWorker(
   )
   const [measureAudioGenerating, setMeasureAudioGenerating] = useState(false)
   const [highlightedSvgs, setHighlightedSvgs] = useState<string[]>([])
+  const [measureSpans, setMeasureSpans] = useState<
+    Array<{ start: number; end: number }>
+  >([])
   const highlightRenderRequestIdRef = useRef(0)
   const latestHighlightRenderIdRef = useRef(0)
+  const measureSpansRequestIdRef = useRef(0)
+  const latestMeasureSpansIdRef = useRef(0)
 
   const workerRef = useRef<Worker | null>(null)
   const wavUrlRef = useRef<string | null>(null)
@@ -281,6 +287,14 @@ export function useJianpuWorker(
         return
       }
 
+      if (msg.type === 'measureSpans') {
+        if (msg.id !== latestMeasureSpansIdRef.current) return
+        if (msg.status === 'ok') {
+          setMeasureSpans(msg.spans)
+        }
+        return
+      }
+
       if (msg.type === 'err') {
         if (msg.id !== latestRenderIdRef.current) return
         setRendering(false)
@@ -429,6 +443,24 @@ export function useJianpuWorker(
     } satisfies WorkerRequest)
   }, [currentMeasureIndex])
 
+  useEffect(() => {
+    const worker = workerRef.current
+    if (!worker) return
+
+    const id = ++measureSpansRequestIdRef.current
+    latestMeasureSpansIdRef.current = id
+
+    const timer = window.setTimeout(() => {
+      worker.postMessage({
+        type: 'listMeasureSpans',
+        source,
+        id,
+      } satisfies WorkerRequest)
+    }, debounceMs)
+
+    return () => window.clearTimeout(timer)
+  }, [source, debounceMs])
+
   const playCurrentMeasure = useCallback(() => {
     const worker = workerRef.current
     if (!worker || currentMeasureIndex === null) return
@@ -500,5 +532,6 @@ export function useJianpuWorker(
     notifyCursorOffset,
     playCurrentMeasure,
     highlightedSvgs,
+    measureSpans,
   }
 }

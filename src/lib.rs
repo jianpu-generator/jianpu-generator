@@ -232,6 +232,21 @@ pub fn find_measure_at_line_number(
     find_measure_at_byte_offset(score, byte_offset)
 }
 
+/// Return the source byte span of every measure in the compiled score.
+///
+/// Spans are in source order and correspond 1-to-1 with measures.
+pub fn list_measure_spans_from_source(
+    source: &str,
+    filename: &str,
+) -> Result<Vec<error::Span>, JianPuError> {
+    let score = compile(source, filename)?;
+    Ok(score
+        .measures
+        .iter()
+        .map(|m| m.source_span.clone())
+        .collect())
+}
+
 /// Sanitize a track name for use in filenames (mirrors CLI).
 pub fn sanitize_track_name(name: &str) -> String {
     name.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-")

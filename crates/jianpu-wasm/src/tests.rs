@@ -295,3 +295,34 @@ fn err_span_is_utf8_byte_offset() {
         "span is absolute in source, not line-local"
     );
 }
+
+#[test]
+fn list_measure_spans_returns_one_span_per_measure() {
+    let input = concat!(
+        "[metadata]\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "[parts]\n",
+        "Melody = notes\n",
+        "\n",
+        "[score]\n",
+        "1 2 3 4\n",
+        "\n",
+        "5 6 7 1\n",
+    );
+    let resp = list_measure_spans_response(input);
+    match resp {
+        ListMeasureSpansResponse::Ok { spans } => {
+            assert_eq!(spans.len(), 2);
+            assert!(spans[0].start < spans[1].start);
+        }
+        ListMeasureSpansResponse::Err => panic!("expected ok"),
+    }
+}
+
+#[test]
+fn list_measure_spans_returns_err_on_invalid_source() {
+    let resp = list_measure_spans_response("not valid jianpu");
+    assert!(matches!(resp, ListMeasureSpansResponse::Err));
+}
