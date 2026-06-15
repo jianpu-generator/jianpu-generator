@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect, useRef } from 'react'
 
 interface PreviewProps {
   svgs: string[]
@@ -33,6 +33,27 @@ export function Preview({
   emptyMessage = 'No preview yet.',
   toolbar,
 }: PreviewProps) {
+  const previewPagesRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (highlightedSvgs.length === 0) return
+
+    const frameId = requestAnimationFrame(() => {
+      const container = previewPagesRef.current
+      if (!container) return
+
+      const highlight = container.querySelector(
+        '[data-testid="measure-highlight"]',
+      )
+      highlight?.scrollIntoView({
+        block: 'center',
+        inline: 'nearest',
+      })
+    })
+
+    return () => cancelAnimationFrame(frameId)
+  }, [highlightedSvgs])
+
   const exporting = pdfExporting || splitPdfExporting
   const canExportPdf =
     pdfAvailable && svgs.length > 0 && !rendering && !exporting
@@ -94,7 +115,7 @@ export function Preview({
           </div>
         </div>
       ) : null}
-      <div className="preview-pages">
+      <div className="preview-pages" ref={previewPagesRef}>
         {svgs.length === 0 && highlightedSvgs.length === 0 && !rendering ? (
           <p className="preview-empty">{emptyMessage}</p>
         ) : null}
