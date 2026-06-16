@@ -1,5 +1,6 @@
 use crate::ast::grouped::{
-    GroupedScore, GroupedTrack, Lyrics, MultiPartMeasure, Notes, PartRow, PartSlice,
+    GroupedScore, GroupedTrack, Lyrics, MeasureDirectives, MultiPartMeasure, Notes, PartRow,
+    PartSlice,
 };
 use crate::ast::parsed::PartKind;
 use crate::error::{JianPuError, Span};
@@ -18,17 +19,25 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> Result<Vec<MultiPartMeasu
 
     let mut combined = Vec::with_capacity(expected_len);
     for measure_idx in 0..expected_len {
-        let directives = grouped_score
-            .measure_directives
-            .get(measure_idx)
-            .ok_or_else(|| {
-                JianPuError::new(
+        let directives_fallback = MeasureDirectives {
+            time_signature: None,
+            bpm: None,
+            key: None,
+            label: None,
+        };
+        let (directives, directives_error) = match grouped_score.measure_directives.get(measure_idx)
+        {
+            Some(d) => (d, None),
+            None => (
+                &directives_fallback,
+                Some(JianPuError::new(
                     Span::new(0, 0),
                     "internal invariant: measure_directives shorter than measure count",
-                )
-            })?;
-        let part_rows = build_part_rows(&grouped_score.parts, measure_idx)?;
-        let source_span = grouped_score
+                )),
+            ),
+        };
+        let (part_rows, part_row_errors) = build_part_rows(&grouped_score.parts, measure_idx);
+        let (source_span, source_span_error) = grouped_score
             .parts
             .iter()
             .filter_map(|track| match track {
@@ -43,24 +52,42 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> Result<Vec<MultiPartMeasu
                     ),
                 })
             })
+            .map(|span| (span, None))
             .unwrap_or_else(|| {
-                unreachable!("combiner: source_span missing for measure {measure_idx}")
+                (
+                    Span::new(0, 0),
+                    Some(JianPuError::new(
+                        Span::new(0, 0),
+                        format!(
+                            "internal invariant: source_span missing for measure {measure_idx}"
+                        ),
+                    )),
+                )
             });
         let parse_error = grouped_score
             .per_measure_parse_errors
             .get(measure_idx)
             .and_then(|e| e.clone());
-        let measure_errors: Vec<JianPuError> = std::iter::once(parse_error)
-            .chain(grouped_score.parts.iter().flat_map(|track| match track {
-                GroupedTrack::Timed(part) => {
-                    let m = part.measures.get(measure_idx);
-                    [
-                        m.and_then(|m| m.lyrics_error.clone()),
-                        m.and_then(|m| m.beat_overflow_error.clone()),
-                    ]
-                }
-            }))
-            .flatten()
+        let measure_errors: Vec<JianPuError> = directives_error
+            .into_iter()
+            .chain(source_span_error)
+            .chain(std::iter::once(parse_error).flatten())
+            .chain(
+                grouped_score
+                    .parts
+                    .iter()
+                    .flat_map(|track| match track {
+                        GroupedTrack::Timed(part) => {
+                            let m = part.measures.get(measure_idx);
+                            [
+                                m.and_then(|m| m.lyrics_error.clone()),
+                                m.and_then(|m| m.beat_overflow_error.clone()),
+                            ]
+                        }
+                    })
+                    .flatten(),
+            )
+            .chain(part_row_errors)
             .collect();
         combined.push(MultiPartMeasure {
             time_signature: directives.time_signature.clone(),
@@ -99,18 +126,20 @@ fn validate_measure_counts(
 fn build_part_rows(
     grouped_tracks: &[GroupedTrack],
     measure_idx: usize,
-) -> Result<Vec<PartRow>, JianPuError> {
+) -> (Vec<PartRow>, Vec<JianPuError>) {
     let mut part_rows = Vec::new();
+    let mut errors = Vec::new();
 
     for track in grouped_tracks.iter() {
         match track {
             GroupedTrack::Timed(part) => {
-                let measure = part.measures.get(measure_idx).ok_or_else(|| {
-                    JianPuError::new(
+                let Some(measure) = part.measures.get(measure_idx) else {
+                    errors.push(JianPuError::new(
                         Span::new(0, 0),
                         "internal invariant: timed part measure missing",
-                    )
-                })?;
+                    ));
+                    continue;
+                };
                 let lyrics = match part.kind {
                     PartKind::NotesWithLyrics | PartKind::LyricsWithNotes => measure
                         .paired_lyrics
@@ -158,7 +187,7 @@ fn build_part_rows(
         }
     }
 
-    Ok(part_rows)
+    (part_rows, errors)
 }
 
 #[cfg(test)]

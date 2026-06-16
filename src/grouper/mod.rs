@@ -448,16 +448,17 @@ fn attach_paired_lyrics(
     let Some(measure_syllables) = measure_syllables else {
         return Ok(());
     };
-    if measure_syllables.len() != measures.len() {
-        return Err(JianPuError::new(
-            Span::new(0, 0),
-            format!(
-                "[{part_name}] internal invariant: {} lyric lines but {} grouped measures",
-                measure_syllables.len(),
-                measures.len()
-            ),
-        ));
-    }
+    let lyric_line_count = measure_syllables.len();
+    let count_mismatch_error = if lyric_line_count != measures.len() {
+        Some(format!(
+            "[{part_name}] internal invariant: {} lyric lines but {} grouped measures",
+            lyric_line_count,
+            measures.len()
+        ))
+    } else {
+        None
+    };
+    let paired_count = lyric_line_count.min(measures.len());
     let mut prev_tie = false;
     let mut prev_pitch: Option<JianPuPitch> = None;
     for ((measure, raw_syllables), lyrics_span) in
@@ -475,6 +476,11 @@ fn attach_paired_lyrics(
         measure.lyrics_error = error;
         prev_tie = next_tie;
         prev_pitch = next_pitch;
+    }
+    if let Some(message) = count_mismatch_error {
+        for measure in measures.iter_mut().skip(paired_count) {
+            measure.lyrics_error = Some(JianPuError::new(Span::new(0, 0), message.clone()));
+        }
     }
     Ok(())
 }
