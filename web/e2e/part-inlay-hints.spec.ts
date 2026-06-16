@@ -56,7 +56,7 @@ test('does not show a hint on the directive line of a measure', async ({
 
   // Give the editor a moment to settle; then verify "[Chord]" is not on line 11.
   // We check that the focused line does not contain the hint text.
-  const cursorLine = page.locator(
+  const _cursorLine = page.locator(
     '.monaco-editor .view-line.selected-text, .monaco-editor .current-line',
   )
 

@@ -19,6 +19,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@github/hotkey": "^3.1.4",
     "@monaco-editor/react": "^4.7.0",
     "monaco-editor": "^0.55.1",
     "react": "^19.2.4",

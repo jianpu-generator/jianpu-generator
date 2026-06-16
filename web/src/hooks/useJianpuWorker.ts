@@ -58,8 +58,10 @@ interface JianpuWorkerState {
   generateFullAudio: () => void
   selectedMeasureRange: { start: number; end: number } | null
   measureAudioGenerating: boolean
+  measureAudioPlaying: boolean
   notifySelection: (startOffset: number, endOffset: number) => void
   playSelectedMeasures: () => void
+  stopMeasurePlayback: () => void
   highlightedSvgs: string[]
   measureSpans: Array<{ start: number; end: number }>
 }
@@ -130,6 +132,8 @@ export function useJianpuWorker(
     end: number
   } | null>(null)
   const [measureAudioGenerating, setMeasureAudioGenerating] = useState(false)
+  const [measureAudioPlaying, setMeasureAudioPlaying] = useState(false)
+  const currentMeasureAudioRef = useRef<HTMLAudioElement | null>(null)
   const [highlightedSvgs, setHighlightedSvgs] = useState<string[]>([])
   const [measureSpans, setMeasureSpans] = useState<
     Array<{ start: number; end: number }>
@@ -189,12 +193,25 @@ export function useJianpuWorker(
   }, [])
 
   const setNextMeasureWavUrl = useCallback((next: string | null) => {
+    if (currentMeasureAudioRef.current) {
+      currentMeasureAudioRef.current.pause()
+      currentMeasureAudioRef.current = null
+    }
     if (measureWavUrlRef.current) {
       URL.revokeObjectURL(measureWavUrlRef.current)
     }
     measureWavUrlRef.current = next
     if (next) {
       const audio = new Audio(next)
+      currentMeasureAudioRef.current = audio
+      audio.addEventListener('play', () => setMeasureAudioPlaying(true))
+      audio.addEventListener('ended', () => {
+        setMeasureAudioPlaying(false)
+        currentMeasureAudioRef.current = null
+      })
+      audio.addEventListener('pause', () => {
+        setMeasureAudioPlaying(false)
+      })
       audio.play().catch(() => {})
     }
   }, [])
@@ -459,6 +476,14 @@ export function useJianpuWorker(
     return () => window.clearTimeout(timer)
   }, [source, debounceMs])
 
+  const stopMeasurePlayback = useCallback(() => {
+    if (currentMeasureAudioRef.current) {
+      currentMeasureAudioRef.current.pause()
+      currentMeasureAudioRef.current = null
+    }
+    setMeasureAudioPlaying(false)
+  }, [])
+
   const playSelectedMeasures = useCallback(() => {
     const worker = workerRef.current
     if (!worker || selectedMeasureRange === null) return
@@ -527,8 +552,10 @@ export function useJianpuWorker(
     generateFullAudio,
     selectedMeasureRange,
     measureAudioGenerating,
+    measureAudioPlaying,
     notifySelection,
     playSelectedMeasures,
+    stopMeasurePlayback,
     highlightedSvgs,
     measureSpans,
   }

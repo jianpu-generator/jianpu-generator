@@ -26,6 +26,8 @@ import {
 import type { EditorHandle } from './types'
 import './App.css'
 
+const shortcutLabel = navigator.platform.startsWith('Mac') ? '⌘↵' : 'Ctrl+↵'
+
 export default function App() {
   const [store, setStore] = useFileStore()
   const source = fileContent(store, store.active)
@@ -60,9 +62,11 @@ export default function App() {
     generateFullAudio,
     selectedMeasureRange,
     measureAudioGenerating,
+    measureAudioPlaying,
     measureSpans,
     notifySelection,
     playSelectedMeasures,
+    stopMeasurePlayback,
     highlightedSvgs,
   } = useJianpuWorker(source, disabledParts, disabledLyrics, store.active)
 
@@ -111,6 +115,26 @@ export default function App() {
       return next.size === prev.size ? prev : next
     })
   }, [parts])
+
+  const playMeasureRef = useRef<(() => void) | undefined>(undefined)
+  playMeasureRef.current = measureAudioPlaying
+    ? stopMeasurePlayback
+    : selectedMeasureRange !== null && !measureAudioGenerating
+      ? playSelectedMeasures
+      : undefined
+
+  useEffect(() => {
+    const isMac = navigator.platform.startsWith('Mac')
+    const onKeyDown = (event: KeyboardEvent) => {
+      const modifier = isMac ? event.metaKey : event.ctrlKey
+      if (modifier && event.key === 'Enter') {
+        event.preventDefault()
+        playMeasureRef.current?.()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   const handlePartToggle = useCallback(
     (abbreviation: string, enabled: boolean) => {
@@ -218,6 +242,13 @@ export default function App() {
                 parts={parts}
                 onSelectionChange={notifySelection}
                 onCursorLineChange={setCurrentLine}
+                onPlayMeasure={
+                  measureAudioPlaying
+                    ? stopMeasurePlayback
+                    : selectedMeasureRange !== null && !measureAudioGenerating
+                      ? playSelectedMeasures
+                      : undefined
+                }
                 toolbar={
                   audioAvailable ? (
                     <div
@@ -233,8 +264,11 @@ export default function App() {
                           measureAudioGenerating
                         }
                         loading={measureAudioGenerating}
+                        playing={measureAudioPlaying}
                         measureRange={selectedMeasureRange}
                         onClick={playSelectedMeasures}
+                        onPause={stopMeasurePlayback}
+                        shortcutLabel={shortcutLabel}
                       />
                       <span
                         style={{

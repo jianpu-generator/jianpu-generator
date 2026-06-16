@@ -24,6 +24,7 @@ export interface EditorProps {
   toolbar?: ReactNode
   onSelectionChange?: (startOffset: number, endOffset: number) => void
   onCursorLineChange?: (line: number) => void
+  onPlayMeasure?: () => void
 }
 
 const MARKER_OWNER = 'jianpu'
@@ -107,6 +108,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     toolbar,
     onSelectionChange,
     onCursorLineChange,
+    onPlayMeasure,
   },
   ref,
 ) {
@@ -118,9 +120,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const partsForHintsRef = useRef(parts)
   const onSelectionChangeRef = useRef(onSelectionChange)
   const onCursorLineChangeRef = useRef(onCursorLineChange)
+  const onPlayMeasureRef = useRef(onPlayMeasure)
   useEffect(() => {
     onSelectionChangeRef.current = onSelectionChange
     onCursorLineChangeRef.current = onCursorLineChange
+    onPlayMeasureRef.current = onPlayMeasure
   })
 
   const applyDiagnostics = useCallback(() => {
@@ -280,6 +284,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     applyMeasureViewZones()
     applyInlayHints()
 
+    ed.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.Enter, () =>
+      onPlayMeasureRef.current?.(),
+    )
+
     const notifyCursor = () => {
       const model = ed.getModel()
       if (!model) return
@@ -313,7 +321,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     applyInlayHints()
   }, [measureSpans, parts, applyInlayHints])
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: disposable cleanup on unmount only
   useEffect(() => {
     return () => {
       inlayHintsDisposableRef.current?.dispose()
