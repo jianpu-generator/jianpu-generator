@@ -15,15 +15,6 @@ fn timed_beats(event: &ScoreEvent) -> u32 {
     }
 }
 
-fn last_timed_event_span(events: &[Spanned<ScoreEvent>]) -> Span {
-    events
-        .iter()
-        .rfind(|e| timed_beats(&e.value) > 0)
-        .map(|e| e.span.clone())
-        // structurally unreachable: a data line always has at least one token
-        .unwrap_or(Span::new(0, 1))
-}
-
 fn timed_beats_before_last(events: &[Spanned<ScoreEvent>]) -> (u32, u32) {
     let timed = events
         .iter()
@@ -121,15 +112,16 @@ pub(super) fn validate_and_pad_beats(
     expected: u32,
     time_num: u8,
     time_den: u8,
+    line_span: Span,
 ) -> Result<(Vec<Spanned<ScoreEvent>>, Option<JianPuError>), JianPuError> {
     let mut total = 0u32;
-    let mut truncate_at: Option<(usize, Span)> = None;
+    let mut truncate_at: Option<usize> = None;
 
     for (i, e) in events.iter().enumerate() {
         let beats = timed_beats(&e.value);
         if beats > 0 {
             if total + beats > expected {
-                truncate_at = Some((i, e.span.clone()));
+                truncate_at = Some(i);
                 break;
             }
             total += beats;
@@ -137,9 +129,9 @@ pub(super) fn validate_and_pad_beats(
     }
 
     let (mut events, overflow_error) = match truncate_at {
-        Some((i, span)) => {
+        Some(i) => {
             let error = JianPuError::new(
-                span,
+                line_span.clone(),
                 format!(
                     "beat overflow: measure has {expected} quarter-beats but notes exceed that (truncated at note {})",
                     i + 1
@@ -158,7 +150,7 @@ pub(super) fn validate_and_pad_beats(
         let deficit = expected - total;
         if !can_implicitly_pad(&events, deficit) {
             return Err(JianPuError::new(
-                last_timed_event_span(&events),
+                line_span,
                 format!("incomplete measure: expected {expected} quarter-beats, got {total}"),
             ));
         }

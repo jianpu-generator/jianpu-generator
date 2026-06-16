@@ -394,6 +394,7 @@ fn process_column_line(
                 beats_expected,
                 *ctx.time_num,
                 *ctx.time_den,
+                line_span.clone(),
             )?;
             if let Some(tie_state) = ctx.lyric_tie_states.get_mut(*track_index) {
                 let slots = count_lyric_slots_in_events(&events, tie_state);
@@ -439,6 +440,7 @@ fn process_column_line(
                 beats_expected,
                 *ctx.time_num,
                 *ctx.time_den,
+                line_span.clone(),
             )?;
             let acc = ctx.accumulators.get_mut(*track_index).ok_or_else(|| {
                 JianPuError::new(

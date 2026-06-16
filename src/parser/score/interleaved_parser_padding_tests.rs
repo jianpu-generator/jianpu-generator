@@ -23,15 +23,42 @@ fn overfull_measure_is_recoverable() {
 }
 
 #[test]
-fn overfull_measure_span_points_to_offending_note() {
-    // The overflow error span points to the note that triggered the overflow.
+fn overfull_measure_error_span_covers_notes_line() {
+    // The overflow error span should cover the whole notes line, not just the offending note.
+    // "1 2 3 4 5" starts at byte 26 and ends at byte 35.
     let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4 5\n";
     let declarations = vec![decl("", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations).unwrap();
     let ParsedTrack::Timed(track) = &tracks[0];
     let error = track.per_measure_beat_errors[0].as_ref().unwrap();
-    assert_eq!(error.span.start, 34, "span must point to the offending '5'");
-    assert_eq!(error.span.end, 35);
+    assert_eq!(
+        error.span.start, 26,
+        "span must start at the beginning of the notes line"
+    );
+    assert_eq!(
+        error.span.end, 35,
+        "span must end at the end of the notes line"
+    );
+}
+
+#[test]
+fn overfull_measure_with_slurred_overflow_note_error_span_covers_notes_line() {
+    // When the overflowing note carries a slur start '(', the error span must still
+    // cover the whole notes line — not just the note token or its bare pitch.
+    // "(time=4/4 key=C4 bpm=120)\n" = 26 bytes; "1 2 3 0_ (4" ends at byte 37.
+    let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 0_ (4\n\n5) 6 7 0\n";
+    let declarations = vec![decl("", PartKind::Notes)];
+    let tracks = parse(content, 0, &declarations).unwrap();
+    let ParsedTrack::Timed(track) = &tracks[0];
+    let error = track.per_measure_beat_errors[0].as_ref().unwrap();
+    assert_eq!(
+        error.span.start, 26,
+        "span must start at the beginning of the notes line"
+    );
+    assert_eq!(
+        error.span.end, 37,
+        "span must end at the end of the notes line"
+    );
 }
 
 #[test]
@@ -165,22 +192,31 @@ fn rejects_underfull_measure_with_short_trailing_notes() {
 }
 
 #[test]
-fn underfull_measure_span_points_to_last_note() {
+fn underfull_measure_error_span_covers_notes_line() {
+    // The underflow error span should cover the whole notes line, not just the last note.
+    // "4 4 4 4_" starts at byte 26 and ends at byte 34.
     let content = "(time=4/4 key=C4 bpm=120)\n4 4 4 4_\n";
     let declarations = vec![decl("", PartKind::Notes)];
     let err = parse(content, 0, &declarations).unwrap_err();
-    assert_eq!(err.span.start, 32, "span must point to the last note '4_'");
-    assert_eq!(err.span.end, 34);
+    assert_eq!(
+        err.span.start, 26,
+        "span must start at the beginning of the notes line"
+    );
+    assert_eq!(
+        err.span.end, 34,
+        "span must end at the end of the notes line"
+    );
 }
 
 #[test]
-fn underfull_measure_in_second_bar_span_points_to_last_note() {
+fn underfull_measure_in_second_bar_error_span_covers_notes_line() {
+    // "4 4 4 4_" in the second bar starts at byte 35 and ends at byte 43.
     let content = "(time=4/4 key=C4 bpm=120)\n5 5 5 5\n\n4 4 4 4_\n";
     let declarations = vec![decl("", PartKind::Notes)];
     let err = parse(content, 0, &declarations).unwrap_err();
     assert_eq!(
-        err.span.start, 41,
-        "span must point to the last note '4_' in the second bar"
+        err.span.start, 35,
+        "span must start at the beginning of the second bar's notes line"
     );
     assert_eq!(err.span.end, 43);
 }
