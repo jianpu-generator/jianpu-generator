@@ -290,6 +290,36 @@ fn omitted_notes_row_is_recoverable() {
 }
 
 #[test]
+fn omitted_chord_row_is_irrecoverable() {
+    // Part kind "notes chord" puts the notes row before the chord row in the score.
+    // The score has only a notes row; the missing chord row must abort parsing (irrecoverable).
+    let input = concat!(
+        "[metadata]\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "[parts]\n",
+        "A = notes chord\n",
+        "\n",
+        "[score]\n",
+        "(time=4/4 key=C4 bpm=120)\n",
+        "1 2 3 4\n",
+    );
+    let err = crate::parser::parse(input, "test.jianpu")
+        .expect_err("missing chord row must abort parsing");
+    assert!(
+        err.message.contains("chord"),
+        "error should mention missing chord row, got: {}",
+        err.message
+    );
+    assert!(
+        !err.message.contains("invalid track columns"),
+        "error should be about missing chord row, not unknown part kind, got: {}",
+        err.message
+    );
+}
+
+#[test]
 fn partial_measure_still_needs_ditto_before_diverging_middle_columns() {
     let content = concat!(
         "(time=4/4 key=C4 bpm=120)\n",

@@ -87,9 +87,10 @@ fn parse_rhs(rhs: &str, span: &Span) -> Result<PartKind, JianPuError> {
         ["notes"] => Ok(PartKind::Notes),
         ["notes", "lyrics"] => Ok(PartKind::NotesWithLyrics),
         ["lyrics", "notes"] => Ok(PartKind::LyricsWithNotes),
+        ["notes", "chord"] => Ok(PartKind::NotesWithChord),
         _ => Err(JianPuError::new(
             span.clone(),
-            format!("invalid track columns '{rhs}': expected 'chord', 'notes', 'notes lyrics', or 'lyrics notes'"),
+            format!("invalid track columns '{rhs}': expected 'chord', 'notes', 'notes lyrics', 'lyrics notes', or 'notes chord'"),
         )),
     }
 }

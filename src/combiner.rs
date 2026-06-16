@@ -116,7 +116,7 @@ fn build_part_rows(
                         .paired_lyrics
                         .clone()
                         .map(|syllables| Lyrics { syllables }),
-                    PartKind::Chord | PartKind::Notes => None,
+                    PartKind::Chord | PartKind::Notes | PartKind::NotesWithChord => None,
                 };
                 let mut slice = PartSlice {
                     name: part.name.clone(),
