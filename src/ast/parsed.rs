@@ -1,4 +1,4 @@
-use crate::error::Spanned;
+use crate::error::{JianPuError, Spanned};
 
 #[derive(Debug)]
 pub struct ParsedScore {
@@ -80,6 +80,8 @@ pub struct ParsedTimedTrack {
     /// group was a `"` ditto (explicit or implicit trailing omission).
     /// Always false for tracks without a lyrics line.
     pub lyrics_ditto_measures: Vec<bool>,
+    /// Per-measure beat-overflow error (None = no overflow for that measure).
+    pub per_measure_beat_errors: Vec<Option<JianPuError>>,
 }
 
 #[derive(Debug)]

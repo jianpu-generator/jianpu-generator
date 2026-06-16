@@ -142,6 +142,8 @@ pub(crate) struct GroupedMeasure {
     pub(crate) paired_lyrics: Option<Vec<Syllable>>,
     /// Recoverable lyrics underflow for this measure, if any.
     pub(crate) lyrics_error: Option<JianPuError>,
+    /// Recoverable beat overflow for this measure (notes trimmed), if any.
+    pub(crate) beat_overflow_error: Option<JianPuError>,
 }
 
 pub(crate) struct GroupedPart {

@@ -49,12 +49,16 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> Result<Vec<MultiPartMeasu
         let measure_errors: Vec<JianPuError> = grouped_score
             .parts
             .iter()
-            .filter_map(|track| match track {
-                GroupedTrack::Timed(part) => part
-                    .measures
-                    .get(measure_idx)
-                    .and_then(|m| m.lyrics_error.clone()),
+            .flat_map(|track| match track {
+                GroupedTrack::Timed(part) => {
+                    let m = part.measures.get(measure_idx);
+                    [
+                        m.and_then(|m| m.lyrics_error.clone()),
+                        m.and_then(|m| m.beat_overflow_error.clone()),
+                    ]
+                }
             })
+            .flatten()
             .collect();
         combined.push(MultiPartMeasure {
             time_signature: directives.time_signature.clone(),
@@ -177,7 +181,9 @@ mod tests {
     }
 
     #[test]
-    fn rejects_parts_with_different_measure_counts() {
+    fn beat_overflow_in_one_part_attaches_error_to_measure() {
+        // Alto has 5 notes in a 4/4 bar — overflow is recoverable; the measure
+        // gets an error and the 5th note is trimmed.
         let input = concat!(
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nSoprano = notes\nAlto = notes\n\n",
             "[score]\n",
@@ -185,7 +191,18 @@ mod tests {
             "1 2 3 4\n",
             "5 6 7 1 5\n",
         );
-        assert!(parser::parse(input, "test.jianpu").is_err());
+        let doc =
+            parser::parse(input, "test.jianpu").expect("beat overflow must not abort parsing");
+        let score = crate::grouper::group(doc).expect("grouping must succeed");
+        assert_eq!(score.measures.len(), 1);
+        assert_eq!(score.measures[0].errors.len(), 1);
+        assert!(
+            score.measures[0].errors[0]
+                .message
+                .contains("beat overflow"),
+            "got: {}",
+            score.measures[0].errors[0].message
+        );
     }
 
     #[test]

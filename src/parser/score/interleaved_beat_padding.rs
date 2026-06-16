@@ -114,27 +114,44 @@ fn can_implicitly_pad(events: &[Spanned<ScoreEvent>], deficit: u32) -> bool {
 }
 
 /// Validates measure capacity and pads omitted trailing `-` extensions when possible.
+/// On beat overflow, truncates the events to fit and returns `Ok((truncated, Some(error)))`.
+/// On underflow that cannot be implicitly padded, returns `Err`.
 pub(super) fn validate_and_pad_beats(
-    mut events: Vec<Spanned<ScoreEvent>>,
+    events: Vec<Spanned<ScoreEvent>>,
     expected: u32,
     time_num: u8,
     time_den: u8,
-) -> Result<Vec<Spanned<ScoreEvent>>, JianPuError> {
+) -> Result<(Vec<Spanned<ScoreEvent>>, Option<JianPuError>), JianPuError> {
     let mut total = 0u32;
+    let mut truncate_at: Option<(usize, Span)> = None;
 
-    for e in &events {
+    for (i, e) in events.iter().enumerate() {
         let beats = timed_beats(&e.value);
         if beats > 0 {
-            total += beats;
-            if total > expected {
-                return Err(JianPuError::new(
-                    e.span.clone(),
-                    format!(
-                        "note exceeds measure boundary: measure has {expected} quarter-beats, cumulative is now {total}"
-                    ),
-                ));
+            if total + beats > expected {
+                truncate_at = Some((i, e.span.clone()));
+                break;
             }
+            total += beats;
         }
+    }
+
+    let (mut events, overflow_error) = match truncate_at {
+        Some((i, span)) => {
+            let error = JianPuError::new(
+                span,
+                format!(
+                    "beat overflow: measure has {expected} quarter-beats but notes exceed that (truncated at note {})",
+                    i + 1
+                ),
+            );
+            (events.into_iter().take(i).collect(), Some(error))
+        }
+        None => (events, None),
+    };
+
+    if overflow_error.is_some() {
+        return Ok((events, overflow_error));
     }
 
     if total < expected {
@@ -177,5 +194,5 @@ pub(super) fn validate_and_pad_beats(
 
     crate::grouping::validate_measure_grouping(&events, time_num, time_den)?;
 
-    Ok(events)
+    Ok((events, None))
 }

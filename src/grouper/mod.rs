@@ -180,6 +180,7 @@ impl PartGrouper {
             source_span,
             paired_lyrics: None,
             lyrics_error: None,
+            beat_overflow_error: None,
         });
         self.current_beat = 0;
         self.measure_span_start = None;
@@ -368,6 +369,7 @@ impl PartGrouper {
                 source_span,
                 paired_lyrics: None,
                 lyrics_error: None,
+                beat_overflow_error: None,
             });
         }
 
@@ -390,6 +392,7 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, JianPuError>
         .map(|l| l.measure_ends.clone())
         .unwrap_or_default();
     let measure_syllables = part.lyrics.as_ref().map(|l| l.measure_syllables.clone());
+    let per_measure_beat_errors = part.per_measure_beat_errors.clone();
     let mut grouper = PartGrouper::new(&part);
     for spanned in part.score.events {
         grouper.process_event(spanned)?;
@@ -399,6 +402,15 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, JianPuError>
     grouped.lyrics_ditto_measures = lyrics_ditto_measures;
     for (measure, &lyrics_end) in grouped.measures.iter_mut().zip(lyrics_measure_ends.iter()) {
         measure.source_span.end = measure.source_span.end.max(lyrics_end);
+    }
+    for (measure, error) in grouped
+        .measures
+        .iter_mut()
+        .zip(per_measure_beat_errors.into_iter())
+    {
+        if error.is_some() {
+            measure.beat_overflow_error = error;
+        }
     }
     if matches!(part.kind, PartKind::NotesWithLyrics) {
         attach_paired_lyrics(&mut grouped.measures, measure_syllables, &part.abbreviation)?;

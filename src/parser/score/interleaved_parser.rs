@@ -30,6 +30,8 @@ enum TrackAccumulator {
         syllables: Option<Vec<Vec<crate::ast::parsed::Syllable>>>,
         /// End byte offset of the lyrics line for each measure, in order.
         lyrics_line_ends: Vec<usize>,
+        /// Per-measure beat-overflow error (None = no overflow for that measure).
+        per_measure_beat_errors: Vec<Option<crate::error::JianPuError>>,
     },
 }
 
@@ -200,6 +202,7 @@ fn init_accumulators(declarations: &[PartDecl]) -> Vec<TrackAccumulator> {
                 None
             },
             lyrics_line_ends: Vec::new(),
+            per_measure_beat_errors: Vec::new(),
         })
         .collect()
 }
@@ -377,7 +380,7 @@ fn process_column_line(
                     "internal error: group state index out of range",
                 )
             })?;
-            let events = validate_and_pad_beats(
+            let (events, beat_overflow_error) = validate_and_pad_beats(
                 token_parser::parse_notes_line(line, ctx.base_offset + line_offset, group_state)?,
                 beats_expected,
                 *ctx.time_num,
@@ -395,7 +398,16 @@ fn process_column_line(
                     "internal error: notes accumulator index out of range",
                 )
             })?;
-            timed_events_mut(acc)?.extend(events);
+            match acc {
+                TrackAccumulator::Timed {
+                    events: acc_events,
+                    per_measure_beat_errors,
+                    ..
+                } => {
+                    acc_events.extend(events);
+                    per_measure_beat_errors.push(beat_overflow_error);
+                }
+            }
         }
         SlotAction::Lyrics { track_index } => {
             process_lyrics_column_line(*track_index, line, line_span, ctx)?;
@@ -413,7 +425,7 @@ fn process_column_line(
                     "internal error: group state index out of range",
                 )
             })?;
-            let events = validate_and_pad_beats(
+            let (events, beat_overflow_error) = validate_and_pad_beats(
                 token_parser::parse_chord_line(line, ctx.base_offset + line_offset, group_state)?,
                 beats_expected,
                 *ctx.time_num,
@@ -425,7 +437,16 @@ fn process_column_line(
                     "internal error: chord accumulator index out of range",
                 )
             })?;
-            timed_events_mut(acc)?.extend(events);
+            match acc {
+                TrackAccumulator::Timed {
+                    events: acc_events,
+                    per_measure_beat_errors,
+                    ..
+                } => {
+                    acc_events.extend(events);
+                    per_measure_beat_errors.push(beat_overflow_error);
+                }
+            }
         }
     }
     Ok(())
@@ -483,6 +504,7 @@ fn build_parse_result(
                 events,
                 syllables,
                 lyrics_line_ends,
+                per_measure_beat_errors,
             } = acc;
             Ok(ParsedTrack::Timed(ParsedTimedTrack {
                 abbreviation: decl.abbreviation.clone(),
@@ -503,6 +525,7 @@ fn build_parse_result(
                     .get_mut(track_index)
                     .map(std::mem::take)
                     .unwrap_or_default(),
+                per_measure_beat_errors,
             }))
         })
         .collect()

@@ -129,15 +129,23 @@ fn half_beat_notes_accumulate_correctly() {
 }
 
 #[test]
-fn overflow_note_errors() {
-    // The interleaved parser validates beats per bar — overfull bar is rejected at parse time.
+fn beat_overflow_recovers_with_error_on_measure() {
+    // 5 quarter notes in a 4/4 bar (capacity = 4) → the 5th note overflows.
+    // Overflow is recoverable: grouping succeeds and the measure gets an error.
     let input = concat!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n",
-        "[score]\n(time=4/4 key=C4 bpm=120)\n1_ 1_ 1_ 1_ 1_ 1_ 1_ 1\na b c d e f g h\n",
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes\n\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4 5\n",
     );
+    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let score = group(doc).expect("beat overflow must not abort grouping");
+    assert_eq!(score.measures.len(), 1);
+    assert_eq!(score.measures[0].errors.len(), 1);
     assert!(
-        parser::parse(input, "test.jianpu").is_err(),
-        "expected parse error for overfull measure",
+        score.measures[0].errors[0]
+            .message
+            .contains("beat overflow"),
+        "error message should mention beat overflow, got: {}",
+        score.measures[0].errors[0].message
     );
 }
 

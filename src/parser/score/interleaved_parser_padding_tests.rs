@@ -4,20 +4,34 @@ use crate::ast::parsed::{Accidental, ParsedTrack};
 use super::test_helpers::{chord_track, decl, notes_track, parse};
 
 #[test]
-fn rejects_overfull_measure() {
+fn overfull_measure_is_recoverable() {
+    // Beat overflow is recoverable: parse succeeds, overflow note is trimmed,
+    // and the error is recorded in per_measure_beat_errors.
     let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4 5\n";
     let declarations = vec![decl("", PartKind::Notes)];
-    let err = parse(content, 0, &declarations).unwrap_err();
-    assert!(err.message.contains("note exceeds measure boundary"));
+    let tracks = parse(content, 0, &declarations).expect("overfull measure must not abort parsing");
+    let ParsedTrack::Timed(track) = &tracks[0];
+    assert_eq!(track.per_measure_beat_errors.len(), 1);
+    let error = track.per_measure_beat_errors[0]
+        .as_ref()
+        .expect("overflow error must be recorded");
+    assert!(
+        error.message.contains("beat overflow"),
+        "error message should mention beat overflow, got: {}",
+        error.message
+    );
 }
 
 #[test]
 fn overfull_measure_span_points_to_offending_note() {
+    // The overflow error span points to the note that triggered the overflow.
     let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4 5\n";
     let declarations = vec![decl("", PartKind::Notes)];
-    let err = parse(content, 0, &declarations).unwrap_err();
-    assert_eq!(err.span.start, 34, "span must point to the offending '5'");
-    assert_eq!(err.span.end, 35);
+    let tracks = parse(content, 0, &declarations).unwrap();
+    let ParsedTrack::Timed(track) = &tracks[0];
+    let error = track.per_measure_beat_errors[0].as_ref().unwrap();
+    assert_eq!(error.span.start, 34, "span must point to the offending '5'");
+    assert_eq!(error.span.end, 35);
 }
 
 #[test]
