@@ -232,18 +232,23 @@ fn spaced_open_group_cross_measure_lyrics() {
 }
 
 #[test]
-fn rejects_omitted_trailing_lyrics_without_precedent() {
+fn omitted_trailing_lyrics_without_precedent_is_recoverable() {
+    // Measure 2 has no lyrics and no preceding lyrics in the same group to ditto from.
+    // Parsing must succeed; the missing lyrics become an empty (no-lyrics) measure.
     let content = concat!(
         "(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c d\n",
         "\n",
         "5 6 7 1\n",
     );
     let declarations = vec![decl("", PartKind::NotesWithLyrics)];
-    let err = parse(content, 0, &declarations).unwrap_err();
-    assert!(
-        err.message.contains("expected lyrics line"),
-        "got: {}",
-        err.message
+    let tracks = parse(content, 0, &declarations).expect("missing lyrics must not abort parsing");
+    let crate::ast::parsed::ParsedTrack::Timed(track) = &tracks[0];
+    let lyrics = track.lyrics.as_ref().expect("track should have lyrics");
+    assert_eq!(lyrics.measure_syllables.len(), 2);
+    assert_eq!(
+        lyrics.measure_syllables[1].len(),
+        0,
+        "measure 2 should have no syllables (treated as no lyrics)"
     );
 }
 

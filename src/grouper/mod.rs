@@ -23,6 +23,7 @@ pub fn group(doc: ParsedDocument) -> Result<Score, JianPuError> {
     let grouped_score = GroupedScore {
         measure_directives,
         parts: grouped_tracks,
+        per_measure_parse_errors: doc.per_measure_parse_errors,
     };
 
     let measures = combiner::combine(&grouped_score)?;
@@ -488,6 +489,7 @@ fn pair_lyrics_to_notes(
     bool,
     Option<JianPuPitch>,
 ) {
+    let no_lyrics = raw_syllables.is_empty();
     let mut syllable_idx = 0;
     let mut paired = Vec::new();
     let mut underflow_detected = false;
@@ -505,7 +507,9 @@ fn pair_lyrics_to_notes(
                             text: String::new(),
                             held: false,
                         });
-                        underflow_detected = true;
+                        if !no_lyrics {
+                            underflow_detected = true;
+                        }
                     }
                 }
                 prev_tie = note.tie;

@@ -8,7 +8,7 @@ pub(super) fn parse(
     base_offset: usize,
     declarations: &[PartDecl],
 ) -> Result<Vec<ParsedTrack>, JianPuError> {
-    super::parse(content, base_offset, declarations).map(|(tracks, _)| tracks)
+    super::parse(content, base_offset, declarations).map(|(tracks, _, _)| tracks)
 }
 
 /// Like `parse`, but also returns the directive-events-per-measure accumulator.
@@ -19,6 +19,7 @@ pub(super) fn parse_with_directives(
     declarations: &[PartDecl],
 ) -> Result<(Vec<ParsedTrack>, super::DirectiveEventsPerMeasure), JianPuError> {
     super::parse(content, base_offset, declarations)
+        .map(|(tracks, directives, _)| (tracks, directives))
 }
 
 pub(super) fn decl(name: &str, kind: PartKind) -> PartDecl {

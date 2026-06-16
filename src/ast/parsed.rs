@@ -95,6 +95,8 @@ pub struct ParsedDocument {
     pub declarations: Vec<PartDecl>,
     pub tracks: Vec<ParsedTrack>,
     pub directive_events_per_measure: Vec<Vec<Spanned<ScoreEvent>>>,
+    /// Per-measure recoverable errors from desugaring (e.g. missing lyrics line).
+    pub per_measure_parse_errors: Vec<Option<JianPuError>>,
 }
 
 #[allow(dead_code)]

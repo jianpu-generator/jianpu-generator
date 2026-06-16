@@ -132,6 +132,7 @@ pub(crate) struct MeasureDirectives {
 pub(crate) struct GroupedScore {
     pub(crate) measure_directives: Vec<MeasureDirectives>,
     pub(crate) parts: Vec<GroupedTrack>,
+    pub(crate) per_measure_parse_errors: Vec<Option<crate::error::JianPuError>>,
 }
 
 pub(crate) struct GroupedMeasure {

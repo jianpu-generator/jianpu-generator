@@ -17,6 +17,16 @@ use directives::{collect_groups, split_directive};
 /// One entry per bar group: all directive events emitted by that group's directive row.
 pub(super) type DirectiveEventsPerMeasure = Vec<Vec<Spanned<ScoreEvent>>>;
 
+/// Return type of `parse`: tracks, directive events per measure, and per-measure desugar errors.
+type ParseResult = Result<
+    (
+        Vec<ParsedTrack>,
+        DirectiveEventsPerMeasure,
+        Vec<Option<JianPuError>>,
+    ),
+    JianPuError,
+>;
+
 enum SlotAction {
     Chord { track_index: usize },
     Notes { track_index: usize },
@@ -52,14 +62,11 @@ struct BarGroupContext<'a> {
     directive_events_per_measure: &'a mut DirectiveEventsPerMeasure,
 }
 
-pub fn parse(
-    content: &str,
-    base_offset: usize,
-    declarations: &[PartDecl],
-) -> Result<(Vec<ParsedTrack>, DirectiveEventsPerMeasure), JianPuError> {
+pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> ParseResult {
     let groups = collect_groups(content);
     let ditto_measures_per_track = compute_ditto_measures(&groups, declarations);
-    let groups = crate::desugar::desugar_groups(groups, declarations, base_offset)?;
+    let (groups, per_group_desugar_errors) =
+        crate::desugar::desugar_groups(groups, declarations, base_offset)?;
 
     let first_notes_track_index = declarations
         .iter()
@@ -115,7 +122,11 @@ pub fn parse(
     }
 
     let tracks = build_parse_result(declarations, accumulators, ditto_measures_per_track)?;
-    Ok((tracks, directive_events_per_measure))
+    Ok((
+        tracks,
+        directive_events_per_measure,
+        per_group_desugar_errors,
+    ))
 }
 
 /// Ditto flags per track, per measure group, computed from the raw groups

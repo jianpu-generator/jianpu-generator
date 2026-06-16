@@ -46,10 +46,12 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> Result<Vec<MultiPartMeasu
             .unwrap_or_else(|| {
                 unreachable!("combiner: source_span missing for measure {measure_idx}")
             });
-        let measure_errors: Vec<JianPuError> = grouped_score
-            .parts
-            .iter()
-            .flat_map(|track| match track {
+        let parse_error = grouped_score
+            .per_measure_parse_errors
+            .get(measure_idx)
+            .and_then(|e| e.clone());
+        let measure_errors: Vec<JianPuError> = std::iter::once(parse_error)
+            .chain(grouped_score.parts.iter().flat_map(|track| match track {
                 GroupedTrack::Timed(part) => {
                     let m = part.measures.get(measure_idx);
                     [
@@ -57,7 +59,7 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> Result<Vec<MultiPartMeasu
                         m.and_then(|m| m.beat_overflow_error.clone()),
                     ]
                 }
-            })
+            }))
             .flatten()
             .collect();
         combined.push(MultiPartMeasure {
@@ -202,6 +204,37 @@ mod tests {
                 .contains("beat overflow"),
             "got: {}",
             score.measures[0].errors[0].message
+        );
+    }
+
+    #[test]
+    fn missing_lyrics_line_in_first_measure_is_recoverable() {
+        let input = concat!(
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+            "[parts]\nA = notes lyrics\n\n",
+            "[score]\n",
+            "1 2 3 4\n",
+            "\n",
+            "5 6 7 1\n",
+            "la lo le li\n",
+        );
+        let doc =
+            parser::parse(input, "test.jianpu").expect("missing lyrics must not abort parsing");
+        let score = crate::grouper::group(doc).expect("grouping must succeed");
+        assert_eq!(score.measures.len(), 2);
+        assert_eq!(
+            score.measures[0].errors.len(),
+            1,
+            "measure 1 should have exactly one error"
+        );
+        assert!(
+            score.measures[0].errors[0].message.contains("lyrics"),
+            "error should mention lyrics, got: {}",
+            score.measures[0].errors[0].message
+        );
+        assert!(
+            score.measures[1].errors.is_empty(),
+            "measure 2 should have no errors"
         );
     }
 
