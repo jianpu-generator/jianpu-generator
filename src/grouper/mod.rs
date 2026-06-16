@@ -192,6 +192,13 @@ impl PartGrouper {
         }
     }
 
+    fn with_part_prefix(&self, message: String) -> String {
+        match &self.part_name {
+            Some(name) => format!("[{name}] {message}"),
+            None => message,
+        }
+    }
+
     fn push_timed_event(
         &mut self,
         span: Span,
@@ -209,10 +216,10 @@ impl PartGrouper {
         if self.current_beat > self.capacity {
             return Err(JianPuError::new(
                 span,
-                format!(
+                self.with_part_prefix(format!(
                     "{overflow_label} duration {duration} overflows the current measure (capacity {} quarter-beats, {} used)",
                     self.capacity, self.current_beat
-                ),
+                )),
             ));
         }
         if self.current_beat == self.capacity {
@@ -233,7 +240,9 @@ impl PartGrouper {
                 self.current_beat += 4;
             }
             Some(NoteEvent::Rest(_)) => {
-                return Err(JianPuError::dash_after_rest(span));
+                let mut error = JianPuError::dash_after_rest(span);
+                error.message = self.with_part_prefix(error.message);
+                return Err(error);
             }
             None => {
                 let message = if self.part_kind == PartKind::Chord {
@@ -241,7 +250,7 @@ impl PartGrouper {
                 } else {
                     "extension `-` without a preceding note or rest; if it follows a measure boundary, cross-measure extension is not supported".to_string()
                 };
-                return Err(JianPuError::new(span, message));
+                return Err(JianPuError::new(span, self.with_part_prefix(message)));
             }
         }
         if self.current_beat >= self.capacity {
@@ -267,7 +276,7 @@ impl PartGrouper {
             }
             _ => Err(JianPuError::new(
                 span,
-                "tie `~` without a preceding note".to_string(),
+                self.with_part_prefix("tie `~` without a preceding note".to_string()),
             )),
         }
     }
@@ -392,7 +401,7 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, JianPuError>
         measure.source_span.end = measure.source_span.end.max(lyrics_end);
     }
     if matches!(part.kind, PartKind::NotesWithLyrics) {
-        attach_paired_lyrics(&mut grouped.measures, measure_syllables)?;
+        attach_paired_lyrics(&mut grouped.measures, measure_syllables, &part.abbreviation)?;
     }
     Ok(grouped)
 }
@@ -402,6 +411,7 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, JianPuError>
 fn attach_paired_lyrics(
     measures: &mut [GroupedMeasure],
     measure_syllables: Option<Vec<Vec<Syllable>>>,
+    part_name: &str,
 ) -> Result<(), JianPuError> {
     let Some(measure_syllables) = measure_syllables else {
         return Ok(());
@@ -410,7 +420,7 @@ fn attach_paired_lyrics(
         return Err(JianPuError::new(
             Span::new(0, 0),
             format!(
-                "internal invariant: {} lyric lines but {} grouped measures",
+                "[{part_name}] internal invariant: {} lyric lines but {} grouped measures",
                 measure_syllables.len(),
                 measures.len()
             ),
@@ -425,6 +435,7 @@ fn attach_paired_lyrics(
             &measure.source_span,
             prev_tie,
             prev_pitch,
+            part_name,
         );
         measure.paired_lyrics = Some(paired);
         measure.lyrics_error = error;
@@ -440,6 +451,7 @@ fn pair_lyrics_to_notes(
     source_span: &Span,
     mut prev_tie: bool,
     mut prev_pitch: Option<JianPuPitch>,
+    part_name: &str,
 ) -> (
     Vec<Syllable>,
     Option<JianPuError>,
@@ -480,7 +492,7 @@ fn pair_lyrics_to_notes(
         Some(JianPuError::new(
             source_span.clone(),
             format!(
-                "lyrics underflow: ran out of syllables at syllable {} (fewer syllables than notes)",
+                "[{part_name}] lyrics underflow: ran out of syllables at syllable {} (fewer syllables than notes)",
                 syllable_idx
             ),
         ))
@@ -488,7 +500,7 @@ fn pair_lyrics_to_notes(
         Some(JianPuError::new(
             source_span.clone(),
             format!(
-                "lyrics overflow: {} extra syllable{} after all notes are consumed",
+                "[{part_name}] lyrics overflow: {} extra syllable{} after all notes are consumed",
                 overflow_count,
                 if overflow_count == 1 { "" } else { "s" }
             ),
