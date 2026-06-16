@@ -92,7 +92,10 @@ pub fn list_parts_from_source(source: &str, filename: &str) -> Result<Vec<PartIn
         .map(|d| PartInfo {
             abbreviation: d.abbreviation,
             display_name: d.display_name,
-            has_lyrics: d.kind == PartKind::NotesWithLyrics,
+            has_lyrics: matches!(
+                d.kind,
+                PartKind::NotesWithLyrics | PartKind::LyricsWithNotes
+            ),
         })
         .collect())
 }
@@ -222,7 +225,10 @@ pub fn apply_lyrics_filter(score: &mut Score, disabled_lyrics: Option<&[String]>
                 .is_some_and(|name| tracks.contains(name))
             {
                 part_slice.lyrics = None;
-                if part_slice.kind == PartKind::NotesWithLyrics {
+                if matches!(
+                    part_slice.kind,
+                    PartKind::NotesWithLyrics | PartKind::LyricsWithNotes
+                ) {
                     part_slice.kind = PartKind::Notes;
                 }
             }

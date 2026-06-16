@@ -253,6 +253,43 @@ fn omitted_trailing_lyrics_without_precedent_is_recoverable() {
 }
 
 #[test]
+fn omitted_notes_row_is_recoverable() {
+    // Part kind "lyrics notes" puts the lyrics row before the notes row in the score.
+    // The score has only a lyrics row; the missing notes row must not abort parsing.
+    let input = concat!(
+        "[metadata]\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "[parts]\n",
+        "A = lyrics notes\n",
+        "\n",
+        "[score]\n",
+        "(time=4/4 key=C4 bpm=120)\n",
+        "la la\n",
+    );
+    let doc = crate::parser::parse(input, "test.jianpu")
+        .expect("missing notes row must not abort parsing");
+    let crate::ast::parsed::ParsedTrack::Timed(track) = &doc.tracks[0];
+    let note_events: Vec<_> = track
+        .score
+        .events
+        .iter()
+        .filter(|e| {
+            matches!(
+                e.value,
+                ScoreEvent::Note(_) | ScoreEvent::Rest(_) | ScoreEvent::Extension
+            )
+        })
+        .collect();
+    assert_eq!(
+        note_events.len(),
+        0,
+        "measure with missing notes row should have no note events"
+    );
+}
+
+#[test]
 fn partial_measure_still_needs_ditto_before_diverging_middle_columns() {
     let content = concat!(
         "(time=4/4 key=C4 bpm=120)\n",

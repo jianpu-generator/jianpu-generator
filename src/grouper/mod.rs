@@ -418,7 +418,10 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, JianPuError>
             measure.beat_overflow_error = error;
         }
     }
-    if matches!(part.kind, PartKind::NotesWithLyrics) {
+    if matches!(
+        part.kind,
+        PartKind::NotesWithLyrics | PartKind::LyricsWithNotes
+    ) {
         let lyrics_spans: Vec<Span> = lyrics_measure_starts
             .iter()
             .zip(lyrics_measure_ends.iter())

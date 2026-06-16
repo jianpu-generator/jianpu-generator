@@ -112,7 +112,7 @@ fn build_part_rows(
                     )
                 })?;
                 let lyrics = match part.kind {
-                    PartKind::NotesWithLyrics => measure
+                    PartKind::NotesWithLyrics | PartKind::LyricsWithNotes => measure
                         .paired_lyrics
                         .clone()
                         .map(|syllables| Lyrics { syllables }),
@@ -139,7 +139,13 @@ fn build_part_rows(
                 // A ditto'd lyric line duplicates the part above's lyrics, so
                 // render this measure as a plain notes part: the copied
                 // syllables are not shown and the lyric row is reclaimed.
-                if lyrics_ditto && !is_ditto && matches!(slice.kind, PartKind::NotesWithLyrics) {
+                if lyrics_ditto
+                    && !is_ditto
+                    && matches!(
+                        slice.kind,
+                        PartKind::NotesWithLyrics | PartKind::LyricsWithNotes
+                    )
+                {
                     slice.kind = PartKind::Notes;
                     slice.lyrics = None;
                 }

@@ -106,6 +106,15 @@ fn pad_implicit_ditto_group(
                 )
             });
             result_data.push(("_".to_string(), pad_offset));
+        } else if role == ScoreLineRole::Notes {
+            let abbrev = track_abbreviation(declarations, slot.track_index);
+            recoverable_error.get_or_insert_with(|| {
+                JianPuError::new(
+                    Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
+                    format!("missing notes line for '{abbrev}'; treating as empty"),
+                )
+            });
+            result_data.push(("_".to_string(), pad_offset));
         } else {
             let abbrev = track_abbreviation(declarations, slot.track_index);
             return Err(JianPuError::new(

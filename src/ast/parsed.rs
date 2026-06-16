@@ -28,6 +28,7 @@ pub enum PartKind {
     Chord,
     Notes,
     NotesWithLyrics,
+    LyricsWithNotes,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -49,6 +50,7 @@ impl PartDecl {
             PartKind::Chord => &[ScoreLineRole::Chord],
             PartKind::Notes => &[ScoreLineRole::Notes],
             PartKind::NotesWithLyrics => &[ScoreLineRole::Notes, ScoreLineRole::Lyrics],
+            PartKind::LyricsWithNotes => &[ScoreLineRole::Lyrics, ScoreLineRole::Notes],
         }
     }
 }

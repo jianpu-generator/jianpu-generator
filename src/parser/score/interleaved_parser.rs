@@ -70,7 +70,12 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
 
     let first_notes_track_index = declarations
         .iter()
-        .position(|d| matches!(d.kind, PartKind::Notes | PartKind::NotesWithLyrics))
+        .position(|d| {
+            matches!(
+                d.kind,
+                PartKind::Notes | PartKind::NotesWithLyrics | PartKind::LyricsWithNotes
+            )
+        })
         .ok_or_else(|| {
             JianPuError::new(
                 Span::new(base_offset, base_offset + content.len()),
@@ -209,7 +214,10 @@ fn init_accumulators(declarations: &[PartDecl]) -> Vec<TrackAccumulator> {
         .iter()
         .map(|decl| TrackAccumulator::Timed {
             events: Vec::new(),
-            syllables: if matches!(decl.kind, PartKind::NotesWithLyrics) {
+            syllables: if matches!(
+                decl.kind,
+                PartKind::NotesWithLyrics | PartKind::LyricsWithNotes
+            ) {
                 Some(Vec::new())
             } else {
                 None
@@ -372,6 +380,63 @@ fn process_lyrics_column_line(
     Ok(())
 }
 
+fn process_notes_column_line(
+    track_index: usize,
+    line: &str,
+    line_offset: usize,
+    beats_expected: u32,
+    line_span: Span,
+    ctx: &mut BarGroupContext<'_>,
+) -> Result<(), JianPuError> {
+    if line == "_" {
+        let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
+            JianPuError::new(
+                line_span,
+                "internal error: notes accumulator index out of range",
+            )
+        })?;
+        let TrackAccumulator::Timed {
+            per_measure_beat_errors,
+            ..
+        } = acc;
+        per_measure_beat_errors.push(None);
+        return Ok(());
+    }
+    let group_state = ctx.group_states.get_mut(track_index).ok_or_else(|| {
+        JianPuError::new(
+            line_span.clone(),
+            "internal error: group state index out of range",
+        )
+    })?;
+    let (events, beat_overflow_error) = validate_and_pad_beats(
+        token_parser::parse_notes_line(line, ctx.base_offset + line_offset, group_state)?,
+        beats_expected,
+        *ctx.time_num,
+        *ctx.time_den,
+        line_span.clone(),
+    )?;
+    if let Some(tie_state) = ctx.lyric_tie_states.get_mut(track_index) {
+        let slots = count_lyric_slots_in_events(&events, tie_state);
+        if let Some(bar_slot) = ctx.bar_lyric_slots.get_mut(track_index) {
+            *bar_slot = Some(slots);
+        }
+    }
+    let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
+        JianPuError::new(
+            line_span,
+            "internal error: notes accumulator index out of range",
+        )
+    })?;
+    let TrackAccumulator::Timed {
+        events: acc_events,
+        per_measure_beat_errors,
+        ..
+    } = acc;
+    acc_events.extend(events);
+    per_measure_beat_errors.push(beat_overflow_error);
+    Ok(())
+}
+
 fn process_column_line(
     slot_idx: usize,
     line: &str,
@@ -388,47 +453,14 @@ fn process_column_line(
     })?;
     match slot_action {
         SlotAction::Notes { track_index } => {
-            if line == "_" {
-                return Err(JianPuError::new(
-                    line_span,
-                    "'_' is only valid on lyrics lines; use '-' for rests in notes".to_string(),
-                ));
-            }
-            let group_state = ctx.group_states.get_mut(*track_index).ok_or_else(|| {
-                JianPuError::new(
-                    line_span.clone(),
-                    "internal error: group state index out of range",
-                )
-            })?;
-            let (events, beat_overflow_error) = validate_and_pad_beats(
-                token_parser::parse_notes_line(line, ctx.base_offset + line_offset, group_state)?,
+            process_notes_column_line(
+                *track_index,
+                line,
+                line_offset,
                 beats_expected,
-                *ctx.time_num,
-                *ctx.time_den,
-                line_span.clone(),
+                line_span,
+                ctx,
             )?;
-            if let Some(tie_state) = ctx.lyric_tie_states.get_mut(*track_index) {
-                let slots = count_lyric_slots_in_events(&events, tie_state);
-                if let Some(bar_slot) = ctx.bar_lyric_slots.get_mut(*track_index) {
-                    *bar_slot = Some(slots);
-                }
-            }
-            let acc = ctx.accumulators.get_mut(*track_index).ok_or_else(|| {
-                JianPuError::new(
-                    line_span.clone(),
-                    "internal error: notes accumulator index out of range",
-                )
-            })?;
-            match acc {
-                TrackAccumulator::Timed {
-                    events: acc_events,
-                    per_measure_beat_errors,
-                    ..
-                } => {
-                    acc_events.extend(events);
-                    per_measure_beat_errors.push(beat_overflow_error);
-                }
-            }
         }
         SlotAction::Lyrics { track_index } => {
             process_lyrics_column_line(*track_index, line, line_span, ctx)?;
