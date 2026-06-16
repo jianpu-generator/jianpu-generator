@@ -365,6 +365,25 @@ fn second_measure_span_covers_its_first_note() {
 }
 
 #[test]
+fn lyrics_overflow_recovers_with_error_on_measure() {
+    // 2 notes but 4 syllables → should not Err, should attach error to measure
+    let input = concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "[parts]\nMelody = notes lyrics\n\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 0 0\na b c d e f\n",
+    );
+    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let score = group(doc).expect("overflow must not abort grouping");
+    assert_eq!(score.measures.len(), 1);
+    assert_eq!(score.measures[0].errors.len(), 1);
+    assert!(
+        score.measures[0].errors[0].message.contains("overflow"),
+        "error message should mention overflow, got: {}",
+        score.measures[0].errors[0].message
+    );
+}
+
+#[test]
 fn lyrics_underflow_recovers_with_error_on_measure() {
     // 4 notes but only 2 syllables → should not Err, should attach error to measure
     let input = concat!(

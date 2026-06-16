@@ -251,7 +251,7 @@ fn process_bar_group(
     }
 
     let beats_expected = beats_per_measure(*ctx.time_num, *ctx.time_den);
-    process_padded_columns(&padded_data, bar, beats_expected, ctx)
+    process_padded_columns(&padded_data, beats_expected, ctx)
 }
 
 fn timed_events_mut(
@@ -281,49 +281,19 @@ fn notes_syllables_mut(
 
 fn process_padded_columns(
     padded_data: &[(String, usize)],
-    bar: usize,
     beats_expected: u32,
     ctx: &mut BarGroupContext<'_>,
 ) -> Result<(), JianPuError> {
     for (i, (line, line_offset)) in padded_data.iter().enumerate() {
-        process_column_line(i, line, *line_offset, bar, beats_expected, ctx)?;
+        process_column_line(i, line, *line_offset, beats_expected, ctx)?;
     }
     Ok(())
-}
-
-fn validate_lyrics_syllable_count(
-    bar: usize,
-    track_index: usize,
-    syllable_count: usize,
-    line_span: Span,
-    ctx: &BarGroupContext<'_>,
-) -> Result<(), JianPuError> {
-    let Some(expected_slots) = ctx.bar_lyric_slots.get(track_index).and_then(|s| *s) else {
-        return Ok(());
-    };
-    let expected = expected_slots as usize;
-    if syllable_count <= expected {
-        return Ok(());
-    }
-    let part_label = ctx
-        .declarations
-        .get(track_index)
-        .map(|d| d.abbreviation.as_str())
-        .unwrap_or("unknown");
-    Err(JianPuError::new(
-        line_span,
-        format!(
-            "bar {bar}: lyrics has {syllable_count} syllable{} but notes need {expected} in part '{part_label}'",
-            if syllable_count == 1 { "" } else { "s" }
-        ),
-    ))
 }
 
 fn process_lyrics_column_line(
     track_index: usize,
     line: &str,
     line_span: Span,
-    bar: usize,
     ctx: &mut BarGroupContext<'_>,
 ) -> Result<(), JianPuError> {
     if line.is_empty() {
@@ -356,7 +326,6 @@ fn process_lyrics_column_line(
         return Ok(());
     }
     let syllables = tokenize_lyrics(line);
-    validate_lyrics_syllable_count(bar, track_index, syllables.len(), line_span.clone(), ctx)?;
     let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
         JianPuError::new(
             line_span.clone(),
@@ -384,7 +353,6 @@ fn process_column_line(
     slot_idx: usize,
     line: &str,
     line_offset: usize,
-    bar: usize,
     beats_expected: u32,
     ctx: &mut BarGroupContext<'_>,
 ) -> Result<(), JianPuError> {
@@ -430,7 +398,7 @@ fn process_column_line(
             timed_events_mut(acc)?.extend(events);
         }
         SlotAction::Lyrics { track_index } => {
-            process_lyrics_column_line(*track_index, line, line_span, bar, ctx)?;
+            process_lyrics_column_line(*track_index, line, line_span, ctx)?;
         }
         SlotAction::Chord { track_index } => {
             if line == "_" {

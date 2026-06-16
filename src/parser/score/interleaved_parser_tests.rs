@@ -140,15 +140,13 @@ fn allows_too_few_lyrics_syllables_for_notes() {
 }
 
 #[test]
-fn rejects_too_many_lyrics_syllables_for_notes() {
+fn accepts_too_many_lyrics_syllables_for_notes() {
+    // Overflow is recoverable — parsing succeeds and the grouper attaches an error to the measure.
     let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c d e\n";
     let declarations = vec![decl("", PartKind::NotesWithLyrics)];
-    let err = parse(content, 0, &declarations).unwrap_err();
     assert!(
-        err.message
-            .contains("lyrics has 5 syllables but notes need 4"),
-        "got: {}",
-        err.message
+        parse(content, 0, &declarations).is_ok(),
+        "too many syllables must not abort parsing"
     );
 }
 

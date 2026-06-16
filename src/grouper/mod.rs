@@ -475,12 +475,22 @@ fn pair_lyrics_to_notes(
         }
     }
 
+    let overflow_count = raw_syllables.len().saturating_sub(syllable_idx);
     let error = if underflow_detected {
         Some(JianPuError::new(
             source_span.clone(),
             format!(
                 "lyrics underflow: ran out of syllables at syllable {} (fewer syllables than notes)",
                 syllable_idx
+            ),
+        ))
+    } else if overflow_count > 0 {
+        Some(JianPuError::new(
+            source_span.clone(),
+            format!(
+                "lyrics overflow: {} extra syllable{} after all notes are consumed",
+                overflow_count,
+                if overflow_count == 1 { "" } else { "s" }
             ),
         ))
     } else {
