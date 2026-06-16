@@ -99,7 +99,9 @@ mod tests {
         let input = format!(
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n[score]\n(time=4/4 key=C4 bpm=120)\n{score_str}\n{lyrics_str}\n"
         );
-        let svgs = crate::render_svgs_from_source(&input, "test.jianpu").unwrap();
+        let svgs = crate::render_svgs_from_source(&input, "test.jianpu")
+            .unwrap()
+            .svgs;
         write_pdf(&svgs).unwrap()
     }
 

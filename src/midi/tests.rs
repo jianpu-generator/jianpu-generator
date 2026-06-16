@@ -58,6 +58,7 @@ fn chord_major_expands_to_three_notes() {
                 lyrics: None,
             })],
             source_span: crate::error::Span::new(0, 0), // dummy — midi output ignores span
+            errors: vec![],
         }],
     };
     let midi_bytes = write_midi(&score).unwrap();

@@ -45,14 +45,15 @@ fn hidden_lyrics_do_not_reserve_lyric_row_space() {
         "5 6 7 1\n",
         "alt alt alt alt\n",
     );
-    let all = render_svgs_from_source(input, "test.jianpu").unwrap();
+    let all = render_svgs_from_source(input, "test.jianpu").unwrap().svgs;
     let alto_lyrics_hidden = render_svgs_from_source_filtered_with_lyrics(
         input,
         "test.jianpu",
         None,
         Some(&["Alto".into()]),
     )
-    .unwrap();
+    .unwrap()
+    .svgs;
     assert_ne!(
         all[0].len(),
         alto_lyrics_hidden[0].len(),
@@ -78,14 +79,15 @@ fn render_svgs_from_source_filtered_can_hide_lyrics_per_part() {
         "5 6 7 1\n",
         "alt alt alt alt\n",
     );
-    let all = render_svgs_from_source(input, "test.jianpu").unwrap();
+    let all = render_svgs_from_source(input, "test.jianpu").unwrap().svgs;
     let alto_lyrics_hidden = render_svgs_from_source_filtered_with_lyrics(
         input,
         "test.jianpu",
         None,
         Some(&["Alto".into()]),
     )
-    .unwrap();
+    .unwrap()
+    .svgs;
     assert!(all[0].contains("sop"));
     assert!(all[0].contains("alt"));
     assert!(alto_lyrics_hidden[0].contains("sop"));
@@ -108,9 +110,11 @@ fn render_svgs_from_source_filtered_can_hide_parts() {
         "1 2 3 4\n",
         "5 6 7 1\n",
     );
-    let all = render_svgs_from_source(input, "test.jianpu").unwrap();
+    let all = render_svgs_from_source(input, "test.jianpu").unwrap().svgs;
     let soprano_only =
-        render_svgs_from_source_filtered(input, "test.jianpu", Some(&["Soprano".into()])).unwrap();
+        render_svgs_from_source_filtered(input, "test.jianpu", Some(&["Soprano".into()]))
+            .unwrap()
+            .svgs;
     assert_ne!(all[0], soprano_only[0]);
 }
 
@@ -129,10 +133,31 @@ fn render_svgs_from_source_smoke() {
         "1 2 3 4\n",
         "a b c d\n",
     );
-    let svgs = render_svgs_from_source(input, "test.jianpu").unwrap();
+    let svgs = render_svgs_from_source(input, "test.jianpu").unwrap().svgs;
     assert_eq!(svgs.len(), 1);
     assert!(svgs[0].starts_with("<svg"));
     assert!(svgs[0].ends_with("</svg>"));
+}
+
+#[test]
+fn lyrics_underflow_render_returns_svgs_and_non_empty_errors() {
+    let input = concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "[parts]\nMelody = notes lyrics\n\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b\n",
+    );
+    let output =
+        render_svgs_from_source(input, "test.jianpu").expect("underflow must not abort the render");
+    assert!(
+        !output.svgs.is_empty(),
+        "should produce at least one SVG page"
+    );
+    assert_eq!(output.errors.len(), 1, "should report one underflow error");
+    assert!(output.errors[0].message.contains("underflow"));
+    assert!(
+        output.svgs[0].contains(r#"data-testid="error-highlight""#),
+        "SVG should contain an error-highlight rect"
+    );
 }
 
 #[test]

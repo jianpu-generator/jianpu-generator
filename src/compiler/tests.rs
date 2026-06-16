@@ -428,6 +428,45 @@ fn three_measure_slur_emits_single_slur_span() {
 }
 
 #[test]
+fn lyrics_underflow_errors_propagate_to_measure_block() {
+    // 4 notes but only 2 syllables → block should have errors
+    let source = lyrics_doc("(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b\n");
+    let score = score_from(&source);
+    let result = compile(&score);
+    assert_eq!(result.blocks.len(), 1);
+    assert_eq!(result.blocks[0].errors.len(), 1);
+    assert!(result.blocks[0].errors[0].message.contains("underflow"));
+}
+
+#[test]
+fn matching_lyrics_produce_no_block_errors() {
+    let source = lyrics_doc("(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c d\n");
+    let score = score_from(&source);
+    let result = compile(&score);
+    assert!(result.blocks[0].errors.is_empty());
+}
+
+#[test]
+fn lyrics_underflow_in_first_measure_only() {
+    // Measure 1: 4 notes but only 2 syllables → underflow
+    // Measure 2: 4 notes and 4 syllables → no error
+    let source = lyrics_doc(concat!(
+        "(time=4/4 key=C4 bpm=120)\n",
+        "1 2 3 4\n",
+        "a b\n",
+        "\n",
+        "5 6 7 1\n",
+        "c d e f\n",
+    ));
+    let score = score_from(&source);
+    let result = compile(&score);
+    assert_eq!(result.blocks.len(), 2);
+    assert_eq!(result.blocks[0].errors.len(), 1);
+    assert!(result.blocks[0].errors[0].message.contains("underflow"));
+    assert!(result.blocks[1].errors.is_empty());
+}
+
+#[test]
 fn three_measure_slur_with_single_note_middle_measure() {
     // Bar 1: "1 2 3 (4" — slur opens on note 4 at col 12.
     // Bar 2: "5 6 7 1" — single measure with all notes in slur continuation.

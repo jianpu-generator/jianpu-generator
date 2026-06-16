@@ -105,8 +105,12 @@ fn ditto_parts_produce_smaller_svg_than_non_ditto() {
         "1 2 3 4\n",
         "5 6 7 1\n",
     );
-    let svgs_ditto = render_svgs_from_source(with_ditto, "test.jianpu").unwrap();
-    let svgs_no_ditto = render_svgs_from_source(without_ditto, "test.jianpu").unwrap();
+    let svgs_ditto = render_svgs_from_source(with_ditto, "test.jianpu")
+        .unwrap()
+        .svgs;
+    let svgs_no_ditto = render_svgs_from_source(without_ditto, "test.jianpu")
+        .unwrap()
+        .svgs;
     assert!(
         svgs_ditto[0].len() < svgs_no_ditto[0].len(),
         "SVG with ditto Alto should be smaller than SVG with explicit Alto notes"

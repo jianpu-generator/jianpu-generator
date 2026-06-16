@@ -6,10 +6,11 @@
 source (&str)
   → [parser]              → ParsedDocument
                              Raw event stream: notes, rests, chords, directives,
-                             lyrics syllables. No measure grouping yet.
+                             lyrics syllables per measure. No note measure grouping yet.
   → [grouper]             → Score
-                             Measures grouped; ditto rows resolved; parts organized
-                             into MultiPartMeasure slices.
+                             Notes grouped into measures; lyrics paired to each
+                             measure's lyric slots (tie-aware); ditto rows resolved;
+                             parts organized into MultiPartMeasure slices.
   → [compiler]            → CompileResult
                              Logical grid: each note/rest assigned to a column,
                              underlines computed, slur spans recorded.
@@ -37,7 +38,7 @@ source (&str)
 ### Grouper
 - Module: `src/grouper/`
 - Entry: `grouper::group(doc: ParsedDocument) -> Result<Score, JianPuError>`
-- Key types: `Score`, `MultiPartMeasure`, `PartRow` (Timed | Ditto), `PartSlice`, `Notes`, `NoteEvent`, `GroupedNote`, `GroupedRest`, `GroupedChordNote`
+- Key types: `Score`, `MultiPartMeasure`, `PartRow` (Timed | Ditto), `PartSlice`, `Notes`, `NoteEvent`, `GroupedNote`, `GroupedRest`, `GroupedChordNote`, `GroupedMeasure` (intermediate: notes + paired lyrics per measure)
 
 ### Compiler
 - Module: `src/compiler/`
@@ -77,7 +78,7 @@ source (&str)
 | **Underline** | A horizontal line drawn below note heads to indicate duration subdivision. `level=0` = half-beat, `level=1` = quarter-beat. |
 | **Octave Dot** | A dot drawn above or below a note head to shift its octave. Count = `octave.abs()`. |
 | **Note Dash** | A visual `-` drawn after a note head for each extra beat of duration. |
-| **Slur / Tie** | A curved arc connecting notes. Slurs connect different pitches; ties extend the same pitch. Both use the same `TieOrSlur` rendering. |
+| **Lyrics line** | One plain-text line per measure per `notes lyrics` part, tokenised into syllables and stored per measure (not as a global pool). |
 | **Slur Span** | The full logical extent of one slur/tie arc, possibly crossing measure or system boundaries (`SlurSpan`). |
 | **Decoration** | Measure-level metadata attached to a `MeasureBlock`: BPM, time signature, section label, bar number. |
 | **Row Label** | The part name displayed at the left margin of a system row. |

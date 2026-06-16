@@ -26,7 +26,8 @@ enum SlotAction {
 enum TrackAccumulator {
     Timed {
         events: Vec<Spanned<ScoreEvent>>,
-        syllables: Option<Vec<crate::ast::parsed::Syllable>>,
+        /// One syllable vec per measure for `NotesWithLyrics` parts.
+        syllables: Option<Vec<Vec<crate::ast::parsed::Syllable>>>,
         /// End byte offset of the lyrics line for each measure, in order.
         lyrics_line_ends: Vec<usize>,
     },
@@ -262,7 +263,7 @@ fn timed_events_mut(
 }
 
 type SyllablesAndLineEnds<'a> = (
-    &'a mut Vec<crate::ast::parsed::Syllable>,
+    &'a mut Vec<Vec<crate::ast::parsed::Syllable>>,
     &'a mut Vec<usize>,
 );
 
@@ -301,7 +302,7 @@ fn validate_lyrics_syllable_count(
         return Ok(());
     };
     let expected = expected_slots as usize;
-    if syllable_count == expected {
+    if syllable_count <= expected {
         return Ok(());
     }
     let part_label = ctx
@@ -332,6 +333,26 @@ fn process_lyrics_column_line(
         ));
     }
     if line == "_" {
+        let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
+            JianPuError::new(
+                line_span.clone(),
+                "internal error: track accumulator index out of range",
+            )
+        })?;
+        let Some(syllables_acc) = notes_syllables_mut(acc)? else {
+            let abbrev = ctx
+                .declarations
+                .get(track_index)
+                .map(|d| d.abbreviation.as_str())
+                .unwrap_or("unknown");
+            return Err(JianPuError::new(
+                line_span,
+                format!("lyrics line for '{abbrev}' has no matching notes track"),
+            ));
+        };
+        let (syllables_vec, line_ends) = syllables_acc;
+        syllables_vec.push(Vec::new());
+        line_ends.push(line_span.end);
         return Ok(());
     }
     let syllables = tokenize_lyrics(line);
@@ -354,7 +375,7 @@ fn process_lyrics_column_line(
         ));
     };
     let (syllables_vec, line_ends) = syllables_acc;
-    syllables_vec.extend(syllables);
+    syllables_vec.push(syllables);
     line_ends.push(line_span.end);
     Ok(())
 }
@@ -500,8 +521,8 @@ fn build_parse_result(
                 display_name: decl.display_name.clone(),
                 kind: decl.kind,
                 score: ParsedScore { events },
-                lyrics: syllables.map(|s| ParsedLyrics {
-                    syllables: s,
+                lyrics: syllables.map(|measure_syllables| ParsedLyrics {
+                    measure_syllables,
                     measure_ends: lyrics_line_ends,
                 }),
                 ditto_measures: ditto_measures_per_track

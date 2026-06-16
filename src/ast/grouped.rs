@@ -1,7 +1,7 @@
 use crate::ast::parsed::{
     Accidental, BassDegree, Extension, JianPuPitch, KeyChange, Syllable, TriadQuality,
 };
-use crate::error::Span;
+use crate::error::{JianPuError, Span};
 
 // ── Public final types ────────────────────────────────────────────────────────
 
@@ -49,6 +49,9 @@ pub struct MultiPartMeasure {
     /// Byte range of this measure's note events in the original source.
     /// Used to map editor cursor position to a measure index.
     pub source_span: Span,
+    /// Recoverable errors collected during grouping for this measure.
+    /// Non-empty triggers a red overlay in the SVG renderer.
+    pub errors: Vec<JianPuError>,
 }
 
 #[derive(Clone)]
@@ -134,14 +137,17 @@ pub(crate) struct GroupedScore {
 pub(crate) struct GroupedMeasure {
     pub(crate) notes: Notes,
     pub(crate) source_span: Span,
+    /// Tie-aware syllables paired to this measure's lyric slots. Set for
+    /// `NotesWithLyrics` parts during grouping.
+    pub(crate) paired_lyrics: Option<Vec<Syllable>>,
+    /// Recoverable lyrics underflow for this measure, if any.
+    pub(crate) lyrics_error: Option<JianPuError>,
 }
 
 pub(crate) struct GroupedPart {
     pub(crate) name: Option<String>,
     pub(crate) kind: crate::ast::parsed::PartKind,
     pub(crate) measures: Vec<GroupedMeasure>,
-    /// Flat lyrics list. `None` means no [lyrics] section was provided.
-    pub(crate) lyrics: Option<Vec<Syllable>>,
     /// Per-measure flag: true when every input line of this part in that
     /// measure was a `"` ditto (explicit or implicit trailing omission).
     pub(crate) ditto_measures: Vec<bool>,

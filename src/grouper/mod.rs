@@ -3,8 +3,8 @@ use crate::ast::grouped::{
     GroupedTrack, MeasureDirectives, Metadata, NoteEvent, Notes, Score, TimeSignature,
 };
 use crate::ast::parsed::{
-    Accidental, KeyChange, Note, NoteName, ParsedChordNote, ParsedDocument, ParsedNote, ParsedRest,
-    ParsedTimedTrack, ParsedTrack, PartKind, ScoreEvent, Syllable,
+    Accidental, JianPuPitch, KeyChange, Note, NoteName, ParsedChordNote, ParsedDocument,
+    ParsedNote, ParsedRest, ParsedTimedTrack, ParsedTrack, PartKind, ScoreEvent, Syllable,
 };
 use crate::combiner;
 use crate::error::{JianPuError, Span};
@@ -140,7 +140,6 @@ struct PartGrouper {
     current_beat: u32,
     capacity: u32,
     part_name: Option<String>,
-    part_lyrics: Option<Vec<Syllable>>,
     measure_span_start: Option<usize>,
     measure_span_end: usize,
 }
@@ -160,7 +159,6 @@ impl PartGrouper {
             current_beat: 0,
             capacity,
             part_name: Some(part.abbreviation.clone()),
-            part_lyrics: part.lyrics.as_ref().map(|l| l.syllables.clone()),
             measure_span_start: None,
             measure_span_end: 0,
         }
@@ -180,6 +178,8 @@ impl PartGrouper {
                 events: std::mem::take(&mut self.current_notes),
             },
             source_span,
+            paired_lyrics: None,
+            lyrics_error: None,
         });
         self.current_beat = 0;
         self.measure_span_start = None;
@@ -357,6 +357,8 @@ impl PartGrouper {
                     events: std::mem::take(&mut self.current_notes),
                 },
                 source_span,
+                paired_lyrics: None,
+                lyrics_error: None,
             });
         }
 
@@ -364,7 +366,6 @@ impl PartGrouper {
             name: self.part_name,
             kind: self.part_kind,
             measures: self.measures,
-            lyrics: self.part_lyrics,
             ditto_measures: Vec::new(),
             lyrics_ditto_measures: Vec::new(),
         }
@@ -379,6 +380,7 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, JianPuError>
         .as_ref()
         .map(|l| l.measure_ends.clone())
         .unwrap_or_default();
+    let measure_syllables = part.lyrics.as_ref().map(|l| l.measure_syllables.clone());
     let mut grouper = PartGrouper::new(&part);
     for spanned in part.score.events {
         grouper.process_event(spanned)?;
@@ -389,7 +391,103 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, JianPuError>
     for (measure, &lyrics_end) in grouped.measures.iter_mut().zip(lyrics_measure_ends.iter()) {
         measure.source_span.end = measure.source_span.end.max(lyrics_end);
     }
+    if matches!(part.kind, PartKind::NotesWithLyrics) {
+        attach_paired_lyrics(&mut grouped.measures, measure_syllables)?;
+    }
     Ok(grouped)
+}
+
+/// Pair each measure's raw lyric line to its note lyric slots (tie-aware).
+/// Underflow is recovered by padding empty syllables and recording an error.
+fn attach_paired_lyrics(
+    measures: &mut [GroupedMeasure],
+    measure_syllables: Option<Vec<Vec<Syllable>>>,
+) -> Result<(), JianPuError> {
+    let Some(measure_syllables) = measure_syllables else {
+        return Ok(());
+    };
+    if measure_syllables.len() != measures.len() {
+        return Err(JianPuError::new(
+            Span::new(0, 0),
+            format!(
+                "internal invariant: {} lyric lines but {} grouped measures",
+                measure_syllables.len(),
+                measures.len()
+            ),
+        ));
+    }
+    let mut prev_tie = false;
+    let mut prev_pitch: Option<JianPuPitch> = None;
+    for (measure, raw_syllables) in measures.iter_mut().zip(measure_syllables) {
+        let (paired, error, next_tie, next_pitch) = pair_lyrics_to_notes(
+            &measure.notes.events,
+            &raw_syllables,
+            &measure.source_span,
+            prev_tie,
+            prev_pitch,
+        );
+        measure.paired_lyrics = Some(paired);
+        measure.lyrics_error = error;
+        prev_tie = next_tie;
+        prev_pitch = next_pitch;
+    }
+    Ok(())
+}
+
+fn pair_lyrics_to_notes(
+    events: &[NoteEvent],
+    raw_syllables: &[Syllable],
+    source_span: &Span,
+    mut prev_tie: bool,
+    mut prev_pitch: Option<JianPuPitch>,
+) -> (
+    Vec<Syllable>,
+    Option<JianPuError>,
+    bool,
+    Option<JianPuPitch>,
+) {
+    let mut syllable_idx = 0;
+    let mut paired = Vec::new();
+    let mut underflow_detected = false;
+
+    for event in events {
+        match event {
+            NoteEvent::Note(note) => {
+                let is_continuation = prev_tie && prev_pitch.as_ref() == Some(&note.pitch);
+                if !is_continuation {
+                    if let Some(syllable) = raw_syllables.get(syllable_idx) {
+                        paired.push(syllable.clone());
+                        syllable_idx += 1;
+                    } else {
+                        paired.push(Syllable {
+                            text: String::new(),
+                            held: false,
+                        });
+                        underflow_detected = true;
+                    }
+                }
+                prev_tie = note.tie;
+                prev_pitch = Some(note.pitch.clone());
+            }
+            NoteEvent::Rest(_) | NoteEvent::Chord(_) => {
+                prev_tie = false;
+            }
+        }
+    }
+
+    let error = if underflow_detected {
+        Some(JianPuError::new(
+            source_span.clone(),
+            format!(
+                "lyrics underflow: ran out of syllables at syllable {} (fewer syllables than notes)",
+                syllable_idx
+            ),
+        ))
+    } else {
+        None
+    };
+
+    (paired, error, prev_tie, prev_pitch)
 }
 
 #[cfg(test)]

@@ -42,8 +42,13 @@ pub struct PartOut {
 #[serde(tag = "status", rename_all = "camelCase")]
 #[tsify(into_wasm_abi)]
 pub enum RenderResponse {
-    Ok { svgs: Vec<String> },
-    Err { diagnostics: Vec<DiagnosticOut> },
+    Ok {
+        svgs: Vec<String>,
+        diagnostics: Vec<DiagnosticOut>,
+    },
+    Err {
+        diagnostics: Vec<DiagnosticOut>,
+    },
 }
 
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]

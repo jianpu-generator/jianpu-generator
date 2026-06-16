@@ -274,9 +274,12 @@ fn lyrics_ditto_resolves_in_full_parse() {
     let tracks = parse(content, 0, &declarations).unwrap();
     let s_lyrics = notes_track(&tracks, "S").lyrics.as_ref().unwrap();
     let a_lyrics = notes_track(&tracks, "A").lyrics.as_ref().unwrap();
-    assert_eq!(s_lyrics.syllables.len(), 4);
-    assert_eq!(a_lyrics.syllables.len(), 4);
-    assert_eq!(s_lyrics.syllables[0].text, a_lyrics.syllables[0].text);
+    assert_eq!(s_lyrics.measure_syllables[0].len(), 4);
+    assert_eq!(a_lyrics.measure_syllables[0].len(), 4);
+    assert_eq!(
+        s_lyrics.measure_syllables[0][0].text,
+        a_lyrics.measure_syllables[0][0].text
+    );
 }
 
 #[test]

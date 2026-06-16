@@ -27,6 +27,25 @@ use ast::grouped::{PartRow, Score};
 use ast::parsed::PartKind;
 use error::JianPuError;
 
+/// Output of a successful render: SVG page strings and any recoverable errors.
+#[derive(Debug)]
+pub struct RenderOutput {
+    /// One SVG string per page.
+    pub svgs: Vec<String>,
+    /// Recoverable errors collected during grouping (e.g. lyrics underflow).
+    /// The SVGs already contain red overlays for erroneous measures; these
+    /// errors let callers surface them in editor diagnostics as well.
+    pub errors: Vec<JianPuError>,
+}
+
+fn collect_measure_errors(score: &Score) -> Vec<JianPuError> {
+    score
+        .measures
+        .iter()
+        .flat_map(|m| m.errors.iter().cloned())
+        .collect()
+}
+
 /// A part declared in the `[parts]` section.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PartInfo {
@@ -60,7 +79,7 @@ pub fn render_svgs(score: &Score) -> Vec<String> {
 }
 
 /// Parse, group, and render a `.jianpu` source string into SVG page strings.
-pub fn render_svgs_from_source(source: &str, filename: &str) -> Result<Vec<String>, JianPuError> {
+pub fn render_svgs_from_source(source: &str, filename: &str) -> Result<RenderOutput, JianPuError> {
     render_svgs_from_source_filtered(source, filename, None)
 }
 
@@ -86,7 +105,7 @@ pub fn render_svgs_from_source_filtered(
     source: &str,
     filename: &str,
     enabled_tracks: Option<&[String]>,
-) -> Result<Vec<String>, JianPuError> {
+) -> Result<RenderOutput, JianPuError> {
     render_svgs_from_source_filtered_with_lyrics(source, filename, enabled_tracks, None)
 }
 
@@ -100,11 +119,15 @@ pub fn render_svgs_from_source_filtered_with_lyrics(
     filename: &str,
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
-) -> Result<Vec<String>, JianPuError> {
+) -> Result<RenderOutput, JianPuError> {
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
-    Ok(render_svgs(&score))
+    let errors = collect_measure_errors(&score);
+    Ok(RenderOutput {
+        svgs: render_svgs(&score),
+        errors,
+    })
 }
 
 /// Parse, group, optionally filter tracks and lyrics, and render SVG page strings with a highlighted measure range.
@@ -120,10 +143,11 @@ pub fn render_svgs_with_highlight_range(
     end_index: usize,
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
-) -> Result<Vec<String>, JianPuError> {
+) -> Result<RenderOutput, JianPuError> {
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
+    let errors = collect_measure_errors(&score);
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
     let header = grid_layout::types::Header {
         title: score.metadata.title.clone(),
@@ -141,7 +165,10 @@ pub fn render_svgs_with_highlight_range(
     );
     let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32);
     let docs = renderer::new_renderer::render_new(&abs, &config);
-    Ok(serializer::serialize(&docs))
+    Ok(RenderOutput {
+        svgs: serializer::serialize(&docs),
+        errors,
+    })
 }
 
 /// Retain only parts whose names appear in `enabled_tracks`.

@@ -30,7 +30,14 @@ fn render_response(
     let tracks = enabled_tracks.as_deref();
     let lyrics = disabled_lyrics.as_deref();
     match render_svgs_from_source_filtered_with_lyrics(source, "input.jianpu", tracks, lyrics) {
-        Ok(svgs) => RenderResponse::Ok { svgs },
+        Ok(output) => RenderResponse::Ok {
+            svgs: output.svgs,
+            diagnostics: output
+                .errors
+                .into_iter()
+                .map(|e| diagnostic_from_error(source, e))
+                .collect(),
+        },
         Err(e) => RenderResponse::Err {
             diagnostics: vec![diagnostic_from_error(source, e)],
         },
@@ -54,7 +61,14 @@ fn render_with_highlight_range_response(
         tracks,
         lyrics,
     ) {
-        Ok(svgs) => RenderResponse::Ok { svgs },
+        Ok(output) => RenderResponse::Ok {
+            svgs: output.svgs,
+            diagnostics: output
+                .errors
+                .into_iter()
+                .map(|e| diagnostic_from_error(source, e))
+                .collect(),
+        },
         Err(e) => RenderResponse::Err {
             diagnostics: vec![diagnostic_from_error(source, e)],
         },

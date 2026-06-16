@@ -18,7 +18,7 @@ fn ok_response_has_svgs() {
     );
     let resp = render_response(input, None, None);
     match resp {
-        RenderResponse::Ok { svgs } => {
+        RenderResponse::Ok { svgs, .. } => {
             assert_eq!(svgs.len(), 1);
             assert!(svgs[0].starts_with("<svg"));
         }
@@ -74,11 +74,11 @@ fn render_with_disabled_lyrics_hides_lyrics_for_part() {
         "alt alt alt alt\n",
     );
     let all = match render_response(input, None, None) {
-        RenderResponse::Ok { svgs } => svgs,
+        RenderResponse::Ok { svgs, .. } => svgs,
         RenderResponse::Err { .. } => panic!("expected ok"),
     };
     let alto_lyrics_hidden = match render_response(input, None, Some(vec!["Alto".into()])) {
-        RenderResponse::Ok { svgs } => svgs,
+        RenderResponse::Ok { svgs, .. } => svgs,
         RenderResponse::Err { .. } => panic!("expected ok"),
     };
     assert!(all[0].contains("sop"));
@@ -104,11 +104,11 @@ fn render_with_enabled_tracks_filters_parts() {
         "5 6 7 1\n",
     );
     let all = match render_response(input, None, None) {
-        RenderResponse::Ok { svgs } => svgs,
+        RenderResponse::Ok { svgs, .. } => svgs,
         RenderResponse::Err { .. } => panic!("expected ok"),
     };
     let soprano_only = match render_response(input, Some(vec!["Soprano".into()]), None) {
-        RenderResponse::Ok { svgs } => svgs,
+        RenderResponse::Ok { svgs, .. } => svgs,
         RenderResponse::Err { .. } => panic!("expected ok"),
     };
     assert_ne!(all[0], soprano_only[0]);
@@ -134,7 +134,7 @@ fn demo_jianpu_renders() {
     let source = include_str!("../../../demo.jianpu");
     let resp = render_response(source, None, None);
     match resp {
-        RenderResponse::Ok { svgs } => {
+        RenderResponse::Ok { svgs, .. } => {
             assert!(
                 !svgs.is_empty(),
                 "demo.jianpu should render in the wasm path used by the web editor"

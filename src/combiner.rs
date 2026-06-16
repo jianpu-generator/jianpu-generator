@@ -1,8 +1,7 @@
 use crate::ast::grouped::{
-    GroupedMeasure, GroupedScore, GroupedTrack, Lyrics, MultiPartMeasure, NoteEvent, Notes,
-    PartRow, PartSlice,
+    GroupedScore, GroupedTrack, Lyrics, MultiPartMeasure, Notes, PartRow, PartSlice,
 };
-use crate::ast::parsed::{JianPuPitch, PartKind, Syllable};
+use crate::ast::parsed::PartKind;
 use crate::error::{JianPuError, Span};
 
 pub(crate) fn combine(grouped_score: &GroupedScore) -> Result<Vec<MultiPartMeasure>, JianPuError> {
@@ -17,23 +16,6 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> Result<Vec<MultiPartMeasu
         .unwrap_or(0);
     validate_measure_counts(&grouped_score.parts, expected_len)?;
 
-    let lyrics_per_track: Vec<Vec<Vec<Syllable>>> = grouped_score
-        .parts
-        .iter()
-        .map(|track| match track {
-            GroupedTrack::Timed(part) => match part.kind {
-                PartKind::NotesWithLyrics => part
-                    .lyrics
-                    .as_deref()
-                    .map(|lyrics| distribute_lyrics(&part.measures, lyrics))
-                    .unwrap_or_else(|| vec![vec![]; part.measures.len()]),
-                PartKind::Chord | PartKind::Notes => {
-                    vec![vec![]; part.measures.len()]
-                }
-            },
-        })
-        .collect();
-
     let mut combined = Vec::with_capacity(expected_len);
     for measure_idx in 0..expected_len {
         let directives = grouped_score
@@ -45,7 +27,7 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> Result<Vec<MultiPartMeasu
                     "internal invariant: measure_directives shorter than measure count",
                 )
             })?;
-        let part_rows = build_part_rows(&grouped_score.parts, measure_idx, &lyrics_per_track)?;
+        let part_rows = build_part_rows(&grouped_score.parts, measure_idx)?;
         let source_span = grouped_score
             .parts
             .iter()
@@ -64,6 +46,16 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> Result<Vec<MultiPartMeasu
             .unwrap_or_else(|| {
                 unreachable!("combiner: source_span missing for measure {measure_idx}")
             });
+        let measure_errors: Vec<JianPuError> = grouped_score
+            .parts
+            .iter()
+            .filter_map(|track| match track {
+                GroupedTrack::Timed(part) => part
+                    .measures
+                    .get(measure_idx)
+                    .and_then(|m| m.lyrics_error.clone()),
+            })
+            .collect();
         combined.push(MultiPartMeasure {
             time_signature: directives.time_signature.clone(),
             bpm: directives.bpm,
@@ -71,6 +63,7 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> Result<Vec<MultiPartMeasu
             label: directives.label.clone(),
             parts: part_rows,
             source_span,
+            errors: measure_errors,
         });
     }
 
@@ -100,11 +93,10 @@ fn validate_measure_counts(
 fn build_part_rows(
     grouped_tracks: &[GroupedTrack],
     measure_idx: usize,
-    lyrics_per_track: &[Vec<Vec<Syllable>>],
 ) -> Result<Vec<PartRow>, JianPuError> {
     let mut part_rows = Vec::new();
 
-    for (track_idx, track) in grouped_tracks.iter().enumerate() {
+    for track in grouped_tracks.iter() {
         match track {
             GroupedTrack::Timed(part) => {
                 let measure = part.measures.get(measure_idx).ok_or_else(|| {
@@ -113,18 +105,11 @@ fn build_part_rows(
                         "internal invariant: timed part measure missing",
                     )
                 })?;
-                let syllables = lyrics_per_track
-                    .get(track_idx)
-                    .and_then(|lyrics| lyrics.get(measure_idx))
-                    .ok_or_else(|| {
-                        JianPuError::new(
-                            Span::new(0, 0),
-                            "internal invariant: lyrics distribution missing",
-                        )
-                    })?
-                    .clone();
                 let lyrics = match part.kind {
-                    PartKind::NotesWithLyrics => Some(Lyrics { syllables }),
+                    PartKind::NotesWithLyrics => measure
+                        .paired_lyrics
+                        .clone()
+                        .map(|syllables| Lyrics { syllables }),
                     PartKind::Chord | PartKind::Notes => None,
                 };
                 let mut slice = PartSlice {
@@ -162,37 +147,6 @@ fn build_part_rows(
     }
 
     Ok(part_rows)
-}
-
-fn distribute_lyrics(measures: &[GroupedMeasure], lyrics: &[Syllable]) -> Vec<Vec<Syllable>> {
-    let mut syllable_idx = 0;
-    let mut prev_tie = false;
-    let mut prev_pitch: Option<JianPuPitch> = None;
-
-    let mut result = Vec::with_capacity(measures.len());
-    for measure in measures {
-        let mut measure_syllables = Vec::new();
-        for event in &measure.notes.events {
-            match event {
-                NoteEvent::Note(note) => {
-                    let is_continuation = prev_tie && prev_pitch.as_ref() == Some(&note.pitch);
-                    if !is_continuation {
-                        if let Some(syllable) = lyrics.get(syllable_idx) {
-                            measure_syllables.push(syllable.clone());
-                            syllable_idx += 1;
-                        }
-                    }
-                    prev_tie = note.tie;
-                    prev_pitch = Some(note.pitch.clone());
-                }
-                NoteEvent::Rest(_) | NoteEvent::Chord(_) => {
-                    prev_tie = false;
-                }
-            }
-        }
-        result.push(measure_syllables);
-    }
-    result
 }
 
 #[cfg(test)]

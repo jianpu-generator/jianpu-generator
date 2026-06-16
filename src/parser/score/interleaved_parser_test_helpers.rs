@@ -46,3 +46,17 @@ pub(super) fn notes_track<'a>(tracks: &'a [ParsedTrack], abbrev: &str) -> &'a Pa
 pub(super) fn chord_track<'a>(tracks: &'a [ParsedTrack], abbrev: &str) -> &'a ParsedTimedTrack {
     timed_track(tracks, abbrev)
 }
+
+pub(super) fn total_lyrics_syllables(track: &ParsedTimedTrack) -> usize {
+    track
+        .lyrics
+        .as_ref()
+        .map(|lyrics| {
+            lyrics
+                .measure_syllables
+                .iter()
+                .map(|measure| measure.len())
+                .sum()
+        })
+        .unwrap_or(0)
+}

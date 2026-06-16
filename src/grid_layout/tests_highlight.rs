@@ -25,6 +25,7 @@ fn simple_block(col_count: u32) -> MeasureBlock {
             elements,
         }],
         decorations: vec![],
+        errors: vec![],
     }
 }
 
@@ -133,4 +134,72 @@ fn range_spanning_two_pages_reports_correct_page_indices() {
     let (second_page, _) = iter.next().expect("second highlight");
     assert_eq!(first_page, 0);
     assert_eq!(second_page, 1);
+}
+
+#[test]
+fn erroneous_measure_produces_error_highlight() {
+    use crate::error::{JianPuError, Span};
+
+    let erroneous_block = MeasureBlock {
+        rows: simple_block(4).rows,
+        decorations: vec![],
+        errors: vec![JianPuError::new(Span::new(0, 1), "lyrics underflow")],
+    };
+    let header = Header {
+        title: "T".into(),
+        subtitle: None,
+        author: "A".into(),
+    };
+    let config = crate::render_config::RenderConfig {
+        row_height: 24,
+        max_columns: 28,
+        label_width: 40,
+        note_number_width: 8,
+    };
+    let pages = crate::grid_layout::layout(
+        &crate::compiler::types::CompileResult {
+            blocks: vec![erroneous_block],
+            slur_spans: vec![],
+        },
+        &config,
+        &header,
+        595.0,
+        842.0,
+        None,
+    );
+    assert!(!pages.is_empty());
+    assert_eq!(
+        pages[0].error_highlights.len(),
+        1,
+        "erroneous measure should produce one error highlight"
+    );
+}
+
+#[test]
+fn non_erroneous_measure_produces_no_error_highlight() {
+    let block = simple_block(4);
+    let header = Header {
+        title: "T".into(),
+        subtitle: None,
+        author: "A".into(),
+    };
+    let config = crate::render_config::RenderConfig {
+        row_height: 24,
+        max_columns: 28,
+        label_width: 40,
+        note_number_width: 8,
+    };
+    let pages = crate::grid_layout::layout(
+        &crate::compiler::types::CompileResult {
+            blocks: vec![block],
+            slur_spans: vec![],
+        },
+        &config,
+        &header,
+        595.0,
+        842.0,
+        None,
+    );
+    assert!(!pages.is_empty());
+    assert!(pages[0].error_highlights.is_empty());
 }

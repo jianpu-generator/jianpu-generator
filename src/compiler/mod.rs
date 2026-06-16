@@ -122,7 +122,11 @@ fn compile_measure(
             row.label = "[ALL]".to_string();
         }
     }
-    MeasureBlock { rows, decorations }
+    MeasureBlock {
+        rows,
+        decorations,
+        errors: measure.errors.clone(),
+    }
 }
 
 fn collect_decorations(measure: &MultiPartMeasure, bar_number: usize) -> Vec<Decoration> {

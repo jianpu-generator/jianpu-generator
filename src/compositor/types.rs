@@ -52,6 +52,11 @@ pub enum AbsoluteContent {
         width: f32,
         height: f32,
     },
+    /// Red semi-transparent overlay drawn over a measure with recoverable errors.
+    ErrorHighlight {
+        width: f32,
+        height: f32,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

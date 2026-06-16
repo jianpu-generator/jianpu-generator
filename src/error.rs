@@ -40,7 +40,7 @@ impl ErrorKind {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct JianPuError {
     pub span: Span,
     pub message: String,

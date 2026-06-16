@@ -457,6 +457,7 @@ pub(crate) fn make_header_rows(header: &Header, base: f32) -> Vec<GridRow> {
 }
 
 use super::expand::make_footer_row;
+use super::highlight::{compute_error_highlight_infos, measure_highlights_on_page};
 
 fn system_total_height(system: &[MeasureBlock], base: f32) -> f32 {
     let Some(first) = system.first() else {
@@ -558,6 +559,8 @@ pub fn layout(
             })
             .unwrap_or_default();
 
+    let error_highlight_infos = compute_error_highlight_infos(blocks, &page_systems, header, base);
+
     let total_pages = page_systems.len() as u32;
     let mut abs_system_index_start: usize = 0;
     let mut pages: Vec<GridPage> = Vec::new();
@@ -572,16 +575,14 @@ pub fn layout(
             remaining_height,
         ));
         abs_system_index_start += page_sys.len();
-        let measure_highlights: Vec<_> = highlight_infos
-            .iter()
-            .filter(|(p, _)| *p == page_idx)
-            .map(|(_, h)| h.clone())
-            .collect();
+        let measure_highlights = measure_highlights_on_page(&highlight_infos, page_idx);
+        let error_highlights = measure_highlights_on_page(&error_highlight_infos, page_idx);
         pages.push(GridPage {
             width_pt: page_width_pt,
             height_pt: page_height_pt,
             rows,
             measure_highlights,
+            error_highlights,
         });
     }
     pages

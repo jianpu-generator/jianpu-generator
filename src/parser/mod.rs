@@ -98,7 +98,7 @@ mod tests {
         assert_eq!(doc.tracks.len(), 1);
         let notes = notes_track(&doc);
         assert_eq!(notes.score.events.len(), 7);
-        assert_eq!(notes.lyrics.as_ref().unwrap().syllables.len(), 4);
+        assert_eq!(notes.lyrics.as_ref().unwrap().measure_syllables[0].len(), 4);
     }
 
     #[test]

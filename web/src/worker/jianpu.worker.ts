@@ -70,7 +70,7 @@ export type WorkerRequest =
 
 export type WorkerResponse =
   | { type: 'ready'; audioAvailable: boolean; pdfAvailable: boolean }
-  | { type: 'ok'; id: number; svgs: string[] }
+  | { type: 'ok'; id: number; svgs: string[]; diagnostics: Diagnostic[] }
   | { type: 'audio'; id: number; wav: ArrayBuffer }
   | { type: 'audioErr'; id: number }
   | { type: 'err'; id: number; diagnostics: Diagnostic[] }
@@ -338,6 +338,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       type: 'ok',
       id: msg.id,
       svgs: result.svgs,
+      diagnostics: result.diagnostics,
     } satisfies WorkerResponse)
     return
   }

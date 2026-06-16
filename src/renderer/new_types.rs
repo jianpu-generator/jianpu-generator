@@ -43,4 +43,9 @@ pub enum SvgKind {
         width: f32,
         height: f32,
     },
+    /// Red semi-transparent overlay for erroneous measures (15% opacity).
+    ErrorRect {
+        width: f32,
+        height: f32,
+    },
 }

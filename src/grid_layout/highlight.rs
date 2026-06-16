@@ -83,7 +83,6 @@ pub(crate) fn compute_measure_highlights_for_range(
     results
 }
 
-#[cfg(test)]
 pub(crate) fn compute_measure_highlight_location(
     page_systems: &[Vec<Vec<MeasureBlock>>],
     highlighted_measure_index: usize,
@@ -128,4 +127,31 @@ pub(crate) fn compute_measure_highlight_location(
         }
     }
     None
+}
+
+pub(crate) fn compute_error_highlight_infos(
+    blocks: &[MeasureBlock],
+    page_systems: &[Vec<Vec<MeasureBlock>>],
+    header: &Header,
+    base: f32,
+) -> Vec<(usize, MeasureHighlight)> {
+    blocks
+        .iter()
+        .enumerate()
+        .filter(|(_, block)| !block.errors.is_empty())
+        .filter_map(|(measure_idx, _)| {
+            compute_measure_highlight_location(page_systems, measure_idx, header, base)
+        })
+        .collect()
+}
+
+pub(crate) fn measure_highlights_on_page(
+    highlight_infos: &[(usize, MeasureHighlight)],
+    page_idx: usize,
+) -> Vec<MeasureHighlight> {
+    highlight_infos
+        .iter()
+        .filter(|(p, _)| *p == page_idx)
+        .map(|(_, h)| h.clone())
+        .collect()
 }

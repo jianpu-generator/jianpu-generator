@@ -1,9 +1,19 @@
 use crate::ast::parsed::JianPuPitch;
+use crate::error::JianPuError;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct MeasureBlock {
     pub rows: Vec<MeasureRow>,
     pub decorations: Vec<Decoration>,
+    /// Errors collected during grouping for this measure.
+    /// Non-empty when the measure's source had recoverable parse errors.
+    pub errors: Vec<JianPuError>,
+}
+
+impl PartialEq for MeasureBlock {
+    fn eq(&self, other: &Self) -> bool {
+        self.rows == other.rows && self.decorations == other.decorations
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

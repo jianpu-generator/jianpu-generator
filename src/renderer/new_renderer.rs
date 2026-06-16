@@ -100,6 +100,15 @@ fn render_element(
                 height: *height,
             },
         }],
+        AbsoluteContent::ErrorHighlight { width, height } => vec![SvgElement {
+            x: elem.x,
+            y: elem.y,
+            variant: "error-highlight",
+            kind: SvgKind::ErrorRect {
+                width: *width,
+                height: *height,
+            },
+        }],
     }
 }
 

@@ -271,7 +271,7 @@ export function useJianpuWorker(
         if (msg.id !== latestRenderIdRef.current) return
         setRendering(false)
         setSvgs(msg.svgs)
-        setDiagnostics([])
+        setDiagnostics(msg.diagnostics)
         return
       }
 

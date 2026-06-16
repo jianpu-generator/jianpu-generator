@@ -13,6 +13,7 @@ fn single_row_page(element: GridElement) -> GridPage {
             elements: vec![element],
         }],
         measure_highlights: vec![],
+        error_highlights: vec![],
     }
 }
 
@@ -77,6 +78,7 @@ fn valign_top_places_y_at_row_top() {
             },
         ],
         measure_highlights: vec![],
+        error_highlights: vec![],
     };
     let abs = resolve(&[page], 12.0);
     let line = abs[0]
@@ -162,6 +164,7 @@ fn measure_highlight_produces_prepended_rect_element() {
             column_start: 4,
             column_end: 6,
         }],
+        error_highlights: vec![],
     };
     let abs = resolve(&[page], 12.0);
     assert!(!abs[0].elements.is_empty(), "should have elements");
@@ -180,6 +183,40 @@ fn measure_highlight_produces_prepended_rect_element() {
 }
 
 #[test]
+fn error_highlight_resolves_to_absolute_error_highlight() {
+    use crate::compositor::types::{AbsoluteContent, AbsolutePage};
+    use crate::grid_layout::types::{GridPage, GridRow, MeasureHighlight};
+
+    let page = GridPage {
+        width_pt: 595.0,
+        height_pt: 842.0,
+        rows: vec![GridRow {
+            height_pt: 24.0,
+            column_count: 10,
+            elements: vec![],
+        }],
+        measure_highlights: vec![],
+        error_highlights: vec![MeasureHighlight {
+            row_start: 0,
+            row_end: 0,
+            column_start: 0,
+            column_end: 5,
+        }],
+    };
+    let abs_pages: Vec<AbsolutePage> = crate::coordinate_resolver::resolve(&[page], 8.0);
+    let error_elements: Vec<_> = abs_pages[0]
+        .elements
+        .iter()
+        .filter(|e| matches!(e.content, AbsoluteContent::ErrorHighlight { .. }))
+        .collect();
+    assert_eq!(
+        error_elements.len(),
+        1,
+        "expected one ErrorHighlight element"
+    );
+}
+
+#[test]
 fn page_with_no_highlight_produces_no_extra_element() {
     let page = crate::grid_layout::types::GridPage {
         width_pt: 595.0,
@@ -190,6 +227,7 @@ fn page_with_no_highlight_produces_no_extra_element() {
             elements: vec![],
         }],
         measure_highlights: vec![],
+        error_highlights: vec![],
     };
     let abs = resolve(&[page], 12.0);
     assert!(abs[0].elements.is_empty());

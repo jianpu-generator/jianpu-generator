@@ -93,6 +93,9 @@ fn resolve_page(page: &GridPage, note_number_width: f32) -> AbsolutePage {
         &row_tops,
         usable_width,
     );
+    let error_elements =
+        resolve_error_highlights(&page.error_highlights, &page.rows, &row_tops, usable_width);
+    highlight_elements.extend(error_elements);
     highlight_elements.extend(elements);
 
     AbsolutePage {
@@ -139,6 +142,39 @@ fn resolve_measure_highlights(
     highlights
         .iter()
         .filter_map(|h| resolve_single_measure_highlight(h, rows, row_tops, usable_width))
+        .collect()
+}
+
+fn resolve_error_highlights(
+    highlights: &[crate::grid_layout::types::MeasureHighlight],
+    rows: &[crate::grid_layout::types::GridRow],
+    row_tops: &[f32],
+    usable_width: f32,
+) -> Vec<AbsoluteElement> {
+    highlights
+        .iter()
+        .filter_map(|h| {
+            let start_row = rows.get(h.row_start)?;
+            let highlight_y = row_tops.get(h.row_start)?;
+            if h.row_end >= rows.len() {
+                return None;
+            }
+            let col_width = start_row.column_width_pt(usable_width);
+            let highlight_x = PAGE_MARGIN + h.column_start as f32 * col_width;
+            let highlight_width = (h.column_end - h.column_start) as f32 * col_width;
+            let highlight_height = rows
+                .get(h.row_start..=h.row_end)
+                .map(|slice| slice.iter().map(|row| row.height_pt).sum())
+                .unwrap_or(0.0);
+            Some(AbsoluteElement {
+                x: highlight_x,
+                y: *highlight_y,
+                content: AbsoluteContent::ErrorHighlight {
+                    width: highlight_width,
+                    height: highlight_height,
+                },
+            })
+        })
         .collect()
 }
 

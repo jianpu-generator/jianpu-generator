@@ -1,7 +1,7 @@
 use super::*;
 use crate::ast::parsed::{Accidental, JianPuPitch, ParsedChordNote, ScoreEvent, TriadQuality};
 
-use super::test_helpers::{chord_track, decl, notes_track, parse};
+use super::test_helpers::{chord_track, decl, notes_track, parse, total_lyrics_syllables};
 
 #[test]
 fn chord_line_parses_spaced_slur_group() {
@@ -76,7 +76,7 @@ fn single_part_with_lyrics() {
     assert_eq!(tracks.len(), 1);
     let notes = notes_track(&tracks, "");
     assert!(notes.lyrics.is_some());
-    assert_eq!(notes.lyrics.as_ref().unwrap().syllables.len(), 4);
+    assert_eq!(notes.lyrics.as_ref().unwrap().measure_syllables[0].len(), 4);
 }
 
 #[test]
@@ -117,27 +117,25 @@ fn underscore_on_lyrics_line_means_no_lyrics_for_that_bar() {
     );
     let declarations = vec![decl("", PartKind::NotesWithLyrics)];
     let tracks = parse(content, 0, &declarations).unwrap();
+    let lyrics = notes_track(&tracks, "").lyrics.as_ref().unwrap();
+    assert_eq!(lyrics.measure_syllables.len(), 2);
+    assert_eq!(lyrics.measure_syllables[0].len(), 4);
+    assert!(lyrics.measure_syllables[1].is_empty());
+}
+
+#[test]
+fn allows_too_few_lyrics_syllables_for_notes() {
+    let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c\n";
+    let declarations = vec![decl("", PartKind::NotesWithLyrics)];
+    let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(
         notes_track(&tracks, "")
             .lyrics
             .as_ref()
             .unwrap()
-            .syllables
+            .measure_syllables[0]
             .len(),
-        4
-    );
-}
-
-#[test]
-fn rejects_too_few_lyrics_syllables_for_notes() {
-    let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c\n";
-    let declarations = vec![decl("", PartKind::NotesWithLyrics)];
-    let err = parse(content, 0, &declarations).unwrap_err();
-    assert!(
-        err.message
-            .contains("lyrics has 3 syllables but notes need 4"),
-        "got: {}",
-        err.message
+        3
     );
 }
 
@@ -192,7 +190,7 @@ fn tied_notes_share_one_lyric_slot_in_bar() {
             .lyrics
             .as_ref()
             .unwrap()
-            .syllables
+            .measure_syllables[0]
             .len(),
         3
     );
@@ -208,15 +206,10 @@ fn cross_measure_tie_continuation_needs_fewer_lyrics() {
     );
     let declarations = vec![decl("", PartKind::NotesWithLyrics)];
     let tracks = parse(content, 0, &declarations).unwrap();
-    assert_eq!(
-        notes_track(&tracks, "")
-            .lyrics
-            .as_ref()
-            .unwrap()
-            .syllables
-            .len(),
-        1
-    );
+    let lyrics = notes_track(&tracks, "").lyrics.as_ref().unwrap();
+    assert_eq!(lyrics.measure_syllables.len(), 2);
+    assert_eq!(lyrics.measure_syllables[0].len(), 1);
+    assert!(lyrics.measure_syllables[1].is_empty());
 }
 
 #[test]
@@ -237,7 +230,7 @@ fn spaced_open_group_cross_measure_lyrics() {
     ];
     let tracks = parse(content, 0, &declarations).unwrap();
     let s1 = notes_track(&tracks, "S1");
-    assert_eq!(s1.lyrics.as_ref().unwrap().syllables.len(), 5);
+    assert_eq!(total_lyrics_syllables(s1), 5);
 }
 
 #[test]
@@ -277,7 +270,10 @@ fn partial_measure_still_needs_ditto_before_diverging_middle_columns() {
     ];
     let tracks = parse(content, 0, &declarations).unwrap();
     let s1 = notes_track(&tracks, "S1");
-    assert_eq!(s1.lyrics.as_ref().unwrap().syllables[0].text, "alto");
+    assert_eq!(
+        s1.lyrics.as_ref().unwrap().measure_syllables[0][0].text,
+        "alto"
+    );
 }
 
 #[test]
@@ -310,11 +306,11 @@ fn implicit_trailing_ditto_matches_explicit_ditto() {
     assert_eq!(explicit_a.score.events.len(), implicit_a.score.events.len());
     assert_eq!(explicit_b.score.events.len(), implicit_b.score.events.len());
     assert_eq!(
-        explicit_a.lyrics.as_ref().unwrap().syllables.len(),
-        implicit_a.lyrics.as_ref().unwrap().syllables.len()
+        explicit_a.lyrics.as_ref().unwrap().measure_syllables,
+        implicit_a.lyrics.as_ref().unwrap().measure_syllables
     );
     assert_eq!(
-        explicit_b.lyrics.as_ref().unwrap().syllables.len(),
-        implicit_b.lyrics.as_ref().unwrap().syllables.len()
+        explicit_b.lyrics.as_ref().unwrap().measure_syllables,
+        implicit_b.lyrics.as_ref().unwrap().measure_syllables
     );
 }

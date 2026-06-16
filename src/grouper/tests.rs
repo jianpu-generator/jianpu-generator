@@ -363,3 +363,56 @@ fn second_measure_span_covers_its_first_note() {
         span.start,
     );
 }
+
+#[test]
+fn lyrics_underflow_recovers_with_error_on_measure() {
+    // 4 notes but only 2 syllables → should not Err, should attach error to measure
+    let input = concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "[parts]\nMelody = notes lyrics\n\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b\n",
+    );
+    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let score = group(doc).expect("underflow must not abort grouping");
+    assert_eq!(score.measures.len(), 1);
+    assert_eq!(score.measures[0].errors.len(), 1);
+    assert!(
+        score.measures[0].errors[0].message.contains("underflow"),
+        "error message should mention underflow, got: {}",
+        score.measures[0].errors[0].message
+    );
+}
+
+#[test]
+fn measures_without_lyrics_underflow_have_no_errors() {
+    let input = concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "[parts]\nMelody = notes lyrics\n\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c d\n",
+    );
+    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let score = group(doc).unwrap();
+    assert!(score.measures[0].errors.is_empty());
+}
+
+#[test]
+fn cross_measure_tie_closing_note_does_not_consume_syllable() {
+    // The closing note of a cross-measure same-pitch tie (5) is a tie continuation
+    // and must not consume a lyric syllable. Measure 2 has notes 5 (continuation),
+    // 6, 7, 0 (rest), so "hi ha" is exactly sufficient — no underflow.
+    let input = concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "[parts]\nMelody = notes lyrics\n\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n",
+        "1 2 3 (5\nfa fo fi fu\n\n",
+        "5) 6 7 0\nhi ha\n",
+    );
+    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let score = group(doc).unwrap();
+    assert_eq!(score.measures.len(), 2);
+    assert!(
+        score.measures[1].errors.is_empty(),
+        "measure 2 must have no underflow error, got: {:?}",
+        score.measures[1].errors
+    );
+}

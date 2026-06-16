@@ -30,10 +30,11 @@ fn read_web_default_source() -> String {
 #[test]
 fn demo_jianpu_parses_and_renders() {
     let source = include_str!("../demo.jianpu");
-    let svgs =
-        jianpu_generator::render_svgs_from_source(source, "demo.jianpu").unwrap_or_else(|e| {
+    let svgs = jianpu_generator::render_svgs_from_source(source, "demo.jianpu")
+        .unwrap_or_else(|e| {
             panic!("demo.jianpu failed to parse/render: {e}");
-        });
+        })
+        .svgs;
     assert!(
         !svgs.is_empty(),
         "demo.jianpu should produce at least one SVG page"

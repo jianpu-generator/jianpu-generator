@@ -90,6 +90,12 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
                 el.x, el.y, width, height
             ));
         }
+        SvgKind::ErrorRect { width, height } => {
+            out.push_str(&format!(
+                r#"<rect data-testid="error-highlight" x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" fill="rgba(255,0,0,0.15)" rx="2"/>"#,
+                el.x, el.y, width, height
+            ));
+        }
     }
 }
 
@@ -295,5 +301,32 @@ mod tests {
             "should have amber fill"
         );
         assert!(result[0].contains(r#"rx="2""#), "should have corner radius");
+    }
+
+    #[test]
+    fn error_rect_serializes_with_red_fill() {
+        let doc = SvgDocument {
+            width_pt: 595.0,
+            height_pt: 842.0,
+            elements: vec![SvgElement {
+                x: 10.0,
+                y: 20.0,
+                variant: "error-highlight",
+                kind: SvgKind::ErrorRect {
+                    width: 50.0,
+                    height: 30.0,
+                },
+            }],
+        };
+        let result = serialize(&[doc]);
+        assert!(
+            result[0].contains(r#"data-testid="error-highlight""#),
+            "should have error-highlight testid"
+        );
+        assert!(
+            result[0].contains("rgba(255,0,0,0.15)"),
+            "should have red fill at 15% opacity, got: {}",
+            result[0]
+        );
     }
 }
