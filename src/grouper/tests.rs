@@ -411,6 +411,36 @@ fn lyrics_underflow_recovers_with_error_on_measure() {
 }
 
 #[test]
+fn lyrics_underflow_error_span_covers_lyrics_line_not_notes() {
+    // 4 notes but only 2 syllables → underflow error span must point at the
+    // lyrics line ("a b"), not the notes line ("1 2 3 4").
+    let input = concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "[parts]\nMelody = notes lyrics\n\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b\n",
+    );
+    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let score = group(doc).expect("underflow must not abort grouping");
+
+    let lyrics_line_offset = input.find("a b").unwrap();
+    let notes_line_offset = input.find("1 2 3 4").unwrap();
+
+    let error = &score.measures[0].errors[0];
+    assert!(
+        error.span.start >= lyrics_line_offset,
+        "underflow span should start at the lyrics line (offset {}), not before it (notes are at {}); got span.start={}",
+        lyrics_line_offset,
+        notes_line_offset,
+        error.span.start,
+    );
+    assert!(
+        error.span.end >= lyrics_line_offset,
+        "underflow span should cover the lyrics line; got span.end={}",
+        error.span.end,
+    );
+}
+
+#[test]
 fn measures_without_lyrics_underflow_have_no_errors() {
     let input = concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",

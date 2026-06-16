@@ -391,6 +391,11 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, JianPuError>
         .as_ref()
         .map(|l| l.measure_ends.clone())
         .unwrap_or_default();
+    let lyrics_measure_starts: Vec<usize> = part
+        .lyrics
+        .as_ref()
+        .map(|l| l.measure_starts.clone())
+        .unwrap_or_default();
     let measure_syllables = part.lyrics.as_ref().map(|l| l.measure_syllables.clone());
     let per_measure_beat_errors = part.per_measure_beat_errors.clone();
     let mut grouper = PartGrouper::new(&part);
@@ -413,7 +418,17 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, JianPuError>
         }
     }
     if matches!(part.kind, PartKind::NotesWithLyrics) {
-        attach_paired_lyrics(&mut grouped.measures, measure_syllables, &part.abbreviation)?;
+        let lyrics_spans: Vec<Span> = lyrics_measure_starts
+            .iter()
+            .zip(lyrics_measure_ends.iter())
+            .map(|(&start, &end)| Span::new(start, end))
+            .collect();
+        attach_paired_lyrics(
+            &mut grouped.measures,
+            measure_syllables,
+            lyrics_spans,
+            &part.abbreviation,
+        )?;
     }
     Ok(grouped)
 }
@@ -423,6 +438,7 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, JianPuError>
 fn attach_paired_lyrics(
     measures: &mut [GroupedMeasure],
     measure_syllables: Option<Vec<Vec<Syllable>>>,
+    lyrics_spans: Vec<Span>,
     part_name: &str,
 ) -> Result<(), JianPuError> {
     let Some(measure_syllables) = measure_syllables else {
@@ -440,11 +456,13 @@ fn attach_paired_lyrics(
     }
     let mut prev_tie = false;
     let mut prev_pitch: Option<JianPuPitch> = None;
-    for (measure, raw_syllables) in measures.iter_mut().zip(measure_syllables) {
+    for ((measure, raw_syllables), lyrics_span) in
+        measures.iter_mut().zip(measure_syllables).zip(lyrics_spans)
+    {
         let (paired, error, next_tie, next_pitch) = pair_lyrics_to_notes(
             &measure.notes.events,
             &raw_syllables,
-            &measure.source_span,
+            &lyrics_span,
             prev_tie,
             prev_pitch,
             part_name,

@@ -9,6 +9,8 @@ pub struct ParsedScore {
 pub struct ParsedLyrics {
     /// One syllable vec per measure, in score order. Empty inner vec = `_` (no lyrics).
     pub measure_syllables: Vec<Vec<Syllable>>,
+    /// Byte offset of the start of the lyrics line for each measure, in order.
+    pub measure_starts: Vec<usize>,
     /// Byte offset of the end of the lyrics line for each measure, in order.
     /// Used to extend the measure's source span to cover the lyrics line.
     pub measure_ends: Vec<usize>,

@@ -28,6 +28,8 @@ enum TrackAccumulator {
         events: Vec<Spanned<ScoreEvent>>,
         /// One syllable vec per measure for `NotesWithLyrics` parts.
         syllables: Option<Vec<Vec<crate::ast::parsed::Syllable>>>,
+        /// Start byte offset of the lyrics line for each measure, in order.
+        lyrics_line_starts: Vec<usize>,
         /// End byte offset of the lyrics line for each measure, in order.
         lyrics_line_ends: Vec<usize>,
         /// Per-measure beat-overflow error (None = no overflow for that measure).
@@ -201,6 +203,7 @@ fn init_accumulators(declarations: &[PartDecl]) -> Vec<TrackAccumulator> {
             } else {
                 None
             },
+            lyrics_line_starts: Vec::new(),
             lyrics_line_ends: Vec::new(),
             per_measure_beat_errors: Vec::new(),
         })
@@ -265,20 +268,24 @@ fn timed_events_mut(
     }
 }
 
-type SyllablesAndLineEnds<'a> = (
+type SyllablesAndLineSpans<'a> = (
     &'a mut Vec<Vec<crate::ast::parsed::Syllable>>,
+    &'a mut Vec<usize>,
     &'a mut Vec<usize>,
 );
 
 fn notes_syllables_mut(
     acc: &mut TrackAccumulator,
-) -> Result<Option<SyllablesAndLineEnds<'_>>, JianPuError> {
+) -> Result<Option<SyllablesAndLineSpans<'_>>, JianPuError> {
     match acc {
         TrackAccumulator::Timed {
             syllables,
+            lyrics_line_starts,
             lyrics_line_ends,
             ..
-        } => Ok(syllables.as_mut().map(|s| (s, lyrics_line_ends))),
+        } => Ok(syllables
+            .as_mut()
+            .map(|s| (s, lyrics_line_starts, lyrics_line_ends))),
     }
 }
 
@@ -323,8 +330,9 @@ fn process_lyrics_column_line(
                 format!("lyrics line for '{abbrev}' has no matching notes track"),
             ));
         };
-        let (syllables_vec, line_ends) = syllables_acc;
+        let (syllables_vec, line_starts, line_ends) = syllables_acc;
         syllables_vec.push(Vec::new());
+        line_starts.push(line_span.start);
         line_ends.push(line_span.end);
         return Ok(());
     }
@@ -346,8 +354,9 @@ fn process_lyrics_column_line(
             format!("lyrics line for '{abbrev}' has no matching notes track"),
         ));
     };
-    let (syllables_vec, line_ends) = syllables_acc;
+    let (syllables_vec, line_starts, line_ends) = syllables_acc;
     syllables_vec.push(syllables);
+    line_starts.push(line_span.start);
     line_ends.push(line_span.end);
     Ok(())
 }
@@ -503,6 +512,7 @@ fn build_parse_result(
             let TrackAccumulator::Timed {
                 events,
                 syllables,
+                lyrics_line_starts,
                 lyrics_line_ends,
                 per_measure_beat_errors,
             } = acc;
@@ -513,6 +523,7 @@ fn build_parse_result(
                 score: ParsedScore { events },
                 lyrics: syllables.map(|measure_syllables| ParsedLyrics {
                     measure_syllables,
+                    measure_starts: lyrics_line_starts,
                     measure_ends: lyrics_line_ends,
                 }),
                 ditto_measures: ditto_measures_per_track
