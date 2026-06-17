@@ -59,14 +59,9 @@ pub fn write_midi_for_measure(
     score: &Score,
     measure_index: usize,
 ) -> Result<Vec<u8>, IrrecoverableError> {
-    let Some(target) = score.measures.get(measure_index) else {
-        return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::MeasureIndexOutOfRange {
-                span: Span::new(0, 0),
-                index: measure_index,
-                total: score.measures.len(),
-            },
-        ));
+    let clamped_index = measure_index.min(score.measures.len().saturating_sub(1));
+    let Some(target) = score.measures.get(clamped_index) else {
+        return Ok(Vec::new());
     };
 
     // Accumulate BPM and key from all measures before the target
@@ -103,16 +98,17 @@ pub fn write_midi_for_measure_range(
     start_index: usize,
     end_index: usize,
 ) -> Result<Vec<u8>, IrrecoverableError> {
-    if start_index > end_index || end_index >= score.measures.len() {
-        return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::InvalidMeasureRange {
-                span: Span::new(0, 0),
-                start: start_index,
-                end: end_index,
-                total: score.measures.len(),
-            },
-        ));
+    if score.measures.is_empty() {
+        return Ok(Vec::new());
     }
+    let last = score.measures.len() - 1;
+    let (clamped_start, clamped_end) = if start_index > end_index {
+        (end_index.min(last), start_index.min(last))
+    } else {
+        (start_index.min(last), end_index.min(last))
+    };
+    let start_index = clamped_start;
+    let end_index = clamped_end;
     let mut accumulated_bpm: Option<u32> = None;
     let mut accumulated_key: Option<KeyChange> = None;
     for measure in score.measures.iter().take(start_index) {

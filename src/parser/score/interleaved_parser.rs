@@ -79,7 +79,10 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
         .position(|d| {
             matches!(
                 d.kind,
-                PartKind::Notes | PartKind::NotesWithLyrics | PartKind::LyricsWithNotes
+                PartKind::Notes
+                    | PartKind::NotesWithLyrics
+                    | PartKind::LyricsWithNotes
+                    | PartKind::NotesWithChord
             )
         })
         .ok_or_else(|| {
@@ -282,7 +285,7 @@ fn process_lyrics_column_line(
     if line == "_" {
         let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
             invariant(
-                line_span.clone(),
+                line_span,
                 "internal error: track accumulator index out of range",
             )
         })?;
@@ -308,7 +311,7 @@ fn process_lyrics_column_line(
     let syllables = tokenize_lyrics(line);
     let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
         invariant(
-            line_span.clone(),
+            line_span,
             "internal error: track accumulator index out of range",
         )
     })?;
@@ -354,18 +357,16 @@ fn process_notes_column_line(
         per_measure_beat_errors.push(None);
         return Ok(());
     }
-    let group_state = ctx.group_states.get_mut(track_index).ok_or_else(|| {
-        invariant(
-            line_span.clone(),
-            "internal error: group state index out of range",
-        )
-    })?;
+    let group_state = ctx
+        .group_states
+        .get_mut(track_index)
+        .ok_or_else(|| invariant(line_span, "internal error: group state index out of range"))?;
     let (events, beat_overflow_error) = validate_and_pad_beats(
         token_parser::parse_notes_line(line, ctx.base_offset + line_offset, group_state)?,
         beats_expected,
         *ctx.time_num,
         *ctx.time_den,
-        line_span.clone(),
+        line_span,
     )?;
     if let Some(tie_state) = ctx.lyric_tie_states.get_mut(track_index) {
         let slots = count_lyric_slots_in_events(&events, tie_state);
@@ -403,7 +404,7 @@ fn process_column_line(
     let slot_action = ctx
         .slot_actions
         .get(slot_idx)
-        .ok_or_else(|| invariant(line_span.clone(), "internal error: slot index out of range"))?;
+        .ok_or_else(|| invariant(line_span, "internal error: slot index out of range"))?;
     match slot_action {
         SlotAction::Notes { track_index } => {
             process_notes_column_line(
@@ -420,22 +421,21 @@ fn process_column_line(
         }
         SlotAction::Chord { track_index } => {
             if line == "_" {
-                return Err(IrrecoverableError::new(
-                    IrrecoverableErrorKind::UnderscoreOnlyOnLyrics { span: line_span },
-                ));
+                // Chord `_` means no chord content for this measure.
+                // The notes column of this track (or another track's notes) already
+                // accounts for the measure in per_measure_beat_errors, so we skip the push.
+                let _ = track_index;
+                return Ok(());
             }
             let group_state = ctx.group_states.get_mut(*track_index).ok_or_else(|| {
-                invariant(
-                    line_span.clone(),
-                    "internal error: group state index out of range",
-                )
+                invariant(line_span, "internal error: group state index out of range")
             })?;
             let (events, beat_overflow_error) = validate_and_pad_beats(
                 token_parser::parse_chord_line(line, ctx.base_offset + line_offset, group_state)?,
                 beats_expected,
                 *ctx.time_num,
                 *ctx.time_den,
-                line_span.clone(),
+                line_span,
             )?;
             let acc = ctx.accumulators.get_mut(*track_index).ok_or_else(|| {
                 invariant(
@@ -469,21 +469,21 @@ fn validate_and_pad_group_lines(
         .map(|(line, off)| Span::new(base_offset + off, base_offset + off + line.len()))
         .unwrap_or_else(|| Span::new(base_offset, base_offset));
 
+    // These checks are defensive: desugar already normalises line counts.
+    // If reached, pad or truncate silently rather than aborting parsing.
     if data_lines.is_empty() {
-        return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::MeasureNoDataLines {
-                span: group_first_span,
-            },
-        ));
+        return Ok(vec![("_".to_string(), group_first_span.start)]);
     }
     if data_lines.len() != slots.len() {
-        return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::MeasureWrongLineCount {
-                span: group_first_span,
-                got: data_lines.len(),
-                expected: slots.len(),
-            },
-        ));
+        let truncated: Vec<(String, usize)> = data_lines
+            .iter()
+            .take(slots.len())
+            .cloned()
+            .chain(
+                (data_lines.len()..slots.len()).map(|_| ("_".to_string(), group_first_span.start)),
+            )
+            .collect();
+        return Ok(truncated);
     }
 
     Ok(data_lines.to_vec())

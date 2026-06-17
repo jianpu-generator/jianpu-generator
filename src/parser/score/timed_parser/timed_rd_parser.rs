@@ -353,7 +353,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
 
                 let frame = self.stack.pop().ok_or_else(|| {
                     IrrecoverableError::new(IrrecoverableErrorKind::GroupUnexpectedCloseParen {
-                        span: rparen_span.clone(),
+                        span: rparen_span,
                     })
                 })?;
 
@@ -379,7 +379,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
 
         let frame = self.stack.pop().ok_or_else(|| {
             IrrecoverableError::new(IrrecoverableErrorKind::GroupUnexpectedCloseParen {
-                span: rparen_span.clone(),
+                span: rparen_span,
             })
         })?;
 

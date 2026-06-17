@@ -4,7 +4,7 @@ pub use irrecoverable::{
     DocumentSection, IrrecoverableError, IrrecoverableErrorKind, RequiredMetadataField,
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Span {
     pub start: usize,
     pub end: usize,

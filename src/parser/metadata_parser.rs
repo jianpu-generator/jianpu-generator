@@ -4,7 +4,7 @@ use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RequiredMetadataF
 fn parse_positive_u32(key: &str, value: &str, line_span: &Span) -> Result<u32, IrrecoverableError> {
     let parsed = value.parse::<u32>().map_err(|_| {
         IrrecoverableError::new(IrrecoverableErrorKind::MetadataInvalidInteger {
-            span: line_span.clone(),
+            span: *line_span,
             field: key.to_string(),
             value: value.to_string(),
         })
@@ -12,7 +12,7 @@ fn parse_positive_u32(key: &str, value: &str, line_span: &Span) -> Result<u32, I
     if parsed == 0 {
         return Err(IrrecoverableError::new(
             IrrecoverableErrorKind::MetadataMustBePositive {
-                span: line_span.clone(),
+                span: *line_span,
                 field: key.to_string(),
             },
         ));
@@ -44,7 +44,7 @@ pub fn parse_metadata(
 
         let (key_raw, value_raw) = trimmed.split_once('=').ok_or_else(|| {
             IrrecoverableError::new(IrrecoverableErrorKind::MetadataMalformedLine {
-                span: line_span.clone(),
+                span: line_span,
                 line: trimmed.to_string(),
             })
         })?;
@@ -87,7 +87,7 @@ pub fn parse_metadata(
     Ok(ParsedMetadata {
         title: title.ok_or_else(|| {
             IrrecoverableError::new(IrrecoverableErrorKind::MetadataMissingField {
-                span: zero_span.clone(),
+                span: zero_span,
                 field: RequiredMetadataField::Title,
             })
         })?,

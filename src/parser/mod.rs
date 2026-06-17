@@ -57,13 +57,13 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, Irrecoverabl
 
     let (meta_content, meta_offset) = raw_metadata.ok_or_else(|| {
         IrrecoverableError::new(IrrecoverableErrorKind::MissingSection {
-            span: doc_span.clone(),
+            span: doc_span,
             section: DocumentSection::Metadata,
         })
     })?;
     let (parts_content, parts_offset) = raw_parts.ok_or_else(|| {
         IrrecoverableError::new(IrrecoverableErrorKind::MissingSection {
-            span: doc_span.clone(),
+            span: doc_span,
             section: DocumentSection::Parts,
         })
     })?;
@@ -188,10 +188,9 @@ mod tests {
     }
 
     #[test]
-    fn error_span_points_to_absolute_file_position() {
-        // One notes part but two data lines in a group → "expected at most 1 lines, got 2".
-        // The span must point to the second line's position in the *full* input, not its
-        // offset within the score section.
+    fn too_many_lines_recoverable_error_span_points_to_absolute_file_position() {
+        // One notes part but two data lines in a group → recoverable error.
+        // The error span must point to the extra line's position in the *full* input.
         let input = concat!(
             "[metadata]\n",
             "title=\"t\"\n",
@@ -205,17 +204,19 @@ mod tests {
             "5 6 7 1\n",
         );
         let expected_offset = input.find("5 6 7 1").unwrap();
-        let err = parse(input, "test.jianpu").unwrap_err();
+        let doc = parse(input, "test.jianpu").expect("too-many-lines must not abort parsing");
+        let error = doc.per_measure_parse_errors[0]
+            .as_ref()
+            .expect("recoverable error must be recorded for the measure");
         assert_eq!(
-            err.span().start,
-            expected_offset,
-            "error span should point to the absolute file position of the extra line"
+            error.span.start, expected_offset,
+            "recoverable error span should point to the absolute file position of the extra line"
         );
     }
 
     #[test]
-    fn too_many_lines_error_lists_declared_parts() {
-        // One notes part but two data lines → error should name the declared part.
+    fn too_many_lines_recoverable_error_lists_declared_parts() {
+        // One notes part but two data lines → recoverable error should name the declared part.
         let input = concat!(
             "[metadata]\n",
             "title=\"t\"\n",
@@ -228,11 +229,14 @@ mod tests {
             "1 2 3 4\n",
             "5 6 7 1\n",
         );
-        let err = parse(input, "test.jianpu").unwrap_err();
+        let doc = parse(input, "test.jianpu").expect("too-many-lines must not abort parsing");
+        let error = doc.per_measure_parse_errors[0]
+            .as_ref()
+            .expect("recoverable error must be recorded for the measure");
         assert!(
-            err.message().contains("Melody"),
-            "error message should list the declared part 'Melody', got: {}",
-            err.message()
+            error.message.contains("Melody"),
+            "recoverable error message should list the declared part 'Melody', got: {}",
+            error.message
         );
     }
 

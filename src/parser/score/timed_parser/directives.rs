@@ -31,7 +31,7 @@ pub fn key_change_lexeme_len(after_eq: &str) -> usize {
 pub fn parse_key_change_text(text: &str, span: &Span) -> Result<KeyChange, IrrecoverableError> {
     let after_eq = text.strip_prefix("1=").ok_or_else(|| {
         IrrecoverableError::new(IrrecoverableErrorKind::KeyChangeMissingPrefix {
-            span: span.clone(),
+            span: *span,
             text: text.to_string(),
         })
     })?;
@@ -40,7 +40,7 @@ pub fn parse_key_change_text(text: &str, span: &Span) -> Result<KeyChange, Irrec
 
     let name_char = chars.next().ok_or_else(|| {
         IrrecoverableError::new(IrrecoverableErrorKind::KeyChangeMissingNoteName {
-            span: span.clone(),
+            span: *span,
             text: text.to_string(),
         })
     })?;
@@ -56,7 +56,7 @@ pub fn parse_key_change_text(text: &str, span: &Span) -> Result<KeyChange, Irrec
         _ => {
             return Err(IrrecoverableError::new(
                 IrrecoverableErrorKind::KeyChangeInvalidNoteName {
-                    span: span.clone(),
+                    span: *span,
                     name: name_char,
                 },
             ))
@@ -78,7 +78,7 @@ pub fn parse_key_change_text(text: &str, span: &Span) -> Result<KeyChange, Irrec
     let octave_str: String = chars.collect();
     let octave = octave_str.parse::<u8>().map_err(|_| {
         IrrecoverableError::new(IrrecoverableErrorKind::KeyChangeInvalidOctave {
-            span: span.clone(),
+            span: *span,
             text: text.to_string(),
         })
     })?;

@@ -100,11 +100,14 @@ fn two_parts_two_bars() {
 }
 
 #[test]
-fn rejects_too_many_lines_in_group() {
+fn too_many_lines_in_group_is_recoverable() {
+    // Extra data line beyond what the declared parts expect must not abort parsing.
     let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c d\nextra line\n";
     let declarations = vec![decl("", PartKind::NotesWithLyrics)];
-    let err = parse(content, 0, &declarations).unwrap_err();
-    assert!(err.message().contains("lines") && err.message().contains("expected"));
+    assert!(
+        parse(content, 0, &declarations).is_ok(),
+        "extra data lines must not abort parsing"
+    );
 }
 
 #[test]
@@ -290,9 +293,9 @@ fn omitted_notes_row_is_recoverable() {
 }
 
 #[test]
-fn omitted_chord_row_is_irrecoverable() {
+fn omitted_chord_row_is_recoverable() {
     // Part kind "notes chord" puts the notes row before the chord row in the score.
-    // The score has only a notes row; the missing chord row must abort parsing (irrecoverable).
+    // With only a notes row provided, the missing chord row is now a recoverable error.
     let input = concat!(
         "[metadata]\n",
         "title = \"t\"\n",
@@ -305,17 +308,9 @@ fn omitted_chord_row_is_irrecoverable() {
         "(time=4/4 key=C4 bpm=120)\n",
         "1 2 3 4\n",
     );
-    let err = crate::parser::parse(input, "test.jianpu")
-        .expect_err("missing chord row must abort parsing");
     assert!(
-        err.message().contains("chord"),
-        "error should mention missing chord row, got: {}",
-        err.message()
-    );
-    assert!(
-        !err.message().contains("invalid track columns"),
-        "error should be about missing chord row, not unknown part kind, got: {}",
-        err.message()
+        crate::parser::parse(input, "test.jianpu").is_ok(),
+        "missing chord row must not abort parsing"
     );
 }
 
@@ -382,5 +377,42 @@ fn implicit_trailing_ditto_matches_explicit_ditto() {
     assert_eq!(
         explicit_b.lyrics.as_ref().unwrap().measure_syllables,
         implicit_b.lyrics.as_ref().unwrap().measure_syllables
+    );
+}
+
+#[test]
+fn measure_no_data_lines_is_recoverable() {
+    // A directive-only group (no note lines) must not abort parsing.
+    let content = "(time=4/4 key=C4 bpm=120)\n\n1 2 3 4\n";
+    let declarations = vec![decl("", PartKind::Notes)];
+    assert!(
+        parse(content, 0, &declarations).is_ok(),
+        "measure with no data lines must not abort parsing"
+    );
+}
+
+#[test]
+fn measure_too_many_lines_is_recoverable() {
+    // Single-part declaration but two data lines — extra line must be silently ignored.
+    let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\n5 6 7 1\n";
+    let declarations = vec![decl("", PartKind::Notes)];
+    assert!(
+        parse(content, 0, &declarations).is_ok(),
+        "measure with too many lines must not abort parsing"
+    );
+}
+
+#[test]
+fn measure_missing_chord_line_is_recoverable() {
+    // [notes, chord] parts but only the notes line is provided.
+    // The chord role cannot be filled implicitly, so this previously errored.
+    let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\n";
+    let declarations = vec![
+        decl("Melody", PartKind::Notes),
+        decl("chord", PartKind::Chord),
+    ];
+    assert!(
+        parse(content, 0, &declarations).is_ok(),
+        "measure missing a chord role line must not abort parsing"
     );
 }

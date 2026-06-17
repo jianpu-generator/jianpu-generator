@@ -280,11 +280,7 @@ pub fn list_measure_spans_from_source(
     filename: &str,
 ) -> Result<Vec<error::Span>, IrrecoverableError> {
     let score = compile(source, filename)?;
-    Ok(score
-        .measures
-        .iter()
-        .map(|m| m.source_span.clone())
-        .collect())
+    Ok(score.measures.iter().map(|m| m.source_span).collect())
 }
 
 /// Sanitize a track name for use in filenames (mirrors CLI).

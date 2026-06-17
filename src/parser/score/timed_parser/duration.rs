@@ -87,13 +87,13 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
 
     if octave_up > 0 && octave_down > 0 {
         return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::DurationMixedOctaveMarkers { span: span.clone() },
+            IrrecoverableErrorKind::DurationMixedOctaveMarkers { span: *span },
         ));
     }
 
     if dotted && duration == 1 {
         return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::DurationCannotDotQuarterBeat { span: span.clone() },
+            IrrecoverableErrorKind::DurationCannotDotQuarterBeat { span: *span },
         ));
     }
 

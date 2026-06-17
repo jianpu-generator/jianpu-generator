@@ -144,6 +144,7 @@ struct PartGrouper {
     measure_span_start: Option<usize>,
     measure_span_end: usize,
     pending_dash_after_rest_error: Option<RecoverableError>,
+    pending_overflow_error: Option<RecoverableError>,
 }
 
 impl PartGrouper {
@@ -164,6 +165,7 @@ impl PartGrouper {
             measure_span_start: None,
             measure_span_end: 0,
             pending_dash_after_rest_error: None,
+            pending_overflow_error: None,
         }
     }
 
@@ -183,7 +185,7 @@ impl PartGrouper {
             source_span,
             paired_lyrics: None,
             lyrics_error: None,
-            beat_overflow_error: None,
+            beat_overflow_error: self.pending_overflow_error.take(),
             dash_after_rest_error: self.pending_dash_after_rest_error.take(),
         });
         self.current_beat = 0;
@@ -219,16 +221,16 @@ impl PartGrouper {
         self.current_notes.push(event);
         self.current_beat += duration;
         if self.current_beat > self.capacity {
-            return Err(IrrecoverableError::new(
-                IrrecoverableErrorKind::MeasureOverflow {
-                    span,
-                    part: self.part_name.clone(),
-                    event_label: overflow_label.to_string(),
-                    duration,
-                    capacity: self.capacity,
-                    used: self.current_beat,
-                },
+            self.current_notes.pop();
+            self.current_beat -= duration;
+            let message = self.with_part_prefix(format!(
+                "beat overflow: {overflow_label} exceeds measure capacity of {} quarter-beats; note dropped",
+                self.capacity,
             ));
+            self.pending_overflow_error
+                .get_or_insert_with(|| RecoverableError::new(span, message));
+            self.flush_measure();
+            return Ok(());
         }
         if self.current_beat == self.capacity {
             self.flush_measure();
@@ -546,7 +548,7 @@ fn pair_lyrics_to_notes(
     let overflow_count = raw_syllables.len().saturating_sub(syllable_idx);
     let error = if underflow_detected {
         Some(RecoverableError::new(
-            source_span.clone(),
+            *source_span,
             format!(
                 "[{part_name}] lyrics underflow: ran out of syllables at syllable {} (fewer syllables than notes)",
                 syllable_idx
@@ -554,7 +556,7 @@ fn pair_lyrics_to_notes(
         ))
     } else if overflow_count > 0 {
         Some(RecoverableError::new(
-            source_span.clone(),
+            *source_span,
             format!(
                 "[{part_name}] lyrics overflow: {} extra syllable{} after all notes are consumed",
                 overflow_count,

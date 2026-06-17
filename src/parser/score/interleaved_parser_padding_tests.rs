@@ -176,52 +176,85 @@ fn implicit_trailing_chord_extensions_after_partial_fill() {
 }
 
 #[test]
-fn rejects_underfull_measure_that_cannot_be_padded_with_extensions() {
+fn incomplete_measure_is_recoverable() {
+    // 4_ is an eighth note (2 beats) in 4/4 (16 beats); cannot be padded by extending the last
+    // note. Must not abort parsing — measure should carry a recoverable beat error.
     let content = "(time=4/4 key=C4 bpm=120)\n4_\n";
     let declarations = vec![decl("", PartKind::Notes)];
-    let err = parse(content, 0, &declarations).unwrap_err();
-    assert!(err.message().contains("incomplete measure"));
+    let tracks =
+        parse(content, 0, &declarations).expect("incomplete measure must not abort parsing");
+    let ParsedTrack::Timed(track) = &tracks[0];
+    assert_eq!(track.per_measure_beat_errors.len(), 1);
+    assert!(
+        track.per_measure_beat_errors[0].is_some(),
+        "incomplete measure must record a recoverable error"
+    );
 }
 
 #[test]
-fn rejects_underfull_measure_with_short_trailing_notes() {
+fn underfull_measure_that_cannot_be_padded_records_recoverable_error() {
+    let content = "(time=4/4 key=C4 bpm=120)\n4_\n";
+    let declarations = vec![decl("", PartKind::Notes)];
+    let tracks =
+        parse(content, 0, &declarations).expect("underfull measure must not abort parsing");
+    let ParsedTrack::Timed(track) = &tracks[0];
+    let error = track.per_measure_beat_errors[0]
+        .as_ref()
+        .expect("recoverable error must be recorded");
+    assert!(
+        error.message.contains("incomplete measure"),
+        "error should mention incomplete measure, got: {}",
+        error.message
+    );
+}
+
+#[test]
+fn underfull_measure_with_short_trailing_notes_records_recoverable_error() {
     let content = "(time=4/4 key=C4 bpm=120)\n3_ 1_ 1 0_ 1= 1=\n";
     let declarations = vec![decl("", PartKind::Notes)];
-    let err = parse(content, 0, &declarations).unwrap_err();
-    assert!(err.message().contains("incomplete measure"));
+    let tracks =
+        parse(content, 0, &declarations).expect("underfull measure must not abort parsing");
+    let ParsedTrack::Timed(track) = &tracks[0];
+    assert!(
+        track.per_measure_beat_errors[0].is_some(),
+        "recoverable error must be recorded for the incomplete measure"
+    );
 }
 
 #[test]
-fn underfull_measure_error_span_covers_notes_line() {
-    // The underflow error span should cover the whole notes line, not just the last note.
+fn underfull_measure_recoverable_error_span_covers_notes_line() {
+    // The recoverable error span should cover the whole notes line, not just the last note.
     // "4 4 4 4_" starts at byte 26 and ends at byte 34.
     let content = "(time=4/4 key=C4 bpm=120)\n4 4 4 4_\n";
     let declarations = vec![decl("", PartKind::Notes)];
-    let err = parse(content, 0, &declarations).unwrap_err();
+    let tracks =
+        parse(content, 0, &declarations).expect("underfull measure must not abort parsing");
+    let ParsedTrack::Timed(track) = &tracks[0];
+    let error = track.per_measure_beat_errors[0].as_ref().unwrap();
     assert_eq!(
-        err.span().start,
-        26,
+        error.span.start, 26,
         "span must start at the beginning of the notes line"
     );
     assert_eq!(
-        err.span().end,
-        34,
+        error.span.end, 34,
         "span must end at the end of the notes line"
     );
 }
 
 #[test]
-fn underfull_measure_in_second_bar_error_span_covers_notes_line() {
+fn underfull_measure_in_second_bar_recoverable_error_span_covers_notes_line() {
     // "4 4 4 4_" in the second bar starts at byte 35 and ends at byte 43.
     let content = "(time=4/4 key=C4 bpm=120)\n5 5 5 5\n\n4 4 4 4_\n";
     let declarations = vec![decl("", PartKind::Notes)];
-    let err = parse(content, 0, &declarations).unwrap_err();
+    let tracks =
+        parse(content, 0, &declarations).expect("underfull measure must not abort parsing");
+    let ParsedTrack::Timed(track) = &tracks[0];
+    let error = track.per_measure_beat_errors[1].as_ref().unwrap();
     assert_eq!(
-        err.span().start,
-        35,
+        error.span.start, 35,
         "span must start at the beginning of the second bar's notes line"
     );
-    assert_eq!(err.span().end, 43);
+    assert_eq!(error.span.end, 43);
 }
 
 #[test]

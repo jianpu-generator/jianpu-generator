@@ -183,13 +183,11 @@ fn validate_dotted_eighth_tail(
 }
 
 fn half_bar_error(span: &Span) -> IrrecoverableError {
-    IrrecoverableError::new(IrrecoverableErrorKind::HalfBarBoundaryCrossed { span: span.clone() })
+    IrrecoverableError::new(IrrecoverableErrorKind::HalfBarBoundaryCrossed { span: *span })
 }
 
 fn dotted_eighth_error(span: &Span) -> IrrecoverableError {
-    IrrecoverableError::new(IrrecoverableErrorKind::DottedEighthNeedsSixteenth {
-        span: span.clone(),
-    })
+    IrrecoverableError::new(IrrecoverableErrorKind::DottedEighthNeedsSixteenth { span: *span })
 }
 
 #[cfg(test)]

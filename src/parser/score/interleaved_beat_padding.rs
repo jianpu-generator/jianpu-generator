@@ -1,5 +1,5 @@
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned};
+use crate::error::{IrrecoverableError, RecoverableError, Span, Spanned};
 
 pub(super) fn beats_per_measure(num: u8, den: u8) -> u32 {
     (num as u32) * (16 / den as u32)
@@ -131,7 +131,7 @@ pub(super) fn validate_and_pad_beats(
     let (mut events, overflow_error) = match truncate_at {
         Some(i) => {
             let error = RecoverableError::new(
-                line_span.clone(),
+                line_span,
                 format!(
                     "beat overflow: measure has {expected} quarter-beats but notes exceed that (truncated at note {})",
                     i + 1
@@ -149,13 +149,23 @@ pub(super) fn validate_and_pad_beats(
     if total < expected {
         let deficit = expected - total;
         if !can_implicitly_pad(&events, deficit) {
-            return Err(IrrecoverableError::new(
-                IrrecoverableErrorKind::IncompleteMeasure {
-                    span: line_span,
-                    expected,
-                    got: total,
-                },
+            let error = RecoverableError::new(
+                line_span,
+                format!(
+                    "incomplete measure: expected {expected} quarter-beats, got {total}; padding with rest"
+                ),
+            );
+            let rest_span = events.last().map(|e| e.span).unwrap_or_else(|| line_span);
+            events.push(Spanned::new(
+                ScoreEvent::Rest(crate::ast::parsed::ParsedRest {
+                    duration: deficit,
+                    dotted: false,
+                    group_membership: 0,
+                    group_continuation: 0,
+                }),
+                rest_span,
             ));
+            return Ok((events, Some(error)));
         }
         if extending_last_crosses_half_bar(&events, deficit) {
             let pad_span = events
@@ -167,10 +177,10 @@ pub(super) fn validate_and_pad_beats(
                         ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::Rest(_)
                     )
                 })
-                .map(|e| e.span.clone())
+                .map(|e| e.span)
                 .unwrap_or_else(|| Span::new(0, 1));
             for _ in 0..(deficit / 4) {
-                events.push(Spanned::new(ScoreEvent::Extension, pad_span.clone()));
+                events.push(Spanned::new(ScoreEvent::Extension, pad_span));
             }
         } else if let Some(last) = events.iter_mut().rev().find(|e| {
             matches!(

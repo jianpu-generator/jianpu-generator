@@ -48,7 +48,7 @@ impl TimedUnitHead for ChordHead {
 
         let head_end = find_symbol_end(chars, start, span)?;
         let token: String = chars[start..head_end].iter().collect();
-        let symbol = parse_chord_symbol(&token, span.clone())?;
+        let symbol = parse_chord_symbol(&token, *span)?;
 
         Ok((
             ChordHead {
@@ -124,17 +124,14 @@ fn find_symbol_end(chars: &[char], start: usize, span: &Span) -> Result<usize, I
 
     for end in (start + 1..=max_end).rev() {
         let token: String = chars[start..end].iter().collect();
-        if parse_chord_symbol(&token, span.clone()).is_ok() {
+        if parse_chord_symbol(&token, *span).is_ok() {
             return Ok(end);
         }
     }
 
     let token: String = chars[start..start + 1].iter().collect();
     Err(IrrecoverableError::new(
-        IrrecoverableErrorKind::ChordInvalidToken {
-            span: span.clone(),
-            token,
-        },
+        IrrecoverableErrorKind::ChordInvalidToken { span: *span, token },
     ))
 }
 
@@ -146,7 +143,7 @@ fn parse_chord_symbol(
 
     let degree = chars.next().and_then(char_to_pitch).ok_or_else(|| {
         IrrecoverableError::new(IrrecoverableErrorKind::ChordInvalidToken {
-            span: span.clone(),
+            span,
             token: token.to_string(),
         })
     })?;
@@ -195,7 +192,7 @@ fn parse_chord_symbol(
         ));
     };
 
-    let bass = bass_str.map(|s| parse_bass(s, span.clone())).transpose()?;
+    let bass = bass_str.map(|s| parse_bass(s, span)).transpose()?;
 
     Ok(ParsedChordSymbolFields {
         degree,
@@ -210,7 +207,7 @@ fn parse_bass(s: &str, span: Span) -> Result<BassDegree, IrrecoverableError> {
     let mut chars = s.chars();
     let degree = chars.next().and_then(char_to_pitch).ok_or_else(|| {
         IrrecoverableError::new(IrrecoverableErrorKind::ChordInvalidBass {
-            span: span.clone(),
+            span,
             bass: s.to_string(),
         })
     })?;

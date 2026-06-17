@@ -47,7 +47,7 @@ pub(crate) fn combine(
             })
             .fold(None, |acc: Option<Span>, m| {
                 Some(match acc {
-                    None => m.source_span.clone(),
+                    None => m.source_span,
                     Some(prev) => Span::new(
                         prev.start.min(m.source_span.start),
                         prev.end.max(m.source_span.end),

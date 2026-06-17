@@ -123,3 +123,74 @@ fn duration_eighth_note_is_240_ticks() {
 fn duration_half_note_is_960_ticks() {
     assert_eq!(duration_to_ticks(8), 960);
 }
+
+fn one_measure_score() -> crate::ast::grouped::Score {
+    use crate::ast::grouped::GroupedNote;
+    use crate::ast::grouped::{
+        Metadata, MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
+    };
+    use crate::ast::parsed::{JianPuPitch, PartKind};
+    Score {
+        metadata: Metadata {
+            title: String::new(),
+            subtitle: None,
+            author: String::new(),
+            row_height: 24,
+            max_columns: 28,
+            label_width: 40,
+            note_number_width: 8,
+        },
+        measures: vec![MultiPartMeasure {
+            time_signature: Some(TimeSignature {
+                numerator: 4,
+                denominator: 4,
+            }),
+            bpm: Some(120),
+            key: Some(KeyChange {
+                note: Note {
+                    name: NoteName::C,
+                    octave: 4,
+                    accidental: Accidental::Natural,
+                },
+            }),
+            label: None,
+            parts: vec![PartRow::Timed(PartSlice {
+                name: None,
+                kind: PartKind::Notes,
+                notes: Notes {
+                    events: vec![NoteEvent::Note(GroupedNote {
+                        pitch: JianPuPitch::One,
+                        octave: 0,
+                        duration: 16,
+                        tie: false,
+                        group_membership: 0,
+                        group_continuation: 0,
+                        dotted: false,
+                        slur_group_close_at_duration: None,
+                    })],
+                },
+                lyrics: None,
+            })],
+            source_span: crate::error::Span::new(0, 0),
+            errors: vec![],
+        }],
+    }
+}
+
+#[test]
+fn measure_index_out_of_range_is_recoverable() {
+    let score = one_measure_score();
+    assert!(
+        write_midi_for_measure(&score, 999).is_ok(),
+        "out-of-range measure index must not abort MIDI generation"
+    );
+}
+
+#[test]
+fn invalid_measure_range_is_recoverable() {
+    let score = one_measure_score();
+    assert!(
+        write_midi_for_measure_range(&score, 5, 0).is_ok(),
+        "invalid measure range (start > end) must not abort MIDI generation"
+    );
+}

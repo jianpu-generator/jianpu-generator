@@ -17,7 +17,7 @@ pub fn parse_parts(content: &str, base_offset: usize) -> Result<Vec<PartDecl>, I
 
         let (lhs, rhs) = trimmed.split_once('=').ok_or_else(|| {
             IrrecoverableError::new(IrrecoverableErrorKind::PartsMalformedLine {
-                span: line_span.clone(),
+                span: line_span,
                 line: trimmed.to_string(),
             })
         })?;
@@ -28,7 +28,7 @@ pub fn parse_parts(content: &str, base_offset: usize) -> Result<Vec<PartDecl>, I
         if !seen_abbreviations.insert(abbreviation.clone()) {
             return Err(IrrecoverableError::new(
                 IrrecoverableErrorKind::PartsDuplicateAbbreviation {
-                    span: line_span.clone(),
+                    span: line_span,
                     abbrev: abbreviation,
                 },
             ));
@@ -60,12 +60,12 @@ fn parse_lhs(lhs: &str, span: &Span) -> Result<(String, String), IrrecoverableEr
             let abbreviation = lhs[open + 1..lhs.len() - 1].trim().to_string();
             if display_name.is_empty() {
                 return Err(IrrecoverableError::new(
-                    IrrecoverableErrorKind::PartsEmptyDisplayName { span: span.clone() },
+                    IrrecoverableErrorKind::PartsEmptyDisplayName { span: *span },
                 ));
             }
             if abbreviation.is_empty() {
                 return Err(IrrecoverableError::new(
-                    IrrecoverableErrorKind::PartsEmptyAbbreviation { span: span.clone() },
+                    IrrecoverableErrorKind::PartsEmptyAbbreviation { span: *span },
                 ));
             }
             return Ok((display_name, abbreviation));
@@ -74,7 +74,7 @@ fn parse_lhs(lhs: &str, span: &Span) -> Result<(String, String), IrrecoverableEr
     let name = lhs.trim().to_string();
     if name.is_empty() {
         return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::PartsEmptyTrackName { span: span.clone() },
+            IrrecoverableErrorKind::PartsEmptyTrackName { span: *span },
         ));
     }
     Ok((name.clone(), name))
@@ -90,7 +90,7 @@ fn parse_rhs(rhs: &str, span: &Span) -> Result<PartKind, IrrecoverableError> {
         ["notes", "chord"] => Ok(PartKind::NotesWithChord),
         _ => Err(IrrecoverableError::new(
             IrrecoverableErrorKind::PartsInvalidColumns {
-                span: span.clone(),
+                span: *span,
                 rhs: rhs.to_string(),
             },
         )),

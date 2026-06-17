@@ -56,33 +56,41 @@ fn pad_implicit_ditto_group(
         .map(|(_, off)| Span::new(base_offset + *off, base_offset + *off + 1))
         .unwrap_or(Span::new(base_offset, base_offset + 1));
 
-    if data_lines.is_empty() {
-        return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::MeasureNoDataLines { span },
-        ));
-    }
+    let mut recoverable_error: Option<RecoverableError> = None;
 
-    if data_lines.len() > slots.len() {
+    let effective_data_lines: Vec<(String, usize)> = if data_lines.is_empty() {
+        recoverable_error = Some(RecoverableError::new(
+            span,
+            "measure has no data lines; treating all parts as empty".to_string(),
+        ));
+        Vec::new()
+    } else if data_lines.len() > slots.len() {
         let part_list = declarations
             .iter()
             .map(|d| d.abbreviation.as_str())
             .collect::<Vec<_>>()
             .join(", ");
-        return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::MeasureTooManyLines {
-                span,
-                got: data_lines.len(),
-                expected: slots.len(),
-                parts: part_list,
-            },
+        recoverable_error = Some(RecoverableError::new(
+            span,
+            format!(
+                "this measure has {} lines but only {} expected (declared parts: {}); extra lines ignored",
+                data_lines.len(),
+                slots.len(),
+                part_list,
+            ),
         ));
-    }
+        data_lines.get(..slots.len()).unwrap_or(data_lines).to_vec()
+    } else {
+        data_lines.to_vec()
+    };
 
-    let pad_offset = data_lines.last().map(|(_, off)| *off).unwrap_or(0);
-    let mut result_data: Vec<(String, usize)> = data_lines.to_vec();
-    let mut recoverable_error: Option<RecoverableError> = None;
+    let pad_offset = effective_data_lines
+        .last()
+        .map(|(_, off)| *off)
+        .unwrap_or(0);
+    let mut result_data: Vec<(String, usize)> = effective_data_lines.clone();
 
-    for i in data_lines.len()..slots.len() {
+    for i in effective_data_lines.len()..slots.len() {
         let slot = slots.get(i).ok_or_else(|| {
             IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
                 Span::new(0, 0),
@@ -114,14 +122,15 @@ fn pad_implicit_ditto_group(
             });
             result_data.push(("_".to_string(), pad_offset));
         } else {
+            // ScoreLineRole::Chord (the only remaining variant)
             let abbrev = track_abbreviation(declarations, slot.track_index);
-            return Err(IrrecoverableError::new(
-                IrrecoverableErrorKind::MeasureMissingRoleLine {
-                    span: Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
-                    role: role_name(role).to_string(),
-                    abbrev: abbrev.to_string(),
-                },
-            ));
+            recoverable_error.get_or_insert_with(|| {
+                RecoverableError::new(
+                    Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
+                    format!("missing chord line for '{abbrev}'; treating as empty"),
+                )
+            });
+            result_data.push(("_".to_string(), pad_offset));
         }
     }
 

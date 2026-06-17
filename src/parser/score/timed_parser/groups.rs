@@ -41,7 +41,7 @@ impl GroupStack {
 pub fn validate_group_note_count(count: usize, span: &Span) -> Result<(), IrrecoverableError> {
     if count < 2 {
         return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::GroupTooFewNotes { span: span.clone() },
+            IrrecoverableErrorKind::GroupTooFewNotes { span: *span },
         ));
     }
     Ok(())

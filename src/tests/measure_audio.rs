@@ -279,10 +279,13 @@ fn write_wav_for_measure_from_source_second_measure_uses_context_key() {
 
 #[cfg(feature = "wav")]
 #[test]
-fn write_wav_for_measure_from_source_out_of_range_returns_err() {
+fn write_wav_for_measure_from_source_out_of_range_clamps_to_last_measure() {
     let source = two_measure_source();
     let result = write_wav_for_measure_from_source(source, "test.jianpu", 99, None);
-    assert!(result.is_err());
+    assert!(
+        result.is_ok(),
+        "out-of-range index must clamp instead of failing"
+    );
 }
 
 #[cfg(feature = "wav")]
@@ -307,8 +310,11 @@ fn write_wav_for_measure_range_from_source_single_measure_matches_range_of_one()
 
 #[cfg(feature = "wav")]
 #[test]
-fn write_wav_for_measure_range_from_source_out_of_range_returns_err() {
+fn write_wav_for_measure_range_from_source_out_of_range_clamps_to_last_measure() {
     let source = two_measure_source();
     let result = write_wav_for_measure_range_from_source(source, "test.jianpu", 0, 99, None);
-    assert!(result.is_err());
+    assert!(
+        result.is_ok(),
+        "out-of-range range end must clamp instead of failing"
+    );
 }
