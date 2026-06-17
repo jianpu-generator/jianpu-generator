@@ -2,7 +2,7 @@ use crate::ast::parsed::{
     flatten_score_line_slots, ParsedLyrics, ParsedScore, ParsedTimedTrack, ParsedTrack, PartDecl,
     PartKind, ScoreEvent, ScoreLineRole, ScoreLineSlot,
 };
-use crate::error::{IrrecoverableError, Span, Spanned};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Spanned};
 use crate::parser::score::token_parser::{self, GroupStack};
 use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics, LyricTieState};
 
@@ -10,9 +10,15 @@ use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics, LyricTieState};
 mod beat_padding;
 #[path = "interleaved_directives.rs"]
 mod directives;
+#[path = "interleaved_ditto.rs"]
+mod ditto;
+#[path = "interleaved_errors.rs"]
+mod errors;
 
 use beat_padding::{beats_per_measure, validate_and_pad_beats};
 use directives::{collect_groups, split_directive};
+use ditto::{compute_ditto_measures, DittoMeasures};
+use errors::invariant;
 
 /// One entry per bar group: all directive events emitted by that group's directive row.
 pub(super) type DirectiveEventsPerMeasure = Vec<Vec<Spanned<ScoreEvent>>>;
@@ -77,10 +83,9 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
             )
         })
         .ok_or_else(|| {
-            IrrecoverableError::new(
-                Span::new(base_offset, base_offset + content.len()),
-                "parts declaration has no notes track",
-            )
+            IrrecoverableError::new(IrrecoverableErrorKind::PartsNoNotesTrack {
+                span: Span::new(base_offset, base_offset + content.len()),
+            })
         })?;
 
     let slots = flatten_score_line_slots(declarations);
@@ -120,8 +125,10 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
                 .map(|d| d.abbreviation.as_str())
                 .unwrap_or("unknown");
             return Err(IrrecoverableError::new(
-                Span::new(base_offset, base_offset + content.len()),
-                format!("unclosed '(' group at end of score in part '{part_label}'"),
+                IrrecoverableErrorKind::UnclosedGroupAtEnd {
+                    span: Span::new(base_offset, base_offset + content.len()),
+                    part: part_label.to_string(),
+                },
             ));
         }
     }
@@ -132,64 +139,6 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
         directive_events_per_measure,
         per_group_desugar_errors,
     ))
-}
-
-/// Ditto flags per track, per measure group, computed from the raw groups
-/// before desugaring erases the distinction. A line is a ditto when it is an
-/// explicit `"` or an omitted trailing line (which desugaring pads as
-/// implicit ditto).
-struct DittoMeasures {
-    /// `[track][measure]`: every score line of the track was a ditto.
-    full: Vec<Vec<bool>>,
-    /// `[track][measure]`: the track's lyric line was a ditto. Always false
-    /// for tracks without a lyrics line.
-    lyrics: Vec<Vec<bool>>,
-}
-
-fn compute_ditto_measures(
-    groups: &[Vec<(String, usize)>],
-    declarations: &[PartDecl],
-) -> DittoMeasures {
-    let slots = flatten_score_line_slots(declarations);
-    let mut full = vec![Vec::with_capacity(groups.len()); declarations.len()];
-    let mut lyrics = vec![Vec::with_capacity(groups.len()); declarations.len()];
-
-    for group in groups {
-        let directive_count = usize::from(
-            group
-                .first()
-                .map(|(l, _)| l.starts_with('('))
-                .unwrap_or(false),
-        );
-        let data_lines = group.get(directive_count..).unwrap_or(&[]);
-        let line_is_ditto = |slot_idx: usize| {
-            data_lines
-                .get(slot_idx)
-                .map(|(line, _)| line == "\"")
-                .unwrap_or(true)
-        };
-
-        for (track_index, (track_full, track_lyrics)) in
-            full.iter_mut().zip(lyrics.iter_mut()).enumerate()
-        {
-            let mut all_lines_ditto = true;
-            let mut lyric_line_ditto = false;
-            for (slot_idx, slot) in slots.iter().enumerate() {
-                if slot.track_index != track_index {
-                    continue;
-                }
-                let is_ditto = line_is_ditto(slot_idx);
-                all_lines_ditto &= is_ditto;
-                if matches!(slot.role, ScoreLineRole::Lyrics) {
-                    lyric_line_ditto = is_ditto;
-                }
-            }
-            track_full.push(all_lines_ditto);
-            track_lyrics.push(lyric_line_ditto);
-        }
-    }
-
-    DittoMeasures { full, lyrics }
 }
 
 fn build_slot_actions(slots: &[ScoreLineSlot]) -> Vec<SlotAction> {
@@ -266,7 +215,7 @@ fn process_bar_group(
             ctx.accumulators
                 .get_mut(ctx.first_notes_track_index)
                 .ok_or_else(|| {
-                    IrrecoverableError::new(
+                    invariant(
                         Span::new(ctx.base_offset, ctx.base_offset + 1),
                         "internal error: missing notes accumulator for directive events",
                     )
@@ -327,13 +276,12 @@ fn process_lyrics_column_line(
 ) -> Result<(), IrrecoverableError> {
     if line.is_empty() {
         return Err(IrrecoverableError::new(
-            line_span,
-            "lyrics line cannot be empty; use '_' for no lyrics".to_string(),
+            IrrecoverableErrorKind::LyricsLineEmpty { span: line_span },
         ));
     }
     if line == "_" {
         let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
-            IrrecoverableError::new(
+            invariant(
                 line_span.clone(),
                 "internal error: track accumulator index out of range",
             )
@@ -345,8 +293,10 @@ fn process_lyrics_column_line(
                 .map(|d| d.abbreviation.as_str())
                 .unwrap_or("unknown");
             return Err(IrrecoverableError::new(
-                line_span,
-                format!("lyrics line for '{abbrev}' has no matching notes track"),
+                IrrecoverableErrorKind::LyricsNoNotesTrack {
+                    span: line_span,
+                    abbrev: abbrev.to_string(),
+                },
             ));
         };
         let (syllables_vec, line_starts, line_ends) = syllables_acc;
@@ -357,7 +307,7 @@ fn process_lyrics_column_line(
     }
     let syllables = tokenize_lyrics(line);
     let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
-        IrrecoverableError::new(
+        invariant(
             line_span.clone(),
             "internal error: track accumulator index out of range",
         )
@@ -369,8 +319,10 @@ fn process_lyrics_column_line(
             .map(|d| d.abbreviation.as_str())
             .unwrap_or("unknown");
         return Err(IrrecoverableError::new(
-            line_span,
-            format!("lyrics line for '{abbrev}' has no matching notes track"),
+            IrrecoverableErrorKind::LyricsNoNotesTrack {
+                span: line_span,
+                abbrev: abbrev.to_string(),
+            },
         ));
     };
     let (syllables_vec, line_starts, line_ends) = syllables_acc;
@@ -390,7 +342,7 @@ fn process_notes_column_line(
 ) -> Result<(), IrrecoverableError> {
     if line == "_" {
         let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
-            IrrecoverableError::new(
+            invariant(
                 line_span,
                 "internal error: notes accumulator index out of range",
             )
@@ -403,7 +355,7 @@ fn process_notes_column_line(
         return Ok(());
     }
     let group_state = ctx.group_states.get_mut(track_index).ok_or_else(|| {
-        IrrecoverableError::new(
+        invariant(
             line_span.clone(),
             "internal error: group state index out of range",
         )
@@ -422,7 +374,7 @@ fn process_notes_column_line(
         }
     }
     let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
-        IrrecoverableError::new(
+        invariant(
             line_span,
             "internal error: notes accumulator index out of range",
         )
@@ -448,9 +400,10 @@ fn process_column_line(
         ctx.base_offset + line_offset,
         ctx.base_offset + line_offset + line.len(),
     );
-    let slot_action = ctx.slot_actions.get(slot_idx).ok_or_else(|| {
-        IrrecoverableError::new(line_span.clone(), "internal error: slot index out of range")
-    })?;
+    let slot_action = ctx
+        .slot_actions
+        .get(slot_idx)
+        .ok_or_else(|| invariant(line_span.clone(), "internal error: slot index out of range"))?;
     match slot_action {
         SlotAction::Notes { track_index } => {
             process_notes_column_line(
@@ -468,12 +421,11 @@ fn process_column_line(
         SlotAction::Chord { track_index } => {
             if line == "_" {
                 return Err(IrrecoverableError::new(
-                    line_span,
-                    "'_' is only valid on lyrics lines".to_string(),
+                    IrrecoverableErrorKind::UnderscoreOnlyOnLyrics { span: line_span },
                 ));
             }
             let group_state = ctx.group_states.get_mut(*track_index).ok_or_else(|| {
-                IrrecoverableError::new(
+                invariant(
                     line_span.clone(),
                     "internal error: group state index out of range",
                 )
@@ -486,7 +438,7 @@ fn process_column_line(
                 line_span.clone(),
             )?;
             let acc = ctx.accumulators.get_mut(*track_index).ok_or_else(|| {
-                IrrecoverableError::new(
+                invariant(
                     line_span,
                     "internal error: chord accumulator index out of range",
                 )
@@ -519,18 +471,18 @@ fn validate_and_pad_group_lines(
 
     if data_lines.is_empty() {
         return Err(IrrecoverableError::new(
-            group_first_span,
-            "expected at least one data line in measure group".to_string(),
+            IrrecoverableErrorKind::MeasureNoDataLines {
+                span: group_first_span,
+            },
         ));
     }
     if data_lines.len() != slots.len() {
         return Err(IrrecoverableError::new(
-            group_first_span,
-            format!(
-                "expected {} lines (one per score line), got {}",
-                slots.len(),
-                data_lines.len()
-            ),
+            IrrecoverableErrorKind::MeasureWrongLineCount {
+                span: group_first_span,
+                got: data_lines.len(),
+                expected: slots.len(),
+            },
         ));
     }
 
@@ -543,7 +495,7 @@ fn build_parse_result(
     mut ditto_measures_per_track: DittoMeasures,
 ) -> Result<Vec<ParsedTrack>, IrrecoverableError> {
     if declarations.len() != accumulators.len() {
-        return Err(IrrecoverableError::new(
+        return Err(invariant(
             Span::new(0, 0),
             "internal error: declaration/accumulator count mismatch",
         ));

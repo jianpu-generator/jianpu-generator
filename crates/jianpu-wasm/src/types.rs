@@ -122,12 +122,13 @@ pub enum GenerateSplitPdfsResponse {
 
 pub(crate) fn diagnostic_from_error(source: &str, e: IrrecoverableError) -> DiagnosticOut {
     let report = error_reporter::render_with_source(source, &e);
+    let span = e.span();
     DiagnosticOut {
         severity: DiagnosticSeverity::Error,
-        message: e.message,
+        message: e.message(),
         span: SpanOut {
-            start: e.span.start,
-            end: e.span.end,
+            start: span.start,
+            end: span.end,
         },
         report: Some(report),
     }

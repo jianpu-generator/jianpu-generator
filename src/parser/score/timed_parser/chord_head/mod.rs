@@ -3,7 +3,7 @@ use crate::ast::parsed::{
     Accidental, BassDegree, Extension, JianPuPitch, ParsedChordNote, ParsedRest, ScoreEvent,
     TriadQuality,
 };
-use crate::error::{IrrecoverableError, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 
 pub struct ChordHead {
     degree: JianPuPitch,
@@ -24,8 +24,10 @@ impl TimedUnitHead for ChordHead {
         if !matches!(degree_char, '0'..='7') {
             let pos = span.start + byte_offset_at_char_index_from_chars(chars, start);
             return Err(IrrecoverableError::new(
-                Span::new(pos, pos + degree_char.len_utf8()),
-                format!("expected chord degree digit (0-7), got: {degree_char}"),
+                IrrecoverableErrorKind::ChordExpectedDegreeDigit {
+                    span: Span::new(pos, pos + degree_char.len_utf8()),
+                    ch: degree_char,
+                },
             ));
         }
 
@@ -129,8 +131,10 @@ fn find_symbol_end(chars: &[char], start: usize, span: &Span) -> Result<usize, I
 
     let token: String = chars[start..start + 1].iter().collect();
     Err(IrrecoverableError::new(
-        span.clone(),
-        format!("invalid chord token '{token}'"),
+        IrrecoverableErrorKind::ChordInvalidToken {
+            span: span.clone(),
+            token,
+        },
     ))
 }
 
@@ -141,7 +145,10 @@ fn parse_chord_symbol(
     let mut chars = token.chars();
 
     let degree = chars.next().and_then(char_to_pitch).ok_or_else(|| {
-        IrrecoverableError::new(span.clone(), format!("invalid chord token '{token}'"))
+        IrrecoverableError::new(IrrecoverableErrorKind::ChordInvalidToken {
+            span: span.clone(),
+            token: token.to_string(),
+        })
     })?;
 
     let rest: String = chars.collect();
@@ -180,8 +187,11 @@ fn parse_chord_symbol(
         None
     } else {
         return Err(IrrecoverableError::new(
-            span,
-            format!("unknown chord suffix '{ext_str}' in token '{token}'"),
+            IrrecoverableErrorKind::ChordUnknownSuffix {
+                span,
+                suffix: ext_str.to_string(),
+                token: token.to_string(),
+            },
         ));
     };
 
@@ -198,25 +208,32 @@ fn parse_chord_symbol(
 
 fn parse_bass(s: &str, span: Span) -> Result<BassDegree, IrrecoverableError> {
     let mut chars = s.chars();
-    let degree = chars
-        .next()
-        .and_then(char_to_pitch)
-        .ok_or_else(|| IrrecoverableError::new(span.clone(), format!("invalid bass note '{s}'")))?;
+    let degree = chars.next().and_then(char_to_pitch).ok_or_else(|| {
+        IrrecoverableError::new(IrrecoverableErrorKind::ChordInvalidBass {
+            span: span.clone(),
+            bass: s.to_string(),
+        })
+    })?;
     let accidental = match chars.next() {
         Some('#') => Accidental::Sharp,
         Some('b') => Accidental::Flat,
         None => Accidental::Natural,
         Some(c) => {
             return Err(IrrecoverableError::new(
-                span,
-                format!("unexpected character '{c}' in bass note '{s}'"),
+                IrrecoverableErrorKind::ChordBassUnexpectedChar {
+                    span,
+                    ch: c,
+                    bass: s.to_string(),
+                },
             ))
         }
     };
     if chars.next().is_some() {
         return Err(IrrecoverableError::new(
-            span,
-            format!("bass note '{s}' has trailing characters"),
+            IrrecoverableErrorKind::ChordBassTrailingChars {
+                span,
+                bass: s.to_string(),
+            },
         ));
     }
     Ok(BassDegree { degree, accidental })

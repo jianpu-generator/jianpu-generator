@@ -32,12 +32,12 @@ source (&str)
 
 ### Parser
 - Module: `src/parser/`
-- Entry: `parser::parse(source: &str, filename: &str) -> Result<ParsedDocument, JianPuError>`
+- Entry: `parser::parse(source: &str, filename: &str) -> Result<ParsedDocument, IrrecoverableError>`
 - Key types: `ParsedDocument`, `ParsedTimedTrack`, `ParsedScore`, `ScoreEvent`, `ParsedNote`, `ParsedRest`, `ParsedChordNote`, `ParsedMetadata`, `JianPuPitch`, `Accidental`, `Syllable`
 
 ### Grouper
 - Module: `src/grouper/`
-- Entry: `grouper::group(doc: ParsedDocument) -> Result<Score, JianPuError>`
+- Entry: `grouper::group(doc: ParsedDocument) -> Result<Score, IrrecoverableError>`
 - Key types: `Score`, `MultiPartMeasure`, `PartRow` (Timed | Ditto), `PartSlice`, `Notes`, `NoteEvent`, `GroupedNote`, `GroupedRest`, `GroupedChordNote`, `GroupedMeasure` (intermediate: notes + paired lyrics per measure)
 
 ### Compiler

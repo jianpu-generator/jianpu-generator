@@ -1,7 +1,7 @@
 #![allow(clippy::indexing_slicing)]
 
 use super::TimedUnitHead;
-use crate::error::{IrrecoverableError, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 
 pub struct DurationParse {
     pub duration: u32,
@@ -54,7 +54,11 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
             '-' => {
                 if is_rest {
                     let pos = span.start + byte_offset_at_char_index_from_chars(chars, start, i);
-                    return Err(IrrecoverableError::dash_after_rest(Span::new(pos, pos + 1)));
+                    return Err(IrrecoverableError::new(
+                        IrrecoverableErrorKind::DashAfterRest {
+                            span: Span::new(pos, pos + 1),
+                        },
+                    ));
                 }
                 duration += 4;
                 i += 1;
@@ -63,15 +67,19 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
             c if !allows_octave && matches!(c, '\'' | ',') => {
                 let pos = span.start + byte_offset_at_char_index_from_chars(chars, start, i);
                 return Err(IrrecoverableError::new(
-                    Span::new(pos, pos + c.len_utf8()),
-                    format!("unexpected character in timed unit: {c}"),
+                    IrrecoverableErrorKind::DurationUnexpectedChar {
+                        span: Span::new(pos, pos + c.len_utf8()),
+                        ch: c,
+                    },
                 ));
             }
             c => {
                 let pos = span.start + byte_offset_at_char_index_from_chars(chars, start, i);
                 return Err(IrrecoverableError::new(
-                    Span::new(pos, pos + c.len_utf8()),
-                    format!("unexpected character in timed unit: {c}"),
+                    IrrecoverableErrorKind::DurationUnexpectedChar {
+                        span: Span::new(pos, pos + c.len_utf8()),
+                        ch: c,
+                    },
                 ));
             }
         }
@@ -79,15 +87,13 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
 
     if octave_up > 0 && octave_down > 0 {
         return Err(IrrecoverableError::new(
-            span.clone(),
-            "mixed octave markers are invalid (use ' for up, , for down)".to_string(),
+            IrrecoverableErrorKind::DurationMixedOctaveMarkers { span: span.clone() },
         ));
     }
 
     if dotted && duration == 1 {
         return Err(IrrecoverableError::new(
-            span.clone(),
-            "cannot dot a quarter-beat (=) note; use _ or no duration suffix".to_string(),
+            IrrecoverableErrorKind::DurationCannotDotQuarterBeat { span: span.clone() },
         ));
     }
 

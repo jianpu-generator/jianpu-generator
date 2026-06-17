@@ -2,7 +2,7 @@
 
 use super::directives::{key_change_lexeme_len, parse_key_change_text};
 use crate::ast::parsed::KeyChange;
-use crate::error::{IrrecoverableError, Span, Spanned};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Spanned};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LexContext {
@@ -136,14 +136,18 @@ fn lex_one_char(
                     return Ok((Some(tok), consumed, true));
                 }
                 return Err(IrrecoverableError::new(
-                    Span::new(start, start + len),
-                    format!("unexpected character: {c}"),
+                    IrrecoverableErrorKind::LexUnexpectedChar {
+                        span: Span::new(start, start + len),
+                        ch: c,
+                    },
                 ));
             } else if at_word_boundary {
                 // In Chords context, digits 8-9 are not valid chord degrees.
                 return Err(IrrecoverableError::new(
-                    Span::new(start, start + len),
-                    format!("unexpected character: {c}"),
+                    IrrecoverableErrorKind::LexUnexpectedChar {
+                        span: Span::new(start, start + len),
+                        ch: c,
+                    },
                 ));
             }
             // Inside a word suffix — skip.
@@ -154,8 +158,10 @@ fn lex_one_char(
             Ok((None, len, false))
         }
         _ => Err(IrrecoverableError::new(
-            Span::new(start, start + len),
-            format!("unexpected character: {c}"),
+            IrrecoverableErrorKind::LexUnexpectedChar {
+                span: Span::new(start, start + len),
+                ch: c,
+            },
         )),
     }
 }
@@ -177,15 +183,16 @@ fn lex_bpm(
     };
     if digits.is_empty() {
         return Err(IrrecoverableError::new(
-            Span::new(start, start + prefix_len),
-            "expected number after 'bpm='".to_string(),
+            IrrecoverableErrorKind::LexBpmMissingNumber {
+                span: Span::new(start, start + prefix_len),
+            },
         ));
     }
     let bpm = digits.parse::<u32>().map_err(|_| {
-        IrrecoverableError::new(
-            Span::new(start, start + prefix_len + digits.len()),
-            format!("invalid bpm value: {digits}"),
-        )
+        IrrecoverableError::new(IrrecoverableErrorKind::LexBpmInvalid {
+            span: Span::new(start, start + prefix_len + digits.len()),
+            value: digits.to_string(),
+        })
     })?;
     let consumed = prefix_len + digits.len();
     let span = Span::new(start, start + consumed);
@@ -270,22 +277,23 @@ fn try_lex_time_signature(
     let den_str = &slice[den_start..den_start + den_len];
 
     let num = num_str.parse::<u8>().map_err(|_| {
-        IrrecoverableError::new(
-            Span::new(start, start + num_len),
-            format!("invalid time signature numerator: {num_str}"),
-        )
+        IrrecoverableError::new(IrrecoverableErrorKind::LexTimeInvalidNumerator {
+            span: Span::new(start, start + num_len),
+            num: num_str.to_string(),
+        })
     })?;
     let den = den_str.parse::<u8>().map_err(|_| {
-        IrrecoverableError::new(
-            Span::new(start + den_start, start + den_start + den_len),
-            format!("invalid time signature denominator: {den_str}"),
-        )
+        IrrecoverableError::new(IrrecoverableErrorKind::LexTimeInvalidDenominator {
+            span: Span::new(start + den_start, start + den_start + den_len),
+            den: den_str.to_string(),
+        })
     })?;
 
     if den == 0 {
         return Err(IrrecoverableError::new(
-            Span::new(start, start + num_len + 1 + den_len),
-            "time signature denominator cannot be zero".to_string(),
+            IrrecoverableErrorKind::LexTimeZeroDenominator {
+                span: Span::new(start, start + num_len + 1 + den_len),
+            },
         ));
     }
 

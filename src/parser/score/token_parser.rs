@@ -196,16 +196,22 @@ mod tests {
 
     #[test]
     fn rejects_dash_suffix_on_rest() {
-        use crate::error::ErrorKind;
+        use crate::error::IrrecoverableErrorKind;
         let err = parse("0---").unwrap_err();
-        assert_eq!(err.kind, ErrorKind::DashAfterRest);
+        assert!(matches!(
+            err.kind,
+            IrrecoverableErrorKind::DashAfterRest { .. }
+        ));
     }
 
     #[test]
     fn rejects_dash_suffix_on_rest_in_group() {
-        use crate::error::ErrorKind;
+        use crate::error::IrrecoverableErrorKind;
         let err = parse("(0-1)").unwrap_err();
-        assert_eq!(err.kind, ErrorKind::DashAfterRest);
+        assert!(matches!(
+            err.kind,
+            IrrecoverableErrorKind::DashAfterRest { .. }
+        ));
     }
 
     #[test]

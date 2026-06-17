@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use crate::ast::grouped::{NoteEvent, Score};
 use crate::ast::parsed::{Accidental, JianPuPitch, KeyChange, NoteName, PartKind};
-use crate::error::{IrrecoverableError, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 
 const TPQ: u16 = 480; // ticks per quarter note
 const VELOCITY: u8 = 80;
@@ -61,12 +61,11 @@ pub fn write_midi_for_measure(
 ) -> Result<Vec<u8>, IrrecoverableError> {
     let Some(target) = score.measures.get(measure_index) else {
         return Err(IrrecoverableError::new(
-            Span::new(0, 0),
-            format!(
-                "measure index {} out of range (score has {} measures)",
-                measure_index,
-                score.measures.len()
-            ),
+            IrrecoverableErrorKind::MeasureIndexOutOfRange {
+                span: Span::new(0, 0),
+                index: measure_index,
+                total: score.measures.len(),
+            },
         ));
     };
 
@@ -106,13 +105,12 @@ pub fn write_midi_for_measure_range(
 ) -> Result<Vec<u8>, IrrecoverableError> {
     if start_index > end_index || end_index >= score.measures.len() {
         return Err(IrrecoverableError::new(
-            Span::new(0, 0),
-            format!(
-                "invalid measure range {}..={} (score has {} measures)",
-                start_index,
-                end_index,
-                score.measures.len()
-            ),
+            IrrecoverableErrorKind::InvalidMeasureRange {
+                span: Span::new(0, 0),
+                start: start_index,
+                end: end_index,
+                total: score.measures.len(),
+            },
         ));
     }
     let mut accumulated_bpm: Option<u32> = None;
@@ -228,10 +226,10 @@ fn process_measure_notes(
     active_key: &KeyChange,
 ) -> Result<u32, IrrecoverableError> {
     let pending_ties = per_part_ties.get_mut(part_idx).ok_or_else(|| {
-        IrrecoverableError::new(
+        IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
             Span::new(0, 0),
             format!("internal error: missing MIDI tie state for part {part_idx}"),
-        )
+        ))
     })?;
     let mut part_tick = current_tick;
 
@@ -454,8 +452,11 @@ fn write_smf(track: Vec<TrackEvent<'static>>) -> Result<Vec<u8>, IrrecoverableEr
     };
 
     let mut buf = Vec::new();
-    smf.write_std(&mut buf)
-        .map_err(|_| IrrecoverableError::new(Span::new(0, 0), "failed to write MIDI data"))?;
+    smf.write_std(&mut buf).map_err(|_| {
+        IrrecoverableError::new(IrrecoverableErrorKind::MidiWriteFailed {
+            span: Span::new(0, 0),
+        })
+    })?;
     Ok(buf)
 }
 

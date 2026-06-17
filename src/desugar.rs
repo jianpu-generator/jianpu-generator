@@ -1,5 +1,5 @@
 use crate::ast::parsed::{flatten_score_line_slots, PartDecl, ScoreLineRole};
-use crate::error::{IrrecoverableError, RecoverableError, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
 
 type SourceLine = (String, usize);
 type MeasureGroup = Vec<SourceLine>;
@@ -58,8 +58,7 @@ fn pad_implicit_ditto_group(
 
     if data_lines.is_empty() {
         return Err(IrrecoverableError::new(
-            span,
-            "expected at least one data line in measure group".to_string(),
+            IrrecoverableErrorKind::MeasureNoDataLines { span },
         ));
     }
 
@@ -70,13 +69,12 @@ fn pad_implicit_ditto_group(
             .collect::<Vec<_>>()
             .join(", ");
         return Err(IrrecoverableError::new(
-            span,
-            format!(
-                "this measure has {} lines but only {} expected (declared parts: {})",
-                data_lines.len(),
-                slots.len(),
-                part_list,
-            ),
+            IrrecoverableErrorKind::MeasureTooManyLines {
+                span,
+                got: data_lines.len(),
+                expected: slots.len(),
+                parts: part_list,
+            },
         ));
     }
 
@@ -86,10 +84,10 @@ fn pad_implicit_ditto_group(
 
     for i in data_lines.len()..slots.len() {
         let slot = slots.get(i).ok_or_else(|| {
-            IrrecoverableError::new(
+            IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
                 Span::new(0, 0),
-                "internal invariant: score line slot missing for implicit ditto padding",
-            )
+                "score line slot missing for implicit ditto padding",
+            ))
         })?;
         let role = slot.role;
         let has_precedent =
@@ -118,11 +116,11 @@ fn pad_implicit_ditto_group(
         } else {
             let abbrev = track_abbreviation(declarations, slot.track_index);
             return Err(IrrecoverableError::new(
-                Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
-                format!(
-                    "expected {} line for '{abbrev}'; write content or '\"' ditto",
-                    role_name(role)
-                ),
+                IrrecoverableErrorKind::MeasureMissingRoleLine {
+                    span: Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
+                    role: role_name(role).to_string(),
+                    abbrev: abbrev.to_string(),
+                },
             ));
         }
     }
@@ -160,10 +158,10 @@ fn desugar_group(
                 continue;
             }
             let role = slots.get(i).map(|s| s.role).ok_or_else(|| {
-                IrrecoverableError::new(
+                IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
                     Span::new(0, 0),
-                    "internal invariant: score line slot missing for ditto line",
-                )
+                    "score line slot missing for ditto line",
+                ))
             })?;
             let source = (0..resolved.len())
                 .rev()
@@ -174,11 +172,10 @@ fn desugar_group(
                 Some(src_content) => resolved.push((src_content, *offset)),
                 None => {
                     return Err(IrrecoverableError::new(
-                        Span::new(base_offset + *offset, base_offset + *offset + 1),
-                        format!(
-                            "ditto '\"' has no preceding {} line in this measure group",
-                            role_name(role)
-                        ),
+                        IrrecoverableErrorKind::DittoNoPrecedent {
+                            span: Span::new(base_offset + *offset, base_offset + *offset + 1),
+                            role: role_name(role).to_string(),
+                        },
                     ));
                 }
             }
@@ -290,9 +287,9 @@ mod tests {
         let declarations = vec![decl("A", PartKind::Notes)];
         let err = desugar_groups(groups, &declarations, 0).unwrap_err();
         assert!(
-            err.message.contains("no preceding notes line"),
+            err.message().contains("no preceding notes line"),
             "got: {}",
-            err.message
+            err.message()
         );
     }
 
@@ -302,9 +299,9 @@ mod tests {
         let declarations = vec![decl("A", PartKind::NotesWithLyrics)];
         let err = desugar_groups(groups, &declarations, 0).unwrap_err();
         assert!(
-            err.message.contains("no preceding lyrics line"),
+            err.message().contains("no preceding lyrics line"),
             "got: {}",
-            err.message
+            err.message()
         );
     }
 
@@ -314,9 +311,9 @@ mod tests {
         let declarations = vec![decl("A", PartKind::Notes)];
         let err = desugar_groups(groups, &declarations, 0).unwrap_err();
         assert!(
-            err.message.contains("no preceding notes line"),
+            err.message().contains("no preceding notes line"),
             "got: {}",
-            err.message
+            err.message()
         );
     }
 
@@ -344,9 +341,9 @@ mod tests {
         let declarations = vec![decl("A", PartKind::Notes)];
         let err = desugar_groups(groups, &declarations, 0).unwrap_err();
         assert!(
-            err.message.contains("no preceding notes line"),
+            err.message().contains("no preceding notes line"),
             "got: {}",
-            err.message
+            err.message()
         );
     }
 

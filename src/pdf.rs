@@ -1,4 +1,4 @@
-use crate::error::{IrrecoverableError, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 use pdf_writer::{Content, Finish, Name, Pdf, Rect, Ref};
 use std::collections::HashMap;
 
@@ -37,24 +37,30 @@ pub fn write_pdf(svgs: &[String]) -> Result<Vec<u8>, IrrecoverableError> {
 
     for (i, svg_str) in svgs.iter().enumerate() {
         let tree = svg2pdf::usvg::Tree::from_str(svg_str, &options).map_err(|e| {
-            IrrecoverableError::new(Span::new(0, 0), format!("SVG parse error: {e}"))
+            IrrecoverableError::new(IrrecoverableErrorKind::PdfSvgParseFailed {
+                span: Span::new(0, 0),
+                detail: e.to_string(),
+            })
         })?;
 
         let page_width = tree.size().width();
         let page_height = tree.size().height();
 
         let (svg_chunk, svg_ref) = svg2pdf::to_chunk(&tree, conversion_options).map_err(|e| {
-            IrrecoverableError::new(Span::new(0, 0), format!("SVG to PDF chunk failed: {e}"))
+            IrrecoverableError::new(IrrecoverableErrorKind::PdfSvgConversionFailed {
+                span: Span::new(0, 0),
+                detail: e.to_string(),
+            })
         })?;
 
         // Renumber the chunk's internal refs so they don't conflict with our allocator.
         let mut map = HashMap::new();
         let svg_chunk = svg_chunk.renumber(|old| *map.entry(old).or_insert_with(|| alloc.bump()));
         let svg_ref_new = map.get(&svg_ref).copied().ok_or_else(|| {
-            IrrecoverableError::new(
+            IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
                 Span::new(0, 0),
                 "internal invariant: SVG chunk ref missing after renumber",
-            )
+            ))
         })?;
 
         pdf.extend(&svg_chunk);
@@ -66,18 +72,18 @@ pub fn write_pdf(svgs: &[String]) -> Result<Vec<u8>, IrrecoverableError> {
         let content_bytes = content.finish();
 
         let content_id = content_ids.get(i).ok_or_else(|| {
-            IrrecoverableError::new(
+            IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
                 Span::new(0, 0),
                 "internal invariant: content_ids index out of range",
-            )
+            ))
         })?;
         pdf.stream(*content_id, &content_bytes).finish();
 
         let page_id = page_ids.get(i).ok_or_else(|| {
-            IrrecoverableError::new(
+            IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
                 Span::new(0, 0),
                 "internal invariant: page_ids index out of range",
-            )
+            ))
         })?;
         let mut page = pdf.page(*page_id);
         page.media_box(Rect::new(0.0, 0.0, page_width, page_height));

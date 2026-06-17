@@ -1,4 +1,4 @@
-use crate::error::{IrrecoverableError, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 use hound::{SampleFormat, WavSpec, WavWriter};
 use midly::{MetaMessage, MidiMessage, Smf, Timing, TrackEventKind};
 use oxisynth::{MidiEvent, SoundFont, Synth, SynthDescriptor};
@@ -10,8 +10,11 @@ const CHOIR_AAHS_PROGRAM: u8 = 52;
 static SF2_BYTES: &[u8] = include_bytes!("../fonts/GeneralUser_GS.sf2");
 
 pub fn write_wav(midi_bytes: &[u8]) -> Result<Vec<u8>, IrrecoverableError> {
-    let smf = Smf::parse(midi_bytes)
-        .map_err(|_| IrrecoverableError::new(Span::new(0, 0), "invalid MIDI bytes"))?;
+    let smf = Smf::parse(midi_bytes).map_err(|_| {
+        IrrecoverableError::new(IrrecoverableErrorKind::WavInvalidMidiBytes {
+            span: Span::new(0, 0),
+        })
+    })?;
     let tpq = match smf.header.timing {
         Timing::Metrical(t) => t.as_int() as u32,
         Timing::Timecode(..) => 480,
@@ -21,10 +24,17 @@ pub fn write_wav(midi_bytes: &[u8]) -> Result<Vec<u8>, IrrecoverableError> {
         sample_rate: SAMPLE_RATE as f32,
         ..Default::default()
     })
-    .map_err(|_| IrrecoverableError::new(Span::new(0, 0), "failed to initialize synthesizer"))?;
+    .map_err(|_| {
+        IrrecoverableError::new(IrrecoverableErrorKind::WavSynthInitFailed {
+            span: Span::new(0, 0),
+        })
+    })?;
 
-    let sf = SoundFont::load(&mut Cursor::new(SF2_BYTES))
-        .map_err(|_| IrrecoverableError::new(Span::new(0, 0), "failed to load soundfont"))?;
+    let sf = SoundFont::load(&mut Cursor::new(SF2_BYTES)).map_err(|_| {
+        IrrecoverableError::new(IrrecoverableErrorKind::WavSoundfontLoadFailed {
+            span: Span::new(0, 0),
+        })
+    })?;
     synth.add_font(sf, true);
 
     let mut micros_per_beat: u32 = 500_000; // default 120 BPM
@@ -32,10 +42,10 @@ pub fn write_wav(midi_bytes: &[u8]) -> Result<Vec<u8>, IrrecoverableError> {
     let mut all_r: Vec<f32> = Vec::new();
 
     let track = smf.tracks.first().ok_or_else(|| {
-        IrrecoverableError::new(
+        IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
             Span::new(0, 0),
             "internal invariant: MIDI file has no tracks",
-        )
+        ))
     })?;
     for event in track.iter() {
         let delta = event.delta.as_int();
@@ -116,22 +126,34 @@ fn encode_wav(l: &[f32], r: &[f32]) -> Result<Vec<u8>, IrrecoverableError> {
     };
     let mut buf: Vec<u8> = Vec::new();
     let mut writer = WavWriter::new(Cursor::new(&mut buf), spec).map_err(|e| {
-        IrrecoverableError::new(Span::new(0, 0), format!("failed to create WAV writer: {e}"))
+        IrrecoverableError::new(IrrecoverableErrorKind::WavWriterCreateFailed {
+            span: Span::new(0, 0),
+            source: e.to_string(),
+        })
     })?;
     for (ls, rs) in l.iter().zip(r.iter()) {
         writer
             .write_sample((ls.clamp(-1.0, 1.0) * i16::MAX as f32) as i16)
             .map_err(|e| {
-                IrrecoverableError::new(Span::new(0, 0), format!("failed to write WAV sample: {e}"))
+                IrrecoverableError::new(IrrecoverableErrorKind::WavWriteSampleFailed {
+                    span: Span::new(0, 0),
+                    source: e.to_string(),
+                })
             })?;
         writer
             .write_sample((rs.clamp(-1.0, 1.0) * i16::MAX as f32) as i16)
             .map_err(|e| {
-                IrrecoverableError::new(Span::new(0, 0), format!("failed to write WAV sample: {e}"))
+                IrrecoverableError::new(IrrecoverableErrorKind::WavWriteSampleFailed {
+                    span: Span::new(0, 0),
+                    source: e.to_string(),
+                })
             })?;
     }
     writer.finalize().map_err(|e| {
-        IrrecoverableError::new(Span::new(0, 0), format!("failed to finalize WAV file: {e}"))
+        IrrecoverableError::new(IrrecoverableErrorKind::WavFinalizeFailed {
+            span: Span::new(0, 0),
+            source: e.to_string(),
+        })
     })?;
     Ok(buf)
 }

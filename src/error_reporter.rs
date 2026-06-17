@@ -61,7 +61,8 @@ fn render_to_writer(
     };
 
     let Some(source_text) = source_text else {
-        writeln!(writer, "error: {}", e.message).ok();
+        let message = e.message();
+        writeln!(writer, "error: {message}").ok();
         return;
     };
 
@@ -71,30 +72,32 @@ fn render_to_writer(
         .map(|p| p.to_string_lossy().into_owned())
         .unwrap_or_else(|| "input".to_owned());
     // ariadne indexes by Unicode character count, not by byte offset.
-    let char_start = source_text[..e.span.start.min(source_text.len())]
+    let span = e.span();
+    let char_start = source_text[..span.start.min(source_text.len())]
         .chars()
         .count();
-    let char_end = source_text[..e.span.end.min(source_text.len())]
+    let char_end = source_text[..span.end.min(source_text.len())]
         .chars()
         .count();
     let span = (filename.clone(), char_start..char_end);
+    let message = e.message();
 
     if Report::build(ReportKind::Error, span.clone())
         .with_config(config)
-        .with_message(&e.message)
-        .with_label(Label::new(span).with_message(&e.message))
+        .with_message(&message)
+        .with_label(Label::new(span).with_message(&message))
         .finish()
         .write((filename, Source::from(source_text.as_str())), &mut writer)
         .is_err()
     {
-        writeln!(writer, "error: {}", e.message).ok();
+        writeln!(writer, "error: {message}").ok();
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::Span;
+    use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
     use std::path::PathBuf;
 
     fn write_temp_file(name: &str, content: &str) -> PathBuf {
@@ -106,14 +109,17 @@ mod tests {
     #[test]
     fn render_output_contains_message() {
         let path = write_temp_file("test_render.jianpu", "1 2 x 4\n");
-        let e =
-            IrrecoverableError::new(Span::new(4, 5), "expected pitch digit 0-7").with_path(&path);
+        let e = IrrecoverableError::new(IrrecoverableErrorKind::NoteExpectedPitchDigit {
+            span: Span::new(4, 5),
+            ch: 'x',
+        })
+        .with_path(&path);
 
         let mut buf = Vec::new();
         render_to_writer(&e, &mut buf, None, Config::default());
         let output = String::from_utf8_lossy(&buf);
         assert!(
-            output.contains("expected pitch digit 0-7"),
+            output.contains("expected pitch digit (0-7), got: x"),
             "output was: {output}"
         );
     }
@@ -121,20 +127,26 @@ mod tests {
     #[test]
     fn render_with_source_shows_code_block() {
         let source = "1 2 x 4\n";
-        let e = IrrecoverableError::new(Span::new(4, 5), "expected pitch digit 0-7");
+        let e = IrrecoverableError::new(IrrecoverableErrorKind::NoteExpectedPitchDigit {
+            span: Span::new(4, 5),
+            ch: 'x',
+        });
 
         let output = render_with_source(source, &e);
         assert!(
             output.contains('│'),
             "expected ariadne code block, got: {output}"
         );
-        assert!(output.contains("expected pitch digit 0-7"));
+        assert!(output.contains("expected pitch digit (0-7), got: x"));
     }
 
     #[test]
     fn render_with_source_has_no_ansi_codes() {
         let source = "1 2 x 4\n";
-        let e = IrrecoverableError::new(Span::new(4, 5), "expected pitch digit 0-7");
+        let e = IrrecoverableError::new(IrrecoverableErrorKind::NoteExpectedPitchDigit {
+            span: Span::new(4, 5),
+            ch: 'x',
+        });
 
         let output = render_with_source(source, &e);
         assert!(
@@ -152,10 +164,10 @@ mod tests {
         let source = "你好世界 x 4\n";
         let path = write_temp_file("test_unicode_render.jianpu", source);
         let token_byte_start = "你好世界 ".len(); // 3*4 + 1 = 13
-        let e = IrrecoverableError::new(
-            Span::new(token_byte_start, token_byte_start + 1),
-            "bad token",
-        )
+        let e = IrrecoverableError::new(IrrecoverableErrorKind::InternalInvariant {
+            span: Span::new(token_byte_start, token_byte_start + 1),
+            detail: "bad token".to_string(),
+        })
         .with_path(&path);
 
         let mut buf = Vec::new();
@@ -171,7 +183,10 @@ mod tests {
 
     #[test]
     fn render_falls_back_when_path_is_none() {
-        let e = IrrecoverableError::new(Span::new(0, 1), "some error");
+        let e = IrrecoverableError::new(IrrecoverableErrorKind::InternalInvariant {
+            span: Span::new(0, 1),
+            detail: "some error".to_string(),
+        });
         let mut buf = Vec::new();
         render_to_writer(&e, &mut buf, None, Config::default());
         let output = String::from_utf8_lossy(&buf);
@@ -180,8 +195,11 @@ mod tests {
 
     #[test]
     fn render_falls_back_when_file_unreadable() {
-        let e = IrrecoverableError::new(Span::new(0, 1), "some error")
-            .with_path("/nonexistent/path.jianpu");
+        let e = IrrecoverableError::new(IrrecoverableErrorKind::InternalInvariant {
+            span: Span::new(0, 1),
+            detail: "some error".to_string(),
+        })
+        .with_path("/nonexistent/path.jianpu");
         let mut buf = Vec::new();
         render_to_writer(&e, &mut buf, None, Config::default());
         let output = String::from_utf8_lossy(&buf);

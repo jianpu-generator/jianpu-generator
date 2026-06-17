@@ -185,10 +185,11 @@ fn write_svgs_to_path(
 fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableError> {
     if opts.split_tracks {
         let content = std::fs::read_to_string(&opts.input).map_err(|e| {
-            jg::error::IrrecoverableError::new(
-                jg::error::Span::new(0, 0),
-                format!("could not read {:?}: {e}", opts.input),
-            )
+            jg::error::IrrecoverableError::new(jg::error::IrrecoverableErrorKind::IoReadFailed {
+                span: jg::error::Span::new(0, 0),
+                path: opts.input.clone(),
+                source: e.to_string(),
+            })
         })?;
         let filename = opts.input.to_string_lossy();
         let (_, base_name) = split_track_base(&opts.input, opts.output.as_deref());
@@ -225,10 +226,11 @@ fn read_display_names(
     input: &Path,
 ) -> Result<std::collections::HashMap<String, String>, jg::error::IrrecoverableError> {
     let content = std::fs::read_to_string(input).map_err(|e| {
-        jg::error::IrrecoverableError::new(
-            jg::error::Span::new(0, 0),
-            format!("could not read {:?}: {e}", input),
-        )
+        jg::error::IrrecoverableError::new(jg::error::IrrecoverableErrorKind::IoReadFailed {
+            span: jg::error::Span::new(0, 0),
+            path: input.to_path_buf(),
+            source: e.to_string(),
+        })
     })?;
     let filename = input.to_string_lossy();
     jg::part_display_name_map(&content, &filename)
@@ -395,10 +397,11 @@ fn run_generate(format: GenerateFormat) -> Result<(), jg::error::IrrecoverableEr
 
 fn parse_and_group(input: &Path) -> Result<jg::ast::grouped::Score, jg::error::IrrecoverableError> {
     let content = std::fs::read_to_string(input).map_err(|e| {
-        jg::error::IrrecoverableError::new(
-            jg::error::Span::new(0, 0),
-            format!("could not read {input:?}: {e}"),
-        )
+        jg::error::IrrecoverableError::new(jg::error::IrrecoverableErrorKind::IoReadFailed {
+            span: jg::error::Span::new(0, 0),
+            path: input.to_path_buf(),
+            source: e.to_string(),
+        })
     })?;
     let filename = input.to_string_lossy().to_string();
     let doc = jg::parser::parse(&content, &filename).map_err(|e| e.with_path(input))?;
@@ -407,9 +410,10 @@ fn parse_and_group(input: &Path) -> Result<jg::ast::grouped::Score, jg::error::I
 
 fn write_file(path: &Path, data: &[u8]) -> Result<(), jg::error::IrrecoverableError> {
     std::fs::write(path, data).map_err(|e| {
-        jg::error::IrrecoverableError::new(
-            jg::error::Span::new(0, 0),
-            format!("could not write {path:?}: {e}"),
-        )
+        jg::error::IrrecoverableError::new(jg::error::IrrecoverableErrorKind::IoWriteFailed {
+            span: jg::error::Span::new(0, 0),
+            path: path.to_path_buf(),
+            source: e.to_string(),
+        })
     })
 }

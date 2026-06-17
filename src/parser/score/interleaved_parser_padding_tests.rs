@@ -180,7 +180,7 @@ fn rejects_underfull_measure_that_cannot_be_padded_with_extensions() {
     let content = "(time=4/4 key=C4 bpm=120)\n4_\n";
     let declarations = vec![decl("", PartKind::Notes)];
     let err = parse(content, 0, &declarations).unwrap_err();
-    assert!(err.message.contains("incomplete measure"));
+    assert!(err.message().contains("incomplete measure"));
 }
 
 #[test]
@@ -188,7 +188,7 @@ fn rejects_underfull_measure_with_short_trailing_notes() {
     let content = "(time=4/4 key=C4 bpm=120)\n3_ 1_ 1 0_ 1= 1=\n";
     let declarations = vec![decl("", PartKind::Notes)];
     let err = parse(content, 0, &declarations).unwrap_err();
-    assert!(err.message.contains("incomplete measure"));
+    assert!(err.message().contains("incomplete measure"));
 }
 
 #[test]
@@ -199,11 +199,13 @@ fn underfull_measure_error_span_covers_notes_line() {
     let declarations = vec![decl("", PartKind::Notes)];
     let err = parse(content, 0, &declarations).unwrap_err();
     assert_eq!(
-        err.span.start, 26,
+        err.span().start,
+        26,
         "span must start at the beginning of the notes line"
     );
     assert_eq!(
-        err.span.end, 34,
+        err.span().end,
+        34,
         "span must end at the end of the notes line"
     );
 }
@@ -215,10 +217,11 @@ fn underfull_measure_in_second_bar_error_span_covers_notes_line() {
     let declarations = vec![decl("", PartKind::Notes)];
     let err = parse(content, 0, &declarations).unwrap_err();
     assert_eq!(
-        err.span.start, 35,
+        err.span().start,
+        35,
         "span must start at the beginning of the second bar's notes line"
     );
-    assert_eq!(err.span.end, 43);
+    assert_eq!(err.span().end, 43);
 }
 
 #[test]

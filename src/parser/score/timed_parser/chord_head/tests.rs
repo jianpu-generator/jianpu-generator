@@ -1,4 +1,5 @@
 use super::*;
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 use crate::parser::score::timed_parser::{parse_timed_line, GroupStack, LexContext};
 
 fn chord(
@@ -28,8 +29,10 @@ fn try_parse_symbol(token: &str) -> Result<ScoreEvent, IrrecoverableError> {
         parse_timed_line::<ChordHead>(token, 0, &mut GroupStack::default(), LexContext::Chords)?;
     if events.len() != 1 {
         return Err(IrrecoverableError::new(
-            Span::new(0, token.len()),
-            format!("expected one event, got {}", events.len()),
+            IrrecoverableErrorKind::internal_invariant(
+                Span::new(0, token.len()),
+                format!("expected one event, got {}", events.len()),
+            ),
         ));
     }
     Ok(events.into_iter().next().unwrap().value)

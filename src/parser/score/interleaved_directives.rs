@@ -1,5 +1,5 @@
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName, ScoreEvent};
-use crate::error::{IrrecoverableError, Span, Spanned};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Spanned};
 
 /// Returns groups of `(trimmed_line, byte_offset_within_content)` pairs.
 pub(super) fn collect_groups(content: &str) -> Vec<Vec<(String, usize)>> {
@@ -35,8 +35,9 @@ pub(super) fn split_directive(
         if directive_line.starts_with('(') {
             if !directive_line.ends_with(')') {
                 return Err(IrrecoverableError::new(
-                    Span::new(*directive_offset, directive_offset + directive_line.len()),
-                    "directive row must end with ')'",
+                    IrrecoverableErrorKind::DirectiveUnclosedParen {
+                        span: Span::new(*directive_offset, directive_offset + directive_line.len()),
+                    },
                 ));
             }
             let events = parse_directive_line(directive_line, *directive_offset)?;
@@ -97,8 +98,10 @@ fn parse_directive_line(
 ) -> Result<Vec<Spanned<ScoreEvent>>, IrrecoverableError> {
     let inner = &line[1..line.len() - 1];
     let inner_offset = line_offset + 1; // skip '('
-    let tokens = tokenize_directive_tokens(inner).map_err(|msg| {
-        IrrecoverableError::new(Span::new(line_offset, line_offset + line.len()), msg)
+    let tokens = tokenize_directive_tokens(inner).map_err(|_| {
+        IrrecoverableError::new(IrrecoverableErrorKind::DirectiveUnclosedQuote {
+            span: Span::new(line_offset, line_offset + line.len()),
+        })
     })?;
     let mut events = Vec::new();
 
@@ -108,7 +111,10 @@ fn parse_directive_line(
 
         let event = if let Some(rest) = token.strip_prefix("bpm=") {
             let bpm = rest.parse::<u32>().map_err(|_| {
-                IrrecoverableError::new(span.clone(), format!("invalid bpm value: {rest}"))
+                IrrecoverableError::new(IrrecoverableErrorKind::DirectiveInvalidBpm {
+                    span: span.clone(),
+                    value: rest.to_string(),
+                })
             })?;
             ScoreEvent::BpmChange(bpm)
         } else if let Some(rest) = token.strip_prefix("key=") {
@@ -118,22 +124,25 @@ fn parse_directive_line(
         } else if let Some(rest) = token.strip_prefix("label=") {
             if rest.len() < 2 || !rest.starts_with('"') || !rest.ends_with('"') {
                 return Err(IrrecoverableError::new(
-                    span,
-                    format!("label value must be a quoted string, got: {rest}"),
+                    IrrecoverableErrorKind::DirectiveLabelNotQuoted {
+                        span,
+                        value: rest.to_string(),
+                    },
                 ));
             }
             let text = rest[1..rest.len() - 1].to_string();
             if text.is_empty() {
                 return Err(IrrecoverableError::new(
-                    span,
-                    "label value must not be empty".to_string(),
+                    IrrecoverableErrorKind::DirectiveLabelEmpty { span },
                 ));
             }
             ScoreEvent::LabelChange(text)
         } else {
             return Err(IrrecoverableError::new(
-                span,
-                format!("unknown directive: '{token}'"),
+                IrrecoverableErrorKind::DirectiveUnknown {
+                    span,
+                    token: token.to_string(),
+                },
             ));
         };
 
@@ -147,7 +156,9 @@ fn parse_key_value(value: &str, span: Span) -> Result<ScoreEvent, IrrecoverableE
     let mut chars = value.chars().peekable();
 
     let name_char = chars.next().ok_or_else(|| {
-        IrrecoverableError::new(span.clone(), "expected note name after 'key='".to_string())
+        IrrecoverableError::new(IrrecoverableErrorKind::DirectiveKeyMissingNoteName {
+            span: span.clone(),
+        })
     })?;
 
     let name = match name_char {
@@ -160,8 +171,10 @@ fn parse_key_value(value: &str, span: Span) -> Result<ScoreEvent, IrrecoverableE
         'G' => NoteName::G,
         _ => {
             return Err(IrrecoverableError::new(
-                span,
-                format!("invalid note name: '{name_char}'"),
+                IrrecoverableErrorKind::DirectiveKeyInvalidNoteName {
+                    span,
+                    name: name_char,
+                },
             ))
         }
     };
@@ -180,10 +193,10 @@ fn parse_key_value(value: &str, span: Span) -> Result<ScoreEvent, IrrecoverableE
 
     let octave_str: String = chars.collect();
     let octave = octave_str.parse::<u8>().map_err(|_| {
-        IrrecoverableError::new(
-            span.clone(),
-            format!("invalid octave in 'key={value}': expected number"),
-        )
+        IrrecoverableError::new(IrrecoverableErrorKind::DirectiveKeyInvalidOctave {
+            span: span.clone(),
+            value: value.to_string(),
+        })
     })?;
 
     Ok(ScoreEvent::KeyChange(KeyChange {
@@ -199,32 +212,39 @@ fn parse_time_value(value: &str, span: Span) -> Result<ScoreEvent, Irrecoverable
     let parts: Vec<&str> = value.split('/').collect();
     if parts.len() != 2 {
         return Err(IrrecoverableError::new(
-            span,
-            format!("invalid time signature: '{value}'"),
+            IrrecoverableErrorKind::DirectiveTimeInvalid {
+                span,
+                value: value.to_string(),
+            },
         ));
     }
     let numerator_str = parts.first().ok_or_else(|| {
-        IrrecoverableError::new(span.clone(), format!("invalid time signature: '{value}'"))
+        IrrecoverableError::new(IrrecoverableErrorKind::DirectiveTimeInvalid {
+            span: span.clone(),
+            value: value.to_string(),
+        })
     })?;
     let denominator_str = parts.get(1).ok_or_else(|| {
-        IrrecoverableError::new(span.clone(), format!("invalid time signature: '{value}'"))
+        IrrecoverableError::new(IrrecoverableErrorKind::DirectiveTimeInvalid {
+            span: span.clone(),
+            value: value.to_string(),
+        })
     })?;
     let numerator = numerator_str.parse::<u8>().map_err(|_| {
-        IrrecoverableError::new(
-            span.clone(),
-            format!("invalid time numerator: '{numerator_str}'"),
-        )
+        IrrecoverableError::new(IrrecoverableErrorKind::DirectiveTimeInvalidNumerator {
+            span: span.clone(),
+            num: (*numerator_str).to_string(),
+        })
     })?;
     let denominator = denominator_str.parse::<u8>().map_err(|_| {
-        IrrecoverableError::new(
-            span.clone(),
-            format!("invalid time denominator: '{denominator_str}'"),
-        )
+        IrrecoverableError::new(IrrecoverableErrorKind::DirectiveTimeInvalidDenominator {
+            span: span.clone(),
+            den: (*denominator_str).to_string(),
+        })
     })?;
     if denominator == 0 {
         return Err(IrrecoverableError::new(
-            span,
-            "time denominator cannot be zero".to_string(),
+            IrrecoverableErrorKind::DirectiveTimeZeroDenominator { span },
         ));
     }
     Ok(ScoreEvent::TimeSignatureChange {

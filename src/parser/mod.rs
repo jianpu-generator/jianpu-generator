@@ -1,5 +1,5 @@
 use crate::ast::parsed::ParsedDocument;
-use crate::error::{IrrecoverableError, Span};
+use crate::error::{DocumentSection, IrrecoverableError, IrrecoverableErrorKind, Span};
 
 pub mod lyrics;
 pub mod metadata_parser;
@@ -22,8 +22,10 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, Irrecoverabl
             SectionKind::Metadata => {
                 if raw_metadata.is_some() {
                     return Err(IrrecoverableError::new(
-                        doc_span,
-                        "duplicate [metadata] section",
+                        IrrecoverableErrorKind::DuplicateSection {
+                            span: doc_span,
+                            section: DocumentSection::Metadata,
+                        },
                     ));
                 }
                 raw_metadata = Some((section.content, section.content_offset));
@@ -31,8 +33,10 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, Irrecoverabl
             SectionKind::Parts => {
                 if raw_parts.is_some() {
                     return Err(IrrecoverableError::new(
-                        doc_span,
-                        "duplicate [parts] section",
+                        IrrecoverableErrorKind::DuplicateSection {
+                            span: doc_span,
+                            section: DocumentSection::Parts,
+                        },
                     ));
                 }
                 raw_parts = Some((section.content, section.content_offset));
@@ -40,8 +44,10 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, Irrecoverabl
             SectionKind::Score => {
                 if raw_score.is_some() {
                     return Err(IrrecoverableError::new(
-                        doc_span,
-                        "duplicate [score] section",
+                        IrrecoverableErrorKind::DuplicateSection {
+                            span: doc_span,
+                            section: DocumentSection::Score,
+                        },
                     ));
                 }
                 raw_score = Some((section.content, section.content_offset));
@@ -49,12 +55,24 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, Irrecoverabl
         }
     }
 
-    let (meta_content, meta_offset) = raw_metadata
-        .ok_or_else(|| IrrecoverableError::new(doc_span.clone(), "missing [metadata] section"))?;
-    let (parts_content, parts_offset) = raw_parts
-        .ok_or_else(|| IrrecoverableError::new(doc_span.clone(), "missing [parts] section"))?;
-    let (score_content, score_offset) =
-        raw_score.ok_or_else(|| IrrecoverableError::new(doc_span, "missing [score] section"))?;
+    let (meta_content, meta_offset) = raw_metadata.ok_or_else(|| {
+        IrrecoverableError::new(IrrecoverableErrorKind::MissingSection {
+            span: doc_span.clone(),
+            section: DocumentSection::Metadata,
+        })
+    })?;
+    let (parts_content, parts_offset) = raw_parts.ok_or_else(|| {
+        IrrecoverableError::new(IrrecoverableErrorKind::MissingSection {
+            span: doc_span.clone(),
+            section: DocumentSection::Parts,
+        })
+    })?;
+    let (score_content, score_offset) = raw_score.ok_or_else(|| {
+        IrrecoverableError::new(IrrecoverableErrorKind::MissingSection {
+            span: doc_span,
+            section: DocumentSection::Score,
+        })
+    })?;
 
     let metadata = metadata_parser::parse_metadata(&meta_content, meta_offset)?;
     let declarations = parts_parser::parse_parts(&parts_content, parts_offset)?;
@@ -189,7 +207,8 @@ mod tests {
         let expected_offset = input.find("5 6 7 1").unwrap();
         let err = parse(input, "test.jianpu").unwrap_err();
         assert_eq!(
-            err.span.start, expected_offset,
+            err.span().start,
+            expected_offset,
             "error span should point to the absolute file position of the extra line"
         );
     }
@@ -211,9 +230,9 @@ mod tests {
         );
         let err = parse(input, "test.jianpu").unwrap_err();
         assert!(
-            err.message.contains("Melody"),
+            err.message().contains("Melody"),
             "error message should list the declared part 'Melody', got: {}",
-            err.message
+            err.message()
         );
     }
 

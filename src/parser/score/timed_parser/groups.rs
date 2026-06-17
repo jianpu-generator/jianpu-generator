@@ -1,6 +1,6 @@
 #![allow(clippy::indexing_slicing)]
 
-use crate::error::{IrrecoverableError, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct GroupStack {
@@ -41,8 +41,7 @@ impl GroupStack {
 pub fn validate_group_note_count(count: usize, span: &Span) -> Result<(), IrrecoverableError> {
     if count < 2 {
         return Err(IrrecoverableError::new(
-            span.clone(),
-            "tie/slur group `(…)` must contain at least 2 notes".to_string(),
+            IrrecoverableErrorKind::GroupTooFewNotes { span: span.clone() },
         ));
     }
     Ok(())

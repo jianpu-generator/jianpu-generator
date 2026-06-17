@@ -104,7 +104,7 @@ fn rejects_too_many_lines_in_group() {
     let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c d\nextra line\n";
     let declarations = vec![decl("", PartKind::NotesWithLyrics)];
     let err = parse(content, 0, &declarations).unwrap_err();
-    assert!(err.message.contains("lines") && err.message.contains("expected"));
+    assert!(err.message().contains("lines") && err.message().contains("expected"));
 }
 
 #[test]
@@ -175,7 +175,7 @@ fn rejects_unclosed_paren_group_at_eof() {
     let content = "(time=4/4 key=C4 bpm=120)\n111(1\n";
     let declarations = vec![decl("", PartKind::Notes)];
     let err = parse(content, 0, &declarations).unwrap_err();
-    assert!(err.message.contains("unclosed '(' group"));
+    assert!(err.message().contains("unclosed '(' group"));
 }
 
 #[test]
@@ -308,14 +308,14 @@ fn omitted_chord_row_is_irrecoverable() {
     let err = crate::parser::parse(input, "test.jianpu")
         .expect_err("missing chord row must abort parsing");
     assert!(
-        err.message.contains("chord"),
+        err.message().contains("chord"),
         "error should mention missing chord row, got: {}",
-        err.message
+        err.message()
     );
     assert!(
-        !err.message.contains("invalid track columns"),
+        !err.message().contains("invalid track columns"),
         "error should be about missing chord row, not unknown part kind, got: {}",
-        err.message
+        err.message()
     );
 }
 

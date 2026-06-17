@@ -334,7 +334,7 @@ mod split_pdf_tests {
     fn write_split_pdfs_from_source_invalid_source_errors() {
         let err =
             write_split_pdfs_from_source("not valid", "test.jianpu", "song", &[]).unwrap_err();
-        assert!(!err.message.is_empty());
+        assert!(!err.message().is_empty());
     }
 
     #[test]

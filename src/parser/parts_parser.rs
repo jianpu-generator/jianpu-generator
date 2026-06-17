@@ -1,5 +1,5 @@
 use crate::ast::parsed::{PartDecl, PartKind};
-use crate::error::{IrrecoverableError, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 
 pub fn parse_parts(content: &str, base_offset: usize) -> Result<Vec<PartDecl>, IrrecoverableError> {
     let mut declarations = Vec::new();
@@ -16,10 +16,10 @@ pub fn parse_parts(content: &str, base_offset: usize) -> Result<Vec<PartDecl>, I
         let line_span = Span::new(line_start, line_start + line.len());
 
         let (lhs, rhs) = trimmed.split_once('=').ok_or_else(|| {
-            IrrecoverableError::new(
-                line_span.clone(),
-                format!("expected track declaration, got: {trimmed}"),
-            )
+            IrrecoverableError::new(IrrecoverableErrorKind::PartsMalformedLine {
+                span: line_span.clone(),
+                line: trimmed.to_string(),
+            })
         })?;
         let lhs = lhs.trim();
         let rhs = rhs.trim();
@@ -27,8 +27,10 @@ pub fn parse_parts(content: &str, base_offset: usize) -> Result<Vec<PartDecl>, I
         let (display_name, abbreviation) = parse_lhs(lhs, &line_span)?;
         if !seen_abbreviations.insert(abbreviation.clone()) {
             return Err(IrrecoverableError::new(
-                line_span.clone(),
-                format!("duplicate abbreviation: {abbreviation}"),
+                IrrecoverableErrorKind::PartsDuplicateAbbreviation {
+                    span: line_span.clone(),
+                    abbrev: abbreviation,
+                },
             ));
         }
 
@@ -42,8 +44,9 @@ pub fn parse_parts(content: &str, base_offset: usize) -> Result<Vec<PartDecl>, I
 
     if declarations.is_empty() {
         return Err(IrrecoverableError::new(
-            Span::new(base_offset, base_offset + content.len().max(1)),
-            "expected at least one track in [parts] section",
+            IrrecoverableErrorKind::PartsEmptySection {
+                span: Span::new(base_offset, base_offset + content.len().max(1)),
+            },
         ));
     }
 
@@ -57,14 +60,12 @@ fn parse_lhs(lhs: &str, span: &Span) -> Result<(String, String), IrrecoverableEr
             let abbreviation = lhs[open + 1..lhs.len() - 1].trim().to_string();
             if display_name.is_empty() {
                 return Err(IrrecoverableError::new(
-                    span.clone(),
-                    "display name cannot be empty".to_string(),
+                    IrrecoverableErrorKind::PartsEmptyDisplayName { span: span.clone() },
                 ));
             }
             if abbreviation.is_empty() {
                 return Err(IrrecoverableError::new(
-                    span.clone(),
-                    "abbreviation cannot be empty".to_string(),
+                    IrrecoverableErrorKind::PartsEmptyAbbreviation { span: span.clone() },
                 ));
             }
             return Ok((display_name, abbreviation));
@@ -73,8 +74,7 @@ fn parse_lhs(lhs: &str, span: &Span) -> Result<(String, String), IrrecoverableEr
     let name = lhs.trim().to_string();
     if name.is_empty() {
         return Err(IrrecoverableError::new(
-            span.clone(),
-            "track name cannot be empty".to_string(),
+            IrrecoverableErrorKind::PartsEmptyTrackName { span: span.clone() },
         ));
     }
     Ok((name.clone(), name))
@@ -89,8 +89,10 @@ fn parse_rhs(rhs: &str, span: &Span) -> Result<PartKind, IrrecoverableError> {
         ["lyrics", "notes"] => Ok(PartKind::LyricsWithNotes),
         ["notes", "chord"] => Ok(PartKind::NotesWithChord),
         _ => Err(IrrecoverableError::new(
-            span.clone(),
-            format!("invalid track columns '{rhs}': expected 'chord', 'notes', 'notes lyrics', 'lyrics notes', or 'notes chord'"),
+            IrrecoverableErrorKind::PartsInvalidColumns {
+                span: span.clone(),
+                rhs: rhs.to_string(),
+            },
         )),
     }
 }

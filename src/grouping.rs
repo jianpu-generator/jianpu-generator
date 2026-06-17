@@ -1,5 +1,5 @@
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{IrrecoverableError, Span, Spanned};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Spanned};
 
 const HALF_BAR_BOUNDARY: u32 = 8;
 
@@ -183,18 +183,13 @@ fn validate_dotted_eighth_tail(
 }
 
 fn half_bar_error(span: &Span) -> IrrecoverableError {
-    IrrecoverableError::new(
-        span.clone(),
-        "note/rest crosses the half-bar boundary (beat 2→3); use a beam group or tie to show the split"
-            .to_string(),
-    )
+    IrrecoverableError::new(IrrecoverableErrorKind::HalfBarBoundaryCrossed { span: span.clone() })
 }
 
 fn dotted_eighth_error(span: &Span) -> IrrecoverableError {
-    IrrecoverableError::new(
-        span.clone(),
-        "dotted eighth must be followed by a sixteenth note or rest".to_string(),
-    )
+    IrrecoverableError::new(IrrecoverableErrorKind::DottedEighthNeedsSixteenth {
+        span: span.clone(),
+    })
 }
 
 #[cfg(test)]
@@ -235,13 +230,13 @@ mod tests {
     #[test]
     fn rejects_half_bar_crossing() {
         let err = parse_score("1. 2. 3_ 4_\n").unwrap_err();
-        assert!(err.message.contains("half-bar boundary"));
+        assert!(err.message().contains("half-bar boundary"));
     }
 
     #[test]
     fn rejects_half_bar_crossing_on_half_note() {
         let err = parse_score("1 2- 0_ 0_\n").unwrap_err();
-        assert!(err.message.contains("half-bar boundary"));
+        assert!(err.message().contains("half-bar boundary"));
     }
 
     #[test]
@@ -256,7 +251,7 @@ mod tests {
         let bar = "1_. 2_ 3_ 4_ 5_ 6_ 7_ 0=";
         let events = token_parser::parse_notes_line(bar, 0, &mut Default::default()).unwrap();
         let err = validate_measure_grouping(&events, 4, 4).unwrap_err();
-        assert!(err.message.contains("dotted eighth"));
+        assert!(err.message().contains("dotted eighth"));
     }
 
     #[test]
@@ -267,7 +262,7 @@ mod tests {
     #[test]
     fn rejects_dotted_eighth_rest_without_tail_group() {
         let err = parse_score("0_. 1_ 2_ 3_ 4_ 5_ 6_ 0=\n").unwrap_err();
-        assert!(err.message.contains("dotted eighth"));
+        assert!(err.message().contains("dotted eighth"));
     }
 
     #[test]

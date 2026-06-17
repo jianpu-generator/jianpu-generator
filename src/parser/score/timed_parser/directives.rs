@@ -1,5 +1,5 @@
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName};
-use crate::error::{IrrecoverableError, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 
 /// Returns how many bytes the key-change token after `=` occupies.
 /// E.g. `"C#4"` → 2 (note name + accidental), `"Gb3"` → 2, `"A4"` → 1.
@@ -30,19 +30,19 @@ pub fn key_change_lexeme_len(after_eq: &str) -> usize {
 /// Parses a full `1=Xb?<octave>` or `1=X#?<octave>` string into a `KeyChange`.
 pub fn parse_key_change_text(text: &str, span: &Span) -> Result<KeyChange, IrrecoverableError> {
     let after_eq = text.strip_prefix("1=").ok_or_else(|| {
-        IrrecoverableError::new(
-            span.clone(),
-            format!("expected key change starting with '1=', got: {text}"),
-        )
+        IrrecoverableError::new(IrrecoverableErrorKind::KeyChangeMissingPrefix {
+            span: span.clone(),
+            text: text.to_string(),
+        })
     })?;
 
     let mut chars = after_eq.chars().peekable();
 
     let name_char = chars.next().ok_or_else(|| {
-        IrrecoverableError::new(
-            span.clone(),
-            format!("expected note name after '1=', got: {text}"),
-        )
+        IrrecoverableError::new(IrrecoverableErrorKind::KeyChangeMissingNoteName {
+            span: span.clone(),
+            text: text.to_string(),
+        })
     })?;
 
     let name = match name_char {
@@ -55,8 +55,10 @@ pub fn parse_key_change_text(text: &str, span: &Span) -> Result<KeyChange, Irrec
         'G' => NoteName::G,
         _ => {
             return Err(IrrecoverableError::new(
-                span.clone(),
-                format!("invalid note name: {name_char}"),
+                IrrecoverableErrorKind::KeyChangeInvalidNoteName {
+                    span: span.clone(),
+                    name: name_char,
+                },
             ))
         }
     };
@@ -75,10 +77,10 @@ pub fn parse_key_change_text(text: &str, span: &Span) -> Result<KeyChange, Irrec
 
     let octave_str: String = chars.collect();
     let octave = octave_str.parse::<u8>().map_err(|_| {
-        IrrecoverableError::new(
-            span.clone(),
-            format!("invalid octave number in key change: {text}"),
-        )
+        IrrecoverableError::new(IrrecoverableErrorKind::KeyChangeInvalidOctave {
+            span: span.clone(),
+            text: text.to_string(),
+        })
     })?;
 
     Ok(KeyChange {

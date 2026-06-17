@@ -7,7 +7,7 @@ use crate::ast::parsed::{
     ParsedNote, ParsedRest, ParsedTimedTrack, ParsedTrack, PartKind, ScoreEvent, Syllable,
 };
 use crate::combiner;
-use crate::error::{IrrecoverableError, RecoverableError, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
 
 pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
     let metadata = doc.metadata;
@@ -220,11 +220,14 @@ impl PartGrouper {
         self.current_beat += duration;
         if self.current_beat > self.capacity {
             return Err(IrrecoverableError::new(
-                span,
-                self.with_part_prefix(format!(
-                    "{overflow_label} duration {duration} overflows the current measure (capacity {} quarter-beats, {} used)",
-                    self.capacity, self.current_beat
-                )),
+                IrrecoverableErrorKind::MeasureOverflow {
+                    span,
+                    part: self.part_name.clone(),
+                    event_label: overflow_label.to_string(),
+                    duration,
+                    capacity: self.capacity,
+                    used: self.current_beat,
+                },
             ));
         }
         if self.current_beat == self.capacity {
@@ -253,14 +256,12 @@ impl PartGrouper {
                 return Ok(());
             }
             None => {
-                let message = if self.part_kind == PartKind::Chord {
-                    "chord extension '-' with no preceding event".to_string()
-                } else {
-                    "extension `-` without a preceding note or rest; if it follows a measure boundary, cross-measure extension is not supported".to_string()
-                };
                 return Err(IrrecoverableError::new(
-                    span,
-                    self.with_part_prefix(message),
+                    IrrecoverableErrorKind::ExtensionNoPrecedingEvent {
+                        span,
+                        part: self.part_name.clone(),
+                        chord_track: self.part_kind == PartKind::Chord,
+                    },
                 ));
             }
         }
@@ -286,8 +287,10 @@ impl PartGrouper {
                 Ok(())
             }
             _ => Err(IrrecoverableError::new(
-                span,
-                self.with_part_prefix("tie `~` without a preceding note".to_string()),
+                IrrecoverableErrorKind::TieNoPrecedingNote {
+                    span,
+                    part: self.part_name.clone(),
+                },
             )),
         }
     }

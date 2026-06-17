@@ -278,12 +278,12 @@ fn chord_extend_with_no_preceding_event_reports_token_span() {
     );
     let err = parse_and_group_err(input);
     assert!(
-        err.span.start > 0 || err.span.end > 0,
+        err.span().start > 0 || err.span().end > 0,
         "expected a non-zero span for the '-' token, got start={} end={}",
-        err.span.start,
-        err.span.end,
+        err.span().start,
+        err.span().end,
     );
-    assert!(err.message.contains("chord extension"));
+    assert!(err.message().contains("chord extension"));
 }
 
 #[test]

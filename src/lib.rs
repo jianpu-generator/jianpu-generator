@@ -25,7 +25,7 @@ pub mod wav;
 
 use ast::grouped::{PartRow, Score};
 use ast::parsed::PartKind;
-use error::{IrrecoverableError, RecoverableError};
+use error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError};
 
 /// Output of a successful render: SVG page strings and any recoverable errors.
 #[derive(Debug)]
@@ -418,14 +418,23 @@ pub fn zip_split_pdfs(entries: &[SplitPdfEntry]) -> Result<Vec<u8>, Irrecoverabl
             SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
         for entry in entries {
             writer.start_file(&entry.filename, options).map_err(|e| {
-                IrrecoverableError::new(error::Span::new(0, 0), format!("zip start_file: {e}"))
+                IrrecoverableError::new(IrrecoverableErrorKind::ZipStartFileFailed {
+                    span: error::Span::new(0, 0),
+                    source: e.to_string(),
+                })
             })?;
             writer.write_all(&entry.pdf).map_err(|e| {
-                IrrecoverableError::new(error::Span::new(0, 0), format!("zip write: {e}"))
+                IrrecoverableError::new(IrrecoverableErrorKind::ZipWriteFailed {
+                    span: error::Span::new(0, 0),
+                    source: e.to_string(),
+                })
             })?;
         }
         writer.finish().map_err(|e| {
-            IrrecoverableError::new(error::Span::new(0, 0), format!("zip finish: {e}"))
+            IrrecoverableError::new(IrrecoverableErrorKind::ZipFinishFailed {
+                span: error::Span::new(0, 0),
+                source: e.to_string(),
+            })
         })?;
     }
     Ok(buffer)

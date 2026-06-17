@@ -1,4 +1,4 @@
-use crate::error::{IrrecoverableError, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 
 #[derive(Clone)]
 pub struct RawSection {
@@ -41,8 +41,10 @@ pub fn split_sections(input: &str) -> Result<Vec<RawSection>, IrrecoverableError
                 "score" => SectionKind::Score,
                 _ => {
                     return Err(IrrecoverableError::new(
-                        Span::new(byte_offset, byte_offset + line.len()),
-                        format!("unknown section: [{kind_str}]"),
+                        IrrecoverableErrorKind::UnknownSection {
+                            span: Span::new(byte_offset, byte_offset + line.len()),
+                            name: kind_str.to_string(),
+                        },
                     ))
                 }
             });
@@ -74,18 +76,18 @@ fn validate_section_order(sections: &[RawSection]) -> Result<Vec<RawSection>, Ir
     ];
     if sections.len() != expected.len() {
         return Err(IrrecoverableError::new(
-            Span::new(0, 0),
-            format!(
-                "expected exactly 3 sections ([metadata], [parts], [score]), got {}",
-                sections.len()
-            ),
+            IrrecoverableErrorKind::WrongSectionCount {
+                span: Span::new(0, 0),
+                got: sections.len(),
+            },
         ));
     }
     for (section, exp) in sections.iter().zip(expected.iter()) {
         if &section.kind != exp {
             return Err(IrrecoverableError::new(
-                Span::new(0, 0),
-                "sections must appear in order: [metadata], [parts], [score]".to_string(),
+                IrrecoverableErrorKind::SectionsOutOfOrder {
+                    span: Span::new(0, 0),
+                },
             ));
         }
     }

@@ -8,7 +8,7 @@ use super::groups::{
 use super::timed_lexer::TimedLexToken;
 use super::TimedUnitHead;
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{IrrecoverableError, Span, Spanned};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Spanned};
 
 /// A thin wrapper over `Spanned<ScoreEvent>` that holds mutable group-depth fields so that the
 /// generic `HasGroupDepth`-based helpers (`apply_closed_group_depth`, `apply_open_group_depth`)
@@ -352,10 +352,9 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
                 self.bump();
 
                 let frame = self.stack.pop().ok_or_else(|| {
-                    IrrecoverableError::new(
-                        rparen_span.clone(),
-                        "unexpected `)` — no open group".to_string(),
-                    )
+                    IrrecoverableError::new(IrrecoverableErrorKind::GroupUnexpectedCloseParen {
+                        span: rparen_span.clone(),
+                    })
                 })?;
 
                 let note_count = frame.note_count;
@@ -379,10 +378,9 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
         self.bump(); // consume RParen
 
         let frame = self.stack.pop().ok_or_else(|| {
-            IrrecoverableError::new(
-                rparen_span.clone(),
-                "unexpected `)` — no open group".to_string(),
-            )
+            IrrecoverableError::new(IrrecoverableErrorKind::GroupUnexpectedCloseParen {
+                span: rparen_span.clone(),
+            })
         })?;
 
         let note_count = frame.note_count;

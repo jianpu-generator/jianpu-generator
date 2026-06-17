@@ -1,17 +1,20 @@
 use crate::ast::parsed::ParsedMetadata;
-use crate::error::{IrrecoverableError, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RequiredMetadataField, Span};
 
 fn parse_positive_u32(key: &str, value: &str, line_span: &Span) -> Result<u32, IrrecoverableError> {
     let parsed = value.parse::<u32>().map_err(|_| {
-        IrrecoverableError::new(
-            line_span.clone(),
-            format!("{key} must be a positive integer, got: {value}"),
-        )
+        IrrecoverableError::new(IrrecoverableErrorKind::MetadataInvalidInteger {
+            span: line_span.clone(),
+            field: key.to_string(),
+            value: value.to_string(),
+        })
     })?;
     if parsed == 0 {
         return Err(IrrecoverableError::new(
-            line_span.clone(),
-            format!("{key} must be greater than zero"),
+            IrrecoverableErrorKind::MetadataMustBePositive {
+                span: line_span.clone(),
+                field: key.to_string(),
+            },
         ));
     }
     Ok(parsed)
@@ -40,10 +43,10 @@ pub fn parse_metadata(
         let line_span = Span::new(byte_offset, byte_offset + line.len());
 
         let (key_raw, value_raw) = trimmed.split_once('=').ok_or_else(|| {
-            IrrecoverableError::new(
-                line_span.clone(),
-                format!("expected key = value, got: {trimmed}"),
-            )
+            IrrecoverableError::new(IrrecoverableErrorKind::MetadataMalformedLine {
+                span: line_span.clone(),
+                line: trimmed.to_string(),
+            })
         })?;
 
         let key = key_raw.trim();
@@ -68,8 +71,10 @@ pub fn parse_metadata(
             }
             _ => {
                 return Err(IrrecoverableError::new(
-                    line_span,
-                    format!("unknown metadata field: {key}"),
+                    IrrecoverableErrorKind::MetadataUnknownField {
+                        span: line_span,
+                        field: key.to_string(),
+                    },
                 ))
             }
         }
@@ -81,11 +86,18 @@ pub fn parse_metadata(
 
     Ok(ParsedMetadata {
         title: title.ok_or_else(|| {
-            IrrecoverableError::new(zero_span.clone(), "missing required field: title")
+            IrrecoverableError::new(IrrecoverableErrorKind::MetadataMissingField {
+                span: zero_span.clone(),
+                field: RequiredMetadataField::Title,
+            })
         })?,
         subtitle,
-        author: author
-            .ok_or_else(|| IrrecoverableError::new(zero_span, "missing required field: author"))?,
+        author: author.ok_or_else(|| {
+            IrrecoverableError::new(IrrecoverableErrorKind::MetadataMissingField {
+                span: zero_span,
+                field: RequiredMetadataField::Author,
+            })
+        })?,
         row_height,
         max_columns,
         label_width,
@@ -144,7 +156,7 @@ mod tests {
     fn rejects_parts_field_in_metadata() {
         let content = "title = \"t\"\nauthor = \"a\"\nparts = notes: lyrics:\n";
         let err = parse_metadata(content, 0).unwrap_err();
-        assert!(err.message.contains("unknown metadata field: parts"));
+        assert!(err.message().contains("unknown metadata field: parts"));
     }
 
     #[test]

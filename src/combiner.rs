@@ -3,7 +3,7 @@ use crate::ast::grouped::{
     PartSlice,
 };
 use crate::ast::parsed::PartKind;
-use crate::error::{IrrecoverableError, RecoverableError, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
 
 pub(crate) fn combine(
     grouped_score: &GroupedScore,
@@ -113,13 +113,12 @@ fn validate_measure_counts(
     for track in grouped_tracks.iter().skip(1) {
         if track.measure_count() != expected_len {
             return Err(IrrecoverableError::new(
-                Span::new(0, 1),
-                format!(
-                    "part {:?} has {} measures but the first part has {}; all parts must have the same number of measures",
-                    track.track_name(),
-                    track.measure_count(),
-                    expected_len
-                ),
+                IrrecoverableErrorKind::PartMeasureCountMismatch {
+                    span: Span::new(0, 1),
+                    part: format!("{:?}", track.track_name()),
+                    got: track.measure_count(),
+                    expected: expected_len,
+                },
             ));
         }
     }
