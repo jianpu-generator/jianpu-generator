@@ -143,6 +143,7 @@ struct PartGrouper {
     part_name: Option<String>,
     measure_span_start: Option<usize>,
     measure_span_end: usize,
+    pending_dash_after_rest_error: Option<RecoverableError>,
 }
 
 impl PartGrouper {
@@ -162,6 +163,7 @@ impl PartGrouper {
             part_name: Some(part.abbreviation.clone()),
             measure_span_start: None,
             measure_span_end: 0,
+            pending_dash_after_rest_error: None,
         }
     }
 
@@ -182,6 +184,7 @@ impl PartGrouper {
             paired_lyrics: None,
             lyrics_error: None,
             beat_overflow_error: None,
+            dash_after_rest_error: self.pending_dash_after_rest_error.take(),
         });
         self.current_beat = 0;
         self.measure_span_start = None;
@@ -242,9 +245,12 @@ impl PartGrouper {
                 self.current_beat += 4;
             }
             Some(NoteEvent::Rest(_)) => {
-                let mut error = IrrecoverableError::dash_after_rest(span);
-                error.message = self.with_part_prefix(error.message);
-                return Err(error);
+                if self.pending_dash_after_rest_error.is_none() {
+                    let mut error = RecoverableError::dash_after_rest(span);
+                    error.message = self.with_part_prefix(error.message);
+                    self.pending_dash_after_rest_error = Some(error);
+                }
+                return Ok(());
             }
             None => {
                 let message = if self.part_kind == PartKind::Chord {
@@ -374,6 +380,7 @@ impl PartGrouper {
                 paired_lyrics: None,
                 lyrics_error: None,
                 beat_overflow_error: None,
+                dash_after_rest_error: self.pending_dash_after_rest_error.take(),
             });
         }
 

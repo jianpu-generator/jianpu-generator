@@ -145,6 +145,8 @@ pub(crate) struct GroupedMeasure {
     pub(crate) lyrics_error: Option<RecoverableError>,
     /// Recoverable beat overflow for this measure (notes trimmed), if any.
     pub(crate) beat_overflow_error: Option<RecoverableError>,
+    /// Recoverable error from `-` used after a rest in this measure, if any.
+    pub(crate) dash_after_rest_error: Option<RecoverableError>,
 }
 
 pub(crate) struct GroupedPart {
