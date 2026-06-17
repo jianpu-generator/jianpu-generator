@@ -1,7 +1,7 @@
 #![allow(clippy::indexing_slicing)]
 
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{JianPuError, Spanned};
+use crate::error::{IrrecoverableError, Spanned};
 use crate::parser::score::timed_parser::{parse_timed_line, ChordHead, LexContext, NoteHead};
 
 pub use crate::parser::score::timed_parser::GroupStack;
@@ -10,7 +10,7 @@ pub fn parse_notes_line(
     line: &str,
     base_offset: usize,
     stack: &mut GroupStack,
-) -> Result<Vec<Spanned<ScoreEvent>>, JianPuError> {
+) -> Result<Vec<Spanned<ScoreEvent>>, IrrecoverableError> {
     parse_timed_line::<NoteHead>(line, base_offset, stack, LexContext::Notes)
 }
 
@@ -18,7 +18,7 @@ pub fn parse_chord_line(
     line: &str,
     base_offset: usize,
     stack: &mut GroupStack,
-) -> Result<Vec<Spanned<ScoreEvent>>, JianPuError> {
+) -> Result<Vec<Spanned<ScoreEvent>>, IrrecoverableError> {
     parse_timed_line::<ChordHead>(line, base_offset, stack, LexContext::Chords)
 }
 
@@ -27,14 +27,14 @@ mod tests {
     use super::*;
     use crate::ast::parsed::{JianPuPitch, ParsedNote, ParsedRest};
 
-    fn parse(input: &str) -> Result<Vec<Spanned<ScoreEvent>>, JianPuError> {
+    fn parse(input: &str) -> Result<Vec<Spanned<ScoreEvent>>, IrrecoverableError> {
         parse_notes_line(input, 0, &mut GroupStack::default())
     }
 
     fn parse_with_state(
         input: &str,
         state: &mut GroupStack,
-    ) -> Result<Vec<Spanned<ScoreEvent>>, JianPuError> {
+    ) -> Result<Vec<Spanned<ScoreEvent>>, IrrecoverableError> {
         parse_notes_line(input, 0, state)
     }
 

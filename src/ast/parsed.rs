@@ -1,4 +1,4 @@
-use crate::error::{JianPuError, Spanned};
+use crate::error::{RecoverableError, Spanned};
 
 #[derive(Debug)]
 pub struct ParsedScore {
@@ -87,7 +87,7 @@ pub struct ParsedTimedTrack {
     /// Always false for tracks without a lyrics line.
     pub lyrics_ditto_measures: Vec<bool>,
     /// Per-measure beat-overflow error (None = no overflow for that measure).
-    pub per_measure_beat_errors: Vec<Option<JianPuError>>,
+    pub per_measure_beat_errors: Vec<Option<RecoverableError>>,
 }
 
 #[derive(Debug)]
@@ -100,7 +100,7 @@ pub struct ParsedDocument {
     pub tracks: Vec<ParsedTrack>,
     pub directive_events_per_measure: Vec<Vec<Spanned<ScoreEvent>>>,
     /// Per-measure recoverable errors from desugaring (e.g. missing lyrics line).
-    pub per_measure_parse_errors: Vec<Option<JianPuError>>,
+    pub per_measure_parse_errors: Vec<Option<RecoverableError>>,
 }
 
 #[allow(dead_code)]

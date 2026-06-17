@@ -1,15 +1,15 @@
 use crate::ast::parsed::ParsedMetadata;
-use crate::error::{JianPuError, Span};
+use crate::error::{IrrecoverableError, Span};
 
-fn parse_positive_u32(key: &str, value: &str, line_span: &Span) -> Result<u32, JianPuError> {
+fn parse_positive_u32(key: &str, value: &str, line_span: &Span) -> Result<u32, IrrecoverableError> {
     let parsed = value.parse::<u32>().map_err(|_| {
-        JianPuError::new(
+        IrrecoverableError::new(
             line_span.clone(),
             format!("{key} must be a positive integer, got: {value}"),
         )
     })?;
     if parsed == 0 {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             line_span.clone(),
             format!("{key} must be greater than zero"),
         ));
@@ -17,7 +17,10 @@ fn parse_positive_u32(key: &str, value: &str, line_span: &Span) -> Result<u32, J
     Ok(parsed)
 }
 
-pub fn parse_metadata(content: &str, base_offset: usize) -> Result<ParsedMetadata, JianPuError> {
+pub fn parse_metadata(
+    content: &str,
+    base_offset: usize,
+) -> Result<ParsedMetadata, IrrecoverableError> {
     let mut title: Option<String> = None;
     let mut subtitle: Option<String> = None;
     let mut author: Option<String> = None;
@@ -37,7 +40,7 @@ pub fn parse_metadata(content: &str, base_offset: usize) -> Result<ParsedMetadat
         let line_span = Span::new(byte_offset, byte_offset + line.len());
 
         let (key_raw, value_raw) = trimmed.split_once('=').ok_or_else(|| {
-            JianPuError::new(
+            IrrecoverableError::new(
                 line_span.clone(),
                 format!("expected key = value, got: {trimmed}"),
             )
@@ -64,7 +67,7 @@ pub fn parse_metadata(content: &str, base_offset: usize) -> Result<ParsedMetadat
                     Some(parse_positive_u32("note number width", value, &line_span)?);
             }
             _ => {
-                return Err(JianPuError::new(
+                return Err(IrrecoverableError::new(
                     line_span,
                     format!("unknown metadata field: {key}"),
                 ))
@@ -77,11 +80,12 @@ pub fn parse_metadata(content: &str, base_offset: usize) -> Result<ParsedMetadat
     let zero_span = Span::new(base_offset, base_offset);
 
     Ok(ParsedMetadata {
-        title: title
-            .ok_or_else(|| JianPuError::new(zero_span.clone(), "missing required field: title"))?,
+        title: title.ok_or_else(|| {
+            IrrecoverableError::new(zero_span.clone(), "missing required field: title")
+        })?,
         subtitle,
         author: author
-            .ok_or_else(|| JianPuError::new(zero_span, "missing required field: author"))?,
+            .ok_or_else(|| IrrecoverableError::new(zero_span, "missing required field: author"))?,
         row_height,
         max_columns,
         label_width,

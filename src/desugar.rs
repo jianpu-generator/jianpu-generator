@@ -1,5 +1,5 @@
 use crate::ast::parsed::{flatten_score_line_slots, PartDecl, ScoreLineRole};
-use crate::error::{JianPuError, Span};
+use crate::error::{IrrecoverableError, RecoverableError, Span};
 
 type SourceLine = (String, usize);
 type MeasureGroup = Vec<SourceLine>;
@@ -17,7 +17,7 @@ pub fn desugar_groups(
     groups: Vec<MeasureGroup>,
     declarations: &[PartDecl],
     base_offset: usize,
-) -> Result<(Vec<MeasureGroup>, Vec<Option<JianPuError>>), JianPuError> {
+) -> Result<(Vec<MeasureGroup>, Vec<Option<RecoverableError>>), IrrecoverableError> {
     let slots = flatten_score_line_slots(declarations);
     let mut desugared = Vec::with_capacity(groups.len());
     let mut per_group_errors = Vec::with_capacity(groups.len());
@@ -36,7 +36,7 @@ fn pad_implicit_ditto_group(
     declarations: &[PartDecl],
     slots: &[crate::ast::parsed::ScoreLineSlot],
     base_offset: usize,
-) -> Result<(MeasureGroup, Option<JianPuError>), JianPuError> {
+) -> Result<(MeasureGroup, Option<RecoverableError>), IrrecoverableError> {
     let directive_count = if group
         .first()
         .map(|(l, _)| l.starts_with('('))
@@ -57,7 +57,7 @@ fn pad_implicit_ditto_group(
         .unwrap_or(Span::new(base_offset, base_offset + 1));
 
     if data_lines.is_empty() {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             span,
             "expected at least one data line in measure group".to_string(),
         ));
@@ -69,7 +69,7 @@ fn pad_implicit_ditto_group(
             .map(|d| d.abbreviation.as_str())
             .collect::<Vec<_>>()
             .join(", ");
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             span,
             format!(
                 "this measure has {} lines but only {} expected (declared parts: {})",
@@ -82,11 +82,11 @@ fn pad_implicit_ditto_group(
 
     let pad_offset = data_lines.last().map(|(_, off)| *off).unwrap_or(0);
     let mut result_data: Vec<(String, usize)> = data_lines.to_vec();
-    let mut recoverable_error: Option<JianPuError> = None;
+    let mut recoverable_error: Option<RecoverableError> = None;
 
     for i in data_lines.len()..slots.len() {
         let slot = slots.get(i).ok_or_else(|| {
-            JianPuError::new(
+            IrrecoverableError::new(
                 Span::new(0, 0),
                 "internal invariant: score line slot missing for implicit ditto padding",
             )
@@ -100,7 +100,7 @@ fn pad_implicit_ditto_group(
         } else if role == ScoreLineRole::Lyrics {
             let abbrev = track_abbreviation(declarations, slot.track_index);
             recoverable_error.get_or_insert_with(|| {
-                JianPuError::new(
+                RecoverableError::new(
                     Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
                     format!("missing lyrics line for '{abbrev}'; treating as no lyrics"),
                 )
@@ -109,7 +109,7 @@ fn pad_implicit_ditto_group(
         } else if role == ScoreLineRole::Notes {
             let abbrev = track_abbreviation(declarations, slot.track_index);
             recoverable_error.get_or_insert_with(|| {
-                JianPuError::new(
+                RecoverableError::new(
                     Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
                     format!("missing notes line for '{abbrev}'; treating as empty"),
                 )
@@ -117,7 +117,7 @@ fn pad_implicit_ditto_group(
             result_data.push(("_".to_string(), pad_offset));
         } else {
             let abbrev = track_abbreviation(declarations, slot.track_index);
-            return Err(JianPuError::new(
+            return Err(IrrecoverableError::new(
                 Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
                 format!(
                     "expected {} line for '{abbrev}'; write content or '\"' ditto",
@@ -137,7 +137,7 @@ fn desugar_group(
     _declarations: &[PartDecl],
     slots: &[crate::ast::parsed::ScoreLineSlot],
     base_offset: usize,
-) -> Result<MeasureGroup, JianPuError> {
+) -> Result<MeasureGroup, IrrecoverableError> {
     let directive_count = if group
         .first()
         .map(|(l, _)| l.starts_with('('))
@@ -160,7 +160,7 @@ fn desugar_group(
                 continue;
             }
             let role = slots.get(i).map(|s| s.role).ok_or_else(|| {
-                JianPuError::new(
+                IrrecoverableError::new(
                     Span::new(0, 0),
                     "internal invariant: score line slot missing for ditto line",
                 )
@@ -173,7 +173,7 @@ fn desugar_group(
             match source {
                 Some(src_content) => resolved.push((src_content, *offset)),
                 None => {
-                    return Err(JianPuError::new(
+                    return Err(IrrecoverableError::new(
                         Span::new(base_offset + *offset, base_offset + *offset + 1),
                         format!(
                             "ditto '\"' has no preceding {} line in this measure group",

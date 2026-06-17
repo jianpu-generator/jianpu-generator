@@ -7,7 +7,7 @@ fn parse_and_group(input: &str) -> Score {
     group(doc).unwrap()
 }
 
-fn parse_and_group_err(input: &str) -> JianPuError {
+fn parse_and_group_err(input: &str) -> IrrecoverableError {
     let doc = parser::parse(input, "test.jianpu").unwrap();
     match group(doc) {
         Err(e) => e,

@@ -1,5 +1,5 @@
 use crate::ast::parsed::{ParsedTimedTrack, ParsedTrack, PartDecl, PartKind};
-use crate::error::JianPuError;
+use crate::error::IrrecoverableError;
 
 /// Convenience wrapper that calls `parse` and returns only the tracks,
 /// discarding the directive-events accumulator. Used in unit tests.
@@ -7,7 +7,7 @@ pub(super) fn parse(
     content: &str,
     base_offset: usize,
     declarations: &[PartDecl],
-) -> Result<Vec<ParsedTrack>, JianPuError> {
+) -> Result<Vec<ParsedTrack>, IrrecoverableError> {
     super::parse(content, base_offset, declarations).map(|(tracks, _, _)| tracks)
 }
 
@@ -17,7 +17,7 @@ pub(super) fn parse_with_directives(
     content: &str,
     base_offset: usize,
     declarations: &[PartDecl],
-) -> Result<(Vec<ParsedTrack>, super::DirectiveEventsPerMeasure), JianPuError> {
+) -> Result<(Vec<ParsedTrack>, super::DirectiveEventsPerMeasure), IrrecoverableError> {
     super::parse(content, base_offset, declarations)
         .map(|(tracks, directives, _)| (tracks, directives))
 }

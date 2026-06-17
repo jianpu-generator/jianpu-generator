@@ -2,7 +2,7 @@
 
 use super::directives::{key_change_lexeme_len, parse_key_change_text};
 use crate::ast::parsed::KeyChange;
-use crate::error::{JianPuError, Span, Spanned};
+use crate::error::{IrrecoverableError, Span, Spanned};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LexContext {
@@ -25,7 +25,7 @@ pub fn lex_line(
     line: &str,
     base_offset: usize,
     context: LexContext,
-) -> Result<Vec<Spanned<TimedLexToken>>, JianPuError> {
+) -> Result<Vec<Spanned<TimedLexToken>>, IrrecoverableError> {
     let mut tokens = Vec::new();
     // `at_word_boundary`: true when the next non-whitespace char starts a new "word"
     // (i.e. we are after whitespace, `|`, `(`, or `)`, or at the start of the line).
@@ -65,7 +65,7 @@ fn lex_one_char(
     c: char,
     at_word_boundary: bool,
     context: LexContext,
-) -> Result<(Option<Spanned<TimedLexToken>>, usize, bool), JianPuError> {
+) -> Result<(Option<Spanned<TimedLexToken>>, usize, bool), IrrecoverableError> {
     match c {
         '(' => Ok((
             Some(Spanned::new(
@@ -135,13 +135,13 @@ fn lex_one_char(
                 if let Some((tok, consumed)) = try_lex_time_signature(line, i, start)? {
                     return Ok((Some(tok), consumed, true));
                 }
-                return Err(JianPuError::new(
+                return Err(IrrecoverableError::new(
                     Span::new(start, start + len),
                     format!("unexpected character: {c}"),
                 ));
             } else if at_word_boundary {
                 // In Chords context, digits 8-9 are not valid chord degrees.
-                return Err(JianPuError::new(
+                return Err(IrrecoverableError::new(
                     Span::new(start, start + len),
                     format!("unexpected character: {c}"),
                 ));
@@ -153,7 +153,7 @@ fn lex_one_char(
             // Any other suffix character inside a word belongs to the current head; skip it.
             Ok((None, len, false))
         }
-        _ => Err(JianPuError::new(
+        _ => Err(IrrecoverableError::new(
             Span::new(start, start + len),
             format!("unexpected character: {c}"),
         )),
@@ -166,7 +166,7 @@ fn lex_bpm(
     line: &str,
     i: usize,
     start: usize,
-) -> Result<(Spanned<TimedLexToken>, usize), JianPuError> {
+) -> Result<(Spanned<TimedLexToken>, usize), IrrecoverableError> {
     // "bpm=" is 4 bytes.
     let prefix_len = 4;
     let rest = &line[i + prefix_len..];
@@ -176,13 +176,13 @@ fn lex_bpm(
         &rest[..end]
     };
     if digits.is_empty() {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             Span::new(start, start + prefix_len),
             "expected number after 'bpm='".to_string(),
         ));
     }
     let bpm = digits.parse::<u32>().map_err(|_| {
-        JianPuError::new(
+        IrrecoverableError::new(
             Span::new(start, start + prefix_len + digits.len()),
             format!("invalid bpm value: {digits}"),
         )
@@ -198,7 +198,7 @@ fn try_lex_key_change(
     line: &str,
     i: usize,
     start: usize,
-) -> Result<Option<(Spanned<TimedLexToken>, usize)>, JianPuError> {
+) -> Result<Option<(Spanned<TimedLexToken>, usize)>, IrrecoverableError> {
     // "1=" is 2 bytes.
     let after_eq = &line[i + 2..];
 
@@ -244,7 +244,7 @@ fn try_lex_time_signature(
     line: &str,
     i: usize,
     start: usize,
-) -> Result<Option<(Spanned<TimedLexToken>, usize)>, JianPuError> {
+) -> Result<Option<(Spanned<TimedLexToken>, usize)>, IrrecoverableError> {
     let slice = &line[i..];
 
     // Collect numerator digits.
@@ -270,20 +270,20 @@ fn try_lex_time_signature(
     let den_str = &slice[den_start..den_start + den_len];
 
     let num = num_str.parse::<u8>().map_err(|_| {
-        JianPuError::new(
+        IrrecoverableError::new(
             Span::new(start, start + num_len),
             format!("invalid time signature numerator: {num_str}"),
         )
     })?;
     let den = den_str.parse::<u8>().map_err(|_| {
-        JianPuError::new(
+        IrrecoverableError::new(
             Span::new(start + den_start, start + den_start + den_len),
             format!("invalid time signature denominator: {den_str}"),
         )
     })?;
 
     if den == 0 {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             Span::new(start, start + num_len + 1 + den_len),
             "time signature denominator cannot be zero".to_string(),
         ));

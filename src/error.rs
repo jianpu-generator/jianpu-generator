@@ -41,14 +41,14 @@ impl ErrorKind {
 }
 
 #[derive(Debug, Clone)]
-pub struct JianPuError {
+pub struct IrrecoverableError {
     pub span: Span,
     pub message: String,
     pub kind: ErrorKind,
     pub path: Option<PathBuf>,
 }
 
-impl JianPuError {
+impl IrrecoverableError {
     pub fn new(span: Span, message: impl Into<String>) -> Self {
         Self {
             span,
@@ -73,13 +73,38 @@ impl JianPuError {
     }
 }
 
-impl std::fmt::Display for JianPuError {
+impl std::fmt::Display for IrrecoverableError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "error: {}", self.message)
     }
 }
 
-impl std::error::Error for JianPuError {}
+impl std::error::Error for IrrecoverableError {}
+
+#[derive(Debug, Clone)]
+pub struct RecoverableError {
+    pub span: Span,
+    pub message: String,
+    pub kind: ErrorKind,
+}
+
+impl RecoverableError {
+    pub fn new(span: Span, message: impl Into<String>) -> Self {
+        Self {
+            span,
+            message: message.into(),
+            kind: ErrorKind::General,
+        }
+    }
+
+    pub fn dash_after_rest(span: Span) -> Self {
+        Self {
+            span,
+            message: "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)".to_string(),
+            kind: ErrorKind::DashAfterRest,
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -87,25 +112,25 @@ mod tests {
 
     #[test]
     fn display_shows_message() {
-        let e = JianPuError::new(Span::new(10, 20), "bad token");
+        let e = IrrecoverableError::new(Span::new(10, 20), "bad token");
         assert_eq!(format!("{e}"), "error: bad token");
     }
 
     #[test]
     fn with_path_attaches_path() {
-        let e = JianPuError::new(Span::new(0, 1), "oops").with_path("/tmp/test.jianpu");
+        let e = IrrecoverableError::new(Span::new(0, 1), "oops").with_path("/tmp/test.jianpu");
         assert_eq!(e.path.unwrap().to_str().unwrap(), "/tmp/test.jianpu");
     }
 
     #[test]
     fn without_path_is_none() {
-        let e = JianPuError::new(Span::new(0, 1), "oops");
+        let e = IrrecoverableError::new(Span::new(0, 1), "oops");
         assert!(e.path.is_none());
     }
 
     #[test]
     fn dash_after_rest_has_kind_and_message() {
-        let e = JianPuError::dash_after_rest(Span::new(5, 6));
+        let e = IrrecoverableError::dash_after_rest(Span::new(5, 6));
         assert_eq!(e.kind, ErrorKind::DashAfterRest);
         assert!(e.message.contains("repeated `0`"));
     }

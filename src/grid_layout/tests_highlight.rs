@@ -138,12 +138,12 @@ fn range_spanning_two_pages_reports_correct_page_indices() {
 
 #[test]
 fn erroneous_measure_produces_error_highlight() {
-    use crate::error::{JianPuError, Span};
+    use crate::error::{RecoverableError, Span};
 
     let erroneous_block = MeasureBlock {
         rows: simple_block(4).rows,
         decorations: vec![],
-        errors: vec![JianPuError::new(Span::new(0, 1), "lyrics underflow")],
+        errors: vec![RecoverableError::new(Span::new(0, 1), "lyrics underflow")],
     };
     let header = Header {
         title: "T".into(),

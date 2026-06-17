@@ -1,7 +1,7 @@
 #![allow(clippy::indexing_slicing)]
 
 use super::TimedUnitHead;
-use crate::error::{JianPuError, Span};
+use crate::error::{IrrecoverableError, Span};
 
 pub struct DurationParse {
     pub duration: u32,
@@ -17,7 +17,7 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
     head_end: usize,
     is_rest: bool,
     span: &Span,
-) -> Result<DurationParse, JianPuError> {
+) -> Result<DurationParse, IrrecoverableError> {
     let mut i = head_end;
     let mut duration = 4u32;
     let mut dotted = false;
@@ -54,7 +54,7 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
             '-' => {
                 if is_rest {
                     let pos = span.start + byte_offset_at_char_index_from_chars(chars, start, i);
-                    return Err(JianPuError::dash_after_rest(Span::new(pos, pos + 1)));
+                    return Err(IrrecoverableError::dash_after_rest(Span::new(pos, pos + 1)));
                 }
                 duration += 4;
                 i += 1;
@@ -62,14 +62,14 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
             ')' | '(' => break,
             c if !allows_octave && matches!(c, '\'' | ',') => {
                 let pos = span.start + byte_offset_at_char_index_from_chars(chars, start, i);
-                return Err(JianPuError::new(
+                return Err(IrrecoverableError::new(
                     Span::new(pos, pos + c.len_utf8()),
                     format!("unexpected character in timed unit: {c}"),
                 ));
             }
             c => {
                 let pos = span.start + byte_offset_at_char_index_from_chars(chars, start, i);
-                return Err(JianPuError::new(
+                return Err(IrrecoverableError::new(
                     Span::new(pos, pos + c.len_utf8()),
                     format!("unexpected character in timed unit: {c}"),
                 ));
@@ -78,14 +78,14 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
     }
 
     if octave_up > 0 && octave_down > 0 {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             span.clone(),
             "mixed octave markers are invalid (use ' for up, , for down)".to_string(),
         ));
     }
 
     if dotted && duration == 1 {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             span.clone(),
             "cannot dot a quarter-beat (=) note; use _ or no duration suffix".to_string(),
         ));

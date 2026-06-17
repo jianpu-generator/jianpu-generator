@@ -1,5 +1,5 @@
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{JianPuError, Span, Spanned};
+use crate::error::{IrrecoverableError, Span, Spanned};
 
 const HALF_BAR_BOUNDARY: u32 = 8;
 
@@ -7,7 +7,7 @@ pub fn validate_measure_grouping(
     events: &[Spanned<ScoreEvent>],
     time_num: u8,
     time_den: u8,
-) -> Result<(), JianPuError> {
+) -> Result<(), IrrecoverableError> {
     if time_num != 4 || time_den != 4 {
         return Ok(());
     }
@@ -160,7 +160,7 @@ fn validate_dotted_eighth_tail(
     events: &[Spanned<ScoreEvent>],
     next_timed: Option<usize>,
     span: &Span,
-) -> Result<(), JianPuError> {
+) -> Result<(), IrrecoverableError> {
     let Some(next_index) = next_timed else {
         return Err(dotted_eighth_error(span));
     };
@@ -182,16 +182,16 @@ fn validate_dotted_eighth_tail(
     }
 }
 
-fn half_bar_error(span: &Span) -> JianPuError {
-    JianPuError::new(
+fn half_bar_error(span: &Span) -> IrrecoverableError {
+    IrrecoverableError::new(
         span.clone(),
         "note/rest crosses the half-bar boundary (beat 2→3); use a beam group or tie to show the split"
             .to_string(),
     )
 }
 
-fn dotted_eighth_error(span: &Span) -> JianPuError {
-    JianPuError::new(
+fn dotted_eighth_error(span: &Span) -> IrrecoverableError {
+    IrrecoverableError::new(
         span.clone(),
         "dotted eighth must be followed by a sixteenth note or rest".to_string(),
     )
@@ -201,7 +201,7 @@ fn dotted_eighth_error(span: &Span) -> JianPuError {
 mod tests {
     use crate::parser;
 
-    fn parse_score(notes_line: &str) -> Result<(), crate::error::JianPuError> {
+    fn parse_score(notes_line: &str) -> Result<(), crate::error::IrrecoverableError> {
         let input = format!(
             concat!(
                 "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes\n\n",

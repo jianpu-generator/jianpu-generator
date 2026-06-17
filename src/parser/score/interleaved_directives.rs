@@ -1,5 +1,5 @@
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName, ScoreEvent};
-use crate::error::{JianPuError, Span, Spanned};
+use crate::error::{IrrecoverableError, Span, Spanned};
 
 /// Returns groups of `(trimmed_line, byte_offset_within_content)` pairs.
 pub(super) fn collect_groups(content: &str) -> Vec<Vec<(String, usize)>> {
@@ -30,11 +30,11 @@ pub(super) fn collect_groups(content: &str) -> Vec<Vec<(String, usize)>> {
 pub(super) fn split_directive(
     lines: &[(String, usize)],
     _bar: usize,
-) -> Result<(Vec<Spanned<ScoreEvent>>, &[(String, usize)]), JianPuError> {
+) -> Result<(Vec<Spanned<ScoreEvent>>, &[(String, usize)]), IrrecoverableError> {
     if let Some((directive_line, directive_offset)) = lines.first() {
         if directive_line.starts_with('(') {
             if !directive_line.ends_with(')') {
-                return Err(JianPuError::new(
+                return Err(IrrecoverableError::new(
                     Span::new(*directive_offset, directive_offset + directive_line.len()),
                     "directive row must end with ')'",
                 ));
@@ -94,11 +94,12 @@ fn tokenize_directive_tokens(inner: &str) -> Result<Vec<(String, usize)>, String
 fn parse_directive_line(
     line: &str,
     line_offset: usize,
-) -> Result<Vec<Spanned<ScoreEvent>>, JianPuError> {
+) -> Result<Vec<Spanned<ScoreEvent>>, IrrecoverableError> {
     let inner = &line[1..line.len() - 1];
     let inner_offset = line_offset + 1; // skip '('
-    let tokens = tokenize_directive_tokens(inner)
-        .map_err(|msg| JianPuError::new(Span::new(line_offset, line_offset + line.len()), msg))?;
+    let tokens = tokenize_directive_tokens(inner).map_err(|msg| {
+        IrrecoverableError::new(Span::new(line_offset, line_offset + line.len()), msg)
+    })?;
     let mut events = Vec::new();
 
     for (token, token_inner_offset) in &tokens {
@@ -107,7 +108,7 @@ fn parse_directive_line(
 
         let event = if let Some(rest) = token.strip_prefix("bpm=") {
             let bpm = rest.parse::<u32>().map_err(|_| {
-                JianPuError::new(span.clone(), format!("invalid bpm value: {rest}"))
+                IrrecoverableError::new(span.clone(), format!("invalid bpm value: {rest}"))
             })?;
             ScoreEvent::BpmChange(bpm)
         } else if let Some(rest) = token.strip_prefix("key=") {
@@ -116,21 +117,21 @@ fn parse_directive_line(
             parse_time_value(rest, span.clone())?
         } else if let Some(rest) = token.strip_prefix("label=") {
             if rest.len() < 2 || !rest.starts_with('"') || !rest.ends_with('"') {
-                return Err(JianPuError::new(
+                return Err(IrrecoverableError::new(
                     span,
                     format!("label value must be a quoted string, got: {rest}"),
                 ));
             }
             let text = rest[1..rest.len() - 1].to_string();
             if text.is_empty() {
-                return Err(JianPuError::new(
+                return Err(IrrecoverableError::new(
                     span,
                     "label value must not be empty".to_string(),
                 ));
             }
             ScoreEvent::LabelChange(text)
         } else {
-            return Err(JianPuError::new(
+            return Err(IrrecoverableError::new(
                 span,
                 format!("unknown directive: '{token}'"),
             ));
@@ -142,11 +143,11 @@ fn parse_directive_line(
     Ok(events)
 }
 
-fn parse_key_value(value: &str, span: Span) -> Result<ScoreEvent, JianPuError> {
+fn parse_key_value(value: &str, span: Span) -> Result<ScoreEvent, IrrecoverableError> {
     let mut chars = value.chars().peekable();
 
     let name_char = chars.next().ok_or_else(|| {
-        JianPuError::new(span.clone(), "expected note name after 'key='".to_string())
+        IrrecoverableError::new(span.clone(), "expected note name after 'key='".to_string())
     })?;
 
     let name = match name_char {
@@ -158,7 +159,7 @@ fn parse_key_value(value: &str, span: Span) -> Result<ScoreEvent, JianPuError> {
         'F' => NoteName::F,
         'G' => NoteName::G,
         _ => {
-            return Err(JianPuError::new(
+            return Err(IrrecoverableError::new(
                 span,
                 format!("invalid note name: '{name_char}'"),
             ))
@@ -179,7 +180,7 @@ fn parse_key_value(value: &str, span: Span) -> Result<ScoreEvent, JianPuError> {
 
     let octave_str: String = chars.collect();
     let octave = octave_str.parse::<u8>().map_err(|_| {
-        JianPuError::new(
+        IrrecoverableError::new(
             span.clone(),
             format!("invalid octave in 'key={value}': expected number"),
         )
@@ -194,34 +195,34 @@ fn parse_key_value(value: &str, span: Span) -> Result<ScoreEvent, JianPuError> {
     }))
 }
 
-fn parse_time_value(value: &str, span: Span) -> Result<ScoreEvent, JianPuError> {
+fn parse_time_value(value: &str, span: Span) -> Result<ScoreEvent, IrrecoverableError> {
     let parts: Vec<&str> = value.split('/').collect();
     if parts.len() != 2 {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             span,
             format!("invalid time signature: '{value}'"),
         ));
     }
     let numerator_str = parts.first().ok_or_else(|| {
-        JianPuError::new(span.clone(), format!("invalid time signature: '{value}'"))
+        IrrecoverableError::new(span.clone(), format!("invalid time signature: '{value}'"))
     })?;
     let denominator_str = parts.get(1).ok_or_else(|| {
-        JianPuError::new(span.clone(), format!("invalid time signature: '{value}'"))
+        IrrecoverableError::new(span.clone(), format!("invalid time signature: '{value}'"))
     })?;
     let numerator = numerator_str.parse::<u8>().map_err(|_| {
-        JianPuError::new(
+        IrrecoverableError::new(
             span.clone(),
             format!("invalid time numerator: '{numerator_str}'"),
         )
     })?;
     let denominator = denominator_str.parse::<u8>().map_err(|_| {
-        JianPuError::new(
+        IrrecoverableError::new(
             span.clone(),
             format!("invalid time denominator: '{denominator_str}'"),
         )
     })?;
     if denominator == 0 {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             span,
             "time denominator cannot be zero".to_string(),
         ));

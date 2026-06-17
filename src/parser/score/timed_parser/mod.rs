@@ -29,7 +29,7 @@ pub use groups::{
 };
 
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{JianPuError, Span, Spanned};
+use crate::error::{IrrecoverableError, Span, Spanned};
 
 /// Parse a single line of timed notation using the lexer + recursive-descent parser.
 pub fn parse_timed_line<H: TimedUnitHead>(
@@ -37,7 +37,7 @@ pub fn parse_timed_line<H: TimedUnitHead>(
     base_offset: usize,
     stack: &mut GroupStack,
     context: LexContext,
-) -> Result<Vec<Spanned<ScoreEvent>>, JianPuError> {
+) -> Result<Vec<Spanned<ScoreEvent>>, IrrecoverableError> {
     let tokens = lex_line(line, base_offset, context)?;
     TimedRdParser::<H>::parse_line(line, base_offset, &tokens, stack)
 }
@@ -48,7 +48,7 @@ pub trait TimedUnitHead: Sized {
         chars: &[char],
         start: usize,
         span: &Span,
-    ) -> Result<(Self, usize, bool), JianPuError>;
+    ) -> Result<(Self, usize, bool), IrrecoverableError>;
 
     /// True when the next atom should start (note: next digit 0-7; chord: always after suffixes end).
     fn head_boundary(chars: &[char], i: usize) -> bool;

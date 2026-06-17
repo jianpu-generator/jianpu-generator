@@ -1,4 +1,7 @@
-use jianpu_generator::{error::JianPuError, error_reporter};
+use jianpu_generator::{
+    error::{IrrecoverableError, RecoverableError},
+    error_reporter,
+};
 use serde::Serialize;
 use tsify::Tsify;
 
@@ -117,8 +120,24 @@ pub enum GenerateSplitPdfsResponse {
     },
 }
 
-pub(crate) fn diagnostic_from_error(source: &str, e: JianPuError) -> DiagnosticOut {
+pub(crate) fn diagnostic_from_error(source: &str, e: IrrecoverableError) -> DiagnosticOut {
     let report = error_reporter::render_with_source(source, &e);
+    DiagnosticOut {
+        severity: DiagnosticSeverity::Error,
+        message: e.message,
+        span: SpanOut {
+            start: e.span.start,
+            end: e.span.end,
+        },
+        report: Some(report),
+    }
+}
+
+pub(crate) fn diagnostic_from_recoverable_error(
+    source: &str,
+    e: RecoverableError,
+) -> DiagnosticOut {
+    let report = error_reporter::render_recoverable_with_source(source, &e);
     DiagnosticOut {
         severity: DiagnosticSeverity::Error,
         message: e.message,

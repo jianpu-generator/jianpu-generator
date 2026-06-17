@@ -1,14 +1,14 @@
-use crate::error::JianPuError;
+use crate::error::{IrrecoverableError, RecoverableError};
 use ariadne::Config;
 
-pub fn render(e: &JianPuError) {
+pub fn render(e: &IrrecoverableError) {
     render_to_writer(e, std::io::stderr(), None, Config::default());
 }
 
 /// Render a pretty error using an in-memory source string (for WASM and other non-FS hosts).
 ///
 /// Uses plain text (no ANSI color codes) so the output is safe to display in a web UI.
-pub fn render_with_source(source: &str, e: &JianPuError) -> String {
+pub fn render_with_source(source: &str, e: &IrrecoverableError) -> String {
     let mut buf = Vec::new();
     render_to_writer(
         e,
@@ -19,8 +19,33 @@ pub fn render_with_source(source: &str, e: &JianPuError) -> String {
     String::from_utf8_lossy(&buf).into_owned()
 }
 
+/// Render a pretty error for a `RecoverableError` using an in-memory source string.
+///
+/// Uses plain text (no ANSI color codes) so the output is safe to display in a web UI.
+pub fn render_recoverable_with_source(source: &str, e: &RecoverableError) -> String {
+    use ariadne::{Label, Report, ReportKind, Source};
+
+    let filename = "input";
+    let char_start = source[..e.span.start.min(source.len())].chars().count();
+    let char_end = source[..e.span.end.min(source.len())].chars().count();
+    let span = (filename, char_start..char_end);
+
+    let mut buf = Vec::new();
+    if Report::build(ReportKind::Error, span.clone())
+        .with_config(Config::default().with_color(false))
+        .with_message(&e.message)
+        .with_label(Label::new(span).with_message(&e.message))
+        .finish()
+        .write((filename, Source::from(source)), &mut buf)
+        .is_err()
+    {
+        buf.extend_from_slice(format!("error: {}", e.message).as_bytes());
+    }
+    String::from_utf8_lossy(&buf).into_owned()
+}
+
 fn render_to_writer(
-    e: &JianPuError,
+    e: &IrrecoverableError,
     mut writer: impl std::io::Write,
     source: Option<&str>,
     config: Config,
@@ -81,7 +106,8 @@ mod tests {
     #[test]
     fn render_output_contains_message() {
         let path = write_temp_file("test_render.jianpu", "1 2 x 4\n");
-        let e = JianPuError::new(Span::new(4, 5), "expected pitch digit 0-7").with_path(&path);
+        let e =
+            IrrecoverableError::new(Span::new(4, 5), "expected pitch digit 0-7").with_path(&path);
 
         let mut buf = Vec::new();
         render_to_writer(&e, &mut buf, None, Config::default());
@@ -95,7 +121,7 @@ mod tests {
     #[test]
     fn render_with_source_shows_code_block() {
         let source = "1 2 x 4\n";
-        let e = JianPuError::new(Span::new(4, 5), "expected pitch digit 0-7");
+        let e = IrrecoverableError::new(Span::new(4, 5), "expected pitch digit 0-7");
 
         let output = render_with_source(source, &e);
         assert!(
@@ -108,7 +134,7 @@ mod tests {
     #[test]
     fn render_with_source_has_no_ansi_codes() {
         let source = "1 2 x 4\n";
-        let e = JianPuError::new(Span::new(4, 5), "expected pitch digit 0-7");
+        let e = IrrecoverableError::new(Span::new(4, 5), "expected pitch digit 0-7");
 
         let output = render_with_source(source, &e);
         assert!(
@@ -126,7 +152,7 @@ mod tests {
         let source = "你好世界 x 4\n";
         let path = write_temp_file("test_unicode_render.jianpu", source);
         let token_byte_start = "你好世界 ".len(); // 3*4 + 1 = 13
-        let e = JianPuError::new(
+        let e = IrrecoverableError::new(
             Span::new(token_byte_start, token_byte_start + 1),
             "bad token",
         )
@@ -145,7 +171,7 @@ mod tests {
 
     #[test]
     fn render_falls_back_when_path_is_none() {
-        let e = JianPuError::new(Span::new(0, 1), "some error");
+        let e = IrrecoverableError::new(Span::new(0, 1), "some error");
         let mut buf = Vec::new();
         render_to_writer(&e, &mut buf, None, Config::default());
         let output = String::from_utf8_lossy(&buf);
@@ -154,8 +180,8 @@ mod tests {
 
     #[test]
     fn render_falls_back_when_file_unreadable() {
-        let e =
-            JianPuError::new(Span::new(0, 1), "some error").with_path("/nonexistent/path.jianpu");
+        let e = IrrecoverableError::new(Span::new(0, 1), "some error")
+            .with_path("/nonexistent/path.jianpu");
         let mut buf = Vec::new();
         render_to_writer(&e, &mut buf, None, Config::default());
         let output = String::from_utf8_lossy(&buf);

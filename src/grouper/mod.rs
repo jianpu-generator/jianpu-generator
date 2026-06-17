@@ -7,9 +7,9 @@ use crate::ast::parsed::{
     ParsedNote, ParsedRest, ParsedTimedTrack, ParsedTrack, PartKind, ScoreEvent, Syllable,
 };
 use crate::combiner;
-use crate::error::{JianPuError, Span};
+use crate::error::{IrrecoverableError, RecoverableError, Span};
 
-pub fn group(doc: ParsedDocument) -> Result<Score, JianPuError> {
+pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
     let metadata = doc.metadata;
     let mut grouped_tracks = Vec::new();
     for track in doc.tracks {
@@ -207,7 +207,7 @@ impl PartGrouper {
         duration: u32,
         event: NoteEvent,
         overflow_label: &str,
-    ) -> Result<(), JianPuError> {
+    ) -> Result<(), IrrecoverableError> {
         self.flush_if_full();
         if self.measure_span_start.is_none() {
             self.measure_span_start = Some(span.start);
@@ -216,7 +216,7 @@ impl PartGrouper {
         self.current_notes.push(event);
         self.current_beat += duration;
         if self.current_beat > self.capacity {
-            return Err(JianPuError::new(
+            return Err(IrrecoverableError::new(
                 span,
                 self.with_part_prefix(format!(
                     "{overflow_label} duration {duration} overflows the current measure (capacity {} quarter-beats, {} used)",
@@ -230,7 +230,7 @@ impl PartGrouper {
         Ok(())
     }
 
-    fn handle_extension(&mut self, span: Span) -> Result<(), JianPuError> {
+    fn handle_extension(&mut self, span: Span) -> Result<(), IrrecoverableError> {
         self.measure_span_end = span.end.max(self.measure_span_end);
         match self.current_notes.last_mut() {
             Some(NoteEvent::Note(n)) => {
@@ -242,7 +242,7 @@ impl PartGrouper {
                 self.current_beat += 4;
             }
             Some(NoteEvent::Rest(_)) => {
-                let mut error = JianPuError::dash_after_rest(span);
+                let mut error = IrrecoverableError::dash_after_rest(span);
                 error.message = self.with_part_prefix(error.message);
                 return Err(error);
             }
@@ -252,7 +252,10 @@ impl PartGrouper {
                 } else {
                     "extension `-` without a preceding note or rest; if it follows a measure boundary, cross-measure extension is not supported".to_string()
                 };
-                return Err(JianPuError::new(span, self.with_part_prefix(message)));
+                return Err(IrrecoverableError::new(
+                    span,
+                    self.with_part_prefix(message),
+                ));
             }
         }
         if self.current_beat >= self.capacity {
@@ -261,7 +264,7 @@ impl PartGrouper {
         Ok(())
     }
 
-    fn handle_tie_marker(&mut self, span: Span) -> Result<(), JianPuError> {
+    fn handle_tie_marker(&mut self, span: Span) -> Result<(), IrrecoverableError> {
         let last_event = self.current_notes.last_mut().or_else(|| {
             self.measures
                 .last_mut()
@@ -276,14 +279,14 @@ impl PartGrouper {
                 c.tie = true;
                 Ok(())
             }
-            _ => Err(JianPuError::new(
+            _ => Err(IrrecoverableError::new(
                 span,
                 self.with_part_prefix("tie `~` without a preceding note".to_string()),
             )),
         }
     }
 
-    fn handle_note(&mut self, span: Span, pn: ParsedNote) -> Result<(), JianPuError> {
+    fn handle_note(&mut self, span: Span, pn: ParsedNote) -> Result<(), IrrecoverableError> {
         self.push_timed_event(
             span,
             pn.duration,
@@ -301,7 +304,7 @@ impl PartGrouper {
         )
     }
 
-    fn handle_chord(&mut self, span: Span, pc: ParsedChordNote) -> Result<(), JianPuError> {
+    fn handle_chord(&mut self, span: Span, pc: ParsedChordNote) -> Result<(), IrrecoverableError> {
         self.push_timed_event(
             span,
             pc.duration,
@@ -322,7 +325,7 @@ impl PartGrouper {
         )
     }
 
-    fn handle_rest(&mut self, span: Span, pr: &ParsedRest) -> Result<(), JianPuError> {
+    fn handle_rest(&mut self, span: Span, pr: &ParsedRest) -> Result<(), IrrecoverableError> {
         self.push_timed_event(
             span,
             pr.duration,
@@ -339,7 +342,7 @@ impl PartGrouper {
     fn process_event(
         &mut self,
         spanned: crate::error::Spanned<ScoreEvent>,
-    ) -> Result<(), JianPuError> {
+    ) -> Result<(), IrrecoverableError> {
         match spanned.value {
             ScoreEvent::BpmChange(_) | ScoreEvent::KeyChange(_) | ScoreEvent::LabelChange(_) => {
                 Ok(()) // handled by DirectiveGrouper
@@ -384,7 +387,7 @@ impl PartGrouper {
     }
 }
 
-fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, JianPuError> {
+fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, IrrecoverableError> {
     let ditto_measures = part.ditto_measures.clone();
     let lyrics_ditto_measures = part.lyrics_ditto_measures.clone();
     let lyrics_measure_ends: Vec<usize> = part
@@ -444,7 +447,7 @@ fn attach_paired_lyrics(
     measure_syllables: Option<Vec<Vec<Syllable>>>,
     lyrics_spans: Vec<Span>,
     part_name: &str,
-) -> Result<(), JianPuError> {
+) -> Result<(), IrrecoverableError> {
     let Some(measure_syllables) = measure_syllables else {
         return Ok(());
     };
@@ -479,7 +482,7 @@ fn attach_paired_lyrics(
     }
     if let Some(message) = count_mismatch_error {
         for measure in measures.iter_mut().skip(paired_count) {
-            measure.lyrics_error = Some(JianPuError::new(Span::new(0, 0), message.clone()));
+            measure.lyrics_error = Some(RecoverableError::new(Span::new(0, 0), message.clone()));
         }
     }
     Ok(())
@@ -494,7 +497,7 @@ fn pair_lyrics_to_notes(
     part_name: &str,
 ) -> (
     Vec<Syllable>,
-    Option<JianPuError>,
+    Option<RecoverableError>,
     bool,
     Option<JianPuPitch>,
 ) {
@@ -532,7 +535,7 @@ fn pair_lyrics_to_notes(
 
     let overflow_count = raw_syllables.len().saturating_sub(syllable_idx);
     let error = if underflow_detected {
-        Some(JianPuError::new(
+        Some(RecoverableError::new(
             source_span.clone(),
             format!(
                 "[{part_name}] lyrics underflow: ran out of syllables at syllable {} (fewer syllables than notes)",
@@ -540,7 +543,7 @@ fn pair_lyrics_to_notes(
             ),
         ))
     } else if overflow_count > 0 {
-        Some(JianPuError::new(
+        Some(RecoverableError::new(
             source_span.clone(),
             format!(
                 "[{part_name}] lyrics overflow: {} extra syllable{} after all notes are consumed",

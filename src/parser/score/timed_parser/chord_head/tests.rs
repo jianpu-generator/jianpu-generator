@@ -23,11 +23,11 @@ fn chord(
     })
 }
 
-fn try_parse_symbol(token: &str) -> Result<ScoreEvent, JianPuError> {
+fn try_parse_symbol(token: &str) -> Result<ScoreEvent, IrrecoverableError> {
     let events =
         parse_timed_line::<ChordHead>(token, 0, &mut GroupStack::default(), LexContext::Chords)?;
     if events.len() != 1 {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             Span::new(0, token.len()),
             format!("expected one event, got {}", events.len()),
         ));

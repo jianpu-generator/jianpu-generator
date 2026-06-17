@@ -1,5 +1,5 @@
 use crate::ast::parsed::ParsedDocument;
-use crate::error::{JianPuError, Span};
+use crate::error::{IrrecoverableError, Span};
 
 pub mod lyrics;
 pub mod metadata_parser;
@@ -7,7 +7,7 @@ pub mod parts_parser;
 pub mod score;
 pub mod section_splitter;
 
-pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, JianPuError> {
+pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, IrrecoverableError> {
     use section_splitter::{split_sections, SectionKind};
 
     let sections = split_sections(input)?;
@@ -21,19 +21,28 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, JianPuError>
         match section.kind {
             SectionKind::Metadata => {
                 if raw_metadata.is_some() {
-                    return Err(JianPuError::new(doc_span, "duplicate [metadata] section"));
+                    return Err(IrrecoverableError::new(
+                        doc_span,
+                        "duplicate [metadata] section",
+                    ));
                 }
                 raw_metadata = Some((section.content, section.content_offset));
             }
             SectionKind::Parts => {
                 if raw_parts.is_some() {
-                    return Err(JianPuError::new(doc_span, "duplicate [parts] section"));
+                    return Err(IrrecoverableError::new(
+                        doc_span,
+                        "duplicate [parts] section",
+                    ));
                 }
                 raw_parts = Some((section.content, section.content_offset));
             }
             SectionKind::Score => {
                 if raw_score.is_some() {
-                    return Err(JianPuError::new(doc_span, "duplicate [score] section"));
+                    return Err(IrrecoverableError::new(
+                        doc_span,
+                        "duplicate [score] section",
+                    ));
                 }
                 raw_score = Some((section.content, section.content_offset));
             }
@@ -41,11 +50,11 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, JianPuError>
     }
 
     let (meta_content, meta_offset) = raw_metadata
-        .ok_or_else(|| JianPuError::new(doc_span.clone(), "missing [metadata] section"))?;
-    let (parts_content, parts_offset) =
-        raw_parts.ok_or_else(|| JianPuError::new(doc_span.clone(), "missing [parts] section"))?;
+        .ok_or_else(|| IrrecoverableError::new(doc_span.clone(), "missing [metadata] section"))?;
+    let (parts_content, parts_offset) = raw_parts
+        .ok_or_else(|| IrrecoverableError::new(doc_span.clone(), "missing [parts] section"))?;
     let (score_content, score_offset) =
-        raw_score.ok_or_else(|| JianPuError::new(doc_span, "missing [score] section"))?;
+        raw_score.ok_or_else(|| IrrecoverableError::new(doc_span, "missing [score] section"))?;
 
     let metadata = metadata_parser::parse_metadata(&meta_content, meta_offset)?;
     let declarations = parts_parser::parse_parts(&parts_content, parts_offset)?;

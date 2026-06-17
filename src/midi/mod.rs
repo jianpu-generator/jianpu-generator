@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use crate::ast::grouped::{NoteEvent, Score};
 use crate::ast::parsed::{Accidental, JianPuPitch, KeyChange, NoteName, PartKind};
-use crate::error::{JianPuError, Span};
+use crate::error::{IrrecoverableError, Span};
 
 const TPQ: u16 = 480; // ticks per quarter note
 const VELOCITY: u8 = 80;
@@ -24,7 +24,7 @@ enum RawKind {
     ProgramChange(u8),
 }
 
-pub fn write_midi(score: &Score) -> Result<Vec<u8>, JianPuError> {
+pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
     let mut raw: Vec<RawEvent> = Vec::new();
 
     raw.push(RawEvent {
@@ -55,9 +55,12 @@ pub fn write_midi(score: &Score) -> Result<Vec<u8>, JianPuError> {
 
 /// Generate MIDI bytes for a single measure, carrying BPM and key context
 /// accumulated from all preceding measures.
-pub fn write_midi_for_measure(score: &Score, measure_index: usize) -> Result<Vec<u8>, JianPuError> {
+pub fn write_midi_for_measure(
+    score: &Score,
+    measure_index: usize,
+) -> Result<Vec<u8>, IrrecoverableError> {
     let Some(target) = score.measures.get(measure_index) else {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             Span::new(0, 0),
             format!(
                 "measure index {} out of range (score has {} measures)",
@@ -100,9 +103,9 @@ pub fn write_midi_for_measure_range(
     score: &Score,
     start_index: usize,
     end_index: usize,
-) -> Result<Vec<u8>, JianPuError> {
+) -> Result<Vec<u8>, IrrecoverableError> {
     if start_index > end_index || end_index >= score.measures.len() {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             Span::new(0, 0),
             format!(
                 "invalid measure range {}..={} (score has {} measures)",
@@ -161,7 +164,7 @@ fn process_measure(
     raw: &mut Vec<RawEvent>,
     per_part_ties: &mut Vec<HashMap<u8, u32>>,
     active_key: &mut KeyChange,
-) -> Result<u32, JianPuError> {
+) -> Result<u32, IrrecoverableError> {
     if let Some(bpm) = measure.bpm {
         let micros = 60_000_000 / bpm;
         raw.push(RawEvent {
@@ -223,9 +226,9 @@ fn process_measure_notes(
     raw: &mut Vec<RawEvent>,
     per_part_ties: &mut [HashMap<u8, u32>],
     active_key: &KeyChange,
-) -> Result<u32, JianPuError> {
+) -> Result<u32, IrrecoverableError> {
     let pending_ties = per_part_ties.get_mut(part_idx).ok_or_else(|| {
-        JianPuError::new(
+        IrrecoverableError::new(
             Span::new(0, 0),
             format!("internal error: missing MIDI tie state for part {part_idx}"),
         )
@@ -441,7 +444,7 @@ fn raw_event_to_track_event(event: &RawEvent, delta: u32) -> TrackEvent<'static>
     }
 }
 
-fn write_smf(track: Vec<TrackEvent<'static>>) -> Result<Vec<u8>, JianPuError> {
+fn write_smf(track: Vec<TrackEvent<'static>>) -> Result<Vec<u8>, IrrecoverableError> {
     let smf = Smf {
         header: Header {
             format: Format::SingleTrack,
@@ -452,7 +455,7 @@ fn write_smf(track: Vec<TrackEvent<'static>>) -> Result<Vec<u8>, JianPuError> {
 
     let mut buf = Vec::new();
     smf.write_std(&mut buf)
-        .map_err(|_| JianPuError::new(Span::new(0, 0), "failed to write MIDI data"))?;
+        .map_err(|_| IrrecoverableError::new(Span::new(0, 0), "failed to write MIDI data"))?;
     Ok(buf)
 }
 

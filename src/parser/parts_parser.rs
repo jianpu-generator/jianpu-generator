@@ -1,7 +1,7 @@
 use crate::ast::parsed::{PartDecl, PartKind};
-use crate::error::{JianPuError, Span};
+use crate::error::{IrrecoverableError, Span};
 
-pub fn parse_parts(content: &str, base_offset: usize) -> Result<Vec<PartDecl>, JianPuError> {
+pub fn parse_parts(content: &str, base_offset: usize) -> Result<Vec<PartDecl>, IrrecoverableError> {
     let mut declarations = Vec::new();
     let mut seen_abbreviations = std::collections::HashSet::new();
     let mut byte_offset = base_offset;
@@ -16,7 +16,7 @@ pub fn parse_parts(content: &str, base_offset: usize) -> Result<Vec<PartDecl>, J
         let line_span = Span::new(line_start, line_start + line.len());
 
         let (lhs, rhs) = trimmed.split_once('=').ok_or_else(|| {
-            JianPuError::new(
+            IrrecoverableError::new(
                 line_span.clone(),
                 format!("expected track declaration, got: {trimmed}"),
             )
@@ -26,7 +26,7 @@ pub fn parse_parts(content: &str, base_offset: usize) -> Result<Vec<PartDecl>, J
 
         let (display_name, abbreviation) = parse_lhs(lhs, &line_span)?;
         if !seen_abbreviations.insert(abbreviation.clone()) {
-            return Err(JianPuError::new(
+            return Err(IrrecoverableError::new(
                 line_span.clone(),
                 format!("duplicate abbreviation: {abbreviation}"),
             ));
@@ -41,7 +41,7 @@ pub fn parse_parts(content: &str, base_offset: usize) -> Result<Vec<PartDecl>, J
     }
 
     if declarations.is_empty() {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             Span::new(base_offset, base_offset + content.len().max(1)),
             "expected at least one track in [parts] section",
         ));
@@ -50,19 +50,19 @@ pub fn parse_parts(content: &str, base_offset: usize) -> Result<Vec<PartDecl>, J
     Ok(declarations)
 }
 
-fn parse_lhs(lhs: &str, span: &Span) -> Result<(String, String), JianPuError> {
+fn parse_lhs(lhs: &str, span: &Span) -> Result<(String, String), IrrecoverableError> {
     if let Some(open) = lhs.rfind('(') {
         if lhs.ends_with(')') {
             let display_name = lhs[..open].trim().to_string();
             let abbreviation = lhs[open + 1..lhs.len() - 1].trim().to_string();
             if display_name.is_empty() {
-                return Err(JianPuError::new(
+                return Err(IrrecoverableError::new(
                     span.clone(),
                     "display name cannot be empty".to_string(),
                 ));
             }
             if abbreviation.is_empty() {
-                return Err(JianPuError::new(
+                return Err(IrrecoverableError::new(
                     span.clone(),
                     "abbreviation cannot be empty".to_string(),
                 ));
@@ -72,7 +72,7 @@ fn parse_lhs(lhs: &str, span: &Span) -> Result<(String, String), JianPuError> {
     }
     let name = lhs.trim().to_string();
     if name.is_empty() {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             span.clone(),
             "track name cannot be empty".to_string(),
         ));
@@ -80,7 +80,7 @@ fn parse_lhs(lhs: &str, span: &Span) -> Result<(String, String), JianPuError> {
     Ok((name.clone(), name))
 }
 
-fn parse_rhs(rhs: &str, span: &Span) -> Result<PartKind, JianPuError> {
+fn parse_rhs(rhs: &str, span: &Span) -> Result<PartKind, IrrecoverableError> {
     let tokens: Vec<&str> = rhs.split_whitespace().collect();
     match tokens.as_slice() {
         ["chord"] => Ok(PartKind::Chord),
@@ -88,7 +88,7 @@ fn parse_rhs(rhs: &str, span: &Span) -> Result<PartKind, JianPuError> {
         ["notes", "lyrics"] => Ok(PartKind::NotesWithLyrics),
         ["lyrics", "notes"] => Ok(PartKind::LyricsWithNotes),
         ["notes", "chord"] => Ok(PartKind::NotesWithChord),
-        _ => Err(JianPuError::new(
+        _ => Err(IrrecoverableError::new(
             span.clone(),
             format!("invalid track columns '{rhs}': expected 'chord', 'notes', 'notes lyrics', 'lyrics notes', or 'notes chord'"),
         )),

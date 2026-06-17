@@ -1,7 +1,7 @@
 use crate::ast::parsed::{
     Accidental, BassDegree, Extension, JianPuPitch, KeyChange, Syllable, TriadQuality,
 };
-use crate::error::{JianPuError, Span};
+use crate::error::{RecoverableError, Span};
 
 // ── Public final types ────────────────────────────────────────────────────────
 
@@ -51,7 +51,7 @@ pub struct MultiPartMeasure {
     pub source_span: Span,
     /// Recoverable errors collected during grouping for this measure.
     /// Non-empty triggers a red overlay in the SVG renderer.
-    pub errors: Vec<JianPuError>,
+    pub errors: Vec<RecoverableError>,
 }
 
 #[derive(Clone)]
@@ -132,7 +132,7 @@ pub(crate) struct MeasureDirectives {
 pub(crate) struct GroupedScore {
     pub(crate) measure_directives: Vec<MeasureDirectives>,
     pub(crate) parts: Vec<GroupedTrack>,
-    pub(crate) per_measure_parse_errors: Vec<Option<crate::error::JianPuError>>,
+    pub(crate) per_measure_parse_errors: Vec<Option<RecoverableError>>,
 }
 
 pub(crate) struct GroupedMeasure {
@@ -142,9 +142,9 @@ pub(crate) struct GroupedMeasure {
     /// `NotesWithLyrics` parts during grouping.
     pub(crate) paired_lyrics: Option<Vec<Syllable>>,
     /// Recoverable lyrics underflow for this measure, if any.
-    pub(crate) lyrics_error: Option<JianPuError>,
+    pub(crate) lyrics_error: Option<RecoverableError>,
     /// Recoverable beat overflow for this measure (notes trimmed), if any.
-    pub(crate) beat_overflow_error: Option<JianPuError>,
+    pub(crate) beat_overflow_error: Option<RecoverableError>,
 }
 
 pub(crate) struct GroupedPart {

@@ -138,7 +138,7 @@ fn try_split_tracks<F>(
     tracks: &[String],
     display_names: &std::collections::HashMap<String, String>,
     mut write_track: F,
-) -> Result<bool, jg::error::JianPuError>
+) -> Result<bool, jg::error::IrrecoverableError>
 where
     F: FnMut(
         &jg::ast::grouped::Score,
@@ -146,7 +146,7 @@ where
         &str,
         &Path,
         &str,
-    ) -> Result<(), jg::error::JianPuError>,
+    ) -> Result<(), jg::error::IrrecoverableError>,
 {
     let effective_tracks = effective_tracks(tracks, score);
     if effective_tracks.is_empty() {
@@ -166,7 +166,10 @@ where
     Ok(true)
 }
 
-fn write_svgs_to_path(svgs: &[String], output_path: &Path) -> Result<(), jg::error::JianPuError> {
+fn write_svgs_to_path(
+    svgs: &[String],
+    output_path: &Path,
+) -> Result<(), jg::error::IrrecoverableError> {
     for (i, svg) in svgs.iter().enumerate() {
         let path = if svgs.len() == 1 {
             output_path.to_path_buf()
@@ -179,10 +182,10 @@ fn write_svgs_to_path(svgs: &[String], output_path: &Path) -> Result<(), jg::err
     Ok(())
 }
 
-fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::JianPuError> {
+fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableError> {
     if opts.split_tracks {
         let content = std::fs::read_to_string(&opts.input).map_err(|e| {
-            jg::error::JianPuError::new(
+            jg::error::IrrecoverableError::new(
                 jg::error::Span::new(0, 0),
                 format!("could not read {:?}: {e}", opts.input),
             )
@@ -220,9 +223,9 @@ fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::JianPuError> {
 
 fn read_display_names(
     input: &Path,
-) -> Result<std::collections::HashMap<String, String>, jg::error::JianPuError> {
+) -> Result<std::collections::HashMap<String, String>, jg::error::IrrecoverableError> {
     let content = std::fs::read_to_string(input).map_err(|e| {
-        jg::error::JianPuError::new(
+        jg::error::IrrecoverableError::new(
             jg::error::Span::new(0, 0),
             format!("could not read {:?}: {e}", input),
         )
@@ -231,7 +234,7 @@ fn read_display_names(
     jg::part_display_name_map(&content, &filename)
 }
 
-fn generate_svg(opts: &GenerateInput) -> Result<(), jg::error::JianPuError> {
+fn generate_svg(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableError> {
     let score = parse_and_group(&opts.input)?;
     if opts.split_tracks {
         let display_names = read_display_names(&opts.input)?;
@@ -273,7 +276,7 @@ fn generate_svg(opts: &GenerateInput) -> Result<(), jg::error::JianPuError> {
     write_svgs_to_path(&svgs, &output_path)
 }
 
-fn generate_midi(opts: &GenerateInput) -> Result<(), jg::error::JianPuError> {
+fn generate_midi(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableError> {
     let score = parse_and_group(&opts.input)?;
     if opts.split_tracks {
         let display_names = read_display_names(&opts.input)?;
@@ -306,7 +309,7 @@ fn generate_midi(opts: &GenerateInput) -> Result<(), jg::error::JianPuError> {
     Ok(())
 }
 
-fn generate_wav(opts: &GenerateInput) -> Result<(), jg::error::JianPuError> {
+fn generate_wav(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableError> {
     let score = parse_and_group(&opts.input)?;
     if opts.split_tracks {
         let display_names = read_display_names(&opts.input)?;
@@ -341,7 +344,7 @@ fn generate_wav(opts: &GenerateInput) -> Result<(), jg::error::JianPuError> {
     Ok(())
 }
 
-fn run_generate(format: GenerateFormat) -> Result<(), jg::error::JianPuError> {
+fn run_generate(format: GenerateFormat) -> Result<(), jg::error::IrrecoverableError> {
     match format {
         GenerateFormat::Pdf {
             input,
@@ -390,9 +393,9 @@ fn run_generate(format: GenerateFormat) -> Result<(), jg::error::JianPuError> {
     }
 }
 
-fn parse_and_group(input: &Path) -> Result<jg::ast::grouped::Score, jg::error::JianPuError> {
+fn parse_and_group(input: &Path) -> Result<jg::ast::grouped::Score, jg::error::IrrecoverableError> {
     let content = std::fs::read_to_string(input).map_err(|e| {
-        jg::error::JianPuError::new(
+        jg::error::IrrecoverableError::new(
             jg::error::Span::new(0, 0),
             format!("could not read {input:?}: {e}"),
         )
@@ -402,9 +405,9 @@ fn parse_and_group(input: &Path) -> Result<jg::ast::grouped::Score, jg::error::J
     jg::grouper::group(doc).map_err(|e| e.with_path(input))
 }
 
-fn write_file(path: &Path, data: &[u8]) -> Result<(), jg::error::JianPuError> {
+fn write_file(path: &Path, data: &[u8]) -> Result<(), jg::error::IrrecoverableError> {
     std::fs::write(path, data).map_err(|e| {
-        jg::error::JianPuError::new(
+        jg::error::IrrecoverableError::new(
             jg::error::Span::new(0, 0),
             format!("could not write {path:?}: {e}"),
         )

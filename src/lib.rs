@@ -25,7 +25,7 @@ pub mod wav;
 
 use ast::grouped::{PartRow, Score};
 use ast::parsed::PartKind;
-use error::JianPuError;
+use error::{IrrecoverableError, RecoverableError};
 
 /// Output of a successful render: SVG page strings and any recoverable errors.
 #[derive(Debug)]
@@ -35,10 +35,10 @@ pub struct RenderOutput {
     /// Recoverable errors collected during grouping (e.g. lyrics underflow).
     /// The SVGs already contain red overlays for erroneous measures; these
     /// errors let callers surface them in editor diagnostics as well.
-    pub errors: Vec<JianPuError>,
+    pub errors: Vec<RecoverableError>,
 }
 
-fn collect_measure_errors(score: &Score) -> Vec<JianPuError> {
+fn collect_measure_errors(score: &Score) -> Vec<RecoverableError> {
     score
         .measures
         .iter()
@@ -58,7 +58,7 @@ pub struct PartInfo {
 }
 
 /// Parse and group a `.jianpu` source string into a [`Score`].
-pub fn compile(source: &str, filename: &str) -> Result<Score, JianPuError> {
+pub fn compile(source: &str, filename: &str) -> Result<Score, IrrecoverableError> {
     let doc = parser::parse(source, filename)?;
     grouper::group(doc)
 }
@@ -79,12 +79,18 @@ pub fn render_svgs(score: &Score) -> Vec<String> {
 }
 
 /// Parse, group, and render a `.jianpu` source string into SVG page strings.
-pub fn render_svgs_from_source(source: &str, filename: &str) -> Result<RenderOutput, JianPuError> {
+pub fn render_svgs_from_source(
+    source: &str,
+    filename: &str,
+) -> Result<RenderOutput, IrrecoverableError> {
     render_svgs_from_source_filtered(source, filename, None)
 }
 
 /// List part declarations from a `.jianpu` source string.
-pub fn list_parts_from_source(source: &str, filename: &str) -> Result<Vec<PartInfo>, JianPuError> {
+pub fn list_parts_from_source(
+    source: &str,
+    filename: &str,
+) -> Result<Vec<PartInfo>, IrrecoverableError> {
     let doc = parser::parse(source, filename)?;
     Ok(doc
         .declarations
@@ -108,7 +114,7 @@ pub fn render_svgs_from_source_filtered(
     source: &str,
     filename: &str,
     enabled_tracks: Option<&[String]>,
-) -> Result<RenderOutput, JianPuError> {
+) -> Result<RenderOutput, IrrecoverableError> {
     render_svgs_from_source_filtered_with_lyrics(source, filename, enabled_tracks, None)
 }
 
@@ -122,7 +128,7 @@ pub fn render_svgs_from_source_filtered_with_lyrics(
     filename: &str,
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
-) -> Result<RenderOutput, JianPuError> {
+) -> Result<RenderOutput, IrrecoverableError> {
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
@@ -146,7 +152,7 @@ pub fn render_svgs_with_highlight_range(
     end_index: usize,
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
-) -> Result<RenderOutput, JianPuError> {
+) -> Result<RenderOutput, IrrecoverableError> {
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
@@ -272,7 +278,7 @@ pub fn find_measure_at_line_number(
 pub fn list_measure_spans_from_source(
     source: &str,
     filename: &str,
-) -> Result<Vec<error::Span>, JianPuError> {
+) -> Result<Vec<error::Span>, IrrecoverableError> {
     let score = compile(source, filename)?;
     Ok(score
         .measures
@@ -290,7 +296,7 @@ pub fn sanitize_track_name(name: &str) -> String {
 pub fn part_display_name_map(
     source: &str,
     filename: &str,
-) -> Result<std::collections::HashMap<String, String>, JianPuError> {
+) -> Result<std::collections::HashMap<String, String>, IrrecoverableError> {
     Ok(list_parts_from_source(source, filename)?
         .into_iter()
         .map(|part| (part.abbreviation, part.display_name))
@@ -346,7 +352,7 @@ pub fn split_track_names(
     filename: &str,
     score: &Score,
     tracks_filter: &[String],
-) -> Result<Vec<String>, JianPuError> {
+) -> Result<Vec<String>, IrrecoverableError> {
     let mut names = if tracks_filter.is_empty() {
         collect_track_names(score)
     } else {
@@ -379,7 +385,7 @@ pub fn write_split_pdfs_from_source(
     filename: &str,
     base_name: &str,
     tracks_filter: &[String],
-) -> Result<Vec<SplitPdfEntry>, JianPuError> {
+) -> Result<Vec<SplitPdfEntry>, IrrecoverableError> {
     let score = compile(source, filename)?;
     let track_names = split_track_names(source, filename, &score, tracks_filter)?;
     let display_names = part_display_name_map(source, filename)?;
@@ -400,7 +406,7 @@ pub fn write_split_pdfs_from_source(
 }
 
 #[cfg(feature = "pdf")]
-pub fn zip_split_pdfs(entries: &[SplitPdfEntry]) -> Result<Vec<u8>, JianPuError> {
+pub fn zip_split_pdfs(entries: &[SplitPdfEntry]) -> Result<Vec<u8>, IrrecoverableError> {
     use std::io::Write;
     use zip::write::SimpleFileOptions;
     use zip::ZipWriter;
@@ -412,15 +418,15 @@ pub fn zip_split_pdfs(entries: &[SplitPdfEntry]) -> Result<Vec<u8>, JianPuError>
             SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
         for entry in entries {
             writer.start_file(&entry.filename, options).map_err(|e| {
-                JianPuError::new(error::Span::new(0, 0), format!("zip start_file: {e}"))
+                IrrecoverableError::new(error::Span::new(0, 0), format!("zip start_file: {e}"))
             })?;
-            writer
-                .write_all(&entry.pdf)
-                .map_err(|e| JianPuError::new(error::Span::new(0, 0), format!("zip write: {e}")))?;
+            writer.write_all(&entry.pdf).map_err(|e| {
+                IrrecoverableError::new(error::Span::new(0, 0), format!("zip write: {e}"))
+            })?;
         }
-        writer
-            .finish()
-            .map_err(|e| JianPuError::new(error::Span::new(0, 0), format!("zip finish: {e}")))?;
+        writer.finish().map_err(|e| {
+            IrrecoverableError::new(error::Span::new(0, 0), format!("zip finish: {e}"))
+        })?;
     }
     Ok(buffer)
 }
@@ -434,7 +440,7 @@ pub fn write_wav_from_source_filtered(
     source: &str,
     filename: &str,
     enabled_tracks: Option<&[String]>,
-) -> Result<Vec<u8>, JianPuError> {
+) -> Result<Vec<u8>, IrrecoverableError> {
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     let midi_bytes = midi::write_midi(&score)?;
@@ -451,7 +457,7 @@ pub fn write_wav_for_measure_from_source(
     filename: &str,
     measure_index: usize,
     enabled_tracks: Option<&[String]>,
-) -> Result<Vec<u8>, JianPuError> {
+) -> Result<Vec<u8>, IrrecoverableError> {
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     let midi_bytes = midi::write_midi_for_measure(&score, measure_index)?;
@@ -468,7 +474,7 @@ pub fn write_wav_for_measure_range_from_source(
     start_index: usize,
     end_index: usize,
     enabled_tracks: Option<&[String]>,
-) -> Result<Vec<u8>, JianPuError> {
+) -> Result<Vec<u8>, IrrecoverableError> {
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     let midi_bytes = midi::write_midi_for_measure_range(&score, start_index, end_index)?;
@@ -484,7 +490,7 @@ pub fn write_pdf_from_source_filtered(
     source: &str,
     filename: &str,
     enabled_tracks: Option<&[String]>,
-) -> Result<Vec<u8>, JianPuError> {
+) -> Result<Vec<u8>, IrrecoverableError> {
     write_pdf_from_source_filtered_with_lyrics(source, filename, enabled_tracks, None)
 }
 
@@ -495,7 +501,7 @@ pub fn write_pdf_from_source_filtered_with_lyrics(
     filename: &str,
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
-) -> Result<Vec<u8>, JianPuError> {
+) -> Result<Vec<u8>, IrrecoverableError> {
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);

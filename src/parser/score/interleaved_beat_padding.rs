@@ -1,5 +1,5 @@
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{JianPuError, Span, Spanned};
+use crate::error::{IrrecoverableError, RecoverableError, Span, Spanned};
 
 pub(super) fn beats_per_measure(num: u8, den: u8) -> u32 {
     (num as u32) * (16 / den as u32)
@@ -113,7 +113,7 @@ pub(super) fn validate_and_pad_beats(
     time_num: u8,
     time_den: u8,
     line_span: Span,
-) -> Result<(Vec<Spanned<ScoreEvent>>, Option<JianPuError>), JianPuError> {
+) -> Result<(Vec<Spanned<ScoreEvent>>, Option<RecoverableError>), IrrecoverableError> {
     let mut total = 0u32;
     let mut truncate_at: Option<usize> = None;
 
@@ -130,7 +130,7 @@ pub(super) fn validate_and_pad_beats(
 
     let (mut events, overflow_error) = match truncate_at {
         Some(i) => {
-            let error = JianPuError::new(
+            let error = RecoverableError::new(
                 line_span.clone(),
                 format!(
                     "beat overflow: measure has {expected} quarter-beats but notes exceed that (truncated at note {})",
@@ -149,7 +149,7 @@ pub(super) fn validate_and_pad_beats(
     if total < expected {
         let deficit = expected - total;
         if !can_implicitly_pad(&events, deficit) {
-            return Err(JianPuError::new(
+            return Err(IrrecoverableError::new(
                 line_span,
                 format!("incomplete measure: expected {expected} quarter-beats, got {total}"),
             ));

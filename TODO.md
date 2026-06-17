@@ -11,3 +11,4 @@
 - [ ] Cheat sheet: add a quick-reference view for jianpu syntax
 - [ ] Formatter: align lyric syllables with their corresponding notes
 - [ ] Inlay hints: show expanded content for dittoed measures
+- [ ] Improve error message location and descriptions for lyrics underflow/overflow

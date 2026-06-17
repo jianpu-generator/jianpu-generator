@@ -2,7 +2,7 @@ use crate::ast::parsed::{
     flatten_score_line_slots, ParsedLyrics, ParsedScore, ParsedTimedTrack, ParsedTrack, PartDecl,
     PartKind, ScoreEvent, ScoreLineRole, ScoreLineSlot,
 };
-use crate::error::{JianPuError, Span, Spanned};
+use crate::error::{IrrecoverableError, Span, Spanned};
 use crate::parser::score::token_parser::{self, GroupStack};
 use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics, LyricTieState};
 
@@ -22,9 +22,9 @@ type ParseResult = Result<
     (
         Vec<ParsedTrack>,
         DirectiveEventsPerMeasure,
-        Vec<Option<JianPuError>>,
+        Vec<Option<crate::error::RecoverableError>>,
     ),
-    JianPuError,
+    IrrecoverableError,
 >;
 
 enum SlotAction {
@@ -43,7 +43,7 @@ enum TrackAccumulator {
         /// End byte offset of the lyrics line for each measure, in order.
         lyrics_line_ends: Vec<usize>,
         /// Per-measure beat-overflow error (None = no overflow for that measure).
-        per_measure_beat_errors: Vec<Option<crate::error::JianPuError>>,
+        per_measure_beat_errors: Vec<Option<crate::error::RecoverableError>>,
     },
 }
 
@@ -77,7 +77,7 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
             )
         })
         .ok_or_else(|| {
-            JianPuError::new(
+            IrrecoverableError::new(
                 Span::new(base_offset, base_offset + content.len()),
                 "parts declaration has no notes track",
             )
@@ -119,7 +119,7 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
                 .get(track_index)
                 .map(|d| d.abbreviation.as_str())
                 .unwrap_or("unknown");
-            return Err(JianPuError::new(
+            return Err(IrrecoverableError::new(
                 Span::new(base_offset, base_offset + content.len()),
                 format!("unclosed '(' group at end of score in part '{part_label}'"),
             ));
@@ -233,7 +233,7 @@ fn process_bar_group(
     group_lines: &[(String, usize)],
     bar: usize,
     ctx: &mut BarGroupContext<'_>,
-) -> Result<(), JianPuError> {
+) -> Result<(), IrrecoverableError> {
     let (directive_events, data_lines) = split_directive(group_lines, bar)?;
 
     for e in &directive_events {
@@ -266,7 +266,7 @@ fn process_bar_group(
             ctx.accumulators
                 .get_mut(ctx.first_notes_track_index)
                 .ok_or_else(|| {
-                    JianPuError::new(
+                    IrrecoverableError::new(
                         Span::new(ctx.base_offset, ctx.base_offset + 1),
                         "internal error: missing notes accumulator for directive events",
                     )
@@ -281,7 +281,7 @@ fn process_bar_group(
 
 fn timed_events_mut(
     acc: &mut TrackAccumulator,
-) -> Result<&mut Vec<Spanned<ScoreEvent>>, JianPuError> {
+) -> Result<&mut Vec<Spanned<ScoreEvent>>, IrrecoverableError> {
     match acc {
         TrackAccumulator::Timed { events, .. } => Ok(events),
     }
@@ -295,7 +295,7 @@ type SyllablesAndLineSpans<'a> = (
 
 fn notes_syllables_mut(
     acc: &mut TrackAccumulator,
-) -> Result<Option<SyllablesAndLineSpans<'_>>, JianPuError> {
+) -> Result<Option<SyllablesAndLineSpans<'_>>, IrrecoverableError> {
     match acc {
         TrackAccumulator::Timed {
             syllables,
@@ -312,7 +312,7 @@ fn process_padded_columns(
     padded_data: &[(String, usize)],
     beats_expected: u32,
     ctx: &mut BarGroupContext<'_>,
-) -> Result<(), JianPuError> {
+) -> Result<(), IrrecoverableError> {
     for (i, (line, line_offset)) in padded_data.iter().enumerate() {
         process_column_line(i, line, *line_offset, beats_expected, ctx)?;
     }
@@ -324,16 +324,16 @@ fn process_lyrics_column_line(
     line: &str,
     line_span: Span,
     ctx: &mut BarGroupContext<'_>,
-) -> Result<(), JianPuError> {
+) -> Result<(), IrrecoverableError> {
     if line.is_empty() {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             line_span,
             "lyrics line cannot be empty; use '_' for no lyrics".to_string(),
         ));
     }
     if line == "_" {
         let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
-            JianPuError::new(
+            IrrecoverableError::new(
                 line_span.clone(),
                 "internal error: track accumulator index out of range",
             )
@@ -344,7 +344,7 @@ fn process_lyrics_column_line(
                 .get(track_index)
                 .map(|d| d.abbreviation.as_str())
                 .unwrap_or("unknown");
-            return Err(JianPuError::new(
+            return Err(IrrecoverableError::new(
                 line_span,
                 format!("lyrics line for '{abbrev}' has no matching notes track"),
             ));
@@ -357,7 +357,7 @@ fn process_lyrics_column_line(
     }
     let syllables = tokenize_lyrics(line);
     let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
-        JianPuError::new(
+        IrrecoverableError::new(
             line_span.clone(),
             "internal error: track accumulator index out of range",
         )
@@ -368,7 +368,7 @@ fn process_lyrics_column_line(
             .get(track_index)
             .map(|d| d.abbreviation.as_str())
             .unwrap_or("unknown");
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             line_span,
             format!("lyrics line for '{abbrev}' has no matching notes track"),
         ));
@@ -387,10 +387,10 @@ fn process_notes_column_line(
     beats_expected: u32,
     line_span: Span,
     ctx: &mut BarGroupContext<'_>,
-) -> Result<(), JianPuError> {
+) -> Result<(), IrrecoverableError> {
     if line == "_" {
         let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
-            JianPuError::new(
+            IrrecoverableError::new(
                 line_span,
                 "internal error: notes accumulator index out of range",
             )
@@ -403,7 +403,7 @@ fn process_notes_column_line(
         return Ok(());
     }
     let group_state = ctx.group_states.get_mut(track_index).ok_or_else(|| {
-        JianPuError::new(
+        IrrecoverableError::new(
             line_span.clone(),
             "internal error: group state index out of range",
         )
@@ -422,7 +422,7 @@ fn process_notes_column_line(
         }
     }
     let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
-        JianPuError::new(
+        IrrecoverableError::new(
             line_span,
             "internal error: notes accumulator index out of range",
         )
@@ -443,13 +443,13 @@ fn process_column_line(
     line_offset: usize,
     beats_expected: u32,
     ctx: &mut BarGroupContext<'_>,
-) -> Result<(), JianPuError> {
+) -> Result<(), IrrecoverableError> {
     let line_span = Span::new(
         ctx.base_offset + line_offset,
         ctx.base_offset + line_offset + line.len(),
     );
     let slot_action = ctx.slot_actions.get(slot_idx).ok_or_else(|| {
-        JianPuError::new(line_span.clone(), "internal error: slot index out of range")
+        IrrecoverableError::new(line_span.clone(), "internal error: slot index out of range")
     })?;
     match slot_action {
         SlotAction::Notes { track_index } => {
@@ -467,13 +467,13 @@ fn process_column_line(
         }
         SlotAction::Chord { track_index } => {
             if line == "_" {
-                return Err(JianPuError::new(
+                return Err(IrrecoverableError::new(
                     line_span,
                     "'_' is only valid on lyrics lines".to_string(),
                 ));
             }
             let group_state = ctx.group_states.get_mut(*track_index).ok_or_else(|| {
-                JianPuError::new(
+                IrrecoverableError::new(
                     line_span.clone(),
                     "internal error: group state index out of range",
                 )
@@ -486,7 +486,7 @@ fn process_column_line(
                 line_span.clone(),
             )?;
             let acc = ctx.accumulators.get_mut(*track_index).ok_or_else(|| {
-                JianPuError::new(
+                IrrecoverableError::new(
                     line_span,
                     "internal error: chord accumulator index out of range",
                 )
@@ -511,20 +511,20 @@ fn validate_and_pad_group_lines(
     data_lines: &[(String, usize)],
     slots: &[ScoreLineSlot],
     base_offset: usize,
-) -> Result<Vec<(String, usize)>, JianPuError> {
+) -> Result<Vec<(String, usize)>, IrrecoverableError> {
     let group_first_span = group_lines
         .first()
         .map(|(line, off)| Span::new(base_offset + off, base_offset + off + line.len()))
         .unwrap_or_else(|| Span::new(base_offset, base_offset));
 
     if data_lines.is_empty() {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             group_first_span,
             "expected at least one data line in measure group".to_string(),
         ));
     }
     if data_lines.len() != slots.len() {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             group_first_span,
             format!(
                 "expected {} lines (one per score line), got {}",
@@ -541,9 +541,9 @@ fn build_parse_result(
     declarations: &[PartDecl],
     accumulators: Vec<TrackAccumulator>,
     mut ditto_measures_per_track: DittoMeasures,
-) -> Result<Vec<ParsedTrack>, JianPuError> {
+) -> Result<Vec<ParsedTrack>, IrrecoverableError> {
     if declarations.len() != accumulators.len() {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             Span::new(0, 0),
             "internal error: declaration/accumulator count mismatch",
         ));

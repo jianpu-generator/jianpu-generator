@@ -3,9 +3,11 @@ use crate::ast::grouped::{
     PartSlice,
 };
 use crate::ast::parsed::PartKind;
-use crate::error::{JianPuError, Span};
+use crate::error::{IrrecoverableError, RecoverableError, Span};
 
-pub(crate) fn combine(grouped_score: &GroupedScore) -> Result<Vec<MultiPartMeasure>, JianPuError> {
+pub(crate) fn combine(
+    grouped_score: &GroupedScore,
+) -> Result<Vec<MultiPartMeasure>, IrrecoverableError> {
     if grouped_score.parts.is_empty() {
         return Ok(Vec::new());
     }
@@ -30,7 +32,7 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> Result<Vec<MultiPartMeasu
             Some(d) => (d, None),
             None => (
                 &directives_fallback,
-                Some(JianPuError::new(
+                Some(RecoverableError::new(
                     Span::new(0, 0),
                     "internal invariant: measure_directives shorter than measure count",
                 )),
@@ -56,7 +58,7 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> Result<Vec<MultiPartMeasu
             .unwrap_or_else(|| {
                 (
                     Span::new(0, 0),
-                    Some(JianPuError::new(
+                    Some(RecoverableError::new(
                         Span::new(0, 0),
                         format!(
                             "internal invariant: source_span missing for measure {measure_idx}"
@@ -68,7 +70,7 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> Result<Vec<MultiPartMeasu
             .per_measure_parse_errors
             .get(measure_idx)
             .and_then(|e| e.clone());
-        let measure_errors: Vec<JianPuError> = directives_error
+        let measure_errors: Vec<RecoverableError> = directives_error
             .into_iter()
             .chain(source_span_error)
             .chain(std::iter::once(parse_error).flatten())
@@ -106,10 +108,10 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> Result<Vec<MultiPartMeasu
 fn validate_measure_counts(
     grouped_tracks: &[GroupedTrack],
     expected_len: usize,
-) -> Result<(), JianPuError> {
+) -> Result<(), IrrecoverableError> {
     for track in grouped_tracks.iter().skip(1) {
         if track.measure_count() != expected_len {
-            return Err(JianPuError::new(
+            return Err(IrrecoverableError::new(
                 Span::new(0, 1),
                 format!(
                     "part {:?} has {} measures but the first part has {}; all parts must have the same number of measures",
@@ -126,7 +128,7 @@ fn validate_measure_counts(
 fn build_part_rows(
     grouped_tracks: &[GroupedTrack],
     measure_idx: usize,
-) -> (Vec<PartRow>, Vec<JianPuError>) {
+) -> (Vec<PartRow>, Vec<RecoverableError>) {
     let mut part_rows = Vec::new();
     let mut errors = Vec::new();
 
@@ -134,7 +136,7 @@ fn build_part_rows(
         match track {
             GroupedTrack::Timed(part) => {
                 let Some(measure) = part.measures.get(measure_idx) else {
-                    errors.push(JianPuError::new(
+                    errors.push(RecoverableError::new(
                         Span::new(0, 0),
                         "internal invariant: timed part measure missing",
                     ));

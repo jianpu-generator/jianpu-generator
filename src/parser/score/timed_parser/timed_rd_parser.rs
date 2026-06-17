@@ -8,7 +8,7 @@ use super::groups::{
 use super::timed_lexer::TimedLexToken;
 use super::TimedUnitHead;
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{JianPuError, Span, Spanned};
+use crate::error::{IrrecoverableError, Span, Spanned};
 
 /// A thin wrapper over `Spanned<ScoreEvent>` that holds mutable group-depth fields so that the
 /// generic `HasGroupDepth`-based helpers (`apply_closed_group_depth`, `apply_open_group_depth`)
@@ -148,7 +148,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
         base_offset: usize,
         tokens: &'a [Spanned<TimedLexToken>],
         stack: &'a mut GroupStack,
-    ) -> Result<Vec<Spanned<ScoreEvent>>, JianPuError> {
+    ) -> Result<Vec<Spanned<ScoreEvent>>, IrrecoverableError> {
         // Frames carried over from a previous bar have segment_start values that
         // refer to the old staging vec.  Reset them to 0 so they cover all events
         // produced in this new call.
@@ -205,7 +205,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
     // Core recursive methods
     // -----------------------------------------------------------------------
 
-    fn parse_atoms(&mut self, stop_at_rparen: bool) -> Result<(), JianPuError> {
+    fn parse_atoms(&mut self, stop_at_rparen: bool) -> Result<(), IrrecoverableError> {
         loop {
             match self.peek() {
                 None => return Ok(()),
@@ -265,7 +265,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
 
     /// Parse one timed unit (note/rest/chord head + duration suffixes) starting at `digit_offset`
     /// (which is an absolute byte offset into `self.source`).
-    fn parse_timed_unit(&mut self, digit_offset: usize) -> Result<(), JianPuError> {
+    fn parse_timed_unit(&mut self, digit_offset: usize) -> Result<(), IrrecoverableError> {
         // Relative byte offset from the start of `source`.
         let rel = digit_offset - self.base_offset;
 
@@ -334,7 +334,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
     }
 
     /// Handle `(` — push a new frame and recurse into the inner atom sequence.
-    fn open_group(&mut self) -> Result<(), JianPuError> {
+    fn open_group(&mut self) -> Result<(), IrrecoverableError> {
         let lparen_span = self.current_span();
         self.bump(); // consume LParen
 
@@ -352,7 +352,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
                 self.bump();
 
                 let frame = self.stack.pop().ok_or_else(|| {
-                    JianPuError::new(
+                    IrrecoverableError::new(
                         rparen_span.clone(),
                         "unexpected `)` — no open group".to_string(),
                     )
@@ -374,12 +374,12 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
 
     /// Handle `)` when encountered outside of `parse_atoms(stop_at_rparen=true)`.
     /// This closes the innermost frame that was left open from a previous call.
-    fn close_group(&mut self) -> Result<(), JianPuError> {
+    fn close_group(&mut self) -> Result<(), IrrecoverableError> {
         let rparen_span = self.current_span();
         self.bump(); // consume RParen
 
         let frame = self.stack.pop().ok_or_else(|| {
-            JianPuError::new(
+            IrrecoverableError::new(
                 rparen_span.clone(),
                 "unexpected `)` — no open group".to_string(),
             )
@@ -395,7 +395,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
 
     /// At end-of-line, any frames still on the stack represent open (cross-line) groups.
     /// Apply open-group depth to the events that belong to those frames.
-    fn finalize_open_frames(&mut self) -> Result<(), JianPuError> {
+    fn finalize_open_frames(&mut self) -> Result<(), IrrecoverableError> {
         // Iterate from outermost to innermost (bottom of stack to top).
         for frame in &self.stack.frames {
             apply_open_group_depth(&mut self.staging[frame.segment_start..]);

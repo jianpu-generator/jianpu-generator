@@ -3,7 +3,7 @@ use crate::ast::parsed::{
     Accidental, BassDegree, Extension, JianPuPitch, ParsedChordNote, ParsedRest, ScoreEvent,
     TriadQuality,
 };
-use crate::error::{JianPuError, Span};
+use crate::error::{IrrecoverableError, Span};
 
 pub struct ChordHead {
     degree: JianPuPitch,
@@ -19,11 +19,11 @@ impl TimedUnitHead for ChordHead {
         chars: &[char],
         start: usize,
         span: &Span,
-    ) -> Result<(Self, usize, bool), JianPuError> {
+    ) -> Result<(Self, usize, bool), IrrecoverableError> {
         let degree_char = chars[start];
         if !matches!(degree_char, '0'..='7') {
             let pos = span.start + byte_offset_at_char_index_from_chars(chars, start);
-            return Err(JianPuError::new(
+            return Err(IrrecoverableError::new(
                 Span::new(pos, pos + degree_char.len_utf8()),
                 format!("expected chord degree digit (0-7), got: {degree_char}"),
             ));
@@ -111,7 +111,7 @@ struct ParsedChordSymbolFields {
     bass: Option<BassDegree>,
 }
 
-fn find_symbol_end(chars: &[char], start: usize, span: &Span) -> Result<usize, JianPuError> {
+fn find_symbol_end(chars: &[char], start: usize, span: &Span) -> Result<usize, IrrecoverableError> {
     let max_end = chars.len().min(
         chars[start..]
             .iter()
@@ -128,19 +128,21 @@ fn find_symbol_end(chars: &[char], start: usize, span: &Span) -> Result<usize, J
     }
 
     let token: String = chars[start..start + 1].iter().collect();
-    Err(JianPuError::new(
+    Err(IrrecoverableError::new(
         span.clone(),
         format!("invalid chord token '{token}'"),
     ))
 }
 
-fn parse_chord_symbol(token: &str, span: Span) -> Result<ParsedChordSymbolFields, JianPuError> {
+fn parse_chord_symbol(
+    token: &str,
+    span: Span,
+) -> Result<ParsedChordSymbolFields, IrrecoverableError> {
     let mut chars = token.chars();
 
-    let degree = chars
-        .next()
-        .and_then(char_to_pitch)
-        .ok_or_else(|| JianPuError::new(span.clone(), format!("invalid chord token '{token}'")))?;
+    let degree = chars.next().and_then(char_to_pitch).ok_or_else(|| {
+        IrrecoverableError::new(span.clone(), format!("invalid chord token '{token}'"))
+    })?;
 
     let rest: String = chars.collect();
     let mut rest = rest.as_str();
@@ -177,7 +179,7 @@ fn parse_chord_symbol(token: &str, span: Span) -> Result<ParsedChordSymbolFields
     } else if ext_str.is_empty() {
         None
     } else {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             span,
             format!("unknown chord suffix '{ext_str}' in token '{token}'"),
         ));
@@ -194,25 +196,25 @@ fn parse_chord_symbol(token: &str, span: Span) -> Result<ParsedChordSymbolFields
     })
 }
 
-fn parse_bass(s: &str, span: Span) -> Result<BassDegree, JianPuError> {
+fn parse_bass(s: &str, span: Span) -> Result<BassDegree, IrrecoverableError> {
     let mut chars = s.chars();
     let degree = chars
         .next()
         .and_then(char_to_pitch)
-        .ok_or_else(|| JianPuError::new(span.clone(), format!("invalid bass note '{s}'")))?;
+        .ok_or_else(|| IrrecoverableError::new(span.clone(), format!("invalid bass note '{s}'")))?;
     let accidental = match chars.next() {
         Some('#') => Accidental::Sharp,
         Some('b') => Accidental::Flat,
         None => Accidental::Natural,
         Some(c) => {
-            return Err(JianPuError::new(
+            return Err(IrrecoverableError::new(
                 span,
                 format!("unexpected character '{c}' in bass note '{s}'"),
             ))
         }
     };
     if chars.next().is_some() {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             span,
             format!("bass note '{s}' has trailing characters"),
         ));

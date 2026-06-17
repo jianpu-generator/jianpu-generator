@@ -15,8 +15,8 @@ use jianpu_generator::{
 #[cfg(feature = "wav")]
 use types::GenerateWavResponse;
 use types::{
-    diagnostic_from_error, ListMeasureSpansResponse, ListPartsResponse, MeasureAtOffsetResponse,
-    PartOut, RenderResponse,
+    diagnostic_from_error, diagnostic_from_recoverable_error, ListMeasureSpansResponse,
+    ListPartsResponse, MeasureAtOffsetResponse, PartOut, RenderResponse,
 };
 #[cfg(feature = "pdf")]
 use types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
@@ -35,7 +35,7 @@ fn render_response(
             diagnostics: output
                 .errors
                 .into_iter()
-                .map(|e| diagnostic_from_error(source, e))
+                .map(|e| diagnostic_from_recoverable_error(source, e))
                 .collect(),
         },
         Err(e) => RenderResponse::Err {
@@ -66,7 +66,7 @@ fn render_with_highlight_range_response(
             diagnostics: output
                 .errors
                 .into_iter()
-                .map(|e| diagnostic_from_error(source, e))
+                .map(|e| diagnostic_from_recoverable_error(source, e))
                 .collect(),
         },
         Err(e) => RenderResponse::Err {

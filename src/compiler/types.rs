@@ -1,5 +1,5 @@
 use crate::ast::parsed::JianPuPitch;
-use crate::error::JianPuError;
+use crate::error::RecoverableError;
 
 #[derive(Debug, Clone)]
 pub struct MeasureBlock {
@@ -7,7 +7,7 @@ pub struct MeasureBlock {
     pub decorations: Vec<Decoration>,
     /// Errors collected during grouping for this measure.
     /// Non-empty when the measure's source had recoverable parse errors.
-    pub errors: Vec<JianPuError>,
+    pub errors: Vec<RecoverableError>,
 }
 
 impl PartialEq for MeasureBlock {

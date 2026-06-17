@@ -1,4 +1,4 @@
-use crate::error::{JianPuError, Span};
+use crate::error::{IrrecoverableError, Span};
 
 #[derive(Clone)]
 pub struct RawSection {
@@ -15,7 +15,7 @@ pub enum SectionKind {
     Score,
 }
 
-pub fn split_sections(input: &str) -> Result<Vec<RawSection>, JianPuError> {
+pub fn split_sections(input: &str) -> Result<Vec<RawSection>, IrrecoverableError> {
     let mut sections: Vec<RawSection> = Vec::new();
     let mut current_kind: Option<SectionKind> = None;
     let mut current_content = String::new();
@@ -40,7 +40,7 @@ pub fn split_sections(input: &str) -> Result<Vec<RawSection>, JianPuError> {
                 "parts" => SectionKind::Parts,
                 "score" => SectionKind::Score,
                 _ => {
-                    return Err(JianPuError::new(
+                    return Err(IrrecoverableError::new(
                         Span::new(byte_offset, byte_offset + line.len()),
                         format!("unknown section: [{kind_str}]"),
                     ))
@@ -66,14 +66,14 @@ pub fn split_sections(input: &str) -> Result<Vec<RawSection>, JianPuError> {
     validate_section_order(&sections)
 }
 
-fn validate_section_order(sections: &[RawSection]) -> Result<Vec<RawSection>, JianPuError> {
+fn validate_section_order(sections: &[RawSection]) -> Result<Vec<RawSection>, IrrecoverableError> {
     let expected = [
         SectionKind::Metadata,
         SectionKind::Parts,
         SectionKind::Score,
     ];
     if sections.len() != expected.len() {
-        return Err(JianPuError::new(
+        return Err(IrrecoverableError::new(
             Span::new(0, 0),
             format!(
                 "expected exactly 3 sections ([metadata], [parts], [score]), got {}",
@@ -83,7 +83,7 @@ fn validate_section_order(sections: &[RawSection]) -> Result<Vec<RawSection>, Ji
     }
     for (section, exp) in sections.iter().zip(expected.iter()) {
         if &section.kind != exp {
-            return Err(JianPuError::new(
+            return Err(IrrecoverableError::new(
                 Span::new(0, 0),
                 "sections must appear in order: [metadata], [parts], [score]".to_string(),
             ));
