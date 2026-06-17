@@ -84,6 +84,7 @@ pub(crate) fn combine(
                             [
                                 m.and_then(|m| m.lyrics_error.clone()),
                                 m.and_then(|m| m.beat_overflow_error.clone()),
+                                m.and_then(|m| m.dash_after_rest_error.clone()),
                             ]
                         }
                     })
