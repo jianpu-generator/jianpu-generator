@@ -1,5 +1,6 @@
 use crate::ast::parsed::{flatten_score_line_slots, PartDecl, ScoreLineRole};
 use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
+use crate::parser::score::measure_group;
 
 type SourceLine = (String, usize);
 type MeasureGroup = Vec<SourceLine>;
@@ -38,15 +39,7 @@ fn pad_implicit_ditto_group(
     slots: &[crate::ast::parsed::ScoreLineSlot],
     base_offset: usize,
 ) -> Result<(MeasureGroup, Option<RecoverableError>), IrrecoverableError> {
-    let directive_count = if group
-        .first()
-        .map(|(l, _)| l.starts_with('('))
-        .unwrap_or(false)
-    {
-        1
-    } else {
-        0
-    };
+    let directive_count = measure_group::directive_line_count(group);
 
     let directive_lines = group.get(..directive_count).unwrap_or(&[]);
     let data_lines = group.get(directive_count..).unwrap_or(&[]);
@@ -146,15 +139,7 @@ fn desugar_group(
     slots: &[crate::ast::parsed::ScoreLineSlot],
     base_offset: usize,
 ) -> Result<(MeasureGroup, Option<RecoverableError>), IrrecoverableError> {
-    let directive_count = if group
-        .first()
-        .map(|(l, _)| l.starts_with('('))
-        .unwrap_or(false)
-    {
-        1
-    } else {
-        0
-    };
+    let directive_count = measure_group::directive_line_count(group);
 
     let directive_lines = group.get(..directive_count).unwrap_or(&[]).to_vec();
     let data_lines = group.get(directive_count..).unwrap_or(&[]);

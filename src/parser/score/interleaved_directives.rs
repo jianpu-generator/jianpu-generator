@@ -1,31 +1,6 @@
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName, ScoreEvent};
 use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Spanned};
 
-/// Returns groups of `(trimmed_line, byte_offset_within_content)` pairs.
-pub(super) fn collect_groups(content: &str) -> Vec<Vec<(String, usize)>> {
-    let mut groups: Vec<Vec<(String, usize)>> = Vec::new();
-    let mut current: Vec<(String, usize)> = Vec::new();
-    let mut byte_offset: usize = 0;
-
-    for line in content.lines() {
-        let leading = line.len() - line.trim_start().len();
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            if !current.is_empty() {
-                groups.push(std::mem::take(&mut current));
-            }
-        } else {
-            current.push((trimmed.to_string(), byte_offset + leading));
-        }
-        byte_offset += line.len() + 1; // +1 for '\n'
-    }
-    if !current.is_empty() {
-        groups.push(current);
-    }
-
-    groups
-}
-
 #[allow(clippy::type_complexity)]
 pub(super) fn split_directive(
     lines: &[(String, usize)],

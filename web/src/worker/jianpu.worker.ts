@@ -1,6 +1,11 @@
 import init, * as jianpuWasm from 'jianpu-wasm'
-import { list_measure_spans, list_parts, render } from 'jianpu-wasm'
-import type { Diagnostic, PartInfo } from '../types'
+import {
+  list_measure_spans,
+  list_parts,
+  list_score_line_hints,
+  render,
+} from 'jianpu-wasm'
+import type { Diagnostic, PartInfo, ScoreLineHint } from '../types'
 
 const generateWav =
   'generate_wav' in jianpuWasm ? jianpuWasm.generate_wav : null
@@ -67,6 +72,7 @@ export type WorkerRequest =
       disabledLyrics?: string[]
     }
   | { type: 'listMeasureSpans'; source: string; id: number }
+  | { type: 'listScoreLineHints'; source: string; id: number }
 
 export type WorkerResponse =
   | { type: 'ready'; audioAvailable: boolean; pdfAvailable: boolean }
@@ -88,6 +94,12 @@ export type WorkerResponse =
       id: number
       status: 'ok' | 'err'
       spans: Array<{ start: number; end: number }>
+    }
+  | {
+      type: 'scoreLineHints'
+      id: number
+      status: 'ok' | 'err'
+      hints: ScoreLineHint[]
     }
 
 let initialized = false
@@ -326,6 +338,17 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       id: msg.id,
       status: result.status,
       spans: result.status === 'ok' ? result.spans : [],
+    } satisfies WorkerResponse)
+    return
+  }
+
+  if (msg.type === 'listScoreLineHints') {
+    const result = list_score_line_hints(msg.source)
+    postMessage({
+      type: 'scoreLineHints',
+      id: msg.id,
+      status: result.status,
+      hints: result.status === 'ok' ? result.hints : [],
     } satisfies WorkerResponse)
     return
   }

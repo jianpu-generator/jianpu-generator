@@ -15,8 +15,9 @@ mod ditto;
 #[path = "interleaved_errors.rs"]
 mod errors;
 
+use crate::parser::score::measure_group::collect_groups;
 use beat_padding::{beats_per_measure, validate_and_pad_beats, validate_and_pad_group_lines};
-use directives::{collect_groups, split_directive};
+use directives::split_directive;
 use ditto::{compute_ditto_measures, DittoMeasures};
 use errors::invariant;
 

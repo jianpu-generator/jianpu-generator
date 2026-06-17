@@ -7,7 +7,15 @@ pub mod parts_parser;
 pub mod score;
 pub mod section_splitter;
 
-pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, IrrecoverableError> {
+pub(crate) struct DocumentSectionContents {
+    pub parts: (String, usize),
+    pub score: (String, usize),
+    metadata: (String, usize),
+}
+
+pub(crate) fn load_document_sections(
+    input: &str,
+) -> Result<DocumentSectionContents, IrrecoverableError> {
     use section_splitter::{split_sections, SectionKind};
 
     let sections = split_sections(input)?;
@@ -55,24 +63,37 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, Irrecoverabl
         }
     }
 
-    let (meta_content, meta_offset) = raw_metadata.ok_or_else(|| {
+    let metadata = raw_metadata.ok_or_else(|| {
         IrrecoverableError::new(IrrecoverableErrorKind::MissingSection {
             span: doc_span,
             section: DocumentSection::Metadata,
         })
     })?;
-    let (parts_content, parts_offset) = raw_parts.ok_or_else(|| {
+    let parts = raw_parts.ok_or_else(|| {
         IrrecoverableError::new(IrrecoverableErrorKind::MissingSection {
             span: doc_span,
             section: DocumentSection::Parts,
         })
     })?;
-    let (score_content, score_offset) = raw_score.ok_or_else(|| {
+    let score = raw_score.ok_or_else(|| {
         IrrecoverableError::new(IrrecoverableErrorKind::MissingSection {
             span: doc_span,
             section: DocumentSection::Score,
         })
     })?;
+
+    Ok(DocumentSectionContents {
+        metadata,
+        parts,
+        score,
+    })
+}
+
+pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, IrrecoverableError> {
+    let sections = load_document_sections(input)?;
+    let (meta_content, meta_offset) = sections.metadata;
+    let (parts_content, parts_offset) = sections.parts;
+    let (score_content, score_offset) = sections.score;
 
     let metadata = metadata_parser::parse_metadata(&meta_content, meta_offset)?;
     let declarations = parts_parser::parse_parts(&parts_content, parts_offset)?;

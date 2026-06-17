@@ -1,4 +1,5 @@
 use crate::ast::parsed::{flatten_score_line_slots, PartDecl, ScoreLineRole};
+use crate::parser::score::measure_group;
 
 /// Ditto flags per track, per measure group, computed from the raw groups
 /// before desugaring erases the distinction. A line is a ditto when it is an
@@ -21,12 +22,7 @@ pub(crate) fn compute_ditto_measures(
     let mut lyrics = vec![Vec::with_capacity(groups.len()); declarations.len()];
 
     for group in groups {
-        let directive_count = usize::from(
-            group
-                .first()
-                .map(|(l, _)| l.starts_with('('))
-                .unwrap_or(false),
-        );
+        let directive_count = measure_group::directive_line_count(group);
         let data_lines = group.get(directive_count..).unwrap_or(&[]);
         let line_is_ditto = |slot_idx: usize| {
             data_lines

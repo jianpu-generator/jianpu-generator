@@ -326,3 +326,37 @@ fn list_measure_spans_returns_err_on_invalid_source() {
     let resp = list_measure_spans_response("not valid jianpu");
     assert!(matches!(resp, ListMeasureSpansResponse::Err));
 }
+
+#[test]
+fn list_score_line_hints_returns_physical_line_offsets() {
+    let input = concat!(
+        "[metadata]\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "[parts]\n",
+        "Chord = chord\n",
+        "Melody = notes lyrics\n",
+        "\n",
+        "[score]\n",
+        "(time=4/4 key=C4 bpm=120)\n",
+        "1 - - -\n",
+        "1 1 5 5\n",
+        "twin- kle\n",
+    );
+    let chord_offset = input.find("1 - - -").unwrap();
+    let melody_lyrics_offset = input.find("twin- kle").unwrap();
+    let resp = list_score_line_hints_response(input);
+    match resp {
+        ListScoreLineHintsResponse::Ok { hints } => {
+            assert_eq!(hints.len(), 3);
+            assert!(hints
+                .iter()
+                .any(|hint| { hint.line_start == chord_offset && hint.abbreviation == "Chord" }));
+            assert!(hints.iter().any(|hint| {
+                hint.line_start == melody_lyrics_offset && hint.abbreviation == "Melody"
+            }));
+        }
+        ListScoreLineHintsResponse::Err { .. } => panic!("expected ok"),
+    }
+}

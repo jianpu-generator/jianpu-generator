@@ -78,6 +78,21 @@ pub enum ListMeasureSpansResponse {
     Err,
 }
 
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[tsify(into_wasm_abi)]
+pub struct ScoreLineHintOut {
+    pub line_start: usize,
+    pub abbreviation: String,
+}
+
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[serde(tag = "status", rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum ListScoreLineHintsResponse {
+    Ok { hints: Vec<ScoreLineHintOut> },
+    Err { diagnostics: Vec<DiagnosticOut> },
+}
+
 #[cfg(feature = "wav")]
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]

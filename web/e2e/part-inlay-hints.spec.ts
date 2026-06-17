@@ -6,8 +6,8 @@ import { expect, test } from '@playwright/test'
  *   Chord  = chord          (1 data line per measure)
  *   Melody = notes lyrics   (2 data lines per measure)
  *
- * After WASM initialises and returns both parts and measure spans, the editor
- * should display inlay hints at the start of each part's notes/chord line:
+ * After WASM initialises and returns score line hints from the pre-desugar
+ * score tree, the editor should display inlay hints at each physical data line:
  *
  *   Line 11: (time=4/4 key=C4 bpm=120)   ← directive, no hint
  *   Line 12: [Chord]  1 - - -            ← Chord data line
@@ -22,8 +22,7 @@ test('shows part inlay hints on each data line within a measure', async ({
   // Wait for WASM to initialise (editor toolbar is only shown once WASM is ready).
   await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
 
-  // Allow the 300 ms debounce for listParts + listMeasureSpans, plus Monaco
-  // rendering time.
+  // Allow the 300 ms debounce for listScoreLineHints, plus Monaco rendering time.
   await page.waitForTimeout(1_000)
 
   const viewLines = page.locator('.monaco-editor .view-lines')

@@ -64,6 +64,7 @@ export default function App() {
     measureAudioGenerating,
     measureAudioPlaying,
     measureSpans,
+    scoreLineHints,
     notifySelection,
     playSelectedMeasures,
     stopMeasurePlayback,
@@ -239,7 +240,7 @@ export default function App() {
                 readOnly={readOnly}
                 diagnostics={diagnostics}
                 measureSpans={measureSpans}
-                parts={parts}
+                scoreLineHints={scoreLineHints}
                 onSelectionChange={notifySelection}
                 onCursorLineChange={setCurrentLine}
                 onPlayMeasure={

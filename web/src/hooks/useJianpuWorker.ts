@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { findIndex, findLastIndex } from 'remeda'
-import type { Diagnostic, PartInfo } from '../types'
+import type { Diagnostic, PartInfo, ScoreLineHint } from '../types'
 import type { WorkerRequest, WorkerResponse } from '../worker/jianpu.worker'
 
 function measureRangeInSpan(
@@ -64,6 +64,7 @@ interface JianpuWorkerState {
   stopMeasurePlayback: () => void
   highlightedSvgs: string[]
   measureSpans: Array<{ start: number; end: number }>
+  scoreLineHints: ScoreLineHint[]
 }
 
 function downloadPdf(bytes: ArrayBuffer, filename: string) {
@@ -138,10 +139,13 @@ export function useJianpuWorker(
   const [measureSpans, setMeasureSpans] = useState<
     Array<{ start: number; end: number }>
   >([])
+  const [scoreLineHints, setScoreLineHints] = useState<ScoreLineHint[]>([])
   const highlightRenderRequestIdRef = useRef(0)
   const latestHighlightRenderIdRef = useRef(0)
   const measureSpansRequestIdRef = useRef(0)
   const latestMeasureSpansIdRef = useRef(0)
+  const scoreLineHintsRequestIdRef = useRef(0)
+  const latestScoreLineHintsIdRef = useRef(0)
 
   const measureSpansRef = useRef<Array<{ start: number; end: number }>>([])
 
@@ -329,6 +333,16 @@ export function useJianpuWorker(
         return
       }
 
+      if (msg.type === 'scoreLineHints') {
+        if (msg.id !== latestScoreLineHintsIdRef.current) return
+        if (msg.status === 'ok') {
+          setScoreLineHints(msg.hints)
+        } else {
+          setScoreLineHints([])
+        }
+        return
+      }
+
       if (msg.type === 'err') {
         if (msg.id !== latestRenderIdRef.current) return
         setRendering(false)
@@ -476,6 +490,24 @@ export function useJianpuWorker(
     return () => window.clearTimeout(timer)
   }, [source, debounceMs])
 
+  useEffect(() => {
+    const worker = workerRef.current
+    if (!worker) return
+
+    const id = ++scoreLineHintsRequestIdRef.current
+    latestScoreLineHintsIdRef.current = id
+
+    const timer = window.setTimeout(() => {
+      worker.postMessage({
+        type: 'listScoreLineHints',
+        source,
+        id,
+      } satisfies WorkerRequest)
+    }, debounceMs)
+
+    return () => window.clearTimeout(timer)
+  }, [source, debounceMs])
+
   const stopMeasurePlayback = useCallback(() => {
     if (currentMeasureAudioRef.current) {
       currentMeasureAudioRef.current.pause()
@@ -558,5 +590,6 @@ export function useJianpuWorker(
     stopMeasurePlayback,
     highlightedSvgs,
     measureSpans,
+    scoreLineHints,
   }
 }
