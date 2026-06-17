@@ -1,5 +1,5 @@
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Spanned};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned};
 
 const HALF_BAR_BOUNDARY: u32 = 8;
 
@@ -7,13 +7,14 @@ pub fn validate_measure_grouping(
     events: &[Spanned<ScoreEvent>],
     time_num: u8,
     time_den: u8,
-) -> Result<(), IrrecoverableError> {
+) -> Result<Vec<RecoverableError>, IrrecoverableError> {
     if time_num != 4 || time_den != 4 {
-        return Ok(());
+        return Ok(vec![]);
     }
 
     let mut pos = 0u32;
     let mut index = 0usize;
+    let mut recoverable_errors = Vec::new();
     while index < events.len() {
         let Some(event) = events.get(index) else {
             break;
@@ -33,7 +34,11 @@ pub fn validate_measure_grouping(
 
                 if is_dotted_eighth_at_beat_start(note.dotted, note.duration, pos) {
                     let next_timed = next_timed_index(events, index);
-                    validate_dotted_eighth_tail(events, next_timed, &event.span)?;
+                    if let Some(error) =
+                        validate_dotted_eighth_tail(events, next_timed, &event.span)?
+                    {
+                        recoverable_errors.push(error);
+                    }
                     pos += note.duration + 1;
                     index = next_timed.map(|next| next + 1).unwrap_or(events.len());
                     continue;
@@ -55,7 +60,11 @@ pub fn validate_measure_grouping(
 
                 if is_dotted_eighth_at_beat_start(chord.dotted, chord.duration, pos) {
                     let next_timed = next_timed_index(events, index);
-                    validate_dotted_eighth_tail(events, next_timed, &event.span)?;
+                    if let Some(error) =
+                        validate_dotted_eighth_tail(events, next_timed, &event.span)?
+                    {
+                        recoverable_errors.push(error);
+                    }
                     pos += chord.duration + 1;
                     index = next_timed.map(|next| next + 1).unwrap_or(events.len());
                     continue;
@@ -73,7 +82,11 @@ pub fn validate_measure_grouping(
 
                 if is_dotted_eighth_at_beat_start(rest.dotted, rest.duration, pos) {
                     let next_timed = next_timed_index(events, index);
-                    validate_dotted_eighth_tail(events, next_timed, &event.span)?;
+                    if let Some(error) =
+                        validate_dotted_eighth_tail(events, next_timed, &event.span)?
+                    {
+                        recoverable_errors.push(error);
+                    }
                     pos += rest.duration + 1;
                     index = next_timed.map(|next| next + 1).unwrap_or(events.len());
                     continue;
@@ -86,7 +99,7 @@ pub fn validate_measure_grouping(
         }
     }
 
-    Ok(())
+    Ok(recoverable_errors)
 }
 
 fn timed_head_duration(events: &[Spanned<ScoreEvent>], start: usize) -> u32 {
@@ -160,25 +173,25 @@ fn validate_dotted_eighth_tail(
     events: &[Spanned<ScoreEvent>],
     next_timed: Option<usize>,
     span: &Span,
-) -> Result<(), IrrecoverableError> {
+) -> Result<Option<RecoverableError>, IrrecoverableError> {
     let Some(next_index) = next_timed else {
-        return Err(dotted_eighth_error(span));
+        return Ok(Some(RecoverableError::dotted_eighth_needs_sixteenth(*span)));
     };
     let Some(event) = events.get(next_index) else {
-        return Err(dotted_eighth_error(span));
+        return Ok(Some(RecoverableError::dotted_eighth_needs_sixteenth(*span)));
     };
 
     let tail_duration = match &event.value {
         ScoreEvent::Note(note) => note.duration,
         ScoreEvent::Chord(chord) => chord.duration,
         ScoreEvent::Rest(rest) => rest.duration,
-        _ => return Err(dotted_eighth_error(span)),
+        _ => return Ok(Some(RecoverableError::dotted_eighth_needs_sixteenth(*span))),
     };
 
     if tail_duration == 1 {
-        Ok(())
+        Ok(None)
     } else {
-        Err(dotted_eighth_error(span))
+        Ok(Some(RecoverableError::dotted_eighth_needs_sixteenth(*span)))
     }
 }
 
@@ -186,15 +199,11 @@ fn half_bar_error(span: &Span) -> IrrecoverableError {
     IrrecoverableError::new(IrrecoverableErrorKind::HalfBarBoundaryCrossed { span: *span })
 }
 
-fn dotted_eighth_error(span: &Span) -> IrrecoverableError {
-    IrrecoverableError::new(IrrecoverableErrorKind::DottedEighthNeedsSixteenth { span: *span })
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::parser;
-
-    fn parse_score(notes_line: &str) -> Result<(), crate::error::IrrecoverableError> {
+    fn parse_score(
+        notes_line: &str,
+    ) -> Result<crate::RenderOutput, crate::error::IrrecoverableError> {
         let input = format!(
             concat!(
                 "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes\n\n",
@@ -203,7 +212,7 @@ mod tests {
             ),
             notes_line = notes_line
         );
-        parser::parse(&input, "test.jianpu").map(|_| ())
+        crate::render_svgs_from_source(&input, "test.jianpu")
     }
 
     #[test]
@@ -222,7 +231,7 @@ mod tests {
             "1. 2. 3_ 4_\n",
             "1 2 3 4\n",
         );
-        assert!(parser::parse(input, "t.jianpu").is_err());
+        assert!(crate::render_svgs_from_source(input, "t.jianpu").is_err());
     }
 
     #[test]
@@ -243,13 +252,14 @@ mod tests {
     }
 
     #[test]
-    fn rejects_dotted_eighth_without_tail_group() {
+    fn recovers_dotted_eighth_without_tail_group() {
         use super::validate_measure_grouping;
         use crate::parser::score::token_parser;
         let bar = "1_. 2_ 3_ 4_ 5_ 6_ 7_ 0=";
         let events = token_parser::parse_notes_line(bar, 0, &mut Default::default()).unwrap();
-        let err = validate_measure_grouping(&events, 4, 4).unwrap_err();
-        assert!(err.message().contains("dotted eighth"));
+        let errors = validate_measure_grouping(&events, 4, 4).unwrap();
+        assert!(!errors.is_empty());
+        assert!(errors[0].message.contains("dotted eighth"));
     }
 
     #[test]
@@ -258,9 +268,12 @@ mod tests {
     }
 
     #[test]
-    fn rejects_dotted_eighth_rest_without_tail_group() {
-        let err = parse_score("0_. 1_ 2_ 3_ 4_ 5_ 6_ 0=\n").unwrap_err();
-        assert!(err.message().contains("dotted eighth"));
+    fn recovers_dotted_eighth_rest_without_tail_group() {
+        let output = parse_score("0_. 1_ 2_ 3_ 4_ 5_ 6_ 0=\n").unwrap();
+        assert!(output
+            .errors
+            .iter()
+            .any(|e| e.message.contains("dotted eighth")));
     }
 
     #[test]
@@ -275,7 +288,7 @@ mod tests {
             "[score]\n(time=3/4 key=C4 bpm=120)\n",
             "1 2 3\n",
         );
-        assert!(parser::parse(input, "test.jianpu").is_ok());
+        assert!(crate::render_svgs_from_source(input, "test.jianpu").is_ok());
     }
 
     #[test]

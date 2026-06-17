@@ -187,10 +187,6 @@ impl std::fmt::Display for IrrecoverableErrorKind {
                 f,
                 "note/rest crosses the half-bar boundary (beat 2→3); use a beam group or tie to show the split"
             ),
-            Self::DottedEighthNeedsSixteenth { .. } => write!(
-                f,
-                "dotted eighth must be followed by a sixteenth note or rest"
-            ),
             Self::LyricsLineEmpty { .. } => {
                 write!(f, "lyrics line cannot be empty; use '_' for no lyrics")
             }

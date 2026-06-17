@@ -272,9 +272,6 @@ pub enum IrrecoverableErrorKind {
     HalfBarBoundaryCrossed {
         span: Span,
     },
-    DottedEighthNeedsSixteenth {
-        span: Span,
-    },
     LyricsLineEmpty {
         span: Span,
     },
@@ -444,7 +441,6 @@ impl IrrecoverableErrorKind {
             | Self::UnclosedGroupAtEnd { span, .. }
             | Self::IncompleteMeasure { span, .. }
             | Self::HalfBarBoundaryCrossed { span }
-            | Self::DottedEighthNeedsSixteenth { span }
             | Self::LyricsLineEmpty { span }
             | Self::UnderscoreOnlyOnLyrics { span }
             | Self::LyricsNoNotesTrack { span, .. }

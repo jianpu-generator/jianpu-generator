@@ -35,6 +35,8 @@ pub enum ErrorKind {
     DashAfterRest,
     /// An invalid token was encountered while parsing a chord line.
     ChordInvalidToken,
+    /// A dotted eighth note or rest is not followed by a sixteenth.
+    DottedEighthNeedsSixteenth,
 }
 
 impl ErrorKind {
@@ -43,6 +45,7 @@ impl ErrorKind {
             Self::General => "general",
             Self::DashAfterRest => "dash_after_rest",
             Self::ChordInvalidToken => "chord_invalid_token",
+            Self::DottedEighthNeedsSixteenth => "dotted_eighth_needs_sixteenth",
         }
     }
 }
@@ -76,6 +79,14 @@ impl RecoverableError {
             span,
             message: message.into(),
             kind: ErrorKind::ChordInvalidToken,
+        }
+    }
+
+    pub fn dotted_eighth_needs_sixteenth(span: Span) -> Self {
+        Self {
+            span,
+            message: "dotted eighth must be followed by a sixteenth note or rest".to_string(),
+            kind: ErrorKind::DottedEighthNeedsSixteenth,
         }
     }
 }

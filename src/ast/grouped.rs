@@ -147,6 +147,8 @@ pub(crate) struct GroupedMeasure {
     pub(crate) beat_overflow_error: Option<RecoverableError>,
     /// Recoverable error from `-` used after a rest in this measure, if any.
     pub(crate) dash_after_rest_error: Option<RecoverableError>,
+    /// Recoverable dotted-eighth grouping errors for this measure (empty = none).
+    pub(crate) dotted_eighth_errors: Vec<RecoverableError>,
 }
 
 pub(crate) struct GroupedPart {

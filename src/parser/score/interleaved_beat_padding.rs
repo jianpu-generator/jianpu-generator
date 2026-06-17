@@ -1,6 +1,12 @@
 use crate::ast::parsed::{ScoreEvent, ScoreLineSlot};
 use crate::error::{IrrecoverableError, RecoverableError, Span, Spanned};
 
+pub(super) struct PaddedBeats {
+    pub(super) events: Vec<Spanned<ScoreEvent>>,
+    pub(super) beat_overflow_error: Option<RecoverableError>,
+    pub(super) dotted_eighth_errors: Vec<RecoverableError>,
+}
+
 pub(super) fn beats_per_measure(num: u8, den: u8) -> u32 {
     (num as u32) * (16 / den as u32)
 }
@@ -105,15 +111,16 @@ fn can_implicitly_pad(events: &[Spanned<ScoreEvent>], deficit: u32) -> bool {
 }
 
 /// Validates measure capacity and pads omitted trailing `-` extensions when possible.
-/// On beat overflow, truncates the events to fit and returns `Ok((truncated, Some(error)))`.
+/// On beat overflow, truncates the events to fit and returns `Ok((truncated, Some(error), vec![]))`.
 /// On underflow that cannot be implicitly padded, returns `Err`.
+/// On dotted-eighth grouping violations, returns `Ok((events, None, errors))`.
 pub(super) fn validate_and_pad_beats(
     events: Vec<Spanned<ScoreEvent>>,
     expected: u32,
     time_num: u8,
     time_den: u8,
     line_span: Span,
-) -> Result<(Vec<Spanned<ScoreEvent>>, Option<RecoverableError>), IrrecoverableError> {
+) -> Result<PaddedBeats, IrrecoverableError> {
     let mut total = 0u32;
     let mut truncate_at: Option<usize> = None;
 
@@ -143,7 +150,11 @@ pub(super) fn validate_and_pad_beats(
     };
 
     if overflow_error.is_some() {
-        return Ok((events, overflow_error));
+        return Ok(PaddedBeats {
+            events,
+            beat_overflow_error: overflow_error,
+            dotted_eighth_errors: vec![],
+        });
     }
 
     if total < expected {
@@ -165,7 +176,11 @@ pub(super) fn validate_and_pad_beats(
                 }),
                 rest_span,
             ));
-            return Ok((events, Some(error)));
+            return Ok(PaddedBeats {
+                events,
+                beat_overflow_error: Some(error),
+                dotted_eighth_errors: vec![],
+            });
         }
         if extending_last_crosses_half_bar(&events, deficit) {
             let pad_span = events
@@ -197,9 +212,14 @@ pub(super) fn validate_and_pad_beats(
         }
     }
 
-    crate::grouping::validate_measure_grouping(&events, time_num, time_den)?;
+    let dotted_eighth_errors =
+        crate::grouping::validate_measure_grouping(&events, time_num, time_den)?;
 
-    Ok((events, None))
+    Ok(PaddedBeats {
+        events,
+        beat_overflow_error: None,
+        dotted_eighth_errors,
+    })
 }
 
 pub(super) fn validate_and_pad_group_lines(

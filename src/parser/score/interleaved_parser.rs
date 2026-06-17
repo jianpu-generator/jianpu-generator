@@ -16,7 +16,9 @@ mod ditto;
 mod errors;
 
 use crate::parser::score::measure_group::collect_groups;
-use beat_padding::{beats_per_measure, validate_and_pad_beats, validate_and_pad_group_lines};
+use beat_padding::{
+    beats_per_measure, validate_and_pad_beats, validate_and_pad_group_lines, PaddedBeats,
+};
 use directives::split_directive;
 use ditto::{compute_ditto_measures, DittoMeasures};
 use errors::invariant;
@@ -51,6 +53,8 @@ enum TrackAccumulator {
         lyrics_line_ends: Vec<usize>,
         /// Per-measure beat-overflow error (None = no overflow for that measure).
         per_measure_beat_errors: Vec<Option<crate::error::RecoverableError>>,
+        /// Per-measure dotted-eighth grouping errors (empty = no violations for that measure).
+        per_measure_dotted_eighth_errors: Vec<Vec<crate::error::RecoverableError>>,
         /// Parallel to `per_measure_beat_errors`: notes-line `_` placeholders.
         empty_note_measure_spans: Vec<Option<Span>>,
     },
@@ -202,6 +206,7 @@ fn init_accumulators(declarations: &[PartDecl]) -> Vec<TrackAccumulator> {
             lyrics_line_starts: Vec::new(),
             lyrics_line_ends: Vec::new(),
             per_measure_beat_errors: Vec::new(),
+            per_measure_dotted_eighth_errors: Vec::new(),
             empty_note_measure_spans: Vec::new(),
         })
         .collect()
@@ -378,10 +383,12 @@ fn process_notes_column_line(
         })?;
         let TrackAccumulator::Timed {
             per_measure_beat_errors,
+            per_measure_dotted_eighth_errors,
             empty_note_measure_spans,
             ..
         } = acc;
         per_measure_beat_errors.push(None);
+        per_measure_dotted_eighth_errors.push(vec![]);
         empty_note_measure_spans.push(Some(line_span));
         return Ok(());
     }
@@ -389,7 +396,7 @@ fn process_notes_column_line(
         .group_states
         .get_mut(track_index)
         .ok_or_else(|| invariant(line_span, "internal error: group state index out of range"))?;
-    let (events, beat_overflow_error) = validate_and_pad_beats(
+    let padded = validate_and_pad_beats(
         token_parser::parse_notes_line(line, ctx.base_offset + line_offset, group_state)?,
         beats_expected,
         *ctx.time_num,
@@ -397,7 +404,7 @@ fn process_notes_column_line(
         line_span,
     )?;
     if let Some(tie_state) = ctx.lyric_tie_states.get_mut(track_index) {
-        let slots = count_lyric_slots_in_events(&events, tie_state);
+        let slots = count_lyric_slots_in_events(&padded.events, tie_state);
         if let Some(bar_slot) = ctx.bar_lyric_slots.get_mut(track_index) {
             *bar_slot = Some(slots);
         }
@@ -411,11 +418,13 @@ fn process_notes_column_line(
     let TrackAccumulator::Timed {
         events: acc_events,
         per_measure_beat_errors,
+        per_measure_dotted_eighth_errors,
         empty_note_measure_spans,
         ..
     } = acc;
-    acc_events.extend(events);
-    per_measure_beat_errors.push(beat_overflow_error);
+    acc_events.extend(padded.events);
+    per_measure_beat_errors.push(padded.beat_overflow_error);
+    per_measure_dotted_eighth_errors.push(padded.dotted_eighth_errors);
     empty_note_measure_spans.push(None);
     Ok(())
 }
@@ -475,15 +484,19 @@ fn process_column_line(
                 Err(e) => return Err(e),
             };
             // When the line failed to parse, pad with a rest so measure counts stay consistent.
-            let (final_events, final_error) = if let Some(chord_error) = chord_error {
-                let (fill, _) = validate_and_pad_beats(
+            let final_padded = if let Some(chord_error) = chord_error {
+                let fill = validate_and_pad_beats(
                     vec![],
                     beats_expected,
                     *ctx.time_num,
                     *ctx.time_den,
                     line_span,
                 )?;
-                (fill, Some(chord_error))
+                PaddedBeats {
+                    events: fill.events,
+                    beat_overflow_error: Some(chord_error),
+                    dotted_eighth_errors: vec![],
+                }
             } else {
                 validate_and_pad_beats(
                     chord_events,
@@ -503,10 +516,12 @@ fn process_column_line(
                 TrackAccumulator::Timed {
                     events: acc_events,
                     per_measure_beat_errors,
+                    per_measure_dotted_eighth_errors,
                     ..
                 } => {
-                    acc_events.extend(final_events);
-                    per_measure_beat_errors.push(final_error);
+                    acc_events.extend(final_padded.events);
+                    per_measure_beat_errors.push(final_padded.beat_overflow_error);
+                    per_measure_dotted_eighth_errors.push(final_padded.dotted_eighth_errors);
                 }
             }
         }
@@ -537,6 +552,7 @@ fn build_parse_result(
                 lyrics_line_starts,
                 lyrics_line_ends,
                 per_measure_beat_errors,
+                per_measure_dotted_eighth_errors,
                 empty_note_measure_spans,
             } = acc;
             Ok(ParsedTrack::Timed(ParsedTimedTrack {
@@ -560,6 +576,7 @@ fn build_parse_result(
                     .map(std::mem::take)
                     .unwrap_or_default(),
                 per_measure_beat_errors,
+                per_measure_dotted_eighth_errors,
                 empty_note_measure_spans,
             }))
         })

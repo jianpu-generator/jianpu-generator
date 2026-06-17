@@ -74,22 +74,23 @@ pub(crate) fn combine(
             .into_iter()
             .chain(source_span_error)
             .chain(std::iter::once(parse_error).flatten())
-            .chain(
-                grouped_score
-                    .parts
-                    .iter()
-                    .flat_map(|track| match track {
-                        GroupedTrack::Timed(part) => {
-                            let m = part.measures.get(measure_idx);
-                            [
-                                m.and_then(|m| m.lyrics_error.clone()),
-                                m.and_then(|m| m.beat_overflow_error.clone()),
-                                m.and_then(|m| m.dash_after_rest_error.clone()),
-                            ]
-                        }
-                    })
-                    .flatten(),
-            )
+            .chain(grouped_score.parts.iter().flat_map(|track| match track {
+                GroupedTrack::Timed(part) => {
+                    let m = part.measures.get(measure_idx);
+                    [
+                        m.and_then(|m| m.lyrics_error.clone()),
+                        m.and_then(|m| m.beat_overflow_error.clone()),
+                        m.and_then(|m| m.dash_after_rest_error.clone()),
+                    ]
+                    .into_iter()
+                    .flatten()
+                    .chain(
+                        m.into_iter()
+                            .flat_map(|m| m.dotted_eighth_errors.iter().cloned()),
+                    )
+                    .collect::<Vec<RecoverableError>>()
+                }
+            }))
             .chain(part_row_errors)
             .collect();
         combined.push(MultiPartMeasure {

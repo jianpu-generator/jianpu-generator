@@ -150,6 +150,7 @@ struct PartGrouper {
     measure_span_end: usize,
     pending_dash_after_rest_error: Option<RecoverableError>,
     pending_overflow_error: Option<RecoverableError>,
+    pending_dotted_eighth_errors: Vec<RecoverableError>,
 }
 
 impl PartGrouper {
@@ -171,6 +172,7 @@ impl PartGrouper {
             measure_span_end: 0,
             pending_dash_after_rest_error: None,
             pending_overflow_error: None,
+            pending_dotted_eighth_errors: Vec::new(),
         }
     }
 
@@ -192,6 +194,7 @@ impl PartGrouper {
             lyrics_error: None,
             beat_overflow_error: self.pending_overflow_error.take(),
             dash_after_rest_error: self.pending_dash_after_rest_error.take(),
+            dotted_eighth_errors: std::mem::take(&mut self.pending_dotted_eighth_errors),
         });
         self.current_beat = 0;
         self.measure_span_start = None;
@@ -391,6 +394,7 @@ impl PartGrouper {
                 lyrics_error: None,
                 beat_overflow_error: None,
                 dash_after_rest_error: self.pending_dash_after_rest_error.take(),
+                dotted_eighth_errors: std::mem::take(&mut self.pending_dotted_eighth_errors),
             });
         }
 
@@ -419,6 +423,7 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
         .unwrap_or_default();
     let measure_syllables = part.lyrics.as_ref().map(|l| l.measure_syllables.clone());
     let per_measure_beat_errors = part.per_measure_beat_errors.clone();
+    let per_measure_dotted_eighth_errors = part.per_measure_dotted_eighth_errors.clone();
     let empty_note_measure_spans = part.empty_note_measure_spans.clone();
     let mut grouper = PartGrouper::new(&part);
     for spanned in part.score.events {
@@ -431,6 +436,7 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
         &mut grouped.measures,
         &empty_note_measure_spans,
         &per_measure_beat_errors,
+        &per_measure_dotted_eighth_errors,
     )?;
     for (measure, &lyrics_end) in grouped.measures.iter_mut().zip(lyrics_measure_ends.iter()) {
         measure.source_span.end = measure.source_span.end.max(lyrics_end);
