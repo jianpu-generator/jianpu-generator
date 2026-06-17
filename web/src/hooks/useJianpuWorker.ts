@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { findIndex, findLastIndex } from 'remeda'
-import type { Diagnostic, PartInfo, ScoreLineHint } from '../types'
+import type { Diagnostic, MeasureSpan, PartInfo, ScoreLineHint } from '../types'
 import type { WorkerRequest, WorkerResponse } from '../worker/jianpu.worker'
 
 function measureRangeInSpan(
-  spans: Array<{ start: number; end: number }>,
+  spans: MeasureSpan[],
   selStart: number,
   selEnd: number,
 ): { start: number; end: number } | null {
   const effective = selStart === selEnd ? selEnd + 1 : selEnd
-  const overlaps = (span: { start: number; end: number }) =>
+  const overlaps = (span: MeasureSpan) =>
     span.start < effective && span.end > selStart
   const start = findIndex(spans, overlaps)
   const end = findLastIndex(spans, overlaps)
@@ -63,7 +63,7 @@ interface JianpuWorkerState {
   playSelectedMeasures: () => void
   stopMeasurePlayback: () => void
   highlightedSvgs: string[]
-  measureSpans: Array<{ start: number; end: number }>
+  measureSpans: MeasureSpan[]
   scoreLineHints: ScoreLineHint[]
 }
 
@@ -136,9 +136,7 @@ export function useJianpuWorker(
   const [measureAudioPlaying, setMeasureAudioPlaying] = useState(false)
   const currentMeasureAudioRef = useRef<HTMLAudioElement | null>(null)
   const [highlightedSvgs, setHighlightedSvgs] = useState<string[]>([])
-  const [measureSpans, setMeasureSpans] = useState<
-    Array<{ start: number; end: number }>
-  >([])
+  const [measureSpans, setMeasureSpans] = useState<MeasureSpan[]>([])
   const [scoreLineHints, setScoreLineHints] = useState<ScoreLineHint[]>([])
   const highlightRenderRequestIdRef = useRef(0)
   const latestHighlightRenderIdRef = useRef(0)
@@ -147,7 +145,7 @@ export function useJianpuWorker(
   const scoreLineHintsRequestIdRef = useRef(0)
   const latestScoreLineHintsIdRef = useRef(0)
 
-  const measureSpansRef = useRef<Array<{ start: number; end: number }>>([])
+  const measureSpansRef = useRef<MeasureSpan[]>([])
 
   const workerRef = useRef<Worker | null>(null)
   const wavUrlRef = useRef<string | null>(null)

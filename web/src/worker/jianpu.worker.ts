@@ -5,7 +5,7 @@ import {
   list_score_line_hints,
   render,
 } from 'jianpu-wasm'
-import type { Diagnostic, PartInfo, ScoreLineHint } from '../types'
+import type { Diagnostic, MeasureSpan, PartInfo, ScoreLineHint } from '../types'
 
 const generateWav =
   'generate_wav' in jianpuWasm ? jianpuWasm.generate_wav : null
@@ -93,7 +93,7 @@ export type WorkerResponse =
       type: 'measureSpans'
       id: number
       status: 'ok' | 'err'
-      spans: Array<{ start: number; end: number }>
+      spans: MeasureSpan[]
     }
   | {
       type: 'scoreLineHints'

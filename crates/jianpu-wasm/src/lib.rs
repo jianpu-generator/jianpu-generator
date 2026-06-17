@@ -110,9 +110,10 @@ fn list_measure_spans_response(source: &str) -> ListMeasureSpansResponse {
         Ok(spans) => ListMeasureSpansResponse::Ok {
             spans: spans
                 .into_iter()
-                .map(|s| types::SpanOut {
-                    start: s.start,
-                    end: s.end,
+                .map(|span| types::MeasureSpanOut {
+                    start: span.start,
+                    end: span.end,
+                    view_zone_start: span.view_zone_start,
                 })
                 .collect(),
         },

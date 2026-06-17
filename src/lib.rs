@@ -292,15 +292,55 @@ pub fn find_measure_at_line_number(
     find_measure_at_byte_offset(score, byte_offset)
 }
 
+/// Source byte ranges for a measure in the editor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MeasureSourceSpan {
+    /// Inclusive start of note content (for cursor/selection mapping).
+    pub start: usize,
+    /// Exclusive end of measure content in source.
+    pub end: usize,
+    /// Byte offset of the first source line in this measure group, for view zones.
+    pub view_zone_start: usize,
+}
+
 /// Return the source byte span of every measure in the compiled score.
 ///
 /// Spans are in source order and correspond 1-to-1 with measures.
 pub fn list_measure_spans_from_source(
     source: &str,
     filename: &str,
-) -> Result<Vec<error::Span>, IrrecoverableError> {
+) -> Result<Vec<MeasureSourceSpan>, IrrecoverableError> {
+    use error::Span;
+
+    let sections = parser::load_document_sections(source)?;
+    let (score_content, score_offset) = sections.score;
+    let view_zone_starts =
+        parser::score::measure_group::view_zone_starts(&score_content, score_offset);
+
     let score = compile(source, filename)?;
-    Ok(score.measures.iter().map(|m| m.source_span).collect())
+    if view_zone_starts.len() != score.measures.len() {
+        return Err(IrrecoverableError::new(
+            IrrecoverableErrorKind::internal_invariant(
+                Span::new(0, 0),
+                format!(
+                    "view zone starts ({}) and measures ({}) out of sync",
+                    view_zone_starts.len(),
+                    score.measures.len()
+                ),
+            ),
+        ));
+    }
+
+    Ok(score
+        .measures
+        .iter()
+        .zip(view_zone_starts)
+        .map(|(measure, view_zone_start)| MeasureSourceSpan {
+            start: measure.source_span.start,
+            end: measure.source_span.end,
+            view_zone_start,
+        })
+        .collect())
 }
 
 /// Sanitize a track name for use in filenames (mirrors CLI).

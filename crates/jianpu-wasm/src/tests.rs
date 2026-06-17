@@ -316,6 +316,34 @@ fn list_measure_spans_returns_one_span_per_measure() {
         ListMeasureSpansResponse::Ok { spans } => {
             assert_eq!(spans.len(), 2);
             assert!(spans[0].start < spans[1].start);
+            assert_eq!(spans[0].view_zone_start, spans[0].start);
+        }
+        ListMeasureSpansResponse::Err => panic!("expected ok"),
+    }
+}
+
+#[test]
+fn list_measure_spans_view_zone_start_includes_directive_line() {
+    let input = concat!(
+        "[metadata]\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "[parts]\n",
+        "Melody = notes\n",
+        "\n",
+        "[score]\n",
+        "(bpm=60)\n",
+        "1 2 3 4\n",
+    );
+    let directive_offset = input.find("(bpm=60)").unwrap();
+    let notes_offset = input.find("1 2 3 4").unwrap();
+    let resp = list_measure_spans_response(input);
+    match resp {
+        ListMeasureSpansResponse::Ok { spans } => {
+            assert_eq!(spans.len(), 1);
+            assert_eq!(spans[0].view_zone_start, directive_offset);
+            assert_eq!(spans[0].start, notes_offset);
         }
         ListMeasureSpansResponse::Err => panic!("expected ok"),
     }

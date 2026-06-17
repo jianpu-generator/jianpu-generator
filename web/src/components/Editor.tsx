@@ -8,7 +8,12 @@ import {
   useImperativeHandle,
   useRef,
 } from 'react'
-import type { Diagnostic, EditorHandle, ScoreLineHint } from '../types'
+import type {
+  Diagnostic,
+  EditorHandle,
+  MeasureSpan,
+  ScoreLineHint,
+} from '../types'
 import {
   byteOffsetToStringIndex,
   stringIndexToByteOffset,
@@ -19,7 +24,7 @@ export interface EditorProps {
   onChange: (value: string) => void
   readOnly?: boolean
   diagnostics?: Diagnostic[]
-  measureSpans?: Array<{ start: number; end: number }>
+  measureSpans?: MeasureSpan[]
   scoreLineHints?: ScoreLineHint[]
   toolbar?: ReactNode
   onSelectionChange?: (startOffset: number, endOffset: number) => void
@@ -144,9 +149,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       const source = model.getValue()
 
       measureSpans.forEach((span, index) => {
-        const stringIndex = byteOffsetToStringIndex(source, span.start)
-        const position = model.getPositionAt(stringIndex)
-        const lineNumber = position.lineNumber
+        const stringIndex = byteOffsetToStringIndex(source, span.viewZoneStart)
+        const lineNumber = model.getPositionAt(stringIndex).lineNumber
 
         const domNode = document.createElement('div')
         domNode.style.cssText = [

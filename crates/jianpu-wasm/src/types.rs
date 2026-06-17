@@ -70,11 +70,22 @@ pub enum MeasureAtOffsetResponse {
     NotInMeasure,
 }
 
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[tsify(into_wasm_abi)]
+pub struct MeasureSpanOut {
+    /// Inclusive start of note content (for cursor/selection mapping).
+    pub start: usize,
+    /// Exclusive end of measure content in source.
+    pub end: usize,
+    /// Byte offset of the first source line in this measure group, for view zones.
+    pub view_zone_start: usize,
+}
+
 #[derive(Debug, Clone, Tsify, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
 #[tsify(into_wasm_abi)]
 pub enum ListMeasureSpansResponse {
-    Ok { spans: Vec<SpanOut> },
+    Ok { spans: Vec<MeasureSpanOut> },
     Err,
 }
 
