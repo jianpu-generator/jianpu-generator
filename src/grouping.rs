@@ -1,5 +1,5 @@
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned};
+use crate::error::{IrrecoverableError, RecoverableError, Span, Spanned};
 
 const HALF_BAR_BOUNDARY: u32 = 8;
 
@@ -29,7 +29,8 @@ pub fn validate_measure_grouping(
                     && pos < HALF_BAR_BOUNDARY
                     && pos + head_duration > HALF_BAR_BOUNDARY
                 {
-                    return Err(half_bar_error(&event.span));
+                    recoverable_errors
+                        .push(RecoverableError::half_bar_boundary_crossed(event.span));
                 }
 
                 if is_dotted_eighth_at_beat_start(note.dotted, note.duration, pos) {
@@ -55,7 +56,8 @@ pub fn validate_measure_grouping(
                     && pos < HALF_BAR_BOUNDARY
                     && pos + head_duration > HALF_BAR_BOUNDARY
                 {
-                    return Err(half_bar_error(&event.span));
+                    recoverable_errors
+                        .push(RecoverableError::half_bar_boundary_crossed(event.span));
                 }
 
                 if is_dotted_eighth_at_beat_start(chord.dotted, chord.duration, pos) {
@@ -77,7 +79,8 @@ pub fn validate_measure_grouping(
                 let total_duration = timed_cluster_duration(events, index);
                 let head_duration = timed_head_duration(events, index);
                 if pos > 0 && pos < HALF_BAR_BOUNDARY && pos + head_duration > HALF_BAR_BOUNDARY {
-                    return Err(half_bar_error(&event.span));
+                    recoverable_errors
+                        .push(RecoverableError::half_bar_boundary_crossed(event.span));
                 }
 
                 if is_dotted_eighth_at_beat_start(rest.dotted, rest.duration, pos) {
@@ -195,10 +198,6 @@ fn validate_dotted_eighth_tail(
     }
 }
 
-fn half_bar_error(span: &Span) -> IrrecoverableError {
-    IrrecoverableError::new(IrrecoverableErrorKind::HalfBarBoundaryCrossed { span: *span })
-}
-
 #[cfg(test)]
 mod tests {
     fn parse_score(
@@ -231,19 +230,29 @@ mod tests {
             "1. 2. 3_ 4_\n",
             "1 2 3 4\n",
         );
-        assert!(crate::render_svgs_from_source(input, "t.jianpu").is_err());
+        let output = crate::render_svgs_from_source(input, "t.jianpu").unwrap();
+        assert!(output
+            .errors
+            .iter()
+            .any(|e| e.message.contains("half-bar boundary")));
     }
 
     #[test]
-    fn rejects_half_bar_crossing() {
-        let err = parse_score("1. 2. 3_ 4_\n").unwrap_err();
-        assert!(err.message().contains("half-bar boundary"));
+    fn recovers_half_bar_crossing() {
+        let output = parse_score("1. 2. 3_ 4_\n").unwrap();
+        assert!(output
+            .errors
+            .iter()
+            .any(|e| e.message.contains("half-bar boundary")));
     }
 
     #[test]
-    fn rejects_half_bar_crossing_on_half_note() {
-        let err = parse_score("1 2- 0_ 0_\n").unwrap_err();
-        assert!(err.message().contains("half-bar boundary"));
+    fn recovers_half_bar_crossing_on_half_note() {
+        let output = parse_score("1 2- 0_ 0_\n").unwrap();
+        assert!(output
+            .errors
+            .iter()
+            .any(|e| e.message.contains("half-bar boundary")));
     }
 
     #[test]

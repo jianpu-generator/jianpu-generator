@@ -37,6 +37,8 @@ pub enum ErrorKind {
     ChordInvalidToken,
     /// A dotted eighth note or rest is not followed by a sixteenth.
     DottedEighthNeedsSixteenth,
+    /// A note/rest duration crosses the half-bar boundary in 4/4 time.
+    HalfBarBoundaryCrossed,
 }
 
 impl ErrorKind {
@@ -46,6 +48,7 @@ impl ErrorKind {
             Self::DashAfterRest => "dash_after_rest",
             Self::ChordInvalidToken => "chord_invalid_token",
             Self::DottedEighthNeedsSixteenth => "dotted_eighth_needs_sixteenth",
+            Self::HalfBarBoundaryCrossed => "half_bar_boundary_crossed",
         }
     }
 }
@@ -87,6 +90,14 @@ impl RecoverableError {
             span,
             message: "dotted eighth must be followed by a sixteenth note or rest".to_string(),
             kind: ErrorKind::DottedEighthNeedsSixteenth,
+        }
+    }
+
+    pub fn half_bar_boundary_crossed(span: Span) -> Self {
+        Self {
+            span,
+            message: "note/rest crosses the half-bar boundary (beat 2→3); use a beam group or tie to show the split".to_string(),
+            kind: ErrorKind::HalfBarBoundaryCrossed,
         }
     }
 }

@@ -183,10 +183,6 @@ impl std::fmt::Display for IrrecoverableErrorKind {
                 f,
                 "incomplete measure: expected {expected} quarter-beats, got {got}"
             ),
-            Self::HalfBarBoundaryCrossed { .. } => write!(
-                f,
-                "note/rest crosses the half-bar boundary (beat 2→3); use a beam group or tie to show the split"
-            ),
             Self::LyricsLineEmpty { .. } => {
                 write!(f, "lyrics line cannot be empty; use '_' for no lyrics")
             }
