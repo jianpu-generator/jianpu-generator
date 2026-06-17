@@ -6,6 +6,8 @@ use std::io::Cursor;
 
 const SAMPLE_RATE: u32 = 44100;
 const CHOIR_AAHS_PROGRAM: u8 = 52;
+/// Target peak level before encoding (0.95 ≈ −0.4 dBFS), matching typical mastered music.
+const TARGET_PEAK: f32 = 0.95;
 
 static SF2_BYTES: &[u8] = include_bytes!("../fonts/GeneralUser_GS.sf2");
 
@@ -100,7 +102,23 @@ pub fn write_wav(midi_bytes: &[u8]) -> Result<Vec<u8>, IrrecoverableError> {
     // Render 1 second of tail so reverb fully decays
     render_samples(&mut synth, SAMPLE_RATE as usize, &mut all_l, &mut all_r);
 
+    normalize_peak(&mut all_l, &mut all_r);
     encode_wav(&all_l, &all_r)
+}
+
+fn normalize_peak(left: &mut [f32], right: &mut [f32]) {
+    let peak = left
+        .iter()
+        .chain(right.iter())
+        .map(|sample| sample.abs())
+        .fold(0.0f32, f32::max);
+    if peak <= 0.0 {
+        return;
+    }
+    let gain = TARGET_PEAK / peak;
+    for sample in left.iter_mut().chain(right.iter_mut()) {
+        *sample *= gain;
+    }
 }
 
 fn ticks_to_samples(ticks: u32, tpq: u32, micros_per_beat: u32) -> usize {
@@ -181,6 +199,28 @@ mod tests {
         let bytes = encode_wav(&l, &r).unwrap();
         assert_eq!(&bytes[0..4], b"RIFF");
         assert_eq!(&bytes[8..12], b"WAVE");
+    }
+
+    #[test]
+    fn normalize_peak_scales_to_target() {
+        let mut left = vec![0.1f32, -0.2, 0.05];
+        let mut right = vec![0.15f32, -0.1, 0.3];
+        normalize_peak(&mut left, &mut right);
+        let peak = left
+            .iter()
+            .chain(right.iter())
+            .map(|sample| sample.abs())
+            .fold(0.0f32, f32::max);
+        assert!((peak - TARGET_PEAK).abs() < 1e-6);
+    }
+
+    #[test]
+    fn normalize_peak_leaves_silence_unchanged() {
+        let mut left = vec![0.0f32; 4];
+        let mut right = vec![0.0f32; 4];
+        normalize_peak(&mut left, &mut right);
+        assert!(left.iter().all(|sample| *sample == 0.0));
+        assert!(right.iter().all(|sample| *sample == 0.0));
     }
 
     #[test]
