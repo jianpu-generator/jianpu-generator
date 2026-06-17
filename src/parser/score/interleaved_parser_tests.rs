@@ -416,3 +416,14 @@ fn measure_missing_chord_line_is_recoverable() {
         "measure missing a chord role line must not abort parsing"
     );
 }
+
+#[test]
+fn no_notes_track_is_recoverable() {
+    // A parts declaration with only a chord track (no notes track) must not abort parsing.
+    let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\n";
+    let declarations = vec![decl("Chord", PartKind::Chord)];
+    assert!(
+        parse(content, 0, &declarations).is_ok(),
+        "parts declaration with no notes track must not abort parsing"
+    );
+}

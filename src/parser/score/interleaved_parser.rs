@@ -74,6 +74,25 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
     let (groups, per_group_desugar_errors) =
         crate::desugar::desugar_groups(groups, declarations, base_offset)?;
 
+    let no_notes_track_error = declarations
+        .iter()
+        .any(|d| {
+            matches!(
+                d.kind,
+                PartKind::Notes
+                    | PartKind::NotesWithLyrics
+                    | PartKind::LyricsWithNotes
+                    | PartKind::NotesWithChord
+            )
+        })
+        .then_some(())
+        .is_none()
+        .then(|| {
+            crate::error::RecoverableError::new(
+                Span::new(base_offset, base_offset + content.len()),
+                "parts declaration has no notes track",
+            )
+        });
     let first_notes_track_index = declarations
         .iter()
         .position(|d| {
@@ -85,11 +104,7 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
                     | PartKind::NotesWithChord
             )
         })
-        .ok_or_else(|| {
-            IrrecoverableError::new(IrrecoverableErrorKind::PartsNoNotesTrack {
-                span: Span::new(base_offset, base_offset + content.len()),
-            })
-        })?;
+        .unwrap_or(0);
 
     let slots = flatten_score_line_slots(declarations);
     let slot_actions = build_slot_actions(&slots);
@@ -137,6 +152,13 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
     }
 
     let tracks = build_parse_result(declarations, accumulators, ditto_measures_per_track)?;
+    let mut per_group_desugar_errors = per_group_desugar_errors;
+    if let Some(error) = no_notes_track_error {
+        match per_group_desugar_errors.first_mut() {
+            Some(slot @ None) => *slot = Some(error),
+            _ => per_group_desugar_errors.insert(0, Some(error)),
+        }
+    }
     Ok((
         tracks,
         directive_events_per_measure,
