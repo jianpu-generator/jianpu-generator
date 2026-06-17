@@ -149,7 +149,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       const source = model.getValue()
 
       measureSpans.forEach((span, index) => {
-        const stringIndex = byteOffsetToStringIndex(source, span.viewZoneStart)
+        const stringIndex = byteOffsetToStringIndex(
+          source,
+          span.view_zone_start,
+        )
         const lineNumber = model.getPositionAt(stringIndex).lineNumber
 
         const domNode = document.createElement('div')
