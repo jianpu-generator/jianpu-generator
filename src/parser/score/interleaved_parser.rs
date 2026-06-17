@@ -443,22 +443,48 @@ fn process_column_line(
         }
         SlotAction::Chord { track_index } => {
             if line == "_" {
-                // Chord `_` means no chord content for this measure.
-                // The notes column of this track (or another track's notes) already
-                // accounts for the measure in per_measure_beat_errors, so we skip the push.
                 let _ = track_index;
                 return Ok(());
             }
             let group_state = ctx.group_states.get_mut(*track_index).ok_or_else(|| {
                 invariant(line_span, "internal error: group state index out of range")
             })?;
-            let (events, beat_overflow_error) = validate_and_pad_beats(
-                token_parser::parse_chord_line(line, ctx.base_offset + line_offset, group_state)?,
-                beats_expected,
-                *ctx.time_num,
-                *ctx.time_den,
-                line_span,
-            )?;
+            let chord_result =
+                token_parser::parse_chord_line(line, ctx.base_offset + line_offset, group_state);
+            let (chord_events, chord_error) = match chord_result {
+                Ok(events) => (events, None),
+                Err(e)
+                    if matches!(
+                        e.kind,
+                        IrrecoverableErrorKind::LexUnexpectedChar { .. }
+                            | IrrecoverableErrorKind::ChordInvalidToken { .. }
+                    ) =>
+                {
+                    let error =
+                        crate::error::RecoverableError::chord_invalid_token(*e.span(), e.message());
+                    (vec![], Some(error))
+                }
+                Err(e) => return Err(e),
+            };
+            // When the line failed to parse, pad with a rest so measure counts stay consistent.
+            let (final_events, final_error) = if let Some(chord_error) = chord_error {
+                let (fill, _) = validate_and_pad_beats(
+                    vec![],
+                    beats_expected,
+                    *ctx.time_num,
+                    *ctx.time_den,
+                    line_span,
+                )?;
+                (fill, Some(chord_error))
+            } else {
+                validate_and_pad_beats(
+                    chord_events,
+                    beats_expected,
+                    *ctx.time_num,
+                    *ctx.time_den,
+                    line_span,
+                )?
+            };
             let acc = ctx.accumulators.get_mut(*track_index).ok_or_else(|| {
                 invariant(
                     line_span,
@@ -471,8 +497,8 @@ fn process_column_line(
                     per_measure_beat_errors,
                     ..
                 } => {
-                    acc_events.extend(events);
-                    per_measure_beat_errors.push(beat_overflow_error);
+                    acc_events.extend(final_events);
+                    per_measure_beat_errors.push(final_error);
                 }
             }
         }

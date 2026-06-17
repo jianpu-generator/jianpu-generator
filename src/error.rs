@@ -33,6 +33,8 @@ pub enum ErrorKind {
     General,
     /// `-` used to extend a rest (`0-`, `0---`, or standalone `-` after `0`).
     DashAfterRest,
+    /// An invalid token was encountered while parsing a chord line.
+    ChordInvalidToken,
 }
 
 impl ErrorKind {
@@ -40,6 +42,7 @@ impl ErrorKind {
         match self {
             Self::General => "general",
             Self::DashAfterRest => "dash_after_rest",
+            Self::ChordInvalidToken => "chord_invalid_token",
         }
     }
 }
@@ -65,6 +68,14 @@ impl RecoverableError {
             span,
             message: "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)".to_string(),
             kind: ErrorKind::DashAfterRest,
+        }
+    }
+
+    pub fn chord_invalid_token(span: Span, message: impl Into<String>) -> Self {
+        Self {
+            span,
+            message: message.into(),
+            kind: ErrorKind::ChordInvalidToken,
         }
     }
 }
