@@ -9,6 +9,11 @@ use crate::ast::parsed::{
 use crate::combiner;
 use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
 
+#[path = "empty_note_measures.rs"]
+mod empty_note_measures;
+
+use empty_note_measures::align_empty_note_measures;
+
 pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
     let metadata = doc.metadata;
     let mut grouped_tracks = Vec::new();
@@ -414,6 +419,7 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
         .unwrap_or_default();
     let measure_syllables = part.lyrics.as_ref().map(|l| l.measure_syllables.clone());
     let per_measure_beat_errors = part.per_measure_beat_errors.clone();
+    let empty_note_measure_spans = part.empty_note_measure_spans.clone();
     let mut grouper = PartGrouper::new(&part);
     for spanned in part.score.events {
         grouper.process_event(spanned)?;
@@ -421,17 +427,13 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
     let mut grouped = grouper.finish();
     grouped.ditto_measures = ditto_measures;
     grouped.lyrics_ditto_measures = lyrics_ditto_measures;
+    align_empty_note_measures(
+        &mut grouped.measures,
+        &empty_note_measure_spans,
+        &per_measure_beat_errors,
+    )?;
     for (measure, &lyrics_end) in grouped.measures.iter_mut().zip(lyrics_measure_ends.iter()) {
         measure.source_span.end = measure.source_span.end.max(lyrics_end);
-    }
-    for (measure, error) in grouped
-        .measures
-        .iter_mut()
-        .zip(per_measure_beat_errors.into_iter())
-    {
-        if error.is_some() {
-            measure.beat_overflow_error = error;
-        }
     }
     if matches!(
         part.kind,

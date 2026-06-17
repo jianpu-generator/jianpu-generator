@@ -1,4 +1,4 @@
-use crate::error::{RecoverableError, Spanned};
+use crate::error::{RecoverableError, Span, Spanned};
 
 #[derive(Debug)]
 pub struct ParsedScore {
@@ -88,6 +88,9 @@ pub struct ParsedTimedTrack {
     pub lyrics_ditto_measures: Vec<bool>,
     /// Per-measure beat-overflow error (None = no overflow for that measure).
     pub per_measure_beat_errors: Vec<Option<RecoverableError>>,
+    /// Parallel to `per_measure_beat_errors`: `Some` when that measure's notes line
+    /// was `_` (empty placeholder) and produced no timed events.
+    pub empty_note_measure_spans: Vec<Option<Span>>,
 }
 
 #[derive(Debug)]

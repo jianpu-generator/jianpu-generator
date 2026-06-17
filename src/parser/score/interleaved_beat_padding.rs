@@ -1,4 +1,4 @@
-use crate::ast::parsed::ScoreEvent;
+use crate::ast::parsed::{ScoreEvent, ScoreLineSlot};
 use crate::error::{IrrecoverableError, RecoverableError, Span, Spanned};
 
 pub(super) fn beats_per_measure(num: u8, den: u8) -> u32 {
@@ -200,4 +200,35 @@ pub(super) fn validate_and_pad_beats(
     crate::grouping::validate_measure_grouping(&events, time_num, time_den)?;
 
     Ok((events, None))
+}
+
+pub(super) fn validate_and_pad_group_lines(
+    group_lines: &[(String, usize)],
+    data_lines: &[(String, usize)],
+    slots: &[ScoreLineSlot],
+    base_offset: usize,
+) -> Result<Vec<(String, usize)>, IrrecoverableError> {
+    let group_first_span = group_lines
+        .first()
+        .map(|(line, off)| Span::new(base_offset + off, base_offset + off + line.len()))
+        .unwrap_or_else(|| Span::new(base_offset, base_offset));
+
+    // These checks are defensive: desugar already normalises line counts.
+    // If reached, pad or truncate silently rather than aborting parsing.
+    if data_lines.is_empty() {
+        return Ok(vec![("_".to_string(), group_first_span.start)]);
+    }
+    if data_lines.len() != slots.len() {
+        let truncated: Vec<(String, usize)> = data_lines
+            .iter()
+            .take(slots.len())
+            .cloned()
+            .chain(
+                (data_lines.len()..slots.len()).map(|_| ("_".to_string(), group_first_span.start)),
+            )
+            .collect();
+        return Ok(truncated);
+    }
+
+    Ok(data_lines.to_vec())
 }

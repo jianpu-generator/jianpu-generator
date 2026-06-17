@@ -1,112 +1,157 @@
-# Irrecoverable Errors Todo
+# Recoverable Error Candidates
 
-## Document Structure
-- [ ] `UnknownSection` — unrecognized section name
-- [ ] `WrongSectionCount` — wrong number of sections
-- [ ] `SectionsOutOfOrder` — sections not in expected order
-- [ ] `DuplicateSection` — same section appears twice
-- [ ] `MissingSection` — required section absent
+Track which `IrrecoverableErrorKind` variants should become measure-level
+`RecoverableError`s (render continues, red overlay on the bad measure, errors
+returned in `RenderOutput.errors`).
 
-## Metadata
-- [ ] `MetadataInvalidInteger` — field value is not a valid integer
-- [ ] `MetadataMustBePositive` — field value must be > 0
-- [ ] `MetadataMalformedLine` — line doesn't follow `key = value` format
-- [ ] `MetadataUnknownField` — unrecognized field name
-- [ ] `MetadataMissingField` — required field (`title` or `author`) absent
+Work through **Candidates** top to bottom. Update the **Status** column as we
+decide.
 
-## Parts
-- [ ] `PartsMalformedLine` — malformed parts line
-- [ ] `PartsDuplicateAbbreviation` — same abbreviation used twice
-- [ ] `PartsEmptySection` — empty section
-- [ ] `PartsEmptyDisplayName` — empty display name
-- [ ] `PartsEmptyAbbreviation` — empty abbreviation
-- [ ] `PartsEmptyTrackName` — empty track name
-- [ ] `PartsInvalidColumns` — invalid column spec
-- [x] `PartsNoNotesTrack` — no notes track defined
+**Status legend**
 
-## Measures
-- [x] `MeasureNoDataLines` — measure has no data lines
-- [x] `MeasureTooManyLines` — measure has more lines than expected
-- [ ] `MeasureWrongLineCount` — wrong number of lines in measure
-- [x] `MeasureMissingRoleLine` — a required role line is absent
-- [x] `MeasureOverflow` — note duration exceeds remaining measure capacity
-- [x] `IncompleteMeasure` — measure ends before filling its time signature
-- [x] `MeasureIndexOutOfRange` — measure index out of bounds
-- [x] `InvalidMeasureRange` — invalid measure range (start/end/total)
+| Status | Meaning |
+|---|---|
+| `implemented` | Already recoverable in code |
+| `pending` | Not reviewed yet — still aborts the whole render |
+| `approved` | Decided recoverable; implementation not started |
+| `rejected` | Decided to stay irrecoverable (see **Never candidates**) |
 
-## Directives
-- [ ] `DirectiveUnclosedParen` — unclosed parenthesis in directive
-- [ ] `DirectiveUnclosedQuote` — unclosed quote in directive
-- [ ] `DirectiveInvalidBpm` — invalid BPM value
-- [ ] `DirectiveLabelNotQuoted` — label not quoted
-- [ ] `DirectiveLabelEmpty` — label is empty
-- [ ] `DirectiveUnknown` — unknown directive token
-- [ ] `DirectiveKeyMissingNoteName` — key directive missing note name
-- [ ] `DirectiveKeyInvalidNoteName` — key directive has invalid note name
-- [ ] `DirectiveKeyInvalidOctave` — key directive has invalid octave
-- [ ] `DirectiveTimeInvalid` — invalid time signature
-- [ ] `DirectiveTimeInvalidNumerator` — invalid time signature numerator
-- [ ] `DirectiveTimeInvalidDenominator` — invalid time signature denominator
-- [ ] `DirectiveTimeZeroDenominator` — time signature denominator is zero
+Reference: [error-isolation design](docs/superpowers/specs/2026-06-16-error-isolation-design.md)
 
-## Lexer
-- [ ] `LexUnexpectedChar` — unexpected character during lexing
-- [ ] `LexBpmMissingNumber` — BPM token missing a number
-- [ ] `LexBpmInvalid` — invalid BPM value in lexer
-- [ ] `LexTimeInvalidNumerator` — invalid time numerator in lexer
-- [ ] `LexTimeInvalidDenominator` — invalid time denominator in lexer
-- [ ] `LexTimeZeroDenominator` — time denominator is zero in lexer
+---
 
-## Key Changes
-- [ ] `KeyChangeMissingPrefix` — key change missing prefix
-- [ ] `KeyChangeMissingNoteName` — key change missing note name
-- [ ] `KeyChangeInvalidNoteName` — key change has invalid note name
-- [ ] `KeyChangeInvalidOctave` — key change has invalid octave
+## Already implemented
 
-## Notes / Chords / Duration
-- [ ] `NoteExpectedPitchDigit` — expected a pitch digit
-- [ ] `ChordExpectedDegreeDigit` — expected a degree digit in chord
-- [ ] `ChordInvalidToken` — invalid chord token
-- [ ] `ChordUnknownSuffix` — unknown chord suffix
-- [ ] `ChordInvalidBass` — invalid bass note in chord
-- [ ] `ChordBassUnexpectedChar` — unexpected character in chord bass
-- [ ] `ChordBassTrailingChars` — trailing characters after chord bass
-- [ ] `DashAfterRest` — dash extension after a rest
-- [ ] `DurationUnexpectedChar` — unexpected character in duration
-- [ ] `DurationMixedOctaveMarkers` — mixed octave markers in duration
-- [ ] `DurationCannotDotQuarterBeat` — cannot dot a quarter beat
+These are no longer review items. Some still have a matching
+`IrrecoverableErrorKind` variant in the enum (legacy / unused at runtime).
 
-## Grouping
-- [ ] `GroupTooFewNotes` — group has too few notes
-- [ ] `GroupUnexpectedCloseParen` — unexpected closing parenthesis
-- [ ] `UnclosedGroupAtEnd` — group not closed by end of input
-- [ ] `HalfBarBoundaryCrossed` — group crosses the half-bar boundary
-- [ ] `DottedEighthNeedsSixteenth` — dotted eighth not followed by a sixteenth
+| Kind / behavior | Status | Recovery behavior today |
+|---|---|---|
+| Lyrics underflow (`#syllables < #notes`) | `implemented` | Pad with empty syllables; error on measure (`grouper/mod.rs`) |
+| Lyrics overflow (`#syllables > #notes`) | `implemented` | Keep paired syllables; error on measure (`grouper/mod.rs`) |
+| Beat overflow (notes/chord line exceeds bar) | `implemented` | Truncate events or drop overflowing note; error on measure (`interleaved_beat_padding.rs`, `grouper/mod.rs`) |
+| Beat underflow / incomplete measure | `implemented` | Pad bar with rest; error on measure (`interleaved_beat_padding.rs`) |
+| Dash after rest (`0-`, `0---`, `-` after rest) | `implemented` | Ignore extension; error on measure (`grouper/mod.rs`) — **notes parse path still irrecoverable** (see candidate below) |
+| Chord line: `LexUnexpectedChar`, `ChordInvalidToken` | `implemented` | Treat line as empty + pad; error on measure (`interleaved_parser.rs`) |
+| Measure has no data lines | `implemented` | Treat all parts as empty; error on measure (`desugar.rs`) |
+| Measure has too many lines | `implemented` | Ignore extra lines; error on measure (`desugar.rs`) |
+| Missing notes / lyrics / chord line for a part | `implemented` | Pad with `_` or `"`; error on measure (`desugar.rs`) |
 
-## Other Syntax
-- [ ] `DittoNoPrecedent` — ditto (`"`) with no prior measure to copy
-- [ ] `LyricsLineEmpty` — lyrics line is empty
-- [ ] `UnderscoreOnlyOnLyrics` — underscore used outside lyrics context
-- [ ] `LyricsNoNotesTrack` — lyrics track has no corresponding notes track
-- [ ] `ExtensionNoPrecedingEvent` — extension with no preceding event
-- [ ] `TieNoPrecedingNote` — tie with no preceding note
-- [ ] `PartMeasureCountMismatch` — part has wrong number of measures
+---
 
-## Output / I/O
-- [ ] `MidiWriteFailed` — failed to write MIDI
-- [ ] `WavInvalidMidiBytes` — invalid MIDI bytes for WAV synthesis
-- [ ] `WavSynthInitFailed` — WAV synthesizer init failed
-- [ ] `WavSoundfontLoadFailed` — soundfont failed to load
-- [ ] `WavWriterCreateFailed` — WAV writer creation failed
-- [ ] `WavWriteSampleFailed` — failed to write WAV sample
-- [ ] `WavFinalizeFailed` — failed to finalize WAV
-- [ ] `PdfSvgParseFailed` — SVG parse failed during PDF generation
-- [ ] `PdfSvgConversionFailed` — SVG-to-PDF conversion failed
-- [ ] `ZipStartFileFailed` — failed to start file entry in ZIP
-- [ ] `ZipWriteFailed` — failed to write to ZIP
-- [ ] `ZipFinishFailed` — failed to finalize ZIP
-- [ ] `IoReadFailed` — file read failed
-- [ ] `IoWriteFailed` — file write failed
+## Candidates
 
-## Internal
-- [ ] `InternalInvariant` — bug/invariant violation (should never happen in valid usage)
+### Measure layout & ditto
+
+| # | Kind | Status | Current behavior | Proposed recovery |
+|---|---|---|---|---|
+| 1 | `DittoNoPrecedent` | `implemented` | Abort when `"` has no same-role line above in the measure | Render blank placeholder; error on measure (design doc) |
+| 2 | `MeasureWrongLineCount` | `pending` | Enum exists; desugar already handles mismatch via recoverable messages | Confirm enum can be removed or align messages with this kind |
+| 3 | `MeasureNoDataLines` | `pending` | Enum exists; already recoverable in desugar | Remove dead enum variant or wire kind through |
+| 4 | `MeasureTooManyLines` | `pending` | Enum exists; already recoverable in desugar | Remove dead enum variant or wire kind through |
+| 5 | `MeasureMissingRoleLine` | `pending` | Enum exists; already recoverable in desugar | Remove dead enum variant or wire kind through |
+
+### Lyrics
+
+| # | Kind | Status | Current behavior | Proposed recovery |
+|---|---|---|---|---|
+| 6 | `LyricsLineEmpty` | `pending` | Abort when a non-`_` lyrics line tokenizes to zero syllables | Treat as no lyrics for that line; error on measure |
+| 7 | `LyricsNoNotesTrack` | `pending` | Abort when lyrics part has no paired notes track | Skip lyrics for that part; error on document or measure? |
+| 8 | `UnderscoreOnlyOnLyrics` | `pending` | Enum exists; not emitted in current parser | Reject, or treat `_` on notes/chord like today and collect error |
+
+### Notes, duration & grouping
+
+| # | Kind | Status | Current behavior | Proposed recovery |
+|---|---|---|---|---|
+| 9 | `DashAfterRest` | `pending` | Abort during notes token parse (`duration.rs`, `token_parser.rs`) | Match grouper: skip extension, error on measure |
+| 10 | `LexUnexpectedChar` (notes line) | `pending` | Abort entire parse | Skip bad token, continue parsing; error on measure (design doc) |
+| 11 | `NoteExpectedPitchDigit` | `pending` | Abort | Skip token or treat as rest; error on measure |
+| 12 | `DurationUnexpectedChar` | `pending` | Abort | Skip token; error on measure |
+| 13 | `DurationMixedOctaveMarkers` | `pending` | Abort | Pick one marker or skip note; error on measure |
+| 14 | `DurationCannotDotQuarterBeat` | `pending` | Abort | Parse without dot or skip note; error on measure |
+| 15 | `GroupTooFewNotes` | `pending` | Abort `(N)` with fewer than 2 notes | Ungroup or skip group; error on measure |
+| 16 | `GroupUnexpectedCloseParen` | `pending` | Abort on stray `)` | Ignore `)`; error on measure |
+| 17 | `UnclosedGroupAtEnd` | `pending` | Abort when `(` not closed at line/measure end | Close implicitly or drop group; error on measure |
+| 18 | `HalfBarBoundaryCrossed` | `pending` | Abort when beaming group crosses half-bar | Split group or drop tie; error on measure |
+| 19 | `DottedEighthNeedsSixteenth` | `pending` | Abort when `(1.2)` pattern invalid | Drop dot or skip group; error on measure |
+
+### Chords (beyond invalid token)
+
+| # | Kind | Status | Current behavior | Proposed recovery |
+|---|---|---|---|---|
+| 20 | `ChordExpectedDegreeDigit` | `pending` | Abort | Skip symbol; error on measure |
+| 21 | `ChordUnknownSuffix` | `pending` | Abort | Render degree only; error on measure |
+| 22 | `ChordInvalidBass` | `pending` | Abort | Omit bass; error on measure |
+| 23 | `ChordBassUnexpectedChar` | `pending` | Abort | Omit bass; error on measure |
+| 24 | `ChordBassTrailingChars` | `pending` | Abort | Truncate bass parse; error on measure |
+
+### Ties, extensions & cross-part rhythm
+
+| # | Kind | Status | Current behavior | Proposed recovery |
+|---|---|---|---|---|
+| 25 | `ExtensionNoPrecedingEvent` | `pending` | Abort on lone `-` at start of measure/event stream | Ignore `-`; error on measure |
+| 26 | `TieNoPrecedingNote` | `pending` | Abort on `_` tie with no note to attach | Ignore tie marker; error on measure |
+| 27 | `PartMeasureCountMismatch` | `pending` | Abort when parts disagree on measure count | Pad shorter parts with empty measures; error on affected measures (design doc: parts line count) |
+| 28 | Unclosed tie/slur into errored measure | `pending` | Not a distinct kind today | Drop arc; render notes normally (design doc) |
+
+### Measure directives & key changes
+
+| # | Kind | Status | Current behavior | Proposed recovery |
+|---|---|---|---|---|
+| 29 | `DirectiveUnclosedParen` | `pending` | Abort | Ignore directive; use previous time/key/bpm; error on measure |
+| 30 | `DirectiveUnclosedQuote` | `pending` | Abort | Ignore `@label`; error on measure |
+| 31 | `DirectiveInvalidBpm` | `pending` | Abort | Keep previous BPM; error on measure |
+| 32 | `DirectiveLabelNotQuoted` / `DirectiveLabelEmpty` | `pending` | Abort | Skip label; error on measure |
+| 33 | `DirectiveUnknown` | `pending` | Abort | Skip token; error on measure |
+| 34 | `DirectiveKey*` / `DirectiveTime*` (all variants) | `pending` | Abort on bad `@key` / `@time` | Keep previous signature/key; error on measure |
+| 35 | `KeyChangeMissingPrefix` / `KeyChangeMissingNoteName` / `KeyChangeInvalidNoteName` / `KeyChangeInvalidOctave` | `pending` | Abort on bad inline key change | Keep previous key; error on measure |
+| 36 | `LexBpm*` / `LexTime*` (lexer variants) | `pending` | Abort during timed-lexer paths | Same as directive recovery; error on measure |
+
+### Dead enum variants (verify & clean up)
+
+These kinds exist in `IrrecoverableErrorKind` but are not emitted by current
+code paths (superseded by `RecoverableError` with free-form messages). Decide
+whether to delete the variants or re-wire them.
+
+| # | Kind | Status | Notes |
+|---|---|---|---|
+| 37 | `IncompleteMeasure` | `pending` | Replaced by recoverable beat-underflow padding |
+| 38 | `MeasureOverflow` | `pending` | Replaced by recoverable beat-overflow handling |
+| 39 | `MeasureIndexOutOfRange` | `pending` | Never emitted — likely API/caller error, not source |
+| 40 | `InvalidMeasureRange` | `pending` | Never emitted — likely API/caller error, not source |
+
+---
+
+## Never candidates
+
+These should **stay irrecoverable** — they indicate document structure,
+declaration, or infrastructure failure, not a single bad measure.
+
+### Document structure
+`UnknownSection`, `WrongSectionCount`, `SectionsOutOfOrder`, `DuplicateSection`,
+`MissingSection`
+
+### Metadata
+`MetadataInvalidInteger`, `MetadataMustBePositive`, `MetadataMalformedLine`,
+`MetadataUnknownField`, `MetadataMissingField`
+
+### Parts declaration (whole document)
+`PartsMalformedLine`, `PartsDuplicateAbbreviation`, `PartsEmptySection`,
+`PartsEmptyDisplayName`, `PartsEmptyAbbreviation`, `PartsEmptyTrackName`,
+`PartsInvalidColumns`, `PartsNoNotesTrack`
+
+### Output / I/O
+`MidiWriteFailed`, `Wav*`, `PdfSvg*`, `Zip*`, `IoReadFailed`, `IoWriteFailed`
+
+### Internal
+`InternalInvariant` — programming bug; must not be masked as recoverable
+
+---
+
+## Review log
+
+Record decisions here as we go.
+
+| # | Kind | Decision | Date | Notes |
+|---|---|---|---|---|
+| — | — | — | — | — |

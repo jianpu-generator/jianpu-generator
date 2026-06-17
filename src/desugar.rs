@@ -10,9 +10,9 @@ type MeasureGroup = Vec<SourceLine>;
 /// the same score line role in this group." The directive line (starts with `(`)
 /// is never a ditto source or target.
 ///
-/// Returns `(groups, per_group_errors)`. Hard failures (e.g. too many lines)
-/// remain `Err`; missing-lyrics lines produce `Ok` with a `Some` error entry
-/// and a `_` placeholder so rendering can continue.
+/// Returns `(groups, per_group_errors)`. Hard failures remain `Err`; recoverable
+/// layout issues (missing lines, ditto with no precedent) produce `Ok` with a
+/// `Some` error entry and a placeholder so rendering can continue.
 pub fn desugar_groups(
     groups: Vec<MeasureGroup>,
     declarations: &[PartDecl],
@@ -24,9 +24,10 @@ pub fn desugar_groups(
     for group in groups {
         let (padded, pad_error) =
             pad_implicit_ditto_group(&group, declarations, &slots, base_offset)?;
-        let desugared_group = desugar_group(&padded, declarations, &slots, base_offset)?;
+        let (desugared_group, desugar_error) =
+            desugar_group(&padded, declarations, &slots, base_offset)?;
         desugared.push(desugared_group);
-        per_group_errors.push(pad_error);
+        per_group_errors.push(pad_error.or(desugar_error));
     }
     Ok((desugared, per_group_errors))
 }
@@ -144,7 +145,7 @@ fn desugar_group(
     _declarations: &[PartDecl],
     slots: &[crate::ast::parsed::ScoreLineSlot],
     base_offset: usize,
-) -> Result<MeasureGroup, IrrecoverableError> {
+) -> Result<(MeasureGroup, Option<RecoverableError>), IrrecoverableError> {
     let directive_count = if group
         .first()
         .map(|(l, _)| l.starts_with('('))
@@ -159,6 +160,7 @@ fn desugar_group(
     let data_lines = group.get(directive_count..).unwrap_or(&[]);
 
     let mut resolved: Vec<(String, usize)> = Vec::with_capacity(data_lines.len());
+    let mut recoverable_error: Option<RecoverableError> = None;
 
     for (i, (line, offset)) in data_lines.iter().enumerate() {
         if line == "\"" {
@@ -180,12 +182,17 @@ fn desugar_group(
             match source {
                 Some(src_content) => resolved.push((src_content, *offset)),
                 None => {
-                    return Err(IrrecoverableError::new(
-                        IrrecoverableErrorKind::DittoNoPrecedent {
-                            span: Span::new(base_offset + *offset, base_offset + *offset + 1),
-                            role: role_name(role).to_string(),
-                        },
-                    ));
+                    let span = Span::new(base_offset + *offset, base_offset + *offset + 1);
+                    recoverable_error.get_or_insert_with(|| {
+                        RecoverableError::new(
+                            span,
+                            format!(
+                                "ditto '\"' has no preceding {} line in this measure group",
+                                role_name(role)
+                            ),
+                        )
+                    });
+                    resolved.push((ditto_no_precedent_placeholder(role), *offset));
                 }
             }
         } else {
@@ -195,7 +202,13 @@ fn desugar_group(
 
     let mut result = directive_lines;
     result.extend(resolved);
-    Ok(result)
+    Ok((result, recoverable_error))
+}
+
+fn ditto_no_precedent_placeholder(role: ScoreLineRole) -> String {
+    match role {
+        ScoreLineRole::Notes | ScoreLineRole::Lyrics | ScoreLineRole::Chord => "_".to_string(),
+    }
 }
 
 fn role_name(role: ScoreLineRole) -> &'static str {
@@ -291,26 +304,39 @@ mod tests {
     }
 
     #[test]
-    fn ditto_with_no_preceding_line_is_an_error() {
+    fn ditto_no_precedent_is_recoverable() {
+        // Explicit `"` with no preceding same-role line must not abort desugaring.
         let groups = vec![group(&["\""])];
         let declarations = vec![decl("A", PartKind::Notes)];
-        let err = desugar_groups(groups, &declarations, 0).unwrap_err();
+        let (result, errors) = desugar_groups(groups, &declarations, 0)
+            .expect("ditto with no precedent must not abort desugaring");
+        let error = errors[0]
+            .as_ref()
+            .expect("should attach a recoverable error");
         assert!(
-            err.message().contains("no preceding notes line"),
+            error.message.contains("no preceding notes line"),
             "got: {}",
-            err.message()
+            error.message
+        );
+        assert_eq!(
+            result[0][0].0, "_",
+            "ditto without precedent should become an empty placeholder"
         );
     }
 
     #[test]
-    fn ditto_with_no_preceding_line_of_same_type_is_an_error() {
+    fn ditto_with_no_preceding_line_of_same_type_is_recoverable() {
         let groups = vec![group(&["1 2 3 4", "\""])];
         let declarations = vec![decl("A", PartKind::NotesWithLyrics)];
-        let err = desugar_groups(groups, &declarations, 0).unwrap_err();
+        let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
+        assert_eq!(result[0][1].0, "_");
+        let error = errors[0]
+            .as_ref()
+            .expect("should attach a recoverable error");
         assert!(
-            err.message().contains("no preceding lyrics line"),
+            error.message.contains("no preceding lyrics line"),
             "got: {}",
-            err.message()
+            error.message
         );
     }
 
@@ -318,11 +344,15 @@ mod tests {
     fn directive_line_is_not_a_ditto_target() {
         let groups = vec![group(&["(time=4/4)", "\""])];
         let declarations = vec![decl("A", PartKind::Notes)];
-        let err = desugar_groups(groups, &declarations, 0).unwrap_err();
+        let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
+        assert_eq!(result[0][1].0, "_");
+        let error = errors[0]
+            .as_ref()
+            .expect("should attach a recoverable error");
         assert!(
-            err.message().contains("no preceding notes line"),
+            error.message.contains("no preceding notes line"),
             "got: {}",
-            err.message()
+            error.message
         );
     }
 
@@ -348,11 +378,15 @@ mod tests {
     fn multiple_groups_are_desugared_independently() {
         let groups = vec![group(&["1 2 3 4"]), group(&["\""])];
         let declarations = vec![decl("A", PartKind::Notes)];
-        let err = desugar_groups(groups, &declarations, 0).unwrap_err();
+        let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
+        assert_eq!(result[0][0].0, "1 2 3 4");
+        assert_eq!(result[1][0].0, "_");
+        assert!(errors[0].is_none());
         assert!(
-            err.message().contains("no preceding notes line"),
-            "got: {}",
-            err.message()
+            errors[1]
+                .as_ref()
+                .is_some_and(|error| error.message.contains("no preceding notes line")),
+            "second group should carry a recoverable ditto error"
         );
     }
 

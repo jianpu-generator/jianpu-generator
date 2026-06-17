@@ -15,7 +15,7 @@ mod ditto;
 #[path = "interleaved_errors.rs"]
 mod errors;
 
-use beat_padding::{beats_per_measure, validate_and_pad_beats};
+use beat_padding::{beats_per_measure, validate_and_pad_beats, validate_and_pad_group_lines};
 use directives::{collect_groups, split_directive};
 use ditto::{compute_ditto_measures, DittoMeasures};
 use errors::invariant;
@@ -50,6 +50,8 @@ enum TrackAccumulator {
         lyrics_line_ends: Vec<usize>,
         /// Per-measure beat-overflow error (None = no overflow for that measure).
         per_measure_beat_errors: Vec<Option<crate::error::RecoverableError>>,
+        /// Parallel to `per_measure_beat_errors`: notes-line `_` placeholders.
+        empty_note_measure_spans: Vec<Option<Span>>,
     },
 }
 
@@ -199,6 +201,7 @@ fn init_accumulators(declarations: &[PartDecl]) -> Vec<TrackAccumulator> {
             lyrics_line_starts: Vec::new(),
             lyrics_line_ends: Vec::new(),
             per_measure_beat_errors: Vec::new(),
+            empty_note_measure_spans: Vec::new(),
         })
         .collect()
 }
@@ -374,9 +377,11 @@ fn process_notes_column_line(
         })?;
         let TrackAccumulator::Timed {
             per_measure_beat_errors,
+            empty_note_measure_spans,
             ..
         } = acc;
         per_measure_beat_errors.push(None);
+        empty_note_measure_spans.push(Some(line_span));
         return Ok(());
     }
     let group_state = ctx
@@ -405,10 +410,12 @@ fn process_notes_column_line(
     let TrackAccumulator::Timed {
         events: acc_events,
         per_measure_beat_errors,
+        empty_note_measure_spans,
         ..
     } = acc;
     acc_events.extend(events);
     per_measure_beat_errors.push(beat_overflow_error);
+    empty_note_measure_spans.push(None);
     Ok(())
 }
 
@@ -506,37 +513,6 @@ fn process_column_line(
     Ok(())
 }
 
-fn validate_and_pad_group_lines(
-    group_lines: &[(String, usize)],
-    data_lines: &[(String, usize)],
-    slots: &[ScoreLineSlot],
-    base_offset: usize,
-) -> Result<Vec<(String, usize)>, IrrecoverableError> {
-    let group_first_span = group_lines
-        .first()
-        .map(|(line, off)| Span::new(base_offset + off, base_offset + off + line.len()))
-        .unwrap_or_else(|| Span::new(base_offset, base_offset));
-
-    // These checks are defensive: desugar already normalises line counts.
-    // If reached, pad or truncate silently rather than aborting parsing.
-    if data_lines.is_empty() {
-        return Ok(vec![("_".to_string(), group_first_span.start)]);
-    }
-    if data_lines.len() != slots.len() {
-        let truncated: Vec<(String, usize)> = data_lines
-            .iter()
-            .take(slots.len())
-            .cloned()
-            .chain(
-                (data_lines.len()..slots.len()).map(|_| ("_".to_string(), group_first_span.start)),
-            )
-            .collect();
-        return Ok(truncated);
-    }
-
-    Ok(data_lines.to_vec())
-}
-
 fn build_parse_result(
     declarations: &[PartDecl],
     accumulators: Vec<TrackAccumulator>,
@@ -560,6 +536,7 @@ fn build_parse_result(
                 lyrics_line_starts,
                 lyrics_line_ends,
                 per_measure_beat_errors,
+                empty_note_measure_spans,
             } = acc;
             Ok(ParsedTrack::Timed(ParsedTimedTrack {
                 abbreviation: decl.abbreviation.clone(),
@@ -582,6 +559,7 @@ fn build_parse_result(
                     .map(std::mem::take)
                     .unwrap_or_default(),
                 per_measure_beat_errors,
+                empty_note_measure_spans,
             }))
         })
         .collect()
