@@ -12,7 +12,7 @@ import { expect, test } from '@playwright/test'
  *   Line 11: (time=4/4 key=C4 bpm=120)   ← directive, no hint
  *   Line 12: [Chord]  1 - - -            ← Chord data line
  *   Line 13: [Melody] 1 1 5 5            ← Melody notes line
- *   Line 14:          twin- kle ...      ← Melody lyrics line, no hint
+ *   Line 14: [Melody] twin- kle ...      ← Melody lyrics line
  */
 test('shows part inlay hints on each data line within a measure', async ({
   page,
@@ -37,6 +37,26 @@ test('shows part inlay hints on each data line within a measure', async ({
     viewLines.getByText('[Melody]', { exact: false }).first(),
   ).toBeVisible({
     timeout: 5_000,
+  })
+})
+
+test('shows part inlay hint on lyrics line', async ({ page }) => {
+  await page.goto('/')
+  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
+  await page.waitForTimeout(1_000)
+
+  // Line 14 is the Melody lyrics line in the default demo.
+  await page.click('.monaco-editor .view-lines')
+  await page.keyboard.press('Control+g')
+  await page.keyboard.type('14')
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(300)
+
+  const lyricsLine = page
+    .locator('.monaco-editor .view-line')
+    .filter({ hasText: 'twin' })
+  await expect(lyricsLine.getByText('[Melody]', { exact: false })).toBeVisible({
+    timeout: 3_000,
   })
 })
 

@@ -68,7 +68,16 @@ function buildPartInlayHints(
       })
       dataLineIndex++ // notes line
       if (part.has_lyrics) {
-        dataLineIndex++ // lyrics line — no separate hint
+        hints.push({
+          position: new monacoApi.Position(
+            startPos.lineNumber + dataLineIndex,
+            1,
+          ),
+          label: `[${part.abbreviation}]`,
+          kind: monacoApi.languages.InlayHintKind.Type,
+          paddingRight: true,
+        })
+        dataLineIndex++ // lyrics line
       }
     }
   }
