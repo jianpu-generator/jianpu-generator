@@ -169,7 +169,6 @@ export function useJianpuWorker(
   const measureAudioRequestIdRef = useRef(0)
   const latestMeasureAudioIdRef = useRef(0)
   const measureWavUrlRef = useRef<string | null>(null)
-  const autoPlayAudioRef = useRef(false)
 
   const enabledTracks = useMemo(
     () => enabledTracksForRender(parts, disabledParts),
@@ -284,10 +283,6 @@ export function useJianpuWorker(
           new Blob([msg.wav], { type: 'audio/wav' }),
         )
         setNextWavUrl(url)
-        if (autoPlayAudioRef.current) {
-          autoPlayAudioRef.current = false
-          new Audio(url).play().catch(() => {})
-        }
         return
       }
 
@@ -417,7 +412,6 @@ export function useJianpuWorker(
     const id = ++audioRequestIdRef.current
     latestAudioIdRef.current = id
     setAudioGenerating(true)
-    autoPlayAudioRef.current = true
     worker.postMessage({
       type: 'generateAudio',
       source: sourceRef.current,

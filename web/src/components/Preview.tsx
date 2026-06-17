@@ -36,6 +36,15 @@ export function Preview({
   toolbar,
 }: PreviewProps) {
   const previewPagesRef = useRef<HTMLDivElement>(null)
+  const audioPlayerRef = useRef<HTMLAudioElement>(null)
+
+  useEffect(() => {
+    if (!audioGenerating) return
+    const audio = audioPlayerRef.current
+    if (audio && !audio.paused) {
+      audio.pause()
+    }
+  }, [audioGenerating])
 
   useEffect(() => {
     if (highlightedSvgs.length === 0) return
@@ -87,20 +96,13 @@ export function Preview({
               {splitPdfExporting ? 'Exporting parts…' : 'Export parts (ZIP)'}
             </button>
           ) : null}
-          {rendering ? (
-            <span className="preview-status">Rendering…</span>
-          ) : null}
-        </div>
-      </div>
-      {toolbar ? <div className="preview-toolbar">{toolbar}</div> : null}
-      {audioAvailable ? (
-        <div className="preview-audio" aria-busy={audioGenerating || undefined}>
-          <div className="preview-audio-frame">
+          {audioAvailable ? (
             <button
               type="button"
-              className="preview-audio-play-btn"
+              className="preview-export-btn"
               disabled={audioGenerating}
               onClick={onGenerateAudio}
+              aria-label={wavUrl ? 'Regenerate audio' : 'Generate audio'}
             >
               {audioGenerating ? (
                 <>
@@ -108,16 +110,33 @@ export function Preview({
                   <span>Generating…</span>
                 </>
               ) : (
-                <span>▶ Play</span>
+                <span>{wavUrl ? 'Regenerate audio' : 'Generate audio'}</span>
               )}
             </button>
-            {wavUrl ? (
-              <div className="preview-audio-player-wrap">
-                {/* biome-ignore lint/a11y/useMediaCaption: synthesized score preview has no captions track */}
-                <audio className="preview-audio-player" controls src={wavUrl} />
-              </div>
-            ) : null}
-          </div>
+          ) : null}
+          {rendering ? (
+            <span className="preview-status">Rendering…</span>
+          ) : null}
+        </div>
+      </div>
+      {toolbar ? <div className="preview-toolbar">{toolbar}</div> : null}
+      {wavUrl ? (
+        <div
+          className={
+            audioGenerating
+              ? 'preview-audio preview-audio--generating'
+              : 'preview-audio'
+          }
+          aria-busy={audioGenerating || undefined}
+        >
+          {/* biome-ignore lint/a11y/useMediaCaption: synthesized score preview has no captions track */}
+          <audio
+            ref={audioPlayerRef}
+            className="preview-audio-player"
+            controls
+            src={wavUrl}
+            tabIndex={audioGenerating ? -1 : undefined}
+          />
         </div>
       ) : null}
       <div className="preview-pages" ref={previewPagesRef}>

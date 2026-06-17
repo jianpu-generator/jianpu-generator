@@ -386,6 +386,9 @@ input.file-tab-name:focus {
 }
 
 .preview-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   border: 1px solid var(--border);
   border-radius: 0.25rem;
   background: var(--surface);
@@ -405,39 +408,9 @@ input.file-tab-name:focus {
 }
 
 .preview-audio {
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 1rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
-}
-
-.preview-audio-frame {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.preview-audio-play-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.75rem;
-  font-size: 0.8rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-  color: var(--fg);
-  cursor: pointer;
-  align-self: flex-start;
-}
-
-.preview-audio-play-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.preview-audio-play-btn:not(:disabled):hover {
-  background: var(--hover, color-mix(in srgb, var(--surface) 80%, var(--fg)));
 }
 
 .preview-audio-spinner {
@@ -456,9 +429,9 @@ input.file-tab-name:focus {
   }
 }
 
-.preview-audio-player-wrap {
-  flex: 1;
-  min-width: 0;
+.preview-audio--generating .preview-audio-player {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 .preview-audio-player {
