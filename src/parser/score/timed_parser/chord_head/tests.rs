@@ -25,8 +25,9 @@ fn chord(
 }
 
 fn try_parse_symbol(token: &str) -> Result<ScoreEvent, IrrecoverableError> {
-    let events =
+    let parsed =
         parse_timed_line::<ChordHead>(token, 0, &mut GroupStack::default(), LexContext::Chords)?;
+    let events = parsed.events;
     if events.len() != 1 {
         return Err(IrrecoverableError::new(
             IrrecoverableErrorKind::internal_invariant(
@@ -45,6 +46,7 @@ fn parse_symbol(token: &str) -> ScoreEvent {
 fn parse_line(line: &str) -> Vec<ScoreEvent> {
     parse_timed_line::<ChordHead>(line, 0, &mut GroupStack::default(), LexContext::Chords)
         .unwrap()
+        .events
         .into_iter()
         .map(|e| e.value)
         .collect()
@@ -391,7 +393,8 @@ fn rejects_octave_suffix() {
 fn parses_compact_slur_group() {
     let events =
         parse_timed_line::<ChordHead>("(1-6m-)", 0, &mut GroupStack::default(), LexContext::Chords)
-            .unwrap();
+            .unwrap()
+            .events;
     let chord_count = events
         .iter()
         .filter(|e| matches!(e.value, ScoreEvent::Chord(_)))
@@ -404,8 +407,9 @@ fn parses_spaced_slur_group_across_tokens() {
     let mut state = GroupStack::default();
     let mut chord_count = 0usize;
     for token in ["(1", "-", "6m", "-)"] {
-        let events =
-            parse_timed_line::<ChordHead>(token, 0, &mut state, LexContext::Chords).unwrap();
+        let events = parse_timed_line::<ChordHead>(token, 0, &mut state, LexContext::Chords)
+            .unwrap()
+            .events;
         chord_count += events
             .iter()
             .filter(|e| matches!(e.value, ScoreEvent::Chord(_)))

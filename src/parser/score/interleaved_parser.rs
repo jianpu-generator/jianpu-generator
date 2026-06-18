@@ -59,6 +59,8 @@ enum TrackAccumulator {
         per_measure_beat_errors: Vec<Option<crate::error::RecoverableError>>,
         /// Per-measure dotted-eighth grouping errors (empty = no violations for that measure).
         per_measure_dotted_eighth_errors: Vec<Vec<crate::error::RecoverableError>>,
+        /// Per-measure dash-after-rest errors from suffix dashes on rests during token parse.
+        per_measure_dash_after_rest_errors: Vec<Option<crate::error::RecoverableError>>,
         /// Parallel to `per_measure_beat_errors`: notes-line `_` placeholders.
         empty_note_measure_spans: Vec<Option<Span>>,
     },

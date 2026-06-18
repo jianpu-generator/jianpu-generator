@@ -90,6 +90,8 @@ pub struct ParsedTimedTrack {
     pub per_measure_beat_errors: Vec<Option<RecoverableError>>,
     /// Per-measure dotted-eighth grouping errors (empty = no violations for that measure).
     pub per_measure_dotted_eighth_errors: Vec<Vec<RecoverableError>>,
+    /// Per-measure dash-after-rest errors from suffix dashes on rests during token parse.
+    pub per_measure_dash_after_rest_errors: Vec<Option<RecoverableError>>,
     /// Parallel to `per_measure_beat_errors`: `Some` when that measure's notes line
     /// was `_` (empty placeholder) and produced no timed events.
     pub empty_note_measure_spans: Vec<Option<Span>>,

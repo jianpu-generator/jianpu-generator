@@ -6,18 +6,25 @@ pub fn align_empty_note_measures(
     empty_note_measure_spans: &[Option<Span>],
     per_measure_beat_errors: &[Option<RecoverableError>],
     per_measure_dotted_eighth_errors: &[Vec<RecoverableError>],
+    per_measure_dash_after_rest_errors: &[Option<RecoverableError>],
 ) -> Result<(), IrrecoverableError> {
     if empty_note_measure_spans.is_empty() {
-        for (measure, (beat_error, dotted_eighth_errors)) in measures.iter_mut().zip(
-            per_measure_beat_errors
-                .iter()
-                .zip(per_measure_dotted_eighth_errors.iter()),
-        ) {
+        for (measure, ((beat_error, dotted_eighth_errors), dash_after_rest_error)) in
+            measures.iter_mut().zip(
+                per_measure_beat_errors
+                    .iter()
+                    .zip(per_measure_dotted_eighth_errors.iter())
+                    .zip(per_measure_dash_after_rest_errors.iter()),
+            )
+        {
             if beat_error.is_some() {
                 measure.beat_overflow_error = beat_error.clone();
             }
             if !dotted_eighth_errors.is_empty() {
                 measure.dotted_eighth_errors = dotted_eighth_errors.clone();
+            }
+            if dash_after_rest_error.is_some() && measure.dash_after_rest_error.is_none() {
+                measure.dash_after_rest_error = dash_after_rest_error.clone();
             }
         }
         return Ok(());
@@ -29,35 +36,41 @@ pub fn align_empty_note_measures(
         .zip(
             per_measure_beat_errors
                 .iter()
-                .zip(per_measure_dotted_eighth_errors.iter()),
+                .zip(per_measure_dotted_eighth_errors.iter())
+                .zip(per_measure_dash_after_rest_errors.iter()),
         )
-        .map(|(empty_span, (beat_error, dotted_eighth_errors))| {
-            if let Some(span) = empty_span {
-                Ok(GroupedMeasure {
-                    notes: Notes { events: Vec::new() },
-                    source_span: *span,
-                    paired_lyrics: None,
-                    lyrics_error: None,
-                    beat_overflow_error: None,
-                    dash_after_rest_error: None,
-                    dotted_eighth_errors: Vec::new(),
-                })
-            } else {
-                let mut measure = filled.next().ok_or_else(|| {
-                    IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
-                        Span::new(0, 0),
-                        "empty_note_measure_spans and grouped measures out of sync",
-                    ))
-                })?;
-                if beat_error.is_some() {
-                    measure.beat_overflow_error = beat_error.clone();
+        .map(
+            |(empty_span, ((beat_error, dotted_eighth_errors), dash_after_rest_error))| {
+                if let Some(span) = empty_span {
+                    Ok(GroupedMeasure {
+                        notes: Notes { events: Vec::new() },
+                        source_span: *span,
+                        paired_lyrics: None,
+                        lyrics_error: None,
+                        beat_overflow_error: None,
+                        dash_after_rest_error: dash_after_rest_error.clone(),
+                        dotted_eighth_errors: Vec::new(),
+                    })
+                } else {
+                    let mut measure = filled.next().ok_or_else(|| {
+                        IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
+                            Span::new(0, 0),
+                            "empty_note_measure_spans and grouped measures out of sync",
+                        ))
+                    })?;
+                    if beat_error.is_some() {
+                        measure.beat_overflow_error = beat_error.clone();
+                    }
+                    if !dotted_eighth_errors.is_empty() {
+                        measure.dotted_eighth_errors = dotted_eighth_errors.clone();
+                    }
+                    if dash_after_rest_error.is_some() && measure.dash_after_rest_error.is_none() {
+                        measure.dash_after_rest_error = dash_after_rest_error.clone();
+                    }
+                    Ok(measure)
                 }
-                if !dotted_eighth_errors.is_empty() {
-                    measure.dotted_eighth_errors = dotted_eighth_errors.clone();
-                }
-                Ok(measure)
-            }
-        })
+            },
+        )
         .collect::<Result<Vec<_>, _>>()?;
     *measures = aligned;
     Ok(())

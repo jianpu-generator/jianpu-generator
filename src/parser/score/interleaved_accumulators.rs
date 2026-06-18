@@ -39,6 +39,7 @@ pub(super) fn init_accumulators(declarations: &[PartDecl]) -> Vec<TrackAccumulat
             lyrics_line_ends: Vec::new(),
             per_measure_beat_errors: Vec::new(),
             per_measure_dotted_eighth_errors: Vec::new(),
+            per_measure_dash_after_rest_errors: Vec::new(),
             empty_note_measure_spans: Vec::new(),
         })
         .collect()
@@ -68,6 +69,7 @@ pub(super) fn build_parse_result(
                 lyrics_line_ends,
                 per_measure_beat_errors,
                 per_measure_dotted_eighth_errors,
+                per_measure_dash_after_rest_errors,
                 empty_note_measure_spans,
             } = acc;
             Ok(ParsedTrack::Timed(ParsedTimedTrack {
@@ -92,6 +94,7 @@ pub(super) fn build_parse_result(
                     .unwrap_or_default(),
                 per_measure_beat_errors,
                 per_measure_dotted_eighth_errors,
+                per_measure_dash_after_rest_errors,
                 empty_note_measure_spans,
             }))
         })

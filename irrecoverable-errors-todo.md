@@ -31,7 +31,7 @@ These are no longer review items. Some still have a matching
 | Lyrics overflow (`#syllables > #notes`) | `implemented` | Keep paired syllables; error on measure (`grouper/mod.rs`) |
 | Beat overflow (notes/chord line exceeds bar) | `implemented` | Truncate events or drop overflowing note; error on measure (`interleaved_beat_padding.rs`, `grouper/mod.rs`) |
 | Beat underflow / incomplete measure | `implemented` | Pad bar with rest; error on measure (`interleaved_beat_padding.rs`) |
-| Dash after rest (`0-`, `0---`, `-` after rest) | `implemented` | Ignore extension; error on measure (`grouper/mod.rs`) — **notes parse path still irrecoverable** (see candidate below) |
+| Dash after rest (`0-`, `0---`, `-` after rest) | `implemented` | Ignore extension; error on measure (`grouper/mod.rs` for spaced `-`; `duration.rs` for suffix dashes) |
 | Chord line: `LexUnexpectedChar`, `ChordInvalidToken` | `implemented` | Treat line as empty + pad; error on measure (`interleaved_parser.rs`) |
 | Measure has no data lines | `implemented` | Treat all parts as empty; error on measure (`desugar.rs`) |
 | Measure has too many lines | `implemented` | Ignore extra lines; error on measure (`desugar.rs`) |
@@ -64,7 +64,7 @@ These are no longer review items. Some still have a matching
 
 | # | Kind | Status | Current behavior | Proposed recovery |
 |---|---|---|---|---|
-| 9 | `DashAfterRest` | `pending` | Abort during notes token parse (`duration.rs`, `token_parser.rs`) | Match grouper: skip extension, error on measure |
+| 9 | `DashAfterRest` | `implemented` | Skip suffix extension during notes token parse; error on measure (matches grouper spaced-extension path) |
 | 10 | `LexUnexpectedChar` (notes line) | `pending` | Abort entire parse | Skip bad token, continue parsing; error on measure (design doc) |
 | 11 | `NoteExpectedPitchDigit` | `pending` | Abort | Skip token or treat as rest; error on measure |
 | 12 | `DurationUnexpectedChar` | `pending` | Abort | Skip token; error on measure |

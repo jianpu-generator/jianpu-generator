@@ -29,7 +29,13 @@ pub use groups::{
 };
 
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{IrrecoverableError, Span, Spanned};
+use crate::error::{IrrecoverableError, RecoverableError, Span, Spanned};
+
+/// Parsed events from one timed notation line, plus any recoverable errors collected while parsing.
+pub struct TimedLineParse {
+    pub events: Vec<Spanned<ScoreEvent>>,
+    pub dash_after_rest_error: Option<RecoverableError>,
+}
 
 /// Parse a single line of timed notation using the lexer + recursive-descent parser.
 pub fn parse_timed_line<H: TimedUnitHead>(
@@ -37,9 +43,14 @@ pub fn parse_timed_line<H: TimedUnitHead>(
     base_offset: usize,
     stack: &mut GroupStack,
     context: LexContext,
-) -> Result<Vec<Spanned<ScoreEvent>>, IrrecoverableError> {
+) -> Result<TimedLineParse, IrrecoverableError> {
     let tokens = lex_line(line, base_offset, context)?;
-    TimedRdParser::<H>::parse_line(line, base_offset, &tokens, stack)
+    let (events, dash_after_rest_error) =
+        TimedRdParser::<H>::parse_line(line, base_offset, &tokens, stack)?;
+    Ok(TimedLineParse {
+        events,
+        dash_after_rest_error,
+    })
 }
 
 pub trait TimedUnitHead: Sized {

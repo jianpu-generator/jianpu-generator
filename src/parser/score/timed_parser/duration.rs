@@ -1,7 +1,7 @@
 #![allow(clippy::indexing_slicing)]
 
 use super::TimedUnitHead;
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
 
 pub struct DurationParse {
     pub duration: u32,
@@ -9,6 +9,7 @@ pub struct DurationParse {
     pub octave_up: i8,
     pub octave_down: i8,
     pub next_index: usize,
+    pub dash_after_rest_error: Option<RecoverableError>,
 }
 
 pub fn parse_duration_suffixes<H: TimedUnitHead>(
@@ -23,6 +24,7 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
     let mut dotted = false;
     let mut octave_up = 0i8;
     let mut octave_down = 0i8;
+    let mut dash_after_rest_error: Option<RecoverableError> = None;
     let allows_octave = H::allows_octave_suffixes();
 
     while i < chars.len() {
@@ -54,14 +56,15 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
             '-' => {
                 if is_rest {
                     let pos = span.start + byte_offset_at_char_index_from_chars(chars, start, i);
-                    return Err(IrrecoverableError::new(
-                        IrrecoverableErrorKind::DashAfterRest {
-                            span: Span::new(pos, pos + 1),
-                        },
-                    ));
+                    if dash_after_rest_error.is_none() {
+                        dash_after_rest_error =
+                            Some(RecoverableError::dash_after_rest(Span::new(pos, pos + 1)));
+                    }
+                    i += 1;
+                } else {
+                    duration += 4;
+                    i += 1;
                 }
-                duration += 4;
-                i += 1;
             }
             ')' | '(' => break,
             c if !allows_octave && matches!(c, '\'' | ',') => {
@@ -109,6 +112,7 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
         octave_up,
         octave_down,
         next_index: i,
+        dash_after_rest_error,
     })
 }
 

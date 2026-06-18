@@ -265,7 +265,9 @@ mod tests {
         use super::validate_measure_grouping;
         use crate::parser::score::token_parser;
         let bar = "1_. 2_ 3_ 4_ 5_ 6_ 7_ 0=";
-        let events = token_parser::parse_notes_line(bar, 0, &mut Default::default()).unwrap();
+        let events = token_parser::parse_notes_line(bar, 0, &mut Default::default())
+            .unwrap()
+            .events;
         let errors = validate_measure_grouping(&events, 4, 4).unwrap();
         assert!(!errors.is_empty());
         assert!(errors[0].message.contains("dotted eighth"));
@@ -308,7 +310,9 @@ mod tests {
         let bar1 = "5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_";
         let _ = token_parser::parse_notes_line(bar1, 0, &mut state).unwrap();
         let bar2 = "3_) (1_1-) 0_ 1= 1=";
-        let events = token_parser::parse_notes_line(bar2, 0, &mut state).unwrap();
+        let events = token_parser::parse_notes_line(bar2, 0, &mut state)
+            .unwrap()
+            .events;
         validate_measure_grouping(&events, 4, 4).expect("grouped crossing should be allowed");
     }
 }

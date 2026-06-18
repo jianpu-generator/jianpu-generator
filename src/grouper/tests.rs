@@ -116,6 +116,17 @@ fn ditto_no_precedent_is_recoverable() {
 }
 
 #[test]
+fn suffix_dash_after_rest_is_recoverable() {
+    use crate::error::ErrorKind;
+    let score = parse_and_group(concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n0---\n_\n",
+    ));
+    assert_eq!(score.measures[0].errors.len(), 1);
+    assert_eq!(score.measures[0].errors[0].kind, ErrorKind::DashAfterRest);
+}
+
+#[test]
 fn dash_after_rest_is_recoverable() {
     use crate::error::ErrorKind;
     let score = parse_and_group(concat!(

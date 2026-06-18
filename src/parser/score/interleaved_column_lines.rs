@@ -100,11 +100,13 @@ fn process_notes_column_line(
         let TrackAccumulator::Timed {
             per_measure_beat_errors,
             per_measure_dotted_eighth_errors,
+            per_measure_dash_after_rest_errors,
             empty_note_measure_spans,
             ..
         } = acc;
         per_measure_beat_errors.push(None);
         per_measure_dotted_eighth_errors.push(vec![]);
+        per_measure_dash_after_rest_errors.push(None);
         empty_note_measure_spans.push(Some(line_span));
         return Ok(());
     }
@@ -112,8 +114,10 @@ fn process_notes_column_line(
         .group_states
         .get_mut(track_index)
         .ok_or_else(|| invariant(line_span, "internal error: group state index out of range"))?;
+    let notes_parse =
+        token_parser::parse_notes_line(line, ctx.base_offset + line_offset, group_state)?;
     let padded = validate_and_pad_beats(
-        token_parser::parse_notes_line(line, ctx.base_offset + line_offset, group_state)?,
+        notes_parse.events,
         beats_expected,
         *ctx.time_num,
         *ctx.time_den,
@@ -135,12 +139,14 @@ fn process_notes_column_line(
         events: acc_events,
         per_measure_beat_errors,
         per_measure_dotted_eighth_errors,
+        per_measure_dash_after_rest_errors,
         empty_note_measure_spans,
         ..
     } = acc;
     acc_events.extend(padded.events);
     per_measure_beat_errors.push(padded.beat_overflow_error);
     per_measure_dotted_eighth_errors.push(padded.dotted_eighth_errors);
+    per_measure_dash_after_rest_errors.push(notes_parse.dash_after_rest_error);
     empty_note_measure_spans.push(None);
     Ok(())
 }
@@ -184,8 +190,8 @@ fn process_column_line(
             })?;
             let chord_result =
                 token_parser::parse_chord_line(line, ctx.base_offset + line_offset, group_state);
-            let (chord_events, chord_error) = match chord_result {
-                Ok(events) => (events, None),
+            let (chord_events, chord_error, dash_after_rest_error) = match chord_result {
+                Ok(parsed) => (parsed.events, None, parsed.dash_after_rest_error),
                 Err(e)
                     if matches!(
                         e.kind,
@@ -195,7 +201,7 @@ fn process_column_line(
                 {
                     let error =
                         crate::error::RecoverableError::chord_invalid_token(*e.span(), e.message());
-                    (vec![], Some(error))
+                    (vec![], Some(error), None)
                 }
                 Err(e) => return Err(e),
             };
@@ -233,11 +239,13 @@ fn process_column_line(
                     events: acc_events,
                     per_measure_beat_errors,
                     per_measure_dotted_eighth_errors,
+                    per_measure_dash_after_rest_errors,
                     ..
                 } => {
                     acc_events.extend(final_padded.events);
                     per_measure_beat_errors.push(final_padded.beat_overflow_error);
                     per_measure_dotted_eighth_errors.push(final_padded.dotted_eighth_errors);
+                    per_measure_dash_after_rest_errors.push(dash_after_rest_error);
                 }
             }
         }

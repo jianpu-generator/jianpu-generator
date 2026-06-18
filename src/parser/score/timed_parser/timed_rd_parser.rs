@@ -8,7 +8,7 @@ use super::groups::{
 use super::timed_lexer::TimedLexToken;
 use super::TimedUnitHead;
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Spanned};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned};
 
 /// A thin wrapper over `Spanned<ScoreEvent>` that holds mutable group-depth fields so that the
 /// generic `HasGroupDepth`-based helpers (`apply_closed_group_depth`, `apply_open_group_depth`)
@@ -139,6 +139,7 @@ pub struct TimedRdParser<'a, H: TimedUnitHead> {
     stack: &'a mut GroupStack,
     /// Staging area: events with their pending depth accumulators.
     staging: Vec<DepthEvent>,
+    dash_after_rest_error: Option<RecoverableError>,
     _head: std::marker::PhantomData<H>,
 }
 
@@ -148,7 +149,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
         base_offset: usize,
         tokens: &'a [Spanned<TimedLexToken>],
         stack: &'a mut GroupStack,
-    ) -> Result<Vec<Spanned<ScoreEvent>>, IrrecoverableError> {
+    ) -> Result<(Vec<Spanned<ScoreEvent>>, Option<RecoverableError>), IrrecoverableError> {
         // Frames carried over from a previous bar have segment_start values that
         // refer to the old staging vec.  Reset them to 0 so they cover all events
         // produced in this new call.
@@ -163,6 +164,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
             pos: 0,
             stack,
             staging: Vec::new(),
+            dash_after_rest_error: None,
             _head: std::marker::PhantomData,
         };
         parser.parse_atoms(false)?;
@@ -172,7 +174,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
             .into_iter()
             .map(|d| d.into_spanned())
             .collect();
-        Ok(events)
+        Ok((events, parser.dash_after_rest_error))
     }
 
     // -----------------------------------------------------------------------
@@ -287,6 +289,10 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
 
         // Parse duration suffixes.
         let duration_meta = parse_duration_suffixes::<H>(&chars, 0, head_end, is_rest, &head_span)?;
+
+        if duration_meta.dash_after_rest_error.is_some() && self.dash_after_rest_error.is_none() {
+            self.dash_after_rest_error = duration_meta.dash_after_rest_error;
+        }
 
         let octave = if duration_meta.octave_up > 0 {
             duration_meta.octave_up
