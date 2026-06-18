@@ -427,3 +427,18 @@ fn no_notes_track_is_recoverable() {
         "parts declaration with no notes track must not abort parsing"
     );
 }
+
+#[test]
+fn lex_unexpected_char_in_notes_line_is_recoverable() {
+    // `@` at a word boundary in a notes line triggers LexUnexpectedChar — must not abort parsing.
+    let content = "(time=4/4 key=C4 bpm=120)\n1 @ 3 4\n";
+    let declarations = vec![decl("", PartKind::Notes)];
+    let tracks = parse(content, 0, &declarations)
+        .expect("LexUnexpectedChar in notes line must not abort parsing");
+    let track = notes_track(&tracks, "");
+    assert_eq!(track.per_measure_lex_errors.len(), 1);
+    assert!(
+        track.per_measure_lex_errors[0].is_some(),
+        "lex error must be recorded for the failing measure"
+    );
+}

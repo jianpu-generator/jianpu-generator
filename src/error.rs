@@ -51,6 +51,8 @@ pub enum ErrorKind {
     HalfBarBoundaryCrossed,
     /// Measure group has the wrong number of data lines for declared parts.
     MeasureWrongLineCount,
+    /// An unexpected character was encountered while lexing a notes line.
+    LexUnexpectedChar,
 }
 
 impl ErrorKind {
@@ -67,6 +69,7 @@ impl ErrorKind {
             Self::DottedEighthNeedsSixteenth => "dotted_eighth_needs_sixteenth",
             Self::HalfBarBoundaryCrossed => "half_bar_boundary_crossed",
             Self::MeasureWrongLineCount => "measure_wrong_line_count",
+            Self::LexUnexpectedChar => "lex_unexpected_char",
         }
     }
 }
@@ -151,6 +154,14 @@ impl RecoverableError {
             span,
             message: "note/rest crosses the half-bar boundary (beat 2→3); use a beam group or tie to show the split".to_string(),
             kind: ErrorKind::HalfBarBoundaryCrossed,
+        }
+    }
+
+    pub fn lex_unexpected_char(span: Span, ch: char) -> Self {
+        Self {
+            span,
+            message: format!("unexpected character: {ch}"),
+            kind: ErrorKind::LexUnexpectedChar,
         }
     }
 

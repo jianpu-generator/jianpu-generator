@@ -63,6 +63,8 @@ enum TrackAccumulator {
         per_measure_dash_after_rest_errors: Vec<Option<crate::error::RecoverableError>>,
         /// Per-measure recoverable chord parse errors (empty = no violations for that measure).
         per_measure_chord_errors: Vec<Vec<crate::error::RecoverableError>>,
+        /// Per-measure recoverable lex error from an unexpected character on the notes line.
+        per_measure_lex_errors: Vec<Option<crate::error::RecoverableError>>,
         /// Parallel to `per_measure_beat_errors`: notes-line `_` placeholders.
         empty_note_measure_spans: Vec<Option<Span>>,
     },

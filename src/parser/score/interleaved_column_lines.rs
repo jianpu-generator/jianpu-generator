@@ -115,12 +115,14 @@ fn process_notes_column_line(
             per_measure_beat_errors,
             per_measure_dotted_eighth_errors,
             per_measure_dash_after_rest_errors,
+            per_measure_lex_errors,
             empty_note_measure_spans,
             ..
         } = acc;
         per_measure_beat_errors.push(None);
         per_measure_dotted_eighth_errors.push(vec![]);
         per_measure_dash_after_rest_errors.push(None);
+        per_measure_lex_errors.push(None);
         empty_note_measure_spans.push(Some(line_span));
         return Ok(());
     }
@@ -128,8 +130,42 @@ fn process_notes_column_line(
         .group_states
         .get_mut(track_index)
         .ok_or_else(|| invariant(line_span, "internal error: group state index out of range"))?;
-    let notes_parse =
-        token_parser::parse_notes_line(line, ctx.base_offset + line_offset, group_state)?;
+    let notes_parse_result =
+        token_parser::parse_notes_line(line, ctx.base_offset + line_offset, group_state);
+    let lex_error = match notes_parse_result {
+        Err(ref error) => match &error.kind {
+            IrrecoverableErrorKind::LexUnexpectedChar { span, ch } => {
+                Some(RecoverableError::lex_unexpected_char(*span, *ch))
+            }
+            _ => None,
+        },
+        Ok(_) => None,
+    };
+    if lex_error.is_some() {
+        let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
+            invariant(
+                line_span,
+                "internal error: notes accumulator index out of range",
+            )
+        })?;
+        let TrackAccumulator::Timed {
+            per_measure_beat_errors,
+            per_measure_dotted_eighth_errors,
+            per_measure_dash_after_rest_errors,
+            per_measure_lex_errors,
+            empty_note_measure_spans,
+            ..
+        } = acc;
+        per_measure_beat_errors.push(None);
+        per_measure_dotted_eighth_errors.push(vec![]);
+        per_measure_dash_after_rest_errors.push(None);
+        per_measure_lex_errors.push(lex_error);
+        // Use Some(line_span) so align_empty_note_measures creates a synthetic
+        // empty GroupedMeasure for this slot (no events were produced).
+        empty_note_measure_spans.push(Some(line_span));
+        return Ok(());
+    }
+    let notes_parse = notes_parse_result?;
     let padded = validate_and_pad_beats(
         notes_parse.events,
         beats_expected,
@@ -154,6 +190,7 @@ fn process_notes_column_line(
         per_measure_beat_errors,
         per_measure_dotted_eighth_errors,
         per_measure_dash_after_rest_errors,
+        per_measure_lex_errors,
         empty_note_measure_spans,
         ..
     } = acc;
@@ -161,6 +198,7 @@ fn process_notes_column_line(
     per_measure_beat_errors.push(padded.beat_overflow_error);
     per_measure_dotted_eighth_errors.push(padded.dotted_eighth_errors);
     per_measure_dash_after_rest_errors.push(notes_parse.dash_after_rest_error);
+    per_measure_lex_errors.push(None);
     empty_note_measure_spans.push(None);
     Ok(())
 }

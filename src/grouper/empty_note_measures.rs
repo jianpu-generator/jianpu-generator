@@ -7,6 +7,7 @@ fn apply_per_measure_errors(
     dotted_eighth_errors: &[RecoverableError],
     dash_after_rest_error: Option<&RecoverableError>,
     chord_errors: &[RecoverableError],
+    lex_error: Option<&RecoverableError>,
 ) {
     if let Some(beat_error) = beat_error {
         measure.beat_overflow_error = Some(beat_error.clone());
@@ -22,6 +23,9 @@ fn apply_per_measure_errors(
     if !chord_errors.is_empty() {
         measure.chord_errors = chord_errors.to_vec();
     }
+    if let Some(lex_error) = lex_error {
+        measure.lex_error = Some(lex_error.clone());
+    }
 }
 
 pub fn align_empty_note_measures(
@@ -31,6 +35,7 @@ pub fn align_empty_note_measures(
     per_measure_dotted_eighth_errors: &[Vec<RecoverableError>],
     per_measure_dash_after_rest_errors: &[Option<RecoverableError>],
     per_measure_chord_errors: &[Vec<RecoverableError>],
+    per_measure_lex_errors: &[Option<RecoverableError>],
 ) -> Result<(), IrrecoverableError> {
     if empty_note_measure_spans.is_empty() {
         for (idx, measure) in measures.iter_mut().enumerate() {
@@ -46,6 +51,7 @@ pub fn align_empty_note_measures(
                 per_measure_chord_errors
                     .get(idx)
                     .map_or(&[][..], Vec::as_slice),
+                per_measure_lex_errors.get(idx).and_then(|e| e.as_ref()),
             );
         }
         return Ok(());
@@ -68,6 +74,7 @@ pub fn align_empty_note_measures(
                 .get(idx)
                 .cloned()
                 .unwrap_or_default();
+            let lex_error = per_measure_lex_errors.get(idx).and_then(|e| e.clone());
 
             if let Some(span) = empty_span {
                 Ok(GroupedMeasure {
@@ -79,6 +86,7 @@ pub fn align_empty_note_measures(
                     dash_after_rest_error,
                     dotted_eighth_errors: Vec::new(),
                     chord_errors,
+                    lex_error,
                 })
             } else {
                 let mut measure = filled.next().ok_or_else(|| {
@@ -93,6 +101,7 @@ pub fn align_empty_note_measures(
                     &dotted_eighth_errors,
                     dash_after_rest_error.as_ref(),
                     &chord_errors,
+                    lex_error.as_ref(),
                 );
                 Ok(measure)
             }

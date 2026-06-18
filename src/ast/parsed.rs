@@ -94,6 +94,8 @@ pub struct ParsedTimedTrack {
     pub per_measure_dash_after_rest_errors: Vec<Option<RecoverableError>>,
     /// Per-measure recoverable chord parse errors (empty = no violations for that measure).
     pub per_measure_chord_errors: Vec<Vec<RecoverableError>>,
+    /// Per-measure recoverable lex error from an unexpected character on the notes line.
+    pub per_measure_lex_errors: Vec<Option<RecoverableError>>,
     /// Parallel to `per_measure_beat_errors`: `Some` when that measure's notes line
     /// was `_` (empty placeholder) and produced no timed events.
     pub empty_note_measure_spans: Vec<Option<Span>>,
