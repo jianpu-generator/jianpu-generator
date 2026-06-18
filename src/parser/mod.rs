@@ -90,18 +90,21 @@ pub(crate) fn load_document_sections(
 }
 
 pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, IrrecoverableError> {
-    let sections = load_document_sections(input)?;
+    let path = std::path::Path::new(filename);
+    let sections = load_document_sections(input).map_err(|error| error.with_path(path))?;
     let (meta_content, meta_offset) = sections.metadata;
     let (parts_content, parts_offset) = sections.parts;
     let (score_content, score_offset) = sections.score;
 
-    let metadata = metadata_parser::parse_metadata(&meta_content, meta_offset)?;
-    let declarations = parts_parser::parse_parts(&parts_content, parts_offset)?;
+    let metadata = metadata_parser::parse_metadata(&meta_content, meta_offset)
+        .map_err(|error| error.with_path(path))?;
+    let declarations = parts_parser::parse_parts(&parts_content, parts_offset)
+        .map_err(|error| error.with_path(path))?;
     let (tracks, directive_events_per_measure, per_measure_parse_errors) =
-        score::interleaved_parser::parse(&score_content, score_offset, &declarations)?;
+        score::interleaved_parser::parse(&score_content, score_offset, &declarations)
+            .map_err(|error| error.with_path(path))?;
 
     Ok(ParsedDocument {
-        filename: filename.to_string(),
         metadata,
         declarations,
         tracks,

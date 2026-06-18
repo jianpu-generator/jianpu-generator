@@ -33,7 +33,7 @@ pub(crate) fn push_head(
         .push(grid_el(column, content, HAlign::Center, VAlign::Center));
 }
 
-#[allow(dead_code, clippy::indexing_slicing)]
+#[allow(clippy::indexing_slicing)]
 pub(crate) fn expand_measure_elements(
     row: &MeasureRow,
     measure_col_offset: u32,
@@ -199,9 +199,9 @@ pub(crate) fn expand_note_part(
     let mut measure_col_offset: u32 = 0;
     for block in system {
         let col_w = block_column_width(block);
-        if let Some(_part_row) = block.rows.get(part_idx) {
+        if let Some(part_row) = block.rows.get(part_idx) {
             expand_measure_elements(
-                _part_row,
+                part_row,
                 measure_col_offset,
                 head_sub,
                 sub_count,

@@ -25,8 +25,7 @@ pub fn desugar_groups(
     for group in groups {
         let (padded, pad_error) =
             pad_implicit_ditto_group(&group, declarations, &slots, base_offset)?;
-        let (desugared_group, desugar_error) =
-            desugar_group(&padded, declarations, &slots, base_offset)?;
+        let (desugared_group, desugar_error) = desugar_group(&padded, &slots, base_offset)?;
         desugared.push(desugared_group);
         per_group_errors.push(pad_error.or(desugar_error));
     }
@@ -132,7 +131,6 @@ fn pad_implicit_ditto_group(
 
 fn desugar_group(
     group: &[SourceLine],
-    _declarations: &[PartDecl],
     slots: &[crate::ast::parsed::ScoreLineSlot],
     base_offset: usize,
 ) -> Result<(MeasureGroup, Option<Warning>), IrrecoverableError> {

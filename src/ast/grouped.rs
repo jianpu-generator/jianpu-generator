@@ -120,7 +120,6 @@ pub struct Score {
 
 // ── Intermediate grouper types (not part of the public API) ─────────────────
 
-#[allow(dead_code)]
 pub(crate) struct MeasureDirectives {
     pub(crate) time_signature: Option<TimeSignature>,
     pub(crate) bpm: Option<u32>,
@@ -128,7 +127,6 @@ pub(crate) struct MeasureDirectives {
     pub(crate) label: Option<String>,
 }
 
-#[allow(dead_code)]
 pub(crate) struct GroupedScore {
     pub(crate) measure_directives: Vec<MeasureDirectives>,
     pub(crate) parts: Vec<GroupedTrack>,
@@ -274,8 +272,7 @@ impl GroupedChordNote {
 pub struct GroupedRest {
     /// Duration in quarter-beats, including any beats added by `-` extensions.
     pub duration: u32,
-    /// True if this rest was written with `*` (dotted duration). Reserved for future use.
-    #[allow(dead_code)]
+    /// True if this rest was written with `*` (dotted duration).
     pub dotted: bool,
     pub group_membership: u8,
     pub group_continuation: u8,

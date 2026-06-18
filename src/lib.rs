@@ -1,3 +1,6 @@
+#![forbid(dead_code)]
+#![forbid(unused_variables)]
+
 pub mod ast;
 pub mod combiner;
 pub mod compiler;
@@ -96,12 +99,14 @@ pub fn render_svgs_from_source(
 /// List pre-desugar score line inlay hints from a `.jianpu` source string.
 pub fn list_score_line_hints_from_source(
     source: &str,
-    _filename: &str,
+    filename: &str,
 ) -> Result<Vec<ScoreLineHint>, IrrecoverableError> {
-    let sections = parser::load_document_sections(source)?;
+    let path = std::path::Path::new(filename);
+    let sections = parser::load_document_sections(source).map_err(|error| error.with_path(path))?;
     let (parts_content, parts_offset) = sections.parts;
     let (score_content, score_offset) = sections.score;
-    let declarations = parser::parts_parser::parse_parts(&parts_content, parts_offset)?;
+    let declarations = parser::parts_parser::parse_parts(&parts_content, parts_offset)
+        .map_err(|error| error.with_path(path))?;
     let groups = parser::score::measure_group::collect_groups(&score_content);
     Ok(parser::score::line_hints::score_line_hints(
         &groups,

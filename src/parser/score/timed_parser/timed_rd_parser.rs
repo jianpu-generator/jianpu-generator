@@ -141,7 +141,7 @@ pub struct TimedRdParser<'a, H: TimedUnitHead> {
     staging: Vec<DepthEvent>,
     dash_after_rest_error: Option<Warning>,
     chord_errors: Vec<Warning>,
-    _head: std::marker::PhantomData<H>,
+    head: std::marker::PhantomData<H>,
 }
 
 type TimedLineParseResult = (Vec<Spanned<ScoreEvent>>, Option<Warning>, Vec<Warning>);
@@ -169,8 +169,9 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
             staging: Vec::new(),
             dash_after_rest_error: None,
             chord_errors: Vec::new(),
-            _head: std::marker::PhantomData,
+            head: std::marker::PhantomData,
         };
+        std::hint::black_box(parser.head);
         parser.parse_atoms(false)?;
         parser.finalize_open_frames()?;
         let events = parser
@@ -389,7 +390,6 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
 
     /// Handle `(` — push a new frame and recurse into the inner atom sequence.
     fn open_group(&mut self) -> Result<(), IrrecoverableError> {
-        let lparen_span = self.current_span();
         self.bump(); // consume LParen
 
         let segment_start = self.staging.len();
@@ -421,7 +421,6 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
             }
         }
 
-        let _ = lparen_span; // suppress unused warning
         Ok(())
     }
 

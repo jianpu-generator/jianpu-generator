@@ -49,67 +49,82 @@ pub(super) fn compile_part_slice(
 
     let mut lyrics_iter = slice.lyrics.as_ref().map(|l| l.syllables.iter());
 
-    let mut state = PartState {
-        elements: &mut elements,
-        beam_buf: &mut beam_buf,
-        pending_chains: &mut pending_chains,
-        pending_slur_opens: &mut pending_slur_opens,
-        slur_spans,
-        prev_tie: &mut prev_tie,
-        prev_tie_column: &mut prev_tie_column,
-        prev_tie_measure: &mut prev_tie_measure,
-        prev_slur_key: &mut prev_slur_key,
-        col: &mut col,
-        cross_measure_open: &mut cross_measure_open,
-        measure_index,
-        part_index,
-    };
+    let (final_tie, final_tie_column, final_tie_measure, final_key) = {
+        let mut state = PartState {
+            elements: &mut elements,
+            beam_buf: &mut beam_buf,
+            pending_chains: &mut pending_chains,
+            pending_slur_opens: &mut pending_slur_opens,
+            slur_spans,
+            prev_tie: &mut prev_tie,
+            prev_tie_column: &mut prev_tie_column,
+            prev_tie_measure: &mut prev_tie_measure,
+            prev_slur_key: &mut prev_slur_key,
+            col: &mut col,
+            cross_measure_open: &mut cross_measure_open,
+            measure_index,
+            part_index,
+        };
 
-    for event in &slice.notes.events {
-        match event {
-            NoteEvent::Note(note) => {
-                compile_note(
-                    &mut state,
-                    note,
-                    measure_col_start,
-                    &mut lyrics_iter,
-                    slice.kind,
-                );
-            }
-            NoteEvent::Rest(rest) => {
-                compile_rest(&mut state, rest, measure_col_start);
-            }
-            NoteEvent::Chord(chord) => {
-                compile_chord(&mut state, chord, measure_col_start);
+        for event in &slice.notes.events {
+            match event {
+                NoteEvent::Note(note) => {
+                    compile_note(
+                        &mut state,
+                        note,
+                        measure_col_start,
+                        &mut lyrics_iter,
+                        slice.kind,
+                    );
+                }
+                NoteEvent::Rest(rest) => {
+                    compile_rest(&mut state, rest, measure_col_start);
+                }
+                NoteEvent::Chord(chord) => {
+                    compile_chord(&mut state, chord, measure_col_start);
+                }
             }
         }
+
+        flush_beam_buffer(state.beam_buf, state.elements);
+
+        (
+            *state.prev_tie,
+            *state.prev_tie_column,
+            *state.prev_tie_measure,
+            state.prev_slur_key.clone(),
+        )
+    };
+
+    preserve_cross_measure_slur_opens(&pending_chains, &mut pending_slur_opens, measure_index);
+
+    elements.push(ColumnElement {
+        column: col,
+        content: ElementContent::BarLine,
+    });
+
+    PartSliceResult {
+        elements,
+        final_tie,
+        final_tie_column,
+        final_tie_measure,
+        final_slur_key: final_key,
+        final_pending_opens: pending_slur_opens,
     }
+}
 
-    flush_beam_buffer(state.beam_buf, state.elements);
-
-    // Extract values from state before the end-of-measure chain flush (avoids borrow conflicts).
-    let final_tie = *state.prev_tie;
-    let final_tie_column = *state.prev_tie_column;
-    let final_tie_measure = *state.prev_tie_measure;
-    let final_key = state.prev_slur_key.clone();
-    // End state borrow so we can access `pending_slur_opens`, `pending_chains`, etc. directly.
-    let _ = state;
-
-    // Flush remaining chains at end of measure.
-    // Multi-note chains (len > 1): slur is still open across the measure boundary.
-    //   Preserve the original origin (don't emit an arc yet).
-    // Single-note chains (len == 1): cross-measure open, save as PendingSlurOpen
-    //   only if no existing origin is already present.
+fn preserve_cross_measure_slur_opens(
+    pending_chains: &[Vec<(u32, SlurKey)>],
+    pending_slur_opens: &mut Vec<Option<PendingSlurOpen>>,
+    measure_index: usize,
+) {
     for (depth, chain) in pending_chains.iter().enumerate() {
         if chain.len() > 1 {
-            // Slur is still open across the measure boundary.
-            // Preserve the original origin (or use first chain note if none exists).
-            // Do NOT emit an arc — flush_chain would produce a premature span.
             let origin = pending_slur_opens
                 .get(depth)
                 .and_then(|o| o.as_ref())
                 .map(|o| (o.measure_index, o.from_column))
-                .or_else(|| chain.first().map(|(c, _)| (measure_index, *c)));
+                .or_else(|| chain.first().map(|(column, _)| (measure_index, *column)));
             while pending_slur_opens.len() <= depth {
                 pending_slur_opens.push(None);
             }
@@ -120,7 +135,6 @@ pub(super) fn compile_part_slice(
                 });
             }
         } else if let Some((chain_col, _)) = chain.first() {
-            // Only save if no cross-measure origin is already preserved.
             while pending_slur_opens.len() <= depth {
                 pending_slur_opens.push(None);
             }
@@ -137,20 +151,6 @@ pub(super) fn compile_part_slice(
                 }
             }
         }
-    }
-
-    elements.push(ColumnElement {
-        column: col,
-        content: ElementContent::BarLine,
-    });
-
-    PartSliceResult {
-        elements,
-        final_tie,
-        final_tie_column,
-        final_tie_measure,
-        final_slur_key: final_key,
-        final_pending_opens: pending_slur_opens,
     }
 }
 

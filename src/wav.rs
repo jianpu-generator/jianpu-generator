@@ -130,8 +130,8 @@ fn render_samples(synth: &mut Synth, n: usize, l: &mut Vec<f32>, r: &mut Vec<f32
     let prev = l.len();
     l.resize(prev + n, 0.0);
     r.resize(prev + n, 0.0);
-    let (_, l_tail) = l.split_at_mut(prev);
-    let (_, r_tail) = r.split_at_mut(prev);
+    let l_tail = l.split_at_mut(prev).1;
+    let r_tail = r.split_at_mut(prev).1;
     synth.write_f32(n, l_tail, 0, 1, r_tail, 0, 1);
 }
 

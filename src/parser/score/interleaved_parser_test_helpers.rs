@@ -11,17 +11,6 @@ pub(super) fn parse(
     super::parse(content, base_offset, declarations).map(|(tracks, _, _)| tracks)
 }
 
-/// Like `parse`, but also returns the directive-events-per-measure accumulator.
-#[allow(dead_code)]
-pub(super) fn parse_with_directives(
-    content: &str,
-    base_offset: usize,
-    declarations: &[PartDecl],
-) -> Result<(Vec<ParsedTrack>, super::DirectiveEventsPerMeasure), IrrecoverableError> {
-    super::parse(content, base_offset, declarations)
-        .map(|(tracks, directives, _)| (tracks, directives))
-}
-
 pub(super) fn decl(name: &str, kind: PartKind) -> PartDecl {
     PartDecl {
         abbreviation: name.into(),

@@ -37,8 +37,8 @@ fn generate_pdf_produces_pdf() {
     let bytes = fs::read(output_path).unwrap();
     assert!(bytes.starts_with(b"%PDF"), "output is not a valid PDF");
 
-    let _ = fs::remove_file(input_path);
-    let _ = fs::remove_file(output_path);
+    fs::remove_file(input_path).ok();
+    fs::remove_file(output_path).ok();
 }
 
 #[test]
@@ -61,8 +61,8 @@ fn generate_midi_produces_midi() {
         "output is not a valid MIDI file"
     );
 
-    let _ = fs::remove_file(input_path);
-    let _ = fs::remove_file(output_path);
+    fs::remove_file(input_path).ok();
+    fs::remove_file(output_path).ok();
 }
 
 #[test]
@@ -71,7 +71,7 @@ fn output_stem_appends_extension() {
     let output_stem = "/tmp/test_stem_out";
     let expected_output = "/tmp/test_stem_out.pdf";
     fs::write(input_path, basic_jianpu_input()).unwrap();
-    let _ = fs::remove_file(expected_output);
+    fs::remove_file(expected_output).ok();
 
     let status = jianpu_cmd()
         .args(["generate", "pdf", input_path, "--output", output_stem])
@@ -82,8 +82,8 @@ fn output_stem_appends_extension() {
     let bytes = fs::read(expected_output).expect("output file not found at expected stem path");
     assert!(bytes.starts_with(b"%PDF"), "output is not a valid PDF");
 
-    let _ = fs::remove_file(input_path);
-    let _ = fs::remove_file(expected_output);
+    fs::remove_file(input_path).ok();
+    fs::remove_file(expected_output).ok();
 }
 
 #[test]
@@ -105,8 +105,8 @@ fn generate_wav_produces_wav() {
     // Expect meaningful audio data (>100 KB for a few seconds of stereo 16-bit 44100 Hz)
     assert!(bytes.len() > 100_000, "WAV output is suspiciously small");
 
-    let _ = fs::remove_file(input_path);
-    let _ = fs::remove_file(output_path);
+    fs::remove_file(input_path).ok();
+    fs::remove_file(output_path).ok();
 }
 
 fn multi_track_jianpu_input() -> &'static str {
@@ -134,8 +134,8 @@ fn split_tracks_generates_one_pdf_per_track() {
     let s1_path = "/tmp/test_split - Soprano 1.pdf";
     let s2_path = "/tmp/test_split - Soprano 2.pdf";
     fs::write(input_path, multi_track_jianpu_input()).unwrap();
-    let _ = fs::remove_file(s1_path);
-    let _ = fs::remove_file(s2_path);
+    fs::remove_file(s1_path).ok();
+    fs::remove_file(s2_path).ok();
 
     let status = jianpu_cmd()
         .args(["generate", "pdf", input_path, "--split-tracks"])
@@ -159,9 +159,9 @@ fn split_tracks_generates_one_pdf_per_track() {
         "S2 output is not a valid PDF"
     );
 
-    let _ = fs::remove_file(input_path);
-    let _ = fs::remove_file(s1_path);
-    let _ = fs::remove_file(s2_path);
+    fs::remove_file(input_path).ok();
+    fs::remove_file(s1_path).ok();
+    fs::remove_file(s2_path).ok();
 }
 
 #[test]
@@ -170,8 +170,8 @@ fn split_tracks_with_output_stem() {
     let s1_path = "/tmp/split_out - Soprano 1.pdf";
     let s2_path = "/tmp/split_out - Soprano 2.pdf";
     fs::write(input_path, multi_track_jianpu_input()).unwrap();
-    let _ = fs::remove_file(s1_path);
-    let _ = fs::remove_file(s2_path);
+    fs::remove_file(s1_path).ok();
+    fs::remove_file(s2_path).ok();
 
     let status = jianpu_cmd()
         .args([
@@ -202,7 +202,7 @@ fn split_tracks_with_output_stem() {
         "S2 output is not a valid PDF"
     );
 
-    let _ = fs::remove_file(input_path);
-    let _ = fs::remove_file(s1_path);
-    let _ = fs::remove_file(s2_path);
+    fs::remove_file(input_path).ok();
+    fs::remove_file(s1_path).ok();
+    fs::remove_file(s2_path).ok();
 }

@@ -4,7 +4,7 @@ use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 /// Returns how many bytes the key-change token after `=` occupies.
 /// E.g. `"C#4"` → 2 (note name + accidental), `"Gb3"` → 2, `"A4"` → 1.
 /// The octave digits are not counted — only the note name and optional accidental.
-pub fn key_change_lexeme_len(after_eq: &str) -> usize {
+pub(super) fn key_change_lexeme_len(after_eq: &str) -> usize {
     let mut bytes = after_eq.bytes();
     let mut len = 0;
 
@@ -28,7 +28,10 @@ pub fn key_change_lexeme_len(after_eq: &str) -> usize {
 }
 
 /// Parses a full `1=Xb?<octave>` or `1=X#?<octave>` string into a `KeyChange`.
-pub fn parse_key_change_text(text: &str, span: &Span) -> Result<KeyChange, IrrecoverableError> {
+pub(super) fn parse_key_change_text(
+    text: &str,
+    span: &Span,
+) -> Result<KeyChange, IrrecoverableError> {
     let after_eq = text.strip_prefix("1=").ok_or_else(|| {
         IrrecoverableError::new(IrrecoverableErrorKind::KeyChangeMissingPrefix {
             span: *span,

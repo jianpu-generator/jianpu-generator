@@ -149,8 +149,8 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
         directive_events_per_measure: &mut directive_events_per_measure,
     };
 
-    for (bar_idx, group_lines) in groups.iter().enumerate() {
-        process_bar_group(group_lines, bar_idx + 1, &mut ctx)?;
+    for group_lines in groups.iter() {
+        process_bar_group(group_lines, &mut ctx)?;
     }
 
     for (track_index, state) in group_states.iter().enumerate() {
@@ -185,10 +185,9 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
 
 fn process_bar_group(
     group_lines: &[(String, usize)],
-    bar: usize,
     ctx: &mut BarGroupContext<'_>,
 ) -> Result<(), IrrecoverableError> {
-    let (directive_events, data_lines) = split_directive(group_lines, bar)?;
+    let (directive_events, data_lines) = split_directive(group_lines)?;
 
     for e in &directive_events {
         if let ScoreEvent::TimeSignatureChange {

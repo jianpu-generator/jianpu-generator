@@ -26,7 +26,7 @@ fn pitch_to_scale_offset(pitch: &JianPuPitch) -> i32 {
     }
 }
 
-pub fn accidental_offset(acc: &Accidental) -> i32 {
+pub(crate) fn accidental_offset(acc: &Accidental) -> i32 {
     match acc {
         Accidental::Sharp => 1,
         Accidental::Flat => -1,
@@ -34,7 +34,7 @@ pub fn accidental_offset(acc: &Accidental) -> i32 {
     }
 }
 
-pub fn resolve_midi_note(pitch: &JianPuPitch, octave: i8, key: &KeyChange) -> u8 {
+pub(crate) fn resolve_midi_note(pitch: &JianPuPitch, octave: i8, key: &KeyChange) -> u8 {
     let root = 12 * (key.note.octave as i32 + 1)
         + note_name_to_semitone(&key.note.name)
         + accidental_offset(&key.note.accidental);
@@ -42,6 +42,6 @@ pub fn resolve_midi_note(pitch: &JianPuPitch, octave: i8, key: &KeyChange) -> u8
     midi.clamp(0, 127) as u8
 }
 
-pub fn duration_to_ticks(quarter_beats: u32) -> u32 {
+pub(crate) fn duration_to_ticks(quarter_beats: u32) -> u32 {
     quarter_beats * (TPQ as u32) / 4
 }

@@ -103,10 +103,7 @@ pub struct ParsedTimedTrack {
 
 #[derive(Debug)]
 pub struct ParsedDocument {
-    #[allow(dead_code)]
-    pub filename: String,
     pub metadata: ParsedMetadata,
-    #[allow(dead_code)] // reserved for future legend rendering
     pub declarations: Vec<PartDecl>,
     pub tracks: Vec<ParsedTrack>,
     pub directive_events_per_measure: Vec<Vec<Spanned<ScoreEvent>>>,
@@ -114,7 +111,6 @@ pub struct ParsedDocument {
     pub per_measure_parse_errors: Vec<Option<Warning>>,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum TriadQuality {
     Major,
@@ -123,7 +119,6 @@ pub enum TriadQuality {
     Diminished,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Extension {
     DominantSeventh,

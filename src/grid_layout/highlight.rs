@@ -11,7 +11,7 @@ fn has_lyrics(row: &crate::compiler::types::MeasureRow) -> bool {
         .any(|e| matches!(e.content, crate::compiler::types::ElementContent::Lyric(_)))
 }
 
-pub(crate) fn system_musical_row_count(system: &[MeasureBlock], _base: f32) -> usize {
+pub(crate) fn system_musical_row_count(system: &[MeasureBlock]) -> usize {
     let Some(first) = system.first() else {
         return 0;
     };
@@ -56,7 +56,7 @@ pub(crate) fn compute_measure_highlights_for_range(
             if has_any_decoration(first) {
                 row_offset += 1;
             }
-            let musical_row_count = system_musical_row_count(system, base);
+            let musical_row_count = system_musical_row_count(system);
             let row_start = row_offset;
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 
@@ -102,7 +102,7 @@ pub(crate) fn compute_measure_highlight_location(
             if has_any_decoration(first) {
                 row_offset += 1; // decoration row
             }
-            let musical_row_count = system_musical_row_count(system, base);
+            let musical_row_count = system_musical_row_count(system);
             let row_start = row_offset;
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 

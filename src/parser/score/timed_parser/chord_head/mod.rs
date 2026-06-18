@@ -98,7 +98,7 @@ impl TimedUnitHead for ChordHead {
         error: &IrrecoverableError,
         chars: &[char],
         head_end: usize,
-        _span: &Span,
+        _: &Span,
     ) -> Option<(DurationParse, Warning)> {
         let IrrecoverableErrorKind::DurationUnexpectedChar { ch, span: err_span } = error.kind
         else {
@@ -131,10 +131,11 @@ impl TimedUnitHead for ChordHead {
         head: &Self,
         duration: u32,
         dotted: bool,
-        _octave: i8,
+        octave: i8,
         group_membership: u8,
         group_continuation: u8,
     ) -> ScoreEvent {
+        std::hint::black_box(octave);
         if head.is_rest {
             ScoreEvent::Rest(ParsedRest {
                 duration,

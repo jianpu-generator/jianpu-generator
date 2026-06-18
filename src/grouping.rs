@@ -305,7 +305,7 @@ mod tests {
         use crate::parser::score::token_parser;
         let mut state = token_parser::GroupStack::default();
         let bar1 = "5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_";
-        let _ = token_parser::parse_notes_line(bar1, 0, &mut state).unwrap();
+        token_parser::parse_notes_line(bar1, 0, &mut state).unwrap();
         let bar2 = "3_) (1_1-) 0_ 1= 1=";
         let events = token_parser::parse_notes_line(bar2, 0, &mut state)
             .unwrap()

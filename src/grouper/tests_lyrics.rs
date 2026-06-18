@@ -1,12 +1,6 @@
 use super::*;
 use crate::parser;
 
-#[allow(dead_code)]
-fn parse_and_group(input: &str) -> Score {
-    let doc = parser::parse(input, "test.jianpu").unwrap();
-    group(doc).unwrap()
-}
-
 #[test]
 fn lyrics_overflow_recovers_with_error_on_measure() {
     // 2 notes but 4 syllables → should not Err, should attach error to measure

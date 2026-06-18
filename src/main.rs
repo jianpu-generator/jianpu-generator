@@ -246,7 +246,7 @@ fn generate_svg(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableErro
             opts.output.as_deref(),
             &opts.tracks,
             &display_names,
-            |score_clone, _track, label, base, base_name| {
+            |score_clone, _, label, base, base_name| {
                 let svgs = jg::render_svgs(score_clone);
                 for (i, svg) in svgs.iter().enumerate() {
                     let path = if svgs.len() == 1 {
@@ -288,7 +288,7 @@ fn generate_midi(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableErr
             opts.output.as_deref(),
             &opts.tracks,
             &display_names,
-            |score_clone, _track, label, base, base_name| {
+            |score_clone, _, label, base, base_name| {
                 let midi_bytes = jg::midi::write_midi(score_clone)?;
                 let track_path = track_output_path(base, base_name, label, "mid");
                 write_file(&track_path, &midi_bytes)?;
@@ -321,7 +321,7 @@ fn generate_wav(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableErro
             opts.output.as_deref(),
             &opts.tracks,
             &display_names,
-            |score_clone, _track, label, base, base_name| {
+            |score_clone, _, label, base, base_name| {
                 let midi_bytes = jg::midi::write_midi(score_clone)?;
                 let wav_bytes = jg::wav::write_wav(&midi_bytes)?;
                 let track_path = track_output_path(base, base_name, label, "wav");

@@ -28,7 +28,7 @@ fn apply_per_measure_errors(
     }
 }
 
-pub fn align_empty_note_measures(
+pub(super) fn align_empty_note_measures(
     measures: &mut Vec<GroupedMeasure>,
     empty_note_measure_spans: &[Option<Span>],
     per_measure_beat_errors: &[Option<Warning>],

@@ -21,3 +21,9 @@ wasm-bindgen = "0.2"
 
 [dev-dependencies]
 zip = { version = "2", default-features = false, features = ["deflate"] }
+
+[lints.rust]
+dead_code = "deny"
+unused_variables = "deny"
+unsafe_code = "forbid"
+unreachable_pub = "deny"

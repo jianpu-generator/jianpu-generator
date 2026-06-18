@@ -234,7 +234,6 @@ fn process_column_line(
         }
         SlotAction::Chord { track_index } => {
             if line == "_" {
-                let _ = track_index;
                 return Ok(());
             }
             let group_state = ctx.group_states.get_mut(*track_index).ok_or_else(|| {

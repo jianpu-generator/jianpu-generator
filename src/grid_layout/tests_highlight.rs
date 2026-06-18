@@ -53,7 +53,7 @@ fn first_block_in_single_system_has_correct_column_range() {
         vec![vec![vec![simple_block(4), simple_block(4)]]];
     let result = compute_measure_highlight_location(&page_systems, 0, &no_header(), 20.0)
         .expect("should find measure 0");
-    let (_page_idx, highlight) = result;
+    let (_, highlight) = result;
     assert_eq!(
         highlight.column_start, 4,
         "column_start should be LABEL_COLS"
@@ -71,7 +71,7 @@ fn second_block_column_start_follows_first_block_width() {
         vec![vec![vec![simple_block(4), simple_block(4)]]];
     let result = compute_measure_highlight_location(&page_systems, 1, &no_header(), 20.0)
         .expect("should find measure 1");
-    let (_page_idx, highlight) = result;
+    let (_, highlight) = result;
     assert_eq!(highlight.column_start, 9);
     assert_eq!(highlight.column_end, 14);
 }

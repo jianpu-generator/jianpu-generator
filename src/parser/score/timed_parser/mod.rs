@@ -71,16 +71,16 @@ pub trait TimedUnitHead: Sized {
     }
 
     /// When `parse_head` fails, return a recoverable error and skip this timed unit.
-    fn recover_parse_head_error(_error: &IrrecoverableError) -> Option<Warning> {
+    fn recover_parse_head_error(_: &IrrecoverableError) -> Option<Warning> {
         None
     }
 
     /// When duration suffix parsing fails, recover by skipping invalid suffix chars.
     fn recover_duration_error(
-        _error: &IrrecoverableError,
-        _chars: &[char],
-        _head_end: usize,
-        _span: &Span,
+        _: &IrrecoverableError,
+        _: &[char],
+        _: usize,
+        _: &Span,
     ) -> Option<(DurationParse, Warning)> {
         None
     }

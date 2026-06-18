@@ -1,5 +1,5 @@
 use jianpu_generator::{
-    error::{Diagnostic, IrrecoverableError, RecoverableError, Warning},
+    error::{Diagnostic, IrrecoverableError, Warning},
     error_reporter,
 };
 use serde::Serialize;
@@ -17,7 +17,6 @@ pub struct SpanOut {
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 #[tsify(into_wasm_abi)]
-#[allow(dead_code)]
 pub enum DiagnosticSeverity {
     Error,
     Warning,
@@ -197,7 +196,7 @@ pub(crate) fn diagnostic_from_diagnostic(source: &str, d: Diagnostic) -> Diagnos
         Diagnostic::Warning(w) => diagnostic_from_warning(source, w),
         Diagnostic::Error(e) => DiagnosticOut {
             severity: DiagnosticSeverity::Error,
-            message: e.message.clone(),
+            message: e.message().clone(),
             span: SpanOut {
                 start: e.span.start,
                 end: e.span.end,

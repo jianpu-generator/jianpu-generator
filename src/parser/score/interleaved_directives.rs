@@ -4,7 +4,6 @@ use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Spanned};
 #[allow(clippy::type_complexity)]
 pub(super) fn split_directive(
     lines: &[(String, usize)],
-    _bar: usize,
 ) -> Result<(Vec<Spanned<ScoreEvent>>, &[(String, usize)]), IrrecoverableError> {
     if let Some((directive_line, directive_offset)) = lines.first() {
         if directive_line.starts_with('(') {
