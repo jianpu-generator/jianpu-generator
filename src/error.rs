@@ -207,19 +207,58 @@ impl Warning {
     }
 }
 
+/// Identifies the specific kind of recoverable error for programmatic matching.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RecoverableErrorKind {
+    /// `measure_directives` is shorter than the measure count (internal invariant).
+    MeasureDirectivesMissing,
+    /// `source_span` is absent for the given measure index (internal invariant).
+    SourceSpanMissing { index: usize },
+    /// A timed-part measure is missing at the given index (internal invariant).
+    TimedPartMeasureMissing,
+}
+
 /// A recoverable error: render continues but the affected measure is highlighted red.
 /// Displayed as a red view zone in the editor.
 #[derive(Debug, Clone)]
 pub struct RecoverableError {
     pub span: Span,
-    pub message: String,
+    pub kind: RecoverableErrorKind,
 }
 
 impl RecoverableError {
-    pub fn new(span: Span, message: impl Into<String>) -> Self {
+    pub fn message(&self) -> String {
+        match &self.kind {
+            RecoverableErrorKind::MeasureDirectivesMissing => {
+                "internal invariant: measure_directives shorter than measure count".to_string()
+            }
+            RecoverableErrorKind::SourceSpanMissing { index } => {
+                format!("internal invariant: source_span missing for measure {index}")
+            }
+            RecoverableErrorKind::TimedPartMeasureMissing => {
+                "internal invariant: timed part measure missing".to_string()
+            }
+        }
+    }
+
+    pub fn measure_directives_missing(span: Span) -> Self {
         Self {
             span,
-            message: message.into(),
+            kind: RecoverableErrorKind::MeasureDirectivesMissing,
+        }
+    }
+
+    pub fn source_span_missing(span: Span, index: usize) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::SourceSpanMissing { index },
+        }
+    }
+
+    pub fn timed_part_measure_missing(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::TimedPartMeasureMissing,
         }
     }
 }
@@ -240,10 +279,10 @@ impl Diagnostic {
         }
     }
 
-    pub fn message(&self) -> &str {
+    pub fn message(&self) -> String {
         match self {
-            Self::Warning(w) => &w.message,
-            Self::Error(e) => &e.message,
+            Self::Warning(w) => w.message.clone(),
+            Self::Error(e) => e.message(),
         }
     }
 
@@ -293,5 +332,44 @@ mod tests {
             span: Span::new(5, 6),
         });
         assert!(e.message().contains("repeated `0`"));
+    }
+
+    #[test]
+    fn recoverable_error_measure_directives_missing_has_correct_kind() {
+        let e = RecoverableError::measure_directives_missing(Span::new(0, 0));
+        assert!(matches!(
+            e.kind,
+            RecoverableErrorKind::MeasureDirectivesMissing
+        ));
+    }
+
+    #[test]
+    fn recoverable_error_source_span_missing_has_correct_kind_and_index() {
+        let e = RecoverableError::source_span_missing(Span::new(0, 0), 3);
+        assert!(matches!(
+            e.kind,
+            RecoverableErrorKind::SourceSpanMissing { index: 3 }
+        ));
+    }
+
+    #[test]
+    fn recoverable_error_timed_part_measure_missing_has_correct_kind() {
+        let e = RecoverableError::timed_part_measure_missing(Span::new(0, 0));
+        assert!(matches!(
+            e.kind,
+            RecoverableErrorKind::TimedPartMeasureMissing
+        ));
+    }
+
+    #[test]
+    fn recoverable_error_source_span_missing_message_contains_index() {
+        let e = RecoverableError::source_span_missing(Span::new(0, 0), 7);
+        assert!(e.message().contains("7"));
+    }
+
+    #[test]
+    fn recoverable_error_measure_directives_missing_message_is_nonempty() {
+        let e = RecoverableError::measure_directives_missing(Span::new(0, 0));
+        assert!(!e.message().is_empty());
     }
 }

@@ -34,10 +34,9 @@ pub(crate) fn combine(
             Some(d) => (d, None),
             None => (
                 &directives_fallback,
-                Some(Diagnostic::Error(RecoverableError::new(
-                    Span::new(0, 0),
-                    "internal invariant: measure_directives shorter than measure count",
-                ))),
+                Some(Diagnostic::Error(
+                    RecoverableError::measure_directives_missing(Span::new(0, 0)),
+                )),
             ),
         };
         let (part_rows, part_row_diagnostics) = build_part_rows(&grouped_score.parts, measure_idx);
@@ -60,11 +59,9 @@ pub(crate) fn combine(
             .unwrap_or_else(|| {
                 (
                     Span::new(0, 0),
-                    Some(Diagnostic::Error(RecoverableError::new(
+                    Some(Diagnostic::Error(RecoverableError::source_span_missing(
                         Span::new(0, 0),
-                        format!(
-                            "internal invariant: source_span missing for measure {measure_idx}"
-                        ),
+                        measure_idx,
                     ))),
                 )
             });
@@ -143,10 +140,9 @@ fn build_part_rows(
         match track {
             GroupedTrack::Timed(part) => {
                 let Some(measure) = part.measures.get(measure_idx) else {
-                    diagnostics.push(Diagnostic::Error(RecoverableError::new(
-                        Span::new(0, 0),
-                        "internal invariant: timed part measure missing",
-                    )));
+                    diagnostics.push(Diagnostic::Error(
+                        RecoverableError::timed_part_measure_missing(Span::new(0, 0)),
+                    ));
                     continue;
                 };
                 let lyrics = match part.kind {
