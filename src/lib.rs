@@ -6,14 +6,17 @@ pub mod coordinate_resolver;
 pub mod desugar;
 pub mod error;
 pub mod error_reporter;
+pub mod filters;
 pub mod grid_layout;
 pub mod grouper;
 pub mod grouping;
 pub mod layout;
+pub mod measure_spans;
 pub mod parser;
 pub mod render_config;
 pub mod renderer;
 pub mod serializer;
+pub mod split_track;
 pub mod utils;
 
 #[cfg(feature = "midi")]
@@ -23,9 +26,13 @@ pub mod pdf;
 #[cfg(feature = "wav")]
 pub mod wav;
 
-use ast::grouped::{PartRow, Score};
+pub use filters::*;
+pub use measure_spans::*;
+pub use split_track::*;
+
+use ast::grouped::Score;
 use ast::parsed::PartKind;
-use error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError};
+use error::{IrrecoverableError, RecoverableError};
 
 /// Output of a successful render: SVG page strings and any recoverable errors.
 #[derive(Debug)]
@@ -198,302 +205,6 @@ pub fn render_svgs_with_highlight_range(
         svgs: serializer::serialize(&docs),
         errors,
     })
-}
-
-/// Retain only parts whose names appear in `enabled_tracks`.
-///
-/// `None` keeps every part. `Some([])` removes every part.
-pub fn apply_track_filter(score: &mut Score, enabled_tracks: Option<&[String]>) {
-    let Some(tracks) = enabled_tracks else {
-        return;
-    };
-    for measure in &mut score.measures {
-        measure.parts.retain(|part| {
-            part.name()
-                .as_ref()
-                .is_some_and(|name| tracks.contains(name))
-        });
-        // If the source part was filtered out, a leading ditto has no row to
-        // merge into and its content would silently disappear. Promote the
-        // first ditto part to Timed so it renders independently.
-        if let Some(first) = measure.parts.first_mut() {
-            if let PartRow::Ditto(slice) = first {
-                *first = PartRow::Timed(slice.clone());
-            }
-        }
-    }
-}
-
-/// Retain only parts whose names appear in `tracks`. No-op when `tracks` is empty.
-pub fn filter_tracks(score: &mut Score, tracks: &[String]) {
-    if tracks.is_empty() {
-        return;
-    }
-    apply_track_filter(score, Some(tracks));
-}
-
-/// Hide lyrics on parts whose abbreviations appear in `disabled_lyrics`.
-///
-/// `None` and `Some([])` keep every lyric line.
-pub fn apply_lyrics_filter(score: &mut Score, disabled_lyrics: Option<&[String]>) {
-    let Some(tracks) = disabled_lyrics else {
-        return;
-    };
-    if tracks.is_empty() {
-        return;
-    }
-    for measure in &mut score.measures {
-        for part in &mut measure.parts {
-            let part_slice = part.slice_mut();
-            if part_slice
-                .name
-                .as_ref()
-                .is_some_and(|name| tracks.contains(name))
-            {
-                part_slice.lyrics = None;
-                if matches!(
-                    part_slice.kind,
-                    PartKind::NotesWithLyrics | PartKind::LyricsWithNotes
-                ) {
-                    part_slice.kind = PartKind::Notes;
-                }
-            }
-        }
-    }
-}
-
-/// Find the index of the measure whose `source_span` contains `byte_offset`.
-///
-/// Returns `None` when `byte_offset` falls outside all measure spans
-/// (e.g. in `[metadata]`, `[parts]`, or a directive line).
-pub fn find_measure_at_byte_offset(score: &Score, byte_offset: usize) -> Option<usize> {
-    score
-        .measures
-        .iter()
-        .position(|m| m.source_span.start <= byte_offset && byte_offset <= m.source_span.end)
-}
-
-/// Find the index of the measure that contains the given 0-based line number.
-///
-/// Converts `line_number` to the byte offset of the first character on that
-/// line, then delegates to [`find_measure_at_byte_offset`].  Returns `None`
-/// when the line falls outside all measure spans (e.g. `[metadata]`,
-/// `[parts]`, directive lines, or blank separator lines).
-pub fn find_measure_at_line_number(
-    score: &Score,
-    source: &str,
-    line_number: usize,
-) -> Option<usize> {
-    let byte_offset: usize = source
-        .split('\n')
-        .take(line_number)
-        .map(|line| line.len() + 1) // +1 for the '\n' byte
-        .sum();
-    find_measure_at_byte_offset(score, byte_offset)
-}
-
-/// Source byte ranges for a measure in the editor.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MeasureSourceSpan {
-    /// Inclusive start of note content (for cursor/selection mapping).
-    pub start: usize,
-    /// Exclusive end of measure content in source.
-    pub end: usize,
-    /// Byte offset of the first source line in this measure group, for view zones.
-    pub view_zone_start: usize,
-}
-
-/// Return the source byte span of every measure in the compiled score.
-///
-/// Spans are in source order and correspond 1-to-1 with measures.
-pub fn list_measure_spans_from_source(
-    source: &str,
-    filename: &str,
-) -> Result<Vec<MeasureSourceSpan>, IrrecoverableError> {
-    use error::Span;
-
-    let sections = parser::load_document_sections(source)?;
-    let (score_content, score_offset) = sections.score;
-    let view_zone_starts =
-        parser::score::measure_group::view_zone_starts(&score_content, score_offset);
-
-    let score = compile(source, filename)?;
-    if view_zone_starts.len() != score.measures.len() {
-        return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::internal_invariant(
-                Span::new(0, 0),
-                format!(
-                    "view zone starts ({}) and measures ({}) out of sync",
-                    view_zone_starts.len(),
-                    score.measures.len()
-                ),
-            ),
-        ));
-    }
-
-    Ok(score
-        .measures
-        .iter()
-        .zip(view_zone_starts)
-        .map(|(measure, view_zone_start)| MeasureSourceSpan {
-            start: measure.source_span.start,
-            end: measure.source_span.end,
-            view_zone_start,
-        })
-        .collect())
-}
-
-/// Sanitize a track name for use in filenames (mirrors CLI).
-pub fn sanitize_track_name(name: &str) -> String {
-    name.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-")
-}
-
-/// Abbreviation → display name from `[parts]` declarations.
-pub fn part_display_name_map(
-    source: &str,
-    filename: &str,
-) -> Result<std::collections::HashMap<String, String>, IrrecoverableError> {
-    Ok(list_parts_from_source(source, filename)?
-        .into_iter()
-        .map(|part| (part.abbreviation, part.display_name))
-        .collect())
-}
-
-/// Resolve the filename label for a track (display name when declared, else abbreviation).
-pub fn split_track_label(
-    display_names: &std::collections::HashMap<String, String>,
-    abbreviation: &str,
-) -> String {
-    display_names
-        .get(abbreviation)
-        .cloned()
-        .unwrap_or_else(|| abbreviation.to_string())
-}
-
-/// Build a split-track filename: `{base_name} - {label}.{extension}`.
-pub fn split_track_filename(base_name: &str, label: &str, extension: &str) -> String {
-    format!(
-        "{} - {}.{}",
-        base_name,
-        sanitize_track_name(label),
-        extension
-    )
-}
-
-/// Collect unique part names from score measures (order of first appearance).
-pub fn collect_track_names(score: &Score) -> Vec<String> {
-    let mut seen = std::collections::HashSet::new();
-    let mut names = Vec::new();
-    for measure in &score.measures {
-        for part in &measure.parts {
-            if let Some(name) = part.name() {
-                if seen.insert(name.clone()) {
-                    names.push(name.clone());
-                }
-            }
-        }
-    }
-    names
-}
-
-/// Build a split-track PDF filename: `{base_name} - {label}.pdf`.
-pub fn split_pdf_filename(base_name: &str, label: &str) -> String {
-    split_track_filename(base_name, label, "pdf")
-}
-
-/// Track list for split export. Empty `tracks_filter` → all score tracks;
-/// falls back to `[parts]` declaration abbreviations when score has no named parts.
-pub fn split_track_names(
-    source: &str,
-    filename: &str,
-    score: &Score,
-    tracks_filter: &[String],
-) -> Result<Vec<String>, IrrecoverableError> {
-    let mut names = if tracks_filter.is_empty() {
-        collect_track_names(score)
-    } else {
-        tracks_filter.to_vec()
-    };
-    if names.is_empty() {
-        names = list_parts_from_source(source, filename)?
-            .into_iter()
-            .map(|part| part.abbreviation)
-            .collect();
-    }
-    Ok(names)
-}
-
-/// One PDF produced by split-track export.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SplitPdfEntry {
-    pub track_name: String,
-    pub filename: String,
-    pub pdf: Vec<u8>,
-}
-
-/// Parse once, render one PDF per track (CLI `--split-tracks` semantics).
-///
-/// `tracks_filter`: empty → all tracks; non-empty → only listed abbreviations.
-/// Lyrics are always included (no lyrics filter).
-#[cfg(feature = "pdf")]
-pub fn write_split_pdfs_from_source(
-    source: &str,
-    filename: &str,
-    base_name: &str,
-    tracks_filter: &[String],
-) -> Result<Vec<SplitPdfEntry>, IrrecoverableError> {
-    let score = compile(source, filename)?;
-    let track_names = split_track_names(source, filename, &score, tracks_filter)?;
-    let display_names = part_display_name_map(source, filename)?;
-    let mut entries = Vec::with_capacity(track_names.len());
-    for track in track_names {
-        let mut score_clone = score.clone();
-        filter_tracks(&mut score_clone, std::slice::from_ref(&track));
-        let svgs = render_svgs(&score_clone);
-        let pdf = pdf::write_pdf(&svgs)?;
-        let label = split_track_label(&display_names, &track);
-        entries.push(SplitPdfEntry {
-            track_name: track.clone(),
-            filename: split_pdf_filename(base_name, &label),
-            pdf,
-        });
-    }
-    Ok(entries)
-}
-
-#[cfg(feature = "pdf")]
-pub fn zip_split_pdfs(entries: &[SplitPdfEntry]) -> Result<Vec<u8>, IrrecoverableError> {
-    use std::io::Write;
-    use zip::write::SimpleFileOptions;
-    use zip::ZipWriter;
-
-    let mut buffer = Vec::new();
-    {
-        let mut writer = ZipWriter::new(std::io::Cursor::new(&mut buffer));
-        let options =
-            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
-        for entry in entries {
-            writer.start_file(&entry.filename, options).map_err(|e| {
-                IrrecoverableError::new(IrrecoverableErrorKind::ZipStartFileFailed {
-                    span: error::Span::new(0, 0),
-                    source: e.to_string(),
-                })
-            })?;
-            writer.write_all(&entry.pdf).map_err(|e| {
-                IrrecoverableError::new(IrrecoverableErrorKind::ZipWriteFailed {
-                    span: error::Span::new(0, 0),
-                    source: e.to_string(),
-                })
-            })?;
-        }
-        writer.finish().map_err(|e| {
-            IrrecoverableError::new(IrrecoverableErrorKind::ZipFinishFailed {
-                span: error::Span::new(0, 0),
-                source: e.to_string(),
-            })
-        })?;
-    }
-    Ok(buffer)
 }
 
 /// Parse, group, optionally filter tracks, and synthesize WAV bytes.

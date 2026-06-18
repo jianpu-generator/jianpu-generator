@@ -1,0 +1,150 @@
+/* Preview */
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.preview-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.preview-toolbar {
+  padding: 0.4rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  min-height: 2rem;
+}
+
+.preview-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+}
+
+.preview-export-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.preview-status {
+  font-style: italic;
+}
+
+.preview-audio {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.preview-audio-spinner {
+  flex-shrink: 0;
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid var(--border);
+  border-top-color: var(--muted);
+  border-radius: 50%;
+  animation: preview-audio-spin 0.7s linear infinite;
+}
+
+@keyframes preview-audio-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.preview-audio-player {
+  display: block;
+  width: 100%;
+}
+
+.preview-audio--generating .preview-audio-player {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.preview-pages {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.preview-empty {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.preview-page {
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.12);
+  background: white;
+}
+
+.preview-page svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.play-measure-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  font-size: 12px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  min-width: 28px;
+  height: 24px;
+}
+
+.play-measure-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.play-measure-btn:not(:disabled):hover {
+  background: #f0f0f0;
+}
+
+.play-measure-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #aaa;
+  border-top-color: #333;
+  border-radius: 50%;
+  animation: play-measure-spin 0.6s linear infinite;
+}
+
+@keyframes play-measure-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

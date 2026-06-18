@@ -1,9 +1,7 @@
-use crate::compiler::types::{
-    CompileResult, Decoration, ElementContent, MeasureBlock, MeasureRow, RowId,
-};
+use crate::compiler::types::{CompileResult, ElementContent, MeasureBlock, MeasureRow, RowId};
 use crate::grid_layout::slur_placement::{build_measure_placements, resolve_slur_spans};
 use crate::grid_layout::types::Header;
-use crate::grid_layout::types::{GridContent, GridElement, GridPage, GridRow, HAlign, VAlign};
+use crate::grid_layout::types::{GridElement, GridPage, GridRow};
 use crate::render_config::RenderConfig;
 use std::collections::HashMap;
 
@@ -23,7 +21,7 @@ pub(crate) fn is_lyric_row(row: &MeasureRow) -> bool {
     has_lyric && !has_note
 }
 
-fn has_lyrics(row: &MeasureRow) -> bool {
+pub(crate) fn has_lyrics(row: &MeasureRow) -> bool {
     row.elements
         .iter()
         .any(|e| matches!(e.content, ElementContent::Lyric(_)))
@@ -171,293 +169,21 @@ pub(crate) fn pack_into_systems(
     systems
 }
 
-fn compute_bar_height(first: &MeasureBlock, base: f32) -> f32 {
+pub(crate) fn compute_bar_height(first: &MeasureBlock, base: f32) -> f32 {
     system_musical_height_pt(first, base) + system_lyric_height_pt(first, base)
-}
-
-fn expand_lyric_part(
-    system: &[MeasureBlock],
-    part_idx: usize,
-    base: f32,
-    column_count: u32,
-) -> GridRow {
-    let mut row = GridRow {
-        height_pt: lyric_row_height(base),
-        column_count,
-        elements: vec![],
-    };
-    let mut measure_col_offset: u32 = 0;
-    for block in system {
-        let col_w = block_column_width(block);
-        if let Some(part_row) = block.rows.get(part_idx) {
-            for el in &part_row.elements {
-                if let ElementContent::Lyric(text) = &el.content {
-                    row.elements.push(GridElement {
-                        column: LABEL_COLS + measure_col_offset + el.column,
-                        column_span: 1,
-                        halign: HAlign::Center,
-                        valign: VAlign::Center,
-                        content: GridContent::LyricSyllable(text.clone()),
-                    });
-                }
-            }
-        }
-        measure_col_offset += col_w;
-    }
-    row
-}
-
-#[allow(clippy::indexing_slicing)]
-fn expand_note_part(
-    system: &[MeasureBlock],
-    part_template: &MeasureRow,
-    part_idx: usize,
-    base: f32,
-    column_count: u32,
-    bar_height: f32,
-    part_arcs: &[GridElement],
-) -> Vec<GridRow> {
-    let (sub_heights, sub_count): (Vec<f32>, usize) = if is_chord_only_row(part_template) {
-        (chord_part_sub_row_heights(base).to_vec(), 4)
-    } else {
-        (note_part_sub_row_heights(base).to_vec(), 6)
-    };
-    let mut sub_rows: Vec<GridRow> = sub_heights
-        .iter()
-        .map(|&h| GridRow {
-            height_pt: h,
-            column_count,
-            elements: vec![],
-        })
-        .collect();
-    let head_sub = if is_chord_only_row(part_template) {
-        1
-    } else {
-        2
-    };
-    if !part_template.label.is_empty() {
-        sub_rows[head_sub].elements.push(GridElement {
-            column: 0,
-            column_span: LABEL_COLS,
-            halign: HAlign::Center,
-            valign: VAlign::Center,
-            content: GridContent::RowLabel(part_template.label.clone()),
-        });
-    }
-    if part_idx == 0 {
-        sub_rows[0].elements.push(GridElement {
-            column: LABEL_COLS,
-            column_span: 1,
-            halign: HAlign::Start,
-            valign: VAlign::Top,
-            content: GridContent::BarLine {
-                height_pt: bar_height,
-            },
-        });
-    }
-    let mut measure_col_offset: u32 = 0;
-    for block in system {
-        let col_w = block_column_width(block);
-        if let Some(part_row) = block.rows.get(part_idx) {
-            crate::grid_layout::expand::expand_measure_elements(
-                part_row,
-                measure_col_offset,
-                head_sub,
-                sub_count,
-                bar_height,
-                part_idx,
-                &mut sub_rows,
-            );
-        }
-        measure_col_offset += col_w;
-    }
-    sub_rows[0].elements.extend_from_slice(part_arcs);
-    sub_rows
-}
-
-/// Convert a system's measures into flat GridRows.
-/// Does not include decoration, separator, header, or footer rows.
-pub(crate) fn expand_system_to_rows(
-    system: &[MeasureBlock],
-    base: f32,
-    system_arcs: &HashMap<usize, Vec<GridElement>>,
-) -> Vec<GridRow> {
-    let Some(first) = system.first() else {
-        return vec![];
-    };
-    let total_musical_cols: u32 = system.iter().map(block_column_width).sum();
-    let column_count = LABEL_COLS + total_musical_cols;
-    let bar_height = compute_bar_height(first, base);
-    let mut all_rows: Vec<GridRow> = Vec::new();
-    for (part_idx, part_template) in first.rows.iter().enumerate() {
-        if is_lyric_row(part_template) {
-            all_rows.push(expand_lyric_part(system, part_idx, base, column_count));
-        } else {
-            let part_arcs: &[GridElement] =
-                system_arcs.get(&part_idx).map_or(&[], |v| v.as_slice());
-            all_rows.extend(expand_note_part(
-                system,
-                part_template,
-                part_idx,
-                base,
-                column_count,
-                bar_height,
-                part_arcs,
-            ));
-            if has_lyrics(part_template) {
-                all_rows.push(expand_lyric_part(system, part_idx, base, column_count));
-            }
-        }
-    }
-    all_rows
 }
 
 pub(crate) fn has_any_decoration(block: &MeasureBlock) -> bool {
     !block.decorations.is_empty()
 }
 
-const DECO_COLS: u32 = 12;
-
-fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow {
-    let Some(first) = system.first() else {
-        return GridRow {
-            height_pt: decoration_row_height(base),
-            column_count: DECO_COLS,
-            elements: vec![],
-        };
-    };
-    let mut elements: Vec<GridElement> = Vec::new();
-    let mut dec_col: u32 = 1;
-
-    fn deco_order(d: &Decoration) -> u8 {
-        match d {
-            Decoration::SectionLabel(_) => 0,
-            Decoration::Bpm(_) => 1,
-            Decoration::TimeSignature { .. } => 2,
-            Decoration::BarNumber(_) => 3,
-        }
-    }
-    let mut sorted_decorations = first.decorations.clone();
-    sorted_decorations.sort_by_key(deco_order);
-
-    for dec in &sorted_decorations {
-        let col = dec_col;
-        dec_col += 1;
-        match dec {
-            Decoration::Bpm(bpm) => elements.push(GridElement {
-                column: col,
-                column_span: 1,
-                halign: HAlign::Start,
-                valign: VAlign::Center,
-                content: GridContent::Bpm(*bpm),
-            }),
-            Decoration::TimeSignature {
-                numerator,
-                denominator,
-            } => elements.push(GridElement {
-                column: col,
-                column_span: 1,
-                halign: HAlign::Start,
-                valign: VAlign::Center,
-                content: GridContent::TimeSignature {
-                    numerator: *numerator,
-                    denominator: *denominator,
-                },
-            }),
-            Decoration::SectionLabel(s) => elements.push(GridElement {
-                column: col,
-                column_span: 1,
-                halign: HAlign::Start,
-                valign: VAlign::Center,
-                content: GridContent::SectionLabel(s.clone()),
-            }),
-            Decoration::BarNumber(n) => elements.push(GridElement {
-                column: col,
-                column_span: 1,
-                halign: HAlign::Start,
-                valign: VAlign::Bottom,
-                content: GridContent::BarNumber(*n),
-            }),
-        }
-    }
-
-    GridRow {
-        height_pt: decoration_row_height(base),
-        column_count: DECO_COLS,
-        elements,
-    }
-}
-
-fn make_separator_row() -> GridRow {
-    GridRow {
-        height_pt: separator_row_height(),
-        column_count: 1,
-        elements: vec![GridElement {
-            column: 0,
-            column_span: 1,
-            halign: HAlign::Start,
-            valign: VAlign::Center,
-            content: GridContent::HorizontalLine,
-        }],
-    }
-}
-
-pub(crate) fn make_header_rows(header: &Header, base: f32) -> Vec<GridRow> {
-    let title_row = GridRow {
-        height_pt: header_title_row_height(base),
-        column_count: 1,
-        elements: vec![GridElement {
-            column: 0,
-            column_span: 1,
-            halign: HAlign::Center,
-            valign: VAlign::Center,
-            content: GridContent::Text {
-                content: header.title.clone(),
-                font_size: base * 1.5,
-                bold: false,
-                italic: false,
-            },
-        }],
-    };
-
-    let mut subtitle_author_elements: Vec<GridElement> = Vec::new();
-    if let Some(subtitle) = &header.subtitle {
-        subtitle_author_elements.push(GridElement {
-            column: 0,
-            column_span: 1,
-            halign: HAlign::Center,
-            valign: VAlign::Center,
-            content: GridContent::Text {
-                content: subtitle.clone(),
-                font_size: base * 0.8,
-                bold: false,
-                italic: true,
-            },
-        });
-    }
-    subtitle_author_elements.push(GridElement {
-        column: 0,
-        column_span: 1,
-        halign: HAlign::End,
-        valign: VAlign::Center,
-        content: GridContent::Text {
-            content: header.author.clone(),
-            font_size: base * 0.6,
-            bold: false,
-            italic: false,
-        },
-    });
-    let subtitle_author_row = GridRow {
-        height_pt: header_subtitle_author_row_height(base),
-        column_count: 1,
-        elements: subtitle_author_elements,
-    };
-
-    vec![title_row, subtitle_author_row]
-}
-
+#[path = "layout_decoration.rs"]
+mod decoration;
+pub(crate) use super::expand::expand_system_to_rows;
 use super::expand::make_footer_row;
 use super::highlight::{compute_error_highlight_infos, measure_highlights_on_page};
+pub(crate) use decoration::make_header_rows;
+use decoration::{make_decoration_row, make_separator_row};
 
 fn system_total_height(system: &[MeasureBlock], base: f32) -> f32 {
     let Some(first) = system.first() else {
@@ -587,6 +313,10 @@ pub fn layout(
     }
     pages
 }
+
+#[cfg(test)]
+#[path = "tests_layout.rs"]
+mod tests_layout;
 
 #[cfg(test)]
 #[path = "tests_highlight.rs"]

@@ -1,45 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { findIndex, findLastIndex } from 'remeda'
 import type { Diagnostic, MeasureSpan, PartInfo, ScoreLineHint } from '../types'
 import type { WorkerRequest, WorkerResponse } from '../worker/jianpu.worker'
-
-function measureRangeInSpan(
-  spans: MeasureSpan[],
-  selStart: number,
-  selEnd: number,
-): { start: number; end: number } | null {
-  const effective = selStart === selEnd ? selEnd + 1 : selEnd
-  const overlaps = (span: MeasureSpan) =>
-    span.start < effective && span.end > selStart
-  const start = findIndex(spans, overlaps)
-  const end = findLastIndex(spans, overlaps)
-  return start === -1 ? null : { start, end }
-}
-
-function enabledTracksForRender(
-  parts: PartInfo[],
-  disabledParts: ReadonlySet<string>,
-): string[] | undefined {
-  if (parts.length === 0) return undefined
-  const enabled = parts
-    .filter((part) => !disabledParts.has(part.abbreviation))
-    .map((part) => part.abbreviation)
-  if (enabled.length === parts.length) return undefined
-  return enabled
-}
-
-function disabledLyricsForRender(
-  parts: PartInfo[],
-  disabledLyrics: ReadonlySet<string>,
-): string[] | undefined {
-  const lyricParts = parts.filter((part) => part.has_lyrics)
-  if (lyricParts.length === 0) return undefined
-  const disabled = lyricParts
-    .filter((part) => disabledLyrics.has(part.abbreviation))
-    .map((part) => part.abbreviation)
-  if (disabled.length === 0) return undefined
-  return disabled
-}
+import {
+  baseNameFromActiveFile,
+  disabledLyricsForRender,
+  downloadPdf,
+  downloadZip,
+  enabledTracksForRender,
+  measureRangeInSpan,
+  pdfFilenameFromActiveFile,
+  zipFilenameFromActiveFile,
+} from './workerHelpers'
 
 interface JianpuWorkerState {
   parts: PartInfo[]
@@ -65,49 +36,6 @@ interface JianpuWorkerState {
   highlightedSvgs: string[]
   measureSpans: MeasureSpan[]
   scoreLineHints: ScoreLineHint[]
-}
-
-function downloadPdf(bytes: ArrayBuffer, filename: string) {
-  const url = URL.createObjectURL(
-    new Blob([bytes], { type: 'application/pdf' }),
-  )
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-  URL.revokeObjectURL(url)
-}
-
-function pdfFilenameFromActiveFile(activeFile: string): string {
-  if (activeFile.endsWith('.jianpu')) {
-    return activeFile.replace(/\.jianpu$/, '.pdf')
-  }
-  return `${activeFile}.pdf`
-}
-
-function zipFilenameFromActiveFile(activeFile: string): string {
-  if (activeFile.endsWith('.jianpu')) {
-    return activeFile.replace(/\.jianpu$/, '.zip')
-  }
-  return `${activeFile}.zip`
-}
-
-function baseNameFromActiveFile(activeFile: string): string {
-  if (activeFile.endsWith('.jianpu')) {
-    return activeFile.replace(/\.jianpu$/, '')
-  }
-  return activeFile
-}
-
-function downloadZip(bytes: ArrayBuffer, filename: string) {
-  const url = URL.createObjectURL(
-    new Blob([bytes], { type: 'application/zip' }),
-  )
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-  URL.revokeObjectURL(url)
 }
 
 export function useJianpuWorker(
@@ -144,7 +72,6 @@ export function useJianpuWorker(
   const latestMeasureSpansIdRef = useRef(0)
   const scoreLineHintsRequestIdRef = useRef(0)
   const latestScoreLineHintsIdRef = useRef(0)
-
   const measureSpansRef = useRef<MeasureSpan[]>([])
 
   const workerRef = useRef<Worker | null>(null)
@@ -210,9 +137,7 @@ export function useJianpuWorker(
         setMeasureAudioPlaying(false)
         currentMeasureAudioRef.current = null
       })
-      audio.addEventListener('pause', () => {
-        setMeasureAudioPlaying(false)
-      })
+      audio.addEventListener('pause', () => setMeasureAudioPlaying(false))
       audio.play().catch(() => {})
     }
   }, [])

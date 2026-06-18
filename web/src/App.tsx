@@ -25,6 +25,8 @@ import {
 } from './partToggleCache'
 import type { EditorHandle } from './types'
 import './App.css'
+import './file-tab-bar.css'
+import './preview.css'
 
 const shortcutLabel = navigator.platform.startsWith('Mac') ? '⌘↵' : 'Ctrl+↵'
 

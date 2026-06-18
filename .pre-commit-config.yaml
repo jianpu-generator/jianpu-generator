@@ -49,7 +49,7 @@ repos:
         files: ^(crates/jianpu-wasm/|web/)
         pass_filenames: false
       - id: check-max-file-lines
-        name: check max file lines (600)
+        name: check max file lines (500)
         entry: python3 scripts/check-max-file-lines.py
         language: system
         files: \.(rs|ts|tsx|js|jsx|py|css|html)$
