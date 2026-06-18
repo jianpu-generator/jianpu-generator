@@ -1,6 +1,6 @@
 use super::TimedUnitHead;
 use crate::ast::parsed::{JianPuPitch, ParsedNote, ParsedRest, ScoreEvent};
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Warning};
 
 pub struct NoteHead {
     pitch: JianPuPitch,
@@ -12,7 +12,7 @@ impl TimedUnitHead for NoteHead {
         chars: &[char],
         start: usize,
         span: &Span,
-    ) -> Result<(Self, usize, bool, Vec<RecoverableError>), IrrecoverableError> {
+    ) -> Result<(Self, usize, bool, Vec<Warning>), IrrecoverableError> {
         let pitch_char = chars[start];
         if !matches!(pitch_char, '0'..='7') {
             let pos = span.start + byte_offset_at_char_index_from_chars(chars, start);

@@ -1,4 +1,4 @@
-use crate::error::{IrrecoverableError, RecoverableError};
+use crate::error::{IrrecoverableError, Warning};
 use ariadne::Config;
 
 pub fn render(e: &IrrecoverableError) {
@@ -19,10 +19,10 @@ pub fn render_with_source(source: &str, e: &IrrecoverableError) -> String {
     String::from_utf8_lossy(&buf).into_owned()
 }
 
-/// Render a pretty error for a `RecoverableError` using an in-memory source string.
+/// Render a pretty warning for a [`Warning`] using an in-memory source string.
 ///
 /// Uses plain text (no ANSI color codes) so the output is safe to display in a web UI.
-pub fn render_recoverable_with_source(source: &str, e: &RecoverableError) -> String {
+pub fn render_warning_with_source(source: &str, e: &Warning) -> String {
     use ariadne::{Label, Report, ReportKind, Source};
 
     let filename = "input";
@@ -31,7 +31,7 @@ pub fn render_recoverable_with_source(source: &str, e: &RecoverableError) -> Str
     let span = (filename, char_start..char_end);
 
     let mut buf = Vec::new();
-    if Report::build(ReportKind::Error, span.clone())
+    if Report::build(ReportKind::Warning, span.clone())
         .with_config(Config::default().with_color(false))
         .with_message(&e.message)
         .with_label(Label::new(span).with_message(&e.message))
@@ -39,7 +39,7 @@ pub fn render_recoverable_with_source(source: &str, e: &RecoverableError) -> Str
         .write((filename, Source::from(source)), &mut buf)
         .is_err()
     {
-        buf.extend_from_slice(format!("error: {}", e.message).as_bytes());
+        buf.extend_from_slice(format!("warning: {}", e.message).as_bytes());
     }
     String::from_utf8_lossy(&buf).into_owned()
 }

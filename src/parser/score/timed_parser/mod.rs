@@ -29,13 +29,13 @@ pub use groups::{
 };
 
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{IrrecoverableError, RecoverableError, Span, Spanned};
+use crate::error::{IrrecoverableError, Span, Spanned, Warning};
 
 /// Parsed events from one timed notation line, plus any recoverable errors collected while parsing.
 pub struct TimedLineParse {
     pub events: Vec<Spanned<ScoreEvent>>,
-    pub dash_after_rest_error: Option<RecoverableError>,
-    pub chord_errors: Vec<RecoverableError>,
+    pub dash_after_rest_error: Option<Warning>,
+    pub chord_errors: Vec<Warning>,
 }
 
 /// Parse a single line of timed notation using the lexer + recursive-descent parser.
@@ -61,7 +61,7 @@ pub trait TimedUnitHead: Sized {
         chars: &[char],
         start: usize,
         span: &Span,
-    ) -> Result<(Self, usize, bool, Vec<RecoverableError>), IrrecoverableError>;
+    ) -> Result<(Self, usize, bool, Vec<Warning>), IrrecoverableError>;
 
     /// True when the next atom should start (note: next digit 0-7; chord: always after suffixes end).
     fn head_boundary(chars: &[char], i: usize) -> bool;
@@ -71,7 +71,7 @@ pub trait TimedUnitHead: Sized {
     }
 
     /// When `parse_head` fails, return a recoverable error and skip this timed unit.
-    fn recover_parse_head_error(_error: &IrrecoverableError) -> Option<RecoverableError> {
+    fn recover_parse_head_error(_error: &IrrecoverableError) -> Option<Warning> {
         None
     }
 
@@ -81,7 +81,7 @@ pub trait TimedUnitHead: Sized {
         _chars: &[char],
         _head_end: usize,
         _span: &Span,
-    ) -> Option<(DurationParse, RecoverableError)> {
+    ) -> Option<(DurationParse, Warning)> {
         None
     }
 

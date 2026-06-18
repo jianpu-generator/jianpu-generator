@@ -8,7 +8,7 @@ use super::groups::{
 use super::timed_lexer::TimedLexToken;
 use super::TimedUnitHead;
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Spanned, Warning};
 
 /// A thin wrapper over `Spanned<ScoreEvent>` that holds mutable group-depth fields so that the
 /// generic `HasGroupDepth`-based helpers (`apply_closed_group_depth`, `apply_open_group_depth`)
@@ -139,16 +139,12 @@ pub struct TimedRdParser<'a, H: TimedUnitHead> {
     stack: &'a mut GroupStack,
     /// Staging area: events with their pending depth accumulators.
     staging: Vec<DepthEvent>,
-    dash_after_rest_error: Option<RecoverableError>,
-    chord_errors: Vec<RecoverableError>,
+    dash_after_rest_error: Option<Warning>,
+    chord_errors: Vec<Warning>,
     _head: std::marker::PhantomData<H>,
 }
 
-type TimedLineParseResult = (
-    Vec<Spanned<ScoreEvent>>,
-    Option<RecoverableError>,
-    Vec<RecoverableError>,
-);
+type TimedLineParseResult = (Vec<Spanned<ScoreEvent>>, Option<Warning>, Vec<Warning>);
 
 impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
     pub fn parse_line(

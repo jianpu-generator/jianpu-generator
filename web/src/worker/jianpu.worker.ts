@@ -5,7 +5,13 @@ import {
   list_score_line_hints,
   render,
 } from 'jianpu-wasm'
-import type { Diagnostic, MeasureSpan, PartInfo, ScoreLineHint } from '../types'
+import type {
+  Diagnostic,
+  DiagnosticViewZone,
+  MeasureSpan,
+  PartInfo,
+  ScoreLineHint,
+} from '../types'
 
 const generateWav =
   'generate_wav' in jianpuWasm ? jianpuWasm.generate_wav : null
@@ -76,10 +82,21 @@ export type WorkerRequest =
 
 export type WorkerResponse =
   | { type: 'ready'; audioAvailable: boolean; pdfAvailable: boolean }
-  | { type: 'ok'; id: number; svgs: string[]; diagnostics: Diagnostic[] }
+  | {
+      type: 'ok'
+      id: number
+      svgs: string[]
+      diagnostics: Diagnostic[]
+      diagnosticViewZones: DiagnosticViewZone[]
+    }
   | { type: 'audio'; id: number; wav: ArrayBuffer }
   | { type: 'audioErr'; id: number }
-  | { type: 'err'; id: number; diagnostics: Diagnostic[] }
+  | {
+      type: 'err'
+      id: number
+      diagnostics: Diagnostic[]
+      diagnosticViewZones: DiagnosticViewZone[]
+    }
   | { type: 'parts'; id: number; parts: PartInfo[] }
   | { type: 'pdf'; id: number; pdf: ArrayBuffer }
   | { type: 'pdfErr'; id: number; diagnostics: Diagnostic[] }
@@ -362,6 +379,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       id: msg.id,
       svgs: result.svgs,
       diagnostics: result.diagnostics,
+      diagnosticViewZones: result.diagnostic_view_zones,
     } satisfies WorkerResponse)
     return
   }
@@ -370,5 +388,6 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     type: 'err',
     id: msg.id,
     diagnostics: result.diagnostics,
+    diagnosticViewZones: result.diagnostic_view_zones,
   } satisfies WorkerResponse)
 }

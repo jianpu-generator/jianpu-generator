@@ -1,7 +1,7 @@
 use crate::ast::parsed::{
     Accidental, BassDegree, Extension, JianPuPitch, KeyChange, Syllable, TriadQuality,
 };
-use crate::error::{RecoverableError, Span};
+use crate::error::{Diagnostic, Span, Warning};
 
 // ── Public final types ────────────────────────────────────────────────────────
 
@@ -49,9 +49,9 @@ pub struct MultiPartMeasure {
     /// Byte range of this measure's note events in the original source.
     /// Used to map editor cursor position to a measure index.
     pub source_span: Span,
-    /// Recoverable errors collected during grouping for this measure.
-    /// Non-empty triggers a red overlay in the SVG renderer.
-    pub errors: Vec<RecoverableError>,
+    /// Diagnostics collected during grouping for this measure.
+    /// Non-empty triggers a colored overlay in the SVG renderer.
+    pub diagnostics: Vec<Diagnostic>,
 }
 
 #[derive(Clone)]
@@ -132,7 +132,7 @@ pub(crate) struct MeasureDirectives {
 pub(crate) struct GroupedScore {
     pub(crate) measure_directives: Vec<MeasureDirectives>,
     pub(crate) parts: Vec<GroupedTrack>,
-    pub(crate) per_measure_parse_errors: Vec<Option<RecoverableError>>,
+    pub(crate) per_measure_parse_errors: Vec<Option<Warning>>,
 }
 
 pub(crate) struct GroupedMeasure {
@@ -142,17 +142,17 @@ pub(crate) struct GroupedMeasure {
     /// `NotesWithLyrics` parts during grouping.
     pub(crate) paired_lyrics: Option<Vec<Syllable>>,
     /// Recoverable lyrics underflow for this measure, if any.
-    pub(crate) lyrics_error: Option<RecoverableError>,
+    pub(crate) lyrics_error: Option<Warning>,
     /// Recoverable beat overflow for this measure (notes trimmed), if any.
-    pub(crate) beat_overflow_error: Option<RecoverableError>,
+    pub(crate) beat_overflow_error: Option<Warning>,
     /// Recoverable error from `-` used after a rest in this measure, if any.
-    pub(crate) dash_after_rest_error: Option<RecoverableError>,
+    pub(crate) dash_after_rest_error: Option<Warning>,
     /// Recoverable dotted-eighth grouping errors for this measure (empty = none).
-    pub(crate) dotted_eighth_errors: Vec<RecoverableError>,
+    pub(crate) dotted_eighth_errors: Vec<Warning>,
     /// Recoverable chord parse errors for this measure (empty = none).
-    pub(crate) chord_errors: Vec<RecoverableError>,
+    pub(crate) chord_errors: Vec<Warning>,
     /// Recoverable lex error from an unexpected character on the notes line, if any.
-    pub(crate) lex_error: Option<RecoverableError>,
+    pub(crate) lex_error: Option<Warning>,
 }
 
 pub(crate) struct GroupedPart {

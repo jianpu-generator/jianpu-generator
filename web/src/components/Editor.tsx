@@ -10,6 +10,8 @@ import {
 } from 'react'
 import type {
   Diagnostic,
+  DiagnosticMessage,
+  DiagnosticViewZone,
   EditorHandle,
   MeasureSpan,
   ScoreLineHint,
@@ -24,6 +26,7 @@ export interface EditorProps {
   onChange: (value: string) => void
   readOnly?: boolean
   diagnostics?: Diagnostic[]
+  diagnosticViewZones?: DiagnosticViewZone[]
   measureSpans?: MeasureSpan[]
   scoreLineHints?: ScoreLineHint[]
   toolbar?: ReactNode
@@ -77,43 +80,33 @@ function diagnosticRange(
 
 const ERROR_ZONE_LINE_HEIGHT_PX = 21
 
-function groupDiagnosticsByLine(
-  model: editor.ITextModel,
-  source: string,
-  diagnostics: Diagnostic[],
-  monacoApi: Monaco,
-): Map<number, Diagnostic[]> {
-  const byLine = new Map<number, Diagnostic[]>()
-  for (const diagnostic of diagnostics) {
-    const range = diagnosticRange(model, source, diagnostic, monacoApi)
-    const lineNumber = range.endLineNumber
-    const existing = byLine.get(lineNumber) ?? []
-    existing.push(diagnostic)
-    byLine.set(lineNumber, existing)
-  }
-  return byLine
-}
-
-function createErrorViewZoneDomNode(
-  lineDiagnostics: Diagnostic[],
+function createDiagnosticViewZoneDomNode(
+  severity: 'error' | 'warning',
+  messages: DiagnosticMessage[],
 ): HTMLElement {
-  const domNode = document.createElement('div')
-  domNode.className = 'editor-error-zone'
+  const zoneClass =
+    severity === 'warning' ? 'editor-warning-zone' : 'editor-error-zone'
+  const messageClass =
+    severity === 'warning'
+      ? 'editor-warning-zone-message'
+      : 'editor-error-zone-message'
 
-  for (const [index, diagnostic] of lineDiagnostics.entries()) {
+  const domNode = document.createElement('div')
+  domNode.className = zoneClass
+
+  for (const [index, msg] of messages.entries()) {
     if (index > 0) {
       domNode.appendChild(document.createElement('hr'))
     }
+    const messageEl = document.createElement('div')
+    messageEl.className = messageClass
+    messageEl.textContent = msg.message
+    domNode.appendChild(messageEl)
 
-    const message = document.createElement('div')
-    message.className = 'editor-error-zone-message'
-    message.textContent = diagnostic.message
-    domNode.appendChild(message)
-
-    if (diagnostic.report) {
+    if (msg.report) {
       const report = document.createElement('pre')
       report.className = 'editor-error-zone-report'
-      report.textContent = diagnostic.report
+      report.textContent = msg.report
       domNode.appendChild(report)
     }
   }
@@ -143,6 +136,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onChange,
     readOnly = false,
     diagnostics = [],
+    diagnosticViewZones = [],
     measureSpans = [],
     scoreLineHints = [],
     toolbar,
@@ -155,7 +149,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<Monaco | null>(null)
   const measureViewZoneIdsRef = useRef<string[]>([])
-  const errorViewZoneIdsRef = useRef<string[]>([])
+  const diagnosticViewZoneIdsRef = useRef<string[]>([])
   const inlayHintsDisposableRef = useRef<IDisposable | null>(null)
   const scoreLineHintsForInlayRef = useRef(scoreLineHints)
   const onSelectionChangeRef = useRef(onSelectionChange)
@@ -244,44 +238,34 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     })
   }, [measureSpans])
 
-  const applyErrorViewZones = useCallback(() => {
+  const applyDiagnosticViewZones = useCallback(() => {
     const ed = editorRef.current
-    const monacoApi = monacoRef.current
-    const model = ed?.getModel()
-    if (!ed || !monacoApi || !model) return
+    if (!ed) return
 
     ed.changeViewZones((accessor) => {
-      for (const id of errorViewZoneIdsRef.current) {
+      for (const id of diagnosticViewZoneIdsRef.current) {
         accessor.removeZone(id)
       }
-      errorViewZoneIdsRef.current = []
+      diagnosticViewZoneIdsRef.current = []
 
-      if (diagnostics.length === 0) return
-
-      const source = model.getValue()
-      const diagnosticsByLine = groupDiagnosticsByLine(
-        model,
-        source,
-        diagnostics,
-        monacoApi,
-      )
-
-      for (const [lineNumber, lineDiagnostics] of diagnosticsByLine) {
-        const domNode = createErrorViewZoneDomNode(lineDiagnostics)
+      for (const zone of diagnosticViewZones) {
+        const domNode = createDiagnosticViewZoneDomNode(
+          zone.severity,
+          zone.messages,
+        )
         const heightInPx = errorViewZoneHeightInPx(
           domNode,
           ed.getLayoutInfo().contentWidth,
         )
-
         const id = accessor.addZone({
-          afterLineNumber: lineNumber,
+          afterLineNumber: zone.after_line_number,
           heightInPx,
           domNode,
         })
-        errorViewZoneIdsRef.current.push(id)
+        diagnosticViewZoneIdsRef.current.push(id)
       }
     })
-  }, [diagnostics])
+  }, [diagnosticViewZones])
 
   useImperativeHandle(ref, () => ({
     insertAtCursor(text: string) {
@@ -362,7 +346,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     monacoRef.current = monacoApi
     applyDiagnostics()
     applyMeasureViewZones()
-    applyErrorViewZones()
+    applyDiagnosticViewZones()
     applyInlayHints()
 
     ed.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.Enter, () =>
@@ -397,8 +381,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   }, [applyMeasureViewZones])
 
   useEffect(() => {
-    applyErrorViewZones()
-  }, [applyErrorViewZones])
+    applyDiagnosticViewZones()
+  }, [applyDiagnosticViewZones])
 
   useEffect(() => {
     scoreLineHintsForInlayRef.current = scoreLineHints

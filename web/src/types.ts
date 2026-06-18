@@ -1,5 +1,7 @@
 export type {
+  DiagnosticMessageOut as DiagnosticMessage,
   DiagnosticOut as Diagnostic,
+  DiagnosticViewZoneOut as DiagnosticViewZone,
   GeneratePdfResponse as GeneratePdfResult,
   GenerateSplitPdfsResponse as GenerateSplitPdfResult,
   GenerateWavResponse as GenerateWavResult,

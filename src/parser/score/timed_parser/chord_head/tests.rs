@@ -1,5 +1,5 @@
 use super::*;
-use crate::error::{ErrorKind, IrrecoverableError, IrrecoverableErrorKind, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, WarningKind};
 use crate::parser::score::timed_parser::{parse_timed_line, GroupStack, LexContext};
 
 fn chord(
@@ -52,7 +52,7 @@ fn parse_line(line: &str) -> Vec<ScoreEvent> {
         .collect()
 }
 
-fn parse_line_with_errors(line: &str) -> (Vec<ScoreEvent>, Vec<ErrorKind>) {
+fn parse_line_with_errors(line: &str) -> (Vec<ScoreEvent>, Vec<WarningKind>) {
     let parsed =
         parse_timed_line::<ChordHead>(line, 0, &mut GroupStack::default(), LexContext::Chords)
             .unwrap();
@@ -396,7 +396,7 @@ fn rejects_invalid_token_at_lexer() {
     assert!(parsed
         .chord_errors
         .iter()
-        .any(|error| error.kind == ErrorKind::ChordExpectedDegreeDigit));
+        .any(|error| error.kind == WarningKind::ChordExpectedDegreeDigit));
 }
 
 #[test]
@@ -404,7 +404,7 @@ fn recovers_unknown_suffix() {
     let (events, errors) = parse_line_with_errors("1z");
     assert_eq!(events.len(), 1);
     assert!(matches!(events[0], ScoreEvent::Chord(_)));
-    assert!(errors.contains(&ErrorKind::ChordUnknownSuffix));
+    assert!(errors.contains(&WarningKind::ChordUnknownSuffix));
 }
 
 #[test]
@@ -412,7 +412,7 @@ fn recovers_expected_degree_digit_by_skipping_symbol() {
     let (events, errors) = parse_line_with_errors("8 2");
     assert_eq!(events.len(), 1);
     assert!(matches!(events[0], ScoreEvent::Chord(_)));
-    assert!(errors.contains(&ErrorKind::ChordExpectedDegreeDigit));
+    assert!(errors.contains(&WarningKind::ChordExpectedDegreeDigit));
 }
 
 #[test]
@@ -420,21 +420,21 @@ fn recovers_invalid_bass() {
     let (events, errors) = parse_line_with_errors("1/X");
     assert_eq!(events.len(), 1);
     assert!(matches!(events[0], ScoreEvent::Chord(_)));
-    assert!(errors.contains(&ErrorKind::ChordInvalidBass));
+    assert!(errors.contains(&WarningKind::ChordInvalidBass));
 }
 
 #[test]
 fn recovers_bass_unexpected_char() {
     let (events, errors) = parse_line_with_errors("1/5x");
     assert_eq!(events.len(), 1);
-    assert!(errors.contains(&ErrorKind::ChordBassUnexpectedChar));
+    assert!(errors.contains(&WarningKind::ChordBassUnexpectedChar));
 }
 
 #[test]
 fn recovers_bass_trailing_chars() {
     let (events, errors) = parse_line_with_errors("1/5bb");
     assert_eq!(events.len(), 1);
-    assert!(errors.contains(&ErrorKind::ChordBassTrailingChars));
+    assert!(errors.contains(&WarningKind::ChordBassTrailingChars));
 }
 
 #[test]
@@ -442,7 +442,7 @@ fn recovers_octave_suffix() {
     let (events, errors) = parse_line_with_errors("1'");
     assert_eq!(events.len(), 1);
     assert!(matches!(events[0], ScoreEvent::Chord(_)));
-    assert!(errors.contains(&ErrorKind::ChordInvalidToken));
+    assert!(errors.contains(&WarningKind::ChordInvalidToken));
 }
 
 #[test]

@@ -25,7 +25,7 @@ fn simple_block(col_count: u32) -> MeasureBlock {
             elements,
         }],
         decorations: vec![],
-        errors: vec![],
+        diagnostics: vec![],
     }
 }
 
@@ -138,12 +138,15 @@ fn range_spanning_two_pages_reports_correct_page_indices() {
 
 #[test]
 fn erroneous_measure_produces_error_highlight() {
-    use crate::error::{RecoverableError, Span};
+    use crate::error::{Diagnostic, Span, Warning};
 
     let erroneous_block = MeasureBlock {
         rows: simple_block(4).rows,
         decorations: vec![],
-        errors: vec![RecoverableError::new(Span::new(0, 1), "lyrics underflow")],
+        diagnostics: vec![Diagnostic::Warning(Warning::new(
+            Span::new(0, 1),
+            "lyrics underflow",
+        ))],
     };
     let header = Header {
         title: "T".into(),

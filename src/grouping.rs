@@ -1,5 +1,5 @@
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{IrrecoverableError, RecoverableError, Span, Spanned};
+use crate::error::{IrrecoverableError, Span, Spanned, Warning};
 
 const HALF_BAR_BOUNDARY: u32 = 8;
 
@@ -7,7 +7,7 @@ pub fn validate_measure_grouping(
     events: &[Spanned<ScoreEvent>],
     time_num: u8,
     time_den: u8,
-) -> Result<Vec<RecoverableError>, IrrecoverableError> {
+) -> Result<Vec<Warning>, IrrecoverableError> {
     if time_num != 4 || time_den != 4 {
         return Ok(vec![]);
     }
@@ -29,8 +29,7 @@ pub fn validate_measure_grouping(
                     && pos < HALF_BAR_BOUNDARY
                     && pos + head_duration > HALF_BAR_BOUNDARY
                 {
-                    recoverable_errors
-                        .push(RecoverableError::half_bar_boundary_crossed(event.span));
+                    recoverable_errors.push(Warning::half_bar_boundary_crossed(event.span));
                 }
 
                 if is_dotted_eighth_at_beat_start(note.dotted, note.duration, pos) {
@@ -56,8 +55,7 @@ pub fn validate_measure_grouping(
                     && pos < HALF_BAR_BOUNDARY
                     && pos + head_duration > HALF_BAR_BOUNDARY
                 {
-                    recoverable_errors
-                        .push(RecoverableError::half_bar_boundary_crossed(event.span));
+                    recoverable_errors.push(Warning::half_bar_boundary_crossed(event.span));
                 }
 
                 if is_dotted_eighth_at_beat_start(chord.dotted, chord.duration, pos) {
@@ -79,8 +77,7 @@ pub fn validate_measure_grouping(
                 let total_duration = timed_cluster_duration(events, index);
                 let head_duration = timed_head_duration(events, index);
                 if pos > 0 && pos < HALF_BAR_BOUNDARY && pos + head_duration > HALF_BAR_BOUNDARY {
-                    recoverable_errors
-                        .push(RecoverableError::half_bar_boundary_crossed(event.span));
+                    recoverable_errors.push(Warning::half_bar_boundary_crossed(event.span));
                 }
 
                 if is_dotted_eighth_at_beat_start(rest.dotted, rest.duration, pos) {
@@ -176,25 +173,25 @@ fn validate_dotted_eighth_tail(
     events: &[Spanned<ScoreEvent>],
     next_timed: Option<usize>,
     span: &Span,
-) -> Result<Option<RecoverableError>, IrrecoverableError> {
+) -> Result<Option<Warning>, IrrecoverableError> {
     let Some(next_index) = next_timed else {
-        return Ok(Some(RecoverableError::dotted_eighth_needs_sixteenth(*span)));
+        return Ok(Some(Warning::dotted_eighth_needs_sixteenth(*span)));
     };
     let Some(event) = events.get(next_index) else {
-        return Ok(Some(RecoverableError::dotted_eighth_needs_sixteenth(*span)));
+        return Ok(Some(Warning::dotted_eighth_needs_sixteenth(*span)));
     };
 
     let tail_duration = match &event.value {
         ScoreEvent::Note(note) => note.duration,
         ScoreEvent::Chord(chord) => chord.duration,
         ScoreEvent::Rest(rest) => rest.duration,
-        _ => return Ok(Some(RecoverableError::dotted_eighth_needs_sixteenth(*span))),
+        _ => return Ok(Some(Warning::dotted_eighth_needs_sixteenth(*span))),
     };
 
     if tail_duration == 1 {
         Ok(None)
     } else {
-        Ok(Some(RecoverableError::dotted_eighth_needs_sixteenth(*span)))
+        Ok(Some(Warning::dotted_eighth_needs_sixteenth(*span)))
     }
 }
 
@@ -232,27 +229,27 @@ mod tests {
         );
         let output = crate::render_svgs_from_source(input, "t.jianpu").unwrap();
         assert!(output
-            .errors
+            .diagnostics
             .iter()
-            .any(|e| e.message.contains("half-bar boundary")));
+            .any(|e| e.message().contains("half-bar boundary")));
     }
 
     #[test]
     fn recovers_half_bar_crossing() {
         let output = parse_score("1. 2. 3_ 4_\n").unwrap();
         assert!(output
-            .errors
+            .diagnostics
             .iter()
-            .any(|e| e.message.contains("half-bar boundary")));
+            .any(|e| e.message().contains("half-bar boundary")));
     }
 
     #[test]
     fn recovers_half_bar_crossing_on_half_note() {
         let output = parse_score("1 2- 0_ 0_\n").unwrap();
         assert!(output
-            .errors
+            .diagnostics
             .iter()
-            .any(|e| e.message.contains("half-bar boundary")));
+            .any(|e| e.message().contains("half-bar boundary")));
     }
 
     #[test]
@@ -282,9 +279,9 @@ mod tests {
     fn recovers_dotted_eighth_rest_without_tail_group() {
         let output = parse_score("0_. 1_ 2_ 3_ 4_ 5_ 6_ 0=\n").unwrap();
         assert!(output
-            .errors
+            .diagnostics
             .iter()
-            .any(|e| e.message.contains("dotted eighth")));
+            .any(|e| e.message().contains("dotted eighth")));
     }
 
     #[test]

@@ -1,0 +1,14 @@
+---
+description: Keep syntax.md in sync when .jianpu syntax changes
+globs: src/parser/**,src/desugar.rs
+alwaysApply: false
+---
+
+# Syntax documentation
+
+The `.jianpu` input syntax is documented in `syntax.md`.
+
+When you change user-facing syntax behavior in `src/parser/` or `src/desugar.rs`:
+
+1. Update `syntax.md` in the same commit to describe the new or changed syntax.
+2. Stage `syntax.md` together with the syntax code changes.

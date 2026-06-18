@@ -35,7 +35,7 @@ type ParseResult = Result<
     (
         Vec<ParsedTrack>,
         DirectiveEventsPerMeasure,
-        Vec<Option<crate::error::RecoverableError>>,
+        Vec<Option<crate::error::Warning>>,
     ),
     IrrecoverableError,
 >;
@@ -56,15 +56,15 @@ enum TrackAccumulator {
         /// End byte offset of the lyrics line for each measure, in order.
         lyrics_line_ends: Vec<usize>,
         /// Per-measure beat-overflow error (None = no overflow for that measure).
-        per_measure_beat_errors: Vec<Option<crate::error::RecoverableError>>,
+        per_measure_beat_errors: Vec<Option<crate::error::Warning>>,
         /// Per-measure dotted-eighth grouping errors (empty = no violations for that measure).
-        per_measure_dotted_eighth_errors: Vec<Vec<crate::error::RecoverableError>>,
+        per_measure_dotted_eighth_errors: Vec<Vec<crate::error::Warning>>,
         /// Per-measure dash-after-rest errors from suffix dashes on rests during token parse.
-        per_measure_dash_after_rest_errors: Vec<Option<crate::error::RecoverableError>>,
+        per_measure_dash_after_rest_errors: Vec<Option<crate::error::Warning>>,
         /// Per-measure recoverable chord parse errors (empty = no violations for that measure).
-        per_measure_chord_errors: Vec<Vec<crate::error::RecoverableError>>,
+        per_measure_chord_errors: Vec<Vec<crate::error::Warning>>,
         /// Per-measure recoverable lex error from an unexpected character on the notes line.
-        per_measure_lex_errors: Vec<Option<crate::error::RecoverableError>>,
+        per_measure_lex_errors: Vec<Option<crate::error::Warning>>,
         /// Parallel to `per_measure_beat_errors`: notes-line `_` placeholders.
         empty_note_measure_spans: Vec<Option<Span>>,
     },
@@ -105,7 +105,7 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
         .then_some(())
         .is_none()
         .then(|| {
-            crate::error::RecoverableError::new(
+            crate::error::Warning::new(
                 Span::new(base_offset, base_offset + content.len()),
                 "parts declaration has no notes track",
             )

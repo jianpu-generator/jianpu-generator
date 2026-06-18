@@ -3,7 +3,9 @@ use crate::ast::grouped::{
     PartSlice,
 };
 use crate::ast::parsed::PartKind;
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
+use crate::error::{
+    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span,
+};
 
 pub(crate) fn combine(
     grouped_score: &GroupedScore,
@@ -32,13 +34,13 @@ pub(crate) fn combine(
             Some(d) => (d, None),
             None => (
                 &directives_fallback,
-                Some(RecoverableError::new(
+                Some(Diagnostic::Error(RecoverableError::new(
                     Span::new(0, 0),
                     "internal invariant: measure_directives shorter than measure count",
-                )),
+                ))),
             ),
         };
-        let (part_rows, part_row_errors) = build_part_rows(&grouped_score.parts, measure_idx);
+        let (part_rows, part_row_diagnostics) = build_part_rows(&grouped_score.parts, measure_idx);
         let (source_span, source_span_error) = grouped_score
             .parts
             .iter()
@@ -58,22 +60,23 @@ pub(crate) fn combine(
             .unwrap_or_else(|| {
                 (
                     Span::new(0, 0),
-                    Some(RecoverableError::new(
+                    Some(Diagnostic::Error(RecoverableError::new(
                         Span::new(0, 0),
                         format!(
                             "internal invariant: source_span missing for measure {measure_idx}"
                         ),
-                    )),
+                    ))),
                 )
             });
-        let parse_error = grouped_score
+        let parse_warning = grouped_score
             .per_measure_parse_errors
             .get(measure_idx)
-            .and_then(|e| e.clone());
-        let measure_errors: Vec<RecoverableError> = directives_error
+            .and_then(|e| e.clone())
+            .map(Diagnostic::Warning);
+        let measure_diagnostics: Vec<Diagnostic> = directives_error
             .into_iter()
             .chain(source_span_error)
-            .chain(std::iter::once(parse_error).flatten())
+            .chain(parse_warning)
             .chain(grouped_score.parts.iter().flat_map(|track| match track {
                 GroupedTrack::Timed(part) => {
                     let m = part.measures.get(measure_idx);
@@ -90,10 +93,11 @@ pub(crate) fn combine(
                             .flat_map(|m| m.dotted_eighth_errors.iter().cloned()),
                     )
                     .chain(m.into_iter().flat_map(|m| m.chord_errors.iter().cloned()))
-                    .collect::<Vec<RecoverableError>>()
+                    .map(Diagnostic::Warning)
+                    .collect::<Vec<Diagnostic>>()
                 }
             }))
-            .chain(part_row_errors)
+            .chain(part_row_diagnostics)
             .collect();
         combined.push(MultiPartMeasure {
             time_signature: directives.time_signature.clone(),
@@ -102,7 +106,7 @@ pub(crate) fn combine(
             label: directives.label.clone(),
             parts: part_rows,
             source_span,
-            errors: measure_errors,
+            diagnostics: measure_diagnostics,
         });
     }
 
@@ -131,18 +135,18 @@ fn validate_measure_counts(
 fn build_part_rows(
     grouped_tracks: &[GroupedTrack],
     measure_idx: usize,
-) -> (Vec<PartRow>, Vec<RecoverableError>) {
+) -> (Vec<PartRow>, Vec<Diagnostic>) {
     let mut part_rows = Vec::new();
-    let mut errors = Vec::new();
+    let mut diagnostics = Vec::new();
 
     for track in grouped_tracks.iter() {
         match track {
             GroupedTrack::Timed(part) => {
                 let Some(measure) = part.measures.get(measure_idx) else {
-                    errors.push(RecoverableError::new(
+                    diagnostics.push(Diagnostic::Error(RecoverableError::new(
                         Span::new(0, 0),
                         "internal invariant: timed part measure missing",
-                    ));
+                    )));
                     continue;
                 };
                 let lyrics = match part.kind {
@@ -192,7 +196,7 @@ fn build_part_rows(
         }
     }
 
-    (part_rows, errors)
+    (part_rows, diagnostics)
 }
 
 #[cfg(test)]
@@ -237,13 +241,13 @@ mod tests {
             parser::parse(input, "test.jianpu").expect("beat overflow must not abort parsing");
         let score = crate::grouper::group(doc).expect("grouping must succeed");
         assert_eq!(score.measures.len(), 1);
-        assert_eq!(score.measures[0].errors.len(), 1);
+        assert_eq!(score.measures[0].diagnostics.len(), 1);
         assert!(
-            score.measures[0].errors[0]
-                .message
+            score.measures[0].diagnostics[0]
+                .message()
                 .contains("beat overflow"),
             "got: {}",
-            score.measures[0].errors[0].message
+            score.measures[0].diagnostics[0].message()
         );
     }
 
@@ -263,17 +267,19 @@ mod tests {
         let score = crate::grouper::group(doc).expect("grouping must succeed");
         assert_eq!(score.measures.len(), 2);
         assert_eq!(
-            score.measures[0].errors.len(),
+            score.measures[0].diagnostics.len(),
             1,
             "measure 1 should have exactly one error"
         );
         assert!(
-            score.measures[0].errors[0].message.contains("lyrics"),
+            score.measures[0].diagnostics[0]
+                .message()
+                .contains("lyrics"),
             "error should mention lyrics, got: {}",
-            score.measures[0].errors[0].message
+            score.measures[0].diagnostics[0].message()
         );
         assert!(
-            score.measures[1].errors.is_empty(),
+            score.measures[1].diagnostics.is_empty(),
             "measure 2 should have no errors"
         );
     }

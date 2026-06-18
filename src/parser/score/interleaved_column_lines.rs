@@ -4,7 +4,7 @@ use super::errors::invariant;
 use super::*;
 #[allow(unused_imports)]
 use super::{notes_syllables_mut, timed_events_mut};
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
+use crate::error::{IrrecoverableErrorKind, Warning};
 use crate::parser::score::token_parser;
 
 fn is_recoverable_chord_line_error(kind: &IrrecoverableErrorKind) -> bool {
@@ -135,7 +135,7 @@ fn process_notes_column_line(
     let lex_error = match notes_parse_result {
         Err(ref error) => match &error.kind {
             IrrecoverableErrorKind::LexUnexpectedChar { span, ch } => {
-                Some(RecoverableError::lex_unexpected_char(*span, *ch))
+                Some(Warning::lex_unexpected_char(*span, *ch))
             }
             _ => None,
         },
@@ -249,7 +249,7 @@ fn process_column_line(
                     parsed.dash_after_rest_error,
                 ),
                 Err(error) if is_recoverable_chord_line_error(&error.kind) => {
-                    let recoverable = RecoverableError::from_chord_irrecoverable(&error);
+                    let recoverable = Warning::from_chord_irrecoverable(&error);
                     (vec![], vec![recoverable], None)
                 }
                 Err(error) => return Err(error),

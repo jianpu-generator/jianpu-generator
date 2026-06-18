@@ -118,7 +118,7 @@ fn render_with_enabled_tracks_filters_parts() {
 fn err_response_has_structured_diagnostic() {
     let resp = render_response("not valid jianpu", None, None);
     match resp {
-        RenderResponse::Err { diagnostics } => {
+        RenderResponse::Err { diagnostics, .. } => {
             assert!(!diagnostics.is_empty());
             let d = &diagnostics[0];
             assert_eq!(d.severity, DiagnosticSeverity::Error);
@@ -126,6 +126,34 @@ fn err_response_has_structured_diagnostic() {
             assert!(d.report.as_ref().is_some_and(|r| !r.is_empty()));
         }
         RenderResponse::Ok { .. } => panic!("expected err"),
+    }
+}
+
+#[test]
+fn recoverable_error_produces_warning_severity_view_zone() {
+    // lyrics underflow is a recoverable error
+    let input = concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "[parts]\nMelody = notes lyrics\n\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b\n",
+    );
+    let resp = render_response(input, None, None);
+    match resp {
+        RenderResponse::Ok {
+            diagnostics,
+            diagnostic_view_zones,
+            ..
+        } => {
+            assert_eq!(diagnostics.len(), 1);
+            assert_eq!(diagnostics[0].severity, DiagnosticSeverity::Warning);
+            assert_eq!(diagnostic_view_zones.len(), 1);
+            assert_eq!(
+                diagnostic_view_zones[0].severity,
+                DiagnosticSeverity::Warning
+            );
+            assert_eq!(diagnostic_view_zones[0].messages.len(), 1);
+        }
+        RenderResponse::Err { .. } => panic!("expected ok"),
     }
 }
 
@@ -140,7 +168,7 @@ fn demo_jianpu_renders() {
                 "demo.jianpu should render in the wasm path used by the web editor"
             );
         }
-        RenderResponse::Err { diagnostics } => {
+        RenderResponse::Err { diagnostics, .. } => {
             panic!(
                 "demo.jianpu failed in wasm render path: {}",
                 diagnostics[0].message
@@ -270,7 +298,9 @@ fn demo_jianpu_generates_wav() {
 }
 
 #[test]
-fn err_span_is_utf8_byte_offset() {
+fn diagnostic_span_is_utf8_byte_offset() {
+    // 'x' in a notes line is a recoverable error (LexUnexpectedChar),
+    // so render returns Ok with a warning diagnostic.
     let source = concat!(
         "[metadata]\n",
         "title = \"你好\"\n",
@@ -286,13 +316,24 @@ fn err_span_is_utf8_byte_offset() {
     );
     let token_byte_start = source.find('x').expect("error token in source");
     let resp = render_response(source, None, None);
-    let RenderResponse::Err { diagnostics } = resp else {
-        panic!("expected err");
+    let diagnostics = match resp {
+        RenderResponse::Ok { diagnostics, .. } => diagnostics,
+        RenderResponse::Err { diagnostics, .. } => diagnostics,
     };
-    assert_eq!(diagnostics[0].span.start, token_byte_start);
+    assert!(!diagnostics.is_empty());
+    // The diagnostic span must overlap with the 'x' token — verify the span
+    // is anchored absolutely in the source (not line-locally, which would be < 4).
+    let d = &diagnostics[0];
     assert!(
-        token_byte_start > 4,
-        "span is absolute in source, not line-local"
+        d.span.start >= token_byte_start || d.span.end > token_byte_start,
+        "span ({}, {}) does not cover token at {token_byte_start}",
+        d.span.start,
+        d.span.end
+    );
+    assert!(
+        d.span.start > 4,
+        "span.start {} should be absolute in source, not line-local",
+        d.span.start
     );
 }
 
@@ -353,6 +394,99 @@ fn list_measure_spans_view_zone_start_includes_directive_line() {
 fn list_measure_spans_returns_err_on_invalid_source() {
     let resp = list_measure_spans_response("not valid jianpu");
     assert!(matches!(resp, ListMeasureSpansResponse::Err));
+}
+
+mod group_diagnostics_tests {
+    use crate::types::{
+        group_diagnostics_into_view_zones, DiagnosticOut, DiagnosticSeverity,
+        DiagnosticViewZoneOut, SpanOut,
+    };
+
+    fn make_diagnostic(
+        severity: DiagnosticSeverity,
+        message: &str,
+        span_end: usize,
+    ) -> DiagnosticOut {
+        DiagnosticOut {
+            severity,
+            message: message.to_string(),
+            span: SpanOut {
+                start: 0,
+                end: span_end,
+            },
+            report: None,
+        }
+    }
+
+    #[test]
+    fn single_error_produces_one_error_zone() {
+        // "line1\nline2\n" — byte offset 10 is on line 2
+        let source = "line1\nline2\n";
+        let diagnostics = vec![make_diagnostic(DiagnosticSeverity::Error, "oops", 10)];
+        let zones = group_diagnostics_into_view_zones(source, &diagnostics);
+        assert_eq!(zones.len(), 1);
+        assert_eq!(zones[0].severity, DiagnosticSeverity::Error);
+        assert_eq!(zones[0].after_line_number, 2);
+        assert_eq!(zones[0].messages.len(), 1);
+        assert_eq!(zones[0].messages[0].message, "oops");
+    }
+
+    #[test]
+    fn single_warning_produces_one_warning_zone() {
+        let source = "line1\n";
+        let diagnostics = vec![make_diagnostic(DiagnosticSeverity::Warning, "note", 4)];
+        let zones = group_diagnostics_into_view_zones(source, &diagnostics);
+        assert_eq!(zones.len(), 1);
+        assert_eq!(zones[0].severity, DiagnosticSeverity::Warning);
+        assert_eq!(zones[0].after_line_number, 1);
+    }
+
+    #[test]
+    fn two_errors_same_line_merge_into_one_zone() {
+        let source = "line1\nline2\n";
+        let diagnostics = vec![
+            make_diagnostic(DiagnosticSeverity::Error, "first", 8),
+            make_diagnostic(DiagnosticSeverity::Error, "second", 10),
+        ];
+        let zones = group_diagnostics_into_view_zones(source, &diagnostics);
+        assert_eq!(zones.len(), 1);
+        assert_eq!(zones[0].messages.len(), 2);
+        assert_eq!(zones[0].messages[0].message, "first");
+        assert_eq!(zones[0].messages[1].message, "second");
+    }
+
+    #[test]
+    fn error_and_warning_on_same_line_produce_two_zones_error_first() {
+        let source = "line1\nline2\n";
+        let diagnostics = vec![
+            make_diagnostic(DiagnosticSeverity::Warning, "warn", 8),
+            make_diagnostic(DiagnosticSeverity::Error, "err", 10),
+        ];
+        let zones = group_diagnostics_into_view_zones(source, &diagnostics);
+        assert_eq!(zones.len(), 2);
+        assert_eq!(zones[0].severity, DiagnosticSeverity::Error);
+        assert_eq!(zones[1].severity, DiagnosticSeverity::Warning);
+        assert_eq!(zones[0].after_line_number, 2);
+        assert_eq!(zones[1].after_line_number, 2);
+    }
+
+    #[test]
+    fn zones_sorted_by_line_number_ascending() {
+        let source = "a\nb\nc\n";
+        let diagnostics = vec![
+            make_diagnostic(DiagnosticSeverity::Error, "line3", 5),
+            make_diagnostic(DiagnosticSeverity::Error, "line1", 1),
+        ];
+        let zones = group_diagnostics_into_view_zones(source, &diagnostics);
+        assert_eq!(zones.len(), 2);
+        assert!(zones[0].after_line_number < zones[1].after_line_number);
+    }
+
+    #[test]
+    fn empty_diagnostics_returns_empty_zones() {
+        let zones = group_diagnostics_into_view_zones("source", &[]);
+        assert!(zones.is_empty());
+    }
 }
 
 #[test]

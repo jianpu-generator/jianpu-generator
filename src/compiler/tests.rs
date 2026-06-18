@@ -434,8 +434,10 @@ fn lyrics_underflow_errors_propagate_to_measure_block() {
     let score = score_from(&source);
     let result = compile(&score);
     assert_eq!(result.blocks.len(), 1);
-    assert_eq!(result.blocks[0].errors.len(), 1);
-    assert!(result.blocks[0].errors[0].message.contains("underflow"));
+    assert_eq!(result.blocks[0].diagnostics.len(), 1);
+    assert!(result.blocks[0].diagnostics[0]
+        .message()
+        .contains("underflow"));
 }
 
 #[test]
@@ -443,7 +445,7 @@ fn matching_lyrics_produce_no_block_errors() {
     let source = lyrics_doc("(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c d\n");
     let score = score_from(&source);
     let result = compile(&score);
-    assert!(result.blocks[0].errors.is_empty());
+    assert!(result.blocks[0].diagnostics.is_empty());
 }
 
 #[test]
@@ -461,9 +463,11 @@ fn lyrics_underflow_in_first_measure_only() {
     let score = score_from(&source);
     let result = compile(&score);
     assert_eq!(result.blocks.len(), 2);
-    assert_eq!(result.blocks[0].errors.len(), 1);
-    assert!(result.blocks[0].errors[0].message.contains("underflow"));
-    assert!(result.blocks[1].errors.is_empty());
+    assert_eq!(result.blocks[0].diagnostics.len(), 1);
+    assert!(result.blocks[0].diagnostics[0]
+        .message()
+        .contains("underflow"));
+    assert!(result.blocks[1].diagnostics.is_empty());
 }
 
 #[test]

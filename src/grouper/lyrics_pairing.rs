@@ -1,6 +1,6 @@
 use crate::ast::grouped::{GroupedMeasure, NoteEvent};
 use crate::ast::parsed::{JianPuPitch, Syllable};
-use crate::error::{IrrecoverableError, RecoverableError, Span};
+use crate::error::{IrrecoverableError, Span, Warning};
 
 /// Pair each measure's raw lyric line to its note lyric slots (tie-aware).
 /// Underflow is recovered by padding empty syllables and recording an error.
@@ -44,7 +44,7 @@ pub(super) fn attach_paired_lyrics(
     }
     if let Some(message) = count_mismatch_error {
         for measure in measures.iter_mut().skip(paired_count) {
-            measure.lyrics_error = Some(RecoverableError::new(Span::new(0, 0), message.clone()));
+            measure.lyrics_error = Some(Warning::new(Span::new(0, 0), message.clone()));
         }
     }
     Ok(())
@@ -57,12 +57,7 @@ fn pair_lyrics_to_notes(
     mut prev_tie: bool,
     mut prev_pitch: Option<JianPuPitch>,
     part_name: &str,
-) -> (
-    Vec<Syllable>,
-    Option<RecoverableError>,
-    bool,
-    Option<JianPuPitch>,
-) {
+) -> (Vec<Syllable>, Option<Warning>, bool, Option<JianPuPitch>) {
     let no_lyrics = raw_syllables.is_empty();
     let mut syllable_idx = 0;
     let mut paired = Vec::new();
@@ -97,7 +92,7 @@ fn pair_lyrics_to_notes(
 
     let overflow_count = raw_syllables.len().saturating_sub(syllable_idx);
     let error = if underflow_detected {
-        Some(RecoverableError::new(
+        Some(Warning::new(
             *source_span,
             format!(
                 "[{part_name}] lyrics underflow: ran out of syllables at syllable {} (fewer syllables than notes)",
@@ -105,7 +100,7 @@ fn pair_lyrics_to_notes(
             ),
         ))
     } else if overflow_count > 0 {
-        Some(RecoverableError::new(
+        Some(Warning::new(
             *source_span,
             format!(
                 "[{part_name}] lyrics overflow: {} extra syllable{} after all notes are consumed",

@@ -1,13 +1,13 @@
 use crate::ast::grouped::{GroupedMeasure, Notes};
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Warning};
 
 fn apply_per_measure_errors(
     measure: &mut GroupedMeasure,
-    beat_error: Option<&RecoverableError>,
-    dotted_eighth_errors: &[RecoverableError],
-    dash_after_rest_error: Option<&RecoverableError>,
-    chord_errors: &[RecoverableError],
-    lex_error: Option<&RecoverableError>,
+    beat_error: Option<&Warning>,
+    dotted_eighth_errors: &[Warning],
+    dash_after_rest_error: Option<&Warning>,
+    chord_errors: &[Warning],
+    lex_error: Option<&Warning>,
 ) {
     if let Some(beat_error) = beat_error {
         measure.beat_overflow_error = Some(beat_error.clone());
@@ -31,11 +31,11 @@ fn apply_per_measure_errors(
 pub fn align_empty_note_measures(
     measures: &mut Vec<GroupedMeasure>,
     empty_note_measure_spans: &[Option<Span>],
-    per_measure_beat_errors: &[Option<RecoverableError>],
-    per_measure_dotted_eighth_errors: &[Vec<RecoverableError>],
-    per_measure_dash_after_rest_errors: &[Option<RecoverableError>],
-    per_measure_chord_errors: &[Vec<RecoverableError>],
-    per_measure_lex_errors: &[Option<RecoverableError>],
+    per_measure_beat_errors: &[Option<Warning>],
+    per_measure_dotted_eighth_errors: &[Vec<Warning>],
+    per_measure_dash_after_rest_errors: &[Option<Warning>],
+    per_measure_chord_errors: &[Vec<Warning>],
+    per_measure_lex_errors: &[Option<Warning>],
 ) -> Result<(), IrrecoverableError> {
     if empty_note_measure_spans.is_empty() {
         for (idx, measure) in measures.iter_mut().enumerate() {

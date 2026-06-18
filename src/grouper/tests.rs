@@ -52,31 +52,31 @@ fn extension_adds_to_previous_note_duration() {
 
 #[test]
 fn chord_invalid_token_is_recoverable() {
-    use crate::error::ErrorKind;
+    use crate::error::WarningKind;
     let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "[parts]\nChords = chord\nMelody = notes\n\n",
         "[score]\n(time=4/4 key=C4 bpm=120)\n@ 0 0 0\n1 2 3 4\n",
     ));
     assert!(score.measures[0]
-        .errors
+        .diagnostics
         .iter()
-        .any(|error| error.kind == ErrorKind::ChordExpectedDegreeDigit));
+        .any(|d| d.warning_kind() == Some(WarningKind::ChordExpectedDegreeDigit)));
     assert!(!score.measures.is_empty());
 }
 
 #[test]
 fn chord_expected_degree_digit_is_recoverable() {
-    use crate::error::ErrorKind;
+    use crate::error::WarningKind;
     let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "[parts]\nChords = chord\nMelody = notes\n\n",
         "[score]\n(time=4/4 key=C4 bpm=120)\n8 2 3 4\n1 2 3 4\n",
     ));
     assert!(score.measures[0]
-        .errors
+        .diagnostics
         .iter()
-        .any(|error| error.kind == ErrorKind::ChordExpectedDegreeDigit));
+        .any(|d| d.warning_kind() == Some(WarningKind::ChordExpectedDegreeDigit)));
     let chord_row = score.measures[0]
         .parts
         .iter()
@@ -94,78 +94,80 @@ fn chord_expected_degree_digit_is_recoverable() {
 
 #[test]
 fn chord_unknown_suffix_is_recoverable() {
-    use crate::error::ErrorKind;
+    use crate::error::WarningKind;
     let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "[parts]\nChords = chord\nMelody = notes\n\n",
         "[score]\n(time=4/4 key=C4 bpm=120)\n1z 2 3 4\n1 2 3 4\n",
     ));
     assert!(score.measures[0]
-        .errors
+        .diagnostics
         .iter()
-        .any(|error| error.kind == ErrorKind::ChordUnknownSuffix));
+        .any(|d| d.warning_kind() == Some(WarningKind::ChordUnknownSuffix)));
 }
 
 #[test]
 fn chord_invalid_bass_is_recoverable() {
-    use crate::error::ErrorKind;
+    use crate::error::WarningKind;
     let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "[parts]\nChords = chord\nMelody = notes\n\n",
         "[score]\n(time=4/4 key=C4 bpm=120)\n1/X 2 3 4\n1 2 3 4\n",
     ));
     assert!(score.measures[0]
-        .errors
+        .diagnostics
         .iter()
-        .any(|error| error.kind == ErrorKind::ChordInvalidBass));
+        .any(|d| d.warning_kind() == Some(WarningKind::ChordInvalidBass)));
 }
 
 #[test]
 fn chord_bass_unexpected_char_is_recoverable() {
-    use crate::error::ErrorKind;
+    use crate::error::WarningKind;
     let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "[parts]\nChords = chord\nMelody = notes\n\n",
         "[score]\n(time=4/4 key=C4 bpm=120)\n1/5x 2 3 4\n1 2 3 4\n",
     ));
     assert!(score.measures[0]
-        .errors
+        .diagnostics
         .iter()
-        .any(|error| error.kind == ErrorKind::ChordBassUnexpectedChar));
+        .any(|d| d.warning_kind() == Some(WarningKind::ChordBassUnexpectedChar)));
 }
 
 #[test]
 fn chord_bass_trailing_chars_is_recoverable() {
-    use crate::error::ErrorKind;
+    use crate::error::WarningKind;
     let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "[parts]\nChords = chord\nMelody = notes\n\n",
         "[score]\n(time=4/4 key=C4 bpm=120)\n1/5bb 2 3 4\n1 2 3 4\n",
     ));
     assert!(score.measures[0]
-        .errors
+        .diagnostics
         .iter()
-        .any(|error| error.kind == ErrorKind::ChordBassTrailingChars));
+        .any(|d| d.warning_kind() == Some(WarningKind::ChordBassTrailingChars)));
 }
 
 #[test]
 fn measure_wrong_line_count_is_recoverable() {
-    use crate::error::ErrorKind;
+    use crate::error::WarningKind;
     // One notes+lyrics part expects two data lines but only the notes line is present.
     let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n",
         "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\n",
     ));
     assert_eq!(score.measures.len(), 1);
-    assert_eq!(score.measures[0].errors.len(), 1);
+    assert_eq!(score.measures[0].diagnostics.len(), 1);
     assert_eq!(
-        score.measures[0].errors[0].kind,
-        ErrorKind::MeasureWrongLineCount
+        score.measures[0].diagnostics[0].warning_kind(),
+        Some(WarningKind::MeasureWrongLineCount)
     );
     assert!(
-        score.measures[0].errors[0].message.contains("lyrics"),
+        score.measures[0].diagnostics[0]
+            .message()
+            .contains("lyrics"),
         "got: {}",
-        score.measures[0].errors[0].message
+        score.measures[0].diagnostics[0].message()
     );
 }
 
@@ -178,13 +180,13 @@ fn ditto_no_precedent_is_recoverable() {
         "[score]\n(time=4/4 key=C4 bpm=120)\n\"\n1 2 3 4\n",
     ));
     assert_eq!(score.measures.len(), 1);
-    assert_eq!(score.measures[0].errors.len(), 1);
+    assert_eq!(score.measures[0].diagnostics.len(), 1);
     assert!(
-        score.measures[0].errors[0]
-            .message
+        score.measures[0].diagnostics[0]
+            .message()
             .contains("no preceding notes line"),
         "got: {}",
-        score.measures[0].errors[0].message
+        score.measures[0].diagnostics[0].message()
     );
     assert_eq!(
         first_part_notes(&score, 0).len(),
@@ -200,24 +202,30 @@ fn ditto_no_precedent_is_recoverable() {
 
 #[test]
 fn suffix_dash_after_rest_is_recoverable() {
-    use crate::error::ErrorKind;
+    use crate::error::WarningKind;
     let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n",
         "[score]\n(time=4/4 key=C4 bpm=120)\n0---\n_\n",
     ));
-    assert_eq!(score.measures[0].errors.len(), 1);
-    assert_eq!(score.measures[0].errors[0].kind, ErrorKind::DashAfterRest);
+    assert_eq!(score.measures[0].diagnostics.len(), 1);
+    assert_eq!(
+        score.measures[0].diagnostics[0].warning_kind(),
+        Some(WarningKind::DashAfterRest)
+    );
 }
 
 #[test]
 fn dash_after_rest_is_recoverable() {
-    use crate::error::ErrorKind;
+    use crate::error::WarningKind;
     let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n",
         "[score]\n(time=4/4 key=C4 bpm=120)\n0 - - -\n_\n",
     ));
-    assert_eq!(score.measures[0].errors.len(), 1);
-    assert_eq!(score.measures[0].errors[0].kind, ErrorKind::DashAfterRest);
+    assert_eq!(score.measures[0].diagnostics.len(), 1);
+    assert_eq!(
+        score.measures[0].diagnostics[0].warning_kind(),
+        Some(WarningKind::DashAfterRest)
+    );
 }
 
 #[test]
@@ -299,13 +307,13 @@ fn beat_overflow_recovers_with_error_on_measure() {
     let doc = parser::parse(input, "test.jianpu").unwrap();
     let score = group(doc).expect("beat overflow must not abort grouping");
     assert_eq!(score.measures.len(), 1);
-    assert_eq!(score.measures[0].errors.len(), 1);
+    assert_eq!(score.measures[0].diagnostics.len(), 1);
     assert!(
-        score.measures[0].errors[0]
-            .message
+        score.measures[0].diagnostics[0]
+            .message()
             .contains("beat overflow"),
         "error message should mention beat overflow, got: {}",
-        score.measures[0].errors[0].message
+        score.measures[0].diagnostics[0].message()
     );
 }
 

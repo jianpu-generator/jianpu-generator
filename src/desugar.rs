@@ -1,5 +1,5 @@
 use crate::ast::parsed::{flatten_score_line_slots, PartDecl, ScoreLineRole};
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Warning};
 use crate::parser::score::measure_group;
 
 type SourceLine = (String, usize);
@@ -18,7 +18,7 @@ pub fn desugar_groups(
     groups: Vec<MeasureGroup>,
     declarations: &[PartDecl],
     base_offset: usize,
-) -> Result<(Vec<MeasureGroup>, Vec<Option<RecoverableError>>), IrrecoverableError> {
+) -> Result<(Vec<MeasureGroup>, Vec<Option<Warning>>), IrrecoverableError> {
     let slots = flatten_score_line_slots(declarations);
     let mut desugared = Vec::with_capacity(groups.len());
     let mut per_group_errors = Vec::with_capacity(groups.len());
@@ -38,7 +38,7 @@ fn pad_implicit_ditto_group(
     declarations: &[PartDecl],
     slots: &[crate::ast::parsed::ScoreLineSlot],
     base_offset: usize,
-) -> Result<(MeasureGroup, Option<RecoverableError>), IrrecoverableError> {
+) -> Result<(MeasureGroup, Option<Warning>), IrrecoverableError> {
     let directive_count = measure_group::directive_line_count(group);
 
     let directive_lines = group.get(..directive_count).unwrap_or(&[]);
@@ -50,10 +50,10 @@ fn pad_implicit_ditto_group(
         .map(|(_, off)| Span::new(base_offset + *off, base_offset + *off + 1))
         .unwrap_or(Span::new(base_offset, base_offset + 1));
 
-    let mut recoverable_error: Option<RecoverableError> = None;
+    let mut recoverable_error: Option<Warning> = None;
 
     let effective_data_lines: Vec<(String, usize)> = if data_lines.is_empty() {
-        recoverable_error = Some(RecoverableError::measure_no_data_lines(span));
+        recoverable_error = Some(Warning::measure_no_data_lines(span));
         Vec::new()
     } else if data_lines.len() > slots.len() {
         let part_list = declarations
@@ -61,7 +61,7 @@ fn pad_implicit_ditto_group(
             .map(|d| d.abbreviation.as_str())
             .collect::<Vec<_>>()
             .join(", ");
-        recoverable_error = Some(RecoverableError::measure_too_many_lines(
+        recoverable_error = Some(Warning::measure_too_many_lines(
             span,
             data_lines.len(),
             slots.len(),
@@ -94,7 +94,7 @@ fn pad_implicit_ditto_group(
         } else if role == ScoreLineRole::Lyrics {
             let abbrev = track_abbreviation(declarations, slot.track_index);
             recoverable_error.get_or_insert_with(|| {
-                RecoverableError::measure_missing_role_line(
+                Warning::measure_missing_role_line(
                     Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
                     role_name(role),
                     abbrev,
@@ -104,7 +104,7 @@ fn pad_implicit_ditto_group(
         } else if role == ScoreLineRole::Notes {
             let abbrev = track_abbreviation(declarations, slot.track_index);
             recoverable_error.get_or_insert_with(|| {
-                RecoverableError::measure_missing_role_line(
+                Warning::measure_missing_role_line(
                     Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
                     role_name(role),
                     abbrev,
@@ -115,7 +115,7 @@ fn pad_implicit_ditto_group(
             // ScoreLineRole::Chord (the only remaining variant)
             let abbrev = track_abbreviation(declarations, slot.track_index);
             recoverable_error.get_or_insert_with(|| {
-                RecoverableError::measure_missing_role_line(
+                Warning::measure_missing_role_line(
                     Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
                     role_name(role),
                     abbrev,
@@ -135,14 +135,14 @@ fn desugar_group(
     _declarations: &[PartDecl],
     slots: &[crate::ast::parsed::ScoreLineSlot],
     base_offset: usize,
-) -> Result<(MeasureGroup, Option<RecoverableError>), IrrecoverableError> {
+) -> Result<(MeasureGroup, Option<Warning>), IrrecoverableError> {
     let directive_count = measure_group::directive_line_count(group);
 
     let directive_lines = group.get(..directive_count).unwrap_or(&[]).to_vec();
     let data_lines = group.get(directive_count..).unwrap_or(&[]);
 
     let mut resolved: Vec<(String, usize)> = Vec::with_capacity(data_lines.len());
-    let mut recoverable_error: Option<RecoverableError> = None;
+    let mut recoverable_error: Option<Warning> = None;
 
     for (i, (line, offset)) in data_lines.iter().enumerate() {
         if line == "\"" {
@@ -166,7 +166,7 @@ fn desugar_group(
                 None => {
                     let span = Span::new(base_offset + *offset, base_offset + *offset + 1);
                     recoverable_error.get_or_insert_with(|| {
-                        RecoverableError::new(
+                        Warning::new(
                             span,
                             format!(
                                 "ditto '\"' has no preceding {} line in this measure group",

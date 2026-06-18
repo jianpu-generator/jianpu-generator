@@ -1,0 +1,13 @@
+[metadata]
+title = "Testing"
+author = "Mozart"
+row height = 24
+max columns = 20
+
+[parts]
+Melody = notes
+
+[score]
+1 2 3 (4
+
+5) 6 7 1

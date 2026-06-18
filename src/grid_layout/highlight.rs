@@ -138,7 +138,7 @@ pub(crate) fn compute_error_highlight_infos(
     blocks
         .iter()
         .enumerate()
-        .filter(|(_, block)| !block.errors.is_empty())
+        .filter(|(_, block)| !block.diagnostics.is_empty())
         .filter_map(|(measure_idx, _)| {
             compute_measure_highlight_location(page_systems, measure_idx, header, base)
         })

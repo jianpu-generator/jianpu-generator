@@ -29,7 +29,7 @@ impl<T> Spanned<T> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ErrorKind {
+pub enum WarningKind {
     General,
     /// `-` used to extend a rest (`0-`, `0---`, or standalone `-` after `0`).
     DashAfterRest,
@@ -55,7 +55,7 @@ pub enum ErrorKind {
     LexUnexpectedChar,
 }
 
-impl ErrorKind {
+impl WarningKind {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::General => "general",
@@ -74,19 +74,21 @@ impl ErrorKind {
     }
 }
 
+/// A recoverable warning: render continues and the score is still produced.
+/// Displayed as an amber view zone in the editor.
 #[derive(Debug, Clone)]
-pub struct RecoverableError {
+pub struct Warning {
     pub span: Span,
     pub message: String,
-    pub kind: ErrorKind,
+    pub kind: WarningKind,
 }
 
-impl RecoverableError {
+impl Warning {
     pub fn new(span: Span, message: impl Into<String>) -> Self {
         Self {
             span,
             message: message.into(),
-            kind: ErrorKind::General,
+            kind: WarningKind::General,
         }
     }
 
@@ -94,7 +96,7 @@ impl RecoverableError {
         Self {
             span,
             message: "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)".to_string(),
-            kind: ErrorKind::DashAfterRest,
+            kind: WarningKind::DashAfterRest,
         }
     }
 
@@ -102,7 +104,7 @@ impl RecoverableError {
         Self {
             span,
             message: message.into(),
-            kind: ErrorKind::ChordInvalidToken,
+            kind: WarningKind::ChordInvalidToken,
         }
     }
 
@@ -111,7 +113,7 @@ impl RecoverableError {
             IrrecoverableErrorKind::ChordExpectedDegreeDigit { span, ch } => Self {
                 span: *span,
                 message: format!("expected chord degree digit (0-7), got: {ch}"),
-                kind: ErrorKind::ChordExpectedDegreeDigit,
+                kind: WarningKind::ChordExpectedDegreeDigit,
             },
             IrrecoverableErrorKind::ChordUnknownSuffix {
                 span,
@@ -120,22 +122,22 @@ impl RecoverableError {
             } => Self {
                 span: *span,
                 message: format!("unknown chord suffix '{suffix}' in token '{token}'"),
-                kind: ErrorKind::ChordUnknownSuffix,
+                kind: WarningKind::ChordUnknownSuffix,
             },
             IrrecoverableErrorKind::ChordInvalidBass { span, bass } => Self {
                 span: *span,
                 message: format!("invalid bass note '{bass}'"),
-                kind: ErrorKind::ChordInvalidBass,
+                kind: WarningKind::ChordInvalidBass,
             },
             IrrecoverableErrorKind::ChordBassUnexpectedChar { span, ch, bass } => Self {
                 span: *span,
                 message: format!("unexpected character '{ch}' in bass note '{bass}'"),
-                kind: ErrorKind::ChordBassUnexpectedChar,
+                kind: WarningKind::ChordBassUnexpectedChar,
             },
             IrrecoverableErrorKind::ChordBassTrailingChars { span, bass } => Self {
                 span: *span,
                 message: format!("bass note '{bass}' has trailing characters"),
-                kind: ErrorKind::ChordBassTrailingChars,
+                kind: WarningKind::ChordBassTrailingChars,
             },
             _ => Self::chord_invalid_token(*error.span(), error.message()),
         }
@@ -145,7 +147,7 @@ impl RecoverableError {
         Self {
             span,
             message: "dotted eighth must be followed by a sixteenth note or rest".to_string(),
-            kind: ErrorKind::DottedEighthNeedsSixteenth,
+            kind: WarningKind::DottedEighthNeedsSixteenth,
         }
     }
 
@@ -153,7 +155,7 @@ impl RecoverableError {
         Self {
             span,
             message: "note/rest crosses the half-bar boundary (beat 2→3); use a beam group or tie to show the split".to_string(),
-            kind: ErrorKind::HalfBarBoundaryCrossed,
+            kind: WarningKind::HalfBarBoundaryCrossed,
         }
     }
 
@@ -161,7 +163,7 @@ impl RecoverableError {
         Self {
             span,
             message: format!("unexpected character: {ch}"),
-            kind: ErrorKind::LexUnexpectedChar,
+            kind: WarningKind::LexUnexpectedChar,
         }
     }
 
@@ -169,7 +171,7 @@ impl RecoverableError {
         Self {
             span,
             message: format!("expected {expected} lines (one per score line), got {got}"),
-            kind: ErrorKind::MeasureWrongLineCount,
+            kind: WarningKind::MeasureWrongLineCount,
         }
     }
 
@@ -177,7 +179,7 @@ impl RecoverableError {
         Self {
             span,
             message: "measure has no data lines; treating all parts as empty".to_string(),
-            kind: ErrorKind::MeasureWrongLineCount,
+            kind: WarningKind::MeasureWrongLineCount,
         }
     }
 
@@ -187,7 +189,7 @@ impl RecoverableError {
             message: format!(
                 "this measure has {got} lines but only {expected} expected (declared parts: {parts}); extra lines ignored"
             ),
-            kind: ErrorKind::MeasureWrongLineCount,
+            kind: WarningKind::MeasureWrongLineCount,
         }
     }
 
@@ -200,7 +202,55 @@ impl RecoverableError {
         Self {
             span,
             message: format!("missing {role} line for '{abbrev}'; treating as {treatment}"),
-            kind: ErrorKind::MeasureWrongLineCount,
+            kind: WarningKind::MeasureWrongLineCount,
+        }
+    }
+}
+
+/// A recoverable error: render continues but the affected measure is highlighted red.
+/// Displayed as a red view zone in the editor.
+#[derive(Debug, Clone)]
+pub struct RecoverableError {
+    pub span: Span,
+    pub message: String,
+}
+
+impl RecoverableError {
+    pub fn new(span: Span, message: impl Into<String>) -> Self {
+        Self {
+            span,
+            message: message.into(),
+        }
+    }
+}
+
+/// A per-measure diagnostic that is attached to rendered output.
+/// `Warning` variants are shown as amber view zones; `Error` variants as red view zones.
+#[derive(Debug, Clone)]
+pub enum Diagnostic {
+    Warning(Warning),
+    Error(RecoverableError),
+}
+
+impl Diagnostic {
+    pub fn span(&self) -> Span {
+        match self {
+            Self::Warning(w) => w.span,
+            Self::Error(e) => e.span,
+        }
+    }
+
+    pub fn message(&self) -> &str {
+        match self {
+            Self::Warning(w) => &w.message,
+            Self::Error(e) => &e.message,
+        }
+    }
+
+    pub fn warning_kind(&self) -> Option<WarningKind> {
+        match self {
+            Self::Warning(w) => Some(w.kind),
+            Self::Error(_) => None,
         }
     }
 }

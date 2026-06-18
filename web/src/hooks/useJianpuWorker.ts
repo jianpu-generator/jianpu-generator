@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Diagnostic, MeasureSpan, PartInfo, ScoreLineHint } from '../types'
+import type {
+  Diagnostic,
+  DiagnosticViewZone,
+  MeasureSpan,
+  PartInfo,
+  ScoreLineHint,
+} from '../types'
 import type { WorkerRequest, WorkerResponse } from '../worker/jianpu.worker'
 import {
   baseNameFromActiveFile,
@@ -22,6 +28,7 @@ interface JianpuWorkerState {
   pdfExporting: boolean
   splitPdfExporting: boolean
   diagnostics: Diagnostic[]
+  diagnosticViewZones: DiagnosticViewZone[]
   rendering: boolean
   audioGenerating: boolean
   exportPdf: () => void
@@ -54,6 +61,9 @@ export function useJianpuWorker(
   const [pdfExporting, setPdfExporting] = useState(false)
   const [splitPdfExporting, setSplitPdfExporting] = useState(false)
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([])
+  const [diagnosticViewZones, setDiagnosticViewZones] = useState<
+    DiagnosticViewZone[]
+  >([])
   const [rendering, setRendering] = useState(false)
   const [audioGenerating, setAudioGenerating] = useState(false)
   const [selectedMeasureRange, setSelectedMeasureRange] = useState<{
@@ -198,6 +208,7 @@ export function useJianpuWorker(
         setRendering(false)
         setSvgs(msg.svgs)
         setDiagnostics(msg.diagnostics)
+        setDiagnosticViewZones(msg.diagnosticViewZones)
         return
       }
 
@@ -265,6 +276,7 @@ export function useJianpuWorker(
         if (msg.id !== latestRenderIdRef.current) return
         setRendering(false)
         setDiagnostics(msg.diagnostics)
+        setDiagnosticViewZones(msg.diagnosticViewZones)
       }
     }
 
@@ -494,6 +506,7 @@ export function useJianpuWorker(
     pdfExporting,
     splitPdfExporting,
     diagnostics,
+    diagnosticViewZones,
     rendering,
     audioGenerating,
     exportPdf,

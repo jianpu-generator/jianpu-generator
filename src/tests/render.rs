@@ -152,8 +152,12 @@ fn lyrics_underflow_render_returns_svgs_and_non_empty_errors() {
         !output.svgs.is_empty(),
         "should produce at least one SVG page"
     );
-    assert_eq!(output.errors.len(), 1, "should report one underflow error");
-    assert!(output.errors[0].message.contains("underflow"));
+    assert_eq!(
+        output.diagnostics.len(),
+        1,
+        "should report one underflow error"
+    );
+    assert!(output.diagnostics[0].message().contains("underflow"));
     assert!(
         output.svgs[0].contains(r#"data-testid="error-highlight""#),
         "SVG should contain an error-highlight rect"
@@ -173,11 +177,11 @@ fn lex_unexpected_char_renders_error_highlight_and_reports_error() {
         !output.svgs.is_empty(),
         "should produce at least one SVG page"
     );
-    assert_eq!(output.errors.len(), 1, "should report one lex error");
+    assert_eq!(output.diagnostics.len(), 1, "should report one lex error");
     assert!(
-        output.errors[0].message.contains("unexpected"),
+        output.diagnostics[0].message().contains("unexpected"),
         "error message should mention unexpected char, got: {}",
-        output.errors[0].message
+        output.diagnostics[0].message()
     );
     assert!(
         output.svgs[0].contains(r#"data-testid="error-highlight""#),

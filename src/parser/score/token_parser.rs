@@ -200,25 +200,25 @@ mod tests {
 
     #[test]
     fn recovers_dash_suffix_on_rest() {
-        use crate::error::ErrorKind;
+        use crate::error::WarningKind;
         let parsed = parse("0---").unwrap();
         assert_eq!(parsed.events.len(), 1);
         assert_eq!(rest(&parsed.events, 0).duration, 4);
         assert_eq!(
             parsed.dash_after_rest_error.as_ref().unwrap().kind,
-            ErrorKind::DashAfterRest
+            WarningKind::DashAfterRest
         );
     }
 
     #[test]
     fn recovers_dash_suffix_on_rest_in_group() {
-        use crate::error::ErrorKind;
+        use crate::error::WarningKind;
         let parsed = parse("(0-1)").unwrap();
         assert_eq!(parsed.events.len(), 2);
         assert_eq!(rest(&parsed.events, 0).duration, 4);
         assert_eq!(
             parsed.dash_after_rest_error.as_ref().unwrap().kind,
-            ErrorKind::DashAfterRest
+            WarningKind::DashAfterRest
         );
     }
 

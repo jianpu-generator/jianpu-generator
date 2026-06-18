@@ -32,24 +32,24 @@ pub use split_track::*;
 
 use ast::grouped::Score;
 use ast::parsed::PartKind;
-use error::{IrrecoverableError, RecoverableError};
+use error::{Diagnostic, IrrecoverableError};
 
-/// Output of a successful render: SVG page strings and any recoverable errors.
+/// Output of a successful render: SVG page strings and any diagnostics.
 #[derive(Debug)]
 pub struct RenderOutput {
     /// One SVG string per page.
     pub svgs: Vec<String>,
-    /// Recoverable errors collected during grouping (e.g. lyrics underflow).
-    /// The SVGs already contain red overlays for erroneous measures; these
-    /// errors let callers surface them in editor diagnostics as well.
-    pub errors: Vec<RecoverableError>,
+    /// Diagnostics collected during grouping (e.g. lyrics underflow).
+    /// The SVGs already contain colored overlays for affected measures; these
+    /// diagnostics let callers surface them in editor view zones as well.
+    pub diagnostics: Vec<Diagnostic>,
 }
 
-fn collect_measure_errors(score: &Score) -> Vec<RecoverableError> {
+fn collect_measure_diagnostics(score: &Score) -> Vec<Diagnostic> {
     score
         .measures
         .iter()
-        .flat_map(|m| m.errors.iter().cloned())
+        .flat_map(|m| m.diagnostics.iter().cloned())
         .collect()
 }
 
@@ -159,10 +159,10 @@ pub fn render_svgs_from_source_filtered_with_lyrics(
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
-    let errors = collect_measure_errors(&score);
+    let diagnostics = collect_measure_diagnostics(&score);
     Ok(RenderOutput {
         svgs: render_svgs(&score),
-        errors,
+        diagnostics,
     })
 }
 
@@ -183,7 +183,7 @@ pub fn render_svgs_with_highlight_range(
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
-    let errors = collect_measure_errors(&score);
+    let diagnostics = collect_measure_diagnostics(&score);
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
     let header = grid_layout::types::Header {
         title: score.metadata.title.clone(),
@@ -203,7 +203,7 @@ pub fn render_svgs_with_highlight_range(
     let docs = renderer::new_renderer::render_new(&abs, &config);
     Ok(RenderOutput {
         svgs: serializer::serialize(&docs),
-        errors,
+        diagnostics,
     })
 }
 

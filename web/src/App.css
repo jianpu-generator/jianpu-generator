@@ -119,3 +119,24 @@
   color: var(--text);
   white-space: pre-wrap;
 }
+
+.editor-warning-zone {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.35rem 1rem 0.5rem 3.5rem;
+  background: var(--warning-bg);
+  border-top: 1px solid color-mix(in srgb, var(--warning) 20%, transparent);
+  font-size: 0.8rem;
+}
+
+.editor-warning-zone hr {
+  border: none;
+  border-top: 1px solid color-mix(in srgb, var(--warning) 15%, transparent);
+  margin: 0.35rem 0;
+}
+
+.editor-warning-zone-message {
+  color: var(--warning);
+  font-weight: 500;
+  line-height: 1.4;
+}

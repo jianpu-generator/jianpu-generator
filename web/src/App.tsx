@@ -55,6 +55,7 @@ export default function App() {
     pdfAvailable,
     pdfExporting,
     diagnostics,
+    diagnosticViewZones,
     rendering,
     audioGenerating,
     exportPdf,
@@ -240,6 +241,7 @@ export default function App() {
                 onChange={handleSourceChange}
                 readOnly={readOnly}
                 diagnostics={diagnostics}
+                diagnosticViewZones={diagnosticViewZones}
                 measureSpans={measureSpans}
                 scoreLineHints={scoreLineHints}
                 onSelectionChange={notifySelection}

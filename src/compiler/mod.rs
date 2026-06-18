@@ -127,7 +127,7 @@ fn compile_measure(
     MeasureBlock {
         rows,
         decorations,
-        errors: measure.errors.clone(),
+        diagnostics: measure.diagnostics.clone(),
     }
 }
 

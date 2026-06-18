@@ -32,7 +32,7 @@ fn make_block_with_decorations(
             ],
         }],
         decorations,
-        errors: vec![],
+        diagnostics: vec![],
     }
 }
 
@@ -76,7 +76,7 @@ fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
             ],
         }],
         decorations: vec![],
-        errors: vec![],
+        diagnostics: vec![],
     }
 }
 
@@ -156,7 +156,7 @@ fn layout_with_bpm_decoration_has_decoration_row() {
             ],
         }],
         decorations: vec![Decoration::Bpm(120)],
-        errors: vec![],
+        diagnostics: vec![],
     };
     let compile_result = CompileResult {
         blocks: vec![block],

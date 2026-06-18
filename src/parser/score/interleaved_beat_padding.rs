@@ -1,10 +1,10 @@
 use crate::ast::parsed::{ScoreEvent, ScoreLineSlot};
-use crate::error::{IrrecoverableError, RecoverableError, Span, Spanned};
+use crate::error::{IrrecoverableError, Span, Spanned, Warning};
 
 pub(super) struct PaddedBeats {
     pub(super) events: Vec<Spanned<ScoreEvent>>,
-    pub(super) beat_overflow_error: Option<RecoverableError>,
-    pub(super) dotted_eighth_errors: Vec<RecoverableError>,
+    pub(super) beat_overflow_error: Option<Warning>,
+    pub(super) dotted_eighth_errors: Vec<Warning>,
 }
 
 pub(super) fn beats_per_measure(num: u8, den: u8) -> u32 {
@@ -137,7 +137,7 @@ pub(super) fn validate_and_pad_beats(
 
     let (mut events, overflow_error) = match truncate_at {
         Some(i) => {
-            let error = RecoverableError::new(
+            let error = Warning::new(
                 line_span,
                 format!(
                     "beat overflow: measure has {expected} quarter-beats but notes exceed that (truncated at note {})",
@@ -160,7 +160,7 @@ pub(super) fn validate_and_pad_beats(
     if total < expected {
         let deficit = expected - total;
         if !can_implicitly_pad(&events, deficit) {
-            let error = RecoverableError::new(
+            let error = Warning::new(
                 line_span,
                 format!(
                     "incomplete measure: expected {expected} quarter-beats, got {total}; padding with rest"

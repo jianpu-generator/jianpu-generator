@@ -16,9 +16,9 @@ use jianpu_generator::{
 #[cfg(feature = "wav")]
 use types::GenerateWavResponse;
 use types::{
-    diagnostic_from_error, diagnostic_from_recoverable_error, ListMeasureSpansResponse,
-    ListPartsResponse, ListScoreLineHintsResponse, MeasureAtOffsetResponse, PartOut,
-    RenderResponse, ScoreLineHintOut,
+    diagnostic_from_diagnostic, diagnostic_from_error, group_diagnostics_into_view_zones,
+    ListMeasureSpansResponse, ListPartsResponse, ListScoreLineHintsResponse,
+    MeasureAtOffsetResponse, PartOut, RenderResponse, ScoreLineHintOut,
 };
 #[cfg(feature = "pdf")]
 use types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
@@ -32,17 +32,27 @@ fn render_response(
     let tracks = enabled_tracks.as_deref();
     let lyrics = disabled_lyrics.as_deref();
     match render_svgs_from_source_filtered_with_lyrics(source, "input.jianpu", tracks, lyrics) {
-        Ok(output) => RenderResponse::Ok {
-            svgs: output.svgs,
-            diagnostics: output
-                .errors
+        Ok(output) => {
+            let diagnostics: Vec<_> = output
+                .diagnostics
                 .into_iter()
-                .map(|e| diagnostic_from_recoverable_error(source, e))
-                .collect(),
-        },
-        Err(e) => RenderResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, e)],
-        },
+                .map(|d| diagnostic_from_diagnostic(source, d))
+                .collect();
+            let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
+            RenderResponse::Ok {
+                svgs: output.svgs,
+                diagnostics,
+                diagnostic_view_zones,
+            }
+        }
+        Err(e) => {
+            let diagnostics = vec![diagnostic_from_error(source, e)];
+            let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
+            RenderResponse::Err {
+                diagnostics,
+                diagnostic_view_zones,
+            }
+        }
     }
 }
 
@@ -63,17 +73,27 @@ fn render_with_highlight_range_response(
         tracks,
         lyrics,
     ) {
-        Ok(output) => RenderResponse::Ok {
-            svgs: output.svgs,
-            diagnostics: output
-                .errors
+        Ok(output) => {
+            let diagnostics: Vec<_> = output
+                .diagnostics
                 .into_iter()
-                .map(|e| diagnostic_from_recoverable_error(source, e))
-                .collect(),
-        },
-        Err(e) => RenderResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, e)],
-        },
+                .map(|d| diagnostic_from_diagnostic(source, d))
+                .collect();
+            let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
+            RenderResponse::Ok {
+                svgs: output.svgs,
+                diagnostics,
+                diagnostic_view_zones,
+            }
+        }
+        Err(e) => {
+            let diagnostics = vec![diagnostic_from_error(source, e)];
+            let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
+            RenderResponse::Err {
+                diagnostics,
+                diagnostic_view_zones,
+            }
+        }
     }
 }
 
