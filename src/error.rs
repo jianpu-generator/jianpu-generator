@@ -39,6 +39,8 @@ pub enum ErrorKind {
     DottedEighthNeedsSixteenth,
     /// A note/rest duration crosses the half-bar boundary in 4/4 time.
     HalfBarBoundaryCrossed,
+    /// Measure group has the wrong number of data lines for declared parts.
+    MeasureWrongLineCount,
 }
 
 impl ErrorKind {
@@ -49,6 +51,7 @@ impl ErrorKind {
             Self::ChordInvalidToken => "chord_invalid_token",
             Self::DottedEighthNeedsSixteenth => "dotted_eighth_needs_sixteenth",
             Self::HalfBarBoundaryCrossed => "half_bar_boundary_crossed",
+            Self::MeasureWrongLineCount => "measure_wrong_line_count",
         }
     }
 }
@@ -98,6 +101,45 @@ impl RecoverableError {
             span,
             message: "note/rest crosses the half-bar boundary (beat 2→3); use a beam group or tie to show the split".to_string(),
             kind: ErrorKind::HalfBarBoundaryCrossed,
+        }
+    }
+
+    pub fn measure_wrong_line_count(span: Span, got: usize, expected: usize) -> Self {
+        Self {
+            span,
+            message: format!("expected {expected} lines (one per score line), got {got}"),
+            kind: ErrorKind::MeasureWrongLineCount,
+        }
+    }
+
+    pub fn measure_no_data_lines(span: Span) -> Self {
+        Self {
+            span,
+            message: "measure has no data lines; treating all parts as empty".to_string(),
+            kind: ErrorKind::MeasureWrongLineCount,
+        }
+    }
+
+    pub fn measure_too_many_lines(span: Span, got: usize, expected: usize, parts: &str) -> Self {
+        Self {
+            span,
+            message: format!(
+                "this measure has {got} lines but only {expected} expected (declared parts: {parts}); extra lines ignored"
+            ),
+            kind: ErrorKind::MeasureWrongLineCount,
+        }
+    }
+
+    pub fn measure_missing_role_line(span: Span, role: &str, abbrev: &str) -> Self {
+        let treatment = if role == "lyrics" {
+            "no lyrics"
+        } else {
+            "empty"
+        };
+        Self {
+            span,
+            message: format!("missing {role} line for '{abbrev}'; treating as {treatment}"),
+            kind: ErrorKind::MeasureWrongLineCount,
         }
     }
 }

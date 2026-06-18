@@ -36,6 +36,7 @@ These are no longer review items. Some still have a matching
 | Measure has no data lines | `implemented` | Treat all parts as empty; error on measure (`desugar.rs`) |
 | Measure has too many lines | `implemented` | Ignore extra lines; error on measure (`desugar.rs`) |
 | Missing notes / lyrics / chord line for a part | `implemented` | Pad with `_` or `"`; error on measure (`desugar.rs`) |
+| Measure line count mismatch | `implemented` | Pad/truncate lines; `ErrorKind::MeasureWrongLineCount` on measure (`desugar.rs`) |
 
 ---
 
@@ -46,7 +47,7 @@ These are no longer review items. Some still have a matching
 | # | Kind | Status | Current behavior | Proposed recovery |
 |---|---|---|---|---|
 | 1 | `DittoNoPrecedent` | `implemented` | Abort when `"` has no same-role line above in the measure | Render blank placeholder; error on measure (design doc) |
-| 2 | `MeasureWrongLineCount` | `pending` | Enum exists; desugar already handles mismatch via recoverable messages | Confirm enum can be removed or align messages with this kind |
+| 2 | `MeasureWrongLineCount` | `implemented` | Recoverable via `ErrorKind::MeasureWrongLineCount` in desugar padding | Tagged recoverable errors; irrecoverable enum variant removed |
 | 3 | `MeasureNoDataLines` | `pending` | Enum exists; already recoverable in desugar | Remove dead enum variant or wire kind through |
 | 4 | `MeasureTooManyLines` | `pending` | Enum exists; already recoverable in desugar | Remove dead enum variant or wire kind through |
 | 5 | `MeasureMissingRoleLine` | `pending` | Enum exists; already recoverable in desugar | Remove dead enum variant or wire kind through |

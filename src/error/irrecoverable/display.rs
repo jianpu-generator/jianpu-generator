@@ -75,10 +75,6 @@ impl std::fmt::Display for IrrecoverableErrorKind {
                 f,
                 "this measure has {got} lines but only {expected} expected (declared parts: {parts})"
             ),
-            Self::MeasureWrongLineCount { got, expected, .. } => write!(
-                f,
-                "expected {expected} lines (one per score line), got {got}"
-            ),
             Self::MeasureMissingRoleLine { role, abbrev, .. } => write!(
                 f,
                 "expected {role} line for '{abbrev}'; write content or '\"' ditto"

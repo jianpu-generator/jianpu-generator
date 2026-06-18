@@ -53,10 +53,7 @@ fn pad_implicit_ditto_group(
     let mut recoverable_error: Option<RecoverableError> = None;
 
     let effective_data_lines: Vec<(String, usize)> = if data_lines.is_empty() {
-        recoverable_error = Some(RecoverableError::new(
-            span,
-            "measure has no data lines; treating all parts as empty".to_string(),
-        ));
+        recoverable_error = Some(RecoverableError::measure_no_data_lines(span));
         Vec::new()
     } else if data_lines.len() > slots.len() {
         let part_list = declarations
@@ -64,14 +61,11 @@ fn pad_implicit_ditto_group(
             .map(|d| d.abbreviation.as_str())
             .collect::<Vec<_>>()
             .join(", ");
-        recoverable_error = Some(RecoverableError::new(
+        recoverable_error = Some(RecoverableError::measure_too_many_lines(
             span,
-            format!(
-                "this measure has {} lines but only {} expected (declared parts: {}); extra lines ignored",
-                data_lines.len(),
-                slots.len(),
-                part_list,
-            ),
+            data_lines.len(),
+            slots.len(),
+            &part_list,
         ));
         data_lines.get(..slots.len()).unwrap_or(data_lines).to_vec()
     } else {
@@ -100,18 +94,20 @@ fn pad_implicit_ditto_group(
         } else if role == ScoreLineRole::Lyrics {
             let abbrev = track_abbreviation(declarations, slot.track_index);
             recoverable_error.get_or_insert_with(|| {
-                RecoverableError::new(
+                RecoverableError::measure_missing_role_line(
                     Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
-                    format!("missing lyrics line for '{abbrev}'; treating as no lyrics"),
+                    role_name(role),
+                    abbrev,
                 )
             });
             result_data.push(("_".to_string(), pad_offset));
         } else if role == ScoreLineRole::Notes {
             let abbrev = track_abbreviation(declarations, slot.track_index);
             recoverable_error.get_or_insert_with(|| {
-                RecoverableError::new(
+                RecoverableError::measure_missing_role_line(
                     Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
-                    format!("missing notes line for '{abbrev}'; treating as empty"),
+                    role_name(role),
+                    abbrev,
                 )
             });
             result_data.push(("_".to_string(), pad_offset));
@@ -119,9 +115,10 @@ fn pad_implicit_ditto_group(
             // ScoreLineRole::Chord (the only remaining variant)
             let abbrev = track_abbreviation(declarations, slot.track_index);
             recoverable_error.get_or_insert_with(|| {
-                RecoverableError::new(
+                RecoverableError::measure_missing_role_line(
                     Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
-                    format!("missing chord line for '{abbrev}'; treating as empty"),
+                    role_name(role),
+                    abbrev,
                 )
             });
             result_data.push(("_".to_string(), pad_offset));

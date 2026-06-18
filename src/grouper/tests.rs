@@ -66,6 +66,27 @@ fn chord_invalid_token_is_recoverable() {
 }
 
 #[test]
+fn measure_wrong_line_count_is_recoverable() {
+    use crate::error::ErrorKind;
+    // One notes+lyrics part expects two data lines but only the notes line is present.
+    let score = parse_and_group(concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\n",
+    ));
+    assert_eq!(score.measures.len(), 1);
+    assert_eq!(score.measures[0].errors.len(), 1);
+    assert_eq!(
+        score.measures[0].errors[0].kind,
+        ErrorKind::MeasureWrongLineCount
+    );
+    assert!(
+        score.measures[0].errors[0].message.contains("lyrics"),
+        "got: {}",
+        score.measures[0].errors[0].message
+    );
+}
+
+#[test]
 fn ditto_no_precedent_is_recoverable() {
     // Part A's only line is `"` with no preceding notes line in the measure.
     // Part B still has valid content — grouping must continue and flag measure 1.
