@@ -66,15 +66,6 @@ impl std::fmt::Display for IrrecoverableErrorKind {
             Self::MeasureNoDataLines { .. } => {
                 write!(f, "expected at least one data line in measure group")
             }
-            Self::MeasureTooManyLines {
-                got,
-                expected,
-                parts,
-                ..
-            } => write!(
-                f,
-                "this measure has {got} lines but only {expected} expected (declared parts: {parts})"
-            ),
             Self::MeasureMissingRoleLine { role, abbrev, .. } => write!(
                 f,
                 "expected {role} line for '{abbrev}'; write content or '\"' ditto"

@@ -106,12 +106,6 @@ pub enum IrrecoverableErrorKind {
     MeasureNoDataLines {
         span: Span,
     },
-    MeasureTooManyLines {
-        span: Span,
-        got: usize,
-        expected: usize,
-        parts: String,
-    },
     MeasureMissingRoleLine {
         span: Span,
         role: String,
@@ -390,7 +384,6 @@ impl IrrecoverableErrorKind {
             | Self::PartsInvalidColumns { span, .. }
             | Self::PartsNoNotesTrack { span }
             | Self::MeasureNoDataLines { span }
-            | Self::MeasureTooManyLines { span, .. }
             | Self::MeasureMissingRoleLine { span, .. }
             | Self::DittoNoPrecedent { span, .. }
             | Self::DirectiveUnclosedParen { span }
