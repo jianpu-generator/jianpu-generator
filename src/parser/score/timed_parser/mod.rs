@@ -35,6 +35,7 @@ use crate::error::{IrrecoverableError, RecoverableError, Span, Spanned};
 pub struct TimedLineParse {
     pub events: Vec<Spanned<ScoreEvent>>,
     pub dash_after_rest_error: Option<RecoverableError>,
+    pub chord_errors: Vec<RecoverableError>,
 }
 
 /// Parse a single line of timed notation using the lexer + recursive-descent parser.
@@ -45,27 +46,43 @@ pub fn parse_timed_line<H: TimedUnitHead>(
     context: LexContext,
 ) -> Result<TimedLineParse, IrrecoverableError> {
     let tokens = lex_line(line, base_offset, context)?;
-    let (events, dash_after_rest_error) =
+    let (events, dash_after_rest_error, chord_errors) =
         TimedRdParser::<H>::parse_line(line, base_offset, &tokens, stack)?;
     Ok(TimedLineParse {
         events,
         dash_after_rest_error,
+        chord_errors,
     })
 }
 
 pub trait TimedUnitHead: Sized {
-    /// Parse one head starting at `chars[start]`. Returns (head, index after head, is_rest).
+    /// Parse one head starting at `chars[start]`. Returns (head, index after head, is_rest, recoverable warnings).
     fn parse_head(
         chars: &[char],
         start: usize,
         span: &Span,
-    ) -> Result<(Self, usize, bool), IrrecoverableError>;
+    ) -> Result<(Self, usize, bool, Vec<RecoverableError>), IrrecoverableError>;
 
     /// True when the next atom should start (note: next digit 0-7; chord: always after suffixes end).
     fn head_boundary(chars: &[char], i: usize) -> bool;
 
     fn allows_octave_suffixes() -> bool {
         true
+    }
+
+    /// When `parse_head` fails, return a recoverable error and skip this timed unit.
+    fn recover_parse_head_error(_error: &IrrecoverableError) -> Option<RecoverableError> {
+        None
+    }
+
+    /// When duration suffix parsing fails, recover by skipping invalid suffix chars.
+    fn recover_duration_error(
+        _error: &IrrecoverableError,
+        _chars: &[char],
+        _head_end: usize,
+        _span: &Span,
+    ) -> Option<(DurationParse, RecoverableError)> {
+        None
     }
 
     fn to_event(

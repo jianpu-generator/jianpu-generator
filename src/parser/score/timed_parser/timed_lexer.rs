@@ -107,63 +107,81 @@ fn lex_one_char(
                 false,
             ))
         }
-        '0'..='7' => {
-            // Check for time signature only at word boundary and in Notes context.
-            if at_word_boundary && context == LexContext::Notes {
-                if let Some((tok, consumed)) = try_lex_time_signature(line, i, start)? {
-                    return Ok((Some(tok), consumed, true));
-                }
-            }
-            // Emit HeadStart.  If inside a word, the RD parser will skip stale HeadStart tokens
-            // that fall within an already-parsed multi-char unit (e.g. `7` in `1m7`).
-            Ok((
-                Some(Spanned::new(
-                    TimedLexToken::HeadStart { offset: start },
-                    Span::new(start, start + len),
-                )),
-                len,
-                false,
-            ))
-        }
+        '0'..='7' => lex_low_digit(line, i, start, len, at_word_boundary, context),
         'b' if at_word_boundary && line[i..].starts_with("bpm=") => {
             let (tok, consumed) = lex_bpm(line, i, start)?;
             Ok((Some(tok), consumed, true))
         }
         _ if c.is_ascii_digit() => {
-            // Digits 8-9: only valid as time signatures at word boundary in Notes context.
-            if at_word_boundary && context == LexContext::Notes {
-                if let Some((tok, consumed)) = try_lex_time_signature(line, i, start)? {
-                    return Ok((Some(tok), consumed, true));
-                }
-                return Err(IrrecoverableError::new(
-                    IrrecoverableErrorKind::LexUnexpectedChar {
-                        span: Span::new(start, start + len),
-                        ch: c,
-                    },
-                ));
-            } else if at_word_boundary {
-                // In Chords context, digits 8-9 are not valid chord degrees.
-                return Err(IrrecoverableError::new(
-                    IrrecoverableErrorKind::LexUnexpectedChar {
-                        span: Span::new(start, start + len),
-                        ch: c,
-                    },
-                ));
-            }
-            // Inside a word suffix — skip.
-            Ok((None, len, false))
+            lex_high_digit_or_error(line, i, start, len, at_word_boundary, context, c)
         }
-        _ if !at_word_boundary => {
-            // Any other suffix character inside a word belongs to the current head; skip it.
-            Ok((None, len, false))
+        _ if !at_word_boundary => Ok((None, len, false)),
+        _ if at_word_boundary && context == LexContext::Chords => {
+            Ok(chord_head_start_token(start, len))
         }
-        _ => Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::LexUnexpectedChar {
-                span: Span::new(start, start + len),
-                ch: c,
-            },
-        )),
+        _ => Err(unexpected_char_error(start, len, c)),
     }
+}
+
+fn lex_low_digit(
+    line: &str,
+    i: usize,
+    start: usize,
+    len: usize,
+    at_word_boundary: bool,
+    context: LexContext,
+) -> Result<(Option<Spanned<TimedLexToken>>, usize, bool), IrrecoverableError> {
+    if at_word_boundary && context == LexContext::Notes {
+        if let Some((tok, consumed)) = try_lex_time_signature(line, i, start)? {
+            return Ok((Some(tok), consumed, true));
+        }
+    }
+    Ok(chord_head_start_token(start, len))
+}
+
+fn chord_head_start_token(
+    start: usize,
+    len: usize,
+) -> (Option<Spanned<TimedLexToken>>, usize, bool) {
+    (
+        Some(Spanned::new(
+            TimedLexToken::HeadStart { offset: start },
+            Span::new(start, start + len),
+        )),
+        len,
+        false,
+    )
+}
+
+fn unexpected_char_error(start: usize, len: usize, ch: char) -> IrrecoverableError {
+    IrrecoverableError::new(IrrecoverableErrorKind::LexUnexpectedChar {
+        span: Span::new(start, start + len),
+        ch,
+    })
+}
+
+fn lex_high_digit_or_error(
+    line: &str,
+    i: usize,
+    start: usize,
+    len: usize,
+    at_word_boundary: bool,
+    context: LexContext,
+    c: char,
+) -> Result<(Option<Spanned<TimedLexToken>>, usize, bool), IrrecoverableError> {
+    if at_word_boundary && context == LexContext::Notes {
+        if let Some((tok, consumed)) = try_lex_time_signature(line, i, start)? {
+            return Ok((Some(tok), consumed, true));
+        }
+        return Err(unexpected_char_error(start, len, c));
+    }
+    if at_word_boundary && context == LexContext::Chords {
+        return Ok(chord_head_start_token(start, len));
+    }
+    if at_word_boundary {
+        return Err(unexpected_char_error(start, len, c));
+    }
+    Ok((None, len, false))
 }
 
 /// Lex a `bpm=<number>` directive starting at byte offset `i` within `line`.

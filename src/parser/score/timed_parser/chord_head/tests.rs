@@ -1,5 +1,5 @@
 use super::*;
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
+use crate::error::{ErrorKind, IrrecoverableError, IrrecoverableErrorKind, Span};
 use crate::parser::score::timed_parser::{parse_timed_line, GroupStack, LexContext};
 
 fn chord(
@@ -50,6 +50,19 @@ fn parse_line(line: &str) -> Vec<ScoreEvent> {
         .into_iter()
         .map(|e| e.value)
         .collect()
+}
+
+fn parse_line_with_errors(line: &str) -> (Vec<ScoreEvent>, Vec<ErrorKind>) {
+    let parsed =
+        parse_timed_line::<ChordHead>(line, 0, &mut GroupStack::default(), LexContext::Chords)
+            .unwrap();
+    let events = parsed.events.into_iter().map(|e| e.value).collect();
+    let errors = parsed
+        .chord_errors
+        .into_iter()
+        .map(|error| error.kind)
+        .collect();
+    (events, errors)
 }
 
 #[test]
@@ -371,22 +384,65 @@ fn parses_sharp_with_slash_chord() {
 }
 
 #[test]
-fn rejects_invalid_token() {
+fn rejects_invalid_token_at_lexer() {
     assert!(
-        parse_timed_line::<ChordHead>("X", 0, &mut GroupStack::default(), LexContext::Chords)
-            .is_err()
+        parse_timed_line::<ChordHead>("@", 0, &mut GroupStack::default(), LexContext::Chords)
+            .is_ok()
     );
+    let parsed =
+        parse_timed_line::<ChordHead>("@", 0, &mut GroupStack::default(), LexContext::Chords)
+            .unwrap();
+    assert!(parsed.events.is_empty());
+    assert!(parsed
+        .chord_errors
+        .iter()
+        .any(|error| error.kind == ErrorKind::ChordExpectedDegreeDigit));
 }
 
 #[test]
-fn rejects_unknown_suffix() {
-    assert!(try_parse_symbol("1z").is_err());
+fn recovers_unknown_suffix() {
+    let (events, errors) = parse_line_with_errors("1z");
+    assert_eq!(events.len(), 1);
+    assert!(matches!(events[0], ScoreEvent::Chord(_)));
+    assert!(errors.contains(&ErrorKind::ChordUnknownSuffix));
 }
 
 #[test]
-fn rejects_octave_suffix() {
-    assert!(try_parse_symbol("1'").is_err());
-    assert!(try_parse_symbol("1,").is_err());
+fn recovers_expected_degree_digit_by_skipping_symbol() {
+    let (events, errors) = parse_line_with_errors("8 2");
+    assert_eq!(events.len(), 1);
+    assert!(matches!(events[0], ScoreEvent::Chord(_)));
+    assert!(errors.contains(&ErrorKind::ChordExpectedDegreeDigit));
+}
+
+#[test]
+fn recovers_invalid_bass() {
+    let (events, errors) = parse_line_with_errors("1/X");
+    assert_eq!(events.len(), 1);
+    assert!(matches!(events[0], ScoreEvent::Chord(_)));
+    assert!(errors.contains(&ErrorKind::ChordInvalidBass));
+}
+
+#[test]
+fn recovers_bass_unexpected_char() {
+    let (events, errors) = parse_line_with_errors("1/5x");
+    assert_eq!(events.len(), 1);
+    assert!(errors.contains(&ErrorKind::ChordBassUnexpectedChar));
+}
+
+#[test]
+fn recovers_bass_trailing_chars() {
+    let (events, errors) = parse_line_with_errors("1/5bb");
+    assert_eq!(events.len(), 1);
+    assert!(errors.contains(&ErrorKind::ChordBassTrailingChars));
+}
+
+#[test]
+fn recovers_octave_suffix() {
+    let (events, errors) = parse_line_with_errors("1'");
+    assert_eq!(events.len(), 1);
+    assert!(matches!(events[0], ScoreEvent::Chord(_)));
+    assert!(errors.contains(&ErrorKind::ChordInvalidToken));
 }
 
 #[test]

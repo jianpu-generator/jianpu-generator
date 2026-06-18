@@ -56,13 +56,96 @@ fn chord_invalid_token_is_recoverable() {
     let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "[parts]\nChords = chord\nMelody = notes\n\n",
-        "[score]\n(time=4/4 key=C4 bpm=120)\nX X X X\n1 2 3 4\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n@ 0 0 0\n1 2 3 4\n",
     ));
-    assert_eq!(score.measures[0].errors.len(), 1);
-    assert_eq!(
-        score.measures[0].errors[0].kind,
-        ErrorKind::ChordInvalidToken
-    );
+    assert!(score.measures[0]
+        .errors
+        .iter()
+        .any(|error| error.kind == ErrorKind::ChordExpectedDegreeDigit));
+    assert!(!score.measures.is_empty());
+}
+
+#[test]
+fn chord_expected_degree_digit_is_recoverable() {
+    use crate::error::ErrorKind;
+    let score = parse_and_group(concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "[parts]\nChords = chord\nMelody = notes\n\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n8 2 3 4\n1 2 3 4\n",
+    ));
+    assert!(score.measures[0]
+        .errors
+        .iter()
+        .any(|error| error.kind == ErrorKind::ChordExpectedDegreeDigit));
+    let chord_row = score.measures[0]
+        .parts
+        .iter()
+        .find_map(|row| match row {
+            crate::ast::grouped::PartRow::Timed(part)
+                if part.kind == crate::ast::parsed::PartKind::Chord =>
+            {
+                Some(part)
+            }
+            _ => None,
+        })
+        .expect("chord part");
+    assert_eq!(chord_row.notes.events.len(), 3);
+}
+
+#[test]
+fn chord_unknown_suffix_is_recoverable() {
+    use crate::error::ErrorKind;
+    let score = parse_and_group(concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "[parts]\nChords = chord\nMelody = notes\n\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n1z 2 3 4\n1 2 3 4\n",
+    ));
+    assert!(score.measures[0]
+        .errors
+        .iter()
+        .any(|error| error.kind == ErrorKind::ChordUnknownSuffix));
+}
+
+#[test]
+fn chord_invalid_bass_is_recoverable() {
+    use crate::error::ErrorKind;
+    let score = parse_and_group(concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "[parts]\nChords = chord\nMelody = notes\n\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n1/X 2 3 4\n1 2 3 4\n",
+    ));
+    assert!(score.measures[0]
+        .errors
+        .iter()
+        .any(|error| error.kind == ErrorKind::ChordInvalidBass));
+}
+
+#[test]
+fn chord_bass_unexpected_char_is_recoverable() {
+    use crate::error::ErrorKind;
+    let score = parse_and_group(concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "[parts]\nChords = chord\nMelody = notes\n\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n1/5x 2 3 4\n1 2 3 4\n",
+    ));
+    assert!(score.measures[0]
+        .errors
+        .iter()
+        .any(|error| error.kind == ErrorKind::ChordBassUnexpectedChar));
+}
+
+#[test]
+fn chord_bass_trailing_chars_is_recoverable() {
+    use crate::error::ErrorKind;
+    let score = parse_and_group(concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "[parts]\nChords = chord\nMelody = notes\n\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n1/5bb 2 3 4\n1 2 3 4\n",
+    ));
+    assert!(score.measures[0]
+        .errors
+        .iter()
+        .any(|error| error.kind == ErrorKind::ChordBassTrailingChars));
 }
 
 #[test]

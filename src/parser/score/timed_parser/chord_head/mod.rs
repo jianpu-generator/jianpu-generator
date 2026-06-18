@@ -1,9 +1,10 @@
+use super::duration::DurationParse;
 use super::TimedUnitHead;
 use crate::ast::parsed::{
     Accidental, BassDegree, Extension, JianPuPitch, ParsedChordNote, ParsedRest, ScoreEvent,
     TriadQuality,
 };
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
 
 pub struct ChordHead {
     degree: JianPuPitch,
@@ -14,12 +15,25 @@ pub struct ChordHead {
     is_rest: bool,
 }
 
+struct ParsedChordSymbolFields {
+    degree: JianPuPitch,
+    accidental: Accidental,
+    triad: TriadQuality,
+    extension: Option<Extension>,
+    bass: Option<BassDegree>,
+}
+
+struct ChordSymbolParse {
+    fields: ParsedChordSymbolFields,
+    errors: Vec<RecoverableError>,
+}
+
 impl TimedUnitHead for ChordHead {
     fn parse_head(
         chars: &[char],
         start: usize,
         span: &Span,
-    ) -> Result<(Self, usize, bool), IrrecoverableError> {
+    ) -> Result<(Self, usize, bool, Vec<RecoverableError>), IrrecoverableError> {
         let degree_char = chars[start];
         if !matches!(degree_char, '0'..='7') {
             let pos = span.start + byte_offset_at_char_index_from_chars(chars, start);
@@ -43,24 +57,23 @@ impl TimedUnitHead for ChordHead {
                 },
                 start + 1,
                 true,
+                Vec::new(),
             ));
         }
 
-        let head_end = find_symbol_end(chars, start, span)?;
-        let token: String = chars[start..head_end].iter().collect();
-        let symbol = parse_chord_symbol(&token, *span)?;
-
+        let (head_end, ChordSymbolParse { fields, errors }) = find_symbol_end(chars, start, span)?;
         Ok((
             ChordHead {
-                degree: symbol.degree,
-                accidental: symbol.accidental,
-                triad: symbol.triad,
-                extension: symbol.extension,
-                bass: symbol.bass,
+                degree: fields.degree,
+                accidental: fields.accidental,
+                triad: fields.triad,
+                extension: fields.extension,
+                bass: fields.bass,
                 is_rest: false,
             },
             head_end,
             false,
+            errors,
         ))
     }
 
@@ -70,6 +83,48 @@ impl TimedUnitHead for ChordHead {
 
     fn allows_octave_suffixes() -> bool {
         false
+    }
+
+    fn recover_parse_head_error(error: &IrrecoverableError) -> Option<RecoverableError> {
+        match error.kind {
+            IrrecoverableErrorKind::ChordExpectedDegreeDigit { .. } => {
+                Some(RecoverableError::from_chord_irrecoverable(error))
+            }
+            _ => None,
+        }
+    }
+
+    fn recover_duration_error(
+        error: &IrrecoverableError,
+        chars: &[char],
+        head_end: usize,
+        _span: &Span,
+    ) -> Option<(DurationParse, RecoverableError)> {
+        let IrrecoverableErrorKind::DurationUnexpectedChar { ch, span: err_span } = error.kind
+        else {
+            return None;
+        };
+        if !matches!(ch, '\'' | ',') {
+            return None;
+        }
+        let mut next_index = head_end;
+        while next_index < chars.len() && matches!(chars[next_index], '\'' | ',') {
+            next_index += 1;
+        }
+        Some((
+            DurationParse {
+                duration: 4,
+                dotted: false,
+                octave_up: 0,
+                octave_down: 0,
+                next_index,
+                dash_after_rest_error: None,
+            },
+            RecoverableError::chord_invalid_token(
+                err_span,
+                format!("octave suffix '{ch}' is not allowed on chord symbols"),
+            ),
+        ))
     }
 
     fn to_event(
@@ -105,15 +160,11 @@ impl TimedUnitHead for ChordHead {
     }
 }
 
-struct ParsedChordSymbolFields {
-    degree: JianPuPitch,
-    accidental: Accidental,
-    triad: TriadQuality,
-    extension: Option<Extension>,
-    bass: Option<BassDegree>,
-}
-
-fn find_symbol_end(chars: &[char], start: usize, span: &Span) -> Result<usize, IrrecoverableError> {
+fn find_symbol_end(
+    chars: &[char],
+    start: usize,
+    span: &Span,
+) -> Result<(usize, ChordSymbolParse), IrrecoverableError> {
     let max_end = chars.len().min(
         chars[start..]
             .iter()
@@ -124,8 +175,8 @@ fn find_symbol_end(chars: &[char], start: usize, span: &Span) -> Result<usize, I
 
     for end in (start + 1..=max_end).rev() {
         let token: String = chars[start..end].iter().collect();
-        if parse_chord_symbol(&token, *span).is_ok() {
-            return Ok(end);
+        if let Ok(parse) = parse_chord_symbol(&token, *span) {
+            return Ok((end, parse));
         }
     }
 
@@ -135,10 +186,8 @@ fn find_symbol_end(chars: &[char], start: usize, span: &Span) -> Result<usize, I
     ))
 }
 
-fn parse_chord_symbol(
-    token: &str,
-    span: Span,
-) -> Result<ParsedChordSymbolFields, IrrecoverableError> {
+fn parse_chord_symbol(token: &str, span: Span) -> Result<ChordSymbolParse, IrrecoverableError> {
+    let mut errors = Vec::new();
     let mut chars = token.chars();
 
     let degree = chars.next().and_then(char_to_pitch).ok_or_else(|| {
@@ -183,57 +232,66 @@ fn parse_chord_symbol(
     } else if ext_str.is_empty() {
         None
     } else {
-        return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::ChordUnknownSuffix {
+        errors.push(RecoverableError::from_chord_irrecoverable(
+            &IrrecoverableError::new(IrrecoverableErrorKind::ChordUnknownSuffix {
                 span,
                 suffix: ext_str.to_string(),
                 token: token.to_string(),
-            },
+            }),
         ));
+        None
     };
 
-    let bass = bass_str.map(|s| parse_bass(s, span)).transpose()?;
+    let bass = bass_str.and_then(|s| parse_bass(s, span, &mut errors));
 
-    Ok(ParsedChordSymbolFields {
-        degree,
-        accidental,
-        triad,
-        extension,
-        bass,
+    Ok(ChordSymbolParse {
+        fields: ParsedChordSymbolFields {
+            degree,
+            accidental,
+            triad,
+            extension,
+            bass,
+        },
+        errors,
     })
 }
 
-fn parse_bass(s: &str, span: Span) -> Result<BassDegree, IrrecoverableError> {
+fn parse_bass(s: &str, span: Span, errors: &mut Vec<RecoverableError>) -> Option<BassDegree> {
     let mut chars = s.chars();
-    let degree = chars.next().and_then(char_to_pitch).ok_or_else(|| {
-        IrrecoverableError::new(IrrecoverableErrorKind::ChordInvalidBass {
-            span,
-            bass: s.to_string(),
-        })
+    let degree = chars.next().and_then(char_to_pitch).or_else(|| {
+        errors.push(RecoverableError::from_chord_irrecoverable(
+            &IrrecoverableError::new(IrrecoverableErrorKind::ChordInvalidBass {
+                span,
+                bass: s.to_string(),
+            }),
+        ));
+        None
     })?;
     let accidental = match chars.next() {
         Some('#') => Accidental::Sharp,
         Some('b') => Accidental::Flat,
         None => Accidental::Natural,
         Some(c) => {
-            return Err(IrrecoverableError::new(
-                IrrecoverableErrorKind::ChordBassUnexpectedChar {
+            errors.push(RecoverableError::from_chord_irrecoverable(
+                &IrrecoverableError::new(IrrecoverableErrorKind::ChordBassUnexpectedChar {
                     span,
                     ch: c,
                     bass: s.to_string(),
-                },
-            ))
+                }),
+            ));
+            return None;
         }
     };
     if chars.next().is_some() {
-        return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::ChordBassTrailingChars {
+        errors.push(RecoverableError::from_chord_irrecoverable(
+            &IrrecoverableError::new(IrrecoverableErrorKind::ChordBassTrailingChars {
                 span,
                 bass: s.to_string(),
-            },
+            }),
         ));
+        return None;
     }
-    Ok(BassDegree { degree, accidental })
+    Some(BassDegree { degree, accidental })
 }
 
 fn char_to_pitch(c: char) -> Option<JianPuPitch> {

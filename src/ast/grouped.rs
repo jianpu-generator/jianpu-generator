@@ -149,6 +149,8 @@ pub(crate) struct GroupedMeasure {
     pub(crate) dash_after_rest_error: Option<RecoverableError>,
     /// Recoverable dotted-eighth grouping errors for this measure (empty = none).
     pub(crate) dotted_eighth_errors: Vec<RecoverableError>,
+    /// Recoverable chord parse errors for this measure (empty = none).
+    pub(crate) chord_errors: Vec<RecoverableError>,
 }
 
 pub(crate) struct GroupedPart {

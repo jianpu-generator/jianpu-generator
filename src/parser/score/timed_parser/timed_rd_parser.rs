@@ -140,8 +140,15 @@ pub struct TimedRdParser<'a, H: TimedUnitHead> {
     /// Staging area: events with their pending depth accumulators.
     staging: Vec<DepthEvent>,
     dash_after_rest_error: Option<RecoverableError>,
+    chord_errors: Vec<RecoverableError>,
     _head: std::marker::PhantomData<H>,
 }
+
+type TimedLineParseResult = (
+    Vec<Spanned<ScoreEvent>>,
+    Option<RecoverableError>,
+    Vec<RecoverableError>,
+);
 
 impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
     pub fn parse_line(
@@ -149,7 +156,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
         base_offset: usize,
         tokens: &'a [Spanned<TimedLexToken>],
         stack: &'a mut GroupStack,
-    ) -> Result<(Vec<Spanned<ScoreEvent>>, Option<RecoverableError>), IrrecoverableError> {
+    ) -> Result<TimedLineParseResult, IrrecoverableError> {
         // Frames carried over from a previous bar have segment_start values that
         // refer to the old staging vec.  Reset them to 0 so they cover all events
         // produced in this new call.
@@ -165,6 +172,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
             stack,
             staging: Vec::new(),
             dash_after_rest_error: None,
+            chord_errors: Vec::new(),
             _head: std::marker::PhantomData,
         };
         parser.parse_atoms(false)?;
@@ -174,7 +182,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
             .into_iter()
             .map(|d| d.into_spanned())
             .collect();
-        Ok((events, parser.dash_after_rest_error))
+        Ok((events, parser.dash_after_rest_error, parser.chord_errors))
     }
 
     // -----------------------------------------------------------------------
@@ -285,10 +293,35 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
         let head_span = Span::new(digit_offset, digit_offset + 1);
 
         // Parse the head (note digit / chord symbol).
-        let (head, head_end, is_rest) = H::parse_head(&chars, 0, &head_span)?;
+        let (head, head_end, is_rest, head_errors) = match H::parse_head(&chars, 0, &head_span) {
+            Ok(parsed) => parsed,
+            Err(error) => {
+                if let Some(recoverable) = H::recover_parse_head_error(&error) {
+                    self.chord_errors.push(recoverable);
+                    self.bump();
+                    self.skip_head_starts_before(self.unit_end_abs(digit_offset));
+                    return Ok(());
+                }
+                return Err(error);
+            }
+        };
+        self.chord_errors.extend(head_errors);
 
         // Parse duration suffixes.
-        let duration_meta = parse_duration_suffixes::<H>(&chars, 0, head_end, is_rest, &head_span)?;
+        let duration_meta =
+            match parse_duration_suffixes::<H>(&chars, 0, head_end, is_rest, &head_span) {
+                Ok(parsed) => parsed,
+                Err(error) => {
+                    if let Some((parsed, recoverable)) =
+                        H::recover_duration_error(&error, &chars, head_end, &head_span)
+                    {
+                        self.chord_errors.push(recoverable);
+                        parsed
+                    } else {
+                        return Err(error);
+                    }
+                }
+            };
 
         if duration_meta.dash_after_rest_error.is_some() && self.dash_after_rest_error.is_none() {
             self.dash_after_rest_error = duration_meta.dash_after_rest_error;
@@ -337,6 +370,25 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
         }
 
         Ok(())
+    }
+
+    fn unit_end_abs(&self, digit_offset: usize) -> usize {
+        let rel = digit_offset.saturating_sub(self.base_offset);
+        let raw_text = self.source.get(rel..).unwrap_or("");
+        raw_text
+            .find(|c: char| c.is_whitespace() || c == '|' || c == '(' || c == ')')
+            .map(|ws_pos| digit_offset + ws_pos)
+            .unwrap_or_else(|| self.base_offset + self.source.len())
+    }
+
+    fn skip_head_starts_before(&mut self, unit_end_abs: usize) {
+        while let Some(TimedLexToken::HeadStart { offset }) = self.peek() {
+            if *offset < unit_end_abs {
+                self.bump();
+            } else {
+                break;
+            }
+        }
     }
 
     /// Handle `(` — push a new frame and recurse into the inner atom sequence.

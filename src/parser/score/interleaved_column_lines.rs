@@ -1,11 +1,25 @@
-use super::beat_padding::{validate_and_pad_beats, PaddedBeats};
+use super::beat_padding::validate_and_pad_beats;
 use super::errors::invariant;
 #[allow(clippy::wildcard_imports)]
 use super::*;
 #[allow(unused_imports)]
 use super::{notes_syllables_mut, timed_events_mut};
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
 use crate::parser::score::token_parser;
+
+fn is_recoverable_chord_line_error(kind: &IrrecoverableErrorKind) -> bool {
+    matches!(
+        kind,
+        IrrecoverableErrorKind::LexUnexpectedChar { .. }
+            | IrrecoverableErrorKind::ChordInvalidToken { .. }
+            | IrrecoverableErrorKind::ChordExpectedDegreeDigit { .. }
+            | IrrecoverableErrorKind::ChordUnknownSuffix { .. }
+            | IrrecoverableErrorKind::ChordInvalidBass { .. }
+            | IrrecoverableErrorKind::ChordBassUnexpectedChar { .. }
+            | IrrecoverableErrorKind::ChordBassTrailingChars { .. }
+            | IrrecoverableErrorKind::DurationUnexpectedChar { .. }
+    )
+}
 
 pub(super) fn process_padded_columns(
     padded_data: &[(String, usize)],
@@ -190,44 +204,29 @@ fn process_column_line(
             })?;
             let chord_result =
                 token_parser::parse_chord_line(line, ctx.base_offset + line_offset, group_state);
-            let (chord_events, chord_error, dash_after_rest_error) = match chord_result {
-                Ok(parsed) => (parsed.events, None, parsed.dash_after_rest_error),
-                Err(e)
-                    if matches!(
-                        e.kind,
-                        IrrecoverableErrorKind::LexUnexpectedChar { .. }
-                            | IrrecoverableErrorKind::ChordInvalidToken { .. }
-                    ) =>
-                {
-                    let error =
-                        crate::error::RecoverableError::chord_invalid_token(*e.span(), e.message());
-                    (vec![], Some(error), None)
+            let (chord_events, line_chord_errors, dash_after_rest_error) = match chord_result {
+                Ok(parsed) => (
+                    parsed.events,
+                    parsed.chord_errors,
+                    parsed.dash_after_rest_error,
+                ),
+                Err(error) if is_recoverable_chord_line_error(&error.kind) => {
+                    let recoverable = RecoverableError::from_chord_irrecoverable(&error);
+                    (vec![], vec![recoverable], None)
                 }
-                Err(e) => return Err(e),
+                Err(error) => return Err(error),
             };
-            // When the line failed to parse, pad with a rest so measure counts stay consistent.
-            let final_padded = if let Some(chord_error) = chord_error {
-                let fill = validate_and_pad_beats(
-                    vec![],
-                    beats_expected,
-                    *ctx.time_num,
-                    *ctx.time_den,
-                    line_span,
-                )?;
-                PaddedBeats {
-                    events: fill.events,
-                    beat_overflow_error: Some(chord_error),
-                    dotted_eighth_errors: vec![],
-                }
-            } else {
-                validate_and_pad_beats(
-                    chord_events,
-                    beats_expected,
-                    *ctx.time_num,
-                    *ctx.time_den,
-                    line_span,
-                )?
-            };
+            let line_failed = chord_events.is_empty() && !line_chord_errors.is_empty();
+            let mut final_padded = validate_and_pad_beats(
+                chord_events,
+                beats_expected,
+                *ctx.time_num,
+                *ctx.time_den,
+                line_span,
+            )?;
+            if line_failed {
+                final_padded.beat_overflow_error = None;
+            }
             let acc = ctx.accumulators.get_mut(*track_index).ok_or_else(|| {
                 invariant(
                     line_span,
@@ -240,12 +239,14 @@ fn process_column_line(
                     per_measure_beat_errors,
                     per_measure_dotted_eighth_errors,
                     per_measure_dash_after_rest_errors,
+                    per_measure_chord_errors,
                     ..
                 } => {
                     acc_events.extend(final_padded.events);
                     per_measure_beat_errors.push(final_padded.beat_overflow_error);
                     per_measure_dotted_eighth_errors.push(final_padded.dotted_eighth_errors);
                     per_measure_dash_after_rest_errors.push(dash_after_rest_error);
+                    per_measure_chord_errors.push(line_chord_errors);
                 }
             }
         }

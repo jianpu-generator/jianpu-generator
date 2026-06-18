@@ -80,11 +80,11 @@ These are no longer review items. Some still have a matching
 
 | # | Kind | Status | Current behavior | Proposed recovery |
 |---|---|---|---|---|
-| 20 | `ChordExpectedDegreeDigit` | `pending` | Abort | Skip symbol; error on measure |
-| 21 | `ChordUnknownSuffix` | `pending` | Abort | Render degree only; error on measure |
-| 22 | `ChordInvalidBass` | `pending` | Abort | Omit bass; error on measure |
-| 23 | `ChordBassUnexpectedChar` | `pending` | Abort | Omit bass; error on measure |
-| 24 | `ChordBassTrailingChars` | `pending` | Abort | Truncate bass parse; error on measure |
+| 20 | `ChordExpectedDegreeDigit` | `implemented` | Skip bad symbol; error on measure |
+| 21 | `ChordUnknownSuffix` | `implemented` | Render degree only; error on measure |
+| 22 | `ChordInvalidBass` | `implemented` | Omit bass; error on measure |
+| 23 | `ChordBassUnexpectedChar` | `implemented` | Omit bass; error on measure |
+| 24 | `ChordBassTrailingChars` | `implemented` | Omit bass; error on measure |
 
 ### Ties, extensions & cross-part rhythm
 

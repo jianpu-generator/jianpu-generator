@@ -35,6 +35,16 @@ pub enum ErrorKind {
     DashAfterRest,
     /// An invalid token was encountered while parsing a chord line.
     ChordInvalidToken,
+    /// A chord symbol did not start with a degree digit (0–7).
+    ChordExpectedDegreeDigit,
+    /// A chord symbol had an unrecognized quality/extension suffix.
+    ChordUnknownSuffix,
+    /// A slash-chord bass note could not be parsed.
+    ChordInvalidBass,
+    /// An unexpected character appeared while parsing a slash-chord bass note.
+    ChordBassUnexpectedChar,
+    /// A slash-chord bass note had trailing characters after the accidental.
+    ChordBassTrailingChars,
     /// A dotted eighth note or rest is not followed by a sixteenth.
     DottedEighthNeedsSixteenth,
     /// A note/rest duration crosses the half-bar boundary in 4/4 time.
@@ -49,6 +59,11 @@ impl ErrorKind {
             Self::General => "general",
             Self::DashAfterRest => "dash_after_rest",
             Self::ChordInvalidToken => "chord_invalid_token",
+            Self::ChordExpectedDegreeDigit => "chord_expected_degree_digit",
+            Self::ChordUnknownSuffix => "chord_unknown_suffix",
+            Self::ChordInvalidBass => "chord_invalid_bass",
+            Self::ChordBassUnexpectedChar => "chord_bass_unexpected_char",
+            Self::ChordBassTrailingChars => "chord_bass_trailing_chars",
             Self::DottedEighthNeedsSixteenth => "dotted_eighth_needs_sixteenth",
             Self::HalfBarBoundaryCrossed => "half_bar_boundary_crossed",
             Self::MeasureWrongLineCount => "measure_wrong_line_count",
@@ -85,6 +100,41 @@ impl RecoverableError {
             span,
             message: message.into(),
             kind: ErrorKind::ChordInvalidToken,
+        }
+    }
+
+    pub fn from_chord_irrecoverable(error: &IrrecoverableError) -> Self {
+        match &error.kind {
+            IrrecoverableErrorKind::ChordExpectedDegreeDigit { span, ch } => Self {
+                span: *span,
+                message: format!("expected chord degree digit (0-7), got: {ch}"),
+                kind: ErrorKind::ChordExpectedDegreeDigit,
+            },
+            IrrecoverableErrorKind::ChordUnknownSuffix {
+                span,
+                suffix,
+                token,
+            } => Self {
+                span: *span,
+                message: format!("unknown chord suffix '{suffix}' in token '{token}'"),
+                kind: ErrorKind::ChordUnknownSuffix,
+            },
+            IrrecoverableErrorKind::ChordInvalidBass { span, bass } => Self {
+                span: *span,
+                message: format!("invalid bass note '{bass}'"),
+                kind: ErrorKind::ChordInvalidBass,
+            },
+            IrrecoverableErrorKind::ChordBassUnexpectedChar { span, ch, bass } => Self {
+                span: *span,
+                message: format!("unexpected character '{ch}' in bass note '{bass}'"),
+                kind: ErrorKind::ChordBassUnexpectedChar,
+            },
+            IrrecoverableErrorKind::ChordBassTrailingChars { span, bass } => Self {
+                span: *span,
+                message: format!("bass note '{bass}' has trailing characters"),
+                kind: ErrorKind::ChordBassTrailingChars,
+            },
+            _ => Self::chord_invalid_token(*error.span(), error.message()),
         }
     }
 

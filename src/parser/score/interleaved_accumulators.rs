@@ -40,6 +40,7 @@ pub(super) fn init_accumulators(declarations: &[PartDecl]) -> Vec<TrackAccumulat
             per_measure_beat_errors: Vec::new(),
             per_measure_dotted_eighth_errors: Vec::new(),
             per_measure_dash_after_rest_errors: Vec::new(),
+            per_measure_chord_errors: Vec::new(),
             empty_note_measure_spans: Vec::new(),
         })
         .collect()
@@ -70,6 +71,7 @@ pub(super) fn build_parse_result(
                 per_measure_beat_errors,
                 per_measure_dotted_eighth_errors,
                 per_measure_dash_after_rest_errors,
+                per_measure_chord_errors,
                 empty_note_measure_spans,
             } = acc;
             Ok(ParsedTrack::Timed(ParsedTimedTrack {
@@ -95,6 +97,7 @@ pub(super) fn build_parse_result(
                 per_measure_beat_errors,
                 per_measure_dotted_eighth_errors,
                 per_measure_dash_after_rest_errors,
+                per_measure_chord_errors,
                 empty_note_measure_spans,
             }))
         })
