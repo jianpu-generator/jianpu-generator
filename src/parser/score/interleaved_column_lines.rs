@@ -96,7 +96,35 @@ fn process_lyrics_column_line(
     Ok(())
 }
 
-#[allow(clippy::too_many_lines)]
+fn push_skipped_notes_measure(
+    ctx: &mut BarGroupContext<'_>,
+    track_index: usize,
+    line_span: Span,
+    lex_error: Option<Warning>,
+    empty_note_measure_span: Option<Span>,
+) -> Result<(), IrrecoverableError> {
+    let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
+        invariant(
+            line_span,
+            "internal error: notes accumulator index out of range",
+        )
+    })?;
+    let TrackAccumulator::Timed {
+        per_measure_beat_errors,
+        per_measure_dotted_eighth_errors,
+        per_measure_dash_after_rest_errors,
+        per_measure_lex_errors,
+        empty_note_measure_spans,
+        ..
+    } = acc;
+    per_measure_beat_errors.push(None);
+    per_measure_dotted_eighth_errors.push(vec![]);
+    per_measure_dash_after_rest_errors.push(None);
+    per_measure_lex_errors.push(lex_error);
+    empty_note_measure_spans.push(empty_note_measure_span);
+    Ok(())
+}
+
 fn process_notes_column_line(
     track_index: usize,
     line: &str,
@@ -106,26 +134,7 @@ fn process_notes_column_line(
     ctx: &mut BarGroupContext<'_>,
 ) -> Result<(), IrrecoverableError> {
     if line == "_" {
-        let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
-            invariant(
-                line_span,
-                "internal error: notes accumulator index out of range",
-            )
-        })?;
-        let TrackAccumulator::Timed {
-            per_measure_beat_errors,
-            per_measure_dotted_eighth_errors,
-            per_measure_dash_after_rest_errors,
-            per_measure_lex_errors,
-            empty_note_measure_spans,
-            ..
-        } = acc;
-        per_measure_beat_errors.push(None);
-        per_measure_dotted_eighth_errors.push(vec![]);
-        per_measure_dash_after_rest_errors.push(None);
-        per_measure_lex_errors.push(None);
-        empty_note_measure_spans.push(Some(line_span));
-        return Ok(());
+        return push_skipped_notes_measure(ctx, track_index, line_span, None, Some(line_span));
     }
     let group_state = ctx
         .group_states
@@ -143,28 +152,7 @@ fn process_notes_column_line(
         Ok(_) => None,
     };
     if lex_error.is_some() {
-        let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
-            invariant(
-                line_span,
-                "internal error: notes accumulator index out of range",
-            )
-        })?;
-        let TrackAccumulator::Timed {
-            per_measure_beat_errors,
-            per_measure_dotted_eighth_errors,
-            per_measure_dash_after_rest_errors,
-            per_measure_lex_errors,
-            empty_note_measure_spans,
-            ..
-        } = acc;
-        per_measure_beat_errors.push(None);
-        per_measure_dotted_eighth_errors.push(vec![]);
-        per_measure_dash_after_rest_errors.push(None);
-        per_measure_lex_errors.push(lex_error);
-        // Use Some(line_span) so align_empty_note_measures creates a synthetic
-        // empty GroupedMeasure for this slot (no events were produced).
-        empty_note_measure_spans.push(Some(line_span));
-        return Ok(());
+        return push_skipped_notes_measure(ctx, track_index, line_span, lex_error, Some(line_span));
     }
     let notes_parse = notes_parse_result?;
     let padded = validate_and_pad_beats(

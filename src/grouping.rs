@@ -3,7 +3,78 @@ use crate::error::{IrrecoverableError, Span, Spanned, Warning};
 
 const HALF_BAR_BOUNDARY: u32 = 8;
 
-#[allow(clippy::too_many_lines)]
+struct TimedBeatFields {
+    dotted: bool,
+    duration: u32,
+    group_membership: u8,
+}
+
+fn timed_beat_fields(event: &ScoreEvent) -> Option<TimedBeatFields> {
+    match event {
+        ScoreEvent::Note(note) => Some(TimedBeatFields {
+            dotted: note.dotted,
+            duration: note.duration,
+            group_membership: note.group_membership,
+        }),
+        ScoreEvent::Chord(chord) => Some(TimedBeatFields {
+            dotted: chord.dotted,
+            duration: chord.duration,
+            group_membership: chord.group_membership,
+        }),
+        ScoreEvent::Rest(rest) => Some(TimedBeatFields {
+            dotted: rest.dotted,
+            duration: rest.duration,
+            group_membership: 0,
+        }),
+        _ => None,
+    }
+}
+
+fn push_half_bar_crossing_warning(
+    group_membership: u8,
+    pos: u32,
+    head_duration: u32,
+    span: Span,
+    recoverable_errors: &mut Vec<Warning>,
+) {
+    if group_membership == 0
+        && pos > 0
+        && pos < HALF_BAR_BOUNDARY
+        && pos + head_duration > HALF_BAR_BOUNDARY
+    {
+        recoverable_errors.push(Warning::half_bar_boundary_crossed(span));
+    }
+}
+
+fn advance_timed_cluster(
+    events: &[Spanned<ScoreEvent>],
+    index: usize,
+    pos: &mut u32,
+    fields: &TimedBeatFields,
+    span: &Span,
+    recoverable_errors: &mut Vec<Warning>,
+) -> Result<usize, IrrecoverableError> {
+    push_half_bar_crossing_warning(
+        fields.group_membership,
+        *pos,
+        timed_head_duration(events, index),
+        *span,
+        recoverable_errors,
+    );
+
+    if is_dotted_eighth_at_beat_start(fields.dotted, fields.duration, *pos) {
+        let next_timed = next_timed_index(events, index);
+        if let Some(error) = validate_dotted_eighth_tail(events, next_timed, span)? {
+            recoverable_errors.push(error);
+        }
+        *pos += fields.duration + 1;
+        return Ok(next_timed.map(|next| next + 1).unwrap_or(events.len()));
+    }
+
+    *pos += timed_cluster_duration(events, index);
+    Ok(index + timed_cluster_len(events, index))
+}
+
 pub fn validate_measure_grouping(
     events: &[Spanned<ScoreEvent>],
     time_num: u8,
@@ -22,79 +93,19 @@ pub fn validate_measure_grouping(
         };
 
         match &event.value {
-            ScoreEvent::Note(note) => {
-                let total_duration = timed_cluster_duration(events, index);
-                let head_duration = timed_head_duration(events, index);
-                if note.group_membership == 0
-                    && pos > 0
-                    && pos < HALF_BAR_BOUNDARY
-                    && pos + head_duration > HALF_BAR_BOUNDARY
-                {
-                    recoverable_errors.push(Warning::half_bar_boundary_crossed(event.span));
-                }
-
-                if is_dotted_eighth_at_beat_start(note.dotted, note.duration, pos) {
-                    let next_timed = next_timed_index(events, index);
-                    if let Some(error) =
-                        validate_dotted_eighth_tail(events, next_timed, &event.span)?
-                    {
-                        recoverable_errors.push(error);
-                    }
-                    pos += note.duration + 1;
-                    index = next_timed.map(|next| next + 1).unwrap_or(events.len());
+            ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::Rest(_) => {
+                let Some(fields) = timed_beat_fields(&event.value) else {
+                    index += 1;
                     continue;
-                }
-
-                pos += total_duration;
-                index += timed_cluster_len(events, index);
-            }
-            ScoreEvent::Chord(chord) => {
-                let total_duration = timed_cluster_duration(events, index);
-                let head_duration = timed_head_duration(events, index);
-                if chord.group_membership == 0
-                    && pos > 0
-                    && pos < HALF_BAR_BOUNDARY
-                    && pos + head_duration > HALF_BAR_BOUNDARY
-                {
-                    recoverable_errors.push(Warning::half_bar_boundary_crossed(event.span));
-                }
-
-                if is_dotted_eighth_at_beat_start(chord.dotted, chord.duration, pos) {
-                    let next_timed = next_timed_index(events, index);
-                    if let Some(error) =
-                        validate_dotted_eighth_tail(events, next_timed, &event.span)?
-                    {
-                        recoverable_errors.push(error);
-                    }
-                    pos += chord.duration + 1;
-                    index = next_timed.map(|next| next + 1).unwrap_or(events.len());
-                    continue;
-                }
-
-                pos += total_duration;
-                index += timed_cluster_len(events, index);
-            }
-            ScoreEvent::Rest(rest) => {
-                let total_duration = timed_cluster_duration(events, index);
-                let head_duration = timed_head_duration(events, index);
-                if pos > 0 && pos < HALF_BAR_BOUNDARY && pos + head_duration > HALF_BAR_BOUNDARY {
-                    recoverable_errors.push(Warning::half_bar_boundary_crossed(event.span));
-                }
-
-                if is_dotted_eighth_at_beat_start(rest.dotted, rest.duration, pos) {
-                    let next_timed = next_timed_index(events, index);
-                    if let Some(error) =
-                        validate_dotted_eighth_tail(events, next_timed, &event.span)?
-                    {
-                        recoverable_errors.push(error);
-                    }
-                    pos += rest.duration + 1;
-                    index = next_timed.map(|next| next + 1).unwrap_or(events.len());
-                    continue;
-                }
-
-                pos += total_duration;
-                index += timed_cluster_len(events, index);
+                };
+                index = advance_timed_cluster(
+                    events,
+                    index,
+                    &mut pos,
+                    &fields,
+                    &event.span,
+                    &mut recoverable_errors,
+                )?;
             }
             _ => index += 1,
         }

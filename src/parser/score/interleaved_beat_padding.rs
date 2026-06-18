@@ -114,7 +114,83 @@ fn can_implicitly_pad(events: &[Spanned<ScoreEvent>], deficit: u32) -> bool {
 /// On beat overflow, truncates the events to fit and returns `Ok((truncated, Some(error), vec![]))`.
 /// On underflow that cannot be implicitly padded, returns `Err`.
 /// On dotted-eighth grouping violations, returns `Ok((events, None, errors))`.
-#[allow(clippy::too_many_lines)]
+fn timed_event_span(events: &[Spanned<ScoreEvent>]) -> Span {
+    events
+        .iter()
+        .rev()
+        .find(|event| {
+            matches!(
+                &event.value,
+                ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::Rest(_)
+            )
+        })
+        .map(|event| event.span)
+        .unwrap_or_else(|| Span::new(0, 1))
+}
+
+fn pad_beat_deficit(events: &mut Vec<Spanned<ScoreEvent>>, deficit: u32) {
+    if extending_last_crosses_half_bar(events, deficit) {
+        let pad_span = timed_event_span(events);
+        for _ in 0..(deficit / 4) {
+            events.push(Spanned::new(ScoreEvent::Extension, pad_span));
+        }
+        return;
+    }
+
+    if let Some(last) = events.iter_mut().rev().find(|event| {
+        matches!(
+            &event.value,
+            ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::Rest(_)
+        )
+    }) {
+        match &mut last.value {
+            ScoreEvent::Note(note) => note.duration += deficit,
+            ScoreEvent::Chord(chord) => chord.duration += deficit,
+            ScoreEvent::Rest(rest) => rest.duration += deficit,
+            _ => {}
+        }
+    }
+}
+
+fn pad_incomplete_measure(
+    mut events: Vec<Spanned<ScoreEvent>>,
+    expected: u32,
+    total: u32,
+    line_span: Span,
+) -> PaddedBeats {
+    let deficit = expected - total;
+    if !can_implicitly_pad(&events, deficit) {
+        let error = Warning::new(
+            line_span,
+            format!(
+                "incomplete measure: expected {expected} quarter-beats, got {total}; padding with rest"
+            ),
+        );
+        let rest_span = events.last().map(|event| event.span).unwrap_or(line_span);
+        events.push(Spanned::new(
+            ScoreEvent::Rest(crate::ast::parsed::ParsedRest {
+                duration: deficit,
+                dotted: false,
+                group_membership: 0,
+                group_continuation: 0,
+            }),
+            rest_span,
+        ));
+        return PaddedBeats {
+            events,
+            beat_overflow_error: Some(error),
+            dotted_eighth_errors: vec![],
+        };
+    }
+
+    pad_beat_deficit(&mut events, deficit);
+    PaddedBeats {
+        events,
+        beat_overflow_error: None,
+        dotted_eighth_errors: vec![],
+    }
+}
+
 pub(super) fn validate_and_pad_beats(
     events: Vec<Spanned<ScoreEvent>>,
     expected: u32,
@@ -159,58 +235,11 @@ pub(super) fn validate_and_pad_beats(
     }
 
     if total < expected {
-        let deficit = expected - total;
-        if !can_implicitly_pad(&events, deficit) {
-            let error = Warning::new(
-                line_span,
-                format!(
-                    "incomplete measure: expected {expected} quarter-beats, got {total}; padding with rest"
-                ),
-            );
-            let rest_span = events.last().map(|e| e.span).unwrap_or_else(|| line_span);
-            events.push(Spanned::new(
-                ScoreEvent::Rest(crate::ast::parsed::ParsedRest {
-                    duration: deficit,
-                    dotted: false,
-                    group_membership: 0,
-                    group_continuation: 0,
-                }),
-                rest_span,
-            ));
-            return Ok(PaddedBeats {
-                events,
-                beat_overflow_error: Some(error),
-                dotted_eighth_errors: vec![],
-            });
+        let padded = pad_incomplete_measure(events, expected, total, line_span);
+        if padded.beat_overflow_error.is_some() {
+            return Ok(padded);
         }
-        if extending_last_crosses_half_bar(&events, deficit) {
-            let pad_span = events
-                .iter()
-                .rev()
-                .find(|e| {
-                    matches!(
-                        &e.value,
-                        ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::Rest(_)
-                    )
-                })
-                .map(|e| e.span)
-                .unwrap_or_else(|| Span::new(0, 1));
-            for _ in 0..(deficit / 4) {
-                events.push(Spanned::new(ScoreEvent::Extension, pad_span));
-            }
-        } else if let Some(last) = events.iter_mut().rev().find(|e| {
-            matches!(
-                &e.value,
-                ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::Rest(_)
-            )
-        }) {
-            match &mut last.value {
-                ScoreEvent::Note(n) => n.duration += deficit,
-                ScoreEvent::Chord(c) => c.duration += deficit,
-                ScoreEvent::Rest(r) => r.duration += deficit,
-                _ => {}
-            }
-        }
+        events = padded.events;
     }
 
     let dotted_eighth_errors =

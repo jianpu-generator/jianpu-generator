@@ -7,7 +7,89 @@ use crate::error::{
     Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span,
 };
 
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_arguments)]
+fn combine_measure(
+    grouped_score: &GroupedScore,
+    measure_idx: usize,
+    directives_fallback: &MeasureDirectives,
+) -> MultiPartMeasure {
+    let (directives, directives_error) = match grouped_score.measure_directives.get(measure_idx) {
+        Some(d) => (d, None),
+        None => (
+            directives_fallback,
+            Some(Diagnostic::Error(
+                RecoverableError::measure_directives_missing(Span::new(0, 0)),
+            )),
+        ),
+    };
+    let (part_rows, part_row_diagnostics) = build_part_rows(&grouped_score.parts, measure_idx);
+    let (source_span, source_span_error) = grouped_score
+        .parts
+        .iter()
+        .filter_map(|track| match track {
+            GroupedTrack::Timed(part) => part.measures.get(measure_idx),
+        })
+        .fold(None, |acc: Option<Span>, m| {
+            Some(match acc {
+                None => m.source_span,
+                Some(prev) => Span::new(
+                    prev.start.min(m.source_span.start),
+                    prev.end.max(m.source_span.end),
+                ),
+            })
+        })
+        .map(|span| (span, None))
+        .unwrap_or_else(|| {
+            (
+                Span::new(0, 0),
+                Some(Diagnostic::Error(RecoverableError::source_span_missing(
+                    Span::new(0, 0),
+                    measure_idx,
+                ))),
+            )
+        });
+    let parse_warning = grouped_score
+        .per_measure_parse_errors
+        .get(measure_idx)
+        .and_then(|e| e.clone())
+        .map(Diagnostic::Warning);
+    let measure_diagnostics: Vec<Diagnostic> = directives_error
+        .into_iter()
+        .chain(source_span_error)
+        .chain(parse_warning)
+        .chain(grouped_score.parts.iter().flat_map(|track| match track {
+            GroupedTrack::Timed(part) => {
+                let m = part.measures.get(measure_idx);
+                [
+                    m.and_then(|m| m.lyrics_error.clone()),
+                    m.and_then(|m| m.beat_overflow_error.clone()),
+                    m.and_then(|m| m.dash_after_rest_error.clone()),
+                    m.and_then(|m| m.lex_error.clone()),
+                ]
+                .into_iter()
+                .flatten()
+                .chain(
+                    m.into_iter()
+                        .flat_map(|m| m.dotted_eighth_errors.iter().cloned()),
+                )
+                .chain(m.into_iter().flat_map(|m| m.chord_errors.iter().cloned()))
+                .map(Diagnostic::Warning)
+                .collect::<Vec<Diagnostic>>()
+            }
+        }))
+        .chain(part_row_diagnostics)
+        .collect();
+    MultiPartMeasure {
+        time_signature: directives.time_signature.clone(),
+        bpm: directives.bpm,
+        key: directives.key.clone(),
+        label: directives.label.clone(),
+        parts: part_rows,
+        source_span,
+        diagnostics: measure_diagnostics,
+    }
+}
+
 pub(crate) fn combine(
     grouped_score: &GroupedScore,
 ) -> Result<Vec<MultiPartMeasure>, IrrecoverableError> {
@@ -22,90 +104,19 @@ pub(crate) fn combine(
         .unwrap_or(0);
     validate_measure_counts(&grouped_score.parts, expected_len)?;
 
+    let directives_fallback = MeasureDirectives {
+        time_signature: None,
+        bpm: None,
+        key: None,
+        label: None,
+    };
     let mut combined = Vec::with_capacity(expected_len);
     for measure_idx in 0..expected_len {
-        let directives_fallback = MeasureDirectives {
-            time_signature: None,
-            bpm: None,
-            key: None,
-            label: None,
-        };
-        let (directives, directives_error) = match grouped_score.measure_directives.get(measure_idx)
-        {
-            Some(d) => (d, None),
-            None => (
-                &directives_fallback,
-                Some(Diagnostic::Error(
-                    RecoverableError::measure_directives_missing(Span::new(0, 0)),
-                )),
-            ),
-        };
-        let (part_rows, part_row_diagnostics) = build_part_rows(&grouped_score.parts, measure_idx);
-        let (source_span, source_span_error) = grouped_score
-            .parts
-            .iter()
-            .filter_map(|track| match track {
-                GroupedTrack::Timed(part) => part.measures.get(measure_idx),
-            })
-            .fold(None, |acc: Option<Span>, m| {
-                Some(match acc {
-                    None => m.source_span,
-                    Some(prev) => Span::new(
-                        prev.start.min(m.source_span.start),
-                        prev.end.max(m.source_span.end),
-                    ),
-                })
-            })
-            .map(|span| (span, None))
-            .unwrap_or_else(|| {
-                (
-                    Span::new(0, 0),
-                    Some(Diagnostic::Error(RecoverableError::source_span_missing(
-                        Span::new(0, 0),
-                        measure_idx,
-                    ))),
-                )
-            });
-        let parse_warning = grouped_score
-            .per_measure_parse_errors
-            .get(measure_idx)
-            .and_then(|e| e.clone())
-            .map(Diagnostic::Warning);
-        let measure_diagnostics: Vec<Diagnostic> = directives_error
-            .into_iter()
-            .chain(source_span_error)
-            .chain(parse_warning)
-            .chain(grouped_score.parts.iter().flat_map(|track| match track {
-                GroupedTrack::Timed(part) => {
-                    let m = part.measures.get(measure_idx);
-                    [
-                        m.and_then(|m| m.lyrics_error.clone()),
-                        m.and_then(|m| m.beat_overflow_error.clone()),
-                        m.and_then(|m| m.dash_after_rest_error.clone()),
-                        m.and_then(|m| m.lex_error.clone()),
-                    ]
-                    .into_iter()
-                    .flatten()
-                    .chain(
-                        m.into_iter()
-                            .flat_map(|m| m.dotted_eighth_errors.iter().cloned()),
-                    )
-                    .chain(m.into_iter().flat_map(|m| m.chord_errors.iter().cloned()))
-                    .map(Diagnostic::Warning)
-                    .collect::<Vec<Diagnostic>>()
-                }
-            }))
-            .chain(part_row_diagnostics)
-            .collect();
-        combined.push(MultiPartMeasure {
-            time_signature: directives.time_signature.clone(),
-            bpm: directives.bpm,
-            key: directives.key.clone(),
-            label: directives.label.clone(),
-            parts: part_rows,
-            source_span,
-            diagnostics: measure_diagnostics,
-        });
+        combined.push(combine_measure(
+            grouped_score,
+            measure_idx,
+            &directives_fallback,
+        ));
     }
 
     Ok(combined)

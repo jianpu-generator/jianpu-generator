@@ -12,7 +12,84 @@ pub struct DurationParse {
     pub dash_after_rest_error: Option<Warning>,
 }
 
-#[allow(clippy::too_many_lines)]
+struct DurationSuffixState {
+    duration: u32,
+    dotted: bool,
+    octave_up: i8,
+    octave_down: i8,
+    dash_after_rest_error: Option<Warning>,
+}
+
+struct DurationSuffixContext<'a> {
+    chars: &'a [char],
+    start: usize,
+    span: &'a Span,
+    is_rest: bool,
+    allows_octave: bool,
+    state: DurationSuffixState,
+}
+
+impl DurationSuffixContext<'_> {
+    fn apply_char(&mut self, index: usize) -> Result<Option<usize>, IrrecoverableError> {
+        match self.chars[index] {
+            '_' => {
+                self.state.duration = self.state.duration.min(2);
+                Ok(Some(index + 1))
+            }
+            '=' => {
+                self.state.duration = 1;
+                Ok(Some(index + 1))
+            }
+            '\'' if self.allows_octave => {
+                self.state.octave_up += 1;
+                Ok(Some(index + 1))
+            }
+            ',' if self.allows_octave => {
+                self.state.octave_down += 1;
+                Ok(Some(index + 1))
+            }
+            '.' => {
+                self.state.dotted = true;
+                Ok(Some(index + 1))
+            }
+            '-' => {
+                if self.is_rest {
+                    let pos = self.span.start
+                        + byte_offset_at_char_index_from_chars(self.chars, self.start, index);
+                    if self.state.dash_after_rest_error.is_none() {
+                        self.state.dash_after_rest_error =
+                            Some(Warning::dash_after_rest(Span::new(pos, pos + 1)));
+                    }
+                    Ok(Some(index + 1))
+                } else {
+                    self.state.duration += 4;
+                    Ok(Some(index + 1))
+                }
+            }
+            ')' | '(' => Ok(None),
+            character if !self.allows_octave && matches!(character, '\'' | ',') => {
+                self.unexpected_char(index, character)
+            }
+            character => self.unexpected_char(index, character),
+        }
+    }
+
+    fn unexpected_char(
+        &self,
+        index: usize,
+        character: char,
+    ) -> Result<Option<usize>, IrrecoverableError> {
+        let pos =
+            self.span.start + byte_offset_at_char_index_from_chars(self.chars, self.start, index);
+        Err(IrrecoverableError::new(
+            IrrecoverableErrorKind::DurationUnexpectedChar {
+                span: Span::new(pos, pos + character.len_utf8()),
+                ch: character,
+            },
+        ))
+    }
+}
+
 pub fn parse_duration_suffixes<H: TimedUnitHead>(
     chars: &[char],
     start: usize,
@@ -20,103 +97,64 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
     is_rest: bool,
     span: &Span,
 ) -> Result<DurationParse, IrrecoverableError> {
-    let mut i = head_end;
-    let mut duration = 4u32;
-    let mut dotted = false;
-    let mut octave_up = 0i8;
-    let mut octave_down = 0i8;
-    let mut dash_after_rest_error: Option<Warning> = None;
-    let allows_octave = H::allows_octave_suffixes();
+    let mut index = head_end;
+    let mut context = DurationSuffixContext {
+        chars,
+        start,
+        span,
+        is_rest,
+        allows_octave: H::allows_octave_suffixes(),
+        state: DurationSuffixState {
+            duration: 4,
+            dotted: false,
+            octave_up: 0,
+            octave_down: 0,
+            dash_after_rest_error: None,
+        },
+    };
 
-    while i < chars.len() {
-        if H::head_boundary(chars, i) {
+    while index < chars.len() {
+        if H::head_boundary(chars, index) {
             break;
         }
 
-        match chars[i] {
-            '_' => {
-                duration = duration.min(2);
-                i += 1;
-            }
-            '=' => {
-                duration = 1;
-                i += 1;
-            }
-            '\'' if allows_octave => {
-                octave_up += 1;
-                i += 1;
-            }
-            ',' if allows_octave => {
-                octave_down += 1;
-                i += 1;
-            }
-            '.' => {
-                dotted = true;
-                i += 1;
-            }
-            '-' => {
-                if is_rest {
-                    let pos = span.start + byte_offset_at_char_index_from_chars(chars, start, i);
-                    if dash_after_rest_error.is_none() {
-                        dash_after_rest_error =
-                            Some(Warning::dash_after_rest(Span::new(pos, pos + 1)));
-                    }
-                    i += 1;
-                } else {
-                    duration += 4;
-                    i += 1;
-                }
-            }
-            ')' | '(' => break,
-            c if !allows_octave && matches!(c, '\'' | ',') => {
-                let pos = span.start + byte_offset_at_char_index_from_chars(chars, start, i);
-                return Err(IrrecoverableError::new(
-                    IrrecoverableErrorKind::DurationUnexpectedChar {
-                        span: Span::new(pos, pos + c.len_utf8()),
-                        ch: c,
-                    },
-                ));
-            }
-            c => {
-                let pos = span.start + byte_offset_at_char_index_from_chars(chars, start, i);
-                return Err(IrrecoverableError::new(
-                    IrrecoverableErrorKind::DurationUnexpectedChar {
-                        span: Span::new(pos, pos + c.len_utf8()),
-                        ch: c,
-                    },
-                ));
-            }
+        match context.apply_char(index)? {
+            Some(next) => index = next,
+            None => break,
         }
     }
 
-    if octave_up > 0 && octave_down > 0 {
+    if context.state.octave_up > 0 && context.state.octave_down > 0 {
         return Err(IrrecoverableError::new(
             IrrecoverableErrorKind::DurationMixedOctaveMarkers { span: *span },
         ));
     }
 
-    if dotted && duration == 1 {
+    if context.state.dotted && context.state.duration == 1 {
         return Err(IrrecoverableError::new(
             IrrecoverableErrorKind::DurationCannotDotQuarterBeat { span: *span },
         ));
     }
 
-    let duration = if dotted {
-        duration + duration / 2
+    let duration = if context.state.dotted {
+        context.state.duration + context.state.duration / 2
     } else {
-        duration
+        context.state.duration
     };
 
     Ok(DurationParse {
         duration,
-        dotted,
-        octave_up,
-        octave_down,
-        next_index: i,
-        dash_after_rest_error,
+        dotted: context.state.dotted,
+        octave_up: context.state.octave_up,
+        octave_down: context.state.octave_down,
+        next_index: index,
+        dash_after_rest_error: context.state.dash_after_rest_error,
     })
 }
 
-fn byte_offset_at_char_index_from_chars(chars: &[char], start: usize, i: usize) -> usize {
-    chars[start..=i].iter().map(|c| c.len_utf8()).sum()
+fn byte_offset_at_char_index_from_chars(chars: &[char], start: usize, index: usize) -> usize {
+    chars[start..=index]
+        .iter()
+        .map(|character| character.len_utf8())
+        .sum()
 }

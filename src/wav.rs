@@ -11,18 +11,7 @@ const TARGET_PEAK: f32 = 0.95;
 
 static SF2_BYTES: &[u8] = include_bytes!("../fonts/GeneralUser_GS.sf2");
 
-#[allow(clippy::too_many_lines)]
-pub fn write_wav(midi_bytes: &[u8]) -> Result<Vec<u8>, IrrecoverableError> {
-    let smf = Smf::parse(midi_bytes).map_err(|_| {
-        IrrecoverableError::new(IrrecoverableErrorKind::WavInvalidMidiBytes {
-            span: Span::new(0, 0),
-        })
-    })?;
-    let tpq = match smf.header.timing {
-        Timing::Metrical(t) => t.as_int() as u32,
-        Timing::Timecode(..) => 480,
-    };
-
+fn init_synth() -> Result<Synth, IrrecoverableError> {
     let mut synth = Synth::new(SynthDescriptor {
         sample_rate: SAMPLE_RATE as f32,
         ..Default::default()
@@ -39,8 +28,84 @@ pub fn write_wav(midi_bytes: &[u8]) -> Result<Vec<u8>, IrrecoverableError> {
         })
     })?;
     synth.add_font(sf, true);
+    Ok(synth)
+}
 
-    let mut micros_per_beat: u32 = 500_000; // default 120 BPM
+fn handle_midi_message(synth: &mut Synth, channel: u8, message: &MidiMessage) {
+    let ch = channel;
+    match message {
+        MidiMessage::ProgramChange { program } => {
+            let p = if program.as_int() == 0 {
+                CHOIR_AAHS_PROGRAM
+            } else {
+                program.as_int()
+            };
+            synth
+                .send_event(MidiEvent::ProgramChange {
+                    channel: ch,
+                    program_id: p,
+                })
+                .ok();
+        }
+        MidiMessage::NoteOn { key, vel } => {
+            synth
+                .send_event(MidiEvent::NoteOn {
+                    channel: ch,
+                    key: key.as_int(),
+                    vel: vel.as_int(),
+                })
+                .ok();
+        }
+        MidiMessage::NoteOff { key, .. } => {
+            synth
+                .send_event(MidiEvent::NoteOff {
+                    channel: ch,
+                    key: key.as_int(),
+                })
+                .ok();
+        }
+        _ => {}
+    }
+}
+
+fn render_track(
+    synth: &mut Synth,
+    track: &midly::Track<'_>,
+    tpq: u32,
+    all_l: &mut Vec<f32>,
+    all_r: &mut Vec<f32>,
+) {
+    let mut micros_per_beat: u32 = 500_000;
+    for event in track.iter() {
+        let delta = event.delta.as_int();
+        if delta > 0 {
+            let n = ticks_to_samples(delta, tpq, micros_per_beat);
+            render_samples(synth, n, all_l, all_r);
+        }
+        match &event.kind {
+            TrackEventKind::Meta(MetaMessage::Tempo(t)) => {
+                micros_per_beat = t.as_int();
+            }
+            TrackEventKind::Midi { channel, message } => {
+                handle_midi_message(synth, channel.as_int(), message);
+            }
+            _ => {}
+        }
+    }
+}
+
+pub fn write_wav(midi_bytes: &[u8]) -> Result<Vec<u8>, IrrecoverableError> {
+    let smf = Smf::parse(midi_bytes).map_err(|_| {
+        IrrecoverableError::new(IrrecoverableErrorKind::WavInvalidMidiBytes {
+            span: Span::new(0, 0),
+        })
+    })?;
+    let tpq = match smf.header.timing {
+        Timing::Metrical(t) => t.as_int() as u32,
+        Timing::Timecode(..) => 480,
+    };
+
+    let mut synth = init_synth()?;
     let mut all_l: Vec<f32> = Vec::new();
     let mut all_r: Vec<f32> = Vec::new();
 
@@ -50,55 +115,7 @@ pub fn write_wav(midi_bytes: &[u8]) -> Result<Vec<u8>, IrrecoverableError> {
             "internal invariant: MIDI file has no tracks",
         ))
     })?;
-    for event in track.iter() {
-        let delta = event.delta.as_int();
-        if delta > 0 {
-            let n = ticks_to_samples(delta, tpq, micros_per_beat);
-            render_samples(&mut synth, n, &mut all_l, &mut all_r);
-        }
-        match &event.kind {
-            TrackEventKind::Meta(MetaMessage::Tempo(t)) => {
-                micros_per_beat = t.as_int();
-            }
-            TrackEventKind::Midi { channel, message } => {
-                let ch = channel.as_int();
-                match message {
-                    MidiMessage::ProgramChange { program } => {
-                        let p = if program.as_int() == 0 {
-                            CHOIR_AAHS_PROGRAM
-                        } else {
-                            program.as_int()
-                        };
-                        synth
-                            .send_event(MidiEvent::ProgramChange {
-                                channel: ch,
-                                program_id: p,
-                            })
-                            .ok();
-                    }
-                    MidiMessage::NoteOn { key, vel } => {
-                        synth
-                            .send_event(MidiEvent::NoteOn {
-                                channel: ch,
-                                key: key.as_int(),
-                                vel: vel.as_int(),
-                            })
-                            .ok();
-                    }
-                    MidiMessage::NoteOff { key, .. } => {
-                        synth
-                            .send_event(MidiEvent::NoteOff {
-                                channel: ch,
-                                key: key.as_int(),
-                            })
-                            .ok();
-                    }
-                    _ => {}
-                }
-            }
-            _ => {}
-        }
-    }
+    render_track(&mut synth, track, tpq, &mut all_l, &mut all_r);
 
     // Render 1 second of tail so reverb fully decays
     render_samples(&mut synth, SAMPLE_RATE as usize, &mut all_l, &mut all_r);

@@ -85,14 +85,12 @@ struct BarGroupContext<'a> {
     directive_events_per_measure: &'a mut DirectiveEventsPerMeasure,
 }
 
-#[allow(clippy::too_many_lines)]
-pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> ParseResult {
-    let groups = collect_groups(content);
-    let ditto_measures_per_track = compute_ditto_measures(&groups, declarations);
-    let (groups, per_group_desugar_errors) =
-        crate::desugar::desugar_groups(groups, declarations, base_offset)?;
-
-    let no_notes_track_error = declarations
+fn no_notes_track_warning(
+    declarations: &[PartDecl],
+    content: &str,
+    base_offset: usize,
+) -> Option<crate::error::Warning> {
+    declarations
         .iter()
         .any(|d| {
             matches!(
@@ -110,8 +108,11 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
                 Span::new(base_offset, base_offset + content.len()),
                 "parts declaration has no notes track",
             )
-        });
-    let first_notes_track_index = declarations
+        })
+}
+
+fn first_notes_track_index(declarations: &[PartDecl]) -> usize {
+    declarations
         .iter()
         .position(|d| {
             matches!(
@@ -122,7 +123,50 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
                     | PartKind::NotesWithChord
             )
         })
-        .unwrap_or(0);
+        .unwrap_or(0)
+}
+
+fn assert_all_groups_closed(
+    group_states: &[GroupStack],
+    declarations: &[PartDecl],
+    base_offset: usize,
+    content: &str,
+) -> Result<(), IrrecoverableError> {
+    for (track_index, state) in group_states.iter().enumerate() {
+        if state.is_open() {
+            let part_label = declarations
+                .get(track_index)
+                .map(|d| d.abbreviation.as_str())
+                .unwrap_or("unknown");
+            return Err(IrrecoverableError::new(
+                IrrecoverableErrorKind::UnclosedGroupAtEnd {
+                    span: Span::new(base_offset, base_offset + content.len()),
+                    part: part_label.to_string(),
+                },
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn attach_no_notes_track_warning(
+    per_group_desugar_errors: &mut Vec<Option<crate::error::Warning>>,
+    error: crate::error::Warning,
+) {
+    match per_group_desugar_errors.first_mut() {
+        Some(slot @ None) => *slot = Some(error),
+        _ => per_group_desugar_errors.insert(0, Some(error)),
+    }
+}
+
+pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> ParseResult {
+    let groups = collect_groups(content);
+    let ditto_measures_per_track = compute_ditto_measures(&groups, declarations);
+    let (groups, per_group_desugar_errors) =
+        crate::desugar::desugar_groups(groups, declarations, base_offset)?;
+
+    let no_notes_track_error = no_notes_track_warning(declarations, content, base_offset);
+    let first_notes_track_index = first_notes_track_index(declarations);
 
     let slots = flatten_score_line_slots(declarations);
     let slot_actions = build_slot_actions(&slots);
@@ -154,28 +198,12 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
         process_bar_group(group_lines, &mut ctx)?;
     }
 
-    for (track_index, state) in group_states.iter().enumerate() {
-        if state.is_open() {
-            let part_label = declarations
-                .get(track_index)
-                .map(|d| d.abbreviation.as_str())
-                .unwrap_or("unknown");
-            return Err(IrrecoverableError::new(
-                IrrecoverableErrorKind::UnclosedGroupAtEnd {
-                    span: Span::new(base_offset, base_offset + content.len()),
-                    part: part_label.to_string(),
-                },
-            ));
-        }
-    }
+    assert_all_groups_closed(&group_states, declarations, base_offset, content)?;
 
     let tracks = build_parse_result(declarations, accumulators, ditto_measures_per_track)?;
     let mut per_group_desugar_errors = per_group_desugar_errors;
     if let Some(error) = no_notes_track_error {
-        match per_group_desugar_errors.first_mut() {
-            Some(slot @ None) => *slot = Some(error),
-            _ => per_group_desugar_errors.insert(0, Some(error)),
-        }
+        attach_no_notes_track_warning(&mut per_group_desugar_errors, error);
     }
     Ok((
         tracks,

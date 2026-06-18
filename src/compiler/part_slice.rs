@@ -154,7 +154,113 @@ fn preserve_cross_measure_slur_opens(
     }
 }
 
-#[allow(clippy::too_many_lines)]
+fn compile_note_slurs(state: &mut PartState<'_>, note: &GroupedNote, slur_key: &SlurKey) {
+    extend_note_chains(
+        state.pending_chains,
+        state.pending_slur_opens,
+        note.group_membership,
+        note.group_continuation,
+        *state.col,
+        slur_key,
+        state.slur_spans,
+        state.measure_index,
+        state.part_index,
+    );
+    if let Some(close_offset) = note.slur_group_close_at_duration {
+        if note.group_membership > 0 {
+            extend_note_chains(
+                state.pending_chains,
+                state.pending_slur_opens,
+                note.group_membership,
+                0,
+                *state.col + close_offset,
+                &SlurKey::Rest,
+                state.slur_spans,
+                state.measure_index,
+                state.part_index,
+            );
+        }
+    }
+}
+
+fn compile_note_tie_and_lyrics(
+    state: &mut PartState<'_>,
+    note: &GroupedNote,
+    slur_key: SlurKey,
+    lyrics_iter: &mut Option<std::slice::Iter<'_, Syllable>>,
+    kind: PartKind,
+) {
+    let is_tie_continuation = *state.prev_tie && state.prev_slur_key.as_ref() == Some(&slur_key);
+
+    if *state.cross_measure_open && is_tie_continuation {
+        if let (Some(from_col), Some(from_measure)) =
+            (*state.prev_tie_column, *state.prev_tie_measure)
+        {
+            state.slur_spans.push(SlurSpan {
+                part_index: state.part_index,
+                from_measure,
+                from_column: from_col,
+                to_measure: state.measure_index,
+                to_column: *state.col,
+            });
+        }
+        *state.cross_measure_open = false;
+    }
+
+    if kind == PartKind::NotesWithLyrics && !is_tie_continuation {
+        if let Some(ref mut iter) = lyrics_iter {
+            if let Some(syllable) = iter.next() {
+                state.elements.push(ColumnElement {
+                    column: *state.col,
+                    content: ElementContent::Lyric(syllable.text.clone()),
+                });
+            }
+        }
+    }
+
+    if note.tie {
+        *state.prev_tie_column = Some(*state.col);
+        *state.prev_tie_measure = Some(state.measure_index);
+    } else {
+        *state.prev_tie_column = None;
+        *state.prev_tie_measure = None;
+    }
+    *state.prev_tie = note.tie;
+    *state.prev_slur_key = Some(slur_key);
+}
+
+fn compile_note_dashes_beams_and_advance(
+    state: &mut PartState<'_>,
+    note: &GroupedNote,
+    measure_col_start: u32,
+    underline_count: u32,
+) {
+    if !note.dotted {
+        let note_col = *state.col;
+        for dash_col in (note_col + 4..note_col + note.duration).step_by(4) {
+            state.elements.push(ColumnElement {
+                column: dash_col,
+                content: ElementContent::NoteDash,
+            });
+        }
+    }
+
+    if underline_count > 0 {
+        state.beam_buf.push(BeamEntry {
+            column: *state.col,
+            underline_count,
+            duration: note.duration,
+        });
+    }
+
+    *state.col += note.duration;
+
+    let beat_position = *state.col - measure_col_start;
+    if underline_count > 0 && beat_position % 4 == 0 {
+        flush_beam_buffer(state.beam_buf, state.elements);
+    }
+}
+
 fn compile_note(
     state: &mut PartState<'_>,
     note: &GroupedNote,
@@ -182,97 +288,9 @@ fn compile_note(
     }
 
     let slur_key = SlurKey::Pitch(note.pitch.clone());
-    extend_note_chains(
-        state.pending_chains,
-        state.pending_slur_opens,
-        note.group_membership,
-        note.group_continuation,
-        *state.col,
-        &slur_key,
-        state.slur_spans,
-        state.measure_index,
-        state.part_index,
-    );
-    if let Some(close_offset) = note.slur_group_close_at_duration {
-        if note.group_membership > 0 {
-            extend_note_chains(
-                state.pending_chains,
-                state.pending_slur_opens,
-                note.group_membership,
-                0,
-                *state.col + close_offset,
-                &SlurKey::Rest,
-                state.slur_spans,
-                state.measure_index,
-                state.part_index,
-            );
-        }
-    }
-
-    let is_tie_continuation = *state.prev_tie && state.prev_slur_key.as_ref() == Some(&slur_key);
-
-    // Cross-measure tie close: emit SlurSpan using saved tie origin.
-    if *state.cross_measure_open && is_tie_continuation {
-        if let (Some(from_col), Some(from_measure)) =
-            (*state.prev_tie_column, *state.prev_tie_measure)
-        {
-            state.slur_spans.push(SlurSpan {
-                part_index: state.part_index,
-                from_measure,
-                from_column: from_col,
-                to_measure: state.measure_index,
-                to_column: *state.col,
-            });
-        }
-        *state.cross_measure_open = false;
-    }
-
-    if kind == PartKind::NotesWithLyrics && !is_tie_continuation {
-        if let Some(ref mut iter) = lyrics_iter {
-            if let Some(syllable) = iter.next() {
-                state.elements.push(ColumnElement {
-                    column: *state.col,
-                    content: ElementContent::Lyric(syllable.text.clone()),
-                });
-            }
-        }
-    }
-
-    // Save tie origin before advancing column.
-    if note.tie {
-        *state.prev_tie_column = Some(*state.col);
-        *state.prev_tie_measure = Some(state.measure_index);
-    } else {
-        *state.prev_tie_column = None;
-        *state.prev_tie_measure = None;
-    }
-    *state.prev_tie = note.tie;
-    *state.prev_slur_key = Some(slur_key);
-
-    if !note.dotted {
-        let note_col = *state.col;
-        for dash_col in (note_col + 4..note_col + note.duration).step_by(4) {
-            state.elements.push(ColumnElement {
-                column: dash_col,
-                content: ElementContent::NoteDash,
-            });
-        }
-    }
-
-    if underline_count > 0 {
-        state.beam_buf.push(BeamEntry {
-            column: *state.col,
-            underline_count,
-            duration: note.duration,
-        });
-    }
-
-    *state.col += note.duration;
-
-    let beat_position = *state.col - measure_col_start;
-    if underline_count > 0 && beat_position % 4 == 0 {
-        flush_beam_buffer(state.beam_buf, state.elements);
-    }
+    compile_note_slurs(state, note, &slur_key);
+    compile_note_tie_and_lyrics(state, note, slur_key, lyrics_iter, kind);
+    compile_note_dashes_beams_and_advance(state, note, measure_col_start, underline_count);
 }
 
 fn compile_rest(state: &mut PartState<'_>, rest: &GroupedRest, measure_col_start: u32) {

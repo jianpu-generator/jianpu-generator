@@ -1,5 +1,6 @@
 mod display;
 mod kind;
+mod span;
 
 pub use kind::{DocumentSection, IrrecoverableErrorKind, RequiredMetadataField};
 

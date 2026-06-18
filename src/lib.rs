@@ -1,5 +1,6 @@
 #![forbid(dead_code)]
 #![forbid(unused_variables)]
+#![forbid(clippy::too_many_lines)]
 
 pub mod ast;
 pub mod combiner;

@@ -6,6 +6,7 @@
 
 cognitive-complexity-threshold = 20
 too-many-lines-threshold = 80
+# clippy::too_many_lines is #![forbid] in src/lib.rs — #[allow(clippy::too_many_lines)] cannot override it there.
 too-many-arguments-threshold = 6
 type-complexity-threshold = 200
 
