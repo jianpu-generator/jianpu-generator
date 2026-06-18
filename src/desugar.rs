@@ -4,6 +4,7 @@ use crate::parser::score::measure_group;
 
 type SourceLine = (String, usize);
 type MeasureGroup = Vec<SourceLine>;
+type DesugarGroupsResult = Result<(Vec<MeasureGroup>, Vec<Option<Warning>>), IrrecoverableError>;
 
 /// Resolves `"` ditto lines within each measure group.
 ///
@@ -18,7 +19,7 @@ pub fn desugar_groups(
     groups: Vec<MeasureGroup>,
     declarations: &[PartDecl],
     base_offset: usize,
-) -> Result<(Vec<MeasureGroup>, Vec<Option<Warning>>), IrrecoverableError> {
+) -> DesugarGroupsResult {
     let slots = flatten_score_line_slots(declarations);
     let mut desugared = Vec::with_capacity(groups.len());
     let mut per_group_errors = Vec::with_capacity(groups.len());

@@ -143,7 +143,7 @@ fn octave_dot_grid_content_emits_nothing() {
 fn measure_highlight_produces_prepended_rect_element() {
     use crate::grid_layout::types::MeasureHighlight;
 
-    let page = crate::grid_layout::types::GridPage {
+    let page = GridPage {
         width_pt: 595.0,
         height_pt: 842.0,
         rows: vec![
@@ -203,7 +203,7 @@ fn error_highlight_resolves_to_absolute_error_highlight() {
             column_end: 5,
         }],
     };
-    let abs_pages: Vec<AbsolutePage> = crate::coordinate_resolver::resolve(&[page], 8.0);
+    let abs_pages: Vec<AbsolutePage> = resolve(&[page], 8.0);
     let error_elements: Vec<_> = abs_pages[0]
         .elements
         .iter()
@@ -218,7 +218,7 @@ fn error_highlight_resolves_to_absolute_error_highlight() {
 
 #[test]
 fn page_with_no_highlight_produces_no_extra_element() {
-    let page = crate::grid_layout::types::GridPage {
+    let page = GridPage {
         width_pt: 595.0,
         height_pt: 842.0,
         rows: vec![GridRow {

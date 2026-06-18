@@ -12,6 +12,7 @@ pub fn resolve(pages: &[GridPage], note_number_width: f32) -> Vec<AbsolutePage> 
         .collect()
 }
 
+#[allow(clippy::too_many_lines)]
 fn resolve_page(page: &GridPage, note_number_width: f32) -> AbsolutePage {
     let usable_width = page.width_pt - 2.0 * PAGE_MARGIN;
     let mut elements: Vec<AbsoluteElement> = Vec::new();

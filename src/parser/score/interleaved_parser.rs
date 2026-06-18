@@ -85,6 +85,7 @@ struct BarGroupContext<'a> {
     directive_events_per_measure: &'a mut DirectiveEventsPerMeasure,
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> ParseResult {
     let groups = collect_groups(content);
     let ditto_measures_per_track = compute_ditto_measures(&groups, declarations);

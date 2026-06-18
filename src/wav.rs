@@ -11,6 +11,7 @@ const TARGET_PEAK: f32 = 0.95;
 
 static SF2_BYTES: &[u8] = include_bytes!("../fonts/GeneralUser_GS.sf2");
 
+#[allow(clippy::too_many_lines)]
 pub fn write_wav(midi_bytes: &[u8]) -> Result<Vec<u8>, IrrecoverableError> {
     let smf = Smf::parse(midi_bytes).map_err(|_| {
         IrrecoverableError::new(IrrecoverableErrorKind::WavInvalidMidiBytes {

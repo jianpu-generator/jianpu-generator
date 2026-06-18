@@ -27,7 +27,7 @@ fn ditto_lyrics_line_drops_lyric_row_for_that_measure() {
     let score = compile(input, "test.jianpu").unwrap();
     let soprano = score.measures[0].parts[0].slice();
     assert!(
-        matches!(soprano.kind, ast::parsed::PartKind::NotesWithLyrics),
+        matches!(soprano.kind, PartKind::NotesWithLyrics),
         "part with explicit lyrics keeps its lyric row"
     );
     assert!(
@@ -36,7 +36,7 @@ fn ditto_lyrics_line_drops_lyric_row_for_that_measure() {
     );
     let alto = score.measures[0].parts[1].slice();
     assert!(
-        matches!(alto.kind, ast::parsed::PartKind::Notes),
+        matches!(alto.kind, PartKind::Notes),
         "part with ditto lyrics should render as a plain notes part"
     );
     assert!(
@@ -67,7 +67,7 @@ fn implicitly_omitted_lyrics_line_drops_lyric_row() {
     let score = compile(input, "test.jianpu").unwrap();
     let alto = score.measures[0].parts[1].slice();
     assert!(
-        matches!(alto.kind, ast::parsed::PartKind::Notes),
+        matches!(alto.kind, PartKind::Notes),
         "part with implicitly omitted lyrics should render as a plain notes part"
     );
     assert!(alto.lyrics.is_none());
@@ -95,7 +95,7 @@ fn explicit_lyrics_keep_lyric_row() {
     for part in &score.measures[0].parts {
         let slice = part.slice();
         assert!(
-            matches!(slice.kind, ast::parsed::PartKind::NotesWithLyrics),
+            matches!(slice.kind, PartKind::NotesWithLyrics),
             "explicit lyrics must keep the lyric row"
         );
         assert!(slice.lyrics.is_some());

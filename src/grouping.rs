@@ -3,6 +3,7 @@ use crate::error::{IrrecoverableError, Span, Spanned, Warning};
 
 const HALF_BAR_BOUNDARY: u32 = 8;
 
+#[allow(clippy::too_many_lines)]
 pub fn validate_measure_grouping(
     events: &[Spanned<ScoreEvent>],
     time_num: u8,

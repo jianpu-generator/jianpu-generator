@@ -31,6 +31,8 @@ pub use groups::{
 use crate::ast::parsed::ScoreEvent;
 use crate::error::{IrrecoverableError, Span, Spanned, Warning};
 
+type ParseHeadResult<H> = Result<(H, usize, bool, Vec<Warning>), IrrecoverableError>;
+
 /// Parsed events from one timed notation line, plus any recoverable errors collected while parsing.
 pub struct TimedLineParse {
     pub events: Vec<Spanned<ScoreEvent>>,
@@ -57,11 +59,7 @@ pub fn parse_timed_line<H: TimedUnitHead>(
 
 pub trait TimedUnitHead: Sized {
     /// Parse one head starting at `chars[start]`. Returns (head, index after head, is_rest, recoverable warnings).
-    fn parse_head(
-        chars: &[char],
-        start: usize,
-        span: &Span,
-    ) -> Result<(Self, usize, bool, Vec<Warning>), IrrecoverableError>;
+    fn parse_head(chars: &[char], start: usize, span: &Span) -> ParseHeadResult<Self>;
 
     /// True when the next atom should start (note: next digit 0-7; chord: always after suffixes end).
     fn head_boundary(chars: &[char], i: usize) -> bool;

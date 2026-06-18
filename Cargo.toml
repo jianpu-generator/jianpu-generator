@@ -7,6 +7,9 @@ unsafe_code = "forbid"
 unreachable_pub = "deny"
 dead_code = "deny"
 unused_variables = "deny"
+unused_imports = "deny"
+unused_must_use = "deny"
+unused_qualifications = "deny"
 
 [workspace.lints.clippy]
 # Hard-block common AI-agent shortcuts and stub code.
@@ -25,7 +28,7 @@ cognitive_complexity = "deny"
 too_many_lines = "deny"
 too_many_arguments = "deny"
 type_complexity = "deny"
-uninlined_format_args = "allow"
+uninlined_format_args = "deny"
 redundant_clone = "deny"
 needless_pass_by_value = "deny"
 match_wildcard_for_single_variants = "deny"

@@ -363,6 +363,7 @@ pub enum IrrecoverableErrorKind {
 }
 
 impl IrrecoverableErrorKind {
+    #[allow(clippy::too_many_lines)]
     pub fn span(&self) -> &Span {
         match self {
             Self::UnknownSection { span, .. }

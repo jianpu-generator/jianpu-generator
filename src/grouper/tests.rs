@@ -81,11 +81,7 @@ fn chord_expected_degree_digit_is_recoverable() {
         .parts
         .iter()
         .find_map(|row| match row {
-            crate::ast::grouped::PartRow::Timed(part)
-                if part.kind == crate::ast::parsed::PartKind::Chord =>
-            {
-                Some(part)
-            }
+            crate::ast::grouped::PartRow::Timed(part) if part.kind == PartKind::Chord => Some(part),
             _ => None,
         })
         .expect("chord part");
@@ -466,7 +462,7 @@ fn chord_part_produces_one_chord_event_per_measure() {
         .find(|r| {
             matches!(
                 r,
-                PartRow::Timed(p) if p.kind == crate::ast::parsed::PartKind::Chord
+                PartRow::Timed(p) if p.kind == PartKind::Chord
             )
         })
         .unwrap();
@@ -499,9 +495,7 @@ fn measure_span_covers_first_note_byte_offset() {
     let first_note_offset = source.find("1 2 3 4").unwrap();
     assert!(
         span.start <= first_note_offset && first_note_offset < span.end,
-        "span {:?} should contain first note offset {}",
-        span,
-        first_note_offset
+        "span {span:?} should contain first note offset {first_note_offset}"
     );
 }
 
@@ -527,9 +521,7 @@ fn second_measure_span_covers_its_first_note() {
     let second_note_offset = source.rfind("5 6 7 1").unwrap();
     assert!(
         span.start <= second_note_offset && second_note_offset < span.end,
-        "span {:?} should contain second measure offset {}",
-        span,
-        second_note_offset
+        "span {span:?} should contain second measure offset {second_note_offset}"
     );
     // Second measure span must not overlap with first
     assert!(

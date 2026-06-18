@@ -33,6 +33,7 @@ pub(crate) fn push_head(
         .push(grid_el(column, content, HAlign::Center, VAlign::Center));
 }
 
+#[allow(clippy::too_many_arguments)]
 #[allow(clippy::indexing_slicing)]
 pub(crate) fn expand_measure_elements(
     row: &MeasureRow,
@@ -148,6 +149,7 @@ pub(crate) fn expand_lyric_part(
     row
 }
 
+#[allow(clippy::too_many_arguments)]
 #[allow(clippy::indexing_slicing)]
 pub(crate) fn expand_note_part(
     system: &[MeasureBlock],

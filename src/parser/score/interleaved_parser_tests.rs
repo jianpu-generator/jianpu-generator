@@ -245,7 +245,7 @@ fn omitted_trailing_lyrics_without_precedent_is_recoverable() {
     );
     let declarations = vec![decl("", PartKind::NotesWithLyrics)];
     let tracks = parse(content, 0, &declarations).expect("missing lyrics must not abort parsing");
-    let crate::ast::parsed::ParsedTrack::Timed(track) = &tracks[0];
+    let ParsedTrack::Timed(track) = &tracks[0];
     let lyrics = track.lyrics.as_ref().expect("track should have lyrics");
     assert_eq!(lyrics.measure_syllables.len(), 2);
     assert_eq!(
@@ -273,7 +273,7 @@ fn omitted_notes_row_is_recoverable() {
     );
     let doc = crate::parser::parse(input, "test.jianpu")
         .expect("missing notes row must not abort parsing");
-    let crate::ast::parsed::ParsedTrack::Timed(track) = &doc.tracks[0];
+    let ParsedTrack::Timed(track) = &doc.tracks[0];
     let note_events: Vec<_> = track
         .score
         .events

@@ -154,6 +154,7 @@ fn preserve_cross_measure_slur_opens(
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn compile_note(
     state: &mut PartState<'_>,
     note: &GroupedNote,

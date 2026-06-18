@@ -4,6 +4,9 @@ use super::directives::{key_change_lexeme_len, parse_key_change_text};
 use crate::ast::parsed::KeyChange;
 use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Spanned};
 
+type LexCharResult = Result<(Option<Spanned<TimedLexToken>>, usize, bool), IrrecoverableError>;
+type LexTokenOffsetResult = Result<Option<(Spanned<TimedLexToken>, usize)>, IrrecoverableError>;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LexContext {
     Notes,
@@ -57,6 +60,7 @@ pub fn lex_line(
 
 /// Lex one non-whitespace character.  Returns `(token, bytes_consumed, new_at_word_boundary)`.
 /// When the character is a suffix that belongs to the current head, `token` is `None`.
+#[allow(clippy::too_many_arguments)]
 fn lex_one_char(
     line: &str,
     i: usize,
@@ -65,7 +69,7 @@ fn lex_one_char(
     c: char,
     at_word_boundary: bool,
     context: LexContext,
-) -> Result<(Option<Spanned<TimedLexToken>>, usize, bool), IrrecoverableError> {
+) -> LexCharResult {
     match c {
         '(' => Ok((
             Some(Spanned::new(
@@ -130,7 +134,7 @@ fn lex_low_digit(
     len: usize,
     at_word_boundary: bool,
     context: LexContext,
-) -> Result<(Option<Spanned<TimedLexToken>>, usize, bool), IrrecoverableError> {
+) -> LexCharResult {
     if at_word_boundary && context == LexContext::Notes {
         if let Some((tok, consumed)) = try_lex_time_signature(line, i, start)? {
             return Ok((Some(tok), consumed, true));
@@ -160,6 +164,7 @@ fn unexpected_char_error(start: usize, len: usize, ch: char) -> IrrecoverableErr
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn lex_high_digit_or_error(
     line: &str,
     i: usize,
@@ -168,7 +173,7 @@ fn lex_high_digit_or_error(
     at_word_boundary: bool,
     context: LexContext,
     c: char,
-) -> Result<(Option<Spanned<TimedLexToken>>, usize, bool), IrrecoverableError> {
+) -> LexCharResult {
     if at_word_boundary && context == LexContext::Notes {
         if let Some((tok, consumed)) = try_lex_time_signature(line, i, start)? {
             return Ok((Some(tok), consumed, true));
@@ -219,11 +224,7 @@ fn lex_bpm(
 
 /// Try to lex a `1=<NoteName><accidental?><octave>` key change starting at byte offset `i`.
 /// Returns `Some((token, bytes_consumed))` if it looks like a key change, `None` otherwise.
-fn try_lex_key_change(
-    line: &str,
-    i: usize,
-    start: usize,
-) -> Result<Option<(Spanned<TimedLexToken>, usize)>, IrrecoverableError> {
+fn try_lex_key_change(line: &str, i: usize, start: usize) -> LexTokenOffsetResult {
     // "1=" is 2 bytes.
     let after_eq = &line[i + 2..];
 
@@ -265,11 +266,7 @@ fn try_lex_key_change(
 /// Try to lex a `<num>/<den>` time signature starting at byte offset `i`.
 /// Returns `Some((token, bytes_consumed))` on success, `None` if the text doesn't look like a
 /// time signature (no `/` found).
-fn try_lex_time_signature(
-    line: &str,
-    i: usize,
-    start: usize,
-) -> Result<Option<(Spanned<TimedLexToken>, usize)>, IrrecoverableError> {
+fn try_lex_time_signature(line: &str, i: usize, start: usize) -> LexTokenOffsetResult {
     let slice = &line[i..];
 
     // Collect numerator digits.

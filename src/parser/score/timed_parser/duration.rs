@@ -12,6 +12,7 @@ pub struct DurationParse {
     pub dash_after_rest_error: Option<Warning>,
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn parse_duration_suffixes<H: TimedUnitHead>(
     chars: &[char],
     start: usize,

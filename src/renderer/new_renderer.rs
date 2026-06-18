@@ -112,6 +112,7 @@ fn render_element(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_note_head(
     elem: &AbsoluteElement,
     pitch: &JianPuPitch,

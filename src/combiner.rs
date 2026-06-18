@@ -7,6 +7,7 @@ use crate::error::{
     Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span,
 };
 
+#[allow(clippy::too_many_lines)]
 pub(crate) fn combine(
     grouped_score: &GroupedScore,
 ) -> Result<Vec<MultiPartMeasure>, IrrecoverableError> {
@@ -235,7 +236,7 @@ mod tests {
         );
         let doc =
             parser::parse(input, "test.jianpu").expect("beat overflow must not abort parsing");
-        let score = crate::grouper::group(doc).expect("grouping must succeed");
+        let score = grouper::group(doc).expect("grouping must succeed");
         assert_eq!(score.measures.len(), 1);
         assert_eq!(score.measures[0].diagnostics.len(), 1);
         assert!(
@@ -260,7 +261,7 @@ mod tests {
         );
         let doc =
             parser::parse(input, "test.jianpu").expect("missing lyrics must not abort parsing");
-        let score = crate::grouper::group(doc).expect("grouping must succeed");
+        let score = grouper::group(doc).expect("grouping must succeed");
         assert_eq!(score.measures.len(), 2);
         assert_eq!(
             score.measures[0].diagnostics.len(),

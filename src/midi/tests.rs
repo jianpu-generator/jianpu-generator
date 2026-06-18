@@ -57,7 +57,7 @@ fn chord_major_expands_to_three_notes() {
                 },
                 lyrics: None,
             })],
-            source_span: crate::error::Span::new(0, 0), // dummy — midi output ignores span
+            source_span: Span::new(0, 0), // dummy — midi output ignores span
             diagnostics: vec![],
         }],
     };
@@ -124,7 +124,7 @@ fn duration_half_note_is_960_ticks() {
     assert_eq!(duration_to_ticks(8), 960);
 }
 
-fn one_measure_score() -> crate::ast::grouped::Score {
+fn one_measure_score() -> Score {
     use crate::ast::grouped::GroupedNote;
     use crate::ast::grouped::{
         Metadata, MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
@@ -171,7 +171,7 @@ fn one_measure_score() -> crate::ast::grouped::Score {
                 },
                 lyrics: None,
             })],
-            source_span: crate::error::Span::new(0, 0),
+            source_span: Span::new(0, 0),
             diagnostics: vec![],
         }],
     }

@@ -134,7 +134,7 @@ fn ditto_part_label_is_merged_into_source_row_label() {
         "\"\n",
     );
     let score = compile(input, "test.jianpu").unwrap();
-    let result = crate::compiler::compile(&score);
+    let result = compiler::compile(&score);
     let blocks = result.blocks;
     assert_eq!(
         blocks[0].rows.len(),

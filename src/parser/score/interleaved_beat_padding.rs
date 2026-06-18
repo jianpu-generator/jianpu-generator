@@ -114,6 +114,7 @@ fn can_implicitly_pad(events: &[Spanned<ScoreEvent>], deficit: u32) -> bool {
 /// On beat overflow, truncates the events to fit and returns `Ok((truncated, Some(error), vec![]))`.
 /// On underflow that cannot be implicitly padded, returns `Err`.
 /// On dotted-eighth grouping violations, returns `Ok((events, None, errors))`.
+#[allow(clippy::too_many_lines)]
 pub(super) fn validate_and_pad_beats(
     events: Vec<Spanned<ScoreEvent>>,
     expected: u32,

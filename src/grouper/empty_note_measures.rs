@@ -28,6 +28,7 @@ fn apply_per_measure_errors(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn align_empty_note_measures(
     measures: &mut Vec<GroupedMeasure>,
     empty_note_measure_spans: &[Option<Span>],

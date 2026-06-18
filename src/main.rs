@@ -408,8 +408,8 @@ fn parse_and_group(input: &Path) -> Result<jg::ast::grouped::Score, jg::error::I
     jg::grouper::group(doc).map_err(|e| e.with_path(input))
 }
 
-fn write_file(path: &Path, data: &[u8]) -> Result<(), jg::error::IrrecoverableError> {
-    std::fs::write(path, data).map_err(|e| {
+fn write_file(path: &Path, bytes: &[u8]) -> Result<(), jg::error::IrrecoverableError> {
+    std::fs::write(path, bytes).map_err(|e| {
         jg::error::IrrecoverableError::new(jg::error::IrrecoverableErrorKind::IoWriteFailed {
             span: jg::error::Span::new(0, 0),
             path: path.to_path_buf(),

@@ -96,6 +96,7 @@ fn process_lyrics_column_line(
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn process_notes_column_line(
     track_index: usize,
     line: &str,

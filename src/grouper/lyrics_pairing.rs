@@ -95,16 +95,14 @@ fn pair_lyrics_to_notes(
         Some(Warning::new(
             *source_span,
             format!(
-                "[{part_name}] lyrics underflow: ran out of syllables at syllable {} (fewer syllables than notes)",
-                syllable_idx
+                "[{part_name}] lyrics underflow: ran out of syllables at syllable {syllable_idx} (fewer syllables than notes)"
             ),
         ))
     } else if overflow_count > 0 {
         Some(Warning::new(
             *source_span,
             format!(
-                "[{part_name}] lyrics overflow: {} extra syllable{} after all notes are consumed",
-                overflow_count,
+                "[{part_name}] lyrics overflow: {overflow_count} extra syllable{} after all notes are consumed",
                 if overflow_count == 1 { "" } else { "s" }
             ),
         ))

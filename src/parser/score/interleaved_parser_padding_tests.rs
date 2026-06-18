@@ -102,10 +102,7 @@ fn implicit_trailing_extensions_after_partial_fill() {
     );
 }
 
-fn timed_cluster_duration(
-    events: &[crate::error::Spanned<crate::ast::parsed::ScoreEvent>],
-    start: usize,
-) -> u32 {
+fn timed_cluster_duration(events: &[Spanned<ScoreEvent>], start: usize) -> u32 {
     use crate::ast::parsed::ScoreEvent;
     let Some(event) = events.get(start) else {
         return 0;
