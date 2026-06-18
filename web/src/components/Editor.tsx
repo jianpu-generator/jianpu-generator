@@ -75,6 +75,68 @@ function diagnosticRange(
   )
 }
 
+const ERROR_ZONE_LINE_HEIGHT_PX = 21
+
+function groupDiagnosticsByLine(
+  model: editor.ITextModel,
+  source: string,
+  diagnostics: Diagnostic[],
+  monacoApi: Monaco,
+): Map<number, Diagnostic[]> {
+  const byLine = new Map<number, Diagnostic[]>()
+  for (const diagnostic of diagnostics) {
+    const range = diagnosticRange(model, source, diagnostic, monacoApi)
+    const lineNumber = range.endLineNumber
+    const existing = byLine.get(lineNumber) ?? []
+    existing.push(diagnostic)
+    byLine.set(lineNumber, existing)
+  }
+  return byLine
+}
+
+function createErrorViewZoneDomNode(
+  lineDiagnostics: Diagnostic[],
+): HTMLElement {
+  const domNode = document.createElement('div')
+  domNode.className = 'editor-error-zone'
+
+  for (const [index, diagnostic] of lineDiagnostics.entries()) {
+    if (index > 0) {
+      domNode.appendChild(document.createElement('hr'))
+    }
+
+    const message = document.createElement('div')
+    message.className = 'editor-error-zone-message'
+    message.textContent = diagnostic.message
+    domNode.appendChild(message)
+
+    if (diagnostic.report) {
+      const report = document.createElement('pre')
+      report.className = 'editor-error-zone-report'
+      report.textContent = diagnostic.report
+      domNode.appendChild(report)
+    }
+  }
+
+  return domNode
+}
+
+function errorViewZoneHeightInPx(
+  domNode: HTMLElement,
+  contentWidth: number,
+): number {
+  domNode.style.width = `${contentWidth}px`
+  domNode.style.visibility = 'hidden'
+  domNode.style.position = 'absolute'
+  document.body.appendChild(domNode)
+  const height = domNode.getBoundingClientRect().height
+  domNode.remove()
+  domNode.style.visibility = ''
+  domNode.style.position = ''
+  domNode.style.width = ''
+  return Math.max(height, ERROR_ZONE_LINE_HEIGHT_PX)
+}
+
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   {
     value,
@@ -92,7 +154,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 ) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<Monaco | null>(null)
-  const viewZoneIdsRef = useRef<string[]>([])
+  const measureViewZoneIdsRef = useRef<string[]>([])
+  const errorViewZoneIdsRef = useRef<string[]>([])
   const inlayHintsDisposableRef = useRef<IDisposable | null>(null)
   const scoreLineHintsForInlayRef = useRef(scoreLineHints)
   const onSelectionChangeRef = useRef(onSelectionChange)
@@ -141,10 +204,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     if (!ed || !model) return
 
     ed.changeViewZones((accessor) => {
-      for (const id of viewZoneIdsRef.current) {
+      for (const id of measureViewZoneIdsRef.current) {
         accessor.removeZone(id)
       }
-      viewZoneIdsRef.current = []
+      measureViewZoneIdsRef.current = []
 
       const source = model.getValue()
 
@@ -176,10 +239,49 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           heightInLines: 1,
           domNode,
         })
-        viewZoneIdsRef.current.push(id)
+        measureViewZoneIdsRef.current.push(id)
       })
     })
   }, [measureSpans])
+
+  const applyErrorViewZones = useCallback(() => {
+    const ed = editorRef.current
+    const monacoApi = monacoRef.current
+    const model = ed?.getModel()
+    if (!ed || !monacoApi || !model) return
+
+    ed.changeViewZones((accessor) => {
+      for (const id of errorViewZoneIdsRef.current) {
+        accessor.removeZone(id)
+      }
+      errorViewZoneIdsRef.current = []
+
+      if (diagnostics.length === 0) return
+
+      const source = model.getValue()
+      const diagnosticsByLine = groupDiagnosticsByLine(
+        model,
+        source,
+        diagnostics,
+        monacoApi,
+      )
+
+      for (const [lineNumber, lineDiagnostics] of diagnosticsByLine) {
+        const domNode = createErrorViewZoneDomNode(lineDiagnostics)
+        const heightInPx = errorViewZoneHeightInPx(
+          domNode,
+          ed.getLayoutInfo().contentWidth,
+        )
+
+        const id = accessor.addZone({
+          afterLineNumber: lineNumber,
+          heightInPx,
+          domNode,
+        })
+        errorViewZoneIdsRef.current.push(id)
+      }
+    })
+  }, [diagnostics])
 
   useImperativeHandle(ref, () => ({
     insertAtCursor(text: string) {
@@ -260,6 +362,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     monacoRef.current = monacoApi
     applyDiagnostics()
     applyMeasureViewZones()
+    applyErrorViewZones()
     applyInlayHints()
 
     ed.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.Enter, () =>
@@ -292,6 +395,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   useEffect(() => {
     applyMeasureViewZones()
   }, [applyMeasureViewZones])
+
+  useEffect(() => {
+    applyErrorViewZones()
+  }, [applyErrorViewZones])
 
   useEffect(() => {
     scoreLineHintsForInlayRef.current = scoreLineHints

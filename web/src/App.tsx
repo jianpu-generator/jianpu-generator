@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Editor } from './components/Editor'
-import { ErrorPanel } from './components/ErrorPanel'
 import { FileTabBar } from './components/FileList'
 import { PartToggles } from './components/PartToggles'
 import { PlayMeasureButton } from './components/PlayMeasureButton'
@@ -292,7 +291,6 @@ export default function App() {
                   ) : null
                 }
               />
-              <ErrorPanel diagnostics={diagnostics} />
             </div>
           </div>
         </section>
