@@ -2,7 +2,7 @@ use crate::ast::parsed::{
     flatten_score_line_slots, ParsedTrack, PartDecl, PartKind, ScoreEvent, ScoreLineRole,
     ScoreLineSlot,
 };
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Spanned};
+use crate::error::{Diagnostic, IrrecoverableError, IrrecoverableErrorKind, Span, Spanned};
 use crate::parser::score::token_parser::GroupStack;
 use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics, LyricTieState};
 
@@ -62,7 +62,7 @@ enum TrackAccumulator {
         /// Per-measure dash-after-rest errors from suffix dashes on rests during token parse.
         per_measure_dash_after_rest_errors: Vec<Option<crate::error::Warning>>,
         /// Per-measure recoverable chord parse errors (empty = no violations for that measure).
-        per_measure_chord_errors: Vec<Vec<crate::error::Warning>>,
+        per_measure_chord_errors: Vec<Vec<Diagnostic>>,
         /// Per-measure recoverable lex error from an unexpected character on the notes line.
         per_measure_lex_errors: Vec<Option<crate::error::Warning>>,
         /// Parallel to `per_measure_beat_errors`: notes-line `_` placeholders.

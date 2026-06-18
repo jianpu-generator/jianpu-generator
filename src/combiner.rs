@@ -72,8 +72,8 @@ fn combine_measure(
                     m.into_iter()
                         .flat_map(|m| m.dotted_eighth_errors.iter().cloned()),
                 )
-                .chain(m.into_iter().flat_map(|m| m.chord_errors.iter().cloned()))
                 .map(Diagnostic::Warning)
+                .chain(m.into_iter().flat_map(|m| m.chord_errors.iter().cloned()))
                 .collect::<Vec<Diagnostic>>()
             }
         }))

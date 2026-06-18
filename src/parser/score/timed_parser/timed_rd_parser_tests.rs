@@ -1,7 +1,7 @@
 use super::note_head::NoteHead;
 use super::{parse_timed_line, GroupStack, LexContext};
 use crate::ast::parsed::ScoreEvent;
-use crate::error::Spanned;
+use crate::error::{Diagnostic, RecoverableErrorKind, Spanned};
 
 fn parse_note_events(line: &str, stack: &mut GroupStack) -> Vec<Spanned<ScoreEvent>> {
     parse_timed_line::<NoteHead>(line, 0, stack, LexContext::Notes)
@@ -163,6 +163,22 @@ fn cross_bar_outer_and_inner() {
     let events = parse_note_events("3))", &mut stack);
     assert!(!stack.is_open());
     assert_eq!(events.len(), 1);
+}
+
+#[test]
+fn note_duration_unexpected_char_recovers_as_recoverable_error() {
+    let result =
+        parse_timed_line::<NoteHead>("5x", 0, &mut GroupStack::default(), LexContext::Notes)
+            .expect("should not be irrecoverable");
+    assert_eq!(result.events.len(), 1, "note should still be emitted");
+    assert_eq!(result.chord_errors.len(), 1, "should emit one diagnostic");
+    assert!(
+        matches!(
+            &result.chord_errors[0],
+            Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::DurationUnexpectedChar { ch: 'x' })
+        ),
+        "expected RecoverableError::DurationUnexpectedChar"
+    );
 }
 
 #[test]

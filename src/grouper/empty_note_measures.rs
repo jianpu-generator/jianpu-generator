@@ -1,12 +1,12 @@
 use crate::ast::grouped::{GroupedMeasure, Notes};
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Warning};
+use crate::error::{Diagnostic, IrrecoverableError, IrrecoverableErrorKind, Span, Warning};
 
 fn apply_per_measure_errors(
     measure: &mut GroupedMeasure,
     beat_error: Option<&Warning>,
     dotted_eighth_errors: &[Warning],
     dash_after_rest_error: Option<&Warning>,
-    chord_errors: &[Warning],
+    chord_errors: &[Diagnostic],
     lex_error: Option<&Warning>,
 ) {
     if let Some(beat_error) = beat_error {
@@ -35,7 +35,7 @@ pub(super) fn align_empty_note_measures(
     per_measure_beat_errors: &[Option<Warning>],
     per_measure_dotted_eighth_errors: &[Vec<Warning>],
     per_measure_dash_after_rest_errors: &[Option<Warning>],
-    per_measure_chord_errors: &[Vec<Warning>],
+    per_measure_chord_errors: &[Vec<Diagnostic>],
     per_measure_lex_errors: &[Option<Warning>],
 ) -> Result<(), IrrecoverableError> {
     if empty_note_measure_spans.is_empty() {

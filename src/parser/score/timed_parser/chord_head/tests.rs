@@ -1,5 +1,5 @@
 use super::*;
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, WarningKind};
+use crate::error::{Diagnostic, IrrecoverableError, IrrecoverableErrorKind, Span, WarningKind};
 use crate::parser::score::timed_parser::{parse_timed_line, GroupStack, LexContext};
 
 fn chord(
@@ -60,7 +60,10 @@ fn parse_line_with_errors(line: &str) -> (Vec<ScoreEvent>, Vec<WarningKind>) {
     let errors = parsed
         .chord_errors
         .into_iter()
-        .map(|error| error.kind)
+        .filter_map(|d| match d {
+            Diagnostic::Warning(w) => Some(w.kind),
+            Diagnostic::Error(_) => None,
+        })
         .collect();
     (events, errors)
 }
@@ -393,10 +396,10 @@ fn rejects_invalid_token_at_lexer() {
         parse_timed_line::<ChordHead>("@", 0, &mut GroupStack::default(), LexContext::Chords)
             .unwrap();
     assert!(parsed.events.is_empty());
-    assert!(parsed
-        .chord_errors
-        .iter()
-        .any(|error| error.kind == WarningKind::ChordExpectedDegreeDigit));
+    assert!(parsed.chord_errors.iter().any(|d| matches!(
+        d,
+        Diagnostic::Warning(w) if w.kind == WarningKind::ChordExpectedDegreeDigit
+    )));
 }
 
 #[test]

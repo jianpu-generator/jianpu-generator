@@ -216,6 +216,8 @@ pub enum RecoverableErrorKind {
     SourceSpanMissing { index: usize },
     /// A timed-part measure is missing at the given index (internal invariant).
     TimedPartMeasureMissing,
+    /// An unexpected character was encountered while parsing duration suffixes on a note.
+    DurationUnexpectedChar { ch: char },
 }
 
 /// A recoverable error: render continues but the affected measure is highlighted red.
@@ -238,6 +240,9 @@ impl RecoverableError {
             RecoverableErrorKind::TimedPartMeasureMissing => {
                 "internal invariant: timed part measure missing".to_string()
             }
+            RecoverableErrorKind::DurationUnexpectedChar { ch } => {
+                format!("unexpected character in note duration: {ch}")
+            }
         }
     }
 
@@ -259,6 +264,13 @@ impl RecoverableError {
         Self {
             span,
             kind: RecoverableErrorKind::TimedPartMeasureMissing,
+        }
+    }
+
+    pub fn duration_unexpected_char(span: Span, ch: char) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::DurationUnexpectedChar { ch },
         }
     }
 }

@@ -147,8 +147,8 @@ pub(crate) struct GroupedMeasure {
     pub(crate) dash_after_rest_error: Option<Warning>,
     /// Recoverable dotted-eighth grouping errors for this measure (empty = none).
     pub(crate) dotted_eighth_errors: Vec<Warning>,
-    /// Recoverable chord parse errors for this measure (empty = none).
-    pub(crate) chord_errors: Vec<Warning>,
+    /// Recoverable chord/note parse diagnostics for this measure (empty = none).
+    pub(crate) chord_errors: Vec<Diagnostic>,
     /// Recoverable lex error from an unexpected character on the notes line, if any.
     pub(crate) lex_error: Option<Warning>,
 }

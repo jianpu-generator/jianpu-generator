@@ -1,6 +1,9 @@
+use super::duration::DurationParse;
 use super::TimedUnitHead;
 use crate::ast::parsed::{JianPuPitch, ParsedNote, ParsedRest, ScoreEvent};
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Warning};
+use crate::error::{
+    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Warning,
+};
 
 pub struct NoteHead {
     pitch: JianPuPitch,
@@ -45,6 +48,36 @@ impl TimedUnitHead for NoteHead {
 
     fn allows_octave_suffixes() -> bool {
         true
+    }
+
+    fn recover_duration_error(
+        error: &IrrecoverableError,
+        chars: &[char],
+        head_end: usize,
+        _: &Span,
+    ) -> Option<(DurationParse, Diagnostic)> {
+        let IrrecoverableErrorKind::DurationUnexpectedChar { ch, span: err_span } = error.kind
+        else {
+            return None;
+        };
+        let mut next_index = head_end;
+        while next_index < chars.len()
+            && !NoteHead::head_boundary(chars, next_index)
+            && !matches!(chars[next_index], '(' | ')')
+        {
+            next_index += 1;
+        }
+        Some((
+            DurationParse {
+                duration: 4,
+                dotted: false,
+                octave_up: 0,
+                octave_down: 0,
+                next_index,
+                dash_after_rest_error: None,
+            },
+            Diagnostic::Error(RecoverableError::duration_unexpected_char(err_span, ch)),
+        ))
     }
 
     fn to_event(

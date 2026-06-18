@@ -1,4 +1,4 @@
-use crate::error::{Span, Spanned, Warning};
+use crate::error::{Diagnostic, Span, Spanned, Warning};
 
 #[derive(Debug)]
 pub struct ParsedScore {
@@ -93,7 +93,7 @@ pub struct ParsedTimedTrack {
     /// Per-measure dash-after-rest errors from suffix dashes on rests during token parse.
     pub per_measure_dash_after_rest_errors: Vec<Option<Warning>>,
     /// Per-measure recoverable chord parse errors (empty = no violations for that measure).
-    pub per_measure_chord_errors: Vec<Vec<Warning>>,
+    pub per_measure_chord_errors: Vec<Vec<Diagnostic>>,
     /// Per-measure recoverable lex error from an unexpected character on the notes line.
     pub per_measure_lex_errors: Vec<Option<Warning>>,
     /// Parallel to `per_measure_beat_errors`: `Some` when that measure's notes line

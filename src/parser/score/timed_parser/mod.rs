@@ -29,7 +29,7 @@ pub use groups::{
 };
 
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{IrrecoverableError, Span, Spanned, Warning};
+use crate::error::{Diagnostic, IrrecoverableError, Span, Spanned, Warning};
 
 type ParseHeadResult<H> = Result<(H, usize, bool, Vec<Warning>), IrrecoverableError>;
 
@@ -37,7 +37,7 @@ type ParseHeadResult<H> = Result<(H, usize, bool, Vec<Warning>), IrrecoverableEr
 pub struct TimedLineParse {
     pub events: Vec<Spanned<ScoreEvent>>,
     pub dash_after_rest_error: Option<Warning>,
-    pub chord_errors: Vec<Warning>,
+    pub chord_errors: Vec<Diagnostic>,
 }
 
 /// Parse a single line of timed notation using the lexer + recursive-descent parser.
@@ -79,7 +79,7 @@ pub trait TimedUnitHead: Sized {
         _: &[char],
         _: usize,
         _: &Span,
-    ) -> Option<(DurationParse, Warning)> {
+    ) -> Option<(DurationParse, Diagnostic)> {
         None
     }
 

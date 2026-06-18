@@ -4,7 +4,7 @@ use crate::ast::parsed::{
     Accidental, BassDegree, Extension, JianPuPitch, ParsedChordNote, ParsedRest, ScoreEvent,
     TriadQuality,
 };
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Warning};
+use crate::error::{Diagnostic, IrrecoverableError, IrrecoverableErrorKind, Span, Warning};
 
 pub struct ChordHead {
     degree: JianPuPitch,
@@ -99,7 +99,7 @@ impl TimedUnitHead for ChordHead {
         chars: &[char],
         head_end: usize,
         _: &Span,
-    ) -> Option<(DurationParse, Warning)> {
+    ) -> Option<(DurationParse, Diagnostic)> {
         let IrrecoverableErrorKind::DurationUnexpectedChar { ch, span: err_span } = error.kind
         else {
             return None;
@@ -120,10 +120,10 @@ impl TimedUnitHead for ChordHead {
                 next_index,
                 dash_after_rest_error: None,
             },
-            Warning::chord_invalid_token(
+            Diagnostic::Warning(Warning::chord_invalid_token(
                 err_span,
                 format!("octave suffix '{ch}' is not allowed on chord symbols"),
-            ),
+            )),
         ))
     }
 
