@@ -161,6 +161,31 @@ fn lyrics_underflow_render_returns_svgs_and_non_empty_errors() {
 }
 
 #[test]
+fn lex_unexpected_char_renders_error_highlight_and_reports_error() {
+    let input = concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "[parts]\nMelody = notes\n\n",
+        "[score]\n(time=4/4 key=C4 bpm=120)\n1 @ 3 4\n",
+    );
+    let output = render_svgs_from_source(input, "test.jianpu")
+        .expect("LexUnexpectedChar must not abort the render");
+    assert!(
+        !output.svgs.is_empty(),
+        "should produce at least one SVG page"
+    );
+    assert_eq!(output.errors.len(), 1, "should report one lex error");
+    assert!(
+        output.errors[0].message.contains("unexpected"),
+        "error message should mention unexpected char, got: {}",
+        output.errors[0].message
+    );
+    assert!(
+        output.svgs[0].contains(r#"data-testid="error-highlight""#),
+        "SVG should contain an error-highlight rect for the erroneous measure"
+    );
+}
+
+#[test]
 fn split_track_names_falls_back_to_part_declarations() {
     let input = concat!(
         "[metadata]\n",

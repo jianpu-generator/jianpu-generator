@@ -65,7 +65,7 @@ These are no longer review items. Some still have a matching
 | # | Kind | Status | Current behavior | Proposed recovery |
 |---|---|---|---|---|
 | 9 | `DashAfterRest` | `implemented` | Skip suffix extension during notes token parse; error on measure (matches grouper spaced-extension path) |
-| 10 | `LexUnexpectedChar` (notes line) | `pending` | Abort entire parse | Skip bad token, continue parsing; error on measure (design doc) |
+| 10 | `LexUnexpectedChar` (notes line) | `implemented` | Skip bad measure, continue; error on measure (`interleaved_column_lines.rs`) |
 | 11 | `NoteExpectedPitchDigit` | `pending` | Abort | Skip token or treat as rest; error on measure |
 | 12 | `DurationUnexpectedChar` | `pending` | Abort | Skip token; error on measure |
 | 13 | `DurationMixedOctaveMarkers` | `pending` | Abort | Pick one marker or skip note; error on measure |
