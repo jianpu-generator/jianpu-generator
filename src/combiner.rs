@@ -1,11 +1,33 @@
 use crate::ast::grouped::{
-    GroupedScore, GroupedTrack, Lyrics, MeasureDirectives, MultiPartMeasure, Notes, PartRow,
-    PartSlice,
+    GroupedMeasure, GroupedScore, GroupedTrack, Lyrics, MeasureDirectives, MultiPartMeasure, Notes,
+    PartRow, PartSlice,
 };
 use crate::ast::parsed::PartKind;
 use crate::error::{
     Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span,
 };
+
+fn collect_part_measure_diagnostics(m: Option<&GroupedMeasure>) -> Vec<Diagnostic> {
+    [
+        m.and_then(|m| m.lyrics_error.clone())
+            .map(Diagnostic::Warning),
+        m.and_then(|m| m.beat_overflow_error.clone())
+            .map(Diagnostic::Warning),
+        m.and_then(|m| m.dash_after_rest_error.clone())
+            .map(Diagnostic::Error),
+        m.and_then(|m| m.lex_error.clone()).map(Diagnostic::Error),
+        m.and_then(|m| m.lyrics_parse_error.clone())
+            .map(Diagnostic::Error),
+    ]
+    .into_iter()
+    .flatten()
+    .chain(
+        m.into_iter()
+            .flat_map(|m| m.dotted_eighth_errors.iter().cloned()),
+    )
+    .chain(m.into_iter().flat_map(|m| m.chord_errors.iter().cloned()))
+    .collect()
+}
 
 fn combine_measure(
     grouped_score: &GroupedScore,
@@ -58,27 +80,7 @@ fn combine_measure(
         .chain(parse_error)
         .chain(grouped_score.parts.iter().flat_map(|track| match track {
             GroupedTrack::Timed(part) => {
-                let m = part.measures.get(measure_idx);
-                let lyrics_beat: Vec<Diagnostic> = [
-                    m.and_then(|m| m.lyrics_error.clone())
-                        .map(Diagnostic::Warning),
-                    m.and_then(|m| m.beat_overflow_error.clone())
-                        .map(Diagnostic::Warning),
-                    m.and_then(|m| m.dash_after_rest_error.clone())
-                        .map(Diagnostic::Error),
-                    m.and_then(|m| m.lex_error.clone()).map(Diagnostic::Error),
-                ]
-                .into_iter()
-                .flatten()
-                .collect();
-                lyrics_beat
-                    .into_iter()
-                    .chain(
-                        m.into_iter()
-                            .flat_map(|m| m.dotted_eighth_errors.iter().cloned()),
-                    )
-                    .chain(m.into_iter().flat_map(|m| m.chord_errors.iter().cloned()))
-                    .collect::<Vec<Diagnostic>>()
+                collect_part_measure_diagnostics(part.measures.get(measure_idx))
             }
         }))
         .chain(part_row_diagnostics)

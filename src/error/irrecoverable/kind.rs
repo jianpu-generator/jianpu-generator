@@ -148,16 +148,6 @@ pub enum IrrecoverableErrorKind {
         expected: u32,
         got: u32,
     },
-    LyricsLineEmpty {
-        span: Span,
-    },
-    UnderscoreOnlyOnLyrics {
-        span: Span,
-    },
-    LyricsNoNotesTrack {
-        span: Span,
-        abbrev: String,
-    },
     MeasureOverflow {
         span: Span,
         part: Option<String>,

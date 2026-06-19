@@ -153,6 +153,8 @@ pub(crate) struct GroupedMeasure {
     pub(crate) chord_errors: Vec<Diagnostic>,
     /// Recoverable lex error from an unexpected character on the notes line, if any.
     pub(crate) lex_error: Option<RecoverableError>,
+    /// Recoverable error from a malformed lyrics line (e.g. empty lyrics line), if any.
+    pub(crate) lyrics_parse_error: Option<RecoverableError>,
 }
 
 pub(crate) struct GroupedPart {

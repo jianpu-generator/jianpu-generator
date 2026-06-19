@@ -66,6 +66,8 @@ enum TrackAccumulator {
         per_measure_chord_errors: Vec<Vec<Diagnostic>>,
         /// Per-measure recoverable lex error from an unexpected character on the notes line.
         per_measure_lex_errors: Vec<Option<RecoverableError>>,
+        /// Per-measure recoverable error on the lyrics line (e.g. empty lyrics line).
+        per_measure_lyrics_errors: Vec<Option<RecoverableError>>,
         /// Parallel to `per_measure_beat_errors`: notes-line `_` placeholders.
         empty_note_measure_spans: Vec<Option<Span>>,
     },
@@ -84,6 +86,7 @@ struct BarGroupContext<'a> {
     group_states: &'a mut [GroupStack],
     bar_lyric_slots: &'a mut [Option<u32>],
     directive_events_per_measure: &'a mut DirectiveEventsPerMeasure,
+    extra_document_errors: &'a mut Vec<RecoverableError>,
 }
 
 fn no_notes_track_warning(
@@ -179,6 +182,7 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
     let mut group_states = vec![GroupStack::default(); declarations.len()];
     let mut bar_lyric_slots = vec![None; declarations.len()];
     let mut directive_events_per_measure: DirectiveEventsPerMeasure = Vec::new();
+    let mut extra_document_errors: Vec<RecoverableError> = Vec::new();
 
     let mut ctx = BarGroupContext {
         base_offset,
@@ -193,6 +197,7 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
         group_states: &mut group_states,
         bar_lyric_slots: &mut bar_lyric_slots,
         directive_events_per_measure: &mut directive_events_per_measure,
+        extra_document_errors: &mut extra_document_errors,
     };
 
     for group_lines in groups.iter() {
@@ -204,6 +209,9 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
     let tracks = build_parse_result(declarations, accumulators, ditto_measures_per_track)?;
     let mut per_group_desugar_errors = per_group_desugar_errors;
     if let Some(error) = no_notes_track_error {
+        attach_no_notes_track_warning(&mut per_group_desugar_errors, error);
+    }
+    for error in extra_document_errors {
         attach_no_notes_track_warning(&mut per_group_desugar_errors, error);
     }
     Ok((

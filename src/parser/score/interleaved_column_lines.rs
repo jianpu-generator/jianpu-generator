@@ -38,12 +38,19 @@ fn process_lyrics_column_line(
     line_span: Span,
     ctx: &mut BarGroupContext<'_>,
 ) -> Result<(), IrrecoverableError> {
-    if line.is_empty() {
-        return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::LyricsLineEmpty { span: line_span },
-        ));
-    }
-    if line == "_" {
+    let lyrics_parse_error = if line.is_empty() {
+        Some(RecoverableError::lyrics_line_empty(line_span))
+    } else {
+        None
+    };
+    // Treat empty lines as `_`: no syllables for this measure.
+    let syllables = if line.is_empty() || line == "_" {
+        Vec::new()
+    } else {
+        tokenize_lyrics(line)
+    };
+
+    {
         let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
             invariant(
                 line_span,
@@ -56,43 +63,27 @@ fn process_lyrics_column_line(
                 .get(track_index)
                 .map(|d| d.abbreviation.as_str())
                 .unwrap_or("unknown");
-            return Err(IrrecoverableError::new(
-                IrrecoverableErrorKind::LyricsNoNotesTrack {
-                    span: line_span,
-                    abbrev: abbrev.to_string(),
-                },
-            ));
+            ctx.extra_document_errors
+                .push(RecoverableError::lyrics_no_notes_track(line_span, abbrev));
+            return Ok(());
         };
         let (syllables_vec, line_starts, line_ends) = syllables_acc;
-        syllables_vec.push(Vec::new());
+        syllables_vec.push(syllables);
         line_starts.push(line_span.start);
         line_ends.push(line_span.end);
-        return Ok(());
     }
-    let syllables = tokenize_lyrics(line);
+
     let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
         invariant(
             line_span,
             "internal error: track accumulator index out of range",
         )
     })?;
-    let Some(syllables_acc) = notes_syllables_mut(acc)? else {
-        let abbrev = ctx
-            .declarations
-            .get(track_index)
-            .map(|d| d.abbreviation.as_str())
-            .unwrap_or("unknown");
-        return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::LyricsNoNotesTrack {
-                span: line_span,
-                abbrev: abbrev.to_string(),
-            },
-        ));
-    };
-    let (syllables_vec, line_starts, line_ends) = syllables_acc;
-    syllables_vec.push(syllables);
-    line_starts.push(line_span.start);
-    line_ends.push(line_span.end);
+    let TrackAccumulator::Timed {
+        per_measure_lyrics_errors,
+        ..
+    } = acc;
+    per_measure_lyrics_errors.push(lyrics_parse_error);
     Ok(())
 }
 

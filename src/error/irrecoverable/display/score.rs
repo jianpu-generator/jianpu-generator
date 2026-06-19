@@ -11,16 +11,6 @@ pub(super) fn write(
             formatter,
             "incomplete measure: expected {expected} quarter-beats, got {got}"
         )),
-        IrrecoverableErrorKind::LyricsLineEmpty { .. } => {
-            Some(write!(formatter, "lyrics line cannot be empty; use '_' for no lyrics"))
-        }
-        IrrecoverableErrorKind::UnderscoreOnlyOnLyrics { .. } => {
-            Some(write!(formatter, "'_' is only valid on lyrics lines"))
-        }
-        IrrecoverableErrorKind::LyricsNoNotesTrack { abbrev, .. } => Some(write!(
-            formatter,
-            "lyrics line for '{abbrev}' has no matching notes track"
-        )),
         IrrecoverableErrorKind::MeasureOverflow {
             part,
             event_label,

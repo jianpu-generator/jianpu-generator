@@ -1,0 +1,158 @@
+use super::{DocumentSection, RequiredMetadataField};
+
+/// Identifies the specific kind of recoverable error for programmatic matching.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RecoverableErrorKind {
+    /// `measure_directives` is shorter than the measure count (internal invariant).
+    MeasureDirectivesMissing,
+    /// `source_span` is absent for the given measure index (internal invariant).
+    SourceSpanMissing { index: usize },
+    /// A timed-part measure is missing at the given index (internal invariant).
+    TimedPartMeasureMissing,
+    /// Generic recoverable error with a free-form message.
+    General { message: String },
+    /// An unexpected character was encountered while lexing a notes line — the line is dropped.
+    LexUnexpectedChar { ch: char },
+    /// Measure group has no data lines at all.
+    MeasureNoDataLines,
+    /// Measure group has fewer data lines than declared parts.
+    MeasureWrongLineCount { got: usize, expected: usize },
+    /// Measure group has more data lines than declared parts — extra lines are ignored.
+    MeasureTooManyLines {
+        got: usize,
+        expected: usize,
+        parts: String,
+    },
+    /// A required role line (notes/lyrics/chord) is missing for a part in this measure.
+    MeasureMissingRoleLine { role: String, abbrev: String },
+    /// A dotted eighth note or rest is not followed by a sixteenth — rhythmic structure is broken.
+    DottedEighthNeedsSixteenth,
+    /// `-` used to extend a rest — duration intent not fulfilled.
+    DashAfterRest,
+    /// A chord symbol did not start with a degree digit (0–7) — chord is dropped.
+    ChordExpectedDegreeDigit { ch: char },
+    /// A chord token is entirely invalid — chord is dropped.
+    ChordInvalidToken { message: String },
+    /// An unexpected character in a note duration suffix — note is emitted with default duration.
+    DurationUnexpectedChar { ch: char },
+    /// A metadata line does not contain `=` — the line is skipped.
+    MetadataMalformedLine { line: String },
+    /// A metadata field name is not recognized — the line is skipped.
+    MetadataUnknownField { field: String },
+    /// A metadata integer field could not be parsed — the field keeps its default.
+    MetadataInvalidInteger { field: String, value: String },
+    /// A metadata integer field parsed to zero — the field keeps its default.
+    MetadataMustBePositive { field: String },
+    /// A required metadata field is absent — an empty string is used.
+    MetadataMissingField { field: RequiredMetadataField },
+    /// A parts declaration line does not contain `=` — the line is skipped.
+    PartsMalformedLine { line: String },
+    /// A parts abbreviation is used by more than one declaration — the duplicate is skipped.
+    PartsDuplicateAbbreviation { abbrev: String },
+    /// The [parts] section contains no valid declarations — document renders empty.
+    PartsEmptySection,
+    /// A display name before `(` is empty — the declaration is skipped.
+    PartsEmptyDisplayName,
+    /// The abbreviation inside `()` is empty — the declaration is skipped.
+    PartsEmptyAbbreviation,
+    /// No `()` and the track name is empty — the declaration is skipped.
+    PartsEmptyTrackName,
+    /// The RHS of a parts declaration is not a recognized column spec — the declaration is skipped.
+    PartsInvalidColumns { rhs: String },
+    /// A section header `[name]` is not one of the three known sections — the section is skipped.
+    SectionUnknown { name: String },
+    /// A section appears more than once — the duplicate is skipped, first occurrence is used.
+    SectionDuplicate { section: DocumentSection },
+    /// A required section is absent — an empty default is used.
+    SectionMissing { section: DocumentSection },
+    /// Sections appear out of canonical order ([metadata], [parts], [score]).
+    SectionOutOfOrder,
+    /// A lyrics line is empty — treated as `_` (no lyrics for this measure).
+    LyricsLineEmpty,
+    /// A lyrics slot has no paired notes track — lyrics are skipped.
+    LyricsNoNotesTrack { abbrev: String },
+}
+
+impl RecoverableErrorKind {
+    pub fn message(&self) -> String {
+        match self {
+            Self::MeasureDirectivesMissing => {
+                "internal invariant: measure_directives shorter than measure count".to_string()
+            }
+            Self::SourceSpanMissing { index } => {
+                format!("internal invariant: source_span missing for measure {index}")
+            }
+            Self::TimedPartMeasureMissing => {
+                "internal invariant: timed part measure missing".to_string()
+            }
+            Self::General { message } => message.clone(),
+            Self::LexUnexpectedChar { ch } => format!("unexpected character: {ch}"),
+            Self::MeasureNoDataLines => {
+                "measure has no data lines; treating all parts as empty".to_string()
+            }
+            Self::MeasureWrongLineCount { got, expected } => {
+                format!("expected {expected} lines (one per score line), got {got}")
+            }
+            Self::MeasureTooManyLines { got, expected, parts } => format!(
+                "this measure has {got} lines but only {expected} expected (declared parts: {parts}); extra lines ignored"
+            ),
+            Self::MeasureMissingRoleLine { role, abbrev } => {
+                let treatment = if role == "lyrics" { "no lyrics" } else { "empty" };
+                format!("missing {role} line for '{abbrev}'; treating as {treatment}")
+            }
+            Self::DottedEighthNeedsSixteenth => {
+                "dotted eighth must be followed by a sixteenth note or rest".to_string()
+            }
+            Self::DashAfterRest => {
+                "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)".to_string()
+            }
+            Self::ChordExpectedDegreeDigit { ch } => {
+                format!("expected chord degree digit (0-7), got: {ch}")
+            }
+            Self::ChordInvalidToken { message } => message.clone(),
+            Self::DurationUnexpectedChar { ch } => {
+                format!("unexpected character in note duration: {ch}")
+            }
+            Self::MetadataMalformedLine { line } => format!("expected key = value, got: {line}"),
+            Self::MetadataUnknownField { field } => format!("unknown metadata field: {field}"),
+            Self::MetadataInvalidInteger { field, value } => {
+                format!("{field} must be a positive integer, got: {value}")
+            }
+            Self::MetadataMustBePositive { field } => {
+                format!("{field} must be greater than zero")
+            }
+            Self::MetadataMissingField { field } => {
+                format!("missing required field: {}", field.label())
+            }
+            Self::PartsMalformedLine { line } => {
+                format!("expected track declaration, got: {line}")
+            }
+            Self::PartsDuplicateAbbreviation { abbrev } => {
+                format!("duplicate abbreviation: {abbrev}")
+            }
+            Self::PartsEmptySection => {
+                "expected at least one track in [parts] section".to_string()
+            }
+            Self::PartsEmptyDisplayName => "display name cannot be empty".to_string(),
+            Self::PartsEmptyAbbreviation => "abbreviation cannot be empty".to_string(),
+            Self::PartsEmptyTrackName => "track name cannot be empty".to_string(),
+            Self::PartsInvalidColumns { rhs } => format!(
+                "invalid track columns '{rhs}': expected 'chord', 'notes', 'notes lyrics', 'lyrics notes', or 'notes chord'"
+            ),
+            Self::SectionUnknown { name } => format!("unknown section: [{name}]"),
+            Self::SectionDuplicate { section } => {
+                format!("duplicate {} section", section.header())
+            }
+            Self::SectionMissing { section } => format!("missing {} section", section.header()),
+            Self::SectionOutOfOrder => {
+                "sections must appear in order: [metadata], [parts], [score]".to_string()
+            }
+            Self::LyricsLineEmpty => {
+                "lyrics line cannot be empty; use '_' for no lyrics".to_string()
+            }
+            Self::LyricsNoNotesTrack { abbrev } => {
+                format!("lyrics line for '{abbrev}' has no matching notes track")
+            }
+        }
+    }
+}

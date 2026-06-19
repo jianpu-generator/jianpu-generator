@@ -42,6 +42,9 @@ These are no longer review items. Some still have a matching
 | `PartsNoNotesTrack` | `implemented` | Already recoverable via `RecoverableError::general` in `interleaved_parser.rs`; `IrrecoverableErrorKind` variant removed |
 | `UnknownSection`, `WrongSectionCount`, `SectionsOutOfOrder`, `DuplicateSection`, `MissingSection` | `implemented` | Section structure errors now recoverable: unknown sections skipped, duplicates use first occurrence, out-of-order sections reordered to canonical, missing sections use empty defaults; errors surfaced via `document_diagnostics` (`section_splitter.rs`, `parser/mod.rs`); `IrrecoverableErrorKind` variants removed |
 | `MeasureNoDataLines`, `MeasureTooManyLines`, `MeasureMissingRoleLine` | `implemented` | Already recoverable in `desugar.rs`; `IrrecoverableErrorKind` variants for `MeasureNoDataLines` and `MeasureMissingRoleLine` removed; `MeasureTooManyLines` had no irrecoverable variant |
+| `LyricsLineEmpty` | `implemented` | Treat empty lyrics line as `_`; `RecoverableError::lyrics_line_empty` on `GroupedMeasure.lyrics_parse_error`; `IrrecoverableErrorKind` variant removed |
+| `LyricsNoNotesTrack` | `implemented` | Skip lyrics for that measure; `RecoverableError::lyrics_no_notes_track` pushed to document-level errors via `ctx.extra_document_errors`; `IrrecoverableErrorKind` variant removed |
+| `UnderscoreOnlyOnLyrics` | `rejected` | Dead code — never emitted; `IrrecoverableErrorKind` variant removed |
 
 ---
 
@@ -58,9 +61,9 @@ These are no longer review items. Some still have a matching
 
 | # | Kind | Status | Current behavior | Proposed recovery |
 |---|---|---|---|---|
-| 6 | `LyricsLineEmpty` | `pending` | Abort when a non-`_` lyrics line tokenizes to zero syllables | Treat as no lyrics for that line; error on measure |
-| 7 | `LyricsNoNotesTrack` | `pending` | Abort when lyrics part has no paired notes track | Skip lyrics for that part; error on document or measure? |
-| 8 | `UnderscoreOnlyOnLyrics` | `pending` | Enum exists; not emitted in current parser | Reject, or treat `_` on notes/chord like today and collect error |
+| 6 | `LyricsLineEmpty` | `implemented` | Treat as `_` (no lyrics for that measure); `RecoverableError::lyrics_line_empty` on `GroupedMeasure.lyrics_parse_error` |
+| 7 | `LyricsNoNotesTrack` | `implemented` | Skip lyrics for that measure; `RecoverableError::lyrics_no_notes_track` pushed to document-level errors via `ctx.extra_document_errors` → `per_group_desugar_errors` |
+| 8 | `UnderscoreOnlyOnLyrics` | `rejected` | Dead code — `IrrecoverableErrorKind` variant removed; was never emitted |
 
 ### Notes, duration & grouping
 
@@ -149,3 +152,4 @@ Record decisions here as we go.
 |---|---|---|---|---|
 | — | Metadata (`MetadataInvalidInteger`, `MetadataMustBePositive`, `MetadataMalformedLine`, `MetadataUnknownField`, `MetadataMissingField`) | Moved from "Never candidates" → implemented as recoverable | 2026-06-19 | `parse_metadata` now returns `(ParsedMetadata, Vec<RecoverableError>)`; missing required fields default to `""`; errors surface via `document_diagnostics` |
 | — | Parts (`PartsMalformedLine`, `PartsDuplicateAbbreviation`, `PartsEmptySection`, `PartsEmptyDisplayName`, `PartsEmptyAbbreviation`, `PartsEmptyTrackName`, `PartsInvalidColumns`, `PartsNoNotesTrack`) | Moved from "Never candidates" → implemented as recoverable | 2026-06-19 | `parse_parts` now returns `(Vec<PartDecl>, Vec<RecoverableError>)`; bad declarations skipped; empty section renders empty document; all errors surface via `document_diagnostics`; `IrrecoverableErrorKind` Parts variants removed |
+| 6, 7, 8 | `LyricsLineEmpty`, `LyricsNoNotesTrack`, `UnderscoreOnlyOnLyrics` | Implemented (#6, #7) and rejected (#8) | 2026-06-19 | `LyricsLineEmpty` → treat as `_`, surface as `GroupedMeasure.lyrics_parse_error`; `LyricsNoNotesTrack` → skip lyrics, surface as document-level error via `extra_document_errors`; `UnderscoreOnlyOnLyrics` deleted (dead code); all three `IrrecoverableErrorKind` variants removed |

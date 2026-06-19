@@ -5,28 +5,37 @@ use crate::error::{
 
 fn apply_per_measure_errors(
     measure: &mut GroupedMeasure,
-    beat_error: Option<&Warning>,
-    dotted_eighth_errors: &[Diagnostic],
-    dash_after_rest_error: Option<&RecoverableError>,
-    chord_errors: &[Diagnostic],
-    lex_error: Option<&RecoverableError>,
+    idx: usize,
+    errors: &PerMeasureErrors<'_>,
 ) {
-    if let Some(beat_error) = beat_error {
-        measure.beat_overflow_error = Some(beat_error.clone());
+    if let Some(e) = errors.beat_errors.get(idx).and_then(|e| e.as_ref()) {
+        measure.beat_overflow_error = Some(e.clone());
     }
-    if !dotted_eighth_errors.is_empty() {
-        measure.dotted_eighth_errors = dotted_eighth_errors.to_vec();
+    let dotted = errors
+        .dotted_eighth_errors
+        .get(idx)
+        .map_or(&[][..], Vec::as_slice);
+    if !dotted.is_empty() {
+        measure.dotted_eighth_errors = dotted.to_vec();
     }
-    if let Some(dash_after_rest_error) = dash_after_rest_error {
+    if let Some(e) = errors
+        .dash_after_rest_errors
+        .get(idx)
+        .and_then(|e| e.as_ref())
+    {
         if measure.dash_after_rest_error.is_none() {
-            measure.dash_after_rest_error = Some(dash_after_rest_error.clone());
+            measure.dash_after_rest_error = Some(e.clone());
         }
     }
-    if !chord_errors.is_empty() {
-        measure.chord_errors = chord_errors.to_vec();
+    let chords = errors.chord_errors.get(idx).map_or(&[][..], Vec::as_slice);
+    if !chords.is_empty() {
+        measure.chord_errors = chords.to_vec();
     }
-    if let Some(lex_error) = lex_error {
-        measure.lex_error = Some(lex_error.clone());
+    if let Some(e) = errors.lex_errors.get(idx).and_then(|e| e.as_ref()) {
+        measure.lex_error = Some(e.clone());
+    }
+    if let Some(e) = errors.lyrics_errors.get(idx).and_then(|e| e.as_ref()) {
+        measure.lyrics_parse_error = Some(e.clone());
     }
 }
 
@@ -36,6 +45,7 @@ pub(super) struct PerMeasureErrors<'a> {
     pub(super) dash_after_rest_errors: &'a [Option<RecoverableError>],
     pub(super) chord_errors: &'a [Vec<Diagnostic>],
     pub(super) lex_errors: &'a [Option<RecoverableError>],
+    pub(super) lyrics_errors: &'a [Option<RecoverableError>],
 }
 
 pub(super) fn align_empty_note_measures(
@@ -45,20 +55,7 @@ pub(super) fn align_empty_note_measures(
 ) -> Result<(), IrrecoverableError> {
     if empty_note_measure_spans.is_empty() {
         for (idx, measure) in measures.iter_mut().enumerate() {
-            apply_per_measure_errors(
-                measure,
-                errors.beat_errors.get(idx).and_then(|e| e.as_ref()),
-                errors
-                    .dotted_eighth_errors
-                    .get(idx)
-                    .map_or(&[][..], Vec::as_slice),
-                errors
-                    .dash_after_rest_errors
-                    .get(idx)
-                    .and_then(|e| e.as_ref()),
-                errors.chord_errors.get(idx).map_or(&[][..], Vec::as_slice),
-                errors.lex_errors.get(idx).and_then(|e| e.as_ref()),
-            );
+            apply_per_measure_errors(measure, idx, errors);
         }
         return Ok(());
     }
@@ -68,19 +65,6 @@ pub(super) fn align_empty_note_measures(
         .iter()
         .enumerate()
         .map(|(idx, empty_span)| {
-            let beat_error = errors.beat_errors.get(idx).and_then(|e| e.clone());
-            let dotted_eighth_errors = errors
-                .dotted_eighth_errors
-                .get(idx)
-                .cloned()
-                .unwrap_or_default();
-            let dash_after_rest_error = errors
-                .dash_after_rest_errors
-                .get(idx)
-                .and_then(|e| e.clone());
-            let chord_errors = errors.chord_errors.get(idx).cloned().unwrap_or_default();
-            let lex_error = errors.lex_errors.get(idx).and_then(|e| e.clone());
-
             if let Some(span) = empty_span {
                 Ok(GroupedMeasure {
                     notes: Notes { events: Vec::new() },
@@ -88,10 +72,14 @@ pub(super) fn align_empty_note_measures(
                     paired_lyrics: None,
                     lyrics_error: None,
                     beat_overflow_error: None,
-                    dash_after_rest_error,
+                    dash_after_rest_error: errors
+                        .dash_after_rest_errors
+                        .get(idx)
+                        .and_then(|e| e.clone()),
                     dotted_eighth_errors: Vec::new(),
-                    chord_errors,
-                    lex_error,
+                    chord_errors: errors.chord_errors.get(idx).cloned().unwrap_or_default(),
+                    lex_error: errors.lex_errors.get(idx).and_then(|e| e.clone()),
+                    lyrics_parse_error: errors.lyrics_errors.get(idx).and_then(|e| e.clone()),
                 })
             } else {
                 let mut measure = filled.next().ok_or_else(|| {
@@ -100,14 +88,7 @@ pub(super) fn align_empty_note_measures(
                         "empty_note_measure_spans and grouped measures out of sync",
                     ))
                 })?;
-                apply_per_measure_errors(
-                    &mut measure,
-                    beat_error.as_ref(),
-                    &dotted_eighth_errors,
-                    dash_after_rest_error.as_ref(),
-                    &chord_errors,
-                    lex_error.as_ref(),
-                );
+                apply_per_measure_errors(&mut measure, idx, errors);
                 Ok(measure)
             }
         })

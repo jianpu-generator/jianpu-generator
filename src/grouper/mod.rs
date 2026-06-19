@@ -121,6 +121,7 @@ impl PartGrouper {
             dotted_eighth_errors: std::mem::take(&mut self.pending_dotted_eighth_errors),
             chord_errors: Vec::new(),
             lex_error: None,
+            lyrics_parse_error: None,
         });
         self.current_beat = 0;
         self.measure_span_start = None;
@@ -322,6 +323,7 @@ impl PartGrouper {
                 dotted_eighth_errors: std::mem::take(&mut self.pending_dotted_eighth_errors),
                 chord_errors: Vec::new(),
                 lex_error: None,
+                lyrics_parse_error: None,
             });
         }
 
@@ -354,6 +356,7 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
     let per_measure_dash_after_rest_errors = part.per_measure_dash_after_rest_errors.clone();
     let per_measure_chord_errors = part.per_measure_chord_errors.clone();
     let per_measure_lex_errors = part.per_measure_lex_errors.clone();
+    let per_measure_lyrics_errors = part.per_measure_lyrics_errors.clone();
     let empty_note_measure_spans = part.empty_note_measure_spans.clone();
     let mut grouper = PartGrouper::new(&part);
     for spanned in part.score.events {
@@ -371,6 +374,7 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
             dash_after_rest_errors: &per_measure_dash_after_rest_errors,
             chord_errors: &per_measure_chord_errors,
             lex_errors: &per_measure_lex_errors,
+            lyrics_errors: &per_measure_lyrics_errors,
         },
     )?;
     for (measure, &lyrics_end) in grouped.measures.iter_mut().zip(lyrics_measure_ends.iter()) {

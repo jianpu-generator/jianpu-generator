@@ -49,9 +49,6 @@ fn parse_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
         | IrrecoverableErrorKind::DurationCannotDotQuarterBeat { span }
         | IrrecoverableErrorKind::GroupUnexpectedCloseParen { span }
         | IrrecoverableErrorKind::UnclosedGroupAtEnd { span, .. }
-        | IrrecoverableErrorKind::LyricsLineEmpty { span }
-        | IrrecoverableErrorKind::UnderscoreOnlyOnLyrics { span }
-        | IrrecoverableErrorKind::LyricsNoNotesTrack { span, .. }
         | IrrecoverableErrorKind::ExtensionNoPrecedingEvent { span, .. }
         | IrrecoverableErrorKind::TieNoPrecedingNote { span, .. } => Some(span),
         _ => None,
