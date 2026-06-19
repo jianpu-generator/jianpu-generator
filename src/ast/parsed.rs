@@ -110,6 +110,8 @@ pub struct ParsedDocument {
     pub directive_events_per_measure: Vec<Vec<Spanned<ScoreEvent>>>,
     /// Per-measure recoverable errors from desugaring (e.g. missing lyrics line).
     pub per_measure_parse_errors: Vec<Option<RecoverableError>>,
+    /// Recoverable errors from parsing the [metadata] section.
+    pub metadata_parse_errors: Vec<RecoverableError>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

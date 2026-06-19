@@ -1,8 +1,21 @@
 mod irrecoverable;
 
-pub use irrecoverable::{
-    DocumentSection, IrrecoverableError, IrrecoverableErrorKind, RequiredMetadataField,
-};
+pub use irrecoverable::{DocumentSection, IrrecoverableError, IrrecoverableErrorKind};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RequiredMetadataField {
+    Title,
+    Author,
+}
+
+impl RequiredMetadataField {
+    pub(crate) fn label(self) -> &'static str {
+        match self {
+            Self::Title => "title",
+            Self::Author => "author",
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Span {
@@ -129,6 +142,16 @@ pub enum RecoverableErrorKind {
     ChordInvalidToken { message: String },
     /// An unexpected character in a note duration suffix — note is emitted with default duration.
     DurationUnexpectedChar { ch: char },
+    /// A metadata line does not contain `=` — the line is skipped.
+    MetadataMalformedLine { line: String },
+    /// A metadata field name is not recognized — the line is skipped.
+    MetadataUnknownField { field: String },
+    /// A metadata integer field could not be parsed — the field keeps its default.
+    MetadataInvalidInteger { field: String, value: String },
+    /// A metadata integer field parsed to zero — the field keeps its default.
+    MetadataMustBePositive { field: String },
+    /// A required metadata field is absent — an empty string is used.
+    MetadataMissingField { field: RequiredMetadataField },
 }
 
 /// A recoverable error: render continues but the affected measure is highlighted red.
@@ -180,6 +203,21 @@ impl RecoverableError {
             RecoverableErrorKind::ChordInvalidToken { message } => message.clone(),
             RecoverableErrorKind::DurationUnexpectedChar { ch } => {
                 format!("unexpected character in note duration: {ch}")
+            }
+            RecoverableErrorKind::MetadataMalformedLine { line } => {
+                format!("expected key = value, got: {line}")
+            }
+            RecoverableErrorKind::MetadataUnknownField { field } => {
+                format!("unknown metadata field: {field}")
+            }
+            RecoverableErrorKind::MetadataInvalidInteger { field, value } => {
+                format!("{field} must be a positive integer, got: {value}")
+            }
+            RecoverableErrorKind::MetadataMustBePositive { field } => {
+                format!("{field} must be greater than zero")
+            }
+            RecoverableErrorKind::MetadataMissingField { field } => {
+                format!("missing required field: {}", field.label())
             }
         }
     }
@@ -274,6 +312,50 @@ impl RecoverableError {
         Self {
             span,
             kind: RecoverableErrorKind::TimedPartMeasureMissing,
+        }
+    }
+
+    pub fn metadata_malformed_line(span: Span, line: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::MetadataMalformedLine {
+                line: line.to_string(),
+            },
+        }
+    }
+
+    pub fn metadata_unknown_field(span: Span, field: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::MetadataUnknownField {
+                field: field.to_string(),
+            },
+        }
+    }
+
+    pub fn metadata_invalid_integer(span: Span, field: &str, value: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::MetadataInvalidInteger {
+                field: field.to_string(),
+                value: value.to_string(),
+            },
+        }
+    }
+
+    pub fn metadata_must_be_positive(span: Span, field: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::MetadataMustBePositive {
+                field: field.to_string(),
+            },
+        }
+    }
+
+    pub fn metadata_missing_field(span: Span, field: RequiredMetadataField) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::MetadataMissingField { field },
         }
     }
 }

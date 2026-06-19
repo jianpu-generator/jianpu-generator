@@ -19,21 +19,6 @@ impl DocumentSection {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RequiredMetadataField {
-    Title,
-    Author,
-}
-
-impl RequiredMetadataField {
-    pub(crate) fn label(self) -> &'static str {
-        match self {
-            Self::Title => "title",
-            Self::Author => "author",
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub enum IrrecoverableErrorKind {
     UnknownSection {
@@ -54,27 +39,6 @@ pub enum IrrecoverableErrorKind {
     MissingSection {
         span: Span,
         section: DocumentSection,
-    },
-    MetadataInvalidInteger {
-        span: Span,
-        field: String,
-        value: String,
-    },
-    MetadataMustBePositive {
-        span: Span,
-        field: String,
-    },
-    MetadataMalformedLine {
-        span: Span,
-        line: String,
-    },
-    MetadataUnknownField {
-        span: Span,
-        field: String,
-    },
-    MetadataMissingField {
-        span: Span,
-        field: RequiredMetadataField,
     },
     PartsMalformedLine {
         span: Span,

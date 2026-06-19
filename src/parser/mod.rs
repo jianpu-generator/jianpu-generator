@@ -96,8 +96,8 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, Irrecoverabl
     let (parts_content, parts_offset) = sections.parts;
     let (score_content, score_offset) = sections.score;
 
-    let metadata = metadata_parser::parse_metadata(&meta_content, meta_offset)
-        .map_err(|error| error.with_path(path))?;
+    let (metadata, metadata_parse_errors) =
+        metadata_parser::parse_metadata(&meta_content, meta_offset);
     let declarations = parts_parser::parse_parts(&parts_content, parts_offset)
         .map_err(|error| error.with_path(path))?;
     let (tracks, directive_events_per_measure, per_measure_parse_errors) =
@@ -110,6 +110,7 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, Irrecoverabl
         tracks,
         directive_events_per_measure,
         per_measure_parse_errors,
+        metadata_parse_errors,
     })
 }
 

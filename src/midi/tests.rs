@@ -60,6 +60,7 @@ fn chord_major_expands_to_three_notes() {
             source_span: Span::new(0, 0), // dummy — midi output ignores span
             diagnostics: vec![],
         }],
+        document_diagnostics: vec![],
     };
     let midi_bytes = write_midi(&score).unwrap();
     // MIDI bytes must be non-empty and start with MThd
@@ -174,6 +175,7 @@ fn one_measure_score() -> Score {
             source_span: Span::new(0, 0),
             diagnostics: vec![],
         }],
+        document_diagnostics: vec![],
     }
 }
 

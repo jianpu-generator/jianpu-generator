@@ -27,6 +27,7 @@ These are no longer review items. Some still have a matching
 
 | Kind / behavior | Status | Recovery behavior today |
 |---|---|---|
+| `MetadataInvalidInteger`, `MetadataMustBePositive`, `MetadataMalformedLine`, `MetadataUnknownField`, `MetadataMissingField` | `implemented` | Skip bad line / use empty-string default; `RecoverableError` collected in `parse_metadata`, surfaced via `Score::document_diagnostics` → `RenderOutput::diagnostics` |
 | Lyrics underflow (`#syllables < #notes`) | `implemented` | Pad with empty syllables; error on measure (`grouper/mod.rs`) |
 | Lyrics overflow (`#syllables > #notes`) | `implemented` | Keep paired syllables; error on measure (`grouper/mod.rs`) |
 | Beat overflow (notes/chord line exceeds bar) | `implemented` | Truncate events or drop overflowing note; error on measure (`interleaved_beat_padding.rs`, `grouper/mod.rs`) |
@@ -132,10 +133,6 @@ declaration, or infrastructure failure, not a single bad measure.
 `UnknownSection`, `WrongSectionCount`, `SectionsOutOfOrder`, `DuplicateSection`,
 `MissingSection`
 
-### Metadata
-`MetadataInvalidInteger`, `MetadataMustBePositive`, `MetadataMalformedLine`,
-`MetadataUnknownField`, `MetadataMissingField`
-
 ### Parts declaration (whole document)
 `PartsMalformedLine`, `PartsDuplicateAbbreviation`, `PartsEmptySection`,
 `PartsEmptyDisplayName`, `PartsEmptyAbbreviation`, `PartsEmptyTrackName`,
@@ -155,4 +152,4 @@ Record decisions here as we go.
 
 | # | Kind | Decision | Date | Notes |
 |---|---|---|---|---|
-| — | — | — | — | — |
+| — | Metadata (`MetadataInvalidInteger`, `MetadataMustBePositive`, `MetadataMalformedLine`, `MetadataUnknownField`, `MetadataMissingField`) | Moved from "Never candidates" → implemented as recoverable | 2026-06-19 | `parse_metadata` now returns `(ParsedMetadata, Vec<RecoverableError>)`; missing required fields default to `""`; errors surface via `document_diagnostics` |

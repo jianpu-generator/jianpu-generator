@@ -12,11 +12,6 @@ fn parse_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
         | IrrecoverableErrorKind::SectionsOutOfOrder { span }
         | IrrecoverableErrorKind::DuplicateSection { span, .. }
         | IrrecoverableErrorKind::MissingSection { span, .. }
-        | IrrecoverableErrorKind::MetadataInvalidInteger { span, .. }
-        | IrrecoverableErrorKind::MetadataMustBePositive { span, .. }
-        | IrrecoverableErrorKind::MetadataMalformedLine { span, .. }
-        | IrrecoverableErrorKind::MetadataUnknownField { span, .. }
-        | IrrecoverableErrorKind::MetadataMissingField { span, .. }
         | IrrecoverableErrorKind::PartsMalformedLine { span, .. }
         | IrrecoverableErrorKind::PartsDuplicateAbbreviation { span, .. }
         | IrrecoverableErrorKind::PartsEmptySection { span }

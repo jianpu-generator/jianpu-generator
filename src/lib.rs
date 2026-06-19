@@ -55,9 +55,15 @@ pub struct RenderOutput {
 
 fn collect_measure_diagnostics(score: &Score) -> Vec<Diagnostic> {
     score
-        .measures
+        .document_diagnostics
         .iter()
-        .flat_map(|m| m.diagnostics.iter().cloned())
+        .cloned()
+        .chain(
+            score
+                .measures
+                .iter()
+                .flat_map(|m| m.diagnostics.iter().cloned()),
+        )
         .collect()
 }
 

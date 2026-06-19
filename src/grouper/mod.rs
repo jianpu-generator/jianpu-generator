@@ -24,6 +24,11 @@ use lyrics_pairing::attach_paired_lyrics;
 
 pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
     let metadata = doc.metadata;
+    let document_diagnostics: Vec<Diagnostic> = doc
+        .metadata_parse_errors
+        .into_iter()
+        .map(Diagnostic::Error)
+        .collect();
     let mut grouped_tracks = Vec::new();
     for track in doc.tracks {
         grouped_tracks.push(match track {
@@ -52,6 +57,7 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
             note_number_width: metadata.note_number_width.unwrap_or(8),
         },
         measures,
+        document_diagnostics,
     })
 }
 

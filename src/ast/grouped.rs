@@ -116,6 +116,8 @@ impl GroupedTrack {
 pub struct Score {
     pub metadata: Metadata,
     pub measures: Vec<MultiPartMeasure>,
+    /// Document-level diagnostics (e.g. metadata parse errors), not tied to any measure.
+    pub document_diagnostics: Vec<Diagnostic>,
 }
 
 // ── Intermediate grouper types (not part of the public API) ─────────────────

@@ -92,6 +92,7 @@ pub fn write_midi_for_measure(
     let single_score = Score {
         metadata: score.metadata.clone(),
         measures: vec![patched],
+        document_diagnostics: vec![],
     };
 
     write_midi(&single_score)
@@ -142,6 +143,7 @@ pub fn write_midi_for_measure_range(
     let range_score = Score {
         metadata: score.metadata.clone(),
         measures,
+        document_diagnostics: vec![],
     };
     write_midi(&range_score)
 }
