@@ -41,6 +41,7 @@ These are no longer review items. Some still have a matching
 | `PartsMalformedLine`, `PartsDuplicateAbbreviation`, `PartsEmptySection`, `PartsEmptyDisplayName`, `PartsEmptyAbbreviation`, `PartsEmptyTrackName`, `PartsInvalidColumns` | `implemented` | Skip bad declaration, continue with valid ones; empty section renders empty document; errors in `document_diagnostics` (`parts_parser.rs`) |
 | `PartsNoNotesTrack` | `implemented` | Already recoverable via `RecoverableError::general` in `interleaved_parser.rs`; `IrrecoverableErrorKind` variant removed |
 | `UnknownSection`, `WrongSectionCount`, `SectionsOutOfOrder`, `DuplicateSection`, `MissingSection` | `implemented` | Section structure errors now recoverable: unknown sections skipped, duplicates use first occurrence, out-of-order sections reordered to canonical, missing sections use empty defaults; errors surfaced via `document_diagnostics` (`section_splitter.rs`, `parser/mod.rs`); `IrrecoverableErrorKind` variants removed |
+| `MeasureNoDataLines`, `MeasureTooManyLines`, `MeasureMissingRoleLine` | `implemented` | Already recoverable in `desugar.rs`; `IrrecoverableErrorKind` variants for `MeasureNoDataLines` and `MeasureMissingRoleLine` removed; `MeasureTooManyLines` had no irrecoverable variant |
 
 ---
 
@@ -52,9 +53,6 @@ These are no longer review items. Some still have a matching
 |---|---|---|---|---|
 | 1 | `DittoNoPrecedent` | `implemented` | Abort when `"` has no same-role line above in the measure | Render blank placeholder; error on measure (design doc) |
 | 2 | `MeasureWrongLineCount` | `implemented` | Recoverable via `ErrorKind::MeasureWrongLineCount` in desugar padding | Tagged recoverable errors; irrecoverable enum variant removed |
-| 3 | `MeasureNoDataLines` | `pending` | Enum exists; already recoverable in desugar | Remove dead enum variant or wire kind through |
-| 4 | `MeasureTooManyLines` | `pending` | Enum exists; already recoverable in desugar | Remove dead enum variant or wire kind through |
-| 5 | `MeasureMissingRoleLine` | `pending` | Enum exists; already recoverable in desugar | Remove dead enum variant or wire kind through |
 
 ### Lyrics
 

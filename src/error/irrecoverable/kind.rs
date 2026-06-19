@@ -4,14 +4,6 @@ use super::Span;
 
 #[derive(Debug, Clone)]
 pub enum IrrecoverableErrorKind {
-    MeasureNoDataLines {
-        span: Span,
-    },
-    MeasureMissingRoleLine {
-        span: Span,
-        role: String,
-        abbrev: String,
-    },
     DittoNoPrecedent {
         span: Span,
         role: String,

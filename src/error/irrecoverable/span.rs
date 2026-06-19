@@ -7,9 +7,7 @@ pub(super) fn span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
 
 fn parse_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
     match kind {
-        IrrecoverableErrorKind::MeasureNoDataLines { span }
-        | IrrecoverableErrorKind::MeasureMissingRoleLine { span, .. }
-        | IrrecoverableErrorKind::DittoNoPrecedent { span, .. }
+        IrrecoverableErrorKind::DittoNoPrecedent { span, .. }
         | IrrecoverableErrorKind::IncompleteMeasure { span, .. }
         | IrrecoverableErrorKind::MeasureOverflow { span, .. }
         | IrrecoverableErrorKind::PartMeasureCountMismatch { span, .. }
