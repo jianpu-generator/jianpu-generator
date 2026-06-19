@@ -21,20 +21,19 @@ pub(crate) fn grid_el(
     }
 }
 
-#[allow(clippy::indexing_slicing)]
 pub(crate) fn push_head(
     sub_rows: &mut [GridRow],
     head_sub: usize,
     column: u32,
     content: GridContent,
 ) {
-    sub_rows[head_sub]
-        .elements
-        .push(grid_el(column, content, HAlign::Center, VAlign::Center));
+    if let Some(row) = sub_rows.get_mut(head_sub) {
+        row.elements
+            .push(grid_el(column, content, HAlign::Center, VAlign::Center));
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
-#[allow(clippy::indexing_slicing)]
 pub(crate) fn expand_measure_elements(
     row: &MeasureRow,
     measure_col_offset: u32,
@@ -75,12 +74,14 @@ pub(crate) fn expand_measure_elements(
                 push_head(sub_rows, head_sub, grid_col, GridContent::NoteDash);
             }
             ElementContent::ChordSymbol(s) => {
-                sub_rows[head_sub].elements.push(grid_el(
-                    grid_col,
-                    GridContent::ChordSymbol(s.clone()),
-                    HAlign::Start,
-                    VAlign::Center,
-                ));
+                if let Some(row) = sub_rows.get_mut(head_sub) {
+                    row.elements.push(grid_el(
+                        grid_col,
+                        GridContent::ChordSymbol(s.clone()),
+                        HAlign::Start,
+                        VAlign::Center,
+                    ));
+                }
             }
             ElementContent::Underline {
                 from_column,
@@ -90,8 +91,8 @@ pub(crate) fn expand_measure_elements(
             } => {
                 let span = last_head_column.saturating_sub(*from_column) + 1;
                 let ul_sub = (sub_count - 2) + *level as usize;
-                if ul_sub < sub_count {
-                    sub_rows[ul_sub].elements.push(GridElement {
+                if let Some(row) = sub_rows.get_mut(ul_sub) {
+                    row.elements.push(GridElement {
                         column: LABEL_COLS + measure_col_offset + from_column,
                         column_span: span,
                         halign: HAlign::Start,
@@ -102,14 +103,16 @@ pub(crate) fn expand_measure_elements(
             }
             ElementContent::BarLine => {
                 if part_idx == 0 {
-                    sub_rows[0].elements.push(grid_el(
-                        grid_col,
-                        GridContent::BarLine {
-                            height_pt: bar_height,
-                        },
-                        HAlign::Center,
-                        VAlign::Top,
-                    ));
+                    if let Some(row) = sub_rows.get_mut(0) {
+                        row.elements.push(grid_el(
+                            grid_col,
+                            GridContent::BarLine {
+                                height_pt: bar_height,
+                            },
+                            HAlign::Center,
+                            VAlign::Top,
+                        ));
+                    }
                 }
             }
             ElementContent::Lyric(_) => {} // handled in lyric-row branch above
@@ -150,7 +153,6 @@ pub(crate) fn expand_lyric_part(
 }
 
 #[allow(clippy::too_many_arguments)]
-#[allow(clippy::indexing_slicing)]
 pub(crate) fn expand_note_part(
     system: &[MeasureBlock],
     part_template: &MeasureRow,
@@ -179,24 +181,28 @@ pub(crate) fn expand_note_part(
         2
     };
     if !part_template.label.is_empty() {
-        sub_rows[head_sub].elements.push(GridElement {
-            column: 0,
-            column_span: LABEL_COLS,
-            halign: HAlign::Center,
-            valign: VAlign::Center,
-            content: GridContent::RowLabel(part_template.label.clone()),
-        });
+        if let Some(row) = sub_rows.get_mut(head_sub) {
+            row.elements.push(GridElement {
+                column: 0,
+                column_span: LABEL_COLS,
+                halign: HAlign::Center,
+                valign: VAlign::Center,
+                content: GridContent::RowLabel(part_template.label.clone()),
+            });
+        }
     }
     if part_idx == 0 {
-        sub_rows[0].elements.push(GridElement {
-            column: LABEL_COLS,
-            column_span: 1,
-            halign: HAlign::Start,
-            valign: VAlign::Top,
-            content: GridContent::BarLine {
-                height_pt: bar_height,
-            },
-        });
+        if let Some(row) = sub_rows.get_mut(0) {
+            row.elements.push(GridElement {
+                column: LABEL_COLS,
+                column_span: 1,
+                halign: HAlign::Start,
+                valign: VAlign::Top,
+                content: GridContent::BarLine {
+                    height_pt: bar_height,
+                },
+            });
+        }
     }
     let mut measure_col_offset: u32 = 0;
     for block in system {
@@ -214,7 +220,9 @@ pub(crate) fn expand_note_part(
         }
         measure_col_offset += col_w;
     }
-    sub_rows[0].elements.extend_from_slice(part_arcs);
+    if let Some(row) = sub_rows.get_mut(0) {
+        row.elements.extend_from_slice(part_arcs);
+    }
     sub_rows
 }
 

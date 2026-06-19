@@ -1,5 +1,3 @@
-#![allow(clippy::indexing_slicing)]
-
 mod chord_head;
 mod directives;
 mod duration;

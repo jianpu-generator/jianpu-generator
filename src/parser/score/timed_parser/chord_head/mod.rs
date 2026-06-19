@@ -34,7 +34,14 @@ impl TimedUnitHead for ChordHead {
         start: usize,
         span: &Span,
     ) -> Result<(Self, usize, bool, Vec<Diagnostic>), IrrecoverableError> {
-        let degree_char = chars[start];
+        let Some(&degree_char) = chars.get(start) else {
+            return Err(IrrecoverableError::new(
+                IrrecoverableErrorKind::ChordExpectedDegreeDigit {
+                    span: *span,
+                    ch: '\0',
+                },
+            ));
+        };
         if !matches!(degree_char, '0'..='7') {
             let pos = span.start + byte_offset_at_char_index_from_chars(chars, start);
             return Err(IrrecoverableError::new(
@@ -78,7 +85,7 @@ impl TimedUnitHead for ChordHead {
     }
 
     fn head_boundary(chars: &[char], i: usize) -> bool {
-        matches!(chars[i], '0'..='7')
+        chars.get(i).is_some_and(|&c| matches!(c, '0'..='7'))
     }
 
     fn allows_octave_suffixes() -> bool {
@@ -108,7 +115,11 @@ impl TimedUnitHead for ChordHead {
             return None;
         }
         let mut next_index = head_end;
-        while next_index < chars.len() && matches!(chars[next_index], '\'' | ',') {
+        while next_index < chars.len()
+            && chars
+                .get(next_index)
+                .is_some_and(|&c| matches!(c, '\'' | ','))
+        {
             next_index += 1;
         }
         Some((
@@ -169,7 +180,9 @@ fn find_symbol_end(
     span: &Span,
 ) -> Result<(usize, ChordSymbolParse), IrrecoverableError> {
     let max_end = chars.len().min(
-        chars[start..]
+        chars
+            .get(start..)
+            .unwrap_or_default()
             .iter()
             .position(|&c| matches!(c, '_' | '=' | '.' | '-' | '\'' | ',' | '(' | ')'))
             .map(|p| start + p)
@@ -177,13 +190,17 @@ fn find_symbol_end(
     );
 
     for end in (start + 1..=max_end).rev() {
-        let token: String = chars[start..end].iter().collect();
+        let token: String = chars.get(start..end).unwrap_or_default().iter().collect();
         if let Ok(parse) = parse_chord_symbol(&token, *span) {
             return Ok((end, parse));
         }
     }
 
-    let token: String = chars[start..start + 1].iter().collect();
+    let token: String = chars
+        .get(start..start + 1)
+        .unwrap_or_default()
+        .iter()
+        .collect();
     Err(IrrecoverableError::new(
         IrrecoverableErrorKind::ChordInvalidToken { span: *span, token },
     ))
@@ -311,7 +328,10 @@ fn char_to_pitch(c: char) -> Option<JianPuPitch> {
 }
 
 fn byte_offset_at_char_index_from_chars(chars: &[char], char_index: usize) -> usize {
-    chars[..char_index].iter().map(|c| c.len_utf8()).sum()
+    chars
+        .get(..char_index)
+        .map(|slice| slice.iter().map(|c| c.len_utf8()).sum())
+        .unwrap_or(0)
 }
 
 #[cfg(test)]

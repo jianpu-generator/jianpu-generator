@@ -1,5 +1,3 @@
-#![allow(clippy::indexing_slicing)]
-
 use crate::error::{Span, Warning};
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

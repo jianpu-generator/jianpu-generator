@@ -16,7 +16,14 @@ impl TimedUnitHead for NoteHead {
         start: usize,
         span: &Span,
     ) -> Result<(Self, usize, bool, Vec<Diagnostic>), IrrecoverableError> {
-        let pitch_char = chars[start];
+        let Some(&pitch_char) = chars.get(start) else {
+            return Err(IrrecoverableError::new(
+                IrrecoverableErrorKind::NoteExpectedPitchDigit {
+                    span: *span,
+                    ch: '\0',
+                },
+            ));
+        };
         if !matches!(pitch_char, '0'..='7') {
             let pos = span.start + byte_offset_at_char_index_from_chars(chars, start);
             return Err(IrrecoverableError::new(
@@ -47,7 +54,7 @@ impl TimedUnitHead for NoteHead {
     }
 
     fn head_boundary(chars: &[char], i: usize) -> bool {
-        matches!(chars[i], '0'..='7')
+        chars.get(i).is_some_and(|&c| matches!(c, '0'..='7'))
     }
 
     fn allows_octave_suffixes() -> bool {
@@ -67,7 +74,9 @@ impl TimedUnitHead for NoteHead {
         let mut next_index = head_end;
         while next_index < chars.len()
             && !NoteHead::head_boundary(chars, next_index)
-            && !matches!(chars[next_index], '(' | ')')
+            && !chars
+                .get(next_index)
+                .is_some_and(|&c| matches!(c, '(' | ')'))
         {
             next_index += 1;
         }
@@ -128,5 +137,8 @@ fn pitch_char_to_jianpu(pitch_char: char) -> Option<JianPuPitch> {
 }
 
 fn byte_offset_at_char_index_from_chars(chars: &[char], char_index: usize) -> usize {
-    chars[..char_index].iter().map(|c| c.len_utf8()).sum()
+    chars
+        .get(..char_index)
+        .map(|slice| slice.iter().map(|c| c.len_utf8()).sum())
+        .unwrap_or(0)
 }

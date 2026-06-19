@@ -1,5 +1,3 @@
-#![allow(clippy::indexing_slicing)]
-
 use super::TimedUnitHead;
 use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
 
@@ -31,7 +29,10 @@ struct DurationSuffixContext<'a> {
 
 impl DurationSuffixContext<'_> {
     fn apply_char(&mut self, index: usize) -> Result<Option<usize>, IrrecoverableError> {
-        match self.chars[index] {
+        let Some(&ch) = self.chars.get(index) else {
+            return Ok(None);
+        };
+        match ch {
             '_' => {
                 self.state.duration = self.state.duration.min(2);
                 Ok(Some(index + 1))
@@ -153,8 +154,8 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
 }
 
 fn byte_offset_at_char_index_from_chars(chars: &[char], start: usize, index: usize) -> usize {
-    chars[start..=index]
-        .iter()
-        .map(|character| character.len_utf8())
-        .sum()
+    chars
+        .get(start..=index)
+        .map(|slice| slice.iter().map(|c| c.len_utf8()).sum())
+        .unwrap_or(0)
 }

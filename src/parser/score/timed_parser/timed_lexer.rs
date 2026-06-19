@@ -1,5 +1,3 @@
-#![allow(clippy::indexing_slicing)]
-
 use super::directives::{key_change_lexeme_len, parse_key_change_text};
 use crate::ast::parsed::KeyChange;
 use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Spanned};
@@ -36,7 +34,7 @@ pub fn lex_line(
     let mut i = 0;
 
     while i < line.len() {
-        let (c, len) = match line[i..].chars().next() {
+        let (c, len) = match line.get(i..).unwrap_or_default().chars().next() {
             Some(ch) => (ch, ch.len_utf8()),
             None => break,
         };
@@ -198,7 +196,7 @@ fn lex_bpm(
 ) -> Result<(Spanned<TimedLexToken>, usize), IrrecoverableError> {
     // "bpm=" is 4 bytes.
     let prefix_len = 4;
-    let rest = &line[i + prefix_len..];
+    let rest = line.get(i + prefix_len..).unwrap_or_default();
     // Consume ASCII digits.
     let digits: &str = {
         let end = rest.bytes().take_while(|b| b.is_ascii_digit()).count();
@@ -226,7 +224,7 @@ fn lex_bpm(
 /// Returns `Some((token, bytes_consumed))` if it looks like a key change, `None` otherwise.
 fn try_lex_key_change(line: &str, i: usize, start: usize) -> LexTokenOffsetResult {
     // "1=" is 2 bytes.
-    let after_eq = &line[i + 2..];
+    let after_eq = line.get(i + 2..).unwrap_or_default();
 
     // Check if the next char is a note name letter.
     let is_note_name = after_eq
@@ -242,7 +240,7 @@ fn try_lex_key_change(line: &str, i: usize, start: usize) -> LexTokenOffsetResul
     let head_len = key_change_lexeme_len(after_eq);
 
     // After the head, consume digits for the octave.
-    let after_head = &after_eq[head_len..];
+    let after_head = after_eq.get(head_len..).unwrap_or_default();
     let octave_len = after_head
         .bytes()
         .take_while(|b| b.is_ascii_digit())
@@ -253,7 +251,7 @@ fn try_lex_key_change(line: &str, i: usize, start: usize) -> LexTokenOffsetResul
     }
 
     let consumed = 2 + head_len + octave_len; // "1=" + head + octave digits
-    let text = &line[i..i + consumed];
+    let text = line.get(i..i + consumed).unwrap_or_default();
     let span = Span::new(start, start + consumed);
 
     let key_change = parse_key_change_text(text, &span)?;
@@ -288,8 +286,10 @@ fn try_lex_time_signature(line: &str, i: usize, start: usize) -> LexTokenOffsetR
         return Ok(None);
     }
 
-    let num_str = &slice[..num_len];
-    let den_str = &slice[den_start..den_start + den_len];
+    let num_str = slice.get(..num_len).unwrap_or_default();
+    let den_str = slice
+        .get(den_start..den_start + den_len)
+        .unwrap_or_default();
 
     let num = num_str.parse::<u8>().map_err(|_| {
         IrrecoverableError::new(IrrecoverableErrorKind::LexTimeInvalidNumerator {

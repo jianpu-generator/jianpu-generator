@@ -1,5 +1,3 @@
-#![allow(clippy::indexing_slicing)]
-
 use super::duration::parse_duration_suffixes;
 use super::groups::{
     apply_closed_group_depth, apply_open_group_depth, validate_group_note_count, GroupStack,
@@ -108,12 +106,17 @@ fn annotate_slur_close_via_extension(group_slice: &mut [DepthEvent]) {
 
     // Count Extension events with continuation > 0 that appear after the note — these are
     // the "continuing" extensions that precede the final closing extension.
-    let num_continuing_exts = group_slice[note_idx + 1..]
+    let num_continuing_exts = group_slice
+        .get(note_idx + 1..)
+        .unwrap_or_default()
         .iter()
         .filter(|e| matches!(e.spanned.value, ScoreEvent::Extension) && e.group_continuation > 0)
         .count() as u32;
 
-    let note_initial_duration = match &group_slice[note_idx].spanned.value {
+    let Some(note_event) = group_slice.get(note_idx) else {
+        return;
+    };
+    let note_initial_duration = match &note_event.spanned.value {
         ScoreEvent::Note(n) => n.duration,
         ScoreEvent::Chord(c) => c.duration,
         _ => return,
@@ -122,7 +125,10 @@ fn annotate_slur_close_via_extension(group_slice: &mut [DepthEvent]) {
     // close_offset = position of the last extension dash relative to the note's start col.
     let close_offset = note_initial_duration + num_continuing_exts * 4;
 
-    match &mut group_slice[note_idx].spanned.value {
+    let Some(note_event) = group_slice.get_mut(note_idx) else {
+        return;
+    };
+    match &mut note_event.spanned.value {
         ScoreEvent::Note(n) => n.slur_group_close_at_duration = Some(close_offset),
         ScoreEvent::Chord(c) => c.slur_group_close_at_duration = Some(close_offset),
         _ => {}
@@ -284,7 +290,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
 
         // Slice from the head offset to the end of the current non-whitespace word.
         // Duration suffixes are never whitespace, so the unit ends at the first whitespace char.
-        let raw_text = &self.source[rel..];
+        let raw_text = self.source.get(rel..).unwrap_or_default();
         let text = raw_text
             .find(|c: char| c.is_whitespace() || c == '|' || c == '(' || c == ')')
             .map(|ws_pos| &raw_text[..ws_pos])
@@ -337,7 +343,9 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
         };
 
         // Calculate the actual byte length covered by this unit.
-        let unit_byte_len: usize = chars[..duration_meta.next_index]
+        let unit_byte_len: usize = chars
+            .get(..duration_meta.next_index)
+            .unwrap_or_default()
             .iter()
             .map(|c| c.len_utf8())
             .sum();
@@ -420,8 +428,8 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
                 let note_count = frame.note_count;
                 if let Some(warning) = validate_group_note_count(note_count, &rparen_span) {
                     self.chord_errors.push(Diagnostic::Warning(warning));
-                } else {
-                    apply_closed_group_depth(&mut self.staging[frame.segment_start..]);
+                } else if let Some(slice) = self.staging.get_mut(frame.segment_start..) {
+                    apply_closed_group_depth(slice);
                 }
             }
             _ => {
@@ -448,9 +456,9 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
         let note_count = frame.note_count;
         if let Some(warning) = validate_group_note_count(note_count, &rparen_span) {
             self.chord_errors.push(Diagnostic::Warning(warning));
-        } else {
-            apply_closed_group_depth(&mut self.staging[frame.segment_start..]);
-            annotate_slur_close_via_extension(&mut self.staging[frame.segment_start..]);
+        } else if let Some(slice) = self.staging.get_mut(frame.segment_start..) {
+            apply_closed_group_depth(slice);
+            annotate_slur_close_via_extension(slice);
         }
 
         Ok(())
@@ -461,7 +469,9 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
     fn finalize_open_frames(&mut self) -> Result<(), IrrecoverableError> {
         // Iterate from outermost to innermost (bottom of stack to top).
         for frame in &self.stack.frames {
-            apply_open_group_depth(&mut self.staging[frame.segment_start..]);
+            if let Some(slice) = self.staging.get_mut(frame.segment_start..) {
+                apply_open_group_depth(slice);
+            }
         }
         Ok(())
     }

@@ -1,5 +1,3 @@
-#![allow(clippy::indexing_slicing)]
-
 use crate::error::IrrecoverableError;
 use crate::parser::score::timed_parser::{parse_timed_line, ChordHead, LexContext, NoteHead};
 
