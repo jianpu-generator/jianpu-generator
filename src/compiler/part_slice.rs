@@ -2,7 +2,7 @@ use super::beam::{flush_beam_buffer, BeamEntry};
 use super::slur_chains::{extend_note_chains, PendingSlurOpen, SlurKey};
 use super::PartSliceResult;
 use crate::ast::grouped::{GroupedChordNote, GroupedNote, GroupedRest, NoteEvent, PartSlice};
-use crate::ast::parsed::{PartKind, Syllable};
+use crate::ast::parsed::{JianPuPitch, PartKind, Syllable};
 use crate::compiler::types::{ColumnElement, ElementContent, SlurSpan};
 
 // ── Part slice compiler ───────────────────────────────────────────────────────
@@ -22,6 +22,134 @@ struct PartState<'a> {
     measure_index: usize,
     part_index: usize,
 }
+
+// ── Shared compile-unit abstraction ──────────────────────────────────────────
+
+trait HeadContent {
+    fn into_element_content(self, dotted: bool) -> ElementContent;
+}
+
+struct NoteUnit {
+    pitch: JianPuPitch,
+    octave: i8,
+}
+
+struct ChordUnit {
+    symbol: String,
+}
+
+impl HeadContent for NoteUnit {
+    fn into_element_content(self, dotted: bool) -> ElementContent {
+        ElementContent::NoteHead {
+            pitch: self.pitch,
+            octave: self.octave,
+            dotted,
+        }
+    }
+}
+
+impl HeadContent for ChordUnit {
+    fn into_element_content(self, _dotted: bool) -> ElementContent {
+        ElementContent::ChordSymbol(self.symbol)
+    }
+}
+
+struct CompiledUnit<H> {
+    duration: u32,
+    dotted: bool,
+    tie: bool,
+    group_membership: u8,
+    group_continuation: u8,
+    slur_close_at: Option<u32>,
+    slur_key: SlurKey,
+    head: H,
+}
+
+fn compile_unit<H: HeadContent>(
+    state: &mut PartState<'_>,
+    unit: CompiledUnit<H>,
+    measure_col_start: u32,
+) {
+    state.elements.push(ColumnElement {
+        column: *state.col,
+        content: unit.head.into_element_content(unit.dotted),
+    });
+
+    let underline_count = match unit.duration {
+        1 => 2,
+        2 | 3 => 1,
+        _ => 0,
+    };
+
+    if underline_count == 0 {
+        flush_beam_buffer(state.beam_buf, state.elements);
+    }
+
+    extend_note_chains(
+        state.pending_chains,
+        state.pending_slur_opens,
+        unit.group_membership,
+        unit.group_continuation,
+        *state.col,
+        &unit.slur_key,
+        state.slur_spans,
+        state.measure_index,
+        state.part_index,
+    );
+
+    if let Some(close_offset) = unit.slur_close_at {
+        if unit.group_membership > 0 {
+            extend_note_chains(
+                state.pending_chains,
+                state.pending_slur_opens,
+                unit.group_membership,
+                0,
+                *state.col + close_offset,
+                &SlurKey::Rest,
+                state.slur_spans,
+                state.measure_index,
+                state.part_index,
+            );
+        }
+    }
+
+    if unit.tie {
+        *state.prev_tie_column = Some(*state.col);
+        *state.prev_tie_measure = Some(state.measure_index);
+    } else {
+        *state.prev_tie_column = None;
+        *state.prev_tie_measure = None;
+    }
+    *state.prev_tie = unit.tie;
+    *state.prev_slur_key = Some(unit.slur_key);
+
+    if !unit.dotted {
+        let note_col = *state.col;
+        for dash_col in (note_col + 4..note_col + unit.duration).step_by(4) {
+            state.elements.push(ColumnElement {
+                column: dash_col,
+                content: ElementContent::NoteDash,
+            });
+        }
+    }
+
+    if underline_count > 0 {
+        state.beam_buf.push(BeamEntry {
+            column: *state.col,
+            underline_count,
+            duration: unit.duration,
+        });
+    }
+
+    *state.col += unit.duration;
+
+    let beat_position = *state.col - measure_col_start;
+    if underline_count > 0 && beat_position % 4 == 0 {
+        flush_beam_buffer(state.beam_buf, state.elements);
+    }
+}
+
+// ── Top-level entry point ─────────────────────────────────────────────────────
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn compile_part_slice(
@@ -154,42 +282,14 @@ fn preserve_cross_measure_slur_opens(
     }
 }
 
-fn compile_note_slurs(state: &mut PartState<'_>, note: &GroupedNote, slur_key: &SlurKey) {
-    extend_note_chains(
-        state.pending_chains,
-        state.pending_slur_opens,
-        note.group_membership,
-        note.group_continuation,
-        *state.col,
-        slur_key,
-        state.slur_spans,
-        state.measure_index,
-        state.part_index,
-    );
-    if let Some(close_offset) = note.slur_group_close_at_duration {
-        if note.group_membership > 0 {
-            extend_note_chains(
-                state.pending_chains,
-                state.pending_slur_opens,
-                note.group_membership,
-                0,
-                *state.col + close_offset,
-                &SlurKey::Rest,
-                state.slur_spans,
-                state.measure_index,
-                state.part_index,
-            );
-        }
-    }
-}
-
-fn compile_note_tie_and_lyrics(
+fn compile_note(
     state: &mut PartState<'_>,
     note: &GroupedNote,
-    slur_key: SlurKey,
+    measure_col_start: u32,
     lyrics_iter: &mut Option<std::slice::Iter<'_, Syllable>>,
     kind: PartKind,
 ) {
+    let slur_key = SlurKey::Pitch(note.pitch.clone());
     let is_tie_continuation = *state.prev_tie && state.prev_slur_key.as_ref() == Some(&slur_key);
 
     if *state.cross_measure_open && is_tie_continuation {
@@ -218,79 +318,23 @@ fn compile_note_tie_and_lyrics(
         }
     }
 
-    if note.tie {
-        *state.prev_tie_column = Some(*state.col);
-        *state.prev_tie_measure = Some(state.measure_index);
-    } else {
-        *state.prev_tie_column = None;
-        *state.prev_tie_measure = None;
-    }
-    *state.prev_tie = note.tie;
-    *state.prev_slur_key = Some(slur_key);
-}
-
-fn compile_note_dashes_beams_and_advance(
-    state: &mut PartState<'_>,
-    note: &GroupedNote,
-    measure_col_start: u32,
-    underline_count: u32,
-) {
-    if !note.dotted {
-        let note_col = *state.col;
-        for dash_col in (note_col + 4..note_col + note.duration).step_by(4) {
-            state.elements.push(ColumnElement {
-                column: dash_col,
-                content: ElementContent::NoteDash,
-            });
-        }
-    }
-
-    if underline_count > 0 {
-        state.beam_buf.push(BeamEntry {
-            column: *state.col,
-            underline_count,
+    compile_unit(
+        state,
+        CompiledUnit {
             duration: note.duration,
-        });
-    }
-
-    *state.col += note.duration;
-
-    let beat_position = *state.col - measure_col_start;
-    if underline_count > 0 && beat_position % 4 == 0 {
-        flush_beam_buffer(state.beam_buf, state.elements);
-    }
-}
-
-fn compile_note(
-    state: &mut PartState<'_>,
-    note: &GroupedNote,
-    measure_col_start: u32,
-    lyrics_iter: &mut Option<std::slice::Iter<'_, Syllable>>,
-    kind: PartKind,
-) {
-    state.elements.push(ColumnElement {
-        column: *state.col,
-        content: ElementContent::NoteHead {
-            pitch: note.pitch.clone(),
-            octave: note.octave,
             dotted: note.dotted,
+            tie: note.tie,
+            group_membership: note.group_membership,
+            group_continuation: note.group_continuation,
+            slur_close_at: note.slur_group_close_at_duration,
+            slur_key,
+            head: NoteUnit {
+                pitch: note.pitch.clone(),
+                octave: note.octave,
+            },
         },
-    });
-
-    let underline_count = match note.duration {
-        1 => 2,
-        2 | 3 => 1,
-        _ => 0,
-    };
-
-    if underline_count == 0 {
-        flush_beam_buffer(state.beam_buf, state.elements);
-    }
-
-    let slur_key = SlurKey::Pitch(note.pitch.clone());
-    compile_note_slurs(state, note, &slur_key);
-    compile_note_tie_and_lyrics(state, note, slur_key, lyrics_iter, kind);
-    compile_note_dashes_beams_and_advance(state, note, measure_col_start, underline_count);
+        measure_col_start,
+    );
 }
 
 fn compile_rest(state: &mut PartState<'_>, rest: &GroupedRest, measure_col_start: u32) {
@@ -346,57 +390,21 @@ fn compile_rest(state: &mut PartState<'_>, rest: &GroupedRest, measure_col_start
 }
 
 fn compile_chord(state: &mut PartState<'_>, chord: &GroupedChordNote, measure_col_start: u32) {
-    let text = chord.format_symbol();
-    state.elements.push(ColumnElement {
-        column: *state.col,
-        content: ElementContent::ChordSymbol(text),
-    });
-
-    let underline_count = match chord.duration {
-        1 => 2,
-        2 | 3 => 1,
-        _ => 0,
-    };
-
-    if underline_count == 0 {
-        flush_beam_buffer(state.beam_buf, state.elements);
-    }
-
     let slur_key = SlurKey::from_chord(chord);
-    extend_note_chains(
-        state.pending_chains,
-        state.pending_slur_opens,
-        chord.group_membership,
-        chord.group_continuation,
-        *state.col,
-        &slur_key,
-        state.slur_spans,
-        state.measure_index,
-        state.part_index,
-    );
-
-    if chord.tie {
-        *state.prev_tie_column = Some(*state.col);
-        *state.prev_tie_measure = Some(state.measure_index);
-    } else {
-        *state.prev_tie_column = None;
-        *state.prev_tie_measure = None;
-    }
-    *state.prev_tie = chord.tie;
-    *state.prev_slur_key = Some(slur_key);
-
-    if underline_count > 0 {
-        state.beam_buf.push(BeamEntry {
-            column: *state.col,
-            underline_count,
+    compile_unit(
+        state,
+        CompiledUnit {
             duration: chord.duration,
-        });
-    }
-
-    *state.col += chord.duration;
-
-    let beat_position = *state.col - measure_col_start;
-    if underline_count > 0 && beat_position % 4 == 0 {
-        flush_beam_buffer(state.beam_buf, state.elements);
-    }
+            dotted: chord.dotted,
+            tie: chord.tie,
+            group_membership: chord.group_membership,
+            group_continuation: chord.group_continuation,
+            slur_close_at: chord.slur_group_close_at_duration,
+            slur_key,
+            head: ChordUnit {
+                symbol: chord.format_symbol(),
+            },
+        },
+        measure_col_start,
+    );
 }
