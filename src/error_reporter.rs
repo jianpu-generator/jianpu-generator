@@ -1,4 +1,4 @@
-use crate::error::{IrrecoverableError, Warning};
+use crate::error::{IrrecoverableError, Span, Warning};
 use ariadne::Config;
 
 pub fn render(e: &IrrecoverableError) {
@@ -72,7 +72,7 @@ fn render_to_writer(
         .map(|p| p.to_string_lossy().into_owned())
         .unwrap_or_else(|| "input".to_owned());
     // ariadne indexes by Unicode character count, not by byte offset.
-    let span = e.span();
+    let span = e.span().copied().unwrap_or(Span::new(0, 0));
     let char_start = source_text[..span.start.min(source_text.len())]
         .chars()
         .count();

@@ -19,7 +19,7 @@ impl IrrecoverableError {
         Self { path: None, kind }
     }
 
-    pub fn span(&self) -> &Span {
+    pub fn span(&self) -> Option<&Span> {
         self.kind.span()
     }
 

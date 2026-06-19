@@ -1,71 +1,39 @@
 use super::kind::IrrecoverableErrorKind;
 use crate::error::Span;
 
-pub(super) fn span(kind: &IrrecoverableErrorKind) -> &Span {
-    document_span(kind)
-        .or_else(|| metadata_span(kind))
-        .or_else(|| parts_span(kind))
-        .or_else(|| measure_span(kind))
-        .or_else(|| directive_span(kind))
-        .or_else(|| lex_span(kind))
-        .or_else(|| note_span(kind))
-        .or_else(|| export_span(kind))
-        .unwrap_or_else(|| unreachable!("all IrrecoverableErrorKind variants carry a span field"))
+pub(super) fn span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
+    parse_span(kind).or_else(|| export_span(kind))
 }
 
-fn document_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
+fn parse_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
     match kind {
         IrrecoverableErrorKind::UnknownSection { span, .. }
         | IrrecoverableErrorKind::WrongSectionCount { span, .. }
         | IrrecoverableErrorKind::SectionsOutOfOrder { span }
         | IrrecoverableErrorKind::DuplicateSection { span, .. }
-        | IrrecoverableErrorKind::MissingSection { span, .. } => Some(span),
-        _ => None,
-    }
-}
-
-fn metadata_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
-    match kind {
-        IrrecoverableErrorKind::MetadataInvalidInteger { span, .. }
+        | IrrecoverableErrorKind::MissingSection { span, .. }
+        | IrrecoverableErrorKind::MetadataInvalidInteger { span, .. }
         | IrrecoverableErrorKind::MetadataMustBePositive { span, .. }
         | IrrecoverableErrorKind::MetadataMalformedLine { span, .. }
         | IrrecoverableErrorKind::MetadataUnknownField { span, .. }
-        | IrrecoverableErrorKind::MetadataMissingField { span, .. } => Some(span),
-        _ => None,
-    }
-}
-
-fn parts_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
-    match kind {
-        IrrecoverableErrorKind::PartsMalformedLine { span, .. }
+        | IrrecoverableErrorKind::MetadataMissingField { span, .. }
+        | IrrecoverableErrorKind::PartsMalformedLine { span, .. }
         | IrrecoverableErrorKind::PartsDuplicateAbbreviation { span, .. }
         | IrrecoverableErrorKind::PartsEmptySection { span }
         | IrrecoverableErrorKind::PartsEmptyDisplayName { span }
         | IrrecoverableErrorKind::PartsEmptyAbbreviation { span }
         | IrrecoverableErrorKind::PartsEmptyTrackName { span }
         | IrrecoverableErrorKind::PartsInvalidColumns { span, .. }
-        | IrrecoverableErrorKind::PartsNoNotesTrack { span } => Some(span),
-        _ => None,
-    }
-}
-
-fn measure_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
-    match kind {
-        IrrecoverableErrorKind::MeasureNoDataLines { span }
+        | IrrecoverableErrorKind::PartsNoNotesTrack { span }
+        | IrrecoverableErrorKind::MeasureNoDataLines { span }
         | IrrecoverableErrorKind::MeasureMissingRoleLine { span, .. }
         | IrrecoverableErrorKind::DittoNoPrecedent { span, .. }
         | IrrecoverableErrorKind::IncompleteMeasure { span, .. }
         | IrrecoverableErrorKind::MeasureOverflow { span, .. }
         | IrrecoverableErrorKind::PartMeasureCountMismatch { span, .. }
         | IrrecoverableErrorKind::MeasureIndexOutOfRange { span, .. }
-        | IrrecoverableErrorKind::InvalidMeasureRange { span, .. } => Some(span),
-        _ => None,
-    }
-}
-
-fn directive_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
-    match kind {
-        IrrecoverableErrorKind::DirectiveUnclosedParen { span }
+        | IrrecoverableErrorKind::InvalidMeasureRange { span, .. }
+        | IrrecoverableErrorKind::DirectiveUnclosedParen { span }
         | IrrecoverableErrorKind::DirectiveUnclosedQuote { span }
         | IrrecoverableErrorKind::DirectiveInvalidBpm { span, .. }
         | IrrecoverableErrorKind::DirectiveLabelNotQuoted { span, .. }
@@ -77,26 +45,14 @@ fn directive_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
         | IrrecoverableErrorKind::DirectiveTimeInvalid { span, .. }
         | IrrecoverableErrorKind::DirectiveTimeInvalidNumerator { span, .. }
         | IrrecoverableErrorKind::DirectiveTimeInvalidDenominator { span, .. }
-        | IrrecoverableErrorKind::DirectiveTimeZeroDenominator { span } => Some(span),
-        _ => None,
-    }
-}
-
-fn lex_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
-    match kind {
-        IrrecoverableErrorKind::LexUnexpectedChar { span, .. }
+        | IrrecoverableErrorKind::DirectiveTimeZeroDenominator { span }
+        | IrrecoverableErrorKind::LexUnexpectedChar { span, .. }
         | IrrecoverableErrorKind::LexBpmMissingNumber { span }
         | IrrecoverableErrorKind::LexBpmInvalid { span, .. }
         | IrrecoverableErrorKind::LexTimeInvalidNumerator { span, .. }
         | IrrecoverableErrorKind::LexTimeInvalidDenominator { span, .. }
-        | IrrecoverableErrorKind::LexTimeZeroDenominator { span } => Some(span),
-        _ => None,
-    }
-}
-
-fn note_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
-    match kind {
-        IrrecoverableErrorKind::KeyChangeMissingPrefix { span, .. }
+        | IrrecoverableErrorKind::LexTimeZeroDenominator { span }
+        | IrrecoverableErrorKind::KeyChangeMissingPrefix { span, .. }
         | IrrecoverableErrorKind::KeyChangeMissingNoteName { span, .. }
         | IrrecoverableErrorKind::KeyChangeInvalidNoteName { span, .. }
         | IrrecoverableErrorKind::KeyChangeInvalidOctave { span, .. }

@@ -75,7 +75,7 @@ pub fn compile(source: &str, filename: &str) -> Result<Score, IrrecoverableError
 }
 
 /// Layout and render a [`Score`] into one SVG string per page.
-pub fn render_svgs(score: &Score) -> Vec<String> {
+pub fn render_svgs(score: &Score) -> Result<Vec<String>, IrrecoverableError> {
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
     let header = grid_layout::types::Header {
         title: score.metadata.title.clone(),
@@ -84,9 +84,9 @@ pub fn render_svgs(score: &Score) -> Vec<String> {
     };
     let compile_result = compiler::compile(score);
     let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
-    let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32);
+    let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)?;
     let docs = renderer::new_renderer::render_new(&abs, &config);
-    serializer::serialize(&docs)
+    Ok(serializer::serialize(&docs))
 }
 
 /// Parse, group, and render a `.jianpu` source string into SVG page strings.
@@ -167,7 +167,7 @@ pub fn render_svgs_from_source_filtered_with_lyrics(
     apply_lyrics_filter(&mut score, disabled_lyrics);
     let diagnostics = collect_measure_diagnostics(&score);
     Ok(RenderOutput {
-        svgs: render_svgs(&score),
+        svgs: render_svgs(&score)?,
         diagnostics,
     })
 }
@@ -205,7 +205,7 @@ pub fn render_svgs_with_highlight_range(
         842.0,
         Some((start_index, end_index)),
     );
-    let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32);
+    let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)?;
     let docs = renderer::new_renderer::render_new(&abs, &config);
     Ok(RenderOutput {
         svgs: serializer::serialize(&docs),
@@ -287,7 +287,7 @@ pub fn write_pdf_from_source_filtered_with_lyrics(
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
-    let svgs = render_svgs(&score);
+    let svgs = render_svgs(&score)?;
     pdf::write_pdf(&svgs)
 }
 

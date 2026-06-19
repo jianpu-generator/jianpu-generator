@@ -360,7 +360,7 @@ pub enum IrrecoverableErrorKind {
 }
 
 impl IrrecoverableErrorKind {
-    pub fn span(&self) -> &Span {
+    pub fn span(&self) -> Option<&Span> {
         super::span::span(self)
     }
 

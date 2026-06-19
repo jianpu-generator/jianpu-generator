@@ -347,7 +347,7 @@ impl Diagnostic {
                 })
             }
             _ => Self::Error(RecoverableError {
-                span: *error.span(),
+                span: error.span().copied().unwrap_or(Span::new(0, 0)),
                 kind: RecoverableErrorKind::ChordInvalidToken {
                     message: error.message(),
                 },

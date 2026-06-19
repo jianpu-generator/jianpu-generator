@@ -440,11 +440,12 @@ fn chord_extend_with_no_preceding_event_reports_token_span() {
         "[score]\n(time=4/4 key=C4 bpm=120)\n- 1 - -\n1 2 3 4\n",
     );
     let err = parse_and_group_err(input);
+    let span = err.span().unwrap();
     assert!(
-        err.span().start > 0 || err.span().end > 0,
+        span.start > 0 || span.end > 0,
         "expected a non-zero span for the '-' token, got start={} end={}",
-        err.span().start,
-        err.span().end,
+        span.start,
+        span.end,
     );
     assert!(err.message().contains("chord extension"));
 }

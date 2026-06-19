@@ -27,19 +27,23 @@ impl TimedUnitHead for NoteHead {
             ));
         }
         let is_rest = pitch_char == '0';
-        Ok((
-            NoteHead {
-                pitch: if is_rest {
-                    JianPuPitch::One
-                } else {
-                    pitch_char_to_jianpu(pitch_char)
-                },
-                is_rest,
-            },
-            start + 1,
-            is_rest,
-            Vec::new(),
-        ))
+        let pitch = if is_rest {
+            JianPuPitch::One
+        } else {
+            match pitch_char_to_jianpu(pitch_char) {
+                Some(p) => p,
+                None => {
+                    let pos = span.start + byte_offset_at_char_index_from_chars(chars, start);
+                    return Err(IrrecoverableError::new(
+                        IrrecoverableErrorKind::NoteExpectedPitchDigit {
+                            span: Span::new(pos, pos + pitch_char.len_utf8()),
+                            ch: pitch_char,
+                        },
+                    ));
+                }
+            }
+        };
+        Ok((NoteHead { pitch, is_rest }, start + 1, is_rest, Vec::new()))
     }
 
     fn head_boundary(chars: &[char], i: usize) -> bool {
@@ -110,16 +114,16 @@ impl TimedUnitHead for NoteHead {
     }
 }
 
-fn pitch_char_to_jianpu(pitch_char: char) -> JianPuPitch {
+fn pitch_char_to_jianpu(pitch_char: char) -> Option<JianPuPitch> {
     match pitch_char {
-        '1' => JianPuPitch::One,
-        '2' => JianPuPitch::Two,
-        '3' => JianPuPitch::Three,
-        '4' => JianPuPitch::Four,
-        '5' => JianPuPitch::Five,
-        '6' => JianPuPitch::Six,
-        '7' => JianPuPitch::Seven,
-        _ => unreachable!("validated pitch digit"),
+        '1' => Some(JianPuPitch::One),
+        '2' => Some(JianPuPitch::Two),
+        '3' => Some(JianPuPitch::Three),
+        '4' => Some(JianPuPitch::Four),
+        '5' => Some(JianPuPitch::Five),
+        '6' => Some(JianPuPitch::Six),
+        '7' => Some(JianPuPitch::Seven),
+        _ => None,
     }
 }
 

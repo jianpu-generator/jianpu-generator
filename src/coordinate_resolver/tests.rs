@@ -19,7 +19,7 @@ fn single_row_page(element: GridElement) -> GridPage {
 
 #[test]
 fn resolve_empty_pages_returns_empty() {
-    assert!(resolve(&[], 12.0).is_empty());
+    assert!(resolve(&[], 12.0).unwrap().is_empty());
 }
 
 #[test]
@@ -38,7 +38,7 @@ fn note_head_halign_center_has_x_at_center_of_column() {
         },
     };
     let page = single_row_page(el);
-    let abs = resolve(&[page], 12.0);
+    let abs = resolve(&[page], 12.0).unwrap();
     let note = abs[0]
         .elements
         .iter()
@@ -80,7 +80,7 @@ fn valign_top_places_y_at_row_top() {
         measure_highlights: vec![],
         error_highlights: vec![],
     };
-    let abs = resolve(&[page], 12.0);
+    let abs = resolve(&[page], 12.0).unwrap();
     let line = abs[0]
         .elements
         .iter()
@@ -105,7 +105,7 @@ fn halign_end_places_x_at_right_of_column_span() {
         },
     };
     let page = single_row_page(el);
-    let abs = resolve(&[page], 12.0);
+    let abs = resolve(&[page], 12.0).unwrap();
     let text = abs[0]
         .elements
         .iter()
@@ -132,7 +132,7 @@ fn octave_dot_grid_content_emits_nothing() {
         content: GridContent::OctaveDot,
     };
     let page = single_row_page(el);
-    let abs = resolve(&[page], 12.0);
+    let abs = resolve(&[page], 12.0).unwrap();
     assert!(
         abs[0].elements.is_empty(),
         "OctaveDot should emit no AbsoluteElement"
@@ -166,7 +166,7 @@ fn measure_highlight_produces_prepended_rect_element() {
         }],
         error_highlights: vec![],
     };
-    let abs = resolve(&[page], 12.0);
+    let abs = resolve(&[page], 12.0).unwrap();
     assert!(!abs[0].elements.is_empty(), "should have elements");
     let first = &abs[0].elements[0];
     assert!(
@@ -203,7 +203,7 @@ fn error_highlight_resolves_to_absolute_error_highlight() {
             column_end: 5,
         }],
     };
-    let abs_pages: Vec<AbsolutePage> = resolve(&[page], 8.0);
+    let abs_pages: Vec<AbsolutePage> = resolve(&[page], 8.0).unwrap();
     let error_elements: Vec<_> = abs_pages[0]
         .elements
         .iter()
@@ -229,6 +229,6 @@ fn page_with_no_highlight_produces_no_extra_element() {
         measure_highlights: vec![],
         error_highlights: vec![],
     };
-    let abs = resolve(&[page], 12.0);
+    let abs = resolve(&[page], 12.0).unwrap();
     assert!(abs[0].elements.is_empty());
 }

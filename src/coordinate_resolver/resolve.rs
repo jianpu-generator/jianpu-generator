@@ -2,10 +2,14 @@ use crate::compositor::types::{
     AbsoluteContent, AbsoluteElement, AbsolutePage, DominantBaseline, FontFamily, FontWeight,
     TextAnchor,
 };
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 use crate::grid_layout::types::{GridContent, GridElement, GridPage, GridRow, HAlign, VAlign};
 use crate::grid_layout::PAGE_MARGIN;
 
-pub fn resolve(pages: &[GridPage], note_number_width: f32) -> Vec<AbsolutePage> {
+pub fn resolve(
+    pages: &[GridPage],
+    note_number_width: f32,
+) -> Result<Vec<AbsolutePage>, IrrecoverableError> {
     pages
         .iter()
         .map(|page| resolve_page(page, note_number_width))
@@ -18,7 +22,7 @@ fn resolve_row_element(
     row_y: f32,
     col_width: f32,
     note_number_width: f32,
-) -> Option<AbsoluteElement> {
+) -> Result<Option<AbsoluteElement>, IrrecoverableError> {
     let x_start = PAGE_MARGIN + el.column as f32 * col_width;
     let span_width = el.column_span as f32 * col_width;
     let x = match el.halign {
@@ -36,48 +40,62 @@ fn resolve_row_element(
         let note_center_x = x_start + col_width * 0.5;
         let ul_x = note_center_x - note_number_width * 0.5;
         let ul_width = (el.column_span as f32 - 1.0) * col_width + note_number_width;
-        return Some(AbsoluteElement {
+        return Ok(Some(AbsoluteElement {
             x: ul_x,
             y,
             content: AbsoluteContent::Underline {
                 width: ul_width,
                 level: *level,
             },
-        });
+        }));
     }
 
     if matches!(
         el.content,
         GridContent::TieOrSlur | GridContent::TieOrSlurTail | GridContent::TieOrSlurHead
     ) {
-        let arc_x = match &el.content {
-            GridContent::TieOrSlur | GridContent::TieOrSlurTail => x_start + col_width * 0.5,
-            GridContent::TieOrSlurHead => x_start,
-            _ => unreachable!(),
-        };
-        let arc_width = match &el.content {
-            GridContent::TieOrSlur => (el.column_span as f32 - 1.0) * col_width,
-            GridContent::TieOrSlurTail => el.column_span as f32 * col_width - col_width * 0.5,
-            GridContent::TieOrSlurHead => {
-                (el.column_span as f32 - 1.0) * col_width + col_width * 0.5
+        let (arc_x, arc_width) = match &el.content {
+            GridContent::TieOrSlur => (
+                x_start + col_width * 0.5,
+                (el.column_span as f32 - 1.0) * col_width,
+            ),
+            GridContent::TieOrSlurTail => (
+                x_start + col_width * 0.5,
+                el.column_span as f32 * col_width - col_width * 0.5,
+            ),
+            GridContent::TieOrSlurHead => (
+                x_start,
+                (el.column_span as f32 - 1.0) * col_width + col_width * 0.5,
+            ),
+            other => {
+                return Err(IrrecoverableError::new(
+                    IrrecoverableErrorKind::internal_invariant(
+                        Span::new(0, 0),
+                        format!("unexpected GridContent variant in tie/slur block: {other:?}"),
+                    ),
+                ))
             }
-            _ => unreachable!(),
         };
-        return Some(AbsoluteElement {
+        return Ok(Some(AbsoluteElement {
             x: arc_x,
             y,
             content: AbsoluteContent::TieOrSlur { width: arc_width },
-        });
+        }));
     }
 
-    grid_to_absolute(&el.content, span_width, el.halign).map(|content| AbsoluteElement {
-        x,
-        y,
-        content,
-    })
+    Ok(
+        grid_to_absolute(&el.content, span_width, el.halign)?.map(|content| AbsoluteElement {
+            x,
+            y,
+            content,
+        }),
+    )
 }
 
-fn resolve_page(page: &GridPage, note_number_width: f32) -> AbsolutePage {
+fn resolve_page(
+    page: &GridPage,
+    note_number_width: f32,
+) -> Result<AbsolutePage, IrrecoverableError> {
     let usable_width = page.width_pt - 2.0 * PAGE_MARGIN;
     let mut elements: Vec<AbsoluteElement> = Vec::new();
     let mut row_y = PAGE_MARGIN;
@@ -87,7 +105,8 @@ fn resolve_page(page: &GridPage, note_number_width: f32) -> AbsolutePage {
         row_tops.push(row_y);
         let col_width = row.column_width_pt(usable_width);
         for el in &row.elements {
-            if let Some(element) = resolve_row_element(el, row, row_y, col_width, note_number_width)
+            if let Some(element) =
+                resolve_row_element(el, row, row_y, col_width, note_number_width)?
             {
                 elements.push(element);
             }
@@ -106,11 +125,11 @@ fn resolve_page(page: &GridPage, note_number_width: f32) -> AbsolutePage {
     highlight_elements.extend(error_elements);
     highlight_elements.extend(elements);
 
-    AbsolutePage {
+    Ok(AbsolutePage {
         width_pt: page.width_pt,
         height_pt: page.height_pt,
         elements: highlight_elements,
-    }
+    })
 }
 
 fn resolve_single_measure_highlight(
@@ -292,12 +311,12 @@ fn grid_to_absolute(
     content: &GridContent,
     span_width: f32,
     halign: HAlign,
-) -> Option<AbsoluteContent> {
+) -> Result<Option<AbsoluteContent>, IrrecoverableError> {
     if let Some(content) = grid_text_to_absolute(content, span_width, halign) {
-        return Some(content);
+        return Ok(Some(content));
     }
 
-    match content {
+    Ok(match content {
         GridContent::NoteHead {
             pitch,
             octave,
@@ -315,10 +334,15 @@ fn grid_to_absolute(
             level: *level,
         }),
         GridContent::TieOrSlur | GridContent::TieOrSlurTail | GridContent::TieOrSlurHead => {
-            unreachable!("arc variants are handled as special cases before grid_to_absolute")
+            return Err(IrrecoverableError::new(
+                IrrecoverableErrorKind::internal_invariant(
+                    Span::new(0, 0),
+                    "arc variants must be resolved before reaching grid_to_absolute",
+                ),
+            ))
         }
         GridContent::BarLine { height_pt } => Some(AbsoluteContent::BarLine { height: *height_pt }),
         GridContent::LyricSyllable(s) => Some(AbsoluteContent::Lyric(s.clone())),
         _ => None,
-    }
+    })
 }

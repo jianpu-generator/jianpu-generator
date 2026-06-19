@@ -213,7 +213,7 @@ fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableErro
     let score = parse_and_group(&opts.input)?;
     let mut score = score;
     jg::filter_tracks(&mut score, &opts.tracks);
-    let svgs = jg::render_svgs(&score);
+    let svgs = jg::render_svgs(&score)?;
     let pdf_bytes = jg::pdf::write_pdf(&svgs)?;
     let output_path =
         output_stem(&opts.input, &opts.tracks, opts.output.as_deref()).with_extension("pdf");
@@ -247,7 +247,7 @@ fn generate_svg(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableErro
             &opts.tracks,
             &display_names,
             |score_clone, _, label, base, base_name| {
-                let svgs = jg::render_svgs(score_clone);
+                let svgs = jg::render_svgs(score_clone)?;
                 for (i, svg) in svgs.iter().enumerate() {
                     let path = if svgs.len() == 1 {
                         base.with_file_name(jg::split_track_filename(base_name, label, "svg"))
@@ -272,7 +272,7 @@ fn generate_svg(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableErro
 
     let mut score = score;
     jg::filter_tracks(&mut score, &opts.tracks);
-    let svgs = jg::render_svgs(&score);
+    let svgs = jg::render_svgs(&score)?;
     let output_path =
         output_stem(&opts.input, &opts.tracks, opts.output.as_deref()).with_extension("svg");
     write_svgs_to_path(&svgs, &output_path)
