@@ -1,11 +1,11 @@
 use super::beat_padding::validate_and_pad_beats;
 use super::errors::invariant;
-#[allow(clippy::wildcard_imports)]
-use super::*;
-#[allow(unused_imports)]
-use super::{notes_syllables_mut, timed_events_mut};
-use crate::error::{Diagnostic, IrrecoverableErrorKind, RecoverableError};
+use super::{notes_syllables_mut, BarGroupContext, SlotAction, TrackAccumulator};
+use crate::error::{
+    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span,
+};
 use crate::parser::score::token_parser;
+use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics};
 
 fn is_recoverable_chord_line_error(kind: &IrrecoverableErrorKind) -> bool {
     matches!(

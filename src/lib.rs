@@ -3,6 +3,8 @@
 #![forbid(clippy::too_many_lines)]
 #![forbid(clippy::indexing_slicing)]
 #![forbid(clippy::too_many_arguments)]
+#![forbid(clippy::wildcard_imports)]
+#![forbid(clippy::type_complexity)]
 
 pub mod ast;
 pub mod combiner;
