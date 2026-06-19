@@ -159,10 +159,10 @@ fn desugar_group(
             let source = (0..resolved.len())
                 .rev()
                 .find(|&j| slots.get(j).map(|s| s.role == role).unwrap_or(false))
-                .and_then(|j| resolved.get(j).map(|r| r.0.clone()));
+                .and_then(|j| resolved.get(j).cloned());
 
             match source {
-                Some(src_content) => resolved.push((src_content, *offset)),
+                Some((src_content, src_offset)) => resolved.push((src_content, src_offset)),
                 None => {
                     let span = Span::new(base_offset + *offset, base_offset + *offset + 1);
                     recoverable_error.get_or_insert_with(|| {
