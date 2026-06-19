@@ -41,6 +41,8 @@ pub enum WarningKind {
     ChordBassTrailingChars,
     /// A note/rest duration crosses the half-bar boundary in 4/4 time.
     HalfBarBoundaryCrossed,
+    /// A tie/slur group `(…)` contains fewer than 2 notes — group depth is not applied.
+    GroupTooFewNotes,
 }
 
 impl WarningKind {
@@ -52,6 +54,7 @@ impl WarningKind {
             Self::ChordBassUnexpectedChar => "chord_bass_unexpected_char",
             Self::ChordBassTrailingChars => "chord_bass_trailing_chars",
             Self::HalfBarBoundaryCrossed => "half_bar_boundary_crossed",
+            Self::GroupTooFewNotes => "group_too_few_notes",
         }
     }
 }
@@ -79,6 +82,14 @@ impl Warning {
             span,
             message: "note/rest crosses the half-bar boundary (beat 2→3); use a beam group or tie to show the split".to_string(),
             kind: WarningKind::HalfBarBoundaryCrossed,
+        }
+    }
+
+    pub fn group_too_few_notes(span: Span) -> Self {
+        Self {
+            span,
+            message: "tie/slur group `(…)` must contain at least 2 notes".to_string(),
+            kind: WarningKind::GroupTooFewNotes,
         }
     }
 }

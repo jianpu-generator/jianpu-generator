@@ -418,8 +418,11 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
                 })?;
 
                 let note_count = frame.note_count;
-                validate_group_note_count(note_count, &rparen_span)?;
-                apply_closed_group_depth(&mut self.staging[frame.segment_start..]);
+                if let Some(warning) = validate_group_note_count(note_count, &rparen_span) {
+                    self.chord_errors.push(Diagnostic::Warning(warning));
+                } else {
+                    apply_closed_group_depth(&mut self.staging[frame.segment_start..]);
+                }
             }
             _ => {
                 // No closing paren — treat as an open (cross-line) group: apply open depth.
@@ -443,9 +446,12 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
         })?;
 
         let note_count = frame.note_count;
-        validate_group_note_count(note_count, &rparen_span)?;
-        apply_closed_group_depth(&mut self.staging[frame.segment_start..]);
-        annotate_slur_close_via_extension(&mut self.staging[frame.segment_start..]);
+        if let Some(warning) = validate_group_note_count(note_count, &rparen_span) {
+            self.chord_errors.push(Diagnostic::Warning(warning));
+        } else {
+            apply_closed_group_depth(&mut self.staging[frame.segment_start..]);
+            annotate_slur_close_via_extension(&mut self.staging[frame.segment_start..]);
+        }
 
         Ok(())
     }

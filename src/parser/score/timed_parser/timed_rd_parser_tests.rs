@@ -1,7 +1,7 @@
 use super::note_head::NoteHead;
 use super::{parse_timed_line, GroupStack, LexContext};
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{Diagnostic, RecoverableErrorKind, Spanned};
+use crate::error::{Diagnostic, RecoverableErrorKind, Spanned, WarningKind};
 
 fn parse_note_events(line: &str, stack: &mut GroupStack) -> Vec<Spanned<ScoreEvent>> {
     parse_timed_line::<NoteHead>(line, 0, stack, LexContext::Notes)
@@ -128,11 +128,19 @@ fn parses_spaced_nested_outer_group() {
 }
 
 #[test]
-fn rejects_single_note_group() {
-    // (3) should be rejected — groups must have at least 2 notes
-    assert!(
+fn single_note_group_emits_warning() {
+    // (3) should recover — the note is emitted and a Warning is reported
+    let result =
         parse_timed_line::<NoteHead>("(3)", 0, &mut GroupStack::default(), LexContext::Notes)
-            .is_err()
+            .expect("should not be irrecoverable");
+    assert_eq!(result.events.len(), 1, "note should still be emitted");
+    assert_eq!(result.chord_errors.len(), 1, "should emit one diagnostic");
+    assert!(
+        matches!(
+            &result.chord_errors[0],
+            Diagnostic::Warning(w) if matches!(w.kind, WarningKind::GroupTooFewNotes)
+        ),
+        "expected Warning::GroupTooFewNotes"
     );
 }
 

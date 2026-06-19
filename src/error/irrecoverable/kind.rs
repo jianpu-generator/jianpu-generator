@@ -243,9 +243,6 @@ pub enum IrrecoverableErrorKind {
     DurationCannotDotQuarterBeat {
         span: Span,
     },
-    GroupTooFewNotes {
-        span: Span,
-    },
     GroupUnexpectedCloseParen {
         span: Span,
     },

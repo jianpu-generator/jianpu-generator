@@ -56,9 +56,6 @@ pub(super) fn write(
             formatter,
             "cannot dot a quarter-beat (=) note; use _ or no duration suffix"
         )),
-        IrrecoverableErrorKind::GroupTooFewNotes { .. } => {
-            Some(write!(formatter, "tie/slur group `(…)` must contain at least 2 notes"))
-        }
         IrrecoverableErrorKind::GroupUnexpectedCloseParen { .. } => {
             Some(write!(formatter, "unexpected `)` — no open group"))
         }

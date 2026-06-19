@@ -111,7 +111,6 @@ fn note_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
         | IrrecoverableErrorKind::DurationUnexpectedChar { span, .. }
         | IrrecoverableErrorKind::DurationMixedOctaveMarkers { span }
         | IrrecoverableErrorKind::DurationCannotDotQuarterBeat { span }
-        | IrrecoverableErrorKind::GroupTooFewNotes { span }
         | IrrecoverableErrorKind::GroupUnexpectedCloseParen { span }
         | IrrecoverableErrorKind::UnclosedGroupAtEnd { span, .. }
         | IrrecoverableErrorKind::LyricsLineEmpty { span }

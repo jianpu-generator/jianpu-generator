@@ -1,6 +1,6 @@
 #![allow(clippy::indexing_slicing)]
 
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
+use crate::error::{Span, Warning};
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct GroupStack {
@@ -38,13 +38,12 @@ impl GroupStack {
     }
 }
 
-pub fn validate_group_note_count(count: usize, span: &Span) -> Result<(), IrrecoverableError> {
+pub fn validate_group_note_count(count: usize, span: &Span) -> Option<Warning> {
     if count < 2 {
-        return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::GroupTooFewNotes { span: *span },
-        ));
+        Some(Warning::group_too_few_notes(*span))
+    } else {
+        None
     }
-    Ok(())
 }
 
 pub trait HasGroupDepth {

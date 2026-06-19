@@ -244,16 +244,38 @@ mod tests {
     }
 
     #[test]
-    fn rejects_single_note_group() {
-        assert!(parse("(3)").is_err());
-        assert!(parse("(5)").is_err());
+    fn single_note_group_emits_warning() {
+        use crate::error::{Diagnostic, WarningKind};
+        for input in &["(3)", "(5)"] {
+            let result = parse(input).expect("should not be irrecoverable");
+            assert_eq!(
+                result.events.len(),
+                1,
+                "note should still be emitted for {input}"
+            );
+            assert!(
+                result.chord_errors.iter().any(|d| matches!(
+                    d,
+                    Diagnostic::Warning(w) if matches!(w.kind, WarningKind::GroupTooFewNotes)
+                )),
+                "expected GroupTooFewNotes warning for {input}"
+            );
+        }
     }
 
     #[test]
-    fn rejects_single_note_cross_measure_group() {
+    fn single_note_cross_measure_group_emits_warning() {
+        use crate::error::{Diagnostic, WarningKind};
         let mut state = GroupStack::default();
         parse_with_state("(1", &mut state).unwrap();
-        assert!(parse_with_state(")", &mut state).is_err());
+        let result = parse_with_state(")", &mut state).expect("should not be irrecoverable");
+        assert!(
+            result.chord_errors.iter().any(|d| matches!(
+                d,
+                Diagnostic::Warning(w) if matches!(w.kind, WarningKind::GroupTooFewNotes)
+            )),
+            "expected GroupTooFewNotes warning"
+        );
     }
 
     #[test]
