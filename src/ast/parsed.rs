@@ -1,4 +1,4 @@
-use crate::error::{Diagnostic, Span, Spanned, Warning};
+use crate::error::{Diagnostic, RecoverableError, Span, Spanned, Warning};
 
 #[derive(Debug)]
 pub struct ParsedScore {
@@ -88,14 +88,15 @@ pub struct ParsedTimedTrack {
     pub lyrics_ditto_measures: Vec<bool>,
     /// Per-measure beat-overflow error (None = no overflow for that measure).
     pub per_measure_beat_errors: Vec<Option<Warning>>,
-    /// Per-measure dotted-eighth grouping errors (empty = no violations for that measure).
-    pub per_measure_dotted_eighth_errors: Vec<Vec<Warning>>,
+    /// Per-measure grouping diagnostics: dotted-eighth errors (RecoverableError) and
+    /// half-bar-boundary warnings (Warning), mixed as Diagnostic.
+    pub per_measure_dotted_eighth_errors: Vec<Vec<Diagnostic>>,
     /// Per-measure dash-after-rest errors from suffix dashes on rests during token parse.
-    pub per_measure_dash_after_rest_errors: Vec<Option<Warning>>,
-    /// Per-measure recoverable chord parse errors (empty = no violations for that measure).
+    pub per_measure_dash_after_rest_errors: Vec<Option<RecoverableError>>,
+    /// Per-measure recoverable chord parse diagnostics (empty = no violations for that measure).
     pub per_measure_chord_errors: Vec<Vec<Diagnostic>>,
     /// Per-measure recoverable lex error from an unexpected character on the notes line.
-    pub per_measure_lex_errors: Vec<Option<Warning>>,
+    pub per_measure_lex_errors: Vec<Option<RecoverableError>>,
     /// Parallel to `per_measure_beat_errors`: `Some` when that measure's notes line
     /// was `_` (empty placeholder) and produced no timed events.
     pub empty_note_measure_spans: Vec<Option<Span>>,
@@ -108,7 +109,7 @@ pub struct ParsedDocument {
     pub tracks: Vec<ParsedTrack>,
     pub directive_events_per_measure: Vec<Vec<Spanned<ScoreEvent>>>,
     /// Per-measure recoverable errors from desugaring (e.g. missing lyrics line).
-    pub per_measure_parse_errors: Vec<Option<Warning>>,
+    pub per_measure_parse_errors: Vec<Option<RecoverableError>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

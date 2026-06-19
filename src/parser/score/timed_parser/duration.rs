@@ -1,7 +1,7 @@
 #![allow(clippy::indexing_slicing)]
 
 use super::TimedUnitHead;
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Warning};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
 
 pub struct DurationParse {
     pub duration: u32,
@@ -9,7 +9,7 @@ pub struct DurationParse {
     pub octave_up: i8,
     pub octave_down: i8,
     pub next_index: usize,
-    pub dash_after_rest_error: Option<Warning>,
+    pub dash_after_rest_error: Option<RecoverableError>,
 }
 
 struct DurationSuffixState {
@@ -17,7 +17,7 @@ struct DurationSuffixState {
     dotted: bool,
     octave_up: i8,
     octave_down: i8,
-    dash_after_rest_error: Option<Warning>,
+    dash_after_rest_error: Option<RecoverableError>,
 }
 
 struct DurationSuffixContext<'a> {
@@ -58,7 +58,7 @@ impl DurationSuffixContext<'_> {
                         + byte_offset_at_char_index_from_chars(self.chars, self.start, index);
                     if self.state.dash_after_rest_error.is_none() {
                         self.state.dash_after_rest_error =
-                            Some(Warning::dash_after_rest(Span::new(pos, pos + 1)));
+                            Some(RecoverableError::dash_after_rest(Span::new(pos, pos + 1)));
                     }
                     Ok(Some(index + 1))
                 } else {

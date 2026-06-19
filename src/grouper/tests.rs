@@ -52,31 +52,31 @@ fn extension_adds_to_previous_note_duration() {
 
 #[test]
 fn chord_invalid_token_is_recoverable() {
-    use crate::error::WarningKind;
+    use crate::error::{Diagnostic, RecoverableErrorKind};
     let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "[parts]\nChords = chord\nMelody = notes\n\n",
         "[score]\n(time=4/4 key=C4 bpm=120)\n@ 0 0 0\n1 2 3 4\n",
     ));
-    assert!(score.measures[0]
-        .diagnostics
-        .iter()
-        .any(|d| d.warning_kind() == Some(WarningKind::ChordExpectedDegreeDigit)));
+    assert!(score.measures[0].diagnostics.iter().any(|d| matches!(
+        d,
+        Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::ChordExpectedDegreeDigit { .. })
+    )));
     assert!(!score.measures.is_empty());
 }
 
 #[test]
 fn chord_expected_degree_digit_is_recoverable() {
-    use crate::error::WarningKind;
+    use crate::error::{Diagnostic, RecoverableErrorKind};
     let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "[parts]\nChords = chord\nMelody = notes\n\n",
         "[score]\n(time=4/4 key=C4 bpm=120)\n8 2 3 4\n1 2 3 4\n",
     ));
-    assert!(score.measures[0]
-        .diagnostics
-        .iter()
-        .any(|d| d.warning_kind() == Some(WarningKind::ChordExpectedDegreeDigit)));
+    assert!(score.measures[0].diagnostics.iter().any(|d| matches!(
+        d,
+        Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::ChordExpectedDegreeDigit { .. })
+    )));
     let chord_row = score.measures[0]
         .parts
         .iter()
@@ -146,7 +146,7 @@ fn chord_bass_trailing_chars_is_recoverable() {
 
 #[test]
 fn measure_wrong_line_count_is_recoverable() {
-    use crate::error::WarningKind;
+    use crate::error::{Diagnostic, RecoverableErrorKind};
     // One notes+lyrics part expects two data lines but only the notes line is present.
     let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n",
@@ -154,10 +154,10 @@ fn measure_wrong_line_count_is_recoverable() {
     ));
     assert_eq!(score.measures.len(), 1);
     assert_eq!(score.measures[0].diagnostics.len(), 1);
-    assert_eq!(
-        score.measures[0].diagnostics[0].warning_kind(),
-        Some(WarningKind::MeasureWrongLineCount)
-    );
+    assert!(matches!(
+        &score.measures[0].diagnostics[0],
+        Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::MeasureMissingRoleLine { .. })
+    ));
     assert!(
         score.measures[0].diagnostics[0]
             .message()
@@ -198,30 +198,30 @@ fn ditto_no_precedent_is_recoverable() {
 
 #[test]
 fn suffix_dash_after_rest_is_recoverable() {
-    use crate::error::WarningKind;
+    use crate::error::{Diagnostic, RecoverableErrorKind};
     let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n",
         "[score]\n(time=4/4 key=C4 bpm=120)\n0---\n_\n",
     ));
     assert_eq!(score.measures[0].diagnostics.len(), 1);
-    assert_eq!(
-        score.measures[0].diagnostics[0].warning_kind(),
-        Some(WarningKind::DashAfterRest)
-    );
+    assert!(matches!(
+        &score.measures[0].diagnostics[0],
+        Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::DashAfterRest)
+    ));
 }
 
 #[test]
 fn dash_after_rest_is_recoverable() {
-    use crate::error::WarningKind;
+    use crate::error::{Diagnostic, RecoverableErrorKind};
     let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n",
         "[score]\n(time=4/4 key=C4 bpm=120)\n0 - - -\n_\n",
     ));
     assert_eq!(score.measures[0].diagnostics.len(), 1);
-    assert_eq!(
-        score.measures[0].diagnostics[0].warning_kind(),
-        Some(WarningKind::DashAfterRest)
-    );
+    assert!(matches!(
+        &score.measures[0].diagnostics[0],
+        Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::DashAfterRest)
+    ));
 }
 
 #[test]

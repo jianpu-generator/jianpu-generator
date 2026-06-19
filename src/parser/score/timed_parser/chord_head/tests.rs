@@ -1,5 +1,7 @@
 use super::*;
-use crate::error::{Diagnostic, IrrecoverableError, IrrecoverableErrorKind, Span, WarningKind};
+use crate::error::{
+    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableErrorKind, Span, WarningKind,
+};
 use crate::parser::score::timed_parser::{parse_timed_line, GroupStack, LexContext};
 
 fn chord(
@@ -52,20 +54,12 @@ fn parse_line(line: &str) -> Vec<ScoreEvent> {
         .collect()
 }
 
-fn parse_line_with_errors(line: &str) -> (Vec<ScoreEvent>, Vec<WarningKind>) {
+fn parse_line_with_errors(line: &str) -> (Vec<ScoreEvent>, Vec<Diagnostic>) {
     let parsed =
         parse_timed_line::<ChordHead>(line, 0, &mut GroupStack::default(), LexContext::Chords)
             .unwrap();
     let events = parsed.events.into_iter().map(|e| e.value).collect();
-    let errors = parsed
-        .chord_errors
-        .into_iter()
-        .filter_map(|d| match d {
-            Diagnostic::Warning(w) => Some(w.kind),
-            Diagnostic::Error(_) => None,
-        })
-        .collect();
-    (events, errors)
+    (events, parsed.chord_errors)
 }
 
 #[test]
@@ -398,7 +392,7 @@ fn rejects_invalid_token_at_lexer() {
     assert!(parsed.events.is_empty());
     assert!(parsed.chord_errors.iter().any(|d| matches!(
         d,
-        Diagnostic::Warning(w) if w.kind == WarningKind::ChordExpectedDegreeDigit
+        Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::ChordExpectedDegreeDigit { .. })
     )));
 }
 
@@ -407,7 +401,10 @@ fn recovers_unknown_suffix() {
     let (events, errors) = parse_line_with_errors("1z");
     assert_eq!(events.len(), 1);
     assert!(matches!(events[0], ScoreEvent::Chord(_)));
-    assert!(errors.contains(&WarningKind::ChordUnknownSuffix));
+    assert!(errors.iter().any(|d| matches!(
+        d,
+        Diagnostic::Warning(w) if w.kind == WarningKind::ChordUnknownSuffix
+    )));
 }
 
 #[test]
@@ -415,7 +412,10 @@ fn recovers_expected_degree_digit_by_skipping_symbol() {
     let (events, errors) = parse_line_with_errors("8 2");
     assert_eq!(events.len(), 1);
     assert!(matches!(events[0], ScoreEvent::Chord(_)));
-    assert!(errors.contains(&WarningKind::ChordExpectedDegreeDigit));
+    assert!(errors.iter().any(|d| matches!(
+        d,
+        Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::ChordExpectedDegreeDigit { .. })
+    )));
 }
 
 #[test]
@@ -423,21 +423,30 @@ fn recovers_invalid_bass() {
     let (events, errors) = parse_line_with_errors("1/X");
     assert_eq!(events.len(), 1);
     assert!(matches!(events[0], ScoreEvent::Chord(_)));
-    assert!(errors.contains(&WarningKind::ChordInvalidBass));
+    assert!(errors.iter().any(|d| matches!(
+        d,
+        Diagnostic::Warning(w) if w.kind == WarningKind::ChordInvalidBass
+    )));
 }
 
 #[test]
 fn recovers_bass_unexpected_char() {
     let (events, errors) = parse_line_with_errors("1/5x");
     assert_eq!(events.len(), 1);
-    assert!(errors.contains(&WarningKind::ChordBassUnexpectedChar));
+    assert!(errors.iter().any(|d| matches!(
+        d,
+        Diagnostic::Warning(w) if w.kind == WarningKind::ChordBassUnexpectedChar
+    )));
 }
 
 #[test]
 fn recovers_bass_trailing_chars() {
     let (events, errors) = parse_line_with_errors("1/5bb");
     assert_eq!(events.len(), 1);
-    assert!(errors.contains(&WarningKind::ChordBassTrailingChars));
+    assert!(errors.iter().any(|d| matches!(
+        d,
+        Diagnostic::Warning(w) if w.kind == WarningKind::ChordBassTrailingChars
+    )));
 }
 
 #[test]
@@ -445,7 +454,10 @@ fn recovers_octave_suffix() {
     let (events, errors) = parse_line_with_errors("1'");
     assert_eq!(events.len(), 1);
     assert!(matches!(events[0], ScoreEvent::Chord(_)));
-    assert!(errors.contains(&WarningKind::ChordInvalidToken));
+    assert!(errors.iter().any(|d| matches!(
+        d,
+        Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::ChordInvalidToken { .. })
+    )));
 }
 
 #[test]

@@ -29,14 +29,14 @@ pub use groups::{
 };
 
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{Diagnostic, IrrecoverableError, Span, Spanned, Warning};
+use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Spanned};
 
-type ParseHeadResult<H> = Result<(H, usize, bool, Vec<Warning>), IrrecoverableError>;
+type ParseHeadResult<H> = Result<(H, usize, bool, Vec<Diagnostic>), IrrecoverableError>;
 
 /// Parsed events from one timed notation line, plus any recoverable errors collected while parsing.
 pub struct TimedLineParse {
     pub events: Vec<Spanned<ScoreEvent>>,
-    pub dash_after_rest_error: Option<Warning>,
+    pub dash_after_rest_error: Option<RecoverableError>,
     pub chord_errors: Vec<Diagnostic>,
 }
 
@@ -68,8 +68,8 @@ pub trait TimedUnitHead: Sized {
         true
     }
 
-    /// When `parse_head` fails, return a recoverable error and skip this timed unit.
-    fn recover_parse_head_error(_: &IrrecoverableError) -> Option<Warning> {
+    /// When `parse_head` fails, return a recoverable diagnostic and skip this timed unit.
+    fn recover_parse_head_error(_: &IrrecoverableError) -> Option<Diagnostic> {
         None
     }
 

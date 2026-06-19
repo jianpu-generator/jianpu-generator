@@ -4,7 +4,7 @@ use crate::ast::parsed::{
     Accidental, BassDegree, Extension, JianPuPitch, ParsedChordNote, ParsedRest, ScoreEvent,
     TriadQuality,
 };
-use crate::error::{Diagnostic, IrrecoverableError, IrrecoverableErrorKind, Span, Warning};
+use crate::error::{Diagnostic, IrrecoverableError, IrrecoverableErrorKind, Span};
 
 pub struct ChordHead {
     degree: JianPuPitch,
@@ -25,7 +25,7 @@ struct ParsedChordSymbolFields {
 
 struct ChordSymbolParse {
     fields: ParsedChordSymbolFields,
-    errors: Vec<Warning>,
+    errors: Vec<Diagnostic>,
 }
 
 impl TimedUnitHead for ChordHead {
@@ -33,7 +33,7 @@ impl TimedUnitHead for ChordHead {
         chars: &[char],
         start: usize,
         span: &Span,
-    ) -> Result<(Self, usize, bool, Vec<Warning>), IrrecoverableError> {
+    ) -> Result<(Self, usize, bool, Vec<Diagnostic>), IrrecoverableError> {
         let degree_char = chars[start];
         if !matches!(degree_char, '0'..='7') {
             let pos = span.start + byte_offset_at_char_index_from_chars(chars, start);
@@ -85,10 +85,10 @@ impl TimedUnitHead for ChordHead {
         false
     }
 
-    fn recover_parse_head_error(error: &IrrecoverableError) -> Option<Warning> {
+    fn recover_parse_head_error(error: &IrrecoverableError) -> Option<Diagnostic> {
         match error.kind {
             IrrecoverableErrorKind::ChordExpectedDegreeDigit { .. } => {
-                Some(Warning::from_chord_irrecoverable(error))
+                Some(Diagnostic::from_chord_irrecoverable(error))
             }
             _ => None,
         }
@@ -120,9 +120,11 @@ impl TimedUnitHead for ChordHead {
                 next_index,
                 dash_after_rest_error: None,
             },
-            Diagnostic::Warning(Warning::chord_invalid_token(
-                err_span,
-                format!("octave suffix '{ch}' is not allowed on chord symbols"),
+            Diagnostic::from_chord_irrecoverable(&IrrecoverableError::new(
+                IrrecoverableErrorKind::ChordInvalidToken {
+                    span: err_span,
+                    token: format!("octave suffix '{ch}' is not allowed on chord symbols"),
+                },
             )),
         ))
     }
@@ -233,13 +235,13 @@ fn parse_chord_symbol(token: &str, span: Span) -> Result<ChordSymbolParse, Irrec
     } else if ext_str.is_empty() {
         None
     } else {
-        errors.push(Warning::from_chord_irrecoverable(&IrrecoverableError::new(
-            IrrecoverableErrorKind::ChordUnknownSuffix {
+        errors.push(Diagnostic::from_chord_irrecoverable(
+            &IrrecoverableError::new(IrrecoverableErrorKind::ChordUnknownSuffix {
                 span,
                 suffix: ext_str.to_string(),
                 token: token.to_string(),
-            },
-        )));
+            }),
+        ));
         None
     };
 
@@ -257,15 +259,15 @@ fn parse_chord_symbol(token: &str, span: Span) -> Result<ChordSymbolParse, Irrec
     })
 }
 
-fn parse_bass(s: &str, span: Span, errors: &mut Vec<Warning>) -> Option<BassDegree> {
+fn parse_bass(s: &str, span: Span, errors: &mut Vec<Diagnostic>) -> Option<BassDegree> {
     let mut chars = s.chars();
     let degree = chars.next().and_then(char_to_pitch).or_else(|| {
-        errors.push(Warning::from_chord_irrecoverable(&IrrecoverableError::new(
-            IrrecoverableErrorKind::ChordInvalidBass {
+        errors.push(Diagnostic::from_chord_irrecoverable(
+            &IrrecoverableError::new(IrrecoverableErrorKind::ChordInvalidBass {
                 span,
                 bass: s.to_string(),
-            },
-        )));
+            }),
+        ));
         None
     })?;
     let accidental = match chars.next() {
@@ -273,23 +275,23 @@ fn parse_bass(s: &str, span: Span, errors: &mut Vec<Warning>) -> Option<BassDegr
         Some('b') => Accidental::Flat,
         None => Accidental::Natural,
         Some(c) => {
-            errors.push(Warning::from_chord_irrecoverable(&IrrecoverableError::new(
-                IrrecoverableErrorKind::ChordBassUnexpectedChar {
+            errors.push(Diagnostic::from_chord_irrecoverable(
+                &IrrecoverableError::new(IrrecoverableErrorKind::ChordBassUnexpectedChar {
                     span,
                     ch: c,
                     bass: s.to_string(),
-                },
-            )));
+                }),
+            ));
             return None;
         }
     };
     if chars.next().is_some() {
-        errors.push(Warning::from_chord_irrecoverable(&IrrecoverableError::new(
-            IrrecoverableErrorKind::ChordBassTrailingChars {
+        errors.push(Diagnostic::from_chord_irrecoverable(
+            &IrrecoverableError::new(IrrecoverableErrorKind::ChordBassTrailingChars {
                 span,
                 bass: s.to_string(),
-            },
-        )));
+            }),
+        ));
         return None;
     }
     Some(BassDegree { degree, accidental })

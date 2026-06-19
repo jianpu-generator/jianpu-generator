@@ -1,7 +1,7 @@
 use crate::ast::parsed::{
     Accidental, BassDegree, Extension, JianPuPitch, KeyChange, Syllable, TriadQuality,
 };
-use crate::error::{Diagnostic, Span, Warning};
+use crate::error::{Diagnostic, RecoverableError, Span, Warning};
 
 // ── Public final types ────────────────────────────────────────────────────────
 
@@ -130,7 +130,7 @@ pub(crate) struct MeasureDirectives {
 pub(crate) struct GroupedScore {
     pub(crate) measure_directives: Vec<MeasureDirectives>,
     pub(crate) parts: Vec<GroupedTrack>,
-    pub(crate) per_measure_parse_errors: Vec<Option<Warning>>,
+    pub(crate) per_measure_parse_errors: Vec<Option<RecoverableError>>,
 }
 
 pub(crate) struct GroupedMeasure {
@@ -144,13 +144,13 @@ pub(crate) struct GroupedMeasure {
     /// Recoverable beat overflow for this measure (notes trimmed), if any.
     pub(crate) beat_overflow_error: Option<Warning>,
     /// Recoverable error from `-` used after a rest in this measure, if any.
-    pub(crate) dash_after_rest_error: Option<Warning>,
-    /// Recoverable dotted-eighth grouping errors for this measure (empty = none).
-    pub(crate) dotted_eighth_errors: Vec<Warning>,
-    /// Recoverable chord/note parse diagnostics for this measure (empty = none).
+    pub(crate) dash_after_rest_error: Option<RecoverableError>,
+    /// Grouping diagnostics: dotted-eighth RecoverableErrors and half-bar-boundary Warnings.
+    pub(crate) dotted_eighth_errors: Vec<Diagnostic>,
+    /// Chord parse diagnostics: promoted kinds are Error, others are Warning.
     pub(crate) chord_errors: Vec<Diagnostic>,
     /// Recoverable lex error from an unexpected character on the notes line, if any.
-    pub(crate) lex_error: Option<Warning>,
+    pub(crate) lex_error: Option<RecoverableError>,
 }
 
 pub(crate) struct GroupedPart {

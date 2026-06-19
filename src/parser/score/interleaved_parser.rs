@@ -2,7 +2,9 @@ use crate::ast::parsed::{
     flatten_score_line_slots, ParsedTrack, PartDecl, PartKind, ScoreEvent, ScoreLineRole,
     ScoreLineSlot,
 };
-use crate::error::{Diagnostic, IrrecoverableError, IrrecoverableErrorKind, Span, Spanned};
+use crate::error::{
+    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned,
+};
 use crate::parser::score::token_parser::GroupStack;
 use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics, LyricTieState};
 
@@ -35,7 +37,7 @@ type ParseResult = Result<
     (
         Vec<ParsedTrack>,
         DirectiveEventsPerMeasure,
-        Vec<Option<crate::error::Warning>>,
+        Vec<Option<RecoverableError>>,
     ),
     IrrecoverableError,
 >;
@@ -57,14 +59,14 @@ enum TrackAccumulator {
         lyrics_line_ends: Vec<usize>,
         /// Per-measure beat-overflow error (None = no overflow for that measure).
         per_measure_beat_errors: Vec<Option<crate::error::Warning>>,
-        /// Per-measure dotted-eighth grouping errors (empty = no violations for that measure).
-        per_measure_dotted_eighth_errors: Vec<Vec<crate::error::Warning>>,
+        /// Per-measure grouping diagnostics (dotted-eighth errors and half-bar warnings).
+        per_measure_dotted_eighth_errors: Vec<Vec<Diagnostic>>,
         /// Per-measure dash-after-rest errors from suffix dashes on rests during token parse.
-        per_measure_dash_after_rest_errors: Vec<Option<crate::error::Warning>>,
-        /// Per-measure recoverable chord parse errors (empty = no violations for that measure).
+        per_measure_dash_after_rest_errors: Vec<Option<RecoverableError>>,
+        /// Per-measure recoverable chord parse diagnostics (empty = no violations for that measure).
         per_measure_chord_errors: Vec<Vec<Diagnostic>>,
         /// Per-measure recoverable lex error from an unexpected character on the notes line.
-        per_measure_lex_errors: Vec<Option<crate::error::Warning>>,
+        per_measure_lex_errors: Vec<Option<RecoverableError>>,
         /// Parallel to `per_measure_beat_errors`: notes-line `_` placeholders.
         empty_note_measure_spans: Vec<Option<Span>>,
     },
@@ -89,7 +91,7 @@ fn no_notes_track_warning(
     declarations: &[PartDecl],
     content: &str,
     base_offset: usize,
-) -> Option<crate::error::Warning> {
+) -> Option<RecoverableError> {
     declarations
         .iter()
         .any(|d| {
@@ -104,7 +106,7 @@ fn no_notes_track_warning(
         .then_some(())
         .is_none()
         .then(|| {
-            crate::error::Warning::new(
+            RecoverableError::general(
                 Span::new(base_offset, base_offset + content.len()),
                 "parts declaration has no notes track",
             )
@@ -150,8 +152,8 @@ fn assert_all_groups_closed(
 }
 
 fn attach_no_notes_track_warning(
-    per_group_desugar_errors: &mut Vec<Option<crate::error::Warning>>,
-    error: crate::error::Warning,
+    per_group_desugar_errors: &mut Vec<Option<RecoverableError>>,
+    error: RecoverableError,
 ) {
     match per_group_desugar_errors.first_mut() {
         Some(slot @ None) => *slot = Some(error),

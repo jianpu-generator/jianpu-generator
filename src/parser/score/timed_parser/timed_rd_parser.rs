@@ -9,7 +9,7 @@ use super::timed_lexer::TimedLexToken;
 use super::TimedUnitHead;
 use crate::ast::parsed::ScoreEvent;
 use crate::error::{
-    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, Span, Spanned, Warning,
+    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned,
 };
 
 /// A thin wrapper over `Spanned<ScoreEvent>` that holds mutable group-depth fields so that the
@@ -141,12 +141,16 @@ pub struct TimedRdParser<'a, H: TimedUnitHead> {
     stack: &'a mut GroupStack,
     /// Staging area: events with their pending depth accumulators.
     staging: Vec<DepthEvent>,
-    dash_after_rest_error: Option<Warning>,
+    dash_after_rest_error: Option<RecoverableError>,
     chord_errors: Vec<Diagnostic>,
     head: std::marker::PhantomData<H>,
 }
 
-type TimedLineParseResult = (Vec<Spanned<ScoreEvent>>, Option<Warning>, Vec<Diagnostic>);
+type TimedLineParseResult = (
+    Vec<Spanned<ScoreEvent>>,
+    Option<RecoverableError>,
+    Vec<Diagnostic>,
+);
 
 impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
     pub fn parse_line(
@@ -296,7 +300,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
             Ok(parsed) => parsed,
             Err(error) => {
                 if let Some(recoverable) = H::recover_parse_head_error(&error) {
-                    self.chord_errors.push(Diagnostic::Warning(recoverable));
+                    self.chord_errors.push(recoverable);
                     self.bump();
                     self.skip_head_starts_before(self.unit_end_abs(digit_offset));
                     return Ok(());
@@ -304,8 +308,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
                 return Err(error);
             }
         };
-        self.chord_errors
-            .extend(head_errors.into_iter().map(Diagnostic::Warning));
+        self.chord_errors.extend(head_errors);
 
         // Parse duration suffixes.
         let duration_meta =

@@ -4,7 +4,7 @@ use super::errors::invariant;
 use super::*;
 #[allow(unused_imports)]
 use super::{notes_syllables_mut, timed_events_mut};
-use crate::error::{Diagnostic, IrrecoverableErrorKind, Warning};
+use crate::error::{Diagnostic, IrrecoverableErrorKind, RecoverableError};
 use crate::parser::score::token_parser;
 
 fn is_recoverable_chord_line_error(kind: &IrrecoverableErrorKind) -> bool {
@@ -100,7 +100,7 @@ fn push_skipped_notes_measure(
     ctx: &mut BarGroupContext<'_>,
     track_index: usize,
     line_span: Span,
-    lex_error: Option<Warning>,
+    lex_error: Option<RecoverableError>,
     empty_note_measure_span: Option<Span>,
 ) -> Result<(), IrrecoverableError> {
     let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
@@ -145,7 +145,7 @@ fn process_notes_column_line(
     let lex_error = match notes_parse_result {
         Err(ref error) => match &error.kind {
             IrrecoverableErrorKind::LexUnexpectedChar { span, ch } => {
-                Some(Warning::lex_unexpected_char(*span, *ch))
+                Some(RecoverableError::lex_unexpected_char(*span, *ch))
             }
             _ => None,
         },
@@ -179,7 +179,6 @@ fn process_notes_column_line(
         per_measure_beat_errors,
         per_measure_dotted_eighth_errors,
         per_measure_dash_after_rest_errors,
-        per_measure_chord_errors,
         per_measure_lex_errors,
         empty_note_measure_spans,
         ..
@@ -188,7 +187,6 @@ fn process_notes_column_line(
     per_measure_beat_errors.push(padded.beat_overflow_error);
     per_measure_dotted_eighth_errors.push(padded.dotted_eighth_errors);
     per_measure_dash_after_rest_errors.push(notes_parse.dash_after_rest_error);
-    per_measure_chord_errors.push(notes_parse.chord_errors);
     per_measure_lex_errors.push(None);
     empty_note_measure_spans.push(None);
     Ok(())
@@ -239,8 +237,7 @@ fn process_column_line(
                     parsed.dash_after_rest_error,
                 ),
                 Err(error) if is_recoverable_chord_line_error(&error.kind) => {
-                    let recoverable =
-                        Diagnostic::Warning(Warning::from_chord_irrecoverable(&error));
+                    let recoverable = Diagnostic::from_chord_irrecoverable(&error);
                     (vec![], vec![recoverable], None)
                 }
                 Err(error) => return Err(error),

@@ -258,9 +258,9 @@ mod tests {
             .as_ref()
             .expect("recoverable error must be recorded for the measure");
         assert!(
-            error.message.contains("Melody"),
+            error.message().contains("Melody"),
             "recoverable error message should list the declared part 'Melody', got: {}",
-            error.message
+            error.message()
         );
     }
 

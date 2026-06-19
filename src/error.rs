@@ -31,12 +31,6 @@ impl<T> Spanned<T> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WarningKind {
     General,
-    /// `-` used to extend a rest (`0-`, `0---`, or standalone `-` after `0`).
-    DashAfterRest,
-    /// An invalid token was encountered while parsing a chord line.
-    ChordInvalidToken,
-    /// A chord symbol did not start with a degree digit (0–7).
-    ChordExpectedDegreeDigit,
     /// A chord symbol had an unrecognized quality/extension suffix.
     ChordUnknownSuffix,
     /// A slash-chord bass note could not be parsed.
@@ -45,31 +39,19 @@ pub enum WarningKind {
     ChordBassUnexpectedChar,
     /// A slash-chord bass note had trailing characters after the accidental.
     ChordBassTrailingChars,
-    /// A dotted eighth note or rest is not followed by a sixteenth.
-    DottedEighthNeedsSixteenth,
     /// A note/rest duration crosses the half-bar boundary in 4/4 time.
     HalfBarBoundaryCrossed,
-    /// Measure group has the wrong number of data lines for declared parts.
-    MeasureWrongLineCount,
-    /// An unexpected character was encountered while lexing a notes line.
-    LexUnexpectedChar,
 }
 
 impl WarningKind {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::General => "general",
-            Self::DashAfterRest => "dash_after_rest",
-            Self::ChordInvalidToken => "chord_invalid_token",
-            Self::ChordExpectedDegreeDigit => "chord_expected_degree_digit",
             Self::ChordUnknownSuffix => "chord_unknown_suffix",
             Self::ChordInvalidBass => "chord_invalid_bass",
             Self::ChordBassUnexpectedChar => "chord_bass_unexpected_char",
             Self::ChordBassTrailingChars => "chord_bass_trailing_chars",
-            Self::DottedEighthNeedsSixteenth => "dotted_eighth_needs_sixteenth",
             Self::HalfBarBoundaryCrossed => "half_bar_boundary_crossed",
-            Self::MeasureWrongLineCount => "measure_wrong_line_count",
-            Self::LexUnexpectedChar => "lex_unexpected_char",
         }
     }
 }
@@ -92,65 +74,6 @@ impl Warning {
         }
     }
 
-    pub fn dash_after_rest(span: Span) -> Self {
-        Self {
-            span,
-            message: "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)".to_string(),
-            kind: WarningKind::DashAfterRest,
-        }
-    }
-
-    pub fn chord_invalid_token(span: Span, message: impl Into<String>) -> Self {
-        Self {
-            span,
-            message: message.into(),
-            kind: WarningKind::ChordInvalidToken,
-        }
-    }
-
-    pub fn from_chord_irrecoverable(error: &IrrecoverableError) -> Self {
-        match &error.kind {
-            IrrecoverableErrorKind::ChordExpectedDegreeDigit { span, ch } => Self {
-                span: *span,
-                message: format!("expected chord degree digit (0-7), got: {ch}"),
-                kind: WarningKind::ChordExpectedDegreeDigit,
-            },
-            IrrecoverableErrorKind::ChordUnknownSuffix {
-                span,
-                suffix,
-                token,
-            } => Self {
-                span: *span,
-                message: format!("unknown chord suffix '{suffix}' in token '{token}'"),
-                kind: WarningKind::ChordUnknownSuffix,
-            },
-            IrrecoverableErrorKind::ChordInvalidBass { span, bass } => Self {
-                span: *span,
-                message: format!("invalid bass note '{bass}'"),
-                kind: WarningKind::ChordInvalidBass,
-            },
-            IrrecoverableErrorKind::ChordBassUnexpectedChar { span, ch, bass } => Self {
-                span: *span,
-                message: format!("unexpected character '{ch}' in bass note '{bass}'"),
-                kind: WarningKind::ChordBassUnexpectedChar,
-            },
-            IrrecoverableErrorKind::ChordBassTrailingChars { span, bass } => Self {
-                span: *span,
-                message: format!("bass note '{bass}' has trailing characters"),
-                kind: WarningKind::ChordBassTrailingChars,
-            },
-            _ => Self::chord_invalid_token(*error.span(), error.message()),
-        }
-    }
-
-    pub fn dotted_eighth_needs_sixteenth(span: Span) -> Self {
-        Self {
-            span,
-            message: "dotted eighth must be followed by a sixteenth note or rest".to_string(),
-            kind: WarningKind::DottedEighthNeedsSixteenth,
-        }
-    }
-
     pub fn half_bar_boundary_crossed(span: Span) -> Self {
         Self {
             span,
@@ -158,57 +81,10 @@ impl Warning {
             kind: WarningKind::HalfBarBoundaryCrossed,
         }
     }
-
-    pub fn lex_unexpected_char(span: Span, ch: char) -> Self {
-        Self {
-            span,
-            message: format!("unexpected character: {ch}"),
-            kind: WarningKind::LexUnexpectedChar,
-        }
-    }
-
-    pub fn measure_wrong_line_count(span: Span, got: usize, expected: usize) -> Self {
-        Self {
-            span,
-            message: format!("expected {expected} lines (one per score line), got {got}"),
-            kind: WarningKind::MeasureWrongLineCount,
-        }
-    }
-
-    pub fn measure_no_data_lines(span: Span) -> Self {
-        Self {
-            span,
-            message: "measure has no data lines; treating all parts as empty".to_string(),
-            kind: WarningKind::MeasureWrongLineCount,
-        }
-    }
-
-    pub fn measure_too_many_lines(span: Span, got: usize, expected: usize, parts: &str) -> Self {
-        Self {
-            span,
-            message: format!(
-                "this measure has {got} lines but only {expected} expected (declared parts: {parts}); extra lines ignored"
-            ),
-            kind: WarningKind::MeasureWrongLineCount,
-        }
-    }
-
-    pub fn measure_missing_role_line(span: Span, role: &str, abbrev: &str) -> Self {
-        let treatment = if role == "lyrics" {
-            "no lyrics"
-        } else {
-            "empty"
-        };
-        Self {
-            span,
-            message: format!("missing {role} line for '{abbrev}'; treating as {treatment}"),
-            kind: WarningKind::MeasureWrongLineCount,
-        }
-    }
 }
 
 /// Identifies the specific kind of recoverable error for programmatic matching.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RecoverableErrorKind {
     /// `measure_directives` is shorter than the measure count (internal invariant).
     MeasureDirectivesMissing,
@@ -216,7 +92,31 @@ pub enum RecoverableErrorKind {
     SourceSpanMissing { index: usize },
     /// A timed-part measure is missing at the given index (internal invariant).
     TimedPartMeasureMissing,
-    /// An unexpected character was encountered while parsing duration suffixes on a note.
+    /// Generic recoverable error with a free-form message.
+    General { message: String },
+    /// An unexpected character was encountered while lexing a notes line — the line is dropped.
+    LexUnexpectedChar { ch: char },
+    /// Measure group has no data lines at all.
+    MeasureNoDataLines,
+    /// Measure group has fewer data lines than declared parts.
+    MeasureWrongLineCount { got: usize, expected: usize },
+    /// Measure group has more data lines than declared parts — extra lines are ignored.
+    MeasureTooManyLines {
+        got: usize,
+        expected: usize,
+        parts: String,
+    },
+    /// A required role line (notes/lyrics/chord) is missing for a part in this measure.
+    MeasureMissingRoleLine { role: String, abbrev: String },
+    /// A dotted eighth note or rest is not followed by a sixteenth — rhythmic structure is broken.
+    DottedEighthNeedsSixteenth,
+    /// `-` used to extend a rest — duration intent not fulfilled.
+    DashAfterRest,
+    /// A chord symbol did not start with a degree digit (0–7) — chord is dropped.
+    ChordExpectedDegreeDigit { ch: char },
+    /// A chord token is entirely invalid — chord is dropped.
+    ChordInvalidToken { message: String },
+    /// An unexpected character in a note duration suffix — note is emitted with default duration.
     DurationUnexpectedChar { ch: char },
 }
 
@@ -240,9 +140,108 @@ impl RecoverableError {
             RecoverableErrorKind::TimedPartMeasureMissing => {
                 "internal invariant: timed part measure missing".to_string()
             }
+            RecoverableErrorKind::General { message } => message.clone(),
+            RecoverableErrorKind::LexUnexpectedChar { ch } => {
+                format!("unexpected character: {ch}")
+            }
+            RecoverableErrorKind::MeasureNoDataLines => {
+                "measure has no data lines; treating all parts as empty".to_string()
+            }
+            RecoverableErrorKind::MeasureWrongLineCount { got, expected } => {
+                format!("expected {expected} lines (one per score line), got {got}")
+            }
+            RecoverableErrorKind::MeasureTooManyLines { got, expected, parts } => {
+                format!("this measure has {got} lines but only {expected} expected (declared parts: {parts}); extra lines ignored")
+            }
+            RecoverableErrorKind::MeasureMissingRoleLine { role, abbrev } => {
+                let treatment = if role == "lyrics" { "no lyrics" } else { "empty" };
+                format!("missing {role} line for '{abbrev}'; treating as {treatment}")
+            }
+            RecoverableErrorKind::DottedEighthNeedsSixteenth => {
+                "dotted eighth must be followed by a sixteenth note or rest".to_string()
+            }
+            RecoverableErrorKind::DashAfterRest => {
+                "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)".to_string()
+            }
+            RecoverableErrorKind::ChordExpectedDegreeDigit { ch } => {
+                format!("expected chord degree digit (0-7), got: {ch}")
+            }
+            RecoverableErrorKind::ChordInvalidToken { message } => message.clone(),
             RecoverableErrorKind::DurationUnexpectedChar { ch } => {
                 format!("unexpected character in note duration: {ch}")
             }
+        }
+    }
+
+    pub fn general(span: Span, message: impl Into<String>) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::General {
+                message: message.into(),
+            },
+        }
+    }
+
+    pub fn lex_unexpected_char(span: Span, ch: char) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::LexUnexpectedChar { ch },
+        }
+    }
+
+    pub fn measure_no_data_lines(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::MeasureNoDataLines,
+        }
+    }
+
+    pub fn measure_wrong_line_count(span: Span, got: usize, expected: usize) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::MeasureWrongLineCount { got, expected },
+        }
+    }
+
+    pub fn measure_too_many_lines(span: Span, got: usize, expected: usize, parts: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::MeasureTooManyLines {
+                got,
+                expected,
+                parts: parts.to_string(),
+            },
+        }
+    }
+
+    pub fn measure_missing_role_line(span: Span, role: &str, abbrev: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::MeasureMissingRoleLine {
+                role: role.to_string(),
+                abbrev: abbrev.to_string(),
+            },
+        }
+    }
+
+    pub fn dotted_eighth_needs_sixteenth(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::DottedEighthNeedsSixteenth,
+        }
+    }
+
+    pub fn dash_after_rest(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::DashAfterRest,
+        }
+    }
+
+    pub fn duration_unexpected_char(span: Span, ch: char) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::DurationUnexpectedChar { ch },
         }
     }
 
@@ -264,13 +263,6 @@ impl RecoverableError {
         Self {
             span,
             kind: RecoverableErrorKind::TimedPartMeasureMissing,
-        }
-    }
-
-    pub fn duration_unexpected_char(span: Span, ch: char) -> Self {
-        Self {
-            span,
-            kind: RecoverableErrorKind::DurationUnexpectedChar { ch },
         }
     }
 }
@@ -302,6 +294,53 @@ impl Diagnostic {
         match self {
             Self::Warning(w) => Some(w.kind),
             Self::Error(_) => None,
+        }
+    }
+
+    /// Convert an `IrrecoverableError` that was caught on a chord line into a `Diagnostic`.
+    /// Promoted kinds become `Diagnostic::Error`; others remain `Diagnostic::Warning`.
+    pub fn from_chord_irrecoverable(error: &IrrecoverableError) -> Self {
+        match &error.kind {
+            IrrecoverableErrorKind::ChordExpectedDegreeDigit { span, ch } => {
+                Self::Error(RecoverableError {
+                    span: *span,
+                    kind: RecoverableErrorKind::ChordExpectedDegreeDigit { ch: *ch },
+                })
+            }
+            IrrecoverableErrorKind::ChordUnknownSuffix {
+                span,
+                suffix,
+                token,
+            } => Self::Warning(Warning {
+                span: *span,
+                message: format!("unknown chord suffix '{suffix}' in token '{token}'"),
+                kind: WarningKind::ChordUnknownSuffix,
+            }),
+            IrrecoverableErrorKind::ChordInvalidBass { span, bass } => Self::Warning(Warning {
+                span: *span,
+                message: format!("invalid bass note '{bass}'"),
+                kind: WarningKind::ChordInvalidBass,
+            }),
+            IrrecoverableErrorKind::ChordBassUnexpectedChar { span, ch, bass } => {
+                Self::Warning(Warning {
+                    span: *span,
+                    message: format!("unexpected character '{ch}' in bass note '{bass}'"),
+                    kind: WarningKind::ChordBassUnexpectedChar,
+                })
+            }
+            IrrecoverableErrorKind::ChordBassTrailingChars { span, bass } => {
+                Self::Warning(Warning {
+                    span: *span,
+                    message: format!("bass note '{bass}' has trailing characters"),
+                    kind: WarningKind::ChordBassTrailingChars,
+                })
+            }
+            _ => Self::Error(RecoverableError {
+                span: *error.span(),
+                kind: RecoverableErrorKind::ChordInvalidToken {
+                    message: error.message(),
+                },
+            }),
         }
     }
 }
@@ -339,10 +378,8 @@ mod tests {
     }
 
     #[test]
-    fn dash_after_rest_has_message() {
-        let e = IrrecoverableError::new(IrrecoverableErrorKind::DashAfterRest {
-            span: Span::new(5, 6),
-        });
+    fn dash_after_rest_recoverable_has_message() {
+        let e = RecoverableError::dash_after_rest(Span::new(5, 6));
         assert!(e.message().contains("repeated `0`"));
     }
 

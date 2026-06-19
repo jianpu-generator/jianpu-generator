@@ -7,7 +7,9 @@ use crate::ast::parsed::{
     PartKind, ScoreEvent,
 };
 use crate::combiner;
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Warning};
+use crate::error::{
+    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Warning,
+};
 
 #[path = "empty_note_measures.rs"]
 mod empty_note_measures;
@@ -62,9 +64,9 @@ struct PartGrouper {
     part_name: Option<String>,
     measure_span_start: Option<usize>,
     measure_span_end: usize,
-    pending_dash_after_rest_error: Option<Warning>,
+    pending_dash_after_rest_error: Option<RecoverableError>,
     pending_overflow_error: Option<Warning>,
-    pending_dotted_eighth_errors: Vec<Warning>,
+    pending_dotted_eighth_errors: Vec<Diagnostic>,
 }
 
 impl PartGrouper {
@@ -175,9 +177,8 @@ impl PartGrouper {
             }
             Some(NoteEvent::Rest(_)) => {
                 if self.pending_dash_after_rest_error.is_none() {
-                    let mut error = Warning::dash_after_rest(span);
-                    error.message = self.with_part_prefix(error.message);
-                    self.pending_dash_after_rest_error = Some(error);
+                    self.pending_dash_after_rest_error =
+                        Some(RecoverableError::dash_after_rest(span));
                 }
                 return Ok(());
             }

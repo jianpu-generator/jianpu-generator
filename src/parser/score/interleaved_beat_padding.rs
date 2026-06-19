@@ -1,10 +1,10 @@
 use crate::ast::parsed::{ScoreEvent, ScoreLineSlot};
-use crate::error::{IrrecoverableError, Span, Spanned, Warning};
+use crate::error::{Diagnostic, IrrecoverableError, Span, Spanned, Warning};
 
 pub(super) struct PaddedBeats {
     pub(super) events: Vec<Spanned<ScoreEvent>>,
     pub(super) beat_overflow_error: Option<Warning>,
-    pub(super) dotted_eighth_errors: Vec<Warning>,
+    pub(super) dotted_eighth_errors: Vec<Diagnostic>,
 }
 
 pub(super) fn beats_per_measure(num: u8, den: u8) -> u32 {
