@@ -25,8 +25,9 @@ use lyrics_pairing::attach_paired_lyrics;
 pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
     let metadata = doc.metadata;
     let document_diagnostics: Vec<Diagnostic> = doc
-        .metadata_parse_errors
+        .section_structure_errors
         .into_iter()
+        .chain(doc.metadata_parse_errors)
         .chain(doc.parts_parse_errors)
         .map(Diagnostic::Error)
         .collect();

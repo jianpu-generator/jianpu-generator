@@ -2,44 +2,8 @@ use std::path::PathBuf;
 
 use super::Span;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DocumentSection {
-    Metadata,
-    Parts,
-    Score,
-}
-
-impl DocumentSection {
-    pub fn header(self) -> &'static str {
-        match self {
-            Self::Metadata => "[metadata]",
-            Self::Parts => "[parts]",
-            Self::Score => "[score]",
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub enum IrrecoverableErrorKind {
-    UnknownSection {
-        span: Span,
-        name: String,
-    },
-    WrongSectionCount {
-        span: Span,
-        got: usize,
-    },
-    SectionsOutOfOrder {
-        span: Span,
-    },
-    DuplicateSection {
-        span: Span,
-        section: DocumentSection,
-    },
-    MissingSection {
-        span: Span,
-        section: DocumentSection,
-    },
     MeasureNoDataLines {
         span: Span,
     },

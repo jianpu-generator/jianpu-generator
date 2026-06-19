@@ -114,6 +114,8 @@ pub struct ParsedDocument {
     pub metadata_parse_errors: Vec<RecoverableError>,
     /// Recoverable errors from parsing the [parts] section.
     pub parts_parse_errors: Vec<RecoverableError>,
+    /// Recoverable errors from section structure validation (unknown/duplicate/missing/out-of-order sections).
+    pub section_structure_errors: Vec<RecoverableError>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

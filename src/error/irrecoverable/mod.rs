@@ -2,7 +2,7 @@ mod display;
 mod kind;
 mod span;
 
-pub use kind::{DocumentSection, IrrecoverableErrorKind};
+pub use kind::IrrecoverableErrorKind;
 
 use std::path::{Path, PathBuf};
 

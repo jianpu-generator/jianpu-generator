@@ -361,10 +361,12 @@ mod split_pdf_tests {
     }
 
     #[test]
-    fn write_split_pdfs_from_source_invalid_source_errors() {
-        let err =
-            write_split_pdfs_from_source("not valid", "test.jianpu", "song", &[]).unwrap_err();
-        assert!(!err.message().is_empty());
+    fn write_split_pdfs_from_source_no_sections_returns_empty() {
+        // Source with no section headers: section-structure errors are recoverable,
+        // so no Err is returned; the missing [parts] section means no tracks exist.
+        let entries =
+            write_split_pdfs_from_source("not valid", "test.jianpu", "song", &[]).unwrap();
+        assert!(entries.is_empty());
     }
 
     #[test]

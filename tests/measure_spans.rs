@@ -60,7 +60,9 @@ fn view_zone_start_includes_leading_directive_line() {
 }
 
 #[test]
-fn returns_err_on_invalid_source() {
-    let result = list_measure_spans_from_source("not valid jianpu", "test.jianpu");
-    assert!(result.is_err());
+fn returns_empty_spans_on_source_with_no_sections() {
+    // Section-structure errors are recoverable; a source with no section headers
+    // produces an empty score (no measures), not an Err.
+    let result = list_measure_spans_from_source("not valid jianpu", "test.jianpu").unwrap();
+    assert!(result.is_empty());
 }

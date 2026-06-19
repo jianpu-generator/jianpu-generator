@@ -40,6 +40,7 @@ These are no longer review items. Some still have a matching
 | Measure line count mismatch | `implemented` | Pad/truncate lines; `ErrorKind::MeasureWrongLineCount` on measure (`desugar.rs`) |
 | `PartsMalformedLine`, `PartsDuplicateAbbreviation`, `PartsEmptySection`, `PartsEmptyDisplayName`, `PartsEmptyAbbreviation`, `PartsEmptyTrackName`, `PartsInvalidColumns` | `implemented` | Skip bad declaration, continue with valid ones; empty section renders empty document; errors in `document_diagnostics` (`parts_parser.rs`) |
 | `PartsNoNotesTrack` | `implemented` | Already recoverable via `RecoverableError::general` in `interleaved_parser.rs`; `IrrecoverableErrorKind` variant removed |
+| `UnknownSection`, `WrongSectionCount`, `SectionsOutOfOrder`, `DuplicateSection`, `MissingSection` | `implemented` | Section structure errors now recoverable: unknown sections skipped, duplicates use first occurrence, out-of-order sections reordered to canonical, missing sections use empty defaults; errors surfaced via `document_diagnostics` (`section_splitter.rs`, `parser/mod.rs`); `IrrecoverableErrorKind` variants removed |
 
 ---
 
@@ -132,8 +133,7 @@ These should **stay irrecoverable** — they indicate document structure,
 declaration, or infrastructure failure, not a single bad measure.
 
 ### Document structure
-`UnknownSection`, `WrongSectionCount`, `SectionsOutOfOrder`, `DuplicateSection`,
-`MissingSection`
+_(all document structure errors are now recoverable — see Already implemented table)_
 
 ### Output / I/O
 `MidiWriteFailed`, `Wav*`, `PdfSvg*`, `Zip*`, `IoReadFailed`, `IoWriteFailed`

@@ -1,6 +1,24 @@
 mod irrecoverable;
 
-pub use irrecoverable::{DocumentSection, IrrecoverableError, IrrecoverableErrorKind};
+pub use irrecoverable::{IrrecoverableError, IrrecoverableErrorKind};
+
+/// One of the three required document sections.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DocumentSection {
+    Metadata,
+    Parts,
+    Score,
+}
+
+impl DocumentSection {
+    pub fn header(self) -> &'static str {
+        match self {
+            Self::Metadata => "[metadata]",
+            Self::Parts => "[parts]",
+            Self::Score => "[score]",
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RequiredMetadataField {
@@ -166,6 +184,92 @@ pub enum RecoverableErrorKind {
     PartsEmptyTrackName,
     /// The RHS of a parts declaration is not a recognized column spec — the declaration is skipped.
     PartsInvalidColumns { rhs: String },
+    /// A section header `[name]` is not one of the three known sections — the section is skipped.
+    SectionUnknown { name: String },
+    /// A section appears more than once — the duplicate is skipped, first occurrence is used.
+    SectionDuplicate { section: DocumentSection },
+    /// A required section is absent — an empty default is used.
+    SectionMissing { section: DocumentSection },
+    /// Sections appear out of canonical order ([metadata], [parts], [score]).
+    SectionOutOfOrder,
+}
+
+impl RecoverableErrorKind {
+    pub fn message(&self) -> String {
+        match self {
+            Self::MeasureDirectivesMissing => {
+                "internal invariant: measure_directives shorter than measure count".to_string()
+            }
+            Self::SourceSpanMissing { index } => {
+                format!("internal invariant: source_span missing for measure {index}")
+            }
+            Self::TimedPartMeasureMissing => {
+                "internal invariant: timed part measure missing".to_string()
+            }
+            Self::General { message } => message.clone(),
+            Self::LexUnexpectedChar { ch } => format!("unexpected character: {ch}"),
+            Self::MeasureNoDataLines => {
+                "measure has no data lines; treating all parts as empty".to_string()
+            }
+            Self::MeasureWrongLineCount { got, expected } => {
+                format!("expected {expected} lines (one per score line), got {got}")
+            }
+            Self::MeasureTooManyLines { got, expected, parts } => format!(
+                "this measure has {got} lines but only {expected} expected (declared parts: {parts}); extra lines ignored"
+            ),
+            Self::MeasureMissingRoleLine { role, abbrev } => {
+                let treatment = if role == "lyrics" { "no lyrics" } else { "empty" };
+                format!("missing {role} line for '{abbrev}'; treating as {treatment}")
+            }
+            Self::DottedEighthNeedsSixteenth => {
+                "dotted eighth must be followed by a sixteenth note or rest".to_string()
+            }
+            Self::DashAfterRest => {
+                "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)".to_string()
+            }
+            Self::ChordExpectedDegreeDigit { ch } => {
+                format!("expected chord degree digit (0-7), got: {ch}")
+            }
+            Self::ChordInvalidToken { message } => message.clone(),
+            Self::DurationUnexpectedChar { ch } => {
+                format!("unexpected character in note duration: {ch}")
+            }
+            Self::MetadataMalformedLine { line } => format!("expected key = value, got: {line}"),
+            Self::MetadataUnknownField { field } => format!("unknown metadata field: {field}"),
+            Self::MetadataInvalidInteger { field, value } => {
+                format!("{field} must be a positive integer, got: {value}")
+            }
+            Self::MetadataMustBePositive { field } => {
+                format!("{field} must be greater than zero")
+            }
+            Self::MetadataMissingField { field } => {
+                format!("missing required field: {}", field.label())
+            }
+            Self::PartsMalformedLine { line } => {
+                format!("expected track declaration, got: {line}")
+            }
+            Self::PartsDuplicateAbbreviation { abbrev } => {
+                format!("duplicate abbreviation: {abbrev}")
+            }
+            Self::PartsEmptySection => {
+                "expected at least one track in [parts] section".to_string()
+            }
+            Self::PartsEmptyDisplayName => "display name cannot be empty".to_string(),
+            Self::PartsEmptyAbbreviation => "abbreviation cannot be empty".to_string(),
+            Self::PartsEmptyTrackName => "track name cannot be empty".to_string(),
+            Self::PartsInvalidColumns { rhs } => format!(
+                "invalid track columns '{rhs}': expected 'chord', 'notes', 'notes lyrics', 'lyrics notes', or 'notes chord'"
+            ),
+            Self::SectionUnknown { name } => format!("unknown section: [{name}]"),
+            Self::SectionDuplicate { section } => {
+                format!("duplicate {} section", section.header())
+            }
+            Self::SectionMissing { section } => format!("missing {} section", section.header()),
+            Self::SectionOutOfOrder => {
+                "sections must appear in order: [metadata], [parts], [score]".to_string()
+            }
+        }
+    }
 }
 
 /// A recoverable error: render continues but the affected measure is highlighted red.
@@ -178,81 +282,7 @@ pub struct RecoverableError {
 
 impl RecoverableError {
     pub fn message(&self) -> String {
-        match &self.kind {
-            RecoverableErrorKind::MeasureDirectivesMissing => {
-                "internal invariant: measure_directives shorter than measure count".to_string()
-            }
-            RecoverableErrorKind::SourceSpanMissing { index } => {
-                format!("internal invariant: source_span missing for measure {index}")
-            }
-            RecoverableErrorKind::TimedPartMeasureMissing => {
-                "internal invariant: timed part measure missing".to_string()
-            }
-            RecoverableErrorKind::General { message } => message.clone(),
-            RecoverableErrorKind::LexUnexpectedChar { ch } => {
-                format!("unexpected character: {ch}")
-            }
-            RecoverableErrorKind::MeasureNoDataLines => {
-                "measure has no data lines; treating all parts as empty".to_string()
-            }
-            RecoverableErrorKind::MeasureWrongLineCount { got, expected } => {
-                format!("expected {expected} lines (one per score line), got {got}")
-            }
-            RecoverableErrorKind::MeasureTooManyLines { got, expected, parts } => {
-                format!("this measure has {got} lines but only {expected} expected (declared parts: {parts}); extra lines ignored")
-            }
-            RecoverableErrorKind::MeasureMissingRoleLine { role, abbrev } => {
-                let treatment = if role == "lyrics" { "no lyrics" } else { "empty" };
-                format!("missing {role} line for '{abbrev}'; treating as {treatment}")
-            }
-            RecoverableErrorKind::DottedEighthNeedsSixteenth => {
-                "dotted eighth must be followed by a sixteenth note or rest".to_string()
-            }
-            RecoverableErrorKind::DashAfterRest => {
-                "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)".to_string()
-            }
-            RecoverableErrorKind::ChordExpectedDegreeDigit { ch } => {
-                format!("expected chord degree digit (0-7), got: {ch}")
-            }
-            RecoverableErrorKind::ChordInvalidToken { message } => message.clone(),
-            RecoverableErrorKind::DurationUnexpectedChar { ch } => {
-                format!("unexpected character in note duration: {ch}")
-            }
-            RecoverableErrorKind::MetadataMalformedLine { line } => {
-                format!("expected key = value, got: {line}")
-            }
-            RecoverableErrorKind::MetadataUnknownField { field } => {
-                format!("unknown metadata field: {field}")
-            }
-            RecoverableErrorKind::MetadataInvalidInteger { field, value } => {
-                format!("{field} must be a positive integer, got: {value}")
-            }
-            RecoverableErrorKind::MetadataMustBePositive { field } => {
-                format!("{field} must be greater than zero")
-            }
-            RecoverableErrorKind::MetadataMissingField { field } => {
-                format!("missing required field: {}", field.label())
-            }
-            RecoverableErrorKind::PartsMalformedLine { line } => {
-                format!("expected track declaration, got: {line}")
-            }
-            RecoverableErrorKind::PartsDuplicateAbbreviation { abbrev } => {
-                format!("duplicate abbreviation: {abbrev}")
-            }
-            RecoverableErrorKind::PartsEmptySection => {
-                "expected at least one track in [parts] section".to_string()
-            }
-            RecoverableErrorKind::PartsEmptyDisplayName => {
-                "display name cannot be empty".to_string()
-            }
-            RecoverableErrorKind::PartsEmptyAbbreviation => {
-                "abbreviation cannot be empty".to_string()
-            }
-            RecoverableErrorKind::PartsEmptyTrackName => "track name cannot be empty".to_string(),
-            RecoverableErrorKind::PartsInvalidColumns { rhs } => {
-                format!("invalid track columns '{rhs}': expected 'chord', 'notes', 'notes lyrics', 'lyrics notes', or 'notes chord'")
-            }
-        }
+        self.kind.message()
     }
 
     pub fn general(span: Span, message: impl Into<String>) -> Self {
@@ -444,6 +474,36 @@ impl RecoverableError {
             kind: RecoverableErrorKind::PartsInvalidColumns {
                 rhs: rhs.to_string(),
             },
+        }
+    }
+
+    pub fn section_unknown(span: Span, name: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::SectionUnknown {
+                name: name.to_string(),
+            },
+        }
+    }
+
+    pub fn section_duplicate(span: Span, section: DocumentSection) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::SectionDuplicate { section },
+        }
+    }
+
+    pub fn section_missing(span: Span, section: DocumentSection) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::SectionMissing { section },
+        }
+    }
+
+    pub fn section_out_of_order(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::SectionOutOfOrder,
         }
     }
 }

@@ -110,10 +110,9 @@ pub fn render_svgs_from_source(
 /// List pre-desugar score line inlay hints from a `.jianpu` source string.
 pub fn list_score_line_hints_from_source(
     source: &str,
-    filename: &str,
+    _filename: &str,
 ) -> Result<Vec<ScoreLineHint>, IrrecoverableError> {
-    let path = std::path::Path::new(filename);
-    let sections = parser::load_document_sections(source).map_err(|error| error.with_path(path))?;
+    let (sections, _section_errors) = parser::load_document_sections(source);
     let (parts_content, parts_offset) = sections.parts;
     let (score_content, score_offset) = sections.score;
     let (declarations, _parts_errors) =

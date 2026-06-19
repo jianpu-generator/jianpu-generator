@@ -1,5 +1,5 @@
 use crate::ast::parsed::ParsedDocument;
-use crate::error::{DocumentSection, IrrecoverableError, IrrecoverableErrorKind, Span};
+use crate::error::{DocumentSection, IrrecoverableError, RecoverableError, Span};
 
 pub mod lyrics;
 pub mod metadata_parser;
@@ -10,88 +10,111 @@ pub mod section_splitter;
 pub(crate) struct DocumentSectionContents {
     pub parts: (String, usize),
     pub score: (String, usize),
-    metadata: (String, usize),
+    pub metadata: (String, usize),
+}
+
+fn unwrap_or_missing(
+    raw: Option<(String, usize)>,
+    section: DocumentSection,
+    span: Span,
+    errors: &mut Vec<RecoverableError>,
+) -> (String, usize) {
+    raw.unwrap_or_else(|| {
+        errors.push(RecoverableError::section_missing(span, section));
+        (String::new(), 0)
+    })
 }
 
 pub(crate) fn load_document_sections(
     input: &str,
-) -> Result<DocumentSectionContents, IrrecoverableError> {
+) -> (DocumentSectionContents, Vec<RecoverableError>) {
     use section_splitter::{split_sections, SectionKind};
 
-    let sections = split_sections(input)?;
+    let (sections, mut errors) = split_sections(input);
     let doc_span = Span::new(0, input.len());
 
     let mut raw_metadata: Option<(String, usize)> = None;
     let mut raw_parts: Option<(String, usize)> = None;
     let mut raw_score: Option<(String, usize)> = None;
 
-    for section in sections {
+    // Track the order in which each section first appears to detect out-of-order.
+    let mut metadata_order: Option<usize> = None;
+    let mut parts_order: Option<usize> = None;
+    let mut score_order: Option<usize> = None;
+
+    for (index, section) in sections.into_iter().enumerate() {
         match section.kind {
             SectionKind::Metadata => {
                 if raw_metadata.is_some() {
-                    return Err(IrrecoverableError::new(
-                        IrrecoverableErrorKind::DuplicateSection {
-                            span: doc_span,
-                            section: DocumentSection::Metadata,
-                        },
+                    errors.push(RecoverableError::section_duplicate(
+                        doc_span,
+                        DocumentSection::Metadata,
                     ));
+                } else {
+                    metadata_order = Some(index);
+                    raw_metadata = Some((section.content, section.content_offset));
                 }
-                raw_metadata = Some((section.content, section.content_offset));
             }
             SectionKind::Parts => {
                 if raw_parts.is_some() {
-                    return Err(IrrecoverableError::new(
-                        IrrecoverableErrorKind::DuplicateSection {
-                            span: doc_span,
-                            section: DocumentSection::Parts,
-                        },
+                    errors.push(RecoverableError::section_duplicate(
+                        doc_span,
+                        DocumentSection::Parts,
                     ));
+                } else {
+                    parts_order = Some(index);
+                    raw_parts = Some((section.content, section.content_offset));
                 }
-                raw_parts = Some((section.content, section.content_offset));
             }
             SectionKind::Score => {
                 if raw_score.is_some() {
-                    return Err(IrrecoverableError::new(
-                        IrrecoverableErrorKind::DuplicateSection {
-                            span: doc_span,
-                            section: DocumentSection::Score,
-                        },
+                    errors.push(RecoverableError::section_duplicate(
+                        doc_span,
+                        DocumentSection::Score,
                     ));
+                } else {
+                    score_order = Some(index);
+                    raw_score = Some((section.content, section.content_offset));
                 }
-                raw_score = Some((section.content, section.content_offset));
             }
         }
     }
 
-    let metadata = raw_metadata.ok_or_else(|| {
-        IrrecoverableError::new(IrrecoverableErrorKind::MissingSection {
-            span: doc_span,
-            section: DocumentSection::Metadata,
-        })
-    })?;
-    let parts = raw_parts.ok_or_else(|| {
-        IrrecoverableError::new(IrrecoverableErrorKind::MissingSection {
-            span: doc_span,
-            section: DocumentSection::Parts,
-        })
-    })?;
-    let score = raw_score.ok_or_else(|| {
-        IrrecoverableError::new(IrrecoverableErrorKind::MissingSection {
-            span: doc_span,
-            section: DocumentSection::Score,
-        })
-    })?;
+    // Detect out-of-order: any two present sections whose first-appearance indices
+    // are not strictly ascending in canonical order (metadata < parts < score).
+    let pairs = [
+        (metadata_order, parts_order),
+        (metadata_order, score_order),
+        (parts_order, score_order),
+    ];
+    if pairs
+        .iter()
+        .any(|(earlier, later)| matches!((earlier, later), (Some(a), Some(b)) if a > b))
+    {
+        errors.push(RecoverableError::section_out_of_order(doc_span));
+    }
 
-    Ok(DocumentSectionContents {
-        metadata,
-        parts,
-        score,
-    })
+    let metadata = unwrap_or_missing(
+        raw_metadata,
+        DocumentSection::Metadata,
+        doc_span,
+        &mut errors,
+    );
+    let parts = unwrap_or_missing(raw_parts, DocumentSection::Parts, doc_span, &mut errors);
+    let score = unwrap_or_missing(raw_score, DocumentSection::Score, doc_span, &mut errors);
+    (
+        DocumentSectionContents {
+            metadata,
+            parts,
+            score,
+        },
+        errors,
+    )
 }
 
 pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, IrrecoverableError> {
     let path = std::path::Path::new(filename);
-    let sections = load_document_sections(input).map_err(|error| error.with_path(path))?;
+    let (sections, section_structure_errors) = load_document_sections(input);
     let (meta_content, meta_offset) = sections.metadata;
     let (parts_content, parts_offset) = sections.parts;
     let (score_content, score_offset) = sections.score;
@@ -116,6 +139,7 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, Irrecoverabl
         per_measure_parse_errors,
         metadata_parse_errors,
         parts_parse_errors,
+        section_structure_errors,
     })
 }
 
@@ -160,29 +184,43 @@ mod tests {
     }
 
     #[test]
-    fn rejects_unknown_section() {
+    fn unknown_section_recoverable() {
         let input = "[unknown]\nfoo\n";
-        assert!(parse(input, "test.jianpu").is_err());
+        let doc = parse(input, "test.jianpu").expect("unknown section must not abort parsing");
+        assert!(doc
+            .section_structure_errors
+            .iter()
+            .any(|e| matches!(&e.kind, crate::error::RecoverableErrorKind::SectionUnknown { name } if name == "unknown")));
     }
 
     #[test]
-    fn rejects_duplicate_score_section() {
+    fn duplicate_score_section_recoverable() {
         let input = concat!(
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
             "[parts]\nMelody = notes\n\n",
             "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\n\n",
             "[score]\n5 6 7 1\n",
         );
-        assert!(parse(input, "test.jianpu").is_err());
+        let doc =
+            parse(input, "test.jianpu").expect("duplicate score section must not abort parsing");
+        assert!(doc
+            .section_structure_errors
+            .iter()
+            .any(|e| matches!(&e.kind, crate::error::RecoverableErrorKind::SectionDuplicate { section } if *section == DocumentSection::Score)));
     }
 
     #[test]
-    fn rejects_missing_metadata_section() {
+    fn missing_metadata_section_recoverable() {
         let input = concat!(
             "[parts]\nMelody = notes\n\n",
             "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\n"
         );
-        assert!(parse(input, "test.jianpu").is_err());
+        let doc =
+            parse(input, "test.jianpu").expect("missing metadata section must not abort parsing");
+        assert!(doc
+            .section_structure_errors
+            .iter()
+            .any(|e| matches!(&e.kind, crate::error::RecoverableErrorKind::SectionMissing { section } if *section == DocumentSection::Metadata)));
     }
 
     #[test]

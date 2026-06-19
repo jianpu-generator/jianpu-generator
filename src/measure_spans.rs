@@ -67,7 +67,7 @@ pub fn list_measure_spans_from_source(
     source: &str,
     filename: &str,
 ) -> Result<Vec<MeasureSourceSpan>, IrrecoverableError> {
-    let sections = parser::load_document_sections(source)?;
+    let (sections, _section_errors) = parser::load_document_sections(source);
     let (score_content, score_offset) = sections.score;
     let view_zone_starts =
         parser::score::measure_group::view_zone_starts(&score_content, score_offset);
