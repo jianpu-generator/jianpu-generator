@@ -169,14 +169,17 @@ pub struct DiagnosticViewZoneOut {
 
 pub(crate) fn diagnostic_from_error(source: &str, e: IrrecoverableError) -> DiagnosticOut {
     let report = error_reporter::render_with_source(source, &e);
-    let span = e.span();
+    let span = e
+        .span()
+        .map(|s| SpanOut {
+            start: s.start,
+            end: s.end,
+        })
+        .unwrap_or(SpanOut { start: 0, end: 0 });
     DiagnosticOut {
         severity: DiagnosticSeverity::Error,
         message: e.message(),
-        span: SpanOut {
-            start: span.start,
-            end: span.end,
-        },
+        span,
         report: Some(report),
     }
 }
