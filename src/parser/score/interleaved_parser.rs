@@ -1,12 +1,11 @@
 use crate::ast::parsed::{
-    flatten_score_line_slots, ParsedTrack, PartDecl, PartKind, ScoreEvent, ScoreLineRole,
-    ScoreLineSlot,
+    flatten_score_line_slots, ParsedTrack, PartDecl, PartKind, ScoreEvent, ScoreLineSlot,
 };
 use crate::error::{
     Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned,
 };
 use crate::parser::score::token_parser::GroupStack;
-use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics, LyricTieState};
+use crate::utils::LyricTieState;
 
 #[path = "interleaved_accumulators.rs"]
 mod accumulators;

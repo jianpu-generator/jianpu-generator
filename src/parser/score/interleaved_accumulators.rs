@@ -1,8 +1,10 @@
 use super::ditto::DittoMeasures;
 use super::errors::invariant;
-#[allow(clippy::wildcard_imports)]
-use super::*;
-use crate::ast::parsed::{ParsedLyrics, ParsedScore, ParsedTimedTrack, PartDecl, PartKind};
+use super::{SlotAction, TrackAccumulator};
+use crate::ast::parsed::{
+    ParsedLyrics, ParsedScore, ParsedTimedTrack, ParsedTrack, PartDecl, PartKind, ScoreLineRole,
+    ScoreLineSlot,
+};
 use crate::error::{IrrecoverableError, Span};
 
 pub(super) fn build_slot_actions(slots: &[ScoreLineSlot]) -> Vec<SlotAction> {

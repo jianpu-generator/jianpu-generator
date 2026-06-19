@@ -1,10 +1,10 @@
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName, ScoreEvent};
 use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Spanned};
 
-#[allow(clippy::type_complexity)]
-pub(super) fn split_directive(
-    lines: &[(String, usize)],
-) -> Result<(Vec<Spanned<ScoreEvent>>, &[(String, usize)]), IrrecoverableError> {
+type SplitDirectiveResult<'a> =
+    Result<(Vec<Spanned<ScoreEvent>>, &'a [(String, usize)]), IrrecoverableError>;
+
+pub(super) fn split_directive(lines: &[(String, usize)]) -> SplitDirectiveResult<'_> {
     if let Some((directive_line, directive_offset)) = lines.first() {
         if directive_line.starts_with('(') {
             if !directive_line.ends_with(')') {
