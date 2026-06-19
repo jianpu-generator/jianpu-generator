@@ -44,8 +44,17 @@ pub fn lex_line(
             continue;
         }
         let start = base_offset + i;
-        let (token_opt, consumed, new_boundary) =
-            lex_one_char(line, i, start, len, c, at_word_boundary, context)?;
+        let (token_opt, consumed, new_boundary) = lex_one_char(
+            line,
+            i,
+            c,
+            CharLexContext {
+                start,
+                len,
+                at_word_boundary,
+                context,
+            },
+        )?;
         if let Some(tok) = token_opt {
             tokens.push(tok);
         }
@@ -56,18 +65,23 @@ pub fn lex_line(
     Ok(tokens)
 }
 
-/// Lex one non-whitespace character.  Returns `(token, bytes_consumed, new_at_word_boundary)`.
-/// When the character is a suffix that belongs to the current head, `token` is `None`.
-#[allow(clippy::too_many_arguments)]
-fn lex_one_char(
-    line: &str,
-    i: usize,
+#[derive(Clone, Copy)]
+struct CharLexContext {
     start: usize,
     len: usize,
-    c: char,
     at_word_boundary: bool,
     context: LexContext,
-) -> LexCharResult {
+}
+
+/// Lex one non-whitespace character.  Returns `(token, bytes_consumed, new_at_word_boundary)`.
+/// When the character is a suffix that belongs to the current head, `token` is `None`.
+fn lex_one_char(line: &str, i: usize, c: char, ctx: CharLexContext) -> LexCharResult {
+    let CharLexContext {
+        start,
+        len,
+        at_word_boundary,
+        context,
+    } = ctx;
     match c {
         '(' => Ok((
             Some(Spanned::new(
@@ -114,9 +128,17 @@ fn lex_one_char(
             let (tok, consumed) = lex_bpm(line, i, start)?;
             Ok((Some(tok), consumed, true))
         }
-        _ if c.is_ascii_digit() => {
-            lex_high_digit_or_error(line, i, start, len, at_word_boundary, context, c)
-        }
+        _ if c.is_ascii_digit() => lex_high_digit_or_error(
+            line,
+            i,
+            c,
+            CharLexContext {
+                start,
+                len,
+                at_word_boundary,
+                context,
+            },
+        ),
         _ if !at_word_boundary => Ok((None, len, false)),
         _ if at_word_boundary && context == LexContext::Chords => {
             Ok(chord_head_start_token(start, len))
@@ -162,16 +184,13 @@ fn unexpected_char_error(start: usize, len: usize, ch: char) -> IrrecoverableErr
     })
 }
 
-#[allow(clippy::too_many_arguments)]
-fn lex_high_digit_or_error(
-    line: &str,
-    i: usize,
-    start: usize,
-    len: usize,
-    at_word_boundary: bool,
-    context: LexContext,
-    c: char,
-) -> LexCharResult {
+fn lex_high_digit_or_error(line: &str, i: usize, c: char, ctx: CharLexContext) -> LexCharResult {
+    let CharLexContext {
+        start,
+        len,
+        at_word_boundary,
+        context,
+    } = ctx;
     if at_word_boundary && context == LexContext::Notes {
         if let Some((tok, consumed)) = try_lex_time_signature(line, i, start)? {
             return Ok((Some(tok), consumed, true));

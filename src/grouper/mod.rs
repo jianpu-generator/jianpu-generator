@@ -14,7 +14,7 @@ use crate::error::{
 #[path = "empty_note_measures.rs"]
 mod empty_note_measures;
 
-use empty_note_measures::align_empty_note_measures;
+use empty_note_measures::{align_empty_note_measures, PerMeasureErrors};
 
 mod directive_grouper;
 mod lyrics_pairing;
@@ -357,11 +357,13 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
     align_empty_note_measures(
         &mut grouped.measures,
         &empty_note_measure_spans,
-        &per_measure_beat_errors,
-        &per_measure_dotted_eighth_errors,
-        &per_measure_dash_after_rest_errors,
-        &per_measure_chord_errors,
-        &per_measure_lex_errors,
+        &PerMeasureErrors {
+            beat_errors: &per_measure_beat_errors,
+            dotted_eighth_errors: &per_measure_dotted_eighth_errors,
+            dash_after_rest_errors: &per_measure_dash_after_rest_errors,
+            chord_errors: &per_measure_chord_errors,
+            lex_errors: &per_measure_lex_errors,
+        },
     )?;
     for (measure, &lyrics_end) in grouped.measures.iter_mut().zip(lyrics_measure_ends.iter()) {
         measure.source_span.end = measure.source_span.end.max(lyrics_end);

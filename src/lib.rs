@@ -2,6 +2,7 @@
 #![forbid(unused_variables)]
 #![forbid(clippy::too_many_lines)]
 #![forbid(clippy::indexing_slicing)]
+#![forbid(clippy::too_many_arguments)]
 
 pub mod ast;
 pub mod combiner;

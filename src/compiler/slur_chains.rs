@@ -119,18 +119,28 @@ pub(super) fn flush_chain(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+pub(super) struct SlurChainContext<'a> {
+    pub(super) chains: &'a mut Vec<Vec<(u32, SlurKey)>>,
+    pub(super) pending_slur_opens: &'a mut Vec<Option<PendingSlurOpen>>,
+    pub(super) slur_spans: &'a mut Vec<SlurSpan>,
+    pub(super) measure_index: usize,
+    pub(super) part_index: usize,
+}
+
 pub(super) fn extend_note_chains(
-    chains: &mut Vec<Vec<(u32, SlurKey)>>,
-    pending_slur_opens: &mut [Option<PendingSlurOpen>],
+    context: SlurChainContext<'_>,
     membership: u8,
     continuation: u8,
     col: u32,
     key: &SlurKey,
-    slur_spans: &mut Vec<SlurSpan>,
-    measure_index: usize,
-    part_index: usize,
 ) {
+    let SlurChainContext {
+        chains,
+        pending_slur_opens,
+        slur_spans,
+        measure_index,
+        part_index,
+    } = context;
     while chains.len() < membership as usize {
         chains.push(Vec::new());
     }

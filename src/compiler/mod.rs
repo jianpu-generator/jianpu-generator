@@ -4,7 +4,7 @@ pub use types::*;
 mod beam;
 
 mod part_slice;
-use part_slice::compile_part_slice;
+use part_slice::{compile_part_slice, PartSliceInput};
 
 mod slur_chains;
 use slur_chains::{PartCrossState, PendingSlurOpen, SlurKey};
@@ -74,13 +74,15 @@ fn compile_measure(
 
         let slice_result = compile_part_slice(
             part_row.slice(),
-            init_tie,
-            init_tie_column,
-            init_tie_measure,
-            init_key,
-            init_pending_opens,
-            measure_index,
-            part_idx,
+            PartSliceInput {
+                prev_tie: init_tie,
+                prev_tie_column: init_tie_column,
+                prev_tie_measure: init_tie_measure,
+                prev_slur_key: init_key,
+                pending_opens: init_pending_opens,
+                measure_index,
+                part_index: part_idx,
+            },
             slur_spans,
         );
 

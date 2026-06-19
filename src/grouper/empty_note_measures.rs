@@ -30,31 +30,34 @@ fn apply_per_measure_errors(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+pub(super) struct PerMeasureErrors<'a> {
+    pub(super) beat_errors: &'a [Option<Warning>],
+    pub(super) dotted_eighth_errors: &'a [Vec<Diagnostic>],
+    pub(super) dash_after_rest_errors: &'a [Option<RecoverableError>],
+    pub(super) chord_errors: &'a [Vec<Diagnostic>],
+    pub(super) lex_errors: &'a [Option<RecoverableError>],
+}
+
 pub(super) fn align_empty_note_measures(
     measures: &mut Vec<GroupedMeasure>,
     empty_note_measure_spans: &[Option<Span>],
-    per_measure_beat_errors: &[Option<Warning>],
-    per_measure_dotted_eighth_errors: &[Vec<Diagnostic>],
-    per_measure_dash_after_rest_errors: &[Option<RecoverableError>],
-    per_measure_chord_errors: &[Vec<Diagnostic>],
-    per_measure_lex_errors: &[Option<RecoverableError>],
+    errors: &PerMeasureErrors<'_>,
 ) -> Result<(), IrrecoverableError> {
     if empty_note_measure_spans.is_empty() {
         for (idx, measure) in measures.iter_mut().enumerate() {
             apply_per_measure_errors(
                 measure,
-                per_measure_beat_errors.get(idx).and_then(|e| e.as_ref()),
-                per_measure_dotted_eighth_errors
+                errors.beat_errors.get(idx).and_then(|e| e.as_ref()),
+                errors
+                    .dotted_eighth_errors
                     .get(idx)
                     .map_or(&[][..], Vec::as_slice),
-                per_measure_dash_after_rest_errors
+                errors
+                    .dash_after_rest_errors
                     .get(idx)
                     .and_then(|e| e.as_ref()),
-                per_measure_chord_errors
-                    .get(idx)
-                    .map_or(&[][..], Vec::as_slice),
-                per_measure_lex_errors.get(idx).and_then(|e| e.as_ref()),
+                errors.chord_errors.get(idx).map_or(&[][..], Vec::as_slice),
+                errors.lex_errors.get(idx).and_then(|e| e.as_ref()),
             );
         }
         return Ok(());
@@ -65,19 +68,18 @@ pub(super) fn align_empty_note_measures(
         .iter()
         .enumerate()
         .map(|(idx, empty_span)| {
-            let beat_error = per_measure_beat_errors.get(idx).and_then(|e| e.clone());
-            let dotted_eighth_errors = per_measure_dotted_eighth_errors
+            let beat_error = errors.beat_errors.get(idx).and_then(|e| e.clone());
+            let dotted_eighth_errors = errors
+                .dotted_eighth_errors
                 .get(idx)
                 .cloned()
                 .unwrap_or_default();
-            let dash_after_rest_error = per_measure_dash_after_rest_errors
+            let dash_after_rest_error = errors
+                .dash_after_rest_errors
                 .get(idx)
                 .and_then(|e| e.clone());
-            let chord_errors = per_measure_chord_errors
-                .get(idx)
-                .cloned()
-                .unwrap_or_default();
-            let lex_error = per_measure_lex_errors.get(idx).and_then(|e| e.clone());
+            let chord_errors = errors.chord_errors.get(idx).cloned().unwrap_or_default();
+            let lex_error = errors.lex_errors.get(idx).and_then(|e| e.clone());
 
             if let Some(span) = empty_span {
                 Ok(GroupedMeasure {

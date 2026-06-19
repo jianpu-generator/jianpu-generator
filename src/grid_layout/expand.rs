@@ -33,16 +33,23 @@ pub(crate) fn push_head(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+pub(crate) struct MeasureRenderParams {
+    pub(crate) head_sub: usize,
+    pub(crate) sub_count: usize,
+    pub(crate) bar_height: f32,
+    pub(crate) part_idx: usize,
+}
+
 pub(crate) fn expand_measure_elements(
     row: &MeasureRow,
     measure_col_offset: u32,
-    head_sub: usize,
-    sub_count: usize,
-    bar_height: f32,
-    part_idx: usize,
+    params: &MeasureRenderParams,
     sub_rows: &mut [GridRow],
 ) {
+    let head_sub = params.head_sub;
+    let sub_count = params.sub_count;
+    let bar_height = params.bar_height;
+    let part_idx = params.part_idx;
     for el in &row.elements {
         let grid_col = LABEL_COLS + measure_col_offset + el.column;
         match &el.content {
@@ -152,16 +159,25 @@ pub(crate) fn expand_lyric_part(
     row
 }
 
-#[allow(clippy::too_many_arguments)]
+pub(crate) struct NotePartParams<'a> {
+    pub(crate) part_template: &'a MeasureRow,
+    pub(crate) part_idx: usize,
+    pub(crate) base: f32,
+    pub(crate) column_count: u32,
+    pub(crate) bar_height: f32,
+    pub(crate) part_arcs: &'a [GridElement],
+}
+
 pub(crate) fn expand_note_part(
     system: &[MeasureBlock],
-    part_template: &MeasureRow,
-    part_idx: usize,
-    base: f32,
-    column_count: u32,
-    bar_height: f32,
-    part_arcs: &[GridElement],
+    params: &NotePartParams<'_>,
 ) -> Vec<GridRow> {
+    let part_template = params.part_template;
+    let part_idx = params.part_idx;
+    let base = params.base;
+    let column_count = params.column_count;
+    let bar_height = params.bar_height;
+    let part_arcs = params.part_arcs;
     let (sub_heights, sub_count): (Vec<f32>, usize) = if is_chord_only_row(part_template) {
         (chord_part_sub_row_heights(base).to_vec(), 4)
     } else {
@@ -211,10 +227,12 @@ pub(crate) fn expand_note_part(
             expand_measure_elements(
                 part_row,
                 measure_col_offset,
-                head_sub,
-                sub_count,
-                bar_height,
-                part_idx,
+                &MeasureRenderParams {
+                    head_sub,
+                    sub_count,
+                    bar_height,
+                    part_idx,
+                },
                 &mut sub_rows,
             );
         }
@@ -248,12 +266,14 @@ pub(crate) fn expand_system_to_rows(
                 system_arcs.get(&part_idx).map_or(&[], |v| v.as_slice());
             all_rows.extend(expand_note_part(
                 system,
-                part_template,
-                part_idx,
-                base,
-                column_count,
-                bar_height,
-                part_arcs,
+                &NotePartParams {
+                    part_template,
+                    part_idx,
+                    base,
+                    column_count,
+                    bar_height,
+                    part_arcs,
+                },
             ));
             if has_lyrics(part_template) {
                 all_rows.push(expand_lyric_part(system, part_idx, base, column_count));

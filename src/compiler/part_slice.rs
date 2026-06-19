@@ -1,5 +1,5 @@
 use super::beam::{flush_beam_buffer, BeamEntry};
-use super::slur_chains::{extend_note_chains, PendingSlurOpen, SlurKey};
+use super::slur_chains::{extend_note_chains, PendingSlurOpen, SlurChainContext, SlurKey};
 use super::PartSliceResult;
 use crate::ast::grouped::{GroupedChordNote, GroupedNote, GroupedRest, NoteEvent, PartSlice};
 use crate::ast::parsed::{JianPuPitch, PartKind, Syllable};
@@ -86,29 +86,33 @@ fn compile_unit<H: HeadContent>(
     }
 
     extend_note_chains(
-        state.pending_chains,
-        state.pending_slur_opens,
+        SlurChainContext {
+            chains: state.pending_chains,
+            pending_slur_opens: state.pending_slur_opens,
+            slur_spans: state.slur_spans,
+            measure_index: state.measure_index,
+            part_index: state.part_index,
+        },
         unit.group_membership,
         unit.group_continuation,
         *state.col,
         &unit.slur_key,
-        state.slur_spans,
-        state.measure_index,
-        state.part_index,
     );
 
     if let Some(close_offset) = unit.slur_close_at {
         if unit.group_membership > 0 {
             extend_note_chains(
-                state.pending_chains,
-                state.pending_slur_opens,
+                SlurChainContext {
+                    chains: state.pending_chains,
+                    pending_slur_opens: state.pending_slur_opens,
+                    slur_spans: state.slur_spans,
+                    measure_index: state.measure_index,
+                    part_index: state.part_index,
+                },
                 unit.group_membership,
                 0,
                 *state.col + close_offset,
                 &SlurKey::Rest,
-                state.slur_spans,
-                state.measure_index,
-                state.part_index,
             );
         }
     }
@@ -151,18 +155,30 @@ fn compile_unit<H: HeadContent>(
 
 // ── Top-level entry point ─────────────────────────────────────────────────────
 
-#[allow(clippy::too_many_arguments)]
+pub(super) struct PartSliceInput {
+    pub(super) prev_tie: bool,
+    pub(super) prev_tie_column: Option<u32>,
+    pub(super) prev_tie_measure: Option<usize>,
+    pub(super) prev_slur_key: Option<SlurKey>,
+    pub(super) pending_opens: Vec<Option<PendingSlurOpen>>,
+    pub(super) measure_index: usize,
+    pub(super) part_index: usize,
+}
+
 pub(super) fn compile_part_slice(
     slice: &PartSlice,
-    initial_prev_tie: bool,
-    initial_prev_tie_column: Option<u32>,
-    initial_prev_tie_measure: Option<usize>,
-    initial_prev_slur_key: Option<SlurKey>,
-    initial_pending_opens: Vec<Option<PendingSlurOpen>>,
-    measure_index: usize,
-    part_index: usize,
+    input: PartSliceInput,
     slur_spans: &mut Vec<SlurSpan>,
 ) -> PartSliceResult {
+    let PartSliceInput {
+        prev_tie: initial_prev_tie,
+        prev_tie_column: initial_prev_tie_column,
+        prev_tie_measure: initial_prev_tie_measure,
+        prev_slur_key: initial_prev_slur_key,
+        pending_opens: initial_pending_opens,
+        measure_index,
+        part_index,
+    } = input;
     let mut elements: Vec<ColumnElement> = Vec::new();
     let mut beam_buf: Vec<BeamEntry> = Vec::new();
     let mut pending_chains: Vec<Vec<(u32, SlurKey)>> = Vec::new();
@@ -357,15 +373,17 @@ fn compile_rest(state: &mut PartState<'_>, rest: &GroupedRest, measure_col_start
 
     if rest.group_membership > 0 {
         extend_note_chains(
-            state.pending_chains,
-            state.pending_slur_opens,
+            SlurChainContext {
+                chains: state.pending_chains,
+                pending_slur_opens: state.pending_slur_opens,
+                slur_spans: state.slur_spans,
+                measure_index: state.measure_index,
+                part_index: state.part_index,
+            },
             rest.group_membership,
             rest.group_continuation,
             *state.col,
             &SlurKey::Rest,
-            state.slur_spans,
-            state.measure_index,
-            state.part_index,
         );
     }
 

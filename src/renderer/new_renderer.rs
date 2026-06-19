@@ -54,9 +54,11 @@ fn render_element(
             pitch,
             *octave,
             *dotted,
-            row_height,
-            base_font_size,
-            note_number_width,
+            &NoteRenderParams {
+                row_height,
+                base_font_size,
+                note_number_width,
+            },
         ),
         AbsoluteContent::Rest { dotted } => {
             render_rest(elem, *dotted, row_height, base_font_size, note_number_width)
@@ -112,26 +114,33 @@ fn render_element(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+struct NoteRenderParams<'a> {
+    row_height: &'a f32,
+    base_font_size: &'a f32,
+    note_number_width: &'a f32,
+}
+
 fn render_note_head(
     elem: &AbsoluteElement,
     pitch: &JianPuPitch,
     octave: i8,
     dotted: bool,
-    row_height: &f32,
-    base_font_size: &f32,
-    note_number_width: &f32,
+    params: &NoteRenderParams<'_>,
 ) -> Vec<SvgElement> {
+    let NoteRenderParams {
+        row_height,
+        base_font_size,
+        note_number_width,
+    } = params;
     let mut results = Vec::new();
 
-    // 1. Note digit
     results.push(SvgElement {
         x: elem.x,
         y: elem.y,
         variant: "note-head",
         kind: SvgKind::Text {
             content: pitch_to_digit(pitch).to_string(),
-            font_size: *base_font_size,
+            font_size: **base_font_size,
             anchor: TextAnchor::Middle,
             baseline: DominantBaseline::Middle,
             font: FontFamily::Monospace,
@@ -140,10 +149,9 @@ fn render_note_head(
         },
     });
 
-    // 2. Dotted note: circle to the right
     if dotted {
-        let dot_radius = row_height * 0.06;
-        let dot_x = elem.x + note_number_width * 1.5;
+        let dot_radius = *row_height * 0.06;
+        let dot_x = elem.x + *note_number_width * 1.5;
         results.push(SvgElement {
             x: dot_x,
             y: elem.y,
@@ -152,13 +160,13 @@ fn render_note_head(
         });
     }
 
-    // 3. Upper octave dots (octave > 0): circles above
     if octave > 0 {
-        let dot_radius = row_height * 0.08;
+        let dot_radius = *row_height * 0.08;
         let dot_spacing = dot_radius * 3.0;
         let gap = dot_radius * 2.0;
         for i in 0..octave {
-            let dot_y = elem.y - base_font_size / 2.0 - dot_radius - gap - (i as f32) * dot_spacing;
+            let dot_y =
+                elem.y - *base_font_size / 2.0 - dot_radius - gap - (i as f32) * dot_spacing;
             results.push(SvgElement {
                 x: elem.x,
                 y: dot_y,
@@ -168,12 +176,11 @@ fn render_note_head(
         }
     }
 
-    // 4. Lower octave dots (octave < 0): circles below
     if octave < 0 {
-        let dot_radius = row_height * 0.08;
+        let dot_radius = *row_height * 0.08;
         let dot_spacing = dot_radius * 3.0;
         for i in 0..(-octave) {
-            let dot_y = elem.y + base_font_size / 2.0 + dot_radius + (i as f32) * dot_spacing;
+            let dot_y = elem.y + *base_font_size / 2.0 + dot_radius + (i as f32) * dot_spacing;
             results.push(SvgElement {
                 x: elem.x,
                 y: dot_y,

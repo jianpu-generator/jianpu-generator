@@ -7,7 +7,6 @@ use crate::error::{
     Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span,
 };
 
-#[allow(clippy::too_many_arguments)]
 fn combine_measure(
     grouped_score: &GroupedScore,
     measure_idx: usize,
