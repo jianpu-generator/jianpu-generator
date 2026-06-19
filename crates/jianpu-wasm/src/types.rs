@@ -83,6 +83,10 @@ pub struct MeasureSpanOut {
     /// Section label from `label="..."` directive, if present on this measure.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub section_label: Option<String>,
+    /// 1-indexed first line of this measure (inclusive).
+    pub start_line: usize,
+    /// 1-indexed last line of this measure (inclusive).
+    pub end_line: usize,
 }
 
 #[derive(Debug, Clone, Tsify, Serialize)]

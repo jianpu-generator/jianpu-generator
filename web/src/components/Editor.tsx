@@ -16,10 +16,7 @@ import type {
   MeasureSpan,
   ScoreLineHint,
 } from '../types'
-import {
-  byteOffsetToStringIndex,
-  stringIndexToByteOffset,
-} from '../utils/byteSpan'
+import { byteOffsetToStringIndex } from '../utils/byteSpan'
 
 export interface EditorProps {
   value: string
@@ -30,7 +27,7 @@ export interface EditorProps {
   measureSpans?: MeasureSpan[]
   scoreLineHints?: ScoreLineHint[]
   toolbar?: ReactNode
-  onSelectionChange?: (startOffset: number, endOffset: number) => void
+  onSelectionChange?: (startLine: number, endLine: number) => void
   onCursorLineChange?: (line: number) => void
   onPlayMeasure?: () => void
 }
@@ -358,14 +355,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       if (!model) return
       const selection = ed.getSelection()
       if (!selection) return
-      const source = model.getValue()
-      if (onSelectionChangeRef.current) {
-        const startCharIndex = model.getOffsetAt(selection.getStartPosition())
-        const endCharIndex = model.getOffsetAt(selection.getEndPosition())
-        const startOffset = stringIndexToByteOffset(source, startCharIndex)
-        const endOffset = stringIndexToByteOffset(source, endCharIndex)
-        onSelectionChangeRef.current(startOffset, endOffset)
-      }
+      onSelectionChangeRef.current?.(
+        selection.startLineNumber,
+        selection.endLineNumber,
+      )
       onCursorLineChangeRef.current?.(selection.startLineNumber)
     }
     ed.onDidChangeCursorPosition(notifyCursor)

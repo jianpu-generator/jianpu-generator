@@ -32,6 +32,17 @@ pub fn find_measure_at_line_number(
     find_measure_at_byte_offset(score, byte_offset)
 }
 
+fn line_at(source: &str, byte_offset: usize) -> usize {
+    source
+        .as_bytes()
+        .get(..byte_offset.min(source.len()))
+        .unwrap_or(&[])
+        .iter()
+        .filter(|&&b| b == b'\n')
+        .count()
+        + 1
+}
+
 /// Source byte ranges for a measure in the editor.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MeasureSourceSpan {
@@ -43,6 +54,10 @@ pub struct MeasureSourceSpan {
     pub view_zone_start: usize,
     /// Section label from `label="..."` directive, if present on this measure.
     pub section_label: Option<String>,
+    /// 1-indexed first line of this measure (inclusive).
+    pub start_line: usize,
+    /// 1-indexed last line of this measure (inclusive).
+    pub end_line: usize,
 }
 
 /// Return the source byte span of every measure in the compiled score.
@@ -80,6 +95,8 @@ pub fn list_measure_spans_from_source(
             end: measure.source_span.end,
             view_zone_start,
             section_label: measure.label.clone(),
+            start_line: line_at(source, measure.source_span.start),
+            end_line: line_at(source, measure.source_span.end),
         })
         .collect())
 }

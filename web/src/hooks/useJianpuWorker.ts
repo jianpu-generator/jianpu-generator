@@ -37,7 +37,7 @@ interface JianpuWorkerState {
   selectedMeasureRange: { start: number; end: number } | null
   measureAudioGenerating: boolean
   measureAudioPlaying: boolean
-  notifySelection: (startOffset: number, endOffset: number) => void
+  notifySelection: (startLine: number, endLine: number) => void
   playSelectedMeasures: () => void
   stopMeasurePlayback: () => void
   highlightedSvgs: string[]
@@ -358,15 +358,15 @@ export function useJianpuWorker(
   }, [audioGenerating])
 
   const notifySelection = useCallback(
-    (startOffset: number, endOffset: number) => {
-      lastSelectionRef.current = { start: startOffset, end: endOffset }
+    (startLine: number, endLine: number) => {
+      lastSelectionRef.current = { start: startLine, end: endLine }
       if (cursorOffsetTimerRef.current !== null) {
         window.clearTimeout(cursorOffsetTimerRef.current)
       }
       cursorOffsetTimerRef.current = window.setTimeout(() => {
         cursorOffsetTimerRef.current = null
         setSelectedMeasureRange(
-          measureRangeInSpan(measureSpansRef.current, startOffset, endOffset),
+          measureRangeInSpan(measureSpansRef.current, startLine, endLine),
         )
       }, debounceMs)
     },

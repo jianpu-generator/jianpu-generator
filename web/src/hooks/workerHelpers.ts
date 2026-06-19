@@ -3,12 +3,11 @@ import type { MeasureSpan, PartInfo } from '../types'
 
 export function measureRangeInSpan(
   spans: MeasureSpan[],
-  selStart: number,
-  selEnd: number,
+  startLine: number,
+  endLine: number,
 ): { start: number; end: number } | null {
-  const effective = selStart === selEnd ? selEnd + 1 : selEnd
   const overlaps = (span: MeasureSpan) =>
-    span.start < effective && span.end > selStart
+    span.start_line <= endLine && span.end_line >= startLine
   const start = findIndex(spans, overlaps)
   const end = findLastIndex(spans, overlaps)
   return start === -1 ? null : { start, end }
