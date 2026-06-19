@@ -33,7 +33,7 @@ pub fn find_measure_at_line_number(
 }
 
 /// Source byte ranges for a measure in the editor.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MeasureSourceSpan {
     /// Inclusive start of note content (for cursor/selection mapping).
     pub start: usize,
@@ -41,6 +41,8 @@ pub struct MeasureSourceSpan {
     pub end: usize,
     /// Byte offset of the first source line in this measure group, for view zones.
     pub view_zone_start: usize,
+    /// Section label from `label="..."` directive, if present on this measure.
+    pub section_label: Option<String>,
 }
 
 /// Return the source byte span of every measure in the compiled score.
@@ -77,6 +79,7 @@ pub fn list_measure_spans_from_source(
             start: measure.source_span.start,
             end: measure.source_span.end,
             view_zone_start,
+            section_label: measure.label.clone(),
         })
         .collect())
 }

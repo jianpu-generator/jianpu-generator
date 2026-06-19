@@ -134,6 +134,7 @@ fn list_measure_spans_response(source: &str) -> ListMeasureSpansResponse {
                     start: span.start,
                     end: span.end,
                     view_zone_start: span.view_zone_start,
+                    section_label: span.section_label,
                 })
                 .collect(),
         },

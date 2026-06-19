@@ -226,7 +226,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           'padding-left: 8px',
           'box-sizing: border-box',
         ].join(';')
-        domNode.textContent = `[Measure ${index + 1}]`
+        domNode.textContent = span.section_label ?? `${index + 1}`
 
         const id = accessor.addZone({
           afterLineNumber: lineNumber - 1,

@@ -80,6 +80,9 @@ pub struct MeasureSpanOut {
     pub end: usize,
     /// Byte offset of the first source line in this measure group, for view zones.
     pub view_zone_start: usize,
+    /// Section label from `label="..."` directive, if present on this measure.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub section_label: Option<String>,
 }
 
 #[derive(Debug, Clone, Tsify, Serialize)]
