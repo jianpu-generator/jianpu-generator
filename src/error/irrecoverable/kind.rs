@@ -40,33 +40,6 @@ pub enum IrrecoverableErrorKind {
         span: Span,
         section: DocumentSection,
     },
-    PartsMalformedLine {
-        span: Span,
-        line: String,
-    },
-    PartsDuplicateAbbreviation {
-        span: Span,
-        abbrev: String,
-    },
-    PartsEmptySection {
-        span: Span,
-    },
-    PartsEmptyDisplayName {
-        span: Span,
-    },
-    PartsEmptyAbbreviation {
-        span: Span,
-    },
-    PartsEmptyTrackName {
-        span: Span,
-    },
-    PartsInvalidColumns {
-        span: Span,
-        rhs: String,
-    },
-    PartsNoNotesTrack {
-        span: Span,
-    },
     MeasureNoDataLines {
         span: Span,
     },

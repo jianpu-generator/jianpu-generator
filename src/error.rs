@@ -152,6 +152,20 @@ pub enum RecoverableErrorKind {
     MetadataMustBePositive { field: String },
     /// A required metadata field is absent — an empty string is used.
     MetadataMissingField { field: RequiredMetadataField },
+    /// A parts declaration line does not contain `=` — the line is skipped.
+    PartsMalformedLine { line: String },
+    /// A parts abbreviation is used by more than one declaration — the duplicate is skipped.
+    PartsDuplicateAbbreviation { abbrev: String },
+    /// The [parts] section contains no valid declarations — document renders empty.
+    PartsEmptySection,
+    /// A display name before `(` is empty — the declaration is skipped.
+    PartsEmptyDisplayName,
+    /// The abbreviation inside `()` is empty — the declaration is skipped.
+    PartsEmptyAbbreviation,
+    /// No `()` and the track name is empty — the declaration is skipped.
+    PartsEmptyTrackName,
+    /// The RHS of a parts declaration is not a recognized column spec — the declaration is skipped.
+    PartsInvalidColumns { rhs: String },
 }
 
 /// A recoverable error: render continues but the affected measure is highlighted red.
@@ -218,6 +232,25 @@ impl RecoverableError {
             }
             RecoverableErrorKind::MetadataMissingField { field } => {
                 format!("missing required field: {}", field.label())
+            }
+            RecoverableErrorKind::PartsMalformedLine { line } => {
+                format!("expected track declaration, got: {line}")
+            }
+            RecoverableErrorKind::PartsDuplicateAbbreviation { abbrev } => {
+                format!("duplicate abbreviation: {abbrev}")
+            }
+            RecoverableErrorKind::PartsEmptySection => {
+                "expected at least one track in [parts] section".to_string()
+            }
+            RecoverableErrorKind::PartsEmptyDisplayName => {
+                "display name cannot be empty".to_string()
+            }
+            RecoverableErrorKind::PartsEmptyAbbreviation => {
+                "abbreviation cannot be empty".to_string()
+            }
+            RecoverableErrorKind::PartsEmptyTrackName => "track name cannot be empty".to_string(),
+            RecoverableErrorKind::PartsInvalidColumns { rhs } => {
+                format!("invalid track columns '{rhs}': expected 'chord', 'notes', 'notes lyrics', 'lyrics notes', or 'notes chord'")
             }
         }
     }
@@ -358,6 +391,61 @@ impl RecoverableError {
             kind: RecoverableErrorKind::MetadataMissingField { field },
         }
     }
+
+    pub fn parts_malformed_line(span: Span, line: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartsMalformedLine {
+                line: line.to_string(),
+            },
+        }
+    }
+
+    pub fn parts_duplicate_abbreviation(span: Span, abbrev: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartsDuplicateAbbreviation {
+                abbrev: abbrev.to_string(),
+            },
+        }
+    }
+
+    pub fn parts_empty_section(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartsEmptySection,
+        }
+    }
+
+    pub fn parts_empty_display_name(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartsEmptyDisplayName,
+        }
+    }
+
+    pub fn parts_empty_abbreviation(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartsEmptyAbbreviation,
+        }
+    }
+
+    pub fn parts_empty_track_name(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartsEmptyTrackName,
+        }
+    }
+
+    pub fn parts_invalid_columns(span: Span, rhs: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartsInvalidColumns {
+                rhs: rhs.to_string(),
+            },
+        }
+    }
 }
 
 /// A per-measure diagnostic that is attached to rendered output.
@@ -439,79 +527,4 @@ impl Diagnostic {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn display_shows_message() {
-        let e = IrrecoverableError::new(IrrecoverableErrorKind::LexUnexpectedChar {
-            span: Span::new(10, 20),
-            ch: 'x',
-        });
-        assert_eq!(format!("{e}"), "error: unexpected character: x");
-    }
-
-    #[test]
-    fn with_path_attaches_path() {
-        let e = IrrecoverableError::new(IrrecoverableErrorKind::InternalInvariant {
-            span: Span::new(0, 1),
-            detail: "oops".to_string(),
-        })
-        .with_path("/tmp/test.jianpu");
-        assert_eq!(e.path.unwrap().to_str().unwrap(), "/tmp/test.jianpu");
-    }
-
-    #[test]
-    fn without_path_is_none() {
-        let e = IrrecoverableError::new(IrrecoverableErrorKind::InternalInvariant {
-            span: Span::new(0, 1),
-            detail: "oops".to_string(),
-        });
-        assert!(e.path.is_none());
-    }
-
-    #[test]
-    fn dash_after_rest_recoverable_has_message() {
-        let e = RecoverableError::dash_after_rest(Span::new(5, 6));
-        assert!(e.message().contains("repeated `0`"));
-    }
-
-    #[test]
-    fn recoverable_error_measure_directives_missing_has_correct_kind() {
-        let e = RecoverableError::measure_directives_missing(Span::new(0, 0));
-        assert!(matches!(
-            e.kind,
-            RecoverableErrorKind::MeasureDirectivesMissing
-        ));
-    }
-
-    #[test]
-    fn recoverable_error_source_span_missing_has_correct_kind_and_index() {
-        let e = RecoverableError::source_span_missing(Span::new(0, 0), 3);
-        assert!(matches!(
-            e.kind,
-            RecoverableErrorKind::SourceSpanMissing { index: 3 }
-        ));
-    }
-
-    #[test]
-    fn recoverable_error_timed_part_measure_missing_has_correct_kind() {
-        let e = RecoverableError::timed_part_measure_missing(Span::new(0, 0));
-        assert!(matches!(
-            e.kind,
-            RecoverableErrorKind::TimedPartMeasureMissing
-        ));
-    }
-
-    #[test]
-    fn recoverable_error_source_span_missing_message_contains_index() {
-        let e = RecoverableError::source_span_missing(Span::new(0, 0), 7);
-        assert!(e.message().contains("7"));
-    }
-
-    #[test]
-    fn recoverable_error_measure_directives_missing_message_is_nonempty() {
-        let e = RecoverableError::measure_directives_missing(Span::new(0, 0));
-        assert!(!e.message().is_empty());
-    }
-}
+mod tests;

@@ -98,11 +98,15 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, Irrecoverabl
 
     let (metadata, metadata_parse_errors) =
         metadata_parser::parse_metadata(&meta_content, meta_offset);
-    let declarations = parts_parser::parse_parts(&parts_content, parts_offset)
-        .map_err(|error| error.with_path(path))?;
+    let (declarations, parts_parse_errors) =
+        parts_parser::parse_parts(&parts_content, parts_offset);
     let (tracks, directive_events_per_measure, per_measure_parse_errors) =
-        score::interleaved_parser::parse(&score_content, score_offset, &declarations)
-            .map_err(|error| error.with_path(path))?;
+        if declarations.is_empty() {
+            (Vec::new(), Vec::new(), Vec::new())
+        } else {
+            score::interleaved_parser::parse(&score_content, score_offset, &declarations)
+                .map_err(|error| error.with_path(path))?
+        };
 
     Ok(ParsedDocument {
         metadata,
@@ -111,6 +115,7 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, Irrecoverabl
         directive_events_per_measure,
         per_measure_parse_errors,
         metadata_parse_errors,
+        parts_parse_errors,
     })
 }
 

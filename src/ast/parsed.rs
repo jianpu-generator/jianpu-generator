@@ -112,6 +112,8 @@ pub struct ParsedDocument {
     pub per_measure_parse_errors: Vec<Option<RecoverableError>>,
     /// Recoverable errors from parsing the [metadata] section.
     pub metadata_parse_errors: Vec<RecoverableError>,
+    /// Recoverable errors from parsing the [parts] section.
+    pub parts_parse_errors: Vec<RecoverableError>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

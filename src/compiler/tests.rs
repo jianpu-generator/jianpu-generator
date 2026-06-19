@@ -28,6 +28,13 @@ fn two_part_doc(score_content: &str) -> String {
     )
 }
 
+/// Chord-part document with one track.
+fn chord_doc(score_content: &str) -> String {
+    format!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nC = chord\n\n[score]\n{score_content}"
+    )
+}
+
 #[test]
 fn single_quarter_note_produces_one_note_head_element() {
     let score = score_from(&notes_doc("(time=4/4 key=C4 bpm=120)\n1\n"));
@@ -246,6 +253,28 @@ fn extended_note_produces_note_dash_at_each_extra_beat() {
         dashes[1].column, 12,
         "second NoteDash should be at column 12"
     );
+}
+
+#[test]
+fn extended_chord_produces_note_dash_at_each_extra_beat() {
+    // "1 - - -" = a whole-note chord filling a 4/4 measure.
+    // The three `-` tokens should each produce a NoteDash at columns 4, 8, 12.
+    let score = score_from(&chord_doc("(time=4/4 key=C4 bpm=120)\n1 - - -\n"));
+    let result = compile(&score);
+    let row = &result.blocks[0].rows[0];
+    let dashes: Vec<_> = row
+        .elements
+        .iter()
+        .filter(|e| matches!(e.content, ElementContent::NoteDash))
+        .collect();
+    assert_eq!(
+        dashes.len(),
+        3,
+        "three `-` tokens should produce three NoteDash elements"
+    );
+    assert_eq!(dashes[0].column, 4, "first dash at column 4");
+    assert_eq!(dashes[1].column, 8, "second dash at column 8");
+    assert_eq!(dashes[2].column, 12, "third dash at column 12");
 }
 
 #[test]
@@ -494,5 +523,75 @@ fn three_measure_slur_with_single_note_middle_measure() {
         }),
         "expected SlurSpan (measure=0, col=12) → (measure=2, col=0), got: {:?}",
         result.slur_spans
+    );
+}
+
+#[test]
+fn malformed_parts_line_is_recoverable_and_valid_part_still_renders() {
+    use crate::error::RecoverableErrorKind;
+
+    let source = concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "[parts]\n",
+        "no-equals-sign\n",
+        "Melody = notes\n",
+        "\n",
+        "[score]\n",
+        "(time=4/4 key=C4 bpm=120)\n",
+        "1 2 3 4\n",
+    );
+    let doc = parse(source, "test").expect("malformed parts line must not abort parsing");
+    assert_eq!(doc.declarations.len(), 1, "valid declaration must survive");
+    assert_eq!(doc.declarations[0].abbreviation, "Melody");
+    assert_eq!(doc.parts_parse_errors.len(), 1);
+    assert!(
+        matches!(
+            doc.parts_parse_errors[0].kind,
+            RecoverableErrorKind::PartsMalformedLine { .. }
+        ),
+        "expected PartsMalformedLine error, got: {:?}",
+        doc.parts_parse_errors[0].kind
+    );
+    let score = group(doc).unwrap();
+    assert!(
+        score
+            .document_diagnostics
+            .iter()
+            .any(|d| d.message().contains("expected track declaration")),
+        "malformed-line error must appear in document_diagnostics"
+    );
+}
+
+#[test]
+fn all_parts_invalid_renders_empty_document_with_error() {
+    use crate::error::RecoverableErrorKind;
+
+    let source = concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "[parts]\n",
+        "no-equals-sign\n",
+        "\n",
+        "[score]\n",
+        "(time=4/4 key=C4 bpm=120)\n",
+        "1 2 3 4\n",
+    );
+    let doc = parse(source, "test").expect("all-invalid parts must not abort parsing");
+    assert!(
+        doc.declarations.is_empty(),
+        "no valid declarations expected"
+    );
+    assert!(
+        doc.parts_parse_errors
+            .iter()
+            .any(|e| matches!(e.kind, RecoverableErrorKind::PartsEmptySection)),
+        "PartsEmptySection error must be collected"
+    );
+    let score = group(doc).unwrap();
+    assert!(
+        score
+            .document_diagnostics
+            .iter()
+            .any(|d| d.message().contains("at least one track")),
+        "empty-section error must appear in document_diagnostics"
     );
 }

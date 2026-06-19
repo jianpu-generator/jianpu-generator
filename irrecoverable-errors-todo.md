@@ -38,6 +38,8 @@ These are no longer review items. Some still have a matching
 | Measure has too many lines | `implemented` | Ignore extra lines; error on measure (`desugar.rs`) |
 | Missing notes / lyrics / chord line for a part | `implemented` | Pad with `_` or `"`; error on measure (`desugar.rs`) |
 | Measure line count mismatch | `implemented` | Pad/truncate lines; `ErrorKind::MeasureWrongLineCount` on measure (`desugar.rs`) |
+| `PartsMalformedLine`, `PartsDuplicateAbbreviation`, `PartsEmptySection`, `PartsEmptyDisplayName`, `PartsEmptyAbbreviation`, `PartsEmptyTrackName`, `PartsInvalidColumns` | `implemented` | Skip bad declaration, continue with valid ones; empty section renders empty document; errors in `document_diagnostics` (`parts_parser.rs`) |
+| `PartsNoNotesTrack` | `implemented` | Already recoverable via `RecoverableError::general` in `interleaved_parser.rs`; `IrrecoverableErrorKind` variant removed |
 
 ---
 
@@ -133,11 +135,6 @@ declaration, or infrastructure failure, not a single bad measure.
 `UnknownSection`, `WrongSectionCount`, `SectionsOutOfOrder`, `DuplicateSection`,
 `MissingSection`
 
-### Parts declaration (whole document)
-`PartsMalformedLine`, `PartsDuplicateAbbreviation`, `PartsEmptySection`,
-`PartsEmptyDisplayName`, `PartsEmptyAbbreviation`, `PartsEmptyTrackName`,
-`PartsInvalidColumns`, `PartsNoNotesTrack`
-
 ### Output / I/O
 `MidiWriteFailed`, `Wav*`, `PdfSvg*`, `Zip*`, `IoReadFailed`, `IoWriteFailed`
 
@@ -153,3 +150,4 @@ Record decisions here as we go.
 | # | Kind | Decision | Date | Notes |
 |---|---|---|---|---|
 | — | Metadata (`MetadataInvalidInteger`, `MetadataMustBePositive`, `MetadataMalformedLine`, `MetadataUnknownField`, `MetadataMissingField`) | Moved from "Never candidates" → implemented as recoverable | 2026-06-19 | `parse_metadata` now returns `(ParsedMetadata, Vec<RecoverableError>)`; missing required fields default to `""`; errors surface via `document_diagnostics` |
+| — | Parts (`PartsMalformedLine`, `PartsDuplicateAbbreviation`, `PartsEmptySection`, `PartsEmptyDisplayName`, `PartsEmptyAbbreviation`, `PartsEmptyTrackName`, `PartsInvalidColumns`, `PartsNoNotesTrack`) | Moved from "Never candidates" → implemented as recoverable | 2026-06-19 | `parse_parts` now returns `(Vec<PartDecl>, Vec<RecoverableError>)`; bad declarations skipped; empty section renders empty document; all errors surface via `document_diagnostics`; `IrrecoverableErrorKind` Parts variants removed |

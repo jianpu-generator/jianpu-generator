@@ -12,14 +12,6 @@ fn parse_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
         | IrrecoverableErrorKind::SectionsOutOfOrder { span }
         | IrrecoverableErrorKind::DuplicateSection { span, .. }
         | IrrecoverableErrorKind::MissingSection { span, .. }
-        | IrrecoverableErrorKind::PartsMalformedLine { span, .. }
-        | IrrecoverableErrorKind::PartsDuplicateAbbreviation { span, .. }
-        | IrrecoverableErrorKind::PartsEmptySection { span }
-        | IrrecoverableErrorKind::PartsEmptyDisplayName { span }
-        | IrrecoverableErrorKind::PartsEmptyAbbreviation { span }
-        | IrrecoverableErrorKind::PartsEmptyTrackName { span }
-        | IrrecoverableErrorKind::PartsInvalidColumns { span, .. }
-        | IrrecoverableErrorKind::PartsNoNotesTrack { span }
         | IrrecoverableErrorKind::MeasureNoDataLines { span }
         | IrrecoverableErrorKind::MeasureMissingRoleLine { span, .. }
         | IrrecoverableErrorKind::DittoNoPrecedent { span, .. }

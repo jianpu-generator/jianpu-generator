@@ -116,8 +116,8 @@ pub fn list_score_line_hints_from_source(
     let sections = parser::load_document_sections(source).map_err(|error| error.with_path(path))?;
     let (parts_content, parts_offset) = sections.parts;
     let (score_content, score_offset) = sections.score;
-    let declarations = parser::parts_parser::parse_parts(&parts_content, parts_offset)
-        .map_err(|error| error.with_path(path))?;
+    let (declarations, _parts_errors) =
+        parser::parts_parser::parse_parts(&parts_content, parts_offset);
     let groups = parser::score::measure_group::collect_groups(&score_content);
     Ok(parser::score::line_hints::score_line_hints(
         &groups,
