@@ -86,6 +86,7 @@ struct BarGroupContext<'a> {
     group_states: &'a mut [GroupStack],
     bar_lyric_slots: &'a mut [Option<u32>],
     directive_events_per_measure: &'a mut DirectiveEventsPerMeasure,
+    per_measure_directive_errors: &'a mut Vec<Option<RecoverableError>>,
     extra_document_errors: &'a mut Vec<RecoverableError>,
 }
 
@@ -182,6 +183,7 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
     let mut group_states = vec![GroupStack::default(); declarations.len()];
     let mut bar_lyric_slots = vec![None; declarations.len()];
     let mut directive_events_per_measure: DirectiveEventsPerMeasure = Vec::new();
+    let mut per_measure_directive_errors: Vec<Option<RecoverableError>> = Vec::new();
     let mut extra_document_errors: Vec<RecoverableError> = Vec::new();
 
     let mut ctx = BarGroupContext {
@@ -197,6 +199,7 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
         group_states: &mut group_states,
         bar_lyric_slots: &mut bar_lyric_slots,
         directive_events_per_measure: &mut directive_events_per_measure,
+        per_measure_directive_errors: &mut per_measure_directive_errors,
         extra_document_errors: &mut extra_document_errors,
     };
 
@@ -210,6 +213,14 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
     let mut per_group_desugar_errors = per_group_desugar_errors;
     if let Some(error) = no_notes_track_error {
         attach_no_notes_track_warning(&mut per_group_desugar_errors, error);
+    }
+    for (slot, directive_error) in per_group_desugar_errors
+        .iter_mut()
+        .zip(per_measure_directive_errors)
+    {
+        if slot.is_none() {
+            *slot = directive_error;
+        }
     }
     for error in extra_document_errors {
         attach_no_notes_track_warning(&mut per_group_desugar_errors, error);
@@ -225,7 +236,9 @@ fn process_bar_group(
     group_lines: &[(String, usize)],
     ctx: &mut BarGroupContext<'_>,
 ) -> Result<(), IrrecoverableError> {
-    let (directive_events, data_lines) = split_directive(group_lines)?;
+    let (directive_events, data_lines, directive_errors) = split_directive(group_lines);
+    ctx.per_measure_directive_errors
+        .push(directive_errors.into_iter().next());
 
     for e in &directive_events {
         if let ScoreEvent::TimeSignatureChange {

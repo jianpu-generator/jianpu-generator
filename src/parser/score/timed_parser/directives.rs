@@ -33,19 +33,19 @@ pub(super) fn parse_key_change_text(
     span: &Span,
 ) -> Result<KeyChange, IrrecoverableError> {
     let after_eq = text.strip_prefix("1=").ok_or_else(|| {
-        IrrecoverableError::new(IrrecoverableErrorKind::KeyChangeMissingPrefix {
-            span: *span,
-            text: text.to_string(),
-        })
+        IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
+            *span,
+            format!("expected key change starting with '1=', got: {text}"),
+        ))
     })?;
 
     let mut chars = after_eq.chars().peekable();
 
     let name_char = chars.next().ok_or_else(|| {
-        IrrecoverableError::new(IrrecoverableErrorKind::KeyChangeMissingNoteName {
-            span: *span,
-            text: text.to_string(),
-        })
+        IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
+            *span,
+            format!("expected note name after '1=', got: {text}"),
+        ))
     })?;
 
     let name = match name_char {
@@ -58,10 +58,10 @@ pub(super) fn parse_key_change_text(
         'G' => NoteName::G,
         _ => {
             return Err(IrrecoverableError::new(
-                IrrecoverableErrorKind::KeyChangeInvalidNoteName {
-                    span: *span,
-                    name: name_char,
-                },
+                IrrecoverableErrorKind::internal_invariant(
+                    *span,
+                    format!("invalid note name: {name_char}"),
+                ),
             ))
         }
     };
@@ -80,10 +80,10 @@ pub(super) fn parse_key_change_text(
 
     let octave_str: String = chars.collect();
     let octave = octave_str.parse::<u8>().map_err(|_| {
-        IrrecoverableError::new(IrrecoverableErrorKind::KeyChangeInvalidOctave {
-            span: *span,
-            text: text.to_string(),
-        })
+        IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
+            *span,
+            format!("invalid octave number in key change: {text}"),
+        ))
     })?;
 
     Ok(KeyChange {

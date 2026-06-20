@@ -36,6 +36,7 @@ pub struct TimedLineParse {
     pub events: Vec<Spanned<ScoreEvent>>,
     pub dash_after_rest_error: Option<RecoverableError>,
     pub chord_errors: Vec<Diagnostic>,
+    pub lex_errors: Vec<RecoverableError>,
 }
 
 /// Parse a single line of timed notation using the lexer + recursive-descent parser.
@@ -45,13 +46,14 @@ pub fn parse_timed_line<H: TimedUnitHead>(
     stack: &mut GroupStack,
     context: LexContext,
 ) -> Result<TimedLineParse, IrrecoverableError> {
-    let tokens = lex_line(line, base_offset, context)?;
+    let (tokens, lex_errors) = lex_line(line, base_offset, context)?;
     let (events, dash_after_rest_error, chord_errors) =
         TimedRdParser::<H>::parse_line(line, base_offset, &tokens, stack)?;
     Ok(TimedLineParse {
         events,
         dash_after_rest_error,
         chord_errors,
+        lex_errors,
     })
 }
 

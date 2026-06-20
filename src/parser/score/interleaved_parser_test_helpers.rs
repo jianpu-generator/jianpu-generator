@@ -1,5 +1,5 @@
 use crate::ast::parsed::{ParsedTimedTrack, ParsedTrack, PartDecl, PartKind};
-use crate::error::IrrecoverableError;
+use crate::error::{IrrecoverableError, RecoverableError};
 
 /// Convenience wrapper that calls `parse` and returns only the tracks,
 /// discarding the directive-events accumulator. Used in unit tests.
@@ -9,6 +9,16 @@ pub(super) fn parse(
     declarations: &[PartDecl],
 ) -> Result<Vec<ParsedTrack>, IrrecoverableError> {
     super::parse(content, base_offset, declarations).map(|(tracks, _, _)| tracks)
+}
+
+/// Convenience wrapper that calls `parse` and returns the recoverable errors,
+/// discarding the tracks and directive-events accumulator.
+pub(super) fn parse_recoverable_errors(
+    content: &str,
+    base_offset: usize,
+    declarations: &[PartDecl],
+) -> Result<Vec<Option<RecoverableError>>, IrrecoverableError> {
+    super::parse(content, base_offset, declarations).map(|(_, _, errors)| errors)
 }
 
 pub(super) fn decl(name: &str, kind: PartKind) -> PartDecl {

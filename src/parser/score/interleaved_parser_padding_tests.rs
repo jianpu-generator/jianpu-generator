@@ -1,7 +1,7 @@
 use super::*;
 use crate::ast::parsed::{Accidental, ParsedTrack};
 
-use super::test_helpers::{chord_track, decl, notes_track, parse};
+use super::test_helpers::{chord_track, decl, notes_track, parse, parse_recoverable_errors};
 
 #[test]
 fn overfull_measure_is_recoverable() {
@@ -278,7 +278,13 @@ fn time_sig_change_updates_beat_tracking() {
 fn rejects_unknown_directive() {
     let content = "(foo=bar)\n1 2 3 4\n";
     let declarations = vec![decl("", PartKind::Notes)];
-    assert!(parse(content, 0, &declarations).is_err());
+    let errors = parse_recoverable_errors(content, 0, &declarations).unwrap();
+    assert!(
+        errors
+            .iter()
+            .any(|e| e.as_ref().is_some_and(|e| e.message().contains("foo"))),
+        "expected an error mentioning unknown key 'foo', got: {errors:?}",
+    );
 }
 
 #[test]
@@ -317,14 +323,26 @@ fn label_directive_parsed() {
 fn label_directive_rejects_unclosed_quote() {
     let content = "(label=\"Verse 1)\n1 2 3 4\n";
     let declarations = vec![decl("", PartKind::Notes)];
-    assert!(parse(content, 0, &declarations).is_err());
+    let errors = parse_recoverable_errors(content, 0, &declarations).unwrap();
+    assert!(
+        errors
+            .iter()
+            .any(|e| e.as_ref().is_some_and(|e| e.message().contains("unclosed"))),
+        "expected a recoverable error for unclosed quote, got none or wrong message",
+    );
 }
 
 #[test]
 fn label_directive_rejects_empty_label() {
     let content = "(label=\"\")\n1 2 3 4\n";
     let declarations = vec![decl("", PartKind::Notes)];
-    assert!(parse(content, 0, &declarations).is_err());
+    let errors = parse_recoverable_errors(content, 0, &declarations).unwrap();
+    assert!(
+        errors
+            .iter()
+            .any(|e| e.as_ref().is_some_and(|e| e.message().contains("empty"))),
+        "expected a recoverable error for empty label, got none or wrong message",
+    );
 }
 
 #[test]

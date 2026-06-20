@@ -116,6 +116,15 @@ fn push_skipped_notes_measure(
     Ok(())
 }
 
+fn notes_lex_recoverable(error: &IrrecoverableError) -> Option<RecoverableError> {
+    match &error.kind {
+        IrrecoverableErrorKind::LexUnexpectedChar { span, ch } => {
+            Some(RecoverableError::lex_unexpected_char(*span, *ch))
+        }
+        _ => None,
+    }
+}
+
 fn process_notes_column_line(
     track_index: usize,
     line: &str,
@@ -133,19 +142,21 @@ fn process_notes_column_line(
         .ok_or_else(|| invariant(line_span, "internal error: group state index out of range"))?;
     let notes_parse_result =
         token_parser::parse_notes_line(line, ctx.base_offset + line_offset, group_state);
-    let lex_error = match notes_parse_result {
-        Err(ref error) => match &error.kind {
-            IrrecoverableErrorKind::LexUnexpectedChar { span, ch } => {
-                Some(RecoverableError::lex_unexpected_char(*span, *ch))
-            }
-            _ => None,
-        },
+    let irrecoverable_lex_error = match notes_parse_result {
+        Err(ref error) => notes_lex_recoverable(error),
         Ok(_) => None,
     };
-    if lex_error.is_some() {
-        return push_skipped_notes_measure(ctx, track_index, line_span, lex_error, Some(line_span));
+    if irrecoverable_lex_error.is_some() {
+        return push_skipped_notes_measure(
+            ctx,
+            track_index,
+            line_span,
+            irrecoverable_lex_error,
+            Some(line_span),
+        );
     }
     let notes_parse = notes_parse_result?;
+    let lex_error = notes_parse.lex_errors.into_iter().next();
     let padded = validate_and_pad_beats(
         notes_parse.events,
         beats_expected,
@@ -178,7 +189,7 @@ fn process_notes_column_line(
     per_measure_beat_errors.push(padded.beat_overflow_error);
     per_measure_dotted_eighth_errors.push(padded.dotted_eighth_errors);
     per_measure_dash_after_rest_errors.push(notes_parse.dash_after_rest_error);
-    per_measure_lex_errors.push(None);
+    per_measure_lex_errors.push(lex_error);
     empty_note_measure_spans.push(None);
     Ok(())
 }

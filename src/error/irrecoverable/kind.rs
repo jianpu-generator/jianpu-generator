@@ -8,90 +8,9 @@ pub enum IrrecoverableErrorKind {
         span: Span,
         role: String,
     },
-    DirectiveUnclosedParen {
-        span: Span,
-    },
-    DirectiveUnclosedQuote {
-        span: Span,
-    },
-    DirectiveInvalidBpm {
-        span: Span,
-        value: String,
-    },
-    DirectiveLabelNotQuoted {
-        span: Span,
-        value: String,
-    },
-    DirectiveLabelEmpty {
-        span: Span,
-    },
-    DirectiveUnknown {
-        span: Span,
-        token: String,
-    },
-    DirectiveKeyMissingNoteName {
-        span: Span,
-    },
-    DirectiveKeyInvalidNoteName {
-        span: Span,
-        name: char,
-    },
-    DirectiveKeyInvalidOctave {
-        span: Span,
-        value: String,
-    },
-    DirectiveTimeInvalid {
-        span: Span,
-        value: String,
-    },
-    DirectiveTimeInvalidNumerator {
-        span: Span,
-        num: String,
-    },
-    DirectiveTimeInvalidDenominator {
-        span: Span,
-        den: String,
-    },
-    DirectiveTimeZeroDenominator {
-        span: Span,
-    },
     LexUnexpectedChar {
         span: Span,
         ch: char,
-    },
-    LexBpmMissingNumber {
-        span: Span,
-    },
-    LexBpmInvalid {
-        span: Span,
-        value: String,
-    },
-    LexTimeInvalidNumerator {
-        span: Span,
-        num: String,
-    },
-    LexTimeInvalidDenominator {
-        span: Span,
-        den: String,
-    },
-    LexTimeZeroDenominator {
-        span: Span,
-    },
-    KeyChangeMissingPrefix {
-        span: Span,
-        text: String,
-    },
-    KeyChangeMissingNoteName {
-        span: Span,
-        text: String,
-    },
-    KeyChangeInvalidNoteName {
-        span: Span,
-        name: char,
-    },
-    KeyChangeInvalidOctave {
-        span: Span,
-        text: String,
     },
     NoteExpectedPitchDigit {
         span: Span,

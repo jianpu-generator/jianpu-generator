@@ -13,29 +13,7 @@ fn parse_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
         | IrrecoverableErrorKind::PartMeasureCountMismatch { span, .. }
         | IrrecoverableErrorKind::MeasureIndexOutOfRange { span, .. }
         | IrrecoverableErrorKind::InvalidMeasureRange { span, .. }
-        | IrrecoverableErrorKind::DirectiveUnclosedParen { span }
-        | IrrecoverableErrorKind::DirectiveUnclosedQuote { span }
-        | IrrecoverableErrorKind::DirectiveInvalidBpm { span, .. }
-        | IrrecoverableErrorKind::DirectiveLabelNotQuoted { span, .. }
-        | IrrecoverableErrorKind::DirectiveLabelEmpty { span }
-        | IrrecoverableErrorKind::DirectiveUnknown { span, .. }
-        | IrrecoverableErrorKind::DirectiveKeyMissingNoteName { span }
-        | IrrecoverableErrorKind::DirectiveKeyInvalidNoteName { span, .. }
-        | IrrecoverableErrorKind::DirectiveKeyInvalidOctave { span, .. }
-        | IrrecoverableErrorKind::DirectiveTimeInvalid { span, .. }
-        | IrrecoverableErrorKind::DirectiveTimeInvalidNumerator { span, .. }
-        | IrrecoverableErrorKind::DirectiveTimeInvalidDenominator { span, .. }
-        | IrrecoverableErrorKind::DirectiveTimeZeroDenominator { span }
         | IrrecoverableErrorKind::LexUnexpectedChar { span, .. }
-        | IrrecoverableErrorKind::LexBpmMissingNumber { span }
-        | IrrecoverableErrorKind::LexBpmInvalid { span, .. }
-        | IrrecoverableErrorKind::LexTimeInvalidNumerator { span, .. }
-        | IrrecoverableErrorKind::LexTimeInvalidDenominator { span, .. }
-        | IrrecoverableErrorKind::LexTimeZeroDenominator { span }
-        | IrrecoverableErrorKind::KeyChangeMissingPrefix { span, .. }
-        | IrrecoverableErrorKind::KeyChangeMissingNoteName { span, .. }
-        | IrrecoverableErrorKind::KeyChangeInvalidNoteName { span, .. }
-        | IrrecoverableErrorKind::KeyChangeInvalidOctave { span, .. }
         | IrrecoverableErrorKind::NoteExpectedPitchDigit { span, .. }
         | IrrecoverableErrorKind::ChordExpectedDegreeDigit { span, .. }
         | IrrecoverableErrorKind::ChordInvalidToken { span, .. }

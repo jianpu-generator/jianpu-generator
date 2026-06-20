@@ -3,6 +3,7 @@ use super::timed_lexer::{lex_line, LexContext, TimedLexToken};
 fn kinds(line: &str) -> Vec<TimedLexToken> {
     lex_line(line, 0, LexContext::Notes)
         .unwrap()
+        .0
         .into_iter()
         .map(|t| t.value)
         .collect()
@@ -58,6 +59,7 @@ fn sixteenth_note_not_key_change() {
     // and the error is caught at parse time (the 'C' is invalid in parse_duration_suffixes).
     let tokens: Vec<_> = lex_line("1=C", 0, LexContext::Notes)
         .unwrap()
+        .0
         .into_iter()
         .map(|t| t.value)
         .collect();
@@ -66,6 +68,7 @@ fn sixteenth_note_not_key_change() {
     // A proper key change (with octave digit) must succeed.
     let tokens: Vec<_> = lex_line("1=C4", 0, LexContext::Notes)
         .unwrap()
+        .0
         .into_iter()
         .map(|t| t.value)
         .collect();
@@ -96,8 +99,11 @@ fn digits_8_9_without_slash_error() {
 }
 
 #[test]
-fn time_signature_zero_denominator_errors() {
-    assert!(lex_line("4/0", 0, LexContext::Notes).is_err());
+fn time_signature_zero_denominator_recoverable() {
+    let (tokens, errors) = lex_line("4/0", 0, LexContext::Notes).unwrap();
+    assert!(tokens.is_empty());
+    assert_eq!(errors.len(), 1);
+    assert!(errors[0].message().contains("zero"));
 }
 
 #[test]
@@ -105,7 +111,7 @@ fn chord_context_treats_slash_as_part_of_chord() {
     // In Chords context, `1/5` must NOT be consumed as a TimeSignature.
     // The lexer should emit a HeadStart for `1`, and leave `/5` for the RD parser
     // (which will handle it via parse_head / find_symbol_end).
-    let tokens = lex_line("1/5", 0, LexContext::Chords).unwrap();
+    let tokens = lex_line("1/5", 0, LexContext::Chords).unwrap().0;
     assert!(
         matches!(tokens[0].value, TimedLexToken::HeadStart { .. }),
         "expected HeadStart, got {:?}",

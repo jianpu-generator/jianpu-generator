@@ -104,14 +104,14 @@ These are no longer review items. Some still have a matching
 
 | # | Kind | Status | Current behavior | Proposed recovery |
 |---|---|---|---|---|
-| 29 | `DirectiveUnclosedParen` | `pending` | Abort | Ignore directive; use previous time/key/bpm; error on measure |
-| 30 | `DirectiveUnclosedQuote` | `pending` | Abort | Ignore `@label`; error on measure |
-| 31 | `DirectiveInvalidBpm` | `pending` | Abort | Keep previous BPM; error on measure |
-| 32 | `DirectiveLabelNotQuoted` / `DirectiveLabelEmpty` | `pending` | Abort | Skip label; error on measure |
-| 33 | `DirectiveUnknown` | `pending` | Abort | Skip token; error on measure |
-| 34 | `DirectiveKey*` / `DirectiveTime*` (all variants) | `pending` | Abort on bad `@key` / `@time` | Keep previous signature/key; error on measure |
-| 35 | `KeyChangeMissingPrefix` / `KeyChangeMissingNoteName` / `KeyChangeInvalidNoteName` / `KeyChangeInvalidOctave` | `pending` | Abort on bad inline key change | Keep previous key; error on measure |
-| 36 | `LexBpm*` / `LexTime*` (lexer variants) | `pending` | Abort during timed-lexer paths | Same as directive recovery; error on measure |
+| 29 | `DirectiveUnclosedParen` | `implemented` | Ignore directive; use previous time/key/bpm; error on measure | Recoverable; bad `(` treated as literal char, directive skipped |
+| 30 | `DirectiveUnclosedQuote` | `implemented` | Ignore `@label`; error on measure | Recoverable; unclosed quote treated as part of label text, label skipped |
+| 31 | `DirectiveInvalidBpm` | `implemented` | Keep previous BPM; error on measure | Recoverable; non-numeric BPM ignored, prior BPM retained |
+| 32 | `DirectiveLabelNotQuoted` / `DirectiveLabelEmpty` | `implemented` | Skip label; error on measure | Recoverable; unquoted or empty labels skipped with error |
+| 33 | `DirectiveUnknown` | `implemented` | Skip token; error on measure | Recoverable; unknown directive token skipped, render continues |
+| 34 | `DirectiveKey*` / `DirectiveTime*` (all variants) | `implemented` | Keep previous signature/key; error on measure | Recoverable; malformed `@key` / `@time` ignored, prior state retained |
+| 35 | `KeyChangeMissingPrefix` / `KeyChangeMissingNoteName` / `KeyChangeInvalidNoteName` / `KeyChangeInvalidOctave` | `implemented` | Keep previous key; error on measure | Recoverable; inline key change errors ignored, previous key retained |
+| 36 | `LexBpm*` / `LexTime*` (lexer variants) | `implemented` | Same as directive recovery; error on measure | Recoverable; lexer-level directive errors handled same as parser-level, prior state retained |
 
 ### Dead enum variants (verify & clean up)
 
@@ -153,3 +153,4 @@ Record decisions here as we go.
 | — | Metadata (`MetadataInvalidInteger`, `MetadataMustBePositive`, `MetadataMalformedLine`, `MetadataUnknownField`, `MetadataMissingField`) | Moved from "Never candidates" → implemented as recoverable | 2026-06-19 | `parse_metadata` now returns `(ParsedMetadata, Vec<RecoverableError>)`; missing required fields default to `""`; errors surface via `document_diagnostics` |
 | — | Parts (`PartsMalformedLine`, `PartsDuplicateAbbreviation`, `PartsEmptySection`, `PartsEmptyDisplayName`, `PartsEmptyAbbreviation`, `PartsEmptyTrackName`, `PartsInvalidColumns`, `PartsNoNotesTrack`) | Moved from "Never candidates" → implemented as recoverable | 2026-06-19 | `parse_parts` now returns `(Vec<PartDecl>, Vec<RecoverableError>)`; bad declarations skipped; empty section renders empty document; all errors surface via `document_diagnostics`; `IrrecoverableErrorKind` Parts variants removed |
 | 6, 7, 8 | `LyricsLineEmpty`, `LyricsNoNotesTrack`, `UnderscoreOnlyOnLyrics` | Implemented (#6, #7) and rejected (#8) | 2026-06-19 | `LyricsLineEmpty` → treat as `_`, surface as `GroupedMeasure.lyrics_parse_error`; `LyricsNoNotesTrack` → skip lyrics, surface as document-level error via `extra_document_errors`; `UnderscoreOnlyOnLyrics` deleted (dead code); all three `IrrecoverableErrorKind` variants removed |
+| 29–36 | Measure directives & key changes (`DirectiveUnclosedParen`, `DirectiveUnclosedQuote`, `DirectiveInvalidBpm`, `DirectiveLabelNotQuoted`, `DirectiveLabelEmpty`, `DirectiveUnknown`, `DirectiveKey*`, `DirectiveTime*`, `KeyChangeMissingPrefix`, `KeyChangeMissingNoteName`, `KeyChangeInvalidNoteName`, `KeyChangeInvalidOctave`, `LexBpm*`, `LexTime*`) | Implemented as recoverable | 2026-06-20 | Directive and key-change errors now collected as `RecoverableError` on measure; malformed directives ignored, prior state retained; errors surfaced via `RenderOutput.errors` |

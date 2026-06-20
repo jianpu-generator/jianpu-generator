@@ -1,9 +1,14 @@
 use super::directives::{key_change_lexeme_len, parse_key_change_text};
 use crate::ast::parsed::KeyChange;
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span, Spanned};
+use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned};
 
+type LexLineResult =
+    Result<(Vec<Spanned<TimedLexToken>>, Vec<RecoverableError>), IrrecoverableError>;
 type LexCharResult = Result<(Option<Spanned<TimedLexToken>>, usize, bool), IrrecoverableError>;
-type LexTokenOffsetResult = Result<Option<(Spanned<TimedLexToken>, usize)>, IrrecoverableError>;
+type LexTokenMaybeResult = Result<Option<(Spanned<TimedLexToken>, usize)>, IrrecoverableError>;
+type LexSoftError = (Span, String);
+type LexBpmResult = Result<(Spanned<TimedLexToken>, usize), LexSoftError>;
+type LexTimeSigResult = Result<Option<(Spanned<TimedLexToken>, usize)>, LexSoftError>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LexContext {
@@ -22,12 +27,9 @@ pub enum TimedLexToken {
     TimeSignature { num: u8, den: u8 },
 }
 
-pub fn lex_line(
-    line: &str,
-    base_offset: usize,
-    context: LexContext,
-) -> Result<Vec<Spanned<TimedLexToken>>, IrrecoverableError> {
+pub fn lex_line(line: &str, base_offset: usize, context: LexContext) -> LexLineResult {
     let mut tokens = Vec::new();
+    let mut recoverable_errors = Vec::new();
     // `at_word_boundary`: true when the next non-whitespace char starts a new "word"
     // (i.e. we are after whitespace, `|`, `(`, or `)`, or at the start of the line).
     let mut at_word_boundary = true;
@@ -54,6 +56,7 @@ pub fn lex_line(
                 at_word_boundary,
                 context,
             },
+            &mut recoverable_errors,
         )?;
         if let Some(tok) = token_opt {
             tokens.push(tok);
@@ -62,7 +65,7 @@ pub fn lex_line(
         i += consumed;
     }
 
-    Ok(tokens)
+    Ok((tokens, recoverable_errors))
 }
 
 #[derive(Clone, Copy)]
@@ -75,7 +78,13 @@ struct CharLexContext {
 
 /// Lex one non-whitespace character.  Returns `(token, bytes_consumed, new_at_word_boundary)`.
 /// When the character is a suffix that belongs to the current head, `token` is `None`.
-fn lex_one_char(line: &str, i: usize, c: char, ctx: CharLexContext) -> LexCharResult {
+fn lex_one_char(
+    line: &str,
+    i: usize,
+    c: char,
+    ctx: CharLexContext,
+    recoverable_errors: &mut Vec<RecoverableError>,
+) -> LexCharResult {
     let CharLexContext {
         start,
         len,
@@ -123,10 +132,19 @@ fn lex_one_char(line: &str, i: usize, c: char, ctx: CharLexContext) -> LexCharRe
                 false,
             ))
         }
-        '0'..='7' => lex_low_digit(line, i, start, len, at_word_boundary, context),
+        '0'..='7' => lex_low_digit(
+            line,
+            i,
+            CharLexContext {
+                start,
+                len,
+                at_word_boundary,
+                context,
+            },
+            recoverable_errors,
+        ),
         'b' if at_word_boundary && line[i..].starts_with("bpm=") => {
-            let (tok, consumed) = lex_bpm(line, i, start)?;
-            Ok((Some(tok), consumed, true))
+            lex_bpm_or_recover(line, i, start, recoverable_errors)
         }
         _ if c.is_ascii_digit() => lex_high_digit_or_error(
             line,
@@ -138,6 +156,7 @@ fn lex_one_char(line: &str, i: usize, c: char, ctx: CharLexContext) -> LexCharRe
                 at_word_boundary,
                 context,
             },
+            recoverable_errors,
         ),
         _ if !at_word_boundary => Ok((None, len, false)),
         _ if at_word_boundary && context == LexContext::Chords => {
@@ -150,17 +169,49 @@ fn lex_one_char(line: &str, i: usize, c: char, ctx: CharLexContext) -> LexCharRe
 fn lex_low_digit(
     line: &str,
     i: usize,
-    start: usize,
-    len: usize,
-    at_word_boundary: bool,
-    context: LexContext,
+    ctx: CharLexContext,
+    recoverable_errors: &mut Vec<RecoverableError>,
 ) -> LexCharResult {
+    let CharLexContext {
+        start,
+        len,
+        at_word_boundary,
+        context,
+    } = ctx;
     if at_word_boundary && context == LexContext::Notes {
-        if let Some((tok, consumed)) = try_lex_time_signature(line, i, start)? {
-            return Ok((Some(tok), consumed, true));
+        match try_lex_time_signature(line, i, start) {
+            Ok(Some((tok, consumed))) => return Ok((Some(tok), consumed, true)),
+            Ok(None) => {}
+            Err((span, message)) => {
+                recoverable_errors.push(RecoverableError::general(span, message));
+                let consumed = line[i..]
+                    .bytes()
+                    .take_while(|b| !b.is_ascii_whitespace() && *b != b'|')
+                    .count();
+                return Ok((None, consumed, true));
+            }
         }
     }
     Ok(chord_head_start_token(start, len))
+}
+
+fn lex_bpm_or_recover(
+    line: &str,
+    i: usize,
+    start: usize,
+    recoverable_errors: &mut Vec<RecoverableError>,
+) -> LexCharResult {
+    match lex_bpm(line, i, start) {
+        Ok((tok, consumed)) => Ok((Some(tok), consumed, true)),
+        Err((span, message)) => {
+            recoverable_errors.push(RecoverableError::general(span, message));
+            let consumed = line[i..]
+                .bytes()
+                .take_while(|b| !b.is_ascii_whitespace() && *b != b'|')
+                .count();
+            Ok((None, consumed, true))
+        }
+    }
 }
 
 fn chord_head_start_token(
@@ -184,7 +235,13 @@ fn unexpected_char_error(start: usize, len: usize, ch: char) -> IrrecoverableErr
     })
 }
 
-fn lex_high_digit_or_error(line: &str, i: usize, c: char, ctx: CharLexContext) -> LexCharResult {
+fn lex_high_digit_or_error(
+    line: &str,
+    i: usize,
+    c: char,
+    ctx: CharLexContext,
+    recoverable_errors: &mut Vec<RecoverableError>,
+) -> LexCharResult {
     let CharLexContext {
         start,
         len,
@@ -192,8 +249,17 @@ fn lex_high_digit_or_error(line: &str, i: usize, c: char, ctx: CharLexContext) -
         context,
     } = ctx;
     if at_word_boundary && context == LexContext::Notes {
-        if let Some((tok, consumed)) = try_lex_time_signature(line, i, start)? {
-            return Ok((Some(tok), consumed, true));
+        match try_lex_time_signature(line, i, start) {
+            Ok(Some((tok, consumed))) => return Ok((Some(tok), consumed, true)),
+            Ok(None) => {}
+            Err((span, message)) => {
+                recoverable_errors.push(RecoverableError::general(span, message));
+                let consumed = line[i..]
+                    .bytes()
+                    .take_while(|b| !b.is_ascii_whitespace() && *b != b'|')
+                    .count();
+                return Ok((None, consumed, true));
+            }
         }
         return Err(unexpected_char_error(start, len, c));
     }
@@ -208,11 +274,7 @@ fn lex_high_digit_or_error(line: &str, i: usize, c: char, ctx: CharLexContext) -
 
 /// Lex a `bpm=<number>` directive starting at byte offset `i` within `line`.
 /// Returns `(token, bytes_consumed)`.
-fn lex_bpm(
-    line: &str,
-    i: usize,
-    start: usize,
-) -> Result<(Spanned<TimedLexToken>, usize), IrrecoverableError> {
+fn lex_bpm(line: &str, i: usize, start: usize) -> LexBpmResult {
     // "bpm=" is 4 bytes.
     let prefix_len = 4;
     let rest = line.get(i + prefix_len..).unwrap_or_default();
@@ -222,17 +284,16 @@ fn lex_bpm(
         &rest[..end]
     };
     if digits.is_empty() {
-        return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::LexBpmMissingNumber {
-                span: Span::new(start, start + prefix_len),
-            },
+        return Err((
+            Span::new(start, start + prefix_len),
+            "expected number after 'bpm='".to_string(),
         ));
     }
     let bpm = digits.parse::<u32>().map_err(|_| {
-        IrrecoverableError::new(IrrecoverableErrorKind::LexBpmInvalid {
-            span: Span::new(start, start + prefix_len + digits.len()),
-            value: digits.to_string(),
-        })
+        (
+            Span::new(start, start + prefix_len + digits.len()),
+            format!("invalid bpm value: {digits}"),
+        )
     })?;
     let consumed = prefix_len + digits.len();
     let span = Span::new(start, start + consumed);
@@ -241,7 +302,7 @@ fn lex_bpm(
 
 /// Try to lex a `1=<NoteName><accidental?><octave>` key change starting at byte offset `i`.
 /// Returns `Some((token, bytes_consumed))` if it looks like a key change, `None` otherwise.
-fn try_lex_key_change(line: &str, i: usize, start: usize) -> LexTokenOffsetResult {
+fn try_lex_key_change(line: &str, i: usize, start: usize) -> LexTokenMaybeResult {
     // "1=" is 2 bytes.
     let after_eq = line.get(i + 2..).unwrap_or_default();
 
@@ -282,8 +343,8 @@ fn try_lex_key_change(line: &str, i: usize, start: usize) -> LexTokenOffsetResul
 
 /// Try to lex a `<num>/<den>` time signature starting at byte offset `i`.
 /// Returns `Some((token, bytes_consumed))` on success, `None` if the text doesn't look like a
-/// time signature (no `/` found).
-fn try_lex_time_signature(line: &str, i: usize, start: usize) -> LexTokenOffsetResult {
+/// time signature (no `/` found), or `Err((span, message))` for a malformed time signature.
+fn try_lex_time_signature(line: &str, i: usize, start: usize) -> LexTimeSigResult {
     let slice = &line[i..];
 
     // Collect numerator digits.
@@ -311,23 +372,22 @@ fn try_lex_time_signature(line: &str, i: usize, start: usize) -> LexTokenOffsetR
         .unwrap_or_default();
 
     let num = num_str.parse::<u8>().map_err(|_| {
-        IrrecoverableError::new(IrrecoverableErrorKind::LexTimeInvalidNumerator {
-            span: Span::new(start, start + num_len),
-            num: num_str.to_string(),
-        })
+        (
+            Span::new(start, start + num_len),
+            format!("invalid time signature numerator: {num_str}"),
+        )
     })?;
     let den = den_str.parse::<u8>().map_err(|_| {
-        IrrecoverableError::new(IrrecoverableErrorKind::LexTimeInvalidDenominator {
-            span: Span::new(start + den_start, start + den_start + den_len),
-            den: den_str.to_string(),
-        })
+        (
+            Span::new(start + den_start, start + den_start + den_len),
+            format!("invalid time signature denominator: {den_str}"),
+        )
     })?;
 
     if den == 0 {
-        return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::LexTimeZeroDenominator {
-                span: Span::new(start, start + num_len + 1 + den_len),
-            },
+        return Err((
+            Span::new(start, start + num_len + 1 + den_len),
+            "time signature denominator cannot be zero".to_string(),
         ));
     }
 

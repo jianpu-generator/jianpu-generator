@@ -6,18 +6,6 @@ pub(super) fn write(
     formatter: &mut fmt::Formatter<'_>,
 ) -> Option<fmt::Result> {
     match kind {
-        IrrecoverableErrorKind::KeyChangeMissingPrefix { text, .. } => {
-            Some(write!(formatter, "expected key change starting with '1=', got: {text}"))
-        }
-        IrrecoverableErrorKind::KeyChangeMissingNoteName { text, .. } => {
-            Some(write!(formatter, "expected note name after '1=', got: {text}"))
-        }
-        IrrecoverableErrorKind::KeyChangeInvalidNoteName { name, .. } => {
-            Some(write!(formatter, "invalid note name: {name}"))
-        }
-        IrrecoverableErrorKind::KeyChangeInvalidOctave { text, .. } => {
-            Some(write!(formatter, "invalid octave number in key change: {text}"))
-        }
         IrrecoverableErrorKind::NoteExpectedPitchDigit { ch, .. } => {
             Some(write!(formatter, "expected pitch digit (0-7), got: {ch}"))
         }
