@@ -236,7 +236,8 @@ fn process_bar_group(
     group_lines: &[(String, usize)],
     ctx: &mut BarGroupContext<'_>,
 ) -> Result<(), IrrecoverableError> {
-    let (directive_events, data_lines, directive_errors) = split_directive(group_lines);
+    let (directive_events, data_lines, directive_errors) =
+        split_directive(group_lines, ctx.base_offset);
     ctx.per_measure_directive_errors
         .push(directive_errors.into_iter().next());
 

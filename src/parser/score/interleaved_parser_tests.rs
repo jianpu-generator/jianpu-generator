@@ -1,7 +1,9 @@
 use super::*;
 use crate::ast::parsed::{Accidental, JianPuPitch, ParsedChordNote, ScoreEvent, TriadQuality};
 
-use super::test_helpers::{chord_track, decl, notes_track, parse, total_lyrics_syllables};
+use super::test_helpers::{
+    chord_track, decl, notes_track, parse, parse_recoverable_errors, total_lyrics_syllables,
+};
 
 #[test]
 fn chord_line_parses_spaced_slur_group() {
@@ -440,5 +442,26 @@ fn lex_unexpected_char_in_notes_line_is_recoverable() {
     assert!(
         track.per_measure_lex_errors[0].is_some(),
         "lex error must be recorded for the failing measure"
+    );
+}
+
+#[test]
+fn directive_error_span_includes_base_offset() {
+    // When parse() is called with a non-zero base_offset, the span of a directive
+    // parse error must be offset by base_offset, not relative to the start of content.
+    let base_offset = 100;
+    let content = "(unknown=foo)\n1 2 3 4\n";
+    let declarations = vec![decl("", PartKind::Notes)];
+    let errors = parse_recoverable_errors(content, base_offset, &declarations)
+        .expect("unknown directive must not abort parsing");
+    let error = errors
+        .into_iter()
+        .find_map(|e| e)
+        .expect("unknown directive must produce a recoverable error");
+    assert!(
+        error.span.start >= base_offset,
+        "directive error span start ({}) must be >= base_offset ({})",
+        error.span.start,
+        base_offset
     );
 }

@@ -7,16 +7,20 @@ type SplitDirectiveResult<'a> = (
     Vec<RecoverableError>,
 );
 
-pub(super) fn split_directive(lines: &[(String, usize)]) -> SplitDirectiveResult<'_> {
+pub(super) fn split_directive(
+    lines: &[(String, usize)],
+    base_offset: usize,
+) -> SplitDirectiveResult<'_> {
     if let Some((directive_line, directive_offset)) = lines.first() {
         if directive_line.starts_with('(') {
+            let absolute_offset = base_offset + directive_offset;
             if !directive_line.ends_with(')') {
-                let span = Span::new(*directive_offset, directive_offset + directive_line.len());
+                let span = Span::new(absolute_offset, absolute_offset + directive_line.len());
                 let recoverable =
                     RecoverableError::general(span, "directive row must end with ')'");
                 return (Vec::new(), lines.get(1..).unwrap_or(&[]), vec![recoverable]);
             }
-            let (events, errors) = parse_directive_line(directive_line, *directive_offset);
+            let (events, errors) = parse_directive_line(directive_line, absolute_offset);
             let remaining = lines.get(1..).unwrap_or(&[]);
             return (events, remaining, errors);
         }
