@@ -209,12 +209,13 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         )
         const lineNumber = model.getPositionAt(stringIndex).lineNumber
 
+        const hasLabel = span.section_label != null
         const domNode = document.createElement('div')
         domNode.style.cssText = [
           'width: 100%',
           'height: 21px',
-          'background: #dbeafe',
-          'color: #1e40af',
+          hasLabel ? 'background: #dbeafe' : 'background: #f5f5f5',
+          hasLabel ? 'color: #1e40af' : 'color: #666666',
           'font-family: var(--mono)',
           'font-size: 14px',
           'font-weight: bold',
