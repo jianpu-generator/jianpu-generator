@@ -258,9 +258,9 @@ fn omitted_trailing_lyrics_without_precedent_is_recoverable() {
 }
 
 #[test]
-fn omitted_notes_row_is_recoverable() {
+fn omitted_notes_row_is_filled_with_rest() {
     // Part kind "lyrics notes" puts the lyrics row before the notes row in the score.
-    // The score has only a lyrics row; the missing notes row must not abort parsing.
+    // The score has only a lyrics row; the missing notes row is silently filled with rests.
     let input = concat!(
         "[metadata]\n",
         "title = \"t\"\n",
@@ -276,21 +276,25 @@ fn omitted_notes_row_is_recoverable() {
     let doc = crate::parser::parse(input, "test.jianpu")
         .expect("missing notes row must not abort parsing");
     let ParsedTrack::Timed(track) = &doc.tracks[0];
+    let rest_events: Vec<_> = track
+        .score
+        .events
+        .iter()
+        .filter(|e| matches!(e.value, ScoreEvent::Rest(_)))
+        .collect();
+    assert!(
+        !rest_events.is_empty(),
+        "measure with missing notes row should be filled with a rest"
+    );
     let note_events: Vec<_> = track
         .score
         .events
         .iter()
-        .filter(|e| {
-            matches!(
-                e.value,
-                ScoreEvent::Note(_) | ScoreEvent::Rest(_) | ScoreEvent::Extension
-            )
-        })
+        .filter(|e| matches!(e.value, ScoreEvent::Note(_)))
         .collect();
-    assert_eq!(
-        note_events.len(),
-        0,
-        "measure with missing notes row should have no note events"
+    assert!(
+        note_events.is_empty(),
+        "measure with missing notes row should have no pitched note events"
     );
 }
 

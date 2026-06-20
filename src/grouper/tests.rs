@@ -145,25 +145,16 @@ fn chord_bass_trailing_chars_is_recoverable() {
 }
 
 #[test]
-fn measure_wrong_line_count_is_recoverable() {
-    use crate::error::{Diagnostic, RecoverableErrorKind};
-    // One notes+lyrics part expects two data lines but only the notes line is present.
+fn measure_omitted_lyrics_line_is_silently_filled() {
+    // One notes+lyrics part with only the notes line present: lyrics silently become empty (no error).
     let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n",
         "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n",
     ));
     assert_eq!(score.measures.len(), 1);
-    assert_eq!(score.measures[0].diagnostics.len(), 1);
-    assert!(matches!(
-        &score.measures[0].diagnostics[0],
-        Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::MeasureMissingRoleLine { .. })
-    ));
     assert!(
-        score.measures[0].diagnostics[0]
-            .message()
-            .contains("lyrics"),
-        "got: {}",
-        score.measures[0].diagnostics[0].message()
+        score.measures[0].diagnostics.is_empty(),
+        "omitted trailing lyrics with no precedent should produce no diagnostics"
     );
 }
 

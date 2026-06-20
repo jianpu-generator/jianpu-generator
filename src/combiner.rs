@@ -258,7 +258,8 @@ mod tests {
     }
 
     #[test]
-    fn missing_lyrics_line_in_first_measure_is_recoverable() {
+    fn missing_lyrics_line_in_first_measure_is_silently_filled() {
+        // Omitted trailing lyrics with no ditto source: silently treated as no lyrics.
         let input = concat!(
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
             "[parts]\nA = notes lyrics\n\n",
@@ -272,17 +273,9 @@ mod tests {
             parser::parse(input, "test.jianpu").expect("missing lyrics must not abort parsing");
         let score = grouper::group(doc).expect("grouping must succeed");
         assert_eq!(score.measures.len(), 2);
-        assert_eq!(
-            score.measures[0].diagnostics.len(),
-            1,
-            "measure 1 should have exactly one error"
-        );
         assert!(
-            score.measures[0].diagnostics[0]
-                .message()
-                .contains("lyrics"),
-            "error should mention lyrics, got: {}",
-            score.measures[0].diagnostics[0].message()
+            score.measures[0].diagnostics.is_empty(),
+            "measure 1 should have no diagnostics when lyrics are silently omitted"
         );
         assert!(
             score.measures[1].diagnostics.is_empty(),

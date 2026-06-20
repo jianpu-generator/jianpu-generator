@@ -93,36 +93,12 @@ fn pad_implicit_ditto_group(
         if has_precedent {
             result_data.push(("\"".to_string(), pad_offset));
         } else if role == ScoreLineRole::Lyrics {
-            let abbrev = track_abbreviation(declarations, slot.track_index);
-            recoverable_error.get_or_insert_with(|| {
-                RecoverableError::measure_missing_role_line(
-                    Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
-                    role_name(role),
-                    abbrev,
-                )
-            });
-            result_data.push(("_".to_string(), pad_offset));
-        } else if role == ScoreLineRole::Notes {
-            let abbrev = track_abbreviation(declarations, slot.track_index);
-            recoverable_error.get_or_insert_with(|| {
-                RecoverableError::measure_missing_role_line(
-                    Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
-                    role_name(role),
-                    abbrev,
-                )
-            });
+            // Omitted lyrics with no ditto source: treat as no lyrics for this measure.
             result_data.push(("_".to_string(), pad_offset));
         } else {
-            // ScoreLineRole::Chord (the only remaining variant)
-            let abbrev = track_abbreviation(declarations, slot.track_index);
-            recoverable_error.get_or_insert_with(|| {
-                RecoverableError::measure_missing_role_line(
-                    Span::new(base_offset + pad_offset, base_offset + pad_offset + 1),
-                    role_name(role),
-                    abbrev,
-                )
-            });
-            result_data.push(("_".to_string(), pad_offset));
+            // Omitted notes or chord with no ditto source: fill with a quarter rest
+            // that beat-padding will extend to cover the full measure.
+            result_data.push(("0".to_string(), pad_offset));
         }
     }
 
@@ -199,13 +175,6 @@ fn role_name(role: ScoreLineRole) -> &'static str {
         ScoreLineRole::Lyrics => "lyrics",
         ScoreLineRole::Chord => "chord",
     }
-}
-
-fn track_abbreviation(declarations: &[PartDecl], track_index: usize) -> &str {
-    declarations
-        .get(track_index)
-        .map(|d| d.abbreviation.as_str())
-        .unwrap_or("unknown")
 }
 
 #[cfg(test)]
@@ -395,18 +364,44 @@ mod tests {
     }
 
     #[test]
-    fn omitted_trailing_lyrics_without_precedent_is_recoverable() {
-        // Missing lyrics line with no precedent to ditto is now recoverable:
-        // desugar fills in `_` (no lyrics) and returns a per-group error.
+    fn omitted_trailing_lyrics_without_precedent_fills_with_no_lyrics_silently() {
+        // Missing lyrics line with no precedent: silently insert `_` (no lyrics), no error.
         let groups = vec![group(&["1 2 3 4"])];
         let declarations = vec![decl("A", PartKind::NotesWithLyrics)];
         let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
         assert_eq!(result[0][1].0, "_", "should fill in underscore placeholder");
-        let error = errors[0].as_ref().expect("should have a recoverable error");
         assert!(
-            error.message().contains("lyrics"),
-            "error should mention lyrics, got: {}",
-            error.message()
+            errors[0].is_none(),
+            "omitted lyrics with no precedent should not produce an error"
+        );
+    }
+
+    #[test]
+    fn omitted_trailing_notes_without_precedent_fills_with_rest_silently() {
+        // Missing notes line with no precedent: silently insert `0` (rest), no error.
+        let groups = vec![group(&["1 - - -"])];
+        let declarations = vec![decl("A", PartKind::Chord), decl("B", PartKind::Notes)];
+        let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
+        assert_eq!(
+            result[0][1].0, "0",
+            "should fill in quarter-rest placeholder"
+        );
+        assert!(
+            errors[0].is_none(),
+            "omitted notes with no precedent should not produce an error"
+        );
+    }
+
+    #[test]
+    fn omitted_trailing_chord_without_precedent_fills_with_rest_silently() {
+        // Missing chord line with no precedent: silently insert `0` (chord rest), no error.
+        let groups = vec![group(&["1 2 3 4"])];
+        let declarations = vec![decl("A", PartKind::Notes), decl("B", PartKind::Chord)];
+        let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
+        assert_eq!(result[0][1].0, "0", "should fill in chord-rest placeholder");
+        assert!(
+            errors[0].is_none(),
+            "omitted chord with no precedent should not produce an error"
         );
     }
 

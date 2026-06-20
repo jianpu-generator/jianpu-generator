@@ -469,16 +469,36 @@ Because lines map **positionally**, you can only omit **trailing** columns. If a
                                ← (omitted) S2 notes + S2 lyrics → implicit ditto
 ```
 
-### Errors for omitted lines
+### Omitted lines — precedence table
 
 | Situation | Result |
 |-----------|--------|
-| Omitted trailing line; same column type exists above | Implicit `"` |
-| Omitted trailing line; no same-type precedent | Error — write content, `"`, or `_` (lyrics) |
+| Omitted trailing notes/chord line; same type exists above | Implicit `"` (ditto) |
+| Omitted trailing lyrics line; lyrics line exists above | Implicit `"` (ditto) |
+| Omitted trailing notes/chord line; **no same-type precedent** | Silently filled with rests (`0` extended to full measure) |
+| Omitted trailing lyrics line; **no same-type precedent** | Silently filled with no lyrics (`_`) |
+| Explicit `"` with no same-type precedent | Error — no source to copy from |
 | More data lines than score lines | Error |
 | Fewer than one data line per group | Error |
 
 Explicit `"` lines remain valid (redundant when trailing omission would apply).
+
+**Omittable parts example** — Part B has no lines in measure 1; it is silently filled with rests:
+
+```
+[parts]
+A = chord
+B = notes
+
+[score]
+1 2m 3 4
+
+1 - - -
+1 2 3 4
+```
+
+Measure 1: A plays `1 2m 3 4`, B plays a full-measure rest (`0 0 0 0` in 4/4).
+Measure 2: A plays `1 - - -`, B plays `1 2 3 4`.
 
 ---
 
