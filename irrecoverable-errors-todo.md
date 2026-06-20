@@ -121,10 +121,10 @@ whether to delete the variants or re-wire them.
 
 | # | Kind | Status | Notes |
 |---|---|---|---|
-| 37 | `IncompleteMeasure` | `pending` | Replaced by recoverable beat-underflow padding |
-| 38 | `MeasureOverflow` | `pending` | Replaced by recoverable beat-overflow handling |
-| 39 | `MeasureIndexOutOfRange` | `pending` | Never emitted — likely API/caller error, not source |
-| 40 | `InvalidMeasureRange` | `pending` | Never emitted — likely API/caller error, not source |
+| 37 | `IncompleteMeasure` | `implemented` | Deleted — replaced by recoverable beat-underflow padding |
+| 38 | `MeasureOverflow` | `implemented` | Deleted — replaced by recoverable beat-overflow handling |
+| 39 | `MeasureIndexOutOfRange` | `implemented` | Deleted — never emitted |
+| 40 | `InvalidMeasureRange` | `implemented` | Deleted — never emitted |
 
 ---
 
@@ -154,3 +154,4 @@ Record decisions here as we go.
 | — | Parts (`PartsMalformedLine`, `PartsDuplicateAbbreviation`, `PartsEmptySection`, `PartsEmptyDisplayName`, `PartsEmptyAbbreviation`, `PartsEmptyTrackName`, `PartsInvalidColumns`, `PartsNoNotesTrack`) | Moved from "Never candidates" → implemented as recoverable | 2026-06-19 | `parse_parts` now returns `(Vec<PartDecl>, Vec<RecoverableError>)`; bad declarations skipped; empty section renders empty document; all errors surface via `document_diagnostics`; `IrrecoverableErrorKind` Parts variants removed |
 | 6, 7, 8 | `LyricsLineEmpty`, `LyricsNoNotesTrack`, `UnderscoreOnlyOnLyrics` | Implemented (#6, #7) and rejected (#8) | 2026-06-19 | `LyricsLineEmpty` → treat as `_`, surface as `GroupedMeasure.lyrics_parse_error`; `LyricsNoNotesTrack` → skip lyrics, surface as document-level error via `extra_document_errors`; `UnderscoreOnlyOnLyrics` deleted (dead code); all three `IrrecoverableErrorKind` variants removed |
 | 29–36 | Measure directives & key changes (`DirectiveUnclosedParen`, `DirectiveUnclosedQuote`, `DirectiveInvalidBpm`, `DirectiveLabelNotQuoted`, `DirectiveLabelEmpty`, `DirectiveUnknown`, `DirectiveKey*`, `DirectiveTime*`, `KeyChangeMissingPrefix`, `KeyChangeMissingNoteName`, `KeyChangeInvalidNoteName`, `KeyChangeInvalidOctave`, `LexBpm*`, `LexTime*`) | Implemented as recoverable | 2026-06-20 | Directive and key-change errors now collected as `RecoverableError` on measure; malformed directives ignored, prior state retained; errors surfaced via `RenderOutput.errors` |
+| 37–40 | `IncompleteMeasure`, `MeasureOverflow`, `MeasureIndexOutOfRange`, `InvalidMeasureRange` | Deleted | 2026-06-20 | Dead variants removed from `IrrecoverableErrorKind`, `span.rs`, and `display/score.rs`; superseded by recoverable equivalents or never emitted |

@@ -62,19 +62,6 @@ pub enum IrrecoverableErrorKind {
         span: Span,
         part: String,
     },
-    IncompleteMeasure {
-        span: Span,
-        expected: u32,
-        got: u32,
-    },
-    MeasureOverflow {
-        span: Span,
-        part: Option<String>,
-        event_label: String,
-        duration: u32,
-        capacity: u32,
-        used: u32,
-    },
     ExtensionNoPrecedingEvent {
         span: Span,
         part: Option<String>,
@@ -89,17 +76,6 @@ pub enum IrrecoverableErrorKind {
         part: String,
         got: usize,
         expected: usize,
-    },
-    MeasureIndexOutOfRange {
-        span: Span,
-        index: usize,
-        total: usize,
-    },
-    InvalidMeasureRange {
-        span: Span,
-        start: usize,
-        end: usize,
-        total: usize,
     },
     MidiWriteFailed {
         span: Span,

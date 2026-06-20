@@ -7,27 +7,6 @@ pub(super) fn write(
     formatter: &mut fmt::Formatter<'_>,
 ) -> Option<fmt::Result> {
     match kind {
-        IrrecoverableErrorKind::IncompleteMeasure { expected, got, .. } => Some(write!(
-            formatter,
-            "incomplete measure: expected {expected} quarter-beats, got {got}"
-        )),
-        IrrecoverableErrorKind::MeasureOverflow {
-            part,
-            event_label,
-            duration,
-            capacity,
-            used,
-            ..
-        } => Some(write!(
-            formatter,
-            "{}",
-            with_part_prefix(
-                part,
-                format!(
-                    "{event_label} duration {duration} overflows the current measure (capacity {capacity} quarter-beats, {used} used)"
-                )
-            )
-        )),
         IrrecoverableErrorKind::ExtensionNoPrecedingEvent { part, chord_track, .. } => {
             let message = if *chord_track {
                 "chord extension '-' with no preceding event".to_string()
@@ -49,19 +28,6 @@ pub(super) fn write(
         } => Some(write!(
             formatter,
             "part {part:?} has {got} measures but the first part has {expected}; all parts must have the same number of measures"
-        )),
-        IrrecoverableErrorKind::MeasureIndexOutOfRange { index, total, .. } => Some(write!(
-            formatter,
-            "measure index {index} out of range (score has {total} measures)"
-        )),
-        IrrecoverableErrorKind::InvalidMeasureRange {
-            start,
-            end,
-            total,
-            ..
-        } => Some(write!(
-            formatter,
-            "invalid measure range {start}..={end} (score has {total} measures)"
         )),
         _ => None,
     }

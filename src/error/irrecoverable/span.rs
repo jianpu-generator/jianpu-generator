@@ -8,11 +8,7 @@ pub(super) fn span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
 fn parse_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
     match kind {
         IrrecoverableErrorKind::DittoNoPrecedent { span, .. }
-        | IrrecoverableErrorKind::IncompleteMeasure { span, .. }
-        | IrrecoverableErrorKind::MeasureOverflow { span, .. }
         | IrrecoverableErrorKind::PartMeasureCountMismatch { span, .. }
-        | IrrecoverableErrorKind::MeasureIndexOutOfRange { span, .. }
-        | IrrecoverableErrorKind::InvalidMeasureRange { span, .. }
         | IrrecoverableErrorKind::LexUnexpectedChar { span, .. }
         | IrrecoverableErrorKind::NoteExpectedPitchDigit { span, .. }
         | IrrecoverableErrorKind::ChordExpectedDegreeDigit { span, .. }
