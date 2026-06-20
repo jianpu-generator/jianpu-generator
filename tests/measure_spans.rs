@@ -23,7 +23,7 @@ const DIRECTIVE_MEASURE_SOURCE: &str = concat!(
     "Melody = notes\n",
     "\n",
     "[score]\n",
-    "(bpm=60)\n",
+    "bpm=60\n",
     "1 2 3 4\n",
 );
 
@@ -51,7 +51,7 @@ fn view_zone_start_includes_leading_directive_line() {
     let spans = list_measure_spans_from_source(DIRECTIVE_MEASURE_SOURCE, "test.jianpu").unwrap();
     assert_eq!(spans.len(), 1);
 
-    let directive_offset = DIRECTIVE_MEASURE_SOURCE.find("(bpm=60)").unwrap();
+    let directive_offset = DIRECTIVE_MEASURE_SOURCE.find("bpm=60").unwrap();
     let notes_offset = DIRECTIVE_MEASURE_SOURCE.find("1 2 3 4").unwrap();
 
     assert_eq!(spans[0].view_zone_start, directive_offset);
@@ -86,7 +86,7 @@ Soprano 1 (S1) = notes lyrics
 Soprano 2 (S2) = notes lyrics
 
 [score]
-(bpm=80 key=C4 time=4/4 label="Verse 1")
+bpm=80 key=C4 time=4/4 label="Verse 1"
 1 - - -
 5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_
 白陽旗旛在大道盛宏

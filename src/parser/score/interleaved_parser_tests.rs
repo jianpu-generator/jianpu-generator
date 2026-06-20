@@ -17,7 +17,7 @@ fn chord_line_parses_spaced_slur_group() {
         "Melody = notes\n",
         "\n",
         "[score]\n",
-        "(time=4/4 key=C4 bpm=120)\n",
+        "time=4/4 key=C4 bpm=120\n",
         "(1 - 6m -)\n",
         "1 1 5 5\n",
     );
@@ -34,7 +34,7 @@ fn chord_line_parses_spaced_slur_group() {
 #[test]
 fn chord_column_events_are_parsed() {
     let declarations = vec![decl("main", PartKind::Chord), decl("main", PartKind::Notes)];
-    let content = "(time=4/4 key=C4 bpm=120)\n1 - - -\n1---\n";
+    let content = "time=4/4 key=C4 bpm=120\n1 - - -\n1---\n";
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(tracks.len(), 2);
     let chord = chord_track(&tracks, "main");
@@ -61,7 +61,7 @@ fn chord_column_events_are_parsed() {
 
 #[test]
 fn single_unnamed_part_no_lyrics() {
-    let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\n";
+    let content = "time=4/4 key=C4 bpm=120\n1 2 3 4\n";
     let declarations = vec![decl("", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(tracks.len(), 1);
@@ -72,7 +72,7 @@ fn single_unnamed_part_no_lyrics() {
 
 #[test]
 fn single_part_with_lyrics() {
-    let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\ndo re mi fa\n";
+    let content = "time=4/4 key=C4 bpm=120\n1 2 3 4\ndo re mi fa\n";
     let declarations = vec![decl("", PartKind::NotesWithLyrics)];
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(tracks.len(), 1);
@@ -84,7 +84,7 @@ fn single_part_with_lyrics() {
 #[test]
 fn two_parts_two_bars() {
     let content = concat!(
-        "(time=4/4 key=C4 bpm=120)\n",
+        "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "5 6 7 1\n",
         "\n",
@@ -104,7 +104,7 @@ fn two_parts_two_bars() {
 #[test]
 fn too_many_lines_in_group_is_recoverable() {
     // Extra data line beyond what the declared parts expect must not abort parsing.
-    let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c d\nextra line\n";
+    let content = "time=4/4 key=C4 bpm=120\n1 2 3 4\na b c d\nextra line\n";
     let declarations = vec![decl("", PartKind::NotesWithLyrics)];
     assert!(
         parse(content, 0, &declarations).is_ok(),
@@ -115,7 +115,7 @@ fn too_many_lines_in_group_is_recoverable() {
 #[test]
 fn underscore_on_lyrics_line_means_no_lyrics_for_that_bar() {
     let content = concat!(
-        "(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c d\n",
+        "time=4/4 key=C4 bpm=120\n1 2 3 4\na b c d\n",
         "\n",
         "5 6 7 1\n",
         "_\n",
@@ -130,7 +130,7 @@ fn underscore_on_lyrics_line_means_no_lyrics_for_that_bar() {
 
 #[test]
 fn allows_too_few_lyrics_syllables_for_notes() {
-    let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c\n";
+    let content = "time=4/4 key=C4 bpm=120\n1 2 3 4\na b c\n";
     let declarations = vec![decl("", PartKind::NotesWithLyrics)];
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(
@@ -147,7 +147,7 @@ fn allows_too_few_lyrics_syllables_for_notes() {
 #[test]
 fn accepts_too_many_lyrics_syllables_for_notes() {
     // Overflow is recoverable — parsing succeeds and the grouper attaches an error to the measure.
-    let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c d e\n";
+    let content = "time=4/4 key=C4 bpm=120\n1 2 3 4\na b c d e\n";
     let declarations = vec![decl("", PartKind::NotesWithLyrics)];
     assert!(
         parse(content, 0, &declarations).is_ok(),
@@ -157,7 +157,7 @@ fn accepts_too_many_lyrics_syllables_for_notes() {
 
 #[test]
 fn cross_measure_paren_group_parses() {
-    let content = concat!("(time=4/4 key=C4 bpm=120)\n", "111(1\n", "\n", "2)345\n",);
+    let content = concat!("time=4/4 key=C4 bpm=120\n", "111(1\n", "\n", "2)345\n",);
     let declarations = vec![decl("", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations).unwrap();
     let notes = notes_track(&tracks, "");
@@ -177,7 +177,7 @@ fn cross_measure_paren_group_parses() {
 
 #[test]
 fn rejects_unclosed_paren_group_at_eof() {
-    let content = "(time=4/4 key=C4 bpm=120)\n111(1\n";
+    let content = "time=4/4 key=C4 bpm=120\n111(1\n";
     let declarations = vec![decl("", PartKind::Notes)];
     let err = parse(content, 0, &declarations).unwrap_err();
     assert!(err.message().contains("unclosed '(' group"));
@@ -185,7 +185,7 @@ fn rejects_unclosed_paren_group_at_eof() {
 
 #[test]
 fn tied_notes_share_one_lyric_slot_in_bar() {
-    let content = "(time=4/4 key=C4 bpm=120)\n(33) 1 2\na b c\n";
+    let content = "time=4/4 key=C4 bpm=120\n(33) 1 2\na b c\n";
     let declarations = vec![decl("", PartKind::NotesWithLyrics)];
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(
@@ -202,7 +202,7 @@ fn tied_notes_share_one_lyric_slot_in_bar() {
 #[test]
 fn cross_measure_tie_continuation_needs_fewer_lyrics() {
     let content = concat!(
-        "(time=4/4 key=C4 bpm=120)\n0 0 0 (3\na\n",
+        "time=4/4 key=C4 bpm=120\n0 0 0 (3\na\n",
         "\n",
         "3) 0 0 0\n",
         "_\n",
@@ -218,7 +218,7 @@ fn cross_measure_tie_continuation_needs_fewer_lyrics() {
 #[test]
 fn spaced_open_group_cross_measure_lyrics() {
     let content = concat!(
-        "(time=4/4 key=C4 bpm=120)\n",
+        "time=4/4 key=C4 bpm=120\n",
         "1 - 6m -\n",
         "(6- 7-\n",
         "慈 -\n",
@@ -241,7 +241,7 @@ fn omitted_trailing_lyrics_without_precedent_is_recoverable() {
     // Measure 2 has no lyrics and no preceding lyrics in the same group to ditto from.
     // Parsing must succeed; the missing lyrics become an empty (no-lyrics) measure.
     let content = concat!(
-        "(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c d\n",
+        "time=4/4 key=C4 bpm=120\n1 2 3 4\na b c d\n",
         "\n",
         "5 6 7 1\n",
     );
@@ -270,7 +270,7 @@ fn omitted_notes_row_is_recoverable() {
         "A = lyrics notes\n",
         "\n",
         "[score]\n",
-        "(time=4/4 key=C4 bpm=120)\n",
+        "time=4/4 key=C4 bpm=120\n",
         "la la\n",
     );
     let doc = crate::parser::parse(input, "test.jianpu")
@@ -307,7 +307,7 @@ fn omitted_chord_row_is_recoverable() {
         "A = notes chord\n",
         "\n",
         "[score]\n",
-        "(time=4/4 key=C4 bpm=120)\n",
+        "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
     );
     assert!(
@@ -319,7 +319,7 @@ fn omitted_chord_row_is_recoverable() {
 #[test]
 fn partial_measure_still_needs_ditto_before_diverging_middle_columns() {
     let content = concat!(
-        "(time=4/4 key=C4 bpm=120)\n",
+        "time=4/4 key=C4 bpm=120\n",
         "1 - 6m -\n",
         "6. 6= 6= 6_ 5_ 3= (2_=2_)\n",
         "a b c d e f g\n",
@@ -346,7 +346,7 @@ fn partial_measure_still_needs_ditto_before_diverging_middle_columns() {
 #[test]
 fn implicit_trailing_ditto_matches_explicit_ditto() {
     let explicit = concat!(
-        "(time=4/4 key=C4 bpm=120)\n",
+        "time=4/4 key=C4 bpm=120\n",
         "1 - - -\n",
         "1 2 3 4\n",
         "do re mi fa\n",
@@ -354,7 +354,7 @@ fn implicit_trailing_ditto_matches_explicit_ditto() {
         "\"\n",
     );
     let implicit = concat!(
-        "(time=4/4 key=C4 bpm=120)\n",
+        "time=4/4 key=C4 bpm=120\n",
         "1 - - -\n",
         "1 2 3 4\n",
         "do re mi fa\n",
@@ -385,7 +385,7 @@ fn implicit_trailing_ditto_matches_explicit_ditto() {
 #[test]
 fn measure_no_data_lines_is_recoverable() {
     // A directive-only group (no note lines) must not abort parsing.
-    let content = "(time=4/4 key=C4 bpm=120)\n\n1 2 3 4\n";
+    let content = "time=4/4 key=C4 bpm=120\n\n1 2 3 4\n";
     let declarations = vec![decl("", PartKind::Notes)];
     assert!(
         parse(content, 0, &declarations).is_ok(),
@@ -396,7 +396,7 @@ fn measure_no_data_lines_is_recoverable() {
 #[test]
 fn measure_too_many_lines_is_recoverable() {
     // Single-part declaration but two data lines — extra line must be silently ignored.
-    let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\n5 6 7 1\n";
+    let content = "time=4/4 key=C4 bpm=120\n1 2 3 4\n5 6 7 1\n";
     let declarations = vec![decl("", PartKind::Notes)];
     assert!(
         parse(content, 0, &declarations).is_ok(),
@@ -408,7 +408,7 @@ fn measure_too_many_lines_is_recoverable() {
 fn measure_missing_chord_line_is_recoverable() {
     // [notes, chord] parts but only the notes line is provided.
     // The chord role cannot be filled implicitly, so this previously errored.
-    let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\n";
+    let content = "time=4/4 key=C4 bpm=120\n1 2 3 4\n";
     let declarations = vec![
         decl("Melody", PartKind::Notes),
         decl("chord", PartKind::Chord),
@@ -422,7 +422,7 @@ fn measure_missing_chord_line_is_recoverable() {
 #[test]
 fn no_notes_track_is_recoverable() {
     // A parts declaration with only a chord track (no notes track) must not abort parsing.
-    let content = "(time=4/4 key=C4 bpm=120)\n1 2 3 4\n";
+    let content = "time=4/4 key=C4 bpm=120\n1 2 3 4\n";
     let declarations = vec![decl("Chord", PartKind::Chord)];
     assert!(
         parse(content, 0, &declarations).is_ok(),
@@ -433,7 +433,7 @@ fn no_notes_track_is_recoverable() {
 #[test]
 fn lex_unexpected_char_in_notes_line_is_recoverable() {
     // `@` at a word boundary in a notes line triggers LexUnexpectedChar — must not abort parsing.
-    let content = "(time=4/4 key=C4 bpm=120)\n1 @ 3 4\n";
+    let content = "time=4/4 key=C4 bpm=120\n1 @ 3 4\n";
     let declarations = vec![decl("", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations)
         .expect("LexUnexpectedChar in notes line must not abort parsing");

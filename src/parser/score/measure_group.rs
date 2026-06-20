@@ -1,11 +1,20 @@
 type SourceLine = (String, usize);
 
+pub(super) fn is_directive_line(line: &str) -> bool {
+    line.split_whitespace().any(|t| {
+        t.starts_with("bpm=")
+            || t.starts_with("key=")
+            || t.starts_with("time=")
+            || t.starts_with("label=")
+    })
+}
+
 /// Number of leading directive lines in a raw measure group (0 or 1).
 pub fn directive_line_count(group: &[SourceLine]) -> usize {
     usize::from(
         group
             .first()
-            .map(|(line, _)| line.starts_with('('))
+            .map(|(line, _)| is_directive_line(line))
             .unwrap_or(false),
     )
 }

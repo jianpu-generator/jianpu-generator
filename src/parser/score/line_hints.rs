@@ -67,12 +67,7 @@ mod tests {
     #[test]
     fn hints_follow_slot_order_for_notes_with_lyrics() {
         let groups = vec![group(
-            &[
-                "(time=4/4 key=C4 bpm=120)",
-                "1 - - -",
-                "1 1 5 5",
-                "twin- kle",
-            ],
+            &["time=4/4 key=C4 bpm=120", "1 - - -", "1 1 5 5", "twin- kle"],
             100,
         )];
         let declarations = vec![

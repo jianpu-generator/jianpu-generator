@@ -16,7 +16,7 @@ Soprano 2 (S2) = notes lyrics
 
 [score]
 
-(bpm=92 key=C4 time=4/4 label="Verse 1")
+bpm=92 key=C4 time=4/4 label="Verse 1"
 1
 5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_
 白陽旗旛在大道盛宏
@@ -49,7 +49,7 @@ Soprano 2 (S2) = notes lyrics
 2 - - -
 浪
 
-(label="Verse 2")
+label="Verse 2"
 1 - 6m -
 5_ 5_ 5_ 5= 5= 5_ 3= 3= 2_ (3_
 彌勒佛張開口吞掉了骯
@@ -82,7 +82,7 @@ Soprano 2 (S2) = notes lyrics
 1 - - 0_ 3= 5=
 想告訴
 
-(label="Chorus")
+label="Chorus"
 1 - 6m -
 6. 6= 6= 6_ 5_ 3= 2_.
 你一個神秘的地

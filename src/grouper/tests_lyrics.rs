@@ -7,7 +7,7 @@ fn lyrics_overflow_recovers_with_error_on_measure() {
     let input = concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "[parts]\nMelody = notes lyrics\n\n",
-        "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 0 0\na b c d e f\n",
+        "[score]\ntime=4/4 key=C4 bpm=120\n1 2 0 0\na b c d e f\n",
     );
     let doc = parser::parse(input, "test.jianpu").unwrap();
     let score = group(doc).expect("overflow must not abort grouping");
@@ -28,7 +28,7 @@ fn lyrics_underflow_recovers_with_error_on_measure() {
     let input = concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "[parts]\nMelody = notes lyrics\n\n",
-        "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b\n",
+        "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\na b\n",
     );
     let doc = parser::parse(input, "test.jianpu").unwrap();
     let score = group(doc).expect("underflow must not abort grouping");
@@ -50,7 +50,7 @@ fn lyrics_underflow_error_span_covers_lyrics_line_not_notes() {
     let input = concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "[parts]\nMelody = notes lyrics\n\n",
-        "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b\n",
+        "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\na b\n",
     );
     let doc = parser::parse(input, "test.jianpu").unwrap();
     let score = group(doc).expect("underflow must not abort grouping");
@@ -78,7 +78,7 @@ fn measures_without_lyrics_underflow_have_no_errors() {
     let input = concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "[parts]\nMelody = notes lyrics\n\n",
-        "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c d\n",
+        "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\na b c d\n",
     );
     let doc = parser::parse(input, "test.jianpu").unwrap();
     let score = group(doc).unwrap();
@@ -93,7 +93,7 @@ fn cross_measure_tie_closing_note_does_not_consume_syllable() {
     let input = concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "[parts]\nMelody = notes lyrics\n\n",
-        "[score]\n(time=4/4 key=C4 bpm=120)\n",
+        "[score]\ntime=4/4 key=C4 bpm=120\n",
         "1 2 3 (5\nfa fo fi fu\n\n",
         "5) 6 7 0\nhi ha\n",
     );

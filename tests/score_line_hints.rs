@@ -32,7 +32,7 @@ fn demo_has_hints_on_each_physical_data_line_in_first_measure() {
 #[test]
 fn directive_line_has_no_hint() {
     let hints = list_score_line_hints_from_source(DEMO_SOURCE, "demo.jianpu").unwrap();
-    let directive_offset = DEMO_SOURCE.find("(time=4/4").unwrap();
+    let directive_offset = DEMO_SOURCE.find("time=4/4").unwrap();
     assert!(
         !hints.iter().any(|hint| hint.line_start == directive_offset),
         "directive line should not receive a hint"

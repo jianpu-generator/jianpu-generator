@@ -324,7 +324,7 @@ mod tests {
 
     #[test]
     fn directive_line_is_not_a_ditto_target() {
-        let groups = vec![group(&["(time=4/4)", "\""])];
+        let groups = vec![group(&["time=4/4", "\""])];
         let declarations = vec![decl("A", PartKind::Notes)];
         let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
         assert_eq!(result[0][1].0, "_");
@@ -340,10 +340,10 @@ mod tests {
 
     #[test]
     fn directive_line_is_not_a_ditto_source() {
-        let groups = vec![group(&["(time=4/4)", "1 2 3 4", "\""])];
+        let groups = vec![group(&["time=4/4", "1 2 3 4", "\""])];
         let declarations = vec![decl("A", PartKind::Notes), decl("B", PartKind::Notes)];
         let (result, _) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(result[0][0].0, "(time=4/4)");
+        assert_eq!(result[0][0].0, "time=4/4");
         assert_eq!(result[0][2].0, "1 2 3 4");
     }
 

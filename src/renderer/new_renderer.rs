@@ -149,8 +149,9 @@ fn render_note_head(
         },
     });
 
+    let dot_radius = *row_height * 0.06;
+
     if dotted {
-        let dot_radius = *row_height * 0.06;
         let dot_x = elem.x + *note_number_width * 1.5;
         results.push(SvgElement {
             x: dot_x,
@@ -161,7 +162,6 @@ fn render_note_head(
     }
 
     if octave > 0 {
-        let dot_radius = *row_height * 0.08;
         let dot_spacing = dot_radius * 3.0;
         let gap = dot_radius * 2.0;
         for i in 0..octave {
@@ -177,7 +177,6 @@ fn render_note_head(
     }
 
     if octave < 0 {
-        let dot_radius = *row_height * 0.08;
         let dot_spacing = dot_radius * 3.0;
         for i in 0..(-octave) {
             let dot_y = elem.y + *base_font_size / 2.0 + dot_radius + (i as f32) * dot_spacing;

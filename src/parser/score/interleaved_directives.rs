@@ -1,5 +1,6 @@
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName, ScoreEvent};
 use crate::error::{RecoverableError, Span, Spanned};
+use crate::parser::score::measure_group::is_directive_line;
 
 type SplitDirectiveResult<'a> = (
     Vec<Spanned<ScoreEvent>>,
@@ -12,14 +13,8 @@ pub(super) fn split_directive(
     base_offset: usize,
 ) -> SplitDirectiveResult<'_> {
     if let Some((directive_line, directive_offset)) = lines.first() {
-        if directive_line.starts_with('(') {
+        if is_directive_line(directive_line) {
             let absolute_offset = base_offset + directive_offset;
-            if !directive_line.ends_with(')') {
-                let span = Span::new(absolute_offset, absolute_offset + directive_line.len());
-                let recoverable =
-                    RecoverableError::general(span, "directive row must end with ')'");
-                return (Vec::new(), lines.get(1..).unwrap_or(&[]), vec![recoverable]);
-            }
             let (events, errors) = parse_directive_line(directive_line, absolute_offset);
             let remaining = lines.get(1..).unwrap_or(&[]);
             return (events, remaining, errors);
@@ -76,8 +71,8 @@ fn parse_directive_line(
     line: &str,
     line_offset: usize,
 ) -> (Vec<Spanned<ScoreEvent>>, Vec<RecoverableError>) {
-    let inner = &line[1..line.len() - 1];
-    let inner_offset = line_offset + 1; // skip '('
+    let inner = line;
+    let inner_offset = line_offset;
 
     let tokens = match tokenize_directive_tokens(inner) {
         Ok(tokens) => tokens,

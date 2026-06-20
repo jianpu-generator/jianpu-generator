@@ -11,7 +11,7 @@ Chord = chord
 Melody = notes lyrics
 
 [score]
-(time=4/4 key=C4 bpm=120)
+time=4/4 key=C4 bpm=120
 1 - - -
 1 1 5 5
 twin- kle twin- kle

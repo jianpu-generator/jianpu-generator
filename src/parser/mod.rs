@@ -171,7 +171,7 @@ mod tests {
         let input = concat!(
             "[metadata]\ntitle = \"hello world\"\nauthor = \"foo\"\n\n",
             "[parts]\nMelody = notes lyrics\n\n",
-            "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\n你好wo rld\n"
+            "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n你好wo rld\n"
         );
         let doc = parse(input, "test.jianpu").unwrap();
         assert_eq!(doc.metadata.title, "hello world");
@@ -198,7 +198,7 @@ mod tests {
         let input = concat!(
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
             "[parts]\nMelody = notes\n\n",
-            "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\n\n",
+            "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n\n",
             "[score]\n5 6 7 1\n",
         );
         let doc =
@@ -213,7 +213,7 @@ mod tests {
     fn missing_metadata_section_recoverable() {
         let input = concat!(
             "[parts]\nMelody = notes\n\n",
-            "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\n"
+            "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n"
         );
         let doc =
             parse(input, "test.jianpu").expect("missing metadata section must not abort parsing");
@@ -229,7 +229,7 @@ mod tests {
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
             "[parts]\nSoprano = notes\nAlto = notes\n\n",
             "[score]\n",
-            "(time=4/4 key=C4 bpm=120)\n",
+            "time=4/4 key=C4 bpm=120\n",
             "1 2 3 4\n",
             "5 6 7 1\n",
         );
@@ -313,7 +313,7 @@ mod tests {
         let input = concat!(
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
             "[parts]\nMelody = notes lyrics\n\n",
-            "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b c d\n"
+            "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\na b c d\n"
         );
         let doc = parse(input, "test.jianpu").unwrap();
         assert_eq!(doc.tracks.len(), 1);

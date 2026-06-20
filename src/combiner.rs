@@ -220,7 +220,7 @@ mod tests {
 
     fn make_two_part_score(soprano: &str, alto: &str) -> Vec<MultiPartMeasure> {
         let input = format!(
-            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nSoprano = notes\nAlto = notes\n\n[score]\n(time=4/4 key=C4 bpm=120)\n{soprano}\n{alto}\n"
+            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nSoprano = notes\nAlto = notes\n\n[score]\ntime=4/4 key=C4 bpm=120\n{soprano}\n{alto}\n"
         );
         let doc = parser::parse(&input, "test.jianpu").unwrap();
         grouper::group(doc).unwrap().measures
@@ -247,7 +247,7 @@ mod tests {
         let input = concat!(
             "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nSoprano = notes\nAlto = notes\n\n",
             "[score]\n",
-            "(time=4/4 key=C4 bpm=120)\n",
+            "time=4/4 key=C4 bpm=120\n",
             "1 2 3 4\n",
             "5 6 7 1 5\n",
         );

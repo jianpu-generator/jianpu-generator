@@ -114,7 +114,7 @@ The `[score]` body is split into **measure groups** by **blank lines**. Each gro
 
 ### Group layout
 
-1. **Optional directive line** — first line starting with `(` and ending with `)`
+1. **Optional directive line** — first line containing at least one directive keyword (`bpm=`, `key=`, `time=`, or `label=`)
 2. **Data lines** — one per score line implied by `[parts]`, in track declaration order
 
 Lines are trimmed; leading/trailing spaces on a line are ignored. A completely empty line separates measure groups (it is not a data line).
@@ -138,10 +138,10 @@ You cannot skip a line in the middle — only **trailing** lines may be omitted 
 
 ## Directive lines
 
-An optional parenthesised first line sets global directives for that measure and onward (until overridden):
+An optional first line of whitespace-separated `key=value` directives sets global values for that measure and onward (until overridden):
 
 ```
-(bpm=92 key=C4 time=4/4 label="Verse 1")
+bpm=92 key=C4 time=4/4 label="Verse 1"
 ```
 
 | Directive | Example | Effect |
@@ -153,7 +153,7 @@ An optional parenthesised first line sets global directives for that measure and
 
 Rules:
 
-- Multiple directives may appear in one `(...)` line, separated by whitespace.
+- Multiple directives may appear on one line, separated by whitespace.
 - `label=` value must be a quoted string; empty labels are rejected.
 - Directives apply to **all** parts. They are stored on the first notes part and propagate through grouping.
 - `label` applies only to the measure where it is declared (does not persist to the next bar).
