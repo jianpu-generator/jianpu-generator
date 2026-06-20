@@ -317,20 +317,10 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
         self.chord_errors.extend(head_errors);
 
         // Parse duration suffixes.
-        let duration_meta =
-            match parse_duration_suffixes::<H>(&chars, 0, head_end, is_rest, &head_span) {
-                Ok(parsed) => parsed,
-                Err(error) => {
-                    if let Some((parsed, recoverable)) =
-                        H::recover_duration_error(&error, &chars, head_end, &head_span)
-                    {
-                        self.chord_errors.push(recoverable);
-                        parsed
-                    } else {
-                        return Err(error);
-                    }
-                }
-            };
+        let duration_meta = parse_duration_suffixes::<H>(&chars, 0, head_end, is_rest, &head_span)?;
+        if let Some(error) = duration_meta.unexpected_char_error.clone() {
+            self.chord_errors.push(Diagnostic::Error(error));
+        }
 
         if duration_meta.dash_after_rest_error.is_some() && self.dash_after_rest_error.is_none() {
             self.dash_after_rest_error = duration_meta.dash_after_rest_error;

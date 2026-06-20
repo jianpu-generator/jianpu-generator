@@ -73,16 +73,6 @@ pub trait TimedUnitHead: Sized {
         None
     }
 
-    /// When duration suffix parsing fails, recover by skipping invalid suffix chars.
-    fn recover_duration_error(
-        _: &IrrecoverableError,
-        _: &[char],
-        _: usize,
-        _: &Span,
-    ) -> Option<(DurationParse, Diagnostic)> {
-        None
-    }
-
     fn to_event(
         head: &Self,
         duration: u32,

@@ -33,9 +33,6 @@ pub(super) fn write(
             formatter,
             "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)"
         )),
-        IrrecoverableErrorKind::DurationUnexpectedChar { ch, .. } => {
-            Some(write!(formatter, "unexpected character in timed unit: {ch}"))
-        }
         IrrecoverableErrorKind::DurationMixedOctaveMarkers { .. } => Some(write!(
             formatter,
             "mixed octave markers are invalid (use ' for up, , for down)"

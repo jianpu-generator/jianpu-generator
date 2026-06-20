@@ -17,7 +17,6 @@ fn is_recoverable_chord_line_error(kind: &IrrecoverableErrorKind) -> bool {
             | IrrecoverableErrorKind::ChordInvalidBass { .. }
             | IrrecoverableErrorKind::ChordBassUnexpectedChar { .. }
             | IrrecoverableErrorKind::ChordBassTrailingChars { .. }
-            | IrrecoverableErrorKind::DurationUnexpectedChar { .. }
     )
 }
 

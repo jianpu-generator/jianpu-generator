@@ -456,7 +456,7 @@ fn recovers_octave_suffix() {
     assert!(matches!(events[0], ScoreEvent::Chord(_)));
     assert!(errors.iter().any(|d| matches!(
         d,
-        Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::ChordInvalidToken { .. })
+        Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::DurationUnexpectedChar { ch: '\'' })
     )));
 }
 

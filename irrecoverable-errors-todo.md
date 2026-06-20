@@ -72,7 +72,7 @@ These are no longer review items. Some still have a matching
 | 9 | `DashAfterRest` | `implemented` | Skip suffix extension during notes token parse; error on measure (matches grouper spaced-extension path) |
 | 10 | `LexUnexpectedChar` (notes line) | `implemented` | Skip bad measure, continue; error on measure (`interleaved_column_lines.rs`) |
 | 11 | `NoteExpectedPitchDigit` | `pending` | Abort | Skip token or treat as rest; error on measure |
-| 12 | `DurationUnexpectedChar` | `pending` | Abort | Skip token; error on measure |
+| 12 | `DurationUnexpectedChar` | `implemented` | Abort | Skip token; error on measure |
 | 13 | `DurationMixedOctaveMarkers` | `pending` | Abort | Pick one marker or skip note; error on measure |
 | 14 | `DurationCannotDotQuarterBeat` | `pending` | Abort | Parse without dot or skip note; error on measure |
 | 15 | `GroupTooFewNotes` | `pending` | Abort `(N)` with fewer than 2 notes | Ungroup or skip group; error on measure |
@@ -155,3 +155,4 @@ Record decisions here as we go.
 | 6, 7, 8 | `LyricsLineEmpty`, `LyricsNoNotesTrack`, `UnderscoreOnlyOnLyrics` | Implemented (#6, #7) and rejected (#8) | 2026-06-19 | `LyricsLineEmpty` → treat as `_`, surface as `GroupedMeasure.lyrics_parse_error`; `LyricsNoNotesTrack` → skip lyrics, surface as document-level error via `extra_document_errors`; `UnderscoreOnlyOnLyrics` deleted (dead code); all three `IrrecoverableErrorKind` variants removed |
 | 29–36 | Measure directives & key changes (`DirectiveUnclosedParen`, `DirectiveUnclosedQuote`, `DirectiveInvalidBpm`, `DirectiveLabelNotQuoted`, `DirectiveLabelEmpty`, `DirectiveUnknown`, `DirectiveKey*`, `DirectiveTime*`, `KeyChangeMissingPrefix`, `KeyChangeMissingNoteName`, `KeyChangeInvalidNoteName`, `KeyChangeInvalidOctave`, `LexBpm*`, `LexTime*`) | Implemented as recoverable | 2026-06-20 | Directive and key-change errors now collected as `RecoverableError` on measure; malformed directives ignored, prior state retained; errors surfaced via `RenderOutput.errors` |
 | 37–40 | `IncompleteMeasure`, `MeasureOverflow`, `MeasureIndexOutOfRange`, `InvalidMeasureRange` | Deleted | 2026-06-20 | Dead variants removed from `IrrecoverableErrorKind`, `span.rs`, and `display/score.rs`; superseded by recoverable equivalents or never emitted |
+| 12 | `DurationUnexpectedChar` | Implemented as recoverable | 2026-06-20 | Unexpected char in duration suffix now collected inline in `parse_duration_suffixes` as `DurationParse.unexpected_char_error`; `IrrecoverableErrorKind` variant removed; `TimedUnitHead::recover_duration_error` trait method removed; chord octave-suffix error now reported as `DurationUnexpectedChar` instead of `ChordInvalidToken` |

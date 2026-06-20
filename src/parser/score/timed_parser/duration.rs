@@ -8,6 +8,7 @@ pub struct DurationParse {
     pub octave_down: i8,
     pub next_index: usize,
     pub dash_after_rest_error: Option<RecoverableError>,
+    pub unexpected_char_error: Option<RecoverableError>,
 }
 
 struct DurationSuffixState {
@@ -16,6 +17,7 @@ struct DurationSuffixState {
     octave_up: i8,
     octave_down: i8,
     dash_after_rest_error: Option<RecoverableError>,
+    unexpected_char_error: Option<RecoverableError>,
 }
 
 struct DurationSuffixContext<'a> {
@@ -76,18 +78,19 @@ impl DurationSuffixContext<'_> {
     }
 
     fn unexpected_char(
-        &self,
+        &mut self,
         index: usize,
         character: char,
     ) -> Result<Option<usize>, IrrecoverableError> {
-        let pos =
-            self.span.start + byte_offset_at_char_index_from_chars(self.chars, self.start, index);
-        Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::DurationUnexpectedChar {
-                span: Span::new(pos, pos + character.len_utf8()),
-                ch: character,
-            },
-        ))
+        if self.state.unexpected_char_error.is_none() {
+            let pos = self.span.start
+                + byte_offset_at_char_index_from_chars(self.chars, self.start, index);
+            self.state.unexpected_char_error = Some(RecoverableError::duration_unexpected_char(
+                Span::new(pos, pos + character.len_utf8()),
+                character,
+            ));
+        }
+        Ok(None)
     }
 }
 
@@ -111,6 +114,7 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
             octave_up: 0,
             octave_down: 0,
             dash_after_rest_error: None,
+            unexpected_char_error: None,
         },
     };
 
@@ -150,6 +154,7 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
         octave_down: context.state.octave_down,
         next_index: index,
         dash_after_rest_error: context.state.dash_after_rest_error,
+        unexpected_char_error: context.state.unexpected_char_error,
     })
 }
 

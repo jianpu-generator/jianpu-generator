@@ -45,10 +45,6 @@ pub enum IrrecoverableErrorKind {
     DashAfterRest {
         span: Span,
     },
-    DurationUnexpectedChar {
-        span: Span,
-        ch: char,
-    },
     DurationMixedOctaveMarkers {
         span: Span,
     },
