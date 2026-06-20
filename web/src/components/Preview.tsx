@@ -9,6 +9,7 @@ interface PreviewProps {
   audioAvailable?: boolean
   onGenerateAudio?: () => void
   pdfAvailable?: boolean
+  pdfFontsReady?: boolean
   pdfExporting?: boolean
   onExportPdf?: () => void
   splitPdfExporting?: boolean
@@ -27,6 +28,7 @@ export function Preview({
   audioAvailable = false,
   onGenerateAudio,
   pdfAvailable = false,
+  pdfFontsReady = false,
   pdfExporting = false,
   onExportPdf,
   splitPdfExporting = false,
@@ -67,9 +69,9 @@ export function Preview({
 
   const exporting = pdfExporting || splitPdfExporting
   const canExportPdf =
-    pdfAvailable && svgs.length > 0 && !rendering && !exporting
+    pdfAvailable && pdfFontsReady && svgs.length > 0 && !rendering && !exporting
   const canExportSplitPdf =
-    pdfAvailable && partsCount > 0 && !rendering && !exporting
+    pdfAvailable && pdfFontsReady && partsCount > 0 && !rendering && !exporting
 
   return (
     <div className="preview">
@@ -83,7 +85,11 @@ export function Preview({
               disabled={!canExportPdf}
               onClick={onExportPdf}
             >
-              {pdfExporting ? 'Exporting PDF…' : 'Export PDF'}
+              {pdfExporting
+                ? 'Exporting PDF…'
+                : !pdfFontsReady
+                  ? 'Loading fonts…'
+                  : 'Export PDF'}
             </button>
           ) : null}
           {pdfAvailable ? (
@@ -93,7 +99,11 @@ export function Preview({
               disabled={!canExportSplitPdf}
               onClick={onExportSplitPdf}
             >
-              {splitPdfExporting ? 'Exporting parts…' : 'Export parts (ZIP)'}
+              {splitPdfExporting
+                ? 'Exporting parts…'
+                : !pdfFontsReady
+                  ? 'Loading fonts…'
+                  : 'Export parts (ZIP)'}
             </button>
           ) : null}
           {audioAvailable ? (

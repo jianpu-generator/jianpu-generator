@@ -82,6 +82,8 @@ export type WorkerRequest =
 
 export type WorkerResponse =
   | { type: 'ready'; audioAvailable: boolean; pdfAvailable: boolean }
+  | { type: 'pdfFontsReady' }
+  | { type: 'pdfFontsError' }
   | {
       type: 'ok'
       id: number
@@ -130,7 +132,44 @@ async function ensureInit() {
       audioAvailable: generateWav !== null,
       pdfAvailable: generatePdf !== null,
     } satisfies WorkerResponse)
+
+    if (generatePdf !== null) {
+      ensurePdfFonts()
+        .then(() =>
+          postMessage({ type: 'pdfFontsReady' } satisfies WorkerResponse),
+        )
+        .catch(() =>
+          postMessage({ type: 'pdfFontsError' } satisfies WorkerResponse),
+        )
+    }
   }
+}
+
+let pdfFontsPromise: Promise<{
+  sc: Uint8Array
+  tc: Uint8Array
+  mono: Uint8Array
+}> | null = null
+
+function ensurePdfFonts(): Promise<{
+  sc: Uint8Array
+  tc: Uint8Array
+  mono: Uint8Array
+}> {
+  if (!pdfFontsPromise) {
+    pdfFontsPromise = Promise.all([
+      fetch('/fonts/SourceHanSansSC-Regular.otf')
+        .then((r) => r.arrayBuffer())
+        .then((b) => new Uint8Array(b)),
+      fetch('/fonts/SourceHanSansTC-Regular.otf')
+        .then((r) => r.arrayBuffer())
+        .then((b) => new Uint8Array(b)),
+      fetch('/fonts/NotoSansMono-Regular.ttf')
+        .then((r) => r.arrayBuffer())
+        .then((b) => new Uint8Array(b)),
+    ]).then(([sc, tc, mono]) => ({ sc, tc, mono }))
+  }
+  return pdfFontsPromise
 }
 
 function binaryBufferFromResult(
@@ -182,10 +221,14 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       return
     }
 
+    const fonts = await ensurePdfFonts()
     const result = generatePdf(
       msg.source,
       msg.enabledTracks,
       msg.disabledLyrics,
+      fonts.sc,
+      fonts.tc,
+      fonts.mono,
     )
     if (result.status === 'ok') {
       const pdfBuffer = binaryBufferFromResult(result.pdf)
@@ -224,7 +267,14 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       return
     }
 
-    const result = generateSplitPdfs(msg.source, msg.baseName)
+    const fonts = await ensurePdfFonts()
+    const result = generateSplitPdfs(
+      msg.source,
+      msg.baseName,
+      fonts.sc,
+      fonts.tc,
+      fonts.mono,
+    )
     if (result.status === 'ok') {
       const zipBuffer = binaryBufferFromResult(result.zip)
       postMessage(

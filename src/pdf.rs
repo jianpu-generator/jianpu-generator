@@ -2,7 +2,13 @@ use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 use pdf_writer::{Content, Finish, Name, Pdf, Rect, Ref};
 use std::collections::HashMap;
 
-pub fn write_pdf(svgs: &[String]) -> Result<Vec<u8>, IrrecoverableError> {
+pub struct PdfFonts {
+    pub sans_serif_sc: Vec<u8>,
+    pub sans_serif_tc: Vec<u8>,
+    pub monospace: Vec<u8>,
+}
+
+pub fn write_pdf(svgs: &[String], fonts: &PdfFonts) -> Result<Vec<u8>, IrrecoverableError> {
     if svgs.is_empty() {
         return Ok(Vec::new());
     }
@@ -10,9 +16,9 @@ pub fn write_pdf(svgs: &[String]) -> Result<Vec<u8>, IrrecoverableError> {
     let mut options = svg2pdf::usvg::Options::default();
     {
         let db = options.fontdb_mut();
-        db.load_font_data(include_bytes!("../fonts/SourceHanSansSC-Regular.otf").to_vec());
-        db.load_font_data(include_bytes!("../fonts/SourceHanSansTC-Regular.otf").to_vec());
-        db.load_font_data(include_bytes!("../fonts/NotoSansMono-Regular.ttf").to_vec());
+        db.load_font_data(fonts.sans_serif_sc.clone());
+        db.load_font_data(fonts.sans_serif_tc.clone());
+        db.load_font_data(fonts.monospace.clone());
         db.set_sans_serif_family("Source Han Sans SC");
         db.set_monospace_family("Noto Sans Mono");
     }
@@ -109,7 +115,12 @@ mod tests {
         let svgs = crate::render_svgs_from_source(&input, "test.jianpu")
             .unwrap()
             .svgs;
-        write_pdf(&svgs).unwrap()
+        let fonts = PdfFonts {
+            sans_serif_sc: include_bytes!("../fonts/SourceHanSansSC-Regular.otf").to_vec(),
+            sans_serif_tc: include_bytes!("../fonts/SourceHanSansTC-Regular.otf").to_vec(),
+            monospace: include_bytes!("../fonts/NotoSansMono-Regular.ttf").to_vec(),
+        };
+        write_pdf(&svgs, &fonts).unwrap()
     }
 
     #[test]

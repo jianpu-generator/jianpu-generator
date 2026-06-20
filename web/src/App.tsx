@@ -53,6 +53,7 @@ export default function App() {
     wavUrl,
     audioAvailable,
     pdfAvailable,
+    pdfFontsReady,
     pdfExporting,
     diagnostics,
     diagnosticViewZones,
@@ -307,6 +308,7 @@ export default function App() {
             audioAvailable={audioAvailable}
             onGenerateAudio={generateFullAudio}
             pdfAvailable={pdfAvailable}
+            pdfFontsReady={pdfFontsReady}
             pdfExporting={pdfExporting}
             onExportPdf={exportPdf}
             splitPdfExporting={splitPdfExporting}

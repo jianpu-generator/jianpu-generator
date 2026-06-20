@@ -178,10 +178,20 @@ fn demo_jianpu_renders() {
 }
 
 #[cfg(feature = "pdf")]
+fn test_pdf_fonts() -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+    (
+        include_bytes!("../../../fonts/SourceHanSansSC-Regular.otf").to_vec(),
+        include_bytes!("../../../fonts/SourceHanSansTC-Regular.otf").to_vec(),
+        include_bytes!("../../../fonts/NotoSansMono-Regular.ttf").to_vec(),
+    )
+}
+
+#[cfg(feature = "pdf")]
 #[test]
 fn demo_jianpu_generates_pdf() {
     let source = include_str!("../../../demo.jianpu");
-    let resp = generate_pdf_response(source, None, None);
+    let (sc, tc, mono) = test_pdf_fonts();
+    let resp = generate_pdf_response(source, None, None, sc, tc, mono);
     match resp {
         GeneratePdfResponse::Ok { pdf } => {
             assert!(pdf.len() > 4);
@@ -203,7 +213,8 @@ fn demo_jianpu_generates_split_pdf_zip() {
     use zip::ZipArchive;
 
     let source = include_str!("../../../demo.jianpu");
-    let resp = generate_split_pdfs_response(source, "demo");
+    let (sc, tc, mono) = test_pdf_fonts();
+    let resp = generate_split_pdfs_response(source, "demo", sc, tc, mono);
     match resp {
         GenerateSplitPdfsResponse::Ok { zip } => {
             assert!(zip.len() > 4);

@@ -213,14 +213,32 @@ fn generate_wav_for_measure_range_response(
 }
 
 #[cfg(feature = "pdf")]
+fn make_pdf_fonts(
+    sans_serif_sc: Vec<u8>,
+    sans_serif_tc: Vec<u8>,
+    monospace: Vec<u8>,
+) -> jianpu_generator::pdf::PdfFonts {
+    jianpu_generator::pdf::PdfFonts {
+        sans_serif_sc,
+        sans_serif_tc,
+        monospace,
+    }
+}
+
+#[cfg(feature = "pdf")]
 fn generate_pdf_response(
     source: &str,
     enabled_tracks: Option<Vec<String>>,
     disabled_lyrics: Option<Vec<String>>,
+    sans_serif_sc: Vec<u8>,
+    sans_serif_tc: Vec<u8>,
+    monospace: Vec<u8>,
 ) -> GeneratePdfResponse {
+    let fonts = make_pdf_fonts(sans_serif_sc, sans_serif_tc, monospace);
     let tracks = enabled_tracks.as_deref();
     let lyrics = disabled_lyrics.as_deref();
-    match write_pdf_from_source_filtered_with_lyrics(source, "input.jianpu", tracks, lyrics) {
+    match write_pdf_from_source_filtered_with_lyrics(source, "input.jianpu", tracks, lyrics, &fonts)
+    {
         Ok(pdf) => GeneratePdfResponse::Ok { pdf },
         Err(e) => GeneratePdfResponse::Err {
             diagnostics: vec![diagnostic_from_error(source, e)],
@@ -229,8 +247,15 @@ fn generate_pdf_response(
 }
 
 #[cfg(feature = "pdf")]
-fn generate_split_pdfs_response(source: &str, base_name: &str) -> GenerateSplitPdfsResponse {
-    match write_split_pdfs_from_source(source, "input.jianpu", base_name, &[]) {
+fn generate_split_pdfs_response(
+    source: &str,
+    base_name: &str,
+    sans_serif_sc: Vec<u8>,
+    sans_serif_tc: Vec<u8>,
+    monospace: Vec<u8>,
+) -> GenerateSplitPdfsResponse {
+    let fonts = make_pdf_fonts(sans_serif_sc, sans_serif_tc, monospace);
+    match write_split_pdfs_from_source(source, "input.jianpu", base_name, &[], &fonts) {
         Ok(entries) => match zip_split_pdfs(&entries) {
             Ok(zip) => GenerateSplitPdfsResponse::Ok { zip },
             Err(e) => GenerateSplitPdfsResponse::Err {
@@ -341,14 +366,28 @@ pub fn generate_wav_for_measure_range(
 /// Returns the same structured `{ status, ... }` envelope as [`render`]:
 /// - `{ "status": "ok", "pdf": Uint8Array }`
 /// - `{ "status": "err", "diagnostics": [...] }`
+///
+/// `sans_serif_sc`, `sans_serif_tc`, and `monospace` are raw font file bytes
+/// (OTF/TTF) used for text rendering. They are not embedded in the WASM binary
+/// and must be supplied by the caller (e.g. fetched from a CDN or local server).
 #[cfg(feature = "pdf")]
 #[wasm_bindgen]
 pub fn generate_pdf(
     source: &str,
     enabled_tracks: Option<Vec<String>>,
     disabled_lyrics: Option<Vec<String>>,
+    sans_serif_sc: Vec<u8>,
+    sans_serif_tc: Vec<u8>,
+    monospace: Vec<u8>,
 ) -> GeneratePdfResponse {
-    generate_pdf_response(source, enabled_tracks, disabled_lyrics)
+    generate_pdf_response(
+        source,
+        enabled_tracks,
+        disabled_lyrics,
+        sans_serif_sc,
+        sans_serif_tc,
+        monospace,
+    )
 }
 
 /// Parse `.jianpu` source and write one PDF per part as a ZIP archive.
@@ -357,10 +396,18 @@ pub fn generate_pdf(
 /// Returns:
 /// - `{ "status": "ok", "zip": Uint8Array }`
 /// - `{ "status": "err", "diagnostics": [...] }`
+///
+/// Font byte parameters have the same semantics as [`generate_pdf`].
 #[cfg(feature = "pdf")]
 #[wasm_bindgen]
-pub fn generate_split_pdfs(source: &str, base_name: &str) -> GenerateSplitPdfsResponse {
-    generate_split_pdfs_response(source, base_name)
+pub fn generate_split_pdfs(
+    source: &str,
+    base_name: &str,
+    sans_serif_sc: Vec<u8>,
+    sans_serif_tc: Vec<u8>,
+    monospace: Vec<u8>,
+) -> GenerateSplitPdfsResponse {
+    generate_split_pdfs_response(source, base_name, sans_serif_sc, sans_serif_tc, monospace)
 }
 
 #[cfg(test)]

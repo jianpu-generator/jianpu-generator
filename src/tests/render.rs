@@ -1,5 +1,14 @@
 use super::*;
 
+#[cfg(feature = "pdf")]
+fn test_pdf_fonts() -> pdf::PdfFonts {
+    pdf::PdfFonts {
+        sans_serif_sc: include_bytes!("../../fonts/SourceHanSansSC-Regular.otf").to_vec(),
+        sans_serif_tc: include_bytes!("../../fonts/SourceHanSansTC-Regular.otf").to_vec(),
+        monospace: include_bytes!("../../fonts/NotoSansMono-Regular.ttf").to_vec(),
+    }
+}
+
 #[test]
 fn list_parts_from_source_returns_declarations() {
     let input = concat!(
@@ -327,9 +336,14 @@ mod split_pdf_tests {
 
     #[test]
     fn write_split_pdfs_from_source_produces_one_pdf_per_track() {
-        let entries =
-            write_split_pdfs_from_source(multi_track_input(), "test.jianpu", "test_split", &[])
-                .unwrap();
+        let entries = write_split_pdfs_from_source(
+            multi_track_input(),
+            "test.jianpu",
+            "test_split",
+            &[],
+            &test_pdf_fonts(),
+        )
+        .unwrap();
         assert_eq!(entries.len(), 2);
         assert_eq!(entries[0].track_name, "S1");
         assert_eq!(entries[0].filename, "test_split - Soprano 1.pdf");
@@ -354,7 +368,9 @@ mod split_pdf_tests {
             "1 2 3 4\n",
             "a b c d\n",
         );
-        let entries = write_split_pdfs_from_source(input, "test.jianpu", "song", &[]).unwrap();
+        let entries =
+            write_split_pdfs_from_source(input, "test.jianpu", "song", &[], &test_pdf_fonts())
+                .unwrap();
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].filename, "song - Melody.pdf");
         assert_eq!(&entries[0].pdf[0..4], b"%PDF");
@@ -364,16 +380,27 @@ mod split_pdf_tests {
     fn write_split_pdfs_from_source_no_sections_returns_empty() {
         // Source with no section headers: section-structure errors are recoverable,
         // so no Err is returned; the missing [parts] section means no tracks exist.
-        let entries =
-            write_split_pdfs_from_source("not valid", "test.jianpu", "song", &[]).unwrap();
+        let entries = write_split_pdfs_from_source(
+            "not valid",
+            "test.jianpu",
+            "song",
+            &[],
+            &test_pdf_fonts(),
+        )
+        .unwrap();
         assert!(entries.is_empty());
     }
 
     #[test]
     fn zip_split_pdfs_contains_named_entries() {
-        let entries =
-            write_split_pdfs_from_source(multi_track_input(), "test.jianpu", "test_split", &[])
-                .unwrap();
+        let entries = write_split_pdfs_from_source(
+            multi_track_input(),
+            "test.jianpu",
+            "test_split",
+            &[],
+            &test_pdf_fonts(),
+        )
+        .unwrap();
         let zip_bytes = zip_split_pdfs(&entries).unwrap();
         assert_eq!(&zip_bytes[0..2], b"PK");
 

@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import fs from 'node:fs'
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin, type ViteDevServer } from 'vite'
@@ -132,9 +133,33 @@ function wasmDevPlugin(): Plugin {
   }
 }
 
+function serveFontsPlugin(): Plugin {
+  const fontsDir = path.resolve(__dirname, '..', 'fonts')
+  return {
+    name: 'serve-fonts',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/fonts', (req, res, next) => {
+        const filePath = path.join(fontsDir, req.url ?? '')
+        if (!filePath.startsWith(fontsDir + path.sep)) {
+          next()
+          return
+        }
+        if (!fs.existsSync(filePath)) {
+          next()
+          return
+        }
+        res.setHeader('Content-Type', 'application/octet-stream')
+        res.setHeader('Cache-Control', 'public, max-age=3600')
+        fs.createReadStream(filePath).pipe(res)
+      })
+    },
+  }
+}
+
 export default defineConfig({
   base: process.env.VITE_BASE_PATH ?? '/',
-  plugins: [react(), wasmDevPlugin()],
+  plugins: [react(), wasmDevPlugin(), serveFontsPlugin()],
   resolve: {
     alias: {
       'jianpu-wasm': path.resolve(

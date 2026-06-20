@@ -101,6 +101,7 @@ pub fn write_split_pdfs_from_source(
     filename: &str,
     base_name: &str,
     tracks_filter: &[String],
+    fonts: &crate::pdf::PdfFonts,
 ) -> Result<Vec<SplitPdfEntry>, IrrecoverableError> {
     let score = crate::compile(source, filename)?;
     let track_names = split_track_names(source, filename, &score, tracks_filter)?;
@@ -110,7 +111,7 @@ pub fn write_split_pdfs_from_source(
         let mut score_clone = score.clone();
         filter_tracks(&mut score_clone, std::slice::from_ref(&track));
         let svgs = render_svgs(&score_clone)?;
-        let pdf = crate::pdf::write_pdf(&svgs)?;
+        let pdf = crate::pdf::write_pdf(&svgs, fonts)?;
         let label = split_track_label(&display_names, &track);
         entries.push(SplitPdfEntry {
             track_name: track.clone(),

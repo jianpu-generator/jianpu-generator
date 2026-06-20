@@ -3,6 +3,22 @@ use jianpu_generator::{self as jg, error_reporter};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+#[cfg(feature = "pdf")]
+static SANS_SERIF_SC_FONT: &[u8] = include_bytes!("../fonts/SourceHanSansSC-Regular.otf");
+#[cfg(feature = "pdf")]
+static SANS_SERIF_TC_FONT: &[u8] = include_bytes!("../fonts/SourceHanSansTC-Regular.otf");
+#[cfg(feature = "pdf")]
+static MONOSPACE_FONT: &[u8] = include_bytes!("../fonts/NotoSansMono-Regular.ttf");
+
+#[cfg(feature = "pdf")]
+fn default_pdf_fonts() -> jg::pdf::PdfFonts {
+    jg::pdf::PdfFonts {
+        sans_serif_sc: SANS_SERIF_SC_FONT.to_vec(),
+        sans_serif_tc: SANS_SERIF_TC_FONT.to_vec(),
+        monospace: MONOSPACE_FONT.to_vec(),
+    }
+}
+
 #[derive(Parser)]
 #[command(name = "jianpu", about = "Generate JianPu notation files")]
 struct Args {
@@ -193,8 +209,13 @@ fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableErro
         })?;
         let filename = opts.input.to_string_lossy();
         let (_, base_name) = split_track_base(&opts.input, opts.output.as_deref());
-        let entries =
-            jg::write_split_pdfs_from_source(&content, &filename, &base_name, &opts.tracks)?;
+        let entries = jg::write_split_pdfs_from_source(
+            &content,
+            &filename,
+            &base_name,
+            &opts.tracks,
+            &default_pdf_fonts(),
+        )?;
         if entries.is_empty() {
             eprintln!(
                 "warning: --split-tracks given but score has no named tracks; generating single file"
@@ -214,7 +235,7 @@ fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableErro
     let mut score = score;
     jg::filter_tracks(&mut score, &opts.tracks);
     let svgs = jg::render_svgs(&score)?;
-    let pdf_bytes = jg::pdf::write_pdf(&svgs)?;
+    let pdf_bytes = jg::pdf::write_pdf(&svgs, &default_pdf_fonts())?;
     let output_path =
         output_stem(&opts.input, &opts.tracks, opts.output.as_deref()).with_extension("pdf");
     write_file(&output_path, &pdf_bytes)?;

@@ -25,6 +25,7 @@ interface JianpuWorkerState {
   wavUrl: string | null
   audioAvailable: boolean
   pdfAvailable: boolean
+  pdfFontsReady: boolean
   pdfExporting: boolean
   splitPdfExporting: boolean
   diagnostics: Diagnostic[]
@@ -58,6 +59,7 @@ export function useJianpuWorker(
   const [wavUrl, setWavUrl] = useState<string | null>(null)
   const [audioAvailable, setAudioAvailable] = useState(false)
   const [pdfAvailable, setPdfAvailable] = useState(false)
+  const [pdfFontsReady, setPdfFontsReady] = useState(false)
   const [pdfExporting, setPdfExporting] = useState(false)
   const [splitPdfExporting, setSplitPdfExporting] = useState(false)
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([])
@@ -165,6 +167,16 @@ export function useJianpuWorker(
         audioAvailableRef.current = msg.audioAvailable
         setAudioAvailable(msg.audioAvailable)
         setPdfAvailable(msg.pdfAvailable)
+        return
+      }
+
+      if (msg.type === 'pdfFontsReady') {
+        setPdfFontsReady(true)
+        return
+      }
+
+      if (msg.type === 'pdfFontsError') {
+        setPdfFontsReady(false)
         return
       }
 
@@ -503,6 +515,7 @@ export function useJianpuWorker(
     wavUrl,
     audioAvailable,
     pdfAvailable,
+    pdfFontsReady,
     pdfExporting,
     splitPdfExporting,
     diagnostics,

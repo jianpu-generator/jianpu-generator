@@ -281,8 +281,9 @@ pub fn write_pdf_from_source_filtered(
     source: &str,
     filename: &str,
     enabled_tracks: Option<&[String]>,
+    fonts: &pdf::PdfFonts,
 ) -> Result<Vec<u8>, IrrecoverableError> {
-    write_pdf_from_source_filtered_with_lyrics(source, filename, enabled_tracks, None)
+    write_pdf_from_source_filtered_with_lyrics(source, filename, enabled_tracks, None, fonts)
 }
 
 /// Parse, group, optionally filter tracks and lyrics, and write PDF bytes.
@@ -292,12 +293,13 @@ pub fn write_pdf_from_source_filtered_with_lyrics(
     filename: &str,
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
+    fonts: &pdf::PdfFonts,
 ) -> Result<Vec<u8>, IrrecoverableError> {
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
     let svgs = render_svgs(&score)?;
-    pdf::write_pdf(&svgs)
+    pdf::write_pdf(&svgs, fonts)
 }
 
 #[cfg(test)]
