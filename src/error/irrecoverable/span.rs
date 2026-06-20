@@ -20,9 +20,7 @@ fn parse_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
         | IrrecoverableErrorKind::DurationMixedOctaveMarkers { span }
         | IrrecoverableErrorKind::DurationCannotDotQuarterBeat { span }
         | IrrecoverableErrorKind::GroupUnexpectedCloseParen { span }
-        | IrrecoverableErrorKind::UnclosedGroupAtEnd { span, .. }
-        | IrrecoverableErrorKind::ExtensionNoPrecedingEvent { span, .. }
-        | IrrecoverableErrorKind::TieNoPrecedingNote { span, .. } => Some(span),
+        | IrrecoverableErrorKind::UnclosedGroupAtEnd { span, .. } => Some(span),
         _ => None,
     }
 }

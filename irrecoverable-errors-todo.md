@@ -95,10 +95,10 @@ These are no longer review items. Some still have a matching
 
 | # | Kind | Status | Current behavior | Proposed recovery |
 |---|---|---|---|---|
-| 25 | `ExtensionNoPrecedingEvent` | `pending` | Abort on lone `-` at start of measure/event stream | Ignore `-`; error on measure |
-| 26 | `TieNoPrecedingNote` | `pending` | Abort on `_` tie with no note to attach | Ignore tie marker; error on measure |
-| 27 | `PartMeasureCountMismatch` | `pending` | Abort when parts disagree on measure count | Pad shorter parts with empty measures; error on affected measures (design doc: parts line count) |
-| 28 | Unclosed tie/slur into errored measure | `pending` | Not a distinct kind today | Drop arc; render notes normally (design doc) |
+| 25 | `ExtensionNoPrecedingEvent` | `implemented` | Ignore `-`; `RecoverableErrorKind::ExtensionNoPrecedingEvent` on measure; `IrrecoverableErrorKind` variant removed |
+| 26 | `TieNoPrecedingNote` | `rejected` | Dead code — `ScoreEvent::TieMarker` never emitted; `IrrecoverableErrorKind` variant removed; `handle_tie_marker` `_` arm silently returns `Ok(())` |
+| 27 | `PartMeasureCountMismatch` | `implemented` | Pad shorter parts with empty measures; error on affected measures |
+| 28 | Unclosed tie/slur into errored measure | `implemented` | `PartSlice::has_error` set when measure has any `Diagnostic::Error`; compiler resets `prev_tie`/`pending_slur_opens` before compiling an errored slice |
 
 ### Measure directives & key changes
 
@@ -156,3 +156,6 @@ Record decisions here as we go.
 | 29–36 | Measure directives & key changes (`DirectiveUnclosedParen`, `DirectiveUnclosedQuote`, `DirectiveInvalidBpm`, `DirectiveLabelNotQuoted`, `DirectiveLabelEmpty`, `DirectiveUnknown`, `DirectiveKey*`, `DirectiveTime*`, `KeyChangeMissingPrefix`, `KeyChangeMissingNoteName`, `KeyChangeInvalidNoteName`, `KeyChangeInvalidOctave`, `LexBpm*`, `LexTime*`) | Implemented as recoverable | 2026-06-20 | Directive and key-change errors now collected as `RecoverableError` on measure; malformed directives ignored, prior state retained; errors surfaced via `RenderOutput.errors` |
 | 37–40 | `IncompleteMeasure`, `MeasureOverflow`, `MeasureIndexOutOfRange`, `InvalidMeasureRange` | Deleted | 2026-06-20 | Dead variants removed from `IrrecoverableErrorKind`, `span.rs`, and `display/score.rs`; superseded by recoverable equivalents or never emitted |
 | 12 | `DurationUnexpectedChar` | Implemented as recoverable | 2026-06-20 | Unexpected char in duration suffix now collected inline in `parse_duration_suffixes` as `DurationParse.unexpected_char_error`; `IrrecoverableErrorKind` variant removed; `TimedUnitHead::recover_duration_error` trait method removed; chord octave-suffix error now reported as `DurationUnexpectedChar` instead of `ChordInvalidToken` |
+| 25 | `ExtensionNoPrecedingEvent` | Implemented as recoverable | 2026-06-21 | Lone `-` with no preceding event now collected as `RecoverableErrorKind::ExtensionNoPrecedingEvent` in `PartGrouper.pending_extension_no_preceding_event_error`; `IrrecoverableErrorKind` variant removed; `grouper/mod.rs` and `combiner.rs` updated |
+| 26 | `TieNoPrecedingNote` | Rejected (dead code) | 2026-06-21 | `ScoreEvent::TieMarker` is never emitted by the parser; `handle_tie_marker` `_` arm changed to `Ok(())` (silent no-op); `IrrecoverableErrorKind` variant removed |
+| 28 | Unclosed tie/slur into errored measure | Implemented | 2026-06-21 | `PartSlice::has_error` flag added; set in `combiner.rs` via `measure_has_error()`; `compiler/mod.rs` resets `prev_tie`, tie columns, slur key, and `pending_slur_opens` to empty when the incoming slice has errors |

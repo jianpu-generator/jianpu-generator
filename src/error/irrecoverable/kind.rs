@@ -58,15 +58,6 @@ pub enum IrrecoverableErrorKind {
         span: Span,
         part: String,
     },
-    ExtensionNoPrecedingEvent {
-        span: Span,
-        part: Option<String>,
-        chord_track: bool,
-    },
-    TieNoPrecedingNote {
-        span: Span,
-        part: Option<String>,
-    },
     MidiWriteFailed {
         span: Span,
     },

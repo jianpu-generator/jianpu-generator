@@ -16,6 +16,8 @@ fn collect_part_measure_diagnostics(m: Option<&GroupedMeasure>) -> Vec<Diagnosti
         m.and_then(|m| m.lex_error.clone()).map(Diagnostic::Error),
         m.and_then(|m| m.lyrics_parse_error.clone())
             .map(Diagnostic::Error),
+        m.and_then(|m| m.extension_no_preceding_event_error.clone())
+            .map(Diagnostic::Error),
     ]
     .into_iter()
     .flatten()
@@ -25,6 +27,19 @@ fn collect_part_measure_diagnostics(m: Option<&GroupedMeasure>) -> Vec<Diagnosti
     )
     .chain(m.into_iter().flat_map(|m| m.chord_errors.iter().cloned()))
     .collect()
+}
+
+fn measure_has_error(m: &GroupedMeasure) -> bool {
+    m.dash_after_rest_error.is_some()
+        || m.lex_error.is_some()
+        || m.lyrics_parse_error.is_some()
+        || m.extension_no_preceding_event_error.is_some()
+        || m.dotted_eighth_errors
+            .iter()
+            .any(|d| matches!(d, Diagnostic::Error(_)))
+        || m.chord_errors
+            .iter()
+            .any(|d| matches!(d, Diagnostic::Error(_)))
 }
 
 fn combine_measure(
@@ -169,6 +184,7 @@ fn build_part_rows(
                         events: measure.notes.events.clone(),
                     },
                     lyrics,
+                    has_error: measure_has_error(measure),
                 };
                 let is_ditto = part
                     .ditto_measures

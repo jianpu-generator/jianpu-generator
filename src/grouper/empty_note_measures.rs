@@ -80,6 +80,7 @@ pub(super) fn align_empty_note_measures(
                     chord_errors: errors.chord_errors.get(idx).cloned().unwrap_or_default(),
                     lex_error: errors.lex_errors.get(idx).and_then(|e| e.clone()),
                     lyrics_parse_error: errors.lyrics_errors.get(idx).and_then(|e| e.clone()),
+                    extension_no_preceding_event_error: None,
                 })
             } else {
                 let mut measure = filled.next().ok_or_else(|| {

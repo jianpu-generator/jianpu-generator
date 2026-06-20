@@ -205,6 +205,13 @@ impl RecoverableError {
         }
     }
 
+    pub fn extension_no_preceding_event(span: Span, chord_track: bool) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::ExtensionNoPrecedingEvent { chord_track },
+        }
+    }
+
     pub fn duration_unexpected_char(span: Span, ch: char) -> Self {
         Self {
             span,

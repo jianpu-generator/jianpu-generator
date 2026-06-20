@@ -7,14 +7,6 @@ fn parse_and_group(input: &str) -> Score {
     group(doc).unwrap()
 }
 
-fn parse_and_group_err(input: &str) -> IrrecoverableError {
-    let doc = parser::parse(input, "test.jianpu").unwrap();
-    match group(doc) {
-        Err(e) => e,
-        Ok(_) => panic!("expected group() to return Err, but it returned Ok"),
-    }
-}
-
 fn first_part_notes(score: &Score, measure_idx: usize) -> &Vec<NoteEvent> {
     &score.measures[measure_idx].parts[0].slice().notes.events
 }
@@ -425,20 +417,45 @@ fn standalone_tie_marker_sets_tie_on_preceding_note() {
 }
 
 #[test]
-fn chord_extend_with_no_preceding_event_reports_token_span() {
-    let input = concat!(
+fn chord_extension_no_preceding_event_is_recoverable() {
+    use crate::error::{Diagnostic, RecoverableErrorKind};
+    let score = parse_and_group(concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nc = chord\nn = notes\n\n",
         "[score]\ntime=4/4 key=C4 bpm=120\n- 1 - -\n1 2 3 4\n",
-    );
-    let err = parse_and_group_err(input);
-    let span = err.span().unwrap();
+    ));
     assert!(
-        span.start > 0 || span.end > 0,
-        "expected a non-zero span for the '-' token, got start={} end={}",
-        span.start,
-        span.end,
+        score.measures[0].diagnostics.iter().any(|d| matches!(
+            d,
+            Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::ExtensionNoPrecedingEvent { chord_track: true, .. })
+        )),
+        "expected ExtensionNoPrecedingEvent error on measure 0"
     );
-    assert!(err.message().contains("chord extension"));
+    assert_eq!(
+        score.measures.len(),
+        1,
+        "render should continue past the error"
+    );
+}
+
+#[test]
+fn notes_extension_no_preceding_event_is_recoverable() {
+    use crate::error::{Diagnostic, RecoverableErrorKind};
+    let score = parse_and_group(concat!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nn = notes\n\n",
+        "[score]\ntime=4/4 key=C4 bpm=120\n- 2 3 4\n",
+    ));
+    assert!(
+        score.measures[0].diagnostics.iter().any(|d| matches!(
+            d,
+            Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::ExtensionNoPrecedingEvent { chord_track: false, .. })
+        )),
+        "expected ExtensionNoPrecedingEvent error on measure 0"
+    );
+    assert_eq!(
+        first_part_notes(&score, 0).len(),
+        3,
+        "remaining notes should render after the discarded extension"
+    );
 }
 
 #[test]

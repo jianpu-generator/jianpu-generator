@@ -161,6 +161,30 @@ fn three_measure_slur_emits_single_slur_span() {
 }
 
 #[test]
+fn cross_measure_arc_dropped_when_target_measure_has_error() {
+    // Bar 1: "1 2 3 (4" — slur group opens on note 4 at col 12.
+    // Bar 2: "- 5) 6 7 1" — lone '-' triggers ExtensionNoPrecedingEvent (has_error=true),
+    //   so the pending slur open is cleared before bar 2 compiles.
+    //   Note 5 would normally close the group but no open exists after the reset.
+    // Expected: no slur span connecting bar 0 to bar 1.
+    let score = score_from(&notes_doc(concat!(
+        "time=4/4 key=C4 bpm=120\n",
+        "1 2 3 (4\n",
+        "\n",
+        "- 5) 6 7 1\n",
+    )));
+    let result = compile(&score);
+    assert!(
+        result
+            .slur_spans
+            .iter()
+            .all(|s| !(s.from_measure == 0 && s.to_measure == 1)),
+        "cross-measure arc into errored measure should be dropped, got: {:?}",
+        result.slur_spans
+    );
+}
+
+#[test]
 fn three_measure_slur_with_single_note_middle_measure() {
     // Bar 1: "1 2 3 (4" — slur opens on note 4 at col 12.
     // Bar 2: "5 6 7 1" — single measure with all notes in slur continuation.

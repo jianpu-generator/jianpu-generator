@@ -36,6 +36,9 @@ pub struct PartSlice {
     pub kind: crate::ast::parsed::PartKind,
     pub notes: Notes,
     pub lyrics: Option<Lyrics>,
+    /// True when this slice's source measure had at least one `Diagnostic::Error`.
+    /// The compiler uses this to drop incoming cross-measure tie/slur arcs.
+    pub has_error: bool,
 }
 
 #[derive(Clone)]
@@ -155,6 +158,8 @@ pub(crate) struct GroupedMeasure {
     pub(crate) lex_error: Option<RecoverableError>,
     /// Recoverable error from a malformed lyrics line (e.g. empty lyrics line), if any.
     pub(crate) lyrics_parse_error: Option<RecoverableError>,
+    /// Recoverable error from `-` at the start of a measure with no preceding event, if any.
+    pub(crate) extension_no_preceding_event_error: Option<RecoverableError>,
 }
 
 pub(crate) struct GroupedPart {

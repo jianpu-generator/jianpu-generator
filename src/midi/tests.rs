@@ -56,6 +56,7 @@ fn chord_major_expands_to_three_notes() {
                     events: vec![NoteEvent::Chord(chord)],
                 },
                 lyrics: None,
+                has_error: false,
             })],
             source_span: Span::new(0, 0), // dummy — midi output ignores span
             diagnostics: vec![],
@@ -171,6 +172,7 @@ fn one_measure_score() -> Score {
                     })],
                 },
                 lyrics: None,
+                has_error: false,
             })],
             source_span: Span::new(0, 0),
             diagnostics: vec![],

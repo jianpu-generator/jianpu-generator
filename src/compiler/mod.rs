@@ -66,11 +66,19 @@ fn compile_measure(
         let Some(cs) = cross_states.get(part_idx) else {
             continue;
         };
-        let init_tie = cs.prev_tie;
-        let init_tie_column = cs.prev_tie_column;
-        let init_tie_measure = cs.prev_tie_measure;
-        let init_key = cs.prev_slur_key.clone();
-        let init_pending_opens = cs.clone_pending_opens();
+        // Drop any incoming cross-measure tie/slur arc when this slice has errors (#28).
+        let (init_tie, init_tie_column, init_tie_measure, init_key, init_pending_opens) =
+            if part_row.slice().has_error {
+                (false, None, None, None, vec![])
+            } else {
+                (
+                    cs.prev_tie,
+                    cs.prev_tie_column,
+                    cs.prev_tie_measure,
+                    cs.prev_slur_key.clone(),
+                    cs.clone_pending_opens(),
+                )
+            };
 
         let slice_result = compile_part_slice(
             part_row.slice(),

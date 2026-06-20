@@ -8,13 +8,6 @@ mod sections;
 
 use super::kind::IrrecoverableErrorKind;
 
-fn with_part_prefix(part: &Option<String>, message: String) -> String {
-    match part {
-        Some(name) => format!("[{name}] {message}"),
-        None => message,
-    }
-}
-
 impl std::fmt::Display for IrrecoverableErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         sections::write(self, f)

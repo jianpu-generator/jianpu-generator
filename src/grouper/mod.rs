@@ -7,9 +7,7 @@ use crate::ast::parsed::{
     PartKind, ScoreEvent,
 };
 use crate::combiner;
-use crate::error::{
-    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Warning,
-};
+use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Warning};
 
 #[path = "empty_note_measures.rs"]
 mod empty_note_measures;
@@ -78,6 +76,7 @@ struct PartGrouper {
     pending_dash_after_rest_error: Option<RecoverableError>,
     pending_overflow_error: Option<Warning>,
     pending_dotted_eighth_errors: Vec<Diagnostic>,
+    pending_extension_no_preceding_event_error: Option<RecoverableError>,
 }
 
 impl PartGrouper {
@@ -100,6 +99,7 @@ impl PartGrouper {
             pending_dash_after_rest_error: None,
             pending_overflow_error: None,
             pending_dotted_eighth_errors: Vec::new(),
+            pending_extension_no_preceding_event_error: None,
         }
     }
 
@@ -125,6 +125,9 @@ impl PartGrouper {
             chord_errors: Vec::new(),
             lex_error: None,
             lyrics_parse_error: None,
+            extension_no_preceding_event_error: self
+                .pending_extension_no_preceding_event_error
+                .take(),
         });
         self.current_beat = 0;
         self.measure_span_start = None;
@@ -195,13 +198,12 @@ impl PartGrouper {
                 return Ok(());
             }
             None => {
-                return Err(IrrecoverableError::new(
-                    IrrecoverableErrorKind::ExtensionNoPrecedingEvent {
-                        span,
-                        part: self.part_name.clone(),
-                        chord_track: self.part_kind == PartKind::Chord,
-                    },
-                ));
+                let chord_track = self.part_kind == PartKind::Chord;
+                self.pending_extension_no_preceding_event_error
+                    .get_or_insert_with(|| {
+                        RecoverableError::extension_no_preceding_event(span, chord_track)
+                    });
+                return Ok(());
             }
         }
         if self.current_beat >= self.capacity {
@@ -210,7 +212,7 @@ impl PartGrouper {
         Ok(())
     }
 
-    fn handle_tie_marker(&mut self, span: Span) -> Result<(), IrrecoverableError> {
+    fn handle_tie_marker(&mut self, _span: Span) -> Result<(), IrrecoverableError> {
         let last_event = self.current_notes.last_mut().or_else(|| {
             self.measures
                 .last_mut()
@@ -225,12 +227,9 @@ impl PartGrouper {
                 c.tie = true;
                 Ok(())
             }
-            _ => Err(IrrecoverableError::new(
-                IrrecoverableErrorKind::TieNoPrecedingNote {
-                    span,
-                    part: self.part_name.clone(),
-                },
-            )),
+            // TieMarker is a legacy event that is never emitted by the parser;
+            // this arm is dead code but kept for exhaustiveness.
+            _ => Ok(()),
         }
     }
 
@@ -327,6 +326,9 @@ impl PartGrouper {
                 chord_errors: Vec::new(),
                 lex_error: None,
                 lyrics_parse_error: None,
+                extension_no_preceding_event_error: self
+                    .pending_extension_no_preceding_event_error
+                    .take(),
             });
         }
 

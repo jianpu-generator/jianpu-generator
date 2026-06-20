@@ -77,6 +77,8 @@ pub enum RecoverableErrorKind {
         got: usize,
         expected: usize,
     },
+    /// `-` used to extend a note/chord but there is no preceding event — the `-` is ignored.
+    ExtensionNoPrecedingEvent { chord_track: bool },
 }
 
 impl RecoverableErrorKind {
@@ -157,9 +159,9 @@ impl RecoverableErrorKind {
             Self::LyricsNoNotesTrack { abbrev } => {
                 format!("lyrics line for '{abbrev}' has no matching notes track")
             }
-            Self::PartMeasureCountMismatch { part, got, expected } => format!(
-                "part {part:?} has {got} measures but the first part has {expected}; all parts must have the same number of measures"
-            ),
+            Self::PartMeasureCountMismatch { part, got, expected } => format!("part {part:?} has {got} measures but the first part has {expected}; all parts must have the same number of measures"),
+            Self::ExtensionNoPrecedingEvent { chord_track: true } => "chord extension '-' with no preceding event; '-' ignored".to_string(),
+            Self::ExtensionNoPrecedingEvent { chord_track: false } => "extension '-' without a preceding note or rest; '-' ignored".to_string(),
         }
     }
 }
