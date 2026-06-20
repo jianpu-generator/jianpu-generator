@@ -1,7 +1,7 @@
 use crate::compiler::types::MeasureBlock;
 use crate::grid_layout::layout::{
-    block_column_width, has_any_decoration, is_chord_only_row, is_lyric_row, make_header_rows,
-    LABEL_COLS,
+    block_column_width, is_chord_only_row, is_lyric_row, make_header_rows,
+    system_has_any_decoration, LABEL_COLS,
 };
 use crate::grid_layout::types::{Header, MeasureHighlight};
 
@@ -50,10 +50,10 @@ pub(crate) fn compute_measure_highlights_for_range(
             if sys_idx > 0 {
                 row_offset += 1;
             }
-            let Some(first) = system.first() else {
+            if system.is_empty() {
                 continue;
-            };
-            if has_any_decoration(first) {
+            }
+            if system_has_any_decoration(system) {
                 row_offset += 1;
             }
             let musical_row_count = system_musical_row_count(system);
@@ -98,8 +98,8 @@ pub(crate) fn compute_measure_highlight_location(
             if sys_idx > 0 {
                 row_offset += 1; // separator row
             }
-            let first = system.first()?;
-            if has_any_decoration(first) {
+            system.first()?;
+            if system_has_any_decoration(system) {
                 row_offset += 1; // decoration row
             }
             let musical_row_count = system_musical_row_count(system);

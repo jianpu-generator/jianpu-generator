@@ -280,6 +280,55 @@ fn multiple_decorations_occupy_consecutive_columns_starting_at_1() {
 }
 
 #[test]
+fn section_label_on_non_first_measure_of_system_is_rendered() {
+    use crate::compiler::types::Decoration;
+    // Two measures in one system; only the second has a SectionLabel.
+    let first_block = make_block("S", 3); // bar at col 3, width = 4
+    let mut second_block = make_block("S", 3);
+    second_block.decorations = vec![Decoration::SectionLabel("B".to_string())];
+    let compile_result = CompileResult {
+        blocks: vec![first_block, second_block],
+        slur_spans: vec![],
+    };
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let has_label = pages[0]
+        .rows
+        .iter()
+        .flat_map(|r| r.elements.iter())
+        .any(|e| matches!(&e.content, GridContent::SectionLabel(s) if s == "B"));
+    assert!(
+        has_label,
+        "SectionLabel on a non-first measure should be rendered"
+    );
+}
+
+#[test]
+fn section_label_on_non_first_measure_is_right_of_column_1() {
+    use crate::compiler::types::Decoration;
+    // First block has no decorations; second block has a SectionLabel.
+    // The label should appear in a column > 1 (to the right of where first-block decorations sit).
+    let first_block = make_block("S", 3);
+    let mut second_block = make_block("S", 3);
+    second_block.decorations = vec![Decoration::SectionLabel("B".to_string())];
+    let compile_result = CompileResult {
+        blocks: vec![first_block, second_block],
+        slur_spans: vec![],
+    };
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let label_col = pages[0]
+        .rows
+        .iter()
+        .flat_map(|r| r.elements.iter())
+        .find(|e| matches!(&e.content, GridContent::SectionLabel(s) if s == "B"))
+        .expect("should find label B")
+        .column;
+    assert!(
+        label_col > 1,
+        "section label on 2nd measure should be right of column 1, got {label_col}"
+    );
+}
+
+#[test]
 fn footer_row_fills_remaining_page_height() {
     let blocks = vec![make_block("S", 3)];
     let compile_result = CompileResult {

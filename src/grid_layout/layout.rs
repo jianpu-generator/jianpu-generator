@@ -173,8 +173,8 @@ pub(crate) fn compute_bar_height(first: &MeasureBlock, base: f32) -> f32 {
     system_musical_height_pt(first, base) + system_lyric_height_pt(first, base)
 }
 
-pub(crate) fn has_any_decoration(block: &MeasureBlock) -> bool {
-    !block.decorations.is_empty()
+pub(crate) fn system_has_any_decoration(system: &[MeasureBlock]) -> bool {
+    system.iter().any(|block| !block.decorations.is_empty())
 }
 
 #[path = "layout_decoration.rs"]
@@ -191,7 +191,7 @@ fn system_total_height(system: &[MeasureBlock], base: f32) -> f32 {
     };
     let musical = system_musical_height_pt(first, base);
     let lyric = system_lyric_height_pt(first, base);
-    let deco = if has_any_decoration(first) {
+    let deco = if system_has_any_decoration(system) {
         decoration_row_height(base)
     } else {
         0.0
@@ -214,7 +214,7 @@ fn build_page_rows(
         let Some(first) = system.first() else {
             continue;
         };
-        if has_any_decoration(first) {
+        if system_has_any_decoration(system) {
             rows.push(make_decoration_row(system, base));
         }
         let abs_sys = abs_system_index_start + sys_idx;
