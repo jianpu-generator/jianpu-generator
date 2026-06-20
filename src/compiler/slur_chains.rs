@@ -78,44 +78,17 @@ pub(super) fn flush_chain(
         return;
     }
 
-    let has_key_change = chain
-        .windows(2)
-        .any(|w| matches!((w.first(), w.get(1)), (Some(a), Some(b)) if a.1 != b.1));
-
-    if has_key_change {
-        if let (Some(first), Some(last)) = (chain.first(), chain.last()) {
-            let (from_measure, from_column) = pending_open
-                .map(|o| (o.measure_index, o.from_column))
-                .unwrap_or((measure_index, first.0));
-            slur_spans.push(SlurSpan {
-                part_index,
-                from_measure,
-                from_column,
-                to_measure: measure_index,
-                to_column: last.0,
-            });
-        }
-    }
-
-    for (w_idx, w) in chain.windows(2).enumerate() {
-        if let (Some(prev), Some(next)) = (w.first(), w.get(1)) {
-            if prev.1 == next.1 {
-                let (from_measure, from_column) = if w_idx == 0 {
-                    pending_open
-                        .map(|o| (o.measure_index, o.from_column))
-                        .unwrap_or((measure_index, prev.0))
-                } else {
-                    (measure_index, prev.0)
-                };
-                slur_spans.push(SlurSpan {
-                    part_index,
-                    from_measure,
-                    from_column,
-                    to_measure: measure_index,
-                    to_column: next.0,
-                });
-            }
-        }
+    if let Some((first, last)) = chain.first().zip(chain.last()) {
+        let (from_measure, from_column) = pending_open
+            .map(|o| (o.measure_index, o.from_column))
+            .unwrap_or((measure_index, first.0));
+        slur_spans.push(SlurSpan {
+            part_index,
+            from_measure,
+            from_column,
+            to_measure: measure_index,
+            to_column: last.0,
+        });
     }
 }
 

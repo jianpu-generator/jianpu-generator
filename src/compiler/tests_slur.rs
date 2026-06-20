@@ -1,0 +1,188 @@
+use crate::compiler::compile;
+use crate::grouper::group;
+use crate::parser::parse;
+
+fn score_from(source: &str) -> crate::ast::grouped::Score {
+    let doc = parse(source, "test").unwrap();
+    group(doc).unwrap()
+}
+
+fn notes_doc(score_content: &str) -> String {
+    format!(
+        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nS = notes\n\n[score]\n{score_content}"
+    )
+}
+
+#[test]
+fn three_same_pitch_notes_in_slur_group_emits_exactly_one_slur_span() {
+    // "(555)" — three quarter notes of the same pitch in a single slur group.
+    // A single tie/slur arc should span from the first note (col 4, after note 1 at col 0)
+    // to the last note (col 12), not one arc per consecutive pair.
+    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n1 (555)\n"));
+    let result = compile(&score);
+    assert_eq!(
+        result.slur_spans.len(),
+        1,
+        "expected exactly 1 slur span for (555), got: {:?}",
+        result.slur_spans
+    );
+    let span = &result.slur_spans[0];
+    assert_eq!(span.from_column, 4, "slur should start at col 4 (first 5)");
+    assert_eq!(span.to_column, 12, "slur should end at col 12 (last 5)");
+}
+
+#[test]
+fn same_measure_slur_emits_slur_span() {
+    // "(4 5)" open on note 4 (col 0), close on note 5 (col 4).
+    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n(4 5) 0 0\n"));
+    let result = compile(&score);
+    assert!(
+        result.slur_spans.iter().any(|s| {
+            s.part_index == 0
+                && s.from_measure == 0
+                && s.from_column == 0
+                && s.to_measure == 0
+                && s.to_column == 4
+        }),
+        "expected SlurSpan (measure=0, col=0) → (measure=0, col=4), got: {:?}",
+        result.slur_spans
+    );
+}
+
+#[test]
+fn cross_measure_slur_emits_single_slur_span() {
+    // Bar 1: "1 2 3 (4" — slur opens on note 4 at col 12.
+    // Bar 2: "5) 6 7 1" — slur closes on note 5 at col 0.
+    let score = score_from(&notes_doc(concat!(
+        "time=4/4 key=C4 bpm=120\n",
+        "1 2 3 (4\n",
+        "\n",
+        "5) 6 7 1\n",
+    )));
+    let result = compile(&score);
+    assert!(
+        result.slur_spans.iter().any(|s| {
+            s.part_index == 0
+                && s.from_measure == 0
+                && s.from_column == 12
+                && s.to_measure == 1
+                && s.to_column == 0
+        }),
+        "expected SlurSpan (measure=0, col=12) → (measure=1, col=0), got: {:?}",
+        result.slur_spans
+    );
+    assert!(
+        result
+            .slur_spans
+            .iter()
+            .all(|s| s.from_column != 16 && s.to_column != 16),
+        "no slur span should touch barline col 16, got: {:?}",
+        result.slur_spans
+    );
+}
+
+#[test]
+fn cross_measure_tie_emits_single_slur_span() {
+    // Bar 1: "1 2 3 (4" — note 4 at col 12 has tie=true (same pitch on both sides).
+    // Bar 2: "4) 5 6 7" — note 4 at col 0 closes the tie.
+    let score = score_from(&notes_doc(concat!(
+        "time=4/4 key=C4 bpm=120\n",
+        "1 2 3 (4\n",
+        "\n",
+        "4) 5 6 7\n",
+    )));
+    let result = compile(&score);
+    assert!(
+        result.slur_spans.iter().any(|s| {
+            s.part_index == 0
+                && s.from_measure == 0
+                && s.from_column == 12
+                && s.to_measure == 1
+                && s.to_column == 0
+        }),
+        "expected SlurSpan (measure=0, col=12) → (measure=1, col=0), got: {:?}",
+        result.slur_spans
+    );
+}
+
+#[test]
+fn cross_measure_slur_closing_on_extension_dash() {
+    // Bar 1: "1 2 3 (4" — slur opens on note 4 at col 12.
+    // Bar 2: "5 -) - -" — slur closes at the extension dash at col 4.
+    let score = score_from(&notes_doc(concat!(
+        "time=4/4 key=C4 bpm=120\n",
+        "1 2 3 (4\n",
+        "\n",
+        "5 -) - -\n",
+    )));
+    let result = compile(&score);
+    assert!(
+        result.slur_spans.iter().any(|s| {
+            s.part_index == 0
+                && s.from_measure == 0
+                && s.from_column == 12
+                && s.to_measure == 1
+                && s.to_column == 4
+        }),
+        "expected SlurSpan (measure=0, col=12) → (measure=1, col=4), got: {:?}",
+        result.slur_spans
+    );
+    assert!(
+        result.slur_spans.iter().all(|s| s.to_column != 16),
+        "no slur span should end at barline col 16"
+    );
+}
+
+#[test]
+fn three_measure_slur_emits_single_slur_span() {
+    // Bar 1: "(1 2 3 4" — slur opens on note 1 at col 0, multiple notes in slur.
+    // Bar 2: "5 6 7 1" — all notes in slur continue.
+    // Bar 3: "2) 3 4 5" — slur closes on note 2 at col 0.
+    let score = score_from(&notes_doc(concat!(
+        "time=4/4 key=C4 bpm=120\n",
+        "(1 2 3 4\n",
+        "\n",
+        "5 6 7 1\n",
+        "\n",
+        "2) 3 4 5\n",
+    )));
+    let result = compile(&score);
+    assert!(
+        result.slur_spans.iter().any(|s| {
+            s.part_index == 0
+                && s.from_measure == 0
+                && s.from_column == 0
+                && s.to_measure == 2
+                && s.to_column == 0
+        }),
+        "expected SlurSpan (measure=0, col=0) → (measure=2, col=0), got: {:?}",
+        result.slur_spans
+    );
+}
+
+#[test]
+fn three_measure_slur_with_single_note_middle_measure() {
+    // Bar 1: "1 2 3 (4" — slur opens on note 4 at col 12.
+    // Bar 2: "5 6 7 1" — single measure with all notes in slur continuation.
+    // Bar 3: "2) 3 4 5" — slur closes on note 2 at col 0.
+    let score = score_from(&notes_doc(concat!(
+        "time=4/4 key=C4 bpm=120\n",
+        "1 2 3 (4\n",
+        "\n",
+        "5 6 7 1\n",
+        "\n",
+        "2) 3 4 5\n",
+    )));
+    let result = compile(&score);
+    assert!(
+        result.slur_spans.iter().any(|s| {
+            s.part_index == 0
+                && s.from_measure == 0
+                && s.from_column == 12
+                && s.to_measure == 2
+                && s.to_column == 0
+        }),
+        "expected SlurSpan (measure=0, col=12) → (measure=2, col=0), got: {:?}",
+        result.slur_spans
+    );
+}

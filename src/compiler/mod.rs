@@ -155,3 +155,5 @@ fn collect_decorations(measure: &MultiPartMeasure, bar_number: usize) -> Vec<Dec
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_slur;
