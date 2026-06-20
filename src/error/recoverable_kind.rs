@@ -71,6 +71,12 @@ pub enum RecoverableErrorKind {
     LyricsLineEmpty,
     /// A lyrics slot has no paired notes track — lyrics are skipped.
     LyricsNoNotesTrack { abbrev: String },
+    /// A part has a different number of measures than the first part.
+    PartMeasureCountMismatch {
+        part: String,
+        got: usize,
+        expected: usize,
+    },
 }
 
 impl RecoverableErrorKind {
@@ -118,9 +124,7 @@ impl RecoverableErrorKind {
             Self::MetadataInvalidInteger { field, value } => {
                 format!("{field} must be a positive integer, got: {value}")
             }
-            Self::MetadataMustBePositive { field } => {
-                format!("{field} must be greater than zero")
-            }
+            Self::MetadataMustBePositive { field } => format!("{field} must be greater than zero"),
             Self::MetadataMissingField { field } => {
                 format!("missing required field: {}", field.label())
             }
@@ -153,6 +157,9 @@ impl RecoverableErrorKind {
             Self::LyricsNoNotesTrack { abbrev } => {
                 format!("lyrics line for '{abbrev}' has no matching notes track")
             }
+            Self::PartMeasureCountMismatch { part, got, expected } => format!(
+                "part {part:?} has {got} measures but the first part has {expected}; all parts must have the same number of measures"
+            ),
         }
     }
 }

@@ -67,12 +67,6 @@ pub enum IrrecoverableErrorKind {
         span: Span,
         part: Option<String>,
     },
-    PartMeasureCountMismatch {
-        span: Span,
-        part: String,
-        got: usize,
-        expected: usize,
-    },
     MidiWriteFailed {
         span: Span,
     },

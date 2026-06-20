@@ -46,7 +46,7 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
         per_measure_parse_errors: doc.per_measure_parse_errors,
     };
 
-    let measures = combiner::combine(&grouped_score)?;
+    let (measures, combiner_diagnostics) = combiner::combine(&grouped_score);
 
     Ok(Score {
         metadata: Metadata {
@@ -59,7 +59,10 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
             note_number_width: metadata.note_number_width.unwrap_or(8),
         },
         measures,
-        document_diagnostics,
+        document_diagnostics: document_diagnostics
+            .into_iter()
+            .chain(combiner_diagnostics)
+            .collect(),
     })
 }
 

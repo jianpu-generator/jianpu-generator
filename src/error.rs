@@ -233,6 +233,22 @@ impl RecoverableError {
         }
     }
 
+    pub fn part_measure_count_mismatch(
+        span: Span,
+        part: impl Into<String>,
+        got: usize,
+        expected: usize,
+    ) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartMeasureCountMismatch {
+                part: part.into(),
+                got,
+                expected,
+            },
+        }
+    }
+
     pub fn metadata_malformed_line(span: Span, line: &str) -> Self {
         Self {
             span,

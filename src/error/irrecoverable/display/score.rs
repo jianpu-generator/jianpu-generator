@@ -7,7 +7,9 @@ pub(super) fn write(
     formatter: &mut fmt::Formatter<'_>,
 ) -> Option<fmt::Result> {
     match kind {
-        IrrecoverableErrorKind::ExtensionNoPrecedingEvent { part, chord_track, .. } => {
+        IrrecoverableErrorKind::ExtensionNoPrecedingEvent {
+            part, chord_track, ..
+        } => {
             let message = if *chord_track {
                 "chord extension '-' with no preceding event".to_string()
             } else {
@@ -19,15 +21,6 @@ pub(super) fn write(
             formatter,
             "{}",
             with_part_prefix(part, "tie `~` without a preceding note".to_string())
-        )),
-        IrrecoverableErrorKind::PartMeasureCountMismatch {
-            part,
-            got,
-            expected,
-            ..
-        } => Some(write!(
-            formatter,
-            "part {part:?} has {got} measures but the first part has {expected}; all parts must have the same number of measures"
         )),
         _ => None,
     }

@@ -3,9 +3,7 @@ use crate::ast::grouped::{
     PartRow, PartSlice,
 };
 use crate::ast::parsed::PartKind;
-use crate::error::{
-    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span,
-};
+use crate::error::{Diagnostic, RecoverableError, Span};
 
 fn collect_part_measure_diagnostics(m: Option<&GroupedMeasure>) -> Vec<Diagnostic> {
     [
@@ -96,11 +94,9 @@ fn combine_measure(
     }
 }
 
-pub(crate) fn combine(
-    grouped_score: &GroupedScore,
-) -> Result<Vec<MultiPartMeasure>, IrrecoverableError> {
+pub(crate) fn combine(grouped_score: &GroupedScore) -> (Vec<MultiPartMeasure>, Vec<Diagnostic>) {
     if grouped_score.parts.is_empty() {
-        return Ok(Vec::new());
+        return (Vec::new(), Vec::new());
     }
 
     let expected_len = grouped_score
@@ -108,7 +104,27 @@ pub(crate) fn combine(
         .first()
         .map(GroupedTrack::measure_count)
         .unwrap_or(0);
-    validate_measure_counts(&grouped_score.parts, expected_len)?;
+    let max_len = grouped_score
+        .parts
+        .iter()
+        .map(GroupedTrack::measure_count)
+        .max()
+        .unwrap_or(0);
+
+    let mismatch_diagnostics: Vec<Diagnostic> = grouped_score
+        .parts
+        .iter()
+        .skip(1)
+        .filter(|track| track.measure_count() != expected_len)
+        .map(|track| {
+            Diagnostic::Error(RecoverableError::part_measure_count_mismatch(
+                Span::new(0, 0),
+                format!("{:?}", track.track_name()),
+                track.measure_count(),
+                expected_len,
+            ))
+        })
+        .collect();
 
     let directives_fallback = MeasureDirectives {
         time_signature: None,
@@ -116,35 +132,11 @@ pub(crate) fn combine(
         key: None,
         label: None,
     };
-    let mut combined = Vec::with_capacity(expected_len);
-    for measure_idx in 0..expected_len {
-        combined.push(combine_measure(
-            grouped_score,
-            measure_idx,
-            &directives_fallback,
-        ));
-    }
+    let combined = (0..max_len)
+        .map(|measure_idx| combine_measure(grouped_score, measure_idx, &directives_fallback))
+        .collect();
 
-    Ok(combined)
-}
-
-fn validate_measure_counts(
-    grouped_tracks: &[GroupedTrack],
-    expected_len: usize,
-) -> Result<(), IrrecoverableError> {
-    for track in grouped_tracks.iter().skip(1) {
-        if track.measure_count() != expected_len {
-            return Err(IrrecoverableError::new(
-                IrrecoverableErrorKind::PartMeasureCountMismatch {
-                    span: Span::new(0, 1),
-                    part: format!("{:?}", track.track_name()),
-                    got: track.measure_count(),
-                    expected: expected_len,
-                },
-            ));
-        }
-    }
-    Ok(())
+    (combined, mismatch_diagnostics)
 }
 
 fn build_part_rows(
