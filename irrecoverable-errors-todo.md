@@ -45,34 +45,42 @@ These are no longer review items. Some still have a matching
 | `LyricsLineEmpty` | `implemented` | Treat empty lyrics line as `_`; `RecoverableError::lyrics_line_empty` on `GroupedMeasure.lyrics_parse_error`; `IrrecoverableErrorKind` variant removed |
 | `LyricsNoNotesTrack` | `implemented` | Skip lyrics for that measure; `RecoverableError::lyrics_no_notes_track` pushed to document-level errors via `ctx.extra_document_errors`; `IrrecoverableErrorKind` variant removed |
 | `UnderscoreOnlyOnLyrics` | `rejected` | Dead code — never emitted; `IrrecoverableErrorKind` variant removed |
+| `DittoNoPrecedent` | `implemented` | Abort when `"` has no same-role line above in the measure → render blank placeholder; error on measure |
+| `MeasureWrongLineCount` | `implemented` | Recoverable via `ErrorKind::MeasureWrongLineCount` in desugar padding; irrecoverable enum variant removed |
+| `DashAfterRest` (suffix) | `implemented` | Skip suffix extension during notes token parse; error on measure (matches grouper spaced-extension path) |
+| `LexUnexpectedChar` (notes line) | `implemented` | Skip bad measure, continue; error on measure (`interleaved_column_lines.rs`) |
+| `DurationUnexpectedChar` | `implemented` | Unexpected char in duration suffix collected inline in `parse_duration_suffixes` as `DurationParse.unexpected_char_error`; `IrrecoverableErrorKind` variant removed |
+| `ChordExpectedDegreeDigit` | `implemented` | Skip bad symbol; error on measure |
+| `ChordUnknownSuffix` | `implemented` | Render degree only; error on measure |
+| `ChordInvalidBass` | `implemented` | Omit bass; error on measure |
+| `ChordBassUnexpectedChar` | `implemented` | Omit bass; error on measure |
+| `ChordBassTrailingChars` | `implemented` | Omit bass; error on measure |
+| `ExtensionNoPrecedingEvent` | `implemented` | Lone `-` with no preceding event collected as `RecoverableErrorKind::ExtensionNoPrecedingEvent` in `PartGrouper.pending_extension_no_preceding_event_error`; `IrrecoverableErrorKind` variant removed |
+| `TieNoPrecedingNote` | `rejected` | Dead code — `ScoreEvent::TieMarker` never emitted; `handle_tie_marker` `_` arm returns `Ok(())`; `IrrecoverableErrorKind` variant removed |
+| `PartMeasureCountMismatch` | `implemented` | Pad shorter parts with empty measures; error on affected measures |
+| Unclosed tie/slur into errored measure | `implemented` | `PartSlice::has_error` flag set via `measure_has_error()` in `combiner.rs`; `compiler/mod.rs` resets `prev_tie`, tie columns, slur key, and `pending_slur_opens` before compiling any errored slice |
+| `DirectiveUnclosedParen` | `implemented` | Bad `(` treated as literal char, directive skipped; error on measure |
+| `DirectiveUnclosedQuote` | `implemented` | Unclosed quote treated as part of label text, label skipped; error on measure |
+| `DirectiveInvalidBpm` | `implemented` | Non-numeric BPM ignored, prior BPM retained; error on measure |
+| `DirectiveLabelNotQuoted` / `DirectiveLabelEmpty` | `implemented` | Unquoted or empty labels skipped; error on measure |
+| `DirectiveUnknown` | `implemented` | Unknown directive token skipped, render continues; error on measure |
+| `DirectiveKey*` / `DirectiveTime*` (all variants) | `implemented` | Malformed `@key` / `@time` ignored, prior state retained; error on measure |
+| `KeyChangeMissingPrefix` / `KeyChangeMissingNoteName` / `KeyChangeInvalidNoteName` / `KeyChangeInvalidOctave` | `implemented` | Inline key change errors ignored, previous key retained; error on measure |
+| `LexBpm*` / `LexTime*` (lexer variants) | `implemented` | Lexer-level directive errors handled same as parser-level, prior state retained; error on measure |
+| `IncompleteMeasure` | `implemented` | Deleted — replaced by recoverable beat-underflow padding |
+| `MeasureOverflow` | `implemented` | Deleted — replaced by recoverable beat-overflow handling |
+| `MeasureIndexOutOfRange` | `implemented` | Deleted — never emitted |
+| `InvalidMeasureRange` | `implemented` | Deleted — never emitted |
 
 ---
 
 ## Candidates
 
-### Measure layout & ditto
-
-| # | Kind | Status | Current behavior | Proposed recovery |
-|---|---|---|---|---|
-| 1 | `DittoNoPrecedent` | `implemented` | Abort when `"` has no same-role line above in the measure | Render blank placeholder; error on measure (design doc) |
-| 2 | `MeasureWrongLineCount` | `implemented` | Recoverable via `ErrorKind::MeasureWrongLineCount` in desugar padding | Tagged recoverable errors; irrecoverable enum variant removed |
-
-### Lyrics
-
-| # | Kind | Status | Current behavior | Proposed recovery |
-|---|---|---|---|---|
-| 6 | `LyricsLineEmpty` | `implemented` | Treat as `_` (no lyrics for that measure); `RecoverableError::lyrics_line_empty` on `GroupedMeasure.lyrics_parse_error` |
-| 7 | `LyricsNoNotesTrack` | `implemented` | Skip lyrics for that measure; `RecoverableError::lyrics_no_notes_track` pushed to document-level errors via `ctx.extra_document_errors` → `per_group_desugar_errors` |
-| 8 | `UnderscoreOnlyOnLyrics` | `rejected` | Dead code — `IrrecoverableErrorKind` variant removed; was never emitted |
-
 ### Notes, duration & grouping
 
 | # | Kind | Status | Current behavior | Proposed recovery |
 |---|---|---|---|---|
-| 9 | `DashAfterRest` | `implemented` | Skip suffix extension during notes token parse; error on measure (matches grouper spaced-extension path) |
-| 10 | `LexUnexpectedChar` (notes line) | `implemented` | Skip bad measure, continue; error on measure (`interleaved_column_lines.rs`) |
 | 11 | `NoteExpectedPitchDigit` | `pending` | Abort | Skip token or treat as rest; error on measure |
-| 12 | `DurationUnexpectedChar` | `implemented` | Abort | Skip token; error on measure |
 | 13 | `DurationMixedOctaveMarkers` | `pending` | Abort | Pick one marker or skip note; error on measure |
 | 14 | `DurationCannotDotQuarterBeat` | `pending` | Abort | Parse without dot or skip note; error on measure |
 | 15 | `GroupTooFewNotes` | `pending` | Abort `(N)` with fewer than 2 notes | Ungroup or skip group; error on measure |
@@ -80,51 +88,6 @@ These are no longer review items. Some still have a matching
 | 17 | `UnclosedGroupAtEnd` | `pending` | Abort when `(` not closed at line/measure end | Close implicitly or drop group; error on measure |
 | 18 | `HalfBarBoundaryCrossed` | `pending` | Abort when beaming group crosses half-bar | Split group or drop tie; error on measure |
 | 19 | `DottedEighthNeedsSixteenth` | `pending` | Abort when `(1.2)` pattern invalid | Drop dot or skip group; error on measure |
-
-### Chords (beyond invalid token)
-
-| # | Kind | Status | Current behavior | Proposed recovery |
-|---|---|---|---|---|
-| 20 | `ChordExpectedDegreeDigit` | `implemented` | Skip bad symbol; error on measure |
-| 21 | `ChordUnknownSuffix` | `implemented` | Render degree only; error on measure |
-| 22 | `ChordInvalidBass` | `implemented` | Omit bass; error on measure |
-| 23 | `ChordBassUnexpectedChar` | `implemented` | Omit bass; error on measure |
-| 24 | `ChordBassTrailingChars` | `implemented` | Omit bass; error on measure |
-
-### Ties, extensions & cross-part rhythm
-
-| # | Kind | Status | Current behavior | Proposed recovery |
-|---|---|---|---|---|
-| 25 | `ExtensionNoPrecedingEvent` | `implemented` | Ignore `-`; `RecoverableErrorKind::ExtensionNoPrecedingEvent` on measure; `IrrecoverableErrorKind` variant removed |
-| 26 | `TieNoPrecedingNote` | `rejected` | Dead code — `ScoreEvent::TieMarker` never emitted; `IrrecoverableErrorKind` variant removed; `handle_tie_marker` `_` arm silently returns `Ok(())` |
-| 27 | `PartMeasureCountMismatch` | `implemented` | Pad shorter parts with empty measures; error on affected measures |
-| 28 | Unclosed tie/slur into errored measure | `implemented` | `PartSlice::has_error` set when measure has any `Diagnostic::Error`; compiler resets `prev_tie`/`pending_slur_opens` before compiling an errored slice |
-
-### Measure directives & key changes
-
-| # | Kind | Status | Current behavior | Proposed recovery |
-|---|---|---|---|---|
-| 29 | `DirectiveUnclosedParen` | `implemented` | Ignore directive; use previous time/key/bpm; error on measure | Recoverable; bad `(` treated as literal char, directive skipped |
-| 30 | `DirectiveUnclosedQuote` | `implemented` | Ignore `@label`; error on measure | Recoverable; unclosed quote treated as part of label text, label skipped |
-| 31 | `DirectiveInvalidBpm` | `implemented` | Keep previous BPM; error on measure | Recoverable; non-numeric BPM ignored, prior BPM retained |
-| 32 | `DirectiveLabelNotQuoted` / `DirectiveLabelEmpty` | `implemented` | Skip label; error on measure | Recoverable; unquoted or empty labels skipped with error |
-| 33 | `DirectiveUnknown` | `implemented` | Skip token; error on measure | Recoverable; unknown directive token skipped, render continues |
-| 34 | `DirectiveKey*` / `DirectiveTime*` (all variants) | `implemented` | Keep previous signature/key; error on measure | Recoverable; malformed `@key` / `@time` ignored, prior state retained |
-| 35 | `KeyChangeMissingPrefix` / `KeyChangeMissingNoteName` / `KeyChangeInvalidNoteName` / `KeyChangeInvalidOctave` | `implemented` | Keep previous key; error on measure | Recoverable; inline key change errors ignored, previous key retained |
-| 36 | `LexBpm*` / `LexTime*` (lexer variants) | `implemented` | Same as directive recovery; error on measure | Recoverable; lexer-level directive errors handled same as parser-level, prior state retained |
-
-### Dead enum variants (verify & clean up)
-
-These kinds exist in `IrrecoverableErrorKind` but are not emitted by current
-code paths (superseded by `RecoverableError` with free-form messages). Decide
-whether to delete the variants or re-wire them.
-
-| # | Kind | Status | Notes |
-|---|---|---|---|
-| 37 | `IncompleteMeasure` | `implemented` | Deleted — replaced by recoverable beat-underflow padding |
-| 38 | `MeasureOverflow` | `implemented` | Deleted — replaced by recoverable beat-overflow handling |
-| 39 | `MeasureIndexOutOfRange` | `implemented` | Deleted — never emitted |
-| 40 | `InvalidMeasureRange` | `implemented` | Deleted — never emitted |
 
 ---
 
