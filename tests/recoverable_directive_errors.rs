@@ -255,3 +255,81 @@ fn inline_time_zero_denominator_is_recoverable() {
             .collect::<Vec<_>>()
     );
 }
+
+// Group — Dotted eighth without sixteenth tail
+
+#[test]
+fn dotted_eighth_note_without_sixteenth_tail_is_recoverable() {
+    // `1_.` is a dotted eighth note; it must be followed by a sixteenth.
+    // When no sixteenth tail follows, render must continue and surface a diagnostic.
+    let source = minimal_fixture("time=4/4 key=C4 bpm=120\n1_. 2_ 3_ 4_ 5_ 6_ 7_ 0=\n");
+    let output = render_svgs_from_source(&source, "test.jianpu")
+        .expect("dotted eighth without sixteenth tail must not abort the render");
+    assert!(!output.svgs.is_empty());
+    assert!(
+        has_error_containing(&output, "dotted eighth"),
+        "expected error about dotted eighth, got: {:?}",
+        output
+            .diagnostics
+            .iter()
+            .map(|d| d.message())
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn dotted_eighth_rest_without_sixteenth_tail_is_recoverable() {
+    // `0_.` is a dotted eighth rest; same rule applies.
+    let source = minimal_fixture("time=4/4 key=C4 bpm=120\n0_. 1_ 2_ 3_ 4_ 5_ 6_ 0=\n");
+    let output = render_svgs_from_source(&source, "test.jianpu")
+        .expect("dotted eighth rest without sixteenth tail must not abort the render");
+    assert!(!output.svgs.is_empty());
+    assert!(
+        has_error_containing(&output, "dotted eighth"),
+        "expected error about dotted eighth, got: {:?}",
+        output
+            .diagnostics
+            .iter()
+            .map(|d| d.message())
+            .collect::<Vec<_>>()
+    );
+}
+
+// NoteExpectedPitchDigit
+
+#[test]
+fn note_invalid_pitch_char_is_recoverable() {
+    // 'x' is not a valid pitch digit (0-7); the lexer rejects it as LexUnexpectedChar,
+    // which is recoverable — the measure is skipped and the render continues.
+    let source = minimal_fixture("1 x 3 4\n");
+    let output = render_svgs_from_source(&source, "test.jianpu")
+        .expect("invalid pitch char must not abort the render");
+    assert!(!output.svgs.is_empty());
+    assert!(
+        has_error_containing(&output, "unexpected character"),
+        "expected error about unexpected character, got: {:?}",
+        output
+            .diagnostics
+            .iter()
+            .map(|d| d.message())
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn dotted_eighth_with_sixteenth_tail_is_valid() {
+    // `1_.` followed by `2=` (sixteenth) is a valid pattern — no error expected.
+    let source = minimal_fixture("time=4/4 key=C4 bpm=120\n1_. 2= 3_ 4_ 5_ 6_ 7_ 1_\n");
+    let output = render_svgs_from_source(&source, "test.jianpu")
+        .expect("dotted eighth with sixteenth tail must not abort");
+    assert!(!output.svgs.is_empty());
+    assert!(
+        !has_error_containing(&output, "dotted eighth"),
+        "expected no dotted-eighth error for valid pattern, got: {:?}",
+        output
+            .diagnostics
+            .iter()
+            .map(|d| d.message())
+            .collect::<Vec<_>>()
+    );
+}

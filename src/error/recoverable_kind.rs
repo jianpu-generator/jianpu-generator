@@ -79,6 +79,8 @@ pub enum RecoverableErrorKind {
     },
     /// `-` used to extend a note/chord but there is no preceding event — the `-` is ignored.
     ExtensionNoPrecedingEvent { chord_track: bool },
+    /// A notes token did not start with a pitch digit (0-7) — the token is skipped.
+    NoteExpectedPitchDigit { ch: char },
 }
 
 impl RecoverableErrorKind {
@@ -114,13 +116,9 @@ impl RecoverableErrorKind {
             Self::DashAfterRest => {
                 "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)".to_string()
             }
-            Self::ChordExpectedDegreeDigit { ch } => {
-                format!("expected chord degree digit (0-7), got: {ch}")
-            }
+            Self::ChordExpectedDegreeDigit { ch } => format!("expected chord degree digit (0-7), got: {ch}"),
             Self::ChordInvalidToken { message } => message.clone(),
-            Self::DurationUnexpectedChar { ch } => {
-                format!("unexpected character in note duration: {ch}")
-            }
+            Self::DurationUnexpectedChar { ch } => format!("unexpected character in note duration: {ch}"),
             Self::MetadataMalformedLine { line } => format!("expected key = value, got: {line}"),
             Self::MetadataUnknownField { field } => format!("unknown metadata field: {field}"),
             Self::MetadataInvalidInteger { field, value } => {
@@ -162,6 +160,7 @@ impl RecoverableErrorKind {
             Self::PartMeasureCountMismatch { part, got, expected } => format!("part {part:?} has {got} measures but the first part has {expected}; all parts must have the same number of measures"),
             Self::ExtensionNoPrecedingEvent { chord_track: true } => "chord extension '-' with no preceding event; '-' ignored".to_string(),
             Self::ExtensionNoPrecedingEvent { chord_track: false } => "extension '-' without a preceding note or rest; '-' ignored".to_string(),
+            Self::NoteExpectedPitchDigit { ch } => format!("expected pitch digit (0-7), got: {ch}"),
         }
     }
 }
