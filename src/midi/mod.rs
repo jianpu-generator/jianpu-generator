@@ -28,6 +28,18 @@ enum RawKind {
     ProgramChange(u8),
 }
 
+enum EventResolution {
+    Skip,
+    Rest {
+        duration: u32,
+    },
+    Notes {
+        midi_notes: Vec<u8>,
+        duration: u32,
+        tie: bool,
+    },
+}
+
 pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
     let mut raw: Vec<RawEvent> = Vec::new();
 
@@ -38,6 +50,7 @@ pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
 
     let mut current_tick: u32 = 0;
     let mut per_part_ties: Vec<HashMap<u8, u32>> = Vec::new();
+    let mut chord_ties: HashMap<u8, u32> = HashMap::new();
     let mut active_key = default_active_key();
 
     for measure in &score.measures {
@@ -46,11 +59,13 @@ pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
             current_tick,
             &mut raw,
             &mut per_part_ties,
+            &mut chord_ties,
             &mut active_key,
         )?;
     }
 
     flush_pending_ties(&mut raw, per_part_ties);
+    flush_pending_ties_at_tick(&mut chord_ties, current_tick, &mut raw);
     sort_raw_events(&mut raw);
 
     let track = build_track_events(&raw);
@@ -163,6 +178,7 @@ fn process_measure(
     current_tick: u32,
     raw: &mut Vec<RawEvent>,
     per_part_ties: &mut Vec<HashMap<u8, u32>>,
+    chord_ties: &mut HashMap<u8, u32>,
     active_key: &mut KeyChange,
 ) -> Result<u32, IrrecoverableError> {
     if let Some(bpm) = measure.bpm {
@@ -208,8 +224,13 @@ fn process_measure(
     for row in &measure.parts {
         let part = row.slice();
         if part.kind == PartKind::Chord {
-            let chord_duration =
-                process_chord_events(&part.notes.events, current_tick, raw, active_key);
+            let chord_duration = process_chord_events(
+                &part.notes.events,
+                current_tick,
+                raw,
+                active_key,
+                chord_ties,
+            );
             if chord_duration > measure_duration {
                 measure_duration = chord_duration;
             }
@@ -227,51 +248,31 @@ fn process_measure_notes(
     per_part_ties: &mut [HashMap<u8, u32>],
     active_key: &KeyChange,
 ) -> Result<u32, IrrecoverableError> {
-    let pending_ties = per_part_ties.get_mut(part_idx).ok_or_else(|| {
+    let ties = per_part_ties.get_mut(part_idx).ok_or_else(|| {
         IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
             Span::new(0, 0),
             format!("internal error: missing MIDI tie state for part {part_idx}"),
         ))
     })?;
-    let mut part_tick = current_tick;
-
-    for event in &part.notes.events {
-        match event {
-            NoteEvent::Note(note) => {
-                let ticks = duration_to_ticks(note.duration);
-                let midi_note = resolve_midi_note(&note.pitch, note.octave, active_key);
-                let note_off_tick = part_tick + ticks;
-
-                let is_tie_continuation = pending_ties.remove(&midi_note).is_some();
-                flush_pending_ties_at_tick(pending_ties, part_tick, raw);
-
-                if !is_tie_continuation {
-                    raw.push(RawEvent {
-                        tick: part_tick,
-                        kind: RawKind::NoteOn(midi_note),
-                    });
-                }
-
-                if note.tie {
-                    pending_ties.insert(midi_note, note_off_tick);
-                } else {
-                    raw.push(RawEvent {
-                        tick: note_off_tick,
-                        kind: RawKind::NoteOff(midi_note),
-                    });
-                }
-
-                part_tick += ticks;
-            }
-            NoteEvent::Rest(rest) => {
-                flush_pending_ties_at_tick(pending_ties, part_tick, raw);
-                part_tick += duration_to_ticks(rest.duration);
-            }
-            NoteEvent::Chord(_) => {}
-        }
-    }
-
-    Ok(part_tick - current_tick)
+    let duration =
+        process_events_with_ties(
+            &part.notes.events,
+            current_tick,
+            raw,
+            ties,
+            |event| match event {
+                NoteEvent::Note(n) => EventResolution::Notes {
+                    midi_notes: vec![resolve_midi_note(&n.pitch, n.octave, active_key)],
+                    duration: n.duration,
+                    tie: n.tie,
+                },
+                NoteEvent::Rest(r) => EventResolution::Rest {
+                    duration: r.duration,
+                },
+                NoteEvent::Chord(_) => EventResolution::Skip,
+            },
+        );
+    Ok(duration)
 }
 
 fn flush_pending_ties_at_tick(
@@ -287,44 +288,73 @@ fn flush_pending_ties_at_tick(
     }
 }
 
+fn process_events_with_ties(
+    events: &[NoteEvent],
+    current_tick: u32,
+    raw: &mut Vec<RawEvent>,
+    ties: &mut HashMap<u8, u32>,
+    resolve: impl Fn(&NoteEvent) -> EventResolution,
+) -> u32 {
+    let mut tick = current_tick;
+    for event in events {
+        match resolve(event) {
+            EventResolution::Skip => {}
+            EventResolution::Rest { duration } => {
+                flush_pending_ties_at_tick(ties, tick, raw);
+                tick += duration_to_ticks(duration);
+            }
+            EventResolution::Notes {
+                midi_notes,
+                duration,
+                tie,
+            } => {
+                let (continuing, new_notes): (Vec<u8>, Vec<u8>) =
+                    midi_notes.iter().partition(|&&n| ties.remove(&n).is_some());
+                flush_pending_ties_at_tick(ties, tick, raw);
+                for &n in &new_notes {
+                    raw.push(RawEvent {
+                        tick,
+                        kind: RawKind::NoteOn(n),
+                    });
+                }
+                let off_tick = tick + duration_to_ticks(duration);
+                if tie {
+                    for &n in &midi_notes {
+                        ties.insert(n, off_tick);
+                    }
+                } else {
+                    for &n in continuing.iter().chain(new_notes.iter()) {
+                        raw.push(RawEvent {
+                            tick: off_tick,
+                            kind: RawKind::NoteOff(n),
+                        });
+                    }
+                }
+                tick += duration_to_ticks(duration);
+            }
+        }
+    }
+    tick - current_tick
+}
+
 fn process_chord_events(
     events: &[NoteEvent],
     current_tick: u32,
     raw: &mut Vec<RawEvent>,
     active_key: &KeyChange,
+    chord_ties: &mut HashMap<u8, u32>,
 ) -> u32 {
-    let mut chord_tick = current_tick;
-
-    for event in events {
-        match event {
-            NoteEvent::Chord(chord) => {
-                let ticks = duration_to_ticks(chord.duration);
-                let notes_to_play = chord_midi_notes(chord, active_key);
-
-                for &midi_note in &notes_to_play {
-                    raw.push(RawEvent {
-                        tick: chord_tick,
-                        kind: RawKind::NoteOn(midi_note),
-                    });
-                }
-                let off_tick = chord_tick + ticks;
-                for &midi_note in &notes_to_play {
-                    raw.push(RawEvent {
-                        tick: off_tick,
-                        kind: RawKind::NoteOff(midi_note),
-                    });
-                }
-
-                chord_tick += ticks;
-            }
-            NoteEvent::Rest(rest) => {
-                chord_tick += duration_to_ticks(rest.duration);
-            }
-            NoteEvent::Note(_) => {}
-        }
-    }
-
-    chord_tick - current_tick
+    process_events_with_ties(events, current_tick, raw, chord_ties, |event| match event {
+        NoteEvent::Chord(c) => EventResolution::Notes {
+            midi_notes: chord_midi_notes(c, active_key),
+            duration: c.duration,
+            tie: c.tie,
+        },
+        NoteEvent::Rest(r) => EventResolution::Rest {
+            duration: r.duration,
+        },
+        NoteEvent::Note(_) => EventResolution::Skip,
+    })
 }
 
 fn chord_midi_notes(
