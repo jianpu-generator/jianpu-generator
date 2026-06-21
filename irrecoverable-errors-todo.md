@@ -56,6 +56,9 @@ These are no longer review items. Some still have a matching
 | `ChordBassUnexpectedChar` | `implemented` | Omit bass; error on measure |
 | `ChordBassTrailingChars` | `implemented` | Omit bass; error on measure |
 | `ExtensionNoPrecedingEvent` | `implemented` | Lone `-` with no preceding event collected as `RecoverableErrorKind::ExtensionNoPrecedingEvent` in `PartGrouper.pending_extension_no_preceding_event_error`; `IrrecoverableErrorKind` variant removed |
+| `DottedEighthNeedsSixteenth` | `implemented` | Dotted eighth not followed by a sixteenth collected as `RecoverableError::dotted_eighth_needs_sixteenth` via `validate_dotted_eighth_tail` → `PaddedBeats.dotted_eighth_errors` → `GroupedMeasure.dotted_eighth_errors`; render continues; error on measure |
+| `GroupTooFewNotes` | `implemented` | `(N)` with fewer than 2 notes emits `WarningKind::GroupTooFewNotes`; note is still rendered; no irrecoverable variant ever existed |
+| `HalfBarBoundaryCrossed` | `implemented` | Note or extension crossing the half-bar boundary emits `Warning::half_bar_boundary_crossed` in `grouping.rs`; render continues; no irrecoverable variant ever existed |
 | `TieNoPrecedingNote` | `rejected` | Dead code — `ScoreEvent::TieMarker` never emitted; `handle_tie_marker` `_` arm returns `Ok(())`; `IrrecoverableErrorKind` variant removed |
 | `PartMeasureCountMismatch` | `implemented` | Pad shorter parts with empty measures; error on affected measures |
 | Unclosed tie/slur into errored measure | `implemented` | `PartSlice::has_error` flag set via `measure_has_error()` in `combiner.rs`; `compiler/mod.rs` resets `prev_tie`, tie columns, slur key, and `pending_slur_opens` before compiling any errored slice |
@@ -71,6 +74,7 @@ These are no longer review items. Some still have a matching
 | `MeasureOverflow` | `implemented` | Deleted — replaced by recoverable beat-overflow handling |
 | `MeasureIndexOutOfRange` | `implemented` | Deleted — never emitted |
 | `InvalidMeasureRange` | `implemented` | Deleted — never emitted |
+| `NoteExpectedPitchDigit` | `implemented` | `NoteHead::recover_parse_head_error` catches this inside `parse_timed_unit`; token skipped, `RecoverableErrorKind::NoteExpectedPitchDigit` emitted; `IrrecoverableErrorKind` variant retained (lexer catches non-digit chars as `LexUnexpectedChar` first, so this fires only in edge cases) |
 
 ---
 
@@ -80,14 +84,11 @@ These are no longer review items. Some still have a matching
 
 | # | Kind | Status | Current behavior | Proposed recovery |
 |---|---|---|---|---|
-| 11 | `NoteExpectedPitchDigit` | `pending` | Abort | Skip token or treat as rest; error on measure |
+| 11 | `NoteExpectedPitchDigit` | `implemented` | Abort | Skip token or treat as rest; error on measure |
 | 13 | `DurationMixedOctaveMarkers` | `pending` | Abort | Pick one marker or skip note; error on measure |
 | 14 | `DurationCannotDotQuarterBeat` | `pending` | Abort | Parse without dot or skip note; error on measure |
-| 15 | `GroupTooFewNotes` | `pending` | Abort `(N)` with fewer than 2 notes | Ungroup or skip group; error on measure |
 | 16 | `GroupUnexpectedCloseParen` | `pending` | Abort on stray `)` | Ignore `)`; error on measure |
-| 17 | `UnclosedGroupAtEnd` | `pending` | Abort when `(` not closed at line/measure end | Close implicitly or drop group; error on measure |
-| 18 | `HalfBarBoundaryCrossed` | `pending` | Abort when beaming group crosses half-bar | Split group or drop tie; error on measure |
-| 19 | `DottedEighthNeedsSixteenth` | `pending` | Abort when `(1.2)` pattern invalid | Drop dot or skip group; error on measure |
+| 17 | `UnclosedGroupAtEnd` | `pending` | Abort when `(` not closed at section end | Close implicitly or drop group; error on measure |
 
 ---
 
@@ -122,3 +123,7 @@ Record decisions here as we go.
 | 25 | `ExtensionNoPrecedingEvent` | Implemented as recoverable | 2026-06-21 | Lone `-` with no preceding event now collected as `RecoverableErrorKind::ExtensionNoPrecedingEvent` in `PartGrouper.pending_extension_no_preceding_event_error`; `IrrecoverableErrorKind` variant removed; `grouper/mod.rs` and `combiner.rs` updated |
 | 26 | `TieNoPrecedingNote` | Rejected (dead code) | 2026-06-21 | `ScoreEvent::TieMarker` is never emitted by the parser; `handle_tie_marker` `_` arm changed to `Ok(())` (silent no-op); `IrrecoverableErrorKind` variant removed |
 | 28 | Unclosed tie/slur into errored measure | Implemented | 2026-06-21 | `PartSlice::has_error` flag added; set in `combiner.rs` via `measure_has_error()`; `compiler/mod.rs` resets `prev_tie`, tie columns, slur key, and `pending_slur_opens` to empty when the incoming slice has errors |
+| 19 | `DottedEighthNeedsSixteenth` | Confirmed implemented (todo was stale) | 2026-06-21 | Already recoverable: `validate_dotted_eighth_tail` returns `Ok(Some(Diagnostic::Error(...)))`, flows through `PaddedBeats.dotted_eighth_errors` → `GroupedMeasure.dotted_eighth_errors` → `combiner.rs`; no `IrrecoverableErrorKind` variant ever existed; integration tests added to `tests/recoverable_directive_errors.rs` |
+| 15 | `GroupTooFewNotes` | Confirmed implemented (todo was stale) | 2026-06-21 | Already a `WarningKind::GroupTooFewNotes`; no irrecoverable variant ever existed; `(3)` emits a warning and the note renders normally |
+| 18 | `HalfBarBoundaryCrossed` | Confirmed implemented (todo was stale) | 2026-06-21 | Already a `Warning::half_bar_boundary_crossed` in `grouping.rs`; no irrecoverable variant ever existed; render continues with a warning diagnostic |
+| 11 | `NoteExpectedPitchDigit` | Implemented as recoverable | 2026-06-21 | `NoteHead::recover_parse_head_error` now returns `Diagnostic::Error(RecoverableErrorKind::NoteExpectedPitchDigit)` when this error fires inside `parse_timed_unit`; `RecoverableErrorKind::NoteExpectedPitchDigit` variant added; note: the lexer catches non-digit chars in notes context as `LexUnexpectedChar` (already recoverable) before the parser sees them, so this path is defensive — it fires if the parser somehow receives a head-start offset pointing at a non-digit char |

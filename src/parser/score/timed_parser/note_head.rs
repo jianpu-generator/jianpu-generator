@@ -1,6 +1,13 @@
 use super::TimedUnitHead;
 use crate::ast::parsed::{JianPuPitch, ParsedNote, ParsedRest, ScoreEvent};
-use crate::error::{Diagnostic, IrrecoverableError, IrrecoverableErrorKind, Span};
+use crate::error::{
+    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, RecoverableErrorKind,
+    Span,
+};
+
+#[path = "note_head_tests.rs"]
+#[cfg(test)]
+mod tests;
 
 pub struct NoteHead {
     pitch: JianPuPitch,
@@ -56,6 +63,18 @@ impl TimedUnitHead for NoteHead {
 
     fn allows_octave_suffixes() -> bool {
         true
+    }
+
+    fn recover_parse_head_error(error: &IrrecoverableError) -> Option<Diagnostic> {
+        match error.kind {
+            IrrecoverableErrorKind::NoteExpectedPitchDigit { span, ch } => {
+                Some(Diagnostic::Error(RecoverableError {
+                    span,
+                    kind: RecoverableErrorKind::NoteExpectedPitchDigit { ch },
+                }))
+            }
+            _ => None,
+        }
     }
 
     fn to_event(
