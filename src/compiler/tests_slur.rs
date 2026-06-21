@@ -14,21 +14,34 @@ fn notes_doc(score_content: &str) -> String {
 }
 
 #[test]
-fn three_same_pitch_notes_in_slur_group_emits_exactly_one_slur_span() {
-    // "(555)" — three quarter notes of the same pitch in a single slur group.
-    // A single tie/slur arc should span from the first note (col 4, after note 1 at col 0)
-    // to the last note (col 12), not one arc per consecutive pair.
+fn three_same_pitch_notes_emits_two_tie_arcs() {
+    // "(555)" — three quarter notes of the same pitch under a tie group.
+    // Ties draw one arc per consecutive pair: (col 4→8) and (col 8→12).
+    // col 0=note 1, col 4=first 5, col 8=second 5, col 12=third 5.
     let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n1 (555)\n"));
     let result = compile(&score);
     assert_eq!(
         result.slur_spans.len(),
-        1,
-        "expected exactly 1 slur span for (555), got: {:?}",
+        2,
+        "expected 2 tie arcs for (555), got: {:?}",
         result.slur_spans
     );
-    let span = &result.slur_spans[0];
-    assert_eq!(span.from_column, 4, "slur should start at col 4 (first 5)");
-    assert_eq!(span.to_column, 12, "slur should end at col 12 (last 5)");
+    assert!(
+        result
+            .slur_spans
+            .iter()
+            .any(|s| s.from_column == 4 && s.to_column == 8),
+        "expected arc col 4→8, got: {:?}",
+        result.slur_spans
+    );
+    assert!(
+        result
+            .slur_spans
+            .iter()
+            .any(|s| s.from_column == 8 && s.to_column == 12),
+        "expected arc col 8→12, got: {:?}",
+        result.slur_spans
+    );
 }
 
 #[test]
