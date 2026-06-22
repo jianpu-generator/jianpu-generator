@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import {
   DEMO_FILE_NAME,
   type FileStoreState,
+  fileContent,
   isReadOnlyFile,
   sortedBinNames,
   sortedFileNames,
 } from '../fileStore'
+import { ShareButton } from './ShareButton'
 
 export interface FileListProps {
   store: FileStoreState
@@ -122,6 +124,10 @@ export function FileTabBar({
         >
           Duplicate
         </button>
+        <ShareButton
+          filename={store.active}
+          content={fileContent(store, store.active)}
+        />
       </div>
       {showHint ? (
         <p className="file-tab-bar-hint">

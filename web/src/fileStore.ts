@@ -1,4 +1,9 @@
 import { DEFAULT_SOURCE, DEMO_FILE_NAME } from './defaultSource'
+import {
+  clearShareHash,
+  parseShareFromHash,
+  type SharePayload,
+} from './shareUrl'
 
 export { DEMO_FILE_NAME }
 
@@ -328,4 +333,47 @@ export function restoreFile(
 
 export function isReadOnlyFile(name: string): boolean {
   return isDemoFile(name)
+}
+
+export function importSharedFile(
+  state: FileStoreState,
+  filenameRaw: string,
+  content: string,
+): FileStoreState {
+  let name = sanitizeFileName(filenameRaw)
+  if (isDemoFile(name)) {
+    name = 'shared.jianpu'
+  }
+
+  const taken = reservedNames(state)
+  name = uniqueName(name, taken)
+
+  return {
+    ...state,
+    active: name,
+    userFiles: { ...state.userFiles, [name]: content },
+    fileIds: { ...state.fileIds, [name]: generateFileId() },
+  }
+}
+
+let cachedSharePayload: SharePayload | null | undefined
+
+function consumeSharePayload(): SharePayload | null {
+  if (cachedSharePayload !== undefined) {
+    return cachedSharePayload
+  }
+
+  const shared = parseShareFromHash()
+  cachedSharePayload = shared
+  if (shared) {
+    clearShareHash()
+  }
+  return shared
+}
+
+export function applyShareIfPresent(state: FileStoreState): FileStoreState {
+  const shared = consumeSharePayload()
+  if (!shared) return state
+
+  return importSharedFile(state, shared.filename, shared.content)
 }
