@@ -41,7 +41,8 @@ pub fn write_pdf(svgs: &[String], fonts: &PdfFonts) -> Result<Vec<u8>, Irrecover
 
     let svg_name = Name(b"Svg");
 
-    for (i, svg_str) in svgs.iter().enumerate() {
+    for ((svg_str, page_id), content_id) in svgs.iter().zip(page_ids.iter()).zip(content_ids.iter())
+    {
         let tree = svg2pdf::usvg::Tree::from_str(svg_str, &options).map_err(|e| {
             IrrecoverableError::new(IrrecoverableErrorKind::PdfSvgParseFailed {
                 span: Span::new(0, 0),
@@ -77,20 +78,8 @@ pub fn write_pdf(svgs: &[String], fonts: &PdfFonts) -> Result<Vec<u8>, Irrecover
         content.x_object(svg_name);
         let content_bytes = content.finish();
 
-        let content_id = content_ids.get(i).ok_or_else(|| {
-            IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
-                Span::new(0, 0),
-                "internal invariant: content_ids index out of range",
-            ))
-        })?;
         pdf.stream(*content_id, &content_bytes).finish();
 
-        let page_id = page_ids.get(i).ok_or_else(|| {
-            IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
-                Span::new(0, 0),
-                "internal invariant: page_ids index out of range",
-            ))
-        })?;
         let mut page = pdf.page(*page_id);
         page.media_box(Rect::new(0.0, 0.0, page_width, page_height));
         page.parent(page_tree_id);
