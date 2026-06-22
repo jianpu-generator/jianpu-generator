@@ -94,12 +94,7 @@ pub(crate) fn load_document_sections(
         errors.push(RecoverableError::section_out_of_order(doc_span));
     }
 
-    let metadata = unwrap_or_missing(
-        raw_metadata,
-        DocumentSection::Metadata,
-        doc_span,
-        &mut errors,
-    );
+    let metadata = raw_metadata.unwrap_or_else(|| (String::new(), 0));
     let parts = unwrap_or_missing(raw_parts, DocumentSection::Parts, doc_span, &mut errors);
     let score = unwrap_or_missing(raw_score, DocumentSection::Score, doc_span, &mut errors);
     (
@@ -210,17 +205,22 @@ mod tests {
     }
 
     #[test]
-    fn missing_metadata_section_recoverable() {
+    fn missing_metadata_section_is_not_an_error() {
         let input = concat!(
             "[parts]\nMelody = notes\n\n",
             "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n"
         );
         let doc =
             parse(input, "test.jianpu").expect("missing metadata section must not abort parsing");
-        assert!(doc
-            .section_structure_errors
-            .iter()
-            .any(|e| matches!(&e.kind, crate::error::RecoverableErrorKind::SectionMissing { section } if *section == DocumentSection::Metadata)));
+        let has_metadata_missing = doc.section_structure_errors.iter().any(|e| {
+            matches!(
+                &e.kind,
+                crate::error::RecoverableErrorKind::SectionMissing {
+                    section
+                } if *section == DocumentSection::Metadata
+            )
+        });
+        debug_assert!(!has_metadata_missing);
     }
 
     #[test]
