@@ -38,99 +38,101 @@ fn resolve_row_element(
         VAlign::Bottom => row_y + row.height_pt,
     };
 
-    if let GridContent::Underline { level } = &el.content {
-        let note_center_x = x_start + col_width * 0.5;
-        let ul_x = note_center_x - note_number_width * 0.5;
-        let ul_width = (el.column_span as f32 - 1.0) * col_width + note_number_width;
-        return Ok(Some(AbsoluteElement {
-            x: ul_x,
-            y,
-            content: AbsoluteContent::Underline {
-                width: ul_width,
-                level: *level,
-            },
-        }));
+    match &el.content {
+        GridContent::Underline { level } => {
+            let note_center_x = x_start + col_width * 0.5;
+            let ul_x = note_center_x - note_number_width * 0.5;
+            let ul_width = (el.column_span as f32 - 1.0) * col_width + note_number_width;
+            Ok(Some(AbsoluteElement {
+                x: ul_x,
+                y,
+                content: AbsoluteContent::Underline {
+                    width: ul_width,
+                    level: *level,
+                },
+            }))
+        }
+        GridContent::TieOrSlur => {
+            let arc_x = x_start + col_width * 0.5;
+            let arc_width = (el.column_span as f32 - 1.0) * col_width;
+            Ok(Some(AbsoluteElement {
+                x: arc_x,
+                y,
+                content: AbsoluteContent::TieOrSlur { width: arc_width },
+            }))
+        }
+        GridContent::TieOrSlurTail => {
+            let arc_x = x_start + col_width * 0.5;
+            let arc_width = el.column_span as f32 * col_width - col_width * 0.5;
+            Ok(Some(AbsoluteElement {
+                x: arc_x,
+                y,
+                content: AbsoluteContent::TieOrSlur { width: arc_width },
+            }))
+        }
+        GridContent::TieOrSlurHead => {
+            let arc_x = x_start;
+            let arc_width = (el.column_span as f32 - 1.0) * col_width + col_width * 0.5;
+            Ok(Some(AbsoluteElement {
+                x: arc_x,
+                y,
+                content: AbsoluteContent::TieOrSlur { width: arc_width },
+            }))
+        }
+        content => {
+            let Some(post_arc_content) = to_post_arc_content(content) else {
+                return Ok(None);
+            };
+            Ok(grid_to_absolute(&post_arc_content, span_width, el.halign)?
+                .map(|content| AbsoluteElement { x, y, content }))
+        }
     }
-
-    if matches!(
-        el.content,
-        GridContent::TieOrSlur | GridContent::TieOrSlurTail | GridContent::TieOrSlurHead
-    ) {
-        let (arc_x, arc_width) = match &el.content {
-            GridContent::TieOrSlur => (
-                x_start + col_width * 0.5,
-                (el.column_span as f32 - 1.0) * col_width,
-            ),
-            GridContent::TieOrSlurTail => (
-                x_start + col_width * 0.5,
-                el.column_span as f32 * col_width - col_width * 0.5,
-            ),
-            GridContent::TieOrSlurHead => (
-                x_start,
-                (el.column_span as f32 - 1.0) * col_width + col_width * 0.5,
-            ),
-            _ => unreachable!("matches! guard above ensures only arc variants reach here"),
-        };
-        return Ok(Some(AbsoluteElement {
-            x: arc_x,
-            y,
-            content: AbsoluteContent::TieOrSlur { width: arc_width },
-        }));
-    }
-
-    let post_arc_content = to_post_arc_content(&el.content);
-    Ok(
-        grid_to_absolute(&post_arc_content, span_width, el.halign)?
-            .map(|content| AbsoluteElement { x, y, content }),
-    )
 }
 
-fn to_post_arc_content(content: &GridContent) -> PostArcGridContent {
+fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
     match content {
-        GridContent::TieOrSlur | GridContent::TieOrSlurTail | GridContent::TieOrSlurHead => {
-            unreachable!("arc variants must be resolved before conversion to PostArcGridContent")
-        }
+        GridContent::TieOrSlur | GridContent::TieOrSlurTail | GridContent::TieOrSlurHead => None,
         GridContent::NoteHead {
             pitch,
             octave,
             dotted,
-        } => PostArcGridContent::NoteHead {
+        } => Some(PostArcGridContent::NoteHead {
             pitch: pitch.clone(),
             octave: *octave,
             dotted: *dotted,
-        },
-        GridContent::Rest { dotted } => PostArcGridContent::Rest { dotted: *dotted },
-        GridContent::NoteDash => PostArcGridContent::NoteDash,
-        GridContent::OctaveDot => PostArcGridContent::OctaveDot,
-        GridContent::ChordSymbol(s) => PostArcGridContent::ChordSymbol(s.clone()),
-        GridContent::Underline { level } => PostArcGridContent::Underline { level: *level },
-        GridContent::BarLine { height_pt } => PostArcGridContent::BarLine {
+        }),
+        GridContent::Rest { dotted } => Some(PostArcGridContent::Rest { dotted: *dotted }),
+        GridContent::NoteDash => Some(PostArcGridContent::NoteDash),
+        GridContent::OctaveDot => Some(PostArcGridContent::OctaveDot),
+        GridContent::ChordSymbol(s) => Some(PostArcGridContent::ChordSymbol(s.clone())),
+        GridContent::Underline { level } => Some(PostArcGridContent::Underline { level: *level }),
+        GridContent::BarLine { height_pt } => Some(PostArcGridContent::BarLine {
             height_pt: *height_pt,
-        },
-        GridContent::HorizontalLine => PostArcGridContent::HorizontalLine,
-        GridContent::RowLabel(s) => PostArcGridContent::RowLabel(s.clone()),
-        GridContent::LyricSyllable(s) => PostArcGridContent::LyricSyllable(s.clone()),
-        GridContent::Bpm(bpm) => PostArcGridContent::Bpm(*bpm),
+        }),
+        GridContent::HorizontalLine => Some(PostArcGridContent::HorizontalLine),
+        GridContent::RowLabel(s) => Some(PostArcGridContent::RowLabel(s.clone())),
+        GridContent::LyricSyllable(s) => Some(PostArcGridContent::LyricSyllable(s.clone())),
+        GridContent::Bpm(bpm) => Some(PostArcGridContent::Bpm(*bpm)),
         GridContent::TimeSignature {
             numerator,
             denominator,
-        } => PostArcGridContent::TimeSignature {
+        } => Some(PostArcGridContent::TimeSignature {
             numerator: *numerator,
             denominator: *denominator,
-        },
-        GridContent::SectionLabel(s) => PostArcGridContent::SectionLabel(s.clone()),
-        GridContent::BarNumber(n) => PostArcGridContent::BarNumber(*n),
+        }),
+        GridContent::SectionLabel(s) => Some(PostArcGridContent::SectionLabel(s.clone())),
+        GridContent::BarNumber(n) => Some(PostArcGridContent::BarNumber(*n)),
         GridContent::Text {
             content,
             font_size,
             bold,
             italic,
-        } => PostArcGridContent::Text {
+        } => Some(PostArcGridContent::Text {
             content: content.clone(),
             font_size: *font_size,
             bold: *bold,
             italic: *italic,
-        },
+        }),
     }
 }
 

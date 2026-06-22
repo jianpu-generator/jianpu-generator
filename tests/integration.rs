@@ -1,3 +1,4 @@
+#![allow(clippy::disallowed_macros)]
 use std::fs;
 use std::process::Command;
 

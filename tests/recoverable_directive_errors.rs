@@ -1,3 +1,4 @@
+#![allow(clippy::disallowed_macros)]
 use jianpu_generator::error::Diagnostic;
 use jianpu_generator::render_svgs_from_source;
 

@@ -1,3 +1,4 @@
+#![allow(clippy::disallowed_macros)]
 use jianpu_generator::list_score_line_hints_from_source;
 
 const DEMO_SOURCE: &str = include_str!("../demo.jianpu");

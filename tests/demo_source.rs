@@ -1,4 +1,4 @@
-#![allow(clippy::panic)]
+#![allow(clippy::panic, clippy::disallowed_macros)]
 
 use std::path::PathBuf;
 

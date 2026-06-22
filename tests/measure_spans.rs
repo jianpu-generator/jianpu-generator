@@ -1,3 +1,4 @@
+#![allow(clippy::disallowed_macros)]
 use jianpu_generator::list_measure_spans_from_source;
 
 const TWO_MEASURE_SOURCE: &str = concat!(

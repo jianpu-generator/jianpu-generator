@@ -218,18 +218,20 @@ fn parse_time_value(
     span: Span,
     errors: &mut Vec<RecoverableError>,
 ) -> Option<ScoreEvent> {
-    let parts: Vec<&str> = value.split('/').collect();
-    if parts.len() != 2 {
+    let Some((numerator_str, denominator_str)) = value.split_once('/') else {
+        errors.push(RecoverableError::general(
+            span,
+            format!("invalid time signature: '{value}'"),
+        ));
+        return None;
+    };
+    if numerator_str.contains('/') || denominator_str.contains('/') {
         errors.push(RecoverableError::general(
             span,
             format!("invalid time signature: '{value}'"),
         ));
         return None;
     }
-    let (numerator_str, denominator_str) = match (parts.first(), parts.get(1)) {
-        (Some(n), Some(d)) => (*n, *d),
-        _ => unreachable!("len == 2 was already checked"),
-    };
     let numerator = match numerator_str.parse::<u8>() {
         Ok(n) => n,
         Err(_) => {

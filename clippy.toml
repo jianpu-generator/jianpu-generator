@@ -31,4 +31,8 @@ disallowed-macros = [
     { path = "std::todo", reason = "do not commit stub code; implement or return a proper error" },
     { path = "std::unimplemented", reason = "do not commit stub code; implement or return a proper error" },
     { path = "std::dbg", reason = "remove debug macros before committing" },
+    { path = "std::unreachable", reason = "eliminate the invariant instead of asserting it at runtime" },
+    { path = "std::assert", reason = "use debug_assert! so the check is elided in release builds" },
+    { path = "std::assert_eq", reason = "use debug_assert_eq! so the check is elided in release builds" },
+    { path = "std::assert_ne", reason = "use debug_assert_ne! so the check is elided in release builds" },
 ]
