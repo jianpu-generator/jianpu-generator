@@ -45,9 +45,6 @@ pub enum IrrecoverableErrorKind {
     DashAfterRest {
         span: Span,
     },
-    DurationMixedOctaveMarkers {
-        span: Span,
-    },
     DurationCannotDotQuarterBeat {
         span: Span,
     },

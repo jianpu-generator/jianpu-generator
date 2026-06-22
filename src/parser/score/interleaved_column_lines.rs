@@ -104,6 +104,7 @@ fn push_skipped_notes_measure(
         per_measure_dotted_eighth_errors,
         per_measure_dash_after_rest_errors,
         per_measure_lex_errors,
+        per_measure_chord_errors,
         empty_note_measure_spans,
         ..
     } = acc;
@@ -111,6 +112,7 @@ fn push_skipped_notes_measure(
     per_measure_dotted_eighth_errors.push(vec![]);
     per_measure_dash_after_rest_errors.push(None);
     per_measure_lex_errors.push(lex_error);
+    per_measure_chord_errors.push(vec![]);
     empty_note_measure_spans.push(empty_note_measure_span);
     Ok(())
 }
@@ -181,6 +183,7 @@ fn process_notes_column_line(
         per_measure_dotted_eighth_errors,
         per_measure_dash_after_rest_errors,
         per_measure_lex_errors,
+        per_measure_chord_errors,
         empty_note_measure_spans,
         ..
     } = acc;
@@ -189,6 +192,7 @@ fn process_notes_column_line(
     per_measure_dotted_eighth_errors.push(padded.dotted_eighth_errors);
     per_measure_dash_after_rest_errors.push(notes_parse.dash_after_rest_error);
     per_measure_lex_errors.push(lex_error);
+    per_measure_chord_errors.push(notes_parse.chord_errors);
     empty_note_measure_spans.push(None);
     Ok(())
 }

@@ -219,6 +219,13 @@ impl RecoverableError {
         }
     }
 
+    pub fn duration_mixed_octave_markers(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::DurationMixedOctaveMarkers,
+        }
+    }
+
     pub fn measure_directives_missing(span: Span) -> Self {
         Self {
             span,

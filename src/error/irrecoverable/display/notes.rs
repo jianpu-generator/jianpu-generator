@@ -33,10 +33,6 @@ pub(super) fn write(
             formatter,
             "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)"
         )),
-        IrrecoverableErrorKind::DurationMixedOctaveMarkers { .. } => Some(write!(
-            formatter,
-            "mixed octave markers are invalid (use ' for up, , for down)"
-        )),
         IrrecoverableErrorKind::DurationCannotDotQuarterBeat { .. } => Some(write!(
             formatter,
             "cannot dot a quarter-beat (=) note; use _ or no duration suffix"

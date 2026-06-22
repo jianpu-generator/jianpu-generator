@@ -9,6 +9,7 @@ pub struct DurationParse {
     pub next_index: usize,
     pub dash_after_rest_error: Option<RecoverableError>,
     pub unexpected_char_error: Option<RecoverableError>,
+    pub mixed_octave_markers_error: Option<RecoverableError>,
 }
 
 struct DurationSuffixState {
@@ -129,11 +130,14 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
         }
     }
 
-    if context.state.octave_up > 0 && context.state.octave_down > 0 {
-        return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::DurationMixedOctaveMarkers { span: *span },
-        ));
-    }
+    let mixed_octave_markers_error = if context.state.octave_up > 0 && context.state.octave_down > 0
+    {
+        context.state.octave_up = 0;
+        context.state.octave_down = 0;
+        Some(RecoverableError::duration_mixed_octave_markers(*span))
+    } else {
+        None
+    };
 
     if context.state.dotted && context.state.duration == 1 {
         return Err(IrrecoverableError::new(
@@ -155,6 +159,7 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
         next_index: index,
         dash_after_rest_error: context.state.dash_after_rest_error,
         unexpected_char_error: context.state.unexpected_char_error,
+        mixed_octave_markers_error,
     })
 }
 

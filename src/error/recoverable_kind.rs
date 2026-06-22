@@ -11,6 +11,8 @@ pub enum RecoverableErrorKind {
     TimedPartMeasureMissing,
     /// Generic recoverable error with a free-form message.
     General { message: String },
+    /// A note has both octave-up (`'`) and octave-down (`,`) markers — octave shift is zeroed.
+    DurationMixedOctaveMarkers,
     /// An unexpected character was encountered while lexing a notes line — the line is dropped.
     LexUnexpectedChar { ch: char },
     /// Measure group has no data lines at all.
@@ -161,6 +163,9 @@ impl RecoverableErrorKind {
             Self::ExtensionNoPrecedingEvent { chord_track: true } => "chord extension '-' with no preceding event; '-' ignored".to_string(),
             Self::ExtensionNoPrecedingEvent { chord_track: false } => "extension '-' without a preceding note or rest; '-' ignored".to_string(),
             Self::NoteExpectedPitchDigit { ch } => format!("expected pitch digit (0-7), got: {ch}"),
+            Self::DurationMixedOctaveMarkers => {
+                "mixed octave markers: use ' for up or , for down, not both; octave shift ignored".to_string()
+            }
         }
     }
 }

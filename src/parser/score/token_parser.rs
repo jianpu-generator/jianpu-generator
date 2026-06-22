@@ -109,8 +109,22 @@ mod tests {
     }
 
     #[test]
-    fn rejects_mixed_octave_markers() {
-        assert!(parse("1',").is_err());
+    fn mixed_octave_markers_recoverable_with_zero_octave() {
+        use crate::error::{Diagnostic, RecoverableErrorKind};
+        let result = parse("1',").expect("mixed octave markers must not abort");
+        assert_eq!(result.events.len(), 1, "note must still be emitted");
+        let note_event = note(&result.events, 0);
+        assert_eq!(
+            note_event.octave, 0,
+            "octave must be zeroed on mixed markers"
+        );
+        assert!(
+            result.chord_errors.iter().any(|d| matches!(
+                d,
+                Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::DurationMixedOctaveMarkers)
+            )),
+            "expected DurationMixedOctaveMarkers error"
+        );
     }
 
     #[test]

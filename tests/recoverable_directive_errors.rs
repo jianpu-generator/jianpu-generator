@@ -333,3 +333,24 @@ fn dotted_eighth_with_sixteenth_tail_is_valid() {
             .collect::<Vec<_>>()
     );
 }
+
+// DurationMixedOctaveMarkers
+
+#[test]
+fn mixed_octave_markers_are_recoverable() {
+    // `1',` has both ' (octave-up) and , (octave-down) — mixed octave markers.
+    // The render must continue; the note is emitted with octave shift zeroed out.
+    let source = minimal_fixture("time=4/4 key=C4 bpm=120\n1', 2 3 4\n");
+    let output = render_svgs_from_source(&source, "test.jianpu")
+        .expect("mixed octave markers must not abort the render");
+    assert!(!output.svgs.is_empty());
+    assert!(
+        has_error_containing(&output, "mixed octave"),
+        "expected error about mixed octave markers, got: {:?}",
+        output
+            .diagnostics
+            .iter()
+            .map(|d| d.message())
+            .collect::<Vec<_>>()
+    );
+}
