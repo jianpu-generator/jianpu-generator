@@ -220,7 +220,7 @@ mod tests {
                 } if *section == DocumentSection::Metadata
             )
         });
-        debug_assert!(!has_metadata_missing);
+        assert!(!has_metadata_missing);
     }
 
     #[test]
