@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { CheatsheetDialog } from './Cheatsheet'
+import { PostcardDialog } from './Postcard'
 import './AppHeader.css'
 
 export function AppHeader() {
   const [cheatsheetOpen, setCheatsheetOpen] = useState(false)
+  const [postcardOpen, setPostcardOpen] = useState(false)
 
   return (
     <>
@@ -13,6 +15,14 @@ export function AppHeader() {
         <div className="app-header__spacer" />
         <button
           type="button"
+          className="app-header__postcard-btn"
+          onClick={() => setPostcardOpen(true)}
+          aria-label="Open syntax postcard"
+        >
+          ⊞
+        </button>
+        <button
+          type="button"
           className="app-header__cheatsheet-btn"
           onClick={() => setCheatsheetOpen(true)}
           aria-label="Open syntax cheatsheet"
@@ -20,6 +30,7 @@ export function AppHeader() {
           ?
         </button>
       </header>
+      <PostcardDialog open={postcardOpen} onOpenChange={setPostcardOpen} />
       <CheatsheetDialog
         open={cheatsheetOpen}
         onOpenChange={setCheatsheetOpen}
