@@ -112,21 +112,26 @@ _(all document structure errors are now recoverable — see Already implemented 
 
 Current invariants in the codebase:
 
+| File | Detail | Notes |
+|---|---|---|
+| `src/pdf.rs` | `"internal invariant: SVG chunk ref missing after renumber"` | External library contract — cannot be typed away |
+| `src/wav.rs` | `"internal invariant: MIDI file has no tracks"` | Pending — see plan `2026-06-22-pdv-task-3c-wav-non-empty-tracks.md` |
+| `src/grouper/mod.rs` | `"empty_note_measure_spans and grouped measures out of sync"` | Partially migrated to `MeasureSlot`; sync check remains at construction site |
+| `src/parser/score/timed_parser/timed_rd_parser.rs` | `"open_group: stack empty after push"` | Added during `GroupUnexpectedCloseParen`/`UnclosedGroupAtEnd` migration; stack pop after confirmed push — structurally unreachable |
+| `src/measure_spans.rs` | `"view zone starts ({}) and measures ({}) out of sync"` | Two independently derived counts must match; requires structural merge to eliminate |
+
+Eliminated invariants (PDV migration, 2026-06-22):
+
 | File | Detail |
 |---|---|
-| `src/pdf.rs` | `"internal invariant: SVG chunk ref missing after renumber"` |
-| `src/pdf.rs` | `"internal invariant: content_ids index out of range"` |
-| `src/pdf.rs` | `"internal invariant: page_ids index out of range"` |
-| `src/wav.rs` | `"internal invariant: MIDI file has no tracks"` |
-| `src/midi/mod.rs` | `"internal error: missing MIDI tie state for part {part_idx}"` |
-| `src/desugar.rs` | `"score line slot missing for implicit ditto padding"` |
-| `src/desugar.rs` | `"score line slot missing for ditto line"` |
-| `src/coordinate_resolver/resolve.rs` | `"unexpected GridContent variant in tie/slur block: {other:?}"` |
-| `src/coordinate_resolver/resolve.rs` | `"arc variants must be resolved before reaching grid_to_absolute"` |
-| `src/parser/score/timed_parser/directives.rs` | `"expected key change starting with '1=', got: {text}"` |
-| `src/parser/score/timed_parser/directives.rs` | `"expected note name after '1=', got: {text}"` |
-| `src/parser/score/timed_parser/directives.rs` | `"invalid note name: {name_char}"` |
-| `src/parser/score/timed_parser/directives.rs` | `"invalid octave number in key change: {text}"` |
+| ~~`src/pdf.rs`~~ | ~~`"internal invariant: content_ids index out of range"`~~ — eliminated via `zip` |
+| ~~`src/pdf.rs`~~ | ~~`"internal invariant: page_ids index out of range"`~~ — eliminated via `zip` |
+| ~~`src/midi/mod.rs`~~ | ~~`"internal error: missing MIDI tie state for part {part_idx}"`~~ — eliminated via `zip` |
+| ~~`src/desugar.rs`~~ | ~~`"score line slot missing for implicit ditto padding"`~~ — eliminated via direct slice iteration |
+| ~~`src/desugar.rs`~~ | ~~`"score line slot missing for ditto line"`~~ — eliminated via direct indexing |
+| ~~`src/coordinate_resolver/resolve.rs`~~ | ~~`"unexpected GridContent variant in tie/slur block: {other:?}"`~~ — eliminated via `PostArcGridContent` type split |
+| ~~`src/coordinate_resolver/resolve.rs`~~ | ~~`"arc variants must be resolved before reaching grid_to_absolute"`~~ — eliminated via `PostArcGridContent` type split |
+| ~~`src/parser/score/timed_parser/directives.rs`~~ | ~~all 4 key-change invariants~~ — eliminated via `KeyChangeToken` struct |
 
 ---
 
