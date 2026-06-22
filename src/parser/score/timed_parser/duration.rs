@@ -1,5 +1,5 @@
 use super::TimedUnitHead;
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
+use crate::error::{IrrecoverableError, RecoverableError, Span};
 
 pub struct DurationParse {
     pub duration: u32,
@@ -10,6 +10,7 @@ pub struct DurationParse {
     pub dash_after_rest_error: Option<RecoverableError>,
     pub unexpected_char_error: Option<RecoverableError>,
     pub mixed_octave_markers_error: Option<RecoverableError>,
+    pub cannot_dot_quarter_beat_error: Option<RecoverableError>,
 }
 
 struct DurationSuffixState {
@@ -139,11 +140,12 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
         None
     };
 
-    if context.state.dotted && context.state.duration == 1 {
-        return Err(IrrecoverableError::new(
-            IrrecoverableErrorKind::DurationCannotDotQuarterBeat { span: *span },
-        ));
-    }
+    let cannot_dot_quarter_beat_error = if context.state.dotted && context.state.duration == 1 {
+        context.state.dotted = false;
+        Some(RecoverableError::duration_cannot_dot_quarter_beat(*span))
+    } else {
+        None
+    };
 
     let duration = if context.state.dotted {
         context.state.duration + context.state.duration / 2
@@ -160,6 +162,7 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
         dash_after_rest_error: context.state.dash_after_rest_error,
         unexpected_char_error: context.state.unexpected_char_error,
         mixed_octave_markers_error,
+        cannot_dot_quarter_beat_error,
     })
 }
 

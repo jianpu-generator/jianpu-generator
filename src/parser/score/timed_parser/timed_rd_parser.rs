@@ -324,6 +324,9 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
         if let Some(error) = duration_meta.mixed_octave_markers_error.clone() {
             self.chord_errors.push(Diagnostic::Error(error));
         }
+        if let Some(error) = duration_meta.cannot_dot_quarter_beat_error.clone() {
+            self.chord_errors.push(Diagnostic::Error(error));
+        }
 
         if duration_meta.dash_after_rest_error.is_some() && self.dash_after_rest_error.is_none() {
             self.dash_after_rest_error = duration_meta.dash_after_rest_error;

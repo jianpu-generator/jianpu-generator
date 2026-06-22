@@ -76,6 +76,7 @@ These are no longer review items. Some still have a matching
 | `InvalidMeasureRange` | `implemented` | Deleted — never emitted |
 | `NoteExpectedPitchDigit` | `implemented` | `NoteHead::recover_parse_head_error` catches this inside `parse_timed_unit`; token skipped, `RecoverableErrorKind::NoteExpectedPitchDigit` emitted; `IrrecoverableErrorKind` variant retained (lexer catches non-digit chars as `LexUnexpectedChar` first, so this fires only in edge cases) |
 | `DurationMixedOctaveMarkers` | `implemented` | Both `'` and `,` on same note now zeroes octave shift and emits `RecoverableErrorKind::DurationMixedOctaveMarkers`; error propagated via `notes_parse.chord_errors` → `per_measure_chord_errors` → `GroupedMeasure.chord_errors`; `IrrecoverableErrorKind` variant removed |
+| `DurationCannotDotQuarterBeat` | `implemented` | Dot on `=` note now ignored; emits `RecoverableErrorKind::DurationCannotDotQuarterBeat` via `DurationParse.cannot_dot_quarter_beat_error` → `chord_errors`; `IrrecoverableErrorKind` variant removed |
 
 ---
 
@@ -87,7 +88,7 @@ These are no longer review items. Some still have a matching
 |---|---|---|---|---|
 | 11 | `NoteExpectedPitchDigit` | `implemented` | Abort | Skip token or treat as rest; error on measure |
 | 13 | `DurationMixedOctaveMarkers` | `implemented` | Abort | Pick one marker or skip note; error on measure |
-| 14 | `DurationCannotDotQuarterBeat` | `pending` | Abort | Parse without dot or skip note; error on measure |
+| 14 | `DurationCannotDotQuarterBeat` | `implemented` | Abort | Parse without dot or skip note; error on measure |
 | 16 | `GroupUnexpectedCloseParen` | `pending` | Abort on stray `)` | Ignore `)`; error on measure |
 | 17 | `UnclosedGroupAtEnd` | `pending` | Abort when `(` not closed at section end | Close implicitly or drop group; error on measure |
 
@@ -129,3 +130,4 @@ Record decisions here as we go.
 | 18 | `HalfBarBoundaryCrossed` | Confirmed implemented (todo was stale) | 2026-06-21 | Already a `Warning::half_bar_boundary_crossed` in `grouping.rs`; no irrecoverable variant ever existed; render continues with a warning diagnostic |
 | 11 | `NoteExpectedPitchDigit` | Implemented as recoverable | 2026-06-21 | `NoteHead::recover_parse_head_error` now returns `Diagnostic::Error(RecoverableErrorKind::NoteExpectedPitchDigit)` when this error fires inside `parse_timed_unit`; `RecoverableErrorKind::NoteExpectedPitchDigit` variant added; note: the lexer catches non-digit chars in notes context as `LexUnexpectedChar` (already recoverable) before the parser sees them, so this path is defensive — it fires if the parser somehow receives a head-start offset pointing at a non-digit char |
 | 13 | `DurationMixedOctaveMarkers` | Implemented as recoverable | 2026-06-22 | Mixed `'`/`,` on same note now zeroes octave shift and emits `RecoverableErrorKind::DurationMixedOctaveMarkers`; notes-line `chord_errors` now propagated through `process_notes_column_line` → `per_measure_chord_errors`; `IrrecoverableErrorKind` variant removed |
+| 14 | `DurationCannotDotQuarterBeat` | Implemented as recoverable | 2026-06-22 | Dot on `=` (quarter-beat) note now ignored; `DurationParse.cannot_dot_quarter_beat_error` carries the `RecoverableErrorKind::DurationCannotDotQuarterBeat` diagnostic; emitted into `chord_errors` in `parse_timed_unit`; `IrrecoverableErrorKind` variant removed |

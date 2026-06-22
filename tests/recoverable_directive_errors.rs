@@ -334,6 +334,27 @@ fn dotted_eighth_with_sixteenth_tail_is_valid() {
     );
 }
 
+// DurationCannotDotQuarterBeat
+
+#[test]
+fn dotted_quarter_beat_is_recoverable() {
+    // `1=.` applies a dot to a quarter-beat note, which is invalid.
+    // The render must continue; the dot is ignored and duration stays at 1 beat.
+    let source = minimal_fixture("time=4/4 key=C4 bpm=120\n1=. 2 3 4\n");
+    let output = render_svgs_from_source(&source, "test.jianpu")
+        .expect("dotted quarter-beat must not abort the render");
+    assert!(!output.svgs.is_empty());
+    assert!(
+        has_error_containing(&output, "cannot dot a quarter-beat"),
+        "expected error about dotted quarter-beat, got: {:?}",
+        output
+            .diagnostics
+            .iter()
+            .map(|d| d.message())
+            .collect::<Vec<_>>()
+    );
+}
+
 // DurationMixedOctaveMarkers
 
 #[test]

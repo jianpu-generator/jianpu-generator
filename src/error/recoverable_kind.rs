@@ -83,28 +83,20 @@ pub enum RecoverableErrorKind {
     ExtensionNoPrecedingEvent { chord_track: bool },
     /// A notes token did not start with a pitch digit (0-7) — the token is skipped.
     NoteExpectedPitchDigit { ch: char },
+    /// A dot was applied to a quarter-beat (`=`) note — dot is ignored, duration stays 1.
+    DurationCannotDotQuarterBeat,
 }
 
 impl RecoverableErrorKind {
     pub fn message(&self) -> String {
         match self {
-            Self::MeasureDirectivesMissing => {
-                "internal invariant: measure_directives shorter than measure count".to_string()
-            }
-            Self::SourceSpanMissing { index } => {
-                format!("internal invariant: source_span missing for measure {index}")
-            }
-            Self::TimedPartMeasureMissing => {
-                "internal invariant: timed part measure missing".to_string()
-            }
+            Self::MeasureDirectivesMissing => "internal invariant: measure_directives shorter than measure count".to_string(),
+            Self::SourceSpanMissing { index } => format!("internal invariant: source_span missing for measure {index}"),
+            Self::TimedPartMeasureMissing => "internal invariant: timed part measure missing".to_string(),
             Self::General { message } => message.clone(),
             Self::LexUnexpectedChar { ch } => format!("unexpected character: {ch}"),
-            Self::MeasureNoDataLines => {
-                "measure has no data lines; treating all parts as empty".to_string()
-            }
-            Self::MeasureWrongLineCount { got, expected } => {
-                format!("expected {expected} lines (one per score line), got {got}")
-            }
+            Self::MeasureNoDataLines => "measure has no data lines; treating all parts as empty".to_string(),
+            Self::MeasureWrongLineCount { got, expected } => format!("expected {expected} lines (one per score line), got {got}"),
             Self::MeasureTooManyLines { got, expected, parts } => format!(
                 "this measure has {got} lines but only {expected} expected (declared parts: {parts}); extra lines ignored"
             ),
@@ -112,33 +104,19 @@ impl RecoverableErrorKind {
                 let treatment = if role == "lyrics" { "no lyrics" } else { "empty" };
                 format!("missing {role} line for '{abbrev}'; treating as {treatment}")
             }
-            Self::DottedEighthNeedsSixteenth => {
-                "dotted eighth must be followed by a sixteenth note or rest".to_string()
-            }
-            Self::DashAfterRest => {
-                "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)".to_string()
-            }
+            Self::DottedEighthNeedsSixteenth => "dotted eighth must be followed by a sixteenth note or rest".to_string(),
+            Self::DashAfterRest => "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)".to_string(),
             Self::ChordExpectedDegreeDigit { ch } => format!("expected chord degree digit (0-7), got: {ch}"),
             Self::ChordInvalidToken { message } => message.clone(),
             Self::DurationUnexpectedChar { ch } => format!("unexpected character in note duration: {ch}"),
             Self::MetadataMalformedLine { line } => format!("expected key = value, got: {line}"),
             Self::MetadataUnknownField { field } => format!("unknown metadata field: {field}"),
-            Self::MetadataInvalidInteger { field, value } => {
-                format!("{field} must be a positive integer, got: {value}")
-            }
+            Self::MetadataInvalidInteger { field, value } => format!("{field} must be a positive integer, got: {value}"),
             Self::MetadataMustBePositive { field } => format!("{field} must be greater than zero"),
-            Self::MetadataMissingField { field } => {
-                format!("missing required field: {}", field.label())
-            }
-            Self::PartsMalformedLine { line } => {
-                format!("expected track declaration, got: {line}")
-            }
-            Self::PartsDuplicateAbbreviation { abbrev } => {
-                format!("duplicate abbreviation: {abbrev}")
-            }
-            Self::PartsEmptySection => {
-                "expected at least one track in [parts] section".to_string()
-            }
+            Self::MetadataMissingField { field } => format!("missing required field: {}", field.label()),
+            Self::PartsMalformedLine { line } => format!("expected track declaration, got: {line}"),
+            Self::PartsDuplicateAbbreviation { abbrev } => format!("duplicate abbreviation: {abbrev}"),
+            Self::PartsEmptySection => "expected at least one track in [parts] section".to_string(),
             Self::PartsEmptyDisplayName => "display name cannot be empty".to_string(),
             Self::PartsEmptyAbbreviation => "abbreviation cannot be empty".to_string(),
             Self::PartsEmptyTrackName => "track name cannot be empty".to_string(),
@@ -146,26 +124,17 @@ impl RecoverableErrorKind {
                 "invalid track columns '{rhs}': expected 'chord', 'notes', 'notes lyrics', 'lyrics notes', or 'notes chord'"
             ),
             Self::SectionUnknown { name } => format!("unknown section: [{name}]"),
-            Self::SectionDuplicate { section } => {
-                format!("duplicate {} section", section.header())
-            }
+            Self::SectionDuplicate { section } => format!("duplicate {} section", section.header()),
             Self::SectionMissing { section } => format!("missing {} section", section.header()),
-            Self::SectionOutOfOrder => {
-                "sections must appear in order: [metadata], [parts], [score]".to_string()
-            }
-            Self::LyricsLineEmpty => {
-                "lyrics line cannot be empty; use '_' for no lyrics".to_string()
-            }
-            Self::LyricsNoNotesTrack { abbrev } => {
-                format!("lyrics line for '{abbrev}' has no matching notes track")
-            }
+            Self::SectionOutOfOrder => "sections must appear in order: [metadata], [parts], [score]".to_string(),
+            Self::LyricsLineEmpty => "lyrics line cannot be empty; use '_' for no lyrics".to_string(),
+            Self::LyricsNoNotesTrack { abbrev } => format!("lyrics line for '{abbrev}' has no matching notes track"),
             Self::PartMeasureCountMismatch { part, got, expected } => format!("part {part:?} has {got} measures but the first part has {expected}; all parts must have the same number of measures"),
             Self::ExtensionNoPrecedingEvent { chord_track: true } => "chord extension '-' with no preceding event; '-' ignored".to_string(),
             Self::ExtensionNoPrecedingEvent { chord_track: false } => "extension '-' without a preceding note or rest; '-' ignored".to_string(),
             Self::NoteExpectedPitchDigit { ch } => format!("expected pitch digit (0-7), got: {ch}"),
-            Self::DurationMixedOctaveMarkers => {
-                "mixed octave markers: use ' for up or , for down, not both; octave shift ignored".to_string()
-            }
+            Self::DurationMixedOctaveMarkers => "mixed octave markers: use ' for up or , for down, not both; octave shift ignored".to_string(),
+            Self::DurationCannotDotQuarterBeat => "cannot dot a quarter-beat (=) note; dot ignored, duration stays at 1 beat".to_string(),
         }
     }
 }

@@ -226,6 +226,13 @@ impl RecoverableError {
         }
     }
 
+    pub fn duration_cannot_dot_quarter_beat(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::DurationCannotDotQuarterBeat,
+        }
+    }
+
     pub fn measure_directives_missing(span: Span) -> Self {
         Self {
             span,

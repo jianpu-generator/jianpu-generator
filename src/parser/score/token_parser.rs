@@ -244,8 +244,19 @@ mod tests {
     }
 
     #[test]
-    fn rejects_dotted_quarter_beat_note() {
-        assert!(parse("1=.").is_err());
+    fn dotted_quarter_beat_note_is_recoverable() {
+        use crate::error::{Diagnostic, RecoverableErrorKind};
+        let result = parse("1=.").expect("dotted quarter-beat must not be irrecoverable");
+        assert_eq!(result.events.len(), 1);
+        assert_eq!(note(&result.events, 0).duration, 1);
+        assert!(
+            result.chord_errors.iter().any(|d| matches!(
+                d,
+                Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::DurationCannotDotQuarterBeat)
+            )),
+            "expected DurationCannotDotQuarterBeat error, got: {:?}",
+            result.chord_errors.iter().map(|d| d.message()).collect::<Vec<_>>()
+        );
     }
 
     #[test]
