@@ -1,3 +1,4 @@
+import { Eye, EyeOff, Headphones } from 'lucide-react'
 import type { PartInfo } from '../types'
 import './PartToggles.css'
 
@@ -5,8 +6,10 @@ interface PartTogglesProps {
   parts: PartInfo[]
   disabledParts: ReadonlySet<string>
   disabledLyrics: ReadonlySet<string>
+  soloedParts: ReadonlySet<string>
   onPartToggle: (abbreviation: string, enabled: boolean) => void
   onLyricsToggle: (abbreviation: string, enabled: boolean) => void
+  onSoloToggle: (abbreviation: string, soloed: boolean) => void
   loading?: boolean
 }
 
@@ -14,8 +17,10 @@ export function PartToggles({
   parts,
   disabledParts,
   disabledLyrics,
+  soloedParts,
   onPartToggle,
   onLyricsToggle,
+  onSoloToggle,
   loading = false,
 }: PartTogglesProps) {
   if (parts.length === 0) {
@@ -30,6 +35,7 @@ export function PartToggles({
         {parts.map((part) => {
           const enabled = !disabledParts.has(part.abbreviation)
           const lyricsEnabled = !disabledLyrics.has(part.abbreviation)
+          const soloed = soloedParts.has(part.abbreviation)
           const title =
             part.display_name === part.abbreviation
               ? part.abbreviation
@@ -37,7 +43,7 @@ export function PartToggles({
 
           return (
             <li key={part.abbreviation} className="part-toggle-group">
-              <label className="part-toggle" title={title}>
+              <label className="part-toggle part-toggle--icon" title={title}>
                 <input
                   type="checkbox"
                   checked={enabled}
@@ -45,7 +51,25 @@ export function PartToggles({
                     onPartToggle(part.abbreviation, event.target.checked)
                   }
                 />
+                {enabled ? (
+                  <Eye size={14} aria-hidden="true" />
+                ) : (
+                  <EyeOff size={14} aria-hidden="true" />
+                )}
                 <span className="part-toggle-label">{part.abbreviation}</span>
+              </label>
+              <label
+                className="part-toggle part-toggle--solo"
+                title={`Solo ${title}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={soloed}
+                  onChange={(event) =>
+                    onSoloToggle(part.abbreviation, event.target.checked)
+                  }
+                />
+                <Headphones size={14} aria-hidden="true" />
               </label>
               {part.has_lyrics && enabled ? (
                 <>

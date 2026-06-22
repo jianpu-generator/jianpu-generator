@@ -50,6 +50,7 @@ export function useJianpuWorker(
   source: string,
   disabledParts: ReadonlySet<string>,
   disabledLyrics: ReadonlySet<string>,
+  soloedParts: ReadonlySet<string>,
   activeFile: string,
   debounceMs = 300,
 ): JianpuWorkerState {
@@ -109,9 +110,18 @@ export function useJianpuWorker(
   const latestMeasureAudioIdRef = useRef(0)
   const measureWavUrlRef = useRef<string | null>(null)
 
+  const effectiveDisabledParts = useMemo(() => {
+    if (soloedParts.size === 0) return disabledParts
+    return new Set(
+      parts
+        .map((part) => part.abbreviation)
+        .filter((abbr) => !soloedParts.has(abbr)),
+    )
+  }, [soloedParts, parts, disabledParts])
+
   const enabledTracks = useMemo(
-    () => enabledTracksForRender(parts, disabledParts),
-    [parts, disabledParts],
+    () => enabledTracksForRender(parts, effectiveDisabledParts),
+    [parts, effectiveDisabledParts],
   )
   const disabledLyricsTracks = useMemo(
     () => disabledLyricsForRender(parts, disabledLyrics),

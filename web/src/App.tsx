@@ -22,8 +22,8 @@ import {
   readPartTogglesForFile,
   writePartTogglesForFile,
 } from './partToggleCache'
-import { byteOffsetToStringIndex } from './utils/byteSpan'
 import type { EditorHandle } from './types'
+import { byteOffsetToStringIndex } from './utils/byteSpan'
 import './App.css'
 import './file-tab-bar.css'
 import './preview.css'
@@ -48,6 +48,10 @@ export default function App() {
   const [disabledLyrics, setDisabledLyrics] = useState<Set<string>>(() => {
     const cached = readPartTogglesForFile(fileId)
     return new Set(cached?.disabledLyrics ?? [])
+  })
+  const [soloedParts, setSoloedParts] = useState<Set<string>>(() => {
+    const cached = readPartTogglesForFile(fileId)
+    return new Set(cached?.soloedParts ?? [])
   })
   const editorRef = useRef<EditorHandle>(null)
   const skipToggleSaveRef = useRef(false)
@@ -77,13 +81,20 @@ export default function App() {
     playSelectedMeasures,
     stopMeasurePlayback,
     highlightedSvgs,
-  } = useJianpuWorker(source, disabledParts, disabledLyrics, store.active)
+  } = useJianpuWorker(
+    source,
+    disabledParts,
+    disabledLyrics,
+    soloedParts,
+    store.active,
+  )
 
   useEffect(() => {
     skipToggleSaveRef.current = true
     const cached = readPartTogglesForFile(fileId)
     setDisabledParts(new Set(cached?.disabledParts ?? []))
     setDisabledLyrics(new Set(cached?.disabledLyrics ?? []))
+    setSoloedParts(new Set(cached?.soloedParts ?? []))
   }, [fileId])
 
   useEffect(() => {
@@ -94,8 +105,9 @@ export default function App() {
     writePartTogglesForFile(fileId, {
       disabledParts: [...disabledParts],
       disabledLyrics: [...disabledLyrics],
+      soloedParts: [...soloedParts],
     })
-  }, [fileId, disabledParts, disabledLyrics])
+  }, [fileId, disabledParts, disabledLyrics, soloedParts])
 
   useEffect(() => {
     if (parts.length === 0) return
@@ -121,6 +133,15 @@ export default function App() {
           lyricAbbreviations.has(abbreviation),
         ),
       )
+      return next.size === prev.size ? prev : next
+    })
+  }, [parts])
+
+  useEffect(() => {
+    if (parts.length === 0) return
+    const abbreviations = new Set(parts.map((part) => part.abbreviation))
+    setSoloedParts((prev) => {
+      const next = new Set([...prev].filter((abbr) => abbreviations.has(abbr)))
       return next.size === prev.size ? prev : next
     })
   }, [parts])
@@ -168,6 +189,21 @@ export default function App() {
           next.delete(abbreviation)
         } else {
           next.add(abbreviation)
+        }
+        return next
+      })
+    },
+    [],
+  )
+
+  const handleSoloToggle = useCallback(
+    (abbreviation: string, soloed: boolean) => {
+      setSoloedParts((prev) => {
+        const next = new Set(prev)
+        if (soloed) {
+          next.add(abbreviation)
+        } else {
+          next.delete(abbreviation)
         }
         return next
       })
@@ -224,7 +260,10 @@ export default function App() {
     for (const span of measureSpans) {
       if (span.section_label != null && !seen.has(span.section_label)) {
         seen.add(span.section_label)
-        result.push({ label: span.section_label, byteOffset: span.view_zone_start })
+        result.push({
+          label: span.section_label,
+          byteOffset: span.view_zone_start,
+        })
       }
     }
     return result
@@ -240,6 +279,7 @@ export default function App() {
 
   const noPartsSelected =
     parts.length > 0 &&
+    soloedParts.size === 0 &&
     parts.every((part) => disabledParts.has(part.abbreviation))
 
   return (
@@ -357,8 +397,10 @@ export default function App() {
                 parts={parts}
                 disabledParts={disabledParts}
                 disabledLyrics={disabledLyrics}
+                soloedParts={soloedParts}
                 onPartToggle={handlePartToggle}
                 onLyricsToggle={handleLyricsToggle}
+                onSoloToggle={handleSoloToggle}
                 loading={partsLoading}
               />
             }
