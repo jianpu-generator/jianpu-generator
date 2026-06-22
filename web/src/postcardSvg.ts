@@ -33,5 +33,4 @@ worker.postMessage({
   type: 'renderPartsScoreSnippet',
   id: POSTCARD_ID,
   source: POSTCARD_SOURCE,
-  showDecorations: false,
 } satisfies WorkerRequest)

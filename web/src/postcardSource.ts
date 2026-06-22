@@ -1,4 +1,3 @@
-// Paste the final validated content of postcard.jianpu verbatim between the backticks:
 export const POSTCARD_SOURCE = `\
 [metadata]
 title = "Jianpu Postcard"

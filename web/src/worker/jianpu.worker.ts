@@ -43,7 +43,7 @@ const renderPartsScoreSnippetWithDecorations =
 const renderDirectivesSnippet =
   'render_directives_snippet' in jianpuWasm
     ? jianpuWasm.render_directives_snippet
-    : jianpuWasm.render_parts_score_snippet_with_decorations
+    : jianpuWasm.render_parts_score_snippet
 
 export type WorkerRequest =
   | {
