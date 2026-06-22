@@ -7,12 +7,14 @@ use crate::ast::parsed::{
     PartKind, ScoreEvent,
 };
 use crate::combiner;
-use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Warning};
+use crate::error::{
+    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Warning,
+};
 
 #[path = "empty_note_measures.rs"]
 mod empty_note_measures;
 
-use empty_note_measures::{align_empty_note_measures, PerMeasureErrors};
+use empty_note_measures::{align_empty_note_measures, MeasureSlot, PerMeasureErrors};
 
 mod directive_grouper;
 mod lyrics_pairing;
@@ -342,6 +344,34 @@ impl PartGrouper {
     }
 }
 
+fn build_measure_slots(
+    measures: Vec<GroupedMeasure>,
+    empty_note_measure_spans: &[Option<Span>],
+) -> Result<Vec<MeasureSlot>, IrrecoverableError> {
+    if empty_note_measure_spans.is_empty() {
+        return Ok(measures
+            .into_iter()
+            .map(|m| MeasureSlot::Real(Box::new(m)))
+            .collect());
+    }
+    let mut real_measures = measures.into_iter();
+    empty_note_measure_spans
+        .iter()
+        .map(|entry| match entry {
+            Some(span) => Ok(MeasureSlot::EmptyNote { span: *span }),
+            None => real_measures
+                .next()
+                .map(|m| MeasureSlot::Real(Box::new(m)))
+                .ok_or_else(|| {
+                    IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
+                        Span::new(0, 0),
+                        "empty_note_measure_spans and grouped measures out of sync",
+                    ))
+                }),
+        })
+        .collect()
+}
+
 fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, IrrecoverableError> {
     let ditto_measures = part.ditto_measures.clone();
     let lyrics_ditto_measures = part.lyrics_ditto_measures.clone();
@@ -370,9 +400,9 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
     let mut grouped = grouper.finish();
     grouped.ditto_measures = ditto_measures;
     grouped.lyrics_ditto_measures = lyrics_ditto_measures;
-    align_empty_note_measures(
-        &mut grouped.measures,
-        &empty_note_measure_spans,
+    let slots = build_measure_slots(grouped.measures, &empty_note_measure_spans)?;
+    grouped.measures = align_empty_note_measures(
+        slots,
         &PerMeasureErrors {
             beat_errors: &per_measure_beat_errors,
             dotted_eighth_errors: &per_measure_dotted_eighth_errors,

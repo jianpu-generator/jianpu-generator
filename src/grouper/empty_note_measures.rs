@@ -1,7 +1,5 @@
 use crate::ast::grouped::{GroupedMeasure, Notes};
-use crate::error::{
-    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Warning,
-};
+use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Warning};
 
 fn apply_per_measure_errors(
     measure: &mut GroupedMeasure,
@@ -48,52 +46,40 @@ pub(super) struct PerMeasureErrors<'a> {
     pub(super) lyrics_errors: &'a [Option<RecoverableError>],
 }
 
-pub(super) fn align_empty_note_measures(
-    measures: &mut Vec<GroupedMeasure>,
-    empty_note_measure_spans: &[Option<Span>],
-    errors: &PerMeasureErrors<'_>,
-) -> Result<(), IrrecoverableError> {
-    if empty_note_measure_spans.is_empty() {
-        for (idx, measure) in measures.iter_mut().enumerate() {
-            apply_per_measure_errors(measure, idx, errors);
-        }
-        return Ok(());
-    }
+pub(super) enum MeasureSlot {
+    EmptyNote { span: Span },
+    Real(Box<GroupedMeasure>),
+}
 
-    let mut filled = std::mem::take(measures).into_iter();
-    let aligned = empty_note_measure_spans
-        .iter()
+pub(super) fn align_empty_note_measures(
+    slots: Vec<MeasureSlot>,
+    errors: &PerMeasureErrors<'_>,
+) -> Result<Vec<GroupedMeasure>, IrrecoverableError> {
+    slots
+        .into_iter()
         .enumerate()
-        .map(|(idx, empty_span)| {
-            if let Some(span) = empty_span {
-                Ok(GroupedMeasure {
-                    notes: Notes { events: Vec::new() },
-                    source_span: *span,
-                    paired_lyrics: None,
-                    lyrics_error: None,
-                    beat_overflow_error: None,
-                    dash_after_rest_error: errors
-                        .dash_after_rest_errors
-                        .get(idx)
-                        .and_then(|e| e.clone()),
-                    dotted_eighth_errors: Vec::new(),
-                    chord_errors: errors.chord_errors.get(idx).cloned().unwrap_or_default(),
-                    lex_error: errors.lex_errors.get(idx).and_then(|e| e.clone()),
-                    lyrics_parse_error: errors.lyrics_errors.get(idx).and_then(|e| e.clone()),
-                    extension_no_preceding_event_error: None,
-                })
-            } else {
-                let mut measure = filled.next().ok_or_else(|| {
-                    IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
-                        Span::new(0, 0),
-                        "empty_note_measure_spans and grouped measures out of sync",
-                    ))
-                })?;
+        .map(|(idx, slot)| match slot {
+            MeasureSlot::EmptyNote { span } => Ok(GroupedMeasure {
+                notes: Notes { events: Vec::new() },
+                source_span: span,
+                paired_lyrics: None,
+                lyrics_error: None,
+                beat_overflow_error: None,
+                dash_after_rest_error: errors
+                    .dash_after_rest_errors
+                    .get(idx)
+                    .and_then(|e| e.clone()),
+                dotted_eighth_errors: Vec::new(),
+                chord_errors: errors.chord_errors.get(idx).cloned().unwrap_or_default(),
+                lex_error: errors.lex_errors.get(idx).and_then(|e| e.clone()),
+                lyrics_parse_error: errors.lyrics_errors.get(idx).and_then(|e| e.clone()),
+                extension_no_preceding_event_error: None,
+            }),
+            MeasureSlot::Real(boxed_measure) => {
+                let mut measure = *boxed_measure;
                 apply_per_measure_errors(&mut measure, idx, errors);
                 Ok(measure)
             }
         })
-        .collect::<Result<Vec<_>, _>>()?;
-    *measures = aligned;
-    Ok(())
+        .collect()
 }

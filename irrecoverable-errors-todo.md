@@ -110,6 +110,24 @@ _(all document structure errors are now recoverable — see Already implemented 
 ### Internal
 `InternalInvariant` — programming bug; must not be masked as recoverable
 
+Current invariants in the codebase:
+
+| File | Detail |
+|---|---|
+| `src/pdf.rs` | `"internal invariant: SVG chunk ref missing after renumber"` |
+| `src/pdf.rs` | `"internal invariant: content_ids index out of range"` |
+| `src/pdf.rs` | `"internal invariant: page_ids index out of range"` |
+| `src/wav.rs` | `"internal invariant: MIDI file has no tracks"` |
+| `src/midi/mod.rs` | `"internal error: missing MIDI tie state for part {part_idx}"` |
+| `src/desugar.rs` | `"score line slot missing for implicit ditto padding"` |
+| `src/desugar.rs` | `"score line slot missing for ditto line"` |
+| `src/coordinate_resolver/resolve.rs` | `"unexpected GridContent variant in tie/slur block: {other:?}"` |
+| `src/coordinate_resolver/resolve.rs` | `"arc variants must be resolved before reaching grid_to_absolute"` |
+| `src/parser/score/timed_parser/directives.rs` | `"expected key change starting with '1=', got: {text}"` |
+| `src/parser/score/timed_parser/directives.rs` | `"expected note name after '1=', got: {text}"` |
+| `src/parser/score/timed_parser/directives.rs` | `"invalid note name: {name_char}"` |
+| `src/parser/score/timed_parser/directives.rs` | `"invalid octave number in key change: {text}"` |
+
 ---
 
 ## Review log
