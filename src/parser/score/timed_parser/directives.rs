@@ -1,5 +1,4 @@
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName};
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 
 /// Returns how many bytes the key-change token after `=` occupies.
 /// E.g. `"C#4"` → 2 (note name + accidental), `"Gb3"` → 2, `"A4"` → 1.
@@ -27,70 +26,52 @@ pub(super) fn key_change_lexeme_len(after_eq: &str) -> usize {
     len
 }
 
-/// Parses a full `1=Xb?<octave>` or `1=X#?<octave>` string into a `KeyChange`.
-pub(super) fn parse_key_change_text(
-    text: &str,
-    span: &Span,
-) -> Result<KeyChange, IrrecoverableError> {
-    let after_eq = text.strip_prefix("1=").ok_or_else(|| {
-        IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
-            *span,
-            format!("expected key change starting with '1=', got: {text}"),
-        ))
-    })?;
+pub(super) struct KeyChangeToken {
+    pub(super) note_name: NoteName,
+    pub(super) accidental: Accidental,
+    pub(super) octave: u8,
+}
 
-    let mut chars = after_eq.chars().peekable();
-
-    let name_char = chars.next().ok_or_else(|| {
-        IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
-            *span,
-            format!("expected note name after '1=', got: {text}"),
-        ))
-    })?;
-
-    let name = match name_char {
-        'A' => NoteName::A,
-        'B' => NoteName::B,
-        'C' => NoteName::C,
-        'D' => NoteName::D,
-        'E' => NoteName::E,
-        'F' => NoteName::F,
-        'G' => NoteName::G,
-        _ => {
-            return Err(IrrecoverableError::new(
-                IrrecoverableErrorKind::internal_invariant(
-                    *span,
-                    format!("invalid note name: {name_char}"),
-                ),
-            ))
-        }
-    };
-
-    let accidental = match chars.peek() {
-        Some('b') => {
-            chars.next();
-            Accidental::Flat
-        }
-        Some('#') => {
-            chars.next();
-            Accidental::Sharp
-        }
-        _ => Accidental::Natural,
-    };
-
-    let octave_str: String = chars.collect();
-    let octave = octave_str.parse::<u8>().map_err(|_| {
-        IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
-            *span,
-            format!("invalid octave number in key change: {text}"),
-        ))
-    })?;
-
-    Ok(KeyChange {
-        note: Note {
-            name,
-            octave,
+impl KeyChangeToken {
+    pub(super) fn parse(text: &str) -> Option<Self> {
+        let after_eq = text.strip_prefix("1=")?;
+        let mut chars = after_eq.chars().peekable();
+        let note_name = match chars.next()? {
+            'A' => NoteName::A,
+            'B' => NoteName::B,
+            'C' => NoteName::C,
+            'D' => NoteName::D,
+            'E' => NoteName::E,
+            'F' => NoteName::F,
+            'G' => NoteName::G,
+            _ => return None,
+        };
+        let accidental = match chars.peek() {
+            Some('b') => {
+                chars.next();
+                Accidental::Flat
+            }
+            Some('#') => {
+                chars.next();
+                Accidental::Sharp
+            }
+            _ => Accidental::Natural,
+        };
+        let octave = chars.collect::<String>().parse::<u8>().ok()?;
+        Some(Self {
+            note_name,
             accidental,
+            octave,
+        })
+    }
+}
+
+pub(super) fn build_key_change(token: KeyChangeToken) -> KeyChange {
+    KeyChange {
+        note: Note {
+            name: token.note_name,
+            octave: token.octave,
+            accidental: token.accidental,
         },
-    })
+    }
 }

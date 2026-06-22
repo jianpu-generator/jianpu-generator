@@ -1,4 +1,4 @@
-use super::directives::{key_change_lexeme_len, parse_key_change_text};
+use super::directives::{build_key_change, key_change_lexeme_len, KeyChangeToken};
 use crate::ast::parsed::KeyChange;
 use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned};
 
@@ -119,7 +119,7 @@ fn lex_one_char(
         // `-` inside a word: duration-suffix dash; skip it.
         '-' => Ok((None, len, false)),
         '1' if at_word_boundary && line[i..].starts_with("1=") => {
-            if let Some((tok, consumed)) = try_lex_key_change(line, i, start)? {
+            if let Some((tok, consumed)) = try_lex_key_change(line, i, start, recoverable_errors)? {
                 return Ok((Some(tok), consumed, true));
             }
             // Not a key change — emit HeadStart for digit `1`.
@@ -302,7 +302,12 @@ fn lex_bpm(line: &str, i: usize, start: usize) -> LexBpmResult {
 
 /// Try to lex a `1=<NoteName><accidental?><octave>` key change starting at byte offset `i`.
 /// Returns `Some((token, bytes_consumed))` if it looks like a key change, `None` otherwise.
-fn try_lex_key_change(line: &str, i: usize, start: usize) -> LexTokenMaybeResult {
+fn try_lex_key_change(
+    line: &str,
+    i: usize,
+    start: usize,
+    recoverable_errors: &mut Vec<RecoverableError>,
+) -> LexTokenMaybeResult {
     // "1=" is 2 bytes.
     let after_eq = line.get(i + 2..).unwrap_or_default();
 
@@ -334,11 +339,19 @@ fn try_lex_key_change(line: &str, i: usize, start: usize) -> LexTokenMaybeResult
     let text = line.get(i..i + consumed).unwrap_or_default();
     let span = Span::new(start, start + consumed);
 
-    let key_change = parse_key_change_text(text, &span)?;
-    Ok(Some((
-        Spanned::new(TimedLexToken::KeyChange(key_change), span),
-        consumed,
-    )))
+    match KeyChangeToken::parse(text) {
+        Some(token) => Ok(Some((
+            Spanned::new(TimedLexToken::KeyChange(build_key_change(token)), span),
+            consumed,
+        ))),
+        None => {
+            recoverable_errors.push(RecoverableError::general(
+                span,
+                format!("invalid key change token: {text}; key change ignored"),
+            ));
+            Ok(None)
+        }
+    }
 }
 
 /// Try to lex a `<num>/<den>` time signature starting at byte offset `i`.
