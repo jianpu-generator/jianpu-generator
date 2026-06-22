@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin, type ViteDevServer } from 'vite'
+import { ViteToml as toml } from 'vite-plugin-toml'
 
 const WASM_PACK_ARGS = [
   'build',
@@ -159,7 +160,7 @@ function serveFontsPlugin(): Plugin {
 
 export default defineConfig({
   base: process.env.VITE_BASE_PATH ?? '/',
-  plugins: [react(), wasmDevPlugin(), serveFontsPlugin()],
+  plugins: [react(), toml(), wasmDevPlugin(), serveFontsPlugin()],
   resolve: {
     alias: {
       'jianpu-wasm': path.resolve(
