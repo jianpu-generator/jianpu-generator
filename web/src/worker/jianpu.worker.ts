@@ -36,6 +36,14 @@ const renderNoteTokenSnippet = jianpuWasm.render_note_token_snippet
 const renderChordTokenSnippet = jianpuWasm.render_chord_token_snippet
 const renderNotesLineSnippet = jianpuWasm.render_notes_line_snippet
 const renderPartsScoreSnippet = jianpuWasm.render_parts_score_snippet
+const renderPartsScoreSnippetWithDecorations =
+  'render_parts_score_snippet_with_decorations' in jianpuWasm
+    ? jianpuWasm.render_parts_score_snippet_with_decorations
+    : jianpuWasm.render_parts_score_snippet
+const renderDirectivesSnippet =
+  'render_directives_snippet' in jianpuWasm
+    ? jianpuWasm.render_directives_snippet
+    : jianpuWasm.render_parts_score_snippet_with_decorations
 
 export type WorkerRequest =
   | {
@@ -87,7 +95,13 @@ export type WorkerRequest =
   | { type: 'renderNoteTokenSnippet'; id: number; syntax: string }
   | { type: 'renderChordTokenSnippet'; id: number; syntax: string }
   | { type: 'renderNotesLineSnippet'; id: number; notesLine: string }
-  | { type: 'renderPartsScoreSnippet'; id: number; source: string }
+  | {
+      type: 'renderPartsScoreSnippet'
+      id: number
+      source: string
+      showDecorations?: boolean
+    }
+  | { type: 'renderDirectivesSnippet'; id: number; source: string }
 
 export type WorkerResponse =
   | { type: 'ready'; audioAvailable: boolean; pdfAvailable: boolean }
@@ -474,7 +488,24 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
   if (msg.type === 'renderPartsScoreSnippet') {
     try {
-      const svg = renderPartsScoreSnippet(msg.source) as string
+      const fn = msg.showDecorations
+        ? renderPartsScoreSnippetWithDecorations
+        : renderPartsScoreSnippet
+      const svg = fn(msg.source) as string
+      postMessage({
+        type: 'snippetOk',
+        id: msg.id,
+        svg,
+      } satisfies WorkerResponse)
+    } catch (_) {
+      /* silently ignore failed snippets */
+    }
+    return
+  }
+
+  if (msg.type === 'renderDirectivesSnippet') {
+    try {
+      const svg = renderDirectivesSnippet(msg.source) as string
       postMessage({
         type: 'snippetOk',
         id: msg.id,
