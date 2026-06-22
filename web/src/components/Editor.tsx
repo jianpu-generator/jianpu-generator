@@ -312,6 +312,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       )
       ed.focus()
     },
+    jumpToOffset(charOffset: number) {
+      const ed = editorRef.current
+      const model = ed?.getModel()
+      if (!ed || !model) return
+      const position = model.getPositionAt(charOffset)
+      ed.setPosition(position)
+      ed.revealPositionInCenter(position)
+      ed.focus()
+    },
     focus() {
       editorRef.current?.focus()
     },

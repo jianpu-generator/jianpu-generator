@@ -140,3 +140,24 @@
   font-weight: 500;
   line-height: 1.4;
 }
+
+/* Section jump buttons */
+
+.section-jump-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  font-size: 12px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  height: 24px;
+  white-space: nowrap;
+}
+
+.section-jump-btn:hover {
+  background: #f0f0f0;
+}

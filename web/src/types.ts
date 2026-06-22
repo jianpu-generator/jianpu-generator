@@ -26,6 +26,8 @@ export interface EditorHandle {
   insertAtCursor: (text: string) => void
   getSelection: () => EditorSelection
   setSelection: (start: number, end: number) => void
+  /** Move the cursor to the given JS string char offset and reveal the line. */
+  jumpToOffset: (charOffset: number) => void
   focus: () => void
   getEditor: () => import('monaco-editor').editor.IStandaloneCodeEditor | null
 }

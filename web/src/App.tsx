@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Editor } from './components/Editor'
 import { FileTabBar } from './components/FileList'
 import { PartToggles } from './components/PartToggles'
@@ -22,12 +22,18 @@ import {
   readPartTogglesForFile,
   writePartTogglesForFile,
 } from './partToggleCache'
+import { byteOffsetToStringIndex } from './utils/byteSpan'
 import type { EditorHandle } from './types'
 import './App.css'
 import './file-tab-bar.css'
 import './preview.css'
 
 const shortcutLabel = navigator.platform.startsWith('Mac') ? '⌘↵' : 'Ctrl+↵'
+
+interface SectionLabel {
+  label: string
+  byteOffset: number
+}
 
 export default function App() {
   const [store, setStore] = useFileStore()
@@ -45,7 +51,6 @@ export default function App() {
   })
   const editorRef = useRef<EditorHandle>(null)
   const skipToggleSaveRef = useRef(false)
-  const [currentLine, setCurrentLine] = useState<number | null>(null)
   const {
     parts,
     partsLoading,
@@ -213,6 +218,26 @@ export default function App() {
     [setStore],
   )
 
+  const sectionLabels = useMemo<SectionLabel[]>(() => {
+    const seen = new Set<string>()
+    const result: SectionLabel[] = []
+    for (const span of measureSpans) {
+      if (span.section_label != null && !seen.has(span.section_label)) {
+        seen.add(span.section_label)
+        result.push({ label: span.section_label, byteOffset: span.view_zone_start })
+      }
+    }
+    return result
+  }, [measureSpans])
+
+  const handleSectionJump = useCallback(
+    (byteOffset: number) => {
+      const charOffset = byteOffsetToStringIndex(source, byteOffset)
+      editorRef.current?.jumpToOffset(charOffset)
+    },
+    [source],
+  )
+
   const noPartsSelected =
     parts.length > 0 &&
     parts.every((part) => disabledParts.has(part.abbreviation))
@@ -246,7 +271,6 @@ export default function App() {
                 measureSpans={measureSpans}
                 scoreLineHints={scoreLineHints}
                 onSelectionChange={notifySelection}
-                onCursorLineChange={setCurrentLine}
                 onPlayMeasure={
                   measureAudioPlaying
                     ? stopMeasurePlayback
@@ -255,7 +279,7 @@ export default function App() {
                       : undefined
                 }
                 toolbar={
-                  audioAvailable ? (
+                  audioAvailable || sectionLabels.length > 0 ? (
                     <div
                       style={{
                         display: 'flex',
@@ -263,33 +287,44 @@ export default function App() {
                         gap: '0.5rem',
                       }}
                     >
-                      <PlayMeasureButton
-                        disabled={
-                          selectedMeasureRange === null ||
-                          measureAudioGenerating
-                        }
-                        loading={measureAudioGenerating}
-                        playing={measureAudioPlaying}
-                        measureRange={selectedMeasureRange}
-                        onClick={playSelectedMeasures}
-                        onPause={stopMeasurePlayback}
-                        shortcutLabel={shortcutLabel}
-                      />
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          color: '#888',
-                          fontFamily: 'monospace',
-                        }}
-                      >
-                        line {currentLine ?? '?'} |{' '}
-                        {selectedMeasureRange !== null
-                          ? selectedMeasureRange.start ===
-                            selectedMeasureRange.end
-                            ? `measure ${selectedMeasureRange.start + 1}`
-                            : `measures ${selectedMeasureRange.start + 1}–${selectedMeasureRange.end + 1}`
-                          : 'measure null'}
-                      </span>
+                      {audioAvailable && (
+                        <>
+                          <PlayMeasureButton
+                            disabled={
+                              selectedMeasureRange === null ||
+                              measureAudioGenerating
+                            }
+                            loading={measureAudioGenerating}
+                            playing={measureAudioPlaying}
+                            measureRange={selectedMeasureRange}
+                            onClick={playSelectedMeasures}
+                            onPause={stopMeasurePlayback}
+                            shortcutLabel={shortcutLabel}
+                          />
+                        </>
+                      )}
+                      {sectionLabels.length > 0 && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            overflowX: 'auto',
+                            flexShrink: 1,
+                          }}
+                        >
+                          {sectionLabels.map(({ label, byteOffset }) => (
+                            <button
+                              key={label}
+                              type="button"
+                              className="section-jump-btn"
+                              onClick={() => handleSectionJump(byteOffset)}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ) : null
                 }
