@@ -1,0 +1,103 @@
+.cheatsheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 100;
+}
+
+.cheatsheet-content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: min(90vw, 720px);
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 1.5rem;
+  z-index: 101;
+}
+
+.cheatsheet-title {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.cheatsheet-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: var(--muted);
+  line-height: 1;
+  padding: 0.2rem;
+}
+
+.cheatsheet-close:hover {
+  color: var(--foreground);
+}
+
+.cheatsheet-section {
+  margin-bottom: 1.5rem;
+}
+
+.cheatsheet-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+
+.cheatsheet-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cheatsheet-table th {
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.cheatsheet-table td {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.cheatsheet-syntax {
+  font-family: monospace;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.cheatsheet-svg-cell {
+  width: 120px;
+}
+
+.cheatsheet-svg-cell svg {
+  max-height: 48px;
+  width: auto;
+}
+
+.cheatsheet-svg-placeholder {
+  width: 60px;
+  height: 24px;
+  background: var(--border);
+  border-radius: 3px;
+  opacity: 0.5;
+}

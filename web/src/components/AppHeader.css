@@ -1,0 +1,40 @@
+.app-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.app-subtitle {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.app-header__spacer {
+  flex: 1;
+}
+
+.app-header__cheatsheet-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.55rem;
+  color: var(--muted);
+  line-height: 1;
+}
+
+.app-header__cheatsheet-btn:hover {
+  color: var(--foreground);
+  border-color: var(--foreground);
+}

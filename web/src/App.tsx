@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { AppHeader } from './components/AppHeader'
 import { Editor } from './components/Editor'
 import { FileTabBar } from './components/FileList'
 import { PartToggles } from './components/PartToggles'
@@ -219,10 +220,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>簡譜</h1>
-        <span className="app-subtitle">live preview</span>
-      </header>
+      <AppHeader />
       <FileTabBar
         store={store}
         onSelect={handleSelect}
