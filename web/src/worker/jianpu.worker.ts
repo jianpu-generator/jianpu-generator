@@ -32,6 +32,11 @@ const generatePdf =
 const generateSplitPdfs =
   'generate_split_pdfs' in jianpuWasm ? jianpuWasm.generate_split_pdfs : null
 
+const renderNoteTokenSnippet = jianpuWasm.render_note_token_snippet
+const renderChordTokenSnippet = jianpuWasm.render_chord_token_snippet
+const renderNotesLineSnippet = jianpuWasm.render_notes_line_snippet
+const renderPartsScoreSnippet = jianpuWasm.render_parts_score_snippet
+
 export type WorkerRequest =
   | {
       type: 'render'
@@ -79,6 +84,10 @@ export type WorkerRequest =
     }
   | { type: 'listMeasureSpans'; source: string; id: number }
   | { type: 'listScoreLineHints'; source: string; id: number }
+  | { type: 'renderNoteTokenSnippet'; id: number; syntax: string }
+  | { type: 'renderChordTokenSnippet'; id: number; syntax: string }
+  | { type: 'renderNotesLineSnippet'; id: number; notesLine: string }
+  | { type: 'renderPartsScoreSnippet'; id: number; source: string }
 
 export type WorkerResponse =
   | { type: 'ready'; audioAvailable: boolean; pdfAvailable: boolean }
@@ -120,6 +129,7 @@ export type WorkerResponse =
       status: 'ok' | 'err'
       hints: ScoreLineHint[]
     }
+  | { type: 'snippetOk'; id: number; svg: string }
 
 let initialized = false
 
@@ -417,6 +427,62 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       status: result.status,
       hints: result.status === 'ok' ? result.hints : [],
     } satisfies WorkerResponse)
+    return
+  }
+
+  if (msg.type === 'renderNoteTokenSnippet') {
+    try {
+      const svg = renderNoteTokenSnippet(msg.syntax) as string
+      postMessage({
+        type: 'snippetOk',
+        id: msg.id,
+        svg,
+      } satisfies WorkerResponse)
+    } catch (_) {
+      /* silently ignore failed snippets */
+    }
+    return
+  }
+
+  if (msg.type === 'renderChordTokenSnippet') {
+    try {
+      const svg = renderChordTokenSnippet(msg.syntax) as string
+      postMessage({
+        type: 'snippetOk',
+        id: msg.id,
+        svg,
+      } satisfies WorkerResponse)
+    } catch (_) {
+      /* silently ignore failed snippets */
+    }
+    return
+  }
+
+  if (msg.type === 'renderNotesLineSnippet') {
+    try {
+      const svg = renderNotesLineSnippet(msg.notesLine) as string
+      postMessage({
+        type: 'snippetOk',
+        id: msg.id,
+        svg,
+      } satisfies WorkerResponse)
+    } catch (_) {
+      /* silently ignore failed snippets */
+    }
+    return
+  }
+
+  if (msg.type === 'renderPartsScoreSnippet') {
+    try {
+      const svg = renderPartsScoreSnippet(msg.source) as string
+      postMessage({
+        type: 'snippetOk',
+        id: msg.id,
+        svg,
+      } satisfies WorkerResponse)
+    } catch (_) {
+      /* silently ignore failed snippets */
+    }
     return
   }
 
