@@ -16,8 +16,7 @@ fn parse_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
         | IrrecoverableErrorKind::ChordInvalidBass { span, .. }
         | IrrecoverableErrorKind::ChordBassUnexpectedChar { span, .. }
         | IrrecoverableErrorKind::ChordBassTrailingChars { span, .. }
-        | IrrecoverableErrorKind::DashAfterRest { span }
-        | IrrecoverableErrorKind::UnclosedGroupAtEnd { span, .. } => Some(span),
+        | IrrecoverableErrorKind::DashAfterRest { span } => Some(span),
         _ => None,
     }
 }

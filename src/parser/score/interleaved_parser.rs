@@ -1,9 +1,7 @@
 use crate::ast::parsed::{
     flatten_score_line_slots, ParsedTrack, PartDecl, PartKind, ScoreEvent, ScoreLineSlot,
 };
-use crate::error::{
-    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned,
-};
+use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Spanned};
 use crate::parser::score::token_parser::GroupStack;
 use crate::utils::LyricTieState;
 
@@ -131,27 +129,45 @@ fn first_notes_track_index(declarations: &[PartDecl]) -> usize {
         .unwrap_or(0)
 }
 
-fn assert_all_groups_closed(
-    group_states: &[GroupStack],
+fn finalize_unclosed_groups(
+    group_states: &mut [GroupStack],
     declarations: &[PartDecl],
+    accumulators: &mut [TrackAccumulator],
     base_offset: usize,
     content: &str,
-) -> Result<(), IrrecoverableError> {
-    for (track_index, state) in group_states.iter().enumerate() {
-        if state.is_open() {
-            let part_label = declarations
-                .get(track_index)
-                .map(|d| d.abbreviation.as_str())
-                .unwrap_or("unknown");
-            return Err(IrrecoverableError::new(
-                IrrecoverableErrorKind::UnclosedGroupAtEnd {
-                    span: Span::new(base_offset, base_offset + content.len()),
-                    part: part_label.to_string(),
-                },
-            ));
+    extra_document_errors: &mut Vec<RecoverableError>,
+) {
+    let last_line_start = content.rfind('\n').map(|index| index + 1).unwrap_or(0);
+    let default_span = Span::new(base_offset + last_line_start, base_offset + content.len());
+
+    for (track_index, state) in group_states.iter_mut().enumerate() {
+        if !state.is_open() {
+            continue;
         }
+        state.frames.clear();
+
+        let part = declarations
+            .get(track_index)
+            .map(|declaration| declaration.abbreviation.clone())
+            .unwrap_or_else(|| "unknown".to_string());
+        let recoverable = RecoverableError {
+            span: default_span,
+            kind: crate::error::RecoverableErrorKind::UnclosedGroupAtEnd { part },
+        };
+
+        if let Some(TrackAccumulator::Timed {
+            per_measure_chord_errors,
+            ..
+        }) = accumulators.get_mut(track_index)
+        {
+            if let Some(measure_errors) = per_measure_chord_errors.last_mut() {
+                measure_errors.push(Diagnostic::Error(recoverable));
+                continue;
+            }
+        }
+
+        extra_document_errors.push(recoverable);
     }
-    Ok(())
 }
 
 fn attach_no_notes_track_warning(
@@ -207,7 +223,14 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
         process_bar_group(group_lines, &mut ctx)?;
     }
 
-    assert_all_groups_closed(&group_states, declarations, base_offset, content)?;
+    finalize_unclosed_groups(
+        &mut group_states,
+        declarations,
+        &mut accumulators,
+        base_offset,
+        content,
+        &mut extra_document_errors,
+    );
 
     let tracks = build_parse_result(declarations, accumulators, ditto_measures_per_track)?;
     let mut per_group_desugar_errors = per_group_desugar_errors;

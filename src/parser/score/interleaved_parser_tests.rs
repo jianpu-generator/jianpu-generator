@@ -176,11 +176,18 @@ fn cross_measure_paren_group_parses() {
 }
 
 #[test]
-fn rejects_unclosed_paren_group_at_eof() {
+fn unclosed_paren_group_at_eof_is_recoverable() {
     let content = "time=4/4 key=C4 bpm=120\n111(1\n";
     let declarations = vec![decl("", PartKind::Notes)];
-    let err = parse(content, 0, &declarations).unwrap_err();
-    assert!(err.message().contains("unclosed '(' group"));
+    let tracks = parse(content, 0, &declarations).expect("unclosed group must not abort");
+    let track = notes_track(&tracks, "");
+    assert!(
+        track.per_measure_chord_errors[0]
+            .iter()
+            .any(|diagnostic| diagnostic.message().contains("unclosed '(' group")),
+        "expected unclosed group error on measure, got: {:?}",
+        track.per_measure_chord_errors
+    );
 }
 
 #[test]

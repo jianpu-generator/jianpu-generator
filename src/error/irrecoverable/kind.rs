@@ -45,10 +45,6 @@ pub enum IrrecoverableErrorKind {
     DashAfterRest {
         span: Span,
     },
-    UnclosedGroupAtEnd {
-        span: Span,
-        part: String,
-    },
     MidiWriteFailed {
         span: Span,
     },

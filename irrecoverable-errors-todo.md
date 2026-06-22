@@ -78,6 +78,7 @@ These are no longer review items. Some still have a matching
 | `DurationMixedOctaveMarkers` | `implemented` | Both `'` and `,` on same note now zeroes octave shift and emits `RecoverableErrorKind::DurationMixedOctaveMarkers`; error propagated via `notes_parse.chord_errors` → `per_measure_chord_errors` → `GroupedMeasure.chord_errors`; `IrrecoverableErrorKind` variant removed |
 | `DurationCannotDotQuarterBeat` | `implemented` | Dot on `=` note now ignored; emits `RecoverableErrorKind::DurationCannotDotQuarterBeat` via `DurationParse.cannot_dot_quarter_beat_error` → `chord_errors`; `IrrecoverableErrorKind` variant removed |
 | `GroupUnexpectedCloseParen` | `implemented` | Stray `)` with no open group now emits `RecoverableErrorKind::GroupUnexpectedCloseParen` pushed to `chord_errors` in `close_group()`; render continues; `IrrecoverableErrorKind` variant removed |
+| `UnclosedGroupAtEnd` | `implemented` | Open `(` at score EOF clears `GroupStack`, emits `RecoverableErrorKind::UnclosedGroupAtEnd` on last measure via `per_measure_chord_errors`; render continues; `IrrecoverableErrorKind` variant removed |
 
 ---
 
@@ -91,7 +92,7 @@ These are no longer review items. Some still have a matching
 | 13 | `DurationMixedOctaveMarkers` | `implemented` | Abort | Pick one marker or skip note; error on measure |
 | 14 | `DurationCannotDotQuarterBeat` | `implemented` | Abort | Parse without dot or skip note; error on measure |
 | 16 | `GroupUnexpectedCloseParen` | `implemented` | Abort on stray `)` | Ignore `)`; error on measure |
-| 17 | `UnclosedGroupAtEnd` | `pending` | Abort when `(` not closed at section end | Close implicitly or drop group; error on measure |
+| 17 | `UnclosedGroupAtEnd` | `implemented` | Abort when `(` not closed at section end | Close implicitly or drop group; error on measure |
 
 ---
 
@@ -133,3 +134,4 @@ Record decisions here as we go.
 | 13 | `DurationMixedOctaveMarkers` | Implemented as recoverable | 2026-06-22 | Mixed `'`/`,` on same note now zeroes octave shift and emits `RecoverableErrorKind::DurationMixedOctaveMarkers`; notes-line `chord_errors` now propagated through `process_notes_column_line` → `per_measure_chord_errors`; `IrrecoverableErrorKind` variant removed |
 | 14 | `DurationCannotDotQuarterBeat` | Implemented as recoverable | 2026-06-22 | Dot on `=` (quarter-beat) note now ignored; `DurationParse.cannot_dot_quarter_beat_error` carries the `RecoverableErrorKind::DurationCannotDotQuarterBeat` diagnostic; emitted into `chord_errors` in `parse_timed_unit`; `IrrecoverableErrorKind` variant removed |
 | 16 | `GroupUnexpectedCloseParen` | Implemented as recoverable | 2026-06-22 | Stray `)` with no open group now pushes `RecoverableErrorKind::GroupUnexpectedCloseParen` to `chord_errors` in `close_group()`; `)` is ignored, render continues; `IrrecoverableErrorKind` variant removed; `open_group()` defensive pop replaced with `InternalInvariant` |
+| 17 | `UnclosedGroupAtEnd` | Implemented as recoverable | 2026-06-22 | Open `(` at score EOF clears `GroupStack`, emits `RecoverableErrorKind::UnclosedGroupAtEnd` on last measure via `per_measure_chord_errors`; render continues with open-group depth already applied; `IrrecoverableErrorKind` variant removed |

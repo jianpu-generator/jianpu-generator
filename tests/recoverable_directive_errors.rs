@@ -376,6 +376,27 @@ fn group_unexpected_close_paren_is_recoverable() {
     );
 }
 
+// UnclosedGroupAtEnd
+
+#[test]
+fn unclosed_paren_group_at_eof_is_recoverable() {
+    // `(1 2 3 4` opens a group but never closes it before EOF.
+    // The render must continue; the group is treated as open and an error is reported.
+    let source = minimal_fixture("time=4/4 key=C4 bpm=120\n(1 2 3 4\n");
+    let output = render_svgs_from_source(&source, "test.jianpu")
+        .expect("unclosed group at EOF must not abort the render");
+    assert!(!output.svgs.is_empty());
+    assert!(
+        has_error_containing(&output, "unclosed '(' group"),
+        "expected error about unclosed group, got: {:?}",
+        output
+            .diagnostics
+            .iter()
+            .map(|d| d.message())
+            .collect::<Vec<_>>()
+    );
+}
+
 // DurationMixedOctaveMarkers
 
 #[test]

@@ -87,6 +87,8 @@ pub enum RecoverableErrorKind {
     DurationCannotDotQuarterBeat,
     /// A `)` appeared with no matching `(` — the `)` is ignored.
     GroupUnexpectedCloseParen,
+    /// A `(` was not closed before the end of the score — group treated as open.
+    UnclosedGroupAtEnd { part: String },
 }
 
 impl RecoverableErrorKind {
@@ -138,6 +140,9 @@ impl RecoverableErrorKind {
             Self::DurationMixedOctaveMarkers => "mixed octave markers: use ' for up or , for down, not both; octave shift ignored".to_string(),
             Self::DurationCannotDotQuarterBeat => "cannot dot a quarter-beat (=) note; dot ignored, duration stays at 1 beat".to_string(),
             Self::GroupUnexpectedCloseParen => "unexpected `)` — no open group; `)` ignored".to_string(),
+            Self::UnclosedGroupAtEnd { part } => {
+                format!("unclosed '(' group at end of score in part '{part}'")
+            }
         }
     }
 }
