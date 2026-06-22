@@ -355,6 +355,27 @@ fn dotted_quarter_beat_is_recoverable() {
     );
 }
 
+// GroupUnexpectedCloseParen
+
+#[test]
+fn group_unexpected_close_paren_is_recoverable() {
+    // `1 2) 3 4` has a stray `)` with no matching `(`.
+    // The render must continue; the `)` is ignored and an error is reported on the measure.
+    let source = minimal_fixture("1 2) 3 4\n");
+    let output =
+        render_svgs_from_source(&source, "test.jianpu").expect("stray ) must not abort the render");
+    assert!(!output.svgs.is_empty());
+    assert!(
+        has_error_containing(&output, "unexpected"),
+        "expected error about unexpected ), got: {:?}",
+        output
+            .diagnostics
+            .iter()
+            .map(|d| d.message())
+            .collect::<Vec<_>>()
+    );
+}
+
 // DurationMixedOctaveMarkers
 
 #[test]

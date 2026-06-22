@@ -416,9 +416,10 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
                 self.bump();
 
                 let frame = self.stack.pop().ok_or_else(|| {
-                    IrrecoverableError::new(IrrecoverableErrorKind::GroupUnexpectedCloseParen {
-                        span: rparen_span,
-                    })
+                    IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
+                        rparen_span,
+                        "open_group: stack empty after push",
+                    ))
                 })?;
 
                 let note_count = frame.note_count;
@@ -443,11 +444,13 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
         let rparen_span = self.current_span();
         self.bump(); // consume RParen
 
-        let frame = self.stack.pop().ok_or_else(|| {
-            IrrecoverableError::new(IrrecoverableErrorKind::GroupUnexpectedCloseParen {
+        let Some(frame) = self.stack.pop() else {
+            self.chord_errors.push(Diagnostic::Error(RecoverableError {
                 span: rparen_span,
-            })
-        })?;
+                kind: crate::error::RecoverableErrorKind::GroupUnexpectedCloseParen,
+            }));
+            return Ok(());
+        };
 
         let note_count = frame.note_count;
         if let Some(warning) = validate_group_note_count(note_count, &rparen_span) {

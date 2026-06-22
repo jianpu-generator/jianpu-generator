@@ -45,9 +45,6 @@ pub enum IrrecoverableErrorKind {
     DashAfterRest {
         span: Span,
     },
-    GroupUnexpectedCloseParen {
-        span: Span,
-    },
     UnclosedGroupAtEnd {
         span: Span,
         part: String,

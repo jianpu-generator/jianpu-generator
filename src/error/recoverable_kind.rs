@@ -85,6 +85,8 @@ pub enum RecoverableErrorKind {
     NoteExpectedPitchDigit { ch: char },
     /// A dot was applied to a quarter-beat (`=`) note — dot is ignored, duration stays 1.
     DurationCannotDotQuarterBeat,
+    /// A `)` appeared with no matching `(` — the `)` is ignored.
+    GroupUnexpectedCloseParen,
 }
 
 impl RecoverableErrorKind {
@@ -135,6 +137,7 @@ impl RecoverableErrorKind {
             Self::NoteExpectedPitchDigit { ch } => format!("expected pitch digit (0-7), got: {ch}"),
             Self::DurationMixedOctaveMarkers => "mixed octave markers: use ' for up or , for down, not both; octave shift ignored".to_string(),
             Self::DurationCannotDotQuarterBeat => "cannot dot a quarter-beat (=) note; dot ignored, duration stays at 1 beat".to_string(),
+            Self::GroupUnexpectedCloseParen => "unexpected `)` — no open group; `)` ignored".to_string(),
         }
     }
 }

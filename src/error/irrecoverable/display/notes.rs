@@ -33,9 +33,6 @@ pub(super) fn write(
             formatter,
             "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)"
         )),
-        IrrecoverableErrorKind::GroupUnexpectedCloseParen { .. } => {
-            Some(write!(formatter, "unexpected `)` — no open group"))
-        }
         IrrecoverableErrorKind::UnclosedGroupAtEnd { part, .. } => {
             Some(write!(formatter, "unclosed '(' group at end of score in part '{part}'"))
         }
