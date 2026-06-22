@@ -361,8 +361,37 @@ fn render_snippet_svg(source: &str) -> Result<String, String> {
     let mut abs_pages = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)
         .map_err(|e| e.to_string())?;
     for page in &mut abs_pages {
-        let max_x = page.elements.iter().map(|e| e.x).fold(0.0_f32, f32::max);
-        let max_y = page.elements.iter().map(|e| e.y).fold(0.0_f32, f32::max);
+        // Compute tight bounds using element extents, not just anchor points.
+        // Elements with width/height extend rightward/downward from their anchor;
+        // elements without explicit size use the anchor point itself as their extent.
+        let max_x = page
+            .elements
+            .iter()
+            .map(|e| {
+                let extent_width = match &e.content {
+                    compositor::types::AbsoluteContent::Underline { width, .. } => *width,
+                    compositor::types::AbsoluteContent::TieOrSlur { width } => *width,
+                    compositor::types::AbsoluteContent::HorizontalLine { width } => *width,
+                    compositor::types::AbsoluteContent::MeasureHighlight { width, .. } => *width,
+                    compositor::types::AbsoluteContent::ErrorHighlight { width, .. } => *width,
+                    _ => 0.0,
+                };
+                e.x + extent_width
+            })
+            .fold(0.0_f32, f32::max);
+        let max_y = page
+            .elements
+            .iter()
+            .map(|e| {
+                let extent_height = match &e.content {
+                    compositor::types::AbsoluteContent::BarLine { height } => *height,
+                    compositor::types::AbsoluteContent::MeasureHighlight { height, .. } => *height,
+                    compositor::types::AbsoluteContent::ErrorHighlight { height, .. } => *height,
+                    _ => 0.0,
+                };
+                e.y + extent_height
+            })
+            .fold(0.0_f32, f32::max);
         page.width_pt = max_x + grid_layout::PAGE_MARGIN;
         page.height_pt = max_y + grid_layout::PAGE_MARGIN;
     }
