@@ -316,5 +316,65 @@ pub fn write_pdf_from_source_filtered_with_lyrics(
     pdf::write_pdf(&svgs, fonts)
 }
 
+/// Render a single note syntax token as a tight-viewBox SVG snippet.
+///
+/// Pads with two quarter rests so all note durations (including extensions)
+/// fit within 4/4 without overshooting 16 quarter-beats.
+pub fn render_note_snippet(syntax: &str) -> Result<String, String> {
+    let source = format!("[parts]\nmain = notes\n[score]\n{syntax} 0 0");
+    render_snippet_svg(&source)
+}
+
+/// Render a single chord syntax token as a tight-viewBox SVG snippet.
+pub fn render_chord_snippet(syntax: &str) -> Result<String, String> {
+    let source = format!("[parts]\nmain = chord\n[score]\n{syntax} - - -");
+    render_snippet_svg(&source)
+}
+
+/// Render a notes-line (without `[parts]`/`[score]` boilerplate) as a tight-viewBox SVG snippet.
+pub fn render_notes_line_snippet(notes_line: &str) -> Result<String, String> {
+    let source = format!("[parts]\nmain = notes\n[score]\n{notes_line}");
+    render_snippet_svg(&source)
+}
+
+/// Render a full `.jianpu` source (with `[parts]` and `[score]`) as a tight-viewBox SVG snippet.
+pub fn render_parts_score_snippet(source: &str) -> Result<String, String> {
+    render_snippet_svg(source)
+}
+
+fn render_snippet_svg(source: &str) -> Result<String, String> {
+    let score = compile(source, "snippet.jianpu").map_err(|e| e.to_string())?;
+    let config = render_config::RenderConfig::from_metadata(&score.metadata);
+    let header = grid_layout::types::Header {
+        title: String::new(),
+        subtitle: None,
+        author: String::new(),
+    };
+    let compile_result = compiler::compile(&score);
+    let options = grid_layout::LayoutOptions {
+        page_width_pt: 400.0,
+        page_height_pt: 400.0,
+        highlighted_measure_range: None,
+        snippet: true,
+    };
+    let grid_pages = grid_layout::layout(&compile_result, &config, &header, &options);
+    let mut abs_pages = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)
+        .map_err(|e| e.to_string())?;
+    for page in &mut abs_pages {
+        let max_x = page.elements.iter().map(|e| e.x).fold(0.0_f32, f32::max);
+        let max_y = page.elements.iter().map(|e| e.y).fold(0.0_f32, f32::max);
+        page.width_pt = max_x + grid_layout::PAGE_MARGIN;
+        page.height_pt = max_y + grid_layout::PAGE_MARGIN;
+    }
+    let docs = renderer::new_renderer::render_new(&abs_pages, &config);
+    serializer::serialize(&docs)
+        .into_iter()
+        .next()
+        .ok_or_else(|| "snippet produced no SVG pages".to_string())
+}
+
+#[cfg(test)]
+mod cheatsheet_examples_test;
+
 #[cfg(test)]
 mod tests;

@@ -6,7 +6,9 @@ use jianpu_generator::write_wav_for_measure_range_from_source;
 use jianpu_generator::write_wav_from_source_filtered;
 use jianpu_generator::{
     compile, find_measure_at_byte_offset, list_measure_spans_from_source, list_parts_from_source,
-    list_score_line_hints_from_source, render_svgs_from_source_filtered_with_lyrics,
+    list_score_line_hints_from_source, render_chord_snippet, render_note_snippet,
+    render_notes_line_snippet as render_notes_line,
+    render_parts_score_snippet as render_parts_score, render_svgs_from_source_filtered_with_lyrics,
     render_svgs_with_highlight_range,
 };
 #[cfg(feature = "pdf")]
@@ -408,6 +410,30 @@ pub fn generate_split_pdfs(
     monospace: Vec<u8>,
 ) -> GenerateSplitPdfsResponse {
     generate_split_pdfs_response(source, base_name, sans_serif_sc, sans_serif_tc, monospace)
+}
+
+/// Render a single note syntax token as a tight-viewBox SVG snippet.
+#[wasm_bindgen]
+pub fn render_note_token_snippet(syntax: &str) -> Result<String, String> {
+    render_note_snippet(syntax)
+}
+
+/// Render a single chord syntax token as a tight-viewBox SVG snippet.
+#[wasm_bindgen]
+pub fn render_chord_token_snippet(syntax: &str) -> Result<String, String> {
+    render_chord_snippet(syntax)
+}
+
+/// Render a notes-line (without `[parts]`/`[score]` boilerplate) as a tight-viewBox SVG snippet.
+#[wasm_bindgen]
+pub fn render_notes_line_snippet(notes_line: &str) -> Result<String, String> {
+    render_notes_line(notes_line)
+}
+
+/// Render a full `.jianpu` source (with `[parts]` and `[score]`) as a tight-viewBox SVG snippet.
+#[wasm_bindgen]
+pub fn render_parts_score_snippet(source: &str) -> Result<String, String> {
+    render_parts_score(source)
 }
 
 #[cfg(test)]
