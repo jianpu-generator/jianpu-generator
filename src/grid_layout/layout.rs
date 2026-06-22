@@ -1,7 +1,8 @@
 use crate::compiler::types::{CompileResult, ElementContent, MeasureBlock, MeasureRow, RowId};
 use crate::grid_layout::slur_placement::{build_measure_placements, resolve_slur_spans};
-use crate::grid_layout::types::Header;
-use crate::grid_layout::types::{GridElement, GridPage, GridRow};
+use crate::grid_layout::types::{
+    GridContent, GridElement, GridPage, GridRow, Header, LayoutOptions,
+};
 use crate::render_config::RenderConfig;
 use std::collections::HashMap;
 
@@ -205,8 +206,13 @@ fn build_page_rows(
     base: f32,
     arc_map: &HashMap<(usize, usize), Vec<GridElement>>,
     abs_system_index_start: usize,
+    snippet: bool,
 ) -> Vec<GridRow> {
-    let mut rows: Vec<GridRow> = make_header_rows(header, base);
+    let mut rows: Vec<GridRow> = if snippet {
+        Vec::new()
+    } else {
+        make_header_rows(header, base)
+    };
     for (sys_idx, system) in systems.iter().enumerate() {
         if sys_idx > 0 {
             rows.push(make_separator_row());
@@ -228,6 +234,16 @@ fn build_page_rows(
             .collect();
         rows.extend(expand_system_to_rows(system, base, &system_arcs));
     }
+    if snippet {
+        for row in &mut rows {
+            row.elements.retain(|el| {
+                !matches!(
+                    el.content,
+                    GridContent::BarNumber(_) | GridContent::RowLabel(_)
+                )
+            });
+        }
+    }
     rows
 }
 
@@ -240,9 +256,7 @@ pub fn layout(
     compile_result: &CompileResult,
     config: &RenderConfig,
     header: &Header,
-    page_width_pt: f32,
-    page_height_pt: f32,
-    highlighted_measure_range: Option<(usize, usize)>,
+    options: &LayoutOptions,
 ) -> Vec<GridPage> {
     let base = config.row_height as f32;
     let blocks = &compile_result.blocks;
@@ -251,12 +265,16 @@ pub fn layout(
     let measure_placements = build_measure_placements(&systems);
     let arc_map = resolve_slur_spans(&compile_result.slur_spans, &measure_placements, &systems);
 
-    let header_h: f32 = make_header_rows(header, base)
-        .iter()
-        .map(|r| r.height_pt)
-        .sum();
-    let footer_h = base * 0.40;
-    let usable_h = page_height_pt - 2.0 * super::PAGE_MARGIN - header_h - footer_h;
+    let header_h: f32 = if options.snippet {
+        0.0
+    } else {
+        make_header_rows(header, base)
+            .iter()
+            .map(|r| r.height_pt)
+            .sum()
+    };
+    let footer_h = if options.snippet { 0.0 } else { base * 0.40 };
+    let usable_h = options.page_height_pt - 2.0 * super::PAGE_MARGIN - header_h - footer_h;
 
     let mut page_systems: Vec<Vec<Vec<MeasureBlock>>> = Vec::new();
     let mut current_page: Vec<Vec<MeasureBlock>> = Vec::new();
@@ -278,12 +296,12 @@ pub fn layout(
     }
     page_systems.push(current_page);
 
-    let highlight_infos: Vec<(usize, crate::grid_layout::types::MeasureHighlight)> =
-        highlighted_measure_range
-            .map(|(start, end)| {
-                compute_measure_highlights_for_range(&page_systems, start, end, header, base)
-            })
-            .unwrap_or_default();
+    let highlight_infos: Vec<(usize, crate::grid_layout::types::MeasureHighlight)> = options
+        .highlighted_measure_range
+        .map(|(start, end)| {
+            compute_measure_highlights_for_range(&page_systems, start, end, header, base)
+        })
+        .unwrap_or_default();
 
     let error_highlight_infos = compute_error_highlight_infos(blocks, &page_systems, header, base);
 
@@ -291,21 +309,30 @@ pub fn layout(
     let mut abs_system_index_start: usize = 0;
     let mut pages: Vec<GridPage> = Vec::new();
     for (page_idx, page_sys) in page_systems.into_iter().enumerate() {
-        let mut rows = build_page_rows(&page_sys, header, base, &arc_map, abs_system_index_start);
-        let body_height: f32 = rows.iter().map(|r| r.height_pt).sum();
-        let remaining_height = page_height_pt - 2.0 * super::PAGE_MARGIN - body_height;
-        rows.push(make_footer_row(
-            page_idx as u32 + 1,
-            total_pages,
+        let mut rows = build_page_rows(
+            &page_sys,
+            header,
             base,
-            remaining_height,
-        ));
+            &arc_map,
+            abs_system_index_start,
+            options.snippet,
+        );
+        if !options.snippet {
+            let body_height: f32 = rows.iter().map(|r| r.height_pt).sum();
+            let remaining_height = options.page_height_pt - 2.0 * super::PAGE_MARGIN - body_height;
+            rows.push(make_footer_row(
+                page_idx as u32 + 1,
+                total_pages,
+                base,
+                remaining_height,
+            ));
+        }
         abs_system_index_start += page_sys.len();
         let measure_highlights = measure_highlights_on_page(&highlight_infos, page_idx);
         let error_highlights = measure_highlights_on_page(&error_highlight_infos, page_idx);
         pages.push(GridPage {
-            width_pt: page_width_pt,
-            height_pt: page_height_pt,
+            width_pt: options.page_width_pt,
+            height_pt: options.page_height_pt,
             rows,
             measure_highlights,
             error_highlights,

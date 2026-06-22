@@ -166,9 +166,12 @@ fn erroneous_measure_produces_error_highlight() {
         },
         &config,
         &header,
-        595.0,
-        842.0,
-        None,
+        &crate::grid_layout::LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
     );
     assert!(!pages.is_empty());
     assert_eq!(
@@ -199,9 +202,12 @@ fn non_erroneous_measure_produces_no_error_highlight() {
         },
         &config,
         &header,
-        595.0,
-        842.0,
-        None,
+        &crate::grid_layout::LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
     );
     assert!(!pages.is_empty());
     assert!(pages[0].error_highlights.is_empty());

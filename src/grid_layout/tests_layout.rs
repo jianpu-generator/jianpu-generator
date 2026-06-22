@@ -3,7 +3,7 @@ use crate::compiler::types::{
     ColumnElement, CompileResult, ElementContent, MeasureBlock, MeasureRow, RowId,
 };
 use crate::grid_layout::layout::layout;
-use crate::grid_layout::types::{GridContent, Header, VAlign};
+use crate::grid_layout::types::{GridContent, Header, LayoutOptions, VAlign};
 use crate::render_config::RenderConfig;
 
 // ── decoration row helpers ────────────────────────────────────────────────────
@@ -87,7 +87,17 @@ fn layout_single_block_produces_one_page() {
         blocks,
         slur_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(
+        &compile_result,
+        &cfg_wide(),
+        &hdr(),
+        &LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
+    );
     assert_eq!(pages.len(), 1);
 }
 
@@ -98,7 +108,17 @@ fn layout_page_has_correct_dimensions() {
         blocks,
         slur_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(
+        &compile_result,
+        &cfg_wide(),
+        &hdr(),
+        &LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
+    );
     assert!((pages[0].width_pt - 595.0).abs() < 0.001);
     assert!((pages[0].height_pt - 842.0).abs() < 0.001);
 }
@@ -110,7 +130,17 @@ fn layout_rows_include_header_and_footer() {
         blocks,
         slur_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(
+        &compile_result,
+        &cfg_wide(),
+        &hdr(),
+        &LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
+    );
     // At minimum: header title row, header subtitle+author row, footer row
     assert!(pages[0].rows.len() >= 3, "len={}", pages[0].rows.len());
 }
@@ -122,7 +152,17 @@ fn layout_page_total_height_does_not_exceed_page_height() {
         blocks,
         slur_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(
+        &compile_result,
+        &cfg_wide(),
+        &hdr(),
+        &LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
+    );
     for page in &pages {
         let total: f32 = page.rows.iter().map(|r| r.height_pt).sum();
         assert!(
@@ -162,7 +202,17 @@ fn layout_with_bpm_decoration_has_decoration_row() {
         blocks: vec![block],
         slur_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(
+        &compile_result,
+        &cfg_wide(),
+        &hdr(),
+        &LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
+    );
     let has_bpm = pages[0]
         .rows
         .iter()
@@ -179,7 +229,17 @@ fn decoration_row_has_fixed_column_count() {
         blocks: vec![block],
         slur_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(
+        &compile_result,
+        &cfg_wide(),
+        &hdr(),
+        &LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
+    );
     let deco_row = pages[0]
         .rows
         .iter()
@@ -203,7 +263,17 @@ fn decoration_items_start_at_column_1() {
         blocks: vec![block],
         slur_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(
+        &compile_result,
+        &cfg_wide(),
+        &hdr(),
+        &LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
+    );
     let bpm_el = pages[0]
         .rows
         .iter()
@@ -225,7 +295,17 @@ fn section_label_ordered_before_bpm_regardless_of_declaration_order() {
         blocks: vec![block],
         slur_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(
+        &compile_result,
+        &cfg_wide(),
+        &hdr(),
+        &LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
+    );
     let section_col = pages[0]
         .rows
         .iter()
@@ -260,7 +340,17 @@ fn multiple_decorations_occupy_consecutive_columns_starting_at_1() {
         blocks: vec![block],
         slur_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(
+        &compile_result,
+        &cfg_wide(),
+        &hdr(),
+        &LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
+    );
     let bpm_col = pages[0]
         .rows
         .iter()
@@ -290,7 +380,17 @@ fn section_label_on_non_first_measure_of_system_is_rendered() {
         blocks: vec![first_block, second_block],
         slur_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(
+        &compile_result,
+        &cfg_wide(),
+        &hdr(),
+        &LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
+    );
     let has_label = pages[0]
         .rows
         .iter()
@@ -314,7 +414,17 @@ fn section_label_on_non_first_measure_is_right_of_column_1() {
         blocks: vec![first_block, second_block],
         slur_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(
+        &compile_result,
+        &cfg_wide(),
+        &hdr(),
+        &LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
+    );
     let label_col = pages[0]
         .rows
         .iter()
@@ -340,9 +450,12 @@ fn footer_row_fills_remaining_page_height() {
         &compile_result,
         &cfg_wide(),
         &hdr(),
-        595.0,
-        page_height,
-        None,
+        &LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: page_height,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
     );
     let page = &pages[0];
     let non_footer_height: f32 = page.rows[..page.rows.len() - 1]
@@ -364,7 +477,17 @@ fn footer_element_valign_is_bottom() {
         blocks,
         slur_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(
+        &compile_result,
+        &cfg_wide(),
+        &hdr(),
+        &LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
+    );
     let footer_row = pages[0].rows.last().unwrap();
     assert!(
         footer_row

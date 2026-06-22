@@ -281,7 +281,17 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
         author: score.metadata.author.clone(),
     };
     let compile_result = compiler::compile(&score);
-    let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
+    let grid_pages = grid_layout::layout(
+        &compile_result,
+        &config,
+        &header,
+        &grid_layout::LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
+    );
     let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)
         .expect("coordinate resolver should not fail in tests");
 

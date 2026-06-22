@@ -6,7 +6,8 @@ pub mod types;
 
 pub use layout::layout;
 pub use types::{
-    GridContent, GridElement, GridPage, GridRow, HAlign, Header, PostArcGridContent, VAlign,
+    GridContent, GridElement, GridPage, GridRow, HAlign, Header, LayoutOptions, PostArcGridContent,
+    VAlign,
 };
 
 pub(crate) const PAGE_MARGIN: f32 = 25.0;

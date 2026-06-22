@@ -11,8 +11,8 @@ fn serialize_doc(doc: &SvgDocument) -> String {
         serialize_element(el, &mut body);
     }
     format!(
-        r#"<svg xmlns="http://www.w3.org/2000/svg" width="210mm" height="297mm" viewBox="0 0 {:.0} {:.0}">{}</svg>"#,
-        doc.width_pt, doc.height_pt, body
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="{:.1}pt" height="{:.1}pt" viewBox="0 0 {:.1} {:.1}">{}</svg>"#,
+        doc.width_pt, doc.height_pt, doc.width_pt, doc.height_pt, body
     )
 }
 

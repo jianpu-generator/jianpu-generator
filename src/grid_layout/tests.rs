@@ -268,3 +268,14 @@ fn column_count_is_label_cols_plus_musical_cols() {
     // 4 label cols + 4 musical cols (bar at col 3 → block width=4)
     assert_eq!(rows[0].column_count, 8);
 }
+
+#[test]
+fn layout_options_snippet_flag_compiles() {
+    use crate::grid_layout::types::LayoutOptions;
+    let _: LayoutOptions = LayoutOptions {
+        page_width_pt: 400.0,
+        page_height_pt: 400.0,
+        highlighted_measure_range: None,
+        snippet: true,
+    };
+}

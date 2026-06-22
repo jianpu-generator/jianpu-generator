@@ -94,7 +94,17 @@ pub fn render_svgs(score: &Score) -> Result<Vec<String>, IrrecoverableError> {
         author: score.metadata.author.clone(),
     };
     let compile_result = compiler::compile(score);
-    let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
+    let grid_pages = grid_layout::layout(
+        &compile_result,
+        &config,
+        &header,
+        &grid_layout::LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: None,
+            snippet: false,
+        },
+    );
     let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)?;
     let docs = renderer::new_renderer::render_new(&abs, &config);
     Ok(serializer::serialize(&docs))
@@ -211,9 +221,12 @@ pub fn render_svgs_with_highlight_range(
         &compile_result,
         &config,
         &header,
-        595.0,
-        842.0,
-        Some((start_index, end_index)),
+        &grid_layout::LayoutOptions {
+            page_width_pt: 595.0,
+            page_height_pt: 842.0,
+            highlighted_measure_range: Some((start_index, end_index)),
+            snippet: false,
+        },
     );
     let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)?;
     let docs = renderer::new_renderer::render_new(&abs, &config);

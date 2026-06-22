@@ -151,3 +151,11 @@ pub struct MeasureHighlight {
     pub column_start: u32,
     pub column_end: u32,
 }
+
+#[derive(Debug, Clone)]
+pub struct LayoutOptions {
+    pub page_width_pt: f32,
+    pub page_height_pt: f32,
+    pub highlighted_measure_range: Option<(usize, usize)>,
+    pub snippet: bool,
+}
