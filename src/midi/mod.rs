@@ -213,9 +213,8 @@ fn process_measure(
         per_part_ties.push(HashMap::new());
     }
 
-    for (part_idx, part) in notes_parts.iter().enumerate() {
-        let part_duration =
-            process_measure_notes(part, part_idx, current_tick, raw, per_part_ties, active_key)?;
+    for (part, ties) in notes_parts.iter().zip(per_part_ties.iter_mut()) {
+        let part_duration = process_measure_notes(part, current_tick, raw, ties, active_key)?;
         if part_duration > measure_duration {
             measure_duration = part_duration;
         }
@@ -242,18 +241,11 @@ fn process_measure(
 
 fn process_measure_notes(
     part: &crate::ast::grouped::PartSlice,
-    part_idx: usize,
     current_tick: u32,
     raw: &mut Vec<RawEvent>,
-    per_part_ties: &mut [HashMap<u8, u32>],
+    ties: &mut HashMap<u8, u32>,
     active_key: &KeyChange,
 ) -> Result<u32, IrrecoverableError> {
-    let ties = per_part_ties.get_mut(part_idx).ok_or_else(|| {
-        IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
-            Span::new(0, 0),
-            format!("internal error: missing MIDI tie state for part {part_idx}"),
-        ))
-    })?;
     let duration =
         process_events_with_ties(
             &part.notes.events,
