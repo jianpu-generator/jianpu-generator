@@ -5,7 +5,9 @@ pub(crate) mod slur_placement;
 pub mod types;
 
 pub use layout::layout;
-pub use types::{GridContent, GridElement, GridPage, GridRow, HAlign, Header, VAlign};
+pub use types::{
+    GridContent, GridElement, GridPage, GridRow, HAlign, Header, PostArcGridContent, VAlign,
+};
 
 pub(crate) const PAGE_MARGIN: f32 = 25.0;
 

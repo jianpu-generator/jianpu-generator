@@ -53,7 +53,8 @@ source (&str)
 ### Coordinate Resolver
 - Module: `src/coordinate_resolver/`
 - Entry: `coordinate_resolver::resolve(pages: &[GridPage], note_number_width: f32) -> Vec<AbsolutePage>`
-- Key types: `AbsolutePage`, `AbsoluteElement`, `AbsoluteContent`
+- Key types: `AbsolutePage`, `AbsoluteElement`, `AbsoluteContent`, `PostArcGridContent`
+- `PostArcGridContent`: `GridContent` minus the three arc variants (`TieOrSlur`, `TieOrSlurTail`, `TieOrSlurHead`); arc variants are resolved before `grid_to_absolute` and must not appear in the coordinate-resolver layer.
 
 ### Renderer
 - Module: `src/renderer/`

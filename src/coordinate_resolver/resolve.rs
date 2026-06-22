@@ -2,8 +2,10 @@ use crate::compositor::types::{
     AbsoluteContent, AbsoluteElement, AbsolutePage, DominantBaseline, FontFamily, FontWeight,
     TextAnchor,
 };
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
-use crate::grid_layout::types::{GridContent, GridElement, GridPage, GridRow, HAlign, VAlign};
+use crate::error::IrrecoverableError;
+use crate::grid_layout::types::{
+    GridContent, GridElement, GridPage, GridRow, HAlign, PostArcGridContent, VAlign,
+};
 use crate::grid_layout::PAGE_MARGIN;
 
 pub fn resolve(
@@ -67,14 +69,7 @@ fn resolve_row_element(
                 x_start,
                 (el.column_span as f32 - 1.0) * col_width + col_width * 0.5,
             ),
-            other => {
-                return Err(IrrecoverableError::new(
-                    IrrecoverableErrorKind::internal_invariant(
-                        Span::new(0, 0),
-                        format!("unexpected GridContent variant in tie/slur block: {other:?}"),
-                    ),
-                ))
-            }
+            _ => unreachable!("matches! guard above ensures only arc variants reach here"),
         };
         return Ok(Some(AbsoluteElement {
             x: arc_x,
@@ -83,13 +78,60 @@ fn resolve_row_element(
         }));
     }
 
+    let post_arc_content = to_post_arc_content(&el.content);
     Ok(
-        grid_to_absolute(&el.content, span_width, el.halign)?.map(|content| AbsoluteElement {
-            x,
-            y,
-            content,
-        }),
+        grid_to_absolute(&post_arc_content, span_width, el.halign)?
+            .map(|content| AbsoluteElement { x, y, content }),
     )
+}
+
+fn to_post_arc_content(content: &GridContent) -> PostArcGridContent {
+    match content {
+        GridContent::TieOrSlur | GridContent::TieOrSlurTail | GridContent::TieOrSlurHead => {
+            unreachable!("arc variants must be resolved before conversion to PostArcGridContent")
+        }
+        GridContent::NoteHead {
+            pitch,
+            octave,
+            dotted,
+        } => PostArcGridContent::NoteHead {
+            pitch: pitch.clone(),
+            octave: *octave,
+            dotted: *dotted,
+        },
+        GridContent::Rest { dotted } => PostArcGridContent::Rest { dotted: *dotted },
+        GridContent::NoteDash => PostArcGridContent::NoteDash,
+        GridContent::OctaveDot => PostArcGridContent::OctaveDot,
+        GridContent::ChordSymbol(s) => PostArcGridContent::ChordSymbol(s.clone()),
+        GridContent::Underline { level } => PostArcGridContent::Underline { level: *level },
+        GridContent::BarLine { height_pt } => PostArcGridContent::BarLine {
+            height_pt: *height_pt,
+        },
+        GridContent::HorizontalLine => PostArcGridContent::HorizontalLine,
+        GridContent::RowLabel(s) => PostArcGridContent::RowLabel(s.clone()),
+        GridContent::LyricSyllable(s) => PostArcGridContent::LyricSyllable(s.clone()),
+        GridContent::Bpm(bpm) => PostArcGridContent::Bpm(*bpm),
+        GridContent::TimeSignature {
+            numerator,
+            denominator,
+        } => PostArcGridContent::TimeSignature {
+            numerator: *numerator,
+            denominator: *denominator,
+        },
+        GridContent::SectionLabel(s) => PostArcGridContent::SectionLabel(s.clone()),
+        GridContent::BarNumber(n) => PostArcGridContent::BarNumber(*n),
+        GridContent::Text {
+            content,
+            font_size,
+            bold,
+            italic,
+        } => PostArcGridContent::Text {
+            content: content.clone(),
+            font_size: *font_size,
+            bold: *bold,
+            italic: *italic,
+        },
+    }
 }
 
 fn resolve_page(
@@ -232,12 +274,12 @@ fn sans_serif_text(
 }
 
 fn grid_text_to_absolute(
-    content: &GridContent,
+    content: &PostArcGridContent,
     span_width: f32,
     halign: HAlign,
 ) -> Option<AbsoluteContent> {
     match content {
-        GridContent::NoteDash => Some(AbsoluteContent::Text {
+        PostArcGridContent::NoteDash => Some(AbsoluteContent::Text {
             content: "\u{2014}".to_string(),
             font_size: 12.0,
             anchor: TextAnchor::Middle,
@@ -246,21 +288,21 @@ fn grid_text_to_absolute(
             weight: FontWeight::Normal,
             italic: false,
         }),
-        GridContent::RowLabel(s) => Some(sans_serif_text(
+        PostArcGridContent::RowLabel(s) => Some(sans_serif_text(
             s.clone(),
             12.0,
             TextAnchor::Middle,
             FontWeight::Normal,
             false,
         )),
-        GridContent::Bpm(bpm) => Some(sans_serif_text(
+        PostArcGridContent::Bpm(bpm) => Some(sans_serif_text(
             format!("\u{2669}={bpm}"),
             12.0,
             TextAnchor::Start,
             FontWeight::Normal,
             false,
         )),
-        GridContent::TimeSignature {
+        PostArcGridContent::TimeSignature {
             numerator,
             denominator,
         } => Some(sans_serif_text(
@@ -270,14 +312,14 @@ fn grid_text_to_absolute(
             FontWeight::Normal,
             false,
         )),
-        GridContent::SectionLabel(s) => Some(sans_serif_text(
+        PostArcGridContent::SectionLabel(s) => Some(sans_serif_text(
             s.clone(),
             12.0,
             TextAnchor::Start,
             FontWeight::Bold,
             true,
         )),
-        GridContent::BarNumber(n) => Some(AbsoluteContent::Text {
+        PostArcGridContent::BarNumber(n) => Some(AbsoluteContent::Text {
             content: n.to_string(),
             font_size: 10.0,
             anchor: TextAnchor::Start,
@@ -286,7 +328,7 @@ fn grid_text_to_absolute(
             weight: FontWeight::Normal,
             italic: false,
         }),
-        GridContent::Text {
+        PostArcGridContent::Text {
             content,
             font_size,
             bold,
@@ -302,13 +344,15 @@ fn grid_text_to_absolute(
             },
             *italic,
         )),
-        GridContent::HorizontalLine => Some(AbsoluteContent::HorizontalLine { width: span_width }),
+        PostArcGridContent::HorizontalLine => {
+            Some(AbsoluteContent::HorizontalLine { width: span_width })
+        }
         _ => None,
     }
 }
 
 fn grid_to_absolute(
-    content: &GridContent,
+    content: &PostArcGridContent,
     span_width: f32,
     halign: HAlign,
 ) -> Result<Option<AbsoluteContent>, IrrecoverableError> {
@@ -317,7 +361,7 @@ fn grid_to_absolute(
     }
 
     Ok(match content {
-        GridContent::NoteHead {
+        PostArcGridContent::NoteHead {
             pitch,
             octave,
             dotted,
@@ -326,23 +370,17 @@ fn grid_to_absolute(
             octave: *octave,
             dotted: *dotted,
         }),
-        GridContent::Rest { dotted } => Some(AbsoluteContent::Rest { dotted: *dotted }),
-        GridContent::OctaveDot => None,
-        GridContent::ChordSymbol(s) => Some(AbsoluteContent::ChordSymbol(s.clone())),
-        GridContent::Underline { level } => Some(AbsoluteContent::Underline {
+        PostArcGridContent::Rest { dotted } => Some(AbsoluteContent::Rest { dotted: *dotted }),
+        PostArcGridContent::OctaveDot => None,
+        PostArcGridContent::ChordSymbol(s) => Some(AbsoluteContent::ChordSymbol(s.clone())),
+        PostArcGridContent::Underline { level } => Some(AbsoluteContent::Underline {
             width: span_width,
             level: *level,
         }),
-        GridContent::TieOrSlur | GridContent::TieOrSlurTail | GridContent::TieOrSlurHead => {
-            return Err(IrrecoverableError::new(
-                IrrecoverableErrorKind::internal_invariant(
-                    Span::new(0, 0),
-                    "arc variants must be resolved before reaching grid_to_absolute",
-                ),
-            ))
+        PostArcGridContent::BarLine { height_pt } => {
+            Some(AbsoluteContent::BarLine { height: *height_pt })
         }
-        GridContent::BarLine { height_pt } => Some(AbsoluteContent::BarLine { height: *height_pt }),
-        GridContent::LyricSyllable(s) => Some(AbsoluteContent::Lyric(s.clone())),
+        PostArcGridContent::LyricSyllable(s) => Some(AbsoluteContent::Lyric(s.clone())),
         _ => None,
     })
 }

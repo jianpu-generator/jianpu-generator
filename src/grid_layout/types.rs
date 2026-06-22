@@ -98,6 +98,45 @@ pub enum GridContent {
     },
 }
 
+/// `GridContent` after arc variants have been resolved.
+/// Used in the coordinate-resolver layer; arc variants are handled before this point.
+#[derive(Debug, Clone)]
+pub enum PostArcGridContent {
+    NoteHead {
+        pitch: JianPuPitch,
+        octave: i8,
+        dotted: bool,
+    },
+    Rest {
+        dotted: bool,
+    },
+    NoteDash,
+    OctaveDot,
+    ChordSymbol(String),
+    Underline {
+        level: u32,
+    },
+    BarLine {
+        height_pt: f32,
+    },
+    HorizontalLine,
+    RowLabel(String),
+    LyricSyllable(String),
+    Bpm(u32),
+    TimeSignature {
+        numerator: u32,
+        denominator: u32,
+    },
+    SectionLabel(String),
+    BarNumber(u32),
+    Text {
+        content: String,
+        font_size: f32,
+        bold: bool,
+        italic: bool,
+    },
+}
+
 #[derive(Debug, Clone)]
 pub struct Header {
     pub title: String,
