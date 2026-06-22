@@ -1,6 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog'
+import { useEffect, useState } from 'react'
 import { cheatsheetSections } from '../cheatsheetData'
-import { getSnippetSvg } from '../cheatsheetSvgs'
+import { getSnippetSvg, onSnippetUpdate } from '../cheatsheetSvgs'
 import './Cheatsheet.css'
 
 interface CheatsheetDialogProps {
@@ -38,6 +39,10 @@ for (const section of cheatsheetSections) {
 }
 
 function CheatsheetBody() {
+  const [, forceUpdate] = useState(0)
+  useEffect(() => {
+    return onSnippetUpdate(() => forceUpdate((n) => n + 1))
+  }, [])
   return (
     <>
       {cheatsheetSections.map((section, sectionIdx) => (

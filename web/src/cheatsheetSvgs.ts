@@ -3,6 +3,13 @@ import type { WorkerRequest, WorkerResponse } from './worker/jianpu.worker'
 
 const svgMap = new Map<number, string>()
 
+const listeners = new Set<() => void>()
+
+export function onSnippetUpdate(fn: () => void): () => void {
+  listeners.add(fn)
+  return () => listeners.delete(fn)
+}
+
 const snippetWorker = new Worker(
   new URL('./worker/jianpu.worker.ts', import.meta.url),
   { type: 'module' },
@@ -12,6 +19,7 @@ snippetWorker.onmessage = (event: MessageEvent<WorkerResponse>) => {
   const msg = event.data
   if (msg.type === 'snippetOk') {
     svgMap.set(msg.id, msg.svg)
+    for (const fn of listeners) fn()
   }
 }
 
