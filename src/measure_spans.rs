@@ -95,7 +95,7 @@ pub fn list_measure_spans_from_source(
             end: measure.source_span.end,
             view_zone_start,
             section_label: measure.label.clone(),
-            start_line: line_at(source, measure.source_span.start),
+            start_line: line_at(source, view_zone_start),
             end_line: line_at(source, measure.source_span.end),
         })
         .collect())

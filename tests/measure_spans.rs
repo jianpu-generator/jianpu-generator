@@ -28,6 +28,19 @@ const DIRECTIVE_MEASURE_SOURCE: &str = concat!(
     "1 2 3 4\n",
 );
 
+const LABEL_DIRECTIVE_SOURCE: &str = concat!(
+    "[metadata]\n",
+    "title = \"t\"\n",
+    "author = \"a\"\n",
+    "\n",
+    "[parts]\n",
+    "Melody = notes\n",
+    "\n",
+    "[score]\n",
+    "label=\"something \"\n",
+    "1 2 3 4\n",
+);
+
 #[test]
 fn returns_one_span_per_measure() {
     let spans = list_measure_spans_from_source(TWO_MEASURE_SOURCE, "test.jianpu").unwrap();
@@ -66,6 +79,31 @@ fn returns_empty_spans_on_source_with_no_sections() {
     // produces an empty score (no measures), not an Err.
     let result = list_measure_spans_from_source("not valid jianpu", "test.jianpu").unwrap();
     assert!(result.is_empty());
+}
+
+/// When the caret is on a directive line (e.g. `label="something "`), the measure
+/// must still be detected. `start_line` must reach back to the directive line, not
+/// only to the first note line.
+#[test]
+fn start_line_includes_label_directive_line() {
+    let spans = list_measure_spans_from_source(LABEL_DIRECTIVE_SOURCE, "test.jianpu").unwrap();
+    assert_eq!(spans.len(), 1);
+
+    let directive_line: usize = LABEL_DIRECTIVE_SOURCE
+        .lines()
+        .enumerate()
+        .find(|(_, line)| line.starts_with("label="))
+        .map(|(i, _)| i + 1) // convert 0-indexed to 1-indexed
+        .expect("label= line not found in LABEL_DIRECTIVE_SOURCE");
+
+    assert_eq!(
+        spans[0].start_line,
+        directive_line,
+        "start_line ({}) should be the directive line ({}) so that a caret on \
+         `label=\"something \"` is detected as belonging to this measure",
+        spans[0].start_line,
+        directive_line,
+    );
 }
 
 /// Regression: with multiple parts sharing a single notes+lyrics row per group,
