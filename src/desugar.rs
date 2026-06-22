@@ -1,5 +1,5 @@
 use crate::ast::parsed::{flatten_score_line_slots, PartDecl, ScoreLineRole};
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span};
+use crate::error::{IrrecoverableError, RecoverableError, Span};
 use crate::parser::score::measure_group;
 
 type SourceLine = (String, usize);
@@ -79,13 +79,7 @@ fn pad_implicit_ditto_group(
         .unwrap_or(0);
     let mut result_data: Vec<(String, usize)> = effective_data_lines.clone();
 
-    for i in effective_data_lines.len()..slots.len() {
-        let slot = slots.get(i).ok_or_else(|| {
-            IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
-                Span::new(0, 0),
-                "score line slot missing for implicit ditto padding",
-            ))
-        })?;
+    for slot in slots.get(effective_data_lines.len()..).unwrap_or(&[]) {
         let role = slot.role;
         let has_precedent =
             (0..result_data.len()).any(|j| slots.get(j).map(|s| s.role == role).unwrap_or(false));
@@ -122,35 +116,35 @@ fn desugar_group(
 
     for (i, (line, offset)) in data_lines.iter().enumerate() {
         if line == "\"" {
-            if i >= slots.len() {
-                resolved.push((line.clone(), *offset));
-                continue;
-            }
-            let role = slots.get(i).map(|s| s.role).ok_or_else(|| {
-                IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
-                    Span::new(0, 0),
-                    "score line slot missing for ditto line",
-                ))
-            })?;
-            let source = (0..resolved.len())
-                .rev()
-                .find(|&j| slots.get(j).map(|s| s.role == role).unwrap_or(false))
-                .and_then(|j| resolved.get(j).cloned());
-
-            match source {
-                Some((src_content, src_offset)) => resolved.push((src_content, src_offset)),
+            match slots.get(i) {
                 None => {
-                    let span = Span::new(base_offset + *offset, base_offset + *offset + 1);
-                    recoverable_error.get_or_insert_with(|| {
-                        RecoverableError::general(
-                            span,
-                            format!(
-                                "ditto '\"' has no preceding {} line in this measure group",
-                                role_name(role)
-                            ),
-                        )
-                    });
-                    resolved.push((ditto_no_precedent_placeholder(role), *offset));
+                    resolved.push((line.clone(), *offset));
+                }
+                Some(slot) => {
+                    let role = slot.role;
+                    let source = (0..resolved.len())
+                        .rev()
+                        .find(|&j| slots.get(j).map(|s| s.role == role).unwrap_or(false))
+                        .and_then(|j| resolved.get(j).cloned());
+
+                    match source {
+                        Some((src_content, src_offset)) => {
+                            resolved.push((src_content, src_offset));
+                        }
+                        None => {
+                            let span = Span::new(base_offset + *offset, base_offset + *offset + 1);
+                            recoverable_error.get_or_insert_with(|| {
+                                RecoverableError::general(
+                                    span,
+                                    format!(
+                                        "ditto '\"' has no preceding {} line in this measure group",
+                                        role_name(role)
+                                    ),
+                                )
+                            });
+                            resolved.push((ditto_no_precedent_placeholder(role), *offset));
+                        }
+                    }
                 }
             }
         } else {
