@@ -165,8 +165,13 @@ fn build_part_rows(
         match track {
             GroupedTrack::Timed(part) => {
                 let Some(measure) = part.measures.get(measure_idx) else {
+                    let span = part
+                        .measures
+                        .last()
+                        .map(|m| Span::new(m.source_span.end, m.source_span.end))
+                        .unwrap_or(Span::new(0, 0));
                     diagnostics.push(Diagnostic::Error(
-                        RecoverableError::timed_part_measure_missing(Span::new(0, 0)),
+                        RecoverableError::timed_part_measure_missing(span),
                     ));
                     continue;
                 };
