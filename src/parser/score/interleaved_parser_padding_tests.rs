@@ -1,7 +1,9 @@
 use super::*;
 use crate::ast::parsed::{Accidental, ParsedTrack};
 
-use super::test_helpers::{chord_track, decl, notes_track, parse, parse_recoverable_errors};
+use super::test_helpers::{
+    all_events, chord_track, decl, notes_track, parse, parse_recoverable_errors,
+};
 
 #[test]
 fn overfull_measure_is_recoverable() {
@@ -70,16 +72,10 @@ fn implicit_trailing_extensions_match_explicit() {
     let implicit_parsed = parse(implicit, 0, &declarations).unwrap();
     let explicit_track = notes_track(&explicit_parsed, "");
     let implicit_track = notes_track(&implicit_parsed, "");
-    assert_eq!(
-        explicit_track.score.events.len(),
-        implicit_track.score.events.len()
-    );
-    for (a, b) in explicit_track
-        .score
-        .events
-        .iter()
-        .zip(implicit_track.score.events.iter())
-    {
+    let explicit_events = all_events(explicit_track);
+    let implicit_events = all_events(implicit_track);
+    assert_eq!(explicit_events.len(), implicit_events.len());
+    for (a, b) in explicit_events.iter().zip(implicit_events.iter()) {
         assert_eq!(
             std::mem::discriminant(&a.value),
             std::mem::discriminant(&b.value)
@@ -97,12 +93,12 @@ fn implicit_trailing_extensions_after_partial_fill() {
     let explicit_track = notes_track(&explicit_parsed, "");
     let implicit_track = notes_track(&implicit_parsed, "");
     assert_eq!(
-        explicit_track.score.events.len(),
-        implicit_track.score.events.len()
+        all_events(explicit_track).len(),
+        all_events(implicit_track).len()
     );
 }
 
-fn timed_cluster_duration(events: &[Spanned<ScoreEvent>], start: usize) -> u32 {
+fn timed_cluster_duration(events: &[&Spanned<ScoreEvent>], start: usize) -> u32 {
     use crate::ast::parsed::ScoreEvent;
     let Some(event) = events.get(start) else {
         return 0;
@@ -126,22 +122,22 @@ fn timed_cluster_duration(events: &[Spanned<ScoreEvent>], start: usize) -> u32 {
 
 fn chord_event_duration(tracks: &[ParsedTrack], abbrev: &str) -> u32 {
     use crate::ast::parsed::ScoreEvent;
-    let events = &chord_track(tracks, abbrev).score.events;
+    let events = all_events(chord_track(tracks, abbrev));
     let start = events
         .iter()
         .position(|e| matches!(e.value, ScoreEvent::Chord(_) | ScoreEvent::Rest(_)))
         .expect("expected a chord or rest event");
-    timed_cluster_duration(events, start)
+    timed_cluster_duration(&events, start)
 }
 
 fn last_chord_event_duration(tracks: &[ParsedTrack], abbrev: &str) -> u32 {
     use crate::ast::parsed::ScoreEvent;
-    let events = &chord_track(tracks, abbrev).score.events;
+    let events = all_events(chord_track(tracks, abbrev));
     let start = events
         .iter()
         .rposition(|e| matches!(e.value, ScoreEvent::Chord(_) | ScoreEvent::Rest(_)))
         .expect("expected a chord or rest event");
-    timed_cluster_duration(events, start)
+    timed_cluster_duration(&events, start)
 }
 
 #[test]
@@ -259,7 +255,7 @@ fn directive_row_is_optional() {
     let content = concat!("time=4/4 key=C4 bpm=120\n1 2 3 4\n", "\n", "5 6 7 1\n",);
     let declarations = vec![decl("", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations).unwrap();
-    assert_eq!(notes_track(&tracks, "").score.events.len(), 11);
+    assert_eq!(all_events(notes_track(&tracks, "")).len(), 11);
 }
 
 #[test]
@@ -271,7 +267,7 @@ fn time_sig_change_updates_beat_tracking() {
     );
     let declarations = vec![decl("", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations).unwrap();
-    assert!(!notes_track(&tracks, "").score.events.is_empty());
+    assert!(!all_events(notes_track(&tracks, "")).is_empty());
 }
 
 #[test]
@@ -292,9 +288,8 @@ fn key_directive_parses_flat() {
     let content = "time=4/4 key=Bb4 bpm=120\n1 2 3 4\n";
     let declarations = vec![decl("", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations).unwrap();
-    let key_event = notes_track(&tracks, "")
-        .score
-        .events
+    let track_events = all_events(notes_track(&tracks, ""));
+    let key_event = track_events
         .iter()
         .find(|e| matches!(&e.value, ScoreEvent::KeyChange(_)));
     assert!(key_event.is_some());
@@ -308,9 +303,8 @@ fn label_directive_parsed() {
     let content = "time=4/4 key=C4 bpm=120 label=\"Verse 1\"\n1 2 3 4\n";
     let declarations = vec![decl("", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations).unwrap();
-    let label_event = notes_track(&tracks, "")
-        .score
-        .events
+    let track_events = all_events(notes_track(&tracks, ""));
+    let label_event = track_events
         .iter()
         .find(|e| matches!(&e.value, ScoreEvent::LabelChange(_)));
     assert!(label_event.is_some(), "expected a LabelChange event");
@@ -351,9 +345,9 @@ fn notes_ditto_resolves_in_full_parse() {
     let declarations = vec![decl("S", PartKind::Notes), decl("A", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(tracks.len(), 2);
-    assert_eq!(notes_track(&tracks, "S").score.events.len(), 7);
+    assert_eq!(all_events(notes_track(&tracks, "S")).len(), 7);
     assert_eq!(
-        notes_track(&tracks, "A").score.events.len(),
+        all_events(notes_track(&tracks, "A")).len(),
         4,
         "Alto should have 4 note events after ditto resolution"
     );
@@ -388,9 +382,8 @@ fn key_directive_parses_sharp() {
     let content = "time=4/4 key=F#3 bpm=120\n1 2 3 4\n";
     let declarations = vec![decl("", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations).unwrap();
-    let key_event = notes_track(&tracks, "")
-        .score
-        .events
+    let track_events = all_events(notes_track(&tracks, ""));
+    let key_event = track_events
         .iter()
         .find(|e| matches!(&e.value, ScoreEvent::KeyChange(_)));
     if let ScoreEvent::KeyChange(kc) = &key_event.unwrap().value {

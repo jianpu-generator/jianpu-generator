@@ -3,13 +3,11 @@ use crate::ast::grouped::{
     GroupedTrack, Metadata, NoteEvent, Notes, Score, TimeSignature,
 };
 use crate::ast::parsed::{
-    ParsedChordNote, ParsedDocument, ParsedNote, ParsedRest, ParsedTimedTrack, ParsedTrack,
-    PartKind, ScoreEvent,
+    ParsedChordNote, ParsedDocument, ParsedMeasureSlot, ParsedNote, ParsedRest, ParsedTimedTrack,
+    ParsedTrack, PartKind, ScoreEvent,
 };
 use crate::combiner;
-use crate::error::{
-    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Warning,
-};
+use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Warning};
 
 #[path = "empty_note_measures.rs"]
 mod empty_note_measures;
@@ -68,7 +66,7 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
 
 struct PartGrouper {
     part_kind: PartKind,
-    measures: Vec<GroupedMeasure>,
+    slots: Vec<MeasureSlot>,
     current_notes: Vec<NoteEvent>,
     current_beat: u32,
     capacity: u32,
@@ -91,7 +89,7 @@ impl PartGrouper {
 
         Self {
             part_kind: part.kind,
-            measures: Vec::new(),
+            slots: Vec::new(),
             current_notes: Vec::new(),
             current_beat: 0,
             capacity,
@@ -114,7 +112,7 @@ impl PartGrouper {
             return;
         }
         let source_span = Span::new(self.measure_span_start.unwrap_or(0), self.measure_span_end);
-        self.measures.push(GroupedMeasure {
+        self.slots.push(MeasureSlot::Real(Box::new(GroupedMeasure {
             notes: Notes {
                 events: std::mem::take(&mut self.current_notes),
             },
@@ -130,10 +128,14 @@ impl PartGrouper {
             extension_no_preceding_event_error: self
                 .pending_extension_no_preceding_event_error
                 .take(),
-        });
+        })));
         self.current_beat = 0;
         self.measure_span_start = None;
         self.measure_span_end = 0;
+    }
+
+    fn push_empty_note_slot(&mut self, span: Span) {
+        self.slots.push(MeasureSlot::EmptyNote { span });
     }
 
     fn flush_if_full(&mut self) {
@@ -216,9 +218,10 @@ impl PartGrouper {
 
     fn handle_tie_marker(&mut self, _span: Span) -> Result<(), IrrecoverableError> {
         let last_event = self.current_notes.last_mut().or_else(|| {
-            self.measures
-                .last_mut()
-                .and_then(|m| m.notes.events.last_mut())
+            self.slots.iter_mut().rev().find_map(|slot| match slot {
+                MeasureSlot::Real(m) => m.notes.events.last_mut(),
+                MeasureSlot::EmptyNote { .. } => None,
+            })
         });
         match last_event {
             Some(NoteEvent::Note(n)) => {
@@ -311,11 +314,11 @@ impl PartGrouper {
         }
     }
 
-    fn finish(mut self) -> GroupedPart {
+    fn finish(mut self) -> (Vec<MeasureSlot>, Option<String>, PartKind) {
         if !self.current_notes.is_empty() {
             let source_span =
                 Span::new(self.measure_span_start.unwrap_or(0), self.measure_span_end);
-            self.measures.push(GroupedMeasure {
+            self.slots.push(MeasureSlot::Real(Box::new(GroupedMeasure {
                 notes: Notes {
                     events: std::mem::take(&mut self.current_notes),
                 },
@@ -331,45 +334,11 @@ impl PartGrouper {
                 extension_no_preceding_event_error: self
                     .pending_extension_no_preceding_event_error
                     .take(),
-            });
+            })));
         }
 
-        GroupedPart {
-            name: self.part_name,
-            kind: self.part_kind,
-            measures: self.measures,
-            ditto_measures: Vec::new(),
-            lyrics_ditto_measures: Vec::new(),
-        }
+        (self.slots, self.part_name, self.part_kind)
     }
-}
-
-fn build_measure_slots(
-    measures: Vec<GroupedMeasure>,
-    empty_note_measure_spans: &[Option<Span>],
-) -> Result<Vec<MeasureSlot>, IrrecoverableError> {
-    if empty_note_measure_spans.is_empty() {
-        return Ok(measures
-            .into_iter()
-            .map(|m| MeasureSlot::Real(Box::new(m)))
-            .collect());
-    }
-    let mut real_measures = measures.into_iter();
-    empty_note_measure_spans
-        .iter()
-        .map(|entry| match entry {
-            Some(span) => Ok(MeasureSlot::EmptyNote { span: *span }),
-            None => real_measures
-                .next()
-                .map(|m| MeasureSlot::Real(Box::new(m)))
-                .ok_or_else(|| {
-                    IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
-                        Span::new(0, 0),
-                        "empty_note_measure_spans and grouped measures out of sync",
-                    ))
-                }),
-        })
-        .collect()
 }
 
 fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, IrrecoverableError> {
@@ -392,16 +361,21 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
     let per_measure_chord_errors = part.per_measure_chord_errors.clone();
     let per_measure_lex_errors = part.per_measure_lex_errors.clone();
     let per_measure_lyrics_errors = part.per_measure_lyrics_errors.clone();
-    let empty_note_measure_spans = part.empty_note_measure_spans.clone();
+    let part_abbreviation = part.abbreviation.clone();
+    let part_kind = part.kind;
     let mut grouper = PartGrouper::new(&part);
-    for spanned in part.score.events {
-        grouper.process_event(spanned)?;
+    for slot in part.measure_slots {
+        match slot {
+            ParsedMeasureSlot::EmptyNote { span } => grouper.push_empty_note_slot(span),
+            ParsedMeasureSlot::Real { events } => {
+                for spanned in events {
+                    grouper.process_event(spanned)?;
+                }
+            }
+        }
     }
-    let mut grouped = grouper.finish();
-    grouped.ditto_measures = ditto_measures;
-    grouped.lyrics_ditto_measures = lyrics_ditto_measures;
-    let slots = build_measure_slots(grouped.measures, &empty_note_measure_spans)?;
-    grouped.measures = align_empty_note_measures(
+    let (slots, name, kind) = grouper.finish();
+    let mut measures = align_empty_note_measures(
         slots,
         &PerMeasureErrors {
             beat_errors: &per_measure_beat_errors,
@@ -412,11 +386,18 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
             lyrics_errors: &per_measure_lyrics_errors,
         },
     )?;
-    for (measure, &lyrics_end) in grouped.measures.iter_mut().zip(lyrics_measure_ends.iter()) {
+    for (measure, &lyrics_end) in measures.iter_mut().zip(lyrics_measure_ends.iter()) {
         measure.source_span.end = measure.source_span.end.max(lyrics_end);
     }
+    let mut grouped = GroupedPart {
+        name,
+        kind,
+        measures,
+        ditto_measures,
+        lyrics_ditto_measures,
+    };
     if matches!(
-        part.kind,
+        part_kind,
         PartKind::NotesWithLyrics | PartKind::LyricsWithNotes
     ) {
         let lyrics_spans: Vec<Span> = lyrics_measure_starts
@@ -428,7 +409,7 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
             &mut grouped.measures,
             measure_syllables,
             lyrics_spans,
-            &part.abbreviation,
+            &part_abbreviation,
         )?;
     }
     Ok(grouped)

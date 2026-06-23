@@ -1,4 +1,5 @@
-use crate::ast::parsed::{ParsedTimedTrack, ParsedTrack, PartDecl, PartKind};
+use crate::ast::parsed::{ParsedMeasureSlot, ParsedTimedTrack, ParsedTrack, PartDecl, PartKind};
+use crate::error::Spanned;
 use crate::error::{IrrecoverableError, RecoverableError};
 
 /// Convenience wrapper that calls `parse` and returns only the tracks,
@@ -45,6 +46,19 @@ pub(super) fn notes_track<'a>(tracks: &'a [ParsedTrack], abbrev: &str) -> &'a Pa
 
 pub(super) fn chord_track<'a>(tracks: &'a [ParsedTrack], abbrev: &str) -> &'a ParsedTimedTrack {
     timed_track(tracks, abbrev)
+}
+
+pub(super) fn all_events(
+    track: &ParsedTimedTrack,
+) -> Vec<&Spanned<crate::ast::parsed::ScoreEvent>> {
+    track
+        .measure_slots
+        .iter()
+        .flat_map(|slot| match slot {
+            ParsedMeasureSlot::Real { events } => events.as_slice(),
+            ParsedMeasureSlot::EmptyNote { .. } => &[],
+        })
+        .collect()
 }
 
 pub(super) fn total_lyrics_syllables(track: &ParsedTimedTrack) -> usize {

@@ -179,7 +179,15 @@ mod tests {
         assert_eq!(doc.declarations.len(), 1);
         assert_eq!(doc.tracks.len(), 1);
         let notes = notes_track(&doc);
-        assert_eq!(notes.score.events.len(), 7);
+        let event_count: usize = notes
+            .measure_slots
+            .iter()
+            .filter_map(|s| match s {
+                crate::ast::parsed::ParsedMeasureSlot::Real { events } => Some(events.len()),
+                crate::ast::parsed::ParsedMeasureSlot::EmptyNote { .. } => None,
+            })
+            .sum();
+        assert_eq!(event_count, 7);
         assert_eq!(notes.lyrics.as_ref().unwrap().measure_syllables[0].len(), 4);
     }
 

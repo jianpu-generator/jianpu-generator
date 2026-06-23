@@ -1,8 +1,9 @@
 use crate::error::{Diagnostic, RecoverableError, Span, Spanned, Warning};
 
 #[derive(Debug)]
-pub struct ParsedScore {
-    pub events: Vec<Spanned<ScoreEvent>>,
+pub enum ParsedMeasureSlot {
+    EmptyNote { span: Span },
+    Real { events: Vec<Spanned<ScoreEvent>> },
 }
 
 #[derive(Debug)]
@@ -77,7 +78,7 @@ pub struct ParsedTimedTrack {
     pub abbreviation: String,
     pub display_name: String,
     pub kind: PartKind,
-    pub score: ParsedScore,
+    pub measure_slots: Vec<ParsedMeasureSlot>,
     pub lyrics: Option<ParsedLyrics>,
     /// Per-measure flag: true when every score line of this track in that
     /// measure group was a `"` ditto (explicit or implicit trailing omission).
@@ -99,9 +100,6 @@ pub struct ParsedTimedTrack {
     pub per_measure_lex_errors: Vec<Option<RecoverableError>>,
     /// Per-measure recoverable error on the lyrics line (e.g. empty lyrics line).
     pub per_measure_lyrics_errors: Vec<Option<RecoverableError>>,
-    /// Parallel to `per_measure_beat_errors`: `Some` when that measure's notes line
-    /// was `_` (empty placeholder) and produced no timed events.
-    pub empty_note_measure_spans: Vec<Option<Span>>,
 }
 
 #[derive(Debug)]

@@ -2,8 +2,7 @@ use super::ditto::DittoMeasures;
 use super::errors::invariant;
 use super::{SlotAction, TrackAccumulator};
 use crate::ast::parsed::{
-    ParsedLyrics, ParsedScore, ParsedTimedTrack, ParsedTrack, PartDecl, PartKind, ScoreLineRole,
-    ScoreLineSlot,
+    ParsedLyrics, ParsedTimedTrack, ParsedTrack, PartDecl, PartKind, ScoreLineRole, ScoreLineSlot,
 };
 use crate::error::{IrrecoverableError, Span};
 
@@ -28,7 +27,8 @@ pub(super) fn init_accumulators(declarations: &[PartDecl]) -> Vec<TrackAccumulat
     declarations
         .iter()
         .map(|decl| TrackAccumulator::Timed {
-            events: Vec::new(),
+            measure_slots: Vec::new(),
+            pending_events: Vec::new(),
             syllables: if matches!(
                 decl.kind,
                 PartKind::NotesWithLyrics | PartKind::LyricsWithNotes
@@ -45,7 +45,6 @@ pub(super) fn init_accumulators(declarations: &[PartDecl]) -> Vec<TrackAccumulat
             per_measure_chord_errors: Vec::new(),
             per_measure_lex_errors: Vec::new(),
             per_measure_lyrics_errors: Vec::new(),
-            empty_note_measure_spans: Vec::new(),
         })
         .collect()
 }
@@ -68,7 +67,7 @@ pub(super) fn build_parse_result(
         .enumerate()
         .map(|(track_index, (decl, acc))| {
             let TrackAccumulator::Timed {
-                events,
+                measure_slots,
                 syllables,
                 lyrics_line_starts,
                 lyrics_line_ends,
@@ -78,13 +77,13 @@ pub(super) fn build_parse_result(
                 per_measure_chord_errors,
                 per_measure_lex_errors,
                 per_measure_lyrics_errors,
-                empty_note_measure_spans,
+                ..
             } = acc;
             Ok(ParsedTrack::Timed(ParsedTimedTrack {
                 abbreviation: decl.abbreviation.clone(),
                 display_name: decl.display_name.clone(),
                 kind: decl.kind,
-                score: ParsedScore { events },
+                measure_slots,
                 lyrics: syllables.map(|measure_syllables| ParsedLyrics {
                     measure_syllables,
                     measure_starts: lyrics_line_starts,
@@ -106,7 +105,6 @@ pub(super) fn build_parse_result(
                 per_measure_chord_errors,
                 per_measure_lex_errors,
                 per_measure_lyrics_errors,
-                empty_note_measure_spans,
             }))
         })
         .collect()

@@ -1,5 +1,6 @@
 use crate::ast::parsed::{
-    flatten_score_line_slots, ParsedTrack, PartDecl, PartKind, ScoreEvent, ScoreLineSlot,
+    flatten_score_line_slots, ParsedMeasureSlot, ParsedTrack, PartDecl, PartKind, ScoreEvent,
+    ScoreLineSlot,
 };
 use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Spanned};
 use crate::parser::score::token_parser::GroupStack;
@@ -47,7 +48,10 @@ enum SlotAction {
 
 enum TrackAccumulator {
     Timed {
-        events: Vec<Spanned<ScoreEvent>>,
+        /// Finalized per-measure slots in score order.
+        measure_slots: Vec<ParsedMeasureSlot>,
+        /// Directive events received since the last finalized slot; prepended to the next Real slot.
+        pending_events: Vec<Spanned<ScoreEvent>>,
         /// One syllable vec per measure for `NotesWithLyrics` parts.
         syllables: Option<Vec<Vec<crate::ast::parsed::Syllable>>>,
         /// Start byte offset of the lyrics line for each measure, in order.
@@ -66,8 +70,6 @@ enum TrackAccumulator {
         per_measure_lex_errors: Vec<Option<RecoverableError>>,
         /// Per-measure recoverable error on the lyrics line (e.g. empty lyrics line).
         per_measure_lyrics_errors: Vec<Option<RecoverableError>>,
-        /// Parallel to `per_measure_beat_errors`: notes-line `_` placeholders.
-        empty_note_measure_spans: Vec<Option<Span>>,
     },
 }
 
@@ -311,7 +313,7 @@ fn timed_events_mut(
     acc: &mut TrackAccumulator,
 ) -> Result<&mut Vec<Spanned<ScoreEvent>>, IrrecoverableError> {
     match acc {
-        TrackAccumulator::Timed { events, .. } => Ok(events),
+        TrackAccumulator::Timed { pending_events, .. } => Ok(pending_events),
     }
 }
 

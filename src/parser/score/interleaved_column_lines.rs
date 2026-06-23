@@ -1,6 +1,7 @@
 use super::beat_padding::validate_and_pad_beats;
 use super::errors::invariant;
 use super::{notes_syllables_mut, BarGroupContext, SlotAction, TrackAccumulator};
+use crate::ast::parsed::ParsedMeasureSlot;
 use crate::error::{
     Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span,
 };
@@ -82,7 +83,6 @@ fn push_skipped_notes_measure(
     track_index: usize,
     line_span: Span,
     lex_error: Option<RecoverableError>,
-    empty_note_measure_span: Option<Span>,
 ) -> Result<(), IrrecoverableError> {
     let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
         invariant(
@@ -96,7 +96,7 @@ fn push_skipped_notes_measure(
         per_measure_dash_after_rest_errors,
         per_measure_lex_errors,
         per_measure_chord_errors,
-        empty_note_measure_spans,
+        measure_slots,
         ..
     } = acc;
     per_measure_beat_errors.push(None);
@@ -104,7 +104,7 @@ fn push_skipped_notes_measure(
     per_measure_dash_after_rest_errors.push(None);
     per_measure_lex_errors.push(lex_error);
     per_measure_chord_errors.push(vec![]);
-    empty_note_measure_spans.push(empty_note_measure_span);
+    measure_slots.push(ParsedMeasureSlot::EmptyNote { span: line_span });
     Ok(())
 }
 
@@ -117,7 +117,7 @@ fn process_notes_column_line(
     ctx: &mut BarGroupContext<'_>,
 ) -> Result<(), IrrecoverableError> {
     if line == "_" {
-        return push_skipped_notes_measure(ctx, track_index, line_span, None, Some(line_span));
+        return push_skipped_notes_measure(ctx, track_index, line_span, None);
     }
     let group_state = ctx
         .group_states
@@ -146,22 +146,89 @@ fn process_notes_column_line(
         )
     })?;
     let TrackAccumulator::Timed {
-        events: acc_events,
+        measure_slots,
+        pending_events,
         per_measure_beat_errors,
         per_measure_dotted_eighth_errors,
         per_measure_dash_after_rest_errors,
         per_measure_lex_errors,
         per_measure_chord_errors,
-        empty_note_measure_spans,
         ..
     } = acc;
-    acc_events.extend(padded.events);
+    let mut slot_events = std::mem::take(pending_events);
+    slot_events.extend(padded.events);
     per_measure_beat_errors.push(padded.beat_overflow_error);
     per_measure_dotted_eighth_errors.push(padded.dotted_eighth_errors);
     per_measure_dash_after_rest_errors.push(notes_parse.dash_after_rest_error);
     per_measure_lex_errors.push(lex_error);
     per_measure_chord_errors.push(notes_parse.chord_errors);
-    empty_note_measure_spans.push(None);
+    measure_slots.push(ParsedMeasureSlot::Real {
+        events: slot_events,
+    });
+    Ok(())
+}
+
+fn process_chord_column_line(
+    track_index: usize,
+    line: &str,
+    line_offset: usize,
+    beats_expected: u32,
+    line_span: Span,
+    ctx: &mut BarGroupContext<'_>,
+) -> Result<(), IrrecoverableError> {
+    let group_state = ctx
+        .group_states
+        .get_mut(track_index)
+        .ok_or_else(|| invariant(line_span, "internal error: group state index out of range"))?;
+    let chord_result =
+        token_parser::parse_chord_line(line, ctx.base_offset + line_offset, group_state);
+    let (chord_events, line_chord_errors, dash_after_rest_error) = match chord_result {
+        Ok(parsed) => (
+            parsed.events,
+            parsed.chord_errors,
+            parsed.dash_after_rest_error,
+        ),
+        Err(error) if is_recoverable_chord_line_error(&error.kind) => {
+            let recoverable = Diagnostic::from_chord_irrecoverable(&error);
+            (vec![], vec![recoverable], None)
+        }
+        Err(error) => return Err(error),
+    };
+    let line_failed = chord_events.is_empty() && !line_chord_errors.is_empty();
+    let mut final_padded = validate_and_pad_beats(
+        chord_events,
+        beats_expected,
+        *ctx.time_num,
+        *ctx.time_den,
+        line_span,
+    )?;
+    if line_failed {
+        final_padded.beat_overflow_error = None;
+    }
+    let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
+        invariant(
+            line_span,
+            "internal error: chord accumulator index out of range",
+        )
+    })?;
+    let TrackAccumulator::Timed {
+        measure_slots,
+        pending_events,
+        per_measure_beat_errors,
+        per_measure_dotted_eighth_errors,
+        per_measure_dash_after_rest_errors,
+        per_measure_chord_errors,
+        ..
+    } = acc;
+    let mut slot_events = std::mem::take(pending_events);
+    slot_events.extend(final_padded.events);
+    per_measure_beat_errors.push(final_padded.beat_overflow_error);
+    per_measure_dotted_eighth_errors.push(final_padded.dotted_eighth_errors);
+    per_measure_dash_after_rest_errors.push(dash_after_rest_error);
+    per_measure_chord_errors.push(line_chord_errors);
+    measure_slots.push(ParsedMeasureSlot::Real {
+        events: slot_events,
+    });
     Ok(())
 }
 
@@ -198,56 +265,14 @@ fn process_column_line(
             if line == "_" {
                 return Ok(());
             }
-            let group_state = ctx.group_states.get_mut(*track_index).ok_or_else(|| {
-                invariant(line_span, "internal error: group state index out of range")
-            })?;
-            let chord_result =
-                token_parser::parse_chord_line(line, ctx.base_offset + line_offset, group_state);
-            let (chord_events, line_chord_errors, dash_after_rest_error) = match chord_result {
-                Ok(parsed) => (
-                    parsed.events,
-                    parsed.chord_errors,
-                    parsed.dash_after_rest_error,
-                ),
-                Err(error) if is_recoverable_chord_line_error(&error.kind) => {
-                    let recoverable = Diagnostic::from_chord_irrecoverable(&error);
-                    (vec![], vec![recoverable], None)
-                }
-                Err(error) => return Err(error),
-            };
-            let line_failed = chord_events.is_empty() && !line_chord_errors.is_empty();
-            let mut final_padded = validate_and_pad_beats(
-                chord_events,
+            process_chord_column_line(
+                *track_index,
+                line,
+                line_offset,
                 beats_expected,
-                *ctx.time_num,
-                *ctx.time_den,
                 line_span,
+                ctx,
             )?;
-            if line_failed {
-                final_padded.beat_overflow_error = None;
-            }
-            let acc = ctx.accumulators.get_mut(*track_index).ok_or_else(|| {
-                invariant(
-                    line_span,
-                    "internal error: chord accumulator index out of range",
-                )
-            })?;
-            match acc {
-                TrackAccumulator::Timed {
-                    events: acc_events,
-                    per_measure_beat_errors,
-                    per_measure_dotted_eighth_errors,
-                    per_measure_dash_after_rest_errors,
-                    per_measure_chord_errors,
-                    ..
-                } => {
-                    acc_events.extend(final_padded.events);
-                    per_measure_beat_errors.push(final_padded.beat_overflow_error);
-                    per_measure_dotted_eighth_errors.push(final_padded.dotted_eighth_errors);
-                    per_measure_dash_after_rest_errors.push(dash_after_rest_error);
-                    per_measure_chord_errors.push(line_chord_errors);
-                }
-            }
         }
     }
     Ok(())

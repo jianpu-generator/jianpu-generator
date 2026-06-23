@@ -2,7 +2,8 @@ use super::*;
 use crate::ast::parsed::{Accidental, JianPuPitch, ParsedChordNote, ScoreEvent, TriadQuality};
 
 use super::test_helpers::{
-    chord_track, decl, notes_track, parse, parse_recoverable_errors, total_lyrics_syllables,
+    all_events, chord_track, decl, notes_track, parse, parse_recoverable_errors,
+    total_lyrics_syllables,
 };
 
 #[test]
@@ -22,10 +23,8 @@ fn chord_line_parses_spaced_slur_group() {
         "1 1 5 5\n",
     );
     let doc = crate::parser::parse(input, "test.jianpu").unwrap();
-    let chord_events: Vec<_> = chord_track(&doc.tracks, "Chord")
-        .score
-        .events
-        .iter()
+    let chord_events: Vec<_> = all_events(chord_track(&doc.tracks, "Chord"))
+        .into_iter()
         .filter(|e| matches!(e.value, ScoreEvent::Chord(_)))
         .collect();
     assert_eq!(chord_events.len(), 2, "expected chord 1 and 6m in group");
@@ -38,7 +37,7 @@ fn chord_column_events_are_parsed() {
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(tracks.len(), 2);
     let chord = chord_track(&tracks, "main");
-    let events: Vec<_> = chord.score.events.iter().map(|e| &e.value).collect();
+    let events: Vec<_> = all_events(chord).into_iter().map(|e| &e.value).collect();
     assert_eq!(
         events[0],
         &ScoreEvent::Chord(ParsedChordNote {
@@ -56,7 +55,7 @@ fn chord_column_events_are_parsed() {
         })
     );
     assert!(matches!(events[1], ScoreEvent::Extension));
-    assert_eq!(notes_track(&tracks, "main").score.events.len(), 4);
+    assert_eq!(all_events(notes_track(&tracks, "main")).len(), 4);
 }
 
 #[test]
@@ -67,7 +66,7 @@ fn single_unnamed_part_no_lyrics() {
     assert_eq!(tracks.len(), 1);
     let notes = notes_track(&tracks, "");
     assert!(notes.lyrics.is_none());
-    assert_eq!(notes.score.events.len(), 7);
+    assert_eq!(all_events(notes).len(), 7);
 }
 
 #[test]
@@ -97,8 +96,8 @@ fn two_parts_two_bars() {
     ];
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(tracks.len(), 2);
-    assert_eq!(notes_track(&tracks, "Soprano").score.events.len(), 11);
-    assert_eq!(notes_track(&tracks, "Alto").score.events.len(), 8);
+    assert_eq!(all_events(notes_track(&tracks, "Soprano")).len(), 11);
+    assert_eq!(all_events(notes_track(&tracks, "Alto")).len(), 8);
 }
 
 #[test]
@@ -161,10 +160,8 @@ fn cross_measure_paren_group_parses() {
     let declarations = vec![decl("", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations).unwrap();
     let notes = notes_track(&tracks, "");
-    let note_events: Vec<_> = notes
-        .score
-        .events
-        .iter()
+    let note_events: Vec<_> = all_events(notes)
+        .into_iter()
         .filter_map(|e| match &e.value {
             ScoreEvent::Note(n) => Some(n),
             _ => None,
@@ -283,9 +280,8 @@ fn omitted_notes_row_is_filled_with_rest() {
     let doc = crate::parser::parse(input, "test.jianpu")
         .expect("missing notes row must not abort parsing");
     let ParsedTrack::Timed(track) = &doc.tracks[0];
-    let rest_events: Vec<_> = track
-        .score
-        .events
+    let track_events = all_events(track);
+    let rest_events: Vec<_> = track_events
         .iter()
         .filter(|e| matches!(e.value, ScoreEvent::Rest(_)))
         .collect();
@@ -293,9 +289,7 @@ fn omitted_notes_row_is_filled_with_rest() {
         !rest_events.is_empty(),
         "measure with missing notes row should be filled with a rest"
     );
-    let note_events: Vec<_> = track
-        .score
-        .events
+    let note_events: Vec<_> = track_events
         .iter()
         .filter(|e| matches!(e.value, ScoreEvent::Note(_)))
         .collect();
@@ -381,8 +375,8 @@ fn implicit_trailing_ditto_matches_explicit_ditto() {
     let implicit_a = notes_track(&implicit_tracks, "A");
     let explicit_b = notes_track(&explicit_tracks, "B");
     let implicit_b = notes_track(&implicit_tracks, "B");
-    assert_eq!(explicit_a.score.events.len(), implicit_a.score.events.len());
-    assert_eq!(explicit_b.score.events.len(), implicit_b.score.events.len());
+    assert_eq!(all_events(explicit_a).len(), all_events(implicit_a).len());
+    assert_eq!(all_events(explicit_b).len(), all_events(implicit_b).len());
     assert_eq!(
         explicit_a.lyrics.as_ref().unwrap().measure_syllables,
         implicit_a.lyrics.as_ref().unwrap().measure_syllables
