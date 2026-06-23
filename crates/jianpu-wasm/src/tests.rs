@@ -158,19 +158,19 @@ fn recoverable_error_produces_warning_severity_view_zone() {
 }
 
 #[test]
-fn demo_jianpu_renders() {
-    let source = include_str!("../../../demo.jianpu");
+fn reference_jianpu_renders() {
+    let source = include_str!("../../../reference.jianpu");
     let resp = render_response(source, None, None);
     match resp {
         RenderResponse::Ok { svgs, .. } => {
             assert!(
                 !svgs.is_empty(),
-                "demo.jianpu should render in the wasm path used by the web editor"
+                "reference.jianpu should render in the wasm path used by the web editor"
             );
         }
         RenderResponse::Err { diagnostics, .. } => {
             panic!(
-                "demo.jianpu failed in wasm render path: {}",
+                "reference.jianpu failed in wasm render path: {}",
                 diagnostics[0].message
             );
         }
@@ -188,8 +188,8 @@ fn test_pdf_fonts() -> (Vec<u8>, Vec<u8>, Vec<u8>) {
 
 #[cfg(feature = "pdf")]
 #[test]
-fn demo_jianpu_generates_pdf() {
-    let source = include_str!("../../../demo.jianpu");
+fn reference_jianpu_generates_pdf() {
+    let source = include_str!("../../../reference.jianpu");
     let (sc, tc, mono) = test_pdf_fonts();
     let resp = generate_pdf_response(source, None, None, sc, tc, mono);
     match resp {
@@ -199,7 +199,7 @@ fn demo_jianpu_generates_pdf() {
         }
         GeneratePdfResponse::Err { diagnostics } => {
             panic!(
-                "demo.jianpu failed in wasm pdf path: {}",
+                "reference.jianpu failed in wasm pdf path: {}",
                 diagnostics[0].message
             );
         }
@@ -208,13 +208,13 @@ fn demo_jianpu_generates_pdf() {
 
 #[cfg(feature = "pdf")]
 #[test]
-fn demo_jianpu_generates_split_pdf_zip() {
+fn reference_jianpu_generates_split_pdf_zip() {
     use std::io::Read;
     use zip::ZipArchive;
 
-    let source = include_str!("../../../demo.jianpu");
+    let source = include_str!("../../../reference.jianpu");
     let (sc, tc, mono) = test_pdf_fonts();
-    let resp = generate_split_pdfs_response(source, "demo", sc, tc, mono);
+    let resp = generate_split_pdfs_response(source, "reference", sc, tc, mono);
     match resp {
         GenerateSplitPdfsResponse::Ok { zip } => {
             assert!(zip.len() > 4);
@@ -226,7 +226,7 @@ fn demo_jianpu_generates_split_pdf_zip() {
                 let mut file = archive.by_index(i).unwrap();
                 let name = file.name().to_string();
                 assert!(
-                    name.starts_with("demo - ") && name.ends_with(".pdf"),
+                    name.starts_with("reference - ") && name.ends_with(".pdf"),
                     "unexpected zip entry: {name}"
                 );
                 let mut buf = [0u8; 4];
@@ -236,7 +236,7 @@ fn demo_jianpu_generates_split_pdf_zip() {
         }
         GenerateSplitPdfsResponse::Err { diagnostics } => {
             panic!(
-                "demo.jianpu failed in wasm split pdf path: {}",
+                "reference.jianpu failed in wasm split pdf path: {}",
                 diagnostics[0].message
             );
         }
@@ -291,8 +291,8 @@ fn generate_wav_for_measure_range_response_returns_riff_wav() {
 
 #[cfg(feature = "wav")]
 #[test]
-fn demo_jianpu_generates_wav() {
-    let source = include_str!("../../../demo.jianpu");
+fn reference_jianpu_generates_wav() {
+    let source = include_str!("../../../reference.jianpu");
     let resp = generate_wav_response(source, None);
     match resp {
         GenerateWavResponse::Ok { wav } => {
@@ -301,7 +301,7 @@ fn demo_jianpu_generates_wav() {
         }
         GenerateWavResponse::Err { diagnostics } => {
             panic!(
-                "demo.jianpu failed in wasm wav path: {}",
+                "reference.jianpu failed in wasm wav path: {}",
                 diagnostics[0].message
             );
         }

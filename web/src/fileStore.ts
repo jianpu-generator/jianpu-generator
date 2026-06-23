@@ -7,7 +7,7 @@ import {
 
 export { DEMO_FILE_NAME }
 
-export const DEMO_FILE_ID = 'jianpu:demo'
+export const DEMO_FILE_ID = 'jianpu:reference'
 
 export const FILE_STORE_KEY = 'jianpu:files:v1'
 const STORAGE_KEY = 'jianpu:source:v5'
