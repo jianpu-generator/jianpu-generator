@@ -245,13 +245,11 @@ fn parse_bass(s: &str, span: Span, errors: &mut Vec<Diagnostic>) -> Option<BassD
         Some('b') => Accidental::Flat,
         None => Accidental::Natural,
         Some(c) => {
-            errors.push(Diagnostic::from_chord_irrecoverable(
-                &IrrecoverableError::new(IrrecoverableErrorKind::ChordBassUnexpectedChar {
-                    span,
-                    ch: c,
-                    bass: s.to_string(),
-                }),
-            ));
+            errors.push(Diagnostic::Warning(Warning {
+                span,
+                message: format!("unexpected character '{c}' in bass note '{s}'"),
+                kind: WarningKind::ChordBassUnexpectedChar,
+            }));
             return None;
         }
     };

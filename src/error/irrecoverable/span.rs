@@ -7,8 +7,7 @@ pub(super) fn span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
 
 fn parse_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
     match kind {
-        IrrecoverableErrorKind::ChordBassUnexpectedChar { span, .. }
-        | IrrecoverableErrorKind::ChordBassTrailingChars { span, .. } => Some(span),
+        IrrecoverableErrorKind::ChordBassTrailingChars { span, .. } => Some(span),
         _ => None,
     }
 }
@@ -30,6 +29,6 @@ fn export_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
         | IrrecoverableErrorKind::IoReadFailed { span, .. }
         | IrrecoverableErrorKind::IoWriteFailed { span, .. }
         | IrrecoverableErrorKind::InternalInvariant { span, .. } => Some(span),
-        _ => None,
+        IrrecoverableErrorKind::ChordBassTrailingChars { .. } => None,
     }
 }

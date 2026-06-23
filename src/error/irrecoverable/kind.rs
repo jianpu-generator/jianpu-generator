@@ -4,11 +4,6 @@ use super::Span;
 
 #[derive(Debug, Clone)]
 pub enum IrrecoverableErrorKind {
-    ChordBassUnexpectedChar {
-        span: Span,
-        ch: char,
-        bass: String,
-    },
     ChordBassTrailingChars {
         span: Span,
         bass: String,

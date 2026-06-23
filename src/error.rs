@@ -450,13 +450,6 @@ impl Diagnostic {
     /// Promoted kinds become `Diagnostic::Error`; others remain `Diagnostic::Warning`.
     pub fn from_chord_irrecoverable(error: &IrrecoverableError) -> Self {
         match &error.kind {
-            IrrecoverableErrorKind::ChordBassUnexpectedChar { span, ch, bass } => {
-                Self::Warning(Warning {
-                    span: *span,
-                    message: format!("unexpected character '{ch}' in bass note '{bass}'"),
-                    kind: WarningKind::ChordBassUnexpectedChar,
-                })
-            }
             IrrecoverableErrorKind::ChordBassTrailingChars { span, bass } => {
                 Self::Warning(Warning {
                     span: *span,
