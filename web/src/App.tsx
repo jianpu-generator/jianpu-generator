@@ -328,20 +328,18 @@ export default function App() {
                       }}
                     >
                       {audioAvailable && (
-                        <>
-                          <PlayMeasureButton
-                            disabled={
-                              selectedMeasureRange === null ||
-                              measureAudioGenerating
-                            }
-                            loading={measureAudioGenerating}
-                            playing={measureAudioPlaying}
-                            measureRange={selectedMeasureRange}
-                            onClick={playSelectedMeasures}
-                            onPause={stopMeasurePlayback}
-                            shortcutLabel={shortcutLabel}
-                          />
-                        </>
+                        <PlayMeasureButton
+                          disabled={
+                            selectedMeasureRange === null ||
+                            measureAudioGenerating
+                          }
+                          loading={measureAudioGenerating}
+                          playing={measureAudioPlaying}
+                          measureRange={selectedMeasureRange}
+                          onClick={playSelectedMeasures}
+                          onPause={stopMeasurePlayback}
+                          shortcutLabel={shortcutLabel}
+                        />
                       )}
                       {sectionLabels.length > 0 && (
                         <div

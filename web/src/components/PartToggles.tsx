@@ -1,4 +1,5 @@
-import { Eye, EyeOff, Headphones } from 'lucide-react'
+import * as Tooltip from '@radix-ui/react-tooltip'
+import { Eye, EyeOff, Headphones, Mic } from 'lucide-react'
 import type { PartInfo } from '../types'
 import './PartToggles.css'
 
@@ -28,71 +29,112 @@ export function PartToggles({
   }
 
   return (
-    <fieldset className="part-toggles">
-      <legend className="part-toggles-label">Parts</legend>
-      {loading ? <span className="part-toggles-status">Updating…</span> : null}
-      <ul className="part-toggles-list">
-        {parts.map((part) => {
-          const enabled = !disabledParts.has(part.abbreviation)
-          const lyricsEnabled = !disabledLyrics.has(part.abbreviation)
-          const soloed = soloedParts.has(part.abbreviation)
-          const title =
-            part.display_name === part.abbreviation
-              ? part.abbreviation
-              : `${part.display_name} (${part.abbreviation})`
+    <Tooltip.Provider delayDuration={400}>
+      <fieldset className="part-toggles">
+        <legend className="part-toggles-label">Parts</legend>
+        {loading ? (
+          <span className="part-toggles-status">Updating…</span>
+        ) : null}
+        <ul className="part-toggles-list">
+          {parts.map((part) => {
+            const enabled = !disabledParts.has(part.abbreviation)
+            const lyricsEnabled = !disabledLyrics.has(part.abbreviation)
+            const soloed = soloedParts.has(part.abbreviation)
 
-          return (
-            <li key={part.abbreviation} className="part-toggle-group">
-              <label className="part-toggle part-toggle--icon" title={title}>
-                <input
-                  type="checkbox"
-                  checked={enabled}
-                  onChange={(event) =>
-                    onPartToggle(part.abbreviation, event.target.checked)
-                  }
-                />
-                {enabled ? (
-                  <Eye size={14} aria-hidden="true" />
-                ) : (
-                  <EyeOff size={14} aria-hidden="true" />
-                )}
-                <span className="part-toggle-label">{part.abbreviation}</span>
-              </label>
-              <label
-                className="part-toggle part-toggle--solo"
-                title={`Solo ${title}`}
-              >
-                <input
-                  type="checkbox"
-                  checked={soloed}
-                  onChange={(event) =>
-                    onSoloToggle(part.abbreviation, event.target.checked)
-                  }
-                />
-                <Headphones size={14} aria-hidden="true" />
-              </label>
-              {part.has_lyrics && enabled ? (
-                <>
-                  <span className="part-toggle-connector" aria-hidden="true" />
-                  <label
-                    className="part-toggle part-toggle--lyrics"
-                    title={`${title} lyrics`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={lyricsEnabled}
-                      onChange={(event) =>
-                        onLyricsToggle(part.abbreviation, event.target.checked)
-                      }
-                    />
-                    <span className="part-toggle-label">lyrics</span>
-                  </label>
-                </>
-              ) : null}
-            </li>
-          )
-        })}
-      </ul>
-    </fieldset>
+            return (
+              <li key={part.abbreviation}>
+                <div className="part-toggle-pill">
+                  <span className="part-toggle-abbr">{part.abbreviation}</span>
+
+                  <Tooltip.Root>
+                    <Tooltip.Trigger asChild>
+                      <label className="part-toggle-segment part-toggle-segment--eye">
+                        <input
+                          type="checkbox"
+                          checked={enabled}
+                          onChange={(event) =>
+                            onPartToggle(
+                              part.abbreviation,
+                              event.target.checked,
+                            )
+                          }
+                        />
+                        {enabled ? (
+                          <Eye size={14} aria-hidden="true" />
+                        ) : (
+                          <EyeOff size={14} aria-hidden="true" />
+                        )}
+                      </label>
+                    </Tooltip.Trigger>
+                    <Tooltip.Portal>
+                      <Tooltip.Content
+                        className="part-toggle-tooltip-content"
+                        sideOffset={4}
+                      >
+                        Show/Hide
+                      </Tooltip.Content>
+                    </Tooltip.Portal>
+                  </Tooltip.Root>
+
+                  <Tooltip.Root>
+                    <Tooltip.Trigger asChild>
+                      <label className="part-toggle-segment part-toggle-segment--headphones">
+                        <input
+                          type="checkbox"
+                          checked={soloed}
+                          onChange={(event) =>
+                            onSoloToggle(
+                              part.abbreviation,
+                              event.target.checked,
+                            )
+                          }
+                        />
+                        <Headphones size={14} aria-hidden="true" />
+                      </label>
+                    </Tooltip.Trigger>
+                    <Tooltip.Portal>
+                      <Tooltip.Content
+                        className="part-toggle-tooltip-content"
+                        sideOffset={4}
+                      >
+                        Solo
+                      </Tooltip.Content>
+                    </Tooltip.Portal>
+                  </Tooltip.Root>
+
+                  {part.has_lyrics && enabled ? (
+                    <Tooltip.Root>
+                      <Tooltip.Trigger asChild>
+                        <label className="part-toggle-segment part-toggle-segment--mic">
+                          <input
+                            type="checkbox"
+                            checked={lyricsEnabled}
+                            onChange={(event) =>
+                              onLyricsToggle(
+                                part.abbreviation,
+                                event.target.checked,
+                              )
+                            }
+                          />
+                          <Mic size={14} aria-hidden="true" />
+                        </label>
+                      </Tooltip.Trigger>
+                      <Tooltip.Portal>
+                        <Tooltip.Content
+                          className="part-toggle-tooltip-content"
+                          sideOffset={4}
+                        >
+                          Lyrics
+                        </Tooltip.Content>
+                      </Tooltip.Portal>
+                    </Tooltip.Root>
+                  ) : null}
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      </fieldset>
+    </Tooltip.Provider>
   )
 }
