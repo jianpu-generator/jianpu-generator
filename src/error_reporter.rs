@@ -108,10 +108,10 @@ mod tests {
 
     #[test]
     fn render_output_contains_message() {
-        let path = write_temp_file("test_render.jianpu", "1 2 1/5bb 4\n");
-        let e = IrrecoverableError::new(IrrecoverableErrorKind::ChordBassTrailingChars {
-            span: Span::new(4, 9),
-            bass: "5bb".to_string(),
+        let path = write_temp_file("test_render.jianpu", "1 2 3 4\n");
+        let e = IrrecoverableError::new(IrrecoverableErrorKind::InternalInvariant {
+            span: Span::new(0, 1),
+            detail: "something went wrong".to_string(),
         })
         .with_path(&path);
 
@@ -119,17 +119,17 @@ mod tests {
         render_to_writer(&e, &mut buf, None, Config::default());
         let output = String::from_utf8_lossy(&buf);
         assert!(
-            output.contains("bass note '5bb' has trailing characters"),
+            output.contains("something went wrong"),
             "output was: {output}"
         );
     }
 
     #[test]
     fn render_with_source_shows_code_block() {
-        let source = "1 2 1/5bb 4\n";
-        let e = IrrecoverableError::new(IrrecoverableErrorKind::ChordBassTrailingChars {
-            span: Span::new(4, 9),
-            bass: "5bb".to_string(),
+        let source = "1 2 3 4\n";
+        let e = IrrecoverableError::new(IrrecoverableErrorKind::InternalInvariant {
+            span: Span::new(0, 1),
+            detail: "something went wrong".to_string(),
         });
 
         let output = render_with_source(source, &e);
@@ -137,15 +137,15 @@ mod tests {
             output.contains('│'),
             "expected ariadne code block, got: {output}"
         );
-        assert!(output.contains("bass note '5bb' has trailing characters"));
+        assert!(output.contains("something went wrong"));
     }
 
     #[test]
     fn render_with_source_has_no_ansi_codes() {
-        let source = "1 2 1/5bb 4\n";
-        let e = IrrecoverableError::new(IrrecoverableErrorKind::ChordBassTrailingChars {
-            span: Span::new(4, 9),
-            bass: "5bb".to_string(),
+        let source = "1 2 3 4\n";
+        let e = IrrecoverableError::new(IrrecoverableErrorKind::InternalInvariant {
+            span: Span::new(0, 1),
+            detail: "something went wrong".to_string(),
         });
 
         let output = render_with_source(source, &e);

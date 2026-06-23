@@ -4,10 +4,6 @@ use super::Span;
 
 #[derive(Debug, Clone)]
 pub enum IrrecoverableErrorKind {
-    ChordBassTrailingChars {
-        span: Span,
-        bass: String,
-    },
     MidiWriteFailed {
         span: Span,
     },

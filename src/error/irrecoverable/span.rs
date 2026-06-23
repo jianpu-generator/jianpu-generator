@@ -5,11 +5,8 @@ pub(super) fn span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
     parse_span(kind).or_else(|| export_span(kind))
 }
 
-fn parse_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
-    match kind {
-        IrrecoverableErrorKind::ChordBassTrailingChars { span, .. } => Some(span),
-        _ => None,
-    }
+fn parse_span(_kind: &IrrecoverableErrorKind) -> Option<&Span> {
+    None
 }
 
 fn export_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
@@ -29,6 +26,5 @@ fn export_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
         | IrrecoverableErrorKind::IoReadFailed { span, .. }
         | IrrecoverableErrorKind::IoWriteFailed { span, .. }
         | IrrecoverableErrorKind::InternalInvariant { span, .. } => Some(span),
-        IrrecoverableErrorKind::ChordBassTrailingChars { .. } => None,
     }
 }

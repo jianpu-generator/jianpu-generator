@@ -2,14 +2,11 @@ use super::*;
 
 #[test]
 fn display_shows_message() {
-    let e = IrrecoverableError::new(IrrecoverableErrorKind::ChordBassTrailingChars {
+    let e = IrrecoverableError::new(IrrecoverableErrorKind::InternalInvariant {
         span: Span::new(10, 20),
-        bass: "1zz".to_string(),
+        detail: "something went wrong".to_string(),
     });
-    assert_eq!(
-        format!("{e}"),
-        "error: bass note '1zz' has trailing characters"
-    );
+    assert_eq!(format!("{e}"), "error: something went wrong");
 }
 
 #[test]

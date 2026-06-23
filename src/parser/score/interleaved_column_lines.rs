@@ -7,8 +7,8 @@ use crate::error::{
 use crate::parser::score::token_parser;
 use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics};
 
-fn is_recoverable_chord_line_error(kind: &IrrecoverableErrorKind) -> bool {
-    matches!(kind, IrrecoverableErrorKind::ChordBassTrailingChars { .. })
+fn is_recoverable_chord_line_error(_kind: &IrrecoverableErrorKind) -> bool {
+    false
 }
 
 pub(super) fn process_padded_columns(

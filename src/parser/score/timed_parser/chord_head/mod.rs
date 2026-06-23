@@ -4,8 +4,7 @@ use crate::ast::parsed::{
     TriadQuality,
 };
 use crate::error::{
-    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, RecoverableErrorKind,
-    Span, Warning, WarningKind,
+    Diagnostic, RecoverableError, RecoverableErrorKind, Span, Warning, WarningKind,
 };
 
 pub struct ChordHead {
@@ -254,12 +253,11 @@ fn parse_bass(s: &str, span: Span, errors: &mut Vec<Diagnostic>) -> Option<BassD
         }
     };
     if chars.next().is_some() {
-        errors.push(Diagnostic::from_chord_irrecoverable(
-            &IrrecoverableError::new(IrrecoverableErrorKind::ChordBassTrailingChars {
-                span,
-                bass: s.to_string(),
-            }),
-        ));
+        errors.push(Diagnostic::Warning(Warning {
+            span,
+            message: format!("bass note '{s}' has trailing characters"),
+            kind: WarningKind::ChordBassTrailingChars,
+        }));
         return None;
     }
     Some(BassDegree { degree, accidental })

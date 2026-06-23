@@ -449,21 +449,12 @@ impl Diagnostic {
     /// Convert an `IrrecoverableError` that was caught on a chord line into a `Diagnostic`.
     /// Promoted kinds become `Diagnostic::Error`; others remain `Diagnostic::Warning`.
     pub fn from_chord_irrecoverable(error: &IrrecoverableError) -> Self {
-        match &error.kind {
-            IrrecoverableErrorKind::ChordBassTrailingChars { span, bass } => {
-                Self::Warning(Warning {
-                    span: *span,
-                    message: format!("bass note '{bass}' has trailing characters"),
-                    kind: WarningKind::ChordBassTrailingChars,
-                })
-            }
-            _ => Self::Error(RecoverableError {
-                span: error.span().copied().unwrap_or(Span::new(0, 0)),
-                kind: RecoverableErrorKind::ChordInvalidToken {
-                    message: error.message(),
-                },
-            }),
-        }
+        Self::Error(RecoverableError {
+            span: error.span().copied().unwrap_or(Span::new(0, 0)),
+            kind: RecoverableErrorKind::ChordInvalidToken {
+                message: error.message(),
+            },
+        })
     }
 }
 

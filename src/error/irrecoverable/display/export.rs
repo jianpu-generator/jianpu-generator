@@ -51,6 +51,5 @@ pub(super) fn write(
         IrrecoverableErrorKind::InternalInvariant { detail, .. } => {
             Some(write!(formatter, "{detail}"))
         }
-        IrrecoverableErrorKind::ChordBassTrailingChars { .. } => None,
     }
 }
