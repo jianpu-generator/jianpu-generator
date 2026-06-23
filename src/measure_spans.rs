@@ -5,7 +5,7 @@ use crate::parser;
 /// Find the index of the measure whose `source_span` contains `byte_offset`.
 ///
 /// Returns `None` when `byte_offset` falls outside all measure spans
-/// (e.g. in `[metadata]`, `[parts]`, or a directive line).
+/// (e.g. in `# metadata`, `# parts`, or a directive line).
 pub fn find_measure_at_byte_offset(score: &Score, byte_offset: usize) -> Option<usize> {
     score
         .measures
@@ -17,8 +17,8 @@ pub fn find_measure_at_byte_offset(score: &Score, byte_offset: usize) -> Option<
 ///
 /// Converts `line_number` to the byte offset of the first character on that
 /// line, then delegates to [`find_measure_at_byte_offset`].  Returns `None`
-/// when the line falls outside all measure spans (e.g. `[metadata]`,
-/// `[parts]`, directive lines, or blank separator lines).
+/// when the line falls outside all measure spans (e.g. `# metadata`,
+/// `# parts`, directive lines, or blank separator lines).
 pub fn find_measure_at_line_number(
     score: &Score,
     source: &str,

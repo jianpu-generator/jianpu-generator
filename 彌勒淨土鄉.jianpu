@@ -1,4 +1,4 @@
-[metadata]
+# metadata
 title = "彌勒淨土鄉"
 subtitle = "調寄：快樂天堂"
 author = "天然師尊 慈賜"
@@ -7,14 +7,14 @@ row height = 20
 max columns = 42
 note number width = 8
 
-[parts]
+# parts
 Chord = chord
 Alto 1 & Tenor (A1&T) = notes lyrics
 Alto 2 (A2) = notes lyrics
 Soprano 1 (S1) = notes lyrics
 Soprano 2 (S2) = notes lyrics
 
-[score]
+# score
 
 bpm=92 key=C4 time=4/4 label="Verse 1"
 1

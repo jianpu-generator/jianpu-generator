@@ -9,21 +9,21 @@ This document describes the input syntax accepted by **jianpu-generator** as imp
 A `.jianpu` file has three sections in fixed order:
 
 ```
-[metadata]
+# metadata
 …key = value fields…
 
-[parts]
+# parts
 …track declarations…
 
-[score]
+# score
 …interleaved score content…
 ```
 
-- `[metadata]` — **required**
-- `[parts]` — **required**
-- `[score]` — **required**
+- `# metadata` — **required**
+- `# parts` — **required**
+- `# score` — **required**
 - Sections must appear in the order above.
-- Legacy `[score:Name]` / `[lyrics:Name]` sections are **not** supported.
+- Legacy `# score:Name` / `# lyrics:Name` sections are **not** supported.
 
 Whitespace around `=` in metadata is optional. Metadata values may be quoted with `"`.
 
@@ -80,7 +80,7 @@ Rules:
 Example (multi-part vocal score with chords):
 
 ```
-[parts]
+# parts
 main = chord
 Alto 1 & Tenor (A1&T) = notes lyrics
 Alto 2 (A2) = notes lyrics
@@ -91,7 +91,7 @@ Soprano 2 (S2) = notes lyrics
 Minimal single-part example:
 
 ```
-[parts]
+# parts
 Melody = notes lyrics
 ```
 
@@ -115,7 +115,7 @@ The `[score]` body is split into **measure groups** by **blank lines**. Each gro
 ### Group layout
 
 1. **Optional directive line** — first line containing at least one directive keyword (`bpm=`, `key=`, `time=`, or `label=`)
-2. **Data lines** — one per score line implied by `[parts]`, in track declaration order
+2. **Data lines** — one per score line implied by `# parts`, in track declaration order
 
 Lines are trimmed; leading/trailing spaces on a line are ignored. A completely empty line separates measure groups (it is not a data line).
 
@@ -486,11 +486,11 @@ Explicit `"` lines remain valid (redundant when trailing omission would apply).
 **Omittable parts example** — Part B has no lines in measure 1; it is silently filled with rests:
 
 ```
-[parts]
+# parts
 A = chord
 B = notes
 
-[score]
+# score
 1 2m 3 4
 
 1 - - -
@@ -516,14 +516,14 @@ Measure 2: A plays `1 - - -`, B plays `1 2 3 4`.
 ## Complete minimal example
 
 ```
-[metadata]
+# metadata
 title = "Demo"
 author = "Author"
 
-[parts]
+# parts
 Melody = notes lyrics
 
-[score]
+# score
 
 (bpm=120 key=C4 time=4/4 label="Verse")
 1 - 4m 5
@@ -543,7 +543,7 @@ Bar 2: chord and notes are implicit ditto; lyrics explicitly marked `_` (no text
 
 Design specs with additional rationale live in `docs/superpowers/specs/`:
 
-- `2026-06-04-interleaved-syntax-design.md` — interleaved `[score]` format
+- `2026-06-04-interleaved-syntax-design.md` — interleaved `# score` format
 - `2026-06-05-label-directive-design.md` — `label=` directive
 - `2026-06-06-chord-track-design.md` — `chord:` columns
 - `2026-06-06-ditto-input-dedup-design.md` — `"` ditto marker

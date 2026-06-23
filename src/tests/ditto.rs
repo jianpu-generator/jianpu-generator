@@ -5,15 +5,15 @@ use super::*;
 #[test]
 fn explicit_ditto_part_is_marked_as_ditto_in_score() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano = notes\n",
         "Alto = notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "\"\n",
@@ -28,15 +28,15 @@ fn explicit_ditto_part_is_marked_as_ditto_in_score() {
 #[test]
 fn implicit_ditto_part_is_marked_as_ditto_in_score() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano = notes\n",
         "Alto = notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         // Alto line omitted — implicit ditto
@@ -51,15 +51,15 @@ fn implicit_ditto_part_is_marked_as_ditto_in_score() {
 #[test]
 fn non_ditto_part_is_timed_in_score() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano = notes\n",
         "Alto = notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "5 6 7 1\n",
@@ -78,29 +78,29 @@ fn non_ditto_part_is_timed_in_score() {
 #[test]
 fn ditto_parts_produce_smaller_svg_than_non_ditto() {
     let with_ditto = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano = notes\n",
         "Alto = notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "\"\n",
     );
     let without_ditto = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano = notes\n",
         "Alto = notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "5 6 7 1\n",
@@ -120,15 +120,15 @@ fn ditto_parts_produce_smaller_svg_than_non_ditto() {
 #[test]
 fn ditto_part_label_is_merged_into_source_row_label() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano (S) = notes\n",
         "Alto (A) = notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "\"\n",
@@ -150,15 +150,15 @@ fn ditto_part_label_is_merged_into_source_row_label() {
 #[test]
 fn ditto_part_promoted_to_timed_when_source_is_filtered_out() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano (S) = notes\n",
         "Alto (A) = notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "\"\n",

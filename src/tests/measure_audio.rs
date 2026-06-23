@@ -3,14 +3,14 @@ use super::*;
 
 fn two_measure_source() -> &'static str {
     concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Melody = notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "\n",
@@ -49,15 +49,15 @@ fn find_measure_at_byte_offset_returns_none_for_header() {
 
 fn two_part_source() -> &'static str {
     concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Chord = chord\n",
         "Melody = notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1\n",
         "1 2 3 4\n",
@@ -82,16 +82,16 @@ fn find_measure_at_byte_offset_finds_measure_on_second_part_line() {
 
 fn twinkle_source() -> &'static str {
     concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"Twinkle Twinkle Little Star\"\n",
         "author = \"Mozart\"\n",
         "row height = 24\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Chord = chord\n",
         "Melody = notes lyrics\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 - - -\n",
         "1 1 5 5\n",
@@ -209,7 +209,7 @@ fn find_measure_at_line_number_covers_all_lines_in_twinkle_star() {
         );
     };
 
-    // Lines 0-10: [metadata], title, author, row height, blank, [parts], Chord, Melody, blank, [score], directive
+    // Lines 0-10: # metadata, title, author, row height, blank, # parts, Chord, Melody, blank, # score, directive
     for line in 0..=10 {
         check("header/directive line", line, None);
     }

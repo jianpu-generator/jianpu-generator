@@ -2,41 +2,41 @@
 use jianpu_generator::list_measure_spans_from_source;
 
 const TWO_MEASURE_SOURCE: &str = concat!(
-    "[metadata]\n",
+    "# metadata\n",
     "title = \"t\"\n",
     "author = \"a\"\n",
     "\n",
-    "[parts]\n",
+    "# parts\n",
     "Melody = notes\n",
     "\n",
-    "[score]\n",
+    "# score\n",
     "1 2 3 4\n",
     "\n",
     "5 6 7 1\n",
 );
 
 const DIRECTIVE_MEASURE_SOURCE: &str = concat!(
-    "[metadata]\n",
+    "# metadata\n",
     "title = \"t\"\n",
     "author = \"a\"\n",
     "\n",
-    "[parts]\n",
+    "# parts\n",
     "Melody = notes\n",
     "\n",
-    "[score]\n",
+    "# score\n",
     "bpm=60\n",
     "1 2 3 4\n",
 );
 
 const LABEL_DIRECTIVE_SOURCE: &str = concat!(
-    "[metadata]\n",
+    "# metadata\n",
     "title = \"t\"\n",
     "author = \"a\"\n",
     "\n",
-    "[parts]\n",
+    "# parts\n",
     "Melody = notes\n",
     "\n",
-    "[score]\n",
+    "# score\n",
     "label=\"something \"\n",
     "1 2 3 4\n",
 );
@@ -111,18 +111,18 @@ fn start_line_includes_label_directive_line() {
 /// must end before that line.
 #[test]
 fn multipart_measure_spans_do_not_overlap_across_groups() {
-    let source = r#"[metadata]
+    let source = r#"# metadata
 title = ""
 author = ""
 
-[parts]
+# parts
 Chord = chord
 Alto 1 & Tenor (A1,T) = notes lyrics
 Alto 2 (A2) = notes lyrics
 Soprano 1 (S1) = notes lyrics
 Soprano 2 (S2) = notes lyrics
 
-[score]
+# score
 bpm=80 key=C4 time=4/4 label="Verse 1"
 1 - - -
 5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_

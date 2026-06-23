@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 /**
  * The default demo (Twinkle Twinkle Little Star) declares two parts:
  *
- *   [parts]
+ *   # parts
  *   Chord = chord
  *   Melody = notes lyrics
  *

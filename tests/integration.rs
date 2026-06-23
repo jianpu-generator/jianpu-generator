@@ -8,14 +8,14 @@ fn jianpu_cmd() -> Command {
 
 fn basic_jianpu_input() -> &'static str {
     concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"test score\"\n",
         "author = \"tester\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Melody = notes lyrics\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "do re mi fa\n",
@@ -112,15 +112,15 @@ fn generate_wav_produces_wav() {
 
 fn multi_track_jianpu_input() -> &'static str {
     concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"test score\"\n",
         "author = \"tester\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano 1 (S1) = notes lyrics\n",
         "Soprano 2 (S2) = notes lyrics\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "do re mi fa\n",

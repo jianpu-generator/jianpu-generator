@@ -12,15 +12,15 @@ fn test_pdf_fonts() -> pdf::PdfFonts {
 #[test]
 fn list_parts_from_source_returns_declarations() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "main = chord\n",
         "Alto 1 & Tenor (A1&T) = notes lyrics\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1m\n",
         "1 2 3 4\n",
@@ -39,15 +39,15 @@ fn list_parts_from_source_returns_declarations() {
 #[test]
 fn hidden_lyrics_do_not_reserve_lyric_row_space() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano = notes lyrics\n",
         "Alto = notes lyrics\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "sop sop sop sop\n",
@@ -73,15 +73,15 @@ fn hidden_lyrics_do_not_reserve_lyric_row_space() {
 #[test]
 fn render_svgs_from_source_filtered_can_hide_lyrics_per_part() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano = notes lyrics\n",
         "Alto = notes lyrics\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "sop sop sop sop\n",
@@ -106,15 +106,15 @@ fn render_svgs_from_source_filtered_can_hide_lyrics_per_part() {
 #[test]
 fn render_svgs_from_source_filtered_can_hide_parts() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano = notes\n",
         "Alto = notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "5 6 7 1\n",
@@ -130,14 +130,14 @@ fn render_svgs_from_source_filtered_can_hide_parts() {
 #[test]
 fn render_svgs_from_source_smoke() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Melody = notes lyrics\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "a b c d\n",
@@ -151,9 +151,9 @@ fn render_svgs_from_source_smoke() {
 #[test]
 fn lyrics_underflow_render_returns_svgs_and_non_empty_errors() {
     let input = concat!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "[parts]\nMelody = notes lyrics\n\n",
-        "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\na b\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "# parts\nMelody = notes lyrics\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\na b\n",
     );
     let output =
         render_svgs_from_source(input, "test.jianpu").expect("underflow must not abort the render");
@@ -176,9 +176,9 @@ fn lyrics_underflow_render_returns_svgs_and_non_empty_errors() {
 #[test]
 fn lex_unexpected_char_renders_error_highlight_and_reports_error() {
     let input = concat!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "[parts]\nMelody = notes\n\n",
-        "[score]\ntime=4/4 key=C4 bpm=120\n1 @ 3 4\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n1 @ 3 4\n",
     );
     let output = render_svgs_from_source(input, "test.jianpu")
         .expect("LexUnexpectedChar must not abort the render");
@@ -201,14 +201,14 @@ fn lex_unexpected_char_renders_error_highlight_and_reports_error() {
 #[test]
 fn split_track_names_falls_back_to_part_declarations() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Melody = notes lyrics\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "a b c d\n",
@@ -233,15 +233,15 @@ fn split_pdf_filename_sanitizes_track_name() {
 #[test]
 fn apply_lyrics_filter_downgrades_kind_to_notes() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano = notes lyrics\n",
         "Alto = notes lyrics\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "do re mi fa\n",
@@ -269,9 +269,9 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
     // "2_3=4=" is beat 2 and "6_7_" is beat 3 — both get a level-0 beam underline.
     // The underline for beat 2 must end strictly before the underline for beat 3 starts.
     let source = concat!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "[parts]\nS = notes\n\n",
-        "[score]\ntime=4/4 key=C4 bpm=120\n0 2_3=4= 6_7_ 0\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "# parts\nS = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n0 2_3=4= 6_7_ 0\n",
     );
     let score = compile(source, "test").unwrap();
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
@@ -317,15 +317,15 @@ mod split_pdf_tests {
 
     fn multi_track_input() -> &'static str {
         concat!(
-            "[metadata]\n",
+            "# metadata\n",
             "title = \"test score\"\n",
             "author = \"tester\"\n",
             "\n",
-            "[parts]\n",
+            "# parts\n",
             "Soprano 1 (S1) = notes lyrics\n",
             "Soprano 2 (S2) = notes lyrics\n",
             "\n",
-            "[score]\n",
+            "# score\n",
             "time=4/4 key=C4 bpm=120\n",
             "1 2 3 4\n",
             "do re mi fa\n",
@@ -356,14 +356,14 @@ mod split_pdf_tests {
     #[test]
     fn write_split_pdfs_from_source_single_part_uses_split_naming() {
         let input = concat!(
-            "[metadata]\n",
+            "# metadata\n",
             "title = \"t\"\n",
             "author = \"a\"\n",
             "\n",
-            "[parts]\n",
+            "# parts\n",
             "Melody = notes lyrics\n",
             "\n",
-            "[score]\n",
+            "# score\n",
             "time=4/4 key=C4 bpm=120\n",
             "1 2 3 4\n",
             "a b c d\n",
@@ -379,7 +379,7 @@ mod split_pdf_tests {
     #[test]
     fn write_split_pdfs_from_source_no_sections_returns_empty() {
         // Source with no section headers: section-structure errors are recoverable,
-        // so no Err is returned; the missing [parts] section means no tracks exist.
+        // so no Err is returned; the missing # parts section means no tracks exist.
         let entries = write_split_pdfs_from_source(
             "not valid",
             "test.jianpu",

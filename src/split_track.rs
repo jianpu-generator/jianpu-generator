@@ -8,7 +8,7 @@ pub fn sanitize_track_name(name: &str) -> String {
     name.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-")
 }
 
-/// Abbreviation → display name from `[parts]` declarations.
+/// Abbreviation → display name from `# parts` declarations.
 pub fn part_display_name_map(
     source: &str,
     filename: &str,
@@ -62,7 +62,7 @@ pub fn split_pdf_filename(base_name: &str, label: &str) -> String {
 }
 
 /// Track list for split export. Empty `tracks_filter` → all score tracks;
-/// falls back to `[parts]` declaration abbreviations when score has no named parts.
+/// falls back to `# parts` declaration abbreviations when score has no named parts.
 pub fn split_track_names(
     source: &str,
     filename: &str,

@@ -4,13 +4,13 @@ import { encodeShareHashSuffix } from '../src/shareUrl'
 const FILE_STORE_KEY = 'jianpu:files:v1'
 const SHARED_FILENAME = 'shared-test.jianpu'
 const SHARED_SOURCE = [
-  '[metadata]',
+  '# metadata',
   'title = "Shared Score"',
   '',
-  '[parts]',
+  '# parts',
   'Melody = notes',
   '',
-  '[score]',
+  '# score',
   '(time=4/4 key=C4 bpm=120)',
   '1 2 3 4',
 ].join('\n')

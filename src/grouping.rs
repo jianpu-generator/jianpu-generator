@@ -226,8 +226,8 @@ mod tests {
     ) -> Result<crate::RenderOutput, crate::error::IrrecoverableError> {
         let input = format!(
             concat!(
-                "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes\n\n",
-                "[score]\ntime=4/4 key=C4 bpm=120\n",
+                "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+                "# score\ntime=4/4 key=C4 bpm=120\n",
                 "{notes_line}"
             ),
             notes_line = notes_line
@@ -238,15 +238,15 @@ mod tests {
     #[test]
     fn chord_half_bar_boundary_validation_matches_notes() {
         let input = concat!(
-            "[metadata]\n",
+            "# metadata\n",
             "title = \"t\"\n",
             "author = \"a\"\n",
             "\n",
-            "[parts]\n",
+            "# parts\n",
             "c = chord\n",
             "n = notes\n",
             "\n",
-            "[score]\n",
+            "# score\n",
             "time=4/4 key=C4 bpm=120\n",
             "1. 2. 3_ 4_\n",
             "1 2 3 4\n",
@@ -316,8 +316,8 @@ mod tests {
     #[test]
     fn skips_validation_for_non_four_four() {
         let input = concat!(
-            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes\n\n",
-            "[score]\ntime=3/4 key=C4 bpm=120\n",
+            "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+            "# score\ntime=3/4 key=C4 bpm=120\n",
             "1 2 3\n",
         );
         assert!(crate::render_svgs_from_source(input, "test.jianpu").is_ok());

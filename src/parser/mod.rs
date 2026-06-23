@@ -169,9 +169,9 @@ mod tests {
     #[test]
     fn parses_full_document() {
         let input = concat!(
-            "[metadata]\ntitle = \"hello world\"\nauthor = \"foo\"\n\n",
-            "[parts]\nMelody = notes lyrics\n\n",
-            "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n你好wo rld\n"
+            "# metadata\ntitle = \"hello world\"\nauthor = \"foo\"\n\n",
+            "# parts\nMelody = notes lyrics\n\n",
+            "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n你好wo rld\n"
         );
         let doc = parse(input, "test.jianpu").unwrap();
         assert_eq!(doc.metadata.title, "hello world");
@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn unknown_section_recoverable() {
-        let input = "[unknown]\nfoo\n";
+        let input = "# unknown\nfoo\n";
         let doc = parse(input, "test.jianpu").expect("unknown section must not abort parsing");
         assert!(doc
             .section_structure_errors
@@ -204,10 +204,10 @@ mod tests {
     #[test]
     fn duplicate_score_section_recoverable() {
         let input = concat!(
-            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
-            "[parts]\nMelody = notes\n\n",
-            "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n\n",
-            "[score]\n5 6 7 1\n",
+            "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
+            "# parts\nMelody = notes\n\n",
+            "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n\n",
+            "# score\n5 6 7 1\n",
         );
         let doc =
             parse(input, "test.jianpu").expect("duplicate score section must not abort parsing");
@@ -220,8 +220,8 @@ mod tests {
     #[test]
     fn missing_metadata_section_recoverable() {
         let input = concat!(
-            "[parts]\nMelody = notes\n\n",
-            "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n"
+            "# parts\nMelody = notes\n\n",
+            "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n"
         );
         let doc =
             parse(input, "test.jianpu").expect("missing metadata section must not abort parsing");
@@ -234,9 +234,9 @@ mod tests {
     #[test]
     fn parses_two_named_parts() {
         let input = concat!(
-            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
-            "[parts]\nSoprano = notes\nAlto = notes\n\n",
-            "[score]\n",
+            "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
+            "# parts\nSoprano = notes\nAlto = notes\n\n",
+            "# score\n",
             "time=4/4 key=C4 bpm=120\n",
             "1 2 3 4\n",
             "5 6 7 1\n",
@@ -268,14 +268,14 @@ mod tests {
         // One notes part but two data lines in a group → recoverable error.
         // The error span must point to the extra line's position in the *full* input.
         let input = concat!(
-            "[metadata]\n",
+            "# metadata\n",
             "title=\"t\"\n",
             "author=\"a\"\n",
             "\n",
-            "[parts]\n",
+            "# parts\n",
             "Melody = notes\n",
             "\n",
-            "[score]\n",
+            "# score\n",
             "1 2 3 4\n",
             "5 6 7 1\n",
         );
@@ -294,14 +294,14 @@ mod tests {
     fn too_many_lines_recoverable_error_lists_declared_parts() {
         // One notes part but two data lines → recoverable error should name the declared part.
         let input = concat!(
-            "[metadata]\n",
+            "# metadata\n",
             "title=\"t\"\n",
             "author=\"a\"\n",
             "\n",
-            "[parts]\n",
+            "# parts\n",
             "Melody = notes\n",
             "\n",
-            "[score]\n",
+            "# score\n",
             "1 2 3 4\n",
             "5 6 7 1\n",
         );
@@ -319,9 +319,9 @@ mod tests {
     #[test]
     fn single_unnamed_part_remains_compatible() {
         let input = concat!(
-            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
-            "[parts]\nMelody = notes lyrics\n\n",
-            "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\na b c d\n"
+            "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
+            "# parts\nMelody = notes lyrics\n\n",
+            "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\na b c d\n"
         );
         let doc = parse(input, "test.jianpu").unwrap();
         assert_eq!(doc.tracks.len(), 1);

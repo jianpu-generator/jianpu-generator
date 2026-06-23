@@ -4,14 +4,14 @@ use types::DiagnosticSeverity;
 #[test]
 fn ok_response_has_svgs() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Melody = notes lyrics\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "a b c d\n",
@@ -29,15 +29,15 @@ fn ok_response_has_svgs() {
 #[test]
 fn list_parts_response_returns_declarations() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano = notes\n",
         "Alto = notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "5 6 7 1\n",
@@ -58,15 +58,15 @@ fn list_parts_response_returns_declarations() {
 #[test]
 fn render_with_disabled_lyrics_hides_lyrics_for_part() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano = notes lyrics\n",
         "Alto = notes lyrics\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "sop sop sop sop\n",
@@ -91,15 +91,15 @@ fn render_with_disabled_lyrics_hides_lyrics_for_part() {
 #[test]
 fn render_with_enabled_tracks_filters_parts() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano = notes\n",
         "Alto = notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "5 6 7 1\n",
@@ -133,9 +133,9 @@ fn err_response_has_structured_diagnostic() {
 fn recoverable_error_produces_warning_severity_view_zone() {
     // lyrics underflow is a recoverable error
     let input = concat!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "[parts]\nMelody = notes lyrics\n\n",
-        "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\na b\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "# parts\nMelody = notes lyrics\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\na b\n",
     );
     let resp = render_response(input, None, None);
     match resp {
@@ -246,8 +246,8 @@ fn reference_jianpu_generates_split_pdf_zip() {
 #[test]
 fn get_measure_at_offset_ok_for_note_in_measure() {
     let source = concat!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes\n\n",
-        "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n",
     );
     let byte_offset = source.find("1 2 3 4").unwrap();
     let resp = get_measure_at_offset_response(source, byte_offset);
@@ -260,8 +260,8 @@ fn get_measure_at_offset_ok_for_note_in_measure() {
 #[test]
 fn get_measure_at_offset_not_in_measure_for_header() {
     let source = concat!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes\n\n",
-        "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n",
     );
     let resp = get_measure_at_offset_response(source, 0);
     assert!(
@@ -274,8 +274,8 @@ fn get_measure_at_offset_not_in_measure_for_header() {
 #[test]
 fn generate_wav_for_measure_range_response_returns_riff_wav() {
     let source = concat!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes\n\n",
-        "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n",
     );
     let resp = generate_wav_for_measure_range_response(source, 0, 0, None);
     match resp {
@@ -313,14 +313,14 @@ fn diagnostic_span_is_utf8_byte_offset() {
     // 'x' in a notes line is a recoverable error (LexUnexpectedChar),
     // so render returns Ok with a warning diagnostic.
     let source = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"你好\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Melody = notes lyrics\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 x 4\n",
         "a b c d\n",
@@ -351,14 +351,14 @@ fn diagnostic_span_is_utf8_byte_offset() {
 #[test]
 fn list_measure_spans_returns_one_span_per_measure() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Melody = notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "1 2 3 4\n",
         "\n",
         "5 6 7 1\n",
@@ -377,14 +377,14 @@ fn list_measure_spans_returns_one_span_per_measure() {
 #[test]
 fn list_measure_spans_view_zone_start_includes_directive_line() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Melody = notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "bpm=60\n",
         "1 2 3 4\n",
     );
@@ -506,15 +506,15 @@ mod group_diagnostics_tests {
 #[test]
 fn list_score_line_hints_returns_physical_line_offsets() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Chord = chord\n",
         "Melody = notes lyrics\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 - - -\n",
         "1 1 5 5\n",

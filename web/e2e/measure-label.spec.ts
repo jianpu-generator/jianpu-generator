@@ -4,10 +4,10 @@ import { expect, test } from '@playwright/test'
  * The default demo source (Twinkle Twinkle Little Star) has the following
  * Monaco line numbers (1-based):
  *
- *   1  [metadata]
+ *   1  # metadata
  *   2  title = "Twinkle Twinkle Little Star"
  *   ...
- *  10  [score]
+ *  10  # score
  *  11  (time=4/4 key=C4 bpm=120)
  *  12  1 - - -        ← first note line → measure 1
  *  13  1 1 5 5        ← melody track note → measure 1
@@ -86,16 +86,16 @@ test('detects measure when cursor is at end of last character of a Chinese lyric
   page,
 }) => {
   const source = [
-    '[metadata]',
+    '# metadata',
     'title = "abc"',
     'author = "author"',
     '',
-    '[parts]',
+    '# parts',
     'Chord = chord',
     'Alto 1 & Tenor (A1,T) = notes lyrics',
     '',
     '',
-    '[score]',
+    '# score',
     '',
     '',
     '(bpm=80 key=C4 time=4/4 label="Verse 1")',

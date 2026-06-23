@@ -28,7 +28,7 @@ pub fn split_sections(input: &str) -> (Vec<RawSection>, Vec<RecoverableError>) {
     for line in input.lines() {
         let line_len = line.len() + 1; // +1 for '\n'
 
-        if line.starts_with('[') && line.ends_with(']') {
+        if let Some(after_prefix) = line.strip_prefix("# ") {
             if let Some(kind) = current_kind.take() {
                 sections.push(RawSection {
                     kind,
@@ -37,7 +37,7 @@ pub fn split_sections(input: &str) -> (Vec<RawSection>, Vec<RecoverableError>) {
                 });
                 current_content.clear();
             }
-            let kind_str = &line[1..line.len() - 1];
+            let kind_str = after_prefix.trim();
             let span = Span::new(byte_offset, byte_offset + line.len());
             match kind_str {
                 "metadata" => {
@@ -82,7 +82,7 @@ mod tests {
     use crate::error::RecoverableErrorKind;
 
     fn three_section_input(score: &str) -> String {
-        format!("[metadata]\ntitle = \"hi\"\n\n[parts]\nMelody = notes lyrics\n\n[score]\n{score}")
+        format!("# metadata\ntitle = \"hi\"\n\n# parts\nMelody = notes lyrics\n\n# score\n{score}")
     }
 
     #[test]
@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn unknown_lyrics_section_is_skipped_with_error() {
-        let input = "[metadata]\ntitle=\"t\"\n[lyrics]\nfoo\n";
+        let input = "# metadata\ntitle=\"t\"\n# lyrics\nfoo\n";
         let (sections, errors) = split_sections(input);
         assert_eq!(errors.len(), 1);
         assert!(matches!(
@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn unknown_named_score_section_is_skipped_with_error() {
-        let input = "[score:Soprano]\n1 2 3\n";
+        let input = "# score:Soprano\n1 2 3\n";
         let (sections, errors) = split_sections(input);
         assert_eq!(errors.len(), 1);
         assert!(matches!(
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn unknown_section_is_skipped_with_error() {
-        let input = "[unknown]\nfoo\n";
+        let input = "# unknown\nfoo\n";
         let (sections, errors) = split_sections(input);
         assert_eq!(errors.len(), 1);
         assert!(matches!(
@@ -137,7 +137,7 @@ mod tests {
 
     #[test]
     fn duplicate_parts_section_both_returned() {
-        let input = "[metadata]\nt\n[parts]\nMelody = notes\n[score]\n1\n[parts]\nX = notes\n";
+        let input = "# metadata\nt\n# parts\nMelody = notes\n# score\n1\n# parts\nX = notes\n";
         let (sections, errors) = split_sections(input);
         assert!(
             errors.is_empty(),
@@ -148,7 +148,7 @@ mod tests {
 
     #[test]
     fn missing_parts_section_not_detected_by_split() {
-        let input = "[metadata]\ntitle=\"t\"\n\n[score]\n1\n";
+        let input = "# metadata\ntitle=\"t\"\n\n# score\n1\n";
         let (sections, errors) = split_sections(input);
         assert!(
             errors.is_empty(),
@@ -159,14 +159,14 @@ mod tests {
 
     #[test]
     fn content_offset_points_past_header_line() {
-        let input = "[metadata]\ntitle = \"hi\"\n\n[parts]\nMelody = notes lyrics\n\n[score]\n";
+        let input = "# metadata\ntitle = \"hi\"\n\n# parts\nMelody = notes lyrics\n\n# score\n";
         let (sections, _errors) = split_sections(input);
         assert_eq!(sections[0].content_offset, 11);
     }
 
     #[test]
     fn handles_header_with_no_content() {
-        let input = "[metadata]\ntitle = \"hi\"\n\n[parts]\nMelody = notes lyrics\n\n[score]\n";
+        let input = "# metadata\ntitle = \"hi\"\n\n# parts\nMelody = notes lyrics\n\n# score\n";
         let (sections, _errors) = split_sections(input);
         assert_eq!(sections.len(), 3);
         assert_eq!(sections[2].kind, SectionKind::Score);

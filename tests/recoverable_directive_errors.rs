@@ -4,14 +4,14 @@ use jianpu_generator::render_svgs_from_source;
 
 fn minimal_fixture(score_section: &str) -> String {
     format!(
-        r#"[metadata]
+        r#"# metadata
 title = "t"
 author = "a"
 
-[parts]
+# parts
 Melody = notes
 
-[score]
+# score
 {score_section}
 "#
     )

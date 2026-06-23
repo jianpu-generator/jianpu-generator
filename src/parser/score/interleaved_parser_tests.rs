@@ -9,15 +9,15 @@ use super::test_helpers::{
 #[test]
 fn chord_line_parses_spaced_slur_group() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Chord = chord\n",
         "Melody = notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "(1 - 6m -)\n",
         "1 1 5 5\n",
@@ -266,14 +266,14 @@ fn omitted_notes_row_is_filled_with_rest() {
     // Part kind "lyrics notes" puts the lyrics row before the notes row in the score.
     // The score has only a lyrics row; the missing notes row is silently filled with rests.
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "A = lyrics notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "la la\n",
     );
@@ -304,14 +304,14 @@ fn omitted_chord_row_is_recoverable() {
     // Part kind "notes chord" puts the notes row before the chord row in the score.
     // With only a notes row provided, the missing chord row is now a recoverable error.
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "A = notes chord\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
     );

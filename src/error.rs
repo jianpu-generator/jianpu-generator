@@ -15,9 +15,9 @@ pub enum DocumentSection {
 impl DocumentSection {
     pub fn header(self) -> &'static str {
         match self {
-            Self::Metadata => "[metadata]",
-            Self::Parts => "[parts]",
-            Self::Score => "[score]",
+            Self::Metadata => "# metadata",
+            Self::Parts => "# parts",
+            Self::Score => "# score",
         }
     }
 }

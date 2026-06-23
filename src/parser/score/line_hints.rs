@@ -6,7 +6,7 @@ use crate::parser::score::measure_group;
 pub struct ScoreLineHint {
     /// UTF-8 byte offset of the first character on the line in the full source file.
     pub line_start: usize,
-    /// Part abbreviation from the `[parts]` declaration for this score line slot.
+    /// Part abbreviation from the `# parts` declaration for this score line slot.
     pub abbreviation: String,
 }
 

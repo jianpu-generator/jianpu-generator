@@ -322,7 +322,7 @@ pub fn render_with_highlight_range(
     )
 }
 
-/// Parse `.jianpu` source and return declared parts from the `[parts]` section.
+/// Parse `.jianpu` source and return declared parts from the `# parts` section.
 ///
 /// - `{ "status": "ok", "parts": [{ "abbreviation", "display_name" }, ...] }`
 /// - `{ "status": "err", "diagnostics": [...] }`
@@ -335,7 +335,7 @@ pub fn list_parts(source: &str) -> ListPartsResponse {
 ///
 /// Returns `{ "status": "ok", "measureIndex": N }` when the offset falls
 /// inside a measure's note events, or `{ "status": "notInMeasure" }` otherwise
-/// (e.g. when the cursor is in `[metadata]`, `[parts]`, or a directive line).
+/// (e.g. when the cursor is in `# metadata`, `# parts`, or a directive line).
 #[wasm_bindgen]
 pub fn get_measure_index_at_offset(source: &str, byte_offset: usize) -> MeasureAtOffsetResponse {
     get_measure_at_offset_response(source, byte_offset)

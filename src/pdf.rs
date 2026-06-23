@@ -99,7 +99,7 @@ mod tests {
 
     fn make_pdf(score_str: &str, lyrics_str: &str) -> Vec<u8> {
         let input = format!(
-            "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes lyrics\n\n[score]\ntime=4/4 key=C4 bpm=120\n{score_str}\n{lyrics_str}\n"
+            "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes lyrics\n\n# score\ntime=4/4 key=C4 bpm=120\n{score_str}\n{lyrics_str}\n"
         );
         let svgs = crate::render_svgs_from_source(&input, "test.jianpu")
             .unwrap()

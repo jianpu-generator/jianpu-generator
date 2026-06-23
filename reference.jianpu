@@ -1,4 +1,4 @@
-[metadata]
+# metadata
 title = "Jianpu Postcard"
 author = "—"
 subtitle = "Complete syntax reference — every feature, one measure each"
@@ -7,11 +7,11 @@ row height = 24
 label width = 120
 note number width = 8
 
-[parts]
+# parts
 Melody (M) = notes lyrics
 Chords (C) = chord
 
-[score]
+# score
 0 0 0 0
 
 label="Scale degrees 1-7 & rest 0"

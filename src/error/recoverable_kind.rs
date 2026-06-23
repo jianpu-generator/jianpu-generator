@@ -51,7 +51,7 @@ pub enum RecoverableErrorKind {
     PartsMalformedLine { line: String },
     /// A parts abbreviation is used by more than one declaration — the duplicate is skipped.
     PartsDuplicateAbbreviation { abbrev: String },
-    /// The [parts] section contains no valid declarations — document renders empty.
+    /// The `# parts` section contains no valid declarations — document renders empty.
     PartsEmptySection,
     /// A display name before `(` is empty — the declaration is skipped.
     PartsEmptyDisplayName,
@@ -61,13 +61,13 @@ pub enum RecoverableErrorKind {
     PartsEmptyTrackName,
     /// The RHS of a parts declaration is not a recognized column spec — the declaration is skipped.
     PartsInvalidColumns { rhs: String },
-    /// A section header `[name]` is not one of the three known sections — the section is skipped.
+    /// A section header `# name` is not one of the three known sections — the section is skipped.
     SectionUnknown { name: String },
     /// A section appears more than once — the duplicate is skipped, first occurrence is used.
     SectionDuplicate { section: DocumentSection },
     /// A required section is absent — an empty default is used.
     SectionMissing { section: DocumentSection },
-    /// Sections appear out of canonical order ([metadata], [parts], [score]).
+    /// Sections appear out of canonical order (# metadata, # parts, # score).
     SectionOutOfOrder,
     /// A lyrics line is empty — treated as `_` (no lyrics for this measure).
     LyricsLineEmpty,
@@ -120,17 +120,17 @@ impl RecoverableErrorKind {
             Self::MetadataMissingField { field } => format!("missing required field: {}", field.label()),
             Self::PartsMalformedLine { line } => format!("expected track declaration, got: {line}"),
             Self::PartsDuplicateAbbreviation { abbrev } => format!("duplicate abbreviation: {abbrev}"),
-            Self::PartsEmptySection => "expected at least one track in [parts] section".to_string(),
+            Self::PartsEmptySection => "expected at least one track in # parts section".to_string(),
             Self::PartsEmptyDisplayName => "display name cannot be empty".to_string(),
             Self::PartsEmptyAbbreviation => "abbreviation cannot be empty".to_string(),
             Self::PartsEmptyTrackName => "track name cannot be empty".to_string(),
             Self::PartsInvalidColumns { rhs } => format!(
                 "invalid track columns '{rhs}': expected 'chord', 'notes', 'notes lyrics', 'lyrics notes', or 'notes chord'"
             ),
-            Self::SectionUnknown { name } => format!("unknown section: [{name}]"),
+            Self::SectionUnknown { name } => format!("unknown section: # {name}"),
             Self::SectionDuplicate { section } => format!("duplicate {} section", section.header()),
             Self::SectionMissing { section } => format!("missing {} section", section.header()),
-            Self::SectionOutOfOrder => "sections must appear in order: [metadata], [parts], [score]".to_string(),
+            Self::SectionOutOfOrder => "sections must appear in order: # metadata, # parts, # score".to_string(),
             Self::LyricsLineEmpty => "lyrics line cannot be empty; use '_' for no lyrics".to_string(),
             Self::LyricsNoNotesTrack { abbrev } => format!("lyrics line for '{abbrev}' has no matching notes track"),
             Self::PartMeasureCountMismatch { part, got, expected } => format!("part {part:?} has {got} measures but the first part has {expected}; all parts must have the same number of measures"),

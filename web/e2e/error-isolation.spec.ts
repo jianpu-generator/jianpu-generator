@@ -1,14 +1,14 @@
 import { expect, test } from '@playwright/test'
 
 const SOURCE_WITH_UNDERFLOW_IN_MEASURE_1 = [
-  '[metadata]',
+  '# metadata',
   'title="t"',
   'author="a"',
   '',
-  '[parts]',
+  '# parts',
   'Melody = notes lyrics',
   '',
-  '[score]',
+  '# score',
   '(time=4/4 key=C4 bpm=120)',
   '1 2 3 4',
   'a b',

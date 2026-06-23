@@ -9,15 +9,15 @@ use super::*;
 #[test]
 fn ditto_lyrics_line_drops_lyric_row_for_that_measure() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano = notes lyrics\n",
         "Alto = notes lyrics\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "do re mi fa\n",
@@ -50,15 +50,15 @@ fn implicitly_omitted_lyrics_line_drops_lyric_row() {
     // Alto's lyric line is omitted entirely — implicit trailing ditto,
     // treated identically to an explicit `"`.
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano = notes lyrics\n",
         "Alto = notes lyrics\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "do re mi fa\n",
@@ -76,15 +76,15 @@ fn implicitly_omitted_lyrics_line_drops_lyric_row() {
 #[test]
 fn explicit_lyrics_keep_lyric_row() {
     let input = concat!(
-        "[metadata]\n",
+        "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
-        "[parts]\n",
+        "# parts\n",
         "Soprano = notes lyrics\n",
         "Alto = notes lyrics\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "do re mi fa\n",

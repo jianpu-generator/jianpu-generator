@@ -23,12 +23,12 @@ function generateFileId(): string {
   return crypto.randomUUID()
 }
 
-const NEW_FILE_TEMPLATE = `[metadata]
+const NEW_FILE_TEMPLATE = `# metadata
 title = "Untitled"
 
-[parts]
+# parts
 
-[score]
+# score
 `
 
 export interface FileStoreState {

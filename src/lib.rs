@@ -68,7 +68,7 @@ fn collect_measure_diagnostics(score: &Score) -> Vec<Diagnostic> {
         .collect()
 }
 
-/// A part declared in the `[parts]` section.
+/// A part declared in the `# parts` section.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PartInfo {
     /// Abbreviation used in score row labels and `--tracks` filtering.

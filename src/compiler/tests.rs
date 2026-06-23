@@ -10,28 +10,28 @@ fn score_from(source: &str) -> crate::ast::grouped::Score {
 /// Lyrics-part document with one track.
 fn lyrics_doc(score_content: &str) -> String {
     format!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nS = notes lyrics\n\n[score]\n{score_content}"
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nS = notes lyrics\n\n# score\n{score_content}"
     )
 }
 
-/// Minimal one-part (notes) document. `score_content` is everything after `[score]\n`.
+/// Minimal one-part (notes) document. `score_content` is everything after `# score\n`.
 fn notes_doc(score_content: &str) -> String {
     format!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nS = notes\n\n[score]\n{score_content}"
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nS = notes\n\n# score\n{score_content}"
     )
 }
 
 /// Two-part (notes) document.
 fn two_part_doc(score_content: &str) -> String {
     format!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nS = notes\nA = notes\n\n[score]\n{score_content}"
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nS = notes\nA = notes\n\n# score\n{score_content}"
     )
 }
 
 /// Chord-part document with one track.
 fn chord_doc(score_content: &str) -> String {
     format!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nC = chord\n\n[score]\n{score_content}"
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nC = chord\n\n# score\n{score_content}"
     )
 }
 
@@ -199,16 +199,16 @@ fn bar_line_column_equals_total_duration() {
 #[test]
 fn all_parts_ditto_except_first_produces_all_label() {
     let score = score_from(
-        "[metadata]
+        "# metadata
 title=\"t\"
 author=\"a\"
 
-[parts]
+# parts
 Soprano (S) = notes
 Alto (A) = notes
 Tenor (T) = notes
 
-[score]
+# score
 time=4/4 key=C4 bpm=120
 1 2 3 4
 \"
@@ -373,12 +373,12 @@ fn malformed_parts_line_is_recoverable_and_valid_part_still_renders() {
     use crate::error::RecoverableErrorKind;
 
     let source = concat!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "[parts]\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "# parts\n",
         "no-equals-sign\n",
         "Melody = notes\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
     );
@@ -409,11 +409,11 @@ fn all_parts_invalid_renders_empty_document_with_error() {
     use crate::error::RecoverableErrorKind;
 
     let source = concat!(
-        "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "[parts]\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "# parts\n",
         "no-equals-sign\n",
         "\n",
-        "[score]\n",
+        "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
     );

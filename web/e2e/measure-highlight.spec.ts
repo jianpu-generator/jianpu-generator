@@ -4,9 +4,9 @@ import { expect, test } from '@playwright/test'
  * The default demo source (Twinkle Twinkle Little Star) has the following
  * Monaco line numbers (1-based):
  *
- *   1  [metadata]
+ *   1  # metadata
  *   ...
- *  10  [score]
+ *  10  # score
  *  11  (time=4/4 key=C4 bpm=120)
  *  12  1 - - -        ← chord line → measure 1
  *  13  1 1 5 5        ← melody note line → measure 1
@@ -54,7 +54,7 @@ test('removes highlight rect when cursor moves outside all measures', async ({
   )
   await expect(highlightRect).toBeVisible({ timeout: 5_000 })
 
-  // Move to line 1 ([metadata] section) — outside any measure span.
+  // Move to line 1 (# metadata section) — outside any measure span.
   await page.keyboard.press('Control+g')
   await page.keyboard.type('1')
   await page.keyboard.press('Enter')
