@@ -1,3 +1,5 @@
+#![cfg_attr(test, allow(clippy::disallowed_macros))]
+
 mod types;
 
 #[cfg(feature = "wav")]
@@ -26,52 +28,14 @@ use wasm_bindgen::prelude::*;
 
 fn render_response(
     source: &str,
-    enabled_tracks: Option<Vec<String>>,
-    disabled_lyrics: Option<Vec<String>>,
+    enabled_tracks: Option<&[String]>,
+    disabled_lyrics: Option<&[String]>,
 ) -> RenderResponse {
-    let tracks = enabled_tracks.as_deref();
-    let lyrics = disabled_lyrics.as_deref();
-    match render_svgs_from_source_filtered_with_lyrics(source, "input.jianpu", tracks, lyrics) {
-        Ok(output) => {
-            let diagnostics: Vec<_> = output
-                .diagnostics
-                .into_iter()
-                .map(|d| diagnostic_from_diagnostic(source, d))
-                .collect();
-            let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
-            RenderResponse::Ok {
-                svgs: output.svgs,
-                diagnostics,
-                diagnostic_view_zones,
-            }
-        }
-        Err(e) => {
-            let diagnostics = vec![diagnostic_from_error(source, e)];
-            let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
-            RenderResponse::Err {
-                diagnostics,
-                diagnostic_view_zones,
-            }
-        }
-    }
-}
-
-fn render_with_highlight_range_response(
-    source: &str,
-    start_index: usize,
-    end_index: usize,
-    enabled_tracks: Option<Vec<String>>,
-    disabled_lyrics: Option<Vec<String>>,
-) -> RenderResponse {
-    let tracks = enabled_tracks.as_deref();
-    let lyrics = disabled_lyrics.as_deref();
-    match render_svgs_with_highlight_range(
+    match render_svgs_from_source_filtered_with_lyrics(
         source,
         "input.jianpu",
-        start_index,
-        end_index,
-        tracks,
-        lyrics,
+        enabled_tracks,
+        disabled_lyrics,
     ) {
         Ok(output) => {
             let diagnostics: Vec<_> = output
@@ -87,7 +51,46 @@ fn render_with_highlight_range_response(
             }
         }
         Err(e) => {
-            let diagnostics = vec![diagnostic_from_error(source, e)];
+            let diagnostics = vec![diagnostic_from_error(source, &e)];
+            let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
+            RenderResponse::Err {
+                diagnostics,
+                diagnostic_view_zones,
+            }
+        }
+    }
+}
+
+fn render_with_highlight_range_response(
+    source: &str,
+    start_index: usize,
+    end_index: usize,
+    enabled_tracks: Option<&[String]>,
+    disabled_lyrics: Option<&[String]>,
+) -> RenderResponse {
+    match render_svgs_with_highlight_range(
+        source,
+        "input.jianpu",
+        start_index,
+        end_index,
+        enabled_tracks,
+        disabled_lyrics,
+    ) {
+        Ok(output) => {
+            let diagnostics: Vec<_> = output
+                .diagnostics
+                .into_iter()
+                .map(|d| diagnostic_from_diagnostic(source, d))
+                .collect();
+            let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
+            RenderResponse::Ok {
+                svgs: output.svgs,
+                diagnostics,
+                diagnostic_view_zones,
+            }
+        }
+        Err(e) => {
+            let diagnostics = vec![diagnostic_from_error(source, &e)];
             let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
             RenderResponse::Err {
                 diagnostics,
@@ -110,7 +113,7 @@ fn list_parts_response(source: &str) -> ListPartsResponse {
                 .collect(),
         },
         Err(e) => ListPartsResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, e)],
+            diagnostics: vec![diagnostic_from_error(source, &e)],
         },
     }
 }
@@ -156,7 +159,7 @@ fn list_score_line_hints_response(source: &str) -> ListScoreLineHintsResponse {
                 .collect(),
         },
         Err(error) => ListScoreLineHintsResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, error)],
+            diagnostics: vec![diagnostic_from_error(source, &error)],
         },
     }
 }
@@ -180,12 +183,11 @@ pub fn list_score_line_hints(source: &str) -> ListScoreLineHintsResponse {
 }
 
 #[cfg(feature = "wav")]
-fn generate_wav_response(source: &str, enabled_tracks: Option<Vec<String>>) -> GenerateWavResponse {
-    let tracks = enabled_tracks.as_deref();
-    match write_wav_from_source_filtered(source, "input.jianpu", tracks) {
+fn generate_wav_response(source: &str, enabled_tracks: Option<&[String]>) -> GenerateWavResponse {
+    match write_wav_from_source_filtered(source, "input.jianpu", enabled_tracks) {
         Ok(wav) => GenerateWavResponse::Ok { wav },
         Err(e) => GenerateWavResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, e)],
+            diagnostics: vec![diagnostic_from_error(source, &e)],
         },
     }
 }
@@ -195,19 +197,18 @@ fn generate_wav_for_measure_range_response(
     source: &str,
     start_index: usize,
     end_index: usize,
-    enabled_tracks: Option<Vec<String>>,
+    enabled_tracks: Option<&[String]>,
 ) -> GenerateWavResponse {
-    let tracks = enabled_tracks.as_deref();
     match write_wav_for_measure_range_from_source(
         source,
         "input.jianpu",
         start_index,
         end_index,
-        tracks,
+        enabled_tracks,
     ) {
         Ok(wav) => GenerateWavResponse::Ok { wav },
         Err(e) => GenerateWavResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, e)],
+            diagnostics: vec![diagnostic_from_error(source, &e)],
         },
     }
 }
@@ -228,20 +229,23 @@ fn make_pdf_fonts(
 #[cfg(feature = "pdf")]
 fn generate_pdf_response(
     source: &str,
-    enabled_tracks: Option<Vec<String>>,
-    disabled_lyrics: Option<Vec<String>>,
+    enabled_tracks: Option<&[String]>,
+    disabled_lyrics: Option<&[String]>,
     sans_serif_sc: Vec<u8>,
     sans_serif_tc: Vec<u8>,
     monospace: Vec<u8>,
 ) -> GeneratePdfResponse {
     let fonts = make_pdf_fonts(sans_serif_sc, sans_serif_tc, monospace);
-    let tracks = enabled_tracks.as_deref();
-    let lyrics = disabled_lyrics.as_deref();
-    match write_pdf_from_source_filtered_with_lyrics(source, "input.jianpu", tracks, lyrics, &fonts)
-    {
+    match write_pdf_from_source_filtered_with_lyrics(
+        source,
+        "input.jianpu",
+        enabled_tracks,
+        disabled_lyrics,
+        &fonts,
+    ) {
         Ok(pdf) => GeneratePdfResponse::Ok { pdf },
         Err(e) => GeneratePdfResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, e)],
+            diagnostics: vec![diagnostic_from_error(source, &e)],
         },
     }
 }
@@ -259,11 +263,11 @@ fn generate_split_pdfs_response(
         Ok(entries) => match zip_split_pdfs(&entries) {
             Ok(zip) => GenerateSplitPdfsResponse::Ok { zip },
             Err(e) => GenerateSplitPdfsResponse::Err {
-                diagnostics: vec![diagnostic_from_error(source, e)],
+                diagnostics: vec![diagnostic_from_error(source, &e)],
             },
         },
         Err(e) => GenerateSplitPdfsResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, e)],
+            diagnostics: vec![diagnostic_from_error(source, &e)],
         },
     }
 }
@@ -281,13 +285,18 @@ fn generate_split_pdfs_response(
 /// When `disabled_lyrics` lists part abbreviations, lyrics are hidden for those parts.
 ///
 /// `span.start` / `span.end` are UTF-8 byte offsets into `source`.
+#[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
 pub fn render(
     source: &str,
     enabled_tracks: Option<Vec<String>>,
     disabled_lyrics: Option<Vec<String>>,
 ) -> RenderResponse {
-    render_response(source, enabled_tracks, disabled_lyrics)
+    render_response(
+        source,
+        enabled_tracks.as_deref(),
+        disabled_lyrics.as_deref(),
+    )
 }
 
 /// Render `.jianpu` source with a range of measures highlighted.
@@ -295,6 +304,7 @@ pub fn render(
 /// Returns the same structured value as [`render`]:
 /// - `{ "status": "ok", "svgs": ["<svg>...</svg>", ...] }`
 /// - `{ "status": "err", "diagnostics": [...] }`
+#[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
 pub fn render_with_highlight_range(
     source: &str,
@@ -307,8 +317,8 @@ pub fn render_with_highlight_range(
         source,
         start_index,
         end_index,
-        enabled_tracks,
-        disabled_lyrics,
+        enabled_tracks.as_deref(),
+        disabled_lyrics.as_deref(),
     )
 }
 
@@ -338,9 +348,10 @@ pub fn get_measure_index_at_offset(source: &str, byte_offset: usize) -> MeasureA
 /// - `{ "status": "ok", "wav": Uint8Array }`
 /// - `{ "status": "err", "diagnostics": [...] }`
 #[cfg(feature = "wav")]
+#[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
 pub fn generate_wav(source: &str, enabled_tracks: Option<Vec<String>>) -> GenerateWavResponse {
-    generate_wav_response(source, enabled_tracks)
+    generate_wav_response(source, enabled_tracks.as_deref())
 }
 
 /// Synthesize WAV audio for a consecutive measure range, with BPM/key context from preceding measures.
@@ -350,6 +361,7 @@ pub fn generate_wav(source: &str, enabled_tracks: Option<Vec<String>>) -> Genera
 /// - `{ "status": "ok", "wav": Uint8Array }`
 /// - `{ "status": "err", "diagnostics": [...] }`
 #[cfg(feature = "wav")]
+#[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
 pub fn generate_wav_for_measure_range(
     source: &str,
@@ -357,7 +369,12 @@ pub fn generate_wav_for_measure_range(
     end_index: usize,
     enabled_tracks: Option<Vec<String>>,
 ) -> GenerateWavResponse {
-    generate_wav_for_measure_range_response(source, start_index, end_index, enabled_tracks)
+    generate_wav_for_measure_range_response(
+        source,
+        start_index,
+        end_index,
+        enabled_tracks.as_deref(),
+    )
 }
 
 /// Parse `.jianpu` source and write PDF bytes.
@@ -371,6 +388,7 @@ pub fn generate_wav_for_measure_range(
 /// (OTF/TTF) used for text rendering. They are not embedded in the WASM binary
 /// and must be supplied by the caller (e.g. fetched from a CDN or local server).
 #[cfg(feature = "pdf")]
+#[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
 pub fn generate_pdf(
     source: &str,
@@ -382,8 +400,8 @@ pub fn generate_pdf(
 ) -> GeneratePdfResponse {
     generate_pdf_response(
         source,
-        enabled_tracks,
-        disabled_lyrics,
+        enabled_tracks.as_deref(),
+        disabled_lyrics.as_deref(),
         sans_serif_sc,
         sans_serif_tc,
         monospace,
