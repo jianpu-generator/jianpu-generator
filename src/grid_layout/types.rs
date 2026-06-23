@@ -158,4 +158,9 @@ pub struct LayoutOptions {
     pub page_height_pt: f32,
     pub highlighted_measure_range: Option<(usize, usize)>,
     pub snippet: bool,
+    /// When `snippet` is true, decorations (BPM, time signature, section labels) are hidden
+    /// unless this flag is set to true.
+    pub snippet_show_decorations: bool,
+    /// When true (implies `snippet`), render only the decoration row and omit musical rows.
+    pub snippet_only_decorations: bool,
 }

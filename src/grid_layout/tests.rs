@@ -277,5 +277,7 @@ fn layout_options_snippet_flag_compiles() {
         page_height_pt: 400.0,
         highlighted_measure_range: None,
         snippet: true,
+        snippet_show_decorations: false,
+            snippet_only_decorations: false,
     };
 }

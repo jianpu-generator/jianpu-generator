@@ -103,6 +103,8 @@ pub fn render_svgs(score: &Score) -> Result<Vec<String>, IrrecoverableError> {
             page_height_pt: 842.0,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)?;
@@ -226,6 +228,8 @@ pub fn render_svgs_with_highlight_range(
             page_height_pt: 842.0,
             highlighted_measure_range: Some((start_index, end_index)),
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)?;
@@ -316,33 +320,41 @@ pub fn write_pdf_from_source_filtered_with_lyrics(
     pdf::write_pdf(&svgs, fonts)
 }
 
-/// Render a single note syntax token as a tight-viewBox SVG snippet.
-///
-/// Pads with two quarter rests so all note durations (including extensions)
-/// fit within 4/4 without overshooting 16 quarter-beats.
+/// Render a single note syntax token as a tight-viewBox SVG snippet showing only the note glyph.
 pub fn render_note_snippet(syntax: &str) -> Result<String, String> {
-    let source = format!("[parts]\nmain = notes\n[score]\n{syntax} 0 0");
-    render_snippet_svg(&source)
+    render_note_glyph(syntax)
 }
 
-/// Render a single chord syntax token as a tight-viewBox SVG snippet.
+/// Render a single chord syntax token as a tight-viewBox SVG snippet showing only the chord glyph.
 pub fn render_chord_snippet(syntax: &str) -> Result<String, String> {
-    let source = format!("[parts]\nmain = chord\n[score]\n{syntax} - - -");
-    render_snippet_svg(&source)
+    render_chord_glyph(syntax)
 }
 
 /// Render a notes-line (without `[parts]`/`[score]` boilerplate) as a tight-viewBox SVG snippet.
 pub fn render_notes_line_snippet(notes_line: &str) -> Result<String, String> {
     let source = format!("[parts]\nmain = notes\n[score]\n{notes_line}");
-    render_snippet_svg(&source)
+    render_snippet_svg(&source, false)
 }
 
 /// Render a full `.jianpu` source (with `[parts]` and `[score]`) as a tight-viewBox SVG snippet.
+/// Decorations (BPM, time signature, section labels) are hidden.
 pub fn render_parts_score_snippet(source: &str) -> Result<String, String> {
-    render_snippet_svg(source)
+    render_snippet_svg(source, false)
 }
 
-fn render_snippet_svg(source: &str) -> Result<String, String> {
+/// Render a full `.jianpu` source as a tight-viewBox SVG snippet, showing decorations
+/// (BPM, time signature, section labels).
+pub fn render_parts_score_snippet_with_decorations(source: &str) -> Result<String, String> {
+    render_snippet_svg(source, true)
+}
+
+/// Render a full `.jianpu` source as a tight-viewBox SVG snippet showing only the decorations
+/// row (BPM, time signature, section labels), with all musical content omitted.
+pub fn render_directives_snippet(source: &str) -> Result<String, String> {
+    render_snippet_svg_only_decorations(source)
+}
+
+fn render_snippet_svg_only_decorations(source: &str) -> Result<String, String> {
     let score = compile(source, "snippet.jianpu").map_err(|e| e.to_string())?;
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
     let header = grid_layout::types::Header {
@@ -356,10 +368,167 @@ fn render_snippet_svg(source: &str) -> Result<String, String> {
         page_height_pt: 400.0,
         highlighted_measure_range: None,
         snippet: true,
+        snippet_show_decorations: false,
+        snippet_only_decorations: true,
     };
     let grid_pages = grid_layout::layout(&compile_result, &config, &header, &options);
-    let mut abs_pages = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)
+    let abs_pages = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)
         .map_err(|e| e.to_string())?;
+    finalize_snippet_svg(abs_pages, &config)
+}
+
+fn render_snippet_svg(source: &str, show_decorations: bool) -> Result<String, String> {
+    let score = compile(source, "snippet.jianpu").map_err(|e| e.to_string())?;
+    let config = render_config::RenderConfig::from_metadata(&score.metadata);
+    let header = grid_layout::types::Header {
+        title: String::new(),
+        subtitle: None,
+        author: String::new(),
+    };
+    let compile_result = compiler::compile(&score);
+    let options = grid_layout::LayoutOptions {
+        page_width_pt: 400.0,
+        page_height_pt: 400.0,
+        highlighted_measure_range: None,
+        snippet: true,
+        snippet_show_decorations: show_decorations,
+        snippet_only_decorations: false,
+    };
+    let grid_pages = grid_layout::layout(&compile_result, &config, &header, &options);
+    let abs_pages = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)
+        .map_err(|e| e.to_string())?;
+    finalize_snippet_svg(abs_pages, &config)
+}
+
+/// Renders a single note token as a glyph-only SVG, bypassing grid layout entirely so no bar
+/// lines or measure framing are ever produced.
+fn render_note_glyph(syntax: &str) -> Result<String, String> {
+    let source = format!("[parts]\nmain = notes\n[score]\n{syntax}");
+    let score = compile(&source, "snippet.jianpu").map_err(|e| e.to_string())?;
+    let config = render_config::RenderConfig::from_metadata(&score.metadata);
+    let compile_result = compiler::compile(&score);
+
+    let base = config.row_height as f32;
+    let note_w = config.note_number_width as f32;
+
+    // y-offsets derived from note_part_sub_row_heights (src/grid_layout/layout.rs):
+    //   [arc(0.30), above-octave(0.25), note-head(1.00), below-octave(0.25), ul0(0.15), ul1(0.15)]
+    let y_note_head = base * 0.30 + base * 0.25;
+    let y_ul0 = y_note_head + base + base * 0.25;
+    let y_ul1 = y_ul0 + base * 0.15;
+
+    let x0 = grid_layout::PAGE_MARGIN;
+    let mut elements = vec![];
+    for block in &compile_result.blocks {
+        for row in &block.rows {
+            for el in &row.elements {
+                match &el.content {
+                    compiler::types::ElementContent::NoteHead {
+                        pitch,
+                        octave,
+                        dotted,
+                    } => {
+                        elements.push(compositor::types::AbsoluteElement {
+                            x: x0,
+                            y: y_note_head,
+                            content: compositor::types::AbsoluteContent::NoteHead {
+                                pitch: pitch.clone(),
+                                octave: *octave,
+                                dotted: *dotted,
+                            },
+                        });
+                    }
+                    compiler::types::ElementContent::Underline { level, .. } => {
+                        let y = if *level == 0 { y_ul0 } else { y_ul1 };
+                        elements.push(compositor::types::AbsoluteElement {
+                            x: x0,
+                            y,
+                            content: compositor::types::AbsoluteContent::Underline {
+                                width: note_w,
+                                level: *level,
+                            },
+                        });
+                    }
+                    // BarLine, Rest, NoteDash, Lyric, ChordSymbol: not part of a note glyph
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    let page = compositor::types::AbsolutePage {
+        width_pt: note_w + grid_layout::PAGE_MARGIN * 2.0,
+        height_pt: y_ul1 + base * 0.15 + grid_layout::PAGE_MARGIN,
+        elements,
+    };
+    finalize_snippet_svg(vec![page], &config)
+}
+
+/// Renders a single chord token as a glyph-only SVG, bypassing grid layout so no bar lines or
+/// measure framing are produced.
+fn render_chord_glyph(syntax: &str) -> Result<String, String> {
+    let source = format!("[parts]\nmain = chord\n[score]\n{syntax}");
+    let score = compile(&source, "snippet.jianpu").map_err(|e| e.to_string())?;
+    let config = render_config::RenderConfig::from_metadata(&score.metadata);
+    let compile_result = compiler::compile(&score);
+
+    let base = config.row_height as f32;
+    let base_font_size = base * 0.6;
+
+    // y-offsets derived from chord_part_sub_row_heights (src/grid_layout/layout.rs):
+    //   [arc(0.30), chord_main(0.75), half_ul(0.15), quarter_ul(0.15)]
+    let y_chord = base * 0.30 + base * 0.75 * 0.5; // arc + half chord_main height (middle baseline)
+    let y_ul0 = base * 0.30 + base * 0.75;
+    let y_ul1 = y_ul0 + base * 0.15;
+
+    let x0 = grid_layout::PAGE_MARGIN;
+    let mut chord_text_len: usize = 0;
+    let mut elements = vec![];
+    for block in &compile_result.blocks {
+        for row in &block.rows {
+            for el in &row.elements {
+                match &el.content {
+                    compiler::types::ElementContent::ChordSymbol(s) => {
+                        chord_text_len = chord_text_len.max(s.len());
+                        elements.push(compositor::types::AbsoluteElement {
+                            x: x0,
+                            y: y_chord,
+                            content: compositor::types::AbsoluteContent::ChordSymbol(s.clone()),
+                        });
+                    }
+                    compiler::types::ElementContent::Underline { level, .. } => {
+                        let note_w = config.note_number_width as f32;
+                        let y = if *level == 0 { y_ul0 } else { y_ul1 };
+                        elements.push(compositor::types::AbsoluteElement {
+                            x: x0,
+                            y,
+                            content: compositor::types::AbsoluteContent::Underline {
+                                width: note_w,
+                                level: *level,
+                            },
+                        });
+                    }
+                    // BarLine, NoteHead, Rest, NoteDash, Lyric: not part of a chord glyph
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    // Monospace character width ≈ 0.6 × font-size; add margin on both sides.
+    let estimated_text_width = chord_text_len as f32 * base_font_size * 0.6;
+    let page = compositor::types::AbsolutePage {
+        width_pt: estimated_text_width + grid_layout::PAGE_MARGIN * 2.0,
+        height_pt: y_ul1 + base * 0.15 + grid_layout::PAGE_MARGIN,
+        elements,
+    };
+    finalize_snippet_svg(vec![page], &config)
+}
+
+fn finalize_snippet_svg(
+    mut abs_pages: Vec<compositor::types::AbsolutePage>,
+    config: &render_config::RenderConfig,
+) -> Result<String, String> {
     for page in &mut abs_pages {
         // Compute tight bounds using element extents, not just anchor points.
         // Elements with width/height extend rightward/downward from their anchor;
@@ -395,7 +564,7 @@ fn render_snippet_svg(source: &str) -> Result<String, String> {
         page.width_pt = max_x + grid_layout::PAGE_MARGIN;
         page.height_pt = max_y + grid_layout::PAGE_MARGIN;
     }
-    let docs = renderer::new_renderer::render_new(&abs_pages, &config);
+    let docs = renderer::new_renderer::render_new(&abs_pages, config);
     serializer::serialize(&docs)
         .into_iter()
         .next()

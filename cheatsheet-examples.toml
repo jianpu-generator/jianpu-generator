@@ -39,7 +39,7 @@ examples = [
 title = "Directives"
 
 [[section.examples]]
-kind = "score"
+kind = "directives"
 description = "BPM / key / time"
 syntax = "bpm=120 key=C4 time=4/4"
 source = """
@@ -51,7 +51,7 @@ main = notes
 1 0 0 0"""
 
 [[section.examples]]
-kind = "score"
+kind = "directives"
 description = "Section label"
 syntax = 'label="Verse 1"'
 source = """

@@ -207,6 +207,8 @@ fn build_page_rows(
     arc_map: &HashMap<(usize, usize), Vec<GridElement>>,
     abs_system_index_start: usize,
     snippet: bool,
+    snippet_show_decorations: bool,
+    snippet_only_decorations: bool,
 ) -> Vec<GridRow> {
     let mut rows: Vec<GridRow> = if snippet {
         Vec::new()
@@ -220,8 +222,12 @@ fn build_page_rows(
         let Some(first) = system.first() else {
             continue;
         };
-        if system_has_any_decoration(system) {
+        let show_deco = !snippet || snippet_show_decorations || snippet_only_decorations;
+        if show_deco && system_has_any_decoration(system) {
             rows.push(make_decoration_row(system, base));
+        }
+        if snippet_only_decorations {
+            continue;
         }
         let abs_sys = abs_system_index_start + sys_idx;
         let part_count = first.rows.len();
@@ -316,6 +322,8 @@ pub fn layout(
             &arc_map,
             abs_system_index_start,
             options.snippet,
+            options.snippet_show_decorations,
+            options.snippet_only_decorations,
         );
         if !options.snippet {
             let body_height: f32 = rows.iter().map(|r| r.height_pt).sum();

@@ -71,8 +71,11 @@ fn parse_directive_line(
     line: &str,
     line_offset: usize,
 ) -> (Vec<Spanned<ScoreEvent>>, Vec<RecoverableError>) {
-    let inner = line;
-    let inner_offset = line_offset;
+    let (inner, inner_offset) = if line.starts_with('(') && line.ends_with(')') {
+        (&line[1..line.len() - 1], line_offset + 1)
+    } else {
+        (line, line_offset)
+    };
 
     let tokens = match tokenize_directive_tokens(inner) {
         Ok(tokens) => tokens,

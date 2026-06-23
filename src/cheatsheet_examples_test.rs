@@ -38,6 +38,15 @@ enum CheatsheetExample {
         _description: String,
         #[serde(rename = "syntax")]
         _syntax: String,
+        #[serde(default)]
+        show_decorations: bool,
+        source: String,
+    },
+    Directives {
+        #[serde(rename = "description")]
+        _description: String,
+        #[serde(rename = "syntax")]
+        _syntax: String,
         source: String,
     },
 }
@@ -55,8 +64,19 @@ fn all_cheatsheet_examples_render() {
                 CheatsheetExample::Line { notes_line, .. } => {
                     crate::render_notes_line_snippet(notes_line)
                 }
-                CheatsheetExample::Score { source, .. } => {
-                    crate::render_parts_score_snippet(source)
+                CheatsheetExample::Score {
+                    source,
+                    show_decorations,
+                    ..
+                } => {
+                    if *show_decorations {
+                        crate::render_parts_score_snippet_with_decorations(source)
+                    } else {
+                        crate::render_parts_score_snippet(source)
+                    }
+                }
+                CheatsheetExample::Directives { source, .. } => {
+                    crate::render_directives_snippet(source)
                 }
             };
             let svg = result.expect("snippet render failed");

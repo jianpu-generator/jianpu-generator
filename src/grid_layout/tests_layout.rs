@@ -96,6 +96,8 @@ fn layout_single_block_produces_one_page() {
             page_height_pt: 842.0,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     assert_eq!(pages.len(), 1);
@@ -117,6 +119,8 @@ fn layout_page_has_correct_dimensions() {
             page_height_pt: 842.0,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     assert!((pages[0].width_pt - 595.0).abs() < 0.001);
@@ -139,6 +143,8 @@ fn layout_rows_include_header_and_footer() {
             page_height_pt: 842.0,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     // At minimum: header title row, header subtitle+author row, footer row
@@ -161,6 +167,8 @@ fn layout_page_total_height_does_not_exceed_page_height() {
             page_height_pt: 842.0,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     for page in &pages {
@@ -211,6 +219,8 @@ fn layout_with_bpm_decoration_has_decoration_row() {
             page_height_pt: 842.0,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     let has_bpm = pages[0]
@@ -222,7 +232,7 @@ fn layout_with_bpm_decoration_has_decoration_row() {
 }
 
 #[test]
-fn decoration_row_has_fixed_column_count() {
+fn decoration_row_uses_music_column_count() {
     use crate::compiler::types::Decoration;
     let block = make_block_with_decorations(vec![Decoration::Bpm(120)]);
     let compile_result = CompileResult {
@@ -238,8 +248,19 @@ fn decoration_row_has_fixed_column_count() {
             page_height_pt: 842.0,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
+    let music_row = pages[0]
+        .rows
+        .iter()
+        .find(|r| {
+            r.elements
+                .iter()
+                .any(|e| matches!(e.content, GridContent::NoteHead { .. }))
+        })
+        .expect("should have a music row with NoteHead");
     let deco_row = pages[0]
         .rows
         .iter()
@@ -250,14 +271,15 @@ fn decoration_row_has_fixed_column_count() {
         })
         .expect("should have a decoration row with Bpm");
     assert_eq!(
-        deco_row.column_count, 12,
-        "decoration row should use fixed DECO_COLS=12"
+        deco_row.column_count, music_row.column_count,
+        "decoration row should use the same column count as music rows"
     );
 }
 
 #[test]
-fn decoration_items_start_at_column_1() {
+fn decoration_items_start_at_label_cols_offset() {
     use crate::compiler::types::Decoration;
+    use crate::grid_layout::layout::LABEL_COLS;
     let block = make_block_with_decorations(vec![Decoration::Bpm(120)]);
     let compile_result = CompileResult {
         blocks: vec![block],
@@ -272,6 +294,8 @@ fn decoration_items_start_at_column_1() {
             page_height_pt: 842.0,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     let bpm_el = pages[0]
@@ -280,7 +304,10 @@ fn decoration_items_start_at_column_1() {
         .flat_map(|r| r.elements.iter())
         .find(|e| matches!(e.content, GridContent::Bpm(_)))
         .expect("should have Bpm element");
-    assert_eq!(bpm_el.column, 1, "first decoration should be at column 1");
+    assert_eq!(
+        bpm_el.column, LABEL_COLS,
+        "first decoration should start at LABEL_COLS"
+    );
 }
 
 #[test]
@@ -304,6 +331,8 @@ fn section_label_ordered_before_bpm_regardless_of_declaration_order() {
             page_height_pt: 842.0,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     let section_col = pages[0]
@@ -327,8 +356,9 @@ fn section_label_ordered_before_bpm_regardless_of_declaration_order() {
 }
 
 #[test]
-fn multiple_decorations_occupy_consecutive_columns_starting_at_1() {
+fn multiple_decorations_are_spaced_apart() {
     use crate::compiler::types::Decoration;
+    use crate::grid_layout::layout::LABEL_COLS;
     let block = make_block_with_decorations(vec![
         Decoration::Bpm(120),
         Decoration::TimeSignature {
@@ -349,6 +379,8 @@ fn multiple_decorations_occupy_consecutive_columns_starting_at_1() {
             page_height_pt: 842.0,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     let bpm_col = pages[0]
@@ -365,8 +397,11 @@ fn multiple_decorations_occupy_consecutive_columns_starting_at_1() {
         .find(|e| matches!(e.content, GridContent::TimeSignature { .. }))
         .expect("should have TimeSignature element")
         .column;
-    assert_eq!(bpm_col, 1, "Bpm should be at column 1");
-    assert_eq!(time_col, 2, "TimeSignature should be at column 2");
+    assert_eq!(bpm_col, LABEL_COLS, "Bpm should start at LABEL_COLS");
+    assert!(
+        time_col > bpm_col,
+        "TimeSignature (col {time_col}) should be to the right of Bpm (col {bpm_col})"
+    );
 }
 
 #[test]
@@ -389,6 +424,8 @@ fn section_label_on_non_first_measure_of_system_is_rendered() {
             page_height_pt: 842.0,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     let has_label = pages[0]
@@ -423,6 +460,8 @@ fn section_label_on_non_first_measure_is_right_of_column_1() {
             page_height_pt: 842.0,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     let label_col = pages[0]
@@ -455,6 +494,8 @@ fn footer_row_fills_remaining_page_height() {
             page_height_pt: page_height,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     let page = &pages[0];
@@ -486,6 +527,8 @@ fn footer_element_valign_is_bottom() {
             page_height_pt: 842.0,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     let footer_row = pages[0].rows.last().unwrap();

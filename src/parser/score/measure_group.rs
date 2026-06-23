@@ -1,7 +1,12 @@
 type SourceLine = (String, usize);
 
 pub(super) fn is_directive_line(line: &str) -> bool {
-    line.split_whitespace().any(|t| {
+    let inner = if line.starts_with('(') && line.ends_with(')') {
+        &line[1..line.len() - 1]
+    } else {
+        line
+    };
+    inner.split_whitespace().any(|t| {
         t.starts_with("bpm=")
             || t.starts_with("key=")
             || t.starts_with("time=")

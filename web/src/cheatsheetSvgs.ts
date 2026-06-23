@@ -38,8 +38,15 @@ for (const section of cheatsheetSections) {
         id,
         notesLine: example.notes_line,
       }
+    } else if (example.kind === 'directives') {
+      request = { type: 'renderDirectivesSnippet', id, source: example.source }
     } else {
-      request = { type: 'renderPartsScoreSnippet', id, source: example.source }
+      request = {
+        type: 'renderPartsScoreSnippet',
+        id,
+        source: example.source,
+        showDecorations: example.show_decorations ?? false,
+      }
     }
     snippetWorker.postMessage(request)
   }

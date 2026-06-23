@@ -1,5 +1,6 @@
 use super::*;
 
+
 #[cfg(feature = "pdf")]
 fn test_pdf_fonts() -> pdf::PdfFonts {
     pdf::PdfFonts {
@@ -290,6 +291,8 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
             page_height_pt: 842.0,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)
@@ -435,3 +438,4 @@ mod split_pdf_tests {
         assert_eq!(&buf[0..4], b"%PDF");
     }
 }
+

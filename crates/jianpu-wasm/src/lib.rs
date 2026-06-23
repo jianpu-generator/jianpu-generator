@@ -6,9 +6,12 @@ use jianpu_generator::write_wav_for_measure_range_from_source;
 use jianpu_generator::write_wav_from_source_filtered;
 use jianpu_generator::{
     compile, find_measure_at_byte_offset, list_measure_spans_from_source, list_parts_from_source,
-    list_score_line_hints_from_source, render_chord_snippet, render_note_snippet,
+    list_score_line_hints_from_source, render_chord_snippet,
+    render_directives_snippet as render_directives, render_note_snippet,
     render_notes_line_snippet as render_notes_line,
-    render_parts_score_snippet as render_parts_score, render_svgs_from_source_filtered_with_lyrics,
+    render_parts_score_snippet as render_parts_score,
+    render_parts_score_snippet_with_decorations as render_parts_score_with_decorations,
+    render_svgs_from_source_filtered_with_lyrics,
     render_svgs_with_highlight_range,
 };
 #[cfg(feature = "pdf")]
@@ -431,9 +434,24 @@ pub fn render_notes_line_snippet(notes_line: &str) -> Result<String, String> {
 }
 
 /// Render a full `.jianpu` source (with `[parts]` and `[score]`) as a tight-viewBox SVG snippet.
+/// Decorations (BPM, time signature, section labels) are hidden.
 #[wasm_bindgen]
 pub fn render_parts_score_snippet(source: &str) -> Result<String, String> {
     render_parts_score(source)
+}
+
+/// Render a full `.jianpu` source as a tight-viewBox SVG snippet, showing decorations
+/// (BPM, time signature, section labels).
+#[wasm_bindgen]
+pub fn render_parts_score_snippet_with_decorations(source: &str) -> Result<String, String> {
+    render_parts_score_with_decorations(source)
+}
+
+/// Render a full `.jianpu` source as a tight-viewBox SVG snippet showing only the decorations
+/// row (BPM, time signature, section labels), with all musical content omitted.
+#[wasm_bindgen]
+pub fn render_directives_snippet(source: &str) -> Result<String, String> {
+    render_directives(source)
 }
 
 #[cfg(test)]

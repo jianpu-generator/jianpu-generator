@@ -5,8 +5,6 @@ use crate::grid_layout::layout::{
 };
 use crate::grid_layout::types::{GridContent, GridElement, GridRow, HAlign, Header, VAlign};
 
-const DECO_COLS: u32 = 12;
-
 fn deco_order(d: &Decoration) -> u8 {
     match d {
         Decoration::SectionLabel(_) => 0,
@@ -60,28 +58,33 @@ pub(super) fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow
     let music_column_count = LABEL_COLS + total_musical_cols;
     let mut elements: Vec<GridElement> = Vec::new();
 
-    // First block: sequential columns starting at 1 (preserves original h-stacking and spacing).
+    // First block: spread decorations evenly across the musical columns so they are
+    // visually separated regardless of how many notes are in the measure.
     if let Some(first) = system.first() {
         let mut sorted = first.decorations.clone();
         sorted.sort_by_key(deco_order);
-        let mut dec_col: u32 = 1;
-        for dec in &sorted {
+        let deco_count = sorted.len() as u32;
+        let spacing = if deco_count > 1 {
+            (total_musical_cols / deco_count).max(2)
+        } else {
+            0
+        };
+        for (i, dec) in sorted.iter().enumerate() {
+            let dec_col = LABEL_COLS + (i as u32) * spacing;
             elements.push(make_deco_element(dec, dec_col));
-            dec_col += 1;
         }
     }
 
-    // Non-first blocks: only SectionLabels, mapped proportionally into the DECO_COLS space
-    // so they appear above the correct measure without disturbing h-stacking of the first block.
+    // Non-first blocks: only SectionLabels, placed directly at their measure's music column.
     let mut measure_music_col = LABEL_COLS;
     for (index, block) in system.iter().enumerate() {
         if index > 0 {
             for dec in &block.decorations {
                 if let Decoration::SectionLabel(_) = dec {
-                    let deco_col = (measure_music_col as f32 * DECO_COLS as f32
-                        / music_column_count as f32)
-                        .round() as u32;
-                    elements.push(make_deco_element(dec, deco_col.clamp(1, DECO_COLS - 1)));
+                    elements.push(make_deco_element(
+                        dec,
+                        measure_music_col.clamp(LABEL_COLS, music_column_count.saturating_sub(1)),
+                    ));
                 }
             }
         }
@@ -90,7 +93,7 @@ pub(super) fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow
 
     GridRow {
         height_pt: decoration_row_height(base),
-        column_count: DECO_COLS,
+        column_count: music_column_count,
         elements,
     }
 }

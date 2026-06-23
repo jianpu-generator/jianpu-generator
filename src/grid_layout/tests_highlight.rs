@@ -171,6 +171,8 @@ fn erroneous_measure_produces_error_highlight() {
             page_height_pt: 842.0,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     assert!(!pages.is_empty());
@@ -207,6 +209,8 @@ fn non_erroneous_measure_produces_no_error_highlight() {
             page_height_pt: 842.0,
             highlighted_measure_range: None,
             snippet: false,
+            snippet_show_decorations: false,
+            snippet_only_decorations: false,
         },
     );
     assert!(!pages.is_empty());
