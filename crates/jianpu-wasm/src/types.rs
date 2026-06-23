@@ -171,8 +171,8 @@ pub struct DiagnosticViewZoneOut {
     pub messages: Vec<DiagnosticMessageOut>,
 }
 
-pub(crate) fn diagnostic_from_error(source: &str, e: IrrecoverableError) -> DiagnosticOut {
-    let report = error_reporter::render_with_source(source, &e);
+pub(crate) fn diagnostic_from_error(source: &str, e: &IrrecoverableError) -> DiagnosticOut {
+    let report = error_reporter::render_with_source(source, e);
     let span = e
         .span()
         .map(|s| SpanOut {
@@ -206,7 +206,7 @@ pub(crate) fn diagnostic_from_diagnostic(source: &str, d: Diagnostic) -> Diagnos
         Diagnostic::Warning(w) => diagnostic_from_warning(source, w),
         Diagnostic::Error(e) => DiagnosticOut {
             severity: DiagnosticSeverity::Error,
-            message: e.message().clone(),
+            message: e.message(),
             span: SpanOut {
                 start: e.span.start,
                 end: e.span.end,
@@ -217,9 +217,11 @@ pub(crate) fn diagnostic_from_diagnostic(source: &str, d: Diagnostic) -> Diagnos
 }
 
 fn byte_offset_to_line_number(source: &str, byte_offset: usize) -> usize {
-    source[..byte_offset.min(source.len())]
-        .bytes()
-        .filter(|&b| b == b'\n')
+    source
+        .as_bytes()
+        .iter()
+        .take(byte_offset.min(source.len()))
+        .filter(|&&b| b == b'\n')
         .count()
         + 1
 }

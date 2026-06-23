@@ -28,12 +28,12 @@ repos:
         pass_filenames: false
       - id: cargo-clippy
         name: cargo clippy
-        entry: cargo clippy --all-targets -- -D warnings
+        entry: cargo clippy --workspace --all-targets -- -D warnings
         language: system
         pass_filenames: false
       - id: cargo-test
         name: cargo test
-        entry: cargo test
+        entry: cargo test --workspace
         language: system
         pass_filenames: false
       - id: biome-check

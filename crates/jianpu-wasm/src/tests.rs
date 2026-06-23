@@ -12,7 +12,7 @@ fn ok_response_has_svgs() {
         "Melody = notes lyrics\n",
         "\n",
         "[score]\n",
-        "(time=4/4 key=C4 bpm=120)\n",
+        "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "a b c d\n",
     );
@@ -38,7 +38,7 @@ fn list_parts_response_returns_declarations() {
         "Alto = notes\n",
         "\n",
         "[score]\n",
-        "(time=4/4 key=C4 bpm=120)\n",
+        "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "5 6 7 1\n",
     );
@@ -67,7 +67,7 @@ fn render_with_disabled_lyrics_hides_lyrics_for_part() {
         "Alto = notes lyrics\n",
         "\n",
         "[score]\n",
-        "(time=4/4 key=C4 bpm=120)\n",
+        "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "sop sop sop sop\n",
         "5 6 7 1\n",
@@ -77,10 +77,11 @@ fn render_with_disabled_lyrics_hides_lyrics_for_part() {
         RenderResponse::Ok { svgs, .. } => svgs,
         RenderResponse::Err { .. } => panic!("expected ok"),
     };
-    let alto_lyrics_hidden = match render_response(input, None, Some(vec!["Alto".into()])) {
-        RenderResponse::Ok { svgs, .. } => svgs,
-        RenderResponse::Err { .. } => panic!("expected ok"),
-    };
+    let alto_lyrics_hidden =
+        match render_response(input, None, Some(vec!["Alto".into()]).as_deref()) {
+            RenderResponse::Ok { svgs, .. } => svgs,
+            RenderResponse::Err { .. } => panic!("expected ok"),
+        };
     assert!(all[0].contains("sop"));
     assert!(all[0].contains("alt"));
     assert!(alto_lyrics_hidden[0].contains("sop"));
@@ -99,7 +100,7 @@ fn render_with_enabled_tracks_filters_parts() {
         "Alto = notes\n",
         "\n",
         "[score]\n",
-        "(time=4/4 key=C4 bpm=120)\n",
+        "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
         "5 6 7 1\n",
     );
@@ -107,7 +108,7 @@ fn render_with_enabled_tracks_filters_parts() {
         RenderResponse::Ok { svgs, .. } => svgs,
         RenderResponse::Err { .. } => panic!("expected ok"),
     };
-    let soprano_only = match render_response(input, Some(vec!["Soprano".into()]), None) {
+    let soprano_only = match render_response(input, Some(vec!["Soprano".into()]).as_deref(), None) {
         RenderResponse::Ok { svgs, .. } => svgs,
         RenderResponse::Err { .. } => panic!("expected ok"),
     };
@@ -116,17 +117,16 @@ fn render_with_enabled_tracks_filters_parts() {
 
 #[test]
 fn err_response_has_structured_diagnostic() {
+    // Missing sections are now recoverable; render returns Ok with error diagnostics.
     let resp = render_response("not valid jianpu", None, None);
-    match resp {
-        RenderResponse::Err { diagnostics, .. } => {
-            assert!(!diagnostics.is_empty());
-            let d = &diagnostics[0];
-            assert_eq!(d.severity, DiagnosticSeverity::Error);
-            assert!(!d.message.is_empty());
-            assert!(d.report.as_ref().is_some_and(|r| !r.is_empty()));
+    let diagnostics = match resp {
+        RenderResponse::Err { diagnostics, .. } | RenderResponse::Ok { diagnostics, .. } => {
+            diagnostics
         }
-        RenderResponse::Ok { .. } => panic!("expected err"),
-    }
+    };
+    assert!(!diagnostics.is_empty());
+    let d = &diagnostics[0];
+    assert!(!d.message.is_empty());
 }
 
 #[test]
@@ -135,7 +135,7 @@ fn recoverable_error_produces_warning_severity_view_zone() {
     let input = concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "[parts]\nMelody = notes lyrics\n\n",
-        "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\na b\n",
+        "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\na b\n",
     );
     let resp = render_response(input, None, None);
     match resp {
@@ -247,7 +247,7 @@ fn demo_jianpu_generates_split_pdf_zip() {
 fn get_measure_at_offset_ok_for_note_in_measure() {
     let source = concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes\n\n",
-        "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\n",
+        "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n",
     );
     let byte_offset = source.find("1 2 3 4").unwrap();
     let resp = get_measure_at_offset_response(source, byte_offset);
@@ -261,7 +261,7 @@ fn get_measure_at_offset_ok_for_note_in_measure() {
 fn get_measure_at_offset_not_in_measure_for_header() {
     let source = concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes\n\n",
-        "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\n",
+        "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n",
     );
     let resp = get_measure_at_offset_response(source, 0);
     assert!(
@@ -275,7 +275,7 @@ fn get_measure_at_offset_not_in_measure_for_header() {
 fn generate_wav_for_measure_range_response_returns_riff_wav() {
     let source = concat!(
         "[metadata]\ntitle=\"t\"\nauthor=\"a\"\n\n[parts]\nMelody = notes\n\n",
-        "[score]\n(time=4/4 key=C4 bpm=120)\n1 2 3 4\n",
+        "[score]\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n",
     );
     let resp = generate_wav_for_measure_range_response(source, 0, 0, None);
     match resp {
@@ -321,7 +321,7 @@ fn diagnostic_span_is_utf8_byte_offset() {
         "Melody = notes lyrics\n",
         "\n",
         "[score]\n",
-        "(time=4/4 key=C4 bpm=120)\n",
+        "time=4/4 key=C4 bpm=120\n",
         "1 2 x 4\n",
         "a b c d\n",
     );
@@ -385,10 +385,10 @@ fn list_measure_spans_view_zone_start_includes_directive_line() {
         "Melody = notes\n",
         "\n",
         "[score]\n",
-        "(bpm=60)\n",
+        "bpm=60\n",
         "1 2 3 4\n",
     );
-    let directive_offset = input.find("(bpm=60)").unwrap();
+    let directive_offset = input.find("bpm=60").unwrap();
     let notes_offset = input.find("1 2 3 4").unwrap();
     let resp = list_measure_spans_response(input);
     match resp {
@@ -402,15 +402,18 @@ fn list_measure_spans_view_zone_start_includes_directive_line() {
 }
 
 #[test]
-fn list_measure_spans_returns_err_on_invalid_source() {
+fn list_measure_spans_returns_empty_for_invalid_source() {
+    // Missing sections are recoverable; the response is Ok with no spans.
     let resp = list_measure_spans_response("not valid jianpu");
-    assert!(matches!(resp, ListMeasureSpansResponse::Err));
+    match resp {
+        ListMeasureSpansResponse::Ok { spans } => assert!(spans.is_empty()),
+        ListMeasureSpansResponse::Err => {}
+    }
 }
 
 mod group_diagnostics_tests {
     use crate::types::{
-        group_diagnostics_into_view_zones, DiagnosticOut, DiagnosticSeverity,
-        DiagnosticViewZoneOut, SpanOut,
+        group_diagnostics_into_view_zones, DiagnosticOut, DiagnosticSeverity, SpanOut,
     };
 
     fn make_diagnostic(
@@ -512,7 +515,7 @@ fn list_score_line_hints_returns_physical_line_offsets() {
         "Melody = notes lyrics\n",
         "\n",
         "[score]\n",
-        "(time=4/4 key=C4 bpm=120)\n",
+        "time=4/4 key=C4 bpm=120\n",
         "1 - - -\n",
         "1 1 5 5\n",
         "twin- kle\n",

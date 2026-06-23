@@ -37,6 +37,9 @@ indexing_slicing = "deny"
 no_effect_underscore_binding = "deny"
 let_underscore_untyped = "deny"
 
+[profile.release]
+debug = true
+
 [package]
 name = "jianpu-generator"
 version = "0.1.0"
