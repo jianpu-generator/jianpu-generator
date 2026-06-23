@@ -5,7 +5,7 @@ use crate::ast::parsed::{
 };
 use crate::error::{
     Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, RecoverableErrorKind,
-    Span,
+    Span, Warning, WarningKind,
 };
 
 pub struct ChordHead {
@@ -208,13 +208,11 @@ fn parse_chord_symbol(token: &str, span: Span) -> Option<ChordSymbolParse> {
     } else if ext_str.is_empty() {
         None
     } else {
-        errors.push(Diagnostic::from_chord_irrecoverable(
-            &IrrecoverableError::new(IrrecoverableErrorKind::ChordUnknownSuffix {
-                span,
-                suffix: ext_str.to_string(),
-                token: token.to_string(),
-            }),
-        ));
+        errors.push(Diagnostic::Warning(Warning {
+            span,
+            message: format!("unknown chord suffix '{ext_str}' in token '{token}'"),
+            kind: WarningKind::ChordUnknownSuffix,
+        }));
         None
     };
 

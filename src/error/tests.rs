@@ -2,15 +2,11 @@ use super::*;
 
 #[test]
 fn display_shows_message() {
-    let e = IrrecoverableError::new(IrrecoverableErrorKind::ChordUnknownSuffix {
+    let e = IrrecoverableError::new(IrrecoverableErrorKind::ChordInvalidBass {
         span: Span::new(10, 20),
-        suffix: "z".to_string(),
-        token: "1z".to_string(),
+        bass: "z".to_string(),
     });
-    assert_eq!(
-        format!("{e}"),
-        "error: unknown chord suffix 'z' in token '1z'"
-    );
+    assert_eq!(format!("{e}"), "error: invalid bass note 'z'");
 }
 
 #[test]

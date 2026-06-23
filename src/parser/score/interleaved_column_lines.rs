@@ -10,8 +10,7 @@ use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics};
 fn is_recoverable_chord_line_error(kind: &IrrecoverableErrorKind) -> bool {
     matches!(
         kind,
-        IrrecoverableErrorKind::ChordUnknownSuffix { .. }
-            | IrrecoverableErrorKind::ChordInvalidBass { .. }
+        IrrecoverableErrorKind::ChordInvalidBass { .. }
             | IrrecoverableErrorKind::ChordBassUnexpectedChar { .. }
             | IrrecoverableErrorKind::ChordBassTrailingChars { .. }
     )
