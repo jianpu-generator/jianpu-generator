@@ -233,12 +233,11 @@ fn parse_chord_symbol(token: &str, span: Span) -> Option<ChordSymbolParse> {
 fn parse_bass(s: &str, span: Span, errors: &mut Vec<Diagnostic>) -> Option<BassDegree> {
     let mut chars = s.chars();
     let degree = chars.next().and_then(char_to_pitch).or_else(|| {
-        errors.push(Diagnostic::from_chord_irrecoverable(
-            &IrrecoverableError::new(IrrecoverableErrorKind::ChordInvalidBass {
-                span,
-                bass: s.to_string(),
-            }),
-        ));
+        errors.push(Diagnostic::Warning(Warning {
+            span,
+            message: format!("invalid bass note '{s}'"),
+            kind: WarningKind::ChordInvalidBass,
+        }));
         None
     })?;
     let accidental = match chars.next() {

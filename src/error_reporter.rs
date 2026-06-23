@@ -108,10 +108,11 @@ mod tests {
 
     #[test]
     fn render_output_contains_message() {
-        let path = write_temp_file("test_render.jianpu", "1 2 1/X 4\n");
-        let e = IrrecoverableError::new(IrrecoverableErrorKind::ChordInvalidBass {
-            span: Span::new(4, 7),
-            bass: "X".to_string(),
+        let path = write_temp_file("test_render.jianpu", "1 2 1/5x 4\n");
+        let e = IrrecoverableError::new(IrrecoverableErrorKind::ChordBassUnexpectedChar {
+            span: Span::new(4, 8),
+            ch: 'x',
+            bass: "5x".to_string(),
         })
         .with_path(&path);
 
@@ -119,17 +120,18 @@ mod tests {
         render_to_writer(&e, &mut buf, None, Config::default());
         let output = String::from_utf8_lossy(&buf);
         assert!(
-            output.contains("invalid bass note 'X'"),
+            output.contains("unexpected character 'x' in bass note '5x'"),
             "output was: {output}"
         );
     }
 
     #[test]
     fn render_with_source_shows_code_block() {
-        let source = "1 2 1/X 4\n";
-        let e = IrrecoverableError::new(IrrecoverableErrorKind::ChordInvalidBass {
-            span: Span::new(4, 7),
-            bass: "X".to_string(),
+        let source = "1 2 1/5x 4\n";
+        let e = IrrecoverableError::new(IrrecoverableErrorKind::ChordBassUnexpectedChar {
+            span: Span::new(4, 8),
+            ch: 'x',
+            bass: "5x".to_string(),
         });
 
         let output = render_with_source(source, &e);
@@ -137,15 +139,16 @@ mod tests {
             output.contains('│'),
             "expected ariadne code block, got: {output}"
         );
-        assert!(output.contains("invalid bass note 'X'"));
+        assert!(output.contains("unexpected character 'x' in bass note '5x'"));
     }
 
     #[test]
     fn render_with_source_has_no_ansi_codes() {
-        let source = "1 2 1/X 4\n";
-        let e = IrrecoverableError::new(IrrecoverableErrorKind::ChordInvalidBass {
-            span: Span::new(4, 7),
-            bass: "X".to_string(),
+        let source = "1 2 1/5x 4\n";
+        let e = IrrecoverableError::new(IrrecoverableErrorKind::ChordBassUnexpectedChar {
+            span: Span::new(4, 8),
+            ch: 'x',
+            bass: "5x".to_string(),
         });
 
         let output = render_with_source(source, &e);

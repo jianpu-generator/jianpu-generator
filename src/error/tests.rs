@@ -2,11 +2,15 @@ use super::*;
 
 #[test]
 fn display_shows_message() {
-    let e = IrrecoverableError::new(IrrecoverableErrorKind::ChordInvalidBass {
+    let e = IrrecoverableError::new(IrrecoverableErrorKind::ChordBassUnexpectedChar {
         span: Span::new(10, 20),
-        bass: "z".to_string(),
+        ch: 'z',
+        bass: "1z".to_string(),
     });
-    assert_eq!(format!("{e}"), "error: invalid bass note 'z'");
+    assert_eq!(
+        format!("{e}"),
+        "error: unexpected character 'z' in bass note '1z'"
+    );
 }
 
 #[test]

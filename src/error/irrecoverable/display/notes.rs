@@ -6,9 +6,6 @@ pub(super) fn write(
     formatter: &mut fmt::Formatter<'_>,
 ) -> Option<fmt::Result> {
     match kind {
-        IrrecoverableErrorKind::ChordInvalidBass { bass, .. } => {
-            Some(write!(formatter, "invalid bass note '{bass}'"))
-        }
         IrrecoverableErrorKind::ChordBassUnexpectedChar { ch, bass, .. } => Some(write!(
             formatter,
             "unexpected character '{ch}' in bass note '{bass}'"

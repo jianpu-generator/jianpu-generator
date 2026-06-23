@@ -7,8 +7,7 @@ pub(super) fn span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
 
 fn parse_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
     match kind {
-        IrrecoverableErrorKind::ChordInvalidBass { span, .. }
-        | IrrecoverableErrorKind::ChordBassUnexpectedChar { span, .. }
+        IrrecoverableErrorKind::ChordBassUnexpectedChar { span, .. }
         | IrrecoverableErrorKind::ChordBassTrailingChars { span, .. } => Some(span),
         _ => None,
     }
