@@ -397,6 +397,16 @@ fn rejects_invalid_token_at_lexer() {
 }
 
 #[test]
+fn recovers_invalid_token_by_skipping() {
+    let (events, errors) = parse_line_with_errors("1 8 2");
+    assert_eq!(events.len(), 2, "valid chords 1 and 2 should be parsed");
+    assert!(errors.iter().any(|d| matches!(
+        d,
+        Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::ChordExpectedDegreeDigit { ch: '8' })
+    )));
+}
+
+#[test]
 fn recovers_unknown_suffix() {
     let (events, errors) = parse_line_with_errors("1z");
     assert_eq!(events.len(), 1);

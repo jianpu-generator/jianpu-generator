@@ -6,9 +6,6 @@ pub(super) fn write(
     formatter: &mut fmt::Formatter<'_>,
 ) -> Option<fmt::Result> {
     match kind {
-        IrrecoverableErrorKind::ChordInvalidToken { token, .. } => {
-            Some(write!(formatter, "invalid chord token '{token}'"))
-        }
         IrrecoverableErrorKind::ChordUnknownSuffix { suffix, token, .. } => Some(write!(
             formatter,
             "unknown chord suffix '{suffix}' in token '{token}'"

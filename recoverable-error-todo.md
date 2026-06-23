@@ -21,7 +21,7 @@ Track which `IrrecoverableErrorKind` variants should be refactored to emit
 | `LexUnexpectedChar` | `caught-at-callsite` | Caught in `interleaved_column_lines.rs`; notes-line path skips bad measure, chord-line path treats line as empty |
 | `NoteExpectedPitchDigit` | `done` | Removed from `IrrecoverableErrorKind`; `NoteHead::parse_head` emits `ParseHeadError::Recoverable` directly |
 | `ChordExpectedDegreeDigit` | `caught-at-callsite` | Caught in `interleaved_column_lines.rs` / `error.rs`; bad symbol skipped |
-| `ChordInvalidToken` | `caught-at-callsite` | Caught in `interleaved_column_lines.rs`; chord line treated as empty |
+| `ChordInvalidToken` | `done` | Removed from `IrrecoverableErrorKind`; `ChordHead::parse_head` emits `ParseHeadError::Recoverable` directly, skipping the bad token |
 | `ChordUnknownSuffix` | `caught-at-callsite` | Caught in `error.rs`; degree rendered without suffix |
 | `ChordInvalidBass` | `caught-at-callsite` | Caught in `error.rs`; bass omitted |
 | `ChordBassUnexpectedChar` | `caught-at-callsite` | Caught in `error.rs`; bass omitted |

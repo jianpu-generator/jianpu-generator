@@ -71,7 +71,8 @@ impl TimedUnitHead for ChordHead {
         }
 
         let (head_end, ChordSymbolParse { fields, errors }) =
-            find_symbol_end(chars, start, span).map_err(ParseHeadError::Irrecoverable)?;
+            find_symbol_end(chars, start, span)
+                .map_err(|e| ParseHeadError::Recoverable(Some(Diagnostic::Error(e))))?;
         Ok((
             ChordHead {
                 degree: fields.degree,
@@ -133,7 +134,7 @@ fn find_symbol_end(
     chars: &[char],
     start: usize,
     span: &Span,
-) -> Result<(usize, ChordSymbolParse), IrrecoverableError> {
+) -> Result<(usize, ChordSymbolParse), RecoverableError> {
     let max_end = chars.len().min(
         chars
             .get(start..)
@@ -146,7 +147,7 @@ fn find_symbol_end(
 
     for end in (start + 1..=max_end).rev() {
         let token: String = chars.get(start..end).unwrap_or_default().iter().collect();
-        if let Ok(parse) = parse_chord_symbol(&token, *span) {
+        if let Some(parse) = parse_chord_symbol(&token, *span) {
             return Ok((end, parse));
         }
     }
@@ -156,21 +157,21 @@ fn find_symbol_end(
         .unwrap_or_default()
         .iter()
         .collect();
-    Err(IrrecoverableError::new(
-        IrrecoverableErrorKind::ChordInvalidToken { span: *span, token },
-    ))
+    let byte_pos = span.start + byte_offset_at_char_index_from_chars(chars, start);
+    let token_len = token.len();
+    Err(RecoverableError {
+        span: Span::new(byte_pos, byte_pos + token_len),
+        kind: RecoverableErrorKind::ChordInvalidToken {
+            message: format!("invalid chord token '{token}'"),
+        },
+    })
 }
 
-fn parse_chord_symbol(token: &str, span: Span) -> Result<ChordSymbolParse, IrrecoverableError> {
+fn parse_chord_symbol(token: &str, span: Span) -> Option<ChordSymbolParse> {
     let mut errors = Vec::new();
     let mut chars = token.chars();
 
-    let degree = chars.next().and_then(char_to_pitch).ok_or_else(|| {
-        IrrecoverableError::new(IrrecoverableErrorKind::ChordInvalidToken {
-            span,
-            token: token.to_string(),
-        })
-    })?;
+    let degree = chars.next().and_then(char_to_pitch)?;
 
     let rest: String = chars.collect();
     let mut rest = rest.as_str();
@@ -219,7 +220,7 @@ fn parse_chord_symbol(token: &str, span: Span) -> Result<ChordSymbolParse, Irrec
 
     let bass = bass_str.and_then(|s| parse_bass(s, span, &mut errors));
 
-    Ok(ChordSymbolParse {
+    Some(ChordSymbolParse {
         fields: ParsedChordSymbolFields {
             degree,
             accidental,
