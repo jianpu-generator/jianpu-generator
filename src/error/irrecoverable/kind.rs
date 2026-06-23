@@ -4,10 +4,6 @@ use super::Span;
 
 #[derive(Debug, Clone)]
 pub enum IrrecoverableErrorKind {
-    ChordExpectedDegreeDigit {
-        span: Span,
-        ch: char,
-    },
     ChordInvalidToken {
         span: Span,
         token: String,

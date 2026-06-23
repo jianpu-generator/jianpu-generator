@@ -2,14 +2,11 @@ use super::*;
 
 #[test]
 fn display_shows_message() {
-    let e = IrrecoverableError::new(IrrecoverableErrorKind::ChordExpectedDegreeDigit {
+    let e = IrrecoverableError::new(IrrecoverableErrorKind::ChordInvalidToken {
         span: Span::new(10, 20),
-        ch: 'x',
+        token: "x".to_string(),
     });
-    assert_eq!(
-        format!("{e}"),
-        "error: expected chord degree digit (0-7), got: x"
-    );
+    assert_eq!(format!("{e}"), "error: invalid chord token 'x'");
 }
 
 #[test]

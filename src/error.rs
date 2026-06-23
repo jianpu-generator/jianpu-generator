@@ -450,12 +450,6 @@ impl Diagnostic {
     /// Promoted kinds become `Diagnostic::Error`; others remain `Diagnostic::Warning`.
     pub fn from_chord_irrecoverable(error: &IrrecoverableError) -> Self {
         match &error.kind {
-            IrrecoverableErrorKind::ChordExpectedDegreeDigit { span, ch } => {
-                Self::Error(RecoverableError {
-                    span: *span,
-                    kind: RecoverableErrorKind::ChordExpectedDegreeDigit { ch: *ch },
-                })
-            }
             IrrecoverableErrorKind::ChordUnknownSuffix {
                 span,
                 suffix,

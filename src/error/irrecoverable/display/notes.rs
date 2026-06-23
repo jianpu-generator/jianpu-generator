@@ -6,10 +6,6 @@ pub(super) fn write(
     formatter: &mut fmt::Formatter<'_>,
 ) -> Option<fmt::Result> {
     match kind {
-        IrrecoverableErrorKind::ChordExpectedDegreeDigit { ch, .. } => Some(write!(
-            formatter,
-            "expected chord degree digit (0-7), got: {ch}"
-        )),
         IrrecoverableErrorKind::ChordInvalidToken { token, .. } => {
             Some(write!(formatter, "invalid chord token '{token}'"))
         }

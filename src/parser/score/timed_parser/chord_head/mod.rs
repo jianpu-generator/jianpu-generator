@@ -3,7 +3,10 @@ use crate::ast::parsed::{
     Accidental, BassDegree, Extension, JianPuPitch, ParsedChordNote, ParsedRest, ScoreEvent,
     TriadQuality,
 };
-use crate::error::{Diagnostic, IrrecoverableError, IrrecoverableErrorKind, Span};
+use crate::error::{
+    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, RecoverableErrorKind,
+    Span,
+};
 
 pub struct ChordHead {
     degree: JianPuPitch,
@@ -34,25 +37,21 @@ impl TimedUnitHead for ChordHead {
         span: &Span,
     ) -> Result<(Self, usize, bool, Vec<Diagnostic>), ParseHeadError> {
         let Some(&degree_char) = chars.get(start) else {
-            return Err(ParseHeadError::Recoverable(Some(
-                Diagnostic::from_chord_irrecoverable(&IrrecoverableError::new(
-                    IrrecoverableErrorKind::ChordExpectedDegreeDigit {
-                        span: *span,
-                        ch: '\0',
-                    },
-                )),
-            )));
+            return Err(ParseHeadError::Recoverable(Some(Diagnostic::Error(
+                RecoverableError {
+                    span: *span,
+                    kind: RecoverableErrorKind::ChordExpectedDegreeDigit { ch: '\0' },
+                },
+            ))));
         };
         if !matches!(degree_char, '0'..='7') {
             let pos = span.start + byte_offset_at_char_index_from_chars(chars, start);
-            return Err(ParseHeadError::Recoverable(Some(
-                Diagnostic::from_chord_irrecoverable(&IrrecoverableError::new(
-                    IrrecoverableErrorKind::ChordExpectedDegreeDigit {
-                        span: Span::new(pos, pos + degree_char.len_utf8()),
-                        ch: degree_char,
-                    },
-                )),
-            )));
+            return Err(ParseHeadError::Recoverable(Some(Diagnostic::Error(
+                RecoverableError {
+                    span: Span::new(pos, pos + degree_char.len_utf8()),
+                    kind: RecoverableErrorKind::ChordExpectedDegreeDigit { ch: degree_char },
+                },
+            ))));
         }
 
         if degree_char == '0' {

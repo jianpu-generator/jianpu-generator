@@ -11,7 +11,6 @@ fn is_recoverable_chord_line_error(kind: &IrrecoverableErrorKind) -> bool {
     matches!(
         kind,
         IrrecoverableErrorKind::ChordInvalidToken { .. }
-            | IrrecoverableErrorKind::ChordExpectedDegreeDigit { .. }
             | IrrecoverableErrorKind::ChordUnknownSuffix { .. }
             | IrrecoverableErrorKind::ChordInvalidBass { .. }
             | IrrecoverableErrorKind::ChordBassUnexpectedChar { .. }
