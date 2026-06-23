@@ -1,14 +1,12 @@
-use super::TimedUnitHead;
+use super::{ParseHeadError, TimedUnitHead};
 use crate::ast::parsed::{JianPuPitch, ParsedNote, ParsedRest, ScoreEvent};
-use crate::error::{
-    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, RecoverableErrorKind,
-    Span,
-};
+use crate::error::{Diagnostic, RecoverableError, RecoverableErrorKind, Span};
 
 #[path = "note_head_tests.rs"]
 #[cfg(test)]
 mod tests;
 
+#[derive(Debug)]
 pub struct NoteHead {
     pitch: JianPuPitch,
     is_rest: bool,
@@ -19,23 +17,23 @@ impl TimedUnitHead for NoteHead {
         chars: &[char],
         start: usize,
         span: &Span,
-    ) -> Result<(Self, usize, bool, Vec<Diagnostic>), IrrecoverableError> {
+    ) -> Result<(Self, usize, bool, Vec<Diagnostic>), ParseHeadError> {
         let Some(&pitch_char) = chars.get(start) else {
-            return Err(IrrecoverableError::new(
-                IrrecoverableErrorKind::NoteExpectedPitchDigit {
+            return Err(ParseHeadError::Recoverable(Some(Diagnostic::Error(
+                RecoverableError {
                     span: *span,
-                    ch: '\0',
+                    kind: RecoverableErrorKind::NoteExpectedPitchDigit { ch: '\0' },
                 },
-            ));
+            ))));
         };
         if !matches!(pitch_char, '0'..='7') {
             let pos = span.start + byte_offset_at_char_index_from_chars(chars, start);
-            return Err(IrrecoverableError::new(
-                IrrecoverableErrorKind::NoteExpectedPitchDigit {
+            return Err(ParseHeadError::Recoverable(Some(Diagnostic::Error(
+                RecoverableError {
                     span: Span::new(pos, pos + pitch_char.len_utf8()),
-                    ch: pitch_char,
+                    kind: RecoverableErrorKind::NoteExpectedPitchDigit { ch: pitch_char },
                 },
-            ));
+            ))));
         }
         let is_rest = pitch_char == '0';
         let pitch = if is_rest {
@@ -45,12 +43,12 @@ impl TimedUnitHead for NoteHead {
                 Some(p) => p,
                 None => {
                     let pos = span.start + byte_offset_at_char_index_from_chars(chars, start);
-                    return Err(IrrecoverableError::new(
-                        IrrecoverableErrorKind::NoteExpectedPitchDigit {
+                    return Err(ParseHeadError::Recoverable(Some(Diagnostic::Error(
+                        RecoverableError {
                             span: Span::new(pos, pos + pitch_char.len_utf8()),
-                            ch: pitch_char,
+                            kind: RecoverableErrorKind::NoteExpectedPitchDigit { ch: pitch_char },
                         },
-                    ));
+                    ))));
                 }
             }
         };
@@ -63,18 +61,6 @@ impl TimedUnitHead for NoteHead {
 
     fn allows_octave_suffixes() -> bool {
         true
-    }
-
-    fn recover_parse_head_error(error: &IrrecoverableError) -> Option<Diagnostic> {
-        match error.kind {
-            IrrecoverableErrorKind::NoteExpectedPitchDigit { span, ch } => {
-                Some(Diagnostic::Error(RecoverableError {
-                    span,
-                    kind: RecoverableErrorKind::NoteExpectedPitchDigit { ch },
-                }))
-            }
-            _ => None,
-        }
     }
 
     fn to_event(

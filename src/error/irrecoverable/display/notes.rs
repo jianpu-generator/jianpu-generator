@@ -6,9 +6,6 @@ pub(super) fn write(
     formatter: &mut fmt::Formatter<'_>,
 ) -> Option<fmt::Result> {
     match kind {
-        IrrecoverableErrorKind::NoteExpectedPitchDigit { ch, .. } => {
-            Some(write!(formatter, "expected pitch digit (0-7), got: {ch}"))
-        }
         IrrecoverableErrorKind::ChordExpectedDegreeDigit { ch, .. } => Some(write!(
             formatter,
             "expected chord degree digit (0-7), got: {ch}"

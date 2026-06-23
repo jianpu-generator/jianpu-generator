@@ -1,20 +1,14 @@
-use crate::error::{
-    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableErrorKind, Span,
-};
-use crate::parser::score::timed_parser::{NoteHead, TimedUnitHead};
+use crate::error::{Diagnostic, RecoverableErrorKind, Span};
+use crate::parser::score::timed_parser::{NoteHead, ParseHeadError, TimedUnitHead};
 
 #[test]
-fn recover_parse_head_error_returns_some_for_note_expected_pitch_digit() {
-    let error = IrrecoverableError::new(IrrecoverableErrorKind::NoteExpectedPitchDigit {
-        span: Span::new(2, 3),
-        ch: 'x',
-    });
-    let result = NoteHead::recover_parse_head_error(&error);
-    assert!(
-        result.is_some(),
-        "expected Some recoverable diagnostic for NoteExpectedPitchDigit, got None"
-    );
-    let diagnostic = result.unwrap();
+fn parse_head_returns_recoverable_for_unexpected_char() {
+    let chars: Vec<char> = "x".chars().collect();
+    let span = Span::new(2, 3);
+    let result = NoteHead::parse_head(&chars, 0, &span);
+    let Err(ParseHeadError::Recoverable(Some(diagnostic))) = result else {
+        panic!("expected Err(ParseHeadError::Recoverable(Some(...))), got: {result:?}");
+    };
     assert!(
         matches!(
             &diagnostic,
@@ -25,14 +19,18 @@ fn recover_parse_head_error_returns_some_for_note_expected_pitch_digit() {
 }
 
 #[test]
-fn recover_parse_head_error_returns_none_for_other_errors() {
-    let error = IrrecoverableError::new(IrrecoverableErrorKind::ChordExpectedDegreeDigit {
-        span: Span::new(0, 1),
-        ch: 'z',
-    });
-    let result = NoteHead::recover_parse_head_error(&error);
+fn parse_head_returns_recoverable_for_empty_input() {
+    let chars: Vec<char> = Vec::new();
+    let span = Span::new(0, 0);
+    let result = NoteHead::parse_head(&chars, 0, &span);
+    let Err(ParseHeadError::Recoverable(Some(diagnostic))) = result else {
+        panic!("expected Err(ParseHeadError::Recoverable(Some(...))), got: {result:?}");
+    };
     assert!(
-        result.is_none(),
-        "expected None for non-NoteExpectedPitchDigit error, got: {result:?}"
+        matches!(
+            &diagnostic,
+            Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::NoteExpectedPitchDigit { ch: '\0' })
+        ),
+        "expected NoteExpectedPitchDigit error diagnostic, got: {diagnostic:?}"
     );
 }

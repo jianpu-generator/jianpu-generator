@@ -29,7 +29,23 @@ pub use groups::{
 use crate::ast::parsed::ScoreEvent;
 use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Spanned};
 
-type ParseHeadResult<H> = Result<(H, usize, bool, Vec<Diagnostic>), IrrecoverableError>;
+/// Error returned by `parse_head`.
+///
+/// `Recoverable(diagnostic)` means: emit the optional diagnostic and skip this timed unit.
+/// `Irrecoverable(error)` means: propagate the error upward.
+#[derive(Debug)]
+pub enum ParseHeadError {
+    Recoverable(Option<Diagnostic>),
+    Irrecoverable(IrrecoverableError),
+}
+
+impl From<IrrecoverableError> for ParseHeadError {
+    fn from(e: IrrecoverableError) -> Self {
+        Self::Irrecoverable(e)
+    }
+}
+
+type ParseHeadResult<H> = Result<(H, usize, bool, Vec<Diagnostic>), ParseHeadError>;
 
 /// Parsed events from one timed notation line, plus any recoverable errors collected while parsing.
 pub struct TimedLineParse {
@@ -59,6 +75,9 @@ pub fn parse_timed_line<H: TimedUnitHead>(
 
 pub trait TimedUnitHead: Sized {
     /// Parse one head starting at `chars[start]`. Returns (head, index after head, is_rest, recoverable warnings).
+    ///
+    /// On recoverable failure, return `Err(ParseHeadError::Recoverable(diagnostic))`.
+    /// On irrecoverable failure, return `Err(ParseHeadError::Irrecoverable(error))`.
     fn parse_head(chars: &[char], start: usize, span: &Span) -> ParseHeadResult<Self>;
 
     /// True when the next atom should start (note: next digit 0-7; chord: always after suffixes end).
@@ -66,11 +85,6 @@ pub trait TimedUnitHead: Sized {
 
     fn allows_octave_suffixes() -> bool {
         true
-    }
-
-    /// When `parse_head` fails, return a recoverable diagnostic and skip this timed unit.
-    fn recover_parse_head_error(_: &IrrecoverableError) -> Option<Diagnostic> {
-        None
     }
 
     fn to_event(

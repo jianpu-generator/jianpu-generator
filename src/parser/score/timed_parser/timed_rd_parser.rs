@@ -4,7 +4,7 @@ use super::groups::{
     HasGroupDepth,
 };
 use super::timed_lexer::TimedLexToken;
-use super::TimedUnitHead;
+use super::{ParseHeadError, TimedUnitHead};
 use crate::ast::parsed::ScoreEvent;
 use crate::error::{
     Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned,
@@ -304,15 +304,15 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
         // Parse the head (note digit / chord symbol).
         let (head, head_end, is_rest, head_errors) = match H::parse_head(&chars, 0, &head_span) {
             Ok(parsed) => parsed,
-            Err(error) => {
-                if let Some(recoverable) = H::recover_parse_head_error(&error) {
-                    self.chord_errors.push(recoverable);
-                    self.bump();
-                    self.skip_head_starts_before(self.unit_end_abs(digit_offset));
-                    return Ok(());
+            Err(ParseHeadError::Recoverable(maybe_diagnostic)) => {
+                if let Some(diagnostic) = maybe_diagnostic {
+                    self.chord_errors.push(diagnostic);
                 }
-                return Err(error);
+                self.bump();
+                self.skip_head_starts_before(self.unit_end_abs(digit_offset));
+                return Ok(());
             }
+            Err(ParseHeadError::Irrecoverable(error)) => return Err(error),
         };
         self.chord_errors.extend(head_errors);
 

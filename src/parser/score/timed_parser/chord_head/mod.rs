@@ -1,4 +1,4 @@
-use super::TimedUnitHead;
+use super::{ParseHeadError, TimedUnitHead};
 use crate::ast::parsed::{
     Accidental, BassDegree, Extension, JianPuPitch, ParsedChordNote, ParsedRest, ScoreEvent,
     TriadQuality,
@@ -32,23 +32,27 @@ impl TimedUnitHead for ChordHead {
         chars: &[char],
         start: usize,
         span: &Span,
-    ) -> Result<(Self, usize, bool, Vec<Diagnostic>), IrrecoverableError> {
+    ) -> Result<(Self, usize, bool, Vec<Diagnostic>), ParseHeadError> {
         let Some(&degree_char) = chars.get(start) else {
-            return Err(IrrecoverableError::new(
-                IrrecoverableErrorKind::ChordExpectedDegreeDigit {
-                    span: *span,
-                    ch: '\0',
-                },
-            ));
+            return Err(ParseHeadError::Recoverable(Some(
+                Diagnostic::from_chord_irrecoverable(&IrrecoverableError::new(
+                    IrrecoverableErrorKind::ChordExpectedDegreeDigit {
+                        span: *span,
+                        ch: '\0',
+                    },
+                )),
+            )));
         };
         if !matches!(degree_char, '0'..='7') {
             let pos = span.start + byte_offset_at_char_index_from_chars(chars, start);
-            return Err(IrrecoverableError::new(
-                IrrecoverableErrorKind::ChordExpectedDegreeDigit {
-                    span: Span::new(pos, pos + degree_char.len_utf8()),
-                    ch: degree_char,
-                },
-            ));
+            return Err(ParseHeadError::Recoverable(Some(
+                Diagnostic::from_chord_irrecoverable(&IrrecoverableError::new(
+                    IrrecoverableErrorKind::ChordExpectedDegreeDigit {
+                        span: Span::new(pos, pos + degree_char.len_utf8()),
+                        ch: degree_char,
+                    },
+                )),
+            )));
         }
 
         if degree_char == '0' {
@@ -67,7 +71,8 @@ impl TimedUnitHead for ChordHead {
             ));
         }
 
-        let (head_end, ChordSymbolParse { fields, errors }) = find_symbol_end(chars, start, span)?;
+        let (head_end, ChordSymbolParse { fields, errors }) =
+            find_symbol_end(chars, start, span).map_err(ParseHeadError::Irrecoverable)?;
         Ok((
             ChordHead {
                 degree: fields.degree,
@@ -89,15 +94,6 @@ impl TimedUnitHead for ChordHead {
 
     fn allows_octave_suffixes() -> bool {
         false
-    }
-
-    fn recover_parse_head_error(error: &IrrecoverableError) -> Option<Diagnostic> {
-        match error.kind {
-            IrrecoverableErrorKind::ChordExpectedDegreeDigit { .. } => {
-                Some(Diagnostic::from_chord_irrecoverable(error))
-            }
-            _ => None,
-        }
     }
 
     fn to_event(

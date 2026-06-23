@@ -4,10 +4,6 @@ use super::Span;
 
 #[derive(Debug, Clone)]
 pub enum IrrecoverableErrorKind {
-    NoteExpectedPitchDigit {
-        span: Span,
-        ch: char,
-    },
     ChordExpectedDegreeDigit {
         span: Span,
         ch: char,
