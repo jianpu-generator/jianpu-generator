@@ -1,6 +1,6 @@
 use super::directives::{build_key_change, key_change_lexeme_len, KeyChangeToken};
 use crate::ast::parsed::KeyChange;
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned};
+use crate::error::{IrrecoverableError, RecoverableError, Span, Spanned};
 
 type LexLineResult =
     Result<(Vec<Spanned<TimedLexToken>>, Vec<RecoverableError>), IrrecoverableError>;
@@ -162,7 +162,7 @@ fn lex_one_char(
         _ if at_word_boundary && context == LexContext::Chords => {
             Ok(chord_head_start_token(start, len))
         }
-        _ => Err(unexpected_char_error(start, len, c)),
+        _ => skip_unexpected_char(start, len, c, recoverable_errors),
     }
 }
 
@@ -228,11 +228,17 @@ fn chord_head_start_token(
     )
 }
 
-fn unexpected_char_error(start: usize, len: usize, ch: char) -> IrrecoverableError {
-    IrrecoverableError::new(IrrecoverableErrorKind::LexUnexpectedChar {
-        span: Span::new(start, start + len),
-        ch,
-    })
+fn skip_unexpected_char(
+    start: usize,
+    len: usize,
+    c: char,
+    recoverable_errors: &mut Vec<RecoverableError>,
+) -> LexCharResult {
+    recoverable_errors.push(RecoverableError::lex_unexpected_char(
+        Span::new(start, start + len),
+        c,
+    ));
+    Ok((None, len, true))
 }
 
 fn lex_high_digit_or_error(
@@ -261,13 +267,13 @@ fn lex_high_digit_or_error(
                 return Ok((None, consumed, true));
             }
         }
-        return Err(unexpected_char_error(start, len, c));
+        return skip_unexpected_char(start, len, c, recoverable_errors);
     }
     if at_word_boundary && context == LexContext::Chords {
         return Ok(chord_head_start_token(start, len));
     }
     if at_word_boundary {
-        return Err(unexpected_char_error(start, len, c));
+        return skip_unexpected_char(start, len, c, recoverable_errors);
     }
     Ok((None, len, false))
 }

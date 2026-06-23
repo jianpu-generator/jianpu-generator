@@ -7,8 +7,7 @@ pub(super) fn span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
 
 fn parse_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
     match kind {
-        IrrecoverableErrorKind::LexUnexpectedChar { span, .. }
-        | IrrecoverableErrorKind::NoteExpectedPitchDigit { span, .. }
+        IrrecoverableErrorKind::NoteExpectedPitchDigit { span, .. }
         | IrrecoverableErrorKind::ChordExpectedDegreeDigit { span, .. }
         | IrrecoverableErrorKind::ChordInvalidToken { span, .. }
         | IrrecoverableErrorKind::ChordUnknownSuffix { span, .. }
