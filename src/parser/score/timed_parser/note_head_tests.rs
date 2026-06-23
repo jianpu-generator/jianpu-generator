@@ -26,7 +26,7 @@ fn recover_parse_head_error_returns_some_for_note_expected_pitch_digit() {
 
 #[test]
 fn recover_parse_head_error_returns_none_for_other_errors() {
-    let error = IrrecoverableError::new(IrrecoverableErrorKind::LexUnexpectedChar {
+    let error = IrrecoverableError::new(IrrecoverableErrorKind::ChordExpectedDegreeDigit {
         span: Span::new(0, 1),
         ch: 'z',
     });

@@ -4,10 +4,6 @@ use super::Span;
 
 #[derive(Debug, Clone)]
 pub enum IrrecoverableErrorKind {
-    LexUnexpectedChar {
-        span: Span,
-        ch: char,
-    },
     NoteExpectedPitchDigit {
         span: Span,
         ch: char,

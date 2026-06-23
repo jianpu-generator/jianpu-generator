@@ -1,4 +1,3 @@
-mod directives;
 mod export;
 mod metadata;
 mod notes;
@@ -13,7 +12,6 @@ impl std::fmt::Display for IrrecoverableErrorKind {
         sections::write(self, f)
             .or_else(|| metadata::write(self, f))
             .or_else(|| parts::write(self, f))
-            .or_else(|| directives::write(self, f))
             .or_else(|| notes::write(self, f))
             .or_else(|| score::write(self, f))
             .or_else(|| export::write(self, f))

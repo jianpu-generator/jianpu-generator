@@ -92,10 +92,17 @@ fn time_signature_with_low_digit() {
 }
 
 #[test]
-fn digits_8_9_without_slash_error() {
-    // digits 8-9 without a slash are invalid
-    assert!(lex_line("8", 0, LexContext::Notes).is_err());
-    assert!(lex_line("9", 0, LexContext::Notes).is_err());
+fn digits_8_9_without_slash_are_recoverable_errors() {
+    // digits 8-9 without a slash are invalid but recoverable — no tokens, one error each
+    let (tokens, errors) = lex_line("8", 0, LexContext::Notes).unwrap();
+    assert!(tokens.is_empty());
+    assert_eq!(errors.len(), 1);
+    assert!(errors[0].message().contains('8'));
+
+    let (tokens, errors) = lex_line("9", 0, LexContext::Notes).unwrap();
+    assert!(tokens.is_empty());
+    assert_eq!(errors.len(), 1);
+    assert!(errors[0].message().contains('9'));
 }
 
 #[test]

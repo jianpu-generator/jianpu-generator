@@ -2,11 +2,11 @@ use super::*;
 
 #[test]
 fn display_shows_message() {
-    let e = IrrecoverableError::new(IrrecoverableErrorKind::LexUnexpectedChar {
+    let e = IrrecoverableError::new(IrrecoverableErrorKind::NoteExpectedPitchDigit {
         span: Span::new(10, 20),
         ch: 'x',
     });
-    assert_eq!(format!("{e}"), "error: unexpected character: x");
+    assert_eq!(format!("{e}"), "error: expected pitch digit (0-7), got: x");
 }
 
 #[test]
