@@ -1,39 +1,48 @@
 #![allow(clippy::disallowed_macros)]
 use jianpu_generator::list_score_line_hints_from_source;
 
-const DEMO_SOURCE: &str = include_str!("../demo.jianpu");
+const DEMO_SOURCE: &str = include_str!("../reference.jianpu");
 
 #[test]
-fn demo_has_hints_on_each_physical_data_line_in_first_measure() {
-    let hints = list_score_line_hints_from_source(DEMO_SOURCE, "demo.jianpu").unwrap();
-    let chord_offset = DEMO_SOURCE.find("1 - - -\n1 1 5 5").unwrap();
-    let melody_notes_offset = DEMO_SOURCE.find("1 1 5 5").unwrap();
-    let melody_lyrics_offset = DEMO_SOURCE.find("twin- kle").unwrap();
+fn reference_has_melody_hints_on_notes_and_lyrics_lines() {
+    let hints = list_score_line_hints_from_source(DEMO_SOURCE, "reference.jianpu").unwrap();
+    // "do re mi fa" is a unique lyrics line in reference.jianpu
+    let lyrics_offset = DEMO_SOURCE.find("do re mi fa").unwrap();
+    // The notes line immediately precedes the unique lyrics line
+    let notes_offset = DEMO_SOURCE.find("1 2 3 4\ndo re mi fa").unwrap();
 
     assert!(
         hints
             .iter()
-            .any(|hint| { hint.line_start == chord_offset && hint.abbreviation == "Chord" }),
-        "expected Chord hint at first chord line"
+            .any(|hint| hint.line_start == notes_offset && hint.abbreviation == "M"),
+        "expected M hint at notes line"
     );
     assert!(
-        hints.iter().any(|hint| {
-            hint.line_start == melody_notes_offset && hint.abbreviation == "Melody"
-        }),
-        "expected Melody hint at notes line"
+        hints
+            .iter()
+            .any(|hint| hint.line_start == lyrics_offset && hint.abbreviation == "M"),
+        "expected M hint at lyrics line"
     );
+}
+
+#[test]
+fn reference_has_chord_hint_on_chord_line() {
+    let hints = list_score_line_hints_from_source(DEMO_SOURCE, "reference.jianpu").unwrap();
+    // "1 1m 1 1m" is a unique chord line in reference.jianpu
+    let chord_offset = DEMO_SOURCE.find("1 1m 1 1m").unwrap();
+
     assert!(
-        hints.iter().any(|hint| {
-            hint.line_start == melody_lyrics_offset && hint.abbreviation == "Melody"
-        }),
-        "expected Melody hint at lyrics line"
+        hints
+            .iter()
+            .any(|hint| hint.line_start == chord_offset && hint.abbreviation == "C"),
+        "expected C hint at chord line"
     );
 }
 
 #[test]
 fn directive_line_has_no_hint() {
-    let hints = list_score_line_hints_from_source(DEMO_SOURCE, "demo.jianpu").unwrap();
-    let directive_offset = DEMO_SOURCE.find("time=4/4").unwrap();
+    let hints = list_score_line_hints_from_source(DEMO_SOURCE, "reference.jianpu").unwrap();
+    let directive_offset = DEMO_SOURCE.find("label=").unwrap();
     assert!(
         !hints.iter().any(|hint| hint.line_start == directive_offset),
         "directive line should not receive a hint"
