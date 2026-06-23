@@ -132,8 +132,15 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> (Vec<MultiPartMeasure>, V
         .skip(1)
         .filter(|track| track.measure_count() != expected_len)
         .map(|track| {
+            let span = match track {
+                GroupedTrack::Timed(part) => part
+                    .measures
+                    .last()
+                    .map(|m| Span::new(m.source_span.end, m.source_span.end))
+                    .unwrap_or(Span::new(0, 0)),
+            };
             Diagnostic::Error(RecoverableError::part_measure_count_mismatch(
-                Span::new(0, 0),
+                span,
                 format!("{:?}", track.track_name()),
                 track.measure_count(),
                 expected_len,
