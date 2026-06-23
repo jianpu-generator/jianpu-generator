@@ -97,12 +97,10 @@ fn start_line_includes_label_directive_line() {
         .expect("label= line not found in LABEL_DIRECTIVE_SOURCE");
 
     assert_eq!(
-        spans[0].start_line,
-        directive_line,
+        spans[0].start_line, directive_line,
         "start_line ({}) should be the directive line ({}) so that a caret on \
          `label=\"something \"` is detected as belonging to this measure",
-        spans[0].start_line,
-        directive_line,
+        spans[0].start_line, directive_line,
     );
 }
 

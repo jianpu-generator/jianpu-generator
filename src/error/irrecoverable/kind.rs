@@ -4,10 +4,6 @@ use super::Span;
 
 #[derive(Debug, Clone)]
 pub enum IrrecoverableErrorKind {
-    DittoNoPrecedent {
-        span: Span,
-        role: String,
-    },
     LexUnexpectedChar {
         span: Span,
         ch: char,
@@ -41,9 +37,6 @@ pub enum IrrecoverableErrorKind {
     ChordBassTrailingChars {
         span: Span,
         bass: String,
-    },
-    DashAfterRest {
-        span: Span,
     },
     MidiWriteFailed {
         span: Span,

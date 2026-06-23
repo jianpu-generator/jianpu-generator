@@ -9,9 +9,10 @@ pub(super) fn write(
         IrrecoverableErrorKind::NoteExpectedPitchDigit { ch, .. } => {
             Some(write!(formatter, "expected pitch digit (0-7), got: {ch}"))
         }
-        IrrecoverableErrorKind::ChordExpectedDegreeDigit { ch, .. } => {
-            Some(write!(formatter, "expected chord degree digit (0-7), got: {ch}"))
-        }
+        IrrecoverableErrorKind::ChordExpectedDegreeDigit { ch, .. } => Some(write!(
+            formatter,
+            "expected chord degree digit (0-7), got: {ch}"
+        )),
         IrrecoverableErrorKind::ChordInvalidToken { token, .. } => {
             Some(write!(formatter, "invalid chord token '{token}'"))
         }
@@ -26,12 +27,9 @@ pub(super) fn write(
             formatter,
             "unexpected character '{ch}' in bass note '{bass}'"
         )),
-        IrrecoverableErrorKind::ChordBassTrailingChars { bass, .. } => {
-            Some(write!(formatter, "bass note '{bass}' has trailing characters"))
-        }
-        IrrecoverableErrorKind::DashAfterRest { .. } => Some(write!(
+        IrrecoverableErrorKind::ChordBassTrailingChars { bass, .. } => Some(write!(
             formatter,
-            "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)"
+            "bass note '{bass}' has trailing characters"
         )),
         _ => None,
     }
