@@ -340,44 +340,6 @@ fn label_directive_rejects_empty_label() {
 }
 
 #[test]
-fn notes_ditto_resolves_in_full_parse() {
-    let content = concat!("time=4/4 key=C4 bpm=120\n", "1 2 3 4\n", "\"\n",);
-    let declarations = vec![decl("S", PartKind::Notes), decl("A", PartKind::Notes)];
-    let tracks = parse(content, 0, &declarations).unwrap();
-    assert_eq!(tracks.len(), 2);
-    assert_eq!(all_events(notes_track(&tracks, "S")).len(), 7);
-    assert_eq!(
-        all_events(notes_track(&tracks, "A")).len(),
-        4,
-        "Alto should have 4 note events after ditto resolution"
-    );
-}
-
-#[test]
-fn lyrics_ditto_resolves_in_full_parse() {
-    let content = concat!(
-        "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        "do re mi fa\n",
-        "\"\n",
-        "\"\n",
-    );
-    let declarations = vec![
-        decl("S", PartKind::NotesWithLyrics),
-        decl("A", PartKind::NotesWithLyrics),
-    ];
-    let tracks = parse(content, 0, &declarations).unwrap();
-    let s_lyrics = notes_track(&tracks, "S").lyrics.as_ref().unwrap();
-    let a_lyrics = notes_track(&tracks, "A").lyrics.as_ref().unwrap();
-    assert_eq!(s_lyrics.measure_syllables[0].len(), 4);
-    assert_eq!(a_lyrics.measure_syllables[0].len(), 4);
-    assert_eq!(
-        s_lyrics.measure_syllables[0][0].text,
-        a_lyrics.measure_syllables[0][0].text
-    );
-}
-
-#[test]
 fn key_directive_parses_sharp() {
     let content = "time=4/4 key=F#3 bpm=120\n1 2 3 4\n";
     let declarations = vec![decl("", PartKind::Notes)];

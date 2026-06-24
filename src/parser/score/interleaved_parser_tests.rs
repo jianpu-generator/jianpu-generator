@@ -349,45 +349,6 @@ fn partial_measure_still_needs_ditto_before_diverging_middle_columns() {
 }
 
 #[test]
-fn implicit_trailing_ditto_matches_explicit_ditto() {
-    let explicit = concat!(
-        "time=4/4 key=C4 bpm=120\n",
-        "1 - - -\n",
-        "1 2 3 4\n",
-        "do re mi fa\n",
-        "\"\n",
-        "\"\n",
-    );
-    let implicit = concat!(
-        "time=4/4 key=C4 bpm=120\n",
-        "1 - - -\n",
-        "1 2 3 4\n",
-        "do re mi fa\n",
-    );
-    let declarations = vec![
-        decl("main", PartKind::Chord),
-        decl("A", PartKind::NotesWithLyrics),
-        decl("B", PartKind::NotesWithLyrics),
-    ];
-    let explicit_tracks = parse(explicit, 0, &declarations).unwrap();
-    let implicit_tracks = parse(implicit, 0, &declarations).unwrap();
-    let explicit_a = notes_track(&explicit_tracks, "A");
-    let implicit_a = notes_track(&implicit_tracks, "A");
-    let explicit_b = notes_track(&explicit_tracks, "B");
-    let implicit_b = notes_track(&implicit_tracks, "B");
-    assert_eq!(all_events(explicit_a).len(), all_events(implicit_a).len());
-    assert_eq!(all_events(explicit_b).len(), all_events(implicit_b).len());
-    assert_eq!(
-        explicit_a.lyrics.as_ref().unwrap().measure_syllables,
-        implicit_a.lyrics.as_ref().unwrap().measure_syllables
-    );
-    assert_eq!(
-        explicit_b.lyrics.as_ref().unwrap().measure_syllables,
-        implicit_b.lyrics.as_ref().unwrap().measure_syllables
-    );
-}
-
-#[test]
 fn measure_no_data_lines_is_recoverable() {
     // A directive-only group (no note lines) must not abort parsing.
     let content = "time=4/4 key=C4 bpm=120\n\n1 2 3 4\n";

@@ -89,6 +89,16 @@ pub enum RecoverableErrorKind {
     GroupUnexpectedCloseParen,
     /// A `(` was not closed before the end of the score — group treated as open.
     UnclosedGroupAtEnd { part: String },
+    /// A `[Key]` prefix does not match any declared part abbreviation — the line is dropped.
+    PartKeyUnknown { key: String },
+    /// A `follow[Target]` clause names an abbreviation not in the parts declaration — the clause is ignored.
+    PartsFollowUnknownTarget { target: String },
+    /// A `follow[Target]` clause names a part declared after the follower — the clause is ignored.
+    PartsFollowTargetAfterFollower { target: String },
+    /// The first declared part uses `follow[...]`, which is not allowed.
+    PartsFirstPartCannotFollow,
+    /// A `[Key]` prefix is used for the first declared part, which must use positional lines.
+    PartKeyUsedForFirstPart { key: String },
 }
 
 impl RecoverableErrorKind {
@@ -142,6 +152,21 @@ impl RecoverableErrorKind {
             Self::GroupUnexpectedCloseParen => "unexpected `)` — no open group; `)` ignored".to_string(),
             Self::UnclosedGroupAtEnd { part } => {
                 format!("unclosed '(' group at end of score in part '{part}'")
+            }
+            Self::PartKeyUnknown { key } => {
+                format!("`[{key}]` does not match any declared part abbreviation; line dropped")
+            }
+            Self::PartsFollowUnknownTarget { target } => {
+                format!("follow[{target}]: unknown part abbreviation")
+            }
+            Self::PartsFollowTargetAfterFollower { target } => {
+                format!("follow[{target}]: target must be declared before the follower")
+            }
+            Self::PartsFirstPartCannotFollow => {
+                "the first declared part cannot use follow[...]".to_string()
+            }
+            Self::PartKeyUsedForFirstPart { key } => {
+                format!("[{key}] cannot be used for the first declared part; use positional lines instead")
             }
         }
     }

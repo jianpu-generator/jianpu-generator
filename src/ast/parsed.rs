@@ -22,6 +22,7 @@ pub struct PartDecl {
     pub abbreviation: String,
     pub display_name: String,
     pub kind: PartKind,
+    pub follow_target: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -82,11 +83,11 @@ pub struct ParsedTimedTrack {
     pub lyrics: Option<ParsedLyrics>,
     /// Per-measure flag: true when every score line of this track in that
     /// measure group was a `"` ditto (explicit or implicit trailing omission).
-    pub ditto_measures: Vec<bool>,
+    pub not_mentioned_measures: Vec<bool>,
     /// Per-measure flag: true when this track's lyric line in that measure
     /// group was a `"` ditto (explicit or implicit trailing omission).
     /// Always false for tracks without a lyrics line.
-    pub lyrics_ditto_measures: Vec<bool>,
+    pub lyrics_not_mentioned_measures: Vec<bool>,
     /// Per-measure beat-overflow error (None = no overflow for that measure).
     pub per_measure_beat_errors: Vec<Option<Warning>>,
     /// Per-measure grouping diagnostics: dotted-eighth errors (RecoverableError) and

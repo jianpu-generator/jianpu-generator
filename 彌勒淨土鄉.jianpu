@@ -9,10 +9,10 @@ note number width = 8
 
 # parts
 Chord = chord
-Alto 1 & Tenor (A1&T) = notes lyrics
-Alto 2 (A2) = notes lyrics
-Soprano 1 (S1) = notes lyrics
-Soprano 2 (S2) = notes lyrics
+Alto 1 & Tenor [A1&T] = notes lyrics
+Alto 2 [A2] = notes lyrics
+Soprano 1 [S1] = notes lyrics
+Soprano 2 [S2] = notes lyrics
 
 # score
 

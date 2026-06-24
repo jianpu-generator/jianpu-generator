@@ -1,9 +1,29 @@
 use super::*;
 
-// ── Output-ditto tests ────────────────────────────────────────────────────
+#[test]
+fn follow_part_not_mentioned_is_marked_as_not_mentioned_in_score() {
+    let input = concat!(
+        "# metadata\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "# parts\n",
+        "Soprano [S] = notes\n",
+        "Alto [A] = follow[S]\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "1 2 3 4\n",
+    );
+    let score = compile(input, "test.jianpu").unwrap();
+    assert!(
+        matches!(score.measures[0].parts[1], PartRow::NotMentioned(_)),
+        "Alto declared as follow[S] and not mentioned should be PartRow::NotMentioned"
+    );
+}
 
 #[test]
-fn explicit_ditto_part_is_marked_as_ditto_in_score() {
+fn implicitly_omitted_part_is_marked_as_not_mentioned_in_score() {
     let input = concat!(
         "# metadata\n",
         "title = \"t\"\n",
@@ -16,40 +36,17 @@ fn explicit_ditto_part_is_marked_as_ditto_in_score() {
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
-        "\"\n",
+        // Alto line omitted — implicit not-mentioned
     );
     let score = compile(input, "test.jianpu").unwrap();
     assert!(
-        matches!(score.measures[0].parts[1], PartRow::Ditto(_)),
-        "Alto part written as `\"` ditto should be PartRow::Ditto"
+        matches!(score.measures[0].parts[1], PartRow::NotMentioned(_)),
+        "Alto part from implicit trailing omission should be PartRow::NotMentioned"
     );
 }
 
 #[test]
-fn implicit_ditto_part_is_marked_as_ditto_in_score() {
-    let input = concat!(
-        "# metadata\n",
-        "title = \"t\"\n",
-        "author = \"a\"\n",
-        "\n",
-        "# parts\n",
-        "Soprano = notes\n",
-        "Alto = notes\n",
-        "\n",
-        "# score\n",
-        "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        // Alto line omitted — implicit ditto
-    );
-    let score = compile(input, "test.jianpu").unwrap();
-    assert!(
-        matches!(score.measures[0].parts[1], PartRow::Ditto(_)),
-        "Alto part from implicit trailing omission should be PartRow::Ditto"
-    );
-}
-
-#[test]
-fn non_ditto_part_is_timed_in_score() {
+fn explicitly_mentioned_part_is_timed_in_score() {
     let input = concat!(
         "# metadata\n",
         "title = \"t\"\n",
@@ -76,8 +73,8 @@ fn non_ditto_part_is_timed_in_score() {
 }
 
 #[test]
-fn ditto_parts_produce_smaller_svg_than_non_ditto() {
-    let with_ditto = concat!(
+fn not_mentioned_part_produces_smaller_svg_than_explicitly_mentioned() {
+    let with_not_mentioned = concat!(
         "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
@@ -89,9 +86,9 @@ fn ditto_parts_produce_smaller_svg_than_non_ditto() {
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
-        "\"\n",
+        // Alto omitted — not-mentioned, row suppressed
     );
-    let without_ditto = concat!(
+    let without_not_mentioned = concat!(
         "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
@@ -105,33 +102,33 @@ fn ditto_parts_produce_smaller_svg_than_non_ditto() {
         "1 2 3 4\n",
         "5 6 7 1\n",
     );
-    let svgs_ditto = render_svgs_from_source(with_ditto, "test.jianpu")
+    let svgs_not_mentioned = render_svgs_from_source(with_not_mentioned, "test.jianpu")
         .unwrap()
         .svgs;
-    let svgs_no_ditto = render_svgs_from_source(without_ditto, "test.jianpu")
+    let svgs_explicit = render_svgs_from_source(without_not_mentioned, "test.jianpu")
         .unwrap()
         .svgs;
     assert!(
-        svgs_ditto[0].len() < svgs_no_ditto[0].len(),
-        "SVG with ditto Alto should be smaller than SVG with explicit Alto notes"
+        svgs_not_mentioned[0].len() < svgs_explicit[0].len(),
+        "SVG with not-mentioned Alto should be smaller than SVG with explicit Alto notes"
     );
 }
 
 #[test]
-fn ditto_part_label_is_merged_into_source_row_label() {
+fn not_mentioned_part_is_omitted_when_other_parts_have_notes() {
     let input = concat!(
         "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
         "# parts\n",
-        "Soprano (S) = notes\n",
-        "Alto (A) = notes\n",
+        "Soprano [S] = notes\n",
+        "Alto [A] = notes\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
-        "\"\n",
+        // Alto omitted — not-mentioned, rest-filled → should be hidden
     );
     let score = compile(input, "test.jianpu").unwrap();
     let result = compiler::compile(&score);
@@ -139,36 +136,33 @@ fn ditto_part_label_is_merged_into_source_row_label() {
     assert_eq!(
         blocks[0].rows.len(),
         1,
-        "ditto Alto should produce no separate row"
+        "not-mentioned Alto (rest-filled) should be omitted when Soprano has notes"
     );
-    assert_eq!(
-        blocks[0].rows[0].label, "[ALL]",
-        "source row label should be [ALL] when all other parts are ditto"
-    );
+    assert_eq!(blocks[0].rows[0].label, "S", "only Soprano should appear");
 }
 
 #[test]
-fn ditto_part_promoted_to_timed_when_source_is_filtered_out() {
+fn not_mentioned_part_promoted_to_timed_when_source_is_filtered_out() {
     let input = concat!(
         "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
         "# parts\n",
-        "Soprano (S) = notes\n",
-        "Alto (A) = notes\n",
+        "Soprano [S] = notes\n",
+        "Alto [A] = follow[S]\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
-        "\"\n",
+        // Alto not mentioned — not-mentioned, copies Soprano
     );
     let mut score = compile(input, "test.jianpu").unwrap();
-    // Alto is ditto. Filter to Alto only — Soprano (the source) is removed.
+    // Alto is not-mentioned. Filter to Alto only — Soprano (the source) is removed.
     apply_track_filter(&mut score, Some(&["A".to_string()]));
     assert_eq!(score.measures[0].parts.len(), 1, "only Alto should remain");
     assert!(
         matches!(score.measures[0].parts[0], PartRow::Timed(_)),
-        "Alto should be promoted from Ditto to Timed when its source Soprano is filtered out"
+        "Alto should be promoted from NotMentioned to Timed when its source Soprano is filtered out"
     );
 }

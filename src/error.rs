@@ -414,6 +414,40 @@ impl RecoverableError {
             },
         }
     }
+
+    pub fn parts_first_part_cannot_follow(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartsFirstPartCannotFollow,
+        }
+    }
+
+    pub fn parts_follow_unknown_target(span: Span, target: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartsFollowUnknownTarget {
+                target: target.to_string(),
+            },
+        }
+    }
+
+    pub fn parts_follow_target_after_follower(span: Span, target: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartsFollowTargetAfterFollower {
+                target: target.to_string(),
+            },
+        }
+    }
+
+    pub fn part_key_unknown(span: Span, key: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartKeyUnknown {
+                key: key.to_string(),
+            },
+        }
+    }
 }
 
 /// A per-measure diagnostic that is attached to rendered output.

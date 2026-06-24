@@ -27,6 +27,7 @@ pub(super) fn decl(name: &str, kind: PartKind) -> PartDecl {
         abbreviation: name.into(),
         display_name: name.into(),
         kind,
+        follow_target: None,
     }
 }
 

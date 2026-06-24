@@ -48,19 +48,20 @@ Whitespace around `=` in metadata is optional. Metadata values may be quoted wit
 One track per line. Blank lines are ignored.
 
 ```
-<display-name> [(<abbreviation>)] = <column> [<column>…]
+<display-name> [[<abbreviation>]] = <column> [<column>…]
+<display-name> [[<abbreviation>]] = follow[<target-abbreviation>]
 ```
 
 ### Left-hand side
 
 | Form | Display name | Abbreviation (row label) |
 |------|--------------|----------------------------|
-| `Alto 1 & Tenor (A1&T)` | `Alto 1 & Tenor` | `A1&T` |
+| `Alto 1 & Tenor [A1&T]` | `Alto 1 & Tenor` | `A1&T` |
 | `Melody` | `Melody` | `Melody` |
 | `main` | `main` | `main` |
 
-- Parentheses denote the **abbreviation** printed at the left of each score row.
-- When parentheses are omitted, the abbreviation equals the full display name.
+- Square brackets `[Abbr]` denote the **abbreviation** used as the row label and for `[Key]` prefix lines in the score.
+- When brackets are omitted, the abbreviation equals the full display name.
 - The display name is stored for future legend rendering; row labels use the abbreviation only.
 
 ### Right-hand side
@@ -70,22 +71,27 @@ One track per line. Blank lines are ignored.
 | `chord` | Chord-symbol row | 1 |
 | `notes` | Notes only (instrumental) | 1 |
 | `notes lyrics` | Notes + lyrics | 2 (notes, then lyrics) |
+| `follow[X]` | Inherit column layout from the part with abbreviation `X` | same as target |
 
 Rules:
 
 - `lyrics` without `notes` on the same line is an error.
 - Duplicate abbreviations across tracks are an error.
 - At least one track must be declared.
+- `follow[X]` cannot be used for the first declared part.
+- The target abbreviation `X` in `follow[X]` must refer to an already-declared part (declared before the follower).
+- A `follow[X]` part that is not explicitly mentioned in a measure copies `X`'s content and is visually suppressed (row not rendered).
+- A `follow[X]` part can be partially or fully overridden using `[Key]` prefix lines in the score.
 
 Example (multi-part vocal score with chords):
 
 ```
 # parts
 main = chord
-Alto 1 & Tenor (A1&T) = notes lyrics
-Alto 2 (A2) = notes lyrics
-Soprano 1 (S1) = notes lyrics
-Soprano 2 (S2) = notes lyrics
+Alto 1 & Tenor [A1&T] = notes lyrics
+Alto 2 [A2] = notes lyrics
+Soprano 1 [S1] = notes lyrics
+Soprano 2 [S2] = notes lyrics
 ```
 
 Minimal single-part example:
@@ -121,18 +127,75 @@ Lines are trimmed; leading/trailing spaces on a line are ignored. A completely e
 
 ### Positional mapping
 
-Each track expands to one or more data lines per measure. Lines map **by position**:
+Positional lines (no `[Abbrev]` prefix) fill the **first declared part's** slots in order. All remaining parts are filled via `[Key]` prefix lines, `follow[X]` target copying, or implicit fill.
 
-| Track | Lines per measure |
-|-------|-------------------|
-| `main = chord` | chord |
-| `Alto 1 & Tenor (A1&T) = notes lyrics` | notes, lyrics |
-| `Alto 2 (A2) = notes lyrics` | notes, lyrics |
-| … | … |
+| Track | Lines per measure (positional) |
+|-------|--------------------------------|
+| First part only | all its score lines, in order |
 
-For the example above, nine data lines per measure: 1 chord + 4 × (notes + lyrics).
+Trailing positional lines may be omitted; they are filled with rests (`0`) or no-lyrics (`_`) depending on slot type. You cannot skip a line in the middle.
 
-You cannot skip a line in the middle — only **trailing** lines may be omitted (see [Implicit ditto](#implicit-ditto) below).
+### Key-based part prefix (`[Abbrev]`)
+
+A data line may begin with `[Abbrev]` to route it to a specific part by abbreviation:
+
+```
+[A2] 5 6 7 0
+```
+
+- Positional lines (no prefix) belong exclusively to the **first declared part**; they must come before any `[Key]` lines in the group.
+- Any number of `[Key]` lines may appear for the same part; they fill that part's slots in declaration order (first line → first slot, second line → second slot, …).
+- `[Key]` lines targeting the first declared part's abbreviation are an error; the line is dropped.
+- An unrecognised abbreviation is an error; the line is dropped.
+- Parts not covered by any positional or `[Key]` line use their `follow[X]` target's content when declared as such, or are filled with implicit rests/no-lyrics otherwise.
+
+**Example — only part C plays, A and B are not-mentioned:**
+
+```
+# parts
+A = notes
+B = notes
+C = notes
+
+# score
+time=4/4 key=C4 bpm=120
+1 2 3 4
+
+[C] 5 6 7 0
+```
+
+Measure 2: C plays `5 6 7 0`. A and B have no explicit lines → filled with `0` (rest) and marked not-mentioned (rows suppressed).
+
+**Example — mix positional and key-based in one measure with a follow part:**
+
+```
+# parts
+A = notes
+B = follow[A]
+C = notes
+
+# score
+1 2 3 4      ← positional → fills A
+[C] 5 6 7 0  ← key-based → fills C
+```
+
+A: `1 2 3 4`. B: not mentioned → copies A's content via `follow`. C: `5 6 7 0`.
+
+**Example — follow part with partial key override:**
+
+```
+# parts
+Soprano [S] = notes lyrics
+Alto [A] = follow[S]
+
+# score
+time=4/4 key=C4 bpm=120
+1 2 3 4
+do re mi fa
+[A] 5 6 7 1
+```
+
+Soprano: notes=`1 2 3 4`, lyrics=`do re mi fa`. Alto: notes=`5 6 7 1` (key override), lyrics=`do re mi fa` (copied from Soprano via follow).
 
 ---
 
@@ -335,7 +398,6 @@ _
 
 - `_` is valid **only** on lyrics columns.
 - On notes or chord columns, `_` alone is a parse error (`_` is already the eighth-note duration prefix on notes lines).
-- Ditto (`"`) copying a `_` source line also yields zero syllables.
 
 ### Empty lyrics
 
@@ -408,82 +470,28 @@ _1 _1 _1 =1 =1 1_ 6, (6_)
 
 ---
 
-## Ditto (`"`)
+## Not-mentioned parts
 
-A line whose entire trimmed content is `"` means **same content as the closest preceding line of the same column type** within this measure group.
+When a part is **not mentioned** in a measure (no positional or `[Key]` lines cover it), its row is **not rendered** for that measure — the vertical space is reclaimed and rows below move up.
 
-```
-5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_)    ← A1&T notes
-白陽旗旛在大道盛宏               ← A1&T lyrics
-"                                ← A2 notes  (= A1&T notes)
-"                                ← A2 lyrics (= A1&T lyrics)
-```
+- A `follow[X]` part that is not mentioned copies `X`'s content (audio plays the same as X).
+- A non-follow part that is not mentioned is filled with rests (`0`) or no-lyrics (`_`).
+- All measures sharing a system line must render identical rows. A measure whose rendered shape differs starts a new system line.
+- The first declared part is always considered mentioned (positional lines always fill it first).
 
-Resolution rules:
-
-| Column type | Copies from |
-|-------------|-------------|
-| `notes:` | Closest preceding `notes:` line above |
-| `lyrics:` | Closest preceding `lyrics:` line above |
-| `chord:` | Closest preceding `chord:` line above |
-
-- The `(...)` directive line is never a ditto source or target.
-- Ditto chains resolve top-to-bottom (`"` copying `"` is fine).
-- `"` with no preceding line of the same type in the group is an error.
-
-### Rendering
-
-When **all** lines of a part in a measure are dittos (explicit `"` or implicit trailing omission), that part's row is **not rendered** for that measure — the vertical space is reclaimed and the rows below move up. The part still sounds in MIDI/WAV output.
-
-When only the **lyric line** of a `notes lyrics` part is a ditto (explicit `"` or implicit omission), the notes row still renders but the lyric row is suppressed and its vertical space is reclaimed. The part is displayed as if it were a plain `notes` part for that measure.
-
-- A part with explicit content on any of its lines (e.g. ditto notes but explicit lyrics) still renders normally.
-- All measures sharing a system line must render identical rows. A measure whose rendered shape differs (different parts visible, or lyric row present vs absent) starts a new system line.
-- The first part of a measure group can never be fully ditto (a `"` needs a preceding same-type line), so every measure renders at least one part.
-
----
-
-## Implicit ditto
-
-**Trailing** omitted lines are automatically treated as `"` when a same-type line already exists earlier in the measure group.
-
-Verse example — three lines instead of nine:
-
-```
-1 - - -
-5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_)
-白陽旗旛在大道盛宏
-```
-
-The omitted A2/S1/S2 notes and lyrics lines are padded as implicit ditto.
-
-### Suffix-only omission
-
-Because lines map **positionally**, you can only omit **trailing** columns. If a middle column would be ditto but later columns have explicit content, the middle `"` must still be written:
-
-```
-4. 4= 4= 4_ 3_ 1= (2_=2_)       ← A2 notes (explicit, diverges)
-"                              ← A2 lyrics (still required — S1 follows)
-6 - 5 -                       ← S1 notes (explicit)
-一個                          ← S1 lyrics (explicit)
-                               ← (omitted) S2 notes + S2 lyrics → implicit ditto
-```
-
-### Omitted lines — precedence table
+### Omitted lines — fill table
 
 | Situation | Result |
 |-----------|--------|
-| Omitted trailing notes/chord line; same type exists above | Implicit `"` (ditto) |
-| Omitted trailing lyrics line; lyrics line exists above | Implicit `"` (ditto) |
-| Omitted trailing notes/chord line; **no same-type precedent** | Silently filled with rests (`0` extended to full measure) |
-| Omitted trailing lyrics line; **no same-type precedent** | Silently filled with no lyrics (`_`) |
-| Explicit `"` with no same-type precedent | Error — no source to copy from |
-| More data lines than score lines | Error |
+| Part not mentioned; declared as `follow[X]` | Copies X's content; row suppressed |
+| Part not mentioned; no follow target; notes/chord slot | Silently filled with rests (`0`) |
+| Part not mentioned; no follow target; lyrics slot | Silently filled with no-lyrics (`_`) |
+| `[Key]` line for first part's abbreviation | Error; line dropped |
+| `[Key]` line with unrecognised abbreviation | Error; line dropped |
+| More positional lines than first part's slots | Error; excess lines dropped |
 | Fewer than one data line per group | Error |
 
-Explicit `"` lines remain valid (redundant when trailing omission would apply).
-
-**Omittable parts example** — Part B has no lines in measure 1; it is silently filled with rests:
+**Example — part B not mentioned:**
 
 ```
 # parts
@@ -497,7 +505,7 @@ B = notes
 1 2 3 4
 ```
 
-Measure 1: A plays `1 2m 3 4`, B plays a full-measure rest (`0 0 0 0` in 4/4).
+Measure 1: A plays `1 2m 3 4`, B is not mentioned → filled with rests, row suppressed.
 Measure 2: A plays `1 - - -`, B plays `1 2 3 4`.
 
 ---
@@ -506,10 +514,10 @@ Measure 2: A plays `1 - - -`, B plays `1 2 3 4`.
 
 | Whole line | Column | Meaning |
 |------------|--------|---------|
-| `"` | notes, lyrics, chord | Ditto — copy preceding same-type line |
 | `_` | lyrics only | No lyrics this bar |
-| *(omitted, trailing)* | any | Implicit ditto if precedent exists |
+| *(omitted)* | any | Rest fill or follow-target copy; row suppressed |
 | `(...)` | directive | Global bpm/key/time/label for this bar |
+| `[Abbrev] <content>` | notes, lyrics, chord | Key-based line targeting the named part by abbreviation |
 
 ---
 
@@ -521,21 +529,23 @@ title = "Demo"
 author = "Author"
 
 # parts
-Melody = notes lyrics
+Melody [M] = notes lyrics
+Harmony [H] = follow[M]
 
 # score
 
 (bpm=120 key=C4 time=4/4 label="Verse")
 1 - 4m 5
-1 2 3 4
 do re mi fa
 
 1 - 4m 5
-"
 _
+[H] 3 - 6m 7
+[H] do re mi fa
 ```
 
-Bar 2: chord and notes are implicit ditto; lyrics explicitly marked `_` (no text this bar).
+Bar 1: Melody plays `1 - 4m 5` / `do re mi fa`. Harmony is not mentioned → copies Melody, row suppressed.  
+Bar 2: Melody plays `1 - 4m 5` / `_` (no lyrics). Harmony uses `[H]` key lines to override both slots.
 
 ---
 
@@ -546,5 +556,3 @@ Design specs with additional rationale live in `docs/superpowers/specs/`:
 - `2026-06-04-interleaved-syntax-design.md` — interleaved `# score` format
 - `2026-06-05-label-directive-design.md` — `label=` directive
 - `2026-06-06-chord-track-design.md` — `chord:` columns
-- `2026-06-06-ditto-input-dedup-design.md` — `"` ditto marker
-- `2026-06-08-implicit-ditto-padding-design.md` — implicit ditto and `_` no-lyrics

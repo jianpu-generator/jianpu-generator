@@ -151,35 +151,6 @@ fn measure_omitted_lyrics_line_is_silently_filled() {
 }
 
 #[test]
-fn ditto_no_precedent_is_recoverable() {
-    // Part A's only line is `"` with no preceding notes line in the measure.
-    // Part B still has valid content — grouping must continue and flag measure 1.
-    let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nA = notes\nB = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n\"\n1 2 3 4\n",
-    ));
-    assert_eq!(score.measures.len(), 1);
-    assert_eq!(score.measures[0].diagnostics.len(), 1);
-    assert!(
-        score.measures[0].diagnostics[0]
-            .message()
-            .contains("no preceding notes line"),
-        "got: {}",
-        score.measures[0].diagnostics[0].message()
-    );
-    assert_eq!(
-        first_part_notes(&score, 0).len(),
-        0,
-        "blank placeholder notes should produce no events"
-    );
-    assert_eq!(
-        score.measures[0].parts[1].slice().notes.events.len(),
-        4,
-        "valid part B notes should still be grouped"
-    );
-}
-
-#[test]
 fn suffix_dash_after_rest_is_recoverable() {
     use crate::error::{Diagnostic, RecoverableErrorKind};
     let score = parse_and_group(concat!(

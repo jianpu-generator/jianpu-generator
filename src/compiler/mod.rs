@@ -9,7 +9,7 @@ use part_slice::{compile_part_slice, PartSliceInput};
 mod slur_chains;
 use slur_chains::{PartCrossState, PendingSlurOpen, SlurKey};
 
-use crate::ast::grouped::{MultiPartMeasure, Score};
+use crate::ast::grouped::{MultiPartMeasure, NoteEvent, PartRow, Score};
 
 struct PartSliceResult {
     elements: Vec<ColumnElement>,
@@ -49,6 +49,24 @@ pub fn compile(score: &Score) -> CompileResult {
     CompileResult { blocks, slur_spans }
 }
 
+fn is_rest_filled(part_row: &PartRow) -> bool {
+    !part_row.slice().notes.events.is_empty()
+        && part_row
+            .slice()
+            .notes
+            .events
+            .iter()
+            .all(|e| matches!(e, NoteEvent::Rest(_)))
+}
+
+fn update_cross_state(cs: &mut PartCrossState, result: &mut PartSliceResult) {
+    cs.prev_tie = result.final_tie;
+    cs.prev_tie_column = result.final_tie_column;
+    cs.prev_tie_measure = result.final_tie_measure;
+    cs.prev_slur_key = result.final_slur_key.take();
+    cs.pending_slur_opens = std::mem::take(&mut result.final_pending_opens);
+}
+
 fn compile_measure(
     measure: &MultiPartMeasure,
     bar_number: usize,
@@ -60,9 +78,18 @@ fn compile_measure(
         cross_states.push(PartCrossState::new());
     }
 
+    let visible_part_count = if measure.parts.iter().any(|p| !is_rest_filled(p)) {
+        measure.parts.iter().filter(|p| !is_rest_filled(p)).count()
+    } else {
+        measure.parts.len()
+    };
+
     let decorations = collect_decorations(measure, bar_number);
     let mut rows: Vec<MeasureRow> = Vec::new();
     for (part_idx, part_row) in measure.parts.iter().enumerate() {
+        if visible_part_count < measure.parts.len() && is_rest_filled(part_row) {
+            continue;
+        }
         let Some(cs) = cross_states.get(part_idx) else {
             continue;
         };
@@ -80,7 +107,7 @@ fn compile_measure(
                 )
             };
 
-        let slice_result = compile_part_slice(
+        let mut slice_result = compile_part_slice(
             part_row.slice(),
             PartSliceInput {
                 prev_tie: init_tie,
@@ -97,40 +124,31 @@ fn compile_measure(
         let Some(cs) = cross_states.get_mut(part_idx) else {
             continue;
         };
-        cs.prev_tie = slice_result.final_tie;
-        cs.prev_tie_column = slice_result.final_tie_column;
-        cs.prev_tie_measure = slice_result.final_tie_measure;
-        cs.prev_slur_key = slice_result.final_slur_key;
-        cs.pending_slur_opens = slice_result.final_pending_opens;
+        update_cross_state(cs, &mut slice_result);
 
-        match part_row.rendered_slice() {
-            Some(_) => {
-                let label = part_row.name().cloned().unwrap_or_default();
-                let id = RowId(
-                    part_row
-                        .name()
-                        .cloned()
-                        .unwrap_or_else(|| format!("__anon_{part_idx}")),
-                );
-                rows.push(MeasureRow {
-                    id,
-                    label,
-                    elements: slice_result.elements,
-                });
-            }
-            None => {
-                if let Some(last) = rows.last_mut() {
-                    let ditto_label = part_row.name().map(String::as_str).unwrap_or("");
-                    if !ditto_label.is_empty() {
-                        last.label.push_str(", ");
-                        last.label.push_str(ditto_label);
-                    }
+        let name = part_row.name().cloned();
+        let label = name.clone().unwrap_or_default();
+        let id = RowId(name.unwrap_or_else(|| format!("__anon_{part_idx}")));
+        let same_content_as_last = rows
+            .last()
+            .is_some_and(|last| last.elements == slice_result.elements);
+        if part_row.is_ditto() && same_content_as_last {
+            if let Some(last) = rows.last_mut() {
+                if !label.is_empty() {
+                    last.label.push_str(", ");
+                    last.label.push_str(&label);
                 }
             }
+        } else {
+            rows.push(MeasureRow {
+                id,
+                label,
+                elements: slice_result.elements,
+            });
         }
     }
-    if rows.len() == 1 && measure.parts.len() > 1 {
-        if let Some(row) = rows.get_mut(0) {
+    if rows.len() == 1 && visible_part_count > 1 {
+        if let Some(row) = rows.first_mut() {
             row.label = "[ALL]".to_string();
         }
     }

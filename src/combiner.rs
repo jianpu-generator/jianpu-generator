@@ -198,21 +198,21 @@ fn build_part_rows(
                     lyrics,
                     has_error: measure_has_error(measure),
                 };
-                let is_ditto = part
-                    .ditto_measures
+                let is_not_mentioned = part
+                    .not_mentioned_measures
                     .get(measure_idx)
                     .copied()
                     .unwrap_or(false);
-                let lyrics_ditto = part
-                    .lyrics_ditto_measures
+                let lyrics_not_mentioned = part
+                    .lyrics_not_mentioned_measures
                     .get(measure_idx)
                     .copied()
                     .unwrap_or(false);
                 // A ditto'd lyric line duplicates the part above's lyrics, so
                 // render this measure as a plain notes part: the copied
                 // syllables are not shown and the lyric row is reclaimed.
-                if lyrics_ditto
-                    && !is_ditto
+                if lyrics_not_mentioned
+                    && !is_not_mentioned
                     && matches!(
                         slice.kind,
                         PartKind::NotesWithLyrics | PartKind::LyricsWithNotes
@@ -221,8 +221,8 @@ fn build_part_rows(
                     slice.kind = PartKind::Notes;
                     slice.lyrics = None;
                 }
-                part_rows.push(if is_ditto {
-                    PartRow::Ditto(slice)
+                part_rows.push(if is_not_mentioned {
+                    PartRow::NotMentioned(slice)
                 } else {
                     PartRow::Timed(slice)
                 });

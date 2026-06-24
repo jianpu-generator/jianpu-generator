@@ -18,7 +18,7 @@ fn list_parts_from_source_returns_declarations() {
         "\n",
         "# parts\n",
         "main = chord\n",
-        "Alto 1 & Tenor (A1&T) = notes lyrics\n",
+        "Alto 1 & Tenor [A1&T] = notes lyrics\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
@@ -309,6 +309,35 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
     );
 }
 
+#[test]
+fn key_prefix_only_b_omits_rest_filled_a() {
+    let input = concat!(
+        "# metadata\n",
+        "title = \"Untitled\"\n",
+        "author = \"author\"\n",
+        "\n",
+        "# parts\n",
+        "A = notes\n",
+        "B = notes\n",
+        "\n",
+        "# score\n",
+        "[B] 1 2 3 4\n",
+    );
+    let svgs = render_svgs_from_source(input, "test.jianpu").unwrap().svgs;
+    let svg = &svgs[0];
+
+    assert!(
+        !svg.contains(">A<"),
+        "part A (rest-filled) should be omitted"
+    );
+    assert!(svg.contains(">B<"), "part B row label should appear");
+    assert!(svg.contains(">1<"), "part B note 1 should appear");
+    assert!(svg.contains(">2<"), "part B note 2 should appear");
+    assert!(svg.contains(">3<"), "part B note 3 should appear");
+    assert!(svg.contains(">4<"), "part B note 4 should appear");
+    assert!(!svg.contains(">0<"), "part A rests should not appear");
+}
+
 #[cfg(feature = "pdf")]
 mod split_pdf_tests {
     use super::*;
@@ -322,8 +351,8 @@ mod split_pdf_tests {
             "author = \"tester\"\n",
             "\n",
             "# parts\n",
-            "Soprano 1 (S1) = notes lyrics\n",
-            "Soprano 2 (S2) = notes lyrics\n",
+            "Soprano 1 [S1] = notes lyrics\n",
+            "Soprano 2 [S2] = notes lyrics\n",
             "\n",
             "# score\n",
             "time=4/4 key=C4 bpm=120\n",

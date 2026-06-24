@@ -8,8 +8,8 @@ label width = 120
 note number width = 8
 
 # parts
-Melody (M) = notes lyrics
-Chords (C) = chord
+Melody [M] = notes lyrics
+Chords [C] = chord
 
 # score
 0 0 0 0
@@ -93,3 +93,8 @@ La la la la
 label="Lyrics: no-lyrics marker (_)"
 0
 _
+
+label="Explicit chord key"
+1 2 3 4
+do re mi fa
+[C] 1 - - -

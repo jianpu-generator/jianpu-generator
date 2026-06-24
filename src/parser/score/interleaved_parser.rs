@@ -24,7 +24,7 @@ use accumulators::{build_parse_result, build_slot_actions, init_accumulators};
 use beat_padding::{beats_per_measure, validate_and_pad_group_lines};
 use column_lines::process_padded_columns;
 use directives::split_directive;
-use ditto::compute_ditto_measures;
+use ditto::compute_not_mentioned_measures;
 use errors::invariant;
 
 /// One entry per bar group: all directive events emitted by that group's directive row.
@@ -184,7 +184,7 @@ fn attach_no_notes_track_warning(
 
 pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> ParseResult {
     let groups = collect_groups(content);
-    let ditto_measures_per_track = compute_ditto_measures(&groups, declarations);
+    let ditto_measures_per_track = compute_not_mentioned_measures(&groups, declarations);
     let (groups, per_group_desugar_errors) =
         crate::desugar::desugar_groups(groups, declarations, base_offset)?;
 

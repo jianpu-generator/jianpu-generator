@@ -1,4 +1,5 @@
 use crate::ast::parsed::{flatten_score_line_slots, PartDecl};
+use crate::desugar::parse_key_prefix;
 use crate::parser::score::measure_group;
 
 /// A pre-desugar score data line that should display a part inlay hint in the editor.
@@ -26,10 +27,15 @@ pub fn score_line_hints(
         let directive_count = measure_group::directive_line_count(group);
         let data_lines = group.get(directive_count..).unwrap_or(&[]);
 
-        for (slot_index, (_, line_offset)) in data_lines.iter().enumerate() {
+        let mut slot_index = 0;
+        for (line, line_offset) in data_lines {
+            if parse_key_prefix(line).is_some() {
+                continue;
+            }
             let Some(slot) = slots.get(slot_index) else {
                 break;
             };
+            slot_index += 1;
             let Some(declaration) = declarations.get(slot.track_index) else {
                 continue;
             };
@@ -53,6 +59,7 @@ mod tests {
             abbreviation: name.to_string(),
             display_name: name.to_string(),
             kind,
+            follow_target: None,
         }
     }
 
@@ -116,6 +123,33 @@ mod tests {
         assert_eq!(hints.len(), 2);
         assert_eq!(hints[1].abbreviation, "B");
         assert_eq!(hints[1].line_start, 10);
+    }
+
+    #[test]
+    fn keyed_lines_produce_no_hint() {
+        let groups = vec![group(&["1 2 3 4", "[B] 5 6 7 8"], 0)];
+        let declarations = vec![decl("A", PartKind::Notes), decl("B", PartKind::Notes)];
+        let hints = score_line_hints(&groups, 0, &declarations);
+        assert_eq!(
+            hints,
+            vec![ScoreLineHint {
+                line_start: 0,
+                abbreviation: "A".to_string(),
+            }]
+        );
+    }
+
+    #[test]
+    fn first_part_with_lyrics_both_positional_lines_get_hints() {
+        let groups = vec![group(&["1 2 3 4", "twin- kle", "[C] 1"], 0)];
+        let declarations = vec![
+            decl("Melody", PartKind::NotesWithLyrics),
+            decl("C", PartKind::Chord),
+        ];
+        let hints = score_line_hints(&groups, 0, &declarations);
+        assert_eq!(hints.len(), 2);
+        assert_eq!(hints[0].abbreviation, "Melody");
+        assert_eq!(hints[1].abbreviation, "Melody");
     }
 
     #[test]

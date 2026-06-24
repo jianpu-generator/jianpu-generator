@@ -197,35 +197,35 @@ fn bar_line_column_equals_total_duration() {
 }
 
 #[test]
-fn all_parts_ditto_except_first_produces_all_label() {
+fn not_mentioned_chord_part_is_omitted_when_other_parts_have_notes() {
+    // B (chord) is not mentioned in this key-based measure, so it gets rest-filled.
+    // Because A and C have actual notes, B should be omitted from the rendered rows.
     let score = score_from(
         "# metadata
 title=\"t\"
 author=\"a\"
 
 # parts
-Soprano (S) = notes
-Alto (A) = notes
-Tenor (T) = notes
+A = notes lyrics
+B = chord
+C = notes
 
 # score
 time=4/4 key=C4 bpm=120
 1 2 3 4
-\"
-\"
+la la la la
+[C] 1
 ",
     );
     let result = compile(&score);
     let blocks = result.blocks;
     assert_eq!(
         blocks[0].rows.len(),
-        1,
-        "all ditto parts should collapse to one row"
+        2,
+        "B (rest-filled) should be omitted when A and C have notes"
     );
-    assert_eq!(
-        blocks[0].rows[0].label, "[ALL]",
-        "label should be [ALL] when all parts except first are ditto"
-    );
+    assert_eq!(blocks[0].rows[0].label, "A", "first row label should be A");
+    assert_eq!(blocks[0].rows[1].label, "C", "second row label should be C");
 }
 
 #[test]

@@ -63,7 +63,7 @@ pub enum PartRow {
     /// All of this part's input lines were `"` (or implicit trailing omission)
     /// in this measure. Carries the resolved content so audio output still
     /// includes it, but the renderer skips the row entirely.
-    Ditto(PartSlice),
+    NotMentioned(PartSlice),
 }
 
 impl PartRow {
@@ -74,13 +74,13 @@ impl PartRow {
     /// The resolved content, whether rendered or not.
     pub fn slice(&self) -> &PartSlice {
         match self {
-            PartRow::Timed(s) | PartRow::Ditto(s) => s,
+            PartRow::Timed(s) | PartRow::NotMentioned(s) => s,
         }
     }
 
     pub fn slice_mut(&mut self) -> &mut PartSlice {
         match self {
-            PartRow::Timed(s) | PartRow::Ditto(s) => s,
+            PartRow::Timed(s) | PartRow::NotMentioned(s) => s,
         }
     }
 
@@ -88,12 +88,12 @@ impl PartRow {
     pub fn rendered_slice(&self) -> Option<&PartSlice> {
         match self {
             PartRow::Timed(s) => Some(s),
-            PartRow::Ditto(_) => None,
+            PartRow::NotMentioned(_) => None,
         }
     }
 
     pub fn is_ditto(&self) -> bool {
-        matches!(self, PartRow::Ditto(_))
+        matches!(self, PartRow::NotMentioned(_))
     }
 }
 
@@ -168,11 +168,11 @@ pub(crate) struct GroupedPart {
     pub(crate) measures: Vec<GroupedMeasure>,
     /// Per-measure flag: true when every input line of this part in that
     /// measure was a `"` ditto (explicit or implicit trailing omission).
-    pub(crate) ditto_measures: Vec<bool>,
+    pub(crate) not_mentioned_measures: Vec<bool>,
     /// Per-measure flag: true when this part's lyric line in that measure
     /// was a `"` ditto. The copied lyrics duplicate the part above, so the
     /// lyric row is not rendered and its space is reclaimed.
-    pub(crate) lyrics_ditto_measures: Vec<bool>,
+    pub(crate) lyrics_not_mentioned_measures: Vec<bool>,
 }
 
 // ── Shared note types ─────────────────────────────────────────────────────────

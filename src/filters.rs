@@ -18,7 +18,7 @@ pub fn apply_track_filter(score: &mut Score, enabled_tracks: Option<&[String]>) 
         // merge into and its content would silently disappear. Promote the
         // first ditto part to Timed so it renders independently.
         if let Some(first) = measure.parts.first_mut() {
-            if let PartRow::Ditto(slice) = first {
+            if let PartRow::NotMentioned(slice) = first {
                 *first = PartRow::Timed(slice.clone());
             }
         }

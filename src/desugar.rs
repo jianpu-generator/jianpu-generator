@@ -1,21 +1,25 @@
 use crate::ast::parsed::{flatten_score_line_slots, PartDecl, ScoreLineRole};
-use crate::error::{IrrecoverableError, RecoverableError, Span};
+use crate::error::{IrrecoverableError, RecoverableError, RecoverableErrorKind, Span};
 use crate::parser::score::measure_group;
 
 type SourceLine = (String, usize);
 type MeasureGroup = Vec<SourceLine>;
+type KeyMap = Vec<(String, Vec<SourceLine>)>;
 type DesugarGroupsResult =
     Result<(Vec<MeasureGroup>, Vec<Option<RecoverableError>>), IrrecoverableError>;
 
-/// Resolves `"` ditto lines within each measure group.
-///
-/// A `"` on a data line means "same content as the closest preceding line of
-/// the same score line role in this group." The directive line (starts with `(`)
-/// is never a ditto source or target.
-///
-/// Returns `(groups, per_group_errors)`. Hard failures remain `Err`; recoverable
-/// layout issues (missing lines, ditto with no precedent) produce `Ok` with a
-/// `Some` error entry and a placeholder so rendering can continue.
+fn extract_time_numerator(group: &[SourceLine]) -> Option<u8> {
+    let (first_line, _) = group.first()?;
+    first_line
+        .split_whitespace()
+        .find(|t| t.starts_with("time="))?
+        .strip_prefix("time=")?
+        .split('/')
+        .next()?
+        .parse::<u8>()
+        .ok()
+}
+
 pub fn desugar_groups(
     groups: Vec<MeasureGroup>,
     declarations: &[PartDecl],
@@ -24,24 +28,56 @@ pub fn desugar_groups(
     let slots = flatten_score_line_slots(declarations);
     let mut desugared = Vec::with_capacity(groups.len());
     let mut per_group_errors = Vec::with_capacity(groups.len());
+    let mut current_time_num: u8 = 4;
     for group in groups {
-        let (padded, pad_error) =
-            pad_implicit_ditto_group(&group, declarations, &slots, base_offset)?;
-        let (desugared_group, desugar_error) = desugar_group(&padded, &slots, base_offset)?;
-        desugared.push(desugared_group);
-        per_group_errors.push(pad_error.or(desugar_error));
+        if let Some(num) = extract_time_numerator(&group) {
+            current_time_num = num;
+        }
+        let (expanded, error) =
+            expand_measure_group(&group, declarations, &slots, base_offset, current_time_num)?;
+        desugared.push(expanded);
+        per_group_errors.push(error);
     }
     Ok((desugared, per_group_errors))
 }
 
-fn pad_implicit_ditto_group(
+pub(crate) fn parse_key_prefix(line: &str) -> Option<(&str, &str)> {
+    line.strip_prefix('[')
+        .and_then(|s| s.find(']').map(|i| (s[..i].trim(), s[i + 1..].trim())))
+}
+
+fn implicit_fill(role: ScoreLineRole, time_num: u8) -> String {
+    match role {
+        ScoreLineRole::Lyrics => "_".to_string(),
+        ScoreLineRole::Notes | ScoreLineRole::Chord => {
+            itertools::join(std::iter::repeat_n("0", time_num as usize), " ")
+        }
+    }
+}
+
+struct GroupContext {
+    span: Span,
+    pad_offset: usize,
+    base_offset: usize,
+    time_num: u8,
+}
+
+fn part_list(declarations: &[PartDecl]) -> String {
+    declarations
+        .iter()
+        .map(|d| d.abbreviation.as_str())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn expand_measure_group(
     group: &[SourceLine],
     declarations: &[PartDecl],
     slots: &[crate::ast::parsed::ScoreLineSlot],
     base_offset: usize,
+    time_num: u8,
 ) -> Result<(MeasureGroup, Option<RecoverableError>), IrrecoverableError> {
     let directive_count = measure_group::directive_line_count(group);
-
     let directive_lines = group.get(..directive_count).unwrap_or(&[]);
     let data_lines = group.get(directive_count..).unwrap_or(&[]);
 
@@ -51,362 +87,262 @@ fn pad_implicit_ditto_group(
         .map(|(_, off)| Span::new(base_offset + *off, base_offset + *off + 1))
         .unwrap_or(Span::new(base_offset, base_offset + 1));
 
-    let mut recoverable_error: Option<RecoverableError> = None;
-
-    let effective_data_lines: Vec<(String, usize)> = if data_lines.is_empty() {
-        recoverable_error = Some(RecoverableError::measure_no_data_lines(span));
-        Vec::new()
-    } else if data_lines.len() > slots.len() {
-        let part_list = declarations
-            .iter()
-            .map(|d| d.abbreviation.as_str())
-            .collect::<Vec<_>>()
-            .join(", ");
-        recoverable_error = Some(RecoverableError::measure_too_many_lines(
-            span,
-            data_lines.len(),
-            slots.len(),
-            &part_list,
-        ));
-        data_lines.get(..slots.len()).unwrap_or(data_lines).to_vec()
-    } else {
-        data_lines.to_vec()
+    let pad_offset = data_lines.last().map(|(_, off)| *off).unwrap_or(0);
+    let context = GroupContext {
+        span,
+        pad_offset,
+        base_offset,
+        time_num,
     };
 
-    let pad_offset = effective_data_lines
-        .last()
-        .map(|(_, off)| *off)
-        .unwrap_or(0);
-    let mut result_data: Vec<(String, usize)> = effective_data_lines.clone();
+    let mut positional: Vec<SourceLine> = Vec::new();
+    let mut keyed: Vec<(String, String, usize)> = Vec::new();
 
-    for slot in slots.get(effective_data_lines.len()..).unwrap_or(&[]) {
-        let role = slot.role;
-        let has_precedent =
-            (0..result_data.len()).any(|j| slots.get(j).map(|s| s.role == role).unwrap_or(false));
-
-        if has_precedent {
-            result_data.push(("\"".to_string(), pad_offset));
-        } else if role == ScoreLineRole::Lyrics {
-            // Omitted lyrics with no ditto source: treat as no lyrics for this measure.
-            result_data.push(("_".to_string(), pad_offset));
+    for (line, offset) in data_lines {
+        if let Some((key, content)) = parse_key_prefix(line) {
+            keyed.push((key.to_string(), content.to_string(), *offset));
         } else {
-            // Omitted notes or chord with no ditto source: fill with a quarter rest
-            // that beat-padding will extend to cover the full measure.
-            result_data.push(("0".to_string(), pad_offset));
+            positional.push((line.clone(), *offset));
         }
     }
+
+    let mut recoverable_error: Option<RecoverableError> = None;
+
+    let result_data = if keyed.is_empty() {
+        expand_positional(
+            positional,
+            slots,
+            declarations,
+            &context,
+            &mut recoverable_error,
+        )
+    } else {
+        expand_keyed(
+            positional,
+            keyed,
+            declarations,
+            &context,
+            &mut recoverable_error,
+        )
+    };
 
     let mut result = directive_lines.to_vec();
     result.extend(result_data);
     Ok((result, recoverable_error))
 }
 
-fn desugar_group(
-    group: &[SourceLine],
+fn expand_positional(
+    positional: Vec<SourceLine>,
     slots: &[crate::ast::parsed::ScoreLineSlot],
-    base_offset: usize,
-) -> Result<(MeasureGroup, Option<RecoverableError>), IrrecoverableError> {
-    let directive_count = measure_group::directive_line_count(group);
+    declarations: &[PartDecl],
+    context: &GroupContext,
+    recoverable_error: &mut Option<RecoverableError>,
+) -> Vec<SourceLine> {
+    let effective: Vec<SourceLine> = if positional.is_empty() {
+        *recoverable_error = Some(RecoverableError::measure_no_data_lines(context.span));
+        Vec::new()
+    } else if positional.len() > slots.len() {
+        recoverable_error.get_or_insert_with(|| {
+            RecoverableError::measure_too_many_lines(
+                context.span,
+                positional.len(),
+                slots.len(),
+                &part_list(declarations),
+            )
+        });
+        positional
+            .get(..slots.len())
+            .unwrap_or(&positional)
+            .to_vec()
+    } else {
+        positional
+    };
 
-    let directive_lines = group.get(..directive_count).unwrap_or(&[]).to_vec();
-    let data_lines = group.get(directive_count..).unwrap_or(&[]);
-
-    let mut resolved: Vec<(String, usize)> = Vec::with_capacity(data_lines.len());
-    let mut recoverable_error: Option<RecoverableError> = None;
-
-    for (i, (line, offset)) in data_lines.iter().enumerate() {
-        if line == "\"" {
-            match slots.get(i) {
-                None => {
-                    resolved.push((line.clone(), *offset));
-                }
-                Some(slot) => {
-                    let role = slot.role;
-                    let source = (0..resolved.len())
-                        .rev()
-                        .find(|&j| slots.get(j).map(|s| s.role == role).unwrap_or(false))
-                        .and_then(|j| resolved.get(j).cloned());
-
-                    match source {
-                        Some((src_content, src_offset)) => {
-                            resolved.push((src_content, src_offset));
-                        }
-                        None => {
-                            let span = Span::new(base_offset + *offset, base_offset + *offset + 1);
-                            recoverable_error.get_or_insert_with(|| {
-                                RecoverableError::general(
-                                    span,
-                                    format!(
-                                        "ditto '\"' has no preceding {} line in this measure group",
-                                        role_name(role)
-                                    ),
-                                )
-                            });
-                            resolved.push((ditto_no_precedent_placeholder(role), *offset));
-                        }
-                    }
-                }
-            }
-        } else {
-            resolved.push((line.clone(), *offset));
+    // Track per-track filled lines so follow targets can be resolved when padding.
+    let mut filled_by_track: Vec<Vec<SourceLine>> = vec![Vec::new(); declarations.len()];
+    for (slot, line) in slots.iter().zip(effective.iter()) {
+        if let Some(bucket) = filled_by_track.get_mut(slot.track_index) {
+            bucket.push(line.clone());
         }
     }
 
-    let mut result = directive_lines;
-    result.extend(resolved);
-    Ok((result, recoverable_error))
+    let mut result = effective;
+    for slot in slots.get(result.len()..).unwrap_or(&[]) {
+        let local_idx = filled_by_track
+            .get(slot.track_index)
+            .map(|v| v.len())
+            .unwrap_or(0);
+        let line = declarations
+            .get(slot.track_index)
+            .and_then(|d| d.follow_target.as_ref())
+            .and_then(|target| declarations.iter().position(|d| &d.abbreviation == target))
+            .and_then(|ft| filled_by_track.get(ft)?.get(local_idx).cloned())
+            .unwrap_or_else(|| {
+                (
+                    implicit_fill(slot.role, context.time_num),
+                    context.pad_offset,
+                )
+            });
+        if let Some(bucket) = filled_by_track.get_mut(slot.track_index) {
+            bucket.push(line.clone());
+        }
+        result.push(line);
+    }
+    result
 }
 
-fn ditto_no_precedent_placeholder(role: ScoreLineRole) -> String {
-    match role {
-        ScoreLineRole::Notes | ScoreLineRole::Lyrics | ScoreLineRole::Chord => "_".to_string(),
+fn expand_keyed(
+    mut positional: Vec<SourceLine>,
+    keyed: Vec<(String, String, usize)>,
+    declarations: &[PartDecl],
+    context: &GroupContext,
+    recoverable_error: &mut Option<RecoverableError>,
+) -> Vec<SourceLine> {
+    let Some(first_decl) = declarations.first() else {
+        return Vec::new();
+    };
+    let first_part_slot_count = first_decl.score_line_roles().len();
+
+    if positional.len() > first_part_slot_count {
+        recoverable_error.get_or_insert_with(|| {
+            RecoverableError::measure_too_many_lines(
+                context.span,
+                positional.len(),
+                first_part_slot_count,
+                &part_list(declarations),
+            )
+        });
+        positional.truncate(first_part_slot_count);
     }
+    for &role in first_decl
+        .score_line_roles()
+        .get(positional.len()..)
+        .unwrap_or(&[])
+    {
+        positional.push((implicit_fill(role, context.time_num), context.pad_offset));
+    }
+
+    let key_map = filter_keyed_into_key_map(keyed, declarations, context, recoverable_error);
+    resolve_tracks(positional, &key_map, declarations, context)
 }
 
-fn role_name(role: ScoreLineRole) -> &'static str {
-    match role {
-        ScoreLineRole::Notes => "notes",
-        ScoreLineRole::Lyrics => "lyrics",
-        ScoreLineRole::Chord => "chord",
+fn filter_keyed_into_key_map(
+    keyed: Vec<(String, String, usize)>,
+    declarations: &[PartDecl],
+    context: &GroupContext,
+    recoverable_error: &mut Option<RecoverableError>,
+) -> KeyMap {
+    let Some(first_decl) = declarations.first() else {
+        return Vec::new();
+    };
+    let first_abbrev = &first_decl.abbreviation;
+
+    let valid_keyed: Vec<_> = keyed
+        .into_iter()
+        .filter(|(key, _, offset)| {
+            let line_span = Span::new(
+                context.base_offset + offset,
+                context.base_offset + offset + 1,
+            );
+            if key == first_abbrev {
+                recoverable_error.get_or_insert(RecoverableError {
+                    span: line_span,
+                    kind: RecoverableErrorKind::PartKeyUsedForFirstPart { key: key.clone() },
+                });
+                false
+            } else if !declarations.iter().any(|d| &d.abbreviation == key) {
+                recoverable_error
+                    .get_or_insert_with(|| RecoverableError::part_key_unknown(line_span, key));
+                false
+            } else {
+                true
+            }
+        })
+        .collect();
+
+    let mut key_map: KeyMap = Vec::new();
+    for (key, content, offset) in valid_keyed {
+        if let Some(entry) = key_map.iter_mut().find(|(k, _)| k == &key) {
+            entry.1.push((content, offset));
+        } else {
+            key_map.push((key, vec![(content, offset)]));
+        }
     }
+
+    for (abbrev, lines) in &key_map {
+        if let Some(decl) = declarations.iter().find(|d| &d.abbreviation == abbrev) {
+            let slot_count = decl.score_line_roles().len();
+            if let Some((_, excess_offset)) = lines.get(slot_count) {
+                let line_span = Span::new(
+                    context.base_offset + excess_offset,
+                    context.base_offset + excess_offset + 1,
+                );
+                recoverable_error.get_or_insert_with(|| {
+                    RecoverableError::general(
+                        line_span,
+                        format!(
+                            "part [{}] has {} lines but only {} slot(s)",
+                            abbrev,
+                            lines.len(),
+                            slot_count
+                        ),
+                    )
+                });
+            }
+        }
+    }
+
+    key_map
+}
+
+fn resolve_tracks(
+    positional: Vec<SourceLine>,
+    key_map: &KeyMap,
+    declarations: &[PartDecl],
+    context: &GroupContext,
+) -> Vec<SourceLine> {
+    let mut resolved_per_track: Vec<Vec<SourceLine>> = Vec::with_capacity(declarations.len());
+    resolved_per_track.push(positional);
+
+    for i in 1..declarations.len() {
+        let Some(decl) = declarations.get(i) else {
+            continue;
+        };
+        let key_lines = key_map
+            .iter()
+            .find(|(k, _)| k == &decl.abbreviation)
+            .map(|(_, v)| v.as_slice());
+        let follow_target_index = decl.follow_target.as_ref().and_then(|target| {
+            declarations
+                .get(..i)
+                .unwrap_or(&[])
+                .iter()
+                .position(|d| &d.abbreviation == target)
+        });
+
+        let track_lines: Vec<SourceLine> = decl
+            .score_line_roles()
+            .iter()
+            .enumerate()
+            .map(|(slot_index, &role)| {
+                if let Some(line) = key_lines.and_then(|ls| ls.get(slot_index)) {
+                    return line.clone();
+                }
+                if let Some(line) = follow_target_index
+                    .and_then(|t| resolved_per_track.get(t))
+                    .and_then(|track| track.get(slot_index))
+                {
+                    return line.clone();
+                }
+                (implicit_fill(role, context.time_num), context.pad_offset)
+            })
+            .collect();
+        resolved_per_track.push(track_lines);
+    }
+
+    resolved_per_track.into_iter().flatten().collect()
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::ast::parsed::PartKind;
-
-    fn decl(name: &str, kind: PartKind) -> PartDecl {
-        PartDecl {
-            abbreviation: name.to_string(),
-            display_name: name.to_string(),
-            kind,
-        }
-    }
-
-    fn group(lines: &[&str]) -> Vec<(String, usize)> {
-        lines
-            .iter()
-            .enumerate()
-            .map(|(i, l)| (l.to_string(), i * 10))
-            .collect()
-    }
-
-    #[test]
-    fn notes_ditto_copies_preceding_notes_line() {
-        let groups = vec![group(&["1 2 3 4", "\""])];
-        let declarations = vec![decl("A", PartKind::Notes), decl("B", PartKind::Notes)];
-        let (result, _) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(result[0][1].0, "1 2 3 4");
-    }
-
-    #[test]
-    fn lyrics_ditto_copies_preceding_lyrics_line() {
-        let groups = vec![group(&["1 2 3 4", "hello world", "5 6 7 1", "\""])];
-        let declarations = vec![
-            decl("A", PartKind::NotesWithLyrics),
-            decl("B", PartKind::NotesWithLyrics),
-        ];
-        let (result, _) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(result[0][3].0, "hello world");
-    }
-
-    #[test]
-    fn chord_ditto_copies_preceding_chord_line() {
-        let groups = vec![group(&["1 - - -", "1 2 3 4", "\"", "5 6 7 1"])];
-        let declarations = vec![
-            decl("main", PartKind::Chord),
-            decl("A", PartKind::Notes),
-            decl("main2", PartKind::Chord),
-            decl("B", PartKind::Notes),
-        ];
-        let (result, _) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(result[0][2].0, "1 - - -");
-    }
-
-    #[test]
-    fn notes_ditto_does_not_copy_lyrics_line() {
-        let groups = vec![group(&["1 2 3 4", "hello world", "\""])];
-        let declarations = vec![
-            decl("A", PartKind::NotesWithLyrics),
-            decl("B", PartKind::Notes),
-        ];
-        let (result, _) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(result[0][2].0, "1 2 3 4");
-    }
-
-    #[test]
-    fn chained_ditto_resolves_transitively() {
-        let groups = vec![group(&["1 2 3 4", "\"", "\""])];
-        let declarations = vec![
-            decl("A", PartKind::Notes),
-            decl("B", PartKind::Notes),
-            decl("C", PartKind::Notes),
-        ];
-        let (result, _) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(result[0][1].0, "1 2 3 4");
-        assert_eq!(result[0][2].0, "1 2 3 4");
-    }
-
-    #[test]
-    fn ditto_no_precedent_is_recoverable() {
-        // Explicit `"` with no preceding same-role line must not abort desugaring.
-        let groups = vec![group(&["\""])];
-        let declarations = vec![decl("A", PartKind::Notes)];
-        let (result, errors) = desugar_groups(groups, &declarations, 0)
-            .expect("ditto with no precedent must not abort desugaring");
-        let error = errors[0]
-            .as_ref()
-            .expect("should attach a recoverable error");
-        assert!(
-            error.message().contains("no preceding notes line"),
-            "got: {}",
-            error.message()
-        );
-        assert_eq!(
-            result[0][0].0, "_",
-            "ditto without precedent should become an empty placeholder"
-        );
-    }
-
-    #[test]
-    fn ditto_with_no_preceding_line_of_same_type_is_recoverable() {
-        let groups = vec![group(&["1 2 3 4", "\""])];
-        let declarations = vec![decl("A", PartKind::NotesWithLyrics)];
-        let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(result[0][1].0, "_");
-        let error = errors[0]
-            .as_ref()
-            .expect("should attach a recoverable error");
-        assert!(
-            error.message().contains("no preceding lyrics line"),
-            "got: {}",
-            error.message()
-        );
-    }
-
-    #[test]
-    fn directive_line_is_not_a_ditto_target() {
-        let groups = vec![group(&["time=4/4", "\""])];
-        let declarations = vec![decl("A", PartKind::Notes)];
-        let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(result[0][1].0, "_");
-        let error = errors[0]
-            .as_ref()
-            .expect("should attach a recoverable error");
-        assert!(
-            error.message().contains("no preceding notes line"),
-            "got: {}",
-            error.message()
-        );
-    }
-
-    #[test]
-    fn directive_line_is_not_a_ditto_source() {
-        let groups = vec![group(&["time=4/4", "1 2 3 4", "\""])];
-        let declarations = vec![decl("A", PartKind::Notes), decl("B", PartKind::Notes)];
-        let (result, _) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(result[0][0].0, "time=4/4");
-        assert_eq!(result[0][2].0, "1 2 3 4");
-    }
-
-    #[test]
-    fn non_ditto_lines_are_passed_through_unchanged() {
-        let groups = vec![group(&["1 2 3 4", "hello"])];
-        let declarations = vec![decl("A", PartKind::NotesWithLyrics)];
-        let (result, _) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(result[0][0].0, "1 2 3 4");
-        assert_eq!(result[0][1].0, "hello");
-    }
-
-    #[test]
-    fn multiple_groups_are_desugared_independently() {
-        let groups = vec![group(&["1 2 3 4"]), group(&["\""])];
-        let declarations = vec![decl("A", PartKind::Notes)];
-        let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(result[0][0].0, "1 2 3 4");
-        assert_eq!(result[1][0].0, "_");
-        assert!(errors[0].is_none());
-        assert!(
-            errors[1]
-                .as_ref()
-                .is_some_and(|error| error.message().contains("no preceding notes line")),
-            "second group should carry a recoverable ditto error"
-        );
-    }
-
-    #[test]
-    fn omitted_trailing_notes_line_is_padded_as_implicit_ditto() {
-        let groups = vec![group(&["1 2 3 4"])];
-        let declarations = vec![decl("A", PartKind::Notes), decl("B", PartKind::Notes)];
-        let (result, _) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(result[0][0].0, "1 2 3 4");
-        assert_eq!(result[0][1].0, "1 2 3 4");
-    }
-
-    #[test]
-    fn omitted_trailing_lines_pad_as_ditto_when_precedent_exists() {
-        let groups = vec![group(&["1 - - -", "1 2 3 4", "hello"])];
-        let declarations = vec![
-            decl("main", PartKind::Chord),
-            decl("A", PartKind::NotesWithLyrics),
-            decl("B", PartKind::NotesWithLyrics),
-        ];
-        let (result, _) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(result[0][3].0, "1 2 3 4");
-        assert_eq!(result[0][4].0, "hello");
-    }
-
-    #[test]
-    fn omitted_trailing_lyrics_without_precedent_fills_with_no_lyrics_silently() {
-        // Missing lyrics line with no precedent: silently insert `_` (no lyrics), no error.
-        let groups = vec![group(&["1 2 3 4"])];
-        let declarations = vec![decl("A", PartKind::NotesWithLyrics)];
-        let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(result[0][1].0, "_", "should fill in underscore placeholder");
-        assert!(
-            errors[0].is_none(),
-            "omitted lyrics with no precedent should not produce an error"
-        );
-    }
-
-    #[test]
-    fn omitted_trailing_notes_without_precedent_fills_with_rest_silently() {
-        // Missing notes line with no precedent: silently insert `0` (rest), no error.
-        let groups = vec![group(&["1 - - -"])];
-        let declarations = vec![decl("A", PartKind::Chord), decl("B", PartKind::Notes)];
-        let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(
-            result[0][1].0, "0",
-            "should fill in quarter-rest placeholder"
-        );
-        assert!(
-            errors[0].is_none(),
-            "omitted notes with no precedent should not produce an error"
-        );
-    }
-
-    #[test]
-    fn omitted_trailing_chord_without_precedent_fills_with_rest_silently() {
-        // Missing chord line with no precedent: silently insert `0` (chord rest), no error.
-        let groups = vec![group(&["1 2 3 4"])];
-        let declarations = vec![decl("A", PartKind::Notes), decl("B", PartKind::Chord)];
-        let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(result[0][1].0, "0", "should fill in chord-rest placeholder");
-        assert!(
-            errors[0].is_none(),
-            "omitted chord with no precedent should not produce an error"
-        );
-    }
-
-    #[test]
-    fn ditto_can_copy_underscore_no_lyrics_marker() {
-        let groups = vec![group(&["1 2 3 4", "_", "\""])];
-        let declarations = vec![
-            decl("A", PartKind::NotesWithLyrics),
-            decl("B", PartKind::NotesWithLyrics),
-        ];
-        let (result, _) = desugar_groups(groups, &declarations, 0).unwrap();
-        assert_eq!(result[0][3].0, "_");
-    }
-}
+#[path = "desugar_tests.rs"]
+mod tests;
