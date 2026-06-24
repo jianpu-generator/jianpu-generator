@@ -133,8 +133,30 @@ function wasmDevPlugin(): Plugin {
   }
 }
 
+const DEPLOYED_ASSET_FILES = [
+  'SourceHanSansSC-Regular.otf',
+  'SourceHanSansTC-Regular.otf',
+  'NotoSansMono-Regular.ttf',
+  'GeneralUser_GS.sf2',
+] as const
+
+const fontsDir = path.resolve(__dirname, '..', 'fonts')
+
+function copyFontsPlugin(): Plugin {
+  return {
+    name: 'copy-fonts',
+    apply: 'build',
+    closeBundle() {
+      const outFonts = path.resolve(__dirname, 'dist', 'fonts')
+      fs.mkdirSync(outFonts, { recursive: true })
+      for (const name of DEPLOYED_ASSET_FILES) {
+        fs.copyFileSync(path.join(fontsDir, name), path.join(outFonts, name))
+      }
+    },
+  }
+}
+
 function serveFontsPlugin(): Plugin {
-  const fontsDir = path.resolve(__dirname, '..', 'fonts')
   return {
     name: 'serve-fonts',
     apply: 'serve',
@@ -159,7 +181,7 @@ function serveFontsPlugin(): Plugin {
 
 export default defineConfig({
   base: process.env.VITE_BASE_PATH ?? '/',
-  plugins: [react(), wasmDevPlugin(), serveFontsPlugin()],
+  plugins: [react(), wasmDevPlugin(), serveFontsPlugin(), copyFontsPlugin()],
   resolve: {
     alias: {
       'jianpu-wasm': path.resolve(

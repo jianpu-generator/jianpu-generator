@@ -11,6 +11,14 @@ export interface AssetLoaderState {
 
 const CACHE_NAME = 'jianpu-assets-v1'
 
+function resolveAssetUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path
+  }
+  const relative = path.startsWith('/') ? path.slice(1) : path
+  return `${import.meta.env.BASE_URL}${relative}`
+}
+
 export function useAssetLoader(url: string): AssetLoaderState {
   const [bytes, setBytes] = useState<Uint8Array | null>(null)
   const [status, setStatus] = useState<AssetStatus>('loading')
@@ -19,11 +27,12 @@ export function useAssetLoader(url: string): AssetLoaderState {
 
   useEffect(() => {
     let cancelled = false
+    const resolvedUrl = resolveAssetUrl(url)
 
     async function load() {
       try {
         const cache = await caches.open(CACHE_NAME)
-        const cached = await cache.match(url)
+        const cached = await cache.match(resolvedUrl)
         if (cached) {
           const buffer = await cached.arrayBuffer()
           const cachedBytes = new Uint8Array(buffer)
@@ -36,7 +45,7 @@ export function useAssetLoader(url: string): AssetLoaderState {
           return
         }
 
-        const response = await fetch(url)
+        const response = await fetch(resolvedUrl)
         const total = Number(response.headers.get('content-length') ?? 0)
         if (!cancelled) setTotalBytes(total)
 
@@ -62,7 +71,7 @@ export function useAssetLoader(url: string): AssetLoaderState {
 
         await cache
           .put(
-            url,
+            resolvedUrl,
             new Response(merged, {
               headers: { 'Content-Type': 'application/octet-stream' },
             }),
