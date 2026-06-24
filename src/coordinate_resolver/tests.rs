@@ -14,6 +14,7 @@ fn single_row_page(element: GridElement) -> GridPage {
         }],
         measure_highlights: vec![],
         error_highlights: vec![],
+        measure_click_targets: vec![],
     }
 }
 
@@ -79,6 +80,7 @@ fn valign_top_places_y_at_row_top() {
         ],
         measure_highlights: vec![],
         error_highlights: vec![],
+        measure_click_targets: vec![],
     };
     let abs = resolve(&[page], 12.0).unwrap();
     let line = abs[0]
@@ -165,6 +167,7 @@ fn measure_highlight_produces_prepended_rect_element() {
             column_end: 6,
         }],
         error_highlights: vec![],
+        measure_click_targets: vec![],
     };
     let abs = resolve(&[page], 12.0).unwrap();
     assert!(!abs[0].elements.is_empty(), "should have elements");
@@ -202,6 +205,7 @@ fn error_highlight_resolves_to_absolute_error_highlight() {
             column_start: 0,
             column_end: 5,
         }],
+        measure_click_targets: vec![],
     };
     let abs_pages: Vec<AbsolutePage> = resolve(&[page], 8.0).unwrap();
     let error_elements: Vec<_> = abs_pages[0]
@@ -228,6 +232,7 @@ fn page_with_no_highlight_produces_no_extra_element() {
         }],
         measure_highlights: vec![],
         error_highlights: vec![],
+        measure_click_targets: vec![],
     };
     let abs = resolve(&[page], 12.0).unwrap();
     assert!(abs[0].elements.is_empty());

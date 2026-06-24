@@ -4,7 +4,7 @@ use crate::compositor::types::{
     TextAnchor,
 };
 use crate::render_config::RenderConfig;
-use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind};
+use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, Tag};
 
 pub fn render_new(pages: &[AbsolutePage], config: &RenderConfig) -> Vec<SvgDocument> {
     pages.iter().map(|page| render_page(page, config)).collect()
@@ -77,22 +77,20 @@ fn render_element(
             font,
             weight,
             italic,
-        } => {
-            vec![SvgElement {
-                x: elem.x,
-                y: elem.y,
-                variant: "text",
-                kind: SvgKind::Text {
-                    content: content.clone(),
-                    font_size: *font_size,
-                    anchor: *anchor,
-                    baseline: *baseline,
-                    font: *font,
-                    weight: *weight,
-                    italic: *italic,
-                },
-            }]
-        }
+        } => vec![SvgElement {
+            x: elem.x,
+            y: elem.y,
+            variant: "text",
+            kind: SvgKind::Text {
+                content: content.clone(),
+                font_size: *font_size,
+                anchor: *anchor,
+                baseline: *baseline,
+                font: *font,
+                weight: *weight,
+                italic: *italic,
+            },
+        }],
         AbsoluteContent::MeasureHighlight { width, height } => vec![SvgElement {
             x: elem.x,
             y: elem.y,
@@ -111,7 +109,36 @@ fn render_element(
                 height: *height,
             },
         }],
+        AbsoluteContent::MeasureClickTarget {
+            width,
+            height,
+            measure_index,
+        } => render_measure_click_target(elem, *width, *height, *measure_index),
     }
+}
+
+fn render_measure_click_target(
+    elem: &AbsoluteElement,
+    width: f32,
+    height: f32,
+    measure_index: usize,
+) -> Vec<SvgElement> {
+    vec![SvgElement {
+        x: elem.x,
+        y: elem.y,
+        variant: "measure-click-target",
+        kind: SvgKind::Group {
+            children: vec![SvgElement {
+                x: elem.x,
+                y: elem.y,
+                variant: "measure-click-target-rect",
+                kind: SvgKind::TransparentRect { width, height },
+            }],
+            tag: Some(Tag::Measure {
+                index: measure_index,
+            }),
+        },
+    }]
 }
 
 struct NoteRenderParams<'a> {

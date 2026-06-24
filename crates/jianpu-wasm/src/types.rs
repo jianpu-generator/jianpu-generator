@@ -1,6 +1,8 @@
 use jianpu_generator::{
+    compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor},
     error::{Diagnostic, IrrecoverableError, Warning},
     error_reporter,
+    renderer::new_types::{SvgDocument, SvgElement, SvgKind, Tag},
 };
 use serde::Serialize;
 use tsify::Tsify;
@@ -40,12 +42,210 @@ pub struct PartOut {
     pub has_lyrics: bool,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Tsify, Serialize)]
+#[tsify(into_wasm_abi)]
+pub struct SvgDocumentOut {
+    pub width_pt: f32,
+    pub height_pt: f32,
+    pub elements: Vec<SvgElementOut>,
+}
+
+#[derive(Debug, Clone, Tsify, Serialize)]
+#[tsify(into_wasm_abi)]
+pub struct SvgElementOut {
+    pub x: f32,
+    pub y: f32,
+    pub variant: String,
+    pub kind: SvgKindOut,
+}
+
+#[derive(Debug, Clone, Tsify, Serialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum SvgKindOut {
+    Text {
+        content: String,
+        font_size: f32,
+        anchor: TextAnchorOut,
+        baseline: DominantBaselineOut,
+        font: FontFamilyOut,
+        weight: FontWeightOut,
+        italic: bool,
+    },
+    Line {
+        x2: f32,
+        y2: f32,
+        stroke_width: f32,
+    },
+    Circle {
+        r: f32,
+    },
+    Path {
+        control_x: f32,
+        control_y: f32,
+        end_x: f32,
+        end_y: f32,
+        stroke_width: f32,
+    },
+    Rect {
+        width: f32,
+        height: f32,
+    },
+    ErrorRect {
+        width: f32,
+        height: f32,
+    },
+    TransparentRect {
+        width: f32,
+        height: f32,
+    },
+    Group {
+        children: Vec<SvgElementOut>,
+        tag: Option<TagOut>,
+    },
+}
+
+#[derive(Debug, Clone, Tsify, Serialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum TagOut {
+    Measure { index: usize },
+}
+
+#[derive(Debug, Clone, Tsify, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum TextAnchorOut {
+    Start,
+    Middle,
+    End,
+}
+
+#[derive(Debug, Clone, Tsify, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum DominantBaselineOut {
+    Middle,
+    Hanging,
+    Ideographic,
+}
+
+#[derive(Debug, Clone, Tsify, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum FontFamilyOut {
+    Monospace,
+    SansSerif,
+}
+
+#[derive(Debug, Clone, Tsify, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum FontWeightOut {
+    Normal,
+    Bold,
+}
+
+pub(crate) fn svg_document_to_out(doc: &SvgDocument) -> SvgDocumentOut {
+    SvgDocumentOut {
+        width_pt: doc.width_pt,
+        height_pt: doc.height_pt,
+        elements: doc.elements.iter().map(svg_element_to_out).collect(),
+    }
+}
+
+fn svg_element_to_out(el: &SvgElement) -> SvgElementOut {
+    SvgElementOut {
+        x: el.x,
+        y: el.y,
+        variant: el.variant.to_string(),
+        kind: svg_kind_to_out(&el.kind),
+    }
+}
+
+fn svg_kind_to_out(kind: &SvgKind) -> SvgKindOut {
+    match kind {
+        SvgKind::Text {
+            content,
+            font_size,
+            anchor,
+            baseline,
+            font,
+            weight,
+            italic,
+        } => SvgKindOut::Text {
+            content: content.clone(),
+            font_size: *font_size,
+            anchor: match anchor {
+                TextAnchor::Start => TextAnchorOut::Start,
+                TextAnchor::Middle => TextAnchorOut::Middle,
+                TextAnchor::End => TextAnchorOut::End,
+            },
+            baseline: match baseline {
+                DominantBaseline::Middle => DominantBaselineOut::Middle,
+                DominantBaseline::Hanging => DominantBaselineOut::Hanging,
+                DominantBaseline::Ideographic => DominantBaselineOut::Ideographic,
+            },
+            font: match font {
+                FontFamily::Monospace => FontFamilyOut::Monospace,
+                FontFamily::SansSerif => FontFamilyOut::SansSerif,
+            },
+            weight: match weight {
+                FontWeight::Normal => FontWeightOut::Normal,
+                FontWeight::Bold => FontWeightOut::Bold,
+            },
+            italic: *italic,
+        },
+        SvgKind::Line {
+            x2,
+            y2,
+            stroke_width,
+        } => SvgKindOut::Line {
+            x2: *x2,
+            y2: *y2,
+            stroke_width: *stroke_width,
+        },
+        SvgKind::Circle { r } => SvgKindOut::Circle { r: *r },
+        SvgKind::Path {
+            control_x,
+            control_y,
+            end_x,
+            end_y,
+            stroke_width,
+        } => SvgKindOut::Path {
+            control_x: *control_x,
+            control_y: *control_y,
+            end_x: *end_x,
+            end_y: *end_y,
+            stroke_width: *stroke_width,
+        },
+        SvgKind::Rect { width, height } => SvgKindOut::Rect {
+            width: *width,
+            height: *height,
+        },
+        SvgKind::ErrorRect { width, height } => SvgKindOut::ErrorRect {
+            width: *width,
+            height: *height,
+        },
+        SvgKind::TransparentRect { width, height } => SvgKindOut::TransparentRect {
+            width: *width,
+            height: *height,
+        },
+        SvgKind::Group { children, tag } => SvgKindOut::Group {
+            children: children.iter().map(svg_element_to_out).collect(),
+            tag: tag.as_ref().map(|t| match t {
+                Tag::Measure { index } => TagOut::Measure { index: *index },
+            }),
+        },
+    }
+}
+
+#[derive(Debug, Clone, Tsify, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
 #[tsify(into_wasm_abi)]
 pub enum RenderResponse {
     Ok {
-        svgs: Vec<String>,
+        documents: Vec<SvgDocumentOut>,
         diagnostics: Vec<DiagnosticOut>,
         diagnostic_view_zones: Vec<DiagnosticViewZoneOut>,
     },

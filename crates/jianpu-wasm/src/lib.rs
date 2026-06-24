@@ -8,8 +8,8 @@ use jianpu_generator::write_wav_for_measure_range_from_source;
 use jianpu_generator::write_wav_from_source_filtered;
 use jianpu_generator::{
     compile, find_measure_at_byte_offset, list_measure_spans_from_source, list_parts_from_source,
-    list_score_line_hints_from_source, render_svgs_from_source_filtered_with_lyrics,
-    render_svgs_with_highlight_range,
+    list_score_line_hints_from_source, render_documents_from_source_filtered_with_lyrics,
+    render_documents_with_highlight_range,
 };
 #[cfg(feature = "pdf")]
 use jianpu_generator::{
@@ -19,7 +19,7 @@ use jianpu_generator::{
 use types::GenerateWavResponse;
 use types::{
     diagnostic_from_diagnostic, diagnostic_from_error, group_diagnostics_into_view_zones,
-    ListMeasureSpansResponse, ListPartsResponse, ListScoreLineHintsResponse,
+    svg_document_to_out, ListMeasureSpansResponse, ListPartsResponse, ListScoreLineHintsResponse,
     MeasureAtOffsetResponse, PartOut, RenderResponse, ScoreLineHintOut,
 };
 #[cfg(feature = "pdf")]
@@ -31,7 +31,7 @@ fn render_response(
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
 ) -> RenderResponse {
-    match render_svgs_from_source_filtered_with_lyrics(
+    match render_documents_from_source_filtered_with_lyrics(
         source,
         "input.jianpu",
         enabled_tracks,
@@ -45,7 +45,7 @@ fn render_response(
                 .collect();
             let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
             RenderResponse::Ok {
-                svgs: output.svgs,
+                documents: output.documents.iter().map(svg_document_to_out).collect(),
                 diagnostics,
                 diagnostic_view_zones,
             }
@@ -68,7 +68,7 @@ fn render_with_highlight_range_response(
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
 ) -> RenderResponse {
-    match render_svgs_with_highlight_range(
+    match render_documents_with_highlight_range(
         source,
         "input.jianpu",
         start_index,
@@ -84,7 +84,7 @@ fn render_with_highlight_range_response(
                 .collect();
             let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
             RenderResponse::Ok {
-                svgs: output.svgs,
+                documents: output.documents.iter().map(svg_document_to_out).collect(),
                 diagnostics,
                 diagnostic_view_zones,
             }

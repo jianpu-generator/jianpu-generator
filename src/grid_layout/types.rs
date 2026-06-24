@@ -7,6 +7,16 @@ pub struct GridPage {
     pub rows: Vec<GridRow>,
     pub measure_highlights: Vec<MeasureHighlight>,
     pub error_highlights: Vec<MeasureHighlight>,
+    pub measure_click_targets: Vec<MeasureClickTarget>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MeasureClickTarget {
+    pub row_start: usize,
+    pub row_end: usize,
+    pub column_start: u32,
+    pub column_end: u32,
+    pub measure_index: usize,
 }
 
 #[derive(Debug, Clone)]

@@ -1,3 +1,4 @@
+import type { SvgDocumentOut } from 'jianpu-wasm'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type {
   Diagnostic,
@@ -21,7 +22,7 @@ import {
 interface JianpuWorkerState {
   parts: PartInfo[]
   partsLoading: boolean
-  svgs: string[]
+  documents: SvgDocumentOut[]
   wavUrl: string | null
   audioAvailable: boolean
   pdfAvailable: boolean
@@ -40,7 +41,7 @@ interface JianpuWorkerState {
   notifySelection: (startLine: number, endLine: number) => void
   playSelectedMeasures: () => void
   stopMeasurePlayback: () => void
-  highlightedSvgs: string[]
+  highlightedDocuments: SvgDocumentOut[]
   measureSpans: MeasureSpan[]
   scoreLineHints: ScoreLineHint[]
 }
@@ -57,7 +58,7 @@ export function useJianpuWorker(
 ): JianpuWorkerState {
   const [parts, setParts] = useState<PartInfo[]>([])
   const [partsLoading, setPartsLoading] = useState(false)
-  const [svgs, setSvgs] = useState<string[]>([])
+  const [documents, setDocuments] = useState<SvgDocumentOut[]>([])
   const [wavUrl, setWavUrl] = useState<string | null>(null)
   const [audioAvailable, setAudioAvailable] = useState(false)
   const [pdfAvailable, setPdfAvailable] = useState(false)
@@ -76,7 +77,9 @@ export function useJianpuWorker(
   const [measureAudioGenerating, setMeasureAudioGenerating] = useState(false)
   const [measureAudioPlaying, setMeasureAudioPlaying] = useState(false)
   const currentMeasureAudioRef = useRef<HTMLAudioElement | null>(null)
-  const [highlightedSvgs, setHighlightedSvgs] = useState<string[]>([])
+  const [highlightedDocuments, setHighlightedDocuments] = useState<
+    SvgDocumentOut[]
+  >([])
   const [measureSpans, setMeasureSpans] = useState<MeasureSpan[]>([])
   const [scoreLineHints, setScoreLineHints] = useState<ScoreLineHint[]>([])
   const highlightRenderRequestIdRef = useRef(0)
@@ -218,7 +221,7 @@ export function useJianpuWorker(
       if (msg.type === 'ok') {
         if (msg.id !== latestRenderIdRef.current) return
         setRendering(false)
-        setSvgs(msg.svgs)
+        setDocuments(msg.documents)
         setDiagnostics(msg.diagnostics)
         setDiagnosticViewZones(msg.diagnosticViewZones)
         return
@@ -257,7 +260,7 @@ export function useJianpuWorker(
 
       if (msg.type === 'highlightRangeOk') {
         if (msg.id !== latestHighlightRenderIdRef.current) return
-        setHighlightedSvgs(msg.svgs)
+        setHighlightedDocuments(msg.documents)
         return
       }
 
@@ -323,7 +326,7 @@ export function useJianpuWorker(
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: activeFile is intentional trigger
   useEffect(() => {
-    setSvgs([])
+    setDocuments([])
     setNextWavUrl(null)
     setDiagnostics([])
   }, [activeFile, setNextWavUrl])
@@ -407,7 +410,7 @@ export function useJianpuWorker(
 
   useEffect(() => {
     if (selectedMeasureRange === null) {
-      setHighlightedSvgs([])
+      setHighlightedDocuments([])
       return
     }
     const worker = workerRef.current
@@ -523,7 +526,7 @@ export function useJianpuWorker(
   return {
     parts,
     partsLoading,
-    svgs,
+    documents,
     wavUrl,
     audioAvailable,
     pdfAvailable,
@@ -542,7 +545,7 @@ export function useJianpuWorker(
     notifySelection,
     playSelectedMeasures,
     stopMeasurePlayback,
-    highlightedSvgs,
+    highlightedDocuments,
     measureSpans,
     scoreLineHints,
   }

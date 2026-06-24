@@ -234,6 +234,7 @@ fn build_page_rows(
 #[cfg(test)]
 pub(crate) use super::highlight::compute_measure_highlight_location;
 pub(crate) use super::highlight::compute_measure_highlights_for_range;
+use super::highlight::{click_targets_on_page, compute_all_measure_click_targets};
 
 /// Public entry point: convert compiler blocks to GridPages.
 pub fn layout(
@@ -286,6 +287,7 @@ pub fn layout(
             .unwrap_or_default();
 
     let error_highlight_infos = compute_error_highlight_infos(blocks, &page_systems, header, base);
+    let all_click_target_infos = compute_all_measure_click_targets(&page_systems, header, base);
 
     let total_pages = page_systems.len() as u32;
     let mut abs_system_index_start: usize = 0;
@@ -303,12 +305,14 @@ pub fn layout(
         abs_system_index_start += page_sys.len();
         let measure_highlights = measure_highlights_on_page(&highlight_infos, page_idx);
         let error_highlights = measure_highlights_on_page(&error_highlight_infos, page_idx);
+        let measure_click_targets = click_targets_on_page(&all_click_target_infos, page_idx);
         pages.push(GridPage {
             width_pt: page_width_pt,
             height_pt: page_height_pt,
             rows,
             measure_highlights,
             error_highlights,
+            measure_click_targets,
         });
     }
     pages

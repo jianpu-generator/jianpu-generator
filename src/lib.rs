@@ -54,6 +54,15 @@ pub struct RenderOutput {
     pub diagnostics: Vec<Diagnostic>,
 }
 
+/// Output of a successful render: typed SVG document tree and any diagnostics.
+#[derive(Debug)]
+pub struct RenderDocumentOutput {
+    /// One typed SVG document per page.
+    pub documents: Vec<renderer::new_types::SvgDocument>,
+    /// Diagnostics collected during grouping (e.g. lyrics underflow).
+    pub diagnostics: Vec<Diagnostic>,
+}
+
 fn collect_measure_diagnostics(score: &Score) -> Vec<Diagnostic> {
     score
         .document_diagnostics
@@ -219,6 +228,90 @@ pub fn render_svgs_with_highlight_range(
     let docs = renderer::new_renderer::render_new(&abs, &config);
     Ok(RenderOutput {
         svgs: serializer::serialize(&docs),
+        diagnostics,
+    })
+}
+
+fn render_documents(
+    score: &Score,
+) -> Result<Vec<renderer::new_types::SvgDocument>, IrrecoverableError> {
+    let config = render_config::RenderConfig::from_metadata(&score.metadata);
+    let header = grid_layout::types::Header {
+        title: score.metadata.title.clone(),
+        subtitle: score.metadata.subtitle.clone(),
+        author: score.metadata.author.clone(),
+    };
+    let compile_result = compiler::compile(score);
+    let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
+    let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)?;
+    Ok(renderer::new_renderer::render_new(&abs, &config))
+}
+
+fn render_documents_with_range(
+    score: &Score,
+    start_index: usize,
+    end_index: usize,
+) -> Result<Vec<renderer::new_types::SvgDocument>, IrrecoverableError> {
+    let config = render_config::RenderConfig::from_metadata(&score.metadata);
+    let header = grid_layout::types::Header {
+        title: score.metadata.title.clone(),
+        subtitle: score.metadata.subtitle.clone(),
+        author: score.metadata.author.clone(),
+    };
+    let compile_result = compiler::compile(score);
+    let grid_pages = grid_layout::layout(
+        &compile_result,
+        &config,
+        &header,
+        595.0,
+        842.0,
+        Some((start_index, end_index)),
+    );
+    let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)?;
+    Ok(renderer::new_renderer::render_new(&abs, &config))
+}
+
+/// Parse, group, optionally filter tracks and lyrics, and return typed SVG document trees.
+///
+/// When `enabled_tracks` is `None`, all parts are rendered.
+/// When `Some(tracks)` is empty, no parts are rendered.
+/// When `disabled_lyrics` lists part abbreviations, lyrics are hidden for those parts.
+pub fn render_documents_from_source_filtered_with_lyrics(
+    source: &str,
+    filename: &str,
+    enabled_tracks: Option<&[String]>,
+    disabled_lyrics: Option<&[String]>,
+) -> Result<RenderDocumentOutput, IrrecoverableError> {
+    let mut score = compile(source, filename)?;
+    apply_track_filter(&mut score, enabled_tracks);
+    apply_lyrics_filter(&mut score, disabled_lyrics);
+    let diagnostics = collect_measure_diagnostics(&score);
+    Ok(RenderDocumentOutput {
+        documents: render_documents(&score)?,
+        diagnostics,
+    })
+}
+
+/// Parse, group, optionally filter tracks and lyrics, and return typed SVG document trees with a highlighted measure range.
+///
+/// When `enabled_tracks` is `None`, all parts are rendered.
+/// When `Some(tracks)` is empty, no parts are rendered.
+/// When `disabled_lyrics` lists part abbreviations, lyrics are hidden for those parts.
+/// `start_index` and `end_index` define the inclusive range of measures to highlight.
+pub fn render_documents_with_highlight_range(
+    source: &str,
+    filename: &str,
+    start_index: usize,
+    end_index: usize,
+    enabled_tracks: Option<&[String]>,
+    disabled_lyrics: Option<&[String]>,
+) -> Result<RenderDocumentOutput, IrrecoverableError> {
+    let mut score = compile(source, filename)?;
+    apply_track_filter(&mut score, enabled_tracks);
+    apply_lyrics_filter(&mut score, disabled_lyrics);
+    let diagnostics = collect_measure_diagnostics(&score);
+    Ok(RenderDocumentOutput {
+        documents: render_documents_with_range(&score, start_index, end_index)?,
         diagnostics,
     })
 }

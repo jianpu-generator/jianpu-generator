@@ -65,7 +65,7 @@ export default function App() {
   const {
     parts,
     partsLoading,
-    svgs,
+    documents,
     wavUrl,
     audioAvailable,
     pdfAvailable,
@@ -86,7 +86,7 @@ export default function App() {
     notifySelection,
     playSelectedMeasures,
     stopMeasurePlayback,
-    highlightedSvgs,
+    highlightedDocuments,
   } = useJianpuWorker(
     source,
     disabledParts,
@@ -285,6 +285,16 @@ export default function App() {
     [source],
   )
 
+  const handleMeasureClick = useCallback(
+    (measureIndex: number) => {
+      const span = measureSpans[measureIndex]
+      if (!span) return
+      const charOffset = byteOffsetToStringIndex(source, span.start)
+      editorRef.current?.jumpToOffset(charOffset)
+    },
+    [measureSpans, source],
+  )
+
   const noPartsSelected =
     parts.length > 0 &&
     soloedParts.size === 0 &&
@@ -391,9 +401,10 @@ export default function App() {
         <div className="pane-divider" aria-hidden="true" />
         <section className="pane pane--preview">
           <Preview
-            svgs={svgs}
-            highlightedSvgs={highlightedSvgs}
+            documents={documents}
+            highlightedDocuments={highlightedDocuments}
             rendering={rendering}
+            onMeasureClick={handleMeasureClick}
             audioGenerating={audioGenerating}
             wavUrl={wavUrl}
             audioAvailable={audioAvailable}

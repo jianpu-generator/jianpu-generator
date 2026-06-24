@@ -1,17 +1,26 @@
 use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
 
+#[derive(Debug)]
 pub struct SvgDocument {
     pub width_pt: f32,
     pub height_pt: f32,
     pub elements: Vec<SvgElement>,
 }
 
+#[derive(Debug)]
 pub struct SvgElement {
     pub x: f32,
     pub y: f32,
     pub variant: &'static str,
     pub kind: SvgKind,
 }
+
+#[derive(Debug)]
+pub enum Tag {
+    Measure { index: usize },
+}
+
+#[derive(Debug)]
 
 pub enum SvgKind {
     Text {
@@ -45,6 +54,14 @@ pub enum SvgKind {
     },
     /// Red semi-transparent overlay for erroneous measures (15% opacity).
     ErrorRect {
+        width: f32,
+        height: f32,
+    },
+    Group {
+        children: Vec<SvgElement>,
+        tag: Option<Tag>,
+    },
+    TransparentRect {
         width: f32,
         height: f32,
     },

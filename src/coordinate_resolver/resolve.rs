@@ -169,6 +169,13 @@ fn resolve_page(
     highlight_elements.extend(error_elements);
     highlight_elements.extend(elements);
 
+    let click_target_elements: Vec<AbsoluteElement> = page
+        .measure_click_targets
+        .iter()
+        .filter_map(|t| resolve_measure_click_target(t, &page.rows, &row_tops, usable_width))
+        .collect();
+    highlight_elements.extend(click_target_elements);
+
     Ok(AbsolutePage {
         width_pt: page.width_pt,
         height_pt: page.height_pt,
@@ -247,6 +254,35 @@ fn resolve_error_highlights(
             })
         })
         .collect()
+}
+
+fn resolve_measure_click_target(
+    target: &crate::grid_layout::types::MeasureClickTarget,
+    rows: &[GridRow],
+    row_tops: &[f32],
+    usable_width: f32,
+) -> Option<AbsoluteElement> {
+    let start_row = rows.get(target.row_start)?;
+    let target_y = row_tops.get(target.row_start)?;
+    if target.row_end >= rows.len() {
+        return None;
+    }
+    let col_width = start_row.column_width_pt(usable_width);
+    let target_x = PAGE_MARGIN + target.column_start as f32 * col_width;
+    let target_width = (target.column_end - target.column_start) as f32 * col_width;
+    let target_height = rows
+        .get(target.row_start..=target.row_end)
+        .map(|slice| slice.iter().map(|row| row.height_pt).sum())
+        .unwrap_or(0.0);
+    Some(AbsoluteElement {
+        x: target_x,
+        y: *target_y,
+        content: AbsoluteContent::MeasureClickTarget {
+            width: target_width,
+            height: target_height,
+            measure_index: target.measure_index,
+        },
+    })
 }
 
 fn text_anchor(halign: HAlign) -> TextAnchor {

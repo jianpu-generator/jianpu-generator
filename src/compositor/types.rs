@@ -57,6 +57,11 @@ pub enum AbsoluteContent {
         width: f32,
         height: f32,
     },
+    MeasureClickTarget {
+        width: f32,
+        height: f32,
+        measure_index: usize,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

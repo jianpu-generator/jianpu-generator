@@ -1,3 +1,4 @@
+import type { SvgDocumentOut } from 'jianpu-wasm'
 import init, * as jianpuWasm from 'jianpu-wasm'
 import {
   list_measure_spans,
@@ -92,7 +93,7 @@ export type WorkerResponse =
   | {
       type: 'ok'
       id: number
-      svgs: string[]
+      documents: SvgDocumentOut[]
       diagnostics: Diagnostic[]
       diagnosticViewZones: DiagnosticViewZone[]
     }
@@ -111,7 +112,7 @@ export type WorkerResponse =
   | { type: 'splitPdfErr'; id: number; diagnostics: Diagnostic[] }
   | { type: 'measureRangeAudio'; id: number; wav: ArrayBuffer }
   | { type: 'measureRangeAudioErr'; id: number }
-  | { type: 'highlightRangeOk'; id: number; svgs: string[] }
+  | { type: 'highlightRangeOk'; id: number; documents: SvgDocumentOut[] }
   | { type: 'highlightRangeErr'; id: number; diagnostics: Diagnostic[] }
   | {
       type: 'measureSpans'
@@ -411,7 +412,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       postMessage({
         type: 'highlightRangeOk',
         id: msg.id,
-        svgs: result.svgs,
+        documents: result.documents,
       } satisfies WorkerResponse)
       return
     }
@@ -452,7 +453,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     postMessage({
       type: 'ok',
       id: msg.id,
-      svgs: result.svgs,
+      documents: result.documents,
       diagnostics: result.diagnostics,
       diagnosticViewZones: result.diagnostic_view_zones,
     } satisfies WorkerResponse)

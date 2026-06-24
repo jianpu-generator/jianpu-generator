@@ -1,8 +1,9 @@
+import type { SvgDocumentOut, SvgElementOut } from 'jianpu-wasm'
 import { type ReactNode, useEffect, useRef } from 'react'
 
 interface PreviewProps {
-  svgs: string[]
-  highlightedSvgs?: string[]
+  documents: SvgDocumentOut[]
+  highlightedDocuments?: SvgDocumentOut[]
   rendering: boolean
   audioGenerating?: boolean
   wavUrl?: string | null
@@ -18,11 +19,163 @@ interface PreviewProps {
   partsCount?: number
   emptyMessage?: string
   toolbar?: ReactNode
+  onMeasureClick?: (measureIndex: number) => void
+}
+
+function renderSvgElement(
+  el: SvgElementOut,
+  key: number,
+  onMeasureClick?: (measureIndex: number) => void,
+): ReactNode {
+  const { kind } = el
+  switch (kind.type) {
+    case 'text':
+      return (
+        <text
+          key={key}
+          x={el.x}
+          y={el.y}
+          data-variant={el.variant}
+          fontSize={kind.font_size}
+          textAnchor={
+            kind.anchor === 'start'
+              ? 'start'
+              : kind.anchor === 'middle'
+                ? 'middle'
+                : 'end'
+          }
+          dominantBaseline={
+            kind.baseline === 'middle'
+              ? 'middle'
+              : kind.baseline === 'hanging'
+                ? 'hanging'
+                : 'ideographic'
+          }
+          fontFamily={kind.font === 'monospace' ? 'monospace' : 'sans-serif'}
+          fontWeight={kind.weight === 'normal' ? 'normal' : 'bold'}
+          fontStyle={kind.italic ? 'italic' : undefined}
+        >
+          {kind.content}
+        </text>
+      )
+    case 'line':
+      return (
+        <line
+          key={key}
+          x1={el.x}
+          y1={el.y}
+          x2={kind.x2}
+          y2={kind.y2}
+          data-variant={el.variant}
+          stroke="black"
+          strokeWidth={kind.stroke_width}
+        />
+      )
+    case 'circle':
+      return (
+        <circle
+          key={key}
+          cx={el.x}
+          cy={el.y}
+          data-variant={el.variant}
+          r={kind.r}
+          fill="black"
+        />
+      )
+    case 'path':
+      return (
+        <path
+          key={key}
+          d={`M ${el.x} ${el.y} Q ${kind.control_x} ${kind.control_y} ${kind.end_x} ${kind.end_y}`}
+          data-variant={el.variant}
+          fill="none"
+          stroke="black"
+          strokeWidth={kind.stroke_width}
+        />
+      )
+    case 'rect':
+      return (
+        <rect
+          key={key}
+          data-testid="measure-highlight"
+          x={el.x}
+          y={el.y}
+          width={kind.width}
+          height={kind.height}
+          fill="rgba(255,200,0,0.25)"
+          rx={2}
+        />
+      )
+    case 'errorRect':
+      return (
+        <rect
+          key={key}
+          data-testid="error-highlight"
+          x={el.x}
+          y={el.y}
+          width={kind.width}
+          height={kind.height}
+          fill="rgba(255,0,0,0.15)"
+          rx={2}
+        />
+      )
+    case 'transparentRect':
+      return (
+        <rect
+          key={key}
+          x={el.x}
+          y={el.y}
+          width={kind.width}
+          height={kind.height}
+          fill="transparent"
+          style={{ cursor: 'pointer' }}
+        />
+      )
+    case 'group': {
+      const measureIndex =
+        kind.tag?.type === 'measure' ? kind.tag.index : undefined
+      return (
+        // biome-ignore lint/a11y/noStaticElementInteractions: SVG group is a visual click target, not a document-level interactive element
+        <g
+          key={key}
+          onClick={
+            measureIndex !== undefined
+              ? () => onMeasureClick?.(measureIndex)
+              : undefined
+          }
+          style={measureIndex !== undefined ? { cursor: 'pointer' } : undefined}
+        >
+          {kind.children.map((child, i) =>
+            renderSvgElement(child, i, onMeasureClick),
+          )}
+        </g>
+      )
+    }
+  }
+}
+
+function renderSvgDocument(
+  doc: SvgDocumentOut,
+  key: number,
+  onMeasureClick?: (measureIndex: number) => void,
+): ReactNode {
+  return (
+    // biome-ignore lint/a11y/noSvgWithoutTitle: synthesized score SVG; title would be redundant with surrounding page context
+    <svg
+      key={key}
+      xmlns="http://www.w3.org/2000/svg"
+      width="210mm"
+      height="297mm"
+      viewBox={`0 0 ${Math.round(doc.width_pt)} ${Math.round(doc.height_pt)}`}
+    >
+      {doc.elements.map((el, i) => renderSvgElement(el, i, onMeasureClick))}
+    </svg>
+  )
 }
 
 export function Preview({
-  svgs,
-  highlightedSvgs = [],
+  documents,
+  highlightedDocuments = [],
   rendering,
   audioGenerating = false,
   wavUrl = null,
@@ -38,6 +191,7 @@ export function Preview({
   partsCount = 0,
   emptyMessage = 'No preview yet.',
   toolbar,
+  onMeasureClick,
 }: PreviewProps) {
   const previewPagesRef = useRef<HTMLDivElement>(null)
   const audioPlayerRef = useRef<HTMLAudioElement>(null)
@@ -51,7 +205,7 @@ export function Preview({
   }, [audioGenerating])
 
   useEffect(() => {
-    if (highlightedSvgs.length === 0) return
+    if (highlightedDocuments.length === 0) return
 
     const frameId = requestAnimationFrame(() => {
       const container = previewPagesRef.current
@@ -67,13 +221,20 @@ export function Preview({
     })
 
     return () => cancelAnimationFrame(frameId)
-  }, [highlightedSvgs])
+  }, [highlightedDocuments])
 
   const exporting = pdfExporting || splitPdfExporting
   const canExportPdf =
-    pdfAvailable && pdfFontsReady && svgs.length > 0 && !rendering && !exporting
+    pdfAvailable &&
+    pdfFontsReady &&
+    documents.length > 0 &&
+    !rendering &&
+    !exporting
   const canExportSplitPdf =
     pdfAvailable && pdfFontsReady && partsCount > 0 && !rendering && !exporting
+
+  const activeDocs =
+    highlightedDocuments.length > 0 ? highlightedDocuments : documents
 
   return (
     <div className="preview">
@@ -154,16 +315,16 @@ export function Preview({
         </div>
       ) : null}
       <div className="preview-pages" ref={previewPagesRef}>
-        {svgs.length === 0 && highlightedSvgs.length === 0 && !rendering ? (
+        {documents.length === 0 &&
+        highlightedDocuments.length === 0 &&
+        !rendering ? (
           <p className="preview-empty">{emptyMessage}</p>
         ) : null}
-        {(highlightedSvgs.length > 0 ? highlightedSvgs : svgs).map((svg) => (
-          <div
-            key={svg}
-            className="preview-page"
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted SVG from local WASM renderer
-            dangerouslySetInnerHTML={{ __html: svg }}
-          />
+        {activeDocs.map((doc, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: pages have no stable identifier
+          <div key={i} className="preview-page">
+            {renderSvgDocument(doc, i, onMeasureClick)}
+          </div>
         ))}
       </div>
     </div>

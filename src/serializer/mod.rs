@@ -1,5 +1,5 @@
 use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
-use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind};
+use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, Tag};
 
 pub fn serialize(documents: &[SvgDocument]) -> Vec<String> {
     documents.iter().map(serialize_doc).collect()
@@ -16,46 +16,52 @@ fn serialize_doc(doc: &SvgDocument) -> String {
     )
 }
 
+fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) {
+    let SvgKind::Text {
+        content,
+        font_size,
+        anchor,
+        baseline,
+        font,
+        weight,
+        italic,
+    } = kind
+    else {
+        return;
+    };
+    let anchor_str = match anchor {
+        TextAnchor::Start => "start",
+        TextAnchor::Middle => "middle",
+        TextAnchor::End => "end",
+    };
+    let baseline_str = match baseline {
+        DominantBaseline::Middle => "middle",
+        DominantBaseline::Hanging => "hanging",
+        DominantBaseline::Ideographic => "ideographic",
+    };
+    let font_str = match font {
+        FontFamily::Monospace => "monospace",
+        FontFamily::SansSerif => "sans-serif",
+    };
+    let weight_str = match weight {
+        FontWeight::Normal => "normal",
+        FontWeight::Bold => "bold",
+    };
+    let style_str = if *italic {
+        "font-style=\"italic\" "
+    } else {
+        ""
+    };
+    out.push_str(&format!(
+        r#"<text x="{:.1}" y="{:.1}" data-variant="{}" font-size="{:.1}" text-anchor="{}" dominant-baseline="{}" font-family="{}" font-weight="{}" {}>{}</text>"#,
+        el.x, el.y, el.variant, font_size, anchor_str, baseline_str, font_str, weight_str, style_str,
+        escape_xml(content)
+    ));
+}
+
 fn serialize_element(el: &SvgElement, out: &mut String) {
     match &el.kind {
-        SvgKind::Text {
-            content,
-            font_size,
-            anchor,
-            baseline,
-            font,
-            weight,
-            italic,
-        } => {
-            let anchor_str = match anchor {
-                TextAnchor::Start => "start",
-                TextAnchor::Middle => "middle",
-                TextAnchor::End => "end",
-            };
-            let baseline_str = match baseline {
-                DominantBaseline::Middle => "middle",
-                DominantBaseline::Hanging => "hanging",
-                DominantBaseline::Ideographic => "ideographic",
-            };
-            let font_str = match font {
-                FontFamily::Monospace => "monospace",
-                FontFamily::SansSerif => "sans-serif",
-            };
-            let weight_str = match weight {
-                FontWeight::Normal => "normal",
-                FontWeight::Bold => "bold",
-            };
-            let style_str = if *italic {
-                "font-style=\"italic\" ".to_string()
-            } else {
-                String::new()
-            };
-            out.push_str(&format!(
-                r#"<text x="{:.1}" y="{:.1}" data-variant="{}" font-size="{:.1}" text-anchor="{}" dominant-baseline="{}" font-family="{}" font-weight="{}" {}>{}</text>"#,
-                el.x, el.y, el.variant, font_size, anchor_str, baseline_str, font_str, weight_str, style_str,
-                escape_xml(content)
-            ));
-        }
+        SvgKind::Text { .. } => serialize_text(el, out, &el.kind),
         SvgKind::Line {
             x2,
             y2,
@@ -95,6 +101,28 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
                 r#"<rect data-testid="error-highlight" x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" fill="rgba(255,0,0,0.15)" rx="2"/>"#,
                 el.x, el.y, width, height
             ));
+        }
+        SvgKind::TransparentRect { width, height } => {
+            out.push_str(&format!(
+                r#"<rect x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" fill="transparent" style="cursor:pointer"/>"#,
+                el.x, el.y, width, height
+            ));
+        }
+        SvgKind::Group { children, tag } => {
+            match tag {
+                Some(Tag::Measure { index }) => {
+                    out.push_str(&format!(
+                        r#"<g data-tag="measure" data-measure-index="{index}">"#
+                    ));
+                }
+                None => {
+                    out.push_str("<g>");
+                }
+            }
+            for child in children {
+                serialize_element(child, out);
+            }
+            out.push_str("</g>");
         }
     }
 }

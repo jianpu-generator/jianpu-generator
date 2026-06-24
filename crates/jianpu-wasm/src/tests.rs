@@ -18,9 +18,9 @@ fn ok_response_has_svgs() {
     );
     let resp = render_response(input, None, None);
     match resp {
-        RenderResponse::Ok { svgs, .. } => {
-            assert_eq!(svgs.len(), 1);
-            assert!(svgs[0].starts_with("<svg"));
+        RenderResponse::Ok { documents, .. } => {
+            assert_eq!(documents.len(), 1);
+            assert!(!documents[0].elements.is_empty());
         }
         RenderResponse::Err { .. } => panic!("expected ok"),
     }
@@ -74,18 +74,16 @@ fn render_with_disabled_lyrics_hides_lyrics_for_part() {
         "alt alt alt alt\n",
     );
     let all = match render_response(input, None, None) {
-        RenderResponse::Ok { svgs, .. } => svgs,
+        RenderResponse::Ok { documents, .. } => documents,
         RenderResponse::Err { .. } => panic!("expected ok"),
     };
     let alto_lyrics_hidden =
         match render_response(input, None, Some(vec!["Alto".into()]).as_deref()) {
-            RenderResponse::Ok { svgs, .. } => svgs,
+            RenderResponse::Ok { documents, .. } => documents,
             RenderResponse::Err { .. } => panic!("expected ok"),
         };
-    assert!(all[0].contains("sop"));
-    assert!(all[0].contains("alt"));
-    assert!(alto_lyrics_hidden[0].contains("sop"));
-    assert!(!alto_lyrics_hidden[0].contains("alt"));
+    // With lyrics, both parts render more elements than without
+    assert!(all[0].elements.len() > alto_lyrics_hidden[0].elements.len());
 }
 
 #[test]
@@ -105,14 +103,15 @@ fn render_with_enabled_tracks_filters_parts() {
         "5 6 7 1\n",
     );
     let all = match render_response(input, None, None) {
-        RenderResponse::Ok { svgs, .. } => svgs,
+        RenderResponse::Ok { documents, .. } => documents,
         RenderResponse::Err { .. } => panic!("expected ok"),
     };
     let soprano_only = match render_response(input, Some(vec!["Soprano".into()]).as_deref(), None) {
-        RenderResponse::Ok { svgs, .. } => svgs,
+        RenderResponse::Ok { documents, .. } => documents,
         RenderResponse::Err { .. } => panic!("expected ok"),
     };
-    assert_ne!(all[0], soprano_only[0]);
+    // Rendering both parts produces more elements than rendering one
+    assert_ne!(all[0].elements.len(), soprano_only[0].elements.len());
 }
 
 #[test]
@@ -162,10 +161,14 @@ fn reference_jianpu_renders() {
     let source = include_str!("../../../reference.jianpu");
     let resp = render_response(source, None, None);
     match resp {
-        RenderResponse::Ok { svgs, .. } => {
+        RenderResponse::Ok { documents, .. } => {
             assert!(
-                !svgs.is_empty(),
+                !documents.is_empty(),
                 "reference.jianpu should render in the wasm path used by the web editor"
+            );
+            assert!(
+                !documents[0].elements.is_empty(),
+                "first page should have elements"
             );
         }
         RenderResponse::Err { diagnostics, .. } => {

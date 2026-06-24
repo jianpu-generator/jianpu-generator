@@ -3,7 +3,7 @@ use crate::grid_layout::layout::{
     block_column_width, is_chord_only_row, is_lyric_row, make_header_rows,
     system_has_any_decoration, LABEL_COLS,
 };
-use crate::grid_layout::types::{Header, MeasureHighlight};
+use crate::grid_layout::types::{Header, MeasureClickTarget, MeasureHighlight};
 
 fn has_lyrics(row: &crate::compiler::types::MeasureRow) -> bool {
     row.elements
@@ -153,5 +153,63 @@ pub(crate) fn measure_highlights_on_page(
         .iter()
         .filter(|(p, _)| *p == page_idx)
         .map(|(_, h)| h.clone())
+        .collect()
+}
+
+pub(crate) fn compute_all_measure_click_targets(
+    page_systems: &[Vec<Vec<MeasureBlock>>],
+    header: &Header,
+    base: f32,
+) -> Vec<(usize, MeasureClickTarget)> {
+    let header_row_count = make_header_rows(header, base).len();
+    let mut global_measure_index: usize = 0;
+    let mut results: Vec<(usize, MeasureClickTarget)> = Vec::new();
+
+    for (page_idx, page_sys) in page_systems.iter().enumerate() {
+        let mut row_offset = header_row_count;
+        for (sys_idx, system) in page_sys.iter().enumerate() {
+            if sys_idx > 0 {
+                row_offset += 1;
+            }
+            if system.is_empty() {
+                continue;
+            }
+            if system_has_any_decoration(system) {
+                row_offset += 1;
+            }
+            let musical_row_count = system_musical_row_count(system);
+            let row_start = row_offset;
+            let row_end = row_offset + musical_row_count.saturating_sub(1);
+
+            let mut col_offset: u32 = LABEL_COLS;
+            for block in system {
+                let col_w = block_column_width(block);
+                results.push((
+                    page_idx,
+                    MeasureClickTarget {
+                        row_start,
+                        row_end,
+                        column_start: col_offset,
+                        column_end: col_offset + col_w,
+                        measure_index: global_measure_index,
+                    },
+                ));
+                col_offset += col_w;
+                global_measure_index += 1;
+            }
+            row_offset += musical_row_count;
+        }
+    }
+    results
+}
+
+pub(crate) fn click_targets_on_page(
+    targets: &[(usize, MeasureClickTarget)],
+    page_idx: usize,
+) -> Vec<MeasureClickTarget> {
+    targets
+        .iter()
+        .filter(|(p, _)| *p == page_idx)
+        .map(|(_, t)| t.clone())
         .collect()
 }
