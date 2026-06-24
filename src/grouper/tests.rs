@@ -74,7 +74,7 @@ fn chord_expected_degree_digit_is_recoverable() {
         .iter()
         .find_map(|row| match row {
             crate::ast::grouped::PartRow::Timed(part) if part.kind == PartKind::Chord => Some(part),
-            _ => None,
+            crate::ast::grouped::PartRow::Timed(_) => None,
         })
         .expect("chord part");
     assert_eq!(chord_row.notes.events.len(), 3);

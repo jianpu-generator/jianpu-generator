@@ -342,8 +342,6 @@ impl PartGrouper {
 }
 
 fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, IrrecoverableError> {
-    let ditto_measures = part.not_mentioned_measures.clone();
-    let lyrics_ditto_measures = part.lyrics_not_mentioned_measures.clone();
     let lyrics_measure_ends: Vec<usize> = part
         .lyrics
         .as_ref()
@@ -393,8 +391,6 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
         name,
         kind,
         measures,
-        not_mentioned_measures: ditto_measures,
-        lyrics_not_mentioned_measures: lyrics_ditto_measures,
     };
     if matches!(
         part_kind,

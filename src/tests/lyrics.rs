@@ -1,33 +1,6 @@
 use super::*;
 
 #[test]
-fn implicitly_omitted_lyrics_line_drops_lyric_row() {
-    // Alto's lyric line is omitted entirely — implicitly not-mentioned.
-    let input = concat!(
-        "# metadata\n",
-        "title = \"t\"\n",
-        "author = \"a\"\n",
-        "\n",
-        "# parts\n",
-        "Soprano = notes lyrics\n",
-        "Alto = notes lyrics\n",
-        "\n",
-        "# score\n",
-        "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        "do re mi fa\n",
-        "5 6 7 1\n",
-    );
-    let score = compile(input, "test.jianpu").unwrap();
-    let alto = score.measures[0].parts[1].slice();
-    assert!(
-        matches!(alto.kind, PartKind::Notes),
-        "part with implicitly omitted lyrics should render as a plain notes part"
-    );
-    assert!(alto.lyrics.is_none());
-}
-
-#[test]
 fn explicit_lyrics_keep_lyric_row() {
     let input = concat!(
         "# metadata\n",

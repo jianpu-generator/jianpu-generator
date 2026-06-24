@@ -28,7 +28,7 @@ fn group(lines: &[&str]) -> Vec<(String, usize)> {
 }
 
 #[test]
-fn non_ditto_lines_are_passed_through_unchanged() {
+fn score_lines_are_passed_through_unchanged() {
     let groups = vec![group(&["1 2 3 4", "hello"])];
     let declarations = vec![decl("A", PartKind::NotesWithLyrics)];
     let (result, _) = desugar_groups(groups, &declarations, 0).unwrap();

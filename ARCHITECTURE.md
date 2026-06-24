@@ -9,7 +9,7 @@ source (&str)
                              lyrics syllables per measure. No note measure grouping yet.
   → [grouper]             → Score
                              Notes grouped into measures; lyrics paired to each
-                             measure's lyric slots (tie-aware); ditto rows resolved;
+                             measure's lyric slots (tie-aware);
                              parts organized into MultiPartMeasure slices.
   → [compiler]            → CompileResult
                              Logical grid: each note/rest assigned to a column,
@@ -38,7 +38,7 @@ source (&str)
 ### Grouper
 - Module: `src/grouper/`
 - Entry: `grouper::group(doc: ParsedDocument) -> Result<Score, IrrecoverableError>`
-- Key types: `Score`, `MultiPartMeasure`, `PartRow` (Timed | Ditto), `PartSlice`, `Notes`, `NoteEvent`, `GroupedNote`, `GroupedRest`, `GroupedChordNote`, `GroupedMeasure` (intermediate: notes + paired lyrics per measure)
+- Key types: `Score`, `MultiPartMeasure`, `PartRow` (Timed), `PartSlice`, `Notes`, `NoteEvent`, `GroupedNote`, `GroupedRest`, `GroupedChordNote`, `GroupedMeasure` (intermediate: notes + paired lyrics per measure)
 
 ### Compiler
 - Module: `src/compiler/`

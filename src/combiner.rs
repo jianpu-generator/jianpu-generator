@@ -189,7 +189,7 @@ fn build_part_rows(
                         .map(|syllables| Lyrics { syllables }),
                     PartKind::Chord | PartKind::Notes | PartKind::NotesWithChord => None,
                 };
-                let mut slice = PartSlice {
+                let slice = PartSlice {
                     name: part.name.clone(),
                     kind: part.kind,
                     notes: Notes {
@@ -198,34 +198,7 @@ fn build_part_rows(
                     lyrics,
                     has_error: measure_has_error(measure),
                 };
-                let is_not_mentioned = part
-                    .not_mentioned_measures
-                    .get(measure_idx)
-                    .copied()
-                    .unwrap_or(false);
-                let lyrics_not_mentioned = part
-                    .lyrics_not_mentioned_measures
-                    .get(measure_idx)
-                    .copied()
-                    .unwrap_or(false);
-                // A ditto'd lyric line duplicates the part above's lyrics, so
-                // render this measure as a plain notes part: the copied
-                // syllables are not shown and the lyric row is reclaimed.
-                if lyrics_not_mentioned
-                    && !is_not_mentioned
-                    && matches!(
-                        slice.kind,
-                        PartKind::NotesWithLyrics | PartKind::LyricsWithNotes
-                    )
-                {
-                    slice.kind = PartKind::Notes;
-                    slice.lyrics = None;
-                }
-                part_rows.push(if is_not_mentioned {
-                    PartRow::NotMentioned(slice)
-                } else {
-                    PartRow::Timed(slice)
-                });
+                part_rows.push(PartRow::Timed(slice));
             }
         }
     }

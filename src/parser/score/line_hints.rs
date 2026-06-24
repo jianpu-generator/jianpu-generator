@@ -116,16 +116,6 @@ mod tests {
     }
 
     #[test]
-    fn explicit_ditto_line_gets_hint() {
-        let groups = vec![group(&["1 2 3 4", "\""], 0)];
-        let declarations = vec![decl("A", PartKind::Notes), decl("B", PartKind::Notes)];
-        let hints = score_line_hints(&groups, 0, &declarations);
-        assert_eq!(hints.len(), 2);
-        assert_eq!(hints[1].abbreviation, "B");
-        assert_eq!(hints[1].line_start, 10);
-    }
-
-    #[test]
     fn keyed_lines_produce_no_hint() {
         let groups = vec![group(&["1 2 3 4", "[B] 5 6 7 8"], 0)];
         let declarations = vec![decl("A", PartKind::Notes), decl("B", PartKind::Notes)];

@@ -129,23 +129,11 @@ fn compile_measure(
         let name = part_row.name().cloned();
         let label = name.clone().unwrap_or_default();
         let id = RowId(name.unwrap_or_else(|| format!("__anon_{part_idx}")));
-        let same_content_as_last = rows
-            .last()
-            .is_some_and(|last| last.elements == slice_result.elements);
-        if part_row.is_ditto() && same_content_as_last {
-            if let Some(last) = rows.last_mut() {
-                if !label.is_empty() {
-                    last.label.push_str(", ");
-                    last.label.push_str(&label);
-                }
-            }
-        } else {
-            rows.push(MeasureRow {
-                id,
-                label,
-                elements: slice_result.elements,
-            });
-        }
+        rows.push(MeasureRow {
+            id,
+            label,
+            elements: slice_result.elements,
+        });
     }
     if rows.len() == 1 && visible_part_count > 1 {
         if let Some(row) = rows.first_mut() {

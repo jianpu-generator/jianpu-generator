@@ -1,4 +1,3 @@
-use super::ditto::NotMentionedMeasures;
 use super::errors::invariant;
 use super::{SlotAction, TrackAccumulator};
 use crate::ast::parsed::{
@@ -52,7 +51,6 @@ pub(super) fn init_accumulators(declarations: &[PartDecl]) -> Vec<TrackAccumulat
 pub(super) fn build_parse_result(
     declarations: &[PartDecl],
     accumulators: Vec<TrackAccumulator>,
-    mut ditto_measures_per_track: NotMentionedMeasures,
 ) -> Result<Vec<ParsedTrack>, IrrecoverableError> {
     if declarations.len() != accumulators.len() {
         return Err(invariant(
@@ -64,8 +62,7 @@ pub(super) fn build_parse_result(
     declarations
         .iter()
         .zip(accumulators)
-        .enumerate()
-        .map(|(track_index, (decl, acc))| {
+        .map(|(decl, acc)| {
             let TrackAccumulator::Timed {
                 measure_slots,
                 syllables,
@@ -89,16 +86,6 @@ pub(super) fn build_parse_result(
                     measure_starts: lyrics_line_starts,
                     measure_ends: lyrics_line_ends,
                 }),
-                not_mentioned_measures: ditto_measures_per_track
-                    .full
-                    .get_mut(track_index)
-                    .map(std::mem::take)
-                    .unwrap_or_default(),
-                lyrics_not_mentioned_measures: ditto_measures_per_track
-                    .lyrics
-                    .get_mut(track_index)
-                    .map(std::mem::take)
-                    .unwrap_or_default(),
                 per_measure_beat_errors,
                 per_measure_dotted_eighth_errors,
                 per_measure_dash_after_rest_errors,

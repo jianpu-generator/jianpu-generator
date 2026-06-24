@@ -14,8 +14,6 @@ mod beat_padding;
 mod column_lines;
 #[path = "interleaved_directives.rs"]
 mod directives;
-#[path = "interleaved_ditto.rs"]
-mod ditto;
 #[path = "interleaved_errors.rs"]
 mod errors;
 
@@ -24,7 +22,6 @@ use accumulators::{build_parse_result, build_slot_actions, init_accumulators};
 use beat_padding::{beats_per_measure, validate_and_pad_group_lines};
 use column_lines::process_padded_columns;
 use directives::split_directive;
-use ditto::compute_not_mentioned_measures;
 use errors::invariant;
 
 /// One entry per bar group: all directive events emitted by that group's directive row.
@@ -184,7 +181,6 @@ fn attach_no_notes_track_warning(
 
 pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> ParseResult {
     let groups = collect_groups(content);
-    let ditto_measures_per_track = compute_not_mentioned_measures(&groups, declarations);
     let (groups, per_group_desugar_errors) =
         crate::desugar::desugar_groups(groups, declarations, base_offset)?;
 
@@ -234,7 +230,7 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
         &mut extra_document_errors,
     );
 
-    let tracks = build_parse_result(declarations, accumulators, ditto_measures_per_track)?;
+    let tracks = build_parse_result(declarations, accumulators)?;
     let mut per_group_desugar_errors = per_group_desugar_errors;
     if let Some(error) = no_notes_track_error {
         attach_no_notes_track_warning(&mut per_group_desugar_errors, error);

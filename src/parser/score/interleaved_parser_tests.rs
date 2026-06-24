@@ -322,33 +322,6 @@ fn omitted_chord_row_is_recoverable() {
 }
 
 #[test]
-fn partial_measure_still_needs_ditto_before_diverging_middle_columns() {
-    let content = concat!(
-        "time=4/4 key=C4 bpm=120\n",
-        "1 - 6m -\n",
-        "6. 6= 6= 6_ 5_ 3= (2_=2_)\n",
-        "a b c d e f g\n",
-        "4. 4= 4= 4_ 3_ 1= (2_=2_)\n",
-        "\"\n",
-        "6- 5-\n",
-        "alto lyrics\n",
-    );
-    let declarations = vec![
-        decl("main", PartKind::Chord),
-        decl("A1", PartKind::NotesWithLyrics),
-        decl("A2", PartKind::NotesWithLyrics),
-        decl("S1", PartKind::NotesWithLyrics),
-        decl("S2", PartKind::NotesWithLyrics),
-    ];
-    let tracks = parse(content, 0, &declarations).unwrap();
-    let s1 = notes_track(&tracks, "S1");
-    assert_eq!(
-        s1.lyrics.as_ref().unwrap().measure_syllables[0][0].text,
-        "alto"
-    );
-}
-
-#[test]
 fn measure_no_data_lines_is_recoverable() {
     // A directive-only group (no note lines) must not abort parsing.
     let content = "time=4/4 key=C4 bpm=120\n\n1 2 3 4\n";

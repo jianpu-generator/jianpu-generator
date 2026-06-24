@@ -21,13 +21,6 @@ fn notes_doc(score_content: &str) -> String {
     )
 }
 
-/// Two-part (notes) document.
-fn two_part_doc(score_content: &str) -> String {
-    format!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nS = notes\nA = notes\n\n# score\n{score_content}"
-    )
-}
-
 /// Chord-part document with one track.
 fn chord_doc(score_content: &str) -> String {
     format!(
@@ -111,16 +104,6 @@ fn time_signature_appears_as_decoration() {
         )
     });
     assert!(has_ts);
-}
-
-#[test]
-fn ditto_rows_are_skipped() {
-    // Two parts rendered in both measures (no ditto)
-    let score = score_from(&two_part_doc("time=4/4 key=C4 bpm=120\n1\n3\n\n2\n4\n"));
-    let result = compile(&score);
-    let blocks = result.blocks;
-    assert_eq!(blocks.len(), 2);
-    assert_eq!(blocks[0].rows.len(), 2);
 }
 
 #[test]
