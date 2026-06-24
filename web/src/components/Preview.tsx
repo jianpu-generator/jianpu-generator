@@ -7,6 +7,7 @@ interface PreviewProps {
   audioGenerating?: boolean
   wavUrl?: string | null
   audioAvailable?: boolean
+  soundfontReady?: boolean
   onGenerateAudio?: () => void
   pdfAvailable?: boolean
   pdfFontsReady?: boolean
@@ -26,6 +27,7 @@ export function Preview({
   audioGenerating = false,
   wavUrl = null,
   audioAvailable = false,
+  soundfontReady = false,
   onGenerateAudio,
   pdfAvailable = false,
   pdfFontsReady = false,
@@ -110,7 +112,7 @@ export function Preview({
             <button
               type="button"
               className="preview-export-btn"
-              disabled={audioGenerating}
+              disabled={audioGenerating || !soundfontReady}
               onClick={onGenerateAudio}
               aria-label={wavUrl ? 'Regenerate audio' : 'Generate audio'}
             >
@@ -119,6 +121,8 @@ export function Preview({
                   <span className="preview-audio-spinner" aria-hidden="true" />
                   <span>Generating…</span>
                 </>
+              ) : !soundfontReady ? (
+                <span>Loading soundfont…</span>
               ) : (
                 <span>{wavUrl ? 'Regenerate audio' : 'Generate audio'}</span>
               )}

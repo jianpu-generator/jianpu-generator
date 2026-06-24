@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AssetLoadingBanner } from './components/AssetLoadingBanner'
 import { Editor } from './components/Editor'
 import { FileTabBar } from './components/FileList'
 import { PartToggles } from './components/PartToggles'
@@ -16,7 +17,9 @@ import {
   selectFile,
   updateActiveContent,
 } from './fileStore'
+import { useAssetLoader } from './hooks/useAssetLoader'
 import { useFileStore } from './hooks/useFileStore'
+import { useFontsLoader } from './hooks/useFontsLoader'
 import { useJianpuWorker } from './hooks/useJianpuWorker'
 import {
   readPartTogglesForFile,
@@ -55,6 +58,10 @@ export default function App() {
   })
   const editorRef = useRef<EditorHandle>(null)
   const skipToggleSaveRef = useRef(false)
+  const soundfont = useAssetLoader('/fonts/GeneralUser_GS.sf2')
+  const fonts = useFontsLoader()
+  const soundfontReady = soundfont.status === 'ready'
+  const pdfFontsReady = fonts.status === 'ready'
   const {
     parts,
     partsLoading,
@@ -62,7 +69,6 @@ export default function App() {
     wavUrl,
     audioAvailable,
     pdfAvailable,
-    pdfFontsReady,
     pdfExporting,
     diagnostics,
     diagnosticViewZones,
@@ -87,6 +93,8 @@ export default function App() {
     disabledLyrics,
     soloedParts,
     store.active,
+    soundfont.bytes,
+    fonts.fonts,
   )
 
   useEffect(() => {
@@ -284,6 +292,14 @@ export default function App() {
 
   return (
     <div className="app">
+      <AssetLoadingBanner
+        soundfontStatus={soundfont.status}
+        soundfontLoadedBytes={soundfont.loadedBytes}
+        soundfontTotalBytes={soundfont.totalBytes}
+        fontsStatus={fonts.status}
+        fontsLoadedBytes={fonts.loadedBytes}
+        fontsTotalBytes={fonts.totalBytes}
+      />
       <header className="app-header">
         <h1>簡譜</h1>
         <span className="app-subtitle">live preview</span>
@@ -314,7 +330,9 @@ export default function App() {
                 onPlayMeasure={
                   measureAudioPlaying
                     ? stopMeasurePlayback
-                    : selectedMeasureRange !== null && !measureAudioGenerating
+                    : selectedMeasureRange !== null &&
+                        !measureAudioGenerating &&
+                        soundfontReady
                       ? playSelectedMeasures
                       : undefined
                 }
@@ -379,6 +397,7 @@ export default function App() {
             audioGenerating={audioGenerating}
             wavUrl={wavUrl}
             audioAvailable={audioAvailable}
+            soundfontReady={soundfontReady}
             onGenerateAudio={generateFullAudio}
             pdfAvailable={pdfAvailable}
             pdfFontsReady={pdfFontsReady}

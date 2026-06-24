@@ -25,7 +25,6 @@ interface JianpuWorkerState {
   wavUrl: string | null
   audioAvailable: boolean
   pdfAvailable: boolean
-  pdfFontsReady: boolean
   pdfExporting: boolean
   splitPdfExporting: boolean
   diagnostics: Diagnostic[]
@@ -52,6 +51,8 @@ export function useJianpuWorker(
   disabledLyrics: ReadonlySet<string>,
   soloedParts: ReadonlySet<string>,
   activeFile: string,
+  soundfontBytes: Uint8Array | null,
+  fontBytes: { sc: Uint8Array; tc: Uint8Array; mono: Uint8Array } | null,
   debounceMs = 300,
 ): JianpuWorkerState {
   const [parts, setParts] = useState<PartInfo[]>([])
@@ -60,7 +61,6 @@ export function useJianpuWorker(
   const [wavUrl, setWavUrl] = useState<string | null>(null)
   const [audioAvailable, setAudioAvailable] = useState(false)
   const [pdfAvailable, setPdfAvailable] = useState(false)
-  const [pdfFontsReady, setPdfFontsReady] = useState(false)
   const [pdfExporting, setPdfExporting] = useState(false)
   const [splitPdfExporting, setSplitPdfExporting] = useState(false)
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([])
@@ -177,16 +177,6 @@ export function useJianpuWorker(
         audioAvailableRef.current = msg.audioAvailable
         setAudioAvailable(msg.audioAvailable)
         setPdfAvailable(msg.pdfAvailable)
-        return
-      }
-
-      if (msg.type === 'pdfFontsReady') {
-        setPdfFontsReady(true)
-        return
-      }
-
-      if (msg.type === 'pdfFontsError') {
-        setPdfFontsReady(false)
         return
       }
 
@@ -318,6 +308,18 @@ export function useJianpuWorker(
       }
     }
   }, [setNextWavUrl, setNextMeasureWavUrl])
+
+  useEffect(() => {
+    const worker = workerRef.current
+    if (!worker || !soundfontBytes || !fontBytes) return
+    worker.postMessage({
+      type: 'loadAssets',
+      soundfont: soundfontBytes.buffer as ArrayBuffer,
+      scFont: fontBytes.sc.buffer as ArrayBuffer,
+      tcFont: fontBytes.tc.buffer as ArrayBuffer,
+      monoFont: fontBytes.mono.buffer as ArrayBuffer,
+    } satisfies WorkerRequest)
+  }, [soundfontBytes, fontBytes])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: activeFile is intentional trigger
   useEffect(() => {
@@ -525,7 +527,6 @@ export function useJianpuWorker(
     wavUrl,
     audioAvailable,
     pdfAvailable,
-    pdfFontsReady,
     pdfExporting,
     splitPdfExporting,
     diagnostics,

@@ -3,6 +3,9 @@ use jianpu_generator::{self as jg, error_reporter};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+#[cfg(feature = "wav")]
+static SF2_BYTES: &[u8] = include_bytes!("../fonts/GeneralUser_GS.sf2");
+
 #[cfg(feature = "pdf")]
 static SANS_SERIF_SC_FONT: &[u8] = include_bytes!("../fonts/SourceHanSansSC-Regular.otf");
 #[cfg(feature = "pdf")]
@@ -344,7 +347,7 @@ fn generate_wav(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableErro
             &display_names,
             |score_clone, _, label, base, base_name| {
                 let midi_bytes = jg::midi::write_midi(score_clone)?;
-                let wav_bytes = jg::wav::write_wav(&midi_bytes)?;
+                let wav_bytes = jg::wav::write_wav(&midi_bytes, SF2_BYTES)?;
                 let track_path = track_output_path(base, base_name, label, "wav");
                 write_file(&track_path, &wav_bytes)?;
                 println!("written to {track_path:?}");
@@ -359,7 +362,7 @@ fn generate_wav(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableErro
     let mut score = score;
     jg::filter_tracks(&mut score, &opts.tracks);
     let midi_bytes = jg::midi::write_midi(&score)?;
-    let wav_bytes = jg::wav::write_wav(&midi_bytes)?;
+    let wav_bytes = jg::wav::write_wav(&midi_bytes, SF2_BYTES)?;
     let output_path =
         output_stem(&opts.input, &opts.tracks, opts.output.as_deref()).with_extension("wav");
     write_file(&output_path, &wav_bytes)?;

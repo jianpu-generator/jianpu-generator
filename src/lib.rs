@@ -232,11 +232,12 @@ pub fn write_wav_from_source_filtered(
     source: &str,
     filename: &str,
     enabled_tracks: Option<&[String]>,
+    sf2_bytes: &[u8],
 ) -> Result<Vec<u8>, IrrecoverableError> {
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     let midi_bytes = midi::write_midi(&score)?;
-    wav::write_wav(&midi_bytes)
+    wav::write_wav(&midi_bytes, sf2_bytes)
 }
 
 /// Parse, group, optionally filter tracks, and synthesize WAV for a single measure.
@@ -249,11 +250,12 @@ pub fn write_wav_for_measure_from_source(
     filename: &str,
     measure_index: usize,
     enabled_tracks: Option<&[String]>,
+    sf2_bytes: &[u8],
 ) -> Result<Vec<u8>, IrrecoverableError> {
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     let midi_bytes = midi::write_midi_for_measure(&score, measure_index)?;
-    wav::write_wav(&midi_bytes)
+    wav::write_wav(&midi_bytes, sf2_bytes)
 }
 
 /// Parse, group, optionally filter tracks, and synthesize WAV for a consecutive measure range.
@@ -266,11 +268,12 @@ pub fn write_wav_for_measure_range_from_source(
     start_index: usize,
     end_index: usize,
     enabled_tracks: Option<&[String]>,
+    sf2_bytes: &[u8],
 ) -> Result<Vec<u8>, IrrecoverableError> {
     let mut score = compile(source, filename)?;
     apply_track_filter(&mut score, enabled_tracks);
     let midi_bytes = midi::write_midi_for_measure_range(&score, start_index, end_index)?;
-    wav::write_wav(&midi_bytes)
+    wav::write_wav(&midi_bytes, sf2_bytes)
 }
 
 /// Parse, group, optionally filter tracks, and write PDF bytes.

@@ -9,9 +9,7 @@ const CHOIR_AAHS_PROGRAM: u8 = 52;
 /// Target peak level before encoding (0.95 ≈ −0.4 dBFS), matching typical mastered music.
 const TARGET_PEAK: f32 = 0.95;
 
-static SF2_BYTES: &[u8] = include_bytes!("../fonts/GeneralUser_GS.sf2");
-
-fn init_synth() -> Result<Synth, IrrecoverableError> {
+fn init_synth(sf2_bytes: &[u8]) -> Result<Synth, IrrecoverableError> {
     let mut synth = Synth::new(SynthDescriptor {
         sample_rate: SAMPLE_RATE as f32,
         ..Default::default()
@@ -22,7 +20,7 @@ fn init_synth() -> Result<Synth, IrrecoverableError> {
         })
     })?;
 
-    let sf = SoundFont::load(&mut Cursor::new(SF2_BYTES)).map_err(|_| {
+    let sf = SoundFont::load(&mut Cursor::new(sf2_bytes)).map_err(|_| {
         IrrecoverableError::new(IrrecoverableErrorKind::WavSoundfontLoadFailed {
             span: Span::new(0, 0),
         })
@@ -94,7 +92,7 @@ fn render_track(
     }
 }
 
-pub fn write_wav(midi_bytes: &[u8]) -> Result<Vec<u8>, IrrecoverableError> {
+pub fn write_wav(midi_bytes: &[u8], sf2_bytes: &[u8]) -> Result<Vec<u8>, IrrecoverableError> {
     let smf = Smf::parse(midi_bytes).map_err(|_| {
         IrrecoverableError::new(IrrecoverableErrorKind::WavInvalidMidiBytes {
             span: Span::new(0, 0),
@@ -105,7 +103,7 @@ pub fn write_wav(midi_bytes: &[u8]) -> Result<Vec<u8>, IrrecoverableError> {
         Timing::Timecode(..) => 480,
     };
 
-    let mut synth = init_synth()?;
+    let mut synth = init_synth(sf2_bytes)?;
     let mut all_l: Vec<f32> = Vec::new();
     let mut all_r: Vec<f32> = Vec::new();
 

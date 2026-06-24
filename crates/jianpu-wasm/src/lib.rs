@@ -183,8 +183,12 @@ pub fn list_score_line_hints(source: &str) -> ListScoreLineHintsResponse {
 }
 
 #[cfg(feature = "wav")]
-fn generate_wav_response(source: &str, enabled_tracks: Option<&[String]>) -> GenerateWavResponse {
-    match write_wav_from_source_filtered(source, "input.jianpu", enabled_tracks) {
+fn generate_wav_response(
+    source: &str,
+    enabled_tracks: Option<&[String]>,
+    soundfont: Vec<u8>,
+) -> GenerateWavResponse {
+    match write_wav_from_source_filtered(source, "input.jianpu", enabled_tracks, &soundfont) {
         Ok(wav) => GenerateWavResponse::Ok { wav },
         Err(e) => GenerateWavResponse::Err {
             diagnostics: vec![diagnostic_from_error(source, &e)],
@@ -198,6 +202,7 @@ fn generate_wav_for_measure_range_response(
     start_index: usize,
     end_index: usize,
     enabled_tracks: Option<&[String]>,
+    soundfont: Vec<u8>,
 ) -> GenerateWavResponse {
     match write_wav_for_measure_range_from_source(
         source,
@@ -205,6 +210,7 @@ fn generate_wav_for_measure_range_response(
         start_index,
         end_index,
         enabled_tracks,
+        &soundfont,
     ) {
         Ok(wav) => GenerateWavResponse::Ok { wav },
         Err(e) => GenerateWavResponse::Err {
@@ -347,11 +353,18 @@ pub fn get_measure_index_at_offset(source: &str, byte_offset: usize) -> MeasureA
 /// Returns the same structured `{ status, ... }` envelope as [`render`]:
 /// - `{ "status": "ok", "wav": Uint8Array }`
 /// - `{ "status": "err", "diagnostics": [...] }`
+///
+/// `soundfont` is the raw SF2 soundfont bytes used for synthesis. They are not
+/// embedded in the WASM binary and must be supplied by the caller.
 #[cfg(feature = "wav")]
 #[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
-pub fn generate_wav(source: &str, enabled_tracks: Option<Vec<String>>) -> GenerateWavResponse {
-    generate_wav_response(source, enabled_tracks.as_deref())
+pub fn generate_wav(
+    source: &str,
+    enabled_tracks: Option<Vec<String>>,
+    soundfont: Vec<u8>,
+) -> GenerateWavResponse {
+    generate_wav_response(source, enabled_tracks.as_deref(), soundfont)
 }
 
 /// Synthesize WAV audio for a consecutive measure range, with BPM/key context from preceding measures.
@@ -360,6 +373,9 @@ pub fn generate_wav(source: &str, enabled_tracks: Option<Vec<String>>) -> Genera
 /// Returns the same structured envelope as [`generate_wav`]:
 /// - `{ "status": "ok", "wav": Uint8Array }`
 /// - `{ "status": "err", "diagnostics": [...] }`
+///
+/// `soundfont` is the raw SF2 soundfont bytes used for synthesis. They are not
+/// embedded in the WASM binary and must be supplied by the caller.
 #[cfg(feature = "wav")]
 #[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
@@ -368,12 +384,14 @@ pub fn generate_wav_for_measure_range(
     start_index: usize,
     end_index: usize,
     enabled_tracks: Option<Vec<String>>,
+    soundfont: Vec<u8>,
 ) -> GenerateWavResponse {
     generate_wav_for_measure_range_response(
         source,
         start_index,
         end_index,
         enabled_tracks.as_deref(),
+        soundfont,
     )
 }
 

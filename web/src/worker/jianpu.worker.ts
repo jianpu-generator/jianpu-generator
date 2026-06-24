@@ -34,6 +34,13 @@ const generateSplitPdfs =
 
 export type WorkerRequest =
   | {
+      type: 'loadAssets'
+      soundfont: ArrayBuffer
+      scFont: ArrayBuffer
+      tcFont: ArrayBuffer
+      monoFont: ArrayBuffer
+    }
+  | {
       type: 'render'
       source: string
       id: number
@@ -82,8 +89,6 @@ export type WorkerRequest =
 
 export type WorkerResponse =
   | { type: 'ready'; audioAvailable: boolean; pdfAvailable: boolean }
-  | { type: 'pdfFontsReady' }
-  | { type: 'pdfFontsError' }
   | {
       type: 'ok'
       id: number
@@ -132,45 +137,12 @@ async function ensureInit() {
       audioAvailable: generateWav !== null,
       pdfAvailable: generatePdf !== null,
     } satisfies WorkerResponse)
-
-    if (generatePdf !== null) {
-      ensurePdfFonts()
-        .then(() =>
-          postMessage({ type: 'pdfFontsReady' } satisfies WorkerResponse),
-        )
-        .catch(() =>
-          postMessage({ type: 'pdfFontsError' } satisfies WorkerResponse),
-        )
-    }
   }
 }
 
-let pdfFontsPromise: Promise<{
-  sc: Uint8Array
-  tc: Uint8Array
-  mono: Uint8Array
-}> | null = null
-
-function ensurePdfFonts(): Promise<{
-  sc: Uint8Array
-  tc: Uint8Array
-  mono: Uint8Array
-}> {
-  if (!pdfFontsPromise) {
-    pdfFontsPromise = Promise.all([
-      fetch('/fonts/SourceHanSansSC-Regular.otf')
-        .then((r) => r.arrayBuffer())
-        .then((b) => new Uint8Array(b)),
-      fetch('/fonts/SourceHanSansTC-Regular.otf')
-        .then((r) => r.arrayBuffer())
-        .then((b) => new Uint8Array(b)),
-      fetch('/fonts/NotoSansMono-Regular.ttf')
-        .then((r) => r.arrayBuffer())
-        .then((b) => new Uint8Array(b)),
-    ]).then(([sc, tc, mono]) => ({ sc, tc, mono }))
-  }
-  return pdfFontsPromise
-}
+let loadedSoundfont: Uint8Array | null = null
+let loadedFonts: { sc: Uint8Array; tc: Uint8Array; mono: Uint8Array } | null =
+  null
 
 function binaryBufferFromResult(
   bytes: Uint8Array | ArrayBuffer | ArrayLike<number>,
@@ -184,6 +156,17 @@ function binaryBufferFromResult(
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const msg = event.data
+
+  if (msg.type === 'loadAssets') {
+    loadedSoundfont = new Uint8Array(msg.soundfont)
+    loadedFonts = {
+      sc: new Uint8Array(msg.scFont),
+      tc: new Uint8Array(msg.tcFont),
+      mono: new Uint8Array(msg.monoFont),
+    }
+    return
+  }
+
   await ensureInit()
 
   if (msg.type === 'listParts') {
@@ -221,14 +204,27 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       return
     }
 
-    const fonts = await ensurePdfFonts()
+    if (!loadedFonts) {
+      postMessage({
+        type: 'pdfErr',
+        id: msg.id,
+        diagnostics: [
+          {
+            severity: 'error',
+            message: 'Fonts are not yet loaded.',
+            span: { start: 0, end: 0 },
+          },
+        ],
+      } satisfies WorkerResponse)
+      return
+    }
     const result = generatePdf(
       msg.source,
       msg.enabledTracks,
       msg.disabledLyrics,
-      fonts.sc,
-      fonts.tc,
-      fonts.mono,
+      loadedFonts.sc,
+      loadedFonts.tc,
+      loadedFonts.mono,
     )
     if (result.status === 'ok') {
       const pdfBuffer = binaryBufferFromResult(result.pdf)
@@ -267,13 +263,26 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       return
     }
 
-    const fonts = await ensurePdfFonts()
+    if (!loadedFonts) {
+      postMessage({
+        type: 'splitPdfErr',
+        id: msg.id,
+        diagnostics: [
+          {
+            severity: 'error',
+            message: 'Fonts are not yet loaded.',
+            span: { start: 0, end: 0 },
+          },
+        ],
+      } satisfies WorkerResponse)
+      return
+    }
     const result = generateSplitPdfs(
       msg.source,
       msg.baseName,
-      fonts.sc,
-      fonts.tc,
-      fonts.mono,
+      loadedFonts.sc,
+      loadedFonts.tc,
+      loadedFonts.mono,
     )
     if (result.status === 'ok') {
       const zipBuffer = binaryBufferFromResult(result.zip)
@@ -305,7 +314,15 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       return
     }
 
-    const wavResult = generateWav(msg.source, msg.enabledTracks)
+    if (!loadedSoundfont) {
+      postMessage({ type: 'audioErr', id: msg.id } satisfies WorkerResponse)
+      return
+    }
+    const wavResult = generateWav(
+      msg.source,
+      msg.enabledTracks,
+      loadedSoundfont,
+    )
     if (wavResult.status === 'ok' && wavResult.wav != null) {
       const wavBuffer = binaryBufferFromResult(wavResult.wav)
       postMessage(
@@ -334,11 +351,19 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       } satisfies WorkerResponse)
       return
     }
+    if (!loadedSoundfont) {
+      postMessage({
+        type: 'measureRangeAudioErr',
+        id: msg.id,
+      } satisfies WorkerResponse)
+      return
+    }
     const wavResult = generateWavForMeasureRange(
       msg.source,
       msg.startMeasureIndex,
       msg.endMeasureIndex,
       msg.enabledTracks,
+      loadedSoundfont,
     )
     if (wavResult.status === 'ok' && wavResult.wav != null) {
       const wavBuffer = binaryBufferFromResult(wavResult.wav)
