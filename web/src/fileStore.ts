@@ -1,3 +1,4 @@
+import NEW_FILE_TEMPLATE from '../../new_file_template.jianpu?raw'
 import { DEFAULT_SOURCE, DEMO_FILE_NAME } from './defaultSource'
 import {
   clearShareHash,
@@ -22,14 +23,6 @@ const DEFAULT_FILE_STORE: FileStoreState = {
 function generateFileId(): string {
   return crypto.randomUUID()
 }
-
-const NEW_FILE_TEMPLATE = `# metadata
-title = "Untitled"
-
-# parts
-
-# score
-`
 
 export interface FileStoreState {
   active: string

@@ -17,7 +17,7 @@ function parseRhs(rhs: string): {
   followTarget: string | null
   soundfont: SoundfontValue | null
 } {
-  let remaining = rhs.trim()
+  const remaining = rhs.trim()
 
   let mode: PartMode
   let followTarget: string | null = null
