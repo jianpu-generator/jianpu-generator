@@ -8,8 +8,7 @@ use jianpu_generator::write_wav_for_measure_range_from_source;
 use jianpu_generator::write_wav_from_source_filtered;
 use jianpu_generator::{
     compile, find_measure_at_byte_offset, list_measure_spans_from_source, list_parts_from_source,
-    list_score_line_hints_from_source, render_documents_from_source_filtered_with_lyrics,
-    render_documents_with_highlight_range,
+    render_documents_from_source_filtered_with_lyrics, render_documents_with_highlight_range,
 };
 #[cfg(feature = "pdf")]
 use jianpu_generator::{
@@ -19,8 +18,8 @@ use jianpu_generator::{
 use types::GenerateWavResponse;
 use types::{
     diagnostic_from_diagnostic, diagnostic_from_error, group_diagnostics_into_view_zones,
-    svg_document_to_out, ListMeasureSpansResponse, ListPartsResponse, ListScoreLineHintsResponse,
-    MeasureAtOffsetResponse, PartOut, RenderResponse, ScoreLineHintOut,
+    svg_document_to_out, ListMeasureSpansResponse, ListPartsResponse, MeasureAtOffsetResponse,
+    PartOut, RenderResponse,
 };
 #[cfg(feature = "pdf")]
 use types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
@@ -147,23 +146,6 @@ fn list_measure_spans_response(source: &str) -> ListMeasureSpansResponse {
     }
 }
 
-fn list_score_line_hints_response(source: &str) -> ListScoreLineHintsResponse {
-    match list_score_line_hints_from_source(source, "input.jianpu") {
-        Ok(hints) => ListScoreLineHintsResponse::Ok {
-            hints: hints
-                .into_iter()
-                .map(|hint| ScoreLineHintOut {
-                    line_start: hint.line_start,
-                    abbreviation: hint.abbreviation,
-                })
-                .collect(),
-        },
-        Err(error) => ListScoreLineHintsResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &error)],
-        },
-    }
-}
-
 /// Return the byte span of every measure in the source.
 ///
 /// - `{ "status": "ok", "spans": [{ "start": N, "end": N }, ...] }` on success
@@ -171,15 +153,6 @@ fn list_score_line_hints_response(source: &str) -> ListScoreLineHintsResponse {
 #[wasm_bindgen]
 pub fn list_measure_spans(source: &str) -> ListMeasureSpansResponse {
     list_measure_spans_response(source)
-}
-
-/// Return pre-desugar score line inlay hints for the editor.
-///
-/// - `{ "status": "ok", "hints": [{ "lineStart": N, "abbreviation": "..." }, ...] }`
-/// - `{ "status": "err", "diagnostics": [...] }` on section/parts parse failure
-#[wasm_bindgen]
-pub fn list_score_line_hints(source: &str) -> ListScoreLineHintsResponse {
-    list_score_line_hints_response(source)
 }
 
 #[cfg(feature = "wav")]

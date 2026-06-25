@@ -1,5 +1,5 @@
 import MonacoEditor, { type Monaco, type OnMount } from '@monaco-editor/react'
-import type { editor, IDisposable, languages } from 'monaco-editor'
+import type { editor } from 'monaco-editor'
 import {
   forwardRef,
   type ReactNode,
@@ -14,7 +14,6 @@ import type {
   DiagnosticViewZone,
   EditorHandle,
   MeasureSpan,
-  ScoreLineHint,
 } from '../types'
 import { byteOffsetToStringIndex } from '../utils/byteSpan'
 
@@ -25,7 +24,6 @@ export interface EditorProps {
   diagnostics?: Diagnostic[]
   diagnosticViewZones?: DiagnosticViewZone[]
   measureSpans?: MeasureSpan[]
-  scoreLineHints?: ScoreLineHint[]
   toolbar?: ReactNode
   onSelectionChange?: (startLine: number, endLine: number) => void
   onCursorLineChange?: (line: number) => void
@@ -33,26 +31,6 @@ export interface EditorProps {
 }
 
 const MARKER_OWNER = 'jianpu'
-
-function buildPartInlayHints(
-  model: editor.ITextModel,
-  scoreLineHints: ScoreLineHint[],
-  monacoApi: Monaco,
-): languages.InlayHint[] {
-  if (scoreLineHints.length === 0) return []
-  const source = model.getValue()
-
-  return scoreLineHints.map((hint) => ({
-    position: new monacoApi.Position(
-      model.getPositionAt(byteOffsetToStringIndex(source, hint.line_start))
-        .lineNumber,
-      1,
-    ),
-    label: `[${hint.abbreviation}]`,
-    kind: monacoApi.languages.InlayHintKind.Type,
-    paddingRight: true,
-  }))
-}
 
 function diagnosticRange(
   model: editor.ITextModel,
@@ -135,7 +113,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     diagnostics = [],
     diagnosticViewZones = [],
     measureSpans = [],
-    scoreLineHints = [],
     toolbar,
     onSelectionChange,
     onCursorLineChange,
@@ -147,8 +124,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const monacoRef = useRef<Monaco | null>(null)
   const measureViewZoneIdsRef = useRef<string[]>([])
   const diagnosticViewZoneIdsRef = useRef<string[]>([])
-  const inlayHintsDisposableRef = useRef<IDisposable | null>(null)
-  const scoreLineHintsForInlayRef = useRef(scoreLineHints)
   const onSelectionChangeRef = useRef(onSelectionChange)
   const onCursorLineChangeRef = useRef(onCursorLineChange)
   const onPlayMeasureRef = useRef(onPlayMeasure)
@@ -329,32 +304,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     },
   }))
 
-  const applyInlayHints = useCallback(() => {
-    const monacoApi = monacoRef.current
-    if (!monacoApi) return
-    inlayHintsDisposableRef.current?.dispose()
-    inlayHintsDisposableRef.current =
-      monacoApi.languages.registerInlayHintsProvider('plaintext', {
-        provideInlayHints(model, _range, _token) {
-          return {
-            hints: buildPartInlayHints(
-              model,
-              scoreLineHintsForInlayRef.current,
-              monacoApi,
-            ),
-            dispose: () => {},
-          }
-        },
-      })
-  }, [])
-
   const handleMount: OnMount = (ed, monacoApi) => {
     editorRef.current = ed
     monacoRef.current = monacoApi
     applyDiagnostics()
     applyMeasureViewZones()
     applyDiagnosticViewZones()
-    applyInlayHints()
 
     ed.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.Enter, () =>
       onPlayMeasureRef.current?.(),
@@ -386,17 +341,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   useEffect(() => {
     applyDiagnosticViewZones()
   }, [applyDiagnosticViewZones])
-
-  useEffect(() => {
-    scoreLineHintsForInlayRef.current = scoreLineHints
-    applyInlayHints()
-  }, [scoreLineHints, applyInlayHints])
-
-  useEffect(() => {
-    return () => {
-      inlayHintsDisposableRef.current?.dispose()
-    }
-  }, [])
 
   return (
     <div className="editor">

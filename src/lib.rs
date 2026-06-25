@@ -119,27 +119,6 @@ pub fn render_svgs_from_source(
     render_svgs_from_source_filtered(source, filename, None)
 }
 
-/// List pre-desugar score line inlay hints from a `.jianpu` source string.
-pub fn list_score_line_hints_from_source(
-    source: &str,
-    _filename: &str,
-) -> Result<Vec<ScoreLineHint>, IrrecoverableError> {
-    let (sections, _section_errors) = parser::load_document_sections(source);
-    let (parts_content, parts_offset) = sections.parts;
-    let (score_content, score_offset) = sections.score;
-    let (declarations, _parts_errors) =
-        parser::parts_parser::parse_parts(&parts_content, parts_offset);
-    let groups = parser::score::measure_group::collect_groups(&score_content);
-    Ok(parser::score::line_hints::score_line_hints(
-        &groups,
-        score_offset,
-        &declarations,
-    ))
-}
-
-/// A pre-desugar score data line that should display a part inlay hint in the editor.
-pub use parser::score::line_hints::ScoreLineHint;
-
 /// List part declarations from a `.jianpu` source string.
 pub fn list_parts_from_source(
     source: &str,

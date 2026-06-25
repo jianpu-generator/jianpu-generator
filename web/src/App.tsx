@@ -82,7 +82,6 @@ export default function App() {
     measureAudioGenerating,
     measureAudioPlaying,
     measureSpans,
-    scoreLineHints,
     notifySelection,
     playSelectedMeasures,
     stopMeasurePlayback,
@@ -335,7 +334,6 @@ export default function App() {
                 diagnostics={diagnostics}
                 diagnosticViewZones={diagnosticViewZones}
                 measureSpans={measureSpans}
-                scoreLineHints={scoreLineHints}
                 onSelectionChange={notifySelection}
                 onPlayMeasure={
                   measureAudioPlaying

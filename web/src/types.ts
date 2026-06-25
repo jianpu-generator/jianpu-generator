@@ -7,12 +7,10 @@ export type {
   GenerateWavResponse as GenerateWavResult,
   ListMeasureSpansResponse as ListMeasureSpansResult,
   ListPartsResponse as ListPartsResult,
-  ListScoreLineHintsResponse as ListScoreLineHintsResult,
   MeasureAtOffsetResponse as MeasureAtOffsetResult,
   MeasureSpanOut as MeasureSpan,
   PartOut as PartInfo,
   RenderResponse as RenderResult,
-  ScoreLineHintOut as ScoreLineHint,
   SpanOut as ByteSpan,
 } from 'jianpu-wasm'
 

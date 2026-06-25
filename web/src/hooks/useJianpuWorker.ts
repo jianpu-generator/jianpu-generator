@@ -5,7 +5,6 @@ import type {
   DiagnosticViewZone,
   MeasureSpan,
   PartInfo,
-  ScoreLineHint,
 } from '../types'
 import type { WorkerRequest, WorkerResponse } from '../worker/jianpu.worker'
 import {
@@ -43,7 +42,6 @@ interface JianpuWorkerState {
   stopMeasurePlayback: () => void
   highlightedDocuments: SvgDocumentOut[]
   measureSpans: MeasureSpan[]
-  scoreLineHints: ScoreLineHint[]
 }
 
 export function useJianpuWorker(
@@ -81,13 +79,10 @@ export function useJianpuWorker(
     SvgDocumentOut[]
   >([])
   const [measureSpans, setMeasureSpans] = useState<MeasureSpan[]>([])
-  const [scoreLineHints, setScoreLineHints] = useState<ScoreLineHint[]>([])
   const highlightRenderRequestIdRef = useRef(0)
   const latestHighlightRenderIdRef = useRef(0)
   const measureSpansRequestIdRef = useRef(0)
   const latestMeasureSpansIdRef = useRef(0)
-  const scoreLineHintsRequestIdRef = useRef(0)
-  const latestScoreLineHintsIdRef = useRef(0)
   const measureSpansRef = useRef<MeasureSpan[]>([])
 
   const workerRef = useRef<Worker | null>(null)
@@ -277,16 +272,6 @@ export function useJianpuWorker(
         return
       }
 
-      if (msg.type === 'scoreLineHints') {
-        if (msg.id !== latestScoreLineHintsIdRef.current) return
-        if (msg.status === 'ok') {
-          setScoreLineHints(msg.hints)
-        } else {
-          setScoreLineHints([])
-        }
-        return
-      }
-
       if (msg.type === 'err') {
         if (msg.id !== latestRenderIdRef.current) return
         setRendering(false)
@@ -446,24 +431,6 @@ export function useJianpuWorker(
     return () => window.clearTimeout(timer)
   }, [source, debounceMs])
 
-  useEffect(() => {
-    const worker = workerRef.current
-    if (!worker) return
-
-    const id = ++scoreLineHintsRequestIdRef.current
-    latestScoreLineHintsIdRef.current = id
-
-    const timer = window.setTimeout(() => {
-      worker.postMessage({
-        type: 'listScoreLineHints',
-        source,
-        id,
-      } satisfies WorkerRequest)
-    }, debounceMs)
-
-    return () => window.clearTimeout(timer)
-  }, [source, debounceMs])
-
   const stopMeasurePlayback = useCallback(() => {
     if (currentMeasureAudioRef.current) {
       currentMeasureAudioRef.current.pause()
@@ -547,6 +514,5 @@ export function useJianpuWorker(
     stopMeasurePlayback,
     highlightedDocuments,
     measureSpans,
-    scoreLineHints,
   }
 }
