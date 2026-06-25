@@ -44,17 +44,6 @@ pub fn find_measure_at_line_number(
         .position(|m| m.source_span.start <= line_end && m.source_span.end >= line_start)
 }
 
-fn line_at(source: &str, byte_offset: usize) -> usize {
-    source
-        .as_bytes()
-        .get(..byte_offset.min(source.len()))
-        .unwrap_or(&[])
-        .iter()
-        .filter(|&&b| b == b'\n')
-        .count()
-        + 1
-}
-
 /// Source byte ranges for a measure in the editor.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MeasureSourceSpan {
@@ -81,17 +70,22 @@ pub fn list_measure_spans_from_source(
 ) -> Result<Vec<MeasureSourceSpan>, IrrecoverableError> {
     let (sections, _section_errors) = parser::load_document_sections(source);
     let (score_content, score_offset) = sections.score;
-    let view_zone_starts =
-        parser::score::measure_group::view_zone_starts(&score_content, score_offset);
+    let base_line = source[..score_offset.min(source.len())]
+        .bytes()
+        .filter(|&b| b == b'\n')
+        .count()
+        + 1;
+    let group_bounds =
+        parser::score::measure_group::collect_group_bounds(&score_content, score_offset, base_line);
 
     let score = crate::compile(source, filename)?;
-    if view_zone_starts.len() != score.measures.len() {
+    if group_bounds.len() != score.measures.len() {
         return Err(IrrecoverableError::new(
             IrrecoverableErrorKind::internal_invariant(
                 Span::new(0, 0),
                 format!(
-                    "view zone starts ({}) and measures ({}) out of sync",
-                    view_zone_starts.len(),
+                    "measure group bounds ({}) and measures ({}) out of sync",
+                    group_bounds.len(),
                     score.measures.len()
                 ),
             ),
@@ -101,14 +95,65 @@ pub fn list_measure_spans_from_source(
     Ok(score
         .measures
         .iter()
-        .zip(view_zone_starts)
-        .map(|(measure, view_zone_start)| MeasureSourceSpan {
+        .zip(group_bounds)
+        .map(|(measure, bounds)| MeasureSourceSpan {
             start: measure.source_span.start,
             end: measure.source_span.end,
-            view_zone_start,
+            view_zone_start: bounds.view_zone_start,
             section_label: measure.label.clone(),
-            start_line: line_at(source, view_zone_start),
-            end_line: line_at(source, measure.source_span.end),
+            start_line: bounds.start_line,
+            end_line: bounds.end_line,
         })
         .collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn measure_end_line_does_not_bleed_into_next_measure_when_implicit_parts_present() {
+        // Regression: [G] (notes-only part with no score lines) received an implicit fill
+        // "0 0 0 0" anchored at the offset of the last real line ([C] 1).  The fill
+        // string is 7 bytes while "[C] 1" is only 5 bytes, so the synthetic span's end
+        // overshot into the blank separator line and then into the first line of measure 2.
+        // start_line/end_line are now derived from raw line counting in the score section,
+        // not from the compiled source_span, so implicit fills cannot affect them.
+        let source = concat!(
+            "# metadata\n",
+            "title = \n",
+            "author = \n",
+            "\n",
+            "# parts\n",
+            "Alto 1 & Tenor [A1,T] = notes lyrics\n",
+            "Alto 2 [A2] = follow[A1,T]\n",
+            "Soprano 1 [S1] = follow[A1,T]\n",
+            "Soprano 2 [S2] = follow[S1]\n",
+            "Chord [C] = chord\n",
+            "Guzheng [G] = notes\n",
+            "\n",
+            "# score\n",
+            "bpm=80 key=C4 time=4/4 label=\"Verse 1\"\n",
+            "[A1,T] 5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_\n",
+            "[A1,T] la la la la la la la la la\n",
+            "[C] 1\n",
+            "\n",
+            "[A1,T] 3_) (1_1-) 0_ 1= 1=\n",
+            "[A1,T] la la la\n",
+            "[C] 6m/3\n",
+        );
+        let spans = list_measure_spans_from_source(source, "test.jianpu").unwrap();
+        assert_eq!(spans.len(), 2);
+        assert_eq!(
+            spans[0].end_line, 17,
+            "measure 0 should end at line 17 ([C] 1)"
+        );
+        assert_eq!(spans[1].start_line, 19, "measure 1 should start at line 19");
+        assert!(
+            spans[0].end_line < spans[1].start_line,
+            "measure 0 end_line ({}) must be before measure 1 start_line ({})",
+            spans[0].end_line,
+            spans[1].start_line,
+        );
+    }
 }
