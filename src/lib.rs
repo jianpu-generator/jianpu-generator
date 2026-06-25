@@ -11,6 +11,7 @@ pub mod ast;
 pub mod combiner;
 pub mod compiler;
 pub mod compositor;
+pub mod consolidator;
 pub mod coordinate_resolver;
 pub mod desugar;
 pub mod error;
@@ -103,6 +104,7 @@ pub fn render_svgs(score: &Score) -> Result<Vec<String>, IrrecoverableError> {
         author: score.metadata.author.clone(),
     };
     let compile_result = compiler::compile(score);
+    let compile_result = consolidator::consolidate(compile_result);
     let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
     let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)?;
     let docs = renderer::new_renderer::render_new(&abs, &config);
@@ -216,6 +218,7 @@ pub fn render_svgs_with_highlight_range(
         author: score.metadata.author.clone(),
     };
     let compile_result = compiler::compile(&score);
+    let compile_result = consolidator::consolidate(compile_result);
     let grid_pages = grid_layout::layout(
         &compile_result,
         &config,
@@ -242,6 +245,7 @@ fn render_documents(
         author: score.metadata.author.clone(),
     };
     let compile_result = compiler::compile(score);
+    let compile_result = consolidator::consolidate(compile_result);
     let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
     let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)?;
     Ok(renderer::new_renderer::render_new(&abs, &config))
@@ -259,6 +263,7 @@ fn render_documents_with_range(
         author: score.metadata.author.clone(),
     };
     let compile_result = compiler::compile(score);
+    let compile_result = consolidator::consolidate(compile_result);
     let grid_pages = grid_layout::layout(
         &compile_result,
         &config,

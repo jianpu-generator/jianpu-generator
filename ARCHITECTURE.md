@@ -14,6 +14,9 @@ source (&str)
   → [compiler]            → CompileResult
                              Logical grid: each note/rest assigned to a column,
                              underlines computed, slur spans recorded.
+  → [consolidator]        → CompileResult
+                             Mixed notes+lyrics rows split; duplicate rows with
+                             identical content suppressed per measure.
   → [grid_layout]         → Vec<GridPage>
                              Grid elements placed into rows with heights and column
                              counts; rows wrapped across pages; slur arcs resolved
@@ -44,6 +47,11 @@ source (&str)
 - Module: `src/compiler/`
 - Entry: `compiler::compile(score: &Score) -> CompileResult`
 - Key types: `CompileResult`, `MeasureBlock`, `MeasureRow`, `ColumnElement`, `ElementContent`, `SlurSpan`, `Decoration`
+
+### Consolidator
+- Module: `src/consolidator/`
+- Entry: `consolidator::consolidate(result: CompileResult) -> CompileResult`
+- Splits mixed `notes lyrics` rows into separate notes and lyrics rows, then removes duplicate rows within each measure when their `elements` are identical (labels and ids are not compared). `slur_spans` are passed through unchanged.
 
 ### Grid Layout
 - Module: `src/grid_layout/`
