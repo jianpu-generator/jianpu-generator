@@ -14,7 +14,7 @@ fn chord_line_parses_spaced_slur_group() {
         "author = \"a\"\n",
         "\n",
         "# parts\n",
-        "Chord = chord\n",
+        "Chord = chords\n",
         "Melody = notes\n",
         "\n",
         "# score\n",
@@ -32,7 +32,7 @@ fn chord_line_parses_spaced_slur_group() {
 
 #[test]
 fn chord_column_events_are_parsed() {
-    let declarations = vec![decl("C", PartKind::Chord), decl("N", PartKind::Notes)];
+    let declarations = vec![decl("C", PartKind::Chords), decl("N", PartKind::Notes)];
     let content = "time=4/4 key=C4 bpm=120\n[C] 1 - - -\n[N] 1---\n";
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(tracks.len(), 2);
@@ -237,7 +237,7 @@ fn spaced_open_group_cross_measure_lyrics() {
         "[S1] 光 - 光\n",
     );
     let declarations = vec![
-        decl("main", PartKind::Chord),
+        decl("main", PartKind::Chords),
         decl("S1", PartKind::NotesWithLyrics),
     ];
     let tracks = parse(content, 0, &declarations).unwrap();
@@ -263,66 +263,6 @@ fn omitted_trailing_lyrics_without_precedent_is_recoverable() {
         lyrics.measure_syllables[1].len(),
         0,
         "measure 2 should have no syllables (treated as no lyrics)"
-    );
-}
-
-#[test]
-fn omitted_notes_row_is_filled_with_rest() {
-    // Part kind "lyrics notes" puts the lyrics row before the notes row in the score.
-    // The score has only a lyrics row; the missing notes row is silently filled with rests.
-    let input = concat!(
-        "# metadata\n",
-        "title = \"t\"\n",
-        "author = \"a\"\n",
-        "\n",
-        "# parts\n",
-        "A = lyrics notes\n",
-        "\n",
-        "# score\n",
-        "time=4/4 key=C4 bpm=120\n",
-        "[A] la la\n",
-    );
-    let doc = crate::parser::parse(input, "test.jianpu")
-        .expect("missing notes row must not abort parsing");
-    let ParsedTrack::Timed(track) = &doc.tracks[0];
-    let track_events = all_events(track);
-    let rest_events: Vec<_> = track_events
-        .iter()
-        .filter(|e| matches!(e.value, ScoreEvent::Rest(_)))
-        .collect();
-    assert!(
-        !rest_events.is_empty(),
-        "measure with missing notes row should be filled with a rest"
-    );
-    let note_events: Vec<_> = track_events
-        .iter()
-        .filter(|e| matches!(e.value, ScoreEvent::Note(_)))
-        .collect();
-    assert!(
-        note_events.is_empty(),
-        "measure with missing notes row should have no pitched note events"
-    );
-}
-
-#[test]
-fn omitted_chord_row_is_recoverable() {
-    // Part kind "notes chord" puts the notes row before the chord row in the score.
-    // With only a notes row provided, the missing chord row is now a recoverable error.
-    let input = concat!(
-        "# metadata\n",
-        "title = \"t\"\n",
-        "author = \"a\"\n",
-        "\n",
-        "# parts\n",
-        "A = notes chord\n",
-        "\n",
-        "# score\n",
-        "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-    );
-    assert!(
-        crate::parser::parse(input, "test.jianpu").is_ok(),
-        "missing chord row must not abort parsing"
     );
 }
 
@@ -355,7 +295,7 @@ fn measure_missing_chord_line_is_recoverable() {
     let content = "time=4/4 key=C4 bpm=120\n1 2 3 4\n";
     let declarations = vec![
         decl("Melody", PartKind::Notes),
-        decl("chord", PartKind::Chord),
+        decl("chord", PartKind::Chords),
     ];
     assert!(
         parse(content, 0, &declarations).is_ok(),
@@ -367,7 +307,7 @@ fn measure_missing_chord_line_is_recoverable() {
 fn no_notes_track_is_recoverable() {
     // A parts declaration with only a chord track (no notes track) must not abort parsing.
     let content = "time=4/4 key=C4 bpm=120\n1 2 3 4\n";
-    let declarations = vec![decl("Chord", PartKind::Chord)];
+    let declarations = vec![decl("Chord", PartKind::Chords)];
     assert!(
         parse(content, 0, &declarations).is_ok(),
         "parts declaration with no notes track must not abort parsing"

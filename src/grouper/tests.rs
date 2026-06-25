@@ -14,7 +14,7 @@ fn first_part_notes(score: &Score, measure_idx: usize) -> &Vec<NoteEvent> {
 #[test]
 fn groups_four_four_into_single_measure() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes lyrics\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n",
     ));
     assert_eq!(score.measures.len(), 1);
@@ -24,7 +24,7 @@ fn groups_four_four_into_single_measure() {
 #[test]
 fn splits_into_two_measures_at_bar_boundary() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes lyrics\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n\n[Melody] 5 6 7 1\n[Melody] e f g h\n",
     ));
     assert_eq!(score.measures.len(), 2);
@@ -33,7 +33,7 @@ fn splits_into_two_measures_at_bar_boundary() {
 #[test]
 fn extension_adds_to_previous_note_duration() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes lyrics\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1- 3 4\n[Melody] a - b\n",
     ));
     match &first_part_notes(&score, 0)[0] {
@@ -47,7 +47,7 @@ fn chord_invalid_token_is_recoverable() {
     use crate::error::{Diagnostic, RecoverableErrorKind};
     let score = parse_and_group(concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nChords = chord\nMelody = notes\n\n",
+        "# parts\nChords = chords\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Chords] @ 0 0 0\n[Melody] 1 2 3 4\n",
     ));
     assert!(score.measures[0].diagnostics.iter().any(|d| matches!(
@@ -62,7 +62,7 @@ fn chord_expected_degree_digit_is_recoverable() {
     use crate::error::{Diagnostic, RecoverableErrorKind};
     let score = parse_and_group(concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nChords = chord\nMelody = notes\n\n",
+        "# parts\nChords = chords\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Chords] 8 2 3 4\n[Melody] 1 2 3 4\n",
     ));
     assert!(score.measures[0].diagnostics.iter().any(|d| matches!(
@@ -73,7 +73,9 @@ fn chord_expected_degree_digit_is_recoverable() {
         .parts
         .iter()
         .find_map(|row| match row {
-            crate::ast::grouped::PartRow::Timed(part) if part.kind == PartKind::Chord => Some(part),
+            crate::ast::grouped::PartRow::Timed(part) if part.kind == PartKind::Chords => {
+                Some(part)
+            }
             crate::ast::grouped::PartRow::Timed(_) => None,
         })
         .expect("chord part");
@@ -85,7 +87,7 @@ fn chord_unknown_suffix_is_recoverable() {
     use crate::error::WarningKind;
     let score = parse_and_group(concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nChords = chord\nMelody = notes\n\n",
+        "# parts\nChords = chords\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Chords] 1z 2 3 4\n[Melody] 1 2 3 4\n",
     ));
     assert!(score.measures[0]
@@ -99,7 +101,7 @@ fn chord_invalid_bass_is_recoverable() {
     use crate::error::WarningKind;
     let score = parse_and_group(concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nChords = chord\nMelody = notes\n\n",
+        "# parts\nChords = chords\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Chords] 1/X 2 3 4\n[Melody] 1 2 3 4\n",
     ));
     assert!(score.measures[0]
@@ -113,7 +115,7 @@ fn chord_bass_unexpected_char_is_recoverable() {
     use crate::error::WarningKind;
     let score = parse_and_group(concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nChords = chord\nMelody = notes\n\n",
+        "# parts\nChords = chords\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Chords] 1/5x 2 3 4\n[Melody] 1 2 3 4\n",
     ));
     assert!(score.measures[0]
@@ -127,7 +129,7 @@ fn chord_bass_trailing_chars_is_recoverable() {
     use crate::error::WarningKind;
     let score = parse_and_group(concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nChords = chord\nMelody = notes\n\n",
+        "# parts\nChords = chords\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Chords] 1/5bb 2 3 4\n[Melody] 1 2 3 4\n",
     ));
     assert!(score.measures[0]
@@ -140,7 +142,7 @@ fn chord_bass_trailing_chars_is_recoverable() {
 fn measure_omitted_lyrics_line_is_silently_filled() {
     // One notes+lyrics part with only the notes line present: lyrics silently become empty (no error).
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes lyrics\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n",
     ));
     assert_eq!(score.measures.len(), 1);
@@ -154,7 +156,7 @@ fn measure_omitted_lyrics_line_is_silently_filled() {
 fn suffix_dash_after_rest_is_recoverable() {
     use crate::error::{Diagnostic, RecoverableErrorKind};
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes lyrics\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 0---\n[Melody] _\n",
     ));
     assert_eq!(score.measures[0].diagnostics.len(), 1);
@@ -168,7 +170,7 @@ fn suffix_dash_after_rest_is_recoverable() {
 fn dash_after_rest_is_recoverable() {
     use crate::error::{Diagnostic, RecoverableErrorKind};
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes lyrics\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 0 - - -\n[Melody] _\n",
     ));
     assert_eq!(score.measures[0].diagnostics.len(), 1);
@@ -181,7 +183,7 @@ fn dash_after_rest_is_recoverable() {
 #[test]
 fn first_measure_has_bpm_some() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes lyrics\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n",
     ));
     assert_eq!(score.measures[0].bpm, Some(120));
@@ -190,7 +192,7 @@ fn first_measure_has_bpm_some() {
 #[test]
 fn bpm_change_sets_some_on_next_measure() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes lyrics\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n\nbpm=90\n[Melody] 5 6 7 1\n[Melody] e f g h\n",
     ));
     assert_eq!(score.measures[0].bpm, Some(120));
@@ -200,7 +202,7 @@ fn bpm_change_sets_some_on_next_measure() {
 #[test]
 fn unchanged_bpm_is_none_on_second_measure() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes lyrics\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n\n[Melody] 5 6 7 1\n[Melody] e f g h\n",
     ));
     assert_eq!(score.measures[0].bpm, Some(120));
@@ -210,7 +212,7 @@ fn unchanged_bpm_is_none_on_second_measure() {
 #[test]
 fn key_change_propagates() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes lyrics\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=G4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n",
     ));
     assert_eq!(
@@ -222,7 +224,7 @@ fn key_change_propagates() {
 #[test]
 fn row_height_defaults_to_24() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes lyrics\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n",
     ));
     assert_eq!(score.metadata.row_height, 24);
@@ -231,7 +233,7 @@ fn row_height_defaults_to_24() {
 #[test]
 fn max_columns_defaults_to_28() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes lyrics\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n",
     ));
     assert_eq!(score.metadata.max_columns, 28);
@@ -240,7 +242,7 @@ fn max_columns_defaults_to_28() {
 #[test]
 fn half_beat_notes_accumulate_correctly() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes lyrics\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1_ 2_ 3_ 4_ 5_ 6_ 7_ 1_\n[Melody] a b c d e f g h\n",
     ));
     assert_eq!(score.measures.len(), 1);
@@ -271,7 +273,7 @@ fn beat_overflow_recovers_with_error_on_measure() {
 fn bpm_change_creates_new_measure() {
     // Bar 1 (bpm=120): 1 2 3 4; Bar 2 bpm=90: 5 6 7 1
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes lyrics\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n\nbpm=90\n[Melody] 5 6 7 1\n[Melody] e f g h\n",
     ));
     assert_eq!(score.measures.len(), 2);
@@ -339,7 +341,7 @@ fn label_on_second_measure_not_first() {
 #[test]
 fn lyrics_distributed_per_measure() {
     let input = concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes lyrics\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n\n[Melody] 5 6 7 1\n[Melody] e f g h\n",
     );
     let doc = parser::parse(input, "test.jianpu").unwrap();
@@ -391,7 +393,7 @@ fn standalone_tie_marker_sets_tie_on_preceding_note() {
 fn chord_extension_no_preceding_event_is_recoverable() {
     use crate::error::{Diagnostic, RecoverableErrorKind};
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nc = chord\nn = notes\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nc = chords\nn = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[c] - 1 - -\n[n] 1 2 3 4\n",
     ));
     assert!(
@@ -432,7 +434,7 @@ fn notes_extension_no_preceding_event_is_recoverable() {
 #[test]
 fn chord_part_produces_one_chord_event_per_measure() {
     use crate::ast::grouped::PartRow;
-    let input = "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nchord = chord\nMelody = notes\n\n# score\ntime=4/4 key=C4 bpm=120\n[chord] 1 - - -\n[Melody] 1---\n";
+    let input = "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nchord = chords\nMelody = notes\n\n# score\ntime=4/4 key=C4 bpm=120\n[chord] 1 - - -\n[Melody] 1---\n";
     let doc = parser::parse(input, "test.jianpu").unwrap();
     let score = group(doc).unwrap();
     let measure = &score.measures[0];
@@ -442,7 +444,7 @@ fn chord_part_produces_one_chord_event_per_measure() {
         .find(|r| {
             matches!(
                 r,
-                PartRow::Timed(p) if p.kind == PartKind::Chord
+                PartRow::Timed(p) if p.kind == PartKind::Chords
             )
         })
         .unwrap();

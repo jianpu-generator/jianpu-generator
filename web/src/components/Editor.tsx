@@ -1,11 +1,12 @@
 import MonacoEditor, { type Monaco, type OnMount } from '@monaco-editor/react'
-import type { editor } from 'monaco-editor'
+import type { editor, ISelection } from 'monaco-editor'
 import {
   forwardRef,
   type ReactNode,
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
 } from 'react'
 import type {
@@ -130,6 +131,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const onSelectionChangeRef = useRef(onSelectionChange)
   const onCursorLineChangeRef = useRef(onCursorLineChange)
   const onPlayMeasureRef = useRef(onPlayMeasure)
+  const savedSelectionRef = useRef<ISelection | null>(null)
+  const isInternalChangeRef = useRef(false)
   useEffect(() => {
     onSelectionChangeRef.current = onSelectionChange
     onCursorLineChangeRef.current = onCursorLineChange
@@ -345,6 +348,33 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     applyDiagnosticViewZones()
   }, [applyDiagnosticViewZones])
 
+  // @monaco-editor/react calls model.setValue() (via useEffect) when the value
+  // prop changes externally, which resets the cursor. The fix has two parts:
+  //
+  // 1. useLayoutEffect runs BEFORE the child's useEffect, so we snapshot the
+  //    cursor position here before setValue has a chance to reset it.
+  // 2. useEffect runs AFTER the child's useEffect (setValue + reset), so we
+  //    restore the snapshotted position here.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: value is the trigger; refs don't need to be listed
+  useLayoutEffect(() => {
+    if (!isInternalChangeRef.current) {
+      savedSelectionRef.current = editorRef.current?.getSelection() ?? null
+    }
+  }, [value])
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: value is the trigger; refs don't need to be listed
+  useEffect(() => {
+    if (isInternalChangeRef.current) {
+      isInternalChangeRef.current = false
+      return
+    }
+    const ed = editorRef.current
+    const saved = savedSelectionRef.current
+    if (ed && saved) {
+      ed.setSelection(saved)
+    }
+  }, [value])
+
   return (
     <div className="editor">
       {toolbar ? <div className="editor-toolbar">{toolbar}</div> : null}
@@ -354,7 +384,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           language="plaintext"
           theme={EDITOR_THEME}
           value={value}
-          onChange={(next) => onChange(next ?? '')}
+          onChange={(next) => {
+            isInternalChangeRef.current = true
+            onChange(next ?? '')
+          }}
           beforeMount={(monacoApi) => {
             monacoApi.editor.defineTheme(EDITOR_THEME, {
               base: 'vs',

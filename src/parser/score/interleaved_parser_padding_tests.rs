@@ -143,7 +143,7 @@ fn last_chord_event_duration(tracks: &[ParsedTrack], abbrev: &str) -> u32 {
 #[test]
 fn implicit_trailing_chord_extensions_match_explicit() {
     let declarations = vec![
-        decl("chord", PartKind::Chord),
+        decl("chord", PartKind::Chords),
         decl("Melody", PartKind::Notes),
     ];
     let explicit = "time=4/4 key=C4 bpm=120\n[chord] 1 - - -\n[Melody] 1\n";
@@ -157,7 +157,7 @@ fn implicit_trailing_chord_extensions_match_explicit() {
 #[test]
 fn implicit_trailing_chord_extensions_after_partial_fill() {
     let declarations = vec![
-        decl("chord", PartKind::Chord),
+        decl("chord", PartKind::Chords),
         decl("Melody", PartKind::Notes),
     ];
     let explicit = "time=4/4 key=C4 bpm=120\n[chord] 1m 2m - -\n[Melody] 1 2 3 4\n";

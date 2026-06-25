@@ -1,4 +1,4 @@
-use crate::ast::parsed::{PartDecl, PartKind};
+use crate::ast::parsed::{PartDecl, PartKind, Soundfont};
 use crate::error::{RecoverableError, Span};
 
 pub fn parse_parts(content: &str, base_offset: usize) -> (Vec<PartDecl>, Vec<RecoverableError>) {
@@ -17,6 +17,7 @@ struct RawDecl {
     abbreviation: String,
     span: Span,
     kind: RawKind,
+    soundfont: Soundfont,
 }
 
 enum RawKind {
@@ -65,8 +66,8 @@ fn collect_raw_declarations(
             continue;
         }
 
-        let kind = match parse_rhs(rhs.trim(), line_span) {
-            Ok(k) => k,
+        let (kind, soundfont) = match parse_rhs(rhs.trim(), line_span, errors) {
+            Ok(pair) => pair,
             Err(e) => {
                 errors.push(e);
                 continue;
@@ -77,6 +78,7 @@ fn collect_raw_declarations(
             abbreviation,
             span: line_span,
             kind,
+            soundfont,
         });
     }
 
@@ -91,6 +93,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
             abbreviation,
             span,
             kind,
+            soundfont,
         } = raw_decl;
         match kind {
             RawKind::Follow(target) => {
@@ -111,6 +114,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                         display_name,
                         kind: target_decl.kind,
                         follow_target: Some(target),
+                        soundfont,
                     }),
                 }
             }
@@ -119,6 +123,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                 display_name,
                 kind,
                 follow_target: None,
+                soundfont,
             }),
         }
     }
@@ -146,26 +151,77 @@ fn parse_lhs(lhs: &str, span: Span) -> Result<(String, String), RecoverableError
     Ok((name.clone(), name))
 }
 
-fn parse_rhs(rhs: &str, span: Span) -> Result<RawKind, RecoverableError> {
+fn parse_soundfont_string(
+    s: &str,
+    span: Span,
+    rhs: &str,
+    errors: &mut Vec<RecoverableError>,
+) -> Result<Soundfont, RecoverableError> {
+    let s = s.trim();
+    if !s.starts_with('"') {
+        errors.push(RecoverableError::parts_invalid_columns(span, rhs));
+        return Err(RecoverableError::parts_invalid_columns(span, rhs));
+    }
+    let after_quote = &s[1..];
+    let close_pos = match after_quote.find('"') {
+        Some(p) => p,
+        None => {
+            errors.push(RecoverableError::parts_invalid_columns(span, rhs));
+            return Err(RecoverableError::parts_invalid_columns(span, rhs));
+        }
+    };
+    let sf_value = &after_quote[..close_pos];
+    if let Some(colon_pos) = sf_value.find(": ") {
+        Ok(sf_value[..colon_pos]
+            .trim()
+            .parse::<u8>()
+            .map(Soundfont)
+            .unwrap_or_else(|_| {
+                errors.push(RecoverableError::parts_invalid_columns(span, sf_value));
+                Soundfont::default()
+            }))
+    } else {
+        errors.push(RecoverableError::parts_invalid_columns(span, sf_value));
+        Ok(Soundfont::default())
+    }
+}
+
+fn parse_rhs(
+    rhs: &str,
+    span: Span,
+    errors: &mut Vec<RecoverableError>,
+) -> Result<(RawKind, Soundfont), RecoverableError> {
     if let Some(rest) = rhs.strip_prefix("follow[") {
-        if let Some(target) = rest.strip_suffix(']') {
-            let target = target.trim().to_string();
+        if let Some(bracket_end) = rest.find(']') {
+            let target = rest[..bracket_end].trim().to_string();
             if target.is_empty() {
                 return Err(RecoverableError::parts_invalid_columns(span, rhs));
             }
-            return Ok(RawKind::Follow(target));
+            let after_bracket = rest[bracket_end + 1..].trim();
+            let soundfont = if after_bracket.is_empty() {
+                Soundfont::default()
+            } else {
+                parse_soundfont_string(after_bracket, span, rhs, errors)?
+            };
+            return Ok((RawKind::Follow(target), soundfont));
         }
     }
-    let tokens: Vec<&str> = rhs.split_whitespace().collect();
-    let kind = match tokens.as_slice() {
-        ["chord"] => PartKind::Chord,
-        ["notes"] => PartKind::Notes,
-        ["notes", "lyrics"] => PartKind::NotesWithLyrics,
-        ["lyrics", "notes"] => PartKind::LyricsWithNotes,
-        ["notes", "chord"] => PartKind::NotesWithChord,
+
+    let (kind_token, soundfont) = if let Some(quote_pos) = rhs.find('"') {
+        let kind_token = rhs[..quote_pos].trim();
+        let soundfont = parse_soundfont_string(&rhs[quote_pos..], span, rhs, errors)?;
+        (kind_token, soundfont)
+    } else {
+        (rhs.trim(), Soundfont::default())
+    };
+
+    let kind = match kind_token {
+        "chords" => PartKind::Chords,
+        "notes" => PartKind::Notes,
+        "notes+lyrics" => PartKind::NotesWithLyrics,
         _ => return Err(RecoverableError::parts_invalid_columns(span, rhs)),
     };
-    Ok(RawKind::Concrete(kind))
+    Ok((RawKind::Concrete(kind), soundfont))
 }
 
 #[cfg(test)]

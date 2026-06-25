@@ -243,7 +243,7 @@ mod tests {
             "author = \"a\"\n",
             "\n",
             "# parts\n",
-            "c = chord\n",
+            "c = chords\n",
             "n = notes\n",
             "\n",
             "# score\n",

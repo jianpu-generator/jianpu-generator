@@ -17,21 +17,29 @@ pub struct ParsedLyrics {
     pub measure_ends: Vec<usize>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Soundfont(pub u8);
+
+impl Default for Soundfont {
+    fn default() -> Self {
+        Self(52) // Choir Aahs
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct PartDecl {
     pub abbreviation: String,
     pub display_name: String,
     pub kind: PartKind,
     pub follow_target: Option<String>,
+    pub soundfont: Soundfont,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PartKind {
-    Chord,
+    Chords,
     Notes,
     NotesWithLyrics,
-    LyricsWithNotes,
-    NotesWithChord,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -50,11 +58,9 @@ pub struct ScoreLineSlot {
 impl PartDecl {
     pub fn score_line_roles(&self) -> &'static [ScoreLineRole] {
         match self.kind {
-            PartKind::Chord => &[ScoreLineRole::Chord],
+            PartKind::Chords => &[ScoreLineRole::Chord],
             PartKind::Notes => &[ScoreLineRole::Notes],
             PartKind::NotesWithLyrics => &[ScoreLineRole::Notes, ScoreLineRole::Lyrics],
-            PartKind::LyricsWithNotes => &[ScoreLineRole::Lyrics, ScoreLineRole::Notes],
-            PartKind::NotesWithChord => &[ScoreLineRole::Notes, ScoreLineRole::Chord],
         }
     }
 }
@@ -79,6 +85,7 @@ pub struct ParsedTimedTrack {
     pub abbreviation: String,
     pub display_name: String,
     pub kind: PartKind,
+    pub soundfont: Soundfont,
     pub measure_slots: Vec<ParsedMeasureSlot>,
     pub lyrics: Option<ParsedLyrics>,
     /// Per-measure beat-overflow error (None = no overflow for that measure).

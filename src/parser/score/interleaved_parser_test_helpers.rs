@@ -1,4 +1,6 @@
-use crate::ast::parsed::{ParsedMeasureSlot, ParsedTimedTrack, ParsedTrack, PartDecl, PartKind};
+use crate::ast::parsed::{
+    ParsedMeasureSlot, ParsedTimedTrack, ParsedTrack, PartDecl, PartKind, Soundfont,
+};
 use crate::error::Spanned;
 use crate::error::{IrrecoverableError, RecoverableError};
 
@@ -28,6 +30,7 @@ pub(super) fn decl(name: &str, kind: PartKind) -> PartDecl {
         display_name: name.into(),
         kind,
         follow_target: None,
+        soundfont: Soundfont::default(),
     }
 }
 

@@ -4,8 +4,8 @@ import { expect, test } from '@playwright/test'
  * The default demo (Twinkle Twinkle Little Star) declares two parts:
  *
  *   # parts
- *   Chord = chord
- *   Melody = notes lyrics
+ *   Chord = chords
+ *   Melody = notes+lyrics
  *
  * Line 12 in the editor is the first chord line of measure 1.
  *

@@ -1,5 +1,5 @@
 use super::*;
-use crate::ast::parsed::PartKind;
+use crate::ast::parsed::{PartKind, Soundfont};
 
 fn decl(name: &str, kind: PartKind) -> PartDecl {
     PartDecl {
@@ -7,6 +7,7 @@ fn decl(name: &str, kind: PartKind) -> PartDecl {
         display_name: name.to_string(),
         kind,
         follow_target: None,
+        soundfont: Soundfont::default(),
     }
 }
 
@@ -16,6 +17,7 @@ fn decl_follow(name: &str, kind: PartKind, target: &str) -> PartDecl {
         display_name: name.to_string(),
         kind,
         follow_target: Some(target.to_string()),
+        soundfont: Soundfont::default(),
     }
 }
 
@@ -51,7 +53,7 @@ fn omitted_trailing_lyrics_without_precedent_fills_with_no_lyrics_silently() {
 #[test]
 fn omitted_trailing_notes_without_precedent_fills_with_rest_silently() {
     let groups = vec![group(&["[A] 1 - - -"])];
-    let declarations = vec![decl("A", PartKind::Chord), decl("B", PartKind::Notes)];
+    let declarations = vec![decl("A", PartKind::Chords), decl("B", PartKind::Notes)];
     let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
     assert_eq!(
         result[0][1].0, "0 0 0 0",
@@ -66,7 +68,7 @@ fn omitted_trailing_notes_without_precedent_fills_with_rest_silently() {
 #[test]
 fn omitted_trailing_chord_without_precedent_fills_with_rest_silently() {
     let groups = vec![group(&["[A] 1 2 3 4"])];
-    let declarations = vec![decl("A", PartKind::Notes), decl("B", PartKind::Chord)];
+    let declarations = vec![decl("A", PartKind::Notes), decl("B", PartKind::Chords)];
     let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
     assert_eq!(
         result[0][1].0, "0 0 0 0",

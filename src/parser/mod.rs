@@ -170,7 +170,7 @@ mod tests {
     fn parses_full_document() {
         let input = concat!(
             "# metadata\ntitle = \"hello world\"\nauthor = \"foo\"\n\n",
-            "# parts\nMelody = notes lyrics\n\n",
+            "# parts\nMelody = notes+lyrics\n\n",
             "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] 你好wo rld\n"
         );
         let doc = parse(input, "test.jianpu").unwrap();
@@ -320,7 +320,7 @@ mod tests {
     fn single_unnamed_part_remains_compatible() {
         let input = concat!(
             "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-            "# parts\nMelody = notes lyrics\n\n",
+            "# parts\nMelody = notes+lyrics\n\n",
             "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n"
         );
         let doc = parse(input, "test.jianpu").unwrap();

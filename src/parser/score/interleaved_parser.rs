@@ -94,15 +94,7 @@ fn no_notes_track_warning(
 ) -> Option<RecoverableError> {
     declarations
         .iter()
-        .any(|d| {
-            matches!(
-                d.kind,
-                PartKind::Notes
-                    | PartKind::NotesWithLyrics
-                    | PartKind::LyricsWithNotes
-                    | PartKind::NotesWithChord
-            )
-        })
+        .any(|d| matches!(d.kind, PartKind::Notes | PartKind::NotesWithLyrics))
         .then_some(())
         .is_none()
         .then(|| {
@@ -116,15 +108,7 @@ fn no_notes_track_warning(
 fn first_notes_track_index(declarations: &[PartDecl]) -> usize {
     declarations
         .iter()
-        .position(|d| {
-            matches!(
-                d.kind,
-                PartKind::Notes
-                    | PartKind::NotesWithLyrics
-                    | PartKind::LyricsWithNotes
-                    | PartKind::NotesWithChord
-            )
-        })
+        .position(|d| matches!(d.kind, PartKind::Notes | PartKind::NotesWithLyrics))
         .unwrap_or(0)
 }
 

@@ -82,7 +82,7 @@ mod tests {
     use crate::error::RecoverableErrorKind;
 
     fn three_section_input(score: &str) -> String {
-        format!("# metadata\ntitle = \"hi\"\n\n# parts\nMelody = notes lyrics\n\n# score\n{score}")
+        format!("# metadata\ntitle = \"hi\"\n\n# parts\nMelody = notes+lyrics\n\n# score\n{score}")
     }
 
     #[test]
@@ -94,7 +94,7 @@ mod tests {
         assert_eq!(sections[0].kind, SectionKind::Metadata);
         assert_eq!(sections[1].kind, SectionKind::Parts);
         assert_eq!(sections[2].kind, SectionKind::Score);
-        assert_eq!(sections[1].content.trim(), "Melody = notes lyrics");
+        assert_eq!(sections[1].content.trim(), "Melody = notes+lyrics");
         assert_eq!(sections[2].content.trim(), "1 2 3");
     }
 
@@ -159,14 +159,14 @@ mod tests {
 
     #[test]
     fn content_offset_points_past_header_line() {
-        let input = "# metadata\ntitle = \"hi\"\n\n# parts\nMelody = notes lyrics\n\n# score\n";
+        let input = "# metadata\ntitle = \"hi\"\n\n# parts\nMelody = notes+lyrics\n\n# score\n";
         let (sections, _errors) = split_sections(input);
         assert_eq!(sections[0].content_offset, 11);
     }
 
     #[test]
     fn handles_header_with_no_content() {
-        let input = "# metadata\ntitle = \"hi\"\n\n# parts\nMelody = notes lyrics\n\n# score\n";
+        let input = "# metadata\ntitle = \"hi\"\n\n# parts\nMelody = notes+lyrics\n\n# score\n";
         let (sections, _errors) = split_sections(input);
         assert_eq!(sections.len(), 3);
         assert_eq!(sections[2].kind, SectionKind::Score);

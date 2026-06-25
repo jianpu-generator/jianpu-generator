@@ -8,11 +8,11 @@ max columns = 48
 note number width = 8
 
 # parts
-Alto 1 & Tenor [A1,T] = notes lyrics
+Alto 1 & Tenor [A1,T] = notes+lyrics
 Alto 2 [A2] = follow[A1,T]
 Soprano 1 [S1] = follow[A1,T]
 Soprano 2 [S2] = follow[S1]
-Chord [C] = chord
+Chord [C] = chords
 Guzheng [G] = notes
 
 # score

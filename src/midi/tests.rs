@@ -8,7 +8,7 @@ fn chord_major_expands_to_three_notes() {
         TimeSignature,
     };
     use crate::ast::parsed::{
-        Accidental, JianPuPitch, KeyChange, Note, NoteName, PartKind, TriadQuality,
+        Accidental, JianPuPitch, KeyChange, Note, NoteName, PartKind, Soundfont, TriadQuality,
     };
 
     let key = KeyChange {
@@ -51,7 +51,8 @@ fn chord_major_expands_to_three_notes() {
             label: None,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
-                kind: PartKind::Chord,
+                kind: PartKind::Chords,
+                soundfont: Soundfont::default(),
                 notes: Notes {
                     events: vec![NoteEvent::Chord(chord)],
                 },
@@ -131,7 +132,7 @@ fn one_measure_score() -> Score {
     use crate::ast::grouped::{
         Metadata, MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
     };
-    use crate::ast::parsed::{JianPuPitch, PartKind};
+    use crate::ast::parsed::{JianPuPitch, PartKind, Soundfont};
     Score {
         metadata: Metadata {
             title: String::new(),
@@ -159,6 +160,7 @@ fn one_measure_score() -> Score {
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
                 kind: PartKind::Notes,
+                soundfont: Soundfont::default(),
                 notes: Notes {
                     events: vec![NoteEvent::Note(GroupedNote {
                         pitch: JianPuPitch::One,

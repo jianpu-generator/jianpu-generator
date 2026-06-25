@@ -68,14 +68,15 @@ One track per line. Blank lines are ignored.
 
 | Pattern | Meaning | Score lines per measure |
 |---------|---------|-------------------------|
-| `chord` | Chord-symbol row | 1 |
+| `chords` | Chord-symbol row | 1 |
 | `notes` | Notes only (instrumental) | 1 |
-| `notes lyrics` | Notes + lyrics | 2 (notes, then lyrics) |
+| `notes+lyrics` | Notes + lyrics | 2 (notes, then lyrics) |
 | `follow[X]` | Inherit column layout from the part with abbreviation `X` | same as target |
+
+An optional soundfont string `"<number>: <name>"` may follow the kind token (or `follow[X]` bracket) to select the MIDI timbre for that part. The number is the General MIDI program number (0–127). For example: `notes "52: Choir Aahs"` or `follow[A] "1: Grand Piano"`. If omitted, the default is program 52 (Choir Aahs).
 
 Rules:
 
-- `lyrics` without `notes` on the same line is an error.
 - Duplicate abbreviations across tracks are an error.
 - At least one track must be declared.
 - `follow[X]` cannot be used for the first declared part.
@@ -87,18 +88,18 @@ Example (multi-part vocal score with chords):
 
 ```
 # parts
-main = chord
-Alto 1 & Tenor [A1&T] = notes lyrics
-Alto 2 [A2] = notes lyrics
-Soprano 1 [S1] = notes lyrics
-Soprano 2 [S2] = notes lyrics
+main = chords
+Alto 1 & Tenor [A1&T] = notes+lyrics
+Alto 2 [A2] = notes+lyrics
+Soprano 1 [S1] = notes+lyrics
+Soprano 2 [S2] = notes+lyrics
 ```
 
 Minimal single-part example:
 
 ```
 # parts
-Melody = notes lyrics
+Melody = notes+lyrics
 ```
 
 ---
@@ -185,7 +186,7 @@ A: `1 2 3 4`. B: not mentioned → copies A's content via `follow`. C: `5 6 7 0`
 
 ```
 # parts
-Soprano [S] = notes lyrics
+Soprano [S] = notes+lyrics
 Alto [A] = follow[S]
 
 # score
@@ -495,7 +496,7 @@ When a part is **not mentioned** in a measure (no positional or `[Key]` lines co
 
 ```
 # parts
-A = chord
+A = chords
 B = notes
 
 # score
@@ -529,7 +530,7 @@ title = "Demo"
 author = "Author"
 
 # parts
-Melody [M] = notes lyrics
+Melody [M] = notes+lyrics
 Harmony [H] = follow[M]
 
 # score

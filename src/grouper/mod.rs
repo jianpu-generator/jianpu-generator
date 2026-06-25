@@ -4,7 +4,7 @@ use crate::ast::grouped::{
 };
 use crate::ast::parsed::{
     ParsedChordNote, ParsedDocument, ParsedMeasureSlot, ParsedNote, ParsedRest, ParsedTimedTrack,
-    ParsedTrack, PartKind, ScoreEvent,
+    ParsedTrack, PartKind, ScoreEvent, Soundfont,
 };
 use crate::combiner;
 use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Warning};
@@ -66,6 +66,7 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
 
 struct PartGrouper {
     part_kind: PartKind,
+    soundfont: Soundfont,
     slots: Vec<MeasureSlot>,
     current_notes: Vec<NoteEvent>,
     current_beat: u32,
@@ -89,6 +90,7 @@ impl PartGrouper {
 
         Self {
             part_kind: part.kind,
+            soundfont: part.soundfont,
             slots: Vec::new(),
             current_notes: Vec::new(),
             current_beat: 0,
@@ -202,7 +204,7 @@ impl PartGrouper {
                 return Ok(());
             }
             None => {
-                let chord_track = self.part_kind == PartKind::Chord;
+                let chord_track = self.part_kind == PartKind::Chords;
                 self.pending_extension_no_preceding_event_error
                     .get_or_insert_with(|| {
                         RecoverableError::extension_no_preceding_event(span, chord_track)
@@ -314,7 +316,7 @@ impl PartGrouper {
         }
     }
 
-    fn finish(mut self) -> (Vec<MeasureSlot>, Option<String>, PartKind) {
+    fn finish(mut self) -> (Vec<MeasureSlot>, Option<String>, PartKind, Soundfont) {
         if !self.current_notes.is_empty() {
             let source_span =
                 Span::new(self.measure_span_start.unwrap_or(0), self.measure_span_end);
@@ -337,7 +339,7 @@ impl PartGrouper {
             })));
         }
 
-        (self.slots, self.part_name, self.part_kind)
+        (self.slots, self.part_name, self.part_kind, self.soundfont)
     }
 }
 
@@ -372,7 +374,7 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
             }
         }
     }
-    let (slots, name, kind) = grouper.finish();
+    let (slots, name, kind, soundfont) = grouper.finish();
     let mut measures = align_empty_note_measures(
         slots,
         &PerMeasureErrors {
@@ -390,12 +392,10 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
     let mut grouped = GroupedPart {
         name,
         kind,
+        soundfont,
         measures,
     };
-    if matches!(
-        part_kind,
-        PartKind::NotesWithLyrics | PartKind::LyricsWithNotes
-    ) {
+    if matches!(part_kind, PartKind::NotesWithLyrics) {
         let lyrics_spans: Vec<Span> = lyrics_measure_starts
             .iter()
             .zip(lyrics_measure_ends.iter())

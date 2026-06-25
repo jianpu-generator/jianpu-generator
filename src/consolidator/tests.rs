@@ -25,7 +25,7 @@ fn follow_part_identical_to_source_is_omitted_per_measure() {
         "\n",
         "\n",
         "# parts\n",
-        "A = notes lyrics\n",
+        "A = notes+lyrics\n",
         "B = follow[A]\n",
         "\n",
         "# score\n",

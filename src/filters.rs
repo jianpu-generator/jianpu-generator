@@ -44,10 +44,7 @@ pub fn apply_lyrics_filter(score: &mut Score, disabled_lyrics: Option<&[String]>
                 .is_some_and(|name| tracks.contains(name))
             {
                 part_slice.lyrics = None;
-                if matches!(
-                    part_slice.kind,
-                    PartKind::NotesWithLyrics | PartKind::LyricsWithNotes
-                ) {
+                if matches!(part_slice.kind, PartKind::NotesWithLyrics) {
                     part_slice.kind = PartKind::Notes;
                 }
             }

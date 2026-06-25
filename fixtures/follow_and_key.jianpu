@@ -3,9 +3,9 @@ title = "follow and key syntax examples"
 author = "test"
 
 # parts
-Soprano [S] = notes lyrics
+Soprano [S] = notes+lyrics
 Alto [A] = follow[S]
-Tenor [T] = notes lyrics
+Tenor [T] = notes+lyrics
 Bass [B] = notes
 
 # score

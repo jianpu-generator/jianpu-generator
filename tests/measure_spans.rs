@@ -124,11 +124,11 @@ title = ""
 author = ""
 
 # parts
-Chord = chord
-Alto 1 & Tenor (A1,T) = notes lyrics
-Alto 2 (A2) = notes lyrics
-Soprano 1 (S1) = notes lyrics
-Soprano 2 (S2) = notes lyrics
+Chord = chords
+Alto 1 & Tenor (A1,T) = notes+lyrics
+Alto 2 (A2) = notes+lyrics
+Soprano 1 (S1) = notes+lyrics
+Soprano 2 (S2) = notes+lyrics
 
 # score
 bpm=80 key=C4 time=4/4 label="Verse 1"

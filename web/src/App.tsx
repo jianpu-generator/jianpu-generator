@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AssetLoadingBanner } from './components/AssetLoadingBanner'
 import { Editor } from './components/Editor'
+import { EditPartsModal } from './components/EditPartsModal'
 import { FileTabBar } from './components/FileList'
 import { PartToggles } from './components/PartToggles'
 import { PlayMeasureButton } from './components/PlayMeasureButton'
@@ -27,6 +28,11 @@ import {
 } from './partToggleCache'
 import type { EditorHandle } from './types'
 import { byteOffsetToStringIndex } from './utils/byteSpan'
+import type { PartMode, SoundfontValue } from './utils/partSource'
+import {
+  parsePartDeclarations,
+  updatePartDeclaration,
+} from './utils/partSource'
 import './App.css'
 import './file-tab-bar.css'
 import './preview.css'
@@ -56,6 +62,7 @@ export default function App() {
     const cached = readPartTogglesForFile(fileId)
     return new Set(cached?.soloedParts ?? [])
   })
+  const [editPartsOpen, setEditPartsOpen] = useState(false)
   const editorRef = useRef<EditorHandle>(null)
   const skipToggleSaveRef = useRef(false)
   const soundfont = useAssetLoader('/fonts/GeneralUser_GS.sf2')
@@ -261,6 +268,30 @@ export default function App() {
     [setStore],
   )
 
+  const partDeclarations = useMemo(
+    () => parsePartDeclarations(source, parts),
+    [source, parts],
+  )
+
+  const handlePartDeclarationChange = useCallback(
+    (
+      abbreviation: string,
+      mode: PartMode,
+      followTarget: string | null,
+      soundfont: SoundfontValue | null,
+    ) => {
+      const newSource = updatePartDeclaration(
+        source,
+        abbreviation,
+        mode,
+        followTarget,
+        soundfont,
+      )
+      handleSourceChange(newSource)
+    },
+    [source, handleSourceChange],
+  )
+
   const sectionLabels = useMemo<SectionLabel[]>(() => {
     const seen = new Set<string>()
     const result: SectionLabel[] = []
@@ -345,7 +376,9 @@ export default function App() {
                       : undefined
                 }
                 toolbar={
-                  audioAvailable || sectionLabels.length > 0 ? (
+                  audioAvailable ||
+                  sectionLabels.length > 0 ||
+                  partDeclarations.length > 0 ? (
                     <div
                       style={{
                         display: 'flex',
@@ -353,6 +386,16 @@ export default function App() {
                         gap: '0.5rem',
                       }}
                     >
+                      {partDeclarations.length > 0 && (
+                        <button
+                          type="button"
+                          className="section-jump-btn"
+                          data-testid="edit-parts-btn"
+                          onClick={() => setEditPartsOpen(true)}
+                        >
+                          Edit Parts
+                        </button>
+                      )}
                       {audioAvailable && (
                         <PlayMeasureButton
                           disabled={
@@ -392,6 +435,13 @@ export default function App() {
                     </div>
                   ) : null
                 }
+              />
+              <EditPartsModal
+                open={editPartsOpen}
+                onOpenChange={setEditPartsOpen}
+                partDeclarations={partDeclarations}
+                allParts={parts}
+                onPartDeclarationChange={handlePartDeclarationChange}
               />
             </div>
           </div>

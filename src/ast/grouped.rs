@@ -34,6 +34,7 @@ pub struct Lyrics {
 pub struct PartSlice {
     pub name: Option<String>,
     pub kind: crate::ast::parsed::PartKind,
+    pub soundfont: crate::ast::parsed::Soundfont,
     pub notes: Notes,
     pub lyrics: Option<Lyrics>,
     /// True when this slice's source measure had at least one `Diagnostic::Error`.
@@ -148,6 +149,7 @@ pub(crate) struct GroupedMeasure {
 pub(crate) struct GroupedPart {
     pub(crate) name: Option<String>,
     pub(crate) kind: crate::ast::parsed::PartKind,
+    pub(crate) soundfont: crate::ast::parsed::Soundfont,
     pub(crate) measures: Vec<GroupedMeasure>,
 }
 

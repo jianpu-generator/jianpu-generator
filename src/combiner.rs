@@ -183,15 +183,16 @@ fn build_part_rows(
                     continue;
                 };
                 let lyrics = match part.kind {
-                    PartKind::NotesWithLyrics | PartKind::LyricsWithNotes => measure
+                    PartKind::NotesWithLyrics => measure
                         .paired_lyrics
                         .clone()
                         .map(|syllables| Lyrics { syllables }),
-                    PartKind::Chord | PartKind::Notes | PartKind::NotesWithChord => None,
+                    PartKind::Chords | PartKind::Notes => None,
                 };
                 let slice = PartSlice {
                     name: part.name.clone(),
                     kind: part.kind,
+                    soundfont: part.soundfont,
                     notes: Notes {
                         events: measure.notes.events.clone(),
                     },
@@ -263,7 +264,7 @@ mod tests {
         // Omitted trailing lyrics with no ditto source: silently treated as no lyrics.
         let input = concat!(
             "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-            "# parts\nA = notes lyrics\n\n",
+            "# parts\nA = notes+lyrics\n\n",
             "# score\n",
             "[A] 1 2 3 4\n",
             "\n",

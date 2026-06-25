@@ -26,6 +26,7 @@ pub mod parser;
 pub mod render_config;
 pub mod renderer;
 pub mod serializer;
+pub mod source_edit;
 pub mod split_track;
 pub mod utils;
 
@@ -131,10 +132,7 @@ pub fn list_parts_from_source(
         .map(|d| PartInfo {
             abbreviation: d.abbreviation,
             display_name: d.display_name,
-            has_lyrics: matches!(
-                d.kind,
-                PartKind::NotesWithLyrics | PartKind::LyricsWithNotes
-            ),
+            has_lyrics: matches!(d.kind, PartKind::NotesWithLyrics),
         })
         .collect())
 }

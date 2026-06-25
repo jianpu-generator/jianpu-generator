@@ -36,12 +36,12 @@ source (&str)
 ### Parser
 - Module: `src/parser/`
 - Entry: `parser::parse(source: &str, filename: &str) -> Result<ParsedDocument, IrrecoverableError>`
-- Key types: `ParsedDocument`, `ParsedTimedTrack`, `ParsedScore`, `ScoreEvent`, `ParsedNote`, `ParsedRest`, `ParsedChordNote`, `ParsedMetadata`, `JianPuPitch`, `Accidental`, `Syllable`
+- Key types: `ParsedDocument`, `ParsedTimedTrack`, `ParsedScore`, `ScoreEvent`, `ParsedNote`, `ParsedRest`, `ParsedChordNote`, `ParsedMetadata`, `JianPuPitch`, `Accidental`, `Syllable`, `Soundfont` (vocal/piano/string; selects MIDI channel+program)
 
 ### Grouper
 - Module: `src/grouper/`
 - Entry: `grouper::group(doc: ParsedDocument) -> Result<Score, IrrecoverableError>`
-- Key types: `Score`, `MultiPartMeasure`, `PartRow` (Timed), `PartSlice`, `Notes`, `NoteEvent`, `GroupedNote`, `GroupedRest`, `GroupedChordNote`, `GroupedMeasure` (intermediate: notes + paired lyrics per measure)
+- Key types: `Score`, `MultiPartMeasure`, `PartRow` (Timed), `PartSlice` (carries `soundfont`), `Notes`, `NoteEvent`, `GroupedNote`, `GroupedRest`, `GroupedChordNote`, `GroupedMeasure` (intermediate: notes + paired lyrics per measure)
 
 ### Compiler
 - Module: `src/compiler/`

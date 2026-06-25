@@ -10,7 +10,7 @@ fn score_from(source: &str) -> crate::ast::grouped::Score {
 /// Lyrics-part document with one track.
 fn lyrics_doc(score_content: &str) -> String {
     format!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nS = notes lyrics\n\n# score\n{score_content}"
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nS = notes+lyrics\n\n# score\n{score_content}"
     )
 }
 
@@ -24,7 +24,7 @@ fn notes_doc(score_content: &str) -> String {
 /// Chord-part document with one track.
 fn chord_doc(score_content: &str) -> String {
     format!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nC = chord\n\n# score\n{score_content}"
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nC = chords\n\n# score\n{score_content}"
     )
 }
 
@@ -191,8 +191,8 @@ title=\"t\"
 author=\"a\"
 
 # parts
-A = notes lyrics
-B = chord
+A = notes+lyrics
+B = chords
 C = notes
 
 # score

@@ -5,7 +5,6 @@ use oxisynth::{MidiEvent, SoundFont, Synth, SynthDescriptor};
 use std::io::Cursor;
 
 const SAMPLE_RATE: u32 = 44100;
-const CHOIR_AAHS_PROGRAM: u8 = 52;
 /// Target peak level before encoding (0.95 ≈ −0.4 dBFS), matching typical mastered music.
 const TARGET_PEAK: f32 = 0.95;
 
@@ -33,15 +32,10 @@ fn handle_midi_message(synth: &mut Synth, channel: u8, message: &MidiMessage) {
     let ch = channel;
     match message {
         MidiMessage::ProgramChange { program } => {
-            let p = if program.as_int() == 0 {
-                CHOIR_AAHS_PROGRAM
-            } else {
-                program.as_int()
-            };
             synth
                 .send_event(MidiEvent::ProgramChange {
                     channel: ch,
-                    program_id: p,
+                    program_id: program.as_int(),
                 })
                 .ok();
         }

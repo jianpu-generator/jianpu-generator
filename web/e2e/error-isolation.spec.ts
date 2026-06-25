@@ -6,7 +6,7 @@ const SOURCE_WITH_UNDERFLOW_IN_MEASURE_1 = [
   'author="a"',
   '',
   '# parts',
-  'Melody = notes lyrics',
+  'Melody = notes+lyrics',
   '',
   '# score',
   '(time=4/4 key=C4 bpm=120)',
