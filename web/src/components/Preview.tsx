@@ -127,7 +127,9 @@ function renderSvgElement(
           y={el.y}
           width={kind.width}
           height={kind.height}
+          data-variant={el.variant}
           fill="transparent"
+          rx={2}
           style={{ cursor: 'pointer' }}
         />
       )
@@ -138,6 +140,8 @@ function renderSvgElement(
         // biome-ignore lint/a11y/noStaticElementInteractions: SVG group is a visual click target, not a document-level interactive element
         <g
           key={key}
+          data-tag={measureIndex !== undefined ? 'measure' : undefined}
+          data-measure-index={measureIndex}
           onClick={
             measureIndex !== undefined
               ? () => onMeasureClick?.(measureIndex)

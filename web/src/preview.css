@@ -110,6 +110,13 @@
   height: auto;
 }
 
+.preview-page
+  svg
+  g[data-tag="measure"]:hover
+  > rect[data-variant="measure-click-target-rect"] {
+  fill: rgba(100, 160, 255, 0.2);
+}
+
 .play-measure-wrapper {
   position: relative;
   display: inline-flex;
