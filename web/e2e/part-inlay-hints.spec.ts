@@ -6,14 +6,14 @@ import { expect, test } from '@playwright/test'
  *   Melody [M] = notes lyrics   (2 data lines per measure)
  *   Chords [C] = chord          (1 data line per measure)
  *
- * After WASM initialises and returns score line hints from the pre-desugar
- * score tree, the editor should display inlay hints at each positional data line:
+ * reference.jianpu uses explicit [M] and [C] key prefixes on every score line,
+ * so part abbreviations appear in the source text rather than as inlay hints:
  *
  *   Line 17: label="Scale degrees 1-7 & rest 0"  ← directive, no hint
- *   Line 18: [M] 1 2 3 0                          ← Melody notes line
- *   Line 19: [M] do re mi                         ← Melody lyrics line
+ *   Line 18: [M] 1 2 3 0                          ← Melody notes line (keyed)
+ *   Line 19: [M] do re mi                         ← Melody lyrics line (keyed)
  *
- * Lines already prefixed with a key (e.g. "[C] 1 - - -") receive no hint.
+ * Keyed lines receive no inlay hint; the [Abbrev] prefix is part of the source.
  */
 test('shows part inlay hints on each data line within a measure', async ({
   page,
@@ -45,7 +45,7 @@ test('shows part inlay hint on lyrics line', async ({ page }) => {
   await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
   await page.waitForTimeout(1_000)
 
-  // Line 19 is the Melody lyrics line ("do re mi") in reference.jianpu.
+  // Line 19 is the Melody lyrics line ("[M] do re mi") in reference.jianpu.
   await page.click('.monaco-editor .view-lines')
   await page.keyboard.press('Control+g')
   await page.keyboard.type('19')
@@ -54,7 +54,7 @@ test('shows part inlay hint on lyrics line', async ({ page }) => {
 
   const lyricsLine = page
     .locator('.monaco-editor .view-line')
-    .filter({ hasText: 'do re mi' })
+    .filter({ hasText: '[M] do re mi' })
   await expect(lyricsLine.getByText('[M]', { exact: false })).toBeVisible({
     timeout: 3_000,
   })
@@ -96,7 +96,7 @@ test('shows hints for every measure, not just the first', async ({ page }) => {
   // Scroll to a later measure so we verify hints are not restricted to measure 1.
   await page.click('.monaco-editor .view-lines')
   await page.keyboard.press('Control+g')
-  // Line 38 is the Melody notes line of the "Slur group" measure.
+  // Line 38 is the Melody notes line of the "Slur group" measure ("[M] (1 2) (3 4)").
   await page.keyboard.type('38')
   await page.keyboard.press('Enter')
 

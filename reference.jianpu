@@ -12,89 +12,89 @@ Melody [M] = notes lyrics
 Chords [C] = chord
 
 # score
-0 0 0 0
+[M] 0 0 0 0
 
 label="Scale degrees 1-7 & rest 0"
-1 2 3 0
-do re mi
+[M] 1 2 3 0
+[M] do re mi
 
 label="Octave: up (') & down (,)"
-1' 2' 1, 2,
-_
+[M] 1' 2' 1, 2,
+[M] _
 
 label="Duration: eighth (_) & sixteenth (=)"
-1_ 1_ 1= 1= 1= 1= 1 -
-_
+[M] 1_ 1_ 1= 1= 1= 1= 1 -
+[M] _
 
 label="Duration: dotted (.)"
-1. 2_ 1_. 2= 0
-_
+[M] 1. 2_ 1_. 2= 0
+[M] _
 
 label="Duration: extension (-)"
-1 - - -
+[M] 1 - - -
 
 
 label="Slur group"
-(1 2) (3 4)
-_
+[M] (1 2) (3 4)
+[M] _
 
 label="Nested slur"
-((1_ 2_) 3) 4
-_
+[M] ((1_ 2_) 3) 4
+[M] _
 
 label="Cross-measure slur (bar 1 of 2)"
-1 2 3 (4
+[M] 1 2 3 (4
 
 
 
-5) 6 7 0
-_
+[M] 5) 6 7 0
+[M] _
 
 label="Chord: major & minor (m)"
-0
-_
-1 1m 1 1m
+[M] 0
+[M] _
+[C] 1 1m 1 1m
 
 label="Chord: dominant 7th (17)"
-0
-_
-17 4m7 57 1
+[M] 0
+[M] _
+[C] 17 4m7 57 1
 
 
 label="Chord: major 7th (1M7) & minor 7th (1m7)"
-0
-_
-1M7 4m7 1m7 1
+[M] 0
+[M] _
+[C] 1M7 4m7 1m7 1
 
 
 label="Chord: slash bass (1/5)"
-0
-_
-1/5 - 5/7 -
+[M] 0
+[M] _
+[C] 1/5 - 5/7 -
 
 
 label="Chord: rest (0) & extension (-)"
-0
-_
-0 0 1 -
+[M] 0
+[M] _
+[C] 0 0 1 -
 
 label="Lyrics: CJK syllables"
-1 2 3 4
-春天来了
+[M] 1 2 3 4
+[M] 春天来了
 
 label="Lyrics: Latin syllables"
-1 2 3 4
-do re mi fa
+[M] 1 2 3 4
+[M] do re mi fa
 
 label="Lyrics: syllable break (-)"
-1 2 3 4
-La la la la
+[M] 1 2 3 4
+[M] La la la la
 
 label="Lyrics: no-lyrics marker (_)"
-0
-_
+[M] 0
+[M] _
 
 label="Explicit chord key"
-1 2 3 4
-do re mi fa
+[M] 1 2 3 4
+[M] do re mi fa
 [C] 1 - - -
