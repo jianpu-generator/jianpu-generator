@@ -142,18 +142,20 @@ pub(crate) fn make_header_rows(header: &Header, base: f32) -> Vec<GridRow> {
             },
         });
     }
-    subtitle_author_elements.push(GridElement {
-        column: 0,
-        column_span: 1,
-        halign: HAlign::End,
-        valign: VAlign::Center,
-        content: GridContent::Text {
-            content: header.author.clone(),
-            font_size: base * 0.6,
-            bold: false,
-            italic: false,
-        },
-    });
+    if let Some(author) = &header.author {
+        subtitle_author_elements.push(GridElement {
+            column: 0,
+            column_span: 1,
+            halign: HAlign::End,
+            valign: VAlign::Center,
+            content: GridContent::Text {
+                content: author.clone(),
+                font_size: base * 0.6,
+                bold: false,
+                italic: false,
+            },
+        });
+    }
     let subtitle_author_row = GridRow {
         height_pt: header_subtitle_author_row_height(base),
         column_count: 1,

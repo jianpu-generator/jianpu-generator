@@ -35,7 +35,7 @@ fn chord_major_expands_to_three_notes() {
         metadata: Metadata {
             title: String::new(),
             subtitle: None,
-            author: String::new(),
+            author: None,
             row_height: 24,
             max_columns: 28,
             label_width: 40,
@@ -137,7 +137,7 @@ fn one_measure_score() -> Score {
         metadata: Metadata {
             title: String::new(),
             subtitle: None,
-            author: String::new(),
+            author: None,
             row_height: 24,
             max_columns: 28,
             label_width: 40,

@@ -29,7 +29,7 @@ mod tests {
         let meta = Metadata {
             title: String::new(),
             subtitle: None,
-            author: String::new(),
+            author: None,
             row_height: 30,
             label_width: 20,
             note_number_width: 12,

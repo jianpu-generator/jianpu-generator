@@ -152,7 +152,7 @@ pub struct ParsedChordSymbol {
 pub struct ParsedMetadata {
     pub title: String,
     pub subtitle: Option<String>,
-    pub author: String,
+    pub author: Option<String>,
     pub row_height: Option<u32>,
     pub max_columns: Option<u32>,
     pub label_width: Option<u32>,

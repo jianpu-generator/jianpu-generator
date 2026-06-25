@@ -34,7 +34,7 @@ Whitespace around `=` in metadata is optional. Metadata values may be quoted wit
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `title` | yes | — | Piece title (rendered in header) |
-| `author` | yes | — | Author name (rendered in header) |
+| `author` | no | none | Author name (rendered in header) |
 | `subtitle` | no | none | Subtitle line |
 | `max columns` | no | `28` | Maximum grid columns per system line before wrapping |
 | `row height` | no | `24` | Vertical spacing of one part row (pixels) |

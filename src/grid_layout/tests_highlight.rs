@@ -33,7 +33,7 @@ fn no_header() -> Header {
     Header {
         title: String::new(),
         subtitle: None,
-        author: String::new(),
+        author: None,
     }
 }
 
@@ -151,7 +151,7 @@ fn erroneous_measure_produces_error_highlight() {
     let header = Header {
         title: "T".into(),
         subtitle: None,
-        author: "A".into(),
+        author: Some("A".into()),
     };
     let config = crate::render_config::RenderConfig {
         row_height: 24,
@@ -184,7 +184,7 @@ fn non_erroneous_measure_produces_no_error_highlight() {
     let header = Header {
         title: "T".into(),
         subtitle: None,
-        author: "A".into(),
+        author: Some("A".into()),
     };
     let config = crate::render_config::RenderConfig {
         row_height: 24,

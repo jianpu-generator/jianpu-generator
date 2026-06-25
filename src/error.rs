@@ -25,14 +25,12 @@ impl DocumentSection {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RequiredMetadataField {
     Title,
-    Author,
 }
 
 impl RequiredMetadataField {
     pub(crate) fn label(self) -> &'static str {
         match self {
             Self::Title => "title",
-            Self::Author => "author",
         }
     }
 }

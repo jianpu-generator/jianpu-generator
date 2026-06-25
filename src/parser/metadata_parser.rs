@@ -82,14 +82,6 @@ pub fn parse_metadata(
         ));
         String::new()
     });
-    let author = author.unwrap_or_else(|| {
-        errors.push(RecoverableError::metadata_missing_field(
-            zero_span,
-            RequiredMetadataField::Author,
-        ));
-        String::new()
-    });
-
     (
         ParsedMetadata {
             title,
@@ -114,7 +106,7 @@ mod tests {
         let (meta, errors) = parse_metadata(content, 0);
         assert!(errors.is_empty());
         assert_eq!(meta.title, "hello world");
-        assert_eq!(meta.author, "foo");
+        assert_eq!(meta.author, Some("foo".to_string()));
         assert_eq!(meta.row_height, None);
         assert_eq!(meta.max_columns, None);
         assert_eq!(meta.label_width, None);
@@ -146,12 +138,11 @@ mod tests {
     }
 
     #[test]
-    fn collects_error_for_missing_author() {
+    fn author_is_optional() {
         let content = "title = \"foo\"\n";
-        let (_meta, errors) = parse_metadata(content, 0);
-        assert!(errors
-            .iter()
-            .any(|e| e.message().contains("missing required field: author")));
+        let (meta, errors) = parse_metadata(content, 0);
+        assert!(errors.is_empty());
+        assert_eq!(meta.author, None);
     }
 
     #[test]

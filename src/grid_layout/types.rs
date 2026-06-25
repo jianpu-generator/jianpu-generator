@@ -151,7 +151,7 @@ pub enum PostArcGridContent {
 pub struct Header {
     pub title: String,
     pub subtitle: Option<String>,
-    pub author: String,
+    pub author: Option<String>,
 }
 
 #[derive(Debug, Clone)]

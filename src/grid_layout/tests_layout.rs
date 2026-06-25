@@ -42,7 +42,7 @@ fn hdr() -> Header {
     Header {
         title: "Song".to_string(),
         subtitle: None,
-        author: "Me".to_string(),
+        author: Some("Me".to_string()),
     }
 }
 
