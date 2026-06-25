@@ -31,6 +31,9 @@ export interface EditorProps {
 }
 
 const MARKER_OWNER = 'jianpu'
+const EDITOR_THEME = 'jianpu'
+// Matches preview measure highlight (rgba(255, 200, 0, 0.25)); Monaco only accepts hex.
+const MEASURE_HIGHLIGHT_COLOR = '#ffc80040'
 
 function diagnosticRange(
   model: editor.ITextModel,
@@ -349,9 +352,20 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         <MonacoEditor
           height="100%"
           language="plaintext"
-          theme="vs"
+          theme={EDITOR_THEME}
           value={value}
           onChange={(next) => onChange(next ?? '')}
+          beforeMount={(monacoApi) => {
+            monacoApi.editor.defineTheme(EDITOR_THEME, {
+              base: 'vs',
+              inherit: true,
+              rules: [],
+              colors: {
+                'editor.lineHighlightBackground': MEASURE_HIGHLIGHT_COLOR,
+                'editor.lineHighlightBorder': '#00000000',
+              },
+            })
+          }}
           onMount={handleMount}
           options={{
             readOnly,
@@ -363,7 +377,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             scrollBeyondLastLine: false,
             wordWrap: 'off',
             tabSize: 2,
-            renderLineHighlight: 'none',
+            renderLineHighlight: 'line',
             renderValidationDecorations: 'on',
             overviewRulerLanes: 2,
             hideCursorInOverviewRuler: true,
