@@ -304,13 +304,15 @@ fn measure_missing_chord_line_is_recoverable() {
 }
 
 #[test]
-fn no_notes_track_is_recoverable() {
-    // A parts declaration with only a chord track (no notes track) must not abort parsing.
-    let content = "time=4/4 key=C4 bpm=120\n1 2 3 4\n";
+fn chord_only_parts_produces_no_errors() {
+    // A parts declaration with only a chord track must parse cleanly with no errors.
+    let content = "time=4/4 key=C4 bpm=120\n[Chord] 1 2 3 4\n";
     let declarations = vec![decl("Chord", PartKind::Chords)];
+    let desugar_errors = parse_recoverable_errors(content, 0, &declarations)
+        .expect("chord-only parts must not abort parsing");
     assert!(
-        parse(content, 0, &declarations).is_ok(),
-        "parts declaration with no notes track must not abort parsing"
+        desugar_errors.iter().all(|e| e.is_none()),
+        "chord-only parts must produce no errors, got: {desugar_errors:?}"
     );
 }
 

@@ -87,24 +87,6 @@ struct BarGroupContext<'a> {
     extra_document_errors: &'a mut Vec<RecoverableError>,
 }
 
-fn no_notes_track_warning(
-    declarations: &[PartDecl],
-    content: &str,
-    base_offset: usize,
-) -> Option<RecoverableError> {
-    declarations
-        .iter()
-        .any(|d| matches!(d.kind, PartKind::Notes | PartKind::NotesWithLyrics))
-        .then_some(())
-        .is_none()
-        .then(|| {
-            RecoverableError::general(
-                Span::new(base_offset, base_offset + content.len()),
-                "parts declaration has no notes track",
-            )
-        })
-}
-
 fn first_notes_track_index(declarations: &[PartDecl]) -> usize {
     declarations
         .iter()
@@ -153,7 +135,7 @@ fn finalize_unclosed_groups(
     }
 }
 
-fn attach_no_notes_track_warning(
+fn attach_document_error(
     per_group_desugar_errors: &mut Vec<Option<RecoverableError>>,
     error: RecoverableError,
 ) {
@@ -168,7 +150,6 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
     let (groups, per_group_desugar_errors) =
         crate::desugar::desugar_groups(groups, declarations, base_offset)?;
 
-    let no_notes_track_error = no_notes_track_warning(declarations, content, base_offset);
     let first_notes_track_index = first_notes_track_index(declarations);
 
     let slots = flatten_score_line_slots(declarations);
@@ -216,9 +197,6 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
 
     let tracks = build_parse_result(declarations, accumulators)?;
     let mut per_group_desugar_errors = per_group_desugar_errors;
-    if let Some(error) = no_notes_track_error {
-        attach_no_notes_track_warning(&mut per_group_desugar_errors, error);
-    }
     for (slot, directive_error) in per_group_desugar_errors
         .iter_mut()
         .zip(per_measure_directive_errors)
@@ -228,7 +206,7 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
         }
     }
     for error in extra_document_errors {
-        attach_no_notes_track_warning(&mut per_group_desugar_errors, error);
+        attach_document_error(&mut per_group_desugar_errors, error);
     }
     Ok((
         tracks,
