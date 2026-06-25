@@ -17,8 +17,8 @@ fn basic_jianpu_input() -> &'static str {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        "do re mi fa\n",
+        "[Melody] 1 2 3 4\n",
+        "[Melody] do re mi fa\n",
     )
 }
 
@@ -122,10 +122,10 @@ fn multi_track_jianpu_input() -> &'static str {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        "do re mi fa\n",
-        "5 6 7 1\n",
-        "sol la ti do\n",
+        "[S1] 1 2 3 4\n",
+        "[S1] do re mi fa\n",
+        "[S2] 5 6 7 1\n",
+        "[S2] sol la ti do\n",
     )
 }
 

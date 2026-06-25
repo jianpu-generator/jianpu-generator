@@ -1,5 +1,5 @@
 use crate::ast::parsed::{flatten_score_line_slots, PartDecl, ScoreLineRole};
-use crate::error::{IrrecoverableError, RecoverableError, RecoverableErrorKind, Span};
+use crate::error::{IrrecoverableError, RecoverableError, Span};
 use crate::parser::score::measure_group;
 
 type SourceLine = (String, usize);
@@ -62,18 +62,10 @@ struct GroupContext {
     time_num: u8,
 }
 
-fn part_list(declarations: &[PartDecl]) -> String {
-    declarations
-        .iter()
-        .map(|d| d.abbreviation.as_str())
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
 fn expand_measure_group(
     group: &[SourceLine],
     declarations: &[PartDecl],
-    slots: &[crate::ast::parsed::ScoreLineSlot],
+    _slots: &[crate::ast::parsed::ScoreLineSlot],
     base_offset: usize,
     time_num: u8,
 ) -> Result<(MeasureGroup, Option<RecoverableError>), IrrecoverableError> {
@@ -95,35 +87,28 @@ fn expand_measure_group(
         time_num,
     };
 
-    let mut positional: Vec<SourceLine> = Vec::new();
+    let mut recoverable_error: Option<RecoverableError> = None;
     let mut keyed: Vec<(String, String, usize)> = Vec::new();
 
     for (line, offset) in data_lines {
         if let Some((key, content)) = parse_key_prefix(line) {
-            keyed.push((key.to_string(), content.to_string(), *offset));
+            let prefix_length = line.len().saturating_sub(content.len());
+            keyed.push((key.to_string(), content.to_string(), offset + prefix_length));
         } else {
-            positional.push((line.clone(), *offset));
+            recoverable_error.get_or_insert_with(|| {
+                RecoverableError::score_line_missing_key_prefix(Span::new(
+                    base_offset + offset,
+                    base_offset + offset + 1,
+                ))
+            });
         }
     }
 
-    let mut recoverable_error: Option<RecoverableError> = None;
-
     let result_data = if keyed.is_empty() {
-        expand_positional(
-            positional,
-            slots,
-            declarations,
-            &context,
-            &mut recoverable_error,
-        )
+        recoverable_error.replace(RecoverableError::measure_no_data_lines(context.span));
+        Vec::new()
     } else {
-        expand_keyed(
-            positional,
-            keyed,
-            declarations,
-            &context,
-            &mut recoverable_error,
-        )
+        expand_keyed(keyed, declarations, &context, &mut recoverable_error)
     };
 
     let mut result = directive_lines.to_vec();
@@ -131,99 +116,14 @@ fn expand_measure_group(
     Ok((result, recoverable_error))
 }
 
-fn expand_positional(
-    positional: Vec<SourceLine>,
-    slots: &[crate::ast::parsed::ScoreLineSlot],
-    declarations: &[PartDecl],
-    context: &GroupContext,
-    recoverable_error: &mut Option<RecoverableError>,
-) -> Vec<SourceLine> {
-    let effective: Vec<SourceLine> = if positional.is_empty() {
-        *recoverable_error = Some(RecoverableError::measure_no_data_lines(context.span));
-        Vec::new()
-    } else if positional.len() > slots.len() {
-        recoverable_error.get_or_insert_with(|| {
-            RecoverableError::measure_too_many_lines(
-                context.span,
-                positional.len(),
-                slots.len(),
-                &part_list(declarations),
-            )
-        });
-        positional
-            .get(..slots.len())
-            .unwrap_or(&positional)
-            .to_vec()
-    } else {
-        positional
-    };
-
-    // Track per-track filled lines so follow targets can be resolved when padding.
-    let mut filled_by_track: Vec<Vec<SourceLine>> = vec![Vec::new(); declarations.len()];
-    for (slot, line) in slots.iter().zip(effective.iter()) {
-        if let Some(bucket) = filled_by_track.get_mut(slot.track_index) {
-            bucket.push(line.clone());
-        }
-    }
-
-    let mut result = effective;
-    for slot in slots.get(result.len()..).unwrap_or(&[]) {
-        let local_idx = filled_by_track
-            .get(slot.track_index)
-            .map(|v| v.len())
-            .unwrap_or(0);
-        let line = declarations
-            .get(slot.track_index)
-            .and_then(|d| d.follow_target.as_ref())
-            .and_then(|target| declarations.iter().position(|d| &d.abbreviation == target))
-            .and_then(|ft| filled_by_track.get(ft)?.get(local_idx).cloned())
-            .unwrap_or_else(|| {
-                (
-                    implicit_fill(slot.role, context.time_num),
-                    context.pad_offset,
-                )
-            });
-        if let Some(bucket) = filled_by_track.get_mut(slot.track_index) {
-            bucket.push(line.clone());
-        }
-        result.push(line);
-    }
-    result
-}
-
 fn expand_keyed(
-    mut positional: Vec<SourceLine>,
     keyed: Vec<(String, String, usize)>,
     declarations: &[PartDecl],
     context: &GroupContext,
     recoverable_error: &mut Option<RecoverableError>,
 ) -> Vec<SourceLine> {
-    let Some(first_decl) = declarations.first() else {
-        return Vec::new();
-    };
-    let first_part_slot_count = first_decl.score_line_roles().len();
-
-    if positional.len() > first_part_slot_count {
-        recoverable_error.get_or_insert_with(|| {
-            RecoverableError::measure_too_many_lines(
-                context.span,
-                positional.len(),
-                first_part_slot_count,
-                &part_list(declarations),
-            )
-        });
-        positional.truncate(first_part_slot_count);
-    }
-    for &role in first_decl
-        .score_line_roles()
-        .get(positional.len()..)
-        .unwrap_or(&[])
-    {
-        positional.push((implicit_fill(role, context.time_num), context.pad_offset));
-    }
-
     let key_map = filter_keyed_into_key_map(keyed, declarations, context, recoverable_error);
-    resolve_tracks(positional, &key_map, declarations, context)
+    resolve_tracks(&key_map, declarations, context)
 }
 
 fn filter_keyed_into_key_map(
@@ -232,11 +132,6 @@ fn filter_keyed_into_key_map(
     context: &GroupContext,
     recoverable_error: &mut Option<RecoverableError>,
 ) -> KeyMap {
-    let Some(first_decl) = declarations.first() else {
-        return Vec::new();
-    };
-    let first_abbrev = &first_decl.abbreviation;
-
     let valid_keyed: Vec<_> = keyed
         .into_iter()
         .filter(|(key, _, offset)| {
@@ -244,13 +139,7 @@ fn filter_keyed_into_key_map(
                 context.base_offset + offset,
                 context.base_offset + offset + 1,
             );
-            if key == first_abbrev {
-                recoverable_error.get_or_insert(RecoverableError {
-                    span: line_span,
-                    kind: RecoverableErrorKind::PartKeyUsedForFirstPart { key: key.clone() },
-                });
-                false
-            } else if !declarations.iter().any(|d| &d.abbreviation == key) {
+            if !declarations.iter().any(|d| &d.abbreviation == key) {
                 recoverable_error
                     .get_or_insert_with(|| RecoverableError::part_key_unknown(line_span, key));
                 false
@@ -296,15 +185,13 @@ fn filter_keyed_into_key_map(
 }
 
 fn resolve_tracks(
-    positional: Vec<SourceLine>,
     key_map: &KeyMap,
     declarations: &[PartDecl],
     context: &GroupContext,
 ) -> Vec<SourceLine> {
     let mut resolved_per_track: Vec<Vec<SourceLine>> = Vec::with_capacity(declarations.len());
-    resolved_per_track.push(positional);
 
-    for i in 1..declarations.len() {
+    for i in 0..declarations.len() {
         let Some(decl) = declarations.get(i) else {
             continue;
         };

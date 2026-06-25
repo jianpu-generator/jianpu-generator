@@ -18,7 +18,7 @@ fn three_same_pitch_notes_emits_two_tie_arcs() {
     // "(555)" — three quarter notes of the same pitch under a tie group.
     // Ties draw one arc per consecutive pair: (col 4→8) and (col 8→12).
     // col 0=note 1, col 4=first 5, col 8=second 5, col 12=third 5.
-    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n1 (555)\n"));
+    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 1 (555)\n"));
     let result = compile(&score);
     assert_eq!(
         result.slur_spans.len(),
@@ -47,7 +47,7 @@ fn three_same_pitch_notes_emits_two_tie_arcs() {
 #[test]
 fn same_measure_slur_emits_slur_span() {
     // "(4 5)" open on note 4 (col 0), close on note 5 (col 4).
-    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n(4 5) 0 0\n"));
+    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] (4 5) 0 0\n"));
     let result = compile(&score);
     assert!(
         result.slur_spans.iter().any(|s| {
@@ -68,9 +68,9 @@ fn cross_measure_slur_emits_single_slur_span() {
     // Bar 2: "5) 6 7 1" — slur closes on note 5 at col 0.
     let score = score_from(&notes_doc(concat!(
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 (4\n",
+        "[S] 1 2 3 (4\n",
         "\n",
-        "5) 6 7 1\n",
+        "[S] 5) 6 7 1\n",
     )));
     let result = compile(&score);
     assert!(
@@ -100,9 +100,9 @@ fn cross_measure_tie_emits_single_slur_span() {
     // Bar 2: "4) 5 6 7" — note 4 at col 0 closes the tie.
     let score = score_from(&notes_doc(concat!(
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 (4\n",
+        "[S] 1 2 3 (4\n",
         "\n",
-        "4) 5 6 7\n",
+        "[S] 4) 5 6 7\n",
     )));
     let result = compile(&score);
     assert!(
@@ -124,9 +124,9 @@ fn cross_measure_slur_closing_on_extension_dash() {
     // Bar 2: "5 -) - -" — slur closes at the extension dash at col 4.
     let score = score_from(&notes_doc(concat!(
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 (4\n",
+        "[S] 1 2 3 (4\n",
         "\n",
-        "5 -) - -\n",
+        "[S] 5 -) - -\n",
     )));
     let result = compile(&score);
     assert!(
@@ -153,11 +153,11 @@ fn three_measure_slur_emits_single_slur_span() {
     // Bar 3: "2) 3 4 5" — slur closes on note 2 at col 0.
     let score = score_from(&notes_doc(concat!(
         "time=4/4 key=C4 bpm=120\n",
-        "(1 2 3 4\n",
+        "[S] (1 2 3 4\n",
         "\n",
-        "5 6 7 1\n",
+        "[S] 5 6 7 1\n",
         "\n",
-        "2) 3 4 5\n",
+        "[S] 2) 3 4 5\n",
     )));
     let result = compile(&score);
     assert!(
@@ -182,9 +182,9 @@ fn cross_measure_arc_dropped_when_target_measure_has_error() {
     // Expected: no slur span connecting bar 0 to bar 1.
     let score = score_from(&notes_doc(concat!(
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 (4\n",
+        "[S] 1 2 3 (4\n",
         "\n",
-        "- 5) 6 7 1\n",
+        "[S] - 5) 6 7 1\n",
     )));
     let result = compile(&score);
     assert!(
@@ -204,11 +204,11 @@ fn three_measure_slur_with_single_note_middle_measure() {
     // Bar 3: "2) 3 4 5" — slur closes on note 2 at col 0.
     let score = score_from(&notes_doc(concat!(
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 (4\n",
+        "[S] 1 2 3 (4\n",
         "\n",
-        "5 6 7 1\n",
+        "[S] 5 6 7 1\n",
         "\n",
-        "2) 3 4 5\n",
+        "[S] 2) 3 4 5\n",
     )));
     let result = compile(&score);
     assert!(

@@ -171,7 +171,7 @@ mod tests {
         let input = concat!(
             "# metadata\ntitle = \"hello world\"\nauthor = \"foo\"\n\n",
             "# parts\nMelody = notes lyrics\n\n",
-            "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n你好wo rld\n"
+            "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] 你好wo rld\n"
         );
         let doc = parse(input, "test.jianpu").unwrap();
         assert_eq!(doc.metadata.title, "hello world");
@@ -206,8 +206,8 @@ mod tests {
         let input = concat!(
             "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
             "# parts\nMelody = notes\n\n",
-            "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n\n",
-            "# score\n5 6 7 1\n",
+            "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n\n",
+            "# score\n[Melody] 5 6 7 1\n",
         );
         let doc =
             parse(input, "test.jianpu").expect("duplicate score section must not abort parsing");
@@ -221,7 +221,7 @@ mod tests {
     fn missing_metadata_section_recoverable() {
         let input = concat!(
             "# parts\nMelody = notes\n\n",
-            "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n"
+            "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n"
         );
         let doc =
             parse(input, "test.jianpu").expect("missing metadata section must not abort parsing");
@@ -238,8 +238,8 @@ mod tests {
             "# parts\nSoprano = notes\nAlto = notes\n\n",
             "# score\n",
             "time=4/4 key=C4 bpm=120\n",
-            "1 2 3 4\n",
-            "5 6 7 1\n",
+            "[Soprano] 1 2 3 4\n",
+            "[Alto] 5 6 7 1\n",
         );
         let doc = parse(input, "test.jianpu").unwrap();
         assert_eq!(doc.tracks.len(), 2);
@@ -276,10 +276,10 @@ mod tests {
             "Melody = notes\n",
             "\n",
             "# score\n",
-            "1 2 3 4\n",
-            "5 6 7 1\n",
+            "[Melody] 1 2 3 4\n",
+            "[Melody] 5 6 7 1\n",
         );
-        let expected_offset = input.find("5 6 7 1").unwrap();
+        let expected_offset = input.rfind("5 6 7 1").unwrap();
         let doc = parse(input, "test.jianpu").expect("too-many-lines must not abort parsing");
         let error = doc.per_measure_parse_errors[0]
             .as_ref()
@@ -302,8 +302,8 @@ mod tests {
             "Melody = notes\n",
             "\n",
             "# score\n",
-            "1 2 3 4\n",
-            "5 6 7 1\n",
+            "[Melody] 1 2 3 4\n",
+            "[Melody] 5 6 7 1\n",
         );
         let doc = parse(input, "test.jianpu").expect("too-many-lines must not abort parsing");
         let error = doc.per_measure_parse_errors[0]
@@ -321,7 +321,7 @@ mod tests {
         let input = concat!(
             "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
             "# parts\nMelody = notes lyrics\n\n",
-            "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\na b c d\n"
+            "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n"
         );
         let doc = parse(input, "test.jianpu").unwrap();
         assert_eq!(doc.tracks.len(), 1);

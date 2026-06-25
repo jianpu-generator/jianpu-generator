@@ -1,7 +1,12 @@
 use crate::ast::grouped::Score;
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
+use crate::error::IrrecoverableError;
+#[cfg(feature = "pdf")]
+use crate::error::{IrrecoverableErrorKind, Span};
+#[cfg(feature = "pdf")]
 use crate::filters::filter_tracks;
-use crate::{list_parts_from_source, render_svgs};
+use crate::list_parts_from_source;
+#[cfg(feature = "pdf")]
+use crate::render_svgs;
 
 /// Sanitize a track name for use in filenames (mirrors CLI).
 pub fn sanitize_track_name(name: &str) -> String {

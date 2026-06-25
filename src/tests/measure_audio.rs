@@ -15,9 +15,9 @@ fn two_measure_source() -> &'static str {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
+        "[Melody] 1 2 3 4\n",
         "\n",
-        "5 6 7 1\n",
+        "[Melody] 5 6 7 1\n",
     )
 }
 
@@ -62,11 +62,11 @@ fn two_part_source() -> &'static str {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1\n",
-        "1 2 3 4\n",
+        "[Chord] 1\n",
+        "[Melody] 1 2 3 4\n",
         "\n",
-        "5\n",
-        "5 6 7 1\n",
+        "[Chord] 5\n",
+        "[Melody] 5 6 7 1\n",
     )
 }
 
@@ -96,21 +96,21 @@ fn twinkle_source() -> &'static str {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 - - -\n",
-        "1 1 5 5\n",
-        "twin- kle twin- kle\n",
+        "[Chord] 1 - - -\n",
+        "[Melody] 1 1 5 5\n",
+        "[Melody] twin- kle twin- kle\n",
         "\n",
-        "5 - - -\n",
-        "6 6 5-\n",
-        "lit- tle star\n",
+        "[Chord] 5 - - -\n",
+        "[Melody] 6 6 5-\n",
+        "[Melody] lit- tle star\n",
         "\n",
-        "4 - - -\n",
-        "4 4 3 3\n",
-        "how I won- der\n",
+        "[Chord] 4 - - -\n",
+        "[Melody] 4 4 3 3\n",
+        "[Melody] how I won- der\n",
         "\n",
-        "4 - - -\n",
-        "2 2 1-\n",
-        "what you are\n",
+        "[Chord] 4 - - -\n",
+        "[Melody] 2 2 1-\n",
+        "[Melody] what you are\n",
     )
 }
 

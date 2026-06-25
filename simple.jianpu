@@ -8,6 +8,6 @@ max columns = 20
 Melody = notes
 
 # score
-1 2 3 (4
+[Melody] 1 2 3 (4
 
-5) 6 7 1
+[Melody] 5) 6 7 1

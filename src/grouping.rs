@@ -228,7 +228,7 @@ mod tests {
             concat!(
                 "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
                 "# score\ntime=4/4 key=C4 bpm=120\n",
-                "{notes_line}"
+                "[Melody] {notes_line}"
             ),
             notes_line = notes_line
         );
@@ -248,8 +248,8 @@ mod tests {
             "\n",
             "# score\n",
             "time=4/4 key=C4 bpm=120\n",
-            "1. 2. 3_ 4_\n",
-            "1 2 3 4\n",
+            "[c] 1. 2. 3_ 4_\n",
+            "[n] 1 2 3 4\n",
         );
         let output = crate::render_svgs_from_source(input, "t.jianpu").unwrap();
         assert!(output
@@ -318,7 +318,7 @@ mod tests {
         let input = concat!(
             "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
             "# score\ntime=3/4 key=C4 bpm=120\n",
-            "1 2 3\n",
+            "[Melody] 1 2 3\n",
         );
         assert!(crate::render_svgs_from_source(input, "test.jianpu").is_ok());
     }

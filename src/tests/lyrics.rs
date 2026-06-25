@@ -13,10 +13,10 @@ fn explicit_lyrics_keep_lyric_row() {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        "do re mi fa\n",
-        "5 6 7 1\n",
-        "la la la la\n",
+        "[Soprano] 1 2 3 4\n",
+        "[Soprano] do re mi fa\n",
+        "[Alto] 5 6 7 1\n",
+        "[Alto] la la la la\n",
     );
     let score = compile(input, "test.jianpu").unwrap();
     for part in &score.measures[0].parts {

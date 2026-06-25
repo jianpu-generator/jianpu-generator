@@ -10,9 +10,9 @@ const TWO_MEASURE_SOURCE: &str = concat!(
     "Melody = notes\n",
     "\n",
     "# score\n",
-    "1 2 3 4\n",
+    "[Melody] 1 2 3 4\n",
     "\n",
-    "5 6 7 1\n",
+    "[Melody] 5 6 7 1\n",
 );
 
 const DIRECTIVE_MEASURE_SOURCE: &str = concat!(
@@ -25,7 +25,7 @@ const DIRECTIVE_MEASURE_SOURCE: &str = concat!(
     "\n",
     "# score\n",
     "bpm=60\n",
-    "1 2 3 4\n",
+    "[Melody] 1 2 3 4\n",
 );
 
 const LABEL_DIRECTIVE_SOURCE: &str = concat!(
@@ -38,7 +38,7 @@ const LABEL_DIRECTIVE_SOURCE: &str = concat!(
     "\n",
     "# score\n",
     "label=\"something \"\n",
-    "1 2 3 4\n",
+    "[Melody] 1 2 3 4\n",
 );
 
 #[test]
@@ -54,10 +54,18 @@ fn spans_are_ordered_by_source_position() {
 }
 
 #[test]
-fn view_zone_start_matches_content_start_without_directive() {
+fn view_zone_start_is_at_or_before_content_start_without_directive() {
+    // When there is no leading directive line, the view zone starts at the beginning
+    // of the first data line (the [Abbrev] prefix), which is at or before the
+    // note content start.
     let spans = list_measure_spans_from_source(TWO_MEASURE_SOURCE, "test.jianpu").unwrap();
-    assert_eq!(spans[0].view_zone_start, spans[0].start);
-    assert_eq!(spans[1].view_zone_start, spans[1].start);
+    assert!(spans[0].view_zone_start <= spans[0].start);
+    assert!(spans[1].view_zone_start <= spans[1].start);
+    // The view zone should start where the [Abbrev] prefix begins on the first data line.
+    let first_line_start = TWO_MEASURE_SOURCE.find("[Melody] 1 2 3 4").unwrap();
+    assert_eq!(spans[0].view_zone_start, first_line_start);
+    let second_line_start = TWO_MEASURE_SOURCE.find("[Melody] 5 6 7 1").unwrap();
+    assert_eq!(spans[1].view_zone_start, second_line_start);
 }
 
 #[test]
@@ -124,17 +132,17 @@ Soprano 2 (S2) = notes lyrics
 
 # score
 bpm=80 key=C4 time=4/4 label="Verse 1"
-1 - - -
-5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_
-白陽旗旛在大道盛宏
+[Chord] 1 - - -
+[A1,T] 5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_
+[A1,T] 白陽旗旛在大道盛宏
 
-6m/3
-3_) (1_1-) 0_ 1= 1=
-昌花花
+[Chord] 6m/3
+[A1,T] 3_) (1_1-) 0_ 1= 1=
+[A1,T] 昌花花
 
-4
-2. 3_ 4_ 3= 3= (2_1_)
-草擺動道音歌-"#;
+[Chord] 4
+[A1,T] 2. 3_ 4_ 3= 3= (2_1_)
+[A1,T] 草擺動道音歌-"#;
 
     // Line 23 (1-based) contains "2. 3_ 4_ 3= 3= (2_1_)" — the notes line of group 3.
     let caret_line: usize = 23;

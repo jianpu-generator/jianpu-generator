@@ -448,6 +448,13 @@ impl RecoverableError {
             },
         }
     }
+
+    pub fn score_line_missing_key_prefix(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::ScoreLineMissingKeyPrefix,
+        }
+    }
 }
 
 /// A per-measure diagnostic that is attached to rendered output.

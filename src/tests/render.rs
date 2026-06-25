@@ -22,9 +22,9 @@ fn list_parts_from_source_returns_declarations() {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1m\n",
-        "1 2 3 4\n",
-        "a b c d\n",
+        "[main] 1m\n",
+        "[A1&T] 1 2 3 4\n",
+        "[A1&T] a b c d\n",
     );
     let parts = list_parts_from_source(input, "test.jianpu").unwrap();
     assert_eq!(parts.len(), 2);
@@ -49,10 +49,10 @@ fn hidden_lyrics_do_not_reserve_lyric_row_space() {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        "sop sop sop sop\n",
-        "5 6 7 1\n",
-        "alt alt alt alt\n",
+        "[Soprano] 1 2 3 4\n",
+        "[Soprano] sop sop sop sop\n",
+        "[Alto] 5 6 7 1\n",
+        "[Alto] alt alt alt alt\n",
     );
     let all = render_svgs_from_source(input, "test.jianpu").unwrap().svgs;
     let alto_lyrics_hidden = render_svgs_from_source_filtered_with_lyrics(
@@ -83,10 +83,10 @@ fn render_svgs_from_source_filtered_can_hide_lyrics_per_part() {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        "sop sop sop sop\n",
-        "5 6 7 1\n",
-        "alt alt alt alt\n",
+        "[Soprano] 1 2 3 4\n",
+        "[Soprano] sop sop sop sop\n",
+        "[Alto] 5 6 7 1\n",
+        "[Alto] alt alt alt alt\n",
     );
     let all = render_svgs_from_source(input, "test.jianpu").unwrap().svgs;
     let alto_lyrics_hidden = render_svgs_from_source_filtered_with_lyrics(
@@ -116,8 +116,8 @@ fn render_svgs_from_source_filtered_can_hide_parts() {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        "5 6 7 1\n",
+        "[Soprano] 1 2 3 4\n",
+        "[Alto] 5 6 7 1\n",
     );
     let all = render_svgs_from_source(input, "test.jianpu").unwrap().svgs;
     let soprano_only =
@@ -139,8 +139,8 @@ fn render_svgs_from_source_smoke() {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        "a b c d\n",
+        "[Melody] 1 2 3 4\n",
+        "[Melody] a b c d\n",
     );
     let svgs = render_svgs_from_source(input, "test.jianpu").unwrap().svgs;
     assert_eq!(svgs.len(), 1);
@@ -153,7 +153,7 @@ fn lyrics_underflow_render_returns_svgs_and_non_empty_errors() {
     let input = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "# parts\nMelody = notes lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\na b\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b\n",
     );
     let output =
         render_svgs_from_source(input, "test.jianpu").expect("underflow must not abort the render");
@@ -178,7 +178,7 @@ fn lex_unexpected_char_renders_error_highlight_and_reports_error() {
     let input = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "# parts\nMelody = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n1 @ 3 4\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 @ 3 4\n",
     );
     let output = render_svgs_from_source(input, "test.jianpu")
         .expect("LexUnexpectedChar must not abort the render");
@@ -210,8 +210,8 @@ fn split_track_names_falls_back_to_part_declarations() {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        "a b c d\n",
+        "[Melody] 1 2 3 4\n",
+        "[Melody] a b c d\n",
     );
     let score = compile(input, "test.jianpu").unwrap();
     let names = split_track_names(input, "test.jianpu", &score, &[]).unwrap();
@@ -243,10 +243,10 @@ fn apply_lyrics_filter_downgrades_kind_to_notes() {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        "do re mi fa\n",
-        "5 6 7 1\n",
-        "alt alt alt alt\n",
+        "[Soprano] 1 2 3 4\n",
+        "[Soprano] do re mi fa\n",
+        "[Alto] 5 6 7 1\n",
+        "[Alto] alt alt alt alt\n",
     );
     let mut score = compile(input, "test.jianpu").unwrap();
     apply_lyrics_filter(&mut score, Some(&["Soprano".into()]));
@@ -271,7 +271,7 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
     let source = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "# parts\nS = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n0 2_3=4= 6_7_ 0\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[S] 0 2_3=4= 6_7_ 0\n",
     );
     let score = compile(source, "test").unwrap();
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
@@ -356,10 +356,10 @@ mod split_pdf_tests {
             "\n",
             "# score\n",
             "time=4/4 key=C4 bpm=120\n",
-            "1 2 3 4\n",
-            "do re mi fa\n",
-            "5 6 7 1\n",
-            "sol la ti do\n",
+            "[S1] 1 2 3 4\n",
+            "[S1] do re mi fa\n",
+            "[S2] 5 6 7 1\n",
+            "[S2] sol la ti do\n",
         )
     }
 
@@ -394,8 +394,8 @@ mod split_pdf_tests {
             "\n",
             "# score\n",
             "time=4/4 key=C4 bpm=120\n",
-            "1 2 3 4\n",
-            "a b c d\n",
+            "[Melody] 1 2 3 4\n",
+            "[Melody] a b c d\n",
         );
         let entries =
             write_split_pdfs_from_source(input, "test.jianpu", "song", &[], &test_pdf_fonts())

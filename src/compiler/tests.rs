@@ -30,7 +30,7 @@ fn chord_doc(score_content: &str) -> String {
 
 #[test]
 fn single_quarter_note_produces_one_note_head_element() {
-    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n1\n"));
+    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 1\n"));
     let result = compile(&score);
     let blocks = result.blocks;
     assert!(!blocks.is_empty());
@@ -45,7 +45,7 @@ fn single_quarter_note_produces_one_note_head_element() {
 
 #[test]
 fn bar_line_is_last_element_in_row() {
-    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n1\n"));
+    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 1\n"));
     let result = compile(&score);
     let blocks = result.blocks;
     let row = &blocks[0].rows[0];
@@ -55,7 +55,7 @@ fn bar_line_is_last_element_in_row() {
 
 #[test]
 fn bpm_decoration_on_first_measure() {
-    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=100\n1\n"));
+    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=100\n[S] 1\n"));
     let result = compile(&score);
     let blocks = result.blocks;
     let has_bpm = blocks[0]
@@ -67,7 +67,7 @@ fn bpm_decoration_on_first_measure() {
 
 #[test]
 fn two_measures_produce_two_blocks() {
-    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n1\n\n2\n"));
+    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 1\n\n[S] 2\n"));
     let result = compile(&score);
     let blocks = result.blocks;
     assert_eq!(blocks.len(), 2);
@@ -77,7 +77,7 @@ fn two_measures_produce_two_blocks() {
 fn eighth_notes_produce_underline_elements() {
     // 2_ means eighth note (duration=2 quarter-beats) in jianpu syntax
     // Two eighth notes fill one beat; padded with rests to complete 4/4
-    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n2_ 2_ 0 0 0\n"));
+    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 2_ 2_ 0 0 0\n"));
     let result = compile(&score);
     let blocks = result.blocks;
     let row = &blocks[0].rows[0];
@@ -91,7 +91,7 @@ fn eighth_notes_produce_underline_elements() {
 
 #[test]
 fn time_signature_appears_as_decoration() {
-    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n1\n"));
+    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 1\n"));
     let result = compile(&score);
     let blocks = result.blocks;
     let has_ts = blocks[0].decorations.iter().any(|d| {
@@ -108,7 +108,7 @@ fn time_signature_appears_as_decoration() {
 
 #[test]
 fn bar_number_decoration_without_label() {
-    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n1\n\n2\n"));
+    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 1\n\n[S] 2\n"));
     let result = compile(&score);
     let blocks = result.blocks;
     let bar1_num = blocks[0]
@@ -131,7 +131,9 @@ fn bar_number_decoration_without_label() {
 
 #[test]
 fn section_label_measure_has_no_bar_number() {
-    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120 label=\"Verse 1\"\n1\n"));
+    let score = score_from(&notes_doc(
+        "time=4/4 key=C4 bpm=120 label=\"Verse 1\"\n[S] 1\n",
+    ));
     let result = compile(&score);
     let blocks = result.blocks;
     let has_bar_num = blocks[0]
@@ -148,7 +150,7 @@ fn section_label_measure_has_no_bar_number() {
 
 #[test]
 fn rest_produces_rest_element() {
-    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n0\n"));
+    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 0\n"));
     let result = compile(&score);
     let blocks = result.blocks;
     let row = &blocks[0].rows[0];
@@ -164,7 +166,7 @@ fn rest_produces_rest_element() {
 fn bar_line_column_equals_total_duration() {
     // "1 2 3 4" = four quarter notes, each duration=4 → total 16 quarter-beats
     // Bar line should appear at column 16
-    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n1 2 3 4\n"));
+    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 1 2 3 4\n"));
     let result = compile(&score);
     let blocks = result.blocks;
     let row = &blocks[0].rows[0];
@@ -195,8 +197,8 @@ C = notes
 
 # score
 time=4/4 key=C4 bpm=120
-1 2 3 4
-la la la la
+[A] 1 2 3 4
+[A] la la la la
 [C] 1
 ",
     );
@@ -215,7 +217,7 @@ la la la la
 fn extended_note_produces_note_dash_at_each_extra_beat() {
     // "1- 2-" = two half notes filling a 4/4 measure (8+8=16 quarter-beats).
     // Each half note should produce one NoteDash at the beat following the note head.
-    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n1- 2-\n"));
+    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 1- 2-\n"));
     let result = compile(&score);
     let blocks = result.blocks;
     let row = &blocks[0].rows[0];
@@ -240,7 +242,7 @@ fn extended_note_produces_note_dash_at_each_extra_beat() {
 fn extended_chord_produces_note_dash_at_each_extra_beat() {
     // "1 - - -" = a whole-note chord filling a 4/4 measure.
     // The three `-` tokens should each produce a NoteDash at columns 4, 8, 12.
-    let score = score_from(&chord_doc("time=4/4 key=C4 bpm=120\n1 - - -\n"));
+    let score = score_from(&chord_doc("time=4/4 key=C4 bpm=120\n[C] 1 - - -\n"));
     let result = compile(&score);
     let row = &result.blocks[0].rows[0];
     let dashes: Vec<_> = row
@@ -261,7 +263,7 @@ fn extended_chord_produces_note_dash_at_each_extra_beat() {
 #[test]
 fn note_head_column_is_zero_indexed() {
     // First note in measure should be at column 0
-    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n1\n"));
+    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 1\n"));
     let result = compile(&score);
     let blocks = result.blocks;
     let row = &blocks[0].rows[0];
@@ -280,11 +282,11 @@ fn cross_measure_tie_does_not_consume_lyric_slot_for_continuation_note() {
     // "sa" must be assigned to note 5 (column 4), not note 4) (column 0).
     let score = score_from(&lyrics_doc(concat!(
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 (4\n",
-        "ha ta ba na\n",
+        "[S] 1 2 3 (4\n",
+        "[S] ha ta ba na\n",
         "\n",
-        "4) 5 6 7\n",
-        "sa da ko\n",
+        "[S] 4) 5 6 7\n",
+        "[S] sa da ko\n",
     )));
     let result = compile(&score);
     let blocks = result.blocks;
@@ -311,7 +313,7 @@ fn cross_measure_tie_does_not_consume_lyric_slot_for_continuation_note() {
 #[test]
 fn lyrics_underflow_errors_propagate_to_measure_block() {
     // 4 notes but only 2 syllables → block should have errors
-    let source = lyrics_doc("time=4/4 key=C4 bpm=120\n1 2 3 4\na b\n");
+    let source = lyrics_doc("time=4/4 key=C4 bpm=120\n[S] 1 2 3 4\n[S] a b\n");
     let score = score_from(&source);
     let result = compile(&score);
     assert_eq!(result.blocks.len(), 1);
@@ -323,7 +325,7 @@ fn lyrics_underflow_errors_propagate_to_measure_block() {
 
 #[test]
 fn matching_lyrics_produce_no_block_errors() {
-    let source = lyrics_doc("time=4/4 key=C4 bpm=120\n1 2 3 4\na b c d\n");
+    let source = lyrics_doc("time=4/4 key=C4 bpm=120\n[S] 1 2 3 4\n[S] a b c d\n");
     let score = score_from(&source);
     let result = compile(&score);
     assert!(result.blocks[0].diagnostics.is_empty());
@@ -335,11 +337,11 @@ fn lyrics_underflow_in_first_measure_only() {
     // Measure 2: 4 notes and 4 syllables → no error
     let source = lyrics_doc(concat!(
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        "a b\n",
+        "[S] 1 2 3 4\n",
+        "[S] a b\n",
         "\n",
-        "5 6 7 1\n",
-        "c d e f\n",
+        "[S] 5 6 7 1\n",
+        "[S] c d e f\n",
     ));
     let score = score_from(&source);
     let result = compile(&score);
@@ -363,7 +365,7 @@ fn malformed_parts_line_is_recoverable_and_valid_part_still_renders() {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
+        "[Melody] 1 2 3 4\n",
     );
     let doc = parse(source, "test").expect("malformed parts line must not abort parsing");
     assert_eq!(doc.declarations.len(), 1, "valid declaration must survive");

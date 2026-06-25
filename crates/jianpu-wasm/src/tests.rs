@@ -13,8 +13,8 @@ fn ok_response_has_svgs() {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        "a b c d\n",
+        "[Melody] 1 2 3 4\n",
+        "[Melody] a b c d\n",
     );
     let resp = render_response(input, None, None);
     match resp {
@@ -39,8 +39,8 @@ fn list_parts_response_returns_declarations() {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        "5 6 7 1\n",
+        "[Soprano] 1 2 3 4\n",
+        "[Alto] 5 6 7 1\n",
     );
     let resp = list_parts_response(input);
     match resp {
@@ -68,10 +68,10 @@ fn render_with_disabled_lyrics_hides_lyrics_for_part() {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        "sop sop sop sop\n",
-        "5 6 7 1\n",
-        "alt alt alt alt\n",
+        "[Soprano] 1 2 3 4\n",
+        "[Soprano] sop sop sop sop\n",
+        "[Alto] 5 6 7 1\n",
+        "[Alto] alt alt alt alt\n",
     );
     let all = match render_response(input, None, None) {
         RenderResponse::Ok { documents, .. } => documents,
@@ -99,8 +99,8 @@ fn render_with_enabled_tracks_filters_parts() {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-        "5 6 7 1\n",
+        "[Soprano] 1 2 3 4\n",
+        "[Alto] 5 6 7 1\n",
     );
     let all = match render_response(input, None, None) {
         RenderResponse::Ok { documents, .. } => documents,
@@ -134,7 +134,7 @@ fn recoverable_error_produces_warning_severity_view_zone() {
     let input = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "# parts\nMelody = notes lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\na b\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b\n",
     );
     let resp = render_response(input, None, None);
     match resp {
@@ -250,7 +250,7 @@ fn reference_jianpu_generates_split_pdf_zip() {
 fn get_measure_at_offset_ok_for_note_in_measure() {
     let source = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n",
     );
     let byte_offset = source.find("1 2 3 4").unwrap();
     let resp = get_measure_at_offset_response(source, byte_offset);
@@ -264,7 +264,7 @@ fn get_measure_at_offset_ok_for_note_in_measure() {
 fn get_measure_at_offset_not_in_measure_for_header() {
     let source = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n",
     );
     let resp = get_measure_at_offset_response(source, 0);
     assert!(
@@ -278,7 +278,7 @@ fn get_measure_at_offset_not_in_measure_for_header() {
 fn generate_wav_for_measure_range_response_returns_riff_wav() {
     let source = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n1 2 3 4\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n",
     );
     let resp = generate_wav_for_measure_range_response(source, 0, 0, None);
     match resp {
@@ -325,8 +325,8 @@ fn diagnostic_span_is_utf8_byte_offset() {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "1 2 x 4\n",
-        "a b c d\n",
+        "[Melody] 1 2 x 4\n",
+        "[Melody] a b c d\n",
     );
     let token_byte_start = source.find('x').expect("error token in source");
     let resp = render_response(source, None, None);
@@ -362,16 +362,22 @@ fn list_measure_spans_returns_one_span_per_measure() {
         "Melody = notes\n",
         "\n",
         "# score\n",
-        "1 2 3 4\n",
+        "[Melody] 1 2 3 4\n",
         "\n",
-        "5 6 7 1\n",
+        "[Melody] 5 6 7 1\n",
     );
     let resp = list_measure_spans_response(input);
     match resp {
         ListMeasureSpansResponse::Ok { spans } => {
             assert_eq!(spans.len(), 2);
             assert!(spans[0].start < spans[1].start);
-            assert_eq!(spans[0].view_zone_start, spans[0].start);
+            // No separate directive line precedes the first measure, so view_zone_start
+            // is on the same source line as start (the [Melody] prefix is on that line).
+            let count_newlines = |s: &str, end: usize| s[..end].matches('\n').count();
+            assert_eq!(
+                count_newlines(input, spans[0].view_zone_start),
+                count_newlines(input, spans[0].start),
+            );
         }
         ListMeasureSpansResponse::Err => panic!("expected ok"),
     }
@@ -389,7 +395,7 @@ fn list_measure_spans_view_zone_start_includes_directive_line() {
         "\n",
         "# score\n",
         "bpm=60\n",
-        "1 2 3 4\n",
+        "[Melody] 1 2 3 4\n",
     );
     let directive_offset = input.find("bpm=60").unwrap();
     let notes_offset = input.find("1 2 3 4").unwrap();

@@ -29,7 +29,7 @@ fn group(lines: &[&str]) -> Vec<(String, usize)> {
 
 #[test]
 fn score_lines_are_passed_through_unchanged() {
-    let groups = vec![group(&["1 2 3 4", "hello"])];
+    let groups = vec![group(&["[A] 1 2 3 4", "[A] hello"])];
     let declarations = vec![decl("A", PartKind::NotesWithLyrics)];
     let (result, _) = desugar_groups(groups, &declarations, 0).unwrap();
     assert_eq!(result[0][0].0, "1 2 3 4");
@@ -38,7 +38,7 @@ fn score_lines_are_passed_through_unchanged() {
 
 #[test]
 fn omitted_trailing_lyrics_without_precedent_fills_with_no_lyrics_silently() {
-    let groups = vec![group(&["1 2 3 4"])];
+    let groups = vec![group(&["[A] 1 2 3 4"])];
     let declarations = vec![decl("A", PartKind::NotesWithLyrics)];
     let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
     assert_eq!(result[0][1].0, "_", "should fill in underscore placeholder");
@@ -50,7 +50,7 @@ fn omitted_trailing_lyrics_without_precedent_fills_with_no_lyrics_silently() {
 
 #[test]
 fn omitted_trailing_notes_without_precedent_fills_with_rest_silently() {
-    let groups = vec![group(&["1 - - -"])];
+    let groups = vec![group(&["[A] 1 - - -"])];
     let declarations = vec![decl("A", PartKind::Chord), decl("B", PartKind::Notes)];
     let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
     assert_eq!(
@@ -65,7 +65,7 @@ fn omitted_trailing_notes_without_precedent_fills_with_rest_silently() {
 
 #[test]
 fn omitted_trailing_chord_without_precedent_fills_with_rest_silently() {
-    let groups = vec![group(&["1 2 3 4"])];
+    let groups = vec![group(&["[A] 1 2 3 4"])];
     let declarations = vec![decl("A", PartKind::Notes), decl("B", PartKind::Chord)];
     let (result, errors) = desugar_groups(groups, &declarations, 0).unwrap();
     assert_eq!(
@@ -116,7 +116,7 @@ fn key_prefix_unknown_abbreviation_is_recoverable_error() {
 
 #[test]
 fn follow_with_no_key_override_copies_target_content() {
-    let groups = vec![group(&["1 2 3 4"])];
+    let groups = vec![group(&["[A] 1 2 3 4"])];
     let declarations = vec![
         decl("A", PartKind::Notes),
         decl_follow("B", PartKind::Notes, "A"),
@@ -128,13 +128,13 @@ fn follow_with_no_key_override_copies_target_content() {
 
 #[test]
 fn follow_with_key_override_uses_key_content() {
-    let groups = vec![group(&["1 2 3 4", "[B] 5 6 7 0"])];
+    let groups = vec![group(&["[A] 1 2 3 4", "[B] 5 6 7 0"])];
     let declarations = vec![
         decl("A", PartKind::Notes),
         decl_follow("B", PartKind::Notes, "A"),
     ];
     let (result, _) = desugar_groups(groups, &declarations, 0).unwrap();
-    assert_eq!(result[0][0].0, "1 2 3 4", "A: positional");
+    assert_eq!(result[0][0].0, "1 2 3 4", "A: key-prefixed");
     assert_eq!(
         result[0][1].0, "5 6 7 0",
         "B: key override takes precedence over follow"
@@ -143,7 +143,7 @@ fn follow_with_key_override_uses_key_content() {
 
 #[test]
 fn follow_with_notes_lyrics_copies_both_slots_from_target() {
-    let groups = vec![group(&["1 2 3 4", "do re mi fa"])];
+    let groups = vec![group(&["[A] 1 2 3 4", "[A] do re mi fa"])];
     let declarations = vec![
         decl("A", PartKind::NotesWithLyrics),
         decl_follow("B", PartKind::NotesWithLyrics, "A"),
@@ -158,7 +158,7 @@ fn follow_with_notes_lyrics_copies_both_slots_from_target() {
 #[test]
 fn follow_with_notes_key_override_copies_only_lyrics_from_target() {
     // B follows A. One [B] key line overrides notes only; lyrics still copied from A.
-    let groups = vec![group(&["1 2 3 4", "do re mi fa", "[B] 5 6 7 0"])];
+    let groups = vec![group(&["[A] 1 2 3 4", "[A] do re mi fa", "[B] 5 6 7 0"])];
     let declarations = vec![
         decl("A", PartKind::NotesWithLyrics),
         decl_follow("B", PartKind::NotesWithLyrics, "A"),
@@ -177,8 +177,8 @@ fn follow_with_notes_key_override_copies_only_lyrics_from_target() {
 fn follow_with_both_key_overrides_uses_both() {
     // B follows A. Two [B] key lines override both notes and lyrics.
     let groups = vec![group(&[
-        "1 2 3 4",
-        "do re mi fa",
+        "[A] 1 2 3 4",
+        "[A] do re mi fa",
         "[B] 5 6 7 0",
         "[B] sol la si do",
     ])];
@@ -194,7 +194,7 @@ fn follow_with_both_key_overrides_uses_both() {
 #[test]
 fn follow_chain_resolves_correctly() {
     // C follows B, B follows A.
-    let groups = vec![group(&["1 2 3 4"])];
+    let groups = vec![group(&["[A] 1 2 3 4"])];
     let declarations = vec![
         decl("A", PartKind::Notes),
         decl_follow("B", PartKind::Notes, "A"),
@@ -211,7 +211,7 @@ fn follow_chain_resolves_correctly() {
 
 #[test]
 fn non_follow_non_first_part_not_mentioned_fills_with_rest() {
-    let groups = vec![group(&["1 2 3 4"])];
+    let groups = vec![group(&["[A] 1 2 3 4"])];
     let declarations = vec![decl("A", PartKind::Notes), decl("B", PartKind::Notes)];
     let (result, _) = desugar_groups(groups, &declarations, 0).unwrap();
     assert_eq!(result[0][0].0, "1 2 3 4", "A: explicit");
@@ -223,9 +223,9 @@ fn non_follow_non_first_part_not_mentioned_fills_with_rest() {
 
 #[test]
 fn non_follow_part_with_key_line_uses_key_content() {
-    let groups = vec![group(&["1 2 3 4", "[B] 5 6 7 0"])];
+    let groups = vec![group(&["[A] 1 2 3 4", "[B] 5 6 7 0"])];
     let declarations = vec![decl("A", PartKind::Notes), decl("B", PartKind::Notes)];
     let (result, _) = desugar_groups(groups, &declarations, 0).unwrap();
-    assert_eq!(result[0][0].0, "1 2 3 4", "A: positional");
+    assert_eq!(result[0][0].0, "1 2 3 4", "A: key-prefixed");
     assert_eq!(result[0][1].0, "5 6 7 0", "B: key-based explicit");
 }
