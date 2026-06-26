@@ -1,5 +1,5 @@
 import MonacoEditor, { type Monaco, type OnMount } from '@monaco-editor/react'
-import type { editor, ISelection } from 'monaco-editor'
+import type { editor, IDisposable, ISelection, languages } from 'monaco-editor'
 import {
   forwardRef,
   type ReactNode,
@@ -29,6 +29,7 @@ export interface EditorProps {
   onSelectionChange?: (startLine: number, endLine: number) => void
   onCursorLineChange?: (line: number) => void
   onPlayMeasure?: () => void
+  onEditPartsClick?: () => void
 }
 
 const MARKER_OWNER = 'jianpu'
@@ -121,6 +122,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onSelectionChange,
     onCursorLineChange,
     onPlayMeasure,
+    onEditPartsClick,
   },
   ref,
 ) {
@@ -131,12 +133,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const onSelectionChangeRef = useRef(onSelectionChange)
   const onCursorLineChangeRef = useRef(onCursorLineChange)
   const onPlayMeasureRef = useRef(onPlayMeasure)
+  const onEditPartsClickRef = useRef(onEditPartsClick)
   const savedSelectionRef = useRef<ISelection | null>(null)
   const isInternalChangeRef = useRef(false)
+  const codeLensProviderRef = useRef<IDisposable | null>(null)
   useEffect(() => {
     onSelectionChangeRef.current = onSelectionChange
     onCursorLineChangeRef.current = onCursorLineChange
     onPlayMeasureRef.current = onPlayMeasure
+    onEditPartsClickRef.current = onEditPartsClick
   })
 
   const applyDiagnostics = useCallback(() => {
@@ -310,6 +315,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     },
   }))
 
+  useEffect(() => {
+    return () => {
+      codeLensProviderRef.current?.dispose()
+    }
+  }, [])
+
   const handleMount: OnMount = (ed, monacoApi) => {
     editorRef.current = ed
     monacoRef.current = monacoApi
@@ -319,6 +330,33 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
     ed.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.Enter, () =>
       onPlayMeasureRef.current?.(),
+    )
+
+    const editPartsCommandId = ed.addCommand(0, () => {
+      onEditPartsClickRef.current?.()
+    })
+
+    codeLensProviderRef.current?.dispose()
+    codeLensProviderRef.current = monacoApi.languages.registerCodeLensProvider(
+      'plaintext',
+      {
+        provideCodeLenses(model) {
+          const lenses: languages.CodeLens[] = []
+          for (let line = 1; line <= model.getLineCount(); line++) {
+            if (model.getLineContent(line).trim() === '# parts') {
+              lenses.push({
+                range: new monacoApi.Range(line, 1, line, 1),
+                command: {
+                  id: editPartsCommandId ?? '',
+                  title: 'Edit Parts',
+                },
+              })
+              break
+            }
+          }
+          return { lenses, dispose: () => {} }
+        },
+      },
     )
 
     const notifyCursor = () => {
@@ -402,6 +440,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           onMount={handleMount}
           options={{
             readOnly,
+            codeLens: true,
             minimap: { enabled: false },
             fontFamily: 'var(--mono)',
             fontSize: 14,

@@ -366,6 +366,7 @@ export default function App() {
                 diagnosticViewZones={diagnosticViewZones}
                 measureSpans={measureSpans}
                 onSelectionChange={notifySelection}
+                onEditPartsClick={() => setEditPartsOpen(true)}
                 onPlayMeasure={
                   measureAudioPlaying
                     ? stopMeasurePlayback
@@ -376,9 +377,7 @@ export default function App() {
                       : undefined
                 }
                 toolbar={
-                  audioAvailable ||
-                  sectionLabels.length > 0 ||
-                  partDeclarations.length > 0 ? (
+                  audioAvailable || sectionLabels.length > 0 ? (
                     <div
                       style={{
                         display: 'flex',
@@ -386,16 +385,6 @@ export default function App() {
                         gap: '0.5rem',
                       }}
                     >
-                      {partDeclarations.length > 0 && (
-                        <button
-                          type="button"
-                          className="section-jump-btn"
-                          data-testid="edit-parts-btn"
-                          onClick={() => setEditPartsOpen(true)}
-                        >
-                          Edit Parts
-                        </button>
-                      )}
                       {audioAvailable && (
                         <PlayMeasureButton
                           disabled={

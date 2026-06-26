@@ -88,6 +88,16 @@
   min-height: 0;
 }
 
+/* CodeLens link styling */
+.codelens-decoration {
+  font-size: 16px !important;
+}
+
+.codelens-decoration a {
+  color: #2563eb !important;
+  text-decoration: underline !important;
+}
+
 /* Editor error view zones (Monaco dom nodes) */
 
 .editor-error-zone {

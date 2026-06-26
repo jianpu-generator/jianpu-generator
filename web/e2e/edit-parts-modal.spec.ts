@@ -29,28 +29,30 @@ async function loadSource(page: import('@playwright/test').Page) {
   }, SOURCE)
 }
 
-test('Edit Parts button opens the modal', async ({ page }) => {
+async function openEditPartsModal(page: import('@playwright/test').Page) {
+  const codeLensLink = page.locator('.codelens-decoration a', {
+    hasText: 'Edit Parts',
+  })
+  await expect(codeLensLink).toBeVisible({ timeout: 15_000 })
+  await codeLensLink.click()
+  await page.getByTestId('edit-parts-modal').waitFor({ state: 'visible' })
+}
+
+test('CodeLens Edit Parts link opens the modal', async ({ page }) => {
   await loadSource(page)
   await page.goto('/')
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
 
-  const editPartsBtn = page.getByTestId('edit-parts-btn')
-  await expect(editPartsBtn).toBeVisible({ timeout: 5_000 })
-
-  await editPartsBtn.click()
+  await openEditPartsModal(page)
 
   const modal = page.getByTestId('edit-parts-modal')
-  await expect(modal).toBeVisible({ timeout: 3_000 })
   await expect(modal).toContainText('Edit Parts')
 })
 
 test('mode select changes the part mode', async ({ page }) => {
   await loadSource(page)
   await page.goto('/')
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
 
-  await page.getByTestId('edit-parts-btn').click()
-  await page.getByTestId('edit-parts-modal').waitFor({ state: 'visible' })
+  await openEditPartsModal(page)
 
   // The "Chords [C]" part starts as "chords". Change it to "notes".
   const modeSelect = page.getByTestId('mode-select-C')
@@ -65,10 +67,8 @@ test('mode select changes the part mode', async ({ page }) => {
 test('soundfont select changes the instrument for a part', async ({ page }) => {
   await loadSource(page)
   await page.goto('/')
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
 
-  await page.getByTestId('edit-parts-btn').click()
-  await page.getByTestId('edit-parts-modal').waitFor({ state: 'visible' })
+  await openEditPartsModal(page)
 
   // The "Melody [M]" part has no soundfont by default (shows "default sound").
   const soundfontSelect = page.getByTestId('soundfont-select-M')
@@ -85,9 +85,13 @@ test('changing soundfont via modal preserves the editor selection', async ({
 }) => {
   await loadSource(page)
   await page.goto('/')
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
 
   // Navigate to SOURCE line 10 ("1 - - -") and select to end of line.
+  const codeLensLink = page.locator('.codelens-decoration a', {
+    hasText: 'Edit Parts',
+  })
+  await expect(codeLensLink).toBeVisible({ timeout: 15_000 })
+
   await page.click('.monaco-editor .view-lines')
   await page.keyboard.press('Control+g')
   await page.keyboard.type('10')
@@ -124,7 +128,7 @@ test('changing soundfont via modal preserves the editor selection', async ({
   expect(selectionBefore?.endColumn).toBeGreaterThan(1)
 
   // Open the modal and change the soundfont.
-  await page.getByTestId('edit-parts-btn').click()
+  await codeLensLink.click()
   await page.getByTestId('edit-parts-modal').waitFor({ state: 'visible' })
   await page.getByTestId('soundfont-select-M').click()
   await page.getByRole('option', { name: '40: Violin' }).click()
