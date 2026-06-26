@@ -24,6 +24,8 @@ export interface EditorHandle {
   insertAtCursor: (text: string) => void
   getSelection: () => EditorSelection
   setSelection: (start: number, end: number) => void
+  /** Select a range of lines by 1-indexed line numbers and reveal the start. */
+  setSelectionByLines: (startLine: number, endLine: number) => void
   /** Move the cursor to the given JS string char offset and reveal the line. */
   jumpToOffset: (charOffset: number) => void
   focus: () => void

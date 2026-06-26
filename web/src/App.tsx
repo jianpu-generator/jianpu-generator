@@ -318,14 +318,17 @@ export default function App() {
     [source],
   )
 
-  const handleMeasureClick = useCallback(
-    (measureIndex: number) => {
-      const span = measureSpans[measureIndex]
-      if (!span) return
-      const charOffset = byteOffsetToStringIndex(source, span.start)
-      editorRef.current?.jumpToOffset(charOffset)
+  const handleMeasureRangeSelect = useCallback(
+    (startIndex: number, endIndex: number) => {
+      const startSpan = measureSpans[startIndex]
+      const endSpan = measureSpans[endIndex]
+      if (!startSpan || !endSpan) return
+      editorRef.current?.setSelectionByLines(
+        startSpan.start_line,
+        endSpan.end_line,
+      )
     },
-    [measureSpans, source],
+    [measureSpans],
   )
 
   const noPartsSelected =
@@ -447,7 +450,7 @@ export default function App() {
             documents={documents}
             highlightedDocuments={highlightedDocuments}
             rendering={rendering}
-            onMeasureClick={handleMeasureClick}
+            onMeasureRangeSelect={handleMeasureRangeSelect}
             audioGenerating={audioGenerating}
             wavUrl={wavUrl}
             audioAvailable={audioAvailable}

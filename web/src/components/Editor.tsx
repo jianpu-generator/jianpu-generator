@@ -298,6 +298,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       )
       ed.focus()
     },
+    setSelectionByLines(startLine: number, endLine: number) {
+      const ed = editorRef.current
+      if (!ed) return
+      ed.setSelection({
+        startLineNumber: startLine,
+        startColumn: 1,
+        endLineNumber: endLine,
+        endColumn: ed.getModel()?.getLineMaxColumn(endLine) ?? 1,
+      })
+      ed.revealLineInCenter(startLine)
+    },
     jumpToOffset(charOffset: number) {
       const ed = editorRef.current
       const model = ed?.getModel()

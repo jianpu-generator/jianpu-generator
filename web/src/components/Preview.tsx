@@ -19,14 +19,48 @@ interface PreviewProps {
   partsCount?: number
   emptyMessage?: string
   toolbar?: ReactNode
-  onMeasureClick?: (measureIndex: number) => void
+  onMeasureRangeSelect?: (startIndex: number, endIndex: number) => void
 }
 
-function renderSvgElement(
-  el: SvgElementOut,
-  key: number,
-  onMeasureClick?: (measureIndex: number) => void,
-): ReactNode {
+function getMeasureAtPoint(x: number, y: number): number | undefined {
+  const el = document.elementFromPoint(x, y)
+  if (!el) return undefined
+  const group = el.closest('[data-tag="measure"]')
+  if (!group) return undefined
+  const index = (group as HTMLElement).dataset.measureIndex
+  if (index === undefined) return undefined
+  const parsed = Number.parseInt(index, 10)
+  return Number.isNaN(parsed) ? undefined : parsed
+}
+
+function applyDragHighlights(
+  container: HTMLElement,
+  start: number,
+  current: number,
+): void {
+  const min = Math.min(start, current)
+  const max = Math.max(start, current)
+  for (const group of Array.from(
+    container.querySelectorAll<HTMLElement>('[data-tag="measure"]'),
+  )) {
+    const index = Number.parseInt(group.dataset.measureIndex ?? '', 10)
+    if (index >= min && index <= max) {
+      group.dataset.dragSelected = ''
+    } else {
+      delete group.dataset.dragSelected
+    }
+  }
+}
+
+function clearDragHighlights(container: HTMLElement): void {
+  for (const group of Array.from(
+    container.querySelectorAll<HTMLElement>('[data-tag="measure"]'),
+  )) {
+    delete group.dataset.dragSelected
+  }
+}
+
+function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
   const { kind } = el
   switch (kind.type) {
     case 'text':
@@ -137,32 +171,20 @@ function renderSvgElement(
       const measureIndex =
         kind.tag?.type === 'measure' ? kind.tag.index : undefined
       return (
-        // biome-ignore lint/a11y/noStaticElementInteractions: SVG group is a visual click target, not a document-level interactive element
         <g
           key={key}
           data-tag={measureIndex !== undefined ? 'measure' : undefined}
           data-measure-index={measureIndex}
-          onClick={
-            measureIndex !== undefined
-              ? () => onMeasureClick?.(measureIndex)
-              : undefined
-          }
           style={measureIndex !== undefined ? { cursor: 'pointer' } : undefined}
         >
-          {kind.children.map((child, i) =>
-            renderSvgElement(child, i, onMeasureClick),
-          )}
+          {kind.children.map((child, i) => renderSvgElement(child, i))}
         </g>
       )
     }
   }
 }
 
-function renderSvgDocument(
-  doc: SvgDocumentOut,
-  key: number,
-  onMeasureClick?: (measureIndex: number) => void,
-): ReactNode {
+function renderSvgDocument(doc: SvgDocumentOut, key: number): ReactNode {
   return (
     // biome-ignore lint/a11y/noSvgWithoutTitle: synthesized score SVG; title would be redundant with surrounding page context
     <svg
@@ -172,7 +194,7 @@ function renderSvgDocument(
       height="297mm"
       viewBox={`0 0 ${Math.round(doc.width_pt)} ${Math.round(doc.height_pt)}`}
     >
-      {doc.elements.map((el, i) => renderSvgElement(el, i, onMeasureClick))}
+      {doc.elements.map((el, i) => renderSvgElement(el, i))}
     </svg>
   )
 }
@@ -195,10 +217,16 @@ export function Preview({
   partsCount = 0,
   emptyMessage = 'No preview yet.',
   toolbar,
-  onMeasureClick,
+  onMeasureRangeSelect,
 }: PreviewProps) {
   const previewPagesRef = useRef<HTMLDivElement>(null)
   const audioPlayerRef = useRef<HTMLAudioElement>(null)
+  const dragStateRef = useRef<{
+    startIndex: number
+    currentIndex: number
+  } | null>(null)
+  const onMeasureRangeSelectRef = useRef(onMeasureRangeSelect)
+  onMeasureRangeSelectRef.current = onMeasureRangeSelect
 
   useEffect(() => {
     if (!audioGenerating) return
@@ -226,6 +254,46 @@ export function Preview({
 
     return () => cancelAnimationFrame(frameId)
   }, [highlightedDocuments])
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const dragState = dragStateRef.current
+      if (!dragState) return
+      const container = previewPagesRef.current
+      if (!container) return
+      const index = getMeasureAtPoint(e.clientX, e.clientY)
+      if (index !== undefined) {
+        dragState.currentIndex = index
+        applyDragHighlights(
+          container,
+          dragState.startIndex,
+          dragState.currentIndex,
+        )
+      }
+    }
+
+    const handleMouseUp = (e: MouseEvent) => {
+      const dragState = dragStateRef.current
+      if (!dragState) return
+      const container = previewPagesRef.current
+      if (container) {
+        clearDragHighlights(container)
+      }
+      const index = getMeasureAtPoint(e.clientX, e.clientY)
+      const finalIndex = index ?? dragState.currentIndex
+      const min = Math.min(dragState.startIndex, finalIndex)
+      const max = Math.max(dragState.startIndex, finalIndex)
+      onMeasureRangeSelectRef.current?.(min, max)
+      dragStateRef.current = null
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
 
   const exporting = pdfExporting || splitPdfExporting
   const canExportPdf =
@@ -318,7 +386,21 @@ export function Preview({
           />
         </div>
       ) : null}
-      <div className="preview-pages" ref={previewPagesRef}>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: drag-to-select measures uses mousedown, mousemove, mouseup — not a standard interactive role */}
+      <div
+        className="preview-pages"
+        ref={previewPagesRef}
+        onMouseDown={(e) => {
+          const index = getMeasureAtPoint(e.clientX, e.clientY)
+          if (index === undefined) return
+          dragStateRef.current = { startIndex: index, currentIndex: index }
+          const container = previewPagesRef.current
+          if (container) {
+            applyDragHighlights(container, index, index)
+          }
+          e.preventDefault()
+        }}
+      >
         {documents.length === 0 &&
         highlightedDocuments.length === 0 &&
         !rendering ? (
@@ -327,7 +409,7 @@ export function Preview({
         {activeDocs.map((doc, i) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: pages have no stable identifier
           <div key={i} className="preview-page">
-            {renderSvgDocument(doc, i, onMeasureClick)}
+            {renderSvgDocument(doc, i)}
           </div>
         ))}
       </div>
