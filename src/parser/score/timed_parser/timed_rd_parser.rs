@@ -292,7 +292,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
         // Duration suffixes are never whitespace, so the unit ends at the first whitespace char.
         let raw_text = self.source.get(rel..).unwrap_or_default();
         let text = raw_text
-            .find(|c: char| c.is_whitespace() || c == '|' || c == '(' || c == ')')
+            .find(|c: char| c.is_whitespace() || c == '(' || c == ')')
             .map(|ws_pos| &raw_text[..ws_pos])
             .unwrap_or(raw_text);
 
@@ -383,7 +383,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
         let rel = digit_offset.saturating_sub(self.base_offset);
         let raw_text = self.source.get(rel..).unwrap_or("");
         raw_text
-            .find(|c: char| c.is_whitespace() || c == '|' || c == '(' || c == ')')
+            .find(|c: char| c.is_whitespace() || c == '(' || c == ')')
             .map(|ws_pos| digit_offset + ws_pos)
             .unwrap_or_else(|| self.base_offset + self.source.len())
     }

@@ -40,7 +40,7 @@ pub fn lex_line(line: &str, base_offset: usize, context: LexContext) -> LexLineR
             Some(ch) => (ch, ch.len_utf8()),
             None => break,
         };
-        if c.is_whitespace() || c == '|' {
+        if c.is_whitespace() {
             i += len;
             at_word_boundary = true;
             continue;
@@ -158,6 +158,7 @@ fn lex_one_char(
             },
             recoverable_errors,
         ),
+        '|' => skip_unexpected_char(start, len, c, recoverable_errors),
         _ if !at_word_boundary => Ok((None, len, false)),
         _ if at_word_boundary && context == LexContext::Chords => {
             Ok(chord_head_start_token(start, len))
@@ -186,7 +187,7 @@ fn lex_low_digit(
                 recoverable_errors.push(RecoverableError::general(span, message));
                 let consumed = line[i..]
                     .bytes()
-                    .take_while(|b| !b.is_ascii_whitespace() && *b != b'|')
+                    .take_while(|b| !b.is_ascii_whitespace())
                     .count();
                 return Ok((None, consumed, true));
             }
@@ -207,7 +208,7 @@ fn lex_bpm_or_recover(
             recoverable_errors.push(RecoverableError::general(span, message));
             let consumed = line[i..]
                 .bytes()
-                .take_while(|b| !b.is_ascii_whitespace() && *b != b'|')
+                .take_while(|b| !b.is_ascii_whitespace())
                 .count();
             Ok((None, consumed, true))
         }
@@ -262,7 +263,7 @@ fn lex_high_digit_or_error(
                 recoverable_errors.push(RecoverableError::general(span, message));
                 let consumed = line[i..]
                     .bytes()
-                    .take_while(|b| !b.is_ascii_whitespace() && *b != b'|')
+                    .take_while(|b| !b.is_ascii_whitespace())
                     .count();
                 return Ok((None, consumed, true));
             }

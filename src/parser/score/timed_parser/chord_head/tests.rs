@@ -298,29 +298,6 @@ fn parses_multiple_tokens() {
 }
 
 #[test]
-fn skips_bar_lines() {
-    assert_eq!(
-        parse_line("1 | 4m"),
-        vec![
-            chord(
-                JianPuPitch::One,
-                Accidental::Natural,
-                TriadQuality::Major,
-                None,
-                None
-            ),
-            chord(
-                JianPuPitch::Four,
-                Accidental::Natural,
-                TriadQuality::Minor,
-                None,
-                None
-            ),
-        ]
-    );
-}
-
-#[test]
 fn parses_sharp_with_dominant_seventh() {
     assert_eq!(
         parse_symbol("1#7"),

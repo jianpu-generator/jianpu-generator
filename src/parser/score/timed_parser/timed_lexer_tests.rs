@@ -10,13 +10,13 @@ fn kinds(line: &str) -> Vec<TimedLexToken> {
 }
 
 #[test]
-fn skips_whitespace_and_bar_lines() {
+fn skips_whitespace() {
     assert_eq!(
-        kinds("1 2 | 3"),
+        kinds("1 2 3"),
         vec![
             TimedLexToken::HeadStart { offset: 0 },
             TimedLexToken::HeadStart { offset: 2 },
-            TimedLexToken::HeadStart { offset: 6 },
+            TimedLexToken::HeadStart { offset: 4 },
         ]
     );
 }
