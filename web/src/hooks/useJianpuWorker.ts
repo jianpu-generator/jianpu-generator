@@ -337,6 +337,7 @@ export function useJianpuWorker(
     return () => window.clearTimeout(timer)
   }, [source, debounceMs])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: activeFile triggers re-render after rename (content unchanged but activeFile changes)
   useEffect(() => {
     const worker = workerRef.current
     if (!worker) return
@@ -353,7 +354,7 @@ export function useJianpuWorker(
       disabledLyrics: disabledLyricsTracks,
     }
     worker.postMessage(payload)
-  }, [source, enabledTracks, disabledLyricsTracks])
+  }, [source, activeFile, enabledTracks, disabledLyricsTracks])
 
   const generateFullAudio = useCallback(() => {
     const worker = workerRef.current
