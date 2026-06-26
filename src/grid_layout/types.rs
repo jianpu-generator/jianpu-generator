@@ -1,4 +1,5 @@
 use crate::ast::parsed::JianPuPitch;
+use crate::compiler::types::ArcKind;
 
 #[derive(Debug, Clone)]
 pub struct GridPage {
@@ -78,11 +79,17 @@ pub enum GridContent {
         level: u32,
     },
     /// Same-system tie/slur arc: from center of from-column to center of to-column.
-    TieOrSlur,
+    TieOrSlur {
+        kind: ArcKind,
+    },
     /// Cross-system arc, first system: center of from-column to right edge of system.
-    TieOrSlurTail,
+    TieOrSlurTail {
+        kind: ArcKind,
+    },
     /// Cross-system arc, last system: left edge of system to center of to-column.
-    TieOrSlurHead,
+    TieOrSlurHead {
+        kind: ArcKind,
+    },
     /// Vertical bar line. `height_pt` baked in by grid layout layer.
     BarLine {
         height_pt: f32,

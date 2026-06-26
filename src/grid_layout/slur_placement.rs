@@ -50,7 +50,9 @@ pub(crate) fn resolve_slur_spans(
                     column_span,
                     halign: HAlign::Start,
                     valign: VAlign::Center,
-                    content: GridContent::TieOrSlur,
+                    content: GridContent::TieOrSlur {
+                        kind: span.kind.clone(),
+                    },
                 });
         } else {
             // TieOrSlurTail in the from-system
@@ -69,7 +71,9 @@ pub(crate) fn resolve_slur_spans(
                     column_span: tail_span,
                     halign: HAlign::Start,
                     valign: VAlign::Center,
-                    content: GridContent::TieOrSlurTail,
+                    content: GridContent::TieOrSlurTail {
+                        kind: span.kind.clone(),
+                    },
                 });
 
             // TieOrSlurHead in the to-system
@@ -83,7 +87,9 @@ pub(crate) fn resolve_slur_spans(
                     column_span: head_span,
                     halign: HAlign::Start,
                     valign: VAlign::Center,
-                    content: GridContent::TieOrSlurHead,
+                    content: GridContent::TieOrSlurHead {
+                        kind: span.kind.clone(),
+                    },
                 });
         }
     }

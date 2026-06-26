@@ -46,7 +46,7 @@ source (&str)
 ### Compiler
 - Module: `src/compiler/`
 - Entry: `compiler::compile(score: &Score) -> CompileResult`
-- Key types: `CompileResult`, `MeasureBlock`, `MeasureRow`, `ColumnElement`, `ElementContent`, `SlurSpan`, `Decoration`
+- Key types: `CompileResult`, `MeasureBlock`, `MeasureRow`, `ColumnElement`, `ElementContent`, `SlurSpan`, `ArcKind`, `Decoration`
 
 ### Consolidator
 - Module: `src/consolidator/`
@@ -88,7 +88,8 @@ source (&str)
 | **Octave Dot** | A dot drawn above or below a note head to shift its octave. Count = `octave.abs()`. |
 | **Note Dash** | A visual `-` drawn after a note head for each extra beat of duration. |
 | **Lyrics line** | One plain-text line per measure per `notes lyrics` part, tokenised into syllables and stored per measure (not as a global pool). |
-| **Slur Span** | The full logical extent of one slur/tie arc, possibly crossing measure or system boundaries (`SlurSpan`). |
+| **Arc Span** | The full logical extent of one slur or tie arc, possibly crossing measure or system boundaries (`SlurSpan`). Carries `ArcKind` to distinguish ties from slurs. |
+| **ArcKind** | Discriminant on `SlurSpan`: `Slur` (from `(…)` groups) or `Tie` (from `~`). Both render as arcs; the kind is available for future visual distinction. |
 | **Decoration** | Measure-level metadata attached to a `MeasureBlock`: BPM, time signature, section label, bar number. |
 | **Row Label** | The part name displayed at the left margin of a system row. |
 | **RowId** | A unique string identifier for a compiler row, used to correlate rows across layout stages. |

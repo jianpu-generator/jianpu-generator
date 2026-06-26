@@ -176,7 +176,7 @@ pub struct GroupedChordNote {
     pub extension: Option<Extension>,
     pub bass: Option<BassDegree>,
     pub duration: u32,
-    pub tie: bool,
+    pub slur: bool,
     pub group_membership: u8,
     pub group_continuation: u8,
     pub dotted: bool,
@@ -190,7 +190,9 @@ pub struct GroupedNote {
     /// Duration in quarter-beats, including any beats added by `-` extensions.
     pub duration: u32,
     /// True if this note is tied/slurred to the next note.
-    pub tie: bool,
+    pub slur: bool,
+    /// True if `~` appeared after the octave modifier, requesting a tie to the next note.
+    pub tie_to_next: bool,
     /// Number of nested `(…)` groups this note belongs to.
     pub group_membership: u8,
     /// Number of those groups that continue past this note.

@@ -119,7 +119,7 @@ impl TimedUnitHead for ChordHead {
                 extension: head.extension.clone(),
                 bass: head.bass.clone(),
                 duration,
-                tie: group_continuation > 0,
+                slur: group_continuation > 0,
                 group_membership,
                 group_continuation,
                 dotted,

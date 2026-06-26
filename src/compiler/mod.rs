@@ -7,17 +7,16 @@ mod part_slice;
 use part_slice::{compile_part_slice, PartSliceInput};
 
 mod slur_chains;
-use slur_chains::{PartCrossState, PendingSlurOpen, SlurKey};
+use slur_chains::{PartCrossState, PendingSlurOpen};
 
 use crate::ast::grouped::{MultiPartMeasure, NoteEvent, PartRow, Score};
 
 struct PartSliceResult {
     elements: Vec<ColumnElement>,
+    final_pending_opens: Vec<Option<PendingSlurOpen>>,
     final_tie: bool,
     final_tie_column: Option<u32>,
     final_tie_measure: Option<usize>,
-    final_slur_key: Option<SlurKey>,
-    final_pending_opens: Vec<Option<PendingSlurOpen>>,
 }
 
 pub fn compile(score: &Score) -> CompileResult {
@@ -60,11 +59,10 @@ fn is_rest_filled(part_row: &PartRow) -> bool {
 }
 
 fn update_cross_state(cs: &mut PartCrossState, result: &mut PartSliceResult) {
+    cs.pending_slur_opens = std::mem::take(&mut result.final_pending_opens);
     cs.prev_tie = result.final_tie;
     cs.prev_tie_column = result.final_tie_column;
     cs.prev_tie_measure = result.final_tie_measure;
-    cs.prev_slur_key = result.final_slur_key.take();
-    cs.pending_slur_opens = std::mem::take(&mut result.final_pending_opens);
 }
 
 fn compile_measure(
@@ -94,27 +92,25 @@ fn compile_measure(
             continue;
         };
         // Drop any incoming cross-measure tie/slur arc when this slice has errors (#28).
-        let (init_tie, init_tie_column, init_tie_measure, init_key, init_pending_opens) =
+        let (init_pending_opens, init_tie, init_tie_column, init_tie_measure) =
             if part_row.slice().has_error {
-                (false, None, None, None, vec![])
+                (vec![], false, None, None)
             } else {
                 (
+                    cs.clone_pending_opens(),
                     cs.prev_tie,
                     cs.prev_tie_column,
                     cs.prev_tie_measure,
-                    cs.prev_slur_key.clone(),
-                    cs.clone_pending_opens(),
                 )
             };
 
         let mut slice_result = compile_part_slice(
             part_row.slice(),
             PartSliceInput {
+                pending_opens: init_pending_opens,
                 prev_tie: init_tie,
                 prev_tie_column: init_tie_column,
                 prev_tie_measure: init_tie_measure,
-                prev_slur_key: init_key,
-                pending_opens: init_pending_opens,
                 measure_index,
                 part_index: part_idx,
             },

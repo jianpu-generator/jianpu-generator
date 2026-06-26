@@ -1,11 +1,10 @@
-use crate::ast::parsed::{JianPuPitch, ScoreEvent, Syllable};
+use crate::ast::parsed::{ScoreEvent, Syllable};
 use crate::error::Spanned;
 
 /// Tracks tie state across measure boundaries for lyric-slot counting.
 #[derive(Debug, Clone, Default)]
 pub struct LyricTieState {
-    pub prev_tie: bool,
-    pub prev_pitch: Option<JianPuPitch>,
+    pub prev_tie_to_next: bool,
 }
 
 /// Count note heads in `events` that consume a lyric syllable (non-tie-continuation notes).
@@ -18,19 +17,13 @@ pub fn count_lyric_slots_in_events(
     for spanned in events {
         match &spanned.value {
             ScoreEvent::Note(note) => {
-                let is_continuation =
-                    state.prev_tie && state.prev_pitch.as_ref() == Some(&note.pitch);
-                if !is_continuation {
+                if !state.prev_tie_to_next {
                     count += 1;
                 }
-                state.prev_tie = note.tie;
-                state.prev_pitch = Some(note.pitch.clone());
+                state.prev_tie_to_next = note.tie_to_next;
             }
             ScoreEvent::Rest(_) => {
-                state.prev_tie = false;
-            }
-            ScoreEvent::TieMarker => {
-                state.prev_tie = true;
+                state.prev_tie_to_next = false;
             }
             _ => {}
         }
@@ -228,10 +221,11 @@ mod tests {
                     pitch: JianPuPitch::Three,
                     octave: 0,
                     duration: 4,
-                    tie: true,
-                    group_membership: 1,
-                    group_continuation: 1,
+                    slur: false,
+                    group_membership: 0,
+                    group_continuation: 0,
                     dotted: false,
+                    tie_to_next: true,
                     slur_group_close_at_duration: None,
                 }),
                 Span::new(0, 1),
@@ -241,10 +235,11 @@ mod tests {
                     pitch: JianPuPitch::Three,
                     octave: 0,
                     duration: 4,
-                    tie: false,
-                    group_membership: 1,
+                    slur: false,
+                    group_membership: 0,
                     group_continuation: 0,
                     dotted: false,
+                    tie_to_next: false,
                     slur_group_close_at_duration: None,
                 }),
                 Span::new(1, 2),
@@ -254,10 +249,11 @@ mod tests {
                     pitch: JianPuPitch::One,
                     octave: 0,
                     duration: 4,
-                    tie: false,
+                    slur: false,
                     group_membership: 0,
                     group_continuation: 0,
                     dotted: false,
+                    tie_to_next: false,
                     slur_group_close_at_duration: None,
                 }),
                 Span::new(2, 3),
@@ -265,8 +261,7 @@ mod tests {
         ];
         let mut state = LyricTieState::default();
         assert_eq!(count_lyric_slots_in_events(&events, &mut state), 2);
-        assert!(!state.prev_tie);
-        assert_eq!(state.prev_pitch, Some(JianPuPitch::One));
+        assert!(!state.prev_tie_to_next);
     }
 
     #[test]
@@ -279,9 +274,10 @@ mod tests {
                 pitch: JianPuPitch::Three,
                 octave: 0,
                 duration: 4,
-                tie: true,
-                group_membership: 1,
-                group_continuation: 1,
+                slur: false,
+                tie_to_next: true,
+                group_membership: 0,
+                group_continuation: 0,
                 dotted: false,
                 slur_group_close_at_duration: None,
             }),
@@ -292,8 +288,9 @@ mod tests {
                 pitch: JianPuPitch::Three,
                 octave: 0,
                 duration: 4,
-                tie: false,
-                group_membership: 1,
+                slur: false,
+                tie_to_next: false,
+                group_membership: 0,
                 group_continuation: 0,
                 dotted: false,
                 slur_group_close_at_duration: None,

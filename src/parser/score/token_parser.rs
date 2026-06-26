@@ -61,7 +61,7 @@ mod tests {
         assert_eq!(n.pitch, JianPuPitch::One);
         assert_eq!(n.duration, 4);
         assert_eq!(n.octave, 0);
-        assert!(!n.tie);
+        assert!(!n.slur);
     }
 
     #[test]
@@ -131,8 +131,8 @@ mod tests {
     fn parses_tie_group() {
         let events = parse_events("(23)");
         assert_eq!(events.len(), 2);
-        assert!(note(&events, 0).tie);
-        assert!(!note(&events, 1).tie);
+        assert!(note(&events, 0).slur);
+        assert!(!note(&events, 1).slur);
     }
 
     #[test]
@@ -305,8 +305,8 @@ mod tests {
     fn parses_group_followed_by_notes() {
         let events = parse_events("(12)31");
         assert_eq!(events.len(), 4);
-        assert!(note(&events, 0).tie);
-        assert!(!note(&events, 1).tie);
+        assert!(note(&events, 0).slur);
+        assert!(!note(&events, 1).slur);
     }
 
     #[test]
@@ -314,7 +314,7 @@ mod tests {
         let mut state = GroupStack::default();
         let events = parse_with_state("111(1", &mut state).unwrap().events;
         assert_eq!(events.len(), 4);
-        assert!(note(&events, 3).tie);
+        assert!(note(&events, 3).slur);
         assert!(state.is_open());
     }
 
@@ -325,7 +325,7 @@ mod tests {
         parse_with_state("(1", &mut state).unwrap();
         let events = parse_with_state("2)345", &mut state).unwrap().events;
         assert_eq!(events.len(), 4);
-        assert!(!note(&events, 0).tie);
+        assert!(!note(&events, 0).slur);
         assert!(!state.is_open());
     }
 
@@ -335,7 +335,7 @@ mod tests {
         parse_with_state("111(1", &mut state).unwrap();
         let events = parse_with_state("2)345", &mut state).unwrap().events;
         assert!(note(&events, 0).pitch == JianPuPitch::Two);
-        assert!(!note(&events, 0).tie);
+        assert!(!note(&events, 0).slur);
     }
 
     #[test]
@@ -347,7 +347,7 @@ mod tests {
         assert!(state.is_open());
         assert_eq!(events.len(), 1);
         assert!(note(&events, 0).pitch == JianPuPitch::Seven);
-        assert!(note(&events, 0).tie);
+        assert!(note(&events, 0).slur);
     }
 
     #[test]
@@ -389,6 +389,6 @@ mod tests {
         assert!(!state.is_open());
         assert_eq!(events.len(), 1);
         assert!(note(&events, 0).pitch == JianPuPitch::Seven);
-        assert!(!note(&events, 0).tie);
+        assert!(!note(&events, 0).slur);
     }
 }

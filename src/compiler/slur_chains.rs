@@ -1,6 +1,6 @@
 use crate::ast::grouped::GroupedChordNote;
 use crate::ast::parsed::{Extension, JianPuPitch, TriadQuality};
-use crate::compiler::types::SlurSpan;
+use crate::compiler::types::{ArcKind, SlurSpan};
 
 pub(super) struct PendingSlurOpen {
     pub(super) measure_index: usize,
@@ -9,21 +9,19 @@ pub(super) struct PendingSlurOpen {
 
 /// Per-part state carried across measure boundaries.
 pub(super) struct PartCrossState {
+    pub(super) pending_slur_opens: Vec<Option<PendingSlurOpen>>,
     pub(super) prev_tie: bool,
     pub(super) prev_tie_column: Option<u32>,
     pub(super) prev_tie_measure: Option<usize>,
-    pub(super) prev_slur_key: Option<SlurKey>,
-    pub(super) pending_slur_opens: Vec<Option<PendingSlurOpen>>,
 }
 
 impl PartCrossState {
     pub(super) fn new() -> Self {
         PartCrossState {
+            pending_slur_opens: Vec::new(),
             prev_tie: false,
             prev_tie_column: None,
             prev_tie_measure: None,
-            prev_slur_key: None,
-            pending_slur_opens: Vec::new(),
         }
     }
 
@@ -63,7 +61,7 @@ impl SlurKey {
     }
 }
 
-/// Emit a `SlurSpan` for a completed chain.
+/// Emit a single `SlurSpan` covering the full chain from first to last node.
 ///
 /// `pending_open`: if `Some`, the chain started in a previous measure; use it as the origin
 /// instead of `chain.first()`. Passing `None` treats the whole chain as same-measure.
@@ -78,45 +76,18 @@ pub(super) fn flush_chain(
         return;
     }
 
-    let has_pitch_change = chain
-        .windows(2)
-        .any(|w| matches!((w.first(), w.get(1)), (Some(a), Some(b)) if a.1 != b.1));
-
-    if has_pitch_change {
-        if let Some((first, last)) = chain.first().zip(chain.last()) {
-            let (from_measure, from_column) = pending_open
-                .map(|o| (o.measure_index, o.from_column))
-                .unwrap_or((measure_index, first.0));
-            slur_spans.push(SlurSpan {
-                part_index,
-                from_measure,
-                from_column,
-                to_measure: measure_index,
-                to_column: last.0,
-            });
-        }
-    }
-
-    // Ties: emit one arc per consecutive same-pitch pair.
-    for (window_index, window) in chain.windows(2).enumerate() {
-        if let (Some(previous), Some(next)) = (window.first(), window.get(1)) {
-            if previous.1 == next.1 {
-                let (from_measure, from_column) = if window_index == 0 {
-                    pending_open
-                        .map(|o| (o.measure_index, o.from_column))
-                        .unwrap_or((measure_index, previous.0))
-                } else {
-                    (measure_index, previous.0)
-                };
-                slur_spans.push(SlurSpan {
-                    part_index,
-                    from_measure,
-                    from_column,
-                    to_measure: measure_index,
-                    to_column: next.0,
-                });
-            }
-        }
+    if let Some((first, last)) = chain.first().zip(chain.last()) {
+        let (from_measure, from_column) = pending_open
+            .map(|o| (o.measure_index, o.from_column))
+            .unwrap_or((measure_index, first.0));
+        slur_spans.push(SlurSpan {
+            kind: ArcKind::Slur,
+            part_index,
+            from_measure,
+            from_column,
+            to_measure: measure_index,
+            to_column: last.0,
+        });
     }
 }
 
@@ -163,6 +134,7 @@ pub(super) fn extend_note_chains(
                 // Cross-measure close: origin is in pending_slur_opens[depth]
                 if let Some(open) = pending_slur_opens.get_mut(depth).and_then(|o| o.take()) {
                     slur_spans.push(SlurSpan {
+                        kind: ArcKind::Slur,
                         part_index,
                         from_measure: open.measure_index,
                         from_column: open.from_column,

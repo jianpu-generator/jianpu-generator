@@ -1,4 +1,5 @@
 use crate::ast::parsed::JianPuPitch;
+use crate::compiler::types::ArcKind;
 
 #[derive(Debug, Clone)]
 pub struct AbsolutePage {
@@ -30,6 +31,7 @@ pub enum AbsoluteContent {
         level: u32,
     },
     TieOrSlur {
+        kind: ArcKind,
         width: f32,
     },
     BarLine {

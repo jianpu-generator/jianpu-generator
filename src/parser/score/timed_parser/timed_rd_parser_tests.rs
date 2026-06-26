@@ -70,13 +70,13 @@ fn parses_closed_group_applies_tie() {
     assert_eq!(events.len(), 2);
     // First note should be tied (group_continuation > 0).
     if let ScoreEvent::Note(ParsedNote {
-        tie,
+        slur,
         group_membership,
         group_continuation,
         ..
     }) = &events[0].value
     {
-        assert!(*tie);
+        assert!(*slur);
         assert_eq!(*group_membership, 1);
         assert_eq!(*group_continuation, 1);
     } else {
@@ -84,13 +84,13 @@ fn parses_closed_group_applies_tie() {
     }
     // Last note: in group but not tied.
     if let ScoreEvent::Note(ParsedNote {
-        tie,
+        slur,
         group_membership,
         group_continuation,
         ..
     }) = &events[1].value
     {
-        assert!(!*tie);
+        assert!(!*slur);
         assert_eq!(*group_membership, 1);
         assert_eq!(*group_continuation, 0);
     } else {
@@ -107,12 +107,12 @@ fn parses_open_group_all_notes_tied() {
     assert!(stack.is_open(), "stack should still have an open frame");
     for ev in &events {
         if let ScoreEvent::Note(ParsedNote {
-            tie,
+            slur,
             group_continuation,
             ..
         }) = &ev.value
         {
-            assert!(*tie);
+            assert!(*slur);
             assert!(*group_continuation > 0);
         } else {
             panic!("expected Note");

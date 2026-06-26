@@ -86,16 +86,46 @@ fn measures_without_lyrics_underflow_have_no_errors() {
 }
 
 #[test]
-fn cross_measure_tie_closing_note_does_not_consume_syllable() {
-    // The closing note of a cross-measure same-pitch tie (5) is a tie continuation
-    // and must not consume a lyric syllable. Measure 2 has notes 5 (continuation),
-    // 6, 7, 0 (rest), so "hi ha" is exactly sufficient — no underflow.
+fn cross_measure_tilde_tie_closing_note_does_not_consume_syllable() {
+    // 4~ ends measure 1; the 4 opening measure 2 is a tie continuation and
+    // must not consume a lyric syllable. Measure 2 has notes 4 (tied), 5, 6, 7,
+    // so "ha ko da" (3 syllables) is exactly sufficient — no underflow.
+    let input = r#"# metadata
+title="t"
+author="a"
+
+# parts
+Melody = notes+lyrics
+
+# score
+time=4/4 key=C4 bpm=120
+[Melody] 1 2 3 4~
+[Melody] la la la la
+
+[Melody] 4 5 6 7
+[Melody] ha ko da
+"#;
+    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let score = group(doc).unwrap();
+    assert_eq!(score.measures.len(), 2);
+    assert!(
+        score.measures[1].diagnostics.is_empty(),
+        "measure 2 must have no underflow error, got: {:?}",
+        score.measures[1].diagnostics
+    );
+}
+
+#[test]
+fn cross_measure_slur_note_consumes_syllable() {
+    // (5 ... 5) is a slur, not a tie — the closing 5) still plays as its own
+    // note and must consume a lyric syllable. Measure 2 has notes 5, 6, 7, 0 (rest),
+    // so "hi ha ho" (3 syllables) is exactly sufficient — no underflow.
     let input = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n",
         "[Melody] 1 2 3 (5\n[Melody] fa fo fi fu\n\n",
-        "[Melody] 5) 6 7 0\n[Melody] hi ha\n",
+        "[Melody] 5) 6 7 0\n[Melody] hi ha ho\n",
     );
     let doc = parser::parse(input, "test.jianpu").unwrap();
     let score = group(doc).unwrap();

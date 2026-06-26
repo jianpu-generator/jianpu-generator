@@ -14,32 +14,24 @@ fn notes_doc(score_content: &str) -> String {
 }
 
 #[test]
-fn three_same_pitch_notes_emits_two_tie_arcs() {
-    // "(555)" — three quarter notes of the same pitch under a tie group.
-    // Ties draw one arc per consecutive pair: (col 4→8) and (col 8→12).
+fn three_same_pitch_notes_in_slur_emits_one_slur_arc() {
+    // "(555)" — three quarter notes of the same pitch under a slur group.
+    // A slur draws one arc from first to last: col 4→12.
     // col 0=note 1, col 4=first 5, col 8=second 5, col 12=third 5.
     let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 1 (555)\n"));
     let result = compile(&score);
     assert_eq!(
         result.slur_spans.len(),
-        2,
-        "expected 2 tie arcs for (555), got: {:?}",
+        1,
+        "expected 1 slur arc for (555), got: {:?}",
         result.slur_spans
     );
     assert!(
         result
             .slur_spans
             .iter()
-            .any(|s| s.from_column == 4 && s.to_column == 8),
-        "expected arc col 4→8, got: {:?}",
-        result.slur_spans
-    );
-    assert!(
-        result
-            .slur_spans
-            .iter()
-            .any(|s| s.from_column == 8 && s.to_column == 12),
-        "expected arc col 8→12, got: {:?}",
+            .any(|s| s.from_column == 4 && s.to_column == 12),
+        "expected arc col 4→12, got: {:?}",
         result.slur_spans
     );
 }
@@ -95,9 +87,9 @@ fn cross_measure_slur_emits_single_slur_span() {
 }
 
 #[test]
-fn cross_measure_tie_emits_single_slur_span() {
-    // Bar 1: "1 2 3 (4" — note 4 at col 12 has tie=true (same pitch on both sides).
-    // Bar 2: "4) 5 6 7" — note 4 at col 0 closes the tie.
+fn cross_measure_same_pitch_slur_emits_single_slur_span() {
+    // Bar 1: "1 2 3 (4" — slur opens on note 4 at col 12.
+    // Bar 2: "4) 5 6 7" — slur closes on note 4 at col 0.
     let score = score_from(&notes_doc(concat!(
         "time=4/4 key=C4 bpm=120\n",
         "[S] 1 2 3 (4\n",

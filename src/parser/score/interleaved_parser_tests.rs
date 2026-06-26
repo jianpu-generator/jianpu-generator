@@ -47,7 +47,7 @@ fn chord_column_events_are_parsed() {
             extension: None,
             bass: None,
             duration: 4,
-            tie: false,
+            slur: false,
             group_membership: 0,
             group_continuation: 0,
             dotted: false,
@@ -173,8 +173,8 @@ fn cross_measure_paren_group_parses() {
         })
         .collect();
     assert_eq!(note_events.len(), 8);
-    assert!(note_events[3].tie);
-    assert!(!note_events[4].tie);
+    assert!(note_events[3].slur);
+    assert!(!note_events[4].slur);
 }
 
 #[test]

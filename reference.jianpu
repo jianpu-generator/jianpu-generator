@@ -38,6 +38,18 @@ label="Slur group"
 [M] (1 2) (3 4)
 [M] _
 
+label="Tie: basic"
+[M] 4~4 3 2
+
+label="Tie: across duration extensions"
+[M] 4~-4-
+
+label="Tie: chained"
+[M] 1~1~1 0
+
+label="Tie inside slur"
+[M] (4~4 3) 2
+
 label="Nested slur"
 [M] ((1_ 2_) 3) 4
 [M] _

@@ -185,7 +185,9 @@ pub struct ParsedNote {
     /// Duration in quarter-beats. For dotted notes this already includes the added half-value.
     pub duration: u32,
     /// Whether this note is tied/slurred to the next note (from a `(…)` group).
-    pub tie: bool,
+    pub slur: bool,
+    /// Whether `~` appeared after the octave modifier, requesting a tie to the next note.
+    pub tie_to_next: bool,
     /// Number of nested `(…)` groups this note belongs to.
     pub group_membership: u8,
     /// Number of those groups that continue past this note.
@@ -206,7 +208,7 @@ pub struct ParsedChordNote {
     pub extension: Option<Extension>,
     pub bass: Option<BassDegree>,
     pub duration: u32,
-    pub tie: bool,
+    pub slur: bool,
     pub group_membership: u8,
     pub group_continuation: u8,
     pub dotted: bool,

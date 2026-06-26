@@ -52,31 +52,40 @@ fn resolve_row_element(
                 },
             }))
         }
-        GridContent::TieOrSlur => {
+        GridContent::TieOrSlur { kind } => {
             let arc_x = x_start + col_width * 0.5;
             let arc_width = (el.column_span as f32 - 1.0) * col_width;
             Ok(Some(AbsoluteElement {
                 x: arc_x,
                 y,
-                content: AbsoluteContent::TieOrSlur { width: arc_width },
+                content: AbsoluteContent::TieOrSlur {
+                    kind: kind.clone(),
+                    width: arc_width,
+                },
             }))
         }
-        GridContent::TieOrSlurTail => {
+        GridContent::TieOrSlurTail { kind } => {
             let arc_x = x_start + col_width * 0.5;
             let arc_width = el.column_span as f32 * col_width - col_width * 0.5;
             Ok(Some(AbsoluteElement {
                 x: arc_x,
                 y,
-                content: AbsoluteContent::TieOrSlur { width: arc_width },
+                content: AbsoluteContent::TieOrSlur {
+                    kind: kind.clone(),
+                    width: arc_width,
+                },
             }))
         }
-        GridContent::TieOrSlurHead => {
+        GridContent::TieOrSlurHead { kind } => {
             let arc_x = x_start;
             let arc_width = (el.column_span as f32 - 1.0) * col_width + col_width * 0.5;
             Ok(Some(AbsoluteElement {
                 x: arc_x,
                 y,
-                content: AbsoluteContent::TieOrSlur { width: arc_width },
+                content: AbsoluteContent::TieOrSlur {
+                    kind: kind.clone(),
+                    width: arc_width,
+                },
             }))
         }
         content => {
@@ -91,7 +100,9 @@ fn resolve_row_element(
 
 fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
     match content {
-        GridContent::TieOrSlur | GridContent::TieOrSlurTail | GridContent::TieOrSlurHead => None,
+        GridContent::TieOrSlur { .. }
+        | GridContent::TieOrSlurTail { .. }
+        | GridContent::TieOrSlurHead { .. } => None,
         GridContent::NoteHead {
             pitch,
             octave,

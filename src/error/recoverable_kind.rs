@@ -93,6 +93,12 @@ pub enum RecoverableErrorKind {
     PartKeyUnknown { key: String },
     /// A score data line has no `[Abbrev]` prefix — the line is dropped.
     ScoreLineMissingKeyPrefix,
+    /// `~` (tie-to-next) appeared on a rest — `~` is ignored, rest is emitted normally.
+    TieOnRest,
+    /// `~` appears on the last note of a part — there is no following note to tie to.
+    DanglingTie,
+    /// `~`-marked note is followed by a note with a different pitch or octave — tie is dropped.
+    TiePitchMismatch { expected: String, got: String },
     /// A `follow[Target]` clause names an abbreviation not in the parts declaration — the clause is ignored.
     PartsFollowUnknownTarget { target: String },
     /// A `follow[Target]` clause names a part declared after the follower — the clause is ignored.
@@ -159,6 +165,9 @@ impl RecoverableErrorKind {
             Self::ScoreLineMissingKeyPrefix => {
                 "score line has no [Abbrev] prefix; line dropped".to_string()
             }
+            Self::TieOnRest => "~ cannot be applied to a rest; ~ ignored".to_string(),
+            Self::DanglingTie => "~ has no following note to tie to; ~ ignored".to_string(),
+            Self::TiePitchMismatch { expected, got } => format!("tied notes must have the same pitch and octave; expected {expected}, got {got}; ~ ignored"),
             Self::PartsFollowUnknownTarget { target } => {
                 format!("follow[{target}]: unknown part abbreviation")
             }

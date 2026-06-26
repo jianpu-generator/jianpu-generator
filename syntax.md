@@ -273,6 +273,7 @@ Examples: `1'` (octave up), `1,,` (two octaves down), `3_,'` (eighth note, up on
 |--------|---------|
 | `.` | Dotted (add half the base duration). Cannot combine with `=` (sixteenth) notes. |
 | `-` | Extend the previous **note** by one beat (4 quarter-beats) |
+| `~` | Tie this note to the next note (same pitch and octave required) |
 
 Example: `2 - - -` is a whole note in 4/4 (equivalent to `2---`).
 
@@ -300,6 +301,27 @@ Parentheses connect notes with tie/slur arcs (happi123-style 连音符). A group
 Groups may be **nested**: a `(…)` inside another `(…)` adds an inner tie/slur arc while the outer group still connects all enclosed notes. Each nested group must still contain at least 2 notes.
 
 A group must contain **at least 2 notes** (counting notes across a cross-measure open/close). Single-note groups like `(5)` are invalid.
+
+### Tie (`~`)
+
+`~` is written immediately after the octave modifier and before any duration modifiers:
+
+```
+4~---4---       tie two 4-beat notes
+4'~4'           tie two high-4 quarter notes
+4~.4.           tie quarter to dotted quarter
+4~---4~---4---  chain of three tied notes
+(4~---4--- 3)   tie inside a slur
+```
+
+Rules:
+- Both pitch and octave must match the next note — otherwise a recoverable error is emitted and the arc is suppressed.
+- `~` on a rest is an error.
+- `~` on the last note of the piece (no following note) is an error.
+- Ties span freely across measure boundaries.
+- Ties may appear inside slur groups `(…)`.
+
+A tie differs from a slur `(…)` in that it requires identical pitch, and carries distinct semantic meaning (duration extension vs. phrasing).
 
 Adjacent digits without spaces also start new notes: `505` is three quarter notes; `(12)31` is a group plus two more notes.
 

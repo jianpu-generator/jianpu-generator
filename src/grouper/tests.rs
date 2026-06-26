@@ -363,7 +363,7 @@ fn standalone_tie_marker_after_extension_that_flushes_measure() {
     ));
     let notes_m0 = first_part_notes(&score, 0);
     match notes_m0.last().unwrap() {
-        NoteEvent::Note(n) => assert!(n.tie, "note 6 in measure 0 should be tied"),
+        NoteEvent::Note(n) => assert!(n.slur, "note 6 in measure 0 should be tied"),
         NoteEvent::Rest(_) | NoteEvent::Chord(_) => panic!("expected Note"),
     }
 }
@@ -379,12 +379,12 @@ fn standalone_tie_marker_sets_tie_on_preceding_note() {
     match &notes[0] {
         NoteEvent::Note(n) => {
             assert_eq!(n.duration, 8, "note 6 should be extended to 2 beats");
-            assert!(n.tie, "note 6 should have tie=true");
+            assert!(n.slur, "note 6 should have tie=true");
         }
         NoteEvent::Rest(_) | NoteEvent::Chord(_) => panic!("expected Note"),
     }
     match &notes[1] {
-        NoteEvent::Note(n) => assert_eq!(n.pitch, crate::ast::parsed::JianPuPitch::Seven),
+        NoteEvent::Note(n) => assert_eq!(n.pitch, JianPuPitch::Seven),
         NoteEvent::Rest(_) | NoteEvent::Chord(_) => panic!("expected Note"),
     }
 }

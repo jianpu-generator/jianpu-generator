@@ -453,6 +453,27 @@ impl RecoverableError {
             kind: RecoverableErrorKind::ScoreLineMissingKeyPrefix,
         }
     }
+
+    pub fn tie_on_rest(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::TieOnRest,
+        }
+    }
+
+    pub fn dangling_tie(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::DanglingTie,
+        }
+    }
+
+    pub fn tie_pitch_mismatch(span: Span, expected: String, got: String) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::TiePitchMismatch { expected, got },
+        }
+    }
 }
 
 /// A per-measure diagnostic that is attached to rendered output.

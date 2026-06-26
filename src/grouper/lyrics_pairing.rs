@@ -1,5 +1,5 @@
 use crate::ast::grouped::{GroupedMeasure, NoteEvent};
-use crate::ast::parsed::{JianPuPitch, Syllable};
+use crate::ast::parsed::Syllable;
 use crate::error::{IrrecoverableError, Span, Warning};
 
 /// Pair each measure's raw lyric line to its note lyric slots (tie-aware).
@@ -24,23 +24,20 @@ pub(super) fn attach_paired_lyrics(
         None
     };
     let paired_count = lyric_line_count.min(measures.len());
-    let mut prev_tie = false;
-    let mut prev_pitch: Option<JianPuPitch> = None;
+    let mut prev_tie_to_next = false;
     for ((measure, raw_syllables), lyrics_span) in
         measures.iter_mut().zip(measure_syllables).zip(lyrics_spans)
     {
-        let (paired, error, next_tie, next_pitch) = pair_lyrics_to_notes(
+        let (paired, error, next_tie_to_next) = pair_lyrics_to_notes(
             &measure.notes.events,
             &raw_syllables,
             &lyrics_span,
-            prev_tie,
-            prev_pitch,
+            prev_tie_to_next,
             part_name,
         );
         measure.paired_lyrics = Some(paired);
         measure.lyrics_error = error;
-        prev_tie = next_tie;
-        prev_pitch = next_pitch;
+        prev_tie_to_next = next_tie_to_next;
     }
     if let Some(message) = count_mismatch_error {
         for measure in measures.iter_mut().skip(paired_count) {
@@ -54,10 +51,9 @@ fn pair_lyrics_to_notes(
     events: &[NoteEvent],
     raw_syllables: &[Syllable],
     source_span: &Span,
-    mut prev_tie: bool,
-    mut prev_pitch: Option<JianPuPitch>,
+    mut prev_tie_to_next: bool,
     part_name: &str,
-) -> (Vec<Syllable>, Option<Warning>, bool, Option<JianPuPitch>) {
+) -> (Vec<Syllable>, Option<Warning>, bool) {
     let no_lyrics = raw_syllables.is_empty();
     let mut syllable_idx = 0;
     let mut paired = Vec::new();
@@ -66,8 +62,8 @@ fn pair_lyrics_to_notes(
     for event in events {
         match event {
             NoteEvent::Note(note) => {
-                let is_continuation = prev_tie && prev_pitch.as_ref() == Some(&note.pitch);
-                if !is_continuation {
+                let is_tie_continuation = prev_tie_to_next;
+                if !is_tie_continuation {
                     if let Some(syllable) = raw_syllables.get(syllable_idx) {
                         paired.push(syllable.clone());
                         syllable_idx += 1;
@@ -81,11 +77,10 @@ fn pair_lyrics_to_notes(
                         }
                     }
                 }
-                prev_tie = note.tie;
-                prev_pitch = Some(note.pitch.clone());
+                prev_tie_to_next = note.tie_to_next;
             }
             NoteEvent::Rest(_) | NoteEvent::Chord(_) => {
-                prev_tie = false;
+                prev_tie_to_next = false;
             }
         }
     }
@@ -110,5 +105,5 @@ fn pair_lyrics_to_notes(
         None
     };
 
-    (paired, error, prev_tie, prev_pitch)
+    (paired, error, prev_tie_to_next)
 }

@@ -6,8 +6,10 @@ pub struct DurationParse {
     pub dotted: bool,
     pub octave_up: i8,
     pub octave_down: i8,
+    pub tie_to_next: bool,
     pub next_index: usize,
     pub dash_after_rest_error: Option<RecoverableError>,
+    pub tie_on_rest_error: Option<RecoverableError>,
     pub unexpected_char_error: Option<RecoverableError>,
     pub mixed_octave_markers_error: Option<RecoverableError>,
     pub cannot_dot_quarter_beat_error: Option<RecoverableError>,
@@ -18,7 +20,9 @@ struct DurationSuffixState {
     dotted: bool,
     octave_up: i8,
     octave_down: i8,
+    tie_to_next: bool,
     dash_after_rest_error: Option<RecoverableError>,
+    tie_on_rest_error: Option<RecoverableError>,
     unexpected_char_error: Option<RecoverableError>,
 }
 
@@ -55,6 +59,19 @@ impl DurationSuffixContext<'_> {
             }
             '.' => {
                 self.state.dotted = true;
+                Ok(Some(index + 1))
+            }
+            '~' => {
+                if self.is_rest {
+                    if self.state.tie_on_rest_error.is_none() {
+                        let pos = self.span.start
+                            + byte_offset_at_char_index_from_chars(self.chars, self.start, index);
+                        self.state.tie_on_rest_error =
+                            Some(RecoverableError::tie_on_rest(Span::new(pos, pos + 1)));
+                    }
+                } else {
+                    self.state.tie_to_next = true;
+                }
                 Ok(Some(index + 1))
             }
             '-' => {
@@ -115,7 +132,9 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
             dotted: false,
             octave_up: 0,
             octave_down: 0,
+            tie_to_next: false,
             dash_after_rest_error: None,
+            tie_on_rest_error: None,
             unexpected_char_error: None,
         },
     };
@@ -158,8 +177,10 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
         dotted: context.state.dotted,
         octave_up: context.state.octave_up,
         octave_down: context.state.octave_down,
+        tie_to_next: context.state.tie_to_next,
         next_index: index,
         dash_after_rest_error: context.state.dash_after_rest_error,
+        tie_on_rest_error: context.state.tie_on_rest_error,
         unexpected_char_error: context.state.unexpected_char_error,
         mixed_octave_markers_error,
         cannot_dot_quarter_beat_error,

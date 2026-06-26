@@ -18,7 +18,7 @@ fn chord(
         extension: ext,
         bass,
         duration: 4,
-        tie: false,
+        slur: false,
         group_membership: 0,
         group_continuation: 0,
         dotted: false,

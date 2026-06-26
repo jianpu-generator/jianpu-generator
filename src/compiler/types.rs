@@ -1,6 +1,12 @@
 use crate::ast::parsed::JianPuPitch;
 use crate::error::Diagnostic;
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum ArcKind {
+    Slur,
+    Tie,
+}
+
 #[derive(Debug, Clone)]
 pub struct MeasureBlock {
     pub rows: Vec<MeasureRow>,
@@ -58,6 +64,7 @@ pub enum ElementContent {
 /// Resolved into grid arc elements by the layout stage.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SlurSpan {
+    pub kind: ArcKind,
     pub part_index: usize,
     pub from_measure: usize, // 0-indexed global measure index
     pub from_column: u32,    // measure-relative column of the opening note

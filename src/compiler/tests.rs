@@ -276,16 +276,16 @@ fn note_head_column_is_zero_indexed() {
 }
 
 #[test]
-fn cross_measure_tie_does_not_consume_lyric_slot_for_continuation_note() {
-    // Bar 1: "1 2 3 (4" has 4 lyric slots → "ha ta ba na"
-    // Bar 2: "4) 5 6 7" → note 4 is a tie continuation, only 3 lyric slots → "sa da ko"
-    // "sa" must be assigned to note 5 (column 4), not note 4) (column 0).
+fn cross_measure_tilde_tie_does_not_consume_lyric_slot_for_continuation_note() {
+    // Bar 1: "1 2 3 4~" has 4 lyric slots → "ha ta ba na"
+    // Bar 2: "4 5 6 7" → note 4 is a tie continuation, only 3 lyric slots → "sa da ko"
+    // "sa" must be assigned to note 5 (column 4), not the tied note 4 (column 0).
     let score = score_from(&lyrics_doc(concat!(
         "time=4/4 key=C4 bpm=120\n",
-        "[S] 1 2 3 (4\n",
+        "[S] 1 2 3 4~\n",
         "[S] ha ta ba na\n",
         "\n",
-        "[S] 4) 5 6 7\n",
+        "[S] 4 5 6 7\n",
         "[S] sa da ko\n",
     )));
     let result = compile(&score);

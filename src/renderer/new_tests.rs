@@ -1,4 +1,5 @@
 use crate::ast::parsed::JianPuPitch;
+use crate::compiler::types::ArcKind;
 use crate::compositor::types::{AbsoluteContent, AbsoluteElement, AbsolutePage};
 use crate::render_config::RenderConfig;
 use crate::renderer::new_renderer::render_new;
@@ -54,7 +55,10 @@ fn bar_line_produces_vertical_line() {
 
 #[test]
 fn tie_produces_path() {
-    let page = make_page(AbsoluteContent::TieOrSlur { width: 40.0 });
+    let page = make_page(AbsoluteContent::TieOrSlur {
+        kind: ArcKind::Slur,
+        width: 40.0,
+    });
     let docs = render_new(&[page], &cfg());
     let has_path = docs[0]
         .elements

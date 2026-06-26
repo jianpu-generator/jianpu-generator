@@ -3,8 +3,8 @@ use crate::ast::grouped::{
     GroupedTrack, Metadata, NoteEvent, Notes, Score, TimeSignature,
 };
 use crate::ast::parsed::{
-    ParsedChordNote, ParsedDocument, ParsedMeasureSlot, ParsedNote, ParsedRest, ParsedTimedTrack,
-    ParsedTrack, PartKind, ScoreEvent, Soundfont,
+    JianPuPitch, ParsedChordNote, ParsedDocument, ParsedMeasureSlot, ParsedNote, ParsedRest,
+    ParsedTimedTrack, ParsedTrack, PartKind, ScoreEvent, Soundfont,
 };
 use crate::combiner;
 use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Warning};
@@ -46,7 +46,7 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
 
     let (measures, combiner_diagnostics) = combiner::combine(&grouped_score);
 
-    Ok(Score {
+    let mut score = Score {
         metadata: Metadata {
             title: metadata.title,
             subtitle: metadata.subtitle,
@@ -61,7 +61,139 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
             .into_iter()
             .chain(combiner_diagnostics)
             .collect(),
-    })
+    };
+    validate_ties(&mut score);
+    Ok(score)
+}
+
+struct NoteInfo {
+    measure_idx: usize,
+    event_idx: usize,
+    pitch: JianPuPitch,
+    octave: i8,
+    tie_to_next: bool,
+    span: Span,
+}
+
+struct TieCorrection {
+    measure_idx: usize,
+    event_idx: usize,
+    error: RecoverableError,
+}
+
+fn pitch_to_char(pitch: &JianPuPitch) -> char {
+    match pitch {
+        JianPuPitch::One => '1',
+        JianPuPitch::Two => '2',
+        JianPuPitch::Three => '3',
+        JianPuPitch::Four => '4',
+        JianPuPitch::Five => '5',
+        JianPuPitch::Six => '6',
+        JianPuPitch::Seven => '7',
+    }
+}
+
+fn format_pitch_octave(pitch: &JianPuPitch, octave: i8) -> String {
+    let ch = pitch_to_char(pitch);
+    let octave_suffix = match octave.cmp(&0) {
+        std::cmp::Ordering::Greater => "'".repeat(octave as usize),
+        std::cmp::Ordering::Less => ",".repeat((-octave) as usize),
+        std::cmp::Ordering::Equal => String::new(),
+    };
+    format!("{ch}{octave_suffix}")
+}
+
+fn collect_notes_for_part(score: &Score, part_idx: usize) -> Vec<NoteInfo> {
+    score
+        .measures
+        .iter()
+        .enumerate()
+        .flat_map(|(measure_idx, measure)| -> Vec<NoteInfo> {
+            let Some(part_row) = measure.parts.get(part_idx) else {
+                return Vec::new();
+            };
+            let span = measure.source_span;
+            part_row
+                .slice()
+                .notes
+                .events
+                .iter()
+                .enumerate()
+                .filter_map(move |(event_idx, event)| {
+                    if let NoteEvent::Note(n) = event {
+                        Some(NoteInfo {
+                            measure_idx,
+                            event_idx,
+                            pitch: n.pitch.clone(),
+                            octave: n.octave,
+                            tie_to_next: n.tie_to_next,
+                            span,
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        })
+        .collect()
+}
+
+fn tie_corrections(notes: &[NoteInfo]) -> Vec<TieCorrection> {
+    notes
+        .iter()
+        .enumerate()
+        .filter(|(_, note)| note.tie_to_next)
+        .filter_map(|(i, note)| {
+            let next = notes.get(i + 1);
+            let error = match next {
+                None => Some(RecoverableError::dangling_tie(note.span)),
+                Some(next_note)
+                    if next_note.pitch != note.pitch || next_note.octave != note.octave =>
+                {
+                    let expected = format_pitch_octave(&note.pitch, note.octave);
+                    let got = format_pitch_octave(&next_note.pitch, next_note.octave);
+                    Some(RecoverableError::tie_pitch_mismatch(
+                        note.span, expected, got,
+                    ))
+                }
+                Some(_) => None,
+            };
+            error.map(|err| TieCorrection {
+                measure_idx: note.measure_idx,
+                event_idx: note.event_idx,
+                error: err,
+            })
+        })
+        .collect()
+}
+
+fn apply_tie_corrections(score: &mut Score, part_idx: usize, corrections: Vec<TieCorrection>) {
+    for correction in corrections {
+        if let Some(measure) = score.measures.get_mut(correction.measure_idx) {
+            measure
+                .diagnostics
+                .push(Diagnostic::Error(correction.error));
+            if let Some(part_row) = measure.parts.get_mut(part_idx) {
+                if let Some(NoteEvent::Note(n)) = part_row
+                    .slice_mut()
+                    .notes
+                    .events
+                    .get_mut(correction.event_idx)
+                {
+                    n.tie_to_next = false;
+                }
+            }
+        }
+    }
+}
+
+fn validate_ties(score: &mut Score) {
+    let num_parts = score.measures.first().map_or(0, |m| m.parts.len());
+    for part_idx in 0..num_parts {
+        let notes = collect_notes_for_part(score, part_idx);
+        let corrections = tie_corrections(&notes);
+        apply_tie_corrections(score, part_idx, corrections);
+    }
 }
 
 struct PartGrouper {
@@ -227,11 +359,11 @@ impl PartGrouper {
         });
         match last_event {
             Some(NoteEvent::Note(n)) => {
-                n.tie = true;
+                n.slur = true;
                 Ok(())
             }
             Some(NoteEvent::Chord(c)) => {
-                c.tie = true;
+                c.slur = true;
                 Ok(())
             }
             // TieMarker is a legacy event that is never emitted by the parser;
@@ -248,7 +380,8 @@ impl PartGrouper {
                 pitch: pn.pitch,
                 octave: pn.octave,
                 duration: pn.duration,
-                tie: pn.tie && pn.slur_group_close_at_duration.is_none(),
+                slur: pn.slur && pn.slur_group_close_at_duration.is_none(),
+                tie_to_next: pn.tie_to_next,
                 group_membership: pn.group_membership,
                 group_continuation: pn.group_continuation,
                 dotted: pn.dotted,
@@ -269,7 +402,7 @@ impl PartGrouper {
                 extension: pc.extension,
                 bass: pc.bass,
                 duration: pc.duration,
-                tie: pc.tie && pc.slur_group_close_at_duration.is_none(),
+                slur: pc.slur && pc.slur_group_close_at_duration.is_none(),
                 group_membership: pc.group_membership,
                 group_continuation: pc.group_continuation,
                 dotted: pc.dotted,
@@ -417,3 +550,7 @@ mod tests;
 #[cfg(test)]
 #[path = "tests_lyrics.rs"]
 mod tests_lyrics;
+
+#[cfg(test)]
+#[path = "tests_tie.rs"]
+mod tests_tie;

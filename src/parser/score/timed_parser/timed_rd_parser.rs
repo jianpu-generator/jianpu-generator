@@ -64,12 +64,12 @@ fn apply_depth_to_event(event: &mut ScoreEvent, membership: u8, continuation: u8
         ScoreEvent::Note(n) => {
             n.group_membership = n.group_membership.saturating_add(membership);
             n.group_continuation = n.group_continuation.saturating_add(continuation);
-            n.tie = n.group_continuation > 0;
+            n.slur = n.group_continuation > 0;
         }
         ScoreEvent::Chord(c) => {
             c.group_membership = c.group_membership.saturating_add(membership);
             c.group_continuation = c.group_continuation.saturating_add(continuation);
-            c.tie = c.group_continuation > 0;
+            c.slur = c.group_continuation > 0;
         }
         ScoreEvent::Rest(r) => {
             r.group_membership = r.group_membership.saturating_add(membership);
@@ -332,6 +332,10 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
             self.dash_after_rest_error = duration_meta.dash_after_rest_error;
         }
 
+        if let Some(error) = duration_meta.tie_on_rest_error {
+            self.chord_errors.push(Diagnostic::Error(error));
+        }
+
         let octave = if duration_meta.octave_up > 0 {
             duration_meta.octave_up
         } else {
@@ -348,7 +352,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
         let unit_end_abs = digit_offset + unit_byte_len;
         let unit_span = Span::new(digit_offset, unit_end_abs);
 
-        let event = H::to_event(
+        let mut event = H::to_event(
             &head,
             duration_meta.duration,
             duration_meta.dotted,
@@ -356,6 +360,11 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
             0,
             0,
         );
+        if duration_meta.tie_to_next {
+            if let ScoreEvent::Note(ref mut note) = event {
+                note.tie_to_next = true;
+            }
+        }
         self.staging
             .push(DepthEvent::new(Spanned::new(event, unit_span)));
 

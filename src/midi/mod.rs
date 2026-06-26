@@ -47,7 +47,7 @@ enum EventResolution {
     Notes {
         midi_notes: Vec<u8>,
         duration: u32,
-        tie: bool,
+        slur: bool,
     },
 }
 
@@ -289,7 +289,7 @@ fn process_measure_notes(
             NoteEvent::Note(n) => EventResolution::Notes {
                 midi_notes: vec![resolve_midi_note(&n.pitch, n.octave, active_key)],
                 duration: n.duration,
-                tie: n.tie,
+                slur: n.slur,
             },
             NoteEvent::Rest(r) => EventResolution::Rest {
                 duration: r.duration,
@@ -336,7 +336,7 @@ fn process_events_with_ties(
             EventResolution::Notes {
                 midi_notes,
                 duration,
-                tie,
+                slur,
             } => {
                 let (continuing, new_notes): (Vec<u8>, Vec<u8>) =
                     midi_notes.iter().partition(|&&n| ties.remove(&n).is_some());
@@ -348,7 +348,7 @@ fn process_events_with_ties(
                     });
                 }
                 let off_tick = tick + duration_to_ticks(duration);
-                if tie {
+                if slur {
                     for &n in &midi_notes {
                         ties.insert(n, off_tick);
                     }
@@ -384,7 +384,7 @@ fn process_chord_events(
             NoteEvent::Chord(c) => EventResolution::Notes {
                 midi_notes: chord_midi_notes(c, active_key),
                 duration: c.duration,
-                tie: c.tie,
+                slur: c.slur,
             },
             NoteEvent::Rest(r) => EventResolution::Rest {
                 duration: r.duration,
