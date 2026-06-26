@@ -27,6 +27,11 @@ const generatePdf =
 const generateSplitPdfs =
   'generate_split_pdfs' in jianpuWasm ? jianpuWasm.generate_split_pdfs : null
 
+const generateInstrumentPreviewWav =
+  'generate_instrument_preview_wav' in jianpuWasm
+    ? jianpuWasm.generate_instrument_preview_wav
+    : null
+
 export type WorkerRequest =
   | {
       type: 'loadAssets'
@@ -80,6 +85,7 @@ export type WorkerRequest =
       disabledLyrics?: string[]
     }
   | { type: 'listMeasureSpans'; source: string; id: number }
+  | { type: 'previewInstrument'; id: number; programNumber: number }
 
 export type WorkerResponse =
   | { type: 'ready'; audioAvailable: boolean; pdfAvailable: boolean }
@@ -105,6 +111,8 @@ export type WorkerResponse =
   | { type: 'splitPdfErr'; id: number; diagnostics: Diagnostic[] }
   | { type: 'measureRangeAudio'; id: number; wav: ArrayBuffer }
   | { type: 'measureRangeAudioErr'; id: number }
+  | { type: 'instrumentPreview'; id: number; wav: ArrayBuffer }
+  | { type: 'instrumentPreviewErr'; id: number }
   | { type: 'highlightRangeOk'; id: number; documents: SvgDocumentOut[] }
   | { type: 'highlightRangeErr'; id: number; diagnostics: Diagnostic[] }
   | {
@@ -367,6 +375,37 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     }
     postMessage({
       type: 'measureRangeAudioErr',
+      id: msg.id,
+    } satisfies WorkerResponse)
+    return
+  }
+
+  if (msg.type === 'previewInstrument') {
+    if (!generateInstrumentPreviewWav || !loadedSoundfont) {
+      postMessage({
+        type: 'instrumentPreviewErr',
+        id: msg.id,
+      } satisfies WorkerResponse)
+      return
+    }
+    const result = generateInstrumentPreviewWav(
+      msg.programNumber,
+      loadedSoundfont,
+    )
+    if (result.status === 'ok' && result.wav != null) {
+      const wavBuffer = binaryBufferFromResult(result.wav)
+      postMessage(
+        {
+          type: 'instrumentPreview',
+          id: msg.id,
+          wav: wavBuffer,
+        } satisfies WorkerResponse,
+        { transfer: [wavBuffer] },
+      )
+      return
+    }
+    postMessage({
+      type: 'instrumentPreviewErr',
       id: msg.id,
     } satisfies WorkerResponse)
     return

@@ -42,6 +42,9 @@ interface JianpuWorkerState {
   stopMeasurePlayback: () => void
   highlightedDocuments: SvgDocumentOut[]
   measureSpans: MeasureSpan[]
+  previewInstrument: (programNumber: number) => void
+  stopPreviewInstrument: () => void
+  previewAudioPlaying: boolean
 }
 
 export function useJianpuWorker(
@@ -74,6 +77,7 @@ export function useJianpuWorker(
   } | null>(null)
   const [measureAudioGenerating, setMeasureAudioGenerating] = useState(false)
   const [measureAudioPlaying, setMeasureAudioPlaying] = useState(false)
+  const [previewAudioPlaying, setPreviewAudioPlaying] = useState(false)
   const currentMeasureAudioRef = useRef<HTMLAudioElement | null>(null)
   const [highlightedDocuments, setHighlightedDocuments] = useState<
     SvgDocumentOut[]
@@ -107,6 +111,9 @@ export function useJianpuWorker(
   const measureAudioRequestIdRef = useRef(0)
   const latestMeasureAudioIdRef = useRef(0)
   const measureWavUrlRef = useRef<string | null>(null)
+  const previewAudioRequestIdRef = useRef(0)
+  const latestPreviewAudioIdRef = useRef(0)
+  const currentPreviewAudioRef = useRef<HTMLAudioElement | null>(null)
 
   const effectiveDisabledParts = useMemo(() => {
     if (soloedParts.size === 0) return disabledParts
@@ -269,6 +276,26 @@ export function useJianpuWorker(
         if (msg.status === 'ok') {
           setMeasureSpans(msg.spans)
         }
+        return
+      }
+
+      if (msg.type === 'instrumentPreview') {
+        if (msg.id !== latestPreviewAudioIdRef.current) return
+        const url = URL.createObjectURL(
+          new Blob([msg.wav], { type: 'audio/wav' }),
+        )
+        if (currentPreviewAudioRef.current) {
+          currentPreviewAudioRef.current.pause()
+        }
+        const audio = new Audio(url)
+        currentPreviewAudioRef.current = audio
+        audio.addEventListener('play', () => setPreviewAudioPlaying(true))
+        audio.addEventListener('ended', () => {
+          setPreviewAudioPlaying(false)
+          URL.revokeObjectURL(url)
+        })
+        audio.addEventListener('pause', () => setPreviewAudioPlaying(false))
+        audio.play().catch(() => {})
         return
       }
 
@@ -474,6 +501,24 @@ export function useJianpuWorker(
     worker.postMessage(payload)
   }, [pdfExporting, splitPdfExporting])
 
+  const previewInstrument = useCallback((programNumber: number) => {
+    const worker = workerRef.current
+    if (!worker) return
+    const id = ++previewAudioRequestIdRef.current
+    latestPreviewAudioIdRef.current = id
+    worker.postMessage({
+      type: 'previewInstrument',
+      id,
+      programNumber,
+    } satisfies WorkerRequest)
+  }, [])
+
+  const stopPreviewInstrument = useCallback(() => {
+    if (currentPreviewAudioRef.current) {
+      currentPreviewAudioRef.current.pause()
+    }
+  }, [])
+
   const exportSplitPdf = useCallback(() => {
     const worker = workerRef.current
     if (!worker || pdfExporting || splitPdfExporting) return
@@ -515,5 +560,8 @@ export function useJianpuWorker(
     stopMeasurePlayback,
     highlightedDocuments,
     measureSpans,
+    previewInstrument,
+    stopPreviewInstrument,
+    previewAudioPlaying,
   }
 }

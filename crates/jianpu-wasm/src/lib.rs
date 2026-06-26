@@ -3,6 +3,8 @@
 mod types;
 
 #[cfg(feature = "wav")]
+use jianpu_generator::wav;
+#[cfg(feature = "wav")]
 use jianpu_generator::write_wav_for_measure_range_from_source;
 #[cfg(feature = "wav")]
 use jianpu_generator::write_wav_from_source_filtered;
@@ -366,6 +368,30 @@ pub fn generate_wav_for_measure_range(
         enabled_tracks.as_deref(),
         soundfont,
     )
+}
+
+/// Synthesize a short WAV preview note for a General MIDI program number.
+///
+/// Available only when the `wav` feature is enabled at build time.
+/// Plays middle C (key 60) for 1 second with a 0.5-second tail using the
+/// supplied soundfont. Returns:
+/// - `{ "status": "ok", "wav": Uint8Array }`
+/// - `{ "status": "err", "diagnostics": [...] }`
+///
+/// `soundfont` is the raw SF2 soundfont bytes used for synthesis.
+#[cfg(feature = "wav")]
+#[allow(clippy::needless_pass_by_value)]
+#[wasm_bindgen]
+pub fn generate_instrument_preview_wav(
+    program_number: u8,
+    soundfont: Vec<u8>,
+) -> GenerateWavResponse {
+    match wav::write_preview_wav(program_number, &soundfont) {
+        Ok(wav) => GenerateWavResponse::Ok { wav },
+        Err(e) => GenerateWavResponse::Err {
+            diagnostics: vec![diagnostic_from_error("", &e)],
+        },
+    }
 }
 
 /// Parse `.jianpu` source and write PDF bytes.

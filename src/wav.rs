@@ -116,6 +116,45 @@ pub fn write_wav(midi_bytes: &[u8], sf2_bytes: &[u8]) -> Result<Vec<u8>, Irrecov
     encode_wav(&all_l, &all_r)
 }
 
+pub fn write_preview_wav(
+    program_number: u8,
+    sf2_bytes: &[u8],
+) -> Result<Vec<u8>, IrrecoverableError> {
+    let mut synth = init_synth(sf2_bytes)?;
+    let mut all_l = Vec::new();
+    let mut all_r = Vec::new();
+
+    // do re mi sol (scale degrees 1 2 3 5 in C major)
+    let melody: [u8; 4] = [60, 62, 64, 67];
+    let sustain_samples = (SAMPLE_RATE as f32 * 0.35) as usize;
+    let gap_samples = (SAMPLE_RATE as f32 * 0.05) as usize;
+
+    synth
+        .send_event(MidiEvent::ProgramChange {
+            channel: 0,
+            program_id: program_number,
+        })
+        .ok();
+    for key in melody {
+        synth
+            .send_event(MidiEvent::NoteOn {
+                channel: 0,
+                key,
+                vel: 80,
+            })
+            .ok();
+        render_samples(&mut synth, sustain_samples, &mut all_l, &mut all_r);
+        synth
+            .send_event(MidiEvent::NoteOff { channel: 0, key })
+            .ok();
+        render_samples(&mut synth, gap_samples, &mut all_l, &mut all_r);
+    }
+    render_samples(&mut synth, SAMPLE_RATE as usize / 2, &mut all_l, &mut all_r); // 0.5 s tail
+
+    normalize_peak(&mut all_l, &mut all_r);
+    encode_wav(&all_l, &all_r)
+}
+
 fn normalize_peak(left: &mut [f32], right: &mut [f32]) {
     let peak = left
         .iter()

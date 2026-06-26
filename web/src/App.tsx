@@ -93,6 +93,9 @@ export default function App() {
     playSelectedMeasures,
     stopMeasurePlayback,
     highlightedDocuments,
+    previewInstrument,
+    stopPreviewInstrument,
+    previewAudioPlaying,
   } = useJianpuWorker(
     source,
     disabledParts,
@@ -431,6 +434,9 @@ export default function App() {
                 partDeclarations={partDeclarations}
                 allParts={parts}
                 onPartDeclarationChange={handlePartDeclarationChange}
+                previewInstrument={previewInstrument}
+                stopPreviewInstrument={stopPreviewInstrument}
+                previewAudioPlaying={previewAudioPlaying}
               />
             </div>
           </div>
