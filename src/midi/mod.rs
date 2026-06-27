@@ -296,7 +296,7 @@ fn process_measure_notes(
             NoteEvent::Note(n) => EventResolution::Notes {
                 midi_notes: vec![resolve_midi_note(&n.pitch, n.octave, active_key)],
                 duration: n.duration,
-                slur: n.slur,
+                slur: n.tie_to_next,
             },
             NoteEvent::Rest(r) => EventResolution::Rest {
                 duration: r.duration,
