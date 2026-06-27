@@ -30,6 +30,7 @@ export interface EditorProps {
   onCursorLineChange?: (line: number) => void
   onPlayMeasure?: () => void
   onEditPartsClick?: () => void
+  onEditMetadataClick?: () => void
 }
 
 const MARKER_OWNER = 'jianpu'
@@ -123,6 +124,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onCursorLineChange,
     onPlayMeasure,
     onEditPartsClick,
+    onEditMetadataClick,
   },
   ref,
 ) {
@@ -134,6 +136,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const onCursorLineChangeRef = useRef(onCursorLineChange)
   const onPlayMeasureRef = useRef(onPlayMeasure)
   const onEditPartsClickRef = useRef(onEditPartsClick)
+  const onEditMetadataClickRef = useRef(onEditMetadataClick)
   const savedSelectionRef = useRef<ISelection | null>(null)
   const isInternalChangeRef = useRef(false)
   const codeLensProviderRef = useRef<IDisposable | null>(null)
@@ -142,6 +145,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onCursorLineChangeRef.current = onCursorLineChange
     onPlayMeasureRef.current = onPlayMeasure
     onEditPartsClickRef.current = onEditPartsClick
+    onEditMetadataClickRef.current = onEditMetadataClick
   })
 
   const applyDiagnostics = useCallback(() => {
@@ -347,6 +351,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       onEditPartsClickRef.current?.()
     })
 
+    const editMetadataCommandId = ed.addCommand(0, () => {
+      onEditMetadataClickRef.current?.()
+    })
+
     codeLensProviderRef.current?.dispose()
     codeLensProviderRef.current = monacoApi.languages.registerCodeLensProvider(
       'plaintext',
@@ -362,7 +370,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
                   title: 'Edit Parts',
                 },
               })
-              break
+            }
+            if (model.getLineContent(line).trim() === '# metadata') {
+              lenses.push({
+                range: new monacoApi.Range(line, 1, line, 1),
+                command: {
+                  id: editMetadataCommandId ?? '',
+                  title: 'Edit Metadata',
+                },
+              })
             }
           }
           return { lenses, dispose: () => {} }

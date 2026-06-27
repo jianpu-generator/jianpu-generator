@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AssetLoadingBanner } from './components/AssetLoadingBanner'
+import { EditMetadataModal } from './components/EditMetadataModal'
 import { Editor } from './components/Editor'
 import { EditPartsModal } from './components/EditPartsModal'
 import { FileTabBar } from './components/FileList'
@@ -28,6 +29,8 @@ import {
 } from './partToggleCache'
 import type { EditorHandle } from './types'
 import { byteOffsetToStringIndex } from './utils/byteSpan'
+import type { MetadataKey } from './utils/metadataSource'
+import { parseMetadata, updateMetadataField } from './utils/metadataSource'
 import type { PartMode, SoundfontValue } from './utils/partSource'
 import {
   parsePartDeclarations,
@@ -63,6 +66,7 @@ export default function App() {
     return new Set(cached?.soloedParts ?? [])
   })
   const [editPartsOpen, setEditPartsOpen] = useState(false)
+  const [editMetadataOpen, setEditMetadataOpen] = useState(false)
   const editorRef = useRef<EditorHandle>(null)
   const skipToggleSaveRef = useRef(false)
   const soundfont = useAssetLoader('/fonts/GeneralUser_GS.sf2')
@@ -276,6 +280,8 @@ export default function App() {
     [source, parts],
   )
 
+  const parsedMetadata = useMemo(() => parseMetadata(source), [source])
+
   const handlePartDeclarationChange = useCallback(
     (
       abbreviation: string,
@@ -291,6 +297,13 @@ export default function App() {
         soundfont,
       )
       handleSourceChange(newSource)
+    },
+    [source, handleSourceChange],
+  )
+
+  const handleMetadataFieldChange = useCallback(
+    (key: MetadataKey, value: string | null) => {
+      handleSourceChange(updateMetadataField(source, key, value))
     },
     [source, handleSourceChange],
   )
@@ -373,6 +386,7 @@ export default function App() {
                 measureSpans={measureSpans}
                 onSelectionChange={notifySelection}
                 onEditPartsClick={() => setEditPartsOpen(true)}
+                onEditMetadataClick={() => setEditMetadataOpen(true)}
                 onPlayMeasure={
                   measureAudioPlaying
                     ? stopMeasurePlayback
@@ -440,6 +454,12 @@ export default function App() {
                 previewInstrument={previewInstrument}
                 stopPreviewInstrument={stopPreviewInstrument}
                 previewAudioPlaying={previewAudioPlaying}
+              />
+              <EditMetadataModal
+                open={editMetadataOpen}
+                onOpenChange={setEditMetadataOpen}
+                metadata={parsedMetadata}
+                onFieldChange={handleMetadataFieldChange}
               />
             </div>
           </div>
