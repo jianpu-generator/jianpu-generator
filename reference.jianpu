@@ -18,6 +18,10 @@ label="Scale degrees 1-7 & rest 0"
 [M] 1 2 3 0
 [M] do re mi
 
+label="Accidentals: sharp (#) & flat (b)"
+[M] 7# 1b 4# 4b
+[M] _
+
 label="Octave: up (') & down (,)"
 [M] 1' 2' 1, 2,
 [M] _

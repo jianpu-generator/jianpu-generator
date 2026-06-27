@@ -1,4 +1,4 @@
-use crate::ast::parsed::JianPuPitch;
+use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compiler::types::ArcKind;
 
 #[derive(Debug, Clone)]
@@ -19,6 +19,7 @@ pub struct AbsoluteElement {
 pub enum AbsoluteContent {
     NoteHead {
         pitch: JianPuPitch,
+        accidental: Accidental,
         octave: i8,
         dotted: bool,
     },

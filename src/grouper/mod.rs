@@ -3,8 +3,8 @@ use crate::ast::grouped::{
     GroupedTrack, Metadata, NoteEvent, Notes, Score, TimeSignature,
 };
 use crate::ast::parsed::{
-    JianPuPitch, ParsedChordNote, ParsedDocument, ParsedMeasureSlot, ParsedNote, ParsedRest,
-    ParsedTimedTrack, ParsedTrack, PartKind, ScoreEvent, Soundfont,
+    Accidental, JianPuPitch, ParsedChordNote, ParsedDocument, ParsedMeasureSlot, ParsedNote,
+    ParsedRest, ParsedTimedTrack, ParsedTrack, PartKind, ScoreEvent, Soundfont,
 };
 use crate::combiner;
 use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Warning};
@@ -70,6 +70,7 @@ struct NoteInfo {
     measure_idx: usize,
     event_idx: usize,
     pitch: JianPuPitch,
+    accidental: Accidental,
     octave: i8,
     tie_to_next: bool,
     span: Span,
@@ -103,6 +104,19 @@ fn format_pitch_octave(pitch: &JianPuPitch, octave: i8) -> String {
     format!("{ch}{octave_suffix}")
 }
 
+fn format_pitch_octave_accidental(
+    pitch: &JianPuPitch,
+    accidental: &Accidental,
+    octave: i8,
+) -> String {
+    let acc_str = match accidental {
+        Accidental::Sharp => "#",
+        Accidental::Flat => "b",
+        Accidental::Natural => "",
+    };
+    format!("{}{}", format_pitch_octave(pitch, octave), acc_str)
+}
+
 fn collect_notes_for_part(score: &Score, part_idx: usize) -> Vec<NoteInfo> {
     score
         .measures
@@ -125,6 +139,7 @@ fn collect_notes_for_part(score: &Score, part_idx: usize) -> Vec<NoteInfo> {
                             measure_idx,
                             event_idx,
                             pitch: n.pitch.clone(),
+                            accidental: n.accidental.clone(),
                             octave: n.octave,
                             tie_to_next: n.tie_to_next,
                             span,
@@ -148,10 +163,17 @@ fn tie_corrections(notes: &[NoteInfo]) -> Vec<TieCorrection> {
             let error = match next {
                 None => Some(RecoverableError::dangling_tie(note.span)),
                 Some(next_note)
-                    if next_note.pitch != note.pitch || next_note.octave != note.octave =>
+                    if next_note.pitch != note.pitch
+                        || next_note.octave != note.octave
+                        || next_note.accidental != note.accidental =>
                 {
-                    let expected = format_pitch_octave(&note.pitch, note.octave);
-                    let got = format_pitch_octave(&next_note.pitch, next_note.octave);
+                    let expected =
+                        format_pitch_octave_accidental(&note.pitch, &note.accidental, note.octave);
+                    let got = format_pitch_octave_accidental(
+                        &next_note.pitch,
+                        &next_note.accidental,
+                        next_note.octave,
+                    );
                     Some(RecoverableError::tie_pitch_mismatch(
                         note.span, expected, got,
                     ))
@@ -378,6 +400,7 @@ impl PartGrouper {
             pn.duration,
             NoteEvent::Note(GroupedNote {
                 pitch: pn.pitch,
+                accidental: pn.accidental,
                 octave: pn.octave,
                 duration: pn.duration,
                 slur: pn.slur && pn.slur_group_close_at_duration.is_none(),

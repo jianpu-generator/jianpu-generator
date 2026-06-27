@@ -219,6 +219,7 @@ mod tests {
             Spanned::new(
                 ScoreEvent::Note(ParsedNote {
                     pitch: JianPuPitch::Three,
+                    accidental: crate::ast::parsed::Accidental::Natural,
                     octave: 0,
                     duration: 4,
                     slur: false,
@@ -233,6 +234,7 @@ mod tests {
             Spanned::new(
                 ScoreEvent::Note(ParsedNote {
                     pitch: JianPuPitch::Three,
+                    accidental: crate::ast::parsed::Accidental::Natural,
                     octave: 0,
                     duration: 4,
                     slur: false,
@@ -247,6 +249,7 @@ mod tests {
             Spanned::new(
                 ScoreEvent::Note(ParsedNote {
                     pitch: JianPuPitch::One,
+                    accidental: crate::ast::parsed::Accidental::Natural,
                     octave: 0,
                     duration: 4,
                     slur: false,
@@ -272,6 +275,7 @@ mod tests {
         let bar1 = vec![Spanned::new(
             ScoreEvent::Note(ParsedNote {
                 pitch: JianPuPitch::Three,
+                accidental: crate::ast::parsed::Accidental::Natural,
                 octave: 0,
                 duration: 4,
                 slur: false,
@@ -286,6 +290,7 @@ mod tests {
         let bar2 = vec![Spanned::new(
             ScoreEvent::Note(ParsedNote {
                 pitch: JianPuPitch::Three,
+                accidental: crate::ast::parsed::Accidental::Natural,
                 octave: 0,
                 duration: 4,
                 slur: false,

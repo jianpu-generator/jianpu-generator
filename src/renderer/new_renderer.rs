@@ -1,4 +1,4 @@
-use crate::ast::parsed::JianPuPitch;
+use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compositor::types::{
     AbsoluteContent, AbsoluteElement, AbsolutePage, DominantBaseline, FontFamily, FontWeight,
     TextAnchor,
@@ -47,11 +47,13 @@ fn render_element(
     match &elem.content {
         AbsoluteContent::NoteHead {
             pitch,
+            accidental,
             octave,
             dotted,
         } => render_note_head(
             elem,
             pitch,
+            accidental,
             *octave,
             *dotted,
             &NoteRenderParams {
@@ -152,6 +154,7 @@ struct NoteRenderParams<'a> {
 fn render_note_head(
     elem: &AbsoluteElement,
     pitch: &JianPuPitch,
+    accidental: &Accidental,
     octave: i8,
     dotted: bool,
     params: &NoteRenderParams<'_>,
@@ -177,6 +180,30 @@ fn render_note_head(
             italic: false,
         },
     });
+
+    let accidental_symbol = match accidental {
+        Accidental::Sharp => Some("♯"),
+        Accidental::Flat => Some("♭"),
+        Accidental::Natural => None,
+    };
+
+    if let Some(symbol) = accidental_symbol {
+        let accidental_x = elem.x - *note_number_width * 0.5;
+        results.push(SvgElement {
+            x: accidental_x,
+            y: elem.y,
+            variant: "note-head-accidental",
+            kind: SvgKind::Text {
+                content: symbol.to_string(),
+                font_size: **base_font_size * 0.7,
+                anchor: TextAnchor::End,
+                baseline: DominantBaseline::Middle,
+                font: FontFamily::Monospace,
+                weight: FontWeight::Normal,
+                italic: false,
+            },
+        });
+    }
 
     let dot_radius = *row_height * 0.06;
 

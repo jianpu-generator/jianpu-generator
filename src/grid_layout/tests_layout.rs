@@ -21,6 +21,7 @@ fn make_block_with_decorations(
                     column: 0,
                     content: ElementContent::NoteHead {
                         pitch: JianPuPitch::One,
+                        accidental: crate::ast::parsed::Accidental::Natural,
                         octave: 0,
                         dotted: false,
                     },
@@ -65,6 +66,7 @@ fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
                     column: 0,
                     content: ElementContent::NoteHead {
                         pitch: JianPuPitch::One,
+                        accidental: crate::ast::parsed::Accidental::Natural,
                         octave: 0,
                         dotted: false,
                     },
@@ -145,6 +147,7 @@ fn layout_with_bpm_decoration_has_decoration_row() {
                     column: 0,
                     content: ElementContent::NoteHead {
                         pitch: JianPuPitch::One,
+                        accidental: crate::ast::parsed::Accidental::Natural,
                         octave: 0,
                         dotted: false,
                     },

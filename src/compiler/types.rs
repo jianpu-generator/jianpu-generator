@@ -1,4 +1,4 @@
-use crate::ast::parsed::JianPuPitch;
+use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::error::Diagnostic;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -41,6 +41,7 @@ pub struct ColumnElement {
 pub enum ElementContent {
     NoteHead {
         pitch: JianPuPitch,
+        accidental: Accidental,
         octave: i8,
         dotted: bool,
     },

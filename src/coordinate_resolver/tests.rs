@@ -34,6 +34,7 @@ fn note_head_halign_center_has_x_at_center_of_column() {
         valign: VAlign::Center,
         content: GridContent::NoteHead {
             pitch: JianPuPitch::One,
+            accidental: crate::ast::parsed::Accidental::Natural,
             octave: 0,
             dotted: false,
         },

@@ -10,7 +10,9 @@ use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 pub use crate::ast::parsed::JianPuPitch;
 
 mod midi_notes;
-pub(crate) use midi_notes::{accidental_offset, duration_to_ticks, resolve_midi_note};
+pub(crate) use midi_notes::{
+    accidental_offset, duration_to_ticks, resolve_midi_note, resolve_midi_note_with_accidental,
+};
 const TPQ: u16 = 480; // ticks per quarter note
 const VELOCITY: u8 = 80;
 const CHORD_CHANNEL: u8 = 3;
@@ -294,7 +296,12 @@ fn process_measure_notes(
         channel,
         |event| match event {
             NoteEvent::Note(n) => EventResolution::Notes {
-                midi_notes: vec![resolve_midi_note(&n.pitch, n.octave, active_key)],
+                midi_notes: vec![resolve_midi_note_with_accidental(
+                    &n.pitch,
+                    &n.accidental,
+                    n.octave,
+                    active_key,
+                )],
                 duration: n.duration,
                 slur: n.tie_to_next,
             },

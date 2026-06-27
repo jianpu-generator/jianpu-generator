@@ -29,6 +29,7 @@ trait HeadContent {
 
 struct NoteUnit {
     pitch: JianPuPitch,
+    accidental: crate::ast::parsed::Accidental,
     octave: i8,
 }
 
@@ -40,6 +41,7 @@ impl HeadContent for NoteUnit {
     fn into_element_content(self, dotted: bool) -> ElementContent {
         ElementContent::NoteHead {
             pitch: self.pitch,
+            accidental: self.accidental,
             octave: self.octave,
             dotted,
         }
@@ -303,6 +305,7 @@ fn compile_note(
             slur_key: SlurKey::Pitch(note.pitch.clone()),
             head: NoteUnit {
                 pitch: note.pitch.clone(),
+                accidental: note.accidental.clone(),
                 octave: note.octave,
             },
         },

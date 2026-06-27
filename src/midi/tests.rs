@@ -182,6 +182,7 @@ fn one_measure_score() -> Score {
                 notes: Notes {
                     events: vec![NoteEvent::Note(GroupedNote {
                         pitch: JianPuPitch::One,
+                        accidental: crate::ast::parsed::Accidental::Natural,
                         octave: 0,
                         duration: 16,
                         slur: false,
@@ -223,6 +224,7 @@ fn tied_notes_produce_single_note_on() {
     let make_note = |tie_to_next: bool| {
         NoteEvent::Note(GroupedNote {
             pitch: JianPuPitch::One,
+            accidental: crate::ast::parsed::Accidental::Natural,
             octave: 0,
             duration: 4, // quarter note
             slur: false,
@@ -308,6 +310,7 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
     let make_note = |slur: bool| {
         NoteEvent::Note(GroupedNote {
             pitch: JianPuPitch::One,
+            accidental: crate::ast::parsed::Accidental::Natural,
             octave: 0,
             duration: 4,
             slur,
@@ -364,6 +367,26 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
         count_note_on_events(&midi_bytes),
         2,
         "slurred (1 1) must produce two NoteOn events"
+    );
+}
+
+#[test]
+fn sharp_note_midi_pitch_is_one_semitone_higher_than_natural() {
+    use crate::ast::parsed::{JianPuPitch, Note, NoteName};
+
+    let key = KeyChange {
+        note: Note {
+            name: NoteName::C,
+            octave: 4,
+            accidental: Accidental::Natural,
+        },
+    };
+    let natural = resolve_midi_note(&JianPuPitch::Seven, 0, &key);
+    let sharp = resolve_midi_note_with_accidental(&JianPuPitch::Seven, &Accidental::Sharp, 0, &key);
+    assert_eq!(
+        sharp,
+        natural + 1,
+        "7# must be exactly one semitone above 7"
     );
 }
 

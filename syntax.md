@@ -267,6 +267,20 @@ Suffix order is flexible (`1_,'` and `1',_` are equivalent).
 
 Examples: `1'` (octave up), `1,,` (two octaves down), `3_,'` (eighth note, up one octave).
 
+### Accidentals (`#` / `b`)
+
+Append `#` (sharp) or `b` (flat) immediately after a scale-degree digit to raise or lower the pitch by one semitone.
+
+| Notation | Meaning |
+|----------|---------|
+| `7#`     | Scale degree 7, raised one semitone (leading tone sharpened) |
+| `1b`     | Scale degree 1, lowered one semitone |
+| `4#`     | Scale degree 4, raised one semitone (tritone) |
+
+Accidentals can be combined with octave modifiers and all duration modifiers: `7#'` (sharp 7, octave up), `1b_` (flat 1, eighth note), `4#.` (sharp 4, dotted).
+
+Rests (`0`) do not accept accidentals.
+
 ### Modifiers
 
 | Suffix | Meaning |

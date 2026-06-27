@@ -105,10 +105,12 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
         | GridContent::TieOrSlurHead { .. } => None,
         GridContent::NoteHead {
             pitch,
+            accidental,
             octave,
             dotted,
         } => Some(PostArcGridContent::NoteHead {
             pitch: pitch.clone(),
+            accidental: accidental.clone(),
             octave: *octave,
             dotted: *dotted,
         }),
@@ -412,10 +414,12 @@ fn grid_to_absolute(
     Ok(match content {
         PostArcGridContent::NoteHead {
             pitch,
+            accidental,
             octave,
             dotted,
         } => Some(AbsoluteContent::NoteHead {
             pitch: pitch.clone(),
+            accidental: accidental.clone(),
             octave: *octave,
             dotted: *dotted,
         }),

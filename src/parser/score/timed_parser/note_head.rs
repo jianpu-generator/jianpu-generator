@@ -1,5 +1,5 @@
 use super::{ParseHeadError, TimedUnitHead};
-use crate::ast::parsed::{JianPuPitch, ParsedNote, ParsedRest, ScoreEvent};
+use crate::ast::parsed::{Accidental, JianPuPitch, ParsedNote, ParsedRest, ScoreEvent};
 use crate::error::{Diagnostic, RecoverableError, RecoverableErrorKind, Span};
 
 #[path = "note_head_tests.rs"]
@@ -9,6 +9,7 @@ mod tests;
 #[derive(Debug)]
 pub struct NoteHead {
     pitch: JianPuPitch,
+    accidental: Accidental,
     is_rest: bool,
 }
 
@@ -52,7 +53,25 @@ impl TimedUnitHead for NoteHead {
                 }
             }
         };
-        Ok((NoteHead { pitch, is_rest }, start + 1, is_rest, Vec::new()))
+        let (accidental, next) = if is_rest {
+            (Accidental::Natural, start + 1)
+        } else {
+            match chars.get(start + 1) {
+                Some('#') => (Accidental::Sharp, start + 2),
+                Some('b') => (Accidental::Flat, start + 2),
+                _ => (Accidental::Natural, start + 1),
+            }
+        };
+        Ok((
+            NoteHead {
+                pitch,
+                accidental,
+                is_rest,
+            },
+            next,
+            is_rest,
+            Vec::new(),
+        ))
     }
 
     fn head_boundary(chars: &[char], i: usize) -> bool {
@@ -81,6 +100,7 @@ impl TimedUnitHead for NoteHead {
         } else {
             ScoreEvent::Note(ParsedNote {
                 pitch: head.pitch.clone(),
+                accidental: head.accidental.clone(),
                 octave,
                 duration,
                 slur: group_continuation > 0,

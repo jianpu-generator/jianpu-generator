@@ -180,6 +180,7 @@ pub enum ScoreEvent {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParsedNote {
     pub pitch: JianPuPitch,
+    pub accidental: Accidental,
     /// Octave offset from the default octave. 0 = default, positive = up, negative = down.
     pub octave: i8,
     /// Duration in quarter-beats. For dotted notes this already includes the added half-value.

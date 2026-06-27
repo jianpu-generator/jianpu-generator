@@ -9,6 +9,7 @@ fn simple_block(col_count: u32) -> MeasureBlock {
             column: c,
             content: ElementContent::NoteHead {
                 pitch: crate::ast::parsed::JianPuPitch::One,
+                accidental: crate::ast::parsed::Accidental::Natural,
                 octave: 0,
                 dotted: false,
             },

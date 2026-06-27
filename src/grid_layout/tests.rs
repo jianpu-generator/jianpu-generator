@@ -32,6 +32,7 @@ fn note_row(id: &str) -> MeasureRow {
             column: 0,
             content: ElementContent::NoteHead {
                 pitch: JianPuPitch::One,
+                accidental: crate::ast::parsed::Accidental::Natural,
                 octave: 0,
                 dotted: false,
             },
@@ -78,6 +79,7 @@ fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
                     column: 0,
                     content: ElementContent::NoteHead {
                         pitch: JianPuPitch::One,
+                        accidental: crate::ast::parsed::Accidental::Natural,
                         octave: 0,
                         dotted: false,
                     },
@@ -202,6 +204,7 @@ fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
                         column: 0,
                         content: ElementContent::NoteHead {
                             pitch: JianPuPitch::One,
+                            accidental: crate::ast::parsed::Accidental::Natural,
                             octave: 0,
                             dotted: false,
                         },

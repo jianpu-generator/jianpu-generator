@@ -48,35 +48,31 @@ pub(crate) fn expand_measure_elements(
 ) {
     let head_sub = params.head_sub;
     let sub_count = params.sub_count;
-    let bar_height = params.bar_height;
-    let part_idx = params.part_idx;
     for el in &row.elements {
         let grid_col = LABEL_COLS + measure_col_offset + el.column;
         match &el.content {
             ElementContent::NoteHead {
                 pitch,
+                accidental,
                 octave,
                 dotted,
-            } => {
-                push_head(
-                    sub_rows,
-                    head_sub,
-                    grid_col,
-                    GridContent::NoteHead {
-                        pitch: pitch.clone(),
-                        octave: *octave,
-                        dotted: *dotted,
-                    },
-                );
-            }
-            ElementContent::Rest { dotted } => {
-                push_head(
-                    sub_rows,
-                    head_sub,
-                    grid_col,
-                    GridContent::Rest { dotted: *dotted },
-                );
-            }
+            } => push_head(
+                sub_rows,
+                head_sub,
+                grid_col,
+                GridContent::NoteHead {
+                    pitch: pitch.clone(),
+                    accidental: accidental.clone(),
+                    octave: *octave,
+                    dotted: *dotted,
+                },
+            ),
+            ElementContent::Rest { dotted } => push_head(
+                sub_rows,
+                head_sub,
+                grid_col,
+                GridContent::Rest { dotted: *dotted },
+            ),
             ElementContent::NoteDash => {
                 push_head(sub_rows, head_sub, grid_col, GridContent::NoteDash);
             }
@@ -109,12 +105,12 @@ pub(crate) fn expand_measure_elements(
                 }
             }
             ElementContent::BarLine => {
-                if part_idx == 0 {
+                if params.part_idx == 0 {
                     if let Some(row) = sub_rows.get_mut(0) {
                         row.elements.push(grid_el(
                             grid_col,
                             GridContent::BarLine {
-                                height_pt: bar_height,
+                                height_pt: params.bar_height,
                             },
                             HAlign::Center,
                             VAlign::Top,

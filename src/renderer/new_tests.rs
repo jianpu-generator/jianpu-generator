@@ -30,6 +30,7 @@ fn make_page(content: AbsoluteContent) -> AbsolutePage {
 fn note_head_produces_text_element() {
     let page = make_page(AbsoluteContent::NoteHead {
         pitch: JianPuPitch::One,
+        accidental: crate::ast::parsed::Accidental::Natural,
         octave: 0,
         dotted: false,
     });
@@ -82,6 +83,7 @@ fn rest_produces_zero_text() {
 fn upper_octave_note_produces_circle() {
     let page = make_page(AbsoluteContent::NoteHead {
         pitch: JianPuPitch::One,
+        accidental: crate::ast::parsed::Accidental::Natural,
         octave: 1,
         dotted: false,
     });

@@ -186,6 +186,7 @@ pub struct GroupedChordNote {
 #[derive(Clone)]
 pub struct GroupedNote {
     pub pitch: JianPuPitch,
+    pub accidental: Accidental,
     pub octave: i8,
     /// Duration in quarter-beats, including any beats added by `-` extensions.
     pub duration: u32,

@@ -42,6 +42,20 @@ pub(crate) fn resolve_midi_note(pitch: &JianPuPitch, octave: i8, key: &KeyChange
     midi.clamp(0, 127) as u8
 }
 
+pub(crate) fn resolve_midi_note_with_accidental(
+    pitch: &JianPuPitch,
+    accidental: &Accidental,
+    octave: i8,
+    key: &KeyChange,
+) -> u8 {
+    let root = 12 * (key.note.octave as i32 + 1)
+        + note_name_to_semitone(&key.note.name)
+        + accidental_offset(&key.note.accidental);
+    let midi =
+        root + pitch_to_scale_offset(pitch) + accidental_offset(accidental) + (octave as i32) * 12;
+    midi.clamp(0, 127) as u8
+}
+
 pub(crate) fn duration_to_ticks(quarter_beats: u32) -> u32 {
     quarter_beats * (TPQ as u32) / 4
 }

@@ -1,4 +1,4 @@
-use crate::ast::parsed::JianPuPitch;
+use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compiler::types::ArcKind;
 
 #[derive(Debug, Clone)]
@@ -64,6 +64,7 @@ pub enum GridContent {
     /// OctaveDot sub-rows exist for vertical spacing only.
     NoteHead {
         pitch: JianPuPitch,
+        accidental: Accidental,
         octave: i8,
         dotted: bool,
     },
@@ -121,6 +122,7 @@ pub enum GridContent {
 pub enum PostArcGridContent {
     NoteHead {
         pitch: JianPuPitch,
+        accidental: Accidental,
         octave: i8,
         dotted: bool,
     },

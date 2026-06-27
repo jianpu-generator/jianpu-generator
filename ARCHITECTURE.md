@@ -36,7 +36,7 @@ source (&str)
 ### Parser
 - Module: `src/parser/`
 - Entry: `parser::parse(source: &str, filename: &str) -> Result<ParsedDocument, IrrecoverableError>`
-- Key types: `ParsedDocument`, `ParsedTimedTrack`, `ParsedScore`, `ScoreEvent`, `ParsedNote`, `ParsedRest`, `ParsedChordNote`, `ParsedMetadata`, `JianPuPitch`, `Accidental`, `Syllable`, `Soundfont` (vocal/piano/string; selects MIDI channel+program)
+- Key types: `ParsedDocument`, `ParsedTimedTrack`, `ParsedScore`, `ScoreEvent`, `ParsedNote` (carries `Accidental` for melody notes), `ParsedRest`, `ParsedChordNote` (also carries `Accidental`), `ParsedMetadata`, `JianPuPitch`, `Accidental` (`Sharp`/`Flat`/`Natural`; applies to both melody notes and chord notes), `Syllable`, `Soundfont` (vocal/piano/string; selects MIDI channel+program)
 
 ### Grouper
 - Module: `src/grouper/`
