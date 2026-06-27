@@ -14,7 +14,6 @@ pub(crate) use midi_notes::{accidental_offset, duration_to_ticks, resolve_midi_n
 const TPQ: u16 = 480; // ticks per quarter note
 const VELOCITY: u8 = 80;
 const CHORD_CHANNEL: u8 = 3;
-const CHORD_PROGRAM: u8 = 0; // Acoustic Grand Piano for chord parts
 
 fn part_index_to_midi_channel(index: usize) -> u8 {
     // Skip CHORD_CHANNEL (3) and GM drum channel (9).
@@ -70,13 +69,21 @@ pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
             });
         }
     }
-    raw.push(RawEvent {
-        tick: 0,
-        kind: RawKind::ProgramChange {
-            channel: CHORD_CHANNEL,
-            program: CHORD_PROGRAM,
-        },
-    });
+    if let Some(first_measure) = score.measures.first() {
+        let chord_program = first_measure
+            .parts
+            .iter()
+            .find(|r| r.slice().kind == PartKind::Chords)
+            .map(|r| r.slice().soundfont.0)
+            .unwrap_or(0);
+        raw.push(RawEvent {
+            tick: 0,
+            kind: RawKind::ProgramChange {
+                channel: CHORD_CHANNEL,
+                program: chord_program,
+            },
+        });
+    }
 
     let mut current_tick: u32 = 0;
     let mut per_part_ties: Vec<(u8, HashMap<u8, u32>)> = Vec::new();
