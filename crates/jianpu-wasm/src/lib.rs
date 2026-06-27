@@ -2,6 +2,7 @@
 
 mod types;
 
+use jianpu_generator::parser::parts_parser::InstrumentInfo;
 #[cfg(feature = "wav")]
 use jianpu_generator::wav;
 #[cfg(feature = "wav")]
@@ -31,12 +32,14 @@ fn render_response(
     source: &str,
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
+    instruments: &[InstrumentInfo],
 ) -> RenderResponse {
     match render_documents_from_source_filtered_with_lyrics(
         source,
         "input.jianpu",
         enabled_tracks,
         disabled_lyrics,
+        instruments,
     ) {
         Ok(output) => {
             let diagnostics: Vec<_> = output
@@ -68,14 +71,15 @@ fn render_with_highlight_range_response(
     end_index: usize,
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
+    instruments: &[InstrumentInfo],
 ) -> RenderResponse {
     match render_documents_with_highlight_range(
         source,
         "input.jianpu",
-        start_index,
-        end_index,
+        start_index..=end_index,
         enabled_tracks,
         disabled_lyrics,
+        instruments,
     ) {
         Ok(output) => {
             let diagnostics: Vec<_> = output
@@ -101,8 +105,8 @@ fn render_with_highlight_range_response(
     }
 }
 
-fn list_parts_response(source: &str) -> ListPartsResponse {
-    match list_parts_from_source(source, "input.jianpu") {
+fn list_parts_response(source: &str, instruments: &[InstrumentInfo]) -> ListPartsResponse {
+    match list_parts_from_source(source, "input.jianpu", instruments) {
         Ok(parts) => ListPartsResponse::Ok {
             parts: parts
                 .into_iter()
@@ -120,7 +124,7 @@ fn list_parts_response(source: &str) -> ListPartsResponse {
 }
 
 fn get_measure_at_offset_response(source: &str, byte_offset: usize) -> MeasureAtOffsetResponse {
-    match compile(source, "input.jianpu") {
+    match compile(source, "input.jianpu", &[]) {
         Ok(score) => match find_measure_at_byte_offset(&score, byte_offset) {
             Some(measure_index) => MeasureAtOffsetResponse::Ok { measure_index },
             None => MeasureAtOffsetResponse::NotInMeasure,
@@ -163,7 +167,7 @@ fn generate_wav_response(
     enabled_tracks: Option<&[String]>,
     soundfont: Vec<u8>,
 ) -> GenerateWavResponse {
-    match write_wav_from_source_filtered(source, "input.jianpu", enabled_tracks, &soundfont) {
+    match write_wav_from_source_filtered(source, "input.jianpu", enabled_tracks, &soundfont, &[]) {
         Ok(wav) => GenerateWavResponse::Ok { wav },
         Err(e) => GenerateWavResponse::Err {
             diagnostics: vec![diagnostic_from_error(source, &e)],
@@ -182,10 +186,10 @@ fn generate_wav_for_measure_range_response(
     match write_wav_for_measure_range_from_source(
         source,
         "input.jianpu",
-        start_index,
-        end_index,
+        start_index..=end_index,
         enabled_tracks,
         &soundfont,
+        &[],
     ) {
         Ok(wav) => GenerateWavResponse::Ok { wav },
         Err(e) => GenerateWavResponse::Err {
@@ -223,6 +227,7 @@ fn generate_pdf_response(
         enabled_tracks,
         disabled_lyrics,
         &fonts,
+        &[],
     ) {
         Ok(pdf) => GeneratePdfResponse::Ok { pdf },
         Err(e) => GeneratePdfResponse::Err {
@@ -272,11 +277,15 @@ pub fn render(
     source: &str,
     enabled_tracks: Option<Vec<String>>,
     disabled_lyrics: Option<Vec<String>>,
+    raw_instruments: JsValue,
 ) -> RenderResponse {
+    let instruments: Vec<InstrumentInfo> =
+        serde_wasm_bindgen::from_value(raw_instruments).unwrap_or_default();
     render_response(
         source,
         enabled_tracks.as_deref(),
         disabled_lyrics.as_deref(),
+        &instruments,
     )
 }
 
@@ -293,13 +302,17 @@ pub fn render_with_highlight_range(
     end_index: usize,
     enabled_tracks: Option<Vec<String>>,
     disabled_lyrics: Option<Vec<String>>,
+    raw_instruments: JsValue,
 ) -> RenderResponse {
+    let instruments: Vec<InstrumentInfo> =
+        serde_wasm_bindgen::from_value(raw_instruments).unwrap_or_default();
     render_with_highlight_range_response(
         source,
         start_index,
         end_index,
         enabled_tracks.as_deref(),
         disabled_lyrics.as_deref(),
+        &instruments,
     )
 }
 
@@ -308,8 +321,10 @@ pub fn render_with_highlight_range(
 /// - `{ "status": "ok", "parts": [{ "abbreviation", "display_name" }, ...] }`
 /// - `{ "status": "err", "diagnostics": [...] }`
 #[wasm_bindgen]
-pub fn list_parts(source: &str) -> ListPartsResponse {
-    list_parts_response(source)
+pub fn list_parts(source: &str, raw_instruments: JsValue) -> ListPartsResponse {
+    let instruments: Vec<InstrumentInfo> =
+        serde_wasm_bindgen::from_value(raw_instruments).unwrap_or_default();
+    list_parts_response(source, &instruments)
 }
 
 /// Find the measure index at a UTF-8 byte offset in the source.

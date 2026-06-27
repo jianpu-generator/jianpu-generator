@@ -428,7 +428,7 @@ fn parse_and_group(input: &Path) -> Result<jg::ast::grouped::Score, jg::error::I
         })
     })?;
     let filename = input.to_string_lossy().to_string();
-    let doc = jg::parser::parse(&content, &filename).map_err(|e| e.with_path(input))?;
+    let doc = jg::parser::parse(&content, &filename, &[]).map_err(|e| e.with_path(input))?;
     jg::grouper::group(doc).map_err(|e| e.with_path(input))
 }
 

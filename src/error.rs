@@ -420,6 +420,16 @@ impl RecoverableError {
         }
     }
 
+    pub fn parts_unknown_soundfont(span: Span, soundfont: &str, suggestions: Vec<String>) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartsUnknownSoundfont {
+                soundfont: soundfont.to_string(),
+                suggestions,
+            },
+        }
+    }
+
     pub fn parts_follow_unknown_target(span: Span, target: &str) -> Self {
         Self {
             span,

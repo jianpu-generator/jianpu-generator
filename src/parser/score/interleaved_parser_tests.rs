@@ -22,7 +22,7 @@ fn chord_line_parses_spaced_slur_group() {
         "[Chord] (1 - 6m -)\n",
         "[Melody] 1 1 5 5\n",
     );
-    let doc = crate::parser::parse(input, "test.jianpu").unwrap();
+    let doc = crate::parser::parse(input, "test.jianpu", &[]).unwrap();
     let chord_events: Vec<_> = all_events(chord_track(&doc.tracks, "Chord"))
         .into_iter()
         .filter(|e| matches!(e.value, ScoreEvent::Chord(_)))

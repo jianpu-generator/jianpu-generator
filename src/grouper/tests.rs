@@ -3,7 +3,7 @@ use crate::ast::parsed::NoteName;
 use crate::parser;
 
 fn parse_and_group(input: &str) -> Score {
-    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     group(doc).unwrap()
 }
 
@@ -256,7 +256,7 @@ fn beat_overflow_recovers_with_error_on_measure() {
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4 5\n",
     );
-    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).expect("beat overflow must not abort grouping");
     assert_eq!(score.measures.len(), 1);
     assert_eq!(score.measures[0].diagnostics.len(), 1);
@@ -289,7 +289,7 @@ fn two_part_score_has_two_part_slices_per_measure() {
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nSoprano = notes\nAlto = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Soprano] 1 2 3 4\n[Alto] 5 6 7 1\n",
     );
-    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();
     assert_eq!(score.measures.len(), 1);
     assert_eq!(score.measures[0].parts.len(), 2);
@@ -344,7 +344,7 @@ fn lyrics_distributed_per_measure() {
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n\n[Melody] 5 6 7 1\n[Melody] e f g h\n",
     );
-    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();
     assert_eq!(score.measures.len(), 2);
     let m0_lyrics = score.measures[0].parts[0].slice().lyrics.as_ref().unwrap();
@@ -435,7 +435,7 @@ fn notes_extension_no_preceding_event_is_recoverable() {
 fn chord_part_produces_one_chord_event_per_measure() {
     use crate::ast::grouped::PartRow;
     let input = "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nchord = chords\nMelody = notes\n\n# score\ntime=4/4 key=C4 bpm=120\n[chord] 1 - - -\n[Melody] 1---\n";
-    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();
     let measure = &score.measures[0];
     let chord_row = measure

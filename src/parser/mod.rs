@@ -112,7 +112,11 @@ pub(crate) fn load_document_sections(
     )
 }
 
-pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, IrrecoverableError> {
+pub fn parse(
+    input: &str,
+    filename: &str,
+    instruments: &[parts_parser::InstrumentInfo],
+) -> Result<ParsedDocument, IrrecoverableError> {
     let path = std::path::Path::new(filename);
     let (sections, section_structure_errors) = load_document_sections(input);
     let (meta_content, meta_offset) = sections.metadata;
@@ -122,7 +126,7 @@ pub fn parse(input: &str, filename: &str) -> Result<ParsedDocument, Irrecoverabl
     let (metadata, metadata_parse_errors) =
         metadata_parser::parse_metadata(&meta_content, meta_offset);
     let (declarations, parts_parse_errors) =
-        parts_parser::parse_parts(&parts_content, parts_offset);
+        parts_parser::parse_parts(&parts_content, parts_offset, instruments);
     let (tracks, directive_events_per_measure, per_measure_parse_errors) =
         if declarations.is_empty() {
             (Vec::new(), Vec::new(), Vec::new())
@@ -173,7 +177,7 @@ mod tests {
             "# parts\nMelody = notes+lyrics\n\n",
             "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] 你好wo rld\n"
         );
-        let doc = parse(input, "test.jianpu").unwrap();
+        let doc = parse(input, "test.jianpu", &[]).unwrap();
         assert_eq!(doc.metadata.title, "hello world");
         assert_eq!(doc.metadata.author, Some("foo".to_string()));
         assert_eq!(doc.declarations.len(), 1);
@@ -194,7 +198,7 @@ mod tests {
     #[test]
     fn unknown_section_recoverable() {
         let input = "# unknown\nfoo\n";
-        let doc = parse(input, "test.jianpu").expect("unknown section must not abort parsing");
+        let doc = parse(input, "test.jianpu", &[]).expect("unknown section must not abort parsing");
         assert!(doc
             .section_structure_errors
             .iter()
@@ -209,8 +213,8 @@ mod tests {
             "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n\n",
             "# score\n[Melody] 5 6 7 1\n",
         );
-        let doc =
-            parse(input, "test.jianpu").expect("duplicate score section must not abort parsing");
+        let doc = parse(input, "test.jianpu", &[])
+            .expect("duplicate score section must not abort parsing");
         assert!(doc
             .section_structure_errors
             .iter()
@@ -223,8 +227,8 @@ mod tests {
             "# parts\nMelody = notes\n\n",
             "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n"
         );
-        let doc =
-            parse(input, "test.jianpu").expect("missing metadata section must not abort parsing");
+        let doc = parse(input, "test.jianpu", &[])
+            .expect("missing metadata section must not abort parsing");
         assert!(doc
             .section_structure_errors
             .iter()
@@ -241,7 +245,7 @@ mod tests {
             "[Soprano] 1 2 3 4\n",
             "[Alto] 5 6 7 1\n",
         );
-        let doc = parse(input, "test.jianpu").unwrap();
+        let doc = parse(input, "test.jianpu", &[]).unwrap();
         assert_eq!(doc.tracks.len(), 2);
         let soprano = doc
             .tracks
@@ -280,7 +284,7 @@ mod tests {
             "[Melody] 5 6 7 1\n",
         );
         let expected_offset = input.rfind("5 6 7 1").unwrap();
-        let doc = parse(input, "test.jianpu").expect("too-many-lines must not abort parsing");
+        let doc = parse(input, "test.jianpu", &[]).expect("too-many-lines must not abort parsing");
         let error = doc.per_measure_parse_errors[0]
             .as_ref()
             .expect("recoverable error must be recorded for the measure");
@@ -305,7 +309,7 @@ mod tests {
             "[Melody] 1 2 3 4\n",
             "[Melody] 5 6 7 1\n",
         );
-        let doc = parse(input, "test.jianpu").expect("too-many-lines must not abort parsing");
+        let doc = parse(input, "test.jianpu", &[]).expect("too-many-lines must not abort parsing");
         let error = doc.per_measure_parse_errors[0]
             .as_ref()
             .expect("recoverable error must be recorded for the measure");
@@ -323,7 +327,7 @@ mod tests {
             "# parts\nMelody = notes+lyrics\n\n",
             "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n"
         );
-        let doc = parse(input, "test.jianpu").unwrap();
+        let doc = parse(input, "test.jianpu", &[]).unwrap();
         assert_eq!(doc.tracks.len(), 1);
         let notes = notes_track(&doc);
         assert_eq!(notes.abbreviation, "Melody");

@@ -18,7 +18,7 @@ pub fn part_display_name_map(
     source: &str,
     filename: &str,
 ) -> Result<std::collections::HashMap<String, String>, IrrecoverableError> {
-    Ok(list_parts_from_source(source, filename)?
+    Ok(list_parts_from_source(source, filename, &[])?
         .into_iter()
         .map(|part| (part.abbreviation, part.display_name))
         .collect())
@@ -80,7 +80,7 @@ pub fn split_track_names(
         tracks_filter.to_vec()
     };
     if names.is_empty() {
-        names = list_parts_from_source(source, filename)?
+        names = list_parts_from_source(source, filename, &[])?
             .into_iter()
             .map(|part| part.abbreviation)
             .collect();
@@ -108,7 +108,7 @@ pub fn write_split_pdfs_from_source(
     tracks_filter: &[String],
     fonts: &crate::pdf::PdfFonts,
 ) -> Result<Vec<SplitPdfEntry>, IrrecoverableError> {
-    let score = crate::compile(source, filename)?;
+    let score = crate::compile(source, filename, &[])?;
     let track_names = split_track_names(source, filename, &score, tracks_filter)?;
     let display_names = part_display_name_map(source, filename)?;
     let mut entries = Vec::with_capacity(track_names.len());

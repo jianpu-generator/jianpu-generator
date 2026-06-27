@@ -18,7 +18,7 @@ fn explicit_lyrics_keep_lyric_row() {
         "[Alto] 5 6 7 1\n",
         "[Alto] la la la la\n",
     );
-    let score = compile(input, "test.jianpu").unwrap();
+    let score = compile(input, "test.jianpu", &[]).unwrap();
     for part in &score.measures[0].parts {
         let slice = part.slice();
         assert!(

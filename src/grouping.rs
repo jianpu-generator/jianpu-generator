@@ -232,7 +232,7 @@ mod tests {
             ),
             notes_line = notes_line
         );
-        crate::render_svgs_from_source(&input, "test.jianpu")
+        crate::render_svgs_from_source(&input, "test.jianpu", &[])
     }
 
     #[test]
@@ -251,7 +251,7 @@ mod tests {
             "[c] 1. 2. 3_ 4_\n",
             "[n] 1 2 3 4\n",
         );
-        let output = crate::render_svgs_from_source(input, "t.jianpu").unwrap();
+        let output = crate::render_svgs_from_source(input, "t.jianpu", &[]).unwrap();
         assert!(output
             .diagnostics
             .iter()
@@ -320,7 +320,7 @@ mod tests {
             "# score\ntime=3/4 key=C4 bpm=120\n",
             "[Melody] 1 2 3\n",
         );
-        assert!(crate::render_svgs_from_source(input, "test.jianpu").is_ok());
+        assert!(crate::render_svgs_from_source(input, "test.jianpu", &[]).is_ok());
     }
 
     #[test]

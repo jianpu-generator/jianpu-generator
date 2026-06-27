@@ -4,7 +4,7 @@ use crate::grouper::group;
 use crate::parser::parse;
 
 fn consolidated_blocks(source: &str) -> Vec<MeasureBlock> {
-    let document = parse(source, "test").unwrap();
+    let document = parse(source, "test", &[]).unwrap();
     let score = group(document).unwrap();
     let result = compile(&score);
     consolidate(result).blocks

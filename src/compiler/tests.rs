@@ -3,7 +3,7 @@ use crate::grouper::group;
 use crate::parser::parse;
 
 fn score_from(source: &str) -> crate::ast::grouped::Score {
-    let doc = parse(source, "test").unwrap();
+    let doc = parse(source, "test", &[]).unwrap();
     group(doc).unwrap()
 }
 
@@ -367,7 +367,7 @@ fn malformed_parts_line_is_recoverable_and_valid_part_still_renders() {
         "time=4/4 key=C4 bpm=120\n",
         "[Melody] 1 2 3 4\n",
     );
-    let doc = parse(source, "test").expect("malformed parts line must not abort parsing");
+    let doc = parse(source, "test", &[]).expect("malformed parts line must not abort parsing");
     assert_eq!(doc.declarations.len(), 1, "valid declaration must survive");
     assert_eq!(doc.declarations[0].abbreviation, "Melody");
     assert_eq!(doc.parts_parse_errors.len(), 1);
@@ -402,7 +402,7 @@ fn all_parts_invalid_renders_empty_document_with_error() {
         "time=4/4 key=C4 bpm=120\n",
         "1 2 3 4\n",
     );
-    let doc = parse(source, "test").expect("all-invalid parts must not abort parsing");
+    let doc = parse(source, "test", &[]).expect("all-invalid parts must not abort parsing");
     assert!(
         doc.declarations.is_empty(),
         "no valid declarations expected"

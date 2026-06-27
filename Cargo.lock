@@ -511,6 +511,7 @@ dependencies = [
  "nonempty",
  "oxisynth",
  "pdf-writer",
+ "serde",
  "svg2pdf",
  "zip",
 ]

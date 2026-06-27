@@ -3,7 +3,7 @@
 #[test]
 fn reference_jianpu_parses_and_renders() {
     let source = include_str!("../reference.jianpu");
-    let svgs = jianpu_generator::render_svgs_from_source(source, "reference.jianpu")
+    let svgs = jianpu_generator::render_svgs_from_source(source, "reference.jianpu", &[])
         .unwrap_or_else(|e| {
             panic!("reference.jianpu failed to parse/render: {e}");
         })
@@ -23,7 +23,7 @@ fn reference_jianpu_parses_and_renders() {
 fn reference_jianpu_has_no_recoverable_errors() {
     use jianpu_generator::error::Diagnostic;
     let source = include_str!("../reference.jianpu");
-    let output = jianpu_generator::render_svgs_from_source(source, "reference.jianpu")
+    let output = jianpu_generator::render_svgs_from_source(source, "reference.jianpu", &[])
         .unwrap_or_else(|e| panic!("reference.jianpu failed to parse/render: {e}"));
     let errors: Vec<_> = output
         .diagnostics
@@ -40,7 +40,7 @@ fn reference_jianpu_has_no_recoverable_errors() {
 #[test]
 fn reference_jianpu_renders_expected_content() {
     let source = include_str!("../reference.jianpu");
-    let output = jianpu_generator::render_svgs_from_source(source, "reference.jianpu")
+    let output = jianpu_generator::render_svgs_from_source(source, "reference.jianpu", &[])
         .unwrap_or_else(|e| panic!("reference.jianpu failed to parse/render: {e}"));
     let svg = output.svgs.join("");
     assert!(

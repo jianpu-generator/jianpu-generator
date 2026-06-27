@@ -3,7 +3,7 @@ use crate::error::RecoverableErrorKind;
 use crate::parser;
 
 fn parse_and_group(input: &str) -> Score {
-    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     group(doc).unwrap()
 }
 

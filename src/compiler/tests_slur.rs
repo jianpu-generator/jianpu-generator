@@ -3,7 +3,7 @@ use crate::grouper::group;
 use crate::parser::parse;
 
 fn score_from(source: &str) -> crate::ast::grouped::Score {
-    let doc = parse(source, "test").unwrap();
+    let doc = parse(source, "test", &[]).unwrap();
     group(doc).unwrap()
 }
 

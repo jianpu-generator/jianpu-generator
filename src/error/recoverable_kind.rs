@@ -105,6 +105,12 @@ pub enum RecoverableErrorKind {
     PartsFollowTargetAfterFollower { target: String },
     /// The first declared part uses `follow[...]`, which is not allowed.
     PartsFirstPartCannotFollow,
+    /// Soundfont string does not match any known instrument — declaration is kept with the parsed
+    /// MIDI program number; audio playback may differ from what the user intended.
+    PartsUnknownSoundfont {
+        soundfont: String,
+        suggestions: Vec<String>,
+    },
 }
 
 impl RecoverableErrorKind {
@@ -176,6 +182,16 @@ impl RecoverableErrorKind {
             }
             Self::PartsFirstPartCannotFollow => {
                 "the first declared part cannot use follow[...]".to_string()
+            }
+            Self::PartsUnknownSoundfont { soundfont, suggestions } => {
+                if suggestions.is_empty() {
+                    format!("unknown soundfont \"{soundfont}\"")
+                } else {
+                    format!(
+                        "unknown soundfont \"{soundfont}\". Did you mean:\n  {}",
+                        suggestions.join("\n  ")
+                    )
+                }
             }
         }
     }

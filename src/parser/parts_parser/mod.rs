@@ -1,9 +1,60 @@
 use crate::ast::parsed::{PartDecl, PartKind, Soundfont};
 use crate::error::{RecoverableError, Span};
 
-pub fn parse_parts(content: &str, base_offset: usize) -> (Vec<PartDecl>, Vec<RecoverableError>) {
+#[derive(serde::Deserialize)]
+pub struct InstrumentInfo {
+    pub value: String,
+    pub category: String,
+    pub source: String,
+    pub role: String,
+    pub articulation: String,
+}
+
+fn fuzzy_score(query: &str, target: &str) -> u32 {
+    let q = query.to_lowercase();
+    let t = target.to_lowercase();
+    if t.contains(q.as_str()) {
+        return 1000;
+    }
+    let mut score: u32 = 0;
+    let mut chars_q = q.chars().peekable();
+    let mut consecutive: u32 = 0;
+    for tc in t.chars() {
+        if chars_q.peek() == Some(&tc) {
+            chars_q.next();
+            score += 1 + consecutive * 2;
+            consecutive += 1;
+        } else {
+            consecutive = 0;
+        }
+    }
+    if chars_q.peek().is_none() {
+        score
+    } else {
+        0
+    }
+}
+
+fn instrument_fuzzy_score(query: &str, instrument: &InstrumentInfo) -> u32 {
+    [
+        fuzzy_score(query, &instrument.value),
+        fuzzy_score(query, &instrument.category),
+        fuzzy_score(query, &instrument.source),
+        fuzzy_score(query, &instrument.role),
+        fuzzy_score(query, &instrument.articulation),
+    ]
+    .into_iter()
+    .max()
+    .unwrap_or(0)
+}
+
+pub fn parse_parts(
+    content: &str,
+    base_offset: usize,
+    instruments: &[InstrumentInfo],
+) -> (Vec<PartDecl>, Vec<RecoverableError>) {
     let mut errors = Vec::new();
-    let raw = collect_raw_declarations(content, base_offset, &mut errors);
+    let raw = collect_raw_declarations(content, base_offset, &mut errors, instruments);
     let declarations = resolve_declarations(raw, &mut errors);
     if declarations.is_empty() {
         let section_span = Span::new(base_offset, base_offset + content.len().max(1));
@@ -29,6 +80,7 @@ fn collect_raw_declarations(
     content: &str,
     base_offset: usize,
     errors: &mut Vec<RecoverableError>,
+    instruments: &[InstrumentInfo],
 ) -> Vec<RawDecl> {
     let mut raw_declarations = Vec::new();
     let mut seen_abbreviations = std::collections::HashSet::new();
@@ -66,7 +118,7 @@ fn collect_raw_declarations(
             continue;
         }
 
-        let (kind, soundfont) = match parse_rhs(rhs.trim(), line_span, errors) {
+        let (kind, soundfont) = match parse_rhs(rhs.trim(), line_span, errors, instruments) {
             Ok(pair) => pair,
             Err(e) => {
                 errors.push(e);
@@ -156,6 +208,7 @@ fn parse_soundfont_string(
     span: Span,
     rhs: &str,
     errors: &mut Vec<RecoverableError>,
+    instruments: &[InstrumentInfo],
 ) -> Result<Soundfont, RecoverableError> {
     let s = s.trim();
     if !s.starts_with('"') {
@@ -171,6 +224,31 @@ fn parse_soundfont_string(
         }
     };
     let sf_value = &after_quote[..close_pos];
+    // Validate against known instruments when list is provided.
+    if !instruments.is_empty() && !instruments.iter().any(|i| i.value == sf_value) {
+        let mut scored: Vec<(&InstrumentInfo, u32)> = instruments
+            .iter()
+            .filter_map(|i| {
+                let s = instrument_fuzzy_score(sf_value, i);
+                if s > 0 {
+                    Some((i, s))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        scored.sort_by(|a, b| b.1.cmp(&a.1));
+        let suggestions: Vec<String> = scored
+            .iter()
+            .take(5)
+            .map(|(i, _)| i.value.clone())
+            .collect();
+        errors.push(RecoverableError::parts_unknown_soundfont(
+            span,
+            sf_value,
+            suggestions,
+        ));
+    }
     if let Some(colon_pos) = sf_value.find(": ") {
         Ok(sf_value[..colon_pos]
             .trim()
@@ -190,6 +268,7 @@ fn parse_rhs(
     rhs: &str,
     span: Span,
     errors: &mut Vec<RecoverableError>,
+    instruments: &[InstrumentInfo],
 ) -> Result<(RawKind, Soundfont), RecoverableError> {
     if let Some(rest) = rhs.strip_prefix("follow[") {
         if let Some(bracket_end) = rest.find(']') {
@@ -201,7 +280,7 @@ fn parse_rhs(
             let soundfont = if after_bracket.is_empty() {
                 Soundfont::default()
             } else {
-                parse_soundfont_string(after_bracket, span, rhs, errors)?
+                parse_soundfont_string(after_bracket, span, rhs, errors, instruments)?
             };
             return Ok((RawKind::Follow(target), soundfont));
         }
@@ -209,7 +288,7 @@ fn parse_rhs(
 
     let (kind_token, soundfont) = if let Some(quote_pos) = rhs.find('"') {
         let kind_token = rhs[..quote_pos].trim();
-        let soundfont = parse_soundfont_string(&rhs[quote_pos..], span, rhs, errors)?;
+        let soundfont = parse_soundfont_string(&rhs[quote_pos..], span, rhs, errors, instruments)?;
         (kind_token, soundfont)
     } else {
         (rhs.trim(), Soundfont::default())

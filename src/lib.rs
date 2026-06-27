@@ -44,6 +44,7 @@ pub use split_track::*;
 use ast::grouped::Score;
 use ast::parsed::PartKind;
 use error::{Diagnostic, IrrecoverableError};
+use parser::parts_parser::InstrumentInfo;
 
 /// Output of a successful render: SVG page strings and any diagnostics.
 #[derive(Debug)]
@@ -91,8 +92,12 @@ pub struct PartInfo {
 }
 
 /// Parse and group a `.jianpu` source string into a [`Score`].
-pub fn compile(source: &str, filename: &str) -> Result<Score, IrrecoverableError> {
-    let doc = parser::parse(source, filename)?;
+pub fn compile(
+    source: &str,
+    filename: &str,
+    instruments: &[InstrumentInfo],
+) -> Result<Score, IrrecoverableError> {
+    let doc = parser::parse(source, filename, instruments)?;
     grouper::group(doc)
 }
 
@@ -116,16 +121,18 @@ pub fn render_svgs(score: &Score) -> Result<Vec<String>, IrrecoverableError> {
 pub fn render_svgs_from_source(
     source: &str,
     filename: &str,
+    instruments: &[InstrumentInfo],
 ) -> Result<RenderOutput, IrrecoverableError> {
-    render_svgs_from_source_filtered(source, filename, None)
+    render_svgs_from_source_filtered(source, filename, None, instruments)
 }
 
 /// List part declarations from a `.jianpu` source string.
 pub fn list_parts_from_source(
     source: &str,
     filename: &str,
+    instruments: &[InstrumentInfo],
 ) -> Result<Vec<PartInfo>, IrrecoverableError> {
-    let doc = parser::parse(source, filename)?;
+    let doc = parser::parse(source, filename, instruments)?;
     Ok(doc
         .declarations
         .into_iter()
@@ -145,8 +152,15 @@ pub fn render_svgs_from_source_filtered(
     source: &str,
     filename: &str,
     enabled_tracks: Option<&[String]>,
+    instruments: &[InstrumentInfo],
 ) -> Result<RenderOutput, IrrecoverableError> {
-    render_svgs_from_source_filtered_with_lyrics(source, filename, enabled_tracks, None)
+    render_svgs_from_source_filtered_with_lyrics(
+        source,
+        filename,
+        enabled_tracks,
+        None,
+        instruments,
+    )
 }
 
 /// Parse, group, optionally filter tracks and lyrics, and render SVG page strings.
@@ -159,8 +173,9 @@ pub fn render_svgs_from_source_filtered_with_lyrics(
     filename: &str,
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
+    instruments: &[InstrumentInfo],
 ) -> Result<RenderOutput, IrrecoverableError> {
-    let mut score = compile(source, filename)?;
+    let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
     let diagnostics = collect_measure_diagnostics(&score);
@@ -179,12 +194,12 @@ pub fn render_svgs_from_source_filtered_with_lyrics(
 pub fn render_svgs_with_highlight_range(
     source: &str,
     filename: &str,
-    start_index: usize,
-    end_index: usize,
+    measure_range: std::ops::RangeInclusive<usize>,
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
+    instruments: &[InstrumentInfo],
 ) -> Result<RenderOutput, IrrecoverableError> {
-    let mut score = compile(source, filename)?;
+    let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
     let diagnostics = collect_measure_diagnostics(&score);
@@ -202,7 +217,7 @@ pub fn render_svgs_with_highlight_range(
         &header,
         595.0,
         842.0,
-        Some((start_index, end_index)),
+        Some((*measure_range.start(), *measure_range.end())),
     );
     let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)?;
     let docs = renderer::new_renderer::render_new(&abs, &config);
@@ -263,8 +278,9 @@ pub fn render_documents_from_source_filtered_with_lyrics(
     filename: &str,
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
+    instruments: &[InstrumentInfo],
 ) -> Result<RenderDocumentOutput, IrrecoverableError> {
-    let mut score = compile(source, filename)?;
+    let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
     let diagnostics = collect_measure_diagnostics(&score);
@@ -283,17 +299,21 @@ pub fn render_documents_from_source_filtered_with_lyrics(
 pub fn render_documents_with_highlight_range(
     source: &str,
     filename: &str,
-    start_index: usize,
-    end_index: usize,
+    measure_range: std::ops::RangeInclusive<usize>,
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
+    instruments: &[InstrumentInfo],
 ) -> Result<RenderDocumentOutput, IrrecoverableError> {
-    let mut score = compile(source, filename)?;
+    let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
     let diagnostics = collect_measure_diagnostics(&score);
     Ok(RenderDocumentOutput {
-        documents: render_documents_with_range(&score, start_index, end_index)?,
+        documents: render_documents_with_range(
+            &score,
+            *measure_range.start(),
+            *measure_range.end(),
+        )?,
         diagnostics,
     })
 }
@@ -308,8 +328,9 @@ pub fn write_wav_from_source_filtered(
     filename: &str,
     enabled_tracks: Option<&[String]>,
     sf2_bytes: &[u8],
+    instruments: &[InstrumentInfo],
 ) -> Result<Vec<u8>, IrrecoverableError> {
-    let mut score = compile(source, filename)?;
+    let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     let midi_bytes = midi::write_midi(&score)?;
     wav::write_wav(&midi_bytes, sf2_bytes)
@@ -326,8 +347,9 @@ pub fn write_wav_for_measure_from_source(
     measure_index: usize,
     enabled_tracks: Option<&[String]>,
     sf2_bytes: &[u8],
+    instruments: &[InstrumentInfo],
 ) -> Result<Vec<u8>, IrrecoverableError> {
-    let mut score = compile(source, filename)?;
+    let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     let midi_bytes = midi::write_midi_for_measure(&score, measure_index)?;
     wav::write_wav(&midi_bytes, sf2_bytes)
@@ -340,14 +362,15 @@ pub fn write_wav_for_measure_from_source(
 pub fn write_wav_for_measure_range_from_source(
     source: &str,
     filename: &str,
-    start_index: usize,
-    end_index: usize,
+    measure_range: std::ops::RangeInclusive<usize>,
     enabled_tracks: Option<&[String]>,
     sf2_bytes: &[u8],
+    instruments: &[InstrumentInfo],
 ) -> Result<Vec<u8>, IrrecoverableError> {
-    let mut score = compile(source, filename)?;
+    let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
-    let midi_bytes = midi::write_midi_for_measure_range(&score, start_index, end_index)?;
+    let midi_bytes =
+        midi::write_midi_for_measure_range(&score, *measure_range.start(), *measure_range.end())?;
     wav::write_wav(&midi_bytes, sf2_bytes)
 }
 
@@ -361,8 +384,16 @@ pub fn write_pdf_from_source_filtered(
     filename: &str,
     enabled_tracks: Option<&[String]>,
     fonts: &pdf::PdfFonts,
+    instruments: &[InstrumentInfo],
 ) -> Result<Vec<u8>, IrrecoverableError> {
-    write_pdf_from_source_filtered_with_lyrics(source, filename, enabled_tracks, None, fonts)
+    write_pdf_from_source_filtered_with_lyrics(
+        source,
+        filename,
+        enabled_tracks,
+        None,
+        fonts,
+        instruments,
+    )
 }
 
 /// Parse, group, optionally filter tracks and lyrics, and write PDF bytes.
@@ -373,8 +404,9 @@ pub fn write_pdf_from_source_filtered_with_lyrics(
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
     fonts: &pdf::PdfFonts,
+    instruments: &[InstrumentInfo],
 ) -> Result<Vec<u8>, IrrecoverableError> {
-    let mut score = compile(source, filename)?;
+    let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
     let svgs = render_svgs(&score)?;

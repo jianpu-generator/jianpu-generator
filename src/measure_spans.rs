@@ -78,7 +78,7 @@ pub fn list_measure_spans_from_source(
     let group_bounds =
         parser::score::measure_group::collect_group_bounds(&score_content, score_offset, base_line);
 
-    let score = crate::compile(source, filename)?;
+    let score = crate::compile(source, filename, &[])?;
     if group_bounds.len() != score.measures.len() {
         return Err(IrrecoverableError::new(
             IrrecoverableErrorKind::internal_invariant(

@@ -16,7 +16,7 @@ fn ok_response_has_svgs() {
         "[Melody] 1 2 3 4\n",
         "[Melody] a b c d\n",
     );
-    let resp = render_response(input, None, None);
+    let resp = render_response(input, None, None, &[]);
     match resp {
         RenderResponse::Ok { documents, .. } => {
             assert_eq!(documents.len(), 1);
@@ -42,7 +42,7 @@ fn list_parts_response_returns_declarations() {
         "[Soprano] 1 2 3 4\n",
         "[Alto] 5 6 7 1\n",
     );
-    let resp = list_parts_response(input);
+    let resp = list_parts_response(input, &[]);
     match resp {
         ListPartsResponse::Ok { parts } => {
             assert_eq!(parts.len(), 2);
@@ -73,12 +73,12 @@ fn render_with_disabled_lyrics_hides_lyrics_for_part() {
         "[Alto] 5 6 7 1\n",
         "[Alto] alt alt alt alt\n",
     );
-    let all = match render_response(input, None, None) {
+    let all = match render_response(input, None, None, &[]) {
         RenderResponse::Ok { documents, .. } => documents,
         RenderResponse::Err { .. } => panic!("expected ok"),
     };
     let alto_lyrics_hidden =
-        match render_response(input, None, Some(vec!["Alto".into()]).as_deref()) {
+        match render_response(input, None, Some(vec!["Alto".into()]).as_deref(), &[]) {
             RenderResponse::Ok { documents, .. } => documents,
             RenderResponse::Err { .. } => panic!("expected ok"),
         };
@@ -102,14 +102,15 @@ fn render_with_enabled_tracks_filters_parts() {
         "[Soprano] 1 2 3 4\n",
         "[Alto] 5 6 7 1\n",
     );
-    let all = match render_response(input, None, None) {
+    let all = match render_response(input, None, None, &[]) {
         RenderResponse::Ok { documents, .. } => documents,
         RenderResponse::Err { .. } => panic!("expected ok"),
     };
-    let soprano_only = match render_response(input, Some(vec!["Soprano".into()]).as_deref(), None) {
-        RenderResponse::Ok { documents, .. } => documents,
-        RenderResponse::Err { .. } => panic!("expected ok"),
-    };
+    let soprano_only =
+        match render_response(input, Some(vec!["Soprano".into()]).as_deref(), None, &[]) {
+            RenderResponse::Ok { documents, .. } => documents,
+            RenderResponse::Err { .. } => panic!("expected ok"),
+        };
     // Rendering both parts produces more elements than rendering one
     assert_ne!(all[0].elements.len(), soprano_only[0].elements.len());
 }
@@ -117,7 +118,7 @@ fn render_with_enabled_tracks_filters_parts() {
 #[test]
 fn err_response_has_structured_diagnostic() {
     // Missing sections are now recoverable; render returns Ok with error diagnostics.
-    let resp = render_response("not valid jianpu", None, None);
+    let resp = render_response("not valid jianpu", None, None, &[]);
     let diagnostics = match resp {
         RenderResponse::Err { diagnostics, .. } | RenderResponse::Ok { diagnostics, .. } => {
             diagnostics
@@ -136,7 +137,7 @@ fn recoverable_error_produces_warning_severity_view_zone() {
         "# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b\n",
     );
-    let resp = render_response(input, None, None);
+    let resp = render_response(input, None, None, &[]);
     match resp {
         RenderResponse::Ok {
             diagnostics,
@@ -159,7 +160,7 @@ fn recoverable_error_produces_warning_severity_view_zone() {
 #[test]
 fn reference_jianpu_renders() {
     let source = include_str!("../../../reference.jianpu");
-    let resp = render_response(source, None, None);
+    let resp = render_response(source, None, None, &[]);
     match resp {
         RenderResponse::Ok { documents, .. } => {
             assert!(
@@ -329,7 +330,7 @@ fn diagnostic_span_is_utf8_byte_offset() {
         "[Melody] a b c d\n",
     );
     let token_byte_start = source.find('x').expect("error token in source");
-    let resp = render_response(source, None, None);
+    let resp = render_response(source, None, None, &[]);
     let diagnostics = match resp {
         RenderResponse::Ok { diagnostics, .. } => diagnostics,
         RenderResponse::Err { diagnostics, .. } => diagnostics,

@@ -7,6 +7,7 @@ import type {
   MeasureSpan,
   PartInfo,
 } from '../types'
+import { GM_INSTRUMENTS } from '../utils/gmInstruments'
 
 const generateWav =
   'generate_wav' in jianpuWasm ? jianpuWasm.generate_wav : null
@@ -166,7 +167,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   await ensureInit()
 
   if (msg.type === 'listParts') {
-    const result = list_parts(msg.source)
+    const result = list_parts(msg.source, GM_INSTRUMENTS)
     if (result.status === 'ok') {
       postMessage({
         type: 'parts',
@@ -433,6 +434,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       msg.endMeasureIndex,
       msg.enabledTracks,
       msg.disabledLyrics,
+      GM_INSTRUMENTS,
     )
     if (result.status === 'ok') {
       postMessage({
@@ -463,7 +465,12 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
   if (msg.type !== 'render') return
 
-  const result = render(msg.source, msg.enabledTracks, msg.disabledLyrics)
+  const result = render(
+    msg.source,
+    msg.enabledTracks,
+    msg.disabledLyrics,
+    GM_INSTRUMENTS,
+  )
   if (result.status === 'ok') {
     postMessage({
       type: 'ok',

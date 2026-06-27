@@ -9,7 +9,7 @@ fn lyrics_overflow_recovers_with_error_on_measure() {
         "# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 0 0\n[Melody] a b c d e f\n",
     );
-    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).expect("overflow must not abort grouping");
     assert_eq!(score.measures.len(), 1);
     assert_eq!(score.measures[0].diagnostics.len(), 1);
@@ -30,7 +30,7 @@ fn lyrics_underflow_recovers_with_error_on_measure() {
         "# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b\n",
     );
-    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).expect("underflow must not abort grouping");
     assert_eq!(score.measures.len(), 1);
     assert_eq!(score.measures[0].diagnostics.len(), 1);
@@ -52,7 +52,7 @@ fn lyrics_underflow_error_span_covers_lyrics_line_not_notes() {
         "# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b\n",
     );
-    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).expect("underflow must not abort grouping");
 
     let lyrics_line_offset = input.find("a b").unwrap();
@@ -80,7 +80,7 @@ fn measures_without_lyrics_underflow_have_no_errors() {
         "# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n",
     );
-    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();
     assert!(score.measures[0].diagnostics.is_empty());
 }
@@ -105,7 +105,7 @@ time=4/4 key=C4 bpm=120
 [Melody] 4 5 6 7
 [Melody] ha ko da
 "#;
-    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();
     assert_eq!(score.measures.len(), 2);
     assert!(
@@ -127,7 +127,7 @@ fn cross_measure_slur_note_consumes_syllable() {
         "[Melody] 1 2 3 (5\n[Melody] fa fo fi fu\n\n",
         "[Melody] 5) 6 7 0\n[Melody] hi ha ho\n",
     );
-    let doc = parser::parse(input, "test.jianpu").unwrap();
+    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();
     assert_eq!(score.measures.len(), 2);
     assert!(
