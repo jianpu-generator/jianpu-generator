@@ -8,6 +8,7 @@ fn decl(name: &str, kind: PartKind) -> PartDecl {
         kind,
         follow_target: None,
         soundfont: Soundfont::default(),
+        volume: 100,
     }
 }
 
@@ -18,6 +19,7 @@ fn decl_follow(name: &str, kind: PartKind, target: &str) -> PartDecl {
         kind,
         follow_target: Some(target.to_string()),
         soundfont: Soundfont::default(),
+        volume: 100,
     }
 }
 

@@ -35,9 +35,23 @@ struct RawEvent {
 
 enum RawKind {
     Tempo(u32),
-    NoteOn { channel: u8, note: u8 },
-    NoteOff { channel: u8, note: u8 },
-    ProgramChange { channel: u8, program: u8 },
+    NoteOn {
+        channel: u8,
+        note: u8,
+    },
+    NoteOff {
+        channel: u8,
+        note: u8,
+    },
+    ProgramChange {
+        channel: u8,
+        program: u8,
+    },
+    ControlChange {
+        channel: u8,
+        controller: u8,
+        value: u8,
+    },
 }
 
 enum EventResolution {
@@ -62,27 +76,45 @@ pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
             .filter(|r| r.slice().kind != PartKind::Chords)
             .enumerate()
         {
+            let channel = part_index_to_midi_channel(index);
+            let part = row.slice();
             raw.push(RawEvent {
                 tick: 0,
                 kind: RawKind::ProgramChange {
-                    channel: part_index_to_midi_channel(index),
-                    program: row.slice().soundfont.0,
+                    channel,
+                    program: part.soundfont.0,
+                },
+            });
+            raw.push(RawEvent {
+                tick: 0,
+                kind: RawKind::ControlChange {
+                    channel,
+                    controller: 7,
+                    value: (part.volume as u32 * 127 / 100) as u8,
                 },
             });
         }
     }
     if let Some(first_measure) = score.measures.first() {
-        let chord_program = first_measure
+        let chord_part = first_measure
             .parts
             .iter()
-            .find(|r| r.slice().kind == PartKind::Chords)
-            .map(|r| r.slice().soundfont.0)
-            .unwrap_or(0);
+            .find(|r| r.slice().kind == PartKind::Chords);
+        let chord_program = chord_part.map(|r| r.slice().soundfont.0).unwrap_or(0);
+        let chord_volume = chord_part.map(|r| r.slice().volume).unwrap_or(100);
         raw.push(RawEvent {
             tick: 0,
             kind: RawKind::ProgramChange {
                 channel: CHORD_CHANNEL,
                 program: chord_program,
+            },
+        });
+        raw.push(RawEvent {
+            tick: 0,
+            kind: RawKind::ControlChange {
+                channel: CHORD_CHANNEL,
+                controller: 7,
+                value: (chord_volume as u32 * 127 / 100) as u8,
             },
         });
     }
@@ -464,7 +496,7 @@ fn flush_pending_ties(raw: &mut Vec<RawEvent>, per_part_ties: Vec<(u8, HashMap<u
 fn sort_raw_events(raw: &mut [RawEvent]) {
     raw.sort_by_key(|e| {
         let priority: u8 = match e.kind {
-            RawKind::Tempo(_) | RawKind::ProgramChange { .. } => 0,
+            RawKind::Tempo(_) | RawKind::ProgramChange { .. } | RawKind::ControlChange { .. } => 0,
             RawKind::NoteOff { .. } => 1,
             RawKind::NoteOn { .. } => 2,
         };
@@ -522,6 +554,20 @@ fn raw_event_to_track_event(event: &RawEvent, delta: u32) -> TrackEvent<'static>
                 message: MidiMessage::NoteOff {
                     key: u7::from(*note),
                     vel: u7::from(0u8),
+                },
+            },
+        },
+        RawKind::ControlChange {
+            channel,
+            controller,
+            value,
+        } => TrackEvent {
+            delta: u28::from(delta),
+            kind: TrackEventKind::Midi {
+                channel: u4::from(*channel),
+                message: MidiMessage::Controller {
+                    controller: u7::from(*controller),
+                    value: u7::from(*value),
                 },
             },
         },

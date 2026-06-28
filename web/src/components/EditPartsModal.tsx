@@ -1,5 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import * as Select from '@radix-ui/react-select'
+import * as Slider from '@radix-ui/react-slider'
 import { useState } from 'react'
 import type { PartInfo } from '../types'
 import type {
@@ -19,6 +20,7 @@ export interface EditPartsModalProps {
     mode: PartMode,
     followTarget: string | null,
     soundfont: SoundfontValue | null,
+    volume: number | null,
   ) => void
   previewInstrument: (programNumber: number) => void
   stopPreviewInstrument: () => void
@@ -62,6 +64,7 @@ function PartRow({
         mode,
         defaultTarget,
         declaration.soundfont,
+        declaration.volume,
       )
     } else {
       onPartDeclarationChange(
@@ -69,6 +72,7 @@ function PartRow({
         mode as PartMode,
         null,
         declaration.soundfont,
+        declaration.volume,
       )
     }
   }
@@ -79,6 +83,7 @@ function PartRow({
       'follow',
       target,
       declaration.soundfont,
+      declaration.volume,
     )
   }
 
@@ -89,6 +94,18 @@ function PartRow({
       declaration.mode,
       declaration.followTarget,
       newSoundfont,
+      declaration.volume,
+    )
+  }
+
+  function handleVolumeChange(value: number) {
+    const newVolume = value === 100 ? null : value
+    onPartDeclarationChange(
+      declaration.abbreviation,
+      declaration.mode,
+      declaration.followTarget,
+      declaration.soundfont,
+      newVolume,
     )
   }
 
@@ -174,6 +191,67 @@ function PartRow({
           stopPreviewInstrument={stopPreviewInstrument}
           previewAudioPlaying={previewAudioPlaying}
         />
+      </td>
+      <td style={tdStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Slider.Root
+            min={1}
+            max={100}
+            step={1}
+            value={[declaration.volume ?? 100]}
+            onValueChange={([v]) => handleVolumeChange(v)}
+            style={{
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              userSelect: 'none',
+              touchAction: 'none',
+              width: '80px',
+              height: '20px',
+            }}
+          >
+            <Slider.Track
+              style={{
+                background: '#e2e8f0',
+                position: 'relative',
+                flexGrow: 1,
+                borderRadius: '9999px',
+                height: '4px',
+              }}
+            >
+              <Slider.Range
+                style={{
+                  position: 'absolute',
+                  background: '#4a90d9',
+                  borderRadius: '9999px',
+                  height: '100%',
+                }}
+              />
+            </Slider.Track>
+            <Slider.Thumb
+              style={{
+                display: 'block',
+                width: '14px',
+                height: '14px',
+                background: '#fff',
+                border: '2px solid #4a90d9',
+                borderRadius: '9999px',
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            />
+          </Slider.Root>
+          <span
+            style={{
+              fontSize: '11px',
+              color: '#666',
+              fontFamily: 'var(--mono, monospace)',
+              minWidth: '28px',
+            }}
+          >
+            {declaration.volume ?? 100}%
+          </span>
+        </div>
       </td>
     </tr>
   )
@@ -381,10 +459,11 @@ export function EditPartsModal({
               }}
             >
               <colgroup>
-                <col style={{ width: '22%' }} />
-                <col style={{ width: '14%' }} />
-                <col style={{ width: '34%' }} />
-                <col style={{ width: '30%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '28%' }} />
+                <col style={{ width: '24%' }} />
+                <col style={{ width: '20%' }} />
               </colgroup>
               <thead>
                 <tr>
@@ -392,6 +471,7 @@ export function EditPartsModal({
                   <th style={thStyle}>Abbr</th>
                   <th style={thStyle}>Kind / Follow</th>
                   <th style={thStyle}>Soundfont</th>
+                  <th style={thStyle}>Volume</th>
                 </tr>
               </thead>
               <tbody>

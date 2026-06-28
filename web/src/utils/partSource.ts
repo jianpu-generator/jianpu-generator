@@ -10,35 +10,56 @@ export interface ParsedPartDeclaration {
   mode: PartMode
   followTarget: string | null
   soundfont: SoundfontValue | null
+  volume: number | null
+}
+
+function parseVolumeSuffix(s: string): { volume: number | null; rest: string } {
+  const trimmed = s.trimEnd()
+  const percentMatch = trimmed.match(/^(.*?)\s+(\d+)%$/)
+  if (percentMatch) {
+    const v = parseInt(percentMatch[2], 10)
+    if (v >= 0 && v <= 100) {
+      return { volume: v === 100 ? null : v, rest: percentMatch[1] }
+    }
+  }
+  return { volume: null, rest: s }
 }
 
 function parseRhs(rhs: string): {
   mode: PartMode
   followTarget: string | null
   soundfont: SoundfontValue | null
+  volume: number | null
 } {
   const remaining = rhs.trim()
 
   let mode: PartMode
   let followTarget: string | null = null
   let soundfont: SoundfontValue | null = null
+  let volume: number | null = null
 
   if (remaining.startsWith('follow[')) {
+    const { volume: parsedVolume, rest } = parseVolumeSuffix(remaining)
+    volume = parsedVolume
     mode = 'follow'
-    const match = remaining.match(/^follow\[([^\]]+)\]/)
+    const match = rest.match(/^follow\[([^\]]+)\]/)
     followTarget = match?.[1] ?? null
   } else {
-    const quotePos = remaining.indexOf('"')
+    const { volume: parsedVolume, rest: withoutVolume } =
+      parseVolumeSuffix(remaining)
+    volume = parsedVolume
+    const trimmedRhs = withoutVolume.trim()
+    const quotePos = trimmedRhs.indexOf('"')
     let kindToken: string
     if (quotePos !== -1) {
-      kindToken = remaining.slice(0, quotePos).trim()
-      const afterQuote = remaining.slice(quotePos + 1)
+      kindToken = trimmedRhs.slice(0, quotePos).trim()
+      const afterQuote = trimmedRhs.slice(quotePos + 1)
       const closePos = afterQuote.indexOf('"')
       if (closePos !== -1) {
         soundfont = afterQuote.slice(0, closePos)
       }
     } else {
-      kindToken = remaining
+      kindToken = trimmedRhs
     }
     if (kindToken === 'notes+lyrics') {
       mode = 'notes+lyrics'
@@ -49,7 +70,7 @@ function parseRhs(rhs: string): {
     }
   }
 
-  return { mode, followTarget, soundfont }
+  return { mode, followTarget, soundfont, volume }
 }
 
 function findPartsSection(lines: string[]): {
@@ -88,15 +109,17 @@ export function parsePartDeclarations(
         mode: 'notes' satisfies PartMode,
         followTarget: null,
         soundfont: null,
+        volume: null,
       }
     }
-    const { mode, followTarget, soundfont } = parseRhs(partLine.rhs)
+    const { mode, followTarget, soundfont, volume } = parseRhs(partLine.rhs)
     return {
       abbreviation: part.abbreviation,
       lineNumber: partLine.index + 1,
       mode,
       followTarget,
       soundfont,
+      volume,
     }
   })
 }
@@ -107,6 +130,7 @@ export function updatePartDeclaration(
   newMode: PartMode,
   newFollowTarget: string | null,
   newSoundfont: SoundfontValue | null,
+  newVolume: number | null,
 ): string {
   const lines = source.split('\n')
   const partsIndex = lines.findIndex((line) => line.trim() === '# parts')
@@ -138,7 +162,9 @@ export function updatePartDeclaration(
   const modeStr =
     newMode === 'follow' ? `follow[${newFollowTarget ?? ''}]` : newMode
   const soundfontSuffix = newSoundfont != null ? ` "${newSoundfont}"` : ''
-  const newLine = `${lhsWithEq} ${modeStr}${soundfontSuffix}`
+  const volumeSuffix =
+    newVolume != null && newVolume !== 100 ? ` ${newVolume}%` : ''
+  const newLine = `${lhsWithEq} ${modeStr}${soundfontSuffix}${volumeSuffix}`
 
   return lines.map((l, i) => (i === targetIndex ? newLine : l)).join('\n')
 }

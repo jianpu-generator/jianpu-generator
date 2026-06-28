@@ -75,6 +75,8 @@ One track per line. Blank lines are ignored.
 
 An optional soundfont string `"<number>: <name>"` may follow the kind token (or `follow[X]` bracket) to select the MIDI timbre for that part. The number is the General MIDI program number (0–127). For example: `notes "52: Choir Aahs"` or `follow[A] "1: Grand Piano"`. If omitted, the default is program 52 (Choir Aahs).
 
+An optional volume suffix `XX%` (where XX is 1–100) may appear after the soundfont string (or after the kind token if there is no soundfont) to set the MIDI volume for that part. For example: `notes "52: Choir Aahs" 47%` or `notes 80%`. If omitted, the default is 100%. `follow[X]` parts always inherit their volume from the target part and ignore any explicit volume suffix.
+
 Rules:
 
 - Duplicate abbreviations across tracks are an error.
