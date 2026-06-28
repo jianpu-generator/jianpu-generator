@@ -139,7 +139,7 @@ fn find_symbol_end(
             .get(start..)
             .unwrap_or_default()
             .iter()
-            .position(|&c| matches!(c, '_' | '=' | '.' | '-' | '\'' | ',' | '(' | ')'))
+            .position(|&c| matches!(c, '_' | '=' | '.' | '-' | '\'' | ',' | '(' | ')' | '~'))
             .map(|p| start + p)
             .unwrap_or(chars.len()),
     );

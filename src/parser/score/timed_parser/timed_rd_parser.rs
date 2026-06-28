@@ -243,6 +243,21 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
                     self.staging
                         .push(DepthEvent::new(Spanned::new(ScoreEvent::Extension, span)));
                 }
+                Some(TimedLexToken::Tilde) => {
+                    if self.staging.is_empty() {
+                        self.bump();
+                    } else {
+                        let group_start = self.staging.len() - 1;
+                        self.bump();
+                        if let Some(TimedLexToken::HeadStart { offset }) = self.peek() {
+                            let offset = *offset;
+                            self.parse_timed_unit(offset)?;
+                        }
+                        if let Some(slice) = self.staging.get_mut(group_start..) {
+                            apply_closed_group_depth(slice);
+                        }
+                    }
+                }
                 Some(TimedLexToken::HeadStart { offset }) => {
                     let offset = *offset;
                     self.parse_timed_unit(offset)?;

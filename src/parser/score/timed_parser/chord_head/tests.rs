@@ -476,3 +476,27 @@ fn parses_spaced_slur_group_across_tokens() {
     assert_eq!(chord_count, 2, "expected chord 1 and 6m in group");
     assert!(!state.is_open());
 }
+
+#[test]
+fn tie_operator_produces_tied_chords() {
+    // `1~1 2 3`: tilde should tie the first chord into the second,
+    // yielding 4 chord events where the first has tie=true.
+    let (events, errors) = parse_line_with_errors("1~1 2 3");
+    let chords: Vec<&ParsedChordNote> = events
+        .iter()
+        .filter_map(|e| {
+            if let ScoreEvent::Chord(c) = e {
+                Some(c)
+            } else {
+                None
+            }
+        })
+        .collect();
+    assert_eq!(chords.len(), 4, "expected 4 chord events (1 tied, 1, 2, 3)");
+    assert!(chords[0].slur, "first chord should be tied");
+    assert!(!chords[1].slur, "second chord should not be tied");
+    assert!(
+        errors.is_empty(),
+        "expected no errors for valid tie syntax, got: {errors:?}"
+    );
+}

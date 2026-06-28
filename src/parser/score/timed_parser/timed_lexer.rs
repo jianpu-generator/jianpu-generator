@@ -25,6 +25,7 @@ pub enum TimedLexToken {
     Bpm(u32),
     KeyChange(KeyChange),
     TimeSignature { num: u8, den: u8 },
+    Tilde,
 }
 
 pub fn lex_line(line: &str, base_offset: usize, context: LexContext) -> LexLineResult {
@@ -76,6 +77,19 @@ struct CharLexContext {
     context: LexContext,
 }
 
+fn emit_single_token(
+    token: TimedLexToken,
+    start: usize,
+    len: usize,
+    boundary: bool,
+) -> LexCharResult {
+    Ok((
+        Some(Spanned::new(token, Span::new(start, start + len))),
+        len,
+        boundary,
+    ))
+}
+
 /// Lex one non-whitespace character.  Returns `(token, bytes_consumed, new_at_word_boundary)`.
 /// When the character is a suffix that belongs to the current head, `token` is `None`.
 fn lex_one_char(
@@ -92,30 +106,9 @@ fn lex_one_char(
         context,
     } = ctx;
     match c {
-        '(' => Ok((
-            Some(Spanned::new(
-                TimedLexToken::LParen,
-                Span::new(start, start + len),
-            )),
-            len,
-            true,
-        )),
-        ')' => Ok((
-            Some(Spanned::new(
-                TimedLexToken::RParen,
-                Span::new(start, start + len),
-            )),
-            len,
-            true,
-        )),
-        '-' if at_word_boundary => Ok((
-            Some(Spanned::new(
-                TimedLexToken::Extension,
-                Span::new(start, start + len),
-            )),
-            len,
-            true,
-        )),
+        '(' => emit_single_token(TimedLexToken::LParen, start, len, true),
+        ')' => emit_single_token(TimedLexToken::RParen, start, len, true),
+        '-' if at_word_boundary => emit_single_token(TimedLexToken::Extension, start, len, true),
         // `-` inside a word: duration-suffix dash; skip it.
         '-' => Ok((None, len, false)),
         '1' if at_word_boundary && line[i..].starts_with("1=") => {
@@ -123,14 +116,12 @@ fn lex_one_char(
                 return Ok((Some(tok), consumed, true));
             }
             // Not a key change — emit HeadStart for digit `1`.
-            Ok((
-                Some(Spanned::new(
-                    TimedLexToken::HeadStart { offset: start },
-                    Span::new(start, start + len),
-                )),
+            emit_single_token(
+                TimedLexToken::HeadStart { offset: start },
+                start,
                 len,
                 false,
-            ))
+            )
         }
         '0'..='7' => lex_low_digit(
             line,
@@ -159,6 +150,7 @@ fn lex_one_char(
             recoverable_errors,
         ),
         '|' => skip_unexpected_char(start, len, c, recoverable_errors),
+        '~' if !at_word_boundary => emit_single_token(TimedLexToken::Tilde, start, len, false),
         _ if !at_word_boundary => Ok((None, len, false)),
         _ if at_word_boundary && context == LexContext::Chords => {
             Ok(chord_head_start_token(start, len))
