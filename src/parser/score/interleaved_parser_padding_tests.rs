@@ -1,5 +1,5 @@
 use super::*;
-use crate::ast::parsed::{Accidental, ParsedTrack};
+use crate::ast::parsed::{Accidental, ParsedTrack, PartKind};
 
 use super::test_helpers::{
     all_events, chord_track, decl, notes_track, parse, parse_recoverable_errors,

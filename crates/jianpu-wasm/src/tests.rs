@@ -421,94 +421,123 @@ fn list_measure_spans_returns_empty_for_invalid_source() {
     }
 }
 
-mod group_diagnostics_tests {
-    use crate::types::{
-        group_diagnostics_into_view_zones, DiagnosticOut, DiagnosticSeverity, SpanOut,
-    };
-
-    fn make_diagnostic(
-        severity: DiagnosticSeverity,
-        message: &str,
-        span_end: usize,
-    ) -> DiagnosticOut {
-        DiagnosticOut {
-            severity,
-            message: message.to_string(),
-            span: SpanOut {
-                start: 0,
-                end: span_end,
-            },
-            report: None,
+#[test]
+fn follow_part_with_explicit_override_in_some_sections_renders_ok() {
+    // p2 follows p1 but has an explicit override ([p2]12) in the first section.
+    // s2 follows s1 but has an explicit override ([s2]67) in the first section.
+    // In the second section (time=4/4), only [s1] and [a] appear; the follow
+    // parts (p2, s2) and their leaders (p1) are absent and should be filled
+    // implicitly / via follow resolution.
+    let input = concat!(
+        "# metadata\n",
+        "title = \"\"\n",
+        "author = \"\"\n",
+        "\n",
+        "# parts\n",
+        "Pluck [p1] = notes\n",
+        "Pluck 2 [p2] = follow[p1]\n",
+        "String [s1] = notes\n",
+        "String 2 [s2] = follow[s1]\n",
+        "Accompaniment [a] = chords\n",
+        "\n",
+        "\n",
+        "# score\n",
+        "time=2/4\n",
+        "[p1]12\n",
+        "[p2]12\n",
+        "[s1]1'2'\n",
+        "[s2]67\n",
+        "[a]4 5 \n",
+        "\n",
+        "time=4/4\n",
+        "[s1] 5---\n",
+        "[a] 1---\n",
+    );
+    let resp = render_response(input, None, None, &[]);
+    match resp {
+        RenderResponse::Ok {
+            documents,
+            diagnostics,
+            ..
+        } => {
+            assert!(!documents.is_empty(), "expected at least one page");
+            assert!(
+                diagnostics.is_empty(),
+                "expected no diagnostics, got: {}",
+                diagnostics
+                    .iter()
+                    .map(|d| d.message.as_str())
+                    .collect::<Vec<_>>()
+                    .join("; ")
+            );
+        }
+        RenderResponse::Err { diagnostics, .. } => {
+            panic!(
+                "expected ok but got error: {}",
+                diagnostics
+                    .iter()
+                    .map(|d| d.message.as_str())
+                    .collect::<Vec<_>>()
+                    .join("; ")
+            );
         }
     }
+}
 
-    #[test]
-    fn single_error_produces_one_error_zone() {
-        // "line1\nline2\n" — byte offset 10 is on line 2
-        let source = "line1\nline2\n";
-        let diagnostics = vec![make_diagnostic(DiagnosticSeverity::Error, "oops", 10)];
-        let zones = group_diagnostics_into_view_zones(source, &diagnostics);
-        assert_eq!(zones.len(), 1);
-        assert_eq!(zones[0].severity, DiagnosticSeverity::Error);
-        assert_eq!(zones[0].after_line_number, 2);
-        assert_eq!(zones[0].messages.len(), 1);
-        assert_eq!(zones[0].messages[0].message, "oops");
-    }
-
-    #[test]
-    fn single_warning_produces_one_warning_zone() {
-        let source = "line1\n";
-        let diagnostics = vec![make_diagnostic(DiagnosticSeverity::Warning, "note", 4)];
-        let zones = group_diagnostics_into_view_zones(source, &diagnostics);
-        assert_eq!(zones.len(), 1);
-        assert_eq!(zones[0].severity, DiagnosticSeverity::Warning);
-        assert_eq!(zones[0].after_line_number, 1);
-    }
-
-    #[test]
-    fn two_errors_same_line_merge_into_one_zone() {
-        let source = "line1\nline2\n";
-        let diagnostics = vec![
-            make_diagnostic(DiagnosticSeverity::Error, "first", 8),
-            make_diagnostic(DiagnosticSeverity::Error, "second", 10),
-        ];
-        let zones = group_diagnostics_into_view_zones(source, &diagnostics);
-        assert_eq!(zones.len(), 1);
-        assert_eq!(zones[0].messages.len(), 2);
-        assert_eq!(zones[0].messages[0].message, "first");
-        assert_eq!(zones[0].messages[1].message, "second");
-    }
-
-    #[test]
-    fn error_and_warning_on_same_line_produce_two_zones_error_first() {
-        let source = "line1\nline2\n";
-        let diagnostics = vec![
-            make_diagnostic(DiagnosticSeverity::Warning, "warn", 8),
-            make_diagnostic(DiagnosticSeverity::Error, "err", 10),
-        ];
-        let zones = group_diagnostics_into_view_zones(source, &diagnostics);
-        assert_eq!(zones.len(), 2);
-        assert_eq!(zones[0].severity, DiagnosticSeverity::Error);
-        assert_eq!(zones[1].severity, DiagnosticSeverity::Warning);
-        assert_eq!(zones[0].after_line_number, 2);
-        assert_eq!(zones[1].after_line_number, 2);
-    }
-
-    #[test]
-    fn zones_sorted_by_line_number_ascending() {
-        let source = "a\nb\nc\n";
-        let diagnostics = vec![
-            make_diagnostic(DiagnosticSeverity::Error, "line3", 5),
-            make_diagnostic(DiagnosticSeverity::Error, "line1", 1),
-        ];
-        let zones = group_diagnostics_into_view_zones(source, &diagnostics);
-        assert_eq!(zones.len(), 2);
-        assert!(zones[0].after_line_number < zones[1].after_line_number);
-    }
-
-    #[test]
-    fn empty_diagnostics_returns_empty_zones() {
-        let zones = group_diagnostics_into_view_zones("source", &[]);
-        assert!(zones.is_empty());
+#[test]
+fn two_parts_with_non_four_four_first_section_has_no_diagnostics() {
+    // Minimal reproducer: two parts, time=2/4 first section, both parts
+    // present in the second section.  The renderer must not emit any
+    // diagnostics — the bug caused spurious "measure count mismatch" and
+    // "beat overflow" errors whenever the first section was not 4/4.
+    let input = concat!(
+        "# metadata\n",
+        "title = \"\"\n",
+        "author = \"\"\n",
+        "\n",
+        "# parts\n",
+        "A [a] = notes\n",
+        "B [b] = notes\n",
+        "\n",
+        "# score\n",
+        "time=2/4\n",
+        "[a]12\n",
+        "[b]12\n",
+        "\n",
+        "time=4/4\n",
+        "[a] 5\n",
+        "[b] 1\n",
+    );
+    let resp = render_response(input, None, None, &[]);
+    match resp {
+        RenderResponse::Ok {
+            documents,
+            diagnostics,
+            ..
+        } => {
+            assert!(!documents.is_empty(), "expected at least one page");
+            assert!(
+                diagnostics.is_empty(),
+                "expected no diagnostics, got: {}",
+                diagnostics
+                    .iter()
+                    .map(|d| d.message.as_str())
+                    .collect::<Vec<_>>()
+                    .join("; ")
+            );
+        }
+        RenderResponse::Err { diagnostics, .. } => {
+            panic!(
+                "expected ok but got error: {}",
+                diagnostics
+                    .iter()
+                    .map(|d| d.message.as_str())
+                    .collect::<Vec<_>>()
+                    .join("; ")
+            );
+        }
     }
 }
+
+#[path = "group_diagnostics_tests.rs"]
+mod group_diagnostics_tests;

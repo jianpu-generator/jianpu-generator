@@ -1,6 +1,5 @@
 use crate::ast::parsed::{
-    flatten_score_line_slots, ParsedMeasureSlot, ParsedTrack, PartDecl, PartKind, ScoreEvent,
-    ScoreLineSlot,
+    flatten_score_line_slots, ParsedMeasureSlot, ParsedTrack, PartDecl, ScoreEvent, ScoreLineSlot,
 };
 use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Spanned};
 use crate::parser::score::token_parser::GroupStack;
@@ -22,7 +21,6 @@ use accumulators::{build_parse_result, build_slot_actions, init_accumulators};
 use beat_padding::{beats_per_measure, validate_and_pad_group_lines};
 use column_lines::process_padded_columns;
 use directives::split_directive;
-use errors::invariant;
 
 /// One entry per bar group: all directive events emitted by that group's directive row.
 pub(super) type DirectiveEventsPerMeasure = Vec<Vec<Spanned<ScoreEvent>>>;
@@ -75,7 +73,6 @@ struct BarGroupContext<'a> {
     declarations: &'a [PartDecl],
     slots: &'a [ScoreLineSlot],
     slot_actions: &'a [SlotAction],
-    first_notes_track_index: usize,
     time_num: &'a mut u8,
     time_den: &'a mut u8,
     accumulators: &'a mut [TrackAccumulator],
@@ -85,13 +82,6 @@ struct BarGroupContext<'a> {
     directive_events_per_measure: &'a mut DirectiveEventsPerMeasure,
     per_measure_directive_errors: &'a mut Vec<Option<RecoverableError>>,
     extra_document_errors: &'a mut Vec<RecoverableError>,
-}
-
-fn first_notes_track_index(declarations: &[PartDecl]) -> usize {
-    declarations
-        .iter()
-        .position(|d| matches!(d.kind, PartKind::Notes | PartKind::NotesWithLyrics))
-        .unwrap_or(0)
 }
 
 fn finalize_unclosed_groups(
@@ -150,8 +140,6 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
     let (groups, per_group_desugar_errors) =
         crate::desugar::desugar_groups(groups, declarations, base_offset)?;
 
-    let first_notes_track_index = first_notes_track_index(declarations);
-
     let slots = flatten_score_line_slots(declarations);
     let slot_actions = build_slot_actions(&slots);
     let mut accumulators = init_accumulators(declarations);
@@ -170,7 +158,6 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
         declarations,
         slots: &slots,
         slot_actions: &slot_actions,
-        first_notes_track_index,
         time_num: &mut time_num,
         time_den: &mut time_den,
         accumulators: &mut accumulators,
@@ -250,17 +237,10 @@ fn process_bar_group(
     ctx.directive_events_per_measure
         .push(directive_events.clone());
     if !directive_events.is_empty() {
-        let events_acc = timed_events_mut(
-            ctx.accumulators
-                .get_mut(ctx.first_notes_track_index)
-                .ok_or_else(|| {
-                    invariant(
-                        Span::new(ctx.base_offset, ctx.base_offset + 1),
-                        "internal error: missing notes accumulator for directive events",
-                    )
-                })?,
-        )?;
-        events_acc.extend(directive_events);
+        for acc in ctx.accumulators.iter_mut() {
+            let events_acc = timed_events_mut(acc)?;
+            events_acc.extend(directive_events.iter().cloned());
+        }
     }
 
     let beats_expected = beats_per_measure(*ctx.time_num, *ctx.time_den);

@@ -1,5 +1,7 @@
 use super::*;
-use crate::ast::parsed::{Accidental, JianPuPitch, ParsedChordNote, ScoreEvent, TriadQuality};
+use crate::ast::parsed::{
+    Accidental, JianPuPitch, ParsedChordNote, PartKind, ScoreEvent, TriadQuality,
+};
 
 use super::test_helpers::{
     all_events, chord_track, decl, notes_track, parse, parse_recoverable_errors,
@@ -38,8 +40,10 @@ fn chord_column_events_are_parsed() {
     assert_eq!(tracks.len(), 2);
     let chord = chord_track(&tracks, "C");
     let events: Vec<_> = all_events(chord).into_iter().map(|e| &e.value).collect();
+    // events[0..3] are directive events (TimeSignatureChange, KeyChange, BpmChange)
+    // broadcast to all tracks; the first chord note follows at index 3.
     assert_eq!(
-        events[0],
+        events[3],
         &ScoreEvent::Chord(ParsedChordNote {
             degree: JianPuPitch::One,
             accidental: Accidental::Natural,
@@ -54,7 +58,7 @@ fn chord_column_events_are_parsed() {
             slur_group_close_at_duration: None,
         })
     );
-    assert!(matches!(events[1], ScoreEvent::Extension));
+    assert!(matches!(events[4], ScoreEvent::Extension));
     assert_eq!(all_events(notes_track(&tracks, "N")).len(), 4);
 }
 
@@ -97,7 +101,8 @@ fn two_parts_two_bars() {
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(tracks.len(), 2);
     assert_eq!(all_events(notes_track(&tracks, "Soprano")).len(), 11);
-    assert_eq!(all_events(notes_track(&tracks, "Alto")).len(), 8);
+    // Alto now receives the 3 directive events from bar 1, same as Soprano.
+    assert_eq!(all_events(notes_track(&tracks, "Alto")).len(), 11);
 }
 
 #[test]
