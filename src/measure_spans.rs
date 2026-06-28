@@ -156,4 +156,32 @@ mod tests {
             spans[1].start_line,
         );
     }
+
+    #[test]
+    fn section_label_is_populated_for_bare_directive() {
+        let source = concat!(
+            "# metadata\n",
+            "title = \"test\"\n",
+            "\n",
+            "# parts\n",
+            "M = notes\n",
+            "\n",
+            "# score\n",
+            "time=4/4 key=C4 bpm=120 label=\"A\"\n",
+            "1 2 3 4\n",
+            "\n",
+            "5 6 7 1'\n",
+            "\n",
+            "label=\"B\"\n",
+            "1' 7 6 5\n",
+            "\n",
+            "4 3 2 1\n",
+        );
+        let spans = list_measure_spans_from_source(source, "test.jianpu").unwrap();
+        assert_eq!(spans.len(), 4);
+        assert_eq!(spans[0].section_label.as_deref(), Some("A"));
+        assert_eq!(spans[1].section_label, None);
+        assert_eq!(spans[2].section_label.as_deref(), Some("B"));
+        assert_eq!(spans[3].section_label, None);
+    }
 }

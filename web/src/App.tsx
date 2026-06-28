@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import * as R from 'remeda'
 import { AssetLoadingBanner } from './components/AssetLoadingBanner'
 import { EditMetadataModal } from './components/EditMetadataModal'
 import { Editor } from './components/Editor'
@@ -28,7 +29,6 @@ import {
   writePartTogglesForFile,
 } from './partToggleCache'
 import type { EditorHandle } from './types'
-import { byteOffsetToStringIndex } from './utils/byteSpan'
 import type { MetadataKey } from './utils/metadataSource'
 import { parseMetadata, updateMetadataField } from './utils/metadataSource'
 import type { PartMode, SoundfontValue } from './utils/partSource'
@@ -44,7 +44,6 @@ const shortcutLabel = navigator.platform.startsWith('Mac') ? '⌘↵' : 'Ctrl+�
 
 interface SectionLabel {
   label: string
-  byteOffset: number
 }
 
 export default function App() {
@@ -314,21 +313,30 @@ export default function App() {
     for (const span of measureSpans) {
       if (span.section_label != null && !seen.has(span.section_label)) {
         seen.add(span.section_label)
-        result.push({
-          label: span.section_label,
-          byteOffset: span.view_zone_start,
-        })
+        result.push({ label: span.section_label })
       }
     }
     return result
   }, [measureSpans])
 
   const handleSectionJump = useCallback(
-    (byteOffset: number) => {
-      const charOffset = byteOffsetToStringIndex(source, byteOffset)
-      editorRef.current?.jumpToOffset(charOffset)
+    (label: string) => {
+      const spansFromSection = R.dropWhile(
+        measureSpans,
+        (span) => span.section_label !== label,
+      )
+      const sectionSpans = R.takeWhile(
+        spansFromSection,
+        (span) => span.section_label == null || span.section_label === label,
+      )
+      if (sectionSpans.length === 0) return
+      const firstLine = sectionSpans[0].start_line
+      const lastLine = sectionSpans[sectionSpans.length - 1].end_line
+      editorRef.current?.setSelectionByLines(firstLine, lastLine)
+      editorRef.current?.focus()
+      notifySelection(firstLine, lastLine)
     },
-    [source],
+    [measureSpans, notifySelection],
   )
 
   const handleMeasureRangeSelect = useCallback(
@@ -372,6 +380,15 @@ export default function App() {
         onDelete={handleDelete}
         onRestore={handleRestore}
       />
+      <span
+        data-testid="selected-measure-range"
+        aria-hidden="true"
+        style={{ display: 'none' }}
+      >
+        {selectedMeasureRange
+          ? `${selectedMeasureRange.start}-${selectedMeasureRange.end}`
+          : ''}
+      </span>
       <main className="workspace">
         <section className="pane pane--editor">
           <div className="editor-layout">
@@ -429,12 +446,12 @@ export default function App() {
                             flexShrink: 1,
                           }}
                         >
-                          {sectionLabels.map(({ label, byteOffset }) => (
+                          {sectionLabels.map(({ label }) => (
                             <button
                               key={label}
                               type="button"
                               className="section-jump-btn"
-                              onClick={() => handleSectionJump(byteOffset)}
+                              onClick={() => handleSectionJump(label)}
                             >
                               {label}
                             </button>
