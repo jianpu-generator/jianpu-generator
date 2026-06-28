@@ -33,6 +33,7 @@ pub struct PartDecl {
     pub kind: PartKind,
     pub follow_target: Option<String>,
     pub soundfont: Soundfont,
+    pub volume: u8,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -86,6 +87,7 @@ pub struct ParsedTimedTrack {
     pub display_name: String,
     pub kind: PartKind,
     pub soundfont: Soundfont,
+    pub volume: u8,
     pub measure_slots: Vec<ParsedMeasureSlot>,
     pub lyrics: Option<ParsedLyrics>,
     /// Per-measure beat-overflow error (None = no overflow for that measure).

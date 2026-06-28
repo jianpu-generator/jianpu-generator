@@ -519,6 +519,7 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
     let per_measure_lyrics_errors = part.per_measure_lyrics_errors.clone();
     let part_abbreviation = part.abbreviation.clone();
     let part_kind = part.kind;
+    let part_volume = part.volume;
     let mut grouper = PartGrouper::new(&part);
     for slot in part.measure_slots {
         match slot {
@@ -549,6 +550,7 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
         name,
         kind,
         soundfont,
+        volume: part_volume,
         measures,
     };
     if matches!(part_kind, PartKind::NotesWithLyrics) {

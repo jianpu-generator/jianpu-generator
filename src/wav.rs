@@ -56,6 +56,15 @@ fn handle_midi_message(synth: &mut Synth, channel: u8, message: &MidiMessage) {
                 })
                 .ok();
         }
+        MidiMessage::Controller { controller, value } => {
+            synth
+                .send_event(MidiEvent::ControlChange {
+                    channel: ch,
+                    ctrl: controller.as_int(),
+                    value: value.as_int(),
+                })
+                .ok();
+        }
         _ => {}
     }
 }

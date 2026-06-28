@@ -460,10 +460,11 @@ pub fn generate_split_pdfs(
     generate_split_pdfs_response(source, base_name, sans_serif_sc, sans_serif_tc, monospace)
 }
 
-/// Rewrite the mode and soundfont of a named part declaration in `.jianpu` source.
+/// Rewrite the mode, soundfont, and volume of a named part declaration in `.jianpu` source.
 ///
 /// `new_mode` is one of `"chord"`, `"notes"`, `"notes lyrics"`, or `"follow[<target>]"`.
 /// `new_soundfont` is `"vocal"`, `"piano"`, `"string"`, or `""` to remove the soundfont.
+/// `new_volume` is `"47"` for 47%, or `""` to use the default (100%).
 /// Returns the updated source string. If the abbreviation is not found or `new_mode` is
 /// unrecognised, returns `source` unchanged.
 #[wasm_bindgen]
@@ -472,6 +473,7 @@ pub fn update_part_declaration(
     abbreviation: &str,
     new_mode: &str,
     new_soundfont: &str,
+    new_volume: &str,
 ) -> String {
     let Some(mode) = jianpu_generator::source_edit::PartMode::parse(new_mode) else {
         return source.to_owned();
@@ -481,8 +483,15 @@ pub fn update_part_declaration(
     } else {
         Some(new_soundfont)
     };
-    jianpu_generator::source_edit::update_part_declaration(source, abbreviation, &mode, soundfont)
-        .unwrap_or_else(|| source.to_owned())
+    let volume = new_volume.parse::<u8>().ok().filter(|&v| v != 100);
+    jianpu_generator::source_edit::update_part_declaration(
+        source,
+        abbreviation,
+        &mode,
+        soundfont,
+        volume,
+    )
+    .unwrap_or_else(|| source.to_owned())
 }
 
 #[cfg(test)]

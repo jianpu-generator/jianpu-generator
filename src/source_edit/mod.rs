@@ -34,6 +34,7 @@ pub fn update_part_declaration(
     abbreviation: &str,
     new_mode: &PartMode,
     new_soundfont: Option<&str>,
+    new_volume: Option<u8>,
 ) -> Option<String> {
     let lines: Vec<&str> = source.split('\n').collect();
 
@@ -72,8 +73,13 @@ pub fn update_part_declaration(
         .map(|sf| format!(" \"{sf}\""))
         .unwrap_or_default();
 
+    let volume_suffix = match new_volume {
+        Some(v) if v != 100 => format!(" {v}%"),
+        _ => String::new(),
+    };
+
     let new_rhs = new_mode.to_rhs_str();
-    let new_line = format!("{lhs_with_eq} {new_rhs}{soundfont_suffix}");
+    let new_line = format!("{lhs_with_eq} {new_rhs}{soundfont_suffix}{volume_suffix}");
 
     let result = lines
         .iter()

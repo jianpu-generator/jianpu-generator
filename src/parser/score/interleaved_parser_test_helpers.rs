@@ -31,6 +31,7 @@ pub(super) fn decl(name: &str, kind: PartKind) -> PartDecl {
         kind,
         follow_target: None,
         soundfont: Soundfont::default(),
+        volume: 100,
     }
 }
 

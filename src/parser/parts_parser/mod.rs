@@ -69,6 +69,7 @@ struct RawDecl {
     span: Span,
     kind: RawKind,
     soundfont: Soundfont,
+    volume: u8,
 }
 
 enum RawKind {
@@ -118,8 +119,9 @@ fn collect_raw_declarations(
             continue;
         }
 
-        let (kind, soundfont) = match parse_rhs(rhs.trim(), line_span, errors, instruments) {
-            Ok(pair) => pair,
+        let (kind, soundfont, volume) = match parse_rhs(rhs.trim(), line_span, errors, instruments)
+        {
+            Ok(triple) => triple,
             Err(e) => {
                 errors.push(e);
                 continue;
@@ -131,6 +133,7 @@ fn collect_raw_declarations(
             span: line_span,
             kind,
             soundfont,
+            volume,
         });
     }
 
@@ -146,6 +149,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
             span,
             kind,
             soundfont,
+            volume,
         } = raw_decl;
         match kind {
             RawKind::Follow(target) => {
@@ -167,6 +171,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                         kind: target_decl.kind,
                         follow_target: Some(target),
                         soundfont,
+                        volume,
                     }),
                 }
             }
@@ -176,6 +181,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                 kind,
                 follow_target: None,
                 soundfont,
+                volume,
             }),
         }
     }
@@ -264,12 +270,29 @@ fn parse_soundfont_string(
     }
 }
 
+fn parse_volume_suffix(s: &str) -> (u8, &str) {
+    let trimmed = s.trim_end();
+    if let Some(rest) = trimmed.strip_suffix('%') {
+        if let Some(vol_str) = rest.split_whitespace().last() {
+            if let Ok(v) = vol_str.parse::<u8>() {
+                let without_vol = rest
+                    .trim_end()
+                    .strip_suffix(vol_str)
+                    .unwrap_or(rest)
+                    .trim_end();
+                return (v, without_vol);
+            }
+        }
+    }
+    (100, s)
+}
+
 fn parse_rhs(
     rhs: &str,
     span: Span,
     errors: &mut Vec<RecoverableError>,
     instruments: &[InstrumentInfo],
-) -> Result<(RawKind, Soundfont), RecoverableError> {
+) -> Result<(RawKind, Soundfont, u8), RecoverableError> {
     if let Some(rest) = rhs.strip_prefix("follow[") {
         if let Some(bracket_end) = rest.find(']') {
             let target = rest[..bracket_end].trim().to_string();
@@ -277,21 +300,26 @@ fn parse_rhs(
                 return Err(RecoverableError::parts_invalid_columns(span, rhs));
             }
             let after_bracket = rest[bracket_end + 1..].trim();
-            let soundfont = if after_bracket.is_empty() {
+            let (volume, after_volume) = parse_volume_suffix(after_bracket);
+            let soundfont = if after_volume.trim().is_empty() {
                 Soundfont::default()
             } else {
-                parse_soundfont_string(after_bracket, span, rhs, errors, instruments)?
+                parse_soundfont_string(after_volume.trim(), span, rhs, errors, instruments)?
             };
-            return Ok((RawKind::Follow(target), soundfont));
+            return Ok((RawKind::Follow(target), soundfont, volume));
         }
     }
 
-    let (kind_token, soundfont) = if let Some(quote_pos) = rhs.find('"') {
-        let kind_token = rhs[..quote_pos].trim();
-        let soundfont = parse_soundfont_string(&rhs[quote_pos..], span, rhs, errors, instruments)?;
+    let (volume, rhs_without_volume) = parse_volume_suffix(rhs);
+    let rhs_trimmed = rhs_without_volume.trim();
+
+    let (kind_token, soundfont) = if let Some(quote_pos) = rhs_trimmed.find('"') {
+        let kind_token = rhs_trimmed[..quote_pos].trim();
+        let soundfont =
+            parse_soundfont_string(&rhs_trimmed[quote_pos..], span, rhs, errors, instruments)?;
         (kind_token, soundfont)
     } else {
-        (rhs.trim(), Soundfont::default())
+        (rhs_trimmed, Soundfont::default())
     };
 
     let kind = match kind_token {
@@ -300,7 +328,7 @@ fn parse_rhs(
         "notes+lyrics" => PartKind::NotesWithLyrics,
         _ => return Err(RecoverableError::parts_invalid_columns(span, rhs)),
     };
-    Ok((RawKind::Concrete(kind), soundfont))
+    Ok((RawKind::Concrete(kind), soundfont, volume))
 }
 
 #[cfg(test)]

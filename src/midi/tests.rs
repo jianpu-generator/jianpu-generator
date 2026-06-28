@@ -71,6 +71,7 @@ fn chord_major_expands_to_three_notes() {
                 name: None,
                 kind: PartKind::Chords,
                 soundfont: Soundfont::default(),
+                volume: 100,
                 notes: Notes {
                     events: vec![NoteEvent::Chord(chord)],
                 },
@@ -179,6 +180,7 @@ fn one_measure_score() -> Score {
                 name: None,
                 kind: PartKind::Notes,
                 soundfont: Soundfont::default(),
+                volume: 100,
                 notes: Notes {
                     events: vec![NoteEvent::Note(GroupedNote {
                         pitch: JianPuPitch::One,
@@ -241,6 +243,7 @@ fn tied_notes_produce_single_note_on() {
             name: None,
             kind: PartKind::Notes,
             soundfont: Soundfont::default(),
+            volume: 100,
             notes: Notes {
                 events: vec![make_note(tie_to_next)],
             },
@@ -350,6 +353,7 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
                 name: None,
                 kind: PartKind::Notes,
                 soundfont: Soundfont::default(),
+                volume: 100,
                 notes: Notes {
                     events: vec![make_note(true), make_note(false)],
                 },

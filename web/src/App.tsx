@@ -287,6 +287,7 @@ export default function App() {
       mode: PartMode,
       followTarget: string | null,
       soundfont: SoundfontValue | null,
+      volume: number | null,
     ) => {
       const newSource = updatePartDeclaration(
         source,
@@ -294,6 +295,7 @@ export default function App() {
         mode,
         followTarget,
         soundfont,
+        volume,
       )
       handleSourceChange(newSource)
     },

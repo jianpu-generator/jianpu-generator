@@ -193,6 +193,7 @@ fn build_part_rows(
                     name: part.name.clone(),
                     kind: part.kind,
                     soundfont: part.soundfont,
+                    volume: part.volume,
                     notes: Notes {
                         events: measure.notes.events.clone(),
                     },

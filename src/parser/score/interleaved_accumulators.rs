@@ -78,6 +78,7 @@ pub(super) fn build_parse_result(
                 display_name: decl.display_name.clone(),
                 kind: decl.kind,
                 soundfont: decl.soundfont,
+                volume: decl.volume,
                 measure_slots,
                 lyrics: syllables.map(|measure_syllables| ParsedLyrics {
                     measure_syllables,
