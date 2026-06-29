@@ -24,6 +24,7 @@ fn simple_block(col_count: u32) -> MeasureBlock {
             id: RowId("S".to_string()),
             label: String::new(),
             elements,
+            source_part_index: 0,
         }],
         decorations: vec![],
         diagnostics: vec![],

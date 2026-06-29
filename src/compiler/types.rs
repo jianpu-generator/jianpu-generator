@@ -26,6 +26,9 @@ pub struct MeasureRow {
     pub id: RowId,
     pub label: String,
     pub elements: Vec<ColumnElement>,
+    /// The original part index this row was compiled from, before consolidation.
+    /// Used to look up slur arcs keyed by original part index.
+    pub source_part_index: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

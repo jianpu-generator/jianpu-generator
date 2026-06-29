@@ -129,6 +129,7 @@ fn compile_measure(
             id,
             label,
             elements: slice_result.elements,
+            source_part_index: part_idx,
         });
     }
     if rows.len() == 1 && visible_part_count > 1 {

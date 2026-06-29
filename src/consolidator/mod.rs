@@ -48,6 +48,7 @@ fn notes_row(row: &MeasureRow) -> MeasureRow {
             .filter(|element| !matches!(element.content, ElementContent::Lyric(_)))
             .cloned()
             .collect(),
+        source_part_index: row.source_part_index,
     }
 }
 
@@ -70,6 +71,7 @@ fn lyrics_row(row: &MeasureRow) -> MeasureRow {
         id: RowId(format!("{}-lyrics", row.id.0)),
         label: row.label.clone(),
         elements,
+        source_part_index: row.source_part_index,
     }
 }
 

@@ -184,6 +184,38 @@ fn lyrics_underflow_render_returns_svgs_and_non_empty_errors() {
 }
 
 #[test]
+fn follow_part_with_tied_note_produces_exactly_one_arc() {
+    // p1 has 1~1 (a tied note), p2 follows p1, a is a chord track.
+    // After consolidation p1 and p2 merge into one visual row.
+    // The tie arc should appear exactly once, not twice (once for p1 and
+    // once for p2 displaced above the chord row).
+    let input = concat!(
+        "# metadata\n",
+        "title = \"\"\n",
+        "author = \"\"\n",
+        "\n",
+        "# parts\n",
+        "Pluck [p1] = notes\n",
+        "Pluck 2 [p2] = follow[p1]\n",
+        "Accompaniment [a] = chords\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[p1] 1~1\n",
+        "[a] 3\n",
+    );
+    let svgs = render_svgs_from_source(input, "test.jianpu", &[])
+        .unwrap()
+        .svgs;
+    let arc_count = svgs[0].matches("data-variant=\"tie-or-slur\"").count();
+    assert_eq!(
+        arc_count, 1,
+        "expected exactly one tie arc; got {arc_count}. SVG: {}",
+        &svgs[0]
+    );
+}
+
+#[test]
 fn lex_unexpected_char_renders_error_highlight_and_reports_error() {
     let input = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",

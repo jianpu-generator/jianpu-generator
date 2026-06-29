@@ -37,6 +37,7 @@ fn note_row(id: &str) -> MeasureRow {
                 dotted: false,
             },
         }],
+        source_part_index: 0,
     }
 }
 
@@ -48,6 +49,7 @@ fn chord_row(id: &str) -> MeasureRow {
             column: 0,
             content: ElementContent::ChordSymbol("Am".to_string()),
         }],
+        source_part_index: 0,
     }
 }
 
@@ -59,6 +61,7 @@ fn lyric_row(id: &str) -> MeasureRow {
             column: 0,
             content: ElementContent::Lyric("la".to_string()),
         }],
+        source_part_index: 0,
     }
 }
 
@@ -89,6 +92,7 @@ fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
                     content: ElementContent::BarLine,
                 },
             ],
+            source_part_index: 0,
         }],
         decorations: vec![],
         diagnostics: vec![],
@@ -214,6 +218,7 @@ fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
                         content: ElementContent::BarLine,
                     },
                 ],
+                source_part_index: 0,
             },
             MeasureRow {
                 id: RowId("lyric".to_string()),
@@ -222,6 +227,7 @@ fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
                     column: 0,
                     content: ElementContent::Lyric("la".to_string()),
                 }],
+                source_part_index: 0,
             },
         ],
         decorations: vec![],

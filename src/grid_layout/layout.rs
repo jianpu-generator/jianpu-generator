@@ -218,12 +218,14 @@ fn build_page_rows(
             rows.push(make_decoration_row(system, base));
         }
         let abs_sys = abs_system_index_start + sys_idx;
-        let part_count = first.rows.len();
-        let system_arcs: HashMap<usize, Vec<GridElement>> = (0..part_count)
-            .filter_map(|part_idx| {
+        let system_arcs: HashMap<usize, Vec<GridElement>> = first
+            .rows
+            .iter()
+            .enumerate()
+            .filter_map(|(consolidated_idx, row)| {
                 arc_map
-                    .get(&(abs_sys, part_idx))
-                    .map(|arcs| (part_idx, arcs.clone()))
+                    .get(&(abs_sys, row.source_part_index))
+                    .map(|arcs| (consolidated_idx, arcs.clone()))
             })
             .collect();
         rows.extend(expand_system_to_rows(system, base, &system_arcs));
