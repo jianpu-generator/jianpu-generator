@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import * as R from 'remeda'
 import { AssetLoadingBanner } from './components/AssetLoadingBanner'
 import { EditMetadataModal } from './components/EditMetadataModal'
 import { Editor } from './components/Editor'
@@ -42,10 +41,6 @@ import './preview.css'
 
 const shortcutLabel = navigator.platform.startsWith('Mac') ? '⌘↵' : 'Ctrl+↵'
 
-interface SectionLabel {
-  label: string
-}
-
 export default function App() {
   const [store, setStore] = useFileStore()
   const source = fileContent(store, store.active)
@@ -66,6 +61,12 @@ export default function App() {
   })
   const [editPartsOpen, setEditPartsOpen] = useState(false)
   const [editMetadataOpen, setEditMetadataOpen] = useState(false)
+  const [dragStartLabel, setDragStartLabel] = useState<string | null>(null)
+  const [dragCurrentLabel, setDragCurrentLabel] = useState<string | null>(null)
+  const [selectedLineRange, setSelectedLineRange] = useState<{
+    firstLine: number
+    lastLine: number
+  } | null>(null)
   const editorRef = useRef<EditorHandle>(null)
   const skipToggleSaveRef = useRef(false)
   const soundfont = useAssetLoader('/fonts/GeneralUser_GS.sf2')
@@ -92,6 +93,7 @@ export default function App() {
     measureAudioGenerating,
     measureAudioPlaying,
     measureSpans,
+    sectionRanges,
     notifySelection,
     playSelectedMeasures,
     stopMeasurePlayback,
@@ -309,47 +311,78 @@ export default function App() {
     [source, handleSourceChange],
   )
 
-  const sectionLabels = useMemo<SectionLabel[]>(() => {
-    const seen = new Set<string>()
-    const result: SectionLabel[] = []
-    for (const span of measureSpans) {
-      if (span.section_label != null && !seen.has(span.section_label)) {
-        seen.add(span.section_label)
-        result.push({ label: span.section_label })
-      }
-    }
-    return result
-  }, [measureSpans])
-
-  const handleSectionJump = useCallback(
-    (label: string) => {
-      const spansFromSection = R.dropWhile(
-        measureSpans,
-        (span) => span.section_label !== label,
-      )
-      const sectionSpans = R.takeWhile(
-        spansFromSection,
-        (span) => span.section_label == null || span.section_label === label,
-      )
-      if (sectionSpans.length === 0) return
-      const firstLine = sectionSpans[0].start_line
-      const lastLine = sectionSpans[sectionSpans.length - 1].end_line
-      editorRef.current?.setSelectionByLines(firstLine, lastLine)
-      editorRef.current?.focus()
-      notifySelection(firstLine, lastLine)
-    },
-    [measureSpans, notifySelection],
+  const sectionLabels = useMemo(
+    () =>
+      sectionRanges
+        .filter((r) => r.labels.length === 1)
+        .flatMap((r) => r.labels),
+    [sectionRanges],
   )
 
+  const dragHighlightedLabels = useMemo<Set<string>>(() => {
+    if (dragStartLabel === null || dragCurrentLabel === null) return new Set()
+    const a = sectionLabels.indexOf(dragStartLabel)
+    const b = sectionLabels.indexOf(dragCurrentLabel)
+    if (a === -1 || b === -1) return new Set()
+    return new Set(sectionLabels.slice(Math.min(a, b), Math.max(a, b) + 1))
+  }, [dragStartLabel, dragCurrentLabel, sectionLabels])
+
+  const activeHighlightedLabels = useMemo(() => {
+    if (dragStartLabel !== null) return dragHighlightedLabels
+    if (!selectedLineRange) return new Set<string>()
+    const match = sectionRanges.find(
+      (r) =>
+        r.first_line === selectedLineRange.firstLine &&
+        r.last_line === selectedLineRange.lastLine,
+    )
+    return new Set(match?.labels ?? [])
+  }, [dragStartLabel, dragHighlightedLabels, selectedLineRange, sectionRanges])
+
+  const selectSectionRange = useCallback(
+    (firstLine: number, lastLine: number) => {
+      editorRef.current?.setSelectionByLines(firstLine, lastLine)
+      editorRef.current?.focus()
+      setSelectedLineRange({ firstLine, lastLine })
+      notifySelection(firstLine, lastLine)
+    },
+    [notifySelection],
+  )
+
+  const handleSectionRangeSelect = useCallback(
+    (labelA: string, labelB: string) => {
+      const range =
+        sectionRanges.find(
+          (r) => r.labels[0] === labelA && r.labels.at(-1) === labelB,
+        ) ??
+        sectionRanges.find(
+          (r) => r.labels[0] === labelB && r.labels.at(-1) === labelA,
+        )
+      if (!range) return
+      selectSectionRange(range.first_line, range.last_line)
+    },
+    [sectionRanges, selectSectionRange],
+  )
+
+  const handleSectionJump = useCallback(
+    (label: string) => handleSectionRangeSelect(label, label),
+    [handleSectionRangeSelect],
+  )
+
+  useEffect(() => {
+    const clearDrag = () => {
+      setDragStartLabel(null)
+      setDragCurrentLabel(null)
+    }
+    window.addEventListener('mouseup', clearDrag)
+    return () => window.removeEventListener('mouseup', clearDrag)
+  }, [])
+
   const handleMeasureRangeSelect = useCallback(
-    (startIndex: number, endIndex: number) => {
-      const startSpan = measureSpans[startIndex]
-      const endSpan = measureSpans[endIndex]
-      if (!startSpan || !endSpan) return
-      editorRef.current?.setSelectionByLines(
-        startSpan.start_line,
-        endSpan.end_line,
-      )
+    (start: number, end: number) => {
+      const s = measureSpans[start]
+      const e = measureSpans[end]
+      if (!s || !e) return
+      editorRef.current?.setSelectionByLines(s.start_line, e.end_line)
     },
     [measureSpans],
   )
@@ -403,7 +436,10 @@ export default function App() {
                 diagnostics={diagnostics}
                 diagnosticViewZones={diagnosticViewZones}
                 measureSpans={measureSpans}
-                onSelectionChange={notifySelection}
+                onSelectionChange={(firstLine, lastLine) => {
+                  setSelectedLineRange(null)
+                  notifySelection(firstLine, lastLine)
+                }}
                 onEditPartsClick={() => setEditPartsOpen(true)}
                 onEditMetadataClick={() => setEditMetadataOpen(true)}
                 onPlayMeasure={
@@ -440,20 +476,56 @@ export default function App() {
                       )}
                       {sectionLabels.length > 0 && (
                         <div
+                          role="toolbar"
                           style={{
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.25rem',
                             overflowX: 'auto',
                             flexShrink: 1,
+                            userSelect:
+                              dragStartLabel !== null ? 'none' : undefined,
+                          }}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onMouseUp={() => {
+                            setDragStartLabel(null)
+                            setDragCurrentLabel(null)
+                          }}
+                          onMouseLeave={() => {
+                            setDragStartLabel(null)
+                            setDragCurrentLabel(null)
                           }}
                         >
-                          {sectionLabels.map(({ label }) => (
+                          {sectionLabels.map((label) => (
                             <button
                               key={label}
                               type="button"
-                              className="section-jump-btn"
-                              onClick={() => handleSectionJump(label)}
+                              className={[
+                                'section-jump-btn',
+                                activeHighlightedLabels.has(label)
+                                  ? 'section-jump-btn--dragging'
+                                  : '',
+                              ].join(' ')}
+                              style={{
+                                cursor:
+                                  dragStartLabel !== null
+                                    ? 'ew-resize'
+                                    : undefined,
+                              }}
+                              onMouseDown={() => {
+                                setDragStartLabel(label)
+                                setDragCurrentLabel(label)
+                                handleSectionJump(label)
+                              }}
+                              onMouseEnter={() => {
+                                if (dragStartLabel !== null) {
+                                  setDragCurrentLabel(label)
+                                  handleSectionRangeSelect(
+                                    dragStartLabel,
+                                    label,
+                                  )
+                                }
+                              }}
                             >
                               {label}
                             </button>

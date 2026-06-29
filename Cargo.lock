@@ -520,6 +520,7 @@ dependencies = [
 name = "jianpu-wasm"
 version = "0.1.0"
 dependencies = [
+ "itertools",
  "jianpu-generator",
  "serde",
  "serde-wasm-bindgen",

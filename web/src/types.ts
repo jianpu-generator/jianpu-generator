@@ -11,6 +11,7 @@ export type {
   MeasureSpanOut as MeasureSpan,
   PartOut as PartInfo,
   RenderResponse as RenderResult,
+  SectionRangeOut as SectionRange,
   SpanOut as ByteSpan,
 } from 'jianpu-wasm'
 

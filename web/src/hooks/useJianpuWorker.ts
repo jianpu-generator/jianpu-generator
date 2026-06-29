@@ -5,6 +5,7 @@ import type {
   DiagnosticViewZone,
   MeasureSpan,
   PartInfo,
+  SectionRange,
 } from '../types'
 import type { WorkerRequest, WorkerResponse } from '../worker/jianpu.worker'
 import {
@@ -42,6 +43,7 @@ interface JianpuWorkerState {
   stopMeasurePlayback: () => void
   highlightedDocuments: SvgDocumentOut[]
   measureSpans: MeasureSpan[]
+  sectionRanges: SectionRange[]
   previewInstrument: (programNumber: number) => void
   stopPreviewInstrument: () => void
   previewAudioPlaying: boolean
@@ -83,6 +85,7 @@ export function useJianpuWorker(
     SvgDocumentOut[]
   >([])
   const [measureSpans, setMeasureSpans] = useState<MeasureSpan[]>([])
+  const [sectionRanges, setSectionRanges] = useState<SectionRange[]>([])
   const highlightRenderRequestIdRef = useRef(0)
   const latestHighlightRenderIdRef = useRef(0)
   const measureSpansRequestIdRef = useRef(0)
@@ -275,6 +278,7 @@ export function useJianpuWorker(
         if (msg.id !== latestMeasureSpansIdRef.current) return
         if (msg.status === 'ok') {
           setMeasureSpans(msg.spans)
+          setSectionRanges(msg.sectionRanges)
         }
         return
       }
@@ -560,6 +564,7 @@ export function useJianpuWorker(
     stopMeasurePlayback,
     highlightedDocuments,
     measureSpans,
+    sectionRanges,
     previewInstrument,
     stopPreviewInstrument,
     previewAudioPlaying,

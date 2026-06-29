@@ -22,7 +22,7 @@ use types::GenerateWavResponse;
 use types::{
     diagnostic_from_diagnostic, diagnostic_from_error, group_diagnostics_into_view_zones,
     svg_document_to_out, ListMeasureSpansResponse, ListPartsResponse, MeasureAtOffsetResponse,
-    PartOut, RenderResponse,
+    MeasureSpanOut, PartOut, RenderResponse, SectionRangeOut,
 };
 #[cfg(feature = "pdf")]
 use types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
@@ -133,12 +133,55 @@ fn get_measure_at_offset_response(source: &str, byte_offset: usize) -> MeasureAt
     }
 }
 
+struct SectionEntry {
+    label: String,
+    first_line: usize,
+    last_line: usize,
+}
+
+fn compute_section_ranges(spans: &[MeasureSpanOut]) -> Vec<SectionRangeOut> {
+    use itertools::Itertools;
+
+    let mut sections: Vec<SectionEntry> = Vec::new();
+    for span in spans {
+        if let Some(label) = &span.section_label {
+            sections.push(SectionEntry {
+                label: label.clone(),
+                first_line: span.start_line,
+                last_line: span.end_line,
+            });
+        } else if let Some(last) = sections.last_mut() {
+            last.last_line = span.end_line;
+        }
+    }
+
+    let n = sections.len();
+    (0..n)
+        .combinations_with_replacement(2)
+        .filter_map(|pair| {
+            let (&i, &j) = (pair.first()?, pair.last()?);
+            let first = sections.get(i)?;
+            let last = sections.get(j)?;
+            let labels = sections
+                .get(i..=j)?
+                .iter()
+                .map(|s| s.label.clone())
+                .collect();
+            Some(SectionRangeOut {
+                first_line: first.first_line,
+                last_line: last.last_line,
+                labels,
+            })
+        })
+        .collect()
+}
+
 fn list_measure_spans_response(source: &str) -> ListMeasureSpansResponse {
     match list_measure_spans_from_source(source, "input.jianpu") {
-        Ok(spans) => ListMeasureSpansResponse::Ok {
-            spans: spans
+        Ok(raw_spans) => {
+            let spans: Vec<MeasureSpanOut> = raw_spans
                 .into_iter()
-                .map(|span| types::MeasureSpanOut {
+                .map(|span| MeasureSpanOut {
                     start: span.start,
                     end: span.end,
                     view_zone_start: span.view_zone_start,
@@ -146,8 +189,13 @@ fn list_measure_spans_response(source: &str) -> ListMeasureSpansResponse {
                     start_line: span.start_line,
                     end_line: span.end_line,
                 })
-                .collect(),
-        },
+                .collect();
+            let section_ranges = compute_section_ranges(&spans);
+            ListMeasureSpansResponse::Ok {
+                spans,
+                section_ranges,
+            }
+        }
         Err(_) => ListMeasureSpansResponse::Err,
     }
 }

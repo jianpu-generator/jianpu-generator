@@ -369,7 +369,7 @@ fn list_measure_spans_returns_one_span_per_measure() {
     );
     let resp = list_measure_spans_response(input);
     match resp {
-        ListMeasureSpansResponse::Ok { spans } => {
+        ListMeasureSpansResponse::Ok { spans, .. } => {
             assert_eq!(spans.len(), 2);
             assert!(spans[0].start < spans[1].start);
             // No separate directive line precedes the first measure, so view_zone_start
@@ -402,7 +402,7 @@ fn list_measure_spans_view_zone_start_includes_directive_line() {
     let notes_offset = input.find("1 2 3 4").unwrap();
     let resp = list_measure_spans_response(input);
     match resp {
-        ListMeasureSpansResponse::Ok { spans } => {
+        ListMeasureSpansResponse::Ok { spans, .. } => {
             assert_eq!(spans.len(), 1);
             assert_eq!(spans[0].view_zone_start, directive_offset);
             assert_eq!(spans[0].start, notes_offset);
@@ -416,7 +416,7 @@ fn list_measure_spans_returns_empty_for_invalid_source() {
     // Missing sections are recoverable; the response is Ok with no spans.
     let resp = list_measure_spans_response("not valid jianpu");
     match resp {
-        ListMeasureSpansResponse::Ok { spans } => assert!(spans.is_empty()),
+        ListMeasureSpansResponse::Ok { spans, .. } => assert!(spans.is_empty()),
         ListMeasureSpansResponse::Err => {}
     }
 }

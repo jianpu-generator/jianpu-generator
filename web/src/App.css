@@ -171,3 +171,9 @@
 .section-jump-btn:hover {
   background: #f0f0f0;
 }
+
+.section-jump-btn--dragging {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}

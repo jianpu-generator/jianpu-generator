@@ -6,6 +6,7 @@ import type {
   DiagnosticViewZone,
   MeasureSpan,
   PartInfo,
+  SectionRange,
 } from '../types'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
 
@@ -121,6 +122,7 @@ export type WorkerResponse =
       id: number
       status: 'ok' | 'err'
       spans: MeasureSpan[]
+      sectionRanges: SectionRange[]
     }
 
 let initialized = false
@@ -459,6 +461,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       id: msg.id,
       status: result.status,
       spans: result.status === 'ok' ? result.spans : [],
+      sectionRanges: result.status === 'ok' ? result.section_ranges : [],
     } satisfies WorkerResponse)
     return
   }
