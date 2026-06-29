@@ -351,6 +351,21 @@ fn key_prefix_only_b_omits_rest_filled_a() {
     assert!(!svg.contains(">0<"), "part A rests should not appear");
 }
 
+#[test]
+fn tie_operator_on_notes_renders_exactly_two_arcs() {
+    // 7_6=5=~5~5 has two ~ tie operators, so exactly 2 arcs should be rendered.
+    let input = concat!(
+        "# metadata\ntitle = \"Untitled\"\nauthor = \"\"\n\n",
+        "# parts\nMelody[m] = notes+lyrics\n\n",
+        "# score\n[m]7_6=5=~5~5\n",
+    );
+    let svgs = render_svgs_from_source(input, "test.jianpu", &[])
+        .unwrap()
+        .svgs;
+    let arc_count = svgs[0].matches(r#"data-variant="tie-or-slur""#).count();
+    assert_eq!(arc_count, 2, "expected 2 arcs but got {arc_count}");
+}
+
 #[cfg(feature = "pdf")]
 mod split_pdf_tests {
     use super::*;

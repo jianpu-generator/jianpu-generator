@@ -254,7 +254,14 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
                             self.parse_timed_unit(offset)?;
                         }
                         if let Some(slice) = self.staging.get_mut(group_start..) {
-                            apply_closed_group_depth(slice);
+                            // Notes use tie_to_next (set by duration parser); applying group depth
+                            // here would create a spurious slur arc in addition to the tie arc.
+                            let is_note_tie = slice
+                                .iter()
+                                .any(|e| matches!(e.spanned.value, ScoreEvent::Note(_)));
+                            if !is_note_tie {
+                                apply_closed_group_depth(slice);
+                            }
                         }
                     }
                 }
