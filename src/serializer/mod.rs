@@ -115,6 +115,12 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
                         r#"<g data-tag="measure" data-measure-index="{index}">"#
                     ));
                 }
+                Some(Tag::SectionLabel { label }) => {
+                    out.push_str(&format!(
+                        r#"<g data-tag="section-label" data-section-label="{}" style="cursor:pointer">"#,
+                        escape_xml(label)
+                    ));
+                }
                 None => {
                     out.push_str("<g>");
                 }

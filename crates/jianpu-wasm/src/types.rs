@@ -110,6 +110,7 @@ pub enum SvgKindOut {
 #[tsify(into_wasm_abi)]
 pub enum TagOut {
     Measure { index: usize },
+    SectionLabel { label: String },
 }
 
 #[derive(Debug, Clone, Tsify, Serialize)]
@@ -235,6 +236,9 @@ fn svg_kind_to_out(kind: &SvgKind) -> SvgKindOut {
             children: children.iter().map(svg_element_to_out).collect(),
             tag: tag.as_ref().map(|t| match t {
                 Tag::Measure { index } => TagOut::Measure { index: *index },
+                Tag::SectionLabel { label } => TagOut::SectionLabel {
+                    label: label.clone(),
+                },
             }),
         },
     }

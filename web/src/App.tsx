@@ -490,6 +490,7 @@ export default function App() {
             highlightedDocuments={highlightedDocuments}
             rendering={rendering}
             onMeasureRangeSelect={handleMeasureRangeSelect}
+            onSectionLabelClick={handleSectionJump}
             audioGenerating={audioGenerating}
             wavUrl={wavUrl}
             audioAvailable={audioAvailable}

@@ -117,6 +117,13 @@
   fill: rgba(100, 160, 255, 0.2);
 }
 
+.preview-page
+  svg
+  g[data-tag="section-label"]:hover
+  > rect[data-variant="section-label-bg"] {
+  fill: rgba(100, 160, 255, 0.2);
+}
+
 .play-measure-wrapper {
   position: relative;
   display: inline-flex;

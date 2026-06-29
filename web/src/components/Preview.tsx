@@ -20,6 +20,15 @@ interface PreviewProps {
   emptyMessage?: string
   toolbar?: ReactNode
   onMeasureRangeSelect?: (startIndex: number, endIndex: number) => void
+  onSectionLabelClick?: (label: string) => void
+}
+
+function getSectionLabelAtPoint(x: number, y: number): string | undefined {
+  const el = document.elementFromPoint(x, y)
+  if (!el) return undefined
+  const group = el.closest('[data-tag="section-label"]')
+  if (!group) return undefined
+  return (group as HTMLElement).dataset.sectionLabel
 }
 
 function getMeasureAtPoint(x: number, y: number): number | undefined {
@@ -170,12 +179,25 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
     case 'group': {
       const measureIndex =
         kind.tag?.type === 'measure' ? kind.tag.index : undefined
+      const sectionLabel =
+        kind.tag?.type === 'sectionLabel' ? kind.tag.label : undefined
       return (
         <g
           key={key}
-          data-tag={measureIndex !== undefined ? 'measure' : undefined}
+          data-tag={
+            measureIndex !== undefined
+              ? 'measure'
+              : sectionLabel !== undefined
+                ? 'section-label'
+                : undefined
+          }
           data-measure-index={measureIndex}
-          style={measureIndex !== undefined ? { cursor: 'pointer' } : undefined}
+          data-section-label={sectionLabel}
+          style={
+            measureIndex !== undefined || sectionLabel !== undefined
+              ? { cursor: 'pointer' }
+              : undefined
+          }
         >
           {kind.children.map((child, i) => renderSvgElement(child, i))}
         </g>
@@ -218,6 +240,7 @@ export function Preview({
   emptyMessage = 'No preview yet.',
   toolbar,
   onMeasureRangeSelect,
+  onSectionLabelClick,
 }: PreviewProps) {
   const previewPagesRef = useRef<HTMLDivElement>(null)
   const audioPlayerRef = useRef<HTMLAudioElement>(null)
@@ -227,6 +250,8 @@ export function Preview({
   } | null>(null)
   const onMeasureRangeSelectRef = useRef(onMeasureRangeSelect)
   onMeasureRangeSelectRef.current = onMeasureRangeSelect
+  const onSectionLabelClickRef = useRef(onSectionLabelClick)
+  onSectionLabelClickRef.current = onSectionLabelClick
 
   useEffect(() => {
     if (!audioGenerating) return
@@ -391,6 +416,12 @@ export function Preview({
         className="preview-pages"
         ref={previewPagesRef}
         onMouseDown={(e) => {
+          const sectionLabel = getSectionLabelAtPoint(e.clientX, e.clientY)
+          if (sectionLabel !== undefined) {
+            onSectionLabelClickRef.current?.(sectionLabel)
+            e.preventDefault()
+            return
+          }
           const index = getMeasureAtPoint(e.clientX, e.clientY)
           if (index === undefined) return
           dragStateRef.current = { startIndex: index, currentIndex: index }

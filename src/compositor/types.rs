@@ -65,6 +65,9 @@ pub enum AbsoluteContent {
         height: f32,
         measure_index: usize,
     },
+    SectionLabel {
+        label: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

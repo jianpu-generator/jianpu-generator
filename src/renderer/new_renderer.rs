@@ -118,7 +118,48 @@ fn render_element(
             height,
             measure_index,
         } => render_measure_click_target(elem, *width, *height, *measure_index),
+        AbsoluteContent::SectionLabel { label } => render_section_label(elem, label),
     }
+}
+
+fn render_section_label(elem: &AbsoluteElement, label: &str) -> Vec<SvgElement> {
+    let bg_width = label.len() as f32 * 8.0 + 6.0;
+    let bg_height = 18.0;
+    vec![SvgElement {
+        x: elem.x,
+        y: elem.y,
+        variant: "section-label",
+        kind: SvgKind::Group {
+            tag: Some(Tag::SectionLabel {
+                label: label.to_string(),
+            }),
+            children: vec![
+                SvgElement {
+                    x: elem.x - 3.0,
+                    y: elem.y - bg_height / 2.0,
+                    variant: "section-label-bg",
+                    kind: SvgKind::TransparentRect {
+                        width: bg_width,
+                        height: bg_height,
+                    },
+                },
+                SvgElement {
+                    x: elem.x,
+                    y: elem.y,
+                    variant: "section-label-text",
+                    kind: SvgKind::Text {
+                        content: label.to_string(),
+                        font_size: 12.0,
+                        anchor: TextAnchor::Start,
+                        baseline: DominantBaseline::Middle,
+                        font: FontFamily::SansSerif,
+                        weight: FontWeight::Bold,
+                        italic: true,
+                    },
+                },
+            ],
+        },
+    }]
 }
 
 fn render_measure_click_target(

@@ -18,6 +18,7 @@ pub struct SvgElement {
 #[derive(Debug)]
 pub enum Tag {
     Measure { index: usize },
+    SectionLabel { label: String },
 }
 
 #[derive(Debug)]

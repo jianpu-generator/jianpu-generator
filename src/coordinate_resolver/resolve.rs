@@ -363,13 +363,9 @@ fn grid_text_to_absolute(
             FontWeight::Normal,
             false,
         )),
-        PostArcGridContent::SectionLabel(s) => Some(sans_serif_text(
-            s.clone(),
-            12.0,
-            TextAnchor::Start,
-            FontWeight::Bold,
-            true,
-        )),
+        PostArcGridContent::SectionLabel(s) => {
+            Some(AbsoluteContent::SectionLabel { label: s.clone() })
+        }
         PostArcGridContent::BarNumber(n) => Some(AbsoluteContent::Text {
             content: n.to_string(),
             font_size: 10.0,
