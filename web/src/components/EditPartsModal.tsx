@@ -406,17 +406,9 @@ export function EditPartsModal({
           data-testid="edit-parts-modal"
           style={{
             position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
+            inset: 0,
             background: '#fff',
-            border: '1px solid #ddd',
-            borderRadius: '6px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.16)',
             zIndex: 1001,
-            minWidth: '560px',
-            maxWidth: '90vw',
-            maxHeight: '80vh',
             display: 'flex',
             flexDirection: 'column',
             fontFamily: 'var(--mono, monospace)',
