@@ -141,6 +141,7 @@
   cursor: pointer;
   min-width: 28px;
   height: 24px;
+  white-space: nowrap;
 }
 
 .play-measure-btn:disabled {
