@@ -1,6 +1,6 @@
 use crate::compositor::types::{
     AbsoluteContent, AbsoluteElement, AbsolutePage, DominantBaseline, FontFamily, FontWeight,
-    TextAnchor,
+    TextAnchor, TextSpan,
 };
 use crate::error::IrrecoverableError;
 use crate::grid_layout::types::{
@@ -125,16 +125,19 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
         GridContent::HorizontalLine => Some(PostArcGridContent::HorizontalLine),
         GridContent::RowLabel(s) => Some(PostArcGridContent::RowLabel(s.clone())),
         GridContent::LyricSyllable(s) => Some(PostArcGridContent::LyricSyllable(s.clone())),
-        GridContent::Bpm(bpm) => Some(PostArcGridContent::Bpm(*bpm)),
-        GridContent::TimeSignature {
-            numerator,
-            denominator,
-        } => Some(PostArcGridContent::TimeSignature {
-            numerator: *numerator,
-            denominator: *denominator,
+        GridContent::DirectiveLine {
+            label,
+            bar_number,
+            key,
+            bpm,
+            time_signature,
+        } => Some(PostArcGridContent::DirectiveLine {
+            label: label.clone(),
+            bar_number: *bar_number,
+            key: key.clone(),
+            bpm: *bpm,
+            time_signature: *time_signature,
         }),
-        GridContent::SectionLabel(s) => Some(PostArcGridContent::SectionLabel(s.clone())),
-        GridContent::BarNumber(n) => Some(PostArcGridContent::BarNumber(*n)),
         GridContent::Text {
             content,
             font_size,
@@ -324,6 +327,56 @@ fn sans_serif_text(
     }
 }
 
+fn directive_line_spans(
+    label: &Option<String>,
+    bar_number: &Option<u32>,
+    key: &Option<String>,
+    bpm: &Option<u32>,
+    time_signature: &Option<(u32, u32)>,
+) -> Vec<TextSpan> {
+    let mut spans: Vec<TextSpan> = Vec::new();
+    if let Some(label_text) = label {
+        spans.push(TextSpan {
+            content: label_text.clone(),
+            bold: true,
+            italic: true,
+            font_size: 12.0,
+        });
+    } else if let Some(n) = bar_number {
+        spans.push(TextSpan {
+            content: n.to_string(),
+            bold: false,
+            italic: false,
+            font_size: 10.0,
+        });
+    }
+    if let Some(key_str) = key {
+        spans.push(TextSpan {
+            content: format!("  {key_str}"),
+            bold: false,
+            italic: false,
+            font_size: 12.0,
+        });
+    }
+    if let Some(b) = bpm {
+        spans.push(TextSpan {
+            content: format!("  \u{2669}={b}"),
+            bold: false,
+            italic: false,
+            font_size: 12.0,
+        });
+    }
+    if let Some((n, d)) = time_signature {
+        spans.push(TextSpan {
+            content: format!("  {n}/{d}"),
+            bold: false,
+            italic: false,
+            font_size: 12.0,
+        });
+    }
+    spans
+}
+
 fn grid_text_to_absolute(
     content: &PostArcGridContent,
     span_width: f32,
@@ -346,34 +399,15 @@ fn grid_text_to_absolute(
             FontWeight::Normal,
             false,
         )),
-        PostArcGridContent::Bpm(bpm) => Some(sans_serif_text(
-            format!("\u{2669}={bpm}"),
-            12.0,
-            TextAnchor::Start,
-            FontWeight::Normal,
-            false,
-        )),
-        PostArcGridContent::TimeSignature {
-            numerator,
-            denominator,
-        } => Some(sans_serif_text(
-            format!("{numerator}/{denominator}"),
-            12.0,
-            TextAnchor::Start,
-            FontWeight::Normal,
-            false,
-        )),
-        PostArcGridContent::SectionLabel(s) => {
-            Some(AbsoluteContent::SectionLabel { label: s.clone() })
-        }
-        PostArcGridContent::BarNumber(n) => Some(AbsoluteContent::Text {
-            content: n.to_string(),
-            font_size: 10.0,
-            anchor: TextAnchor::Start,
-            baseline: DominantBaseline::Ideographic,
-            font: FontFamily::SansSerif,
-            weight: FontWeight::Normal,
-            italic: false,
+        PostArcGridContent::DirectiveLine {
+            label,
+            bar_number,
+            key,
+            bpm,
+            time_signature,
+        } => Some(AbsoluteContent::DirectiveLine {
+            label: label.clone(),
+            spans: directive_line_spans(label, bar_number, key, bpm, time_signature),
         }),
         PostArcGridContent::Text {
             content,

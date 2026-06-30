@@ -65,9 +65,18 @@ pub enum AbsoluteContent {
         height: f32,
         measure_index: usize,
     },
-    SectionLabel {
-        label: String,
+    DirectiveLine {
+        label: Option<String>,
+        spans: Vec<TextSpan>,
     },
+}
+
+#[derive(Debug, Clone)]
+pub struct TextSpan {
+    pub content: String,
+    pub bold: bool,
+    pub italic: bool,
+    pub font_size: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

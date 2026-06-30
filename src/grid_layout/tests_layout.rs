@@ -1,6 +1,6 @@
 use crate::ast::parsed::JianPuPitch;
 use crate::compiler::types::{
-    ColumnElement, CompileResult, ElementContent, MeasureBlock, MeasureRow, RowId,
+    ColumnElement, CompileResult, Decoration, ElementContent, MeasureBlock, MeasureRow, RowId,
 };
 use crate::grid_layout::layout::layout;
 use crate::grid_layout::types::{GridContent, Header, VAlign};
@@ -8,10 +8,7 @@ use crate::render_config::RenderConfig;
 
 // ── decoration row helpers ────────────────────────────────────────────────────
 
-fn make_block_with_decorations(
-    decorations: Vec<crate::compiler::types::Decoration>,
-) -> MeasureBlock {
-    use crate::compiler::types::MeasureBlock;
+fn make_block_with_decorations(decorations: Vec<Decoration>) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
             id: RowId("S".to_string()),
@@ -35,6 +32,22 @@ fn make_block_with_decorations(
         }],
         decorations,
         diagnostics: vec![],
+    }
+}
+
+fn directive_line(
+    label: Option<&str>,
+    bar_number: Option<u32>,
+    key: Option<&str>,
+    bpm: Option<u32>,
+    time_signature: Option<(u32, u32)>,
+) -> Decoration {
+    Decoration::DirectiveLine {
+        label: label.map(|s| s.to_string()),
+        bar_number,
+        key: key.map(|s| s.to_string()),
+        bpm,
+        time_signature,
     }
 }
 
@@ -139,48 +152,33 @@ fn layout_page_total_height_does_not_exceed_page_height() {
 
 #[test]
 fn layout_with_bpm_decoration_has_decoration_row() {
-    use crate::compiler::types::{Decoration, MeasureBlock};
-    let block = MeasureBlock {
-        rows: vec![MeasureRow {
-            id: RowId("S".to_string()),
-            label: "S".to_string(),
-            elements: vec![
-                ColumnElement {
-                    column: 0,
-                    content: ElementContent::NoteHead {
-                        pitch: JianPuPitch::One,
-                        accidental: crate::ast::parsed::Accidental::Natural,
-                        octave: 0,
-                        dotted: false,
-                    },
-                },
-                ColumnElement {
-                    column: 3,
-                    content: ElementContent::BarLine,
-                },
-            ],
-            source_part_index: 0,
-        }],
-        decorations: vec![Decoration::Bpm(120)],
-        diagnostics: vec![],
-    };
+    let block =
+        make_block_with_decorations(vec![directive_line(None, None, None, Some(120), None)]);
     let compile_result = CompileResult {
         blocks: vec![block],
         slur_spans: vec![],
     };
     let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
-    let has_bpm = pages[0]
+    let has_directive = pages[0]
         .rows
         .iter()
         .flat_map(|r| r.elements.iter())
-        .any(|e| matches!(e.content, GridContent::Bpm(120)));
-    assert!(has_bpm, "should have Bpm(120) element");
+        .any(|e| {
+            matches!(
+                &e.content,
+                GridContent::DirectiveLine { bpm: Some(120), .. }
+            )
+        });
+    assert!(
+        has_directive,
+        "should have DirectiveLine with bpm=120 element"
+    );
 }
 
 #[test]
 fn decoration_row_has_fixed_column_count() {
-    use crate::compiler::types::Decoration;
-    let block = make_block_with_decorations(vec![Decoration::Bpm(120)]);
+    let block =
+        make_block_with_decorations(vec![directive_line(None, None, None, Some(120), None)]);
     let compile_result = CompileResult {
         blocks: vec![block],
         slur_spans: vec![],
@@ -192,9 +190,9 @@ fn decoration_row_has_fixed_column_count() {
         .find(|r| {
             r.elements
                 .iter()
-                .any(|e| matches!(e.content, GridContent::Bpm(_)))
+                .any(|e| matches!(&e.content, GridContent::DirectiveLine { bpm: Some(_), .. }))
         })
-        .expect("should have a decoration row with Bpm");
+        .expect("should have a decoration row with bpm");
     assert_eq!(
         deco_row.column_count, 12,
         "decoration row should use fixed DECO_COLS=12"
@@ -203,95 +201,99 @@ fn decoration_row_has_fixed_column_count() {
 
 #[test]
 fn decoration_items_start_at_column_1() {
-    use crate::compiler::types::Decoration;
-    let block = make_block_with_decorations(vec![Decoration::Bpm(120)]);
+    let block =
+        make_block_with_decorations(vec![directive_line(None, None, None, Some(120), None)]);
     let compile_result = CompileResult {
         blocks: vec![block],
         slur_spans: vec![],
     };
     let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
-    let bpm_el = pages[0]
+    let directive_el = pages[0]
         .rows
         .iter()
         .flat_map(|r| r.elements.iter())
-        .find(|e| matches!(e.content, GridContent::Bpm(_)))
-        .expect("should have Bpm element");
-    assert_eq!(bpm_el.column, 1, "first decoration should be at column 1");
-}
-
-#[test]
-fn section_label_ordered_before_bpm_regardless_of_declaration_order() {
-    use crate::compiler::types::Decoration;
-    // Bpm declared first — SectionLabel should still win column 1
-    let block = make_block_with_decorations(vec![
-        Decoration::Bpm(120),
-        Decoration::SectionLabel("A".to_string()),
-    ]);
-    let compile_result = CompileResult {
-        blocks: vec![block],
-        slur_spans: vec![],
-    };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
-    let section_col = pages[0]
-        .rows
-        .iter()
-        .flat_map(|r| r.elements.iter())
-        .find(|e| matches!(e.content, GridContent::SectionLabel(_)))
-        .expect("should have SectionLabel element")
-        .column;
-    let bpm_col = pages[0]
-        .rows
-        .iter()
-        .flat_map(|r| r.elements.iter())
-        .find(|e| matches!(e.content, GridContent::Bpm(_)))
-        .expect("should have Bpm element")
-        .column;
-    assert!(
-        section_col < bpm_col,
-        "SectionLabel (col {section_col}) should come before Bpm (col {bpm_col})"
+        .find(|e| matches!(&e.content, GridContent::DirectiveLine { bpm: Some(_), .. }))
+        .expect("should have DirectiveLine element");
+    assert_eq!(
+        directive_el.column, 1,
+        "directive line should be at column 1"
     );
 }
 
 #[test]
-fn multiple_decorations_occupy_consecutive_columns_starting_at_1() {
-    use crate::compiler::types::Decoration;
-    let block = make_block_with_decorations(vec![
-        Decoration::Bpm(120),
-        Decoration::TimeSignature {
-            numerator: 4,
-            denominator: 4,
-        },
-    ]);
+fn label_and_bpm_are_merged_into_single_directive_line() {
+    // Both label and bpm should be combined into one DirectiveLine element.
+    let block =
+        make_block_with_decorations(vec![directive_line(Some("A"), None, None, Some(120), None)]);
     let compile_result = CompileResult {
         blocks: vec![block],
         slur_spans: vec![],
     };
     let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
-    let bpm_col = pages[0]
+    let directive_elements: Vec<_> = pages[0]
         .rows
         .iter()
         .flat_map(|r| r.elements.iter())
-        .find(|e| matches!(e.content, GridContent::Bpm(_)))
-        .expect("should have Bpm element")
-        .column;
-    let time_col = pages[0]
+        .filter(|e| {
+            matches!(
+                &e.content,
+                GridContent::DirectiveLine {
+                    label: Some(_),
+                    bpm: Some(_),
+                    ..
+                }
+            )
+        })
+        .collect();
+    assert_eq!(
+        directive_elements.len(),
+        1,
+        "should have exactly one DirectiveLine with label and bpm"
+    );
+    assert_eq!(directive_elements[0].column, 1);
+}
+
+#[test]
+fn bpm_and_time_signature_merged_into_single_directive_line_at_column_1() {
+    let block = make_block_with_decorations(vec![directive_line(
+        None,
+        None,
+        None,
+        Some(120),
+        Some((4, 4)),
+    )]);
+    let compile_result = CompileResult {
+        blocks: vec![block],
+        slur_spans: vec![],
+    };
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let directive_el = pages[0]
         .rows
         .iter()
         .flat_map(|r| r.elements.iter())
-        .find(|e| matches!(e.content, GridContent::TimeSignature { .. }))
-        .expect("should have TimeSignature element")
-        .column;
-    assert_eq!(bpm_col, 1, "Bpm should be at column 1");
-    assert_eq!(time_col, 2, "TimeSignature should be at column 2");
+        .find(|e| {
+            matches!(
+                &e.content,
+                GridContent::DirectiveLine {
+                    bpm: Some(_),
+                    time_signature: Some(_),
+                    ..
+                }
+            )
+        })
+        .expect("should have DirectiveLine with bpm and time_signature");
+    assert_eq!(
+        directive_el.column, 1,
+        "directive line should be at column 1"
+    );
 }
 
 #[test]
 fn section_label_on_non_first_measure_of_system_is_rendered() {
-    use crate::compiler::types::Decoration;
-    // Two measures in one system; only the second has a SectionLabel.
+    // Two measures in one system; only the second has a label.
     let first_block = make_block("S", 3); // bar at col 3, width = 4
     let mut second_block = make_block("S", 3);
-    second_block.decorations = vec![Decoration::SectionLabel("B".to_string())];
+    second_block.decorations = vec![directive_line(Some("B"), None, None, None, None)];
     let compile_result = CompileResult {
         blocks: vec![first_block, second_block],
         slur_spans: vec![],
@@ -301,21 +303,25 @@ fn section_label_on_non_first_measure_of_system_is_rendered() {
         .rows
         .iter()
         .flat_map(|r| r.elements.iter())
-        .any(|e| matches!(&e.content, GridContent::SectionLabel(s) if s == "B"));
+        .any(|e| {
+            matches!(
+                &e.content,
+                GridContent::DirectiveLine { label: Some(s), .. } if s == "B"
+            )
+        });
     assert!(
         has_label,
-        "SectionLabel on a non-first measure should be rendered"
+        "DirectiveLine with label 'B' on a non-first measure should be rendered"
     );
 }
 
 #[test]
 fn section_label_on_non_first_measure_is_right_of_column_1() {
-    use crate::compiler::types::Decoration;
-    // First block has no decorations; second block has a SectionLabel.
-    // The label should appear in a column > 1 (to the right of where first-block decorations sit).
+    // First block has no decorations; second block has a label.
+    // The directive line should appear in a column > 1.
     let first_block = make_block("S", 3);
     let mut second_block = make_block("S", 3);
-    second_block.decorations = vec![Decoration::SectionLabel("B".to_string())];
+    second_block.decorations = vec![directive_line(Some("B"), None, None, None, None)];
     let compile_result = CompileResult {
         blocks: vec![first_block, second_block],
         slur_spans: vec![],
@@ -325,12 +331,17 @@ fn section_label_on_non_first_measure_is_right_of_column_1() {
         .rows
         .iter()
         .flat_map(|r| r.elements.iter())
-        .find(|e| matches!(&e.content, GridContent::SectionLabel(s) if s == "B"))
-        .expect("should find label B")
+        .find(|e| {
+            matches!(
+                &e.content,
+                GridContent::DirectiveLine { label: Some(s), .. } if s == "B"
+            )
+        })
+        .expect("should find DirectiveLine with label B")
         .column;
     assert!(
         label_col > 1,
-        "section label on 2nd measure should be right of column 1, got {label_col}"
+        "directive line on 2nd measure should be right of column 1, got {label_col}"
     );
 }
 

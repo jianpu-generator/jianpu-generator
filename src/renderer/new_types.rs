@@ -66,4 +66,18 @@ pub enum SvgKind {
         width: f32,
         height: f32,
     },
+    TextWithTspans {
+        font_size: f32,
+        anchor: TextAnchor,
+        baseline: DominantBaseline,
+        spans: Vec<TspanData>,
+    },
+}
+
+#[derive(Debug)]
+pub struct TspanData {
+    pub content: String,
+    pub bold: bool,
+    pub italic: bool,
+    pub font_size: Option<f32>,
 }

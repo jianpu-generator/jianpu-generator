@@ -2,7 +2,7 @@ use jianpu_generator::{
     compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor},
     error::{Diagnostic, IrrecoverableError, Warning},
     error_reporter,
-    renderer::new_types::{SvgDocument, SvgElement, SvgKind, Tag},
+    renderer::new_types::{SvgDocument, SvgElement, SvgKind, Tag, TspanData},
 };
 use serde::Serialize;
 use tsify::Tsify;
@@ -99,10 +99,26 @@ pub enum SvgKindOut {
         width: f32,
         height: f32,
     },
+    TextWithTspans {
+        font_size: f32,
+        anchor: TextAnchorOut,
+        baseline: DominantBaselineOut,
+        spans: Vec<TspanOut>,
+    },
     Group {
         children: Vec<SvgElementOut>,
         tag: Option<TagOut>,
     },
+}
+
+#[derive(Debug, Clone, Tsify, Serialize)]
+#[tsify(into_wasm_abi)]
+pub struct TspanOut {
+    pub content: String,
+    pub bold: bool,
+    pub italic: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub font_size: Option<f32>,
 }
 
 #[derive(Debug, Clone, Tsify, Serialize)]
@@ -155,12 +171,51 @@ pub(crate) fn svg_document_to_out(doc: &SvgDocument) -> SvgDocumentOut {
     }
 }
 
+fn tspan_to_out(span: &TspanData) -> TspanOut {
+    TspanOut {
+        content: span.content.clone(),
+        bold: span.bold,
+        italic: span.italic,
+        font_size: span.font_size,
+    }
+}
+
 fn svg_element_to_out(el: &SvgElement) -> SvgElementOut {
     SvgElementOut {
         x: el.x,
         y: el.y,
         variant: el.variant.to_string(),
         kind: svg_kind_to_out(&el.kind),
+    }
+}
+
+fn text_anchor_to_out(anchor: &TextAnchor) -> TextAnchorOut {
+    match anchor {
+        TextAnchor::Start => TextAnchorOut::Start,
+        TextAnchor::Middle => TextAnchorOut::Middle,
+        TextAnchor::End => TextAnchorOut::End,
+    }
+}
+
+fn dominant_baseline_to_out(baseline: &DominantBaseline) -> DominantBaselineOut {
+    match baseline {
+        DominantBaseline::Middle => DominantBaselineOut::Middle,
+        DominantBaseline::Hanging => DominantBaselineOut::Hanging,
+        DominantBaseline::Ideographic => DominantBaselineOut::Ideographic,
+    }
+}
+
+fn font_family_to_out(font: &FontFamily) -> FontFamilyOut {
+    match font {
+        FontFamily::Monospace => FontFamilyOut::Monospace,
+        FontFamily::SansSerif => FontFamilyOut::SansSerif,
+    }
+}
+
+fn font_weight_to_out(weight: &FontWeight) -> FontWeightOut {
+    match weight {
+        FontWeight::Normal => FontWeightOut::Normal,
+        FontWeight::Bold => FontWeightOut::Bold,
     }
 }
 
@@ -177,24 +232,10 @@ fn svg_kind_to_out(kind: &SvgKind) -> SvgKindOut {
         } => SvgKindOut::Text {
             content: content.clone(),
             font_size: *font_size,
-            anchor: match anchor {
-                TextAnchor::Start => TextAnchorOut::Start,
-                TextAnchor::Middle => TextAnchorOut::Middle,
-                TextAnchor::End => TextAnchorOut::End,
-            },
-            baseline: match baseline {
-                DominantBaseline::Middle => DominantBaselineOut::Middle,
-                DominantBaseline::Hanging => DominantBaselineOut::Hanging,
-                DominantBaseline::Ideographic => DominantBaselineOut::Ideographic,
-            },
-            font: match font {
-                FontFamily::Monospace => FontFamilyOut::Monospace,
-                FontFamily::SansSerif => FontFamilyOut::SansSerif,
-            },
-            weight: match weight {
-                FontWeight::Normal => FontWeightOut::Normal,
-                FontWeight::Bold => FontWeightOut::Bold,
-            },
+            anchor: text_anchor_to_out(anchor),
+            baseline: dominant_baseline_to_out(baseline),
+            font: font_family_to_out(font),
+            weight: font_weight_to_out(weight),
             italic: *italic,
         },
         SvgKind::Line {
@@ -231,6 +272,17 @@ fn svg_kind_to_out(kind: &SvgKind) -> SvgKindOut {
         SvgKind::TransparentRect { width, height } => SvgKindOut::TransparentRect {
             width: *width,
             height: *height,
+        },
+        SvgKind::TextWithTspans {
+            font_size,
+            anchor,
+            baseline,
+            spans,
+        } => SvgKindOut::TextWithTspans {
+            font_size: *font_size,
+            anchor: text_anchor_to_out(anchor),
+            baseline: dominant_baseline_to_out(baseline),
+            spans: spans.iter().map(tspan_to_out).collect(),
         },
         SvgKind::Group { children, tag } => SvgKindOut::Group {
             children: children.iter().map(svg_element_to_out).collect(),

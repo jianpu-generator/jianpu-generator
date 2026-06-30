@@ -61,7 +61,7 @@ fn bpm_decoration_on_first_measure() {
     let has_bpm = blocks[0]
         .decorations
         .iter()
-        .any(|d| matches!(d, Decoration::Bpm(100)));
+        .any(|d| matches!(d, Decoration::DirectiveLine { bpm: Some(100), .. }));
     assert!(has_bpm);
 }
 
@@ -97,9 +97,9 @@ fn time_signature_appears_as_decoration() {
     let has_ts = blocks[0].decorations.iter().any(|d| {
         matches!(
             d,
-            Decoration::TimeSignature {
-                numerator: 4,
-                denominator: 4
+            Decoration::DirectiveLine {
+                time_signature: Some((4, 4)),
+                ..
             }
         )
     });
@@ -111,21 +111,27 @@ fn bar_number_decoration_without_label() {
     let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 1\n\n[S] 2\n"));
     let result = compile(&score);
     let blocks = result.blocks;
-    let bar1_num = blocks[0]
-        .decorations
-        .iter()
-        .find(|d| matches!(d, Decoration::BarNumber(_)));
+    let bar1 = blocks[0].decorations.first().unwrap();
     assert!(
-        matches!(bar1_num, Some(Decoration::BarNumber(1))),
-        "first measure should have BarNumber(1)"
+        matches!(
+            bar1,
+            Decoration::DirectiveLine {
+                bar_number: Some(1),
+                ..
+            }
+        ),
+        "first measure should have bar_number=1"
     );
-    let bar2_num = blocks[1]
-        .decorations
-        .iter()
-        .find(|d| matches!(d, Decoration::BarNumber(_)));
+    let bar2 = blocks[1].decorations.first().unwrap();
     assert!(
-        matches!(bar2_num, Some(Decoration::BarNumber(2))),
-        "second measure should have BarNumber(2)"
+        matches!(
+            bar2,
+            Decoration::DirectiveLine {
+                bar_number: Some(2),
+                ..
+            }
+        ),
+        "second measure should have bar_number=2"
     );
 }
 
@@ -136,16 +142,21 @@ fn section_label_measure_has_no_bar_number() {
     ));
     let result = compile(&score);
     let blocks = result.blocks;
-    let has_bar_num = blocks[0]
-        .decorations
-        .iter()
-        .any(|d| matches!(d, Decoration::BarNumber(_)));
-    assert!(!has_bar_num, "labeled measure should not have a bar number");
-    let has_label = blocks[0]
-        .decorations
-        .iter()
-        .any(|d| matches!(d, Decoration::SectionLabel(_)));
-    assert!(has_label, "labeled measure should have SectionLabel");
+    let dec = blocks[0].decorations.first().unwrap();
+    assert!(
+        matches!(
+            dec,
+            Decoration::DirectiveLine {
+                bar_number: None,
+                ..
+            }
+        ),
+        "labeled measure should not have a bar number"
+    );
+    assert!(
+        matches!(dec, Decoration::DirectiveLine { label: Some(_), .. }),
+        "labeled measure should have a label"
+    );
 }
 
 #[test]

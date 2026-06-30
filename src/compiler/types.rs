@@ -85,8 +85,11 @@ pub struct CompileResult {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Decoration {
-    Bpm(u32),
-    TimeSignature { numerator: u32, denominator: u32 },
-    SectionLabel(String),
-    BarNumber(u32),
+    DirectiveLine {
+        label: Option<String>,
+        bar_number: Option<u32>,
+        key: Option<String>,
+        bpm: Option<u32>,
+        time_signature: Option<(u32, u32)>,
+    },
 }

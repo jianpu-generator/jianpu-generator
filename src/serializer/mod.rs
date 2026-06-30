@@ -1,5 +1,5 @@
 use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
-use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, Tag};
+use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, Tag, TspanData};
 
 pub fn serialize(documents: &[SvgDocument]) -> Vec<String> {
     documents.iter().map(serialize_doc).collect()
@@ -59,6 +59,48 @@ fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) {
     ));
 }
 
+fn serialize_text_with_tspans(
+    el: &SvgElement,
+    out: &mut String,
+    font_size: f32,
+    anchor: &TextAnchor,
+    baseline: &DominantBaseline,
+    spans: &[TspanData],
+) {
+    let anchor_str = match anchor {
+        TextAnchor::Start => "start",
+        TextAnchor::Middle => "middle",
+        TextAnchor::End => "end",
+    };
+    let baseline_str = match baseline {
+        DominantBaseline::Middle => "middle",
+        DominantBaseline::Hanging => "hanging",
+        DominantBaseline::Ideographic => "ideographic",
+    };
+    out.push_str(&format!(
+        r#"<text x="{:.1}" y="{:.1}" data-variant="{}" font-size="{:.1}" text-anchor="{}" dominant-baseline="{}" font-family="sans-serif">"#,
+        el.x, el.y, el.variant, font_size, anchor_str, baseline_str
+    ));
+    for span in spans {
+        let mut attrs = String::new();
+        if span.bold {
+            attrs.push_str(r#" font-weight="bold""#);
+        }
+        if span.italic {
+            attrs.push_str(r#" font-style="italic""#);
+        }
+        if let Some(fs) = span.font_size {
+            attrs.push_str(&format!(r#" font-size="{fs:.1}""#));
+        }
+        out.push_str(&format!(
+            "<tspan{}>{}</tspan>",
+            attrs,
+            escape_xml(&span.content)
+        ));
+    }
+    out.push_str("</text>");
+}
+
 fn serialize_element(el: &SvgElement, out: &mut String) {
     match &el.kind {
         SvgKind::Text { .. } => serialize_text(el, out, &el.kind),
@@ -108,6 +150,12 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
                 el.x, el.y, width, height
             ));
         }
+        SvgKind::TextWithTspans {
+            font_size,
+            anchor,
+            baseline,
+            spans,
+        } => serialize_text_with_tspans(el, out, *font_size, anchor, baseline, spans),
         SvgKind::Group { children, tag } => {
             match tag {
                 Some(Tag::Measure { index }) => {

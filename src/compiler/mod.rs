@@ -10,6 +10,7 @@ mod slur_chains;
 use slur_chains::{PartCrossState, PendingSlurOpen};
 
 use crate::ast::grouped::{MultiPartMeasure, NoteEvent, PartRow, Score};
+use crate::ast::parsed::{Accidental, KeyChange, NoteName};
 
 struct PartSliceResult {
     elements: Vec<ColumnElement>,
@@ -144,24 +145,35 @@ fn compile_measure(
     }
 }
 
+fn format_key(key: &KeyChange) -> String {
+    let name = match key.note.name {
+        NoteName::A => "A",
+        NoteName::B => "B",
+        NoteName::C => "C",
+        NoteName::D => "D",
+        NoteName::E => "E",
+        NoteName::F => "F",
+        NoteName::G => "G",
+    };
+    let accidental = match key.note.accidental {
+        Accidental::Natural => "",
+        Accidental::Sharp => "\u{266f}",
+        Accidental::Flat => "\u{266d}",
+    };
+    format!("1={name}{accidental}")
+}
+
 fn collect_decorations(measure: &MultiPartMeasure, bar_number: usize) -> Vec<Decoration> {
-    let mut decorations = Vec::new();
-    if let Some(bpm) = measure.bpm {
-        decorations.push(Decoration::Bpm(bpm));
-    }
-    if let Some(ts) = &measure.time_signature {
-        decorations.push(Decoration::TimeSignature {
-            numerator: ts.numerator as u32,
-            denominator: ts.denominator as u32,
-        });
-    }
-    if let Some(label) = &measure.label {
-        decorations.push(Decoration::SectionLabel(label.clone()));
-    }
-    if measure.label.is_none() {
-        decorations.push(Decoration::BarNumber(bar_number as u32));
-    }
-    decorations
+    vec![Decoration::DirectiveLine {
+        label: measure.label.clone(),
+        bar_number: measure.label.is_none().then_some(bar_number as u32),
+        key: measure.key.as_ref().map(format_key),
+        bpm: measure.bpm,
+        time_signature: measure
+            .time_signature
+            .as_ref()
+            .map(|ts| (ts.numerator as u32, ts.denominator as u32)),
+    }]
 }
 
 #[cfg(test)]

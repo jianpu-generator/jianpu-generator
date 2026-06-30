@@ -1,10 +1,10 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compositor::types::{
     AbsoluteContent, AbsoluteElement, AbsolutePage, DominantBaseline, FontFamily, FontWeight,
-    TextAnchor,
+    TextAnchor, TextSpan,
 };
 use crate::render_config::RenderConfig;
-use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, Tag};
+use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, Tag, TspanData};
 
 pub fn render_new(pages: &[AbsolutePage], config: &RenderConfig) -> Vec<SvgDocument> {
     pages.iter().map(|page| render_page(page, config)).collect()
@@ -118,48 +118,73 @@ fn render_element(
             height,
             measure_index,
         } => render_measure_click_target(elem, *width, *height, *measure_index),
-        AbsoluteContent::SectionLabel { label } => render_section_label(elem, label),
+        AbsoluteContent::DirectiveLine { label, spans } => {
+            render_directive_line(elem, label, spans)
+        }
     }
 }
 
-fn render_section_label(elem: &AbsoluteElement, label: &str) -> Vec<SvgElement> {
-    let bg_width = label.len() as f32 * 8.0 + 6.0;
-    let bg_height = 18.0;
-    vec![SvgElement {
+fn spans_to_tspans(spans: &[TextSpan]) -> Vec<TspanData> {
+    spans
+        .iter()
+        .map(|s| TspanData {
+            content: s.content.clone(),
+            bold: s.bold,
+            italic: s.italic,
+            font_size: if (s.font_size - 12.0).abs() < 0.001 {
+                None
+            } else {
+                Some(s.font_size)
+            },
+        })
+        .collect()
+}
+
+fn render_directive_line(
+    elem: &AbsoluteElement,
+    label: &Option<String>,
+    spans: &[TextSpan],
+) -> Vec<SvgElement> {
+    let text_element = SvgElement {
         x: elem.x,
         y: elem.y,
-        variant: "section-label",
-        kind: SvgKind::Group {
-            tag: Some(Tag::SectionLabel {
-                label: label.to_string(),
-            }),
-            children: vec![
-                SvgElement {
-                    x: elem.x - 3.0,
-                    y: elem.y - bg_height / 2.0,
-                    variant: "section-label-bg",
-                    kind: SvgKind::TransparentRect {
-                        width: bg_width,
-                        height: bg_height,
-                    },
-                },
-                SvgElement {
-                    x: elem.x,
-                    y: elem.y,
-                    variant: "section-label-text",
-                    kind: SvgKind::Text {
-                        content: label.to_string(),
-                        font_size: 12.0,
-                        anchor: TextAnchor::Start,
-                        baseline: DominantBaseline::Middle,
-                        font: FontFamily::SansSerif,
-                        weight: FontWeight::Bold,
-                        italic: true,
-                    },
-                },
-            ],
+        variant: "directive-line",
+        kind: SvgKind::TextWithTspans {
+            font_size: 12.0,
+            anchor: TextAnchor::Start,
+            baseline: DominantBaseline::Middle,
+            spans: spans_to_tspans(spans),
         },
-    }]
+    };
+
+    if let Some(label_str) = label {
+        let bg_width = label_str.len() as f32 * 8.0 + 6.0;
+        let bg_height = 18.0;
+        vec![SvgElement {
+            x: elem.x,
+            y: elem.y,
+            variant: "section-label",
+            kind: SvgKind::Group {
+                tag: Some(Tag::SectionLabel {
+                    label: label_str.clone(),
+                }),
+                children: vec![
+                    SvgElement {
+                        x: elem.x - 3.0,
+                        y: elem.y - bg_height / 2.0,
+                        variant: "section-label-bg",
+                        kind: SvgKind::TransparentRect {
+                            width: bg_width,
+                            height: bg_height,
+                        },
+                    },
+                    text_element,
+                ],
+            },
+        }]
+    } else {
+        vec![text_element]
+    }
 }
 
 fn render_measure_click_target(

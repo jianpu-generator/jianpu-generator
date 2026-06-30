@@ -7,50 +7,25 @@ use crate::grid_layout::types::{GridContent, GridElement, GridRow, HAlign, Heade
 
 const DECO_COLS: u32 = 12;
 
-fn deco_order(d: &Decoration) -> u8 {
-    match d {
-        Decoration::SectionLabel(_) => 0,
-        Decoration::Bpm(_) => 1,
-        Decoration::TimeSignature { .. } => 2,
-        Decoration::BarNumber(_) => 3,
-    }
-}
-
-fn make_deco_element(dec: &Decoration, col: u32) -> GridElement {
-    match dec {
-        Decoration::Bpm(bpm) => GridElement {
-            column: col,
-            column_span: 1,
-            halign: HAlign::Start,
-            valign: VAlign::Center,
-            content: GridContent::Bpm(*bpm),
-        },
-        Decoration::TimeSignature {
-            numerator,
-            denominator,
-        } => GridElement {
-            column: col,
-            column_span: 1,
-            halign: HAlign::Start,
-            valign: VAlign::Center,
-            content: GridContent::TimeSignature {
-                numerator: *numerator,
-                denominator: *denominator,
-            },
-        },
-        Decoration::SectionLabel(s) => GridElement {
-            column: col,
-            column_span: 1,
-            halign: HAlign::Start,
-            valign: VAlign::Center,
-            content: GridContent::SectionLabel(s.clone()),
-        },
-        Decoration::BarNumber(n) => GridElement {
-            column: col,
-            column_span: 1,
-            halign: HAlign::Start,
-            valign: VAlign::Bottom,
-            content: GridContent::BarNumber(*n),
+fn directive_line_element(dec: &Decoration, col: u32) -> GridElement {
+    let Decoration::DirectiveLine {
+        label,
+        bar_number,
+        key,
+        bpm,
+        time_signature,
+    } = dec;
+    GridElement {
+        column: col,
+        column_span: 1,
+        halign: HAlign::Start,
+        valign: VAlign::Bottom,
+        content: GridContent::DirectiveLine {
+            label: label.clone(),
+            bar_number: *bar_number,
+            key: key.clone(),
+            bpm: *bpm,
+            time_signature: *time_signature,
         },
     }
 }
@@ -60,28 +35,29 @@ pub(super) fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow
     let music_column_count = LABEL_COLS + total_musical_cols;
     let mut elements: Vec<GridElement> = Vec::new();
 
-    // First block: sequential columns starting at 1 (preserves original h-stacking and spacing).
+    // First block: one DirectiveLine element at column 1.
     if let Some(first) = system.first() {
-        let mut sorted = first.decorations.clone();
-        sorted.sort_by_key(deco_order);
-        let mut dec_col: u32 = 1;
-        for dec in &sorted {
-            elements.push(make_deco_element(dec, dec_col));
-            dec_col += 1;
+        if let Some(dec) = first.decorations.first() {
+            elements.push(directive_line_element(dec, 1));
         }
     }
 
-    // Non-first blocks: only SectionLabels, mapped proportionally into the DECO_COLS space
-    // so they appear above the correct measure without disturbing h-stacking of the first block.
+    // Non-first blocks: only emit a DirectiveLine when there is a label,
+    // placed proportionally so it appears above the correct measure.
     let mut measure_music_col = LABEL_COLS;
     for (index, block) in system.iter().enumerate() {
         if index > 0 {
-            for dec in &block.decorations {
-                if let Decoration::SectionLabel(_) = dec {
-                    let deco_col = (measure_music_col as f32 * DECO_COLS as f32
-                        / music_column_count as f32)
-                        .round() as u32;
-                    elements.push(make_deco_element(dec, deco_col.clamp(1, DECO_COLS - 1)));
+            if let Some(Decoration::DirectiveLine { label: Some(_), .. }) =
+                block.decorations.first()
+            {
+                let deco_col = (measure_music_col as f32 * DECO_COLS as f32
+                    / music_column_count as f32)
+                    .round() as u32;
+                if let Some(dec) = block.decorations.first() {
+                    elements.push(directive_line_element(
+                        dec,
+                        deco_col.clamp(1, DECO_COLS - 1),
+                    ));
                 }
             }
         }

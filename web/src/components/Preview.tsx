@@ -101,6 +101,43 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           {kind.content}
         </text>
       )
+    case 'textWithTspans':
+      return (
+        <text
+          key={key}
+          x={el.x}
+          y={el.y}
+          data-variant={el.variant}
+          fontSize={kind.font_size}
+          textAnchor={
+            kind.anchor === 'start'
+              ? 'start'
+              : kind.anchor === 'middle'
+                ? 'middle'
+                : 'end'
+          }
+          dominantBaseline={
+            kind.baseline === 'middle'
+              ? 'middle'
+              : kind.baseline === 'hanging'
+                ? 'hanging'
+                : 'ideographic'
+          }
+          fontFamily="sans-serif"
+        >
+          {kind.spans.map((span, spanIndex) => (
+            <tspan
+              // biome-ignore lint/suspicious/noArrayIndexKey: tspans have no stable identifier
+              key={spanIndex}
+              fontWeight={span.bold ? 'bold' : undefined}
+              fontStyle={span.italic ? 'italic' : undefined}
+              fontSize={span.font_size ?? undefined}
+            >
+              {span.content}
+            </tspan>
+          ))}
+        </text>
+      )
     case 'line':
       return (
         <line
