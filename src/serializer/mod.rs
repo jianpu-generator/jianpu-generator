@@ -201,14 +201,14 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
                 el.x, el.y, width, height
             ));
         }
-        SvgKind::TransparentRect { width, height } => {
+        SvgKind::TransparentRect {
+            width,
+            height,
+            role,
+        } => {
             out.push_str(&format!(
-                r#"<rect x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}"{} fill="transparent" rx="2" style="cursor:pointer"/>"#,
-                el.x,
-                el.y,
-                width,
-                height,
-                variant_attr(el.variant)
+                r#"<rect x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" data-variant="{}" fill="transparent" rx="2" style="cursor:pointer"/>"#,
+                el.x, el.y, width, height, role.as_str()
             ));
         }
         SvgKind::TextWithTspans {
@@ -232,7 +232,9 @@ fn escape_xml(s: &str) -> String {
 mod tests {
     use super::*;
     use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
-    use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, SvgVariant};
+    use crate::renderer::new_types::{
+        SvgDocument, SvgElement, SvgKind, SvgVariant, TransparentRectRole,
+    };
 
     fn text_doc(content: &str) -> SvgDocument {
         SvgDocument {
@@ -477,10 +479,11 @@ mod tests {
             elements: vec![SvgElement {
                 x: 1.0,
                 y: 2.0,
-                variant: Some(SvgVariant::MeasureClickTargetRect),
+                variant: None,
                 kind: SvgKind::TransparentRect {
                     width: 40.0,
                     height: 20.0,
+                    role: TransparentRectRole::MeasureClickTarget,
                 },
             }],
         };
@@ -488,7 +491,7 @@ mod tests {
         assert!(
             result[0].contains(&format!(
                 r#"data-variant="{}""#,
-                SvgVariant::MeasureClickTargetRect.as_str()
+                TransparentRectRole::MeasureClickTarget.as_str()
             )),
             "should emit data-variant for hover target rects"
         );

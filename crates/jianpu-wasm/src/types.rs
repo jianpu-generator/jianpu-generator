@@ -2,7 +2,7 @@ use jianpu_generator::{
     compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor},
     error::{Diagnostic, IrrecoverableError, Warning},
     error_reporter,
-    renderer::new_types::{SvgDocument, SvgElement, SvgKind, Tag, TspanData},
+    renderer::new_types::{SvgDocument, SvgElement, SvgKind, Tag, TransparentRectRole, TspanData},
 };
 use serde::Serialize;
 use tsify::Tsify;
@@ -61,6 +61,14 @@ pub struct SvgElementOut {
 }
 
 #[derive(Debug, Clone, Tsify, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum TransparentRectRoleOut {
+    MeasureClickTarget,
+    SectionLabelBackground,
+}
+
+#[derive(Debug, Clone, Tsify, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 #[tsify(into_wasm_abi)]
 pub enum SvgKindOut {
@@ -99,6 +107,7 @@ pub enum SvgKindOut {
     TransparentRect {
         width: f32,
         height: f32,
+        role: TransparentRectRoleOut,
     },
     TextWithTspans {
         font_size: f32,
@@ -220,6 +229,15 @@ fn font_weight_to_out(weight: &FontWeight) -> FontWeightOut {
     }
 }
 
+fn transparent_rect_role_to_out(role: &TransparentRectRole) -> TransparentRectRoleOut {
+    match role {
+        TransparentRectRole::MeasureClickTarget => TransparentRectRoleOut::MeasureClickTarget,
+        TransparentRectRole::SectionLabelBackground => {
+            TransparentRectRoleOut::SectionLabelBackground
+        }
+    }
+}
+
 fn svg_kind_to_out(kind: &SvgKind) -> SvgKindOut {
     match kind {
         SvgKind::Text {
@@ -270,9 +288,14 @@ fn svg_kind_to_out(kind: &SvgKind) -> SvgKindOut {
             width: *width,
             height: *height,
         },
-        SvgKind::TransparentRect { width, height } => SvgKindOut::TransparentRect {
+        SvgKind::TransparentRect {
+            width,
+            height,
+            role,
+        } => SvgKindOut::TransparentRect {
             width: *width,
             height: *height,
+            role: transparent_rect_role_to_out(role),
         },
         SvgKind::TextWithTspans {
             font_size,

@@ -23,6 +23,17 @@ interface PreviewProps {
   onSectionLabelClick?: (label: string) => void
 }
 
+function transparentRectRoleToDataVariant(
+  role: 'measureClickTarget' | 'sectionLabelBackground',
+): string {
+  switch (role) {
+    case 'measureClickTarget':
+      return 'measure-click-target-rect'
+    case 'sectionLabelBackground':
+      return 'section-label-bg'
+  }
+}
+
 function getSectionLabelAtPoint(x: number, y: number): string | undefined {
   const el = document.elementFromPoint(x, y)
   if (!el) return undefined
@@ -194,7 +205,7 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           y={el.y}
           width={kind.width}
           height={kind.height}
-          data-variant={el.variant}
+          data-variant={transparentRectRoleToDataVariant(kind.role)}
           fill="transparent"
           rx={2}
           style={{ cursor: 'pointer' }}

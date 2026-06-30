@@ -13,8 +13,6 @@ pub enum SvgVariant {
     BarLine,
     Lyric,
     DirectiveLine,
-    MeasureClickTargetRect,
-    SectionLabelBackground,
 }
 
 impl SvgVariant {
@@ -31,7 +29,20 @@ impl SvgVariant {
             Self::BarLine => "bar-line",
             Self::Lyric => "lyric",
             Self::DirectiveLine => "directive-line",
-            Self::MeasureClickTargetRect => "measure-click-target-rect",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TransparentRectRole {
+    MeasureClickTarget,
+    SectionLabelBackground,
+}
+
+impl TransparentRectRole {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::MeasureClickTarget => "measure-click-target-rect",
             Self::SectionLabelBackground => "section-label-bg",
         }
     }
@@ -102,6 +113,7 @@ pub enum SvgKind {
     TransparentRect {
         width: f32,
         height: f32,
+        role: TransparentRectRole,
     },
     TextWithTspans {
         font_size: f32,

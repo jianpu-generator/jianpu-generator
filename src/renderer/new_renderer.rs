@@ -4,7 +4,9 @@ use crate::compositor::types::{
     TextAnchor, TextSpan,
 };
 use crate::render_config::RenderConfig;
-use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, SvgVariant, Tag, TspanData};
+use crate::renderer::new_types::{
+    SvgDocument, SvgElement, SvgKind, SvgVariant, Tag, TransparentRectRole, TspanData,
+};
 
 pub fn render_new(pages: &[AbsolutePage], config: &RenderConfig) -> Vec<SvgDocument> {
     pages.iter().map(|page| render_page(page, config)).collect()
@@ -172,10 +174,11 @@ fn render_directive_line(
                     SvgElement {
                         x: elem.x - 3.0,
                         y: elem.y - bg_height / 2.0,
-                        variant: Some(SvgVariant::SectionLabelBackground),
+                        variant: None,
                         kind: SvgKind::TransparentRect {
                             width: bg_width,
                             height: bg_height,
+                            role: TransparentRectRole::SectionLabelBackground,
                         },
                     },
                     text_element,
@@ -201,8 +204,12 @@ fn render_measure_click_target(
             children: vec![SvgElement {
                 x: elem.x,
                 y: elem.y,
-                variant: Some(SvgVariant::MeasureClickTargetRect),
-                kind: SvgKind::TransparentRect { width, height },
+                variant: None,
+                kind: SvgKind::TransparentRect {
+                    width,
+                    height,
+                    role: TransparentRectRole::MeasureClickTarget,
+                },
             }],
             tag: Some(Tag::Measure {
                 index: measure_index,

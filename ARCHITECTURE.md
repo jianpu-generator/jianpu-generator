@@ -67,8 +67,9 @@ source (&str)
 ### Renderer
 - Module: `src/renderer/`
 - Entry: `renderer::new_renderer::render_new(pages: &[AbsolutePage], config: &RenderConfig) -> Vec<SvgDocument>`
-- Key types: `SvgDocument`, `SvgElement`, `SvgKind`, `SvgVariant`
-- `SvgElement.variant` is `Option<SvgVariant>`: `None` for group wrappers and highlight rects; `Some(...)` for drawable primitives and hover transparent rects
+- Key types: `SvgDocument`, `SvgElement`, `SvgKind`, `SvgVariant`, `TransparentRectRole`
+- `SvgElement.variant` is `Option<SvgVariant>`: `None` for group wrappers and highlight rects; `Some(...)` for musical/export drawable primitives
+- `SvgKind::TransparentRect` carries a `role: TransparentRectRole` for CSS hover targets (`data-variant` in serializer/preview); roles are `MeasureClickTarget` and `SectionLabelBackground`
 
 ### Serializer
 - Module: `src/serializer/`
