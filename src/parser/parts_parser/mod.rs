@@ -68,14 +68,24 @@ struct RawDecl {
     abbreviation: String,
     span: Span,
     kind: RawKind,
-    soundfont: Soundfont,
-    volume: u8,
-    octave_offset: i8,
+    /// `None` when omitted on the declaration line (follow parts inherit from target).
+    soundfont: Option<Soundfont>,
+    /// `None` when omitted on the declaration line (follow parts inherit from target).
+    volume: Option<u8>,
+    /// `None` when omitted on the declaration line (follow parts inherit from target).
+    octave_offset: Option<i8>,
 }
 
 enum RawKind {
     Concrete(PartKind),
     Follow(String),
+}
+
+struct ParsedPartRhs {
+    kind: RawKind,
+    soundfont: Option<Soundfont>,
+    volume: Option<u8>,
+    octave_offset: Option<i8>,
 }
 
 fn collect_raw_declarations(
@@ -120,14 +130,18 @@ fn collect_raw_declarations(
             continue;
         }
 
-        let (kind, soundfont, volume, octave_offset) =
-            match parse_rhs(rhs.trim(), line_span, errors, instruments) {
-                Ok(quadruple) => quadruple,
-                Err(e) => {
-                    errors.push(e);
-                    continue;
-                }
-            };
+        let ParsedPartRhs {
+            kind,
+            soundfont,
+            volume,
+            octave_offset,
+        } = match parse_rhs(rhs.trim(), line_span, errors, instruments) {
+            Ok(parsed) => parsed,
+            Err(e) => {
+                errors.push(e);
+                continue;
+            }
+        };
         raw_declarations.push(RawDecl {
             display_name,
             abbreviation,
@@ -173,9 +187,9 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                         display_name,
                         kind: target_decl.kind,
                         follow_target: Some(target),
-                        soundfont,
-                        volume,
-                        octave_offset,
+                        soundfont: soundfont.unwrap_or(target_decl.soundfont),
+                        volume: volume.unwrap_or(target_decl.volume),
+                        octave_offset: octave_offset.unwrap_or(target_decl.octave_offset),
                     }),
                 }
             }
@@ -184,9 +198,9 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                 display_name,
                 kind,
                 follow_target: None,
-                soundfont,
-                volume,
-                octave_offset,
+                soundfont: soundfont.unwrap_or_default(),
+                volume: volume.unwrap_or(100),
+                octave_offset: octave_offset.unwrap_or(0),
             }),
         }
     }
@@ -275,7 +289,7 @@ fn parse_soundfont_string(
     }
 }
 
-fn parse_volume_suffix(s: &str) -> (u8, &str) {
+fn parse_volume_suffix(s: &str) -> (Option<u8>, &str) {
     let trimmed = s.trim_end();
     if let Some(rest) = trimmed.strip_suffix('%') {
         if let Some(vol_str) = rest.split_whitespace().last() {
@@ -285,65 +299,75 @@ fn parse_volume_suffix(s: &str) -> (u8, &str) {
                     .strip_suffix(vol_str)
                     .unwrap_or(rest)
                     .trim_end();
-                return (v, without_vol);
+                return (Some(v), without_vol);
             }
         }
     }
-    (100, s)
+    (None, s)
 }
 
 /// Strips a trailing `+N` or `-N` whitespace-delimited token from `s`, or a standalone
 /// `+N`/`-N` when `s` contains nothing else. Returns (offset, remainder).
 /// Returns (0, s) if no such token found.
-fn parse_octave_offset(s: &str) -> (i8, &str) {
+fn parse_octave_offset(s: &str) -> (Option<i8>, &str) {
     let trimmed = s.trim_end();
     if let Some(ws) = trimmed.rfind(|c: char| c.is_ascii_whitespace()) {
         let last = &trimmed[ws + 1..];
         let rest = trimmed[..ws].trim_end();
         if let Some(d) = last.strip_prefix('+') {
             if let Ok(n) = d.parse::<i8>() {
-                return (n, rest);
+                return (Some(n), rest);
             }
         }
         if let Some(d) = last.strip_prefix('-') {
             if let Ok(n) = d.parse::<i8>() {
-                return (-n, rest);
+                return (Some(-n), rest);
             }
         }
     }
     let standalone = s.trim();
     if let Some(d) = standalone.strip_prefix('+') {
         if let Ok(n) = d.parse::<i8>() {
-            return (n, "");
+            return (Some(n), "");
         }
     }
     if let Some(d) = standalone.strip_prefix('-') {
         if !d.is_empty() {
             if let Ok(n) = d.parse::<i8>() {
-                return (-n, "");
+                return (Some(-n), "");
             }
         }
     }
-    (0, s)
+    (None, s)
+}
+
+fn clamp_octave_offset(
+    octave: Option<i8>,
+    span: Span,
+    errors: &mut Vec<RecoverableError>,
+) -> Option<i8> {
+    octave.map(|offset| {
+        if offset.abs() > 4 {
+            errors.push(RecoverableError::parts_octave_offset_too_large(
+                span, offset,
+            ));
+            offset.clamp(-4, 4)
+        } else {
+            offset
+        }
+    })
 }
 
 fn parse_rhs_suffixes<'a>(
     s: &'a str,
     span: Span,
     errors: &mut Vec<RecoverableError>,
-) -> (u8, i8, &'a str) {
+) -> (Option<u8>, Option<i8>, &'a str) {
     let (volume1, after_vol1) = parse_volume_suffix(s);
     let (octave, after_oct) = parse_octave_offset(after_vol1);
     let (volume2, remainder) = parse_volume_suffix(after_oct);
-    let volume = if volume1 != 100 { volume1 } else { volume2 };
-    let octave_offset = if octave.abs() > 4 {
-        errors.push(RecoverableError::parts_octave_offset_too_large(
-            span, octave,
-        ));
-        octave.clamp(-4, 4)
-    } else {
-        octave
-    };
+    let volume = volume1.or(volume2);
+    let octave_offset = clamp_octave_offset(octave, span, errors);
     (volume, octave_offset, remainder)
 }
 
@@ -352,7 +376,7 @@ fn parse_rhs(
     span: Span,
     errors: &mut Vec<RecoverableError>,
     instruments: &[InstrumentInfo],
-) -> Result<(RawKind, Soundfont, u8, i8), RecoverableError> {
+) -> Result<ParsedPartRhs, RecoverableError> {
     if let Some(rest) = rhs.strip_prefix("follow[") {
         if let Some(bracket_end) = rest.find(']') {
             let target = rest[..bracket_end].trim().to_string();
@@ -363,11 +387,22 @@ fn parse_rhs(
             let (volume, octave_offset, after_suffixes) =
                 parse_rhs_suffixes(after_bracket, span, errors);
             let soundfont = if after_suffixes.trim().is_empty() {
-                Soundfont::default()
+                None
             } else {
-                parse_soundfont_string(after_suffixes.trim(), span, rhs, errors, instruments)?
+                Some(parse_soundfont_string(
+                    after_suffixes.trim(),
+                    span,
+                    rhs,
+                    errors,
+                    instruments,
+                )?)
             };
-            return Ok((RawKind::Follow(target), soundfont, volume, octave_offset));
+            return Ok(ParsedPartRhs {
+                kind: RawKind::Follow(target),
+                soundfont,
+                volume,
+                octave_offset,
+            });
         }
     }
 
@@ -376,11 +411,16 @@ fn parse_rhs(
 
     let (kind_token, soundfont) = if let Some(quote_pos) = rhs_trimmed.find('"') {
         let kind_token = rhs_trimmed[..quote_pos].trim();
-        let soundfont =
-            parse_soundfont_string(&rhs_trimmed[quote_pos..], span, rhs, errors, instruments)?;
+        let soundfont = Some(parse_soundfont_string(
+            &rhs_trimmed[quote_pos..],
+            span,
+            rhs,
+            errors,
+            instruments,
+        )?);
         (kind_token, soundfont)
     } else {
-        (rhs_trimmed, Soundfont::default())
+        (rhs_trimmed, None)
     };
 
     let kind = match kind_token {
@@ -389,7 +429,12 @@ fn parse_rhs(
         "notes+lyrics" => PartKind::NotesWithLyrics,
         _ => return Err(RecoverableError::parts_invalid_columns(span, rhs)),
     };
-    Ok((RawKind::Concrete(kind), soundfont, volume, octave_offset))
+    Ok(ParsedPartRhs {
+        kind: RawKind::Concrete(kind),
+        soundfont,
+        volume,
+        octave_offset,
+    })
 }
 
 #[cfg(test)]

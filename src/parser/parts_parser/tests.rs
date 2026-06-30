@@ -204,3 +204,58 @@ fn octave_offset_follow_part() {
     assert!(errors.is_empty(), "unexpected errors: {errors:?}");
     assert_eq!(decls[1].octave_offset, -1);
 }
+
+#[test]
+fn follow_inherits_soundfont_volume_and_octave_from_target() {
+    use crate::ast::parsed::Soundfont;
+    let content = "A = notes \"48: String Ensemble 1\" 60% +1\nB = follow[A]\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert!(errors.is_empty(), "unexpected errors: {errors:?}");
+    assert_eq!(decls[1].soundfont, Soundfont(48));
+    assert_eq!(decls[1].volume, 60);
+    assert_eq!(decls[1].octave_offset, 1);
+}
+
+#[test]
+fn follow_overrides_soundfont_while_inheriting_volume_and_octave() {
+    use crate::ast::parsed::Soundfont;
+    let content = "A = notes \"48: String Ensemble 1\" 60% +1\nB = follow[A] \"1: Grand Piano\"\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert!(errors.is_empty(), "unexpected errors: {errors:?}");
+    assert_eq!(decls[1].soundfont, Soundfont(1));
+    assert_eq!(decls[1].volume, 60);
+    assert_eq!(decls[1].octave_offset, 1);
+}
+
+#[test]
+fn follow_overrides_volume_while_inheriting_soundfont_and_octave() {
+    use crate::ast::parsed::Soundfont;
+    let content = "A = notes \"48: String Ensemble 1\" 60% +1\nB = follow[A] 80%\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert!(errors.is_empty(), "unexpected errors: {errors:?}");
+    assert_eq!(decls[1].soundfont, Soundfont(48));
+    assert_eq!(decls[1].volume, 80);
+    assert_eq!(decls[1].octave_offset, 1);
+}
+
+#[test]
+fn follow_overrides_octave_while_inheriting_soundfont_and_volume() {
+    use crate::ast::parsed::Soundfont;
+    let content = "A = notes \"48: String Ensemble 1\" 60% +1\nB = follow[A] -2\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert!(errors.is_empty(), "unexpected errors: {errors:?}");
+    assert_eq!(decls[1].soundfont, Soundfont(48));
+    assert_eq!(decls[1].volume, 60);
+    assert_eq!(decls[1].octave_offset, -2);
+}
+
+#[test]
+fn follow_chain_inherits_resolved_properties_from_intermediate_target() {
+    use crate::ast::parsed::Soundfont;
+    let content = "A = notes \"48: String Ensemble 1\" 60% +1\nB = follow[A]\nC = follow[B]\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert!(errors.is_empty(), "unexpected errors: {errors:?}");
+    assert_eq!(decls[2].soundfont, Soundfont(48));
+    assert_eq!(decls[2].volume, 60);
+    assert_eq!(decls[2].octave_offset, 1);
+}
