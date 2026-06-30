@@ -79,6 +79,7 @@ pub(super) fn build_parse_result(
                 kind: decl.kind,
                 soundfont: decl.soundfont,
                 volume: decl.volume,
+                octave_offset: decl.octave_offset,
                 measure_slots,
                 lyrics: syllables.map(|measure_syllables| ParsedLyrics {
                     measure_syllables,

@@ -36,12 +36,12 @@ source (&str)
 ### Parser
 - Module: `src/parser/`
 - Entry: `parser::parse(source: &str, filename: &str) -> Result<ParsedDocument, IrrecoverableError>`
-- Key types: `ParsedDocument`, `ParsedTimedTrack`, `ParsedScore`, `ScoreEvent`, `ParsedNote` (carries `Accidental` for melody notes), `ParsedRest`, `ParsedChordNote` (also carries `Accidental`), `ParsedMetadata`, `JianPuPitch`, `Accidental` (`Sharp`/`Flat`/`Natural`; applies to both melody notes and chord notes), `Syllable`, `Soundfont` (vocal/piano/string; selects MIDI channel+program)
+- Key types: `ParsedDocument`, `ParsedTimedTrack`, `ParsedScore`, `ScoreEvent`, `ParsedNote` (carries `Accidental` for melody notes), `ParsedRest`, `ParsedChordNote` (also carries `Accidental`), `ParsedMetadata`, `JianPuPitch`, `Accidental` (`Sharp`/`Flat`/`Natural`; applies to both melody notes and chord notes), `Syllable`, `Soundfont` (vocal/piano/string; selects MIDI channel+program), `PartDecl` (carries `soundfont`, `volume`, `octave_offset`)
 
 ### Grouper
 - Module: `src/grouper/`
 - Entry: `grouper::group(doc: ParsedDocument) -> Result<Score, IrrecoverableError>`
-- Key types: `Score`, `MultiPartMeasure`, `PartRow` (Timed), `PartSlice` (carries `soundfont`), `Notes`, `NoteEvent`, `GroupedNote`, `GroupedRest`, `GroupedChordNote`, `GroupedMeasure` (intermediate: notes + paired lyrics per measure)
+- Key types: `Score`, `MultiPartMeasure`, `PartRow` (Timed), `PartSlice` (carries `soundfont`, `volume`, `octave_offset`), `Notes`, `NoteEvent`, `GroupedNote`, `GroupedRest`, `GroupedChordNote`, `GroupedMeasure` (intermediate: notes + paired lyrics per measure)
 
 ### Compiler
 - Module: `src/compiler/`

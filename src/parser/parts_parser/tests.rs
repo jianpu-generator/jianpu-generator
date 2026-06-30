@@ -142,3 +142,65 @@ fn follow_unknown_target_emits_error() {
         RecoverableErrorKind::PartsFollowUnknownTarget { ref target } if target == "UNKNOWN"
     ));
 }
+
+#[test]
+fn octave_offset_positive_parses() {
+    let content = "Bass = notes +2\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert!(errors.is_empty());
+    assert_eq!(decls[0].octave_offset, 2);
+}
+
+#[test]
+fn octave_offset_negative_parses() {
+    let content = "Bass = notes -1\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert!(errors.is_empty());
+    assert_eq!(decls[0].octave_offset, -1);
+}
+
+#[test]
+fn octave_offset_absent_defaults_to_zero() {
+    let content = "Bass = notes\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert!(errors.is_empty());
+    assert_eq!(decls[0].octave_offset, 0);
+}
+
+#[test]
+fn octave_offset_with_soundfont_before() {
+    let content = "G = notes \"5: Guitar\" -2\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert!(errors.is_empty());
+    assert_eq!(decls[0].octave_offset, -2);
+}
+
+#[test]
+fn octave_offset_with_volume() {
+    let content = "B = notes 75% -1\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert!(errors.is_empty());
+    assert_eq!(decls[0].octave_offset, -1);
+    assert_eq!(decls[0].volume, 75);
+}
+
+#[test]
+fn octave_offset_too_large_clamps() {
+    let content = "B = notes +5\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert_eq!(decls[0].octave_offset, 4);
+    assert!(errors.iter().any(|e| {
+        matches!(
+            e.kind,
+            RecoverableErrorKind::PartsOctaveOffsetTooLarge { offset: 5 }
+        )
+    }));
+}
+
+#[test]
+fn octave_offset_follow_part() {
+    let content = "A = notes\nB = follow[A] -1\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert!(errors.is_empty(), "unexpected errors: {errors:?}");
+    assert_eq!(decls[1].octave_offset, -1);
+}

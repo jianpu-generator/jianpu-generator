@@ -34,6 +34,8 @@ pub struct PartDecl {
     pub follow_target: Option<String>,
     pub soundfont: Soundfont,
     pub volume: u8,
+    /// MIDI-only octave shift applied to every note in this part (−4..=+4).
+    pub octave_offset: i8,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -88,6 +90,7 @@ pub struct ParsedTimedTrack {
     pub kind: PartKind,
     pub soundfont: Soundfont,
     pub volume: u8,
+    pub octave_offset: i8,
     pub measure_slots: Vec<ParsedMeasureSlot>,
     pub lyrics: Option<ParsedLyrics>,
     /// Per-measure beat-overflow error (None = no overflow for that measure).

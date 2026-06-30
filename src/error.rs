@@ -430,6 +430,13 @@ impl RecoverableError {
         }
     }
 
+    pub fn parts_octave_offset_too_large(span: Span, offset: i8) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartsOctaveOffsetTooLarge { offset },
+        }
+    }
+
     pub fn parts_follow_unknown_target(span: Span, target: &str) -> Self {
         Self {
             span,

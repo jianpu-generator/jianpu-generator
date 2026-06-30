@@ -111,6 +111,8 @@ pub enum RecoverableErrorKind {
         soundfont: String,
         suggestions: Vec<String>,
     },
+    /// Per-part octave offset exceeds ±4 — clamped to the valid range.
+    PartsOctaveOffsetTooLarge { offset: i8 },
 }
 
 impl RecoverableErrorKind {
@@ -184,15 +186,22 @@ impl RecoverableErrorKind {
                 "the first declared part cannot use follow[...]".to_string()
             }
             Self::PartsUnknownSoundfont { soundfont, suggestions } => {
-                if suggestions.is_empty() {
-                    format!("unknown soundfont \"{soundfont}\"")
-                } else {
-                    format!(
-                        "unknown soundfont \"{soundfont}\". Did you mean:\n  {}",
-                        suggestions.join("\n  ")
-                    )
-                }
+                Self::parts_unknown_soundfont_message(soundfont, suggestions)
             }
+            Self::PartsOctaveOffsetTooLarge { offset } => format!(
+                "octave offset {offset} is out of range; valid range is -4 to +4; clamped"
+            ),
+        }
+    }
+
+    fn parts_unknown_soundfont_message(soundfont: &str, suggestions: &[String]) -> String {
+        if suggestions.is_empty() {
+            format!("unknown soundfont \"{soundfont}\"")
+        } else {
+            format!(
+                "unknown soundfont \"{soundfont}\". Did you mean:\n  {}",
+                suggestions.join("\n  ")
+            )
         }
     }
 }

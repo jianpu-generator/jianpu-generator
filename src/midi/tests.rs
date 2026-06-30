@@ -3,20 +3,22 @@ use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName};
 use midly::{MidiMessage, Smf, TrackEventKind};
 
 fn count_note_on_events(midi_bytes: &[u8]) -> usize {
+    note_on_keys(midi_bytes).len()
+}
+
+fn note_on_keys(midi_bytes: &[u8]) -> Vec<u8> {
     let smf = Smf::parse(midi_bytes).expect("valid MIDI");
     smf.tracks
         .iter()
         .flat_map(|t| t.iter())
-        .filter(|e| {
-            matches!(
-                e.kind,
-                TrackEventKind::Midi {
-                    message: MidiMessage::NoteOn { vel, .. },
-                    ..
-                } if vel.as_int() > 0
-            )
+        .filter_map(|e| match e.kind {
+            TrackEventKind::Midi {
+                message: MidiMessage::NoteOn { key, vel, .. },
+                ..
+            } if vel.as_int() > 0 => Some(key.as_int()),
+            _ => None,
         })
-        .count()
+        .collect()
 }
 
 #[test]
@@ -72,6 +74,7 @@ fn chord_major_expands_to_three_notes() {
                 kind: PartKind::Chords,
                 soundfont: Soundfont::default(),
                 volume: 100,
+                octave_offset: 0,
                 notes: Notes {
                     events: vec![NoteEvent::Chord(chord)],
                 },
@@ -181,6 +184,7 @@ fn one_measure_score() -> Score {
                 kind: PartKind::Notes,
                 soundfont: Soundfont::default(),
                 volume: 100,
+                octave_offset: 0,
                 notes: Notes {
                     events: vec![NoteEvent::Note(GroupedNote {
                         pitch: JianPuPitch::One,
@@ -244,6 +248,7 @@ fn tied_notes_produce_single_note_on() {
             kind: PartKind::Notes,
             soundfont: Soundfont::default(),
             volume: 100,
+            octave_offset: 0,
             notes: Notes {
                 events: vec![make_note(tie_to_next)],
             },
@@ -354,6 +359,7 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
                 kind: PartKind::Notes,
                 soundfont: Soundfont::default(),
                 volume: 100,
+                octave_offset: 0,
                 notes: Notes {
                     events: vec![make_note(true), make_note(false)],
                 },
@@ -400,5 +406,88 @@ fn invalid_measure_range_is_recoverable() {
     assert!(
         write_midi_for_measure_range(&score, 5, 0).is_ok(),
         "invalid measure range (start > end) must not abort MIDI generation"
+    );
+}
+
+fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
+    use crate::ast::grouped::GroupedNote;
+    use crate::ast::grouped::{
+        Metadata, MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
+    };
+    use crate::ast::parsed::{JianPuPitch, PartKind, Soundfont};
+
+    Score {
+        metadata: Metadata {
+            title: String::new(),
+            subtitle: None,
+            author: None,
+            row_height: 24,
+            max_columns: 28,
+            label_width: 40,
+            note_number_width: 8,
+        },
+        measures: vec![MultiPartMeasure {
+            time_signature: Some(TimeSignature {
+                numerator: 4,
+                denominator: 4,
+            }),
+            bpm: Some(120),
+            key: Some(KeyChange {
+                note: Note {
+                    name: NoteName::C,
+                    octave: 4,
+                    accidental: Accidental::Natural,
+                },
+            }),
+            label: None,
+            parts: vec![PartRow::Timed(PartSlice {
+                name: None,
+                kind: PartKind::Notes,
+                soundfont: Soundfont::default(),
+                volume: 100,
+                octave_offset,
+                notes: Notes {
+                    events: vec![NoteEvent::Note(GroupedNote {
+                        pitch: JianPuPitch::One,
+                        accidental: Accidental::Natural,
+                        octave: 0,
+                        duration: 16,
+                        slur: false,
+                        tie_to_next: false,
+                        group_membership: 0,
+                        group_continuation: 0,
+                        dotted: false,
+                        slur_group_close_at_duration: None,
+                    })],
+                },
+                lyrics: None,
+                has_error: false,
+            })],
+            source_span: Span::new(0, 0),
+            diagnostics: vec![],
+        }],
+        document_diagnostics: vec![],
+    }
+}
+
+#[test]
+fn octave_offset_shifts_midi_note_down() {
+    let score = one_note_score_with_octave_offset(-1);
+    let midi_bytes = write_midi(&score).unwrap();
+    assert_eq!(
+        note_on_keys(&midi_bytes),
+        vec![48],
+        "octave offset -1 should shift C4 down to C3 (MIDI 48)"
+    );
+}
+
+#[test]
+fn octave_offset_zero_is_identity() {
+    let score = one_note_score_with_octave_offset(0);
+    let midi_bytes = write_midi(&score).unwrap();
+    assert_eq!(
+        note_on_keys(&midi_bytes),
+        vec![60],
+        "octave offset 0 should leave C4 at MIDI 60"
     );
 }

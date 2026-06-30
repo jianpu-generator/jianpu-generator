@@ -70,6 +70,7 @@ struct RawDecl {
     kind: RawKind,
     soundfont: Soundfont,
     volume: u8,
+    octave_offset: i8,
 }
 
 enum RawKind {
@@ -119,14 +120,14 @@ fn collect_raw_declarations(
             continue;
         }
 
-        let (kind, soundfont, volume) = match parse_rhs(rhs.trim(), line_span, errors, instruments)
-        {
-            Ok(triple) => triple,
-            Err(e) => {
-                errors.push(e);
-                continue;
-            }
-        };
+        let (kind, soundfont, volume, octave_offset) =
+            match parse_rhs(rhs.trim(), line_span, errors, instruments) {
+                Ok(quadruple) => quadruple,
+                Err(e) => {
+                    errors.push(e);
+                    continue;
+                }
+            };
         raw_declarations.push(RawDecl {
             display_name,
             abbreviation,
@@ -134,6 +135,7 @@ fn collect_raw_declarations(
             kind,
             soundfont,
             volume,
+            octave_offset,
         });
     }
 
@@ -150,6 +152,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
             kind,
             soundfont,
             volume,
+            octave_offset,
         } = raw_decl;
         match kind {
             RawKind::Follow(target) => {
@@ -172,6 +175,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                         follow_target: Some(target),
                         soundfont,
                         volume,
+                        octave_offset,
                     }),
                 }
             }
@@ -182,6 +186,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                 follow_target: None,
                 soundfont,
                 volume,
+                octave_offset,
             }),
         }
     }
@@ -287,12 +292,67 @@ fn parse_volume_suffix(s: &str) -> (u8, &str) {
     (100, s)
 }
 
+/// Strips a trailing `+N` or `-N` whitespace-delimited token from `s`, or a standalone
+/// `+N`/`-N` when `s` contains nothing else. Returns (offset, remainder).
+/// Returns (0, s) if no such token found.
+fn parse_octave_offset(s: &str) -> (i8, &str) {
+    let trimmed = s.trim_end();
+    if let Some(ws) = trimmed.rfind(|c: char| c.is_ascii_whitespace()) {
+        let last = &trimmed[ws + 1..];
+        let rest = trimmed[..ws].trim_end();
+        if let Some(d) = last.strip_prefix('+') {
+            if let Ok(n) = d.parse::<i8>() {
+                return (n, rest);
+            }
+        }
+        if let Some(d) = last.strip_prefix('-') {
+            if let Ok(n) = d.parse::<i8>() {
+                return (-n, rest);
+            }
+        }
+    }
+    let standalone = s.trim();
+    if let Some(d) = standalone.strip_prefix('+') {
+        if let Ok(n) = d.parse::<i8>() {
+            return (n, "");
+        }
+    }
+    if let Some(d) = standalone.strip_prefix('-') {
+        if !d.is_empty() {
+            if let Ok(n) = d.parse::<i8>() {
+                return (-n, "");
+            }
+        }
+    }
+    (0, s)
+}
+
+fn parse_rhs_suffixes<'a>(
+    s: &'a str,
+    span: Span,
+    errors: &mut Vec<RecoverableError>,
+) -> (u8, i8, &'a str) {
+    let (volume1, after_vol1) = parse_volume_suffix(s);
+    let (octave, after_oct) = parse_octave_offset(after_vol1);
+    let (volume2, remainder) = parse_volume_suffix(after_oct);
+    let volume = if volume1 != 100 { volume1 } else { volume2 };
+    let octave_offset = if octave.abs() > 4 {
+        errors.push(RecoverableError::parts_octave_offset_too_large(
+            span, octave,
+        ));
+        octave.clamp(-4, 4)
+    } else {
+        octave
+    };
+    (volume, octave_offset, remainder)
+}
+
 fn parse_rhs(
     rhs: &str,
     span: Span,
     errors: &mut Vec<RecoverableError>,
     instruments: &[InstrumentInfo],
-) -> Result<(RawKind, Soundfont, u8), RecoverableError> {
+) -> Result<(RawKind, Soundfont, u8, i8), RecoverableError> {
     if let Some(rest) = rhs.strip_prefix("follow[") {
         if let Some(bracket_end) = rest.find(']') {
             let target = rest[..bracket_end].trim().to_string();
@@ -300,18 +360,19 @@ fn parse_rhs(
                 return Err(RecoverableError::parts_invalid_columns(span, rhs));
             }
             let after_bracket = rest[bracket_end + 1..].trim();
-            let (volume, after_volume) = parse_volume_suffix(after_bracket);
-            let soundfont = if after_volume.trim().is_empty() {
+            let (volume, octave_offset, after_suffixes) =
+                parse_rhs_suffixes(after_bracket, span, errors);
+            let soundfont = if after_suffixes.trim().is_empty() {
                 Soundfont::default()
             } else {
-                parse_soundfont_string(after_volume.trim(), span, rhs, errors, instruments)?
+                parse_soundfont_string(after_suffixes.trim(), span, rhs, errors, instruments)?
             };
-            return Ok((RawKind::Follow(target), soundfont, volume));
+            return Ok((RawKind::Follow(target), soundfont, volume, octave_offset));
         }
     }
 
-    let (volume, rhs_without_volume) = parse_volume_suffix(rhs);
-    let rhs_trimmed = rhs_without_volume.trim();
+    let (volume, octave_offset, rhs_without_suffixes) = parse_rhs_suffixes(rhs, span, errors);
+    let rhs_trimmed = rhs_without_suffixes.trim();
 
     let (kind_token, soundfont) = if let Some(quote_pos) = rhs_trimmed.find('"') {
         let kind_token = rhs_trimmed[..quote_pos].trim();
@@ -328,7 +389,7 @@ fn parse_rhs(
         "notes+lyrics" => PartKind::NotesWithLyrics,
         _ => return Err(RecoverableError::parts_invalid_columns(span, rhs)),
     };
-    Ok((RawKind::Concrete(kind), soundfont, volume))
+    Ok((RawKind::Concrete(kind), soundfont, volume, octave_offset))
 }
 
 #[cfg(test)]

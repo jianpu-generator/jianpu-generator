@@ -77,6 +77,8 @@ An optional soundfont string `"<number>: <name>"` may follow the kind token (or 
 
 An optional volume suffix `XX%` (where XX is 1–100) may appear after the soundfont string (or after the kind token if there is no soundfont) to set the MIDI volume for that part. For example: `notes "52: Choir Aahs" 47%` or `notes 80%`. If omitted, the default is 100%. `follow[X]` parts always inherit their volume from the target part and ignore any explicit volume suffix.
 
+An optional octave offset `+N` or `-N` (where N is 1–4) may appear anywhere on the right-hand side to shift every note in that part up or down by N octaves in MIDI output only. For example: `notes -1`, `notes+lyrics +1`, `notes "5: Electric Guitar" -2`, or `follow[A] -1`. The offset does not change octave dots in the rendered SVG. If omitted, the default is 0. Values outside ±4 emit a recoverable error and are clamped to ±4.
+
 Rules:
 
 - Duplicate abbreviations across tracks are an error.

@@ -520,6 +520,7 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
     let part_abbreviation = part.abbreviation.clone();
     let part_kind = part.kind;
     let part_volume = part.volume;
+    let part_octave_offset = part.octave_offset;
     let mut grouper = PartGrouper::new(&part);
     for slot in part.measure_slots {
         match slot {
@@ -551,6 +552,7 @@ fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, Irrecoverabl
         kind,
         soundfont,
         volume: part_volume,
+        octave_offset: part_octave_offset,
         measures,
     };
     if matches!(part_kind, PartKind::NotesWithLyrics) {

@@ -331,7 +331,7 @@ fn process_measure_notes(
                 midi_notes: vec![resolve_midi_note_with_accidental(
                     &n.pitch,
                     &n.accidental,
-                    n.octave,
+                    n.octave + part.octave_offset,
                     active_key,
                 )],
                 duration: n.duration,
