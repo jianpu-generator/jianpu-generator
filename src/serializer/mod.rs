@@ -146,8 +146,8 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
         }
         SvgKind::TransparentRect { width, height } => {
             out.push_str(&format!(
-                r#"<rect x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" fill="transparent" style="cursor:pointer"/>"#,
-                el.x, el.y, width, height
+                r#"<rect x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" data-variant="{}" fill="transparent" rx="2" style="cursor:pointer"/>"#,
+                el.x, el.y, width, height, el.variant
             ));
         }
         SvgKind::TextWithTspans {
@@ -410,5 +410,28 @@ mod tests {
             "should have red fill at 15% opacity, got: {}",
             result[0]
         );
+    }
+
+    #[test]
+    fn transparent_rect_serializes_with_data_variant_and_rx() {
+        let doc = SvgDocument {
+            width_pt: 100.0,
+            height_pt: 100.0,
+            elements: vec![SvgElement {
+                x: 1.0,
+                y: 2.0,
+                variant: "measure-click-target-rect",
+                kind: SvgKind::TransparentRect {
+                    width: 40.0,
+                    height: 20.0,
+                },
+            }],
+        };
+        let result = serialize(&[doc]);
+        assert!(
+            result[0].contains(r#"data-variant="measure-click-target-rect""#),
+            "should emit data-variant for hover target rects"
+        );
+        assert!(result[0].contains(r#"rx="2""#), "should have corner radius");
     }
 }

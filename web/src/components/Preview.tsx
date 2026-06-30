@@ -78,7 +78,6 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           key={key}
           x={el.x}
           y={el.y}
-          data-variant={el.variant}
           fontSize={kind.font_size}
           textAnchor={
             kind.anchor === 'start'
@@ -107,7 +106,6 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           key={key}
           x={el.x}
           y={el.y}
-          data-variant={el.variant}
           fontSize={kind.font_size}
           textAnchor={
             kind.anchor === 'start'
@@ -146,28 +144,17 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           y1={el.y}
           x2={kind.x2}
           y2={kind.y2}
-          data-variant={el.variant}
           stroke="black"
           strokeWidth={kind.stroke_width}
         />
       )
     case 'circle':
-      return (
-        <circle
-          key={key}
-          cx={el.x}
-          cy={el.y}
-          data-variant={el.variant}
-          r={kind.r}
-          fill="black"
-        />
-      )
+      return <circle key={key} cx={el.x} cy={el.y} r={kind.r} fill="black" />
     case 'path':
       return (
         <path
           key={key}
           d={`M ${el.x} ${el.y} Q ${kind.control_x} ${kind.control_y} ${kind.end_x} ${kind.end_y}`}
-          data-variant={el.variant}
           fill="none"
           stroke="black"
           strokeWidth={kind.stroke_width}

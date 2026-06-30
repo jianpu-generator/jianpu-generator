@@ -6,6 +6,9 @@ use crate::compositor::types::{
 use crate::render_config::RenderConfig;
 use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, Tag, TspanData};
 
+/// Placeholder for `SvgElement.variant` when the variant is not emitted to DOM.
+const UNUSED_VARIANT: &str = "group";
+
 pub fn render_new(pages: &[AbsolutePage], config: &RenderConfig) -> Vec<SvgDocument> {
     pages.iter().map(|page| render_page(page, config)).collect()
 }
@@ -98,7 +101,7 @@ fn render_element(
         AbsoluteContent::MeasureHighlight { width, height } => vec![SvgElement {
             x: elem.x,
             y: elem.y,
-            variant: "measure-highlight",
+            variant: UNUSED_VARIANT,
             kind: SvgKind::Rect {
                 width: *width,
                 height: *height,
@@ -107,7 +110,7 @@ fn render_element(
         AbsoluteContent::ErrorHighlight { width, height } => vec![SvgElement {
             x: elem.x,
             y: elem.y,
-            variant: "error-highlight",
+            variant: UNUSED_VARIANT,
             kind: SvgKind::ErrorRect {
                 width: *width,
                 height: *height,
@@ -163,7 +166,7 @@ fn render_directive_line(
         vec![SvgElement {
             x: elem.x,
             y: elem.y,
-            variant: "section-label",
+            variant: UNUSED_VARIANT,
             kind: SvgKind::Group {
                 tag: Some(Tag::SectionLabel {
                     label: label_str.clone(),
@@ -196,7 +199,7 @@ fn render_measure_click_target(
     vec![SvgElement {
         x: elem.x,
         y: elem.y,
-        variant: "measure-click-target",
+        variant: UNUSED_VARIANT,
         kind: SvgKind::Group {
             children: vec![SvgElement {
                 x: elem.x,
