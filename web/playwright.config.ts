@@ -9,8 +9,12 @@ export default defineConfig({
     // Skip `predev` (wasm-pack) since the pkg is already built; just start Vite.
     command: 'pnpm exec vite',
     url: 'http://localhost:5173',
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
     timeout: 60_000,
+    env: {
+      ...process.env,
+      VITE_ENABLE_GITHUB_SYNC: 'true',
+    },
   },
   projects: [
     {

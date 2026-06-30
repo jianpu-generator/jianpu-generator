@@ -26,6 +26,18 @@
   color: var(--muted);
 }
 
+.github-store-status {
+  padding: 0.45rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.github-store-status--error {
+  color: #b91c1c;
+}
+
 .workspace {
   display: flex;
   flex: 1;

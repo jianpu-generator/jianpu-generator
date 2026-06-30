@@ -1,0 +1,15 @@
+.sync-status-indicator {
+  padding: 0.35rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.sync-status-indicator--saved {
+  color: #15803d;
+}
+
+.sync-status-indicator--error {
+  color: #b91c1c;
+}

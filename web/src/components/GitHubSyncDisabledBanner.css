@@ -1,0 +1,40 @@
+.github-sync-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 85%, #dbeafe);
+  color: #374151;
+  font-size: 0.85rem;
+}
+
+.github-sync-banner__text {
+  margin: 0;
+}
+
+.github-sync-banner__link {
+  color: #1d4ed8;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.github-sync-banner__link:hover {
+  color: #1e40af;
+}
+
+.github-sync-banner__dismiss {
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+}
+
+.github-sync-banner__dismiss:hover {
+  color: #374151;
+}

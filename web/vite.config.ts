@@ -182,6 +182,9 @@ function serveFontsPlugin(): Plugin {
 export default defineConfig({
   base: process.env.VITE_BASE_PATH ?? '/',
   plugins: [react(), wasmDevPlugin(), serveFontsPlugin(), copyFontsPlugin()],
+  test: {
+    include: ['src/**/*.test.ts'],
+  },
   resolve: {
     alias: {
       'jianpu-wasm': path.resolve(

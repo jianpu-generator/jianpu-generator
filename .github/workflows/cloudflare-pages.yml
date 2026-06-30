@@ -1,4 +1,4 @@
-name: Deploy web to GitHub Pages
+name: Deploy web to Cloudflare Pages
 
 on:
   push:
@@ -7,15 +7,13 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: cloudflare-pages
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,23 +39,14 @@ jobs:
       - name: Build
         working-directory: web
         env:
-          VITE_BASE_PATH: /jianpu-generator/
-          VITE_ENABLE_GITHUB_SYNC: 'false'
+          VITE_BASE_PATH: /
+          VITE_ENABLE_GITHUB_SYNC: 'true'
         run: pnpm build
 
-      - name: Add .nojekyll
-        run: touch web/dist/.nojekyll
-
-      - uses: actions/upload-pages-artifact@v3
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
         with:
-          path: web/dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/deploy-pages@v4
-        id: deployment
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: web
+          command: pages deploy dist --project-name=jianpu-generator

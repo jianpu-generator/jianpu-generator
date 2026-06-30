@@ -1,4 +1,6 @@
-export const PART_TOGGLES_KEY = 'jianpu:part-toggles:v1'
+export const LEGACY_PART_TOGGLES_KEY = 'jianpu:part-toggles:v1'
+
+export type PartToggleWorkspace = 'local' | 'github'
 
 export interface PartToggleState {
   disabledParts: string[]
@@ -8,9 +10,19 @@ export interface PartToggleState {
 
 type PartToggleCache = Record<string, PartToggleState>
 
-function readCache(): PartToggleCache {
+function partTogglesStorageKey(workspace: PartToggleWorkspace): string {
+  return workspace === 'local'
+    ? 'jianpu:part-toggles:local'
+    : 'jianpu:part-toggles:github'
+}
+
+function readCache(workspace: PartToggleWorkspace): PartToggleCache {
   try {
-    const raw = localStorage.getItem(PART_TOGGLES_KEY)
+    const key = partTogglesStorageKey(workspace)
+    let raw = localStorage.getItem(key)
+    if (raw == null && workspace === 'local') {
+      raw = localStorage.getItem(LEGACY_PART_TOGGLES_KEY)
+    }
     if (raw != null) {
       const parsed = JSON.parse(raw) as PartToggleCache
       if (parsed && typeof parsed === 'object') return parsed
@@ -21,8 +33,11 @@ function readCache(): PartToggleCache {
   return {}
 }
 
-export function readPartTogglesForFile(fileId: string): PartToggleState | null {
-  const entry = readCache()[fileId]
+export function readPartTogglesForFile(
+  fileId: string,
+  workspace: PartToggleWorkspace = 'local',
+): PartToggleState | null {
+  const entry = readCache(workspace)[fileId]
   if (entry == null) return null
   return {
     disabledParts: entry.disabledParts ?? [],
@@ -34,11 +49,15 @@ export function readPartTogglesForFile(fileId: string): PartToggleState | null {
 export function writePartTogglesForFile(
   fileId: string,
   state: PartToggleState,
+  workspace: PartToggleWorkspace = 'local',
 ): void {
   try {
-    const cache = readCache()
+    const cache = readCache(workspace)
     cache[fileId] = state
-    localStorage.setItem(PART_TOGGLES_KEY, JSON.stringify(cache))
+    localStorage.setItem(
+      partTogglesStorageKey(workspace),
+      JSON.stringify(cache),
+    )
   } catch {
     // ignore quota errors
   }

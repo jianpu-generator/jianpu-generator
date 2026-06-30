@@ -4,9 +4,17 @@ import { EditMetadataModal } from './components/EditMetadataModal'
 import { Editor } from './components/Editor'
 import { EditPartsModal } from './components/EditPartsModal'
 import { FileTabBar } from './components/FileList'
+import { GitHubConnectPrompt } from './components/GitHubConnectPrompt'
+import { GitHubSyncDisabledBanner } from './components/GitHubSyncDisabledBanner'
 import { PartToggles } from './components/PartToggles'
 import { PlayMeasureButton } from './components/PlayMeasureButton'
 import { Preview } from './components/Preview'
+import { SyncStatusIndicator } from './components/SyncStatusIndicator'
+import {
+  type Workspace,
+  WorkspaceSwitcher,
+} from './components/WorkspaceSwitcher'
+import { enableGitHubSync } from './env'
 import {
   createFile,
   deleteFile,
@@ -20,10 +28,14 @@ import {
   updateActiveContent,
 } from './fileStore'
 import { useAssetLoader } from './hooks/useAssetLoader'
-import { useFileStore } from './hooks/useFileStore'
 import { useFontsLoader } from './hooks/useFontsLoader'
+import { useGitHubAutosave } from './hooks/useGitHubAutosave'
+import { useGitHubFileStore } from './hooks/useGitHubFileStore'
+import { useGitHubSession } from './hooks/useGitHubSession'
 import { useJianpuWorker } from './hooks/useJianpuWorker'
+import { useLocalFileStore } from './hooks/useLocalFileStore'
 import {
+  type PartToggleWorkspace,
   readPartTogglesForFile,
   writePartTogglesForFile,
 } from './partToggleCache'
@@ -42,21 +54,60 @@ import './preview.css'
 const shortcutLabel = navigator.platform.startsWith('Mac') ? '⌘↵' : 'Ctrl+↵'
 
 export default function App() {
-  const [store, setStore] = useFileStore()
+  const [workspace, setWorkspace] = useState<Workspace>('local')
+  const partToggleWorkspace: PartToggleWorkspace = workspace
+  const [localStore, setLocalStore] = useLocalFileStore()
+  const githubSession = useGitHubSession()
+  const [githubStore, setGithubStore, githubStoreMeta] = useGitHubFileStore(
+    githubSession.connected,
+  )
+  const usingGitHubWorkspace = enableGitHubSync && workspace === 'github'
+  const githubReady = usingGitHubWorkspace && githubSession.connected
+  const store = usingGitHubWorkspace ? githubStore : localStore
+  const setStore = usingGitHubWorkspace ? setGithubStore : setLocalStore
+  const [syncBaselineToken, setSyncBaselineToken] = useState(0)
+  const prevUsingGitHubRef = useRef(false)
+
+  useEffect(() => {
+    const enteredGitHub = usingGitHubWorkspace && !prevUsingGitHubRef.current
+    prevUsingGitHubRef.current = usingGitHubWorkspace
+
+    if (!enteredGitHub || !githubSession.connected) {
+      return
+    }
+
+    let cancelled = false
+    void githubStoreMeta.refresh().then(() => {
+      if (!cancelled) {
+        setSyncBaselineToken((token) => token + 1)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [usingGitHubWorkspace, githubSession.connected, githubStoreMeta.refresh])
+
+  const autosave = useGitHubAutosave(
+    githubReady && !githubStoreMeta.loading,
+    githubStore,
+    syncBaselineToken,
+    githubStoreMeta.loading,
+  )
   const source = fileContent(store, store.active)
   const readOnly = isReadOnlyFile(store.active)
   const fileId = fileIdForName(store, store.active)
 
   const [disabledParts, setDisabledParts] = useState<Set<string>>(() => {
-    const cached = readPartTogglesForFile(fileId)
+    const cached = readPartTogglesForFile(fileId, partToggleWorkspace)
     return new Set(cached?.disabledParts ?? [])
   })
   const [disabledLyrics, setDisabledLyrics] = useState<Set<string>>(() => {
-    const cached = readPartTogglesForFile(fileId)
+    const cached = readPartTogglesForFile(fileId, partToggleWorkspace)
     return new Set(cached?.disabledLyrics ?? [])
   })
   const [soloedParts, setSoloedParts] = useState<Set<string>>(() => {
-    const cached = readPartTogglesForFile(fileId)
+    const cached = readPartTogglesForFile(fileId, partToggleWorkspace)
     return new Set(cached?.soloedParts ?? [])
   })
   const [editPartsOpen, setEditPartsOpen] = useState(false)
@@ -113,23 +164,27 @@ export default function App() {
 
   useEffect(() => {
     skipToggleSaveRef.current = true
-    const cached = readPartTogglesForFile(fileId)
+    const cached = readPartTogglesForFile(fileId, partToggleWorkspace)
     setDisabledParts(new Set(cached?.disabledParts ?? []))
     setDisabledLyrics(new Set(cached?.disabledLyrics ?? []))
     setSoloedParts(new Set(cached?.soloedParts ?? []))
-  }, [fileId])
+  }, [fileId, partToggleWorkspace])
 
   useEffect(() => {
     if (skipToggleSaveRef.current) {
       skipToggleSaveRef.current = false
       return
     }
-    writePartTogglesForFile(fileId, {
-      disabledParts: [...disabledParts],
-      disabledLyrics: [...disabledLyrics],
-      soloedParts: [...soloedParts],
-    })
-  }, [fileId, disabledParts, disabledLyrics, soloedParts])
+    writePartTogglesForFile(
+      fileId,
+      {
+        disabledParts: [...disabledParts],
+        disabledLyrics: [...disabledLyrics],
+        soloedParts: [...soloedParts],
+      },
+      partToggleWorkspace,
+    )
+  }, [fileId, partToggleWorkspace, disabledParts, disabledLyrics, soloedParts])
 
   useEffect(() => {
     if (parts.length === 0) return
@@ -404,19 +459,43 @@ export default function App() {
         fontsLoadedBytes={fonts.loadedBytes}
         fontsTotalBytes={fonts.totalBytes}
       />
+      <GitHubSyncDisabledBanner />
       <header className="app-header">
         <h1>簡譜</h1>
         <span className="app-subtitle">live preview</span>
       </header>
-      <FileTabBar
-        store={store}
-        onSelect={handleSelect}
-        onCreate={handleCreate}
-        onDuplicate={handleDuplicate}
-        onRename={handleRename}
-        onDelete={handleDelete}
-        onRestore={handleRestore}
-      />
+      <WorkspaceSwitcher value={workspace} onValueChange={setWorkspace} />
+      {githubReady ? (
+        <SyncStatusIndicator status={autosave.status} error={autosave.error} />
+      ) : null}
+      {usingGitHubWorkspace && !githubSession.connected ? (
+        <GitHubConnectPrompt />
+      ) : (
+        <>
+          {githubReady && githubStoreMeta.loading ? (
+            <div className="github-store-status" role="status">
+              Loading GitHub scores…
+            </div>
+          ) : null}
+          {githubReady && githubStoreMeta.error ? (
+            <div
+              className="github-store-status github-store-status--error"
+              role="alert"
+            >
+              {githubStoreMeta.error}
+            </div>
+          ) : null}
+          <FileTabBar
+            store={store}
+            onSelect={handleSelect}
+            onCreate={handleCreate}
+            onDuplicate={handleDuplicate}
+            onRename={handleRename}
+            onDelete={handleDelete}
+            onRestore={handleRestore}
+          />
+        </>
+      )}
       <span
         data-testid="selected-measure-range"
         aria-hidden="true"
