@@ -149,7 +149,7 @@ impl RecoverableErrorKind {
             Self::PartsEmptyAbbreviation => "abbreviation cannot be empty".to_string(),
             Self::PartsEmptyTrackName => "track name cannot be empty".to_string(),
             Self::PartsInvalidColumns { rhs } => format!(
-                "invalid track columns '{rhs}': expected 'chord', 'notes', 'notes lyrics', 'lyrics notes', or 'notes chord'"
+                "invalid track columns '{rhs}': expected 'chords', 'notes', 'notes+lyrics', or 'follow[X]'"
             ),
             Self::SectionUnknown { name } => format!("unknown section: # {name}"),
             Self::SectionDuplicate { section } => format!("duplicate {} section", section.header()),
@@ -177,7 +177,9 @@ impl RecoverableErrorKind {
             Self::DanglingTie => "~ has no following note to tie to; ~ ignored".to_string(),
             Self::TiePitchMismatch { expected, got } => format!("tied notes must have the same pitch and octave; expected {expected}, got {got}; ~ ignored"),
             Self::PartsFollowUnknownTarget { target } => {
-                format!("follow[{target}]: unknown part abbreviation")
+                format!(
+                    "no part with abbreviation '{target}'; follow targets must match a part declared earlier in #parts"
+                )
             }
             Self::PartsFollowTargetAfterFollower { target } => {
                 format!("follow[{target}]: target must be declared before the follower")

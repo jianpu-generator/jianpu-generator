@@ -141,6 +141,10 @@ fn follow_unknown_target_emits_error() {
         errors[0].kind,
         RecoverableErrorKind::PartsFollowUnknownTarget { ref target } if target == "UNKNOWN"
     ));
+    assert_eq!(
+        errors[0].message(),
+        "no part with abbreviation 'UNKNOWN'; follow targets must match a part declared earlier in #parts"
+    );
     let unknown_start = content.find("UNKNOWN").expect("UNKNOWN in source");
     assert_eq!(errors[0].span.start, unknown_start);
     assert_eq!(errors[0].span.end, unknown_start + "UNKNOWN".len());
