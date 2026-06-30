@@ -21,11 +21,24 @@ export interface EditPartsModalProps {
     followTarget: string | null,
     soundfont: SoundfontValue | null,
     volume: number | null,
+    octaveOffset: number | null,
   ) => void
   previewInstrument: (programNumber: number) => void
   stopPreviewInstrument: () => void
   previewAudioPlaying: boolean
 }
+
+const OCTAVE_OPTIONS = [
+  { value: '4', label: '+4' },
+  { value: '3', label: '+3' },
+  { value: '2', label: '+2' },
+  { value: '1', label: '+1' },
+  { value: '0', label: '0' },
+  { value: '-1', label: '-1' },
+  { value: '-2', label: '-2' },
+  { value: '-3', label: '-3' },
+  { value: '-4', label: '-4' },
+] as const
 
 function PartRow({
   declaration,
@@ -65,6 +78,7 @@ function PartRow({
         defaultTarget,
         declaration.soundfont,
         declaration.volume,
+        declaration.octaveOffset,
       )
     } else {
       onPartDeclarationChange(
@@ -73,6 +87,7 @@ function PartRow({
         null,
         declaration.soundfont,
         declaration.volume,
+        declaration.octaveOffset,
       )
     }
   }
@@ -84,6 +99,7 @@ function PartRow({
       target,
       declaration.soundfont,
       declaration.volume,
+      declaration.octaveOffset,
     )
   }
 
@@ -95,6 +111,7 @@ function PartRow({
       declaration.followTarget,
       newSoundfont,
       declaration.volume,
+      declaration.octaveOffset,
     )
   }
 
@@ -106,6 +123,20 @@ function PartRow({
       declaration.followTarget,
       declaration.soundfont,
       newVolume,
+      declaration.octaveOffset,
+    )
+  }
+
+  function handleOctaveChange(value: string) {
+    const parsed = parseInt(value, 10)
+    const newOctaveOffset = parsed === 0 ? null : parsed
+    onPartDeclarationChange(
+      declaration.abbreviation,
+      declaration.mode,
+      declaration.followTarget,
+      declaration.soundfont,
+      declaration.volume,
+      newOctaveOffset,
     )
   }
 
@@ -252,6 +283,20 @@ function PartRow({
             {declaration.volume ?? 100}%
           </span>
         </div>
+      </td>
+      <td style={tdStyle}>
+        <RadixSelect
+          value={String(declaration.octaveOffset ?? 0)}
+          onValueChange={handleOctaveChange}
+          placeholder="octave"
+          testId={`octave-select-${declaration.abbreviation}`}
+        >
+          {OCTAVE_OPTIONS.map((option) => (
+            <RadixSelectItem key={option.value} value={option.value}>
+              {option.label}
+            </RadixSelectItem>
+          ))}
+        </RadixSelect>
       </td>
     </tr>
   )
@@ -451,11 +496,12 @@ export function EditPartsModal({
               }}
             >
               <colgroup>
-                <col style={{ width: '18%' }} />
-                <col style={{ width: '10%' }} />
-                <col style={{ width: '28%' }} />
+                <col style={{ width: '16%' }} />
+                <col style={{ width: '8%' }} />
                 <col style={{ width: '24%' }} />
-                <col style={{ width: '20%' }} />
+                <col style={{ width: '22%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '12%' }} />
               </colgroup>
               <thead>
                 <tr>
@@ -464,6 +510,7 @@ export function EditPartsModal({
                   <th style={thStyle}>Kind / Follow</th>
                   <th style={thStyle}>Soundfont</th>
                   <th style={thStyle}>Volume</th>
+                  <th style={thStyle}>Octave</th>
                 </tr>
               </thead>
               <tbody>

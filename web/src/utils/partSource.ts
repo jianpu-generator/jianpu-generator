@@ -11,6 +11,7 @@ export interface ParsedPartDeclaration {
   followTarget: string | null
   soundfont: SoundfontValue | null
   volume: number | null
+  octaveOffset: number | null
 }
 
 function parseVolumeSuffix(s: string): { volume: number | null; rest: string } {
@@ -25,11 +26,66 @@ function parseVolumeSuffix(s: string): { volume: number | null; rest: string } {
   return { volume: null, rest: s }
 }
 
+function parseOctaveToken(token: string): number | null {
+  if (/^\+\d+$/.test(token)) {
+    const value = parseInt(token.slice(1), 10)
+    return Number.isNaN(value) ? null : value
+  }
+  if (/^-\d+$/.test(token)) {
+    const value = parseInt(token.slice(1), 10)
+    return Number.isNaN(value) ? null : -value
+  }
+  return null
+}
+
+function parseOctaveSuffix(s: string): {
+  octaveOffset: number | null
+  rest: string
+} {
+  const trimmed = s.trimEnd()
+  const match = trimmed.match(/^(.*?)\s+([+-]\d+)$/)
+  if (match) {
+    const octaveOffset = parseOctaveToken(match[2])
+    if (octaveOffset !== null) {
+      return {
+        octaveOffset: octaveOffset === 0 ? null : octaveOffset,
+        rest: match[1],
+      }
+    }
+  }
+  return { octaveOffset: null, rest: s }
+}
+
+function stripSuffixes(s: string): {
+  volume: number | null
+  octaveOffset: number | null
+  rest: string
+} {
+  let rest = s
+  let volume: number | null = null
+  let octaveOffset: number | null = null
+
+  for (let pass = 0; pass < 2; pass++) {
+    const volumeResult = parseVolumeSuffix(rest)
+    rest = volumeResult.rest
+    if (volumeResult.volume !== null) volume = volumeResult.volume
+
+    const octaveResult = parseOctaveSuffix(rest)
+    rest = octaveResult.rest
+    if (octaveResult.octaveOffset !== null) {
+      octaveOffset = octaveResult.octaveOffset
+    }
+  }
+
+  return { volume, octaveOffset, rest }
+}
+
 function parseRhs(rhs: string): {
   mode: PartMode
   followTarget: string | null
   soundfont: SoundfontValue | null
   volume: number | null
+  octaveOffset: number | null
 } {
   const remaining = rhs.trim()
 
@@ -37,18 +93,20 @@ function parseRhs(rhs: string): {
   let followTarget: string | null = null
   let soundfont: SoundfontValue | null = null
   let volume: number | null = null
+  let octaveOffset: number | null = null
 
   if (remaining.startsWith('follow[')) {
-    const { volume: parsedVolume, rest } = parseVolumeSuffix(remaining)
-    volume = parsedVolume
+    const suffixes = stripSuffixes(remaining)
+    volume = suffixes.volume
+    octaveOffset = suffixes.octaveOffset
     mode = 'follow'
-    const match = rest.match(/^follow\[([^\]]+)\]/)
+    const match = suffixes.rest.match(/^follow\[([^\]]+)\]/)
     followTarget = match?.[1] ?? null
   } else {
-    const { volume: parsedVolume, rest: withoutVolume } =
-      parseVolumeSuffix(remaining)
-    volume = parsedVolume
-    const trimmedRhs = withoutVolume.trim()
+    const suffixes = stripSuffixes(remaining)
+    volume = suffixes.volume
+    octaveOffset = suffixes.octaveOffset
+    const trimmedRhs = suffixes.rest.trim()
     const quotePos = trimmedRhs.indexOf('"')
     let kindToken: string
     if (quotePos !== -1) {
@@ -70,7 +128,7 @@ function parseRhs(rhs: string): {
     }
   }
 
-  return { mode, followTarget, soundfont, volume }
+  return { mode, followTarget, soundfont, volume, octaveOffset }
 }
 
 function findPartsSection(lines: string[]): {
@@ -110,9 +168,12 @@ export function parsePartDeclarations(
         followTarget: null,
         soundfont: null,
         volume: null,
+        octaveOffset: null,
       }
     }
-    const { mode, followTarget, soundfont, volume } = parseRhs(partLine.rhs)
+    const { mode, followTarget, soundfont, volume, octaveOffset } = parseRhs(
+      partLine.rhs,
+    )
     return {
       abbreviation: part.abbreviation,
       lineNumber: partLine.index + 1,
@@ -120,6 +181,7 @@ export function parsePartDeclarations(
       followTarget,
       soundfont,
       volume,
+      octaveOffset,
     }
   })
 }
@@ -131,6 +193,7 @@ export function updatePartDeclaration(
   newFollowTarget: string | null,
   newSoundfont: SoundfontValue | null,
   newVolume: number | null,
+  newOctaveOffset: number | null,
 ): string {
   const lines = source.split('\n')
   const partsIndex = lines.findIndex((line) => line.trim() === '# parts')
@@ -164,7 +227,11 @@ export function updatePartDeclaration(
   const soundfontSuffix = newSoundfont != null ? ` "${newSoundfont}"` : ''
   const volumeSuffix =
     newVolume != null && newVolume !== 100 ? ` ${newVolume}%` : ''
-  const newLine = `${lhsWithEq} ${modeStr}${soundfontSuffix}${volumeSuffix}`
+  const octaveSuffix =
+    newOctaveOffset != null && newOctaveOffset !== 0
+      ? ` ${newOctaveOffset > 0 ? `+${newOctaveOffset}` : newOctaveOffset}`
+      : ''
+  const newLine = `${lhsWithEq} ${modeStr}${soundfontSuffix}${volumeSuffix}${octaveSuffix}`
 
   return lines.map((l, i) => (i === targetIndex ? newLine : l)).join('\n')
 }

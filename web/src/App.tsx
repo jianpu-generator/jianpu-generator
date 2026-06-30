@@ -290,6 +290,7 @@ export default function App() {
       followTarget: string | null,
       soundfont: SoundfontValue | null,
       volume: number | null,
+      octaveOffset: number | null,
     ) => {
       const newSource = updatePartDeclaration(
         source,
@@ -298,6 +299,7 @@ export default function App() {
         followTarget,
         soundfont,
         volume,
+        octaveOffset,
       )
       handleSourceChange(newSource)
     },

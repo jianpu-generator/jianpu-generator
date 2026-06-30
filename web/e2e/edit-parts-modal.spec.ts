@@ -38,6 +38,33 @@ async function openEditPartsModal(page: import('@playwright/test').Page) {
   await page.getByTestId('edit-parts-modal').waitFor({ state: 'visible' })
 }
 
+async function getEditorSource(page: import('@playwright/test').Page) {
+  return page.evaluate(() => {
+    const editors = (
+      window as unknown as {
+        monaco?: {
+          editor?: {
+            getEditors?: () => { getValue?: () => string }[]
+          }
+        }
+      }
+    ).monaco?.editor?.getEditors?.()
+    return editors?.[0]?.getValue?.() ?? ''
+  })
+}
+
+async function getStoredSource(page: import('@playwright/test').Page) {
+  return page.evaluate(() => {
+    const raw = localStorage.getItem('jianpu:files:v1')
+    if (!raw) return ''
+    const store = JSON.parse(raw) as {
+      active: string
+      userFiles: Record<string, string>
+    }
+    return store.userFiles[store.active] ?? ''
+  })
+}
+
 test('CodeLens Edit Parts link opens the modal', async ({ page }) => {
   await loadSource(page)
   await page.goto('/')
@@ -78,6 +105,30 @@ test('soundfont select changes the instrument for a part', async ({ page }) => {
   await page.getByRole('option', { name: '40: Violin' }).click()
 
   await expect(soundfontSelect).toContainText('40: Violin')
+})
+
+test('octave select changes the MIDI octave offset for a part', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.goto('/')
+
+  await openEditPartsModal(page)
+
+  const octaveSelect = page.getByTestId('octave-select-M')
+  await expect(octaveSelect).toContainText('0')
+
+  await octaveSelect.click()
+  await page.getByRole('option', { name: '-1', exact: true }).click()
+
+  await expect(octaveSelect).toContainText('-1')
+
+  await page.keyboard.press('Escape')
+  await page.getByTestId('edit-parts-modal').waitFor({ state: 'hidden' })
+
+  const expectedLine = 'Melody [M] = notes+lyrics -1'
+  await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
+  await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })
 
 test('changing soundfont via modal preserves the editor selection', async ({
