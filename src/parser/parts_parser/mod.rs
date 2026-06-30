@@ -1,5 +1,14 @@
+mod lexer;
+
 use crate::ast::parsed::{PartDecl, PartKind, Soundfont};
-use crate::error::{RecoverableError, Span};
+use crate::error::{RecoverableError, Span, Spanned};
+
+use lexer::{lex_line, PartsToken};
+
+#[cfg(test)]
+mod lexer_tests;
+#[cfg(test)]
+mod tests;
 
 #[derive(serde::Deserialize)]
 pub struct InstrumentInfo {
@@ -78,11 +87,22 @@ struct RawDecl {
 
 enum RawKind {
     Concrete(PartKind),
-    Follow(String),
+    Follow { target: String, target_span: Span },
 }
 
 struct ParsedPartRhs {
     kind: RawKind,
+    soundfont: Option<Soundfont>,
+    volume: Option<u8>,
+    octave_offset: Option<i8>,
+}
+
+struct LhsParsed {
+    display_name: String,
+    abbreviation: String,
+}
+
+struct RhsSuffixes {
     soundfont: Option<Soundfont>,
     volume: Option<u8>,
     octave_offset: Option<i8>,
@@ -106,54 +126,259 @@ fn collect_raw_declarations(
             continue;
         }
         let line_span = Span::new(line_start, line_start + line.len());
+        let trimmed_start = line_start + (line.len() - line.trim_start().len());
 
-        let (lhs, rhs) = match trimmed.split_once('=') {
-            Some(pair) => pair,
-            None => {
-                errors.push(RecoverableError::parts_malformed_line(line_span, trimmed));
+        let tokens = match lex_line(trimmed, trimmed_start, line_span) {
+            Ok(tokens) => tokens,
+            Err(error) => {
+                errors.push(error);
                 continue;
             }
         };
 
-        let (display_name, abbreviation) = match parse_lhs(lhs.trim(), line_span) {
-            Ok(pair) => pair,
-            Err(e) => {
-                errors.push(e);
-                continue;
-            }
+        let Some(raw_decl) = parse_declaration_line(&tokens, line_span, errors, instruments) else {
+            continue;
         };
-        if !seen_abbreviations.insert(abbreviation.clone()) {
+
+        if !seen_abbreviations.insert(raw_decl.abbreviation.clone()) {
             errors.push(RecoverableError::parts_duplicate_abbreviation(
                 line_span,
-                &abbreviation,
+                &raw_decl.abbreviation,
             ));
             continue;
         }
 
-        let ParsedPartRhs {
-            kind,
-            soundfont,
-            volume,
-            octave_offset,
-        } = match parse_rhs(rhs.trim(), line_span, errors, instruments) {
-            Ok(parsed) => parsed,
-            Err(e) => {
-                errors.push(e);
-                continue;
-            }
-        };
-        raw_declarations.push(RawDecl {
-            display_name,
-            abbreviation,
-            span: line_span,
-            kind,
-            soundfont,
-            volume,
-            octave_offset,
-        });
+        raw_declarations.push(raw_decl);
     }
 
     raw_declarations
+}
+
+fn parse_declaration_line(
+    tokens: &[Spanned<PartsToken>],
+    line_span: Span,
+    errors: &mut Vec<RecoverableError>,
+    instruments: &[InstrumentInfo],
+) -> Option<RawDecl> {
+    let equals_index = tokens
+        .iter()
+        .position(|token| matches!(token.value, PartsToken::Equals))?;
+
+    let lhs_tokens = tokens.get(..equals_index)?;
+    let rhs_tokens = tokens.get(equals_index + 1..)?;
+
+    let LhsParsed {
+        display_name,
+        abbreviation,
+    } = match parse_lhs_tokens(lhs_tokens, line_span) {
+        Ok(parsed) => parsed,
+        Err(error) => {
+            errors.push(error);
+            return None;
+        }
+    };
+
+    let ParsedPartRhs {
+        kind,
+        soundfont,
+        volume,
+        octave_offset,
+    } = match parse_rhs_tokens(rhs_tokens, line_span, errors, instruments) {
+        Ok(parsed) => parsed,
+        Err(error) => {
+            errors.push(error);
+            return None;
+        }
+    };
+
+    Some(RawDecl {
+        display_name,
+        abbreviation,
+        span: line_span,
+        kind,
+        soundfont,
+        volume,
+        octave_offset,
+    })
+}
+
+fn parse_lhs_tokens(
+    tokens: &[Spanned<PartsToken>],
+    span: Span,
+) -> Result<LhsParsed, RecoverableError> {
+    if tokens.is_empty() {
+        return Err(RecoverableError::parts_empty_track_name(span));
+    }
+
+    match tokens {
+        [Spanned {
+            value: PartsToken::Name(display_name),
+            ..
+        }] => {
+            if display_name.is_empty() {
+                return Err(RecoverableError::parts_empty_track_name(span));
+            }
+            Ok(LhsParsed {
+                display_name: display_name.clone(),
+                abbreviation: display_name.clone(),
+            })
+        }
+        [Spanned {
+            value: PartsToken::Name(display_name),
+            ..
+        }, Spanned {
+            value: PartsToken::LBracket,
+            ..
+        }, Spanned {
+            value: PartsToken::Abbreviation(abbreviation),
+            ..
+        }, Spanned {
+            value: PartsToken::RBracket,
+            ..
+        }] => {
+            if display_name.is_empty() {
+                return Err(RecoverableError::parts_empty_display_name(span));
+            }
+            if abbreviation.is_empty() {
+                return Err(RecoverableError::parts_empty_abbreviation(span));
+            }
+            Ok(LhsParsed {
+                display_name: display_name.clone(),
+                abbreviation: abbreviation.clone(),
+            })
+        }
+        _ => Err(RecoverableError::parts_invalid_columns(span, "")),
+    }
+}
+
+fn parse_rhs_tokens(
+    tokens: &[Spanned<PartsToken>],
+    span: Span,
+    errors: &mut Vec<RecoverableError>,
+    instruments: &[InstrumentInfo],
+) -> Result<ParsedPartRhs, RecoverableError> {
+    if tokens.is_empty() {
+        return Err(RecoverableError::parts_invalid_columns(span, ""));
+    }
+
+    let first = tokens
+        .first()
+        .ok_or_else(|| RecoverableError::parts_invalid_columns(span, ""))?;
+    let (head, suffix_tokens) = match &first.value {
+        PartsToken::Kind(kind) => (
+            RawKind::Concrete(*kind),
+            tokens.get(1..).unwrap_or_default(),
+        ),
+        PartsToken::Follow => {
+            let Some(Spanned {
+                value: PartsToken::FollowTarget(target),
+                span: target_span,
+            }) = tokens.get(1)
+            else {
+                return Err(RecoverableError::parts_invalid_columns(span, ""));
+            };
+            if target.is_empty() {
+                return Err(RecoverableError::parts_invalid_columns(span, ""));
+            }
+            (
+                RawKind::Follow {
+                    target: target.clone(),
+                    target_span: *target_span,
+                },
+                tokens.get(2..).unwrap_or_default(),
+            )
+        }
+        _ => return Err(RecoverableError::parts_invalid_columns(span, "")),
+    };
+
+    let RhsSuffixes {
+        soundfont,
+        volume,
+        octave_offset,
+    } = parse_rhs_suffix_tokens(suffix_tokens, span, errors, instruments)?;
+
+    Ok(ParsedPartRhs {
+        kind: head,
+        soundfont,
+        volume,
+        octave_offset,
+    })
+}
+
+fn parse_rhs_suffix_tokens(
+    tokens: &[Spanned<PartsToken>],
+    span: Span,
+    errors: &mut Vec<RecoverableError>,
+    instruments: &[InstrumentInfo],
+) -> Result<RhsSuffixes, RecoverableError> {
+    let mut soundfont = None;
+    let mut volume = None;
+    let mut octave_offset = None;
+
+    for token in tokens {
+        match &token.value {
+            PartsToken::Soundfont(inner) => {
+                soundfont = Some(validate_soundfont(inner, token.span, errors, instruments));
+            }
+            PartsToken::Volume(value) => volume = Some(*value),
+            PartsToken::OctaveOffset(offset) => {
+                octave_offset = clamp_octave_offset(Some(*offset), span, errors);
+            }
+            _ => return Err(RecoverableError::parts_invalid_columns(span, "")),
+        }
+    }
+
+    Ok(RhsSuffixes {
+        soundfont,
+        volume,
+        octave_offset,
+    })
+}
+
+fn validate_soundfont(
+    inner: &str,
+    span: Span,
+    errors: &mut Vec<RecoverableError>,
+    instruments: &[InstrumentInfo],
+) -> Soundfont {
+    if !instruments.is_empty() && !instruments.iter().any(|i| i.value == inner) {
+        let mut scored: Vec<(&InstrumentInfo, u32)> = instruments
+            .iter()
+            .filter_map(|instrument| {
+                let score = instrument_fuzzy_score(inner, instrument);
+                if score > 0 {
+                    Some((instrument, score))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        scored.sort_by(|left, right| right.1.cmp(&left.1));
+        let suggestions: Vec<String> = scored
+            .iter()
+            .take(5)
+            .map(|(instrument, _)| instrument.value.clone())
+            .collect();
+        errors.push(RecoverableError::parts_unknown_soundfont(
+            span,
+            inner,
+            suggestions,
+        ));
+    }
+
+    if let Some(colon_pos) = inner.find(": ") {
+        inner[..colon_pos]
+            .trim()
+            .parse::<u8>()
+            .map(Soundfont)
+            .unwrap_or_else(|_| {
+                errors.push(RecoverableError::parts_invalid_columns(span, inner));
+                Soundfont::default()
+            })
+    } else {
+        errors.push(RecoverableError::parts_invalid_columns(span, inner));
+        Soundfont::default()
+    }
 }
 
 fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -> Vec<PartDecl> {
@@ -169,17 +394,23 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
             octave_offset,
         } = raw_decl;
         match kind {
-            RawKind::Follow(target) => {
+            RawKind::Follow {
+                target,
+                target_span,
+            } => {
                 if index == 0 {
                     errors.push(RecoverableError::parts_first_part_cannot_follow(span));
                     continue;
                 }
                 let found = declarations
                     .iter()
-                    .find(|d: &&PartDecl| d.abbreviation == target);
+                    .find(|declaration: &&PartDecl| declaration.abbreviation == target);
                 match found {
                     None => {
-                        errors.push(RecoverableError::parts_follow_unknown_target(span, &target));
+                        errors.push(RecoverableError::parts_follow_unknown_target(
+                            target_span,
+                            &target,
+                        ));
                         continue;
                     }
                     Some(target_decl) => declarations.push(PartDecl {
@@ -207,140 +438,6 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
     declarations
 }
 
-fn parse_lhs(lhs: &str, span: Span) -> Result<(String, String), RecoverableError> {
-    if let Some(open) = lhs.rfind('[') {
-        if lhs.ends_with(']') {
-            let display_name = lhs[..open].trim().to_string();
-            let abbreviation = lhs[open + 1..lhs.len() - 1].trim().to_string();
-            if display_name.is_empty() {
-                return Err(RecoverableError::parts_empty_display_name(span));
-            }
-            if abbreviation.is_empty() {
-                return Err(RecoverableError::parts_empty_abbreviation(span));
-            }
-            return Ok((display_name, abbreviation));
-        }
-    }
-    let name = lhs.trim().to_string();
-    if name.is_empty() {
-        return Err(RecoverableError::parts_empty_track_name(span));
-    }
-    Ok((name.clone(), name))
-}
-
-fn parse_soundfont_string(
-    s: &str,
-    span: Span,
-    rhs: &str,
-    errors: &mut Vec<RecoverableError>,
-    instruments: &[InstrumentInfo],
-) -> Result<Soundfont, RecoverableError> {
-    let s = s.trim();
-    if !s.starts_with('"') {
-        errors.push(RecoverableError::parts_invalid_columns(span, rhs));
-        return Err(RecoverableError::parts_invalid_columns(span, rhs));
-    }
-    let after_quote = &s[1..];
-    let close_pos = match after_quote.find('"') {
-        Some(p) => p,
-        None => {
-            errors.push(RecoverableError::parts_invalid_columns(span, rhs));
-            return Err(RecoverableError::parts_invalid_columns(span, rhs));
-        }
-    };
-    let sf_value = &after_quote[..close_pos];
-    // Validate against known instruments when list is provided.
-    if !instruments.is_empty() && !instruments.iter().any(|i| i.value == sf_value) {
-        let mut scored: Vec<(&InstrumentInfo, u32)> = instruments
-            .iter()
-            .filter_map(|i| {
-                let s = instrument_fuzzy_score(sf_value, i);
-                if s > 0 {
-                    Some((i, s))
-                } else {
-                    None
-                }
-            })
-            .collect();
-        scored.sort_by(|a, b| b.1.cmp(&a.1));
-        let suggestions: Vec<String> = scored
-            .iter()
-            .take(5)
-            .map(|(i, _)| i.value.clone())
-            .collect();
-        errors.push(RecoverableError::parts_unknown_soundfont(
-            span,
-            sf_value,
-            suggestions,
-        ));
-    }
-    if let Some(colon_pos) = sf_value.find(": ") {
-        Ok(sf_value[..colon_pos]
-            .trim()
-            .parse::<u8>()
-            .map(Soundfont)
-            .unwrap_or_else(|_| {
-                errors.push(RecoverableError::parts_invalid_columns(span, sf_value));
-                Soundfont::default()
-            }))
-    } else {
-        errors.push(RecoverableError::parts_invalid_columns(span, sf_value));
-        Ok(Soundfont::default())
-    }
-}
-
-fn parse_volume_suffix(s: &str) -> (Option<u8>, &str) {
-    let trimmed = s.trim_end();
-    if let Some(rest) = trimmed.strip_suffix('%') {
-        if let Some(vol_str) = rest.split_whitespace().last() {
-            if let Ok(v) = vol_str.parse::<u8>() {
-                let without_vol = rest
-                    .trim_end()
-                    .strip_suffix(vol_str)
-                    .unwrap_or(rest)
-                    .trim_end();
-                return (Some(v), without_vol);
-            }
-        }
-    }
-    (None, s)
-}
-
-/// Strips a trailing `+N` or `-N` whitespace-delimited token from `s`, or a standalone
-/// `+N`/`-N` when `s` contains nothing else. Returns (offset, remainder).
-/// Returns (0, s) if no such token found.
-fn parse_octave_offset(s: &str) -> (Option<i8>, &str) {
-    let trimmed = s.trim_end();
-    if let Some(ws) = trimmed.rfind(|c: char| c.is_ascii_whitespace()) {
-        let last = &trimmed[ws + 1..];
-        let rest = trimmed[..ws].trim_end();
-        if let Some(d) = last.strip_prefix('+') {
-            if let Ok(n) = d.parse::<i8>() {
-                return (Some(n), rest);
-            }
-        }
-        if let Some(d) = last.strip_prefix('-') {
-            if let Ok(n) = d.parse::<i8>() {
-                return (Some(-n), rest);
-            }
-        }
-    }
-    let standalone = s.trim();
-    if let Some(d) = standalone.strip_prefix('+') {
-        if let Ok(n) = d.parse::<i8>() {
-            return (Some(n), "");
-        }
-    }
-    if let Some(d) = standalone.strip_prefix('-') {
-        if !d.is_empty() {
-            if let Ok(n) = d.parse::<i8>() {
-                return (Some(-n), "");
-            }
-        }
-    }
-    (None, s)
-}
-
 fn clamp_octave_offset(
     octave: Option<i8>,
     span: Span,
@@ -357,85 +454,3 @@ fn clamp_octave_offset(
         }
     })
 }
-
-fn parse_rhs_suffixes<'a>(
-    s: &'a str,
-    span: Span,
-    errors: &mut Vec<RecoverableError>,
-) -> (Option<u8>, Option<i8>, &'a str) {
-    let (volume1, after_vol1) = parse_volume_suffix(s);
-    let (octave, after_oct) = parse_octave_offset(after_vol1);
-    let (volume2, remainder) = parse_volume_suffix(after_oct);
-    let volume = volume1.or(volume2);
-    let octave_offset = clamp_octave_offset(octave, span, errors);
-    (volume, octave_offset, remainder)
-}
-
-fn parse_rhs(
-    rhs: &str,
-    span: Span,
-    errors: &mut Vec<RecoverableError>,
-    instruments: &[InstrumentInfo],
-) -> Result<ParsedPartRhs, RecoverableError> {
-    if let Some(rest) = rhs.strip_prefix("follow[") {
-        if let Some(bracket_end) = rest.find(']') {
-            let target = rest[..bracket_end].trim().to_string();
-            if target.is_empty() {
-                return Err(RecoverableError::parts_invalid_columns(span, rhs));
-            }
-            let after_bracket = rest[bracket_end + 1..].trim();
-            let (volume, octave_offset, after_suffixes) =
-                parse_rhs_suffixes(after_bracket, span, errors);
-            let soundfont = if after_suffixes.trim().is_empty() {
-                None
-            } else {
-                Some(parse_soundfont_string(
-                    after_suffixes.trim(),
-                    span,
-                    rhs,
-                    errors,
-                    instruments,
-                )?)
-            };
-            return Ok(ParsedPartRhs {
-                kind: RawKind::Follow(target),
-                soundfont,
-                volume,
-                octave_offset,
-            });
-        }
-    }
-
-    let (volume, octave_offset, rhs_without_suffixes) = parse_rhs_suffixes(rhs, span, errors);
-    let rhs_trimmed = rhs_without_suffixes.trim();
-
-    let (kind_token, soundfont) = if let Some(quote_pos) = rhs_trimmed.find('"') {
-        let kind_token = rhs_trimmed[..quote_pos].trim();
-        let soundfont = Some(parse_soundfont_string(
-            &rhs_trimmed[quote_pos..],
-            span,
-            rhs,
-            errors,
-            instruments,
-        )?);
-        (kind_token, soundfont)
-    } else {
-        (rhs_trimmed, None)
-    };
-
-    let kind = match kind_token {
-        "chords" => PartKind::Chords,
-        "notes" => PartKind::Notes,
-        "notes+lyrics" => PartKind::NotesWithLyrics,
-        _ => return Err(RecoverableError::parts_invalid_columns(span, rhs)),
-    };
-    Ok(ParsedPartRhs {
-        kind: RawKind::Concrete(kind),
-        soundfont,
-        volume,
-        octave_offset,
-    })
-}
-
-#[cfg(test)]
-mod tests;

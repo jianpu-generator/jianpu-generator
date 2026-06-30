@@ -73,7 +73,7 @@ One track per line. Blank lines are ignored.
 | `notes+lyrics` | Notes + lyrics | 2 (notes, then lyrics) |
 | `follow[X]` | Inherit column layout from the part with abbreviation `X` | same as target |
 
-An optional soundfont string `"<number>: <name>"` may follow the kind token (or `follow[X]` bracket) to select the MIDI timbre for that part. The number is the General MIDI program number (0–127). For example: `notes "52: Choir Aahs"` or `follow[A] "1: Grand Piano"`. If omitted on a concrete part, the default is program 52 (Choir Aahs). On a `follow[X]` part, the soundfont is inherited from the target when omitted.
+An optional soundfont string `"<number>: <name>"` may follow the kind token (or `follow[X]` bracket) to select the MIDI timbre for that part. The number is the General MIDI program number (0–127). The `<name>` portion is a quoted string and may contain `=` and other characters (for example `"1: Grand = Piano"`). For example: `notes "52: Choir Aahs"` or `follow[A] "1: Grand Piano"`. If omitted on a concrete part, the default is program 52 (Choir Aahs). On a `follow[X]` part, the soundfont is inherited from the target when omitted.
 
 An optional volume suffix `XX%` (where XX is 1–100) may appear after the soundfont string (or after the kind token if there is no soundfont) to set the MIDI volume for that part. For example: `notes "52: Choir Aahs" 47%` or `notes 80%`. If omitted on a concrete part, the default is 100%. On a `follow[X]` part, volume is inherited from the target when omitted and may be overridden with an explicit `XX%` suffix.
 

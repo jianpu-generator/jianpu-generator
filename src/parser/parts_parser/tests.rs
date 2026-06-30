@@ -141,6 +141,25 @@ fn follow_unknown_target_emits_error() {
         errors[0].kind,
         RecoverableErrorKind::PartsFollowUnknownTarget { ref target } if target == "UNKNOWN"
     ));
+    let unknown_start = content.find("UNKNOWN").expect("UNKNOWN in source");
+    assert_eq!(errors[0].span.start, unknown_start);
+    assert_eq!(errors[0].span.end, unknown_start + "UNKNOWN".len());
+}
+
+#[test]
+fn follow_unknown_target_span_is_specific_for_simple_names() {
+    let content = "#parts\na = notes\nb = follow[xxx]\n";
+    let parts_start = content.find("a = notes").expect("parts section");
+    let (decls, errors) = parse_parts(&content[parts_start..], parts_start, &[]);
+    assert_eq!(decls.len(), 1);
+    assert_eq!(errors.len(), 1);
+    assert!(matches!(
+        errors[0].kind,
+        RecoverableErrorKind::PartsFollowUnknownTarget { ref target } if target == "xxx"
+    ));
+    let xxx_start = content.find("xxx").expect("xxx in source");
+    assert_eq!(errors[0].span.start, xxx_start);
+    assert_eq!(errors[0].span.end, xxx_start + "xxx".len());
 }
 
 #[test]
@@ -258,4 +277,14 @@ fn follow_chain_inherits_resolved_properties_from_intermediate_target() {
     assert_eq!(decls[2].soundfont, Soundfont(48));
     assert_eq!(decls[2].volume, 60);
     assert_eq!(decls[2].octave_offset, 1);
+}
+
+#[test]
+fn soundfont_name_may_contain_equals() {
+    use crate::ast::parsed::Soundfont;
+    let content = "Bass = notes \"1: Grand = Piano\"\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert!(errors.is_empty(), "unexpected errors: {errors:?}");
+    assert_eq!(decls.len(), 1);
+    assert_eq!(decls[0].soundfont, Soundfont(1));
 }
