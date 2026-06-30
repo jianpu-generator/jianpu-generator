@@ -4,10 +4,7 @@ use crate::compositor::types::{
     TextAnchor, TextSpan,
 };
 use crate::render_config::RenderConfig;
-use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, Tag, TspanData};
-
-/// Placeholder for `SvgElement.variant` when the variant is not emitted to DOM.
-const UNUSED_VARIANT: &str = "group";
+use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, SvgVariant, Tag, TspanData};
 
 pub fn render_new(pages: &[AbsolutePage], config: &RenderConfig) -> Vec<SvgDocument> {
     pages.iter().map(|page| render_page(page, config)).collect()
@@ -87,7 +84,7 @@ fn render_element(
         } => vec![SvgElement {
             x: elem.x,
             y: elem.y,
-            variant: "text",
+            variant: Some(SvgVariant::Text),
             kind: SvgKind::Text {
                 content: content.clone(),
                 font_size: *font_size,
@@ -101,7 +98,7 @@ fn render_element(
         AbsoluteContent::MeasureHighlight { width, height } => vec![SvgElement {
             x: elem.x,
             y: elem.y,
-            variant: UNUSED_VARIANT,
+            variant: None,
             kind: SvgKind::Rect {
                 width: *width,
                 height: *height,
@@ -110,7 +107,7 @@ fn render_element(
         AbsoluteContent::ErrorHighlight { width, height } => vec![SvgElement {
             x: elem.x,
             y: elem.y,
-            variant: UNUSED_VARIANT,
+            variant: None,
             kind: SvgKind::ErrorRect {
                 width: *width,
                 height: *height,
@@ -151,7 +148,7 @@ fn render_directive_line(
     let text_element = SvgElement {
         x: elem.x,
         y: elem.y,
-        variant: "directive-line",
+        variant: Some(SvgVariant::DirectiveLine),
         kind: SvgKind::TextWithTspans {
             font_size: 12.0,
             anchor: TextAnchor::Start,
@@ -166,7 +163,7 @@ fn render_directive_line(
         vec![SvgElement {
             x: elem.x,
             y: elem.y,
-            variant: UNUSED_VARIANT,
+            variant: None,
             kind: SvgKind::Group {
                 tag: Some(Tag::SectionLabel {
                     label: label_str.clone(),
@@ -175,7 +172,7 @@ fn render_directive_line(
                     SvgElement {
                         x: elem.x - 3.0,
                         y: elem.y - bg_height / 2.0,
-                        variant: "section-label-bg",
+                        variant: Some(SvgVariant::SectionLabelBackground),
                         kind: SvgKind::TransparentRect {
                             width: bg_width,
                             height: bg_height,
@@ -199,12 +196,12 @@ fn render_measure_click_target(
     vec![SvgElement {
         x: elem.x,
         y: elem.y,
-        variant: UNUSED_VARIANT,
+        variant: None,
         kind: SvgKind::Group {
             children: vec![SvgElement {
                 x: elem.x,
                 y: elem.y,
-                variant: "measure-click-target-rect",
+                variant: Some(SvgVariant::MeasureClickTargetRect),
                 kind: SvgKind::TransparentRect { width, height },
             }],
             tag: Some(Tag::Measure {
@@ -238,7 +235,7 @@ fn render_note_head(
     results.push(SvgElement {
         x: elem.x,
         y: elem.y,
-        variant: "note-head",
+        variant: Some(SvgVariant::NoteHead),
         kind: SvgKind::Text {
             content: pitch_to_digit(pitch).to_string(),
             font_size: **base_font_size,
@@ -261,7 +258,7 @@ fn render_note_head(
         results.push(SvgElement {
             x: accidental_x,
             y: elem.y,
-            variant: "note-head-accidental",
+            variant: Some(SvgVariant::NoteHeadAccidental),
             kind: SvgKind::Text {
                 content: symbol.to_string(),
                 font_size: **base_font_size * 0.7,
@@ -281,7 +278,7 @@ fn render_note_head(
         results.push(SvgElement {
             x: dot_x,
             y: elem.y,
-            variant: "note-head",
+            variant: Some(SvgVariant::NoteHead),
             kind: SvgKind::Circle { r: dot_radius },
         });
     }
@@ -295,7 +292,7 @@ fn render_note_head(
             results.push(SvgElement {
                 x: elem.x,
                 y: dot_y,
-                variant: "note-head",
+                variant: Some(SvgVariant::NoteHead),
                 kind: SvgKind::Circle { r: dot_radius },
             });
         }
@@ -308,7 +305,7 @@ fn render_note_head(
             results.push(SvgElement {
                 x: elem.x,
                 y: dot_y,
-                variant: "note-head",
+                variant: Some(SvgVariant::NoteHead),
                 kind: SvgKind::Circle { r: dot_radius },
             });
         }
@@ -330,7 +327,7 @@ fn render_rest(
     results.push(SvgElement {
         x: elem.x,
         y: elem.y,
-        variant: "rest",
+        variant: Some(SvgVariant::Rest),
         kind: SvgKind::Text {
             content: "0".to_string(),
             font_size: *base_font_size,
@@ -349,7 +346,7 @@ fn render_rest(
         results.push(SvgElement {
             x: dot_x,
             y: elem.y,
-            variant: "rest",
+            variant: Some(SvgVariant::Rest),
             kind: SvgKind::Circle { r: dot_radius },
         });
     }
@@ -361,7 +358,7 @@ fn render_chord_symbol(elem: &AbsoluteElement, s: &str, base_font_size: &f32) ->
     vec![SvgElement {
         x: elem.x,
         y: elem.y,
-        variant: "chord-symbol",
+        variant: Some(SvgVariant::ChordSymbol),
         kind: SvgKind::Text {
             content: s.to_string(),
             font_size: *base_font_size,
@@ -378,7 +375,7 @@ fn render_horizontal_line(elem: &AbsoluteElement, width: &f32) -> Vec<SvgElement
     vec![SvgElement {
         x: elem.x,
         y: elem.y,
-        variant: "horizontal-line",
+        variant: Some(SvgVariant::HorizontalLine),
         kind: SvgKind::Line {
             x2: elem.x + width,
             y2: elem.y,
@@ -391,7 +388,7 @@ fn render_underline(elem: &AbsoluteElement, width: &f32) -> Vec<SvgElement> {
     vec![SvgElement {
         x: elem.x,
         y: elem.y,
-        variant: "underline",
+        variant: Some(SvgVariant::Underline),
         kind: SvgKind::Line {
             x2: elem.x + width,
             y2: elem.y,
@@ -406,7 +403,7 @@ fn render_tie_or_slur(elem: &AbsoluteElement, width: &f32, row_height: &f32) -> 
     vec![SvgElement {
         x: elem.x,
         y: elem.y,
-        variant: "tie-or-slur",
+        variant: Some(SvgVariant::TieOrSlur),
         kind: SvgKind::Path {
             control_x: cx,
             control_y: cy,
@@ -421,7 +418,7 @@ fn render_bar_line(elem: &AbsoluteElement, height: &f32) -> Vec<SvgElement> {
     vec![SvgElement {
         x: elem.x,
         y: elem.y,
-        variant: "bar-line",
+        variant: Some(SvgVariant::BarLine),
         kind: SvgKind::Line {
             x2: elem.x,
             y2: elem.y + height,
@@ -445,7 +442,7 @@ fn render_lyric(
     vec![SvgElement {
         x: elem.x,
         y: elem.y,
-        variant: "lyric",
+        variant: Some(SvgVariant::Lyric),
         kind: SvgKind::Text {
             content: s.to_string(),
             font_size,

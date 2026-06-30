@@ -1,5 +1,42 @@
 use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SvgVariant {
+    Text,
+    NoteHead,
+    NoteHeadAccidental,
+    Rest,
+    ChordSymbol,
+    HorizontalLine,
+    Underline,
+    TieOrSlur,
+    BarLine,
+    Lyric,
+    DirectiveLine,
+    MeasureClickTargetRect,
+    SectionLabelBackground,
+}
+
+impl SvgVariant {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Text => "text",
+            Self::NoteHead => "note-head",
+            Self::NoteHeadAccidental => "note-head-accidental",
+            Self::Rest => "rest",
+            Self::ChordSymbol => "chord-symbol",
+            Self::HorizontalLine => "horizontal-line",
+            Self::Underline => "underline",
+            Self::TieOrSlur => "tie-or-slur",
+            Self::BarLine => "bar-line",
+            Self::Lyric => "lyric",
+            Self::DirectiveLine => "directive-line",
+            Self::MeasureClickTargetRect => "measure-click-target-rect",
+            Self::SectionLabelBackground => "section-label-bg",
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct SvgDocument {
     pub width_pt: f32,
@@ -11,7 +48,7 @@ pub struct SvgDocument {
 pub struct SvgElement {
     pub x: f32,
     pub y: f32,
-    pub variant: &'static str,
+    pub variant: Option<SvgVariant>,
     pub kind: SvgKind,
 }
 

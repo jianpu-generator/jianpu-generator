@@ -67,7 +67,8 @@ source (&str)
 ### Renderer
 - Module: `src/renderer/`
 - Entry: `renderer::new_renderer::render_new(pages: &[AbsolutePage], config: &RenderConfig) -> Vec<SvgDocument>`
-- Key types: `SvgDocument`, `SvgElement`, `SvgKind`
+- Key types: `SvgDocument`, `SvgElement`, `SvgKind`, `SvgVariant`
+- `SvgElement.variant` is `Option<SvgVariant>`: `None` for group wrappers and highlight rects; `Some(...)` for drawable primitives and hover transparent rects
 
 ### Serializer
 - Module: `src/serializer/`

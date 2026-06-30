@@ -1,5 +1,5 @@
 use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
-use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, Tag, TspanData};
+use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, SvgVariant, Tag, TspanData};
 
 pub fn serialize(documents: &[SvgDocument]) -> Vec<String> {
     documents.iter().map(serialize_doc).collect()
@@ -14,6 +14,12 @@ fn serialize_doc(doc: &SvgDocument) -> String {
         r#"<svg xmlns="http://www.w3.org/2000/svg" width="210mm" height="297mm" viewBox="0 0 {:.0} {:.0}">{}</svg>"#,
         doc.width_pt, doc.height_pt, body
     )
+}
+
+fn variant_attr(variant: Option<SvgVariant>) -> String {
+    variant
+        .map(|variant| format!(r#" data-variant="{}""#, variant.as_str()))
+        .unwrap_or_default()
 }
 
 fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) {
@@ -53,8 +59,16 @@ fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) {
         ""
     };
     out.push_str(&format!(
-        r#"<text x="{:.1}" y="{:.1}" data-variant="{}" font-size="{:.1}" text-anchor="{}" dominant-baseline="{}" font-family="{}" font-weight="{}" {}>{}</text>"#,
-        el.x, el.y, el.variant, font_size, anchor_str, baseline_str, font_str, weight_str, style_str,
+        r#"<text x="{:.1}" y="{:.1}"{} font-size="{:.1}" text-anchor="{}" dominant-baseline="{}" font-family="{}" font-weight="{}" {}>{}</text>"#,
+        el.x,
+        el.y,
+        variant_attr(el.variant),
+        font_size,
+        anchor_str,
+        baseline_str,
+        font_str,
+        weight_str,
+        style_str,
         escape_xml(content)
     ));
 }
@@ -78,8 +92,13 @@ fn serialize_text_with_tspans(
         DominantBaseline::Ideographic => "ideographic",
     };
     out.push_str(&format!(
-        r#"<text x="{:.1}" y="{:.1}" data-variant="{}" font-size="{:.1}" text-anchor="{}" dominant-baseline="{}" font-family="sans-serif">"#,
-        el.x, el.y, el.variant, font_size, anchor_str, baseline_str
+        r#"<text x="{:.1}" y="{:.1}"{} font-size="{:.1}" text-anchor="{}" dominant-baseline="{}" font-family="sans-serif">"#,
+        el.x,
+        el.y,
+        variant_attr(el.variant),
+        font_size,
+        anchor_str,
+        baseline_str
     ));
     for span in spans {
         let mut attrs = String::new();
@@ -101,6 +120,29 @@ fn serialize_text_with_tspans(
     out.push_str("</text>");
 }
 
+fn serialize_group(out: &mut String, children: &[SvgElement], tag: &Option<Tag>) {
+    match tag {
+        Some(Tag::Measure { index }) => {
+            out.push_str(&format!(
+                r#"<g data-tag="measure" data-measure-index="{index}">"#
+            ));
+        }
+        Some(Tag::SectionLabel { label }) => {
+            out.push_str(&format!(
+                r#"<g data-tag="section-label" data-section-label="{}" style="cursor:pointer">"#,
+                escape_xml(label)
+            ));
+        }
+        None => {
+            out.push_str("<g>");
+        }
+    }
+    for child in children {
+        serialize_element(child, out);
+    }
+    out.push_str("</g>");
+}
+
 fn serialize_element(el: &SvgElement, out: &mut String) {
     match &el.kind {
         SvgKind::Text { .. } => serialize_text(el, out, &el.kind),
@@ -110,14 +152,22 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
             stroke_width,
         } => {
             out.push_str(&format!(
-                r#"<line x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}" data-variant="{}" stroke="black" stroke-width="{:.1}"/>"#,
-                el.x, el.y, x2, y2, el.variant, stroke_width
+                r#"<line x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}"{} stroke="black" stroke-width="{:.1}"/>"#,
+                el.x,
+                el.y,
+                x2,
+                y2,
+                variant_attr(el.variant),
+                stroke_width
             ));
         }
         SvgKind::Circle { r } => {
             out.push_str(&format!(
-                r#"<circle cx="{:.1}" cy="{:.1}" data-variant="{}" r="{:.1}" fill="black"/>"#,
-                el.x, el.y, el.variant, r
+                r#"<circle cx="{:.1}" cy="{:.1}"{} r="{:.1}" fill="black"/>"#,
+                el.x,
+                el.y,
+                variant_attr(el.variant),
+                r
             ));
         }
         SvgKind::Path {
@@ -128,8 +178,15 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
             stroke_width,
         } => {
             out.push_str(&format!(
-                r#"<path d="M {:.1} {:.1} Q {:.1} {:.1} {:.1} {:.1}" data-variant="{}" fill="none" stroke="black" stroke-width="{:.1}"/>"#,
-                el.x, el.y, control_x, control_y, end_x, end_y, el.variant, stroke_width
+                r#"<path d="M {:.1} {:.1} Q {:.1} {:.1} {:.1} {:.1}"{} fill="none" stroke="black" stroke-width="{:.1}"/>"#,
+                el.x,
+                el.y,
+                control_x,
+                control_y,
+                end_x,
+                end_y,
+                variant_attr(el.variant),
+                stroke_width
             ));
         }
         SvgKind::Rect { width, height } => {
@@ -146,8 +203,12 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
         }
         SvgKind::TransparentRect { width, height } => {
             out.push_str(&format!(
-                r#"<rect x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" data-variant="{}" fill="transparent" rx="2" style="cursor:pointer"/>"#,
-                el.x, el.y, width, height, el.variant
+                r#"<rect x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}"{} fill="transparent" rx="2" style="cursor:pointer"/>"#,
+                el.x,
+                el.y,
+                width,
+                height,
+                variant_attr(el.variant)
             ));
         }
         SvgKind::TextWithTspans {
@@ -156,28 +217,7 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
             baseline,
             spans,
         } => serialize_text_with_tspans(el, out, *font_size, anchor, baseline, spans),
-        SvgKind::Group { children, tag } => {
-            match tag {
-                Some(Tag::Measure { index }) => {
-                    out.push_str(&format!(
-                        r#"<g data-tag="measure" data-measure-index="{index}">"#
-                    ));
-                }
-                Some(Tag::SectionLabel { label }) => {
-                    out.push_str(&format!(
-                        r#"<g data-tag="section-label" data-section-label="{}" style="cursor:pointer">"#,
-                        escape_xml(label)
-                    ));
-                }
-                None => {
-                    out.push_str("<g>");
-                }
-            }
-            for child in children {
-                serialize_element(child, out);
-            }
-            out.push_str("</g>");
-        }
+        SvgKind::Group { children, tag } => serialize_group(out, children, tag),
     }
 }
 
@@ -192,7 +232,7 @@ fn escape_xml(s: &str) -> String {
 mod tests {
     use super::*;
     use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
-    use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind};
+    use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, SvgVariant};
 
     fn text_doc(content: &str) -> SvgDocument {
         SvgDocument {
@@ -201,7 +241,7 @@ mod tests {
             elements: vec![SvgElement {
                 x: 10.0,
                 y: 20.0,
-                variant: "text",
+                variant: Some(SvgVariant::Text),
                 kind: SvgKind::Text {
                     content: content.to_string(),
                     font_size: 12.0,
@@ -237,7 +277,7 @@ mod tests {
             elements: vec![SvgElement {
                 x: 5.0,
                 y: 5.0,
-                variant: "note-head",
+                variant: Some(SvgVariant::NoteHead),
                 kind: SvgKind::Circle { r: 3.0 },
             }],
         };
@@ -254,7 +294,7 @@ mod tests {
             elements: vec![SvgElement {
                 x: 0.0,
                 y: 0.0,
-                variant: "bar-line",
+                variant: Some(SvgVariant::BarLine),
                 kind: SvgKind::Line {
                     x2: 50.0,
                     y2: 0.0,
@@ -274,7 +314,7 @@ mod tests {
             elements: vec![SvgElement {
                 x: 0.0,
                 y: 0.0,
-                variant: "tie-or-slur",
+                variant: Some(SvgVariant::TieOrSlur),
                 kind: SvgKind::Path {
                     control_x: 25.0,
                     control_y: -10.0,
@@ -292,7 +332,7 @@ mod tests {
     #[test]
     fn text_element_has_data_variant() {
         let result = serialize(&[text_doc("hello")]);
-        assert!(result[0].contains(r#"data-variant="text""#));
+        assert!(result[0].contains(&format!(r#"data-variant="{}""#, SvgVariant::Text.as_str())));
     }
 
     #[test]
@@ -303,12 +343,15 @@ mod tests {
             elements: vec![SvgElement {
                 x: 5.0,
                 y: 5.0,
-                variant: "note-head",
+                variant: Some(SvgVariant::NoteHead),
                 kind: SvgKind::Circle { r: 3.0 },
             }],
         };
         let result = serialize(&[doc]);
-        assert!(result[0].contains(r#"data-variant="note-head""#));
+        assert!(result[0].contains(&format!(
+            r#"data-variant="{}""#,
+            SvgVariant::NoteHead.as_str()
+        )));
     }
 
     #[test]
@@ -319,7 +362,7 @@ mod tests {
             elements: vec![SvgElement {
                 x: 0.0,
                 y: 0.0,
-                variant: "bar-line",
+                variant: Some(SvgVariant::BarLine),
                 kind: SvgKind::Line {
                     x2: 50.0,
                     y2: 0.0,
@@ -328,7 +371,10 @@ mod tests {
             }],
         };
         let result = serialize(&[doc]);
-        assert!(result[0].contains(r#"data-variant="bar-line""#));
+        assert!(result[0].contains(&format!(
+            r#"data-variant="{}""#,
+            SvgVariant::BarLine.as_str()
+        )));
     }
 
     #[test]
@@ -339,7 +385,7 @@ mod tests {
             elements: vec![SvgElement {
                 x: 0.0,
                 y: 0.0,
-                variant: "tie-or-slur",
+                variant: Some(SvgVariant::TieOrSlur),
                 kind: SvgKind::Path {
                     control_x: 25.0,
                     control_y: -10.0,
@@ -350,7 +396,10 @@ mod tests {
             }],
         };
         let result = serialize(&[doc]);
-        assert!(result[0].contains(r#"data-variant="tie-or-slur""#));
+        assert!(result[0].contains(&format!(
+            r#"data-variant="{}""#,
+            SvgVariant::TieOrSlur.as_str()
+        )));
     }
 
     #[test]
@@ -361,7 +410,7 @@ mod tests {
             elements: vec![SvgElement {
                 x: 10.0,
                 y: 20.0,
-                variant: "measure-highlight",
+                variant: None,
                 kind: SvgKind::Rect {
                     width: 50.0,
                     height: 30.0,
@@ -383,6 +432,10 @@ mod tests {
             "should have amber fill"
         );
         assert!(result[0].contains(r#"rx="2""#), "should have corner radius");
+        assert!(
+            !result[0].contains("data-variant"),
+            "measure highlight rects should not emit data-variant"
+        );
     }
 
     #[test]
@@ -393,7 +446,7 @@ mod tests {
             elements: vec![SvgElement {
                 x: 10.0,
                 y: 20.0,
-                variant: "error-highlight",
+                variant: None,
                 kind: SvgKind::ErrorRect {
                     width: 50.0,
                     height: 30.0,
@@ -410,6 +463,10 @@ mod tests {
             "should have red fill at 15% opacity, got: {}",
             result[0]
         );
+        assert!(
+            !result[0].contains("data-variant"),
+            "error highlight rects should not emit data-variant"
+        );
     }
 
     #[test]
@@ -420,7 +477,7 @@ mod tests {
             elements: vec![SvgElement {
                 x: 1.0,
                 y: 2.0,
-                variant: "measure-click-target-rect",
+                variant: Some(SvgVariant::MeasureClickTargetRect),
                 kind: SvgKind::TransparentRect {
                     width: 40.0,
                     height: 20.0,
@@ -429,7 +486,10 @@ mod tests {
         };
         let result = serialize(&[doc]);
         assert!(
-            result[0].contains(r#"data-variant="measure-click-target-rect""#),
+            result[0].contains(&format!(
+                r#"data-variant="{}""#,
+                SvgVariant::MeasureClickTargetRect.as_str()
+            )),
             "should emit data-variant for hover target rects"
         );
         assert!(result[0].contains(r#"rx="2""#), "should have corner radius");

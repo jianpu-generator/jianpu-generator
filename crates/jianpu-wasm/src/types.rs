@@ -55,7 +55,8 @@ pub struct SvgDocumentOut {
 pub struct SvgElementOut {
     pub x: f32,
     pub y: f32,
-    pub variant: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub variant: Option<String>,
     pub kind: SvgKindOut,
 }
 
@@ -184,7 +185,7 @@ fn svg_element_to_out(el: &SvgElement) -> SvgElementOut {
     SvgElementOut {
         x: el.x,
         y: el.y,
-        variant: el.variant.to_string(),
+        variant: el.variant.map(|variant| variant.as_str().to_string()),
         kind: svg_kind_to_out(&el.kind),
     }
 }
