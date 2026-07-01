@@ -13,6 +13,12 @@ fn notes_doc(score_content: &str) -> String {
     )
 }
 
+fn chord_doc(score_content: &str) -> String {
+    format!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nC = chords\n\n# score\n{score_content}"
+    )
+}
+
 #[test]
 fn three_same_pitch_notes_in_slur_emits_one_slur_arc() {
     // "(555)" — three quarter notes of the same pitch under a slur group.
@@ -190,6 +196,30 @@ fn cross_measure_arc_dropped_when_target_measure_has_error() {
 }
 
 #[test]
+fn cross_measure_chord_slur_emits_single_slur_span() {
+    // Bar 1: "1 2 3 (4m" — slur opens on chord 4m at col 12.
+    // Bar 2: "5) 6 7 1"  — slur closes on chord 5 at col 0.
+    let score = score_from(&chord_doc(concat!(
+        "time=4/4 key=C4 bpm=120\n",
+        "[C] 1 2 3 (4m\n",
+        "\n",
+        "[C] 5) 6 7 1\n",
+    )));
+    let result = compile(&score);
+    assert!(
+        result.slur_spans.iter().any(|s| {
+            s.part_index == 0
+                && s.from_measure == 0
+                && s.from_column == 12
+                && s.to_measure == 1
+                && s.to_column == 0
+        }),
+        "expected SlurSpan (measure=0, col=12) → (measure=1, col=0), got: {:?}",
+        result.slur_spans
+    );
+}
+
+#[test]
 fn three_measure_slur_with_single_note_middle_measure() {
     // Bar 1: "1 2 3 (4" — slur opens on note 4 at col 12.
     // Bar 2: "5 6 7 1" — single measure with all notes in slur continuation.
@@ -212,6 +242,31 @@ fn three_measure_slur_with_single_note_middle_measure() {
                 && s.to_column == 0
         }),
         "expected SlurSpan (measure=0, col=12) → (measure=2, col=0), got: {:?}",
+        result.slur_spans
+    );
+}
+
+#[test]
+fn tilde_cross_measure_chord_slur_emits_single_slur_span() {
+    // [a] 3~---  => chord 3 tied (via ~) into 3 extensions, filling measure 1
+    // [a] 3      => chord 3 closes the tie in measure 2
+    let input = concat!(
+        "# metadata\ntitle=\"\"\nauthor=\"\"\n\n",
+        "# parts\nAccompaniment [a] = chords\n\n",
+        "# score\n\n\n",
+        "[a] 3~---\n",
+        "\n",
+        "[a] 3\n",
+    );
+    let doc = parse(input, "test", &[]).unwrap();
+    let score = group(doc).unwrap();
+    let result = compile(&score);
+    assert!(
+        result
+            .slur_spans
+            .iter()
+            .any(|s| { s.part_index == 0 && s.from_measure == 0 && s.to_measure == 1 }),
+        "expected a SlurSpan crossing from measure 0 to measure 1 for tilde chord tie, got: {:?}",
         result.slur_spans
     );
 }

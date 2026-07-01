@@ -430,7 +430,7 @@ fn process_chord_events(
             NoteEvent::Chord(c) => EventResolution::Notes {
                 midi_notes: chord_midi_notes(c, active_key),
                 duration: c.duration,
-                slur: c.slur,
+                slur: c.slur || c.tie_to_next,
             },
             NoteEvent::Rest(r) => EventResolution::Rest {
                 duration: r.duration,

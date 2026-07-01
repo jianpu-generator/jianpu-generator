@@ -2,7 +2,7 @@ use super::beam::{flush_beam_buffer, BeamEntry};
 use super::slur_chains::{extend_note_chains, PendingSlurOpen, SlurChainContext, SlurKey};
 use super::PartSliceResult;
 use crate::ast::grouped::{GroupedChordNote, GroupedNote, GroupedRest, NoteEvent, PartSlice};
-use crate::ast::parsed::{JianPuPitch, PartKind, Syllable};
+use crate::ast::parsed::PartKind;
 use crate::compiler::types::{ArcKind, ColumnElement, ElementContent, SlurSpan};
 
 // ── Part slice compiler ───────────────────────────────────────────────────────
@@ -21,57 +21,94 @@ struct PartState<'a> {
     part_index: usize,
 }
 
-// ── Shared compile-unit abstraction ──────────────────────────────────────────
+// ── TimedUnit trait ───────────────────────────────────────────────────────────
 
-trait HeadContent {
-    fn into_element_content(self, dotted: bool) -> ElementContent;
+trait TimedUnit {
+    fn duration(&self) -> u32;
+    fn dotted(&self) -> bool;
+    fn group_membership(&self) -> u8;
+    fn group_continuation(&self) -> u8;
+    fn slur_close_at(&self) -> Option<u32>;
+    fn slur_key(&self) -> SlurKey;
+    fn tie_to_next(&self) -> bool;
+    fn element_content(&self) -> ElementContent;
 }
 
-struct NoteUnit {
-    pitch: JianPuPitch,
-    accidental: crate::ast::parsed::Accidental,
-    octave: i8,
-}
-
-struct ChordUnit {
-    symbol: String,
-}
-
-impl HeadContent for NoteUnit {
-    fn into_element_content(self, dotted: bool) -> ElementContent {
+impl TimedUnit for GroupedNote {
+    fn duration(&self) -> u32 {
+        self.duration
+    }
+    fn dotted(&self) -> bool {
+        self.dotted
+    }
+    fn group_membership(&self) -> u8 {
+        self.group_membership
+    }
+    fn group_continuation(&self) -> u8 {
+        self.group_continuation
+    }
+    fn slur_close_at(&self) -> Option<u32> {
+        self.slur_group_close_at_duration
+    }
+    fn slur_key(&self) -> SlurKey {
+        SlurKey::Pitch(self.pitch.clone())
+    }
+    fn tie_to_next(&self) -> bool {
+        self.tie_to_next
+    }
+    fn element_content(&self) -> ElementContent {
         ElementContent::NoteHead {
-            pitch: self.pitch,
-            accidental: self.accidental,
+            pitch: self.pitch.clone(),
+            accidental: self.accidental.clone(),
             octave: self.octave,
-            dotted,
+            dotted: self.dotted,
         }
     }
 }
 
-impl HeadContent for ChordUnit {
-    fn into_element_content(self, _dotted: bool) -> ElementContent {
-        ElementContent::ChordSymbol(self.symbol)
+impl TimedUnit for GroupedChordNote {
+    fn duration(&self) -> u32 {
+        self.duration
+    }
+    fn dotted(&self) -> bool {
+        self.dotted
+    }
+    fn group_membership(&self) -> u8 {
+        self.group_membership
+    }
+    fn group_continuation(&self) -> u8 {
+        self.group_continuation
+    }
+    fn slur_close_at(&self) -> Option<u32> {
+        self.slur_group_close_at_duration
+    }
+    fn slur_key(&self) -> SlurKey {
+        SlurKey::from_chord(self)
+    }
+    fn tie_to_next(&self) -> bool {
+        self.tie_to_next
+    }
+    fn element_content(&self) -> ElementContent {
+        ElementContent::ChordSymbol(self.format_symbol())
     }
 }
 
-struct CompiledUnit<H> {
+// ── Shared compile-unit abstraction ──────────────────────────────────────────
+
+struct CompiledUnit {
     duration: u32,
     dotted: bool,
     group_membership: u8,
     group_continuation: u8,
     slur_close_at: Option<u32>,
     slur_key: SlurKey,
-    head: H,
+    head: ElementContent,
 }
 
-fn compile_unit<H: HeadContent>(
-    state: &mut PartState<'_>,
-    unit: CompiledUnit<H>,
-    measure_col_start: u32,
-) {
+fn compile_unit(state: &mut PartState<'_>, unit: CompiledUnit, measure_col_start: u32) {
     state.elements.push(ColumnElement {
         column: *state.col,
-        content: unit.head.into_element_content(unit.dotted),
+        content: unit.head,
     });
 
     let underline_count = match unit.duration {
@@ -205,9 +242,20 @@ fn process_events(state: &mut PartState<'_>, slice: &PartSlice) {
     let mut lyrics_iter = slice.lyrics.as_ref().map(|l| l.syllables.iter());
     for event in &slice.notes.events {
         match event {
-            NoteEvent::Note(note) => compile_note(state, note, 0, &mut lyrics_iter, slice.kind),
+            NoteEvent::Note(note) => {
+                let is_tie_continuation = *state.prev_tie;
+                let lyric = if slice.kind == PartKind::NotesWithLyrics && !is_tie_continuation {
+                    lyrics_iter
+                        .as_mut()
+                        .and_then(|it| it.next())
+                        .map(|s| ElementContent::Lyric(s.text.clone()))
+                } else {
+                    None
+                };
+                compile_timed_unit(state, note, 0, lyric);
+            }
             NoteEvent::Rest(rest) => compile_rest(state, rest, 0),
-            NoteEvent::Chord(chord) => compile_chord(state, chord, 0),
+            NoteEvent::Chord(chord) => compile_timed_unit(state, chord, 0, None),
         }
     }
     flush_beam_buffer(state.beam_buf, state.elements);
@@ -254,16 +302,13 @@ fn preserve_cross_measure_slur_opens(
     }
 }
 
-fn compile_note(
+fn compile_timed_unit<T: TimedUnit>(
     state: &mut PartState<'_>,
-    note: &GroupedNote,
+    unit: &T,
     measure_col_start: u32,
-    lyrics_iter: &mut Option<std::slice::Iter<'_, Syllable>>,
-    kind: PartKind,
+    lyric: Option<ElementContent>,
 ) {
     let is_tie_continuation = *state.prev_tie;
-
-    // Close an incoming tie arc (from the previous note's tie_to_next flag).
     if is_tie_continuation {
         if let (Some(from_col), Some(from_measure)) =
             (*state.prev_tie_column, *state.prev_tie_measure)
@@ -282,39 +327,31 @@ fn compile_note(
         *state.prev_tie_measure = None;
     }
 
-    if kind == PartKind::NotesWithLyrics && !is_tie_continuation {
-        if let Some(ref mut iter) = lyrics_iter {
-            if let Some(syllable) = iter.next() {
-                state.elements.push(ColumnElement {
-                    column: *state.col,
-                    content: ElementContent::Lyric(syllable.text.clone()),
-                });
-            }
-        }
+    if let Some(content) = lyric {
+        state.elements.push(ColumnElement {
+            column: *state.col,
+            content,
+        });
     }
 
-    let note_col = *state.col;
+    let event_col = *state.col;
     compile_unit(
         state,
         CompiledUnit {
-            duration: note.duration,
-            dotted: note.dotted,
-            group_membership: note.group_membership,
-            group_continuation: note.group_continuation,
-            slur_close_at: note.slur_group_close_at_duration,
-            slur_key: SlurKey::Pitch(note.pitch.clone()),
-            head: NoteUnit {
-                pitch: note.pitch.clone(),
-                accidental: note.accidental.clone(),
-                octave: note.octave,
-            },
+            duration: unit.duration(),
+            dotted: unit.dotted(),
+            group_membership: unit.group_membership(),
+            group_continuation: unit.group_continuation(),
+            slur_close_at: unit.slur_close_at(),
+            slur_key: unit.slur_key(),
+            head: unit.element_content(),
         },
         measure_col_start,
     );
 
-    if note.tie_to_next {
+    if unit.tie_to_next() {
         *state.prev_tie = true;
-        *state.prev_tie_column = Some(note_col);
+        *state.prev_tie_column = Some(event_col);
         *state.prev_tie_measure = Some(state.measure_index);
     } else {
         *state.prev_tie = false;
@@ -374,23 +411,4 @@ fn compile_rest(state: &mut PartState<'_>, rest: &GroupedRest, measure_col_start
     if underline_count > 0 && beat_position % 4 == 0 {
         flush_beam_buffer(state.beam_buf, state.elements);
     }
-}
-
-fn compile_chord(state: &mut PartState<'_>, chord: &GroupedChordNote, measure_col_start: u32) {
-    let slur_key = SlurKey::from_chord(chord);
-    compile_unit(
-        state,
-        CompiledUnit {
-            duration: chord.duration,
-            dotted: chord.dotted,
-            group_membership: chord.group_membership,
-            group_continuation: chord.group_continuation,
-            slur_close_at: chord.slur_group_close_at_duration,
-            slur_key,
-            head: ChordUnit {
-                symbol: chord.format_symbol(),
-            },
-        },
-        measure_col_start,
-    );
 }

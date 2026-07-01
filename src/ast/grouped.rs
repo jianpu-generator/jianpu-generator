@@ -180,6 +180,7 @@ pub struct GroupedChordNote {
     pub bass: Option<BassDegree>,
     pub duration: u32,
     pub slur: bool,
+    pub tie_to_next: bool,
     pub group_membership: u8,
     pub group_continuation: u8,
     pub dotted: bool,

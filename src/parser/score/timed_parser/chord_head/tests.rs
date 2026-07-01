@@ -19,6 +19,7 @@ fn chord(
         bass,
         duration: 4,
         slur: false,
+        tie_to_next: false,
         group_membership: 0,
         group_continuation: 0,
         dotted: false,
@@ -479,8 +480,8 @@ fn parses_spaced_slur_group_across_tokens() {
 
 #[test]
 fn tie_operator_produces_tied_chords() {
-    // `1~1 2 3`: tilde should tie the first chord into the second,
-    // yielding 4 chord events where the first has tie=true.
+    // `1~1 2 3`: tilde should tie the first chord into the second via tie_to_next,
+    // yielding 4 chord events where the first has tie_to_next=true.
     let (events, errors) = parse_line_with_errors("1~1 2 3");
     let chords: Vec<&ParsedChordNote> = events
         .iter()
@@ -493,8 +494,15 @@ fn tie_operator_produces_tied_chords() {
         })
         .collect();
     assert_eq!(chords.len(), 4, "expected 4 chord events (1 tied, 1, 2, 3)");
-    assert!(chords[0].slur, "first chord should be tied");
-    assert!(!chords[1].slur, "second chord should not be tied");
+    assert!(
+        chords[0].tie_to_next,
+        "first chord should have tie_to_next=true"
+    );
+    assert!(
+        !chords[0].slur,
+        "first chord should not have slur=true (no group depth applied for tilde)"
+    );
+    assert!(!chords[1].tie_to_next, "second chord should not be tied");
     assert!(
         errors.is_empty(),
         "expected no errors for valid tie syntax, got: {errors:?}"

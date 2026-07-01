@@ -426,6 +426,7 @@ impl PartGrouper {
                 bass: pc.bass,
                 duration: pc.duration,
                 slur: pc.slur && pc.slur_group_close_at_duration.is_none(),
+                tie_to_next: pc.tie_to_next,
                 group_membership: pc.group_membership,
                 group_continuation: pc.group_continuation,
                 dotted: pc.dotted,

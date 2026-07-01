@@ -46,6 +46,7 @@ fn chord_major_expands_to_three_notes() {
         bass: None,
         duration: 16,
         slur: false,
+        tie_to_next: false,
         group_membership: 0,
         group_continuation: 0,
         dotted: false,
@@ -489,5 +490,54 @@ fn octave_offset_zero_is_identity() {
         note_on_keys(&midi_bytes),
         vec![60],
         "octave offset 0 should leave C4 at MIDI 60"
+    );
+}
+
+#[test]
+fn cross_measure_chord_slur_does_not_replay_chord() {
+    // A chord `(1` at the end of measure 1 slurred into `1)` at the start of measure 2.
+    // Because the same chord is tied across the barline, there should be exactly 3 NoteOn
+    // events (one per note of the C major triad), not 6 (which would mean the chord re-fires).
+    let input = concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "# parts\nC = chords\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n",
+        "[C] 0 0 0 (1\n",
+        "\n",
+        "[C] 1) 0 0 0\n",
+    );
+    let doc = crate::parser::parse(input, "test", &[]).unwrap();
+    let score = crate::grouper::group(doc).unwrap();
+    let midi_bytes = write_midi(&score).unwrap();
+    assert_eq!(
+        count_note_on_events(&midi_bytes),
+        3,
+        "cross-measure chord slur should produce exactly 3 NoteOn events (C major triad once), \
+         got {} — chord is being re-articulated across the barline",
+        count_note_on_events(&midi_bytes),
+    );
+}
+
+#[test]
+fn tilde_cross_measure_chord_does_not_replay_chord() {
+    // [a] 3~---  => chord 3 tied into 3 extensions; [a] 3 => chord 3 in measure 2.
+    // The same chord tied across the barline should produce only 3 NoteOn events (one triad).
+    let input = concat!(
+        "# metadata\ntitle=\"\"\nauthor=\"\"\n\n",
+        "# parts\nAccompaniment [a] = chords\n\n",
+        "# score\n\n\n",
+        "[a] 3~---\n",
+        "\n",
+        "[a] 3\n",
+    );
+    let doc = crate::parser::parse(input, "test", &[]).unwrap();
+    let score = crate::grouper::group(doc).unwrap();
+    let midi_bytes = write_midi(&score).unwrap();
+    assert_eq!(
+        count_note_on_events(&midi_bytes),
+        3,
+        "cross-measure tilde chord tie should produce 3 NoteOn events (triad once), \
+         got {} — chord is being re-articulated",
+        count_note_on_events(&midi_bytes),
     );
 }
