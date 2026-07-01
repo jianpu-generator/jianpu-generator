@@ -292,3 +292,85 @@ fn soundfont_name_may_contain_equals() {
     assert_eq!(decls.len(), 1);
     assert_eq!(decls[0].soundfont, Soundfont(1));
 }
+
+#[test]
+fn source_level_follow_soundfont_is_explicit_only() {
+    use super::{collect_source_raw_declarations, SourcePartMode};
+    use crate::parser::parts_parser::InstrumentInfo;
+
+    let instruments = [InstrumentInfo {
+        value: "40: Violin".to_owned(),
+        category: String::new(),
+        source: String::new(),
+        role: String::new(),
+        articulation: String::new(),
+    }];
+
+    let content = "Chords [C] = follow[M] \"40: Violin\"\n";
+    let full_source = format!("# parts\n{content}# score\n");
+    let mut errors = Vec::new();
+    let decls = collect_source_raw_declarations(
+        content,
+        "# parts\n".len(),
+        &full_source,
+        &mut errors,
+        &instruments,
+    );
+    assert!(errors.is_empty());
+    assert_eq!(decls.len(), 1);
+    assert_eq!(decls[0].mode, SourcePartMode::Follow);
+    assert_eq!(decls[0].follow_target.as_deref(), Some("M"));
+    assert_eq!(decls[0].soundfont.map(|sf| sf.0), Some(40));
+}
+
+#[test]
+fn source_level_follow_without_soundfont_does_not_inherit() {
+    use super::{collect_source_raw_declarations, SourcePartMode};
+
+    let content = "Melody [M] = notes \"48: String Ensemble 1\"\nChords [C] = follow[M]\n";
+    let full_source = format!("# parts\n{content}# score\n");
+    let mut errors = Vec::new();
+    let decls =
+        collect_source_raw_declarations(content, "# parts\n".len(), &full_source, &mut errors, &[]);
+    assert!(errors.is_empty());
+    assert_eq!(decls.len(), 2);
+    assert_eq!(decls[1].mode, SourcePartMode::Follow);
+    assert!(decls[1].soundfont.is_none());
+}
+
+#[test]
+fn source_level_follow_explicit_volume_and_octave() {
+    use super::{collect_source_raw_declarations, SourcePartMode};
+
+    let content = "Melody [M] = notes\nChords [C] = follow[M] 60% +1\n";
+    let full_source = format!("# parts\n{content}# score\n");
+    let mut errors = Vec::new();
+    let decls =
+        collect_source_raw_declarations(content, "# parts\n".len(), &full_source, &mut errors, &[]);
+    assert!(errors.is_empty());
+    assert_eq!(decls[1].mode, SourcePartMode::Follow);
+    assert_eq!(decls[1].volume, Some(60));
+    assert_eq!(decls[1].octave_offset, Some(1));
+}
+
+#[test]
+fn source_level_line_numbers_in_multi_section_file() {
+    use crate::list_part_declarations_from_source;
+
+    let source = concat!(
+        "# metadata\n",
+        "title = \"t\"\n",
+        "\n",
+        "# parts\n",
+        "Melody [M] = notes\n",
+        "Chords [C] = follow[M]\n",
+        "\n",
+        "# score\n",
+        "1 - - -\n",
+    );
+
+    let declarations = list_part_declarations_from_source(source, "test.jianpu", &[]).unwrap();
+    assert_eq!(declarations.len(), 2);
+    assert_eq!(declarations[0].line_number, 5);
+    assert_eq!(declarations[1].line_number, 6);
+}

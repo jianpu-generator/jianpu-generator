@@ -2,18 +2,18 @@ import * as Dialog from '@radix-ui/react-dialog'
 import * as Select from '@radix-ui/react-select'
 import * as Slider from '@radix-ui/react-slider'
 import { useState } from 'react'
-import type { PartInfo } from '../types'
 import type {
-  ParsedPartDeclaration,
+  PartDeclaration,
+  PartInfo,
   PartMode,
   SoundfontValue,
-} from '../utils/partSource'
+} from '../types'
 import { SoundfontSearchModal } from './SoundfontSearchModal'
 
 export interface EditPartsModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  partDeclarations: ParsedPartDeclaration[]
+  partDeclarations: PartDeclaration[]
   allParts: PartInfo[]
   onPartDeclarationChange: (
     abbreviation: string,
@@ -50,7 +50,7 @@ function PartRow({
   stopPreviewInstrument,
   previewAudioPlaying,
 }: {
-  declaration: ParsedPartDeclaration
+  declaration: PartDeclaration
   allParts: PartInfo[]
   isFirstPart: boolean
   onPartDeclarationChange: EditPartsModalProps['onPartDeclarationChange']

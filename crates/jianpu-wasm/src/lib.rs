@@ -1,5 +1,6 @@
 #![cfg_attr(test, allow(clippy::disallowed_macros))]
 
+mod part_declarations;
 mod types;
 
 use jianpu_generator::parser::parts_parser::InstrumentInfo;
@@ -10,7 +11,7 @@ use jianpu_generator::write_wav_for_measure_range_from_source;
 #[cfg(feature = "wav")]
 use jianpu_generator::write_wav_from_source_filtered;
 use jianpu_generator::{
-    compile, find_measure_at_byte_offset, list_measure_spans_from_source, list_parts_from_source,
+    compile, find_measure_at_byte_offset, list_measure_spans_from_source,
     render_documents_from_source_filtered_with_lyrics, render_documents_with_highlight_range,
 };
 #[cfg(feature = "pdf")]
@@ -21,8 +22,8 @@ use jianpu_generator::{
 use types::GenerateWavResponse;
 use types::{
     diagnostic_from_diagnostic, diagnostic_from_error, group_diagnostics_into_view_zones,
-    svg_document_to_out, ListMeasureSpansResponse, ListPartsResponse, MeasureAtOffsetResponse,
-    MeasureSpanOut, PartOut, RenderResponse, SectionRangeOut,
+    svg_document_to_out, ListMeasureSpansResponse, ListPartDeclarationsResponse, ListPartsResponse,
+    MeasureAtOffsetResponse, MeasureSpanOut, RenderResponse, SectionRangeOut,
 };
 #[cfg(feature = "pdf")]
 use types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
@@ -102,24 +103,6 @@ fn render_with_highlight_range_response(
                 diagnostic_view_zones,
             }
         }
-    }
-}
-
-fn list_parts_response(source: &str, instruments: &[InstrumentInfo]) -> ListPartsResponse {
-    match list_parts_from_source(source, "input.jianpu", instruments) {
-        Ok(parts) => ListPartsResponse::Ok {
-            parts: parts
-                .into_iter()
-                .map(|part| PartOut {
-                    abbreviation: part.abbreviation,
-                    display_name: part.display_name,
-                    has_lyrics: part.has_lyrics,
-                })
-                .collect(),
-        },
-        Err(e) => ListPartsResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &e)],
-        },
     }
 }
 
@@ -366,13 +349,54 @@ pub fn render_with_highlight_range(
 
 /// Parse `.jianpu` source and return declared parts from the `# parts` section.
 ///
-/// - `{ "status": "ok", "parts": [{ "abbreviation", "display_name" }, ...] }`
+/// - `{ "status": "ok", "parts": [...], "declarations": [...] }`
 /// - `{ "status": "err", "diagnostics": [...] }`
 #[wasm_bindgen]
 pub fn list_parts(source: &str, raw_instruments: JsValue) -> ListPartsResponse {
     let instruments: Vec<InstrumentInfo> =
         serde_wasm_bindgen::from_value(raw_instruments).unwrap_or_default();
-    list_parts_response(source, &instruments)
+    part_declarations::list_parts_response(source, &instruments)
+}
+
+/// Parse `.jianpu` source and return source-level part declarations.
+///
+/// - `{ "status": "ok", "declarations": [...] }`
+/// - `{ "status": "err", "diagnostics": [...] }`
+#[wasm_bindgen]
+pub fn list_part_declarations(
+    source: &str,
+    raw_instruments: JsValue,
+) -> ListPartDeclarationsResponse {
+    let instruments: Vec<InstrumentInfo> =
+        serde_wasm_bindgen::from_value(raw_instruments).unwrap_or_default();
+    part_declarations::list_part_declarations_response(source, &instruments)
+}
+
+/// Rewrite the mode, soundfont, volume, and octave of a named part declaration in `.jianpu` source.
+///
+/// `new_mode` is one of `"chords"`, `"notes"`, `"notes+lyrics"`, or `"follow[<target>]"`.
+/// `new_soundfont` is a GM instrument label such as `"40: Violin"`, or `""` to omit soundfont.
+/// `new_volume` is `"47"` for 47%, or `""` to use the default (100%).
+/// `new_octave_offset` is `"+1"`, `"-2"`, or `""` to use the default (0).
+/// Returns the updated source string. If the abbreviation is not found or `new_mode` is
+/// unrecognised, returns `source` unchanged.
+#[wasm_bindgen]
+pub fn update_part_declaration(
+    source: &str,
+    abbreviation: &str,
+    new_mode: &str,
+    new_soundfont: &str,
+    new_volume: &str,
+    new_octave_offset: &str,
+) -> String {
+    part_declarations::update_part_declaration_source(
+        source,
+        abbreviation,
+        new_mode,
+        new_soundfont,
+        new_volume,
+        new_octave_offset,
+    )
 }
 
 /// Find the measure index at a UTF-8 byte offset in the source.
@@ -506,40 +530,6 @@ pub fn generate_split_pdfs(
     monospace: Vec<u8>,
 ) -> GenerateSplitPdfsResponse {
     generate_split_pdfs_response(source, base_name, sans_serif_sc, sans_serif_tc, monospace)
-}
-
-/// Rewrite the mode, soundfont, and volume of a named part declaration in `.jianpu` source.
-///
-/// `new_mode` is one of `"chord"`, `"notes"`, `"notes lyrics"`, or `"follow[<target>]"`.
-/// `new_soundfont` is `"vocal"`, `"piano"`, `"string"`, or `""` to remove the soundfont.
-/// `new_volume` is `"47"` for 47%, or `""` to use the default (100%).
-/// Returns the updated source string. If the abbreviation is not found or `new_mode` is
-/// unrecognised, returns `source` unchanged.
-#[wasm_bindgen]
-pub fn update_part_declaration(
-    source: &str,
-    abbreviation: &str,
-    new_mode: &str,
-    new_soundfont: &str,
-    new_volume: &str,
-) -> String {
-    let Some(mode) = jianpu_generator::source_edit::PartMode::parse(new_mode) else {
-        return source.to_owned();
-    };
-    let soundfont = if new_soundfont.is_empty() {
-        None
-    } else {
-        Some(new_soundfont)
-    };
-    let volume = new_volume.parse::<u8>().ok().filter(|&v| v != 100);
-    jianpu_generator::source_edit::update_part_declaration(
-        source,
-        abbreviation,
-        &mode,
-        soundfont,
-        volume,
-    )
-    .unwrap_or_else(|| source.to_owned())
 }
 
 #[cfg(test)]

@@ -9,11 +9,16 @@ export type {
   ListPartsResponse as ListPartsResult,
   MeasureAtOffsetResponse as MeasureAtOffsetResult,
   MeasureSpanOut as MeasureSpan,
+  PartDeclarationModeOut as PartMode,
+  PartDeclarationOut as PartDeclaration,
   PartOut as PartInfo,
   RenderResponse as RenderResult,
   SectionRangeOut as SectionRange,
   SpanOut as ByteSpan,
 } from 'jianpu-wasm'
+
+// Format: "N: Instrument Name" e.g. "48: String Ensemble 1"
+export type SoundfontValue = string
 
 interface EditorSelection {
   start: number

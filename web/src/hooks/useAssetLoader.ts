@@ -19,6 +19,37 @@ function resolveAssetUrl(path: string): string {
   return `${import.meta.env.BASE_URL}${relative}`
 }
 
+async function readCachedBytes(
+  resolvedUrl: string,
+): Promise<Uint8Array | null> {
+  try {
+    const cache = await caches.open(CACHE_NAME)
+    const cached = await cache.match(resolvedUrl)
+    if (!cached) return null
+    const buffer = await cached.arrayBuffer()
+    return new Uint8Array(buffer)
+  } catch {
+    return null
+  }
+}
+
+async function writeCachedBytes(
+  resolvedUrl: string,
+  bytes: Uint8Array,
+): Promise<void> {
+  try {
+    const cache = await caches.open(CACHE_NAME)
+    await cache.put(
+      resolvedUrl,
+      new Response(new Uint8Array(bytes), {
+        headers: { 'Content-Type': 'application/octet-stream' },
+      }),
+    )
+  } catch {
+    // Cache API may be unavailable (e.g. Playwright, private mode).
+  }
+}
+
 export function useAssetLoader(url: string): AssetLoaderState {
   const [bytes, setBytes] = useState<Uint8Array | null>(null)
   const [status, setStatus] = useState<AssetStatus>('loading')
@@ -31,11 +62,8 @@ export function useAssetLoader(url: string): AssetLoaderState {
 
     async function load() {
       try {
-        const cache = await caches.open(CACHE_NAME)
-        const cached = await cache.match(resolvedUrl)
-        if (cached) {
-          const buffer = await cached.arrayBuffer()
-          const cachedBytes = new Uint8Array(buffer)
+        const cachedBytes = await readCachedBytes(resolvedUrl)
+        if (cachedBytes) {
           if (!cancelled) {
             setBytes(cachedBytes)
             setLoadedBytes(cachedBytes.byteLength)
@@ -46,40 +74,22 @@ export function useAssetLoader(url: string): AssetLoaderState {
         }
 
         const response = await fetch(resolvedUrl)
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+
         const total = Number(response.headers.get('content-length') ?? 0)
         if (!cancelled) setTotalBytes(total)
 
-        const reader = response.body?.getReader()
-        if (!reader) throw new Error('Response body is not readable')
-        const chunks: Uint8Array[] = []
-        let received = 0
+        const buffer = await response.arrayBuffer()
+        const merged = new Uint8Array(buffer)
 
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          chunks.push(value)
-          received += value.byteLength
-          if (!cancelled) setLoadedBytes(received)
-        }
-
-        const merged = new Uint8Array(received)
-        let offset = 0
-        for (const chunk of chunks) {
-          merged.set(chunk, offset)
-          offset += chunk.byteLength
-        }
-
-        await cache
-          .put(
-            resolvedUrl,
-            new Response(merged, {
-              headers: { 'Content-Type': 'application/octet-stream' },
-            }),
-          )
-          .catch(() => {})
+        await writeCachedBytes(resolvedUrl, merged)
 
         if (!cancelled) {
           setBytes(merged)
+          setLoadedBytes(merged.byteLength)
+          if (total === 0) setTotalBytes(merged.byteLength)
           setStatus('ready')
         }
       } catch {

@@ -4,10 +4,13 @@ import type {
   Diagnostic,
   DiagnosticViewZone,
   MeasureSpan,
+  PartDeclaration,
   PartInfo,
+  PartMode,
   SectionRange,
 } from '../types'
 import type { WorkerRequest, WorkerResponse } from '../worker/jianpu.worker'
+import type { JianpuWorkerState } from './useJianpuWorkerTypes'
 import {
   baseNameFromActiveFile,
   disabledLyricsForRender,
@@ -19,35 +22,7 @@ import {
   zipFilenameFromActiveFile,
 } from './workerHelpers'
 
-interface JianpuWorkerState {
-  parts: PartInfo[]
-  partsLoading: boolean
-  documents: SvgDocumentOut[]
-  wavUrl: string | null
-  audioAvailable: boolean
-  pdfAvailable: boolean
-  pdfExporting: boolean
-  splitPdfExporting: boolean
-  diagnostics: Diagnostic[]
-  diagnosticViewZones: DiagnosticViewZone[]
-  rendering: boolean
-  audioGenerating: boolean
-  exportPdf: () => void
-  exportSplitPdf: () => void
-  generateFullAudio: () => void
-  selectedMeasureRange: { start: number; end: number } | null
-  measureAudioGenerating: boolean
-  measureAudioPlaying: boolean
-  notifySelection: (startLine: number, endLine: number) => void
-  playSelectedMeasures: () => void
-  stopMeasurePlayback: () => void
-  highlightedDocuments: SvgDocumentOut[]
-  measureSpans: MeasureSpan[]
-  sectionRanges: SectionRange[]
-  previewInstrument: (programNumber: number) => void
-  stopPreviewInstrument: () => void
-  previewAudioPlaying: boolean
-}
+export type { JianpuWorkerState } from './useJianpuWorkerTypes'
 
 export function useJianpuWorker(
   source: string,
@@ -60,6 +35,9 @@ export function useJianpuWorker(
   debounceMs = 300,
 ): JianpuWorkerState {
   const [parts, setParts] = useState<PartInfo[]>([])
+  const [partDeclarations, setPartDeclarations] = useState<PartDeclaration[]>(
+    [],
+  )
   const [partsLoading, setPartsLoading] = useState(false)
   const [documents, setDocuments] = useState<SvgDocumentOut[]>([])
   const [wavUrl, setWavUrl] = useState<string | null>(null)
@@ -95,6 +73,11 @@ export function useJianpuWorker(
   const workerRef = useRef<Worker | null>(null)
   const wavUrlRef = useRef<string | null>(null)
   const partsRequestIdRef = useRef(0)
+  const updatePartDeclarationRequestIdRef = useRef(0)
+  const latestUpdatePartDeclarationIdRef = useRef(0)
+  const pendingPartDeclarationUpdatesRef = useRef(
+    new Map<number, (source: string) => void>(),
+  )
   const renderRequestIdRef = useRef(0)
   const audioRequestIdRef = useRef(0)
   const pdfRequestIdRef = useRef(0)
@@ -192,6 +175,15 @@ export function useJianpuWorker(
         if (msg.id !== latestPartsIdRef.current) return
         setPartsLoading(false)
         setParts(msg.parts)
+        setPartDeclarations(msg.declarations)
+        return
+      }
+
+      if (msg.type === 'partDeclarationUpdated') {
+        if (msg.id !== latestUpdatePartDeclarationIdRef.current) return
+        setPartDeclarations(msg.declarations)
+        pendingPartDeclarationUpdatesRef.current.get(msg.id)?.(msg.source)
+        pendingPartDeclarationUpdatesRef.current.delete(msg.id)
         return
       }
 
@@ -540,8 +532,42 @@ export function useJianpuWorker(
     worker.postMessage(payload)
   }, [pdfExporting, splitPdfExporting])
 
+  const updatePartDeclaration = useCallback(
+    (
+      abbreviation: string,
+      mode: PartMode,
+      followTarget: string | null,
+      soundfont: string | null,
+      volume: number | null,
+      octaveOffset: number | null,
+    ) =>
+      new Promise<string>((resolve) => {
+        const worker = workerRef.current
+        if (!worker) {
+          resolve(sourceRef.current)
+          return
+        }
+        const id = ++updatePartDeclarationRequestIdRef.current
+        latestUpdatePartDeclarationIdRef.current = id
+        pendingPartDeclarationUpdatesRef.current.set(id, resolve)
+        worker.postMessage({
+          type: 'updatePartDeclaration',
+          source: sourceRef.current,
+          abbreviation,
+          mode,
+          followTarget,
+          soundfont,
+          volume,
+          octaveOffset,
+          id,
+        } satisfies WorkerRequest)
+      }),
+    [],
+  )
+
   return {
     parts,
+    partDeclarations,
     partsLoading,
     documents,
     wavUrl,
@@ -568,5 +594,6 @@ export function useJianpuWorker(
     previewInstrument,
     stopPreviewInstrument,
     previewAudioPlaying,
+    updatePartDeclaration,
   }
 }

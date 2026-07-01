@@ -7,14 +7,16 @@ fn source_with_parts(parts_body: &str) -> String {
 #[test]
 fn test_basic_chord_to_notes() {
     let source = source_with_parts("main = chords");
-    let result = update_part_declaration(&source, "main", &PartMode::Notes, None, None).unwrap();
+    let result =
+        update_part_declaration(&source, "main", &PartMode::Notes, None, None, None).unwrap();
     assert!(result.contains("main = notes"));
 }
 
 #[test]
 fn test_notes_to_notes_lyrics() {
     let source = source_with_parts("Melody [M] = notes");
-    let result = update_part_declaration(&source, "M", &PartMode::NotesLyrics, None, None).unwrap();
+    let result =
+        update_part_declaration(&source, "M", &PartMode::NotesLyrics, None, None, None).unwrap();
     assert!(result.contains("Melody [M] = notes+lyrics"));
 }
 
@@ -27,6 +29,7 @@ fn test_notes_lyrics_to_follow() {
         &PartMode::Follow {
             target: "M".to_owned(),
         },
+        None,
         None,
         None,
     )
@@ -43,6 +46,7 @@ fn test_set_soundfont() {
         &PartMode::Notes,
         Some("0: Acoustic Grand Piano"),
         None,
+        None,
     )
     .unwrap();
     assert!(result.contains(r#"Piano [P] = notes "0: Acoustic Grand Piano""#));
@@ -51,16 +55,22 @@ fn test_set_soundfont() {
 #[test]
 fn test_change_soundfont() {
     let source = source_with_parts(r#"Piano [P] = notes "0: Acoustic Grand Piano""#);
-    let result =
-        update_part_declaration(&source, "P", &PartMode::Notes, Some("52: Choir Aahs"), None)
-            .unwrap();
+    let result = update_part_declaration(
+        &source,
+        "P",
+        &PartMode::Notes,
+        Some("52: Choir Aahs"),
+        None,
+        None,
+    )
+    .unwrap();
     assert!(result.contains(r#"Piano [P] = notes "52: Choir Aahs""#));
 }
 
 #[test]
 fn test_remove_soundfont() {
     let source = source_with_parts(r#"Piano [P] = notes "0: Acoustic Grand Piano""#);
-    let result = update_part_declaration(&source, "P", &PartMode::Notes, None, None).unwrap();
+    let result = update_part_declaration(&source, "P", &PartMode::Notes, None, None, None).unwrap();
     assert!(result.contains("Piano [P] = notes\n"));
     assert!(!result.contains('"'));
 }
@@ -74,6 +84,7 @@ fn test_mode_change_preserves_soundfont() {
         &PartMode::Chords,
         Some("0: Acoustic Grand Piano"),
         None,
+        None,
     )
     .unwrap();
     assert!(result.contains(r#"Piano [P] = chords "0: Acoustic Grand Piano""#));
@@ -82,14 +93,58 @@ fn test_mode_change_preserves_soundfont() {
 #[test]
 fn test_no_match_returns_none() {
     let source = source_with_parts("main = notes");
-    let result = update_part_declaration(&source, "NOMATCH", &PartMode::Chords, None, None);
+    let result = update_part_declaration(&source, "NOMATCH", &PartMode::Chords, None, None, None);
     assert!(result.is_none());
 }
 
 #[test]
 fn test_multi_part_only_target_changes() {
     let source = source_with_parts("Melody [M] = notes\nAlto [A] = notes+lyrics");
-    let result = update_part_declaration(&source, "A", &PartMode::Chords, None, None).unwrap();
+    let result =
+        update_part_declaration(&source, "A", &PartMode::Chords, None, None, None).unwrap();
     assert!(result.contains("Melody [M] = notes\n"));
     assert!(result.contains("Alto [A] = chords"));
+}
+
+#[test]
+fn test_set_octave_on_notes() {
+    let source = source_with_parts("Melody [M] = notes+lyrics");
+    let result =
+        update_part_declaration(&source, "M", &PartMode::NotesLyrics, None, None, Some(-1))
+            .unwrap();
+    assert!(result.contains("Melody [M] = notes+lyrics -1"));
+}
+
+#[test]
+fn test_set_octave_on_follow() {
+    let source = source_with_parts("Melody [M] = notes\nChords [C] = follow[M]");
+    let result = update_part_declaration(
+        &source,
+        "C",
+        &PartMode::Follow {
+            target: "M".to_owned(),
+        },
+        None,
+        None,
+        Some(1),
+    )
+    .unwrap();
+    assert!(result.contains("Chords [C] = follow[M] +1"));
+}
+
+#[test]
+fn test_change_soundfont_on_follow_preserves_mode_and_target() {
+    let source = source_with_parts("Melody [M] = notes\nChords [C] = follow[M] 60%");
+    let result = update_part_declaration(
+        &source,
+        "C",
+        &PartMode::Follow {
+            target: "M".to_owned(),
+        },
+        Some("40: Violin"),
+        Some(60),
+        None,
+    )
+    .unwrap();
+    assert!(result.contains(r#"Chords [C] = follow[M] "40: Violin" 60%"#));
 }

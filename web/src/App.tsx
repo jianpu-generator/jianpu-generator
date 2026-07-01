@@ -27,14 +27,9 @@ import {
   readPartTogglesForFile,
   writePartTogglesForFile,
 } from './partToggleCache'
-import type { EditorHandle } from './types'
+import type { EditorHandle, PartMode, SoundfontValue } from './types'
 import type { MetadataKey } from './utils/metadataSource'
 import { parseMetadata, updateMetadataField } from './utils/metadataSource'
-import type { PartMode, SoundfontValue } from './utils/partSource'
-import {
-  parsePartDeclarations,
-  updatePartDeclaration,
-} from './utils/partSource'
 import './App.css'
 import './file-tab-bar.css'
 import './preview.css'
@@ -75,6 +70,7 @@ export default function App() {
   const pdfFontsReady = fonts.status === 'ready'
   const {
     parts,
+    partDeclarations,
     partsLoading,
     documents,
     wavUrl,
@@ -101,6 +97,7 @@ export default function App() {
     previewInstrument,
     stopPreviewInstrument,
     previewAudioPlaying,
+    updatePartDeclaration,
   } = useJianpuWorker(
     source,
     disabledParts,
@@ -276,13 +273,6 @@ export default function App() {
     [setStore],
   )
 
-  const partDeclarations = useMemo(
-    () => parsePartDeclarations(source, parts),
-    [source, parts],
-  )
-
-  const parsedMetadata = useMemo(() => parseMetadata(source), [source])
-
   const handlePartDeclarationChange = useCallback(
     (
       abbreviation: string,
@@ -292,19 +282,19 @@ export default function App() {
       volume: number | null,
       octaveOffset: number | null,
     ) => {
-      const newSource = updatePartDeclaration(
-        source,
+      void updatePartDeclaration(
         abbreviation,
         mode,
         followTarget,
         soundfont,
         volume,
         octaveOffset,
-      )
-      handleSourceChange(newSource)
+      ).then(handleSourceChange)
     },
-    [source, handleSourceChange],
+    [updatePartDeclaration, handleSourceChange],
   )
+
+  const parsedMetadata = useMemo(() => parseMetadata(source), [source])
 
   const handleMetadataFieldChange = useCallback(
     (key: MetadataKey, value: string | null) => {

@@ -1,6 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { Pause, Play } from 'lucide-react'
 import { useState } from 'react'
+import type { SoundfontValue } from '../types'
 import type {
   InstrumentArticulation,
   InstrumentCategory,
@@ -9,7 +10,6 @@ import type {
   InstrumentSource,
 } from '../utils/gmInstruments'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
-import type { SoundfontValue } from '../utils/partSource'
 
 type ActiveTag =
   | { kind: 'category'; value: InstrumentCategory }

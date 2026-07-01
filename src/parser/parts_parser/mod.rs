@@ -72,6 +72,27 @@ pub fn parse_parts(
     (declarations, errors)
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SourcePartMode {
+    Chords,
+    Notes,
+    NotesLyrics,
+    Follow,
+}
+
+/// Source-level part declaration before follow inheritance is applied.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceRawPartDecl {
+    pub display_name: String,
+    pub abbreviation: String,
+    pub line_number: u32,
+    pub mode: SourcePartMode,
+    pub follow_target: Option<String>,
+    pub soundfont: Option<Soundfont>,
+    pub volume: Option<u8>,
+    pub octave_offset: Option<i8>,
+}
+
 struct RawDecl {
     display_name: String,
     abbreviation: String,
@@ -88,6 +109,51 @@ struct RawDecl {
 enum RawKind {
     Concrete(PartKind),
     Follow { target: String, target_span: Span },
+}
+
+fn byte_offset_to_line_number(source: &str, byte_offset: usize) -> u32 {
+    source
+        .as_bytes()
+        .iter()
+        .take(byte_offset.min(source.len()))
+        .filter(|&&byte| byte == b'\n')
+        .count() as u32
+        + 1
+}
+
+fn raw_kind_to_source_mode(kind: &RawKind) -> (SourcePartMode, Option<String>) {
+    match kind {
+        RawKind::Concrete(PartKind::Chords) => (SourcePartMode::Chords, None),
+        RawKind::Concrete(PartKind::Notes) => (SourcePartMode::Notes, None),
+        RawKind::Concrete(PartKind::NotesWithLyrics) => (SourcePartMode::NotesLyrics, None),
+        RawKind::Follow { target, .. } => (SourcePartMode::Follow, Some(target.clone())),
+    }
+}
+
+/// Collect source-level part declarations from a `# parts` section body.
+pub fn collect_source_raw_declarations(
+    content: &str,
+    base_offset: usize,
+    full_source: &str,
+    errors: &mut Vec<RecoverableError>,
+    instruments: &[InstrumentInfo],
+) -> Vec<SourceRawPartDecl> {
+    collect_raw_declarations(content, base_offset, errors, instruments)
+        .into_iter()
+        .map(|raw_decl| {
+            let (mode, follow_target) = raw_kind_to_source_mode(&raw_decl.kind);
+            SourceRawPartDecl {
+                display_name: raw_decl.display_name,
+                abbreviation: raw_decl.abbreviation,
+                line_number: byte_offset_to_line_number(full_source, raw_decl.span.start),
+                mode,
+                follow_target,
+                soundfont: raw_decl.soundfont,
+                volume: raw_decl.volume,
+                octave_offset: raw_decl.octave_offset,
+            }
+        })
+        .collect()
 }
 
 struct ParsedPartRhs {

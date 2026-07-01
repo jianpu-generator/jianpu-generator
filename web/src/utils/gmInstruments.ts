@@ -1,4 +1,4 @@
-import type { SoundfontValue } from './partSource'
+import type { SoundfontValue } from '../types'
 
 export type InstrumentCategory =
   | 'piano'

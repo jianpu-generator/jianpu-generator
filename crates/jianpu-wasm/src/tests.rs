@@ -42,9 +42,9 @@ fn list_parts_response_returns_declarations() {
         "[Soprano] 1 2 3 4\n",
         "[Alto] 5 6 7 1\n",
     );
-    let resp = list_parts_response(input, &[]);
+    let resp = part_declarations::list_parts_response(input, &[]);
     match resp {
-        ListPartsResponse::Ok { parts } => {
+        ListPartsResponse::Ok { parts, .. } => {
             assert_eq!(parts.len(), 2);
             assert_eq!(parts[0].abbreviation, "Soprano");
             assert_eq!(parts[1].abbreviation, "Alto");

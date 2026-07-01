@@ -1,11 +1,18 @@
 import type { SvgDocumentOut } from 'jianpu-wasm'
 import init, * as jianpuWasm from 'jianpu-wasm'
-import { list_measure_spans, list_parts, render } from 'jianpu-wasm'
+import {
+  list_measure_spans,
+  list_parts,
+  render,
+  update_part_declaration,
+} from 'jianpu-wasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
   MeasureSpan,
+  PartDeclaration,
   PartInfo,
+  PartMode,
   SectionRange,
 } from '../types'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
@@ -50,6 +57,17 @@ export type WorkerRequest =
       disabledLyrics?: string[]
     }
   | { type: 'listParts'; source: string; id: number }
+  | {
+      type: 'updatePartDeclaration'
+      source: string
+      abbreviation: string
+      mode: PartMode
+      followTarget: string | null
+      soundfont: string | null
+      volume: number | null
+      octaveOffset: number | null
+      id: number
+    }
   | {
       type: 'generatePdf'
       source: string
@@ -106,7 +124,18 @@ export type WorkerResponse =
       diagnostics: Diagnostic[]
       diagnosticViewZones: DiagnosticViewZone[]
     }
-  | { type: 'parts'; id: number; parts: PartInfo[] }
+  | {
+      type: 'parts'
+      id: number
+      parts: PartInfo[]
+      declarations: PartDeclaration[]
+    }
+  | {
+      type: 'partDeclarationUpdated'
+      id: number
+      source: string
+      declarations: PartDeclaration[]
+    }
   | { type: 'pdf'; id: number; pdf: ArrayBuffer }
   | { type: 'pdfErr'; id: number; diagnostics: Diagnostic[] }
   | { type: 'splitPdf'; id: number; zip: ArrayBuffer }
@@ -143,6 +172,24 @@ let loadedSoundfont: Uint8Array | null = null
 let loadedFonts: { sc: Uint8Array; tc: Uint8Array; mono: Uint8Array } | null =
   null
 
+function modeToWasmString(mode: PartMode, followTarget: string | null): string {
+  if (mode === 'follow') {
+    return `follow[${followTarget ?? ''}]`
+  }
+  return mode
+}
+
+function octaveOffsetToWasmString(octaveOffset: number | null): string {
+  if (octaveOffset == null || octaveOffset === 0) return ''
+  return octaveOffset > 0 ? `+${octaveOffset}` : String(octaveOffset)
+}
+
+function listDeclarationsFromSource(source: string): PartDeclaration[] {
+  if (!('list_part_declarations' in jianpuWasm)) return []
+  const result = jianpuWasm.list_part_declarations(source, GM_INSTRUMENTS)
+  return result.status === 'ok' ? result.declarations : []
+}
+
 function binaryBufferFromResult(
   bytes: Uint8Array | ArrayBuffer | ArrayLike<number>,
 ): ArrayBuffer {
@@ -175,6 +222,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         type: 'parts',
         id: msg.id,
         parts: result.parts,
+        declarations: result.declarations,
       } satisfies WorkerResponse)
       return
     }
@@ -183,6 +231,25 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       type: 'parts',
       id: msg.id,
       parts: [],
+      declarations: [],
+    } satisfies WorkerResponse)
+    return
+  }
+
+  if (msg.type === 'updatePartDeclaration') {
+    const newSource = update_part_declaration(
+      msg.source,
+      msg.abbreviation,
+      modeToWasmString(msg.mode, msg.followTarget),
+      msg.soundfont ?? '',
+      msg.volume != null ? String(msg.volume) : '',
+      octaveOffsetToWasmString(msg.octaveOffset),
+    )
+    postMessage({
+      type: 'partDeclarationUpdated',
+      id: msg.id,
+      source: newSource,
+      declarations: listDeclarationsFromSource(newSource),
     } satisfies WorkerResponse)
     return
   }

@@ -35,6 +35,7 @@ pub fn update_part_declaration(
     new_mode: &PartMode,
     new_soundfont: Option<&str>,
     new_volume: Option<u8>,
+    new_octave_offset: Option<i8>,
 ) -> Option<String> {
     let lines: Vec<&str> = source.split('\n').collect();
 
@@ -78,8 +79,20 @@ pub fn update_part_declaration(
         _ => String::new(),
     };
 
+    let octave_suffix = match new_octave_offset {
+        Some(offset) if offset != 0 => {
+            if offset > 0 {
+                format!(" +{offset}")
+            } else {
+                format!(" {offset}")
+            }
+        }
+        _ => String::new(),
+    };
+
     let new_rhs = new_mode.to_rhs_str();
-    let new_line = format!("{lhs_with_eq} {new_rhs}{soundfont_suffix}{volume_suffix}");
+    let new_line =
+        format!("{lhs_with_eq} {new_rhs}{soundfont_suffix}{volume_suffix}{octave_suffix}");
 
     let result = lines
         .iter()

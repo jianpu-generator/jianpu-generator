@@ -42,6 +42,35 @@ pub struct PartOut {
     pub has_lyrics: bool,
 }
 
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum PartDeclarationModeOut {
+    Chords,
+    Notes,
+    #[serde(rename = "notes+lyrics")]
+    NotesLyrics,
+    Follow,
+}
+
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub struct PartDeclarationOut {
+    pub abbreviation: String,
+    pub display_name: String,
+    pub line_number: u32,
+    pub mode: PartDeclarationModeOut,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub follow_target: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub soundfont: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub volume: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub octave_offset: Option<i8>,
+}
+
 #[derive(Debug, Clone, Tsify, Serialize)]
 #[tsify(into_wasm_abi)]
 pub struct SvgDocumentOut {
@@ -339,8 +368,25 @@ pub enum RenderResponse {
 #[serde(tag = "status", rename_all = "camelCase")]
 #[tsify(into_wasm_abi)]
 pub enum ListPartsResponse {
-    Ok { parts: Vec<PartOut> },
-    Err { diagnostics: Vec<DiagnosticOut> },
+    Ok {
+        parts: Vec<PartOut>,
+        declarations: Vec<PartDeclarationOut>,
+    },
+    Err {
+        diagnostics: Vec<DiagnosticOut>,
+    },
+}
+
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[serde(tag = "status", rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum ListPartDeclarationsResponse {
+    Ok {
+        declarations: Vec<PartDeclarationOut>,
+    },
+    Err {
+        diagnostics: Vec<DiagnosticOut>,
+    },
 }
 
 #[derive(Debug, Clone, Tsify, Serialize)]

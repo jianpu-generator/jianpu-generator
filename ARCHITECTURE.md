@@ -95,3 +95,28 @@ source (&str)
 | **Decoration** | Measure-level metadata attached to a `MeasureBlock`: BPM, time signature, section label, bar number. |
 | **Row Label** | The part name displayed at the left margin of a system row. |
 | **RowId** | A unique string identifier for a compiler row, used to correlate rows across layout stages. |
+
+## Web integration
+
+The React app (`web/`) runs the compiler in a dedicated worker (`web/src/worker/jianpu.worker.ts`) backed by the `jianpu-wasm` crate. The main thread sends source text and asset bytes; the worker calls WASM exports and posts structured results back.
+
+### Source editing
+
+- Module: `src/source_edit/`
+- Entry: `source_edit::update_part_declaration(source, abbreviation, new_mode, new_soundfont, new_volume, new_octave_offset) -> Option<String>`
+- Rewrites a single `# parts` declaration line in place (mode, optional quoted soundfont, optional volume `%`, optional octave offset). Used by the Edit Parts modal instead of any TypeScript parser.
+
+### Part declarations (source-level)
+
+- Entry: `list_part_declarations_from_source(source, filename, instruments) -> Result<Vec<SourcePartDeclaration>, IrrecoverableError>` in `src/lib.rs`
+- Backed by `parts_parser::collect_source_raw_declarations()` — returns **raw** fields from each declaration line (before `follow[X]` inheritance). The Edit Parts modal displays these values.
+
+### WASM exports (`crates/jianpu-wasm`)
+
+| Export | Purpose |
+|--------|---------|
+| `list_parts(source, raw_instruments)` | Part summaries for preview toggles **and** `declarations: PartDeclarationOut[]` for the Edit Parts modal |
+| `list_part_declarations(source, raw_instruments)` | Declarations only (re-list after a write) |
+| `update_part_declaration(source, abbreviation, new_mode, new_soundfont, new_volume, new_octave_offset)` | Returns updated source; empty strings for soundfont/volume/octave mean “omit / default” |
+
+Worker messages: `listParts` → `{ parts, declarations }`; `updatePartDeclaration` → `{ source, declarations }` (hook updates `partDeclarations` immediately, without waiting for the debounced re-render).

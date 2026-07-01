@@ -1,5 +1,7 @@
 # Plan: Rust/WASM `update_part_declaration` Function
 
+> Superseded by [`plan-part-declarations-in-rust.md`](plan-part-declarations-in-rust.md), which moves both reads and writes for `# parts` declarations to Rust/WASM.
+
 ## Context
 
 The frontend currently rewrites part declarations in JS (`web/src/utils/partSource.ts`).
