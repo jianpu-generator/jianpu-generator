@@ -1,9 +1,9 @@
 use crate::ast::parsed::JianPuPitch;
 use crate::compiler::types::ArcKind;
-use crate::compositor::types::{AbsoluteContent, AbsoluteElement, AbsolutePage};
+use crate::compositor::types::{AbsoluteContent, AbsoluteElement, AbsolutePage, TextAnchor};
 use crate::render_config::RenderConfig;
 use crate::renderer::new_renderer::render_new;
-use crate::renderer::new_types::SvgKind;
+use crate::renderer::new_types::{SvgKind, SvgVariant};
 
 fn cfg() -> RenderConfig {
     RenderConfig {
@@ -77,6 +77,35 @@ fn rest_produces_zero_text() {
         .iter()
         .any(|e| matches!(&e.kind, SvgKind::Text { content, .. } if content == "0"));
     assert!(has_zero);
+}
+
+#[test]
+fn sharp_accidental_renders_to_the_right_of_note() {
+    let page = make_page(AbsoluteContent::NoteHead {
+        pitch: JianPuPitch::One,
+        accidental: crate::ast::parsed::Accidental::Sharp,
+        octave: 0,
+        dotted: false,
+    });
+    let note_number_width = cfg().note_number_width as f32;
+    let note_x = 100.0_f32;
+    let docs = render_new(&[page], &cfg());
+    let accidental = docs[0]
+        .elements
+        .iter()
+        .find(|e| e.variant == Some(SvgVariant::NoteHeadAccidental));
+    let accidental = accidental.expect("accidental element should be present");
+    assert!(
+        accidental.x > note_x,
+        "accidental x ({}) should be to the right of the note x ({})",
+        accidental.x,
+        note_x
+    );
+    assert_eq!(accidental.x, note_x + note_number_width * 0.5);
+    assert!(
+        matches!(&accidental.kind, SvgKind::Text { anchor, .. } if *anchor == TextAnchor::Start),
+        "accidental should use TextAnchor::Start"
+    );
 }
 
 #[test]

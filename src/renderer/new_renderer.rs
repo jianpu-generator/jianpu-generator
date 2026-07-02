@@ -261,7 +261,7 @@ fn render_note_head(
     };
 
     if let Some(symbol) = accidental_symbol {
-        let accidental_x = elem.x - *note_number_width * 0.5;
+        let accidental_x = elem.x + *note_number_width * 0.5;
         results.push(SvgElement {
             x: accidental_x,
             y: elem.y,
@@ -269,7 +269,7 @@ fn render_note_head(
             kind: SvgKind::Text {
                 content: symbol.to_string(),
                 font_size: **base_font_size * 1.25,
-                anchor: TextAnchor::End,
+                anchor: TextAnchor::Start,
                 baseline: DominantBaseline::Middle,
                 font: FontFamily::Monospace,
                 weight: FontWeight::Normal,
