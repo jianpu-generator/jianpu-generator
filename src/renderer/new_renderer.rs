@@ -268,7 +268,7 @@ fn render_note_head(
             variant: Some(SvgVariant::NoteHeadAccidental),
             kind: SvgKind::Text {
                 content: symbol.to_string(),
-                font_size: **base_font_size * 0.7,
+                font_size: **base_font_size * 1.25,
                 anchor: TextAnchor::End,
                 baseline: DominantBaseline::Middle,
                 font: FontFamily::Monospace,
