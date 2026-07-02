@@ -7,6 +7,7 @@ struct TimedBeatFields {
     dotted: bool,
     duration: u32,
     group_membership: u8,
+    tie_to_next: bool,
 }
 
 fn timed_beat_fields(event: &ScoreEvent) -> Option<TimedBeatFields> {
@@ -15,16 +16,19 @@ fn timed_beat_fields(event: &ScoreEvent) -> Option<TimedBeatFields> {
             dotted: note.dotted,
             duration: note.duration,
             group_membership: note.group_membership,
+            tie_to_next: note.tie_to_next,
         }),
         ScoreEvent::Chord(chord) => Some(TimedBeatFields {
             dotted: chord.dotted,
             duration: chord.duration,
             group_membership: chord.group_membership,
+            tie_to_next: chord.tie_to_next,
         }),
         ScoreEvent::Rest(rest) => Some(TimedBeatFields {
             dotted: rest.dotted,
             duration: rest.duration,
             group_membership: 0,
+            tie_to_next: false,
         }),
         _ => None,
     }
@@ -32,12 +36,14 @@ fn timed_beat_fields(event: &ScoreEvent) -> Option<TimedBeatFields> {
 
 fn push_half_bar_crossing_warning(
     group_membership: u8,
+    tied_from_previous: bool,
     pos: u32,
     head_duration: u32,
     span: Span,
     recoverable_errors: &mut Vec<Diagnostic>,
 ) {
     if group_membership == 0
+        && !tied_from_previous
         && pos > 0
         && pos < HALF_BAR_BOUNDARY
         && pos + head_duration > HALF_BAR_BOUNDARY
@@ -56,14 +62,6 @@ fn advance_timed_cluster(
     span: &Span,
     recoverable_errors: &mut Vec<Diagnostic>,
 ) -> Result<usize, IrrecoverableError> {
-    push_half_bar_crossing_warning(
-        fields.group_membership,
-        *pos,
-        timed_head_duration(events, index),
-        *span,
-        recoverable_errors,
-    );
-
     if is_dotted_eighth_at_beat_start(fields.dotted, fields.duration, *pos) {
         let next_timed = next_timed_index(events, index);
         if let Some(error) = validate_dotted_eighth_tail(events, next_timed, span)? {
@@ -88,6 +86,7 @@ pub fn validate_measure_grouping(
 
     let mut pos = 0u32;
     let mut index = 0usize;
+    let mut tied_from_previous = false;
     let mut recoverable_errors = Vec::new();
     while index < events.len() {
         let Some(event) = events.get(index) else {
@@ -100,6 +99,15 @@ pub fn validate_measure_grouping(
                     index += 1;
                     continue;
                 };
+                let current_tie_to_next = fields.tie_to_next;
+                push_half_bar_crossing_warning(
+                    fields.group_membership,
+                    tied_from_previous,
+                    pos,
+                    timed_head_duration(events, index),
+                    event.span,
+                    &mut recoverable_errors,
+                );
                 index = advance_timed_cluster(
                     events,
                     index,
@@ -108,6 +116,7 @@ pub fn validate_measure_grouping(
                     &event.span,
                     &mut recoverable_errors,
                 )?;
+                tied_from_previous = current_tie_to_next;
             }
             _ => index += 1,
         }
@@ -279,6 +288,26 @@ mod tests {
     #[test]
     fn accepts_half_bar_split_with_beam_group() {
         assert!(parse_score("1. (2_ 2_) 3_ 4_ 0_\n").is_ok());
+    }
+
+    #[test]
+    fn accepts_tied_note_crossing_half_bar() {
+        // 2~2-0: quarter tied to half note, then quarter rest.
+        // The second note (2-) starts at beat 2 and spans the half-bar;
+        // because the composer explicitly tied across the boundary, no warning should fire.
+        let output = parse_score("2~2-0\n").unwrap();
+        assert!(
+            !output
+                .diagnostics
+                .iter()
+                .any(|e| e.message().contains("half-bar boundary")),
+            "tied note crossing half-bar should not warn, but got: {:?}",
+            output
+                .diagnostics
+                .iter()
+                .map(|e| e.message())
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]
