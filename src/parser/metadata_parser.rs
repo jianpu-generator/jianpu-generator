@@ -1,6 +1,13 @@
 use crate::ast::parsed::ParsedMetadata;
 use crate::error::{RecoverableError, RequiredMetadataField, Span};
 
+fn span_of_key_in_line(byte_offset: usize, line: &str, key_raw: &str, key: &str) -> Span {
+    let leading_whitespace = line.len() - line.trim_start().len();
+    let key_start_in_key_raw = key_raw.len() - key_raw.trim_start().len();
+    let key_start = byte_offset + leading_whitespace + key_start_in_key_raw;
+    Span::new(key_start, key_start + key.len())
+}
+
 fn parse_positive_u32(key: &str, value: &str, line_span: &Span) -> Result<u32, RecoverableError> {
     let parsed = value
         .parse::<u32>()
@@ -46,6 +53,8 @@ pub fn parse_metadata(
         let key = key_raw.trim();
         let value = value_raw.trim().trim_matches('"');
 
+        let key_span = span_of_key_in_line(byte_offset, line, key_raw, key);
+
         match key {
             "title" => title = Some(value.to_string()),
             "subtitle" => subtitle = Some(value.to_string()),
@@ -74,7 +83,7 @@ pub fn parse_metadata(
                     Err(e) => errors.push(e),
                 }
             }
-            _ => errors.push(RecoverableError::metadata_unknown_field(line_span, key)),
+            _ => errors.push(RecoverableError::metadata_unknown_field(key_span, key)),
         }
 
         byte_offset += line.len() + 1;
