@@ -18,6 +18,8 @@ pub struct Metadata {
     pub label_width: u32,
     /// Estimated rendered width of a single digit note number (0–9) in points. Default: 8.
     pub note_number_width: u32,
+    /// Number of columns in the parts list header. Default: 4.
+    pub parts_list_columns: u32,
 }
 
 #[derive(Clone)]

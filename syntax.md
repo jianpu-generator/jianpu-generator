@@ -40,6 +40,7 @@ Whitespace around `=` in metadata is optional. Metadata values may be quoted wit
 | `row height` | no | `24` | Vertical spacing of one part row (pixels) |
 | `label width` | no | `40` | Horizontal space reserved for part labels (pixels) |
 | `note number width` | no | `8` | Horizontal space per note column (pixels) |
+| `parts list columns` | no | `4` | Number of columns in the parts list header |
 
 ---
 

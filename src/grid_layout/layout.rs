@@ -90,6 +90,10 @@ pub(crate) fn header_subtitle_author_row_height(base: f32) -> f32 {
     base * 2.625
 }
 
+pub(crate) fn header_part_list_row_height(base: f32) -> f32 {
+    base * 0.9
+}
+
 // ── Column width helper ───────────────────────────────────────────────────────
 
 /// Number of columns in a MeasureBlock (BarLine column + 1).
@@ -205,8 +209,9 @@ fn build_page_rows(
     base: f32,
     arc_map: &HashMap<(usize, usize), Vec<GridElement>>,
     abs_system_index_start: usize,
+    is_first_page: bool,
 ) -> Vec<GridRow> {
-    let mut rows: Vec<GridRow> = make_header_rows(header, base);
+    let mut rows: Vec<GridRow> = make_header_rows(header, base, is_first_page);
     for (sys_idx, system) in systems.iter().enumerate() {
         if sys_idx > 0 {
             rows.push(make_separator_row());
@@ -254,7 +259,7 @@ pub fn layout(
     let measure_placements = build_measure_placements(&systems);
     let arc_map = resolve_slur_spans(&compile_result.slur_spans, &measure_placements, &systems);
 
-    let header_h: f32 = make_header_rows(header, base)
+    let header_h: f32 = make_header_rows(header, base, true)
         .iter()
         .map(|r| r.height_pt)
         .sum();
@@ -295,7 +300,14 @@ pub fn layout(
     let mut abs_system_index_start: usize = 0;
     let mut pages: Vec<GridPage> = Vec::new();
     for (page_idx, page_sys) in page_systems.into_iter().enumerate() {
-        let mut rows = build_page_rows(&page_sys, header, base, &arc_map, abs_system_index_start);
+        let mut rows = build_page_rows(
+            &page_sys,
+            header,
+            base,
+            &arc_map,
+            abs_system_index_start,
+            page_idx == 0,
+        );
         let body_height: f32 = rows.iter().map(|r| r.height_pt).sum();
         let remaining_height = page_height_pt - 2.0 * super::PAGE_MARGIN - body_height;
         rows.push(make_footer_row(

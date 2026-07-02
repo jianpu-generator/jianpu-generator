@@ -157,10 +157,18 @@ pub enum PostArcGridContent {
 }
 
 #[derive(Debug, Clone)]
+pub struct PartListEntry {
+    pub abbreviation: String,
+    pub display_name: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct Header {
     pub title: String,
     pub subtitle: Option<String>,
     pub author: Option<String>,
+    pub part_list: Vec<PartListEntry>,
+    pub parts_list_columns: u32,
 }
 
 #[derive(Debug, Clone)]

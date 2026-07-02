@@ -294,12 +294,18 @@ fn generate_svg(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableErro
         }
     }
 
-    let mut score = score;
-    jg::filter_tracks(&mut score, &opts.tracks);
-    let svgs = jg::render_svgs(&score)?;
+    let content = read_source(&opts.input)?;
+    let filename = opts.input.to_string_lossy();
+    let enabled_tracks = if opts.tracks.is_empty() {
+        None
+    } else {
+        Some(opts.tracks.as_slice())
+    };
+    let render_output =
+        jg::render_svgs_from_source_filtered(&content, &filename, enabled_tracks, &[])?;
     let output_path =
         output_stem(&opts.input, &opts.tracks, opts.output.as_deref()).with_extension("svg");
-    write_svgs_to_path(&svgs, &output_path)
+    write_svgs_to_path(&render_output.svgs, &output_path)
 }
 
 fn generate_midi(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableError> {
@@ -419,14 +425,18 @@ fn run_generate(format: GenerateFormat) -> Result<(), jg::error::IrrecoverableEr
     }
 }
 
-fn parse_and_group(input: &Path) -> Result<jg::ast::grouped::Score, jg::error::IrrecoverableError> {
-    let content = std::fs::read_to_string(input).map_err(|e| {
+fn read_source(input: &Path) -> Result<String, jg::error::IrrecoverableError> {
+    std::fs::read_to_string(input).map_err(|e| {
         jg::error::IrrecoverableError::new(jg::error::IrrecoverableErrorKind::IoReadFailed {
             span: jg::error::Span::new(0, 0),
             path: input.to_path_buf(),
             source: e.to_string(),
         })
-    })?;
+    })
+}
+
+fn parse_and_group(input: &Path) -> Result<jg::ast::grouped::Score, jg::error::IrrecoverableError> {
+    let content = read_source(input)?;
     let filename = input.to_string_lossy().to_string();
     let doc = jg::parser::parse(&content, &filename, &[]).map_err(|e| e.with_path(input))?;
     jg::grouper::group(doc).map_err(|e| e.with_path(input))

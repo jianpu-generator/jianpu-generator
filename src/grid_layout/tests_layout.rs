@@ -58,6 +58,8 @@ fn hdr() -> Header {
         title: "Song".to_string(),
         subtitle: None,
         author: Some("Me".to_string()),
+        part_list: vec![],
+        parts_list_columns: 3,
     }
 }
 

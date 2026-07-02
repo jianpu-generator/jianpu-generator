@@ -40,11 +40,11 @@ pub(crate) fn compute_measure_highlights_for_range(
     header: &Header,
     base: f32,
 ) -> Vec<(usize, MeasureHighlight)> {
-    let header_row_count = make_header_rows(header, base).len();
     let mut global_measure_index: usize = 0;
     let mut results: Vec<(usize, MeasureHighlight)> = Vec::new();
 
     for (page_idx, page_sys) in page_systems.iter().enumerate() {
+        let header_row_count = make_header_rows(header, base, page_idx == 0).len();
         let mut row_offset = header_row_count;
         for (sys_idx, system) in page_sys.iter().enumerate() {
             if sys_idx > 0 {
@@ -89,10 +89,10 @@ pub(crate) fn compute_measure_highlight_location(
     header: &Header,
     base: f32,
 ) -> Option<(usize, MeasureHighlight)> {
-    let header_row_count = make_header_rows(header, base).len();
     let mut global_measure_index: usize = 0;
 
     for (page_idx, page_sys) in page_systems.iter().enumerate() {
+        let header_row_count = make_header_rows(header, base, page_idx == 0).len();
         let mut row_offset = header_row_count;
         for (sys_idx, system) in page_sys.iter().enumerate() {
             if sys_idx > 0 {
@@ -161,11 +161,11 @@ pub(crate) fn compute_all_measure_click_targets(
     header: &Header,
     base: f32,
 ) -> Vec<(usize, MeasureClickTarget)> {
-    let header_row_count = make_header_rows(header, base).len();
     let mut global_measure_index: usize = 0;
     let mut results: Vec<(usize, MeasureClickTarget)> = Vec::new();
 
     for (page_idx, page_sys) in page_systems.iter().enumerate() {
+        let header_row_count = make_header_rows(header, base, page_idx == 0).len();
         let mut row_offset = header_row_count;
         for (sys_idx, system) in page_sys.iter().enumerate() {
             if sys_idx > 0 {

@@ -1,6 +1,20 @@
 use super::*;
+use crate::ast::grouped::Metadata;
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName};
 use midly::{MidiMessage, Smf, TrackEventKind};
+
+fn default_test_metadata() -> Metadata {
+    Metadata {
+        title: String::new(),
+        subtitle: None,
+        author: None,
+        row_height: 24,
+        max_columns: 28,
+        label_width: 40,
+        note_number_width: 8,
+        parts_list_columns: 3,
+    }
+}
 
 fn count_note_on_events(midi_bytes: &[u8]) -> usize {
     note_on_keys(midi_bytes).len()
@@ -61,6 +75,7 @@ fn chord_major_expands_to_three_notes() {
             max_columns: 28,
             label_width: 40,
             note_number_width: 8,
+            parts_list_columns: 3,
         },
         measures: vec![MultiPartMeasure {
             time_signature: Some(TimeSignature {
@@ -165,6 +180,7 @@ fn one_measure_score() -> Score {
             max_columns: 28,
             label_width: 40,
             note_number_width: 8,
+            parts_list_columns: 3,
         },
         measures: vec![MultiPartMeasure {
             time_signature: Some(TimeSignature {
@@ -224,7 +240,7 @@ fn tied_notes_produce_single_note_on() {
     // `1~1` — two quarter notes tied together should produce exactly one NoteOn.
     use crate::ast::grouped::GroupedNote;
     use crate::ast::grouped::{
-        Metadata, MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
+        MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
     };
     use crate::ast::parsed::{JianPuPitch, PartKind, Soundfont};
 
@@ -258,15 +274,7 @@ fn tied_notes_produce_single_note_on() {
         })
     };
     let score = Score {
-        metadata: Metadata {
-            title: String::new(),
-            subtitle: None,
-            author: None,
-            row_height: 24,
-            max_columns: 28,
-            label_width: 40,
-            note_number_width: 8,
-        },
+        metadata: default_test_metadata(),
         measures: vec![
             MultiPartMeasure {
                 time_signature: Some(TimeSignature {
@@ -340,6 +348,7 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
             max_columns: 28,
             label_width: 40,
             note_number_width: 8,
+            parts_list_columns: 3,
         },
         measures: vec![MultiPartMeasure {
             time_signature: Some(TimeSignature {
@@ -426,6 +435,7 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
             max_columns: 28,
             label_width: 40,
             note_number_width: 8,
+            parts_list_columns: 3,
         },
         measures: vec![MultiPartMeasure {
             time_signature: Some(TimeSignature {

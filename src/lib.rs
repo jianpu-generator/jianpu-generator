@@ -182,20 +182,41 @@ pub fn compile(
     grouper::group(doc)
 }
 
-/// Layout and render a [`Score`] into one SVG string per page.
-pub fn render_svgs(score: &Score) -> Result<Vec<String>, IrrecoverableError> {
-    let config = render_config::RenderConfig::from_metadata(&score.metadata);
-    let header = grid_layout::types::Header {
+fn build_header(score: &Score, parts: &[PartInfo]) -> grid_layout::types::Header {
+    let part_list = parts
+        .iter()
+        .filter(|part| part.abbreviation != part.display_name)
+        .map(|part| grid_layout::types::PartListEntry {
+            abbreviation: part.abbreviation.clone(),
+            display_name: part.display_name.clone(),
+        })
+        .collect();
+    grid_layout::types::Header {
         title: score.metadata.title.clone(),
         subtitle: score.metadata.subtitle.clone(),
         author: score.metadata.author.clone(),
-    };
+        part_list,
+        parts_list_columns: score.metadata.parts_list_columns,
+    }
+}
+
+fn render_svgs_with_parts(
+    score: &Score,
+    parts: &[PartInfo],
+) -> Result<Vec<String>, IrrecoverableError> {
+    let config = render_config::RenderConfig::from_metadata(&score.metadata);
+    let header = build_header(score, parts);
     let compile_result = compiler::compile(score);
     let compile_result = consolidator::consolidate(compile_result);
     let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
     let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)?;
     let docs = renderer::new_renderer::render_new(&abs, &config);
     Ok(serializer::serialize(&docs))
+}
+
+/// Layout and render a [`Score`] into one SVG string per page.
+pub fn render_svgs(score: &Score) -> Result<Vec<String>, IrrecoverableError> {
+    render_svgs_with_parts(score, &[])
 }
 
 /// Parse, group, and render a `.jianpu` source string into SVG page strings.
@@ -256,12 +277,13 @@ pub fn render_svgs_from_source_filtered_with_lyrics(
     disabled_lyrics: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<RenderOutput, IrrecoverableError> {
+    let parts = list_parts_from_source(source, filename, instruments)?;
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
     let diagnostics = collect_measure_diagnostics(&score);
     Ok(RenderOutput {
-        svgs: render_svgs(&score)?,
+        svgs: render_svgs_with_parts(&score, &parts)?,
         diagnostics,
     })
 }
@@ -280,16 +302,13 @@ pub fn render_svgs_with_highlight_range(
     disabled_lyrics: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<RenderOutput, IrrecoverableError> {
+    let parts = list_parts_from_source(source, filename, instruments)?;
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
     let diagnostics = collect_measure_diagnostics(&score);
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
-    let header = grid_layout::types::Header {
-        title: score.metadata.title.clone(),
-        subtitle: score.metadata.subtitle.clone(),
-        author: score.metadata.author.clone(),
-    };
+    let header = build_header(&score, &parts);
     let compile_result = compiler::compile(&score);
     let compile_result = consolidator::consolidate(compile_result);
     let grid_pages = grid_layout::layout(
@@ -310,13 +329,10 @@ pub fn render_svgs_with_highlight_range(
 
 fn render_documents(
     score: &Score,
+    parts: &[PartInfo],
 ) -> Result<Vec<renderer::new_types::SvgDocument>, IrrecoverableError> {
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
-    let header = grid_layout::types::Header {
-        title: score.metadata.title.clone(),
-        subtitle: score.metadata.subtitle.clone(),
-        author: score.metadata.author.clone(),
-    };
+    let header = build_header(score, parts);
     let compile_result = compiler::compile(score);
     let compile_result = consolidator::consolidate(compile_result);
     let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
@@ -326,15 +342,12 @@ fn render_documents(
 
 fn render_documents_with_range(
     score: &Score,
+    parts: &[PartInfo],
     start_index: usize,
     end_index: usize,
 ) -> Result<Vec<renderer::new_types::SvgDocument>, IrrecoverableError> {
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
-    let header = grid_layout::types::Header {
-        title: score.metadata.title.clone(),
-        subtitle: score.metadata.subtitle.clone(),
-        author: score.metadata.author.clone(),
-    };
+    let header = build_header(score, parts);
     let compile_result = compiler::compile(score);
     let compile_result = consolidator::consolidate(compile_result);
     let grid_pages = grid_layout::layout(
@@ -361,12 +374,13 @@ pub fn render_documents_from_source_filtered_with_lyrics(
     disabled_lyrics: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<RenderDocumentOutput, IrrecoverableError> {
+    let parts = list_parts_from_source(source, filename, instruments)?;
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
     let diagnostics = collect_measure_diagnostics(&score);
     Ok(RenderDocumentOutput {
-        documents: render_documents(&score)?,
+        documents: render_documents(&score, &parts)?,
         diagnostics,
     })
 }
@@ -385,6 +399,7 @@ pub fn render_documents_with_highlight_range(
     disabled_lyrics: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<RenderDocumentOutput, IrrecoverableError> {
+    let parts = list_parts_from_source(source, filename, instruments)?;
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
@@ -392,6 +407,7 @@ pub fn render_documents_with_highlight_range(
     Ok(RenderDocumentOutput {
         documents: render_documents_with_range(
             &score,
+            &parts,
             *measure_range.start(),
             *measure_range.end(),
         )?,

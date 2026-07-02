@@ -230,6 +230,24 @@ export function EditMetadataModal({
                     />
                   </td>
                 </tr>
+                <tr>
+                  <td style={tdStyle}>Parts List Columns</td>
+                  <td style={tdStyle}>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="4"
+                      style={inputStyle}
+                      value={metadata.partsListColumns ?? ''}
+                      onChange={(e) =>
+                        onFieldChange(
+                          'parts list columns',
+                          e.target.value === '' ? null : e.target.value,
+                        )
+                      }
+                    />
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>

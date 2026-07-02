@@ -22,6 +22,7 @@ pub fn parse_metadata(
     let mut max_columns: Option<u32> = None;
     let mut label_width: Option<u32> = None;
     let mut note_number_width: Option<u32> = None;
+    let mut parts_list_columns: Option<u32> = None;
     let mut byte_offset = base_offset;
     let mut errors: Vec<RecoverableError> = Vec::new();
 
@@ -67,6 +68,12 @@ pub fn parse_metadata(
                     Err(e) => errors.push(e),
                 }
             }
+            "parts list columns" => {
+                match parse_positive_u32("parts list columns", value, &line_span) {
+                    Ok(v) => parts_list_columns = Some(v),
+                    Err(e) => errors.push(e),
+                }
+            }
             _ => errors.push(RecoverableError::metadata_unknown_field(line_span, key)),
         }
 
@@ -91,6 +98,7 @@ pub fn parse_metadata(
             max_columns,
             label_width,
             note_number_width,
+            parts_list_columns,
         },
         errors,
     )

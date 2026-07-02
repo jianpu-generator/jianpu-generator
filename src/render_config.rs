@@ -34,6 +34,7 @@ mod tests {
             label_width: 20,
             note_number_width: 12,
             max_columns: 48,
+            parts_list_columns: 3,
         };
         let cfg = RenderConfig::from_metadata(&meta);
         assert_eq!(cfg.row_height, 30);

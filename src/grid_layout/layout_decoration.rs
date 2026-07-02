@@ -1,9 +1,11 @@
 use crate::compiler::types::{Decoration, MeasureBlock};
 use crate::grid_layout::layout::{
-    block_column_width, decoration_row_height, header_subtitle_author_row_height,
-    header_title_row_height, separator_row_height, LABEL_COLS,
+    block_column_width, decoration_row_height, header_part_list_row_height,
+    header_subtitle_author_row_height, header_title_row_height, separator_row_height, LABEL_COLS,
 };
-use crate::grid_layout::types::{GridContent, GridElement, GridRow, HAlign, Header, VAlign};
+use crate::grid_layout::types::{
+    GridContent, GridElement, GridRow, HAlign, Header, PartListEntry, VAlign,
+};
 
 const DECO_COLS: u32 = 12;
 
@@ -85,7 +87,11 @@ pub(super) fn make_separator_row() -> GridRow {
     }
 }
 
-pub(crate) fn make_header_rows(header: &Header, base: f32) -> Vec<GridRow> {
+pub(crate) fn make_header_rows(
+    header: &Header,
+    base: f32,
+    include_part_list: bool,
+) -> Vec<GridRow> {
     let title_row = GridRow {
         height_pt: header_title_row_height(base),
         column_count: 1,
@@ -138,5 +144,45 @@ pub(crate) fn make_header_rows(header: &Header, base: f32) -> Vec<GridRow> {
         elements: subtitle_author_elements,
     };
 
-    vec![title_row, subtitle_author_row]
+    let part_list_rows: Vec<GridRow> = if include_part_list {
+        let entries: Vec<&PartListEntry> = header
+            .part_list
+            .iter()
+            .filter(|entry| entry.abbreviation != entry.display_name)
+            .collect();
+        make_part_list_rows(&entries, base, header.parts_list_columns)
+    } else {
+        vec![]
+    };
+
+    std::iter::once(title_row)
+        .chain(std::iter::once(subtitle_author_row))
+        .chain(part_list_rows)
+        .collect()
+}
+
+fn make_part_list_rows(entries: &[&PartListEntry], base: f32, columns: u32) -> Vec<GridRow> {
+    entries
+        .chunks(columns as usize)
+        .map(|chunk| GridRow {
+            height_pt: header_part_list_row_height(base),
+            column_count: columns,
+            elements: chunk
+                .iter()
+                .enumerate()
+                .map(|(col_idx, entry)| GridElement {
+                    column: col_idx as u32,
+                    column_span: 1,
+                    halign: HAlign::Start,
+                    valign: VAlign::Center,
+                    content: GridContent::Text {
+                        content: format!("{} \u{2014} {}", entry.abbreviation, entry.display_name),
+                        font_size: base * 0.6,
+                        bold: false,
+                        italic: false,
+                    },
+                })
+                .collect(),
+        })
+        .collect()
 }

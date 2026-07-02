@@ -55,6 +55,7 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
             max_columns: metadata.max_columns.unwrap_or(28),
             label_width: metadata.label_width.unwrap_or(40),
             note_number_width: metadata.note_number_width.unwrap_or(8),
+            parts_list_columns: metadata.parts_list_columns.unwrap_or(4),
         },
         measures,
         document_diagnostics: document_diagnostics
