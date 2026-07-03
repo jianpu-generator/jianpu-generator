@@ -8,12 +8,24 @@ fn span_of_key_in_line(byte_offset: usize, line: &str, key_raw: &str, key: &str)
     Span::new(key_start, key_start + key.len())
 }
 
-fn parse_positive_u32(key: &str, value: &str, line_span: &Span) -> Result<u32, RecoverableError> {
+fn span_of_value_in_line(byte_offset: usize, line: &str, key_raw: &str, value_raw: &str) -> Span {
+    let leading_whitespace_in_line = line.len() - line.trim_start().len();
+    let value_leading_whitespace = value_raw.len() - value_raw.trim_start().len();
+    let value_start =
+        byte_offset + leading_whitespace_in_line + key_raw.len() + 1 + value_leading_whitespace;
+    let value_trimmed = value_raw.trim();
+    Span::new(value_start, value_start + value_trimmed.len())
+}
+
+fn parse_positive_u32(key: &str, value: &str, value_span: &Span) -> Result<u32, RecoverableError> {
     let parsed = value
         .parse::<u32>()
-        .map_err(|_| RecoverableError::metadata_invalid_integer(*line_span, key, value))?;
+        .map_err(|_| RecoverableError::metadata_invalid_integer(*value_span, key, value))?;
     if parsed == 0 {
-        return Err(RecoverableError::metadata_must_be_positive(*line_span, key));
+        return Err(RecoverableError::metadata_must_be_positive(
+            *value_span,
+            key,
+        ));
     }
     Ok(parsed)
 }
@@ -40,11 +52,10 @@ pub fn parse_metadata(
             continue;
         }
 
-        let line_span = Span::new(byte_offset, byte_offset + line.len());
-
         let Some((key_raw, value_raw)) = trimmed.split_once('=') else {
             errors.push(RecoverableError::metadata_malformed_line(
-                line_span, trimmed,
+                Span::new(byte_offset, byte_offset + line.len()),
+                trimmed,
             ));
             byte_offset += line.len() + 1;
             continue;
@@ -54,31 +65,32 @@ pub fn parse_metadata(
         let value = value_raw.trim().trim_matches('"');
 
         let key_span = span_of_key_in_line(byte_offset, line, key_raw, key);
+        let value_span = span_of_value_in_line(byte_offset, line, key_raw, value_raw);
 
         match key {
             "title" => title = Some(value.to_string()),
             "subtitle" => subtitle = Some(value.to_string()),
             "author" => author = Some(value.to_string()),
-            "row height" => match parse_positive_u32("row height", value, &line_span) {
+            "row height" => match parse_positive_u32("row height", value, &value_span) {
                 Ok(v) => row_height = Some(v),
                 Err(e) => errors.push(e),
             },
-            "max columns" => match parse_positive_u32("max columns", value, &line_span) {
+            "max columns" => match parse_positive_u32("max columns", value, &value_span) {
                 Ok(v) => max_columns = Some(v),
                 Err(e) => errors.push(e),
             },
-            "label width" => match parse_positive_u32("label width", value, &line_span) {
+            "label width" => match parse_positive_u32("label width", value, &value_span) {
                 Ok(v) => label_width = Some(v),
                 Err(e) => errors.push(e),
             },
             "note number width" => {
-                match parse_positive_u32("note number width", value, &line_span) {
+                match parse_positive_u32("note number width", value, &value_span) {
                     Ok(v) => note_number_width = Some(v),
                     Err(e) => errors.push(e),
                 }
             }
             "parts list columns" => {
-                match parse_positive_u32("parts list columns", value, &line_span) {
+                match parse_positive_u32("parts list columns", value, &value_span) {
                     Ok(v) => parts_list_columns = Some(v),
                     Err(e) => errors.push(e),
                 }
@@ -89,11 +101,9 @@ pub fn parse_metadata(
         byte_offset += line.len() + 1;
     }
 
-    let zero_span = Span::new(base_offset, base_offset);
-
     let title = title.unwrap_or_else(|| {
         errors.push(RecoverableError::metadata_missing_field(
-            zero_span,
+            Span::new(base_offset, base_offset),
             RequiredMetadataField::Title,
         ));
         String::new()
@@ -183,6 +193,17 @@ mod tests {
         let content = "title = \"t\"\nauthor = \"a\"\nrow height = abc\n";
         let (_meta, errors) = parse_metadata(content, 0);
         assert!(!errors.is_empty());
+    }
+
+    #[test]
+    fn invalid_value_span_covers_only_the_value() {
+        let prefix = "title = \"t\"\nauthor = \"a\"\n";
+        let content = format!("{prefix}row height = 20k\n");
+        let (_meta, errors) = parse_metadata(&content, 0);
+        assert_eq!(errors.len(), 1);
+        let span = errors[0].span;
+        let spanned = &content[span.start..span.end];
+        assert_eq!(spanned, "20k");
     }
 
     #[test]
