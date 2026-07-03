@@ -33,7 +33,7 @@ fn simple_block(col_count: u32) -> MeasureBlock {
 
 fn no_header() -> Header {
     Header {
-        title: String::new(),
+        title: None,
         subtitle: None,
         author: None,
         part_list: vec![],
@@ -153,7 +153,7 @@ fn erroneous_measure_produces_error_highlight() {
         ))],
     };
     let header = Header {
-        title: "T".into(),
+        title: Some("T".into()),
         subtitle: None,
         author: Some("A".into()),
         part_list: vec![],
@@ -188,7 +188,7 @@ fn erroneous_measure_produces_error_highlight() {
 fn non_erroneous_measure_produces_no_error_highlight() {
     let block = simple_block(4);
     let header = Header {
-        title: "T".into(),
+        title: Some("T".into()),
         subtitle: None,
         author: Some("A".into()),
         part_list: vec![],

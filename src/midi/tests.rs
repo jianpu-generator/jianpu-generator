@@ -5,7 +5,7 @@ use midly::{MidiMessage, Smf, TrackEventKind};
 
 fn default_test_metadata() -> Metadata {
     Metadata {
-        title: String::new(),
+        title: None,
         subtitle: None,
         author: None,
         row_height: 24,
@@ -68,7 +68,7 @@ fn chord_major_expands_to_three_notes() {
     };
     let score = Score {
         metadata: Metadata {
-            title: String::new(),
+            title: None,
             subtitle: None,
             author: None,
             row_height: 24,
@@ -173,7 +173,7 @@ fn one_measure_score() -> Score {
     use crate::ast::parsed::{JianPuPitch, PartKind, Soundfont};
     Score {
         metadata: Metadata {
-            title: String::new(),
+            title: None,
             subtitle: None,
             author: None,
             row_height: 24,
@@ -341,7 +341,7 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
 
     let score = Score {
         metadata: Metadata {
-            title: String::new(),
+            title: None,
             subtitle: None,
             author: None,
             row_height: 24,
@@ -428,7 +428,7 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
 
     Score {
         metadata: Metadata {
-            title: String::new(),
+            title: None,
             subtitle: None,
             author: None,
             row_height: 24,

@@ -164,7 +164,7 @@ pub struct PartListEntry {
 
 #[derive(Debug, Clone)]
 pub struct Header {
-    pub title: String,
+    pub title: Option<String>,
     pub subtitle: Option<String>,
     pub author: Option<String>,
     pub part_list: Vec<PartListEntry>,

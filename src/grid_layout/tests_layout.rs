@@ -55,7 +55,7 @@ fn directive_line(
 
 fn hdr() -> Header {
     Header {
-        title: "Song".to_string(),
+        title: Some("Song".to_string()),
         subtitle: None,
         author: Some("Me".to_string()),
         part_list: vec![],

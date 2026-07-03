@@ -92,7 +92,7 @@ pub(crate) fn make_header_rows(
     base: f32,
     include_part_list: bool,
 ) -> Vec<GridRow> {
-    let title_row = GridRow {
+    let title_row = header.title.as_ref().map(|title| GridRow {
         height_pt: header_title_row_height(base),
         column_count: 1,
         elements: vec![GridElement {
@@ -101,13 +101,13 @@ pub(crate) fn make_header_rows(
             halign: HAlign::Center,
             valign: VAlign::Center,
             content: GridContent::Text {
-                content: header.title.clone(),
+                content: title.clone(),
                 font_size: base * 1.5,
                 bold: false,
                 italic: false,
             },
         }],
-    };
+    });
 
     let mut subtitle_author_elements: Vec<GridElement> = Vec::new();
     if let Some(subtitle) = &header.subtitle {
@@ -155,7 +155,8 @@ pub(crate) fn make_header_rows(
         vec![]
     };
 
-    std::iter::once(title_row)
+    title_row
+        .into_iter()
         .chain(std::iter::once(subtitle_author_row))
         .chain(part_list_rows)
         .collect()

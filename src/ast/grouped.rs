@@ -7,7 +7,7 @@ use crate::error::{Diagnostic, RecoverableError, Span, Warning};
 
 #[derive(Clone)]
 pub struct Metadata {
-    pub title: String,
+    pub title: Option<String>,
     pub subtitle: Option<String>,
     pub author: Option<String>,
     /// Row height in points. Controls font sizes, dot radii, and all vertical spacing. Default: 24.

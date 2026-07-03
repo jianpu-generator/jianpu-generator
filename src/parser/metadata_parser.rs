@@ -1,5 +1,5 @@
 use crate::ast::parsed::ParsedMetadata;
-use crate::error::{RecoverableError, RequiredMetadataField, Span};
+use crate::error::{RecoverableError, Span};
 
 fn span_of_key_in_line(byte_offset: usize, line: &str, key_raw: &str, key: &str) -> Span {
     let leading_whitespace = line.len() - line.trim_start().len();
@@ -101,13 +101,6 @@ pub fn parse_metadata(
         byte_offset += line.len() + 1;
     }
 
-    let title = title.unwrap_or_else(|| {
-        errors.push(RecoverableError::metadata_missing_field(
-            Span::new(base_offset, base_offset),
-            RequiredMetadataField::Title,
-        ));
-        String::new()
-    });
     (
         ParsedMetadata {
             title,
@@ -132,7 +125,7 @@ mod tests {
         let content = "title = \"hello world\"\nauthor = \"foo\"\n";
         let (meta, errors) = parse_metadata(content, 0);
         assert!(errors.is_empty());
-        assert_eq!(meta.title, "hello world");
+        assert_eq!(meta.title, Some("hello world".to_string()));
         assert_eq!(meta.author, Some("foo".to_string()));
         assert_eq!(meta.row_height, None);
         assert_eq!(meta.max_columns, None);
@@ -156,12 +149,11 @@ mod tests {
     }
 
     #[test]
-    fn collects_error_for_missing_title() {
+    fn title_is_optional() {
         let content = "author = \"foo\"\n";
-        let (_meta, errors) = parse_metadata(content, 0);
-        assert!(errors
-            .iter()
-            .any(|e| e.message().contains("missing required field: title")));
+        let (meta, errors) = parse_metadata(content, 0);
+        assert!(errors.is_empty());
+        assert_eq!(meta.title, None);
     }
 
     #[test]

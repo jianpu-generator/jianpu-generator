@@ -27,7 +27,7 @@ mod tests {
     #[test]
     fn from_metadata_copies_fields() {
         let meta = Metadata {
-            title: String::new(),
+            title: None,
             subtitle: None,
             author: None,
             row_height: 30,

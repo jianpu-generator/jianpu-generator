@@ -178,7 +178,7 @@ mod tests {
             "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] 你好wo rld\n"
         );
         let doc = parse(input, "test.jianpu", &[]).unwrap();
-        assert_eq!(doc.metadata.title, "hello world");
+        assert_eq!(doc.metadata.title, Some("hello world".to_string()));
         assert_eq!(doc.metadata.author, Some("foo".to_string()));
         assert_eq!(doc.declarations.len(), 1);
         assert_eq!(doc.tracks.len(), 1);

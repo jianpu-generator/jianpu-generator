@@ -155,7 +155,7 @@ pub struct ParsedChordSymbol {
 
 #[derive(Debug)]
 pub struct ParsedMetadata {
-    pub title: String,
+    pub title: Option<String>,
     pub subtitle: Option<String>,
     pub author: Option<String>,
     pub row_height: Option<u32>,

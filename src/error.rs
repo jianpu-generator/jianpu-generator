@@ -22,19 +22,6 @@ impl DocumentSection {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RequiredMetadataField {
-    Title,
-}
-
-impl RequiredMetadataField {
-    pub(crate) fn label(self) -> &'static str {
-        match self {
-            Self::Title => "title",
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Span {
     pub start: usize,
@@ -302,13 +289,6 @@ impl RecoverableError {
             kind: RecoverableErrorKind::MetadataMustBePositive {
                 field: field.to_string(),
             },
-        }
-    }
-
-    pub fn metadata_missing_field(span: Span, field: RequiredMetadataField) -> Self {
-        Self {
-            span,
-            kind: RecoverableErrorKind::MetadataMissingField { field },
         }
     }
 
