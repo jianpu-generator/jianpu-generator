@@ -19,7 +19,7 @@ A `.jianpu` file has three sections in fixed order:
 …interleaved score content…
 ```
 
-- `# metadata` — **required**
+- `# metadata` — **optional**
 - `# parts` — **required**
 - `# score` — **required**
 - Sections must appear in the order above.
