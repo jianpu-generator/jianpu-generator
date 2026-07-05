@@ -52,7 +52,7 @@ fn chord_column_events_are_parsed() {
             bass: None,
             duration: 4,
             slur: false,
-            tie_to_next: false,
+            tie_to_next_span: None,
             group_membership: 0,
             group_continuation: 0,
             dotted: false,

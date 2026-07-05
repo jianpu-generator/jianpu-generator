@@ -104,7 +104,7 @@ impl TimedUnitHead for NoteHead {
                 octave,
                 duration,
                 slur: group_continuation > 0,
-                tie_to_next: false,
+                tie_to_next_span: None,
                 group_membership,
                 group_continuation,
                 dotted,

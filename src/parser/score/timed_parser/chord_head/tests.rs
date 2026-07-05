@@ -19,7 +19,7 @@ fn chord(
         bass,
         duration: 4,
         slur: false,
-        tie_to_next: false,
+        tie_to_next_span: None,
         group_membership: 0,
         group_continuation: 0,
         dotted: false,
@@ -495,14 +495,14 @@ fn tie_operator_produces_tied_chords() {
         .collect();
     assert_eq!(chords.len(), 4, "expected 4 chord events (1 tied, 1, 2, 3)");
     assert!(
-        chords[0].tie_to_next,
+        chords[0].tie_to_next(),
         "first chord should have tie_to_next=true"
     );
     assert!(
         !chords[0].slur,
         "first chord should not have slur=true (no group depth applied for tilde)"
     );
-    assert!(!chords[1].tie_to_next, "second chord should not be tied");
+    assert!(!chords[1].tie_to_next(), "second chord should not be tied");
     assert!(
         errors.is_empty(),
         "expected no errors for valid tie syntax, got: {errors:?}"

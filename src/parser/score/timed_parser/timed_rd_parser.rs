@@ -254,7 +254,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
                             self.parse_timed_unit(offset)?;
                         }
                         if let Some(slice) = self.staging.get_mut(group_start..) {
-                            // Notes and chords use tie_to_next (set by duration parser); applying
+                            // Notes and chords use tie_to_next_span (set by duration parser); applying
                             // group depth here would create a spurious slur arc in addition to
                             // the tie arc.
                             let is_note_tie = slice
@@ -386,12 +386,12 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
             0,
             0,
         );
-        if duration_meta.tie_to_next {
+        if let Some(tie_span) = duration_meta.tie_to_next_span {
             if let ScoreEvent::Note(ref mut note) = event {
-                note.tie_to_next = true;
+                note.tie_to_next_span = Some(tie_span);
             }
             if let ScoreEvent::Chord(ref mut chord) = event {
-                chord.tie_to_next = true;
+                chord.tie_to_next_span = Some(tie_span);
             }
         }
         self.staging

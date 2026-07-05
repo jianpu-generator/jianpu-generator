@@ -20,7 +20,7 @@ pub fn count_lyric_slots_in_events(
                 if !state.prev_tie_to_next {
                     count += 1;
                 }
-                state.prev_tie_to_next = note.tie_to_next;
+                state.prev_tie_to_next = note.tie_to_next();
             }
             ScoreEvent::Rest(_) => {
                 state.prev_tie_to_next = false;
@@ -226,7 +226,7 @@ mod tests {
                     group_membership: 0,
                     group_continuation: 0,
                     dotted: false,
-                    tie_to_next: true,
+                    tie_to_next_span: Some(Span::new(0, 1)),
                     slur_group_close_at_duration: None,
                 }),
                 Span::new(0, 1),
@@ -241,7 +241,7 @@ mod tests {
                     group_membership: 0,
                     group_continuation: 0,
                     dotted: false,
-                    tie_to_next: false,
+                    tie_to_next_span: None,
                     slur_group_close_at_duration: None,
                 }),
                 Span::new(1, 2),
@@ -256,7 +256,7 @@ mod tests {
                     group_membership: 0,
                     group_continuation: 0,
                     dotted: false,
-                    tie_to_next: false,
+                    tie_to_next_span: None,
                     slur_group_close_at_duration: None,
                 }),
                 Span::new(2, 3),
@@ -279,7 +279,7 @@ mod tests {
                 octave: 0,
                 duration: 4,
                 slur: false,
-                tie_to_next: true,
+                tie_to_next_span: Some(Span::new(0, 1)),
                 group_membership: 0,
                 group_continuation: 0,
                 dotted: false,
@@ -294,7 +294,7 @@ mod tests {
                 octave: 0,
                 duration: 4,
                 slur: false,
-                tie_to_next: false,
+                tie_to_next_span: None,
                 group_membership: 0,
                 group_continuation: 0,
                 dotted: false,

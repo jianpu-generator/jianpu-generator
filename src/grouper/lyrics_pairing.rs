@@ -77,7 +77,7 @@ fn pair_lyrics_to_notes(
                         }
                     }
                 }
-                prev_tie_to_next = note.tie_to_next;
+                prev_tie_to_next = note.tie_to_next();
             }
             NoteEvent::Rest(_) | NoteEvent::Chord(_) => {
                 prev_tie_to_next = false;

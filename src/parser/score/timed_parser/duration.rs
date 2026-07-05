@@ -6,7 +6,7 @@ pub struct DurationParse {
     pub dotted: bool,
     pub octave_up: i8,
     pub octave_down: i8,
-    pub tie_to_next: bool,
+    pub tie_to_next_span: Option<Span>,
     pub next_index: usize,
     pub dash_after_rest_error: Option<RecoverableError>,
     pub tie_on_rest_error: Option<RecoverableError>,
@@ -20,7 +20,7 @@ struct DurationSuffixState {
     dotted: bool,
     octave_up: i8,
     octave_down: i8,
-    tie_to_next: bool,
+    tie_to_next_span: Option<Span>,
     dash_after_rest_error: Option<RecoverableError>,
     tie_on_rest_error: Option<RecoverableError>,
     unexpected_char_error: Option<RecoverableError>,
@@ -70,7 +70,10 @@ impl DurationSuffixContext<'_> {
                             Some(RecoverableError::tie_on_rest(Span::new(pos, pos + 1)));
                     }
                 } else {
-                    self.state.tie_to_next = true;
+                    let tie_start = self.span.start
+                        + byte_offset_before_char_index(self.chars, self.start, index);
+                    self.state.tie_to_next_span =
+                        Some(Span::new(tie_start, tie_start + ch.len_utf8()));
                 }
                 Ok(Some(index + 1))
             }
@@ -132,7 +135,7 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
             dotted: false,
             octave_up: 0,
             octave_down: 0,
-            tie_to_next: false,
+            tie_to_next_span: None,
             dash_after_rest_error: None,
             tie_on_rest_error: None,
             unexpected_char_error: None,
@@ -177,7 +180,7 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
         dotted: context.state.dotted,
         octave_up: context.state.octave_up,
         octave_down: context.state.octave_down,
-        tie_to_next: context.state.tie_to_next,
+        tie_to_next_span: context.state.tie_to_next_span,
         next_index: index,
         dash_after_rest_error: context.state.dash_after_rest_error,
         tie_on_rest_error: context.state.tie_on_rest_error,
@@ -188,8 +191,12 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
 }
 
 fn byte_offset_at_char_index_from_chars(chars: &[char], start: usize, index: usize) -> usize {
+    byte_offset_before_char_index(chars, start, index + 1)
+}
+
+fn byte_offset_before_char_index(chars: &[char], start: usize, index: usize) -> usize {
     chars
-        .get(start..=index)
+        .get(start..index)
         .map(|slice| slice.iter().map(|c| c.len_utf8()).sum())
         .unwrap_or(0)
 }

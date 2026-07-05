@@ -193,8 +193,8 @@ pub struct ParsedNote {
     pub duration: u32,
     /// Whether this note is tied/slurred to the next note (from a `(…)` group).
     pub slur: bool,
-    /// Whether `~` appeared after the octave modifier, requesting a tie to the next note.
-    pub tie_to_next: bool,
+    /// Source span of the `~` suffix when this note is tied to the next note.
+    pub tie_to_next_span: Option<Span>,
     /// Number of nested `(…)` groups this note belongs to.
     pub group_membership: u8,
     /// Number of those groups that continue past this note.
@@ -216,11 +216,23 @@ pub struct ParsedChordNote {
     pub bass: Option<BassDegree>,
     pub duration: u32,
     pub slur: bool,
-    pub tie_to_next: bool,
+    pub tie_to_next_span: Option<Span>,
     pub group_membership: u8,
     pub group_continuation: u8,
     pub dotted: bool,
     pub slur_group_close_at_duration: Option<u32>,
+}
+
+impl ParsedNote {
+    pub fn tie_to_next(&self) -> bool {
+        self.tie_to_next_span.is_some()
+    }
+}
+
+impl ParsedChordNote {
+    pub fn tie_to_next(&self) -> bool {
+        self.tie_to_next_span.is_some()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

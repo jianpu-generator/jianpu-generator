@@ -182,7 +182,8 @@ pub struct GroupedChordNote {
     pub bass: Option<BassDegree>,
     pub duration: u32,
     pub slur: bool,
-    pub tie_to_next: bool,
+    pub tie_to_next_span: Option<Span>,
+    pub event_span: Span,
     pub group_membership: u8,
     pub group_continuation: u8,
     pub dotted: bool,
@@ -198,8 +199,10 @@ pub struct GroupedNote {
     pub duration: u32,
     /// True if this note is tied/slurred to the next note.
     pub slur: bool,
-    /// True if `~` appeared after the octave modifier, requesting a tie to the next note.
-    pub tie_to_next: bool,
+    /// Source span of the `~` suffix when this note is tied to the next note.
+    pub tie_to_next_span: Option<Span>,
+    /// Byte range of this note token in the original source.
+    pub event_span: Span,
     /// Number of nested `(…)` groups this note belongs to.
     pub group_membership: u8,
     /// Number of those groups that continue past this note.
@@ -207,6 +210,18 @@ pub struct GroupedNote {
     /// True if this note was written with `*` (dotted duration).
     pub dotted: bool,
     pub slur_group_close_at_duration: Option<u32>,
+}
+
+impl GroupedNote {
+    pub fn tie_to_next(&self) -> bool {
+        self.tie_to_next_span.is_some()
+    }
+}
+
+impl GroupedChordNote {
+    pub fn tie_to_next(&self) -> bool {
+        self.tie_to_next_span.is_some()
+    }
 }
 
 impl GroupedChordNote {

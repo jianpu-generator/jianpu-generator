@@ -16,13 +16,13 @@ fn timed_beat_fields(event: &ScoreEvent) -> Option<TimedBeatFields> {
             dotted: note.dotted,
             duration: note.duration,
             group_membership: note.group_membership,
-            tie_to_next: note.tie_to_next,
+            tie_to_next: note.tie_to_next(),
         }),
         ScoreEvent::Chord(chord) => Some(TimedBeatFields {
             dotted: chord.dotted,
             duration: chord.duration,
             group_membership: chord.group_membership,
-            tie_to_next: chord.tie_to_next,
+            tie_to_next: chord.tie_to_next(),
         }),
         ScoreEvent::Rest(rest) => Some(TimedBeatFields {
             dotted: rest.dotted,

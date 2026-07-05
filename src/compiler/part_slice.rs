@@ -54,7 +54,7 @@ impl TimedUnit for GroupedNote {
         SlurKey::Pitch(self.pitch.clone())
     }
     fn tie_to_next(&self) -> bool {
-        self.tie_to_next
+        self.tie_to_next_span.is_some()
     }
     fn element_content(&self) -> ElementContent {
         ElementContent::NoteHead {
@@ -86,7 +86,7 @@ impl TimedUnit for GroupedChordNote {
         SlurKey::from_chord(self)
     }
     fn tie_to_next(&self) -> bool {
-        self.tie_to_next
+        self.tie_to_next_span.is_some()
     }
     fn element_content(&self) -> ElementContent {
         ElementContent::ChordSymbol(self.format_symbol())

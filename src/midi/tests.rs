@@ -60,7 +60,8 @@ fn chord_major_expands_to_three_notes() {
         bass: None,
         duration: 16,
         slur: false,
-        tie_to_next: false,
+        tie_to_next_span: None,
+        event_span: Span::new(0, 0),
         group_membership: 0,
         group_continuation: 0,
         dotted: false,
@@ -209,7 +210,8 @@ fn one_measure_score() -> Score {
                         octave: 0,
                         duration: 16,
                         slur: false,
-                        tie_to_next: false,
+                        tie_to_next_span: None,
+                        event_span: Span::new(0, 0),
                         group_membership: 0,
                         group_continuation: 0,
                         dotted: false,
@@ -244,14 +246,19 @@ fn tied_notes_produce_single_note_on() {
     };
     use crate::ast::parsed::{JianPuPitch, PartKind, Soundfont};
 
-    let make_note = |tie_to_next: bool| {
+    let make_note = |tied: bool| {
         NoteEvent::Note(GroupedNote {
             pitch: JianPuPitch::One,
             accidental: crate::ast::parsed::Accidental::Natural,
             octave: 0,
             duration: 4, // quarter note
             slur: false,
-            tie_to_next,
+            tie_to_next_span: if tied {
+                Some(Span::new(0, 1))
+            } else {
+                None
+            },
+            event_span: Span::new(0, 0),
             group_membership: 0,
             group_continuation: 0,
             dotted: false,
@@ -259,7 +266,7 @@ fn tied_notes_produce_single_note_on() {
         })
     };
 
-    let make_part = |tie_to_next| {
+    let make_part = |tied| {
         PartRow::Timed(PartSlice {
             name: None,
             kind: PartKind::Notes,
@@ -267,7 +274,7 @@ fn tied_notes_produce_single_note_on() {
             volume: 100,
             octave_offset: 0,
             notes: Notes {
-                events: vec![make_note(tie_to_next)],
+                events: vec![make_note(tied)],
             },
             lyrics: None,
             has_error: false,
@@ -331,7 +338,8 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
             octave: 0,
             duration: 4,
             slur,
-            tie_to_next: false,
+            tie_to_next_span: None,
+            event_span: Span::new(0, 0),
             group_membership: 1,
             group_continuation: if slur { 1 } else { 0 },
             dotted: false,
@@ -464,7 +472,8 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
                         octave: 0,
                         duration: 16,
                         slur: false,
-                        tie_to_next: false,
+                        tie_to_next_span: None,
+                        event_span: Span::new(0, 0),
                         group_membership: 0,
                         group_continuation: 0,
                         dotted: false,

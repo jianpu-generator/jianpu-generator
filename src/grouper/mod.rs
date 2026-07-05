@@ -73,8 +73,8 @@ struct NoteInfo {
     pitch: JianPuPitch,
     accidental: Accidental,
     octave: i8,
-    tie_to_next: bool,
-    span: Span,
+    tie_span: Option<Span>,
+    event_span: Span,
 }
 
 struct TieCorrection {
@@ -127,7 +127,6 @@ fn collect_notes_for_part(score: &Score, part_idx: usize) -> Vec<NoteInfo> {
             let Some(part_row) = measure.parts.get(part_idx) else {
                 return Vec::new();
             };
-            let span = measure.source_span;
             part_row
                 .slice()
                 .notes
@@ -142,8 +141,8 @@ fn collect_notes_for_part(score: &Score, part_idx: usize) -> Vec<NoteInfo> {
                             pitch: n.pitch.clone(),
                             accidental: n.accidental.clone(),
                             octave: n.octave,
-                            tie_to_next: n.tie_to_next,
-                            span,
+                            tie_span: n.tie_to_next_span,
+                            event_span: n.event_span,
                         })
                     } else {
                         None
@@ -154,15 +153,33 @@ fn collect_notes_for_part(score: &Score, part_idx: usize) -> Vec<NoteInfo> {
         .collect()
 }
 
+fn tie_error_span(tie_span: Option<Span>, event_span: Span) -> Span {
+    tie_span.unwrap_or(event_span)
+}
+
+fn tie_pitch_mismatch_span(
+    tie_span: Option<Span>,
+    tied_event_span: Span,
+    next_event_span: Span,
+) -> Span {
+    match tie_span {
+        Some(tie) => Span::new(tie.start, next_event_span.end),
+        None => Span::new(tied_event_span.start, next_event_span.end),
+    }
+}
+
 fn tie_corrections(notes: &[NoteInfo]) -> Vec<TieCorrection> {
     notes
         .iter()
         .enumerate()
-        .filter(|(_, note)| note.tie_to_next)
+        .filter(|(_, note)| note.tie_span.is_some())
         .filter_map(|(i, note)| {
             let next = notes.get(i + 1);
             let error = match next {
-                None => Some(RecoverableError::dangling_tie(note.span)),
+                None => Some(RecoverableError::dangling_tie(tie_error_span(
+                    note.tie_span,
+                    note.event_span,
+                ))),
                 Some(next_note)
                     if next_note.pitch != note.pitch
                         || next_note.octave != note.octave
@@ -176,7 +193,13 @@ fn tie_corrections(notes: &[NoteInfo]) -> Vec<TieCorrection> {
                         next_note.octave,
                     );
                     Some(RecoverableError::tie_pitch_mismatch(
-                        note.span, expected, got,
+                        tie_pitch_mismatch_span(
+                            note.tie_span,
+                            note.event_span,
+                            next_note.event_span,
+                        ),
+                        expected,
+                        got,
                     ))
                 }
                 Some(_) => None,
@@ -203,7 +226,7 @@ fn apply_tie_corrections(score: &mut Score, part_idx: usize, corrections: Vec<Ti
                     .events
                     .get_mut(correction.event_idx)
                 {
-                    n.tie_to_next = false;
+                    n.tie_to_next_span = None;
                 }
             }
         }
@@ -405,7 +428,8 @@ impl PartGrouper {
                 octave: pn.octave,
                 duration: pn.duration,
                 slur: pn.slur && pn.slur_group_close_at_duration.is_none(),
-                tie_to_next: pn.tie_to_next,
+                tie_to_next_span: pn.tie_to_next_span,
+                event_span: span,
                 group_membership: pn.group_membership,
                 group_continuation: pn.group_continuation,
                 dotted: pn.dotted,
@@ -427,7 +451,8 @@ impl PartGrouper {
                 bass: pc.bass,
                 duration: pc.duration,
                 slur: pc.slur && pc.slur_group_close_at_duration.is_none(),
-                tie_to_next: pc.tie_to_next,
+                tie_to_next_span: pc.tie_to_next_span,
+                event_span: span,
                 group_membership: pc.group_membership,
                 group_continuation: pc.group_continuation,
                 dotted: pc.dotted,
