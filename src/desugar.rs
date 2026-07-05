@@ -62,6 +62,21 @@ struct GroupContext {
     time_num: u8,
 }
 
+struct KeyedLine {
+    key: String,
+    content: String,
+    content_offset: usize,
+    key_prefix_span: Span,
+}
+
+fn key_prefix_span_in_line(line: &str, line_offset: usize, base_offset: usize) -> Span {
+    let end = line
+        .find(']')
+        .map(|index| index + 1)
+        .unwrap_or_else(|| line.len().min(1));
+    Span::new(base_offset + line_offset, base_offset + line_offset + end)
+}
+
 fn expand_measure_group(
     group: &[SourceLine],
     declarations: &[PartDecl],
@@ -88,12 +103,17 @@ fn expand_measure_group(
     };
 
     let mut recoverable_error: Option<RecoverableError> = None;
-    let mut keyed: Vec<(String, String, usize)> = Vec::new();
+    let mut keyed: Vec<KeyedLine> = Vec::new();
 
     for (line, offset) in data_lines {
         if let Some((key, content)) = parse_key_prefix(line) {
             let prefix_length = line.len().saturating_sub(content.len());
-            keyed.push((key.to_string(), content.to_string(), offset + prefix_length));
+            keyed.push(KeyedLine {
+                key: key.to_string(),
+                content: content.to_string(),
+                content_offset: *offset + prefix_length,
+                key_prefix_span: key_prefix_span_in_line(line, *offset, base_offset),
+            });
         } else {
             recoverable_error.get_or_insert_with(|| {
                 RecoverableError::score_line_missing_key_prefix(Span::new(
@@ -117,7 +137,7 @@ fn expand_measure_group(
 }
 
 fn expand_keyed(
-    keyed: Vec<(String, String, usize)>,
+    keyed: Vec<KeyedLine>,
     declarations: &[PartDecl],
     context: &GroupContext,
     recoverable_error: &mut Option<RecoverableError>,
@@ -127,21 +147,18 @@ fn expand_keyed(
 }
 
 fn filter_keyed_into_key_map(
-    keyed: Vec<(String, String, usize)>,
+    keyed: Vec<KeyedLine>,
     declarations: &[PartDecl],
     context: &GroupContext,
     recoverable_error: &mut Option<RecoverableError>,
 ) -> KeyMap {
     let valid_keyed: Vec<_> = keyed
         .into_iter()
-        .filter(|(key, _, offset)| {
-            let line_span = Span::new(
-                context.base_offset + offset,
-                context.base_offset + offset + 1,
-            );
-            if !declarations.iter().any(|d| &d.abbreviation == key) {
-                recoverable_error
-                    .get_or_insert_with(|| RecoverableError::part_key_unknown(line_span, key));
+        .filter(|line| {
+            if !declarations.iter().any(|d| &d.abbreviation == &line.key) {
+                recoverable_error.get_or_insert_with(|| {
+                    RecoverableError::part_key_unknown(line.key_prefix_span, &line.key)
+                });
                 false
             } else {
                 true
@@ -150,11 +167,11 @@ fn filter_keyed_into_key_map(
         .collect();
 
     let mut key_map: KeyMap = Vec::new();
-    for (key, content, offset) in valid_keyed {
-        if let Some(entry) = key_map.iter_mut().find(|(k, _)| k == &key) {
-            entry.1.push((content, offset));
+    for line in valid_keyed {
+        if let Some(entry) = key_map.iter_mut().find(|(k, _)| k == &line.key) {
+            entry.1.push((line.content, line.content_offset));
         } else {
-            key_map.push((key, vec![(content, offset)]));
+            key_map.push((line.key, vec![(line.content, line.content_offset)]));
         }
     }
 

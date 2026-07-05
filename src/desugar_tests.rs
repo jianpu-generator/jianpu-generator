@@ -116,6 +116,8 @@ fn key_prefix_unknown_abbreviation_is_recoverable_error() {
         "got: {}",
         err.message()
     );
+    assert_eq!(err.span.start, 0, "span must start at `[`");
+    assert_eq!(err.span.end, "[Z]".len(), "span must cover `[Z]`");
 }
 
 // --- follow[X] tests ---
