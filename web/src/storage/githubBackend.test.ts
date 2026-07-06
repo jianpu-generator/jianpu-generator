@@ -210,6 +210,45 @@ describe('createGithubBackend: single-flight save serialization', () => {
   })
 })
 
+describe('createGithubBackend: offline retry-on-reconnect', () => {
+  it('replays the pending save with the latest state once the browser comes back online', async () => {
+    const listeners: Record<string, () => void> = {}
+    vi.stubGlobal('window', {
+      addEventListener: (event: string, callback: () => void) => {
+        listeners[event] = callback
+      },
+      removeEventListener: () => {},
+    })
+
+    getContent.mockImplementation(() => fileResponse('old', 'sha-1'))
+    createOrUpdateFileContents.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    createOrUpdateFileContents.mockResolvedValueOnce({})
+
+    const backend = createGithubBackend(config)
+    const state: FileStoreState = {
+      active: 'a.jianpu',
+      userFiles: { 'a.jianpu': 'new content' },
+      bin: {},
+      fileIds: { 'a.jianpu': 'id-1' },
+    }
+
+    await expect(backend.saveContent(state)).rejects.toThrow('Failed to fetch')
+    expect(backend.status()).toBe('offline')
+    expect(backend.lastError()).toEqual({ kind: 'network' })
+
+    listeners.online()
+    await vi.waitFor(() => expect(backend.status()).toBe('idle'))
+
+    expect(createOrUpdateFileContents).toHaveBeenCalledTimes(2)
+    expect(createOrUpdateFileContents.mock.calls[1][0]).toMatchObject({
+      path: 'scores/a.jianpu',
+      content: encodeBase64('new content'),
+    })
+
+    vi.unstubAllGlobals()
+  })
+})
+
 describe('createGithubBackend: 409 conflict surfacing', () => {
   it('reports a conflict status and detail when the write is rejected with 409', async () => {
     getContent.mockImplementation(() => fileResponse('old', 'sha-stale'))
