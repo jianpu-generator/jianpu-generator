@@ -12,6 +12,7 @@ import { StorageSettingsModal } from './components/StorageSettingsModal'
 import {
   fileContent,
   fileIdForName,
+  type FileStoreState,
   isReadOnlyFile,
   mergeBackendResult,
   selectFile,
@@ -64,6 +65,8 @@ export default function App() {
   const [storageSettingsOpen, setStorageSettingsOpen] = useState(false)
   const [creatingFile, setCreatingFile] = useState(false)
   const [deletingFileName, setDeletingFileName] = useState<string | null>(null)
+  const [duplicatingFile, setDuplicatingFile] = useState(false)
+  const [renamingFileName, setRenamingFileName] = useState<string | null>(null)
   const [fileOpError, setFileOpError] = useState<{
     title: string
     message: string
@@ -263,56 +266,64 @@ export default function App() {
     [setStore],
   )
 
-  const handleCreate = useCallback(async () => {
-    const base = store
-    setCreatingFile(true)
-    try {
-      const next = await backend.createFile(base)
-      setStore((prev) => mergeBackendResult(prev, base, next))
-    } catch (error) {
-      setFileOpError({
-        title: 'Could not create file',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      })
-    } finally {
-      setCreatingFile(false)
-    }
-  }, [setStore, backend, store])
-
-  const handleDuplicate = useCallback(async () => {
-    const base = store
-    const next = await backend.duplicateFile(base)
-    setStore((prev) => mergeBackendResult(prev, base, next))
-  }, [setStore, backend, store])
-
-  const handleRename = useCallback(
-    async (from: string, to: string) => {
+  const runFileOp = useCallback(
+    async (
+      errorTitle: string,
+      setPending: (pending: boolean) => void,
+      op: (base: FileStoreState) => Promise<FileStoreState>,
+    ) => {
       const base = store
-      const next = await backend.renameFile(base, from, to)
-      setStore((prev) => mergeBackendResult(prev, base, next))
-    },
-    [setStore, backend, store],
-  )
-
-  const handleDelete = useCallback(
-    async (name: string) => {
-      const base = store
-      setDeletingFileName(name)
+      setPending(true)
       try {
-        const next = await backend.deleteFile(base, name)
+        const next = await op(base)
         setStore((prev) => mergeBackendResult(prev, base, next))
       } catch (error) {
         setFileOpError({
-          title: 'Could not delete file',
+          title: errorTitle,
           message: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined,
         })
       } finally {
-        setDeletingFileName(null)
+        setPending(false)
       }
     },
-    [setStore, backend, store],
+    [setStore, store],
+  )
+
+  const handleCreate = useCallback(
+    () =>
+      runFileOp('Could not create file', setCreatingFile, (base) =>
+        backend.createFile(base),
+      ),
+    [runFileOp, backend],
+  )
+
+  const handleDuplicate = useCallback(
+    () =>
+      runFileOp('Could not duplicate file', setDuplicatingFile, (base) =>
+        backend.duplicateFile(base),
+      ),
+    [runFileOp, backend],
+  )
+
+  const handleRename = useCallback(
+    (from: string, to: string) =>
+      runFileOp(
+        'Could not rename file',
+        (pending) => setRenamingFileName(pending ? from : null),
+        (base) => backend.renameFile(base, from, to),
+      ),
+    [runFileOp, backend],
+  )
+
+  const handleDelete = useCallback(
+    (name: string) =>
+      runFileOp(
+        'Could not delete file',
+        (pending) => setDeletingFileName(pending ? name : null),
+        (base) => backend.deleteFile(base, name),
+      ),
+    [runFileOp, backend],
   )
 
   const handleRestore = useCallback(
@@ -461,6 +472,8 @@ export default function App() {
         saveStatus={saveStatus}
         creating={creatingFile}
         deletingName={deletingFileName}
+        duplicating={duplicatingFile}
+        renamingName={renamingFileName}
       />
       <ErrorModal
         open={fileOpError !== null}

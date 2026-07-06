@@ -26,6 +26,12 @@ export interface FileListProps {
   /** Name of the file currently being deleted, if any — disables and spins
    * just that file's close button rather than the whole tab bar. */
   deletingName?: string | null
+  /** Whether a `duplicateFile` call is in flight — disables "Duplicate" and
+   * shows a spinner on it. */
+  duplicating?: boolean
+  /** Name of the file currently being renamed, if any — disables and spins
+   * just that file's tab name rather than the whole tab bar. */
+  renamingName?: string | null
 }
 
 const SAVE_STATUS_LABEL: Record<SaveStatus, string> = {
@@ -34,6 +40,21 @@ const SAVE_STATUS_LABEL: Record<SaveStatus, string> = {
   saved: 'Saved',
   error: 'Save failed',
   offline: 'Offline',
+}
+
+/** Swaps a button's label for the shared spinner while `pending` is true. */
+function SpinnerLabel({
+  pending,
+  label,
+}: {
+  pending: boolean
+  label: string
+}) {
+  return pending ? (
+    <span className="file-tab-bar-spinner" aria-hidden="true" />
+  ) : (
+    label
+  )
 }
 
 function SaveStatusBadge({ status }: { status: SaveStatus }) {
@@ -54,11 +75,13 @@ function FileTabName({
   active,
   onSelect,
   onRename,
+  renaming = false,
 }: {
   name: string
   active: boolean
   onSelect: (name: string) => void
   onRename: (from: string, to: string) => void
+  renaming?: boolean
 }) {
   const readOnly = isReadOnlyFile(name)
   const [draft, setDraft] = useState(name)
@@ -122,8 +145,9 @@ function FileTabName({
       onDoubleClick={() => {
         if (active && !readOnly) setEditing(true)
       }}
+      disabled={renaming}
     >
-      {name}
+      <SpinnerLabel pending={renaming} label={name} />
     </button>
   )
 }
@@ -140,6 +164,8 @@ export function FileTabBar({
   saveStatus,
   creating = false,
   deletingName = null,
+  duplicating = false,
+  renamingName = null,
 }: FileListProps) {
   const names = sortedFileNames(store)
   const binNames = sortedBinNames(store)
@@ -154,18 +180,15 @@ export function FileTabBar({
           onClick={onCreate}
           disabled={creating}
         >
-          {creating ? (
-            <span className="file-tab-bar-spinner" aria-hidden="true" />
-          ) : (
-            'New'
-          )}
+          <SpinnerLabel pending={creating} label="New" />
         </button>
         <button
           type="button"
           className="file-tab-bar-btn"
           onClick={onDuplicate}
+          disabled={duplicating}
         >
-          Duplicate
+          <SpinnerLabel pending={duplicating} label="Duplicate" />
         </button>
         <ShareButton
           filename={store.active}
@@ -201,6 +224,7 @@ export function FileTabBar({
                   active={active}
                   onSelect={onSelect}
                   onRename={onRename}
+                  renaming={renamingName === name}
                 />
                 {!readOnly ? (
                   <button
@@ -210,14 +234,7 @@ export function FileTabBar({
                     onClick={() => onDelete(name)}
                     disabled={deletingName === name}
                   >
-                    {deletingName === name ? (
-                      <span
-                        className="file-tab-bar-spinner"
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      '×'
-                    )}
+                    <SpinnerLabel pending={deletingName === name} label="×" />
                   </button>
                 ) : null}
               </li>
