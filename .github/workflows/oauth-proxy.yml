@@ -2,14 +2,13 @@ name: Deploy OAuth proxy to Cloudflare Pages
 
 on:
   push:
-    branches: [master]
     paths:
       - cf-oauth-proxy/**
       - .github/workflows/oauth-proxy.yml
   workflow_dispatch:
 
 concurrency:
-  group: oauth-proxy
+  group: oauth-proxy-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
