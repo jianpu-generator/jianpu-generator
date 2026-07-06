@@ -19,6 +19,7 @@ import type { SaveStatus, StorageBackend } from './types'
  * free for those rather than mixing everything in together.
  */
 const SCORES_DIR = 'scores'
+const TRASH_DIR = 'trash'
 
 export interface GithubBackendConfig {
   token: string
@@ -105,7 +106,7 @@ function addedFileName(
  *   (create-at-new-path, then delete-at-old-path), not an atomic Git Data
  *   API commit — an interruption between the two transiently leaves the
  *   file at both paths, recoverable by re-running the operation.
- * - Restore only undoes a delete (moves the file back from `.bin/` with the
+ * - Restore only undoes a delete (moves the file back from `trash/` with the
  *   content it had at delete time); it does not restore an older edited
  *   version of a still-active file.
  */
@@ -114,9 +115,9 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
   const { owner, repo, branch } = config
 
   const mainDir = SCORES_DIR
-  const binDir = joinPath(SCORES_DIR, '.bin')
+  const binDir = TRASH_DIR
   const filePath = (name: string) => joinPath(SCORES_DIR, name)
-  const binFilePath = (name: string) => joinPath(SCORES_DIR, '.bin', name)
+  const binFilePath = (name: string) => joinPath(TRASH_DIR, name)
 
   let status: SaveStatus = 'idle'
   let lastError: GithubBackendError | null = null
@@ -207,7 +208,7 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
   }
 
   /** Fetch-sha-then-write, for paths that may already exist (active-file
-   * saves, and the `.bin/` destination of a delete — which can already hold
+   * saves, and the `trash/` destination of a delete — which can already hold
    * a stale entry from an earlier restore-then-delete cycle). */
   async function putFile(
     path: string,

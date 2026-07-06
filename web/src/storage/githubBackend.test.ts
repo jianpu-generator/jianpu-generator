@@ -50,7 +50,7 @@ beforeEach(() => {
 })
 
 describe('createGithubBackend: path construction', () => {
-  it('scopes directory listing to the fixed scores/ folder and its .bin/', async () => {
+  it('scopes directory listing to the fixed scores/ folder and the trash/ folder', async () => {
     getContent.mockImplementation(() => dirResponse([]))
     const backend = createGithubBackend(config)
 
@@ -58,10 +58,10 @@ describe('createGithubBackend: path construction', () => {
 
     const paths = getContent.mock.calls.map((call) => call[0].path)
     expect(paths).toContain('scores')
-    expect(paths).toContain('scores/.bin')
+    expect(paths).toContain('trash')
   })
 
-  it('loads files from the main folder and treats a missing .bin/ as empty', async () => {
+  it('loads files from the main folder and treats a missing trash/ as empty', async () => {
     getContent.mockImplementation(({ path }: { path: string }) => {
       if (path === 'scores') {
         return dirResponse([
@@ -70,7 +70,7 @@ describe('createGithubBackend: path construction', () => {
         ])
       }
       if (path === 'scores/a.jianpu') return fileResponse('1 2 3')
-      if (path === 'scores/.bin') return notFound()
+      if (path === 'trash') return notFound()
       throw new Error(`unexpected path ${path}`)
     })
 
