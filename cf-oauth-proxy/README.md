@@ -41,7 +41,7 @@ Configure these in the Cloudflare dashboard for this Pages project
 | ------------------------ | ------- | -------------------------------------------------------------------- |
 | `GITHUB_CLIENT_ID`       | no      | The OAuth App's client ID.                                          |
 | `GITHUB_CLIENT_SECRET`   | yes     | The OAuth App's client secret. Never sent to the browser, never logged. |
-| `ALLOWED_ORIGIN`         | no      | The exact origin of the deployed GitHub Pages site (e.g. `https://<user>.github.io`). Requests from any other `Origin` are rejected with 403. |
+| `ALLOWED_ORIGINS`        | no      | Comma-separated list of allowed origins (e.g. `http://localhost:5173,https://<user>.github.io`). Requests from any other `Origin` are rejected with 403. |
 
 ## Deploying
 
@@ -72,5 +72,5 @@ or with `npx wrangler pages secret put GITHUB_CLIENT_SECRET`.)
   never logged.
 - Token response bodies are relayed to the caller but are never logged or
   otherwise inspected server-side.
-- Every request is checked against `ALLOWED_ORIGIN` before anything is
+- Every request is checked against `ALLOWED_ORIGINS` before anything is
   relayed to GitHub; mismatched or missing `Origin` headers get a 403.
