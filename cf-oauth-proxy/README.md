@@ -45,9 +45,25 @@ Configure these in the Cloudflare dashboard for this Pages project
 
 ## Deploying
 
-This project is Functions-only (see the empty `public/` directory), so the
-simplest path is to connect this directory as its own Cloudflare Pages
-project in the dashboard:
+`.github/workflows/oauth-proxy.yml` deploys this project to Cloudflare Pages
+automatically on every push to `master` that touches `cf-oauth-proxy/`, using
+[`cloudflare/wrangler-action`](https://github.com/cloudflare/wrangler-action).
+It requires two repo secrets (Settings → Secrets and variables → Actions):
+
+| Name                     | Where to get it                                                        |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`   | Cloudflare dashboard → My Profile → API Tokens → Create Token, with "Cloudflare Pages — Edit" permission for this account. |
+| `CLOUDFLARE_ACCOUNT_ID`  | Cloudflare dashboard → right sidebar of any domain/Workers & Pages overview page. |
+
+The `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` / `ALLOWED_ORIGINS`
+environment variables above are Cloudflare Pages project settings, not
+GitHub Actions secrets — they're unaffected by CI and only need to be set
+once (or updated) via the dashboard or `wrangler pages secret put`, per the
+note under the table above.
+
+Alternatively, this project is Functions-only (see the empty `public/`
+directory), so it can also be deployed by connecting this directory as its
+own Cloudflare Pages project in the dashboard, without using the workflow:
 
 1. In the Cloudflare dashboard, create a new Pages project pointing at this
    repo, with **`cf-oauth-proxy`** set as the project's root/build directory
