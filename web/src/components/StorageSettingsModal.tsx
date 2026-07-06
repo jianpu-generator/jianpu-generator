@@ -53,7 +53,7 @@ function statusOf(error: unknown): number | undefined {
  * Get-or-create the fixed app repo under the authenticated user's account.
  * No confirmation prompt either way: the common case (existing repo) is the
  * same user reconnecting, and even a name collision is non-destructive
- * since the app only ever touches its own subfolder within the repo.
+ * since the app only ever touches its own `scores/` folder within the repo.
  *
  * Lives here (not `githubBackend.ts`/`githubAuth.ts`) since it only ever
  * runs once, right after `connectWithDeviceFlow` resolves and this modal
@@ -193,7 +193,6 @@ export function StorageSettingsModal({
   const [selectedKind, setSelectedKind] = useState<'local' | 'github'>(
     preference.backend,
   )
-  const [subfolder, setSubfolder] = useState(preference.github?.subfolder ?? '')
   const [username, setUsername] = useState<string | null>(
     preference.github?.owner ?? null,
   )
@@ -205,7 +204,6 @@ export function StorageSettingsModal({
   useEffect(() => {
     if (!open) return
     setSelectedKind(preference.backend)
-    setSubfolder(preference.github?.subfolder ?? '')
     setConnectError(null)
     setVerification(null)
   }, [open, preference])
@@ -244,11 +242,7 @@ export function StorageSettingsModal({
       const { data: user } = await octokit.rest.users.getAuthenticated()
       await ensureStorageRepo(octokit, user.login)
       setUsername(user.login)
-      await switchBackend({
-        kind: 'github',
-        owner: user.login,
-        subfolder: subfolder.trim() || undefined,
-      })
+      await switchBackend({ kind: 'github', owner: user.login })
     } catch (error) {
       setConnectError(error instanceof Error ? error.message : String(error))
     } finally {
@@ -271,11 +265,7 @@ export function StorageSettingsModal({
   async function handleSelectGithub(currentUsername: string | null) {
     setSelectedKind('github')
     if (currentUsername) {
-      await switchBackend({
-        kind: 'github',
-        owner: currentUsername,
-        subfolder: subfolder.trim() || undefined,
-      })
+      await switchBackend({ kind: 'github', owner: currentUsername })
     }
   }
 
@@ -375,31 +365,8 @@ export function StorageSettingsModal({
                     Connected as <strong>@{username}</strong>
                   </p>
                   <p style={{ margin: 0, color: '#666' }}>
-                    Storing files in <code>{GITHUB_STORAGE_REPO}</code>
-                    {subfolder ? ` / ${subfolder}` : ''}
+                    Storing files in <code>{GITHUB_STORAGE_REPO}/scores</code>
                   </p>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    Subfolder (optional)
-                    <input
-                      type="text"
-                      value={subfolder}
-                      placeholder="(repo root)"
-                      onChange={(e) => setSubfolder(e.target.value)}
-                      onBlur={() =>
-                        void switchBackend({
-                          kind: 'github',
-                          owner: username,
-                          subfolder: subfolder.trim() || undefined,
-                        })
-                      }
-                      style={{
-                        fontSize: '12px',
-                        padding: '4px 6px',
-                        border: '1px solid #cbd5e0',
-                        borderRadius: '3px',
-                      }}
-                    />
-                  </label>
                   <button
                     type="button"
                     style={{ ...buttonStyle, alignSelf: 'flex-start' }}

@@ -50,9 +50,9 @@ beforeEach(() => {
 })
 
 describe('createGithubBackend: path construction', () => {
-  it('scopes directory listing to the configured subfolder and its .bin/', async () => {
+  it('scopes directory listing to the fixed scores/ folder and its .bin/', async () => {
     getContent.mockImplementation(() => dirResponse([]))
-    const backend = createGithubBackend({ ...config, subfolder: 'scores' })
+    const backend = createGithubBackend(config)
 
     await backend.load()
 
@@ -74,22 +74,11 @@ describe('createGithubBackend: path construction', () => {
       throw new Error(`unexpected path ${path}`)
     })
 
-    const backend = createGithubBackend({ ...config, subfolder: 'scores' })
+    const backend = createGithubBackend(config)
     const state = await backend.load()
 
     expect(state.userFiles).toEqual({ 'a.jianpu': '1 2 3' })
     expect(state.bin).toEqual({})
-  })
-
-  it('defaults to the repo root when no subfolder is configured', async () => {
-    getContent.mockImplementation(() => dirResponse([]))
-    const backend = createGithubBackend(config)
-
-    await backend.load()
-
-    const paths = getContent.mock.calls.map((call) => call[0].path)
-    expect(paths).toContain('')
-    expect(paths).toContain('.bin')
   })
 })
 
@@ -108,10 +97,10 @@ describe('createGithubBackend: sha-refetch-before-write', () => {
     await backend.saveContent(state)
 
     expect(getContent).toHaveBeenCalledWith(
-      expect.objectContaining({ path: 'a.jianpu' }),
+      expect.objectContaining({ path: 'scores/a.jianpu' }),
     )
     expect(createOrUpdateFileContents).toHaveBeenCalledWith(
-      expect.objectContaining({ path: 'a.jianpu', sha: 'sha-abc' }),
+      expect.objectContaining({ path: 'scores/a.jianpu', sha: 'sha-abc' }),
     )
   })
 
@@ -160,9 +149,9 @@ describe('createGithubBackend: rename as create-then-delete', () => {
     await backend.renameFile(state, 'a.jianpu', 'b.jianpu')
 
     expect(order).toEqual([
-      'create:b.jianpu',
-      'getContent:a.jianpu',
-      'delete:a.jianpu',
+      'create:scores/b.jianpu',
+      'getContent:scores/a.jianpu',
+      'delete:scores/a.jianpu',
     ])
   })
 
@@ -239,6 +228,6 @@ describe('createGithubBackend: 409 conflict surfacing', () => {
     await expect(backend.saveContent(state)).rejects.toThrow('Conflict')
 
     expect(backend.status()).toBe('error')
-    expect(backend.lastError()).toEqual({ kind: 'conflict', path: 'a.jianpu' })
+    expect(backend.lastError()).toEqual({ kind: 'conflict', path: 'scores/a.jianpu' })
   })
 })

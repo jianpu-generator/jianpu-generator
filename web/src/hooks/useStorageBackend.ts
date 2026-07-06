@@ -43,7 +43,7 @@ const STORAGE_BACKEND_PREFERENCE_KEY = 'jianpu:storage-backend:v1'
  */
 export interface StorageBackendPreference {
   backend: 'local' | 'github'
-  github?: { owner: string; subfolder?: string }
+  github?: { owner: string }
 }
 
 const DEFAULT_PREFERENCE: StorageBackendPreference = { backend: 'local' }
@@ -61,7 +61,7 @@ const EMPTY_STORE: FileStoreState = {
 
 export type StorageBackendTarget =
   | { kind: 'local' }
-  | { kind: 'github'; owner: string; subfolder?: string }
+  | { kind: 'github'; owner: string }
 
 export interface UseStorageBackendResult {
   store: FileStoreState
@@ -71,8 +71,8 @@ export interface UseStorageBackendResult {
   backend: StorageBackend
   saveStatus: SaveStatus
   /** Currently persisted backend choice, exposed so `StorageSettingsModal`
-   * can reflect the active selection (and configured subfolder) without
-   * re-deriving it from `backend.kind` alone. */
+   * can reflect the active selection without re-deriving it from
+   * `backend.kind` alone. */
   preference: StorageBackendPreference
   /**
    * Switches the active backend. If leaving GitHub with a pending debounced
@@ -141,14 +141,13 @@ export function useStorageBackend(): UseStorageBackendResult {
         token: authToken.token,
         owner: preference.github.owner,
         repo: GITHUB_STORAGE_REPO,
-        subfolder: preference.github.subfolder,
       })
     }
     return localBackend
   }, [preference, authToken])
 
   // (Re)loads the GitHub listing whenever the backend identity changes
-  // (kind, owner, subfolder, or token) — exactly when a fresh listing is
+  // (kind, owner, or token) — exactly when a fresh listing is
   // needed. `localBackend`'s state instead lives in `localStore` above,
   // seeded synchronously, so no such effect is needed for it.
   useEffect(() => {
@@ -246,7 +245,7 @@ export function useStorageBackend(): UseStorageBackendResult {
       } else {
         setPreference({
           backend: 'github',
-          github: { owner: target.owner, subfolder: target.subfolder },
+          github: { owner: target.owner },
         })
       }
     },

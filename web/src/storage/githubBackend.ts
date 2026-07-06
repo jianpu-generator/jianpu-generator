@@ -14,17 +14,18 @@ import {
 import type { SaveStatus, StorageBackend } from './types'
 
 /**
- * Where in the target repo the app's files live. `subfolder` is optional
- * (defaults to the repo root); trash is always mirrored one level under it
- * at `.bin/`, e.g. `<subfolder>/.bin/<name>.jianpu`.
+ * Fixed top-level folder the app's files live under within the target repo,
+ * alongside future siblings like `trash`/`metadata` — keeps the repo root
+ * free for those rather than mixing everything in together.
  */
+const SCORES_DIR = 'scores'
+
 export interface GithubBackendConfig {
   token: string
   owner: string
   repo: string
   /** Defaults to the repo's default branch when omitted. */
   branch?: string
-  subfolder?: string
 }
 
 /**
@@ -112,10 +113,10 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
   const octokit = new Octokit({ auth: config.token })
   const { owner, repo, branch } = config
 
-  const mainDir = joinPath(config.subfolder)
-  const binDir = joinPath(config.subfolder, '.bin')
-  const filePath = (name: string) => joinPath(config.subfolder, name)
-  const binFilePath = (name: string) => joinPath(config.subfolder, '.bin', name)
+  const mainDir = SCORES_DIR
+  const binDir = joinPath(SCORES_DIR, '.bin')
+  const filePath = (name: string) => joinPath(SCORES_DIR, name)
+  const binFilePath = (name: string) => joinPath(SCORES_DIR, '.bin', name)
 
   let status: SaveStatus = 'idle'
   let lastError: GithubBackendError | null = null
