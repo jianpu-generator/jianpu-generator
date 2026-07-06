@@ -270,3 +270,56 @@ describe('createGithubBackend: 409 conflict surfacing', () => {
     expect(backend.lastError()).toEqual({ kind: 'conflict', path: 'scores/a.jianpu' })
   })
 })
+
+function makeFakeLocalStorage(): Storage {
+  const data = new Map<string, string>()
+  return {
+    getItem: (key: string) => data.get(key) ?? null,
+    setItem: (key: string, value: string) => void data.set(key, value),
+    removeItem: (key: string) => void data.delete(key),
+    clear: () => data.clear(),
+    key: () => null,
+    get length() {
+      return data.size
+    },
+  } as Storage
+}
+
+describe('createGithubBackend: stable file IDs across load()', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', makeFakeLocalStorage())
+  })
+
+  it('reuses the same file ID for an unchanged file across repeated load() calls', async () => {
+    getContent.mockImplementation(({ path }: { path: string }) => {
+      if (path === 'scores') {
+        return dirResponse([{ name: 'a.jianpu', path: 'scores/a.jianpu' }])
+      }
+      if (path === 'scores/a.jianpu') return fileResponse('1 2 3')
+      if (path === 'trash') return notFound()
+      throw new Error(`unexpected path ${path}`)
+    })
+
+    const backend = createGithubBackend(config)
+    const first = await backend.load()
+    const second = await backend.load()
+
+    expect(second.fileIds['a.jianpu']).toBe(first.fileIds['a.jianpu'])
+  })
+
+  it('keeps a stable ID for a name-only backend recreation (e.g. page reload)', async () => {
+    getContent.mockImplementation(({ path }: { path: string }) => {
+      if (path === 'scores') {
+        return dirResponse([{ name: 'a.jianpu', path: 'scores/a.jianpu' }])
+      }
+      if (path === 'scores/a.jianpu') return fileResponse('1 2 3')
+      if (path === 'trash') return notFound()
+      throw new Error(`unexpected path ${path}`)
+    })
+
+    const first = await createGithubBackend(config).load()
+    const second = await createGithubBackend(config).load()
+
+    expect(second.fileIds['a.jianpu']).toBe(first.fileIds['a.jianpu'])
+  })
+})

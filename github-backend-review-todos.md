@@ -24,10 +24,13 @@ Findings from code review of the `github-backend-integrated` branch (vs `master`
   `classifyError` doesn't recognize — it's bucketed as `'unknown'` and never surfaced
   in the UI.
 
-- [ ] **fileId regenerated on every load(), resetting part-toggle settings** — `web/src/storage/githubBackend.ts:317`
-  `load()` mints a fresh random UUID per file on every call, even for unchanged files.
-  Per-file part/lyrics visibility is cached by that UUID, so any reload/backend-switch
-  silently resets those settings.
+- [x] **fileId regenerated on every load(), resetting part-toggle settings** — `web/src/storage/githubBackend.ts:317`
+  Fixed. Name -> file-ID mappings are now persisted to `localStorage`, keyed per
+  `owner/repo` (`readStoredFileIds`/`writeStoredFileIds`). `load()` reuses the stored ID
+  for any name it has seen before instead of minting a fresh UUID, and every structural
+  op (`createFile`/`duplicateFile`/`renameFile`/`restoreFile`) persists its updated
+  mapping immediately so IDs survive a reload even before the next `load()`. Covered by
+  new tests in `web/src/storage/githubBackend.test.ts`.
 
 - [ ] **403 always misclassified as rate-limited** — `web/src/storage/githubBackend.ts:248`
   Every HTTP 403 is classified as `'rate-limited'`, even though GitHub also returns 403

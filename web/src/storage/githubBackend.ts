@@ -21,6 +21,50 @@ import type { SaveStatus, StorageBackend } from './types'
 const SCORES_DIR = 'scores'
 const TRASH_DIR = 'trash'
 
+/** `localStorage` key prefix for the per-repo name -> file-ID map (see
+ * `readStoredFileIds`/`writeStoredFileIds`). Scoped by `owner/repo` since a
+ * user could point the backend at different repos over time. */
+const FILE_IDS_STORAGE_PREFIX = 'jianpu:github-file-ids:v1:'
+
+function fileIdsStorageKey(owner: string, repo: string): string {
+  return `${FILE_IDS_STORAGE_PREFIX}${owner}/${repo}`
+}
+
+/** Reads the previously assigned name -> file-ID map for this repo, if any.
+ * Falls back to an empty map on missing/corrupt storage so callers can
+ * treat every name as new. */
+function readStoredFileIds(
+  owner: string,
+  repo: string,
+): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(fileIdsStorageKey(owner, repo))
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as unknown
+    return parsed && typeof parsed === 'object'
+      ? (parsed as Record<string, string>)
+      : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeStoredFileIds(
+  owner: string,
+  repo: string,
+  fileIds: Record<string, string>,
+): void {
+  try {
+    localStorage.setItem(
+      fileIdsStorageKey(owner, repo),
+      JSON.stringify(fileIds),
+    )
+  } catch {
+    // Ignore write failures (e.g. private-browsing storage quotas); IDs
+    // simply won't survive a reload, which is a safe degradation.
+  }
+}
+
 export interface GithubBackendConfig {
   token: string
   owner: string
@@ -314,10 +358,12 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
         listJianpuFiles(mainDir),
         listJianpuFiles(binDir),
       ])
+      const stored = readStoredFileIds(owner, repo)
       const fileIds: Record<string, string> = {}
       for (const name of [...Object.keys(userFiles), ...Object.keys(bin)]) {
-        fileIds[name] = crypto.randomUUID()
+        fileIds[name] = stored[name] ?? crypto.randomUUID()
       }
+      writeStoredFileIds(owner, repo, fileIds)
       return { active: DEMO_FILE_NAME, userFiles, bin, fileIds }
     },
 
@@ -328,6 +374,7 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
       await runOp(() =>
         createOnly(filePath(name), nextState.userFiles[name] ?? '', `jianpu: create ${name}`),
       )
+      writeStoredFileIds(owner, repo, nextState.fileIds)
       return nextState
     },
 
@@ -342,6 +389,7 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
           `jianpu: duplicate ${state.active} as ${name}`,
         ),
       )
+      writeStoredFileIds(owner, repo, nextState.fileIds)
       return nextState
     },
 
@@ -361,6 +409,7 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
         )
         await deleteFileAt(filePath(from), `jianpu: rename ${from} to ${newName}`)
       })
+      writeStoredFileIds(owner, repo, nextState.fileIds)
       return nextState
     },
 
@@ -387,6 +436,7 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
         )
         await deleteFileAt(binFilePath(name), `jianpu: restore ${newName}`)
       })
+      writeStoredFileIds(owner, repo, nextState.fileIds)
       return nextState
     },
 
