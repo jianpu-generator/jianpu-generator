@@ -80,6 +80,14 @@ export interface UseStorageBackendResult {
    * on the demo file — there is no per-backend "last active file" memory.
    */
   switchBackend: (target: StorageBackendTarget) => Promise<void>
+  /**
+   * Immediately persists the active file, bypassing the autosave debounce
+   * interval. Wired to Ctrl/Cmd+S so users aren't stuck waiting out
+   * `AUTOSAVE_DEBOUNCE_MS` when they explicitly ask to save. A no-op for
+   * `localBackend` (already persisted synchronously by `useLocalStorage`),
+   * but harmless to call unconditionally.
+   */
+  forceSave: () => void
 }
 
 /**
@@ -221,6 +229,11 @@ export function useStorageBackend(): UseStorageBackendResult {
     }
   }, [debouncedSave])
 
+  const forceSave = useCallback(() => {
+    debouncedSave.cancel()
+    runSave(store)
+  }, [debouncedSave, runSave, store])
+
   const switchBackend = useCallback(
     async (target: StorageBackendTarget) => {
       if (backend.kind === 'github' && debouncedSave.isPending()) {
@@ -240,5 +253,13 @@ export function useStorageBackend(): UseStorageBackendResult {
     [backend, debouncedSave, setPreference, setLocalStore],
   )
 
-  return { store, setStore, backend, saveStatus, preference, switchBackend }
+  return {
+    store,
+    setStore,
+    backend,
+    saveStatus,
+    preference,
+    switchBackend,
+    forceSave,
+  }
 }
