@@ -67,6 +67,9 @@ export default function App() {
   const [deletingFileName, setDeletingFileName] = useState<string | null>(null)
   const [duplicatingFile, setDuplicatingFile] = useState(false)
   const [renamingFileName, setRenamingFileName] = useState<string | null>(null)
+  const [restoringFileName, setRestoringFileName] = useState<string | null>(
+    null,
+  )
   const [fileOpError, setFileOpError] = useState<{
     title: string
     message: string
@@ -327,12 +330,13 @@ export default function App() {
   )
 
   const handleRestore = useCallback(
-    async (name: string) => {
-      const base = store
-      const next = await backend.restoreFile(base, name)
-      setStore((prev) => mergeBackendResult(prev, base, next))
-    },
-    [setStore, backend, store],
+    (name: string) =>
+      runFileOp(
+        'Could not restore file',
+        (pending) => setRestoringFileName(pending ? name : null),
+        (base) => backend.restoreFile(base, name),
+      ),
+    [runFileOp, backend],
   )
 
   const handlePartDeclarationChange = useCallback(
@@ -474,6 +478,7 @@ export default function App() {
         deletingName={deletingFileName}
         duplicating={duplicatingFile}
         renamingName={renamingFileName}
+        restoringName={restoringFileName}
       />
       <ErrorModal
         open={fileOpError !== null}

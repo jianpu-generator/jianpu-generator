@@ -32,6 +32,9 @@ export interface FileListProps {
   /** Name of the file currently being renamed, if any — disables and spins
    * just that file's tab name rather than the whole tab bar. */
   renamingName?: string | null
+  /** Name of the file currently being restored, if any — disables and spins
+   * just that file's restore button rather than the whole bin list. */
+  restoringName?: string | null
 }
 
 const SAVE_STATUS_LABEL: Record<SaveStatus, string> = {
@@ -166,6 +169,7 @@ export function FileTabBar({
   deletingName = null,
   duplicating = false,
   renamingName = null,
+  restoringName = null,
 }: FileListProps) {
   const names = sortedFileNames(store)
   const binNames = sortedBinNames(store)
@@ -256,8 +260,12 @@ export function FileTabBar({
                   className="file-tab-bar-restore"
                   aria-label={`Restore ${name}`}
                   onClick={() => onRestore(name)}
+                  disabled={restoringName === name}
                 >
-                  ↩
+                  <SpinnerLabel
+                    pending={restoringName === name}
+                    label="↩"
+                  />
                 </button>
               </li>
             ))}
