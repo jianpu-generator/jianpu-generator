@@ -32,8 +32,15 @@ import './preview.css'
 const shortcutLabel = navigator.platform.startsWith('Mac') ? '⌘↵' : 'Ctrl+↵'
 
 export default function App() {
-  const { store, setStore, backend, saveStatus, preference, switchBackend } =
-    useStorageBackend()
+  const {
+    store,
+    setStore,
+    backend,
+    saveStatus,
+    preference,
+    switchBackend,
+    forceSave,
+  } = useStorageBackend()
   const source = fileContent(store, store.active)
   const readOnly = isReadOnlyFile(store.active)
   const fileId = fileIdForName(store, store.active)
@@ -169,6 +176,9 @@ export default function App() {
       ? playSelectedMeasures
       : undefined
 
+  const forceSaveRef = useRef(forceSave)
+  forceSaveRef.current = forceSave
+
   useEffect(() => {
     const isMac = navigator.platform.startsWith('Mac')
     const onKeyDown = (event: KeyboardEvent) => {
@@ -176,6 +186,9 @@ export default function App() {
       if (modifier && event.key === 'Enter') {
         event.preventDefault()
         playMeasureRef.current?.()
+      } else if (modifier && event.key.toLowerCase() === 's') {
+        event.preventDefault()
+        forceSaveRef.current()
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -442,6 +455,7 @@ export default function App() {
                 }}
                 onEditPartsClick={() => setEditPartsOpen(true)}
                 onEditMetadataClick={() => setEditMetadataOpen(true)}
+                onForceSave={forceSave}
                 onPlayMeasure={
                   measureAudioPlaying
                     ? stopMeasurePlayback

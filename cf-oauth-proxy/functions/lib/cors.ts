@@ -1,22 +1,28 @@
 // Shared origin-check + CORS header helper for the OAuth device-flow proxy.
 //
 // GitHub's OAuth device-flow endpoints do not send CORS headers, so this
-// proxy adds them itself, but only for the single origin configured via the
-// ALLOWED_ORIGIN environment variable. Requests from any other Origin are
-// rejected before we relay anything to GitHub.
+// proxy adds them itself, but only for the origin(s) configured via the
+// ALLOWED_ORIGINS environment variable (comma-separated for multiple, e.g.
+// local dev + production). Requests from any other Origin are rejected
+// before we relay anything to GitHub.
 
 export interface Env {
   GITHUB_CLIENT_ID: string;
   GITHUB_CLIENT_SECRET: string;
-  ALLOWED_ORIGIN: string;
+  ALLOWED_ORIGINS: string;
+}
+
+function allowedOrigins(env: Env): string[] {
+  return env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim());
 }
 
 /**
- * Returns the CORS headers to attach to a response when `origin` matches the
- * configured ALLOWED_ORIGIN, or `null` if the origin is not allowed.
+ * Returns the CORS headers to attach to a response when `origin` matches one
+ * of the configured ALLOWED_ORIGINS entries, or `null` if the origin is not
+ * allowed.
  */
 export function corsHeadersFor(origin: string | null, env: Env): Headers | null {
-  if (!origin || origin !== env.ALLOWED_ORIGIN) {
+  if (!origin || !allowedOrigins(env).includes(origin)) {
     return null;
   }
 
@@ -30,7 +36,7 @@ export function corsHeadersFor(origin: string | null, env: Env): Headers | null 
 
 /**
  * Rejects the request with a 403 if its Origin header does not match
- * ALLOWED_ORIGIN. Returns null when the request is allowed to proceed.
+ * ALLOWED_ORIGINS. Returns null when the request is allowed to proceed.
  */
 export function rejectDisallowedOrigin(request: Request, env: Env): Response | null {
   const origin = request.headers.get("Origin");

@@ -29,6 +29,7 @@ export interface EditorProps {
   onSelectionChange?: (startLine: number, endLine: number) => void
   onCursorLineChange?: (line: number) => void
   onPlayMeasure?: () => void
+  onForceSave?: () => void
   onEditPartsClick?: () => void
   onEditMetadataClick?: () => void
 }
@@ -123,6 +124,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onSelectionChange,
     onCursorLineChange,
     onPlayMeasure,
+    onForceSave,
     onEditPartsClick,
     onEditMetadataClick,
   },
@@ -135,6 +137,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const onSelectionChangeRef = useRef(onSelectionChange)
   const onCursorLineChangeRef = useRef(onCursorLineChange)
   const onPlayMeasureRef = useRef(onPlayMeasure)
+  const onForceSaveRef = useRef(onForceSave)
   const onEditPartsClickRef = useRef(onEditPartsClick)
   const onEditMetadataClickRef = useRef(onEditMetadataClick)
   const savedSelectionRef = useRef<ISelection | null>(null)
@@ -144,6 +147,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onSelectionChangeRef.current = onSelectionChange
     onCursorLineChangeRef.current = onCursorLineChange
     onPlayMeasureRef.current = onPlayMeasure
+    onForceSaveRef.current = onForceSave
     onEditPartsClickRef.current = onEditPartsClick
     onEditMetadataClickRef.current = onEditMetadataClick
   })
@@ -345,6 +349,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
     ed.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.Enter, () =>
       onPlayMeasureRef.current?.(),
+    )
+
+    ed.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.KeyS, () =>
+      onForceSaveRef.current?.(),
     )
 
     const editPartsCommandId = ed.addCommand(0, () => {
