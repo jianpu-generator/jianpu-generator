@@ -8,21 +8,15 @@ import { PartToggles } from './components/PartToggles'
 import { PlayMeasureButton } from './components/PlayMeasureButton'
 import { Preview } from './components/Preview'
 import {
-  createFile,
-  deleteFile,
-  duplicateFile,
   fileContent,
   fileIdForName,
   isReadOnlyFile,
-  renameFile,
-  restoreFile,
   selectFile,
-  updateActiveContent,
 } from './fileStore'
 import { useAssetLoader } from './hooks/useAssetLoader'
-import { useFileStore } from './hooks/useFileStore'
 import { useFontsLoader } from './hooks/useFontsLoader'
 import { useJianpuWorker } from './hooks/useJianpuWorker'
+import { useStorageBackend } from './hooks/useStorageBackend'
 import {
   readPartTogglesForFile,
   writePartTogglesForFile,
@@ -37,7 +31,7 @@ import './preview.css'
 const shortcutLabel = navigator.platform.startsWith('Mac') ? '⌘↵' : 'Ctrl+↵'
 
 export default function App() {
-  const [store, setStore] = useFileStore()
+  const { store, setStore, backend } = useStorageBackend()
   const source = fileContent(store, store.active)
   const readOnly = isReadOnlyFile(store.active)
   const fileId = fileIdForName(store, store.active)
@@ -232,9 +226,9 @@ export default function App() {
 
   const handleSourceChange = useCallback(
     (value: string) => {
-      setStore((prev) => updateActiveContent(prev, value))
+      setStore((prev) => backend.updateActiveContent(prev, value))
     },
-    [setStore],
+    [setStore, backend],
   )
 
   const handleSelect = useCallback(
@@ -244,33 +238,33 @@ export default function App() {
     [setStore],
   )
 
-  const handleCreate = useCallback(() => {
-    setStore((prev) => createFile(prev))
-  }, [setStore])
+  const handleCreate = useCallback(async () => {
+    setStore(await backend.createFile(store))
+  }, [setStore, backend, store])
 
-  const handleDuplicate = useCallback(() => {
-    setStore((prev) => duplicateFile(prev))
-  }, [setStore])
+  const handleDuplicate = useCallback(async () => {
+    setStore(await backend.duplicateFile(store))
+  }, [setStore, backend, store])
 
   const handleRename = useCallback(
-    (from: string, to: string) => {
-      setStore((prev) => renameFile(prev, from, to))
+    async (from: string, to: string) => {
+      setStore(await backend.renameFile(store, from, to))
     },
-    [setStore],
+    [setStore, backend, store],
   )
 
   const handleDelete = useCallback(
-    (name: string) => {
-      setStore((prev) => deleteFile(prev, name))
+    async (name: string) => {
+      setStore(await backend.deleteFile(store, name))
     },
-    [setStore],
+    [setStore, backend, store],
   )
 
   const handleRestore = useCallback(
-    (name: string) => {
-      setStore((prev) => restoreFile(prev, name))
+    async (name: string) => {
+      setStore(await backend.restoreFile(store, name))
     },
-    [setStore],
+    [setStore, backend, store],
   )
 
   const handlePartDeclarationChange = useCallback(

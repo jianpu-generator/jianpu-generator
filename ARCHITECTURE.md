@@ -100,6 +100,13 @@ source (&str)
 
 The React app (`web/`) runs the compiler in a dedicated worker (`web/src/worker/jianpu.worker.ts`) backed by the `jianpu-wasm` crate. The main thread sends source text and asset bytes; the worker calls WASM exports and posts structured results back.
 
+### Storage abstraction
+
+- Module: `web/src/storage/`
+- Key types: `StorageBackend` (`web/src/storage/types.ts`) — the interface both the browser-`localStorage` backend and a future GitHub backend implement; `FileStoreState` (`web/src/fileStore.ts`) remains the canonical in-memory shape used by every backend. `StorageBackend.load`/`createFile`/`duplicateFile`/`renameFile`/`deleteFile`/`restoreFile`/`saveContent` are async (to accommodate network-backed backends); `updateActiveContent` is sync with no persistence side effect. `saveContent` is the explicit call that persists the active file's content — debounce ownership lives in the hook layer, not the backend.
+- `web/src/storage/localBackend.ts` — the only `StorageBackend` implementation so far. Thin async adapter over `fileStore.ts`'s pure, synchronous functions (`createFile`, `duplicateFile`, `renameFile`, `deleteFile`, `restoreFile`, `updateActiveContent`). Its `saveContent` is a no-op since `useLocalStorage` already persists on every state change.
+- Entry: `useStorageBackend()` in `web/src/hooks/useStorageBackend.ts` — holds the `FileStoreState` in React state (via `useLocalStorage`, seeded synchronously through `localBackend`'s local-only read helpers) and exposes `store`/`setStore`/`backend`/`saveStatus`. Callers `await backend.xxxFile(store)` for structural operations, then `setStore` the result. Only `localBackend` is reachable currently — no `switchBackend()` yet, since there is nothing else to switch to.
+
 ### Source editing
 
 - Module: `src/source_edit/`
