@@ -3,6 +3,7 @@ import { AssetLoadingBanner } from './components/AssetLoadingBanner'
 import { EditMetadataModal } from './components/EditMetadataModal'
 import { Editor } from './components/Editor'
 import { EditPartsModal } from './components/EditPartsModal'
+import { ErrorModal } from './components/ErrorModal'
 import { FileTabBar } from './components/FileList'
 import { PartToggles } from './components/PartToggles'
 import { PlayMeasureButton } from './components/PlayMeasureButton'
@@ -12,6 +13,7 @@ import {
   fileContent,
   fileIdForName,
   isReadOnlyFile,
+  mergeBackendResult,
   selectFile,
 } from './fileStore'
 import { useAssetLoader } from './hooks/useAssetLoader'
@@ -60,6 +62,13 @@ export default function App() {
   const [editPartsOpen, setEditPartsOpen] = useState(false)
   const [editMetadataOpen, setEditMetadataOpen] = useState(false)
   const [storageSettingsOpen, setStorageSettingsOpen] = useState(false)
+  const [creatingFile, setCreatingFile] = useState(false)
+  const [deletingFileName, setDeletingFileName] = useState<string | null>(null)
+  const [fileOpError, setFileOpError] = useState<{
+    title: string
+    message: string
+    stack?: string
+  } | null>(null)
   const [dragStartLabel, setDragStartLabel] = useState<string | null>(null)
   const [dragCurrentLabel, setDragCurrentLabel] = useState<string | null>(null)
   const [selectedLineRange, setSelectedLineRange] = useState<{
@@ -255,30 +264,62 @@ export default function App() {
   )
 
   const handleCreate = useCallback(async () => {
-    setStore(await backend.createFile(store))
+    const base = store
+    setCreatingFile(true)
+    try {
+      const next = await backend.createFile(base)
+      setStore((prev) => mergeBackendResult(prev, base, next))
+    } catch (error) {
+      setFileOpError({
+        title: 'Could not create file',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      })
+    } finally {
+      setCreatingFile(false)
+    }
   }, [setStore, backend, store])
 
   const handleDuplicate = useCallback(async () => {
-    setStore(await backend.duplicateFile(store))
+    const base = store
+    const next = await backend.duplicateFile(base)
+    setStore((prev) => mergeBackendResult(prev, base, next))
   }, [setStore, backend, store])
 
   const handleRename = useCallback(
     async (from: string, to: string) => {
-      setStore(await backend.renameFile(store, from, to))
+      const base = store
+      const next = await backend.renameFile(base, from, to)
+      setStore((prev) => mergeBackendResult(prev, base, next))
     },
     [setStore, backend, store],
   )
 
   const handleDelete = useCallback(
     async (name: string) => {
-      setStore(await backend.deleteFile(store, name))
+      const base = store
+      setDeletingFileName(name)
+      try {
+        const next = await backend.deleteFile(base, name)
+        setStore((prev) => mergeBackendResult(prev, base, next))
+      } catch (error) {
+        setFileOpError({
+          title: 'Could not delete file',
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        })
+      } finally {
+        setDeletingFileName(null)
+      }
     },
     [setStore, backend, store],
   )
 
   const handleRestore = useCallback(
     async (name: string) => {
-      setStore(await backend.restoreFile(store, name))
+      const base = store
+      const next = await backend.restoreFile(base, name)
+      setStore((prev) => mergeBackendResult(prev, base, next))
     },
     [setStore, backend, store],
   )
@@ -418,6 +459,17 @@ export default function App() {
         onRestore={handleRestore}
         onOpenStorageSettings={() => setStorageSettingsOpen(true)}
         saveStatus={saveStatus}
+        creating={creatingFile}
+        deletingName={deletingFileName}
+      />
+      <ErrorModal
+        open={fileOpError !== null}
+        onOpenChange={(open) => {
+          if (!open) setFileOpError(null)
+        }}
+        title={fileOpError?.title ?? ''}
+        message={fileOpError?.message ?? ''}
+        stack={fileOpError?.stack}
       />
       <StorageSettingsModal
         open={storageSettingsOpen}

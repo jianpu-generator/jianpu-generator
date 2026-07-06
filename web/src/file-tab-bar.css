@@ -26,6 +26,9 @@
 }
 
 .file-tab-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
   border: 1px solid var(--border);
@@ -37,6 +40,29 @@
 
 .file-tab-bar-btn:hover {
   background: var(--preview-bg);
+}
+
+.file-tab-bar-btn:disabled,
+.file-tab-close:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.file-tab-bar-spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 2px solid var(--border);
+  border-top-color: var(--muted);
+  border-radius: 50%;
+  animation: file-tab-bar-spin 0.7s linear infinite;
+}
+
+@keyframes file-tab-bar-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .file-tab-bar-save-status {
@@ -129,6 +155,9 @@ input.file-tab-name:focus {
 }
 
 .file-tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   width: 1.1rem;
   height: 1.1rem;

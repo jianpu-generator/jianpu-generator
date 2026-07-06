@@ -324,6 +324,81 @@ export function restoreFile(
   }
 }
 
+function mergeAddedRemoved(
+  prevRecord: Record<string, string>,
+  baseRecord: Record<string, string>,
+  nextRecord: Record<string, string>,
+  resolveAdded: (key: string) => string,
+): Record<string, string> {
+  const result = { ...prevRecord }
+  for (const key of Object.keys(baseRecord)) {
+    if (!(key in nextRecord)) delete result[key]
+  }
+  for (const key of Object.keys(nextRecord)) {
+    if (!(key in baseRecord)) result[key] = resolveAdded(key)
+  }
+  return result
+}
+
+/**
+ * Reconciles the result of an async structural operation (create/duplicate/
+ * rename/delete/restore) with whatever the store has become since the
+ * operation's `base` snapshot was read — instead of blindly replacing state
+ * with `next`, which would discard any edits or other operations applied to
+ * `prev` while the async call was in flight. Only the keys the operation
+ * actually added or removed (relative to `base`) are applied to `prev`;
+ * every other key is left exactly as `prev` has it. For a moved key (e.g.
+ * rename's `from` -> `to`), the destination's content is taken from `prev`'s
+ * current value of the source key when still present, so a concurrent edit
+ * to the file being renamed/restored isn't lost either.
+ */
+export function mergeBackendResult(
+  prev: FileStoreState,
+  base: FileStoreState,
+  next: FileStoreState,
+): FileStoreState {
+  const removedFrom = (
+    record: 'userFiles' | 'bin',
+  ): string[] =>
+    Object.keys(base[record]).filter((key) => !(key in next[record]))
+
+  const findMovedSource = (content: string): string | undefined => {
+    const fromUserFiles = removedFrom('userFiles').find(
+      (key) => base.userFiles[key] === content,
+    )
+    if (fromUserFiles !== undefined) {
+      return prev.userFiles[fromUserFiles] ?? prev.bin[fromUserFiles]
+    }
+    const fromBin = removedFrom('bin').find((key) => base.bin[key] === content)
+    if (fromBin !== undefined) {
+      return prev.userFiles[fromBin] ?? prev.bin[fromBin]
+    }
+    return undefined
+  }
+
+  return {
+    active: next.active !== base.active ? next.active : prev.active,
+    userFiles: mergeAddedRemoved(
+      prev.userFiles,
+      base.userFiles,
+      next.userFiles,
+      (key) => findMovedSource(next.userFiles[key]) ?? next.userFiles[key],
+    ),
+    bin: mergeAddedRemoved(
+      prev.bin,
+      base.bin,
+      next.bin,
+      (key) => findMovedSource(next.bin[key]) ?? next.bin[key],
+    ),
+    fileIds: mergeAddedRemoved(
+      prev.fileIds,
+      base.fileIds,
+      next.fileIds,
+      (key) => next.fileIds[key],
+    ),
+  }
+}
+
 export function isReadOnlyFile(name: string): boolean {
   return isDemoFile(name)
 }

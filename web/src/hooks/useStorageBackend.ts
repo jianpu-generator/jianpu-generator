@@ -116,8 +116,11 @@ export function shouldScheduleAutosave(
  * updates (e.g. selecting a file, or applying `backend.updateActiveContent`)
  * via `setStore`. Structural operations (create/duplicate/rename/delete/
  * restore) are modeled as async on `StorageBackend`, so callers
- * `await backend.xxxFile(store)` and then `setStore` the result — those
- * calls hit the backend immediately, unlike content edits (see
+ * `await backend.xxxFile(store)` and then reconcile the result into the
+ * latest state with `fileStore.ts`'s `mergeBackendResult` via a functional
+ * `setStore(prev => ...)` update — never a plain `setStore(next)`, which
+ * would discard any edits made to `prev` while the await was in flight.
+ * Those calls hit the backend immediately, unlike content edits (see
  * `AUTOSAVE_DEBOUNCE_MS`).
  */
 export function useStorageBackend(): UseStorageBackendResult {

@@ -20,6 +20,12 @@ export interface FileListProps {
   onRestore: (name: string) => void
   onOpenStorageSettings: () => void
   saveStatus: SaveStatus
+  /** Whether a `createFile` call is in flight — disables "New" and shows a
+   * spinner on it. */
+  creating?: boolean
+  /** Name of the file currently being deleted, if any — disables and spins
+   * just that file's close button rather than the whole tab bar. */
+  deletingName?: string | null
 }
 
 const SAVE_STATUS_LABEL: Record<SaveStatus, string> = {
@@ -132,6 +138,8 @@ export function FileTabBar({
   onRestore,
   onOpenStorageSettings,
   saveStatus,
+  creating = false,
+  deletingName = null,
 }: FileListProps) {
   const names = sortedFileNames(store)
   const binNames = sortedBinNames(store)
@@ -140,8 +148,17 @@ export function FileTabBar({
   return (
     <div className="file-tab-bar">
       <div className="file-tab-bar-actions">
-        <button type="button" className="file-tab-bar-btn" onClick={onCreate}>
-          New
+        <button
+          type="button"
+          className="file-tab-bar-btn"
+          onClick={onCreate}
+          disabled={creating}
+        >
+          {creating ? (
+            <span className="file-tab-bar-spinner" aria-hidden="true" />
+          ) : (
+            'New'
+          )}
         </button>
         <button
           type="button"
@@ -191,8 +208,16 @@ export function FileTabBar({
                     className="file-tab-close"
                     aria-label={`Move ${name} to bin`}
                     onClick={() => onDelete(name)}
+                    disabled={deletingName === name}
                   >
-                    ×
+                    {deletingName === name ? (
+                      <span
+                        className="file-tab-bar-spinner"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      '×'
+                    )}
                   </button>
                 ) : null}
               </li>
