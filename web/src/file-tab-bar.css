@@ -39,6 +39,17 @@
   background: var(--preview-bg);
 }
 
+.file-tab-bar-save-status {
+  font-size: 0.7rem;
+  color: var(--text-muted, #888);
+  white-space: nowrap;
+}
+
+.file-tab-bar-save-status--error,
+.file-tab-bar-save-status--offline {
+  color: #b00020;
+}
+
 .file-tab-bar-hint {
   margin: 0;
   align-self: center;

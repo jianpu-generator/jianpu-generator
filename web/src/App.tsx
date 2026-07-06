@@ -7,6 +7,7 @@ import { FileTabBar } from './components/FileList'
 import { PartToggles } from './components/PartToggles'
 import { PlayMeasureButton } from './components/PlayMeasureButton'
 import { Preview } from './components/Preview'
+import { StorageSettingsModal } from './components/StorageSettingsModal'
 import {
   fileContent,
   fileIdForName,
@@ -31,7 +32,8 @@ import './preview.css'
 const shortcutLabel = navigator.platform.startsWith('Mac') ? '⌘↵' : 'Ctrl+↵'
 
 export default function App() {
-  const { store, setStore, backend } = useStorageBackend()
+  const { store, setStore, backend, saveStatus, preference, switchBackend } =
+    useStorageBackend()
   const source = fileContent(store, store.active)
   const readOnly = isReadOnlyFile(store.active)
   const fileId = fileIdForName(store, store.active)
@@ -50,6 +52,7 @@ export default function App() {
   })
   const [editPartsOpen, setEditPartsOpen] = useState(false)
   const [editMetadataOpen, setEditMetadataOpen] = useState(false)
+  const [storageSettingsOpen, setStorageSettingsOpen] = useState(false)
   const [dragStartLabel, setDragStartLabel] = useState<string | null>(null)
   const [dragCurrentLabel, setDragCurrentLabel] = useState<string | null>(null)
   const [selectedLineRange, setSelectedLineRange] = useState<{
@@ -400,6 +403,17 @@ export default function App() {
         onRename={handleRename}
         onDelete={handleDelete}
         onRestore={handleRestore}
+        onOpenStorageSettings={() => setStorageSettingsOpen(true)}
+        saveStatus={saveStatus}
+      />
+      <StorageSettingsModal
+        open={storageSettingsOpen}
+        onOpenChange={setStorageSettingsOpen}
+        backend={backend}
+        preference={preference}
+        switchBackend={switchBackend}
+        store={store}
+        setStore={setStore}
       />
       <span
         data-testid="selected-measure-range"

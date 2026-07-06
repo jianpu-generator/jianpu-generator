@@ -7,6 +7,7 @@ import {
   sortedBinNames,
   sortedFileNames,
 } from '../fileStore'
+import type { SaveStatus } from '../storage/types'
 import { ShareButton } from './ShareButton'
 
 export interface FileListProps {
@@ -17,6 +18,29 @@ export interface FileListProps {
   onRename: (from: string, to: string) => void
   onDelete: (name: string) => void
   onRestore: (name: string) => void
+  onOpenStorageSettings: () => void
+  saveStatus: SaveStatus
+}
+
+const SAVE_STATUS_LABEL: Record<SaveStatus, string> = {
+  idle: '',
+  saving: 'Saving…',
+  saved: 'Saved',
+  error: 'Save failed',
+  offline: 'Offline',
+}
+
+function SaveStatusBadge({ status }: { status: SaveStatus }) {
+  const label = SAVE_STATUS_LABEL[status]
+  if (!label) return null
+  return (
+    <span
+      className={`file-tab-bar-save-status file-tab-bar-save-status--${status}`}
+      data-testid="save-status-badge"
+    >
+      {label}
+    </span>
+  )
 }
 
 function FileTabName({
@@ -106,6 +130,8 @@ export function FileTabBar({
   onRename,
   onDelete,
   onRestore,
+  onOpenStorageSettings,
+  saveStatus,
 }: FileListProps) {
   const names = sortedFileNames(store)
   const binNames = sortedBinNames(store)
@@ -128,6 +154,14 @@ export function FileTabBar({
           filename={store.active}
           content={fileContent(store, store.active)}
         />
+        <button
+          type="button"
+          className="file-tab-bar-btn"
+          onClick={onOpenStorageSettings}
+        >
+          Storage…
+        </button>
+        <SaveStatusBadge status={saveStatus} />
       </div>
       {showHint ? (
         <p className="file-tab-bar-hint">
