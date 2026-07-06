@@ -13,6 +13,7 @@ import {
   fileContent,
   fileIdForName,
   type FileStoreState,
+  importSharedFile,
   isReadOnlyFile,
   mergeBackendResult,
   selectFile,
@@ -25,6 +26,7 @@ import {
   readPartTogglesForFile,
   writePartTogglesForFile,
 } from './partToggleCache'
+import { clearShareHash, parseShareFromHash, type SharePayload } from './shareUrl'
 import type { EditorHandle, PartMode, SoundfontValue } from './types'
 import type { MetadataKey } from './utils/metadataSource'
 import { parseMetadata, updateMetadataField } from './utils/metadataSource'
@@ -44,8 +46,13 @@ export default function App() {
     switchBackend,
     forceSave,
   } = useStorageBackend()
-  const source = fileContent(store, store.active)
-  const readOnly = isReadOnlyFile(store.active)
+  const [sharedPreview, setSharedPreview] = useState<SharePayload | null>(() =>
+    parseShareFromHash(),
+  )
+  const source = sharedPreview
+    ? sharedPreview.content
+    : fileContent(store, store.active)
+  const readOnly = sharedPreview !== null || isReadOnlyFile(store.active)
   const fileId = fileIdForName(store, store.active)
 
   const [disabledParts, setDisabledParts] = useState<Set<string>>(() => {
@@ -268,6 +275,20 @@ export default function App() {
     },
     [setStore],
   )
+
+  const handleImportShared = useCallback(() => {
+    if (!sharedPreview) return
+    setStore((prev) =>
+      importSharedFile(prev, sharedPreview.filename, sharedPreview.content),
+    )
+    clearShareHash()
+    setSharedPreview(null)
+  }, [sharedPreview, setStore])
+
+  const handleDismissShared = useCallback(() => {
+    clearShareHash()
+    setSharedPreview(null)
+  }, [])
 
   const runFileOp = useCallback(
     async (
@@ -511,115 +532,140 @@ export default function App() {
         <section className="pane pane--editor">
           <div className="editor-layout">
             <div className="editor-main">
-              <Editor
-                ref={editorRef}
-                value={source}
-                onChange={handleSourceChange}
-                readOnly={readOnly}
-                diagnostics={diagnostics}
-                diagnosticViewZones={diagnosticViewZones}
-                measureSpans={measureSpans}
-                onSelectionChange={(firstLine, lastLine) => {
-                  setSelectedLineRange(null)
-                  notifySelection(firstLine, lastLine)
-                }}
-                onEditPartsClick={() => setEditPartsOpen(true)}
-                onEditMetadataClick={() => setEditMetadataOpen(true)}
-                onForceSave={forceSave}
-                onPlayMeasure={
-                  measureAudioPlaying
-                    ? stopMeasurePlayback
-                    : selectedMeasureRange !== null &&
-                        !measureAudioGenerating &&
-                        soundfontReady
-                      ? playSelectedMeasures
-                      : undefined
-                }
-                toolbar={
-                  audioAvailable || sectionLabels.length > 0 ? (
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                      }}
+              {sharedPreview ? (
+                <div className="shared-preview-banner">
+                  <p>
+                    Viewing a shared score:{' '}
+                    <strong>{sharedPreview.filename}</strong>
+                  </p>
+                  <div className="shared-preview-actions">
+                    <button
+                      type="button"
+                      className="shared-preview-import-btn"
+                      onClick={handleImportShared}
                     >
-                      {audioAvailable && (
-                        <PlayMeasureButton
-                          disabled={
-                            selectedMeasureRange === null ||
-                            measureAudioGenerating
-                          }
-                          loading={measureAudioGenerating}
-                          playing={measureAudioPlaying}
-                          measureRange={selectedMeasureRange}
-                          onClick={playSelectedMeasures}
-                          onPause={stopMeasurePlayback}
-                          shortcutLabel={shortcutLabel}
-                        />
-                      )}
-                      {sectionLabels.length > 0 && (
-                        <div
-                          role="toolbar"
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            overflowX: 'auto',
-                            flexShrink: 1,
-                            userSelect:
-                              dragStartLabel !== null ? 'none' : undefined,
-                          }}
-                          onMouseDown={(e) => e.preventDefault()}
-                          onMouseUp={() => {
-                            setDragStartLabel(null)
-                            setDragCurrentLabel(null)
-                          }}
-                          onMouseLeave={() => {
-                            setDragStartLabel(null)
-                            setDragCurrentLabel(null)
-                          }}
-                        >
-                          {sectionLabels.map((label) => (
-                            <button
-                              key={label}
-                              type="button"
-                              className={[
-                                'section-jump-btn',
-                                activeHighlightedLabels.has(label)
-                                  ? 'section-jump-btn--dragging'
-                                  : '',
-                              ].join(' ')}
-                              style={{
-                                cursor:
-                                  dragStartLabel !== null
-                                    ? 'ew-resize'
-                                    : undefined,
-                              }}
-                              onMouseDown={() => {
-                                setDragStartLabel(label)
-                                setDragCurrentLabel(label)
-                                handleSectionJump(label)
-                              }}
-                              onMouseEnter={() => {
-                                if (dragStartLabel !== null) {
+                      Import to my scores
+                    </button>
+                    <button
+                      type="button"
+                      className="shared-preview-discard-btn"
+                      onClick={handleDismissShared}
+                    >
+                      Discard
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <Editor
+                  ref={editorRef}
+                  value={source}
+                  onChange={handleSourceChange}
+                  readOnly={readOnly}
+                  diagnostics={diagnostics}
+                  diagnosticViewZones={diagnosticViewZones}
+                  measureSpans={measureSpans}
+                  onSelectionChange={(firstLine, lastLine) => {
+                    setSelectedLineRange(null)
+                    notifySelection(firstLine, lastLine)
+                  }}
+                  onEditPartsClick={() => setEditPartsOpen(true)}
+                  onEditMetadataClick={() => setEditMetadataOpen(true)}
+                  onForceSave={forceSave}
+                  onPlayMeasure={
+                    measureAudioPlaying
+                      ? stopMeasurePlayback
+                      : selectedMeasureRange !== null &&
+                          !measureAudioGenerating &&
+                          soundfontReady
+                        ? playSelectedMeasures
+                        : undefined
+                  }
+                  toolbar={
+                    audioAvailable || sectionLabels.length > 0 ? (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                        }}
+                      >
+                        {audioAvailable && (
+                          <PlayMeasureButton
+                            disabled={
+                              selectedMeasureRange === null ||
+                              measureAudioGenerating
+                            }
+                            loading={measureAudioGenerating}
+                            playing={measureAudioPlaying}
+                            measureRange={selectedMeasureRange}
+                            onClick={playSelectedMeasures}
+                            onPause={stopMeasurePlayback}
+                            shortcutLabel={shortcutLabel}
+                          />
+                        )}
+                        {sectionLabels.length > 0 && (
+                          <div
+                            role="toolbar"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              overflowX: 'auto',
+                              flexShrink: 1,
+                              userSelect:
+                                dragStartLabel !== null ? 'none' : undefined,
+                            }}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onMouseUp={() => {
+                              setDragStartLabel(null)
+                              setDragCurrentLabel(null)
+                            }}
+                            onMouseLeave={() => {
+                              setDragStartLabel(null)
+                              setDragCurrentLabel(null)
+                            }}
+                          >
+                            {sectionLabels.map((label) => (
+                              <button
+                                key={label}
+                                type="button"
+                                className={[
+                                  'section-jump-btn',
+                                  activeHighlightedLabels.has(label)
+                                    ? 'section-jump-btn--dragging'
+                                    : '',
+                                ].join(' ')}
+                                style={{
+                                  cursor:
+                                    dragStartLabel !== null
+                                      ? 'ew-resize'
+                                      : undefined,
+                                }}
+                                onMouseDown={() => {
+                                  setDragStartLabel(label)
                                   setDragCurrentLabel(label)
-                                  handleSectionRangeSelect(
-                                    dragStartLabel,
-                                    label,
-                                  )
-                                }
-                              }}
-                            >
-                              {label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : null
-                }
-              />
+                                  handleSectionJump(label)
+                                }}
+                                onMouseEnter={() => {
+                                  if (dragStartLabel !== null) {
+                                    setDragCurrentLabel(label)
+                                    handleSectionRangeSelect(
+                                      dragStartLabel,
+                                      label,
+                                    )
+                                  }
+                                }}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : null
+                  }
+                />
+              )}
               <EditPartsModal
                 open={editPartsOpen}
                 onOpenChange={setEditPartsOpen}

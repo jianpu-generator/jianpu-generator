@@ -1,5 +1,4 @@
 import {
-  applyShareIfPresent,
   createFile,
   deleteFile,
   deserializeFileStore,
@@ -13,26 +12,25 @@ import {
 import type { SaveStatus, StorageBackend } from './types'
 
 /**
- * Reads the initial `FileStoreState` from `localStorage`, applying any
- * pending share-URL import. Exposed separately (in addition to being used by
- * `localBackend.load`) because `useStorageBackend` needs a *synchronous*
- * initial value for `useLocalStorage`'s initializer — `StorageBackend.load`
- * is async to accommodate future network-backed backends, but the local
- * backend's underlying read is always instant, so there is no behavior
- * change in seeding the state this way.
+ * Reads the initial `FileStoreState` from `localStorage`. Exposed separately
+ * (in addition to being used by `localBackend.load`) because
+ * `useStorageBackend` needs a *synchronous* initial value for
+ * `useLocalStorage`'s initializer — `StorageBackend.load` is async to
+ * accommodate future network-backed backends, but the local backend's
+ * underlying read is always instant, so there is no behavior change in
+ * seeding the state this way.
  */
 export function readInitialStoreSync(): FileStoreState {
-  return applyShareIfPresent(readInitialFileStore())
+  return readInitialFileStore()
 }
 
 /**
- * Deserializes a raw `localStorage` value into a `FileStoreState`, applying
- * any pending share-URL import. Used directly as `useLocalStorage`'s
- * `deserializer` for the same synchronous-seeding reason as
- * `readInitialStoreSync`.
+ * Deserializes a raw `localStorage` value into a `FileStoreState`. Used
+ * directly as `useLocalStorage`'s `deserializer` for the same
+ * synchronous-seeding reason as `readInitialStoreSync`.
  */
 export function deserializeStoreSync(raw: string): FileStoreState {
-  return applyShareIfPresent(deserializeFileStore(raw))
+  return deserializeFileStore(raw)
 }
 
 /**

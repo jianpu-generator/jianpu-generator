@@ -1,10 +1,5 @@
 import NEW_FILE_TEMPLATE from '../../new_file_template.jianpu?raw'
 import { DEFAULT_SOURCE, DEMO_FILE_NAME } from './defaultSource'
-import {
-  clearShareHash,
-  parseShareFromHash,
-  type SharePayload,
-} from './shareUrl'
 
 export { DEMO_FILE_NAME }
 
@@ -422,26 +417,4 @@ export function importSharedFile(
     userFiles: { ...state.userFiles, [name]: content },
     fileIds: { ...state.fileIds, [name]: generateFileId() },
   }
-}
-
-let cachedSharePayload: SharePayload | null | undefined
-
-function consumeSharePayload(): SharePayload | null {
-  if (cachedSharePayload !== undefined) {
-    return cachedSharePayload
-  }
-
-  const shared = parseShareFromHash()
-  cachedSharePayload = shared
-  if (shared) {
-    clearShareHash()
-  }
-  return shared
-}
-
-export function applyShareIfPresent(state: FileStoreState): FileStoreState {
-  const shared = consumeSharePayload()
-  if (!shared) return state
-
-  return importSharedFile(state, shared.filename, shared.content)
 }
