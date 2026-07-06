@@ -42,6 +42,20 @@ jobs:
         working-directory: web
         env:
           VITE_BASE_PATH: /jianpu-generator/
+          # Deployed URL of the step-1 Cloudflare Pages OAuth proxy
+          # (`cf-oauth-proxy/`), which relays the two GitHub device-flow
+          # calls that don't send CORS headers. Placeholder below — replace
+          # with the real project URL once that Cloudflare Pages project is
+          # deployed (see `cf-oauth-proxy/README.md`).
+          VITE_GITHUB_OAUTH_PROXY_URL: https://jianpu-oauth-proxy.pages.dev
+          # The OAuth App's client ID. Not a secret (GitHub's device flow
+          # sends it in plaintext), but functionally unused by the proxy
+          # above, which injects the real `GITHUB_CLIENT_ID` server-side
+          # regardless of what's sent here — required only because
+          # `@octokit/auth-oauth-device` needs a non-empty `clientId` to
+          # construct its requests. Replace with the real OAuth App's client
+          # ID for clarity/future-proofing once one is registered.
+          VITE_GITHUB_OAUTH_CLIENT_ID: placeholder-client-id
         run: pnpm build
 
       - name: Add .nojekyll

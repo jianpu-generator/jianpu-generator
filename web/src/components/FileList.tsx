@@ -7,6 +7,7 @@ import {
   sortedBinNames,
   sortedFileNames,
 } from '../fileStore'
+import type { SaveStatus } from '../storage/types'
 import { ShareButton } from './ShareButton'
 
 export interface FileListProps {
@@ -17,6 +18,59 @@ export interface FileListProps {
   onRename: (from: string, to: string) => void
   onDelete: (name: string) => void
   onRestore: (name: string) => void
+  onOpenStorageSettings: () => void
+  saveStatus: SaveStatus
+  /** Whether a `createFile` call is in flight — disables "New" and shows a
+   * spinner on it. */
+  creating?: boolean
+  /** Name of the file currently being deleted, if any — disables and spins
+   * just that file's close button rather than the whole tab bar. */
+  deletingName?: string | null
+  /** Whether a `duplicateFile` call is in flight — disables "Duplicate" and
+   * shows a spinner on it. */
+  duplicating?: boolean
+  /** Name of the file currently being renamed, if any — disables and spins
+   * just that file's tab name rather than the whole tab bar. */
+  renamingName?: string | null
+  /** Name of the file currently being restored, if any — disables and spins
+   * just that file's restore button rather than the whole bin list. */
+  restoringName?: string | null
+}
+
+const SAVE_STATUS_LABEL: Record<SaveStatus, string> = {
+  idle: '',
+  saving: 'Saving…',
+  saved: 'Saved',
+  error: 'Save failed',
+  offline: 'Offline',
+}
+
+/** Swaps a button's label for the shared spinner while `pending` is true. */
+function SpinnerLabel({
+  pending,
+  label,
+}: {
+  pending: boolean
+  label: string
+}) {
+  return pending ? (
+    <span className="file-tab-bar-spinner" aria-hidden="true" />
+  ) : (
+    label
+  )
+}
+
+function SaveStatusBadge({ status }: { status: SaveStatus }) {
+  const label = SAVE_STATUS_LABEL[status]
+  if (!label) return null
+  return (
+    <span
+      className={`file-tab-bar-save-status file-tab-bar-save-status--${status}`}
+      data-testid="save-status-badge"
+    >
+      {label}
+    </span>
+  )
 }
 
 function FileTabName({
@@ -24,11 +78,13 @@ function FileTabName({
   active,
   onSelect,
   onRename,
+  renaming = false,
 }: {
   name: string
   active: boolean
   onSelect: (name: string) => void
   onRename: (from: string, to: string) => void
+  renaming?: boolean
 }) {
   const readOnly = isReadOnlyFile(name)
   const [draft, setDraft] = useState(name)
@@ -92,8 +148,9 @@ function FileTabName({
       onDoubleClick={() => {
         if (active && !readOnly) setEditing(true)
       }}
+      disabled={renaming}
     >
-      {name}
+      <SpinnerLabel pending={renaming} label={name} />
     </button>
   )
 }
@@ -106,6 +163,13 @@ export function FileTabBar({
   onRename,
   onDelete,
   onRestore,
+  onOpenStorageSettings,
+  saveStatus,
+  creating = false,
+  deletingName = null,
+  duplicating = false,
+  renamingName = null,
+  restoringName = null,
 }: FileListProps) {
   const names = sortedFileNames(store)
   const binNames = sortedBinNames(store)
@@ -114,20 +178,34 @@ export function FileTabBar({
   return (
     <div className="file-tab-bar">
       <div className="file-tab-bar-actions">
-        <button type="button" className="file-tab-bar-btn" onClick={onCreate}>
-          New
+        <button
+          type="button"
+          className="file-tab-bar-btn"
+          onClick={onCreate}
+          disabled={creating}
+        >
+          <SpinnerLabel pending={creating} label="New" />
         </button>
         <button
           type="button"
           className="file-tab-bar-btn"
           onClick={onDuplicate}
+          disabled={duplicating}
         >
-          Duplicate
+          <SpinnerLabel pending={duplicating} label="Duplicate" />
         </button>
         <ShareButton
           filename={store.active}
           content={fileContent(store, store.active)}
         />
+        <button
+          type="button"
+          className="file-tab-bar-btn"
+          onClick={onOpenStorageSettings}
+        >
+          Storage…
+        </button>
+        <SaveStatusBadge status={saveStatus} />
       </div>
       {showHint ? (
         <p className="file-tab-bar-hint">
@@ -150,6 +228,7 @@ export function FileTabBar({
                   active={active}
                   onSelect={onSelect}
                   onRename={onRename}
+                  renaming={renamingName === name}
                 />
                 {!readOnly ? (
                   <button
@@ -157,8 +236,9 @@ export function FileTabBar({
                     className="file-tab-close"
                     aria-label={`Move ${name} to bin`}
                     onClick={() => onDelete(name)}
+                    disabled={deletingName === name}
                   >
-                    ×
+                    <SpinnerLabel pending={deletingName === name} label="×" />
                   </button>
                 ) : null}
               </li>
@@ -180,8 +260,12 @@ export function FileTabBar({
                   className="file-tab-bar-restore"
                   aria-label={`Restore ${name}`}
                   onClick={() => onRestore(name)}
+                  disabled={restoringName === name}
                 >
-                  ↩
+                  <SpinnerLabel
+                    pending={restoringName === name}
+                    label="↩"
+                  />
                 </button>
               </li>
             ))}

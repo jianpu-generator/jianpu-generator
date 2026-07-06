@@ -3,26 +3,24 @@ import { AssetLoadingBanner } from './components/AssetLoadingBanner'
 import { EditMetadataModal } from './components/EditMetadataModal'
 import { Editor } from './components/Editor'
 import { EditPartsModal } from './components/EditPartsModal'
+import { ErrorModal } from './components/ErrorModal'
 import { FileTabBar } from './components/FileList'
 import { PartToggles } from './components/PartToggles'
 import { PlayMeasureButton } from './components/PlayMeasureButton'
 import { Preview } from './components/Preview'
+import { StorageSettingsModal } from './components/StorageSettingsModal'
 import {
-  createFile,
-  deleteFile,
-  duplicateFile,
   fileContent,
   fileIdForName,
+  type FileStoreState,
   isReadOnlyFile,
-  renameFile,
-  restoreFile,
+  mergeBackendResult,
   selectFile,
-  updateActiveContent,
 } from './fileStore'
 import { useAssetLoader } from './hooks/useAssetLoader'
-import { useFileStore } from './hooks/useFileStore'
 import { useFontsLoader } from './hooks/useFontsLoader'
 import { useJianpuWorker } from './hooks/useJianpuWorker'
+import { useStorageBackend } from './hooks/useStorageBackend'
 import {
   readPartTogglesForFile,
   writePartTogglesForFile,
@@ -37,7 +35,15 @@ import './preview.css'
 const shortcutLabel = navigator.platform.startsWith('Mac') ? '⌘↵' : 'Ctrl+↵'
 
 export default function App() {
-  const [store, setStore] = useFileStore()
+  const {
+    store,
+    setStore,
+    backend,
+    saveStatus,
+    preference,
+    switchBackend,
+    forceSave,
+  } = useStorageBackend()
   const source = fileContent(store, store.active)
   const readOnly = isReadOnlyFile(store.active)
   const fileId = fileIdForName(store, store.active)
@@ -56,6 +62,19 @@ export default function App() {
   })
   const [editPartsOpen, setEditPartsOpen] = useState(false)
   const [editMetadataOpen, setEditMetadataOpen] = useState(false)
+  const [storageSettingsOpen, setStorageSettingsOpen] = useState(false)
+  const [creatingFile, setCreatingFile] = useState(false)
+  const [deletingFileName, setDeletingFileName] = useState<string | null>(null)
+  const [duplicatingFile, setDuplicatingFile] = useState(false)
+  const [renamingFileName, setRenamingFileName] = useState<string | null>(null)
+  const [restoringFileName, setRestoringFileName] = useState<string | null>(
+    null,
+  )
+  const [fileOpError, setFileOpError] = useState<{
+    title: string
+    message: string
+    stack?: string
+  } | null>(null)
   const [dragStartLabel, setDragStartLabel] = useState<string | null>(null)
   const [dragCurrentLabel, setDragCurrentLabel] = useState<string | null>(null)
   const [selectedLineRange, setSelectedLineRange] = useState<{
@@ -172,6 +191,9 @@ export default function App() {
       ? playSelectedMeasures
       : undefined
 
+  const forceSaveRef = useRef(forceSave)
+  forceSaveRef.current = forceSave
+
   useEffect(() => {
     const isMac = navigator.platform.startsWith('Mac')
     const onKeyDown = (event: KeyboardEvent) => {
@@ -179,6 +201,9 @@ export default function App() {
       if (modifier && event.key === 'Enter') {
         event.preventDefault()
         playMeasureRef.current?.()
+      } else if (modifier && event.key.toLowerCase() === 's') {
+        event.preventDefault()
+        forceSaveRef.current()
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -232,9 +257,9 @@ export default function App() {
 
   const handleSourceChange = useCallback(
     (value: string) => {
-      setStore((prev) => updateActiveContent(prev, value))
+      setStore((prev) => backend.updateActiveContent(prev, value))
     },
-    [setStore],
+    [setStore, backend],
   )
 
   const handleSelect = useCallback(
@@ -244,33 +269,74 @@ export default function App() {
     [setStore],
   )
 
-  const handleCreate = useCallback(() => {
-    setStore((prev) => createFile(prev))
-  }, [setStore])
+  const runFileOp = useCallback(
+    async (
+      errorTitle: string,
+      setPending: (pending: boolean) => void,
+      op: (base: FileStoreState) => Promise<FileStoreState>,
+    ) => {
+      const base = store
+      setPending(true)
+      try {
+        const next = await op(base)
+        setStore((prev) => mergeBackendResult(prev, base, next))
+      } catch (error) {
+        setFileOpError({
+          title: errorTitle,
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        })
+      } finally {
+        setPending(false)
+      }
+    },
+    [setStore, store],
+  )
 
-  const handleDuplicate = useCallback(() => {
-    setStore((prev) => duplicateFile(prev))
-  }, [setStore])
+  const handleCreate = useCallback(
+    () =>
+      runFileOp('Could not create file', setCreatingFile, (base) =>
+        backend.createFile(base),
+      ),
+    [runFileOp, backend],
+  )
+
+  const handleDuplicate = useCallback(
+    () =>
+      runFileOp('Could not duplicate file', setDuplicatingFile, (base) =>
+        backend.duplicateFile(base),
+      ),
+    [runFileOp, backend],
+  )
 
   const handleRename = useCallback(
-    (from: string, to: string) => {
-      setStore((prev) => renameFile(prev, from, to))
-    },
-    [setStore],
+    (from: string, to: string) =>
+      runFileOp(
+        'Could not rename file',
+        (pending) => setRenamingFileName(pending ? from : null),
+        (base) => backend.renameFile(base, from, to),
+      ),
+    [runFileOp, backend],
   )
 
   const handleDelete = useCallback(
-    (name: string) => {
-      setStore((prev) => deleteFile(prev, name))
-    },
-    [setStore],
+    (name: string) =>
+      runFileOp(
+        'Could not delete file',
+        (pending) => setDeletingFileName(pending ? name : null),
+        (base) => backend.deleteFile(base, name),
+      ),
+    [runFileOp, backend],
   )
 
   const handleRestore = useCallback(
-    (name: string) => {
-      setStore((prev) => restoreFile(prev, name))
-    },
-    [setStore],
+    (name: string) =>
+      runFileOp(
+        'Could not restore file',
+        (pending) => setRestoringFileName(pending ? name : null),
+        (base) => backend.restoreFile(base, name),
+      ),
+    [runFileOp, backend],
   )
 
   const handlePartDeclarationChange = useCallback(
@@ -406,6 +472,31 @@ export default function App() {
         onRename={handleRename}
         onDelete={handleDelete}
         onRestore={handleRestore}
+        onOpenStorageSettings={() => setStorageSettingsOpen(true)}
+        saveStatus={saveStatus}
+        creating={creatingFile}
+        deletingName={deletingFileName}
+        duplicating={duplicatingFile}
+        renamingName={renamingFileName}
+        restoringName={restoringFileName}
+      />
+      <ErrorModal
+        open={fileOpError !== null}
+        onOpenChange={(open) => {
+          if (!open) setFileOpError(null)
+        }}
+        title={fileOpError?.title ?? ''}
+        message={fileOpError?.message ?? ''}
+        stack={fileOpError?.stack}
+      />
+      <StorageSettingsModal
+        open={storageSettingsOpen}
+        onOpenChange={setStorageSettingsOpen}
+        backend={backend}
+        preference={preference}
+        switchBackend={switchBackend}
+        store={store}
+        setStore={setStore}
       />
       <span
         data-testid="selected-measure-range"
@@ -434,6 +525,7 @@ export default function App() {
                 }}
                 onEditPartsClick={() => setEditPartsOpen(true)}
                 onEditMetadataClick={() => setEditMetadataOpen(true)}
+                onForceSave={forceSave}
                 onPlayMeasure={
                   measureAudioPlaying
                     ? stopMeasurePlayback
