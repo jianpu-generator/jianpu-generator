@@ -43,8 +43,11 @@ const generateInstrumentPreviewWav =
 
 export type WorkerRequest =
   | {
-      type: 'loadAssets'
+      type: 'loadSoundfont'
       soundfont: ArrayBuffer
+    }
+  | {
+      type: 'loadPdfFonts'
       scFont: ArrayBuffer
       tcFont: ArrayBuffer
       monoFont: ArrayBuffer
@@ -203,8 +206,12 @@ function binaryBufferFromResult(
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const msg = event.data
 
-  if (msg.type === 'loadAssets') {
+  if (msg.type === 'loadSoundfont') {
     loadedSoundfont = new Uint8Array(msg.soundfont)
+    return
+  }
+
+  if (msg.type === 'loadPdfFonts') {
     loadedFonts = {
       sc: new Uint8Array(msg.scFont),
       tc: new Uint8Array(msg.tcFont),

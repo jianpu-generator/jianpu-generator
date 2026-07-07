@@ -194,7 +194,9 @@ export default function App() {
   const playMeasureRef = useRef<(() => void) | undefined>(undefined)
   playMeasureRef.current = measureAudioPlaying
     ? stopMeasurePlayback
-    : selectedMeasureRange !== null && !measureAudioGenerating
+    : selectedMeasureRange !== null &&
+        !measureAudioGenerating &&
+        soundfontReady
       ? playSelectedMeasures
       : undefined
 
@@ -593,7 +595,8 @@ export default function App() {
                           <PlayMeasureButton
                             disabled={
                               selectedMeasureRange === null ||
-                              measureAudioGenerating
+                              measureAudioGenerating ||
+                              !soundfontReady
                             }
                             loading={measureAudioGenerating}
                             playing={measureAudioPlaying}

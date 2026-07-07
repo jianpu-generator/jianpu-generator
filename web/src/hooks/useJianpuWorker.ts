@@ -322,15 +322,23 @@ export function useJianpuWorker(
 
   useEffect(() => {
     const worker = workerRef.current
-    if (!worker || !soundfontBytes || !fontBytes) return
+    if (!worker || !soundfontBytes) return
     worker.postMessage({
-      type: 'loadAssets',
+      type: 'loadSoundfont',
       soundfont: soundfontBytes.buffer as ArrayBuffer,
+    } satisfies WorkerRequest)
+  }, [soundfontBytes])
+
+  useEffect(() => {
+    const worker = workerRef.current
+    if (!worker || !fontBytes) return
+    worker.postMessage({
+      type: 'loadPdfFonts',
       scFont: fontBytes.sc.buffer as ArrayBuffer,
       tcFont: fontBytes.tc.buffer as ArrayBuffer,
       monoFont: fontBytes.mono.buffer as ArrayBuffer,
     } satisfies WorkerRequest)
-  }, [soundfontBytes, fontBytes])
+  }, [fontBytes])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: activeFile is intentional trigger
   useEffect(() => {
