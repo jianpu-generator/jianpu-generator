@@ -41,6 +41,14 @@ test('drag from measure 1 to measure 3 selects measures 1–3', async ({
     timeout: 5_000,
   })
 
+  // Priming the cursor also triggers an async highlight re-render that swaps
+  // the SVG DOM (plain documents -> highlighted documents). Wait for that
+  // swap to land before measuring positions, otherwise the drag below runs
+  // against stale coordinates from the pre-swap layout.
+  await expect(
+    page.locator('.preview-page [data-testid="measure-highlight"]').first(),
+  ).toBeVisible({ timeout: 5_000 })
+
   // Grab the bounding boxes for measure 1 and measure 3.
   // The SVG may contain multiple groups with the same index (one per row),
   // so we take the first occurrence for each.
@@ -50,6 +58,9 @@ test('drag from measure 1 to measure 3 selects measures 1–3', async ({
   const measure3 = page
     .locator('[data-tag="measure"][data-measure-index="3"]')
     .first()
+
+  await expect(measure1).toBeVisible({ timeout: 5_000 })
+  await expect(measure3).toBeVisible({ timeout: 5_000 })
 
   const box1 = await measure1.boundingBox()
   const box3 = await measure3.boundingBox()
@@ -121,12 +132,23 @@ test('drag from measure 0 to measure 3 selects exactly 4 measures (not 5)', asyn
     timeout: 5_000,
   })
 
+  // Priming the cursor also triggers an async highlight re-render that swaps
+  // the SVG DOM (plain documents -> highlighted documents). Wait for that
+  // swap to land before measuring positions, otherwise the drag below runs
+  // against stale coordinates from the pre-swap layout.
+  await expect(
+    page.locator('.preview-page [data-testid="measure-highlight"]').first(),
+  ).toBeVisible({ timeout: 5_000 })
+
   const measure0 = page
     .locator('[data-tag="measure"][data-measure-index="0"]')
     .first()
   const measure3 = page
     .locator('[data-tag="measure"][data-measure-index="3"]')
     .first()
+
+  await expect(measure0).toBeVisible({ timeout: 5_000 })
+  await expect(measure3).toBeVisible({ timeout: 5_000 })
 
   const box0 = await measure0.boundingBox()
   const box3 = await measure3.boundingBox()
@@ -236,12 +258,23 @@ test('drag from measure 0 to measure 3 with CJK source selects exactly 4 measure
     timeout: 5_000,
   })
 
+  // Priming the cursor also triggers an async highlight re-render that swaps
+  // the SVG DOM (plain documents -> highlighted documents). Wait for that
+  // swap to land before measuring positions, otherwise the drag below runs
+  // against stale coordinates from the pre-swap layout.
+  await expect(
+    page.locator('.preview-page [data-testid="measure-highlight"]').first(),
+  ).toBeVisible({ timeout: 5_000 })
+
   const measure0 = page
     .locator('[data-tag="measure"][data-measure-index="0"]')
     .first()
   const measure3 = page
     .locator('[data-tag="measure"][data-measure-index="3"]')
     .first()
+
+  await expect(measure0).toBeVisible({ timeout: 5_000 })
+  await expect(measure3).toBeVisible({ timeout: 5_000 })
 
   const box0 = await measure0.boundingBox()
   const box3 = await measure3.boundingBox()

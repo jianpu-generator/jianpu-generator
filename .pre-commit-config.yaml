@@ -18,3 +18,11 @@ repos:
       - id: detect-private-key
       - id: check-shebang-scripts-are-executable
         exclude: \.rs$
+  - repo: local
+    hooks:
+      - id: e2e-tests
+        name: Playwright e2e tests
+        entry: bash -c 'cd web && pnpm build:wasm && pnpm test:e2e'
+        language: system
+        files: '^(web/(src|e2e)/|crates/|src/)'
+        pass_filenames: false
