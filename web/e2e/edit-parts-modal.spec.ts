@@ -30,6 +30,22 @@ const FOLLOW_SOURCE = [
   'twin- kle',
 ].join('\n')
 
+const MULTI_FOLLOW_SOURCE = [
+  '# metadata',
+  'title = "Test"',
+  '',
+  '# parts',
+  'Melody [M] = notes+lyrics',
+  'Harmony [H] = notes',
+  'Chords [C] = follow[M]',
+  '',
+  '# score',
+  '(bpm=120 key=C4 time=4/4)',
+  '1 - - -',
+  '1 1 5 5',
+  'twin- kle',
+].join('\n')
+
 async function loadSource(
   page: import('@playwright/test').Page,
   source: string = SOURCE,
@@ -208,6 +224,30 @@ test('volume slider changes the MIDI volume for a part', async ({ page }) => {
   await page.getByTestId('edit-parts-modal').waitFor({ state: 'hidden' })
 
   const expectedLine = 'Melody [M] = notes+lyrics 1%'
+  await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
+  await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
+})
+
+test('follow target select changes the followed part', async ({ page }) => {
+  await loadSource(page, MULTI_FOLLOW_SOURCE)
+  await page.goto('/')
+
+  await openEditPartsModal(page)
+
+  await expect(page.getByTestId('mode-select-C')).toContainText('follow')
+
+  const followTargetSelect = page.getByTestId('follow-target-select-C')
+  await expect(followTargetSelect).toContainText('M')
+
+  await followTargetSelect.click()
+  await page.getByRole('option', { name: 'H', exact: true }).click()
+
+  await expect(followTargetSelect).toContainText('H')
+
+  await page.keyboard.press('Escape')
+  await page.getByTestId('edit-parts-modal').waitFor({ state: 'hidden' })
+
+  const expectedLine = 'Chords [C] = follow[H]'
   await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
   await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })

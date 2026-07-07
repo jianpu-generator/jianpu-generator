@@ -174,6 +174,7 @@ function PartRow({
               value={declaration.followTarget ?? precedingParts[0].abbreviation}
               onValueChange={handleFollowTargetChange}
               placeholder="target"
+              testId={`follow-target-select-${declaration.abbreviation}`}
             >
               {precedingParts.map((part) => (
                 <RadixSelectItem
