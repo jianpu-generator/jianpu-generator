@@ -46,6 +46,7 @@ export default function App() {
     preference,
     switchBackend,
     forceSave,
+    flushPendingSave,
   } = useStorageBackend()
   const [sharedPreview, setSharedPreview] = useState<SharePayload | null>(() =>
     parseShareFromHash(),
@@ -189,9 +190,10 @@ export default function App() {
 
   const handleSelect = useCallback(
     (name: string) => {
+      flushPendingSave()
       setStore((prev) => selectFile(prev, name))
     },
-    [setStore],
+    [setStore, flushPendingSave],
   )
 
   const handleDismissShared = useCallback(() => {

@@ -88,6 +88,16 @@ export interface UseStorageBackendResult {
    * but harmless to call unconditionally.
    */
   forceSave: () => void
+  /**
+   * Flushes a pending debounced save without cancelling the debounce timer
+   * itself (unlike `forceSave`, which also bypasses scheduling a new one).
+   * Wired to file-tab switches so an edit made just before switching away
+   * from a file is persisted immediately instead of waiting out
+   * `AUTOSAVE_DEBOUNCE_MS` — `shouldScheduleAutosave` deliberately does not
+   * schedule a new save on such switches, so this is the only flush path
+   * for that case. A no-op for `localBackend` or when nothing is pending.
+   */
+  flushPendingSave: () => void
 }
 
 /**
@@ -95,9 +105,11 @@ export interface UseStorageBackendResult {
  * Pure (no backend/React access) so it's unit-testable in isolation: a save
  * is only warranted when the *same* active file's content actually changed
  * — not merely when the user switched which file is active (whose content
- * naturally differs from the previously active file's, but was already
- * saved) — and never for a non-GitHub backend, since only GitHub's
- * `saveContent` does real work.
+ * naturally differs from the previously active file's) — and never for a
+ * non-GitHub backend, since only GitHub's `saveContent` does real work. A
+ * switch away from a file with a still-*pending* debounced save is not
+ * covered by "already saved" — that's instead handled by `flushPendingSave`,
+ * which callers should invoke before changing the active file.
  */
 export function shouldScheduleAutosave(
   backendKind: StorageBackend['kind'],
@@ -236,6 +248,12 @@ export function useStorageBackend(): UseStorageBackendResult {
     runSave(store)
   }, [debouncedSave, runSave, store])
 
+  const flushPendingSave = useCallback(() => {
+    if (backend.kind === 'github' && debouncedSave.isPending()) {
+      debouncedSave.flush()
+    }
+  }, [backend, debouncedSave])
+
   const switchBackend = useCallback(
     async (target: StorageBackendTarget) => {
       if (backend.kind === 'github' && debouncedSave.isPending()) {
@@ -263,5 +281,6 @@ export function useStorageBackend(): UseStorageBackendResult {
     preference,
     switchBackend,
     forceSave,
+    flushPendingSave,
   }
 }
