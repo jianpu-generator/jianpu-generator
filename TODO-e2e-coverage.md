@@ -20,7 +20,7 @@ helper used by the `*-github.spec.ts` files.
         path (assert the visible source text changed, not just that the
         banner cleared).
 
-- [ ] **GitHub OAuth connect/disconnect device flow**
+- [x] **GitHub OAuth connect/disconnect device flow**
       (`StorageSettingsModal.tsx:228` `handleConnect`, `:254`
       `handleDisconnect`). Every existing `*-github.spec.ts` test seeds
       `jianpu:github-auth:v1` via `page.addInitScript`, so `handleConnect`'s
@@ -38,7 +38,7 @@ helper used by the `*-github.spec.ts` files.
         the radio selection and that a subsequent edit doesn't hit
         `API_PREFIX`).
 
-- [ ] **PDF export** (`Preview.tsx:359` `canExportPdf`/`onExportPdf`,
+- [x] **PDF export** (`Preview.tsx:359` `canExportPdf`/`onExportPdf`,
       `useJianpuWorker.ts:490` `exportPdf`, `:526` `exportSplitPdf`,
       `workerHelpers.ts:41` `downloadPdf`). Zero e2e coverage on a primary
       output button. Using Playwright's download event

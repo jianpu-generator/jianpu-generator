@@ -1,0 +1,130 @@
+import { expect, test } from '@playwright/test'
+
+// These tests load real font assets for the wasm PDF renderer; some sandboxed
+// environments fail to write Chromium's HTTP disk cache for large responses
+// (net::ERR_CACHE_WRITE_FAILURE), which otherwise breaks the font fetch.
+test.use({
+  launchOptions: {
+    args: ['--disk-cache-dir=/tmp/chromium-e2e-cache', '--disable-http-cache'],
+  },
+})
+
+const SINGLE_PART_SOURCE = [
+  '# metadata',
+  'title = "Test"',
+  '',
+  '# parts',
+  'Melody [M] = notes',
+  '',
+  '# score',
+  '(bpm=120 key=C4 time=4/4)',
+  '1 2 3 4',
+].join('\n')
+
+const MULTI_PART_SOURCE = [
+  '# metadata',
+  'title = "Test"',
+  '',
+  '# parts',
+  'Melody [M] = notes',
+  'Harmony [H] = notes',
+  '',
+  '# score',
+  '(bpm=120 key=C4 time=4/4)',
+  '1 2 3 4',
+  '5 6 7 1',
+].join('\n')
+
+async function loadSource(
+  page: import('@playwright/test').Page,
+  source: string,
+) {
+  await page.addInitScript((src) => {
+    localStorage.setItem(
+      'jianpu:files:v1',
+      JSON.stringify({
+        active: 'test.jianpu',
+        userFiles: { 'test.jianpu': src },
+        bin: {},
+        fileIds: { 'test.jianpu': crypto.randomUUID() },
+      }),
+    )
+  }, source)
+}
+
+test('Export PDF produces a non-empty downloaded file', async ({ page }) => {
+  await loadSource(page, SINGLE_PART_SOURCE)
+  await page.goto('/')
+  await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
+  await page.waitForSelector('.preview-page', { timeout: 15_000 })
+
+  const exportButton = page.getByRole('button', { name: /^Export PDF$/ })
+  await expect(exportButton).toBeEnabled({ timeout: 30_000 })
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    exportButton.click(),
+  ])
+
+  const downloadPath = await download.path()
+  expect(downloadPath).toBeTruthy()
+  const fs = await import('node:fs')
+  const stats = fs.statSync(downloadPath as string)
+  expect(stats.size).toBeGreaterThan(1000)
+  expect(download.suggestedFilename()).toBe('test.pdf')
+})
+
+test('Export parts produces a non-empty downloaded zip for a multi-part score', async ({
+  page,
+}) => {
+  await loadSource(page, MULTI_PART_SOURCE)
+  await page.goto('/')
+  await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
+  await page.waitForSelector('.preview-page', { timeout: 15_000 })
+
+  const exportPartsButton = page.getByRole('button', {
+    name: /^Export parts \(ZIP\)$/,
+  })
+  await expect(exportPartsButton).toBeEnabled({ timeout: 30_000 })
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    exportPartsButton.click(),
+  ])
+
+  const downloadPath = await download.path()
+  expect(downloadPath).toBeTruthy()
+  const fs = await import('node:fs')
+  const stats = fs.statSync(downloadPath as string)
+  expect(stats.size).toBeGreaterThan(1000)
+  expect(download.suggestedFilename()).toBe('test.zip')
+})
+
+test('rapid double-click on Export PDF only triggers a single export', async ({
+  page,
+}) => {
+  await loadSource(page, SINGLE_PART_SOURCE)
+  await page.goto('/')
+  await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
+  await page.waitForSelector('.preview-page', { timeout: 15_000 })
+
+  const exportButton = page.getByRole('button', { name: /^Export PDF$/ })
+  await expect(exportButton).toBeEnabled({ timeout: 30_000 })
+
+  let downloadCount = 0
+  page.on('download', () => {
+    downloadCount += 1
+  })
+
+  // Dispatch two click events back-to-back in a single browser task so both
+  // reach the handler before React can re-render the button as disabled,
+  // exercising the `pdfExporting`/`splitPdfExporting` re-entrancy guard in
+  // `exportPdf` (useJianpuWorker.ts) rather than relying on real user timing.
+  await exportButton.evaluate((el: HTMLElement) => {
+    el.click()
+    el.click()
+  })
+
+  await expect(exportButton).toBeEnabled({ timeout: 30_000 })
+  expect(downloadCount).toBe(1)
+})
