@@ -25,3 +25,7 @@ pre-commit:
     web-typecheck:
       glob: "{crates/jianpu-wasm/**,web/**}"
       run: cd web && pnpm run build:wasm && pnpm exec tsc -b
+
+    e2e-tests:
+      glob: "{web/src/**,web/e2e/**,crates/**,src/**}"
+      run: cd web && pnpm build:wasm && pnpm test:e2e
