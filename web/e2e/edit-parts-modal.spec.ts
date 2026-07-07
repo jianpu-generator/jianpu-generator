@@ -189,6 +189,29 @@ test('octave select changes the MIDI octave offset for a part', async ({
   await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })
 
+test('volume slider changes the MIDI volume for a part', async ({ page }) => {
+  await loadSource(page)
+  await page.goto('/')
+
+  await openEditPartsModal(page)
+
+  const volumeValue = page.getByTestId('volume-value-M')
+  await expect(volumeValue).toContainText('100%')
+
+  const volumeSlider = page.getByTestId('volume-slider-M')
+  await volumeSlider.locator('[role="slider"]').focus()
+  await page.keyboard.press('Home')
+
+  await expect(volumeValue).toContainText('1%')
+
+  await page.keyboard.press('Escape')
+  await page.getByTestId('edit-parts-modal').waitFor({ state: 'hidden' })
+
+  const expectedLine = 'Melody [M] = notes+lyrics 1%'
+  await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
+  await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
+})
+
 test('changing soundfont via modal preserves the editor selection', async ({
   page,
 }) => {

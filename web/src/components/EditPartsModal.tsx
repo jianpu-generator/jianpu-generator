@@ -231,6 +231,7 @@ function PartRow({
             step={1}
             value={[declaration.volume ?? 100]}
             onValueChange={([v]) => handleVolumeChange(v)}
+            data-testid={`volume-slider-${declaration.abbreviation}`}
             style={{
               position: 'relative',
               display: 'flex',
@@ -273,6 +274,7 @@ function PartRow({
             />
           </Slider.Root>
           <span
+            data-testid={`volume-value-${declaration.abbreviation}`}
             style={{
               fontSize: '11px',
               color: '#666',
