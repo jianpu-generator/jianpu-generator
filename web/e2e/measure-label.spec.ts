@@ -72,12 +72,11 @@ test('detects measure when cursor is at end of last character of a note line', a
 })
 
 /**
- * Regression: when the cursor is at the end of a Chinese lyric line that is the
- * last line of the measure, the byte offset equals span.end (exclusive) and
- * measureRangeInSpan's strict `span.end > selStart` check returns null → no label.
+ * Regression: exercises measure detection when the cursor is at the end of a
+ * multi-byte-UTF-8 (CJK) lyric line that is also the last line of the measure.
  *
  * The lyric line "白陽旗旛在大道盛宏" is line 16 (1-based) in the source below.
- * Pressing End places the cursor after "宏" (3-byte UTF-8 char), byte offset = span.end.
+ * Pressing End places the cursor after "宏" (3-byte UTF-8 char).
  */
 test('detects measure when cursor is at end of last character of a Chinese lyric line', async ({
   page,
@@ -88,22 +87,21 @@ test('detects measure when cursor is at end of last character of a Chinese lyric
     'author = "author"',
     '',
     '# parts',
-    'Chord = chords',
-    'Alto 1 & Tenor (A1,T) = notes+lyrics',
+    'Chord [C] = chords',
+    'Alto 1 & Tenor [A1,T] = notes+lyrics',
     '',
     '',
     '# score',
     '',
     '',
-    '(bpm=80 key=C4 time=4/4 label="Verse 1")',
-    '1 - - -',
-    '5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_',
-    '白陽旗旛在大道盛宏',
+    'bpm=80 key=C4 time=4/4 label="Verse 1"',
+    '[C] 1 - - -',
+    '[A1,T] 5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_',
+    '[A1,T] 白陽旗旛在大道盛宏',
     '',
-    '',
-    '6m/3',
-    '3_) (1_1-) 0_ 1= 1=',
-    '昌花花',
+    '[C] 6m/3',
+    '[A1,T] 3_) (1_1-) 0_ 1= 1=',
+    '[A1,T] 昌花花',
   ].join('\n')
 
   await page.addInitScript((src) => {

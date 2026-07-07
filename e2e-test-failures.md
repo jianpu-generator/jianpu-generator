@@ -59,18 +59,30 @@ needlessly delaying audio readiness. Given the residual flake is about test
 timing rather than app behavior, the test was deleted rather than chased
 further.
 
-**Still failing / not fixed** (same stale-line-number problem, different
-target line that needs remapping to the new `reference.jianpu` layout):
-
-- e2e/measure-label.spec.ts:85 — "detects measure when cursor is at end of
-  last character of a Chinese lyric line" — same cause.
+**Fixed**: `e2e/measure-label.spec.ts:82` ("detects measure when cursor is at
+end of last character of a Chinese lyric line") — this test uses its own
+inline `.jianpu` fixture (injected via `localStorage`), not
+`reference.jianpu`, so the stale-line-number fix pattern didn't apply. The
+test's doc comment described a stale bug (byte-offset comparison in
+`measureRangeInSpan`) that was already removed by commit `f23ec44` (measure
+detection switched to comparing Monaco line numbers, not byte offsets) — no
+live bug existed there. The actual cause: the inline fixture used syntax
+removed by later commits — parenthesized directive line (`(bpm=... )`,
+removed by `f5a84d9`), score data lines with no `[Abbrev]` prefix (made
+mandatory by `b2e8dd9`), and a parenthesized part abbreviation
+(`(A1,T)` instead of `[A1,T]`). With that stale syntax, `compile()` produced
+zero measures while `collect_group_bounds` still found 2 line-groups,
+tripping the invariant check in `src/measure_spans.rs` and making
+`listMeasureSpans` error out for the whole document — so `measureRangeInSpan`
+returned `null` everywhere, not just for the Chinese line. Rewrote the
+fixture to current syntax (square-bracket part abbreviation, unparenthesized
+directive line, `[Abbrev]`-prefixed data lines) with the same musical shape;
+confirmed it compiles via `cargo run -- generate svg`. No app code changes
+were needed — `measureRangeInSpan`'s line-based comparison already handled
+this case correctly once the source actually compiled into measures.
 
 ## Suggested next step
 
-This is the only remaining known failure. Unlike the others, it needs
-live-debugging rather than a line remap: the new `reference.jianpu` doesn't
-have an obvious drop-in replacement line with the same shape (Chinese lyric
-line at the end of a note line), so figuring out the right target line (or
-whether the CJK-lyric-cursor-position logic itself needs adjusting) requires
-running the test interactively against the current file rather than reading
-line numbers off a listing.
+No known failures remain. All 26 e2e tests pass (`npx playwright test
+--reporter=list`), including 3 back-to-back runs of
+`measure-label.spec.ts` to rule out flakiness.
