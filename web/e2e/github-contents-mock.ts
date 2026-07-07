@@ -124,3 +124,39 @@ export async function mockGithubContentsApi(
     setRemoteContent: (path, content) => files.set(path, content),
   }
 }
+
+/**
+ * Fakes `GET https://api.github.com/user`, which
+ * `checkGithubAuthStatus`/`handleConnect` both call to resolve the
+ * authenticated username.
+ */
+export async function mockGithubUser(
+  page: import('@playwright/test').Page,
+  login: string,
+): Promise<void> {
+  await page.route('https://api.github.com/user', async (route: Route) => {
+    await route.fulfill({ status: 200, json: { login } })
+  })
+}
+
+/**
+ * Fakes `GET https://api.github.com/repos/{owner}/{repo}`, which
+ * `ensureStorageRepo` calls right after connecting to check whether the
+ * app's storage repo already exists (avoiding a `createForAuthenticatedUser`
+ * call in the common case).
+ */
+export async function mockGithubRepoExists(
+  page: import('@playwright/test').Page,
+  owner: string,
+  repo: string,
+): Promise<void> {
+  await page.route(
+    `https://api.github.com/repos/${owner}/${repo}`,
+    async (route: Route) => {
+      await route.fulfill({
+        status: 200,
+        json: { name: repo, full_name: `${owner}/${repo}`, private: true },
+      })
+    },
+  )
+}
