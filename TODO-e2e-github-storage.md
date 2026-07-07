@@ -19,10 +19,11 @@ in `page.addInitScript`, no real OAuth/network) still needs to be written for:
       pair, just to `trash/` instead of a renamed path); assert the tab
       disappears and the name shows up under the "Bin (n)" `<details>`.
       See `web/e2e/delete-file-github.spec.ts`.
-- [ ] **restore** (bin item's `↩` / `file-tab-bar-restore`, `aria-label="Restore
+- [x] **restore** (bin item's `↩` / `file-tab-bar-restore`, `aria-label="Restore
       <name>"` → `restoreFile`) — expect `PUT contents/scores/<name>.jianpu`
       then `DELETE contents/trash/<name>.jianpu`; assert the tab reappears
       outside the bin.
+      See `web/e2e/restore-file-github.spec.ts`.
 - [ ] **import** (shared-link flow, see `web/e2e/share.spec.ts` for the local-
       backend version) — open `/#share=...` while the GitHub backend is
       already active/seeded, click "Import to my scores", and expect the same
