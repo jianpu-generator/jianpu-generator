@@ -2,9 +2,7 @@
 
 ## Bugs
 
-- [ ] Chord parts: dashes are not rendered
 - [ ] Audio: investigate parts cancelling each other out (possible mixing/phase issue)
-- [ ] Error isolation: parse errors in a measure should not halt rendering — red-highlight the erroneous bar in the SVG instead
 
 ## Features
 
