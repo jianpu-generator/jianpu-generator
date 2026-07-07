@@ -22,6 +22,19 @@ export interface MockGithubContentsApiOptions {
   mutationDelayMs?: number
 }
 
+export interface GithubContentsApiController {
+  /** Makes the next `PUT` to `path` fail with a `409` (GitHub's response
+   * when the `sha` sent no longer matches HEAD), simulating a concurrent
+   * edit on GitHub racing the app's save. Consumed after one use so a
+   * retried `PUT` to the same path succeeds normally, matching real
+   * GitHub's behavior once the client re-fetches a fresh `sha`. */
+  failNextPutWith409(path: string): void
+  /** Directly overwrites the in-memory file the mock serves, simulating a
+   * change landing on GitHub from elsewhere (e.g. another device) without
+   * going through this page's own `PUT` calls. */
+  setRemoteContent(path: string, content: string): void
+}
+
 /**
  * Fakes the slice of GitHub's Contents API the `github` storage backend
  * calls (`githubBackend.ts`): directory listing, file read, create (`PUT`),
@@ -32,9 +45,10 @@ export async function mockGithubContentsApi(
   page: import('@playwright/test').Page,
   seed: Record<string, string>,
   options: MockGithubContentsApiOptions = {},
-): Promise<void> {
+): Promise<GithubContentsApiController> {
   const { onPut, mutationDelayMs = 0 } = options
   const files = new Map<string, string>(Object.entries(seed))
+  const conflictPaths = new Set<string>()
 
   await page.route(`${API_PREFIX}**`, async (route: Route) => {
     const request = route.request()
@@ -80,6 +94,14 @@ export async function mockGithubContentsApi(
     if (request.method() === 'PUT') {
       const body = request.postDataJSON() as { content: string; sha?: string }
       onPut?.(path, body)
+      if (conflictPaths.has(path)) {
+        conflictPaths.delete(path)
+        await delay(mutationDelayMs)
+        return route.fulfill({
+          status: 409,
+          json: { message: 'sha does not match' },
+        })
+      }
       files.set(path, Buffer.from(body.content, 'base64').toString('utf-8'))
       await delay(mutationDelayMs)
       return route.fulfill({
@@ -96,4 +118,9 @@ export async function mockGithubContentsApi(
 
     throw new Error(`Unexpected ${request.method()} ${request.url()}`)
   })
+
+  return {
+    failNextPutWith409: (path) => conflictPaths.add(path),
+    setRemoteContent: (path, content) => files.set(path, content),
+  }
 }

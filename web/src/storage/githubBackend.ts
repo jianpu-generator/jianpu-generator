@@ -382,6 +382,12 @@ export function createGithubBackend(
         fileIds[name] = stored[name] ?? crypto.randomUUID()
       }
       writeStoredFileIds(owner, repo, fileIds)
+      // A successful listing proves the backend is reachable and current,
+      // so any stale error/conflict from a previous save (e.g. "discard
+      // mine", which reloads via this method without going through
+      // `runOp`/`saveContentImpl`) no longer applies.
+      status = 'idle'
+      lastError = null
       return { active: DEMO_FILE_NAME, userFiles, bin, fileIds }
     },
 
