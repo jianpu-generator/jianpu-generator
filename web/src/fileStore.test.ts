@@ -26,7 +26,11 @@ describe('mergeBackendResult', () => {
         'b.jianpu': 'original b',
         'untitled.jianpu': 'template',
       },
-      fileIds: { 'a.jianpu': 'id-a', 'b.jianpu': 'id-b', 'untitled.jianpu': 'id-new' },
+      fileIds: {
+        'a.jianpu': 'id-a',
+        'b.jianpu': 'id-b',
+        'untitled.jianpu': 'id-new',
+      },
     })
     // While createFile was in flight, the user edited 'b.jianpu'.
     const prev = makeState({

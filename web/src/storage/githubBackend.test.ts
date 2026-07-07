@@ -29,7 +29,12 @@ function notFound(): Promise<never> {
 
 function fileResponse(content: string, sha = 'sha-1') {
   return Promise.resolve({
-    data: { type: 'file', content: encodeBase64(content), encoding: 'base64', sha },
+    data: {
+      type: 'file',
+      content: encodeBase64(content),
+      encoding: 'base64',
+      sha,
+    },
   })
 }
 
@@ -118,7 +123,9 @@ describe('createGithubBackend: sha-refetch-before-write', () => {
 
     expect(getContent).not.toHaveBeenCalled()
     expect(createOrUpdateFileContents).toHaveBeenCalledTimes(1)
-    expect(createOrUpdateFileContents.mock.calls[0][0]).not.toHaveProperty('sha')
+    expect(createOrUpdateFileContents.mock.calls[0][0]).not.toHaveProperty(
+      'sha',
+    )
   })
 })
 
@@ -186,7 +193,11 @@ describe('createGithubBackend: single-flight save serialization', () => {
       return result
     }
 
-    getContent.mockImplementation(() => track({ data: { type: 'file', sha: 'sha-1', content: '', encoding: 'base64' } }))
+    getContent.mockImplementation(() =>
+      track({
+        data: { type: 'file', sha: 'sha-1', content: '', encoding: 'base64' },
+      }),
+    )
     createOrUpdateFileContents.mockImplementation(() => track({}))
 
     const backend = createGithubBackend(config)
@@ -203,7 +214,10 @@ describe('createGithubBackend: single-flight save serialization', () => {
       fileIds: { 'a.jianpu': 'id-a' },
     }
 
-    await Promise.all([backend.saveContent(stateA), backend.saveContent(stateB)])
+    await Promise.all([
+      backend.saveContent(stateA),
+      backend.saveContent(stateB),
+    ])
 
     expect(maxConcurrent).toBe(1)
     expect(createOrUpdateFileContents).toHaveBeenCalledTimes(2)
@@ -221,7 +235,9 @@ describe('createGithubBackend: offline retry-on-reconnect', () => {
     })
 
     getContent.mockImplementation(() => fileResponse('old', 'sha-1'))
-    createOrUpdateFileContents.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    createOrUpdateFileContents.mockRejectedValueOnce(
+      new TypeError('Failed to fetch'),
+    )
     createOrUpdateFileContents.mockResolvedValueOnce({})
 
     const backend = createGithubBackend(config)
@@ -267,7 +283,10 @@ describe('createGithubBackend: 409 conflict surfacing', () => {
     await expect(backend.saveContent(state)).rejects.toThrow('Conflict')
 
     expect(backend.status()).toBe('error')
-    expect(backend.lastError()).toEqual({ kind: 'conflict', path: 'scores/a.jianpu' })
+    expect(backend.lastError()).toEqual({
+      kind: 'conflict',
+      path: 'scores/a.jianpu',
+    })
   })
 })
 

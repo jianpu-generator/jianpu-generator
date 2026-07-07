@@ -22,13 +22,17 @@ test('editing a file schedules a debounced autosave to the GitHub storage backen
   page,
 }) => {
   const putBodies: { path: string; content: string }[] = []
-  await mockGithubContentsApi(page, { 'scores/auto.jianpu': SOURCE }, {
-    onPut: (path, body) =>
-      putBodies.push({
-        path,
-        content: Buffer.from(body.content, 'base64').toString('utf-8'),
-      }),
-  })
+  await mockGithubContentsApi(
+    page,
+    { 'scores/auto.jianpu': SOURCE },
+    {
+      onPut: (path, body) =>
+        putBodies.push({
+          path,
+          content: Buffer.from(body.content, 'base64').toString('utf-8'),
+        }),
+    },
+  )
 
   await page.addInitScript(
     ({ owner }) => {

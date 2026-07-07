@@ -9,7 +9,9 @@ export function encodeBase64(text: string): string {
 }
 
 function delay(ms: number): Promise<void> {
-  return ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve()
+  return ms > 0
+    ? new Promise((resolve) => setTimeout(resolve, ms))
+    : Promise.resolve()
 }
 
 export interface MockGithubContentsApiOptions {
@@ -38,7 +40,9 @@ export async function mockGithubContentsApi(
     const request = route.request()
     const url = new URL(request.url())
     const path = decodeURIComponent(
-      url.pathname.slice(url.pathname.indexOf('/contents/') + '/contents/'.length),
+      url.pathname.slice(
+        url.pathname.indexOf('/contents/') + '/contents/'.length,
+      ),
     )
 
     if (request.method() === 'GET') {

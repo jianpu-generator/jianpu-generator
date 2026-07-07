@@ -12,20 +12,22 @@ import { StorageSettingsModal } from './components/StorageSettingsModal'
 import {
   fileContent,
   fileIdForName,
-  type FileStoreState,
   isReadOnlyFile,
   mergeBackendResult,
   selectFile,
 } from './fileStore'
 import { useAssetLoader } from './hooks/useAssetLoader'
+import { useFileOperations } from './hooks/useFileOperations'
 import { useFontsLoader } from './hooks/useFontsLoader'
 import { useJianpuWorker } from './hooks/useJianpuWorker'
+import { usePartToggles } from './hooks/usePartToggles'
+import { useSectionNavigation } from './hooks/useSectionNavigation'
 import { useStorageBackend } from './hooks/useStorageBackend'
 import {
-  readPartTogglesForFile,
-  writePartTogglesForFile,
-} from './partToggleCache'
-import { clearShareHash, parseShareFromHash, type SharePayload } from './shareUrl'
+  clearShareHash,
+  parseShareFromHash,
+  type SharePayload,
+} from './shareUrl'
 import type { EditorHandle, PartMode, SoundfontValue } from './types'
 import type { MetadataKey } from './utils/metadataSource'
 import { parseMetadata, updateMetadataField } from './utils/metadataSource'
@@ -54,45 +56,27 @@ export default function App() {
   const readOnly = sharedPreview !== null || isReadOnlyFile(store.active)
   const fileId = fileIdForName(store, store.active)
 
-  const [disabledParts, setDisabledParts] = useState<Set<string>>(() => {
-    const cached = readPartTogglesForFile(fileId)
-    return new Set(cached?.disabledParts ?? [])
-  })
-  const [disabledLyrics, setDisabledLyrics] = useState<Set<string>>(() => {
-    const cached = readPartTogglesForFile(fileId)
-    return new Set(cached?.disabledLyrics ?? [])
-  })
-  const [soloedParts, setSoloedParts] = useState<Set<string>>(() => {
-    const cached = readPartTogglesForFile(fileId)
-    return new Set(cached?.soloedParts ?? [])
-  })
   const [editPartsOpen, setEditPartsOpen] = useState(false)
   const [editMetadataOpen, setEditMetadataOpen] = useState(false)
   const [storageSettingsOpen, setStorageSettingsOpen] = useState(false)
-  const [creatingFile, setCreatingFile] = useState(false)
-  const [deletingFileName, setDeletingFileName] = useState<string | null>(null)
-  const [duplicatingFile, setDuplicatingFile] = useState(false)
-  const [renamingFileName, setRenamingFileName] = useState<string | null>(null)
-  const [restoringFileName, setRestoringFileName] = useState<string | null>(
-    null,
-  )
-  const [fileOpError, setFileOpError] = useState<{
-    title: string
-    message: string
-    stack?: string
-  } | null>(null)
-  const [dragStartLabel, setDragStartLabel] = useState<string | null>(null)
-  const [dragCurrentLabel, setDragCurrentLabel] = useState<string | null>(null)
-  const [selectedLineRange, setSelectedLineRange] = useState<{
-    firstLine: number
-    lastLine: number
-  } | null>(null)
   const editorRef = useRef<EditorHandle>(null)
-  const skipToggleSaveRef = useRef(false)
   const soundfont = useAssetLoader('/fonts/GeneralUser_GS.sf2')
   const fonts = useFontsLoader()
   const soundfontReady = soundfont.status === 'ready'
   const pdfFontsReady = fonts.status === 'ready'
+
+  const {
+    disabledParts,
+    setDisabledParts,
+    disabledLyrics,
+    setDisabledLyrics,
+    soloedParts,
+    setSoloedParts,
+    handlePartToggle,
+    handleLyricsToggle,
+    handleSoloToggle,
+  } = usePartToggles(fileId)
+
   const {
     parts,
     partDeclarations,
@@ -134,26 +118,6 @@ export default function App() {
   )
 
   useEffect(() => {
-    skipToggleSaveRef.current = true
-    const cached = readPartTogglesForFile(fileId)
-    setDisabledParts(new Set(cached?.disabledParts ?? []))
-    setDisabledLyrics(new Set(cached?.disabledLyrics ?? []))
-    setSoloedParts(new Set(cached?.soloedParts ?? []))
-  }, [fileId])
-
-  useEffect(() => {
-    if (skipToggleSaveRef.current) {
-      skipToggleSaveRef.current = false
-      return
-    }
-    writePartTogglesForFile(fileId, {
-      disabledParts: [...disabledParts],
-      disabledLyrics: [...disabledLyrics],
-      soloedParts: [...soloedParts],
-    })
-  }, [fileId, disabledParts, disabledLyrics, soloedParts])
-
-  useEffect(() => {
     if (parts.length === 0) return
 
     const abbreviations = new Set(parts.map((part) => part.abbreviation))
@@ -163,7 +127,7 @@ export default function App() {
       )
       return next.size === prev.size ? prev : next
     })
-  }, [parts])
+  }, [parts, setDisabledParts])
 
   useEffect(() => {
     if (parts.length === 0) return
@@ -179,7 +143,7 @@ export default function App() {
       )
       return next.size === prev.size ? prev : next
     })
-  }, [parts])
+  }, [parts, setDisabledLyrics])
 
   useEffect(() => {
     if (parts.length === 0) return
@@ -188,14 +152,12 @@ export default function App() {
       const next = new Set([...prev].filter((abbr) => abbreviations.has(abbr)))
       return next.size === prev.size ? prev : next
     })
-  }, [parts])
+  }, [parts, setSoloedParts])
 
   const playMeasureRef = useRef<(() => void) | undefined>(undefined)
   playMeasureRef.current = measureAudioPlaying
     ? stopMeasurePlayback
-    : selectedMeasureRange !== null &&
-        !measureAudioGenerating &&
-        soundfontReady
+    : selectedMeasureRange !== null && !measureAudioGenerating && soundfontReady
       ? playSelectedMeasures
       : undefined
 
@@ -218,51 +180,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  const handlePartToggle = useCallback(
-    (abbreviation: string, enabled: boolean) => {
-      setDisabledParts((prev) => {
-        const next = new Set(prev)
-        if (enabled) {
-          next.delete(abbreviation)
-        } else {
-          next.add(abbreviation)
-        }
-        return next
-      })
-    },
-    [],
-  )
-
-  const handleLyricsToggle = useCallback(
-    (abbreviation: string, enabled: boolean) => {
-      setDisabledLyrics((prev) => {
-        const next = new Set(prev)
-        if (enabled) {
-          next.delete(abbreviation)
-        } else {
-          next.add(abbreviation)
-        }
-        return next
-      })
-    },
-    [],
-  )
-
-  const handleSoloToggle = useCallback(
-    (abbreviation: string, soloed: boolean) => {
-      setSoloedParts((prev) => {
-        const next = new Set(prev)
-        if (soloed) {
-          next.add(abbreviation)
-        } else {
-          next.delete(abbreviation)
-        }
-        return next
-      })
-    },
-    [],
-  )
-
   const handleSourceChange = useCallback(
     (value: string) => {
       setStore((prev) => backend.updateActiveContent(prev, value))
@@ -276,6 +193,26 @@ export default function App() {
     },
     [setStore],
   )
+
+  const handleDismissShared = useCallback(() => {
+    clearShareHash()
+    setSharedPreview(null)
+  }, [])
+
+  const {
+    creatingFile,
+    deletingFileName,
+    duplicatingFile,
+    renamingFileName,
+    restoringFileName,
+    fileOpError,
+    setFileOpError,
+    handleCreate,
+    handleDuplicate,
+    handleRename,
+    handleDelete,
+    handleRestore,
+  } = useFileOperations(store, setStore, backend)
 
   const handleImportShared = useCallback(async () => {
     if (!sharedPreview) return
@@ -296,82 +233,7 @@ export default function App() {
         stack: error instanceof Error ? error.stack : undefined,
       })
     }
-  }, [sharedPreview, store, backend, setStore])
-
-  const handleDismissShared = useCallback(() => {
-    clearShareHash()
-    setSharedPreview(null)
-  }, [])
-
-  const runFileOp = useCallback(
-    async (
-      errorTitle: string,
-      setPending: (pending: boolean) => void,
-      op: (base: FileStoreState) => Promise<FileStoreState>,
-    ) => {
-      const base = store
-      setPending(true)
-      try {
-        const next = await op(base)
-        setStore((prev) => mergeBackendResult(prev, base, next))
-      } catch (error) {
-        setFileOpError({
-          title: errorTitle,
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        })
-      } finally {
-        setPending(false)
-      }
-    },
-    [setStore, store],
-  )
-
-  const handleCreate = useCallback(
-    () =>
-      runFileOp('Could not create file', setCreatingFile, (base) =>
-        backend.createFile(base),
-      ),
-    [runFileOp, backend],
-  )
-
-  const handleDuplicate = useCallback(
-    () =>
-      runFileOp('Could not duplicate file', setDuplicatingFile, (base) =>
-        backend.duplicateFile(base),
-      ),
-    [runFileOp, backend],
-  )
-
-  const handleRename = useCallback(
-    (from: string, to: string) =>
-      runFileOp(
-        'Could not rename file',
-        (pending) => setRenamingFileName(pending ? from : null),
-        (base) => backend.renameFile(base, from, to),
-      ),
-    [runFileOp, backend],
-  )
-
-  const handleDelete = useCallback(
-    (name: string) =>
-      runFileOp(
-        'Could not delete file',
-        (pending) => setDeletingFileName(pending ? name : null),
-        (base) => backend.deleteFile(base, name),
-      ),
-    [runFileOp, backend],
-  )
-
-  const handleRestore = useCallback(
-    (name: string) =>
-      runFileOp(
-        'Could not restore file',
-        (pending) => setRestoringFileName(pending ? name : null),
-        (base) => backend.restoreFile(base, name),
-      ),
-    [runFileOp, backend],
-  )
+  }, [sharedPreview, store, backend, setStore, setFileOpError])
 
   const handlePartDeclarationChange = useCallback(
     (
@@ -403,80 +265,21 @@ export default function App() {
     [source, handleSourceChange],
   )
 
-  const sectionLabels = useMemo(
-    () =>
-      sectionRanges
-        .filter((r) => r.labels.length === 1)
-        .flatMap((r) => r.labels),
-    [sectionRanges],
-  )
-
-  const dragHighlightedLabels = useMemo<Set<string>>(() => {
-    if (dragStartLabel === null || dragCurrentLabel === null) return new Set()
-    const a = sectionLabels.indexOf(dragStartLabel)
-    const b = sectionLabels.indexOf(dragCurrentLabel)
-    if (a === -1 || b === -1) return new Set()
-    return new Set(sectionLabels.slice(Math.min(a, b), Math.max(a, b) + 1))
-  }, [dragStartLabel, dragCurrentLabel, sectionLabels])
-
-  const activeHighlightedLabels = useMemo(() => {
-    if (dragStartLabel !== null) return dragHighlightedLabels
-    if (!selectedLineRange) return new Set<string>()
-    const match = sectionRanges.find(
-      (r) =>
-        r.first_line === selectedLineRange.firstLine &&
-        r.last_line === selectedLineRange.lastLine,
-    )
-    return new Set(match?.labels ?? [])
-  }, [dragStartLabel, dragHighlightedLabels, selectedLineRange, sectionRanges])
-
-  const selectSectionRange = useCallback(
-    (firstLine: number, lastLine: number) => {
-      editorRef.current?.setSelectionByLines(firstLine, lastLine)
-      editorRef.current?.focus()
-      setSelectedLineRange({ firstLine, lastLine })
-      notifySelection(firstLine, lastLine)
-    },
-    [notifySelection],
-  )
-
-  const handleSectionRangeSelect = useCallback(
-    (labelA: string, labelB: string) => {
-      const range =
-        sectionRanges.find(
-          (r) => r.labels[0] === labelA && r.labels.at(-1) === labelB,
-        ) ??
-        sectionRanges.find(
-          (r) => r.labels[0] === labelB && r.labels.at(-1) === labelA,
-        )
-      if (!range) return
-      selectSectionRange(range.first_line, range.last_line)
-    },
-    [sectionRanges, selectSectionRange],
-  )
-
-  const handleSectionJump = useCallback(
-    (label: string) => handleSectionRangeSelect(label, label),
-    [handleSectionRangeSelect],
-  )
-
-  useEffect(() => {
-    const clearDrag = () => {
-      setDragStartLabel(null)
-      setDragCurrentLabel(null)
-    }
-    window.addEventListener('mouseup', clearDrag)
-    return () => window.removeEventListener('mouseup', clearDrag)
-  }, [])
-
-  const handleMeasureRangeSelect = useCallback(
-    (start: number, end: number) => {
-      const s = measureSpans[start]
-      const e = measureSpans[end]
-      if (!s || !e) return
-      editorRef.current?.setSelectionByLines(s.start_line, e.end_line)
-    },
-    [measureSpans],
+  const {
+    setSelectedLineRange,
+    sectionLabels,
+    dragStartLabel,
+    setDragStartLabel,
+    setDragCurrentLabel,
+    activeHighlightedLabels,
+    handleSectionRangeSelect,
+    handleSectionJump,
+    handleMeasureRangeSelect,
+  } = useSectionNavigation(
+    sectionRanges,
+    measureSpans,
+    editorRef,
+    notifySelection,
   )
 
   const noPartsSelected =

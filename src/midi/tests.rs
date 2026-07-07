@@ -253,11 +253,7 @@ fn tied_notes_produce_single_note_on() {
             octave: 0,
             duration: 4, // quarter note
             slur: false,
-            tie_to_next_span: if tied {
-                Some(Span::new(0, 1))
-            } else {
-                None
-            },
+            tie_to_next_span: if tied { Some(Span::new(0, 1)) } else { None },
             event_span: Span::new(0, 0),
             group_membership: 0,
             group_continuation: 0,

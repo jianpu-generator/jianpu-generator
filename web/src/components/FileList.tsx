@@ -46,13 +46,7 @@ const SAVE_STATUS_LABEL: Record<SaveStatus, string> = {
 }
 
 /** Swaps a button's label for the shared spinner while `pending` is true. */
-function SpinnerLabel({
-  pending,
-  label,
-}: {
-  pending: boolean
-  label: string
-}) {
+function SpinnerLabel({ pending, label }: { pending: boolean; label: string }) {
   return pending ? (
     <span className="file-tab-bar-spinner" aria-hidden="true" />
   ) : (
@@ -262,10 +256,7 @@ export function FileTabBar({
                   onClick={() => onRestore(name)}
                   disabled={restoringName === name}
                 >
-                  <SpinnerLabel
-                    pending={restoringName === name}
-                    label="↩"
-                  />
+                  <SpinnerLabel pending={restoringName === name} label="↩" />
                 </button>
               </li>
             ))}

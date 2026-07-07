@@ -1,13 +1,13 @@
 import { Octokit } from '@octokit/rest'
 import {
-  createFile as pureCreateFile,
   DEMO_FILE_NAME,
+  type FileStoreState,
+  fileContent,
+  isReadOnlyFile,
+  createFile as pureCreateFile,
   deleteFile as pureDeleteFile,
   duplicateFile as pureDuplicateFile,
-  fileContent,
-  type FileStoreState,
   importSharedFile as pureImportSharedFile,
-  isReadOnlyFile,
   renameFile as pureRenameFile,
   restoreFile as pureRestoreFile,
   updateActiveContent as pureUpdateActiveContent,
@@ -136,7 +136,9 @@ function addedFileName(
   before: FileStoreState,
   after: FileStoreState,
 ): string | undefined {
-  return Object.keys(after.userFiles).find((name) => !(name in before.userFiles))
+  return Object.keys(after.userFiles).find(
+    (name) => !(name in before.userFiles),
+  )
 }
 
 /**
@@ -155,7 +157,9 @@ function addedFileName(
  *   content it had at delete time); it does not restore an older edited
  *   version of a still-active file.
  */
-export function createGithubBackend(config: GithubBackendConfig): GithubBackend {
+export function createGithubBackend(
+  config: GithubBackendConfig,
+): GithubBackend {
   const octokit = new Octokit({ auth: config.token })
   const { owner, repo, branch } = config
 
@@ -207,7 +211,9 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
     return decodeBase64(data.content)
   }
 
-  async function listJianpuFiles(dirPath: string): Promise<Record<string, string>> {
+  async function listJianpuFiles(
+    dirPath: string,
+  ): Promise<Record<string, string>> {
     let entries: { name: string; path: string; type: string }[]
     try {
       const { data } = await octokit.rest.repos.getContent({
@@ -275,7 +281,14 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
   async function deleteFileAt(path: string, message: string): Promise<void> {
     const sha = await fetchSha(path)
     if (!sha) return
-    await octokit.rest.repos.deleteFile({ owner, repo, path, message, sha, branch })
+    await octokit.rest.repos.deleteFile({
+      owner,
+      repo,
+      path,
+      message,
+      sha,
+      branch,
+    })
   }
 
   /** Classifies a thrown error into the `GithubBackendError`/`SaveStatus`
@@ -328,7 +341,11 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
     const path = filePath(state.active)
     status = 'saving'
     try {
-      await putFile(path, fileContent(state, state.active), `jianpu: update ${state.active}`)
+      await putFile(
+        path,
+        fileContent(state, state.active),
+        `jianpu: update ${state.active}`,
+      )
       status = 'idle'
       lastError = null
       pendingRetryState = null
@@ -373,7 +390,11 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
       const name = addedFileName(state, nextState)
       if (!name) return nextState
       await runOp(() =>
-        createOnly(filePath(name), nextState.userFiles[name] ?? '', `jianpu: create ${name}`),
+        createOnly(
+          filePath(name),
+          nextState.userFiles[name] ?? '',
+          `jianpu: create ${name}`,
+        ),
       )
       writeStoredFileIds(owner, repo, nextState.fileIds)
       return nextState
@@ -388,7 +409,11 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
       const name = addedFileName(state, nextState)
       if (!name) return nextState
       await runOp(() =>
-        createOnly(filePath(name), nextState.userFiles[name] ?? '', `jianpu: import ${name}`),
+        createOnly(
+          filePath(name),
+          nextState.userFiles[name] ?? '',
+          `jianpu: import ${name}`,
+        ),
       )
       writeStoredFileIds(owner, repo, nextState.fileIds)
       return nextState
@@ -423,13 +448,19 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
           nextState.userFiles[newName] ?? '',
           `jianpu: rename ${from} to ${newName}`,
         )
-        await deleteFileAt(filePath(from), `jianpu: rename ${from} to ${newName}`)
+        await deleteFileAt(
+          filePath(from),
+          `jianpu: rename ${from} to ${newName}`,
+        )
       })
       writeStoredFileIds(owner, repo, nextState.fileIds)
       return nextState
     },
 
-    async deleteFile(state: FileStoreState, name: string): Promise<FileStoreState> {
+    async deleteFile(
+      state: FileStoreState,
+      name: string,
+    ): Promise<FileStoreState> {
       const nextState = pureDeleteFile(state, name)
       if (nextState === state) return nextState
       const content = nextState.bin[name] ?? ''
@@ -440,7 +471,10 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
       return nextState
     },
 
-    async restoreFile(state: FileStoreState, name: string): Promise<FileStoreState> {
+    async restoreFile(
+      state: FileStoreState,
+      name: string,
+    ): Promise<FileStoreState> {
       const nextState = pureRestoreFile(state, name)
       const newName = addedFileName(state, nextState)
       if (!newName) return nextState
@@ -456,8 +490,10 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
       return nextState
     },
 
-    updateActiveContent: (state: FileStoreState, content: string): FileStoreState =>
-      pureUpdateActiveContent(state, content),
+    updateActiveContent: (
+      state: FileStoreState,
+      content: string,
+    ): FileStoreState => pureUpdateActiveContent(state, content),
 
     saveContent,
 

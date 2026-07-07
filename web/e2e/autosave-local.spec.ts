@@ -55,9 +55,7 @@ test('editing a file persists to the local storage backend without waiting out t
   await page.keyboard.press('Control+End')
   await page.keyboard.type(' 5')
 
-  await expect
-    .poll(getStoredSource.bind(null, page))
-    .toContain('1 2 3 4 5')
+  await expect.poll(getStoredSource.bind(null, page)).toContain('1 2 3 4 5')
 
   // No debounced save is even scheduled for the local backend, so the
   // save-status badge (only meaningful for GitHub) never appears.

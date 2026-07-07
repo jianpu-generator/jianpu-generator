@@ -1,5 +1,6 @@
-use super::*;
-use crate::ast::parsed::NoteName;
+use super::group;
+use crate::ast::grouped::{NoteEvent, Score};
+use crate::ast::parsed::{JianPuPitch, NoteName, PartKind};
 use crate::parser;
 
 fn parse_and_group(input: &str) -> Score {

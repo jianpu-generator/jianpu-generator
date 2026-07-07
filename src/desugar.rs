@@ -155,7 +155,7 @@ fn filter_keyed_into_key_map(
     let valid_keyed: Vec<_> = keyed
         .into_iter()
         .filter(|line| {
-            if !declarations.iter().any(|d| &d.abbreviation == &line.key) {
+            if !declarations.iter().any(|d| d.abbreviation == line.key) {
                 recoverable_error.get_or_insert_with(|| {
                     RecoverableError::part_key_unknown(line.key_prefix_span, &line.key)
                 });

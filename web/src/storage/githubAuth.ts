@@ -74,10 +74,7 @@ export function clearStoredGithubAuth(): void {
  * imperative logic — see `readStoredGithubAuth`/`writeStoredGithubAuth`.
  */
 export function useGithubAuthToken() {
-  return useLocalStorage<StoredGithubAuth | null>(
-    GITHUB_AUTH_STORAGE_KEY,
-    null,
-  )
+  return useLocalStorage<StoredGithubAuth | null>(GITHUB_AUTH_STORAGE_KEY, null)
 }
 
 /**
@@ -120,7 +117,10 @@ function createProxyRequest(proxyBaseUrl: string) {
     const { baseUrl: _baseUrl, headers: _headers, ...body } = parameters ?? {}
     const response = await fetch(`${proxyBaseUrl}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
       body: JSON.stringify(body),
     })
     const data = (await response.json()) as unknown
@@ -155,7 +155,9 @@ export interface DeviceFlowOptions {
   scopes?: string[]
   /** Renders `verification.user_code` / `verification.verification_uri` to
    * the user; UI for this is wired in a later step. */
-  onVerification: (verification: GithubDeviceVerification) => void | Promise<void>
+  onVerification: (
+    verification: GithubDeviceVerification,
+  ) => void | Promise<void>
 }
 
 /**
@@ -173,9 +175,9 @@ export async function connectWithDeviceFlow(
     // `RequestInterface` expects a fuller shape than this proxy-only stub
     // provides; see `createProxyRequest`'s doc comment for why a full
     // `@octokit/request` instance isn't used here.
-    request: createProxyRequest(
-      options.proxyBaseUrl,
-    ) as unknown as Parameters<typeof createOAuthDeviceAuth>[0]['request'],
+    request: createProxyRequest(options.proxyBaseUrl) as unknown as Parameters<
+      typeof createOAuthDeviceAuth
+    >[0]['request'],
     onVerification: options.onVerification,
   })
 

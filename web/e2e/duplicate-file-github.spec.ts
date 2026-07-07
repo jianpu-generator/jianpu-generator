@@ -32,11 +32,15 @@ test('duplicating a file persists via the GitHub storage backend', async ({
   page,
 }) => {
   const putBodies: { path: string; sha?: string }[] = []
-  await mockGithubContentsApi(page, { 'scores/original.jianpu': SOURCE }, {
-    onPut: (path, body) => putBodies.push({ path, sha: body.sha }),
-    // Slow enough for the "Duplicate" button's pending spinner to be observable.
-    mutationDelayMs: 300,
-  })
+  await mockGithubContentsApi(
+    page,
+    { 'scores/original.jianpu': SOURCE },
+    {
+      onPut: (path, body) => putBodies.push({ path, sha: body.sha }),
+      // Slow enough for the "Duplicate" button's pending spinner to be observable.
+      mutationDelayMs: 300,
+    },
+  )
 
   await page.addInitScript(
     ({ owner }) => {
@@ -73,9 +77,9 @@ test('duplicating a file persists via the GitHub storage backend', async ({
 
   // Positional locator (not `hasText: 'Duplicate'`) since its label is
   // swapped for a spinner while the duplicate is pending.
-  const duplicateButton = page.locator(
-    '.file-tab-bar-actions .file-tab-bar-btn',
-  ).nth(1)
+  const duplicateButton = page
+    .locator('.file-tab-bar-actions .file-tab-bar-btn')
+    .nth(1)
   await duplicateButton.click()
 
   // The pending `duplicateFile` call shows a spinner on the "Duplicate"

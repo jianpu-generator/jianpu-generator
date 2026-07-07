@@ -1,5 +1,6 @@
-use super::*;
-use crate::error::{RecoverableErrorKind, Span};
+use super::group;
+use crate::ast::grouped::{GroupedNote, NoteEvent, Score};
+use crate::error::{Diagnostic, RecoverableErrorKind, Span};
 use crate::parser;
 
 fn parse_and_group(input: &str) -> Score {

@@ -9,17 +9,14 @@ import type {
   PartMode,
   SectionRange,
 } from '../types'
-import type { WorkerRequest, WorkerResponse } from '../worker/jianpu.worker'
+import type { WorkerRequest } from '../worker/jianpu.worker'
+import { createWorkerMessageHandler } from './useJianpuWorkerMessageHandler'
 import type { JianpuWorkerState } from './useJianpuWorkerTypes'
 import {
   baseNameFromActiveFile,
   disabledLyricsForRender,
-  downloadPdf,
-  downloadZip,
   enabledTracksForRender,
   measureRangeInSpan,
-  pdfFilenameFromActiveFile,
-  zipFilenameFromActiveFile,
 } from './workerHelpers'
 
 export type { JianpuWorkerState } from './useJianpuWorkerTypes'
@@ -162,146 +159,41 @@ export function useJianpuWorker(
     )
     workerRef.current = worker
 
-    worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
-      const msg = event.data
-      if (msg.type === 'ready') {
-        audioAvailableRef.current = msg.audioAvailable
-        setAudioAvailable(msg.audioAvailable)
-        setPdfAvailable(msg.pdfAvailable)
-        return
-      }
-
-      if (msg.type === 'parts') {
-        if (msg.id !== latestPartsIdRef.current) return
-        setPartsLoading(false)
-        setParts(msg.parts)
-        setPartDeclarations(msg.declarations)
-        return
-      }
-
-      if (msg.type === 'partDeclarationUpdated') {
-        if (msg.id !== latestUpdatePartDeclarationIdRef.current) return
-        setPartDeclarations(msg.declarations)
-        pendingPartDeclarationUpdatesRef.current.get(msg.id)?.(msg.source)
-        pendingPartDeclarationUpdatesRef.current.delete(msg.id)
-        return
-      }
-
-      if (msg.type === 'pdf') {
-        if (msg.id !== latestPdfIdRef.current) return
-        setPdfExporting(false)
-        downloadPdf(msg.pdf, pdfFilenameFromActiveFile(activeFileRef.current))
-        return
-      }
-
-      if (msg.type === 'pdfErr') {
-        if (msg.id !== latestPdfIdRef.current) return
-        setPdfExporting(false)
-        setDiagnostics(msg.diagnostics)
-        return
-      }
-
-      if (msg.type === 'splitPdf') {
-        if (msg.id !== latestSplitPdfIdRef.current) return
-        setSplitPdfExporting(false)
-        downloadZip(msg.zip, zipFilenameFromActiveFile(activeFileRef.current))
-        return
-      }
-
-      if (msg.type === 'splitPdfErr') {
-        if (msg.id !== latestSplitPdfIdRef.current) return
-        setSplitPdfExporting(false)
-        setDiagnostics(msg.diagnostics)
-        return
-      }
-
-      if (msg.type === 'ok') {
-        if (msg.id !== latestRenderIdRef.current) return
-        setRendering(false)
-        setDocuments(msg.documents)
-        setDiagnostics(msg.diagnostics)
-        setDiagnosticViewZones(msg.diagnosticViewZones)
-        return
-      }
-
-      if (msg.type === 'audio') {
-        if (msg.id !== latestAudioIdRef.current) return
-        setAudioGenerating(false)
-        const url = URL.createObjectURL(
-          new Blob([msg.wav], { type: 'audio/wav' }),
-        )
-        setNextWavUrl(url)
-        return
-      }
-
-      if (msg.type === 'audioErr') {
-        if (msg.id !== latestAudioIdRef.current) return
-        setAudioGenerating(false)
-        return
-      }
-
-      if (msg.type === 'measureRangeAudio') {
-        if (msg.id !== latestMeasureAudioIdRef.current) return
-        setMeasureAudioGenerating(false)
-        setNextMeasureWavUrl(
-          URL.createObjectURL(new Blob([msg.wav], { type: 'audio/wav' })),
-        )
-        return
-      }
-
-      if (msg.type === 'measureRangeAudioErr') {
-        if (msg.id !== latestMeasureAudioIdRef.current) return
-        setMeasureAudioGenerating(false)
-        return
-      }
-
-      if (msg.type === 'highlightRangeOk') {
-        if (msg.id !== latestHighlightRenderIdRef.current) return
-        setHighlightedDocuments(msg.documents)
-        return
-      }
-
-      if (msg.type === 'highlightRangeErr') {
-        if (msg.id !== latestHighlightRenderIdRef.current) return
-        return
-      }
-
-      if (msg.type === 'measureSpans') {
-        if (msg.id !== latestMeasureSpansIdRef.current) return
-        if (msg.status === 'ok') {
-          setMeasureSpans(msg.spans)
-          setSectionRanges(msg.sectionRanges)
-        }
-        return
-      }
-
-      if (msg.type === 'instrumentPreview') {
-        if (msg.id !== latestPreviewAudioIdRef.current) return
-        const url = URL.createObjectURL(
-          new Blob([msg.wav], { type: 'audio/wav' }),
-        )
-        if (currentPreviewAudioRef.current) {
-          currentPreviewAudioRef.current.pause()
-        }
-        const audio = new Audio(url)
-        currentPreviewAudioRef.current = audio
-        audio.addEventListener('play', () => setPreviewAudioPlaying(true))
-        audio.addEventListener('ended', () => {
-          setPreviewAudioPlaying(false)
-          URL.revokeObjectURL(url)
-        })
-        audio.addEventListener('pause', () => setPreviewAudioPlaying(false))
-        audio.play().catch(() => {})
-        return
-      }
-
-      if (msg.type === 'err') {
-        if (msg.id !== latestRenderIdRef.current) return
-        setRendering(false)
-        setDiagnostics(msg.diagnostics)
-        setDiagnosticViewZones(msg.diagnosticViewZones)
-      }
-    }
+    worker.onmessage = createWorkerMessageHandler({
+      audioAvailableRef,
+      setAudioAvailable,
+      setPdfAvailable,
+      latestPartsIdRef,
+      setPartsLoading,
+      setParts,
+      setPartDeclarations,
+      latestUpdatePartDeclarationIdRef,
+      pendingPartDeclarationUpdatesRef,
+      latestPdfIdRef,
+      setPdfExporting,
+      activeFileRef,
+      setDiagnostics,
+      latestSplitPdfIdRef,
+      setSplitPdfExporting,
+      latestRenderIdRef,
+      setRendering,
+      setDocuments,
+      setDiagnosticViewZones,
+      latestAudioIdRef,
+      setAudioGenerating,
+      setNextWavUrl,
+      latestMeasureAudioIdRef,
+      setMeasureAudioGenerating,
+      setNextMeasureWavUrl,
+      latestHighlightRenderIdRef,
+      setHighlightedDocuments,
+      latestMeasureSpansIdRef,
+      setMeasureSpans,
+      setSectionRanges,
+      latestPreviewAudioIdRef,
+      currentPreviewAudioRef,
+      setPreviewAudioPlaying,
+    })
 
     return () => {
       worker.terminate()

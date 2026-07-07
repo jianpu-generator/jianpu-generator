@@ -17,11 +17,15 @@ test('creating a new file persists via the GitHub storage backend', async ({
   page,
 }) => {
   const putBodies: { path: string; sha?: string }[] = []
-  await mockGithubContentsApi(page, { 'scores/original.jianpu': SOURCE }, {
-    onPut: (path, body) => putBodies.push({ path, sha: body.sha }),
-    // Slow enough for the "New" button's pending spinner to be observable.
-    mutationDelayMs: 300,
-  })
+  await mockGithubContentsApi(
+    page,
+    { 'scores/original.jianpu': SOURCE },
+    {
+      onPut: (path, body) => putBodies.push({ path, sha: body.sha }),
+      // Slow enough for the "New" button's pending spinner to be observable.
+      mutationDelayMs: 300,
+    },
+  )
 
   await page.addInitScript(
     ({ owner }) => {
@@ -48,7 +52,9 @@ test('creating a new file persists via the GitHub storage backend', async ({
 
   // Positional locator (not `hasText: 'New'`) since its label is swapped for
   // a spinner while the create is pending.
-  const newButton = page.locator('.file-tab-bar-actions .file-tab-bar-btn').first()
+  const newButton = page
+    .locator('.file-tab-bar-actions .file-tab-bar-btn')
+    .first()
   await newButton.click()
 
   // The pending `createFile` call shows a spinner on the "New" button —

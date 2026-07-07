@@ -2,7 +2,10 @@ import type { Octokit } from '@octokit/rest'
 import { describe, expect, it, vi } from 'vitest'
 import type { FileStoreState } from '../fileStore'
 import type { GithubBackend } from '../storage/githubBackend'
-import { ensureStorageRepo, resolveGithubConflict } from './StorageSettingsModal'
+import {
+  ensureStorageRepo,
+  resolveGithubConflict,
+} from './StorageSettingsModal'
 
 function notFound(): Promise<never> {
   return Promise.reject(Object.assign(new Error('Not Found'), { status: 404 }))
@@ -48,7 +51,8 @@ describe('ensureStorageRepo', () => {
 
   it('rethrows non-404 errors without attempting to create', async () => {
     const octokit = makeOctokit({
-      get: () => Promise.reject(Object.assign(new Error('boom'), { status: 500 })),
+      get: () =>
+        Promise.reject(Object.assign(new Error('boom'), { status: 500 })),
     })
 
     await expect(ensureStorageRepo(octokit, 'octo')).rejects.toThrow('boom')

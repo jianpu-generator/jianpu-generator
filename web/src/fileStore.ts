@@ -352,9 +352,7 @@ export function mergeBackendResult(
   base: FileStoreState,
   next: FileStoreState,
 ): FileStoreState {
-  const removedFrom = (
-    record: 'userFiles' | 'bin',
-  ): string[] =>
+  const removedFrom = (record: 'userFiles' | 'bin'): string[] =>
     Object.keys(base[record]).filter((key) => !(key in next[record]))
 
   const findMovedSource = (content: string): string | undefined => {

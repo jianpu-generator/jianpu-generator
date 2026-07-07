@@ -47,19 +47,27 @@ describe('readStoredGithubAuth', () => {
   })
 
   it('returns null when the stored value has no string token', () => {
-    localStorage.setItem(GITHUB_AUTH_STORAGE_KEY, JSON.stringify({ scopes: ['repo'] }))
+    localStorage.setItem(
+      GITHUB_AUTH_STORAGE_KEY,
+      JSON.stringify({ scopes: ['repo'] }),
+    )
     expect(readStoredGithubAuth()).toBeNull()
   })
 
   it('defaults scopes to an empty array when omitted', () => {
-    localStorage.setItem(GITHUB_AUTH_STORAGE_KEY, JSON.stringify({ token: 'tok' }))
+    localStorage.setItem(
+      GITHUB_AUTH_STORAGE_KEY,
+      JSON.stringify({ token: 'tok' }),
+    )
     expect(readStoredGithubAuth()).toEqual({ token: 'tok', scopes: [] })
   })
 })
 
 describe('checkGithubAuthStatus', () => {
   it('reports disconnected when no token is stored', async () => {
-    await expect(checkGithubAuthStatus()).resolves.toEqual({ state: 'disconnected' })
+    await expect(checkGithubAuthStatus()).resolves.toEqual({
+      state: 'disconnected',
+    })
     expect(getAuthenticated).not.toHaveBeenCalled()
   })
 
@@ -81,9 +89,13 @@ describe('checkGithubAuthStatus', () => {
       GITHUB_AUTH_STORAGE_KEY,
       JSON.stringify({ token: 'stale', scopes: [] }),
     )
-    getAuthenticated.mockRejectedValue(Object.assign(new Error('Bad credentials'), { status: 401 }))
+    getAuthenticated.mockRejectedValue(
+      Object.assign(new Error('Bad credentials'), { status: 401 }),
+    )
 
-    await expect(checkGithubAuthStatus()).resolves.toEqual({ state: 'needs-reconnect' })
+    await expect(checkGithubAuthStatus()).resolves.toEqual({
+      state: 'needs-reconnect',
+    })
     expect(readStoredGithubAuth()).toBeNull()
   })
 
@@ -92,7 +104,9 @@ describe('checkGithubAuthStatus', () => {
       GITHUB_AUTH_STORAGE_KEY,
       JSON.stringify({ token: 'tok', scopes: [] }),
     )
-    getAuthenticated.mockRejectedValue(Object.assign(new Error('boom'), { status: 500 }))
+    getAuthenticated.mockRejectedValue(
+      Object.assign(new Error('boom'), { status: 500 }),
+    )
 
     await expect(checkGithubAuthStatus()).rejects.toThrow('boom')
     expect(readStoredGithubAuth()).not.toBeNull()

@@ -138,10 +138,6 @@ test('clearing an optional field removes it from the source', async ({
   await page.keyboard.press('Escape')
   await modal.waitFor({ state: 'hidden' })
 
-  await expect
-    .poll(getEditorSource.bind(null, page))
-    .not.toContain('subtitle')
-  await expect
-    .poll(getStoredSource.bind(null, page))
-    .not.toContain('subtitle')
+  await expect.poll(getEditorSource.bind(null, page)).not.toContain('subtitle')
+  await expect.poll(getStoredSource.bind(null, page)).not.toContain('subtitle')
 })

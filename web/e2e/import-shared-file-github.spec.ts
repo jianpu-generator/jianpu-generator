@@ -23,11 +23,15 @@ test('importing a shared score persists via the GitHub storage backend', async (
   page,
 }) => {
   const putBodies: { path: string; sha?: string }[] = []
-  await mockGithubContentsApi(page, {}, {
-    onPut: (path, body) => putBodies.push({ path, sha: body.sha }),
-    // Slow enough for the import to still be in flight when we assert on it.
-    mutationDelayMs: 300,
-  })
+  await mockGithubContentsApi(
+    page,
+    {},
+    {
+      onPut: (path, body) => putBodies.push({ path, sha: body.sha }),
+      // Slow enough for the import to still be in flight when we assert on it.
+      mutationDelayMs: 300,
+    },
+  )
 
   await page.addInitScript(
     ({ owner }) => {

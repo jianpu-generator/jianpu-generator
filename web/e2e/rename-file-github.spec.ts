@@ -16,10 +16,14 @@ const SOURCE = [
 test('renaming a file persists via the GitHub storage backend', async ({
   page,
 }) => {
-  await mockGithubContentsApi(page, { 'scores/original.jianpu': SOURCE }, {
-    // Slow enough for the renaming tab's pending spinner to be observable.
-    mutationDelayMs: 300,
-  })
+  await mockGithubContentsApi(
+    page,
+    { 'scores/original.jianpu': SOURCE },
+    {
+      // Slow enough for the renaming tab's pending spinner to be observable.
+      mutationDelayMs: 300,
+    },
+  )
 
   await page.addInitScript(
     ({ owner }) => {

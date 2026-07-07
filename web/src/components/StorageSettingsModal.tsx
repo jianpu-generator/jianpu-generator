@@ -1,7 +1,12 @@
-import * as Dialog from '@radix-ui/react-dialog'
 import { Octokit } from '@octokit/rest'
+import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useState } from 'react'
 import type { FileStoreState } from '../fileStore'
+import {
+  GITHUB_STORAGE_REPO,
+  type StorageBackendPreference,
+  type StorageBackendTarget,
+} from '../hooks/useStorageBackend'
 import {
   checkGithubAuthStatus,
   clearStoredGithubAuth,
@@ -9,12 +14,10 @@ import {
   type GithubDeviceVerification,
   readStoredGithubAuth,
 } from '../storage/githubAuth'
-import type { GithubBackend, GithubBackendError } from '../storage/githubBackend'
-import {
-  GITHUB_STORAGE_REPO,
-  type StorageBackendPreference,
-  type StorageBackendTarget,
-} from '../hooks/useStorageBackend'
+import type {
+  GithubBackend,
+  GithubBackendError,
+} from '../storage/githubBackend'
 import type { StorageBackend } from '../storage/types'
 
 export interface StorageSettingsModalProps {
@@ -35,11 +38,9 @@ export interface StorageSettingsModalProps {
  * `cf-oauth-proxy/functions/device/code.ts`) regardless of what's sent here
  * — this is only required because `@octokit/auth-oauth-device` insists on a
  * non-empty `clientId` to construct its requests. */
-const GITHUB_OAUTH_CLIENT_ID =
-  import.meta.env.VITE_GITHUB_OAUTH_CLIENT_ID ?? ''
+const GITHUB_OAUTH_CLIENT_ID = import.meta.env.VITE_GITHUB_OAUTH_CLIENT_ID ?? ''
 
-const GITHUB_OAUTH_PROXY_URL =
-  import.meta.env.VITE_GITHUB_OAUTH_PROXY_URL ?? ''
+const GITHUB_OAUTH_PROXY_URL = import.meta.env.VITE_GITHUB_OAUTH_PROXY_URL ?? ''
 
 function statusOf(error: unknown): number | undefined {
   if (typeof error === 'object' && error !== null && 'status' in error) {
@@ -269,7 +270,9 @@ export function StorageSettingsModal({
     }
   }
 
-  const githubBackendError = isGithubBackend(backend) ? backend.lastError() : null
+  const githubBackendError = isGithubBackend(backend)
+    ? backend.lastError()
+    : null
   const bannerMessage = errorBannerMessage(githubBackendError)
   const conflictPath =
     githubBackendError?.kind === 'conflict' ? githubBackendError.path : null
@@ -284,9 +287,14 @@ export function StorageSettingsModal({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay style={overlayStyle} />
-        <Dialog.Content data-testid="storage-settings-modal" style={contentStyle}>
+        <Dialog.Content
+          data-testid="storage-settings-modal"
+          style={contentStyle}
+        >
           <div style={headerStyle}>
-            <Dialog.Title style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>
+            <Dialog.Title
+              style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}
+            >
               Storage
             </Dialog.Title>
             <Dialog.Close
@@ -335,7 +343,9 @@ export function StorageSettingsModal({
             ) : null}
 
             <div style={optionRowStyle}>
-              <label style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <label
+                style={{ display: 'flex', gap: '6px', alignItems: 'center' }}
+              >
                 <input
                   type="radio"
                   name="storage-backend"
@@ -344,7 +354,9 @@ export function StorageSettingsModal({
                 />
                 This browser
               </label>
-              <label style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <label
+                style={{ display: 'flex', gap: '6px', alignItems: 'center' }}
+              >
                 <input
                   type="radio"
                   name="storage-backend"
@@ -358,7 +370,11 @@ export function StorageSettingsModal({
             {selectedKind === 'github' ? (
               username ? (
                 <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
                   data-testid="github-connected"
                 >
                   <p style={{ margin: 0 }}>
@@ -377,7 +393,11 @@ export function StorageSettingsModal({
                 </div>
               ) : (
                 <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
                   data-testid="github-connect"
                 >
                   {verification ? (
@@ -393,7 +413,13 @@ export function StorageSettingsModal({
                         </a>{' '}
                         and enter this code:
                       </p>
-                      <p style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 4px' }}>
+                      <p
+                        style={{
+                          fontSize: '18px',
+                          fontWeight: 700,
+                          margin: '0 0 4px',
+                        }}
+                      >
                         {verification.user_code}
                       </p>
                       <p style={{ margin: 0, color: '#666' }}>
@@ -411,7 +437,9 @@ export function StorageSettingsModal({
                     </button>
                   )}
                   {connectError ? (
-                    <p style={{ color: '#b00020', margin: 0 }}>{connectError}</p>
+                    <p style={{ color: '#b00020', margin: 0 }}>
+                      {connectError}
+                    </p>
                   ) : null}
                 </div>
               )

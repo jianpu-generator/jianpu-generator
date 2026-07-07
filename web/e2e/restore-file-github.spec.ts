@@ -18,10 +18,14 @@ test('restoring a file persists via the GitHub storage backend', async ({
 }) => {
   // Seed only `trash/`, so the file loads straight into the bin without a
   // prior delete step in this test.
-  await mockGithubContentsApi(page, { 'trash/original.jianpu': SOURCE }, {
-    // Slow enough for the restore button's pending spinner to be observable.
-    mutationDelayMs: 300,
-  })
+  await mockGithubContentsApi(
+    page,
+    { 'trash/original.jianpu': SOURCE },
+    {
+      // Slow enough for the restore button's pending spinner to be observable.
+      mutationDelayMs: 300,
+    },
+  )
 
   await page.addInitScript(
     ({ owner }) => {
@@ -41,9 +45,7 @@ test('restoring a file persists via the GitHub storage backend', async ({
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
   // The seeded file loads straight into the bin, not the main tab list.
-  await expect(page.locator('.file-tab-bar-bin-summary')).toHaveText(
-    'Bin (1)',
-  )
+  await expect(page.locator('.file-tab-bar-bin-summary')).toHaveText('Bin (1)')
   await expect(
     page.locator('.file-tabs .file-tab-name', { hasText: 'original.jianpu' }),
   ).toHaveCount(0)

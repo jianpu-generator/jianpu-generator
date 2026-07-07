@@ -4,8 +4,8 @@ import { useLocalStorage } from 'usehooks-ts'
 import {
   DEMO_FILE_NAME,
   FILE_STORE_KEY,
-  fileContent,
   type FileStoreState,
+  fileContent,
 } from '../fileStore'
 import { useGithubAuthToken } from '../storage/githubAuth'
 import { createGithubBackend } from '../storage/githubBackend'

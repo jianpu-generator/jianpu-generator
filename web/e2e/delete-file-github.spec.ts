@@ -16,10 +16,14 @@ const SOURCE = [
 test('deleting a file persists via the GitHub storage backend', async ({
   page,
 }) => {
-  await mockGithubContentsApi(page, { 'scores/original.jianpu': SOURCE }, {
-    // Slow enough for the delete button's pending spinner to be observable.
-    mutationDelayMs: 300,
-  })
+  await mockGithubContentsApi(
+    page,
+    { 'scores/original.jianpu': SOURCE },
+    {
+      // Slow enough for the delete button's pending spinner to be observable.
+      mutationDelayMs: 300,
+    },
+  )
 
   await page.addInitScript(
     ({ owner }) => {
@@ -69,9 +73,7 @@ test('deleting a file persists via the GitHub storage backend', async ({
   ).toHaveCount(0, { timeout: 5_000 })
 
   // ...and the deleted file moves into the bin, listed by name.
-  await expect(page.locator('.file-tab-bar-bin-summary')).toHaveText(
-    'Bin (1)',
-  )
+  await expect(page.locator('.file-tab-bar-bin-summary')).toHaveText('Bin (1)')
   const binDetails = page.locator('.file-tab-bar-bin')
   await binDetails.evaluate((el) => {
     ;(el as HTMLDetailsElement).open = true
@@ -95,9 +97,7 @@ test('deleting a file persists via the GitHub storage backend', async ({
   await expect(
     page.locator('.file-tabs .file-tab-name', { hasText: 'original.jianpu' }),
   ).toHaveCount(0)
-  await expect(page.locator('.file-tab-bar-bin-summary')).toHaveText(
-    'Bin (1)',
-  )
+  await expect(page.locator('.file-tab-bar-bin-summary')).toHaveText('Bin (1)')
   const binDetailsAfterReload = page.locator('.file-tab-bar-bin')
   await binDetailsAfterReload.evaluate((el) => {
     ;(el as HTMLDetailsElement).open = true
