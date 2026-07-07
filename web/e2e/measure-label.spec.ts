@@ -1,17 +1,14 @@
 import { expect, test } from '@playwright/test'
 
 /**
- * The default demo source (Twinkle Twinkle Little Star) has the following
+ * The default demo source (reference.jianpu) has the following
  * Monaco line numbers (1-based):
  *
  *   1  # metadata
- *   2  title = "Twinkle Twinkle Little Star"
+ *   2  title = "Jianpu Postcard"
  *   ...
- *  10  # score
- *  11  (time=4/4 key=C4 bpm=120)
- *  12  1 - - -        ← first note line → measure 1
- *  13  1 1 5 5        ← melody track note → measure 1
- *  14  twin- kle ...
+ *  14  # score
+ *  15  [M] 0 0 0 0    ← first note line → measure 1
  */
 test('shows measure number when cursor is placed on a note line', async ({
   page,
@@ -25,10 +22,10 @@ test('shows measure number when cursor is placed on a note line', async ({
   // Focus the Monaco editor.
   await page.click('.monaco-editor .view-lines')
 
-  // Use Monaco's "Go to Line" command (Ctrl+G) to jump to line 12,
-  // which is the first note line in the default Twinkle demo source.
+  // Use Monaco's "Go to Line" command (Ctrl+G) to jump to line 15,
+  // which is the first note line in the default reference.jianpu source.
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('12')
+  await page.keyboard.type('15')
   await page.keyboard.press('Enter')
 
   // Allow the 300 ms debounce in notifySelection plus worker round-trip.
