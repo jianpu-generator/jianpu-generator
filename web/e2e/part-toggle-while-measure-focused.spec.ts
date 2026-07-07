@@ -1,13 +1,15 @@
 import { expect, test } from '@playwright/test'
 
 /**
- * The default demo (Twinkle Twinkle Little Star) declares two parts:
+ * The default demo source ("Jianpu Postcard" syntax reference) declares two
+ * parts, in this order:
  *
  *   # parts
- *   Chord = chords
- *   Melody = notes+lyrics
+ *   Melody [M] = notes+lyrics
+ *   Chords [C] = chords
  *
- * Line 12 in the editor is the first chord line of measure 1.
+ * Line 15 in the editor (`[M] 0 0 0 0`) is the first note line of measure 1,
+ * containing only a melody line (no chords).
  *
  * Regression: when the cursor is inside a measure, `highlightedSvgs` is shown
  * in the Preview. Toggling a part should re-render `highlightedSvgs` with the
@@ -23,7 +25,7 @@ test('toggling a part rerenders the highlighted SVG while a measure is focused',
   // Focus the Monaco editor and navigate to the first measure.
   await page.click('.monaco-editor .view-lines')
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('12')
+  await page.keyboard.type('15')
   await page.keyboard.press('Enter')
 
   // Allow the debounce + highlight render worker round-trip.
@@ -38,11 +40,13 @@ test('toggling a part rerenders the highlighted SVG while a measure is focused',
   // Capture the rendered SVG content before any part toggle.
   const svgBefore = await page.locator('.preview-pages').innerHTML()
 
-  // Uncheck the first part toggle (the "Chord" part).
-  const firstPartCheckbox = page
-    .locator('.part-toggles input[type="checkbox"]')
+  // Uncheck the first part toggle (the "Melody" part). The checkbox itself
+  // is visually hidden (opacity: 0, 0x0 box) in favor of its icon label, so
+  // click the label that wraps it instead of the input directly.
+  const firstPartToggle = page
+    .locator('.part-toggles .part-toggle-segment--eye')
     .first()
-  await firstPartCheckbox.uncheck()
+  await firstPartToggle.click()
 
   // Give the worker time to re-render with the updated parts filter.
   await page.waitForTimeout(1_500)

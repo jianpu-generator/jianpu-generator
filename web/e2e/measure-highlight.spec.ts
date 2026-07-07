@@ -1,16 +1,16 @@
 import { expect, test } from '@playwright/test'
 
 /**
- * The default demo source (Twinkle Twinkle Little Star) has the following
- * Monaco line numbers (1-based):
+ * The default demo source ("Jianpu Postcard" syntax reference) has the
+ * following Monaco line numbers (1-based):
  *
  *   1  # metadata
  *   ...
- *  10  # score
- *  11  (time=4/4 key=C4 bpm=120)
- *  12  1 - - -        ← chord line → measure 1
- *  13  1 1 5 5        ← melody note line → measure 1
- *  14  twin- kle ...  ← lyric line → measure 1
+ *  14  # score
+ *  15  [M] 0 0 0 0   ← melody note line → measure 1 (all rests)
+ *  16  (blank)
+ *
+ * Line 1 (`# metadata`) sits outside any measure span.
  */
 test('renders amber highlight rect when cursor is inside a measure', async ({
   page,
@@ -20,9 +20,9 @@ test('renders amber highlight rect when cursor is inside a measure', async ({
 
   await page.click('.monaco-editor .view-lines')
 
-  // Navigate to line 12 (first note line of measure 1).
+  // Navigate to line 15 (first note line of measure 1).
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('12')
+  await page.keyboard.type('15')
   await page.keyboard.press('Enter')
 
   // Allow the 300 ms debounce plus the highlight render worker round-trip.
@@ -45,7 +45,7 @@ test('removes highlight rect when cursor moves outside all measures', async ({
 
   // First put cursor inside a measure so the highlight appears.
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('12')
+  await page.keyboard.type('15')
   await page.keyboard.press('Enter')
   await page.waitForTimeout(1_000)
 
