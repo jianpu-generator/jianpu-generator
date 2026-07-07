@@ -4,6 +4,7 @@ import {
   deserializeFileStore,
   duplicateFile,
   type FileStoreState,
+  importSharedFile,
   readInitialFileStore,
   renameFile,
   restoreFile,
@@ -47,6 +48,9 @@ export const localBackend: StorageBackend = {
   createFile: (state) => Promise.resolve(createFile(state)),
 
   duplicateFile: (state) => Promise.resolve(duplicateFile(state)),
+
+  importFile: (state, filename, content) =>
+    Promise.resolve(importSharedFile(state, filename, content)),
 
   renameFile: (state, from, to) => Promise.resolve(renameFile(state, from, to)),
 

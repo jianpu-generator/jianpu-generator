@@ -13,7 +13,6 @@ import {
   fileContent,
   fileIdForName,
   type FileStoreState,
-  importSharedFile,
   isReadOnlyFile,
   mergeBackendResult,
   selectFile,
@@ -278,14 +277,26 @@ export default function App() {
     [setStore],
   )
 
-  const handleImportShared = useCallback(() => {
+  const handleImportShared = useCallback(async () => {
     if (!sharedPreview) return
-    setStore((prev) =>
-      importSharedFile(prev, sharedPreview.filename, sharedPreview.content),
-    )
-    clearShareHash()
-    setSharedPreview(null)
-  }, [sharedPreview, setStore])
+    const base = store
+    try {
+      const next = await backend.importFile(
+        base,
+        sharedPreview.filename,
+        sharedPreview.content,
+      )
+      setStore((prev) => mergeBackendResult(prev, base, next))
+      clearShareHash()
+      setSharedPreview(null)
+    } catch (error) {
+      setFileOpError({
+        title: 'Could not import shared score',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      })
+    }
+  }, [sharedPreview, store, backend, setStore])
 
   const handleDismissShared = useCallback(() => {
     clearShareHash()

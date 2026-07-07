@@ -24,6 +24,11 @@ export interface StorageBackend {
   load(): Promise<FileStoreState>
   createFile(state: FileStoreState): Promise<FileStoreState>
   duplicateFile(state: FileStoreState): Promise<FileStoreState>
+  importFile(
+    state: FileStoreState,
+    filename: string,
+    content: string,
+  ): Promise<FileStoreState>
   renameFile(
     state: FileStoreState,
     from: string,

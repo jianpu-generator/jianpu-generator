@@ -24,10 +24,16 @@ in `page.addInitScript`, no real OAuth/network) still needs to be written for:
       then `DELETE contents/trash/<name>.jianpu`; assert the tab reappears
       outside the bin.
       See `web/e2e/restore-file-github.spec.ts`.
-- [ ] **import** (shared-link flow, see `web/e2e/share.spec.ts` for the local-
+- [x] **import** (shared-link flow, see `web/e2e/share.spec.ts` for the local-
       backend version) — open `/#share=...` while the GitHub backend is
       already active/seeded, click "Import to my scores", and expect the same
       create-only `PUT contents/scores/<name>.jianpu` as new/duplicate.
+      Required adding `StorageBackend.importFile` (mirroring `createFile`)
+      and wiring `App.tsx`'s `handleImportShared` through it — previously it
+      called `setStore` directly, which never actually persisted an import
+      on the GitHub backend since `useStorageBackend`'s autosave only fires
+      for edits to the *same* active file, not a newly-switched-to one.
+      See `web/e2e/import-shared-file-github.spec.ts`.
 
 For each: also add a post-reload assertion (like the rename test's) that
 re-fetches through the mock, to prove the operation actually landed in the

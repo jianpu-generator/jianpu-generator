@@ -6,6 +6,7 @@ import {
   duplicateFile as pureDuplicateFile,
   fileContent,
   type FileStoreState,
+  importSharedFile as pureImportSharedFile,
   isReadOnlyFile,
   renameFile as pureRenameFile,
   restoreFile as pureRestoreFile,
@@ -373,6 +374,21 @@ export function createGithubBackend(config: GithubBackendConfig): GithubBackend 
       if (!name) return nextState
       await runOp(() =>
         createOnly(filePath(name), nextState.userFiles[name] ?? '', `jianpu: create ${name}`),
+      )
+      writeStoredFileIds(owner, repo, nextState.fileIds)
+      return nextState
+    },
+
+    async importFile(
+      state: FileStoreState,
+      filename: string,
+      content: string,
+    ): Promise<FileStoreState> {
+      const nextState = pureImportSharedFile(state, filename, content)
+      const name = addedFileName(state, nextState)
+      if (!name) return nextState
+      await runOp(() =>
+        createOnly(filePath(name), nextState.userFiles[name] ?? '', `jianpu: import ${name}`),
       )
       writeStoredFileIds(owner, repo, nextState.fileIds)
       return nextState
