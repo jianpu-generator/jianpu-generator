@@ -110,11 +110,30 @@ helper used by the `*-github.spec.ts` files.
         clicking again reverts it to "Preview instrument", guarding against
         a stuck-playing preview toggle.
 
+- [x] **File-operation error path** (`useFileOperations.ts:27` `runFileOp`,
+      wired to `ErrorModal.tsx`). The single shared error-handling wrapper
+      behind all six structural file operations (create, duplicate, rename,
+      delete, restore, import) had zero coverage of any kind — every
+      `*-github.spec.ts` test only mocked successful `PUT`/`DELETE`
+      responses. Added `web/e2e/file-op-error-github.spec.ts`, asserting for
+      a failed create:
+      - The "New" button's spinner appears while the create is in flight,
+        then the error modal appears with the right title and a message
+        containing the underlying failure text.
+      - The spinner clears and the button reverts to "New" afterward
+        (`finally`'s `setPending(false)` ran on the error path, not just
+        success — otherwise the button would spin forever).
+      - No phantom `untitled.jianpu` tab appears and the active tab is
+        unchanged (`setStore` is never called on failure).
+      - Closing the modal and retrying "New" succeeds normally, proving the
+        user can actually recover from the failure.
+
 ## Not worth adding right now
 
-- Individual GitHub error-path tests (500s, rate-limit banner) per
-  operation (create/rename/delete/duplicate) — real gap, but lower priority
-  than the conflict-resolution test above since it's the same banner logic
+- Individual per-operation GitHub error-path tests beyond the generic
+  create-failure case above (500s, rate-limit banner) for
+  rename/delete/duplicate — real gap, but lower priority since it's the same
+  shared `runFileOp`/banner logic already exercised once
   (`errorBannerMessage`) already partially exercised; add only if a bug
   surfaces there.
 
