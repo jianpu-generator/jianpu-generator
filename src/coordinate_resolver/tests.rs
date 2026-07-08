@@ -164,8 +164,8 @@ fn measure_highlight_produces_prepended_rect_element() {
         measure_highlights: vec![MeasureHighlight {
             row_start: 0,
             row_end: 1,
-            column_start: 4,
-            column_end: 6,
+            column_start: 4.0,
+            column_end: 6.0,
         }],
         error_highlights: vec![],
         measure_click_targets: vec![],
@@ -203,8 +203,8 @@ fn error_highlight_resolves_to_absolute_error_highlight() {
         error_highlights: vec![MeasureHighlight {
             row_start: 0,
             row_end: 0,
-            column_start: 0,
-            column_end: 5,
+            column_start: 0.0,
+            column_end: 5.0,
         }],
         measure_click_targets: vec![],
     };

@@ -11,6 +11,19 @@ fn has_lyrics(row: &crate::compiler::types::MeasureRow) -> bool {
         .any(|e| matches!(e.content, crate::compiler::types::ElementContent::Lyric(_)))
 }
 
+/// Column bounds of a measure block, in fractional grid columns, matching where its
+/// bar lines are actually rendered: the ending bar line of every measure is centered
+/// within its own column, while the very first bar line of a row is start-aligned.
+fn measure_column_bounds(col_offset: u32, col_w: u32, is_first_in_row: bool) -> (f32, f32) {
+    let column_start = if is_first_in_row {
+        col_offset as f32
+    } else {
+        col_offset as f32 - 0.5
+    };
+    let column_end = (col_offset + col_w) as f32 - 0.5;
+    (column_start, column_end)
+}
+
 pub(crate) fn system_musical_row_count(system: &[MeasureBlock]) -> usize {
     let Some(first) = system.first() else {
         return 0;
@@ -61,16 +74,18 @@ pub(crate) fn compute_measure_highlights_for_range(
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 
             let mut col_offset: u32 = LABEL_COLS;
-            for block in system {
+            for (block_idx, block) in system.iter().enumerate() {
                 let col_w = block_column_width(block);
                 if global_measure_index >= start_index && global_measure_index <= end_index {
+                    let (column_start, column_end) =
+                        measure_column_bounds(col_offset, col_w, block_idx == 0);
                     results.push((
                         page_idx,
                         MeasureHighlight {
                             row_start,
                             row_end,
-                            column_start: col_offset,
-                            column_end: col_offset + col_w,
+                            column_start,
+                            column_end,
                         },
                     ));
                 }
@@ -107,16 +122,18 @@ pub(crate) fn compute_measure_highlight_location(
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 
             let mut col_offset: u32 = LABEL_COLS;
-            for block in system {
+            for (block_idx, block) in system.iter().enumerate() {
                 let col_w = block_column_width(block);
                 if global_measure_index == highlighted_measure_index {
+                    let (column_start, column_end) =
+                        measure_column_bounds(col_offset, col_w, block_idx == 0);
                     return Some((
                         page_idx,
                         MeasureHighlight {
                             row_start,
                             row_end,
-                            column_start: col_offset,
-                            column_end: col_offset + col_w,
+                            column_start,
+                            column_end,
                         },
                     ));
                 }
@@ -182,15 +199,17 @@ pub(crate) fn compute_all_measure_click_targets(
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 
             let mut col_offset: u32 = LABEL_COLS;
-            for block in system {
+            for (block_idx, block) in system.iter().enumerate() {
                 let col_w = block_column_width(block);
+                let (column_start, column_end) =
+                    measure_column_bounds(col_offset, col_w, block_idx == 0);
                 results.push((
                     page_idx,
                     MeasureClickTarget {
                         row_start,
                         row_end,
-                        column_start: col_offset,
-                        column_end: col_offset + col_w,
+                        column_start,
+                        column_end,
                         measure_index: global_measure_index,
                     },
                 ));

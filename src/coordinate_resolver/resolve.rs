@@ -211,8 +211,8 @@ fn resolve_single_measure_highlight(
         return None;
     }
     let col_width = start_row.column_width_pt(usable_width);
-    let highlight_x = PAGE_MARGIN + highlight.column_start as f32 * col_width;
-    let highlight_width = (highlight.column_end - highlight.column_start) as f32 * col_width;
+    let highlight_x = PAGE_MARGIN + highlight.column_start * col_width;
+    let highlight_width = (highlight.column_end - highlight.column_start) * col_width;
     let highlight_height = rows
         .get(highlight.row_start..=highlight.row_end)
         .map(|slice| slice.iter().map(|row| row.height_pt).sum())
@@ -254,8 +254,8 @@ fn resolve_error_highlights(
                 return None;
             }
             let col_width = start_row.column_width_pt(usable_width);
-            let highlight_x = PAGE_MARGIN + h.column_start as f32 * col_width;
-            let highlight_width = (h.column_end - h.column_start) as f32 * col_width;
+            let highlight_x = PAGE_MARGIN + h.column_start * col_width;
+            let highlight_width = (h.column_end - h.column_start) * col_width;
             let highlight_height = rows
                 .get(h.row_start..=h.row_end)
                 .map(|slice| slice.iter().map(|row| row.height_pt).sum())
@@ -284,8 +284,8 @@ fn resolve_measure_click_target(
         return None;
     }
     let col_width = start_row.column_width_pt(usable_width);
-    let target_x = PAGE_MARGIN + target.column_start as f32 * col_width;
-    let target_width = (target.column_end - target.column_start) as f32 * col_width;
+    let target_x = PAGE_MARGIN + target.column_start * col_width;
+    let target_width = (target.column_end - target.column_start) * col_width;
     let target_height = rows
         .get(target.row_start..=target.row_end)
         .map(|slice| slice.iter().map(|row| row.height_pt).sum())

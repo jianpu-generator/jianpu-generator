@@ -15,8 +15,8 @@ pub struct GridPage {
 pub struct MeasureClickTarget {
     pub row_start: usize,
     pub row_end: usize,
-    pub column_start: u32,
-    pub column_end: u32,
+    pub column_start: f32,
+    pub column_end: f32,
     pub measure_index: usize,
 }
 
@@ -175,6 +175,6 @@ pub struct Header {
 pub struct MeasureHighlight {
     pub row_start: usize,
     pub row_end: usize,
-    pub column_start: u32,
-    pub column_end: u32,
+    pub column_start: f32,
+    pub column_end: f32,
 }
