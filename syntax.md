@@ -76,7 +76,7 @@ One track per line. Blank lines are ignored.
 
 An optional soundfont string `"<number>: <name>"` may follow the kind token (or `follow[X]` bracket) to select the MIDI timbre for that part. The number is the General MIDI program number (0–127). The `<name>` portion is a quoted string and may contain `=` and other characters (for example `"1: Grand = Piano"`). For example: `notes "52: Choir Aahs"` or `follow[A] "1: Grand Piano"`. If omitted on a concrete part, the default is program 52 (Choir Aahs). On a `follow[X]` part, the soundfont is inherited from the target when omitted.
 
-An optional volume suffix `XX%` (where XX is 1–100) may appear after the soundfont string (or after the kind token if there is no soundfont) to set the MIDI volume for that part. For example: `notes "52: Choir Aahs" 47%` or `notes 80%`. If omitted on a concrete part, the default is 100%. On a `follow[X]` part, volume is inherited from the target when omitted and may be overridden with an explicit `XX%` suffix.
+An optional volume suffix `XX%` (1–3 ASCII digits followed by `%`, parsed as an unsigned 8-bit number; values above 100 or 0 are accepted without error or clamping) may appear after the soundfont string (or after the kind token if there is no soundfont) to set the MIDI volume for that part. For example: `notes "52: Choir Aahs" 47%` or `notes 80%`. If omitted on a concrete part, the default is 100%. On a `follow[X]` part, volume is inherited from the target when omitted and may be overridden with an explicit `XX%` suffix.
 
 An optional octave offset `+N` or `-N` (where N is 1–4) may appear anywhere on the right-hand side to shift every note in that part up or down by N octaves in MIDI output only. For example: `notes -1`, `notes+lyrics +1`, `notes "5: Electric Guitar" -2`, or `follow[A] -1`. The offset does not change octave dots in the rendered SVG. If omitted on a concrete part, the default is 0. On a `follow[X]` part, the octave offset is inherited from the target when omitted and may be overridden with an explicit `+N` or `-N` suffix. Values outside ±4 emit a recoverable error and are clamped to ±4.
 
@@ -115,45 +115,33 @@ The `[score]` body is split into **measure groups** by **blank lines**. Each gro
 
 ```
 (bpm=92 key=C4 time=4/4 label="Verse 1")
-1 - - -
-5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_)
-白陽旗旛在大道盛宏
+[Melody] 5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_)
+[Melody] 白陽旗旛在大道盛宏
 
-6m - - -
-3_ (1_1) 0_- 1= 1=
-昌花花
+[Melody] 3_ (1_1) 0_- 1= 1=
+[Melody] 昌花花
 ```
 
 ### Group layout
 
 1. **Optional directive line** — first line containing at least one directive keyword (`bpm=`, `key=`, `time=`, or `label=`)
-2. **Data lines** — one per score line implied by `# parts`, in track declaration order
+2. **Data lines** — every data line **must** begin with a `[Abbrev]` prefix (see below); there are no unprefixed/positional lines
 
 Lines are trimmed; leading/trailing spaces on a line are ignored. A completely empty line separates measure groups (it is not a data line).
 
-### Positional mapping
-
-Positional lines (no `[Abbrev]` prefix) fill the **first declared part's** slots in order. All remaining parts are filled via `[Key]` prefix lines, `follow[X]` target copying, or implicit fill.
-
-| Track | Lines per measure (positional) |
-|-------|--------------------------------|
-| First part only | all its score lines, in order |
-
-Trailing positional lines may be omitted; they are filled with rests (`0`) or no-lyrics (`_`) depending on slot type. You cannot skip a line in the middle.
-
 ### Key-based part prefix (`[Abbrev]`)
 
-A data line may begin with `[Abbrev]` to route it to a specific part by abbreviation:
+Every data line must begin with `[Abbrev]` to route it to a specific part by abbreviation, including the first declared part:
 
 ```
 [A2] 5 6 7 0
 ```
 
-- Positional lines (no prefix) belong exclusively to the **first declared part**; they must come before any `[Key]` lines in the group.
+- A data line with no `[Abbrev]` prefix is a recoverable error; the line is dropped.
 - Any number of `[Key]` lines may appear for the same part; they fill that part's slots in declaration order (first line → first slot, second line → second slot, …).
-- `[Key]` lines targeting the first declared part's abbreviation are an error; the line is dropped.
 - An unrecognised abbreviation is an error; the line is dropped.
-- Parts not covered by any positional or `[Key]` line use their `follow[X]` target's content when declared as such, or are filled with implicit rests/no-lyrics otherwise.
+- Parts not covered by any `[Key]` line use their `follow[X]` target's content when declared as such, or are filled with implicit rests/no-lyrics otherwise.
+- A measure group with zero valid keyed lines is an error (`measure_no_data_lines`).
 
 **Example — only part C plays, A and B are not-mentioned:**
 
@@ -165,14 +153,14 @@ C = notes
 
 # score
 time=4/4 key=C4 bpm=120
-1 2 3 4
+[A] 1 2 3 4
 
 [C] 5 6 7 0
 ```
 
 Measure 2: C plays `5 6 7 0`. A and B have no explicit lines → filled with `0` (rest) and marked not-mentioned (rows suppressed).
 
-**Example — mix positional and key-based in one measure with a follow part:**
+**Example — key-based lines in one measure with a follow part:**
 
 ```
 # parts
@@ -181,8 +169,8 @@ B = follow[A]
 C = notes
 
 # score
-1 2 3 4      ← positional → fills A
-[C] 5 6 7 0  ← key-based → fills C
+[A] 1 2 3 4
+[C] 5 6 7 0
 ```
 
 A: `1 2 3 4`. B: not mentioned → copies A's content via `follow`. C: `5 6 7 0`.
@@ -196,8 +184,8 @@ Alto [A] = follow[S]
 
 # score
 time=4/4 key=C4 bpm=120
-1 2 3 4
-do re mi fa
+[S] 1 2 3 4
+[S] do re mi fa
 [A] 5 6 7 1
 ```
 
@@ -319,7 +307,7 @@ Parentheses connect notes with tie/slur arcs (happi123-style 连音符). A group
 
 Groups may be **nested**: a `(…)` inside another `(…)` adds an inner tie/slur arc while the outer group still connects all enclosed notes. Each nested group must still contain at least 2 notes.
 
-A group must contain **at least 2 notes** (counting notes across a cross-measure open/close). Single-note groups like `(5)` are invalid.
+A group must contain **at least 2 notes** (counting notes across a cross-measure open/close). Single-note groups like `(5)` trigger a non-fatal **warning** (`group_too_few_notes`); rendering still proceeds.
 
 ### Tie (`~`)
 
@@ -334,7 +322,7 @@ A group must contain **at least 2 notes** (counting notes across a cross-measure
 ```
 
 Rules:
-- Both pitch and octave must match the next note — otherwise a recoverable error is emitted and the arc is suppressed.
+- Pitch, accidental, and octave must all match the next note — otherwise a recoverable error is emitted and the arc is suppressed.
 - `~` on a rest is an error.
 - `~` on the last note of the piece (no following note) is an error.
 - Ties span freely across measure boundaries.
@@ -375,7 +363,7 @@ In 4/4, the parser rejects rhythm spellings that cross metrical boundaries witho
 1. **Half-bar boundary:** after beat 1, no single note/rest may span from before beat 3 into beat 3 or beyond (quarter-beat position 8). Use a beam group such as `(2_ 2_)` or a tie instead of a single long value (e.g. `1. 2. 3_ 4_` is invalid; `1. (2_ 2_) 3_ 4_ 0_` is valid). Long notes/rests starting on beat 1 (including a fully extended `1` or `1---`) are allowed.
 2. **Dotted-eighth tail:** a dotted eighth note/rest at the start of a beat must be followed immediately by a sixteenth note/rest filling the remaining sixteenth (e.g. `1_. 2= 3_ …`); `1_. 2_ 3_ 4_` is invalid (`2_.` is a dotted eighth, not an eighth).
 
-Other time signatures skip these checks for now. Violations are parse errors.
+Other time signatures skip these checks for now. Violations are diagnostics attached to the note (half-bar-boundary crossing is a **warning**; the dotted-eighth-tail rule is a **recoverable error**) — the file still renders.
 
 ### Examples
 
@@ -409,8 +397,8 @@ Lyrics lines are plain text tokenised into syllables:
 A `-` **attached** to the end of a Latin syllable marks a word split across notes — the hyphen is part of the syllable text:
 
 ```
-1 1 5 5
-twin- kle twin- kle     ← "twinkle" split across two notes each
+[Melody] 1 1 5 5
+[Melody] twin- kle twin- kle     ← "twinkle" split across two notes each
 ```
 
 This is distinct from a **standalone** `-` surrounded by whitespace (held syllable, below).
@@ -420,8 +408,8 @@ This is distinct from a **standalone** `-` surrounded by whitespace (held syllab
 A `-` **inside** a lyrics line marks the **preceding** syllable as *held* — it stretches across tied notes:
 
 ```
-he llo - world     ← "llo" is held across the tied note
-你 - - 好           ← first 你 is held across two tied notes
+[Melody] he llo - world     ← "llo" is held across the tied note
+[Melody] 你 - - 好           ← first 你 is held across two tied notes
 ```
 
 This is distinct from `-` on a notes line (duration extension) and distinct from `_` (see below).
@@ -431,11 +419,11 @@ This is distinct from `-` on a notes line (duration extension) and distinct from
 A lyrics line whose **entire** trimmed content is `_` means **zero syllables** for that part in this measure (instrumental bar):
 
 ```
-1 2 3 4
-do re mi fa
+[Melody] 1 2 3 4
+[Melody] do re mi fa
 
-5 6 7 1
-_
+[Melody] 5 6 7 1
+[Melody] _
 ```
 
 - `_` is valid **only** on lyrics columns.
@@ -453,7 +441,7 @@ In each measure, the number of lyric syllables must match the number of notes th
 - Held-syllable markers (`-`) count as their own syllables — e.g. `你 - 好` is three syllables for three lyric slots.
 - The `_` no-lyrics marker skips this check (zero syllables allowed regardless of notes).
 
-Mismatch is a parse error, e.g. `lyrics has 3 syllables but notes need 4 in part 'Soprano'`.
+Mismatch is a non-fatal **warning** (rendering continues, with empty-string syllables inserted for underflow), e.g. `[Soprano] lyrics underflow: ran out of syllables at syllable 3 (fewer syllables than notes)` or `[Soprano] lyrics overflow: 1 extra syllable(s) after all notes are consumed`.
 
 ---
 
@@ -505,20 +493,19 @@ Parentheses work identically to notes lines. Spaces inside groups are ignored. E
 Example:
 
 ```
-1 - 6m -
-_1 _1 _1 =1 =1 1_ 6, (6_)
+[chords] 1 - 6m -
+[Melody] _1 _1 _1 =1 =1 1_ 6, (6_)
 ```
 
 ---
 
 ## Not-mentioned parts
 
-When a part is **not mentioned** in a measure (no positional or `[Key]` lines cover it), its row is **not rendered** for that measure — the vertical space is reclaimed and rows below move up.
+When a part is **not mentioned** in a measure (no `[Key]` line covers it), its row is **not rendered** for that measure — the vertical space is reclaimed and rows below move up.
 
 - A `follow[X]` part that is not mentioned copies `X`'s content (audio plays the same as X).
 - A non-follow part that is not mentioned is filled with rests (`0`) or no-lyrics (`_`).
 - All measures sharing a system line must render identical rows. A measure whose rendered shape differs starts a new system line.
-- The first declared part is always considered mentioned (positional lines always fill it first).
 
 ### Omitted lines — fill table
 
@@ -527,10 +514,9 @@ When a part is **not mentioned** in a measure (no positional or `[Key]` lines co
 | Part not mentioned; declared as `follow[X]` | Copies X's content; row suppressed |
 | Part not mentioned; no follow target; notes/chord slot | Silently filled with rests (`0`) |
 | Part not mentioned; no follow target; lyrics slot | Silently filled with no-lyrics (`_`) |
-| `[Key]` line for first part's abbreviation | Error; line dropped |
+| Data line missing `[Abbrev]` prefix | Error; line dropped |
 | `[Key]` line with unrecognised abbreviation | Error; line dropped |
-| More positional lines than first part's slots | Error; excess lines dropped |
-| Fewer than one data line per group | Error |
+| No valid keyed lines in a measure group | Error (`measure_no_data_lines`) |
 
 **Example — part B not mentioned:**
 
@@ -540,10 +526,10 @@ A = chords
 B = notes
 
 # score
-1 2m 3 4
+[A] 1 2m 3 4
 
-1 - - -
-1 2 3 4
+[A] 1 - - -
+[B] 1 2 3 4
 ```
 
 Measure 1: A plays `1 2m 3 4`, B is not mentioned → filled with rests, row suppressed.
@@ -576,24 +562,14 @@ Harmony [H] = follow[M]
 # score
 
 (bpm=120 key=C4 time=4/4 label="Verse")
-1 - 4m 5
-do re mi fa
+[M] 1 - 4m 5
+[M] do re mi fa
 
-1 - 4m 5
-_
+[M] 1 - 4m 5
+[M] _
 [H] 3 - 6m 7
 [H] do re mi fa
 ```
 
 Bar 1: Melody plays `1 - 4m 5` / `do re mi fa`. Harmony is not mentioned → copies Melody, row suppressed.  
 Bar 2: Melody plays `1 - 4m 5` / `_` (no lyrics). Harmony uses `[H]` key lines to override both slots.
-
----
-
-## Further reading
-
-Design specs with additional rationale live in `docs/superpowers/specs/`:
-
-- `2026-06-04-interleaved-syntax-design.md` — interleaved `# score` format
-- `2026-06-05-label-directive-design.md` — `label=` directive
-- `2026-06-06-chord-track-design.md` — `chord:` columns
