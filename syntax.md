@@ -29,6 +29,22 @@ Whitespace around `=` in metadata is optional. Metadata values may be quoted wit
 
 ---
 
+## Comments
+
+`//` starts a comment that runs to the end of the line. It is recognized anywhere in the file — in the metadata, parts, or score sections, on its own line or trailing other content.
+
+```
+# metadata
+title = "My Song"  // shown in the header
+
+// this whole line is a comment
+author = "Jane Doe"
+```
+
+A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is not treated as a comment.
+
+---
+
 ## Metadata
 
 | Field | Required | Default | Description |

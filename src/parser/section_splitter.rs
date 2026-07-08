@@ -15,9 +15,43 @@ pub enum SectionKind {
     Score,
 }
 
+/// Blanks out `//` line comments with spaces, preserving byte length and line
+/// structure so downstream byte offsets (used in error spans) stay valid.
+/// A `//` inside a double-quoted string (e.g. `title = "http://example.com"`)
+/// does not start a comment.
+fn strip_comments(input: &str) -> String {
+    let mut out = Vec::with_capacity(input.len());
+    let mut in_string = false;
+    let mut in_comment = false;
+    let mut bytes = input.as_bytes().iter().copied().peekable();
+    while let Some(byte) = bytes.next() {
+        match byte {
+            b'\n' => {
+                in_string = false;
+                in_comment = false;
+                out.push(byte);
+            }
+            b'"' if !in_comment => {
+                in_string = !in_string;
+                out.push(byte);
+            }
+            b'/' if !in_string && !in_comment && bytes.peek() == Some(&b'/') => {
+                in_comment = true;
+                out.push(b' ');
+            }
+            _ => out.push(if in_comment { b' ' } else { byte }),
+        }
+    }
+    // Every replaced byte is either an ASCII space or an unmodified original
+    // byte, so `out` stays valid UTF-8 even where a multi-byte character was
+    // blanked out.
+    String::from_utf8(out).unwrap_or_default()
+}
+
 /// Splits `input` into known sections. Unknown section headers are skipped and
 /// reported as recoverable errors. Order and duplicate checks are left to the caller.
 pub fn split_sections(input: &str) -> (Vec<RawSection>, Vec<RecoverableError>) {
+    let input = &strip_comments(input);
     let mut sections: Vec<RawSection> = Vec::new();
     let mut errors: Vec<RecoverableError> = Vec::new();
     let mut current_kind: Option<SectionKind> = None;
@@ -162,6 +196,40 @@ mod tests {
         let input = "# metadata\ntitle = \"hi\"\n\n# parts\nMelody = notes+lyrics\n\n# score\n";
         let (sections, _errors) = split_sections(input);
         assert_eq!(sections[0].content_offset, 11);
+    }
+
+    #[test]
+    fn strips_whole_line_comment() {
+        let input = "# metadata\n// this is a comment\ntitle = \"hi\"\n\n# parts\nMelody = notes\n\n# score\n1 2 3\n";
+        let (sections, errors) = split_sections(input);
+        assert!(errors.is_empty());
+        assert_eq!(sections[0].content.trim(), "title = \"hi\"");
+    }
+
+    #[test]
+    fn strips_trailing_inline_comment() {
+        let input = "# metadata\ntitle = \"hi\"\n\n# parts\nMelody = notes\n\n# score\n1 2 3 // trailing comment\n";
+        let (sections, errors) = split_sections(input);
+        assert!(errors.is_empty());
+        assert_eq!(sections[2].content.trim(), "1 2 3");
+    }
+
+    #[test]
+    fn does_not_treat_slashes_inside_quotes_as_comment() {
+        let input = "# metadata\ntitle = \"http://example.com\"\n\n# parts\nMelody = notes\n\n# score\n1 2 3\n";
+        let (sections, errors) = split_sections(input);
+        assert!(errors.is_empty());
+        assert_eq!(sections[0].content.trim(), "title = \"http://example.com\"");
+    }
+
+    #[test]
+    fn comment_preserves_byte_offsets() {
+        let input = "# metadata\ntitle = \"hi\" // note\nauthor = \"a\"\n\n# parts\nMelody = notes\n\n# score\n1 2 3\n";
+        let (sections, _errors) = split_sections(input);
+        // "author" must still be found at its original byte offset within the section content.
+        let author_pos_in_content = sections[0].content.find("author").unwrap();
+        let expected = input.find("author").unwrap() - sections[0].content_offset;
+        assert_eq!(author_pos_in_content, expected);
     }
 
     #[test]
