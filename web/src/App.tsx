@@ -47,6 +47,7 @@ export default function App() {
     switchBackend,
     forceSave,
     flushPendingSave,
+    refreshSaveStatus,
   } = useStorageBackend()
   const [sharedPreview, setSharedPreview] = useState<SharePayload | null>(null)
   useEffect(() => {
@@ -343,6 +344,7 @@ export default function App() {
         switchBackend={switchBackend}
         store={store}
         setStore={setStore}
+        refreshSaveStatus={refreshSaveStatus}
       />
       <span
         data-testid="selected-measure-range"

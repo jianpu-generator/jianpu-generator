@@ -98,6 +98,15 @@ export interface UseStorageBackendResult {
    * for that case. A no-op for `localBackend` or when nothing is pending.
    */
   flushPendingSave: () => void
+  /**
+   * Re-reads `backend.status()` into `saveStatus`. Needed after callers that
+   * mutate a `GithubBackend`'s status by calling `saveContent`/`load`
+   * directly rather than through `runSave` — namely
+   * `StorageSettingsModal`'s conflict-resolution flow — so the "Saved"
+   * badge in `FileTabBar` doesn't keep showing a stale status (e.g. the
+   * conflict's `'error'`) after the conflict has actually been resolved.
+   */
+  refreshSaveStatus: () => void
 }
 
 /**
@@ -137,6 +146,18 @@ export function shouldWarnBeforeUnload(
 ): boolean {
   if (backendKind !== 'github') return false
   return isPending || saveStatus === 'saving'
+}
+
+/**
+ * Maps a `StorageBackend.status()` reading to the `SaveStatus` shown in the
+ * UI: `'idle'` alone doesn't tell the user whether the store is idle because
+ * it was just persisted or because nothing has happened yet, so both
+ * `runSave` (after an autosave/force-save lands) and `refreshSaveStatus`
+ * (after a conflict resolution mutates the backend's status directly)
+ * normalize it to the more informative `'saved'`.
+ */
+function displaySaveStatus(status: SaveStatus): SaveStatus {
+  return status === 'idle' ? 'saved' : status
 }
 
 /**
@@ -223,8 +244,7 @@ export function useStorageBackend(): UseStorageBackendResult {
       const promise = backend
         .saveContent(state)
         .then(() => {
-          const status = backend.status()
-          setSaveStatus(status === 'idle' ? 'saved' : status)
+          setSaveStatus(displaySaveStatus(backend.status()))
         })
         .catch(() => {
           setSaveStatus(backend.status())
@@ -295,6 +315,10 @@ export function useStorageBackend(): UseStorageBackendResult {
     }
   }, [backend, debouncedSave])
 
+  const refreshSaveStatus = useCallback(() => {
+    setSaveStatus(displaySaveStatus(backend.status()))
+  }, [backend])
+
   const switchBackend = useCallback(
     async (target: StorageBackendTarget) => {
       if (backend.kind === 'github' && debouncedSave.isPending()) {
@@ -323,5 +347,6 @@ export function useStorageBackend(): UseStorageBackendResult {
     switchBackend,
     forceSave,
     flushPendingSave,
+    refreshSaveStatus,
   }
 }

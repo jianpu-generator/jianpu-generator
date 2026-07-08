@@ -30,6 +30,12 @@ export interface StorageSettingsModalProps {
   setStore: (
     value: FileStoreState | ((prev: FileStoreState) => FileStoreState),
   ) => void
+  /** Re-syncs `useStorageBackend`'s `saveStatus` state after a conflict
+   * resolution mutates the `GithubBackend`'s status directly (via
+   * `resolveGithubConflict`'s `saveContent`/`load` calls, which bypass the
+   * hook's own `runSave`), so the tab bar's "Saved" badge stops showing the
+   * conflict's stale error status once resolved. */
+  refreshSaveStatus: () => void
 }
 
 /** Public GitHub OAuth App client ID; not a secret (it's visible in every
@@ -190,6 +196,7 @@ export function StorageSettingsModal({
   switchBackend,
   store,
   setStore,
+  refreshSaveStatus,
 }: StorageSettingsModalProps) {
   const [selectedKind, setSelectedKind] = useState<'local' | 'github'>(
     preference.backend,
@@ -281,6 +288,7 @@ export function StorageSettingsModal({
     if (!isGithubBackend(backend)) return
     const nextStore = await resolveGithubConflict(resolution, backend, store)
     setStore(nextStore)
+    refreshSaveStatus()
   }
 
   return (

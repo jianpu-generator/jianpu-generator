@@ -81,6 +81,11 @@ async function setUpConflictingEdit(
     'scores/conflict.jianpu',
   )
 
+  // The failed force-save left the "Saved" badge showing the conflict's
+  // error status — resolving it below should update the badge, not leave it
+  // stuck.
+  await expect(page.getByTestId('save-status-badge')).toHaveText('Save failed')
+
   return controller
 }
 
@@ -98,6 +103,7 @@ test('overwriting mine re-pushes the in-memory edit and clears the conflict bann
   await expect
     .poll(() => putBodies.at(-1))
     .toEqual(expect.stringContaining('1 2 3 4 5'))
+  await expect(page.getByTestId('save-status-badge')).toHaveText('Saved')
 
   // The editor still shows the user's edit: overwrite-mine must not have
   // discarded it.
@@ -118,6 +124,7 @@ test('discarding mine reloads the remote content and clears the conflict banner'
   await page.getByRole('button', { name: 'Discard mine' }).click()
 
   await expect(page.getByTestId('conflict-banner')).toHaveCount(0)
+  await expect(page.getByTestId('save-status-badge')).toHaveText('Saved')
 
   // The editor now shows the remote content, not the user's edit.
   await expect(page.locator('.monaco-editor .view-lines')).toContainText(
