@@ -33,6 +33,25 @@ const source = [
   '4 3 2 1',
 ].join('\n')
 
+// Read the live Monaco selection off the `monaco` global that
+// `@monaco-editor/react`'s loader exposes on `window`, rather than trusting
+// only the `selected-measure-range` testid — this confirms the editor's
+// actual highlighted text spans the clicked section's lines, not just that
+// the app's internal state was updated.
+async function getEditorSelection(page: import('@playwright/test').Page) {
+  return page.evaluate(() => {
+    const monacoApi = (
+      window as unknown as { monaco: typeof import('monaco-editor') }
+    ).monaco
+    const selection = monacoApi.editor.getEditors()[0]?.getSelection()
+    if (!selection) return null
+    return {
+      startLineNumber: selection.startLineNumber,
+      endLineNumber: selection.endLineNumber,
+    }
+  })
+}
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript((src) => {
     localStorage.setItem(
@@ -77,4 +96,32 @@ test('clicking section B button selects measures 2–3', async ({ page }) => {
   await expect(page.getByTestId('selected-measure-range')).toHaveText('2-3', {
     timeout: 3_000,
   })
+})
+
+test('clicking section A button highlights lines 8–11 in the Monaco editor', async ({
+  page,
+}) => {
+  await page.locator('button.section-jump-btn', { hasText: 'A' }).click()
+
+  await expect(page.getByTestId('selected-measure-range')).toHaveText('0-1', {
+    timeout: 3_000,
+  })
+
+  await expect
+    .poll(() => getEditorSelection(page), { timeout: 3_000 })
+    .toEqual({ startLineNumber: 8, endLineNumber: 11 })
+})
+
+test('clicking section B button highlights lines 13–16 in the Monaco editor', async ({
+  page,
+}) => {
+  await page.locator('button.section-jump-btn', { hasText: 'B' }).click()
+
+  await expect(page.getByTestId('selected-measure-range')).toHaveText('2-3', {
+    timeout: 3_000,
+  })
+
+  await expect
+    .poll(() => getEditorSelection(page), { timeout: 3_000 })
+    .toEqual({ startLineNumber: 13, endLineNumber: 16 })
 })
