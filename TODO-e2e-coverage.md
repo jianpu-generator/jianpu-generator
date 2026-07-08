@@ -95,6 +95,21 @@ helper used by the `*-github.spec.ts` files.
         existing player or reset the button back to "Generate audio",
         matching `useJianpuWorker.ts`'s `[activeFile]`-only clear effect.
 
+- [x] **SoundfontSearchModal fuzzy search, tag filters, and instrument
+      preview** (`SoundfontSearchModal.tsx:24` `fuzzyScore`/
+      `instrumentFuzzyScore`, `:246` `toggleTag`, `:259` the `filtered`
+      AND-filter, `:274` `handlePlay`). Previously zero automated coverage
+      on three independent pieces of business logic. Added
+      `web/e2e/soundfont-search-modal.spec.ts`, asserting:
+      - Typing a fuzzy query (`vln`) surfaces "40: Violin" via subsequence
+        matching while excluding unrelated instruments.
+      - Clicking an instrument's `#strings` tag narrows the list to the
+        strings-category instruments (AND-filter) and un-clicking restores
+        the full list.
+      - Clicking the preview button flips its title to "Pause preview" and
+        clicking again reverts it to "Preview instrument", guarding against
+        a stuck-playing preview toggle.
+
 ## Not worth adding right now
 
 - Individual GitHub error-path tests (500s, rate-limit banner) per
@@ -102,8 +117,6 @@ helper used by the `*-github.spec.ts` files.
   than the conflict-resolution test above since it's the same banner logic
   (`errorBannerMessage`) already partially exercised; add only if a bug
   surfaces there.
-- `SoundfontSearchModal` — real UI gap (zero e2e references) but low risk:
-  it's a search/filter list, not a data-mutating flow.
 
 ## Cleanup
 
