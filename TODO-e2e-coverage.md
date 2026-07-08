@@ -52,7 +52,7 @@ helper used by the `*-github.spec.ts` files.
       - Both buttons are disabled while `rendering`/`exporting` is true
         (`disabled={!canExportPdf}` / `!canExportSplitPdf`).
 
-- [ ] **Cmd/Ctrl+S force-save shortcut** (`App.tsx:212`
+- [x] **Cmd/Ctrl+S force-save shortcut** (`App.tsx:212`
       `modifier && event.key.toLowerCase() === 's'` → `forceSaveRef.current()`
       / `forceSave`). Shares the same `onKeyDown` handler as the already-
       tested play shortcut (`web/e2e/cmd-enter-play.spec.ts`), but only the
