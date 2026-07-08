@@ -79,6 +79,22 @@ helper used by the `*-github.spec.ts` files.
       file bugs like the one fixed for shared-import (see
       `TODO-e2e-github-storage.md`'s import entry) tend to hide.
 
+- [x] **Generate/Regenerate full-score audio** (`Preview.tsx:404`
+      `onGenerateAudio` button, `useJianpuWorker.ts:282` `generateFullAudio`,
+      `:125` `setNextWavUrl`). Full synthesis pipeline parallel in risk to
+      PDF export and per-measure playback but previously uncovered. Added
+      `web/e2e/export-audio.spec.ts`, asserting:
+      - Clicking "Generate audio" produces a `.preview-audio-player` with a
+        `blob:` `src` and a decodable, non-zero `duration` (catches a
+        silently empty/corrupt WAV).
+      - The button's label flips to "Regenerate audio" once a `wavUrl`
+        exists, and clicking it again actually replaces the blob `src`
+        rather than reusing the old object URL (`setNextWavUrl`'s
+        revoke-then-set logic).
+      - Editing the source in place (no file switch) does not clear the
+        existing player or reset the button back to "Generate audio",
+        matching `useJianpuWorker.ts`'s `[activeFile]`-only clear effect.
+
 ## Not worth adding right now
 
 - Individual GitHub error-path tests (500s, rate-limit banner) per
