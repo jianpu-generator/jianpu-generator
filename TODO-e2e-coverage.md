@@ -61,7 +61,7 @@ helper used by the `*-github.spec.ts` files.
       Meta/Ctrl+S triggers a save (e.g. via the GitHub mock, assert a `PUT`
       fires immediately rather than waiting for autosave's debounce).
 
-- [ ] **Playback actually plays** (`Preview.tsx`'s `playMeasureRef` /
+- [x] **Playback actually plays** (`Preview.tsx`'s `playMeasureRef` /
       `playSelectedMeasures` in `useJianpuWorker.ts`). Existing
       `cmd-enter-play.spec.ts` only asserts the no-op case (no measure
       selected). Add a case with a valid `selectedMeasureRange` and
