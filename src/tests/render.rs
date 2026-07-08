@@ -327,8 +327,12 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
     let compile_result = compiler::compile(&score);
     let compile_result = consolidator::consolidate(compile_result);
     let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
-    let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)
-        .expect("coordinate resolver should not fail in tests");
+    let abs = coordinate_resolver::resolve(
+        &grid_pages,
+        config.note_number_width as f32,
+        config.lyric_font_sizes(),
+    )
+    .expect("coordinate resolver should not fail in tests");
 
     let mut underlines: Vec<(f32, f32)> = abs[0]
         .elements

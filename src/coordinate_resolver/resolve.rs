@@ -8,14 +8,52 @@ use crate::grid_layout::types::{
 };
 use crate::grid_layout::PAGE_MARGIN;
 
+/// Font sizes used to estimate lyric syllable width, so a clamp can keep
+/// wide syllables from bleeding past their grid column (see
+/// [`estimate_lyric_width`]).
+#[derive(Clone, Copy)]
+pub struct LyricFontSizes {
+    pub base: f32,
+    pub cjk: f32,
+}
+
 pub fn resolve(
     pages: &[GridPage],
     note_number_width: f32,
+    lyric_font_sizes: LyricFontSizes,
 ) -> Result<Vec<AbsolutePage>, IrrecoverableError> {
     pages
         .iter()
-        .map(|page| resolve_page(page, note_number_width))
+        .map(|page| resolve_page(page, note_number_width, lyric_font_sizes))
         .collect()
+}
+
+/// Rough estimate (in points) of a lyric syllable's rendered width, used only
+/// to keep long syllables from bleeding past the left edge of their grid
+/// column and into the bar line to their left. Sans-serif glyphs average
+/// roughly half their font size in width; CJK glyphs render roughly square.
+fn estimate_lyric_width(s: &str, fonts: LyricFontSizes) -> f32 {
+    const LATIN_AVG_CHAR_WIDTH_RATIO: f32 = 0.55;
+    s.chars()
+        .map(|c| {
+            if ('\u{4E00}'..='\u{9FFF}').contains(&c) {
+                fonts.cjk
+            } else {
+                fonts.base * LATIN_AVG_CHAR_WIDTH_RATIO
+            }
+        })
+        .sum()
+}
+
+/// Clamps a centered lyric syllable's x so its left edge never crosses
+/// `x_start`, its column's left boundary (and thus the bar line one column
+/// to its left).
+fn clamp_lyric_x(x: f32, x_start: f32, content: &GridContent, fonts: LyricFontSizes) -> f32 {
+    let GridContent::LyricSyllable(s) = content else {
+        return x;
+    };
+    let half_width = estimate_lyric_width(s, fonts) * 0.5;
+    x.max(x_start + half_width)
 }
 
 /// Gap kept between a bottom-aligned directive line (section label, key,
@@ -29,6 +67,7 @@ fn resolve_row_element(
     row_y: f32,
     col_width: f32,
     note_number_width: f32,
+    lyric_font_sizes: LyricFontSizes,
 ) -> Result<Option<AbsoluteElement>, IrrecoverableError> {
     let x_start = PAGE_MARGIN + el.column as f32 * col_width;
     let span_width = el.column_span as f32 * col_width;
@@ -37,6 +76,7 @@ fn resolve_row_element(
         HAlign::Center => x_start + span_width * 0.5,
         HAlign::End => x_start + span_width,
     };
+    let x = clamp_lyric_x(x, x_start, &el.content, lyric_font_sizes);
     let bottom_padding = if matches!(el.content, GridContent::DirectiveLine { .. }) {
         DIRECTIVE_LINE_BOTTOM_PADDING
     } else {
@@ -165,6 +205,7 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
 fn resolve_page(
     page: &GridPage,
     note_number_width: f32,
+    lyric_font_sizes: LyricFontSizes,
 ) -> Result<AbsolutePage, IrrecoverableError> {
     let usable_width = page.width_pt - 2.0 * PAGE_MARGIN;
     let mut elements: Vec<AbsoluteElement> = Vec::new();
@@ -175,9 +216,14 @@ fn resolve_page(
         row_tops.push(row_y);
         let col_width = row.column_width_pt(usable_width);
         for el in &row.elements {
-            if let Some(element) =
-                resolve_row_element(el, row, row_y, col_width, note_number_width)?
-            {
+            if let Some(element) = resolve_row_element(
+                el,
+                row,
+                row_y,
+                col_width,
+                note_number_width,
+                lyric_font_sizes,
+            )? {
                 elements.push(element);
             }
         }

@@ -210,7 +210,11 @@ fn render_svgs_with_parts(
     let compile_result = compiler::compile(score);
     let compile_result = consolidator::consolidate(compile_result);
     let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
-    let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)?;
+    let abs = coordinate_resolver::resolve(
+        &grid_pages,
+        config.note_number_width as f32,
+        config.lyric_font_sizes(),
+    )?;
     let docs = renderer::new_renderer::render_new(&abs, &config);
     Ok(serializer::serialize(&docs))
 }
@@ -320,7 +324,11 @@ pub fn render_svgs_with_highlight_range(
         842.0,
         Some((*measure_range.start(), *measure_range.end())),
     );
-    let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)?;
+    let abs = coordinate_resolver::resolve(
+        &grid_pages,
+        config.note_number_width as f32,
+        config.lyric_font_sizes(),
+    )?;
     let docs = renderer::new_renderer::render_new(&abs, &config);
     Ok(RenderOutput {
         svgs: serializer::serialize(&docs),
@@ -337,7 +345,11 @@ fn render_documents(
     let compile_result = compiler::compile(score);
     let compile_result = consolidator::consolidate(compile_result);
     let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
-    let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)?;
+    let abs = coordinate_resolver::resolve(
+        &grid_pages,
+        config.note_number_width as f32,
+        config.lyric_font_sizes(),
+    )?;
     Ok(renderer::new_renderer::render_new(&abs, &config))
 }
 
@@ -359,7 +371,11 @@ fn render_documents_with_range(
         842.0,
         Some((start_index, end_index)),
     );
-    let abs = coordinate_resolver::resolve(&grid_pages, config.note_number_width as f32)?;
+    let abs = coordinate_resolver::resolve(
+        &grid_pages,
+        config.note_number_width as f32,
+        config.lyric_font_sizes(),
+    )?;
     Ok(renderer::new_renderer::render_new(&abs, &config))
 }
 

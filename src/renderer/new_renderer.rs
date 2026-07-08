@@ -14,8 +14,8 @@ pub fn render_new(pages: &[AbsolutePage], config: &RenderConfig) -> Vec<SvgDocum
 
 fn render_page(page: &AbsolutePage, config: &RenderConfig) -> SvgDocument {
     let row_height = config.row_height as f32;
-    let base_font_size = row_height * 0.6;
-    let cjk_font_size = base_font_size * 1.2;
+    let base_font_size = config.lyric_font_size();
+    let cjk_font_size = config.lyric_cjk_font_size();
     let note_number_width = config.note_number_width as f32;
 
     let elements = page

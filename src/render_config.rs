@@ -1,4 +1,5 @@
 use crate::ast::grouped::Metadata;
+use crate::coordinate_resolver::LyricFontSizes;
 
 #[derive(Debug, Clone)]
 pub struct RenderConfig {
@@ -15,6 +16,24 @@ impl RenderConfig {
             label_width: meta.label_width,
             note_number_width: meta.note_number_width,
             max_columns: meta.max_columns,
+        }
+    }
+
+    /// Font size used for Latin-script lyric syllables (and other body text).
+    pub fn lyric_font_size(&self) -> f32 {
+        self.row_height as f32 * 0.6
+    }
+
+    /// Font size used for CJK lyric syllables, which render larger than Latin
+    /// glyphs at the same visual weight.
+    pub fn lyric_cjk_font_size(&self) -> f32 {
+        self.lyric_font_size() * 1.2
+    }
+
+    pub fn lyric_font_sizes(&self) -> LyricFontSizes {
+        LyricFontSizes {
+            base: self.lyric_font_size(),
+            cjk: self.lyric_cjk_font_size(),
         }
     }
 }
