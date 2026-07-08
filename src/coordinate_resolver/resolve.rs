@@ -18,6 +18,11 @@ pub fn resolve(
         .collect()
 }
 
+/// Gap kept between a bottom-aligned directive line (section label, key,
+/// bpm, time signature) and the top of the musical row below it, so the
+/// vertically-centered text doesn't dip into the measure underneath.
+const DIRECTIVE_LINE_BOTTOM_PADDING: f32 = 16.0;
+
 fn resolve_row_element(
     el: &GridElement,
     row: &GridRow,
@@ -32,10 +37,15 @@ fn resolve_row_element(
         HAlign::Center => x_start + span_width * 0.5,
         HAlign::End => x_start + span_width,
     };
+    let bottom_padding = if matches!(el.content, GridContent::DirectiveLine { .. }) {
+        DIRECTIVE_LINE_BOTTOM_PADDING
+    } else {
+        0.0
+    };
     let y = match el.valign {
         VAlign::Top => row_y,
         VAlign::Center => row_y + row.height_pt * 0.5,
-        VAlign::Bottom => row_y + row.height_pt,
+        VAlign::Bottom => row_y + row.height_pt - bottom_padding,
     };
 
     match &el.content {
