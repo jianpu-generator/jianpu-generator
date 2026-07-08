@@ -125,3 +125,48 @@ test('clicking section B button highlights lines 13–16 in the Monaco editor', 
     .poll(() => getEditorSelection(page), { timeout: 3_000 })
     .toEqual({ startLineNumber: 13, endLineNumber: 16 })
 })
+
+// Section labels are also rendered inside the SVG preview itself (as a
+// `<g data-tag="section-label" data-section-label="…">` group) and are
+// clickable there via the same onMouseDown -> elementFromPoint lookup that
+// backs the button toolbar. Cover that path separately, since it goes
+// through a different DOM element than `button.section-jump-btn`.
+test('clicking section A label in the SVG preview highlights lines 8–11 in the Monaco editor', async ({
+  page,
+}) => {
+  const label = page
+    .locator(
+      '.preview-pages g[data-tag="section-label"][data-section-label="A"]',
+    )
+    .first()
+  await label.waitFor({ timeout: 15_000 })
+  await label.click()
+
+  await expect(page.getByTestId('selected-measure-range')).toHaveText('0-1', {
+    timeout: 3_000,
+  })
+
+  await expect
+    .poll(() => getEditorSelection(page), { timeout: 3_000 })
+    .toEqual({ startLineNumber: 8, endLineNumber: 11 })
+})
+
+test('clicking section B label in the SVG preview highlights lines 13–16 in the Monaco editor', async ({
+  page,
+}) => {
+  const label = page
+    .locator(
+      '.preview-pages g[data-tag="section-label"][data-section-label="B"]',
+    )
+    .first()
+  await label.waitFor({ timeout: 15_000 })
+  await label.click()
+
+  await expect(page.getByTestId('selected-measure-range')).toHaveText('2-3', {
+    timeout: 3_000,
+  })
+
+  await expect
+    .poll(() => getEditorSelection(page), { timeout: 3_000 })
+    .toEqual({ startLineNumber: 13, endLineNumber: 16 })
+})
