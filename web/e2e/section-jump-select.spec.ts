@@ -126,6 +126,116 @@ test('clicking section B button highlights lines 13–16 in the Monaco editor', 
     .toEqual({ startLineNumber: 13, endLineNumber: 16 })
 })
 
+// Drags a mouse (already pressed down) from one section button to another,
+// interpolating through intermediate points so the cursor never technically
+// leaves the toolbar's bounding box mid-transition. A single-jump hover
+// (locator.hover()) can land the cursor exactly on the toolbar's edge for a
+// frame, spuriously firing the container's onMouseLeave and cancelling the
+// drag (App.tsx's toolbar `onMouseLeave` resets dragStartLabel) — this
+// mirrors the multi-step pattern already used in drag-to-select-measures.spec.ts.
+async function dragBetweenSectionButtons(
+  page: import('@playwright/test').Page,
+  from: import('@playwright/test').Locator,
+  to: import('@playwright/test').Locator,
+) {
+  const fromBox = await from.boundingBox()
+  const toBox = await to.boundingBox()
+  if (!fromBox || !toBox) {
+    throw new Error('Could not get bounding boxes for section buttons.')
+  }
+
+  await page.mouse.move(
+    fromBox.x + fromBox.width / 2,
+    fromBox.y + fromBox.height / 2,
+  )
+  await page.mouse.down()
+  // Wait for the mousedown's setDragStartLabel state update to commit
+  // before moving on — otherwise the target button's onMouseEnter can fire
+  // fast enough (under synthetic/automated input) to read the pre-drag
+  // (null) dragStartLabel and skip handleSectionRangeSelect entirely.
+  await expect(from).toHaveClass(/section-jump-btn--dragging/, {
+    timeout: 3_000,
+  })
+  await page.mouse.move(toBox.x + toBox.width / 2, toBox.y + toBox.height / 2, {
+    steps: 10,
+  })
+  // Wait for the target's mouseenter (and the resulting
+  // handleSectionRangeSelect call) to actually land before the caller
+  // releases the mouse — under parallel test load the final synthetic
+  // mousemove can otherwise be processed after mouseup, making the drag a
+  // no-op that only registers the initial mousedown click.
+  await expect(to).toHaveClass(/section-jump-btn--dragging/, {
+    timeout: 3_000,
+  })
+}
+
+// Dragging from one section button to another should select the merged
+// line/measure range spanning both sections, via
+// useSectionNavigation's handleSectionRangeSelect.
+test('dragging from section A button to section B button selects the merged range', async ({
+  page,
+}) => {
+  const buttonA = page.locator('button.section-jump-btn', { hasText: 'A' })
+  const buttonB = page.locator('button.section-jump-btn', { hasText: 'B' })
+
+  await dragBetweenSectionButtons(page, buttonA, buttonB)
+  await page.mouse.up()
+
+  await expect(page.getByTestId('selected-measure-range')).toHaveText('0-3', {
+    timeout: 3_000,
+  })
+
+  await expect
+    .poll(() => getEditorSelection(page), { timeout: 3_000 })
+    .toEqual({ startLineNumber: 8, endLineNumber: 16 })
+})
+
+// Reverse-direction drag confirms the order-independent lookup in
+// handleSectionRangeSelect (labels are matched start/end in either order).
+test('dragging from section B button to section A button selects the merged range', async ({
+  page,
+}) => {
+  const buttonA = page.locator('button.section-jump-btn', { hasText: 'A' })
+  const buttonB = page.locator('button.section-jump-btn', { hasText: 'B' })
+
+  await dragBetweenSectionButtons(page, buttonB, buttonA)
+  await page.mouse.up()
+
+  await expect(page.getByTestId('selected-measure-range')).toHaveText('0-3', {
+    timeout: 3_000,
+  })
+
+  await expect
+    .poll(() => getEditorSelection(page), { timeout: 3_000 })
+    .toEqual({ startLineNumber: 8, endLineNumber: 16 })
+})
+
+// While a drag is in progress, every section button between the drag start
+// and the currently-hovered button should get the `--dragging` highlight
+// class (dragHighlightedLabels). The class doubles as the "active
+// selection" indicator (activeHighlightedLabels), so it stays applied after
+// mouseup too — the completed drag leaves the merged A-B range selected,
+// it doesn't merely mark an in-progress drag.
+test('dragging between section buttons highlights them while dragging', async ({
+  page,
+}) => {
+  const buttonA = page.locator('button.section-jump-btn', { hasText: 'A' })
+  const buttonB = page.locator('button.section-jump-btn', { hasText: 'B' })
+
+  await dragBetweenSectionButtons(page, buttonA, buttonB)
+
+  await expect(buttonA).toHaveClass(/section-jump-btn--dragging/)
+  await expect(buttonB).toHaveClass(/section-jump-btn--dragging/)
+
+  await page.mouse.up()
+
+  // The A-B range is now the active selection, so both buttons remain
+  // highlighted (not cleared) — confirms activeHighlightedLabels falls back
+  // to selectedLineRange once dragStartLabel resets to null.
+  await expect(buttonA).toHaveClass(/section-jump-btn--dragging/)
+  await expect(buttonB).toHaveClass(/section-jump-btn--dragging/)
+})
+
 // Section labels are also rendered inside the SVG preview itself (as a
 // `<g data-tag="section-label" data-section-label="…">` group) and are
 // clickable there via the same onMouseDown -> elementFromPoint lookup that
