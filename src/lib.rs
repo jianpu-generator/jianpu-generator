@@ -67,7 +67,8 @@ pub struct RenderDocumentOutput {
     pub diagnostics: Vec<Diagnostic>,
 }
 
-fn collect_measure_diagnostics(score: &Score) -> Vec<Diagnostic> {
+/// All diagnostics for a score: document-level plus per-measure.
+pub fn collect_measure_diagnostics(score: &Score) -> Vec<Diagnostic> {
     score
         .document_diagnostics
         .iter()

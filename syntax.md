@@ -114,7 +114,7 @@ Melody = notes+lyrics
 The `[score]` body is split into **measure groups** by **blank lines**. Each group is exactly one bar (measure).
 
 ```
-(bpm=92 key=C4 time=4/4 label="Verse 1")
+bpm=92 key=C4 time=4/4 label="Verse 1"
 [Melody] 5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_)
 [Melody] 白陽旗旛在大道盛宏
 
@@ -145,7 +145,7 @@ Every data line must begin with `[Abbrev]` to route it to a specific part by abb
 
 **Example — only part C plays, A and B are not-mentioned:**
 
-```
+```jianpu
 # parts
 A = notes
 B = notes
@@ -162,7 +162,7 @@ Measure 2: C plays `5 6 7 0`. A and B have no explicit lines → filled with `0`
 
 **Example — key-based lines in one measure with a follow part:**
 
-```
+```jianpu
 # parts
 A = notes
 B = follow[A]
@@ -177,7 +177,7 @@ A: `1 2 3 4`. B: not mentioned → copies A's content via `follow`. C: `5 6 7 0`
 
 **Example — follow part with partial key override:**
 
-```
+```jianpu
 # parts
 Soprano [S] = notes+lyrics
 Alto [A] = follow[S]
@@ -520,7 +520,7 @@ When a part is **not mentioned** in a measure (no `[Key]` line covers it), its r
 
 **Example — part B not mentioned:**
 
-```
+```jianpu
 # parts
 A = chords
 B = notes
@@ -550,7 +550,7 @@ Measure 2: A plays `1 - - -`, B plays `1 2 3 4`.
 
 ## Complete minimal example
 
-```
+```jianpu
 # metadata
 title = "Demo"
 author = "Author"
@@ -561,15 +561,15 @@ Harmony [H] = follow[M]
 
 # score
 
-(bpm=120 key=C4 time=4/4 label="Verse")
-[M] 1 - 4m 5
+bpm=120 key=C4 time=4/4 label="Verse"
+[M] 1 2 4 5
 [M] do re mi fa
 
-[M] 1 - 4m 5
+[M] 1 2 4 5
 [M] _
-[H] 3 - 6m 7
+[H] 3 5 6 7
 [H] do re mi fa
 ```
 
-Bar 1: Melody plays `1 - 4m 5` / `do re mi fa`. Harmony is not mentioned → copies Melody, row suppressed.  
-Bar 2: Melody plays `1 - 4m 5` / `_` (no lyrics). Harmony uses `[H]` key lines to override both slots.
+Bar 1: Melody plays `1 2 4 5` / `do re mi fa`. Harmony is not mentioned → copies Melody, row suppressed.  
+Bar 2: Melody plays `1 2 4 5` / `_` (no lyrics). Harmony uses `[H]` key lines to override both slots.

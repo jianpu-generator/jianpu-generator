@@ -35,6 +35,9 @@ enum Commands {
         #[command(subcommand)]
         format: GenerateFormat,
     },
+    Check {
+        input: PathBuf,
+    },
 }
 
 #[derive(Subcommand)]
@@ -93,11 +96,13 @@ fn main() -> ExitCode {
     let args = Args::parse();
 
     let result = match args.command {
-        Commands::Generate { format } => run_generate(format),
+        Commands::Generate { format } => run_generate(format).map(|()| true),
+        Commands::Check { input } => run_check(&input),
     };
 
     match result {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(true) => ExitCode::SUCCESS,
+        Ok(false) => ExitCode::FAILURE,
         Err(e) => {
             error_reporter::render(&e);
             ExitCode::FAILURE
@@ -423,6 +428,27 @@ fn run_generate(format: GenerateFormat) -> Result<(), jg::error::IrrecoverableEr
             split_tracks,
         }),
     }
+}
+
+/// Returns `Ok(true)` when the file parses with no errors, `Ok(false)` when it
+/// parses but has recoverable errors.
+fn run_check(input: &Path) -> Result<bool, jg::error::IrrecoverableError> {
+    let score = parse_and_group(input)?;
+    let diagnostics = jg::collect_measure_diagnostics(&score);
+
+    for diagnostic in &diagnostics {
+        eprintln!("{}: {}", input.display(), diagnostic.message());
+    }
+
+    let has_errors = diagnostics
+        .iter()
+        .any(|d| matches!(d, jg::error::Diagnostic::Error(_)));
+    if has_errors {
+        return Ok(false);
+    }
+
+    println!("{input:?}: ok");
+    Ok(true)
 }
 
 fn read_source(input: &Path) -> Result<String, jg::error::IrrecoverableError> {

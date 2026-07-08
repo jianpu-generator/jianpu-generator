@@ -18,6 +18,10 @@ pre-commit:
       glob: "**/*.rs"
       run: cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
 
+    - name: syntax-md-examples
+      glob: "{syntax.md,src/parser/**,src/desugar.rs}"
+      run: python3 scripts/check-syntax-md-examples.py
+
     - name: biome-check
       glob: "web/**"
       run: cd web && pnpm exec biome check .
