@@ -15,7 +15,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "paths": {
-      "jianpu-wasm": ["../crates/jianpu-wasm/pkg/jianpu_wasm.js"]
+      "jianpu-wasm": ["../crates/jianpu-wasm/pkg"]
     },
 
     /* Linting */

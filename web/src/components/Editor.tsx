@@ -370,7 +370,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     codeLensProviderRef.current = monacoApi.languages.registerCodeLensProvider(
       'plaintext',
       {
-        provideCodeLenses(model) {
+        provideCodeLenses(model: editor.ITextModel) {
           const lenses: languages.CodeLens[] = []
           for (let line = 1; line <= model.getLineCount(); line++) {
             if (model.getLineContent(line).trim() === '# parts') {
