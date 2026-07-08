@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { shouldScheduleAutosave } from './useStorageBackend'
+import {
+  shouldScheduleAutosave,
+  shouldWarnBeforeUnload,
+} from './useStorageBackend'
 
 describe('shouldScheduleAutosave', () => {
   it('never schedules a save for the local backend', () => {
@@ -49,5 +52,27 @@ describe('shouldScheduleAutosave', () => {
         { active: 'a.jianpu', content: 'new' },
       ),
     ).toBe(true)
+  })
+})
+
+describe('shouldWarnBeforeUnload', () => {
+  it('never warns for the local backend, even mid-save', () => {
+    expect(shouldWarnBeforeUnload('local', true, 'saving')).toBe(false)
+  })
+
+  it('does not warn on GitHub when idle with nothing pending', () => {
+    expect(shouldWarnBeforeUnload('github', false, 'idle')).toBe(false)
+  })
+
+  it('does not warn on GitHub once a save has landed', () => {
+    expect(shouldWarnBeforeUnload('github', false, 'saved')).toBe(false)
+  })
+
+  it('warns on GitHub while a debounced save is still armed', () => {
+    expect(shouldWarnBeforeUnload('github', true, 'idle')).toBe(true)
+  })
+
+  it('warns on GitHub while a save request is in flight', () => {
+    expect(shouldWarnBeforeUnload('github', false, 'saving')).toBe(true)
   })
 })

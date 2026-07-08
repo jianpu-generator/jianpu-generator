@@ -122,6 +122,24 @@ export function shouldScheduleAutosave(
 }
 
 /**
+ * Decides whether the `beforeunload` handler should warn about unsaved
+ * changes. Pure for the same testability reason as `shouldScheduleAutosave`.
+ * True in two disjoint windows: `isPending` (a debounced save is armed but
+ * hasn't fired yet) and `saveStatus === 'saving'` (it fired — via the debounce
+ * timer, `flush()`, or `forceSave()` — but the underlying multi-request
+ * Octokit call hasn't resolved). Never true for `localBackend`, which has no
+ * debounce and no in-flight network call to lose.
+ */
+export function shouldWarnBeforeUnload(
+  backendKind: StorageBackend['kind'],
+  isPending: boolean,
+  saveStatus: SaveStatus,
+): boolean {
+  if (backendKind !== 'github') return false
+  return isPending || saveStatus === 'saving'
+}
+
+/**
  * Holds the file store's in-memory state and wires it to a `StorageBackend`,
  * switchable between `local` and `github`. `store`/`setStore` keep the same
  * ergonomics `useFileStore` used to expose, so callers still perform sync
@@ -242,6 +260,29 @@ export function useStorageBackend(): UseStorageBackendResult {
       document.removeEventListener('visibilitychange', flush)
     }
   }, [debouncedSave])
+
+  // Warns before closing/reloading the tab if a GitHub save hasn't landed
+  // yet — the blur/visibilitychange flush above only *starts* the save; it
+  // can't guarantee the underlying multi-request Octokit call (fetch sha,
+  // then PUT) finishes before the page actually unloads. Native
+  // confirmation is the only backstop for that gap. No-op (and thus no
+  // dialog) whenever nothing is pending or in flight, including for
+  // `localBackend`, which never has a pending save.
+  useEffect(() => {
+    const handler = (event: BeforeUnloadEvent) => {
+      if (
+        shouldWarnBeforeUnload(
+          backend.kind,
+          debouncedSave.isPending(),
+          saveStatus,
+        )
+      ) {
+        event.preventDefault()
+      }
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [backend, debouncedSave, saveStatus])
 
   const forceSave = useCallback(() => {
     debouncedSave.cancel()
