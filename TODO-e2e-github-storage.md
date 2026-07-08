@@ -45,5 +45,6 @@ already handles:
   the existing mock's path-based `Map` already supports this, no changes
   needed there.
 - `restoreFile` can target a name that collides with something already in
-  `scores/` (see `fileStore.ts`'s `restoreFile`/`uniqueName`) — worth a
-  dedicated test case once the basic restore test exists.
+  `scores/` (see `fileStore.ts`'s `restoreFile`/`uniqueName`), renaming the
+  restored file rather than overwriting the existing one. Covered by
+  `web/e2e/restore-file-collision-github.spec.ts`.
