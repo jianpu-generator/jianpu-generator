@@ -31,10 +31,11 @@ test('shows measure number when cursor is placed on a note line', async ({
   // Allow the 300 ms debounce in notifySelection plus worker round-trip.
   await page.waitForTimeout(700)
 
-  // The label should show "measure 1", not "measure null".
-  await expect(page.getByTestId('measure-status')).toContainText('measure 1', {
-    timeout: 3_000,
-  })
+  // The label should show "Measure 1", not be empty.
+  await expect(page.getByTestId('play-measure-button')).toContainText(
+    'Measure 1',
+    { timeout: 3_000 },
+  )
 })
 
 /**
@@ -65,10 +66,11 @@ test('detects measure when cursor is at end of last character of a note line', a
   // Allow the 300 ms debounce in notifySelection plus worker round-trip.
   await page.waitForTimeout(700)
 
-  // Should still detect measure 1, not "measure null".
-  await expect(page.getByTestId('measure-status')).toContainText('measure 1', {
-    timeout: 3_000,
-  })
+  // Should still detect measure 1, not be empty.
+  await expect(page.getByTestId('play-measure-button')).toContainText(
+    'Measure 1',
+    { timeout: 3_000 },
+  )
 })
 
 /**
@@ -130,8 +132,9 @@ test('detects measure when cursor is at end of last character of a Chinese lyric
   // Allow 300 ms debounce + worker round-trip.
   await page.waitForTimeout(700)
 
-  // Must show "measure 1" (first measure, index 0).
-  await expect(page.getByTestId('measure-status')).toContainText('measure 1', {
-    timeout: 3_000,
-  })
+  // Must show "Measure 1" (first measure, index 0).
+  await expect(page.getByTestId('play-measure-button')).toContainText(
+    'Measure 1',
+    { timeout: 3_000 },
+  )
 })

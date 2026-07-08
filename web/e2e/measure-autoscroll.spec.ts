@@ -66,9 +66,10 @@ test('auto-scrolls the preview to the highlighted measure when the caret moves o
   await page.keyboard.press('Control+g')
   await page.keyboard.type('8')
   await page.keyboard.press('Enter')
-  await expect(page.getByTestId('measure-status')).toContainText('measure 1', {
-    timeout: 5_000,
-  })
+  await expect(page.getByTestId('play-measure-button')).toContainText(
+    'Measure 1',
+    { timeout: 5_000 },
+  )
   await expect(
     page.locator('.preview-page [data-testid="measure-highlight"]').first(),
   ).toBeVisible({ timeout: 5_000 })
@@ -81,8 +82,8 @@ test('auto-scrolls the preview to the highlighted measure when the caret moves o
   await page.keyboard.press('Control+g')
   await page.keyboard.type(String(lastMeasureLine))
   await page.keyboard.press('Enter')
-  await expect(page.getByTestId('measure-status')).toContainText(
-    `measure ${measureCount}`,
+  await expect(page.getByTestId('play-measure-button')).toContainText(
+    `Measure ${measureCount}`,
     { timeout: 5_000 },
   )
 

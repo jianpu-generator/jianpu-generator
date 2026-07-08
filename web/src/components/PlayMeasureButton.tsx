@@ -61,6 +61,7 @@ export function PlayMeasureButton({
         <button
           type="button"
           className="play-measure-btn play-measure-btn--playing"
+          data-testid="play-measure-button"
           onClick={onPause}
           aria-label={label ? `Pause ${label}` : 'Pause playback'}
         >
@@ -76,6 +77,7 @@ export function PlayMeasureButton({
       <button
         type="button"
         className="play-measure-btn"
+        data-testid="play-measure-button"
         disabled={disabled}
         onClick={onClick}
         aria-label={label ? `▶ ${label}` : 'Play selected measure(s)'}

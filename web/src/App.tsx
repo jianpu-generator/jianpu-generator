@@ -431,23 +431,6 @@ export default function App() {
                             shortcutLabel={shortcutLabel}
                           />
                         )}
-                        {audioAvailable && (
-                          <span
-                            data-testid="measure-status"
-                            style={{
-                              fontSize: '0.75rem',
-                              color: '#888',
-                              fontFamily: 'monospace',
-                            }}
-                          >
-                            {selectedMeasureRange !== null
-                              ? selectedMeasureRange.start ===
-                                selectedMeasureRange.end
-                                ? `measure ${selectedMeasureRange.start + 1}`
-                                : `measures ${selectedMeasureRange.start + 1}–${selectedMeasureRange.end + 1}`
-                              : 'measure null'}
-                          </span>
-                        )}
                         {sectionLabels.length > 0 && (
                           <div
                             role="toolbar"
