@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { encodeShareHashSuffix } from '../src/shareUrl'
+import { encodeShareHashOnPage, gotoShareUrl } from './shareUrlHelper'
 
 const FILE_STORE_KEY = 'jianpu:files:v1'
 const SHARED_FILENAME = 'shared-test.jianpu'
@@ -15,10 +15,6 @@ const SHARED_SOURCE = [
   '1 2 3 4',
 ].join('\n')
 
-function shareUrlForLocalhost(filename: string, content: string): string {
-  return `http://localhost:5173/#share=${encodeShareHashSuffix(filename, content)}`
-}
-
 test('opens a shared score preview without saving it, then imports on demand', async ({
   page,
 }) => {
@@ -26,7 +22,7 @@ test('opens a shared score preview without saving it, then imports on demand', a
     localStorage.clear()
   })
 
-  await page.goto(shareUrlForLocalhost(SHARED_FILENAME, SHARED_SOURCE))
+  await gotoShareUrl(page, SHARED_FILENAME, SHARED_SOURCE)
 
   await expect(page.locator('.shared-preview-banner')).toContainText(
     SHARED_FILENAME,
@@ -45,7 +41,7 @@ test('opens a shared score preview without saving it, then imports on demand', a
     SHARED_FILENAME,
   )
 
-  await page.goto(shareUrlForLocalhost(SHARED_FILENAME, SHARED_SOURCE))
+  await gotoShareUrl(page, SHARED_FILENAME, SHARED_SOURCE)
   await page.getByRole('button', { name: 'Import to my scores' }).click()
 
   await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
@@ -59,7 +55,7 @@ test('discarding a shared preview does not save it', async ({ page }) => {
     localStorage.clear()
   })
 
-  await page.goto(shareUrlForLocalhost(SHARED_FILENAME, SHARED_SOURCE))
+  await gotoShareUrl(page, SHARED_FILENAME, SHARED_SOURCE)
   await expect(page.locator('.shared-preview-banner')).toBeVisible()
 
   await page.getByRole('button', { name: 'Discard' }).click()
@@ -122,9 +118,12 @@ test('share button copies a compressed link that opens as a preview', async ({
     return navigator.clipboard.readText()
   })
 
-  expect(shareUrl).toContain(
-    `#share=${encodeShareHashSuffix(SHARED_FILENAME, SHARED_SOURCE)}`,
+  const expectedHash = await encodeShareHashOnPage(
+    page,
+    SHARED_FILENAME,
+    SHARED_SOURCE,
   )
+  expect(shareUrl).toContain(`#share=${expectedHash}`)
 
   await page.goto('/')
   await page.evaluate(() => localStorage.clear())

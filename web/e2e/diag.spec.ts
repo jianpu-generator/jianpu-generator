@@ -1,5 +1,5 @@
 import { test } from '@playwright/test'
-import { encodeShareHashSuffix } from '../src/shareUrl'
+import { gotoShareUrl } from './shareUrlHelper'
 
 const SHARED_FILENAME = 'shared-test.jianpu'
 const SHARED_SOURCE = [
@@ -36,8 +36,7 @@ test('what does localStorage contain when share URL loads?', async ({
       console.log('BROWSER LOG:', msg.text())
     }
   })
-  const shareUrl = `http://localhost:5173/#share=${encodeShareHashSuffix(SHARED_FILENAME, SHARED_SOURCE)}`
-  await page.goto(shareUrl)
+  await gotoShareUrl(page, SHARED_FILENAME, SHARED_SOURCE)
   const state = await page.evaluate(() =>
     localStorage.getItem('jianpu:files:v1'),
   )

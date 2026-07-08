@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { encodeShareHashSuffix } from '../src/shareUrl'
 import { mockGithubContentsApi, OWNER } from './github-contents-mock'
+import { gotoShareUrl } from './shareUrlHelper'
 
 const SHARED_FILENAME = 'shared-test.jianpu'
 const SHARED_SOURCE = [
@@ -14,10 +14,6 @@ const SHARED_SOURCE = [
   '(time=4/4 key=C4 bpm=120)',
   '1 2 3 4',
 ].join('\n')
-
-function shareUrlForLocalhost(filename: string, content: string): string {
-  return `http://localhost:5173/#share=${encodeShareHashSuffix(filename, content)}`
-}
 
 test('importing a shared score persists via the GitHub storage backend', async ({
   page,
@@ -47,7 +43,7 @@ test('importing a shared score persists via the GitHub storage backend', async (
     { owner: OWNER },
   )
 
-  await page.goto(shareUrlForLocalhost(SHARED_FILENAME, SHARED_SOURCE))
+  await gotoShareUrl(page, SHARED_FILENAME, SHARED_SOURCE)
 
   await expect(page.locator('.shared-preview-banner')).toContainText(
     SHARED_FILENAME,

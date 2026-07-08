@@ -129,5 +129,9 @@ The React app (`web/`) runs the compiler in a dedicated worker (`web/src/worker/
 | `list_parts(source, raw_instruments)` | Part summaries for preview toggles **and** `declarations: PartDeclarationOut[]` for the Edit Parts modal |
 | `list_part_declarations(source, raw_instruments)` | Declarations only (re-list after a write) |
 | `update_part_declaration(source, abbreviation, new_mode, new_soundfont, new_volume, new_octave_offset)` | Returns updated source; empty strings for soundfont/volume/octave mean “omit / default” |
+| `compress_share_payload(payload) -> Vec<u8>` | Brotli-compresses a share-link JSON payload (quality 11); caller base64url-encodes the result |
+| `decompress_share_payload(bytes) -> Option<String>` | Inverse of the above; `None` if `bytes` isn't valid brotli or decodes to invalid UTF-8 |
+
+`web/src/shareUrl.ts` calls `compress_share_payload`/`decompress_share_payload` directly from the main thread (a separate WASM instance from the render worker's), lazily `init()`-ing on first use, to build/parse `#share=<base64url>` links. `decodeShareHashSuffix` falls back to the legacy `lz-string`-encoded format, then plain-JSON, for links created before this switch.
 
 Worker messages: `listParts` → `{ parts, declarations }`; `updatePartDeclaration` → `{ source, declarations }` (hook updates `partDeclarations` immediately, without waiting for the debounced re-render).

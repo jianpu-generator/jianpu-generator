@@ -10,7 +10,7 @@ export function ShareButton({ filename, content }: ShareButtonProps) {
   const [copied, setCopied] = useState(false)
 
   const handleShare = useCallback(async () => {
-    const url = buildShareUrl(filename, content)
+    const url = await buildShareUrl(filename, content)
     try {
       await navigator.clipboard.writeText(url)
       setCopied(true)

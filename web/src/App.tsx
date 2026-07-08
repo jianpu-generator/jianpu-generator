@@ -48,9 +48,16 @@ export default function App() {
     forceSave,
     flushPendingSave,
   } = useStorageBackend()
-  const [sharedPreview, setSharedPreview] = useState<SharePayload | null>(() =>
-    parseShareFromHash(),
-  )
+  const [sharedPreview, setSharedPreview] = useState<SharePayload | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    void parseShareFromHash().then((parsed) => {
+      if (!cancelled) setSharedPreview(parsed)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
   const source = sharedPreview
     ? sharedPreview.content
     : fileContent(store, store.active)
