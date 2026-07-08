@@ -52,6 +52,21 @@ async function loadSource(
   }, source)
 }
 
+async function toggleEye(
+  page: import('@playwright/test').Page,
+  abbreviation: string,
+) {
+  await page
+    .locator('.part-toggle-pill')
+    .filter({
+      has: page.locator('.part-toggle-abbr', {
+        hasText: new RegExp(`^${abbreviation}$`),
+      }),
+    })
+    .locator('.part-toggle-segment--eye')
+    .click()
+}
+
 test('Export PDF produces a non-empty downloaded file', async ({ page }) => {
   await loadSource(page, SINGLE_PART_SOURCE)
   await page.goto('/')
@@ -98,6 +113,27 @@ test('Export parts produces a non-empty downloaded zip for a multi-part score', 
   const stats = fs.statSync(downloadPath as string)
   expect(stats.size).toBeGreaterThan(1000)
   expect(download.suggestedFilename()).toBe('test.zip')
+})
+
+test('Export PDF filename includes only the enabled parts when a part is hidden', async ({
+  page,
+}) => {
+  await loadSource(page, MULTI_PART_SOURCE)
+  await page.goto('/')
+  await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
+  await page.waitForSelector('.preview-page', { timeout: 15_000 })
+
+  await toggleEye(page, 'H')
+
+  const exportButton = page.getByRole('button', { name: /^Export PDF$/ })
+  await expect(exportButton).toBeEnabled({ timeout: 30_000 })
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    exportButton.click(),
+  ])
+
+  expect(download.suggestedFilename()).toBe('test (M).pdf')
 })
 
 test('rapid double-click on Export PDF only triggers a single export', async ({

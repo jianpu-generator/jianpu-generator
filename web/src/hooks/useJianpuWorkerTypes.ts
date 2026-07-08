@@ -15,6 +15,7 @@ export interface JianpuWorkerState {
   partsLoading: boolean
   documents: SvgDocumentOut[]
   wavUrl: string | null
+  wavFilename: string
   audioAvailable: boolean
   pdfAvailable: boolean
   pdfExporting: boolean

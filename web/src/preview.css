@@ -53,6 +53,9 @@
 }
 
 .preview-audio {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   padding: 0.5rem 1rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
@@ -76,10 +79,19 @@
 
 .preview-audio-player {
   display: block;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
-.preview-audio--generating .preview-audio-player {
+.preview-audio-download {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.preview-audio--generating .preview-audio-player,
+.preview-audio--generating .preview-audio-download {
   opacity: 0.5;
   pointer-events: none;
 }

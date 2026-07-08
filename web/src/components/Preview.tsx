@@ -7,6 +7,7 @@ interface PreviewProps {
   rendering: boolean
   audioGenerating?: boolean
   wavUrl?: string | null
+  wavFilename?: string
   audioAvailable?: boolean
   soundfontReady?: boolean
   onGenerateAudio?: () => void
@@ -262,6 +263,7 @@ export function Preview({
   rendering,
   audioGenerating = false,
   wavUrl = null,
+  wavFilename = 'audio.wav',
   audioAvailable = false,
   soundfontReady = false,
   onGenerateAudio,
@@ -444,6 +446,14 @@ export function Preview({
             src={wavUrl}
             tabIndex={audioGenerating ? -1 : undefined}
           />
+          <a
+            className="preview-audio-download"
+            href={wavUrl}
+            download={wavFilename}
+            tabIndex={audioGenerating ? -1 : undefined}
+          >
+            Download
+          </a>
         </div>
       ) : null}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: drag-to-select measures uses mousedown, mousemove, mouseup — not a standard interactive role */}

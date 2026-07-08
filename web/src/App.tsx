@@ -91,6 +91,7 @@ export default function App() {
     partsLoading,
     documents,
     wavUrl,
+    wavFilename,
     audioAvailable,
     pdfAvailable,
     pdfExporting,
@@ -539,6 +540,7 @@ export default function App() {
             onSectionLabelClick={handleSectionJump}
             audioGenerating={audioGenerating}
             wavUrl={wavUrl}
+            wavFilename={wavFilename}
             audioAvailable={audioAvailable}
             soundfontReady={soundfontReady}
             onGenerateAudio={generateFullAudio}

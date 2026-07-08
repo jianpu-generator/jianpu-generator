@@ -49,11 +49,37 @@ export function downloadPdf(bytes: ArrayBuffer, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-export function pdfFilenameFromActiveFile(activeFile: string): string {
-  if (activeFile.endsWith('.jianpu')) {
-    return activeFile.replace(/\.jianpu$/, '.pdf')
-  }
-  return `${activeFile}.pdf`
+// When only some parts are enabled, mark that in the filename so exports
+// of different toggle combinations don't silently overwrite each other.
+export function withEnabledPartsSuffix(
+  filename: string,
+  enabledTracks: string[] | undefined,
+): string {
+  if (!enabledTracks || enabledTracks.length === 0) return filename
+  const suffix = enabledTracks.join(', ')
+  const dotIndex = filename.lastIndexOf('.')
+  if (dotIndex === -1) return `${filename} (${suffix})`
+  return `${filename.slice(0, dotIndex)} (${suffix})${filename.slice(dotIndex)}`
+}
+
+export function pdfFilenameFromActiveFile(
+  activeFile: string,
+  enabledTracks?: string[],
+): string {
+  const base = activeFile.endsWith('.jianpu')
+    ? activeFile.replace(/\.jianpu$/, '.pdf')
+    : `${activeFile}.pdf`
+  return withEnabledPartsSuffix(base, enabledTracks)
+}
+
+export function wavFilenameFromActiveFile(
+  activeFile: string,
+  enabledTracks?: string[],
+): string {
+  const base = activeFile.endsWith('.jianpu')
+    ? activeFile.replace(/\.jianpu$/, '.wav')
+    : `${activeFile}.wav`
+  return withEnabledPartsSuffix(base, enabledTracks)
 }
 
 export function zipFilenameFromActiveFile(activeFile: string): string {

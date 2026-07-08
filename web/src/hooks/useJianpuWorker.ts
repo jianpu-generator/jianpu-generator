@@ -17,6 +17,7 @@ import {
   disabledLyricsForRender,
   enabledTracksForRender,
   measureRangeInSpan,
+  wavFilenameFromActiveFile,
 } from './workerHelpers'
 
 export type { JianpuWorkerState } from './useJianpuWorkerTypes'
@@ -115,6 +116,10 @@ export function useJianpuWorker(
     () => disabledLyricsForRender(parts, disabledLyrics),
     [parts, disabledLyrics],
   )
+  const wavFilename = useMemo(
+    () => wavFilenameFromActiveFile(activeFile, enabledTracks),
+    [activeFile, enabledTracks],
+  )
 
   sourceRef.current = source
   activeFileRef.current = activeFile
@@ -172,6 +177,7 @@ export function useJianpuWorker(
       latestPdfIdRef,
       setPdfExporting,
       activeFileRef,
+      enabledTracksRef,
       setDiagnostics,
       latestSplitPdfIdRef,
       setSplitPdfExporting,
@@ -471,6 +477,7 @@ export function useJianpuWorker(
     partsLoading,
     documents,
     wavUrl,
+    wavFilename,
     audioAvailable,
     pdfAvailable,
     pdfExporting,
