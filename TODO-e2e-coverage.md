@@ -70,7 +70,7 @@ helper used by the `*-github.spec.ts` files.
       `measureAudioPlaying` becomes true) rather than only checking the
       shortcut didn't crash.
 
-- [ ] **Undo/redo across file switches with unsaved edits** (`fileStore.ts`
+- [x] **Undo/redo across file switches with unsaved edits** (`fileStore.ts`
       — only unit-tested today; `restore-file-github.spec.ts` etc. cover
       single-file backend round-trips but not this). Assert that editing
       file A, switching to file B without saving, switching back to A,

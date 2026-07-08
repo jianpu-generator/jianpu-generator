@@ -19,6 +19,8 @@ import type {
 import { byteOffsetToStringIndex } from '../utils/byteSpan'
 
 export interface EditorProps {
+  /** Unique per-file ID; gives each file its own Monaco model and undo stack. */
+  path?: string
   value: string
   onChange: (value: string) => void
   readOnly?: boolean
@@ -114,6 +116,7 @@ function errorViewZoneHeightInPx(
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   {
+    path,
     value,
     onChange,
     readOnly = false,
@@ -456,6 +459,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           height="100%"
           language="plaintext"
           theme={EDITOR_THEME}
+          path={path}
           value={value}
           onChange={(next) => {
             isInternalChangeRef.current = true

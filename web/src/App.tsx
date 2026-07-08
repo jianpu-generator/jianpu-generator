@@ -376,6 +376,7 @@ export default function App() {
               ) : (
                 <Editor
                   ref={editorRef}
+                  path={fileId}
                   value={source}
                   onChange={handleSourceChange}
                   readOnly={readOnly}
