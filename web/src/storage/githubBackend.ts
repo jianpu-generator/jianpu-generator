@@ -121,11 +121,20 @@ function statusOf(error: unknown): number | undefined {
   return undefined
 }
 
-/** Octokit throws a plain `TypeError` (e.g. "Failed to fetch") when the
- * underlying `fetch` call fails outright, as opposed to `RequestError`
- * (which always carries a `.status`) for responses GitHub actually sent. */
+/** A raw `fetch` failure (offline, DNS failure, aborted request) surfaces
+ * differently depending on what layer throws it. If something outside
+ * Octokit's own request path throws, it's a plain `TypeError` with no
+ * `.status`. But Octokit's `fetchWrapper` always catches the underlying
+ * `fetch` rejection itself and rethrows a `RequestError` with `status: 500`
+ * and no `.response` (unlike a real HTTP error response, which always
+ * carries one) — the original `TypeError` survives on `.cause`. Both shapes
+ * are checked here since either can reach a caller depending on where in
+ * `githubBackend.ts` the failure originates. */
 function isNetworkError(error: unknown): boolean {
-  return statusOf(error) === undefined && error instanceof TypeError
+  if (statusOf(error) === undefined && error instanceof TypeError) return true
+  if (typeof error !== 'object' || error === null) return false
+  const { response, cause } = error as { response?: unknown; cause?: unknown }
+  return response == null && cause instanceof TypeError
 }
 
 /** The single name added to `userFiles` between two `FileStoreState`s, used
