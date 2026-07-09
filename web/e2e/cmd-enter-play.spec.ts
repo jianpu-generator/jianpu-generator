@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { focusEditor } from './fileSwitcherHelpers'
 
 test('Meta+Enter does nothing when cursor is outside all measures', async ({
   page,
@@ -6,7 +7,7 @@ test('Meta+Enter does nothing when cursor is outside all measures', async ({
   await page.goto('/')
   await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
 
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
   await page.keyboard.press('Control+g')
   await page.keyboard.type('1')
   await page.keyboard.press('Enter')

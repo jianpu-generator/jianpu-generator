@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test'
 import {
+  fileSwitcherTrigger,
+  openFileActions,
+  openFileList,
+} from './fileSwitcherHelpers'
+import {
   API_PREFIX,
   mockGithubContentsApi,
   OWNER,
@@ -68,23 +73,24 @@ test('a failed create shows the error modal, resets pending state, and a retry s
 
   await page.goto('/')
 
+  await openFileList(page)
   const originalTab = page.locator('.file-tab-name', {
     hasText: 'original.jianpu',
   })
   await originalTab.waitFor({ timeout: 15_000 })
 
+  const activeTabBeforeCreate = await fileSwitcherTrigger(page).textContent()
+
   // Positional locator (not `hasText: 'New'`) since its label is swapped for
   // a spinner while the create is pending.
-  const newButton = page
-    .locator('.file-tab-bar-actions .file-tab-bar-btn')
-    .first()
-  const activeTabName = page.locator('.file-tab--active .file-tab-name')
-  const activeTabBeforeCreate = await activeTabName.textContent()
-
+  await openFileActions(page)
+  const newButton = page.locator('.export-menu-item').first()
   await newButton.click()
 
-  // The pending `createFile` call shows a spinner on the "New" button —
+  // Clicking "New" closes the "⋯" dropdown immediately; reopen it to
+  // observe the pending `createFile` call's spinner on the "New" button —
   // proves the op actually went in flight before failing.
+  await openFileActions(page)
   await expect(newButton.locator('.file-tab-bar-spinner')).toBeVisible()
 
   const errorModal = page.getByTestId('error-modal')
@@ -94,28 +100,35 @@ test('a failed create shows the error modal, resets pending state, and a retry s
     'Internal Server Error',
   )
 
+  // Close the error modal before interacting with anything underneath it —
+  // it's a real overlay that blocks pointer events on the rest of the page.
+  await page.getByTestId('error-modal').getByRole('button').click()
+  await expect(errorModal).toHaveCount(0)
+
   // `finally`'s `setPending(false)` must run on the error path too, not
   // just on success — otherwise the "New" button would be stuck spinning.
+  // The dropdown closes once `onCreate` settles (success or failure), so
+  // reopen it to observe the reset state.
+  await openFileActions(page)
   await expect(newButton.locator('.file-tab-bar-spinner')).toHaveCount(0)
   await expect(newButton).toHaveText('New')
 
   // `setStore` is never called on failure, so no phantom file/tab appears
   // and the active tab is unchanged.
+  await openFileList(page)
   await expect(
     page.locator('.file-tab-name', { hasText: 'untitled.jianpu' }),
   ).toHaveCount(0)
-  await expect(activeTabName).toHaveText(activeTabBeforeCreate ?? '')
-
-  // Close the error modal.
-  await page.getByTestId('error-modal').getByRole('button').click()
-  await expect(errorModal).toHaveCount(0)
+  await expect(fileSwitcherTrigger(page)).toHaveText(
+    activeTabBeforeCreate ?? '',
+  )
 
   // The one-shot 500 route has already fired and now falls back to the
   // base mock, so retrying "New" should succeed normally — proving the
   // user can actually recover from the failure.
+  await openFileActions(page)
   await newButton.click()
-  await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
-    'untitled.jianpu',
-  )
+  await expect(fileSwitcherTrigger(page)).toContainText('untitled.jianpu')
+  await openFileActions(page)
   await expect(newButton.locator('.file-tab-bar-spinner')).toHaveCount(0)
 })

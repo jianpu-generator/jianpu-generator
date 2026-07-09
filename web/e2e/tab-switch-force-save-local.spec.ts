@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { openFileList, typeAtEditorEnd } from './fileSwitcherHelpers'
 
 const SOURCE_A = [
   '# metadata',
@@ -70,9 +71,7 @@ test('switching tabs on the local backend never loses an edit that has not been 
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
-  await page.click('.monaco-editor .view-lines')
-  await page.keyboard.press('Control+End')
-  await page.keyboard.type(' 5')
+  await typeAtEditorEnd(page, ' 5')
 
   await expect
     .poll(getStoredFile.bind(null, page, 'a.jianpu'))
@@ -80,9 +79,11 @@ test('switching tabs on the local backend never loses an edit that has not been 
 
   const editedFileA = await getStoredFile(page, 'a.jianpu')
 
-  await page.getByRole('button', { name: 'b.jianpu', exact: true }).click()
+  await openFileList(page)
+  await page.locator('.file-tab-name', { hasText: 'b.jianpu' }).click()
+  await openFileList(page)
   await expect(
-    page.getByRole('button', { name: 'b.jianpu', exact: true }),
+    page.locator('.file-tab-name', { hasText: 'b.jianpu' }),
   ).toHaveAttribute('aria-current', 'true')
   await expect(page.locator('.monaco-editor .view-lines')).toContainText(
     '5 6 7 1',
@@ -90,7 +91,7 @@ test('switching tabs on the local backend never loses an edit that has not been 
 
   expect(await getStoredFile(page, 'a.jianpu')).toBe(editedFileA)
 
-  await page.getByRole('button', { name: 'a.jianpu', exact: true }).click()
+  await page.locator('.file-tab-name', { hasText: 'a.jianpu' }).click()
   await expect(page.locator('.monaco-editor .view-lines')).toContainText(
     '1 2 3 4 5',
   )

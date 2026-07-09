@@ -7,11 +7,20 @@
 
 .app-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.75rem;
   padding: 0.6rem 1rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
+  flex-wrap: wrap;
+}
+
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  flex-wrap: wrap;
 }
 
 .app-header h1 {

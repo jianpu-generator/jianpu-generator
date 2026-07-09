@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { typeAtEditorEnd } from './fileSwitcherHelpers'
 
 // The soundfont is a real ~30 MB asset; some sandboxed environments fail to
 // write Chromium's HTTP disk cache for large responses
@@ -130,9 +131,7 @@ test('Export > WAV produces a playable inline audio player and Export > WAV (reg
   // Editing the source in place (no file switch) must not clear the
   // existing audio or reset the item back to "WAV" — wavUrl is only cleared
   // on `activeFile` change, not on `source` change.
-  await page.click('.monaco-editor .view-lines')
-  await page.keyboard.press('Control+End')
-  await page.keyboard.type(' 5')
+  await typeAtEditorEnd(page, ' 5')
 
   await expect(audioPlayer).toBeVisible()
   await expect(audioPlayer).toHaveAttribute('src', secondSrc as string)

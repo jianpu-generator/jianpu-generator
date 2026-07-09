@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import {
+  fileSwitcherTrigger,
+  openBin,
+  openFileList,
+} from './fileSwitcherHelpers'
 import { mockGithubContentsApi, OWNER } from './github-contents-mock'
 
 const EXISTING_SOURCE = [
@@ -60,9 +65,12 @@ test('restoring a file that collides with an active file renames it via the GitH
   await page.goto('/')
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
+  await openFileList(page)
   // Initial state: one active tab (the pre-existing scores/original.jianpu)
   // and one bin entry sharing the same base name.
-  await expect(page.locator('.file-tab-bar-bin-summary')).toHaveText('Bin (1)')
+  await expect(page.locator('.file-tab-bar-bin-trigger')).toContainText(
+    'Bin (1)',
+  )
   await expect(
     page.locator('.file-tabs .file-tab-name', { hasText: 'original.jianpu' }),
   ).toHaveCount(1)
@@ -72,10 +80,7 @@ test('restoring a file that collides with an active file renames it via the GitH
     }),
   ).toHaveCount(0)
 
-  const binDetails = page.locator('.file-tab-bar-bin')
-  await binDetails.evaluate((el) => {
-    ;(el as HTMLDetailsElement).open = true
-  })
+  await openBin(page)
   await expect(page.locator('.file-tab-bar-bin-name')).toHaveText(
     'original.jianpu',
   )
@@ -89,6 +94,9 @@ test('restoring a file that collides with an active file renames it via the GitH
 
   // The restored file gets renamed to avoid colliding with the existing
   // active `original.jianpu` tab.
+  // (Restoring is a click outside the file-switcher dropdown, which
+  // dismisses it — reopen it to see the tab list.)
+  await openFileList(page)
   const restoredTab = page.locator('.file-tab-name', {
     hasText: 'original 2.jianpu',
   })
@@ -106,9 +114,7 @@ test('restoring a file that collides with an active file renames it via the GitH
   ).toHaveCount(1)
 
   // The newly restored file is the active tab.
-  await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
-    'original 2.jianpu',
-  )
+  await expect(fileSwitcherTrigger(page)).toContainText('original 2.jianpu')
 
   // The bin is now empty.
   await expect(page.locator('.file-tab-bar-bin')).toHaveCount(0)
@@ -125,6 +131,7 @@ test('restoring a file that collides with an active file renames it via the GitH
   // pre-existing file was never overwritten.
   await page.reload()
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
+  await openFileList(page)
   await page
     .locator('.file-tab-name', { hasText: 'original.jianpu' })
     .waitFor({ timeout: 15_000 })
@@ -136,7 +143,7 @@ test('restoring a file that collides with an active file renames it via the GitH
       hasText: 'original 2.jianpu',
     }),
   ).toHaveCount(1)
-  await expect(page.locator('.file-tab-bar-bin')).toHaveCount(0)
+  await expect(page.locator('.file-tab-bar-bin-trigger')).toHaveCount(0)
 
   // The pre-existing tab's content must be untouched by the restore.
   await page.locator('.file-tab-name', { hasText: 'original.jianpu' }).click()

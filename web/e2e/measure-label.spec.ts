@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { focusEditor } from './fileSwitcherHelpers'
 
 /**
  * The default demo source (reference.jianpu) has the following
@@ -20,7 +21,7 @@ test('shows measure number when cursor is placed on a note line', async ({
   await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
 
   // Focus the Monaco editor.
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
 
   // Use Monaco's "Go to Line" command (Ctrl+G) to jump to line 15,
   // which is the first note line in the default reference.jianpu source.
@@ -54,7 +55,7 @@ test('detects measure when cursor is at end of last character of a note line', a
   await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
 
   // Focus the Monaco editor.
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
 
   // Navigate to line 15 ("[M] 0 0 0 0") and press End to put the cursor
   // after the trailing "0" — the last character of the measure span.
@@ -121,7 +122,7 @@ test('detects measure when cursor is at end of last character of a Chinese lyric
   await page.goto('/')
   await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
 
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
 
   // Go to line 16 ("白陽旗旛在大道盛宏") and press End to place cursor after "宏".
   await page.keyboard.press('Control+g')

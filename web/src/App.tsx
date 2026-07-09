@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AssetLoadingBanner } from './components/AssetLoadingBanner'
+import { BinMenu } from './components/BinMenu'
 import { EditMetadataModal } from './components/EditMetadataModal'
 import { Editor } from './components/Editor'
 import { EditPartsModal } from './components/EditPartsModal'
 import { ErrorModal } from './components/ErrorModal'
-import { FileTabBar } from './components/FileList'
+import { ExportControls } from './components/ExportControls'
+import { FileSwitcher } from './components/FileSwitcher'
 import { PartToggles } from './components/PartToggles'
 import { PlayMeasureButton } from './components/PlayMeasureButton'
 import { Preview } from './components/Preview'
@@ -16,6 +18,7 @@ import {
   isReadOnlyFile,
   mergeBackendResult,
   selectFile,
+  sortedBinNames,
 } from './fileStore'
 import { useAssetLoader } from './hooks/useAssetLoader'
 import { useFileOperations } from './hooks/useFileOperations'
@@ -33,7 +36,7 @@ import type { EditorHandle, PartMode, SoundfontValue } from './types'
 import type { MetadataKey } from './utils/metadataSource'
 import { parseMetadata, updateMetadataField } from './utils/metadataSource'
 import './App.css'
-import './file-tab-bar.css'
+import './file-switcher.css'
 import './preview.css'
 
 const shortcutLabel = navigator.platform.startsWith('Mac') ? '⌘↵' : 'Ctrl+↵'
@@ -323,23 +326,52 @@ export default function App() {
       <header className="app-header">
         <h1>簡譜</h1>
         <span className="app-subtitle">live preview</span>
+        <div className="app-header-actions">
+          <FileSwitcher
+            store={store}
+            onSelect={handleSelect}
+            onCreate={handleCreate}
+            onDuplicate={handleDuplicate}
+            onRename={handleRename}
+            onDelete={handleDelete}
+            onOpenStorageSettings={() => setStorageSettingsOpen(true)}
+            saveStatus={saveStatus}
+            creating={creatingFile}
+            deletingName={deletingFileName}
+            duplicating={duplicatingFile}
+            renamingName={renamingFileName}
+            isLoadingGithub={isLoadingGithub}
+          />
+          <BinMenu
+            binNames={sortedBinNames(store)}
+            onRestore={handleRestore}
+            restoringName={restoringFileName}
+          />
+          <ExportControls
+            hasDocuments={documents.length > 0}
+            rendering={rendering}
+            audioGenerating={audioGenerating}
+            wavUrl={wavUrl}
+            soundfontReady={soundfontReady}
+            onGenerateAudio={generateFullAudio}
+            pdfAvailable={pdfAvailable}
+            pdfFontsReady={pdfFontsReady}
+            pdfExporting={pdfExporting}
+            onExportPdf={exportPdf}
+            splitPdfExporting={splitPdfExporting}
+            onExportSplitPdf={exportSplitPdf}
+            midiAvailable={midiAvailable}
+            midiExporting={midiExporting}
+            onExportMidi={exportMidi}
+            splitMidiExporting={splitMidiExporting}
+            onExportSplitMidi={exportSplitMidi}
+            audioAvailable={audioAvailable}
+            splitWavExporting={splitWavExporting}
+            onExportSplitWav={exportSplitWav}
+            partsCount={parts.length}
+          />
+        </div>
       </header>
-      <FileTabBar
-        store={store}
-        onSelect={handleSelect}
-        onCreate={handleCreate}
-        onDuplicate={handleDuplicate}
-        onRename={handleRename}
-        onDelete={handleDelete}
-        onRestore={handleRestore}
-        onOpenStorageSettings={() => setStorageSettingsOpen(true)}
-        saveStatus={saveStatus}
-        creating={creatingFile}
-        deletingName={deletingFileName}
-        duplicating={duplicatingFile}
-        renamingName={renamingFileName}
-        restoringName={restoringFileName}
-      />
       <ErrorModal
         open={fileOpError !== null}
         onOpenChange={(open) => {
@@ -531,23 +563,6 @@ export default function App() {
             audioGenerating={audioGenerating}
             wavUrl={wavUrl}
             wavFilename={wavFilename}
-            audioAvailable={audioAvailable}
-            soundfontReady={soundfontReady}
-            onGenerateAudio={generateFullAudio}
-            pdfAvailable={pdfAvailable}
-            pdfFontsReady={pdfFontsReady}
-            pdfExporting={pdfExporting}
-            onExportPdf={exportPdf}
-            splitPdfExporting={splitPdfExporting}
-            onExportSplitPdf={exportSplitPdf}
-            midiAvailable={midiAvailable}
-            midiExporting={midiExporting}
-            onExportMidi={exportMidi}
-            splitMidiExporting={splitMidiExporting}
-            onExportSplitMidi={exportSplitMidi}
-            splitWavExporting={splitWavExporting}
-            onExportSplitWav={exportSplitWav}
-            partsCount={parts.length}
             emptyMessage={
               noPartsSelected ? 'No parts selected.' : 'No preview yet.'
             }

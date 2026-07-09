@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import {
+  fileSwitcherTrigger,
+  openFileActions,
+  openFileList,
+} from './fileSwitcherHelpers'
 import { mockGithubContentsApi, OWNER } from './github-contents-mock'
 
 const SOURCE = [
@@ -45,6 +50,7 @@ test('creating a new file persists via the GitHub storage backend', async ({
 
   // The GitHub-backed file list loads asynchronously; wait for the seeded
   // file's tab to appear alongside the read-only demo tab.
+  await openFileList(page)
   const originalTab = page.locator('.file-tab-name', {
     hasText: 'original.jianpu',
   })
@@ -52,26 +58,23 @@ test('creating a new file persists via the GitHub storage backend', async ({
 
   // Positional locator (not `hasText: 'New'`) since its label is swapped for
   // a spinner while the create is pending.
-  const newButton = page
-    .locator('.file-tab-bar-actions .file-tab-bar-btn')
-    .first()
+  await openFileActions(page)
+  const newButton = page.locator('.export-menu-item').first()
   await newButton.click()
 
-  // The pending `createFile` call shows a spinner on the "New" button —
-  // this is user-visible feedback that the op is in flight, and the mocked
-  // PUT's artificial delay (above) gives it time to actually render.
+  // The "⋯" dropdown stays open while the create is pending, so its spinner
+  // on the "New" button is visible without reopening — user-visible
+  // feedback that the op is in flight, given time to render by the mocked
+  // PUT's artificial delay (above).
   await expect(newButton.locator('.file-tab-bar-spinner')).toBeVisible()
 
   // `createFile` names the new file `untitled.jianpu` since that name isn't
   // already taken, and it becomes the active tab.
   const newTab = page.locator('.file-tab-name', { hasText: 'untitled.jianpu' })
-  await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
-    'untitled.jianpu',
-  )
+  await expect(fileSwitcherTrigger(page)).toContainText('untitled.jianpu')
 
-  // Once the create resolves, the spinner is gone and "New" is usable again.
-  await expect(newButton.locator('.file-tab-bar-spinner')).toHaveCount(0)
-  await expect(newButton).toHaveText('New')
+  // Once the create resolves, the dropdown closes automatically.
+  await expect(newButton).toHaveCount(0)
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
   // Create-only: the PUT that lands the new file must not carry a `sha` —
@@ -86,6 +89,7 @@ test('creating a new file persists via the GitHub storage backend', async ({
   // persisting across a reload proves the backend's create-only `PUT`
   // actually landed in the fake remote, not just in in-memory React state.
   await page.reload()
+  await openFileList(page)
   await newTab.waitFor({ timeout: 15_000 })
   await expect(
     page.locator('.file-tab-name', { hasText: 'original.jianpu' }),

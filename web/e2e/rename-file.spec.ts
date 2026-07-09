@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { fileSwitcherTrigger, openFileList } from './fileSwitcherHelpers'
 
 const SOURCE = [
   '# metadata',
@@ -33,6 +34,7 @@ test('SVG preview persists after renaming the active file', async ({
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
   // Double-click the active tab to enter rename mode.
+  await openFileList(page)
   const tabName = page.locator('.file-tab--active .file-tab-name')
   await tabName.dblclick()
 
@@ -45,6 +47,7 @@ test('SVG preview persists after renaming the active file', async ({
   await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
     'renamed.jianpu',
   )
+  await expect(fileSwitcherTrigger(page)).toContainText('renamed.jianpu')
 
   // The SVG preview should still be visible without any manual edits.
   await expect(page.locator('.preview-page').first()).toBeVisible({

@@ -4,9 +4,14 @@ import { buildShareUrl } from '../shareUrl'
 interface ShareButtonProps {
   filename: string
   content: string
+  className?: string
 }
 
-export function ShareButton({ filename, content }: ShareButtonProps) {
+export function ShareButton({
+  filename,
+  content,
+  className = 'file-tab-bar-btn',
+}: ShareButtonProps) {
   const [copied, setCopied] = useState(false)
 
   const handleShare = useCallback(async () => {
@@ -23,7 +28,7 @@ export function ShareButton({ filename, content }: ShareButtonProps) {
   return (
     <button
       type="button"
-      className="file-tab-bar-btn"
+      className={className}
       data-testid="share-button"
       aria-label="Copy share link"
       onClick={() => {

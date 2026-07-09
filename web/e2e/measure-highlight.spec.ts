@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { focusEditor } from './fileSwitcherHelpers'
 
 /**
  * The default demo source ("Jianpu Postcard" syntax reference) has the
@@ -18,7 +19,7 @@ test('renders amber highlight rect when cursor is inside a measure', async ({
   await page.goto('/')
   await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
 
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
 
   // Navigate to line 15 (first note line of measure 1).
   await page.keyboard.press('Control+g')
@@ -41,7 +42,7 @@ test('removes highlight rect when cursor moves outside all measures', async ({
   await page.goto('/')
   await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
 
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
 
   // First put cursor inside a measure so the highlight appears.
   await page.keyboard.press('Control+g')

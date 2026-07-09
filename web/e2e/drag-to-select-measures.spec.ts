@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { focusEditor } from './fileSwitcherHelpers'
 
 /**
  * The default source (reference.jianpu) contains many measures.
@@ -31,7 +32,7 @@ test('drag from measure 1 to measure 3 selects measures 1–3', async ({
   // waiting for the play button to display a measure label — that confirms
   // the worker's measureSpans response has been processed.
   // Line 18 of reference.jianpu is "[M] 1 2 3 0" (measure index 1).
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
   await page.keyboard.press('Control+g')
   await page.keyboard.type('18')
   await page.keyboard.press('Enter')
@@ -124,7 +125,7 @@ test('drag from measure 0 to measure 3 selects exactly 4 measures (not 5)', asyn
 
   // Prime measureSpans: click into the editor, navigate to a measure line,
   // and wait for the play button to confirm measureSpans are loaded.
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
   await page.keyboard.press('Control+g')
   await page.keyboard.type('18')
   await page.keyboard.press('Enter')
@@ -250,7 +251,7 @@ test('drag from measure 0 to measure 3 with CJK source selects exactly 4 measure
 
   // Prime measureSpans: navigate to line 11 ("[M] 0 0 0 0", measure 0) and
   // wait for the play button to confirm the worker has sent measureSpans back.
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
   await page.keyboard.press('Control+g')
   await page.keyboard.type('11')
   await page.keyboard.press('Enter')

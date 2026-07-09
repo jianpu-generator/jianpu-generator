@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test'
 import {
+  fileSwitcherTrigger,
+  openFileActions,
+  openFileList,
+  typeAtEditorEnd,
+} from './fileSwitcherHelpers'
+import {
   API_PREFIX,
   mockGithubContentsApi,
   OWNER,
@@ -47,18 +53,15 @@ async function setUpAndEdit(
 
   await page.goto('/')
 
+  await openFileList(page)
   const tab = page.locator('.file-tab-name', { hasText: 'banner.jianpu' })
   await tab.waitFor({ timeout: 15_000 })
   await tab.click()
-  await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
-    'banner.jianpu',
-  )
+  await expect(fileSwitcherTrigger(page)).toContainText('banner.jianpu')
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
-  await page.click('.monaco-editor .view-lines')
-  await page.keyboard.press('Control+End')
-  await page.keyboard.type(suffix)
+  await typeAtEditorEnd(page, suffix)
 
   // Waits for the edit to actually land in the DOM before the caller jumps
   // the fake clock — otherwise the clock can advance past the debounce
@@ -108,7 +111,8 @@ test('a rate-limited autosave shows the rate-limit banner, which clears once a s
   await setUpAndEdit(page, ' 5')
   await page.clock.fastForward(AUTOSAVE_DEBOUNCE_MS)
 
-  await page.getByRole('button', { name: 'Storage…' }).click()
+  await openFileActions(page)
+  await page.getByRole('menuitem', { name: 'Storage…' }).click()
   await page.getByTestId('storage-settings-modal').waitFor()
 
   const banner = page.getByTestId('status-banner')
@@ -122,9 +126,7 @@ test('a rate-limited autosave shows the rate-limit banner, which clears once a s
   // The one-shot 403 route has already fired and now falls back to the base
   // mock, so the next autosave succeeds and should clear the banner
   // (`lastError` reset to `null` in `saveContentImpl`'s success path).
-  await page.click('.monaco-editor .view-lines')
-  await page.keyboard.press('Control+End')
-  await page.keyboard.type(' 6')
+  await typeAtEditorEnd(page, ' 6')
   await expect(page.locator('.monaco-editor .view-lines')).toContainText(
     '1 2 3 4 5 6',
     { timeout: 10_000 },
@@ -138,7 +140,8 @@ test('a rate-limited autosave shows the rate-limit banner, which clears once a s
     )
     .toMatchObject({ content: expect.stringContaining('1 2 3 4 5 6') })
 
-  await page.getByRole('button', { name: 'Storage…' }).click()
+  await openFileActions(page)
+  await page.getByRole('menuitem', { name: 'Storage…' }).click()
   await page.getByTestId('storage-settings-modal').waitFor()
   await expect(banner).toHaveCount(0)
 })
@@ -177,7 +180,8 @@ test('a network-failed autosave shows the offline banner, which clears once a sa
   await setUpAndEdit(page, ' 5')
   await page.clock.fastForward(AUTOSAVE_DEBOUNCE_MS)
 
-  await page.getByRole('button', { name: 'Storage…' }).click()
+  await openFileActions(page)
+  await page.getByRole('menuitem', { name: 'Storage…' }).click()
   await page.getByTestId('storage-settings-modal').waitFor()
 
   const banner = page.getByTestId('status-banner')
@@ -190,9 +194,7 @@ test('a network-failed autosave shows the offline banner, which clears once a sa
 
   // The one-shot aborted route has already fired and now falls back to the
   // base mock, so the next autosave succeeds and should clear the banner.
-  await page.click('.monaco-editor .view-lines')
-  await page.keyboard.press('Control+End')
-  await page.keyboard.type(' 6')
+  await typeAtEditorEnd(page, ' 6')
   await expect(page.locator('.monaco-editor .view-lines')).toContainText(
     '1 2 3 4 5 6',
     { timeout: 10_000 },
@@ -206,7 +208,8 @@ test('a network-failed autosave shows the offline banner, which clears once a sa
     )
     .toMatchObject({ content: expect.stringContaining('1 2 3 4 5 6') })
 
-  await page.getByRole('button', { name: 'Storage…' }).click()
+  await openFileActions(page)
+  await page.getByRole('menuitem', { name: 'Storage…' }).click()
   await page.getByTestId('storage-settings-modal').waitFor()
   await expect(banner).toHaveCount(0)
 })

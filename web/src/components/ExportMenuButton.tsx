@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
+import { useDismissableOpen } from '../hooks/useDismissableOpen'
 
 export interface ExportMenuItem {
   key: string
@@ -15,26 +16,8 @@ interface ExportMenuButtonProps {
 }
 
 export function ExportMenuButton({ label, items }: ExportMenuButtonProps) {
-  const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [open])
+  const [open, setOpen] = useDismissableOpen(containerRef)
 
   return (
     <div className="export-menu" ref={containerRef}>

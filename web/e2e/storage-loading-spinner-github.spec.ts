@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { openFileActions } from './fileSwitcherHelpers'
 import {
   API_PREFIX,
   mockGithubContentsApi,
@@ -49,7 +50,8 @@ test('switching to GitHub repository storage shows a loading spinner while files
   await page.goto('/')
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
 
-  await page.getByRole('button', { name: 'Storage…' }).click()
+  await openFileActions(page)
+  await page.getByRole('menuitem', { name: 'Storage…' }).click()
   await page.getByTestId('storage-settings-modal').waitFor()
 
   await page

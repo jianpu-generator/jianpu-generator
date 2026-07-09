@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { focusEditor } from './fileSwitcherHelpers'
 
 /**
  * Generates a source with `count` single-measure lines so the rendered SVG
@@ -62,7 +63,7 @@ test('auto-scrolls the preview to the highlighted measure when the caret moves o
 
   // Place the caret on the first measure (line 8: "[M] 1 2 3 4") and confirm
   // the preview has not scrolled away from the top yet.
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
   await page.keyboard.press('Control+g')
   await page.keyboard.type('8')
   await page.keyboard.press('Enter')

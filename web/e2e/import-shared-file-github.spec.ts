@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { fileSwitcherTrigger, openFileList } from './fileSwitcherHelpers'
 import { mockGithubContentsApi, OWNER } from './github-contents-mock'
 import { gotoShareUrl } from './shareUrlHelper'
 
@@ -54,9 +55,7 @@ test('importing a shared score persists via the GitHub storage backend', async (
 
   // The banner is dismissed and the imported file becomes the active tab
   // once `backend.importFile`'s create-only `PUT` resolves.
-  await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
-    SHARED_FILENAME,
-  )
+  await expect(fileSwitcherTrigger(page)).toContainText(SHARED_FILENAME)
   await expect(page.locator('.shared-preview-banner')).toHaveCount(0)
 
   // Create-only: the PUT that lands the import must not carry a `sha` — a
@@ -72,6 +71,7 @@ test('importing a shared score persists via the GitHub storage backend', async (
   // actually landed in the fake remote, not just in in-memory React state.
   await page.reload()
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
+  await openFileList(page)
   await page
     .locator('.file-tab-name', { hasText: SHARED_FILENAME })
     .waitFor({ timeout: 15_000 })
