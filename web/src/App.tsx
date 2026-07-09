@@ -68,6 +68,7 @@ export default function App() {
   const [editPartsOpen, setEditPartsOpen] = useState(false)
   const [editMetadataOpen, setEditMetadataOpen] = useState(false)
   const [storageSettingsOpen, setStorageSettingsOpen] = useState(false)
+  const [editorCollapsed, setEditorCollapsed] = useState(false)
   const editorRef = useRef<EditorHandle>(null)
   const soundfont = useAssetLoader('/fonts/GeneralUser_GS.sf2')
   const fonts = useFontsLoader()
@@ -357,7 +358,15 @@ export default function App() {
           : ''}
       </span>
       <main className="workspace">
-        <section className="pane pane--editor">
+        <section
+          className={[
+            'pane',
+            'pane--editor',
+            editorCollapsed ? 'pane--editor-collapsed' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
           <div className="editor-layout">
             <div className="editor-main">
               {sharedPreview ? (
@@ -515,7 +524,25 @@ export default function App() {
             </div>
           </div>
         </section>
-        <div className="pane-divider" aria-hidden="true" />
+        <div className="pane-divider">
+          <button
+            type="button"
+            className="pane-divider-toggle"
+            onClick={() => setEditorCollapsed((collapsed) => !collapsed)}
+            title={editorCollapsed ? 'Show editor' : 'Hide editor'}
+            aria-label={editorCollapsed ? 'Show editor' : 'Hide editor'}
+          >
+            <span
+              className="pane-divider-toggle-icon"
+              style={{
+                transform: editorCollapsed ? 'rotate(180deg)' : 'none',
+              }}
+              aria-hidden="true"
+            >
+              ‹
+            </span>
+          </button>
+        </div>
         <section className="pane pane--preview">
           <Preview
             documents={documents}
