@@ -24,6 +24,7 @@ export interface StorageSettingsModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   backend: StorageBackend
+  isLoadingGithub: boolean
   preference: StorageBackendPreference
   switchBackend: (target: StorageBackendTarget) => Promise<void>
   store: FileStoreState
@@ -186,6 +187,7 @@ export function StorageSettingsModal({
   open,
   onOpenChange,
   backend,
+  isLoadingGithub,
   preference,
   switchBackend,
   store,
@@ -381,8 +383,34 @@ export function StorageSettingsModal({
                     Connected as <strong>@{username}</strong>
                   </p>
                   <p style={{ margin: 0, color: '#666' }}>
-                    Storing files in <code>{GITHUB_STORAGE_REPO}/scores</code>
+                    Storing files in{' '}
+                    <a
+                      href={`https://github.com/${username}/${GITHUB_STORAGE_REPO}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {username}/{GITHUB_STORAGE_REPO}
+                    </a>
+                    <code>/scores</code>
                   </p>
+                  {isLoadingGithub ? (
+                    <p
+                      style={{
+                        margin: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        color: '#666',
+                      }}
+                      data-testid="github-loading-spinner"
+                    >
+                      <span
+                        className="file-tab-bar-spinner"
+                        aria-hidden="true"
+                      />
+                      Loading files from GitHub…
+                    </p>
+                  ) : null}
                   <button
                     type="button"
                     style={{ ...buttonStyle, alignSelf: 'flex-start' }}

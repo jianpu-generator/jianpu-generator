@@ -42,6 +42,7 @@ export default function App() {
     store,
     setStore,
     backend,
+    isLoadingGithub,
     saveStatus,
     preference,
     switchBackend,
@@ -340,6 +341,7 @@ export default function App() {
         open={storageSettingsOpen}
         onOpenChange={setStorageSettingsOpen}
         backend={backend}
+        isLoadingGithub={isLoadingGithub}
         preference={preference}
         switchBackend={switchBackend}
         store={store}

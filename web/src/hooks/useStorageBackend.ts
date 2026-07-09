@@ -69,6 +69,12 @@ export interface UseStorageBackendResult {
     value: FileStoreState | ((prev: FileStoreState) => FileStoreState),
   ) => void
   backend: StorageBackend
+  /** True from the moment the `github` backend becomes active until its
+   * `load()` resolves and populates `githubStore` — the window during which
+   * `store` is the `EMPTY_STORE` placeholder rather than the real listing.
+   * Lets `StorageSettingsModal` show a loading spinner instead of briefly
+   * flashing an empty file list. */
+  isLoadingGithub: boolean
   saveStatus: SaveStatus
   /** Currently persisted backend choice, exposed so `StorageSettingsModal`
    * can reflect the active selection without re-deriving it from
@@ -201,6 +207,7 @@ export function useStorageBackend(): UseStorageBackendResult {
 
   const store =
     backend.kind === 'github' ? (githubStore ?? EMPTY_STORE) : localStore
+  const isLoadingGithub = backend.kind === 'github' && githubStore === null
 
   const setStore = useCallback(
     (value: FileStoreState | ((prev: FileStoreState) => FileStoreState)) => {
@@ -318,6 +325,7 @@ export function useStorageBackend(): UseStorageBackendResult {
     store,
     setStore,
     backend,
+    isLoadingGithub,
     saveStatus,
     preference,
     switchBackend,
