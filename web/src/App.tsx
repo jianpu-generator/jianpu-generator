@@ -8,6 +8,7 @@ import { FileTabBar } from './components/FileList'
 import { PartToggles } from './components/PartToggles'
 import { PlayMeasureButton } from './components/PlayMeasureButton'
 import { Preview } from './components/Preview'
+import { SharedPreviewBanner } from './components/SharedPreviewBanner'
 import { StorageSettingsModal } from './components/StorageSettingsModal'
 import {
   fileContent,
@@ -53,7 +54,10 @@ export default function App() {
   useEffect(() => {
     let cancelled = false
     void parseShareFromHash().then((parsed) => {
-      if (!cancelled) setSharedPreview(parsed)
+      if (!cancelled) {
+        setSharedPreview(parsed)
+        if (parsed) setEditorCollapsed(true)
+      }
     })
     return () => {
       cancelled = true
@@ -364,6 +368,13 @@ export default function App() {
           ? `${selectedMeasureRange.start}-${selectedMeasureRange.end}`
           : ''}
       </span>
+      {sharedPreview ? (
+        <SharedPreviewBanner
+          filename={sharedPreview.filename}
+          onImport={handleImportShared}
+          onDiscard={handleDismissShared}
+        />
+      ) : null}
       <main className="workspace">
         <section
           className={[
@@ -376,30 +387,7 @@ export default function App() {
         >
           <div className="editor-layout">
             <div className="editor-main">
-              {sharedPreview ? (
-                <div className="shared-preview-banner">
-                  <p>
-                    Viewing a shared score:{' '}
-                    <strong>{sharedPreview.filename}</strong>
-                  </p>
-                  <div className="shared-preview-actions">
-                    <button
-                      type="button"
-                      className="shared-preview-import-btn"
-                      onClick={handleImportShared}
-                    >
-                      Import to my scores
-                    </button>
-                    <button
-                      type="button"
-                      className="shared-preview-discard-btn"
-                      onClick={handleDismissShared}
-                    >
-                      Discard
-                    </button>
-                  </div>
-                </div>
-              ) : (
+              {sharedPreview ? null : (
                 <Editor
                   ref={editorRef}
                   path={fileId}
@@ -532,23 +520,25 @@ export default function App() {
           </div>
         </section>
         <div className="pane-divider">
-          <button
-            type="button"
-            className="pane-divider-toggle"
-            onClick={() => setEditorCollapsed((collapsed) => !collapsed)}
-            title={editorCollapsed ? 'Show editor' : 'Hide editor'}
-            aria-label={editorCollapsed ? 'Show editor' : 'Hide editor'}
-          >
-            <span
-              className="pane-divider-toggle-icon"
-              style={{
-                transform: editorCollapsed ? 'rotate(180deg)' : 'none',
-              }}
-              aria-hidden="true"
+          {sharedPreview ? null : (
+            <button
+              type="button"
+              className="pane-divider-toggle"
+              onClick={() => setEditorCollapsed((collapsed) => !collapsed)}
+              title={editorCollapsed ? 'Show editor' : 'Hide editor'}
+              aria-label={editorCollapsed ? 'Show editor' : 'Hide editor'}
             >
-              ‹
-            </span>
-          </button>
+              <span
+                className="pane-divider-toggle-icon"
+                style={{
+                  transform: editorCollapsed ? 'rotate(180deg)' : 'none',
+                }}
+                aria-hidden="true"
+              >
+                ‹
+              </span>
+            </button>
+          )}
         </div>
         <section className="pane pane--preview">
           <Preview

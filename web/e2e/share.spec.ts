@@ -50,6 +50,31 @@ test('opens a shared score preview without saving it, then imports on demand', a
   await expect(page.locator('.shared-preview-banner')).toHaveCount(0)
 })
 
+test('collapses the editor pane and hides its toggle when viewing a shared score', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.clear()
+  })
+
+  await gotoShareUrl(page, SHARED_FILENAME, SHARED_SOURCE)
+
+  await expect(page.locator('.pane--editor')).toHaveClass(
+    /pane--editor-collapsed/,
+  )
+  await expect(page.locator('.pane-divider-toggle')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Discard' }).click()
+
+  // The toggle reappears once the shared preview is dismissed, letting the
+  // user re-expand the editor pane manually.
+  await expect(page.locator('.pane-divider-toggle')).toBeVisible()
+  await page.locator('.pane-divider-toggle').click()
+  await expect(page.locator('.pane--editor')).not.toHaveClass(
+    /pane--editor-collapsed/,
+  )
+})
+
 test('discarding a shared preview does not save it', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.clear()
