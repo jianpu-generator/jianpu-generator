@@ -25,6 +25,18 @@ export function enabledTracksForRender(
   return enabled
 }
 
+export function enabledPartNamesForFilename(
+  parts: PartInfo[],
+  disabledParts: ReadonlySet<string>,
+): string[] | undefined {
+  if (parts.length === 0) return undefined
+  const enabled = parts
+    .filter((part) => !disabledParts.has(part.abbreviation))
+    .map((part) => part.display_name)
+  if (enabled.length === parts.length) return undefined
+  return enabled
+}
+
 export function disabledLyricsForRender(
   parts: PartInfo[],
   disabledLyrics: ReadonlySet<string>,
@@ -53,10 +65,10 @@ export function downloadPdf(bytes: ArrayBuffer, filename: string) {
 // of different toggle combinations don't silently overwrite each other.
 export function withEnabledPartsSuffix(
   filename: string,
-  enabledTracks: string[] | undefined,
+  enabledPartNames: string[] | undefined,
 ): string {
-  if (!enabledTracks || enabledTracks.length === 0) return filename
-  const suffix = enabledTracks.join(', ')
+  if (!enabledPartNames || enabledPartNames.length === 0) return filename
+  const suffix = enabledPartNames.join(', ')
   const dotIndex = filename.lastIndexOf('.')
   if (dotIndex === -1) return `${filename} (${suffix})`
   return `${filename.slice(0, dotIndex)} (${suffix})${filename.slice(dotIndex)}`
@@ -64,22 +76,22 @@ export function withEnabledPartsSuffix(
 
 export function pdfFilenameFromActiveFile(
   activeFile: string,
-  enabledTracks?: string[],
+  enabledPartNames?: string[],
 ): string {
   const base = activeFile.endsWith('.jianpu')
     ? activeFile.replace(/\.jianpu$/, '.pdf')
     : `${activeFile}.pdf`
-  return withEnabledPartsSuffix(base, enabledTracks)
+  return withEnabledPartsSuffix(base, enabledPartNames)
 }
 
 export function wavFilenameFromActiveFile(
   activeFile: string,
-  enabledTracks?: string[],
+  enabledPartNames?: string[],
 ): string {
   const base = activeFile.endsWith('.jianpu')
     ? activeFile.replace(/\.jianpu$/, '.wav')
     : `${activeFile}.wav`
-  return withEnabledPartsSuffix(base, enabledTracks)
+  return withEnabledPartsSuffix(base, enabledPartNames)
 }
 
 export function zipFilenameFromActiveFile(activeFile: string): string {

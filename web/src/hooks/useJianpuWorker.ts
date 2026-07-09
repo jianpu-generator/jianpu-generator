@@ -15,6 +15,7 @@ import type { JianpuWorkerState } from './useJianpuWorkerTypes'
 import {
   baseNameFromActiveFile,
   disabledLyricsForRender,
+  enabledPartNamesForFilename,
   enabledTracksForRender,
   measureRangeInSpan,
   wavFilenameFromActiveFile,
@@ -88,6 +89,7 @@ export function useJianpuWorker(
   const sourceRef = useRef(source)
   const activeFileRef = useRef(activeFile)
   const enabledTracksRef = useRef<string[] | undefined>(undefined)
+  const enabledPartNamesRef = useRef<string[] | undefined>(undefined)
   const disabledLyricsRef = useRef<string[] | undefined>(undefined)
   const audioAvailableRef = useRef(false)
   const cursorOffsetTimerRef = useRef<number | null>(null)
@@ -112,18 +114,23 @@ export function useJianpuWorker(
     () => enabledTracksForRender(parts, effectiveDisabledParts),
     [parts, effectiveDisabledParts],
   )
+  const enabledPartNames = useMemo(
+    () => enabledPartNamesForFilename(parts, effectiveDisabledParts),
+    [parts, effectiveDisabledParts],
+  )
   const disabledLyricsTracks = useMemo(
     () => disabledLyricsForRender(parts, disabledLyrics),
     [parts, disabledLyrics],
   )
   const wavFilename = useMemo(
-    () => wavFilenameFromActiveFile(activeFile, enabledTracks),
-    [activeFile, enabledTracks],
+    () => wavFilenameFromActiveFile(activeFile, enabledPartNames),
+    [activeFile, enabledPartNames],
   )
 
   sourceRef.current = source
   activeFileRef.current = activeFile
   enabledTracksRef.current = enabledTracks
+  enabledPartNamesRef.current = enabledPartNames
   disabledLyricsRef.current = disabledLyricsTracks
   measureSpansRef.current = measureSpans
 
@@ -177,7 +184,7 @@ export function useJianpuWorker(
       latestPdfIdRef,
       setPdfExporting,
       activeFileRef,
-      enabledTracksRef,
+      enabledPartNamesRef,
       setDiagnostics,
       latestSplitPdfIdRef,
       setSplitPdfExporting,

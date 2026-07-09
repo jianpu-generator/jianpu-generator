@@ -158,5 +158,5 @@ test('audio download link filename includes only the enabled parts when a part i
 
   const downloadLink = page.locator('.preview-audio-download')
   await expect(downloadLink).toBeVisible({ timeout: 15_000 })
-  await expect(downloadLink).toHaveAttribute('download', 'test (M).wav')
+  await expect(downloadLink).toHaveAttribute('download', 'test (Melody).wav')
 })

@@ -133,7 +133,7 @@ test('Export PDF filename includes only the enabled parts when a part is hidden'
     exportButton.click(),
   ])
 
-  expect(download.suggestedFilename()).toBe('test (M).pdf')
+  expect(download.suggestedFilename()).toBe('test (Melody).pdf')
 })
 
 test('rapid double-click on Export PDF only triggers a single export', async ({

@@ -31,7 +31,7 @@ export interface WorkerMessageHandlerDeps {
   latestPdfIdRef: RefObject<number>
   setPdfExporting: (value: boolean) => void
   activeFileRef: RefObject<string>
-  enabledTracksRef: RefObject<string[] | undefined>
+  enabledPartNamesRef: RefObject<string[] | undefined>
   setDiagnostics: (value: Diagnostic[]) => void
   latestSplitPdfIdRef: RefObject<number>
   setSplitPdfExporting: (value: boolean) => void
@@ -88,7 +88,7 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
         msg.pdf,
         pdfFilenameFromActiveFile(
           deps.activeFileRef.current,
-          deps.enabledTracksRef.current,
+          deps.enabledPartNamesRef.current,
         ),
       )
       return

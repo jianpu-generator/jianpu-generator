@@ -380,7 +380,14 @@ export function StorageSettingsModal({
                   data-testid="github-connected"
                 >
                   <p style={{ margin: 0 }}>
-                    Connected as <strong>@{username}</strong>
+                    Connected as{' '}
+                    <a
+                      href={`https://github.com/${username}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <strong>@{username}</strong>
+                    </a>
                   </p>
                   <p style={{ margin: 0, color: '#666' }}>
                     Storing files in{' '}
