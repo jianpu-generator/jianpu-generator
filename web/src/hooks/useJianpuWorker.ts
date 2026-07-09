@@ -44,6 +44,10 @@ export function useJianpuWorker(
   const [pdfAvailable, setPdfAvailable] = useState(false)
   const [pdfExporting, setPdfExporting] = useState(false)
   const [splitPdfExporting, setSplitPdfExporting] = useState(false)
+  const [midiAvailable, setMidiAvailable] = useState(false)
+  const [midiExporting, setMidiExporting] = useState(false)
+  const [splitMidiExporting, setSplitMidiExporting] = useState(false)
+  const [splitWavExporting, setSplitWavExporting] = useState(false)
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([])
   const [diagnosticViewZones, setDiagnosticViewZones] = useState<
     DiagnosticViewZone[]
@@ -81,11 +85,17 @@ export function useJianpuWorker(
   const audioRequestIdRef = useRef(0)
   const pdfRequestIdRef = useRef(0)
   const splitPdfRequestIdRef = useRef(0)
+  const midiRequestIdRef = useRef(0)
+  const splitMidiRequestIdRef = useRef(0)
+  const splitWavRequestIdRef = useRef(0)
   const latestPartsIdRef = useRef(0)
   const latestRenderIdRef = useRef(0)
   const latestAudioIdRef = useRef(0)
   const latestPdfIdRef = useRef(0)
   const latestSplitPdfIdRef = useRef(0)
+  const latestMidiIdRef = useRef(0)
+  const latestSplitMidiIdRef = useRef(0)
+  const latestSplitWavIdRef = useRef(0)
   const sourceRef = useRef(source)
   const activeFileRef = useRef(activeFile)
   const enabledTracksRef = useRef<string[] | undefined>(undefined)
@@ -175,6 +185,7 @@ export function useJianpuWorker(
       audioAvailableRef,
       setAudioAvailable,
       setPdfAvailable,
+      setMidiAvailable,
       latestPartsIdRef,
       setPartsLoading,
       setParts,
@@ -188,6 +199,12 @@ export function useJianpuWorker(
       setDiagnostics,
       latestSplitPdfIdRef,
       setSplitPdfExporting,
+      latestMidiIdRef,
+      setMidiExporting,
+      latestSplitMidiIdRef,
+      setSplitMidiExporting,
+      latestSplitWavIdRef,
+      setSplitWavExporting,
       latestRenderIdRef,
       setRendering,
       setDocuments,
@@ -445,6 +462,57 @@ export function useJianpuWorker(
     worker.postMessage(payload)
   }, [pdfExporting, splitPdfExporting])
 
+  const exportMidi = useCallback(() => {
+    const worker = workerRef.current
+    if (!worker || midiExporting) return
+
+    const id = ++midiRequestIdRef.current
+    latestMidiIdRef.current = id
+    setMidiExporting(true)
+
+    const payload: WorkerRequest = {
+      type: 'generateMidi',
+      source: sourceRef.current,
+      id,
+      enabledTracks: enabledTracksRef.current,
+    }
+    worker.postMessage(payload)
+  }, [midiExporting])
+
+  const exportSplitMidi = useCallback(() => {
+    const worker = workerRef.current
+    if (!worker || splitMidiExporting) return
+
+    const id = ++splitMidiRequestIdRef.current
+    latestSplitMidiIdRef.current = id
+    setSplitMidiExporting(true)
+
+    const payload: WorkerRequest = {
+      type: 'generateSplitMidi',
+      source: sourceRef.current,
+      id,
+      baseName: baseNameFromActiveFile(activeFileRef.current),
+    }
+    worker.postMessage(payload)
+  }, [splitMidiExporting])
+
+  const exportSplitWav = useCallback(() => {
+    const worker = workerRef.current
+    if (!worker || splitWavExporting) return
+
+    const id = ++splitWavRequestIdRef.current
+    latestSplitWavIdRef.current = id
+    setSplitWavExporting(true)
+
+    const payload: WorkerRequest = {
+      type: 'generateSplitWav',
+      source: sourceRef.current,
+      id,
+      baseName: baseNameFromActiveFile(activeFileRef.current),
+    }
+    worker.postMessage(payload)
+  }, [splitWavExporting])
+
   const updatePartDeclaration = useCallback(
     (
       abbreviation: string,
@@ -489,12 +557,19 @@ export function useJianpuWorker(
     pdfAvailable,
     pdfExporting,
     splitPdfExporting,
+    midiAvailable,
+    midiExporting,
+    splitMidiExporting,
+    splitWavExporting,
     diagnostics,
     diagnosticViewZones,
     rendering,
     audioGenerating,
     exportPdf,
     exportSplitPdf,
+    exportMidi,
+    exportSplitMidi,
+    exportSplitWav,
     generateFullAudio,
     selectedMeasureRange,
     measureAudioGenerating,

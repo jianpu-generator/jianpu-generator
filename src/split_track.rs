@@ -1,8 +1,8 @@
 use crate::ast::grouped::Score;
 use crate::error::IrrecoverableError;
-#[cfg(feature = "pdf")]
+#[cfg(any(feature = "pdf", feature = "midi"))]
 use crate::error::{IrrecoverableErrorKind, Span};
-#[cfg(feature = "pdf")]
+#[cfg(any(feature = "pdf", feature = "midi"))]
 use crate::filters::filter_tracks;
 use crate::list_parts_from_source;
 #[cfg(feature = "pdf")]
@@ -160,4 +160,105 @@ pub fn zip_split_pdfs(entries: &[SplitPdfEntry]) -> Result<Vec<u8>, Irrecoverabl
         })?;
     }
     Ok(buffer)
+}
+
+/// One file (WAV or MIDI) produced by split-track export.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SplitFileEntry {
+    pub track_name: String,
+    pub filename: String,
+    pub bytes: Vec<u8>,
+}
+
+#[cfg(any(feature = "pdf", feature = "midi"))]
+pub fn zip_split_entries(entries: &[SplitFileEntry]) -> Result<Vec<u8>, IrrecoverableError> {
+    use std::io::Write;
+    use zip::write::SimpleFileOptions;
+    use zip::ZipWriter;
+
+    let mut buffer = Vec::new();
+    {
+        let mut writer = ZipWriter::new(std::io::Cursor::new(&mut buffer));
+        let options =
+            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+        for entry in entries {
+            writer.start_file(&entry.filename, options).map_err(|e| {
+                IrrecoverableError::new(IrrecoverableErrorKind::ZipStartFileFailed {
+                    span: Span::new(0, 0),
+                    source: e.to_string(),
+                })
+            })?;
+            writer.write_all(&entry.bytes).map_err(|e| {
+                IrrecoverableError::new(IrrecoverableErrorKind::ZipWriteFailed {
+                    span: Span::new(0, 0),
+                    source: e.to_string(),
+                })
+            })?;
+        }
+        writer.finish().map_err(|e| {
+            IrrecoverableError::new(IrrecoverableErrorKind::ZipFinishFailed {
+                span: Span::new(0, 0),
+                source: e.to_string(),
+            })
+        })?;
+    }
+    Ok(buffer)
+}
+
+/// Parse once, write one MIDI file per track.
+///
+/// `tracks_filter`: empty → all tracks; non-empty → only listed abbreviations.
+#[cfg(feature = "midi")]
+pub fn write_split_midis_from_source(
+    source: &str,
+    filename: &str,
+    base_name: &str,
+    tracks_filter: &[String],
+) -> Result<Vec<SplitFileEntry>, IrrecoverableError> {
+    let score = crate::compile(source, filename, &[])?;
+    let track_names = split_track_names(source, filename, &score, tracks_filter)?;
+    let display_names = part_display_name_map(source, filename)?;
+    let mut entries = Vec::with_capacity(track_names.len());
+    for track in track_names {
+        let mut score_clone = score.clone();
+        filter_tracks(&mut score_clone, std::slice::from_ref(&track));
+        let midi = crate::midi::write_midi(&score_clone)?;
+        let label = split_track_label(&display_names, &track);
+        entries.push(SplitFileEntry {
+            track_name: track.clone(),
+            filename: split_track_filename(base_name, &label, "mid"),
+            bytes: midi,
+        });
+    }
+    Ok(entries)
+}
+
+/// Parse once, synthesize one WAV file per track.
+///
+/// `tracks_filter`: empty → all tracks; non-empty → only listed abbreviations.
+#[cfg(feature = "wav")]
+pub fn write_split_wavs_from_source(
+    source: &str,
+    filename: &str,
+    base_name: &str,
+    tracks_filter: &[String],
+    sf2_bytes: &[u8],
+) -> Result<Vec<SplitFileEntry>, IrrecoverableError> {
+    let score = crate::compile(source, filename, &[])?;
+    let track_names = split_track_names(source, filename, &score, tracks_filter)?;
+    let display_names = part_display_name_map(source, filename)?;
+    let mut entries = Vec::with_capacity(track_names.len());
+    for track in track_names {
+        let mut score_clone = score.clone();
+        filter_tracks(&mut score_clone, std::slice::from_ref(&track));
+        let midi_bytes = crate::midi::write_midi(&score_clone)?;
+        let wav = crate::wav::write_wav(&midi_bytes, sf2_bytes)?;
+        let label = split_track_label(&display_names, &track);
+        entries.push(SplitFileEntry {
+            track_name: track.clone(),
+            filename: split_track_filename(base_name, &label, "wav"),
+            bytes: wav,
+        });
+    }
+    Ok(entries)
 }

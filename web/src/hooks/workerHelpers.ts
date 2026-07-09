@@ -84,6 +84,25 @@ export function pdfFilenameFromActiveFile(
   return withEnabledPartsSuffix(base, enabledPartNames)
 }
 
+export function midiFilenameFromActiveFile(
+  activeFile: string,
+  enabledPartNames?: string[],
+): string {
+  const base = activeFile.endsWith('.jianpu')
+    ? activeFile.replace(/\.jianpu$/, '.mid')
+    : `${activeFile}.mid`
+  return withEnabledPartsSuffix(base, enabledPartNames)
+}
+
+export function downloadMidi(bytes: ArrayBuffer, filename: string) {
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/midi' }))
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+
 export function wavFilenameFromActiveFile(
   activeFile: string,
   enabledPartNames?: string[],
@@ -94,11 +113,14 @@ export function wavFilenameFromActiveFile(
   return withEnabledPartsSuffix(base, enabledPartNames)
 }
 
-export function zipFilenameFromActiveFile(activeFile: string): string {
-  if (activeFile.endsWith('.jianpu')) {
-    return activeFile.replace(/\.jianpu$/, '.zip')
-  }
-  return `${activeFile}.zip`
+export function zipFilenameFromActiveFile(
+  activeFile: string,
+  suffix?: string,
+): string {
+  const base = activeFile.endsWith('.jianpu')
+    ? activeFile.replace(/\.jianpu$/, '')
+    : activeFile
+  return suffix ? `${base} (${suffix}).zip` : `${base}.zip`
 }
 
 export function baseNameFromActiveFile(activeFile: string): string {

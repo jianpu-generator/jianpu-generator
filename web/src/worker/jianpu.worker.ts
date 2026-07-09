@@ -16,6 +16,13 @@ import type {
   SectionRange,
 } from '../types'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
+import {
+  handleGenerateMidi,
+  handleGeneratePdf,
+  handleGenerateSplitMidi,
+  handleGenerateSplitPdf,
+  handleGenerateSplitWav,
+} from './exportMessageHandlers'
 
 const generateWav =
   'generate_wav' in jianpuWasm ? jianpuWasm.generate_wav : null
@@ -35,6 +42,15 @@ const generatePdf =
 
 const generateSplitPdfs =
   'generate_split_pdfs' in jianpuWasm ? jianpuWasm.generate_split_pdfs : null
+
+const generateMidi =
+  'generate_midi' in jianpuWasm ? jianpuWasm.generate_midi : null
+
+const generateSplitMidis =
+  'generate_split_midis' in jianpuWasm ? jianpuWasm.generate_split_midis : null
+
+const generateSplitWavs =
+  'generate_split_wavs' in jianpuWasm ? jianpuWasm.generate_split_wavs : null
 
 const generateInstrumentPreviewWav =
   'generate_instrument_preview_wav' in jianpuWasm
@@ -85,6 +101,24 @@ export type WorkerRequest =
       baseName: string
     }
   | {
+      type: 'generateMidi'
+      source: string
+      id: number
+      enabledTracks?: string[]
+    }
+  | {
+      type: 'generateSplitMidi'
+      source: string
+      id: number
+      baseName: string
+    }
+  | {
+      type: 'generateSplitWav'
+      source: string
+      id: number
+      baseName: string
+    }
+  | {
       type: 'generateAudio'
       source: string
       id: number
@@ -111,7 +145,12 @@ export type WorkerRequest =
   | { type: 'previewInstrument'; id: number; programNumber: number }
 
 export type WorkerResponse =
-  | { type: 'ready'; audioAvailable: boolean; pdfAvailable: boolean }
+  | {
+      type: 'ready'
+      audioAvailable: boolean
+      pdfAvailable: boolean
+      midiAvailable: boolean
+    }
   | {
       type: 'ok'
       id: number
@@ -143,6 +182,12 @@ export type WorkerResponse =
   | { type: 'pdfErr'; id: number; diagnostics: Diagnostic[] }
   | { type: 'splitPdf'; id: number; zip: ArrayBuffer }
   | { type: 'splitPdfErr'; id: number; diagnostics: Diagnostic[] }
+  | { type: 'midi'; id: number; midi: ArrayBuffer }
+  | { type: 'midiErr'; id: number; diagnostics: Diagnostic[] }
+  | { type: 'splitMidi'; id: number; zip: ArrayBuffer }
+  | { type: 'splitMidiErr'; id: number; diagnostics: Diagnostic[] }
+  | { type: 'splitWav'; id: number; zip: ArrayBuffer }
+  | { type: 'splitWavErr'; id: number; diagnostics: Diagnostic[] }
   | { type: 'measureRangeAudio'; id: number; wav: ArrayBuffer }
   | { type: 'measureRangeAudioErr'; id: number }
   | { type: 'instrumentPreview'; id: number; wav: ArrayBuffer }
@@ -167,6 +212,7 @@ async function ensureInit() {
       type: 'ready',
       audioAvailable: generateWav !== null,
       pdfAvailable: generatePdf !== null,
+      midiAvailable: generateMidi !== null,
     } satisfies WorkerResponse)
   }
 }
@@ -262,119 +308,27 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'generatePdf') {
-    if (!generatePdf) {
-      postMessage({
-        type: 'pdfErr',
-        id: msg.id,
-        diagnostics: [
-          {
-            severity: 'error',
-            message: 'PDF export is not available in this build.',
-            span: { start: 0, end: 0 },
-          },
-        ],
-      } satisfies WorkerResponse)
-      return
-    }
-
-    if (!loadedFonts) {
-      postMessage({
-        type: 'pdfErr',
-        id: msg.id,
-        diagnostics: [
-          {
-            severity: 'error',
-            message: 'Fonts are not yet loaded.',
-            span: { start: 0, end: 0 },
-          },
-        ],
-      } satisfies WorkerResponse)
-      return
-    }
-    const result = generatePdf(
-      msg.source,
-      msg.enabledTracks,
-      msg.disabledLyrics,
-      loadedFonts.sc,
-      loadedFonts.tc,
-      loadedFonts.mono,
-    )
-    if (result.status === 'ok') {
-      const pdfBuffer = binaryBufferFromResult(result.pdf)
-      postMessage(
-        {
-          type: 'pdf',
-          id: msg.id,
-          pdf: pdfBuffer,
-        } satisfies WorkerResponse,
-        { transfer: [pdfBuffer] },
-      )
-      return
-    }
-
-    postMessage({
-      type: 'pdfErr',
-      id: msg.id,
-      diagnostics: result.diagnostics,
-    } satisfies WorkerResponse)
+    handleGeneratePdf(msg, generatePdf, loadedFonts)
     return
   }
 
   if (msg.type === 'generateSplitPdf') {
-    if (!generateSplitPdfs) {
-      postMessage({
-        type: 'splitPdfErr',
-        id: msg.id,
-        diagnostics: [
-          {
-            severity: 'error',
-            message: 'Split PDF export is not available in this build.',
-            span: { start: 0, end: 0 },
-          },
-        ],
-      } satisfies WorkerResponse)
-      return
-    }
+    handleGenerateSplitPdf(msg, generateSplitPdfs, loadedFonts)
+    return
+  }
 
-    if (!loadedFonts) {
-      postMessage({
-        type: 'splitPdfErr',
-        id: msg.id,
-        diagnostics: [
-          {
-            severity: 'error',
-            message: 'Fonts are not yet loaded.',
-            span: { start: 0, end: 0 },
-          },
-        ],
-      } satisfies WorkerResponse)
-      return
-    }
-    const result = generateSplitPdfs(
-      msg.source,
-      msg.baseName,
-      loadedFonts.sc,
-      loadedFonts.tc,
-      loadedFonts.mono,
-    )
-    if (result.status === 'ok') {
-      const zipBuffer = binaryBufferFromResult(result.zip)
-      postMessage(
-        {
-          type: 'splitPdf',
-          id: msg.id,
-          zip: zipBuffer,
-        } satisfies WorkerResponse,
-        { transfer: [zipBuffer] },
-      )
-      return
-    }
+  if (msg.type === 'generateMidi') {
+    handleGenerateMidi(msg, generateMidi)
+    return
+  }
 
-    postMessage({
-      type: 'splitPdfErr',
-      id: msg.id,
-      diagnostics: result.diagnostics,
-    } satisfies WorkerResponse)
+  if (msg.type === 'generateSplitMidi') {
+    handleGenerateSplitMidi(msg, generateSplitMidis)
+    return
+  }
+
+  if (msg.type === 'generateSplitWav') {
+    handleGenerateSplitWav(msg, generateSplitWavs, loadedSoundfont)
     return
   }
 

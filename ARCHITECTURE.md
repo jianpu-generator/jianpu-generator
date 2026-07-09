@@ -117,6 +117,15 @@ The React app (`web/`) runs the compiler in a dedicated worker (`web/src/worker/
 - Entry: `source_edit::update_part_declaration(source, abbreviation, new_mode, new_soundfont, new_volume, new_octave_offset) -> Option<String>`
 - Rewrites a single `# parts` declaration line in place (mode, optional quoted soundfont, optional volume `%`, optional octave offset). Used by the Edit Parts modal instead of any TypeScript parser.
 
+### Split-track export
+
+- Module: `src/split_track.rs`
+- Entries: `write_split_pdfs_from_source(source, filename, base_name, tracks_filter, fonts) -> Result<Vec<SplitPdfEntry>, IrrecoverableError>` (`pdf` feature); `write_split_midis_from_source(source, filename, base_name, tracks_filter) -> Result<Vec<SplitFileEntry>, IrrecoverableError>` (`midi` feature); `write_split_wavs_from_source(source, filename, base_name, tracks_filter, sf2_bytes) -> Result<Vec<SplitFileEntry>, IrrecoverableError>` (`wav` feature)
+- Each parses/compiles the source once, then renders/synthesizes one output per track (`tracks_filter` empty → all score tracks).
+- Key types: `SplitPdfEntry` (`track_name`, `filename`, `pdf`), `SplitFileEntry` (`track_name`, `filename`, `bytes` — shared by the MIDI and WAV variants)
+- `zip_split_pdfs(entries: &[SplitPdfEntry])` / `zip_split_entries(entries: &[SplitFileEntry])` archive the entries into a single ZIP (`Vec<u8>`), one file per track named via `split_track_filename`.
+- `src/lib.rs`'s `write_midi_from_source_filtered(source, filename, enabled_tracks, instruments) -> Result<Vec<u8>, IrrecoverableError>` (`midi` feature) is the whole-score counterpart used by `generate_midi`, mirroring `write_pdf_from_source_filtered` and `write_wav_for_measure_range_from_source`.
+
 ### Part declarations (source-level)
 
 - Entry: `list_part_declarations_from_source(source, filename, instruments) -> Result<Vec<SourcePartDeclaration>, IrrecoverableError>` in `src/lib.rs`
@@ -131,6 +140,11 @@ The React app (`web/`) runs the compiler in a dedicated worker (`web/src/worker/
 | `update_part_declaration(source, abbreviation, new_mode, new_soundfont, new_volume, new_octave_offset)` | Returns updated source; empty strings for soundfont/volume/octave mean “omit / default” |
 | `compress_share_payload(payload) -> Vec<u8>` | Brotli-compresses a share-link JSON payload (quality 11); caller base64url-encodes the result |
 | `decompress_share_payload(bytes) -> Option<String>` | Inverse of the above; `None` if `bytes` isn't valid brotli or decodes to invalid UTF-8 |
+| `generate_midi(source, enabled_tracks)` | Generates MIDI (SMF) bytes for the whole score. `midi` feature only. |
+| `generate_split_midis(source, base_name)` | One MIDI file per part, zipped. `midi` feature only. |
+| `generate_split_wavs(source, base_name, soundfont)` | One WAV file per part, zipped; `soundfont` is raw SF2 bytes supplied by the caller. `wav` feature only. |
+
+`generate_pdf`/`generate_split_pdfs` (`pdf` feature) follow the same pattern as the MIDI/WAV exports above: structured `{ status, ... }` envelope, `Vec<u8>` font/soundfont parameters supplied by the caller rather than embedded in the WASM binary.
 
 `web/src/shareUrl.ts` calls `compress_share_payload`/`decompress_share_payload` directly from the main thread (a separate WASM instance from the render worker's), lazily `init()`-ing on first use, to build/parse `#share=<base64url>` links. `decodeShareHashSuffix` falls back to the legacy `lz-string`-encoded format, then plain-JSON, for links created before this switch.
 

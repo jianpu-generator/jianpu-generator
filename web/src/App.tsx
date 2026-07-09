@@ -104,6 +104,13 @@ export default function App() {
     exportPdf,
     splitPdfExporting,
     exportSplitPdf,
+    midiAvailable,
+    midiExporting,
+    exportMidi,
+    splitMidiExporting,
+    exportSplitMidi,
+    splitWavExporting,
+    exportSplitWav,
     generateFullAudio,
     selectedMeasureRange,
     measureAudioGenerating,
@@ -562,6 +569,13 @@ export default function App() {
             onExportPdf={exportPdf}
             splitPdfExporting={splitPdfExporting}
             onExportSplitPdf={exportSplitPdf}
+            midiAvailable={midiAvailable}
+            midiExporting={midiExporting}
+            onExportMidi={exportMidi}
+            splitMidiExporting={splitMidiExporting}
+            onExportSplitMidi={exportSplitMidi}
+            splitWavExporting={splitWavExporting}
+            onExportSplitWav={exportSplitWav}
             partsCount={parts.length}
             emptyMessage={
               noPartsSelected ? 'No parts selected.' : 'No preview yet.'

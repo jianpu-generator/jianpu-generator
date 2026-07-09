@@ -488,6 +488,22 @@ pub fn write_wav_for_measure_range_from_source(
     wav::write_wav(&midi_bytes, sf2_bytes)
 }
 
+/// Parse, group, optionally filter tracks, and generate MIDI (SMF) bytes.
+///
+/// When `enabled_tracks` is `None`, all parts are included.
+/// When `Some(tracks)` is empty, no parts are included.
+#[cfg(feature = "midi")]
+pub fn write_midi_from_source_filtered(
+    source: &str,
+    filename: &str,
+    enabled_tracks: Option<&[String]>,
+    instruments: &[InstrumentInfo],
+) -> Result<Vec<u8>, IrrecoverableError> {
+    let mut score = compile(source, filename, instruments)?;
+    apply_track_filter(&mut score, enabled_tracks);
+    midi::write_midi(&score)
+}
+
 /// Parse, group, optionally filter tracks, and write PDF bytes.
 ///
 /// When `enabled_tracks` is `None`, all parts are included.

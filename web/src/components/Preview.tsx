@@ -1,5 +1,6 @@
 import type { SvgDocumentOut, SvgElementOut } from 'jianpu-wasm'
 import { type ReactNode, useEffect, useRef } from 'react'
+import { ExportMenuButton, type ExportMenuItem } from './ExportMenuButton'
 
 interface PreviewProps {
   documents: SvgDocumentOut[]
@@ -17,6 +18,13 @@ interface PreviewProps {
   onExportPdf?: () => void
   splitPdfExporting?: boolean
   onExportSplitPdf?: () => void
+  midiAvailable?: boolean
+  midiExporting?: boolean
+  onExportMidi?: () => void
+  splitMidiExporting?: boolean
+  onExportSplitMidi?: () => void
+  splitWavExporting?: boolean
+  onExportSplitWav?: () => void
   partsCount?: number
   emptyMessage?: string
   toolbar?: ReactNode
@@ -273,6 +281,13 @@ export function Preview({
   onExportPdf,
   splitPdfExporting = false,
   onExportSplitPdf,
+  midiAvailable = false,
+  midiExporting = false,
+  onExportMidi,
+  splitMidiExporting = false,
+  onExportSplitMidi,
+  splitWavExporting = false,
+  onExportSplitWav,
   partsCount = 0,
   emptyMessage = 'No preview yet.',
   toolbar,
@@ -357,7 +372,8 @@ export function Preview({
     }
   }, [])
 
-  const exporting = pdfExporting || splitPdfExporting
+  const exporting =
+    pdfExporting || splitPdfExporting || midiExporting || splitMidiExporting
   const canExportPdf =
     pdfAvailable &&
     pdfFontsReady &&
@@ -366,6 +382,98 @@ export function Preview({
     !exporting
   const canExportSplitPdf =
     pdfAvailable && pdfFontsReady && partsCount > 0 && !rendering && !exporting
+  const canExportMidi =
+    midiAvailable && documents.length > 0 && !rendering && !exporting
+  const canExportSplitMidi =
+    midiAvailable && partsCount > 0 && !rendering && !exporting
+  const canExportWav = audioAvailable && soundfontReady && !audioGenerating
+  const canExportSplitWav =
+    audioAvailable &&
+    soundfontReady &&
+    partsCount > 0 &&
+    !splitWavExporting &&
+    !audioGenerating
+
+  const canExport = pdfAvailable || midiAvailable || audioAvailable
+  const canExportParts = canExport && partsCount > 1
+
+  const exportItems: ExportMenuItem[] = [
+    ...(pdfAvailable
+      ? [
+          {
+            key: 'pdf',
+            label: 'PDF',
+            busyLabel: 'Exporting PDF…',
+            busy: pdfExporting,
+            disabled: !canExportPdf,
+            onSelect: () => onExportPdf?.(),
+          },
+        ]
+      : []),
+    ...(audioAvailable
+      ? [
+          {
+            key: 'wav',
+            label: wavUrl ? 'WAV (regenerate)' : 'WAV',
+            busyLabel: 'Generating WAV…',
+            busy: audioGenerating,
+            disabled: !canExportWav,
+            onSelect: () => onGenerateAudio?.(),
+          },
+        ]
+      : []),
+    ...(midiAvailable
+      ? [
+          {
+            key: 'midi',
+            label: 'MIDI',
+            busyLabel: 'Exporting MIDI…',
+            busy: midiExporting,
+            disabled: !canExportMidi,
+            onSelect: () => onExportMidi?.(),
+          },
+        ]
+      : []),
+  ]
+
+  const exportPartsItems: ExportMenuItem[] = [
+    ...(pdfAvailable
+      ? [
+          {
+            key: 'pdf-parts',
+            label: 'PDF (ZIP)',
+            busyLabel: 'Exporting…',
+            busy: splitPdfExporting,
+            disabled: !canExportSplitPdf,
+            onSelect: () => onExportSplitPdf?.(),
+          },
+        ]
+      : []),
+    ...(audioAvailable
+      ? [
+          {
+            key: 'wav-parts',
+            label: 'WAV (ZIP)',
+            busyLabel: 'Exporting…',
+            busy: splitWavExporting,
+            disabled: !canExportSplitWav,
+            onSelect: () => onExportSplitWav?.(),
+          },
+        ]
+      : []),
+    ...(midiAvailable
+      ? [
+          {
+            key: 'midi-parts',
+            label: 'MIDI (ZIP)',
+            busyLabel: 'Exporting…',
+            busy: splitMidiExporting,
+            disabled: !canExportSplitMidi,
+            onSelect: () => onExportSplitMidi?.(),
+          },
+        ]
+      : []),
+  ]
 
   const activeDocs =
     highlightedDocuments.length > 0 ? highlightedDocuments : documents
@@ -375,53 +483,11 @@ export function Preview({
       <div className="preview-header">
         <span>Preview</span>
         <div className="preview-header-actions">
-          {pdfAvailable ? (
-            <button
-              type="button"
-              className="preview-export-btn"
-              disabled={!canExportPdf}
-              onClick={onExportPdf}
-            >
-              {pdfExporting
-                ? 'Exporting PDF…'
-                : !pdfFontsReady
-                  ? 'Loading fonts…'
-                  : 'Export PDF'}
-            </button>
+          {canExport ? (
+            <ExportMenuButton label="Export" items={exportItems} />
           ) : null}
-          {pdfAvailable ? (
-            <button
-              type="button"
-              className="preview-export-btn"
-              disabled={!canExportSplitPdf}
-              onClick={onExportSplitPdf}
-            >
-              {splitPdfExporting
-                ? 'Exporting parts…'
-                : !pdfFontsReady
-                  ? 'Loading fonts…'
-                  : 'Export parts (ZIP)'}
-            </button>
-          ) : null}
-          {audioAvailable ? (
-            <button
-              type="button"
-              className="preview-export-btn"
-              disabled={audioGenerating || !soundfontReady}
-              onClick={onGenerateAudio}
-              aria-label={wavUrl ? 'Regenerate audio' : 'Generate audio'}
-            >
-              {audioGenerating ? (
-                <>
-                  <span className="preview-audio-spinner" aria-hidden="true" />
-                  <span>Generating…</span>
-                </>
-              ) : !soundfontReady ? (
-                <span>Loading soundfont…</span>
-              ) : (
-                <span>{wavUrl ? 'Regenerate audio' : 'Generate audio'}</span>
-              )}
-            </button>
+          {canExportParts ? (
+            <ExportMenuButton label="Export Parts" items={exportPartsItems} />
           ) : null}
           {rendering ? (
             <span className="preview-status">Rendering…</span>

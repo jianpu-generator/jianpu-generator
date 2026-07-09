@@ -20,12 +20,19 @@ export interface JianpuWorkerState {
   pdfAvailable: boolean
   pdfExporting: boolean
   splitPdfExporting: boolean
+  midiAvailable: boolean
+  midiExporting: boolean
+  splitMidiExporting: boolean
+  splitWavExporting: boolean
   diagnostics: Diagnostic[]
   diagnosticViewZones: DiagnosticViewZone[]
   rendering: boolean
   audioGenerating: boolean
   exportPdf: () => void
   exportSplitPdf: () => void
+  exportMidi: () => void
+  exportSplitMidi: () => void
+  exportSplitWav: () => void
   generateFullAudio: () => void
   selectedMeasureRange: { start: number; end: number } | null
   measureAudioGenerating: boolean
