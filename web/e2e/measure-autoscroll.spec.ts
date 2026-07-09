@@ -50,7 +50,7 @@ test('auto-scrolls the preview to the highlighted measure when the caret moves o
   }, source)
 
   await page.goto('/')
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
 
   const lastMeasureIndex = measureCount - 1
   await page.waitForSelector(

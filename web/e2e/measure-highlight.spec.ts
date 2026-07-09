@@ -16,7 +16,7 @@ test('renders amber highlight rect when cursor is inside a measure', async ({
   page,
 }) => {
   await page.goto('/')
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
 
   await page.click('.monaco-editor .view-lines')
 
@@ -39,7 +39,7 @@ test('removes highlight rect when cursor moves outside all measures', async ({
   page,
 }) => {
   await page.goto('/')
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
 
   await page.click('.monaco-editor .view-lines')
 

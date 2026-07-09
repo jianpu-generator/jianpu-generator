@@ -26,6 +26,24 @@
   color: var(--muted);
 }
 
+.workspace-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  min-height: 2rem;
+}
+
+.workspace-toolbar-sections {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  overflow-x: auto;
+  flex-shrink: 1;
+}
+
 .workspace {
   display: flex;
   flex: 1;

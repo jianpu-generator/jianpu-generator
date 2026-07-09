@@ -20,7 +20,7 @@ test('toggling a part rerenders the highlighted SVG while a measure is focused',
   page,
 }) => {
   await page.goto('/')
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
 
   // Focus the Monaco editor and navigate to the first measure.
   await page.click('.monaco-editor .view-lines')

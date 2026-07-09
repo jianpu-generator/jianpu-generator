@@ -17,7 +17,7 @@ test('shows measure number when cursor is placed on a note line', async ({
 
   // The PlayMeasureButton toolbar is only rendered once the WASM module reports
   // audioAvailable=true.  Wait up to 15 s for it to appear.
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
 
   // Focus the Monaco editor.
   await page.click('.monaco-editor .view-lines')
@@ -51,7 +51,7 @@ test('detects measure when cursor is at end of last character of a note line', a
   page,
 }) => {
   await page.goto('/')
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
 
   // Focus the Monaco editor.
   await page.click('.monaco-editor .view-lines')
@@ -119,7 +119,7 @@ test('detects measure when cursor is at end of last character of a Chinese lyric
   }, source)
 
   await page.goto('/')
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
 
   await page.click('.monaco-editor .view-lines')
 

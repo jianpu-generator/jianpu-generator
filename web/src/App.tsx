@@ -375,6 +375,72 @@ export default function App() {
           onDiscard={handleDismissShared}
         />
       ) : null}
+      {sharedPreview ? null : audioAvailable || sectionLabels.length > 0 ? (
+        <div className="workspace-toolbar">
+          {audioAvailable && (
+            <PlayMeasureButton
+              disabled={
+                selectedMeasureRange === null ||
+                measureAudioGenerating ||
+                !soundfontReady
+              }
+              loading={measureAudioGenerating}
+              playing={measureAudioPlaying}
+              measureRange={selectedMeasureRange}
+              onClick={playSelectedMeasures}
+              onPause={stopMeasurePlayback}
+              shortcutLabel={shortcutLabel}
+            />
+          )}
+          {sectionLabels.length > 0 && (
+            <div
+              role="toolbar"
+              className="workspace-toolbar-sections"
+              style={{
+                userSelect: dragStartLabel !== null ? 'none' : undefined,
+              }}
+              onMouseDown={(e) => e.preventDefault()}
+              onMouseUp={() => {
+                setDragStartLabel(null)
+                setDragCurrentLabel(null)
+              }}
+              onMouseLeave={() => {
+                setDragStartLabel(null)
+                setDragCurrentLabel(null)
+              }}
+            >
+              {sectionLabels.map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  className={[
+                    'section-jump-btn',
+                    activeHighlightedLabels.has(label)
+                      ? 'section-jump-btn--dragging'
+                      : '',
+                  ].join(' ')}
+                  style={{
+                    cursor: dragStartLabel !== null ? 'ew-resize' : undefined,
+                  }}
+                  onMouseDown={() => {
+                    setDragStartLabel(label)
+                    setDragCurrentLabel(label)
+                    handleSectionJump(label)
+                  }}
+                  onMouseEnter={() => {
+                    if (dragStartLabel !== null) {
+                      setDragCurrentLabel(label)
+                      handleSectionRangeSelect(dragStartLabel, label)
+                    }
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
       <main className="workspace">
         <section
           className={[
@@ -412,91 +478,6 @@ export default function App() {
                           soundfontReady
                         ? playSelectedMeasures
                         : undefined
-                  }
-                  toolbar={
-                    audioAvailable || sectionLabels.length > 0 ? (
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                        }}
-                      >
-                        {audioAvailable && (
-                          <PlayMeasureButton
-                            disabled={
-                              selectedMeasureRange === null ||
-                              measureAudioGenerating ||
-                              !soundfontReady
-                            }
-                            loading={measureAudioGenerating}
-                            playing={measureAudioPlaying}
-                            measureRange={selectedMeasureRange}
-                            onClick={playSelectedMeasures}
-                            onPause={stopMeasurePlayback}
-                            shortcutLabel={shortcutLabel}
-                          />
-                        )}
-                        {sectionLabels.length > 0 && (
-                          <div
-                            role="toolbar"
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.25rem',
-                              overflowX: 'auto',
-                              flexShrink: 1,
-                              userSelect:
-                                dragStartLabel !== null ? 'none' : undefined,
-                            }}
-                            onMouseDown={(e) => e.preventDefault()}
-                            onMouseUp={() => {
-                              setDragStartLabel(null)
-                              setDragCurrentLabel(null)
-                            }}
-                            onMouseLeave={() => {
-                              setDragStartLabel(null)
-                              setDragCurrentLabel(null)
-                            }}
-                          >
-                            {sectionLabels.map((label) => (
-                              <button
-                                key={label}
-                                type="button"
-                                className={[
-                                  'section-jump-btn',
-                                  activeHighlightedLabels.has(label)
-                                    ? 'section-jump-btn--dragging'
-                                    : '',
-                                ].join(' ')}
-                                style={{
-                                  cursor:
-                                    dragStartLabel !== null
-                                      ? 'ew-resize'
-                                      : undefined,
-                                }}
-                                onMouseDown={() => {
-                                  setDragStartLabel(label)
-                                  setDragCurrentLabel(label)
-                                  handleSectionJump(label)
-                                }}
-                                onMouseEnter={() => {
-                                  if (dragStartLabel !== null) {
-                                    setDragCurrentLabel(label)
-                                    handleSectionRangeSelect(
-                                      dragStartLabel,
-                                      label,
-                                    )
-                                  }
-                                }}
-                              >
-                                {label}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : null
                   }
                 />
               )}

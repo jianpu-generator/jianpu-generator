@@ -58,7 +58,7 @@ async function loadSource(page: Page, source: string = SOURCE) {
 }
 
 async function waitForPreviewReady(page: Page) {
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
   await expect(page.locator('.preview-pages')).toContainText(MELODY_NOTES, {
     timeout: 15_000,
   })

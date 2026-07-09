@@ -4,7 +4,7 @@ test('Meta+Enter does nothing when cursor is outside all measures', async ({
   page,
 }) => {
   await page.goto('/')
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
 
   await page.click('.monaco-editor .view-lines')
   await page.keyboard.press('Control+g')
