@@ -13,9 +13,14 @@ export interface ExportMenuItem {
 interface ExportMenuButtonProps {
   label: string
   items: ExportMenuItem[]
+  disabled?: boolean
 }
 
-export function ExportMenuButton({ label, items }: ExportMenuButtonProps) {
+export function ExportMenuButton({
+  label,
+  items,
+  disabled = false,
+}: ExportMenuButtonProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useDismissableOpen(containerRef)
 
@@ -26,6 +31,7 @@ export function ExportMenuButton({ label, items }: ExportMenuButtonProps) {
         className="preview-export-btn"
         aria-haspopup="menu"
         aria-expanded={open}
+        disabled={disabled}
         onClick={() => setOpen((prev) => !prev)}
       >
         {label}
@@ -33,7 +39,7 @@ export function ExportMenuButton({ label, items }: ExportMenuButtonProps) {
           ▾
         </span>
       </button>
-      {open ? (
+      {open && !disabled ? (
         <div className="export-menu-list" role="menu">
           {items.map((item) => (
             <button

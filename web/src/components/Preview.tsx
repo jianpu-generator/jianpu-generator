@@ -1,6 +1,5 @@
 import type { SvgDocumentOut, SvgElementOut } from 'jianpu-wasm'
 import { type ReactNode, useEffect, useRef } from 'react'
-import { ExportMenuButton, type ExportMenuItem } from './ExportMenuButton'
 
 interface PreviewProps {
   documents: SvgDocumentOut[]
@@ -9,23 +8,6 @@ interface PreviewProps {
   audioGenerating?: boolean
   wavUrl?: string | null
   wavFilename?: string
-  audioAvailable?: boolean
-  soundfontReady?: boolean
-  onGenerateAudio?: () => void
-  pdfAvailable?: boolean
-  pdfFontsReady?: boolean
-  pdfExporting?: boolean
-  onExportPdf?: () => void
-  splitPdfExporting?: boolean
-  onExportSplitPdf?: () => void
-  midiAvailable?: boolean
-  midiExporting?: boolean
-  onExportMidi?: () => void
-  splitMidiExporting?: boolean
-  onExportSplitMidi?: () => void
-  splitWavExporting?: boolean
-  onExportSplitWav?: () => void
-  partsCount?: number
   emptyMessage?: string
   toolbar?: ReactNode
   onMeasureRangeSelect?: (startIndex: number, endIndex: number) => void
@@ -272,23 +254,6 @@ export function Preview({
   audioGenerating = false,
   wavUrl = null,
   wavFilename = 'audio.wav',
-  audioAvailable = false,
-  soundfontReady = false,
-  onGenerateAudio,
-  pdfAvailable = false,
-  pdfFontsReady = false,
-  pdfExporting = false,
-  onExportPdf,
-  splitPdfExporting = false,
-  onExportSplitPdf,
-  midiAvailable = false,
-  midiExporting = false,
-  onExportMidi,
-  splitMidiExporting = false,
-  onExportSplitMidi,
-  splitWavExporting = false,
-  onExportSplitWav,
-  partsCount = 0,
   emptyMessage = 'No preview yet.',
   toolbar,
   onMeasureRangeSelect,
@@ -372,128 +337,11 @@ export function Preview({
     }
   }, [])
 
-  const exporting =
-    pdfExporting || splitPdfExporting || midiExporting || splitMidiExporting
-  const canExportPdf =
-    pdfAvailable &&
-    pdfFontsReady &&
-    documents.length > 0 &&
-    !rendering &&
-    !exporting
-  const canExportSplitPdf =
-    pdfAvailable && pdfFontsReady && partsCount > 0 && !rendering && !exporting
-  const canExportMidi =
-    midiAvailable && documents.length > 0 && !rendering && !exporting
-  const canExportSplitMidi =
-    midiAvailable && partsCount > 0 && !rendering && !exporting
-  const canExportWav = audioAvailable && soundfontReady && !audioGenerating
-  const canExportSplitWav =
-    audioAvailable &&
-    soundfontReady &&
-    partsCount > 0 &&
-    !splitWavExporting &&
-    !audioGenerating
-
-  const canExport = pdfAvailable || midiAvailable || audioAvailable
-  const canExportParts = canExport && partsCount > 1
-
-  const exportItems: ExportMenuItem[] = [
-    ...(pdfAvailable
-      ? [
-          {
-            key: 'pdf',
-            label: 'PDF',
-            busyLabel: 'Exporting PDF…',
-            busy: pdfExporting,
-            disabled: !canExportPdf,
-            onSelect: () => onExportPdf?.(),
-          },
-        ]
-      : []),
-    ...(audioAvailable
-      ? [
-          {
-            key: 'wav',
-            label: wavUrl ? 'WAV (regenerate)' : 'WAV',
-            busyLabel: 'Generating WAV…',
-            busy: audioGenerating,
-            disabled: !canExportWav,
-            onSelect: () => onGenerateAudio?.(),
-          },
-        ]
-      : []),
-    ...(midiAvailable
-      ? [
-          {
-            key: 'midi',
-            label: 'MIDI',
-            busyLabel: 'Exporting MIDI…',
-            busy: midiExporting,
-            disabled: !canExportMidi,
-            onSelect: () => onExportMidi?.(),
-          },
-        ]
-      : []),
-  ]
-
-  const exportPartsItems: ExportMenuItem[] = [
-    ...(pdfAvailable
-      ? [
-          {
-            key: 'pdf-parts',
-            label: 'PDF (ZIP)',
-            busyLabel: 'Exporting…',
-            busy: splitPdfExporting,
-            disabled: !canExportSplitPdf,
-            onSelect: () => onExportSplitPdf?.(),
-          },
-        ]
-      : []),
-    ...(audioAvailable
-      ? [
-          {
-            key: 'wav-parts',
-            label: 'WAV (ZIP)',
-            busyLabel: 'Exporting…',
-            busy: splitWavExporting,
-            disabled: !canExportSplitWav,
-            onSelect: () => onExportSplitWav?.(),
-          },
-        ]
-      : []),
-    ...(midiAvailable
-      ? [
-          {
-            key: 'midi-parts',
-            label: 'MIDI (ZIP)',
-            busyLabel: 'Exporting…',
-            busy: splitMidiExporting,
-            disabled: !canExportSplitMidi,
-            onSelect: () => onExportSplitMidi?.(),
-          },
-        ]
-      : []),
-  ]
-
   const activeDocs =
     highlightedDocuments.length > 0 ? highlightedDocuments : documents
 
   return (
     <div className="preview">
-      <div className="preview-header">
-        <span>Preview</span>
-        <div className="preview-header-actions">
-          {canExport ? (
-            <ExportMenuButton label="Export" items={exportItems} />
-          ) : null}
-          {canExportParts ? (
-            <ExportMenuButton label="Export Parts" items={exportPartsItems} />
-          ) : null}
-          {rendering ? (
-            <span className="preview-status">Rendering…</span>
-          ) : null}
-        </div>
-      </div>
       {toolbar ? <div className="preview-toolbar">{toolbar}</div> : null}
       {wavUrl ? (
         <div
@@ -522,38 +370,47 @@ export function Preview({
           </a>
         </div>
       ) : null}
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: drag-to-select measures uses mousedown, mousemove, mouseup — not a standard interactive role */}
-      <div
-        className="preview-pages"
-        ref={previewPagesRef}
-        onMouseDown={(e) => {
-          const sectionLabel = getSectionLabelAtPoint(e.clientX, e.clientY)
-          if (sectionLabel !== undefined) {
-            onSectionLabelClickRef.current?.(sectionLabel)
+      <div className="preview-pages-wrapper">
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: drag-to-select measures uses mousedown, mousemove, mouseup — not a standard interactive role */}
+        <div
+          className="preview-pages"
+          ref={previewPagesRef}
+          onMouseDown={(e) => {
+            const sectionLabel = getSectionLabelAtPoint(e.clientX, e.clientY)
+            if (sectionLabel !== undefined) {
+              onSectionLabelClickRef.current?.(sectionLabel)
+              e.preventDefault()
+              return
+            }
+            const index = getMeasureAtPoint(e.clientX, e.clientY)
+            if (index === undefined) return
+            dragStateRef.current = { startIndex: index, currentIndex: index }
+            const container = previewPagesRef.current
+            if (container) {
+              applyDragHighlights(container, index, index)
+            }
             e.preventDefault()
-            return
-          }
-          const index = getMeasureAtPoint(e.clientX, e.clientY)
-          if (index === undefined) return
-          dragStateRef.current = { startIndex: index, currentIndex: index }
-          const container = previewPagesRef.current
-          if (container) {
-            applyDragHighlights(container, index, index)
-          }
-          e.preventDefault()
-        }}
-      >
-        {documents.length === 0 &&
-        highlightedDocuments.length === 0 &&
-        !rendering ? (
-          <p className="preview-empty">{emptyMessage}</p>
+          }}
+        >
+          {documents.length === 0 &&
+          highlightedDocuments.length === 0 &&
+          !rendering ? (
+            <p className="preview-empty">{emptyMessage}</p>
+          ) : null}
+          {activeDocs.map((doc, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: pages have no stable identifier
+            <div key={i} className="preview-page">
+              {renderSvgDocument(doc, i)}
+            </div>
+          ))}
+        </div>
+        {rendering ? (
+          <div
+            className="preview-render-spinner"
+            role="status"
+            aria-label="Rendering"
+          />
         ) : null}
-        {activeDocs.map((doc, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: pages have no stable identifier
-          <div key={i} className="preview-page">
-            {renderSvgDocument(doc, i)}
-          </div>
-        ))}
       </div>
     </div>
   )

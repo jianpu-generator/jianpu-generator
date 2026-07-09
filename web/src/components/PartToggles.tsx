@@ -11,7 +11,6 @@ interface PartTogglesProps {
   onPartToggle: (abbreviation: string, enabled: boolean) => void
   onLyricsToggle: (abbreviation: string, enabled: boolean) => void
   onSoloToggle: (abbreviation: string, soloed: boolean) => void
-  loading?: boolean
 }
 
 export function PartToggles({
@@ -22,7 +21,6 @@ export function PartToggles({
   onPartToggle,
   onLyricsToggle,
   onSoloToggle,
-  loading = false,
 }: PartTogglesProps) {
   if (parts.length === 0) {
     return null
@@ -32,9 +30,6 @@ export function PartToggles({
     <Tooltip.Provider delayDuration={400}>
       <fieldset className="part-toggles">
         <legend className="part-toggles-label">Parts</legend>
-        {loading ? (
-          <span className="part-toggles-status">Updating…</span>
-        ) : null}
         <ul className="part-toggles-list">
           {parts.map((part) => {
             const enabled = !disabledParts.has(part.abbreviation)

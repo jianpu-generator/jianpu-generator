@@ -97,7 +97,6 @@ export default function App() {
   const {
     parts,
     partDeclarations,
-    partsLoading,
     documents,
     wavUrl,
     wavFilename,
@@ -369,6 +368,7 @@ export default function App() {
             splitWavExporting={splitWavExporting}
             onExportSplitWav={exportSplitWav}
             partsCount={parts.length}
+            isLoadingGithub={isLoadingGithub}
           />
         </div>
       </header>
@@ -575,7 +575,6 @@ export default function App() {
                 onPartToggle={handlePartToggle}
                 onLyricsToggle={handleLyricsToggle}
                 onSoloToggle={handleSoloToggle}
-                loading={partsLoading}
               />
             }
           />
