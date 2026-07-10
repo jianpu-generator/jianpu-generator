@@ -165,6 +165,9 @@ input.file-tab-name:focus {
 }
 
 .file-tab-bar-restore {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   width: 1.25rem;
   height: 1.25rem;
@@ -176,6 +179,11 @@ input.file-tab-name:focus {
   font-size: 0.85rem;
   line-height: 1;
   cursor: pointer;
+}
+
+.file-tab-bar-restore svg {
+  width: 0.8rem;
+  height: 0.8rem;
 }
 
 .file-tab-bar-restore:hover {

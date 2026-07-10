@@ -1,3 +1,12 @@
+import {
+  ChevronDownIcon,
+  CopyIcon,
+  DotsHorizontalIcon,
+  GearIcon,
+  Pencil1Icon,
+  PlusIcon,
+  TrashIcon,
+} from '@radix-ui/react-icons'
 import { useEffect, useRef, useState } from 'react'
 import {
   DEMO_FILE_NAME,
@@ -192,9 +201,7 @@ export function FileSwitcher({
           {isLoadingGithub ? (
             <span className="file-tab-bar-spinner" aria-hidden="true" />
           ) : (
-            <span className="export-menu-caret" aria-hidden="true">
-              ▾
-            </span>
+            <ChevronDownIcon className="export-menu-caret" aria-hidden="true" />
           )}
         </button>
         {filesOpen ? (
@@ -242,7 +249,7 @@ export function FileSwitcher({
           aria-label="File actions"
           onClick={() => setActionsOpen((prev) => !prev)}
         >
-          ⋯
+          <DotsHorizontalIcon aria-hidden="true" />
         </button>
         {actionsOpen ? (
           <div className="export-menu-list" role="menu">
@@ -256,6 +263,7 @@ export function FileSwitcher({
                 setActionsOpen(false)
               }}
             >
+              <PlusIcon aria-hidden="true" />
               <SpinnerLabel pending={creating} label="New" />
             </button>
             <button
@@ -268,6 +276,7 @@ export function FileSwitcher({
                 setActionsOpen(false)
               }}
             >
+              <CopyIcon aria-hidden="true" />
               <SpinnerLabel pending={duplicating} label="Duplicate" />
             </button>
             <button
@@ -285,6 +294,7 @@ export function FileSwitcher({
                 setActionsOpen(false)
               }}
             >
+              <Pencil1Icon aria-hidden="true" />
               <SpinnerLabel
                 pending={renamingName === store.active}
                 label="Rename"
@@ -307,6 +317,7 @@ export function FileSwitcher({
                 setActionsOpen(false)
               }}
             >
+              <TrashIcon aria-hidden="true" />
               <SpinnerLabel
                 pending={deletingName === store.active}
                 label="Delete"
@@ -321,6 +332,7 @@ export function FileSwitcher({
                 onOpenStorageSettings()
               }}
             >
+              <GearIcon aria-hidden="true" />
               Storage…
             </button>
           </div>

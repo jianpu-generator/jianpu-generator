@@ -1,3 +1,7 @@
+import {
+  ChevronDownIcon,
+  CounterClockwiseClockIcon,
+} from '@radix-ui/react-icons'
 import { useRef } from 'react'
 import { useDismissableOpen } from '../hooks/useDismissableOpen'
 
@@ -36,9 +40,7 @@ export function BinMenu({
         onClick={() => setOpen((prev) => !prev)}
       >
         Bin ({binNames.length})
-        <span className="export-menu-caret" aria-hidden="true">
-          ▾
-        </span>
+        <ChevronDownIcon className="export-menu-caret" aria-hidden="true" />
       </button>
       {open ? (
         <div className="export-menu-list file-tab-bar-bin-items" role="menu">
@@ -53,7 +55,11 @@ export function BinMenu({
                 onClick={() => onRestore(name)}
                 disabled={restoringName === name}
               >
-                <SpinnerLabel pending={restoringName === name} label="↩" />
+                {restoringName === name ? (
+                  <SpinnerLabel pending label="" />
+                ) : (
+                  <CounterClockwiseClockIcon aria-hidden="true" />
+                )}
               </button>
             </div>
           ))}

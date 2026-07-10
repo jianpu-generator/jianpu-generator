@@ -1,3 +1,9 @@
+import {
+  DiscIcon,
+  DownloadIcon,
+  FileTextIcon,
+  SpeakerLoudIcon,
+} from '@radix-ui/react-icons'
 import { ExportMenuButton, type ExportMenuItem } from './ExportMenuButton'
 
 interface ExportControlsProps {
@@ -100,6 +106,7 @@ export function ExportControls({
             busy: pdfExporting,
             disabled: !canExportPdf,
             onSelect: () => onExportPdf?.(),
+            icon: <FileTextIcon aria-hidden="true" />,
           },
         ]
       : []),
@@ -112,6 +119,7 @@ export function ExportControls({
             busy: audioGenerating,
             disabled: !canExportWav,
             onSelect: () => onGenerateAudio?.(),
+            icon: <SpeakerLoudIcon aria-hidden="true" />,
           },
         ]
       : []),
@@ -124,6 +132,7 @@ export function ExportControls({
             busy: midiExporting,
             disabled: !canExportMidi,
             onSelect: () => onExportMidi?.(),
+            icon: <DiscIcon aria-hidden="true" />,
           },
         ]
       : []),
@@ -139,6 +148,7 @@ export function ExportControls({
             busy: splitPdfExporting,
             disabled: !canExportSplitPdf,
             onSelect: () => onExportSplitPdf?.(),
+            icon: <FileTextIcon aria-hidden="true" />,
           },
         ]
       : []),
@@ -151,6 +161,7 @@ export function ExportControls({
             busy: splitWavExporting,
             disabled: !canExportSplitWav,
             onSelect: () => onExportSplitWav?.(),
+            icon: <SpeakerLoudIcon aria-hidden="true" />,
           },
         ]
       : []),
@@ -163,6 +174,7 @@ export function ExportControls({
             busy: splitMidiExporting,
             disabled: !canExportSplitMidi,
             onSelect: () => onExportSplitMidi?.(),
+            icon: <DiscIcon aria-hidden="true" />,
           },
         ]
       : []),
@@ -176,6 +188,7 @@ export function ExportControls({
       {canExport ? (
         <ExportMenuButton
           label="Export"
+          icon={<DownloadIcon aria-hidden="true" />}
           items={exportItems}
           disabled={exportDisabled}
         />
@@ -183,6 +196,7 @@ export function ExportControls({
       {canExportParts ? (
         <ExportMenuButton
           label="Export Parts"
+          icon={<DownloadIcon aria-hidden="true" />}
           items={exportPartsItems}
           disabled={exportPartsDisabled}
         />

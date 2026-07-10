@@ -1,3 +1,4 @@
+import { Share1Icon } from '@radix-ui/react-icons'
 import { useCallback, useState } from 'react'
 import { buildShareUrl } from '../shareUrl'
 
@@ -35,7 +36,14 @@ export function ShareButton({
         void handleShare()
       }}
     >
-      {copied ? 'Link copied' : 'Share'}
+      {copied ? (
+        'Link copied'
+      ) : (
+        <>
+          <Share1Icon aria-hidden="true" />
+          Share
+        </>
+      )}
     </button>
   )
 }

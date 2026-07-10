@@ -1,3 +1,5 @@
+import { ChevronDownIcon } from '@radix-ui/react-icons'
+import type { ReactNode } from 'react'
 import { useRef } from 'react'
 import { useDismissableOpen } from '../hooks/useDismissableOpen'
 
@@ -8,16 +10,19 @@ export interface ExportMenuItem {
   busy: boolean
   disabled: boolean
   onSelect: () => void
+  icon?: ReactNode
 }
 
 interface ExportMenuButtonProps {
   label: string
+  icon?: ReactNode
   items: ExportMenuItem[]
   disabled?: boolean
 }
 
 export function ExportMenuButton({
   label,
+  icon,
   items,
   disabled = false,
 }: ExportMenuButtonProps) {
@@ -34,10 +39,9 @@ export function ExportMenuButton({
         disabled={disabled}
         onClick={() => setOpen((prev) => !prev)}
       >
+        {icon}
         {label}
-        <span className="export-menu-caret" aria-hidden="true">
-          ▾
-        </span>
+        <ChevronDownIcon className="export-menu-caret" aria-hidden="true" />
       </button>
       {open && !disabled ? (
         <div className="export-menu-list" role="menu">
@@ -53,6 +57,7 @@ export function ExportMenuButton({
                 item.onSelect()
               }}
             >
+              {item.icon}
               {item.busy ? item.busyLabel : item.label}
             </button>
           ))}
