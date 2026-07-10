@@ -422,7 +422,7 @@ export default function App() {
           onDiscard={handleDismissShared}
         />
       ) : null}
-      {sharedPreview ? null : sectionLabels.length > 0 ? (
+      {sectionLabels.length > 0 ? (
         <div className="workspace-toolbar">
           <div
             role="toolbar"
