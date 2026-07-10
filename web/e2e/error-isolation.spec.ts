@@ -39,7 +39,9 @@ test('lyric underflow in measure 1 shows error overlay and still renders measure
 
   // Reload so the app initialises with our user file active.
   await page.reload()
-  await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
 
   // Wait for the debounce + render worker round-trip.
   await page.waitForTimeout(2_000)

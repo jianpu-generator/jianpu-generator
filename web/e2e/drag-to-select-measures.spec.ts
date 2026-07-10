@@ -20,7 +20,9 @@ test('drag from measure 1 to measure 3 selects measures 1–3', async ({
   await page.goto('/')
 
   // Wait for the editor toolbar (signals WASM is loaded and app is ready).
-  await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
 
   // Wait for the SVG preview to render measure groups.
   await page.waitForSelector('[data-tag="measure"][data-measure-index="3"]', {
@@ -118,7 +120,9 @@ test('drag from measure 0 to measure 3 selects exactly 4 measures (not 5)', asyn
 }) => {
   await page.goto('/')
 
-  await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
   await page.waitForSelector('[data-tag="measure"][data-measure-index="3"]', {
     timeout: 10_000,
   })
@@ -242,7 +246,9 @@ test('drag from measure 0 to measure 3 with CJK source selects exactly 4 measure
   await page.goto('/')
 
   // Wait for the editor toolbar (signals WASM is loaded and app is ready).
-  await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
 
   // Wait for the SVG preview to render all four measure groups.
   await page.waitForSelector('[data-tag="measure"][data-measure-index="3"]', {

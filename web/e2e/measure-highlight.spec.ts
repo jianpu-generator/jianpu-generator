@@ -17,7 +17,9 @@ test('renders amber highlight rect when cursor is inside a measure', async ({
   page,
 }) => {
   await page.goto('/')
-  await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
 
   await focusEditor(page)
 
@@ -40,7 +42,9 @@ test('removes highlight rect when cursor moves outside all measures', async ({
   page,
 }) => {
   await page.goto('/')
-  await page.waitForSelector('.workspace-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
 
   await focusEditor(page)
 
