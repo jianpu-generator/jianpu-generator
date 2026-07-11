@@ -1,3 +1,7 @@
+#[cfg(feature = "wav")]
+use jianpu_generator::measure_start_times_for_range_from_source;
+#[cfg(feature = "wav")]
+use jianpu_generator::measure_start_times_from_source;
 use jianpu_generator::parser::parts_parser::InstrumentInfo;
 #[cfg(feature = "wav")]
 use jianpu_generator::wav;
@@ -25,6 +29,8 @@ use crate::svg_types::svg_document_to_out;
 use crate::types::GenerateSplitWavsResponse;
 #[cfg(feature = "wav")]
 use crate::types::GenerateWavResponse;
+#[cfg(feature = "wav")]
+use crate::types::ListMeasureTimesResponse;
 use crate::types::{
     diagnostic_from_diagnostic, diagnostic_from_error, group_diagnostics_into_view_zones,
     ListMeasureSpansResponse, MeasureAtOffsetResponse, MeasureSpanOut, RenderResponse,
@@ -226,6 +232,40 @@ pub(crate) fn generate_wav_for_measure_range_response(
     ) {
         Ok(wav) => GenerateWavResponse::Ok { wav },
         Err(e) => GenerateWavResponse::Err {
+            diagnostics: vec![diagnostic_from_error(source, &e)],
+        },
+    }
+}
+
+#[cfg(feature = "wav")]
+pub(crate) fn list_measure_times_response(
+    source: &str,
+    enabled_tracks: Option<&[String]>,
+) -> ListMeasureTimesResponse {
+    match measure_start_times_from_source(source, "input.jianpu", enabled_tracks, &[]) {
+        Ok(times) => ListMeasureTimesResponse::Ok { times },
+        Err(e) => ListMeasureTimesResponse::Err {
+            diagnostics: vec![diagnostic_from_error(source, &e)],
+        },
+    }
+}
+
+#[cfg(feature = "wav")]
+pub(crate) fn list_measure_times_for_range_response(
+    source: &str,
+    start_index: usize,
+    end_index: usize,
+    enabled_tracks: Option<&[String]>,
+) -> ListMeasureTimesResponse {
+    match measure_start_times_for_range_from_source(
+        source,
+        "input.jianpu",
+        start_index..=end_index,
+        enabled_tracks,
+        &[],
+    ) {
+        Ok(times) => ListMeasureTimesResponse::Ok { times },
+        Err(e) => ListMeasureTimesResponse::Err {
             diagnostics: vec![diagnostic_from_error(source, &e)],
         },
     }

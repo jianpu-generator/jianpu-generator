@@ -10,10 +10,10 @@ import type {
   SectionRange,
 } from '../types'
 import type { WorkerRequest } from '../worker/jianpu.worker'
+import { useJianpuWorkerExports } from './useJianpuWorkerExports'
 import { createWorkerMessageHandler } from './useJianpuWorkerMessageHandler'
 import type { JianpuWorkerState } from './useJianpuWorkerTypes'
 import {
-  baseNameFromActiveFile,
   disabledLyricsForRender,
   enabledPartNamesForFilename,
   enabledTracksForRender,
@@ -40,6 +40,7 @@ export function useJianpuWorker(
   const [partsLoading, setPartsLoading] = useState(false)
   const [documents, setDocuments] = useState<SvgDocumentOut[]>([])
   const [wavUrl, setWavUrl] = useState<string | null>(null)
+  const [measureTimes, setMeasureTimes] = useState<number[]>([])
   const [audioAvailable, setAudioAvailable] = useState(false)
   const [pdfAvailable, setPdfAvailable] = useState(false)
   const [pdfExporting, setPdfExporting] = useState(false)
@@ -60,6 +61,9 @@ export function useJianpuWorker(
   } | null>(null)
   const [measureAudioGenerating, setMeasureAudioGenerating] = useState(false)
   const [measureAudioPlaying, setMeasureAudioPlaying] = useState(false)
+  const [measureAudioTimes, setMeasureAudioTimes] = useState<number[]>([])
+  const [measureAudioElement, setMeasureAudioElement] =
+    useState<HTMLAudioElement | null>(null)
   const [previewAudioPlaying, setPreviewAudioPlaying] = useState(false)
   const currentMeasureAudioRef = useRef<HTMLAudioElement | null>(null)
   const [highlightedDocuments, setHighlightedDocuments] = useState<
@@ -152,27 +156,35 @@ export function useJianpuWorker(
     setWavUrl(next)
   }, [])
 
-  const setNextMeasureWavUrl = useCallback((next: string | null) => {
-    if (currentMeasureAudioRef.current) {
-      currentMeasureAudioRef.current.pause()
-      currentMeasureAudioRef.current = null
-    }
-    if (measureWavUrlRef.current) {
-      URL.revokeObjectURL(measureWavUrlRef.current)
-    }
-    measureWavUrlRef.current = next
-    if (next) {
-      const audio = new Audio(next)
-      currentMeasureAudioRef.current = audio
-      audio.addEventListener('play', () => setMeasureAudioPlaying(true))
-      audio.addEventListener('ended', () => {
-        setMeasureAudioPlaying(false)
+  const setNextMeasureWavUrl = useCallback(
+    (next: string | null, nextMeasureTimes: number[] = []) => {
+      if (currentMeasureAudioRef.current) {
+        currentMeasureAudioRef.current.pause()
         currentMeasureAudioRef.current = null
-      })
-      audio.addEventListener('pause', () => setMeasureAudioPlaying(false))
-      audio.play().catch(() => {})
-    }
-  }, [])
+      }
+      if (measureWavUrlRef.current) {
+        URL.revokeObjectURL(measureWavUrlRef.current)
+      }
+      measureWavUrlRef.current = next
+      setMeasureAudioTimes(nextMeasureTimes)
+      if (next) {
+        const audio = new Audio(next)
+        currentMeasureAudioRef.current = audio
+        setMeasureAudioElement(audio)
+        audio.addEventListener('play', () => setMeasureAudioPlaying(true))
+        audio.addEventListener('ended', () => {
+          setMeasureAudioPlaying(false)
+          currentMeasureAudioRef.current = null
+          setMeasureAudioElement(null)
+        })
+        audio.addEventListener('pause', () => setMeasureAudioPlaying(false))
+        audio.play().catch(() => {})
+      } else {
+        setMeasureAudioElement(null)
+      }
+    },
+    [],
+  )
 
   useEffect(() => {
     const worker = new Worker(
@@ -212,6 +224,7 @@ export function useJianpuWorker(
       latestAudioIdRef,
       setAudioGenerating,
       setNextWavUrl,
+      setMeasureTimes,
       latestMeasureAudioIdRef,
       setMeasureAudioGenerating,
       setNextMeasureWavUrl,
@@ -409,24 +422,6 @@ export function useJianpuWorker(
     } satisfies WorkerRequest)
   }, [selectedMeasureRange])
 
-  const exportPdf = useCallback(() => {
-    const worker = workerRef.current
-    if (!worker || pdfExporting || splitPdfExporting) return
-
-    const id = ++pdfRequestIdRef.current
-    latestPdfIdRef.current = id
-    setPdfExporting(true)
-
-    const payload: WorkerRequest = {
-      type: 'generatePdf',
-      source: sourceRef.current,
-      id,
-      enabledTracks: enabledTracksRef.current,
-      disabledLyrics: disabledLyricsRef.current,
-    }
-    worker.postMessage(payload)
-  }, [pdfExporting, splitPdfExporting])
-
   const previewInstrument = useCallback((programNumber: number) => {
     const worker = workerRef.current
     if (!worker) return
@@ -445,73 +440,39 @@ export function useJianpuWorker(
     }
   }, [])
 
-  const exportSplitPdf = useCallback(() => {
-    const worker = workerRef.current
-    if (!worker || pdfExporting || splitPdfExporting) return
-
-    const id = ++splitPdfRequestIdRef.current
-    latestSplitPdfIdRef.current = id
-    setSplitPdfExporting(true)
-
-    const payload: WorkerRequest = {
-      type: 'generateSplitPdf',
-      source: sourceRef.current,
-      id,
-      baseName: baseNameFromActiveFile(activeFileRef.current),
-    }
-    worker.postMessage(payload)
-  }, [pdfExporting, splitPdfExporting])
-
-  const exportMidi = useCallback(() => {
-    const worker = workerRef.current
-    if (!worker || midiExporting) return
-
-    const id = ++midiRequestIdRef.current
-    latestMidiIdRef.current = id
-    setMidiExporting(true)
-
-    const payload: WorkerRequest = {
-      type: 'generateMidi',
-      source: sourceRef.current,
-      id,
-      enabledTracks: enabledTracksRef.current,
-    }
-    worker.postMessage(payload)
-  }, [midiExporting])
-
-  const exportSplitMidi = useCallback(() => {
-    const worker = workerRef.current
-    if (!worker || splitMidiExporting) return
-
-    const id = ++splitMidiRequestIdRef.current
-    latestSplitMidiIdRef.current = id
-    setSplitMidiExporting(true)
-
-    const payload: WorkerRequest = {
-      type: 'generateSplitMidi',
-      source: sourceRef.current,
-      id,
-      baseName: baseNameFromActiveFile(activeFileRef.current),
-    }
-    worker.postMessage(payload)
-  }, [splitMidiExporting])
-
-  const exportSplitWav = useCallback(() => {
-    const worker = workerRef.current
-    if (!worker || splitWavExporting) return
-
-    const id = ++splitWavRequestIdRef.current
-    latestSplitWavIdRef.current = id
-    setSplitWavExporting(true)
-
-    const payload: WorkerRequest = {
-      type: 'generateSplitWav',
-      source: sourceRef.current,
-      id,
-      baseName: baseNameFromActiveFile(activeFileRef.current),
-    }
-    worker.postMessage(payload)
-  }, [splitWavExporting])
+  const {
+    exportPdf,
+    exportSplitPdf,
+    exportMidi,
+    exportSplitMidi,
+    exportSplitWav,
+  } = useJianpuWorkerExports({
+    workerRef,
+    sourceRef,
+    activeFileRef,
+    enabledTracksRef,
+    disabledLyricsRef,
+    pdfExporting,
+    splitPdfExporting,
+    midiExporting,
+    splitMidiExporting,
+    splitWavExporting,
+    setPdfExporting,
+    setSplitPdfExporting,
+    setMidiExporting,
+    setSplitMidiExporting,
+    setSplitWavExporting,
+    pdfRequestIdRef,
+    latestPdfIdRef,
+    splitPdfRequestIdRef,
+    latestSplitPdfIdRef,
+    midiRequestIdRef,
+    latestMidiIdRef,
+    splitMidiRequestIdRef,
+    latestSplitMidiIdRef,
+    splitWavRequestIdRef,
+    latestSplitWavIdRef,
+  })
 
   const updatePartDeclaration = useCallback(
     (
@@ -553,6 +514,7 @@ export function useJianpuWorker(
     documents,
     wavUrl,
     wavFilename,
+    measureTimes,
     audioAvailable,
     pdfAvailable,
     pdfExporting,
@@ -574,6 +536,8 @@ export function useJianpuWorker(
     selectedMeasureRange,
     measureAudioGenerating,
     measureAudioPlaying,
+    measureAudioTimes,
+    measureAudioElement,
     notifySelection,
     playSelectedMeasures,
     stopMeasurePlayback,

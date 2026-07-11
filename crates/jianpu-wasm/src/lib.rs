@@ -10,6 +10,7 @@ use jianpu_generator::parser::parts_parser::InstrumentInfo;
 use responses::{
     generate_instrument_preview_wav_response, generate_split_wavs_response,
     generate_wav_for_measure_range_response, generate_wav_response,
+    list_measure_times_for_range_response, list_measure_times_response,
 };
 #[cfg(feature = "midi")]
 use responses::{generate_midi_response, generate_split_midis_response};
@@ -23,6 +24,8 @@ use responses::{
 use types::GenerateSplitWavsResponse;
 #[cfg(feature = "wav")]
 use types::GenerateWavResponse;
+#[cfg(feature = "wav")]
+use types::ListMeasureTimesResponse;
 #[cfg(feature = "midi")]
 use types::{GenerateMidiResponse, GenerateSplitMidisResponse};
 #[cfg(feature = "pdf")]
@@ -208,6 +211,43 @@ pub fn generate_wav_for_measure_range(
         enabled_tracks.as_deref(),
         soundfont,
     )
+}
+
+/// Return the elapsed-seconds offset of each measure boundary in the whole score.
+///
+/// Available only when the `wav` feature is enabled at build time.
+/// Used to sync a UI playhead against the audio produced by [`generate_wav`].
+/// Returns:
+/// - `{ "status": "ok", "times": [f64, ...] }` — length is `measure count + 1`;
+///   the last entry is the total duration.
+/// - `{ "status": "err", "diagnostics": [...] }`
+#[cfg(feature = "wav")]
+#[allow(clippy::needless_pass_by_value)]
+#[wasm_bindgen]
+pub fn list_measure_times(
+    source: &str,
+    enabled_tracks: Option<Vec<String>>,
+) -> ListMeasureTimesResponse {
+    list_measure_times_response(source, enabled_tracks.as_deref())
+}
+
+/// Return the elapsed-seconds offset of each measure boundary within a
+/// consecutive measure range, relative to the start of that range.
+///
+/// Available only when the `wav` feature is enabled at build time.
+/// Used to sync a UI playhead against the audio produced by
+/// [`generate_wav_for_measure_range`]. Returns the same envelope as
+/// [`list_measure_times`].
+#[cfg(feature = "wav")]
+#[allow(clippy::needless_pass_by_value)]
+#[wasm_bindgen]
+pub fn list_measure_times_for_range(
+    source: &str,
+    start_index: usize,
+    end_index: usize,
+    enabled_tracks: Option<Vec<String>>,
+) -> ListMeasureTimesResponse {
+    list_measure_times_for_range_response(source, start_index, end_index, enabled_tracks.as_deref())
 }
 
 /// Synthesize a short WAV preview note for a General MIDI program number.

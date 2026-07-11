@@ -16,6 +16,8 @@ export interface JianpuWorkerState {
   documents: SvgDocumentOut[]
   wavUrl: string | null
   wavFilename: string
+  /** Elapsed-seconds offset of each measure boundary for `wavUrl`'s audio, length = measure count + 1. */
+  measureTimes: number[]
   audioAvailable: boolean
   pdfAvailable: boolean
   pdfExporting: boolean
@@ -37,6 +39,10 @@ export interface JianpuWorkerState {
   selectedMeasureRange: { start: number; end: number } | null
   measureAudioGenerating: boolean
   measureAudioPlaying: boolean
+  /** Elapsed-seconds offset of each measure boundary within the selected range's audio, relative to the range start. */
+  measureAudioTimes: number[]
+  /** The `<audio>` element currently playing the selected measure range, if any; a new element each time playback starts. */
+  measureAudioElement: HTMLAudioElement | null
   notifySelection: (startLine: number, endLine: number) => void
   playSelectedMeasures: () => void
   stopMeasurePlayback: () => void

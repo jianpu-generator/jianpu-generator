@@ -95,6 +95,7 @@ source (&str)
 | **Decoration** | Measure-level metadata attached to a `MeasureBlock`: BPM, time signature, section label, bar number. |
 | **Row Label** | The part name displayed at the left margin of a system row. |
 | **RowId** | A unique string identifier for a compiler row, used to correlate rows across layout stages. |
+| **Measure Start Time** | The elapsed-seconds offset of a measure boundary within a score's audio rendering, computed from cumulative MIDI ticks and any BPM changes (`midi::measure_start_times_seconds`). Used to sync a playback-position UI element (a "playhead") against a `<audio>` element's `currentTime`. |
 
 ## Web integration
 
@@ -143,6 +144,8 @@ The React app (`web/`) runs the compiler in a dedicated worker (`web/src/worker/
 | `generate_midi(source, enabled_tracks)` | Generates MIDI (SMF) bytes for the whole score. `midi` feature only. |
 | `generate_split_midis(source, base_name)` | One MIDI file per part, zipped. `midi` feature only. |
 | `generate_split_wavs(source, base_name, soundfont)` | One WAV file per part, zipped; `soundfont` is raw SF2 bytes supplied by the caller. `wav` feature only. |
+| `list_measure_times(source, enabled_tracks)` | **Measure start times**: elapsed-seconds offset of each measure boundary in the whole score (length = measure count + 1, last entry is total duration). Syncs a UI playhead against the audio from `generate_wav`. `wav` feature only. |
+| `list_measure_times_for_range(source, start_index, end_index, enabled_tracks)` | Same as above, scoped to a measure range and relative to the start of that range. Syncs a playhead against the audio from `generate_wav_for_measure_range`. `wav` feature only. |
 
 `generate_pdf`/`generate_split_pdfs` (`pdf` feature) follow the same pattern as the MIDI/WAV exports above: structured `{ status, ... }` envelope, `Vec<u8>` font/soundfont parameters supplied by the caller rather than embedded in the WASM binary.
 

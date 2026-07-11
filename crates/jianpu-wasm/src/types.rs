@@ -168,6 +168,20 @@ pub enum GenerateWavResponse {
     },
 }
 
+#[cfg(feature = "wav")]
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq)]
+#[serde(tag = "status", rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum ListMeasureTimesResponse {
+    Ok {
+        /// Elapsed-seconds offset of each measure boundary, length = `measures + 1`.
+        times: Vec<f64>,
+    },
+    Err {
+        diagnostics: Vec<DiagnosticOut>,
+    },
+}
+
 #[cfg(feature = "pdf")]
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]

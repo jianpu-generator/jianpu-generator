@@ -3,6 +3,9 @@ use crate::ast::grouped::Metadata;
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName};
 use midly::{MidiMessage, Smf, TrackEventKind};
 
+#[path = "tests_timing.rs"]
+mod tests_timing;
+
 fn default_test_metadata() -> Metadata {
     Metadata {
         title: None,
@@ -166,7 +169,7 @@ fn duration_half_note_is_960_ticks() {
     assert_eq!(duration_to_ticks(8), 960);
 }
 
-fn one_measure_score() -> Score {
+pub(super) fn one_measure_score() -> Score {
     use crate::ast::grouped::GroupedNote;
     use crate::ast::grouped::{
         Metadata, MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,

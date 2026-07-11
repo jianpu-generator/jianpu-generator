@@ -32,6 +32,14 @@ const generateWavForMeasureRange =
     ? jianpuWasm.generate_wav_for_measure_range
     : null
 
+const listMeasureTimes =
+  'list_measure_times' in jianpuWasm ? jianpuWasm.list_measure_times : null
+
+const listMeasureTimesForRange =
+  'list_measure_times_for_range' in jianpuWasm
+    ? jianpuWasm.list_measure_times_for_range
+    : null
+
 const renderWithHighlightRange =
   'render_with_highlight_range' in jianpuWasm
     ? jianpuWasm.render_with_highlight_range
@@ -158,7 +166,7 @@ export type WorkerResponse =
       diagnostics: Diagnostic[]
       diagnosticViewZones: DiagnosticViewZone[]
     }
-  | { type: 'audio'; id: number; wav: ArrayBuffer }
+  | { type: 'audio'; id: number; wav: ArrayBuffer; measureTimes: number[] }
   | { type: 'audioErr'; id: number }
   | {
       type: 'err'
@@ -188,7 +196,12 @@ export type WorkerResponse =
   | { type: 'splitMidiErr'; id: number; diagnostics: Diagnostic[] }
   | { type: 'splitWav'; id: number; zip: ArrayBuffer }
   | { type: 'splitWavErr'; id: number; diagnostics: Diagnostic[] }
-  | { type: 'measureRangeAudio'; id: number; wav: ArrayBuffer }
+  | {
+      type: 'measureRangeAudio'
+      id: number
+      wav: ArrayBuffer
+      measureTimes: number[]
+    }
   | { type: 'measureRangeAudioErr'; id: number }
   | { type: 'instrumentPreview'; id: number; wav: ArrayBuffer }
   | { type: 'instrumentPreviewErr'; id: number }
@@ -237,6 +250,31 @@ function listDeclarationsFromSource(source: string): PartDeclaration[] {
   if (!('list_part_declarations' in jianpuWasm)) return []
   const result = jianpuWasm.list_part_declarations(source, GM_INSTRUMENTS)
   return result.status === 'ok' ? result.declarations : []
+}
+
+function measureTimesFromSource(
+  source: string,
+  enabledTracks: string[] | undefined,
+): number[] {
+  if (!listMeasureTimes) return []
+  const result = listMeasureTimes(source, enabledTracks)
+  return result.status === 'ok' ? result.times : []
+}
+
+function measureTimesForRangeFromSource(
+  source: string,
+  startMeasureIndex: number,
+  endMeasureIndex: number,
+  enabledTracks: string[] | undefined,
+): number[] {
+  if (!listMeasureTimesForRange) return []
+  const result = listMeasureTimesForRange(
+    source,
+    startMeasureIndex,
+    endMeasureIndex,
+    enabledTracks,
+  )
+  return result.status === 'ok' ? result.times : []
 }
 
 function binaryBufferFromResult(
@@ -357,6 +395,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
           type: 'audio',
           id: msg.id,
           wav: wavBuffer,
+          measureTimes: measureTimesFromSource(msg.source, msg.enabledTracks),
         } satisfies WorkerResponse,
         { transfer: [wavBuffer] },
       )
@@ -399,6 +438,12 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
           type: 'measureRangeAudio',
           id: msg.id,
           wav: wavBuffer,
+          measureTimes: measureTimesForRangeFromSource(
+            msg.source,
+            msg.startMeasureIndex,
+            msg.endMeasureIndex,
+            msg.enabledTracks,
+          ),
         } satisfies WorkerResponse,
         { transfer: [wavBuffer] },
       )

@@ -100,6 +100,7 @@ export default function App() {
     documents,
     wavUrl,
     wavFilename,
+    measureTimes,
     audioAvailable,
     pdfAvailable,
     pdfExporting,
@@ -121,6 +122,8 @@ export default function App() {
     selectedMeasureRange,
     measureAudioGenerating,
     measureAudioPlaying,
+    measureAudioTimes,
+    measureAudioElement,
     measureSpans,
     sectionRanges,
     notifySelection,
@@ -561,6 +564,10 @@ export default function App() {
             audioGenerating={audioGenerating}
             wavUrl={wavUrl}
             wavFilename={wavFilename}
+            measureTimes={measureTimes}
+            measureAudioTimes={measureAudioTimes}
+            measureAudioElement={measureAudioElement}
+            selectedMeasureRange={selectedMeasureRange}
             emptyMessage={
               noPartsSelected ? 'No parts selected.' : 'No preview yet.'
             }

@@ -488,6 +488,42 @@ pub fn write_wav_for_measure_range_from_source(
     wav::write_wav(&midi_bytes, sf2_bytes)
 }
 
+/// Parse, group, optionally filter tracks, and compute the elapsed-seconds
+/// offset of each measure boundary (length = `measures + 1`; the last entry
+/// is the total duration). Used to sync a UI playhead against WAV audio
+/// returned by [`write_wav_from_source_filtered`].
+#[cfg(feature = "midi")]
+pub fn measure_start_times_from_source(
+    source: &str,
+    filename: &str,
+    enabled_tracks: Option<&[String]>,
+    instruments: &[InstrumentInfo],
+) -> Result<Vec<f64>, IrrecoverableError> {
+    let mut score = compile(source, filename, instruments)?;
+    apply_track_filter(&mut score, enabled_tracks);
+    midi::measure_start_times_seconds(&score)
+}
+
+/// Same as [`measure_start_times_from_source`], but scoped to a measure range
+/// and relative to the start of that range. Used to sync a playhead against
+/// the audio clip returned by [`write_wav_for_measure_range_from_source`].
+#[cfg(feature = "midi")]
+pub fn measure_start_times_for_range_from_source(
+    source: &str,
+    filename: &str,
+    measure_range: std::ops::RangeInclusive<usize>,
+    enabled_tracks: Option<&[String]>,
+    instruments: &[InstrumentInfo],
+) -> Result<Vec<f64>, IrrecoverableError> {
+    let mut score = compile(source, filename, instruments)?;
+    apply_track_filter(&mut score, enabled_tracks);
+    midi::measure_start_times_seconds_for_range(
+        &score,
+        *measure_range.start(),
+        *measure_range.end(),
+    )
+}
+
 /// Parse, group, optionally filter tracks, and generate MIDI (SMF) bytes.
 ///
 /// When `enabled_tracks` is `None`, all parts are included.
