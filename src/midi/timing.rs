@@ -12,7 +12,7 @@ use super::{default_active_key, process_measure, RawEvent, RawKind, TPQ};
 pub fn measure_start_times_seconds(score: &Score) -> Result<Vec<f64>, IrrecoverableError> {
     let mut raw: Vec<RawEvent> = Vec::new();
     let mut per_part_ties: Vec<(u8, HashMap<u8, u32>)> = Vec::new();
-    let mut chord_ties: HashMap<u8, u32> = HashMap::new();
+    let mut chord_ties: Vec<HashMap<u8, u32>> = Vec::new();
     let mut active_key = default_active_key();
     let mut current_tick: u32 = 0;
     let mut boundaries = vec![0u32];

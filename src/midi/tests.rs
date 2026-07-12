@@ -559,3 +559,33 @@ fn tilde_cross_measure_chord_does_not_replay_chord() {
         count_note_on_events(&midi_bytes),
     );
 }
+
+#[test]
+fn tie_across_barline_with_two_chord_parts_does_not_replay_either_chord() {
+    // `g = follow[m]` makes `g` a second `chords`-kind part, so both `m` and `g`
+    // share the MIDI chord channel. Each part ties its own chord across the barline
+    // (`1~` into `1`), so this must produce exactly 6 NoteOn events total (3 per
+    // part, one attack each) — not 12, which would mean one part's tie got dropped
+    // because it shared tie-tracking state with the other chord part.
+    let input = concat!(
+        "# metadata\ntitle=\"\"\nauthor=\"\"\n\n",
+        "# parts\nm = chords\ng = follow[m]\n\n",
+        "# score\n\n\n",
+        "[m] 1~\n",
+        "[g] 1~\n",
+        "\n",
+        "[m] 1\n",
+        "[g] 1\n",
+    );
+    let doc = crate::parser::parse(input, "test", &[]).unwrap();
+    let score = crate::grouper::group(doc).unwrap();
+    let midi_bytes = write_midi(&score).unwrap();
+    assert_eq!(
+        count_note_on_events(&midi_bytes),
+        6,
+        "two tied chord parts crossing a barline should produce 6 NoteOn events total \
+         (3 per part, one attack each), got {} — a chord part's tie state is bleeding \
+         into another chord part sharing the same channel",
+        count_note_on_events(&midi_bytes),
+    );
+}

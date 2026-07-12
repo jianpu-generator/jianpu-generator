@@ -122,7 +122,7 @@ pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
 
     let mut current_tick: u32 = 0;
     let mut per_part_ties: Vec<(u8, HashMap<u8, u32>)> = Vec::new();
-    let mut chord_ties: HashMap<u8, u32> = HashMap::new();
+    let mut chord_ties: Vec<HashMap<u8, u32>> = Vec::new();
     let mut active_key = default_active_key();
 
     for measure in &score.measures {
@@ -137,7 +137,9 @@ pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
     }
 
     flush_pending_ties(&mut raw, per_part_ties);
-    flush_pending_ties_at_tick(&mut chord_ties, current_tick, &mut raw, CHORD_CHANNEL);
+    for ties in &mut chord_ties {
+        flush_pending_ties_at_tick(ties, current_tick, &mut raw, CHORD_CHANNEL);
+    }
     sort_raw_events(&mut raw);
 
     let track = build_track_events(&raw);
@@ -187,7 +189,7 @@ pub(crate) fn process_measure(
     current_tick: u32,
     raw: &mut Vec<RawEvent>,
     per_part_ties: &mut Vec<(u8, HashMap<u8, u32>)>,
-    chord_ties: &mut HashMap<u8, u32>,
+    chord_ties: &mut Vec<HashMap<u8, u32>>,
     active_key: &mut KeyChange,
 ) -> Result<u32, IrrecoverableError> {
     if let Some(bpm) = measure.bpm {
@@ -231,19 +233,28 @@ pub(crate) fn process_measure(
         }
     }
 
-    for row in &measure.parts {
-        let part = row.slice();
-        if part.kind == PartKind::Chords {
-            let chord_duration = process_chord_events(
-                &part.notes.events,
-                current_tick,
-                raw,
-                active_key,
-                chord_ties,
-            );
-            if chord_duration > measure_duration {
-                measure_duration = chord_duration;
+    let chord_parts: Vec<&crate::ast::grouped::PartSlice> = measure
+        .parts
+        .iter()
+        .filter_map(|r| {
+            let p = r.slice();
+            if p.kind == PartKind::Chords {
+                Some(p)
+            } else {
+                None
             }
+        })
+        .collect();
+
+    while chord_ties.len() < chord_parts.len() {
+        chord_ties.push(HashMap::new());
+    }
+
+    for (part, ties) in chord_parts.iter().zip(chord_ties.iter_mut()) {
+        let chord_duration =
+            process_chord_events(&part.notes.events, current_tick, raw, active_key, ties);
+        if chord_duration > measure_duration {
+            measure_duration = chord_duration;
         }
     }
 
