@@ -7,8 +7,6 @@ use crate::grid_layout::types::{
     GridContent, GridElement, GridRow, HAlign, Header, PartListEntry, VAlign,
 };
 
-const DECO_COLS: u32 = 12;
-
 fn directive_line_element(dec: &Decoration, col: u32) -> GridElement {
     let Decoration::DirectiveLine {
         label,
@@ -37,29 +35,25 @@ pub(super) fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow
     let music_column_count = LABEL_COLS + total_musical_cols;
     let mut elements: Vec<GridElement> = Vec::new();
 
-    // First block: one DirectiveLine element at column 1.
+    // First block: one DirectiveLine element aligned to the left edge of the first measure.
     if let Some(first) = system.first() {
         if let Some(dec) = first.decorations.first() {
-            elements.push(directive_line_element(dec, 1));
+            elements.push(directive_line_element(dec, LABEL_COLS));
         }
     }
 
     // Non-first blocks: only emit a DirectiveLine when there is a label,
-    // placed proportionally so it appears above the correct measure.
+    // aligned to the left edge of the measure it belongs to. This uses the
+    // same column grid as the music rows so the label lines up exactly with
+    // the measure's bar line.
     let mut measure_music_col = LABEL_COLS;
     for (index, block) in system.iter().enumerate() {
         if index > 0 {
             if let Some(Decoration::DirectiveLine { label: Some(_), .. }) =
                 block.decorations.first()
             {
-                let deco_col = (measure_music_col as f32 * DECO_COLS as f32
-                    / music_column_count as f32)
-                    .round() as u32;
                 if let Some(dec) = block.decorations.first() {
-                    elements.push(directive_line_element(
-                        dec,
-                        deco_col.clamp(1, DECO_COLS - 1),
-                    ));
+                    elements.push(directive_line_element(dec, measure_music_col));
                 }
             }
         }
@@ -68,7 +62,7 @@ pub(super) fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow
 
     GridRow {
         height_pt: decoration_row_height(base),
-        column_count: DECO_COLS,
+        column_count: music_column_count,
         elements,
     }
 }

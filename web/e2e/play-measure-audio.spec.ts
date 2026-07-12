@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { focusEditor } from './fileSwitcherHelpers'
 
 // The soundfont is a real ~30 MB asset; some sandboxed environments fail to
 // write Chromium's HTTP disk cache for large responses
@@ -25,10 +26,12 @@ test('clicking play on a selected measure starts and finishes playback', async (
   test.setTimeout(60_000)
 
   await page.goto('/')
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
 
   // Focus the Monaco editor and place the cursor inside measure 0.
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
   await page.keyboard.press('Control+g')
   await page.keyboard.type('15')
   await page.keyboard.press('Enter')

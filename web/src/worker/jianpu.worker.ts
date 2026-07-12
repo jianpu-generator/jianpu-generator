@@ -16,6 +16,13 @@ import type {
   SectionRange,
 } from '../types'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
+import {
+  handleGenerateMidi,
+  handleGeneratePdf,
+  handleGenerateSplitMidi,
+  handleGenerateSplitPdf,
+  handleGenerateSplitWav,
+} from './exportMessageHandlers'
 
 const generateWav =
   'generate_wav' in jianpuWasm ? jianpuWasm.generate_wav : null
@@ -23,6 +30,14 @@ const generateWav =
 const generateWavForMeasureRange =
   'generate_wav_for_measure_range' in jianpuWasm
     ? jianpuWasm.generate_wav_for_measure_range
+    : null
+
+const listMeasureTimes =
+  'list_measure_times' in jianpuWasm ? jianpuWasm.list_measure_times : null
+
+const listMeasureTimesForRange =
+  'list_measure_times_for_range' in jianpuWasm
+    ? jianpuWasm.list_measure_times_for_range
     : null
 
 const renderWithHighlightRange =
@@ -35,6 +50,15 @@ const generatePdf =
 
 const generateSplitPdfs =
   'generate_split_pdfs' in jianpuWasm ? jianpuWasm.generate_split_pdfs : null
+
+const generateMidi =
+  'generate_midi' in jianpuWasm ? jianpuWasm.generate_midi : null
+
+const generateSplitMidis =
+  'generate_split_midis' in jianpuWasm ? jianpuWasm.generate_split_midis : null
+
+const generateSplitWavs =
+  'generate_split_wavs' in jianpuWasm ? jianpuWasm.generate_split_wavs : null
 
 const generateInstrumentPreviewWav =
   'generate_instrument_preview_wav' in jianpuWasm
@@ -85,6 +109,24 @@ export type WorkerRequest =
       baseName: string
     }
   | {
+      type: 'generateMidi'
+      source: string
+      id: number
+      enabledTracks?: string[]
+    }
+  | {
+      type: 'generateSplitMidi'
+      source: string
+      id: number
+      baseName: string
+    }
+  | {
+      type: 'generateSplitWav'
+      source: string
+      id: number
+      baseName: string
+    }
+  | {
       type: 'generateAudio'
       source: string
       id: number
@@ -111,7 +153,12 @@ export type WorkerRequest =
   | { type: 'previewInstrument'; id: number; programNumber: number }
 
 export type WorkerResponse =
-  | { type: 'ready'; audioAvailable: boolean; pdfAvailable: boolean }
+  | {
+      type: 'ready'
+      audioAvailable: boolean
+      pdfAvailable: boolean
+      midiAvailable: boolean
+    }
   | {
       type: 'ok'
       id: number
@@ -119,7 +166,7 @@ export type WorkerResponse =
       diagnostics: Diagnostic[]
       diagnosticViewZones: DiagnosticViewZone[]
     }
-  | { type: 'audio'; id: number; wav: ArrayBuffer }
+  | { type: 'audio'; id: number; wav: ArrayBuffer; measureTimes: number[] }
   | { type: 'audioErr'; id: number }
   | {
       type: 'err'
@@ -143,7 +190,18 @@ export type WorkerResponse =
   | { type: 'pdfErr'; id: number; diagnostics: Diagnostic[] }
   | { type: 'splitPdf'; id: number; zip: ArrayBuffer }
   | { type: 'splitPdfErr'; id: number; diagnostics: Diagnostic[] }
-  | { type: 'measureRangeAudio'; id: number; wav: ArrayBuffer }
+  | { type: 'midi'; id: number; midi: ArrayBuffer }
+  | { type: 'midiErr'; id: number; diagnostics: Diagnostic[] }
+  | { type: 'splitMidi'; id: number; zip: ArrayBuffer }
+  | { type: 'splitMidiErr'; id: number; diagnostics: Diagnostic[] }
+  | { type: 'splitWav'; id: number; zip: ArrayBuffer }
+  | { type: 'splitWavErr'; id: number; diagnostics: Diagnostic[] }
+  | {
+      type: 'measureRangeAudio'
+      id: number
+      wav: ArrayBuffer
+      measureTimes: number[]
+    }
   | { type: 'measureRangeAudioErr'; id: number }
   | { type: 'instrumentPreview'; id: number; wav: ArrayBuffer }
   | { type: 'instrumentPreviewErr'; id: number }
@@ -167,6 +225,7 @@ async function ensureInit() {
       type: 'ready',
       audioAvailable: generateWav !== null,
       pdfAvailable: generatePdf !== null,
+      midiAvailable: generateMidi !== null,
     } satisfies WorkerResponse)
   }
 }
@@ -191,6 +250,31 @@ function listDeclarationsFromSource(source: string): PartDeclaration[] {
   if (!('list_part_declarations' in jianpuWasm)) return []
   const result = jianpuWasm.list_part_declarations(source, GM_INSTRUMENTS)
   return result.status === 'ok' ? result.declarations : []
+}
+
+function measureTimesFromSource(
+  source: string,
+  enabledTracks: string[] | undefined,
+): number[] {
+  if (!listMeasureTimes) return []
+  const result = listMeasureTimes(source, enabledTracks)
+  return result.status === 'ok' ? result.times : []
+}
+
+function measureTimesForRangeFromSource(
+  source: string,
+  startMeasureIndex: number,
+  endMeasureIndex: number,
+  enabledTracks: string[] | undefined,
+): number[] {
+  if (!listMeasureTimesForRange) return []
+  const result = listMeasureTimesForRange(
+    source,
+    startMeasureIndex,
+    endMeasureIndex,
+    enabledTracks,
+  )
+  return result.status === 'ok' ? result.times : []
 }
 
 function binaryBufferFromResult(
@@ -262,119 +346,27 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'generatePdf') {
-    if (!generatePdf) {
-      postMessage({
-        type: 'pdfErr',
-        id: msg.id,
-        diagnostics: [
-          {
-            severity: 'error',
-            message: 'PDF export is not available in this build.',
-            span: { start: 0, end: 0 },
-          },
-        ],
-      } satisfies WorkerResponse)
-      return
-    }
-
-    if (!loadedFonts) {
-      postMessage({
-        type: 'pdfErr',
-        id: msg.id,
-        diagnostics: [
-          {
-            severity: 'error',
-            message: 'Fonts are not yet loaded.',
-            span: { start: 0, end: 0 },
-          },
-        ],
-      } satisfies WorkerResponse)
-      return
-    }
-    const result = generatePdf(
-      msg.source,
-      msg.enabledTracks,
-      msg.disabledLyrics,
-      loadedFonts.sc,
-      loadedFonts.tc,
-      loadedFonts.mono,
-    )
-    if (result.status === 'ok') {
-      const pdfBuffer = binaryBufferFromResult(result.pdf)
-      postMessage(
-        {
-          type: 'pdf',
-          id: msg.id,
-          pdf: pdfBuffer,
-        } satisfies WorkerResponse,
-        { transfer: [pdfBuffer] },
-      )
-      return
-    }
-
-    postMessage({
-      type: 'pdfErr',
-      id: msg.id,
-      diagnostics: result.diagnostics,
-    } satisfies WorkerResponse)
+    handleGeneratePdf(msg, generatePdf, loadedFonts)
     return
   }
 
   if (msg.type === 'generateSplitPdf') {
-    if (!generateSplitPdfs) {
-      postMessage({
-        type: 'splitPdfErr',
-        id: msg.id,
-        diagnostics: [
-          {
-            severity: 'error',
-            message: 'Split PDF export is not available in this build.',
-            span: { start: 0, end: 0 },
-          },
-        ],
-      } satisfies WorkerResponse)
-      return
-    }
+    handleGenerateSplitPdf(msg, generateSplitPdfs, loadedFonts)
+    return
+  }
 
-    if (!loadedFonts) {
-      postMessage({
-        type: 'splitPdfErr',
-        id: msg.id,
-        diagnostics: [
-          {
-            severity: 'error',
-            message: 'Fonts are not yet loaded.',
-            span: { start: 0, end: 0 },
-          },
-        ],
-      } satisfies WorkerResponse)
-      return
-    }
-    const result = generateSplitPdfs(
-      msg.source,
-      msg.baseName,
-      loadedFonts.sc,
-      loadedFonts.tc,
-      loadedFonts.mono,
-    )
-    if (result.status === 'ok') {
-      const zipBuffer = binaryBufferFromResult(result.zip)
-      postMessage(
-        {
-          type: 'splitPdf',
-          id: msg.id,
-          zip: zipBuffer,
-        } satisfies WorkerResponse,
-        { transfer: [zipBuffer] },
-      )
-      return
-    }
+  if (msg.type === 'generateMidi') {
+    handleGenerateMidi(msg, generateMidi)
+    return
+  }
 
-    postMessage({
-      type: 'splitPdfErr',
-      id: msg.id,
-      diagnostics: result.diagnostics,
-    } satisfies WorkerResponse)
+  if (msg.type === 'generateSplitMidi') {
+    handleGenerateSplitMidi(msg, generateSplitMidis)
+    return
+  }
+
+  if (msg.type === 'generateSplitWav') {
+    handleGenerateSplitWav(msg, generateSplitWavs, loadedSoundfont)
     return
   }
 
@@ -403,6 +395,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
           type: 'audio',
           id: msg.id,
           wav: wavBuffer,
+          measureTimes: measureTimesFromSource(msg.source, msg.enabledTracks),
         } satisfies WorkerResponse,
         { transfer: [wavBuffer] },
       )
@@ -445,6 +438,12 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
           type: 'measureRangeAudio',
           id: msg.id,
           wav: wavBuffer,
+          measureTimes: measureTimesForRangeFromSource(
+            msg.source,
+            msg.startMeasureIndex,
+            msg.endMeasureIndex,
+            msg.enabledTracks,
+          ),
         } satisfies WorkerResponse,
         { transfer: [wavBuffer] },
       )

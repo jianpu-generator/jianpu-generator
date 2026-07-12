@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import {
+  focusEditor,
+  openFileList,
+  typeAtEditorEnd,
+} from './fileSwitcherHelpers'
 
 const SOURCE_A = [
   '# metadata',
@@ -101,27 +106,28 @@ test("an unsaved edit in file A survives switching to file B and back, and undo/
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
   // Edit file A.
-  await page.click('.monaco-editor .view-lines')
-  await page.keyboard.press('Control+End')
-  await page.keyboard.type(' 5')
+  await typeAtEditorEnd(page, ' 5')
 
   await expect
     .poll(getStoredFile.bind(null, page, 'a.jianpu'))
     .toContain('1 2 3 4 5')
 
   // Switch to file B without explicitly saving.
-  await page.getByRole('button', { name: 'b.jianpu', exact: true }).click()
+  await openFileList(page)
+  await page.locator('.file-tab-name', { hasText: 'b.jianpu' }).click()
+  await openFileList(page)
   await expect(
-    page.getByRole('button', { name: 'b.jianpu', exact: true }),
+    page.locator('.file-tab-name', { hasText: 'b.jianpu' }),
   ).toHaveAttribute('aria-current', 'true')
   await expect(page.locator('.monaco-editor .view-lines')).toContainText(
     '5 6 7 1',
   )
 
   // Switch back to file A: the edit must still be there.
-  await page.getByRole('button', { name: 'a.jianpu', exact: true }).click()
+  await page.locator('.file-tab-name', { hasText: 'a.jianpu' }).click()
+  await openFileList(page)
   await expect(
-    page.getByRole('button', { name: 'a.jianpu', exact: true }),
+    page.locator('.file-tab-name', { hasText: 'a.jianpu' }),
   ).toHaveAttribute('aria-current', 'true')
   await expect(page.locator('.monaco-editor .view-lines')).toContainText(
     '1 2 3 4 5',
@@ -132,7 +138,7 @@ test("an unsaved edit in file A survives switching to file B and back, and undo/
   // Monaco's built-in undo/redo keybindings resolve to the `Control`
   // chord regardless of host OS (unlike the app's own Cmd/Ctrl+S handler),
   // so these are not platform-conditional like other specs' `Meta+...`.
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
   const undoKey = 'Control+z'
   const redoKey = 'Control+y'
 

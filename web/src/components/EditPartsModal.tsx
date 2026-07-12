@@ -76,18 +76,18 @@ function PartRow({
         declaration.abbreviation,
         mode,
         defaultTarget,
-        declaration.soundfont,
-        declaration.volume,
-        declaration.octaveOffset,
+        declaration.soundfont ?? null,
+        declaration.volume ?? null,
+        declaration.octaveOffset ?? null,
       )
     } else {
       onPartDeclarationChange(
         declaration.abbreviation,
         mode as PartMode,
         null,
-        declaration.soundfont,
-        declaration.volume,
-        declaration.octaveOffset,
+        declaration.soundfont ?? null,
+        declaration.volume ?? null,
+        declaration.octaveOffset ?? null,
       )
     }
   }
@@ -97,9 +97,9 @@ function PartRow({
       declaration.abbreviation,
       'follow',
       target,
-      declaration.soundfont,
-      declaration.volume,
-      declaration.octaveOffset,
+      declaration.soundfont ?? null,
+      declaration.volume ?? null,
+      declaration.octaveOffset ?? null,
     )
   }
 
@@ -108,10 +108,10 @@ function PartRow({
     onPartDeclarationChange(
       declaration.abbreviation,
       declaration.mode,
-      declaration.followTarget,
+      declaration.followTarget ?? null,
       newSoundfont,
-      declaration.volume,
-      declaration.octaveOffset,
+      declaration.volume ?? null,
+      declaration.octaveOffset ?? null,
     )
   }
 
@@ -120,10 +120,10 @@ function PartRow({
     onPartDeclarationChange(
       declaration.abbreviation,
       declaration.mode,
-      declaration.followTarget,
-      declaration.soundfont,
+      declaration.followTarget ?? null,
+      declaration.soundfont ?? null,
       newVolume,
-      declaration.octaveOffset,
+      declaration.octaveOffset ?? null,
     )
   }
 
@@ -133,9 +133,9 @@ function PartRow({
     onPartDeclarationChange(
       declaration.abbreviation,
       declaration.mode,
-      declaration.followTarget,
-      declaration.soundfont,
-      declaration.volume,
+      declaration.followTarget ?? null,
+      declaration.soundfont ?? null,
+      declaration.volume ?? null,
       newOctaveOffset,
     )
   }
@@ -214,7 +214,7 @@ function PartRow({
         <SoundfontSearchModal
           open={searchOpen}
           onOpenChange={setSearchOpen}
-          currentValue={declaration.soundfont}
+          currentValue={declaration.soundfont ?? null}
           onSelect={(value) => {
             handleSoundfontChange(value ?? '')
             setSearchOpen(false)

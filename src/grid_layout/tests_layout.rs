@@ -2,7 +2,7 @@ use crate::ast::parsed::JianPuPitch;
 use crate::compiler::types::{
     ColumnElement, CompileResult, Decoration, ElementContent, MeasureBlock, MeasureRow, RowId,
 };
-use crate::grid_layout::layout::layout;
+use crate::grid_layout::layout::{layout, LABEL_COLS};
 use crate::grid_layout::types::{GridContent, Header, VAlign};
 use crate::render_config::RenderConfig;
 
@@ -178,7 +178,7 @@ fn layout_with_bpm_decoration_has_decoration_row() {
 }
 
 #[test]
-fn decoration_row_has_fixed_column_count() {
+fn decoration_row_shares_column_count_with_music_rows() {
     let block =
         make_block_with_decorations(vec![directive_line(None, None, None, Some(120), None)]);
     let compile_result = CompileResult {
@@ -195,14 +195,23 @@ fn decoration_row_has_fixed_column_count() {
                 .any(|e| matches!(&e.content, GridContent::DirectiveLine { bpm: Some(_), .. }))
         })
         .expect("should have a decoration row with bpm");
+    let music_row = pages[0]
+        .rows
+        .iter()
+        .find(|r| {
+            r.elements
+                .iter()
+                .any(|e| matches!(&e.content, GridContent::BarLine { .. }))
+        })
+        .expect("should have a music row with a bar line");
     assert_eq!(
-        deco_row.column_count, 12,
-        "decoration row should use fixed DECO_COLS=12"
+        deco_row.column_count, music_row.column_count,
+        "decoration row should share the music rows' column grid so labels align to measures"
     );
 }
 
 #[test]
-fn decoration_items_start_at_column_1() {
+fn decoration_items_start_at_first_measure_left_edge() {
     let block =
         make_block_with_decorations(vec![directive_line(None, None, None, Some(120), None)]);
     let compile_result = CompileResult {
@@ -217,8 +226,8 @@ fn decoration_items_start_at_column_1() {
         .find(|e| matches!(&e.content, GridContent::DirectiveLine { bpm: Some(_), .. }))
         .expect("should have DirectiveLine element");
     assert_eq!(
-        directive_el.column, 1,
-        "directive line should be at column 1"
+        directive_el.column, LABEL_COLS,
+        "directive line should align with the left edge of the first measure"
     );
 }
 
@@ -252,7 +261,7 @@ fn label_and_bpm_are_merged_into_single_directive_line() {
         1,
         "should have exactly one DirectiveLine with label and bpm"
     );
-    assert_eq!(directive_elements[0].column, 1);
+    assert_eq!(directive_elements[0].column, LABEL_COLS);
 }
 
 #[test]
@@ -285,8 +294,8 @@ fn bpm_and_time_signature_merged_into_single_directive_line_at_column_1() {
         })
         .expect("should have DirectiveLine with bpm and time_signature");
     assert_eq!(
-        directive_el.column, 1,
-        "directive line should be at column 1"
+        directive_el.column, LABEL_COLS,
+        "directive line should align with the left edge of the first measure"
     );
 }
 

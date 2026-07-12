@@ -1,12 +1,18 @@
+import { Share1Icon } from '@radix-ui/react-icons'
 import { useCallback, useState } from 'react'
 import { buildShareUrl } from '../shareUrl'
 
 interface ShareButtonProps {
   filename: string
   content: string
+  className?: string
 }
 
-export function ShareButton({ filename, content }: ShareButtonProps) {
+export function ShareButton({
+  filename,
+  content,
+  className = 'file-tab-bar-btn',
+}: ShareButtonProps) {
   const [copied, setCopied] = useState(false)
 
   const handleShare = useCallback(async () => {
@@ -23,14 +29,21 @@ export function ShareButton({ filename, content }: ShareButtonProps) {
   return (
     <button
       type="button"
-      className="file-tab-bar-btn"
+      className={className}
       data-testid="share-button"
       aria-label="Copy share link"
       onClick={() => {
         void handleShare()
       }}
     >
-      {copied ? 'Link copied' : 'Share'}
+      {copied ? (
+        'Link copied'
+      ) : (
+        <>
+          <Share1Icon aria-hidden="true" />
+          Share
+        </>
+      )}
     </button>
   )
 }

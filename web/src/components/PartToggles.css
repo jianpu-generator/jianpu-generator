@@ -19,12 +19,6 @@
   margin: 0;
 }
 
-.part-toggles-status {
-  font-size: 0.75rem;
-  color: var(--muted);
-  font-style: italic;
-}
-
 .part-toggles-list {
   display: flex;
   flex-wrap: wrap;

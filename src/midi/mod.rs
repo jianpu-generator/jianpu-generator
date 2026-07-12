@@ -10,10 +10,11 @@ use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 pub use crate::ast::parsed::JianPuPitch;
 
 mod midi_notes;
+mod timing;
 pub(crate) use midi_notes::{
     accidental_offset, duration_to_ticks, resolve_midi_note, resolve_midi_note_with_accidental,
 };
-const TPQ: u16 = 480; // ticks per quarter note
+pub(crate) const TPQ: u16 = 480; // ticks per quarter note
 const VELOCITY: u8 = 80;
 const CHORD_CHANNEL: u8 = 3;
 
@@ -28,12 +29,12 @@ fn part_index_to_midi_channel(index: usize) -> u8 {
     }
 }
 
-struct RawEvent {
-    tick: u32,
-    kind: RawKind,
+pub(crate) struct RawEvent {
+    pub(crate) tick: u32,
+    pub(crate) kind: RawKind,
 }
 
-enum RawKind {
+pub(crate) enum RawKind {
     Tempo(u32),
     NoteOn {
         channel: u8,
@@ -149,38 +150,9 @@ pub fn write_midi_for_measure(
     score: &Score,
     measure_index: usize,
 ) -> Result<Vec<u8>, IrrecoverableError> {
-    let clamped_index = measure_index.min(score.measures.len().saturating_sub(1));
-    let Some(target) = score.measures.get(clamped_index) else {
+    let Some(single_score) = build_single_measure_score(score, measure_index) else {
         return Ok(Vec::new());
     };
-
-    // Accumulate BPM and key from all measures before the target
-    let mut accumulated_bpm: Option<u32> = None;
-    let mut accumulated_key: Option<KeyChange> = None;
-    for measure in score.measures.iter().take(measure_index) {
-        if let Some(bpm) = measure.bpm {
-            accumulated_bpm = Some(bpm);
-        }
-        if let Some(key) = &measure.key {
-            accumulated_key = Some(key.clone());
-        }
-    }
-
-    // Clone target and inject accumulated context for fields the target doesn't override
-    let mut patched = target.clone();
-    if patched.bpm.is_none() {
-        patched.bpm = accumulated_bpm;
-    }
-    if patched.key.is_none() {
-        patched.key = accumulated_key;
-    }
-
-    let single_score = Score {
-        metadata: score.metadata.clone(),
-        measures: vec![patched],
-        document_diagnostics: vec![],
-    };
-
     write_midi(&single_score)
 }
 
@@ -189,52 +161,18 @@ pub fn write_midi_for_measure_range(
     start_index: usize,
     end_index: usize,
 ) -> Result<Vec<u8>, IrrecoverableError> {
-    if score.measures.is_empty() {
+    let Some(range_score) = build_measure_range_score(score, start_index, end_index) else {
         return Ok(Vec::new());
-    }
-    let last = score.measures.len() - 1;
-    let (clamped_start, clamped_end) = if start_index > end_index {
-        (end_index.min(last), start_index.min(last))
-    } else {
-        (start_index.min(last), end_index.min(last))
-    };
-    let start_index = clamped_start;
-    let end_index = clamped_end;
-    let mut accumulated_bpm: Option<u32> = None;
-    let mut accumulated_key: Option<KeyChange> = None;
-    for measure in score.measures.iter().take(start_index) {
-        if let Some(bpm) = measure.bpm {
-            accumulated_bpm = Some(bpm);
-        }
-        if let Some(key) = &measure.key {
-            accumulated_key = Some(key.clone());
-        }
-    }
-    let count = end_index - start_index + 1;
-    let mut measures: Vec<_> = score
-        .measures
-        .iter()
-        .skip(start_index)
-        .take(count)
-        .cloned()
-        .collect();
-    if let Some(first) = measures.first_mut() {
-        if first.bpm.is_none() {
-            first.bpm = accumulated_bpm;
-        }
-        if first.key.is_none() {
-            first.key = accumulated_key;
-        }
-    }
-    let range_score = Score {
-        metadata: score.metadata.clone(),
-        measures,
-        document_diagnostics: vec![],
     };
     write_midi(&range_score)
 }
 
-fn default_active_key() -> KeyChange {
+pub use timing::{
+    build_measure_range_score, build_single_measure_score, measure_start_times_seconds,
+    measure_start_times_seconds_for_range,
+};
+
+pub(crate) fn default_active_key() -> KeyChange {
     KeyChange {
         note: crate::ast::parsed::Note {
             name: NoteName::C,
@@ -244,7 +182,7 @@ fn default_active_key() -> KeyChange {
     }
 }
 
-fn process_measure(
+pub(crate) fn process_measure(
     measure: &crate::ast::grouped::MultiPartMeasure,
     current_tick: u32,
     raw: &mut Vec<RawEvent>,

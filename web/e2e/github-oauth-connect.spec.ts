@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test'
 import {
+  focusEditor,
+  openFileActions,
+  openFileList,
+} from './fileSwitcherHelpers'
+import {
   mockGithubContentsApi,
   mockGithubRepoExists,
   mockGithubUser,
@@ -49,7 +54,8 @@ test('connect via device flow shows the verification code and switches to the gi
 
   await page.goto('/')
 
-  await page.getByRole('button', { name: 'Storage…' }).click()
+  await openFileActions(page)
+  await page.getByRole('menuitem', { name: 'Storage…' }).click()
   await page.getByTestId('storage-settings-modal').waitFor()
 
   await page.getByLabel('GitHub repository').check()
@@ -105,12 +111,14 @@ test('disconnect reverts to the local backend and stops saving to github', async
 
   await page.goto('/')
 
+  await openFileList(page)
   const tab = page.locator('.file-tab-name', { hasText: 'song.jianpu' })
   await tab.waitFor({ timeout: 15_000 })
   await tab.click()
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
 
-  await page.getByRole('button', { name: 'Storage…' }).click()
+  await openFileActions(page)
+  await page.getByRole('menuitem', { name: 'Storage…' }).click()
   await page.getByTestId('storage-settings-modal').waitFor()
 
   await expect(page.getByTestId('github-connected')).toBeVisible()
@@ -127,7 +135,13 @@ test('disconnect reverts to the local backend and stops saving to github', async
   await expect(page.getByLabel('This browser')).toBeChecked()
 
   await page.keyboard.press('Escape')
-  await page.click('.monaco-editor .view-lines')
+  // Disconnecting switches the active file to the read-only reference/demo
+  // file (`isReadOnlyFile` in `fileStore.ts`), so this attempted edit is a
+  // no-op in the editor itself — `typeAtEditorEnd` isn't used here since its
+  // landed-text verification would never succeed against a read-only model.
+  // The assertion below only cares that force-saving afterwards doesn't hit
+  // GitHub, regardless of whether the keystrokes changed anything.
+  await focusEditor(page)
   await page.keyboard.press('Control+End')
   await page.keyboard.type(' edited')
   await page.keyboard.press('Meta+s')

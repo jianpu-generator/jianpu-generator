@@ -10,8 +10,10 @@ import type {
 } from '../types'
 import type { WorkerResponse } from '../worker/jianpu.worker'
 import {
+  downloadMidi,
   downloadPdf,
   downloadZip,
+  midiFilenameFromActiveFile,
   pdfFilenameFromActiveFile,
   zipFilenameFromActiveFile,
 } from './workerHelpers'
@@ -20,6 +22,7 @@ export interface WorkerMessageHandlerDeps {
   audioAvailableRef: RefObject<boolean>
   setAudioAvailable: (value: boolean) => void
   setPdfAvailable: (value: boolean) => void
+  setMidiAvailable: (value: boolean) => void
   latestPartsIdRef: RefObject<number>
   setPartsLoading: (value: boolean) => void
   setParts: (value: PartInfo[]) => void
@@ -31,9 +34,16 @@ export interface WorkerMessageHandlerDeps {
   latestPdfIdRef: RefObject<number>
   setPdfExporting: (value: boolean) => void
   activeFileRef: RefObject<string>
+  enabledPartNamesRef: RefObject<string[] | undefined>
   setDiagnostics: (value: Diagnostic[]) => void
   latestSplitPdfIdRef: RefObject<number>
   setSplitPdfExporting: (value: boolean) => void
+  latestMidiIdRef: RefObject<number>
+  setMidiExporting: (value: boolean) => void
+  latestSplitMidiIdRef: RefObject<number>
+  setSplitMidiExporting: (value: boolean) => void
+  latestSplitWavIdRef: RefObject<number>
+  setSplitWavExporting: (value: boolean) => void
   latestRenderIdRef: RefObject<number>
   setRendering: (value: boolean) => void
   setDocuments: (value: SvgDocumentOut[]) => void
@@ -41,9 +51,10 @@ export interface WorkerMessageHandlerDeps {
   latestAudioIdRef: RefObject<number>
   setAudioGenerating: (value: boolean) => void
   setNextWavUrl: (value: string | null) => void
+  setMeasureTimes: (value: number[]) => void
   latestMeasureAudioIdRef: RefObject<number>
   setMeasureAudioGenerating: (value: boolean) => void
-  setNextMeasureWavUrl: (value: string | null) => void
+  setNextMeasureWavUrl: (value: string | null, measureTimes: number[]) => void
   latestHighlightRenderIdRef: RefObject<number>
   setHighlightedDocuments: (value: SvgDocumentOut[]) => void
   latestMeasureSpansIdRef: RefObject<number>
@@ -61,6 +72,7 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       deps.audioAvailableRef.current = msg.audioAvailable
       deps.setAudioAvailable(msg.audioAvailable)
       deps.setPdfAvailable(msg.pdfAvailable)
+      deps.setMidiAvailable(msg.midiAvailable)
       return
     }
 
@@ -85,7 +97,10 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       deps.setPdfExporting(false)
       downloadPdf(
         msg.pdf,
-        pdfFilenameFromActiveFile(deps.activeFileRef.current),
+        pdfFilenameFromActiveFile(
+          deps.activeFileRef.current,
+          deps.enabledPartNamesRef.current,
+        ),
       )
       return
     }
@@ -114,6 +129,60 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       return
     }
 
+    if (msg.type === 'midi') {
+      if (msg.id !== deps.latestMidiIdRef.current) return
+      deps.setMidiExporting(false)
+      downloadMidi(
+        msg.midi,
+        midiFilenameFromActiveFile(
+          deps.activeFileRef.current,
+          deps.enabledPartNamesRef.current,
+        ),
+      )
+      return
+    }
+
+    if (msg.type === 'midiErr') {
+      if (msg.id !== deps.latestMidiIdRef.current) return
+      deps.setMidiExporting(false)
+      deps.setDiagnostics(msg.diagnostics)
+      return
+    }
+
+    if (msg.type === 'splitMidi') {
+      if (msg.id !== deps.latestSplitMidiIdRef.current) return
+      deps.setSplitMidiExporting(false)
+      downloadZip(
+        msg.zip,
+        zipFilenameFromActiveFile(deps.activeFileRef.current, 'MIDI parts'),
+      )
+      return
+    }
+
+    if (msg.type === 'splitMidiErr') {
+      if (msg.id !== deps.latestSplitMidiIdRef.current) return
+      deps.setSplitMidiExporting(false)
+      deps.setDiagnostics(msg.diagnostics)
+      return
+    }
+
+    if (msg.type === 'splitWav') {
+      if (msg.id !== deps.latestSplitWavIdRef.current) return
+      deps.setSplitWavExporting(false)
+      downloadZip(
+        msg.zip,
+        zipFilenameFromActiveFile(deps.activeFileRef.current, 'WAV parts'),
+      )
+      return
+    }
+
+    if (msg.type === 'splitWavErr') {
+      if (msg.id !== deps.latestSplitWavIdRef.current) return
+      deps.setSplitWavExporting(false)
+      deps.setDiagnostics(msg.diagnostics)
+      return
+    }
+
     if (msg.type === 'ok') {
       if (msg.id !== deps.latestRenderIdRef.current) return
       deps.setRendering(false)
@@ -130,6 +199,7 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
         new Blob([msg.wav], { type: 'audio/wav' }),
       )
       deps.setNextWavUrl(url)
+      deps.setMeasureTimes(msg.measureTimes)
       return
     }
 
@@ -144,6 +214,7 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       deps.setMeasureAudioGenerating(false)
       deps.setNextMeasureWavUrl(
         URL.createObjectURL(new Blob([msg.wav], { type: 'audio/wav' })),
+        msg.measureTimes,
       )
       return
     }

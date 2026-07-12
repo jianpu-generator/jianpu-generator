@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { focusEditor } from './fileSwitcherHelpers'
 
 /**
  * The default source (reference.jianpu) contains many measures.
@@ -19,7 +20,9 @@ test('drag from measure 1 to measure 3 selects measures 1–3', async ({
   await page.goto('/')
 
   // Wait for the editor toolbar (signals WASM is loaded and app is ready).
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
 
   // Wait for the SVG preview to render measure groups.
   await page.waitForSelector('[data-tag="measure"][data-measure-index="3"]', {
@@ -31,7 +34,7 @@ test('drag from measure 1 to measure 3 selects measures 1–3', async ({
   // waiting for the play button to display a measure label — that confirms
   // the worker's measureSpans response has been processed.
   // Line 18 of reference.jianpu is "[M] 1 2 3 0" (measure index 1).
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
   await page.keyboard.press('Control+g')
   await page.keyboard.type('18')
   await page.keyboard.press('Enter')
@@ -117,14 +120,16 @@ test('drag from measure 0 to measure 3 selects exactly 4 measures (not 5)', asyn
 }) => {
   await page.goto('/')
 
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
   await page.waitForSelector('[data-tag="measure"][data-measure-index="3"]', {
     timeout: 10_000,
   })
 
   // Prime measureSpans: click into the editor, navigate to a measure line,
   // and wait for the play button to confirm measureSpans are loaded.
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
   await page.keyboard.press('Control+g')
   await page.keyboard.type('18')
   await page.keyboard.press('Enter')
@@ -241,7 +246,9 @@ test('drag from measure 0 to measure 3 with CJK source selects exactly 4 measure
   await page.goto('/')
 
   // Wait for the editor toolbar (signals WASM is loaded and app is ready).
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
 
   // Wait for the SVG preview to render all four measure groups.
   await page.waitForSelector('[data-tag="measure"][data-measure-index="3"]', {
@@ -250,7 +257,7 @@ test('drag from measure 0 to measure 3 with CJK source selects exactly 4 measure
 
   // Prime measureSpans: navigate to line 11 ("[M] 0 0 0 0", measure 0) and
   // wait for the play button to confirm the worker has sent measureSpans back.
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
   await page.keyboard.press('Control+g')
   await page.keyboard.type('11')
   await page.keyboard.press('Enter')

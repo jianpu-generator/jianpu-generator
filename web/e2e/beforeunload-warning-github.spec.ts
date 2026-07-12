@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import {
+  fileSwitcherTrigger,
+  openFileList,
+  typeAtEditorEnd,
+} from './fileSwitcherHelpers'
 import { mockGithubContentsApi, OWNER } from './github-contents-mock'
 
 // Mirrors `useStorageBackend.ts`'s `AUTOSAVE_DEBOUNCE_MS`. Not imported
@@ -42,18 +47,15 @@ async function openEditedFile(
 
   await page.goto('/')
 
+  await openFileList(page)
   const tab = page.locator('.file-tab-name', { hasText: filename })
   await tab.waitFor({ timeout: 15_000 })
   await tab.click()
-  await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
-    filename,
-  )
+  await expect(fileSwitcherTrigger(page)).toContainText(filename)
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
-  await page.click('.monaco-editor .view-lines')
-  await page.keyboard.press('Control+End')
-  await page.keyboard.type(' 5')
+  await typeAtEditorEnd(page, ' 5')
 }
 
 test('closing the tab warns while a GitHub save is still pending', async ({
@@ -64,8 +66,8 @@ test('closing the tab warns while a GitHub save is still pending', async ({
 
   // Right after the edit, the debounce hasn't fired yet: no save has
   // happened, so this is exactly the window `shouldWarnBeforeUnload` should
-  // catch via `isPending`.
-  await expect(page.getByTestId('save-status-badge')).toHaveCount(0)
+  // catch via `isPending` — the badge reflects it as "Unsaved".
+  await expect(page.getByTestId('save-status-badge')).toContainText('Unsaved')
 
   let dialogShown = false
   page.once('dialog', (dialog) => {

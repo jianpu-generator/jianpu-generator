@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import {
+  fileSwitcherTrigger,
+  openFileList,
+  typeAtEditorEnd,
+} from './fileSwitcherHelpers'
 import { mockGithubContentsApi, OWNER } from './github-contents-mock'
 
 // Mirrors `useStorageBackend.ts`'s `AUTOSAVE_DEBOUNCE_MS`. Not imported
@@ -55,24 +60,22 @@ test('editing a file schedules a debounced autosave to the GitHub storage backen
 
   await page.goto('/')
 
+  await openFileList(page)
   const autoTab = page.locator('.file-tab-name', { hasText: 'auto.jianpu' })
   await autoTab.waitFor({ timeout: 15_000 })
   await autoTab.click()
-  await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
-    'auto.jianpu',
-  )
+  await expect(fileSwitcherTrigger(page)).toContainText('auto.jianpu')
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
-  await page.click('.monaco-editor .view-lines')
-  await page.keyboard.press('Control+End')
-  await page.keyboard.type(' 5')
+  await typeAtEditorEnd(page, ' 5')
 
   // Right after the edit, the debounce hasn't fired yet: no PUT sent, and
-  // the save-status badge is still absent (idle renders nothing — see
-  // `FileList.tsx`'s `SaveStatusBadge`).
+  // the save-status badge shows the pending "Unsaved" countdown rather than
+  // the stale "Saved" from before the edit (see `FileSwitcher.tsx`'s
+  // `SaveStatusBadge`).
   expect(putBodies).toHaveLength(0)
-  await expect(page.getByTestId('save-status-badge')).toHaveCount(0)
+  await expect(page.getByTestId('save-status-badge')).toContainText('Unsaved')
 
   await page.clock.fastForward(AUTOSAVE_DEBOUNCE_MS)
 
@@ -85,6 +88,7 @@ test('editing a file schedules a debounced autosave to the GitHub storage backen
   // a reload proves the autosave actually landed in the fake remote, not
   // just in in-memory React state.
   await page.reload()
+  await openFileList(page)
   await page.locator('.file-tab-name', { hasText: 'auto.jianpu' }).waitFor({
     timeout: 15_000,
   })

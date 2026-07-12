@@ -301,7 +301,8 @@ fn generate_wav_for_measure_range_response_returns_riff_wav() {
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n",
     );
-    let resp = generate_wav_for_measure_range_response(source, 0, 0, None);
+    let soundfont = include_bytes!("../../../fonts/GeneralUser_GS.sf2").to_vec();
+    let resp = generate_wav_for_measure_range_response(source, 0, 0, None, soundfont);
     match resp {
         GenerateWavResponse::Ok { wav } => {
             assert!(wav.len() > 4);
@@ -317,7 +318,8 @@ fn generate_wav_for_measure_range_response_returns_riff_wav() {
 #[test]
 fn reference_jianpu_generates_wav() {
     let source = include_str!("../../../reference.jianpu");
-    let resp = generate_wav_response(source, None);
+    let soundfont = include_bytes!("../../../fonts/GeneralUser_GS.sf2").to_vec();
+    let resp = generate_wav_response(source, None, soundfont);
     match resp {
         GenerateWavResponse::Ok { wav } => {
             assert!(wav.len() > 4);

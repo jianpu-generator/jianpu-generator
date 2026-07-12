@@ -1,4 +1,10 @@
 import { expect, test } from '@playwright/test'
+import {
+  fileSwitcherTrigger,
+  openFileActions,
+  openFileList,
+  typeAtEditorEnd,
+} from './fileSwitcherHelpers'
 import { mockGithubContentsApi, OWNER } from './github-contents-mock'
 
 const SOURCE = [
@@ -51,18 +57,15 @@ async function setUpConflictingEdit(
 
   await page.goto('/')
 
+  await openFileList(page)
   const tab = page.locator('.file-tab-name', { hasText: 'conflict.jianpu' })
   await tab.waitFor({ timeout: 15_000 })
   await tab.click()
-  await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
-    'conflict.jianpu',
-  )
+  await expect(fileSwitcherTrigger(page)).toContainText('conflict.jianpu')
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
-  await page.click('.monaco-editor .view-lines')
-  await page.keyboard.press('Control+End')
-  await page.keyboard.type(' 5')
+  await typeAtEditorEnd(page, ' 5')
 
   // Force-save immediately rather than waiting out the debounce; the next
   // PUT this triggers is the one `failNextPutWith409` targets below.
@@ -71,7 +74,8 @@ async function setUpConflictingEdit(
 
   // Opening the modal after the failed save (rather than before) avoids its
   // overlay intercepting the editor click above.
-  await page.getByRole('button', { name: 'Storage…' }).click()
+  await openFileActions(page)
+  await page.getByRole('menuitem', { name: 'Storage…' }).click()
   await page.getByTestId('storage-settings-modal').waitFor()
 
   await expect(page.getByTestId('conflict-banner')).toBeVisible({

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { focusEditor } from './fileSwitcherHelpers'
 
 const SOURCE = [
   '# metadata',
@@ -265,7 +266,7 @@ test('changing soundfont via modal preserves the editor selection', async ({
   })
   await expect(codeLensLink).toBeVisible({ timeout: 15_000 })
 
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
   await page.keyboard.press('Control+g')
   await page.keyboard.type('10')
   await page.keyboard.press('Enter')

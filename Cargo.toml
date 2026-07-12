@@ -57,7 +57,7 @@ required-features = ["cli"]
 default = ["cli"]
 cli = ["dep:clap", "pdf", "midi", "wav"]
 pdf = ["dep:svg2pdf", "dep:pdf-writer", "dep:zip"]
-midi = ["dep:midly"]
+midi = ["dep:midly", "dep:zip"]
 wav = ["midi", "dep:oxisynth", "dep:hound"]
 
 [dependencies]

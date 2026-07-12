@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { typeAtEditorEnd } from './fileSwitcherHelpers'
 
 const SOURCE = [
   '# metadata',
@@ -51,9 +52,7 @@ test('editing a file persists to the local storage backend without waiting out t
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
-  await page.click('.monaco-editor .view-lines')
-  await page.keyboard.press('Control+End')
-  await page.keyboard.type(' 5')
+  await typeAtEditorEnd(page, ' 5')
 
   await expect.poll(getStoredSource.bind(null, page)).toContain('1 2 3 4 5')
 

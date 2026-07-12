@@ -52,18 +52,45 @@ async function loadSource(
   }, source)
 }
 
-test('Export PDF produces a non-empty downloaded file', async ({ page }) => {
+async function toggleEye(
+  page: import('@playwright/test').Page,
+  abbreviation: string,
+) {
+  await page
+    .locator('.part-toggle-pill')
+    .filter({
+      has: page.locator('.part-toggle-abbr', {
+        hasText: new RegExp(`^${abbreviation}$`),
+      }),
+    })
+    .locator('.part-toggle-segment--eye')
+    .click()
+}
+
+function exportMenuButton(page: import('@playwright/test').Page) {
+  return page.getByRole('button', { name: 'Export', exact: true })
+}
+
+function exportPartsMenuButton(page: import('@playwright/test').Page) {
+  return page.getByRole('button', { name: 'Export Parts', exact: true })
+}
+
+test('Export > PDF produces a non-empty downloaded file', async ({ page }) => {
   await loadSource(page, SINGLE_PART_SOURCE)
   await page.goto('/')
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
-  const exportButton = page.getByRole('button', { name: /^Export PDF$/ })
-  await expect(exportButton).toBeEnabled({ timeout: 30_000 })
+  const menuButton = exportMenuButton(page)
+  await expect(menuButton).toBeEnabled({ timeout: 30_000 })
+  await menuButton.click()
+
+  const pdfItem = page.getByRole('menuitem', { name: 'PDF', exact: true })
+  await expect(pdfItem).toBeEnabled({ timeout: 30_000 })
 
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    exportButton.click(),
+    pdfItem.click(),
   ])
 
   const downloadPath = await download.path()
@@ -74,7 +101,7 @@ test('Export PDF produces a non-empty downloaded file', async ({ page }) => {
   expect(download.suggestedFilename()).toBe('test.pdf')
 })
 
-test('Export parts produces a non-empty downloaded zip for a multi-part score', async ({
+test('Export Parts > PDF (ZIP) produces a non-empty downloaded zip for a multi-part score', async ({
   page,
 }) => {
   await loadSource(page, MULTI_PART_SOURCE)
@@ -82,14 +109,19 @@ test('Export parts produces a non-empty downloaded zip for a multi-part score', 
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
-  const exportPartsButton = page.getByRole('button', {
-    name: /^Export parts \(ZIP\)$/,
+  const menuButton = exportPartsMenuButton(page)
+  await expect(menuButton).toBeEnabled({ timeout: 30_000 })
+  await menuButton.click()
+
+  const zipItem = page.getByRole('menuitem', {
+    name: 'PDF (ZIP)',
+    exact: true,
   })
-  await expect(exportPartsButton).toBeEnabled({ timeout: 30_000 })
+  await expect(zipItem).toBeEnabled({ timeout: 30_000 })
 
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    exportPartsButton.click(),
+    zipItem.click(),
   ])
 
   const downloadPath = await download.path()
@@ -100,7 +132,32 @@ test('Export parts produces a non-empty downloaded zip for a multi-part score', 
   expect(download.suggestedFilename()).toBe('test.zip')
 })
 
-test('rapid double-click on Export PDF only triggers a single export', async ({
+test('Export > PDF filename includes only the enabled parts when a part is hidden', async ({
+  page,
+}) => {
+  await loadSource(page, MULTI_PART_SOURCE)
+  await page.goto('/')
+  await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
+  await page.waitForSelector('.preview-page', { timeout: 15_000 })
+
+  await toggleEye(page, 'H')
+
+  const menuButton = exportMenuButton(page)
+  await expect(menuButton).toBeEnabled({ timeout: 30_000 })
+  await menuButton.click()
+
+  const pdfItem = page.getByRole('menuitem', { name: 'PDF', exact: true })
+  await expect(pdfItem).toBeEnabled({ timeout: 30_000 })
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    pdfItem.click(),
+  ])
+
+  expect(download.suggestedFilename()).toBe('test (Melody).pdf')
+})
+
+test('rapid double-click on Export > PDF only triggers a single export', async ({
   page,
 }) => {
   await loadSource(page, SINGLE_PART_SOURCE)
@@ -108,8 +165,12 @@ test('rapid double-click on Export PDF only triggers a single export', async ({
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
-  const exportButton = page.getByRole('button', { name: /^Export PDF$/ })
-  await expect(exportButton).toBeEnabled({ timeout: 30_000 })
+  const menuButton = exportMenuButton(page)
+  await expect(menuButton).toBeEnabled({ timeout: 30_000 })
+  await menuButton.click()
+
+  const pdfItem = page.getByRole('menuitem', { name: 'PDF', exact: true })
+  await expect(pdfItem).toBeEnabled({ timeout: 30_000 })
 
   let downloadCount = 0
   page.on('download', () => {
@@ -117,14 +178,20 @@ test('rapid double-click on Export PDF only triggers a single export', async ({
   })
 
   // Dispatch two click events back-to-back in a single browser task so both
-  // reach the handler before React can re-render the button as disabled,
+  // reach the handler before React can re-render the menu as closed,
   // exercising the `pdfExporting`/`splitPdfExporting` re-entrancy guard in
   // `exportPdf` (useJianpuWorker.ts) rather than relying on real user timing.
-  await exportButton.evaluate((el: HTMLElement) => {
-    el.click()
-    el.click()
-  })
+  const [download] = await Promise.all([
+    page.waitForEvent('download', { timeout: 30_000 }),
+    pdfItem.evaluate((el: HTMLElement) => {
+      el.click()
+      el.click()
+    }),
+  ])
+  expect(download.suggestedFilename()).toBe('test.pdf')
 
-  await expect(exportButton).toBeEnabled({ timeout: 30_000 })
+  // Give a stray second export (if the guard were broken) a chance to fire
+  // before asserting only one download ever happened.
+  await new Promise((resolve) => setTimeout(resolve, 500))
   expect(downloadCount).toBe(1)
 })

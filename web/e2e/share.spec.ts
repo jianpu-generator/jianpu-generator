@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { fileSwitcherTrigger, openFileActions } from './fileSwitcherHelpers'
 import { encodeShareHashOnPage, gotoShareUrl } from './shareUrlHelper'
 
 const FILE_STORE_KEY = 'jianpu:files:v1'
@@ -27,9 +28,7 @@ test('opens a shared score preview without saving it, then imports on demand', a
   await expect(page.locator('.shared-preview-banner')).toContainText(
     SHARED_FILENAME,
   )
-  await expect(page.locator('.file-tab--active .file-tab-name')).not.toHaveText(
-    SHARED_FILENAME,
-  )
+  await expect(fileSwitcherTrigger(page)).not.toContainText(SHARED_FILENAME)
 
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
   const previewContent = await page.locator('.preview-page').first().innerHTML()
@@ -37,17 +36,38 @@ test('opens a shared score preview without saving it, then imports on demand', a
 
   // Reloading without importing must not have persisted the shared score.
   await page.reload()
-  await expect(page.locator('.file-tab--active .file-tab-name')).not.toHaveText(
-    SHARED_FILENAME,
-  )
+  await expect(fileSwitcherTrigger(page)).not.toContainText(SHARED_FILENAME)
 
   await gotoShareUrl(page, SHARED_FILENAME, SHARED_SOURCE)
   await page.getByRole('button', { name: 'Import to my scores' }).click()
 
-  await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
-    SHARED_FILENAME,
-  )
+  await expect(fileSwitcherTrigger(page)).toContainText(SHARED_FILENAME)
   await expect(page.locator('.shared-preview-banner')).toHaveCount(0)
+})
+
+test('collapses the editor pane and hides its toggle when viewing a shared score', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.clear()
+  })
+
+  await gotoShareUrl(page, SHARED_FILENAME, SHARED_SOURCE)
+
+  await expect(page.locator('.pane--editor')).toHaveClass(
+    /pane--editor-collapsed/,
+  )
+  await expect(page.locator('.pane-divider-toggle')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Discard' }).click()
+
+  // The toggle reappears once the shared preview is dismissed, letting the
+  // user re-expand the editor pane manually.
+  await expect(page.locator('.pane-divider-toggle')).toBeVisible()
+  await page.locator('.pane-divider-toggle').click()
+  await expect(page.locator('.pane--editor')).not.toHaveClass(
+    /pane--editor-collapsed/,
+  )
 })
 
 test('discarding a shared preview does not save it', async ({ page }) => {
@@ -61,9 +81,7 @@ test('discarding a shared preview does not save it', async ({ page }) => {
   await page.getByRole('button', { name: 'Discard' }).click()
 
   await expect(page.locator('.shared-preview-banner')).toHaveCount(0)
-  await expect(page.locator('.file-tab--active .file-tab-name')).not.toHaveText(
-    SHARED_FILENAME,
-  )
+  await expect(fileSwitcherTrigger(page)).not.toContainText(SHARED_FILENAME)
 })
 
 test('opens legacy uncompressed share links', async ({ page }) => {
@@ -111,6 +129,7 @@ test('share button copies a compressed link that opens as a preview', async ({
   )
   await page.reload()
 
+  await openFileActions(page)
   await page.getByTestId('share-button').click()
   await expect(page.getByTestId('share-button')).toHaveText('Link copied')
 

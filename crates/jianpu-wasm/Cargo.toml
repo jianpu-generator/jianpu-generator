@@ -9,7 +9,8 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
-wav = ["jianpu-generator/wav"]
+midi = ["jianpu-generator/midi"]
+wav = ["midi", "jianpu-generator/wav"]
 pdf = ["jianpu-generator/pdf"]
 
 [dependencies]

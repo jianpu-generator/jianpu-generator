@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import {
+  fileSwitcherTrigger,
+  openFileActions,
+  openFileList,
+} from './fileSwitcherHelpers'
 import { mockGithubContentsApi, OWNER } from './github-contents-mock'
 
 async function getEditorSource(page: import('@playwright/test').Page) {
@@ -60,44 +65,42 @@ test('duplicating a file persists via the GitHub storage backend', async ({
 
   // The GitHub-backed file list loads asynchronously; wait for the seeded
   // file's tab to appear alongside the read-only demo tab.
+  await openFileList(page)
   const originalTab = page.locator('.file-tab-name', {
     hasText: 'original.jianpu',
   })
   await originalTab.waitFor({ timeout: 15_000 })
 
   // Select it (duplicateFile duplicates the active file), then wait for its
-  // preview to render before duplicating.
+  // preview to render before duplicating. Selecting closes the dropdown.
   await originalTab.click()
-  await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
-    'original.jianpu',
-  )
+  await expect(fileSwitcherTrigger(page)).toContainText('original.jianpu')
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
   const sourceContent = await getEditorSource(page)
 
   // Positional locator (not `hasText: 'Duplicate'`) since its label is
   // swapped for a spinner while the duplicate is pending.
-  const duplicateButton = page
-    .locator('.file-tab-bar-actions .file-tab-bar-btn')
-    .nth(1)
+  await openFileActions(page)
+  const duplicateButton = page.locator('.export-menu-item').nth(1)
   await duplicateButton.click()
 
-  // The pending `duplicateFile` call shows a spinner on the "Duplicate"
-  // button — this is user-visible feedback that the op is in flight, and the
-  // mocked PUT's artificial delay (above) gives it time to actually render.
+  // The "⋯" dropdown stays open while the duplicate is pending, so its
+  // spinner is visible without reopening — user-visible feedback that the
+  // op is in flight, given time to render by the mocked PUT's artificial
+  // delay (above).
   await expect(duplicateButton.locator('.file-tab-bar-spinner')).toBeVisible()
 
   // `duplicateFile` names the copy `original 2.jianpu` since `original.jianpu`
   // is already taken, and it becomes the active tab.
+  await expect(fileSwitcherTrigger(page)).toContainText('original 2.jianpu')
   const duplicateTab = page.locator('.file-tab-name', {
     hasText: 'original 2.jianpu',
   })
-  await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
-    'original 2.jianpu',
-  )
 
-  // Once the duplicate resolves, the spinner is gone and "Duplicate" is
-  // usable again.
+  // Once the duplicate resolves, the dropdown closes automatically; reopen
+  // it and "Duplicate" is usable again.
+  await openFileActions(page)
   await expect(duplicateButton.locator('.file-tab-bar-spinner')).toHaveCount(0)
   await expect(duplicateButton).toHaveText('Duplicate')
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
@@ -121,6 +124,7 @@ test('duplicating a file persists via the GitHub storage backend', async ({
   // persisting across a reload proves the backend's create-only `PUT`
   // actually landed in the fake remote, not just in in-memory React state.
   await page.reload()
+  await openFileList(page)
   await duplicateTab.waitFor({ timeout: 15_000 })
   await expect(originalTab).toHaveCount(1)
   await duplicateTab.click()

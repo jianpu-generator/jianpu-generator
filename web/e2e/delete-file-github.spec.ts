@@ -1,4 +1,10 @@
 import { expect, test } from '@playwright/test'
+import {
+  fileSwitcherTrigger,
+  openBin,
+  openFileActions,
+  openFileList,
+} from './fileSwitcherHelpers'
 import { mockGithubContentsApi, OWNER } from './github-contents-mock'
 
 const SOURCE = [
@@ -43,29 +49,29 @@ test('deleting a file persists via the GitHub storage backend', async ({
 
   // The GitHub-backed file list loads asynchronously; wait for the seeded
   // file's tab to appear alongside the read-only demo tab.
+  await openFileList(page)
   const originalTab = page.locator('.file-tab-name', {
     hasText: 'original.jianpu',
   })
   await originalTab.waitFor({ timeout: 15_000 })
 
   // Select it (it isn't active by default — the backend always loads onto
-  // the demo file).
+  // the demo file). Selecting closes the file-switcher dropdown.
   await originalTab.click()
-  await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
-    'original.jianpu',
-  )
+  await expect(fileSwitcherTrigger(page)).toContainText('original.jianpu')
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
-  const closeButton = page.locator(
-    '.file-tab-close[aria-label="Move original.jianpu to bin"]',
-  )
-  await closeButton.click()
+  await openFileActions(page)
+  // Positional locator, tracking the menu's item order: New, Duplicate,
+  // Rename, Share, Delete.
+  const deleteButton = page.locator('.export-menu-item').nth(4)
+  await deleteButton.click()
 
-  // The pending `deleteFile` call (PUT trash/... + DELETE scores/...) shows a
-  // spinner on the close button being deleted — this is user-visible
-  // feedback that the op is in flight, and the mocked mutation delay (above)
-  // gives it time to actually render.
-  await expect(closeButton.locator('.file-tab-bar-spinner')).toBeVisible()
+  // The "⋯" dropdown stays open while the delete is pending, so its spinner
+  // (PUT trash/... + DELETE scores/...) is visible without reopening —
+  // user-visible feedback that the op is in flight, given time to render by
+  // the mocked mutation delay (above).
+  await expect(deleteButton.locator('.file-tab-bar-spinner')).toBeVisible()
 
   // Once the delete resolves, the tab disappears from the tab list...
   await expect(
@@ -73,20 +79,17 @@ test('deleting a file persists via the GitHub storage backend', async ({
   ).toHaveCount(0, { timeout: 5_000 })
 
   // ...and the deleted file moves into the bin, listed by name.
-  await expect(page.locator('.file-tab-bar-bin-summary')).toHaveText('Bin (1)')
-  const binDetails = page.locator('.file-tab-bar-bin')
-  await binDetails.evaluate((el) => {
-    ;(el as HTMLDetailsElement).open = true
-  })
+  await expect(page.locator('.file-tab-bar-bin-trigger')).toContainText(
+    'Bin (1)',
+  )
+  await openBin(page)
   await expect(page.locator('.file-tab-bar-bin-name')).toHaveText(
     'original.jianpu',
   )
 
   // With no other user files remaining, the active tab falls back to the
   // read-only demo file.
-  await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
-    'reference.jianpu',
-  )
+  await expect(fileSwitcherTrigger(page)).toContainText('reference.jianpu')
 
   // Reloading re-fetches from the (mocked) GitHub API, so the deleted file
   // staying gone from the main tab list and present in the bin proves the
@@ -94,14 +97,14 @@ test('deleting a file persists via the GitHub storage backend', async ({
   // fake remote, not just in in-memory React state.
   await page.reload()
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
+  await openFileList(page)
   await expect(
     page.locator('.file-tabs .file-tab-name', { hasText: 'original.jianpu' }),
   ).toHaveCount(0)
-  await expect(page.locator('.file-tab-bar-bin-summary')).toHaveText('Bin (1)')
-  const binDetailsAfterReload = page.locator('.file-tab-bar-bin')
-  await binDetailsAfterReload.evaluate((el) => {
-    ;(el as HTMLDetailsElement).open = true
-  })
+  await expect(page.locator('.file-tab-bar-bin-trigger')).toContainText(
+    'Bin (1)',
+  )
+  await openBin(page)
   await expect(page.locator('.file-tab-bar-bin-name')).toHaveText(
     'original.jianpu',
   )

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { focusEditor } from './fileSwitcherHelpers'
 
 /**
  * Generates a source with `count` single-measure lines so the rendered SVG
@@ -50,7 +51,9 @@ test('auto-scrolls the preview to the highlighted measure when the caret moves o
   }, source)
 
   await page.goto('/')
-  await page.waitForSelector('.editor-toolbar', { timeout: 15_000 })
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
 
   const lastMeasureIndex = measureCount - 1
   await page.waitForSelector(
@@ -62,13 +65,14 @@ test('auto-scrolls the preview to the highlighted measure when the caret moves o
 
   // Place the caret on the first measure (line 8: "[M] 1 2 3 4") and confirm
   // the preview has not scrolled away from the top yet.
-  await page.click('.monaco-editor .view-lines')
+  await focusEditor(page)
   await page.keyboard.press('Control+g')
   await page.keyboard.type('8')
   await page.keyboard.press('Enter')
-  await expect(page.getByTestId('measure-status')).toContainText('measure 1', {
-    timeout: 5_000,
-  })
+  await expect(page.getByTestId('play-measure-button')).toContainText(
+    'Measure 1',
+    { timeout: 5_000 },
+  )
   await expect(
     page.locator('.preview-page [data-testid="measure-highlight"]').first(),
   ).toBeVisible({ timeout: 5_000 })
@@ -81,8 +85,8 @@ test('auto-scrolls the preview to the highlighted measure when the caret moves o
   await page.keyboard.press('Control+g')
   await page.keyboard.type(String(lastMeasureLine))
   await page.keyboard.press('Enter')
-  await expect(page.getByTestId('measure-status')).toContainText(
-    `measure ${measureCount}`,
+  await expect(page.getByTestId('play-measure-button')).toContainText(
+    `Measure ${measureCount}`,
     { timeout: 5_000 },
   )
 
