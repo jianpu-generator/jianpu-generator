@@ -66,8 +66,8 @@ test('closing the tab warns while a GitHub save is still pending', async ({
 
   // Right after the edit, the debounce hasn't fired yet: no save has
   // happened, so this is exactly the window `shouldWarnBeforeUnload` should
-  // catch via `isPending`.
-  await expect(page.getByTestId('save-status-badge')).toHaveCount(0)
+  // catch via `isPending` — the badge reflects it as "Unsaved".
+  await expect(page.getByTestId('save-status-badge')).toContainText('Unsaved')
 
   let dialogShown = false
   page.once('dialog', (dialog) => {

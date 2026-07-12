@@ -78,9 +78,9 @@ test('switching the active file tab force-flushes a pending debounced GitHub sav
   await typeAtEditorEnd(page, ' 5')
 
   // Right after the edit, the debounce hasn't fired yet: no PUT sent, and
-  // the save-status badge is still absent.
+  // the save-status badge shows the pending "Unsaved" countdown.
   expect(putBodies).toHaveLength(0)
-  await expect(page.getByTestId('save-status-badge')).toHaveCount(0)
+  await expect(page.getByTestId('save-status-badge')).toContainText('Unsaved')
 
   await openFileList(page)
   await page.locator('.file-tab-name', { hasText: 'b.jianpu' }).click()

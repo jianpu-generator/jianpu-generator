@@ -53,6 +53,7 @@ export default function App() {
     backend,
     isLoadingGithub,
     saveStatus,
+    autosaveDeadline,
     preference,
     switchBackend,
     forceSave,
@@ -359,6 +360,7 @@ export default function App() {
             onDelete={handleDelete}
             onOpenStorageSettings={() => setStorageSettingsOpen(true)}
             saveStatus={saveStatus}
+            autosaveDeadline={autosaveDeadline}
             creating={creatingFile}
             deletingName={deletingFileName}
             duplicating={duplicatingFile}

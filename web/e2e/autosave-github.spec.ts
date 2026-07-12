@@ -71,10 +71,11 @@ test('editing a file schedules a debounced autosave to the GitHub storage backen
   await typeAtEditorEnd(page, ' 5')
 
   // Right after the edit, the debounce hasn't fired yet: no PUT sent, and
-  // the save-status badge is still absent (idle renders nothing — see
-  // `FileList.tsx`'s `SaveStatusBadge`).
+  // the save-status badge shows the pending "Unsaved" countdown rather than
+  // the stale "Saved" from before the edit (see `FileSwitcher.tsx`'s
+  // `SaveStatusBadge`).
   expect(putBodies).toHaveLength(0)
-  await expect(page.getByTestId('save-status-badge')).toHaveCount(0)
+  await expect(page.getByTestId('save-status-badge')).toContainText('Unsaved')
 
   await page.clock.fastForward(AUTOSAVE_DEBOUNCE_MS)
 

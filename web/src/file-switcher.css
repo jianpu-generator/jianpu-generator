@@ -67,6 +67,10 @@
   color: #b00020;
 }
 
+.file-tab-bar-save-status--unsaved {
+  color: var(--text-warning, #a66a00);
+}
+
 .file-tab-bar-hint {
   margin: 0;
   align-self: center;

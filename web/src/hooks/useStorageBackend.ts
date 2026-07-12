@@ -63,6 +63,15 @@ export type StorageBackendTarget =
   | { kind: 'local' }
   | { kind: 'github'; owner: string }
 
+/**
+ * `SaveStatus` plus a UI-only `'unsaved'` state: a debounced edit is pending
+ * but hasn't been handed to `backend.saveContent` yet. Derived from
+ * `autosaveDeadline` in this hook rather than tracked by `StorageBackend`
+ * itself, since it describes debounce state (owned here, see
+ * `AUTOSAVE_DEBOUNCE_MS`) rather than backend/network state.
+ */
+export type DisplaySaveStatus = SaveStatus | 'unsaved'
+
 export interface UseStorageBackendResult {
   store: FileStoreState
   setStore: (
@@ -75,7 +84,13 @@ export interface UseStorageBackendResult {
    * Lets `StorageSettingsModal` show a loading spinner instead of briefly
    * flashing an empty file list. */
   isLoadingGithub: boolean
-  saveStatus: SaveStatus
+  saveStatus: DisplaySaveStatus
+  /** `Date.now()`-comparable timestamp at which the pending debounced
+   * autosave will fire, or `null` when no save is pending. Lets the UI show
+   * a countdown alongside the `'unsaved'` status. Cleared the moment the
+   * save actually starts (debounce firing, `forceSave`, or
+   * `flushPendingSave`), not when it completes. */
+  autosaveDeadline: number | null
   /** Currently persisted backend choice, exposed so `StorageSettingsModal`
    * can reflect the active selection without re-deriving it from
    * `backend.kind` alone. */
@@ -173,6 +188,7 @@ export function useStorageBackend(): UseStorageBackendResult {
   )
   const [githubStore, setGithubStore] = useState<FileStoreState | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
+  const [autosaveDeadline, setAutosaveDeadline] = useState<number | null>(null)
 
   const backend = useMemo<StorageBackend>(() => {
     if (preference.backend === 'github' && authToken && preference.github) {
@@ -226,6 +242,7 @@ export function useStorageBackend(): UseStorageBackendResult {
   const pendingSaveRef = useRef<Promise<void> | null>(null)
   const runSave = useCallback(
     (state: FileStoreState) => {
+      setAutosaveDeadline(null)
       setSaveStatus('saving')
       const promise = backend
         .saveContent(state)
@@ -252,6 +269,7 @@ export function useStorageBackend(): UseStorageBackendResult {
     }
     if (shouldScheduleAutosave(backend.kind, lastContentRef.current, next)) {
       debouncedSave(store)
+      setAutosaveDeadline(Date.now() + AUTOSAVE_DEBOUNCE_MS)
     }
     lastContentRef.current = next
   }, [store, backend, debouncedSave])
@@ -326,7 +344,8 @@ export function useStorageBackend(): UseStorageBackendResult {
     setStore,
     backend,
     isLoadingGithub,
-    saveStatus,
+    saveStatus: autosaveDeadline !== null ? 'unsaved' : saveStatus,
+    autosaveDeadline,
     preference,
     switchBackend,
     forceSave,

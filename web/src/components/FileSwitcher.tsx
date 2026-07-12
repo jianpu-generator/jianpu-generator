@@ -16,6 +16,7 @@ import {
   sortedFileNames,
 } from '../fileStore'
 import { useDismissableOpen } from '../hooks/useDismissableOpen'
+import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SaveStatus } from '../storage/types'
 import { ShareButton } from './ShareButton'
 
@@ -27,7 +28,10 @@ export interface FileSwitcherProps {
   onRename: (from: string, to: string) => void
   onDelete: (name: string) => void
   onOpenStorageSettings: () => void
-  saveStatus: SaveStatus
+  saveStatus: DisplaySaveStatus
+  /** `Date.now()`-comparable deadline for the pending autosave, used to
+   * render a countdown while `saveStatus === 'unsaved'`. */
+  autosaveDeadline: number | null
   /** Whether a `createFile` call is in flight — disables "New" and shows a
    * spinner on it. */
   creating?: boolean
@@ -53,6 +57,22 @@ const SAVE_STATUS_LABEL: Record<SaveStatus, string> = {
   offline: 'Offline',
 }
 
+/** Ticks once a second while `deadline` is non-null, so a rendered countdown
+ * stays in sync without the parent re-rendering on every store change. */
+function useCountdownSeconds(deadline: number | null): number | null {
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    if (deadline === null) return
+    const interval = setInterval(() => setNow(Date.now()), 1_000)
+    return () => clearInterval(interval)
+  }, [deadline])
+
+  return deadline === null
+    ? null
+    : Math.max(0, Math.ceil((deadline - now) / 1_000))
+}
+
 /** Shows the shared spinner alongside a button's label while `pending` is true. */
 function SpinnerLabel({ pending, label }: { pending: boolean; label: string }) {
   return (
@@ -68,8 +88,22 @@ function SpinnerLabel({ pending, label }: { pending: boolean; label: string }) {
   )
 }
 
-function SaveStatusBadge({ status }: { status: SaveStatus }) {
-  const label = SAVE_STATUS_LABEL[status]
+function SaveStatusBadge({
+  status,
+  autosaveDeadline,
+}: {
+  status: DisplaySaveStatus
+  autosaveDeadline: number | null
+}) {
+  const remainingSeconds = useCountdownSeconds(
+    status === 'unsaved' ? autosaveDeadline : null,
+  )
+  const label =
+    status === 'unsaved'
+      ? remainingSeconds !== null
+        ? `Unsaved (autosaving in ${remainingSeconds}s)`
+        : 'Unsaved'
+      : SAVE_STATUS_LABEL[status]
   if (!label) return null
   return (
     <span
@@ -172,6 +206,7 @@ export function FileSwitcher({
   onDelete,
   onOpenStorageSettings,
   saveStatus,
+  autosaveDeadline,
   creating = false,
   deletingName = null,
   duplicating = false,
@@ -189,6 +224,10 @@ export function FileSwitcher({
 
   return (
     <div className="file-tab-bar">
+      <SaveStatusBadge
+        status={saveStatus}
+        autosaveDeadline={autosaveDeadline}
+      />
       <div className="export-menu" ref={filesContainerRef}>
         <button
           type="button"
@@ -239,7 +278,6 @@ export function FileSwitcher({
           </div>
         ) : null}
       </div>
-      <SaveStatusBadge status={saveStatus} />
       <div className="export-menu" ref={actionsContainerRef}>
         <button
           type="button"
