@@ -220,7 +220,8 @@
   display: inline-flex;
 }
 
-.play-measure-btn {
+.play-measure-btn,
+.play-from-measure-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -235,12 +236,14 @@
   white-space: nowrap;
 }
 
-.play-measure-btn:disabled {
+.play-measure-btn:disabled,
+.play-from-measure-btn:disabled {
   opacity: 0.4;
   cursor: default;
 }
 
-.play-measure-btn:not(:disabled):hover {
+.play-measure-btn:not(:disabled):hover,
+.play-from-measure-btn:not(:disabled):hover {
   background: #f0f0f0;
 }
 

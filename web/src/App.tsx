@@ -8,6 +8,7 @@ import { ErrorModal } from './components/ErrorModal'
 import { ExportControls } from './components/ExportControls'
 import { FileSwitcher } from './components/FileSwitcher'
 import { PartToggles } from './components/PartToggles'
+import { PlayFromCurrentMeasureButton } from './components/PlayFromCurrentMeasureButton'
 import { PlayMeasureButton } from './components/PlayMeasureButton'
 import { Preview } from './components/Preview'
 import { SharedPreviewBanner } from './components/SharedPreviewBanner'
@@ -24,6 +25,7 @@ import { useAssetLoader } from './hooks/useAssetLoader'
 import { useFileOperations } from './hooks/useFileOperations'
 import { useFontsLoader } from './hooks/useFontsLoader'
 import { useJianpuWorker } from './hooks/useJianpuWorker'
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { usePartToggles } from './hooks/usePartToggles'
 import { useSectionNavigation } from './hooks/useSectionNavigation'
 import { useStorageBackend } from './hooks/useStorageBackend'
@@ -40,6 +42,9 @@ import './file-switcher.css'
 import './preview.css'
 
 const shortcutLabel = navigator.platform.startsWith('Mac') ? '⌘↵' : 'Ctrl+↵'
+const playFromCurrentMeasureShortcutLabel = navigator.platform.startsWith('Mac')
+  ? '⇧⌘↵'
+  : 'Ctrl+Shift+↵'
 
 export default function App() {
   const {
@@ -128,6 +133,7 @@ export default function App() {
     sectionRanges,
     notifySelection,
     playSelectedMeasures,
+    playFromCurrentMeasure,
     stopMeasurePlayback,
     highlightedDocuments,
     previewInstrument,
@@ -181,31 +187,16 @@ export default function App() {
     })
   }, [parts, setSoloedParts])
 
-  const playMeasureRef = useRef<(() => void) | undefined>(undefined)
-  playMeasureRef.current = measureAudioPlaying
-    ? stopMeasurePlayback
-    : selectedMeasureRange !== null && !measureAudioGenerating && soundfontReady
-      ? playSelectedMeasures
-      : undefined
-
-  const forceSaveRef = useRef(forceSave)
-  forceSaveRef.current = forceSave
-
-  useEffect(() => {
-    const isMac = navigator.platform.startsWith('Mac')
-    const onKeyDown = (event: KeyboardEvent) => {
-      const modifier = isMac ? event.metaKey : event.ctrlKey
-      if (modifier && event.key === 'Enter') {
-        event.preventDefault()
-        playMeasureRef.current?.()
-      } else if (modifier && event.key.toLowerCase() === 's') {
-        event.preventDefault()
-        forceSaveRef.current()
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  useKeyboardShortcuts({
+    measureAudioPlaying,
+    measureAudioGenerating,
+    soundfontReady,
+    selectedMeasureRange,
+    playSelectedMeasures,
+    playFromCurrentMeasure,
+    stopMeasurePlayback,
+    forceSave,
+  })
 
   const handleSourceChange = useCallback(
     (value: string) => {
@@ -341,6 +332,21 @@ export default function App() {
             onClick={playSelectedMeasures}
             onPause={stopMeasurePlayback}
             shortcutLabel={shortcutLabel}
+          />
+        )}
+        {audioAvailable && (
+          <PlayFromCurrentMeasureButton
+            disabled={
+              selectedMeasureRange === null ||
+              measureAudioGenerating ||
+              !soundfontReady
+            }
+            loading={measureAudioGenerating}
+            playing={measureAudioPlaying}
+            currentMeasure={selectedMeasureRange?.start ?? null}
+            onClick={playFromCurrentMeasure}
+            onPause={stopMeasurePlayback}
+            shortcutLabel={playFromCurrentMeasureShortcutLabel}
           />
         )}
         <div className="app-header-actions">

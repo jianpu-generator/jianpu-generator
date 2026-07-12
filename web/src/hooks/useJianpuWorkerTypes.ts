@@ -45,6 +45,7 @@ export interface JianpuWorkerState {
   measureAudioElement: HTMLAudioElement | null
   notifySelection: (startLine: number, endLine: number) => void
   playSelectedMeasures: () => void
+  playFromCurrentMeasure: () => void
   stopMeasurePlayback: () => void
   highlightedDocuments: SvgDocumentOut[]
   measureSpans: MeasureSpan[]

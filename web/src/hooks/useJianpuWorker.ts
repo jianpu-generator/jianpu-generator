@@ -406,21 +406,34 @@ export function useJianpuWorker(
     setMeasureAudioPlaying(false)
   }, [])
 
+  const playMeasureRange = useCallback(
+    (startMeasureIndex: number, endMeasureIndex: number) => {
+      const worker = workerRef.current
+      if (!worker) return
+      const id = ++measureAudioRequestIdRef.current
+      latestMeasureAudioIdRef.current = id
+      setMeasureAudioGenerating(true)
+      worker.postMessage({
+        type: 'generateMeasureRangeAudio',
+        source: sourceRef.current,
+        id,
+        startMeasureIndex,
+        endMeasureIndex,
+        enabledTracks: enabledTracksRef.current,
+      } satisfies WorkerRequest)
+    },
+    [],
+  )
+
   const playSelectedMeasures = useCallback(() => {
-    const worker = workerRef.current
-    if (!worker || selectedMeasureRange === null) return
-    const id = ++measureAudioRequestIdRef.current
-    latestMeasureAudioIdRef.current = id
-    setMeasureAudioGenerating(true)
-    worker.postMessage({
-      type: 'generateMeasureRangeAudio',
-      source: sourceRef.current,
-      id,
-      startMeasureIndex: selectedMeasureRange.start,
-      endMeasureIndex: selectedMeasureRange.end,
-      enabledTracks: enabledTracksRef.current,
-    } satisfies WorkerRequest)
-  }, [selectedMeasureRange])
+    if (selectedMeasureRange === null) return
+    playMeasureRange(selectedMeasureRange.start, selectedMeasureRange.end)
+  }, [selectedMeasureRange, playMeasureRange])
+
+  const playFromCurrentMeasure = useCallback(() => {
+    if (selectedMeasureRange === null || measureSpans.length === 0) return
+    playMeasureRange(selectedMeasureRange.start, measureSpans.length - 1)
+  }, [selectedMeasureRange, measureSpans, playMeasureRange])
 
   const previewInstrument = useCallback((programNumber: number) => {
     const worker = workerRef.current
@@ -540,6 +553,7 @@ export function useJianpuWorker(
     measureAudioElement,
     notifySelection,
     playSelectedMeasures,
+    playFromCurrentMeasure,
     stopMeasurePlayback,
     highlightedDocuments,
     measureSpans,
