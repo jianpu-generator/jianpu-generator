@@ -95,7 +95,14 @@ fn render_track(
     }
 }
 
-pub fn write_wav(midi_bytes: &[u8], sf2_bytes: &[u8]) -> Result<Vec<u8>, IrrecoverableError> {
+/// Synthesize `midi_bytes` into peak-normalized stereo `f32` sample buffers
+/// (left, right), without encoding to any container format.
+///
+/// Shared by [`write_wav`] and [`render_pcm_interleaved`].
+fn render_stereo_samples(
+    midi_bytes: &[u8],
+    sf2_bytes: &[u8],
+) -> Result<(Vec<f32>, Vec<f32>), IrrecoverableError> {
     let smf = Smf::parse(midi_bytes).map_err(|_| {
         IrrecoverableError::new(IrrecoverableErrorKind::WavInvalidMidiBytes {
             span: Span::new(0, 0),
@@ -122,7 +129,157 @@ pub fn write_wav(midi_bytes: &[u8], sf2_bytes: &[u8]) -> Result<Vec<u8>, Irrecov
     render_samples(&mut synth, SAMPLE_RATE as usize, &mut all_l, &mut all_r);
 
     normalize_peak(&mut all_l, &mut all_r);
+    Ok((all_l, all_r))
+}
+
+pub fn write_wav(midi_bytes: &[u8], sf2_bytes: &[u8]) -> Result<Vec<u8>, IrrecoverableError> {
+    let (all_l, all_r) = render_stereo_samples(midi_bytes, sf2_bytes)?;
     encode_wav(&all_l, &all_r)
+}
+
+/// Fixed gain applied uniformly to every chunk emitted by
+/// [`render_pcm_streaming`], in lieu of true-peak normalization (which would
+/// require the whole buffer up front). Conservative enough to avoid clipping
+/// typical soundfont output without a peak scan.
+const STREAMING_GAIN: f32 = 0.5;
+
+/// Callback signature for [`render_pcm_streaming`]:
+/// `(measure_offset, interleaved_stereo_samples, is_final)`.
+#[cfg(feature = "wav")]
+pub type PcmChunkHandler<'a> = dyn FnMut(usize, &[f32], bool) + 'a;
+
+/// Synthesize `midi_bytes` into interleaved stereo `f32` PCM
+/// (`[l0, r0, l1, r1, ...]`) using a single synth instance for the whole
+/// range, invoking `on_chunk(measure_offset, interleaved_samples, is_final)`
+/// once per measure boundary in `tick_boundaries` (as produced by
+/// [`crate::midi::write_midi_and_boundaries_for_measure_range`]).
+///
+/// Unlike [`write_wav`], gain is a fixed constant ([`STREAMING_GAIN`]) applied
+/// uniformly to every chunk rather than a whole-buffer peak scan, so chunks
+/// can be emitted as they're synthesized instead of after the whole range
+/// finishes. The synth is initialized once and never reset between measures,
+/// so notes/pedal/reverb sustained across a barline carry through correctly.
+/// The final chunk includes the same 1-second reverb tail [`write_wav`] adds.
+#[cfg(feature = "wav")]
+pub fn render_pcm_streaming(
+    midi_bytes: &[u8],
+    tick_boundaries: &[u32],
+    sf2_bytes: &[u8],
+    on_chunk: &mut PcmChunkHandler,
+) -> Result<(), IrrecoverableError> {
+    let smf = Smf::parse(midi_bytes).map_err(|_| {
+        IrrecoverableError::new(IrrecoverableErrorKind::WavInvalidMidiBytes {
+            span: Span::new(0, 0),
+        })
+    })?;
+    let tpq = match smf.header.timing {
+        Timing::Metrical(t) => t.as_int() as u32,
+        Timing::Timecode(..) => 480,
+    };
+    let track = smf.tracks.first().ok_or_else(|| {
+        IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
+            Span::new(0, 0),
+            "internal invariant: MIDI file has no tracks",
+        ))
+    })?;
+
+    let mut synth = init_synth(sf2_bytes)?;
+    let mut micros_per_beat: u32 = 500_000;
+    let mut rendered_tick: u32 = 0;
+    let mut chunk_l: Vec<f32> = Vec::new();
+    let mut chunk_r: Vec<f32> = Vec::new();
+
+    // Index into `tick_boundaries` of the next boundary to split a chunk at.
+    // Once it reaches `last_boundary_index`, every remaining tick (the final
+    // measure, plus the reverb tail) accumulates into one last chunk instead
+    // of being split further.
+    let mut next_boundary_index: usize = 1;
+    let last_boundary_index = tick_boundaries.len().saturating_sub(1);
+
+    for event in track.iter() {
+        let mut remaining_delta = event.delta.as_int();
+        while remaining_delta > 0 {
+            if next_boundary_index >= last_boundary_index {
+                let n = ticks_to_samples(remaining_delta, tpq, micros_per_beat);
+                render_samples(&mut synth, n, &mut chunk_l, &mut chunk_r);
+                rendered_tick += remaining_delta;
+                break;
+            }
+            let boundary_tick = tick_boundaries
+                .get(next_boundary_index)
+                .copied()
+                .unwrap_or(rendered_tick);
+            let ticks_to_boundary = boundary_tick.saturating_sub(rendered_tick);
+            if remaining_delta < ticks_to_boundary {
+                let n = ticks_to_samples(remaining_delta, tpq, micros_per_beat);
+                render_samples(&mut synth, n, &mut chunk_l, &mut chunk_r);
+                rendered_tick += remaining_delta;
+                remaining_delta = 0;
+            } else {
+                let n = ticks_to_samples(ticks_to_boundary, tpq, micros_per_beat);
+                render_samples(&mut synth, n, &mut chunk_l, &mut chunk_r);
+                rendered_tick = boundary_tick;
+                remaining_delta -= ticks_to_boundary;
+                let measure_offset = next_boundary_index - 1;
+                emit_chunk(&mut chunk_l, &mut chunk_r, measure_offset, false, on_chunk);
+                next_boundary_index += 1;
+            }
+        }
+        match &event.kind {
+            TrackEventKind::Meta(MetaMessage::Tempo(t)) => {
+                micros_per_beat = t.as_int();
+            }
+            TrackEventKind::Midi { channel, message } => {
+                handle_midi_message(&mut synth, channel.as_int(), message);
+            }
+            _ => {}
+        }
+    }
+
+    // Measure boundaries with no track events at all up to the second-to-last
+    // boundary (e.g. trailing empty measures) still need their own chunk.
+    while next_boundary_index < last_boundary_index {
+        let measure_offset = next_boundary_index - 1;
+        emit_chunk(&mut chunk_l, &mut chunk_r, measure_offset, false, on_chunk);
+        next_boundary_index += 1;
+    }
+
+    // Render 1 second of tail so reverb fully decays, appended to the final chunk.
+    render_samples(&mut synth, SAMPLE_RATE as usize, &mut chunk_l, &mut chunk_r);
+    let final_measure_offset = last_boundary_index.saturating_sub(1);
+    emit_chunk(
+        &mut chunk_l,
+        &mut chunk_r,
+        final_measure_offset,
+        true,
+        on_chunk,
+    );
+
+    Ok(())
+}
+
+fn emit_chunk(
+    l: &mut Vec<f32>,
+    r: &mut Vec<f32>,
+    measure_offset: usize,
+    is_final: bool,
+    on_chunk: &mut PcmChunkHandler,
+) {
+    normalize_by_fixed_gain(l, r);
+    let mut interleaved = Vec::with_capacity(l.len() + r.len());
+    for (ls, rs) in l.iter().zip(r.iter()) {
+        interleaved.push(*ls);
+        interleaved.push(*rs);
+    }
+    on_chunk(measure_offset, &interleaved, is_final);
+    l.clear();
+    r.clear();
+}
+
+fn normalize_by_fixed_gain(left: &mut [f32], right: &mut [f32]) {
+    for sample in left.iter_mut().chain(right.iter_mut()) {
+        *sample *= STREAMING_GAIN;
+    }
 }
 
 pub fn write_preview_wav(

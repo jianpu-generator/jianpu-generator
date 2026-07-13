@@ -6,6 +6,7 @@ import type {
   PartDeclaration,
   PartInfo,
   PartMode,
+  PlaybackClock,
   SectionRange,
 } from '../types'
 
@@ -41,8 +42,8 @@ export interface JianpuWorkerState {
   measureAudioPlaying: boolean
   /** Elapsed-seconds offset of each measure boundary within the selected range's audio, relative to the range start. */
   measureAudioTimes: number[]
-  /** The `<audio>` element currently playing the selected measure range, if any; a new element each time playback starts. */
-  measureAudioElement: HTMLAudioElement | null
+  /** The playback clock currently driving the selected measure range, if any; a new instance each time playback starts. */
+  measureAudioElement: PlaybackClock | null
   notifySelection: (startLine: number, endLine: number) => void
   playSelectedMeasures: () => void
   playFromCurrentMeasure: () => void

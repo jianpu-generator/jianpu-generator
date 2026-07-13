@@ -469,6 +469,48 @@ pub fn write_wav_for_measure_from_source(
     wav::write_wav(&midi_bytes, sf2_bytes)
 }
 
+/// Arguments for [`render_pcm_streaming_for_measure_range_from_source`],
+/// bundled into a struct to stay within this crate's `too_many_arguments` cap.
+#[cfg(feature = "wav")]
+pub struct MeasureRangeStreamingRequest<'a> {
+    pub source: &'a str,
+    pub filename: &'a str,
+    pub measure_range: std::ops::RangeInclusive<usize>,
+    pub enabled_tracks: Option<&'a [String]>,
+    pub sf2_bytes: &'a [u8],
+    pub instruments: &'a [InstrumentInfo],
+}
+
+/// Parse, group, optionally filter tracks, and stream synthesized interleaved
+/// stereo PCM `f32` samples (`[l0, r0, l1, r1, ...]`) for a consecutive
+/// measure range, one measure chunk at a time via `on_chunk`, skipping WAV
+/// container encoding entirely.
+///
+/// Streaming path: intended for feeding a Web Audio `AudioBuffer` as each
+/// measure finishes synthesizing, instead of waiting for a whole-range
+/// [`write_wav_for_measure_range_from_source`] render to finish before
+/// playback can start. A single synth instance renders the whole range (no
+/// per-measure reset), so notes/pedal/reverb sustained across a barline carry
+/// through correctly. `on_chunk(measure_offset, samples, is_final)` is called
+/// once per measure, `is_final` true only for the last measure in the range
+/// (which also carries the trailing reverb tail).
+///
+/// BPM and key context is accumulated from all measures before the range start.
+#[cfg(feature = "wav")]
+pub fn render_pcm_streaming_for_measure_range_from_source(
+    request: &MeasureRangeStreamingRequest,
+    on_chunk: &mut wav::PcmChunkHandler,
+) -> Result<(), IrrecoverableError> {
+    let mut score = compile(request.source, request.filename, request.instruments)?;
+    apply_track_filter(&mut score, request.enabled_tracks);
+    let (midi_bytes, tick_boundaries) = midi::write_midi_and_boundaries_for_measure_range(
+        &score,
+        *request.measure_range.start(),
+        *request.measure_range.end(),
+    )?;
+    wav::render_pcm_streaming(&midi_bytes, &tick_boundaries, request.sf2_bytes, on_chunk)
+}
+
 /// Parse, group, optionally filter tracks, and synthesize WAV for a consecutive measure range.
 ///
 /// BPM and key context is accumulated from all measures before `start_index`.

@@ -1,5 +1,6 @@
 import type { SvgDocumentOut, SvgElementOut } from 'jianpu-wasm'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
+import type { PlaybackClock } from '../types'
 
 interface PreviewProps {
   documents: SvgDocumentOut[]
@@ -12,8 +13,8 @@ interface PreviewProps {
   measureTimes?: number[]
   /** Elapsed-seconds offset of each measure boundary within the selected range's audio, relative to the range start. */
   measureAudioTimes?: number[]
-  /** The `<audio>` element currently playing the selected measure range, if any. */
-  measureAudioElement?: HTMLAudioElement | null
+  /** The playback clock currently driving the selected measure range, if any. */
+  measureAudioElement?: PlaybackClock | null
   selectedMeasureRange?: { start: number; end: number } | null
   emptyMessage?: string
   toolbar?: ReactNode
@@ -37,7 +38,7 @@ function findMeasureSegmentAtTime(times: number[], t: number): number {
  */
 function usePlayhead(
   containerRef: React.RefObject<HTMLDivElement | null>,
-  audio: HTMLAudioElement | null | undefined,
+  audio: PlaybackClock | null | undefined,
   measureTimes: number[] | undefined,
   measureIndexOffset: number,
 ) {

@@ -25,6 +25,16 @@ interface EditorSelection {
   end: number
 }
 
+/**
+ * Minimal surface `usePlayhead` (in `Preview.tsx`) needs to track playback
+ * position, satisfied structurally by `HTMLAudioElement` and by
+ * `MeasureAudioStreamClock` (the Web Audio streaming playback clock).
+ */
+export interface PlaybackClock extends EventTarget {
+  readonly currentTime: number
+  readonly paused: boolean
+}
+
 export interface EditorHandle {
   /** Insert text at the current cursor, replacing any selection. */
   insertAtCursor: (text: string) => void

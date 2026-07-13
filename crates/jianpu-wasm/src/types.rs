@@ -169,6 +169,17 @@ pub enum GenerateWavResponse {
 }
 
 #[cfg(feature = "wav")]
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[serde(tag = "status", rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum RenderPcmStreamingResponse {
+    Ok {},
+    Err {
+        diagnostics: Vec<DiagnosticOut>,
+    },
+}
+
+#[cfg(feature = "wav")]
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq)]
 #[serde(tag = "status", rename_all = "camelCase")]
 #[tsify(into_wasm_abi)]

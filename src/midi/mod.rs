@@ -169,6 +169,25 @@ pub fn write_midi_for_measure_range(
     write_midi(&range_score)
 }
 
+/// Generate MIDI bytes for a measure range alongside the per-measure tick
+/// boundaries within that byte stream (length = `measure_count + 1`; the
+/// last entry is the total tick length of the range).
+///
+/// Used by the streaming PCM render path to know where to split synthesis
+/// into per-measure chunks without re-parsing the MIDI bytes.
+pub fn write_midi_and_boundaries_for_measure_range(
+    score: &Score,
+    start_index: usize,
+    end_index: usize,
+) -> Result<(Vec<u8>, Vec<u32>), IrrecoverableError> {
+    let Some(range_score) = build_measure_range_score(score, start_index, end_index) else {
+        return Ok((Vec::new(), vec![0]));
+    };
+    let midi_bytes = write_midi(&range_score)?;
+    let boundaries = timing::measure_tick_boundaries(&range_score)?;
+    Ok((midi_bytes, boundaries))
+}
+
 pub use timing::{
     build_measure_range_score, build_single_measure_score, measure_start_times_seconds,
     measure_start_times_seconds_for_range,
