@@ -88,7 +88,7 @@ impl TimedUnitHead for ChordHead {
     }
 
     fn head_boundary(chars: &[char], i: usize) -> bool {
-        chars.get(i).is_some_and(|&c| matches!(c, '0'..='7'))
+        crate::parser::score::timed_parser::duplicate_after_tie_boundary(chars, i)
     }
 
     fn allows_octave_suffixes() -> bool {

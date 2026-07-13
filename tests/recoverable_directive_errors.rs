@@ -300,9 +300,10 @@ fn dotted_eighth_rest_without_sixteenth_tail_is_recoverable() {
 
 #[test]
 fn note_invalid_pitch_char_is_recoverable() {
-    // 'x' is not a valid pitch digit (0-7); the lexer rejects it as LexUnexpectedChar,
-    // which is recoverable — the measure is skipped and the render continues.
-    let source = minimal_fixture("[Melody] 1 x 3 4\n");
+    // 'y' is not a valid pitch digit (0-7) and not a duplicate atom (`x`/`_`/`=`); the lexer
+    // rejects it as LexUnexpectedChar, which is recoverable — the measure is skipped and the
+    // render continues.
+    let source = minimal_fixture("[Melody] 1 y 3 4\n");
     let output = render_svgs_from_source(&source, "test.jianpu", &[])
         .expect("invalid pitch char must not abort the render");
     assert!(!output.svgs.is_empty());

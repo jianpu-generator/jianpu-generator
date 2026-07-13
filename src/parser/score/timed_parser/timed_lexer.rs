@@ -26,6 +26,7 @@ pub enum TimedLexToken {
     KeyChange(KeyChange),
     TimeSignature { num: u8, den: u8 },
     Tilde,
+    Duplicate { offset: usize },
 }
 
 pub fn lex_line(line: &str, base_offset: usize, context: LexContext) -> LexLineResult {
@@ -150,6 +151,12 @@ fn lex_one_char(
             recoverable_errors,
         ),
         '|' => skip_unexpected_char(start, len, c, recoverable_errors),
+        // `x`/`_`/`=` glued directly after a tie (`~`) still start a fresh duplicate atom
+        // (`5~_`) even though we're mid-word — this mirrors `duplicate_after_tie_boundary`
+        // in duration.rs's suffix scanner, which stops before consuming the same character.
+        'x' | '_' | '=' if at_word_boundary || line[..i].ends_with('~') => {
+            emit_single_token(TimedLexToken::Duplicate { offset: start }, start, len, true)
+        }
         '~' if !at_word_boundary => emit_single_token(TimedLexToken::Tilde, start, len, false),
         _ if !at_word_boundary => Ok((None, len, false)),
         _ if at_word_boundary && context == LexContext::Chords => {

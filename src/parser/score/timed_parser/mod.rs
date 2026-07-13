@@ -14,6 +14,10 @@ mod timed_lexer_tests;
 #[cfg(test)]
 mod timed_rd_parser_tests;
 
+#[path = "duplicate_tests.rs"]
+#[cfg(test)]
+mod duplicate_tests;
+
 pub use timed_lexer::{lex_line, LexContext, TimedLexToken};
 pub use timed_rd_parser::TimedRdParser;
 
@@ -95,6 +99,18 @@ pub trait TimedUnitHead: Sized {
         group_membership: u8,
         group_continuation: u8,
     ) -> ScoreEvent;
+}
+
+/// Head-boundary check shared by `NoteHead`/`ChordHead`: a fresh degree digit always starts a
+/// new head, and `x`/`_`/`=` immediately after a tie (`~`) also starts a new head — that's what
+/// lets a duplicate atom glued right after `~` (e.g. `5~_`) be parsed as its own unit instead of
+/// being swallowed as a duration suffix of the tied note.
+pub(crate) fn duplicate_after_tie_boundary(chars: &[char], i: usize) -> bool {
+    match chars.get(i) {
+        Some('0'..='7') => true,
+        Some('x') | Some('_') | Some('=') => i > 0 && chars.get(i - 1) == Some(&'~'),
+        _ => false,
+    }
 }
 
 pub fn byte_offset_at_char_index(text: &str, char_index: usize) -> usize {
