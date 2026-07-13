@@ -1,4 +1,5 @@
-use super::*;
+use crate::responses::{generate_pdf_response, generate_split_pdfs_response};
+use crate::types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
 
 fn test_pdf_fonts() -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     (

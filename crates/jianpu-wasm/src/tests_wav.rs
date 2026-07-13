@@ -1,4 +1,5 @@
-use super::*;
+use crate::responses::{generate_wav_for_measure_range_response, generate_wav_response};
+use crate::types::GenerateWavResponse;
 
 #[test]
 fn generate_wav_for_measure_range_response_returns_riff_wav() {

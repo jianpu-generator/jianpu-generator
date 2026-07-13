@@ -1,5 +1,5 @@
 import type { SvgDocumentOut } from 'jianpu-wasm'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -12,14 +12,14 @@ import type {
 import type { WorkerRequest } from '../worker/jianpu.worker'
 import { useInstrumentPreview } from './useInstrumentPreview'
 import { useJianpuWorkerExports } from './useJianpuWorkerExports'
-import { createWorkerMessageHandler } from './useJianpuWorkerMessageHandler'
+import { useJianpuWorkerLifecycle } from './useJianpuWorkerLifecycle'
+import { useJianpuWorkerRenderRequests } from './useJianpuWorkerRenderRequests'
 import type { JianpuWorkerState } from './useJianpuWorkerTypes'
 import { useMeasureAudioPlayback } from './useMeasureAudioPlayback'
 import {
   disabledLyricsForRender,
   enabledPartNamesForFilename,
   enabledTracksForRender,
-  measureRangeInSpan,
   wavFilenameFromActiveFile,
 } from './workerHelpers'
 
@@ -173,142 +173,87 @@ export function useJianpuWorker(
     latestPreviewAudioIdRef,
     currentPreviewAudioRef,
   } = useInstrumentPreview({ workerRef })
-  // biome-ignore lint/correctness/useExhaustiveDependencies: deps are stable refs/setters from sibling hooks
-  useEffect(() => {
-    const worker = new Worker(
-      new URL('../worker/jianpu.worker.ts', import.meta.url),
-      { type: 'module' },
-    )
-    workerRef.current = worker
 
-    worker.onmessage = createWorkerMessageHandler({
-      audioAvailableRef,
-      setAudioAvailable,
-      setPdfAvailable,
-      setMidiAvailable,
-      latestPartsIdRef,
-      setPartsLoading,
-      setParts,
-      setPartDeclarations,
-      latestUpdatePartDeclarationIdRef,
-      pendingPartDeclarationUpdatesRef,
-      latestPdfIdRef,
-      setPdfExporting,
-      activeFileRef,
-      enabledPartNamesRef,
-      setDiagnostics,
-      latestSplitPdfIdRef,
-      setSplitPdfExporting,
-      latestMidiIdRef,
-      setMidiExporting,
-      latestSplitMidiIdRef,
-      setSplitMidiExporting,
-      latestSplitWavIdRef,
-      setSplitWavExporting,
-      latestRenderIdRef,
-      setRendering,
-      setDocuments,
-      setDiagnosticViewZones,
-      latestAudioIdRef,
-      setAudioGenerating,
-      setNextWavUrl,
-      setMeasureTimes,
-      latestMeasureAudioIdRef,
-      setMeasureAudioGenerating,
-      setNextMeasureWavUrl,
-      latestHighlightRenderIdRef,
-      setHighlightedDocuments,
-      latestMeasureSpansIdRef,
-      setMeasureSpans,
-      setSectionRanges,
-      latestPreviewAudioIdRef,
-      currentPreviewAudioRef,
-      setPreviewAudioPlaying,
-    })
+  useJianpuWorkerLifecycle({
+    workerRef,
+    wavUrlRef,
+    measureWavUrlRef,
+    cursorOffsetTimerRef,
+    soundfontBytes,
+    fontBytes,
+    audioAvailableRef,
+    setAudioAvailable,
+    setPdfAvailable,
+    setMidiAvailable,
+    latestPartsIdRef,
+    setPartsLoading,
+    setParts,
+    setPartDeclarations,
+    latestUpdatePartDeclarationIdRef,
+    pendingPartDeclarationUpdatesRef,
+    latestPdfIdRef,
+    setPdfExporting,
+    activeFileRef,
+    enabledPartNamesRef,
+    setDiagnostics,
+    latestSplitPdfIdRef,
+    setSplitPdfExporting,
+    latestMidiIdRef,
+    setMidiExporting,
+    latestSplitMidiIdRef,
+    setSplitMidiExporting,
+    latestSplitWavIdRef,
+    setSplitWavExporting,
+    latestRenderIdRef,
+    setRendering,
+    setDocuments,
+    setDiagnosticViewZones,
+    latestAudioIdRef,
+    setAudioGenerating,
+    setNextWavUrl,
+    setMeasureTimes,
+    latestMeasureAudioIdRef,
+    setMeasureAudioGenerating,
+    setNextMeasureWavUrl,
+    latestHighlightRenderIdRef,
+    setHighlightedDocuments,
+    latestMeasureSpansIdRef,
+    setMeasureSpans,
+    setSectionRanges,
+    latestPreviewAudioIdRef,
+    currentPreviewAudioRef,
+    setPreviewAudioPlaying,
+  })
 
-    return () => {
-      worker.terminate()
-      workerRef.current = null
-      if (wavUrlRef.current) {
-        URL.revokeObjectURL(wavUrlRef.current)
-        wavUrlRef.current = null
-      }
-      if (measureWavUrlRef.current) {
-        URL.revokeObjectURL(measureWavUrlRef.current)
-        measureWavUrlRef.current = null
-      }
-      if (cursorOffsetTimerRef.current !== null) {
-        window.clearTimeout(cursorOffsetTimerRef.current)
-      }
-    }
-  }, [setNextWavUrl, setNextMeasureWavUrl])
-
-  useEffect(() => {
-    const worker = workerRef.current
-    if (!worker || !soundfontBytes) return
-    worker.postMessage({
-      type: 'loadSoundfont',
-      soundfont: soundfontBytes.buffer as ArrayBuffer,
-    } satisfies WorkerRequest)
-  }, [soundfontBytes])
-
-  useEffect(() => {
-    const worker = workerRef.current
-    if (!worker || !fontBytes) return
-    worker.postMessage({
-      type: 'loadPdfFonts',
-      scFont: fontBytes.sc.buffer as ArrayBuffer,
-      tcFont: fontBytes.tc.buffer as ArrayBuffer,
-      monoFont: fontBytes.mono.buffer as ArrayBuffer,
-    } satisfies WorkerRequest)
-  }, [fontBytes])
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: activeFile is intentional trigger
-  useEffect(() => {
-    setDocuments([])
-    setNextWavUrl(null)
-    setDiagnostics([])
-  }, [activeFile, setNextWavUrl])
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: source is intentional trigger
-  useEffect(() => {
-    setSelectedMeasureRange(null)
-  }, [source])
-
-  useEffect(() => {
-    const worker = workerRef.current
-    if (!worker) return
-
-    const id = ++partsRequestIdRef.current
-    latestPartsIdRef.current = id
-    setPartsLoading(true)
-
-    const timer = window.setTimeout(() => {
-      const payload: WorkerRequest = { type: 'listParts', source, id }
-      worker.postMessage(payload)
-    }, debounceMs)
-
-    return () => window.clearTimeout(timer)
-  }, [source, debounceMs])
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: activeFile triggers re-render after rename (content unchanged but activeFile changes)
-  useEffect(() => {
-    const worker = workerRef.current
-    if (!worker) return
-
-    const id = ++renderRequestIdRef.current
-    latestRenderIdRef.current = id
-    setRendering(true)
-
-    const payload: WorkerRequest = {
-      type: 'render',
-      source,
-      id,
-      enabledTracks,
-      disabledLyrics: disabledLyricsTracks,
-    }
-    worker.postMessage(payload)
-  }, [source, activeFile, enabledTracks, disabledLyricsTracks])
+  const { notifySelection } = useJianpuWorkerRenderRequests({
+    workerRef,
+    sourceRef,
+    source,
+    activeFile,
+    debounceMs,
+    enabledTracks,
+    disabledLyricsTracks,
+    setDocuments,
+    setNextWavUrl,
+    setDiagnostics,
+    setPartsLoading,
+    partsRequestIdRef,
+    latestPartsIdRef,
+    setRendering,
+    renderRequestIdRef,
+    latestRenderIdRef,
+    selectedMeasureRange,
+    setSelectedMeasureRange,
+    setHighlightedDocuments,
+    highlightRenderRequestIdRef,
+    latestHighlightRenderIdRef,
+    measureSpans,
+    measureSpansRef,
+    measureSpansRequestIdRef,
+    latestMeasureSpansIdRef,
+    cursorOffsetTimerRef,
+    lastSelectionRef,
+  })
 
   const generateFullAudio = useCallback(() => {
     const worker = workerRef.current
@@ -323,68 +268,6 @@ export function useJianpuWorker(
       enabledTracks: enabledTracksRef.current,
     } satisfies WorkerRequest)
   }, [audioGenerating])
-
-  const notifySelection = useCallback(
-    (startLine: number, endLine: number) => {
-      lastSelectionRef.current = { start: startLine, end: endLine }
-      if (cursorOffsetTimerRef.current !== null) {
-        window.clearTimeout(cursorOffsetTimerRef.current)
-      }
-      cursorOffsetTimerRef.current = window.setTimeout(() => {
-        cursorOffsetTimerRef.current = null
-        setSelectedMeasureRange(
-          measureRangeInSpan(measureSpansRef.current, startLine, endLine),
-        )
-      }, debounceMs)
-    },
-    [debounceMs],
-  )
-
-  useEffect(() => {
-    const sel = lastSelectionRef.current
-    if (!sel) return
-    setSelectedMeasureRange(
-      measureRangeInSpan(measureSpans, sel.start, sel.end),
-    )
-  }, [measureSpans])
-
-  useEffect(() => {
-    if (selectedMeasureRange === null) {
-      setHighlightedDocuments([])
-      return
-    }
-    const worker = workerRef.current
-    if (!worker) return
-    const id = ++highlightRenderRequestIdRef.current
-    latestHighlightRenderIdRef.current = id
-    worker.postMessage({
-      type: 'renderWithHighlightRange',
-      source: sourceRef.current,
-      id,
-      startMeasureIndex: selectedMeasureRange.start,
-      endMeasureIndex: selectedMeasureRange.end,
-      enabledTracks,
-      disabledLyrics: disabledLyricsTracks,
-    } satisfies WorkerRequest)
-  }, [selectedMeasureRange, enabledTracks, disabledLyricsTracks])
-
-  useEffect(() => {
-    const worker = workerRef.current
-    if (!worker) return
-
-    const id = ++measureSpansRequestIdRef.current
-    latestMeasureSpansIdRef.current = id
-
-    const timer = window.setTimeout(() => {
-      worker.postMessage({
-        type: 'listMeasureSpans',
-        source,
-        id,
-      } satisfies WorkerRequest)
-    }, debounceMs)
-
-    return () => window.clearTimeout(timer)
-  }, [source, debounceMs])
 
   const {
     exportPdf,

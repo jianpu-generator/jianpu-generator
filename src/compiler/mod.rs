@@ -6,6 +6,8 @@ mod beam;
 mod part_slice;
 use part_slice::{compile_part_slice, PartSliceInput};
 
+mod timed_unit;
+
 mod slur_chains;
 use slur_chains::{PartCrossState, PendingSlurOpen};
 
@@ -178,5 +180,7 @@ fn collect_decorations(measure: &MultiPartMeasure, bar_number: usize) -> Vec<Dec
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_lyrics_and_diagnostics;
 #[cfg(test)]
 mod tests_slur;

@@ -5,31 +5,23 @@ mod responses;
 mod svg_types;
 mod types;
 
-use jianpu_generator::parser::parts_parser::InstrumentInfo;
 #[cfg(feature = "wav")]
-use responses::{
-    generate_instrument_preview_wav_response, generate_percussion_preview_wav_response,
-    generate_split_wavs_response, generate_wav_for_measure_range_response, generate_wav_response,
-    list_measure_times_for_range_response, list_measure_times_response,
-};
-#[cfg(feature = "midi")]
-use responses::{generate_midi_response, generate_split_midis_response};
+#[path = "lib_wav.rs"]
+pub mod lib_wav;
+
 #[cfg(feature = "pdf")]
-use responses::{generate_pdf_response, generate_split_pdfs_response};
+#[path = "lib_pdf.rs"]
+pub mod lib_pdf;
+
+#[cfg(feature = "midi")]
+#[path = "lib_midi.rs"]
+pub mod lib_midi;
+
+use jianpu_generator::parser::parts_parser::InstrumentInfo;
 use responses::{
     get_measure_at_offset_response, list_measure_spans_response, render_response,
     render_with_highlight_range_response,
 };
-#[cfg(feature = "wav")]
-use types::GenerateSplitWavsResponse;
-#[cfg(feature = "wav")]
-use types::GenerateWavResponse;
-#[cfg(feature = "wav")]
-use types::ListMeasureTimesResponse;
-#[cfg(feature = "midi")]
-use types::{GenerateMidiResponse, GenerateSplitMidisResponse};
-#[cfg(feature = "pdf")]
-use types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
 use types::{
     ListMeasureSpansResponse, ListPartDeclarationsResponse, ListPartsResponse,
     MeasureAtOffsetResponse, RenderResponse,
@@ -163,223 +155,6 @@ pub fn update_part_declaration(
 #[wasm_bindgen]
 pub fn get_measure_index_at_offset(source: &str, byte_offset: usize) -> MeasureAtOffsetResponse {
     get_measure_at_offset_response(source, byte_offset)
-}
-
-/// Parse `.jianpu` source and synthesize WAV audio bytes.
-///
-/// Available only when the `wav` feature is enabled at build time.
-/// Returns the same structured `{ status, ... }` envelope as [`render`]:
-/// - `{ "status": "ok", "wav": Uint8Array }`
-/// - `{ "status": "err", "diagnostics": [...] }`
-///
-/// `soundfont` is the raw SF2 soundfont bytes used for synthesis. They are not
-/// embedded in the WASM binary and must be supplied by the caller.
-#[cfg(feature = "wav")]
-#[allow(clippy::needless_pass_by_value)]
-#[wasm_bindgen]
-pub fn generate_wav(
-    source: &str,
-    enabled_tracks: Option<Vec<String>>,
-    soundfont: Vec<u8>,
-) -> GenerateWavResponse {
-    generate_wav_response(source, enabled_tracks.as_deref(), soundfont)
-}
-
-/// Synthesize WAV audio for a consecutive measure range, with BPM/key context from preceding measures.
-///
-/// Available only when the `wav` feature is enabled at build time.
-/// Returns the same structured envelope as [`generate_wav`]:
-/// - `{ "status": "ok", "wav": Uint8Array }`
-/// - `{ "status": "err", "diagnostics": [...] }`
-///
-/// `soundfont` is the raw SF2 soundfont bytes used for synthesis. They are not
-/// embedded in the WASM binary and must be supplied by the caller.
-#[cfg(feature = "wav")]
-#[allow(clippy::needless_pass_by_value)]
-#[wasm_bindgen]
-pub fn generate_wav_for_measure_range(
-    source: &str,
-    start_index: usize,
-    end_index: usize,
-    enabled_tracks: Option<Vec<String>>,
-    soundfont: Vec<u8>,
-) -> GenerateWavResponse {
-    generate_wav_for_measure_range_response(
-        source,
-        start_index,
-        end_index,
-        enabled_tracks.as_deref(),
-        soundfont,
-    )
-}
-
-/// Return the elapsed-seconds offset of each measure boundary in the whole score.
-///
-/// Available only when the `wav` feature is enabled at build time.
-/// Used to sync a UI playhead against the audio produced by [`generate_wav`].
-/// Returns:
-/// - `{ "status": "ok", "times": [f64, ...] }` — length is `measure count + 1`;
-///   the last entry is the total duration.
-/// - `{ "status": "err", "diagnostics": [...] }`
-#[cfg(feature = "wav")]
-#[allow(clippy::needless_pass_by_value)]
-#[wasm_bindgen]
-pub fn list_measure_times(
-    source: &str,
-    enabled_tracks: Option<Vec<String>>,
-) -> ListMeasureTimesResponse {
-    list_measure_times_response(source, enabled_tracks.as_deref())
-}
-
-/// Return the elapsed-seconds offset of each measure boundary within a
-/// consecutive measure range, relative to the start of that range.
-///
-/// Available only when the `wav` feature is enabled at build time.
-/// Used to sync a UI playhead against the audio produced by
-/// [`generate_wav_for_measure_range`]. Returns the same envelope as
-/// [`list_measure_times`].
-#[cfg(feature = "wav")]
-#[allow(clippy::needless_pass_by_value)]
-#[wasm_bindgen]
-pub fn list_measure_times_for_range(
-    source: &str,
-    start_index: usize,
-    end_index: usize,
-    enabled_tracks: Option<Vec<String>>,
-) -> ListMeasureTimesResponse {
-    list_measure_times_for_range_response(source, start_index, end_index, enabled_tracks.as_deref())
-}
-
-/// Synthesize a short WAV preview note for a General MIDI program number.
-///
-/// Available only when the `wav` feature is enabled at build time.
-/// Plays middle C (key 60) for 1 second with a 0.5-second tail using the
-/// supplied soundfont. Returns:
-/// - `{ "status": "ok", "wav": Uint8Array }`
-/// - `{ "status": "err", "diagnostics": [...] }`
-///
-/// `soundfont` is the raw SF2 soundfont bytes used for synthesis.
-#[cfg(feature = "wav")]
-#[allow(clippy::needless_pass_by_value)]
-#[wasm_bindgen]
-pub fn generate_instrument_preview_wav(
-    program_number: u8,
-    soundfont: Vec<u8>,
-) -> GenerateWavResponse {
-    generate_instrument_preview_wav_response(program_number, soundfont)
-}
-
-/// Parse `.jianpu` source and write a short WAV preview of a percussion hit.
-///
-/// Available only when the `wav` feature is enabled at build time.
-/// Plays the given GM percussion key twice on the shared drum channel using
-/// the supplied soundfont. Returns:
-/// - `{ "status": "ok", "wav": Uint8Array }`
-/// - `{ "status": "err", "diagnostics": [...] }`
-///
-/// `soundfont` is the raw SF2 soundfont bytes used for synthesis.
-#[cfg(feature = "wav")]
-#[allow(clippy::needless_pass_by_value)]
-#[wasm_bindgen]
-pub fn generate_percussion_preview_wav(key: u8, soundfont: Vec<u8>) -> GenerateWavResponse {
-    generate_percussion_preview_wav_response(key, soundfont)
-}
-
-/// Parse `.jianpu` source and write PDF bytes.
-///
-/// Available only when the `pdf` feature is enabled at build time.
-/// Returns the same structured `{ status, ... }` envelope as [`render`]:
-/// - `{ "status": "ok", "pdf": Uint8Array }`
-/// - `{ "status": "err", "diagnostics": [...] }`
-///
-/// `sans_serif_sc`, `sans_serif_tc`, and `monospace` are raw font file bytes
-/// (OTF/TTF) used for text rendering. They are not embedded in the WASM binary
-/// and must be supplied by the caller (e.g. fetched from a CDN or local server).
-#[cfg(feature = "pdf")]
-#[allow(clippy::needless_pass_by_value)]
-#[wasm_bindgen]
-pub fn generate_pdf(
-    source: &str,
-    enabled_tracks: Option<Vec<String>>,
-    disabled_lyrics: Option<Vec<String>>,
-    sans_serif_sc: Vec<u8>,
-    sans_serif_tc: Vec<u8>,
-    monospace: Vec<u8>,
-) -> GeneratePdfResponse {
-    generate_pdf_response(
-        source,
-        enabled_tracks.as_deref(),
-        disabled_lyrics.as_deref(),
-        sans_serif_sc,
-        sans_serif_tc,
-        monospace,
-    )
-}
-
-/// Parse `.jianpu` source and write one PDF per part as a ZIP archive.
-///
-/// Available only when the `pdf` feature is enabled at build time.
-/// Returns:
-/// - `{ "status": "ok", "zip": Uint8Array }`
-/// - `{ "status": "err", "diagnostics": [...] }`
-///
-/// Font byte parameters have the same semantics as [`generate_pdf`].
-#[cfg(feature = "pdf")]
-#[wasm_bindgen]
-pub fn generate_split_pdfs(
-    source: &str,
-    base_name: &str,
-    sans_serif_sc: Vec<u8>,
-    sans_serif_tc: Vec<u8>,
-    monospace: Vec<u8>,
-) -> GenerateSplitPdfsResponse {
-    generate_split_pdfs_response(source, base_name, sans_serif_sc, sans_serif_tc, monospace)
-}
-
-/// Parse `.jianpu` source and generate MIDI (SMF) bytes.
-///
-/// Available only when the `midi` feature is enabled at build time.
-/// Returns:
-/// - `{ "status": "ok", "midi": Uint8Array }`
-/// - `{ "status": "err", "diagnostics": [...] }`
-#[cfg(feature = "midi")]
-#[allow(clippy::needless_pass_by_value)]
-#[wasm_bindgen]
-pub fn generate_midi(source: &str, enabled_tracks: Option<Vec<String>>) -> GenerateMidiResponse {
-    generate_midi_response(source, enabled_tracks.as_deref())
-}
-
-/// Parse `.jianpu` source and write one MIDI file per part as a ZIP archive.
-///
-/// Available only when the `midi` feature is enabled at build time.
-/// Returns:
-/// - `{ "status": "ok", "zip": Uint8Array }`
-/// - `{ "status": "err", "diagnostics": [...] }`
-#[cfg(feature = "midi")]
-#[wasm_bindgen]
-pub fn generate_split_midis(source: &str, base_name: &str) -> GenerateSplitMidisResponse {
-    generate_split_midis_response(source, base_name)
-}
-
-/// Parse `.jianpu` source and synthesize one WAV file per part as a ZIP archive.
-///
-/// Available only when the `wav` feature is enabled at build time.
-///
-/// `soundfont` is the raw SF2 soundfont bytes used for synthesis. They are not
-/// embedded in the WASM binary and must be supplied by the caller.
-///
-/// Returns:
-/// - `{ "status": "ok", "zip": Uint8Array }`
-/// - `{ "status": "err", "diagnostics": [...] }`
-#[cfg(feature = "wav")]
-#[allow(clippy::needless_pass_by_value)]
-#[wasm_bindgen]
-pub fn generate_split_wavs(
-    source: &str,
-    base_name: &str,
-    soundfont: Vec<u8>,
-) -> GenerateSplitWavsResponse {
-    generate_split_wavs_response(source, base_name, soundfont)
 }
 
 /// Compress a share-link payload with brotli (quality 11).

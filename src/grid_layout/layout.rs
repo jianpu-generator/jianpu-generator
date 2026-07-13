@@ -339,5 +339,9 @@ pub fn layout(
 mod tests_layout;
 
 #[cfg(test)]
+#[path = "tests_layout_directives.rs"]
+mod tests_layout_directives;
+
+#[cfg(test)]
 #[path = "tests_highlight.rs"]
 mod tests_highlight;

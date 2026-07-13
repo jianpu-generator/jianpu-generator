@@ -1,12 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { AppHeader } from './components/AppHeader'
+import { AppWorkspace } from './components/AppWorkspace'
 import { AssetLoadingBanner } from './components/AssetLoadingBanner'
-import { EditMetadataModal } from './components/EditMetadataModal'
-import { Editor } from './components/Editor'
-import { EditPartsModal } from './components/EditPartsModal'
 import { ErrorModal } from './components/ErrorModal'
-import { PartToggles } from './components/PartToggles'
-import { Preview } from './components/Preview'
 import { SectionJumpToolbar } from './components/SectionJumpToolbar'
 import { SharedPreviewBanner } from './components/SharedPreviewBanner'
 import { StorageSettingsModal } from './components/StorageSettingsModal'
@@ -21,6 +17,7 @@ import { useFileOperations } from './hooks/useFileOperations'
 import { useFontsLoader } from './hooks/useFontsLoader'
 import { useJianpuWorker } from './hooks/useJianpuWorker'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
+import { usePartTogglePruning } from './hooks/usePartTogglePruning'
 import { usePartToggles } from './hooks/usePartToggles'
 import { useSectionNavigation } from './hooks/useSectionNavigation'
 import { useSharedPreview } from './hooks/useSharedPreview'
@@ -155,42 +152,12 @@ export default function App() {
     fonts.fonts,
   )
 
-  useEffect(() => {
-    if (parts.length === 0) return
-
-    const abbreviations = new Set(parts.map((part) => part.abbreviation))
-    setDisabledParts((prev) => {
-      const next = new Set(
-        [...prev].filter((abbreviation) => abbreviations.has(abbreviation)),
-      )
-      return next.size === prev.size ? prev : next
-    })
-  }, [parts, setDisabledParts])
-
-  useEffect(() => {
-    if (parts.length === 0) return
-
-    const lyricAbbreviations = new Set(
-      parts.filter((part) => part.has_lyrics).map((part) => part.abbreviation),
-    )
-    setDisabledLyrics((prev) => {
-      const next = new Set(
-        [...prev].filter((abbreviation) =>
-          lyricAbbreviations.has(abbreviation),
-        ),
-      )
-      return next.size === prev.size ? prev : next
-    })
-  }, [parts, setDisabledLyrics])
-
-  useEffect(() => {
-    if (parts.length === 0) return
-    const abbreviations = new Set(parts.map((part) => part.abbreviation))
-    setSoloedParts((prev) => {
-      const next = new Set([...prev].filter((abbr) => abbreviations.has(abbr)))
-      return next.size === prev.size ? prev : next
-    })
-  }, [parts, setSoloedParts])
+  usePartTogglePruning(
+    parts,
+    setDisabledParts,
+    setDisabledLyrics,
+    setSoloedParts,
+  )
 
   useKeyboardShortcuts({
     measureAudioPlaying,
@@ -373,118 +340,59 @@ export default function App() {
         handleSectionJump={handleSectionJump}
         handleSectionRangeSelect={handleSectionRangeSelect}
       />
-      <main className="workspace">
-        <section
-          className={[
-            'pane',
-            'pane--editor',
-            editorCollapsed ? 'pane--editor-collapsed' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-        >
-          <div className="editor-layout">
-            <div className="editor-main">
-              {sharedPreview ? null : (
-                <Editor
-                  ref={editorRef}
-                  path={fileId}
-                  value={source}
-                  onChange={handleSourceChange}
-                  readOnly={readOnly}
-                  diagnostics={diagnostics}
-                  diagnosticViewZones={diagnosticViewZones}
-                  measureSpans={measureSpans}
-                  onSelectionChange={(firstLine, lastLine) => {
-                    setSelectedLineRange(null)
-                    notifySelection(firstLine, lastLine)
-                  }}
-                  onEditPartsClick={() => setEditPartsOpen(true)}
-                  onEditMetadataClick={() => setEditMetadataOpen(true)}
-                  onForceSave={forceSave}
-                  onPlayMeasure={
-                    measureAudioPlaying
-                      ? stopMeasurePlayback
-                      : selectedMeasureRange !== null &&
-                          !measureAudioGenerating &&
-                          soundfontReady
-                        ? playSelectedMeasures
-                        : undefined
-                  }
-                />
-              )}
-              <EditPartsModal
-                open={editPartsOpen}
-                onOpenChange={setEditPartsOpen}
-                partDeclarations={partDeclarations}
-                allParts={parts}
-                onPartDeclarationChange={handlePartDeclarationChange}
-                previewInstrument={previewInstrument}
-                previewPercussion={previewPercussion}
-                stopPreviewInstrument={stopPreviewInstrument}
-                previewAudioPlaying={previewAudioPlaying}
-              />
-              <EditMetadataModal
-                open={editMetadataOpen}
-                onOpenChange={setEditMetadataOpen}
-                metadata={parsedMetadata}
-                onFieldChange={handleMetadataFieldChange}
-              />
-            </div>
-          </div>
-        </section>
-        <div className="pane-divider">
-          {sharedPreview ? null : (
-            <button
-              type="button"
-              className="pane-divider-toggle"
-              onClick={() => setEditorCollapsed((collapsed) => !collapsed)}
-              title={editorCollapsed ? 'Show editor' : 'Hide editor'}
-              aria-label={editorCollapsed ? 'Show editor' : 'Hide editor'}
-            >
-              <span
-                className="pane-divider-toggle-icon"
-                style={{
-                  transform: editorCollapsed ? 'rotate(180deg)' : 'none',
-                }}
-                aria-hidden="true"
-              >
-                ‹
-              </span>
-            </button>
-          )}
-        </div>
-        <section className="pane pane--preview">
-          <Preview
-            documents={documents}
-            highlightedDocuments={highlightedDocuments}
-            rendering={rendering}
-            onMeasureRangeSelect={handleMeasureRangeSelect}
-            onSectionLabelClick={handleSectionJump}
-            audioGenerating={audioGenerating}
-            wavUrl={wavUrl}
-            wavFilename={wavFilename}
-            measureTimes={measureTimes}
-            measureAudioTimes={measureAudioTimes}
-            measureAudioElement={measureAudioElement}
-            selectedMeasureRange={selectedMeasureRange}
-            emptyMessage={
-              noPartsSelected ? 'No parts selected.' : 'No preview yet.'
-            }
-            toolbar={
-              <PartToggles
-                parts={parts}
-                disabledParts={disabledParts}
-                disabledLyrics={disabledLyrics}
-                soloedParts={soloedParts}
-                onPartToggle={handlePartToggle}
-                onLyricsToggle={handleLyricsToggle}
-                onSoloToggle={handleSoloToggle}
-              />
-            }
-          />
-        </section>
-      </main>
+      <AppWorkspace
+        editorCollapsed={editorCollapsed}
+        setEditorCollapsed={setEditorCollapsed}
+        sharedPreview={sharedPreview}
+        editorRef={editorRef}
+        fileId={fileId}
+        source={source}
+        handleSourceChange={handleSourceChange}
+        readOnly={readOnly}
+        diagnostics={diagnostics}
+        diagnosticViewZones={diagnosticViewZones}
+        measureSpans={measureSpans}
+        setSelectedLineRange={setSelectedLineRange}
+        notifySelection={notifySelection}
+        setEditPartsOpen={setEditPartsOpen}
+        setEditMetadataOpen={setEditMetadataOpen}
+        forceSave={forceSave}
+        measureAudioPlaying={measureAudioPlaying}
+        stopMeasurePlayback={stopMeasurePlayback}
+        selectedMeasureRange={selectedMeasureRange}
+        measureAudioGenerating={measureAudioGenerating}
+        soundfontReady={soundfontReady}
+        playSelectedMeasures={playSelectedMeasures}
+        editPartsOpen={editPartsOpen}
+        partDeclarations={partDeclarations}
+        parts={parts}
+        handlePartDeclarationChange={handlePartDeclarationChange}
+        previewInstrument={previewInstrument}
+        previewPercussion={previewPercussion}
+        stopPreviewInstrument={stopPreviewInstrument}
+        previewAudioPlaying={previewAudioPlaying}
+        editMetadataOpen={editMetadataOpen}
+        parsedMetadata={parsedMetadata}
+        handleMetadataFieldChange={handleMetadataFieldChange}
+        documents={documents}
+        highlightedDocuments={highlightedDocuments}
+        rendering={rendering}
+        handleMeasureRangeSelect={handleMeasureRangeSelect}
+        handleSectionJump={handleSectionJump}
+        audioGenerating={audioGenerating}
+        wavUrl={wavUrl}
+        wavFilename={wavFilename}
+        measureTimes={measureTimes}
+        measureAudioTimes={measureAudioTimes}
+        measureAudioElement={measureAudioElement}
+        noPartsSelected={noPartsSelected}
+        disabledParts={disabledParts}
+        disabledLyrics={disabledLyrics}
+        soloedParts={soloedParts}
+        handlePartToggle={handlePartToggle}
+        handleLyricsToggle={handleLyricsToggle}
+        handleSoloToggle={handleSoloToggle}
+      />
     </div>
   )
 }

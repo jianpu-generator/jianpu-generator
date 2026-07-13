@@ -14,6 +14,7 @@ pub mod compositor;
 pub mod consolidator;
 pub mod coordinate_resolver;
 pub mod desugar;
+mod document_render;
 pub mod error;
 pub mod error_reporter;
 pub mod filters;
@@ -39,6 +40,10 @@ pub mod pdf;
 #[cfg(feature = "wav")]
 pub mod wav;
 
+pub use document_render::{
+    render_documents_from_source_filtered_with_lyrics, render_documents_with_highlight_range,
+    RenderDocumentOutput,
+};
 pub use filters::*;
 pub use measure_spans::*;
 pub use part_info::{
@@ -58,15 +63,6 @@ pub struct RenderOutput {
     /// Diagnostics collected during grouping (e.g. lyrics underflow).
     /// The SVGs already contain colored overlays for affected measures; these
     /// diagnostics let callers surface them in editor view zones as well.
-    pub diagnostics: Vec<Diagnostic>,
-}
-
-/// Output of a successful render: typed SVG document tree and any diagnostics.
-#[derive(Debug)]
-pub struct RenderDocumentOutput {
-    /// One typed SVG document per page.
-    pub documents: Vec<renderer::new_types::SvgDocument>,
-    /// Diagnostics collected during grouping (e.g. lyrics underflow).
     pub diagnostics: Vec<Diagnostic>,
 }
 
@@ -226,102 +222,6 @@ pub fn render_svgs_with_highlight_range(
     let docs = renderer::new_renderer::render_new(&abs, &config);
     Ok(RenderOutput {
         svgs: serializer::serialize(&docs),
-        diagnostics,
-    })
-}
-
-fn render_documents(
-    score: &Score,
-    parts: &[PartInfo],
-) -> Result<Vec<renderer::new_types::SvgDocument>, IrrecoverableError> {
-    let config = render_config::RenderConfig::from_metadata(&score.metadata);
-    let header = build_header(score, parts);
-    let compile_result = compiler::compile(score);
-    let compile_result = consolidator::consolidate(compile_result);
-    let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
-    let abs = coordinate_resolver::resolve(
-        &grid_pages,
-        config.note_number_width as f32,
-        config.lyric_font_sizes(),
-    )?;
-    Ok(renderer::new_renderer::render_new(&abs, &config))
-}
-
-fn render_documents_with_range(
-    score: &Score,
-    parts: &[PartInfo],
-    start_index: usize,
-    end_index: usize,
-) -> Result<Vec<renderer::new_types::SvgDocument>, IrrecoverableError> {
-    let config = render_config::RenderConfig::from_metadata(&score.metadata);
-    let header = build_header(score, parts);
-    let compile_result = compiler::compile(score);
-    let compile_result = consolidator::consolidate(compile_result);
-    let grid_pages = grid_layout::layout(
-        &compile_result,
-        &config,
-        &header,
-        595.0,
-        842.0,
-        Some((start_index, end_index)),
-    );
-    let abs = coordinate_resolver::resolve(
-        &grid_pages,
-        config.note_number_width as f32,
-        config.lyric_font_sizes(),
-    )?;
-    Ok(renderer::new_renderer::render_new(&abs, &config))
-}
-
-/// Parse, group, optionally filter tracks and lyrics, and return typed SVG document trees.
-///
-/// When `enabled_tracks` is `None`, all parts are rendered.
-/// When `Some(tracks)` is empty, no parts are rendered.
-/// When `disabled_lyrics` lists part abbreviations, lyrics are hidden for those parts.
-pub fn render_documents_from_source_filtered_with_lyrics(
-    source: &str,
-    filename: &str,
-    enabled_tracks: Option<&[String]>,
-    disabled_lyrics: Option<&[String]>,
-    instruments: &[InstrumentInfo],
-) -> Result<RenderDocumentOutput, IrrecoverableError> {
-    let parts = list_parts_from_source(source, filename, instruments)?;
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
-    apply_lyrics_filter(&mut score, disabled_lyrics);
-    let diagnostics = collect_measure_diagnostics(&score);
-    Ok(RenderDocumentOutput {
-        documents: render_documents(&score, &parts)?,
-        diagnostics,
-    })
-}
-
-/// Parse, group, optionally filter tracks and lyrics, and return typed SVG document trees with a highlighted measure range.
-///
-/// When `enabled_tracks` is `None`, all parts are rendered.
-/// When `Some(tracks)` is empty, no parts are rendered.
-/// When `disabled_lyrics` lists part abbreviations, lyrics are hidden for those parts.
-/// `start_index` and `end_index` define the inclusive range of measures to highlight.
-pub fn render_documents_with_highlight_range(
-    source: &str,
-    filename: &str,
-    measure_range: std::ops::RangeInclusive<usize>,
-    enabled_tracks: Option<&[String]>,
-    disabled_lyrics: Option<&[String]>,
-    instruments: &[InstrumentInfo],
-) -> Result<RenderDocumentOutput, IrrecoverableError> {
-    let parts = list_parts_from_source(source, filename, instruments)?;
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
-    apply_lyrics_filter(&mut score, disabled_lyrics);
-    let diagnostics = collect_measure_diagnostics(&score);
-    Ok(RenderDocumentOutput {
-        documents: render_documents_with_range(
-            &score,
-            &parts,
-            *measure_range.start(),
-            *measure_range.end(),
-        )?,
         diagnostics,
     })
 }

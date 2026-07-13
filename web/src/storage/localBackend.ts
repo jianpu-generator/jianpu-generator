@@ -1,15 +1,17 @@
 import {
   createFile,
   deleteFile,
-  deserializeFileStore,
   duplicateFile,
   type FileStoreState,
   importSharedFile,
-  readInitialFileStore,
   renameFile,
   restoreFile,
   updateActiveContent,
 } from '../fileStore'
+import {
+  deserializeFileStore,
+  readInitialFileStore,
+} from '../fileStorePersistence'
 import type { SaveStatus, StorageBackend } from './types'
 
 /**
