@@ -39,7 +39,9 @@ label="Duration: extension (-)"
 
 
 label="Duplicate: repeat last note (x) & bare eighth/sixteenth (_/=)"
-[M] 1 x x __
+[M] 1 x x -
+
+[M] __ 0 0 0
 [M] _
 
 label="Duplicate: works with tie (1~_)"
