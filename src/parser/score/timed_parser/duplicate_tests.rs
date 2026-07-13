@@ -147,6 +147,35 @@ fn tie_into_duplicate_preserves_tie_and_matches_pitch() {
 }
 
 #[test]
+fn tie_out_of_duplicate_sets_tie_span() {
+    // 6__~6 : note 6, an eighth-note duplicate, then that duplicate tied into a following 6.
+    // The `~` is glued directly after the duplicate atom's `_`, not after a digit, so it never
+    // passes through `parse_duration_suffixes` (which normally records the tie span) — the tie
+    // must be picked up by the top-level tilde handling instead.
+    let events = parse_notes("6__~6", &mut GroupStack::default());
+    assert_eq!(events.len(), 3);
+    let ScoreEvent::Note(duplicate) = &events[1] else {
+        panic!("expected Note");
+    };
+    assert!(
+        duplicate.tie_to_next_span.is_some(),
+        "tie arc glued after a duplicate atom should still be recorded"
+    );
+}
+
+#[test]
+fn tie_out_of_duplicate_with_no_following_note_still_records_span() {
+    // 6__~ : the tie has nothing to bind to within this line, but the span must still be set so
+    // that cross-line/cross-measure tie validation can detect it (dangling tie vs. continuation).
+    let events = parse_notes("6__~", &mut GroupStack::default());
+    assert_eq!(events.len(), 2);
+    let ScoreEvent::Note(duplicate) = &events[1] else {
+        panic!("expected Note");
+    };
+    assert!(duplicate.tie_to_next_span.is_some());
+}
+
+#[test]
 fn duplicate_reaches_across_measure_boundary() {
     let mut stack = GroupStack::default();
     // Measure 1: fills a 4/4 bar on pitch 5.
@@ -172,6 +201,62 @@ fn glued_underscore_after_digit_keeps_existing_meaning() {
     let events = parse_notes("5_", &mut GroupStack::default());
     assert_eq!(events.len(), 1);
     assert_eq!(note_duration(&events[0]), 2);
+}
+
+#[test]
+fn doubled_underscore_after_digit_is_note_plus_duplicate() {
+    // "5__" — the second `_` can't shorten the duration any further (it's already an
+    // eighth note), so instead of being a silent no-op it starts a fresh duplicate atom.
+    let events = parse_notes("5__", &mut GroupStack::default());
+    assert_eq!(events.len(), 2);
+    assert_eq!(
+        events.iter().map(note_duration).collect::<Vec<_>>(),
+        vec![2, 2]
+    );
+}
+
+#[test]
+fn doubled_equals_after_digit_is_note_plus_duplicate() {
+    // "5==" mirrors "5__" but at sixteenth-note duration.
+    let events = parse_notes("5==", &mut GroupStack::default());
+    assert_eq!(events.len(), 2);
+    assert_eq!(
+        events.iter().map(note_duration).collect::<Vec<_>>(),
+        vec![1, 1]
+    );
+}
+
+#[test]
+fn triple_underscore_chains_two_duplicates() {
+    // "5___" — each repeat past the first starts another duplicate atom.
+    let events = parse_notes("5___", &mut GroupStack::default());
+    assert_eq!(
+        events.iter().map(note_duration).collect::<Vec<_>>(),
+        vec![2, 2, 2]
+    );
+}
+
+#[test]
+fn mixed_duration_suffixes_are_unaffected() {
+    // "5_=" — different suffix characters still combine onto the same atom, since only a
+    // repeat of the *same* character is treated as a fresh duplicate.
+    let events = parse_notes("5_=", &mut GroupStack::default());
+    assert_eq!(events.len(), 1);
+    assert_eq!(note_duration(&events[0]), 1);
+}
+
+#[test]
+fn doubled_underscore_after_chord_is_chord_plus_duplicate() {
+    let events = parse_chords("1__", &mut GroupStack::default());
+    assert_eq!(events.len(), 2);
+    let durations: Vec<u32> = events
+        .iter()
+        .map(|e| match e {
+            ScoreEvent::Chord(ParsedChordNote { duration, .. }) => *duration,
+            other => panic!("expected Chord, got {other:?}"),
+        })
+        .collect();
+    assert_eq!(durations, vec![2, 2]);
 }
 
 #[test]

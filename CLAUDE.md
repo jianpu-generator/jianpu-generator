@@ -16,7 +16,7 @@ Example:
 cargo run -- generate svg simple.jianpu
 ```
 
-Avoid using abbreviations when naming.
+Avoid using uncommon abbreviations when naming (e.g. `TimedRdParser` for "recursive descent" — spell it out as `TimedRecursiveDescentParser` instead). Widely understood abbreviations (e.g. `Ast`, `Id`, `Http`) are fine.
 
 Test cases should not be inlined with the source code, they should live in separate files.
 

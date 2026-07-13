@@ -152,12 +152,25 @@ fn lex_one_char(
         ),
         '|' => skip_unexpected_char(start, len, c, recoverable_errors),
         // `x`/`_`/`=` glued directly after a tie (`~`) still start a fresh duplicate atom
-        // (`5~_`) even though we're mid-word — this mirrors `duplicate_after_tie_boundary`
-        // in duration.rs's suffix scanner, which stops before consuming the same character.
+        // (`5~_`) even though we're mid-word — this mirrors `duplicate_atom_boundary`
+        // in mod.rs's suffix scanner, which stops before consuming the same character.
         'x' | '_' | '=' if at_word_boundary || line[..i].ends_with('~') => {
             emit_single_token(TimedLexToken::Duplicate { offset: start }, start, len, true)
         }
-        '~' if !at_word_boundary => emit_single_token(TimedLexToken::Tilde, start, len, false),
+        // A `_`/`=` glued directly after another occurrence of itself (`5__`, `5==`) also
+        // starts a fresh duplicate atom instead of being silently absorbed as a no-op
+        // duration suffix — same rationale as the tie case above.
+        c @ ('_' | '=') if line[..i].ends_with(c) => {
+            emit_single_token(TimedLexToken::Duplicate { offset: start }, start, len, true)
+        }
+        // A `~` glued directly after a duplicate atom (`x`/`_`/`=`) is a tie out of that
+        // duplicate into the next note — mirrors `5~_` (tie into a duplicate) but in reverse.
+        // `Duplicate` tokens report `at_word_boundary = true` (needed so e.g. `x_` lexes as two
+        // atoms), so this case must be detected by inspecting the actual preceding character
+        // rather than relying on `at_word_boundary`.
+        '~' if !at_word_boundary || matches!(line[..i].chars().last(), Some('x' | '_' | '=')) => {
+            emit_single_token(TimedLexToken::Tilde, start, len, false)
+        }
         _ if !at_word_boundary => Ok((None, len, false)),
         _ if at_word_boundary && context == LexContext::Chords => {
             Ok(chord_head_start_token(start, len))

@@ -1,25 +1,26 @@
 mod chord_head;
+mod depth_event;
 mod directives;
 mod duration;
 mod groups;
 mod note_head;
 mod timed_lexer;
-mod timed_rd_parser;
+mod timed_recursive_descent_parser;
 
 #[path = "timed_lexer_tests.rs"]
 #[cfg(test)]
 mod timed_lexer_tests;
 
-#[path = "timed_rd_parser_tests.rs"]
+#[path = "timed_recursive_descent_parser_tests.rs"]
 #[cfg(test)]
-mod timed_rd_parser_tests;
+mod timed_recursive_descent_parser_tests;
 
 #[path = "duplicate_tests.rs"]
 #[cfg(test)]
 mod duplicate_tests;
 
 pub use timed_lexer::{lex_line, LexContext, TimedLexToken};
-pub use timed_rd_parser::TimedRdParser;
+pub use timed_recursive_descent_parser::TimedRecursiveDescentParser;
 
 pub use chord_head::ChordHead;
 pub use note_head::NoteHead;
@@ -68,7 +69,7 @@ pub fn parse_timed_line<H: TimedUnitHead>(
 ) -> Result<TimedLineParse, IrrecoverableError> {
     let (tokens, lex_errors) = lex_line(line, base_offset, context)?;
     let (events, dash_after_rest_error, chord_errors) =
-        TimedRdParser::<H>::parse_line(line, base_offset, &tokens, stack)?;
+        TimedRecursiveDescentParser::<H>::parse_line(line, base_offset, &tokens, stack)?;
     Ok(TimedLineParse {
         events,
         dash_after_rest_error,
@@ -102,13 +103,18 @@ pub trait TimedUnitHead: Sized {
 }
 
 /// Head-boundary check shared by `NoteHead`/`ChordHead`: a fresh degree digit always starts a
-/// new head, and `x`/`_`/`=` immediately after a tie (`~`) also starts a new head — that's what
-/// lets a duplicate atom glued right after `~` (e.g. `5~_`) be parsed as its own unit instead of
-/// being swallowed as a duration suffix of the tied note.
-pub(crate) fn duplicate_after_tie_boundary(chars: &[char], i: usize) -> bool {
+/// new head. `x`/`_`/`=` immediately after a tie (`~`) also starts a new head — that's what lets
+/// a duplicate atom glued right after `~` (e.g. `5~_`) be parsed as its own unit instead of being
+/// swallowed as a duration suffix of the tied note. Likewise, a `_`/`=` immediately after another
+/// occurrence of the *same* character (`5__`, `5==`) starts a new head instead of being silently
+/// absorbed as a no-op duration suffix — the repeat becomes a fresh duplicate atom.
+pub(crate) fn duplicate_atom_boundary(chars: &[char], i: usize) -> bool {
     match chars.get(i) {
         Some('0'..='7') => true,
-        Some('x') | Some('_') | Some('=') => i > 0 && chars.get(i - 1) == Some(&'~'),
+        Some('x') => i > 0 && chars.get(i - 1) == Some(&'~'),
+        Some(c @ ('_' | '=')) => {
+            i > 0 && matches!(chars.get(i - 1), Some(&prev) if prev == '~' || prev == *c)
+        }
         _ => false,
     }
 }
