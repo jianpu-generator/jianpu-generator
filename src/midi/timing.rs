@@ -6,10 +6,10 @@ use crate::error::IrrecoverableError;
 
 use super::{default_active_key, process_measure, RawEvent, RawKind, TPQ};
 
-/// Return the elapsed-seconds offset of each measure boundary in `score`,
-/// accounting for BPM changes. Length is `score.measures.len() + 1`: the
-/// last entry is the total duration of the whole score.
-pub fn measure_start_times_seconds(score: &Score) -> Result<Vec<f64>, IrrecoverableError> {
+/// Walk `score`'s measures, returning the absolute MIDI tick at each measure
+/// boundary. Length is `score.measures.len() + 1`: the last entry is the
+/// total tick length of the whole score.
+pub(crate) fn measure_tick_boundaries(score: &Score) -> Result<Vec<u32>, IrrecoverableError> {
     let mut raw: Vec<RawEvent> = Vec::new();
     let mut per_part_ties: Vec<(u8, HashMap<u8, u32>)> = Vec::new();
     let mut chord_ties: Vec<HashMap<u8, u32>> = Vec::new();
@@ -27,6 +27,32 @@ pub fn measure_start_times_seconds(score: &Score) -> Result<Vec<f64>, Irrecovera
             &mut active_key,
         )?;
         boundaries.push(current_tick);
+    }
+
+    Ok(boundaries)
+}
+
+/// Return the elapsed-seconds offset of each measure boundary in `score`,
+/// accounting for BPM changes. Length is `score.measures.len() + 1`: the
+/// last entry is the total duration of the whole score.
+pub fn measure_start_times_seconds(score: &Score) -> Result<Vec<f64>, IrrecoverableError> {
+    let boundaries = measure_tick_boundaries(score)?;
+
+    let mut raw: Vec<RawEvent> = Vec::new();
+    let mut per_part_ties: Vec<(u8, HashMap<u8, u32>)> = Vec::new();
+    let mut chord_ties: Vec<HashMap<u8, u32>> = Vec::new();
+    let mut active_key = default_active_key();
+    let mut current_tick: u32 = 0;
+
+    for measure in &score.measures {
+        current_tick = process_measure(
+            measure,
+            current_tick,
+            &mut raw,
+            &mut per_part_ties,
+            &mut chord_ties,
+            &mut active_key,
+        )?;
     }
 
     let tempo_changes: Vec<(u32, u32)> = raw

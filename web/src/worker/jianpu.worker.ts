@@ -65,6 +65,14 @@ const generateInstrumentPreviewWav =
     ? jianpuWasm.generate_instrument_preview_wav
     : null
 
+const renderPcmStreamingForMeasureRange =
+  'render_pcm_streaming_for_measure_range' in jianpuWasm
+    ? jianpuWasm.render_pcm_streaming_for_measure_range
+    : null
+
+// Must match `SAMPLE_RATE` in `src/wav.rs`.
+const STREAMED_PCM_SAMPLE_RATE = 44100
+
 export type WorkerRequest =
   | {
       type: 'loadSoundfont'
@@ -141,6 +149,14 @@ export type WorkerRequest =
       enabledTracks?: string[]
     }
   | {
+      type: 'streamMeasureRangeAudio'
+      source: string
+      id: number
+      startMeasureIndex: number
+      endMeasureIndex: number
+      enabledTracks?: string[]
+    }
+  | {
       type: 'renderWithHighlightRange'
       source: string
       id: number
@@ -203,6 +219,15 @@ export type WorkerResponse =
       measureTimes: number[]
     }
   | { type: 'measureRangeAudioErr'; id: number }
+  | {
+      type: 'measureAudioChunk'
+      id: number
+      measureIndex: number
+      pcm: ArrayBuffer
+      sampleRate: number
+      isFinal: boolean
+    }
+  | { type: 'measureAudioChunkErr'; id: number }
   | { type: 'instrumentPreview'; id: number; wav: ArrayBuffer }
   | { type: 'instrumentPreviewErr'; id: number }
   | { type: 'highlightRangeOk'; id: number; documents: SvgDocumentOut[] }
@@ -453,6 +478,44 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       type: 'measureRangeAudioErr',
       id: msg.id,
     } satisfies WorkerResponse)
+    return
+  }
+
+  if (msg.type === 'streamMeasureRangeAudio') {
+    if (!renderPcmStreamingForMeasureRange || !loadedSoundfont) {
+      postMessage({
+        type: 'measureAudioChunkErr',
+        id: msg.id,
+      } satisfies WorkerResponse)
+      return
+    }
+    const result = renderPcmStreamingForMeasureRange(
+      msg.source,
+      msg.startMeasureIndex,
+      msg.endMeasureIndex,
+      msg.enabledTracks,
+      loadedSoundfont,
+      (measureIndex: number, samples: Float32Array, isFinal: boolean) => {
+        const pcm = samples.slice().buffer
+        postMessage(
+          {
+            type: 'measureAudioChunk',
+            id: msg.id,
+            measureIndex,
+            pcm,
+            sampleRate: STREAMED_PCM_SAMPLE_RATE,
+            isFinal,
+          } satisfies WorkerResponse,
+          { transfer: [pcm] },
+        )
+      },
+    )
+    if (result.status !== 'ok') {
+      postMessage({
+        type: 'measureAudioChunkErr',
+        id: msg.id,
+      } satisfies WorkerResponse)
+    }
     return
   }
 

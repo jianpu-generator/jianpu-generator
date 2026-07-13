@@ -1,11 +1,13 @@
 import type { SvgDocumentOut } from 'jianpu-wasm'
 import type { RefObject } from 'react'
+import type { MeasureAudioStreamPlayer } from '../audio/streamingMeasurePlayback'
 import type {
   Diagnostic,
   DiagnosticViewZone,
   MeasureSpan,
   PartDeclaration,
   PartInfo,
+  PlaybackClock,
   SectionRange,
 } from '../types'
 import type { WorkerResponse } from '../worker/jianpu.worker'
@@ -63,6 +65,12 @@ export interface WorkerMessageHandlerDeps {
   latestPreviewAudioIdRef: RefObject<number>
   currentPreviewAudioRef: RefObject<HTMLAudioElement | null>
   setPreviewAudioPlaying: (value: boolean) => void
+  latestStreamingIdRef: RefObject<number>
+  streamingPlayerRef: RefObject<MeasureAudioStreamPlayer | null>
+  streamingFirstChunkReceivedRef: RefObject<boolean>
+  setMeasureAudioElement: (value: PlaybackClock | null) => void
+  setMeasureAudioPlaying: (value: boolean) => void
+  setMeasureAudioTimes: (value: number[]) => void
 }
 
 export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
@@ -222,6 +230,31 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
     if (msg.type === 'measureRangeAudioErr') {
       if (msg.id !== deps.latestMeasureAudioIdRef.current) return
       deps.setMeasureAudioGenerating(false)
+      return
+    }
+
+    if (msg.type === 'measureAudioChunk') {
+      if (msg.id !== deps.latestStreamingIdRef.current) return
+      const player = deps.streamingPlayerRef.current
+      if (!player) return
+      if (!deps.streamingFirstChunkReceivedRef.current) {
+        deps.streamingFirstChunkReceivedRef.current = true
+        deps.setMeasureAudioGenerating(false)
+        deps.setMeasureAudioElement(player.getClock())
+        deps.setMeasureAudioPlaying(true)
+      }
+      player.pushChunk(msg.measureIndex, msg.pcm, msg.sampleRate, msg.isFinal)
+      deps.setMeasureAudioTimes(player.getMeasureTimes().slice())
+      return
+    }
+
+    if (msg.type === 'measureAudioChunkErr') {
+      if (msg.id !== deps.latestStreamingIdRef.current) return
+      deps.setMeasureAudioGenerating(false)
+      if (deps.streamingPlayerRef.current) {
+        deps.streamingPlayerRef.current.stop()
+        deps.streamingPlayerRef.current = null
+      }
       return
     }
 

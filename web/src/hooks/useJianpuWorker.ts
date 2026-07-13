@@ -1,5 +1,6 @@
 import type { SvgDocumentOut } from 'jianpu-wasm'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { MeasureAudioStreamPlayer } from '../audio/streamingMeasurePlayback'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -7,6 +8,7 @@ import type {
   PartDeclaration,
   PartInfo,
   PartMode,
+  PlaybackClock,
   SectionRange,
 } from '../types'
 import type { WorkerRequest } from '../worker/jianpu.worker'
@@ -63,7 +65,7 @@ export function useJianpuWorker(
   const [measureAudioPlaying, setMeasureAudioPlaying] = useState(false)
   const [measureAudioTimes, setMeasureAudioTimes] = useState<number[]>([])
   const [measureAudioElement, setMeasureAudioElement] =
-    useState<HTMLAudioElement | null>(null)
+    useState<PlaybackClock | null>(null)
   const [previewAudioPlaying, setPreviewAudioPlaying] = useState(false)
   const currentMeasureAudioRef = useRef<HTMLAudioElement | null>(null)
   const [highlightedDocuments, setHighlightedDocuments] = useState<
@@ -111,6 +113,10 @@ export function useJianpuWorker(
   const measureAudioRequestIdRef = useRef(0)
   const latestMeasureAudioIdRef = useRef(0)
   const measureWavUrlRef = useRef<string | null>(null)
+  const streamingPlayerRef = useRef<MeasureAudioStreamPlayer | null>(null)
+  const streamingRequestIdRef = useRef(0)
+  const latestStreamingIdRef = useRef(0)
+  const streamingFirstChunkReceivedRef = useRef(false)
   const previewAudioRequestIdRef = useRef(0)
   const latestPreviewAudioIdRef = useRef(0)
   const currentPreviewAudioRef = useRef<HTMLAudioElement | null>(null)
@@ -158,6 +164,10 @@ export function useJianpuWorker(
 
   const setNextMeasureWavUrl = useCallback(
     (next: string | null, nextMeasureTimes: number[] = []) => {
+      if (streamingPlayerRef.current) {
+        streamingPlayerRef.current.stop()
+        streamingPlayerRef.current = null
+      }
       if (currentMeasureAudioRef.current) {
         currentMeasureAudioRef.current.pause()
         currentMeasureAudioRef.current = null
@@ -236,11 +246,21 @@ export function useJianpuWorker(
       latestPreviewAudioIdRef,
       currentPreviewAudioRef,
       setPreviewAudioPlaying,
+      latestStreamingIdRef,
+      streamingPlayerRef,
+      streamingFirstChunkReceivedRef,
+      setMeasureAudioElement,
+      setMeasureAudioPlaying,
+      setMeasureAudioTimes,
     })
 
     return () => {
       worker.terminate()
       workerRef.current = null
+      if (streamingPlayerRef.current) {
+        streamingPlayerRef.current.stop()
+        streamingPlayerRef.current = null
+      }
       if (wavUrlRef.current) {
         URL.revokeObjectURL(wavUrlRef.current)
         wavUrlRef.current = null
@@ -399,6 +419,10 @@ export function useJianpuWorker(
   }, [source, debounceMs])
 
   const stopMeasurePlayback = useCallback(() => {
+    if (streamingPlayerRef.current) {
+      streamingPlayerRef.current.stop()
+      streamingPlayerRef.current = null
+    }
     if (currentMeasureAudioRef.current) {
       currentMeasureAudioRef.current.pause()
       currentMeasureAudioRef.current = null
@@ -432,8 +456,41 @@ export function useJianpuWorker(
 
   const playFromCurrentMeasure = useCallback(() => {
     if (selectedMeasureRange === null || measureSpans.length === 0) return
-    playMeasureRange(selectedMeasureRange.start, measureSpans.length - 1)
-  }, [selectedMeasureRange, measureSpans, playMeasureRange])
+    const worker = workerRef.current
+    if (!worker) return
+
+    if (streamingPlayerRef.current) {
+      streamingPlayerRef.current.stop()
+      streamingPlayerRef.current = null
+    }
+    if (currentMeasureAudioRef.current) {
+      currentMeasureAudioRef.current.pause()
+      currentMeasureAudioRef.current = null
+    }
+
+    const id = ++streamingRequestIdRef.current
+    latestStreamingIdRef.current = id
+    streamingFirstChunkReceivedRef.current = false
+    setMeasureAudioGenerating(true)
+    setMeasureAudioTimes([])
+
+    const player = new MeasureAudioStreamPlayer()
+    player.start()
+    player.getClock().addEventListener('ended', () => {
+      if (latestStreamingIdRef.current !== id) return
+      setMeasureAudioPlaying(false)
+    })
+    streamingPlayerRef.current = player
+
+    worker.postMessage({
+      type: 'streamMeasureRangeAudio',
+      source: sourceRef.current,
+      id,
+      startMeasureIndex: selectedMeasureRange.start,
+      endMeasureIndex: measureSpans.length - 1,
+      enabledTracks: enabledTracksRef.current,
+    } satisfies WorkerRequest)
+  }, [selectedMeasureRange, measureSpans])
 
   const previewInstrument = useCallback((programNumber: number) => {
     const worker = workerRef.current

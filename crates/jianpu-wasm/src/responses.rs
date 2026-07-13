@@ -11,6 +11,10 @@ use jianpu_generator::write_split_wavs_from_source;
 use jianpu_generator::write_wav_for_measure_range_from_source;
 #[cfg(feature = "wav")]
 use jianpu_generator::write_wav_from_source_filtered;
+#[cfg(feature = "wav")]
+use jianpu_generator::{
+    render_pcm_streaming_for_measure_range_from_source, MeasureRangeStreamingRequest,
+};
 use jianpu_generator::{
     compile, find_measure_at_byte_offset, list_measure_spans_from_source,
     render_documents_from_source_filtered_with_lyrics, render_documents_with_highlight_range,
@@ -31,6 +35,8 @@ use crate::types::GenerateSplitWavsResponse;
 use crate::types::GenerateWavResponse;
 #[cfg(feature = "wav")]
 use crate::types::ListMeasureTimesResponse;
+#[cfg(feature = "wav")]
+use crate::types::RenderPcmStreamingResponse;
 use crate::types::{
     diagnostic_from_diagnostic, diagnostic_from_error, group_diagnostics_into_view_zones,
     ListMeasureSpansResponse, MeasureAtOffsetResponse, MeasureSpanOut, RenderResponse,
@@ -40,6 +46,8 @@ use crate::types::{
 use crate::types::{GenerateMidiResponse, GenerateSplitMidisResponse};
 #[cfg(feature = "pdf")]
 use crate::types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
+#[cfg(feature = "wav")]
+use wasm_bindgen::JsValue;
 
 pub(crate) fn render_response(
     source: &str,
@@ -232,6 +240,50 @@ pub(crate) fn generate_wav_for_measure_range_response(
     ) {
         Ok(wav) => GenerateWavResponse::Ok { wav },
         Err(e) => GenerateWavResponse::Err {
+            diagnostics: vec![diagnostic_from_error(source, &e)],
+        },
+    }
+}
+
+/// Bridges the Rust streaming `on_chunk` closure to a JS callback, invoked
+/// once per synthesized measure while still inside the (synchronous,
+/// blocking) wasm call.
+///
+/// Uses the owned/copying `Float32Array::from(&[f32])` rather than the
+/// unsafe aliasing `Float32Array::view`, since wasm linear memory can grow
+/// mid-call (e.g. from further synth allocations) and invalidate any aliased
+/// view before the JS side reads it.
+#[cfg(feature = "wav")]
+#[allow(clippy::needless_pass_by_value)]
+pub(crate) fn render_pcm_streaming_for_measure_range_response(
+    source: &str,
+    start_index: usize,
+    end_index: usize,
+    enabled_tracks: Option<&[String]>,
+    soundfont: Vec<u8>,
+    on_chunk: js_sys::Function,
+) -> RenderPcmStreamingResponse {
+    let result = render_pcm_streaming_for_measure_range_from_source(
+        &MeasureRangeStreamingRequest {
+            source,
+            filename: "input.jianpu",
+            measure_range: start_index..=end_index,
+            enabled_tracks,
+            sf2_bytes: &soundfont,
+            instruments: &[],
+        },
+        &mut |measure_index, chunk, is_final| {
+            let _: Result<JsValue, JsValue> = on_chunk.call3(
+                &JsValue::NULL,
+                &JsValue::from(measure_index as u32),
+                &js_sys::Float32Array::from(chunk),
+                &JsValue::from(is_final),
+            );
+        },
+    );
+    match result {
+        Ok(()) => RenderPcmStreamingResponse::Ok {},
+        Err(e) => RenderPcmStreamingResponse::Err {
             diagnostics: vec![diagnostic_from_error(source, &e)],
         },
     }

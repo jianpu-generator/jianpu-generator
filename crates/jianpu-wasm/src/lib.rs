@@ -11,6 +11,7 @@ use responses::{
     generate_instrument_preview_wav_response, generate_split_wavs_response,
     generate_wav_for_measure_range_response, generate_wav_response,
     list_measure_times_for_range_response, list_measure_times_response,
+    render_pcm_streaming_for_measure_range_response,
 };
 #[cfg(feature = "midi")]
 use responses::{generate_midi_response, generate_split_midis_response};
@@ -26,6 +27,8 @@ use types::GenerateSplitWavsResponse;
 use types::GenerateWavResponse;
 #[cfg(feature = "wav")]
 use types::ListMeasureTimesResponse;
+#[cfg(feature = "wav")]
+use types::RenderPcmStreamingResponse;
 #[cfg(feature = "midi")]
 use types::{GenerateMidiResponse, GenerateSplitMidisResponse};
 #[cfg(feature = "pdf")]
@@ -210,6 +213,46 @@ pub fn generate_wav_for_measure_range(
         end_index,
         enabled_tracks.as_deref(),
         soundfont,
+    )
+}
+
+/// Synthesize a consecutive measure range as streamed PCM, invoking `on_chunk`
+/// once per measure as it finishes synthesizing instead of waiting for the
+/// whole range.
+///
+/// Available only when the `wav` feature is enabled at build time.
+/// `on_chunk` is called as `(measureIndex: number, samples: Float32Array,
+/// isFinal: boolean)`, where `samples` is interleaved stereo `[l0, r0, l1,
+/// r1, ...]` and `measureIndex` is relative to `start_index` (i.e. `0` is the
+/// range's first measure). `isFinal` is `true` only for the range's last
+/// measure, which also carries the trailing reverb tail. This call is
+/// synchronous and blocking; `on_chunk` fires synchronously on the calling
+/// thread while it runs.
+///
+/// Returns:
+/// - `{ "status": "ok" }` once all chunks have been delivered
+/// - `{ "status": "err", "diagnostics": [...] }`
+///
+/// `soundfont` is the raw SF2 soundfont bytes used for synthesis. They are not
+/// embedded in the WASM binary and must be supplied by the caller.
+#[cfg(feature = "wav")]
+#[allow(clippy::needless_pass_by_value)]
+#[wasm_bindgen]
+pub fn render_pcm_streaming_for_measure_range(
+    source: &str,
+    start_index: usize,
+    end_index: usize,
+    enabled_tracks: Option<Vec<String>>,
+    soundfont: Vec<u8>,
+    on_chunk: js_sys::Function,
+) -> RenderPcmStreamingResponse {
+    render_pcm_streaming_for_measure_range_response(
+        source,
+        start_index,
+        end_index,
+        enabled_tracks.as_deref(),
+        soundfont,
+        on_chunk,
     )
 }
 
