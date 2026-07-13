@@ -182,7 +182,11 @@ fn reference_jianpu_renders() {
     let source = include_str!("../../../reference.jianpu");
     let resp = render_response(source, None, None, &[]);
     match resp {
-        RenderResponse::Ok { documents, .. } => {
+        RenderResponse::Ok {
+            documents,
+            diagnostics,
+            ..
+        } => {
             assert!(
                 !documents.is_empty(),
                 "reference.jianpu should render in the wasm path used by the web editor"
@@ -190,6 +194,11 @@ fn reference_jianpu_renders() {
             assert!(
                 !documents[0].elements.is_empty(),
                 "first page should have elements"
+            );
+            assert!(
+                diagnostics.is_empty(),
+                "reference.jianpu should have no errors or warnings, got: {:?}",
+                diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>()
             );
         }
         RenderResponse::Err { diagnostics, .. } => {

@@ -42,6 +42,10 @@ label="Duplicate: repeat last note (x) & bare eighth/sixteenth (_/=)"
 [M] 1 x x __
 [M] _
 
+label="Duplicate: works with tie (1~_)"
+[M] 1~ _0_ 00
+[M] _
+
 
 label="Slur group"
 [M] (1 2) (3 4)
@@ -102,7 +106,7 @@ label="Chord: rest (0) & extension (-)"
 label="Chord: duplicate last chord (x, bare _)"
 [M] 0
 [M] _
-[C] 1 x _ =
+[C] 1 x x _==
 
 label="Lyrics: CJK syllables"
 [M] 1 2 3 4
