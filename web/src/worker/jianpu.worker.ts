@@ -23,6 +23,10 @@ import {
   handleGenerateSplitPdf,
   handleGenerateSplitWav,
 } from './exportMessageHandlers'
+import {
+  handlePreviewInstrument,
+  handlePreviewPercussion,
+} from './previewMessageHandlers'
 
 const generateWav =
   'generate_wav' in jianpuWasm ? jianpuWasm.generate_wav : null
@@ -63,6 +67,11 @@ const generateSplitWavs =
 const generateInstrumentPreviewWav =
   'generate_instrument_preview_wav' in jianpuWasm
     ? jianpuWasm.generate_instrument_preview_wav
+    : null
+
+const generatePercussionPreviewWav =
+  'generate_percussion_preview_wav' in jianpuWasm
+    ? jianpuWasm.generate_percussion_preview_wav
     : null
 
 export type WorkerRequest =
@@ -151,6 +160,7 @@ export type WorkerRequest =
     }
   | { type: 'listMeasureSpans'; source: string; id: number }
   | { type: 'previewInstrument'; id: number; programNumber: number }
+  | { type: 'previewPercussion'; id: number; key: number }
 
 export type WorkerResponse =
   | {
@@ -205,6 +215,8 @@ export type WorkerResponse =
   | { type: 'measureRangeAudioErr'; id: number }
   | { type: 'instrumentPreview'; id: number; wav: ArrayBuffer }
   | { type: 'instrumentPreviewErr'; id: number }
+  | { type: 'percussionPreview'; id: number; wav: ArrayBuffer }
+  | { type: 'percussionPreviewErr'; id: number }
   | { type: 'highlightRangeOk'; id: number; documents: SvgDocumentOut[] }
   | { type: 'highlightRangeErr'; id: number; diagnostics: Diagnostic[] }
   | {
@@ -457,33 +469,12 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'previewInstrument') {
-    if (!generateInstrumentPreviewWav || !loadedSoundfont) {
-      postMessage({
-        type: 'instrumentPreviewErr',
-        id: msg.id,
-      } satisfies WorkerResponse)
-      return
-    }
-    const result = generateInstrumentPreviewWav(
-      msg.programNumber,
-      loadedSoundfont,
-    )
-    if (result.status === 'ok' && result.wav != null) {
-      const wavBuffer = binaryBufferFromResult(result.wav)
-      postMessage(
-        {
-          type: 'instrumentPreview',
-          id: msg.id,
-          wav: wavBuffer,
-        } satisfies WorkerResponse,
-        { transfer: [wavBuffer] },
-      )
-      return
-    }
-    postMessage({
-      type: 'instrumentPreviewErr',
-      id: msg.id,
-    } satisfies WorkerResponse)
+    handlePreviewInstrument(msg, generateInstrumentPreviewWav, loadedSoundfont)
+    return
+  }
+
+  if (msg.type === 'previewPercussion') {
+    handlePreviewPercussion(msg, generatePercussionPreviewWav, loadedSoundfont)
     return
   }
 

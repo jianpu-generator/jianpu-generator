@@ -14,6 +14,7 @@ type LexTimeSigResult = Result<Option<(Spanned<TimedLexToken>, usize)>, LexSoftE
 pub enum LexContext {
     Notes,
     Chords,
+    Percussion,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -171,6 +172,7 @@ fn lex_one_char(
         '~' if !at_word_boundary || matches!(line[..i].chars().last(), Some('r' | '_' | '=')) => {
             emit_single_token(TimedLexToken::Tilde, start, len, false)
         }
+        'x' if context == LexContext::Percussion => Ok(chord_head_start_token(start, len)),
         _ if !at_word_boundary => Ok((None, len, false)),
         _ if at_word_boundary && context == LexContext::Chords => {
             Ok(chord_head_start_token(start, len))

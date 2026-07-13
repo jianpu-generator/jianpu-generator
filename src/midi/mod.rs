@@ -1,11 +1,8 @@
-use midly::num::{u15, u24, u28, u4, u7};
-use midly::{Format, Header, MetaMessage, MidiMessage, Smf, Timing, TrackEvent, TrackEventKind};
-
 use std::collections::HashMap;
 
 use crate::ast::grouped::{NoteEvent, Score};
 use crate::ast::parsed::{Accidental, KeyChange, NoteName, PartKind};
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
+use crate::error::IrrecoverableError;
 
 pub use crate::ast::parsed::JianPuPitch;
 
@@ -17,6 +14,8 @@ pub(crate) use midi_notes::{
 pub(crate) const TPQ: u16 = 480; // ticks per quarter note
 const VELOCITY: u8 = 80;
 const CHORD_CHANNEL: u8 = 3;
+const PERCUSSION_CHANNEL: u8 = 9;
+const GM_STANDARD_KIT_PROGRAM: u8 = 0;
 
 fn part_index_to_midi_channel(index: usize) -> u8 {
     // Skip CHORD_CHANNEL (3) and GM drum channel (9).
@@ -27,6 +26,22 @@ fn part_index_to_midi_channel(index: usize) -> u8 {
     } else {
         after_chord
     }
+}
+
+fn is_melodic(kind: PartKind) -> bool {
+    matches!(kind, PartKind::Notes | PartKind::NotesWithLyrics)
+}
+
+fn parts_matching(
+    measure: &crate::ast::grouped::MultiPartMeasure,
+    matches: impl Fn(PartKind) -> bool,
+) -> Vec<&crate::ast::grouped::PartSlice> {
+    measure
+        .parts
+        .iter()
+        .map(|r| r.slice())
+        .filter(|p| matches(p.kind))
+        .collect()
 }
 
 pub(crate) struct RawEvent {
@@ -67,62 +82,106 @@ enum EventResolution {
     },
 }
 
-pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
-    let mut raw: Vec<RawEvent> = Vec::new();
+/// Pending-tie tracking for all three channel groups (melodic, chord, percussion),
+/// bundled so `process_measure` can thread them through as a single argument.
+#[derive(Default)]
+pub(crate) struct TieState {
+    per_part_ties: Vec<(u8, HashMap<u8, u32>)>,
+    chord_ties: Vec<HashMap<u8, u32>>,
+    percussion_ties: HashMap<u8, u32>,
+}
 
-    if let Some(first_measure) = score.measures.first() {
-        for (index, row) in first_measure
-            .parts
-            .iter()
-            .filter(|r| r.slice().kind != PartKind::Chords)
-            .enumerate()
-        {
-            let channel = part_index_to_midi_channel(index);
-            let part = row.slice();
-            raw.push(RawEvent {
-                tick: 0,
-                kind: RawKind::ProgramChange {
-                    channel,
-                    program: part.soundfont.0,
-                },
-            });
-            raw.push(RawEvent {
-                tick: 0,
-                kind: RawKind::ControlChange {
-                    channel,
-                    controller: 7,
-                    value: (part.volume as u32 * 127 / 100) as u8,
-                },
-            });
+impl TieState {
+    fn flush(mut self, raw: &mut Vec<RawEvent>, current_tick: u32) {
+        flush_pending_ties(raw, self.per_part_ties);
+        for ties in &mut self.chord_ties {
+            flush_pending_ties_at_tick(ties, current_tick, raw, CHORD_CHANNEL);
         }
+        flush_pending_ties_at_tick(
+            &mut self.percussion_ties,
+            current_tick,
+            raw,
+            PERCUSSION_CHANNEL,
+        );
     }
-    if let Some(first_measure) = score.measures.first() {
-        let chord_part = first_measure
-            .parts
-            .iter()
-            .find(|r| r.slice().kind == PartKind::Chords);
-        let chord_program = chord_part.map(|r| r.slice().soundfont.0).unwrap_or(0);
-        let chord_volume = chord_part.map(|r| r.slice().volume).unwrap_or(100);
+}
+
+fn write_program_change_preamble(score: &Score, raw: &mut Vec<RawEvent>) {
+    let Some(first_measure) = score.measures.first() else {
+        return;
+    };
+
+    for (index, row) in first_measure
+        .parts
+        .iter()
+        .filter(|r| is_melodic(r.slice().kind))
+        .enumerate()
+    {
+        let channel = part_index_to_midi_channel(index);
+        let part = row.slice();
         raw.push(RawEvent {
             tick: 0,
             kind: RawKind::ProgramChange {
-                channel: CHORD_CHANNEL,
-                program: chord_program,
+                channel,
+                program: part.soundfont.0,
             },
         });
         raw.push(RawEvent {
             tick: 0,
             kind: RawKind::ControlChange {
-                channel: CHORD_CHANNEL,
+                channel,
                 controller: 7,
-                value: (chord_volume as u32 * 127 / 100) as u8,
+                value: (part.volume as u32 * 127 / 100) as u8,
             },
         });
     }
 
+    let chord_part = first_measure
+        .parts
+        .iter()
+        .find(|r| r.slice().kind == PartKind::Chords);
+    let chord_program = chord_part.map(|r| r.slice().soundfont.0).unwrap_or(0);
+    let chord_volume = chord_part.map(|r| r.slice().volume).unwrap_or(100);
+    raw.push(RawEvent {
+        tick: 0,
+        kind: RawKind::ProgramChange {
+            channel: CHORD_CHANNEL,
+            program: chord_program,
+        },
+    });
+    raw.push(RawEvent {
+        tick: 0,
+        kind: RawKind::ControlChange {
+            channel: CHORD_CHANNEL,
+            controller: 7,
+            value: (chord_volume as u32 * 127 / 100) as u8,
+        },
+    });
+
+    let has_percussion = first_measure
+        .parts
+        .iter()
+        .any(|r| r.slice().kind == PartKind::Percussion);
+    if has_percussion {
+        // Percussion parts share channel 9; per-part channel volume (CC7) isn't
+        // meaningful on a shared channel without a per-note-velocity refactor, so it's
+        // skipped here. Exactly one Standard Kit program change covers all of them.
+        raw.push(RawEvent {
+            tick: 0,
+            kind: RawKind::ProgramChange {
+                channel: PERCUSSION_CHANNEL,
+                program: GM_STANDARD_KIT_PROGRAM,
+            },
+        });
+    }
+}
+
+pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
+    let mut raw: Vec<RawEvent> = Vec::new();
+    write_program_change_preamble(score, &mut raw);
+
     let mut current_tick: u32 = 0;
-    let mut per_part_ties: Vec<(u8, HashMap<u8, u32>)> = Vec::new();
-    let mut chord_ties: Vec<HashMap<u8, u32>> = Vec::new();
+    let mut tie_state = TieState::default();
     let mut active_key = default_active_key();
 
     for measure in &score.measures {
@@ -130,16 +189,12 @@ pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
             measure,
             current_tick,
             &mut raw,
-            &mut per_part_ties,
-            &mut chord_ties,
+            &mut tie_state,
             &mut active_key,
         )?;
     }
 
-    flush_pending_ties(&mut raw, per_part_ties);
-    for ties in &mut chord_ties {
-        flush_pending_ties_at_tick(ties, current_tick, &mut raw, CHORD_CHANNEL);
-    }
+    tie_state.flush(&mut raw, current_tick);
     sort_raw_events(&mut raw);
 
     let track = build_track_events(&raw);
@@ -188,10 +243,14 @@ pub(crate) fn process_measure(
     measure: &crate::ast::grouped::MultiPartMeasure,
     current_tick: u32,
     raw: &mut Vec<RawEvent>,
-    per_part_ties: &mut Vec<(u8, HashMap<u8, u32>)>,
-    chord_ties: &mut Vec<HashMap<u8, u32>>,
+    tie_state: &mut TieState,
     active_key: &mut KeyChange,
 ) -> Result<u32, IrrecoverableError> {
+    let TieState {
+        per_part_ties,
+        chord_ties,
+        percussion_ties,
+    } = tie_state;
     if let Some(bpm) = measure.bpm {
         let micros = 60_000_000 / bpm;
         raw.push(RawEvent {
@@ -206,19 +265,8 @@ pub(crate) fn process_measure(
 
     let mut measure_duration: u32 = 0;
 
-    let notes_parts: Vec<&crate::ast::grouped::PartSlice> = measure
-        .parts
-        .iter()
-        .filter_map(|r| {
-            // Ditto parts still sound — only rendering skips them.
-            let p = r.slice();
-            if p.kind != PartKind::Chords {
-                Some(p)
-            } else {
-                None
-            }
-        })
-        .collect();
+    // Ditto parts still sound — only rendering skips them.
+    let notes_parts = parts_matching(measure, is_melodic);
 
     while per_part_ties.len() < notes_parts.len() {
         let channel = part_index_to_midi_channel(per_part_ties.len());
@@ -233,18 +281,7 @@ pub(crate) fn process_measure(
         }
     }
 
-    let chord_parts: Vec<&crate::ast::grouped::PartSlice> = measure
-        .parts
-        .iter()
-        .filter_map(|r| {
-            let p = r.slice();
-            if p.kind == PartKind::Chords {
-                Some(p)
-            } else {
-                None
-            }
-        })
-        .collect();
+    let chord_parts = parts_matching(measure, |kind| kind == PartKind::Chords);
 
     while chord_ties.len() < chord_parts.len() {
         chord_ties.push(HashMap::new());
@@ -255,6 +292,19 @@ pub(crate) fn process_measure(
             process_chord_events(&part.notes.events, current_tick, raw, active_key, ties);
         if chord_duration > measure_duration {
             measure_duration = chord_duration;
+        }
+    }
+
+    let percussion_parts = parts_matching(measure, |kind| kind == PartKind::Percussion);
+
+    for part in &percussion_parts {
+        // All percussion parts share channel 9, so their tied notes are tracked in one
+        // shared map keyed by GM key number, which is unique per percussion part by
+        // construction.
+        let percussion_duration =
+            process_percussion_events(part, current_tick, raw, percussion_ties);
+        if percussion_duration > measure_duration {
+            measure_duration = percussion_duration;
         }
     }
 
@@ -289,7 +339,7 @@ fn process_measure_notes(
             NoteEvent::Rest(r) => EventResolution::Rest {
                 duration: r.duration,
             },
-            NoteEvent::Chord(_) => EventResolution::Skip,
+            NoteEvent::Chord(_) | NoteEvent::Percussion(_) => EventResolution::Skip,
         },
     );
     Ok(duration)
@@ -384,7 +434,35 @@ fn process_chord_events(
             NoteEvent::Rest(r) => EventResolution::Rest {
                 duration: r.duration,
             },
-            NoteEvent::Note(_) => EventResolution::Skip,
+            NoteEvent::Note(_) | NoteEvent::Percussion(_) => EventResolution::Skip,
+        },
+    )
+}
+
+fn process_percussion_events(
+    part: &crate::ast::grouped::PartSlice,
+    current_tick: u32,
+    raw: &mut Vec<RawEvent>,
+    percussion_ties: &mut HashMap<u8, u32>,
+) -> u32 {
+    process_events_with_ties(
+        &part.notes.events,
+        current_tick,
+        raw,
+        percussion_ties,
+        PERCUSSION_CHANNEL,
+        |event| match event {
+            // The soundfont-string number is reinterpreted as a fixed GM percussion key
+            // (not a MIDI program number) for percussion parts.
+            NoteEvent::Percussion(p) => EventResolution::Notes {
+                midi_notes: vec![part.soundfont.0],
+                duration: p.duration,
+                slur: p.tie_to_next(),
+            },
+            NoteEvent::Rest(r) => EventResolution::Rest {
+                duration: r.duration,
+            },
+            NoteEvent::Note(_) | NoteEvent::Chord(_) => EventResolution::Skip,
         },
     )
 }
@@ -442,103 +520,10 @@ fn flush_pending_ties(raw: &mut Vec<RawEvent>, per_part_ties: Vec<(u8, HashMap<u
     }
 }
 
-fn sort_raw_events(raw: &mut [RawEvent]) {
-    raw.sort_by_key(|e| {
-        let priority: u8 = match e.kind {
-            RawKind::Tempo(_) | RawKind::ProgramChange { .. } | RawKind::ControlChange { .. } => 0,
-            RawKind::NoteOff { .. } => 1,
-            RawKind::NoteOn { .. } => 2,
-        };
-        (e.tick, priority)
-    });
-}
+mod smf_writer;
+use smf_writer::{build_track_events, sort_raw_events, write_smf};
 
-fn build_track_events(raw: &[RawEvent]) -> Vec<TrackEvent<'static>> {
-    let mut track: Vec<TrackEvent> = Vec::new();
-    let mut last_tick: u32 = 0;
-
-    for event in raw {
-        let delta = event.tick - last_tick;
-        last_tick = event.tick;
-        track.push(raw_event_to_track_event(event, delta));
-    }
-
-    track.push(TrackEvent {
-        delta: u28::from(0u32),
-        kind: TrackEventKind::Meta(MetaMessage::EndOfTrack),
-    });
-
-    track
-}
-
-fn raw_event_to_track_event(event: &RawEvent, delta: u32) -> TrackEvent<'static> {
-    match &event.kind {
-        RawKind::Tempo(micros) => TrackEvent {
-            delta: u28::from(delta),
-            kind: TrackEventKind::Meta(MetaMessage::Tempo(u24::from(*micros))),
-        },
-        RawKind::ProgramChange { channel, program } => TrackEvent {
-            delta: u28::from(delta),
-            kind: TrackEventKind::Midi {
-                channel: u4::from(*channel),
-                message: MidiMessage::ProgramChange {
-                    program: u7::from(*program),
-                },
-            },
-        },
-        RawKind::NoteOn { channel, note } => TrackEvent {
-            delta: u28::from(delta),
-            kind: TrackEventKind::Midi {
-                channel: u4::from(*channel),
-                message: MidiMessage::NoteOn {
-                    key: u7::from(*note),
-                    vel: u7::from(VELOCITY),
-                },
-            },
-        },
-        RawKind::NoteOff { channel, note } => TrackEvent {
-            delta: u28::from(delta),
-            kind: TrackEventKind::Midi {
-                channel: u4::from(*channel),
-                message: MidiMessage::NoteOff {
-                    key: u7::from(*note),
-                    vel: u7::from(0u8),
-                },
-            },
-        },
-        RawKind::ControlChange {
-            channel,
-            controller,
-            value,
-        } => TrackEvent {
-            delta: u28::from(delta),
-            kind: TrackEventKind::Midi {
-                channel: u4::from(*channel),
-                message: MidiMessage::Controller {
-                    controller: u7::from(*controller),
-                    value: u7::from(*value),
-                },
-            },
-        },
-    }
-}
-
-fn write_smf(track: Vec<TrackEvent<'static>>) -> Result<Vec<u8>, IrrecoverableError> {
-    let smf = Smf {
-        header: Header {
-            format: Format::SingleTrack,
-            timing: Timing::Metrical(u15::from(TPQ)),
-        },
-        tracks: vec![track],
-    };
-
-    let mut buf = Vec::new();
-    smf.write_std(&mut buf).map_err(|_| {
-        IrrecoverableError::new(IrrecoverableErrorKind::MidiWriteFailed {
-            span: Span::new(0, 0),
-        })
-    })?;
-    Ok(buf)
-}
+#[cfg(test)]
+mod percussion_tests;
 #[cfg(test)]
 mod tests;

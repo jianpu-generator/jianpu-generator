@@ -24,6 +24,7 @@ export interface EditPartsModalProps {
     octaveOffset: number | null,
   ) => void
   previewInstrument: (programNumber: number) => void
+  previewPercussion: (key: number) => void
   stopPreviewInstrument: () => void
   previewAudioPlaying: boolean
 }
@@ -47,6 +48,7 @@ function PartRow({
   onPartDeclarationChange,
   rowIndex,
   previewInstrument,
+  previewPercussion,
   stopPreviewInstrument,
   previewAudioPlaying,
 }: {
@@ -56,6 +58,7 @@ function PartRow({
   onPartDeclarationChange: EditPartsModalProps['onPartDeclarationChange']
   rowIndex: number
   previewInstrument: (programNumber: number) => void
+  previewPercussion: (key: number) => void
   stopPreviewInstrument: () => void
   previewAudioPlaying: boolean
 }) {
@@ -165,6 +168,7 @@ function PartRow({
             <RadixSelectItem value="chords">chords</RadixSelectItem>
             <RadixSelectItem value="notes">notes</RadixSelectItem>
             <RadixSelectItem value="notes+lyrics">notes+lyrics</RadixSelectItem>
+            <RadixSelectItem value="percussion">percussion</RadixSelectItem>
             {!isFirstPart && (
               <RadixSelectItem value="follow">follow</RadixSelectItem>
             )}
@@ -214,12 +218,14 @@ function PartRow({
         <SoundfontSearchModal
           open={searchOpen}
           onOpenChange={setSearchOpen}
+          mode={declaration.mode === 'percussion' ? 'percussion' : 'instrument'}
           currentValue={declaration.soundfont ?? null}
           onSelect={(value) => {
             handleSoundfontChange(value ?? '')
             setSearchOpen(false)
           }}
           previewInstrument={previewInstrument}
+          previewPercussion={previewPercussion}
           stopPreviewInstrument={stopPreviewInstrument}
           previewAudioPlaying={previewAudioPlaying}
         />
@@ -436,6 +442,7 @@ export function EditPartsModal({
   allParts,
   onPartDeclarationChange,
   previewInstrument,
+  previewPercussion,
   stopPreviewInstrument,
   previewAudioPlaying,
 }: EditPartsModalProps) {
@@ -526,6 +533,7 @@ export function EditPartsModal({
                     onPartDeclarationChange={onPartDeclarationChange}
                     rowIndex={index}
                     previewInstrument={previewInstrument}
+                    previewPercussion={previewPercussion}
                     stopPreviewInstrument={stopPreviewInstrument}
                     previewAudioPlaying={previewAudioPlaying}
                   />

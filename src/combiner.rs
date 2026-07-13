@@ -187,7 +187,7 @@ fn build_part_rows(
                         .paired_lyrics
                         .clone()
                         .map(|syllables| Lyrics { syllables }),
-                    PartKind::Chords | PartKind::Notes => None,
+                    PartKind::Chords | PartKind::Notes | PartKind::Percussion => None,
                 };
                 let slice = PartSlice {
                     name: part.name.clone(),

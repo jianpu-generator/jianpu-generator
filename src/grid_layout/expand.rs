@@ -76,6 +76,9 @@ pub(crate) fn expand_measure_elements(
             ElementContent::NoteDash => {
                 push_head(sub_rows, head_sub, grid_col, GridContent::NoteDash);
             }
+            ElementContent::PercussionHit => {
+                push_head(sub_rows, head_sub, grid_col, GridContent::PercussionHit);
+            }
             ElementContent::ChordSymbol(s) => {
                 if let Some(row) = sub_rows.get_mut(head_sub) {
                     row.elements.push(grid_el(

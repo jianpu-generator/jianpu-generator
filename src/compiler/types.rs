@@ -52,6 +52,7 @@ pub enum ElementContent {
         dotted: bool,
     },
     ChordSymbol(String),
+    PercussionHit,
     Underline {
         from_column: u32,
         to_column: u32,

@@ -63,6 +63,9 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
 }
 
 #[cfg(test)]
+mod percussion_tests;
+
+#[cfg(test)]
 mod tests;
 
 #[cfg(test)]

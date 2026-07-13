@@ -24,6 +24,12 @@ fn timed_beat_fields(event: &ScoreEvent) -> Option<TimedBeatFields> {
             group_membership: chord.group_membership,
             tie_to_next: chord.tie_to_next(),
         }),
+        ScoreEvent::PercussionHit(hit) => Some(TimedBeatFields {
+            dotted: hit.dotted,
+            duration: hit.duration,
+            group_membership: hit.group_membership,
+            tie_to_next: hit.tie_to_next(),
+        }),
         ScoreEvent::Rest(rest) => Some(TimedBeatFields {
             dotted: rest.dotted,
             duration: rest.duration,
@@ -94,7 +100,10 @@ pub fn validate_measure_grouping(
         };
 
         match &event.value {
-            ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::Rest(_) => {
+            ScoreEvent::Note(_)
+            | ScoreEvent::Chord(_)
+            | ScoreEvent::PercussionHit(_)
+            | ScoreEvent::Rest(_) => {
                 let Some(fields) = timed_beat_fields(&event.value) else {
                     index += 1;
                     continue;
@@ -129,6 +138,7 @@ fn timed_head_duration(events: &[Spanned<ScoreEvent>], start: usize) -> u32 {
     match events.get(start).map(|e| &e.value) {
         Some(ScoreEvent::Note(note)) => note.duration,
         Some(ScoreEvent::Chord(chord)) => chord.duration,
+        Some(ScoreEvent::PercussionHit(hit)) => hit.duration,
         Some(ScoreEvent::Rest(rest)) => rest.duration,
         _ => 0,
     }
@@ -141,6 +151,7 @@ fn timed_cluster_duration(events: &[Spanned<ScoreEvent>], start: usize) -> u32 {
     let mut duration = match &event.value {
         ScoreEvent::Note(note) => note.duration,
         ScoreEvent::Chord(chord) => chord.duration,
+        ScoreEvent::PercussionHit(hit) => hit.duration,
         ScoreEvent::Rest(rest) => rest.duration,
         _ => return 0,
     };
@@ -178,7 +189,10 @@ fn next_timed_index(events: &[Spanned<ScoreEvent>], start: usize) -> Option<usiz
         if let Some(event) = events.get(index) {
             if matches!(
                 event.value,
-                ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::Rest(_)
+                ScoreEvent::Note(_)
+                    | ScoreEvent::Chord(_)
+                    | ScoreEvent::PercussionHit(_)
+                    | ScoreEvent::Rest(_)
             ) {
                 return Some(index);
             }
@@ -211,6 +225,7 @@ fn validate_dotted_eighth_tail(
     let tail_duration = match &event.value {
         ScoreEvent::Note(note) => note.duration,
         ScoreEvent::Chord(chord) => chord.duration,
+        ScoreEvent::PercussionHit(hit) => hit.duration,
         ScoreEvent::Rest(rest) => rest.duration,
         _ => {
             return Ok(Some(Diagnostic::Error(

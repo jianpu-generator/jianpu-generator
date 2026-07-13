@@ -63,6 +63,11 @@ fn apply_depth_to_event(event: &mut ScoreEvent, membership: u8, continuation: u8
             c.group_continuation = c.group_continuation.saturating_add(continuation);
             c.slur = c.group_continuation > 0;
         }
+        ScoreEvent::PercussionHit(p) => {
+            p.group_membership = p.group_membership.saturating_add(membership);
+            p.group_continuation = p.group_continuation.saturating_add(continuation);
+            p.slur = p.group_continuation > 0;
+        }
         ScoreEvent::Rest(r) => {
             r.group_membership = r.group_membership.saturating_add(membership);
             r.group_continuation = r.group_continuation.saturating_add(continuation);
@@ -88,9 +93,12 @@ pub(super) fn annotate_slur_close_via_extension(group_slice: &mut [DepthEvent]) 
     }
 
     // Find the last Note or Chord in the group slice — this is the note being extended.
-    let last_note_idx = group_slice
-        .iter()
-        .rposition(|e| matches!(e.spanned.value, ScoreEvent::Note(_) | ScoreEvent::Chord(_)));
+    let last_note_idx = group_slice.iter().rposition(|e| {
+        matches!(
+            e.spanned.value,
+            ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::PercussionHit(_)
+        )
+    });
 
     let Some(note_idx) = last_note_idx else {
         return;
@@ -111,6 +119,7 @@ pub(super) fn annotate_slur_close_via_extension(group_slice: &mut [DepthEvent]) 
     let note_initial_duration = match &note_event.spanned.value {
         ScoreEvent::Note(n) => n.duration,
         ScoreEvent::Chord(c) => c.duration,
+        ScoreEvent::PercussionHit(p) => p.duration,
         _ => return,
     };
 
@@ -123,6 +132,7 @@ pub(super) fn annotate_slur_close_via_extension(group_slice: &mut [DepthEvent]) 
     match &mut note_event.spanned.value {
         ScoreEvent::Note(n) => n.slur_group_close_at_duration = Some(close_offset),
         ScoreEvent::Chord(c) => c.slur_group_close_at_duration = Some(close_offset),
+        ScoreEvent::PercussionHit(p) => p.slur_group_close_at_duration = Some(close_offset),
         _ => {}
     }
 }

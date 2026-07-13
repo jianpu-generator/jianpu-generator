@@ -447,6 +447,18 @@ export function useJianpuWorker(
     } satisfies WorkerRequest)
   }, [])
 
+  const previewPercussion = useCallback((key: number) => {
+    const worker = workerRef.current
+    if (!worker) return
+    const id = ++previewAudioRequestIdRef.current
+    latestPreviewAudioIdRef.current = id
+    worker.postMessage({
+      type: 'previewPercussion',
+      id,
+      key,
+    } satisfies WorkerRequest)
+  }, [])
+
   const stopPreviewInstrument = useCallback(() => {
     if (currentPreviewAudioRef.current) {
       currentPreviewAudioRef.current.pause()
@@ -559,6 +571,7 @@ export function useJianpuWorker(
     measureSpans,
     sectionRanges,
     previewInstrument,
+    previewPercussion,
     stopPreviewInstrument,
     previewAudioPlaying,
     updatePartDeclaration,

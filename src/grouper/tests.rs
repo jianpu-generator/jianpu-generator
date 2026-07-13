@@ -39,7 +39,9 @@ fn extension_adds_to_previous_note_duration() {
     ));
     match &first_part_notes(&score, 0)[0] {
         NoteEvent::Note(n) => assert_eq!(n.duration, 8),
-        NoteEvent::Rest(_) | NoteEvent::Chord(_) => panic!("expected Note"),
+        NoteEvent::Rest(_) | NoteEvent::Chord(_) | NoteEvent::Percussion(_) => {
+            panic!("expected Note")
+        }
     }
 }
 
@@ -365,7 +367,9 @@ fn standalone_tie_marker_after_extension_that_flushes_measure() {
     let notes_m0 = first_part_notes(&score, 0);
     match notes_m0.last().unwrap() {
         NoteEvent::Note(n) => assert!(n.slur, "note 6 in measure 0 should be tied"),
-        NoteEvent::Rest(_) | NoteEvent::Chord(_) => panic!("expected Note"),
+        NoteEvent::Rest(_) | NoteEvent::Chord(_) | NoteEvent::Percussion(_) => {
+            panic!("expected Note")
+        }
     }
 }
 
@@ -382,11 +386,15 @@ fn standalone_tie_marker_sets_tie_on_preceding_note() {
             assert_eq!(n.duration, 8, "note 6 should be extended to 2 beats");
             assert!(n.slur, "note 6 should have tie=true");
         }
-        NoteEvent::Rest(_) | NoteEvent::Chord(_) => panic!("expected Note"),
+        NoteEvent::Rest(_) | NoteEvent::Chord(_) | NoteEvent::Percussion(_) => {
+            panic!("expected Note")
+        }
     }
     match &notes[1] {
         NoteEvent::Note(n) => assert_eq!(n.pitch, JianPuPitch::Seven),
-        NoteEvent::Rest(_) | NoteEvent::Chord(_) => panic!("expected Note"),
+        NoteEvent::Rest(_) | NoteEvent::Chord(_) | NoteEvent::Percussion(_) => {
+            panic!("expected Note")
+        }
     }
 }
 
@@ -455,7 +463,9 @@ fn chord_part_produces_one_chord_event_per_measure() {
         NoteEvent::Chord(c) => {
             assert_eq!(c.duration, 16); // 4 tokens * 4 quarter-beats
         }
-        NoteEvent::Note(_) | NoteEvent::Rest(_) => panic!("expected Chord event"),
+        NoteEvent::Note(_) | NoteEvent::Rest(_) | NoteEvent::Percussion(_) => {
+            panic!("expected Chord event")
+        }
     }
 }
 

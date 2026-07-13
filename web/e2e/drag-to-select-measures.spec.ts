@@ -33,10 +33,10 @@ test('drag from measure 1 to measure 3 selects measures 1–3', async ({
   // We prime measureSpans by clicking into the editor at a note line and
   // waiting for the play button to display a measure label — that confirms
   // the worker's measureSpans response has been processed.
-  // Line 18 of reference.jianpu is "[M] 1 2 3 0" (measure index 1).
+  // Line 20 of reference.jianpu is "[M] 1 2 3 0" (measure index 1).
   await focusEditor(page)
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('18')
+  await page.keyboard.type('20')
   await page.keyboard.press('Enter')
   // Wait for debounce (300 ms) + worker round-trip, then for React to render
   // the play button with the measure label.
@@ -131,7 +131,7 @@ test('drag from measure 0 to measure 3 selects exactly 4 measures (not 5)', asyn
   // and wait for the play button to confirm measureSpans are loaded.
   await focusEditor(page)
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('18')
+  await page.keyboard.type('20')
   await page.keyboard.press('Enter')
   await expect(page.locator('button.play-measure-btn')).toHaveText(/Measure/, {
     timeout: 5_000,

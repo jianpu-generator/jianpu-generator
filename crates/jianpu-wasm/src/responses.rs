@@ -285,6 +285,20 @@ pub(crate) fn generate_instrument_preview_wav_response(
     }
 }
 
+#[cfg(feature = "wav")]
+#[allow(clippy::needless_pass_by_value)]
+pub(crate) fn generate_percussion_preview_wav_response(
+    key: u8,
+    soundfont: Vec<u8>,
+) -> GenerateWavResponse {
+    match wav::write_percussion_preview_wav(key, &soundfont) {
+        Ok(wav) => GenerateWavResponse::Ok { wav },
+        Err(e) => GenerateWavResponse::Err {
+            diagnostics: vec![diagnostic_from_error("", &e)],
+        },
+    }
+}
+
 #[cfg(feature = "pdf")]
 pub(crate) fn make_pdf_fonts(
     sans_serif_sc: Vec<u8>,

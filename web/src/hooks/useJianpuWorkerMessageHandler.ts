@@ -245,7 +245,7 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       return
     }
 
-    if (msg.type === 'instrumentPreview') {
+    if (msg.type === 'instrumentPreview' || msg.type === 'percussionPreview') {
       if (msg.id !== deps.latestPreviewAudioIdRef.current) return
       const url = URL.createObjectURL(
         new Blob([msg.wav], { type: 'audio/wav' }),

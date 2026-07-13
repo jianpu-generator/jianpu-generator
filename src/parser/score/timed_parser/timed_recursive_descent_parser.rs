@@ -188,7 +188,10 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
             let is_chord_tie = slice
                 .iter()
                 .any(|e| matches!(e.spanned.value, ScoreEvent::Chord(_)));
-            if is_note_tie || is_chord_tie {
+            let is_percussion_tie = slice
+                .iter()
+                .any(|e| matches!(e.spanned.value, ScoreEvent::PercussionHit(_)));
+            if is_note_tie || is_chord_tie || is_percussion_tie {
                 // A `~` glued directly after a repeat atom (`r`/`_`/`=`) never goes through
                 // `parse_duration_suffixes` — that's where `tie_to_next_span` normally gets
                 // recorded while scanning a note's own suffix characters — so the tied event
@@ -200,6 +203,9 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
                         }
                         ScoreEvent::Chord(chord) if chord.tie_to_next_span.is_none() => {
                             chord.tie_to_next_span = Some(tilde_span);
+                        }
+                        ScoreEvent::PercussionHit(hit) if hit.tie_to_next_span.is_none() => {
+                            hit.tie_to_next_span = Some(tilde_span);
                         }
                         _ => {}
                     }
@@ -300,8 +306,14 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
             if let ScoreEvent::Chord(ref mut chord) = event {
                 chord.tie_to_next_span = Some(tie_span);
             }
+            if let ScoreEvent::PercussionHit(ref mut hit) = event {
+                hit.tie_to_next_span = Some(tie_span);
+            }
         }
-        if matches!(event, ScoreEvent::Note(_) | ScoreEvent::Chord(_)) {
+        if matches!(
+            event,
+            ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::PercussionHit(_)
+        ) {
             self.stack.last_pitched_event = Some(event.clone());
         }
 
@@ -368,6 +380,15 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
                 chord.group_continuation = 0;
                 chord.slur = false;
                 chord.slur_group_close_at_duration = None;
+            }
+            ScoreEvent::PercussionHit(hit) => {
+                hit.duration = duration;
+                hit.dotted = false;
+                hit.tie_to_next_span = None;
+                hit.group_membership = 0;
+                hit.group_continuation = 0;
+                hit.slur = false;
+                hit.slur_group_close_at_duration = None;
             }
             _ => {}
         }

@@ -43,6 +43,7 @@ pub enum PartKind {
     Chords,
     Notes,
     NotesWithLyrics,
+    Percussion,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -64,6 +65,7 @@ impl PartDecl {
             PartKind::Chords => &[ScoreLineRole::Chord],
             PartKind::Notes => &[ScoreLineRole::Notes],
             PartKind::NotesWithLyrics => &[ScoreLineRole::Notes, ScoreLineRole::Lyrics],
+            PartKind::Percussion => &[ScoreLineRole::Notes],
         }
     }
 }
@@ -169,6 +171,7 @@ pub struct ParsedMetadata {
 pub enum ScoreEvent {
     Note(ParsedNote),
     Chord(ParsedChordNote),
+    PercussionHit(ParsedPercussionHit),
     Rest(ParsedRest),
     BpmChange(u32),
     KeyChange(KeyChange),
@@ -221,6 +224,29 @@ pub struct ParsedChordNote {
     pub group_continuation: u8,
     pub dotted: bool,
     pub slur_group_close_at_duration: Option<u32>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParsedPercussionHit {
+    /// Duration in quarter-beats. For dotted hits this already includes the added half-value.
+    pub duration: u32,
+    /// Whether this hit is tied/slurred to the next hit (from a `(…)` group).
+    pub slur: bool,
+    /// Source span of the `~` suffix when this hit is tied to the next hit.
+    pub tie_to_next_span: Option<Span>,
+    /// Number of nested `(…)` groups this hit belongs to.
+    pub group_membership: u8,
+    /// Number of those groups that continue past this hit.
+    pub group_continuation: u8,
+    /// Whether `.` was present as a dotted-hit suffix.
+    pub dotted: bool,
+    pub slur_group_close_at_duration: Option<u32>,
+}
+
+impl ParsedPercussionHit {
+    pub fn tie_to_next(&self) -> bool {
+        self.tie_to_next_span.is_some()
+    }
 }
 
 impl ParsedNote {

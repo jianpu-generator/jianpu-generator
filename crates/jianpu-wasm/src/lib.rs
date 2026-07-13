@@ -8,8 +8,8 @@ mod types;
 use jianpu_generator::parser::parts_parser::InstrumentInfo;
 #[cfg(feature = "wav")]
 use responses::{
-    generate_instrument_preview_wav_response, generate_split_wavs_response,
-    generate_wav_for_measure_range_response, generate_wav_response,
+    generate_instrument_preview_wav_response, generate_percussion_preview_wav_response,
+    generate_split_wavs_response, generate_wav_for_measure_range_response, generate_wav_response,
     list_measure_times_for_range_response, list_measure_times_response,
 };
 #[cfg(feature = "midi")]
@@ -267,6 +267,22 @@ pub fn generate_instrument_preview_wav(
     soundfont: Vec<u8>,
 ) -> GenerateWavResponse {
     generate_instrument_preview_wav_response(program_number, soundfont)
+}
+
+/// Parse `.jianpu` source and write a short WAV preview of a percussion hit.
+///
+/// Available only when the `wav` feature is enabled at build time.
+/// Plays the given GM percussion key twice on the shared drum channel using
+/// the supplied soundfont. Returns:
+/// - `{ "status": "ok", "wav": Uint8Array }`
+/// - `{ "status": "err", "diagnostics": [...] }`
+///
+/// `soundfont` is the raw SF2 soundfont bytes used for synthesis.
+#[cfg(feature = "wav")]
+#[allow(clippy::needless_pass_by_value)]
+#[wasm_bindgen]
+pub fn generate_percussion_preview_wav(key: u8, soundfont: Vec<u8>) -> GenerateWavResponse {
+    generate_percussion_preview_wav_response(key, soundfont)
 }
 
 /// Parse `.jianpu` source and write PDF bytes.

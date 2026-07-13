@@ -168,6 +168,7 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
         GridContent::NoteDash => Some(PostArcGridContent::NoteDash),
         GridContent::OctaveDot => Some(PostArcGridContent::OctaveDot),
         GridContent::ChordSymbol(s) => Some(PostArcGridContent::ChordSymbol(s.clone())),
+        GridContent::PercussionHit => Some(PostArcGridContent::PercussionHit),
         GridContent::Underline { level } => Some(PostArcGridContent::Underline { level: *level }),
         GridContent::BarLine { height_pt } => Some(PostArcGridContent::BarLine {
             height_pt: *height_pt,
@@ -512,6 +513,7 @@ fn grid_to_absolute(
         PostArcGridContent::Rest { dotted } => Some(AbsoluteContent::Rest { dotted: *dotted }),
         PostArcGridContent::OctaveDot => None,
         PostArcGridContent::ChordSymbol(s) => Some(AbsoluteContent::ChordSymbol(s.clone())),
+        PostArcGridContent::PercussionHit => Some(AbsoluteContent::PercussionHit),
         PostArcGridContent::Underline { level } => Some(AbsoluteContent::Underline {
             width: span_width,
             level: *level,

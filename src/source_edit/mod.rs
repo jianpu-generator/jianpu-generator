@@ -2,6 +2,7 @@ pub enum PartMode {
     Chords,
     Notes,
     NotesLyrics,
+    Percussion,
     Follow { target: String },
 }
 
@@ -11,6 +12,7 @@ impl PartMode {
             "chords" => Some(Self::Chords),
             "notes" => Some(Self::Notes),
             "notes+lyrics" => Some(Self::NotesLyrics),
+            "percussion" => Some(Self::Percussion),
             _ if s.starts_with("follow[") && s.ends_with(']') => {
                 let target = s["follow[".len()..s.len() - 1].to_owned();
                 Some(Self::Follow { target })
@@ -24,6 +26,7 @@ impl PartMode {
             Self::Chords => "chords".to_owned(),
             Self::Notes => "notes".to_owned(),
             Self::NotesLyrics => "notes+lyrics".to_owned(),
+            Self::Percussion => "percussion".to_owned(),
             Self::Follow { target } => format!("follow[{target}]"),
         }
     }

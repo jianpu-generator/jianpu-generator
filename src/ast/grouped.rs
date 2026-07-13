@@ -171,6 +171,7 @@ pub enum NoteEvent {
     Note(GroupedNote),
     Rest(GroupedRest),
     Chord(GroupedChordNote),
+    Percussion(GroupedPercussionHit),
 }
 
 #[derive(Clone)]
@@ -213,6 +214,31 @@ pub struct GroupedNote {
 }
 
 impl GroupedNote {
+    pub fn tie_to_next(&self) -> bool {
+        self.tie_to_next_span.is_some()
+    }
+}
+
+#[derive(Clone)]
+pub struct GroupedPercussionHit {
+    /// Duration in quarter-beats, including any beats added by `-` extensions.
+    pub duration: u32,
+    /// True if this hit is tied/slurred to the next hit.
+    pub slur: bool,
+    /// Source span of the `~` suffix when this hit is tied to the next hit.
+    pub tie_to_next_span: Option<Span>,
+    /// Byte range of this hit token in the original source.
+    pub event_span: Span,
+    /// Number of nested `(…)` groups this hit belongs to.
+    pub group_membership: u8,
+    /// Number of those groups that continue past this hit.
+    pub group_continuation: u8,
+    /// True if this hit was written with `*` (dotted duration).
+    pub dotted: bool,
+    pub slur_group_close_at_duration: Option<u32>,
+}
+
+impl GroupedPercussionHit {
     pub fn tie_to_next(&self) -> bool {
         self.tie_to_next_span.is_some()
     }

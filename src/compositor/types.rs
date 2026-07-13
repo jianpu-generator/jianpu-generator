@@ -27,6 +27,7 @@ pub enum AbsoluteContent {
         dotted: bool,
     },
     ChordSymbol(String),
+    PercussionHit,
     Underline {
         width: f32,
         level: u32,

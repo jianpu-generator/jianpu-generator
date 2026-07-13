@@ -1,6 +1,7 @@
 use super::*;
 use crate::ast::grouped::Metadata;
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName};
+use crate::error::Span;
 use midly::{MidiMessage, Smf, TrackEventKind};
 
 #[path = "tests_timing.rs"]

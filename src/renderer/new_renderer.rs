@@ -68,6 +68,7 @@ fn render_element(
             render_rest(elem, *dotted, row_height, base_font_size, note_number_width)
         }
         AbsoluteContent::ChordSymbol(s) => render_chord_symbol(elem, s, base_font_size),
+        AbsoluteContent::PercussionHit => render_percussion_hit(elem, base_font_size),
         AbsoluteContent::Underline { width, level: _ } => render_underline(elem, width),
         AbsoluteContent::TieOrSlur { kind: _, width } => {
             render_tie_or_slur(elem, width, row_height)
@@ -359,6 +360,23 @@ fn render_rest(
     }
 
     results
+}
+
+fn render_percussion_hit(elem: &AbsoluteElement, base_font_size: &f32) -> Vec<SvgElement> {
+    vec![SvgElement {
+        x: elem.x,
+        y: elem.y,
+        variant: Some(SvgVariant::PercussionHit),
+        kind: SvgKind::Text {
+            content: "x".to_string(),
+            font_size: *base_font_size,
+            anchor: TextAnchor::Middle,
+            baseline: DominantBaseline::Middle,
+            font: FontFamily::Monospace,
+            weight: FontWeight::Normal,
+            italic: false,
+        },
+    }]
 }
 
 fn render_chord_symbol(elem: &AbsoluteElement, s: &str, base_font_size: &f32) -> Vec<SvgElement> {

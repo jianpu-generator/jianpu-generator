@@ -51,6 +51,7 @@ export interface JianpuWorkerState {
   measureSpans: MeasureSpan[]
   sectionRanges: SectionRange[]
   previewInstrument: (programNumber: number) => void
+  previewPercussion: (key: number) => void
   stopPreviewInstrument: () => void
   previewAudioPlaying: boolean
   updatePartDeclaration: (

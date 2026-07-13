@@ -1,10 +1,10 @@
 use crate::ast::grouped::{
-    GroupedChordNote, GroupedMeasure, GroupedNote, GroupedPart, GroupedRest, NoteEvent, Notes,
-    TimeSignature,
+    GroupedChordNote, GroupedMeasure, GroupedNote, GroupedPart, GroupedPercussionHit, GroupedRest,
+    NoteEvent, Notes, TimeSignature,
 };
 use crate::ast::parsed::{
-    ParsedChordNote, ParsedMeasureSlot, ParsedNote, ParsedRest, ParsedTimedTrack, PartKind,
-    ScoreEvent, Soundfont,
+    ParsedChordNote, ParsedMeasureSlot, ParsedNote, ParsedPercussionHit, ParsedRest,
+    ParsedTimedTrack, PartKind, ScoreEvent, Soundfont,
 };
 use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Warning};
 
@@ -143,6 +143,10 @@ impl PartGrouper {
                 c.duration += 4;
                 self.current_beat += 4;
             }
+            Some(NoteEvent::Percussion(p)) => {
+                p.duration += 4;
+                self.current_beat += 4;
+            }
             Some(NoteEvent::Rest(_)) => {
                 if self.pending_dash_after_rest_error.is_none() {
                     self.pending_dash_after_rest_error =
@@ -231,6 +235,28 @@ impl PartGrouper {
         )
     }
 
+    fn handle_percussion_hit(
+        &mut self,
+        span: Span,
+        ph: &ParsedPercussionHit,
+    ) -> Result<(), IrrecoverableError> {
+        self.push_timed_event(
+            span,
+            ph.duration,
+            NoteEvent::Percussion(GroupedPercussionHit {
+                duration: ph.duration,
+                slur: ph.slur && ph.slur_group_close_at_duration.is_none(),
+                tie_to_next_span: ph.tie_to_next_span,
+                event_span: span,
+                group_membership: ph.group_membership,
+                group_continuation: ph.group_continuation,
+                dotted: ph.dotted,
+                slur_group_close_at_duration: ph.slur_group_close_at_duration,
+            }),
+            "percussion hit",
+        )
+    }
+
     fn handle_rest(&mut self, span: Span, pr: &ParsedRest) -> Result<(), IrrecoverableError> {
         self.push_timed_event(
             span,
@@ -264,6 +290,7 @@ impl PartGrouper {
             ScoreEvent::TieMarker => self.handle_tie_marker(spanned.span),
             ScoreEvent::Note(pn) => self.handle_note(spanned.span, pn),
             ScoreEvent::Chord(pc) => self.handle_chord(spanned.span, pc),
+            ScoreEvent::PercussionHit(ph) => self.handle_percussion_hit(spanned.span, &ph),
             ScoreEvent::Rest(pr) => self.handle_rest(spanned.span, &pr),
         }
     }

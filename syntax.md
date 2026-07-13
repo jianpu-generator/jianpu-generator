@@ -88,9 +88,12 @@ One track per line. Blank lines are ignored.
 | `chords` | Chord-symbol row | 1 |
 | `notes` | Notes only (instrumental) | 1 |
 | `notes+lyrics` | Notes + lyrics | 2 (notes, then lyrics) |
+| `percussion` | Unpitched GM drum hits | 1 |
 | `follow[X]` | Inherit column layout from the part with abbreviation `X` | same as target |
 
 An optional soundfont string `"<number>: <name>"` may follow the kind token (or `follow[X]` bracket) to select the MIDI timbre for that part. The number is the General MIDI program number (0–127). The `<name>` portion is a quoted string and may contain `=` and other characters (for example `"1: Grand = Piano"`). For example: `notes "52: Choir Aahs"` or `follow[A] "1: Grand Piano"`. If omitted on a concrete part, the default is program 52 (Choir Aahs). On a `follow[X]` part, the soundfont is inherited from the target when omitted.
+
+For `percussion` parts, the soundfont number is instead a **GM percussion key** (e.g. `38` = Acoustic Snare, `36` = Bass Drum 1), not a GM program number — all percussion parts share MIDI channel 9 (the GM drum channel) and a single fixed GM Standard Kit program change; the number selects which drum sample within that kit each hit plays. The number is not checked against the melodic instrument catalog.
 
 An optional volume suffix `XX%` (1–3 ASCII digits followed by `%`, parsed as an unsigned 8-bit number; values above 100 or 0 are accepted without error or clamping) may appear after the soundfont string (or after the kind token if there is no soundfont) to set the MIDI volume for that part. For example: `notes "52: Choir Aahs" 47%` or `notes 80%`. If omitted on a concrete part, the default is 100%. On a `follow[X]` part, volume is inherited from the target when omitted and may be overridden with an explicit `XX%` suffix.
 
@@ -536,6 +539,32 @@ Example:
 ```
 [chords] 1 - 6m -
 [Melody] _1 _1 _1 =1 =1 1_ 6, (6_)
+```
+
+---
+
+## Percussion syntax
+
+Percussion lines carry unpitched GM drum hits. Duration works like notes: each token occupies one beat; `-` extends the previous hit.
+
+| Token | Meaning |
+|-------|---------|
+| `0` | Rest |
+| `x` | Hit |
+| `-` | Extend previous hit one beat |
+
+Duration suffixes (`_`, `=`, `.`), tie/slur groups (`(...)`), and the repeat-last-atom shorthand (`r`, bare `_`/`=`) work the same way as on notes lines — see [Notes syntax](#notes-syntax). Octave markers (`'`, `,`) and accidentals are not allowed on percussion lines, since hits have no pitch.
+
+Example — snare and bass drum hitting simultaneously:
+
+```
+# parts
+Snare = percussion "38: Acoustic Snare"
+Kick = percussion "36: Bass Drum 1"
+
+# score
+[Snare] 0 x 0 x
+[Kick] x 0 x 0
 ```
 
 ---

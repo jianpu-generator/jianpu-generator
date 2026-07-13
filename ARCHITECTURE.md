@@ -36,17 +36,17 @@ source (&str)
 ### Parser
 - Module: `src/parser/`
 - Entry: `parser::parse(source: &str, filename: &str) -> Result<ParsedDocument, IrrecoverableError>`
-- Key types: `ParsedDocument`, `ParsedTimedTrack`, `ParsedScore`, `ScoreEvent`, `ParsedNote` (carries `Accidental` for melody notes; tie intent via `tie_to_next_span: Option<Span>` with `tie_to_next()` accessor), `ParsedRest`, `ParsedChordNote` (also carries `Accidental` and `tie_to_next_span`), `ParsedMetadata`, `JianPuPitch`, `Accidental` (`Sharp`/`Flat`/`Natural`; applies to both melody notes and chord notes), `Syllable`, `Soundfont` (vocal/piano/string; selects MIDI channel+program), `PartDecl` (carries `soundfont`, `volume`, `octave_offset`)
+- Key types: `ParsedDocument`, `ParsedTimedTrack`, `ParsedScore`, `ScoreEvent` (includes `PercussionHit(ParsedPercussionHit)`), `ParsedNote` (carries `Accidental` for melody notes; tie intent via `tie_to_next_span: Option<Span>` with `tie_to_next()` accessor), `ParsedRest`, `ParsedChordNote` (also carries `Accidental` and `tie_to_next_span`), `ParsedPercussionHit` (`ParsedNote` minus pitch/accidental — carries duration, dotted, group membership, tie/slur fields), `ParsedMetadata`, `JianPuPitch`, `Accidental` (`Sharp`/`Flat`/`Natural`; applies to both melody notes and chord notes), `Syllable`, `Soundfont` (vocal/piano/string; selects MIDI channel+program — on a `PartKind::Percussion` part, the number is instead a fixed GM percussion key rather than a GM program number, and is not validated against the melodic instrument catalog), `PartDecl` (carries `soundfont`, `volume`, `octave_offset`, `kind: PartKind` — `PartKind::Percussion` reuses `&[ScoreLineRole::Notes]` for its score line roles)
 
 ### Grouper
 - Module: `src/grouper/`
 - Entry: `grouper::group(doc: ParsedDocument) -> Result<Score, IrrecoverableError>`
-- Key types: `Score`, `MultiPartMeasure`, `PartRow` (Timed), `PartSlice` (carries `soundfont`, `volume`, `octave_offset`), `Notes`, `NoteEvent`, `GroupedNote`, `GroupedRest`, `GroupedChordNote` (`GroupedNote`/`GroupedChordNote` use `tie_to_next_span` + `tie_to_next()` accessor), `GroupedMeasure` (intermediate: notes + paired lyrics per measure)
+- Key types: `Score`, `MultiPartMeasure`, `PartRow` (Timed), `PartSlice` (carries `soundfont`, `volume`, `octave_offset`), `Notes`, `NoteEvent` (includes `Percussion(GroupedPercussionHit)`), `GroupedNote`, `GroupedRest`, `GroupedChordNote` (`GroupedNote`/`GroupedChordNote` use `tie_to_next_span` + `tie_to_next()` accessor), `GroupedPercussionHit` (mirrors `GroupedNote` minus pitch/accidental/octave, plus `event_span`; `slur_key()` returns the inert `SlurKey::Rest` sentinel since hits have no pitch to differentiate slur arcs by), `GroupedMeasure` (intermediate: notes + paired lyrics per measure)
 
 ### Compiler
 - Module: `src/compiler/`
 - Entry: `compiler::compile(score: &Score) -> CompileResult`
-- Key types: `CompileResult`, `MeasureBlock`, `MeasureRow`, `ColumnElement`, `ElementContent`, `SlurSpan`, `ArcKind`, `Decoration`
+- Key types: `CompileResult`, `MeasureBlock`, `MeasureRow`, `ColumnElement`, `ElementContent` (includes `PercussionHit`, threaded through `GridContent`/`PostArcGridContent`/`AbsoluteContent`/`SvgVariant::PercussionHit` and rendered centered via `render_percussion_hit`), `SlurSpan`, `ArcKind`, `Decoration`
 
 ### Consolidator
 - Module: `src/consolidator/`
@@ -96,6 +96,7 @@ source (&str)
 | **Row Label** | The part name displayed at the left margin of a system row. |
 | **RowId** | A unique string identifier for a compiler row, used to correlate rows across layout stages. |
 | **Measure Start Time** | The elapsed-seconds offset of a measure boundary within a score's audio rendering, computed from cumulative MIDI ticks and any BPM changes (`midi::measure_start_times_seconds`). Used to sync a playback-position UI element (a "playhead") against a `<audio>` element's `currentTime`. |
+| **GM percussion key** | A General MIDI drum-kit key number (0–127) identifying a specific unpitched drum sample (e.g. `38` = Acoustic Snare, `36` = Bass Drum 1) played on the shared GM percussion channel (MIDI channel 9). Used as the `Soundfont` number on `PartKind::Percussion` parts instead of a melodic GM program number. |
 
 ## Web integration
 

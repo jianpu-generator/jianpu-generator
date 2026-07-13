@@ -15,6 +15,7 @@ fn timed_beats(event: &ScoreEvent) -> u32 {
     match event {
         ScoreEvent::Note(n) => n.duration,
         ScoreEvent::Chord(c) => c.duration,
+        ScoreEvent::PercussionHit(p) => p.duration,
         ScoreEvent::Rest(r) => r.duration,
         ScoreEvent::Extension => 4,
         _ => 0,
@@ -121,7 +122,10 @@ fn timed_event_span(events: &[Spanned<ScoreEvent>]) -> Span {
         .find(|event| {
             matches!(
                 &event.value,
-                ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::Rest(_)
+                ScoreEvent::Note(_)
+                    | ScoreEvent::Chord(_)
+                    | ScoreEvent::PercussionHit(_)
+                    | ScoreEvent::Rest(_)
             )
         })
         .map(|event| event.span)
@@ -140,12 +144,16 @@ fn pad_beat_deficit(events: &mut Vec<Spanned<ScoreEvent>>, deficit: u32) {
     if let Some(last) = events.iter_mut().rev().find(|event| {
         matches!(
             &event.value,
-            ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::Rest(_)
+            ScoreEvent::Note(_)
+                | ScoreEvent::Chord(_)
+                | ScoreEvent::PercussionHit(_)
+                | ScoreEvent::Rest(_)
         )
     }) {
         match &mut last.value {
             ScoreEvent::Note(note) => note.duration += deficit,
             ScoreEvent::Chord(chord) => chord.duration += deficit,
+            ScoreEvent::PercussionHit(hit) => hit.duration += deficit,
             ScoreEvent::Rest(rest) => rest.duration += deficit,
             _ => {}
         }

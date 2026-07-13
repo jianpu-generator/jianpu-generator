@@ -17,6 +17,7 @@ pub mod desugar;
 pub mod error;
 pub mod error_reporter;
 pub mod filters;
+mod gm_percussion;
 pub mod grid_layout;
 pub mod grouper;
 pub mod grouping;
@@ -106,7 +107,7 @@ pub struct SourcePartDeclaration {
     pub octave_offset: Option<i8>,
 }
 
-fn soundfont_program_to_label(program: u8, instruments: &[InstrumentInfo]) -> String {
+fn instrument_program_to_label(program: u8, instruments: &[InstrumentInfo]) -> String {
     instruments
         .iter()
         .find(|instrument| {
@@ -121,13 +122,25 @@ fn soundfont_program_to_label(program: u8, instruments: &[InstrumentInfo]) -> St
         .unwrap_or_else(|| format!("{program}: Unknown"))
 }
 
+fn soundfont_program_to_label(
+    program: u8,
+    mode: &SourcePartMode,
+    instruments: &[InstrumentInfo],
+) -> String {
+    if matches!(mode, SourcePartMode::Percussion) {
+        gm_percussion::percussion_program_to_label(program)
+    } else {
+        instrument_program_to_label(program, instruments)
+    }
+}
+
 fn map_raw_to_source_declaration(
     raw: SourceRawPartDecl,
     instruments: &[InstrumentInfo],
 ) -> SourcePartDeclaration {
     let soundfont = raw
         .soundfont
-        .map(|soundfont| soundfont_program_to_label(soundfont.0, instruments));
+        .map(|soundfont| soundfont_program_to_label(soundfont.0, &raw.mode, instruments));
     let volume = raw.volume.filter(|&volume| volume != 100);
     let octave_offset = raw.octave_offset.filter(|&offset| offset != 0);
     SourcePartDeclaration {

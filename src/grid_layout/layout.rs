@@ -34,7 +34,9 @@ pub(crate) fn is_chord_only_row(row: &MeasureRow) -> bool {
     let has_note = row.elements.iter().any(|e| {
         matches!(
             e.content,
-            ElementContent::NoteHead { .. } | ElementContent::Rest { .. }
+            ElementContent::NoteHead { .. }
+                | ElementContent::Rest { .. }
+                | ElementContent::PercussionHit
         )
     });
     !has_note

@@ -138,6 +138,7 @@ export default function App() {
     stopMeasurePlayback,
     highlightedDocuments,
     previewInstrument,
+    previewPercussion,
     stopPreviewInstrument,
     previewAudioPlaying,
     updatePartDeclaration,
@@ -529,6 +530,7 @@ export default function App() {
                 allParts={parts}
                 onPartDeclarationChange={handlePartDeclarationChange}
                 previewInstrument={previewInstrument}
+                previewPercussion={previewPercussion}
                 stopPreviewInstrument={stopPreviewInstrument}
                 previewAudioPlaying={previewAudioPlaying}
               />

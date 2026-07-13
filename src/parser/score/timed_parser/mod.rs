@@ -4,6 +4,7 @@ mod directives;
 mod duration;
 mod groups;
 mod note_head;
+mod percussion_head;
 mod timed_lexer;
 mod timed_recursive_descent_parser;
 
@@ -24,6 +25,7 @@ pub use timed_recursive_descent_parser::TimedRecursiveDescentParser;
 
 pub use chord_head::ChordHead;
 pub use note_head::NoteHead;
+pub use percussion_head::PercussionHead;
 
 pub use duration::{parse_duration_suffixes, DurationParse};
 pub use groups::{

@@ -8,6 +8,8 @@ use lexer::{lex_line, PartsToken};
 #[cfg(test)]
 mod lexer_tests;
 #[cfg(test)]
+mod percussion_tests;
+#[cfg(test)]
 mod tests;
 
 #[derive(serde::Deserialize)]
@@ -77,6 +79,7 @@ pub enum SourcePartMode {
     Chords,
     Notes,
     NotesLyrics,
+    Percussion,
     Follow,
 }
 
@@ -126,6 +129,7 @@ fn raw_kind_to_source_mode(kind: &RawKind) -> (SourcePartMode, Option<String>) {
         RawKind::Concrete(PartKind::Chords) => (SourcePartMode::Chords, None),
         RawKind::Concrete(PartKind::Notes) => (SourcePartMode::Notes, None),
         RawKind::Concrete(PartKind::NotesWithLyrics) => (SourcePartMode::NotesLyrics, None),
+        RawKind::Concrete(PartKind::Percussion) => (SourcePartMode::Percussion, None),
         RawKind::Follow { target, .. } => (SourcePartMode::Follow, Some(target.clone())),
     }
 }
@@ -357,11 +361,13 @@ fn parse_rhs_tokens(
         _ => return Err(RecoverableError::parts_invalid_columns(span, "")),
     };
 
+    let is_percussion = matches!(head, RawKind::Concrete(PartKind::Percussion));
+
     let RhsSuffixes {
         soundfont,
         volume,
         octave_offset,
-    } = parse_rhs_suffix_tokens(suffix_tokens, span, errors, instruments)?;
+    } = parse_rhs_suffix_tokens(suffix_tokens, span, errors, instruments, is_percussion)?;
 
     Ok(ParsedPartRhs {
         kind: head,
@@ -376,6 +382,7 @@ fn parse_rhs_suffix_tokens(
     span: Span,
     errors: &mut Vec<RecoverableError>,
     instruments: &[InstrumentInfo],
+    is_percussion: bool,
 ) -> Result<RhsSuffixes, RecoverableError> {
     let mut soundfont = None;
     let mut volume = None;
@@ -384,7 +391,13 @@ fn parse_rhs_suffix_tokens(
     for token in tokens {
         match &token.value {
             PartsToken::Soundfont(inner) => {
-                soundfont = Some(validate_soundfont(inner, token.span, errors, instruments));
+                soundfont = Some(validate_soundfont(
+                    inner,
+                    token.span,
+                    errors,
+                    instruments,
+                    is_percussion,
+                ));
             }
             PartsToken::Volume(value) => volume = Some(*value),
             PartsToken::OctaveOffset(offset) => {
@@ -406,8 +419,9 @@ fn validate_soundfont(
     span: Span,
     errors: &mut Vec<RecoverableError>,
     instruments: &[InstrumentInfo],
+    is_percussion: bool,
 ) -> Soundfont {
-    if !instruments.is_empty() && !instruments.iter().any(|i| i.value == inner) {
+    if !is_percussion && !instruments.is_empty() && !instruments.iter().any(|i| i.value == inner) {
         let mut scored: Vec<(&InstrumentInfo, u32)> = instruments
             .iter()
             .filter_map(|instrument| {

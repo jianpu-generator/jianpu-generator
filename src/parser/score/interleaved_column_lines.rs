@@ -123,8 +123,15 @@ fn process_notes_column_line(
         .group_states
         .get_mut(track_index)
         .ok_or_else(|| invariant(line_span, "internal error: group state index out of range"))?;
-    let notes_parse =
-        token_parser::parse_notes_line(line, ctx.base_offset + line_offset, group_state)?;
+    let is_percussion = ctx
+        .declarations
+        .get(track_index)
+        .is_some_and(|decl| decl.kind == crate::ast::parsed::PartKind::Percussion);
+    let notes_parse = if is_percussion {
+        token_parser::parse_percussion_line(line, ctx.base_offset + line_offset, group_state)?
+    } else {
+        token_parser::parse_notes_line(line, ctx.base_offset + line_offset, group_state)?
+    };
     let lex_error = notes_parse.lex_errors.into_iter().next();
     let padded = validate_and_pad_beats(
         notes_parse.events,

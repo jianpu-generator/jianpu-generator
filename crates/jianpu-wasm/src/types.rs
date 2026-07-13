@@ -48,6 +48,7 @@ pub enum PartDeclarationModeOut {
     Notes,
     #[serde(rename = "notes+lyrics")]
     NotesLyrics,
+    Percussion,
     Follow,
 }
 

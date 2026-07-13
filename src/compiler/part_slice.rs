@@ -1,7 +1,9 @@
 use super::beam::{flush_beam_buffer, BeamEntry};
 use super::slur_chains::{extend_note_chains, PendingSlurOpen, SlurChainContext, SlurKey};
 use super::PartSliceResult;
-use crate::ast::grouped::{GroupedChordNote, GroupedNote, GroupedRest, NoteEvent, PartSlice};
+use crate::ast::grouped::{
+    GroupedChordNote, GroupedNote, GroupedPercussionHit, GroupedRest, NoteEvent, PartSlice,
+};
 use crate::ast::parsed::PartKind;
 use crate::compiler::types::{ArcKind, ColumnElement, ElementContent, SlurSpan};
 
@@ -90,6 +92,33 @@ impl TimedUnit for GroupedChordNote {
     }
     fn element_content(&self) -> ElementContent {
         ElementContent::ChordSymbol(self.format_symbol())
+    }
+}
+
+impl TimedUnit for GroupedPercussionHit {
+    fn duration(&self) -> u32 {
+        self.duration
+    }
+    fn dotted(&self) -> bool {
+        self.dotted
+    }
+    fn group_membership(&self) -> u8 {
+        self.group_membership
+    }
+    fn group_continuation(&self) -> u8 {
+        self.group_continuation
+    }
+    fn slur_close_at(&self) -> Option<u32> {
+        self.slur_group_close_at_duration
+    }
+    fn slur_key(&self) -> SlurKey {
+        SlurKey::Rest
+    }
+    fn tie_to_next(&self) -> bool {
+        self.tie_to_next_span.is_some()
+    }
+    fn element_content(&self) -> ElementContent {
+        ElementContent::PercussionHit
     }
 }
 
@@ -256,6 +285,7 @@ fn process_events(state: &mut PartState<'_>, slice: &PartSlice) {
             }
             NoteEvent::Rest(rest) => compile_rest(state, rest, 0),
             NoteEvent::Chord(chord) => compile_timed_unit(state, chord, 0, None),
+            NoteEvent::Percussion(hit) => compile_timed_unit(state, hit, 0, None),
         }
     }
     flush_beam_buffer(state.beam_buf, state.elements);
