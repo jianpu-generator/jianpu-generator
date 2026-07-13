@@ -458,6 +458,13 @@ impl RecoverableError {
         }
     }
 
+    pub fn duplicate_no_prior_note(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::DuplicateNoPriorNote,
+        }
+    }
+
     pub fn dangling_tie(span: Span) -> Self {
         Self {
             span,

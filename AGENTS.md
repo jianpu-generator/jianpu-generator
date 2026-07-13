@@ -3,6 +3,7 @@
 The `.jianpu` input syntax is documented in `syntax.md`.
 
 - When a commit introduces or changes user-facing `.jianpu` syntax, **MUST update `syntax.md`** in the same commit.
+- When a commit introduces or changes user-facing `.jianpu` syntax, **MUST update `reference.jianpu`** in the same commit (add/update the example measure demonstrating the feature).
 - Syntax-affecting code lives under `src/parser/` and `src/desugar.rs`.
 
 ## Coding style

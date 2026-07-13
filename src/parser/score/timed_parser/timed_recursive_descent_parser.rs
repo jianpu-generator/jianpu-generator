@@ -1,7 +1,7 @@
+use super::depth_event::{annotate_slur_close_via_extension, DepthEvent};
 use super::duration::parse_duration_suffixes;
 use super::groups::{
     apply_closed_group_depth, apply_open_group_depth, validate_group_note_count, GroupStack,
-    HasGroupDepth,
 };
 use super::timed_lexer::TimedLexToken;
 use super::{ParseHeadError, TimedUnitHead};
@@ -10,136 +10,11 @@ use crate::error::{
     Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned,
 };
 
-/// A thin wrapper over `Spanned<ScoreEvent>` that holds mutable group-depth fields so that the
-/// generic `HasGroupDepth`-based helpers (`apply_closed_group_depth`, `apply_open_group_depth`)
-/// can operate on them.  After depth is applied the wrapper is consumed into the final event list.
-struct DepthEvent {
-    spanned: Spanned<ScoreEvent>,
-    group_membership: u8,
-    group_continuation: u8,
-}
-
-impl DepthEvent {
-    fn new(spanned: Spanned<ScoreEvent>) -> Self {
-        Self {
-            spanned,
-            group_membership: 0,
-            group_continuation: 0,
-        }
-    }
-
-    /// Flush accumulated depth into the underlying `ScoreEvent` and return the `Spanned` value.
-    fn into_spanned(mut self) -> Spanned<ScoreEvent> {
-        apply_depth_to_event(
-            &mut self.spanned.value,
-            self.group_membership,
-            self.group_continuation,
-        );
-        self.spanned
-    }
-}
-
-impl HasGroupDepth for DepthEvent {
-    fn group_membership(&self) -> u8 {
-        self.group_membership
-    }
-
-    fn group_continuation(&self) -> u8 {
-        self.group_continuation
-    }
-
-    fn set_group_membership(&mut self, value: u8) {
-        self.group_membership = value;
-    }
-
-    fn set_group_continuation(&mut self, value: u8) {
-        self.group_continuation = value;
-    }
-}
-
-/// Push `group_membership` and `group_continuation` depth values into the event's inner struct
-/// (only `Note` and `Chord` carry these fields; other variants are unaffected).
-fn apply_depth_to_event(event: &mut ScoreEvent, membership: u8, continuation: u8) {
-    match event {
-        ScoreEvent::Note(n) => {
-            n.group_membership = n.group_membership.saturating_add(membership);
-            n.group_continuation = n.group_continuation.saturating_add(continuation);
-            n.slur = n.group_continuation > 0;
-        }
-        ScoreEvent::Chord(c) => {
-            c.group_membership = c.group_membership.saturating_add(membership);
-            c.group_continuation = c.group_continuation.saturating_add(continuation);
-            c.slur = c.group_continuation > 0;
-        }
-        ScoreEvent::Rest(r) => {
-            r.group_membership = r.group_membership.saturating_add(membership);
-            r.group_continuation = r.group_continuation.saturating_add(continuation);
-        }
-        _ => {}
-    }
-}
-
-/// When a slur group's last element is an Extension (i.e., `)` follows a `-`), the arc should
-/// end at the extension dash position rather than at the note head. This function scans the
-/// group slice (after `apply_closed_group_depth` has run), finds such a pattern, and sets
-/// `slur_group_close_at_duration` on the last Note/Chord in the group so the compiler can
-/// close the arc at the right column.
-fn annotate_slur_close_via_extension(group_slice: &mut [DepthEvent]) {
-    // Check if the last element in the group is a closing Extension (continuation == 0).
-    let last_is_closing_ext = group_slice
-        .last()
-        .map(|e| matches!(e.spanned.value, ScoreEvent::Extension) && e.group_continuation == 0)
-        .unwrap_or(false);
-
-    if !last_is_closing_ext {
-        return;
-    }
-
-    // Find the last Note or Chord in the group slice — this is the note being extended.
-    let last_note_idx = group_slice
-        .iter()
-        .rposition(|e| matches!(e.spanned.value, ScoreEvent::Note(_) | ScoreEvent::Chord(_)));
-
-    let Some(note_idx) = last_note_idx else {
-        return;
-    };
-
-    // Count Extension events with continuation > 0 that appear after the note — these are
-    // the "continuing" extensions that precede the final closing extension.
-    let num_continuing_exts = group_slice
-        .get(note_idx + 1..)
-        .unwrap_or_default()
-        .iter()
-        .filter(|e| matches!(e.spanned.value, ScoreEvent::Extension) && e.group_continuation > 0)
-        .count() as u32;
-
-    let Some(note_event) = group_slice.get(note_idx) else {
-        return;
-    };
-    let note_initial_duration = match &note_event.spanned.value {
-        ScoreEvent::Note(n) => n.duration,
-        ScoreEvent::Chord(c) => c.duration,
-        _ => return,
-    };
-
-    // close_offset = position of the last extension dash relative to the note's start col.
-    let close_offset = note_initial_duration + num_continuing_exts * 4;
-
-    let Some(note_event) = group_slice.get_mut(note_idx) else {
-        return;
-    };
-    match &mut note_event.spanned.value {
-        ScoreEvent::Note(n) => n.slur_group_close_at_duration = Some(close_offset),
-        ScoreEvent::Chord(c) => c.slur_group_close_at_duration = Some(close_offset),
-        _ => {}
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Parser
 // ---------------------------------------------------------------------------
 
-pub struct TimedRdParser<'a, H: TimedUnitHead> {
+pub struct TimedRecursiveDescentParser<'a, H: TimedUnitHead> {
     source: &'a str,
     base_offset: usize,
     tokens: &'a [Spanned<TimedLexToken>],
@@ -158,7 +33,7 @@ type TimedLineParseResult = (
     Vec<Diagnostic>,
 );
 
-impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
+impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
     pub fn parse_line(
         source: &'a str,
         base_offset: usize,
@@ -244,34 +119,15 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
                         .push(DepthEvent::new(Spanned::new(ScoreEvent::Extension, span)));
                 }
                 Some(TimedLexToken::Tilde) => {
-                    if self.staging.is_empty() {
-                        self.bump();
-                    } else {
-                        let group_start = self.staging.len() - 1;
-                        self.bump();
-                        if let Some(TimedLexToken::HeadStart { offset }) = self.peek() {
-                            let offset = *offset;
-                            self.parse_timed_unit(offset)?;
-                        }
-                        if let Some(slice) = self.staging.get_mut(group_start..) {
-                            // Notes and chords use tie_to_next_span (set by duration parser); applying
-                            // group depth here would create a spurious slur arc in addition to
-                            // the tie arc.
-                            let is_note_tie = slice
-                                .iter()
-                                .any(|e| matches!(e.spanned.value, ScoreEvent::Note(_)));
-                            let is_chord_tie = slice
-                                .iter()
-                                .any(|e| matches!(e.spanned.value, ScoreEvent::Chord(_)));
-                            if !is_note_tie && !is_chord_tie {
-                                apply_closed_group_depth(slice);
-                            }
-                        }
-                    }
+                    self.parse_tilde()?;
                 }
                 Some(TimedLexToken::HeadStart { offset }) => {
                     let offset = *offset;
                     self.parse_timed_unit(offset)?;
+                }
+                Some(TimedLexToken::Duplicate { offset }) => {
+                    let offset = *offset;
+                    self.parse_duplicate_unit(offset)?;
                 }
                 Some(TimedLexToken::Bpm(bpm)) => {
                     let bpm = *bpm;
@@ -305,6 +161,73 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
                     )));
                 }
             }
+        }
+    }
+
+    /// Handle a `~` token: it ties the most recently pushed event to the timed unit that
+    /// immediately follows it (if any), then, unless that pair forms a note/chord tie (which
+    /// carries its own arc via `tie_to_next_span`), applies closed-group depth to the pair.
+    fn parse_tilde(&mut self) -> Result<(), IrrecoverableError> {
+        if self.staging.is_empty() {
+            self.bump();
+            return Ok(());
+        }
+        let group_start = self.staging.len() - 1;
+        let tilde_span = self.current_span();
+        self.bump();
+        if let Some(TimedLexToken::HeadStart { offset }) = self.peek() {
+            let offset = *offset;
+            self.parse_timed_unit(offset)?;
+        }
+        if let Some(slice) = self.staging.get_mut(group_start..) {
+            // Notes and chords use tie_to_next_span (set by duration parser); applying
+            // group depth here would create a spurious slur arc in addition to the tie arc.
+            let is_note_tie = slice
+                .iter()
+                .any(|e| matches!(e.spanned.value, ScoreEvent::Note(_)));
+            let is_chord_tie = slice
+                .iter()
+                .any(|e| matches!(e.spanned.value, ScoreEvent::Chord(_)));
+            if is_note_tie || is_chord_tie {
+                // A `~` glued directly after a duplicate atom (`x`/`_`/`=`) never goes through
+                // `parse_duration_suffixes` — that's where `tie_to_next_span` normally gets
+                // recorded while scanning a note's own suffix characters — so the tied event
+                // here may not carry a tie span yet. Fill it in from the `~` token itself.
+                if let Some(tied) = slice.first_mut() {
+                    match &mut tied.spanned.value {
+                        ScoreEvent::Note(note) if note.tie_to_next_span.is_none() => {
+                            note.tie_to_next_span = Some(tilde_span);
+                        }
+                        ScoreEvent::Chord(chord) if chord.tie_to_next_span.is_none() => {
+                            chord.tie_to_next_span = Some(tilde_span);
+                        }
+                        _ => {}
+                    }
+                }
+            } else {
+                apply_closed_group_depth(slice);
+            }
+        }
+        Ok(())
+    }
+
+    /// Collect the recoverable diagnostics attached to a parsed `DurationParse` into
+    /// `self.chord_errors` / `self.dash_after_rest_error`.
+    fn collect_duration_suffix_diagnostics(&mut self, duration_meta: &super::DurationParse) {
+        if let Some(error) = duration_meta.unexpected_char_error.clone() {
+            self.chord_errors.push(Diagnostic::Error(error));
+        }
+        if let Some(error) = duration_meta.mixed_octave_markers_error.clone() {
+            self.chord_errors.push(Diagnostic::Error(error));
+        }
+        if let Some(error) = duration_meta.cannot_dot_quarter_beat_error.clone() {
+            self.chord_errors.push(Diagnostic::Error(error));
+        }
+        if duration_meta.dash_after_rest_error.is_some() && self.dash_after_rest_error.is_none() {
+            self.dash_after_rest_error = duration_meta.dash_after_rest_error.clone();
+        }
+        if let Some(error) = duration_meta.tie_on_rest_error.clone() {
+            self.chord_errors.push(Diagnostic::Error(error));
         }
     }
 
@@ -344,23 +267,7 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
 
         // Parse duration suffixes.
         let duration_meta = parse_duration_suffixes::<H>(&chars, 0, head_end, is_rest, &head_span)?;
-        if let Some(error) = duration_meta.unexpected_char_error.clone() {
-            self.chord_errors.push(Diagnostic::Error(error));
-        }
-        if let Some(error) = duration_meta.mixed_octave_markers_error.clone() {
-            self.chord_errors.push(Diagnostic::Error(error));
-        }
-        if let Some(error) = duration_meta.cannot_dot_quarter_beat_error.clone() {
-            self.chord_errors.push(Diagnostic::Error(error));
-        }
-
-        if duration_meta.dash_after_rest_error.is_some() && self.dash_after_rest_error.is_none() {
-            self.dash_after_rest_error = duration_meta.dash_after_rest_error;
-        }
-
-        if let Some(error) = duration_meta.tie_on_rest_error {
-            self.chord_errors.push(Diagnostic::Error(error));
-        }
+        self.collect_duration_suffix_diagnostics(&duration_meta);
 
         let octave = if duration_meta.octave_up > 0 {
             duration_meta.octave_up
@@ -394,6 +301,10 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
                 chord.tie_to_next_span = Some(tie_span);
             }
         }
+        if matches!(event, ScoreEvent::Note(_) | ScoreEvent::Chord(_)) {
+            self.stack.last_pitched_event = Some(event.clone());
+        }
+
         self.staging
             .push(DepthEvent::new(Spanned::new(event, unit_span)));
 
@@ -413,6 +324,58 @@ impl<'a, H: TimedUnitHead> TimedRdParser<'a, H> {
                 break;
             }
         }
+
+        Ok(())
+    }
+
+    /// Parse a duplicate atom (`x`, bare `_`, or bare `=`) starting at `offset`, which repeats
+    /// the last pitched note/chord (skipping rests) as a fresh, standalone attack.
+    fn parse_duplicate_unit(&mut self, offset: usize) -> Result<(), IrrecoverableError> {
+        let rel = offset - self.base_offset;
+        let ch = self.source[rel..].chars().next().unwrap_or('x');
+        let len = ch.len_utf8();
+        let span = Span::new(offset, offset + len);
+        let duration = match ch {
+            'x' => 4,
+            '_' => 2,
+            _ => 1, // '='
+        };
+
+        let Some(mut event) = self.stack.last_pitched_event.clone() else {
+            self.chord_errors.push(Diagnostic::Error(
+                RecoverableError::duplicate_no_prior_note(span),
+            ));
+            self.bump();
+            return Ok(());
+        };
+
+        match &mut event {
+            ScoreEvent::Note(note) => {
+                note.duration = duration;
+                note.dotted = false;
+                note.tie_to_next_span = None;
+                note.group_membership = 0;
+                note.group_continuation = 0;
+                note.slur = false;
+                note.slur_group_close_at_duration = None;
+            }
+            ScoreEvent::Chord(chord) => {
+                chord.duration = duration;
+                chord.dotted = false;
+                chord.tie_to_next_span = None;
+                chord.group_membership = 0;
+                chord.group_continuation = 0;
+                chord.slur = false;
+                chord.slur_group_close_at_duration = None;
+            }
+            _ => {}
+        }
+
+        self.stack.last_pitched_event = Some(event.clone());
+        self.staging
+            .push(DepthEvent::new(Spanned::new(event, span)));
+        self.stack.increment_note_count();
+        self.bump();
 
         Ok(())
     }

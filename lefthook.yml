@@ -38,4 +38,13 @@ pre-commit:
 
           - name: e2e-tests
             glob: "{web/src/**,web/e2e/**,crates/**,src/**}"
+            only:
+              - ref: master
             run: cd web && pnpm build:wasm && pnpm test:e2e
+
+pre-merge-commit:
+  jobs:
+    - name: e2e-tests
+      only:
+        - ref: master
+      run: cd web && pnpm build:wasm && pnpm test:e2e

@@ -182,7 +182,11 @@ fn reference_jianpu_renders() {
     let source = include_str!("../../../reference.jianpu");
     let resp = render_response(source, None, None, &[]);
     match resp {
-        RenderResponse::Ok { documents, .. } => {
+        RenderResponse::Ok {
+            documents,
+            diagnostics,
+            ..
+        } => {
             assert!(
                 !documents.is_empty(),
                 "reference.jianpu should render in the wasm path used by the web editor"
@@ -190,6 +194,11 @@ fn reference_jianpu_renders() {
             assert!(
                 !documents[0].elements.is_empty(),
                 "first page should have elements"
+            );
+            assert!(
+                diagnostics.is_empty(),
+                "reference.jianpu should have no errors or warnings, got: {:?}",
+                diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>()
             );
         }
         RenderResponse::Err { diagnostics, .. } => {
@@ -336,7 +345,7 @@ fn reference_jianpu_generates_wav() {
 
 #[test]
 fn diagnostic_span_is_utf8_byte_offset() {
-    // 'x' in a notes line is a recoverable error (LexUnexpectedChar),
+    // 'z' in a notes line is a recoverable error (LexUnexpectedChar),
     // so render returns Ok with a warning diagnostic.
     let source = concat!(
         "# metadata\n",
@@ -348,10 +357,10 @@ fn diagnostic_span_is_utf8_byte_offset() {
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
-        "[Melody] 1 2 x 4\n",
+        "[Melody] 1 2 z 4\n",
         "[Melody] a b c d\n",
     );
-    let token_byte_start = source.find('x').expect("error token in source");
+    let token_byte_start = source.find('z').expect("error token in source");
     let resp = render_response(source, None, None, &[]);
     let diagnostics = match resp {
         RenderResponse::Ok { diagnostics, .. } => diagnostics,

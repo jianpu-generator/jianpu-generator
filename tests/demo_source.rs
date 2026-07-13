@@ -20,20 +20,18 @@ fn reference_jianpu_parses_and_renders() {
 }
 
 #[test]
-fn reference_jianpu_has_no_recoverable_errors() {
-    use jianpu_generator::error::Diagnostic;
+fn reference_jianpu_has_no_diagnostics() {
     let source = include_str!("../reference.jianpu");
     let output = jianpu_generator::render_svgs_from_source(source, "reference.jianpu", &[])
         .unwrap_or_else(|e| panic!("reference.jianpu failed to parse/render: {e}"));
-    let errors: Vec<_> = output
-        .diagnostics
-        .iter()
-        .filter(|d| matches!(d, Diagnostic::Error(_)))
-        .map(|d| d.message())
-        .collect();
     assert!(
-        errors.is_empty(),
-        "reference.jianpu should have no recoverable errors, got: {errors:?}"
+        output.diagnostics.is_empty(),
+        "reference.jianpu should have no errors or warnings, got: {:?}",
+        output
+            .diagnostics
+            .iter()
+            .map(|d| d.message())
+            .collect::<Vec<_>>()
     );
 }
 

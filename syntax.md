@@ -346,6 +346,27 @@ Rules:
 
 A tie differs from a slur `(…)` in that it requires identical pitch, and carries distinct semantic meaning (duration extension vs. phrasing).
 
+### Duplicate the last note/chord (`x`, bare `_`/`=`)
+
+`x` repeats the last sounded pitch/chord as a fresh one-beat attack (a new note, not a tie/sustain). A bare `_` or `=` — one **not** glued directly after a digit — repeats it as an eighth-note or sixteenth-note attack respectively:
+
+```
+5 x x __        note 5, then three more 5s: a beat, a beat, and two eighths
+5 0 x           note 5, a rest, then another beat of 5 (rests are skipped)
+5~_             note 5 tied into its own eighth-note duplicate
+5__~5           note 5, an eighth-note duplicate, tied out into the next note 5
+```
+
+Rules:
+- "Last pitched note/chord" skips over intervening rests, and persists across measure boundaries (like ties/slurs).
+- `x` never takes suffixes: `x_`, `x.`, `x'` are two atoms in sequence (`x` then a fresh atom), not `x` with a suffix glued on. Write repeats as multiple `x`s instead.
+- Using `x`/`_`/`=` with no prior pitched note/chord on the track is a recoverable error; the token is dropped.
+- A `~` glued directly after a duplicate atom (`x`/`_`/`=`) ties that duplicate into the following note, following the same rules as any other tie (matching pitch required, dangling tie is an error).
+
+**Gotcha — maximal munch:** whitespace is cosmetic everywhere else in this grammar, but not here. `5_` (glued, no space) is unchanged: it's still note 5 shortened to an eighth note. Only a `_`/`=` that is *not* glued directly after a digit is a duplicate atom — so `5 _` (with a space) duplicates note 5's pitch as an eighth note, while `5_` does not. There are two exceptions, both because the glued character can't be read as a suffix of the preceding note in that position:
+- Right after a tie: `5~_` glues fine (the `~` already claimed that spot).
+- Right after another occurrence of the *same* suffix character: `5__` is note 5 shortened to an eighth note (first `_`) plus a duplicate eighth-note attack (second `_`), not a no-op double-shorten. Likewise `5==` is a sixteenth note plus a duplicate sixteenth, and this chains — `5___` is a note plus two duplicates. Mixing different suffix characters still combines onto one atom as before: `5_=` is a single sixteenth note.
+
 Adjacent digits without spaces also start new notes: `505` is three quarter notes; `(12)31` is a group plus two more notes.
 
 Trailing duration may be omitted when the remaining measure beats extend the last note. In 4/4, `1` is equivalent to `1---`; `1 2` is equivalent to `1 2--`.
@@ -501,6 +522,10 @@ Parsing checks longest suffix first (`M7` before `7`; `m` before extension).
 ### Duration suffixes
 
 Chord heads accept the same suffixes as notes: `_`, `=`, `.`, and suffix `-`. Octave markers (`'`, `,`) are not allowed on chord lines.
+
+### Duplicating the last chord
+
+`x` and bare `_`/`=` work the same way as on notes lines — see [Duplicate the last note/chord](#duplicate-the-last-notechord-x-bare-_) above: `1 x` repeats chord `1` for another beat, and `1 _` repeats it as an eighth note.
 
 ### Tie and slur groups
 

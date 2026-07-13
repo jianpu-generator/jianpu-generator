@@ -75,7 +75,7 @@ impl TimedUnitHead for NoteHead {
     }
 
     fn head_boundary(chars: &[char], i: usize) -> bool {
-        chars.get(i).is_some_and(|&c| matches!(c, '0'..='7'))
+        super::duplicate_atom_boundary(chars, i)
     }
 
     fn allows_octave_suffixes() -> bool {
