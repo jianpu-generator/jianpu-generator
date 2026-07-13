@@ -5,7 +5,7 @@ use crate::error::{Span, Warning};
 pub struct GroupStack {
     pub frames: Vec<GroupFrame>,
     /// The most recently parsed Note/Chord event on this track (rests never update it),
-    /// used to resolve `x`/bare `_`/`=` duplicate atoms. Persists across measures and lines,
+    /// used to resolve `r`/bare `_`/`=` repeat atoms. Persists across measures and lines,
     /// like ties/slurs already do.
     pub last_pitched_event: Option<ScoreEvent>,
 }

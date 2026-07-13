@@ -75,7 +75,7 @@ impl TimedUnitHead for NoteHead {
     }
 
     fn head_boundary(chars: &[char], i: usize) -> bool {
-        super::duplicate_atom_boundary(chars, i)
+        super::repeat_atom_boundary(chars, i)
     }
 
     fn allows_octave_suffixes() -> bool {

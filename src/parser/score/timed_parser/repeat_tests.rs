@@ -48,9 +48,9 @@ fn note_duration(event: &ScoreEvent) -> u32 {
 }
 
 #[test]
-fn duplicate_note_x_and_bare_underscore_repeat_last_pitch() {
-    let events = parse_notes("5 x x __", &mut GroupStack::default());
-    assert_eq!(events.len(), 5, "original note 5 plus four duplicates");
+fn repeat_note_r_and_bare_underscore_repeat_last_pitch() {
+    let events = parse_notes("5 r r __", &mut GroupStack::default());
+    assert_eq!(events.len(), 5, "original note 5 plus four repeats");
     assert_eq!(
         events[1..].iter().map(note_duration).collect::<Vec<_>>(),
         vec![4, 4, 2, 2]
@@ -69,38 +69,38 @@ fn duplicate_note_x_and_bare_underscore_repeat_last_pitch() {
 }
 
 #[test]
-fn duplicate_skips_over_rest() {
-    let events = parse_notes("5 0 x", &mut GroupStack::default());
+fn repeat_skips_over_rest() {
+    let events = parse_notes("5 0 r", &mut GroupStack::default());
     assert_eq!(events.len(), 3);
     assert!(matches!(events[1], ScoreEvent::Rest(_)));
     let ScoreEvent::Note(first) = &events[0] else {
         panic!("expected Note");
     };
-    let ScoreEvent::Note(dup) = &events[2] else {
+    let ScoreEvent::Note(repeated) = &events[2] else {
         panic!("expected Note");
     };
-    assert_eq!(dup.pitch, first.pitch);
-    assert_eq!(dup.octave, first.octave);
-    assert_eq!(dup.duration, 4);
+    assert_eq!(repeated.pitch, first.pitch);
+    assert_eq!(repeated.octave, first.octave);
+    assert_eq!(repeated.duration, 4);
 }
 
 #[test]
-fn duplicate_with_no_prior_note_errors_and_emits_nothing() {
-    let (events, errors) = parse_notes_with_errors("x", &mut GroupStack::default());
+fn repeat_with_no_prior_note_errors_and_emits_nothing() {
+    let (events, errors) = parse_notes_with_errors("r", &mut GroupStack::default());
     assert_eq!(events.len(), 0, "no event should be emitted");
     assert_eq!(errors.len(), 1);
     assert!(
         matches!(
             &errors[0],
-            Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::DuplicateNoPriorNote)
+            Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::RepeatNoPriorNote)
         ),
-        "expected DuplicateNoPriorNote error, got {errors:?}"
+        "expected RepeatNoPriorNote error, got {errors:?}"
     );
 }
 
 #[test]
-fn duplicate_chord_x_and_bare_suffix() {
-    let events = parse_chords("1 x _ =", &mut GroupStack::default());
+fn repeat_chord_r_and_bare_suffix() {
+    let events = parse_chords("1 r _ =", &mut GroupStack::default());
     assert_eq!(events.len(), 4);
     let ScoreEvent::Chord(first) = &events[0] else {
         panic!("expected Chord");
@@ -123,8 +123,8 @@ fn duplicate_chord_x_and_bare_suffix() {
 }
 
 #[test]
-fn tie_into_duplicate_preserves_tie_and_matches_pitch() {
-    // 5~_ : tie from note 5 into its own eighth-note duplicate.
+fn tie_into_repeat_preserves_tie_and_matches_pitch() {
+    // 5~_ : tie from note 5 into its own eighth-note repeat.
     let events = parse_notes("5~_", &mut GroupStack::default());
     assert_eq!(events.len(), 2);
     let ScoreEvent::Note(first) = &events[0] else {
@@ -137,7 +137,7 @@ fn tie_into_duplicate_preserves_tie_and_matches_pitch() {
     let ScoreEvent::Note(second) = &events[1] else {
         panic!("expected Note");
     };
-    // Duplicated event copies pitch/accidental/octave verbatim, so tie_validation
+    // Repeated event copies pitch/accidental/octave verbatim, so tie_validation
     // (which requires equal pitch/accidental/octave on consecutive tied notes) is
     // trivially satisfied.
     assert_eq!(second.pitch, first.pitch);
@@ -147,36 +147,36 @@ fn tie_into_duplicate_preserves_tie_and_matches_pitch() {
 }
 
 #[test]
-fn tie_out_of_duplicate_sets_tie_span() {
-    // 6__~6 : note 6, an eighth-note duplicate, then that duplicate tied into a following 6.
-    // The `~` is glued directly after the duplicate atom's `_`, not after a digit, so it never
+fn tie_out_of_repeat_sets_tie_span() {
+    // 6__~6 : note 6, an eighth-note repeat, then that repeat tied into a following 6.
+    // The `~` is glued directly after the repeat atom's `_`, not after a digit, so it never
     // passes through `parse_duration_suffixes` (which normally records the tie span) — the tie
     // must be picked up by the top-level tilde handling instead.
     let events = parse_notes("6__~6", &mut GroupStack::default());
     assert_eq!(events.len(), 3);
-    let ScoreEvent::Note(duplicate) = &events[1] else {
+    let ScoreEvent::Note(repeated) = &events[1] else {
         panic!("expected Note");
     };
     assert!(
-        duplicate.tie_to_next_span.is_some(),
-        "tie arc glued after a duplicate atom should still be recorded"
+        repeated.tie_to_next_span.is_some(),
+        "tie arc glued after a repeat atom should still be recorded"
     );
 }
 
 #[test]
-fn tie_out_of_duplicate_with_no_following_note_still_records_span() {
+fn tie_out_of_repeat_with_no_following_note_still_records_span() {
     // 6__~ : the tie has nothing to bind to within this line, but the span must still be set so
     // that cross-line/cross-measure tie validation can detect it (dangling tie vs. continuation).
     let events = parse_notes("6__~", &mut GroupStack::default());
     assert_eq!(events.len(), 2);
-    let ScoreEvent::Note(duplicate) = &events[1] else {
+    let ScoreEvent::Note(repeated) = &events[1] else {
         panic!("expected Note");
     };
-    assert!(duplicate.tie_to_next_span.is_some());
+    assert!(repeated.tie_to_next_span.is_some());
 }
 
 #[test]
-fn duplicate_reaches_across_measure_boundary() {
+fn repeat_reaches_across_measure_boundary() {
     let mut stack = GroupStack::default();
     // Measure 1: fills a 4/4 bar on pitch 5.
     let first_measure = parse_notes("5 5 5 5", &mut stack);
@@ -185,28 +185,28 @@ fn duplicate_reaches_across_measure_boundary() {
     };
     let expected_pitch = last_of_measure_one.pitch.clone();
 
-    // Measure 2: starts with a bare duplicate, referring back across the bar line.
+    // Measure 2: starts with a bare repeat, referring back across the bar line.
     let second_measure = parse_notes("_ 5", &mut stack);
     assert_eq!(second_measure.len(), 2);
-    let ScoreEvent::Note(dup) = &second_measure[0] else {
+    let ScoreEvent::Note(repeated) = &second_measure[0] else {
         panic!("expected Note");
     };
-    assert_eq!(dup.pitch, expected_pitch);
-    assert_eq!(dup.duration, 2);
+    assert_eq!(repeated.pitch, expected_pitch);
+    assert_eq!(repeated.duration, 2);
 }
 
 #[test]
 fn glued_underscore_after_digit_keeps_existing_meaning() {
-    // "5_" (glued) is still eighth-note 5, not a separate duplicate atom.
+    // "5_" (glued) is still eighth-note 5, not a separate repeat atom.
     let events = parse_notes("5_", &mut GroupStack::default());
     assert_eq!(events.len(), 1);
     assert_eq!(note_duration(&events[0]), 2);
 }
 
 #[test]
-fn doubled_underscore_after_digit_is_note_plus_duplicate() {
+fn doubled_underscore_after_digit_is_note_plus_repeat() {
     // "5__" — the second `_` can't shorten the duration any further (it's already an
-    // eighth note), so instead of being a silent no-op it starts a fresh duplicate atom.
+    // eighth note), so instead of being a silent no-op it starts a fresh repeat atom.
     let events = parse_notes("5__", &mut GroupStack::default());
     assert_eq!(events.len(), 2);
     assert_eq!(
@@ -216,7 +216,7 @@ fn doubled_underscore_after_digit_is_note_plus_duplicate() {
 }
 
 #[test]
-fn doubled_equals_after_digit_is_note_plus_duplicate() {
+fn doubled_equals_after_digit_is_note_plus_repeat() {
     // "5==" mirrors "5__" but at sixteenth-note duration.
     let events = parse_notes("5==", &mut GroupStack::default());
     assert_eq!(events.len(), 2);
@@ -227,8 +227,8 @@ fn doubled_equals_after_digit_is_note_plus_duplicate() {
 }
 
 #[test]
-fn triple_underscore_chains_two_duplicates() {
-    // "5___" — each repeat past the first starts another duplicate atom.
+fn triple_underscore_chains_two_repeats() {
+    // "5___" — each repeat past the first starts another repeat atom.
     let events = parse_notes("5___", &mut GroupStack::default());
     assert_eq!(
         events.iter().map(note_duration).collect::<Vec<_>>(),
@@ -239,14 +239,14 @@ fn triple_underscore_chains_two_duplicates() {
 #[test]
 fn mixed_duration_suffixes_are_unaffected() {
     // "5_=" — different suffix characters still combine onto the same atom, since only a
-    // repeat of the *same* character is treated as a fresh duplicate.
+    // repeat of the *same* character is treated as a fresh repeat.
     let events = parse_notes("5_=", &mut GroupStack::default());
     assert_eq!(events.len(), 1);
     assert_eq!(note_duration(&events[0]), 1);
 }
 
 #[test]
-fn doubled_underscore_after_chord_is_chord_plus_duplicate() {
+fn doubled_underscore_after_chord_is_chord_plus_repeat() {
     let events = parse_chords("1__", &mut GroupStack::default());
     assert_eq!(events.len(), 2);
     let durations: Vec<u32> = events
@@ -260,27 +260,27 @@ fn doubled_underscore_after_chord_is_chord_plus_duplicate() {
 }
 
 #[test]
-fn glued_xx_is_two_one_beat_duplicates() {
-    let events = parse_notes("5 xx", &mut GroupStack::default());
+fn glued_rr_is_two_one_beat_repeats() {
+    let events = parse_notes("5 rr", &mut GroupStack::default());
     assert_eq!(events.len(), 3);
     assert_eq!(note_duration(&events[1]), 4);
     assert_eq!(note_duration(&events[2]), 4);
 }
 
 #[test]
-fn glued_x_underscore_is_two_duplicate_atoms() {
-    // "x_" glued = two duplicate atoms in sequence (one beat + one eighth), not an error.
-    let events = parse_notes("5 x_", &mut GroupStack::default());
+fn glued_r_underscore_is_two_repeat_atoms() {
+    // "r_" glued = two repeat atoms in sequence (one beat + one eighth), not an error.
+    let events = parse_notes("5 r_", &mut GroupStack::default());
     assert_eq!(events.len(), 3);
     assert_eq!(note_duration(&events[1]), 4);
     assert_eq!(note_duration(&events[2]), 2);
 }
 
 #[test]
-fn x_with_glued_suffix_char_is_lex_error() {
-    // "x." — `x` never takes suffixes; `.` glued after `x` is unhandled and errors out.
-    let (events, error_count) = parse_notes_total_error_count("5 x.", &mut GroupStack::default());
-    assert_eq!(events.len(), 2, "the `x` duplicate should still be emitted");
+fn r_with_glued_suffix_char_is_lex_error() {
+    // "r." — `r` never takes suffixes; `.` glued after `r` is unhandled and errors out.
+    let (events, error_count) = parse_notes_total_error_count("5 r.", &mut GroupStack::default());
+    assert_eq!(events.len(), 2, "the `r` repeat should still be emitted");
     assert_eq!(note_duration(&events[1]), 4);
     assert_eq!(error_count, 1, "the glued `.` should produce one error");
 }

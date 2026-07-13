@@ -458,10 +458,10 @@ impl RecoverableError {
         }
     }
 
-    pub fn duplicate_no_prior_note(span: Span) -> Self {
+    pub fn repeat_no_prior_note(span: Span) -> Self {
         Self {
             span,
-            kind: RecoverableErrorKind::DuplicateNoPriorNote,
+            kind: RecoverableErrorKind::RepeatNoPriorNote,
         }
     }
 

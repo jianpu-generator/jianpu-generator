@@ -38,8 +38,8 @@ label="Duration: extension (-)"
 [M] 1 - - -
 
 
-label="Duplicate: repeat last note (x) & bare eighth/sixteenth (_/=)"
-[M] 1 x x -
+label="Repeat: repeat last note (r) & bare eighth/sixteenth (_/=)"
+[M] 1 r r -
 
 [M] __ 0 0 0
 [M] _
@@ -105,10 +105,10 @@ label="Chord: rest (0) & extension (-)"
 [M] _
 [C] 0 0 1 -
 
-label="Chord: duplicate last chord (x, bare _)"
+label="Chord: repeat last chord (r, bare _)"
 [M] 0
 [M] _
-[C] 1 x x _==
+[C] 1 r r _==
 
 label="Lyrics: CJK syllables"
 [M] 1 2 3 4

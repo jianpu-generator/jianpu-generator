@@ -125,9 +125,9 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
                     let offset = *offset;
                     self.parse_timed_unit(offset)?;
                 }
-                Some(TimedLexToken::Duplicate { offset }) => {
+                Some(TimedLexToken::Repeat { offset }) => {
                     let offset = *offset;
-                    self.parse_duplicate_unit(offset)?;
+                    self.parse_repeat_unit(offset)?;
                 }
                 Some(TimedLexToken::Bpm(bpm)) => {
                     let bpm = *bpm;
@@ -189,7 +189,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
                 .iter()
                 .any(|e| matches!(e.spanned.value, ScoreEvent::Chord(_)));
             if is_note_tie || is_chord_tie {
-                // A `~` glued directly after a duplicate atom (`x`/`_`/`=`) never goes through
+                // A `~` glued directly after a repeat atom (`r`/`_`/`=`) never goes through
                 // `parse_duration_suffixes` — that's where `tie_to_next_span` normally gets
                 // recorded while scanning a note's own suffix characters — so the tied event
                 // here may not carry a tie span yet. Fill it in from the `~` token itself.
@@ -328,23 +328,24 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
         Ok(())
     }
 
-    /// Parse a duplicate atom (`x`, bare `_`, or bare `=`) starting at `offset`, which repeats
+    /// Parse a repeat atom (`r`, bare `_`, or bare `=`) starting at `offset`, which repeats
     /// the last pitched note/chord (skipping rests) as a fresh, standalone attack.
-    fn parse_duplicate_unit(&mut self, offset: usize) -> Result<(), IrrecoverableError> {
+    fn parse_repeat_unit(&mut self, offset: usize) -> Result<(), IrrecoverableError> {
         let rel = offset - self.base_offset;
-        let ch = self.source[rel..].chars().next().unwrap_or('x');
+        let ch = self.source[rel..].chars().next().unwrap_or('r');
         let len = ch.len_utf8();
         let span = Span::new(offset, offset + len);
         let duration = match ch {
-            'x' => 4,
+            'r' => 4,
             '_' => 2,
             _ => 1, // '='
         };
 
         let Some(mut event) = self.stack.last_pitched_event.clone() else {
-            self.chord_errors.push(Diagnostic::Error(
-                RecoverableError::duplicate_no_prior_note(span),
-            ));
+            self.chord_errors
+                .push(Diagnostic::Error(RecoverableError::repeat_no_prior_note(
+                    span,
+                )));
             self.bump();
             return Ok(());
         };

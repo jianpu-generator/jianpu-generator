@@ -15,9 +15,9 @@ mod timed_lexer_tests;
 #[cfg(test)]
 mod timed_recursive_descent_parser_tests;
 
-#[path = "duplicate_tests.rs"]
+#[path = "repeat_tests.rs"]
 #[cfg(test)]
-mod duplicate_tests;
+mod repeat_tests;
 
 pub use timed_lexer::{lex_line, LexContext, TimedLexToken};
 pub use timed_recursive_descent_parser::TimedRecursiveDescentParser;
@@ -103,15 +103,15 @@ pub trait TimedUnitHead: Sized {
 }
 
 /// Head-boundary check shared by `NoteHead`/`ChordHead`: a fresh degree digit always starts a
-/// new head. `x`/`_`/`=` immediately after a tie (`~`) also starts a new head — that's what lets
-/// a duplicate atom glued right after `~` (e.g. `5~_`) be parsed as its own unit instead of being
+/// new head. `r`/`_`/`=` immediately after a tie (`~`) also starts a new head — that's what lets
+/// a repeat atom glued right after `~` (e.g. `5~_`) be parsed as its own unit instead of being
 /// swallowed as a duration suffix of the tied note. Likewise, a `_`/`=` immediately after another
 /// occurrence of the *same* character (`5__`, `5==`) starts a new head instead of being silently
-/// absorbed as a no-op duration suffix — the repeat becomes a fresh duplicate atom.
-pub(crate) fn duplicate_atom_boundary(chars: &[char], i: usize) -> bool {
+/// absorbed as a no-op duration suffix — the repeat becomes a fresh repeat atom.
+pub(crate) fn repeat_atom_boundary(chars: &[char], i: usize) -> bool {
     match chars.get(i) {
         Some('0'..='7') => true,
-        Some('x') => i > 0 && chars.get(i - 1) == Some(&'~'),
+        Some('r') => i > 0 && chars.get(i - 1) == Some(&'~'),
         Some(c @ ('_' | '=')) => {
             i > 0 && matches!(chars.get(i - 1), Some(&prev) if prev == '~' || prev == *c)
         }

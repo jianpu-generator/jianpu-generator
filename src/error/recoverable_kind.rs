@@ -111,8 +111,8 @@ pub enum RecoverableErrorKind {
     },
     /// Per-part octave offset exceeds ±4 — clamped to the valid range.
     PartsOctaveOffsetTooLarge { offset: i8 },
-    /// `x`/bare `_`/`=` used with no prior pitched note/chord to duplicate — token ignored.
-    DuplicateNoPriorNote,
+    /// `r`/bare `_`/`=` used with no prior pitched note/chord to repeat — token ignored.
+    RepeatNoPriorNote,
 }
 
 impl RecoverableErrorKind {
@@ -192,7 +192,7 @@ impl RecoverableErrorKind {
             Self::PartsOctaveOffsetTooLarge { offset } => format!(
                 "octave offset {offset} is out of range; valid range is -4 to +4; clamped"
             ),
-            Self::DuplicateNoPriorNote => "no prior note/chord to duplicate; token ignored".to_string(),
+            Self::RepeatNoPriorNote => "no prior note/chord to repeat; token ignored".to_string(),
         }
     }
 

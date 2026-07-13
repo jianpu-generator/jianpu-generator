@@ -88,7 +88,7 @@ impl TimedUnitHead for ChordHead {
     }
 
     fn head_boundary(chars: &[char], i: usize) -> bool {
-        crate::parser::score::timed_parser::duplicate_atom_boundary(chars, i)
+        crate::parser::score::timed_parser::repeat_atom_boundary(chars, i)
     }
 
     fn allows_octave_suffixes() -> bool {

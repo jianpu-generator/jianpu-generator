@@ -26,7 +26,7 @@ pub enum TimedLexToken {
     KeyChange(KeyChange),
     TimeSignature { num: u8, den: u8 },
     Tilde,
-    Duplicate { offset: usize },
+    Repeat { offset: usize },
 }
 
 pub fn lex_line(line: &str, base_offset: usize, context: LexContext) -> LexLineResult {
@@ -151,24 +151,24 @@ fn lex_one_char(
             recoverable_errors,
         ),
         '|' => skip_unexpected_char(start, len, c, recoverable_errors),
-        // `x`/`_`/`=` glued directly after a tie (`~`) still start a fresh duplicate atom
-        // (`5~_`) even though we're mid-word — this mirrors `duplicate_atom_boundary`
+        // `r`/`_`/`=` glued directly after a tie (`~`) still start a fresh repeat atom
+        // (`5~_`) even though we're mid-word — this mirrors `repeat_atom_boundary`
         // in mod.rs's suffix scanner, which stops before consuming the same character.
-        'x' | '_' | '=' if at_word_boundary || line[..i].ends_with('~') => {
-            emit_single_token(TimedLexToken::Duplicate { offset: start }, start, len, true)
+        'r' | '_' | '=' if at_word_boundary || line[..i].ends_with('~') => {
+            emit_single_token(TimedLexToken::Repeat { offset: start }, start, len, true)
         }
         // A `_`/`=` glued directly after another occurrence of itself (`5__`, `5==`) also
-        // starts a fresh duplicate atom instead of being silently absorbed as a no-op
+        // starts a fresh repeat atom instead of being silently absorbed as a no-op
         // duration suffix — same rationale as the tie case above.
         c @ ('_' | '=') if line[..i].ends_with(c) => {
-            emit_single_token(TimedLexToken::Duplicate { offset: start }, start, len, true)
+            emit_single_token(TimedLexToken::Repeat { offset: start }, start, len, true)
         }
-        // A `~` glued directly after a duplicate atom (`x`/`_`/`=`) is a tie out of that
-        // duplicate into the next note — mirrors `5~_` (tie into a duplicate) but in reverse.
-        // `Duplicate` tokens report `at_word_boundary = true` (needed so e.g. `x_` lexes as two
+        // A `~` glued directly after a repeat atom (`r`/`_`/`=`) is a tie out of that
+        // repeat into the next note — mirrors `5~_` (tie into a repeat) but in reverse.
+        // `Repeat` tokens report `at_word_boundary = true` (needed so e.g. `r_` lexes as two
         // atoms), so this case must be detected by inspecting the actual preceding character
         // rather than relying on `at_word_boundary`.
-        '~' if !at_word_boundary || matches!(line[..i].chars().last(), Some('x' | '_' | '=')) => {
+        '~' if !at_word_boundary || matches!(line[..i].chars().last(), Some('r' | '_' | '=')) => {
             emit_single_token(TimedLexToken::Tilde, start, len, false)
         }
         _ if !at_word_boundary => Ok((None, len, false)),
