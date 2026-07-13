@@ -1,25 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AppHeader } from './components/AppHeader'
 import { AssetLoadingBanner } from './components/AssetLoadingBanner'
-import { BinMenu } from './components/BinMenu'
 import { EditMetadataModal } from './components/EditMetadataModal'
 import { Editor } from './components/Editor'
 import { EditPartsModal } from './components/EditPartsModal'
 import { ErrorModal } from './components/ErrorModal'
-import { ExportControls } from './components/ExportControls'
-import { FileSwitcher } from './components/FileSwitcher'
 import { PartToggles } from './components/PartToggles'
-import { PlayFromCurrentMeasureButton } from './components/PlayFromCurrentMeasureButton'
-import { PlayMeasureButton } from './components/PlayMeasureButton'
 import { Preview } from './components/Preview'
+import { SectionJumpToolbar } from './components/SectionJumpToolbar'
 import { SharedPreviewBanner } from './components/SharedPreviewBanner'
 import { StorageSettingsModal } from './components/StorageSettingsModal'
 import {
   fileContent,
   fileIdForName,
   isReadOnlyFile,
-  mergeBackendResult,
   selectFile,
-  sortedBinNames,
 } from './fileStore'
 import { useAssetLoader } from './hooks/useAssetLoader'
 import { useFileOperations } from './hooks/useFileOperations'
@@ -28,12 +23,8 @@ import { useJianpuWorker } from './hooks/useJianpuWorker'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { usePartToggles } from './hooks/usePartToggles'
 import { useSectionNavigation } from './hooks/useSectionNavigation'
+import { useSharedPreview } from './hooks/useSharedPreview'
 import { useStorageBackend } from './hooks/useStorageBackend'
-import {
-  clearShareHash,
-  parseShareFromHash,
-  type SharePayload,
-} from './shareUrl'
 import type { EditorHandle, PartMode, SoundfontValue } from './types'
 import type { MetadataKey } from './utils/metadataSource'
 import { parseMetadata, updateMetadataField } from './utils/metadataSource'
@@ -59,29 +50,41 @@ export default function App() {
     forceSave,
     flushPendingSave,
   } = useStorageBackend()
-  const [sharedPreview, setSharedPreview] = useState<SharePayload | null>(null)
-  useEffect(() => {
-    let cancelled = false
-    void parseShareFromHash().then((parsed) => {
-      if (!cancelled) {
-        setSharedPreview(parsed)
-        if (parsed) setEditorCollapsed(true)
-      }
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const [editPartsOpen, setEditPartsOpen] = useState(false)
+  const [editMetadataOpen, setEditMetadataOpen] = useState(false)
+  const [storageSettingsOpen, setStorageSettingsOpen] = useState(false)
+  const [editorCollapsed, setEditorCollapsed] = useState(false)
+
+  const {
+    creatingFile,
+    deletingFileName,
+    duplicatingFile,
+    renamingFileName,
+    restoringFileName,
+    fileOpError,
+    setFileOpError,
+    handleCreate,
+    handleDuplicate,
+    handleRename,
+    handleDelete,
+    handleRestore,
+  } = useFileOperations(store, setStore, backend)
+
+  const { sharedPreview, handleDismissShared, handleImportShared } =
+    useSharedPreview(
+      store,
+      backend,
+      setStore,
+      setFileOpError,
+      setEditorCollapsed,
+    )
+
   const source = sharedPreview
     ? sharedPreview.content
     : fileContent(store, store.active)
   const readOnly = sharedPreview !== null || isReadOnlyFile(store.active)
   const fileId = fileIdForName(store, store.active)
 
-  const [editPartsOpen, setEditPartsOpen] = useState(false)
-  const [editMetadataOpen, setEditMetadataOpen] = useState(false)
-  const [storageSettingsOpen, setStorageSettingsOpen] = useState(false)
-  const [editorCollapsed, setEditorCollapsed] = useState(false)
   const editorRef = useRef<EditorHandle>(null)
   const soundfont = useAssetLoader('/fonts/GeneralUser_GS.sf2')
   const fonts = useFontsLoader()
@@ -215,47 +218,6 @@ export default function App() {
     [setStore, flushPendingSave],
   )
 
-  const handleDismissShared = useCallback(() => {
-    clearShareHash()
-    setSharedPreview(null)
-  }, [])
-
-  const {
-    creatingFile,
-    deletingFileName,
-    duplicatingFile,
-    renamingFileName,
-    restoringFileName,
-    fileOpError,
-    setFileOpError,
-    handleCreate,
-    handleDuplicate,
-    handleRename,
-    handleDelete,
-    handleRestore,
-  } = useFileOperations(store, setStore, backend)
-
-  const handleImportShared = useCallback(async () => {
-    if (!sharedPreview) return
-    const base = store
-    try {
-      const next = await backend.importFile(
-        base,
-        sharedPreview.filename,
-        sharedPreview.content,
-      )
-      setStore((prev) => mergeBackendResult(prev, base, next))
-      clearShareHash()
-      setSharedPreview(null)
-    } catch (error) {
-      setFileOpError({
-        title: 'Could not import shared score',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      })
-    }
-  }, [sharedPreview, store, backend, setStore, setFileOpError])
-
   const handlePartDeclarationChange = useCallback(
     (
       abbreviation: string,
@@ -318,87 +280,55 @@ export default function App() {
         fontsLoadedBytes={fonts.loadedBytes}
         fontsTotalBytes={fonts.totalBytes}
       />
-      <header className="app-header">
-        <h1>簡譜</h1>
-        <span className="app-subtitle">live preview</span>
-        {audioAvailable && (
-          <PlayMeasureButton
-            disabled={
-              selectedMeasureRange === null ||
-              measureAudioGenerating ||
-              !soundfontReady
-            }
-            loading={measureAudioGenerating}
-            playing={measureAudioPlaying}
-            measureRange={selectedMeasureRange}
-            onClick={playSelectedMeasures}
-            onPause={stopMeasurePlayback}
-            shortcutLabel={shortcutLabel}
-          />
-        )}
-        {audioAvailable && (
-          <PlayFromCurrentMeasureButton
-            disabled={
-              selectedMeasureRange === null ||
-              measureAudioGenerating ||
-              !soundfontReady
-            }
-            loading={measureAudioGenerating}
-            playing={measureAudioPlaying}
-            currentMeasure={selectedMeasureRange?.start ?? null}
-            onClick={playFromCurrentMeasure}
-            onPause={stopMeasurePlayback}
-            shortcutLabel={playFromCurrentMeasureShortcutLabel}
-          />
-        )}
-        <div className="app-header-actions">
-          <FileSwitcher
-            store={store}
-            onSelect={handleSelect}
-            onCreate={handleCreate}
-            onDuplicate={handleDuplicate}
-            onRename={handleRename}
-            onDelete={handleDelete}
-            onOpenStorageSettings={() => setStorageSettingsOpen(true)}
-            saveStatus={saveStatus}
-            autosaveDeadline={autosaveDeadline}
-            creating={creatingFile}
-            deletingName={deletingFileName}
-            duplicating={duplicatingFile}
-            renamingName={renamingFileName}
-            isLoadingGithub={isLoadingGithub}
-          />
-          <BinMenu
-            binNames={sortedBinNames(store)}
-            onRestore={handleRestore}
-            restoringName={restoringFileName}
-          />
-          <ExportControls
-            hasDocuments={documents.length > 0}
-            rendering={rendering}
-            audioGenerating={audioGenerating}
-            wavUrl={wavUrl}
-            soundfontReady={soundfontReady}
-            onGenerateAudio={generateFullAudio}
-            pdfAvailable={pdfAvailable}
-            pdfFontsReady={pdfFontsReady}
-            pdfExporting={pdfExporting}
-            onExportPdf={exportPdf}
-            splitPdfExporting={splitPdfExporting}
-            onExportSplitPdf={exportSplitPdf}
-            midiAvailable={midiAvailable}
-            midiExporting={midiExporting}
-            onExportMidi={exportMidi}
-            splitMidiExporting={splitMidiExporting}
-            onExportSplitMidi={exportSplitMidi}
-            audioAvailable={audioAvailable}
-            splitWavExporting={splitWavExporting}
-            onExportSplitWav={exportSplitWav}
-            partsCount={parts.length}
-            isLoadingGithub={isLoadingGithub}
-          />
-        </div>
-      </header>
+      <AppHeader
+        audioAvailable={audioAvailable}
+        selectedMeasureRange={selectedMeasureRange}
+        measureAudioGenerating={measureAudioGenerating}
+        soundfontReady={soundfontReady}
+        measureAudioPlaying={measureAudioPlaying}
+        playSelectedMeasures={playSelectedMeasures}
+        playFromCurrentMeasure={playFromCurrentMeasure}
+        stopMeasurePlayback={stopMeasurePlayback}
+        shortcutLabel={shortcutLabel}
+        playFromCurrentMeasureShortcutLabel={
+          playFromCurrentMeasureShortcutLabel
+        }
+        store={store}
+        onSelect={handleSelect}
+        onCreate={handleCreate}
+        onDuplicate={handleDuplicate}
+        onRename={handleRename}
+        onDelete={handleDelete}
+        onOpenStorageSettings={() => setStorageSettingsOpen(true)}
+        saveStatus={saveStatus}
+        autosaveDeadline={autosaveDeadline}
+        creatingFile={creatingFile}
+        deletingFileName={deletingFileName}
+        duplicatingFile={duplicatingFile}
+        renamingFileName={renamingFileName}
+        isLoadingGithub={isLoadingGithub}
+        onRestore={handleRestore}
+        restoringFileName={restoringFileName}
+        hasDocuments={documents.length > 0}
+        rendering={rendering}
+        audioGenerating={audioGenerating}
+        wavUrl={wavUrl}
+        onGenerateAudio={generateFullAudio}
+        pdfAvailable={pdfAvailable}
+        pdfFontsReady={pdfFontsReady}
+        pdfExporting={pdfExporting}
+        onExportPdf={exportPdf}
+        splitPdfExporting={splitPdfExporting}
+        onExportSplitPdf={exportSplitPdf}
+        midiAvailable={midiAvailable}
+        midiExporting={midiExporting}
+        onExportMidi={exportMidi}
+        splitMidiExporting={splitMidiExporting}
+        onExportSplitMidi={exportSplitMidi}
+        splitWavExporting={splitWavExporting}
+        onExportSplitWav={exportSplitWav}
+        partsCount={parts.length}
+      />
       <ErrorModal
         open={fileOpError !== null}
         onOpenChange={(open) => {
@@ -434,55 +364,15 @@ export default function App() {
           onDiscard={handleDismissShared}
         />
       ) : null}
-      {sectionLabels.length > 0 ? (
-        <div className="workspace-toolbar">
-          <div
-            role="toolbar"
-            className="workspace-toolbar-sections"
-            style={{
-              userSelect: dragStartLabel !== null ? 'none' : undefined,
-            }}
-            onMouseDown={(e) => e.preventDefault()}
-            onMouseUp={() => {
-              setDragStartLabel(null)
-              setDragCurrentLabel(null)
-            }}
-            onMouseLeave={() => {
-              setDragStartLabel(null)
-              setDragCurrentLabel(null)
-            }}
-          >
-            {sectionLabels.map((label) => (
-              <button
-                key={label}
-                type="button"
-                className={[
-                  'section-jump-btn',
-                  activeHighlightedLabels.has(label)
-                    ? 'section-jump-btn--dragging'
-                    : '',
-                ].join(' ')}
-                style={{
-                  cursor: dragStartLabel !== null ? 'ew-resize' : undefined,
-                }}
-                onMouseDown={() => {
-                  setDragStartLabel(label)
-                  setDragCurrentLabel(label)
-                  handleSectionJump(label)
-                }}
-                onMouseEnter={() => {
-                  if (dragStartLabel !== null) {
-                    setDragCurrentLabel(label)
-                    handleSectionRangeSelect(dragStartLabel, label)
-                  }
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
+      <SectionJumpToolbar
+        sectionLabels={sectionLabels}
+        dragStartLabel={dragStartLabel}
+        setDragStartLabel={setDragStartLabel}
+        setDragCurrentLabel={setDragCurrentLabel}
+        activeHighlightedLabels={activeHighlightedLabels}
+        handleSectionJump={handleSectionJump}
+        handleSectionRangeSelect={handleSectionRangeSelect}
+      />
       <main className="workspace">
         <section
           className={[

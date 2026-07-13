@@ -1,3 +1,4 @@
+mod highlights;
 pub mod resolve;
 pub use resolve::{resolve, LyricFontSizes};
 

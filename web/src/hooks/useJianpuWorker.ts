@@ -10,9 +10,11 @@ import type {
   SectionRange,
 } from '../types'
 import type { WorkerRequest } from '../worker/jianpu.worker'
+import { useInstrumentPreview } from './useInstrumentPreview'
 import { useJianpuWorkerExports } from './useJianpuWorkerExports'
 import { createWorkerMessageHandler } from './useJianpuWorkerMessageHandler'
 import type { JianpuWorkerState } from './useJianpuWorkerTypes'
+import { useMeasureAudioPlayback } from './useMeasureAudioPlayback'
 import {
   disabledLyricsForRender,
   enabledPartNamesForFilename,
@@ -59,13 +61,6 @@ export function useJianpuWorker(
     start: number
     end: number
   } | null>(null)
-  const [measureAudioGenerating, setMeasureAudioGenerating] = useState(false)
-  const [measureAudioPlaying, setMeasureAudioPlaying] = useState(false)
-  const [measureAudioTimes, setMeasureAudioTimes] = useState<number[]>([])
-  const [measureAudioElement, setMeasureAudioElement] =
-    useState<HTMLAudioElement | null>(null)
-  const [previewAudioPlaying, setPreviewAudioPlaying] = useState(false)
-  const currentMeasureAudioRef = useRef<HTMLAudioElement | null>(null)
   const [highlightedDocuments, setHighlightedDocuments] = useState<
     SvgDocumentOut[]
   >([])
@@ -76,7 +71,6 @@ export function useJianpuWorker(
   const measureSpansRequestIdRef = useRef(0)
   const latestMeasureSpansIdRef = useRef(0)
   const measureSpansRef = useRef<MeasureSpan[]>([])
-
   const workerRef = useRef<Worker | null>(null)
   const wavUrlRef = useRef<string | null>(null)
   const partsRequestIdRef = useRef(0)
@@ -108,12 +102,6 @@ export function useJianpuWorker(
   const audioAvailableRef = useRef(false)
   const cursorOffsetTimerRef = useRef<number | null>(null)
   const lastSelectionRef = useRef<{ start: number; end: number } | null>(null)
-  const measureAudioRequestIdRef = useRef(0)
-  const latestMeasureAudioIdRef = useRef(0)
-  const measureWavUrlRef = useRef<string | null>(null)
-  const previewAudioRequestIdRef = useRef(0)
-  const latestPreviewAudioIdRef = useRef(0)
-  const currentPreviewAudioRef = useRef<HTMLAudioElement | null>(null)
 
   const effectiveDisabledParts = useMemo(() => {
     if (soloedParts.size === 0) return disabledParts
@@ -156,36 +144,36 @@ export function useJianpuWorker(
     setWavUrl(next)
   }, [])
 
-  const setNextMeasureWavUrl = useCallback(
-    (next: string | null, nextMeasureTimes: number[] = []) => {
-      if (currentMeasureAudioRef.current) {
-        currentMeasureAudioRef.current.pause()
-        currentMeasureAudioRef.current = null
-      }
-      if (measureWavUrlRef.current) {
-        URL.revokeObjectURL(measureWavUrlRef.current)
-      }
-      measureWavUrlRef.current = next
-      setMeasureAudioTimes(nextMeasureTimes)
-      if (next) {
-        const audio = new Audio(next)
-        currentMeasureAudioRef.current = audio
-        setMeasureAudioElement(audio)
-        audio.addEventListener('play', () => setMeasureAudioPlaying(true))
-        audio.addEventListener('ended', () => {
-          setMeasureAudioPlaying(false)
-          currentMeasureAudioRef.current = null
-          setMeasureAudioElement(null)
-        })
-        audio.addEventListener('pause', () => setMeasureAudioPlaying(false))
-        audio.play().catch(() => {})
-      } else {
-        setMeasureAudioElement(null)
-      }
-    },
-    [],
-  )
+  const {
+    measureAudioGenerating,
+    setMeasureAudioGenerating,
+    measureAudioPlaying,
+    measureAudioTimes,
+    measureAudioElement,
+    setNextMeasureWavUrl,
+    stopMeasurePlayback,
+    playSelectedMeasures,
+    playFromCurrentMeasure,
+    latestMeasureAudioIdRef,
+    measureWavUrlRef,
+  } = useMeasureAudioPlayback({
+    workerRef,
+    sourceRef,
+    enabledTracksRef,
+    selectedMeasureRange,
+    measureSpans,
+  })
 
+  const {
+    previewAudioPlaying,
+    setPreviewAudioPlaying,
+    previewInstrument,
+    previewPercussion,
+    stopPreviewInstrument,
+    latestPreviewAudioIdRef,
+    currentPreviewAudioRef,
+  } = useInstrumentPreview({ workerRef })
+  // biome-ignore lint/correctness/useExhaustiveDependencies: deps are stable refs/setters from sibling hooks
   useEffect(() => {
     const worker = new Worker(
       new URL('../worker/jianpu.worker.ts', import.meta.url),
@@ -397,73 +385,6 @@ export function useJianpuWorker(
 
     return () => window.clearTimeout(timer)
   }, [source, debounceMs])
-
-  const stopMeasurePlayback = useCallback(() => {
-    if (currentMeasureAudioRef.current) {
-      currentMeasureAudioRef.current.pause()
-      currentMeasureAudioRef.current = null
-    }
-    setMeasureAudioPlaying(false)
-  }, [])
-
-  const playMeasureRange = useCallback(
-    (startMeasureIndex: number, endMeasureIndex: number) => {
-      const worker = workerRef.current
-      if (!worker) return
-      const id = ++measureAudioRequestIdRef.current
-      latestMeasureAudioIdRef.current = id
-      setMeasureAudioGenerating(true)
-      worker.postMessage({
-        type: 'generateMeasureRangeAudio',
-        source: sourceRef.current,
-        id,
-        startMeasureIndex,
-        endMeasureIndex,
-        enabledTracks: enabledTracksRef.current,
-      } satisfies WorkerRequest)
-    },
-    [],
-  )
-
-  const playSelectedMeasures = useCallback(() => {
-    if (selectedMeasureRange === null) return
-    playMeasureRange(selectedMeasureRange.start, selectedMeasureRange.end)
-  }, [selectedMeasureRange, playMeasureRange])
-
-  const playFromCurrentMeasure = useCallback(() => {
-    if (selectedMeasureRange === null || measureSpans.length === 0) return
-    playMeasureRange(selectedMeasureRange.start, measureSpans.length - 1)
-  }, [selectedMeasureRange, measureSpans, playMeasureRange])
-
-  const previewInstrument = useCallback((programNumber: number) => {
-    const worker = workerRef.current
-    if (!worker) return
-    const id = ++previewAudioRequestIdRef.current
-    latestPreviewAudioIdRef.current = id
-    worker.postMessage({
-      type: 'previewInstrument',
-      id,
-      programNumber,
-    } satisfies WorkerRequest)
-  }, [])
-
-  const previewPercussion = useCallback((key: number) => {
-    const worker = workerRef.current
-    if (!worker) return
-    const id = ++previewAudioRequestIdRef.current
-    latestPreviewAudioIdRef.current = id
-    worker.postMessage({
-      type: 'previewPercussion',
-      id,
-      key,
-    } satisfies WorkerRequest)
-  }, [])
-
-  const stopPreviewInstrument = useCallback(() => {
-    if (currentPreviewAudioRef.current) {
-      currentPreviewAudioRef.current.pause()
-    }
-  }, [])
 
   const {
     exportPdf,

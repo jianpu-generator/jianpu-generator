@@ -6,7 +6,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-MAX_LINES = 600
+MAX_LINES = 500
 
 
 def main() -> int:

@@ -1,4 +1,5 @@
 use super::*;
+use crate::ast::parsed::PartKind;
 
 #[test]
 fn explicit_lyrics_keep_lyric_row() {

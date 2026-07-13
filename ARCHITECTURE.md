@@ -130,7 +130,8 @@ The React app (`web/`) runs the compiler in a dedicated worker (`web/src/worker/
 
 ### Part declarations (source-level)
 
-- Entry: `list_part_declarations_from_source(source, filename, instruments) -> Result<Vec<SourcePartDeclaration>, IrrecoverableError>` in `src/lib.rs`
+- Module: `src/part_info.rs` (re-exported from `src/lib.rs`)
+- Entry: `list_part_declarations_from_source(source, filename, instruments) -> Result<Vec<SourcePartDeclaration>, IrrecoverableError>`
 - Backed by `parts_parser::collect_source_raw_declarations()` — returns **raw** fields from each declaration line (before `follow[X]` inheritance). The Edit Parts modal displays these values.
 
 ### WASM exports (`crates/jianpu-wasm`)
