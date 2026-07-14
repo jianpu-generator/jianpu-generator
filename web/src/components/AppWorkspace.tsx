@@ -75,7 +75,9 @@ interface AppWorkspaceProps {
   wavUrl: string | null
   wavFilename: string
   measureTimes: number[]
+  writtenMeasureIndices: number[]
   measureAudioTimes: number[]
+  measureAudioWrittenIndices: number[]
   measureAudioElement: HTMLAudioElement | null
   noPartsSelected: boolean
   disabledParts: ReadonlySet<string>
@@ -129,7 +131,9 @@ export function AppWorkspace({
   wavUrl,
   wavFilename,
   measureTimes,
+  writtenMeasureIndices,
   measureAudioTimes,
+  measureAudioWrittenIndices,
   measureAudioElement,
   noPartsSelected,
   disabledParts,
@@ -232,7 +236,9 @@ export function AppWorkspace({
           wavUrl={wavUrl}
           wavFilename={wavFilename}
           measureTimes={measureTimes}
+          writtenMeasureIndices={writtenMeasureIndices}
           measureAudioTimes={measureAudioTimes}
+          measureAudioWrittenIndices={measureAudioWrittenIndices}
           measureAudioElement={measureAudioElement}
           selectedMeasureRange={selectedMeasureRange}
           emptyMessage={

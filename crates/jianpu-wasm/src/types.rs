@@ -229,6 +229,23 @@ pub enum GenerateMidiResponse {
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
 #[tsify(into_wasm_abi)]
+pub enum WrittenMeasureIndicesResponse {
+    Ok {
+        /// Written measure index at each playback position; entry `i` is the
+        /// written measure to highlight while playing back position `i`
+        /// (i.e. between `times[i]` and `times[i + 1]` from the paired
+        /// [`ListMeasureTimesResponse`]).
+        indices: Vec<usize>,
+    },
+    Err {
+        diagnostics: Vec<DiagnosticOut>,
+    },
+}
+
+#[cfg(feature = "midi")]
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[serde(tag = "status", rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
 pub enum GenerateSplitMidisResponse {
     Ok {
         #[tsify(type = "Uint8Array")]

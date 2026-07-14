@@ -12,8 +12,12 @@ interface PreviewProps {
   wavFilename?: string
   /** Elapsed-seconds offset of each measure boundary for `wavUrl`'s audio, length = measure count + 1. */
   measureTimes?: number[]
+  /** Written measure index to highlight at each playback position of `measureTimes`, following D.C. al Coda navigation. */
+  writtenMeasureIndices?: number[]
   /** Elapsed-seconds offset of each measure boundary within the selected range's audio, relative to the range start. */
   measureAudioTimes?: number[]
+  /** Written measure index to highlight at each playback position of `measureAudioTimes`, following D.C. al Coda navigation. */
+  measureAudioWrittenIndices?: number[]
   /** The `<audio>` element currently playing the selected measure range, if any. */
   measureAudioElement?: HTMLAudioElement | null
   selectedMeasureRange?: { start: number; end: number } | null
@@ -77,7 +81,9 @@ export function Preview({
   wavUrl = null,
   wavFilename = 'audio.wav',
   measureTimes,
+  writtenMeasureIndices,
   measureAudioTimes,
+  measureAudioWrittenIndices,
   measureAudioElement,
   selectedMeasureRange,
   emptyMessage = 'No preview yet.',
@@ -90,12 +96,13 @@ export function Preview({
     null,
   )
 
-  usePlayhead(previewPagesRef, audioElement, measureTimes, 0)
+  usePlayhead(previewPagesRef, audioElement, measureTimes, 0, writtenMeasureIndices)
   usePlayhead(
     previewPagesRef,
     measureAudioElement,
     measureAudioTimes,
     selectedMeasureRange?.start ?? 0,
+    measureAudioWrittenIndices,
   )
   const dragStateRef = useRef<{
     startIndex: number

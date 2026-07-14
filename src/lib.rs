@@ -8,6 +8,7 @@
 #![forbid(clippy::type_complexity)]
 
 pub mod ast;
+mod audio_source;
 pub mod combiner;
 pub mod compiler;
 pub mod compositor;
@@ -40,6 +41,7 @@ pub mod pdf;
 #[cfg(feature = "wav")]
 pub mod wav;
 
+pub use audio_source::*;
 pub use document_render::{
     render_documents_from_source_filtered_with_lyrics, render_documents_with_highlight_range,
     RenderDocumentOutput,
@@ -224,117 +226,6 @@ pub fn render_svgs_with_highlight_range(
         svgs: serializer::serialize(&docs),
         diagnostics,
     })
-}
-
-/// Parse, group, optionally filter tracks, and synthesize WAV bytes.
-///
-/// When `enabled_tracks` is `None`, all parts are included.
-/// When `Some(tracks)` is empty, no parts are included.
-#[cfg(feature = "wav")]
-pub fn write_wav_from_source_filtered(
-    source: &str,
-    filename: &str,
-    enabled_tracks: Option<&[String]>,
-    sf2_bytes: &[u8],
-    instruments: &[InstrumentInfo],
-) -> Result<Vec<u8>, IrrecoverableError> {
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
-    let score = midi::expand_navigation(&score)?;
-    let midi_bytes = midi::write_midi(&score)?;
-    wav::write_wav(&midi_bytes, sf2_bytes)
-}
-
-/// Parse, group, optionally filter tracks, and synthesize WAV for a single measure.
-///
-/// BPM and key context is accumulated from all preceding measures so
-/// that mid-piece measures sound correct even without explicit directives.
-#[cfg(feature = "wav")]
-pub fn write_wav_for_measure_from_source(
-    source: &str,
-    filename: &str,
-    measure_index: usize,
-    enabled_tracks: Option<&[String]>,
-    sf2_bytes: &[u8],
-    instruments: &[InstrumentInfo],
-) -> Result<Vec<u8>, IrrecoverableError> {
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
-    let (score, measure_index) = midi::expand_for_measure(&score, measure_index)?;
-    let midi_bytes = midi::write_midi_for_measure(&score, measure_index)?;
-    wav::write_wav(&midi_bytes, sf2_bytes)
-}
-
-/// Parse, group, optionally filter tracks, and synthesize WAV for a consecutive measure range.
-///
-/// BPM and key context is accumulated from all measures before `start_index`.
-#[cfg(feature = "wav")]
-pub fn write_wav_for_measure_range_from_source(
-    source: &str,
-    filename: &str,
-    measure_range: std::ops::RangeInclusive<usize>,
-    enabled_tracks: Option<&[String]>,
-    sf2_bytes: &[u8],
-    instruments: &[InstrumentInfo],
-) -> Result<Vec<u8>, IrrecoverableError> {
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
-    let (score, start, end) =
-        midi::expand_for_measure_range(&score, *measure_range.start(), *measure_range.end())?;
-    let midi_bytes = midi::write_midi_for_measure_range(&score, start, end)?;
-    wav::write_wav(&midi_bytes, sf2_bytes)
-}
-
-/// Parse, group, optionally filter tracks, and compute the elapsed-seconds
-/// offset of each measure boundary (length = `measures + 1`; the last entry
-/// is the total duration). Used to sync a UI playhead against WAV audio
-/// returned by [`write_wav_from_source_filtered`].
-#[cfg(feature = "midi")]
-pub fn measure_start_times_from_source(
-    source: &str,
-    filename: &str,
-    enabled_tracks: Option<&[String]>,
-    instruments: &[InstrumentInfo],
-) -> Result<Vec<f64>, IrrecoverableError> {
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
-    let score = midi::expand_navigation(&score)?;
-    midi::measure_start_times_seconds(&score)
-}
-
-/// Same as [`measure_start_times_from_source`], but scoped to a measure range
-/// and relative to the start of that range. Used to sync a playhead against
-/// the audio clip returned by [`write_wav_for_measure_range_from_source`].
-#[cfg(feature = "midi")]
-pub fn measure_start_times_for_range_from_source(
-    source: &str,
-    filename: &str,
-    measure_range: std::ops::RangeInclusive<usize>,
-    enabled_tracks: Option<&[String]>,
-    instruments: &[InstrumentInfo],
-) -> Result<Vec<f64>, IrrecoverableError> {
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
-    let (score, start, end) =
-        midi::expand_for_measure_range(&score, *measure_range.start(), *measure_range.end())?;
-    midi::measure_start_times_seconds_for_range(&score, start, end)
-}
-
-/// Parse, group, optionally filter tracks, and generate MIDI (SMF) bytes.
-///
-/// When `enabled_tracks` is `None`, all parts are included.
-/// When `Some(tracks)` is empty, no parts are included.
-#[cfg(feature = "midi")]
-pub fn write_midi_from_source_filtered(
-    source: &str,
-    filename: &str,
-    enabled_tracks: Option<&[String]>,
-    instruments: &[InstrumentInfo],
-) -> Result<Vec<u8>, IrrecoverableError> {
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
-    let score = midi::expand_navigation(&score)?;
-    midi::write_midi(&score)
 }
 
 /// Parse, group, optionally filter tracks, and write PDF bytes.

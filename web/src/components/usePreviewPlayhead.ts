@@ -10,8 +10,10 @@ function findMeasureSegmentAtTime(times: number[], t: number): number {
 /**
  * Imperatively drives an SVG playhead `<rect>` across measures in sync with
  * `audio`'s playback position, using `measureTimes` (seconds per measure
- * boundary, offset by `measureIndexOffset`) to locate each measure's x/width
- * via its existing click-target rect. Runs outside React state/rendering
+ * boundary) to locate the current playback segment. That segment is mapped
+ * to a written measure index via `writtenIndices[segment]` (which follows
+ * D.C. al Coda navigation), falling back to `measureIndexOffset + segment`
+ * when `writtenIndices` isn't available. Runs outside React state/rendering
  * (rAF, direct attribute writes) since it updates every animation frame.
  */
 export function usePlayhead(
@@ -19,6 +21,7 @@ export function usePlayhead(
   audio: HTMLAudioElement | null | undefined,
   measureTimes: number[] | undefined,
   measureIndexOffset: number,
+  writtenIndices?: number[],
 ) {
   useEffect(() => {
     const container = containerRef.current
@@ -40,7 +43,8 @@ export function usePlayhead(
     const updatePosition = () => {
       const t = audio.currentTime
       const segment = findMeasureSegmentAtTime(measureTimes, t)
-      const measureIndex = measureIndexOffset + segment
+      const measureIndex =
+        writtenIndices?.[segment] ?? measureIndexOffset + segment
       const group = container.querySelector<SVGGElement>(
         `[data-tag="measure"][data-measure-index="${measureIndex}"]`,
       )
@@ -96,5 +100,5 @@ export function usePlayhead(
       audio.removeEventListener('ended', stop)
       stop()
     }
-  }, [containerRef, audio, measureTimes, measureIndexOffset])
+  }, [containerRef, audio, measureTimes, measureIndexOffset, writtenIndices])
 }

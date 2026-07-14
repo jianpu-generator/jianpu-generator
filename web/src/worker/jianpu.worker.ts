@@ -8,6 +8,10 @@ import {
 import type { PartDeclaration, PartMode } from '../types'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
 import {
+  handleGenerateAudio,
+  handleGenerateMeasureRangeAudio,
+} from './audioMessageHandlers'
+import {
   handleGenerateMidi,
   handleGeneratePdf,
   handleGenerateSplitMidi,
@@ -36,6 +40,16 @@ const listMeasureTimes =
 const listMeasureTimesForRange =
   'list_measure_times_for_range' in jianpuWasm
     ? jianpuWasm.list_measure_times_for_range
+    : null
+
+const writtenMeasureIndices =
+  'written_measure_indices' in jianpuWasm
+    ? jianpuWasm.written_measure_indices
+    : null
+
+const writtenMeasureIndicesForRange =
+  'written_measure_indices_for_range' in jianpuWasm
+    ? jianpuWasm.written_measure_indices_for_range
     : null
 
 const renderWithHighlightRange =
@@ -103,41 +117,6 @@ function listDeclarationsFromSource(source: string): PartDeclaration[] {
   if (!('list_part_declarations' in jianpuWasm)) return []
   const result = jianpuWasm.list_part_declarations(source, GM_INSTRUMENTS)
   return result.status === 'ok' ? result.declarations : []
-}
-
-function measureTimesFromSource(
-  source: string,
-  enabledTracks: string[] | undefined,
-): number[] {
-  if (!listMeasureTimes) return []
-  const result = listMeasureTimes(source, enabledTracks)
-  return result.status === 'ok' ? result.times : []
-}
-
-function measureTimesForRangeFromSource(
-  source: string,
-  startMeasureIndex: number,
-  endMeasureIndex: number,
-  enabledTracks: string[] | undefined,
-): number[] {
-  if (!listMeasureTimesForRange) return []
-  const result = listMeasureTimesForRange(
-    source,
-    startMeasureIndex,
-    endMeasureIndex,
-    enabledTracks,
-  )
-  return result.status === 'ok' ? result.times : []
-}
-
-function binaryBufferFromResult(
-  bytes: Uint8Array | ArrayBuffer | ArrayLike<number>,
-): ArrayBuffer {
-  if (bytes instanceof ArrayBuffer) {
-    return bytes.slice(0)
-  }
-  const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
-  return view.slice().buffer
 }
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
@@ -224,88 +203,24 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'generateAudio') {
-    if (!generateWav) {
-      postMessage({
-        type: 'audioErr',
-        id: msg.id,
-      } satisfies WorkerResponse)
-      return
-    }
-
-    if (!loadedSoundfont) {
-      postMessage({ type: 'audioErr', id: msg.id } satisfies WorkerResponse)
-      return
-    }
-    const wavResult = generateWav(
-      msg.source,
-      msg.enabledTracks,
+    handleGenerateAudio(
+      msg,
+      generateWav,
+      listMeasureTimes,
+      writtenMeasureIndices,
       loadedSoundfont,
     )
-    if (wavResult.status === 'ok' && wavResult.wav != null) {
-      const wavBuffer = binaryBufferFromResult(wavResult.wav)
-      postMessage(
-        {
-          type: 'audio',
-          id: msg.id,
-          wav: wavBuffer,
-          measureTimes: measureTimesFromSource(msg.source, msg.enabledTracks),
-        } satisfies WorkerResponse,
-        { transfer: [wavBuffer] },
-      )
-      return
-    }
-
-    postMessage({
-      type: 'audioErr',
-      id: msg.id,
-    } satisfies WorkerResponse)
     return
   }
 
   if (msg.type === 'generateMeasureRangeAudio') {
-    if (!generateWavForMeasureRange) {
-      postMessage({
-        type: 'measureRangeAudioErr',
-        id: msg.id,
-      } satisfies WorkerResponse)
-      return
-    }
-    if (!loadedSoundfont) {
-      postMessage({
-        type: 'measureRangeAudioErr',
-        id: msg.id,
-      } satisfies WorkerResponse)
-      return
-    }
-    const wavResult = generateWavForMeasureRange(
-      msg.source,
-      msg.startMeasureIndex,
-      msg.endMeasureIndex,
-      msg.enabledTracks,
+    handleGenerateMeasureRangeAudio(
+      msg,
+      generateWavForMeasureRange,
+      listMeasureTimesForRange,
+      writtenMeasureIndicesForRange,
       loadedSoundfont,
     )
-    if (wavResult.status === 'ok' && wavResult.wav != null) {
-      const wavBuffer = binaryBufferFromResult(wavResult.wav)
-      postMessage(
-        {
-          type: 'measureRangeAudio',
-          id: msg.id,
-          wav: wavBuffer,
-          measureTimes: measureTimesForRangeFromSource(
-            msg.source,
-            msg.startMeasureIndex,
-            msg.endMeasureIndex,
-            msg.enabledTracks,
-          ),
-        } satisfies WorkerResponse,
-        { transfer: [wavBuffer] },
-      )
-      return
-    }
-    postMessage({
-      type: 'measureRangeAudioErr',
-      id: msg.id,
-    } satisfies WorkerResponse)
     return
   }
 
