@@ -2,7 +2,7 @@
 
 #[test]
 fn new_file_template_parses_and_renders() {
-    let source = include_str!("../new_file_template.jianpu");
+    let source = include_str!("../../new_file_template.jianpu");
     let svgs = jianpu_generator::render_svgs_from_source(source, "new_file_template.jianpu", &[])
         .unwrap_or_else(|e| {
             panic!("new_file_template.jianpu failed to parse/render: {e}");
@@ -22,7 +22,7 @@ fn new_file_template_parses_and_renders() {
 #[test]
 fn new_file_template_has_no_recoverable_errors() {
     use jianpu_generator::error::Diagnostic;
-    let source = include_str!("../new_file_template.jianpu");
+    let source = include_str!("../../new_file_template.jianpu");
     let output = jianpu_generator::render_svgs_from_source(source, "new_file_template.jianpu", &[])
         .unwrap_or_else(|e| panic!("new_file_template.jianpu failed to parse/render: {e}"));
     let errors: Vec<_> = output
