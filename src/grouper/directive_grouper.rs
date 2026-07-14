@@ -42,6 +42,8 @@ impl DirectiveGrouper {
             let mut pending_dc_al_coda = false;
             let mut pending_to_coda = false;
             let mut pending_coda = false;
+            let mut pending_segno = false;
+            let mut pending_ds_al_coda = false;
             for event in events {
                 match &event.value {
                     ScoreEvent::BpmChange(bpm) => {
@@ -74,6 +76,12 @@ impl DirectiveGrouper {
                     ScoreEvent::Coda => {
                         pending_coda = true;
                     }
+                    ScoreEvent::Segno => {
+                        pending_segno = true;
+                    }
+                    ScoreEvent::DsAlCoda => {
+                        pending_ds_al_coda = true;
+                    }
                     _ => {}
                 }
             }
@@ -100,6 +108,8 @@ impl DirectiveGrouper {
                 dc_al_coda: pending_dc_al_coda,
                 to_coda: pending_to_coda,
                 coda: pending_coda,
+                segno: pending_segno,
+                ds_al_coda: pending_ds_al_coda,
             });
             self.bpm_changed = false;
             self.time_sig_changed = false;

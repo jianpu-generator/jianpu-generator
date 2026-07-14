@@ -135,6 +135,10 @@ fn parse_directive_line(
             Some(ScoreEvent::ToCoda)
         } else if token == "coda" {
             Some(ScoreEvent::Coda)
+        } else if token == "segno" {
+            Some(ScoreEvent::Segno)
+        } else if token == "dsalcoda" {
+            Some(ScoreEvent::DsAlCoda)
         } else {
             errors.push(RecoverableError::general(
                 span,

@@ -40,6 +40,8 @@ fn directive_line_spans(content: &PostArcGridContent) -> Vec<TextSpan> {
         dc_al_coda,
         to_coda,
         coda,
+        segno,
+        ds_al_coda,
     } = content
     else {
         return Vec::new();
@@ -84,30 +86,24 @@ fn directive_line_spans(content: &PostArcGridContent) -> Vec<TextSpan> {
             font_size: 12.0,
         });
     }
-    if *to_coda {
-        spans.push(TextSpan {
-            content: "  \u{2295} To Coda".to_string(),
-            bold: false,
-            italic: true,
-            font_size: 12.0,
-        });
-    }
-    if *coda {
-        spans.push(TextSpan {
-            content: "  \u{2295} Coda".to_string(),
-            bold: false,
-            italic: true,
-            font_size: 12.0,
-        });
-    }
-    if *dc_al_coda {
-        spans.push(TextSpan {
-            content: "  D.C. al Coda".to_string(),
-            bold: false,
-            italic: true,
-            font_size: 12.0,
-        });
-    }
+    let navigation_markers = [
+        (*to_coda, "  \u{2295} To Coda"),
+        (*coda, "  \u{2295} Coda"),
+        (*dc_al_coda, "  D.C. al Coda"),
+        (*segno, "  \u{1d10b} Segno"),
+        (*ds_al_coda, "  D.S. al Coda"),
+    ];
+    spans.extend(
+        navigation_markers
+            .into_iter()
+            .filter(|(present, _)| *present)
+            .map(|(_, text)| TextSpan {
+                content: text.to_string(),
+                bold: false,
+                italic: true,
+                font_size: 12.0,
+            }),
+    );
     spans
 }
 

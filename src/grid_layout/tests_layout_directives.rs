@@ -51,6 +51,8 @@ fn directive_line(
         dc_al_coda: false,
         to_coda: false,
         coda: false,
+        segno: false,
+        ds_al_coda: false,
     }
 }
 
@@ -318,6 +320,8 @@ fn tocoda_on_non_first_measure_without_label_is_still_rendered() {
         dc_al_coda: false,
         to_coda: true,
         coda: false,
+        segno: false,
+        ds_al_coda: false,
     }];
     let compile_result = CompileResult {
         blocks: vec![first_block, second_block],

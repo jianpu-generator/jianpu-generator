@@ -190,6 +190,10 @@ pub enum ScoreEvent {
     ToCoda,
     /// `coda` — playback resumes here (on the second pass) and continues to the end.
     Coda,
+    /// `segno` — marks the measure that `dsalcoda` jumps back to.
+    Segno,
+    /// `dsalcoda` — after this measure, playback restarts from the `Segno` measure.
+    DsAlCoda,
 }
 
 #[derive(Debug, Clone, PartialEq)]

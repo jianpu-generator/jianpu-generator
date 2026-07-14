@@ -95,5 +95,7 @@ pub enum Decoration {
         dc_al_coda: bool,
         to_coda: bool,
         coda: bool,
+        segno: bool,
+        ds_al_coda: bool,
     },
 }

@@ -45,6 +45,33 @@ fn navigation_source() -> &'static str {
     )
 }
 
+fn segno_navigation_source() -> &'static str {
+    concat!(
+        "# metadata\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "# parts\n",
+        "Melody = notes\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[Melody] 1 2 3 4\n",
+        "\n",
+        "segno\n",
+        "[Melody] 2 3 4 5\n",
+        "\n",
+        "tocoda\n",
+        "[Melody] 5 6 7 1'\n",
+        "\n",
+        "coda\n",
+        "[Melody] 1' 7 6 5\n",
+        "\n",
+        "dsalcoda\n",
+        "[Melody] 4 3 2 1\n",
+    )
+}
+
 fn plain_source() -> &'static str {
     concat!(
         "# metadata\n",
@@ -191,5 +218,24 @@ fn navigation_markers_replay_measures_in_midi_output() {
     assert_eq!(
         nav_notes, 32,
         "D.C. al Coda navigation should replay measures 0-3 then 0-1 then 2-3, doubling the note count"
+    );
+}
+
+#[test]
+fn segno_dsalcoda_markers_replay_measures_in_midi_output() {
+    let nav_midi =
+        write_midi_from_source_filtered(segno_navigation_source(), "test.jianpu", None, &[])
+            .expect("D.S. al Coda navigation score should generate MIDI");
+
+    let nav_notes = count_note_on_events(&nav_midi);
+
+    // Written order: 5 measures x 4 notes = 20 notes.
+    // Playback order: measures [0,1,2,3,4, 1,2, 3,4] = 9 measures x 4 notes = 36 notes
+    // (pass 1 through dsalcoda at measure 4, pass 2 restarts at segno,
+    // measure 1, through tocoda at measure 2, then jumps to coda at measure
+    // 3 through the end).
+    assert_eq!(
+        nav_notes, 36,
+        "D.S. al Coda navigation should replay measures 0-4 then 1-2 then 3-4"
     );
 }

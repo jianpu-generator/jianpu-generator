@@ -23,67 +23,160 @@ fn invalid_at(score: &Score, measure_idx: usize, detail: String) -> Irrecoverabl
     IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(span, detail))
 }
 
-/// Validates that `dcalcoda`/`tocoda`/`coda` each appear exactly once (or not
-/// at all) and that `tocoda` precedes `coda`. Returns their measure indices.
-fn resolve_marker_indices(
-    score: &Score,
-) -> Result<Option<(usize, usize, usize)>, IrrecoverableError> {
+/// Resolved measure indices of a validated navigation marker set.
+struct NavigationMarkers {
+    /// The `dcalcoda`/`dsalcoda` measure: pass 1 plays through this measure.
+    repeat_after: usize,
+    /// Where pass 2 restarts: measure 0 for `dcalcoda`, the `segno` measure for `dsalcoda`.
+    repeat_from: usize,
+    /// The `tocoda` measure: pass 2 plays through this measure before jumping to `coda`.
+    to_coda: usize,
+    /// The `coda` measure: pass 2 resumes here and continues to the literal end.
+    coda: usize,
+}
+
+/// The raw (unvalidated) marker measure indices for whichever navigation
+/// scheme is in use, plus the fixed `tocoda`/`coda` indices shared by both.
+struct RawMarkerIndices {
+    /// `dc_indices` (dcalcoda scheme) or `ds_indices` (dsalcoda scheme).
+    repeat_after_indices: Vec<usize>,
+    /// `[0]` (dcalcoda scheme) or `segno_indices` (dsalcoda scheme).
+    repeat_from_indices: Vec<usize>,
+    to_coda_indices: Vec<usize>,
+    coda_indices: Vec<usize>,
+    uses_ds_scheme: bool,
+}
+
+/// Determines which navigation scheme (if any) is in use and gathers its raw
+/// marker indices. Errors if `dcalcoda` is mixed with `segno`/`dsalcoda`.
+fn scheme_indices(score: &Score) -> Result<Option<RawMarkerIndices>, IrrecoverableError> {
     let dc_indices = marker_indices(score, |m| m.dc_al_coda);
+    let segno_indices = marker_indices(score, |m| m.segno);
+    let ds_indices = marker_indices(score, |m| m.ds_al_coda);
     let to_coda_indices = marker_indices(score, |m| m.to_coda);
     let coda_indices = marker_indices(score, |m| m.coda);
 
-    if dc_indices.is_empty() && to_coda_indices.is_empty() && coda_indices.is_empty() {
+    let uses_dc_scheme = !dc_indices.is_empty();
+    let uses_ds_scheme = !segno_indices.is_empty() || !ds_indices.is_empty();
+
+    if !uses_dc_scheme && !uses_ds_scheme && to_coda_indices.is_empty() && coda_indices.is_empty() {
         return Ok(None);
     }
 
-    if dc_indices.len() != 1 || to_coda_indices.len() != 1 || coda_indices.len() != 1 {
-        let measure_idx = dc_indices
-            .first()
-            .or_else(|| to_coda_indices.first())
-            .or_else(|| coda_indices.first())
-            .copied()
-            .unwrap_or(0);
+    if uses_dc_scheme && uses_ds_scheme {
         return Err(invalid_at(
             score,
-            measure_idx,
-            "dcalcoda, tocoda, and coda must each appear exactly once, and all three must appear together".to_string(),
+            dc_indices.first().copied().unwrap_or(0),
+            "dcalcoda cannot appear together with segno or dsalcoda".to_string(),
         ));
     }
 
-    let (Some(&dc), Some(&to), Some(&coda)) = (
-        dc_indices.first(),
-        to_coda_indices.first(),
-        coda_indices.first(),
-    ) else {
-        return Err(invalid_at(
-            score,
-            0,
-            "internal invariant violated: marker index missing after length check".to_string(),
-        ));
+    let (repeat_after_indices, repeat_from_indices) = if uses_ds_scheme {
+        (ds_indices, segno_indices)
+    } else {
+        (dc_indices, vec![0])
     };
 
-    if to >= coda {
+    Ok(Some(RawMarkerIndices {
+        repeat_after_indices,
+        repeat_from_indices,
+        to_coda_indices,
+        coda_indices,
+        uses_ds_scheme,
+    }))
+}
+
+/// Validates the navigation markers and returns their resolved measure
+/// indices.
+///
+/// Exactly one of two marker schemes is accepted (or neither, for no
+/// navigation at all):
+/// - `dcalcoda`/`tocoda`/`coda`, each exactly once.
+/// - `segno`/`dsalcoda`/`tocoda`/`coda`, each exactly once, with `segno` at
+///   or before `dsalcoda`.
+///
+/// In both schemes `tocoda` must precede `coda`. Mixing `dcalcoda` with
+/// `segno`/`dsalcoda` is an error.
+fn resolve_marker_indices(score: &Score) -> Result<Option<NavigationMarkers>, IrrecoverableError> {
+    let Some(raw) = scheme_indices(score)? else {
+        return Ok(None);
+    };
+    let index_groups = [
+        &raw.repeat_after_indices,
+        &raw.repeat_from_indices,
+        &raw.to_coda_indices,
+        &raw.coda_indices,
+    ];
+    if index_groups.iter().any(|indices| indices.len() != 1) {
+        let measure_idx = index_groups
+            .iter()
+            .find_map(|indices| indices.first())
+            .copied()
+            .unwrap_or(0);
+        let marker_names = if raw.uses_ds_scheme {
+            "segno, dsalcoda, tocoda, and coda"
+        } else {
+            "dcalcoda, tocoda, and coda"
+        };
         return Err(invalid_at(
             score,
-            to,
+            measure_idx,
+            format!(
+                "{marker_names} must each appear exactly once, and they must all appear together"
+            ),
+        ));
+    }
+
+    // Each `.first()` is `Some` here: the length check above already
+    // confirmed exactly one element in each of these four vecs.
+    let repeat_after = raw
+        .repeat_after_indices
+        .first()
+        .copied()
+        .unwrap_or_default();
+    let repeat_from = raw.repeat_from_indices.first().copied().unwrap_or_default();
+    let to_coda = raw.to_coda_indices.first().copied().unwrap_or_default();
+    let coda = raw.coda_indices.first().copied().unwrap_or_default();
+
+    if raw.uses_ds_scheme && repeat_from > repeat_after {
+        return Err(invalid_at(
+            score,
+            repeat_from,
+            "segno must occur at or before dsalcoda".to_string(),
+        ));
+    }
+
+    if to_coda >= coda {
+        return Err(invalid_at(
+            score,
+            to_coda,
             "tocoda must occur before coda".to_string(),
         ));
     }
 
-    Ok(Some((dc, to, coda)))
+    Ok(Some(NavigationMarkers {
+        repeat_after,
+        repeat_from,
+        to_coda,
+        coda,
+    }))
 }
 
 /// Rebuilds `score.measures` to reflect D.C. al Coda navigation
-/// (`dcalcoda`/`tocoda`/`coda` markers), so downstream MIDI/WAV generation
-/// replays measures in actual playback order instead of written order.
+/// (`dcalcoda`/`tocoda`/`coda`, or `segno`/`dsalcoda`/`tocoda`/`coda`,
+/// markers), so downstream MIDI/WAV generation replays measures in actual
+/// playback order instead of written order.
 ///
 /// - No markers present: returns the score unchanged.
-/// - All three markers present exactly once, with `tocoda` before `coda`:
-///   returns a score whose measures are the expanded playback sequence
-///   (pass 1 through D.C. al Coda, then pass 2 from the start through To
-///   Coda, then Coda through the literal end).
-/// - Any other combination (partial set, duplicates, or `tocoda` at/after
-///   `coda`) is an error.
+/// - `dcalcoda`/`tocoda`/`coda` all present exactly once, with `tocoda`
+///   before `coda`: returns a score whose measures are the expanded playback
+///   sequence (pass 1 through D.C. al Coda, then pass 2 from the start
+///   through To Coda, then Coda through the literal end).
+/// - `segno`/`dsalcoda`/`tocoda`/`coda` all present exactly once, with
+///   `segno` at or before `dsalcoda` and `tocoda` before `coda`: same as
+///   above, but pass 2 restarts from `segno` instead of the start.
+/// - Any other combination (partial set, duplicates, mixing `dcalcoda` with
+///   `segno`/`dsalcoda`, or `tocoda` at/after `coda`) is an error.
 pub fn expand_navigation(score: &Score) -> Result<Score, IrrecoverableError> {
     expand_navigation_with_origins(score).map(|(score, _)| score)
 }
@@ -98,16 +191,16 @@ pub fn expand_navigation_with_origins(
         return Ok((score.clone(), Vec::new()));
     }
 
-    let Some((dc, to, coda)) = resolve_marker_indices(score)? else {
+    let Some(markers) = resolve_marker_indices(score)? else {
         let origins = (0..score.measures.len()).collect();
         return Ok((score.clone(), origins));
     };
 
     let last = score.measures.len() - 1;
     let mut idx: Vec<usize> = Vec::new();
-    idx.extend(0..=dc);
-    idx.extend(0..=to);
-    idx.extend(coda..=last);
+    idx.extend(0..=markers.repeat_after);
+    idx.extend(markers.repeat_from..=markers.to_coda);
+    idx.extend(markers.coda..=last);
 
     let measures = idx
         .iter()

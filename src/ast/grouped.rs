@@ -58,6 +58,10 @@ pub struct MultiPartMeasure {
     pub to_coda: bool,
     /// `coda` on this measure: playback resumes here on the second pass.
     pub coda: bool,
+    /// `segno` on this measure: marks the measure `dsalcoda` jumps back to.
+    pub segno: bool,
+    /// `dsalcoda` on this measure: after playing it, playback restarts from the `segno` measure.
+    pub ds_al_coda: bool,
     pub parts: Vec<PartRow>,
     /// Byte range of this measure's note events in the original source.
     /// Used to map editor cursor position to a measure index.
@@ -126,6 +130,8 @@ pub(crate) struct MeasureDirectives {
     pub(crate) dc_al_coda: bool,
     pub(crate) to_coda: bool,
     pub(crate) coda: bool,
+    pub(crate) segno: bool,
+    pub(crate) ds_al_coda: bool,
 }
 
 pub(crate) struct GroupedScore {

@@ -178,6 +178,8 @@ fn collect_decorations(measure: &MultiPartMeasure, bar_number: usize) -> Vec<Dec
         dc_al_coda: measure.dc_al_coda,
         to_coda: measure.to_coda,
         coda: measure.coda,
+        segno: measure.segno,
+        ds_al_coda: measure.ds_al_coda,
     }]
 }
 

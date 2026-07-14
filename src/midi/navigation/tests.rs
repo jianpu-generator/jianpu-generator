@@ -24,6 +24,8 @@ fn bare_measure(index: usize) -> MultiPartMeasure {
         dc_al_coda: false,
         to_coda: false,
         coda: false,
+        segno: false,
+        ds_al_coda: false,
         parts: vec![],
         source_span: Span::new(index, index + 1),
         diagnostics: vec![],
@@ -135,4 +137,57 @@ fn dead_zone_written_index_is_absent_from_origins() {
     let score = score_with(measures);
     let (_, origins) = expand_navigation_with_origins(&score).unwrap();
     assert!(!origins.contains(&3));
+}
+
+#[test]
+fn segno_markers_expand_to_expected_sequence() {
+    // 5 measures: segno on 1, tocoda on 2, coda on 3, dsalcoda on 4.
+    let mut measures: Vec<_> = (0..5).map(bare_measure).collect();
+    measures[1].segno = true;
+    measures[2].to_coda = true;
+    measures[3].coda = true;
+    measures[4].ds_al_coda = true;
+    let score = score_with(measures);
+    let expanded = expand_navigation(&score).unwrap();
+    let sequence: Vec<usize> = expanded
+        .measures
+        .iter()
+        .map(|m| m.source_span.start)
+        .collect();
+    // Pass 1: 0..=4 (through dsalcoda). Pass 2: restart from segno (1)
+    // through tocoda (2), then jump to coda (3) through the end (4).
+    assert_eq!(sequence, vec![0, 1, 2, 3, 4, 1, 2, 3, 4]);
+}
+
+#[test]
+fn segno_partial_set_is_error() {
+    let mut measures: Vec<_> = (0..3).map(bare_measure).collect();
+    measures[0].segno = true;
+    // no dsalcoda, no tocoda, no coda
+    let score = score_with(measures);
+    assert!(expand_navigation(&score).is_err());
+}
+
+#[test]
+fn dcalcoda_and_segno_together_is_error() {
+    let mut measures: Vec<_> = (0..4).map(bare_measure).collect();
+    measures[0].dc_al_coda = true;
+    measures[0].segno = true;
+    measures[1].to_coda = true;
+    measures[2].coda = true;
+    let score = score_with(measures);
+    assert!(expand_navigation(&score).is_err());
+}
+
+#[test]
+fn segno_after_dsalcoda_is_error() {
+    // segno (1) occurs after dsalcoda (0), which is invalid: dsalcoda must
+    // jump back to a measure at or before itself.
+    let mut measures: Vec<_> = (0..4).map(bare_measure).collect();
+    measures[0].ds_al_coda = true;
+    measures[1].segno = true;
+    measures[2].to_coda = true;
+    measures[3].coda = true;
+    let score = score_with(measures);
+    assert!(expand_navigation(&score).is_err());
 }

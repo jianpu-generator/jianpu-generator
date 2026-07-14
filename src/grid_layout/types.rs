@@ -111,6 +111,8 @@ pub enum GridContent {
         dc_al_coda: bool,
         to_coda: bool,
         coda: bool,
+        segno: bool,
+        ds_al_coda: bool,
     },
     /// Generic styled text for header and footer rows.
     Text {
@@ -156,6 +158,8 @@ pub enum PostArcGridContent {
         dc_al_coda: bool,
         to_coda: bool,
         coda: bool,
+        segno: bool,
+        ds_al_coda: bool,
     },
     Text {
         content: String,
