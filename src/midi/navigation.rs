@@ -85,12 +85,22 @@ fn resolve_marker_indices(
 /// - Any other combination (partial set, duplicates, or `tocoda` at/after
 ///   `coda`) is an error.
 pub fn expand_navigation(score: &Score) -> Result<Score, IrrecoverableError> {
+    expand_navigation_with_origins(score).map(|(score, _)| score)
+}
+
+/// Same as [`expand_navigation`], but also returns a same-length `Vec<usize>`
+/// mapping each measure in the expanded score back to its index in the
+/// original written `score.measures`.
+pub fn expand_navigation_with_origins(
+    score: &Score,
+) -> Result<(Score, Vec<usize>), IrrecoverableError> {
     if score.measures.is_empty() {
-        return Ok(score.clone());
+        return Ok((score.clone(), Vec::new()));
     }
 
     let Some((dc, to, coda)) = resolve_marker_indices(score)? else {
-        return Ok(score.clone());
+        let origins = (0..score.measures.len()).collect();
+        return Ok((score.clone(), origins));
     };
 
     let last = score.measures.len() - 1;
@@ -100,15 +110,83 @@ pub fn expand_navigation(score: &Score) -> Result<Score, IrrecoverableError> {
     idx.extend(coda..=last);
 
     let measures = idx
-        .into_iter()
-        .filter_map(|i| score.measures.get(i).cloned())
+        .iter()
+        .filter_map(|&i| score.measures.get(i).cloned())
         .collect();
 
-    Ok(Score {
-        metadata: score.metadata.clone(),
-        measures,
-        document_diagnostics: score.document_diagnostics.clone(),
-    })
+    Ok((
+        Score {
+            metadata: score.metadata.clone(),
+            measures,
+            document_diagnostics: score.document_diagnostics.clone(),
+        },
+        idx,
+    ))
+}
+
+/// Smallest position `>= min_pos` in `origins` whose value equals
+/// `written_index`, i.e. the earliest playback position (at or after
+/// `min_pos`) at which the given written measure is played.
+pub fn earliest_playback_position(
+    origins: &[usize],
+    written_index: usize,
+    min_pos: usize,
+) -> Option<usize> {
+    origins
+        .iter()
+        .enumerate()
+        .skip(min_pos)
+        .find(|(_, &origin)| origin == written_index)
+        .map(|(pos, _)| pos)
+}
+
+/// Translates a written measure index into its position in actual playback
+/// order (see [`expand_navigation`]). Falls back to the written index
+/// against the original score if the measure has no reachable position
+/// (e.g. it lies between `dcalcoda` and `coda`, or navigation markers are
+/// absent — in which case the mapping is already the identity).
+pub fn expand_for_measure(
+    score: &Score,
+    measure_index: usize,
+) -> Result<(Score, usize), IrrecoverableError> {
+    let (expanded, origins) = expand_navigation_with_origins(score)?;
+    match earliest_playback_position(&origins, measure_index, 0) {
+        Some(position) => Ok((expanded, position)),
+        None => Ok((score.clone(), measure_index)),
+    }
+}
+
+/// Same as [`expand_for_measure`], but for a `start..=end` written range: maps
+/// `start` to its earliest playback position, then maps `end` to its
+/// *last* occurrence at or after that position — the final time `end` is
+/// reached in the performance tail starting at `start`. This is what makes
+/// "play written measure X through the last written measure" (the web app's
+/// "play from current measure") follow every repeat/jump instead of
+/// stopping at `end`'s first, mid-performance occurrence.
+/// Falls back to the original written range if either endpoint has no
+/// reachable position, or if `start_index > end_index`.
+pub fn expand_for_measure_range(
+    score: &Score,
+    start_index: usize,
+    end_index: usize,
+) -> Result<(Score, usize, usize), IrrecoverableError> {
+    if start_index > end_index {
+        return Ok((score.clone(), start_index, end_index));
+    }
+    let (expanded, origins) = expand_navigation_with_origins(score)?;
+    let mapped = earliest_playback_position(&origins, start_index, 0).and_then(|start_pos| {
+        origins
+            .iter()
+            .enumerate()
+            .skip(start_pos)
+            .filter(|(_, &origin)| origin == end_index)
+            .next_back()
+            .map(|(end_pos, _)| (start_pos, end_pos))
+    });
+    match mapped {
+        Some((start_pos, end_pos)) => Ok((expanded, start_pos, end_pos)),
+        None => Ok((score.clone(), start_index, end_index)),
+    }
 }
 
 #[cfg(test)]

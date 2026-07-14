@@ -1,4 +1,4 @@
-use super::expand_navigation;
+use super::{expand_navigation, expand_navigation_with_origins};
 use crate::ast::grouped::{Metadata, MultiPartMeasure, Score};
 use crate::error::Span;
 
@@ -101,4 +101,38 @@ fn empty_score_is_identity() {
     let score = score_with(vec![]);
     let expanded = expand_navigation(&score).unwrap();
     assert!(expanded.measures.is_empty());
+}
+
+#[test]
+fn no_markers_origins_are_identity() {
+    let measures: Vec<_> = (0..4).map(bare_measure).collect();
+    let score = score_with(measures);
+    let (_, origins) = expand_navigation_with_origins(&score).unwrap();
+    assert_eq!(origins, vec![0, 1, 2, 3]);
+}
+
+#[test]
+fn valid_markers_origins_match_expected_sequence() {
+    // 4 measures: tocoda on 1, coda on 2, dcalcoda on 3.
+    let mut measures: Vec<_> = (0..4).map(bare_measure).collect();
+    measures[1].to_coda = true;
+    measures[2].coda = true;
+    measures[3].dc_al_coda = true;
+    let score = score_with(measures);
+    let (_, origins) = expand_navigation_with_origins(&score).unwrap();
+    assert_eq!(origins, vec![0, 1, 2, 3, 0, 1, 2, 3]);
+}
+
+#[test]
+fn dead_zone_written_index_is_absent_from_origins() {
+    // 5 measures: tocoda on 1, dcalcoda on 2 (before coda), a dead-zone
+    // measure at 3 (between dcalcoda and coda, so reachable by neither the
+    // first pass 0..=dc nor the second pass's coda..=last segment), coda on 4.
+    let mut measures: Vec<_> = (0..5).map(bare_measure).collect();
+    measures[1].to_coda = true;
+    measures[2].dc_al_coda = true;
+    measures[4].coda = true;
+    let score = score_with(measures);
+    let (_, origins) = expand_navigation_with_origins(&score).unwrap();
+    assert!(!origins.contains(&3));
 }

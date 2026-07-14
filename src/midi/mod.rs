@@ -14,7 +14,10 @@ use event_processing::{
     flush_pending_ties, flush_pending_ties_at_tick, process_chord_events, process_measure_notes,
     process_percussion_events,
 };
-pub use navigation::expand_navigation;
+pub use navigation::{
+    earliest_playback_position, expand_for_measure, expand_for_measure_range, expand_navigation,
+    expand_navigation_with_origins,
+};
 pub(crate) const TPQ: u16 = 480; // ticks per quarter note
 const VELOCITY: u8 = 80;
 const CHORD_CHANNEL: u8 = 3;

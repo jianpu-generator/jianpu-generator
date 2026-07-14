@@ -260,6 +260,7 @@ pub fn write_wav_for_measure_from_source(
 ) -> Result<Vec<u8>, IrrecoverableError> {
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
+    let (score, measure_index) = midi::expand_for_measure(&score, measure_index)?;
     let midi_bytes = midi::write_midi_for_measure(&score, measure_index)?;
     wav::write_wav(&midi_bytes, sf2_bytes)
 }
@@ -278,8 +279,9 @@ pub fn write_wav_for_measure_range_from_source(
 ) -> Result<Vec<u8>, IrrecoverableError> {
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
-    let midi_bytes =
-        midi::write_midi_for_measure_range(&score, *measure_range.start(), *measure_range.end())?;
+    let (score, start, end) =
+        midi::expand_for_measure_range(&score, *measure_range.start(), *measure_range.end())?;
+    let midi_bytes = midi::write_midi_for_measure_range(&score, start, end)?;
     wav::write_wav(&midi_bytes, sf2_bytes)
 }
 
@@ -296,6 +298,7 @@ pub fn measure_start_times_from_source(
 ) -> Result<Vec<f64>, IrrecoverableError> {
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
+    let score = midi::expand_navigation(&score)?;
     midi::measure_start_times_seconds(&score)
 }
 
@@ -312,11 +315,9 @@ pub fn measure_start_times_for_range_from_source(
 ) -> Result<Vec<f64>, IrrecoverableError> {
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
-    midi::measure_start_times_seconds_for_range(
-        &score,
-        *measure_range.start(),
-        *measure_range.end(),
-    )
+    let (score, start, end) =
+        midi::expand_for_measure_range(&score, *measure_range.start(), *measure_range.end())?;
+    midi::measure_start_times_seconds_for_range(&score, start, end)
 }
 
 /// Parse, group, optionally filter tracks, and generate MIDI (SMF) bytes.
