@@ -137,11 +137,11 @@ label="Percussion: hit (x) & rest (0), two parts together"
 [Sn] 0 x 0 x
 [Kk] x 0 x 0
 
-label="Navigation: To Coda — on the 2nd pass only, playback cuts to the coda measure" tocoda
+label="Navigation: to coda" tocoda
 [M] 1 2 3 4
 
-label="Navigation: D.C. al Coda — after this measure, playback restarts from measure 0" dcalcoda
+label="Navigation: D.C. al coda" dcalcoda
 [M] 5 6 7 1'
 
-label="Navigation: Coda — playback resumes here on the 2nd pass, through the end" coda
+label="Navigation: coda" coda
 [M] 1' 7 6 5
