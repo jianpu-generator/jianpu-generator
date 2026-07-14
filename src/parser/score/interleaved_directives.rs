@@ -129,6 +129,12 @@ fn parse_directive_line(
                     Some(ScoreEvent::LabelChange(text))
                 }
             }
+        } else if token == "dcalcoda" {
+            Some(ScoreEvent::DcAlCoda)
+        } else if token == "tocoda" {
+            Some(ScoreEvent::ToCoda)
+        } else if token == "coda" {
+            Some(ScoreEvent::Coda)
         } else {
             errors.push(RecoverableError::general(
                 span,

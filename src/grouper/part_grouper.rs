@@ -276,7 +276,12 @@ impl PartGrouper {
         spanned: crate::error::Spanned<ScoreEvent>,
     ) -> Result<(), IrrecoverableError> {
         match spanned.value {
-            ScoreEvent::BpmChange(_) | ScoreEvent::KeyChange(_) | ScoreEvent::LabelChange(_) => {
+            ScoreEvent::BpmChange(_)
+            | ScoreEvent::KeyChange(_)
+            | ScoreEvent::LabelChange(_)
+            | ScoreEvent::DcAlCoda
+            | ScoreEvent::ToCoda
+            | ScoreEvent::Coda => {
                 Ok(()) // handled by DirectiveGrouper
             }
             ScoreEvent::TimeSignatureChange {

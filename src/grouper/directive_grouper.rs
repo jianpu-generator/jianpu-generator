@@ -39,6 +39,9 @@ impl DirectiveGrouper {
         let mut result = Vec::new();
         for events in directive_events_per_measure {
             let mut pending_label: Option<String> = None;
+            let mut pending_dc_al_coda = false;
+            let mut pending_to_coda = false;
+            let mut pending_coda = false;
             for event in events {
                 match &event.value {
                     ScoreEvent::BpmChange(bpm) => {
@@ -61,6 +64,15 @@ impl DirectiveGrouper {
                     }
                     ScoreEvent::LabelChange(text) => {
                         pending_label = Some(text.clone());
+                    }
+                    ScoreEvent::DcAlCoda => {
+                        pending_dc_al_coda = true;
+                    }
+                    ScoreEvent::ToCoda => {
+                        pending_to_coda = true;
+                    }
+                    ScoreEvent::Coda => {
+                        pending_coda = true;
                     }
                     _ => {}
                 }
@@ -85,6 +97,9 @@ impl DirectiveGrouper {
                     None
                 },
                 label: pending_label,
+                dc_al_coda: pending_dc_al_coda,
+                to_coda: pending_to_coda,
+                coda: pending_coda,
             });
             self.bpm_changed = false;
             self.time_sig_changed = false;

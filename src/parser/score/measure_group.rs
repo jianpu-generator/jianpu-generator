@@ -6,6 +6,9 @@ pub(super) fn is_directive_line(line: &str) -> bool {
             || t.starts_with("key=")
             || t.starts_with("time=")
             || t.starts_with("label=")
+            || t == "dcalcoda"
+            || t == "tocoda"
+            || t == "coda"
     })
 }
 

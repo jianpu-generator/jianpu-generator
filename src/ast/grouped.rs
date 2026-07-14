@@ -52,6 +52,12 @@ pub struct MultiPartMeasure {
     pub bpm: Option<u32>,
     pub key: Option<KeyChange>,
     pub label: Option<String>,
+    /// `dcalcoda` on this measure: after playing it, playback restarts from measure 0.
+    pub dc_al_coda: bool,
+    /// `tocoda` on this measure: on the second pass only, playback cuts to the `coda` measure.
+    pub to_coda: bool,
+    /// `coda` on this measure: playback resumes here on the second pass.
+    pub coda: bool,
     pub parts: Vec<PartRow>,
     /// Byte range of this measure's note events in the original source.
     /// Used to map editor cursor position to a measure index.
@@ -117,6 +123,9 @@ pub(crate) struct MeasureDirectives {
     pub(crate) bpm: Option<u32>,
     pub(crate) key: Option<KeyChange>,
     pub(crate) label: Option<String>,
+    pub(crate) dc_al_coda: bool,
+    pub(crate) to_coda: bool,
+    pub(crate) coda: bool,
 }
 
 pub(crate) struct GroupedScore {

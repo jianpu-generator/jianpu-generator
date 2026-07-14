@@ -41,7 +41,7 @@ source (&str)
 ### Grouper
 - Module: `src/grouper/`
 - Entry: `grouper::group(doc: ParsedDocument) -> Result<Score, IrrecoverableError>`
-- Key types: `Score`, `MultiPartMeasure`, `PartRow` (Timed), `PartSlice` (carries `soundfont`, `volume`, `octave_offset`), `Notes`, `NoteEvent` (includes `Percussion(GroupedPercussionHit)`), `GroupedNote`, `GroupedRest`, `GroupedChordNote` (`GroupedNote`/`GroupedChordNote` use `tie_to_next_span` + `tie_to_next()` accessor), `GroupedPercussionHit` (mirrors `GroupedNote` minus pitch/accidental/octave, plus `event_span`; `slur_key()` returns the inert `SlurKey::Rest` sentinel since hits have no pitch to differentiate slur arcs by), `GroupedMeasure` (intermediate: notes + paired lyrics per measure)
+- Key types: `Score`, `MultiPartMeasure` (carries `bpm`/`key`/`time_signature`/`label` plus the D.C. al Coda navigation markers `dc_al_coda`/`to_coda`/`coda`, all non-persisting — see **Navigation expansion** in the glossary), `PartRow` (Timed), `PartSlice` (carries `soundfont`, `volume`, `octave_offset`), `Notes`, `NoteEvent` (includes `Percussion(GroupedPercussionHit)`), `GroupedNote`, `GroupedRest`, `GroupedChordNote` (`GroupedNote`/`GroupedChordNote` use `tie_to_next_span` + `tie_to_next()` accessor), `GroupedPercussionHit` (mirrors `GroupedNote` minus pitch/accidental/octave, plus `event_span`; `slur_key()` returns the inert `SlurKey::Rest` sentinel since hits have no pitch to differentiate slur arcs by), `GroupedMeasure` (intermediate: notes + paired lyrics per measure)
 
 ### Compiler
 - Module: `src/compiler/`
@@ -92,11 +92,12 @@ source (&str)
 | **Lyrics line** | One plain-text line per measure per `notes lyrics` part, tokenised into syllables and stored per measure (not as a global pool). |
 | **Arc Span** | The full logical extent of one slur or tie arc, possibly crossing measure or system boundaries (`SlurSpan`). Carries `ArcKind` to distinguish ties from slurs. |
 | **ArcKind** | Discriminant on `SlurSpan`: `Slur` (from `(…)` groups) or `Tie` (from `~`). Both render as arcs; the kind is available for future visual distinction. |
-| **Decoration** | Measure-level metadata attached to a `MeasureBlock`: BPM, time signature, section label, bar number. |
+| **Decoration** | Measure-level metadata attached to a `MeasureBlock`: BPM, time signature, section label, bar number, D.C. al Coda navigation markers (`dc_al_coda`/`to_coda`/`coda`). |
 | **Row Label** | The part name displayed at the left margin of a system row. |
 | **RowId** | A unique string identifier for a compiler row, used to correlate rows across layout stages. |
 | **Measure Start Time** | The elapsed-seconds offset of a measure boundary within a score's audio rendering, computed from cumulative MIDI ticks and any BPM changes (`midi::measure_start_times_seconds`). Used to sync a playback-position UI element (a "playhead") against a `<audio>` element's `currentTime`. |
 | **GM percussion key** | A General MIDI drum-kit key number (0–127) identifying a specific unpitched drum sample (e.g. `38` = Acoustic Snare, `36` = Bass Drum 1) played on the shared GM percussion channel (MIDI channel 9). Used as the `Soundfont` number on `PartKind::Percussion` parts instead of a melodic GM program number. |
+| **Navigation expansion** | `midi::expand_navigation(score: &Score) -> Result<Score, IrrecoverableError>`, a `Score -> Score` pass applied only on the MIDI/WAV export path (after `apply_track_filter`, before `midi::write_midi`). Rebuilds `measures` by index to reflect `dcalcoda`/`tocoda`/`coda` markers: play from the start through the `dcalcoda` measure, restart from the start through the `tocoda` measure, then jump to the `coda` measure through the literal end. Identity when no markers are present. SVG/PDF export never calls this — those always render measures in written order. |
 
 ## Web integration
 

@@ -14,6 +14,9 @@ fn directive_line_element(dec: &Decoration, col: u32) -> GridElement {
         key,
         bpm,
         time_signature,
+        dc_al_coda,
+        to_coda,
+        coda,
     } = dec;
     GridElement {
         column: col,
@@ -26,8 +29,21 @@ fn directive_line_element(dec: &Decoration, col: u32) -> GridElement {
             key: key.clone(),
             bpm: *bpm,
             time_signature: *time_signature,
+            dc_al_coda: *dc_al_coda,
+            to_coda: *to_coda,
+            coda: *coda,
         },
     }
+}
+
+fn decoration_has_navigation_marker(dec: &Decoration) -> bool {
+    let Decoration::DirectiveLine {
+        dc_al_coda,
+        to_coda,
+        coda,
+        ..
+    } = dec;
+    *dc_al_coda || *to_coda || *coda
 }
 
 pub(super) fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow {
@@ -42,17 +58,16 @@ pub(super) fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow
         }
     }
 
-    // Non-first blocks: only emit a DirectiveLine when there is a label,
-    // aligned to the left edge of the measure it belongs to. This uses the
-    // same column grid as the music rows so the label lines up exactly with
-    // the measure's bar line.
+    // Non-first blocks: only emit a DirectiveLine when there is a label or a
+    // navigation marker, aligned to the left edge of the measure it belongs
+    // to. This uses the same column grid as the music rows so the label
+    // lines up exactly with the measure's bar line.
     let mut measure_music_col = LABEL_COLS;
     for (index, block) in system.iter().enumerate() {
         if index > 0 {
-            if let Some(Decoration::DirectiveLine { label: Some(_), .. }) =
-                block.decorations.first()
-            {
-                if let Some(dec) = block.decorations.first() {
+            if let Some(dec) = block.decorations.first() {
+                let has_label = matches!(dec, Decoration::DirectiveLine { label: Some(_), .. });
+                if has_label || decoration_has_navigation_marker(dec) {
                     elements.push(directive_line_element(dec, measure_music_col));
                 }
             }

@@ -240,6 +240,7 @@ pub fn write_wav_from_source_filtered(
 ) -> Result<Vec<u8>, IrrecoverableError> {
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
+    let score = midi::expand_navigation(&score)?;
     let midi_bytes = midi::write_midi(&score)?;
     wav::write_wav(&midi_bytes, sf2_bytes)
 }
@@ -331,6 +332,7 @@ pub fn write_midi_from_source_filtered(
 ) -> Result<Vec<u8>, IrrecoverableError> {
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
+    let score = midi::expand_navigation(&score)?;
     midi::write_midi(&score)
 }
 

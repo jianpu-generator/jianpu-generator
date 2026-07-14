@@ -48,6 +48,9 @@ fn directive_line(
         key: key.map(|s| s.to_string()),
         bpm,
         time_signature,
+        dc_al_coda: false,
+        to_coda: false,
+        coda: false,
     }
 }
 
@@ -298,5 +301,36 @@ fn section_label_on_non_first_measure_is_right_of_column_1() {
     assert!(
         label_col > 1,
         "directive line on 2nd measure should be right of column 1, got {label_col}"
+    );
+}
+
+#[test]
+fn tocoda_on_non_first_measure_without_label_is_still_rendered() {
+    // Two measures in one system; only the second has `tocoda` set and no label.
+    let first_block = make_block("S", 3);
+    let mut second_block = make_block("S", 3);
+    second_block.decorations = vec![Decoration::DirectiveLine {
+        label: None,
+        bar_number: None,
+        key: None,
+        bpm: None,
+        time_signature: None,
+        dc_al_coda: false,
+        to_coda: true,
+        coda: false,
+    }];
+    let compile_result = CompileResult {
+        blocks: vec![first_block, second_block],
+        slur_spans: vec![],
+    };
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let has_to_coda = pages[0]
+        .rows
+        .iter()
+        .flat_map(|r| r.elements.iter())
+        .any(|e| matches!(&e.content, GridContent::DirectiveLine { to_coda: true, .. }));
+    assert!(
+        has_to_coda,
+        "a labelless tocoda marker on a non-first measure must not be dropped"
     );
 }

@@ -103,6 +103,9 @@ fn combine_measure(
         bpm: directives.bpm,
         key: directives.key.clone(),
         label: directives.label.clone(),
+        dc_al_coda: directives.dc_al_coda,
+        to_coda: directives.to_coda,
+        coda: directives.coda,
         parts: part_rows,
         source_span,
         diagnostics: measure_diagnostics,
@@ -153,6 +156,9 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> (Vec<MultiPartMeasure>, V
         bpm: None,
         key: None,
         label: None,
+        dc_al_coda: false,
+        to_coda: false,
+        coda: false,
     };
     let combined = (0..max_len)
         .map(|measure_idx| combine_measure(grouped_score, measure_idx, &directives_fallback))

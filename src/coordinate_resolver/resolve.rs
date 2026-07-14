@@ -184,12 +184,18 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
             key,
             bpm,
             time_signature,
+            dc_al_coda,
+            to_coda,
+            coda,
         } => Some(PostArcGridContent::DirectiveLine {
             label: label.clone(),
             bar_number: *bar_number,
             key: key.clone(),
             bpm: *bpm,
             time_signature: *time_signature,
+            dc_al_coda: *dc_al_coda,
+            to_coda: *to_coda,
+            coda: *coda,
         }),
         GridContent::Text {
             content,

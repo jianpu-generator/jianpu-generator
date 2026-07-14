@@ -108,6 +108,9 @@ pub enum GridContent {
         key: Option<String>,
         bpm: Option<u32>,
         time_signature: Option<(u32, u32)>,
+        dc_al_coda: bool,
+        to_coda: bool,
+        coda: bool,
     },
     /// Generic styled text for header and footer rows.
     Text {
@@ -150,6 +153,9 @@ pub enum PostArcGridContent {
         key: Option<String>,
         bpm: Option<u32>,
         time_signature: Option<(u32, u32)>,
+        dc_al_coda: bool,
+        to_coda: bool,
+        coda: bool,
     },
     Text {
         content: String,

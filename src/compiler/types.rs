@@ -92,5 +92,8 @@ pub enum Decoration {
         key: Option<String>,
         bpm: Option<u32>,
         time_signature: Option<(u32, u32)>,
+        dc_al_coda: bool,
+        to_coda: bool,
+        coda: bool,
     },
 }

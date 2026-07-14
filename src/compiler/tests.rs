@@ -153,6 +153,27 @@ fn section_label_measure_has_no_bar_number() {
 }
 
 #[test]
+fn dc_al_coda_directive_sets_decoration_flag() {
+    let score = score_from(&notes_doc(
+        "time=4/4 key=C4 bpm=120 dcalcoda tocoda coda\n[S] 1\n",
+    ));
+    let result = compile(&score);
+    let dec = result.blocks[0].decorations.first().unwrap();
+    assert!(
+        matches!(
+            dec,
+            Decoration::DirectiveLine {
+                dc_al_coda: true,
+                to_coda: true,
+                coda: true,
+                ..
+            }
+        ),
+        "measure with all three navigation markers should set all three decoration flags"
+    );
+}
+
+#[test]
 fn rest_produces_rest_element() {
     let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 0\n"));
     let result = compile(&score);

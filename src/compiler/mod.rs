@@ -175,6 +175,9 @@ fn collect_decorations(measure: &MultiPartMeasure, bar_number: usize) -> Vec<Dec
             .time_signature
             .as_ref()
             .map(|ts| (ts.numerator as u32, ts.denominator as u32)),
+        dc_al_coda: measure.dc_al_coda,
+        to_coda: measure.to_coda,
+        coda: measure.coda,
     }]
 }
 

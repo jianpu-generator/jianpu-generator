@@ -130,6 +130,9 @@ pub(super) fn one_measure_score() -> Score {
                 },
             }),
             label: None,
+            dc_al_coda: false,
+            to_coda: false,
+            coda: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
                 kind: PartKind::Notes,
@@ -213,6 +216,9 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
                 },
             }),
             label: None,
+            dc_al_coda: false,
+            to_coda: false,
+            coda: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
                 kind: PartKind::Notes,

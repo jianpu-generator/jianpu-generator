@@ -8,11 +8,13 @@ pub use crate::ast::parsed::JianPuPitch;
 
 mod event_processing;
 mod midi_notes;
+mod navigation;
 mod timing;
 use event_processing::{
     flush_pending_ties, flush_pending_ties_at_tick, process_chord_events, process_measure_notes,
     process_percussion_events,
 };
+pub use navigation::expand_navigation;
 pub(crate) const TPQ: u16 = 480; // ticks per quarter note
 const VELOCITY: u8 = 80;
 const CHORD_CHANNEL: u8 = 3;

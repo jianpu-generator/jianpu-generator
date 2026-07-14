@@ -226,6 +226,9 @@ bpm=92 key=C4 time=4/4 label="Verse 1"
 | `key=` | `key=C4`, `key=F#3`, `key=Bb4` | Key signature (`1` = this note) |
 | `time=` | `time=4/4`, `time=3/4` | Time signature |
 | `label=` | `label="Verse 1"` | Section label rendered above the row group |
+| `dcalcoda` | `dcalcoda` | D.C. al Coda: after this measure, playback restarts from measure 0 |
+| `tocoda` | `tocoda` | To Coda: on the second pass only, playback cuts away here to the `coda` measure |
+| `coda` | `coda` | Coda: playback resumes here (on the second pass) and continues to the end |
 
 Rules:
 
@@ -234,12 +237,19 @@ Rules:
 - Directives apply to **all** parts. They are stored on the first notes part and propagate through grouping.
 - `label` applies only to the measure where it is declared (does not persist to the next bar).
 - `bpm`, `key`, and `time` persist until the next directive line overrides them.
+- `dcalcoda`, `tocoda`, and `coda` are bare keywords (no `=value`) that, like `label`, apply only to the measure where declared and do not persist. They must appear **all three together or not at all** (a partial set is an error), at most once each, and `tocoda` must occur before `coda`.
 
 ### Rendering
 
-When `time=` or `bpm=` changes on a measure, the generator may add a **directive row** above the bar-number / section-label row for that system line. Time signature and BPM appear once on that row (not on each part row), aligned with each measure’s note-start column. They do not shift notes or lyrics horizontally. If neither value changes on any measure in the line, the directive row is omitted.
+When `time=` or `bpm=` changes on a measure, the generator may add a **directive row** above the bar-number / section-label row for that system line. Time signature and BPM appear once on that row (not on each part row), aligned with each measure’s note-start column. They do not shift notes or lyrics horizontally. If neither value changes on any measure in the line, the directive row is omitted. A measure with `dcalcoda`, `tocoda`, or `coda` set also forces a directive row for that measure, even without a label.
 
 Note names: `A` `B` `C` `D` `E` `F` `G`, with optional `#` or `b` accidental, followed by octave digit (e.g. `4`).
+
+### D.C. al Coda navigation (SVG vs. MIDI/WAV)
+
+`dcalcoda`/`tocoda`/`coda` render as annotations only — "D.C. al Coda" (italic), "⊕ To Coda", and "⊕ Coda" — on the measure where each is declared. **SVG (and PDF) output always shows measures in written order**; the markers are just text, they never reorder or duplicate anything visually.
+
+**MIDI and WAV output actually replay measures according to the markers**, since this generator also produces playable audio: measures play from the start through the `dcalcoda` measure, then restart from the start and play through the `tocoda` measure, then jump to the `coda` measure and play through to the literal end of the score. On the first pass, the `tocoda` measure is just a normal measure — the cut only happens on the second pass.
 
 ---
 

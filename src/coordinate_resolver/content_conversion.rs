@@ -30,13 +30,20 @@ fn sans_serif_text(
     }
 }
 
-fn directive_line_spans(
-    label: &Option<String>,
-    bar_number: &Option<u32>,
-    key: &Option<String>,
-    bpm: &Option<u32>,
-    time_signature: &Option<(u32, u32)>,
-) -> Vec<TextSpan> {
+fn directive_line_spans(content: &PostArcGridContent) -> Vec<TextSpan> {
+    let PostArcGridContent::DirectiveLine {
+        label,
+        bar_number,
+        key,
+        bpm,
+        time_signature,
+        dc_al_coda,
+        to_coda,
+        coda,
+    } = content
+    else {
+        return Vec::new();
+    };
     let mut spans: Vec<TextSpan> = Vec::new();
     if let Some(label_text) = label {
         spans.push(TextSpan {
@@ -77,6 +84,30 @@ fn directive_line_spans(
             font_size: 12.0,
         });
     }
+    if *to_coda {
+        spans.push(TextSpan {
+            content: "  \u{2295} To Coda".to_string(),
+            bold: false,
+            italic: true,
+            font_size: 12.0,
+        });
+    }
+    if *coda {
+        spans.push(TextSpan {
+            content: "  \u{2295} Coda".to_string(),
+            bold: false,
+            italic: true,
+            font_size: 12.0,
+        });
+    }
+    if *dc_al_coda {
+        spans.push(TextSpan {
+            content: "  D.C. al Coda".to_string(),
+            bold: false,
+            italic: true,
+            font_size: 12.0,
+        });
+    }
     spans
 }
 
@@ -102,15 +133,9 @@ fn grid_text_to_absolute(
             FontWeight::Normal,
             false,
         )),
-        PostArcGridContent::DirectiveLine {
-            label,
-            bar_number,
-            key,
-            bpm,
-            time_signature,
-        } => Some(AbsoluteContent::DirectiveLine {
+        PostArcGridContent::DirectiveLine { label, .. } => Some(AbsoluteContent::DirectiveLine {
             label: label.clone(),
-            spans: directive_line_spans(label, bar_number, key, bpm, time_signature),
+            spans: directive_line_spans(content),
         }),
         PostArcGridContent::Text {
             content,
