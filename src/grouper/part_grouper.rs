@@ -283,7 +283,10 @@ impl PartGrouper {
             | ScoreEvent::ToCoda
             | ScoreEvent::Coda
             | ScoreEvent::Segno
-            | ScoreEvent::DsAlCoda => {
+            | ScoreEvent::DsAlCoda
+            | ScoreEvent::DcAlFine
+            | ScoreEvent::Fine
+            | ScoreEvent::DsAlFine => {
                 Ok(()) // handled by DirectiveGrouper
             }
             ScoreEvent::TimeSignatureChange {

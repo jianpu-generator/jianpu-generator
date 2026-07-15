@@ -26,6 +26,9 @@ fn bare_measure(index: usize) -> MultiPartMeasure {
         coda: false,
         segno: false,
         ds_al_coda: false,
+        dc_al_fine: false,
+        fine: false,
+        ds_al_fine: false,
         parts: vec![],
         source_span: Span::new(index, index + 1),
         diagnostics: vec![],
@@ -188,6 +191,99 @@ fn segno_after_dsalcoda_is_error() {
     measures[1].segno = true;
     measures[2].to_coda = true;
     measures[3].coda = true;
+    let score = score_with(measures);
+    assert!(expand_navigation(&score).is_err());
+}
+
+#[test]
+fn dcalfine_markers_expand_to_expected_sequence() {
+    // 4 measures: fine on 1, dcalfine on 3.
+    let mut measures: Vec<_> = (0..4).map(bare_measure).collect();
+    measures[1].fine = true;
+    measures[3].dc_al_fine = true;
+    let score = score_with(measures);
+    let expanded = expand_navigation(&score).unwrap();
+    let sequence: Vec<usize> = expanded
+        .measures
+        .iter()
+        .map(|m| m.source_span.start)
+        .collect();
+    // Pass 1: 0..=3 (through dcalfine). Pass 2: restart from the start
+    // through fine (1), then stop.
+    assert_eq!(sequence, vec![0, 1, 2, 3, 0, 1]);
+}
+
+#[test]
+fn dsalfine_markers_expand_to_expected_sequence() {
+    // 5 measures: segno on 1, fine on 3, dsalfine on 4.
+    let mut measures: Vec<_> = (0..5).map(bare_measure).collect();
+    measures[1].segno = true;
+    measures[3].fine = true;
+    measures[4].ds_al_fine = true;
+    let score = score_with(measures);
+    let expanded = expand_navigation(&score).unwrap();
+    let sequence: Vec<usize> = expanded
+        .measures
+        .iter()
+        .map(|m| m.source_span.start)
+        .collect();
+    // Pass 1: 0..=4 (through dsalfine). Pass 2: restart from segno (1)
+    // through fine (3), then stop.
+    assert_eq!(sequence, vec![0, 1, 2, 3, 4, 1, 2, 3]);
+}
+
+#[test]
+fn dcalfine_partial_set_is_error() {
+    let mut measures: Vec<_> = (0..3).map(bare_measure).collect();
+    measures[2].dc_al_fine = true;
+    // no fine
+    let score = score_with(measures);
+    assert!(expand_navigation(&score).is_err());
+}
+
+#[test]
+fn dsalfine_partial_set_is_error() {
+    let mut measures: Vec<_> = (0..3).map(bare_measure).collect();
+    measures[0].segno = true;
+    measures[2].ds_al_fine = true;
+    // no fine
+    let score = score_with(measures);
+    assert!(expand_navigation(&score).is_err());
+}
+
+#[test]
+fn fine_before_segno_is_error() {
+    // fine (0) occurs before segno (1), so pass 2 (restarting at segno)
+    // could never reach it.
+    let mut measures: Vec<_> = (0..3).map(bare_measure).collect();
+    measures[0].fine = true;
+    measures[1].segno = true;
+    measures[2].ds_al_fine = true;
+    let score = score_with(measures);
+    assert!(expand_navigation(&score).is_err());
+}
+
+#[test]
+fn dcalfine_and_dcalcoda_together_is_error() {
+    let mut measures: Vec<_> = (0..4).map(bare_measure).collect();
+    measures[0].dc_al_fine = true;
+    measures[1].fine = true;
+    measures[2].to_coda = true;
+    measures[3].coda = true;
+    measures[3].dc_al_coda = true;
+    let score = score_with(measures);
+    assert!(expand_navigation(&score).is_err());
+}
+
+#[test]
+fn fine_combined_with_tocoda_coda_is_error() {
+    // dcalfine present alongside a stray tocoda/coda pair (belonging to no
+    // scheme) must be rejected rather than silently ignored.
+    let mut measures: Vec<_> = (0..4).map(bare_measure).collect();
+    measures[0].to_coda = true;
+    measures[1].coda = true;
+    measures[2].fine = true;
+    measures[3].dc_al_fine = true;
     let score = score_with(measures);
     assert!(expand_navigation(&score).is_err());
 }

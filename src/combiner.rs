@@ -108,6 +108,9 @@ fn combine_measure(
         coda: directives.coda,
         segno: directives.segno,
         ds_al_coda: directives.ds_al_coda,
+        dc_al_fine: directives.dc_al_fine,
+        fine: directives.fine,
+        ds_al_fine: directives.ds_al_fine,
         parts: part_rows,
         source_span,
         diagnostics: measure_diagnostics,
@@ -163,6 +166,9 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> (Vec<MultiPartMeasure>, V
         coda: false,
         segno: false,
         ds_al_coda: false,
+        dc_al_fine: false,
+        fine: false,
+        ds_al_fine: false,
     };
     let combined = (0..max_len)
         .map(|measure_idx| combine_measure(grouped_score, measure_idx, &directives_fallback))

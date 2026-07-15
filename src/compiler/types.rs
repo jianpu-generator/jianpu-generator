@@ -97,5 +97,8 @@ pub enum Decoration {
         coda: bool,
         segno: bool,
         ds_al_coda: bool,
+        dc_al_fine: bool,
+        fine: bool,
+        ds_al_fine: bool,
     },
 }

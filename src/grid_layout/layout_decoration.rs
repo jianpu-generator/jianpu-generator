@@ -19,6 +19,9 @@ fn directive_line_element(dec: &Decoration, col: u32) -> GridElement {
         coda,
         segno,
         ds_al_coda,
+        dc_al_fine,
+        fine,
+        ds_al_fine,
     } = dec;
     GridElement {
         column: col,
@@ -36,6 +39,9 @@ fn directive_line_element(dec: &Decoration, col: u32) -> GridElement {
             coda: *coda,
             segno: *segno,
             ds_al_coda: *ds_al_coda,
+            dc_al_fine: *dc_al_fine,
+            fine: *fine,
+            ds_al_fine: *ds_al_fine,
         },
     }
 }
@@ -47,9 +53,12 @@ fn decoration_has_navigation_marker(dec: &Decoration) -> bool {
         coda,
         segno,
         ds_al_coda,
+        dc_al_fine,
+        fine,
+        ds_al_fine,
         ..
     } = dec;
-    *dc_al_coda || *to_coda || *coda || *segno || *ds_al_coda
+    *dc_al_coda || *to_coda || *coda || *segno || *ds_al_coda || *dc_al_fine || *fine || *ds_al_fine
 }
 
 pub(super) fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow {

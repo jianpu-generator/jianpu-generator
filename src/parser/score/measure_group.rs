@@ -11,6 +11,9 @@ pub(super) fn is_directive_line(line: &str) -> bool {
             || t == "coda"
             || t == "segno"
             || t == "dsalcoda"
+            || t == "dcalfine"
+            || t == "fine"
+            || t == "dsalfine"
     })
 }
 

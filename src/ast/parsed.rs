@@ -190,10 +190,16 @@ pub enum ScoreEvent {
     ToCoda,
     /// `coda` — playback resumes here (on the second pass) and continues to the end.
     Coda,
-    /// `segno` — marks the measure that `dsalcoda` jumps back to.
+    /// `segno` — marks the measure that `dsalcoda`/`dsalfine` jumps back to.
     Segno,
     /// `dsalcoda` — after this measure, playback restarts from the `Segno` measure.
     DsAlCoda,
+    /// `dcalfine` — after this measure, playback restarts from measure 0 and stops at `Fine`.
+    DcAlFine,
+    /// `fine` — on the second pass only, playback stops here.
+    Fine,
+    /// `dsalfine` — after this measure, playback restarts from the `Segno` measure and stops at `Fine`.
+    DsAlFine,
 }
 
 #[derive(Debug, Clone, PartialEq)]

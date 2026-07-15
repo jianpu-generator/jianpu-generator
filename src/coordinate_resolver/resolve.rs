@@ -189,6 +189,9 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
             coda,
             segno,
             ds_al_coda,
+            dc_al_fine,
+            fine,
+            ds_al_fine,
         } => Some(PostArcGridContent::DirectiveLine {
             label: label.clone(),
             bar_number: *bar_number,
@@ -200,6 +203,9 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
             coda: *coda,
             segno: *segno,
             ds_al_coda: *ds_al_coda,
+            dc_al_fine: *dc_al_fine,
+            fine: *fine,
+            ds_al_fine: *ds_al_fine,
         }),
         GridContent::Text {
             content,

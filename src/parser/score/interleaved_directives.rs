@@ -129,16 +129,8 @@ fn parse_directive_line(
                     Some(ScoreEvent::LabelChange(text))
                 }
             }
-        } else if token == "dcalcoda" {
-            Some(ScoreEvent::DcAlCoda)
-        } else if token == "tocoda" {
-            Some(ScoreEvent::ToCoda)
-        } else if token == "coda" {
-            Some(ScoreEvent::Coda)
-        } else if token == "segno" {
-            Some(ScoreEvent::Segno)
-        } else if token == "dsalcoda" {
-            Some(ScoreEvent::DsAlCoda)
+        } else if let Some(ev) = navigation_keyword_event(token) {
+            Some(ev)
         } else {
             errors.push(RecoverableError::general(
                 span,
@@ -153,6 +145,21 @@ fn parse_directive_line(
     }
 
     (events, errors)
+}
+
+/// Matches the bare-keyword (no `=value`) navigation directives.
+fn navigation_keyword_event(token: &str) -> Option<ScoreEvent> {
+    match token {
+        "dcalcoda" => Some(ScoreEvent::DcAlCoda),
+        "tocoda" => Some(ScoreEvent::ToCoda),
+        "coda" => Some(ScoreEvent::Coda),
+        "segno" => Some(ScoreEvent::Segno),
+        "dsalcoda" => Some(ScoreEvent::DsAlCoda),
+        "dcalfine" => Some(ScoreEvent::DcAlFine),
+        "fine" => Some(ScoreEvent::Fine),
+        "dsalfine" => Some(ScoreEvent::DsAlFine),
+        _ => None,
+    }
 }
 
 fn parse_key_value(
