@@ -155,7 +155,7 @@ impl RecoverableErrorKind {
             Self::SectionUnknown { name } => format!("unknown section: # {name}"),
             Self::SectionDuplicate { section } => format!("duplicate {} section", section.header()),
             Self::SectionMissing { section } => format!("missing {} section", section.header()),
-            Self::SectionOutOfOrder => "sections must appear in order: # metadata, # parts, # sequence, # score".to_string(),
+            Self::SectionOutOfOrder => "sections must appear in order: # metadata, # parts, # groups, # sequence, # score".to_string(),
             Self::LyricsLineEmpty => "lyrics line cannot be empty; use '_' for no lyrics".to_string(),
             Self::LyricsNoNotesTrack { abbrev } => format!("lyrics line for '{abbrev}' has no matching notes track"),
             Self::PartMeasureCountMismatch { part, got, expected } => format!("part {part:?} has {got} measures but the first part has {expected}; all parts must have the same number of measures"),
@@ -166,15 +166,9 @@ impl RecoverableErrorKind {
             Self::DurationMixedOctaveMarkers => "mixed octave markers: use ' for up or , for down, not both; octave shift ignored".to_string(),
             Self::DurationCannotDotQuarterBeat => "cannot dot a quarter-beat (=) note; dot ignored, duration stays at 1 beat".to_string(),
             Self::GroupUnexpectedCloseParen => "unexpected `)` — no open group; `)` ignored".to_string(),
-            Self::UnclosedGroupAtEnd { part } => {
-                format!("unclosed '(' group at end of score in part '{part}'")
-            }
-            Self::PartKeyUnknown { key } => {
-                format!("`[{key}]` does not match any declared part abbreviation; line dropped")
-            }
-            Self::ScoreLineMissingKeyPrefix => {
-                "score line has no [Abbrev] prefix; line dropped".to_string()
-            }
+            Self::UnclosedGroupAtEnd { part } => format!("unclosed '(' group at end of score in part '{part}'"),
+            Self::PartKeyUnknown { key } => format!("`[{key}]` does not match any declared part abbreviation; line dropped"),
+            Self::ScoreLineMissingKeyPrefix => "score line has no [Abbrev] prefix; line dropped".to_string(),
             Self::TieOnRest => "~ cannot be applied to a rest; ~ ignored".to_string(),
             Self::DanglingTie => "~ has no following note to tie to; ~ ignored".to_string(),
             Self::TiePitchMismatch { expected, got } => format!("tied notes must have the same pitch and octave; expected {expected}, got {got}; ~ ignored"),

@@ -188,6 +188,96 @@ fn render_documents_from_source_filtered_with_lyrics_hides_legend_entry_for_filt
 }
 
 #[test]
+fn render_svgs_from_source_includes_group_legend_entry() {
+    let input = concat!(
+        "# metadata\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "# parts\n",
+        "Violin [vln] = notes\n",
+        "Viola [vla] = notes\n",
+        "\n",
+        "# groups\n",
+        "Strings [str] = vln vla\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[vln] 1 2 3 4\n",
+        "[vla] 5 6 7 1\n",
+    );
+    let svgs = render_svgs_from_source(input, "test.jianpu", &[])
+        .unwrap()
+        .svgs;
+    assert!(svgs[0].contains("str \u{2014} Strings"));
+}
+
+#[test]
+fn render_svgs_from_source_filtered_hides_legend_entry_for_group_with_no_enabled_members() {
+    let input = concat!(
+        "# metadata\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "# parts\n",
+        "Violin [vln] = notes\n",
+        "Viola [vla] = notes\n",
+        "Flute [fl] = notes\n",
+        "\n",
+        "# groups\n",
+        "Strings [str] = vln vla\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[vln] 1 2 3 4\n",
+        "[vla] 5 6 7 1\n",
+        "[fl] 1 2 3 4\n",
+    );
+    let flute_only =
+        render_svgs_from_source_filtered(input, "test.jianpu", Some(&["fl".into()]), &[])
+            .unwrap()
+            .svgs;
+    assert!(!flute_only[0].contains("Strings"));
+
+    let vln_only =
+        render_svgs_from_source_filtered(input, "test.jianpu", Some(&["vln".into()]), &[])
+            .unwrap()
+            .svgs;
+    assert!(vln_only[0].contains("str \u{2014} Strings"));
+}
+
+#[test]
+fn render_svgs_from_source_filtered_keeps_group_built_from_other_groups() {
+    let input = concat!(
+        "# metadata\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "# parts\n",
+        "Violin [vln] = notes\n",
+        "Viola [vla] = notes\n",
+        "\n",
+        "# groups\n",
+        "Strings [str] = vln vla\n",
+        "AllStrings [all] = str\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[vln] 1 2 3 4\n",
+        "[vla] 5 6 7 1\n",
+    );
+    let vln_only =
+        render_svgs_from_source_filtered(input, "test.jianpu", Some(&["vln".into()]), &[])
+            .unwrap()
+            .svgs;
+    assert!(
+        vln_only[0].contains("all \u{2014} AllStrings"),
+        "a group built entirely from other group abbreviations should still resolve \
+         transitively to enabled parts and appear in the legend"
+    );
+}
+
+#[test]
 fn split_track_names_falls_back_to_part_declarations() {
     let input = concat!(
         "# metadata\n",

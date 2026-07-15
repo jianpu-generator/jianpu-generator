@@ -6,7 +6,7 @@ This document describes the input syntax accepted by **jianpu-generator** as imp
 
 ## File structure
 
-A `.jianpu` file has up to four sections in fixed order:
+A `.jianpu` file has up to five sections in fixed order:
 
 ```
 # metadata
@@ -14,6 +14,9 @@ A `.jianpu` file has up to four sections in fixed order:
 
 # parts
 …track declarations…
+
+# groups
+…group alias declarations…
 
 # sequence
 …comma-separated section labels…
@@ -24,6 +27,7 @@ A `.jianpu` file has up to four sections in fixed order:
 
 - `# metadata` — **optional**
 - `# parts` — **required**
+- `# groups` — **optional**, must appear after `# parts` and before `# score` when present
 - `# sequence` — **optional**, must appear after `# parts` and before `# score` when present
 - `# score` — **required**
 - Sections must appear in the order above.
@@ -130,6 +134,23 @@ Minimal single-part example:
 # parts
 Melody = notes+lyrics
 ```
+
+---
+
+## Groups section
+
+An optional `# groups` section — placed after `# parts` and before `# score`.
+
+```
+# groups
+Soprano [s] = s1 s2
+Alto [a] = a1 a2
+```
+
+- Same left-hand-side syntax as `# parts`: `<display-name> [<abbreviation>] = <members>`; when brackets are omitted, the abbreviation equals the display name.
+- The right-hand side is a space-separated list of member abbreviations.
+
+Each group with an explicit abbreviation (i.e. `[abbreviation]` differs from the display name) is listed in the part-list legend in the SVG/PDF output, alongside part entries. A group is hidden from the legend when a track filter excludes all of its members. Groups otherwise have no effect on rendering or MIDI output.
 
 ---
 

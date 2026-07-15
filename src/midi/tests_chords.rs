@@ -98,9 +98,8 @@ fn measure_index_out_of_range_is_recoverable() {
 #[test]
 fn tied_notes_produce_single_note_on() {
     // `1~1` — two quarter notes tied together should produce exactly one NoteOn.
-    use crate::ast::grouped::GroupedNote;
     use crate::ast::grouped::{
-        MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
+        GroupedNote, MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
     };
     use crate::ast::parsed::{JianPuPitch, PartKind, Soundfont};
 

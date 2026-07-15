@@ -129,6 +129,11 @@ pub struct ParsedDocument {
     pub sequence: Option<crate::parser::sequence_parser::SequenceSection>,
     /// Recoverable errors from parsing the `# sequence` section (e.g. empty entries).
     pub sequence_parse_errors: Vec<RecoverableError>,
+    /// The parsed `# groups` section, if present: an ordered list of
+    /// group declarations.
+    pub group: Option<crate::parser::group_parser::GroupSection>,
+    /// Recoverable errors from parsing the `# groups` section.
+    pub group_parse_errors: Vec<RecoverableError>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

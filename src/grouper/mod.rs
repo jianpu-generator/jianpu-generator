@@ -32,6 +32,7 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
         .into_iter()
         .chain(doc.metadata_parse_errors)
         .chain(doc.parts_parse_errors)
+        .chain(doc.group_parse_errors)
         .map(Diagnostic::Error)
         .collect();
     let mut grouped_tracks = Vec::new();
