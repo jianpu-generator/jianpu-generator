@@ -264,6 +264,20 @@ fn fine_before_segno_is_error() {
 }
 
 #[test]
+fn tocoda_before_segno_is_error() {
+    // tocoda (1) occurs before segno (3), so pass 2 (restarting at segno
+    // through tocoda) would form an empty/backwards range instead of being
+    // rejected.
+    let mut measures: Vec<_> = (0..7).map(bare_measure).collect();
+    measures[1].to_coda = true;
+    measures[3].segno = true;
+    measures[5].ds_al_coda = true;
+    measures[6].coda = true;
+    let score = score_with(measures);
+    assert!(expand_navigation(&score).is_err());
+}
+
+#[test]
 fn dcalfine_and_dcalcoda_together_is_error() {
     let mut measures: Vec<_> = (0..4).map(bare_measure).collect();
     measures[0].dc_al_fine = true;
