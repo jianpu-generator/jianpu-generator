@@ -76,15 +76,21 @@ fn directive_line_content(content: &PostArcGridContent) -> (Vec<TextSpan>, Optio
         return (Vec::new(), None);
     };
     let mut spans: Vec<TextSpan> = Vec::new();
-    if let Some(label_text) = label {
-        spans.push(section_label_span(label_text));
-    } else if let Some(n) = bar_number {
+    if let Some(n) = bar_number {
         spans.push(TextSpan {
             content: n.to_string(),
             bold: false,
             italic: false,
             font_size: 10.0,
         });
+    }
+    if let Some(label_text) = label {
+        let text = if bar_number.is_some() {
+            format!("  {label_text}")
+        } else {
+            label_text.clone()
+        };
+        spans.push(section_label_span(&text));
     }
     if let Some(key_str) = key {
         spans.push(TextSpan {

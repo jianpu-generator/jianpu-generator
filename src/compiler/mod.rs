@@ -168,7 +168,7 @@ fn format_key(key: &KeyChange) -> String {
 fn collect_decorations(measure: &MultiPartMeasure, bar_number: usize) -> Vec<Decoration> {
     vec![Decoration::DirectiveLine {
         label: measure.label.clone(),
-        bar_number: measure.label.is_none().then_some(bar_number as u32),
+        bar_number: Some(bar_number as u32),
         key: measure.key.as_ref().map(format_key),
         bpm: measure.bpm,
         time_signature: measure

@@ -129,7 +129,7 @@ fn bar_number_decoration_without_label() {
 }
 
 #[test]
-fn section_label_measure_has_no_bar_number() {
+fn section_label_measure_still_has_bar_number() {
     let score = score_from(&notes_doc(
         "time=4/4 key=C4 bpm=120 label=\"Verse 1\"\n[S] 1\n",
     ));
@@ -140,11 +140,11 @@ fn section_label_measure_has_no_bar_number() {
         matches!(
             dec,
             Decoration::DirectiveLine {
-                bar_number: None,
+                bar_number: Some(_),
                 ..
             }
         ),
-        "labeled measure should not have a bar number"
+        "labeled measure should still show its bar number"
     );
     assert!(
         matches!(dec, Decoration::DirectiveLine { label: Some(_), .. }),
