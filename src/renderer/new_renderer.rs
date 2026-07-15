@@ -88,12 +88,10 @@ fn render_element(
             font,
             weight,
             italic,
-        } => vec![SvgElement {
-            x: elem.x,
-            y: elem.y,
-            variant: Some(SvgVariant::Text),
-            kind: SvgKind::Text {
-                content: content.clone(),
+        } => vec![render_text_content(
+            elem,
+            content,
+            TextContentStyle {
                 font_size: *font_size,
                 anchor: *anchor,
                 baseline: *baseline,
@@ -101,33 +99,75 @@ fn render_element(
                 weight: *weight,
                 italic: *italic,
             },
-        }],
-        AbsoluteContent::MeasureHighlight { width, height } => vec![SvgElement {
-            x: elem.x,
-            y: elem.y,
-            variant: None,
-            kind: SvgKind::Rect {
-                width: *width,
-                height: *height,
-            },
-        }],
-        AbsoluteContent::ErrorHighlight { width, height } => vec![SvgElement {
-            x: elem.x,
-            y: elem.y,
-            variant: None,
-            kind: SvgKind::ErrorRect {
-                width: *width,
-                height: *height,
-            },
-        }],
+        )],
+        AbsoluteContent::MeasureHighlight { width, height } => {
+            vec![render_rect(
+                elem,
+                SvgKind::Rect {
+                    width: *width,
+                    height: *height,
+                },
+            )]
+        }
+        AbsoluteContent::ErrorHighlight { width, height } => {
+            vec![render_rect(
+                elem,
+                SvgKind::ErrorRect {
+                    width: *width,
+                    height: *height,
+                },
+            )]
+        }
         AbsoluteContent::MeasureClickTarget {
             width,
             height,
             measure_index,
         } => render_measure_click_target(elem, *width, *height, *measure_index),
-        AbsoluteContent::DirectiveLine { label, spans } => {
-            render_directive_line(elem, label, spans)
-        }
+        AbsoluteContent::DirectiveLine {
+            label,
+            spans,
+            segno_icon_offset,
+        } => render_directive_line(elem, label, spans, *segno_icon_offset),
+    }
+}
+
+#[derive(Clone, Copy)]
+struct TextContentStyle {
+    font_size: f32,
+    anchor: TextAnchor,
+    baseline: DominantBaseline,
+    font: crate::compositor::types::FontFamily,
+    weight: crate::compositor::types::FontWeight,
+    italic: bool,
+}
+
+fn render_text_content(
+    elem: &AbsoluteElement,
+    content: &str,
+    style: TextContentStyle,
+) -> SvgElement {
+    SvgElement {
+        x: elem.x,
+        y: elem.y,
+        variant: Some(SvgVariant::Text),
+        kind: SvgKind::Text {
+            content: content.to_string(),
+            font_size: style.font_size,
+            anchor: style.anchor,
+            baseline: style.baseline,
+            font: style.font,
+            weight: style.weight,
+            italic: style.italic,
+        },
+    }
+}
+
+fn render_rect(elem: &AbsoluteElement, kind: SvgKind) -> SvgElement {
+    SvgElement {
+        x: elem.x,
+        y: elem.y,
+        variant: None,
+        kind,
     }
 }
 
@@ -147,10 +187,15 @@ fn spans_to_tspans(spans: &[TextSpan]) -> Vec<TspanData> {
         .collect()
 }
 
+/// Rendered width/height (in points) of the vector Segno glyph, matching the
+/// 12pt text it's drawn alongside.
+const SEGNO_GLYPH_SIZE: f32 = 13.0;
+
 fn render_directive_line(
     elem: &AbsoluteElement,
     label: &Option<String>,
     spans: &[TextSpan],
+    segno_icon_offset: Option<f32>,
 ) -> Vec<SvgElement> {
     let text_element = SvgElement {
         x: elem.x,
@@ -164,9 +209,32 @@ fn render_directive_line(
         },
     };
 
+    let segno_element = segno_icon_offset.map(|offset| SvgElement {
+        x: elem.x + offset,
+        y: elem.y - SEGNO_GLYPH_SIZE / 2.0,
+        variant: None,
+        kind: SvgKind::SegnoGlyph {
+            size: SEGNO_GLYPH_SIZE,
+        },
+    });
+
     if let Some(label_str) = label {
         let bg_width = label_str.len() as f32 * 8.0 + 6.0;
         let bg_height = 18.0;
+        let mut children = vec![
+            SvgElement {
+                x: elem.x - 3.0,
+                y: elem.y - bg_height / 2.0,
+                variant: None,
+                kind: SvgKind::TransparentRect {
+                    width: bg_width,
+                    height: bg_height,
+                    role: TransparentRectRole::SectionLabelBackground,
+                },
+            },
+            text_element,
+        ];
+        children.extend(segno_element);
         vec![SvgElement {
             x: elem.x,
             y: elem.y,
@@ -175,23 +243,11 @@ fn render_directive_line(
                 tag: Some(Tag::SectionLabel {
                     label: label_str.clone(),
                 }),
-                children: vec![
-                    SvgElement {
-                        x: elem.x - 3.0,
-                        y: elem.y - bg_height / 2.0,
-                        variant: None,
-                        kind: SvgKind::TransparentRect {
-                            width: bg_width,
-                            height: bg_height,
-                            role: TransparentRectRole::SectionLabelBackground,
-                        },
-                    },
-                    text_element,
-                ],
+                children,
             },
         }]
     } else {
-        vec![text_element]
+        std::iter::once(text_element).chain(segno_element).collect()
     }
 }
 

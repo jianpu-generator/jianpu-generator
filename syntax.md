@@ -229,8 +229,11 @@ bpm=92 key=C4 time=4/4 label="Verse 1"
 | `dcalcoda` | `dcalcoda` | D.C. al Coda: after this measure, playback restarts from measure 0 |
 | `tocoda` | `tocoda` | To Coda: on the second pass only, playback cuts away here to the `coda` measure |
 | `coda` | `coda` | Coda: playback resumes here (on the second pass) and continues to the end |
-| `segno` | `segno` | Segno: marks the measure that `dsalcoda` jumps back to |
+| `segno` | `segno` | Segno: marks the measure that `dsalcoda`/`dsalfine` jumps back to |
 | `dsalcoda` | `dsalcoda` | D.S. al Coda: after this measure, playback restarts from the `segno` measure |
+| `dcalfine` | `dcalfine` | D.C. al Fine: after this measure, playback restarts from measure 0 and stops at `fine` |
+| `fine` | `fine` | Fine: on the second pass only, playback stops here |
+| `dsalfine` | `dsalfine` | D.S. al Fine: after this measure, playback restarts from the `segno` measure and stops at `fine` |
 
 Rules:
 
@@ -240,24 +243,29 @@ Rules:
 - `label` applies only to the measure where it is declared (does not persist to the next bar).
 - `bpm`, `key`, and `time` persist until the next directive line overrides them.
 - `dcalcoda`, `tocoda`, and `coda` are bare keywords (no `=value`) that, like `label`, apply only to the measure where declared and do not persist. They must appear **all three together or not at all** (a partial set is an error), at most once each, and `tocoda` must occur before `coda`.
-- `segno`, `dsalcoda`, `tocoda`, and `coda` are the equivalent "D.S. al Coda" marker set: they must appear **all four together or not at all**, at most once each, `segno` must occur at or before `dsalcoda`, and `tocoda` must occur before `coda`. `dcalcoda` cannot be combined with `segno`/`dsalcoda` in the same score — pick one navigation scheme.
+- `segno`, `dsalcoda`, `tocoda`, and `coda` are the equivalent "D.S. al Coda" marker set: they must appear **all four together or not at all**, at most once each, `segno` must occur at or before `dsalcoda`, and `tocoda` must occur before `coda`.
+- `dcalfine` and `fine` are a marker set: they must appear **both together or not at all**, at most once each.
+- `segno`, `dsalfine`, and `fine` are the equivalent "D.S. al Fine" marker set: they must appear **all three together or not at all**, at most once each, `segno` must occur at or before `dsalfine`, and `fine` must occur at or after `segno`.
+- Exactly one of `dcalcoda`, `dsalcoda`, `dcalfine`, or `dsalfine` may be used per score — mixing navigation schemes is an error. `tocoda`/`coda` cannot be combined with `dcalfine`/`dsalfine`, and `fine` cannot be combined with `dcalcoda`/`dsalcoda`.
 
 ### Rendering
 
-When `time=` or `bpm=` changes on a measure, the generator may add a **directive row** above the bar-number / section-label row for that system line. Time signature and BPM appear once on that row (not on each part row), aligned with each measure’s note-start column. They do not shift notes or lyrics horizontally. If neither value changes on any measure in the line, the directive row is omitted. A measure with `dcalcoda`, `tocoda`, `coda`, `segno`, or `dsalcoda` set also forces a directive row for that measure, even without a label.
+When `time=` or `bpm=` changes on a measure, the generator may add a **directive row** above the bar-number / section-label row for that system line. Time signature and BPM appear once on that row (not on each part row), aligned with each measure’s note-start column. They do not shift notes or lyrics horizontally. If neither value changes on any measure in the line, the directive row is omitted. A measure with `dcalcoda`, `tocoda`, `coda`, `segno`, `dsalcoda`, `dcalfine`, `fine`, or `dsalfine` set also forces a directive row for that measure, even without a label.
 
 Note names: `A` `B` `C` `D` `E` `F` `G`, with optional `#` or `b` accidental, followed by octave digit (e.g. `4`).
 
-### D.C./D.S. al Coda navigation (SVG vs. MIDI/WAV)
+### D.C./D.S. al Coda/Fine navigation (SVG vs. MIDI/WAV)
 
-`dcalcoda`/`tocoda`/`coda`/`segno`/`dsalcoda` render as annotations only — "D.C. al Coda" (italic), "⊕ To Coda", "⊕ Coda", "𝄋 Segno", and "D.S. al Coda" (italic) — on the measure where each is declared. **SVG (and PDF) output always shows measures in written order**; the markers are just text, they never reorder or duplicate anything visually.
+`dcalcoda`/`tocoda`/`coda`/`segno`/`dsalcoda`/`dcalfine`/`fine`/`dsalfine` render as annotations only — "D.C. al Coda" (italic), "⊕ To Coda", "⊕ Coda", a vector Segno glyph followed by "Segno" (italic), "D.S. al Coda" (italic), "D.C. al Fine" (italic), "Fine" (italic), and "D.S. al Fine" (italic) — on the measure where each is declared. The Segno marker draws as a small vector icon rather than a unicode character, since the `𝄋` Segno codepoint is missing from most system fonts and renders as a tofu box. **SVG (and PDF) output always shows measures in written order**; the markers are just text/vector annotations, they never reorder or duplicate anything visually.
 
 **MIDI and WAV output actually replay measures according to the markers**, since this generator also produces playable audio:
 
 - With `dcalcoda`/`tocoda`/`coda`: measures play from the start through the `dcalcoda` measure, then restart from the start and play through the `tocoda` measure, then jump to the `coda` measure and play through to the literal end of the score.
 - With `segno`/`dsalcoda`/`tocoda`/`coda`: measures play from the start through the `dsalcoda` measure, then restart from the `segno` measure and play through the `tocoda` measure, then jump to the `coda` measure and play through to the literal end of the score.
+- With `dcalfine`/`fine`: measures play from the start through the `dcalfine` measure, then restart from the start and play through the `fine` measure, then stop.
+- With `segno`/`dsalfine`/`fine`: measures play from the start through the `dsalfine` measure, then restart from the `segno` measure and play through the `fine` measure, then stop.
 
-On the first pass, the `tocoda` measure is just a normal measure — the cut only happens on the second pass.
+On the first pass, the `tocoda`/`fine` measure is just a normal measure — the cut/stop only happens on the second pass.
 
 ---
 

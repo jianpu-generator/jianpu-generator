@@ -30,7 +30,21 @@ fn sans_serif_text(
     }
 }
 
-fn directive_line_spans(content: &PostArcGridContent) -> Vec<TextSpan> {
+/// Rough estimate (in points) of a span's rendered width, used only to
+/// position the vector Segno glyph inline with the directive-line text (see
+/// [`directive_line_content`]). Sans-serif glyphs average roughly half their
+/// font size in width.
+fn estimate_span_width(span: &TextSpan) -> f32 {
+    const LATIN_AVG_CHAR_WIDTH_RATIO: f32 = 0.51;
+    span.content.chars().count() as f32 * span.font_size * LATIN_AVG_CHAR_WIDTH_RATIO
+}
+
+/// Builds the text spans for a directive line, plus (if a Segno marker is
+/// present) the x offset from the line's start where the vector Segno glyph
+/// should be drawn. The offset is a rough estimate based on the combined
+/// width of the spans preceding it, since actual text layout happens in the
+/// browser and isn't available here.
+fn directive_line_content(content: &PostArcGridContent) -> (Vec<TextSpan>, Option<f32>) {
     let PostArcGridContent::DirectiveLine {
         label,
         bar_number,
@@ -42,9 +56,12 @@ fn directive_line_spans(content: &PostArcGridContent) -> Vec<TextSpan> {
         coda,
         segno,
         ds_al_coda,
+        dc_al_fine,
+        fine,
+        ds_al_fine,
     } = content
     else {
-        return Vec::new();
+        return (Vec::new(), None);
     };
     let mut spans: Vec<TextSpan> = Vec::new();
     if let Some(label_text) = label {
@@ -90,21 +107,42 @@ fn directive_line_spans(content: &PostArcGridContent) -> Vec<TextSpan> {
         (*to_coda, "  \u{2295} To Coda"),
         (*coda, "  \u{2295} Coda"),
         (*dc_al_coda, "  D.C. al Coda"),
-        (*segno, "  \u{1d10b} Segno"),
+        // Leading non-breaking spaces (regular spaces collapse under SVG's
+        // default `xml:space` whitespace handling) reserve room for the
+        // vector Segno glyph drawn over this gap; see `segno_icon_offset`.
+        (*segno, "  \u{a0}\u{a0}\u{a0}\u{a0}\u{a0}Segno"),
         (*ds_al_coda, "  D.S. al Coda"),
+        (*fine, "  Fine"),
+        (*dc_al_fine, "  D.C. al Fine"),
+        (*ds_al_fine, "  D.S. al Fine"),
     ];
-    spans.extend(
-        navigation_markers
-            .into_iter()
-            .filter(|(present, _)| *present)
-            .map(|(_, text)| TextSpan {
-                content: text.to_string(),
-                bold: false,
-                italic: true,
-                font_size: 12.0,
-            }),
-    );
-    spans
+    let segno_offset = push_navigation_marker_spans(&mut spans, navigation_markers);
+    (spans, segno_offset)
+}
+
+/// Appends each present navigation marker span to `spans`, returning the x
+/// offset (in points) where the Segno span starts, if a Segno marker is
+/// present.
+fn push_navigation_marker_spans<const N: usize>(
+    spans: &mut Vec<TextSpan>,
+    navigation_markers: [(bool, &str); N],
+) -> Option<f32> {
+    let mut segno_offset: Option<f32> = None;
+    for (present, text) in navigation_markers {
+        if !present {
+            continue;
+        }
+        if text.trim_start() == "Segno" {
+            segno_offset = Some(spans.iter().map(estimate_span_width).sum());
+        }
+        spans.push(TextSpan {
+            content: text.to_string(),
+            bold: false,
+            italic: true,
+            font_size: 12.0,
+        });
+    }
+    segno_offset
 }
 
 fn grid_text_to_absolute(
@@ -129,10 +167,14 @@ fn grid_text_to_absolute(
             FontWeight::Normal,
             false,
         )),
-        PostArcGridContent::DirectiveLine { label, .. } => Some(AbsoluteContent::DirectiveLine {
-            label: label.clone(),
-            spans: directive_line_spans(content),
-        }),
+        PostArcGridContent::DirectiveLine { label, .. } => {
+            let (spans, segno_icon_offset) = directive_line_content(content);
+            Some(AbsoluteContent::DirectiveLine {
+                label: label.clone(),
+                spans,
+                segno_icon_offset,
+            })
+        }
         PostArcGridContent::Text {
             content,
             font_size,
