@@ -1,4 +1,10 @@
 import * as Dialog from '@radix-ui/react-dialog'
+import { useEffect, useState } from 'react'
+import type { MetadataDefaults } from '../utils/metadataDefaults'
+import {
+  defaultLyricsFontSize,
+  loadMetadataDefaults,
+} from '../utils/metadataDefaults'
 import type { MetadataKey, ParsedMetadataFields } from '../utils/metadataSource'
 
 export interface EditMetadataModalProps {
@@ -41,6 +47,21 @@ export function EditMetadataModal({
   metadata,
   onFieldChange,
 }: EditMetadataModalProps) {
+  const [defaults, setDefaults] = useState<MetadataDefaults | null>(null)
+  const [lyricsFontSizeDefault, setLyricsFontSizeDefault] = useState<
+    number | null
+  >(null)
+
+  useEffect(() => {
+    loadMetadataDefaults().then(setDefaults)
+  }, [])
+
+  const effectiveRowHeight = metadata.rowHeight ?? defaults?.rowHeight ?? null
+  useEffect(() => {
+    if (effectiveRowHeight === null) return
+    defaultLyricsFontSize(effectiveRowHeight).then(setLyricsFontSizeDefault)
+  }, [effectiveRowHeight])
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -168,6 +189,9 @@ export function EditMetadataModal({
                     <input
                       type="number"
                       min="1"
+                      placeholder={
+                        defaults ? String(defaults.rowHeight) : undefined
+                      }
                       style={inputStyle}
                       value={metadata.rowHeight ?? ''}
                       onChange={(e) =>
@@ -185,6 +209,11 @@ export function EditMetadataModal({
                     <input
                       type="number"
                       min="1"
+                      placeholder={
+                        defaults
+                          ? String(defaults.maxMeasuresPerSystem)
+                          : undefined
+                      }
                       style={inputStyle}
                       value={metadata.maxMeasuresPerSystem ?? ''}
                       onChange={(e) =>
@@ -202,6 +231,9 @@ export function EditMetadataModal({
                     <input
                       type="number"
                       min="1"
+                      placeholder={
+                        defaults ? String(defaults.labelWidth) : undefined
+                      }
                       style={inputStyle}
                       value={metadata.labelWidth ?? ''}
                       onChange={(e) =>
@@ -219,6 +251,9 @@ export function EditMetadataModal({
                     <input
                       type="number"
                       min="1"
+                      placeholder={
+                        defaults ? String(defaults.noteNumberWidth) : undefined
+                      }
                       style={inputStyle}
                       value={metadata.noteNumberWidth ?? ''}
                       onChange={(e) =>
@@ -236,7 +271,9 @@ export function EditMetadataModal({
                     <input
                       type="number"
                       min="1"
-                      placeholder="4"
+                      placeholder={
+                        defaults ? String(defaults.partsListColumns) : undefined
+                      }
                       style={inputStyle}
                       value={metadata.partsListColumns ?? ''}
                       onChange={(e) =>
@@ -254,6 +291,11 @@ export function EditMetadataModal({
                     <input
                       type="number"
                       min="1"
+                      placeholder={
+                        lyricsFontSizeDefault !== null
+                          ? String(lyricsFontSizeDefault)
+                          : undefined
+                      }
                       style={inputStyle}
                       value={metadata.lyricsFontSize ?? ''}
                       onChange={(e) =>

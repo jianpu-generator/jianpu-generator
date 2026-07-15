@@ -5,6 +5,22 @@ use crate::error::{Diagnostic, RecoverableError, Span, Warning};
 
 // ── Public final types ────────────────────────────────────────────────────────
 
+/// Default `row_height` in points, used when unset in `# metadata`.
+pub const DEFAULT_ROW_HEIGHT: u32 = 24;
+/// Default `max_measures_per_system`, used when unset in `# metadata`.
+pub const DEFAULT_MAX_MEASURES_PER_SYSTEM: u32 = 4;
+/// Default `label_width` in points, used when unset in `# metadata`.
+pub const DEFAULT_LABEL_WIDTH: u32 = 40;
+/// Default `note_number_width` in points, used when unset in `# metadata`.
+pub const DEFAULT_NOTE_NUMBER_WIDTH: u32 = 8;
+/// Default `parts_list_columns`, used when unset in `# metadata`.
+pub const DEFAULT_PARTS_LIST_COLUMNS: u32 = 4;
+
+/// Default `lyrics_font_size` in points: 60% of `row_height`, used when unset in `# metadata`.
+pub fn default_lyrics_font_size(row_height: u32) -> u32 {
+    (row_height as f32 * 0.6).round() as u32
+}
+
 #[derive(Clone)]
 pub struct Metadata {
     pub title: Option<String>,

@@ -1,5 +1,6 @@
 #![cfg_attr(test, allow(clippy::disallowed_macros))]
 
+mod metadata_types;
 mod part_declarations;
 mod responses;
 mod svg_types;
@@ -18,6 +19,7 @@ pub mod lib_pdf;
 pub mod lib_midi;
 
 use jianpu_generator::parser::parts_parser::InstrumentInfo;
+use metadata_types::MetadataDefaultsOut;
 use responses::{
     get_measure_at_offset_response, list_measure_spans_response, render_response,
     render_with_highlight_range_response,
@@ -155,6 +157,18 @@ pub fn update_part_declaration(
 #[wasm_bindgen]
 pub fn get_measure_index_at_offset(source: &str, byte_offset: usize) -> MeasureAtOffsetResponse {
     get_measure_at_offset_response(source, byte_offset)
+}
+
+/// Return the default values applied to `# metadata` fields left unset in the source.
+#[wasm_bindgen]
+pub fn get_metadata_defaults() -> MetadataDefaultsOut {
+    MetadataDefaultsOut::default()
+}
+
+/// The `lyrics font size` default (60% of `row_height`) for a given `row_height`.
+#[wasm_bindgen]
+pub fn get_default_lyrics_font_size(row_height: u32) -> u32 {
+    jianpu_generator::ast::grouped::default_lyrics_font_size(row_height)
 }
 
 /// Compress a share-link payload with brotli (quality 11).

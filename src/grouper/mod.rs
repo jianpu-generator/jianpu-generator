@@ -1,4 +1,8 @@
-use crate::ast::grouped::{GroupedScore, GroupedTrack, Metadata, Score};
+use crate::ast::grouped::{
+    default_lyrics_font_size, GroupedScore, GroupedTrack, Metadata, Score, DEFAULT_LABEL_WIDTH,
+    DEFAULT_MAX_MEASURES_PER_SYSTEM, DEFAULT_NOTE_NUMBER_WIDTH, DEFAULT_PARTS_LIST_COLUMNS,
+    DEFAULT_ROW_HEIGHT,
+};
 use crate::ast::parsed::{ParsedDocument, ParsedTrack};
 use crate::combiner;
 use crate::error::{Diagnostic, IrrecoverableError};
@@ -47,20 +51,26 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
 
     let (measures, combiner_diagnostics) = combiner::combine(&grouped_score);
 
-    let row_height = metadata.row_height.unwrap_or(24);
+    let row_height = metadata.row_height.unwrap_or(DEFAULT_ROW_HEIGHT);
     let mut score = Score {
         metadata: Metadata {
             title: metadata.title,
             subtitle: metadata.subtitle,
             author: metadata.author,
             row_height,
-            max_measures_per_system: metadata.max_measures_per_system.unwrap_or(4),
-            label_width: metadata.label_width.unwrap_or(40),
-            note_number_width: metadata.note_number_width.unwrap_or(8),
-            parts_list_columns: metadata.parts_list_columns.unwrap_or(4),
+            max_measures_per_system: metadata
+                .max_measures_per_system
+                .unwrap_or(DEFAULT_MAX_MEASURES_PER_SYSTEM),
+            label_width: metadata.label_width.unwrap_or(DEFAULT_LABEL_WIDTH),
+            note_number_width: metadata
+                .note_number_width
+                .unwrap_or(DEFAULT_NOTE_NUMBER_WIDTH),
+            parts_list_columns: metadata
+                .parts_list_columns
+                .unwrap_or(DEFAULT_PARTS_LIST_COLUMNS),
             lyrics_font_size: metadata
                 .lyrics_font_size
-                .unwrap_or_else(|| (row_height as f32 * 0.6).round() as u32),
+                .unwrap_or_else(|| default_lyrics_font_size(row_height)),
         },
         measures,
         document_diagnostics: document_diagnostics
