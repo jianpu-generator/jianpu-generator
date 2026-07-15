@@ -128,6 +128,7 @@ fn play_from_current_measure_after_navigation_includes_repeat() {
         navigation_source(),
         "test.jianpu",
         0..=3,
+        true,
         None,
         SF2_BYTES,
         &[],
@@ -152,6 +153,7 @@ fn measure_start_times_for_range_reflects_navigation() {
         navigation_source(),
         "test.jianpu",
         0..=3,
+        true,
         None,
         &[],
     )
@@ -170,6 +172,7 @@ fn play_from_dead_zone_measure_falls_back_to_written_order() {
         dead_zone_source(),
         "test.jianpu",
         3..=4,
+        true,
         None,
         SF2_BYTES,
         &[],
@@ -187,6 +190,7 @@ fn no_markers_measure_range_playback_unchanged() {
         plain_source(),
         "test.jianpu",
         0..=3,
+        true,
         None,
         SF2_BYTES,
         &[],
@@ -218,6 +222,155 @@ fn navigation_markers_replay_measures_in_midi_output() {
     assert_eq!(
         nav_notes, 32,
         "D.C. al Coda navigation should replay measures 0-3 then 0-1 then 2-3, doubling the note count"
+    );
+}
+
+#[cfg(feature = "wav")]
+#[test]
+fn play_current_measure_inside_dsalcoda_repeat_window_plays_one_measure() {
+    // Measure 1 (segno) is replayed a second time later in the performance
+    // (pass 2 restarts from segno). Selecting exactly "measure 1" (start ==
+    // end == 1, as the web app's "play current measure" button does) must
+    // play only that one measure, not overrun into the repeat.
+    let wav = write_wav_for_measure_range_from_source(
+        segno_navigation_source(),
+        "test.jianpu",
+        1..=1,
+        false,
+        None,
+        SF2_BYTES,
+        &[],
+    )
+    .expect("single-measure range should generate WAV");
+
+    let single_measure_wav = write_wav_for_measure_range_from_source(
+        plain_source(),
+        "test.jianpu",
+        1..=1,
+        false,
+        None,
+        SF2_BYTES,
+        &[],
+    )
+    .expect("single-measure range on plain score should generate WAV");
+
+    assert_eq!(
+        wav.len(),
+        single_measure_wav.len(),
+        "selecting a single measure inside the D.S. al Coda repeat window must not overrun into the repeat"
+    );
+}
+
+#[cfg(feature = "wav")]
+#[test]
+fn play_from_literal_end_measure_still_follows_navigation() {
+    // Measure 4 is the score's literal last written measure, and also the
+    // dsalcoda mark itself, so it's reachable twice in the performance (once
+    // ending pass 1, once ending pass 2). "Play from current measure" always
+    // passes `extend_to_last_occurrence: true` with the literal last written
+    // measure as the range end, so it must resolve through the true end of
+    // the whole performance rather than stopping at the first occurrence.
+    let wav = write_wav_for_measure_range_from_source(
+        segno_navigation_source(),
+        "test.jianpu",
+        4..=4,
+        true,
+        None,
+        SF2_BYTES,
+        &[],
+    )
+    .expect("range at literal end should generate WAV");
+
+    let full_expanded_wav = write_wav_from_source_filtered(
+        segno_navigation_source(),
+        "test.jianpu",
+        None,
+        SF2_BYTES,
+        &[],
+    )
+    .expect("full navigation score should generate WAV");
+
+    // origins for segno_navigation_source are [0,1,2,3,4,1,2,3,4]; measure 4
+    // first occurs at position 4 and last occurs at position 8, so the
+    // expanded range should cover positions 4..=8 (5 measures x 4 notes)
+    // out of the full 9-measure performance.
+    assert!(
+        wav.len() < full_expanded_wav.len(),
+        "range starting at the literal end measure shouldn't replay the whole performance"
+    );
+    assert!(
+        wav.len() > 0,
+        "range starting at the literal end measure should still produce audio"
+    );
+}
+
+fn realistic_coda_navigation_source() -> &'static str {
+    // Mirrors reference.jianpu's real marker order: segno < tocoda < dsalcoda
+    // < coda, i.e. the coda section (and thus the score's literal last
+    // written measure) comes *after* the dsalcoda mark, not before it. This
+    // is the common real-world layout: the coda section is appended after
+    // the main tune, so its last measure is also the score's last measure.
+    concat!(
+        "# metadata\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "# parts\n",
+        "Melody = notes\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[Melody] 1 2 3 4\n",
+        "\n",
+        "segno\n",
+        "[Melody] 2 3 4 5\n",
+        "\n",
+        "tocoda\n",
+        "[Melody] 5 6 7 1'\n",
+        "\n",
+        "dsalcoda\n",
+        "[Melody] 4 3 2 1\n",
+        "\n",
+        "coda\n",
+        "[Melody] 1' 7 6 5\n",
+    )
+}
+
+#[cfg(feature = "wav")]
+#[test]
+fn play_current_measure_on_final_coda_measure_plays_one_measure() {
+    // The `coda` measure here is both a navigation marker measure *and* the
+    // score's literal last written measure (matching reference.jianpu's real
+    // layout). Selecting exactly that measure as "current measure"
+    // (extend_to_last_occurrence: false) must play only that one measure.
+    let wav = write_wav_for_measure_range_from_source(
+        realistic_coda_navigation_source(),
+        "test.jianpu",
+        4..=4,
+        false,
+        None,
+        SF2_BYTES,
+        &[],
+    )
+    .expect("single-measure range on the final coda measure should generate WAV");
+
+    // plain_source has 4 measures (indices 0-3), so its last measure (3) is
+    // the single-measure baseline for a written measure's audio length.
+    let single_measure_wav = write_wav_for_measure_range_from_source(
+        plain_source(),
+        "test.jianpu",
+        3..=3,
+        false,
+        None,
+        SF2_BYTES,
+        &[],
+    )
+    .expect("single-measure range on plain score should generate WAV");
+
+    assert_eq!(
+        wav.len(),
+        single_measure_wav.len(),
+        "selecting the final coda measure alone must not overrun into an earlier repeat pass"
     );
 }
 

@@ -82,6 +82,7 @@ export type WorkerRequest =
       id: number
       startMeasureIndex: number
       endMeasureIndex: number
+      extendToLastOccurrence: boolean
       enabledTracks?: string[]
     }
   | {

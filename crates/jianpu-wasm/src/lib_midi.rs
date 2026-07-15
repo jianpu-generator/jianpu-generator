@@ -44,18 +44,23 @@ pub fn written_measure_indices(
 /// range, pairing with `list_measure_times_for_range`.
 ///
 /// Available only when the `midi` feature is enabled at build time.
+///
+/// See `generate_wav_for_measure_range` (in the `wav` feature) for
+/// `extend_to_last_occurrence`.
 #[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
 pub fn written_measure_indices_for_range(
     source: &str,
     start_index: usize,
     end_index: usize,
+    extend_to_last_occurrence: bool,
     enabled_tracks: Option<Vec<String>>,
 ) -> WrittenMeasureIndicesResponse {
     written_measure_indices_for_range_response(
         source,
         start_index,
         end_index,
+        extend_to_last_occurrence,
         enabled_tracks.as_deref(),
     )
 }

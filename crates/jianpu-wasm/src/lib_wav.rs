@@ -35,12 +35,21 @@ pub fn generate_wav(
 ///
 /// `soundfont` is the raw SF2 soundfont bytes used for synthesis. They are not
 /// embedded in the WASM binary and must be supplied by the caller.
+///
+/// `extend_to_last_occurrence`: when the range's end measure recurs later in
+/// the performance due to a D.C./D.S. al Coda repeat, pass `true` to extend
+/// through its last occurrence (needed for "play from current measure",
+/// which always passes the score's literal last written measure as
+/// `end_index`) or `false` to stop at its first occurrence at or after
+/// `start_index` (needed for an exact range selection, e.g. "play current
+/// measure").
 #[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
 pub fn generate_wav_for_measure_range(
     source: &str,
     start_index: usize,
     end_index: usize,
+    extend_to_last_occurrence: bool,
     enabled_tracks: Option<Vec<String>>,
     soundfont: Vec<u8>,
 ) -> GenerateWavResponse {
@@ -48,6 +57,7 @@ pub fn generate_wav_for_measure_range(
         source,
         start_index,
         end_index,
+        extend_to_last_occurrence,
         enabled_tracks.as_deref(),
         soundfont,
     )
@@ -77,15 +87,23 @@ pub fn list_measure_times(
 /// Used to sync a UI playhead against the audio produced by
 /// [`generate_wav_for_measure_range`]. Returns the same envelope as
 /// [`list_measure_times`].
+/// See [`generate_wav_for_measure_range`] for `extend_to_last_occurrence`.
 #[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
 pub fn list_measure_times_for_range(
     source: &str,
     start_index: usize,
     end_index: usize,
+    extend_to_last_occurrence: bool,
     enabled_tracks: Option<Vec<String>>,
 ) -> ListMeasureTimesResponse {
-    list_measure_times_for_range_response(source, start_index, end_index, enabled_tracks.as_deref())
+    list_measure_times_for_range_response(
+        source,
+        start_index,
+        end_index,
+        extend_to_last_occurrence,
+        enabled_tracks.as_deref(),
+    )
 }
 
 /// Synthesize a short WAV preview note for a General MIDI program number.

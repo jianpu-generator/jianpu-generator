@@ -37,12 +37,14 @@ pub(crate) fn written_measure_indices_for_range_response(
     source: &str,
     start_index: usize,
     end_index: usize,
+    extend_to_last_occurrence: bool,
     enabled_tracks: Option<&[String]>,
 ) -> WrittenMeasureIndicesResponse {
     match written_measure_indices_for_range_from_source(
         source,
         "input.jianpu",
         start_index..=end_index,
+        extend_to_last_occurrence,
         enabled_tracks,
         &[],
     ) {

@@ -44,11 +44,21 @@ pub fn write_wav_for_measure_from_source(
 /// Parse, group, optionally filter tracks, and synthesize WAV for a consecutive measure range.
 ///
 /// BPM and key context is accumulated from all measures before `start_index`.
+///
+/// When `extend_to_last_occurrence` is `true`, a range's end measure that
+/// recurs later in the performance (due to a repeat/jump) is extended
+/// through its last occurrence — this is what the web app's "play from
+/// current measure" (which always passes the score's literal last written
+/// measure as the range end) needs to follow the repeat to the true end.
+/// When `false`, the range stops at the end measure's first occurrence at or
+/// after the start — what an exact range selection (e.g. "play current
+/// measure") needs to avoid overrunning into a later repeat/jump pass.
 #[cfg(feature = "wav")]
 pub fn write_wav_for_measure_range_from_source(
     source: &str,
     filename: &str,
     measure_range: std::ops::RangeInclusive<usize>,
+    extend_to_last_occurrence: bool,
     enabled_tracks: Option<&[String]>,
     sf2_bytes: &[u8],
     instruments: &[InstrumentInfo],
@@ -59,6 +69,7 @@ pub fn write_wav_for_measure_range_from_source(
         &score,
         *measure_range.start(),
         *measure_range.end(),
+        extend_to_last_occurrence,
     )?;
     let midi_bytes = crate::midi::write_midi_for_measure_range(&score, start, end)?;
     crate::wav::write_wav(&midi_bytes, sf2_bytes)
@@ -84,11 +95,14 @@ pub fn measure_start_times_from_source(
 /// Same as [`measure_start_times_from_source`], but scoped to a measure range
 /// and relative to the start of that range. Used to sync a playhead against
 /// the audio clip returned by [`write_wav_for_measure_range_from_source`].
+///
+/// See [`write_wav_for_measure_range_from_source`] for `extend_to_last_occurrence`.
 #[cfg(feature = "midi")]
 pub fn measure_start_times_for_range_from_source(
     source: &str,
     filename: &str,
     measure_range: std::ops::RangeInclusive<usize>,
+    extend_to_last_occurrence: bool,
     enabled_tracks: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<f64>, IrrecoverableError> {
@@ -98,6 +112,7 @@ pub fn measure_start_times_for_range_from_source(
         &score,
         *measure_range.start(),
         *measure_range.end(),
+        extend_to_last_occurrence,
     )?;
     crate::midi::measure_start_times_seconds_for_range(&score, start, end)
 }
@@ -127,11 +142,14 @@ pub fn written_measure_indices_from_source(
 /// Same as [`written_measure_indices_from_source`], but scoped to a measure
 /// range: entries correspond 1:1 to [`measure_start_times_for_range_from_source`]'s
 /// timeline for the same range.
+///
+/// See [`write_wav_for_measure_range_from_source`] for `extend_to_last_occurrence`.
 #[cfg(feature = "midi")]
 pub fn written_measure_indices_for_range_from_source(
     source: &str,
     filename: &str,
     measure_range: std::ops::RangeInclusive<usize>,
+    extend_to_last_occurrence: bool,
     enabled_tracks: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<usize>, IrrecoverableError> {
@@ -142,6 +160,7 @@ pub fn written_measure_indices_for_range_from_source(
         &score,
         *measure_range.start(),
         *measure_range.end(),
+        extend_to_last_occurrence,
     )?;
     Ok(origins
         .get(start_pos..=end_pos)
