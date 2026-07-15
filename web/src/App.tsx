@@ -1,11 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { AppHeader } from './components/AppHeader'
+import { AppOverlays } from './components/AppOverlays'
 import { AppWorkspace } from './components/AppWorkspace'
 import { AssetLoadingBanner } from './components/AssetLoadingBanner'
-import { ErrorModal } from './components/ErrorModal'
 import { SectionJumpToolbar } from './components/SectionJumpToolbar'
-import { SharedPreviewBanner } from './components/SharedPreviewBanner'
-import { StorageSettingsModal } from './components/StorageSettingsModal'
 import {
   fileContent,
   fileIdForName,
@@ -18,21 +16,23 @@ import { useFontsLoader } from './hooks/useFontsLoader'
 import { useJianpuWorker } from './hooks/useJianpuWorker'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { usePartTogglePruning } from './hooks/usePartTogglePruning'
-import { usePartToggles } from './hooks/usePartToggles'
+import {
+  noPartsSelected as computeNoPartsSelected,
+  usePartToggles,
+} from './hooks/usePartToggles'
 import { useSectionNavigation } from './hooks/useSectionNavigation'
 import { useSharedPreview } from './hooks/useSharedPreview'
 import { useStorageBackend } from './hooks/useStorageBackend'
 import type { EditorHandle, PartMode, SoundfontValue } from './types'
 import type { MetadataKey } from './utils/metadataSource'
 import { parseMetadata, updateMetadataField } from './utils/metadataSource'
+import {
+  playFromCurrentMeasureShortcutLabel,
+  shortcutLabel,
+} from './utils/shortcutLabels'
 import './App.css'
 import './file-switcher.css'
 import './preview.css'
-
-const shortcutLabel = navigator.platform.startsWith('Mac') ? '⌘↵' : 'Ctrl+↵'
-const playFromCurrentMeasureShortcutLabel = navigator.platform.startsWith('Mac')
-  ? '⇧⌘↵'
-  : 'Ctrl+Shift+↵'
 
 export default function App() {
   const {
@@ -107,6 +107,7 @@ export default function App() {
     wavUrl,
     wavFilename,
     measureTimes,
+    writtenMeasureIndices,
     audioAvailable,
     pdfAvailable,
     pdfExporting,
@@ -129,6 +130,7 @@ export default function App() {
     measureAudioGenerating,
     measureAudioPlaying,
     measureAudioTimes,
+    measureAudioWrittenIndices,
     measureAudioElement,
     measureSpans,
     sectionRanges,
@@ -232,10 +234,11 @@ export default function App() {
     notifySelection,
   )
 
-  const noPartsSelected =
-    parts.length > 0 &&
-    soloedParts.size === 0 &&
-    parts.every((part) => disabledParts.has(part.abbreviation))
+  const noPartsSelected = computeNoPartsSelected(
+    parts,
+    disabledParts,
+    soloedParts,
+  )
 
   return (
     <div className="app">
@@ -296,41 +299,22 @@ export default function App() {
         onExportSplitWav={exportSplitWav}
         partsCount={parts.length}
       />
-      <ErrorModal
-        open={fileOpError !== null}
-        onOpenChange={(open) => {
-          if (!open) setFileOpError(null)
-        }}
-        title={fileOpError?.title ?? ''}
-        message={fileOpError?.message ?? ''}
-        stack={fileOpError?.stack}
-      />
-      <StorageSettingsModal
-        open={storageSettingsOpen}
-        onOpenChange={setStorageSettingsOpen}
+      <AppOverlays
+        fileOpError={fileOpError}
+        setFileOpError={setFileOpError}
+        storageSettingsOpen={storageSettingsOpen}
+        setStorageSettingsOpen={setStorageSettingsOpen}
         backend={backend}
         isLoadingGithub={isLoadingGithub}
         preference={preference}
         switchBackend={switchBackend}
         store={store}
         setStore={setStore}
+        selectedMeasureRange={selectedMeasureRange}
+        sharedPreview={sharedPreview}
+        handleImportShared={handleImportShared}
+        handleDismissShared={handleDismissShared}
       />
-      <span
-        data-testid="selected-measure-range"
-        aria-hidden="true"
-        style={{ display: 'none' }}
-      >
-        {selectedMeasureRange
-          ? `${selectedMeasureRange.start}-${selectedMeasureRange.end}`
-          : ''}
-      </span>
-      {sharedPreview ? (
-        <SharedPreviewBanner
-          filename={sharedPreview.filename}
-          onImport={handleImportShared}
-          onDiscard={handleDismissShared}
-        />
-      ) : null}
       <SectionJumpToolbar
         sectionLabels={sectionLabels}
         dragStartLabel={dragStartLabel}
@@ -383,7 +367,9 @@ export default function App() {
         wavUrl={wavUrl}
         wavFilename={wavFilename}
         measureTimes={measureTimes}
+        writtenMeasureIndices={writtenMeasureIndices}
         measureAudioTimes={measureAudioTimes}
+        measureAudioWrittenIndices={measureAudioWrittenIndices}
         measureAudioElement={measureAudioElement}
         noPartsSelected={noPartsSelected}
         disabledParts={disabledParts}

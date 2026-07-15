@@ -1,5 +1,7 @@
 pre-commit:
   parallel: true
+  only:
+    - ref: master
   jobs:
     - name: file-quality
       # prek runs .pre-commit-config.yaml's builtin checks against staged files
@@ -38,8 +40,6 @@ pre-commit:
 
           - name: e2e-tests
             glob: "{web/src/**,web/e2e/**,crates/**,src/**}"
-            only:
-              - ref: master
             run: cd web && pnpm build:wasm && pnpm test:e2e
 
 pre-merge-commit:

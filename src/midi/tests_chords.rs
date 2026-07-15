@@ -53,6 +53,14 @@ fn chord_major_expands_to_three_notes() {
             bpm: Some(120),
             key: Some(key),
             label: None,
+            dc_al_coda: false,
+            to_coda: false,
+            coda: false,
+            segno: false,
+            ds_al_coda: false,
+            dc_al_fine: false,
+            fine: false,
+            ds_al_fine: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
                 kind: PartKind::Chords,
@@ -124,36 +132,42 @@ fn tied_notes_produce_single_note_on() {
             has_error: false,
         })
     };
+    let make_measure = |time_signature, bpm, key, tied| MultiPartMeasure {
+        time_signature,
+        bpm,
+        key,
+        label: None,
+        dc_al_coda: false,
+        to_coda: false,
+        coda: false,
+        segno: false,
+        ds_al_coda: false,
+        dc_al_fine: false,
+        fine: false,
+        ds_al_fine: false,
+        parts: vec![make_part(tied)],
+        source_span: Span::new(0, 0),
+        diagnostics: vec![],
+    };
     let score = Score {
         metadata: default_test_metadata(),
         measures: vec![
-            MultiPartMeasure {
-                time_signature: Some(TimeSignature {
+            make_measure(
+                Some(TimeSignature {
                     numerator: 4,
                     denominator: 4,
                 }),
-                bpm: Some(120),
-                key: Some(KeyChange {
+                Some(120),
+                Some(KeyChange {
                     note: Note {
                         name: NoteName::C,
                         octave: 4,
                         accidental: Accidental::Natural,
                     },
                 }),
-                label: None,
-                parts: vec![make_part(true)],
-                source_span: Span::new(0, 0),
-                diagnostics: vec![],
-            },
-            MultiPartMeasure {
-                time_signature: None,
-                bpm: None,
-                key: None,
-                label: None,
-                parts: vec![make_part(false)],
-                source_span: Span::new(0, 0),
-                diagnostics: vec![],
-            },
+                true,
+            ),
+            make_measure(None, None, None, false),
         ],
         document_diagnostics: vec![],
     };
@@ -216,6 +230,14 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
                 },
             }),
             label: None,
+            dc_al_coda: false,
+            to_coda: false,
+            coda: false,
+            segno: false,
+            ds_al_coda: false,
+            dc_al_fine: false,
+            fine: false,
+            ds_al_fine: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
                 kind: PartKind::Notes,

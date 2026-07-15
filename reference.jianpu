@@ -136,3 +136,15 @@ label="Explicit chord key"
 label="Percussion: hit (x) & rest (0), two parts together"
 [Sn] 0 x 0 x
 [Kk] x 0 x 0
+
+label="Navigation: segno" segno
+[M] 1 2 3 4
+
+label="Navigation: to coda" tocoda
+[M] 5 6 7 1'
+
+label="Navigation: D.S. al coda" dsalcoda
+[M] 1' 7 6 5
+
+label="Navigation: coda" coda
+[M] 4 3 2 1

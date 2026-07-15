@@ -52,9 +52,14 @@ export interface WorkerMessageHandlerDeps {
   setAudioGenerating: (value: boolean) => void
   setNextWavUrl: (value: string | null) => void
   setMeasureTimes: (value: number[]) => void
+  setWrittenMeasureIndices: (value: number[]) => void
   latestMeasureAudioIdRef: RefObject<number>
   setMeasureAudioGenerating: (value: boolean) => void
-  setNextMeasureWavUrl: (value: string | null, measureTimes: number[]) => void
+  setNextMeasureWavUrl: (
+    value: string | null,
+    measureTimes: number[],
+    writtenMeasureIndices: number[],
+  ) => void
   latestHighlightRenderIdRef: RefObject<number>
   setHighlightedDocuments: (value: SvgDocumentOut[]) => void
   latestMeasureSpansIdRef: RefObject<number>
@@ -200,6 +205,7 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       )
       deps.setNextWavUrl(url)
       deps.setMeasureTimes(msg.measureTimes)
+      deps.setWrittenMeasureIndices(msg.writtenMeasureIndices)
       return
     }
 
@@ -215,6 +221,7 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       deps.setNextMeasureWavUrl(
         URL.createObjectURL(new Blob([msg.wav], { type: 'audio/wav' })),
         msg.measureTimes,
+        msg.writtenMeasureIndices,
       )
       return
     }

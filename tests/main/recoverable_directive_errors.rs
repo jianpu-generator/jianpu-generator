@@ -5,6 +5,9 @@ use jianpu_generator::render_svgs_from_source;
 #[path = "recoverable_directive_errors/duration_and_group_errors.rs"]
 mod duration_and_group_errors;
 
+#[path = "recoverable_directive_errors/navigation_marker_set_errors.rs"]
+mod navigation_marker_set_errors;
+
 pub(crate) fn minimal_fixture(score_section: &str) -> String {
     format!(
         r#"# metadata
@@ -258,4 +261,22 @@ fn inline_time_zero_denominator_is_recoverable() {
             .map(|d| d.message())
             .collect::<Vec<_>>()
     );
+}
+
+#[test]
+fn debug_label_only_measure() {
+    let source = minimal_fixture("label=\"hello\"\n");
+    let output = render_svgs_from_source(&source, "test.jianpu", &[]);
+    match &output {
+        Ok(o) => {
+            eprintln!(
+                "DIAGS: {:?}",
+                o.diagnostics
+                    .iter()
+                    .map(|d| d.message())
+                    .collect::<Vec<_>>()
+            );
+        }
+        Err(e) => eprintln!("ERR: {e:?}"),
+    }
 }

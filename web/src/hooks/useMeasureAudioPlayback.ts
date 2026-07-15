@@ -22,6 +22,9 @@ export function useMeasureAudioPlayback({
   const [measureAudioGenerating, setMeasureAudioGenerating] = useState(false)
   const [measureAudioPlaying, setMeasureAudioPlaying] = useState(false)
   const [measureAudioTimes, setMeasureAudioTimes] = useState<number[]>([])
+  const [measureAudioWrittenIndices, setMeasureAudioWrittenIndices] = useState<
+    number[]
+  >([])
   const [measureAudioElement, setMeasureAudioElement] =
     useState<HTMLAudioElement | null>(null)
   const currentMeasureAudioRef = useRef<HTMLAudioElement | null>(null)
@@ -30,7 +33,11 @@ export function useMeasureAudioPlayback({
   const measureWavUrlRef = useRef<string | null>(null)
 
   const setNextMeasureWavUrl = useCallback(
-    (next: string | null, nextMeasureTimes: number[] = []) => {
+    (
+      next: string | null,
+      nextMeasureTimes: number[] = [],
+      nextWrittenIndices: number[] = [],
+    ) => {
       if (currentMeasureAudioRef.current) {
         currentMeasureAudioRef.current.pause()
         currentMeasureAudioRef.current = null
@@ -40,6 +47,7 @@ export function useMeasureAudioPlayback({
       }
       measureWavUrlRef.current = next
       setMeasureAudioTimes(nextMeasureTimes)
+      setMeasureAudioWrittenIndices(nextWrittenIndices)
       if (next) {
         const audio = new Audio(next)
         currentMeasureAudioRef.current = audio
@@ -69,7 +77,11 @@ export function useMeasureAudioPlayback({
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: workerRef/sourceRef/enabledTracksRef are stable refs passed in as params
   const playMeasureRange = useCallback(
-    (startMeasureIndex: number, endMeasureIndex: number) => {
+    (
+      startMeasureIndex: number,
+      endMeasureIndex: number,
+      extendToLastOccurrence: boolean,
+    ) => {
       const worker = workerRef.current
       if (!worker) return
       const id = ++measureAudioRequestIdRef.current
@@ -81,6 +93,7 @@ export function useMeasureAudioPlayback({
         id,
         startMeasureIndex,
         endMeasureIndex,
+        extendToLastOccurrence,
         enabledTracks: enabledTracksRef.current,
       } satisfies WorkerRequest)
     },
@@ -89,12 +102,22 @@ export function useMeasureAudioPlayback({
 
   const playSelectedMeasures = useCallback(() => {
     if (selectedMeasureRange === null) return
-    playMeasureRange(selectedMeasureRange.start, selectedMeasureRange.end)
+    // Exact range: stop at the end measure's first occurrence, so a
+    // single-measure selection (e.g. "play current measure") doesn't
+    // overrun into a later D.C./D.S. al Coda repeat pass.
+    playMeasureRange(
+      selectedMeasureRange.start,
+      selectedMeasureRange.end,
+      false,
+    )
   }, [selectedMeasureRange, playMeasureRange])
 
   const playFromCurrentMeasure = useCallback(() => {
     if (selectedMeasureRange === null || measureSpans.length === 0) return
-    playMeasureRange(selectedMeasureRange.start, measureSpans.length - 1)
+    // "Play to the end": follow every repeat/jump through to the true end
+    // of the performance instead of stopping at the last written measure's
+    // first occurrence.
+    playMeasureRange(selectedMeasureRange.start, measureSpans.length - 1, true)
   }, [selectedMeasureRange, measureSpans, playMeasureRange])
 
   return {
@@ -102,6 +125,7 @@ export function useMeasureAudioPlayback({
     setMeasureAudioGenerating,
     measureAudioPlaying,
     measureAudioTimes,
+    measureAudioWrittenIndices,
     measureAudioElement,
     setNextMeasureWavUrl,
     stopMeasurePlayback,

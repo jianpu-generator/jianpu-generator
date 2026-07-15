@@ -82,6 +82,7 @@ export type WorkerRequest =
       id: number
       startMeasureIndex: number
       endMeasureIndex: number
+      extendToLastOccurrence: boolean
       enabledTracks?: string[]
     }
   | {
@@ -111,7 +112,13 @@ export type WorkerResponse =
       diagnostics: Diagnostic[]
       diagnosticViewZones: DiagnosticViewZone[]
     }
-  | { type: 'audio'; id: number; wav: ArrayBuffer; measureTimes: number[] }
+  | {
+      type: 'audio'
+      id: number
+      wav: ArrayBuffer
+      measureTimes: number[]
+      writtenMeasureIndices: number[]
+    }
   | { type: 'audioErr'; id: number }
   | {
       type: 'err'
@@ -146,6 +153,7 @@ export type WorkerResponse =
       id: number
       wav: ArrayBuffer
       measureTimes: number[]
+      writtenMeasureIndices: number[]
     }
   | { type: 'measureRangeAudioErr'; id: number }
   | { type: 'instrumentPreview'; id: number; wav: ArrayBuffer }

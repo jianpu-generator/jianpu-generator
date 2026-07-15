@@ -11,6 +11,10 @@ use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Warni
 use super::empty_note_measures::{align_empty_note_measures, MeasureSlot, PerMeasureErrors};
 use super::lyrics_pairing::attach_paired_lyrics;
 
+#[path = "part_grouper_group.rs"]
+mod part_grouper_group;
+pub(super) use part_grouper_group::group_timed_track;
+
 struct PartGrouper {
     part_kind: PartKind,
     soundfont: Soundfont,
@@ -276,7 +280,17 @@ impl PartGrouper {
         spanned: crate::error::Spanned<ScoreEvent>,
     ) -> Result<(), IrrecoverableError> {
         match spanned.value {
-            ScoreEvent::BpmChange(_) | ScoreEvent::KeyChange(_) | ScoreEvent::LabelChange(_) => {
+            ScoreEvent::BpmChange(_)
+            | ScoreEvent::KeyChange(_)
+            | ScoreEvent::LabelChange(_)
+            | ScoreEvent::DcAlCoda
+            | ScoreEvent::ToCoda
+            | ScoreEvent::Coda
+            | ScoreEvent::Segno
+            | ScoreEvent::DsAlCoda
+            | ScoreEvent::DcAlFine
+            | ScoreEvent::Fine
+            | ScoreEvent::DsAlFine => {
                 Ok(()) // handled by DirectiveGrouper
             }
             ScoreEvent::TimeSignatureChange {
@@ -320,76 +334,4 @@ impl PartGrouper {
 
         (self.slots, self.part_name, self.part_kind, self.soundfont)
     }
-}
-
-pub(super) fn group_timed_track(part: ParsedTimedTrack) -> Result<GroupedPart, IrrecoverableError> {
-    let lyrics_measure_ends: Vec<usize> = part
-        .lyrics
-        .as_ref()
-        .map(|l| l.measure_ends.clone())
-        .unwrap_or_default();
-    let lyrics_measure_starts: Vec<usize> = part
-        .lyrics
-        .as_ref()
-        .map(|l| l.measure_starts.clone())
-        .unwrap_or_default();
-    let measure_syllables = part.lyrics.as_ref().map(|l| l.measure_syllables.clone());
-    let per_measure_beat_errors = part.per_measure_beat_errors.clone();
-    let per_measure_dotted_eighth_errors = part.per_measure_dotted_eighth_errors.clone();
-    let per_measure_dash_after_rest_errors = part.per_measure_dash_after_rest_errors.clone();
-    let per_measure_chord_errors = part.per_measure_chord_errors.clone();
-    let per_measure_lex_errors = part.per_measure_lex_errors.clone();
-    let per_measure_lyrics_errors = part.per_measure_lyrics_errors.clone();
-    let part_abbreviation = part.abbreviation.clone();
-    let part_kind = part.kind;
-    let part_volume = part.volume;
-    let part_octave_offset = part.octave_offset;
-    let mut grouper = PartGrouper::new(&part);
-    for slot in part.measure_slots {
-        match slot {
-            ParsedMeasureSlot::EmptyNote { span } => grouper.push_empty_note_slot(span),
-            ParsedMeasureSlot::Real { events } => {
-                for spanned in events {
-                    grouper.process_event(spanned)?;
-                }
-            }
-        }
-    }
-    let (slots, name, kind, soundfont) = grouper.finish();
-    let mut measures = align_empty_note_measures(
-        slots,
-        &PerMeasureErrors {
-            beat_errors: &per_measure_beat_errors,
-            dotted_eighth_errors: &per_measure_dotted_eighth_errors,
-            dash_after_rest_errors: &per_measure_dash_after_rest_errors,
-            chord_errors: &per_measure_chord_errors,
-            lex_errors: &per_measure_lex_errors,
-            lyrics_errors: &per_measure_lyrics_errors,
-        },
-    )?;
-    for (measure, &lyrics_end) in measures.iter_mut().zip(lyrics_measure_ends.iter()) {
-        measure.source_span.end = measure.source_span.end.max(lyrics_end);
-    }
-    let mut grouped = GroupedPart {
-        name,
-        kind,
-        soundfont,
-        volume: part_volume,
-        octave_offset: part_octave_offset,
-        measures,
-    };
-    if matches!(part_kind, PartKind::NotesWithLyrics) {
-        let lyrics_spans: Vec<Span> = lyrics_measure_starts
-            .iter()
-            .zip(lyrics_measure_ends.iter())
-            .map(|(&start, &end)| Span::new(start, end))
-            .collect();
-        attach_paired_lyrics(
-            &mut grouped.measures,
-            measure_syllables,
-            lyrics_spans,
-            &part_abbreviation,
-        )?;
-    }
-    Ok(grouped)
 }
