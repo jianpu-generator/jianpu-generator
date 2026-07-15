@@ -1,7 +1,8 @@
 use crate::compiler::types::{Decoration, MeasureBlock};
 use crate::grid_layout::layout::{
     block_column_width, decoration_row_height, header_gap_row_height, header_part_list_row_height,
-    header_subtitle_author_row_height, header_title_row_height, separator_row_height, LABEL_COLS,
+    header_subtitle_author_row_height, header_title_row_height, separator_row_height,
+    MUSIC_START_COL,
 };
 use crate::grid_layout::types::{
     GridContent, GridElement, GridRow, HAlign, Header, PartListEntry, VAlign,
@@ -63,13 +64,13 @@ fn decoration_has_navigation_marker(dec: &Decoration) -> bool {
 
 pub(super) fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow {
     let total_musical_cols: u32 = system.iter().map(block_column_width).sum();
-    let music_column_count = LABEL_COLS + total_musical_cols;
+    let music_column_count = MUSIC_START_COL + total_musical_cols;
     let mut elements: Vec<GridElement> = Vec::new();
 
     // First block: one DirectiveLine element aligned to the left edge of the first measure.
     if let Some(first) = system.first() {
         if let Some(dec) = first.decorations.first() {
-            elements.push(directive_line_element(dec, LABEL_COLS));
+            elements.push(directive_line_element(dec, MUSIC_START_COL));
         }
     }
 
@@ -77,7 +78,7 @@ pub(super) fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow
     // navigation marker, aligned to the left edge of the measure it belongs
     // to. This uses the same column grid as the music rows so the label
     // lines up exactly with the measure's bar line.
-    let mut measure_music_col = LABEL_COLS;
+    let mut measure_music_col = MUSIC_START_COL;
     for (index, block) in system.iter().enumerate() {
         if index > 0 {
             if let Some(dec) = block.decorations.first() {

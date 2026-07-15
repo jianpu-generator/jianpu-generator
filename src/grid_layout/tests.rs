@@ -281,6 +281,6 @@ fn row_label_is_in_note_head_sub_row_at_column_0_span_4() {
 #[test]
 fn column_count_is_label_cols_plus_musical_cols() {
     let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new());
-    // 4 label cols + 4 musical cols (bar at col 3 → block width=4)
-    assert_eq!(rows[0].column_count, 8);
+    // 4 label cols + 1 leading bar line col + 4 musical cols (bar at col 3 → block width=4)
+    assert_eq!(rows[0].column_count, 9);
 }

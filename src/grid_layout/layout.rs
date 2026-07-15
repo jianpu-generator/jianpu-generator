@@ -147,6 +147,10 @@ fn row_ids(block: &MeasureBlock) -> Vec<&RowId> {
 
 pub(crate) const LABEL_COLS: u32 = 4;
 
+/// First musical column, leaving a dedicated column at `LABEL_COLS` for the
+/// leading barline so it gets the same breathing room as inter-measure barlines.
+pub(crate) const MUSIC_START_COL: u32 = LABEL_COLS + 1;
+
 /// Break `blocks` into systems. Each system is a `Vec<MeasureBlock>`.
 pub(crate) fn pack_into_systems(
     blocks: &[MeasureBlock],

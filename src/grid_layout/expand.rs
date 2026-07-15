@@ -2,6 +2,7 @@ use crate::compiler::types::{ElementContent, MeasureBlock, MeasureRow};
 use crate::grid_layout::layout::{
     block_column_width, chord_part_sub_row_heights, compute_bar_height, has_lyrics,
     is_chord_only_row, is_lyric_row, lyric_row_height, note_part_sub_row_heights, LABEL_COLS,
+    MUSIC_START_COL,
 };
 use crate::grid_layout::types::{GridContent, GridElement, GridRow, HAlign, VAlign};
 use std::collections::HashMap;
@@ -49,7 +50,7 @@ pub(crate) fn expand_measure_elements(
     let head_sub = params.head_sub;
     let sub_count = params.sub_count;
     for el in &row.elements {
-        let grid_col = LABEL_COLS + measure_col_offset + el.column;
+        let grid_col = MUSIC_START_COL + measure_col_offset + el.column;
         match &el.content {
             ElementContent::NoteHead {
                 pitch,
@@ -99,7 +100,7 @@ pub(crate) fn expand_measure_elements(
                 let ul_sub = (sub_count - 2) + *level as usize;
                 if let Some(row) = sub_rows.get_mut(ul_sub) {
                     row.elements.push(GridElement {
-                        column: LABEL_COLS + measure_col_offset + from_column,
+                        column: MUSIC_START_COL + measure_col_offset + from_column,
                         column_span: span,
                         halign: HAlign::Start,
                         valign: VAlign::Center,
@@ -144,7 +145,7 @@ pub(crate) fn expand_lyric_part(
             for el in &part_row.elements {
                 if let ElementContent::Lyric(text) = &el.content {
                     row.elements.push(GridElement {
-                        column: LABEL_COLS + measure_col_offset + el.column,
+                        column: MUSIC_START_COL + measure_col_offset + el.column,
                         column_span: 1,
                         halign: HAlign::Center,
                         valign: VAlign::Center,
@@ -211,7 +212,7 @@ pub(crate) fn expand_note_part(
             row.elements.push(GridElement {
                 column: LABEL_COLS,
                 column_span: 1,
-                halign: HAlign::Start,
+                halign: HAlign::Center,
                 valign: VAlign::Top,
                 content: GridContent::BarLine {
                     height_pt: bar_height,
@@ -254,7 +255,7 @@ pub(crate) fn expand_system_to_rows(
         return vec![];
     };
     let total_musical_cols: u32 = system.iter().map(block_column_width).sum();
-    let column_count = LABEL_COLS + total_musical_cols;
+    let column_count = MUSIC_START_COL + total_musical_cols;
     let bar_height = compute_bar_height(first, base);
     let mut all_rows: Vec<GridRow> = Vec::new();
     for (part_idx, part_template) in first.rows.iter().enumerate() {

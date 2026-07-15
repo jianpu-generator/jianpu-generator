@@ -2,7 +2,7 @@ use crate::ast::parsed::JianPuPitch;
 use crate::compiler::types::{
     ColumnElement, CompileResult, Decoration, ElementContent, MeasureBlock, MeasureRow, RowId,
 };
-use crate::grid_layout::layout::{layout, LABEL_COLS};
+use crate::grid_layout::layout::{layout, MUSIC_START_COL};
 use crate::grid_layout::types::{GridContent, Header};
 use crate::render_config::RenderConfig;
 
@@ -183,7 +183,7 @@ fn decoration_items_start_at_first_measure_left_edge() {
         .find(|e| matches!(&e.content, GridContent::DirectiveLine { bpm: Some(_), .. }))
         .expect("should have DirectiveLine element");
     assert_eq!(
-        directive_el.column, LABEL_COLS,
+        directive_el.column, MUSIC_START_COL,
         "directive line should align with the left edge of the first measure"
     );
 }
@@ -218,7 +218,7 @@ fn label_and_bpm_are_merged_into_single_directive_line() {
         1,
         "should have exactly one DirectiveLine with label and bpm"
     );
-    assert_eq!(directive_elements[0].column, LABEL_COLS);
+    assert_eq!(directive_elements[0].column, MUSIC_START_COL);
 }
 
 #[test]
@@ -251,7 +251,7 @@ fn bpm_and_time_signature_merged_into_single_directive_line_at_column_1() {
         })
         .expect("should have DirectiveLine with bpm and time_signature");
     assert_eq!(
-        directive_el.column, LABEL_COLS,
+        directive_el.column, MUSIC_START_COL,
         "directive line should align with the left edge of the first measure"
     );
 }
