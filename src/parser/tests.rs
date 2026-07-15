@@ -71,6 +71,35 @@ fn duplicate_score_section_recoverable() {
 }
 
 #[test]
+fn sections_may_appear_in_any_order() {
+    let input = r#"# score
+time=4/4 key=C4 bpm=120
+[Melody] 1 2 3 4
+
+# metadata
+title = "hello world"
+
+# parts
+Melody = notes
+"#;
+    let doc =
+        parse(input, "test.jianpu", &[]).expect("out-of-order sections must not abort parsing");
+    assert!(
+        !doc.section_structure_errors.iter().any(|e| matches!(
+            &e.kind,
+            crate::error::RecoverableErrorKind::SectionMissing { .. }
+                | crate::error::RecoverableErrorKind::SectionUnknown { .. }
+                | crate::error::RecoverableErrorKind::SectionDuplicate { .. }
+        )),
+        "out-of-order sections must not produce a structure error: {:?}",
+        doc.section_structure_errors
+    );
+    assert_eq!(doc.metadata.title, Some("hello world".to_string()));
+    assert_eq!(doc.declarations.len(), 1);
+    assert_eq!(doc.tracks.len(), 1);
+}
+
+#[test]
 fn missing_metadata_section_is_allowed() {
     let input = concat!(
         "# parts\nMelody = notes\n\n",

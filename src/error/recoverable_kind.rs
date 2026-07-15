@@ -65,8 +65,6 @@ pub enum RecoverableErrorKind {
     SectionDuplicate { section: DocumentSection },
     /// A required section is absent — an empty default is used.
     SectionMissing { section: DocumentSection },
-    /// Sections appear out of canonical order (# metadata, # parts, # score).
-    SectionOutOfOrder,
     /// A lyrics line is empty — treated as `_` (no lyrics for this measure).
     LyricsLineEmpty,
     /// A lyrics slot has no paired notes track — lyrics are skipped.
@@ -161,7 +159,6 @@ impl RecoverableErrorKind {
             Self::SectionUnknown { name } => format!("unknown section: # {name}"),
             Self::SectionDuplicate { section } => format!("duplicate {} section", section.header()),
             Self::SectionMissing { section } => format!("missing {} section", section.header()),
-            Self::SectionOutOfOrder => "sections must appear in order: # metadata, # parts, # groups, # sequence, # score".to_string(),
             Self::LyricsLineEmpty => "lyrics line cannot be empty; use '_' for no lyrics".to_string(),
             Self::LyricsNoNotesTrack { abbrev } => format!("lyrics line for '{abbrev}' has no matching notes track"),
             Self::PartMeasureCountMismatch { part, got, expected } => format!("part {part:?} has {got} measures but the first part has {expected}; all parts must have the same number of measures"),

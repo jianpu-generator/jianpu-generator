@@ -36,12 +36,6 @@ struct RawSections {
     score: Option<(String, usize)>,
     sequence: Option<(String, usize)>,
     group: Option<(String, usize)>,
-    // First-appearance index of each section, used to detect out-of-order sections.
-    metadata_order: Option<usize>,
-    parts_order: Option<usize>,
-    score_order: Option<usize>,
-    sequence_order: Option<usize>,
-    group_order: Option<usize>,
 }
 
 fn partition_sections(
@@ -52,62 +46,45 @@ fn partition_sections(
     use section_splitter::SectionKind;
 
     let mut raw = RawSections::default();
-    for (index, section) in sections.into_iter().enumerate() {
+    for section in sections.into_iter() {
         let occurrence = SectionOccurrence {
-            index,
             content: (section.content, section.content_offset),
             doc_span,
         };
         match section.kind {
             SectionKind::Metadata => record_section(
                 &mut raw.metadata,
-                &mut raw.metadata_order,
                 DocumentSection::Metadata,
                 occurrence,
                 errors,
             ),
-            SectionKind::Parts => record_section(
-                &mut raw.parts,
-                &mut raw.parts_order,
-                DocumentSection::Parts,
-                occurrence,
-                errors,
-            ),
-            SectionKind::Score => record_section(
-                &mut raw.score,
-                &mut raw.score_order,
-                DocumentSection::Score,
-                occurrence,
-                errors,
-            ),
+            SectionKind::Parts => {
+                record_section(&mut raw.parts, DocumentSection::Parts, occurrence, errors)
+            }
+            SectionKind::Score => {
+                record_section(&mut raw.score, DocumentSection::Score, occurrence, errors)
+            }
             SectionKind::Sequence => record_section(
                 &mut raw.sequence,
-                &mut raw.sequence_order,
                 DocumentSection::Sequence,
                 occurrence,
                 errors,
             ),
-            SectionKind::Groups => record_section(
-                &mut raw.group,
-                &mut raw.group_order,
-                DocumentSection::Groups,
-                occurrence,
-                errors,
-            ),
+            SectionKind::Groups => {
+                record_section(&mut raw.group, DocumentSection::Groups, occurrence, errors)
+            }
         }
     }
     raw
 }
 
 struct SectionOccurrence {
-    index: usize,
     content: (String, usize),
     doc_span: Span,
 }
 
 fn record_section(
     slot: &mut Option<(String, usize)>,
-    order_slot: &mut Option<usize>,
     section: DocumentSection,
     occurrence: SectionOccurrence,
     errors: &mut Vec<RecoverableError>,
@@ -118,7 +95,6 @@ fn record_section(
             section,
         ));
     } else {
-        *order_slot = Some(occurrence.index);
         *slot = Some(occurrence.content);
     }
 }
@@ -132,25 +108,6 @@ pub(crate) fn load_document_sections(
     let doc_span = Span::new(0, input.len());
 
     let raw = partition_sections(sections, doc_span, &mut errors);
-
-    // Detect out-of-order: any two present sections whose first-appearance indices
-    // are not strictly ascending in canonical order (metadata < parts < sequence < score).
-    let pairs = [
-        (raw.metadata_order, raw.parts_order),
-        (raw.metadata_order, raw.score_order),
-        (raw.parts_order, raw.score_order),
-        (raw.metadata_order, raw.sequence_order),
-        (raw.parts_order, raw.sequence_order),
-        (raw.sequence_order, raw.score_order),
-        (raw.parts_order, raw.group_order),
-        (raw.group_order, raw.score_order),
-    ];
-    if pairs
-        .iter()
-        .any(|(earlier, later)| matches!((earlier, later), (Some(a), Some(b)) if a > b))
-    {
-        errors.push(RecoverableError::section_out_of_order(doc_span));
-    }
 
     let metadata = raw.metadata.unwrap_or((String::new(), 0));
     let parts = unwrap_or_missing(raw.parts, DocumentSection::Parts, doc_span, &mut errors);

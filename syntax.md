@@ -6,7 +6,7 @@ This document describes the input syntax accepted by **jianpu-generator** as imp
 
 ## File structure
 
-A `.jianpu` file has up to five sections in fixed order:
+A `.jianpu` file has up to five sections, which may appear in any order:
 
 ```
 # metadata
@@ -27,10 +27,10 @@ A `.jianpu` file has up to five sections in fixed order:
 
 - `# metadata` — **optional**
 - `# parts` — **required**
-- `# groups` — **optional**, must appear after `# parts` and before `# score` when present
-- `# sequence` — **optional**, must appear after `# parts` and before `# score` when present
+- `# groups` — **optional**
+- `# sequence` — **optional**
 - `# score` — **required**
-- Sections must appear in the order above.
+- Sections may appear in any order.
 - Legacy `# score:Name` / `# lyrics:Name` sections are **not** supported.
 
 Whitespace around `=` in metadata is optional. Metadata values may be quoted with `"`.

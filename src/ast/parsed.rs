@@ -125,7 +125,7 @@ pub struct ParsedDocument {
     pub metadata_parse_errors: Vec<RecoverableError>,
     /// Recoverable errors from parsing the [parts] section.
     pub parts_parse_errors: Vec<RecoverableError>,
-    /// Recoverable errors from section structure validation (unknown/duplicate/missing/out-of-order sections).
+    /// Recoverable errors from section structure validation (unknown/duplicate/missing sections).
     pub section_structure_errors: Vec<RecoverableError>,
     /// The parsed `# sequence` section, if present: an ordered list of
     /// section-label references defining explicit playback order.

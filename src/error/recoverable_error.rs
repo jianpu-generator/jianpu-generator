@@ -258,13 +258,6 @@ impl RecoverableError {
         }
     }
 
-    pub fn section_out_of_order(span: Span) -> Self {
-        Self {
-            span,
-            kind: RecoverableErrorKind::SectionOutOfOrder,
-        }
-    }
-
     pub fn lyrics_line_empty(span: Span) -> Self {
         Self {
             span,
