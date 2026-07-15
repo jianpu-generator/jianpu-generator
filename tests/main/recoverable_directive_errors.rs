@@ -8,6 +8,9 @@ mod duration_and_group_errors;
 #[path = "recoverable_directive_errors/navigation_marker_set_errors.rs"]
 mod navigation_marker_set_errors;
 
+#[path = "recoverable_directive_errors/sequence_errors.rs"]
+mod sequence_errors;
+
 pub(crate) fn minimal_fixture(score_section: &str) -> String {
     format!(
         r#"# metadata

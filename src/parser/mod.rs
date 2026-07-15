@@ -6,11 +6,13 @@ pub mod metadata_parser;
 pub mod parts_parser;
 pub mod score;
 pub mod section_splitter;
+pub mod sequence_parser;
 
 pub(crate) struct DocumentSectionContents {
     pub parts: (String, usize),
     pub score: (String, usize),
     pub metadata: (String, usize),
+    pub sequence: Option<(String, usize)>,
 }
 
 fn unwrap_or_missing(
@@ -25,67 +27,110 @@ fn unwrap_or_missing(
     })
 }
 
+#[derive(Default)]
+struct RawSections {
+    metadata: Option<(String, usize)>,
+    parts: Option<(String, usize)>,
+    score: Option<(String, usize)>,
+    sequence: Option<(String, usize)>,
+    // First-appearance index of each section, used to detect out-of-order sections.
+    metadata_order: Option<usize>,
+    parts_order: Option<usize>,
+    score_order: Option<usize>,
+    sequence_order: Option<usize>,
+}
+
+fn partition_sections(
+    sections: Vec<section_splitter::RawSection>,
+    doc_span: Span,
+    errors: &mut Vec<RecoverableError>,
+) -> RawSections {
+    use section_splitter::SectionKind;
+
+    let mut raw = RawSections::default();
+    for (index, section) in sections.into_iter().enumerate() {
+        let occurrence = SectionOccurrence {
+            index,
+            content: (section.content, section.content_offset),
+            doc_span,
+        };
+        match section.kind {
+            SectionKind::Metadata => record_section(
+                &mut raw.metadata,
+                &mut raw.metadata_order,
+                DocumentSection::Metadata,
+                occurrence,
+                errors,
+            ),
+            SectionKind::Parts => record_section(
+                &mut raw.parts,
+                &mut raw.parts_order,
+                DocumentSection::Parts,
+                occurrence,
+                errors,
+            ),
+            SectionKind::Score => record_section(
+                &mut raw.score,
+                &mut raw.score_order,
+                DocumentSection::Score,
+                occurrence,
+                errors,
+            ),
+            SectionKind::Sequence => record_section(
+                &mut raw.sequence,
+                &mut raw.sequence_order,
+                DocumentSection::Sequence,
+                occurrence,
+                errors,
+            ),
+        }
+    }
+    raw
+}
+
+struct SectionOccurrence {
+    index: usize,
+    content: (String, usize),
+    doc_span: Span,
+}
+
+fn record_section(
+    slot: &mut Option<(String, usize)>,
+    order_slot: &mut Option<usize>,
+    section: DocumentSection,
+    occurrence: SectionOccurrence,
+    errors: &mut Vec<RecoverableError>,
+) {
+    if slot.is_some() {
+        errors.push(RecoverableError::section_duplicate(
+            occurrence.doc_span,
+            section,
+        ));
+    } else {
+        *order_slot = Some(occurrence.index);
+        *slot = Some(occurrence.content);
+    }
+}
+
 pub(crate) fn load_document_sections(
     input: &str,
 ) -> (DocumentSectionContents, Vec<RecoverableError>) {
-    use section_splitter::{split_sections, SectionKind};
+    use section_splitter::split_sections;
 
     let (sections, mut errors) = split_sections(input);
     let doc_span = Span::new(0, input.len());
 
-    let mut raw_metadata: Option<(String, usize)> = None;
-    let mut raw_parts: Option<(String, usize)> = None;
-    let mut raw_score: Option<(String, usize)> = None;
-
-    // Track the order in which each section first appears to detect out-of-order.
-    let mut metadata_order: Option<usize> = None;
-    let mut parts_order: Option<usize> = None;
-    let mut score_order: Option<usize> = None;
-
-    for (index, section) in sections.into_iter().enumerate() {
-        match section.kind {
-            SectionKind::Metadata => {
-                if raw_metadata.is_some() {
-                    errors.push(RecoverableError::section_duplicate(
-                        doc_span,
-                        DocumentSection::Metadata,
-                    ));
-                } else {
-                    metadata_order = Some(index);
-                    raw_metadata = Some((section.content, section.content_offset));
-                }
-            }
-            SectionKind::Parts => {
-                if raw_parts.is_some() {
-                    errors.push(RecoverableError::section_duplicate(
-                        doc_span,
-                        DocumentSection::Parts,
-                    ));
-                } else {
-                    parts_order = Some(index);
-                    raw_parts = Some((section.content, section.content_offset));
-                }
-            }
-            SectionKind::Score => {
-                if raw_score.is_some() {
-                    errors.push(RecoverableError::section_duplicate(
-                        doc_span,
-                        DocumentSection::Score,
-                    ));
-                } else {
-                    score_order = Some(index);
-                    raw_score = Some((section.content, section.content_offset));
-                }
-            }
-        }
-    }
+    let raw = partition_sections(sections, doc_span, &mut errors);
 
     // Detect out-of-order: any two present sections whose first-appearance indices
-    // are not strictly ascending in canonical order (metadata < parts < score).
+    // are not strictly ascending in canonical order (metadata < parts < sequence < score).
     let pairs = [
-        (metadata_order, parts_order),
-        (metadata_order, score_order),
-        (parts_order, score_order),
+        (raw.metadata_order, raw.parts_order),
+        (raw.metadata_order, raw.score_order),
+        (raw.parts_order, raw.score_order),
+        (raw.metadata_order, raw.sequence_order),
+        (raw.parts_order, raw.sequence_order),
+        (raw.sequence_order, raw.score_order),
     ];
     if pairs
         .iter()
@@ -94,14 +139,15 @@ pub(crate) fn load_document_sections(
         errors.push(RecoverableError::section_out_of_order(doc_span));
     }
 
-    let metadata = raw_metadata.unwrap_or((String::new(), 0));
-    let parts = unwrap_or_missing(raw_parts, DocumentSection::Parts, doc_span, &mut errors);
-    let score = unwrap_or_missing(raw_score, DocumentSection::Score, doc_span, &mut errors);
+    let metadata = raw.metadata.unwrap_or((String::new(), 0));
+    let parts = unwrap_or_missing(raw.parts, DocumentSection::Parts, doc_span, &mut errors);
+    let score = unwrap_or_missing(raw.score, DocumentSection::Score, doc_span, &mut errors);
     (
         DocumentSectionContents {
             metadata,
             parts,
             score,
+            sequence: raw.sequence,
         },
         errors,
     )
@@ -129,6 +175,12 @@ pub fn parse(
             score::interleaved_parser::parse(&score_content, score_offset, &declarations)
                 .map_err(|error| error.with_path(path))?
         };
+    let (sequence, sequence_parse_errors) = match sections.sequence {
+        Some((sequence_content, sequence_offset)) => {
+            sequence_parser::parse_sequence(&sequence_content, sequence_offset)
+        }
+        None => (None, Vec::new()),
+    };
 
     Ok(ParsedDocument {
         metadata,
@@ -139,6 +191,8 @@ pub fn parse(
         metadata_parse_errors,
         parts_parse_errors,
         section_structure_errors,
+        sequence,
+        sequence_parse_errors,
     })
 }
 

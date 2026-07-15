@@ -124,6 +124,23 @@ pub struct Score {
     pub measures: Vec<MultiPartMeasure>,
     /// Document-level diagnostics (e.g. metadata parse errors), not tied to any measure.
     pub document_diagnostics: Vec<Diagnostic>,
+    /// Resolved playback order from a `# sequence` section, if present and
+    /// valid: each span is a labeled section's inclusive measure-index range
+    /// in `measures`, in the order they should play. Mutually exclusive with
+    /// the D.C./D.S. al Coda/Fine navigation markers on `MultiPartMeasure`.
+    pub sequence: Option<Vec<SequenceSpan>>,
+}
+
+/// A labeled section's resolved measure range, in written-score order: from
+/// the labeled measure up to (but not including) the next labeled measure,
+/// or the end of the score.
+#[derive(Clone)]
+pub struct SequenceSpan {
+    pub label: String,
+    /// Inclusive index into `Score.measures`.
+    pub start: usize,
+    /// Inclusive index into `Score.measures`.
+    pub end: usize,
 }
 
 // ── Intermediate grouper types (not part of the public API) ─────────────────

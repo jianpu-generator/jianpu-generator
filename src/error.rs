@@ -6,12 +6,14 @@ pub use irrecoverable::{IrrecoverableError, IrrecoverableErrorKind};
 pub use recoverable_error::RecoverableError;
 pub use recoverable_kind::RecoverableErrorKind;
 
-/// One of the three required document sections.
+/// One of the document's top-level sections (`# sequence` is optional; the
+/// others are required).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DocumentSection {
     Metadata,
     Parts,
     Score,
+    Sequence,
 }
 
 impl DocumentSection {
@@ -20,6 +22,7 @@ impl DocumentSection {
             Self::Metadata => "# metadata",
             Self::Parts => "# parts",
             Self::Score => "# score",
+            Self::Sequence => "# sequence",
         }
     }
 }

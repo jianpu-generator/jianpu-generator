@@ -124,6 +124,12 @@ pub enum GridContent {
         bold: bool,
         italic: bool,
     },
+    /// The resolved `# sequence` playback order, rendered as "Sequence: "
+    /// followed by each label (styled like an inline section label) joined
+    /// by " → ".
+    SequenceLine {
+        entries: Vec<String>,
+    },
 }
 
 /// `GridContent` after arc variants have been resolved.
@@ -173,6 +179,9 @@ pub enum PostArcGridContent {
         bold: bool,
         italic: bool,
     },
+    SequenceLine {
+        entries: Vec<String>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -188,6 +197,10 @@ pub struct Header {
     pub author: Option<String>,
     pub part_list: Vec<PartListEntry>,
     pub parts_list_columns: u32,
+    /// The resolved `# sequence` playback order, one entry per label
+    /// reference (e.g. `["A", "B", "A"]`), if present. Rendered as a line
+    /// near the top of the score; does not affect SVG/PDF measure order.
+    pub sequence: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone)]

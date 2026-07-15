@@ -77,6 +77,7 @@ fn chord_major_expands_to_three_notes() {
             diagnostics: vec![],
         }],
         document_diagnostics: vec![],
+        sequence: None,
     };
     let midi_bytes = write_midi(&score).unwrap();
     // MIDI bytes must be non-empty and start with MThd
@@ -170,6 +171,7 @@ fn tied_notes_produce_single_note_on() {
             make_measure(None, None, None, false),
         ],
         document_diagnostics: vec![],
+        sequence: None,
     };
 
     let midi_bytes = write_midi(&score).unwrap();
@@ -254,6 +256,7 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
             diagnostics: vec![],
         }],
         document_diagnostics: vec![],
+        sequence: None,
     };
 
     let midi_bytes = write_midi(&score).unwrap();

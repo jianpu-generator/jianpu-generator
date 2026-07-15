@@ -135,6 +135,14 @@ pub fn expand_navigation_with_origins(
         return Ok((score.clone(), Vec::new()));
     }
 
+    if let Some(spans) = &score.sequence {
+        let idx: Vec<usize> = spans
+            .iter()
+            .flat_map(|span| span.start..=span.end)
+            .collect();
+        return Ok(build_expanded(score, idx));
+    }
+
     let markers =
         resolve_marker_indices(score).map_err(|error| into_irrecoverable_error(score, error))?;
     let Some(markers) = markers else {
@@ -155,19 +163,26 @@ pub fn expand_navigation_with_origins(
         }
     }
 
+    Ok(build_expanded(score, idx))
+}
+
+/// Clones `score.measures` at each index in `idx` (playback order) into a new
+/// `Score`, alongside `idx` itself as the origins mapping.
+fn build_expanded(score: &Score, idx: Vec<usize>) -> (Score, Vec<usize>) {
     let measures = idx
         .iter()
         .filter_map(|&i| score.measures.get(i).cloned())
         .collect();
 
-    Ok((
+    (
         Score {
             metadata: score.metadata.clone(),
             measures,
             document_diagnostics: score.document_diagnostics.clone(),
+            sequence: None,
         },
         idx,
-    ))
+    )
 }
 
 /// Smallest position `>= min_pos` in `origins` whose value equals

@@ -84,6 +84,11 @@ pub(crate) fn separator_row_height() -> f32 {
     4.0
 }
 
+/// One row of blank vertical space, used above the sequence line.
+pub(crate) fn header_gap_row_height(base: f32) -> f32 {
+    base
+}
+
 pub(crate) fn header_title_row_height(base: f32) -> f32 {
     base * 0.80
 }

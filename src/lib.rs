@@ -103,12 +103,17 @@ fn build_header(score: &Score, parts: &[PartInfo]) -> grid_layout::types::Header
             display_name: part.display_name.clone(),
         })
         .collect();
+    let sequence = score
+        .sequence
+        .as_ref()
+        .map(|spans| spans.iter().map(|span| span.label.clone()).collect());
     grid_layout::types::Header {
         title: score.metadata.title.clone(),
         subtitle: score.metadata.subtitle.clone(),
         author: score.metadata.author.clone(),
         part_list,
         parts_list_columns: score.metadata.parts_list_columns,
+        sequence,
     }
 }
 

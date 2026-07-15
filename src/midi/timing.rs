@@ -83,6 +83,7 @@ pub fn build_single_measure_score(score: &Score, measure_index: usize) -> Option
         metadata: score.metadata.clone(),
         measures: vec![patched],
         document_diagnostics: vec![],
+        sequence: None,
     })
 }
 
@@ -130,6 +131,7 @@ pub fn build_measure_range_score(
         metadata: score.metadata.clone(),
         measures,
         document_diagnostics: vec![],
+        sequence: None,
     })
 }
 

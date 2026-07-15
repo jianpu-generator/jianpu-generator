@@ -30,6 +30,18 @@ fn sans_serif_text(
     }
 }
 
+/// Builds the text span for a section label (bold + italic, 12pt), matching
+/// how a `label="..."` directive is rendered inline on a measure. Shared by
+/// [`directive_line_content`] and the `# sequence` header line.
+fn section_label_span(label_text: &str) -> TextSpan {
+    TextSpan {
+        content: label_text.to_string(),
+        bold: true,
+        italic: true,
+        font_size: 12.0,
+    }
+}
+
 /// Rough estimate (in points) of a span's rendered width, used only to
 /// position the vector Segno glyph inline with the directive-line text (see
 /// [`directive_line_content`]). Sans-serif glyphs average roughly half their
@@ -65,12 +77,7 @@ fn directive_line_content(content: &PostArcGridContent) -> (Vec<TextSpan>, Optio
     };
     let mut spans: Vec<TextSpan> = Vec::new();
     if let Some(label_text) = label {
-        spans.push(TextSpan {
-            content: label_text.clone(),
-            bold: true,
-            italic: true,
-            font_size: 12.0,
-        });
+        spans.push(section_label_span(label_text));
     } else if let Some(n) = bar_number {
         spans.push(TextSpan {
             content: n.to_string(),
@@ -145,6 +152,30 @@ fn push_navigation_marker_spans<const N: usize>(
     segno_offset
 }
 
+/// Builds the text spans for the `# sequence` header line: a plain
+/// "Sequence: " prefix, each label styled like an inline section label (see
+/// [`section_label_span`]), joined by a plain " → " arrow.
+fn sequence_line_content(entries: &[String]) -> Vec<TextSpan> {
+    let mut spans = vec![TextSpan {
+        content: "Sequence: ".to_string(),
+        bold: false,
+        italic: false,
+        font_size: 12.0,
+    }];
+    for (index, label) in entries.iter().enumerate() {
+        if index > 0 {
+            spans.push(TextSpan {
+                content: " \u{2192} ".to_string(),
+                bold: false,
+                italic: false,
+                font_size: 12.0,
+            });
+        }
+        spans.push(section_label_span(label));
+    }
+    spans
+}
+
 fn grid_text_to_absolute(
     content: &PostArcGridContent,
     span_width: f32,
@@ -194,6 +225,11 @@ fn grid_text_to_absolute(
         PostArcGridContent::HorizontalLine => {
             Some(AbsoluteContent::HorizontalLine { width: span_width })
         }
+        PostArcGridContent::SequenceLine { entries } => Some(AbsoluteContent::DirectiveLine {
+            label: None,
+            spans: sequence_line_content(entries),
+            segno_icon_offset: None,
+        }),
         _ => None,
     }
 }

@@ -122,6 +122,7 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
         author: score.metadata.author.clone(),
         part_list: vec![],
         parts_list_columns: 3,
+        sequence: None,
     };
     let compile_result = compiler::compile(&score);
     let compile_result = consolidator::consolidate(compile_result);

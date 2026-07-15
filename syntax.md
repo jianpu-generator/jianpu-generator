@@ -6,7 +6,7 @@ This document describes the input syntax accepted by **jianpu-generator** as imp
 
 ## File structure
 
-A `.jianpu` file has three sections in fixed order:
+A `.jianpu` file has up to four sections in fixed order:
 
 ```
 # metadata
@@ -15,12 +15,16 @@ A `.jianpu` file has three sections in fixed order:
 # parts
 …track declarations…
 
+# sequence
+…comma-separated section labels…
+
 # score
 …interleaved score content…
 ```
 
 - `# metadata` — **optional**
 - `# parts` — **required**
+- `# sequence` — **optional**, must appear after `# parts` and before `# score` when present
 - `# score` — **required**
 - Sections must appear in the order above.
 - Legacy `# score:Name` / `# lyrics:Name` sections are **not** supported.
@@ -240,7 +244,7 @@ Rules:
 - Multiple directives may appear on one line, separated by whitespace.
 - `label=` value must be a quoted string; empty labels are rejected.
 - Directives apply to **all** parts. They are stored on the first notes part and propagate through grouping.
-- `label` applies only to the measure where it is declared (does not persist to the next bar).
+- `label` applies only to the measure where it is declared (does not persist to the next bar) — this is true for rendering purposes and whenever no `# sequence` section is present. When a `# sequence` section **is** present, each label additionally denotes a *span* of measures for playback-order purposes: see [`# sequence` — explicit playback order](#sequence--explicit-playback-order) below.
 - `bpm`, `key`, and `time` persist until the next directive line overrides them.
 - `dcalcoda`, `tocoda`, and `coda` are bare keywords (no `=value`) that, like `label`, apply only to the measure where declared and do not persist. They must appear **all three together or not at all** (a partial set is an error), at most once each, and `tocoda` must occur before `coda`.
 - `segno`, `dsalcoda`, `tocoda`, and `coda` are the equivalent "D.S. al Coda" marker set: they must appear **all four together or not at all**, at most once each, `segno` must occur at or before `dsalcoda`, and `tocoda` must occur before `coda`.
@@ -266,6 +270,29 @@ Note names: `A` `B` `C` `D` `E` `F` `G`, with optional `#` or `b` accidental, fo
 - With `segno`/`dsalfine`/`fine`: measures play from the start through the `dsalfine` measure, then restart from the `segno` measure and play through the `fine` measure, then stop.
 
 On the first pass, the `tocoda`/`fine` measure is just a normal measure — the cut/stop only happens on the second pass.
+
+### `# sequence` — explicit playback order
+
+As an alternative to the `dcalcoda`/`tocoda`/`coda`/`segno`/`dsalcoda`/`dcalfine`/`fine`/`dsalfine` markers, a score may include an optional `# sequence` section — placed after `# parts` and before `# score` — that states the playback order directly, as a comma-separated list of section labels (the same labels set via `label="..."` on a measure's directive line):
+
+```
+# sequence
+A, B, A
+
+# score
+time=4/4 key=C4 bpm=120 label="A"
+1 2 3 4
+label="B"
+5 6 7 1
+```
+
+- Each entry in `# sequence` is a label declared with `label="..."` in `# score`; entries are separated by commas, and surrounding whitespace is trimmed.
+- A label's **span** covers its measure and every following measure up to (but not including) the next `label="..."` measure, or through the end of the score if there is no following label. Above, `A` spans just its own measure, and `B` spans from its measure to the end of the score.
+- Labels may be repeated in `# sequence` (e.g. `A, B, A`) to replay a span more than once.
+- Each label must be declared **exactly once** in `# score`; declaring the same label on more than one measure is an error.
+- Referencing a label in `# sequence` that was never declared in `# score` is an error; that entry is skipped and the rest of the sequence still resolves.
+- `# sequence` and the inline navigation markers (`dcalcoda`/`tocoda`/`coda`/`segno`/`dsalcoda`/`dcalfine`/`fine`/`dsalfine`) are **mutually exclusive** — using both in the same score is an error.
+- Like the inline markers, `# sequence` only affects **MIDI/WAV playback order** — measures always render once, in written order, with normal bar numbers. However, SVG/PDF output does show the resolved order as a left-aligned line ("Sequence: A → B → A") on the first page, with a blank line of space above it, below the title/subtitle/author/part list. Each label is styled the same as an inline `label="..."` directive (bold, italic).
 
 ---
 

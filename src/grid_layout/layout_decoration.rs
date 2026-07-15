@@ -1,6 +1,6 @@
 use crate::compiler::types::{Decoration, MeasureBlock};
 use crate::grid_layout::layout::{
-    block_column_width, decoration_row_height, header_part_list_row_height,
+    block_column_width, decoration_row_height, header_gap_row_height, header_part_list_row_height,
     header_subtitle_author_row_height, header_title_row_height, separator_row_height, LABEL_COLS,
 };
 use crate::grid_layout::types::{
@@ -111,12 +111,38 @@ pub(super) fn make_separator_row() -> GridRow {
     }
 }
 
-pub(crate) fn make_header_rows(
-    header: &Header,
-    base: f32,
-    include_part_list: bool,
-) -> Vec<GridRow> {
-    let title_row = header.title.as_ref().map(|title| GridRow {
+fn make_sequence_rows(header: &Header, base: f32, include_part_list: bool) -> Vec<GridRow> {
+    header
+        .sequence
+        .as_ref()
+        .filter(|_| include_part_list)
+        .map(|entries| {
+            vec![
+                GridRow {
+                    height_pt: header_gap_row_height(base),
+                    column_count: 1,
+                    elements: vec![],
+                },
+                GridRow {
+                    height_pt: decoration_row_height(base),
+                    column_count: 1,
+                    elements: vec![GridElement {
+                        column: 0,
+                        column_span: 1,
+                        halign: HAlign::Start,
+                        valign: VAlign::Center,
+                        content: GridContent::SequenceLine {
+                            entries: entries.clone(),
+                        },
+                    }],
+                },
+            ]
+        })
+        .unwrap_or_default()
+}
+
+fn make_title_row(header: &Header, base: f32) -> Option<GridRow> {
+    header.title.as_ref().map(|title| GridRow {
         height_pt: header_title_row_height(base),
         column_count: 1,
         elements: vec![GridElement {
@@ -131,11 +157,13 @@ pub(crate) fn make_header_rows(
                 italic: false,
             },
         }],
-    });
+    })
+}
 
-    let mut subtitle_author_elements: Vec<GridElement> = Vec::new();
+fn make_subtitle_author_row(header: &Header, base: f32) -> GridRow {
+    let mut elements: Vec<GridElement> = Vec::new();
     if let Some(subtitle) = &header.subtitle {
-        subtitle_author_elements.push(GridElement {
+        elements.push(GridElement {
             column: 0,
             column_span: 1,
             halign: HAlign::Center,
@@ -149,7 +177,7 @@ pub(crate) fn make_header_rows(
         });
     }
     if let Some(author) = &header.author {
-        subtitle_author_elements.push(GridElement {
+        elements.push(GridElement {
             column: 0,
             column_span: 1,
             halign: HAlign::End,
@@ -162,12 +190,18 @@ pub(crate) fn make_header_rows(
             },
         });
     }
-    let subtitle_author_row = GridRow {
+    GridRow {
         height_pt: header_subtitle_author_row_height(base),
         column_count: 1,
-        elements: subtitle_author_elements,
-    };
+        elements,
+    }
+}
 
+pub(crate) fn make_header_rows(
+    header: &Header,
+    base: f32,
+    include_part_list: bool,
+) -> Vec<GridRow> {
     let part_list_rows: Vec<GridRow> = if include_part_list {
         let entries: Vec<&PartListEntry> = header
             .part_list
@@ -179,10 +213,11 @@ pub(crate) fn make_header_rows(
         vec![]
     };
 
-    title_row
+    make_title_row(header, base)
         .into_iter()
-        .chain(std::iter::once(subtitle_author_row))
+        .chain(std::iter::once(make_subtitle_author_row(header, base)))
         .chain(part_list_rows)
+        .chain(make_sequence_rows(header, base, include_part_list))
         .collect()
 }
 

@@ -38,6 +38,7 @@ fn no_header() -> Header {
         author: None,
         part_list: vec![],
         parts_list_columns: 3,
+        sequence: None,
     }
 }
 
@@ -160,6 +161,7 @@ fn erroneous_measure_produces_error_highlight() {
         author: Some("A".into()),
         part_list: vec![],
         parts_list_columns: 3,
+        sequence: None,
     };
     let config = crate::render_config::RenderConfig {
         row_height: 24,
@@ -195,6 +197,7 @@ fn non_erroneous_measure_produces_no_error_highlight() {
         author: Some("A".into()),
         part_list: vec![],
         parts_list_columns: 3,
+        sequence: None,
     };
     let config = crate::render_config::RenderConfig {
         row_height: 24,

@@ -15,6 +15,7 @@ fn hdr() -> Header {
         author: Some("Me".to_string()),
         part_list: vec![],
         parts_list_columns: 3,
+        sequence: None,
     }
 }
 

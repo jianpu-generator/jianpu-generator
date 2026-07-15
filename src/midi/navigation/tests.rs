@@ -1,5 +1,5 @@
 use super::{expand_navigation, expand_navigation_with_origins};
-use crate::ast::grouped::{Metadata, MultiPartMeasure, Score};
+use crate::ast::grouped::{Metadata, MultiPartMeasure, Score, SequenceSpan};
 use crate::error::Span;
 
 fn metadata() -> Metadata {
@@ -40,6 +40,14 @@ fn score_with(measures: Vec<MultiPartMeasure>) -> Score {
         metadata: metadata(),
         measures,
         document_diagnostics: vec![],
+        sequence: None,
+    }
+}
+
+fn score_with_sequence(measures: Vec<MultiPartMeasure>, sequence: Vec<SequenceSpan>) -> Score {
+    Score {
+        sequence: Some(sequence),
+        ..score_with(measures)
     }
 }
 
@@ -126,6 +134,56 @@ fn valid_markers_origins_match_expected_sequence() {
     let score = score_with(measures);
     let (_, origins) = expand_navigation_with_origins(&score).unwrap();
     assert_eq!(origins, vec![0, 1, 2, 3, 0, 1, 2, 3]);
+}
+
+#[test]
+fn sequence_origins_replay_spans_in_stated_order() {
+    // 4 measures split into two labeled sections: A = [0], B = [1, 2, 3].
+    // A `# sequence` of A, B, A should replay A's single measure, then B's
+    // three measures, then A's measure again.
+    let measures: Vec<_> = (0..4).map(bare_measure).collect();
+    let score = score_with_sequence(
+        measures,
+        vec![
+            SequenceSpan {
+                label: "A".to_string(),
+                start: 0,
+                end: 0,
+            },
+            SequenceSpan {
+                label: "B".to_string(),
+                start: 1,
+                end: 3,
+            },
+            SequenceSpan {
+                label: "A".to_string(),
+                start: 0,
+                end: 0,
+            },
+        ],
+    );
+    let (expanded, origins) = expand_navigation_with_origins(&score).unwrap();
+    assert_eq!(origins, vec![0, 1, 2, 3, 0]);
+    assert_eq!(expanded.measures.len(), 5);
+}
+
+#[test]
+fn sequence_takes_precedence_over_markers_when_present() {
+    // Markers here would normally be a "partial set" error (tocoda with no
+    // coda/dcalcoda), but a present `# sequence` bypasses marker resolution
+    // entirely.
+    let mut measures: Vec<_> = (0..2).map(bare_measure).collect();
+    measures[1].to_coda = true;
+    let score = score_with_sequence(
+        measures,
+        vec![SequenceSpan {
+            label: "A".to_string(),
+            start: 0,
+            end: 1,
+        }],
+    );
+    let (_, origins) = expand_navigation_with_origins(&score).unwrap();
+    assert_eq!(origins, vec![0, 1]);
 }
 
 #[test]

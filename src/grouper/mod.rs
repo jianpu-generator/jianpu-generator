@@ -10,15 +10,19 @@ mod directive_grouper;
 mod lyrics_pairing;
 mod navigation_validation;
 mod part_grouper;
+mod sequence_resolution;
 mod tie_validation;
 
 use directive_grouper::DirectiveGrouper;
 use navigation_validation::validate_navigation_markers;
 use part_grouper::group_timed_track;
+use sequence_resolution::resolve_sequence;
 use tie_validation::validate_ties;
 
 pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
     let metadata = doc.metadata;
+    let sequence = doc.sequence;
+    let sequence_parse_errors = doc.sequence_parse_errors;
     let document_diagnostics: Vec<Diagnostic> = doc
         .section_structure_errors
         .into_iter()
@@ -59,9 +63,13 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
             .into_iter()
             .chain(combiner_diagnostics)
             .collect(),
+        sequence: None,
     };
     validate_ties(&mut score);
-    validate_navigation_markers(&mut score);
+    resolve_sequence(&mut score, sequence, sequence_parse_errors);
+    if score.sequence.is_none() {
+        validate_navigation_markers(&mut score);
+    }
     Ok(score)
 }
 

@@ -13,6 +13,7 @@ pub enum SectionKind {
     Metadata,
     Parts,
     Score,
+    Sequence,
 }
 
 /// Blanks out `//` line comments with spaces, preserving byte length and line
@@ -84,6 +85,10 @@ pub fn split_sections(input: &str) -> (Vec<RawSection>, Vec<RecoverableError>) {
                 }
                 "score" => {
                     current_kind = Some(SectionKind::Score);
+                    current_content_offset = byte_offset + line_len;
+                }
+                "sequence" => {
+                    current_kind = Some(SectionKind::Sequence);
                     current_content_offset = byte_offset + line_len;
                 }
                 _ => {

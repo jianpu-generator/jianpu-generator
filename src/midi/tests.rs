@@ -166,6 +166,7 @@ pub(super) fn one_measure_score() -> Score {
             diagnostics: vec![],
         }],
         document_diagnostics: vec![],
+        sequence: None,
     }
 }
 
@@ -257,5 +258,6 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
             diagnostics: vec![],
         }],
         document_diagnostics: vec![],
+        sequence: None,
     }
 }

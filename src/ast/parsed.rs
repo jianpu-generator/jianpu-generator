@@ -124,6 +124,11 @@ pub struct ParsedDocument {
     pub parts_parse_errors: Vec<RecoverableError>,
     /// Recoverable errors from section structure validation (unknown/duplicate/missing/out-of-order sections).
     pub section_structure_errors: Vec<RecoverableError>,
+    /// The parsed `# sequence` section, if present: an ordered list of
+    /// section-label references defining explicit playback order.
+    pub sequence: Option<crate::parser::sequence_parser::SequenceSection>,
+    /// Recoverable errors from parsing the `# sequence` section (e.g. empty entries).
+    pub sequence_parse_errors: Vec<RecoverableError>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
