@@ -168,6 +168,7 @@ fn erroneous_measure_produces_error_highlight() {
         max_measures_per_system: 28,
         label_width: 40,
         note_number_width: 8,
+        lyrics_font_size: 14,
     };
     let pages = crate::grid_layout::layout(
         &crate::compiler::types::CompileResult {
@@ -204,6 +205,7 @@ fn non_erroneous_measure_produces_no_error_highlight() {
         max_measures_per_system: 28,
         label_width: 40,
         note_number_width: 8,
+        lyrics_font_size: 14,
     };
     let pages = crate::grid_layout::layout(
         &crate::compiler::types::CompileResult {

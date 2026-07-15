@@ -7,6 +7,7 @@ pub struct RenderConfig {
     pub label_width: u32,
     pub note_number_width: u32,
     pub max_measures_per_system: u32,
+    pub lyrics_font_size: u32,
 }
 
 impl RenderConfig {
@@ -16,12 +17,13 @@ impl RenderConfig {
             label_width: meta.label_width,
             note_number_width: meta.note_number_width,
             max_measures_per_system: meta.max_measures_per_system,
+            lyrics_font_size: meta.lyrics_font_size,
         }
     }
 
     /// Font size used for Latin-script lyric syllables (and other body text).
     pub fn lyric_font_size(&self) -> f32 {
-        self.row_height as f32 * 0.6
+        self.lyrics_font_size as f32
     }
 
     /// Font size used for CJK lyric syllables, which render larger than Latin
@@ -54,11 +56,14 @@ mod tests {
             note_number_width: 12,
             max_measures_per_system: 6,
             parts_list_columns: 3,
+            lyrics_font_size: 18,
         };
         let cfg = RenderConfig::from_metadata(&meta);
         assert_eq!(cfg.row_height, 30);
         assert_eq!(cfg.label_width, 20);
         assert_eq!(cfg.note_number_width, 12);
         assert_eq!(cfg.max_measures_per_system, 6);
+        assert_eq!(cfg.lyrics_font_size, 18);
+        assert_eq!(cfg.lyric_font_size(), 18.0);
     }
 }

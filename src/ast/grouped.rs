@@ -20,6 +20,8 @@ pub struct Metadata {
     pub note_number_width: u32,
     /// Number of columns in the parts list header. Default: 4.
     pub parts_list_columns: u32,
+    /// Lyrics font size in points. Default: 60% of row_height.
+    pub lyrics_font_size: u32,
 }
 
 #[derive(Clone)]

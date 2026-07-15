@@ -105,6 +105,7 @@ fn cfg() -> RenderConfig {
         label_width: 0,
         note_number_width: 12,
         max_measures_per_system: 2,
+        lyrics_font_size: 18,
     }
 }
 

@@ -12,6 +12,7 @@ fn metadata() -> Metadata {
         label_width: 40,
         note_number_width: 8,
         parts_list_columns: 3,
+        lyrics_font_size: 14,
     }
 }
 

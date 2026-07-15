@@ -248,6 +248,23 @@ export function EditMetadataModal({
                     />
                   </td>
                 </tr>
+                <tr>
+                  <td style={tdStyle}>Lyrics Font Size</td>
+                  <td style={tdStyle}>
+                    <input
+                      type="number"
+                      min="1"
+                      style={inputStyle}
+                      value={metadata.lyricsFontSize ?? ''}
+                      onChange={(e) =>
+                        onFieldChange(
+                          'lyrics font size',
+                          e.target.value === '' ? null : e.target.value,
+                        )
+                      }
+                    />
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>

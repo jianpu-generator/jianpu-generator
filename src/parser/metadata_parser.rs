@@ -30,6 +30,19 @@ fn parse_positive_u32(key: &str, value: &str, value_span: &Span) -> Result<u32, 
     Ok(parsed)
 }
 
+fn parse_numeric_field(
+    target: &mut Option<u32>,
+    key: &str,
+    value: &str,
+    value_span: &Span,
+    errors: &mut Vec<RecoverableError>,
+) {
+    match parse_positive_u32(key, value, value_span) {
+        Ok(v) => *target = Some(v),
+        Err(e) => errors.push(e),
+    }
+}
+
 pub fn parse_metadata(
     content: &str,
     base_offset: usize,
@@ -42,6 +55,7 @@ pub fn parse_metadata(
     let mut label_width: Option<u32> = None;
     let mut note_number_width: Option<u32> = None;
     let mut parts_list_columns: Option<u32> = None;
+    let mut lyrics_font_size: Option<u32> = None;
     let mut byte_offset = base_offset;
     let mut errors: Vec<RecoverableError> = Vec::new();
 
@@ -71,31 +85,31 @@ pub fn parse_metadata(
             "title" => title = Some(value.to_string()),
             "subtitle" => subtitle = Some(value.to_string()),
             "author" => author = Some(value.to_string()),
-            "row height" => match parse_positive_u32("row height", value, &value_span) {
-                Ok(v) => row_height = Some(v),
-                Err(e) => errors.push(e),
-            },
-            "max measures per system" => {
-                match parse_positive_u32("max measures per system", value, &value_span) {
-                    Ok(v) => max_measures_per_system = Some(v),
-                    Err(e) => errors.push(e),
-                }
+            "row height" => {
+                parse_numeric_field(&mut row_height, key, value, &value_span, &mut errors)
             }
-            "label width" => match parse_positive_u32("label width", value, &value_span) {
-                Ok(v) => label_width = Some(v),
-                Err(e) => errors.push(e),
-            },
+            "max measures per system" => parse_numeric_field(
+                &mut max_measures_per_system,
+                key,
+                value,
+                &value_span,
+                &mut errors,
+            ),
+            "label width" => {
+                parse_numeric_field(&mut label_width, key, value, &value_span, &mut errors)
+            }
             "note number width" => {
-                match parse_positive_u32("note number width", value, &value_span) {
-                    Ok(v) => note_number_width = Some(v),
-                    Err(e) => errors.push(e),
-                }
+                parse_numeric_field(&mut note_number_width, key, value, &value_span, &mut errors)
             }
-            "parts list columns" => {
-                match parse_positive_u32("parts list columns", value, &value_span) {
-                    Ok(v) => parts_list_columns = Some(v),
-                    Err(e) => errors.push(e),
-                }
+            "parts list columns" => parse_numeric_field(
+                &mut parts_list_columns,
+                key,
+                value,
+                &value_span,
+                &mut errors,
+            ),
+            "lyrics font size" => {
+                parse_numeric_field(&mut lyrics_font_size, key, value, &value_span, &mut errors)
             }
             _ => errors.push(RecoverableError::metadata_unknown_field(key_span, key)),
         }
@@ -113,6 +127,7 @@ pub fn parse_metadata(
             label_width,
             note_number_width,
             parts_list_columns,
+            lyrics_font_size,
         },
         errors,
     )
@@ -244,5 +259,21 @@ mod tests {
         let (meta, errors) = parse_metadata(content, 0);
         assert!(errors.is_empty());
         assert_eq!(meta.label_width, None);
+    }
+
+    #[test]
+    fn parses_lyrics_font_size() {
+        let content = "title = \"t\"\nauthor = \"a\"\nlyrics font size = 14\n";
+        let (meta, errors) = parse_metadata(content, 0);
+        assert!(errors.is_empty());
+        assert_eq!(meta.lyrics_font_size, Some(14));
+    }
+
+    #[test]
+    fn lyrics_font_size_defaults_to_none() {
+        let content = "title = \"t\"\nauthor = \"a\"\n";
+        let (meta, errors) = parse_metadata(content, 0);
+        assert!(errors.is_empty());
+        assert_eq!(meta.lyrics_font_size, None);
     }
 }

@@ -7,6 +7,7 @@ export type MetadataKey =
   | 'label width'
   | 'note number width'
   | 'parts list columns'
+  | 'lyrics font size'
 
 export interface ParsedMetadataFields {
   title: string
@@ -17,6 +18,7 @@ export interface ParsedMetadataFields {
   labelWidth: number | null
   noteNumberWidth: number | null
   partsListColumns: number | null
+  lyricsFontSize: number | null
 }
 
 const numericKeys: MetadataKey[] = [
@@ -25,6 +27,7 @@ const numericKeys: MetadataKey[] = [
   'label width',
   'note number width',
   'parts list columns',
+  'lyrics font size',
 ]
 
 const canonicalKeyOrder: MetadataKey[] = [
@@ -36,6 +39,7 @@ const canonicalKeyOrder: MetadataKey[] = [
   'label width',
   'note number width',
   'parts list columns',
+  'lyrics font size',
 ]
 
 function isNumericKey(key: MetadataKey): boolean {
@@ -111,6 +115,7 @@ export function parseMetadata(source: string): ParsedMetadataFields {
     labelWidth: null,
     noteNumberWidth: null,
     partsListColumns: null,
+    lyricsFontSize: null,
   }
 
   if (startIndex === -1) return result
@@ -138,6 +143,11 @@ export function parseMetadata(source: string): ParsedMetadataFields {
   if (fieldMap.has('parts list columns'))
     result.partsListColumns = parseInt(
       fieldMap.get('parts list columns') as string,
+      10,
+    )
+  if (fieldMap.has('lyrics font size'))
+    result.lyricsFontSize = parseInt(
+      fieldMap.get('lyrics font size') as string,
       10,
     )
 

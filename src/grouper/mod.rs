@@ -47,16 +47,20 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
 
     let (measures, combiner_diagnostics) = combiner::combine(&grouped_score);
 
+    let row_height = metadata.row_height.unwrap_or(24);
     let mut score = Score {
         metadata: Metadata {
             title: metadata.title,
             subtitle: metadata.subtitle,
             author: metadata.author,
-            row_height: metadata.row_height.unwrap_or(24),
+            row_height,
             max_measures_per_system: metadata.max_measures_per_system.unwrap_or(4),
             label_width: metadata.label_width.unwrap_or(40),
             note_number_width: metadata.note_number_width.unwrap_or(8),
             parts_list_columns: metadata.parts_list_columns.unwrap_or(4),
+            lyrics_font_size: metadata
+                .lyrics_font_size
+                .unwrap_or_else(|| (row_height as f32 * 0.6).round() as u32),
         },
         measures,
         document_diagnostics: document_diagnostics

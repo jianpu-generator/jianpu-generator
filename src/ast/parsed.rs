@@ -170,6 +170,7 @@ pub struct ParsedMetadata {
     pub label_width: Option<u32>,
     pub note_number_width: Option<u32>,
     pub parts_list_columns: Option<u32>,
+    pub lyrics_font_size: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
