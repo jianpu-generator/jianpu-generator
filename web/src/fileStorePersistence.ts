@@ -1,11 +1,11 @@
-import { DEMO_FILE_NAME } from './defaultSource'
+import { DEMO_FILE_NAMES } from './defaultSource'
 import {
   DEFAULT_FILE_STORE,
   FILE_STORE_KEY,
   type FileStoreState,
   generateFileId,
   STORAGE_KEY,
-  sortedFileNames,
+  sortedUserFileNames,
 } from './fileStore'
 
 function ensureFileIds(
@@ -25,20 +25,22 @@ function ensureFileIds(
 
 function normalizeState(parsed: Partial<FileStoreState>): FileStoreState {
   const userFiles = { ...parsed.userFiles }
-  delete userFiles[DEMO_FILE_NAME]
   const bin = { ...parsed.bin }
-  delete bin[DEMO_FILE_NAME]
+  for (const name of DEMO_FILE_NAMES) {
+    delete userFiles[name]
+    delete bin[name]
+  }
 
   const state: FileStoreState = {
-    active: parsed.active ?? DEMO_FILE_NAME,
+    active: parsed.active ?? DEMO_FILE_NAMES[0],
     userFiles,
     bin,
     fileIds: ensureFileIds(userFiles, bin, parsed.fileIds),
   }
-  const names = sortedFileNames(state)
+  const names = [...DEMO_FILE_NAMES, ...sortedUserFileNames(state)]
   return {
     ...state,
-    active: names.includes(state.active) ? state.active : DEMO_FILE_NAME,
+    active: names.includes(state.active) ? state.active : DEMO_FILE_NAMES[0],
   }
 }
 

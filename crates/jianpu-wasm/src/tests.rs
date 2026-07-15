@@ -1,5 +1,27 @@
 use super::*;
 
+/// Every numbered `.jianpu` fragment under `demo/` (sorted by filename) —
+/// each one is a complete, standalone-renderable document (its own
+/// metadata/parts/score), shown to users as a folder of individually
+/// selectable demo files in the web editor.
+fn demo_file_paths() -> Vec<std::path::PathBuf> {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../demo");
+    let mut paths: Vec<_> = std::fs::read_dir(&dir)
+        .unwrap_or_else(|e| panic!("failed to read demo dir {dir:?}: {e}"))
+        .map(|entry| {
+            entry
+                .unwrap_or_else(|e| panic!("failed to read demo dir entry: {e}"))
+                .path()
+        })
+        .collect();
+    paths.sort();
+    paths
+}
+
+fn read_demo_file(path: &std::path::Path) -> String {
+    std::fs::read_to_string(path).unwrap_or_else(|e| panic!("failed to read {path:?}: {e}"))
+}
+
 #[path = "tests_parts_and_measures.rs"]
 mod tests_parts_and_measures;
 

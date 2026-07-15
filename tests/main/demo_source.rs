@@ -1,52 +1,74 @@
 #![allow(clippy::panic, clippy::disallowed_macros)]
 
-#[test]
-fn reference_jianpu_parses_and_renders() {
-    let source = include_str!("../../reference.jianpu");
-    let svgs = jianpu_generator::render_svgs_from_source(source, "reference.jianpu", &[])
-        .unwrap_or_else(|e| {
-            panic!("reference.jianpu failed to parse/render: {e}");
+/// Every numbered `.jianpu` fragment under `demo/`, sorted by filename —
+/// each one is a complete, standalone-renderable document (its own
+/// metadata/parts/score), shown to users as a folder of individually
+/// selectable demo files in the web editor.
+fn demo_file_paths() -> Vec<std::path::PathBuf> {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("demo");
+    let mut paths: Vec<_> = std::fs::read_dir(&dir)
+        .unwrap_or_else(|e| panic!("failed to read demo dir {dir:?}: {e}"))
+        .map(|entry| {
+            entry
+                .unwrap_or_else(|e| panic!("failed to read demo dir entry: {e}"))
+                .path()
         })
-        .svgs;
-    assert!(
-        !svgs.is_empty(),
-        "reference.jianpu should produce at least one SVG page"
-    );
-    assert!(
-        svgs.iter()
-            .all(|svg| svg.starts_with("<svg") && svg.ends_with("</svg>")),
-        "reference.jianpu SVG output should be well-formed"
-    );
+        .collect();
+    paths.sort();
+    paths
+}
+
+fn render_demo_file(path: &std::path::Path) -> jianpu_generator::RenderOutput {
+    let source =
+        std::fs::read_to_string(path).unwrap_or_else(|e| panic!("failed to read {path:?}: {e}"));
+    jianpu_generator::render_svgs_from_source(&source, "demo.jianpu", &[])
+        .unwrap_or_else(|e| panic!("{path:?} failed to parse/render: {e}"))
 }
 
 #[test]
-fn reference_jianpu_has_no_diagnostics() {
-    let source = include_str!("../../reference.jianpu");
-    let output = jianpu_generator::render_svgs_from_source(source, "reference.jianpu", &[])
-        .unwrap_or_else(|e| panic!("reference.jianpu failed to parse/render: {e}"));
-    assert!(
-        output.diagnostics.is_empty(),
-        "reference.jianpu should have no errors or warnings, got: {:?}",
-        output
-            .diagnostics
-            .iter()
-            .map(|d| d.message())
-            .collect::<Vec<_>>()
-    );
+fn demo_files_parse_and_render() {
+    for path in demo_file_paths() {
+        let svgs = render_demo_file(&path).svgs;
+        assert!(
+            !svgs.is_empty(),
+            "{path:?} should produce at least one SVG page"
+        );
+        assert!(
+            svgs.iter()
+                .all(|svg| svg.starts_with("<svg") && svg.ends_with("</svg>")),
+            "{path:?} SVG output should be well-formed"
+        );
+    }
 }
 
 #[test]
-fn reference_jianpu_renders_expected_content() {
-    let source = include_str!("../../reference.jianpu");
-    let output = jianpu_generator::render_svgs_from_source(source, "reference.jianpu", &[])
-        .unwrap_or_else(|e| panic!("reference.jianpu failed to parse/render: {e}"));
-    let svg = output.svgs.join("");
+fn demo_files_have_no_diagnostics() {
+    for path in demo_file_paths() {
+        let output = render_demo_file(&path);
+        assert!(
+            output.diagnostics.is_empty(),
+            "{path:?} should have no errors or warnings, got: {:?}",
+            output
+                .diagnostics
+                .iter()
+                .map(|d| d.message())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
+#[test]
+fn demo_files_render_expected_content() {
+    let combined: String = demo_file_paths()
+        .iter()
+        .map(|path| render_demo_file(path).svgs.join(""))
+        .collect();
     assert!(
-        svg.contains('春'),
-        "reference.jianpu should render CJK lyrics"
+        combined.contains('春'),
+        "demo files should render CJK lyrics"
     );
     assert!(
-        svg.contains("1m"),
-        "reference.jianpu should render minor chord symbols"
+        combined.contains("1m"),
+        "demo files should render minor chord symbols"
     );
 }

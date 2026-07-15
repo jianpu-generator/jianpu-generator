@@ -17,7 +17,7 @@ pre-commit:
       run: cargo fmt -- --check
 
     - name: cargo-checks
-      glob: "{**/*.rs,reference.jianpu}"
+      glob: "{**/*.rs,demo/**}"
       run: cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
 
     - name: syntax-md-examples

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { FileStoreState } from '../fileStore'
+import { DEMO_FILE_NAMES, type FileStoreState } from '../fileStore'
 import { createGithubBackend } from './githubBackend'
 
 const getContent = vi.fn()
@@ -171,9 +171,9 @@ describe('createGithubBackend: rename as create-then-delete', () => {
       fileIds: { 'a.jianpu': 'id-1' },
     }
 
-    // Renaming to the (read-only) demo file's name is rejected by the pure
+    // Renaming to a (read-only) demo file's name is rejected by the pure
     // fileStore transform, so no API calls should happen at all.
-    await backend.renameFile(state, 'a.jianpu', 'reference.jianpu')
+    await backend.renameFile(state, 'a.jianpu', DEMO_FILE_NAMES[0])
 
     expect(createOrUpdateFileContents).not.toHaveBeenCalled()
     expect(deleteFile).not.toHaveBeenCalled()

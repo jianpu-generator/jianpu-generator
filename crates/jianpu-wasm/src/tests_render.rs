@@ -130,33 +130,35 @@ fn recoverable_error_produces_warning_severity_view_zone() {
 
 #[test]
 fn reference_jianpu_renders() {
-    let source = include_str!("../../../reference.jianpu");
-    let resp = render_response(source, None, None, &[]);
-    match resp {
-        RenderResponse::Ok {
-            documents,
-            diagnostics,
-            ..
-        } => {
-            assert!(
-                !documents.is_empty(),
-                "reference.jianpu should render in the wasm path used by the web editor"
-            );
-            assert!(
-                !documents[0].elements.is_empty(),
-                "first page should have elements"
-            );
-            assert!(
-                diagnostics.is_empty(),
-                "reference.jianpu should have no errors or warnings, got: {:?}",
-                diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>()
-            );
-        }
-        RenderResponse::Err { diagnostics, .. } => {
-            panic!(
-                "reference.jianpu failed in wasm render path: {}",
-                diagnostics[0].message
-            );
+    for path in demo_file_paths() {
+        let source = read_demo_file(&path);
+        let resp = render_response(&source, None, None, &[]);
+        match resp {
+            RenderResponse::Ok {
+                documents,
+                diagnostics,
+                ..
+            } => {
+                assert!(
+                    !documents.is_empty(),
+                    "{path:?} should render in the wasm path used by the web editor"
+                );
+                assert!(
+                    !documents[0].elements.is_empty(),
+                    "{path:?} first page should have elements"
+                );
+                assert!(
+                    diagnostics.is_empty(),
+                    "{path:?} should have no errors or warnings, got: {:?}",
+                    diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>()
+                );
+            }
+            RenderResponse::Err { diagnostics, .. } => {
+                panic!(
+                    "{path:?} failed in wasm render path: {}",
+                    diagnostics[0].message
+                );
+            }
         }
     }
 }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { useLocalStorage } from 'usehooks-ts'
 import {
-  DEMO_FILE_NAME,
+  DEMO_FILE_NAMES,
   FILE_STORE_KEY,
   type FileStoreState,
   fileContent,
@@ -53,7 +53,7 @@ const DEFAULT_PREFERENCE: StorageBackendPreference = { backend: 'local' }
  * shape to `fileStore.ts`'s own `DEFAULT_FILE_STORE` (not exported from
  * there, so reconstructed here). */
 const EMPTY_STORE: FileStoreState = {
-  active: DEMO_FILE_NAME,
+  active: DEMO_FILE_NAMES[0],
   userFiles: {},
   bin: {},
   fileIds: {},
@@ -328,7 +328,7 @@ export function useStorageBackend(): UseStorageBackendResult {
       }
       if (target.kind === 'local') {
         setPreference({ backend: 'local' })
-        setLocalStore((prev) => ({ ...prev, active: DEMO_FILE_NAME }))
+        setLocalStore((prev) => ({ ...prev, active: DEMO_FILE_NAMES[0] }))
       } else {
         setPreference({
           backend: 'github',

@@ -2,21 +2,56 @@ import { expect, test } from '@playwright/test'
 import { focusEditor } from './fileSwitcherHelpers'
 
 /**
- * The default source (reference.jianpu) contains many measures.
- * Measures are 0-indexed internally; the play-button label is 1-indexed.
+ * Self-contained source (not a demo file) with a generous "max measures per
+ * system" so all four measures render in one row and stay within the
+ * viewport during the drag — dragging is a screen-space operation that
+ * shouldn't depend on the reader's demo content or system width.
  *
- * Measure 0 : [M] 0 0 0 0
- * Measure 1 : [M] 1 2 3 0  +  [M] do re mi
- * Measure 2 : [M] 1' 2' 1, 2,  +  [M] _
- * Measure 3 : [M] 1_ 1_ 1= 1= 1= 1= 1 -  +  [M] _
+ * Measure 0 : [M] 1_ 1_ 1= 1= 1= 1= 1 -
+ * Measure 1 : [M] 1. 2_ 1_. 2= 0
+ * Measure 2 : [M] 1 - - -
+ * Measure 3 : [M] 1 r r -
  *
  * Dragging from measure index 1 → measure index 3 should produce
  * selectedMeasureRange = { start: 1, end: 3 } which the play button
  * renders as "▶ Measures 2–4".
  */
+const dragTestSource = [
+  '# metadata',
+  'title = "drag test"',
+  'max measures per system = 48',
+  '',
+  '# parts',
+  'Melody [M] = notes',
+  '',
+  '# score',
+  '[M] 1_ 1_ 1= 1= 1= 1= 1 -', // measure 0 — line 9
+  '',
+  '[M] 1. 2_ 1_. 2= 0', // measure 1 — line 11
+  '',
+  '[M] 1 - - -', // measure 2 — line 13
+  '',
+  '[M] 1 r r -', // measure 3 — line 15
+].join('\n')
+
+async function loadDragTestFixture(page: import('@playwright/test').Page) {
+  await page.addInitScript((source) => {
+    localStorage.setItem(
+      'jianpu:files:v1',
+      JSON.stringify({
+        active: 'drag-test.jianpu',
+        userFiles: { 'drag-test.jianpu': source },
+        bin: {},
+        fileIds: { 'drag-test.jianpu': 'drag-test-id-001' },
+      }),
+    )
+  }, dragTestSource)
+}
+
 test('drag from measure 1 to measure 3 selects measures 1–3', async ({
   page,
 }) => {
+  await loadDragTestFixture(page)
   await page.goto('/')
 
   // Wait for the editor toolbar (signals WASM is loaded and app is ready).
@@ -33,10 +68,10 @@ test('drag from measure 1 to measure 3 selects measures 1–3', async ({
   // We prime measureSpans by clicking into the editor at a note line and
   // waiting for the play button to display a measure label — that confirms
   // the worker's measureSpans response has been processed.
-  // Line 20 of reference.jianpu is "[M] 1 2 3 0" (measure index 1).
+  // Line 9 is "[M] 1_ 1_ 1= 1= 1= 1= 1 -" (measure index 0).
   await focusEditor(page)
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('20')
+  await page.keyboard.type('9')
   await page.keyboard.press('Enter')
   // Wait for debounce (300 ms) + worker round-trip, then for React to render
   // the play button with the measure label.
@@ -118,11 +153,13 @@ test('drag from measure 1 to measure 3 selects measures 1–3', async ({
 test('drag from measure 0 to measure 3 selects exactly 4 measures (not 5)', async ({
   page,
 }) => {
+  await loadDragTestFixture(page)
   await page.goto('/')
 
   await page.waitForSelector('[data-testid="play-measure-button"]', {
     timeout: 15_000,
   })
+
   await page.waitForSelector('[data-tag="measure"][data-measure-index="3"]', {
     timeout: 10_000,
   })
@@ -131,7 +168,7 @@ test('drag from measure 0 to measure 3 selects exactly 4 measures (not 5)', asyn
   // and wait for the play button to confirm measureSpans are loaded.
   await focusEditor(page)
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('20')
+  await page.keyboard.type('9')
   await page.keyboard.press('Enter')
   await expect(page.locator('button.play-measure-btn')).toHaveText(/Measure/, {
     timeout: 5_000,

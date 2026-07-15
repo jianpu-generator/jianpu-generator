@@ -1,7 +1,7 @@
 use super::*;
 
 fn realistic_coda_navigation_source() -> &'static str {
-    // Mirrors reference.jianpu's real marker order: segno < tocoda < dsalcoda
+    // Mirrors demo/07-navigation.jianpu's real marker order: segno < tocoda < dsalcoda
     // < coda, i.e. the coda section (and thus the score's literal last
     // written measure) comes *after* the dsalcoda mark, not before it. This
     // is the common real-world layout: the coda section is appended after
@@ -36,7 +36,7 @@ fn realistic_coda_navigation_source() -> &'static str {
 #[test]
 fn play_current_measure_on_final_coda_measure_plays_one_measure() {
     // The `coda` measure here is both a navigation marker measure *and* the
-    // score's literal last written measure (matching reference.jianpu's real
+    // score's literal last written measure (matching demo/07-navigation.jianpu's real
     // layout). Selecting exactly that measure as "current measure"
     // (extend_to_last_occurrence: false) must play only that one measure.
     let wav = write_wav_for_measure_range_from_source(

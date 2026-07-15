@@ -1,15 +1,23 @@
 import NEW_FILE_TEMPLATE from '../../new_file_template.jianpu?raw'
-import { DEFAULT_SOURCE, DEMO_FILE_NAME } from './defaultSource'
+import { DEMO_FILE_NAMES, DEMO_FILES } from './defaultSource'
 
-export { DEMO_FILE_NAME }
+export { DEMO_FILE_NAMES }
 
-export const DEMO_FILE_ID = 'jianpu:reference'
+const DEMO_FILE_NAME_SET = new Set(DEMO_FILE_NAMES)
+
+const DEMO_FILE_CONTENT: Record<string, string> = Object.fromEntries(
+  DEMO_FILES.map((file) => [file.name, file.content]),
+)
+
+const DEMO_FILE_IDS: Record<string, string> = Object.fromEntries(
+  DEMO_FILE_NAMES.map((name) => [name, `jianpu:reference:${name}`]),
+)
 
 export const FILE_STORE_KEY = 'jianpu:files:v1'
 export const STORAGE_KEY = 'jianpu:source:v5'
 
 export const DEFAULT_FILE_STORE: FileStoreState = {
-  active: DEMO_FILE_NAME,
+  active: DEMO_FILE_NAMES[0],
   userFiles: {},
   bin: {},
   fileIds: {},
@@ -28,27 +36,31 @@ export interface FileStoreState {
 }
 
 export function fileIdForName(state: FileStoreState, name: string): string {
-  if (isDemoFile(name)) return DEMO_FILE_ID
+  if (isDemoFile(name)) return DEMO_FILE_IDS[name]
   const id = state.fileIds[name]
   if (!id) throw new Error(`Missing file ID for ${name}`)
   return id
 }
 
 function isDemoFile(name: string): boolean {
-  return name === DEMO_FILE_NAME
+  return DEMO_FILE_NAME_SET.has(name)
 }
 
 export function fileContent(state: FileStoreState, name: string): string {
-  if (isDemoFile(name)) return DEFAULT_SOURCE
+  if (isDemoFile(name)) return DEMO_FILE_CONTENT[name] ?? ''
   return state.userFiles[name] ?? ''
 }
 
-export function sortedFileNames(state: FileStoreState): string[] {
-  const names = new Set<string>([
-    DEMO_FILE_NAME,
-    ...Object.keys(state.userFiles),
-  ])
-  return [...names].sort((a, b) => a.localeCompare(b))
+/** Names shown in the "My Files" dropdown — user files only; the read-only
+ * demo files live in their own dropdown (`DEMO_FILE_NAMES`). */
+export function sortedUserFileNames(state: FileStoreState): string[] {
+  return Object.keys(state.userFiles).sort((a, b) => a.localeCompare(b))
+}
+
+/** All names `selectFile`/persistence may treat as a valid `active` value —
+ * every demo file plus every user file. */
+function activeFileNames(state: FileStoreState): string[] {
+  return [...DEMO_FILE_NAME_SET, ...sortedUserFileNames(state)]
 }
 
 export function sortedBinNames(state: FileStoreState): string[] {
@@ -57,7 +69,7 @@ export function sortedBinNames(state: FileStoreState): string[] {
 
 function reservedNames(state: FileStoreState): Set<string> {
   return new Set([
-    DEMO_FILE_NAME,
+    ...DEMO_FILE_NAMES,
     ...Object.keys(state.userFiles),
     ...Object.keys(state.bin),
   ])
@@ -94,8 +106,7 @@ export function selectFile(
   state: FileStoreState,
   name: string,
 ): FileStoreState {
-  const names = sortedFileNames(state)
-  if (!names.includes(name)) return state
+  if (!activeFileNames(state).includes(name)) return state
   return { ...state, active: name }
 }
 
@@ -131,8 +142,7 @@ export function renameFile(
   if (isDemoFile(from)) return state
   const to = sanitizeFileName(toRaw)
   if (to === from) return state
-  const names = sortedFileNames(state)
-  if (!names.includes(from) || isDemoFile(to)) return state
+  if (!activeFileNames(state).includes(from) || isDemoFile(to)) return state
   if (reservedNames(state).has(to) && to !== from) return state
 
   const { [from]: content, ...rest } = state.userFiles
@@ -156,9 +166,9 @@ export function deleteFile(
   if (content === undefined) return state
 
   const { [name]: _, ...rest } = state.userFiles
-  const remaining = sortedFileNames({ ...state, userFiles: rest })
+  const remaining = sortedUserFileNames({ ...state, userFiles: rest })
   const nextActive =
-    state.active === name ? (remaining[0] ?? DEMO_FILE_NAME) : state.active
+    state.active === name ? (remaining[0] ?? DEMO_FILE_NAMES[0]) : state.active
 
   return {
     ...state,
@@ -175,7 +185,7 @@ export function restoreFile(
   const content = state.bin[name]
   if (content === undefined) return state
 
-  const activeNames = new Set(sortedFileNames(state))
+  const activeNames = new Set(activeFileNames(state))
   const restoreName = activeNames.has(name)
     ? uniqueName(name, activeNames)
     : name

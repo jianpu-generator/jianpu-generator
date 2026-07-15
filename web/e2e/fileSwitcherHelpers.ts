@@ -98,13 +98,20 @@ export async function typeAtEditorEnd(page: Page, text: string) {
   throw new Error(`typeAtEditorEnd: "${text}" never landed after retries`)
 }
 
-/** The "<filename> ▾" trigger button in the header — its text is the
- * currently active file's name. */
+/** The "My Files" ("<filename> ▾") trigger button in the header — its text
+ * is the last-active user file's name, or a placeholder if none exists. */
 export function fileSwitcherTrigger(page: Page) {
   return page
     .locator('.file-tab-bar .export-menu')
     .first()
     .locator('.preview-export-btn')
+}
+
+/** The "Demo" trigger button in the header — a separate dropdown listing
+ * the read-only `demo/*.jianpu` files; its text is the currently active
+ * demo file's name, or "Demo" when a user file is active instead. */
+export function demoFileSwitcherTrigger(page: Page) {
+  return page.getByRole('button', { name: 'Demo files' })
 }
 
 /** Opens the file-switcher dropdown (the "<filename> ▾" trigger in the
@@ -114,6 +121,22 @@ export async function openFileList(page: Page) {
   const trigger = fileSwitcherTrigger(page)
   if ((await trigger.getAttribute('aria-expanded')) === 'true') return
   await trigger.click()
+}
+
+/** Opens the "Demo" dropdown (the read-only `demo/*.jianpu` file list).
+ * Idempotent — the trigger toggles open/closed, so this is a no-op if
+ * already open. */
+export async function openDemoFileList(page: Page) {
+  const trigger = demoFileSwitcherTrigger(page)
+  if ((await trigger.getAttribute('aria-expanded')) === 'true') return
+  await trigger.click()
+}
+
+/** Opens the "Demo" dropdown and selects the fragment named `name` (e.g.
+ * `02-durations.jianpu`), closing the dropdown. */
+export async function selectDemoFile(page: Page, name: string) {
+  await openDemoFileList(page)
+  await page.locator('.file-tab-name', { hasText: name }).click()
 }
 
 /** Opens the "⋯" file-actions dropdown (New / Duplicate / Share / Storage…)

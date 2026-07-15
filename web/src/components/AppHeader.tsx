@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
 import type { FileStoreState } from '../fileStore'
-import { sortedBinNames } from '../fileStore'
+import { isReadOnlyFile, sortedBinNames } from '../fileStore'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import { BinMenu } from './BinMenu'
+import { DemoFileSwitcher } from './DemoFileSwitcher'
 import { ExportControls } from './ExportControls'
 import { FileSwitcher } from './FileSwitcher'
 import { PlayFromCurrentMeasureButton } from './PlayFromCurrentMeasureButton'
@@ -107,6 +109,23 @@ export function AppHeader({
   onExportSplitWav,
   partsCount,
 }: AppHeaderProps) {
+  // The "My Files" trigger keeps showing the last user file that was active
+  // even while a (separately-dropdown'd) demo file is currently open, so
+  // switching to a demo file doesn't make the "My Files" trigger look empty.
+  // Falls back to a placeholder once that file no longer exists (e.g. it was
+  // deleted) or no user file has ever been active yet.
+  const [lastActiveUserFileName, setLastActiveUserFileName] = useState<
+    string | null
+  >(() => (isReadOnlyFile(store.active) ? null : store.active))
+  useEffect(() => {
+    if (!isReadOnlyFile(store.active)) setLastActiveUserFileName(store.active)
+  }, [store.active])
+  const triggerLabel =
+    lastActiveUserFileName !== null &&
+    store.userFiles[lastActiveUserFileName] !== undefined
+      ? lastActiveUserFileName
+      : 'Untitled'
+
   return (
     <header className="app-header">
       <h1>簡譜</h1>
@@ -144,6 +163,7 @@ export function AppHeader({
       <div className="app-header-actions">
         <FileSwitcher
           store={store}
+          triggerLabel={triggerLabel}
           onSelect={onSelect}
           onCreate={onCreate}
           onDuplicate={onDuplicate}
@@ -158,6 +178,7 @@ export function AppHeader({
           renamingName={renamingFileName}
           isLoadingGithub={isLoadingGithub}
         />
+        <DemoFileSwitcher active={store.active} onSelect={onSelect} />
         <BinMenu
           binNames={sortedBinNames(store)}
           onRestore={onRestore}

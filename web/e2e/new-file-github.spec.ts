@@ -49,7 +49,8 @@ test('creating a new file persists via the GitHub storage backend', async ({
   await page.goto('/')
 
   // The GitHub-backed file list loads asynchronously; wait for the seeded
-  // file's tab to appear alongside the read-only demo tab.
+  // file's tab to appear (the read-only demo files live in their own
+  // dropdown now, so they no longer share this list).
   await openFileList(page)
   const originalTab = page.locator('.file-tab-name', {
     hasText: 'original.jianpu',

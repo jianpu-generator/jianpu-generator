@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test'
 import { focusEditor } from './fileSwitcherHelpers'
 
 /**
- * The default demo source (reference.jianpu) has the following
- * Monaco line numbers (1-based):
+ * The default demo file (demo/00-header.jianpu, opened on first load) has
+ * the following Monaco line numbers (1-based):
  *
  *   1  # metadata
  *   2  title = "Jianpu Postcard"
@@ -26,7 +26,7 @@ test('shows measure number when cursor is placed on a note line', async ({
   await focusEditor(page)
 
   // Use Monaco's "Go to Line" command (Ctrl+G) to jump to line 17,
-  // which is the first note line in the default reference.jianpu source.
+  // which is the first note line in the default demo/00-header.jianpu file.
   await page.keyboard.press('Control+g')
   await page.keyboard.type('17')
   await page.keyboard.press('Enter')

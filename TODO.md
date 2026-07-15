@@ -11,5 +11,5 @@
 - [ ] Allow second line of lyrics for pinyin
 - [ ] The first measure vertical line is too closed to the first note, it should have a padding/margin right
 - [ ] new group section to allow group of label to be combined together
-- [ ] Demo should be a folder of multiple files
+- [x] Demo should be a folder of multiple files
 - [ ] Formatter: align lyric syllables with their corresponding notes

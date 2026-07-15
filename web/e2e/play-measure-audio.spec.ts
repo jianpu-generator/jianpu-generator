@@ -17,8 +17,9 @@ test.use({
  * on the play button's visible "playing" state rather than just "didn't
  * crash".
  *
- * Uses the default demo source (reference.jianpu); line 17 is the first note
- * line ("[M] 0 0 0 0" → measure 0), as established by `measure-label.spec.ts`.
+ * Uses the default demo file (demo/00-header.jianpu); line 17 is the first
+ * note line ("[M] 0 0 0 0" → measure 0), as established by
+ * `measure-label.spec.ts`.
  */
 test('clicking play on a selected measure starts and finishes playback', async ({
   page,

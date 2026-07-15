@@ -22,19 +22,21 @@ fn generate_wav_for_measure_range_response_returns_riff_wav() {
 
 #[test]
 fn reference_jianpu_generates_wav() {
-    let source = include_str!("../../../reference.jianpu");
     let soundfont = include_bytes!("../../../fonts/GeneralUser_GS.sf2").to_vec();
-    let resp = generate_wav_response(source, None, soundfont);
-    match resp {
-        GenerateWavResponse::Ok { wav } => {
-            assert!(wav.len() > 4);
-            assert_eq!(&wav[0..4], b"RIFF");
-        }
-        GenerateWavResponse::Err { diagnostics } => {
-            panic!(
-                "reference.jianpu failed in wasm wav path: {}",
-                diagnostics[0].message
-            );
+    for path in super::demo_file_paths() {
+        let source = super::read_demo_file(&path);
+        let resp = generate_wav_response(&source, None, soundfont.clone());
+        match resp {
+            GenerateWavResponse::Ok { wav } => {
+                assert!(wav.len() > 4);
+                assert_eq!(&wav[0..4], b"RIFF");
+            }
+            GenerateWavResponse::Err { diagnostics } => {
+                panic!(
+                    "{path:?} failed in wasm wav path: {}",
+                    diagnostics[0].message
+                );
+            }
         }
     }
 }
