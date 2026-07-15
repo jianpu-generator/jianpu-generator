@@ -133,12 +133,8 @@ fn compile_measure(
             label,
             elements: slice_result.elements,
             source_part_index: part_idx,
+            group_provenance: part_row.slice().group_provenance.clone(),
         });
-    }
-    if rows.len() == 1 && visible_part_count > 1 {
-        if let Some(row) = rows.first_mut() {
-            row.label = "[ALL]".to_string();
-        }
     }
     MeasureBlock {
         rows,

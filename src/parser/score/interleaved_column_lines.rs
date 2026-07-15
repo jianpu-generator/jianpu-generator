@@ -2,6 +2,7 @@ use super::beat_padding::validate_and_pad_beats;
 use super::errors::invariant;
 use super::{notes_syllables_mut, BarGroupContext, SlotAction, TrackAccumulator};
 use crate::ast::parsed::ParsedMeasureSlot;
+use crate::desugar::SourceLine;
 use crate::error::{
     Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span,
 };
@@ -12,13 +13,31 @@ fn is_recoverable_chord_line_error(_kind: &IrrecoverableErrorKind) -> bool {
     false
 }
 
+/// A single column's source line plus its group-broadcast provenance, bundled to keep
+/// downstream `process_*_column_line` functions under clippy's argument-count limit.
+#[derive(Clone, Copy)]
+struct ColumnLine<'a> {
+    text: &'a str,
+    offset: usize,
+    group: Option<&'a str>,
+}
+
 pub(super) fn process_padded_columns(
-    padded_data: &[(String, usize)],
+    padded_data: &[SourceLine],
     beats_expected: u32,
     ctx: &mut BarGroupContext<'_>,
 ) -> Result<(), IrrecoverableError> {
-    for (i, (line, line_offset)) in padded_data.iter().enumerate() {
-        process_column_line(i, line, *line_offset, beats_expected, ctx)?;
+    for (i, line) in padded_data.iter().enumerate() {
+        process_column_line(
+            i,
+            ColumnLine {
+                text: &line.content,
+                offset: line.offset,
+                group: line.group.as_deref(),
+            },
+            beats_expected,
+            ctx,
+        )?;
     }
     Ok(())
 }
@@ -83,6 +102,7 @@ fn push_skipped_notes_measure(
     track_index: usize,
     line_span: Span,
     lex_error: Option<RecoverableError>,
+    group: Option<&str>,
 ) -> Result<(), IrrecoverableError> {
     let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
         invariant(
@@ -96,6 +116,7 @@ fn push_skipped_notes_measure(
         per_measure_dash_after_rest_errors,
         per_measure_lex_errors,
         per_measure_chord_errors,
+        per_measure_group_provenance,
         measure_slots,
         ..
     } = acc;
@@ -104,20 +125,25 @@ fn push_skipped_notes_measure(
     per_measure_dash_after_rest_errors.push(None);
     per_measure_lex_errors.push(lex_error);
     per_measure_chord_errors.push(vec![]);
+    per_measure_group_provenance.push(group.map(str::to_string));
     measure_slots.push(ParsedMeasureSlot::EmptyNote { span: line_span });
     Ok(())
 }
 
 fn process_notes_column_line(
     track_index: usize,
-    line: &str,
-    line_offset: usize,
+    line: ColumnLine<'_>,
     beats_expected: u32,
     line_span: Span,
     ctx: &mut BarGroupContext<'_>,
 ) -> Result<(), IrrecoverableError> {
+    let ColumnLine {
+        text: line,
+        offset: line_offset,
+        group,
+    } = line;
     if line == "_" {
-        return push_skipped_notes_measure(ctx, track_index, line_span, None);
+        return push_skipped_notes_measure(ctx, track_index, line_span, None, group);
     }
     let group_state = ctx
         .group_states
@@ -160,6 +186,7 @@ fn process_notes_column_line(
         per_measure_dash_after_rest_errors,
         per_measure_lex_errors,
         per_measure_chord_errors,
+        per_measure_group_provenance,
         ..
     } = acc;
     let mut slot_events = std::mem::take(pending_events);
@@ -169,6 +196,7 @@ fn process_notes_column_line(
     per_measure_dash_after_rest_errors.push(notes_parse.dash_after_rest_error);
     per_measure_lex_errors.push(lex_error);
     per_measure_chord_errors.push(notes_parse.chord_errors);
+    per_measure_group_provenance.push(group.map(str::to_string));
     measure_slots.push(ParsedMeasureSlot::Real {
         events: slot_events,
     });
@@ -177,12 +205,16 @@ fn process_notes_column_line(
 
 fn process_chord_column_line(
     track_index: usize,
-    line: &str,
-    line_offset: usize,
+    line: ColumnLine<'_>,
     beats_expected: u32,
     line_span: Span,
     ctx: &mut BarGroupContext<'_>,
 ) -> Result<(), IrrecoverableError> {
+    let ColumnLine {
+        text: line,
+        offset: line_offset,
+        group,
+    } = line;
     let group_state = ctx
         .group_states
         .get_mut(track_index)
@@ -225,6 +257,7 @@ fn process_chord_column_line(
         per_measure_dotted_eighth_errors,
         per_measure_dash_after_rest_errors,
         per_measure_chord_errors,
+        per_measure_group_provenance,
         ..
     } = acc;
     let mut slot_events = std::mem::take(pending_events);
@@ -233,6 +266,7 @@ fn process_chord_column_line(
     per_measure_dotted_eighth_errors.push(final_padded.dotted_eighth_errors);
     per_measure_dash_after_rest_errors.push(dash_after_rest_error);
     per_measure_chord_errors.push(line_chord_errors);
+    per_measure_group_provenance.push(group.map(str::to_string));
     measure_slots.push(ParsedMeasureSlot::Real {
         events: slot_events,
     });
@@ -241,14 +275,13 @@ fn process_chord_column_line(
 
 fn process_column_line(
     slot_idx: usize,
-    line: &str,
-    line_offset: usize,
+    line: ColumnLine<'_>,
     beats_expected: u32,
     ctx: &mut BarGroupContext<'_>,
 ) -> Result<(), IrrecoverableError> {
     let line_span = Span::new(
-        ctx.base_offset + line_offset,
-        ctx.base_offset + line_offset + line.len(),
+        ctx.base_offset + line.offset,
+        ctx.base_offset + line.offset + line.text.len(),
     );
     let slot_action = ctx
         .slot_actions
@@ -256,30 +289,16 @@ fn process_column_line(
         .ok_or_else(|| invariant(line_span, "internal error: slot index out of range"))?;
     match slot_action {
         SlotAction::Notes { track_index } => {
-            process_notes_column_line(
-                *track_index,
-                line,
-                line_offset,
-                beats_expected,
-                line_span,
-                ctx,
-            )?;
+            process_notes_column_line(*track_index, line, beats_expected, line_span, ctx)?;
         }
         SlotAction::Lyrics { track_index } => {
-            process_lyrics_column_line(*track_index, line, line_span, ctx)?;
+            process_lyrics_column_line(*track_index, line.text, line_span, ctx)?;
         }
         SlotAction::Chord { track_index } => {
-            if line == "_" {
+            if line.text == "_" {
                 return Ok(());
             }
-            process_chord_column_line(
-                *track_index,
-                line,
-                line_offset,
-                beats_expected,
-                line_span,
-                ctx,
-            )?;
+            process_chord_column_line(*track_index, line, beats_expected, line_span, ctx)?;
         }
     }
     Ok(())

@@ -62,6 +62,9 @@ pub struct PartSlice {
     /// True when this slice's source measure had at least one `Diagnostic::Error`.
     /// The compiler uses this to drop incoming cross-measure tie/slur arcs.
     pub has_error: bool,
+    /// Abbreviation of the group whose `[GroupAbbrev]` broadcast produced this
+    /// measure's content, when this part didn't override it with its own line.
+    pub group_provenance: Option<String>,
 }
 
 #[derive(Clone)]
@@ -206,6 +209,9 @@ pub(crate) struct GroupedMeasure {
     pub(crate) lyrics_parse_error: Option<RecoverableError>,
     /// Recoverable error from `-` at the start of a measure with no preceding event, if any.
     pub(crate) extension_no_preceding_event_error: Option<RecoverableError>,
+    /// Abbreviation of the group whose `[GroupAbbrev]` broadcast produced this
+    /// measure's content, when this part didn't override it with its own line.
+    pub(crate) group_provenance: Option<String>,
 }
 
 pub(crate) struct GroupedPart {

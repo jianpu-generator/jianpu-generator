@@ -49,6 +49,7 @@ fn notes_row(row: &MeasureRow) -> MeasureRow {
             .cloned()
             .collect(),
         source_part_index: row.source_part_index,
+        group_provenance: row.group_provenance.clone(),
     }
 }
 
@@ -72,6 +73,22 @@ fn lyrics_row(row: &MeasureRow) -> MeasureRow {
         label: row.label.clone(),
         elements,
         source_part_index: row.source_part_index,
+        group_provenance: row.group_provenance.clone(),
+    }
+}
+
+/// A merged row's label is the shared group abbreviation when every row being
+/// merged traces back to the same `[GroupAbbrev]` broadcast; otherwise it falls
+/// back to concatenating the individual labels (the pre-existing behavior for
+/// coincidentally-identical content). The returned provenance is only `Some`
+/// when the label is the group abbreviation, so a later merge in the same pass
+/// can't mistake a partially-diverged cluster for a fully in-group one.
+fn merge_labels(left: &MeasureRow, right: &MeasureRow) -> (String, Option<String>) {
+    match (&left.group_provenance, &right.group_provenance) {
+        (Some(left_group), Some(right_group)) if left_group == right_group => {
+            (left_group.clone(), Some(left_group.clone()))
+        }
+        _ => (format!("{} {}", left.label, right.label), None),
     }
 }
 
@@ -86,9 +103,14 @@ fn consolidate_rows(mut rows: Vec<MeasureRow>) -> Vec<MeasureRow> {
                 .zip(rows.get(inner))
                 .is_some_and(|(left, right)| content_equal(left, right));
             if equal {
-                let duplicate_label = rows.get(inner).map(|row| row.label.clone());
-                if let (Some(row), Some(label)) = (rows.get_mut(index), duplicate_label) {
-                    row.label = format!("{} {}", row.label, label);
+                let merged_label = rows
+                    .get(index)
+                    .zip(rows.get(inner))
+                    .map(|(left, right)| merge_labels(left, right));
+                if let (Some(row), Some((label, provenance))) = (rows.get_mut(index), merged_label)
+                {
+                    row.label = label;
+                    row.group_provenance = provenance;
                 }
                 rows.remove(inner);
                 merged = true;

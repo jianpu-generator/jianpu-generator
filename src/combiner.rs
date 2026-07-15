@@ -216,6 +216,7 @@ fn build_part_rows(
                     },
                     lyrics,
                     has_error: measure_has_error(measure),
+                    group_provenance: measure.group_provenance.clone(),
                 };
                 part_rows.push(PartRow::Timed(slice));
             }

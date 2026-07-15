@@ -16,6 +16,7 @@ mod directives;
 #[path = "interleaved_errors.rs"]
 mod errors;
 
+use crate::desugar::SourceLine;
 use crate::parser::score::measure_group::collect_groups;
 use accumulators::{build_parse_result, build_slot_actions, init_accumulators};
 use beat_padding::{beats_per_measure, validate_and_pad_group_lines};
@@ -65,6 +66,9 @@ enum TrackAccumulator {
         per_measure_lex_errors: Vec<Option<RecoverableError>>,
         /// Per-measure recoverable error on the lyrics line (e.g. empty lyrics line).
         per_measure_lyrics_errors: Vec<Option<RecoverableError>>,
+        /// Per-measure group broadcast provenance (`Some(abbrev)` when this measure's
+        /// primary score line came from a `[GroupAbbrev]` broadcast this member didn't override).
+        per_measure_group_provenance: Vec<Option<String>>,
     },
 }
 
@@ -135,10 +139,15 @@ fn attach_document_error(
     }
 }
 
-pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> ParseResult {
+pub fn parse(
+    content: &str,
+    base_offset: usize,
+    declarations: &[PartDecl],
+    resolved_groups: &[crate::parser::group_parser::ResolvedGroup],
+) -> ParseResult {
     let groups = collect_groups(content);
     let (groups, per_group_desugar_errors) =
-        crate::desugar::desugar_groups(groups, declarations, base_offset)?;
+        crate::desugar::desugar_groups(groups, declarations, resolved_groups, base_offset)?;
 
     let slots = flatten_score_line_slots(declarations);
     let slot_actions = build_slot_actions(&slots);
@@ -203,7 +212,7 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
 }
 
 fn process_bar_group(
-    group_lines: &[(String, usize)],
+    group_lines: &[SourceLine],
     ctx: &mut BarGroupContext<'_>,
 ) -> Result<(), IrrecoverableError> {
     let (directive_events, data_lines, directive_errors) =

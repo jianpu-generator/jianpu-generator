@@ -35,6 +35,7 @@ fn apply_per_measure_errors(
     if let Some(e) = errors.lyrics_errors.get(idx).and_then(|e| e.as_ref()) {
         measure.lyrics_parse_error = Some(e.clone());
     }
+    measure.group_provenance = errors.group_provenance.get(idx).cloned().flatten();
 }
 
 pub(super) struct PerMeasureErrors<'a> {
@@ -44,6 +45,7 @@ pub(super) struct PerMeasureErrors<'a> {
     pub(super) chord_errors: &'a [Vec<Diagnostic>],
     pub(super) lex_errors: &'a [Option<RecoverableError>],
     pub(super) lyrics_errors: &'a [Option<RecoverableError>],
+    pub(super) group_provenance: &'a [Option<String>],
 }
 
 pub(super) enum MeasureSlot {
@@ -74,6 +76,7 @@ pub(super) fn align_empty_note_measures(
                 lex_error: errors.lex_errors.get(idx).and_then(|e| e.clone()),
                 lyrics_parse_error: errors.lyrics_errors.get(idx).and_then(|e| e.clone()),
                 extension_no_preceding_event_error: None,
+                group_provenance: errors.group_provenance.get(idx).cloned().flatten(),
             }),
             MeasureSlot::Real(boxed_measure) => {
                 let mut measure = *boxed_measure;

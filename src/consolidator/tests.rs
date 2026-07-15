@@ -77,3 +77,69 @@ fn follow_part_identical_to_source_is_omitted_per_measure() {
         "measure 2: third row should be B notes"
     );
 }
+
+#[test]
+fn group_broadcast_merge_uses_group_abbreviation_as_label() {
+    let source = concat!(
+        "# metadata\n",
+        "title = \"hello\"\n",
+        "author = \"\"\n",
+        "\n",
+        "# parts\n",
+        "Soprano 1 [S1] = notes\n",
+        "Soprano 2 [S2] = notes\n",
+        "\n",
+        "# groups\n",
+        "Soprano [s] = S1 S2\n",
+        "\n",
+        "# score\n",
+        "[s] 1 2 3 4\n",
+    );
+    let blocks = consolidated_blocks(source);
+
+    assert_eq!(
+        blocks[0].rows.len(),
+        1,
+        "both members broadcast identical content, so they merge into one row"
+    );
+    assert_eq!(
+        blocks[0].rows[0].label, "s",
+        "merged row should be labeled with the group's abbreviation, not concatenated part labels"
+    );
+}
+
+#[test]
+fn group_broadcast_partial_override_keeps_diverged_member_separate() {
+    let source = concat!(
+        "# metadata\n",
+        "title = \"hello\"\n",
+        "author = \"\"\n",
+        "\n",
+        "# parts\n",
+        "Soprano 1 [S1] = notes\n",
+        "Soprano 2 [S2] = notes\n",
+        "Soprano 3 [S3] = notes\n",
+        "\n",
+        "# groups\n",
+        "Soprano [s] = S1 S2 S3\n",
+        "\n",
+        "# score\n",
+        "[s] 1 2 3 4\n",
+        "[S2] 5 5 5 5\n",
+    );
+    let blocks = consolidated_blocks(source);
+
+    assert_eq!(
+        blocks[0].rows.len(),
+        2,
+        "S2 diverges from the broadcast so it splits off; S1/S3 still merge"
+    );
+    assert_eq!(
+        blocks[0].rows[0].label, "s",
+        "S1 and S3 both trace to the group broadcast and merge under the group abbreviation"
+    );
+    assert_eq!(
+        blocks[0].rows[1].label, "S2",
+        "S2 overrode the broadcast, so it keeps its own individual label"
+    );
+}

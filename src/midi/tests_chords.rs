@@ -64,6 +64,7 @@ fn chord_major_expands_to_three_notes() {
             ds_al_fine: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
+                group_provenance: None,
                 kind: PartKind::Chords,
                 soundfont: Soundfont::default(),
                 volume: 100,
@@ -122,6 +123,7 @@ fn tied_notes_produce_single_note_on() {
     let make_part = |tied| {
         PartRow::Timed(PartSlice {
             name: None,
+            group_provenance: None,
             kind: PartKind::Notes,
             soundfont: Soundfont::default(),
             volume: 100,
@@ -243,6 +245,7 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
             ds_al_fine: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
+                group_provenance: None,
                 kind: PartKind::Notes,
                 soundfont: Soundfont::default(),
                 volume: 100,

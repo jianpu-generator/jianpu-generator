@@ -182,23 +182,38 @@ pub fn parse(
         metadata_parser::parse_metadata(&meta_content, meta_offset);
     let (declarations, parts_parse_errors) =
         parts_parser::parse_parts(&parts_content, parts_offset, instruments);
+
+    let (group, mut group_parse_errors) = match sections.group {
+        Some((group_content, group_offset)) => {
+            group_parser::parse_group(&group_content, group_offset)
+        }
+        None => (None, Vec::new()),
+    };
+    let resolved_groups = match &group {
+        Some(group_section) => {
+            let (resolved, errors) =
+                group_parser::resolve_and_validate_groups(group_section, &declarations);
+            group_parse_errors.extend(errors);
+            resolved
+        }
+        None => Vec::new(),
+    };
+
     let (tracks, directive_events_per_measure, per_measure_parse_errors) =
         if declarations.is_empty() {
             (Vec::new(), Vec::new(), Vec::new())
         } else {
-            score::interleaved_parser::parse(&score_content, score_offset, &declarations)
-                .map_err(|error| error.with_path(path))?
+            score::interleaved_parser::parse(
+                &score_content,
+                score_offset,
+                &declarations,
+                &resolved_groups,
+            )
+            .map_err(|error| error.with_path(path))?
         };
     let (sequence, sequence_parse_errors) = match sections.sequence {
         Some((sequence_content, sequence_offset)) => {
             sequence_parser::parse_sequence(&sequence_content, sequence_offset)
-        }
-        None => (None, Vec::new()),
-    };
-
-    let (group, group_parse_errors) = match sections.group {
-        Some((group_content, group_offset)) => {
-            group_parser::parse_group(&group_content, group_offset)
         }
         None => (None, Vec::new()),
     };

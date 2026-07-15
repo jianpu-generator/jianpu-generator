@@ -27,6 +27,7 @@ fn column_width_pt_with_label_columns() {
 fn note_row(id: &str) -> MeasureRow {
     MeasureRow {
         id: RowId(id.to_string()),
+        group_provenance: None,
         label: id.to_string(),
         elements: vec![ColumnElement {
             column: 0,
@@ -44,6 +45,7 @@ fn note_row(id: &str) -> MeasureRow {
 fn chord_row(id: &str) -> MeasureRow {
     MeasureRow {
         id: RowId(id.to_string()),
+        group_provenance: None,
         label: id.to_string(),
         elements: vec![ColumnElement {
             column: 0,
@@ -56,6 +58,7 @@ fn chord_row(id: &str) -> MeasureRow {
 fn lyric_row(id: &str) -> MeasureRow {
     MeasureRow {
         id: RowId(id.to_string()),
+        group_provenance: None,
         label: id.to_string(),
         elements: vec![ColumnElement {
             column: 0,
@@ -76,6 +79,7 @@ fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
             id: RowId(row_id.to_string()),
+            group_provenance: None,
             label: row_id.to_string(),
             elements: vec![
                 ColumnElement {
@@ -203,6 +207,7 @@ fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
         rows: vec![
             MeasureRow {
                 id: RowId("note".to_string()),
+                group_provenance: None,
                 label: "note".to_string(),
                 elements: vec![
                     ColumnElement {
@@ -223,6 +228,7 @@ fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
             },
             MeasureRow {
                 id: RowId("lyric".to_string()),
+                group_provenance: None,
                 label: "lyric".to_string(),
                 elements: vec![ColumnElement {
                     column: 0,

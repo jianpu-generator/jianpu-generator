@@ -1,4 +1,5 @@
 use crate::ast::parsed::{ScoreEvent, ScoreLineSlot};
+use crate::desugar::SourceLine;
 use crate::error::{Diagnostic, IrrecoverableError, Span, Spanned, Warning};
 
 pub(super) struct PaddedBeats {
@@ -260,29 +261,43 @@ pub(super) fn validate_and_pad_beats(
     })
 }
 
+fn implicit_source_line(offset: usize) -> SourceLine {
+    SourceLine {
+        content: "_".to_string(),
+        offset,
+        group: None,
+    }
+}
+
 pub(super) fn validate_and_pad_group_lines(
-    group_lines: &[(String, usize)],
-    data_lines: &[(String, usize)],
+    group_lines: &[SourceLine],
+    data_lines: &[SourceLine],
     slots: &[ScoreLineSlot],
     base_offset: usize,
-) -> Result<Vec<(String, usize)>, IrrecoverableError> {
+) -> Result<Vec<SourceLine>, IrrecoverableError> {
     let group_first_span = group_lines
         .first()
-        .map(|(line, off)| Span::new(base_offset + off, base_offset + off + line.len()))
+        .map(|line| {
+            Span::new(
+                base_offset + line.offset,
+                base_offset + line.offset + line.content.len(),
+            )
+        })
         .unwrap_or_else(|| Span::new(base_offset, base_offset));
 
     // These checks are defensive: desugar already normalises line counts.
     // If reached, pad or truncate silently rather than aborting parsing.
     if data_lines.is_empty() {
-        return Ok(vec![("_".to_string(), group_first_span.start)]);
+        return Ok(vec![implicit_source_line(group_first_span.start)]);
     }
     if data_lines.len() != slots.len() {
-        let truncated: Vec<(String, usize)> = data_lines
+        let truncated: Vec<SourceLine> = data_lines
             .iter()
             .take(slots.len())
             .cloned()
             .chain(
-                (data_lines.len()..slots.len()).map(|_| ("_".to_string(), group_first_span.start)),
+                (data_lines.len()..slots.len())
+                    .map(|_| implicit_source_line(group_first_span.start)),
             )
             .collect();
         return Ok(truncated);

@@ -150,7 +150,9 @@ Alto [a] = a1 a2
 - Same left-hand-side syntax as `# parts`: `<display-name> [<abbreviation>] = <members>`; when brackets are omitted, the abbreviation equals the display name.
 - The right-hand side is a space-separated list of member abbreviations.
 
-Each group with an explicit abbreviation (i.e. `[abbreviation]` differs from the display name) is listed in the part-list legend in the SVG/PDF output, alongside part entries. A group is hidden from the legend when a track filter excludes all of its members. Groups otherwise have no effect on rendering or MIDI output.
+Each group with an explicit abbreviation (i.e. `[abbreviation]` differs from the display name) is listed in the part-list legend in the SVG/PDF output, alongside part entries. A group is hidden from the legend when a track filter excludes all of its members.
+
+A group's abbreviation may also be used as a `[GroupAbbrev]` key prefix in `# score` to broadcast a line to all of its members at once — see [Key-based part prefix](#key-based-part-prefix-abbrev) below. This requires every resolved member to share the same part kind; a group whose members don't (or whose abbreviation collides with a part's) can still appear in the legend but cannot be used as a score key.
 
 ---
 
@@ -187,6 +189,42 @@ Every data line must begin with `[Abbrev]` to route it to a specific part by abb
 - An unrecognised abbreviation is an error; the line is dropped.
 - Parts not covered by any `[Key]` line use their `follow[X]` target's content when declared as such, or are filled with implicit rests/no-lyrics otherwise.
 - A measure group with zero valid keyed lines is an error (`measure_no_data_lines`).
+
+`[Abbrev]` may also name a `# groups` abbreviation, broadcasting that line to every part the group resolves to (expanding nested groups transitively):
+
+```
+# groups
+Soprano [s] = S1 S2
+
+# score
+bpm=92 key=C4 time=4/4
+[s] 5_ 5_ 5_ 5=
+[S2] 6_ 6_ 6_ 6=
+```
+
+Here `S1` gets `5_ 5_ 5_ 5=` from the group broadcast; `S2` has its own `[S2]` line, which wins over the broadcast for that slot. Rules:
+
+- Multiple `[GroupAbbrev]` lines fill slots in occurrence order, same as a part key — the group's first line fills every member's first slot, the second line fills every member's second slot, and so on.
+- A member's own `[MemberAbbrev]` line always takes precedence over the group broadcast for that slot, regardless of which appears first in the file.
+- A group is only usable this way if all of its resolved members share the same part kind (`notes`, `chords`, `notes+lyrics`, or `percussion`) and its abbreviation does not collide with any part's abbreviation; otherwise the group is invalid and using it as a key produces the same "unrecognised abbreviation" error as an unknown key.
+
+**Row label when members render as one unison row:** when two or more members' compiled content ends up identical (typically because they all took the unmodified group broadcast for that measure), the renderer already merges them into a single row. If every merged member traces to the same `[GroupAbbrev]` broadcast, that row is labeled with the **group's abbreviation** instead of the members' concatenated abbreviations. A member with its own overriding `[MemberAbbrev]` line never merges into that row (it keeps its own row, labeled with its own abbreviation), even if the override happens to be one of two members left in the group:
+
+```
+# parts
+Soprano 1 [S1] = notes
+Soprano 2 [S2] = notes
+Soprano 3 [S3] = notes
+
+# groups
+Soprano [s] = S1 S2 S3
+
+# score
+[s] 1 2 3 4=
+[S2] 5 5 5 5=
+```
+
+S1 and S3 both take the `[s]` broadcast unmodified and merge into one row labeled `s`; S2 overrides it and renders on its own row labeled `S2`.
 
 **Example — only part C plays, A and B are not-mentioned:**
 

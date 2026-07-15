@@ -1,14 +1,27 @@
 use crate::ast::parsed::{flatten_score_line_slots, PartDecl, ScoreLineRole};
 use crate::error::{IrrecoverableError, RecoverableError, Span};
+use crate::parser::group_parser::ResolvedGroup;
 use crate::parser::score::measure_group;
 
-type SourceLine = (String, usize);
+/// A raw, not-yet-desugared score line: `[Key] content`, paired with its byte offset.
+type RawSourceLine = (String, usize);
+
+/// A desugared score line, positionally bound to one `PartDecl`'s score-line slot.
+#[derive(Debug, Clone)]
+pub(crate) struct SourceLine {
+    pub(crate) content: String,
+    pub(crate) offset: usize,
+    /// Abbreviation of the group whose `[GroupAbbrev]` broadcast produced this line's
+    /// content, when this member did not override it with its own `[MemberAbbrev]` line.
+    pub(crate) group: Option<String>,
+}
+
 type MeasureGroup = Vec<SourceLine>;
 type KeyMap = Vec<(String, Vec<SourceLine>)>;
 type DesugarGroupsResult =
     Result<(Vec<MeasureGroup>, Vec<Option<RecoverableError>>), IrrecoverableError>;
 
-fn extract_time_numerator(group: &[SourceLine]) -> Option<u8> {
+fn extract_time_numerator(group: &[RawSourceLine]) -> Option<u8> {
     let (first_line, _) = group.first()?;
     first_line
         .split_whitespace()
@@ -20,9 +33,10 @@ fn extract_time_numerator(group: &[SourceLine]) -> Option<u8> {
         .ok()
 }
 
-pub fn desugar_groups(
-    groups: Vec<MeasureGroup>,
+pub(crate) fn desugar_groups(
+    groups: Vec<Vec<RawSourceLine>>,
     declarations: &[PartDecl],
+    resolved_groups: &[ResolvedGroup],
     base_offset: usize,
 ) -> DesugarGroupsResult {
     let slots = flatten_score_line_slots(declarations);
@@ -33,8 +47,14 @@ pub fn desugar_groups(
         if let Some(num) = extract_time_numerator(&group) {
             current_time_num = num;
         }
-        let (expanded, error) =
-            expand_measure_group(&group, declarations, &slots, base_offset, current_time_num)?;
+        let (expanded, error) = expand_measure_group(
+            &group,
+            declarations,
+            resolved_groups,
+            &slots,
+            base_offset,
+            current_time_num,
+        )?;
         desugared.push(expanded);
         per_group_errors.push(error);
     }
@@ -78,8 +98,9 @@ fn key_prefix_span_in_line(line: &str, line_offset: usize, base_offset: usize) -
 }
 
 fn expand_measure_group(
-    group: &[SourceLine],
+    group: &[RawSourceLine],
     declarations: &[PartDecl],
+    resolved_groups: &[ResolvedGroup],
     _slots: &[crate::ast::parsed::ScoreLineSlot],
     base_offset: usize,
     time_num: u8,
@@ -128,10 +149,23 @@ fn expand_measure_group(
         recoverable_error.replace(RecoverableError::measure_no_data_lines(context.span));
         Vec::new()
     } else {
-        expand_keyed(keyed, declarations, &context, &mut recoverable_error)
+        expand_keyed(
+            keyed,
+            declarations,
+            resolved_groups,
+            &context,
+            &mut recoverable_error,
+        )
     };
 
-    let mut result = directive_lines.to_vec();
+    let mut result: Vec<SourceLine> = directive_lines
+        .iter()
+        .map(|(content, offset)| SourceLine {
+            content: content.clone(),
+            offset: *offset,
+            group: None,
+        })
+        .collect();
     result.extend(result_data);
     Ok((result, recoverable_error))
 }
@@ -139,49 +173,108 @@ fn expand_measure_group(
 fn expand_keyed(
     keyed: Vec<KeyedLine>,
     declarations: &[PartDecl],
+    resolved_groups: &[ResolvedGroup],
     context: &GroupContext,
     recoverable_error: &mut Option<RecoverableError>,
 ) -> Vec<SourceLine> {
-    let key_map = filter_keyed_into_key_map(keyed, declarations, context, recoverable_error);
+    let key_map = filter_keyed_into_key_map(
+        keyed,
+        declarations,
+        resolved_groups,
+        context,
+        recoverable_error,
+    );
     resolve_tracks(&key_map, declarations, context)
+}
+
+/// Groups keyed lines that share the same key, in file order, appending each line's
+/// content to that key's slot list (first line -> first slot, second line -> second slot, ...).
+/// Lines built this way carry no group provenance (`group: None`): they are either a
+/// part's own direct lines, or a group's own broadcast content prior to distribution.
+fn group_by_key(lines: Vec<KeyedLine>) -> KeyMap {
+    let mut map: KeyMap = Vec::new();
+    for line in lines {
+        let entry = SourceLine {
+            content: line.content,
+            offset: line.content_offset,
+            group: None,
+        };
+        if let Some(existing) = map.iter_mut().find(|(k, _)| k == &line.key) {
+            existing.1.push(entry);
+        } else {
+            map.push((line.key, vec![entry]));
+        }
+    }
+    map
+}
+
+/// Fills each group broadcast's members with its content, one content line per slot index,
+/// skipping any slot a member already has an explicit direct line for (direct lines win).
+/// Lines filled this way are tagged with the group's abbreviation as their provenance.
+fn merge_group_broadcasts(
+    key_map: &mut KeyMap,
+    group_map: KeyMap,
+    resolved_groups: &[ResolvedGroup],
+) {
+    for (group_abbrev, contents) in group_map {
+        let Some(resolved) = resolved_groups
+            .iter()
+            .find(|g| g.abbreviation == group_abbrev)
+        else {
+            continue;
+        };
+        for member in &resolved.members {
+            if !key_map.iter().any(|(k, _)| k == member) {
+                key_map.push((member.clone(), Vec::new()));
+            }
+            let Some((_, lines)) = key_map.iter_mut().find(|(k, _)| k == member) else {
+                continue;
+            };
+            for (index, content) in contents.iter().enumerate() {
+                if index == lines.len() {
+                    lines.push(SourceLine {
+                        content: content.content.clone(),
+                        offset: content.offset,
+                        group: Some(group_abbrev.clone()),
+                    });
+                }
+            }
+        }
+    }
 }
 
 fn filter_keyed_into_key_map(
     keyed: Vec<KeyedLine>,
     declarations: &[PartDecl],
+    resolved_groups: &[ResolvedGroup],
     context: &GroupContext,
     recoverable_error: &mut Option<RecoverableError>,
 ) -> KeyMap {
-    let valid_keyed: Vec<_> = keyed
-        .into_iter()
-        .filter(|line| {
-            if !declarations.iter().any(|d| d.abbreviation == line.key) {
-                recoverable_error.get_or_insert_with(|| {
-                    RecoverableError::part_key_unknown(line.key_prefix_span, &line.key)
-                });
-                false
-            } else {
-                true
-            }
-        })
-        .collect();
-
-    let mut key_map: KeyMap = Vec::new();
-    for line in valid_keyed {
-        if let Some(entry) = key_map.iter_mut().find(|(k, _)| k == &line.key) {
-            entry.1.push((line.content, line.content_offset));
+    let mut part_keyed = Vec::new();
+    let mut group_keyed = Vec::new();
+    for line in keyed {
+        if declarations.iter().any(|d| d.abbreviation == line.key) {
+            part_keyed.push(line);
+        } else if resolved_groups.iter().any(|g| g.abbreviation == line.key) {
+            group_keyed.push(line);
         } else {
-            key_map.push((line.key, vec![(line.content, line.content_offset)]));
+            recoverable_error.get_or_insert_with(|| {
+                RecoverableError::part_key_unknown(line.key_prefix_span, &line.key)
+            });
         }
     }
+
+    let mut key_map = group_by_key(part_keyed);
+    let group_map = group_by_key(group_keyed);
+    merge_group_broadcasts(&mut key_map, group_map, resolved_groups);
 
     for (abbrev, lines) in &key_map {
         if let Some(decl) = declarations.iter().find(|d| &d.abbreviation == abbrev) {
             let slot_count = decl.score_line_roles().len();
-            if let Some((_, excess_offset)) = lines.get(slot_count) {
+            if let Some(excess) = lines.get(slot_count) {
                 let line_span = Span::new(
-                    context.base_offset + excess_offset,
-                    context.base_offset + excess_offset + 1,
+                    context.base_offset + excess.offset,
+                    context.base_offset + excess.offset + 1,
                 );
                 recoverable_error.get_or_insert_with(|| {
                     RecoverableError::general(
@@ -238,7 +331,11 @@ fn resolve_tracks(
                 {
                     return line.clone();
                 }
-                (implicit_fill(role, context.time_num), context.pad_offset)
+                SourceLine {
+                    content: implicit_fill(role, context.time_num),
+                    offset: context.pad_offset,
+                    group: None,
+                }
             })
             .collect();
         resolved_per_track.push(track_lines);

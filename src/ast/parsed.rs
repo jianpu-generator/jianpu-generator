@@ -108,6 +108,9 @@ pub struct ParsedTimedTrack {
     pub per_measure_lex_errors: Vec<Option<RecoverableError>>,
     /// Per-measure recoverable error on the lyrics line (e.g. empty lyrics line).
     pub per_measure_lyrics_errors: Vec<Option<RecoverableError>>,
+    /// Per-measure group broadcast provenance (`Some(abbrev)` when this measure's
+    /// primary score line came from a `[GroupAbbrev]` broadcast this member didn't override).
+    pub per_measure_group_provenance: Vec<Option<String>>,
 }
 
 #[derive(Debug)]

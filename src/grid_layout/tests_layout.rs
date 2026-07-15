@@ -33,6 +33,7 @@ fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
             id: RowId(row_id.to_string()),
+            group_provenance: None,
             label: row_id.to_string(),
             elements: vec![
                 ColumnElement {
