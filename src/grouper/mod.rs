@@ -53,7 +53,7 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
             subtitle: metadata.subtitle,
             author: metadata.author,
             row_height: metadata.row_height.unwrap_or(24),
-            max_columns: metadata.max_columns.unwrap_or(28),
+            max_measures_per_system: metadata.max_measures_per_system.unwrap_or(4),
             label_width: metadata.label_width.unwrap_or(40),
             note_number_width: metadata.note_number_width.unwrap_or(8),
             parts_list_columns: metadata.parts_list_columns.unwrap_or(4),

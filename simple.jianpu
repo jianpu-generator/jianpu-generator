@@ -2,7 +2,7 @@
 title = "Testing"
 author = "Mozart"
 row height = 24
-max columns = 20
+max measures per system = 4
 
 # parts
 Melody = notes

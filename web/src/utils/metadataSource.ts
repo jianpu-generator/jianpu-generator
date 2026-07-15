@@ -3,7 +3,7 @@ export type MetadataKey =
   | 'subtitle'
   | 'author'
   | 'row height'
-  | 'max columns'
+  | 'max measures per system'
   | 'label width'
   | 'note number width'
   | 'parts list columns'
@@ -13,7 +13,7 @@ export interface ParsedMetadataFields {
   subtitle: string | null
   author: string | null
   rowHeight: number | null
-  maxColumns: number | null
+  maxMeasuresPerSystem: number | null
   labelWidth: number | null
   noteNumberWidth: number | null
   partsListColumns: number | null
@@ -21,7 +21,7 @@ export interface ParsedMetadataFields {
 
 const numericKeys: MetadataKey[] = [
   'row height',
-  'max columns',
+  'max measures per system',
   'label width',
   'note number width',
   'parts list columns',
@@ -32,7 +32,7 @@ const canonicalKeyOrder: MetadataKey[] = [
   'subtitle',
   'author',
   'row height',
-  'max columns',
+  'max measures per system',
   'label width',
   'note number width',
   'parts list columns',
@@ -107,7 +107,7 @@ export function parseMetadata(source: string): ParsedMetadataFields {
     subtitle: null,
     author: null,
     rowHeight: null,
-    maxColumns: null,
+    maxMeasuresPerSystem: null,
     labelWidth: null,
     noteNumberWidth: null,
     partsListColumns: null,
@@ -123,8 +123,11 @@ export function parseMetadata(source: string): ParsedMetadataFields {
   if (fieldMap.has('author')) result.author = fieldMap.get('author') as string
   if (fieldMap.has('row height'))
     result.rowHeight = parseInt(fieldMap.get('row height') as string, 10)
-  if (fieldMap.has('max columns'))
-    result.maxColumns = parseInt(fieldMap.get('max columns') as string, 10)
+  if (fieldMap.has('max measures per system'))
+    result.maxMeasuresPerSystem = parseInt(
+      fieldMap.get('max measures per system') as string,
+      10,
+    )
   if (fieldMap.has('label width'))
     result.labelWidth = parseInt(fieldMap.get('label width') as string, 10)
   if (fieldMap.has('note number width'))

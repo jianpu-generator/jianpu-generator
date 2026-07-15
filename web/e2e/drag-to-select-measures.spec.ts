@@ -214,7 +214,7 @@ test('drag from measure 0 to measure 3 with CJK source selects exactly 4 measure
     'title = "彌勒淨土鄉"',
     'subtitle = "測試副標題"',
     'author = "天然師尊"',
-    'max columns = 48',
+    'max measures per system = 48',
     '',
     '# parts',
     'Melody [M] = notes',

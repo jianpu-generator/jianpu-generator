@@ -180,16 +180,16 @@ export function EditMetadataModal({
                   </td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Max Columns</td>
+                  <td style={tdStyle}>Max Measures Per System</td>
                   <td style={tdStyle}>
                     <input
                       type="number"
                       min="1"
                       style={inputStyle}
-                      value={metadata.maxColumns ?? ''}
+                      value={metadata.maxMeasuresPerSystem ?? ''}
                       onChange={(e) =>
                         onFieldChange(
-                          'max columns',
+                          'max measures per system',
                           e.target.value === '' ? null : e.target.value,
                         )
                       }

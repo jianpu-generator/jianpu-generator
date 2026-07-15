@@ -56,7 +56,7 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | `title` | no | none | Piece title (rendered in header) |
 | `author` | no | none | Author name (rendered in header) |
 | `subtitle` | no | none | Subtitle line |
-| `max columns` | no | `28` | Maximum grid columns per system line before wrapping |
+| `max measures per system` | no | `4` | Maximum number of measures per system line before wrapping |
 | `row height` | no | `24` | Vertical spacing of one part row (pixels) |
 | `label width` | no | `40` | Horizontal space reserved for part labels (pixels) |
 | `note number width` | no | `8` | Horizontal space per note column (pixels) |

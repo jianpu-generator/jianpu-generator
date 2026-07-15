@@ -104,7 +104,7 @@ fn cfg() -> RenderConfig {
         row_height: 30,
         label_width: 0,
         note_number_width: 12,
-        max_columns: 8,
+        max_measures_per_system: 2,
     }
 }
 
@@ -146,8 +146,8 @@ fn single_block_is_one_system() {
 }
 
 #[test]
-fn blocks_exceeding_max_columns_split_into_two_systems() {
-    // Each block is 4 cols wide; max=8 → fits 2 per system
+fn blocks_exceeding_max_measures_per_system_split_into_two_systems() {
+    // max_measures_per_system=2 → fits 2 blocks per system
     let blocks = vec![make_block("S", 3), make_block("S", 3), make_block("S", 3)];
     let systems = pack_into_systems(&blocks, &cfg());
     assert_eq!(systems.len(), 2);

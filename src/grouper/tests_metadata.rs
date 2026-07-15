@@ -52,12 +52,12 @@ fn row_height_defaults_to_24() {
 }
 
 #[test]
-fn max_columns_defaults_to_28() {
+fn max_measures_per_system_defaults_to_4() {
     let score = parse_and_group(concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n",
     ));
-    assert_eq!(score.metadata.max_columns, 28);
+    assert_eq!(score.metadata.max_measures_per_system, 4);
 }
 
 #[test]

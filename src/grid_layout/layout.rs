@@ -154,22 +154,19 @@ pub(crate) fn pack_into_systems(
 ) -> Vec<Vec<MeasureBlock>> {
     let mut systems: Vec<Vec<MeasureBlock>> = Vec::new();
     let mut current: Vec<MeasureBlock> = Vec::new();
-    let mut current_cols: u32 = 0;
 
     for block in blocks {
-        let col_w = block_column_width(block);
         let needs_new = if let Some(first) = current.first() {
-            current_cols + col_w > config.max_columns || row_ids(block) != row_ids(first)
+            current.len() as u32 >= config.max_measures_per_system
+                || row_ids(block) != row_ids(first)
         } else {
             false
         };
 
         if needs_new && !current.is_empty() {
             systems.push(std::mem::take(&mut current));
-            current_cols = 0;
         }
 
-        current_cols += col_w;
         current.push(block.clone());
     }
 

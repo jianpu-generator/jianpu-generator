@@ -24,7 +24,7 @@ fn cfg_wide() -> RenderConfig {
         row_height: 30,
         label_width: 0,
         note_number_width: 12,
-        max_columns: 48,
+        max_measures_per_system: 48,
     }
 }
 

@@ -12,8 +12,8 @@ pub struct Metadata {
     pub author: Option<String>,
     /// Row height in points. Controls font sizes, dot radii, and all vertical spacing. Default: 24.
     pub row_height: u32,
-    /// Maximum logical columns per row before wrapping. Default: 28.
-    pub max_columns: u32,
+    /// Maximum number of measures per system line before wrapping. Default: 4.
+    pub max_measures_per_system: u32,
     /// Left margin reserved for part labels in points. Default: 40.
     pub label_width: u32,
     /// Estimated rendered width of a single digit note number (0–9) in points. Default: 8.

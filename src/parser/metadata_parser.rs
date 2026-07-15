@@ -38,7 +38,7 @@ pub fn parse_metadata(
     let mut subtitle: Option<String> = None;
     let mut author: Option<String> = None;
     let mut row_height: Option<u32> = None;
-    let mut max_columns: Option<u32> = None;
+    let mut max_measures_per_system: Option<u32> = None;
     let mut label_width: Option<u32> = None;
     let mut note_number_width: Option<u32> = None;
     let mut parts_list_columns: Option<u32> = None;
@@ -75,10 +75,12 @@ pub fn parse_metadata(
                 Ok(v) => row_height = Some(v),
                 Err(e) => errors.push(e),
             },
-            "max columns" => match parse_positive_u32("max columns", value, &value_span) {
-                Ok(v) => max_columns = Some(v),
-                Err(e) => errors.push(e),
-            },
+            "max measures per system" => {
+                match parse_positive_u32("max measures per system", value, &value_span) {
+                    Ok(v) => max_measures_per_system = Some(v),
+                    Err(e) => errors.push(e),
+                }
+            }
             "label width" => match parse_positive_u32("label width", value, &value_span) {
                 Ok(v) => label_width = Some(v),
                 Err(e) => errors.push(e),
@@ -107,7 +109,7 @@ pub fn parse_metadata(
             subtitle,
             author,
             row_height,
-            max_columns,
+            max_measures_per_system,
             label_width,
             note_number_width,
             parts_list_columns,
@@ -128,7 +130,7 @@ mod tests {
         assert_eq!(meta.title, Some("hello world".to_string()));
         assert_eq!(meta.author, Some("foo".to_string()));
         assert_eq!(meta.row_height, None);
-        assert_eq!(meta.max_columns, None);
+        assert_eq!(meta.max_measures_per_system, None);
         assert_eq!(meta.label_width, None);
     }
 
@@ -141,11 +143,11 @@ mod tests {
     }
 
     #[test]
-    fn parses_optional_max_columns() {
-        let content = "title = \"t\"\nauthor = \"a\"\nmax columns = 32\n";
+    fn parses_optional_max_measures_per_system() {
+        let content = "title = \"t\"\nauthor = \"a\"\nmax measures per system = 6\n";
         let (meta, errors) = parse_metadata(content, 0);
         assert!(errors.is_empty());
-        assert_eq!(meta.max_columns, Some(32));
+        assert_eq!(meta.max_measures_per_system, Some(6));
     }
 
     #[test]
@@ -199,8 +201,8 @@ mod tests {
     }
 
     #[test]
-    fn collects_error_for_invalid_max_columns() {
-        let content = "title = \"t\"\nauthor = \"a\"\nmax columns = 0\n";
+    fn collects_error_for_invalid_max_measures_per_system() {
+        let content = "title = \"t\"\nauthor = \"a\"\nmax measures per system = 0\n";
         let (_meta, errors) = parse_metadata(content, 0);
         assert!(!errors.is_empty());
     }

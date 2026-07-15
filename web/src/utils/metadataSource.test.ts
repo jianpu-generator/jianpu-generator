@@ -13,7 +13,7 @@ title = "Song"
 subtitle = "Sub"
 author = "Bob"
 row height = 80
-max columns = 4
+max measures per system = 4
 label width = 20
 note number width = 10
 # notes
@@ -66,7 +66,11 @@ row height = 80
 subtitle = "Sub"
 # notes
 1 2 3`
-    const result = updateMetadataField(outOfOrderSource, 'max columns', '4')
+    const result = updateMetadataField(
+      outOfOrderSource,
+      'max measures per system',
+      '4',
+    )
     const lines = result.split('\n')
     const metadataStart = lines.findIndex((l) => l.trim() === '# metadata')
     const metadataEnd = lines.findIndex(
@@ -82,7 +86,7 @@ subtitle = "Sub"
       'subtitle',
       'author',
       'row height',
-      'max columns',
+      'max measures per system',
     ])
   })
 
@@ -95,7 +99,7 @@ title = "Solo"
     expect(result).not.toContain('subtitle')
     expect(result).not.toContain('author')
     expect(result).not.toContain('row height')
-    expect(result).not.toContain('max columns')
+    expect(result).not.toContain('max measures per system')
     expect(result).not.toContain('label width')
     expect(result).not.toContain('note number width')
   })
@@ -158,7 +162,7 @@ title = "Song"
       'subtitle',
       'author',
       'row height',
-      'max columns',
+      'max measures per system',
       'label width',
       'note number width',
     ])

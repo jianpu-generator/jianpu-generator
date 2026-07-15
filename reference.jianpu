@@ -2,7 +2,7 @@
 title = "Jianpu Postcard"
 author = "—"
 subtitle = "Complete syntax reference — every feature, one measure each"
-max columns = 48
+max measures per system = 2
 row height = 24
 label width = 120
 note number width = 8
