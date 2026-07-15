@@ -94,6 +94,23 @@ pub fn compile(
     grouper::group(doc)
 }
 
+/// Drop parts whose abbreviation is not in `enabled_tracks`, so the header's part-list
+/// legend does not list parts hidden by a track filter.
+///
+/// `None` keeps every part.
+pub(crate) fn filter_part_list(
+    parts: Vec<PartInfo>,
+    enabled_tracks: Option<&[String]>,
+) -> Vec<PartInfo> {
+    let Some(tracks) = enabled_tracks else {
+        return parts;
+    };
+    parts
+        .into_iter()
+        .filter(|part| tracks.contains(&part.abbreviation))
+        .collect()
+}
+
 fn build_header(score: &Score, parts: &[PartInfo]) -> grid_layout::types::Header {
     let part_list = parts
         .iter()
@@ -180,7 +197,10 @@ pub fn render_svgs_from_source_filtered_with_lyrics(
     disabled_lyrics: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<RenderOutput, IrrecoverableError> {
-    let parts = list_parts_from_source(source, filename, instruments)?;
+    let parts = filter_part_list(
+        list_parts_from_source(source, filename, instruments)?,
+        enabled_tracks,
+    );
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
@@ -205,7 +225,10 @@ pub fn render_svgs_with_highlight_range(
     disabled_lyrics: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<RenderOutput, IrrecoverableError> {
-    let parts = list_parts_from_source(source, filename, instruments)?;
+    let parts = filter_part_list(
+        list_parts_from_source(source, filename, instruments)?,
+        enabled_tracks,
+    );
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);

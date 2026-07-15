@@ -67,7 +67,10 @@ pub fn render_documents_from_source_filtered_with_lyrics(
     disabled_lyrics: Option<&[String]>,
     instruments: &[crate::parser::parts_parser::InstrumentInfo],
 ) -> Result<RenderDocumentOutput, IrrecoverableError> {
-    let parts = crate::list_parts_from_source(source, filename, instruments)?;
+    let parts = crate::filter_part_list(
+        crate::list_parts_from_source(source, filename, instruments)?,
+        enabled_tracks,
+    );
     let mut score = crate::compile(source, filename, instruments)?;
     crate::apply_track_filter(&mut score, enabled_tracks);
     crate::apply_lyrics_filter(&mut score, disabled_lyrics);
@@ -92,7 +95,10 @@ pub fn render_documents_with_highlight_range(
     disabled_lyrics: Option<&[String]>,
     instruments: &[crate::parser::parts_parser::InstrumentInfo],
 ) -> Result<RenderDocumentOutput, IrrecoverableError> {
-    let parts = crate::list_parts_from_source(source, filename, instruments)?;
+    let parts = crate::filter_part_list(
+        crate::list_parts_from_source(source, filename, instruments)?,
+        enabled_tracks,
+    );
     let mut score = crate::compile(source, filename, instruments)?;
     crate::apply_track_filter(&mut score, enabled_tracks);
     crate::apply_lyrics_filter(&mut score, disabled_lyrics);

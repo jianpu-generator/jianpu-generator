@@ -128,6 +128,66 @@ fn render_svgs_from_source_filtered_can_hide_parts() {
 }
 
 #[test]
+fn render_svgs_from_source_filtered_hides_legend_entry_for_filtered_out_parts() {
+    let input = concat!(
+        "# metadata\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "# parts\n",
+        "Soprano [S] = notes\n",
+        "Alto [A] = notes\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[S] 1 2 3 4\n",
+        "[A] 5 6 7 1\n",
+    );
+    let all = render_svgs_from_source(input, "test.jianpu", &[])
+        .unwrap()
+        .svgs;
+    assert!(all[0].contains(">S ") || all[0].contains("S \u{2014}"));
+    assert!(all[0].contains(">A ") || all[0].contains("A \u{2014}"));
+
+    let soprano_only =
+        render_svgs_from_source_filtered(input, "test.jianpu", Some(&["S".into()]), &[])
+            .unwrap()
+            .svgs;
+    assert!(soprano_only[0].contains("S \u{2014} Soprano"));
+    assert!(!soprano_only[0].contains("A \u{2014} Alto"));
+}
+
+#[test]
+fn render_documents_from_source_filtered_with_lyrics_hides_legend_entry_for_filtered_out_parts() {
+    let input = concat!(
+        "# metadata\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "# parts\n",
+        "Soprano [S] = notes\n",
+        "Alto [A] = notes\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[S] 1 2 3 4\n",
+        "[A] 5 6 7 1\n",
+    );
+    let soprano_only = render_documents_from_source_filtered_with_lyrics(
+        input,
+        "test.jianpu",
+        Some(&["S".into()]),
+        None,
+        &[],
+    )
+    .unwrap()
+    .documents;
+    let svgs = serializer::serialize(&soprano_only);
+    assert!(svgs[0].contains("S \u{2014} Soprano"));
+    assert!(!svgs[0].contains("A \u{2014} Alto"));
+}
+
+#[test]
 fn split_track_names_falls_back_to_part_declarations() {
     let input = concat!(
         "# metadata\n",
