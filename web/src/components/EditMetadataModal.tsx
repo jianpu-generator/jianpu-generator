@@ -12,6 +12,9 @@ export interface EditMetadataModalProps {
   onOpenChange: (open: boolean) => void
   metadata: ParsedMetadataFields
   onFieldChange: (key: MetadataKey, value: string | null) => void
+  /** Element to confine the modal to (e.g. the editor pane), so it doesn't
+   * cover the preview pane. Falls back to viewport-centered when null. */
+  container?: HTMLElement | null
 }
 
 const thStyle: React.CSSProperties = {
@@ -46,6 +49,7 @@ export function EditMetadataModal({
   onOpenChange,
   metadata,
   onFieldChange,
+  container,
 }: EditMetadataModalProps) {
   const [defaults, setDefaults] = useState<MetadataDefaults | null>(null)
   const [lyricsFontSizeDefault, setLyricsFontSizeDefault] = useState<
@@ -64,10 +68,10 @@ export function EditMetadataModal({
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
+      <Dialog.Portal container={container ?? undefined}>
         <Dialog.Overlay
           style={{
-            position: 'fixed',
+            position: container ? 'absolute' : 'fixed',
             inset: 0,
             background: 'rgba(0,0,0,0.35)',
             zIndex: 1000,
@@ -76,7 +80,7 @@ export function EditMetadataModal({
         <Dialog.Content
           data-testid="edit-metadata-modal"
           style={{
-            position: 'fixed',
+            position: container ? 'absolute' : 'fixed',
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
@@ -85,9 +89,10 @@ export function EditMetadataModal({
             borderRadius: '6px',
             boxShadow: '0 8px 32px rgba(0,0,0,0.16)',
             zIndex: 1001,
-            minWidth: '420px',
-            maxWidth: '90vw',
-            maxHeight: '80vh',
+            minWidth: container ? undefined : '420px',
+            width: container ? '90%' : undefined,
+            maxWidth: container ? undefined : '90vw',
+            maxHeight: container ? '90%' : '80vh',
             display: 'flex',
             flexDirection: 'column',
             fontFamily: 'var(--mono, monospace)',

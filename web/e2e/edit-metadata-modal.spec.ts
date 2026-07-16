@@ -267,3 +267,22 @@ test('unchecking hide system dividers writes = no to the source', async ({
   await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
   await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })
+
+test('modal stays within the editor pane and does not cover the preview pane', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await page.goto('/')
+
+  await openEditMetadataModal(page)
+
+  const modal = page.getByTestId('edit-metadata-modal')
+  const modalBox = await modal.boundingBox()
+  const previewBox = await page.locator('.pane--preview').boundingBox()
+  if (!modalBox || !previewBox) {
+    throw new Error('expected modal and preview pane to have bounding boxes')
+  }
+
+  expect(modalBox.x + modalBox.width).toBeLessThanOrEqual(previewBox.x)
+})

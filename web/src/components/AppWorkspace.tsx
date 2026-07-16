@@ -1,5 +1,6 @@
 import type { SvgDocumentOut } from 'jianpu-wasm'
 import type { RefObject } from 'react'
+import { useState } from 'react'
 import type { SharePayload } from '../shareUrl'
 import type {
   Diagnostic,
@@ -143,6 +144,7 @@ export function AppWorkspace({
   handleLyricsToggle,
   handleSoloToggle,
 }: AppWorkspaceProps) {
+  const [editorPaneEl, setEditorPaneEl] = useState<HTMLDivElement | null>(null)
   return (
     <main className="workspace">
       <section
@@ -155,7 +157,7 @@ export function AppWorkspace({
           .join(' ')}
       >
         <div className="editor-layout">
-          <div className="editor-main">
+          <div className="editor-main" ref={setEditorPaneEl}>
             {sharedPreview ? null : (
               <Editor
                 ref={editorRef}
@@ -200,6 +202,7 @@ export function AppWorkspace({
               onOpenChange={setEditMetadataOpen}
               metadata={parsedMetadata}
               onFieldChange={handleMetadataFieldChange}
+              container={editorPaneEl}
             />
           </div>
         </div>
