@@ -86,14 +86,12 @@ fn pair_lyrics_to_notes(
                     if let Some(syllable) = raw_syllables.get(syllable_idx) {
                         paired.push(syllable.clone());
                         syllable_idx += 1;
-                    } else {
+                    } else if !no_lyrics {
                         paired.push(Syllable {
                             text: String::new(),
                             held: false,
                         });
-                        if !no_lyrics {
-                            underflow_detected = true;
-                        }
+                        underflow_detected = true;
                     }
                 }
                 prev_tie_to_next = note.tie_to_next();

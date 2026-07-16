@@ -17,12 +17,12 @@
 - [x] Allow hiding resting measure of some parts to be togglable
 - [x] How to collapse contiguous resting measures into one
 - [x] URL should contain the current selected file ID/name
+- [x] Why cargo test takes so long?
 - [ ] One 0 should autofill 4 zeroes?
 - [ ] Edit Metadata modal should overlay on top on monaco editor space
 - [ ] syntax highlighting
 - [ ] LSP rename
 - [ ] Formatter: align lyric syllables with their corresponding notes
 - [ ] Help tooltip for every fields in Edit Metadata
-- [ ] Why cargo test takes so long?
 - [ ] Unexplained vertical gap on measure 9 of 今山古道
 - [ ] clicking on a merge rest bar should highlight all measures in monaco editor

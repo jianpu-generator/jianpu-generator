@@ -79,6 +79,38 @@ fn follow_part_identical_to_source_is_omitted_per_measure() {
 }
 
 #[test]
+fn no_orphan_lyric_row_when_notes_lyrics_part_and_follower_never_write_lyric_text() {
+    // A is notes+lyrics but never writes a lyric line, and B follows A without
+    // ever writing its own lyric line either. Neither part ever supplies real
+    // lyric text, so no lyrics row should be produced at all — only the notes
+    // row(s). This guards the "orphan empty lyric row" regression: previously
+    // both parts' unwritten lyric slots got padded with an empty placeholder
+    // syllable per note, producing an identical empty lyrics row for each
+    // part that then merged into a single leftover blank row.
+    let source = concat!(
+        "# parts\n",
+        "A = notes+lyrics\n",
+        "B = follow[A]\n",
+        "\n",
+        "# score\n",
+        "[A] 1 2 3 4\n",
+        "[B] 5 6 7 1\n",
+    );
+    let blocks = consolidated_blocks(source);
+
+    assert_eq!(
+        blocks[0].rows.len(),
+        2,
+        "expected only A's and B's notes rows, no lyrics row; got rows: {:?}",
+        blocks[0]
+            .rows
+            .iter()
+            .map(|row| &row.label)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn identical_rows_from_different_parts_merge_by_default() {
     let source = r#"
 # parts

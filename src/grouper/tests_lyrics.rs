@@ -86,6 +86,66 @@ fn measures_without_lyrics_underflow_have_no_errors() {
 }
 
 #[test]
+fn explicit_no_lyrics_marker_produces_no_paired_syllables() {
+    // `_` means "zero syllables for this measure" (syntax.md), so a measure
+    // with real notes paired against `_` must not get any placeholder
+    // syllables — otherwise it would render as a spurious empty lyric row.
+    let input = concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "# parts\nMelody = notes+lyrics\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] _\n",
+    );
+    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let score = group(doc).unwrap();
+    assert!(score.measures[0].diagnostics.is_empty());
+    let melody = score.measures[0].parts[0].slice();
+    assert!(
+        melody.lyrics.iter().all(|verse| verse.syllables.is_empty()),
+        "measure paired against `_` should have no syllables in any verse, got: {:?}",
+        melody
+            .lyrics
+            .iter()
+            .map(|l| &l.syllables)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn follow_part_with_no_lyric_line_gets_no_implicit_syllables() {
+    // Neither `m` nor `h` ever writes a lyric line for this measure, so both
+    // get the implicit `_` fill (desugar's `implicit_fill`), and `h` (which
+    // `follow[m]`s) copies that resolved `_` through the follow chain. This
+    // must not produce placeholder syllables for either part — this is the
+    // exact path that caused an orphan empty lyric row to appear between
+    // unrelated parts in a real score.
+    let input = concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
+        "# parts\nMelody [m] = notes+lyrics\nHarmony [h] = follow[m]\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[m] 1 2 3 4\n[h] 5 6 7 1\n",
+    );
+    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let score = group(doc).unwrap();
+    let harmony = score.measures[0]
+        .parts
+        .iter()
+        .find(|p| p.name().map(|n| n.as_str()) == Some("h"))
+        .expect("Harmony part should exist")
+        .slice();
+    assert!(
+        harmony
+            .lyrics
+            .iter()
+            .all(|verse| verse.syllables.is_empty()),
+        "follow part with no lyric line of its own should have no syllables, got: {:?}",
+        harmony
+            .lyrics
+            .iter()
+            .map(|l| &l.syllables)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn cross_measure_tilde_tie_closing_note_does_not_consume_syllable() {
     // 4~ ends measure 1; the 4 opening measure 2 is a tie continuation and
     // must not consume a lyric syllable. Measure 2 has notes 4 (tied), 5, 6, 7,

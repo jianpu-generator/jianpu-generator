@@ -8,5 +8,7 @@ mod integration;
 mod measure_spans;
 #[path = "main/new_file_template.rs"]
 mod new_file_template;
+#[path = "main/orphan_lyric_row.rs"]
+mod orphan_lyric_row;
 #[path = "main/recoverable_directive_errors.rs"]
 mod recoverable_directive_errors;
