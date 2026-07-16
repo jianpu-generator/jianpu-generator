@@ -104,8 +104,7 @@ test('share button copies a compressed link that opens as a preview', async ({
   context,
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-  await page.goto('/')
-  await page.evaluate(
+  await page.addInitScript(
     ({
       key,
       filename,
@@ -127,7 +126,7 @@ test('share button copies a compressed link that opens as a preview', async ({
     },
     { key: FILE_STORE_KEY, filename: SHARED_FILENAME, source: SHARED_SOURCE },
   )
-  await page.reload()
+  await page.goto('/')
 
   await openFileActions(page)
   await page.getByTestId('share-button').click()

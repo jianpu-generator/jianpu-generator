@@ -23,6 +23,7 @@ import {
 import { useSectionNavigation } from './hooks/useSectionNavigation'
 import { useSharedPreview } from './hooks/useSharedPreview'
 import { useStorageBackend } from './hooks/useStorageBackend'
+import { useUrlFileSync } from './hooks/useUrlFileSync'
 import type { EditorHandle, PartMode, SoundfontValue } from './types'
 import type { MetadataKey } from './utils/metadataSource'
 import { parseMetadata, updateMetadataField } from './utils/metadataSource'
@@ -51,6 +52,8 @@ export default function App() {
   const [editMetadataOpen, setEditMetadataOpen] = useState(false)
   const [storageSettingsOpen, setStorageSettingsOpen] = useState(false)
   const [editorCollapsed, setEditorCollapsed] = useState(false)
+
+  useUrlFileSync(store, setStore, isLoadingGithub)
 
   const {
     creatingFile,

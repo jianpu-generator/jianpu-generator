@@ -23,8 +23,7 @@ test('lyric underflow in measure 1 shows error overlay and still renders measure
 }) => {
   // Pre-seed localStorage with a user file that has lyric underflow in measure 1
   // but valid lyrics in measure 2. The demo file is read-only, so we use a user file.
-  await page.goto('/')
-  await page.evaluate(
+  await page.addInitScript(
     ({ key, source }: { key: string; source: string }) => {
       const store = {
         active: 'test.jianpu',
@@ -37,8 +36,7 @@ test('lyric underflow in measure 1 shows error overlay and still renders measure
     { key: FILE_STORE_KEY, source: SOURCE_WITH_UNDERFLOW_IN_MEASURE_1 },
   )
 
-  // Reload so the app initialises with our user file active.
-  await page.reload()
+  await page.goto('/')
   await page.waitForSelector('[data-testid="play-measure-button"]', {
     timeout: 15_000,
   })
