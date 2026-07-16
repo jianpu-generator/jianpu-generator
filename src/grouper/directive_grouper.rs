@@ -75,22 +75,29 @@ impl DirectiveGrouper {
             for event in events {
                 match &event.value {
                     ScoreEvent::BpmChange(bpm) => {
+                        if *bpm != self.current_bpm {
+                            self.bpm_changed = true;
+                        }
                         self.current_bpm = *bpm;
-                        self.bpm_changed = true;
                     }
                     ScoreEvent::TimeSignatureChange {
                         numerator,
                         denominator,
                     } => {
-                        self.current_time_sig = TimeSignature {
+                        let new_time_sig = TimeSignature {
                             numerator: *numerator,
                             denominator: *denominator,
                         };
-                        self.time_sig_changed = true;
+                        if new_time_sig != self.current_time_sig {
+                            self.time_sig_changed = true;
+                        }
+                        self.current_time_sig = new_time_sig;
                     }
                     ScoreEvent::KeyChange(kc) => {
+                        if *kc != self.current_key {
+                            self.key_changed = true;
+                        }
                         self.current_key = kc.clone();
-                        self.key_changed = true;
                     }
                     ScoreEvent::LabelChange(text) => {
                         pending_label = Some(text.clone());

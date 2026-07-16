@@ -92,6 +92,25 @@ fn time_signature_change_interrupts_a_rest_run() {
 }
 
 #[test]
+fn redundant_time_signature_directive_does_not_interrupt_a_rest_run() {
+    // Measure 1 implicitly starts in 4/4 (the default); measure 3 restates
+    // `time=4/4` explicitly even though nothing actually changed. Since it's
+    // not a real change, it must not break the rest run spanning measures
+    // 2-4.
+    let score = score_from(&notes_doc(
+        "key=C4 bpm=120\n[S] 1\n\n[S] 0 0 0 0\n\ntime=4/4\n[S] 0 0 0 0\n\n[S] 0 0 0 0\n",
+    ));
+    let result = compile(&score);
+    let blocks = result.blocks;
+    assert_eq!(blocks.len(), 2, "blocks={blocks:#?}");
+    assert_eq!(blocks[0].represents_measures, 1, "measure 1 has a note");
+    assert_eq!(
+        blocks[1].represents_measures, 3,
+        "the redundant time=4/4 on measure 3 must not split the rest run"
+    );
+}
+
+#[test]
 fn labeled_measure_starts_a_new_rest_run_instead_of_joining_the_previous_one() {
     let score = score_from(&notes_doc(
         "time=4/4 key=C4 bpm=120\n[S] 1\n\n[S] 0 0 0 0\n\n[S] 0 0 0 0\n\nlabel=\"Verse 1\"\n[S] 0 0 0 0\n\n[S] 0 0 0 0\n",

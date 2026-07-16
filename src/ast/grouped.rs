@@ -242,7 +242,7 @@ pub(crate) struct GroupedPart {
 
 // ── Shared note types ─────────────────────────────────────────────────────────
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct TimeSignature {
     pub numerator: u8,
     pub denominator: u8,
