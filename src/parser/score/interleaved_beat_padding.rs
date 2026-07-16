@@ -142,7 +142,7 @@ fn pad_beat_deficit(events: &mut Vec<Spanned<ScoreEvent>>, deficit: u32) {
         return;
     }
 
-    if let Some(last) = events.iter_mut().rev().find(|event| {
+    let Some(last_index) = events.iter().rposition(|event| {
         matches!(
             &event.value,
             ScoreEvent::Note(_)
@@ -150,12 +150,37 @@ fn pad_beat_deficit(events: &mut Vec<Spanned<ScoreEvent>>, deficit: u32) {
                 | ScoreEvent::PercussionHit(_)
                 | ScoreEvent::Rest(_)
         )
-    }) {
+    }) else {
+        return;
+    };
+
+    // Conventional 简谱 renders a multi-beat rest as repeated `0` glyphs rather
+    // than a single glyph stretched across several beats, so pad a rest with
+    // additional one-beat rest events instead of growing its `duration`.
+    let rest_span = events
+        .get(last_index)
+        .and_then(|event| matches!(&event.value, ScoreEvent::Rest(_)).then_some(event.span));
+
+    if let Some(span) = rest_span {
+        for _ in 0..(deficit / 4) {
+            events.push(Spanned::new(
+                ScoreEvent::Rest(crate::ast::parsed::ParsedRest {
+                    duration: 4,
+                    dotted: false,
+                    group_membership: 0,
+                    group_continuation: 0,
+                }),
+                span,
+            ));
+        }
+        return;
+    }
+
+    if let Some(last) = events.get_mut(last_index) {
         match &mut last.value {
             ScoreEvent::Note(note) => note.duration += deficit,
             ScoreEvent::Chord(chord) => chord.duration += deficit,
             ScoreEvent::PercussionHit(hit) => hit.duration += deficit,
-            ScoreEvent::Rest(rest) => rest.duration += deficit,
             _ => {}
         }
     }

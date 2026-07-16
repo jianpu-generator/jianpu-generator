@@ -510,7 +510,7 @@ Note and rest durations in a row must fill the measure capacity. For time signat
 measure capacity = N × (16 / D) quarter-beats
 ```
 
-(e.g. 4/4 → 16, 3/4 → 12). Too many quarter-beats is a parse error. A shortfall extends the last note/rest when possible; otherwise it is a parse error.
+(e.g. 4/4 → 16, 3/4 → 12). Too many quarter-beats is a parse error. A shortfall extends the last note when possible. For a shortfall after a rest, additional one-beat rests are appended instead (so a lone `0` filling an empty measure renders as repeated `0` glyphs, matching conventional 简谱, rather than one glyph stretched across the measure). Otherwise it is a parse error.
 
 #### Grouping validation (4/4 only)
 
