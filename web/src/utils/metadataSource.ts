@@ -11,6 +11,7 @@ export type MetadataKey =
   | 'merge duplicate measures across parts'
   | 'hide resting parts'
   | 'hide system dividers'
+  | 'section label offset'
 
 export interface ParsedMetadataFields {
   title: string
@@ -25,6 +26,7 @@ export interface ParsedMetadataFields {
   mergeDuplicateMeasuresAcrossParts: boolean | null
   hideRestingParts: boolean | null
   hideSystemDividers: boolean | null
+  sectionLabelOffset: string | null
 }
 
 const numericKeys: MetadataKey[] = [
@@ -41,6 +43,7 @@ const unquotedKeys: MetadataKey[] = [
   'merge duplicate measures across parts',
   'hide resting parts',
   'hide system dividers',
+  'section label offset',
 ]
 
 const canonicalKeyOrder: MetadataKey[] = [
@@ -56,6 +59,7 @@ const canonicalKeyOrder: MetadataKey[] = [
   'merge duplicate measures across parts',
   'hide resting parts',
   'hide system dividers',
+  'section label offset',
 ]
 
 function isUnquotedKey(key: MetadataKey): boolean {
@@ -135,6 +139,7 @@ export function parseMetadata(source: string): ParsedMetadataFields {
     mergeDuplicateMeasuresAcrossParts: null,
     hideRestingParts: null,
     hideSystemDividers: null,
+    sectionLabelOffset: null,
   }
 
   if (startIndex === -1) return result
@@ -176,6 +181,8 @@ export function parseMetadata(source: string): ParsedMetadataFields {
     result.hideRestingParts = fieldMap.get('hide resting parts') === 'yes'
   if (fieldMap.has('hide system dividers'))
     result.hideSystemDividers = fieldMap.get('hide system dividers') === 'yes'
+  if (fieldMap.has('section label offset'))
+    result.sectionLabelOffset = fieldMap.get('section label offset') as string
 
   return result
 }

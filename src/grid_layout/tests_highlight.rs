@@ -209,6 +209,7 @@ fn erroneous_measure_produces_error_highlight() {
         note_number_width: 8,
         lyrics_font_size: 14,
         hide_system_dividers: false,
+        section_label_offset: crate::ast::parsed::Offset::default(),
     };
     let pages = crate::grid_layout::layout(
         &crate::compiler::types::CompileResult {
@@ -247,6 +248,7 @@ fn non_erroneous_measure_produces_no_error_highlight() {
         note_number_width: 8,
         lyrics_font_size: 14,
         hide_system_dividers: false,
+        section_label_offset: crate::ast::parsed::Offset::default(),
     };
     let pages = crate::grid_layout::layout(
         &crate::compiler::types::CompileResult {

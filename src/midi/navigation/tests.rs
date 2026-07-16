@@ -1,5 +1,6 @@
 use super::{expand_navigation, expand_navigation_with_origins};
 use crate::ast::grouped::{Metadata, MultiPartMeasure, Score, SequenceSpan};
+use crate::ast::parsed::Offset;
 use crate::error::Span;
 
 fn metadata() -> Metadata {
@@ -16,6 +17,7 @@ fn metadata() -> Metadata {
         merge_duplicate_measures_across_parts: true,
         hide_resting_parts: true,
         hide_system_dividers: false,
+        section_label_offset: Offset::default(),
     }
 }
 

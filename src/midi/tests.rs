@@ -1,7 +1,7 @@
 use super::midi_notes::{duration_to_ticks, resolve_midi_note, resolve_midi_note_with_accidental};
 use super::*;
 use crate::ast::grouped::Metadata;
-use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName};
+use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName, Offset};
 use crate::error::Span;
 use midly::{MidiMessage, Smf, TrackEventKind};
 
@@ -24,6 +24,7 @@ fn default_test_metadata() -> Metadata {
         merge_duplicate_measures_across_parts: true,
         hide_resting_parts: true,
         hide_system_dividers: false,
+        section_label_offset: Offset::default(),
     }
 }
 
@@ -108,7 +109,7 @@ pub(super) fn one_measure_score() -> Score {
     use crate::ast::grouped::{
         Metadata, MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
     };
-    use crate::ast::parsed::{JianPuPitch, PartKind, Soundfont};
+    use crate::ast::parsed::{JianPuPitch, Offset, PartKind, Soundfont};
     Score {
         metadata: Metadata {
             title: None,
@@ -123,6 +124,7 @@ pub(super) fn one_measure_score() -> Score {
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
             hide_system_dividers: false,
+            section_label_offset: Offset::default(),
         },
         measures: vec![MultiPartMeasure {
             time_signature: Some(TimeSignature {
@@ -204,7 +206,7 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
     use crate::ast::grouped::{
         Metadata, MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
     };
-    use crate::ast::parsed::{JianPuPitch, PartKind, Soundfont};
+    use crate::ast::parsed::{JianPuPitch, Offset, PartKind, Soundfont};
 
     Score {
         metadata: Metadata {
@@ -220,6 +222,7 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
             hide_system_dividers: false,
+            section_label_offset: Offset::default(),
         },
         measures: vec![MultiPartMeasure {
             time_signature: Some(TimeSignature {

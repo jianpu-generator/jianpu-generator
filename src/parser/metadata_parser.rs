@@ -1,4 +1,4 @@
-use crate::ast::parsed::ParsedMetadata;
+use crate::ast::parsed::{Offset, ParsedMetadata};
 use crate::error::{RecoverableError, Span};
 
 fn span_of_key_in_line(byte_offset: usize, line: &str, key_raw: &str, key: &str) -> Span {
@@ -43,6 +43,28 @@ fn parse_numeric_field(
     }
 }
 
+fn parse_offset_field(
+    target: &mut Option<Offset>,
+    key: &str,
+    value: &str,
+    value_span: &Span,
+    errors: &mut Vec<RecoverableError>,
+) {
+    let parts: Vec<&str> = value.split_whitespace().collect();
+    let parsed = match parts.as_slice() {
+        [x, y] => x.parse::<i32>().ok().zip(y.parse::<i32>().ok()),
+        _ => None,
+    };
+    match parsed {
+        Some((x, y)) => *target = Some(Offset { x, y }),
+        None => errors.push(RecoverableError::metadata_invalid_integer_pair(
+            *value_span,
+            key,
+            value,
+        )),
+    }
+}
+
 fn parse_bool_field(
     target: &mut Option<bool>,
     key: &str,
@@ -75,6 +97,7 @@ struct MetadataAccumulator {
     merge_duplicate_measures_across_parts: Option<bool>,
     hide_resting_parts: Option<bool>,
     hide_system_dividers: Option<bool>,
+    section_label_offset: Option<Offset>,
 }
 
 impl MetadataAccumulator {
@@ -124,6 +147,13 @@ impl MetadataAccumulator {
             }
             "hide system dividers" => parse_bool_field(
                 &mut self.hide_system_dividers,
+                key,
+                value,
+                value_span,
+                errors,
+            ),
+            "section label offset" => parse_offset_field(
+                &mut self.section_label_offset,
                 key,
                 value,
                 value_span,
@@ -184,6 +214,7 @@ pub fn parse_metadata(
                 .merge_duplicate_measures_across_parts,
             hide_resting_parts: accumulator.hide_resting_parts,
             hide_system_dividers: accumulator.hide_system_dividers,
+            section_label_offset: accumulator.section_label_offset,
         },
         errors,
     )

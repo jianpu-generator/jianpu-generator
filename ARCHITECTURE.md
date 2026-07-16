@@ -78,6 +78,7 @@ source (&str)
 - Key types: `SvgDocument`, `SvgElement`, `SvgKind`, `SvgVariant`, `TransparentRectRole`
 - `SvgElement.variant` is `Option<SvgVariant>`: `None` for group wrappers and highlight rects; `Some(...)` for musical/export drawable primitives
 - `SvgKind::TransparentRect` carries a `role: TransparentRectRole` for CSS hover targets (`data-variant` in serializer/preview); roles are `MeasureClickTarget` and `SectionLabelBackground`
+- `config.section_label_offset` (from `Metadata::section_label_offset`, `# metadata` field `section label offset`, an `Offset { x, y }` in points, default `(0, 0)`) is applied by `render_directive_line` to every child element of a rendered section label (its background rect, text, and optional Segno glyph) after `coordinate_resolver` has already resolved their absolute position. It never reaches `grid_layout` or `coordinate_resolver` — those layers are unaware of it, since the translation only nudges pixels within the renderer and cannot disturb any other element's layout.
 
 ### Serializer
 - Module: `src/serializer/`

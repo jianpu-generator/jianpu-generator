@@ -268,6 +268,26 @@ test('unchecking hide system dividers writes = no to the source', async ({
   await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })
 
+test('editing section label offset writes "x y" to the source', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.goto('/')
+
+  await openEditMetadataModal(page)
+
+  const modal = page.getByTestId('edit-metadata-modal')
+  const offsetInput = modal.locator('input[type="text"]').nth(3)
+  await offsetInput.fill('0 12')
+
+  await page.keyboard.press('Escape')
+  await modal.waitFor({ state: 'hidden' })
+
+  const expectedLine = 'section label offset = 0 12'
+  await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
+  await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
+})
+
 test('modal stays within the editor pane and does not cover the preview pane', async ({
   page,
 }) => {

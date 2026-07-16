@@ -2,7 +2,7 @@ use jianpu_generator::ast::grouped::{
     default_lyrics_font_size, DEFAULT_HIDE_RESTING_PARTS, DEFAULT_HIDE_SYSTEM_DIVIDERS,
     DEFAULT_LABEL_WIDTH, DEFAULT_MAX_MEASURES_PER_SYSTEM,
     DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS, DEFAULT_NOTE_NUMBER_WIDTH,
-    DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_ROW_HEIGHT,
+    DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_ROW_HEIGHT, DEFAULT_SECTION_LABEL_OFFSET,
 };
 use serde::Serialize;
 use tsify::Tsify;
@@ -21,6 +21,8 @@ pub struct MetadataDefaultsOut {
     pub merge_duplicate_measures_across_parts: bool,
     pub hide_resting_parts: bool,
     pub hide_system_dividers: bool,
+    pub section_label_offset_x: i32,
+    pub section_label_offset_y: i32,
 }
 
 impl Default for MetadataDefaultsOut {
@@ -35,6 +37,8 @@ impl Default for MetadataDefaultsOut {
             merge_duplicate_measures_across_parts: DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
             hide_resting_parts: DEFAULT_HIDE_RESTING_PARTS,
             hide_system_dividers: DEFAULT_HIDE_SYSTEM_DIVIDERS,
+            section_label_offset_x: DEFAULT_SECTION_LABEL_OFFSET.x,
+            section_label_offset_y: DEFAULT_SECTION_LABEL_OFFSET.y,
         }
     }
 }

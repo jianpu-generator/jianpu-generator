@@ -172,6 +172,15 @@ pub struct ParsedChordSymbol {
     pub bass: Option<BassDegree>,
 }
 
+/// A translation in points, applied to a rendered element after its layout
+/// position has been resolved. Does not affect the position of any other
+/// element.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Offset {
+    pub x: i32,
+    pub y: i32,
+}
+
 #[derive(Debug)]
 pub struct ParsedMetadata {
     pub title: Option<String>,
@@ -192,6 +201,9 @@ pub struct ParsedMetadata {
     /// When `true`, the horizontal divider line drawn between systems is omitted (see
     /// `grid_layout::layout`). Default: `false`.
     pub hide_system_dividers: Option<bool>,
+    /// Translation in points applied to a rendered section label, after layout (see
+    /// `renderer::new_renderer::render_directive_line`). Default: `(0, 0)`.
+    pub section_label_offset: Option<Offset>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

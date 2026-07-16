@@ -1,3 +1,4 @@
+use crate::ast::parsed::Offset;
 use crate::compositor::types::{
     AbsoluteContent, AbsoluteElement, AbsolutePage, DominantBaseline, TextAnchor, TextSpan,
 };
@@ -33,6 +34,7 @@ fn render_page(page: &AbsolutePage, config: &RenderConfig) -> SvgDocument {
                 &base_font_size,
                 &cjk_font_size,
                 &note_number_width,
+                config.section_label_offset,
             )
         })
         .collect();
@@ -50,6 +52,7 @@ fn render_element(
     base_font_size: &f32,
     cjk_font_size: &f32,
     note_number_width: &f32,
+    section_label_offset: Offset,
 ) -> Vec<SvgElement> {
     match &elem.content {
         AbsoluteContent::NoteHead {
@@ -119,7 +122,7 @@ fn render_element(
             label,
             spans,
             segno_icon_offset,
-        } => render_directive_line(elem, label, spans, *segno_icon_offset),
+        } => render_directive_line(elem, label, spans, *segno_icon_offset, section_label_offset),
     }
 }
 
@@ -202,6 +205,7 @@ fn render_directive_line(
     label: &Option<String>,
     spans: &[TextSpan],
     segno_icon_offset: Option<f32>,
+    section_label_offset: Offset,
 ) -> Vec<SvgElement> {
     let text_element = SvgElement {
         x: elem.x,
@@ -225,12 +229,14 @@ fn render_directive_line(
     });
 
     if let Some(label_str) = label {
+        let label_x = elem.x + section_label_offset.x as f32;
+        let label_y = elem.y + section_label_offset.y as f32;
         let bg_width = label_str.len() as f32 * 8.0 + 6.0;
         let bg_height = 18.0;
         let mut children = vec![
             SvgElement {
-                x: elem.x - 3.0,
-                y: elem.y - bg_height / 2.0,
+                x: label_x - 3.0,
+                y: label_y - bg_height / 2.0,
                 variant: None,
                 kind: SvgKind::TransparentRect {
                     width: bg_width,
@@ -238,9 +244,17 @@ fn render_directive_line(
                     role: TransparentRectRole::SectionLabelBackground,
                 },
             },
-            text_element,
+            SvgElement {
+                x: label_x,
+                y: label_y,
+                ..text_element
+            },
         ];
-        children.extend(segno_element);
+        children.extend(segno_element.map(|e| SvgElement {
+            x: e.x + section_label_offset.x as f32,
+            y: e.y + section_label_offset.y as f32,
+            ..e
+        }));
         vec![SvgElement {
             x: elem.x,
             y: elem.y,

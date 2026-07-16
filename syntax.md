@@ -69,6 +69,7 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | `merge duplicate measures across parts` | no | `yes` | Whether identical measures from different parts are merged into a single row (`yes`/`no`) |
 | `hide resting parts` | no | `yes` | Whether an all-rest part is omitted from a measure where other parts have content (`yes`/`no`) |
 | `hide system dividers` | no | `no` | Whether the horizontal divider line between systems is omitted (`yes`/`no`) |
+| `section label offset` | no | `0 0` | Translation `"x y"` (points) applied to a rendered section label, moving it away from its default position without affecting the layout of anything else |
 
 ---
 

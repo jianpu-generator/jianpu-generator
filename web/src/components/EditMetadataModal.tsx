@@ -369,6 +369,27 @@ export function EditMetadataModal({
                     />
                   </td>
                 </tr>
+                <tr>
+                  <td style={tdStyle}>Section Label Offset (x y)</td>
+                  <td style={tdStyle}>
+                    <input
+                      type="text"
+                      placeholder={
+                        defaults
+                          ? `${defaults.sectionLabelOffsetX} ${defaults.sectionLabelOffsetY}`
+                          : undefined
+                      }
+                      style={inputStyle}
+                      value={metadata.sectionLabelOffset ?? ''}
+                      onChange={(e) =>
+                        onFieldChange(
+                          'section label offset',
+                          e.target.value === '' ? null : e.target.value,
+                        )
+                      }
+                    />
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>

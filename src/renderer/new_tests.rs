@@ -1,4 +1,4 @@
-use crate::ast::parsed::JianPuPitch;
+use crate::ast::parsed::{JianPuPitch, Offset};
 use crate::compiler::types::ArcKind;
 use crate::compositor::types::{AbsoluteContent, AbsoluteElement, AbsolutePage, TextAnchor};
 use crate::render_config::RenderConfig;
@@ -13,6 +13,7 @@ fn cfg() -> RenderConfig {
         max_measures_per_system: 16,
         lyrics_font_size: 18,
         hide_system_dividers: false,
+        section_label_offset: Offset::default(),
     }
 }
 

@@ -208,3 +208,41 @@ fn collects_error_for_invalid_hide_system_dividers() {
     let (_meta, errors) = parse_metadata(content, 0);
     assert!(!errors.is_empty());
 }
+
+#[test]
+fn parses_section_label_offset() {
+    let content = "title = \"t\"\nauthor = \"a\"\nsection label offset = 0 12\n";
+    let (meta, errors) = parse_metadata(content, 0);
+    assert!(errors.is_empty());
+    assert_eq!(meta.section_label_offset, Some(Offset { x: 0, y: 12 }));
+}
+
+#[test]
+fn parses_section_label_offset_with_negative_values() {
+    let content = "title = \"t\"\nauthor = \"a\"\nsection label offset = -5 -12\n";
+    let (meta, errors) = parse_metadata(content, 0);
+    assert!(errors.is_empty());
+    assert_eq!(meta.section_label_offset, Some(Offset { x: -5, y: -12 }));
+}
+
+#[test]
+fn section_label_offset_defaults_to_none() {
+    let content = "title = \"t\"\nauthor = \"a\"\n";
+    let (meta, errors) = parse_metadata(content, 0);
+    assert!(errors.is_empty());
+    assert_eq!(meta.section_label_offset, None);
+}
+
+#[test]
+fn collects_error_for_invalid_section_label_offset() {
+    let content = "title = \"t\"\nauthor = \"a\"\nsection label offset = twelve\n";
+    let (_meta, errors) = parse_metadata(content, 0);
+    assert!(!errors.is_empty());
+}
+
+#[test]
+fn collects_error_for_section_label_offset_with_too_many_values() {
+    let content = "title = \"t\"\nauthor = \"a\"\nsection label offset = 1 2 3\n";
+    let (_meta, errors) = parse_metadata(content, 0);
+    assert!(!errors.is_empty());
+}

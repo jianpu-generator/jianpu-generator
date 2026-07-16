@@ -1,6 +1,6 @@
 use super::*;
 use crate::ast::grouped::Metadata;
-use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName};
+use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName, Offset};
 use crate::error::Span;
 
 fn test_metadata() -> Metadata {
@@ -17,6 +17,7 @@ fn test_metadata() -> Metadata {
         merge_duplicate_measures_across_parts: true,
         hide_resting_parts: true,
         hide_system_dividers: false,
+        section_label_offset: Offset::default(),
     }
 }
 
