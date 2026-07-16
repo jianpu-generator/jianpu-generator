@@ -97,7 +97,7 @@ pub enum ElementContent {
 pub struct SlurSpan {
     pub kind: ArcKind,
     pub part_index: usize,
-    pub from_measure: usize, // 0-indexed global measure index
+    pub from_measure: usize, // 0-indexed position in the final `CompileResult.blocks` list, after rest-run merging
     pub from_column: u32,    // measure-relative column of the opening note
     pub to_measure: usize,
     pub to_column: u32, // measure-relative column of the closing note

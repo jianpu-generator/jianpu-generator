@@ -50,7 +50,17 @@ pub fn compile(score: &Score) -> CompileResult {
         })
         .collect();
 
-    let blocks = merge_rest_runs(&score.measures, blocks);
+    let (blocks, measure_to_block) = merge_rest_runs(&score.measures, blocks);
+    for span in &mut slur_spans {
+        let (Some(&from), Some(&to)) = (
+            measure_to_block.get(span.from_measure),
+            measure_to_block.get(span.to_measure),
+        ) else {
+            continue;
+        };
+        span.from_measure = from;
+        span.to_measure = to;
+    }
 
     CompileResult { blocks, slur_spans }
 }
@@ -129,7 +139,15 @@ fn merge_rest_run(run: &[MeasureBlock]) -> MeasureBlock {
     }
 }
 
-fn merge_rest_runs(measures: &[MultiPartMeasure], blocks: Vec<MeasureBlock>) -> Vec<MeasureBlock> {
+/// Collapses consecutive collapsible (all-rest, no directive) measures into
+/// single `MultiMeasureRest` blocks. Returns the resulting blocks alongside
+/// `measure_to_block`, a same-length-as-`measures` mapping from original
+/// measure index to the index of the block it ended up in, so that measure
+/// indices baked into `SlurSpan`s earlier in `compile` can be remapped.
+fn merge_rest_runs(
+    measures: &[MultiPartMeasure],
+    blocks: Vec<MeasureBlock>,
+) -> (Vec<MeasureBlock>, Vec<usize>) {
     // Each collapsible measure gets a run id; a label always starts a fresh
     // id (breaking off from whatever run precedes it) so the label stays
     // attached to the merged block it heads instead of being swallowed by an
@@ -153,20 +171,27 @@ fn merge_rest_runs(measures: &[MultiPartMeasure], blocks: Vec<MeasureBlock>) -> 
         })
         .collect();
 
-    run_ids
+    let mut merged_blocks: Vec<MeasureBlock> = Vec::new();
+    let mut measure_to_block: Vec<usize> = Vec::with_capacity(measures.len());
+    for (run_id, group) in run_ids
         .into_iter()
         .zip(blocks)
         .chunk_by(|(run_id, _)| *run_id)
         .into_iter()
-        .flat_map(|(run_id, group)| {
-            let run: Vec<MeasureBlock> = group.map(|(_, block)| block).collect();
-            if run_id.is_some() && run.len() >= MIN_REST_RUN_LENGTH {
-                vec![merge_rest_run(&run)]
-            } else {
-                run
-            }
-        })
-        .collect()
+    {
+        let run: Vec<MeasureBlock> = group.map(|(_, block)| block).collect();
+        let block_index = merged_blocks.len();
+        if run_id.is_some() && run.len() >= MIN_REST_RUN_LENGTH {
+            measure_to_block.extend(std::iter::repeat_n(block_index, run.len()));
+            merged_blocks.push(merge_rest_run(&run));
+        } else {
+            let run_len = run.len();
+            measure_to_block.extend(block_index..block_index + run_len);
+            merged_blocks.extend(run);
+        }
+    }
+
+    (merged_blocks, measure_to_block)
 }
 
 fn is_rest_filled(part_row: &PartRow) -> bool {

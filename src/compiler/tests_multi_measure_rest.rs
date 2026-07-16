@@ -187,6 +187,50 @@ fn soloing_a_part_with_a_labeled_first_measure_still_collapses_its_rest_run() {
 }
 
 #[test]
+fn slur_span_measure_indices_are_remapped_after_a_hidden_track_causes_merging() {
+    // Mirrors `hiding_part_a_still_renders_tie_arc_on_part_b_across_merged_rest_measures`
+    // in `tests_render_filtering`: [a] has plain notes in measures 1-2 and
+    // measure 3; [b] only has content in measure 3, where a tie chain
+    // (`6m __~_6m`) connects two chord symbols. Soloing [b] turns measures
+    // 1-2 into all-rest for [b], collapsing them into one block, so the tie's
+    // `SlurSpan` (originally recorded against raw measure index 2) must be
+    // remapped to block index 1, not left pointing at the stale pre-merge
+    // measure index.
+    let source = "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\na = notes\nb = chords\n\n# score\n[a] 1\n\n[a]1\n\n[a]1\n[b] 6m __~_6m__0_\n";
+    let mut score = {
+        let doc = parse(source, "test", &[]).unwrap();
+        group(doc).unwrap()
+    };
+    crate::filters::filter_tracks(&mut score, &["b".to_string()]);
+    let result = compile(&score);
+    let blocks = &result.blocks;
+    assert_eq!(
+        blocks.len(),
+        2,
+        "measures 1-2 (all-rest for soloed b) merge into one block, measure 3 stays \
+         standalone, blocks={blocks:#?}"
+    );
+    assert_eq!(blocks[0].represents_measures, 2);
+    assert_eq!(blocks[1].represents_measures, 1);
+    assert_eq!(
+        result.slur_spans.len(),
+        1,
+        "expected exactly one tie span, got: {:?}",
+        result.slur_spans
+    );
+    let span = &result.slur_spans[0];
+    assert_eq!(
+        span.from_measure, 1,
+        "tie's opening note lives in block 1 (the standalone measure 3 block), not the \
+         stale pre-merge measure index, span={span:?}"
+    );
+    assert_eq!(
+        span.to_measure, 1,
+        "tie's closing note also lives in block 1, span={span:?}"
+    );
+}
+
+#[test]
 fn diagnostic_bearing_measure_interrupts_a_rest_run() {
     // An error inside a measure means the source has a real problem there;
     // a lone rest measure sandwiched between two 2-measure rest runs by
