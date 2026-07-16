@@ -214,14 +214,15 @@ fn system_total_height(system: &[MeasureBlock], base: f32) -> f32 {
 fn build_page_rows(
     systems: &[Vec<MeasureBlock>],
     header: &Header,
-    base: f32,
+    config: &RenderConfig,
     arc_map: &HashMap<(usize, usize), Vec<GridElement>>,
     abs_system_index_start: usize,
     is_first_page: bool,
 ) -> Vec<GridRow> {
+    let base = config.row_height as f32;
     let mut rows: Vec<GridRow> = make_header_rows(header, base, is_first_page);
     for (sys_idx, system) in systems.iter().enumerate() {
-        if sys_idx > 0 {
+        if sys_idx > 0 && !config.hide_system_dividers {
             rows.push(make_separator_row());
         }
         let Some(first) = system.first() else {
@@ -280,7 +281,7 @@ pub fn layout(
 
     for system in systems {
         let sys_h = system_total_height(&system, base);
-        let gap = if current_page.is_empty() {
+        let gap = if current_page.is_empty() || config.hide_system_dividers {
             0.0
         } else {
             separator_row_height()
@@ -311,7 +312,7 @@ pub fn layout(
         let mut rows = build_page_rows(
             &page_sys,
             header,
-            base,
+            config,
             &arc_map,
             abs_system_index_start,
             page_idx == 0,

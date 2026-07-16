@@ -79,6 +79,7 @@ fn cfg_wide() -> RenderConfig {
         note_number_width: 12,
         max_measures_per_system: 48,
         lyrics_font_size: 18,
+        hide_system_dividers: false,
     }
 }
 

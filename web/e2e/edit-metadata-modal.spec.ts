@@ -193,7 +193,7 @@ test('unchecking hide resting parts writes = no to the source', async ({
   await openEditMetadataModal(page)
 
   const modal = page.getByTestId('edit-metadata-modal')
-  const hideRestingCheckbox = modal.locator('input[type="checkbox"]').last()
+  const hideRestingCheckbox = modal.locator('input[type="checkbox"]').nth(1)
   await expect(hideRestingCheckbox).toBeChecked()
   await hideRestingCheckbox.uncheck()
 
@@ -214,7 +214,7 @@ test('re-checking hide resting parts writes = yes to the source', async ({
   await openEditMetadataModal(page)
 
   const modal = page.getByTestId('edit-metadata-modal')
-  const hideRestingCheckbox = modal.locator('input[type="checkbox"]').last()
+  const hideRestingCheckbox = modal.locator('input[type="checkbox"]').nth(1)
   await hideRestingCheckbox.uncheck()
   await hideRestingCheckbox.check()
 
@@ -222,6 +222,48 @@ test('re-checking hide resting parts writes = yes to the source', async ({
   await modal.waitFor({ state: 'hidden' })
 
   const expectedLine = 'hide resting parts = yes'
+  await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
+  await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
+})
+
+test('checking hide system dividers writes = yes to the source', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.goto('/')
+
+  await openEditMetadataModal(page)
+
+  const modal = page.getByTestId('edit-metadata-modal')
+  const hideDividersCheckbox = modal.locator('input[type="checkbox"]').last()
+  await expect(hideDividersCheckbox).not.toBeChecked()
+  await hideDividersCheckbox.check()
+
+  await page.keyboard.press('Escape')
+  await modal.waitFor({ state: 'hidden' })
+
+  const expectedLine = 'hide system dividers = yes'
+  await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
+  await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
+})
+
+test('unchecking hide system dividers writes = no to the source', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.goto('/')
+
+  await openEditMetadataModal(page)
+
+  const modal = page.getByTestId('edit-metadata-modal')
+  const hideDividersCheckbox = modal.locator('input[type="checkbox"]').last()
+  await hideDividersCheckbox.check()
+  await hideDividersCheckbox.uncheck()
+
+  await page.keyboard.press('Escape')
+  await modal.waitFor({ state: 'hidden' })
+
+  const expectedLine = 'hide system dividers = no'
   await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
   await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })

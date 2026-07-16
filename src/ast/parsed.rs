@@ -189,6 +189,9 @@ pub struct ParsedMetadata {
     /// When `false`, an all-rest part is no longer omitted from a measure that has other
     /// parts with real content (see `compiler::compile_measure`). Default: `true`.
     pub hide_resting_parts: Option<bool>,
+    /// When `true`, the horizontal divider line drawn between systems is omitted (see
+    /// `grid_layout::layout`). Default: `false`.
+    pub hide_system_dividers: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

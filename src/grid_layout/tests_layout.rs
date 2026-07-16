@@ -3,7 +3,7 @@ use crate::compiler::types::{
     ColumnElement, CompileResult, ElementContent, MeasureBlock, MeasureRow, RowId,
 };
 use crate::grid_layout::layout::layout;
-use crate::grid_layout::types::{Header, VAlign};
+use crate::grid_layout::types::{GridContent, Header, VAlign};
 use crate::render_config::RenderConfig;
 
 // ── layout() tests ────────────────────────────────────────────────────────────
@@ -26,6 +26,7 @@ fn cfg_wide() -> RenderConfig {
         note_number_width: 12,
         max_measures_per_system: 48,
         lyrics_font_size: 18,
+        hide_system_dividers: false,
     }
 }
 
@@ -155,5 +156,62 @@ fn footer_element_valign_is_bottom() {
             .iter()
             .all(|e| e.valign == VAlign::Bottom),
         "footer elements should be VAlign::Bottom"
+    );
+}
+
+fn cfg_one_measure_per_system(hide_system_dividers: bool) -> RenderConfig {
+    RenderConfig {
+        max_measures_per_system: 1,
+        hide_system_dividers,
+        ..cfg_wide()
+    }
+}
+
+fn has_divider(pages: &[crate::grid_layout::types::GridPage]) -> bool {
+    pages.iter().any(|page| {
+        page.rows.iter().any(|row| {
+            row.elements
+                .iter()
+                .any(|e| matches!(e.content, GridContent::HorizontalLine))
+        })
+    })
+}
+
+#[test]
+fn layout_draws_divider_between_systems_by_default() {
+    let blocks = vec![make_block("S", 3), make_block("S", 3)];
+    let compile_result = CompileResult {
+        blocks,
+        slur_spans: vec![],
+    };
+    let pages = layout(
+        &compile_result,
+        &cfg_one_measure_per_system(false),
+        &hdr(),
+        595.0,
+        842.0,
+        None,
+    );
+    assert!(has_divider(&pages), "divider should be drawn by default");
+}
+
+#[test]
+fn layout_omits_divider_when_hide_system_dividers_is_set() {
+    let blocks = vec![make_block("S", 3), make_block("S", 3)];
+    let compile_result = CompileResult {
+        blocks,
+        slur_spans: vec![],
+    };
+    let pages = layout(
+        &compile_result,
+        &cfg_one_measure_per_system(true),
+        &hdr(),
+        595.0,
+        842.0,
+        None,
+    );
+    assert!(
+        !has_divider(&pages),
+        "divider should be omitted when hide_system_dividers is true"
     );
 }

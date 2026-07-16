@@ -146,6 +146,16 @@ title = "Song"
     expect(result).not.toContain('"no"')
   })
 
+  it('formats the hide system dividers key without quotes', () => {
+    const result = updateMetadataField(
+      sourceWithMetadata,
+      'hide system dividers',
+      'yes',
+    )
+    expect(result).toContain('hide system dividers = yes')
+    expect(result).not.toContain('"yes"')
+  })
+
   it('formats string keys with quotes', () => {
     const result = updateMetadataField(
       sourceWithMetadata,

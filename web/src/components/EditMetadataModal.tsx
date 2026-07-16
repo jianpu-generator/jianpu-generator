@@ -345,6 +345,25 @@ export function EditMetadataModal({
                     />
                   </td>
                 </tr>
+                <tr>
+                  <td style={tdStyle}>Hide System Dividers</td>
+                  <td style={tdStyle}>
+                    <input
+                      type="checkbox"
+                      checked={
+                        metadata.hideSystemDividers ??
+                        defaults?.hideSystemDividers ??
+                        false
+                      }
+                      onChange={(e) =>
+                        onFieldChange(
+                          'hide system dividers',
+                          e.target.checked ? 'yes' : 'no',
+                        )
+                      }
+                    />
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>

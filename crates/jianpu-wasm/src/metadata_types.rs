@@ -1,7 +1,8 @@
 use jianpu_generator::ast::grouped::{
-    default_lyrics_font_size, DEFAULT_HIDE_RESTING_PARTS, DEFAULT_LABEL_WIDTH,
-    DEFAULT_MAX_MEASURES_PER_SYSTEM, DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
-    DEFAULT_NOTE_NUMBER_WIDTH, DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_ROW_HEIGHT,
+    default_lyrics_font_size, DEFAULT_HIDE_RESTING_PARTS, DEFAULT_HIDE_SYSTEM_DIVIDERS,
+    DEFAULT_LABEL_WIDTH, DEFAULT_MAX_MEASURES_PER_SYSTEM,
+    DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS, DEFAULT_NOTE_NUMBER_WIDTH,
+    DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_ROW_HEIGHT,
 };
 use serde::Serialize;
 use tsify::Tsify;
@@ -19,6 +20,7 @@ pub struct MetadataDefaultsOut {
     pub lyrics_font_size: u32,
     pub merge_duplicate_measures_across_parts: bool,
     pub hide_resting_parts: bool,
+    pub hide_system_dividers: bool,
 }
 
 impl Default for MetadataDefaultsOut {
@@ -32,6 +34,7 @@ impl Default for MetadataDefaultsOut {
             lyrics_font_size: default_lyrics_font_size(DEFAULT_ROW_HEIGHT),
             merge_duplicate_measures_across_parts: DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
             hide_resting_parts: DEFAULT_HIDE_RESTING_PARTS,
+            hide_system_dividers: DEFAULT_HIDE_SYSTEM_DIVIDERS,
         }
     }
 }

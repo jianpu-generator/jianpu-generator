@@ -19,6 +19,8 @@ pub const DEFAULT_PARTS_LIST_COLUMNS: u32 = 4;
 pub const DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS: bool = true;
 /// Default `hide_resting_parts`, used when unset in `# metadata`.
 pub const DEFAULT_HIDE_RESTING_PARTS: bool = true;
+/// Default `hide_system_dividers`, used when unset in `# metadata`.
+pub const DEFAULT_HIDE_SYSTEM_DIVIDERS: bool = false;
 
 /// Default `lyrics_font_size` in points: 60% of `row_height`, used when unset in `# metadata`.
 pub fn default_lyrics_font_size(row_height: u32) -> u32 {
@@ -48,6 +50,9 @@ pub struct Metadata {
     /// When `false`, an all-rest part is no longer omitted from a measure that has other
     /// parts with real content (see `compiler::compile_measure`). Default: `true`.
     pub hide_resting_parts: bool,
+    /// When `true`, the horizontal divider line drawn between systems is omitted (see
+    /// `grid_layout::layout`). Default: `false`.
+    pub hide_system_dividers: bool,
 }
 
 #[derive(Clone)]

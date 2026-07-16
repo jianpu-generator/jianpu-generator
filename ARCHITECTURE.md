@@ -64,6 +64,7 @@ source (&str)
 - Module: `src/grid_layout/`
 - Entry: `grid_layout::layout(result: &CompileResult, config: &RenderConfig, header: &Header, width_pt: f32, height_pt: f32) -> Vec<GridPage>`
 - Key types: `GridPage`, `GridRow`, `GridElement`, `GridContent`, `HAlign`, `VAlign`
+- `config.hide_system_dividers` (from `Metadata::hide_system_dividers`, `# metadata` field `hide system dividers`, default `no`) gates `layout::build_page_rows`'s insertion of the full-width `GridContent::HorizontalLine` separator row between systems, and the corresponding gap in `layout()`'s page-break height accounting; when `true`, no divider row or gap is inserted between systems.
 
 ### Coordinate Resolver
 - Module: `src/coordinate_resolver/`

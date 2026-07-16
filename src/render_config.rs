@@ -8,6 +8,7 @@ pub struct RenderConfig {
     pub note_number_width: u32,
     pub max_measures_per_system: u32,
     pub lyrics_font_size: u32,
+    pub hide_system_dividers: bool,
 }
 
 impl RenderConfig {
@@ -18,6 +19,7 @@ impl RenderConfig {
             note_number_width: meta.note_number_width,
             max_measures_per_system: meta.max_measures_per_system,
             lyrics_font_size: meta.lyrics_font_size,
+            hide_system_dividers: meta.hide_system_dividers,
         }
     }
 
@@ -59,6 +61,7 @@ mod tests {
             lyrics_font_size: 18,
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
+            hide_system_dividers: false,
         };
         let cfg = RenderConfig::from_metadata(&meta);
         assert_eq!(cfg.row_height, 30);

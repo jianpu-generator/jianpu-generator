@@ -16,6 +16,7 @@ fn test_metadata() -> Metadata {
         lyrics_font_size: 14,
         merge_duplicate_measures_across_parts: true,
         hide_resting_parts: true,
+        hide_system_dividers: false,
     }
 }
 
