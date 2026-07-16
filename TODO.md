@@ -11,7 +11,7 @@
 - [x] Demo should be a folder of multiple files
 - [x] Allow sections to be out of order
 - [x] new group section to allow group of label to be combined together
-- [ ] Allow second line of lyrics for pinyin
+- [x] Allow second line of lyrics for pinyin
 - [ ] URL should contain the current selected file ID/name
 - [ ] One 0 should autofill 4 zeroes?
 - [ ] How to collapse contiguous resting measures into one
@@ -21,5 +21,7 @@
 - [ ] Formatter: align lyric syllables with their corresponding notes
 - [ ] Allow system dividers to be hidden
 - [x] Allow cross-part measure consolidation to be togglable
-- [ ] Allow hiding resting parts to be togglable
+- [x] Allow hiding resting measure of some parts to be togglable
 - [ ] Help tooltip for every fields in Edit Metadata
+- [ ] Why cargo test takes so long?
+- [ ] Unexplained vertical gap on measure 9 of 今山古道

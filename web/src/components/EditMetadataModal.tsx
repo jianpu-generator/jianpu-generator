@@ -326,6 +326,25 @@ export function EditMetadataModal({
                     />
                   </td>
                 </tr>
+                <tr>
+                  <td style={tdStyle}>Hide Resting Parts</td>
+                  <td style={tdStyle}>
+                    <input
+                      type="checkbox"
+                      checked={
+                        metadata.hideRestingParts ??
+                        defaults?.hideRestingParts ??
+                        true
+                      }
+                      onChange={(e) =>
+                        onFieldChange(
+                          'hide resting parts',
+                          e.target.checked ? 'yes' : 'no',
+                        )
+                      }
+                    />
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>

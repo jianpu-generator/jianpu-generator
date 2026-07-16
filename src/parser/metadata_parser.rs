@@ -73,6 +73,7 @@ struct MetadataAccumulator {
     parts_list_columns: Option<u32>,
     lyrics_font_size: Option<u32>,
     merge_duplicate_measures_across_parts: Option<bool>,
+    hide_resting_parts: Option<bool>,
 }
 
 impl MetadataAccumulator {
@@ -117,6 +118,9 @@ impl MetadataAccumulator {
                 value_span,
                 errors,
             ),
+            "hide resting parts" => {
+                parse_bool_field(&mut self.hide_resting_parts, key, value, value_span, errors)
+            }
             _ => errors.push(RecoverableError::metadata_unknown_field(key_span, key)),
         }
     }
@@ -170,6 +174,7 @@ pub fn parse_metadata(
             lyrics_font_size: accumulator.lyrics_font_size,
             merge_duplicate_measures_across_parts: accumulator
                 .merge_duplicate_measures_across_parts,
+            hide_resting_parts: accumulator.hide_resting_parts,
         },
         errors,
     )
@@ -339,6 +344,29 @@ mod tests {
     fn collects_error_for_invalid_merge_duplicate_measures_across_parts() {
         let content =
             "title = \"t\"\nauthor = \"a\"\nmerge duplicate measures across parts = maybe\n";
+        let (_meta, errors) = parse_metadata(content, 0);
+        assert!(!errors.is_empty());
+    }
+
+    #[test]
+    fn parses_hide_resting_parts() {
+        let content = "title = \"t\"\nauthor = \"a\"\nhide resting parts = no\n";
+        let (meta, errors) = parse_metadata(content, 0);
+        assert!(errors.is_empty());
+        assert_eq!(meta.hide_resting_parts, Some(false));
+    }
+
+    #[test]
+    fn hide_resting_parts_defaults_to_none() {
+        let content = "title = \"t\"\nauthor = \"a\"\n";
+        let (meta, errors) = parse_metadata(content, 0);
+        assert!(errors.is_empty());
+        assert_eq!(meta.hide_resting_parts, None);
+    }
+
+    #[test]
+    fn collects_error_for_invalid_hide_resting_parts() {
+        let content = "title = \"t\"\nauthor = \"a\"\nhide resting parts = maybe\n";
         let (_meta, errors) = parse_metadata(content, 0);
         assert!(!errors.is_empty());
     }

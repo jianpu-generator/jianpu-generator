@@ -1,11 +1,28 @@
 use super::*;
+use crate::ast::grouped::Metadata;
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName};
 use crate::error::Span;
+
+fn test_metadata() -> Metadata {
+    Metadata {
+        title: None,
+        subtitle: None,
+        author: None,
+        row_height: 24,
+        max_measures_per_system: 28,
+        label_width: 40,
+        note_number_width: 8,
+        parts_list_columns: 3,
+        lyrics_font_size: 14,
+        merge_duplicate_measures_across_parts: true,
+        hide_resting_parts: true,
+    }
+}
 
 #[test]
 fn chord_major_expands_to_three_notes() {
     use crate::ast::grouped::{
-        GroupedChordNote, Metadata, MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score,
+        GroupedChordNote, MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score,
         TimeSignature,
     };
     use crate::ast::parsed::{
@@ -35,18 +52,7 @@ fn chord_major_expands_to_three_notes() {
         slur_group_close_at_duration: None,
     };
     let score = Score {
-        metadata: Metadata {
-            title: None,
-            subtitle: None,
-            author: None,
-            row_height: 24,
-            max_measures_per_system: 28,
-            label_width: 40,
-            note_number_width: 8,
-            parts_list_columns: 3,
-            lyrics_font_size: 14,
-            merge_duplicate_measures_across_parts: true,
-        },
+        metadata: test_metadata(),
         measures: vec![MultiPartMeasure {
             time_signature: Some(TimeSignature {
                 numerator: 4,
@@ -190,7 +196,7 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
     // `(1 1)` — two slurred notes on the same pitch must each be re-articulated.
     use crate::ast::grouped::GroupedNote;
     use crate::ast::grouped::{
-        Metadata, MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
+        MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
     };
     use crate::ast::parsed::{JianPuPitch, PartKind, Soundfont};
 
@@ -211,18 +217,7 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
     };
 
     let score = Score {
-        metadata: Metadata {
-            title: None,
-            subtitle: None,
-            author: None,
-            row_height: 24,
-            max_measures_per_system: 28,
-            label_width: 40,
-            note_number_width: 8,
-            parts_list_columns: 3,
-            lyrics_font_size: 14,
-            merge_duplicate_measures_across_parts: true,
-        },
+        metadata: test_metadata(),
         measures: vec![MultiPartMeasure {
             time_signature: Some(TimeSignature {
                 numerator: 4,

@@ -186,6 +186,9 @@ pub struct ParsedMetadata {
     /// When `false`, disables merging of identical measure rows that come from different
     /// parts (see `consolidator::consolidate`). Default: `true`.
     pub merge_duplicate_measures_across_parts: Option<bool>,
+    /// When `false`, an all-rest part is no longer omitted from a measure that has other
+    /// parts with real content (see `compiler::compile_measure`). Default: `true`.
+    pub hide_resting_parts: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -300,6 +300,35 @@ time=4/4 key=C4 bpm=120
 }
 
 #[test]
+fn not_mentioned_part_is_kept_when_hide_resting_parts_is_disabled() {
+    let score = score_from(
+        "# metadata
+title=\"t\"
+author=\"a\"
+hide resting parts = no
+
+# parts
+A = notes+lyrics
+B = chords
+C = notes
+
+# score
+time=4/4 key=C4 bpm=120
+[A] 1 2 3 4
+[A] la la la la
+[C] 1
+",
+    );
+    let result = compile(&score);
+    let blocks = result.blocks;
+    assert_eq!(
+        blocks[0].rows.len(),
+        3,
+        "B (rest-filled) should be kept when hide resting parts is disabled"
+    );
+}
+
+#[test]
 fn extended_note_produces_note_dash_at_each_extra_beat() {
     // "1- 2-" = two half notes filling a 4/4 measure (8+8=16 quarter-beats).
     // Each half note should produce one NoteDash at the beat following the note head.

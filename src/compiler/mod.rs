@@ -45,6 +45,7 @@ pub fn compile(score: &Score) -> CompileResult {
                 measure_index,
                 &mut cross_states,
                 &mut slur_spans,
+                score.metadata.hide_resting_parts,
             )
         })
         .collect();
@@ -191,16 +192,18 @@ fn compile_measure(
     measure_index: usize,
     cross_states: &mut Vec<PartCrossState>,
     slur_spans: &mut Vec<SlurSpan>,
+    hide_resting_parts: bool,
 ) -> MeasureBlock {
     while cross_states.len() < measure.parts.len() {
         cross_states.push(PartCrossState::new());
     }
 
-    let visible_part_count = if measure.parts.iter().any(|p| !is_rest_filled(p)) {
-        measure.parts.iter().filter(|p| !is_rest_filled(p)).count()
-    } else {
-        measure.parts.len()
-    };
+    let visible_part_count =
+        if hide_resting_parts && measure.parts.iter().any(|p| !is_rest_filled(p)) {
+            measure.parts.iter().filter(|p| !is_rest_filled(p)).count()
+        } else {
+            measure.parts.len()
+        };
 
     let decorations = collect_decorations(measure, bar_number);
     let mut rows: Vec<MeasureRow> = Vec::new();

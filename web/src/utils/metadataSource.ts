@@ -9,6 +9,7 @@ export type MetadataKey =
   | 'parts list columns'
   | 'lyrics font size'
   | 'merge duplicate measures across parts'
+  | 'hide resting parts'
 
 export interface ParsedMetadataFields {
   title: string
@@ -21,6 +22,7 @@ export interface ParsedMetadataFields {
   partsListColumns: number | null
   lyricsFontSize: number | null
   mergeDuplicateMeasuresAcrossParts: boolean | null
+  hideRestingParts: boolean | null
 }
 
 const numericKeys: MetadataKey[] = [
@@ -35,6 +37,7 @@ const numericKeys: MetadataKey[] = [
 const unquotedKeys: MetadataKey[] = [
   ...numericKeys,
   'merge duplicate measures across parts',
+  'hide resting parts',
 ]
 
 const canonicalKeyOrder: MetadataKey[] = [
@@ -48,6 +51,7 @@ const canonicalKeyOrder: MetadataKey[] = [
   'parts list columns',
   'lyrics font size',
   'merge duplicate measures across parts',
+  'hide resting parts',
 ]
 
 function isUnquotedKey(key: MetadataKey): boolean {
@@ -125,6 +129,7 @@ export function parseMetadata(source: string): ParsedMetadataFields {
     partsListColumns: null,
     lyricsFontSize: null,
     mergeDuplicateMeasuresAcrossParts: null,
+    hideRestingParts: null,
   }
 
   if (startIndex === -1) return result
@@ -162,6 +167,8 @@ export function parseMetadata(source: string): ParsedMetadataFields {
   if (fieldMap.has('merge duplicate measures across parts'))
     result.mergeDuplicateMeasuresAcrossParts =
       fieldMap.get('merge duplicate measures across parts') === 'yes'
+  if (fieldMap.has('hide resting parts'))
+    result.hideRestingParts = fieldMap.get('hide resting parts') === 'yes'
 
   return result
 }
