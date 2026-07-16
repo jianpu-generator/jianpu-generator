@@ -9,6 +9,8 @@
 
 pub mod ast;
 mod audio_source;
+#[cfg(feature = "cli")]
+pub mod cli;
 pub mod combiner;
 pub mod compiler;
 pub mod compositor;

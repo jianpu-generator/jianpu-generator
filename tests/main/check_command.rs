@@ -1,10 +1,7 @@
 #![allow(clippy::disallowed_macros)]
+use jianpu_generator::cli::check;
 use std::fs;
-use std::process::Command;
-
-fn jianpu_cmd() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_jianpu"))
-}
+use std::path::Path;
 
 #[test]
 fn check_succeeds_on_valid_file() {
@@ -20,13 +17,13 @@ Melody = notes
     )
     .unwrap();
 
-    let output = jianpu_cmd().args(["check", input_path]).output().unwrap();
+    let outcome = check(Path::new(input_path)).unwrap();
 
     fs::remove_file(input_path).ok();
     assert!(
-        output.status.success(),
-        "expected success, got: {}",
-        String::from_utf8_lossy(&output.stderr)
+        outcome.ok,
+        "expected success, got: {:?}",
+        outcome.diagnostics
     );
 }
 
@@ -44,14 +41,17 @@ Melody = notes
     )
     .unwrap();
 
-    let output = jianpu_cmd().args(["check", input_path]).output().unwrap();
+    let outcome = check(Path::new(input_path)).unwrap();
 
     fs::remove_file(input_path).ok();
     assert!(
-        !output.status.success(),
+        !outcome.ok,
         "expected failure for unrecognised abbreviation"
     );
-    assert!(String::from_utf8_lossy(&output.stderr).contains("Unknown"));
+    assert!(outcome
+        .diagnostics
+        .iter()
+        .any(|d| d.message().contains("Unknown")));
 }
 
 #[test]
@@ -59,11 +59,8 @@ fn check_fails_on_irrecoverable_error() {
     let input_path = "/tmp/test_check_irrecoverable_error.jianpu";
     fs::write(input_path, "# score\n[Melody] 1 2 3 4\n").unwrap();
 
-    let output = jianpu_cmd().args(["check", input_path]).output().unwrap();
+    let outcome = check(Path::new(input_path)).unwrap();
 
     fs::remove_file(input_path).ok();
-    assert!(
-        !output.status.success(),
-        "expected failure for missing # parts section"
-    );
+    assert!(!outcome.ok, "expected failure for missing # parts section");
 }

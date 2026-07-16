@@ -1,10 +1,8 @@
 #![allow(clippy::disallowed_macros)]
+use jianpu_generator::cli::generate::{generate_midi, generate_pdf, generate_wav};
+use jianpu_generator::cli::GenerateInput;
 use std::fs;
-use std::process::Command;
-
-fn jianpu_cmd() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_jianpu"))
-}
+use std::path::PathBuf;
 
 fn basic_jianpu_input() -> &'static str {
     concat!(
@@ -29,12 +27,14 @@ fn generate_pdf_produces_pdf() {
     let output_path = "/tmp/test_pdf_basic.pdf";
     fs::write(input_path, basic_jianpu_input()).unwrap();
 
-    let status = jianpu_cmd()
-        .args(["generate", "pdf", input_path, "--output", output_stem_arg])
-        .status()
-        .unwrap();
+    generate_pdf(&GenerateInput {
+        input: PathBuf::from(input_path),
+        output: Some(PathBuf::from(output_stem_arg)),
+        tracks: vec![],
+        split_tracks: false,
+    })
+    .expect("generate pdf command failed");
 
-    assert!(status.success(), "generate pdf command failed");
     let bytes = fs::read(output_path).unwrap();
     assert!(bytes.starts_with(b"%PDF"), "output is not a valid PDF");
 
@@ -49,12 +49,14 @@ fn generate_midi_produces_midi() {
     let output_path = "/tmp/test_score_midi_out.mid";
     fs::write(input_path, basic_jianpu_input()).unwrap();
 
-    let status = jianpu_cmd()
-        .args(["generate", "midi", input_path, "--output", output_stem_arg])
-        .status()
-        .unwrap();
+    generate_midi(&GenerateInput {
+        input: PathBuf::from(input_path),
+        output: Some(PathBuf::from(output_stem_arg)),
+        tracks: vec![],
+        split_tracks: false,
+    })
+    .expect("generate midi command failed");
 
-    assert!(status.success(), "generate midi command failed");
     let bytes = fs::read(output_path).unwrap();
     // MIDI files start with "MThd"
     assert!(
@@ -74,12 +76,14 @@ fn output_stem_appends_extension() {
     fs::write(input_path, basic_jianpu_input()).unwrap();
     fs::remove_file(expected_output).ok();
 
-    let status = jianpu_cmd()
-        .args(["generate", "pdf", input_path, "--output", output_stem])
-        .status()
-        .unwrap();
+    generate_pdf(&GenerateInput {
+        input: PathBuf::from(input_path),
+        output: Some(PathBuf::from(output_stem)),
+        tracks: vec![],
+        split_tracks: false,
+    })
+    .expect("generate pdf command failed");
 
-    assert!(status.success(), "generate pdf command failed");
     let bytes = fs::read(expected_output).expect("output file not found at expected stem path");
     assert!(bytes.starts_with(b"%PDF"), "output is not a valid PDF");
 
@@ -94,12 +98,14 @@ fn generate_wav_produces_wav() {
     let output_path = "/tmp/test_score_wav_out.wav";
     fs::write(input_path, basic_jianpu_input()).unwrap();
 
-    let status = jianpu_cmd()
-        .args(["generate", "wav", input_path, "--output", output_stem_arg])
-        .status()
-        .unwrap();
+    generate_wav(&GenerateInput {
+        input: PathBuf::from(input_path),
+        output: Some(PathBuf::from(output_stem_arg)),
+        tracks: vec![],
+        split_tracks: false,
+    })
+    .expect("generate wav command failed");
 
-    assert!(status.success(), "generate wav command failed");
     let bytes = fs::read(output_path).unwrap();
     assert_eq!(&bytes[0..4], b"RIFF", "output is not a valid WAV file");
     assert_eq!(&bytes[8..12], b"WAVE", "output is not a valid WAV file");
@@ -138,15 +144,13 @@ fn split_tracks_generates_one_pdf_per_track() {
     fs::remove_file(s1_path).ok();
     fs::remove_file(s2_path).ok();
 
-    let status = jianpu_cmd()
-        .args(["generate", "pdf", input_path, "--split-tracks"])
-        .status()
-        .unwrap();
-
-    assert!(
-        status.success(),
-        "generate pdf --split-tracks command failed"
-    );
+    generate_pdf(&GenerateInput {
+        input: PathBuf::from(input_path),
+        output: None,
+        tracks: vec![],
+        split_tracks: true,
+    })
+    .expect("generate pdf --split-tracks command failed");
 
     let s1_bytes = fs::read(s1_path).expect("S1 output file not found");
     assert!(
@@ -174,22 +178,13 @@ fn split_tracks_with_output_stem() {
     fs::remove_file(s1_path).ok();
     fs::remove_file(s2_path).ok();
 
-    let status = jianpu_cmd()
-        .args([
-            "generate",
-            "pdf",
-            input_path,
-            "--output",
-            "/tmp/split_out",
-            "--split-tracks",
-        ])
-        .status()
-        .unwrap();
-
-    assert!(
-        status.success(),
-        "generate pdf --output --split-tracks command failed"
-    );
+    generate_pdf(&GenerateInput {
+        input: PathBuf::from(input_path),
+        output: Some(PathBuf::from("/tmp/split_out")),
+        tracks: vec![],
+        split_tracks: true,
+    })
+    .expect("generate pdf --output --split-tracks command failed");
 
     let s1_bytes = fs::read(s1_path).expect("S1 output file not found");
     assert!(

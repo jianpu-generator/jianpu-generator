@@ -1,7 +1,5 @@
-use jianpu_generator::{self as jg};
+use crate as jg;
 use std::path::{Path, PathBuf};
-
-use super::GenerateFormat;
 
 fn output_stem(input: &Path, tracks: &[String], output: Option<&Path>) -> PathBuf {
     match output {
@@ -18,11 +16,11 @@ fn output_stem(input: &Path, tracks: &[String], output: Option<&Path>) -> PathBu
     }
 }
 
-pub(super) struct GenerateInput {
-    pub(super) input: PathBuf,
-    pub(super) output: Option<PathBuf>,
-    pub(super) tracks: Vec<String>,
-    pub(super) split_tracks: bool,
+pub struct GenerateInput {
+    pub input: PathBuf,
+    pub output: Option<PathBuf>,
+    pub tracks: Vec<String>,
+    pub split_tracks: bool,
 }
 
 fn effective_tracks(tracks: &[String], score: &jg::ast::grouped::Score) -> Vec<String> {
@@ -99,7 +97,8 @@ fn write_svgs_to_path(
     Ok(())
 }
 
-fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableError> {
+#[cfg(feature = "pdf")]
+pub fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableError> {
     if opts.split_tracks {
         let content = std::fs::read_to_string(&opts.input).map_err(|e| {
             jg::error::IrrecoverableError::new(jg::error::IrrecoverableErrorKind::IoReadFailed {
@@ -158,7 +157,7 @@ fn read_display_names(
     jg::part_display_name_map(&content, &filename)
 }
 
-fn generate_svg(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableError> {
+pub fn generate_svg(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableError> {
     let score = super::parse_and_group(&opts.input)?;
     if opts.split_tracks {
         let display_names = read_display_names(&opts.input)?;
@@ -206,7 +205,8 @@ fn generate_svg(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableErro
     write_svgs_to_path(&render_output.svgs, &output_path)
 }
 
-fn generate_midi(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableError> {
+#[cfg(feature = "midi")]
+pub fn generate_midi(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableError> {
     let score = super::parse_and_group(&opts.input)?;
     if opts.split_tracks {
         let display_names = read_display_names(&opts.input)?;
@@ -239,7 +239,8 @@ fn generate_midi(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableErr
     Ok(())
 }
 
-fn generate_wav(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableError> {
+#[cfg(feature = "wav")]
+pub fn generate_wav(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableError> {
     let score = super::parse_and_group(&opts.input)?;
     if opts.split_tracks {
         let display_names = read_display_names(&opts.input)?;
@@ -272,53 +273,4 @@ fn generate_wav(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableErro
     super::write_file(&output_path, &wav_bytes)?;
     println!("written to {output_path:?}");
     Ok(())
-}
-
-pub(super) fn run_generate(format: GenerateFormat) -> Result<(), jg::error::IrrecoverableError> {
-    match format {
-        GenerateFormat::Pdf {
-            input,
-            output,
-            tracks,
-            split_tracks,
-        } => generate_pdf(&GenerateInput {
-            input,
-            output,
-            tracks,
-            split_tracks,
-        }),
-        GenerateFormat::Svg {
-            input,
-            output,
-            tracks,
-            split_tracks,
-        } => generate_svg(&GenerateInput {
-            input,
-            output,
-            tracks,
-            split_tracks,
-        }),
-        GenerateFormat::Midi {
-            input,
-            output,
-            tracks,
-            split_tracks,
-        } => generate_midi(&GenerateInput {
-            input,
-            output,
-            tracks,
-            split_tracks,
-        }),
-        GenerateFormat::Wav {
-            input,
-            output,
-            tracks,
-            split_tracks,
-        } => generate_wav(&GenerateInput {
-            input,
-            output,
-            tracks,
-            split_tracks,
-        }),
-    }
 }
