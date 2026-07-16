@@ -136,6 +136,16 @@ title = "Song"
     expect(lines[metadataEnd - 1]).toBe('')
   })
 
+  it('formats the merge duplicate measures across parts key without quotes', () => {
+    const result = updateMetadataField(
+      sourceWithMetadata,
+      'merge duplicate measures across parts',
+      'no',
+    )
+    expect(result).toContain('merge duplicate measures across parts = no')
+    expect(result).not.toContain('"no"')
+  })
+
   it('formats string keys with quotes', () => {
     const result = updateMetadataField(
       sourceWithMetadata,

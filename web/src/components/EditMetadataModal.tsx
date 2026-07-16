@@ -307,6 +307,25 @@ export function EditMetadataModal({
                     />
                   </td>
                 </tr>
+                <tr>
+                  <td style={tdStyle}>Merge Duplicate Measures Across Parts</td>
+                  <td style={tdStyle}>
+                    <input
+                      type="checkbox"
+                      checked={
+                        metadata.mergeDuplicateMeasuresAcrossParts ??
+                        defaults?.mergeDuplicateMeasuresAcrossParts ??
+                        true
+                      }
+                      onChange={(e) =>
+                        onFieldChange(
+                          'merge duplicate measures across parts',
+                          e.target.checked ? 'yes' : 'no',
+                        )
+                      }
+                    />
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>

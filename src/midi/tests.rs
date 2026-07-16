@@ -21,6 +21,7 @@ fn default_test_metadata() -> Metadata {
         note_number_width: 8,
         parts_list_columns: 3,
         lyrics_font_size: 14,
+        merge_duplicate_measures_across_parts: true,
     }
 }
 
@@ -117,6 +118,7 @@ pub(super) fn one_measure_score() -> Score {
             note_number_width: 8,
             parts_list_columns: 3,
             lyrics_font_size: 14,
+            merge_duplicate_measures_across_parts: true,
         },
         measures: vec![MultiPartMeasure {
             time_signature: Some(TimeSignature {
@@ -211,6 +213,7 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
             note_number_width: 8,
             parts_list_columns: 3,
             lyrics_font_size: 14,
+            merge_duplicate_measures_across_parts: true,
         },
         measures: vec![MultiPartMeasure {
             time_signature: Some(TimeSignature {

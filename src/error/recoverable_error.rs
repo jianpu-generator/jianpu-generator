@@ -180,6 +180,16 @@ impl RecoverableError {
         }
     }
 
+    pub fn metadata_invalid_boolean(span: Span, field: &str, value: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::MetadataInvalidBoolean {
+                field: field.to_string(),
+                value: value.to_string(),
+            },
+        }
+    }
+
     pub fn parts_malformed_line(span: Span, line: &str) -> Self {
         Self {
             span,

@@ -183,6 +183,9 @@ pub struct ParsedMetadata {
     pub note_number_width: Option<u32>,
     pub parts_list_columns: Option<u32>,
     pub lyrics_font_size: Option<u32>,
+    /// When `false`, disables merging of identical measure rows that come from different
+    /// parts (see `consolidator::consolidate`). Default: `true`.
+    pub merge_duplicate_measures_across_parts: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

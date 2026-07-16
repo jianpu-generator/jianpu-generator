@@ -66,6 +66,7 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | `note number width` | no | `8` | Horizontal space per note column (pixels) |
 | `parts list columns` | no | `4` | Number of columns in the parts list header |
 | `lyrics font size` | no | `row height * 0.6` | Font size of lyric syllables (points) |
+| `merge duplicate measures across parts` | no | `yes` | Whether identical measures from different parts are merged into a single row (`yes`/`no`) |
 
 ---
 

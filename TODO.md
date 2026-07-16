@@ -20,4 +20,6 @@
 - [ ] LSP rename
 - [ ] Formatter: align lyric syllables with their corresponding notes
 - [ ] Allow system dividers to be hidden
-- [ ] Allow cross-part measure consolidation to be togglable
+- [x] Allow cross-part measure consolidation to be togglable
+- [ ] Allow hiding resting parts to be togglable
+- [ ] Help tooltip for every fields in Edit Metadata

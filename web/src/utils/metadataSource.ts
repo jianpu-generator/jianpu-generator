@@ -8,6 +8,7 @@ export type MetadataKey =
   | 'note number width'
   | 'parts list columns'
   | 'lyrics font size'
+  | 'merge duplicate measures across parts'
 
 export interface ParsedMetadataFields {
   title: string
@@ -19,6 +20,7 @@ export interface ParsedMetadataFields {
   noteNumberWidth: number | null
   partsListColumns: number | null
   lyricsFontSize: number | null
+  mergeDuplicateMeasuresAcrossParts: boolean | null
 }
 
 const numericKeys: MetadataKey[] = [
@@ -28,6 +30,11 @@ const numericKeys: MetadataKey[] = [
   'note number width',
   'parts list columns',
   'lyrics font size',
+]
+
+const unquotedKeys: MetadataKey[] = [
+  ...numericKeys,
+  'merge duplicate measures across parts',
 ]
 
 const canonicalKeyOrder: MetadataKey[] = [
@@ -40,10 +47,11 @@ const canonicalKeyOrder: MetadataKey[] = [
   'note number width',
   'parts list columns',
   'lyrics font size',
+  'merge duplicate measures across parts',
 ]
 
-function isNumericKey(key: MetadataKey): boolean {
-  return numericKeys.includes(key)
+function isUnquotedKey(key: MetadataKey): boolean {
+  return unquotedKeys.includes(key)
 }
 
 function findMetadataSection(lines: string[]): {
@@ -90,7 +98,7 @@ function parseSectionIntoMap(
 }
 
 function formatMetadataLine(key: MetadataKey, value: string): string {
-  return isNumericKey(key) ? `${key} = ${value}` : `${key} = "${value}"`
+  return isUnquotedKey(key) ? `${key} = ${value}` : `${key} = "${value}"`
 }
 
 function emitCanonicalSection(fieldMap: Map<MetadataKey, string>): string[] {
@@ -116,6 +124,7 @@ export function parseMetadata(source: string): ParsedMetadataFields {
     noteNumberWidth: null,
     partsListColumns: null,
     lyricsFontSize: null,
+    mergeDuplicateMeasuresAcrossParts: null,
   }
 
   if (startIndex === -1) return result
@@ -150,6 +159,9 @@ export function parseMetadata(source: string): ParsedMetadataFields {
       fieldMap.get('lyrics font size') as string,
       10,
     )
+  if (fieldMap.has('merge duplicate measures across parts'))
+    result.mergeDuplicateMeasuresAcrossParts =
+      fieldMap.get('merge duplicate measures across parts') === 'yes'
 
   return result
 }

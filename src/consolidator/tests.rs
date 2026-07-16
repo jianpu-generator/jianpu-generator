@@ -7,7 +7,7 @@ fn consolidated_blocks(source: &str) -> Vec<MeasureBlock> {
     let document = parse(source, "test", &[]).unwrap();
     let score = group(document).unwrap();
     let result = compile(&score);
-    consolidate(result).blocks
+    consolidate(result, score.metadata.merge_duplicate_measures_across_parts).blocks
 }
 
 #[test]
@@ -76,6 +76,42 @@ fn follow_part_identical_to_source_is_omitted_per_measure() {
         blocks[1].rows[2].label, "B",
         "measure 2: third row should be B notes"
     );
+}
+
+#[test]
+fn identical_rows_from_different_parts_merge_by_default() {
+    let source = r#"
+# parts
+A = notes
+B = notes
+
+# score
+[A] 1 2 3 4
+[B] 1 2 3 4
+"#;
+    let blocks = consolidated_blocks(source);
+    assert_eq!(blocks[0].rows.len(), 1);
+    assert_eq!(blocks[0].rows[0].label, "A B");
+}
+
+#[test]
+fn identical_rows_from_different_parts_stay_separate_when_disabled() {
+    let source = r#"
+# metadata
+merge duplicate measures across parts = no
+
+# parts
+A = notes
+B = notes
+
+# score
+[A] 1 2 3 4
+[B] 1 2 3 4
+"#;
+    let blocks = consolidated_blocks(source);
+    assert_eq!(blocks[0].rows.len(), 2);
+    assert_eq!(blocks[0].rows[0].label, "A");
+    assert_eq!(blocks[0].rows[1].label, "B");
 }
 
 #[test]

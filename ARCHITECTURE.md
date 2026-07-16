@@ -53,8 +53,9 @@ source (&str)
 
 ### Consolidator
 - Module: `src/consolidator/`
-- Entry: `consolidator::consolidate(result: CompileResult) -> CompileResult`
+- Entry: `consolidator::consolidate(result: CompileResult, merge_across_parts: bool) -> CompileResult`
 - Splits mixed `notes lyrics` rows into one notes row plus one lyrics row per verse (`ElementContent::Lyric { text, verse }` groups by `verse`), each verse's row getting a distinct `RowId` (`"{part}-lyrics-{verse}"`), then removes duplicate rows within each measure when their `elements` are identical (labels and ids are not compared). `slur_spans` are passed through unchanged.
+- `merge_across_parts` (from `Metadata::merge_duplicate_measures_across_parts`, `# metadata` field `merge duplicate measures across parts`, default `yes`) gates only merges between rows with different `source_part_index`; rows from the same part still merge regardless.
 - Because each verse gets its own `RowId`, a part's verse count changing between two measures changes that measure's row-id list, so `grid_layout::layout::pack_into_systems`'s existing row-identity check (see **System**) already forces a new system at that boundary — no separate verse-count check is needed.
 - When rows merge, `merge_labels()` sets the surviving row's label to the shared group abbreviation when every merged row's `group_provenance` traces to the same `[GroupAbbrev]` broadcast (see **Group** in the glossary); otherwise it falls back to the space-joined concatenation of each source row's original label (its part abbreviation), and the surviving row's `group_provenance` is cleared to `None` so a later merge in the same pass can't mistake a partially-diverged cluster for a fully in-group one.
 

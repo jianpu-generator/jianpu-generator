@@ -2,13 +2,17 @@ use crate::compiler::types::{
     ColumnElement, CompileResult, ElementContent, MeasureBlock, MeasureRow, RowId,
 };
 
-pub fn consolidate(mut result: CompileResult) -> CompileResult {
-    result.blocks = result.blocks.into_iter().map(consolidate_block).collect();
+pub fn consolidate(mut result: CompileResult, merge_across_parts: bool) -> CompileResult {
+    result.blocks = result
+        .blocks
+        .into_iter()
+        .map(|block| consolidate_block(block, merge_across_parts))
+        .collect();
     result
 }
 
-fn consolidate_block(mut block: MeasureBlock) -> MeasureBlock {
-    block.rows = consolidate_rows(expand_mixed_rows(block.rows));
+fn consolidate_block(mut block: MeasureBlock, merge_across_parts: bool) -> MeasureBlock {
+    block.rows = consolidate_rows(expand_mixed_rows(block.rows), merge_across_parts);
     block
 }
 
@@ -114,7 +118,7 @@ fn merge_labels(left: &MeasureRow, right: &MeasureRow) -> (String, Option<String
     }
 }
 
-fn consolidate_rows(mut rows: Vec<MeasureRow>) -> Vec<MeasureRow> {
+fn consolidate_rows(mut rows: Vec<MeasureRow>, merge_across_parts: bool) -> Vec<MeasureRow> {
     let mut index = 0;
     while index < rows.len() {
         let mut inner = index + 1;
@@ -123,7 +127,10 @@ fn consolidate_rows(mut rows: Vec<MeasureRow>) -> Vec<MeasureRow> {
             let equal = rows
                 .get(index)
                 .zip(rows.get(inner))
-                .is_some_and(|(left, right)| content_equal(left, right));
+                .is_some_and(|(left, right)| {
+                    let is_cross_part = left.source_part_index != right.source_part_index;
+                    (merge_across_parts || !is_cross_part) && content_equal(left, right)
+                });
             if equal {
                 let merged_label = rows
                     .get(index)

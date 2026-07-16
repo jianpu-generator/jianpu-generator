@@ -204,7 +204,10 @@ fn render_svgs_with_parts(
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
     let header = build_header(score, parts, groups);
     let compile_result = compiler::compile(score);
-    let compile_result = consolidator::consolidate(compile_result);
+    let compile_result = consolidator::consolidate(
+        compile_result,
+        score.metadata.merge_duplicate_measures_across_parts,
+    );
     let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
     let abs = coordinate_resolver::resolve(
         &grid_pages,
@@ -307,7 +310,10 @@ pub fn render_svgs_with_highlight_range(
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
     let header = build_header(&score, &parts, &groups);
     let compile_result = compiler::compile(&score);
-    let compile_result = consolidator::consolidate(compile_result);
+    let compile_result = consolidator::consolidate(
+        compile_result,
+        score.metadata.merge_duplicate_measures_across_parts,
+    );
     let grid_pages = grid_layout::layout(
         &compile_result,
         &config,

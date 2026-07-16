@@ -1,6 +1,7 @@
 use jianpu_generator::ast::grouped::{
     default_lyrics_font_size, DEFAULT_LABEL_WIDTH, DEFAULT_MAX_MEASURES_PER_SYSTEM,
-    DEFAULT_NOTE_NUMBER_WIDTH, DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_ROW_HEIGHT,
+    DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS, DEFAULT_NOTE_NUMBER_WIDTH,
+    DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_ROW_HEIGHT,
 };
 use serde::Serialize;
 use tsify::Tsify;
@@ -16,6 +17,7 @@ pub struct MetadataDefaultsOut {
     pub note_number_width: u32,
     pub parts_list_columns: u32,
     pub lyrics_font_size: u32,
+    pub merge_duplicate_measures_across_parts: bool,
 }
 
 impl Default for MetadataDefaultsOut {
@@ -27,6 +29,7 @@ impl Default for MetadataDefaultsOut {
             note_number_width: DEFAULT_NOTE_NUMBER_WIDTH,
             parts_list_columns: DEFAULT_PARTS_LIST_COLUMNS,
             lyrics_font_size: default_lyrics_font_size(DEFAULT_ROW_HEIGHT),
+            merge_duplicate_measures_across_parts: DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
         }
     }
 }

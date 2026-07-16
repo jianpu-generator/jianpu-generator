@@ -13,6 +13,7 @@ fn metadata() -> Metadata {
         note_number_width: 8,
         parts_list_columns: 3,
         lyrics_font_size: 14,
+        merge_duplicate_measures_across_parts: true,
     }
 }
 

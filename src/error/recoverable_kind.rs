@@ -45,6 +45,8 @@ pub enum RecoverableErrorKind {
     MetadataInvalidInteger { field: String, value: String },
     /// A metadata integer field parsed to zero — the field keeps its default.
     MetadataMustBePositive { field: String },
+    /// A metadata boolean field is not `yes` or `no` — the field keeps its default.
+    MetadataInvalidBoolean { field: String, value: String },
     /// A parts declaration line does not contain `=` — the line is skipped.
     PartsMalformedLine { line: String },
     /// A parts abbreviation is used by more than one declaration — the duplicate is skipped.
@@ -147,6 +149,7 @@ impl RecoverableErrorKind {
             Self::MetadataUnknownField { field } => format!("unknown metadata field: {field}"),
             Self::MetadataInvalidInteger { field, value } => format!("{field} must be a positive integer, got: {value}"),
             Self::MetadataMustBePositive { field } => format!("{field} must be greater than zero"),
+            Self::MetadataInvalidBoolean { field, value } => format!("{field} must be 'yes' or 'no', got: {value}"),
             Self::PartsMalformedLine { line } => format!("expected track declaration, got: {line}"),
             Self::PartsDuplicateAbbreviation { abbrev } => format!("duplicate abbreviation: {abbrev}"),
             Self::PartsEmptySection => "expected at least one track in # parts section".to_string(),

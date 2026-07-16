@@ -43,19 +43,90 @@ fn parse_numeric_field(
     }
 }
 
+fn parse_bool_field(
+    target: &mut Option<bool>,
+    key: &str,
+    value: &str,
+    value_span: &Span,
+    errors: &mut Vec<RecoverableError>,
+) {
+    match value {
+        "yes" => *target = Some(true),
+        "no" => *target = Some(false),
+        _ => errors.push(RecoverableError::metadata_invalid_boolean(
+            *value_span,
+            key,
+            value,
+        )),
+    }
+}
+
+#[derive(Default)]
+struct MetadataAccumulator {
+    title: Option<String>,
+    subtitle: Option<String>,
+    author: Option<String>,
+    row_height: Option<u32>,
+    max_measures_per_system: Option<u32>,
+    label_width: Option<u32>,
+    note_number_width: Option<u32>,
+    parts_list_columns: Option<u32>,
+    lyrics_font_size: Option<u32>,
+    merge_duplicate_measures_across_parts: Option<bool>,
+}
+
+impl MetadataAccumulator {
+    fn apply_field(
+        &mut self,
+        key: &str,
+        value: &str,
+        key_span: Span,
+        value_span: &Span,
+        errors: &mut Vec<RecoverableError>,
+    ) {
+        match key {
+            "title" => self.title = Some(value.to_string()),
+            "subtitle" => self.subtitle = Some(value.to_string()),
+            "author" => self.author = Some(value.to_string()),
+            "row height" => {
+                parse_numeric_field(&mut self.row_height, key, value, value_span, errors)
+            }
+            "max measures per system" => parse_numeric_field(
+                &mut self.max_measures_per_system,
+                key,
+                value,
+                value_span,
+                errors,
+            ),
+            "label width" => {
+                parse_numeric_field(&mut self.label_width, key, value, value_span, errors)
+            }
+            "note number width" => {
+                parse_numeric_field(&mut self.note_number_width, key, value, value_span, errors)
+            }
+            "parts list columns" => {
+                parse_numeric_field(&mut self.parts_list_columns, key, value, value_span, errors)
+            }
+            "lyrics font size" => {
+                parse_numeric_field(&mut self.lyrics_font_size, key, value, value_span, errors)
+            }
+            "merge duplicate measures across parts" => parse_bool_field(
+                &mut self.merge_duplicate_measures_across_parts,
+                key,
+                value,
+                value_span,
+                errors,
+            ),
+            _ => errors.push(RecoverableError::metadata_unknown_field(key_span, key)),
+        }
+    }
+}
+
 pub fn parse_metadata(
     content: &str,
     base_offset: usize,
 ) -> (ParsedMetadata, Vec<RecoverableError>) {
-    let mut title: Option<String> = None;
-    let mut subtitle: Option<String> = None;
-    let mut author: Option<String> = None;
-    let mut row_height: Option<u32> = None;
-    let mut max_measures_per_system: Option<u32> = None;
-    let mut label_width: Option<u32> = None;
-    let mut note_number_width: Option<u32> = None;
-    let mut parts_list_columns: Option<u32> = None;
-    let mut lyrics_font_size: Option<u32> = None;
+    let mut accumulator = MetadataAccumulator::default();
     let mut byte_offset = base_offset;
     let mut errors: Vec<RecoverableError> = Vec::new();
 
@@ -81,53 +152,24 @@ pub fn parse_metadata(
         let key_span = span_of_key_in_line(byte_offset, line, key_raw, key);
         let value_span = span_of_value_in_line(byte_offset, line, key_raw, value_raw);
 
-        match key {
-            "title" => title = Some(value.to_string()),
-            "subtitle" => subtitle = Some(value.to_string()),
-            "author" => author = Some(value.to_string()),
-            "row height" => {
-                parse_numeric_field(&mut row_height, key, value, &value_span, &mut errors)
-            }
-            "max measures per system" => parse_numeric_field(
-                &mut max_measures_per_system,
-                key,
-                value,
-                &value_span,
-                &mut errors,
-            ),
-            "label width" => {
-                parse_numeric_field(&mut label_width, key, value, &value_span, &mut errors)
-            }
-            "note number width" => {
-                parse_numeric_field(&mut note_number_width, key, value, &value_span, &mut errors)
-            }
-            "parts list columns" => parse_numeric_field(
-                &mut parts_list_columns,
-                key,
-                value,
-                &value_span,
-                &mut errors,
-            ),
-            "lyrics font size" => {
-                parse_numeric_field(&mut lyrics_font_size, key, value, &value_span, &mut errors)
-            }
-            _ => errors.push(RecoverableError::metadata_unknown_field(key_span, key)),
-        }
+        accumulator.apply_field(key, value, key_span, &value_span, &mut errors);
 
         byte_offset += line.len() + 1;
     }
 
     (
         ParsedMetadata {
-            title,
-            subtitle,
-            author,
-            row_height,
-            max_measures_per_system,
-            label_width,
-            note_number_width,
-            parts_list_columns,
-            lyrics_font_size,
+            title: accumulator.title,
+            subtitle: accumulator.subtitle,
+            author: accumulator.author,
+            row_height: accumulator.row_height,
+            max_measures_per_system: accumulator.max_measures_per_system,
+            label_width: accumulator.label_width,
+            note_number_width: accumulator.note_number_width,
+            parts_list_columns: accumulator.parts_list_columns,
+            lyrics_font_size: accumulator.lyrics_font_size,
+            merge_duplicate_measures_across_parts: accumulator
+                .merge_duplicate_measures_across_parts,
         },
         errors,
     )
@@ -275,5 +317,29 @@ mod tests {
         let (meta, errors) = parse_metadata(content, 0);
         assert!(errors.is_empty());
         assert_eq!(meta.lyrics_font_size, None);
+    }
+
+    #[test]
+    fn parses_merge_duplicate_measures_across_parts() {
+        let content = "title = \"t\"\nauthor = \"a\"\nmerge duplicate measures across parts = no\n";
+        let (meta, errors) = parse_metadata(content, 0);
+        assert!(errors.is_empty());
+        assert_eq!(meta.merge_duplicate_measures_across_parts, Some(false));
+    }
+
+    #[test]
+    fn merge_duplicate_measures_across_parts_defaults_to_none() {
+        let content = "title = \"t\"\nauthor = \"a\"\n";
+        let (meta, errors) = parse_metadata(content, 0);
+        assert!(errors.is_empty());
+        assert_eq!(meta.merge_duplicate_measures_across_parts, None);
+    }
+
+    #[test]
+    fn collects_error_for_invalid_merge_duplicate_measures_across_parts() {
+        let content =
+            "title = \"t\"\nauthor = \"a\"\nmerge duplicate measures across parts = maybe\n";
+        let (_meta, errors) = parse_metadata(content, 0);
+        assert!(!errors.is_empty());
     }
 }

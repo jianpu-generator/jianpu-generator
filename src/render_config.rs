@@ -57,6 +57,7 @@ mod tests {
             max_measures_per_system: 6,
             parts_list_columns: 3,
             lyrics_font_size: 18,
+            merge_duplicate_measures_across_parts: true,
         };
         let cfg = RenderConfig::from_metadata(&meta);
         assert_eq!(cfg.row_height, 30);

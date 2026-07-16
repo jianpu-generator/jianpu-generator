@@ -45,6 +45,7 @@ fn chord_major_expands_to_three_notes() {
             note_number_width: 8,
             parts_list_columns: 3,
             lyrics_font_size: 14,
+            merge_duplicate_measures_across_parts: true,
         },
         measures: vec![MultiPartMeasure {
             time_signature: Some(TimeSignature {
@@ -220,6 +221,7 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
             note_number_width: 8,
             parts_list_columns: 3,
             lyrics_font_size: 14,
+            merge_duplicate_measures_across_parts: true,
         },
         measures: vec![MultiPartMeasure {
             time_signature: Some(TimeSignature {

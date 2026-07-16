@@ -141,3 +141,45 @@ test('clearing an optional field removes it from the source', async ({
   await expect.poll(getEditorSource.bind(null, page)).not.toContain('subtitle')
   await expect.poll(getStoredSource.bind(null, page)).not.toContain('subtitle')
 })
+
+test('unchecking merge duplicate measures across parts writes = no to the source', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.goto('/')
+
+  await openEditMetadataModal(page)
+
+  const modal = page.getByTestId('edit-metadata-modal')
+  const mergeCheckbox = modal.locator('input[type="checkbox"]')
+  await expect(mergeCheckbox).toBeChecked()
+  await mergeCheckbox.uncheck()
+
+  await page.keyboard.press('Escape')
+  await modal.waitFor({ state: 'hidden' })
+
+  const expectedLine = 'merge duplicate measures across parts = no'
+  await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
+  await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
+})
+
+test('re-checking merge duplicate measures across parts writes = yes to the source', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.goto('/')
+
+  await openEditMetadataModal(page)
+
+  const modal = page.getByTestId('edit-metadata-modal')
+  const mergeCheckbox = modal.locator('input[type="checkbox"]')
+  await mergeCheckbox.uncheck()
+  await mergeCheckbox.check()
+
+  await page.keyboard.press('Escape')
+  await modal.waitFor({ state: 'hidden' })
+
+  const expectedLine = 'merge duplicate measures across parts = yes'
+  await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
+  await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
+})
