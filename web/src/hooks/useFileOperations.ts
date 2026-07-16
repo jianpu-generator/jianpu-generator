@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { type FileStoreState, mergeBackendResult } from '../fileStore'
 import type { StorageBackend } from '../storage/types'
 
-interface FileOpError {
+export interface FileOpError {
   title: string
   message: string
   stack?: string

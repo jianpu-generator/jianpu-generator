@@ -7,7 +7,7 @@ fn consolidated_blocks(source: &str) -> Vec<MeasureBlock> {
     let document = parse(source, "test", &[]).unwrap();
     let score = group(document).unwrap();
     let result = compile(&score);
-    consolidate(result).blocks
+    consolidate(result, score.metadata.merge_duplicate_measures_across_parts).blocks
 }
 
 #[test]
@@ -75,5 +75,139 @@ fn follow_part_identical_to_source_is_omitted_per_measure() {
     assert_eq!(
         blocks[1].rows[2].label, "B",
         "measure 2: third row should be B notes"
+    );
+}
+
+#[test]
+fn no_orphan_lyric_row_when_notes_lyrics_part_and_follower_never_write_lyric_text() {
+    // A is notes+lyrics but never writes a lyric line, and B follows A without
+    // ever writing its own lyric line either. Neither part ever supplies real
+    // lyric text, so no lyrics row should be produced at all — only the notes
+    // row(s). This guards the "orphan empty lyric row" regression: previously
+    // both parts' unwritten lyric slots got padded with an empty placeholder
+    // syllable per note, producing an identical empty lyrics row for each
+    // part that then merged into a single leftover blank row.
+    let source = concat!(
+        "# parts\n",
+        "A = notes+lyrics\n",
+        "B = follow[A]\n",
+        "\n",
+        "# score\n",
+        "[A] 1 2 3 4\n",
+        "[B] 5 6 7 1\n",
+    );
+    let blocks = consolidated_blocks(source);
+
+    assert_eq!(
+        blocks[0].rows.len(),
+        2,
+        "expected only A's and B's notes rows, no lyrics row; got rows: {:?}",
+        blocks[0]
+            .rows
+            .iter()
+            .map(|row| &row.label)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn identical_rows_from_different_parts_merge_by_default() {
+    let source = r#"
+# parts
+A = notes
+B = notes
+
+# score
+[A] 1 2 3 4
+[B] 1 2 3 4
+"#;
+    let blocks = consolidated_blocks(source);
+    assert_eq!(blocks[0].rows.len(), 1);
+    assert_eq!(blocks[0].rows[0].label, "A B");
+}
+
+#[test]
+fn identical_rows_from_different_parts_stay_separate_when_disabled() {
+    let source = r#"
+# metadata
+merge duplicate measures across parts = no
+
+# parts
+A = notes
+B = notes
+
+# score
+[A] 1 2 3 4
+[B] 1 2 3 4
+"#;
+    let blocks = consolidated_blocks(source);
+    assert_eq!(blocks[0].rows.len(), 2);
+    assert_eq!(blocks[0].rows[0].label, "A");
+    assert_eq!(blocks[0].rows[1].label, "B");
+}
+
+#[test]
+fn group_broadcast_merge_uses_group_abbreviation_as_label() {
+    let source = concat!(
+        "# metadata\n",
+        "title = \"hello\"\n",
+        "author = \"\"\n",
+        "\n",
+        "# parts\n",
+        "Soprano 1 [S1] = notes\n",
+        "Soprano 2 [S2] = notes\n",
+        "\n",
+        "# groups\n",
+        "Soprano [s] = S1 S2\n",
+        "\n",
+        "# score\n",
+        "[s] 1 2 3 4\n",
+    );
+    let blocks = consolidated_blocks(source);
+
+    assert_eq!(
+        blocks[0].rows.len(),
+        1,
+        "both members broadcast identical content, so they merge into one row"
+    );
+    assert_eq!(
+        blocks[0].rows[0].label, "s",
+        "merged row should be labeled with the group's abbreviation, not concatenated part labels"
+    );
+}
+
+#[test]
+fn group_broadcast_partial_override_keeps_diverged_member_separate() {
+    let source = concat!(
+        "# metadata\n",
+        "title = \"hello\"\n",
+        "author = \"\"\n",
+        "\n",
+        "# parts\n",
+        "Soprano 1 [S1] = notes\n",
+        "Soprano 2 [S2] = notes\n",
+        "Soprano 3 [S3] = notes\n",
+        "\n",
+        "# groups\n",
+        "Soprano [s] = S1 S2 S3\n",
+        "\n",
+        "# score\n",
+        "[s] 1 2 3 4\n",
+        "[S2] 5 5 5 5\n",
+    );
+    let blocks = consolidated_blocks(source);
+
+    assert_eq!(
+        blocks[0].rows.len(),
+        2,
+        "S2 diverges from the broadcast so it splits off; S1/S3 still merge"
+    );
+    assert_eq!(
+        blocks[0].rows[0].label, "s",
+        "S1 and S3 both trace to the group broadcast and merge under the group abbreviation"
+    );
+    assert_eq!(
+        blocks[0].rows[1].label, "S2",
+        "S2 overrode the broadcast, so it keeps its own individual label"
     );
 }

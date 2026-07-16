@@ -9,11 +9,10 @@ import {
 } from '@radix-ui/react-icons'
 import { useEffect, useRef, useState } from 'react'
 import {
-  DEMO_FILE_NAME,
   type FileStoreState,
   fileContent,
   isReadOnlyFile,
-  sortedFileNames,
+  sortedUserFileNames,
 } from '../fileStore'
 import { useDismissableOpen } from '../hooks/useDismissableOpen'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
@@ -22,6 +21,10 @@ import { ShareButton } from './ShareButton'
 
 export interface FileSwitcherProps {
   store: FileStoreState
+  /** Label shown on the trigger button — the last-active user file's name,
+   * or a placeholder when none exists yet (a demo file may be active
+   * instead; demo files have their own dropdown, see `DemoFileSwitcher`). */
+  triggerLabel: string
   onSelect: (name: string) => void
   onCreate: () => void
   onDuplicate: () => void
@@ -199,6 +202,7 @@ function FileTabName({
 
 export function FileSwitcher({
   store,
+  triggerLabel,
   onSelect,
   onCreate,
   onDuplicate,
@@ -213,8 +217,8 @@ export function FileSwitcher({
   renamingName = null,
   isLoadingGithub = false,
 }: FileSwitcherProps) {
-  const names = sortedFileNames(store)
-  const showHint = names.length === 1 && names[0] === DEMO_FILE_NAME
+  const names = sortedUserFileNames(store)
+  const showEmptyHint = !isLoadingGithub && names.length === 0
 
   const filesContainerRef = useRef<HTMLDivElement>(null)
   const [filesOpen, setFilesOpen] = useDismissableOpen(filesContainerRef)
@@ -236,7 +240,7 @@ export function FileSwitcher({
           aria-expanded={filesOpen}
           onClick={() => setFilesOpen((prev) => !prev)}
         >
-          {store.active}
+          {triggerLabel}
           {isLoadingGithub ? (
             <span className="file-tab-bar-spinner" aria-hidden="true" />
           ) : (
@@ -247,9 +251,9 @@ export function FileSwitcher({
           <div className="export-menu-list file-tab-bar-files-list">
             {isLoadingGithub ? (
               <p className="file-tab-bar-hint">Loading files from GitHub…</p>
-            ) : showHint ? (
+            ) : showEmptyHint ? (
               <p className="file-tab-bar-hint">
-                Demo is read-only — duplicate to edit.
+                No files yet — click New to create one.
               </p>
             ) : null}
             <ul className="file-tabs" aria-label="Files">

@@ -1,18 +1,15 @@
-use std::collections::HashMap;
-
 use crate::ast::grouped::Score;
 use crate::ast::parsed::KeyChange;
 use crate::error::IrrecoverableError;
 
-use super::{default_active_key, process_measure, RawEvent, RawKind, TPQ};
+use super::{default_active_key, process_measure, RawEvent, RawKind, TieState, TPQ};
 
 /// Return the elapsed-seconds offset of each measure boundary in `score`,
 /// accounting for BPM changes. Length is `score.measures.len() + 1`: the
 /// last entry is the total duration of the whole score.
 pub fn measure_start_times_seconds(score: &Score) -> Result<Vec<f64>, IrrecoverableError> {
     let mut raw: Vec<RawEvent> = Vec::new();
-    let mut per_part_ties: Vec<(u8, HashMap<u8, u32>)> = Vec::new();
-    let mut chord_ties: HashMap<u8, u32> = HashMap::new();
+    let mut tie_state = TieState::default();
     let mut active_key = default_active_key();
     let mut current_tick: u32 = 0;
     let mut boundaries = vec![0u32];
@@ -22,8 +19,7 @@ pub fn measure_start_times_seconds(score: &Score) -> Result<Vec<f64>, Irrecovera
             measure,
             current_tick,
             &mut raw,
-            &mut per_part_ties,
-            &mut chord_ties,
+            &mut tie_state,
             &mut active_key,
         )?;
         boundaries.push(current_tick);
@@ -87,6 +83,7 @@ pub fn build_single_measure_score(score: &Score, measure_index: usize) -> Option
         metadata: score.metadata.clone(),
         measures: vec![patched],
         document_diagnostics: vec![],
+        sequence: None,
     })
 }
 
@@ -134,6 +131,7 @@ pub fn build_measure_range_score(
         metadata: score.metadata.clone(),
         measures,
         document_diagnostics: vec![],
+        sequence: None,
     })
 }
 

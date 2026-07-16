@@ -2,6 +2,38 @@ use crate::ast::grouped::{MeasureDirectives, TimeSignature};
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName, ScoreEvent};
 use crate::error::Spanned;
 
+/// Which navigation markers were declared on a single measure's directive
+/// line. Collected separately from `DirectiveGrouper`'s persisting state
+/// since navigation markers, like `label`, apply only to the measure where
+/// declared.
+#[derive(Default)]
+struct PendingNavigationMarkers {
+    dc_al_coda: bool,
+    to_coda: bool,
+    coda: bool,
+    segno: bool,
+    ds_al_coda: bool,
+    dc_al_fine: bool,
+    fine: bool,
+    ds_al_fine: bool,
+}
+
+impl PendingNavigationMarkers {
+    fn apply(&mut self, event: &ScoreEvent) {
+        match event {
+            ScoreEvent::DcAlCoda => self.dc_al_coda = true,
+            ScoreEvent::ToCoda => self.to_coda = true,
+            ScoreEvent::Coda => self.coda = true,
+            ScoreEvent::Segno => self.segno = true,
+            ScoreEvent::DsAlCoda => self.ds_al_coda = true,
+            ScoreEvent::DcAlFine => self.dc_al_fine = true,
+            ScoreEvent::Fine => self.fine = true,
+            ScoreEvent::DsAlFine => self.ds_al_fine = true,
+            _ => {}
+        }
+    }
+}
+
 pub(super) struct DirectiveGrouper {
     current_bpm: u32,
     current_time_sig: TimeSignature,
@@ -39,30 +71,38 @@ impl DirectiveGrouper {
         let mut result = Vec::new();
         for events in directive_events_per_measure {
             let mut pending_label: Option<String> = None;
+            let mut markers = PendingNavigationMarkers::default();
             for event in events {
                 match &event.value {
                     ScoreEvent::BpmChange(bpm) => {
+                        if *bpm != self.current_bpm {
+                            self.bpm_changed = true;
+                        }
                         self.current_bpm = *bpm;
-                        self.bpm_changed = true;
                     }
                     ScoreEvent::TimeSignatureChange {
                         numerator,
                         denominator,
                     } => {
-                        self.current_time_sig = TimeSignature {
+                        let new_time_sig = TimeSignature {
                             numerator: *numerator,
                             denominator: *denominator,
                         };
-                        self.time_sig_changed = true;
+                        if new_time_sig != self.current_time_sig {
+                            self.time_sig_changed = true;
+                        }
+                        self.current_time_sig = new_time_sig;
                     }
                     ScoreEvent::KeyChange(kc) => {
+                        if *kc != self.current_key {
+                            self.key_changed = true;
+                        }
                         self.current_key = kc.clone();
-                        self.key_changed = true;
                     }
                     ScoreEvent::LabelChange(text) => {
                         pending_label = Some(text.clone());
                     }
-                    _ => {}
+                    other => markers.apply(other),
                 }
             }
             result.push(MeasureDirectives {
@@ -85,6 +125,14 @@ impl DirectiveGrouper {
                     None
                 },
                 label: pending_label,
+                dc_al_coda: markers.dc_al_coda,
+                to_coda: markers.to_coda,
+                coda: markers.coda,
+                segno: markers.segno,
+                ds_al_coda: markers.ds_al_coda,
+                dc_al_fine: markers.dc_al_fine,
+                fine: markers.fine,
+                ds_al_fine: markers.ds_al_fine,
             });
             self.bpm_changed = false;
             self.time_sig_changed = false;

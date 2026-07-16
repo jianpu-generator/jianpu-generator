@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { useLocalStorage } from 'usehooks-ts'
 import {
-  DEMO_FILE_NAME,
+  DEMO_FILE_NAMES,
   FILE_STORE_KEY,
   type FileStoreState,
   fileContent,
@@ -53,7 +53,7 @@ const DEFAULT_PREFERENCE: StorageBackendPreference = { backend: 'local' }
  * shape to `fileStore.ts`'s own `DEFAULT_FILE_STORE` (not exported from
  * there, so reconstructed here). */
 const EMPTY_STORE: FileStoreState = {
-  active: DEMO_FILE_NAME,
+  active: DEMO_FILE_NAMES[0],
   userFiles: {},
   bin: {},
   fileIds: {},
@@ -126,8 +126,17 @@ export interface UseStorageBackendResult {
    * `StorageSettingsModal`'s conflict-resolution flow — so the "Saved"
    * badge in `FileTabBar` doesn't keep showing a stale status (e.g. the
    * conflict's `'error'`) after the conflict has actually been resolved.
+   *
+   * Pass `syncedStore` when the caller also just replaced the active file's
+   * content with content it fetched from the backend (`discard-mine`'s
+   * `updateActiveContent`, for instance): it's already in sync with what's
+   * persisted, so this marks it as the new baseline the autosave-scheduling
+   * effect diffs against. Omitting it would make that effect see the
+   * content "change" on the next render and immediately schedule a
+   * redundant autosave, flipping the badge back to "Unsaved" right after
+   * this call set it to "Saved".
    */
-  refreshSaveStatus: () => void
+  refreshSaveStatus: (syncedStore?: FileStoreState) => void
 }
 
 /**
@@ -340,9 +349,19 @@ export function useStorageBackend(): UseStorageBackendResult {
     }
   }, [backend, debouncedSave])
 
-  const refreshSaveStatus = useCallback(() => {
-    setSaveStatus(displaySaveStatus(backend.status()))
-  }, [backend])
+  const refreshSaveStatus = useCallback(
+    (syncedStore?: FileStoreState) => {
+      if (syncedStore) {
+        lastContentRef.current = {
+          active: syncedStore.active,
+          content: fileContent(syncedStore, syncedStore.active),
+        }
+        setAutosaveDeadline(null)
+      }
+      setSaveStatus(displaySaveStatus(backend.status()))
+    },
+    [backend],
+  )
 
   const switchBackend = useCallback(
     async (target: StorageBackendTarget) => {
@@ -352,7 +371,7 @@ export function useStorageBackend(): UseStorageBackendResult {
       }
       if (target.kind === 'local') {
         setPreference({ backend: 'local' })
-        setLocalStore((prev) => ({ ...prev, active: DEMO_FILE_NAME }))
+        setLocalStore((prev) => ({ ...prev, active: DEMO_FILE_NAMES[0] }))
       } else {
         setPreference({
           backend: 'github',

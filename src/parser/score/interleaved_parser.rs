@@ -1,6 +1,4 @@
-use crate::ast::parsed::{
-    flatten_score_line_slots, ParsedMeasureSlot, ParsedTrack, PartDecl, ScoreEvent, ScoreLineSlot,
-};
+use crate::ast::parsed::{ParsedMeasureSlot, ParsedTrack, PartDecl, ScoreEvent, ScoreLineSlot};
 use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Spanned};
 use crate::parser::score::token_parser::GroupStack;
 use crate::utils::LyricTieState;
@@ -16,6 +14,7 @@ mod directives;
 #[path = "interleaved_errors.rs"]
 mod errors;
 
+use crate::desugar::SourceLine;
 use crate::parser::score::measure_group::collect_groups;
 use accumulators::{build_parse_result, build_slot_actions, init_accumulators};
 use beat_padding::{beats_per_measure, validate_and_pad_group_lines};
@@ -47,8 +46,8 @@ enum TrackAccumulator {
         measure_slots: Vec<ParsedMeasureSlot>,
         /// Directive events received since the last finalized slot; prepended to the next Real slot.
         pending_events: Vec<Spanned<ScoreEvent>>,
-        /// One syllable vec per measure for `NotesWithLyrics` parts.
-        syllables: Option<Vec<Vec<crate::ast::parsed::Syllable>>>,
+        /// Measure -> verse -> syllables, for `NotesWithLyrics` parts.
+        syllables: Option<Vec<Vec<Vec<crate::ast::parsed::Syllable>>>>,
         /// Start byte offset of the lyrics line for each measure, in order.
         lyrics_line_starts: Vec<usize>,
         /// End byte offset of the lyrics line for each measure, in order.
@@ -65,20 +64,30 @@ enum TrackAccumulator {
         per_measure_lex_errors: Vec<Option<RecoverableError>>,
         /// Per-measure recoverable error on the lyrics line (e.g. empty lyrics line).
         per_measure_lyrics_errors: Vec<Option<RecoverableError>>,
+        /// Per-measure group broadcast provenance (`Some(abbrev)` when this measure's
+        /// primary score line came from a `[GroupAbbrev]` broadcast this member didn't override).
+        per_measure_group_provenance: Vec<Option<String>>,
     },
 }
 
 struct BarGroupContext<'a> {
     base_offset: usize,
     declarations: &'a [PartDecl],
-    slots: &'a [ScoreLineSlot],
-    slot_actions: &'a [SlotAction],
+    /// This measure group's score-line slots. Reset at the top of each
+    /// `process_bar_group` call, since a `NotesWithLyrics` part's verse count
+    /// (and thus its slot list) can vary from one measure group to the next.
+    slots: Vec<ScoreLineSlot>,
+    slot_actions: Vec<SlotAction>,
     time_num: &'a mut u8,
     time_den: &'a mut u8,
     accumulators: &'a mut [TrackAccumulator],
     lyric_tie_states: &'a mut [LyricTieState],
     group_states: &'a mut [GroupStack],
     bar_lyric_slots: &'a mut [Option<u32>],
+    /// Per-track count of lyric-verse lines seen so far in the current measure
+    /// group; reset to 0 at the top of each `process_bar_group` call. Used to
+    /// tell which verse (0-indexed) a given lyrics column line belongs to.
+    bar_lyric_verse_counters: &'a mut [usize],
     directive_events_per_measure: &'a mut DirectiveEventsPerMeasure,
     per_measure_directive_errors: &'a mut Vec<Option<RecoverableError>>,
     extra_document_errors: &'a mut Vec<RecoverableError>,
@@ -135,13 +144,16 @@ fn attach_document_error(
     }
 }
 
-pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> ParseResult {
+pub fn parse(
+    content: &str,
+    base_offset: usize,
+    declarations: &[PartDecl],
+    resolved_groups: &[crate::parser::group_parser::ResolvedGroup],
+) -> ParseResult {
     let groups = collect_groups(content);
-    let (groups, per_group_desugar_errors) =
-        crate::desugar::desugar_groups(groups, declarations, base_offset)?;
+    let (groups, slots_per_group, per_group_desugar_errors) =
+        crate::desugar::desugar_groups(groups, declarations, resolved_groups, base_offset)?;
 
-    let slots = flatten_score_line_slots(declarations);
-    let slot_actions = build_slot_actions(&slots);
     let mut accumulators = init_accumulators(declarations);
 
     let mut time_num: u8 = 4;
@@ -149,6 +161,7 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
     let mut lyric_tie_states = vec![LyricTieState::default(); declarations.len()];
     let mut group_states = vec![GroupStack::default(); declarations.len()];
     let mut bar_lyric_slots = vec![None; declarations.len()];
+    let mut bar_lyric_verse_counters = vec![0usize; declarations.len()];
     let mut directive_events_per_measure: DirectiveEventsPerMeasure = Vec::new();
     let mut per_measure_directive_errors: Vec<Option<RecoverableError>> = Vec::new();
     let mut extra_document_errors: Vec<RecoverableError> = Vec::new();
@@ -156,21 +169,22 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
     let mut ctx = BarGroupContext {
         base_offset,
         declarations,
-        slots: &slots,
-        slot_actions: &slot_actions,
+        slots: Vec::new(),
+        slot_actions: Vec::new(),
         time_num: &mut time_num,
         time_den: &mut time_den,
         accumulators: &mut accumulators,
         lyric_tie_states: &mut lyric_tie_states,
         group_states: &mut group_states,
         bar_lyric_slots: &mut bar_lyric_slots,
+        bar_lyric_verse_counters: &mut bar_lyric_verse_counters,
         directive_events_per_measure: &mut directive_events_per_measure,
         per_measure_directive_errors: &mut per_measure_directive_errors,
         extra_document_errors: &mut extra_document_errors,
     };
 
-    for group_lines in groups.iter() {
-        process_bar_group(group_lines, &mut ctx)?;
+    for (group_lines, group_slots) in groups.iter().zip(slots_per_group) {
+        process_bar_group(group_lines, group_slots, &mut ctx)?;
     }
 
     finalize_unclosed_groups(
@@ -203,9 +217,13 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
 }
 
 fn process_bar_group(
-    group_lines: &[(String, usize)],
+    group_lines: &[SourceLine],
+    group_slots: Vec<ScoreLineSlot>,
     ctx: &mut BarGroupContext<'_>,
 ) -> Result<(), IrrecoverableError> {
+    ctx.slots = group_slots;
+    ctx.slot_actions = build_slot_actions(&ctx.slots);
+
     let (directive_events, data_lines, directive_errors) =
         split_directive(group_lines, ctx.base_offset);
     ctx.per_measure_directive_errors
@@ -223,10 +241,18 @@ fn process_bar_group(
     }
 
     let padded_data =
-        validate_and_pad_group_lines(group_lines, data_lines, ctx.slots, ctx.base_offset)?;
+        validate_and_pad_group_lines(group_lines, data_lines, &ctx.slots, ctx.base_offset)?;
 
     for slot in ctx.bar_lyric_slots.iter_mut() {
         *slot = None;
+    }
+    for counter in ctx.bar_lyric_verse_counters.iter_mut() {
+        *counter = 0;
+    }
+    for acc in ctx.accumulators.iter_mut() {
+        if let Some((syllables_vec, ..)) = notes_syllables_mut(acc)? {
+            syllables_vec.push(Vec::new());
+        }
     }
 
     // Collect directive events into the dedicated per-measure accumulator.
@@ -256,7 +282,7 @@ fn timed_events_mut(
 }
 
 type SyllablesAndLineSpans<'a> = (
-    &'a mut Vec<Vec<crate::ast::parsed::Syllable>>,
+    &'a mut Vec<Vec<Vec<crate::ast::parsed::Syllable>>>,
     &'a mut Vec<usize>,
     &'a mut Vec<usize>,
 );
@@ -287,3 +313,7 @@ mod tests;
 #[cfg(test)]
 #[path = "interleaved_parser_padding_tests.rs"]
 mod padding_tests;
+
+#[cfg(test)]
+#[path = "interleaved_lone_rest_padding_tests.rs"]
+mod lone_rest_padding_tests;

@@ -8,12 +8,16 @@ pub enum ParsedMeasureSlot {
 
 #[derive(Debug)]
 pub struct ParsedLyrics {
-    /// One syllable vec per measure, in score order. Empty inner vec = `_` (no lyrics).
-    pub measure_syllables: Vec<Vec<Syllable>>,
-    /// Byte offset of the start of the lyrics line for each measure, in order.
+    /// Measure -> verse -> syllables, in score order. Consecutive `[Part]` lyric
+    /// lines after the notes line become verses 1..N; an empty inner vec = `_`
+    /// (no lyrics) for that verse in that measure.
+    pub measure_syllables: Vec<Vec<Vec<Syllable>>>,
+    /// Byte offset of the start of the lyrics block (spanning all its verses)
+    /// for each measure, in order.
     pub measure_starts: Vec<usize>,
-    /// Byte offset of the end of the lyrics line for each measure, in order.
-    /// Used to extend the measure's source span to cover the lyrics line.
+    /// Byte offset of the end of the lyrics block (spanning all its verses)
+    /// for each measure, in order. Used to extend the measure's source span to
+    /// cover the lyrics lines.
     pub measure_ends: Vec<usize>,
 }
 
@@ -43,6 +47,7 @@ pub enum PartKind {
     Chords,
     Notes,
     NotesWithLyrics,
+    Percussion,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -64,6 +69,7 @@ impl PartDecl {
             PartKind::Chords => &[ScoreLineRole::Chord],
             PartKind::Notes => &[ScoreLineRole::Notes],
             PartKind::NotesWithLyrics => &[ScoreLineRole::Notes, ScoreLineRole::Lyrics],
+            PartKind::Percussion => &[ScoreLineRole::Notes],
         }
     }
 }
@@ -106,6 +112,9 @@ pub struct ParsedTimedTrack {
     pub per_measure_lex_errors: Vec<Option<RecoverableError>>,
     /// Per-measure recoverable error on the lyrics line (e.g. empty lyrics line).
     pub per_measure_lyrics_errors: Vec<Option<RecoverableError>>,
+    /// Per-measure group broadcast provenance (`Some(abbrev)` when this measure's
+    /// primary score line came from a `[GroupAbbrev]` broadcast this member didn't override).
+    pub per_measure_group_provenance: Vec<Option<String>>,
 }
 
 #[derive(Debug)]
@@ -120,8 +129,18 @@ pub struct ParsedDocument {
     pub metadata_parse_errors: Vec<RecoverableError>,
     /// Recoverable errors from parsing the [parts] section.
     pub parts_parse_errors: Vec<RecoverableError>,
-    /// Recoverable errors from section structure validation (unknown/duplicate/missing/out-of-order sections).
+    /// Recoverable errors from section structure validation (unknown/duplicate/missing sections).
     pub section_structure_errors: Vec<RecoverableError>,
+    /// The parsed `# sequence` section, if present: an ordered list of
+    /// section-label references defining explicit playback order.
+    pub sequence: Option<crate::parser::sequence_parser::SequenceSection>,
+    /// Recoverable errors from parsing the `# sequence` section (e.g. empty entries).
+    pub sequence_parse_errors: Vec<RecoverableError>,
+    /// The parsed `# groups` section, if present: an ordered list of
+    /// group declarations.
+    pub group: Option<crate::parser::group_parser::GroupSection>,
+    /// Recoverable errors from parsing the `# groups` section.
+    pub group_parse_errors: Vec<RecoverableError>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -159,16 +178,27 @@ pub struct ParsedMetadata {
     pub subtitle: Option<String>,
     pub author: Option<String>,
     pub row_height: Option<u32>,
-    pub max_columns: Option<u32>,
+    pub max_measures_per_system: Option<u32>,
     pub label_width: Option<u32>,
     pub note_number_width: Option<u32>,
     pub parts_list_columns: Option<u32>,
+    pub lyrics_font_size: Option<u32>,
+    /// When `false`, disables merging of identical measure rows that come from different
+    /// parts (see `consolidator::consolidate`). Default: `true`.
+    pub merge_duplicate_measures_across_parts: Option<bool>,
+    /// When `false`, an all-rest part is no longer omitted from a measure that has other
+    /// parts with real content (see `compiler::compile_measure`). Default: `true`.
+    pub hide_resting_parts: Option<bool>,
+    /// When `true`, the horizontal divider line drawn between systems is omitted (see
+    /// `grid_layout::layout`). Default: `false`.
+    pub hide_system_dividers: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ScoreEvent {
     Note(ParsedNote),
     Chord(ParsedChordNote),
+    PercussionHit(ParsedPercussionHit),
     Rest(ParsedRest),
     BpmChange(u32),
     KeyChange(KeyChange),
@@ -181,6 +211,22 @@ pub enum ScoreEvent {
     /// Legacy tie marker retained for lyric-slot counting paths; use `(…)` groups in input.
     TieMarker,
     LabelChange(String),
+    /// `dcalcoda` — after this measure, playback restarts from measure 0.
+    DcAlCoda,
+    /// `tocoda` — on the second pass only, playback cuts away here to the `Coda` measure.
+    ToCoda,
+    /// `coda` — playback resumes here (on the second pass) and continues to the end.
+    Coda,
+    /// `segno` — marks the measure that `dsalcoda`/`dsalfine` jumps back to.
+    Segno,
+    /// `dsalcoda` — after this measure, playback restarts from the `Segno` measure.
+    DsAlCoda,
+    /// `dcalfine` — after this measure, playback restarts from measure 0 and stops at `Fine`.
+    DcAlFine,
+    /// `fine` — on the second pass only, playback stops here.
+    Fine,
+    /// `dsalfine` — after this measure, playback restarts from the `Segno` measure and stops at `Fine`.
+    DsAlFine,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -221,6 +267,29 @@ pub struct ParsedChordNote {
     pub group_continuation: u8,
     pub dotted: bool,
     pub slur_group_close_at_duration: Option<u32>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParsedPercussionHit {
+    /// Duration in quarter-beats. For dotted hits this already includes the added half-value.
+    pub duration: u32,
+    /// Whether this hit is tied/slurred to the next hit (from a `(…)` group).
+    pub slur: bool,
+    /// Source span of the `~` suffix when this hit is tied to the next hit.
+    pub tie_to_next_span: Option<Span>,
+    /// Number of nested `(…)` groups this hit belongs to.
+    pub group_membership: u8,
+    /// Number of those groups that continue past this hit.
+    pub group_continuation: u8,
+    /// Whether `.` was present as a dotted-hit suffix.
+    pub dotted: bool,
+    pub slur_group_close_at_duration: Option<u32>,
+}
+
+impl ParsedPercussionHit {
+    pub fn tie_to_next(&self) -> bool {
+        self.tie_to_next_span.is_some()
+    }
 }
 
 impl ParsedNote {

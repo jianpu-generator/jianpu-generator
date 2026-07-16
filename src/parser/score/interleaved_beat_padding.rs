@@ -1,4 +1,5 @@
 use crate::ast::parsed::{ScoreEvent, ScoreLineSlot};
+use crate::desugar::SourceLine;
 use crate::error::{Diagnostic, IrrecoverableError, Span, Spanned, Warning};
 
 pub(super) struct PaddedBeats {
@@ -15,6 +16,7 @@ fn timed_beats(event: &ScoreEvent) -> u32 {
     match event {
         ScoreEvent::Note(n) => n.duration,
         ScoreEvent::Chord(c) => c.duration,
+        ScoreEvent::PercussionHit(p) => p.duration,
         ScoreEvent::Rest(r) => r.duration,
         ScoreEvent::Extension => 4,
         _ => 0,
@@ -121,7 +123,10 @@ fn timed_event_span(events: &[Spanned<ScoreEvent>]) -> Span {
         .find(|event| {
             matches!(
                 &event.value,
-                ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::Rest(_)
+                ScoreEvent::Note(_)
+                    | ScoreEvent::Chord(_)
+                    | ScoreEvent::PercussionHit(_)
+                    | ScoreEvent::Rest(_)
             )
         })
         .map(|event| event.span)
@@ -137,16 +142,45 @@ fn pad_beat_deficit(events: &mut Vec<Spanned<ScoreEvent>>, deficit: u32) {
         return;
     }
 
-    if let Some(last) = events.iter_mut().rev().find(|event| {
+    let Some(last_index) = events.iter().rposition(|event| {
         matches!(
             &event.value,
-            ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::Rest(_)
+            ScoreEvent::Note(_)
+                | ScoreEvent::Chord(_)
+                | ScoreEvent::PercussionHit(_)
+                | ScoreEvent::Rest(_)
         )
-    }) {
+    }) else {
+        return;
+    };
+
+    // Conventional 简谱 renders a multi-beat rest as repeated `0` glyphs rather
+    // than a single glyph stretched across several beats, so pad a rest with
+    // additional one-beat rest events instead of growing its `duration`.
+    let rest_span = events
+        .get(last_index)
+        .and_then(|event| matches!(&event.value, ScoreEvent::Rest(_)).then_some(event.span));
+
+    if let Some(span) = rest_span {
+        for _ in 0..(deficit / 4) {
+            events.push(Spanned::new(
+                ScoreEvent::Rest(crate::ast::parsed::ParsedRest {
+                    duration: 4,
+                    dotted: false,
+                    group_membership: 0,
+                    group_continuation: 0,
+                }),
+                span,
+            ));
+        }
+        return;
+    }
+
+    if let Some(last) = events.get_mut(last_index) {
         match &mut last.value {
             ScoreEvent::Note(note) => note.duration += deficit,
             ScoreEvent::Chord(chord) => chord.duration += deficit,
-            ScoreEvent::Rest(rest) => rest.duration += deficit,
+            ScoreEvent::PercussionHit(hit) => hit.duration += deficit,
             _ => {}
         }
     }
@@ -252,29 +286,43 @@ pub(super) fn validate_and_pad_beats(
     })
 }
 
+fn implicit_source_line(offset: usize) -> SourceLine {
+    SourceLine {
+        content: "_".to_string(),
+        offset,
+        group: None,
+    }
+}
+
 pub(super) fn validate_and_pad_group_lines(
-    group_lines: &[(String, usize)],
-    data_lines: &[(String, usize)],
+    group_lines: &[SourceLine],
+    data_lines: &[SourceLine],
     slots: &[ScoreLineSlot],
     base_offset: usize,
-) -> Result<Vec<(String, usize)>, IrrecoverableError> {
+) -> Result<Vec<SourceLine>, IrrecoverableError> {
     let group_first_span = group_lines
         .first()
-        .map(|(line, off)| Span::new(base_offset + off, base_offset + off + line.len()))
+        .map(|line| {
+            Span::new(
+                base_offset + line.offset,
+                base_offset + line.offset + line.content.len(),
+            )
+        })
         .unwrap_or_else(|| Span::new(base_offset, base_offset));
 
     // These checks are defensive: desugar already normalises line counts.
     // If reached, pad or truncate silently rather than aborting parsing.
     if data_lines.is_empty() {
-        return Ok(vec![("_".to_string(), group_first_span.start)]);
+        return Ok(vec![implicit_source_line(group_first_span.start)]);
     }
     if data_lines.len() != slots.len() {
-        let truncated: Vec<(String, usize)> = data_lines
+        let truncated: Vec<SourceLine> = data_lines
             .iter()
             .take(slots.len())
             .cloned()
             .chain(
-                (data_lines.len()..slots.len()).map(|_| ("_".to_string(), group_first_span.start)),
+                (data_lines.len()..slots.len())
+                    .map(|_| implicit_source_line(group_first_span.start)),
             )
             .collect();
         return Ok(truncated);

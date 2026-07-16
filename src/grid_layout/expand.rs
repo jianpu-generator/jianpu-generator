@@ -1,7 +1,8 @@
-use crate::compiler::types::{ElementContent, MeasureBlock, MeasureRow};
+use crate::compiler::types::{ElementContent, MeasureBlock, MeasureRow, MULTI_MEASURE_REST_WIDTH};
 use crate::grid_layout::layout::{
     block_column_width, chord_part_sub_row_heights, compute_bar_height, has_lyrics,
     is_chord_only_row, is_lyric_row, lyric_row_height, note_part_sub_row_heights, LABEL_COLS,
+    MUSIC_START_COL,
 };
 use crate::grid_layout::types::{GridContent, GridElement, GridRow, HAlign, VAlign};
 use std::collections::HashMap;
@@ -40,6 +41,34 @@ pub(crate) struct MeasureRenderParams {
     pub(crate) part_idx: usize,
 }
 
+/// The collapsed multi-measure-rest glyph gets a fixed wide `column_span`
+/// (unlike `push_head`, which always spans a single column), so it's built
+/// as its own `GridElement` rather than routed through `push_head`.
+fn push_multi_measure_rest(sub_rows: &mut [GridRow], head_sub: usize, column: u32, count: u32) {
+    if let Some(row) = sub_rows.get_mut(head_sub) {
+        row.elements.push(GridElement {
+            column,
+            column_span: MULTI_MEASURE_REST_WIDTH,
+            halign: HAlign::Center,
+            valign: VAlign::Center,
+            content: GridContent::MultiMeasureRest { count },
+        });
+    }
+}
+
+fn push_bar_line(sub_rows: &mut [GridRow], column: u32, bar_height: f32) {
+    if let Some(row) = sub_rows.get_mut(0) {
+        row.elements.push(grid_el(
+            column,
+            GridContent::BarLine {
+                height_pt: bar_height,
+            },
+            HAlign::Center,
+            VAlign::Top,
+        ));
+    }
+}
+
 pub(crate) fn expand_measure_elements(
     row: &MeasureRow,
     measure_col_offset: u32,
@@ -49,7 +78,7 @@ pub(crate) fn expand_measure_elements(
     let head_sub = params.head_sub;
     let sub_count = params.sub_count;
     for el in &row.elements {
-        let grid_col = LABEL_COLS + measure_col_offset + el.column;
+        let grid_col = MUSIC_START_COL + measure_col_offset + el.column;
         match &el.content {
             ElementContent::NoteHead {
                 pitch,
@@ -73,8 +102,14 @@ pub(crate) fn expand_measure_elements(
                 grid_col,
                 GridContent::Rest { dotted: *dotted },
             ),
+            ElementContent::MultiMeasureRest { count } => {
+                push_multi_measure_rest(sub_rows, head_sub, grid_col, *count as u32);
+            }
             ElementContent::NoteDash => {
                 push_head(sub_rows, head_sub, grid_col, GridContent::NoteDash);
+            }
+            ElementContent::PercussionHit => {
+                push_head(sub_rows, head_sub, grid_col, GridContent::PercussionHit);
             }
             ElementContent::ChordSymbol(s) => {
                 if let Some(row) = sub_rows.get_mut(head_sub) {
@@ -96,7 +131,7 @@ pub(crate) fn expand_measure_elements(
                 let ul_sub = (sub_count - 2) + *level as usize;
                 if let Some(row) = sub_rows.get_mut(ul_sub) {
                     row.elements.push(GridElement {
-                        column: LABEL_COLS + measure_col_offset + from_column,
+                        column: MUSIC_START_COL + measure_col_offset + from_column,
                         column_span: span,
                         halign: HAlign::Start,
                         valign: VAlign::Center,
@@ -106,19 +141,10 @@ pub(crate) fn expand_measure_elements(
             }
             ElementContent::BarLine => {
                 if params.part_idx == 0 {
-                    if let Some(row) = sub_rows.get_mut(0) {
-                        row.elements.push(grid_el(
-                            grid_col,
-                            GridContent::BarLine {
-                                height_pt: params.bar_height,
-                            },
-                            HAlign::Center,
-                            VAlign::Top,
-                        ));
-                    }
+                    push_bar_line(sub_rows, grid_col, params.bar_height);
                 }
             }
-            ElementContent::Lyric(_) => {} // handled in lyric-row branch above
+            ElementContent::Lyric { .. } => {} // handled in lyric-row branch above
         }
     }
 }
@@ -139,9 +165,9 @@ pub(crate) fn expand_lyric_part(
         let col_w = block_column_width(block);
         if let Some(part_row) = block.rows.get(part_idx) {
             for el in &part_row.elements {
-                if let ElementContent::Lyric(text) = &el.content {
+                if let ElementContent::Lyric { text, .. } = &el.content {
                     row.elements.push(GridElement {
-                        column: LABEL_COLS + measure_col_offset + el.column,
+                        column: MUSIC_START_COL + measure_col_offset + el.column,
                         column_span: 1,
                         halign: HAlign::Center,
                         valign: VAlign::Center,
@@ -208,7 +234,7 @@ pub(crate) fn expand_note_part(
             row.elements.push(GridElement {
                 column: LABEL_COLS,
                 column_span: 1,
-                halign: HAlign::Start,
+                halign: HAlign::Center,
                 valign: VAlign::Top,
                 content: GridContent::BarLine {
                     height_pt: bar_height,
@@ -251,7 +277,7 @@ pub(crate) fn expand_system_to_rows(
         return vec![];
     };
     let total_musical_cols: u32 = system.iter().map(block_column_width).sum();
-    let column_count = LABEL_COLS + total_musical_cols;
+    let column_count = MUSIC_START_COL + total_musical_cols;
     let bar_height = compute_bar_height(first, base);
     let mut all_rows: Vec<GridRow> = Vec::new();
     for (part_idx, part_template) in first.rows.iter().enumerate() {

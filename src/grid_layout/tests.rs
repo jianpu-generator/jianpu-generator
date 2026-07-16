@@ -27,6 +27,7 @@ fn column_width_pt_with_label_columns() {
 fn note_row(id: &str) -> MeasureRow {
     MeasureRow {
         id: RowId(id.to_string()),
+        group_provenance: None,
         label: id.to_string(),
         elements: vec![ColumnElement {
             column: 0,
@@ -44,6 +45,7 @@ fn note_row(id: &str) -> MeasureRow {
 fn chord_row(id: &str) -> MeasureRow {
     MeasureRow {
         id: RowId(id.to_string()),
+        group_provenance: None,
         label: id.to_string(),
         elements: vec![ColumnElement {
             column: 0,
@@ -56,10 +58,14 @@ fn chord_row(id: &str) -> MeasureRow {
 fn lyric_row(id: &str) -> MeasureRow {
     MeasureRow {
         id: RowId(id.to_string()),
+        group_provenance: None,
         label: id.to_string(),
         elements: vec![ColumnElement {
             column: 0,
-            content: ElementContent::Lyric("la".to_string()),
+            content: ElementContent::Lyric {
+                text: "la".to_string(),
+                verse: 0,
+            },
         }],
         source_part_index: 0,
     }
@@ -76,6 +82,7 @@ fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
             id: RowId(row_id.to_string()),
+            group_provenance: None,
             label: row_id.to_string(),
             elements: vec![
                 ColumnElement {
@@ -96,6 +103,7 @@ fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
         }],
         decorations: vec![],
         diagnostics: vec![],
+        represents_measures: 1,
     }
 }
 
@@ -104,7 +112,9 @@ fn cfg() -> RenderConfig {
         row_height: 30,
         label_width: 0,
         note_number_width: 12,
-        max_columns: 8,
+        max_measures_per_system: 2,
+        lyrics_font_size: 18,
+        hide_system_dividers: false,
     }
 }
 
@@ -146,8 +156,8 @@ fn single_block_is_one_system() {
 }
 
 #[test]
-fn blocks_exceeding_max_columns_split_into_two_systems() {
-    // Each block is 4 cols wide; max=8 → fits 2 per system
+fn blocks_exceeding_max_measures_per_system_split_into_two_systems() {
+    // max_measures_per_system=2 → fits 2 blocks per system
     let blocks = vec![make_block("S", 3), make_block("S", 3), make_block("S", 3)];
     let systems = pack_into_systems(&blocks, &cfg());
     assert_eq!(systems.len(), 2);
@@ -202,6 +212,7 @@ fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
         rows: vec![
             MeasureRow {
                 id: RowId("note".to_string()),
+                group_provenance: None,
                 label: "note".to_string(),
                 elements: vec![
                     ColumnElement {
@@ -222,16 +233,21 @@ fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
             },
             MeasureRow {
                 id: RowId("lyric".to_string()),
+                group_provenance: None,
                 label: "lyric".to_string(),
                 elements: vec![ColumnElement {
                     column: 0,
-                    content: ElementContent::Lyric("la".to_string()),
+                    content: ElementContent::Lyric {
+                        text: "la".to_string(),
+                        verse: 0,
+                    },
                 }],
                 source_part_index: 0,
             },
         ],
         decorations: vec![],
         diagnostics: vec![],
+        represents_measures: 1,
     }
 }
 
@@ -274,6 +290,6 @@ fn row_label_is_in_note_head_sub_row_at_column_0_span_4() {
 #[test]
 fn column_count_is_label_cols_plus_musical_cols() {
     let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new());
-    // 4 label cols + 4 musical cols (bar at col 3 → block width=4)
-    assert_eq!(rows[0].column_count, 8);
+    // 4 label cols + 1 leading bar line col + 4 musical cols (bar at col 3 → block width=4)
+    assert_eq!(rows[0].column_count, 9);
 }

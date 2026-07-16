@@ -11,7 +11,7 @@ pub(crate) fn is_lyric_row(row: &MeasureRow) -> bool {
     let has_lyric = row
         .elements
         .iter()
-        .any(|e| matches!(e.content, ElementContent::Lyric(_)));
+        .any(|e| matches!(e.content, ElementContent::Lyric { .. }));
     let has_note = row.elements.iter().any(|e| {
         matches!(
             e.content,
@@ -24,7 +24,7 @@ pub(crate) fn is_lyric_row(row: &MeasureRow) -> bool {
 pub(crate) fn has_lyrics(row: &MeasureRow) -> bool {
     row.elements
         .iter()
-        .any(|e| matches!(e.content, ElementContent::Lyric(_)))
+        .any(|e| matches!(e.content, ElementContent::Lyric { .. }))
 }
 
 pub(crate) fn is_chord_only_row(row: &MeasureRow) -> bool {
@@ -34,7 +34,9 @@ pub(crate) fn is_chord_only_row(row: &MeasureRow) -> bool {
     let has_note = row.elements.iter().any(|e| {
         matches!(
             e.content,
-            ElementContent::NoteHead { .. } | ElementContent::Rest { .. }
+            ElementContent::NoteHead { .. }
+                | ElementContent::Rest { .. }
+                | ElementContent::PercussionHit
         )
     });
     !has_note
@@ -80,6 +82,11 @@ pub(crate) fn decoration_row_height(base: f32) -> f32 {
 
 pub(crate) fn separator_row_height() -> f32 {
     4.0
+}
+
+/// One row of blank vertical space, used above the sequence line.
+pub(crate) fn header_gap_row_height(base: f32) -> f32 {
+    base
 }
 
 pub(crate) fn header_title_row_height(base: f32) -> f32 {
@@ -140,6 +147,10 @@ fn row_ids(block: &MeasureBlock) -> Vec<&RowId> {
 
 pub(crate) const LABEL_COLS: u32 = 4;
 
+/// First musical column, leaving a dedicated column at `LABEL_COLS` for the
+/// leading barline so it gets the same breathing room as inter-measure barlines.
+pub(crate) const MUSIC_START_COL: u32 = LABEL_COLS + 1;
+
 /// Break `blocks` into systems. Each system is a `Vec<MeasureBlock>`.
 pub(crate) fn pack_into_systems(
     blocks: &[MeasureBlock],
@@ -147,22 +158,19 @@ pub(crate) fn pack_into_systems(
 ) -> Vec<Vec<MeasureBlock>> {
     let mut systems: Vec<Vec<MeasureBlock>> = Vec::new();
     let mut current: Vec<MeasureBlock> = Vec::new();
-    let mut current_cols: u32 = 0;
 
     for block in blocks {
-        let col_w = block_column_width(block);
         let needs_new = if let Some(first) = current.first() {
-            current_cols + col_w > config.max_columns || row_ids(block) != row_ids(first)
+            current.len() as u32 >= config.max_measures_per_system
+                || row_ids(block) != row_ids(first)
         } else {
             false
         };
 
         if needs_new && !current.is_empty() {
             systems.push(std::mem::take(&mut current));
-            current_cols = 0;
         }
 
-        current_cols += col_w;
         current.push(block.clone());
     }
 
@@ -206,14 +214,15 @@ fn system_total_height(system: &[MeasureBlock], base: f32) -> f32 {
 fn build_page_rows(
     systems: &[Vec<MeasureBlock>],
     header: &Header,
-    base: f32,
+    config: &RenderConfig,
     arc_map: &HashMap<(usize, usize), Vec<GridElement>>,
     abs_system_index_start: usize,
     is_first_page: bool,
 ) -> Vec<GridRow> {
+    let base = config.row_height as f32;
     let mut rows: Vec<GridRow> = make_header_rows(header, base, is_first_page);
     for (sys_idx, system) in systems.iter().enumerate() {
-        if sys_idx > 0 {
+        if sys_idx > 0 && !config.hide_system_dividers {
             rows.push(make_separator_row());
         }
         let Some(first) = system.first() else {
@@ -272,7 +281,7 @@ pub fn layout(
 
     for system in systems {
         let sys_h = system_total_height(&system, base);
-        let gap = if current_page.is_empty() {
+        let gap = if current_page.is_empty() || config.hide_system_dividers {
             0.0
         } else {
             separator_row_height()
@@ -303,7 +312,7 @@ pub fn layout(
         let mut rows = build_page_rows(
             &page_sys,
             header,
-            base,
+            config,
             &arc_map,
             abs_system_index_start,
             page_idx == 0,
@@ -335,6 +344,10 @@ pub fn layout(
 #[cfg(test)]
 #[path = "tests_layout.rs"]
 mod tests_layout;
+
+#[cfg(test)]
+#[path = "tests_layout_directives.rs"]
+mod tests_layout_directives;
 
 #[cfg(test)]
 #[path = "tests_highlight.rs"]

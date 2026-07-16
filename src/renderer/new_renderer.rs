@@ -1,12 +1,17 @@
-use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compositor::types::{
-    AbsoluteContent, AbsoluteElement, AbsolutePage, DominantBaseline, FontFamily, FontWeight,
-    TextAnchor, TextSpan,
+    AbsoluteContent, AbsoluteElement, AbsolutePage, DominantBaseline, TextAnchor, TextSpan,
 };
 use crate::render_config::RenderConfig;
 use crate::renderer::new_types::{
     SvgDocument, SvgElement, SvgKind, SvgVariant, Tag, TransparentRectRole, TspanData,
 };
+use glyph_renderers::{
+    render_bar_line, render_chord_symbol, render_horizontal_line, render_lyric,
+    render_multi_measure_rest, render_note_head, render_percussion_hit, render_rest,
+    render_tie_or_slur, render_underline, NoteRenderParams,
+};
+
+mod glyph_renderers;
 
 pub fn render_new(pages: &[AbsolutePage], config: &RenderConfig) -> Vec<SvgDocument> {
     pages.iter().map(|page| render_page(page, config)).collect()
@@ -67,7 +72,11 @@ fn render_element(
         AbsoluteContent::Rest { dotted } => {
             render_rest(elem, *dotted, row_height, base_font_size, note_number_width)
         }
+        AbsoluteContent::MultiMeasureRest { count, width } => {
+            render_multi_measure_rest(elem, *count, *width, row_height, base_font_size)
+        }
         AbsoluteContent::ChordSymbol(s) => render_chord_symbol(elem, s, base_font_size),
+        AbsoluteContent::PercussionHit => render_percussion_hit(elem, base_font_size),
         AbsoluteContent::Underline { width, level: _ } => render_underline(elem, width),
         AbsoluteContent::TieOrSlur { kind: _, width } => {
             render_tie_or_slur(elem, width, row_height)
@@ -83,12 +92,10 @@ fn render_element(
             font,
             weight,
             italic,
-        } => vec![SvgElement {
-            x: elem.x,
-            y: elem.y,
-            variant: Some(SvgVariant::Text),
-            kind: SvgKind::Text {
-                content: content.clone(),
+        } => vec![render_text_content(
+            elem,
+            content,
+            TextContentStyle {
                 font_size: *font_size,
                 anchor: *anchor,
                 baseline: *baseline,
@@ -96,33 +103,77 @@ fn render_element(
                 weight: *weight,
                 italic: *italic,
             },
-        }],
-        AbsoluteContent::MeasureHighlight { width, height } => vec![SvgElement {
-            x: elem.x,
-            y: elem.y,
-            variant: None,
-            kind: SvgKind::Rect {
-                width: *width,
-                height: *height,
-            },
-        }],
-        AbsoluteContent::ErrorHighlight { width, height } => vec![SvgElement {
-            x: elem.x,
-            y: elem.y,
-            variant: None,
-            kind: SvgKind::ErrorRect {
-                width: *width,
-                height: *height,
-            },
-        }],
+        )],
+        AbsoluteContent::MeasureHighlight { width, height } => {
+            vec![render_highlight_rect(elem, *width, *height, false)]
+        }
+        AbsoluteContent::ErrorHighlight { width, height } => {
+            vec![render_highlight_rect(elem, *width, *height, true)]
+        }
         AbsoluteContent::MeasureClickTarget {
             width,
             height,
             measure_index,
         } => render_measure_click_target(elem, *width, *height, *measure_index),
-        AbsoluteContent::DirectiveLine { label, spans } => {
-            render_directive_line(elem, label, spans)
-        }
+        AbsoluteContent::DirectiveLine {
+            label,
+            spans,
+            segno_icon_offset,
+        } => render_directive_line(elem, label, spans, *segno_icon_offset),
+    }
+}
+
+#[derive(Clone, Copy)]
+struct TextContentStyle {
+    font_size: f32,
+    anchor: TextAnchor,
+    baseline: DominantBaseline,
+    font: crate::compositor::types::FontFamily,
+    weight: crate::compositor::types::FontWeight,
+    italic: bool,
+}
+
+fn render_text_content(
+    elem: &AbsoluteElement,
+    content: &str,
+    style: TextContentStyle,
+) -> SvgElement {
+    SvgElement {
+        x: elem.x,
+        y: elem.y,
+        variant: Some(SvgVariant::Text),
+        kind: SvgKind::Text {
+            content: content.to_string(),
+            font_size: style.font_size,
+            anchor: style.anchor,
+            baseline: style.baseline,
+            font: style.font,
+            weight: style.weight,
+            italic: style.italic,
+        },
+    }
+}
+
+fn render_highlight_rect(
+    elem: &AbsoluteElement,
+    width: f32,
+    height: f32,
+    is_error: bool,
+) -> SvgElement {
+    let kind = if is_error {
+        SvgKind::ErrorRect { width, height }
+    } else {
+        SvgKind::Rect { width, height }
+    };
+    render_rect(elem, kind)
+}
+
+fn render_rect(elem: &AbsoluteElement, kind: SvgKind) -> SvgElement {
+    SvgElement {
+        x: elem.x,
+        y: elem.y,
+        variant: None,
+        kind,
     }
 }
 
@@ -142,10 +193,15 @@ fn spans_to_tspans(spans: &[TextSpan]) -> Vec<TspanData> {
         .collect()
 }
 
+/// Rendered width/height (in points) of the vector Segno glyph, matching the
+/// 12pt text it's drawn alongside.
+const SEGNO_GLYPH_SIZE: f32 = 13.0;
+
 fn render_directive_line(
     elem: &AbsoluteElement,
     label: &Option<String>,
     spans: &[TextSpan],
+    segno_icon_offset: Option<f32>,
 ) -> Vec<SvgElement> {
     let text_element = SvgElement {
         x: elem.x,
@@ -159,9 +215,32 @@ fn render_directive_line(
         },
     };
 
+    let segno_element = segno_icon_offset.map(|offset| SvgElement {
+        x: elem.x + offset,
+        y: elem.y - SEGNO_GLYPH_SIZE / 2.0,
+        variant: None,
+        kind: SvgKind::SegnoGlyph {
+            size: SEGNO_GLYPH_SIZE,
+        },
+    });
+
     if let Some(label_str) = label {
         let bg_width = label_str.len() as f32 * 8.0 + 6.0;
         let bg_height = 18.0;
+        let mut children = vec![
+            SvgElement {
+                x: elem.x - 3.0,
+                y: elem.y - bg_height / 2.0,
+                variant: None,
+                kind: SvgKind::TransparentRect {
+                    width: bg_width,
+                    height: bg_height,
+                    role: TransparentRectRole::SectionLabelBackground,
+                },
+            },
+            text_element,
+        ];
+        children.extend(segno_element);
         vec![SvgElement {
             x: elem.x,
             y: elem.y,
@@ -170,23 +249,11 @@ fn render_directive_line(
                 tag: Some(Tag::SectionLabel {
                     label: label_str.clone(),
                 }),
-                children: vec![
-                    SvgElement {
-                        x: elem.x - 3.0,
-                        y: elem.y - bg_height / 2.0,
-                        variant: None,
-                        kind: SvgKind::TransparentRect {
-                            width: bg_width,
-                            height: bg_height,
-                            role: TransparentRectRole::SectionLabelBackground,
-                        },
-                    },
-                    text_element,
-                ],
+                children,
             },
         }]
     } else {
-        vec![text_element]
+        std::iter::once(text_element).chain(segno_element).collect()
     }
 }
 
@@ -216,261 +283,4 @@ fn render_measure_click_target(
             }),
         },
     }]
-}
-
-struct NoteRenderParams<'a> {
-    row_height: &'a f32,
-    base_font_size: &'a f32,
-    note_number_width: &'a f32,
-}
-
-fn render_note_head(
-    elem: &AbsoluteElement,
-    pitch: &JianPuPitch,
-    accidental: &Accidental,
-    octave: i8,
-    dotted: bool,
-    params: &NoteRenderParams<'_>,
-) -> Vec<SvgElement> {
-    let NoteRenderParams {
-        row_height,
-        base_font_size,
-        note_number_width,
-    } = params;
-    let mut results = Vec::new();
-
-    results.push(SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: Some(SvgVariant::NoteHead),
-        kind: SvgKind::Text {
-            content: pitch_to_digit(pitch).to_string(),
-            font_size: **base_font_size,
-            anchor: TextAnchor::Middle,
-            baseline: DominantBaseline::Middle,
-            font: FontFamily::Monospace,
-            weight: FontWeight::Normal,
-            italic: false,
-        },
-    });
-
-    let accidental_symbol = match accidental {
-        Accidental::Sharp => Some("♯"),
-        Accidental::Flat => Some("♭"),
-        Accidental::Natural => None,
-    };
-
-    if let Some(symbol) = accidental_symbol {
-        let accidental_x = elem.x + *note_number_width * 0.5;
-        results.push(SvgElement {
-            x: accidental_x,
-            y: elem.y,
-            variant: Some(SvgVariant::NoteHeadAccidental),
-            kind: SvgKind::Text {
-                content: symbol.to_string(),
-                font_size: **base_font_size * 1.25,
-                anchor: TextAnchor::Start,
-                baseline: DominantBaseline::Middle,
-                font: FontFamily::Monospace,
-                weight: FontWeight::Normal,
-                italic: false,
-            },
-        });
-    }
-
-    let dot_radius = *row_height * 0.06;
-
-    if dotted {
-        let dot_x = elem.x + *note_number_width * 1.5;
-        results.push(SvgElement {
-            x: dot_x,
-            y: elem.y,
-            variant: Some(SvgVariant::NoteHead),
-            kind: SvgKind::Circle { r: dot_radius },
-        });
-    }
-
-    if octave > 0 {
-        let dot_spacing = dot_radius * 3.0;
-        let gap = dot_radius * 2.0;
-        for i in 0..octave {
-            let dot_y =
-                elem.y - *base_font_size / 2.0 - dot_radius - gap - (i as f32) * dot_spacing;
-            results.push(SvgElement {
-                x: elem.x,
-                y: dot_y,
-                variant: Some(SvgVariant::NoteHead),
-                kind: SvgKind::Circle { r: dot_radius },
-            });
-        }
-    }
-
-    if octave < 0 {
-        let dot_spacing = dot_radius * 3.0;
-        for i in 0..(-octave) {
-            let dot_y = elem.y + *base_font_size / 2.0 + dot_radius + (i as f32) * dot_spacing;
-            results.push(SvgElement {
-                x: elem.x,
-                y: dot_y,
-                variant: Some(SvgVariant::NoteHead),
-                kind: SvgKind::Circle { r: dot_radius },
-            });
-        }
-    }
-
-    results
-}
-
-fn render_rest(
-    elem: &AbsoluteElement,
-    dotted: bool,
-    row_height: &f32,
-    base_font_size: &f32,
-    note_number_width: &f32,
-) -> Vec<SvgElement> {
-    let mut results = Vec::new();
-
-    // "0" text
-    results.push(SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: Some(SvgVariant::Rest),
-        kind: SvgKind::Text {
-            content: "0".to_string(),
-            font_size: *base_font_size,
-            anchor: TextAnchor::Middle,
-            baseline: DominantBaseline::Middle,
-            font: FontFamily::Monospace,
-            weight: FontWeight::Normal,
-            italic: false,
-        },
-    });
-
-    // Optional dot
-    if dotted {
-        let dot_radius = row_height * 0.06;
-        let dot_x = elem.x + note_number_width * 1.5;
-        results.push(SvgElement {
-            x: dot_x,
-            y: elem.y,
-            variant: Some(SvgVariant::Rest),
-            kind: SvgKind::Circle { r: dot_radius },
-        });
-    }
-
-    results
-}
-
-fn render_chord_symbol(elem: &AbsoluteElement, s: &str, base_font_size: &f32) -> Vec<SvgElement> {
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: Some(SvgVariant::ChordSymbol),
-        kind: SvgKind::Text {
-            content: s.to_string(),
-            font_size: *base_font_size,
-            anchor: TextAnchor::Start,
-            baseline: DominantBaseline::Middle,
-            font: FontFamily::Monospace,
-            weight: FontWeight::Normal,
-            italic: false,
-        },
-    }]
-}
-
-fn render_horizontal_line(elem: &AbsoluteElement, width: &f32) -> Vec<SvgElement> {
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: Some(SvgVariant::HorizontalLine),
-        kind: SvgKind::Line {
-            x2: elem.x + width,
-            y2: elem.y,
-            stroke_width: 0.5,
-        },
-    }]
-}
-
-fn render_underline(elem: &AbsoluteElement, width: &f32) -> Vec<SvgElement> {
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: Some(SvgVariant::Underline),
-        kind: SvgKind::Line {
-            x2: elem.x + width,
-            y2: elem.y,
-            stroke_width: 1.0,
-        },
-    }]
-}
-
-fn render_tie_or_slur(elem: &AbsoluteElement, width: &f32, row_height: &f32) -> Vec<SvgElement> {
-    let cx = elem.x + width / 2.0;
-    let cy = elem.y - row_height * 0.3;
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: Some(SvgVariant::TieOrSlur),
-        kind: SvgKind::Path {
-            control_x: cx,
-            control_y: cy,
-            end_x: elem.x + width,
-            end_y: elem.y,
-            stroke_width: 1.0,
-        },
-    }]
-}
-
-fn render_bar_line(elem: &AbsoluteElement, height: &f32) -> Vec<SvgElement> {
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: Some(SvgVariant::BarLine),
-        kind: SvgKind::Line {
-            x2: elem.x,
-            y2: elem.y + height,
-            stroke_width: 0.5,
-        },
-    }]
-}
-
-fn render_lyric(
-    elem: &AbsoluteElement,
-    s: &str,
-    base_font_size: &f32,
-    cjk_font_size: &f32,
-) -> Vec<SvgElement> {
-    let is_cjk = s.chars().any(|c| ('\u{4E00}'..='\u{9FFF}').contains(&c));
-    let font_size = if is_cjk {
-        *cjk_font_size
-    } else {
-        *base_font_size
-    };
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: Some(SvgVariant::Lyric),
-        kind: SvgKind::Text {
-            content: s.to_string(),
-            font_size,
-            anchor: TextAnchor::Middle,
-            baseline: DominantBaseline::Hanging,
-            font: FontFamily::SansSerif,
-            weight: FontWeight::Normal,
-            italic: false,
-        },
-    }]
-}
-
-fn pitch_to_digit(pitch: &JianPuPitch) -> char {
-    use crate::ast::parsed::JianPuPitch::*;
-    match pitch {
-        One => '1',
-        Two => '2',
-        Three => '3',
-        Four => '4',
-        Five => '5',
-        Six => '6',
-        Seven => '7',
-    }
 }

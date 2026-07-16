@@ -2,14 +2,14 @@ import { expect, test } from '@playwright/test'
 import { focusEditor } from './fileSwitcherHelpers'
 
 /**
- * The default demo source (reference.jianpu) has the following
- * Monaco line numbers (1-based):
+ * The default demo file (demo/00-header.jianpu, opened on first load) has
+ * the following Monaco line numbers (1-based):
  *
  *   1  # metadata
  *   2  title = "Jianpu Postcard"
  *   ...
- *  14  # score
- *  15  [M] 0 0 0 0    ← first note line → measure 1
+ *  16  # score
+ *  17  [M] 0 0 0 0    ← first note line → measure 1
  */
 test('shows measure number when cursor is placed on a note line', async ({
   page,
@@ -25,10 +25,10 @@ test('shows measure number when cursor is placed on a note line', async ({
   // Focus the Monaco editor.
   await focusEditor(page)
 
-  // Use Monaco's "Go to Line" command (Ctrl+G) to jump to line 15,
-  // which is the first note line in the default reference.jianpu source.
+  // Use Monaco's "Go to Line" command (Ctrl+G) to jump to line 17,
+  // which is the first note line in the default demo/00-header.jianpu file.
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('15')
+  await page.keyboard.type('17')
   await page.keyboard.press('Enter')
 
   // Allow the 300 ms debounce in notifySelection plus worker round-trip.
@@ -46,8 +46,8 @@ test('shows measure number when cursor is placed on a note line', async ({
  * of a note line, the byte offset equals source_span.end and the measure must
  * still be detected.
  *
- * Line 15 of the default demo is "[M] 0 0 0 0" — the entire span of
- * measure 1 (the following line 16 is blank). Pressing End places the
+ * Line 17 of the default demo is "[M] 0 0 0 0" — the entire span of
+ * measure 1 (the following line 18 is blank). Pressing End places the
  * cursor after the trailing "0", at the end of the measure's span.
  */
 test('detects measure when cursor is at end of last character of a note line', async ({
@@ -61,10 +61,10 @@ test('detects measure when cursor is at end of last character of a note line', a
   // Focus the Monaco editor.
   await focusEditor(page)
 
-  // Navigate to line 15 ("[M] 0 0 0 0") and press End to put the cursor
+  // Navigate to line 17 ("[M] 0 0 0 0") and press End to put the cursor
   // after the trailing "0" — the last character of the measure span.
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('15')
+  await page.keyboard.type('17')
   await page.keyboard.press('Enter')
   await page.keyboard.press('End')
 

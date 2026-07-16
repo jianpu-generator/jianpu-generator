@@ -6,7 +6,9 @@ pub enum SvgVariant {
     NoteHead,
     NoteHeadAccidental,
     Rest,
+    MultiMeasureRest,
     ChordSymbol,
+    PercussionHit,
     HorizontalLine,
     Underline,
     TieOrSlur,
@@ -22,7 +24,9 @@ impl SvgVariant {
             Self::NoteHead => "note-head",
             Self::NoteHeadAccidental => "note-head-accidental",
             Self::Rest => "rest",
+            Self::MultiMeasureRest => "multi-measure-rest",
             Self::ChordSymbol => "chord-symbol",
+            Self::PercussionHit => "percussion-hit",
             Self::HorizontalLine => "horizontal-line",
             Self::Underline => "underline",
             Self::TieOrSlur => "tie-or-slur",
@@ -120,6 +124,13 @@ pub enum SvgKind {
         anchor: TextAnchor,
         baseline: DominantBaseline,
         spans: Vec<TspanData>,
+    },
+    /// Vector Segno glyph (rendered in place of the unicode
+    /// `\u{1d10b}` character, which is missing from most system fonts).
+    /// `size` is the glyph's rendered width/height in points; `(x, y)` on
+    /// the enclosing [`SvgElement`] is its vertical center / left edge.
+    SegnoGlyph {
+        size: f32,
     },
 }
 

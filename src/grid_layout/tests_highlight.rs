@@ -1,4 +1,5 @@
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
+use crate::grid_layout::highlight::compute_all_measure_click_targets;
 use crate::grid_layout::layout::compute_measure_highlight_location;
 use crate::grid_layout::layout::compute_measure_highlights_for_range;
 use crate::grid_layout::types::Header;
@@ -22,13 +23,21 @@ fn simple_block(col_count: u32) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
             id: RowId("S".to_string()),
+            group_provenance: None,
             label: String::new(),
             elements,
             source_part_index: 0,
         }],
         decorations: vec![],
         diagnostics: vec![],
+        represents_measures: 1,
     }
+}
+
+fn merged_block(col_count: u32, represents_measures: usize) -> MeasureBlock {
+    let mut block = simple_block(col_count);
+    block.represents_measures = represents_measures;
+    block
 }
 
 fn no_header() -> Header {
@@ -38,6 +47,7 @@ fn no_header() -> Header {
         author: None,
         part_list: vec![],
         parts_list_columns: 3,
+        sequence: None,
     }
 }
 
@@ -51,35 +61,37 @@ fn returns_none_for_out_of_range_measure_index() {
 
 #[test]
 fn first_block_in_single_system_has_correct_column_range() {
-    // LABEL_COLS = 4, block_column_width(4-note block) = 5 (4 notes + 1 bar line)
-    // measure 0's bar line is centered in its own column (col 8), so column_end = 8.5
-    // column_start stays at LABEL_COLS since the row's leading bar line is start-aligned
+    // LABEL_COLS = 4, MUSIC_START_COL = 5 (the leading bar line gets its own
+    // dedicated column at LABEL_COLS), block_column_width(4-note block) = 5
+    // (4 notes + 1 bar line). Both the leading and ending bar lines are
+    // centered in their own column, so column_start = 5 - 0.5 = 4.5 and
+    // column_end = (5 + 5) - 0.5 = 9.5.
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4), simple_block(4)]]];
     let result = compute_measure_highlight_location(&page_systems, 0, &no_header(), 20.0)
         .expect("should find measure 0");
     let (_, highlight) = result;
     assert_eq!(
-        highlight.column_start, 4.0,
-        "column_start should be LABEL_COLS"
+        highlight.column_start, 4.5,
+        "column_start should match the centered position of the leading bar line"
     );
     assert_eq!(
-        highlight.column_end, 8.5,
+        highlight.column_end, 9.5,
         "column_end should match the centered position of the ending bar line"
     );
 }
 
 #[test]
 fn second_block_column_start_follows_first_block_width() {
-    // measure 1's left edge is the previous bar line, centered at column 8, i.e. 8.5
-    // its own ending bar line is centered in column 13, i.e. column_end = 13.5
+    // measure 1's left edge is the previous bar line, centered at column 9, i.e. 9.5
+    // its own ending bar line is centered in column 14, i.e. column_end = 14.5
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4), simple_block(4)]]];
     let result = compute_measure_highlight_location(&page_systems, 1, &no_header(), 20.0)
         .expect("should find measure 1");
     let (_, highlight) = result;
-    assert_eq!(highlight.column_start, 8.5);
-    assert_eq!(highlight.column_end, 13.5);
+    assert_eq!(highlight.column_start, 9.5);
+    assert_eq!(highlight.column_end, 14.5);
 }
 
 #[test]
@@ -104,8 +116,8 @@ fn range_with_single_index_returns_one_highlight_matching_location() {
         .next()
         .expect("should have one highlight");
     assert_eq!(page_idx, 0);
-    assert_eq!(h.column_start, 4.0);
-    assert_eq!(h.column_end, 8.5);
+    assert_eq!(h.column_start, 4.5);
+    assert_eq!(h.column_end, 9.5);
 }
 
 #[test]
@@ -117,8 +129,8 @@ fn range_spanning_two_measures_returns_two_highlights() {
     let mut iter = highlights.into_iter();
     let (_, first_h) = iter.next().expect("first highlight");
     let (_, second_h) = iter.next().expect("second highlight");
-    assert_eq!(first_h.column_start, 4.0);
-    assert_eq!(second_h.column_start, 8.5);
+    assert_eq!(first_h.column_start, 4.5);
+    assert_eq!(second_h.column_start, 9.5);
 }
 
 #[test]
@@ -143,6 +155,33 @@ fn range_spanning_two_pages_reports_correct_page_indices() {
 }
 
 #[test]
+fn global_measure_index_accounts_for_a_merged_block() {
+    // 5 source measures: measure 0 is a normal block, measures 1-3 are
+    // collapsed into one merged block (represents_measures = 3), measure 4
+    // is a normal block again. Its global_measure_index must be 4, not 2
+    // (which is what a naive "+1 per block" count would produce, since
+    // there are only 3 blocks in this system).
+    let page_systems: Vec<Vec<Vec<MeasureBlock>>> = vec![vec![vec![
+        simple_block(4),
+        merged_block(4, 3),
+        simple_block(4),
+    ]]];
+    let result = compute_measure_highlight_location(&page_systems, 4, &no_header(), 20.0);
+    assert!(
+        result.is_some(),
+        "measure index 4 should resolve to the block after the merged run"
+    );
+
+    let targets = compute_all_measure_click_targets(&page_systems, &no_header(), 20.0);
+    let measure_indices: Vec<usize> = targets.iter().map(|(_, t)| t.measure_index).collect();
+    assert_eq!(
+        measure_indices,
+        vec![0, 1, 4],
+        "click targets should carry global_measure_index 0, 1 (merged block's start), 4 (not 2)"
+    );
+}
+
+#[test]
 fn erroneous_measure_produces_error_highlight() {
     use crate::error::{Diagnostic, Span, Warning};
 
@@ -153,6 +192,7 @@ fn erroneous_measure_produces_error_highlight() {
             Span::new(0, 1),
             "lyrics underflow",
         ))],
+        represents_measures: 1,
     };
     let header = Header {
         title: Some("T".into()),
@@ -160,12 +200,15 @@ fn erroneous_measure_produces_error_highlight() {
         author: Some("A".into()),
         part_list: vec![],
         parts_list_columns: 3,
+        sequence: None,
     };
     let config = crate::render_config::RenderConfig {
         row_height: 24,
-        max_columns: 28,
+        max_measures_per_system: 28,
         label_width: 40,
         note_number_width: 8,
+        lyrics_font_size: 14,
+        hide_system_dividers: false,
     };
     let pages = crate::grid_layout::layout(
         &crate::compiler::types::CompileResult {
@@ -195,12 +238,15 @@ fn non_erroneous_measure_produces_no_error_highlight() {
         author: Some("A".into()),
         part_list: vec![],
         parts_list_columns: 3,
+        sequence: None,
     };
     let config = crate::render_config::RenderConfig {
         row_height: 24,
-        max_columns: 28,
+        max_measures_per_system: 28,
         label_width: 40,
         note_number_width: 8,
+        lyrics_font_size: 14,
+        hide_system_dividers: false,
     };
     let pages = crate::grid_layout::layout(
         &crate::compiler::types::CompileResult {

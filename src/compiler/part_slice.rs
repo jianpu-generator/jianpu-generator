@@ -1,7 +1,7 @@
 use super::beam::{flush_beam_buffer, BeamEntry};
 use super::slur_chains::{extend_note_chains, PendingSlurOpen, SlurChainContext, SlurKey};
 use super::PartSliceResult;
-use crate::ast::grouped::{GroupedChordNote, GroupedNote, GroupedRest, NoteEvent, PartSlice};
+use crate::ast::grouped::{GroupedRest, NoteEvent, PartSlice};
 use crate::ast::parsed::PartKind;
 use crate::compiler::types::{ArcKind, ColumnElement, ElementContent, SlurSpan};
 
@@ -21,77 +21,7 @@ struct PartState<'a> {
     part_index: usize,
 }
 
-// ── TimedUnit trait ───────────────────────────────────────────────────────────
-
-trait TimedUnit {
-    fn duration(&self) -> u32;
-    fn dotted(&self) -> bool;
-    fn group_membership(&self) -> u8;
-    fn group_continuation(&self) -> u8;
-    fn slur_close_at(&self) -> Option<u32>;
-    fn slur_key(&self) -> SlurKey;
-    fn tie_to_next(&self) -> bool;
-    fn element_content(&self) -> ElementContent;
-}
-
-impl TimedUnit for GroupedNote {
-    fn duration(&self) -> u32 {
-        self.duration
-    }
-    fn dotted(&self) -> bool {
-        self.dotted
-    }
-    fn group_membership(&self) -> u8 {
-        self.group_membership
-    }
-    fn group_continuation(&self) -> u8 {
-        self.group_continuation
-    }
-    fn slur_close_at(&self) -> Option<u32> {
-        self.slur_group_close_at_duration
-    }
-    fn slur_key(&self) -> SlurKey {
-        SlurKey::Pitch(self.pitch.clone())
-    }
-    fn tie_to_next(&self) -> bool {
-        self.tie_to_next_span.is_some()
-    }
-    fn element_content(&self) -> ElementContent {
-        ElementContent::NoteHead {
-            pitch: self.pitch.clone(),
-            accidental: self.accidental.clone(),
-            octave: self.octave,
-            dotted: self.dotted,
-        }
-    }
-}
-
-impl TimedUnit for GroupedChordNote {
-    fn duration(&self) -> u32 {
-        self.duration
-    }
-    fn dotted(&self) -> bool {
-        self.dotted
-    }
-    fn group_membership(&self) -> u8 {
-        self.group_membership
-    }
-    fn group_continuation(&self) -> u8 {
-        self.group_continuation
-    }
-    fn slur_close_at(&self) -> Option<u32> {
-        self.slur_group_close_at_duration
-    }
-    fn slur_key(&self) -> SlurKey {
-        SlurKey::from_chord(self)
-    }
-    fn tie_to_next(&self) -> bool {
-        self.tie_to_next_span.is_some()
-    }
-    fn element_content(&self) -> ElementContent {
-        ElementContent::ChordSymbol(self.format_symbol())
-    }
-}
+use super::timed_unit::TimedUnit;
 
 // ── Shared compile-unit abstraction ──────────────────────────────────────────
 
@@ -239,23 +169,31 @@ pub(super) fn compile_part_slice(
 }
 
 fn process_events(state: &mut PartState<'_>, slice: &PartSlice) {
-    let mut lyrics_iter = slice.lyrics.as_ref().map(|l| l.syllables.iter());
+    let mut lyrics_iters: Vec<_> = slice.lyrics.iter().map(|l| l.syllables.iter()).collect();
     for event in &slice.notes.events {
         match event {
             NoteEvent::Note(note) => {
                 let is_tie_continuation = *state.prev_tie;
-                let lyric = if slice.kind == PartKind::NotesWithLyrics && !is_tie_continuation {
-                    lyrics_iter
-                        .as_mut()
-                        .and_then(|it| it.next())
-                        .map(|s| ElementContent::Lyric(s.text.clone()))
-                } else {
-                    None
-                };
-                compile_timed_unit(state, note, 0, lyric);
+                let lyrics: Vec<ElementContent> =
+                    if slice.kind == PartKind::NotesWithLyrics && !is_tie_continuation {
+                        lyrics_iters
+                            .iter_mut()
+                            .enumerate()
+                            .filter_map(|(verse, it)| {
+                                it.next().map(|s| ElementContent::Lyric {
+                                    text: s.text.clone(),
+                                    verse,
+                                })
+                            })
+                            .collect()
+                    } else {
+                        Vec::new()
+                    };
+                compile_timed_unit(state, note, 0, lyrics);
             }
             NoteEvent::Rest(rest) => compile_rest(state, rest, 0),
-            NoteEvent::Chord(chord) => compile_timed_unit(state, chord, 0, None),
+            NoteEvent::Chord(chord) => compile_timed_unit(state, chord, 0, Vec::new()),
+            NoteEvent::Percussion(hit) => compile_timed_unit(state, hit, 0, Vec::new()),
         }
     }
     flush_beam_buffer(state.beam_buf, state.elements);
@@ -306,7 +244,7 @@ fn compile_timed_unit<T: TimedUnit>(
     state: &mut PartState<'_>,
     unit: &T,
     measure_col_start: u32,
-    lyric: Option<ElementContent>,
+    lyrics: Vec<ElementContent>,
 ) {
     let is_tie_continuation = *state.prev_tie;
     if is_tie_continuation {
@@ -327,7 +265,7 @@ fn compile_timed_unit<T: TimedUnit>(
         *state.prev_tie_measure = None;
     }
 
-    if let Some(content) = lyric {
+    for content in lyrics {
         state.elements.push(ColumnElement {
             column: *state.col,
             content,

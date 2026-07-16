@@ -1,25 +1,24 @@
 use crate::compiler::types::MeasureBlock;
 use crate::grid_layout::layout::{
     block_column_width, is_chord_only_row, is_lyric_row, make_header_rows,
-    system_has_any_decoration, LABEL_COLS,
+    system_has_any_decoration, MUSIC_START_COL,
 };
 use crate::grid_layout::types::{Header, MeasureClickTarget, MeasureHighlight};
 
 fn has_lyrics(row: &crate::compiler::types::MeasureRow) -> bool {
-    row.elements
-        .iter()
-        .any(|e| matches!(e.content, crate::compiler::types::ElementContent::Lyric(_)))
+    row.elements.iter().any(|e| {
+        matches!(
+            e.content,
+            crate::compiler::types::ElementContent::Lyric { .. }
+        )
+    })
 }
 
 /// Column bounds of a measure block, in fractional grid columns, matching where its
-/// bar lines are actually rendered: the ending bar line of every measure is centered
-/// within its own column, while the very first bar line of a row is start-aligned.
-fn measure_column_bounds(col_offset: u32, col_w: u32, is_first_in_row: bool) -> (f32, f32) {
-    let column_start = if is_first_in_row {
-        col_offset as f32
-    } else {
-        col_offset as f32 - 0.5
-    };
+/// bar lines are actually rendered: every bar line (including the leading one) is
+/// centered within its own dedicated column.
+fn measure_column_bounds(col_offset: u32, col_w: u32) -> (f32, f32) {
+    let column_start = col_offset as f32 - 0.5;
     let column_end = (col_offset + col_w) as f32 - 0.5;
     (column_start, column_end)
 }
@@ -73,12 +72,11 @@ pub(crate) fn compute_measure_highlights_for_range(
             let row_start = row_offset;
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 
-            let mut col_offset: u32 = LABEL_COLS;
-            for (block_idx, block) in system.iter().enumerate() {
+            let mut col_offset: u32 = MUSIC_START_COL;
+            for block in system.iter() {
                 let col_w = block_column_width(block);
                 if global_measure_index >= start_index && global_measure_index <= end_index {
-                    let (column_start, column_end) =
-                        measure_column_bounds(col_offset, col_w, block_idx == 0);
+                    let (column_start, column_end) = measure_column_bounds(col_offset, col_w);
                     results.push((
                         page_idx,
                         MeasureHighlight {
@@ -90,7 +88,7 @@ pub(crate) fn compute_measure_highlights_for_range(
                     ));
                 }
                 col_offset += col_w;
-                global_measure_index += 1;
+                global_measure_index += block.represents_measures;
             }
             row_offset += musical_row_count;
         }
@@ -121,12 +119,11 @@ pub(crate) fn compute_measure_highlight_location(
             let row_start = row_offset;
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 
-            let mut col_offset: u32 = LABEL_COLS;
-            for (block_idx, block) in system.iter().enumerate() {
+            let mut col_offset: u32 = MUSIC_START_COL;
+            for block in system.iter() {
                 let col_w = block_column_width(block);
                 if global_measure_index == highlighted_measure_index {
-                    let (column_start, column_end) =
-                        measure_column_bounds(col_offset, col_w, block_idx == 0);
+                    let (column_start, column_end) = measure_column_bounds(col_offset, col_w);
                     return Some((
                         page_idx,
                         MeasureHighlight {
@@ -138,7 +135,7 @@ pub(crate) fn compute_measure_highlight_location(
                     ));
                 }
                 col_offset += col_w;
-                global_measure_index += 1;
+                global_measure_index += block.represents_measures;
             }
             row_offset += musical_row_count;
         }
@@ -152,14 +149,20 @@ pub(crate) fn compute_error_highlight_infos(
     header: &Header,
     base: f32,
 ) -> Vec<(usize, MeasureHighlight)> {
-    blocks
-        .iter()
-        .enumerate()
-        .filter(|(_, block)| !block.diagnostics.is_empty())
-        .filter_map(|(measure_idx, _)| {
-            compute_measure_highlight_location(page_systems, measure_idx, header, base)
-        })
-        .collect()
+    let mut measure_idx: usize = 0;
+    let mut results: Vec<(usize, MeasureHighlight)> = Vec::new();
+    for block in blocks {
+        if !block.diagnostics.is_empty() {
+            results.extend(compute_measure_highlight_location(
+                page_systems,
+                measure_idx,
+                header,
+                base,
+            ));
+        }
+        measure_idx += block.represents_measures;
+    }
+    results
 }
 
 pub(crate) fn measure_highlights_on_page(
@@ -198,11 +201,10 @@ pub(crate) fn compute_all_measure_click_targets(
             let row_start = row_offset;
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 
-            let mut col_offset: u32 = LABEL_COLS;
-            for (block_idx, block) in system.iter().enumerate() {
+            let mut col_offset: u32 = MUSIC_START_COL;
+            for block in system.iter() {
                 let col_w = block_column_width(block);
-                let (column_start, column_end) =
-                    measure_column_bounds(col_offset, col_w, block_idx == 0);
+                let (column_start, column_end) = measure_column_bounds(col_offset, col_w);
                 results.push((
                     page_idx,
                     MeasureClickTarget {
@@ -214,7 +216,7 @@ pub(crate) fn compute_all_measure_click_targets(
                     },
                 ));
                 col_offset += col_w;
-                global_measure_index += 1;
+                global_measure_index += block.represents_measures;
             }
             row_offset += musical_row_count;
         }

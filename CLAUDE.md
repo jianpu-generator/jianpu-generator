@@ -16,7 +16,13 @@ Example:
 cargo run -- generate svg simple.jianpu
 ```
 
-Avoid using abbreviations when naming.
+## Committing
+
+Do not run `cargo build`/`cargo test` before committing — the pre-commit hook already runs them.
+
+The pre-commit hook runs the full e2e (Playwright) suite plus cargo checks, which regularly takes longer than the default 2-minute Bash tool timeout — a plain `git commit` will hit that timeout even though the hook itself is still running to completion in the background. Always pass an explicit `timeout` of at least 480000ms (8 minutes) on the `git commit` Bash call to avoid wasting a turn on a false timeout.
+
+Avoid using uncommon abbreviations when naming (e.g. `TimedRdParser` for "recursive descent" — spell it out as `TimedRecursiveDescentParser` instead). Widely understood abbreviations (e.g. `Ast`, `Id`, `Http`) are fine.
 
 Test cases should not be inlined with the source code, they should live in separate files.
 

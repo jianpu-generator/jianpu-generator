@@ -1,0 +1,29 @@
+# metadata
+title = "Durations"
+max measures per system = 1
+
+# parts
+Melody [M] = notes+lyrics
+
+# score
+label="Duration: eighth (_) & sixteenth (=)"
+[M] 1_ 1_ 1= 1= 1= 1= 1 -
+[M] _
+
+label="Duration: dotted (.)"
+[M] 1. 2_ 1_. 2= 0
+[M] _
+
+label="Duration: extension (-)"
+[M] 1 - - -
+
+
+label="Repeat: repeat last note (r) & bare eighth/sixteenth (_/=)"
+[M] 1 r r -
+
+[M] __ 0 0 0
+[M] _
+
+label="Duplicate: works with tie (1~_)"
+[M] 1~ _0_ 00
+[M] _

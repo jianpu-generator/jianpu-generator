@@ -1,0 +1,23 @@
+# metadata
+title = "Lyrics"
+max measures per system = 1
+
+# parts
+Melody [M] = notes+lyrics
+
+# score
+label="Lyrics: CJK syllables"
+[M] 1 2 3 4
+[M] 春天来了
+
+label="Lyrics: Latin syllables"
+[M] 1 2 3 4
+[M] do re mi fa
+
+label="Lyrics: syllable break (-)"
+[M] 1 2 3 4
+[M] La la la la
+
+label="Lyrics: no-lyrics marker (_)"
+[M] 0
+[M] _

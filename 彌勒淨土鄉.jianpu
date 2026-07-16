@@ -2,9 +2,8 @@
 title = "彌勒淨土鄉"
 subtitle = "調寄：快樂天堂"
 author = "天然師尊 慈賜"
-max columns = 42
+max measures per system = 6
 row height = 20
-max columns = 48
 note number width = 8
 
 # parts

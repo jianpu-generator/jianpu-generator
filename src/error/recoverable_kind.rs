@@ -45,6 +45,8 @@ pub enum RecoverableErrorKind {
     MetadataInvalidInteger { field: String, value: String },
     /// A metadata integer field parsed to zero — the field keeps its default.
     MetadataMustBePositive { field: String },
+    /// A metadata boolean field is not `yes` or `no` — the field keeps its default.
+    MetadataInvalidBoolean { field: String, value: String },
     /// A parts declaration line does not contain `=` — the line is skipped.
     PartsMalformedLine { line: String },
     /// A parts abbreviation is used by more than one declaration — the duplicate is skipped.
@@ -65,8 +67,6 @@ pub enum RecoverableErrorKind {
     SectionDuplicate { section: DocumentSection },
     /// A required section is absent — an empty default is used.
     SectionMissing { section: DocumentSection },
-    /// Sections appear out of canonical order (# metadata, # parts, # score).
-    SectionOutOfOrder,
     /// A lyrics line is empty — treated as `_` (no lyrics for this measure).
     LyricsLineEmpty,
     /// A lyrics slot has no paired notes track — lyrics are skipped.
@@ -81,6 +81,8 @@ pub enum RecoverableErrorKind {
     ExtensionNoPrecedingEvent { chord_track: bool },
     /// A notes token did not start with a pitch digit (0-7) — the token is skipped.
     NoteExpectedPitchDigit { ch: char },
+    /// A percussion token did not start with `x` (hit) or `0` (rest) — the token is skipped.
+    PercussionExpectedHitOrRest { ch: char },
     /// A dot was applied to a quarter-beat (`=`) note — dot is ignored, duration stays 1.
     DurationCannotDotQuarterBeat,
     /// A `)` appeared with no matching `(` — the `)` is ignored.
@@ -111,6 +113,14 @@ pub enum RecoverableErrorKind {
     },
     /// Per-part octave offset exceeds ±4 — clamped to the valid range.
     PartsOctaveOffsetTooLarge { offset: i8 },
+    /// `r`/bare `_`/`=` used with no prior pitched note/chord to repeat — token ignored.
+    RepeatNoPriorNote,
+    /// A `# groups` abbreviation matches an already-declared part abbreviation — the group is skipped.
+    GroupsAbbreviationCollidesWithPart { abbrev: String },
+    /// A group member (after resolving nested groups) does not match any declared part — the group is skipped.
+    GroupsUnknownMember { group: String, member: String },
+    /// A group's resolved members do not all share the same part kind — the group is skipped.
+    GroupsMemberKindMismatch { group: String },
 }
 
 impl RecoverableErrorKind {
@@ -139,6 +149,7 @@ impl RecoverableErrorKind {
             Self::MetadataUnknownField { field } => format!("unknown metadata field: {field}"),
             Self::MetadataInvalidInteger { field, value } => format!("{field} must be a positive integer, got: {value}"),
             Self::MetadataMustBePositive { field } => format!("{field} must be greater than zero"),
+            Self::MetadataInvalidBoolean { field, value } => format!("{field} must be 'yes' or 'no', got: {value}"),
             Self::PartsMalformedLine { line } => format!("expected track declaration, got: {line}"),
             Self::PartsDuplicateAbbreviation { abbrev } => format!("duplicate abbreviation: {abbrev}"),
             Self::PartsEmptySection => "expected at least one track in # parts section".to_string(),
@@ -151,25 +162,19 @@ impl RecoverableErrorKind {
             Self::SectionUnknown { name } => format!("unknown section: # {name}"),
             Self::SectionDuplicate { section } => format!("duplicate {} section", section.header()),
             Self::SectionMissing { section } => format!("missing {} section", section.header()),
-            Self::SectionOutOfOrder => "sections must appear in order: # metadata, # parts, # score".to_string(),
             Self::LyricsLineEmpty => "lyrics line cannot be empty; use '_' for no lyrics".to_string(),
             Self::LyricsNoNotesTrack { abbrev } => format!("lyrics line for '{abbrev}' has no matching notes track"),
             Self::PartMeasureCountMismatch { part, got, expected } => format!("part {part:?} has {got} measures but the first part has {expected}; all parts must have the same number of measures"),
             Self::ExtensionNoPrecedingEvent { chord_track: true } => "chord extension '-' with no preceding event; '-' ignored".to_string(),
             Self::ExtensionNoPrecedingEvent { chord_track: false } => "extension '-' without a preceding note or rest; '-' ignored".to_string(),
             Self::NoteExpectedPitchDigit { ch } => format!("expected pitch digit (0-7), got: {ch}"),
+            Self::PercussionExpectedHitOrRest { ch } => format!("expected 'x' (hit) or '0' (rest), got: {ch}"),
             Self::DurationMixedOctaveMarkers => "mixed octave markers: use ' for up or , for down, not both; octave shift ignored".to_string(),
             Self::DurationCannotDotQuarterBeat => "cannot dot a quarter-beat (=) note; dot ignored, duration stays at 1 beat".to_string(),
             Self::GroupUnexpectedCloseParen => "unexpected `)` — no open group; `)` ignored".to_string(),
-            Self::UnclosedGroupAtEnd { part } => {
-                format!("unclosed '(' group at end of score in part '{part}'")
-            }
-            Self::PartKeyUnknown { key } => {
-                format!("`[{key}]` does not match any declared part abbreviation; line dropped")
-            }
-            Self::ScoreLineMissingKeyPrefix => {
-                "score line has no [Abbrev] prefix; line dropped".to_string()
-            }
+            Self::UnclosedGroupAtEnd { part } => format!("unclosed '(' group at end of score in part '{part}'"),
+            Self::PartKeyUnknown { key } => format!("`[{key}]` does not match any declared part abbreviation; line dropped"),
+            Self::ScoreLineMissingKeyPrefix => "score line has no [Abbrev] prefix; line dropped".to_string(),
             Self::TieOnRest => "~ cannot be applied to a rest; ~ ignored".to_string(),
             Self::DanglingTie => "~ has no following note to tie to; ~ ignored".to_string(),
             Self::TiePitchMismatch { expected, got } => format!("tied notes must have the same pitch and octave; expected {expected}, got {got}; ~ ignored"),
@@ -190,6 +195,10 @@ impl RecoverableErrorKind {
             Self::PartsOctaveOffsetTooLarge { offset } => format!(
                 "octave offset {offset} is out of range; valid range is -4 to +4; clamped"
             ),
+            Self::RepeatNoPriorNote => "no prior note/chord to repeat; token ignored".to_string(),
+            Self::GroupsAbbreviationCollidesWithPart { abbrev } => format!("group abbreviation '{abbrev}' collides with a declared part abbreviation; group ignored"),
+            Self::GroupsUnknownMember { group, member } => format!("group '{group}' member '{member}' does not match any declared part; group ignored"),
+            Self::GroupsMemberKindMismatch { group } => format!("group '{group}' members must all have the same part kind (e.g. all 'notes' or all 'notes+lyrics'); group ignored"),
         }
     }
 

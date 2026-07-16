@@ -1,12 +1,14 @@
-use crate::compositor::types::{
-    AbsoluteContent, AbsoluteElement, AbsolutePage, DominantBaseline, FontFamily, FontWeight,
-    TextAnchor, TextSpan,
-};
+use crate::compositor::types::{AbsoluteContent, AbsoluteElement, AbsolutePage};
 use crate::error::IrrecoverableError;
 use crate::grid_layout::types::{
     GridContent, GridElement, GridPage, GridRow, HAlign, PostArcGridContent, VAlign,
 };
 use crate::grid_layout::PAGE_MARGIN;
+
+use super::content_conversion::grid_to_absolute;
+use super::highlights::{
+    resolve_error_highlights, resolve_measure_click_target, resolve_measure_highlights,
+};
 
 /// Font sizes used to estimate lyric syllable width, so a clamp can keep
 /// wide syllables from bleeding past their grid column (see
@@ -138,6 +140,9 @@ fn resolve_row_element(
                 },
             }))
         }
+        GridContent::MultiMeasureRest { count } => Ok(Some(resolve_multi_measure_rest(
+            *count, x_start, span_width, y,
+        ))),
         content => {
             let Some(post_arc_content) = to_post_arc_content(content) else {
                 return Ok(None);
@@ -145,6 +150,17 @@ fn resolve_row_element(
             Ok(grid_to_absolute(&post_arc_content, span_width, el.halign)?
                 .map(|content| AbsoluteElement { x, y, content }))
         }
+    }
+}
+
+/// The collapsed multi-measure-rest bar spans its full custom column_span
+/// width starting at the column's left edge, rather than the generic
+/// per-column halign/valign math above.
+fn resolve_multi_measure_rest(count: u32, x_start: f32, width: f32, y: f32) -> AbsoluteElement {
+    AbsoluteElement {
+        x: x_start,
+        y,
+        content: AbsoluteContent::MultiMeasureRest { count, width },
     }
 }
 
@@ -165,9 +181,13 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
             dotted: *dotted,
         }),
         GridContent::Rest { dotted } => Some(PostArcGridContent::Rest { dotted: *dotted }),
+        GridContent::MultiMeasureRest { count } => {
+            Some(PostArcGridContent::MultiMeasureRest { count: *count })
+        }
         GridContent::NoteDash => Some(PostArcGridContent::NoteDash),
         GridContent::OctaveDot => Some(PostArcGridContent::OctaveDot),
         GridContent::ChordSymbol(s) => Some(PostArcGridContent::ChordSymbol(s.clone())),
+        GridContent::PercussionHit => Some(PostArcGridContent::PercussionHit),
         GridContent::Underline { level } => Some(PostArcGridContent::Underline { level: *level }),
         GridContent::BarLine { height_pt } => Some(PostArcGridContent::BarLine {
             height_pt: *height_pt,
@@ -181,12 +201,28 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
             key,
             bpm,
             time_signature,
+            dc_al_coda,
+            to_coda,
+            coda,
+            segno,
+            ds_al_coda,
+            dc_al_fine,
+            fine,
+            ds_al_fine,
         } => Some(PostArcGridContent::DirectiveLine {
             label: label.clone(),
             bar_number: *bar_number,
             key: key.clone(),
             bpm: *bpm,
             time_signature: *time_signature,
+            dc_al_coda: *dc_al_coda,
+            to_coda: *to_coda,
+            coda: *coda,
+            segno: *segno,
+            ds_al_coda: *ds_al_coda,
+            dc_al_fine: *dc_al_fine,
+            fine: *fine,
+            ds_al_fine: *ds_al_fine,
         }),
         GridContent::Text {
             content,
@@ -198,6 +234,9 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
             font_size: *font_size,
             bold: *bold,
             italic: *italic,
+        }),
+        GridContent::SequenceLine { entries } => Some(PostArcGridContent::SequenceLine {
+            entries: entries.clone(),
         }),
     }
 }
@@ -252,274 +291,5 @@ fn resolve_page(
         width_pt: page.width_pt,
         height_pt: page.height_pt,
         elements: highlight_elements,
-    })
-}
-
-fn resolve_single_measure_highlight(
-    highlight: &crate::grid_layout::types::MeasureHighlight,
-    rows: &[GridRow],
-    row_tops: &[f32],
-    usable_width: f32,
-) -> Option<AbsoluteElement> {
-    let start_row = rows.get(highlight.row_start)?;
-    let highlight_y = row_tops.get(highlight.row_start)?;
-    if highlight.row_end >= rows.len() {
-        return None;
-    }
-    let col_width = start_row.column_width_pt(usable_width);
-    let highlight_x = PAGE_MARGIN + highlight.column_start * col_width;
-    let highlight_width = (highlight.column_end - highlight.column_start) * col_width;
-    let highlight_height = rows
-        .get(highlight.row_start..=highlight.row_end)
-        .map(|slice| slice.iter().map(|row| row.height_pt).sum())
-        .unwrap_or(0.0);
-    Some(AbsoluteElement {
-        x: highlight_x,
-        y: *highlight_y,
-        content: AbsoluteContent::MeasureHighlight {
-            width: highlight_width,
-            height: highlight_height,
-        },
-    })
-}
-
-fn resolve_measure_highlights(
-    highlights: &[crate::grid_layout::types::MeasureHighlight],
-    rows: &[GridRow],
-    row_tops: &[f32],
-    usable_width: f32,
-) -> Vec<AbsoluteElement> {
-    highlights
-        .iter()
-        .filter_map(|h| resolve_single_measure_highlight(h, rows, row_tops, usable_width))
-        .collect()
-}
-
-fn resolve_error_highlights(
-    highlights: &[crate::grid_layout::types::MeasureHighlight],
-    rows: &[GridRow],
-    row_tops: &[f32],
-    usable_width: f32,
-) -> Vec<AbsoluteElement> {
-    highlights
-        .iter()
-        .filter_map(|h| {
-            let start_row = rows.get(h.row_start)?;
-            let highlight_y = row_tops.get(h.row_start)?;
-            if h.row_end >= rows.len() {
-                return None;
-            }
-            let col_width = start_row.column_width_pt(usable_width);
-            let highlight_x = PAGE_MARGIN + h.column_start * col_width;
-            let highlight_width = (h.column_end - h.column_start) * col_width;
-            let highlight_height = rows
-                .get(h.row_start..=h.row_end)
-                .map(|slice| slice.iter().map(|row| row.height_pt).sum())
-                .unwrap_or(0.0);
-            Some(AbsoluteElement {
-                x: highlight_x,
-                y: *highlight_y,
-                content: AbsoluteContent::ErrorHighlight {
-                    width: highlight_width,
-                    height: highlight_height,
-                },
-            })
-        })
-        .collect()
-}
-
-fn resolve_measure_click_target(
-    target: &crate::grid_layout::types::MeasureClickTarget,
-    rows: &[GridRow],
-    row_tops: &[f32],
-    usable_width: f32,
-) -> Option<AbsoluteElement> {
-    let start_row = rows.get(target.row_start)?;
-    let target_y = row_tops.get(target.row_start)?;
-    if target.row_end >= rows.len() {
-        return None;
-    }
-    let col_width = start_row.column_width_pt(usable_width);
-    let target_x = PAGE_MARGIN + target.column_start * col_width;
-    let target_width = (target.column_end - target.column_start) * col_width;
-    let target_height = rows
-        .get(target.row_start..=target.row_end)
-        .map(|slice| slice.iter().map(|row| row.height_pt).sum())
-        .unwrap_or(0.0);
-    Some(AbsoluteElement {
-        x: target_x,
-        y: *target_y,
-        content: AbsoluteContent::MeasureClickTarget {
-            width: target_width,
-            height: target_height,
-            measure_index: target.measure_index,
-        },
-    })
-}
-
-fn text_anchor(halign: HAlign) -> TextAnchor {
-    match halign {
-        HAlign::Start => TextAnchor::Start,
-        HAlign::Center => TextAnchor::Middle,
-        HAlign::End => TextAnchor::End,
-    }
-}
-
-fn sans_serif_text(
-    content: String,
-    font_size: f32,
-    anchor: TextAnchor,
-    weight: FontWeight,
-    italic: bool,
-) -> AbsoluteContent {
-    AbsoluteContent::Text {
-        content,
-        font_size,
-        anchor,
-        baseline: DominantBaseline::Middle,
-        font: FontFamily::SansSerif,
-        weight,
-        italic,
-    }
-}
-
-fn directive_line_spans(
-    label: &Option<String>,
-    bar_number: &Option<u32>,
-    key: &Option<String>,
-    bpm: &Option<u32>,
-    time_signature: &Option<(u32, u32)>,
-) -> Vec<TextSpan> {
-    let mut spans: Vec<TextSpan> = Vec::new();
-    if let Some(label_text) = label {
-        spans.push(TextSpan {
-            content: label_text.clone(),
-            bold: true,
-            italic: true,
-            font_size: 12.0,
-        });
-    } else if let Some(n) = bar_number {
-        spans.push(TextSpan {
-            content: n.to_string(),
-            bold: false,
-            italic: false,
-            font_size: 10.0,
-        });
-    }
-    if let Some(key_str) = key {
-        spans.push(TextSpan {
-            content: format!("  {key_str}"),
-            bold: false,
-            italic: false,
-            font_size: 12.0,
-        });
-    }
-    if let Some(b) = bpm {
-        spans.push(TextSpan {
-            content: format!("  \u{2669}={b}"),
-            bold: false,
-            italic: false,
-            font_size: 12.0,
-        });
-    }
-    if let Some((n, d)) = time_signature {
-        spans.push(TextSpan {
-            content: format!("  {n}/{d}"),
-            bold: false,
-            italic: false,
-            font_size: 12.0,
-        });
-    }
-    spans
-}
-
-fn grid_text_to_absolute(
-    content: &PostArcGridContent,
-    span_width: f32,
-    halign: HAlign,
-) -> Option<AbsoluteContent> {
-    match content {
-        PostArcGridContent::NoteDash => Some(AbsoluteContent::Text {
-            content: "\u{2014}".to_string(),
-            font_size: 12.0,
-            anchor: TextAnchor::Middle,
-            baseline: DominantBaseline::Middle,
-            font: FontFamily::Monospace,
-            weight: FontWeight::Normal,
-            italic: false,
-        }),
-        PostArcGridContent::RowLabel(s) => Some(sans_serif_text(
-            s.clone(),
-            12.0,
-            TextAnchor::Middle,
-            FontWeight::Normal,
-            false,
-        )),
-        PostArcGridContent::DirectiveLine {
-            label,
-            bar_number,
-            key,
-            bpm,
-            time_signature,
-        } => Some(AbsoluteContent::DirectiveLine {
-            label: label.clone(),
-            spans: directive_line_spans(label, bar_number, key, bpm, time_signature),
-        }),
-        PostArcGridContent::Text {
-            content,
-            font_size,
-            bold,
-            italic,
-        } => Some(sans_serif_text(
-            content.clone(),
-            *font_size,
-            text_anchor(halign),
-            if *bold {
-                FontWeight::Bold
-            } else {
-                FontWeight::Normal
-            },
-            *italic,
-        )),
-        PostArcGridContent::HorizontalLine => {
-            Some(AbsoluteContent::HorizontalLine { width: span_width })
-        }
-        _ => None,
-    }
-}
-
-fn grid_to_absolute(
-    content: &PostArcGridContent,
-    span_width: f32,
-    halign: HAlign,
-) -> Result<Option<AbsoluteContent>, IrrecoverableError> {
-    if let Some(content) = grid_text_to_absolute(content, span_width, halign) {
-        return Ok(Some(content));
-    }
-
-    Ok(match content {
-        PostArcGridContent::NoteHead {
-            pitch,
-            accidental,
-            octave,
-            dotted,
-        } => Some(AbsoluteContent::NoteHead {
-            pitch: pitch.clone(),
-            accidental: accidental.clone(),
-            octave: *octave,
-            dotted: *dotted,
-        }),
-        PostArcGridContent::Rest { dotted } => Some(AbsoluteContent::Rest { dotted: *dotted }),
-        PostArcGridContent::OctaveDot => None,
-        PostArcGridContent::ChordSymbol(s) => Some(AbsoluteContent::ChordSymbol(s.clone())),
-        PostArcGridContent::Underline { level } => Some(AbsoluteContent::Underline {
-            width: span_width,
-            level: *level,
-        }),
-        PostArcGridContent::BarLine { height_pt } => {
-            Some(AbsoluteContent::BarLine { height: *height_pt })
-        }
-        PostArcGridContent::LyricSyllable(s) => Some(AbsoluteContent::Lyric(s.clone())),
-        _ => None,
     })
 }

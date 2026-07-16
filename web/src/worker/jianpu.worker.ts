@@ -1,4 +1,3 @@
-import type { SvgDocumentOut } from 'jianpu-wasm'
 import init, * as jianpuWasm from 'jianpu-wasm'
 import {
   list_measure_spans,
@@ -6,16 +5,12 @@ import {
   render,
   update_part_declaration,
 } from 'jianpu-wasm'
-import type {
-  Diagnostic,
-  DiagnosticViewZone,
-  MeasureSpan,
-  PartDeclaration,
-  PartInfo,
-  PartMode,
-  SectionRange,
-} from '../types'
+import type { PartDeclaration, PartMode } from '../types'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
+import {
+  handleGenerateAudio,
+  handleGenerateMeasureRangeAudio,
+} from './audioMessageHandlers'
 import {
   handleGenerateMidi,
   handleGeneratePdf,
@@ -23,6 +18,13 @@ import {
   handleGenerateSplitPdf,
   handleGenerateSplitWav,
 } from './exportMessageHandlers'
+import type { WorkerRequest, WorkerResponse } from './messages'
+import {
+  handlePreviewInstrument,
+  handlePreviewPercussion,
+} from './previewMessageHandlers'
+
+export type { WorkerRequest, WorkerResponse } from './messages'
 
 const generateWav =
   'generate_wav' in jianpuWasm ? jianpuWasm.generate_wav : null
@@ -38,6 +40,16 @@ const listMeasureTimes =
 const listMeasureTimesForRange =
   'list_measure_times_for_range' in jianpuWasm
     ? jianpuWasm.list_measure_times_for_range
+    : null
+
+const writtenMeasureIndices =
+  'written_measure_indices' in jianpuWasm
+    ? jianpuWasm.written_measure_indices
+    : null
+
+const writtenMeasureIndicesForRange =
+  'written_measure_indices_for_range' in jianpuWasm
+    ? jianpuWasm.written_measure_indices_for_range
     : null
 
 const renderWithHighlightRange =
@@ -65,155 +77,10 @@ const generateInstrumentPreviewWav =
     ? jianpuWasm.generate_instrument_preview_wav
     : null
 
-export type WorkerRequest =
-  | {
-      type: 'loadSoundfont'
-      soundfont: ArrayBuffer
-    }
-  | {
-      type: 'loadPdfFonts'
-      scFont: ArrayBuffer
-      tcFont: ArrayBuffer
-      monoFont: ArrayBuffer
-    }
-  | {
-      type: 'render'
-      source: string
-      id: number
-      enabledTracks?: string[]
-      disabledLyrics?: string[]
-    }
-  | { type: 'listParts'; source: string; id: number }
-  | {
-      type: 'updatePartDeclaration'
-      source: string
-      abbreviation: string
-      mode: PartMode
-      followTarget: string | null
-      soundfont: string | null
-      volume: number | null
-      octaveOffset: number | null
-      id: number
-    }
-  | {
-      type: 'generatePdf'
-      source: string
-      id: number
-      enabledTracks?: string[]
-      disabledLyrics?: string[]
-    }
-  | {
-      type: 'generateSplitPdf'
-      source: string
-      id: number
-      baseName: string
-    }
-  | {
-      type: 'generateMidi'
-      source: string
-      id: number
-      enabledTracks?: string[]
-    }
-  | {
-      type: 'generateSplitMidi'
-      source: string
-      id: number
-      baseName: string
-    }
-  | {
-      type: 'generateSplitWav'
-      source: string
-      id: number
-      baseName: string
-    }
-  | {
-      type: 'generateAudio'
-      source: string
-      id: number
-      enabledTracks?: string[]
-    }
-  | {
-      type: 'generateMeasureRangeAudio'
-      source: string
-      id: number
-      startMeasureIndex: number
-      endMeasureIndex: number
-      enabledTracks?: string[]
-    }
-  | {
-      type: 'renderWithHighlightRange'
-      source: string
-      id: number
-      startMeasureIndex: number
-      endMeasureIndex: number
-      enabledTracks?: string[]
-      disabledLyrics?: string[]
-    }
-  | { type: 'listMeasureSpans'; source: string; id: number }
-  | { type: 'previewInstrument'; id: number; programNumber: number }
-
-export type WorkerResponse =
-  | {
-      type: 'ready'
-      audioAvailable: boolean
-      pdfAvailable: boolean
-      midiAvailable: boolean
-    }
-  | {
-      type: 'ok'
-      id: number
-      documents: SvgDocumentOut[]
-      diagnostics: Diagnostic[]
-      diagnosticViewZones: DiagnosticViewZone[]
-    }
-  | { type: 'audio'; id: number; wav: ArrayBuffer; measureTimes: number[] }
-  | { type: 'audioErr'; id: number }
-  | {
-      type: 'err'
-      id: number
-      diagnostics: Diagnostic[]
-      diagnosticViewZones: DiagnosticViewZone[]
-    }
-  | {
-      type: 'parts'
-      id: number
-      parts: PartInfo[]
-      declarations: PartDeclaration[]
-    }
-  | {
-      type: 'partDeclarationUpdated'
-      id: number
-      source: string
-      declarations: PartDeclaration[]
-    }
-  | { type: 'pdf'; id: number; pdf: ArrayBuffer }
-  | { type: 'pdfErr'; id: number; diagnostics: Diagnostic[] }
-  | { type: 'splitPdf'; id: number; zip: ArrayBuffer }
-  | { type: 'splitPdfErr'; id: number; diagnostics: Diagnostic[] }
-  | { type: 'midi'; id: number; midi: ArrayBuffer }
-  | { type: 'midiErr'; id: number; diagnostics: Diagnostic[] }
-  | { type: 'splitMidi'; id: number; zip: ArrayBuffer }
-  | { type: 'splitMidiErr'; id: number; diagnostics: Diagnostic[] }
-  | { type: 'splitWav'; id: number; zip: ArrayBuffer }
-  | { type: 'splitWavErr'; id: number; diagnostics: Diagnostic[] }
-  | {
-      type: 'measureRangeAudio'
-      id: number
-      wav: ArrayBuffer
-      measureTimes: number[]
-    }
-  | { type: 'measureRangeAudioErr'; id: number }
-  | { type: 'instrumentPreview'; id: number; wav: ArrayBuffer }
-  | { type: 'instrumentPreviewErr'; id: number }
-  | { type: 'highlightRangeOk'; id: number; documents: SvgDocumentOut[] }
-  | { type: 'highlightRangeErr'; id: number; diagnostics: Diagnostic[] }
-  | {
-      type: 'measureSpans'
-      id: number
-      status: 'ok' | 'err'
-      spans: MeasureSpan[]
-      sectionRanges: SectionRange[]
-    }
+const generatePercussionPreviewWav =
+  'generate_percussion_preview_wav' in jianpuWasm
+    ? jianpuWasm.generate_percussion_preview_wav
+    : null
 
 let initialized = false
 
@@ -250,41 +117,6 @@ function listDeclarationsFromSource(source: string): PartDeclaration[] {
   if (!('list_part_declarations' in jianpuWasm)) return []
   const result = jianpuWasm.list_part_declarations(source, GM_INSTRUMENTS)
   return result.status === 'ok' ? result.declarations : []
-}
-
-function measureTimesFromSource(
-  source: string,
-  enabledTracks: string[] | undefined,
-): number[] {
-  if (!listMeasureTimes) return []
-  const result = listMeasureTimes(source, enabledTracks)
-  return result.status === 'ok' ? result.times : []
-}
-
-function measureTimesForRangeFromSource(
-  source: string,
-  startMeasureIndex: number,
-  endMeasureIndex: number,
-  enabledTracks: string[] | undefined,
-): number[] {
-  if (!listMeasureTimesForRange) return []
-  const result = listMeasureTimesForRange(
-    source,
-    startMeasureIndex,
-    endMeasureIndex,
-    enabledTracks,
-  )
-  return result.status === 'ok' ? result.times : []
-}
-
-function binaryBufferFromResult(
-  bytes: Uint8Array | ArrayBuffer | ArrayLike<number>,
-): ArrayBuffer {
-  if (bytes instanceof ArrayBuffer) {
-    return bytes.slice(0)
-  }
-  const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
-  return view.slice().buffer
 }
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
@@ -371,119 +203,34 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'generateAudio') {
-    if (!generateWav) {
-      postMessage({
-        type: 'audioErr',
-        id: msg.id,
-      } satisfies WorkerResponse)
-      return
-    }
-
-    if (!loadedSoundfont) {
-      postMessage({ type: 'audioErr', id: msg.id } satisfies WorkerResponse)
-      return
-    }
-    const wavResult = generateWav(
-      msg.source,
-      msg.enabledTracks,
+    handleGenerateAudio(
+      msg,
+      generateWav,
+      listMeasureTimes,
+      writtenMeasureIndices,
       loadedSoundfont,
     )
-    if (wavResult.status === 'ok' && wavResult.wav != null) {
-      const wavBuffer = binaryBufferFromResult(wavResult.wav)
-      postMessage(
-        {
-          type: 'audio',
-          id: msg.id,
-          wav: wavBuffer,
-          measureTimes: measureTimesFromSource(msg.source, msg.enabledTracks),
-        } satisfies WorkerResponse,
-        { transfer: [wavBuffer] },
-      )
-      return
-    }
-
-    postMessage({
-      type: 'audioErr',
-      id: msg.id,
-    } satisfies WorkerResponse)
     return
   }
 
   if (msg.type === 'generateMeasureRangeAudio') {
-    if (!generateWavForMeasureRange) {
-      postMessage({
-        type: 'measureRangeAudioErr',
-        id: msg.id,
-      } satisfies WorkerResponse)
-      return
-    }
-    if (!loadedSoundfont) {
-      postMessage({
-        type: 'measureRangeAudioErr',
-        id: msg.id,
-      } satisfies WorkerResponse)
-      return
-    }
-    const wavResult = generateWavForMeasureRange(
-      msg.source,
-      msg.startMeasureIndex,
-      msg.endMeasureIndex,
-      msg.enabledTracks,
+    handleGenerateMeasureRangeAudio(
+      msg,
+      generateWavForMeasureRange,
+      listMeasureTimesForRange,
+      writtenMeasureIndicesForRange,
       loadedSoundfont,
     )
-    if (wavResult.status === 'ok' && wavResult.wav != null) {
-      const wavBuffer = binaryBufferFromResult(wavResult.wav)
-      postMessage(
-        {
-          type: 'measureRangeAudio',
-          id: msg.id,
-          wav: wavBuffer,
-          measureTimes: measureTimesForRangeFromSource(
-            msg.source,
-            msg.startMeasureIndex,
-            msg.endMeasureIndex,
-            msg.enabledTracks,
-          ),
-        } satisfies WorkerResponse,
-        { transfer: [wavBuffer] },
-      )
-      return
-    }
-    postMessage({
-      type: 'measureRangeAudioErr',
-      id: msg.id,
-    } satisfies WorkerResponse)
     return
   }
 
   if (msg.type === 'previewInstrument') {
-    if (!generateInstrumentPreviewWav || !loadedSoundfont) {
-      postMessage({
-        type: 'instrumentPreviewErr',
-        id: msg.id,
-      } satisfies WorkerResponse)
-      return
-    }
-    const result = generateInstrumentPreviewWav(
-      msg.programNumber,
-      loadedSoundfont,
-    )
-    if (result.status === 'ok' && result.wav != null) {
-      const wavBuffer = binaryBufferFromResult(result.wav)
-      postMessage(
-        {
-          type: 'instrumentPreview',
-          id: msg.id,
-          wav: wavBuffer,
-        } satisfies WorkerResponse,
-        { transfer: [wavBuffer] },
-      )
-      return
-    }
-    postMessage({
-      type: 'instrumentPreviewErr',
-      id: msg.id,
-    } satisfies WorkerResponse)
+    handlePreviewInstrument(msg, generateInstrumentPreviewWav, loadedSoundfont)
+    return
+  }
+
+  if (msg.type === 'previewPercussion') {
+    handlePreviewPercussion(msg, generatePercussionPreviewWav, loadedSoundfont)
     return
   }
 

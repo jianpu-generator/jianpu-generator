@@ -7,8 +7,6 @@ use crate::error::{Diagnostic, RecoverableError, Span};
 
 fn collect_part_measure_diagnostics(m: Option<&GroupedMeasure>) -> Vec<Diagnostic> {
     [
-        m.and_then(|m| m.lyrics_error.clone())
-            .map(Diagnostic::Warning),
         m.and_then(|m| m.beat_overflow_error.clone())
             .map(Diagnostic::Warning),
         m.and_then(|m| m.dash_after_rest_error.clone())
@@ -21,6 +19,11 @@ fn collect_part_measure_diagnostics(m: Option<&GroupedMeasure>) -> Vec<Diagnosti
     ]
     .into_iter()
     .flatten()
+    .chain(
+        m.into_iter()
+            .flat_map(|m| m.lyrics_error.iter().cloned())
+            .map(Diagnostic::Warning),
+    )
     .chain(
         m.into_iter()
             .flat_map(|m| m.dotted_eighth_errors.iter().cloned()),
@@ -103,6 +106,14 @@ fn combine_measure(
         bpm: directives.bpm,
         key: directives.key.clone(),
         label: directives.label.clone(),
+        dc_al_coda: directives.dc_al_coda,
+        to_coda: directives.to_coda,
+        coda: directives.coda,
+        segno: directives.segno,
+        ds_al_coda: directives.ds_al_coda,
+        dc_al_fine: directives.dc_al_fine,
+        fine: directives.fine,
+        ds_al_fine: directives.ds_al_fine,
         parts: part_rows,
         source_span,
         diagnostics: measure_diagnostics,
@@ -153,6 +164,14 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> (Vec<MultiPartMeasure>, V
         bpm: None,
         key: None,
         label: None,
+        dc_al_coda: false,
+        to_coda: false,
+        coda: false,
+        segno: false,
+        ds_al_coda: false,
+        dc_al_fine: false,
+        fine: false,
+        ds_al_fine: false,
     };
     let combined = (0..max_len)
         .map(|measure_idx| combine_measure(grouped_score, measure_idx, &directives_fallback))
@@ -185,9 +204,11 @@ fn build_part_rows(
                 let lyrics = match part.kind {
                     PartKind::NotesWithLyrics => measure
                         .paired_lyrics
-                        .clone()
-                        .map(|syllables| Lyrics { syllables }),
-                    PartKind::Chords | PartKind::Notes => None,
+                        .iter()
+                        .cloned()
+                        .map(|syllables| Lyrics { syllables })
+                        .collect(),
+                    PartKind::Chords | PartKind::Notes | PartKind::Percussion => Vec::new(),
                 };
                 let slice = PartSlice {
                     name: part.name.clone(),
@@ -200,6 +221,7 @@ fn build_part_rows(
                     },
                     lyrics,
                     has_error: measure_has_error(measure),
+                    group_provenance: measure.group_provenance.clone(),
                 };
                 part_rows.push(PartRow::Timed(slice));
             }

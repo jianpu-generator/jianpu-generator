@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import {
+  demoFileSwitcherTrigger,
   fileSwitcherTrigger,
   openBin,
   openFileActions,
@@ -48,7 +49,8 @@ test('deleting a file persists via the GitHub storage backend', async ({
   await page.goto('/')
 
   // The GitHub-backed file list loads asynchronously; wait for the seeded
-  // file's tab to appear alongside the read-only demo tab.
+  // file's tab to appear (the read-only demo files live in their own
+  // dropdown now, so they no longer share this list).
   await openFileList(page)
   const originalTab = page.locator('.file-tab-name', {
     hasText: 'original.jianpu',
@@ -88,8 +90,10 @@ test('deleting a file persists via the GitHub storage backend', async ({
   )
 
   // With no other user files remaining, the active tab falls back to the
-  // read-only demo file.
-  await expect(fileSwitcherTrigger(page)).toContainText('reference.jianpu')
+  // read-only demo file: the "My Files" trigger reverts to its placeholder
+  // and the separate "Demo" trigger shows the (first) active demo file.
+  await expect(fileSwitcherTrigger(page)).toContainText('Untitled')
+  await expect(demoFileSwitcherTrigger(page)).toContainText('00-header.jianpu')
 
   // Reloading re-fetches from the (mocked) GitHub API, so the deleted file
   // staying gone from the main tab list and present in the bin proves the

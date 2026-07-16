@@ -26,7 +26,12 @@ pub enum AbsoluteContent {
     Rest {
         dotted: bool,
     },
+    MultiMeasureRest {
+        count: u32,
+        width: f32,
+    },
     ChordSymbol(String),
+    PercussionHit,
     Underline {
         width: f32,
         level: u32,
@@ -68,6 +73,10 @@ pub enum AbsoluteContent {
     DirectiveLine {
         label: Option<String>,
         spans: Vec<TextSpan>,
+        /// X offset (in points, from the line's start) where the vector
+        /// Segno glyph should be drawn, if a Segno marker is present. `None`
+        /// when there is no Segno marker on this line.
+        segno_icon_offset: Option<f32>,
     },
 }
 

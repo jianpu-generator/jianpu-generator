@@ -30,18 +30,115 @@ fn parse_positive_u32(key: &str, value: &str, value_span: &Span) -> Result<u32, 
     Ok(parsed)
 }
 
+fn parse_numeric_field(
+    target: &mut Option<u32>,
+    key: &str,
+    value: &str,
+    value_span: &Span,
+    errors: &mut Vec<RecoverableError>,
+) {
+    match parse_positive_u32(key, value, value_span) {
+        Ok(v) => *target = Some(v),
+        Err(e) => errors.push(e),
+    }
+}
+
+fn parse_bool_field(
+    target: &mut Option<bool>,
+    key: &str,
+    value: &str,
+    value_span: &Span,
+    errors: &mut Vec<RecoverableError>,
+) {
+    match value {
+        "yes" => *target = Some(true),
+        "no" => *target = Some(false),
+        _ => errors.push(RecoverableError::metadata_invalid_boolean(
+            *value_span,
+            key,
+            value,
+        )),
+    }
+}
+
+#[derive(Default)]
+struct MetadataAccumulator {
+    title: Option<String>,
+    subtitle: Option<String>,
+    author: Option<String>,
+    row_height: Option<u32>,
+    max_measures_per_system: Option<u32>,
+    label_width: Option<u32>,
+    note_number_width: Option<u32>,
+    parts_list_columns: Option<u32>,
+    lyrics_font_size: Option<u32>,
+    merge_duplicate_measures_across_parts: Option<bool>,
+    hide_resting_parts: Option<bool>,
+    hide_system_dividers: Option<bool>,
+}
+
+impl MetadataAccumulator {
+    fn apply_field(
+        &mut self,
+        key: &str,
+        value: &str,
+        key_span: Span,
+        value_span: &Span,
+        errors: &mut Vec<RecoverableError>,
+    ) {
+        match key {
+            "title" => self.title = Some(value.to_string()),
+            "subtitle" => self.subtitle = Some(value.to_string()),
+            "author" => self.author = Some(value.to_string()),
+            "row height" => {
+                parse_numeric_field(&mut self.row_height, key, value, value_span, errors)
+            }
+            "max measures per system" => parse_numeric_field(
+                &mut self.max_measures_per_system,
+                key,
+                value,
+                value_span,
+                errors,
+            ),
+            "label width" => {
+                parse_numeric_field(&mut self.label_width, key, value, value_span, errors)
+            }
+            "note number width" => {
+                parse_numeric_field(&mut self.note_number_width, key, value, value_span, errors)
+            }
+            "parts list columns" => {
+                parse_numeric_field(&mut self.parts_list_columns, key, value, value_span, errors)
+            }
+            "lyrics font size" => {
+                parse_numeric_field(&mut self.lyrics_font_size, key, value, value_span, errors)
+            }
+            "merge duplicate measures across parts" => parse_bool_field(
+                &mut self.merge_duplicate_measures_across_parts,
+                key,
+                value,
+                value_span,
+                errors,
+            ),
+            "hide resting parts" => {
+                parse_bool_field(&mut self.hide_resting_parts, key, value, value_span, errors)
+            }
+            "hide system dividers" => parse_bool_field(
+                &mut self.hide_system_dividers,
+                key,
+                value,
+                value_span,
+                errors,
+            ),
+            _ => errors.push(RecoverableError::metadata_unknown_field(key_span, key)),
+        }
+    }
+}
+
 pub fn parse_metadata(
     content: &str,
     base_offset: usize,
 ) -> (ParsedMetadata, Vec<RecoverableError>) {
-    let mut title: Option<String> = None;
-    let mut subtitle: Option<String> = None;
-    let mut author: Option<String> = None;
-    let mut row_height: Option<u32> = None;
-    let mut max_columns: Option<u32> = None;
-    let mut label_width: Option<u32> = None;
-    let mut note_number_width: Option<u32> = None;
-    let mut parts_list_columns: Option<u32> = None;
+    let mut accumulator = MetadataAccumulator::default();
     let mut byte_offset = base_offset;
     let mut errors: Vec<RecoverableError> = Vec::new();
 
@@ -67,180 +164,31 @@ pub fn parse_metadata(
         let key_span = span_of_key_in_line(byte_offset, line, key_raw, key);
         let value_span = span_of_value_in_line(byte_offset, line, key_raw, value_raw);
 
-        match key {
-            "title" => title = Some(value.to_string()),
-            "subtitle" => subtitle = Some(value.to_string()),
-            "author" => author = Some(value.to_string()),
-            "row height" => match parse_positive_u32("row height", value, &value_span) {
-                Ok(v) => row_height = Some(v),
-                Err(e) => errors.push(e),
-            },
-            "max columns" => match parse_positive_u32("max columns", value, &value_span) {
-                Ok(v) => max_columns = Some(v),
-                Err(e) => errors.push(e),
-            },
-            "label width" => match parse_positive_u32("label width", value, &value_span) {
-                Ok(v) => label_width = Some(v),
-                Err(e) => errors.push(e),
-            },
-            "note number width" => {
-                match parse_positive_u32("note number width", value, &value_span) {
-                    Ok(v) => note_number_width = Some(v),
-                    Err(e) => errors.push(e),
-                }
-            }
-            "parts list columns" => {
-                match parse_positive_u32("parts list columns", value, &value_span) {
-                    Ok(v) => parts_list_columns = Some(v),
-                    Err(e) => errors.push(e),
-                }
-            }
-            _ => errors.push(RecoverableError::metadata_unknown_field(key_span, key)),
-        }
+        accumulator.apply_field(key, value, key_span, &value_span, &mut errors);
 
         byte_offset += line.len() + 1;
     }
 
     (
         ParsedMetadata {
-            title,
-            subtitle,
-            author,
-            row_height,
-            max_columns,
-            label_width,
-            note_number_width,
-            parts_list_columns,
+            title: accumulator.title,
+            subtitle: accumulator.subtitle,
+            author: accumulator.author,
+            row_height: accumulator.row_height,
+            max_measures_per_system: accumulator.max_measures_per_system,
+            label_width: accumulator.label_width,
+            note_number_width: accumulator.note_number_width,
+            parts_list_columns: accumulator.parts_list_columns,
+            lyrics_font_size: accumulator.lyrics_font_size,
+            merge_duplicate_measures_across_parts: accumulator
+                .merge_duplicate_measures_across_parts,
+            hide_resting_parts: accumulator.hide_resting_parts,
+            hide_system_dividers: accumulator.hide_system_dividers,
         },
         errors,
     )
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parses_title_and_author() {
-        let content = "title = \"hello world\"\nauthor = \"foo\"\n";
-        let (meta, errors) = parse_metadata(content, 0);
-        assert!(errors.is_empty());
-        assert_eq!(meta.title, Some("hello world".to_string()));
-        assert_eq!(meta.author, Some("foo".to_string()));
-        assert_eq!(meta.row_height, None);
-        assert_eq!(meta.max_columns, None);
-        assert_eq!(meta.label_width, None);
-    }
-
-    #[test]
-    fn parses_optional_row_height() {
-        let content = "title = \"t\"\nauthor = \"a\"\nrow height = 16\n";
-        let (meta, errors) = parse_metadata(content, 0);
-        assert!(errors.is_empty());
-        assert_eq!(meta.row_height, Some(16));
-    }
-
-    #[test]
-    fn parses_optional_max_columns() {
-        let content = "title = \"t\"\nauthor = \"a\"\nmax columns = 32\n";
-        let (meta, errors) = parse_metadata(content, 0);
-        assert!(errors.is_empty());
-        assert_eq!(meta.max_columns, Some(32));
-    }
-
-    #[test]
-    fn title_is_optional() {
-        let content = "author = \"foo\"\n";
-        let (meta, errors) = parse_metadata(content, 0);
-        assert!(errors.is_empty());
-        assert_eq!(meta.title, None);
-    }
-
-    #[test]
-    fn author_is_optional() {
-        let content = "title = \"foo\"\n";
-        let (meta, errors) = parse_metadata(content, 0);
-        assert!(errors.is_empty());
-        assert_eq!(meta.author, None);
-    }
-
-    #[test]
-    fn collects_error_for_unknown_field() {
-        let content = "title = \"t\"\nauthor = \"a\"\nfoo = \"bar\"\n";
-        let (_meta, errors) = parse_metadata(content, 0);
-        assert!(!errors.is_empty());
-    }
-
-    #[test]
-    fn collects_error_for_parts_field_in_metadata() {
-        let content = "title = \"t\"\nauthor = \"a\"\nparts = notes: lyrics:\n";
-        let (_meta, errors) = parse_metadata(content, 0);
-        assert!(errors
-            .iter()
-            .any(|e| e.message().contains("unknown metadata field: parts")));
-    }
-
-    #[test]
-    fn collects_error_for_invalid_row_height() {
-        let content = "title = \"t\"\nauthor = \"a\"\nrow height = abc\n";
-        let (_meta, errors) = parse_metadata(content, 0);
-        assert!(!errors.is_empty());
-    }
-
-    #[test]
-    fn invalid_value_span_covers_only_the_value() {
-        let prefix = "title = \"t\"\nauthor = \"a\"\n";
-        let content = format!("{prefix}row height = 20k\n");
-        let (_meta, errors) = parse_metadata(&content, 0);
-        assert_eq!(errors.len(), 1);
-        let span = errors[0].span;
-        let spanned = &content[span.start..span.end];
-        assert_eq!(spanned, "20k");
-    }
-
-    #[test]
-    fn collects_error_for_invalid_max_columns() {
-        let content = "title = \"t\"\nauthor = \"a\"\nmax columns = 0\n";
-        let (_meta, errors) = parse_metadata(content, 0);
-        assert!(!errors.is_empty());
-    }
-
-    #[test]
-    fn parses_optional_subtitle() {
-        let content = "title = \"hello\"\nauthor = \"foo\"\nsubtitle = \"sub\"\n";
-        let (meta, errors) = parse_metadata(content, 0);
-        assert!(errors.is_empty());
-        assert_eq!(meta.subtitle, Some("sub".to_string()));
-    }
-
-    #[test]
-    fn subtitle_defaults_to_none() {
-        let content = "title = \"t\"\nauthor = \"a\"\n";
-        let (meta, errors) = parse_metadata(content, 0);
-        assert!(errors.is_empty());
-        assert_eq!(meta.subtitle, None);
-    }
-
-    #[test]
-    fn collects_error_for_row_height_with_underscore() {
-        let content = "title = \"t\"\nauthor = \"a\"\nrow_height = 20\n";
-        let (_meta, errors) = parse_metadata(content, 0);
-        assert!(!errors.is_empty());
-    }
-
-    #[test]
-    fn parses_label_width() {
-        let content = "title = \"t\"\nauthor = \"a\"\nlabel width = 60\n";
-        let (meta, errors) = parse_metadata(content, 0);
-        assert!(errors.is_empty());
-        assert_eq!(meta.label_width, Some(60));
-    }
-
-    #[test]
-    fn label_width_defaults_to_none() {
-        let content = "title = \"t\"\nauthor = \"a\"\n";
-        let (meta, errors) = parse_metadata(content, 0);
-        assert!(errors.is_empty());
-        assert_eq!(meta.label_width, None);
-    }
-}
+#[path = "metadata_parser_tests.rs"]
+mod metadata_parser_tests;

@@ -3,6 +3,20 @@ import {
   readPartTogglesForFile,
   writePartTogglesForFile,
 } from '../partToggleCache'
+import type { PartInfo } from '../types'
+
+/** True when every part is either soloed-out or individually disabled, leaving nothing audible/visible. */
+export function noPartsSelected(
+  parts: PartInfo[],
+  disabledParts: ReadonlySet<string>,
+  soloedParts: ReadonlySet<string>,
+): boolean {
+  return (
+    parts.length > 0 &&
+    soloedParts.size === 0 &&
+    parts.every((part) => disabledParts.has(part.abbreviation))
+  )
+}
 
 export function usePartToggles(fileId: string) {
   const [disabledParts, setDisabledParts] = useState<Set<string>>(() => {

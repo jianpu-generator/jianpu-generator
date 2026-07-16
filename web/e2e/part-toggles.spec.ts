@@ -1,9 +1,8 @@
 import { expect, type Page, test } from '@playwright/test'
 
-// Note: the "M — Melody" / "C — Chords" legend in the preview header always
-// lists every declared part, regardless of hide/solo state — only the score
-// content (notes, lyrics, chord symbols) is filtered. Assertions below key
-// off that content instead of the legend.
+// The "M — Melody" / "C — Chords" legend in the preview header lists only
+// parts currently enabled by hide/solo state — a hidden or non-soloed part's
+// entry disappears from the legend along with its score content.
 
 const SOURCE = [
   '# metadata',
@@ -42,6 +41,12 @@ const MELODY_NOTES = '1234'
 const MELODY_LYRICS = 'twin-'
 const HARMONY_NOTES = '5671'
 const CHORD_CONTENT = '———'
+
+// Part-list legend entries ("abbreviation — display name"), rendered in the
+// preview header only for parts whose abbreviation differs from their name.
+const MELODY_LEGEND = 'M — Melody'
+const HARMONY_LEGEND = 'H — Harmony'
+const CHORDS_LEGEND = 'C — Chords'
 
 async function loadSource(page: Page, source: string = SOURCE) {
   await page.addInitScript((src) => {
@@ -216,4 +221,87 @@ test('toggling lyrics back on restores lyric text', async ({ page }) => {
   await toggleLyrics(page, 'M')
 
   await expect(page.locator('.preview-pages')).toContainText(MELODY_LYRICS)
+})
+
+test('hiding a part removes its entry from the part-list legend', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.goto('/')
+  await waitForPreviewReady(page)
+
+  const preview = page.locator('.preview-pages')
+  await expect(preview).toContainText(MELODY_LEGEND)
+  await expect(preview).toContainText(CHORDS_LEGEND)
+
+  await toggleEye(page, 'M')
+
+  await expect(preview).not.toContainText(MELODY_LEGEND)
+  // The other part's legend entry is unaffected.
+  await expect(preview).toContainText(CHORDS_LEGEND)
+})
+
+test('unhiding a part restores its part-list legend entry', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.goto('/')
+  await waitForPreviewReady(page)
+
+  await toggleEye(page, 'M')
+  await expect(page.locator('.preview-pages')).not.toContainText(MELODY_LEGEND)
+
+  await toggleEye(page, 'M')
+
+  await expect(page.locator('.preview-pages')).toContainText(MELODY_LEGEND)
+})
+
+test('soloing a part hides other parts legend entries', async ({ page }) => {
+  await loadSource(page)
+  await page.goto('/')
+  await waitForPreviewReady(page)
+
+  const preview = page.locator('.preview-pages')
+  await expect(preview).toContainText(CHORDS_LEGEND)
+
+  await toggleSolo(page, 'M')
+
+  await expect(preview).toContainText(MELODY_LEGEND)
+  await expect(preview).not.toContainText(CHORDS_LEGEND)
+})
+
+test('un-soloing restores previously enabled parts legend entries', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.goto('/')
+  await waitForPreviewReady(page)
+
+  await toggleSolo(page, 'M')
+  await expect(page.locator('.preview-pages')).not.toContainText(CHORDS_LEGEND)
+
+  await toggleSolo(page, 'M')
+
+  const preview = page.locator('.preview-pages')
+  await expect(preview).toContainText(MELODY_LEGEND)
+  await expect(preview).toContainText(CHORDS_LEGEND)
+})
+
+test('soloing multiple parts keeps both legend entries and hides the rest', async ({
+  page,
+}) => {
+  await loadSource(page, THREE_PART_SOURCE)
+  await page.goto('/')
+  await waitForPreviewReady(page)
+
+  const preview = page.locator('.preview-pages')
+  await expect(preview).toContainText(HARMONY_LEGEND)
+  await expect(preview).toContainText(CHORDS_LEGEND)
+
+  await toggleSolo(page, 'H')
+  await toggleSolo(page, 'C')
+
+  await expect(preview).not.toContainText(MELODY_LEGEND)
+  await expect(preview).toContainText(HARMONY_LEGEND)
+  await expect(preview).toContainText(CHORDS_LEGEND)
 })

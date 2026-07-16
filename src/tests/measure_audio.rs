@@ -1,4 +1,5 @@
 use super::write_wav_for_measure_range_from_source;
+use super::MeasureRangeSelection;
 use super::*;
 
 #[cfg(feature = "wav")]
@@ -296,9 +297,18 @@ fn write_wav_for_measure_from_source_out_of_range_clamps_to_last_measure() {
 #[test]
 fn write_wav_for_measure_range_from_source_returns_riff_wav() {
     let source = two_measure_source();
-    let wav =
-        write_wav_for_measure_range_from_source(source, "test.jianpu", 0..=1, None, SF2_BYTES, &[])
-            .unwrap();
+    let wav = write_wav_for_measure_range_from_source(
+        source,
+        "test.jianpu",
+        &MeasureRangeSelection {
+            range: 0..=1,
+            extend_to_last_occurrence: false,
+        },
+        None,
+        SF2_BYTES,
+        &[],
+    )
+    .unwrap();
     assert!(wav.len() > 4);
     assert_eq!(&wav[0..4], b"RIFF");
 }
@@ -309,9 +319,18 @@ fn write_wav_for_measure_range_from_source_single_measure_matches_range_of_one()
     let source = two_measure_source();
     let single =
         write_wav_for_measure_from_source(source, "test.jianpu", 0, None, SF2_BYTES, &[]).unwrap();
-    let range =
-        write_wav_for_measure_range_from_source(source, "test.jianpu", 0..=0, None, SF2_BYTES, &[])
-            .unwrap();
+    let range = write_wav_for_measure_range_from_source(
+        source,
+        "test.jianpu",
+        &MeasureRangeSelection {
+            range: 0..=0,
+            extend_to_last_occurrence: false,
+        },
+        None,
+        SF2_BYTES,
+        &[],
+    )
+    .unwrap();
     // Both paths produce RIFF WAV; the exact bytes may differ but both are valid.
     assert_eq!(&single[0..4], b"RIFF");
     assert_eq!(&range[0..4], b"RIFF");
@@ -324,7 +343,10 @@ fn write_wav_for_measure_range_from_source_out_of_range_clamps_to_last_measure()
     let result = write_wav_for_measure_range_from_source(
         source,
         "test.jianpu",
-        0..=99,
+        &MeasureRangeSelection {
+            range: 0..=99,
+            extend_to_last_occurrence: false,
+        },
         None,
         SF2_BYTES,
         &[],

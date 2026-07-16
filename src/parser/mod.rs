@@ -1,16 +1,20 @@
 use crate::ast::parsed::ParsedDocument;
 use crate::error::{DocumentSection, IrrecoverableError, RecoverableError, Span};
 
+pub mod group_parser;
 pub mod lyrics;
 pub mod metadata_parser;
 pub mod parts_parser;
 pub mod score;
 pub mod section_splitter;
+pub mod sequence_parser;
 
 pub(crate) struct DocumentSectionContents {
     pub parts: (String, usize),
     pub score: (String, usize),
     pub metadata: (String, usize),
+    pub sequence: Option<(String, usize)>,
+    pub group: Option<(String, usize)>,
 }
 
 fn unwrap_or_missing(
@@ -25,83 +29,96 @@ fn unwrap_or_missing(
     })
 }
 
+#[derive(Default)]
+struct RawSections {
+    metadata: Option<(String, usize)>,
+    parts: Option<(String, usize)>,
+    score: Option<(String, usize)>,
+    sequence: Option<(String, usize)>,
+    group: Option<(String, usize)>,
+}
+
+fn partition_sections(
+    sections: Vec<section_splitter::RawSection>,
+    doc_span: Span,
+    errors: &mut Vec<RecoverableError>,
+) -> RawSections {
+    use section_splitter::SectionKind;
+
+    let mut raw = RawSections::default();
+    for section in sections.into_iter() {
+        let occurrence = SectionOccurrence {
+            content: (section.content, section.content_offset),
+            doc_span,
+        };
+        match section.kind {
+            SectionKind::Metadata => record_section(
+                &mut raw.metadata,
+                DocumentSection::Metadata,
+                occurrence,
+                errors,
+            ),
+            SectionKind::Parts => {
+                record_section(&mut raw.parts, DocumentSection::Parts, occurrence, errors)
+            }
+            SectionKind::Score => {
+                record_section(&mut raw.score, DocumentSection::Score, occurrence, errors)
+            }
+            SectionKind::Sequence => record_section(
+                &mut raw.sequence,
+                DocumentSection::Sequence,
+                occurrence,
+                errors,
+            ),
+            SectionKind::Groups => {
+                record_section(&mut raw.group, DocumentSection::Groups, occurrence, errors)
+            }
+        }
+    }
+    raw
+}
+
+struct SectionOccurrence {
+    content: (String, usize),
+    doc_span: Span,
+}
+
+fn record_section(
+    slot: &mut Option<(String, usize)>,
+    section: DocumentSection,
+    occurrence: SectionOccurrence,
+    errors: &mut Vec<RecoverableError>,
+) {
+    if slot.is_some() {
+        errors.push(RecoverableError::section_duplicate(
+            occurrence.doc_span,
+            section,
+        ));
+    } else {
+        *slot = Some(occurrence.content);
+    }
+}
+
 pub(crate) fn load_document_sections(
     input: &str,
 ) -> (DocumentSectionContents, Vec<RecoverableError>) {
-    use section_splitter::{split_sections, SectionKind};
+    use section_splitter::split_sections;
 
     let (sections, mut errors) = split_sections(input);
     let doc_span = Span::new(0, input.len());
 
-    let mut raw_metadata: Option<(String, usize)> = None;
-    let mut raw_parts: Option<(String, usize)> = None;
-    let mut raw_score: Option<(String, usize)> = None;
+    let raw = partition_sections(sections, doc_span, &mut errors);
 
-    // Track the order in which each section first appears to detect out-of-order.
-    let mut metadata_order: Option<usize> = None;
-    let mut parts_order: Option<usize> = None;
-    let mut score_order: Option<usize> = None;
-
-    for (index, section) in sections.into_iter().enumerate() {
-        match section.kind {
-            SectionKind::Metadata => {
-                if raw_metadata.is_some() {
-                    errors.push(RecoverableError::section_duplicate(
-                        doc_span,
-                        DocumentSection::Metadata,
-                    ));
-                } else {
-                    metadata_order = Some(index);
-                    raw_metadata = Some((section.content, section.content_offset));
-                }
-            }
-            SectionKind::Parts => {
-                if raw_parts.is_some() {
-                    errors.push(RecoverableError::section_duplicate(
-                        doc_span,
-                        DocumentSection::Parts,
-                    ));
-                } else {
-                    parts_order = Some(index);
-                    raw_parts = Some((section.content, section.content_offset));
-                }
-            }
-            SectionKind::Score => {
-                if raw_score.is_some() {
-                    errors.push(RecoverableError::section_duplicate(
-                        doc_span,
-                        DocumentSection::Score,
-                    ));
-                } else {
-                    score_order = Some(index);
-                    raw_score = Some((section.content, section.content_offset));
-                }
-            }
-        }
-    }
-
-    // Detect out-of-order: any two present sections whose first-appearance indices
-    // are not strictly ascending in canonical order (metadata < parts < score).
-    let pairs = [
-        (metadata_order, parts_order),
-        (metadata_order, score_order),
-        (parts_order, score_order),
-    ];
-    if pairs
-        .iter()
-        .any(|(earlier, later)| matches!((earlier, later), (Some(a), Some(b)) if a > b))
-    {
-        errors.push(RecoverableError::section_out_of_order(doc_span));
-    }
-
-    let metadata = raw_metadata.unwrap_or((String::new(), 0));
-    let parts = unwrap_or_missing(raw_parts, DocumentSection::Parts, doc_span, &mut errors);
-    let score = unwrap_or_missing(raw_score, DocumentSection::Score, doc_span, &mut errors);
+    let metadata = raw.metadata.unwrap_or((String::new(), 0));
+    let parts = unwrap_or_missing(raw.parts, DocumentSection::Parts, doc_span, &mut errors);
+    let score = unwrap_or_missing(raw.score, DocumentSection::Score, doc_span, &mut errors);
     (
         DocumentSectionContents {
             metadata,
             parts,
             score,
+            sequence: raw.sequence,
+            group: raw.group,
         },
         errors,
     )
@@ -122,13 +139,41 @@ pub fn parse(
         metadata_parser::parse_metadata(&meta_content, meta_offset);
     let (declarations, parts_parse_errors) =
         parts_parser::parse_parts(&parts_content, parts_offset, instruments);
+
+    let (group, mut group_parse_errors) = match sections.group {
+        Some((group_content, group_offset)) => {
+            group_parser::parse_group(&group_content, group_offset)
+        }
+        None => (None, Vec::new()),
+    };
+    let resolved_groups = match &group {
+        Some(group_section) => {
+            let (resolved, errors) =
+                group_parser::resolve_and_validate_groups(group_section, &declarations);
+            group_parse_errors.extend(errors);
+            resolved
+        }
+        None => Vec::new(),
+    };
+
     let (tracks, directive_events_per_measure, per_measure_parse_errors) =
         if declarations.is_empty() {
             (Vec::new(), Vec::new(), Vec::new())
         } else {
-            score::interleaved_parser::parse(&score_content, score_offset, &declarations)
-                .map_err(|error| error.with_path(path))?
+            score::interleaved_parser::parse(
+                &score_content,
+                score_offset,
+                &declarations,
+                &resolved_groups,
+            )
+            .map_err(|error| error.with_path(path))?
         };
+    let (sequence, sequence_parse_errors) = match sections.sequence {
+        Some((sequence_content, sequence_offset)) => {
+            sequence_parser::parse_sequence(&sequence_content, sequence_offset)
+        }
+        None => (None, Vec::new()),
+    };
 
     Ok(ParsedDocument {
         metadata,
@@ -139,198 +184,12 @@ pub fn parse(
         metadata_parse_errors,
         parts_parse_errors,
         section_structure_errors,
+        sequence,
+        sequence_parse_errors,
+        group,
+        group_parse_errors,
     })
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::ast::parsed::{ParsedTimedTrack, ParsedTrack};
-
-    fn notes_track(doc: &ParsedDocument) -> &ParsedTimedTrack {
-        doc.tracks
-            .iter()
-            .find_map(|t| match t {
-                ParsedTrack::Timed(n) if n.lyrics.is_none() && n.abbreviation != "Chord" => Some(n),
-                ParsedTrack::Timed(_) => None,
-            })
-            .or_else(|| {
-                doc.tracks
-                    .iter()
-                    .map(|t| match t {
-                        ParsedTrack::Timed(n) => n,
-                    })
-                    .next()
-            })
-            .expect("expected a notes track")
-    }
-
-    #[test]
-    fn parses_full_document() {
-        let input = concat!(
-            "# metadata\ntitle = \"hello world\"\nauthor = \"foo\"\n\n",
-            "# parts\nMelody = notes+lyrics\n\n",
-            "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] 你好wo rld\n"
-        );
-        let doc = parse(input, "test.jianpu", &[]).unwrap();
-        assert_eq!(doc.metadata.title, Some("hello world".to_string()));
-        assert_eq!(doc.metadata.author, Some("foo".to_string()));
-        assert_eq!(doc.declarations.len(), 1);
-        assert_eq!(doc.tracks.len(), 1);
-        let notes = notes_track(&doc);
-        let event_count: usize = notes
-            .measure_slots
-            .iter()
-            .filter_map(|s| match s {
-                crate::ast::parsed::ParsedMeasureSlot::Real { events } => Some(events.len()),
-                crate::ast::parsed::ParsedMeasureSlot::EmptyNote { .. } => None,
-            })
-            .sum();
-        assert_eq!(event_count, 7);
-        assert_eq!(notes.lyrics.as_ref().unwrap().measure_syllables[0].len(), 4);
-    }
-
-    #[test]
-    fn unknown_section_recoverable() {
-        let input = "# unknown\nfoo\n";
-        let doc = parse(input, "test.jianpu", &[]).expect("unknown section must not abort parsing");
-        assert!(doc
-            .section_structure_errors
-            .iter()
-            .any(|e| matches!(&e.kind, crate::error::RecoverableErrorKind::SectionUnknown { name } if name == "unknown")));
-    }
-
-    #[test]
-    fn duplicate_score_section_recoverable() {
-        let input = concat!(
-            "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-            "# parts\nMelody = notes\n\n",
-            "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n\n",
-            "# score\n[Melody] 5 6 7 1\n",
-        );
-        let doc = parse(input, "test.jianpu", &[])
-            .expect("duplicate score section must not abort parsing");
-        assert!(doc
-            .section_structure_errors
-            .iter()
-            .any(|e| matches!(&e.kind, crate::error::RecoverableErrorKind::SectionDuplicate { section } if *section == DocumentSection::Score)));
-    }
-
-    #[test]
-    fn missing_metadata_section_is_allowed() {
-        let input = concat!(
-            "# parts\nMelody = notes\n\n",
-            "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n"
-        );
-        let doc = parse(input, "test.jianpu", &[])
-            .expect("missing metadata section must not abort parsing");
-        assert!(
-            !doc.section_structure_errors.iter().any(|e| matches!(
-                &e.kind,
-                crate::error::RecoverableErrorKind::SectionMissing { section }
-                    if *section == DocumentSection::Metadata
-            )),
-            "missing #metadata must not produce an error"
-        );
-        assert_eq!(doc.metadata.title, None);
-    }
-
-    #[test]
-    fn parses_two_named_parts() {
-        let input = concat!(
-            "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-            "# parts\nSoprano = notes\nAlto = notes\n\n",
-            "# score\n",
-            "time=4/4 key=C4 bpm=120\n",
-            "[Soprano] 1 2 3 4\n",
-            "[Alto] 5 6 7 1\n",
-        );
-        let doc = parse(input, "test.jianpu", &[]).unwrap();
-        assert_eq!(doc.tracks.len(), 2);
-        let soprano = doc
-            .tracks
-            .iter()
-            .find_map(|t| match t {
-                ParsedTrack::Timed(n) if n.abbreviation == "Soprano" => Some(n),
-                ParsedTrack::Timed(_) => None,
-            })
-            .unwrap();
-        let alto = doc
-            .tracks
-            .iter()
-            .find_map(|t| match t {
-                ParsedTrack::Timed(n) if n.abbreviation == "Alto" => Some(n),
-                ParsedTrack::Timed(_) => None,
-            })
-            .unwrap();
-        assert!(soprano.lyrics.is_none());
-        assert!(alto.lyrics.is_none());
-    }
-
-    #[test]
-    fn too_many_lines_recoverable_error_span_points_to_absolute_file_position() {
-        // One notes part but two data lines in a group → recoverable error.
-        // The error span must point to the extra line's position in the *full* input.
-        let input = concat!(
-            "# metadata\n",
-            "title=\"t\"\n",
-            "author=\"a\"\n",
-            "\n",
-            "# parts\n",
-            "Melody = notes\n",
-            "\n",
-            "# score\n",
-            "[Melody] 1 2 3 4\n",
-            "[Melody] 5 6 7 1\n",
-        );
-        let expected_offset = input.rfind("5 6 7 1").unwrap();
-        let doc = parse(input, "test.jianpu", &[]).expect("too-many-lines must not abort parsing");
-        let error = doc.per_measure_parse_errors[0]
-            .as_ref()
-            .expect("recoverable error must be recorded for the measure");
-        assert_eq!(
-            error.span.start, expected_offset,
-            "recoverable error span should point to the absolute file position of the extra line"
-        );
-    }
-
-    #[test]
-    fn too_many_lines_recoverable_error_lists_declared_parts() {
-        // One notes part but two data lines → recoverable error should name the declared part.
-        let input = concat!(
-            "# metadata\n",
-            "title=\"t\"\n",
-            "author=\"a\"\n",
-            "\n",
-            "# parts\n",
-            "Melody = notes\n",
-            "\n",
-            "# score\n",
-            "[Melody] 1 2 3 4\n",
-            "[Melody] 5 6 7 1\n",
-        );
-        let doc = parse(input, "test.jianpu", &[]).expect("too-many-lines must not abort parsing");
-        let error = doc.per_measure_parse_errors[0]
-            .as_ref()
-            .expect("recoverable error must be recorded for the measure");
-        assert!(
-            error.message().contains("Melody"),
-            "recoverable error message should list the declared part 'Melody', got: {}",
-            error.message()
-        );
-    }
-
-    #[test]
-    fn single_unnamed_part_remains_compatible() {
-        let input = concat!(
-            "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-            "# parts\nMelody = notes+lyrics\n\n",
-            "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n"
-        );
-        let doc = parse(input, "test.jianpu", &[]).unwrap();
-        assert_eq!(doc.tracks.len(), 1);
-        let notes = notes_track(&doc);
-        assert_eq!(notes.abbreviation, "Melody");
-        assert!(notes.lyrics.is_some());
-    }
-}
+mod tests;

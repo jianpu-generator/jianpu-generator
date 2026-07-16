@@ -1,4 +1,10 @@
 import * as Dialog from '@radix-ui/react-dialog'
+import { useEffect, useState } from 'react'
+import type { MetadataDefaults } from '../utils/metadataDefaults'
+import {
+  defaultLyricsFontSize,
+  loadMetadataDefaults,
+} from '../utils/metadataDefaults'
 import type { MetadataKey, ParsedMetadataFields } from '../utils/metadataSource'
 
 export interface EditMetadataModalProps {
@@ -6,6 +12,9 @@ export interface EditMetadataModalProps {
   onOpenChange: (open: boolean) => void
   metadata: ParsedMetadataFields
   onFieldChange: (key: MetadataKey, value: string | null) => void
+  /** Element to confine the modal to (e.g. the editor pane), so it doesn't
+   * cover the preview pane. Falls back to viewport-centered when null. */
+  container?: HTMLElement | null
 }
 
 const thStyle: React.CSSProperties = {
@@ -40,13 +49,29 @@ export function EditMetadataModal({
   onOpenChange,
   metadata,
   onFieldChange,
+  container,
 }: EditMetadataModalProps) {
+  const [defaults, setDefaults] = useState<MetadataDefaults | null>(null)
+  const [lyricsFontSizeDefault, setLyricsFontSizeDefault] = useState<
+    number | null
+  >(null)
+
+  useEffect(() => {
+    loadMetadataDefaults().then(setDefaults)
+  }, [])
+
+  const effectiveRowHeight = metadata.rowHeight ?? defaults?.rowHeight ?? null
+  useEffect(() => {
+    if (effectiveRowHeight === null) return
+    defaultLyricsFontSize(effectiveRowHeight).then(setLyricsFontSizeDefault)
+  }, [effectiveRowHeight])
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
+      <Dialog.Portal container={container ?? undefined}>
         <Dialog.Overlay
           style={{
-            position: 'fixed',
+            position: container ? 'absolute' : 'fixed',
             inset: 0,
             background: 'rgba(0,0,0,0.35)',
             zIndex: 1000,
@@ -55,7 +80,7 @@ export function EditMetadataModal({
         <Dialog.Content
           data-testid="edit-metadata-modal"
           style={{
-            position: 'fixed',
+            position: container ? 'absolute' : 'fixed',
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
@@ -64,9 +89,10 @@ export function EditMetadataModal({
             borderRadius: '6px',
             boxShadow: '0 8px 32px rgba(0,0,0,0.16)',
             zIndex: 1001,
-            minWidth: '420px',
-            maxWidth: '90vw',
-            maxHeight: '80vh',
+            minWidth: container ? undefined : '420px',
+            width: container ? '90%' : undefined,
+            maxWidth: container ? undefined : '90vw',
+            maxHeight: container ? '90%' : '80vh',
             display: 'flex',
             flexDirection: 'column',
             fontFamily: 'var(--mono, monospace)',
@@ -168,6 +194,9 @@ export function EditMetadataModal({
                     <input
                       type="number"
                       min="1"
+                      placeholder={
+                        defaults ? String(defaults.rowHeight) : undefined
+                      }
                       style={inputStyle}
                       value={metadata.rowHeight ?? ''}
                       onChange={(e) =>
@@ -180,16 +209,21 @@ export function EditMetadataModal({
                   </td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Max Columns</td>
+                  <td style={tdStyle}>Max Measures Per System</td>
                   <td style={tdStyle}>
                     <input
                       type="number"
                       min="1"
+                      placeholder={
+                        defaults
+                          ? String(defaults.maxMeasuresPerSystem)
+                          : undefined
+                      }
                       style={inputStyle}
-                      value={metadata.maxColumns ?? ''}
+                      value={metadata.maxMeasuresPerSystem ?? ''}
                       onChange={(e) =>
                         onFieldChange(
-                          'max columns',
+                          'max measures per system',
                           e.target.value === '' ? null : e.target.value,
                         )
                       }
@@ -202,6 +236,9 @@ export function EditMetadataModal({
                     <input
                       type="number"
                       min="1"
+                      placeholder={
+                        defaults ? String(defaults.labelWidth) : undefined
+                      }
                       style={inputStyle}
                       value={metadata.labelWidth ?? ''}
                       onChange={(e) =>
@@ -219,6 +256,9 @@ export function EditMetadataModal({
                     <input
                       type="number"
                       min="1"
+                      placeholder={
+                        defaults ? String(defaults.noteNumberWidth) : undefined
+                      }
                       style={inputStyle}
                       value={metadata.noteNumberWidth ?? ''}
                       onChange={(e) =>
@@ -236,13 +276,94 @@ export function EditMetadataModal({
                     <input
                       type="number"
                       min="1"
-                      placeholder="4"
+                      placeholder={
+                        defaults ? String(defaults.partsListColumns) : undefined
+                      }
                       style={inputStyle}
                       value={metadata.partsListColumns ?? ''}
                       onChange={(e) =>
                         onFieldChange(
                           'parts list columns',
                           e.target.value === '' ? null : e.target.value,
+                        )
+                      }
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>Lyrics Font Size</td>
+                  <td style={tdStyle}>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder={
+                        lyricsFontSizeDefault !== null
+                          ? String(lyricsFontSizeDefault)
+                          : undefined
+                      }
+                      style={inputStyle}
+                      value={metadata.lyricsFontSize ?? ''}
+                      onChange={(e) =>
+                        onFieldChange(
+                          'lyrics font size',
+                          e.target.value === '' ? null : e.target.value,
+                        )
+                      }
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>Merge Duplicate Measures Across Parts</td>
+                  <td style={tdStyle}>
+                    <input
+                      type="checkbox"
+                      checked={
+                        metadata.mergeDuplicateMeasuresAcrossParts ??
+                        defaults?.mergeDuplicateMeasuresAcrossParts ??
+                        true
+                      }
+                      onChange={(e) =>
+                        onFieldChange(
+                          'merge duplicate measures across parts',
+                          e.target.checked ? 'yes' : 'no',
+                        )
+                      }
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>Hide Resting Parts</td>
+                  <td style={tdStyle}>
+                    <input
+                      type="checkbox"
+                      checked={
+                        metadata.hideRestingParts ??
+                        defaults?.hideRestingParts ??
+                        true
+                      }
+                      onChange={(e) =>
+                        onFieldChange(
+                          'hide resting parts',
+                          e.target.checked ? 'yes' : 'no',
+                        )
+                      }
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>Hide System Dividers</td>
+                  <td style={tdStyle}>
+                    <input
+                      type="checkbox"
+                      checked={
+                        metadata.hideSystemDividers ??
+                        defaults?.hideSystemDividers ??
+                        false
+                      }
+                      onChange={(e) =>
+                        onFieldChange(
+                          'hide system dividers',
+                          e.target.checked ? 'yes' : 'no',
                         )
                       }
                     />

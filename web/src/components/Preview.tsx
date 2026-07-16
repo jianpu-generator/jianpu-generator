@@ -1,5 +1,7 @@
-import type { SvgDocumentOut, SvgElementOut } from 'jianpu-wasm'
+import type { SvgDocumentOut } from 'jianpu-wasm'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { renderSvgDocument } from './PreviewSvgRenderer'
+import { usePlayhead } from './usePreviewPlayhead'
 
 interface PreviewProps {
   documents: SvgDocumentOut[]
@@ -10,8 +12,12 @@ interface PreviewProps {
   wavFilename?: string
   /** Elapsed-seconds offset of each measure boundary for `wavUrl`'s audio, length = measure count + 1. */
   measureTimes?: number[]
+  /** Written measure index to highlight at each playback position of `measureTimes`, following D.C. al Coda navigation. */
+  writtenMeasureIndices?: number[]
   /** Elapsed-seconds offset of each measure boundary within the selected range's audio, relative to the range start. */
   measureAudioTimes?: number[]
+  /** Written measure index to highlight at each playback position of `measureAudioTimes`, following D.C. al Coda navigation. */
+  measureAudioWrittenIndices?: number[]
   /** The `<audio>` element currently playing the selected measure range, if any. */
   measureAudioElement?: HTMLAudioElement | null
   selectedMeasureRange?: { start: number; end: number } | null
@@ -19,116 +25,6 @@ interface PreviewProps {
   toolbar?: ReactNode
   onMeasureRangeSelect?: (startIndex: number, endIndex: number) => void
   onSectionLabelClick?: (label: string) => void
-}
-
-function findMeasureSegmentAtTime(times: number[], t: number): number {
-  for (let i = times.length - 2; i >= 0; i--) {
-    if (t >= times[i]) return i
-  }
-  return 0
-}
-
-/**
- * Imperatively drives an SVG playhead `<rect>` across measures in sync with
- * `audio`'s playback position, using `measureTimes` (seconds per measure
- * boundary, offset by `measureIndexOffset`) to locate each measure's x/width
- * via its existing click-target rect. Runs outside React state/rendering
- * (rAF, direct attribute writes) since it updates every animation frame.
- */
-function usePlayhead(
-  containerRef: React.RefObject<HTMLDivElement | null>,
-  audio: HTMLAudioElement | null | undefined,
-  measureTimes: number[] | undefined,
-  measureIndexOffset: number,
-) {
-  useEffect(() => {
-    const container = containerRef.current
-    if (!audio || !container || !measureTimes || measureTimes.length < 2) {
-      return
-    }
-
-    const playhead = document.createElementNS(
-      'http://www.w3.org/2000/svg',
-      'rect',
-    )
-    playhead.setAttribute('data-testid', 'measure-playhead')
-    playhead.setAttribute('width', '2')
-    playhead.setAttribute('fill', 'rgba(220,38,38,0.85)')
-    playhead.style.pointerEvents = 'none'
-    let currentSvg: SVGSVGElement | null = null
-    let rafId: number | null = null
-
-    const updatePosition = () => {
-      const t = audio.currentTime
-      const segment = findMeasureSegmentAtTime(measureTimes, t)
-      const measureIndex = measureIndexOffset + segment
-      const group = container.querySelector<SVGGElement>(
-        `[data-tag="measure"][data-measure-index="${measureIndex}"]`,
-      )
-      const targetRect = group?.querySelector<SVGRectElement>(
-        'rect[data-variant="measure-click-target-rect"]',
-      )
-      if (!group || !targetRect) return
-      const svg = group.closest('svg')
-      if (svg && svg !== currentSvg) {
-        playhead.remove()
-        svg.appendChild(playhead)
-        currentSvg = svg
-      }
-      const x = Number.parseFloat(targetRect.getAttribute('x') ?? '0')
-      const y = Number.parseFloat(targetRect.getAttribute('y') ?? '0')
-      const width = Number.parseFloat(targetRect.getAttribute('width') ?? '0')
-      const height = Number.parseFloat(targetRect.getAttribute('height') ?? '0')
-      const segStart = measureTimes[segment]
-      const segEnd = measureTimes[segment + 1] ?? segStart
-      const fraction =
-        segEnd > segStart
-          ? Math.min(1, Math.max(0, (t - segStart) / (segEnd - segStart)))
-          : 0
-      playhead.setAttribute('x', String(x + fraction * width))
-      playhead.setAttribute('y', String(y))
-      playhead.setAttribute('height', String(height))
-    }
-
-    const tick = () => {
-      updatePosition()
-      rafId = requestAnimationFrame(tick)
-    }
-    const start = () => {
-      if (rafId === null) rafId = requestAnimationFrame(tick)
-    }
-    const stop = () => {
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId)
-        rafId = null
-      }
-      playhead.remove()
-      currentSvg = null
-    }
-
-    audio.addEventListener('play', start)
-    audio.addEventListener('pause', stop)
-    audio.addEventListener('ended', stop)
-    if (!audio.paused) start()
-
-    return () => {
-      audio.removeEventListener('play', start)
-      audio.removeEventListener('pause', stop)
-      audio.removeEventListener('ended', stop)
-      stop()
-    }
-  }, [containerRef, audio, measureTimes, measureIndexOffset])
-}
-
-function transparentRectRoleToDataVariant(
-  role: 'measureClickTarget' | 'sectionLabelBackground',
-): string {
-  switch (role) {
-    case 'measureClickTarget':
-      return 'measure-click-target-rect'
-    case 'sectionLabelBackground':
-      return 'section-label-bg'
-  }
 }
 
 function getSectionLabelAtPoint(x: number, y: number): string | undefined {
@@ -177,182 +73,6 @@ function clearDragHighlights(container: HTMLElement): void {
   }
 }
 
-function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
-  const { kind } = el
-  switch (kind.type) {
-    case 'text':
-      return (
-        <text
-          key={key}
-          x={el.x}
-          y={el.y}
-          fontSize={kind.font_size}
-          textAnchor={
-            kind.anchor === 'start'
-              ? 'start'
-              : kind.anchor === 'middle'
-                ? 'middle'
-                : 'end'
-          }
-          dominantBaseline={
-            kind.baseline === 'middle'
-              ? 'middle'
-              : kind.baseline === 'hanging'
-                ? 'hanging'
-                : 'ideographic'
-          }
-          fontFamily={kind.font === 'monospace' ? 'monospace' : 'sans-serif'}
-          fontWeight={kind.weight === 'normal' ? 'normal' : 'bold'}
-          fontStyle={kind.italic ? 'italic' : undefined}
-        >
-          {kind.content}
-        </text>
-      )
-    case 'textWithTspans':
-      return (
-        <text
-          key={key}
-          x={el.x}
-          y={el.y}
-          fontSize={kind.font_size}
-          textAnchor={
-            kind.anchor === 'start'
-              ? 'start'
-              : kind.anchor === 'middle'
-                ? 'middle'
-                : 'end'
-          }
-          dominantBaseline={
-            kind.baseline === 'middle'
-              ? 'middle'
-              : kind.baseline === 'hanging'
-                ? 'hanging'
-                : 'ideographic'
-          }
-          fontFamily="sans-serif"
-        >
-          {kind.spans.map((span, spanIndex) => (
-            <tspan
-              // biome-ignore lint/suspicious/noArrayIndexKey: tspans have no stable identifier
-              key={spanIndex}
-              fontWeight={span.bold ? 'bold' : undefined}
-              fontStyle={span.italic ? 'italic' : undefined}
-              fontSize={span.font_size ?? undefined}
-            >
-              {span.content}
-            </tspan>
-          ))}
-        </text>
-      )
-    case 'line':
-      return (
-        <line
-          key={key}
-          x1={el.x}
-          y1={el.y}
-          x2={kind.x2}
-          y2={kind.y2}
-          stroke="black"
-          strokeWidth={kind.stroke_width}
-        />
-      )
-    case 'circle':
-      return <circle key={key} cx={el.x} cy={el.y} r={kind.r} fill="black" />
-    case 'path':
-      return (
-        <path
-          key={key}
-          d={`M ${el.x} ${el.y} Q ${kind.control_x} ${kind.control_y} ${kind.end_x} ${kind.end_y}`}
-          fill="none"
-          stroke="black"
-          strokeWidth={kind.stroke_width}
-        />
-      )
-    case 'rect':
-      return (
-        <rect
-          key={key}
-          data-testid="measure-highlight"
-          x={el.x}
-          y={el.y}
-          width={kind.width}
-          height={kind.height}
-          fill="rgba(255,200,0,0.25)"
-          rx={2}
-        />
-      )
-    case 'errorRect':
-      return (
-        <rect
-          key={key}
-          data-testid="error-highlight"
-          x={el.x}
-          y={el.y}
-          width={kind.width}
-          height={kind.height}
-          fill="rgba(255,0,0,0.15)"
-          rx={2}
-        />
-      )
-    case 'transparentRect':
-      return (
-        <rect
-          key={key}
-          x={el.x}
-          y={el.y}
-          width={kind.width}
-          height={kind.height}
-          data-variant={transparentRectRoleToDataVariant(kind.role)}
-          fill="transparent"
-          rx={2}
-          style={{ cursor: 'pointer' }}
-        />
-      )
-    case 'group': {
-      const measureIndex =
-        kind.tag?.type === 'measure' ? kind.tag.index : undefined
-      const sectionLabel =
-        kind.tag?.type === 'sectionLabel' ? kind.tag.label : undefined
-      return (
-        <g
-          key={key}
-          data-tag={
-            measureIndex !== undefined
-              ? 'measure'
-              : sectionLabel !== undefined
-                ? 'section-label'
-                : undefined
-          }
-          data-measure-index={measureIndex}
-          data-section-label={sectionLabel}
-          style={
-            measureIndex !== undefined || sectionLabel !== undefined
-              ? { cursor: 'pointer' }
-              : undefined
-          }
-        >
-          {kind.children.map((child, i) => renderSvgElement(child, i))}
-        </g>
-      )
-    }
-  }
-}
-
-function renderSvgDocument(doc: SvgDocumentOut, key: number): ReactNode {
-  return (
-    // biome-ignore lint/a11y/noSvgWithoutTitle: synthesized score SVG; title would be redundant with surrounding page context
-    <svg
-      key={key}
-      xmlns="http://www.w3.org/2000/svg"
-      width="210mm"
-      height="297mm"
-      viewBox={`0 0 ${Math.round(doc.width_pt)} ${Math.round(doc.height_pt)}`}
-    >
-      {doc.elements.map((el, i) => renderSvgElement(el, i))}
-    </svg>
-  )
-}
-
 export function Preview({
   documents,
   highlightedDocuments = [],
@@ -361,7 +81,9 @@ export function Preview({
   wavUrl = null,
   wavFilename = 'audio.wav',
   measureTimes,
+  writtenMeasureIndices,
   measureAudioTimes,
+  measureAudioWrittenIndices,
   measureAudioElement,
   selectedMeasureRange,
   emptyMessage = 'No preview yet.',
@@ -374,12 +96,19 @@ export function Preview({
     null,
   )
 
-  usePlayhead(previewPagesRef, audioElement, measureTimes, 0)
+  usePlayhead(
+    previewPagesRef,
+    audioElement,
+    measureTimes,
+    0,
+    writtenMeasureIndices,
+  )
   usePlayhead(
     previewPagesRef,
     measureAudioElement,
     measureAudioTimes,
     selectedMeasureRange?.start ?? 0,
+    measureAudioWrittenIndices,
   )
   const dragStateRef = useRef<{
     startIndex: number

@@ -1,237 +1,34 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { Pause, Play } from 'lucide-react'
 import { useState } from 'react'
 import type { SoundfontValue } from '../types'
-import type {
-  InstrumentArticulation,
-  InstrumentCategory,
-  InstrumentEntry,
-  InstrumentRole,
-  InstrumentSource,
-} from '../utils/gmInstruments'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
-
-type ActiveTag =
-  | { kind: 'category'; value: InstrumentCategory }
-  | { kind: 'source'; value: InstrumentSource }
-  | { kind: 'role'; value: InstrumentRole }
-  | { kind: 'articulation'; value: InstrumentArticulation }
-
-function tagKey(tag: ActiveTag): string {
-  return `${tag.kind}:${tag.value}`
-}
-
-function fuzzyScore(query: string, target: string): number {
-  const q = query.toLowerCase()
-  const t = target.toLowerCase()
-  if (t.includes(q)) return 1000
-  let score = 0
-  let qi = 0
-  let consecutive = 0
-  for (let ti = 0; ti < t.length && qi < q.length; ti++) {
-    if (t[ti] === q[qi]) {
-      score += 1 + consecutive * 2
-      consecutive++
-      qi++
-    } else {
-      consecutive = 0
-    }
-  }
-  return qi === q.length ? score : 0
-}
-
-function instrumentFuzzyScore(
-  query: string,
-  instrument: InstrumentEntry,
-): number {
-  return Math.max(
-    fuzzyScore(query, instrument.value),
-    fuzzyScore(query, instrument.category),
-    fuzzyScore(query, instrument.source),
-    fuzzyScore(query, instrument.role),
-    fuzzyScore(query, instrument.articulation),
-  )
-}
-
-function InlineTag({
-  label,
-  active,
-  onClick,
-}: {
-  label: string
-  active: boolean
-  onClick: (e: React.MouseEvent) => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        fontSize: '10px',
-        padding: '1px 5px',
-        borderRadius: '8px',
-        border: active ? '1px solid #3b82f6' : '1px solid #cbd5e0',
-        background: active ? '#dbeafe' : '#f1f5f9',
-        color: active ? '#1d4ed8' : '#777',
-        cursor: 'pointer',
-        fontFamily: 'var(--mono, monospace)',
-        whiteSpace: 'nowrap',
-        flexShrink: 0,
-      }}
-    >
-      #{label}
-    </button>
-  )
-}
-
-function SoundfontSearchRow({
-  label,
-  tags,
-  activeTags,
-  isSelected,
-  isPreviewing,
-  onPlay,
-  onSelect,
-  onTagClick,
-}: {
-  label: string
-  tags: {
-    category: InstrumentCategory
-    source: InstrumentSource
-    role: InstrumentRole
-    articulation: InstrumentArticulation
-  } | null
-  activeTags: Map<string, ActiveTag>
-  isSelected: boolean
-  isPreviewing: boolean
-  onPlay: (() => void) | null
-  onSelect: () => void
-  onTagClick: (tag: ActiveTag) => void
-}) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        padding: '4px 8px',
-        background: isSelected ? '#e8f0fe' : undefined,
-        fontSize: '12px',
-        fontFamily: 'var(--mono, monospace)',
-        gap: '6px',
-      }}
-    >
-      {onPlay !== null ? (
-        <button
-          type="button"
-          onClick={onPlay}
-          title={isPreviewing ? 'Pause preview' : 'Preview instrument'}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '24px',
-            height: '24px',
-            borderRadius: '50%',
-            border: 'none',
-            background: isPreviewing ? '#dbeafe' : 'transparent',
-            cursor: 'pointer',
-            color: isPreviewing ? '#1d4ed8' : '#888',
-            flexShrink: 0,
-            padding: 0,
-            transition: 'background 0.15s, color 0.15s',
-          }}
-        >
-          {isPreviewing ? (
-            <Pause size={13} fill="currentColor" strokeWidth={0} />
-          ) : (
-            <Play size={13} fill="currentColor" strokeWidth={0} />
-          )}
-        </button>
-      ) : (
-        <span
-          style={{ display: 'inline-block', width: '24px', flexShrink: 0 }}
-        />
-      )}
-      <button
-        type="button"
-        onClick={onSelect}
-        style={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          fontSize: '12px',
-          fontFamily: 'var(--mono, monospace)',
-          textAlign: 'left',
-          padding: 0,
-          flex: 1,
-          minWidth: 0,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {label}
-      </button>
-      {tags !== null && (
-        <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
-          <InlineTag
-            label={tags.category}
-            active={activeTags.has(
-              tagKey({ kind: 'category', value: tags.category }),
-            )}
-            onClick={(e) => {
-              e.stopPropagation()
-              onTagClick({ kind: 'category', value: tags.category })
-            }}
-          />
-          <InlineTag
-            label={tags.source}
-            active={activeTags.has(
-              tagKey({ kind: 'source', value: tags.source }),
-            )}
-            onClick={(e) => {
-              e.stopPropagation()
-              onTagClick({ kind: 'source', value: tags.source })
-            }}
-          />
-          <InlineTag
-            label={tags.role}
-            active={activeTags.has(tagKey({ kind: 'role', value: tags.role }))}
-            onClick={(e) => {
-              e.stopPropagation()
-              onTagClick({ kind: 'role', value: tags.role })
-            }}
-          />
-          <InlineTag
-            label={tags.articulation}
-            active={activeTags.has(
-              tagKey({ kind: 'articulation', value: tags.articulation }),
-            )}
-            onClick={(e) => {
-              e.stopPropagation()
-              onTagClick({ kind: 'articulation', value: tags.articulation })
-            }}
-          />
-        </div>
-      )}
-    </div>
-  )
-}
+import { GM_PERCUSSION } from '../utils/gmPercussion'
+import { SoundfontSearchRow } from './SoundfontSearchRow'
+import {
+  type ActiveTag,
+  instrumentFuzzyScore,
+  percussionFuzzyScore,
+  tagKey,
+} from './soundfontSearchHelpers'
 
 export function SoundfontSearchModal({
   open,
   onOpenChange,
+  mode,
   currentValue,
   onSelect,
   previewInstrument,
+  previewPercussion,
   stopPreviewInstrument,
   previewAudioPlaying,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  mode: 'instrument' | 'percussion'
   currentValue: SoundfontValue | null
   onSelect: (value: SoundfontValue | null) => void
   previewInstrument: (programNumber: number) => void
+  previewPercussion: (key: number) => void
   stopPreviewInstrument: () => void
   previewAudioPlaying: boolean
 }) {
@@ -239,9 +36,7 @@ export function SoundfontSearchModal({
   const [activeTags, setActiveTags] = useState<Map<string, ActiveTag>>(
     new Map(),
   )
-  const [previewingProgramNumber, setPreviewingProgramNumber] = useState<
-    number | null
-  >(null)
+  const [previewingNumber, setPreviewingNumber] = useState<number | null>(null)
 
   function toggleTag(tag: ActiveTag) {
     const key = tagKey(tag)
@@ -256,29 +51,50 @@ export function SoundfontSearchModal({
     })
   }
 
-  const filtered = GM_INSTRUMENTS.flatMap((instrument) => {
-    for (const tag of activeTags.values()) {
-      if (tag.kind === 'category' && instrument.category !== tag.value)
-        return []
-      if (tag.kind === 'source' && instrument.source !== tag.value) return []
-      if (tag.kind === 'role' && instrument.role !== tag.value) return []
-      if (tag.kind === 'articulation' && instrument.articulation !== tag.value)
-        return []
-    }
-    if (query.trim() === '') return [{ instrument, score: 0 }]
-    const score = instrumentFuzzyScore(query, instrument)
-    if (score === 0) return []
-    return [{ instrument, score }]
-  }).sort((a, b) => b.score - a.score)
+  const filteredInstruments =
+    mode === 'instrument'
+      ? GM_INSTRUMENTS.flatMap((instrument) => {
+          for (const tag of activeTags.values()) {
+            if (tag.kind === 'category' && instrument.category !== tag.value)
+              return []
+            if (tag.kind === 'source' && instrument.source !== tag.value)
+              return []
+            if (tag.kind === 'role' && instrument.role !== tag.value) return []
+            if (
+              tag.kind === 'articulation' &&
+              instrument.articulation !== tag.value
+            )
+              return []
+          }
+          if (query.trim() === '') return [{ instrument, score: 0 }]
+          const score = instrumentFuzzyScore(query, instrument)
+          if (score === 0) return []
+          return [{ instrument, score }]
+        }).sort((a, b) => b.score - a.score)
+      : []
 
-  function handlePlay(instrument: InstrumentEntry) {
-    const programNumber = parseInt(instrument.value.split(':')[0], 10)
-    if (previewingProgramNumber === programNumber && previewAudioPlaying) {
+  const filteredPercussion =
+    mode === 'percussion'
+      ? GM_PERCUSSION.flatMap((entry) => {
+          if (query.trim() === '') return [{ entry, score: 0 }]
+          const score = percussionFuzzyScore(query, entry)
+          if (score === 0) return []
+          return [{ entry, score }]
+        }).sort((a, b) => b.score - a.score)
+      : []
+
+  function handlePlay(value: SoundfontValue) {
+    const number = parseInt(value.split(':')[0], 10)
+    if (previewingNumber === number && previewAudioPlaying) {
       stopPreviewInstrument()
-      setPreviewingProgramNumber(null)
+      setPreviewingNumber(null)
     } else {
-      setPreviewingProgramNumber(programNumber)
-      previewInstrument(programNumber)
+      setPreviewingNumber(number)
+      if (mode === 'percussion') {
+        previewPercussion(number)
+      } else {
+        previewInstrument(number)
+      }
     }
   }
 
@@ -333,7 +149,9 @@ export function SoundfontSearchModal({
             <Dialog.Title
               style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}
             >
-              Select soundfont
+              {mode === 'percussion'
+                ? 'Select percussion sound'
+                : 'Select soundfont'}
             </Dialog.Title>
             <Dialog.Close
               style={{
@@ -380,7 +198,7 @@ export function SoundfontSearchModal({
               onSelect={() => onSelect(null)}
               onTagClick={toggleTag}
             />
-            {filtered.map(({ instrument }) => {
+            {filteredInstruments.map(({ instrument }) => {
               const programNumber = parseInt(instrument.value.split(':')[0], 10)
               return (
                 <SoundfontSearchRow
@@ -390,15 +208,29 @@ export function SoundfontSearchModal({
                   activeTags={activeTags}
                   isSelected={currentValue === instrument.value}
                   isPreviewing={
-                    previewingProgramNumber === programNumber &&
-                    previewAudioPlaying
+                    previewingNumber === programNumber && previewAudioPlaying
                   }
-                  onPlay={() => handlePlay(instrument)}
+                  onPlay={() => handlePlay(instrument.value)}
                   onSelect={() => onSelect(instrument.value)}
                   onTagClick={toggleTag}
                 />
               )
             })}
+            {filteredPercussion.map(({ entry }) => (
+              <SoundfontSearchRow
+                key={entry.value}
+                label={entry.value}
+                tags={null}
+                activeTags={activeTags}
+                isSelected={currentValue === entry.value}
+                isPreviewing={
+                  previewingNumber === entry.key && previewAudioPlaying
+                }
+                onPlay={() => handlePlay(entry.value)}
+                onSelect={() => onSelect(entry.value)}
+                onTagClick={toggleTag}
+              />
+            ))}
           </div>
         </Dialog.Content>
       </Dialog.Portal>

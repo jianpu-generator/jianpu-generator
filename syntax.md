@@ -6,7 +6,7 @@ This document describes the input syntax accepted by **jianpu-generator** as imp
 
 ## File structure
 
-A `.jianpu` file has three sections in fixed order:
+A `.jianpu` file has up to five sections, which may appear in any order:
 
 ```
 # metadata
@@ -15,14 +15,22 @@ A `.jianpu` file has three sections in fixed order:
 # parts
 …track declarations…
 
+# groups
+…group alias declarations…
+
+# sequence
+…comma-separated section labels…
+
 # score
 …interleaved score content…
 ```
 
 - `# metadata` — **optional**
 - `# parts` — **required**
+- `# groups` — **optional**
+- `# sequence` — **optional**
 - `# score` — **required**
-- Sections must appear in the order above.
+- Sections may appear in any order.
 - Legacy `# score:Name` / `# lyrics:Name` sections are **not** supported.
 
 Whitespace around `=` in metadata is optional. Metadata values may be quoted with `"`.
@@ -52,11 +60,15 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | `title` | no | none | Piece title (rendered in header) |
 | `author` | no | none | Author name (rendered in header) |
 | `subtitle` | no | none | Subtitle line |
-| `max columns` | no | `28` | Maximum grid columns per system line before wrapping |
+| `max measures per system` | no | `4` | Maximum number of measures per system line before wrapping |
 | `row height` | no | `24` | Vertical spacing of one part row (pixels) |
 | `label width` | no | `40` | Horizontal space reserved for part labels (pixels) |
 | `note number width` | no | `8` | Horizontal space per note column (pixels) |
 | `parts list columns` | no | `4` | Number of columns in the parts list header |
+| `lyrics font size` | no | `row height * 0.6` | Font size of lyric syllables (points) |
+| `merge duplicate measures across parts` | no | `yes` | Whether identical measures from different parts are merged into a single row (`yes`/`no`) |
+| `hide resting parts` | no | `yes` | Whether an all-rest part is omitted from a measure where other parts have content (`yes`/`no`) |
+| `hide system dividers` | no | `no` | Whether the horizontal divider line between systems is omitted (`yes`/`no`) |
 
 ---
 
@@ -87,10 +99,13 @@ One track per line. Blank lines are ignored.
 |---------|---------|-------------------------|
 | `chords` | Chord-symbol row | 1 |
 | `notes` | Notes only (instrumental) | 1 |
-| `notes+lyrics` | Notes + lyrics | 2 (notes, then lyrics) |
+| `notes+lyrics` | Notes + lyrics | notes, then 1 or more lyric-verse lines |
+| `percussion` | Unpitched GM drum hits | 1 |
 | `follow[X]` | Inherit column layout from the part with abbreviation `X` | same as target |
 
 An optional soundfont string `"<number>: <name>"` may follow the kind token (or `follow[X]` bracket) to select the MIDI timbre for that part. The number is the General MIDI program number (0–127). The `<name>` portion is a quoted string and may contain `=` and other characters (for example `"1: Grand = Piano"`). For example: `notes "52: Choir Aahs"` or `follow[A] "1: Grand Piano"`. If omitted on a concrete part, the default is program 52 (Choir Aahs). On a `follow[X]` part, the soundfont is inherited from the target when omitted.
+
+For `percussion` parts, the soundfont number is instead a **GM percussion key** (e.g. `38` = Acoustic Snare, `36` = Bass Drum 1), not a GM program number — all percussion parts share MIDI channel 9 (the GM drum channel) and a single fixed GM Standard Kit program change; the number selects which drum sample within that kit each hit plays. The number is not checked against the melodic instrument catalog.
 
 An optional volume suffix `XX%` (1–3 ASCII digits followed by `%`, parsed as an unsigned 8-bit number; values above 100 or 0 are accepted without error or clamping) may appear after the soundfont string (or after the kind token if there is no soundfont) to set the MIDI volume for that part. For example: `notes "52: Choir Aahs" 47%` or `notes 80%`. If omitted on a concrete part, the default is 100%. On a `follow[X]` part, volume is inherited from the target when omitted and may be overridden with an explicit `XX%` suffix.
 
@@ -122,6 +137,25 @@ Minimal single-part example:
 # parts
 Melody = notes+lyrics
 ```
+
+---
+
+## Groups section
+
+An optional `# groups` section — placed after `# parts` and before `# score`.
+
+```
+# groups
+Soprano [s] = s1 s2
+Alto [a] = a1 a2
+```
+
+- Same left-hand-side syntax as `# parts`: `<display-name> [<abbreviation>] = <members>`; when brackets are omitted, the abbreviation equals the display name.
+- The right-hand side is a space-separated list of member abbreviations.
+
+Each group with an explicit abbreviation (i.e. `[abbreviation]` differs from the display name) is listed in the part-list legend in the SVG/PDF output, alongside part entries. A group is hidden from the legend when a track filter excludes all of its members.
+
+A group's abbreviation may also be used as a `[GroupAbbrev]` key prefix in `# score` to broadcast a line to all of its members at once — see [Key-based part prefix](#key-based-part-prefix-abbrev) below. This requires every resolved member to share the same part kind; a group whose members don't (or whose abbreviation collides with a part's) can still appear in the legend but cannot be used as a score key.
 
 ---
 
@@ -158,6 +192,42 @@ Every data line must begin with `[Abbrev]` to route it to a specific part by abb
 - An unrecognised abbreviation is an error; the line is dropped.
 - Parts not covered by any `[Key]` line use their `follow[X]` target's content when declared as such, or are filled with implicit rests/no-lyrics otherwise.
 - A measure group with zero valid keyed lines is an error (`measure_no_data_lines`).
+
+`[Abbrev]` may also name a `# groups` abbreviation, broadcasting that line to every part the group resolves to (expanding nested groups transitively):
+
+```
+# groups
+Soprano [s] = S1 S2
+
+# score
+bpm=92 key=C4 time=4/4
+[s] 5_ 5_ 5_ 5=
+[S2] 6_ 6_ 6_ 6=
+```
+
+Here `S1` gets `5_ 5_ 5_ 5=` from the group broadcast; `S2` has its own `[S2]` line, which wins over the broadcast for that slot. Rules:
+
+- Multiple `[GroupAbbrev]` lines fill slots in occurrence order, same as a part key — the group's first line fills every member's first slot, the second line fills every member's second slot, and so on.
+- A member's own `[MemberAbbrev]` line always takes precedence over the group broadcast for that slot, regardless of which appears first in the file.
+- A group is only usable this way if all of its resolved members share the same part kind (`notes`, `chords`, `notes+lyrics`, or `percussion`) and its abbreviation does not collide with any part's abbreviation; otherwise the group is invalid and using it as a key produces the same "unrecognised abbreviation" error as an unknown key.
+
+**Row label when members render as one unison row:** when two or more members' compiled content ends up identical (typically because they all took the unmodified group broadcast for that measure), the renderer already merges them into a single row. If every merged member traces to the same `[GroupAbbrev]` broadcast, that row is labeled with the **group's abbreviation** instead of the members' concatenated abbreviations. A member with its own overriding `[MemberAbbrev]` line never merges into that row (it keeps its own row, labeled with its own abbreviation), even if the override happens to be one of two members left in the group:
+
+```
+# parts
+Soprano 1 [S1] = notes
+Soprano 2 [S2] = notes
+Soprano 3 [S3] = notes
+
+# groups
+Soprano [s] = S1 S2 S3
+
+# score
+[s] 1 2 3 4=
+[S2] 5 5 5 5=
+```
+
+S1 and S3 both take the `[s]` broadcast unmodified and merge into one row labeled `s`; S2 overrides it and renders on its own row labeled `S2`.
 
 **Example — only part C plays, A and B are not-mentioned:**
 
@@ -223,20 +293,69 @@ bpm=92 key=C4 time=4/4 label="Verse 1"
 | `key=` | `key=C4`, `key=F#3`, `key=Bb4` | Key signature (`1` = this note) |
 | `time=` | `time=4/4`, `time=3/4` | Time signature |
 | `label=` | `label="Verse 1"` | Section label rendered above the row group |
+| `dcalcoda` | `dcalcoda` | D.C. al Coda: after this measure, playback restarts from measure 0 |
+| `tocoda` | `tocoda` | To Coda: on the second pass only, playback cuts away here to the `coda` measure |
+| `coda` | `coda` | Coda: playback resumes here (on the second pass) and continues to the end |
+| `segno` | `segno` | Segno: marks the measure that `dsalcoda`/`dsalfine` jumps back to |
+| `dsalcoda` | `dsalcoda` | D.S. al Coda: after this measure, playback restarts from the `segno` measure |
+| `dcalfine` | `dcalfine` | D.C. al Fine: after this measure, playback restarts from measure 0 and stops at `fine` |
+| `fine` | `fine` | Fine: on the second pass only, playback stops here |
+| `dsalfine` | `dsalfine` | D.S. al Fine: after this measure, playback restarts from the `segno` measure and stops at `fine` |
 
 Rules:
 
 - Multiple directives may appear on one line, separated by whitespace.
 - `label=` value must be a quoted string; empty labels are rejected.
 - Directives apply to **all** parts. They are stored on the first notes part and propagate through grouping.
-- `label` applies only to the measure where it is declared (does not persist to the next bar).
+- `label` applies only to the measure where it is declared (does not persist to the next bar) — this is true for rendering purposes and whenever no `# sequence` section is present. When a `# sequence` section **is** present, each label additionally denotes a *span* of measures for playback-order purposes: see [`# sequence` — explicit playback order](#sequence--explicit-playback-order) below.
 - `bpm`, `key`, and `time` persist until the next directive line overrides them.
+- `dcalcoda`, `tocoda`, and `coda` are bare keywords (no `=value`) that, like `label`, apply only to the measure where declared and do not persist. They must appear **all three together or not at all** (a partial set is an error), at most once each, and `tocoda` must occur before `coda`.
+- `segno`, `dsalcoda`, `tocoda`, and `coda` are the equivalent "D.S. al Coda" marker set: they must appear **all four together or not at all**, at most once each, `segno` must occur at or before `dsalcoda`, and `tocoda` must occur before `coda`.
+- `dcalfine` and `fine` are a marker set: they must appear **both together or not at all**, at most once each.
+- `segno`, `dsalfine`, and `fine` are the equivalent "D.S. al Fine" marker set: they must appear **all three together or not at all**, at most once each, `segno` must occur at or before `dsalfine`, and `fine` must occur at or after `segno`.
+- Exactly one of `dcalcoda`, `dsalcoda`, `dcalfine`, or `dsalfine` may be used per score — mixing navigation schemes is an error. `tocoda`/`coda` cannot be combined with `dcalfine`/`dsalfine`, and `fine` cannot be combined with `dcalcoda`/`dsalcoda`.
 
 ### Rendering
 
-When `time=` or `bpm=` changes on a measure, the generator may add a **directive row** above the bar-number / section-label row for that system line. Time signature and BPM appear once on that row (not on each part row), aligned with each measure’s note-start column. They do not shift notes or lyrics horizontally. If neither value changes on any measure in the line, the directive row is omitted.
+When `time=` or `bpm=` changes on a measure, the generator may add a **directive row** above the bar-number / section-label row for that system line. Time signature and BPM appear once on that row (not on each part row), aligned with each measure’s note-start column. They do not shift notes or lyrics horizontally. If neither value changes on any measure in the line, the directive row is omitted. A measure with `dcalcoda`, `tocoda`, `coda`, `segno`, `dsalcoda`, `dcalfine`, `fine`, or `dsalfine` set also forces a directive row for that measure, even without a label.
 
 Note names: `A` `B` `C` `D` `E` `F` `G`, with optional `#` or `b` accidental, followed by octave digit (e.g. `4`).
+
+### D.C./D.S. al Coda/Fine navigation (SVG vs. MIDI/WAV)
+
+`dcalcoda`/`tocoda`/`coda`/`segno`/`dsalcoda`/`dcalfine`/`fine`/`dsalfine` render as annotations only — "D.C. al Coda" (italic), "⊕ To Coda", "⊕ Coda", a vector Segno glyph followed by "Segno" (italic), "D.S. al Coda" (italic), "D.C. al Fine" (italic), "Fine" (italic), and "D.S. al Fine" (italic) — on the measure where each is declared. The Segno marker draws as a small vector icon rather than a unicode character, since the `𝄋` Segno codepoint is missing from most system fonts and renders as a tofu box. **SVG (and PDF) output always shows measures in written order**; the markers are just text/vector annotations, they never reorder or duplicate anything visually.
+
+**MIDI and WAV output actually replay measures according to the markers**, since this generator also produces playable audio:
+
+- With `dcalcoda`/`tocoda`/`coda`: measures play from the start through the `dcalcoda` measure, then restart from the start and play through the `tocoda` measure, then jump to the `coda` measure and play through to the literal end of the score.
+- With `segno`/`dsalcoda`/`tocoda`/`coda`: measures play from the start through the `dsalcoda` measure, then restart from the `segno` measure and play through the `tocoda` measure, then jump to the `coda` measure and play through to the literal end of the score.
+- With `dcalfine`/`fine`: measures play from the start through the `dcalfine` measure, then restart from the start and play through the `fine` measure, then stop.
+- With `segno`/`dsalfine`/`fine`: measures play from the start through the `dsalfine` measure, then restart from the `segno` measure and play through the `fine` measure, then stop.
+
+On the first pass, the `tocoda`/`fine` measure is just a normal measure — the cut/stop only happens on the second pass.
+
+### `# sequence` — explicit playback order
+
+As an alternative to the `dcalcoda`/`tocoda`/`coda`/`segno`/`dsalcoda`/`dcalfine`/`fine`/`dsalfine` markers, a score may include an optional `# sequence` section — placed after `# parts` and before `# score` — that states the playback order directly, as a comma-separated list of section labels (the same labels set via `label="..."` on a measure's directive line):
+
+```
+# sequence
+A, B, A
+
+# score
+time=4/4 key=C4 bpm=120 label="A"
+1 2 3 4
+label="B"
+5 6 7 1
+```
+
+- Each entry in `# sequence` is a label declared with `label="..."` in `# score`; entries are separated by commas, and surrounding whitespace is trimmed.
+- A label's **span** covers its measure and every following measure up to (but not including) the next `label="..."` measure, or through the end of the score if there is no following label. Above, `A` spans just its own measure, and `B` spans from its measure to the end of the score.
+- Labels may be repeated in `# sequence` (e.g. `A, B, A`) to replay a span more than once.
+- Each label must be declared **exactly once** in `# score`; declaring the same label on more than one measure is an error.
+- Referencing a label in `# sequence` that was never declared in `# score` is an error; that entry is skipped and the rest of the sequence still resolves.
+- `# sequence` and the inline navigation markers (`dcalcoda`/`tocoda`/`coda`/`segno`/`dsalcoda`/`dcalfine`/`fine`/`dsalfine`) are **mutually exclusive** — using both in the same score is an error.
+- Like the inline markers, `# sequence` only affects **MIDI/WAV playback order** — measures always render once, in written order, with normal bar numbers. However, SVG/PDF output does show the resolved order as a left-aligned line ("Sequence: A → B → A") on the first page, with a blank line of space above it, below the title/subtitle/author/part list. Each label is styled the same as an inline `label="..."` directive (bold, italic).
 
 ---
 
@@ -346,6 +465,27 @@ Rules:
 
 A tie differs from a slur `(…)` in that it requires identical pitch, and carries distinct semantic meaning (duration extension vs. phrasing).
 
+### Repeat the last note/chord (`r`, bare `_`/`=`)
+
+`r` repeats the last sounded pitch/chord as a fresh one-beat attack (a new note, not a tie/sustain). A bare `_` or `=` — one **not** glued directly after a digit — repeats it as an eighth-note or sixteenth-note attack respectively:
+
+```
+5 r r __        note 5, then three more 5s: a beat, a beat, and two eighths
+5 0 r           note 5, a rest, then another beat of 5 (rests are skipped)
+5~_             note 5 tied into its own eighth-note repeat
+5__~5           note 5, an eighth-note repeat, tied out into the next note 5
+```
+
+Rules:
+- "Last pitched note/chord" skips over intervening rests, and persists across measure boundaries (like ties/slurs).
+- `r` never takes suffixes: `r_`, `r.`, `r'` are two atoms in sequence (`r` then a fresh atom), not `r` with a suffix glued on. Write repeats as multiple `r`s instead.
+- Using `r`/`_`/`=` with no prior pitched note/chord on the track is a recoverable error; the token is dropped.
+- A `~` glued directly after a repeat atom (`r`/`_`/`=`) ties that repeat into the following note, following the same rules as any other tie (matching pitch required, dangling tie is an error).
+
+**Gotcha — maximal munch:** whitespace is cosmetic everywhere else in this grammar, but not here. `5_` (glued, no space) is unchanged: it's still note 5 shortened to an eighth note. Only a `_`/`=` that is *not* glued directly after a digit is a repeat atom — so `5 _` (with a space) repeats note 5's pitch as an eighth note, while `5_` does not. There are two exceptions, both because the glued character can't be read as a suffix of the preceding note in that position:
+- Right after a tie: `5~_` glues fine (the `~` already claimed that spot).
+- Right after another occurrence of the *same* suffix character: `5__` is note 5 shortened to an eighth note (first `_`) plus a repeated eighth-note attack (second `_`), not a no-op double-shorten. Likewise `5==` is a sixteenth note plus a repeated sixteenth, and this chains — `5___` is a note plus two repeats. Mixing different suffix characters still combines onto one atom as before: `5_=` is a single sixteenth note.
+
 Adjacent digits without spaces also start new notes: `505` is three quarter notes; `(12)31` is a group plus two more notes.
 
 Trailing duration may be omitted when the remaining measure beats extend the last note. In 4/4, `1` is equivalent to `1---`; `1 2` is equivalent to `1 2--`.
@@ -370,7 +510,7 @@ Note and rest durations in a row must fill the measure capacity. For time signat
 measure capacity = N × (16 / D) quarter-beats
 ```
 
-(e.g. 4/4 → 16, 3/4 → 12). Too many quarter-beats is a parse error. A shortfall extends the last note/rest when possible; otherwise it is a parse error.
+(e.g. 4/4 → 16, 3/4 → 12). Too many quarter-beats is a parse error. A shortfall extends the last note when possible. For a shortfall after a rest, additional one-beat rests are appended instead (so a lone `0` filling an empty measure renders as repeated `0` glyphs, matching conventional 简谱, rather than one glyph stretched across the measure). Otherwise it is a parse error.
 
 #### Grouping validation (4/4 only)
 
@@ -380,6 +520,10 @@ In 4/4, the parser rejects rhythm spellings that cross metrical boundaries witho
 2. **Dotted-eighth tail:** a dotted eighth note/rest at the start of a beat must be followed immediately by a sixteenth note/rest filling the remaining sixteenth (e.g. `1_. 2= 3_ …`); `1_. 2_ 3_ 4_` is invalid (`2_.` is a dotted eighth, not an eighth).
 
 Other time signatures skip these checks for now. Violations are diagnostics attached to the note (half-bar-boundary crossing is a **warning**; the dotted-eighth-tail rule is a **recoverable error**) — the file still renders.
+
+### Multi-measure rests
+
+This isn't new input syntax — it's automatic rendering behavior. When 2 or more consecutive measures are entirely rests (on every currently-visible part, after any `--tracks` filtering) and none of them carries its own directive (label, navigation marker, time signature/BPM/key change) or diagnostic, they render as a single wide rest bar showing the collapsed measure count, instead of one rest measure per bar. A single isolated all-rest measure still renders normally.
 
 ### Examples
 
@@ -459,6 +603,20 @@ In each measure, the number of lyric syllables must match the number of notes th
 
 Mismatch is a non-fatal **warning** (rendering continues, with empty-string syllables inserted for underflow), e.g. `[Soprano] lyrics underflow: ran out of syllables at syllable 3 (fewer syllables than notes)` or `[Soprano] lyrics overflow: 1 extra syllable(s) after all notes are consumed`.
 
+### Multiple verses
+
+A `notes+lyrics` part can carry more than one lyric line per measure. Every consecutive `[Part]` line that follows the notes line, up to the next part's line or the end of the measure, is a separate verse, in order (verse 1, verse 2, …):
+
+```
+[Melody] 1 2 3 4
+[Melody] a b c d
+[Melody] one two three four
+```
+
+Each verse renders as its own row directly under the notes row, in verse order, and each verse is tallied and tie-paired against the notes row independently — a verse can have its own `-` held syllables and `_` no-lyrics marker.
+
+The number of verse lines is per-measure: one measure can have one verse while the next has two. A part's verse count changing from one measure to the next always starts a new system at that measure boundary, regardless of how much horizontal space is left on the current line — verses can't silently appear or disappear mid-system.
+
 ---
 
 ## Chord syntax
@@ -502,6 +660,10 @@ Parsing checks longest suffix first (`M7` before `7`; `m` before extension).
 
 Chord heads accept the same suffixes as notes: `_`, `=`, `.`, and suffix `-`. Octave markers (`'`, `,`) are not allowed on chord lines.
 
+### Repeating the last chord
+
+`r` and bare `_`/`=` work the same way as on notes lines — see [Repeat the last note/chord](#repeat-the-last-notechord-r-bare-_) above: `1 r` repeats chord `1` for another beat, and `1 _` repeats it as an eighth note.
+
 ### Tie and slur groups
 
 Parentheses work identically to notes lines. Spaces inside groups are ignored. Examples: `(1-6m-)`, `(1 - 6m -)`.
@@ -515,9 +677,35 @@ Example:
 
 ---
 
+## Percussion syntax
+
+Percussion lines carry unpitched GM drum hits. Duration works like notes: each token occupies one beat; `-` extends the previous hit.
+
+| Token | Meaning |
+|-------|---------|
+| `0` | Rest |
+| `x` | Hit |
+| `-` | Extend previous hit one beat |
+
+Duration suffixes (`_`, `=`, `.`), tie/slur groups (`(...)`), and the repeat-last-atom shorthand (`r`, bare `_`/`=`) work the same way as on notes lines — see [Notes syntax](#notes-syntax). Octave markers (`'`, `,`) and accidentals are not allowed on percussion lines, since hits have no pitch.
+
+Example — snare and bass drum hitting simultaneously:
+
+```
+# parts
+Snare = percussion "38: Acoustic Snare"
+Kick = percussion "36: Bass Drum 1"
+
+# score
+[Snare] 0 x 0 x
+[Kick] x 0 x 0
+```
+
+---
+
 ## Not-mentioned parts
 
-When a part is **not mentioned** in a measure (no `[Key]` line covers it), its row is **not rendered** for that measure — the vertical space is reclaimed and rows below move up.
+When a part is **not mentioned** in a measure (no `[Key]` line covers it), it is filled with rests (`0`) or no-lyrics (`_`). If, after filling, that part's row is all rests for the measure **and at least one other part in the same measure has real content**, the row is **not rendered** for that measure — the vertical space is reclaimed and rows below move up. This suppression is controlled by the `hide resting parts` metadata field (default `yes`); set it to `no` to always render every part's row, even when it's all rests.
 
 - A `follow[X]` part that is not mentioned copies `X`'s content (audio plays the same as X).
 - A non-follow part that is not mentioned is filled with rests (`0`) or no-lyrics (`_`).

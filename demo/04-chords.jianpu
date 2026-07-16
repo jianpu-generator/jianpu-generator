@@ -1,0 +1,46 @@
+# metadata
+title = "Chords"
+max measures per system = 1
+
+# parts
+Melody [M] = notes+lyrics
+Chords [C] = chords
+
+# score
+label="Chord: major & minor (m)"
+[M] 0
+[M] _
+[C] 1 1m 1 1m
+
+label="Chord: dominant 7th (17)"
+[M] 0
+[M] _
+[C] 17 4m7 57 1
+
+
+label="Chord: major 7th (1M7) & minor 7th (1m7)"
+[M] 0
+[M] _
+[C] 1M7 4m7 1m7 1
+
+
+label="Chord: slash bass (1/5)"
+[M] 0
+[M] _
+[C] 1/5 - 5/7 -
+
+
+label="Chord: rest (0) & extension (-)"
+[M] 0
+[M] _
+[C] 0 0 1 -
+
+label="Chord: repeat last chord (r, bare _)"
+[M] 0
+[M] _
+[C] 1 r r _==
+
+label="Explicit chord key"
+[M] 1 2 3 4
+[M] do re mi fa
+[C] 1 - - -

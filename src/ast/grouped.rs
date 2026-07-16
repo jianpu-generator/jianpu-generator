@@ -5,6 +5,28 @@ use crate::error::{Diagnostic, RecoverableError, Span, Warning};
 
 // ── Public final types ────────────────────────────────────────────────────────
 
+/// Default `row_height` in points, used when unset in `# metadata`.
+pub const DEFAULT_ROW_HEIGHT: u32 = 24;
+/// Default `max_measures_per_system`, used when unset in `# metadata`.
+pub const DEFAULT_MAX_MEASURES_PER_SYSTEM: u32 = 4;
+/// Default `label_width` in points, used when unset in `# metadata`.
+pub const DEFAULT_LABEL_WIDTH: u32 = 40;
+/// Default `note_number_width` in points, used when unset in `# metadata`.
+pub const DEFAULT_NOTE_NUMBER_WIDTH: u32 = 8;
+/// Default `parts_list_columns`, used when unset in `# metadata`.
+pub const DEFAULT_PARTS_LIST_COLUMNS: u32 = 4;
+/// Default `merge_duplicate_measures_across_parts`, used when unset in `# metadata`.
+pub const DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS: bool = true;
+/// Default `hide_resting_parts`, used when unset in `# metadata`.
+pub const DEFAULT_HIDE_RESTING_PARTS: bool = true;
+/// Default `hide_system_dividers`, used when unset in `# metadata`.
+pub const DEFAULT_HIDE_SYSTEM_DIVIDERS: bool = false;
+
+/// Default `lyrics_font_size` in points: 60% of `row_height`, used when unset in `# metadata`.
+pub fn default_lyrics_font_size(row_height: u32) -> u32 {
+    (row_height as f32 * 0.6).round() as u32
+}
+
 #[derive(Clone)]
 pub struct Metadata {
     pub title: Option<String>,
@@ -12,14 +34,25 @@ pub struct Metadata {
     pub author: Option<String>,
     /// Row height in points. Controls font sizes, dot radii, and all vertical spacing. Default: 24.
     pub row_height: u32,
-    /// Maximum logical columns per row before wrapping. Default: 28.
-    pub max_columns: u32,
+    /// Maximum number of measures per system line before wrapping. Default: 4.
+    pub max_measures_per_system: u32,
     /// Left margin reserved for part labels in points. Default: 40.
     pub label_width: u32,
     /// Estimated rendered width of a single digit note number (0–9) in points. Default: 8.
     pub note_number_width: u32,
     /// Number of columns in the parts list header. Default: 4.
     pub parts_list_columns: u32,
+    /// Lyrics font size in points. Default: 60% of row_height.
+    pub lyrics_font_size: u32,
+    /// When `false`, identical measure rows from different parts are no longer merged
+    /// into one row (see `consolidator::consolidate`). Default: `true`.
+    pub merge_duplicate_measures_across_parts: bool,
+    /// When `false`, an all-rest part is no longer omitted from a measure that has other
+    /// parts with real content (see `compiler::compile_measure`). Default: `true`.
+    pub hide_resting_parts: bool,
+    /// When `true`, the horizontal divider line drawn between systems is omitted (see
+    /// `grid_layout::layout`). Default: `false`.
+    pub hide_system_dividers: bool,
 }
 
 #[derive(Clone)]
@@ -27,6 +60,7 @@ pub struct Notes {
     pub events: Vec<NoteEvent>,
 }
 
+/// One verse's syllables for a single measure.
 #[derive(Clone)]
 pub struct Lyrics {
     pub syllables: Vec<Syllable>,
@@ -40,10 +74,14 @@ pub struct PartSlice {
     pub volume: u8,
     pub octave_offset: i8,
     pub notes: Notes,
-    pub lyrics: Option<Lyrics>,
+    /// One entry per verse, in order. Empty when this part has no lyrics this measure.
+    pub lyrics: Vec<Lyrics>,
     /// True when this slice's source measure had at least one `Diagnostic::Error`.
     /// The compiler uses this to drop incoming cross-measure tie/slur arcs.
     pub has_error: bool,
+    /// Abbreviation of the group whose `[GroupAbbrev]` broadcast produced this
+    /// measure's content, when this part didn't override it with its own line.
+    pub group_provenance: Option<String>,
 }
 
 #[derive(Clone)]
@@ -52,6 +90,22 @@ pub struct MultiPartMeasure {
     pub bpm: Option<u32>,
     pub key: Option<KeyChange>,
     pub label: Option<String>,
+    /// `dcalcoda` on this measure: after playing it, playback restarts from measure 0.
+    pub dc_al_coda: bool,
+    /// `tocoda` on this measure: on the second pass only, playback cuts to the `coda` measure.
+    pub to_coda: bool,
+    /// `coda` on this measure: playback resumes here on the second pass.
+    pub coda: bool,
+    /// `segno` on this measure: marks the measure `dsalcoda`/`dsalfine` jumps back to.
+    pub segno: bool,
+    /// `dsalcoda` on this measure: after playing it, playback restarts from the `segno` measure.
+    pub ds_al_coda: bool,
+    /// `dcalfine` on this measure: after playing it, playback restarts from measure 0 and stops at `fine`.
+    pub dc_al_fine: bool,
+    /// `fine` on this measure: on the second pass only, playback stops here.
+    pub fine: bool,
+    /// `dsalfine` on this measure: after playing it, playback restarts from the `segno` measure and stops at `fine`.
+    pub ds_al_fine: bool,
     pub parts: Vec<PartRow>,
     /// Byte range of this measure's note events in the original source.
     /// Used to map editor cursor position to a measure index.
@@ -108,6 +162,23 @@ pub struct Score {
     pub measures: Vec<MultiPartMeasure>,
     /// Document-level diagnostics (e.g. metadata parse errors), not tied to any measure.
     pub document_diagnostics: Vec<Diagnostic>,
+    /// Resolved playback order from a `# sequence` section, if present and
+    /// valid: each span is a labeled section's inclusive measure-index range
+    /// in `measures`, in the order they should play. Mutually exclusive with
+    /// the D.C./D.S. al Coda/Fine navigation markers on `MultiPartMeasure`.
+    pub sequence: Option<Vec<SequenceSpan>>,
+}
+
+/// A labeled section's resolved measure range, in written-score order: from
+/// the labeled measure up to (but not including) the next labeled measure,
+/// or the end of the score.
+#[derive(Clone)]
+pub struct SequenceSpan {
+    pub label: String,
+    /// Inclusive index into `Score.measures`.
+    pub start: usize,
+    /// Inclusive index into `Score.measures`.
+    pub end: usize,
 }
 
 // ── Intermediate grouper types (not part of the public API) ─────────────────
@@ -117,6 +188,14 @@ pub(crate) struct MeasureDirectives {
     pub(crate) bpm: Option<u32>,
     pub(crate) key: Option<KeyChange>,
     pub(crate) label: Option<String>,
+    pub(crate) dc_al_coda: bool,
+    pub(crate) to_coda: bool,
+    pub(crate) coda: bool,
+    pub(crate) segno: bool,
+    pub(crate) ds_al_coda: bool,
+    pub(crate) dc_al_fine: bool,
+    pub(crate) fine: bool,
+    pub(crate) ds_al_fine: bool,
 }
 
 pub(crate) struct GroupedScore {
@@ -128,11 +207,11 @@ pub(crate) struct GroupedScore {
 pub(crate) struct GroupedMeasure {
     pub(crate) notes: Notes,
     pub(crate) source_span: Span,
-    /// Tie-aware syllables paired to this measure's lyric slots. Set for
-    /// `NotesWithLyrics` parts during grouping.
-    pub(crate) paired_lyrics: Option<Vec<Syllable>>,
-    /// Recoverable lyrics underflow for this measure, if any.
-    pub(crate) lyrics_error: Option<Warning>,
+    /// Tie-aware syllables paired to this measure's lyric slots, one entry per
+    /// verse. Set for `NotesWithLyrics` parts during grouping.
+    pub(crate) paired_lyrics: Vec<Vec<Syllable>>,
+    /// Recoverable lyrics underflow/overflow for this measure, one per verse that has one.
+    pub(crate) lyrics_error: Vec<Warning>,
     /// Recoverable beat overflow for this measure (notes trimmed), if any.
     pub(crate) beat_overflow_error: Option<Warning>,
     /// Recoverable error from `-` used after a rest in this measure, if any.
@@ -147,6 +226,9 @@ pub(crate) struct GroupedMeasure {
     pub(crate) lyrics_parse_error: Option<RecoverableError>,
     /// Recoverable error from `-` at the start of a measure with no preceding event, if any.
     pub(crate) extension_no_preceding_event_error: Option<RecoverableError>,
+    /// Abbreviation of the group whose `[GroupAbbrev]` broadcast produced this
+    /// measure's content, when this part didn't override it with its own line.
+    pub(crate) group_provenance: Option<String>,
 }
 
 pub(crate) struct GroupedPart {
@@ -160,7 +242,7 @@ pub(crate) struct GroupedPart {
 
 // ── Shared note types ─────────────────────────────────────────────────────────
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct TimeSignature {
     pub numerator: u8,
     pub denominator: u8,
@@ -171,6 +253,7 @@ pub enum NoteEvent {
     Note(GroupedNote),
     Rest(GroupedRest),
     Chord(GroupedChordNote),
+    Percussion(GroupedPercussionHit),
 }
 
 #[derive(Clone)]
@@ -213,6 +296,31 @@ pub struct GroupedNote {
 }
 
 impl GroupedNote {
+    pub fn tie_to_next(&self) -> bool {
+        self.tie_to_next_span.is_some()
+    }
+}
+
+#[derive(Clone)]
+pub struct GroupedPercussionHit {
+    /// Duration in quarter-beats, including any beats added by `-` extensions.
+    pub duration: u32,
+    /// True if this hit is tied/slurred to the next hit.
+    pub slur: bool,
+    /// Source span of the `~` suffix when this hit is tied to the next hit.
+    pub tie_to_next_span: Option<Span>,
+    /// Byte range of this hit token in the original source.
+    pub event_span: Span,
+    /// Number of nested `(…)` groups this hit belongs to.
+    pub group_membership: u8,
+    /// Number of those groups that continue past this hit.
+    pub group_continuation: u8,
+    /// True if this hit was written with `*` (dotted duration).
+    pub dotted: bool,
+    pub slur_group_close_at_duration: Option<u32>,
+}
+
+impl GroupedPercussionHit {
     pub fn tie_to_next(&self) -> bool {
         self.tie_to_next_span.is_some()
     }

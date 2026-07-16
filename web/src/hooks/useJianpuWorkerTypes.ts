@@ -18,6 +18,8 @@ export interface JianpuWorkerState {
   wavFilename: string
   /** Elapsed-seconds offset of each measure boundary for `wavUrl`'s audio, length = measure count + 1. */
   measureTimes: number[]
+  /** Written measure index to highlight at each playback position of `measureTimes`, following D.C. al Coda navigation; entry `i` pairs with `measureTimes[i]`. */
+  writtenMeasureIndices: number[]
   audioAvailable: boolean
   pdfAvailable: boolean
   pdfExporting: boolean
@@ -41,6 +43,8 @@ export interface JianpuWorkerState {
   measureAudioPlaying: boolean
   /** Elapsed-seconds offset of each measure boundary within the selected range's audio, relative to the range start. */
   measureAudioTimes: number[]
+  /** Written measure index to highlight at each playback position of `measureAudioTimes`, following D.C. al Coda navigation; entry `i` pairs with `measureAudioTimes[i]`. */
+  measureAudioWrittenIndices: number[]
   /** The `<audio>` element currently playing the selected measure range, if any; a new element each time playback starts. */
   measureAudioElement: HTMLAudioElement | null
   notifySelection: (startLine: number, endLine: number) => void
@@ -51,6 +55,7 @@ export interface JianpuWorkerState {
   measureSpans: MeasureSpan[]
   sectionRanges: SectionRange[]
   previewInstrument: (programNumber: number) => void
+  previewPercussion: (key: number) => void
   stopPreviewInstrument: () => void
   previewAudioPlaying: boolean
   updatePartDeclaration: (

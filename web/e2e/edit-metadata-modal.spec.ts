@@ -141,3 +141,148 @@ test('clearing an optional field removes it from the source', async ({
   await expect.poll(getEditorSource.bind(null, page)).not.toContain('subtitle')
   await expect.poll(getStoredSource.bind(null, page)).not.toContain('subtitle')
 })
+
+test('unchecking merge duplicate measures across parts writes = no to the source', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.goto('/')
+
+  await openEditMetadataModal(page)
+
+  const modal = page.getByTestId('edit-metadata-modal')
+  const mergeCheckbox = modal.locator('input[type="checkbox"]').first()
+  await expect(mergeCheckbox).toBeChecked()
+  await mergeCheckbox.uncheck()
+
+  await page.keyboard.press('Escape')
+  await modal.waitFor({ state: 'hidden' })
+
+  const expectedLine = 'merge duplicate measures across parts = no'
+  await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
+  await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
+})
+
+test('re-checking merge duplicate measures across parts writes = yes to the source', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.goto('/')
+
+  await openEditMetadataModal(page)
+
+  const modal = page.getByTestId('edit-metadata-modal')
+  const mergeCheckbox = modal.locator('input[type="checkbox"]').first()
+  await mergeCheckbox.uncheck()
+  await mergeCheckbox.check()
+
+  await page.keyboard.press('Escape')
+  await modal.waitFor({ state: 'hidden' })
+
+  const expectedLine = 'merge duplicate measures across parts = yes'
+  await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
+  await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
+})
+
+test('unchecking hide resting parts writes = no to the source', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.goto('/')
+
+  await openEditMetadataModal(page)
+
+  const modal = page.getByTestId('edit-metadata-modal')
+  const hideRestingCheckbox = modal.locator('input[type="checkbox"]').nth(1)
+  await expect(hideRestingCheckbox).toBeChecked()
+  await hideRestingCheckbox.uncheck()
+
+  await page.keyboard.press('Escape')
+  await modal.waitFor({ state: 'hidden' })
+
+  const expectedLine = 'hide resting parts = no'
+  await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
+  await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
+})
+
+test('re-checking hide resting parts writes = yes to the source', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.goto('/')
+
+  await openEditMetadataModal(page)
+
+  const modal = page.getByTestId('edit-metadata-modal')
+  const hideRestingCheckbox = modal.locator('input[type="checkbox"]').nth(1)
+  await hideRestingCheckbox.uncheck()
+  await hideRestingCheckbox.check()
+
+  await page.keyboard.press('Escape')
+  await modal.waitFor({ state: 'hidden' })
+
+  const expectedLine = 'hide resting parts = yes'
+  await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
+  await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
+})
+
+test('checking hide system dividers writes = yes to the source', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.goto('/')
+
+  await openEditMetadataModal(page)
+
+  const modal = page.getByTestId('edit-metadata-modal')
+  const hideDividersCheckbox = modal.locator('input[type="checkbox"]').last()
+  await expect(hideDividersCheckbox).not.toBeChecked()
+  await hideDividersCheckbox.check()
+
+  await page.keyboard.press('Escape')
+  await modal.waitFor({ state: 'hidden' })
+
+  const expectedLine = 'hide system dividers = yes'
+  await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
+  await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
+})
+
+test('unchecking hide system dividers writes = no to the source', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.goto('/')
+
+  await openEditMetadataModal(page)
+
+  const modal = page.getByTestId('edit-metadata-modal')
+  const hideDividersCheckbox = modal.locator('input[type="checkbox"]').last()
+  await hideDividersCheckbox.check()
+  await hideDividersCheckbox.uncheck()
+
+  await page.keyboard.press('Escape')
+  await modal.waitFor({ state: 'hidden' })
+
+  const expectedLine = 'hide system dividers = no'
+  await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
+  await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
+})
+
+test('modal stays within the editor pane and does not cover the preview pane', async ({
+  page,
+}) => {
+  await loadSource(page)
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await page.goto('/')
+
+  await openEditMetadataModal(page)
+
+  const modal = page.getByTestId('edit-metadata-modal')
+  const modalBox = await modal.boundingBox()
+  const previewBox = await page.locator('.pane--preview').boundingBox()
+  if (!modalBox || !previewBox) {
+    throw new Error('expected modal and preview pane to have bounding boxes')
+  }
+
+  expect(modalBox.x + modalBox.width).toBeLessThanOrEqual(previewBox.x)
+})

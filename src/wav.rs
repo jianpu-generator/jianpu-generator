@@ -164,6 +164,55 @@ pub fn write_preview_wav(
     encode_wav(&all_l, &all_r)
 }
 
+/// Percussion channel/program matching [`crate::midi::mod`]'s GM Standard Kit preamble, so
+/// the preview sounds like the same kit that renders in exported audio.
+const PERCUSSION_PREVIEW_CHANNEL: u8 = 9;
+const GM_STANDARD_KIT_PROGRAM: u8 = 0;
+
+pub fn write_percussion_preview_wav(
+    key: u8,
+    sf2_bytes: &[u8],
+) -> Result<Vec<u8>, IrrecoverableError> {
+    let mut synth = init_synth(sf2_bytes)?;
+    let mut all_l = Vec::new();
+    let mut all_r = Vec::new();
+
+    let hit_samples = (SAMPLE_RATE as f32 * 0.35) as usize;
+    let gap_samples = (SAMPLE_RATE as f32 * 0.15) as usize;
+
+    synth
+        .send_event(MidiEvent::ProgramChange {
+            channel: PERCUSSION_PREVIEW_CHANNEL,
+            program_id: GM_STANDARD_KIT_PROGRAM,
+        })
+        .ok();
+    for _ in 0..2 {
+        synth
+            .send_event(MidiEvent::NoteOn {
+                channel: PERCUSSION_PREVIEW_CHANNEL,
+                key,
+                vel: 100,
+            })
+            .ok();
+        render_samples(&mut synth, hit_samples, &mut all_l, &mut all_r);
+        synth
+            .send_event(MidiEvent::NoteOff {
+                channel: PERCUSSION_PREVIEW_CHANNEL,
+                key,
+            })
+            .ok();
+        render_samples(&mut synth, gap_samples, &mut all_l, &mut all_r);
+    }
+    render_samples(&mut synth, SAMPLE_RATE as usize / 2, &mut all_l, &mut all_r); // 0.5 s tail
+
+    normalize_peak(&mut all_l, &mut all_r);
+    encode_wav(&all_l, &all_r)
+}
+
+#[cfg(test)]
+#[path = "wav_percussion_tests.rs"]
+mod wav_percussion_tests;
+
 fn normalize_peak(left: &mut [f32], right: &mut [f32]) {
     let peak = left
         .iter()

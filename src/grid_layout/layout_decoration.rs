@@ -1,7 +1,8 @@
 use crate::compiler::types::{Decoration, MeasureBlock};
 use crate::grid_layout::layout::{
-    block_column_width, decoration_row_height, header_part_list_row_height,
-    header_subtitle_author_row_height, header_title_row_height, separator_row_height, LABEL_COLS,
+    block_column_width, decoration_row_height, header_gap_row_height, header_part_list_row_height,
+    header_subtitle_author_row_height, header_title_row_height, separator_row_height,
+    MUSIC_START_COL,
 };
 use crate::grid_layout::types::{
     GridContent, GridElement, GridRow, HAlign, Header, PartListEntry, VAlign,
@@ -14,6 +15,14 @@ fn directive_line_element(dec: &Decoration, col: u32) -> GridElement {
         key,
         bpm,
         time_signature,
+        dc_al_coda,
+        to_coda,
+        coda,
+        segno,
+        ds_al_coda,
+        dc_al_fine,
+        fine,
+        ds_al_fine,
     } = dec;
     GridElement {
         column: col,
@@ -26,33 +35,55 @@ fn directive_line_element(dec: &Decoration, col: u32) -> GridElement {
             key: key.clone(),
             bpm: *bpm,
             time_signature: *time_signature,
+            dc_al_coda: *dc_al_coda,
+            to_coda: *to_coda,
+            coda: *coda,
+            segno: *segno,
+            ds_al_coda: *ds_al_coda,
+            dc_al_fine: *dc_al_fine,
+            fine: *fine,
+            ds_al_fine: *ds_al_fine,
         },
     }
 }
 
+fn decoration_has_navigation_marker(dec: &Decoration) -> bool {
+    let Decoration::DirectiveLine {
+        dc_al_coda,
+        to_coda,
+        coda,
+        segno,
+        ds_al_coda,
+        dc_al_fine,
+        fine,
+        ds_al_fine,
+        ..
+    } = dec;
+    *dc_al_coda || *to_coda || *coda || *segno || *ds_al_coda || *dc_al_fine || *fine || *ds_al_fine
+}
+
 pub(super) fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow {
     let total_musical_cols: u32 = system.iter().map(block_column_width).sum();
-    let music_column_count = LABEL_COLS + total_musical_cols;
+    let music_column_count = MUSIC_START_COL + total_musical_cols;
     let mut elements: Vec<GridElement> = Vec::new();
 
     // First block: one DirectiveLine element aligned to the left edge of the first measure.
     if let Some(first) = system.first() {
         if let Some(dec) = first.decorations.first() {
-            elements.push(directive_line_element(dec, LABEL_COLS));
+            elements.push(directive_line_element(dec, MUSIC_START_COL));
         }
     }
 
-    // Non-first blocks: only emit a DirectiveLine when there is a label,
-    // aligned to the left edge of the measure it belongs to. This uses the
-    // same column grid as the music rows so the label lines up exactly with
-    // the measure's bar line.
-    let mut measure_music_col = LABEL_COLS;
+    // Non-first blocks: only emit a DirectiveLine when there is a label or a
+    // navigation marker, aligned to the left edge of the measure it belongs
+    // to. This uses the same column grid as the music rows so the label
+    // lines up exactly with the measure's bar line.
+    let mut measure_music_col = MUSIC_START_COL;
     for (index, block) in system.iter().enumerate() {
         if index > 0 {
-            if let Some(Decoration::DirectiveLine { label: Some(_), .. }) =
-                block.decorations.first()
-            {
-                if let Some(dec) = block.decorations.first() {
+            if let Some(dec) = block.decorations.first() {
+                let has_label = matches!(dec, Decoration::DirectiveLine { label: Some(_), .. });
+                if has_label || decoration_has_navigation_marker(dec) {
                     elements.push(directive_line_element(dec, measure_music_col));
                 }
             }
@@ -81,12 +112,38 @@ pub(super) fn make_separator_row() -> GridRow {
     }
 }
 
-pub(crate) fn make_header_rows(
-    header: &Header,
-    base: f32,
-    include_part_list: bool,
-) -> Vec<GridRow> {
-    let title_row = header.title.as_ref().map(|title| GridRow {
+fn make_sequence_rows(header: &Header, base: f32, include_part_list: bool) -> Vec<GridRow> {
+    header
+        .sequence
+        .as_ref()
+        .filter(|_| include_part_list)
+        .map(|entries| {
+            vec![
+                GridRow {
+                    height_pt: header_gap_row_height(base),
+                    column_count: 1,
+                    elements: vec![],
+                },
+                GridRow {
+                    height_pt: decoration_row_height(base),
+                    column_count: 1,
+                    elements: vec![GridElement {
+                        column: 0,
+                        column_span: 1,
+                        halign: HAlign::Start,
+                        valign: VAlign::Center,
+                        content: GridContent::SequenceLine {
+                            entries: entries.clone(),
+                        },
+                    }],
+                },
+            ]
+        })
+        .unwrap_or_default()
+}
+
+fn make_title_row(header: &Header, base: f32) -> Option<GridRow> {
+    header.title.as_ref().map(|title| GridRow {
         height_pt: header_title_row_height(base),
         column_count: 1,
         elements: vec![GridElement {
@@ -101,11 +158,13 @@ pub(crate) fn make_header_rows(
                 italic: false,
             },
         }],
-    });
+    })
+}
 
-    let mut subtitle_author_elements: Vec<GridElement> = Vec::new();
+fn make_subtitle_author_row(header: &Header, base: f32) -> GridRow {
+    let mut elements: Vec<GridElement> = Vec::new();
     if let Some(subtitle) = &header.subtitle {
-        subtitle_author_elements.push(GridElement {
+        elements.push(GridElement {
             column: 0,
             column_span: 1,
             halign: HAlign::Center,
@@ -119,7 +178,7 @@ pub(crate) fn make_header_rows(
         });
     }
     if let Some(author) = &header.author {
-        subtitle_author_elements.push(GridElement {
+        elements.push(GridElement {
             column: 0,
             column_span: 1,
             halign: HAlign::End,
@@ -132,12 +191,18 @@ pub(crate) fn make_header_rows(
             },
         });
     }
-    let subtitle_author_row = GridRow {
+    GridRow {
         height_pt: header_subtitle_author_row_height(base),
         column_count: 1,
-        elements: subtitle_author_elements,
-    };
+        elements,
+    }
+}
 
+pub(crate) fn make_header_rows(
+    header: &Header,
+    base: f32,
+    include_part_list: bool,
+) -> Vec<GridRow> {
     let part_list_rows: Vec<GridRow> = if include_part_list {
         let entries: Vec<&PartListEntry> = header
             .part_list
@@ -149,10 +214,11 @@ pub(crate) fn make_header_rows(
         vec![]
     };
 
-    title_row
+    make_title_row(header, base)
         .into_iter()
-        .chain(std::iter::once(subtitle_author_row))
+        .chain(std::iter::once(make_subtitle_author_row(header, base)))
         .chain(part_list_rows)
+        .chain(make_sequence_rows(header, base, include_part_list))
         .collect()
 }
 

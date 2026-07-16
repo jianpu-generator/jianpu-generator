@@ -7,12 +7,24 @@ pub enum ArcKind {
     Tie,
 }
 
+/// Column width (in grid-layout columns) reserved for a collapsed
+/// `MultiMeasureRest` block, regardless of how many source measures it
+/// represents — wide enough to read visually as "more than one measure",
+/// with the printed count communicating the actual number. Shared between
+/// the compiler (which positions the block's `BarLine`) and the grid-layout
+/// expansion step (which spans the `MultiMeasureRest` glyph to match).
+pub const MULTI_MEASURE_REST_WIDTH: u32 = 8;
+
 #[derive(Debug, Clone)]
 pub struct MeasureBlock {
     pub rows: Vec<MeasureRow>,
     pub decorations: Vec<Decoration>,
     /// Diagnostics collected during grouping for this measure.
     pub diagnostics: Vec<Diagnostic>,
+    /// Number of original source measures this block stands in for. `1` for
+    /// every normal block; > 1 when a run of all-rest measures has been
+    /// folded into a single `MultiMeasureRest` block.
+    pub represents_measures: usize,
 }
 
 impl PartialEq for MeasureBlock {
@@ -29,6 +41,11 @@ pub struct MeasureRow {
     /// The original part index this row was compiled from, before consolidation.
     /// Used to look up slur arcs keyed by original part index.
     pub source_part_index: usize,
+    /// Abbreviation of the group whose `[GroupAbbrev]` broadcast produced this
+    /// row's content, when the source part didn't override it with its own line.
+    /// Used by the consolidator to label a fully-merged unison row with the
+    /// group's abbreviation instead of concatenating member labels.
+    pub group_provenance: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -51,7 +68,13 @@ pub enum ElementContent {
     Rest {
         dotted: bool,
     },
+    /// A single wide rest bar standing in for `count` consecutive
+    /// all-rest source measures (cross-measure collapsing).
+    MultiMeasureRest {
+        count: usize,
+    },
     ChordSymbol(String),
+    PercussionHit,
     Underline {
         from_column: u32,
         to_column: u32,
@@ -61,7 +84,11 @@ pub enum ElementContent {
     BarLine,
     /// Visual dash rendered after a note head for each extra beat of duration (e.g. `1-`).
     NoteDash,
-    Lyric(String),
+    /// A syllable for one verse (0-indexed) of a `notes+lyrics` part.
+    Lyric {
+        text: String,
+        verse: usize,
+    },
 }
 
 /// The full logical extent of one slur or tie arc across measures.
@@ -91,5 +118,13 @@ pub enum Decoration {
         key: Option<String>,
         bpm: Option<u32>,
         time_signature: Option<(u32, u32)>,
+        dc_al_coda: bool,
+        to_coda: bool,
+        coda: bool,
+        segno: bool,
+        ds_al_coda: bool,
+        dc_al_fine: bool,
+        fine: bool,
+        ds_al_fine: bool,
     },
 }

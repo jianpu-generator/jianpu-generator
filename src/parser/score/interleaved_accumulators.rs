@@ -41,6 +41,7 @@ pub(super) fn init_accumulators(declarations: &[PartDecl]) -> Vec<TrackAccumulat
             per_measure_chord_errors: Vec::new(),
             per_measure_lex_errors: Vec::new(),
             per_measure_lyrics_errors: Vec::new(),
+            per_measure_group_provenance: Vec::new(),
         })
         .collect()
 }
@@ -71,6 +72,7 @@ pub(super) fn build_parse_result(
                 per_measure_chord_errors,
                 per_measure_lex_errors,
                 per_measure_lyrics_errors,
+                per_measure_group_provenance,
                 ..
             } = acc;
             Ok(ParsedTrack::Timed(ParsedTimedTrack {
@@ -92,6 +94,7 @@ pub(super) fn build_parse_result(
                 per_measure_chord_errors,
                 per_measure_lex_errors,
                 per_measure_lyrics_errors,
+                per_measure_group_provenance,
             }))
         })
         .collect()

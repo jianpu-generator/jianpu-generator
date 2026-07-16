@@ -7,13 +7,6 @@ fn score_from(source: &str) -> crate::ast::grouped::Score {
     group(doc).unwrap()
 }
 
-/// Lyrics-part document with one track.
-fn lyrics_doc(score_content: &str) -> String {
-    format!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nS = notes+lyrics\n\n# score\n{score_content}"
-    )
-}
-
 /// Minimal one-part (notes) document. `score_content` is everything after `# score\n`.
 fn notes_doc(score_content: &str) -> String {
     format!(
@@ -136,7 +129,7 @@ fn bar_number_decoration_without_label() {
 }
 
 #[test]
-fn section_label_measure_has_no_bar_number() {
+fn section_label_measure_still_has_bar_number() {
     let score = score_from(&notes_doc(
         "time=4/4 key=C4 bpm=120 label=\"Verse 1\"\n[S] 1\n",
     ));
@@ -147,11 +140,11 @@ fn section_label_measure_has_no_bar_number() {
         matches!(
             dec,
             Decoration::DirectiveLine {
-                bar_number: None,
+                bar_number: Some(_),
                 ..
             }
         ),
-        "labeled measure should not have a bar number"
+        "labeled measure should still show its bar number"
     );
     assert!(
         matches!(dec, Decoration::DirectiveLine { label: Some(_), .. }),
@@ -160,7 +153,91 @@ fn section_label_measure_has_no_bar_number() {
 }
 
 #[test]
+fn dc_al_coda_directive_sets_decoration_flag() {
+    let score = score_from(&notes_doc(
+        "time=4/4 key=C4 bpm=120 dcalcoda tocoda coda\n[S] 1\n",
+    ));
+    let result = compile(&score);
+    let dec = result.blocks[0].decorations.first().unwrap();
+    assert!(
+        matches!(
+            dec,
+            Decoration::DirectiveLine {
+                dc_al_coda: true,
+                to_coda: true,
+                coda: true,
+                ..
+            }
+        ),
+        "measure with all three navigation markers should set all three decoration flags"
+    );
+}
+
+#[test]
+fn segno_dsalcoda_directive_sets_decoration_flag() {
+    let score = score_from(&notes_doc(
+        "time=4/4 key=C4 bpm=120 segno tocoda dsalcoda coda\n[S] 1\n",
+    ));
+    let result = compile(&score);
+    let dec = result.blocks[0].decorations.first().unwrap();
+    assert!(
+        matches!(
+            dec,
+            Decoration::DirectiveLine {
+                segno: true,
+                ds_al_coda: true,
+                to_coda: true,
+                coda: true,
+                ..
+            }
+        ),
+        "measure with all four D.S. al Coda navigation markers should set all four decoration flags"
+    );
+}
+
+#[test]
+fn dc_al_fine_directive_sets_decoration_flag() {
+    let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120 dcalfine fine\n[S] 1\n"));
+    let result = compile(&score);
+    let dec = result.blocks[0].decorations.first().unwrap();
+    assert!(
+        matches!(
+            dec,
+            Decoration::DirectiveLine {
+                dc_al_fine: true,
+                fine: true,
+                ..
+            }
+        ),
+        "measure with both D.C. al Fine navigation markers should set both decoration flags"
+    );
+}
+
+#[test]
+fn segno_dsalfine_directive_sets_decoration_flag() {
+    let score = score_from(&notes_doc(
+        "time=4/4 key=C4 bpm=120 segno dsalfine fine\n[S] 1\n",
+    ));
+    let result = compile(&score);
+    let dec = result.blocks[0].decorations.first().unwrap();
+    assert!(
+        matches!(
+            dec,
+            Decoration::DirectiveLine {
+                segno: true,
+                ds_al_fine: true,
+                fine: true,
+                ..
+            }
+        ),
+        "measure with all three D.S. al Fine navigation markers should set all three decoration flags"
+    );
+}
+
+#[test]
 fn rest_produces_rest_element() {
+    // A lone `0` fills the whole 4/4 measure, but renders as four one-beat rest
+    // glyphs (matching conventional 简谱 `0 0 0 0`) rather than one stretched glyph.
     let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 0\n"));
     let result = compile(&score);
     let blocks = result.blocks;
@@ -170,7 +247,7 @@ fn rest_produces_rest_element() {
         .iter()
         .filter(|e| matches!(e.content, ElementContent::Rest { .. }))
         .collect();
-    assert_eq!(rests.len(), 1);
+    assert_eq!(rests.len(), 4);
 }
 
 #[test]
@@ -222,6 +299,35 @@ time=4/4 key=C4 bpm=120
     );
     assert_eq!(blocks[0].rows[0].label, "A", "first row label should be A");
     assert_eq!(blocks[0].rows[1].label, "C", "second row label should be C");
+}
+
+#[test]
+fn not_mentioned_part_is_kept_when_hide_resting_parts_is_disabled() {
+    let score = score_from(
+        "# metadata
+title=\"t\"
+author=\"a\"
+hide resting parts = no
+
+# parts
+A = notes+lyrics
+B = chords
+C = notes
+
+# score
+time=4/4 key=C4 bpm=120
+[A] 1 2 3 4
+[A] la la la la
+[C] 1
+",
+    );
+    let result = compile(&score);
+    let blocks = result.blocks;
+    assert_eq!(
+        blocks[0].rows.len(),
+        3,
+        "B (rest-filled) should be kept when hide resting parts is disabled"
+    );
 }
 
 #[test]
@@ -284,152 +390,4 @@ fn note_head_column_is_zero_indexed() {
         .find(|e| matches!(e.content, ElementContent::NoteHead { .. }))
         .unwrap();
     assert_eq!(note_head.column, 0);
-}
-
-#[test]
-fn cross_measure_tilde_tie_does_not_consume_lyric_slot_for_continuation_note() {
-    // Bar 1: "1 2 3 4~" has 4 lyric slots → "ha ta ba na"
-    // Bar 2: "4 5 6 7" → note 4 is a tie continuation, only 3 lyric slots → "sa da ko"
-    // "sa" must be assigned to note 5 (column 4), not the tied note 4 (column 0).
-    let score = score_from(&lyrics_doc(concat!(
-        "time=4/4 key=C4 bpm=120\n",
-        "[S] 1 2 3 4~\n",
-        "[S] ha ta ba na\n",
-        "\n",
-        "[S] 4 5 6 7\n",
-        "[S] sa da ko\n",
-    )));
-    let result = compile(&score);
-    let blocks = result.blocks;
-    let bar2 = &blocks[1].rows[0];
-    // "sa" should be at column 4 (note 5, after the tied note 4 at column 0)
-    let lyrics: Vec<_> = bar2
-        .elements
-        .iter()
-        .filter_map(|e| {
-            if let ElementContent::Lyric(text) = &e.content {
-                Some((e.column, text.as_str()))
-            } else {
-                None
-            }
-        })
-        .collect();
-    assert_eq!(
-        lyrics,
-        vec![(4, "sa"), (8, "da"), (12, "ko")],
-        "lyrics should be assigned to notes 5, 6, 7 (columns 4, 8, 12), not to the tied continuation note 4"
-    );
-}
-
-#[test]
-fn lyrics_underflow_errors_propagate_to_measure_block() {
-    // 4 notes but only 2 syllables → block should have errors
-    let source = lyrics_doc("time=4/4 key=C4 bpm=120\n[S] 1 2 3 4\n[S] a b\n");
-    let score = score_from(&source);
-    let result = compile(&score);
-    assert_eq!(result.blocks.len(), 1);
-    assert_eq!(result.blocks[0].diagnostics.len(), 1);
-    assert!(result.blocks[0].diagnostics[0]
-        .message()
-        .contains("underflow"));
-}
-
-#[test]
-fn matching_lyrics_produce_no_block_errors() {
-    let source = lyrics_doc("time=4/4 key=C4 bpm=120\n[S] 1 2 3 4\n[S] a b c d\n");
-    let score = score_from(&source);
-    let result = compile(&score);
-    assert!(result.blocks[0].diagnostics.is_empty());
-}
-
-#[test]
-fn lyrics_underflow_in_first_measure_only() {
-    // Measure 1: 4 notes but only 2 syllables → underflow
-    // Measure 2: 4 notes and 4 syllables → no error
-    let source = lyrics_doc(concat!(
-        "time=4/4 key=C4 bpm=120\n",
-        "[S] 1 2 3 4\n",
-        "[S] a b\n",
-        "\n",
-        "[S] 5 6 7 1\n",
-        "[S] c d e f\n",
-    ));
-    let score = score_from(&source);
-    let result = compile(&score);
-    assert_eq!(result.blocks.len(), 2);
-    assert_eq!(result.blocks[0].diagnostics.len(), 1);
-    assert!(result.blocks[0].diagnostics[0]
-        .message()
-        .contains("underflow"));
-    assert!(result.blocks[1].diagnostics.is_empty());
-}
-
-#[test]
-fn malformed_parts_line_is_recoverable_and_valid_part_still_renders() {
-    use crate::error::RecoverableErrorKind;
-
-    let source = concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\n",
-        "no-equals-sign\n",
-        "Melody = notes\n",
-        "\n",
-        "# score\n",
-        "time=4/4 key=C4 bpm=120\n",
-        "[Melody] 1 2 3 4\n",
-    );
-    let doc = parse(source, "test", &[]).expect("malformed parts line must not abort parsing");
-    assert_eq!(doc.declarations.len(), 1, "valid declaration must survive");
-    assert_eq!(doc.declarations[0].abbreviation, "Melody");
-    assert_eq!(doc.parts_parse_errors.len(), 1);
-    assert!(
-        matches!(
-            doc.parts_parse_errors[0].kind,
-            RecoverableErrorKind::PartsMalformedLine { .. }
-        ),
-        "expected PartsMalformedLine error, got: {:?}",
-        doc.parts_parse_errors[0].kind
-    );
-    let score = group(doc).unwrap();
-    assert!(
-        score
-            .document_diagnostics
-            .iter()
-            .any(|d| d.message().contains("expected track declaration")),
-        "malformed-line error must appear in document_diagnostics"
-    );
-}
-
-#[test]
-fn all_parts_invalid_renders_empty_document_with_error() {
-    use crate::error::RecoverableErrorKind;
-
-    let source = concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\n",
-        "no-equals-sign\n",
-        "\n",
-        "# score\n",
-        "time=4/4 key=C4 bpm=120\n",
-        "1 2 3 4\n",
-    );
-    let doc = parse(source, "test", &[]).expect("all-invalid parts must not abort parsing");
-    assert!(
-        doc.declarations.is_empty(),
-        "no valid declarations expected"
-    );
-    assert!(
-        doc.parts_parse_errors
-            .iter()
-            .any(|e| matches!(e.kind, RecoverableErrorKind::PartsEmptySection)),
-        "PartsEmptySection error must be collected"
-    );
-    let score = group(doc).unwrap();
-    assert!(
-        score
-            .document_diagnostics
-            .iter()
-            .any(|d| d.message().contains("at least one track")),
-        "empty-section error must appear in document_diagnostics"
-    );
 }

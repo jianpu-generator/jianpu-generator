@@ -14,11 +14,29 @@ import {
   type GithubDeviceVerification,
   readStoredGithubAuth,
 } from '../storage/githubAuth'
-import type {
-  GithubBackend,
-  GithubBackendError,
-} from '../storage/githubBackend'
 import type { StorageBackend } from '../storage/types'
+import {
+  type ConflictResolution,
+  ensureStorageRepo,
+  errorBannerMessage,
+  isGithubBackend,
+  resolveGithubConflict,
+} from './storageSettingsModalHelpers'
+import {
+  bannerStyle,
+  bodyStyle,
+  buttonStyle,
+  contentStyle,
+  headerStyle,
+  optionRowStyle,
+  overlayStyle,
+} from './storageSettingsModalStyles'
+
+export {
+  type ConflictResolution,
+  ensureStorageRepo,
+  resolveGithubConflict,
+} from './storageSettingsModalHelpers'
 
 export interface StorageSettingsModalProps {
   open: boolean
@@ -36,7 +54,7 @@ export interface StorageSettingsModalProps {
    * `resolveGithubConflict`'s `saveContent`/`load` calls, which bypass the
    * hook's own `runSave`), so the tab bar's "Saved" badge stops showing the
    * conflict's stale error status once resolved. */
-  refreshSaveStatus: () => void
+  refreshSaveStatus: (syncedStore?: FileStoreState) => void
 }
 
 /** Public GitHub OAuth App client ID; not a secret (it's visible in every
@@ -48,146 +66,6 @@ export interface StorageSettingsModalProps {
 const GITHUB_OAUTH_CLIENT_ID = import.meta.env.VITE_GITHUB_OAUTH_CLIENT_ID ?? ''
 
 const GITHUB_OAUTH_PROXY_URL = import.meta.env.VITE_GITHUB_OAUTH_PROXY_URL ?? ''
-
-function statusOf(error: unknown): number | undefined {
-  if (typeof error === 'object' && error !== null && 'status' in error) {
-    const status = (error as { status: unknown }).status
-    return typeof status === 'number' ? status : undefined
-  }
-  return undefined
-}
-
-/**
- * Get-or-create the fixed app repo under the authenticated user's account.
- * No confirmation prompt either way: the common case (existing repo) is the
- * same user reconnecting, and even a name collision is non-destructive
- * since the app only ever touches its own `scores/` folder within the repo.
- *
- * Lives here (not `githubBackend.ts`/`githubAuth.ts`) since it only ever
- * runs once, right after `connectWithDeviceFlow` resolves and this modal
- * already has both the fresh `Octokit` instance and the username on hand —
- * threading it through the backend/auth modules would add a second entry
- * point for the same one-shot setup step.
- */
-export async function ensureStorageRepo(
-  octokit: Octokit,
-  owner: string,
-): Promise<void> {
-  try {
-    await octokit.rest.repos.get({ owner, repo: GITHUB_STORAGE_REPO })
-  } catch (error) {
-    if (statusOf(error) !== 404) throw error
-    await octokit.rest.repos.createForAuthenticatedUser({
-      name: GITHUB_STORAGE_REPO,
-      private: true,
-    })
-  }
-}
-
-export type ConflictResolution = 'overwrite-mine' | 'discard-mine'
-
-/**
- * Resolves a `409` conflict on the active file with a minimal "last write
- * wins" choice (no 3-way merge, per the v1 limitations): `overwrite-mine`
- * re-pushes the current in-memory content (the retried `saveContent` fetches
- * a fresh `sha` first, so it succeeds even though the previous attempt
- * raced); `discard-mine` reloads the backend's file listing and replaces the
- * active file's in-memory content with whatever is now on GitHub.
- */
-export async function resolveGithubConflict(
-  resolution: ConflictResolution,
-  backend: GithubBackend,
-  store: FileStoreState,
-): Promise<FileStoreState> {
-  if (resolution === 'overwrite-mine') {
-    await backend.saveContent(store)
-    return store
-  }
-  const reloaded = await backend.load()
-  const remoteContent = reloaded.userFiles[store.active] ?? ''
-  return backend.updateActiveContent(store, remoteContent)
-}
-
-function isGithubBackend(backend: StorageBackend): backend is GithubBackend {
-  return backend.kind === 'github'
-}
-
-const overlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0,0,0,0.35)',
-  zIndex: 1000,
-}
-
-const contentStyle: React.CSSProperties = {
-  position: 'fixed',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  background: '#fff',
-  border: '1px solid #ddd',
-  borderRadius: '6px',
-  boxShadow: '0 8px 32px rgba(0,0,0,0.16)',
-  zIndex: 1001,
-  minWidth: '420px',
-  maxWidth: '90vw',
-  maxHeight: '80vh',
-  display: 'flex',
-  flexDirection: 'column',
-  fontFamily: 'var(--mono, monospace)',
-}
-
-const headerStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: '12px 16px',
-  borderBottom: '1px solid #eee',
-}
-
-const bodyStyle: React.CSSProperties = {
-  overflowY: 'auto',
-  flex: 1,
-  padding: '16px',
-  fontSize: '13px',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '12px',
-}
-
-const optionRowStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '12px',
-}
-
-const bannerStyle: React.CSSProperties = {
-  padding: '8px 10px',
-  borderRadius: '4px',
-  fontSize: '12px',
-  background: '#fff4e5',
-  border: '1px solid #f0c987',
-  color: '#7a4b00',
-}
-
-const buttonStyle: React.CSSProperties = {
-  fontSize: '12px',
-  padding: '4px 10px',
-  borderRadius: '4px',
-  border: '1px solid #cbd5e0',
-  background: '#f5f5f5',
-  cursor: 'pointer',
-}
-
-function errorBannerMessage(error: GithubBackendError | null): string | null {
-  if (!error) return null
-  if (error.kind === 'rate-limited') {
-    return 'GitHub API rate limit reached. Autosave is paused until it resets.'
-  }
-  if (error.kind === 'network') {
-    return "You appear to be offline. Changes will save once you're back online."
-  }
-  return null
-}
 
 export function StorageSettingsModal({
   open,
@@ -290,7 +168,7 @@ export function StorageSettingsModal({
     if (!isGithubBackend(backend)) return
     const nextStore = await resolveGithubConflict(resolution, backend, store)
     setStore(nextStore)
-    refreshSaveStatus()
+    refreshSaveStatus(nextStore)
   }
 
   return (

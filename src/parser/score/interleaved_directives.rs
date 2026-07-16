@@ -1,21 +1,22 @@
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName, ScoreEvent};
+use crate::desugar::SourceLine;
 use crate::error::{RecoverableError, Span, Spanned};
 use crate::parser::score::measure_group::is_directive_line;
 
 type SplitDirectiveResult<'a> = (
     Vec<Spanned<ScoreEvent>>,
-    &'a [(String, usize)],
+    &'a [SourceLine],
     Vec<RecoverableError>,
 );
 
 pub(super) fn split_directive(
-    lines: &[(String, usize)],
+    lines: &[SourceLine],
     base_offset: usize,
 ) -> SplitDirectiveResult<'_> {
-    if let Some((directive_line, directive_offset)) = lines.first() {
-        if is_directive_line(directive_line) {
-            let absolute_offset = base_offset + directive_offset;
-            let (events, errors) = parse_directive_line(directive_line, absolute_offset);
+    if let Some(directive_line) = lines.first() {
+        if is_directive_line(&directive_line.content) {
+            let absolute_offset = base_offset + directive_line.offset;
+            let (events, errors) = parse_directive_line(&directive_line.content, absolute_offset);
             let remaining = lines.get(1..).unwrap_or(&[]);
             return (events, remaining, errors);
         }
@@ -129,6 +130,8 @@ fn parse_directive_line(
                     Some(ScoreEvent::LabelChange(text))
                 }
             }
+        } else if let Some(ev) = navigation_keyword_event(token) {
+            Some(ev)
         } else {
             errors.push(RecoverableError::general(
                 span,
@@ -143,6 +146,21 @@ fn parse_directive_line(
     }
 
     (events, errors)
+}
+
+/// Matches the bare-keyword (no `=value`) navigation directives.
+fn navigation_keyword_event(token: &str) -> Option<ScoreEvent> {
+    match token {
+        "dcalcoda" => Some(ScoreEvent::DcAlCoda),
+        "tocoda" => Some(ScoreEvent::ToCoda),
+        "coda" => Some(ScoreEvent::Coda),
+        "segno" => Some(ScoreEvent::Segno),
+        "dsalcoda" => Some(ScoreEvent::DsAlCoda),
+        "dcalfine" => Some(ScoreEvent::DcAlFine),
+        "fine" => Some(ScoreEvent::Fine),
+        "dsalfine" => Some(ScoreEvent::DsAlFine),
+        _ => None,
+    }
 }
 
 fn parse_key_value(

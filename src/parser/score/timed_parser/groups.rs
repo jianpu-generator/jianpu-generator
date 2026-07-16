@@ -1,8 +1,13 @@
+use crate::ast::parsed::ScoreEvent;
 use crate::error::{Span, Warning};
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct GroupStack {
     pub frames: Vec<GroupFrame>,
+    /// The most recently parsed Note/Chord event on this track (rests never update it),
+    /// used to resolve `r`/bare `_`/`=` repeat atoms. Persists across measures and lines,
+    /// like ties/slurs already do.
+    pub last_pitched_event: Option<ScoreEvent>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -218,7 +218,32 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
             spans,
         } => serialize_text_with_tspans(el, out, *font_size, anchor, baseline, spans),
         SvgKind::Group { children, tag } => serialize_group(out, children, tag),
+        SvgKind::SegnoGlyph { size } => serialize_segno_glyph(el, out, *size),
     }
+}
+
+/// Vector Segno glyph, traced from a 190x190 viewBox. Adapted from
+/// "Music symbol Segno.svg" by Xavier enc (Wikimedia Commons), licensed
+/// CC BY-SA 3.0 / GFDL: https://commons.wikimedia.org/wiki/File:Music_symbol_Segno.svg
+const SEGNO_GLYPH_PATH: &str = "M162.542,147.629c0,24.913-15.023,37.37-45.072,37.37c-19.359,0-29.039-6.555-29.039-19.662\
+c0-5.346,2.094-9.933,6.276-13.764c4.185-3.833,9-5.747,14.444-5.747c5.85,0,10.765,1.989,14.746,5.974\
+c3.985,3.982,5.975,8.898,5.975,14.746c0,7.159-3.063,11.678-9.518,15.208c15.323-3.063,20.373-10.965,20.373-18.028\
+c0-9.894-6.429-17.883-20.867-27.772c-7.15-4.603-17.867-11.437-32.146-20.499l-42.125,56.929H29.89l47.295-63.913\
+c-12.863-7.794-23.734-16.813-32.621-27.066C33.157,68.19,27.458,55.179,27.458,42.371c0-24.913,15.023-37.37,45.07-37.37\
+c19.361,0,29.041,6.555,29.041,19.662c0,5.345-2.094,9.934-6.276,13.764c-4.187,3.834-9,5.747-14.444,5.747\
+c-5.85,0-10.765-1.989-14.746-5.974c-3.984-3.982-5.975-8.898-5.975-14.748c0-7.158,3.064-11.676,9.518-15.207\
+C54.321,11.31,49.272,19.21,49.272,26.274c0,9.893,6.43,17.882,20.869,27.771c7.149,4.604,17.865,11.438,32.144,20.5l42.125-56.928\
+h15.7l-47.295,63.914c12.859,7.792,23.734,16.813,32.619,27.066C156.843,121.81,162.542,134.821,162.542,147.629z M55.44,120.976\
+c0-6.969-5.65-12.619-12.621-12.619c-6.969,0-12.619,5.65-12.619,12.619c0,6.972,5.65,12.621,12.619,12.621\
+C49.79,133.597,55.44,127.946,55.44,120.976z M134.562,69.022c0,6.97,5.649,12.621,12.619,12.621c6.971,0,12.62-5.651,12.62-12.621\
+c0-6.971-5.649-12.619-12.62-12.619C140.211,56.403,134.562,62.052,134.562,69.022z";
+
+fn serialize_segno_glyph(el: &SvgElement, out: &mut String, size: f32) {
+    let scale = size / 190.0;
+    out.push_str(&format!(
+        r#"<g transform="translate({:.1},{:.1}) scale({:.4})" data-variant="segno"><path d="{}"/></g>"#,
+        el.x, el.y, scale, SEGNO_GLYPH_PATH
+    ));
 }
 
 fn escape_xml(s: &str) -> String {
@@ -229,272 +254,4 @@ fn escape_xml(s: &str) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
-    use crate::renderer::new_types::{
-        SvgDocument, SvgElement, SvgKind, SvgVariant, TransparentRectRole,
-    };
-
-    fn text_doc(content: &str) -> SvgDocument {
-        SvgDocument {
-            width_pt: 595.0,
-            height_pt: 842.0,
-            elements: vec![SvgElement {
-                x: 10.0,
-                y: 20.0,
-                variant: Some(SvgVariant::Text),
-                kind: SvgKind::Text {
-                    content: content.to_string(),
-                    font_size: 12.0,
-                    anchor: TextAnchor::Middle,
-                    baseline: DominantBaseline::Middle,
-                    font: FontFamily::SansSerif,
-                    weight: FontWeight::Normal,
-                    italic: false,
-                },
-            }],
-        }
-    }
-
-    #[test]
-    fn produces_valid_svg_wrapper() {
-        let result = serialize(&[text_doc("hello")]);
-        assert_eq!(result.len(), 1);
-        assert!(result[0].starts_with("<svg"), "should start with <svg");
-        assert!(result[0].ends_with("</svg>"), "should end with </svg>");
-    }
-
-    #[test]
-    fn xml_special_chars_are_escaped() {
-        let result = serialize(&[text_doc("<b>&\"</b>")]);
-        assert!(result[0].contains("&lt;b&gt;&amp;&quot;&lt;/b&gt;"));
-    }
-
-    #[test]
-    fn circle_serializes_correctly() {
-        let doc = SvgDocument {
-            width_pt: 100.0,
-            height_pt: 100.0,
-            elements: vec![SvgElement {
-                x: 5.0,
-                y: 5.0,
-                variant: Some(SvgVariant::NoteHead),
-                kind: SvgKind::Circle { r: 3.0 },
-            }],
-        };
-        let result = serialize(&[doc]);
-        assert!(result[0].contains("<circle"), "should contain circle");
-        assert!(result[0].contains(r#"r="3.0""#));
-    }
-
-    #[test]
-    fn line_serializes_correctly() {
-        let doc = SvgDocument {
-            width_pt: 100.0,
-            height_pt: 100.0,
-            elements: vec![SvgElement {
-                x: 0.0,
-                y: 0.0,
-                variant: Some(SvgVariant::BarLine),
-                kind: SvgKind::Line {
-                    x2: 50.0,
-                    y2: 0.0,
-                    stroke_width: 1.0,
-                },
-            }],
-        };
-        let result = serialize(&[doc]);
-        assert!(result[0].contains("<line"), "should contain line");
-    }
-
-    #[test]
-    fn path_serializes_correctly() {
-        let doc = SvgDocument {
-            width_pt: 100.0,
-            height_pt: 100.0,
-            elements: vec![SvgElement {
-                x: 0.0,
-                y: 0.0,
-                variant: Some(SvgVariant::TieOrSlur),
-                kind: SvgKind::Path {
-                    control_x: 25.0,
-                    control_y: -10.0,
-                    end_x: 50.0,
-                    end_y: 0.0,
-                    stroke_width: 1.5,
-                },
-            }],
-        };
-        let result = serialize(&[doc]);
-        assert!(result[0].contains("<path"), "should contain path");
-        assert!(result[0].contains("fill=\"none\""));
-    }
-
-    #[test]
-    fn text_element_has_data_variant() {
-        let result = serialize(&[text_doc("hello")]);
-        assert!(result[0].contains(&format!(r#"data-variant="{}""#, SvgVariant::Text.as_str())));
-    }
-
-    #[test]
-    fn circle_element_has_data_variant() {
-        let doc = SvgDocument {
-            width_pt: 100.0,
-            height_pt: 100.0,
-            elements: vec![SvgElement {
-                x: 5.0,
-                y: 5.0,
-                variant: Some(SvgVariant::NoteHead),
-                kind: SvgKind::Circle { r: 3.0 },
-            }],
-        };
-        let result = serialize(&[doc]);
-        assert!(result[0].contains(&format!(
-            r#"data-variant="{}""#,
-            SvgVariant::NoteHead.as_str()
-        )));
-    }
-
-    #[test]
-    fn line_element_has_data_variant() {
-        let doc = SvgDocument {
-            width_pt: 100.0,
-            height_pt: 100.0,
-            elements: vec![SvgElement {
-                x: 0.0,
-                y: 0.0,
-                variant: Some(SvgVariant::BarLine),
-                kind: SvgKind::Line {
-                    x2: 50.0,
-                    y2: 0.0,
-                    stroke_width: 1.0,
-                },
-            }],
-        };
-        let result = serialize(&[doc]);
-        assert!(result[0].contains(&format!(
-            r#"data-variant="{}""#,
-            SvgVariant::BarLine.as_str()
-        )));
-    }
-
-    #[test]
-    fn path_element_has_data_variant() {
-        let doc = SvgDocument {
-            width_pt: 100.0,
-            height_pt: 100.0,
-            elements: vec![SvgElement {
-                x: 0.0,
-                y: 0.0,
-                variant: Some(SvgVariant::TieOrSlur),
-                kind: SvgKind::Path {
-                    control_x: 25.0,
-                    control_y: -10.0,
-                    end_x: 50.0,
-                    end_y: 0.0,
-                    stroke_width: 1.5,
-                },
-            }],
-        };
-        let result = serialize(&[doc]);
-        assert!(result[0].contains(&format!(
-            r#"data-variant="{}""#,
-            SvgVariant::TieOrSlur.as_str()
-        )));
-    }
-
-    #[test]
-    fn rect_serializes_with_amber_fill() {
-        let doc = SvgDocument {
-            width_pt: 100.0,
-            height_pt: 100.0,
-            elements: vec![SvgElement {
-                x: 10.0,
-                y: 20.0,
-                variant: None,
-                kind: SvgKind::Rect {
-                    width: 50.0,
-                    height: 30.0,
-                },
-            }],
-        };
-        let result = serialize(&[doc]);
-        assert!(result[0].contains("<rect"), "should contain rect");
-        assert!(
-            result[0].contains(r#"data-testid="measure-highlight""#),
-            "should have testid"
-        );
-        assert!(result[0].contains(r#"x="10.0""#), "should have x");
-        assert!(result[0].contains(r#"y="20.0""#), "should have y");
-        assert!(result[0].contains(r#"width="50.0""#), "should have width");
-        assert!(result[0].contains(r#"height="30.0""#), "should have height");
-        assert!(
-            result[0].contains("rgba(255,200,0,0.25)"),
-            "should have amber fill"
-        );
-        assert!(result[0].contains(r#"rx="2""#), "should have corner radius");
-        assert!(
-            !result[0].contains("data-variant"),
-            "measure highlight rects should not emit data-variant"
-        );
-    }
-
-    #[test]
-    fn error_rect_serializes_with_red_fill() {
-        let doc = SvgDocument {
-            width_pt: 595.0,
-            height_pt: 842.0,
-            elements: vec![SvgElement {
-                x: 10.0,
-                y: 20.0,
-                variant: None,
-                kind: SvgKind::ErrorRect {
-                    width: 50.0,
-                    height: 30.0,
-                },
-            }],
-        };
-        let result = serialize(&[doc]);
-        assert!(
-            result[0].contains(r#"data-testid="error-highlight""#),
-            "should have error-highlight testid"
-        );
-        assert!(
-            result[0].contains("rgba(255,0,0,0.15)"),
-            "should have red fill at 15% opacity, got: {}",
-            result[0]
-        );
-        assert!(
-            !result[0].contains("data-variant"),
-            "error highlight rects should not emit data-variant"
-        );
-    }
-
-    #[test]
-    fn transparent_rect_serializes_with_data_variant_and_rx() {
-        let doc = SvgDocument {
-            width_pt: 100.0,
-            height_pt: 100.0,
-            elements: vec![SvgElement {
-                x: 1.0,
-                y: 2.0,
-                variant: None,
-                kind: SvgKind::TransparentRect {
-                    width: 40.0,
-                    height: 20.0,
-                    role: TransparentRectRole::MeasureClickTarget,
-                },
-            }],
-        };
-        let result = serialize(&[doc]);
-        assert!(
-            result[0].contains(&format!(
-                r#"data-variant="{}""#,
-                TransparentRectRole::MeasureClickTarget.as_str()
-            )),
-            "should emit data-variant for hover target rects"
-        );
-        assert!(result[0].contains(r#"rx="2""#), "should have corner radius");
-    }
-}
+mod tests;

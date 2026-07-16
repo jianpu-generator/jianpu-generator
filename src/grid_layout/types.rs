@@ -71,10 +71,17 @@ pub enum GridContent {
     Rest {
         dotted: bool,
     },
+    /// A single wide rest bar standing in for `count` consecutive
+    /// all-rest source measures.
+    MultiMeasureRest {
+        count: u32,
+    },
     NoteDash,
     /// Spacing-only row for octave dots. Resolver emits nothing for this.
     OctaveDot,
     ChordSymbol(String),
+    /// Percussion hit glyph (unpitched GM drum key), centered like a note head.
+    PercussionHit,
     /// Durational underline. `level=0` half-beat, `level=1` quarter-beat.
     Underline {
         level: u32,
@@ -106,6 +113,14 @@ pub enum GridContent {
         key: Option<String>,
         bpm: Option<u32>,
         time_signature: Option<(u32, u32)>,
+        dc_al_coda: bool,
+        to_coda: bool,
+        coda: bool,
+        segno: bool,
+        ds_al_coda: bool,
+        dc_al_fine: bool,
+        fine: bool,
+        ds_al_fine: bool,
     },
     /// Generic styled text for header and footer rows.
     Text {
@@ -113,6 +128,12 @@ pub enum GridContent {
         font_size: f32,
         bold: bool,
         italic: bool,
+    },
+    /// The resolved `# sequence` playback order, rendered as "Sequence: "
+    /// followed by each label (styled like an inline section label) joined
+    /// by " → ".
+    SequenceLine {
+        entries: Vec<String>,
     },
 }
 
@@ -129,9 +150,15 @@ pub enum PostArcGridContent {
     Rest {
         dotted: bool,
     },
+    /// A single wide rest bar standing in for `count` consecutive
+    /// all-rest source measures.
+    MultiMeasureRest {
+        count: u32,
+    },
     NoteDash,
     OctaveDot,
     ChordSymbol(String),
+    PercussionHit,
     Underline {
         level: u32,
     },
@@ -147,12 +174,23 @@ pub enum PostArcGridContent {
         key: Option<String>,
         bpm: Option<u32>,
         time_signature: Option<(u32, u32)>,
+        dc_al_coda: bool,
+        to_coda: bool,
+        coda: bool,
+        segno: bool,
+        ds_al_coda: bool,
+        dc_al_fine: bool,
+        fine: bool,
+        ds_al_fine: bool,
     },
     Text {
         content: String,
         font_size: f32,
         bold: bool,
         italic: bool,
+    },
+    SequenceLine {
+        entries: Vec<String>,
     },
 }
 
@@ -169,6 +207,10 @@ pub struct Header {
     pub author: Option<String>,
     pub part_list: Vec<PartListEntry>,
     pub parts_list_columns: u32,
+    /// The resolved `# sequence` playback order, one entry per label
+    /// reference (e.g. `["A", "B", "A"]`), if present. Rendered as a line
+    /// near the top of the score; does not affect SVG/PDF measure order.
+    pub sequence: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone)]

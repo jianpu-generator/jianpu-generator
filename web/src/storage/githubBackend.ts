@@ -1,6 +1,6 @@
 import { Octokit } from '@octokit/rest'
 import {
-  DEMO_FILE_NAME,
+  DEMO_FILE_NAMES,
   type FileStoreState,
   fileContent,
   isReadOnlyFile,
@@ -12,6 +12,15 @@ import {
   restoreFile as pureRestoreFile,
   updateActiveContent as pureUpdateActiveContent,
 } from '../fileStore'
+import { createGithubContentsApi } from './githubBackendApi'
+import {
+  addedFileName,
+  isNetworkError,
+  joinPath,
+  readStoredFileIds,
+  statusOf,
+  writeStoredFileIds,
+} from './githubBackendUtils'
 import type { SaveStatus, StorageBackend } from './types'
 
 /**
@@ -21,50 +30,6 @@ import type { SaveStatus, StorageBackend } from './types'
  */
 const SCORES_DIR = 'scores'
 const TRASH_DIR = 'trash'
-
-/** `localStorage` key prefix for the per-repo name -> file-ID map (see
- * `readStoredFileIds`/`writeStoredFileIds`). Scoped by `owner/repo` since a
- * user could point the backend at different repos over time. */
-const FILE_IDS_STORAGE_PREFIX = 'jianpu:github-file-ids:v1:'
-
-function fileIdsStorageKey(owner: string, repo: string): string {
-  return `${FILE_IDS_STORAGE_PREFIX}${owner}/${repo}`
-}
-
-/** Reads the previously assigned name -> file-ID map for this repo, if any.
- * Falls back to an empty map on missing/corrupt storage so callers can
- * treat every name as new. */
-function readStoredFileIds(
-  owner: string,
-  repo: string,
-): Record<string, string> {
-  try {
-    const raw = localStorage.getItem(fileIdsStorageKey(owner, repo))
-    if (!raw) return {}
-    const parsed = JSON.parse(raw) as unknown
-    return parsed && typeof parsed === 'object'
-      ? (parsed as Record<string, string>)
-      : {}
-  } catch {
-    return {}
-  }
-}
-
-function writeStoredFileIds(
-  owner: string,
-  repo: string,
-  fileIds: Record<string, string>,
-): void {
-  try {
-    localStorage.setItem(
-      fileIdsStorageKey(owner, repo),
-      JSON.stringify(fileIds),
-    )
-  } catch {
-    // Ignore write failures (e.g. private-browsing storage quotas); IDs
-    // simply won't survive a reload, which is a safe degradation.
-  }
-}
 
 export interface GithubBackendConfig {
   token: string
@@ -91,63 +56,6 @@ export interface GithubBackend extends StorageBackend {
   readonly kind: 'github'
   /** Detail behind the most recent `'error'`/`'offline'` status, if any. */
   lastError(): GithubBackendError | null
-}
-
-function joinPath(...segments: (string | undefined)[]): string {
-  return segments
-    .filter((segment): segment is string => !!segment && segment.length > 0)
-    .map((segment) => segment.replace(/^\/+|\/+$/g, ''))
-    .join('/')
-}
-
-function encodeBase64(text: string): string {
-  const bytes = new TextEncoder().encode(text)
-  let binary = ''
-  for (const byte of bytes) binary += String.fromCharCode(byte)
-  return btoa(binary)
-}
-
-function decodeBase64(base64: string): string {
-  const binary = atob(base64.replace(/\n/g, ''))
-  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
-  return new TextDecoder().decode(bytes)
-}
-
-function statusOf(error: unknown): number | undefined {
-  if (typeof error === 'object' && error !== null && 'status' in error) {
-    const status = (error as { status: unknown }).status
-    return typeof status === 'number' ? status : undefined
-  }
-  return undefined
-}
-
-/** A raw `fetch` failure (offline, DNS failure, aborted request) surfaces
- * differently depending on what layer throws it. If something outside
- * Octokit's own request path throws, it's a plain `TypeError` with no
- * `.status`. But Octokit's `fetchWrapper` always catches the underlying
- * `fetch` rejection itself and rethrows a `RequestError` with `status: 500`
- * and no `.response` (unlike a real HTTP error response, which always
- * carries one) — the original `TypeError` survives on `.cause`. Both shapes
- * are checked here since either can reach a caller depending on where in
- * `githubBackend.ts` the failure originates. */
-function isNetworkError(error: unknown): boolean {
-  if (statusOf(error) === undefined && error instanceof TypeError) return true
-  if (typeof error !== 'object' || error === null) return false
-  const { response, cause } = error as { response?: unknown; cause?: unknown }
-  return response == null && cause instanceof TypeError
-}
-
-/** The single name added to `userFiles` between two `FileStoreState`s, used
- * to recover which file a pure `fileStore.ts` transform just created,
- * renamed to, or restored — rather than re-deriving that naming logic
- * (uniqueness/sanitization) a second time in this module. */
-function addedFileName(
-  before: FileStoreState,
-  after: FileStoreState,
-): string | undefined {
-  return Object.keys(after.userFiles).find(
-    (name) => !(name in before.userFiles),
-  )
 }
 
 /**
@@ -192,113 +100,8 @@ export function createGithubBackend(
     })
   }
 
-  async function fetchSha(path: string): Promise<string | undefined> {
-    try {
-      const { data } = await octokit.rest.repos.getContent({
-        owner,
-        repo,
-        path,
-        ref: branch,
-      })
-      return !Array.isArray(data) && 'sha' in data ? data.sha : undefined
-    } catch (error) {
-      if (statusOf(error) === 404) return undefined
-      throw error
-    }
-  }
-
-  async function fetchFileContent(path: string): Promise<string> {
-    const { data } = await octokit.rest.repos.getContent({
-      owner,
-      repo,
-      path,
-      ref: branch,
-    })
-    if (Array.isArray(data) || data.type !== 'file' || !data.content) {
-      throw new Error(`githubBackend: expected a file at ${path}`)
-    }
-    return decodeBase64(data.content)
-  }
-
-  async function listJianpuFiles(
-    dirPath: string,
-  ): Promise<Record<string, string>> {
-    let entries: { name: string; path: string; type: string }[]
-    try {
-      const { data } = await octokit.rest.repos.getContent({
-        owner,
-        repo,
-        path: dirPath,
-        ref: branch,
-      })
-      entries = Array.isArray(data) ? data : []
-    } catch (error) {
-      if (statusOf(error) === 404) return {}
-      throw error
-    }
-
-    const files = entries.filter(
-      (entry) => entry.type === 'file' && entry.name.endsWith('.jianpu'),
-    )
-    const contents = await Promise.all(
-      files.map((file) => fetchFileContent(file.path)),
-    )
-    const result: Record<string, string> = {}
-    files.forEach((file, index) => {
-      result[file.name] = contents[index] ?? ''
-    })
-    return result
-  }
-
-  /** Create-only write, no sha lookup — for paths guaranteed not to exist
-   * yet (new file, rename/restore destination, duplicate destination). */
-  async function createOnly(
-    path: string,
-    content: string,
-    message: string,
-  ): Promise<void> {
-    await octokit.rest.repos.createOrUpdateFileContents({
-      owner,
-      repo,
-      path,
-      message,
-      content: encodeBase64(content),
-      branch,
-    })
-  }
-
-  /** Fetch-sha-then-write, for paths that may already exist (active-file
-   * saves, and the `trash/` destination of a delete — which can already hold
-   * a stale entry from an earlier restore-then-delete cycle). */
-  async function putFile(
-    path: string,
-    content: string,
-    message: string,
-  ): Promise<void> {
-    const sha = await fetchSha(path)
-    await octokit.rest.repos.createOrUpdateFileContents({
-      owner,
-      repo,
-      path,
-      message,
-      content: encodeBase64(content),
-      sha,
-      branch,
-    })
-  }
-
-  async function deleteFileAt(path: string, message: string): Promise<void> {
-    const sha = await fetchSha(path)
-    if (!sha) return
-    await octokit.rest.repos.deleteFile({
-      owner,
-      repo,
-      path,
-      message,
-      sha,
-      branch,
-    })
-  }
+  const { listJianpuFiles, createOnly, putFile, deleteFileAt } =
+    createGithubContentsApi({ octokit, owner, repo, branch })
 
   /** Classifies a thrown error into the `GithubBackendError`/`SaveStatus`
    * pair it should surface. Returns the pair rather than mutating `status`
@@ -397,7 +200,7 @@ export function createGithubBackend(
       // `runOp`/`saveContentImpl`) no longer applies.
       status = 'idle'
       lastError = null
-      return { active: DEMO_FILE_NAME, userFiles, bin, fileIds }
+      return { active: DEMO_FILE_NAMES[0], userFiles, bin, fileIds }
     },
 
     async createFile(state: FileStoreState): Promise<FileStoreState> {

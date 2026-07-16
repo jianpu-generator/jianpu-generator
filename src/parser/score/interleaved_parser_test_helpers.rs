@@ -11,7 +11,7 @@ pub(super) fn parse(
     base_offset: usize,
     declarations: &[PartDecl],
 ) -> Result<Vec<ParsedTrack>, IrrecoverableError> {
-    super::parse(content, base_offset, declarations).map(|(tracks, _, _)| tracks)
+    super::parse(content, base_offset, declarations, &[]).map(|(tracks, _, _)| tracks)
 }
 
 /// Convenience wrapper that calls `parse` and returns the recoverable errors,
@@ -21,7 +21,7 @@ pub(super) fn parse_recoverable_errors(
     base_offset: usize,
     declarations: &[PartDecl],
 ) -> Result<Vec<Option<RecoverableError>>, IrrecoverableError> {
-    super::parse(content, base_offset, declarations).map(|(_, _, errors)| errors)
+    super::parse(content, base_offset, declarations, &[]).map(|(_, _, errors)| errors)
 }
 
 pub(super) fn decl(name: &str, kind: PartKind) -> PartDecl {
@@ -75,7 +75,7 @@ pub(super) fn total_lyrics_syllables(track: &ParsedTimedTrack) -> usize {
             lyrics
                 .measure_syllables
                 .iter()
-                .map(|measure| measure.len())
+                .map(|measure| measure.iter().map(Vec::len).sum::<usize>())
                 .sum()
         })
         .unwrap_or(0)

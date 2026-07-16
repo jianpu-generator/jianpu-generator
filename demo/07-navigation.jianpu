@@ -1,0 +1,19 @@
+# metadata
+title = "Navigation"
+max measures per system = 1
+
+# parts
+Melody [M] = notes+lyrics
+
+# score
+label="Navigation: segno" segno
+[M] 1 2 3 4
+
+label="Navigation: to coda" tocoda
+[M] 5 6 7 1'
+
+label="Navigation: D.S. al coda" dsalcoda
+[M] 1' 7 6 5
+
+label="Navigation: coda" coda
+[M] 4 3 2 1

@@ -6,7 +6,9 @@ pub struct RenderConfig {
     pub row_height: u32,
     pub label_width: u32,
     pub note_number_width: u32,
-    pub max_columns: u32,
+    pub max_measures_per_system: u32,
+    pub lyrics_font_size: u32,
+    pub hide_system_dividers: bool,
 }
 
 impl RenderConfig {
@@ -15,13 +17,15 @@ impl RenderConfig {
             row_height: meta.row_height,
             label_width: meta.label_width,
             note_number_width: meta.note_number_width,
-            max_columns: meta.max_columns,
+            max_measures_per_system: meta.max_measures_per_system,
+            lyrics_font_size: meta.lyrics_font_size,
+            hide_system_dividers: meta.hide_system_dividers,
         }
     }
 
     /// Font size used for Latin-script lyric syllables (and other body text).
     pub fn lyric_font_size(&self) -> f32 {
-        self.row_height as f32 * 0.6
+        self.lyrics_font_size as f32
     }
 
     /// Font size used for CJK lyric syllables, which render larger than Latin
@@ -52,13 +56,19 @@ mod tests {
             row_height: 30,
             label_width: 20,
             note_number_width: 12,
-            max_columns: 48,
+            max_measures_per_system: 6,
             parts_list_columns: 3,
+            lyrics_font_size: 18,
+            merge_duplicate_measures_across_parts: true,
+            hide_resting_parts: true,
+            hide_system_dividers: false,
         };
         let cfg = RenderConfig::from_metadata(&meta);
         assert_eq!(cfg.row_height, 30);
         assert_eq!(cfg.label_width, 20);
         assert_eq!(cfg.note_number_width, 12);
-        assert_eq!(cfg.max_columns, 48);
+        assert_eq!(cfg.max_measures_per_system, 6);
+        assert_eq!(cfg.lyrics_font_size, 18);
+        assert_eq!(cfg.lyric_font_size(), 18.0);
     }
 }
