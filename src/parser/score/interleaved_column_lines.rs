@@ -60,6 +60,16 @@ fn process_lyrics_column_line(
         tokenize_lyrics(line)
     };
 
+    let verse = ctx
+        .bar_lyric_verse_counters
+        .get_mut(track_index)
+        .map(|counter| {
+            let verse = *counter;
+            *counter += 1;
+            verse
+        })
+        .unwrap_or(0);
+
     {
         let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
             invariant(
@@ -78,9 +88,19 @@ fn process_lyrics_column_line(
             return Ok(());
         };
         let (syllables_vec, line_starts, line_ends) = syllables_acc;
-        syllables_vec.push(syllables);
-        line_starts.push(line_span.start);
-        line_ends.push(line_span.end);
+        let Some(current_measure) = syllables_vec.last_mut() else {
+            return Err(invariant(
+                line_span,
+                "internal error: no measure bucket to push lyric verse into",
+            ));
+        };
+        current_measure.push(syllables);
+        if verse == 0 {
+            line_starts.push(line_span.start);
+            line_ends.push(line_span.end);
+        } else if let Some(end) = line_ends.last_mut() {
+            *end = line_span.end;
+        }
     }
 
     let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
@@ -93,7 +113,13 @@ fn process_lyrics_column_line(
         per_measure_lyrics_errors,
         ..
     } = acc;
-    per_measure_lyrics_errors.push(lyrics_parse_error);
+    if verse == 0 {
+        per_measure_lyrics_errors.push(lyrics_parse_error);
+    } else if lyrics_parse_error.is_some() {
+        if let Some(slot @ None) = per_measure_lyrics_errors.last_mut() {
+            *slot = lyrics_parse_error;
+        }
+    }
     Ok(())
 }
 

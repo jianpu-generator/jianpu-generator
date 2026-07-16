@@ -82,7 +82,10 @@ fn single_part_with_lyrics() {
     assert_eq!(tracks.len(), 1);
     let notes = notes_track(&tracks, "");
     assert!(notes.lyrics.is_some());
-    assert_eq!(notes.lyrics.as_ref().unwrap().measure_syllables[0].len(), 4);
+    assert_eq!(
+        notes.lyrics.as_ref().unwrap().measure_syllables[0][0].len(),
+        4
+    );
 }
 
 #[test]
@@ -129,8 +132,8 @@ fn underscore_on_lyrics_line_means_no_lyrics_for_that_bar() {
     let tracks = parse(content, 0, &declarations).unwrap();
     let lyrics = notes_track(&tracks, "").lyrics.as_ref().unwrap();
     assert_eq!(lyrics.measure_syllables.len(), 2);
-    assert_eq!(lyrics.measure_syllables[0].len(), 4);
-    assert!(lyrics.measure_syllables[1].is_empty());
+    assert_eq!(lyrics.measure_syllables[0][0].len(), 4);
+    assert!(lyrics.measure_syllables[1][0].is_empty());
 }
 
 #[test]
@@ -143,7 +146,7 @@ fn allows_too_few_lyrics_syllables_for_notes() {
             .lyrics
             .as_ref()
             .unwrap()
-            .measure_syllables[0]
+            .measure_syllables[0][0]
             .len(),
         3
     );
@@ -208,7 +211,7 @@ fn tied_notes_share_one_lyric_slot_in_bar() {
             .lyrics
             .as_ref()
             .unwrap()
-            .measure_syllables[0]
+            .measure_syllables[0][0]
             .len(),
         3
     );
@@ -226,8 +229,8 @@ fn cross_measure_tie_continuation_needs_fewer_lyrics() {
     let tracks = parse(content, 0, &declarations).unwrap();
     let lyrics = notes_track(&tracks, "").lyrics.as_ref().unwrap();
     assert_eq!(lyrics.measure_syllables.len(), 2);
-    assert_eq!(lyrics.measure_syllables[0].len(), 1);
-    assert!(lyrics.measure_syllables[1].is_empty());
+    assert_eq!(lyrics.measure_syllables[0][0].len(), 1);
+    assert!(lyrics.measure_syllables[1][0].is_empty());
 }
 
 #[test]
@@ -266,7 +269,7 @@ fn omitted_trailing_lyrics_without_precedent_is_recoverable() {
     let lyrics = track.lyrics.as_ref().expect("track should have lyrics");
     assert_eq!(lyrics.measure_syllables.len(), 2);
     assert_eq!(
-        lyrics.measure_syllables[1].len(),
+        lyrics.measure_syllables[1][0].len(),
         0,
         "measure 2 should have no syllables (treated as no lyrics)"
     );

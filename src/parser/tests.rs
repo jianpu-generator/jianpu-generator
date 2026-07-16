@@ -41,7 +41,10 @@ fn parses_full_document() {
         })
         .sum();
     assert_eq!(event_count, 7);
-    assert_eq!(notes.lyrics.as_ref().unwrap().measure_syllables[0].len(), 4);
+    assert_eq!(
+        notes.lyrics.as_ref().unwrap().measure_syllables[0][0].len(),
+        4
+    );
 }
 
 #[test]

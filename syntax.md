@@ -96,7 +96,7 @@ One track per line. Blank lines are ignored.
 |---------|---------|-------------------------|
 | `chords` | Chord-symbol row | 1 |
 | `notes` | Notes only (instrumental) | 1 |
-| `notes+lyrics` | Notes + lyrics | 2 (notes, then lyrics) |
+| `notes+lyrics` | Notes + lyrics | notes, then 1 or more lyric-verse lines |
 | `percussion` | Unpitched GM drum hits | 1 |
 | `follow[X]` | Inherit column layout from the part with abbreviation `X` | same as target |
 
@@ -595,6 +595,20 @@ In each measure, the number of lyric syllables must match the number of notes th
 - The `_` no-lyrics marker skips this check (zero syllables allowed regardless of notes).
 
 Mismatch is a non-fatal **warning** (rendering continues, with empty-string syllables inserted for underflow), e.g. `[Soprano] lyrics underflow: ran out of syllables at syllable 3 (fewer syllables than notes)` or `[Soprano] lyrics overflow: 1 extra syllable(s) after all notes are consumed`.
+
+### Multiple verses
+
+A `notes+lyrics` part can carry more than one lyric line per measure. Every consecutive `[Part]` line that follows the notes line, up to the next part's line or the end of the measure, is a separate verse, in order (verse 1, verse 2, …):
+
+```
+[Melody] 1 2 3 4
+[Melody] a b c d
+[Melody] one two three four
+```
+
+Each verse renders as its own row directly under the notes row, in verse order, and each verse is tallied and tie-paired against the notes row independently — a verse can have its own `-` held syllables and `_` no-lyrics marker.
+
+The number of verse lines is per-measure: one measure can have one verse while the next has two. A part's verse count changing from one measure to the next always starts a new system at that measure boundary, regardless of how much horizontal space is left on the current line — verses can't silently appear or disappear mid-system.
 
 ---
 

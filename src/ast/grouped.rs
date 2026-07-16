@@ -45,6 +45,7 @@ pub struct Notes {
     pub events: Vec<NoteEvent>,
 }
 
+/// One verse's syllables for a single measure.
 #[derive(Clone)]
 pub struct Lyrics {
     pub syllables: Vec<Syllable>,
@@ -58,7 +59,8 @@ pub struct PartSlice {
     pub volume: u8,
     pub octave_offset: i8,
     pub notes: Notes,
-    pub lyrics: Option<Lyrics>,
+    /// One entry per verse, in order. Empty when this part has no lyrics this measure.
+    pub lyrics: Vec<Lyrics>,
     /// True when this slice's source measure had at least one `Diagnostic::Error`.
     /// The compiler uses this to drop incoming cross-measure tie/slur arcs.
     pub has_error: bool,
@@ -190,11 +192,11 @@ pub(crate) struct GroupedScore {
 pub(crate) struct GroupedMeasure {
     pub(crate) notes: Notes,
     pub(crate) source_span: Span,
-    /// Tie-aware syllables paired to this measure's lyric slots. Set for
-    /// `NotesWithLyrics` parts during grouping.
-    pub(crate) paired_lyrics: Option<Vec<Syllable>>,
-    /// Recoverable lyrics underflow for this measure, if any.
-    pub(crate) lyrics_error: Option<Warning>,
+    /// Tie-aware syllables paired to this measure's lyric slots, one entry per
+    /// verse. Set for `NotesWithLyrics` parts during grouping.
+    pub(crate) paired_lyrics: Vec<Vec<Syllable>>,
+    /// Recoverable lyrics underflow/overflow for this measure, one per verse that has one.
+    pub(crate) lyrics_error: Vec<Warning>,
     /// Recoverable beat overflow for this measure (notes trimmed), if any.
     pub(crate) beat_overflow_error: Option<Warning>,
     /// Recoverable error from `-` used after a rest in this measure, if any.

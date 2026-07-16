@@ -64,8 +64,8 @@ pub(super) fn align_empty_note_measures(
             MeasureSlot::EmptyNote { span } => Ok(GroupedMeasure {
                 notes: Notes { events: Vec::new() },
                 source_span: span,
-                paired_lyrics: None,
-                lyrics_error: None,
+                paired_lyrics: Vec::new(),
+                lyrics_error: Vec::new(),
                 beat_overflow_error: None,
                 dash_after_rest_error: errors
                     .dash_after_rest_errors

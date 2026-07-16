@@ -43,7 +43,7 @@ pub fn apply_lyrics_filter(score: &mut Score, disabled_lyrics: Option<&[String]>
                 .as_ref()
                 .is_some_and(|name| tracks.contains(name))
             {
-                part_slice.lyrics = None;
+                part_slice.lyrics = Vec::new();
                 if matches!(part_slice.kind, PartKind::NotesWithLyrics) {
                     part_slice.kind = PartKind::Notes;
                 }

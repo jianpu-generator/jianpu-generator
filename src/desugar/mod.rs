@@ -1,7 +1,10 @@
-use crate::ast::parsed::{flatten_score_line_slots, PartDecl, ScoreLineRole};
+use crate::ast::parsed::{PartDecl, PartKind, ScoreLineRole, ScoreLineSlot};
 use crate::error::{IrrecoverableError, RecoverableError, Span};
 use crate::parser::group_parser::ResolvedGroup;
 use crate::parser::score::measure_group;
+use key_map::KeyMap;
+
+mod key_map;
 
 /// A raw, not-yet-desugared score line: `[Key] content`, paired with its byte offset.
 type RawSourceLine = (String, usize);
@@ -17,9 +20,16 @@ pub(crate) struct SourceLine {
 }
 
 type MeasureGroup = Vec<SourceLine>;
-type KeyMap = Vec<(String, Vec<SourceLine>)>;
-type DesugarGroupsResult =
-    Result<(Vec<MeasureGroup>, Vec<Option<RecoverableError>>), IrrecoverableError>;
+type DesugarGroupsResult = Result<
+    (
+        Vec<MeasureGroup>,
+        Vec<Vec<ScoreLineSlot>>,
+        Vec<Option<RecoverableError>>,
+    ),
+    IrrecoverableError,
+>;
+type ExpandMeasureGroupResult =
+    Result<(MeasureGroup, Vec<ScoreLineSlot>, Option<RecoverableError>), IrrecoverableError>;
 
 fn extract_time_numerator(group: &[RawSourceLine]) -> Option<u8> {
     let (first_line, _) = group.first()?;
@@ -39,26 +49,26 @@ pub(crate) fn desugar_groups(
     resolved_groups: &[ResolvedGroup],
     base_offset: usize,
 ) -> DesugarGroupsResult {
-    let slots = flatten_score_line_slots(declarations);
     let mut desugared = Vec::with_capacity(groups.len());
+    let mut slots_per_group = Vec::with_capacity(groups.len());
     let mut per_group_errors = Vec::with_capacity(groups.len());
     let mut current_time_num: u8 = 4;
     for group in groups {
         if let Some(num) = extract_time_numerator(&group) {
             current_time_num = num;
         }
-        let (expanded, error) = expand_measure_group(
+        let (expanded, slots, error) = expand_measure_group(
             &group,
             declarations,
             resolved_groups,
-            &slots,
             base_offset,
             current_time_num,
         )?;
         desugared.push(expanded);
+        slots_per_group.push(slots);
         per_group_errors.push(error);
     }
-    Ok((desugared, per_group_errors))
+    Ok((desugared, slots_per_group, per_group_errors))
 }
 
 pub(crate) fn parse_key_prefix(line: &str) -> Option<(&str, &str)> {
@@ -101,10 +111,9 @@ fn expand_measure_group(
     group: &[RawSourceLine],
     declarations: &[PartDecl],
     resolved_groups: &[ResolvedGroup],
-    _slots: &[crate::ast::parsed::ScoreLineSlot],
     base_offset: usize,
     time_num: u8,
-) -> Result<(MeasureGroup, Option<RecoverableError>), IrrecoverableError> {
+) -> ExpandMeasureGroupResult {
     let directive_count = measure_group::directive_line_count(group);
     let directive_lines = group.get(..directive_count).unwrap_or(&[]);
     let data_lines = group.get(directive_count..).unwrap_or(&[]);
@@ -145,9 +154,23 @@ fn expand_measure_group(
         }
     }
 
-    let result_data = if keyed.is_empty() {
+    let (result_data, slots) = if keyed.is_empty() {
         recoverable_error.replace(RecoverableError::measure_no_data_lines(context.span));
-        Vec::new()
+        // No `[Key]`-prefixed line could be attributed to any declaration, so
+        // there is no real per-group role list to compute. Fall back to each
+        // declaration's static default role list (the same shape
+        // `interleaved_parser`'s degenerate single-synthesized-line repair
+        // expects), so slot routing doesn't go out of range downstream.
+        let default_slots = declarations
+            .iter()
+            .enumerate()
+            .flat_map(|(track_index, decl)| {
+                roles_for_group(decl, None, None)
+                    .into_iter()
+                    .map(move |role| ScoreLineSlot { track_index, role })
+            })
+            .collect();
+        (Vec::new(), default_slots)
     } else {
         expand_keyed(
             keyed,
@@ -167,7 +190,7 @@ fn expand_measure_group(
         })
         .collect();
     result.extend(result_data);
-    Ok((result, recoverable_error))
+    Ok((result, slots, recoverable_error))
 }
 
 fn expand_keyed(
@@ -176,8 +199,8 @@ fn expand_keyed(
     resolved_groups: &[ResolvedGroup],
     context: &GroupContext,
     recoverable_error: &mut Option<RecoverableError>,
-) -> Vec<SourceLine> {
-    let key_map = filter_keyed_into_key_map(
+) -> (Vec<SourceLine>, Vec<ScoreLineSlot>) {
+    let key_map = key_map::filter_keyed_into_key_map(
         keyed,
         declarations,
         resolved_groups,
@@ -187,119 +210,37 @@ fn expand_keyed(
     resolve_tracks(&key_map, declarations, context)
 }
 
-/// Groups keyed lines that share the same key, in file order, appending each line's
-/// content to that key's slot list (first line -> first slot, second line -> second slot, ...).
-/// Lines built this way carry no group provenance (`group: None`): they are either a
-/// part's own direct lines, or a group's own broadcast content prior to distribution.
-fn group_by_key(lines: Vec<KeyedLine>) -> KeyMap {
-    let mut map: KeyMap = Vec::new();
-    for line in lines {
-        let entry = SourceLine {
-            content: line.content,
-            offset: line.content_offset,
-            group: None,
-        };
-        if let Some(existing) = map.iter_mut().find(|(k, _)| k == &line.key) {
-            existing.1.push(entry);
-        } else {
-            map.push((line.key, vec![entry]));
+/// The score-line roles this part contributes to this specific measure group.
+/// For `NotesWithLyrics`, the number of `Lyrics` roles is the number of
+/// consecutive `[Part]` lyric lines actually written after the notes line in
+/// this group (verses 1..N), defaulting to a single implicit-fill verse when
+/// no lyrics line was written at all. Other kinds keep their static role list.
+fn roles_for_group(
+    decl: &PartDecl,
+    key_lines: Option<&[SourceLine]>,
+    follow_target_roles: Option<&[ScoreLineRole]>,
+) -> Vec<ScoreLineRole> {
+    match (decl.kind, key_lines) {
+        (PartKind::NotesWithLyrics, Some(lines)) => {
+            let verse_count = lines.len().saturating_sub(1).max(1);
+            std::iter::once(ScoreLineRole::Notes)
+                .chain(itertools::repeat_n(ScoreLineRole::Lyrics, verse_count))
+                .collect()
         }
+        (PartKind::NotesWithLyrics, None) => follow_target_roles
+            .map(|roles| roles.to_vec())
+            .unwrap_or_else(|| decl.score_line_roles().to_vec()),
+        _ => decl.score_line_roles().to_vec(),
     }
-    map
-}
-
-/// Fills each group broadcast's members with its content, one content line per slot index,
-/// skipping any slot a member already has an explicit direct line for (direct lines win).
-/// Lines filled this way are tagged with the group's abbreviation as their provenance.
-fn merge_group_broadcasts(
-    key_map: &mut KeyMap,
-    group_map: KeyMap,
-    resolved_groups: &[ResolvedGroup],
-) {
-    for (group_abbrev, contents) in group_map {
-        let Some(resolved) = resolved_groups
-            .iter()
-            .find(|g| g.abbreviation == group_abbrev)
-        else {
-            continue;
-        };
-        for member in &resolved.members {
-            if !key_map.iter().any(|(k, _)| k == member) {
-                key_map.push((member.clone(), Vec::new()));
-            }
-            let Some((_, lines)) = key_map.iter_mut().find(|(k, _)| k == member) else {
-                continue;
-            };
-            for (index, content) in contents.iter().enumerate() {
-                if index == lines.len() {
-                    lines.push(SourceLine {
-                        content: content.content.clone(),
-                        offset: content.offset,
-                        group: Some(group_abbrev.clone()),
-                    });
-                }
-            }
-        }
-    }
-}
-
-fn filter_keyed_into_key_map(
-    keyed: Vec<KeyedLine>,
-    declarations: &[PartDecl],
-    resolved_groups: &[ResolvedGroup],
-    context: &GroupContext,
-    recoverable_error: &mut Option<RecoverableError>,
-) -> KeyMap {
-    let mut part_keyed = Vec::new();
-    let mut group_keyed = Vec::new();
-    for line in keyed {
-        if declarations.iter().any(|d| d.abbreviation == line.key) {
-            part_keyed.push(line);
-        } else if resolved_groups.iter().any(|g| g.abbreviation == line.key) {
-            group_keyed.push(line);
-        } else {
-            recoverable_error.get_or_insert_with(|| {
-                RecoverableError::part_key_unknown(line.key_prefix_span, &line.key)
-            });
-        }
-    }
-
-    let mut key_map = group_by_key(part_keyed);
-    let group_map = group_by_key(group_keyed);
-    merge_group_broadcasts(&mut key_map, group_map, resolved_groups);
-
-    for (abbrev, lines) in &key_map {
-        if let Some(decl) = declarations.iter().find(|d| &d.abbreviation == abbrev) {
-            let slot_count = decl.score_line_roles().len();
-            if let Some(excess) = lines.get(slot_count) {
-                let line_span = Span::new(
-                    context.base_offset + excess.offset,
-                    context.base_offset + excess.offset + 1,
-                );
-                recoverable_error.get_or_insert_with(|| {
-                    RecoverableError::general(
-                        line_span,
-                        format!(
-                            "part [{}] has {} lines but only {} slot(s)",
-                            abbrev,
-                            lines.len(),
-                            slot_count
-                        ),
-                    )
-                });
-            }
-        }
-    }
-
-    key_map
 }
 
 fn resolve_tracks(
     key_map: &KeyMap,
     declarations: &[PartDecl],
     context: &GroupContext,
-) -> Vec<SourceLine> {
+) -> (Vec<SourceLine>, Vec<ScoreLineSlot>) {
     let mut resolved_per_track: Vec<Vec<SourceLine>> = Vec::with_capacity(declarations.len());
+    let mut roles_per_track: Vec<Vec<ScoreLineRole>> = Vec::with_capacity(declarations.len());
 
     for i in 0..declarations.len() {
         let Some(decl) = declarations.get(i) else {
@@ -317,8 +258,15 @@ fn resolve_tracks(
                 .position(|d| &d.abbreviation == target)
         });
 
-        let track_lines: Vec<SourceLine> = decl
-            .score_line_roles()
+        let roles = roles_for_group(
+            decl,
+            key_lines,
+            follow_target_index
+                .and_then(|t| roles_per_track.get(t))
+                .map(Vec::as_slice),
+        );
+
+        let track_lines: Vec<SourceLine> = roles
             .iter()
             .enumerate()
             .map(|(slot_index, &role)| {
@@ -339,11 +287,22 @@ fn resolve_tracks(
             })
             .collect();
         resolved_per_track.push(track_lines);
+        roles_per_track.push(roles);
     }
 
-    resolved_per_track.into_iter().flatten().collect()
+    let lines = resolved_per_track.into_iter().flatten().collect();
+    let slots = roles_per_track
+        .into_iter()
+        .enumerate()
+        .flat_map(|(track_index, roles)| {
+            roles
+                .into_iter()
+                .map(move |role| ScoreLineSlot { track_index, role })
+        })
+        .collect();
+    (lines, slots)
 }
 
 #[cfg(test)]
-#[path = "desugar_tests.rs"]
+#[path = "tests.rs"]
 mod tests;

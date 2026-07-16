@@ -67,7 +67,11 @@ pub enum ElementContent {
     BarLine,
     /// Visual dash rendered after a note head for each extra beat of duration (e.g. `1-`).
     NoteDash,
-    Lyric(String),
+    /// A syllable for one verse (0-indexed) of a `notes+lyrics` part.
+    Lyric {
+        text: String,
+        verse: usize,
+    },
 }
 
 /// The full logical extent of one slur or tie arc across measures.

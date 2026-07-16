@@ -6,9 +6,12 @@ use crate::grid_layout::layout::{
 use crate::grid_layout::types::{Header, MeasureClickTarget, MeasureHighlight};
 
 fn has_lyrics(row: &crate::compiler::types::MeasureRow) -> bool {
-    row.elements
-        .iter()
-        .any(|e| matches!(e.content, crate::compiler::types::ElementContent::Lyric(_)))
+    row.elements.iter().any(|e| {
+        matches!(
+            e.content,
+            crate::compiler::types::ElementContent::Lyric { .. }
+        )
+    })
 }
 
 /// Column bounds of a measure block, in fractional grid columns, matching where its

@@ -75,7 +75,7 @@ pub(super) fn total_lyrics_syllables(track: &ParsedTimedTrack) -> usize {
             lyrics
                 .measure_syllables
                 .iter()
-                .map(|measure| measure.len())
+                .map(|measure| measure.iter().map(Vec::len).sum::<usize>())
                 .sum()
         })
         .unwrap_or(0)

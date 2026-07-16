@@ -26,6 +26,73 @@ fn explicit_lyrics_keep_lyric_row() {
             matches!(slice.kind, PartKind::NotesWithLyrics),
             "explicit lyrics must keep the lyric row"
         );
-        assert!(slice.lyrics.is_some());
+        assert_eq!(slice.lyrics.len(), 1);
     }
+}
+
+/// Consecutive `[Part]` lyric lines after the notes line become verses 1..N, in order.
+#[test]
+fn multiple_lyric_lines_become_separate_verses() {
+    let input = r#"# metadata
+title = "t"
+author = "a"
+
+# parts
+Melody = notes+lyrics
+
+# score
+time=4/4 key=C4 bpm=120
+[Melody] 1 2 3 4
+[Melody] do re mi fa
+[Melody] one two three four
+"#;
+    let score = compile(input, "test.jianpu", &[]).unwrap();
+    let slice = score.measures[0].parts[0].slice();
+    assert_eq!(
+        slice.lyrics.len(),
+        2,
+        "two lyric lines after the notes line should become two verses"
+    );
+    let verse_texts = |verse: usize| -> Vec<String> {
+        slice.lyrics[verse]
+            .syllables
+            .iter()
+            .map(|s| s.text.clone())
+            .collect()
+    };
+    assert_eq!(verse_texts(0), vec!["do", "re", "mi", "fa"]);
+    assert_eq!(verse_texts(1), vec!["one", "two", "three", "four"]);
+}
+
+/// A part whose verse count changes between two consecutive measures must never
+/// have those measures combined into the same rendering system, regardless of
+/// available horizontal space.
+#[test]
+fn verse_count_change_forces_new_system() {
+    let input = r#"# metadata
+title = "t"
+author = "a"
+
+# parts
+Melody = notes+lyrics
+
+# score
+time=4/4 key=C4 bpm=120
+[Melody] 1 2 3 4
+[Melody] do re mi fa
+
+[Melody] 5 6 7 1
+[Melody] one two three four
+[Melody] uno dos tres cuatro
+"#;
+    let score = compile(input, "test.jianpu", &[]).unwrap();
+    let compile_result = compiler::compile(&score);
+    let compile_result = consolidator::consolidate(compile_result);
+    let config = render_config::RenderConfig::from_metadata(&score.metadata);
+    let systems = grid_layout::layout::pack_into_systems(&compile_result.blocks, &config);
+    assert_eq!(
+        systems.len(),
+        2,
+        "a verse-count change for the same part must force a new system even though both measures would fit in one"
+    );
 }

@@ -62,7 +62,10 @@ fn lyric_row(id: &str) -> MeasureRow {
         label: id.to_string(),
         elements: vec![ColumnElement {
             column: 0,
-            content: ElementContent::Lyric("la".to_string()),
+            content: ElementContent::Lyric {
+                text: "la".to_string(),
+                verse: 0,
+            },
         }],
         source_part_index: 0,
     }
@@ -232,7 +235,10 @@ fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
                 label: "lyric".to_string(),
                 elements: vec![ColumnElement {
                     column: 0,
-                    content: ElementContent::Lyric("la".to_string()),
+                    content: ElementContent::Lyric {
+                        text: "la".to_string(),
+                        verse: 0,
+                    },
                 }],
                 source_part_index: 0,
             },

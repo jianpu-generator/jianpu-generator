@@ -16,7 +16,9 @@ fn expand_mixed_rows(rows: Vec<MeasureRow>) -> Vec<MeasureRow> {
     rows.into_iter()
         .flat_map(|row| {
             if is_mixed_row(&row) {
-                vec![notes_row(&row), lyrics_row(&row)]
+                let mut expanded = vec![notes_row(&row)];
+                expanded.extend(lyrics_rows(&row));
+                expanded
             } else {
                 vec![row]
             }
@@ -34,7 +36,7 @@ fn is_mixed_row(row: &MeasureRow) -> bool {
     let has_lyric = row
         .elements
         .iter()
-        .any(|element| matches!(element.content, ElementContent::Lyric(_)));
+        .any(|element| matches!(element.content, ElementContent::Lyric { .. }));
     has_note_or_rest && has_lyric
 }
 
@@ -45,7 +47,7 @@ fn notes_row(row: &MeasureRow) -> MeasureRow {
         elements: row
             .elements
             .iter()
-            .filter(|element| !matches!(element.content, ElementContent::Lyric(_)))
+            .filter(|element| !matches!(element.content, ElementContent::Lyric { .. }))
             .cloned()
             .collect(),
         source_part_index: row.source_part_index,
@@ -53,28 +55,48 @@ fn notes_row(row: &MeasureRow) -> MeasureRow {
     }
 }
 
-fn lyrics_row(row: &MeasureRow) -> MeasureRow {
+/// Splits a mixed row's lyric elements into one `MeasureRow` per verse, in verse
+/// order, each with a distinct `RowId` so a verse-count change between two
+/// measures of the same part is a row-structure change (see `pack_into_systems`
+/// in `grid_layout::layout`), forcing a new system rather than silently
+/// dropping or misaligning verses.
+fn lyrics_rows(row: &MeasureRow) -> Vec<MeasureRow> {
     let bar_line = row
         .elements
         .iter()
         .find(|element| matches!(element.content, ElementContent::BarLine))
         .cloned();
-    let mut elements: Vec<ColumnElement> = row
+    let verse_count = row
         .elements
         .iter()
-        .filter(|element| matches!(element.content, ElementContent::Lyric(_)))
-        .cloned()
-        .collect();
-    if let Some(bar_line) = bar_line {
-        elements.push(bar_line);
-    }
-    MeasureRow {
-        id: RowId(format!("{}-lyrics", row.id.0)),
-        label: row.label.clone(),
-        elements,
-        source_part_index: row.source_part_index,
-        group_provenance: row.group_provenance.clone(),
-    }
+        .filter_map(|element| match &element.content {
+            ElementContent::Lyric { verse, .. } => Some(*verse + 1),
+            _ => None,
+        })
+        .max()
+        .unwrap_or(0);
+    (0..verse_count)
+        .map(|verse| {
+            let mut elements: Vec<ColumnElement> = row
+                .elements
+                .iter()
+                .filter(|element| {
+                    matches!(&element.content, ElementContent::Lyric { verse: v, .. } if *v == verse)
+                })
+                .cloned()
+                .collect();
+            if let Some(bar_line) = &bar_line {
+                elements.push(bar_line.clone());
+            }
+            MeasureRow {
+                id: RowId(format!("{}-lyrics-{verse}", row.id.0)),
+                label: row.label.clone(),
+                elements,
+                source_part_index: row.source_part_index,
+                group_provenance: row.group_provenance.clone(),
+            }
+        })
+        .collect()
 }
 
 /// A merged row's label is the shared group abbreviation when every row being

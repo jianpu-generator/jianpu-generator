@@ -11,7 +11,7 @@ pub(crate) fn is_lyric_row(row: &MeasureRow) -> bool {
     let has_lyric = row
         .elements
         .iter()
-        .any(|e| matches!(e.content, ElementContent::Lyric(_)));
+        .any(|e| matches!(e.content, ElementContent::Lyric { .. }));
     let has_note = row.elements.iter().any(|e| {
         matches!(
             e.content,
@@ -24,7 +24,7 @@ pub(crate) fn is_lyric_row(row: &MeasureRow) -> bool {
 pub(crate) fn has_lyrics(row: &MeasureRow) -> bool {
     row.elements
         .iter()
-        .any(|e| matches!(e.content, ElementContent::Lyric(_)))
+        .any(|e| matches!(e.content, ElementContent::Lyric { .. }))
 }
 
 pub(crate) fn is_chord_only_row(row: &MeasureRow) -> bool {

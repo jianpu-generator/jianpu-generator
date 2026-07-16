@@ -8,12 +8,16 @@ pub enum ParsedMeasureSlot {
 
 #[derive(Debug)]
 pub struct ParsedLyrics {
-    /// One syllable vec per measure, in score order. Empty inner vec = `_` (no lyrics).
-    pub measure_syllables: Vec<Vec<Syllable>>,
-    /// Byte offset of the start of the lyrics line for each measure, in order.
+    /// Measure -> verse -> syllables, in score order. Consecutive `[Part]` lyric
+    /// lines after the notes line become verses 1..N; an empty inner vec = `_`
+    /// (no lyrics) for that verse in that measure.
+    pub measure_syllables: Vec<Vec<Vec<Syllable>>>,
+    /// Byte offset of the start of the lyrics block (spanning all its verses)
+    /// for each measure, in order.
     pub measure_starts: Vec<usize>,
-    /// Byte offset of the end of the lyrics line for each measure, in order.
-    /// Used to extend the measure's source span to cover the lyrics line.
+    /// Byte offset of the end of the lyrics block (spanning all its verses)
+    /// for each measure, in order. Used to extend the measure's source span to
+    /// cover the lyrics lines.
     pub measure_ends: Vec<usize>,
 }
 

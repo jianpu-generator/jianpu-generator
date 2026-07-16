@@ -7,8 +7,6 @@ use crate::error::{Diagnostic, RecoverableError, Span};
 
 fn collect_part_measure_diagnostics(m: Option<&GroupedMeasure>) -> Vec<Diagnostic> {
     [
-        m.and_then(|m| m.lyrics_error.clone())
-            .map(Diagnostic::Warning),
         m.and_then(|m| m.beat_overflow_error.clone())
             .map(Diagnostic::Warning),
         m.and_then(|m| m.dash_after_rest_error.clone())
@@ -21,6 +19,11 @@ fn collect_part_measure_diagnostics(m: Option<&GroupedMeasure>) -> Vec<Diagnosti
     ]
     .into_iter()
     .flatten()
+    .chain(
+        m.into_iter()
+            .flat_map(|m| m.lyrics_error.iter().cloned())
+            .map(Diagnostic::Warning),
+    )
     .chain(
         m.into_iter()
             .flat_map(|m| m.dotted_eighth_errors.iter().cloned()),
@@ -201,9 +204,11 @@ fn build_part_rows(
                 let lyrics = match part.kind {
                     PartKind::NotesWithLyrics => measure
                         .paired_lyrics
-                        .clone()
-                        .map(|syllables| Lyrics { syllables }),
-                    PartKind::Chords | PartKind::Notes | PartKind::Percussion => None,
+                        .iter()
+                        .cloned()
+                        .map(|syllables| Lyrics { syllables })
+                        .collect(),
+                    PartKind::Chords | PartKind::Notes | PartKind::Percussion => Vec::new(),
                 };
                 let slice = PartSlice {
                     name: part.name.clone(),

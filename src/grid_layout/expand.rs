@@ -122,7 +122,7 @@ pub(crate) fn expand_measure_elements(
                     }
                 }
             }
-            ElementContent::Lyric(_) => {} // handled in lyric-row branch above
+            ElementContent::Lyric { .. } => {} // handled in lyric-row branch above
         }
     }
 }
@@ -143,7 +143,7 @@ pub(crate) fn expand_lyric_part(
         let col_w = block_column_width(block);
         if let Some(part_row) = block.rows.get(part_idx) {
             for el in &part_row.elements {
-                if let ElementContent::Lyric(text) = &el.content {
+                if let ElementContent::Lyric { text, .. } = &el.content {
                     row.elements.push(GridElement {
                         column: MUSIC_START_COL + measure_col_offset + el.column,
                         column_span: 1,

@@ -155,8 +155,8 @@ fn lyrics_distributed_per_measure() {
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();
     assert_eq!(score.measures.len(), 2);
-    let m0_lyrics = score.measures[0].parts[0].slice().lyrics.as_ref().unwrap();
-    let m1_lyrics = score.measures[1].parts[0].slice().lyrics.as_ref().unwrap();
+    let m0_lyrics = &score.measures[0].parts[0].slice().lyrics[0];
+    let m1_lyrics = &score.measures[1].parts[0].slice().lyrics[0];
     assert_eq!(m0_lyrics.syllables.len(), 4);
     assert_eq!(m1_lyrics.syllables.len(), 4);
 }

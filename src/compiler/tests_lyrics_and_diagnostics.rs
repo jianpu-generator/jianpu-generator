@@ -35,7 +35,7 @@ fn cross_measure_tilde_tie_does_not_consume_lyric_slot_for_continuation_note() {
         .elements
         .iter()
         .filter_map(|e| {
-            if let ElementContent::Lyric(text) = &e.content {
+            if let ElementContent::Lyric { text, .. } = &e.content {
                 Some((e.column, text.as_str()))
             } else {
                 None
