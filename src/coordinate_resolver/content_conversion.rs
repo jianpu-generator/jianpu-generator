@@ -262,6 +262,10 @@ pub(super) fn grid_to_absolute(
             dotted: *dotted,
         }),
         PostArcGridContent::Rest { dotted } => Some(AbsoluteContent::Rest { dotted: *dotted }),
+        PostArcGridContent::MultiMeasureRest { count } => Some(AbsoluteContent::MultiMeasureRest {
+            count: *count,
+            width: span_width,
+        }),
         PostArcGridContent::OctaveDot => None,
         PostArcGridContent::ChordSymbol(s) => Some(AbsoluteContent::ChordSymbol(s.clone())),
         PostArcGridContent::PercussionHit => Some(AbsoluteContent::PercussionHit),

@@ -140,6 +140,9 @@ fn resolve_row_element(
                 },
             }))
         }
+        GridContent::MultiMeasureRest { count } => Ok(Some(resolve_multi_measure_rest(
+            *count, x_start, span_width, y,
+        ))),
         content => {
             let Some(post_arc_content) = to_post_arc_content(content) else {
                 return Ok(None);
@@ -147,6 +150,17 @@ fn resolve_row_element(
             Ok(grid_to_absolute(&post_arc_content, span_width, el.halign)?
                 .map(|content| AbsoluteElement { x, y, content }))
         }
+    }
+}
+
+/// The collapsed multi-measure-rest bar spans its full custom column_span
+/// width starting at the column's left edge, rather than the generic
+/// per-column halign/valign math above.
+fn resolve_multi_measure_rest(count: u32, x_start: f32, width: f32, y: f32) -> AbsoluteElement {
+    AbsoluteElement {
+        x: x_start,
+        y,
+        content: AbsoluteContent::MultiMeasureRest { count, width },
     }
 }
 
@@ -167,6 +181,9 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
             dotted: *dotted,
         }),
         GridContent::Rest { dotted } => Some(PostArcGridContent::Rest { dotted: *dotted }),
+        GridContent::MultiMeasureRest { count } => {
+            Some(PostArcGridContent::MultiMeasureRest { count: *count })
+        }
         GridContent::NoteDash => Some(PostArcGridContent::NoteDash),
         GridContent::OctaveDot => Some(PostArcGridContent::OctaveDot),
         GridContent::ChordSymbol(s) => Some(PostArcGridContent::ChordSymbol(s.clone())),

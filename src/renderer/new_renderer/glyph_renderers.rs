@@ -146,6 +146,67 @@ pub(super) fn render_rest(
     results
 }
 
+/// Standard multi-bar-rest engraving: a thick horizontal bar with short
+/// vertical ticks at both ends, and the collapsed measure count printed
+/// centered above it.
+pub(super) fn render_multi_measure_rest(
+    elem: &AbsoluteElement,
+    count: u32,
+    width: f32,
+    row_height: &f32,
+    base_font_size: &f32,
+) -> Vec<SvgElement> {
+    let bar_stroke_width = row_height * 0.18;
+    let tick_half_height = row_height * 0.25;
+
+    vec![
+        SvgElement {
+            x: elem.x,
+            y: elem.y,
+            variant: Some(SvgVariant::MultiMeasureRest),
+            kind: SvgKind::Line {
+                x2: elem.x + width,
+                y2: elem.y,
+                stroke_width: bar_stroke_width,
+            },
+        },
+        SvgElement {
+            x: elem.x,
+            y: elem.y - tick_half_height,
+            variant: Some(SvgVariant::MultiMeasureRest),
+            kind: SvgKind::Line {
+                x2: elem.x,
+                y2: elem.y + tick_half_height,
+                stroke_width: 1.0,
+            },
+        },
+        SvgElement {
+            x: elem.x + width,
+            y: elem.y - tick_half_height,
+            variant: Some(SvgVariant::MultiMeasureRest),
+            kind: SvgKind::Line {
+                x2: elem.x + width,
+                y2: elem.y + tick_half_height,
+                stroke_width: 1.0,
+            },
+        },
+        SvgElement {
+            x: elem.x + width * 0.5,
+            y: elem.y - *row_height * 0.5,
+            variant: Some(SvgVariant::MultiMeasureRest),
+            kind: SvgKind::Text {
+                content: count.to_string(),
+                font_size: *base_font_size,
+                anchor: TextAnchor::Middle,
+                baseline: DominantBaseline::Middle,
+                font: FontFamily::Monospace,
+                weight: FontWeight::Bold,
+                italic: false,
+            },
+        },
+    ]
+}
+
 pub(super) fn render_percussion_hit(
     elem: &AbsoluteElement,
     base_font_size: &f32,

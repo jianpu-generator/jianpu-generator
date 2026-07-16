@@ -7,12 +7,24 @@ pub enum ArcKind {
     Tie,
 }
 
+/// Column width (in grid-layout columns) reserved for a collapsed
+/// `MultiMeasureRest` block, regardless of how many source measures it
+/// represents — wide enough to read visually as "more than one measure",
+/// with the printed count communicating the actual number. Shared between
+/// the compiler (which positions the block's `BarLine`) and the grid-layout
+/// expansion step (which spans the `MultiMeasureRest` glyph to match).
+pub const MULTI_MEASURE_REST_WIDTH: u32 = 8;
+
 #[derive(Debug, Clone)]
 pub struct MeasureBlock {
     pub rows: Vec<MeasureRow>,
     pub decorations: Vec<Decoration>,
     /// Diagnostics collected during grouping for this measure.
     pub diagnostics: Vec<Diagnostic>,
+    /// Number of original source measures this block stands in for. `1` for
+    /// every normal block; > 1 when a run of all-rest measures has been
+    /// folded into a single `MultiMeasureRest` block.
+    pub represents_measures: usize,
 }
 
 impl PartialEq for MeasureBlock {
@@ -55,6 +67,11 @@ pub enum ElementContent {
     },
     Rest {
         dotted: bool,
+    },
+    /// A single wide rest bar standing in for `count` consecutive
+    /// all-rest source measures (cross-measure collapsing).
+    MultiMeasureRest {
+        count: usize,
     },
     ChordSymbol(String),
     PercussionHit,

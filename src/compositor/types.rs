@@ -26,6 +26,10 @@ pub enum AbsoluteContent {
     Rest {
         dotted: bool,
     },
+    MultiMeasureRest {
+        count: u32,
+        width: f32,
+    },
     ChordSymbol(String),
     PercussionHit,
     Underline {

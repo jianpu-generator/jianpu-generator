@@ -71,6 +71,11 @@ pub enum GridContent {
     Rest {
         dotted: bool,
     },
+    /// A single wide rest bar standing in for `count` consecutive
+    /// all-rest source measures.
+    MultiMeasureRest {
+        count: u32,
+    },
     NoteDash,
     /// Spacing-only row for octave dots. Resolver emits nothing for this.
     OctaveDot,
@@ -144,6 +149,11 @@ pub enum PostArcGridContent {
     },
     Rest {
         dotted: bool,
+    },
+    /// A single wide rest bar standing in for `count` consecutive
+    /// all-rest source measures.
+    MultiMeasureRest {
+        count: u32,
     },
     NoteDash,
     OctaveDot,

@@ -1,4 +1,4 @@
-use crate::compiler::types::{ElementContent, MeasureBlock, MeasureRow};
+use crate::compiler::types::{ElementContent, MeasureBlock, MeasureRow, MULTI_MEASURE_REST_WIDTH};
 use crate::grid_layout::layout::{
     block_column_width, chord_part_sub_row_heights, compute_bar_height, has_lyrics,
     is_chord_only_row, is_lyric_row, lyric_row_height, note_part_sub_row_heights, LABEL_COLS,
@@ -41,6 +41,34 @@ pub(crate) struct MeasureRenderParams {
     pub(crate) part_idx: usize,
 }
 
+/// The collapsed multi-measure-rest glyph gets a fixed wide `column_span`
+/// (unlike `push_head`, which always spans a single column), so it's built
+/// as its own `GridElement` rather than routed through `push_head`.
+fn push_multi_measure_rest(sub_rows: &mut [GridRow], head_sub: usize, column: u32, count: u32) {
+    if let Some(row) = sub_rows.get_mut(head_sub) {
+        row.elements.push(GridElement {
+            column,
+            column_span: MULTI_MEASURE_REST_WIDTH,
+            halign: HAlign::Center,
+            valign: VAlign::Center,
+            content: GridContent::MultiMeasureRest { count },
+        });
+    }
+}
+
+fn push_bar_line(sub_rows: &mut [GridRow], column: u32, bar_height: f32) {
+    if let Some(row) = sub_rows.get_mut(0) {
+        row.elements.push(grid_el(
+            column,
+            GridContent::BarLine {
+                height_pt: bar_height,
+            },
+            HAlign::Center,
+            VAlign::Top,
+        ));
+    }
+}
+
 pub(crate) fn expand_measure_elements(
     row: &MeasureRow,
     measure_col_offset: u32,
@@ -74,6 +102,9 @@ pub(crate) fn expand_measure_elements(
                 grid_col,
                 GridContent::Rest { dotted: *dotted },
             ),
+            ElementContent::MultiMeasureRest { count } => {
+                push_multi_measure_rest(sub_rows, head_sub, grid_col, *count as u32);
+            }
             ElementContent::NoteDash => {
                 push_head(sub_rows, head_sub, grid_col, GridContent::NoteDash);
             }
@@ -110,16 +141,7 @@ pub(crate) fn expand_measure_elements(
             }
             ElementContent::BarLine => {
                 if params.part_idx == 0 {
-                    if let Some(row) = sub_rows.get_mut(0) {
-                        row.elements.push(grid_el(
-                            grid_col,
-                            GridContent::BarLine {
-                                height_pt: params.bar_height,
-                            },
-                            HAlign::Center,
-                            VAlign::Top,
-                        ));
-                    }
+                    push_bar_line(sub_rows, grid_col, params.bar_height);
                 }
             }
             ElementContent::Lyric { .. } => {} // handled in lyric-row branch above

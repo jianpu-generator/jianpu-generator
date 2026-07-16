@@ -88,7 +88,7 @@ pub(crate) fn compute_measure_highlights_for_range(
                     ));
                 }
                 col_offset += col_w;
-                global_measure_index += 1;
+                global_measure_index += block.represents_measures;
             }
             row_offset += musical_row_count;
         }
@@ -135,7 +135,7 @@ pub(crate) fn compute_measure_highlight_location(
                     ));
                 }
                 col_offset += col_w;
-                global_measure_index += 1;
+                global_measure_index += block.represents_measures;
             }
             row_offset += musical_row_count;
         }
@@ -149,14 +149,20 @@ pub(crate) fn compute_error_highlight_infos(
     header: &Header,
     base: f32,
 ) -> Vec<(usize, MeasureHighlight)> {
-    blocks
-        .iter()
-        .enumerate()
-        .filter(|(_, block)| !block.diagnostics.is_empty())
-        .filter_map(|(measure_idx, _)| {
-            compute_measure_highlight_location(page_systems, measure_idx, header, base)
-        })
-        .collect()
+    let mut measure_idx: usize = 0;
+    let mut results: Vec<(usize, MeasureHighlight)> = Vec::new();
+    for block in blocks {
+        if !block.diagnostics.is_empty() {
+            results.extend(compute_measure_highlight_location(
+                page_systems,
+                measure_idx,
+                header,
+                base,
+            ));
+        }
+        measure_idx += block.represents_measures;
+    }
+    results
 }
 
 pub(crate) fn measure_highlights_on_page(
@@ -210,7 +216,7 @@ pub(crate) fn compute_all_measure_click_targets(
                     },
                 ));
                 col_offset += col_w;
-                global_measure_index += 1;
+                global_measure_index += block.represents_measures;
             }
             row_offset += musical_row_count;
         }

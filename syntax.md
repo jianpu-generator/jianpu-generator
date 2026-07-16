@@ -518,6 +518,10 @@ In 4/4, the parser rejects rhythm spellings that cross metrical boundaries witho
 
 Other time signatures skip these checks for now. Violations are diagnostics attached to the note (half-bar-boundary crossing is a **warning**; the dotted-eighth-tail rule is a **recoverable error**) — the file still renders.
 
+### Multi-measure rests
+
+This isn't new input syntax — it's automatic rendering behavior. When 2 or more consecutive measures are entirely rests (on every currently-visible part, after any `--tracks` filtering) and none of them carries its own directive (label, navigation marker, time signature/BPM/key change) or diagnostic, they render as a single wide rest bar showing the collapsed measure count, instead of one rest measure per bar. A single isolated all-rest measure still renders normally.
+
 ### Examples
 
 | Token | Meaning |

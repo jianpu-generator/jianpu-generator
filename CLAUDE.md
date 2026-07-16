@@ -16,6 +16,10 @@ Example:
 cargo run -- generate svg simple.jianpu
 ```
 
+## Committing
+
+Do not run `cargo build`/`cargo test` before committing — the pre-commit hook already runs them.
+
 Avoid using uncommon abbreviations when naming (e.g. `TimedRdParser` for "recursive descent" — spell it out as `TimedRecursiveDescentParser` instead). Widely understood abbreviations (e.g. `Ast`, `Id`, `Http`) are fine.
 
 Test cases should not be inlined with the source code, they should live in separate files.

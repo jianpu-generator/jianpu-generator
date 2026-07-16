@@ -1,4 +1,5 @@
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
+use crate::grid_layout::highlight::compute_all_measure_click_targets;
 use crate::grid_layout::layout::compute_measure_highlight_location;
 use crate::grid_layout::layout::compute_measure_highlights_for_range;
 use crate::grid_layout::types::Header;
@@ -29,7 +30,14 @@ fn simple_block(col_count: u32) -> MeasureBlock {
         }],
         decorations: vec![],
         diagnostics: vec![],
+        represents_measures: 1,
     }
+}
+
+fn merged_block(col_count: u32, represents_measures: usize) -> MeasureBlock {
+    let mut block = simple_block(col_count);
+    block.represents_measures = represents_measures;
+    block
 }
 
 fn no_header() -> Header {
@@ -147,6 +155,33 @@ fn range_spanning_two_pages_reports_correct_page_indices() {
 }
 
 #[test]
+fn global_measure_index_accounts_for_a_merged_block() {
+    // 5 source measures: measure 0 is a normal block, measures 1-3 are
+    // collapsed into one merged block (represents_measures = 3), measure 4
+    // is a normal block again. Its global_measure_index must be 4, not 2
+    // (which is what a naive "+1 per block" count would produce, since
+    // there are only 3 blocks in this system).
+    let page_systems: Vec<Vec<Vec<MeasureBlock>>> = vec![vec![vec![
+        simple_block(4),
+        merged_block(4, 3),
+        simple_block(4),
+    ]]];
+    let result = compute_measure_highlight_location(&page_systems, 4, &no_header(), 20.0);
+    assert!(
+        result.is_some(),
+        "measure index 4 should resolve to the block after the merged run"
+    );
+
+    let targets = compute_all_measure_click_targets(&page_systems, &no_header(), 20.0);
+    let measure_indices: Vec<usize> = targets.iter().map(|(_, t)| t.measure_index).collect();
+    assert_eq!(
+        measure_indices,
+        vec![0, 1, 4],
+        "click targets should carry global_measure_index 0, 1 (merged block's start), 4 (not 2)"
+    );
+}
+
+#[test]
 fn erroneous_measure_produces_error_highlight() {
     use crate::error::{Diagnostic, Span, Warning};
 
@@ -157,6 +192,7 @@ fn erroneous_measure_produces_error_highlight() {
             Span::new(0, 1),
             "lyrics underflow",
         ))],
+        represents_measures: 1,
     };
     let header = Header {
         title: Some("T".into()),

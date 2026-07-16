@@ -6,8 +6,9 @@ use crate::renderer::new_types::{
     SvgDocument, SvgElement, SvgKind, SvgVariant, Tag, TransparentRectRole, TspanData,
 };
 use glyph_renderers::{
-    render_bar_line, render_chord_symbol, render_horizontal_line, render_lyric, render_note_head,
-    render_percussion_hit, render_rest, render_tie_or_slur, render_underline, NoteRenderParams,
+    render_bar_line, render_chord_symbol, render_horizontal_line, render_lyric,
+    render_multi_measure_rest, render_note_head, render_percussion_hit, render_rest,
+    render_tie_or_slur, render_underline, NoteRenderParams,
 };
 
 mod glyph_renderers;
@@ -71,6 +72,9 @@ fn render_element(
         AbsoluteContent::Rest { dotted } => {
             render_rest(elem, *dotted, row_height, base_font_size, note_number_width)
         }
+        AbsoluteContent::MultiMeasureRest { count, width } => {
+            render_multi_measure_rest(elem, *count, *width, row_height, base_font_size)
+        }
         AbsoluteContent::ChordSymbol(s) => render_chord_symbol(elem, s, base_font_size),
         AbsoluteContent::PercussionHit => render_percussion_hit(elem, base_font_size),
         AbsoluteContent::Underline { width, level: _ } => render_underline(elem, width),
@@ -101,22 +105,10 @@ fn render_element(
             },
         )],
         AbsoluteContent::MeasureHighlight { width, height } => {
-            vec![render_rect(
-                elem,
-                SvgKind::Rect {
-                    width: *width,
-                    height: *height,
-                },
-            )]
+            vec![render_highlight_rect(elem, *width, *height, false)]
         }
         AbsoluteContent::ErrorHighlight { width, height } => {
-            vec![render_rect(
-                elem,
-                SvgKind::ErrorRect {
-                    width: *width,
-                    height: *height,
-                },
-            )]
+            vec![render_highlight_rect(elem, *width, *height, true)]
         }
         AbsoluteContent::MeasureClickTarget {
             width,
@@ -160,6 +152,20 @@ fn render_text_content(
             italic: style.italic,
         },
     }
+}
+
+fn render_highlight_rect(
+    elem: &AbsoluteElement,
+    width: f32,
+    height: f32,
+    is_error: bool,
+) -> SvgElement {
+    let kind = if is_error {
+        SvgKind::ErrorRect { width, height }
+    } else {
+        SvgKind::Rect { width, height }
+    };
+    render_rect(elem, kind)
 }
 
 fn render_rect(elem: &AbsoluteElement, kind: SvgKind) -> SvgElement {
