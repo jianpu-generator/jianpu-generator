@@ -1,7 +1,7 @@
 use crate::compiler::types::{Decoration, MeasureBlock};
 use crate::grid_layout::layout::{
     block_column_width, decoration_row_height, header_gap_row_height, header_part_list_row_height,
-    header_subtitle_author_row_height, header_title_row_height, separator_row_height,
+    header_subtitle_author_row_height, header_title_row_height, separator_row_height, LABEL_COLS,
     MUSIC_START_COL,
 };
 use crate::grid_layout::types::{
@@ -67,28 +67,29 @@ pub(super) fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow
     let music_column_count = MUSIC_START_COL + total_musical_cols;
     let mut elements: Vec<GridElement> = Vec::new();
 
-    // First block: one DirectiveLine element aligned to the left edge of the first measure.
-    if let Some(first) = system.first() {
-        if let Some(dec) = first.decorations.first() {
-            elements.push(directive_line_element(dec, MUSIC_START_COL));
-        }
-    }
-
-    // Non-first blocks: only emit a DirectiveLine when there is a label or a
-    // navigation marker, aligned to the left edge of the measure it belongs
-    // to. This uses the same column grid as the music rows so the label
-    // lines up exactly with the measure's bar line.
-    let mut measure_music_col = MUSIC_START_COL;
+    // Each block's DirectiveLine is aligned to its own leading barline column
+    // (for non-first blocks, this is the same column as the previous block's
+    // ending barline) rather than to the first musical column. The barline
+    // column is the one place in the grid whose x-position doesn't depend on
+    // how many musical columns this system happens to contain (see
+    // `ColumnGeometry::x_start`: at `column == LABEL_COLS` the density-scaled
+    // term is zero), so anchoring there keeps a measure's label at a
+    // consistent position relative to its own bar line across systems.
+    //
+    // For non-first blocks, only emit a DirectiveLine when there is a label
+    // or a navigation marker.
+    let mut leading_barline_col = LABEL_COLS;
     for (index, block) in system.iter().enumerate() {
-        if index > 0 {
-            if let Some(dec) = block.decorations.first() {
+        if let Some(dec) = block.decorations.first() {
+            let should_emit = index == 0 || {
                 let has_label = matches!(dec, Decoration::DirectiveLine { label: Some(_), .. });
-                if has_label || decoration_has_navigation_marker(dec) {
-                    elements.push(directive_line_element(dec, measure_music_col));
-                }
+                has_label || decoration_has_navigation_marker(dec)
+            };
+            if should_emit {
+                elements.push(directive_line_element(dec, leading_barline_col));
             }
         }
-        measure_music_col += block_column_width(block);
+        leading_barline_col += block_column_width(block);
     }
 
     GridRow {

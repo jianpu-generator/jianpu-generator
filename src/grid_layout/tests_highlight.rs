@@ -62,37 +62,37 @@ fn returns_none_for_out_of_range_measure_index() {
 
 #[test]
 fn first_block_in_single_system_has_correct_column_range() {
-    // LABEL_COLS = 4, MUSIC_START_COL = 5 (the leading bar line gets its own
+    // LABEL_COLS = 1, MUSIC_START_COL = 2 (the leading bar line gets its own
     // dedicated column at LABEL_COLS), block_column_width(4-note block) = 5
     // (4 notes + 1 bar line). Both the leading and ending bar lines are
-    // centered in their own column, so column_start = 5 - 0.5 = 4.5 and
-    // column_end = (5 + 5) - 0.5 = 9.5.
+    // centered in their own column, so column_start = 2 - 0.5 = 1.5 and
+    // column_end = (2 + 5) - 0.5 = 6.5.
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4), simple_block(4)]]];
     let result = compute_measure_highlight_location(&page_systems, 0, &no_header(), 20.0)
         .expect("should find measure 0");
     let (_, highlight) = result;
     assert_eq!(
-        highlight.column_start, 4.5,
+        highlight.column_start, 1.5,
         "column_start should match the centered position of the leading bar line"
     );
     assert_eq!(
-        highlight.column_end, 9.5,
+        highlight.column_end, 6.5,
         "column_end should match the centered position of the ending bar line"
     );
 }
 
 #[test]
 fn second_block_column_start_follows_first_block_width() {
-    // measure 1's left edge is the previous bar line, centered at column 9, i.e. 9.5
-    // its own ending bar line is centered in column 14, i.e. column_end = 14.5
+    // measure 1's left edge is the previous bar line, centered at column 7, i.e. 6.5
+    // its own ending bar line is centered in column 12, i.e. column_end = 11.5
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4), simple_block(4)]]];
     let result = compute_measure_highlight_location(&page_systems, 1, &no_header(), 20.0)
         .expect("should find measure 1");
     let (_, highlight) = result;
-    assert_eq!(highlight.column_start, 9.5);
-    assert_eq!(highlight.column_end, 14.5);
+    assert_eq!(highlight.column_start, 6.5);
+    assert_eq!(highlight.column_end, 11.5);
 }
 
 #[test]
@@ -117,8 +117,8 @@ fn range_with_single_index_returns_one_highlight_matching_location() {
         .next()
         .expect("should have one highlight");
     assert_eq!(page_idx, 0);
-    assert_eq!(h.column_start, 4.5);
-    assert_eq!(h.column_end, 9.5);
+    assert_eq!(h.column_start, 1.5);
+    assert_eq!(h.column_end, 6.5);
 }
 
 #[test]
@@ -130,8 +130,8 @@ fn range_spanning_two_measures_returns_two_highlights() {
     let mut iter = highlights.into_iter();
     let (_, first_h) = iter.next().expect("first highlight");
     let (_, second_h) = iter.next().expect("second highlight");
-    assert_eq!(first_h.column_start, 4.5);
-    assert_eq!(second_h.column_start, 9.5);
+    assert_eq!(first_h.column_start, 1.5);
+    assert_eq!(second_h.column_start, 6.5);
 }
 
 #[test]

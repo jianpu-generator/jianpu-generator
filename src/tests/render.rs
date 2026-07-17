@@ -9,3 +9,5 @@ mod tests_render_rendering;
 #[cfg(feature = "pdf")]
 #[path = "tests_render_split_pdf.rs"]
 mod tests_render_split_pdf;
+#[path = "tests_section_label_alignment.rs"]
+mod tests_section_label_alignment;

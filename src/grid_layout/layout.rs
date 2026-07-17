@@ -145,7 +145,11 @@ fn row_ids(block: &MeasureBlock) -> Vec<&RowId> {
     block.rows.iter().map(|r| &r.id).collect()
 }
 
-pub(crate) const LABEL_COLS: u32 = 4;
+/// The fixed-width column reserved at the start of every system row for the
+/// part label (see [`crate::grid_layout::types::GridRow::column_geometry`]).
+/// A single column, not a subdivided region — nothing else places elements
+/// at fractional positions within it.
+pub(crate) const LABEL_COLS: u32 = 1;
 
 /// First musical column, leaving a dedicated column at `LABEL_COLS` for the
 /// leading barline so it gets the same breathing room as inter-measure barlines.

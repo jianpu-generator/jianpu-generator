@@ -17,19 +17,19 @@ fn column_geometry_divides_evenly_without_label_region() {
 
 #[test]
 fn column_geometry_gives_label_region_a_fixed_width() {
-    // 4 label cols + 16 musical cols = 20 total; usable=400, label=40pt fixed
-    // regardless of column_count → musical cols get (400-40)/16 = 22.5pt each.
+    // 1 label col + 15 musical cols = 16 total; usable=400, label=40pt fixed
+    // regardless of column_count → musical cols get (400-40)/15 = 24pt each.
     let row = GridRow {
         height_pt: 30.0,
-        column_count: 20,
+        column_count: 16,
         has_label_region: true,
         elements: vec![],
     };
     let geometry = row.column_geometry(400.0, 40.0);
-    assert_eq!(geometry.col_width(0.0), 10.0); // 40pt / 4 label cols
-    assert_eq!(geometry.col_width(5.0), 22.5);
+    assert_eq!(geometry.col_width(0.0), 40.0); // 40pt / 1 label col
+    assert_eq!(geometry.col_width(5.0), 24.0);
     assert_eq!(geometry.x_start(0.0), 0.0);
-    assert_eq!(geometry.x_start(4.0), 40.0);
+    assert_eq!(geometry.x_start(1.0), 40.0);
 }
 
 #[test]
@@ -39,20 +39,20 @@ fn column_geometry_label_width_is_independent_of_musical_density() {
     // the fix for the part-label-width-varies-by-system bug.
     let sparse_row = GridRow {
         height_pt: 30.0,
-        column_count: 6, // 4 label cols + 1 barline col + 1 musical col
+        column_count: 3, // 1 label col + 1 barline col + 1 musical col
         has_label_region: true,
         elements: vec![],
     };
     let dense_row = GridRow {
         height_pt: 30.0,
-        column_count: 24, // 4 label cols + 1 barline col + 19 musical cols
+        column_count: 21, // 1 label col + 1 barline col + 19 musical cols
         has_label_region: true,
         elements: vec![],
     };
     let sparse_geometry = sparse_row.column_geometry(545.0, 40.0);
     let dense_geometry = dense_row.column_geometry(545.0, 40.0);
-    let sparse_label_width = sparse_geometry.x_start(4.0) - sparse_geometry.x_start(0.0);
-    let dense_label_width = dense_geometry.x_start(4.0) - dense_geometry.x_start(0.0);
+    let sparse_label_width = sparse_geometry.x_start(1.0) - sparse_geometry.x_start(0.0);
+    let dense_label_width = dense_geometry.x_start(1.0) - dense_geometry.x_start(0.0);
     assert_eq!(sparse_label_width, dense_label_width);
     assert_eq!(sparse_label_width, 40.0);
 }
@@ -311,7 +311,7 @@ fn bar_line_height_includes_lyric_rows() {
 }
 
 #[test]
-fn row_label_is_in_note_head_sub_row_at_column_0_span_4() {
+fn row_label_is_in_note_head_sub_row_at_column_0_span_1() {
     let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new());
     let note_row = &rows[2];
     let label = note_row
@@ -320,12 +320,12 @@ fn row_label_is_in_note_head_sub_row_at_column_0_span_4() {
         .find(|e| matches!(e.content, GridContent::RowLabel(_)));
     let label = label.expect("note-head row should have RowLabel");
     assert_eq!(label.column, 0);
-    assert_eq!(label.column_span, 4);
+    assert_eq!(label.column_span, 1);
 }
 
 #[test]
 fn column_count_is_label_cols_plus_musical_cols() {
     let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new());
-    // 4 label cols + 1 leading bar line col + 4 musical cols (bar at col 3 → block width=4)
-    assert_eq!(rows[0].column_count, 9);
+    // 1 label col + 1 leading bar line col + 4 musical cols (bar at col 3 → block width=4)
+    assert_eq!(rows[0].column_count, 6);
 }
