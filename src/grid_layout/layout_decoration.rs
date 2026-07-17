@@ -255,7 +255,16 @@ fn make_part_list_rows(entries: &[&PartListEntry], base: f32, columns: u32) -> V
                     halign: HAlign::Start,
                     valign: VAlign::Center,
                     content: GridContent::Text {
-                        content: format!("{} \u{2014} {}", entry.abbreviation, entry.display_name),
+                        content: if entry.members.is_empty() {
+                            format!("{} \u{2014} {}", entry.abbreviation, entry.display_name)
+                        } else {
+                            format!(
+                                "{} \u{2014} {} ({})",
+                                entry.abbreviation,
+                                entry.display_name,
+                                entry.members.join(",")
+                            )
+                        },
                         font_size: base * 0.6,
                         bold: false,
                         italic: false,

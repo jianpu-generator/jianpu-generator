@@ -23,9 +23,9 @@
 - [x] Edit Metadata modal should overlay on top on monaco editor space
 - [x] Help tooltip for every fields in Edit Metadata
 - [x] when system divier is hidden, the hover bounding box is wrong
+- [x] when edit data modal is open, the preview should be scrollable
 - [ ] syntax highlighting
 - [ ] LSP rename
 - [ ] Formatter: align lyric syllables with their corresponding notes
 - [ ] clicking on a merge rest bar should highlight all measures in monaco editor
-- [x] when edit data modal is open, the preview should be scrollable
-- [ ] Legends of Group label should show what they consist of, for example `V - Vocal (S1,S2,A1,A2)`
+- [x] Legends of Group label should show what they consist of, for example `V - Vocal (S1,S2,A1,A2)`

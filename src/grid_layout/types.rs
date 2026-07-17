@@ -259,6 +259,9 @@ pub enum PostArcGridContent {
 pub struct PartListEntry {
     pub abbreviation: String,
     pub display_name: String,
+    /// Abbreviations of the parts a group resolves to, shown in the legend as
+    /// `V — Vocal (S1,S2,A1,A2)`. Empty for a plain part entry.
+    pub members: Vec<String>,
 }
 
 #[derive(Debug, Clone)]

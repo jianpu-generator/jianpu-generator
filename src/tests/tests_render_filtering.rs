@@ -209,7 +209,7 @@ fn render_svgs_from_source_includes_group_legend_entry() {
     let svgs = render_svgs_from_source(input, "test.jianpu", &[])
         .unwrap()
         .svgs;
-    assert!(svgs[0].contains("str \u{2014} Strings"));
+    assert!(svgs[0].contains("str \u{2014} Strings (vln,vla)"));
 }
 
 #[test]
@@ -271,7 +271,7 @@ fn render_svgs_from_source_filtered_keeps_group_built_from_other_groups() {
             .unwrap()
             .svgs;
     assert!(
-        vln_only[0].contains("all \u{2014} AllStrings"),
+        vln_only[0].contains("all \u{2014} AllStrings (vln,vla)"),
         "a group built entirely from other group abbreviations should still resolve \
          transitively to enabled parts and appear in the legend"
     );

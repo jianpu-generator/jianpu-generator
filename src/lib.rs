@@ -173,6 +173,7 @@ fn build_header(
         .map(|part| grid_layout::types::PartListEntry {
             abbreviation: part.abbreviation.clone(),
             display_name: part.display_name.clone(),
+            members: Vec::new(),
         })
         .chain(
             groups
@@ -181,6 +182,7 @@ fn build_header(
                 .map(|group| grid_layout::types::PartListEntry {
                     abbreviation: group.abbreviation.clone(),
                     display_name: group.display_name.clone(),
+                    members: resolve_group_parts(group, groups, &mut Vec::new()),
                 }),
         )
         .collect();
