@@ -17,7 +17,7 @@ test.use({
  * on the play button's visible "playing" state rather than just "didn't
  * crash".
  *
- * Uses the default demo file (demo/00-header.jianpu); line 17 is the first
+ * Uses the default demo file (demo/00-header.jianpu); line 16 is the first
  * note line ("[M] 0 0 0 0" → measure 0), as established by
  * `measure-label.spec.ts`.
  */
@@ -34,7 +34,7 @@ test('clicking play on a selected measure starts and finishes playback', async (
   // Focus the Monaco editor and place the cursor inside measure 0.
   await focusEditor(page)
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('17')
+  await page.keyboard.type('16')
   await page.keyboard.press('Enter')
 
   const playBtn = page.locator('button.play-measure-btn')

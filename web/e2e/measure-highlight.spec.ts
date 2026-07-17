@@ -7,9 +7,9 @@ import { focusEditor } from './fileSwitcherHelpers'
  *
  *   1  # metadata
  *   ...
- *  16  # score
- *  17  [M] 0 0 0 0   ← melody note line → measure 1 (all rests)
- *  18  (blank)
+ *  15  # score
+ *  16  [M] 0 0 0 0   ← melody note line → measure 1 (all rests)
+ *  17  (blank)
  *
  * Line 1 (`# metadata`) sits outside any measure span.
  */
@@ -23,9 +23,9 @@ test('renders amber highlight rect when cursor is inside a measure', async ({
 
   await focusEditor(page)
 
-  // Navigate to line 17 (first note line of measure 1).
+  // Navigate to line 16 (first note line of measure 1).
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('17')
+  await page.keyboard.type('16')
   await page.keyboard.press('Enter')
 
   // Allow the 300 ms debounce plus the highlight render worker round-trip.
@@ -50,7 +50,7 @@ test('removes highlight rect when cursor moves outside all measures', async ({
 
   // First put cursor inside a measure so the highlight appears.
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('17')
+  await page.keyboard.type('16')
   await page.keyboard.press('Enter')
   await page.waitForTimeout(1_000)
 

@@ -8,8 +8,8 @@ import { focusEditor } from './fileSwitcherHelpers'
  *   1  # metadata
  *   2  title = "Jianpu Postcard"
  *   ...
- *  16  # score
- *  17  [M] 0 0 0 0    ← first note line → measure 1
+ *  15  # score
+ *  16  [M] 0 0 0 0    ← first note line → measure 1
  */
 test('shows measure number when cursor is placed on a note line', async ({
   page,
@@ -25,10 +25,10 @@ test('shows measure number when cursor is placed on a note line', async ({
   // Focus the Monaco editor.
   await focusEditor(page)
 
-  // Use Monaco's "Go to Line" command (Ctrl+G) to jump to line 17,
+  // Use Monaco's "Go to Line" command (Ctrl+G) to jump to line 16,
   // which is the first note line in the default demo/00-header.jianpu file.
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('17')
+  await page.keyboard.type('16')
   await page.keyboard.press('Enter')
 
   // Allow the 300 ms debounce in notifySelection plus worker round-trip.
@@ -46,8 +46,8 @@ test('shows measure number when cursor is placed on a note line', async ({
  * of a note line, the byte offset equals source_span.end and the measure must
  * still be detected.
  *
- * Line 17 of the default demo is "[M] 0 0 0 0" — the entire span of
- * measure 1 (the following line 18 is blank). Pressing End places the
+ * Line 16 of the default demo is "[M] 0 0 0 0" — the entire span of
+ * measure 1 (the following line 17 is blank). Pressing End places the
  * cursor after the trailing "0", at the end of the measure's span.
  */
 test('detects measure when cursor is at end of last character of a note line', async ({
@@ -61,10 +61,10 @@ test('detects measure when cursor is at end of last character of a note line', a
   // Focus the Monaco editor.
   await focusEditor(page)
 
-  // Navigate to line 17 ("[M] 0 0 0 0") and press End to put the cursor
+  // Navigate to line 16 ("[M] 0 0 0 0") and press End to put the cursor
   // after the trailing "0" — the last character of the measure span.
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('17')
+  await page.keyboard.type('16')
   await page.keyboard.press('Enter')
   await page.keyboard.press('End')
 

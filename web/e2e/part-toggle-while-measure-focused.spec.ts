@@ -9,7 +9,7 @@ import { focusEditor } from './fileSwitcherHelpers'
  *   Melody [M] = notes+lyrics
  *   Chords [C] = chords
  *
- * Line 17 in the editor (`[M] 0 0 0 0`) is the first note line of measure 1,
+ * Line 16 in the editor (`[M] 0 0 0 0`) is the first note line of measure 1,
  * containing only a melody line (no chords).
  *
  * Regression: when the cursor is inside a measure, `highlightedSvgs` is shown
@@ -28,7 +28,7 @@ test('toggling a part rerenders the highlighted SVG while a measure is focused',
   // Focus the Monaco editor and navigate to the first measure.
   await focusEditor(page)
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('17')
+  await page.keyboard.type('16')
   await page.keyboard.press('Enter')
 
   // Allow the debounce + highlight render worker round-trip.
