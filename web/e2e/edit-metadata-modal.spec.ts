@@ -324,3 +324,51 @@ test('modal stays within the editor pane and does not cover the preview pane', a
 
   expect(modalBox.x + modalBox.width).toBeLessThanOrEqual(previewBox.x)
 })
+
+test('preview pane stays scrollable while the modal is open', async ({
+  page,
+}) => {
+  const manyMeasures = Array.from({ length: 40 }, () => '1 1 5 5').join('\n')
+  const source = [
+    '# metadata',
+    'title = "Test"',
+    'row_height = 200',
+    '',
+    '# parts',
+    'Melody [M] = notes',
+    '',
+    '# score',
+    '(bpm=120 key=C4 time=4/4)',
+    manyMeasures,
+  ].join('\n')
+
+  await page.addInitScript((src) => {
+    localStorage.setItem(
+      'jianpu:files:v1',
+      JSON.stringify({
+        active: 'test.jianpu',
+        userFiles: { 'test.jianpu': src },
+        bin: {},
+        fileIds: { 'test.jianpu': crypto.randomUUID() },
+      }),
+    )
+  }, source)
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await page.goto('/')
+
+  const previewPages = page.locator('.preview-pages')
+  await expect
+    .poll(async () =>
+      previewPages.evaluate((el) => el.scrollHeight > el.clientHeight),
+    )
+    .toBe(true)
+
+  await openEditMetadataModal(page)
+
+  await previewPages.hover()
+  await page.mouse.wheel(0, 400)
+
+  await expect
+    .poll(() => previewPages.evaluate((el) => el.scrollTop))
+    .toBeGreaterThan(0)
+})

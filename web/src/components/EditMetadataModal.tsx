@@ -77,7 +77,7 @@ export function EditMetadataModal({
       onFieldChange(key, e.target.checked ? 'yes' : 'no')
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root open={open} onOpenChange={onOpenChange} modal={false}>
       <Dialog.Portal container={container ?? undefined}>
         <Dialog.Overlay
           style={{
