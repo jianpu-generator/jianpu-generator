@@ -15,11 +15,27 @@ fn has_lyrics(row: &crate::compiler::types::MeasureRow) -> bool {
 }
 
 /// Column bounds of a measure block, in fractional grid columns, matching where its
-/// bar lines are actually rendered: every bar line (including the leading one) is
-/// centered within its own dedicated column.
-fn measure_column_bounds(col_offset: u32, col_w: u32) -> (f32, f32) {
-    let column_start = col_offset as f32 - 0.5;
-    let column_end = (col_offset + col_w) as f32 - 0.5;
+/// bar lines are actually rendered. Interior bar lines are centered within their own
+/// dedicated column, but the system-leading bar line (`is_first_block`) is flush
+/// against the start of its column (`HAlign::Start`) and the system-trailing bar line
+/// (`is_last_block`) is flush against the end of its column (`HAlign::End`) — see
+/// `expand.rs`'s `is_last_block` handling and the `part_idx == 0` leading bar line.
+fn measure_column_bounds(
+    col_offset: u32,
+    col_w: u32,
+    is_first_block: bool,
+    is_last_block: bool,
+) -> (f32, f32) {
+    let column_start = if is_first_block {
+        col_offset as f32 - 1.0
+    } else {
+        col_offset as f32 - 0.5
+    };
+    let column_end = if is_last_block {
+        (col_offset + col_w) as f32
+    } else {
+        (col_offset + col_w) as f32 - 0.5
+    };
     (column_start, column_end)
 }
 
@@ -74,10 +90,16 @@ pub(crate) fn compute_measure_highlights_for_range(
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 
             let mut col_offset: u32 = MUSIC_START_COL;
-            for block in system.iter() {
+            let last_block_idx = system.len().saturating_sub(1);
+            for (block_idx, block) in system.iter().enumerate() {
                 let col_w = block_column_width(block);
                 if global_measure_index >= start_index && global_measure_index <= end_index {
-                    let (column_start, column_end) = measure_column_bounds(col_offset, col_w);
+                    let (column_start, column_end) = measure_column_bounds(
+                        col_offset,
+                        col_w,
+                        block_idx == 0,
+                        block_idx == last_block_idx,
+                    );
                     results.push((
                         page_idx,
                         MeasureHighlight {
@@ -122,10 +144,16 @@ pub(crate) fn compute_measure_highlight_location(
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 
             let mut col_offset: u32 = MUSIC_START_COL;
-            for block in system.iter() {
+            let last_block_idx = system.len().saturating_sub(1);
+            for (block_idx, block) in system.iter().enumerate() {
                 let col_w = block_column_width(block);
                 if global_measure_index == highlighted_measure_index {
-                    let (column_start, column_end) = measure_column_bounds(col_offset, col_w);
+                    let (column_start, column_end) = measure_column_bounds(
+                        col_offset,
+                        col_w,
+                        block_idx == 0,
+                        block_idx == last_block_idx,
+                    );
                     return Some((
                         page_idx,
                         MeasureHighlight {
@@ -207,9 +235,15 @@ pub(crate) fn compute_all_measure_click_targets(
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 
             let mut col_offset: u32 = MUSIC_START_COL;
-            for block in system.iter() {
+            let last_block_idx = system.len().saturating_sub(1);
+            for (block_idx, block) in system.iter().enumerate() {
                 let col_w = block_column_width(block);
-                let (column_start, column_end) = measure_column_bounds(col_offset, col_w);
+                let (column_start, column_end) = measure_column_bounds(
+                    col_offset,
+                    col_w,
+                    block_idx == 0,
+                    block_idx == last_block_idx,
+                );
                 results.push((
                     page_idx,
                     MeasureClickTarget {
