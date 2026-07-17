@@ -14,7 +14,6 @@ subtitle = "Sub"
 author = "Bob"
 row_height = 80
 max_measures_per_system = 4
-label_width = 20
 note_number_width = 10
 # notes
 1 2 3`
@@ -100,7 +99,6 @@ title = "Solo"
     expect(result).not.toContain('author')
     expect(result).not.toContain('row_height')
     expect(result).not.toContain('max_measures_per_system')
-    expect(result).not.toContain('label_width')
     expect(result).not.toContain('note_number_width')
   })
 
@@ -183,7 +181,6 @@ title = "Song"
       'author',
       'row_height',
       'max_measures_per_system',
-      'label_width',
       'note_number_width',
     ])
   })

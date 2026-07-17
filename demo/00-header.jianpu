@@ -4,7 +4,6 @@ author = "—"
 subtitle = "Complete syntax reference — every feature, one measure each"
 max_measures_per_system = 1
 row_height = 24
-label_width = 120
 note_number_width = 8
 
 # parts

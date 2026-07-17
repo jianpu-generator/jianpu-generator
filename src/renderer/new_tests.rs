@@ -8,7 +8,6 @@ use crate::renderer::new_types::{SvgKind, SvgVariant};
 fn cfg() -> RenderConfig {
     RenderConfig {
         row_height: 30,
-        label_width: 0,
         note_number_width: 12,
         max_measures_per_system: 16,
         lyrics_font_size: 18,

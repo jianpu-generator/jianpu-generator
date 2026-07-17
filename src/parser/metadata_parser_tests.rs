@@ -9,7 +9,6 @@ fn parses_title_and_author() {
     assert_eq!(meta.author, Some("foo".to_string()));
     assert_eq!(meta.row_height, None);
     assert_eq!(meta.max_measures_per_system, None);
-    assert_eq!(meta.label_width, None);
 }
 
 #[test]
@@ -99,22 +98,6 @@ fn subtitle_defaults_to_none() {
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
     assert_eq!(meta.subtitle, None);
-}
-
-#[test]
-fn parses_label_width() {
-    let content = "title = \"t\"\nauthor = \"a\"\nlabel_width = 60\n";
-    let (meta, errors) = parse_metadata(content, 0);
-    assert!(errors.is_empty());
-    assert_eq!(meta.label_width, Some(60));
-}
-
-#[test]
-fn label_width_defaults_to_none() {
-    let content = "title = \"t\"\nauthor = \"a\"\n";
-    let (meta, errors) = parse_metadata(content, 0);
-    assert!(errors.is_empty());
-    assert_eq!(meta.label_width, None);
 }
 
 #[test]

@@ -10,7 +10,6 @@ fn metadata() -> Metadata {
         author: None,
         row_height: 24,
         max_measures_per_system: 28,
-        label_width: 40,
         note_number_width: 8,
         parts_list_columns: 3,
         lyrics_font_size: 14,

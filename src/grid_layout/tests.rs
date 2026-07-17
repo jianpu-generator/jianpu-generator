@@ -111,7 +111,6 @@ fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
 fn cfg() -> RenderConfig {
     RenderConfig {
         row_height: 30,
-        label_width: 0,
         note_number_width: 12,
         max_measures_per_system: 2,
         lyrics_font_size: 18,

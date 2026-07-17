@@ -90,7 +90,6 @@ struct MetadataAccumulator {
     author: Option<String>,
     row_height: Option<u32>,
     max_measures_per_system: Option<u32>,
-    label_width: Option<u32>,
     note_number_width: Option<u32>,
     parts_list_columns: Option<u32>,
     lyrics_font_size: Option<u32>,
@@ -123,9 +122,6 @@ impl MetadataAccumulator {
                 value_span,
                 errors,
             ),
-            "label_width" => {
-                parse_numeric_field(&mut self.label_width, key, value, value_span, errors)
-            }
             "note_number_width" => {
                 parse_numeric_field(&mut self.note_number_width, key, value, value_span, errors)
             }
@@ -206,7 +202,6 @@ pub fn parse_metadata(
             author: accumulator.author,
             row_height: accumulator.row_height,
             max_measures_per_system: accumulator.max_measures_per_system,
-            label_width: accumulator.label_width,
             note_number_width: accumulator.note_number_width,
             parts_list_columns: accumulator.parts_list_columns,
             lyrics_font_size: accumulator.lyrics_font_size,

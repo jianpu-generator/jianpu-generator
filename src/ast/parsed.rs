@@ -188,7 +188,6 @@ pub struct ParsedMetadata {
     pub author: Option<String>,
     pub row_height: Option<u32>,
     pub max_measures_per_system: Option<u32>,
-    pub label_width: Option<u32>,
     pub note_number_width: Option<u32>,
     pub parts_list_columns: Option<u32>,
     pub lyrics_font_size: Option<u32>,

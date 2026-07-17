@@ -62,7 +62,6 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | `subtitle` | no | none | Subtitle line |
 | `max_measures_per_system` | no | `4` | Maximum number of measures per system line before wrapping |
 | `row_height` | no | `24` | Vertical spacing of one part row (pixels) |
-| `label_width` | no | `40` | Horizontal space reserved for part labels (pixels) |
 | `note_number_width` | no | `8` | Horizontal space per note column (pixels) |
 | `parts_list_columns` | no | `4` | Number of columns in the parts list header |
 | `lyrics_font_size` | no | `row_height * 0.6` | Font size of lyric syllables (points) |

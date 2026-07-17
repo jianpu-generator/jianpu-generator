@@ -5,7 +5,14 @@ import {
   defaultLyricsFontSize,
   loadMetadataDefaults,
 } from '../utils/metadataDefaults'
+import { metadataFieldHelp } from '../utils/metadataFieldHelp'
 import type { MetadataKey, ParsedMetadataFields } from '../utils/metadataSource'
+import { FieldHelpModal } from './FieldHelpModal'
+import {
+  CheckboxFieldRow,
+  NumberFieldRow,
+  TextFieldRow,
+} from './MetadataFieldRows'
 
 export interface EditMetadataModalProps {
   open: boolean
@@ -27,23 +34,6 @@ const thStyle: React.CSSProperties = {
   background: '#f5f5f5',
 }
 
-const tdStyle: React.CSSProperties = {
-  padding: '6px 10px',
-  borderBottom: '1px solid #eee',
-  verticalAlign: 'middle',
-  fontSize: '13px',
-}
-
-const inputStyle: React.CSSProperties = {
-  fontSize: '12px',
-  fontFamily: 'var(--mono, monospace)',
-  border: '1px solid #cbd5e0',
-  borderRadius: '3px',
-  padding: '2px 6px',
-  width: '100%',
-  boxSizing: 'border-box',
-}
-
 export function EditMetadataModal({
   open,
   onOpenChange,
@@ -55,6 +45,12 @@ export function EditMetadataModal({
   const [lyricsFontSizeDefault, setLyricsFontSizeDefault] = useState<
     number | null
   >(null)
+  const [helpContent, setHelpContent] = useState<{
+    label: string
+    help: string
+  } | null>(null)
+  const showHelp = (label: string, help: string) =>
+    setHelpContent({ label, help })
 
   useEffect(() => {
     loadMetadataDefaults().then(setDefaults)
@@ -67,6 +63,18 @@ export function EditMetadataModal({
   }, [effectiveRowHeight])
 
   const d = defaults
+
+  const setText =
+    (key: MetadataKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
+      onFieldChange(key, e.target.value === '' ? null : e.target.value)
+
+  const setNumber =
+    (key: MetadataKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
+      onFieldChange(key, e.target.value === '' ? null : e.target.value)
+
+  const setYesNo =
+    (key: MetadataKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
+      onFieldChange(key, e.target.checked ? 'yes' : 'no')
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -147,244 +155,123 @@ export function EditMetadataModal({
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td style={tdStyle}>Title *</td>
-                  <td style={tdStyle}>
-                    <input
-                      type="text"
-                      style={inputStyle}
-                      value={metadata.title}
-                      onChange={(e) => onFieldChange('title', e.target.value)}
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <td style={tdStyle}>Subtitle</td>
-                  <td style={tdStyle}>
-                    <input
-                      type="text"
-                      style={inputStyle}
-                      value={metadata.subtitle ?? ''}
-                      onChange={(e) =>
-                        onFieldChange(
-                          'subtitle',
-                          e.target.value === '' ? null : e.target.value,
-                        )
-                      }
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <td style={tdStyle}>Author</td>
-                  <td style={tdStyle}>
-                    <input
-                      type="text"
-                      style={inputStyle}
-                      value={metadata.author ?? ''}
-                      onChange={(e) =>
-                        onFieldChange(
-                          'author',
-                          e.target.value === '' ? null : e.target.value,
-                        )
-                      }
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <td style={tdStyle}>Row Height</td>
-                  <td style={tdStyle}>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder={d ? String(d.row_height) : undefined}
-                      style={inputStyle}
-                      value={metadata.row_height ?? ''}
-                      onChange={(e) =>
-                        onFieldChange(
-                          'row_height',
-                          e.target.value === '' ? null : e.target.value,
-                        )
-                      }
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <td style={tdStyle}>Max Measures Per System</td>
-                  <td style={tdStyle}>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder={
-                        d ? String(d.max_measures_per_system) : undefined
-                      }
-                      style={inputStyle}
-                      value={metadata.max_measures_per_system ?? ''}
-                      onChange={(e) =>
-                        onFieldChange(
-                          'max_measures_per_system',
-                          e.target.value === '' ? null : e.target.value,
-                        )
-                      }
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <td style={tdStyle}>Label Width</td>
-                  <td style={tdStyle}>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder={d ? String(d.label_width) : undefined}
-                      style={inputStyle}
-                      value={metadata.label_width ?? ''}
-                      onChange={(e) =>
-                        onFieldChange(
-                          'label_width',
-                          e.target.value === '' ? null : e.target.value,
-                        )
-                      }
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <td style={tdStyle}>Note Number Width</td>
-                  <td style={tdStyle}>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder={d ? String(d.note_number_width) : undefined}
-                      style={inputStyle}
-                      value={metadata.note_number_width ?? ''}
-                      onChange={(e) =>
-                        onFieldChange(
-                          'note_number_width',
-                          e.target.value === '' ? null : e.target.value,
-                        )
-                      }
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <td style={tdStyle}>Parts List Columns</td>
-                  <td style={tdStyle}>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder={d ? String(d.parts_list_columns) : undefined}
-                      style={inputStyle}
-                      value={metadata.parts_list_columns ?? ''}
-                      onChange={(e) =>
-                        onFieldChange(
-                          'parts_list_columns',
-                          e.target.value === '' ? null : e.target.value,
-                        )
-                      }
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <td style={tdStyle}>Lyrics Font Size</td>
-                  <td style={tdStyle}>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder={
-                        lyricsFontSizeDefault !== null
-                          ? String(lyricsFontSizeDefault)
-                          : undefined
-                      }
-                      style={inputStyle}
-                      value={metadata.lyrics_font_size ?? ''}
-                      onChange={(e) =>
-                        onFieldChange(
-                          'lyrics_font_size',
-                          e.target.value === '' ? null : e.target.value,
-                        )
-                      }
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <td style={tdStyle}>Merge Duplicate Measures Across Parts</td>
-                  <td style={tdStyle}>
-                    <input
-                      type="checkbox"
-                      checked={
-                        metadata.merge_duplicate_measures_across_parts ??
-                        d?.merge_duplicate_measures_across_parts ??
-                        true
-                      }
-                      onChange={(e) =>
-                        onFieldChange(
-                          'merge_duplicate_measures_across_parts',
-                          e.target.checked ? 'yes' : 'no',
-                        )
-                      }
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <td style={tdStyle}>Hide Resting Parts</td>
-                  <td style={tdStyle}>
-                    <input
-                      type="checkbox"
-                      checked={
-                        metadata.hide_resting_parts ??
-                        d?.hide_resting_parts ??
-                        true
-                      }
-                      onChange={(e) =>
-                        onFieldChange(
-                          'hide_resting_parts',
-                          e.target.checked ? 'yes' : 'no',
-                        )
-                      }
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <td style={tdStyle}>Hide System Dividers</td>
-                  <td style={tdStyle}>
-                    <input
-                      type="checkbox"
-                      checked={
-                        metadata.hide_system_dividers ??
-                        d?.hide_system_dividers ??
-                        false
-                      }
-                      onChange={(e) =>
-                        onFieldChange(
-                          'hide_system_dividers',
-                          e.target.checked ? 'yes' : 'no',
-                        )
-                      }
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <td style={tdStyle}>Section Label Offset (x y)</td>
-                  <td style={tdStyle}>
-                    <input
-                      type="text"
-                      placeholder={
-                        d
-                          ? `${d.section_label_offset_x} ${d.section_label_offset_y}`
-                          : undefined
-                      }
-                      style={inputStyle}
-                      value={metadata.section_label_offset ?? ''}
-                      onChange={(e) =>
-                        onFieldChange(
-                          'section_label_offset',
-                          e.target.value === '' ? null : e.target.value,
-                        )
-                      }
-                    />
-                  </td>
-                </tr>
+                <TextFieldRow
+                  label="Title *"
+                  help={metadataFieldHelp.title}
+                  onShowHelp={showHelp}
+                  value={metadata.title}
+                  onChange={(e) => onFieldChange('title', e.target.value)}
+                />
+                <TextFieldRow
+                  label="Subtitle"
+                  help={metadataFieldHelp.subtitle}
+                  onShowHelp={showHelp}
+                  value={metadata.subtitle ?? ''}
+                  onChange={setText('subtitle')}
+                />
+                <TextFieldRow
+                  label="Author"
+                  help={metadataFieldHelp.author}
+                  onShowHelp={showHelp}
+                  value={metadata.author ?? ''}
+                  onChange={setText('author')}
+                />
+                <NumberFieldRow
+                  label="Row Height"
+                  help={metadataFieldHelp.row_height}
+                  onShowHelp={showHelp}
+                  value={metadata.row_height ?? ''}
+                  placeholder={d ? String(d.row_height) : undefined}
+                  onChange={setNumber('row_height')}
+                />
+                <NumberFieldRow
+                  label="Max Measures Per System"
+                  help={metadataFieldHelp.max_measures_per_system}
+                  onShowHelp={showHelp}
+                  value={metadata.max_measures_per_system ?? ''}
+                  placeholder={
+                    d ? String(d.max_measures_per_system) : undefined
+                  }
+                  onChange={setNumber('max_measures_per_system')}
+                />
+                <NumberFieldRow
+                  label="Note Number Width"
+                  help={metadataFieldHelp.note_number_width}
+                  onShowHelp={showHelp}
+                  value={metadata.note_number_width ?? ''}
+                  placeholder={d ? String(d.note_number_width) : undefined}
+                  onChange={setNumber('note_number_width')}
+                />
+                <NumberFieldRow
+                  label="Parts List Columns"
+                  help={metadataFieldHelp.parts_list_columns}
+                  onShowHelp={showHelp}
+                  value={metadata.parts_list_columns ?? ''}
+                  placeholder={d ? String(d.parts_list_columns) : undefined}
+                  onChange={setNumber('parts_list_columns')}
+                />
+                <NumberFieldRow
+                  label="Lyrics Font Size"
+                  help={metadataFieldHelp.lyrics_font_size}
+                  onShowHelp={showHelp}
+                  value={metadata.lyrics_font_size ?? ''}
+                  placeholder={
+                    lyricsFontSizeDefault !== null
+                      ? String(lyricsFontSizeDefault)
+                      : undefined
+                  }
+                  onChange={setNumber('lyrics_font_size')}
+                />
+                <CheckboxFieldRow
+                  label="Merge Duplicate Measures Across Parts"
+                  help={metadataFieldHelp.merge_duplicate_measures_across_parts}
+                  onShowHelp={showHelp}
+                  checked={
+                    metadata.merge_duplicate_measures_across_parts ??
+                    d?.merge_duplicate_measures_across_parts ??
+                    true
+                  }
+                  onChange={setYesNo('merge_duplicate_measures_across_parts')}
+                />
+                <CheckboxFieldRow
+                  label="Hide Resting Parts"
+                  help={metadataFieldHelp.hide_resting_parts}
+                  onShowHelp={showHelp}
+                  checked={
+                    metadata.hide_resting_parts ?? d?.hide_resting_parts ?? true
+                  }
+                  onChange={setYesNo('hide_resting_parts')}
+                />
+                <CheckboxFieldRow
+                  label="Hide System Dividers"
+                  help={metadataFieldHelp.hide_system_dividers}
+                  onShowHelp={showHelp}
+                  checked={
+                    metadata.hide_system_dividers ??
+                    d?.hide_system_dividers ??
+                    false
+                  }
+                  onChange={setYesNo('hide_system_dividers')}
+                />
+                <TextFieldRow
+                  label="Section Label Offset (x y)"
+                  help={metadataFieldHelp.section_label_offset}
+                  onShowHelp={showHelp}
+                  value={metadata.section_label_offset ?? ''}
+                  placeholder={
+                    d
+                      ? `${d.section_label_offset_x} ${d.section_label_offset_y}`
+                      : undefined
+                  }
+                  onChange={setText('section_label_offset')}
+                />
               </tbody>
             </table>
           </div>
+          <FieldHelpModal
+            content={helpContent}
+            onOpenChange={(open) => !open && setHelpContent(null)}
+          />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

@@ -7,8 +7,6 @@ use crate::error::{Diagnostic, RecoverableError, Span, Warning};
 pub const DEFAULT_ROW_HEIGHT: u32 = 24;
 /// Default `max_measures_per_system`, used when unset in `# metadata`.
 pub const DEFAULT_MAX_MEASURES_PER_SYSTEM: u32 = 4;
-/// Default `label_width` in points, used when unset in `# metadata`.
-pub const DEFAULT_LABEL_WIDTH: u32 = 40;
 /// Default `note_number_width` in points, used when unset in `# metadata`.
 pub const DEFAULT_NOTE_NUMBER_WIDTH: u32 = 8;
 /// Default `parts_list_columns`, used when unset in `# metadata`.
@@ -36,8 +34,6 @@ pub struct Metadata {
     pub row_height: u32,
     /// Maximum number of measures per system line before wrapping. Default: 4.
     pub max_measures_per_system: u32,
-    /// Left margin reserved for part labels in points. Default: 40.
-    pub label_width: u32,
     /// Estimated rendered width of a single digit note number (0–9) in points. Default: 8.
     pub note_number_width: u32,
     /// Number of columns in the parts list header. Default: 4.

@@ -76,7 +76,6 @@ fn hdr() -> Header {
 fn cfg_wide() -> RenderConfig {
     RenderConfig {
         row_height: 30,
-        label_width: 0,
         note_number_width: 12,
         max_measures_per_system: 48,
         lyrics_font_size: 18,
