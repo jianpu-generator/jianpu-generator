@@ -186,6 +186,12 @@ fn global_measure_index_accounts_for_a_merged_block() {
         vec![0, 1, 4],
         "click targets should carry global_measure_index 0, 1 (merged block's start), 4 (not 2)"
     );
+    let measure_index_ends: Vec<usize> = targets.iter().map(|(_, t)| t.measure_index_end).collect();
+    assert_eq!(
+        measure_index_ends,
+        vec![0, 3, 4],
+        "the merged block's click target should span its whole represented range (1..=3)"
+    );
 }
 
 #[test]

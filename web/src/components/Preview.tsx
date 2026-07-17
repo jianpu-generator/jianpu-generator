@@ -35,15 +35,27 @@ function getSectionLabelAtPoint(x: number, y: number): string | undefined {
   return (group as HTMLElement).dataset.sectionLabel
 }
 
-function getMeasureAtPoint(x: number, y: number): number | undefined {
+interface MeasureRange {
+  start: number
+  end: number
+}
+
+/**
+ * The measure range under the given point. A merged multi-measure rest bar
+ * carries a `start`/`end` wider than a single measure, so clicking anywhere
+ * on it resolves to every source measure it represents.
+ */
+function getMeasureAtPoint(x: number, y: number): MeasureRange | undefined {
   const el = document.elementFromPoint(x, y)
   if (!el) return undefined
   const group = el.closest('[data-tag="measure"]')
   if (!group) return undefined
-  const index = (group as HTMLElement).dataset.measureIndex
-  if (index === undefined) return undefined
-  const parsed = Number.parseInt(index, 10)
-  return Number.isNaN(parsed) ? undefined : parsed
+  const { measureIndex, measureIndexEnd } = (group as HTMLElement).dataset
+  if (measureIndex === undefined) return undefined
+  const start = Number.parseInt(measureIndex, 10)
+  const end = Number.parseInt(measureIndexEnd ?? measureIndex, 10)
+  if (Number.isNaN(start) || Number.isNaN(end)) return undefined
+  return { start, end }
 }
 
 function applyDragHighlights(
@@ -111,8 +123,8 @@ export function Preview({
     measureAudioWrittenIndices,
   )
   const dragStateRef = useRef<{
-    startIndex: number
-    currentIndex: number
+    anchor: MeasureRange
+    current: MeasureRange
   } | null>(null)
   const onMeasureRangeSelectRef = useRef(onMeasureRangeSelect)
   onMeasureRangeSelectRef.current = onMeasureRangeSelect
@@ -151,14 +163,12 @@ export function Preview({
       if (!dragState) return
       const container = previewPagesRef.current
       if (!container) return
-      const index = getMeasureAtPoint(e.clientX, e.clientY)
-      if (index !== undefined) {
-        dragState.currentIndex = index
-        applyDragHighlights(
-          container,
-          dragState.startIndex,
-          dragState.currentIndex,
-        )
+      const range = getMeasureAtPoint(e.clientX, e.clientY)
+      if (range !== undefined) {
+        dragState.current = range
+        const min = Math.min(dragState.anchor.start, dragState.current.start)
+        const max = Math.max(dragState.anchor.end, dragState.current.end)
+        applyDragHighlights(container, min, max)
       }
     }
 
@@ -169,10 +179,10 @@ export function Preview({
       if (container) {
         clearDragHighlights(container)
       }
-      const index = getMeasureAtPoint(e.clientX, e.clientY)
-      const finalIndex = index ?? dragState.currentIndex
-      const min = Math.min(dragState.startIndex, finalIndex)
-      const max = Math.max(dragState.startIndex, finalIndex)
+      const finalRange =
+        getMeasureAtPoint(e.clientX, e.clientY) ?? dragState.current
+      const min = Math.min(dragState.anchor.start, finalRange.start)
+      const max = Math.max(dragState.anchor.end, finalRange.end)
       onMeasureRangeSelectRef.current?.(min, max)
       dragStateRef.current = null
     }
@@ -230,12 +240,12 @@ export function Preview({
               e.preventDefault()
               return
             }
-            const index = getMeasureAtPoint(e.clientX, e.clientY)
-            if (index === undefined) return
-            dragStateRef.current = { startIndex: index, currentIndex: index }
+            const range = getMeasureAtPoint(e.clientX, e.clientY)
+            if (range === undefined) return
+            dragStateRef.current = { anchor: range, current: range }
             const container = previewPagesRef.current
             if (container) {
-              applyDragHighlights(container, index, index)
+              applyDragHighlights(container, range.start, range.end)
             }
             e.preventDefault()
           }}

@@ -252,6 +252,8 @@ pub(crate) fn compute_all_measure_click_targets(
                         column_start,
                         column_end,
                         measure_index: global_measure_index,
+                        measure_index_end: global_measure_index
+                            + block.represents_measures.saturating_sub(1),
                     },
                 ));
                 col_offset += col_w;

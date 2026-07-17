@@ -163,6 +163,8 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
     case 'group': {
       const measureIndex =
         kind.tag?.type === 'measure' ? kind.tag.index : undefined
+      const measureIndexEnd =
+        kind.tag?.type === 'measure' ? kind.tag.end : undefined
       const sectionLabel =
         kind.tag?.type === 'sectionLabel' ? kind.tag.label : undefined
       return (
@@ -176,6 +178,7 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
                 : undefined
           }
           data-measure-index={measureIndex}
+          data-measure-index-end={measureIndexEnd}
           data-section-label={sectionLabel}
           style={
             measureIndex !== undefined || sectionLabel !== undefined

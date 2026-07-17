@@ -101,7 +101,7 @@ pub struct TspanOut {
 #[serde(tag = "type", rename_all = "camelCase")]
 #[tsify(into_wasm_abi)]
 pub enum TagOut {
-    Measure { index: usize },
+    Measure { index: usize, end: usize },
     SectionLabel { label: String },
 }
 
@@ -195,6 +195,18 @@ fn font_weight_to_out(weight: &FontWeight) -> FontWeightOut {
     }
 }
 
+fn tag_to_out(tag: &Tag) -> TagOut {
+    match tag {
+        Tag::Measure { index, end } => TagOut::Measure {
+            index: *index,
+            end: *end,
+        },
+        Tag::SectionLabel { label } => TagOut::SectionLabel {
+            label: label.clone(),
+        },
+    }
+}
+
 fn transparent_rect_role_to_out(role: &TransparentRectRole) -> TransparentRectRoleOut {
     match role {
         TransparentRectRole::MeasureClickTarget => TransparentRectRoleOut::MeasureClickTarget,
@@ -276,12 +288,7 @@ fn svg_kind_to_out(kind: &SvgKind) -> SvgKindOut {
         },
         SvgKind::Group { children, tag } => SvgKindOut::Group {
             children: children.iter().map(svg_element_to_out).collect(),
-            tag: tag.as_ref().map(|t| match t {
-                Tag::Measure { index } => TagOut::Measure { index: *index },
-                Tag::SectionLabel { label } => TagOut::SectionLabel {
-                    label: label.clone(),
-                },
-            }),
+            tag: tag.as_ref().map(tag_to_out),
         },
         SvgKind::SegnoGlyph { size } => SvgKindOut::SegnoGlyph { size: *size },
     }

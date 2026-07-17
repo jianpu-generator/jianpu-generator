@@ -69,8 +69,15 @@ pub struct SvgElement {
 
 #[derive(Debug)]
 pub enum Tag {
-    Measure { index: usize },
-    SectionLabel { label: String },
+    /// `end` is the last original source measure index this click target
+    /// represents; equal to `index` except for merged multi-measure rests.
+    Measure {
+        index: usize,
+        end: usize,
+    },
+    SectionLabel {
+        label: String,
+    },
 }
 
 #[derive(Debug)]

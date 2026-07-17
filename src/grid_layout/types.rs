@@ -19,6 +19,10 @@ pub struct MeasureClickTarget {
     pub column_start: f32,
     pub column_end: f32,
     pub measure_index: usize,
+    /// Last original source measure index this click target represents. Equal to
+    /// `measure_index` for an ordinary measure block; greater than `measure_index`
+    /// for a merged multi-measure rest, so clicking it can highlight the whole span.
+    pub measure_index_end: usize,
 }
 
 #[derive(Debug, Clone)]

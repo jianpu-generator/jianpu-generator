@@ -109,6 +109,7 @@ pub(super) fn resolve_measure_click_target(
             width: target_width,
             height: target_height,
             measure_index: target.measure_index,
+            measure_index_end: target.measure_index_end,
         },
     })
 }

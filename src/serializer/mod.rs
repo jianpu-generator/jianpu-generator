@@ -122,9 +122,9 @@ fn serialize_text_with_tspans(
 
 fn serialize_group(out: &mut String, children: &[SvgElement], tag: &Option<Tag>) {
     match tag {
-        Some(Tag::Measure { index }) => {
+        Some(Tag::Measure { index, end }) => {
             out.push_str(&format!(
-                r#"<g data-tag="measure" data-measure-index="{index}">"#
+                r#"<g data-tag="measure" data-measure-index="{index}" data-measure-index-end="{end}">"#
             ));
         }
         Some(Tag::SectionLabel { label }) => {

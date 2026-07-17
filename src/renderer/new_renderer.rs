@@ -117,7 +117,8 @@ fn render_element(
             width,
             height,
             measure_index,
-        } => render_measure_click_target(elem, *width, *height, *measure_index),
+            measure_index_end,
+        } => render_measure_click_target(elem, *width, *height, *measure_index, *measure_index_end),
         AbsoluteContent::DirectiveLine {
             label,
             spans,
@@ -276,6 +277,7 @@ fn render_measure_click_target(
     width: f32,
     height: f32,
     measure_index: usize,
+    measure_index_end: usize,
 ) -> Vec<SvgElement> {
     vec![SvgElement {
         x: elem.x,
@@ -294,6 +296,7 @@ fn render_measure_click_target(
             }],
             tag: Some(Tag::Measure {
                 index: measure_index,
+                end: measure_index_end,
             }),
         },
     }]

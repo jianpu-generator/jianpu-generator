@@ -69,6 +69,7 @@ pub enum AbsoluteContent {
         width: f32,
         height: f32,
         measure_index: usize,
+        measure_index_end: usize,
     },
     DirectiveLine {
         label: Option<String>,
