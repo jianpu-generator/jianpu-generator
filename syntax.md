@@ -69,7 +69,7 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | `merge_duplicate_measures_across_parts` | no | `yes` | Score-wide default for whether identical measures from different parts are merged into a single row (`yes`/`no`); can be overridden from a given measure onward with the `merge_duplicate_measures_across_parts=` directive line — see [Directive lines](#directive-lines) |
 | `hide_resting_parts` | no | `yes` | Score-wide default for whether an all-rest part is omitted from a measure where other parts have content (`yes`/`no`); can be overridden from a given measure onward with the `hide_resting_parts=` directive line — see [Directive lines](#directive-lines) |
 | `hide_system_dividers` | no | `no` | Whether the horizontal divider line between systems is omitted (`yes`/`no`) |
-| `section_label_offset` | no | `0 0` | Translation `"x y"` (points) applied to a rendered section label, moving it away from its default position without affecting the layout of anything else |
+| `directive_row_offset` | no | `0 0` | Translation `"x y"` (points) applied to every rendered directive row (bar number, section label, key, bpm, time signature, D.C./Segno/Coda/Fine markers), moving that row's text without affecting the layout of anything else. Not applied to the `# sequence` summary header. |
 
 ---
 

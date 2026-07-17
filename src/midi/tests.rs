@@ -26,7 +26,7 @@ fn default_test_metadata() -> Metadata {
         merge_duplicate_measures_across_parts: true,
         hide_resting_parts: true,
         hide_system_dividers: false,
-        section_label_offset: Offset::default(),
+        directive_row_offset: Offset::default(),
     }
 }
 
@@ -126,7 +126,7 @@ pub(super) fn one_measure_score() -> Score {
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
             hide_system_dividers: false,
-            section_label_offset: Offset::default(),
+            directive_row_offset: Offset::default(),
         },
         measures: vec![MultiPartMeasure {
             time_signature: Some(TimeSignature {
@@ -226,7 +226,7 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
             hide_system_dividers: false,
-            section_label_offset: Offset::default(),
+            directive_row_offset: Offset::default(),
         },
         measures: vec![MultiPartMeasure {
             time_signature: Some(TimeSignature {

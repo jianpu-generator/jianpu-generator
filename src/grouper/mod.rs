@@ -1,9 +1,9 @@
 use crate::ast::grouped::{
     default_lyrics_font_size, GroupedScore, GroupedTrack, Metadata, Score,
-    DEFAULT_HIDE_RESTING_PARTS, DEFAULT_HIDE_SYSTEM_DIVIDERS, DEFAULT_MAX_MEASURES_PER_SYSTEM,
-    DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS, DEFAULT_NOTE_NUMBER_WIDTH,
-    DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_PART_LABEL_WIDTH_PT, DEFAULT_ROW_HEIGHT,
-    DEFAULT_SECTION_LABEL_OFFSET,
+    DEFAULT_DIRECTIVE_ROW_OFFSET, DEFAULT_HIDE_RESTING_PARTS, DEFAULT_HIDE_SYSTEM_DIVIDERS,
+    DEFAULT_MAX_MEASURES_PER_SYSTEM, DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
+    DEFAULT_NOTE_NUMBER_WIDTH, DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_PART_LABEL_WIDTH_PT,
+    DEFAULT_ROW_HEIGHT,
 };
 use crate::ast::parsed::{ParsedDocument, ParsedTrack};
 use crate::combiner;
@@ -93,9 +93,9 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
             hide_system_dividers: metadata
                 .hide_system_dividers
                 .unwrap_or(DEFAULT_HIDE_SYSTEM_DIVIDERS),
-            section_label_offset: metadata
-                .section_label_offset
-                .unwrap_or(DEFAULT_SECTION_LABEL_OFFSET),
+            directive_row_offset: metadata
+                .directive_row_offset
+                .unwrap_or(DEFAULT_DIRECTIVE_ROW_OFFSET),
         },
         measures,
         document_diagnostics: document_diagnostics

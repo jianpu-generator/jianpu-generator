@@ -149,7 +149,7 @@ fn cfg() -> RenderConfig {
         max_measures_per_system: 2,
         lyrics_font_size: 18,
         hide_system_dividers: false,
-        section_label_offset: Offset::default(),
+        directive_row_offset: Offset::default(),
     }
 }
 

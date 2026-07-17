@@ -53,13 +53,9 @@ Can be overridden from a specific measure onward with a
 
   hide_system_dividers: `When on, the horizontal divider line normally drawn between consecutive systems (rows of measures) is omitted.`,
 
-  section_label_offset: `Translation (points, \`"x y"\`) applied only to a section label's text position, i.e. the label set by a measure's
+  directive_row_offset: `Translation (points, \`"x y"\`) applied to every rendered directive row — bar number, section label, key, bpm, time signature, and D.C./Segno/Coda/Fine markers.
 
-\`\`\`
-label="Verse 1"
-\`\`\`
+Moves that row's text without affecting the layout or spacing of anything else on the page.
 
-directive.
-
-Moves the label without affecting the layout or spacing of anything else on the page.`,
+Not applied to the \`# sequence\` summary header line.`,
 }

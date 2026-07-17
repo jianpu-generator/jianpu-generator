@@ -194,39 +194,46 @@ fn collects_error_for_invalid_hide_system_dividers() {
 }
 
 #[test]
-fn parses_section_label_offset() {
-    let content = "title = \"t\"\nauthor = \"a\"\nsection_label_offset = 0 12\n";
+fn parses_directive_row_offset() {
+    let content = "title = \"t\"\nauthor = \"a\"\ndirective_row_offset = 0 12\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.section_label_offset, Some(Offset { x: 0, y: 12 }));
+    assert_eq!(meta.directive_row_offset, Some(Offset { x: 0, y: 12 }));
 }
 
 #[test]
-fn parses_section_label_offset_with_negative_values() {
-    let content = "title = \"t\"\nauthor = \"a\"\nsection_label_offset = -5 -12\n";
+fn parses_directive_row_offset_with_negative_values() {
+    let content = "title = \"t\"\nauthor = \"a\"\ndirective_row_offset = -5 -12\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.section_label_offset, Some(Offset { x: -5, y: -12 }));
+    assert_eq!(meta.directive_row_offset, Some(Offset { x: -5, y: -12 }));
 }
 
 #[test]
-fn section_label_offset_defaults_to_none() {
+fn directive_row_offset_defaults_to_none() {
     let content = "title = \"t\"\nauthor = \"a\"\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.section_label_offset, None);
+    assert_eq!(meta.directive_row_offset, None);
 }
 
 #[test]
-fn collects_error_for_invalid_section_label_offset() {
-    let content = "title = \"t\"\nauthor = \"a\"\nsection_label_offset = twelve\n";
+fn collects_error_for_invalid_directive_row_offset() {
+    let content = "title = \"t\"\nauthor = \"a\"\ndirective_row_offset = twelve\n";
     let (_meta, errors) = parse_metadata(content, 0);
     assert!(!errors.is_empty());
 }
 
 #[test]
-fn collects_error_for_section_label_offset_with_too_many_values() {
-    let content = "title = \"t\"\nauthor = \"a\"\nsection_label_offset = 1 2 3\n";
+fn collects_error_for_directive_row_offset_with_too_many_values() {
+    let content = "title = \"t\"\nauthor = \"a\"\ndirective_row_offset = 1 2 3\n";
+    let (_meta, errors) = parse_metadata(content, 0);
+    assert!(!errors.is_empty());
+}
+
+#[test]
+fn collects_error_for_old_section_label_offset_key() {
+    let content = "title = \"t\"\nauthor = \"a\"\nsection_label_offset = 0 12\n";
     let (_meta, errors) = parse_metadata(content, 0);
     assert!(!errors.is_empty());
 }

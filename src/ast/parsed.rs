@@ -201,9 +201,11 @@ pub struct ParsedMetadata {
     /// When `true`, the horizontal divider line drawn between systems is omitted (see
     /// `grid_layout::layout`). Default: `false`.
     pub hide_system_dividers: Option<bool>,
-    /// Translation in points applied to a rendered section label, after layout (see
-    /// `renderer::new_renderer::render_directive_line`). Default: `(0, 0)`.
-    pub section_label_offset: Option<Offset>,
+    /// Translation in points applied to every rendered directive row (bar number, section
+    /// label, key, bpm, time signature, nav markers), after layout (see
+    /// `renderer::new_renderer::render_directive_line`). Not applied to the `# sequence`
+    /// summary header. Default: `(0, 0)`.
+    pub directive_row_offset: Option<Offset>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

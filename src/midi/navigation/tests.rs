@@ -17,7 +17,7 @@ fn metadata() -> Metadata {
         merge_duplicate_measures_across_parts: true,
         hide_resting_parts: true,
         hide_system_dividers: false,
-        section_label_offset: Offset::default(),
+        directive_row_offset: Offset::default(),
     }
 }
 

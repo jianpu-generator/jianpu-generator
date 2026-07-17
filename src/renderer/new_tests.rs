@@ -1,6 +1,8 @@
 use crate::ast::parsed::{JianPuPitch, Offset};
 use crate::compiler::types::ArcKind;
-use crate::compositor::types::{AbsoluteContent, AbsoluteElement, AbsolutePage, TextAnchor};
+use crate::compositor::types::{
+    AbsoluteContent, AbsoluteElement, AbsolutePage, TextAnchor, TextSpan,
+};
 use crate::render_config::RenderConfig;
 use crate::renderer::new_renderer::render_new;
 use crate::renderer::new_types::{SvgKind, SvgVariant};
@@ -13,7 +15,23 @@ fn cfg() -> RenderConfig {
         max_measures_per_system: 16,
         lyrics_font_size: 18,
         hide_system_dividers: false,
-        section_label_offset: Offset::default(),
+        directive_row_offset: Offset::default(),
+    }
+}
+
+fn cfg_with_directive_row_offset(offset: Offset) -> RenderConfig {
+    RenderConfig {
+        directive_row_offset: offset,
+        ..cfg()
+    }
+}
+
+fn bpm_span() -> TextSpan {
+    TextSpan {
+        content: "120".to_string(),
+        bold: false,
+        italic: false,
+        font_size: 12.0,
     }
 }
 
@@ -125,4 +143,80 @@ fn upper_octave_note_produces_circle() {
         .iter()
         .any(|e| matches!(e.kind, SvgKind::Circle { .. }));
     assert!(has_circle, "upper octave note should produce a dot circle");
+}
+
+#[test]
+fn labelless_directive_line_shifts_by_directive_row_offset() {
+    let offset = Offset { x: 5, y: 12 };
+    let page = make_page(AbsoluteContent::DirectiveLine {
+        label: None,
+        spans: vec![bpm_span()],
+        segno_icon_offset: None,
+        apply_row_offset: true,
+    });
+    let docs = render_new(&[page], &cfg_with_directive_row_offset(offset));
+    let text_element = docs[0]
+        .elements
+        .iter()
+        .find(|e| e.variant == Some(SvgVariant::DirectiveLine))
+        .expect("directive line text element should be present");
+    assert_eq!(text_element.x, 100.0 + offset.x as f32);
+    assert_eq!(text_element.y, 200.0 + offset.y as f32);
+}
+
+#[test]
+fn sequence_header_ignores_directive_row_offset() {
+    let offset = Offset { x: 5, y: 12 };
+    let page = make_page(AbsoluteContent::DirectiveLine {
+        label: None,
+        spans: vec![bpm_span()],
+        segno_icon_offset: None,
+        apply_row_offset: false,
+    });
+    let docs = render_new(&[page], &cfg_with_directive_row_offset(offset));
+    let text_element = docs[0]
+        .elements
+        .iter()
+        .find(|e| e.variant == Some(SvgVariant::DirectiveLine))
+        .expect("directive line text element should be present");
+    assert_eq!(text_element.x, 100.0);
+    assert_eq!(text_element.y, 200.0);
+}
+
+#[test]
+fn labeled_directive_line_moves_label_background_text_and_segno_together() {
+    let offset = Offset { x: 5, y: 12 };
+    let page = make_page(AbsoluteContent::DirectiveLine {
+        label: Some("Verse 1".to_string()),
+        spans: vec![bpm_span()],
+        segno_icon_offset: Some(20.0),
+        apply_row_offset: true,
+    });
+    let docs = render_new(&[page], &cfg_with_directive_row_offset(offset));
+    let group = docs[0]
+        .elements
+        .iter()
+        .find(|e| matches!(&e.kind, SvgKind::Group { .. }))
+        .expect("section label group should be present");
+    let SvgKind::Group { children, .. } = &group.kind else {
+        unreachable!()
+    };
+
+    let background = children
+        .iter()
+        .find(|e| matches!(&e.kind, SvgKind::TransparentRect { .. }))
+        .expect("label background rect should be present");
+    let text = children
+        .iter()
+        .find(|e| e.variant == Some(SvgVariant::DirectiveLine))
+        .expect("directive line text element should be present");
+    let segno = children
+        .iter()
+        .find(|e| matches!(&e.kind, SvgKind::SegnoGlyph { .. }))
+        .expect("segno glyph should be present");
+
+    assert_eq!(text.x, 100.0 + offset.x as f32);
+    assert_eq!(text.y, 200.0 + offset.y as f32);
+    assert_eq!(background.x, text.x - 3.0);
+    assert_eq!(segno.x, text.x + 20.0);
 }

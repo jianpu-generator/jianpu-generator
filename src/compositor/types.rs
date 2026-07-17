@@ -78,6 +78,10 @@ pub enum AbsoluteContent {
         /// Segno glyph should be drawn, if a Segno marker is present. `None`
         /// when there is no Segno marker on this line.
         segno_icon_offset: Option<f32>,
+        /// Whether `directive_row_offset` should be applied to this line.
+        /// `true` for ordinary directive lines; `false` for the `# sequence`
+        /// summary header, which must not move.
+        apply_row_offset: bool,
     },
 }
 

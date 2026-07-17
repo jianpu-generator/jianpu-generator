@@ -262,16 +262,16 @@ export function EditMetadataModal({
                   onChange={setYesNo('hide_system_dividers')}
                 />
                 <TextFieldRow
-                  label="Section Label Offset (x y)"
-                  help={metadataFieldHelp.section_label_offset}
+                  label="Directive Row Offset (x y)"
+                  help={metadataFieldHelp.directive_row_offset}
                   onShowHelp={showHelp}
-                  value={metadata.section_label_offset ?? ''}
+                  value={metadata.directive_row_offset ?? ''}
                   placeholder={
                     d
-                      ? `${d.section_label_offset_x} ${d.section_label_offset_y}`
+                      ? `${d.directive_row_offset_x} ${d.directive_row_offset_y}`
                       : undefined
                   }
-                  onChange={setText('section_label_offset')}
+                  onChange={setText('directive_row_offset')}
                 />
               </tbody>
             </table>

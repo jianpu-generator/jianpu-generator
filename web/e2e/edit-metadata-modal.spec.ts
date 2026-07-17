@@ -286,7 +286,7 @@ test('editing part_label_width_pt updates the source', async ({ page }) => {
   await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })
 
-test('editing section_label_offset writes "x y" to the source', async ({
+test('editing directive_row_offset writes "x y" to the source', async ({
   page,
 }) => {
   await loadSource(page)
@@ -301,7 +301,7 @@ test('editing section_label_offset writes "x y" to the source', async ({
   await page.keyboard.press('Escape')
   await modal.waitFor({ state: 'hidden' })
 
-  const expectedLine = 'section_label_offset = 0 12'
+  const expectedLine = 'directive_row_offset = 0 12'
   await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
   await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })

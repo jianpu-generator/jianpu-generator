@@ -210,6 +210,7 @@ fn grid_text_to_absolute(
                 label: label.clone(),
                 spans,
                 segno_icon_offset,
+                apply_row_offset: true,
             })
         }
         PostArcGridContent::Text {
@@ -235,6 +236,7 @@ fn grid_text_to_absolute(
             label: None,
             spans: sequence_line_content(entries),
             segno_icon_offset: None,
+            apply_row_offset: false,
         }),
         _ => None,
     }

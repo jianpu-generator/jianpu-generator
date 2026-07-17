@@ -11,7 +11,7 @@ export type MetadataKey =
   | 'merge_duplicate_measures_across_parts'
   | 'hide_resting_parts'
   | 'hide_system_dividers'
-  | 'section_label_offset'
+  | 'directive_row_offset'
 
 export interface ParsedMetadataFields {
   title: string
@@ -26,7 +26,7 @@ export interface ParsedMetadataFields {
   merge_duplicate_measures_across_parts: boolean | null
   hide_resting_parts: boolean | null
   hide_system_dividers: boolean | null
-  section_label_offset: string | null
+  directive_row_offset: string | null
 }
 
 const numericKeys: MetadataKey[] = [
@@ -43,7 +43,7 @@ const unquotedKeys: MetadataKey[] = [
   'merge_duplicate_measures_across_parts',
   'hide_resting_parts',
   'hide_system_dividers',
-  'section_label_offset',
+  'directive_row_offset',
 ]
 
 const canonicalKeyOrder: MetadataKey[] = [
@@ -59,7 +59,7 @@ const canonicalKeyOrder: MetadataKey[] = [
   'merge_duplicate_measures_across_parts',
   'hide_resting_parts',
   'hide_system_dividers',
-  'section_label_offset',
+  'directive_row_offset',
 ]
 
 function isUnquotedKey(key: MetadataKey): boolean {
@@ -139,7 +139,7 @@ export function parseMetadata(source: string): ParsedMetadataFields {
     merge_duplicate_measures_across_parts: null,
     hide_resting_parts: null,
     hide_system_dividers: null,
-    section_label_offset: null,
+    directive_row_offset: null,
   }
 
   if (startIndex === -1) return result
@@ -184,8 +184,8 @@ export function parseMetadata(source: string): ParsedMetadataFields {
     result.hide_resting_parts = fieldMap.get('hide_resting_parts') === 'yes'
   if (fieldMap.has('hide_system_dividers'))
     result.hide_system_dividers = fieldMap.get('hide_system_dividers') === 'yes'
-  if (fieldMap.has('section_label_offset'))
-    result.section_label_offset = fieldMap.get('section_label_offset') as string
+  if (fieldMap.has('directive_row_offset'))
+    result.directive_row_offset = fieldMap.get('directive_row_offset') as string
 
   return result
 }

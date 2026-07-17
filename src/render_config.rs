@@ -10,7 +10,7 @@ pub struct RenderConfig {
     pub max_measures_per_system: u32,
     pub lyrics_font_size: u32,
     pub hide_system_dividers: bool,
-    pub section_label_offset: Offset,
+    pub directive_row_offset: Offset,
 }
 
 impl RenderConfig {
@@ -22,7 +22,7 @@ impl RenderConfig {
             max_measures_per_system: meta.max_measures_per_system,
             lyrics_font_size: meta.lyrics_font_size,
             hide_system_dividers: meta.hide_system_dividers,
-            section_label_offset: meta.section_label_offset,
+            directive_row_offset: meta.directive_row_offset,
         }
     }
 
@@ -65,7 +65,7 @@ mod tests {
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
             hide_system_dividers: false,
-            section_label_offset: Offset::default(),
+            directive_row_offset: Offset::default(),
         };
         let cfg = RenderConfig::from_metadata(&meta);
         assert_eq!(cfg.row_height, 30);

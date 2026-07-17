@@ -97,7 +97,7 @@ struct MetadataAccumulator {
     merge_duplicate_measures_across_parts: Option<bool>,
     hide_resting_parts: Option<bool>,
     hide_system_dividers: Option<bool>,
-    section_label_offset: Option<Offset>,
+    directive_row_offset: Option<Offset>,
 }
 
 impl MetadataAccumulator {
@@ -156,8 +156,8 @@ impl MetadataAccumulator {
                 value_span,
                 errors,
             ),
-            "section_label_offset" => parse_offset_field(
-                &mut self.section_label_offset,
+            "directive_row_offset" => parse_offset_field(
+                &mut self.directive_row_offset,
                 key,
                 value,
                 value_span,
@@ -218,7 +218,7 @@ pub fn parse_metadata(
                 .merge_duplicate_measures_across_parts,
             hide_resting_parts: accumulator.hide_resting_parts,
             hide_system_dividers: accumulator.hide_system_dividers,
-            section_label_offset: accumulator.section_label_offset,
+            directive_row_offset: accumulator.directive_row_offset,
         },
         errors,
     )

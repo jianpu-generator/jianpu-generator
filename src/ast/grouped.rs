@@ -19,8 +19,8 @@ pub const DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS: bool = true;
 pub const DEFAULT_HIDE_RESTING_PARTS: bool = true;
 /// Default `hide_system_dividers`, used when unset in `# metadata`.
 pub const DEFAULT_HIDE_SYSTEM_DIVIDERS: bool = false;
-/// Default `section_label_offset`, used when unset in `# metadata`.
-pub const DEFAULT_SECTION_LABEL_OFFSET: Offset = Offset { x: 0, y: 0 };
+/// Default `directive_row_offset`, used when unset in `# metadata`.
+pub const DEFAULT_DIRECTIVE_ROW_OFFSET: Offset = Offset { x: 0, y: 0 };
 
 /// Default `lyrics_font_size` in points: 60% of `row_height`, used when unset in `# metadata`.
 pub fn default_lyrics_font_size(row_height: u32) -> u32 {
@@ -61,9 +61,11 @@ pub struct Metadata {
     /// When `true`, the horizontal divider line drawn between systems is omitted (see
     /// `grid_layout::layout`). Default: `false`.
     pub hide_system_dividers: bool,
-    /// Translation in points applied to a rendered section label, after layout (see
-    /// `renderer::new_renderer::render_directive_line`). Default: `(0, 0)`.
-    pub section_label_offset: Offset,
+    /// Translation in points applied to every rendered directive row (bar number, section
+    /// label, key, bpm, time signature, nav markers), after layout (see
+    /// `renderer::new_renderer::render_directive_line`). Not applied to the `# sequence`
+    /// summary header. Default: `(0, 0)`.
+    pub directive_row_offset: Offset,
 }
 
 #[derive(Clone)]
