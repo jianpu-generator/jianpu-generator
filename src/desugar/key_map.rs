@@ -28,8 +28,12 @@ fn group_by_key(lines: Vec<KeyedLine>) -> KeyMap {
 }
 
 /// Fills each group broadcast's members with its content, one content line per slot index,
-/// skipping any slot a member already has an explicit direct line for (direct lines win).
-/// Lines filled this way are tagged with the group's abbreviation as their provenance.
+/// skipping any slot a member already has an explicit direct line for (direct lines always
+/// win). A slot previously filled by an *earlier* group broadcast (in score order) is
+/// overwritten by a later group broadcast targeting the same member and slot — e.g. a
+/// broader group's broadcast (`[V] 1`, where `V` transitively contains `S`) is superseded
+/// by a subsequent, more specific broadcast (`[S] 4`) to the same member. Lines filled this
+/// way are tagged with the group's abbreviation as their provenance.
 fn merge_group_broadcasts(
     key_map: &mut KeyMap,
     group_map: KeyMap,
@@ -50,12 +54,17 @@ fn merge_group_broadcasts(
                 continue;
             };
             for (index, content) in contents.iter().enumerate() {
+                let line = SourceLine {
+                    content: content.content.clone(),
+                    offset: content.offset,
+                    group: Some(group_abbrev.clone()),
+                };
                 if index == lines.len() {
-                    lines.push(SourceLine {
-                        content: content.content.clone(),
-                        offset: content.offset,
-                        group: Some(group_abbrev.clone()),
-                    });
+                    lines.push(line);
+                } else if let Some(existing) = lines.get_mut(index) {
+                    if existing.group.is_some() {
+                        *existing = line;
+                    }
                 }
             }
         }

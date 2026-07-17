@@ -239,3 +239,48 @@ fn group_broadcast_partial_override_keeps_diverged_member_separate() {
         "S2 overrode the broadcast, so it keeps its own individual label"
     );
 }
+
+#[test]
+fn narrower_group_broadcast_overrides_broader_group_broadcast_for_shared_members() {
+    // V = A S (A and S are themselves groups). [V] broadcasts "1" to every
+    // member of A and S, including S1/S2. Then [S] broadcasts "4" to S1/S2
+    // only. The later, narrower [S] broadcast should win for S1/S2, so a
+    // separate "S" row with content "4" must appear alongside the "A" row
+    // that keeps content "1".
+    let source = concat!(
+        "# parts\n",
+        "Alto 1 [A1] = notes\n",
+        "Alto 2 [A2] = follow[A1]\n",
+        "Soprano 1 [S1] = follow[A1]\n",
+        "Soprano 2 [S2] = follow[S1]\n",
+        "\n",
+        "# groups\n",
+        "Alto [A] = A1 A2\n",
+        "Soprano [S] = S1 S2\n",
+        "Vocal [V] = A S\n",
+        "\n",
+        "# score\n",
+        "[V] 1\n",
+        "[S] 4\n",
+    );
+    let blocks = consolidated_blocks(source);
+
+    assert_eq!(
+        blocks[0].rows.len(),
+        2,
+        "expected a merged A row (content 1) and a merged S row (content 4); got rows: {:?}",
+        blocks[0]
+            .rows
+            .iter()
+            .map(|row| &row.label)
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        blocks[0].rows[0].label, "V",
+        "A1/A2 only ever got the V broadcast, so they merge under the V group label"
+    );
+    assert_eq!(
+        blocks[0].rows[1].label, "S",
+        "S1/S2 should be overridden by the later, narrower S broadcast and merge under the S group label"
+    );
+}
