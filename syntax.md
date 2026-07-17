@@ -60,16 +60,16 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | `title` | no | none | Piece title (rendered in header) |
 | `author` | no | none | Author name (rendered in header) |
 | `subtitle` | no | none | Subtitle line |
-| `max measures per system` | no | `4` | Maximum number of measures per system line before wrapping |
-| `row height` | no | `24` | Vertical spacing of one part row (pixels) |
-| `label width` | no | `40` | Horizontal space reserved for part labels (pixels) |
-| `note number width` | no | `8` | Horizontal space per note column (pixels) |
-| `parts list columns` | no | `4` | Number of columns in the parts list header |
-| `lyrics font size` | no | `row height * 0.6` | Font size of lyric syllables (points) |
-| `merge duplicate measures across parts` | no | `yes` | Whether identical measures from different parts are merged into a single row (`yes`/`no`) |
-| `hide resting parts` | no | `yes` | Whether an all-rest part is omitted from a measure where other parts have content (`yes`/`no`) |
-| `hide system dividers` | no | `no` | Whether the horizontal divider line between systems is omitted (`yes`/`no`) |
-| `section label offset` | no | `0 0` | Translation `"x y"` (points) applied to a rendered section label, moving it away from its default position without affecting the layout of anything else |
+| `max_measures_per_system` | no | `4` | Maximum number of measures per system line before wrapping |
+| `row_height` | no | `24` | Vertical spacing of one part row (pixels) |
+| `label_width` | no | `40` | Horizontal space reserved for part labels (pixels) |
+| `note_number_width` | no | `8` | Horizontal space per note column (pixels) |
+| `parts_list_columns` | no | `4` | Number of columns in the parts list header |
+| `lyrics_font_size` | no | `row_height * 0.6` | Font size of lyric syllables (points) |
+| `merge_duplicate_measures_across_parts` | no | `yes` | Whether identical measures from different parts are merged into a single row (`yes`/`no`) |
+| `hide_resting_parts` | no | `yes` | Whether an all-rest part is omitted from a measure where other parts have content (`yes`/`no`) |
+| `hide_system_dividers` | no | `no` | Whether the horizontal divider line between systems is omitted (`yes`/`no`) |
+| `section_label_offset` | no | `0 0` | Translation `"x y"` (points) applied to a rendered section label, moving it away from its default position without affecting the layout of anything else |
 
 ---
 
@@ -706,7 +706,7 @@ Kick = percussion "36: Bass Drum 1"
 
 ## Not-mentioned parts
 
-When a part is **not mentioned** in a measure (no `[Key]` line covers it), it is filled with rests (`0`) or no-lyrics (`_`). If, after filling, that part's row is all rests for the measure **and at least one other part in the same measure has real content**, the row is **not rendered** for that measure — the vertical space is reclaimed and rows below move up. This suppression is controlled by the `hide resting parts` metadata field (default `yes`); set it to `no` to always render every part's row, even when it's all rests.
+When a part is **not mentioned** in a measure (no `[Key]` line covers it), it is filled with rests (`0`) or no-lyrics (`_`). If, after filling, that part's row is all rests for the measure **and at least one other part in the same measure has real content**, the row is **not rendered** for that measure — the vertical space is reclaimed and rows below move up. This suppression is controlled by the `hide_resting_parts` metadata field (default `yes`); set it to `no` to always render every part's row, even when it's all rests.
 
 - A `follow[X]` part that is not mentioned copies `X`'s content (audio plays the same as X).
 - A non-follow part that is not mentioned is filled with rests (`0`) or no-lyrics (`_`).

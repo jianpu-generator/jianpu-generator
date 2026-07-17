@@ -1,6 +1,6 @@
 # metadata
 title = "Percussion"
-max measures per system = 1
+max_measures_per_system = 1
 
 # parts
 Snare [Sn] = percussion "38: Acoustic Snare"

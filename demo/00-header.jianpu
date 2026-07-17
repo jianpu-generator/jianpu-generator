@@ -2,10 +2,10 @@
 title = "Jianpu Postcard"
 author = "—"
 subtitle = "Complete syntax reference — every feature, one measure each"
-max measures per system = 1
-row height = 24
-label width = 120
-note number width = 8
+max_measures_per_system = 1
+row_height = 24
+label_width = 120
+note_number_width = 8
 
 # parts
 Melody [M] = notes+lyrics

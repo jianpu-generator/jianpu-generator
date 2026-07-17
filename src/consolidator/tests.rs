@@ -130,7 +130,7 @@ B = notes
 fn identical_rows_from_different_parts_stay_separate_when_disabled() {
     let source = r#"
 # metadata
-merge duplicate measures across parts = no
+merge_duplicate_measures_across_parts = no
 
 # parts
 A = notes

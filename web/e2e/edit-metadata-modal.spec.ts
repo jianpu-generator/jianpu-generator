@@ -114,7 +114,7 @@ test('editing a numeric field updates the source', async ({ page }) => {
   await page.keyboard.press('Escape')
   await modal.waitFor({ state: 'hidden' })
 
-  const expectedLine = 'row height = 30'
+  const expectedLine = 'row_height = 30'
   await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
   await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })
@@ -142,7 +142,7 @@ test('clearing an optional field removes it from the source', async ({
   await expect.poll(getStoredSource.bind(null, page)).not.toContain('subtitle')
 })
 
-test('unchecking merge duplicate measures across parts writes = no to the source', async ({
+test('unchecking merge_duplicate_measures_across_parts writes = no to the source', async ({
   page,
 }) => {
   await loadSource(page)
@@ -158,12 +158,12 @@ test('unchecking merge duplicate measures across parts writes = no to the source
   await page.keyboard.press('Escape')
   await modal.waitFor({ state: 'hidden' })
 
-  const expectedLine = 'merge duplicate measures across parts = no'
+  const expectedLine = 'merge_duplicate_measures_across_parts = no'
   await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
   await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })
 
-test('re-checking merge duplicate measures across parts writes = yes to the source', async ({
+test('re-checking merge_duplicate_measures_across_parts writes = yes to the source', async ({
   page,
 }) => {
   await loadSource(page)
@@ -179,12 +179,12 @@ test('re-checking merge duplicate measures across parts writes = yes to the sour
   await page.keyboard.press('Escape')
   await modal.waitFor({ state: 'hidden' })
 
-  const expectedLine = 'merge duplicate measures across parts = yes'
+  const expectedLine = 'merge_duplicate_measures_across_parts = yes'
   await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
   await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })
 
-test('unchecking hide resting parts writes = no to the source', async ({
+test('unchecking hide_resting_parts writes = no to the source', async ({
   page,
 }) => {
   await loadSource(page)
@@ -200,12 +200,12 @@ test('unchecking hide resting parts writes = no to the source', async ({
   await page.keyboard.press('Escape')
   await modal.waitFor({ state: 'hidden' })
 
-  const expectedLine = 'hide resting parts = no'
+  const expectedLine = 'hide_resting_parts = no'
   await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
   await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })
 
-test('re-checking hide resting parts writes = yes to the source', async ({
+test('re-checking hide_resting_parts writes = yes to the source', async ({
   page,
 }) => {
   await loadSource(page)
@@ -221,12 +221,12 @@ test('re-checking hide resting parts writes = yes to the source', async ({
   await page.keyboard.press('Escape')
   await modal.waitFor({ state: 'hidden' })
 
-  const expectedLine = 'hide resting parts = yes'
+  const expectedLine = 'hide_resting_parts = yes'
   await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
   await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })
 
-test('checking hide system dividers writes = yes to the source', async ({
+test('checking hide_system_dividers writes = yes to the source', async ({
   page,
 }) => {
   await loadSource(page)
@@ -242,12 +242,12 @@ test('checking hide system dividers writes = yes to the source', async ({
   await page.keyboard.press('Escape')
   await modal.waitFor({ state: 'hidden' })
 
-  const expectedLine = 'hide system dividers = yes'
+  const expectedLine = 'hide_system_dividers = yes'
   await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
   await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })
 
-test('unchecking hide system dividers writes = no to the source', async ({
+test('unchecking hide_system_dividers writes = no to the source', async ({
   page,
 }) => {
   await loadSource(page)
@@ -263,12 +263,12 @@ test('unchecking hide system dividers writes = no to the source', async ({
   await page.keyboard.press('Escape')
   await modal.waitFor({ state: 'hidden' })
 
-  const expectedLine = 'hide system dividers = no'
+  const expectedLine = 'hide_system_dividers = no'
   await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
   await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })
 
-test('editing section label offset writes "x y" to the source', async ({
+test('editing section_label_offset writes "x y" to the source', async ({
   page,
 }) => {
   await loadSource(page)
@@ -283,7 +283,7 @@ test('editing section label offset writes "x y" to the source', async ({
   await page.keyboard.press('Escape')
   await modal.waitFor({ state: 'hidden' })
 
-  const expectedLine = 'section label offset = 0 12'
+  const expectedLine = 'section_label_offset = 0 12'
   await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
   await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })

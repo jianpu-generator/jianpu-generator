@@ -307,7 +307,7 @@ fn not_mentioned_part_is_kept_when_hide_resting_parts_is_disabled() {
         "# metadata
 title=\"t\"
 author=\"a\"
-hide resting parts = no
+hide_resting_parts = no
 
 # parts
 A = notes+lyrics
@@ -326,7 +326,7 @@ time=4/4 key=C4 bpm=120
     assert_eq!(
         blocks[0].rows.len(),
         3,
-        "B (rest-filled) should be kept when hide resting parts is disabled"
+        "B (rest-filled) should be kept when hide_resting_parts is disabled"
     );
 }
 

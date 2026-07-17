@@ -1,8 +1,8 @@
 # metadata
 title = "Testing"
 author = "Mozart"
-row height = 24
-max measures per system = 4
+row_height = 24
+max_measures_per_system = 4
 
 # parts
 Melody = notes

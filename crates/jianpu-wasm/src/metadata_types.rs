@@ -9,7 +9,6 @@ use tsify::Tsify;
 
 /// Default values applied to `# metadata` fields left unset in the source.
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
 #[tsify(into_wasm_abi)]
 pub struct MetadataDefaultsOut {
     pub row_height: u32,

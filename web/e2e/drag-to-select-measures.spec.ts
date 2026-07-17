@@ -19,7 +19,7 @@ import { focusEditor } from './fileSwitcherHelpers'
 const dragTestSource = [
   '# metadata',
   'title = "drag test"',
-  'max measures per system = 48',
+  'max_measures_per_system = 48',
   '',
   '# parts',
   'Melody [M] = notes',
@@ -251,7 +251,7 @@ test('drag from measure 0 to measure 3 with CJK source selects exactly 4 measure
     'title = "彌勒淨土鄉"',
     'subtitle = "測試副標題"',
     'author = "天然師尊"',
-    'max measures per system = 48',
+    'max_measures_per_system = 48',
     '',
     '# parts',
     'Melody [M] = notes',

@@ -89,7 +89,7 @@ fn twinkle_source() -> &'static str {
         "# metadata\n",
         "title = \"Twinkle Twinkle Little Star\"\n",
         "author = \"Mozart\"\n",
-        "row height = 24\n",
+        "row_height = 24\n",
         "\n",
         "# parts\n",
         "Chord = chords\n",
@@ -213,7 +213,7 @@ fn find_measure_at_line_number_covers_all_lines_in_twinkle_star() {
         );
     };
 
-    // Lines 0-10: # metadata, title, author, row height, blank, # parts, Chord, Melody, blank, # score, directive
+    // Lines 0-10: # metadata, title, author, row_height, blank, # parts, Chord, Melody, blank, # score, directive
     for line in 0..=10 {
         check("header/directive line", line, None);
     }

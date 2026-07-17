@@ -113,46 +113,46 @@ impl MetadataAccumulator {
             "title" => self.title = Some(value.to_string()),
             "subtitle" => self.subtitle = Some(value.to_string()),
             "author" => self.author = Some(value.to_string()),
-            "row height" => {
+            "row_height" => {
                 parse_numeric_field(&mut self.row_height, key, value, value_span, errors)
             }
-            "max measures per system" => parse_numeric_field(
+            "max_measures_per_system" => parse_numeric_field(
                 &mut self.max_measures_per_system,
                 key,
                 value,
                 value_span,
                 errors,
             ),
-            "label width" => {
+            "label_width" => {
                 parse_numeric_field(&mut self.label_width, key, value, value_span, errors)
             }
-            "note number width" => {
+            "note_number_width" => {
                 parse_numeric_field(&mut self.note_number_width, key, value, value_span, errors)
             }
-            "parts list columns" => {
+            "parts_list_columns" => {
                 parse_numeric_field(&mut self.parts_list_columns, key, value, value_span, errors)
             }
-            "lyrics font size" => {
+            "lyrics_font_size" => {
                 parse_numeric_field(&mut self.lyrics_font_size, key, value, value_span, errors)
             }
-            "merge duplicate measures across parts" => parse_bool_field(
+            "merge_duplicate_measures_across_parts" => parse_bool_field(
                 &mut self.merge_duplicate_measures_across_parts,
                 key,
                 value,
                 value_span,
                 errors,
             ),
-            "hide resting parts" => {
+            "hide_resting_parts" => {
                 parse_bool_field(&mut self.hide_resting_parts, key, value, value_span, errors)
             }
-            "hide system dividers" => parse_bool_field(
+            "hide_system_dividers" => parse_bool_field(
                 &mut self.hide_system_dividers,
                 key,
                 value,
                 value_span,
                 errors,
             ),
-            "section label offset" => parse_offset_field(
+            "section_label_offset" => parse_offset_field(
                 &mut self.section_label_offset,
                 key,
                 value,

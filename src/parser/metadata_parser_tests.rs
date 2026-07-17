@@ -14,7 +14,7 @@ fn parses_title_and_author() {
 
 #[test]
 fn parses_optional_row_height() {
-    let content = "title = \"t\"\nauthor = \"a\"\nrow height = 16\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nrow_height = 16\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
     assert_eq!(meta.row_height, Some(16));
@@ -22,7 +22,7 @@ fn parses_optional_row_height() {
 
 #[test]
 fn parses_optional_max_measures_per_system() {
-    let content = "title = \"t\"\nauthor = \"a\"\nmax measures per system = 6\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nmax_measures_per_system = 6\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
     assert_eq!(meta.max_measures_per_system, Some(6));
@@ -62,7 +62,7 @@ fn collects_error_for_parts_field_in_metadata() {
 
 #[test]
 fn collects_error_for_invalid_row_height() {
-    let content = "title = \"t\"\nauthor = \"a\"\nrow height = abc\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nrow_height = abc\n";
     let (_meta, errors) = parse_metadata(content, 0);
     assert!(!errors.is_empty());
 }
@@ -70,7 +70,7 @@ fn collects_error_for_invalid_row_height() {
 #[test]
 fn invalid_value_span_covers_only_the_value() {
     let prefix = "title = \"t\"\nauthor = \"a\"\n";
-    let content = format!("{prefix}row height = 20k\n");
+    let content = format!("{prefix}row_height = 20k\n");
     let (_meta, errors) = parse_metadata(&content, 0);
     assert_eq!(errors.len(), 1);
     let span = errors[0].span;
@@ -80,7 +80,7 @@ fn invalid_value_span_covers_only_the_value() {
 
 #[test]
 fn collects_error_for_invalid_max_measures_per_system() {
-    let content = "title = \"t\"\nauthor = \"a\"\nmax measures per system = 0\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nmax_measures_per_system = 0\n";
     let (_meta, errors) = parse_metadata(content, 0);
     assert!(!errors.is_empty());
 }
@@ -102,15 +102,8 @@ fn subtitle_defaults_to_none() {
 }
 
 #[test]
-fn collects_error_for_row_height_with_underscore() {
-    let content = "title = \"t\"\nauthor = \"a\"\nrow_height = 20\n";
-    let (_meta, errors) = parse_metadata(content, 0);
-    assert!(!errors.is_empty());
-}
-
-#[test]
 fn parses_label_width() {
-    let content = "title = \"t\"\nauthor = \"a\"\nlabel width = 60\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nlabel_width = 60\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
     assert_eq!(meta.label_width, Some(60));
@@ -126,7 +119,7 @@ fn label_width_defaults_to_none() {
 
 #[test]
 fn parses_lyrics_font_size() {
-    let content = "title = \"t\"\nauthor = \"a\"\nlyrics font size = 14\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nlyrics_font_size = 14\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
     assert_eq!(meta.lyrics_font_size, Some(14));
@@ -142,7 +135,7 @@ fn lyrics_font_size_defaults_to_none() {
 
 #[test]
 fn parses_merge_duplicate_measures_across_parts() {
-    let content = "title = \"t\"\nauthor = \"a\"\nmerge duplicate measures across parts = no\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nmerge_duplicate_measures_across_parts = no\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
     assert_eq!(meta.merge_duplicate_measures_across_parts, Some(false));
@@ -158,14 +151,14 @@ fn merge_duplicate_measures_across_parts_defaults_to_none() {
 
 #[test]
 fn collects_error_for_invalid_merge_duplicate_measures_across_parts() {
-    let content = "title = \"t\"\nauthor = \"a\"\nmerge duplicate measures across parts = maybe\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nmerge_duplicate_measures_across_parts = maybe\n";
     let (_meta, errors) = parse_metadata(content, 0);
     assert!(!errors.is_empty());
 }
 
 #[test]
 fn parses_hide_resting_parts() {
-    let content = "title = \"t\"\nauthor = \"a\"\nhide resting parts = no\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nhide_resting_parts = no\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
     assert_eq!(meta.hide_resting_parts, Some(false));
@@ -181,14 +174,14 @@ fn hide_resting_parts_defaults_to_none() {
 
 #[test]
 fn collects_error_for_invalid_hide_resting_parts() {
-    let content = "title = \"t\"\nauthor = \"a\"\nhide resting parts = maybe\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nhide_resting_parts = maybe\n";
     let (_meta, errors) = parse_metadata(content, 0);
     assert!(!errors.is_empty());
 }
 
 #[test]
 fn parses_hide_system_dividers() {
-    let content = "title = \"t\"\nauthor = \"a\"\nhide system dividers = yes\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nhide_system_dividers = yes\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
     assert_eq!(meta.hide_system_dividers, Some(true));
@@ -204,14 +197,14 @@ fn hide_system_dividers_defaults_to_none() {
 
 #[test]
 fn collects_error_for_invalid_hide_system_dividers() {
-    let content = "title = \"t\"\nauthor = \"a\"\nhide system dividers = maybe\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nhide_system_dividers = maybe\n";
     let (_meta, errors) = parse_metadata(content, 0);
     assert!(!errors.is_empty());
 }
 
 #[test]
 fn parses_section_label_offset() {
-    let content = "title = \"t\"\nauthor = \"a\"\nsection label offset = 0 12\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nsection_label_offset = 0 12\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
     assert_eq!(meta.section_label_offset, Some(Offset { x: 0, y: 12 }));
@@ -219,7 +212,7 @@ fn parses_section_label_offset() {
 
 #[test]
 fn parses_section_label_offset_with_negative_values() {
-    let content = "title = \"t\"\nauthor = \"a\"\nsection label offset = -5 -12\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nsection_label_offset = -5 -12\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
     assert_eq!(meta.section_label_offset, Some(Offset { x: -5, y: -12 }));
@@ -235,14 +228,14 @@ fn section_label_offset_defaults_to_none() {
 
 #[test]
 fn collects_error_for_invalid_section_label_offset() {
-    let content = "title = \"t\"\nauthor = \"a\"\nsection label offset = twelve\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nsection_label_offset = twelve\n";
     let (_meta, errors) = parse_metadata(content, 0);
     assert!(!errors.is_empty());
 }
 
 #[test]
 fn collects_error_for_section_label_offset_with_too_many_values() {
-    let content = "title = \"t\"\nauthor = \"a\"\nsection label offset = 1 2 3\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nsection_label_offset = 1 2 3\n";
     let (_meta, errors) = parse_metadata(content, 0);
     assert!(!errors.is_empty());
 }

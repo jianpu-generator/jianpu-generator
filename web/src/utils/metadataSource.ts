@@ -2,64 +2,64 @@ export type MetadataKey =
   | 'title'
   | 'subtitle'
   | 'author'
-  | 'row height'
-  | 'max measures per system'
-  | 'label width'
-  | 'note number width'
-  | 'parts list columns'
-  | 'lyrics font size'
-  | 'merge duplicate measures across parts'
-  | 'hide resting parts'
-  | 'hide system dividers'
-  | 'section label offset'
+  | 'row_height'
+  | 'max_measures_per_system'
+  | 'label_width'
+  | 'note_number_width'
+  | 'parts_list_columns'
+  | 'lyrics_font_size'
+  | 'merge_duplicate_measures_across_parts'
+  | 'hide_resting_parts'
+  | 'hide_system_dividers'
+  | 'section_label_offset'
 
 export interface ParsedMetadataFields {
   title: string
   subtitle: string | null
   author: string | null
-  rowHeight: number | null
-  maxMeasuresPerSystem: number | null
-  labelWidth: number | null
-  noteNumberWidth: number | null
-  partsListColumns: number | null
-  lyricsFontSize: number | null
-  mergeDuplicateMeasuresAcrossParts: boolean | null
-  hideRestingParts: boolean | null
-  hideSystemDividers: boolean | null
-  sectionLabelOffset: string | null
+  row_height: number | null
+  max_measures_per_system: number | null
+  label_width: number | null
+  note_number_width: number | null
+  parts_list_columns: number | null
+  lyrics_font_size: number | null
+  merge_duplicate_measures_across_parts: boolean | null
+  hide_resting_parts: boolean | null
+  hide_system_dividers: boolean | null
+  section_label_offset: string | null
 }
 
 const numericKeys: MetadataKey[] = [
-  'row height',
-  'max measures per system',
-  'label width',
-  'note number width',
-  'parts list columns',
-  'lyrics font size',
+  'row_height',
+  'max_measures_per_system',
+  'label_width',
+  'note_number_width',
+  'parts_list_columns',
+  'lyrics_font_size',
 ]
 
 const unquotedKeys: MetadataKey[] = [
   ...numericKeys,
-  'merge duplicate measures across parts',
-  'hide resting parts',
-  'hide system dividers',
-  'section label offset',
+  'merge_duplicate_measures_across_parts',
+  'hide_resting_parts',
+  'hide_system_dividers',
+  'section_label_offset',
 ]
 
 const canonicalKeyOrder: MetadataKey[] = [
   'title',
   'subtitle',
   'author',
-  'row height',
-  'max measures per system',
-  'label width',
-  'note number width',
-  'parts list columns',
-  'lyrics font size',
-  'merge duplicate measures across parts',
-  'hide resting parts',
-  'hide system dividers',
-  'section label offset',
+  'row_height',
+  'max_measures_per_system',
+  'label_width',
+  'note_number_width',
+  'parts_list_columns',
+  'lyrics_font_size',
+  'merge_duplicate_measures_across_parts',
+  'hide_resting_parts',
+  'hide_system_dividers',
+  'section_label_offset',
 ]
 
 function isUnquotedKey(key: MetadataKey): boolean {
@@ -130,16 +130,16 @@ export function parseMetadata(source: string): ParsedMetadataFields {
     title: '',
     subtitle: null,
     author: null,
-    rowHeight: null,
-    maxMeasuresPerSystem: null,
-    labelWidth: null,
-    noteNumberWidth: null,
-    partsListColumns: null,
-    lyricsFontSize: null,
-    mergeDuplicateMeasuresAcrossParts: null,
-    hideRestingParts: null,
-    hideSystemDividers: null,
-    sectionLabelOffset: null,
+    row_height: null,
+    max_measures_per_system: null,
+    label_width: null,
+    note_number_width: null,
+    parts_list_columns: null,
+    lyrics_font_size: null,
+    merge_duplicate_measures_across_parts: null,
+    hide_resting_parts: null,
+    hide_system_dividers: null,
+    section_label_offset: null,
   }
 
   if (startIndex === -1) return result
@@ -150,39 +150,39 @@ export function parseMetadata(source: string): ParsedMetadataFields {
   if (fieldMap.has('subtitle'))
     result.subtitle = fieldMap.get('subtitle') as string
   if (fieldMap.has('author')) result.author = fieldMap.get('author') as string
-  if (fieldMap.has('row height'))
-    result.rowHeight = parseInt(fieldMap.get('row height') as string, 10)
-  if (fieldMap.has('max measures per system'))
-    result.maxMeasuresPerSystem = parseInt(
-      fieldMap.get('max measures per system') as string,
+  if (fieldMap.has('row_height'))
+    result.row_height = parseInt(fieldMap.get('row_height') as string, 10)
+  if (fieldMap.has('max_measures_per_system'))
+    result.max_measures_per_system = parseInt(
+      fieldMap.get('max_measures_per_system') as string,
       10,
     )
-  if (fieldMap.has('label width'))
-    result.labelWidth = parseInt(fieldMap.get('label width') as string, 10)
-  if (fieldMap.has('note number width'))
-    result.noteNumberWidth = parseInt(
-      fieldMap.get('note number width') as string,
+  if (fieldMap.has('label_width'))
+    result.label_width = parseInt(fieldMap.get('label_width') as string, 10)
+  if (fieldMap.has('note_number_width'))
+    result.note_number_width = parseInt(
+      fieldMap.get('note_number_width') as string,
       10,
     )
-  if (fieldMap.has('parts list columns'))
-    result.partsListColumns = parseInt(
-      fieldMap.get('parts list columns') as string,
+  if (fieldMap.has('parts_list_columns'))
+    result.parts_list_columns = parseInt(
+      fieldMap.get('parts_list_columns') as string,
       10,
     )
-  if (fieldMap.has('lyrics font size'))
-    result.lyricsFontSize = parseInt(
-      fieldMap.get('lyrics font size') as string,
+  if (fieldMap.has('lyrics_font_size'))
+    result.lyrics_font_size = parseInt(
+      fieldMap.get('lyrics_font_size') as string,
       10,
     )
-  if (fieldMap.has('merge duplicate measures across parts'))
-    result.mergeDuplicateMeasuresAcrossParts =
-      fieldMap.get('merge duplicate measures across parts') === 'yes'
-  if (fieldMap.has('hide resting parts'))
-    result.hideRestingParts = fieldMap.get('hide resting parts') === 'yes'
-  if (fieldMap.has('hide system dividers'))
-    result.hideSystemDividers = fieldMap.get('hide system dividers') === 'yes'
-  if (fieldMap.has('section label offset'))
-    result.sectionLabelOffset = fieldMap.get('section label offset') as string
+  if (fieldMap.has('merge_duplicate_measures_across_parts'))
+    result.merge_duplicate_measures_across_parts =
+      fieldMap.get('merge_duplicate_measures_across_parts') === 'yes'
+  if (fieldMap.has('hide_resting_parts'))
+    result.hide_resting_parts = fieldMap.get('hide_resting_parts') === 'yes'
+  if (fieldMap.has('hide_system_dividers'))
+    result.hide_system_dividers = fieldMap.get('hide_system_dividers') === 'yes'
+  if (fieldMap.has('section_label_offset'))
+    result.section_label_offset = fieldMap.get('section_label_offset') as string
 
   return result
 }

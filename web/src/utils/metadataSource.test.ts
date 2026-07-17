@@ -12,10 +12,10 @@ const sourceWithAllFields = `# metadata
 title = "Song"
 subtitle = "Sub"
 author = "Bob"
-row height = 80
-max measures per system = 4
-label width = 20
-note number width = 10
+row_height = 80
+max_measures_per_system = 4
+label_width = 20
+note_number_width = 10
 # notes
 1 2 3`
 
@@ -62,13 +62,13 @@ describe('updateMetadataField', () => {
     const outOfOrderSource = `# metadata
 author = "Bob"
 title = "Song"
-row height = 80
+row_height = 80
 subtitle = "Sub"
 # notes
 1 2 3`
     const result = updateMetadataField(
       outOfOrderSource,
-      'max measures per system',
+      'max_measures_per_system',
       '4',
     )
     const lines = result.split('\n')
@@ -85,8 +85,8 @@ subtitle = "Sub"
       'title',
       'subtitle',
       'author',
-      'row height',
-      'max measures per system',
+      'row_height',
+      'max_measures_per_system',
     ])
   })
 
@@ -98,10 +98,10 @@ title = "Solo"
     const result = updateMetadataField(minimalSource, 'title', 'Solo Updated')
     expect(result).not.toContain('subtitle')
     expect(result).not.toContain('author')
-    expect(result).not.toContain('row height')
-    expect(result).not.toContain('max measures per system')
-    expect(result).not.toContain('label width')
-    expect(result).not.toContain('note number width')
+    expect(result).not.toContain('row_height')
+    expect(result).not.toContain('max_measures_per_system')
+    expect(result).not.toContain('label_width')
+    expect(result).not.toContain('note_number_width')
   })
 
   it('leaves sections before metadata untouched', () => {
@@ -121,8 +121,8 @@ title = "Song"
   })
 
   it('formats numeric keys without quotes', () => {
-    const result = updateMetadataField(sourceWithMetadata, 'row height', '100')
-    expect(result).toContain('row height = 100')
+    const result = updateMetadataField(sourceWithMetadata, 'row_height', '100')
+    expect(result).toContain('row_height = 100')
     expect(result).not.toContain('"100"')
   })
 
@@ -136,23 +136,23 @@ title = "Song"
     expect(lines[metadataEnd - 1]).toBe('')
   })
 
-  it('formats the merge duplicate measures across parts key without quotes', () => {
+  it('formats the merge_duplicate_measures_across_parts key without quotes', () => {
     const result = updateMetadataField(
       sourceWithMetadata,
-      'merge duplicate measures across parts',
+      'merge_duplicate_measures_across_parts',
       'no',
     )
-    expect(result).toContain('merge duplicate measures across parts = no')
+    expect(result).toContain('merge_duplicate_measures_across_parts = no')
     expect(result).not.toContain('"no"')
   })
 
-  it('formats the hide system dividers key without quotes', () => {
+  it('formats the hide_system_dividers key without quotes', () => {
     const result = updateMetadataField(
       sourceWithMetadata,
-      'hide system dividers',
+      'hide_system_dividers',
       'yes',
     )
-    expect(result).toContain('hide system dividers = yes')
+    expect(result).toContain('hide_system_dividers = yes')
     expect(result).not.toContain('"yes"')
   })
 
@@ -181,10 +181,10 @@ title = "Song"
       'title',
       'subtitle',
       'author',
-      'row height',
-      'max measures per system',
-      'label width',
-      'note number width',
+      'row_height',
+      'max_measures_per_system',
+      'label_width',
+      'note_number_width',
     ])
   })
 })

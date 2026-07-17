@@ -165,7 +165,7 @@ pub fn get_metadata_defaults() -> MetadataDefaultsOut {
     MetadataDefaultsOut::default()
 }
 
-/// The `lyrics font size` default (60% of `row_height`) for a given `row_height`.
+/// The `lyrics_font_size` default (60% of `row_height`) for a given `row_height`.
 #[wasm_bindgen]
 pub fn get_default_lyrics_font_size(row_height: u32) -> u32 {
     jianpu_generator::ast::grouped::default_lyrics_font_size(row_height)

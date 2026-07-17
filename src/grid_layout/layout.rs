@@ -46,9 +46,9 @@ pub(crate) fn is_chord_only_row(row: &MeasureRow) -> bool {
             .any(|e| matches!(e.content, ElementContent::ChordSymbol(_)))
 }
 
-// ── Sub-row heights ───────────────────────────────────────────────────────────
+// ── Sub-row_heights ───────────────────────────────────────────────────────────
 
-/// Returns the 6 sub-row heights for a Note/Chord part, in order:
+/// Returns the 6 sub-row_heights for a Note/Chord part, in order:
 /// [arc, above_dot, note_head, below_dot, half_ul, quarter_ul]
 pub(crate) fn note_part_sub_row_heights(base: f32) -> [f32; 6] {
     [
@@ -61,7 +61,7 @@ pub(crate) fn note_part_sub_row_heights(base: f32) -> [f32; 6] {
     ]
 }
 
-/// Returns the 4 sub-row heights for a Chord-symbol-only part, in order:
+/// Returns the 4 sub-row_heights for a Chord-symbol-only part, in order:
 /// [arc, chord_main, half_ul, quarter_ul]
 pub(crate) fn chord_part_sub_row_heights(base: f32) -> [f32; 4] {
     [

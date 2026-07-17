@@ -60,11 +60,13 @@ export function EditMetadataModal({
     loadMetadataDefaults().then(setDefaults)
   }, [])
 
-  const effectiveRowHeight = metadata.rowHeight ?? defaults?.rowHeight ?? null
+  const effectiveRowHeight = metadata.row_height ?? defaults?.row_height ?? null
   useEffect(() => {
     if (effectiveRowHeight === null) return
     defaultLyricsFontSize(effectiveRowHeight).then(setLyricsFontSizeDefault)
   }, [effectiveRowHeight])
+
+  const d = defaults
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -194,14 +196,12 @@ export function EditMetadataModal({
                     <input
                       type="number"
                       min="1"
-                      placeholder={
-                        defaults ? String(defaults.rowHeight) : undefined
-                      }
+                      placeholder={d ? String(d.row_height) : undefined}
                       style={inputStyle}
-                      value={metadata.rowHeight ?? ''}
+                      value={metadata.row_height ?? ''}
                       onChange={(e) =>
                         onFieldChange(
-                          'row height',
+                          'row_height',
                           e.target.value === '' ? null : e.target.value,
                         )
                       }
@@ -215,15 +215,13 @@ export function EditMetadataModal({
                       type="number"
                       min="1"
                       placeholder={
-                        defaults
-                          ? String(defaults.maxMeasuresPerSystem)
-                          : undefined
+                        d ? String(d.max_measures_per_system) : undefined
                       }
                       style={inputStyle}
-                      value={metadata.maxMeasuresPerSystem ?? ''}
+                      value={metadata.max_measures_per_system ?? ''}
                       onChange={(e) =>
                         onFieldChange(
-                          'max measures per system',
+                          'max_measures_per_system',
                           e.target.value === '' ? null : e.target.value,
                         )
                       }
@@ -236,14 +234,12 @@ export function EditMetadataModal({
                     <input
                       type="number"
                       min="1"
-                      placeholder={
-                        defaults ? String(defaults.labelWidth) : undefined
-                      }
+                      placeholder={d ? String(d.label_width) : undefined}
                       style={inputStyle}
-                      value={metadata.labelWidth ?? ''}
+                      value={metadata.label_width ?? ''}
                       onChange={(e) =>
                         onFieldChange(
-                          'label width',
+                          'label_width',
                           e.target.value === '' ? null : e.target.value,
                         )
                       }
@@ -256,14 +252,12 @@ export function EditMetadataModal({
                     <input
                       type="number"
                       min="1"
-                      placeholder={
-                        defaults ? String(defaults.noteNumberWidth) : undefined
-                      }
+                      placeholder={d ? String(d.note_number_width) : undefined}
                       style={inputStyle}
-                      value={metadata.noteNumberWidth ?? ''}
+                      value={metadata.note_number_width ?? ''}
                       onChange={(e) =>
                         onFieldChange(
-                          'note number width',
+                          'note_number_width',
                           e.target.value === '' ? null : e.target.value,
                         )
                       }
@@ -276,14 +270,12 @@ export function EditMetadataModal({
                     <input
                       type="number"
                       min="1"
-                      placeholder={
-                        defaults ? String(defaults.partsListColumns) : undefined
-                      }
+                      placeholder={d ? String(d.parts_list_columns) : undefined}
                       style={inputStyle}
-                      value={metadata.partsListColumns ?? ''}
+                      value={metadata.parts_list_columns ?? ''}
                       onChange={(e) =>
                         onFieldChange(
-                          'parts list columns',
+                          'parts_list_columns',
                           e.target.value === '' ? null : e.target.value,
                         )
                       }
@@ -302,10 +294,10 @@ export function EditMetadataModal({
                           : undefined
                       }
                       style={inputStyle}
-                      value={metadata.lyricsFontSize ?? ''}
+                      value={metadata.lyrics_font_size ?? ''}
                       onChange={(e) =>
                         onFieldChange(
-                          'lyrics font size',
+                          'lyrics_font_size',
                           e.target.value === '' ? null : e.target.value,
                         )
                       }
@@ -318,13 +310,13 @@ export function EditMetadataModal({
                     <input
                       type="checkbox"
                       checked={
-                        metadata.mergeDuplicateMeasuresAcrossParts ??
-                        defaults?.mergeDuplicateMeasuresAcrossParts ??
+                        metadata.merge_duplicate_measures_across_parts ??
+                        d?.merge_duplicate_measures_across_parts ??
                         true
                       }
                       onChange={(e) =>
                         onFieldChange(
-                          'merge duplicate measures across parts',
+                          'merge_duplicate_measures_across_parts',
                           e.target.checked ? 'yes' : 'no',
                         )
                       }
@@ -337,13 +329,13 @@ export function EditMetadataModal({
                     <input
                       type="checkbox"
                       checked={
-                        metadata.hideRestingParts ??
-                        defaults?.hideRestingParts ??
+                        metadata.hide_resting_parts ??
+                        d?.hide_resting_parts ??
                         true
                       }
                       onChange={(e) =>
                         onFieldChange(
-                          'hide resting parts',
+                          'hide_resting_parts',
                           e.target.checked ? 'yes' : 'no',
                         )
                       }
@@ -356,13 +348,13 @@ export function EditMetadataModal({
                     <input
                       type="checkbox"
                       checked={
-                        metadata.hideSystemDividers ??
-                        defaults?.hideSystemDividers ??
+                        metadata.hide_system_dividers ??
+                        d?.hide_system_dividers ??
                         false
                       }
                       onChange={(e) =>
                         onFieldChange(
-                          'hide system dividers',
+                          'hide_system_dividers',
                           e.target.checked ? 'yes' : 'no',
                         )
                       }
@@ -375,15 +367,15 @@ export function EditMetadataModal({
                     <input
                       type="text"
                       placeholder={
-                        defaults
-                          ? `${defaults.sectionLabelOffsetX} ${defaults.sectionLabelOffsetY}`
+                        d
+                          ? `${d.section_label_offset_x} ${d.section_label_offset_y}`
                           : undefined
                       }
                       style={inputStyle}
-                      value={metadata.sectionLabelOffset ?? ''}
+                      value={metadata.section_label_offset ?? ''}
                       onChange={(e) =>
                         onFieldChange(
-                          'section label offset',
+                          'section_label_offset',
                           e.target.value === '' ? null : e.target.value,
                         )
                       }

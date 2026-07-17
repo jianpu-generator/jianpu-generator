@@ -28,7 +28,7 @@ const SOURCE: &str = concat!(
 /// adjacent rows.
 ///
 /// Root cause: `s1` is an all-rest measure (`0`), so it's hidden by the
-/// default `hide resting parts` setting. But `s2`/`a1`/`a2`/`t` all
+/// default `hide_resting_parts` setting. But `s2`/`a1`/`a2`/`t` all
 /// `follow[s1]`, which also inherits `s1`'s `notes+lyrics` part kind — even
 /// though none of these parts, including `s1` itself, ever supplies lyric
 /// text anywhere in the score. Each follower still gets an implicit, empty
