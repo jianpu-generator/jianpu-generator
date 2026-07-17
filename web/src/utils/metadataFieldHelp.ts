@@ -29,6 +29,10 @@ Affects:
 
 Does **not** change the spacing between note columns — that comes from the available page width instead.`,
 
+  part_label_width_pt: `Fixed width (points) of the part-label column at the start of each system.
+
+This width is the same for every system in the score, regardless of how many measures or columns that system's music needs — so the part name lines up at the same horizontal position on every row.`,
+
   parts_list_columns: `Number of columns used to lay out the part-name legend shown in the header.`,
 
   lyrics_font_size: `Font size (points) of lyric syllable text under notes.

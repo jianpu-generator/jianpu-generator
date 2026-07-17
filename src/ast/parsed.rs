@@ -189,6 +189,7 @@ pub struct ParsedMetadata {
     pub row_height: Option<u32>,
     pub max_measures_per_system: Option<u32>,
     pub note_number_width: Option<u32>,
+    pub part_label_width_pt: Option<u32>,
     pub parts_list_columns: Option<u32>,
     pub lyrics_font_size: Option<u32>,
     /// When `false`, disables merging of identical measure rows that come from different

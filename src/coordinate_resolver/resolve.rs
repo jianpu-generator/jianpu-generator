@@ -1,7 +1,7 @@
 use crate::compositor::types::{AbsoluteContent, AbsoluteElement, AbsolutePage};
 use crate::error::IrrecoverableError;
 use crate::grid_layout::types::{
-    GridContent, GridElement, GridPage, GridRow, HAlign, PostArcGridContent, VAlign,
+    ColumnGeometry, GridContent, GridElement, GridPage, GridRow, HAlign, PostArcGridContent, VAlign,
 };
 use crate::grid_layout::PAGE_MARGIN;
 
@@ -22,11 +22,19 @@ pub struct LyricFontSizes {
 pub fn resolve(
     pages: &[GridPage],
     note_number_width: f32,
+    part_label_width_pt: f32,
     lyric_font_sizes: LyricFontSizes,
 ) -> Result<Vec<AbsolutePage>, IrrecoverableError> {
     pages
         .iter()
-        .map(|page| resolve_page(page, note_number_width, lyric_font_sizes))
+        .map(|page| {
+            resolve_page(
+                page,
+                note_number_width,
+                part_label_width_pt,
+                lyric_font_sizes,
+            )
+        })
         .collect()
 }
 
@@ -67,11 +75,12 @@ fn resolve_row_element(
     el: &GridElement,
     row: &GridRow,
     row_y: f32,
-    col_width: f32,
+    geometry: &ColumnGeometry,
     note_number_width: f32,
     lyric_font_sizes: LyricFontSizes,
 ) -> Result<Option<AbsoluteElement>, IrrecoverableError> {
-    let x_start = PAGE_MARGIN + el.column as f32 * col_width;
+    let col_width = geometry.col_width(el.column as f32);
+    let x_start = PAGE_MARGIN + geometry.x_start(el.column as f32);
     let span_width = el.column_span as f32 * col_width;
     let x = match el.halign {
         HAlign::Start => x_start,
@@ -244,6 +253,7 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
 fn resolve_page(
     page: &GridPage,
     note_number_width: f32,
+    part_label_width_pt: f32,
     lyric_font_sizes: LyricFontSizes,
 ) -> Result<AbsolutePage, IrrecoverableError> {
     let usable_width = page.width_pt - 2.0 * PAGE_MARGIN;
@@ -253,13 +263,13 @@ fn resolve_page(
 
     for row in &page.rows {
         row_tops.push(row_y);
-        let col_width = row.column_width_pt(usable_width);
+        let geometry = row.column_geometry(usable_width, part_label_width_pt);
         for el in &row.elements {
             if let Some(element) = resolve_row_element(
                 el,
                 row,
                 row_y,
-                col_width,
+                &geometry,
                 note_number_width,
                 lyric_font_sizes,
             )? {
@@ -274,16 +284,30 @@ fn resolve_page(
         &page.rows,
         &row_tops,
         usable_width,
+        part_label_width_pt,
     );
-    let error_elements =
-        resolve_error_highlights(&page.error_highlights, &page.rows, &row_tops, usable_width);
+    let error_elements = resolve_error_highlights(
+        &page.error_highlights,
+        &page.rows,
+        &row_tops,
+        usable_width,
+        part_label_width_pt,
+    );
     highlight_elements.extend(error_elements);
     highlight_elements.extend(elements);
 
     let click_target_elements: Vec<AbsoluteElement> = page
         .measure_click_targets
         .iter()
-        .filter_map(|t| resolve_measure_click_target(t, &page.rows, &row_tops, usable_width))
+        .filter_map(|t| {
+            resolve_measure_click_target(
+                t,
+                &page.rows,
+                &row_tops,
+                usable_width,
+                part_label_width_pt,
+            )
+        })
         .collect();
     highlight_elements.extend(click_target_elements);
 

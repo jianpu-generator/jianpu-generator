@@ -130,6 +130,7 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
     let abs = coordinate_resolver::resolve(
         &grid_pages,
         config.note_number_width as f32,
+        config.part_label_width_pt as f32,
         config.lyric_font_sizes(),
     )
     .expect("coordinate resolver should not fail in tests");
@@ -155,6 +156,68 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
         "underlines should have a gap but they touch: beat2 ends at {:.1}, beat3 starts at {:.1}",
         x1 + w1,
         x2
+    );
+}
+
+#[test]
+fn part_label_width_is_consistent_across_systems_of_differing_density() {
+    // Regression test: a system containing only a sparse part ("a") must
+    // render its part label at the same x-position as a denser system
+    // containing an extra chord-symbol part ("b"), even though the two
+    // systems have very different musical column counts.
+    let input = concat!(
+        "# parts\n",
+        "a = notes\n",
+        "b = chords\n",
+        "\n",
+        "# score\n",
+        "[a] 1\n",
+        "\n",
+        "[a]1\n",
+        "\n",
+        "[a]1\n",
+        "[b] 6m __~_6m__0_\n",
+    );
+    let score = compile(input, "test", &[]).unwrap();
+    let config = render_config::RenderConfig::from_metadata(&score.metadata);
+    let header = grid_layout::types::Header {
+        title: score.metadata.title.clone(),
+        subtitle: score.metadata.subtitle.clone(),
+        author: score.metadata.author.clone(),
+        part_list: vec![],
+        parts_list_columns: 3,
+        sequence: None,
+    };
+    let compile_result = compiler::compile(&score);
+    let compile_result = consolidator::consolidate(compile_result);
+    let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
+    let abs = coordinate_resolver::resolve(
+        &grid_pages,
+        config.note_number_width as f32,
+        config.part_label_width_pt as f32,
+        config.lyric_font_sizes(),
+    )
+    .expect("coordinate resolver should not fail in tests");
+
+    let label_x_positions: Vec<f32> = abs[0]
+        .elements
+        .iter()
+        .filter_map(|e| match &e.content {
+            compositor::types::AbsoluteContent::Text { content, .. } if content == "a" => Some(e.x),
+            _ => None,
+        })
+        .collect();
+
+    assert!(
+        label_x_positions.len() >= 2,
+        "expected at least two 'a' part labels across systems, got {}",
+        label_x_positions.len()
+    );
+    let first = label_x_positions[0];
+    assert!(
+        label_x_positions.iter().all(|&x| (x - first).abs() < 0.01),
+        "part label x-position should be identical across systems regardless of \
+         musical density: {label_x_positions:?}"
     );
 }
 

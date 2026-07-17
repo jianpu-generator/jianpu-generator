@@ -5,6 +5,7 @@ export type MetadataKey =
   | 'row_height'
   | 'max_measures_per_system'
   | 'note_number_width'
+  | 'part_label_width_pt'
   | 'parts_list_columns'
   | 'lyrics_font_size'
   | 'merge_duplicate_measures_across_parts'
@@ -19,6 +20,7 @@ export interface ParsedMetadataFields {
   row_height: number | null
   max_measures_per_system: number | null
   note_number_width: number | null
+  part_label_width_pt: number | null
   parts_list_columns: number | null
   lyrics_font_size: number | null
   merge_duplicate_measures_across_parts: boolean | null
@@ -31,6 +33,7 @@ const numericKeys: MetadataKey[] = [
   'row_height',
   'max_measures_per_system',
   'note_number_width',
+  'part_label_width_pt',
   'parts_list_columns',
   'lyrics_font_size',
 ]
@@ -50,6 +53,7 @@ const canonicalKeyOrder: MetadataKey[] = [
   'row_height',
   'max_measures_per_system',
   'note_number_width',
+  'part_label_width_pt',
   'parts_list_columns',
   'lyrics_font_size',
   'merge_duplicate_measures_across_parts',
@@ -129,6 +133,7 @@ export function parseMetadata(source: string): ParsedMetadataFields {
     row_height: null,
     max_measures_per_system: null,
     note_number_width: null,
+    part_label_width_pt: null,
     parts_list_columns: null,
     lyrics_font_size: null,
     merge_duplicate_measures_across_parts: null,
@@ -155,6 +160,11 @@ export function parseMetadata(source: string): ParsedMetadataFields {
   if (fieldMap.has('note_number_width'))
     result.note_number_width = parseInt(
       fieldMap.get('note_number_width') as string,
+      10,
+    )
+  if (fieldMap.has('part_label_width_pt'))
+    result.part_label_width_pt = parseInt(
+      fieldMap.get('part_label_width_pt') as string,
       10,
     )
   if (fieldMap.has('parts_list_columns'))

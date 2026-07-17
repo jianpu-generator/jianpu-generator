@@ -11,6 +11,7 @@ fn metadata() -> Metadata {
         row_height: 24,
         max_measures_per_system: 28,
         note_number_width: 8,
+        part_label_width_pt: 40,
         parts_list_columns: 3,
         lyrics_font_size: 14,
         merge_duplicate_measures_across_parts: true,

@@ -4,24 +4,57 @@ use crate::grid_layout::types::{GridContent, GridRow};
 use crate::render_config::RenderConfig;
 
 #[test]
-fn column_width_pt_divides_evenly() {
+fn column_geometry_divides_evenly_without_label_region() {
     let row = GridRow {
         height_pt: 30.0,
         column_count: 10,
+        has_label_region: false,
         elements: vec![],
     };
-    assert_eq!(row.column_width_pt(500.0), 50.0);
+    let geometry = row.column_geometry(500.0, 40.0);
+    assert_eq!(geometry.col_width(0.0), 50.0);
 }
 
 #[test]
-fn column_width_pt_with_label_columns() {
-    // 4 label cols + 16 musical cols = 20 total; usable=400 → 20pt each
+fn column_geometry_gives_label_region_a_fixed_width() {
+    // 4 label cols + 16 musical cols = 20 total; usable=400, label=40pt fixed
+    // regardless of column_count → musical cols get (400-40)/16 = 22.5pt each.
     let row = GridRow {
         height_pt: 30.0,
         column_count: 20,
+        has_label_region: true,
         elements: vec![],
     };
-    assert_eq!(row.column_width_pt(400.0), 20.0);
+    let geometry = row.column_geometry(400.0, 40.0);
+    assert_eq!(geometry.col_width(0.0), 10.0); // 40pt / 4 label cols
+    assert_eq!(geometry.col_width(5.0), 22.5);
+    assert_eq!(geometry.x_start(0.0), 0.0);
+    assert_eq!(geometry.x_start(4.0), 40.0);
+}
+
+#[test]
+fn column_geometry_label_width_is_independent_of_musical_density() {
+    // Two systems with the same label width but different musical column
+    // counts must still render the label at the same pixel width — this is
+    // the fix for the part-label-width-varies-by-system bug.
+    let sparse_row = GridRow {
+        height_pt: 30.0,
+        column_count: 6, // 4 label cols + 1 barline col + 1 musical col
+        has_label_region: true,
+        elements: vec![],
+    };
+    let dense_row = GridRow {
+        height_pt: 30.0,
+        column_count: 24, // 4 label cols + 1 barline col + 19 musical cols
+        has_label_region: true,
+        elements: vec![],
+    };
+    let sparse_geometry = sparse_row.column_geometry(545.0, 40.0);
+    let dense_geometry = dense_row.column_geometry(545.0, 40.0);
+    let sparse_label_width = sparse_geometry.x_start(4.0) - sparse_geometry.x_start(0.0);
+    let dense_label_width = dense_geometry.x_start(4.0) - dense_geometry.x_start(0.0);
+    assert_eq!(sparse_label_width, dense_label_width);
+    assert_eq!(sparse_label_width, 40.0);
 }
 
 fn note_row(id: &str) -> MeasureRow {
@@ -112,6 +145,7 @@ fn cfg() -> RenderConfig {
     RenderConfig {
         row_height: 30,
         note_number_width: 12,
+        part_label_width_pt: 40,
         max_measures_per_system: 2,
         lyrics_font_size: 18,
         hide_system_dividers: false,

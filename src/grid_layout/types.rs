@@ -1,5 +1,6 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compiler::types::ArcKind;
+use crate::grid_layout::layout::LABEL_COLS;
 
 #[derive(Debug, Clone)]
 pub struct GridPage {
@@ -24,13 +25,73 @@ pub struct MeasureClickTarget {
 pub struct GridRow {
     pub height_pt: f32,
     pub column_count: u32,
+    /// True for rows belonging to a system (note/lyric/decoration rows),
+    /// which reserve `LABEL_COLS` columns at the start for the part label
+    /// (see [`GridRow::column_geometry`]). False for header/footer/separator
+    /// rows, which divide their full width evenly across `column_count`.
+    pub has_label_region: bool,
     pub elements: Vec<GridElement>,
 }
 
 impl GridRow {
-    /// Column width in points, given the usable page width.
-    pub fn column_width_pt(&self, usable_width_pt: f32) -> f32 {
-        usable_width_pt / self.column_count as f32
+    /// Column geometry for this row, given the usable page width and the
+    /// score-wide fixed part-label width. Rows with `has_label_region: true`
+    /// (system rows) get a label column width independent of the row's own
+    /// musical density; other rows (headers, footers) divide the full width
+    /// evenly as before.
+    pub fn column_geometry(&self, usable_width_pt: f32, label_width_pt: f32) -> ColumnGeometry {
+        if self.has_label_region {
+            let music_cols = self.column_count - LABEL_COLS;
+            ColumnGeometry {
+                label_cols: LABEL_COLS,
+                label_col_width: label_width_pt / LABEL_COLS as f32,
+                label_width_pt,
+                music_col_width: (usable_width_pt - label_width_pt) / music_cols as f32,
+            }
+        } else {
+            let col_width = usable_width_pt / self.column_count as f32;
+            ColumnGeometry {
+                label_cols: 0,
+                label_col_width: col_width,
+                label_width_pt: 0.0,
+                music_col_width: col_width,
+            }
+        }
+    }
+}
+
+/// Resolves a grid column index to a pixel x-offset (from the row's left
+/// edge) and column width, so the fixed-width label region (columns
+/// `0..label_cols`) and the variable-width music region (`label_cols..`)
+/// can share a `GridRow` without the label's rendered width depending on
+/// how many musical columns the row has.
+#[derive(Debug, Clone, Copy)]
+pub struct ColumnGeometry {
+    label_cols: u32,
+    label_col_width: f32,
+    label_width_pt: f32,
+    music_col_width: f32,
+}
+
+impl ColumnGeometry {
+    /// x-offset of the start of `column`, relative to the row's left edge.
+    /// `column` may be fractional (e.g. a highlight's `column_start`); it is
+    /// never expected to straddle the label/music boundary.
+    pub fn x_start(&self, column: f32) -> f32 {
+        if column < self.label_cols as f32 {
+            column * self.label_col_width
+        } else {
+            self.label_width_pt + (column - self.label_cols as f32) * self.music_col_width
+        }
+    }
+
+    /// Width of a single column at `column`.
+    pub fn col_width(&self, column: f32) -> f32 {
+        if column < self.label_cols as f32 {
+            self.label_col_width
+        } else {
+            self.music_col_width
+        }
     }
 }
 

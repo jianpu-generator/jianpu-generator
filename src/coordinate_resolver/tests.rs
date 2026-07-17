@@ -10,6 +10,7 @@ fn single_row_page(element: GridElement) -> GridPage {
         rows: vec![GridRow {
             height_pt: 30.0,
             column_count: 10,
+            has_label_region: false,
             elements: vec![element],
         }],
         measure_highlights: vec![],
@@ -23,6 +24,7 @@ fn resolve_empty_pages_returns_empty() {
     assert!(resolve(
         &[],
         12.0,
+        40.0,
         LyricFontSizes {
             base: 14.4,
             cjk: 17.28
@@ -52,6 +54,7 @@ fn note_head_halign_center_has_x_at_center_of_column() {
     let abs = resolve(
         &[page],
         12.0,
+        40.0,
         LyricFontSizes {
             base: 14.4,
             cjk: 17.28,
@@ -88,11 +91,13 @@ fn valign_top_places_y_at_row_top() {
             GridRow {
                 height_pt: 10.0,
                 column_count: 1,
+                has_label_region: false,
                 elements: vec![],
             },
             GridRow {
                 height_pt: 20.0,
                 column_count: 1,
+                has_label_region: false,
                 elements: vec![el],
             },
         ],
@@ -103,6 +108,7 @@ fn valign_top_places_y_at_row_top() {
     let abs = resolve(
         &[page],
         12.0,
+        40.0,
         LyricFontSizes {
             base: 14.4,
             cjk: 17.28,
@@ -136,6 +142,7 @@ fn halign_end_places_x_at_right_of_column_span() {
     let abs = resolve(
         &[page],
         12.0,
+        40.0,
         LyricFontSizes {
             base: 14.4,
             cjk: 17.28,
@@ -174,6 +181,7 @@ fn wide_lyric_syllable_does_not_bleed_left_of_its_column() {
     let abs = resolve(
         &[page],
         12.0,
+        40.0,
         LyricFontSizes {
             base: 14.4,
             cjk: 17.28,
@@ -208,6 +216,7 @@ fn short_lyric_syllable_stays_centered_in_its_column() {
     let abs = resolve(
         &[page],
         12.0,
+        40.0,
         LyricFontSizes {
             base: 14.4,
             cjk: 17.28,
@@ -241,6 +250,7 @@ fn octave_dot_grid_content_emits_nothing() {
     let abs = resolve(
         &[page],
         12.0,
+        40.0,
         LyricFontSizes {
             base: 14.4,
             cjk: 17.28,
@@ -264,11 +274,13 @@ fn measure_highlight_produces_prepended_rect_element() {
             GridRow {
                 height_pt: 30.0,
                 column_count: 10,
+                has_label_region: false,
                 elements: vec![],
             },
             GridRow {
                 height_pt: 20.0,
                 column_count: 10,
+                has_label_region: false,
                 elements: vec![],
             },
         ],
@@ -284,6 +296,7 @@ fn measure_highlight_produces_prepended_rect_element() {
     let abs = resolve(
         &[page],
         12.0,
+        40.0,
         LyricFontSizes {
             base: 14.4,
             cjk: 17.28,
@@ -316,6 +329,7 @@ fn error_highlight_resolves_to_absolute_error_highlight() {
         rows: vec![GridRow {
             height_pt: 24.0,
             column_count: 10,
+            has_label_region: false,
             elements: vec![],
         }],
         measure_highlights: vec![],
@@ -330,6 +344,7 @@ fn error_highlight_resolves_to_absolute_error_highlight() {
     let abs_pages: Vec<AbsolutePage> = resolve(
         &[page],
         8.0,
+        40.0,
         LyricFontSizes {
             base: 14.4,
             cjk: 17.28,
@@ -356,6 +371,7 @@ fn page_with_no_highlight_produces_no_extra_element() {
         rows: vec![GridRow {
             height_pt: 30.0,
             column_count: 10,
+            has_label_region: false,
             elements: vec![],
         }],
         measure_highlights: vec![],
@@ -365,6 +381,7 @@ fn page_with_no_highlight_produces_no_extra_element() {
     let abs = resolve(
         &[page],
         12.0,
+        40.0,
         LyricFontSizes {
             base: 14.4,
             cjk: 17.28,

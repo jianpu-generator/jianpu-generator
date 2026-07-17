@@ -268,6 +268,24 @@ test('unchecking hide_system_dividers writes = no to the source', async ({
   await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
 })
 
+test('editing part_label_width_pt updates the source', async ({ page }) => {
+  await loadSource(page)
+  await page.goto('/')
+
+  await openEditMetadataModal(page)
+
+  const modal = page.getByTestId('edit-metadata-modal')
+  const partLabelWidthInput = modal.locator('input[type="number"]').nth(3)
+  await partLabelWidthInput.fill('60')
+
+  await page.keyboard.press('Escape')
+  await modal.waitFor({ state: 'hidden' })
+
+  const expectedLine = 'part_label_width_pt = 60'
+  await expect.poll(getEditorSource.bind(null, page)).toContain(expectedLine)
+  await expect.poll(getStoredSource.bind(null, page)).toContain(expectedLine)
+})
+
 test('editing section_label_offset writes "x y" to the source', async ({
   page,
 }) => {

@@ -9,6 +9,8 @@ pub const DEFAULT_ROW_HEIGHT: u32 = 24;
 pub const DEFAULT_MAX_MEASURES_PER_SYSTEM: u32 = 4;
 /// Default `note_number_width` in points, used when unset in `# metadata`.
 pub const DEFAULT_NOTE_NUMBER_WIDTH: u32 = 8;
+/// Default `part_label_width_pt`, used when unset in `# metadata`.
+pub const DEFAULT_PART_LABEL_WIDTH_PT: u32 = 40;
 /// Default `parts_list_columns`, used when unset in `# metadata`.
 pub const DEFAULT_PARTS_LIST_COLUMNS: u32 = 4;
 /// Default `merge_duplicate_measures_across_parts`, used when unset in `# metadata`.
@@ -36,6 +38,10 @@ pub struct Metadata {
     pub max_measures_per_system: u32,
     /// Estimated rendered width of a single digit note number (0–9) in points. Default: 8.
     pub note_number_width: u32,
+    /// Fixed width in points of the part-label column at the start of each system row,
+    /// shared by every system in the score regardless of that system's musical density
+    /// (see `grid_layout::types::GridRow::column_geometry`). Default: 40.
+    pub part_label_width_pt: u32,
     /// Number of columns in the parts list header. Default: 4.
     pub parts_list_columns: u32,
     /// Lyrics font size in points. Default: 60% of row_height.

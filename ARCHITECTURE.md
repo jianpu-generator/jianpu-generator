@@ -65,12 +65,13 @@ source (&str)
 ### Grid Layout
 - Module: `src/grid_layout/`
 - Entry: `grid_layout::layout(result: &CompileResult, config: &RenderConfig, header: &Header, width_pt: f32, height_pt: f32) -> Vec<GridPage>`
-- Key types: `GridPage`, `GridRow`, `GridElement`, `GridContent`, `HAlign`, `VAlign`
+- Key types: `GridPage`, `GridRow`, `GridElement`, `GridContent`, `HAlign`, `VAlign`, `ColumnGeometry`
 - `config.hide_system_dividers` (from `Metadata::hide_system_dividers`, `# metadata` field `hide_system_dividers`, default `no`) gates `layout::build_page_rows`'s insertion of the full-width `GridContent::HorizontalLine` separator row between systems, and the corresponding gap in `layout()`'s page-break height accounting; when `true`, no divider row or gap is inserted between systems.
+- `GridRow.has_label_region` (`true` for system rows built by `expand::expand_system_to_rows`/`layout_decoration::make_decoration_row`, `false` for header/footer/separator rows) marks which rows reserve `LABEL_COLS` columns for the part label. `GridRow::column_geometry(usable_width_pt, label_width_pt) -> ColumnGeometry` uses this flag to give the label region a fixed pixel width (`config.part_label_width_pt`) independent of that row's own `column_count`, while the remaining columns still split the rest of the width evenly — this is what keeps the part-label column the same rendered width across systems of differing musical density, rather than the old uniform `usable_width_pt / column_count` division which made the label's width vary with each system's content.
 
 ### Coordinate Resolver
 - Module: `src/coordinate_resolver/`
-- Entry: `coordinate_resolver::resolve(pages: &[GridPage], note_number_width: f32) -> Vec<AbsolutePage>`
+- Entry: `coordinate_resolver::resolve(pages: &[GridPage], note_number_width: f32, part_label_width_pt: f32, lyric_font_sizes: LyricFontSizes) -> Vec<AbsolutePage>`
 - Key types: `AbsolutePage`, `AbsoluteElement`, `AbsoluteContent`, `PostArcGridContent`
 - `PostArcGridContent`: `GridContent` minus the three arc variants (`TieOrSlur`, `TieOrSlurTail`, `TieOrSlurHead`); arc variants are resolved before `grid_to_absolute` and must not appear in the coordinate-resolver layer.
 
@@ -105,7 +106,7 @@ source (&str)
 | **Arc Span** | The full logical extent of one slur or tie arc, possibly crossing measure or system boundaries (`SlurSpan`). Carries `ArcKind` to distinguish ties from slurs. |
 | **ArcKind** | Discriminant on `SlurSpan`: `Slur` (from `(…)` groups) or `Tie` (from `~`). Both render as arcs; the kind is available for future visual distinction. |
 | **Decoration** | Measure-level metadata attached to a `MeasureBlock`: BPM, time signature, section label, bar number, D.C. al Coda navigation markers (`dc_al_coda`/`to_coda`/`coda`), D.S. al Coda navigation markers (`segno`/`ds_al_coda`, reusing `to_coda`/`coda`), D.C. al Fine navigation markers (`dc_al_fine`/`fine`), D.S. al Fine navigation markers (`segno`/`ds_al_fine`, reusing `fine`). |
-| **Row Label** | The part name displayed at the left margin of a system row. |
+| **Row Label** | The part name displayed at the left margin of a system row, in a fixed-width column (`Metadata::part_label_width_pt`, `# metadata` field `part_label_width_pt`, default `40` points) shared by every system in the score regardless of that system's musical density — see **Grid Layout**'s `ColumnGeometry`. |
 | **RowId** | A unique string identifier for a compiler row, used to correlate rows across layout stages. |
 | **Measure Start Time** | The elapsed-seconds offset of a measure boundary within a score's audio rendering, computed from cumulative MIDI ticks and any BPM changes (`midi::measure_start_times_seconds`). Used to sync a playback-position UI element (a "playhead") against a `<audio>` element's `currentTime`. |
 | **GM percussion key** | A General MIDI drum-kit key number (0–127) identifying a specific unpitched drum sample (e.g. `38` = Acoustic Snare, `36` = Bass Drum 1) played on the shared GM percussion channel (MIDI channel 9). Used as the `Soundfont` number on `PartKind::Percussion` parts instead of a melodic GM program number. |
@@ -164,7 +165,7 @@ The React app (`web/`) runs the compiler in a dedicated worker (`web/src/worker/
 | `generate_split_wavs(source, base_name, soundfont)` | One WAV file per part, zipped; `soundfont` is raw SF2 bytes supplied by the caller. `wav` feature only. |
 | `list_measure_times(source, enabled_tracks)` | **Measure start times**: elapsed-seconds offset of each measure boundary in the whole score (length = measure count + 1, last entry is total duration). Syncs a UI playhead against the audio from `generate_wav`. `wav` feature only. |
 | `list_measure_times_for_range(source, start_index, end_index, enabled_tracks)` | Same as above, scoped to a measure range and relative to the start of that range. Syncs a playhead against the audio from `generate_wav_for_measure_range`. `wav` feature only. |
-| `get_metadata_defaults()` | Returns `MetadataDefaultsOut` — the five numeric `# metadata` defaults (`row_height`, `max_measures_per_system`, `note_number_width`, `parts_list_columns`, `lyrics_font_size`), mirroring the `DEFAULT_*` consts in `src/ast/grouped.rs` that `grouper::group()` falls back to. Single source of truth for the Edit Metadata modal's placeholder text. |
+| `get_metadata_defaults()` | Returns `MetadataDefaultsOut` — the six numeric `# metadata` defaults (`row_height`, `max_measures_per_system`, `note_number_width`, `part_label_width_pt`, `parts_list_columns`, `lyrics_font_size`), mirroring the `DEFAULT_*` consts in `src/ast/grouped.rs` that `grouper::group()` falls back to. Single source of truth for the Edit Metadata modal's placeholder text. |
 | `get_default_lyrics_font_size(row_height)` | The `lyrics_font_size` default (60% of `row_height`, rounded) for a given `row_height`, so the modal can recompute the placeholder live as the user edits Row Height without duplicating the formula in TypeScript. |
 
 `generate_pdf`/`generate_split_pdfs` (`pdf` feature) follow the same pattern as the MIDI/WAV exports above: structured `{ status, ... }` envelope, `Vec<u8>` font/soundfont parameters supplied by the caller rather than embedded in the WASM binary.

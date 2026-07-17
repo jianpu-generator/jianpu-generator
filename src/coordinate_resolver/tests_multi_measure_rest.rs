@@ -9,6 +9,7 @@ fn single_row_page(element: GridElement) -> GridPage {
         rows: vec![GridRow {
             height_pt: 30.0,
             column_count: 10,
+            has_label_region: false,
             elements: vec![element],
         }],
         measure_highlights: vec![],
@@ -32,6 +33,7 @@ fn multi_measure_rest_resolves_width_from_column_span() {
     let abs = resolve(
         &[page],
         12.0,
+        40.0,
         LyricFontSizes {
             base: 14.4,
             cjk: 17.28,

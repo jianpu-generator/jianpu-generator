@@ -158,6 +158,7 @@ pub(crate) fn expand_lyric_part(
     let mut row = GridRow {
         height_pt: lyric_row_height(base),
         column_count,
+        has_label_region: true,
         elements: vec![],
     };
     let mut measure_col_offset: u32 = 0;
@@ -210,6 +211,7 @@ pub(crate) fn expand_note_part(
         .map(|&h| GridRow {
             height_pt: h,
             column_count,
+            has_label_region: true,
             elements: vec![],
         })
         .collect();
@@ -314,6 +316,7 @@ pub(crate) fn make_footer_row(
     GridRow {
         height_pt,
         column_count: 1,
+        has_label_region: false,
         elements: vec![GridElement {
             column: 0,
             column_span: 1,

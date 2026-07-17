@@ -25,6 +25,7 @@ fn render_documents(
     let abs = crate::coordinate_resolver::resolve(
         &grid_pages,
         config.note_number_width as f32,
+        config.part_label_width_pt as f32,
         config.lyric_font_sizes(),
     )?;
     Ok(crate::renderer::new_renderer::render_new(&abs, &config))
@@ -52,6 +53,7 @@ fn render_documents_with_range(
     let abs = crate::coordinate_resolver::resolve(
         &grid_pages,
         config.note_number_width as f32,
+        config.part_label_width_pt as f32,
         config.lyric_font_sizes(),
     )?;
     Ok(crate::renderer::new_renderer::render_new(&abs, &config))

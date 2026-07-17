@@ -63,6 +63,7 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | `max_measures_per_system` | no | `4` | Maximum number of measures per system line before wrapping |
 | `row_height` | no | `24` | Vertical spacing of one part row (pixels) |
 | `note_number_width` | no | `8` | Horizontal space per note column (pixels) |
+| `part_label_width_pt` | no | `40` | Fixed width (points) of the part-label column at the start of each system, shared by every system in the score regardless of how many measures/columns that system's music needs |
 | `parts_list_columns` | no | `4` | Number of columns in the parts list header |
 | `lyrics_font_size` | no | `row_height * 0.6` | Font size of lyric syllables (points) |
 | `merge_duplicate_measures_across_parts` | no | `yes` | Score-wide default for whether identical measures from different parts are merged into a single row (`yes`/`no`); can be overridden from a given measure onward with the `merge_duplicate_measures_across_parts=` directive line — see [Directive lines](#directive-lines) |

@@ -23,6 +23,7 @@ fn cfg_wide() -> RenderConfig {
     RenderConfig {
         row_height: 30,
         note_number_width: 12,
+        part_label_width_pt: 40,
         max_measures_per_system: 48,
         lyrics_font_size: 18,
         hide_system_dividers: false,

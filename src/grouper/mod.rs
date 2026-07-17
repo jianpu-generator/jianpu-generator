@@ -2,7 +2,8 @@ use crate::ast::grouped::{
     default_lyrics_font_size, GroupedScore, GroupedTrack, Metadata, Score,
     DEFAULT_HIDE_RESTING_PARTS, DEFAULT_HIDE_SYSTEM_DIVIDERS, DEFAULT_MAX_MEASURES_PER_SYSTEM,
     DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS, DEFAULT_NOTE_NUMBER_WIDTH,
-    DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_ROW_HEIGHT, DEFAULT_SECTION_LABEL_OFFSET,
+    DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_PART_LABEL_WIDTH_PT, DEFAULT_ROW_HEIGHT,
+    DEFAULT_SECTION_LABEL_OFFSET,
 };
 use crate::ast::parsed::{ParsedDocument, ParsedTrack};
 use crate::combiner;
@@ -74,6 +75,9 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
             note_number_width: metadata
                 .note_number_width
                 .unwrap_or(DEFAULT_NOTE_NUMBER_WIDTH),
+            part_label_width_pt: metadata
+                .part_label_width_pt
+                .unwrap_or(DEFAULT_PART_LABEL_WIDTH_PT),
             parts_list_columns: metadata
                 .parts_list_columns
                 .unwrap_or(DEFAULT_PARTS_LIST_COLUMNS),

@@ -203,6 +203,14 @@ export function EditMetadataModal({
                   onChange={setNumber('note_number_width')}
                 />
                 <NumberFieldRow
+                  label="Part Label Width (pt)"
+                  help={metadataFieldHelp.part_label_width_pt}
+                  onShowHelp={showHelp}
+                  value={metadata.part_label_width_pt ?? ''}
+                  placeholder={d ? String(d.part_label_width_pt) : undefined}
+                  onChange={setNumber('part_label_width_pt')}
+                />
+                <NumberFieldRow
                   label="Parts List Columns"
                   help={metadataFieldHelp.parts_list_columns}
                   onShowHelp={showHelp}

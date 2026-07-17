@@ -7,14 +7,16 @@ fn resolve_single_measure_highlight(
     rows: &[GridRow],
     row_tops: &[f32],
     usable_width: f32,
+    part_label_width_pt: f32,
 ) -> Option<AbsoluteElement> {
     let start_row = rows.get(highlight.row_start)?;
     let highlight_y = row_tops.get(highlight.row_start)?;
     if highlight.row_end >= rows.len() {
         return None;
     }
-    let col_width = start_row.column_width_pt(usable_width);
-    let highlight_x = PAGE_MARGIN + highlight.column_start * col_width;
+    let geometry = start_row.column_geometry(usable_width, part_label_width_pt);
+    let col_width = geometry.col_width(highlight.column_start);
+    let highlight_x = PAGE_MARGIN + geometry.x_start(highlight.column_start);
     let highlight_width = (highlight.column_end - highlight.column_start) * col_width;
     let highlight_height = rows
         .get(highlight.row_start..=highlight.row_end)
@@ -35,10 +37,13 @@ pub(super) fn resolve_measure_highlights(
     rows: &[GridRow],
     row_tops: &[f32],
     usable_width: f32,
+    part_label_width_pt: f32,
 ) -> Vec<AbsoluteElement> {
     highlights
         .iter()
-        .filter_map(|h| resolve_single_measure_highlight(h, rows, row_tops, usable_width))
+        .filter_map(|h| {
+            resolve_single_measure_highlight(h, rows, row_tops, usable_width, part_label_width_pt)
+        })
         .collect()
 }
 
@@ -47,6 +52,7 @@ pub(super) fn resolve_error_highlights(
     rows: &[GridRow],
     row_tops: &[f32],
     usable_width: f32,
+    part_label_width_pt: f32,
 ) -> Vec<AbsoluteElement> {
     highlights
         .iter()
@@ -56,8 +62,9 @@ pub(super) fn resolve_error_highlights(
             if h.row_end >= rows.len() {
                 return None;
             }
-            let col_width = start_row.column_width_pt(usable_width);
-            let highlight_x = PAGE_MARGIN + h.column_start * col_width;
+            let geometry = start_row.column_geometry(usable_width, part_label_width_pt);
+            let col_width = geometry.col_width(h.column_start);
+            let highlight_x = PAGE_MARGIN + geometry.x_start(h.column_start);
             let highlight_width = (h.column_end - h.column_start) * col_width;
             let highlight_height = rows
                 .get(h.row_start..=h.row_end)
@@ -80,14 +87,16 @@ pub(super) fn resolve_measure_click_target(
     rows: &[GridRow],
     row_tops: &[f32],
     usable_width: f32,
+    part_label_width_pt: f32,
 ) -> Option<AbsoluteElement> {
     let start_row = rows.get(target.row_start)?;
     let target_y = row_tops.get(target.row_start)?;
     if target.row_end >= rows.len() {
         return None;
     }
-    let col_width = start_row.column_width_pt(usable_width);
-    let target_x = PAGE_MARGIN + target.column_start * col_width;
+    let geometry = start_row.column_geometry(usable_width, part_label_width_pt);
+    let col_width = geometry.col_width(target.column_start);
+    let target_x = PAGE_MARGIN + geometry.x_start(target.column_start);
     let target_width = (target.column_end - target.column_start) * col_width;
     let target_height = rows
         .get(target.row_start..=target.row_end)

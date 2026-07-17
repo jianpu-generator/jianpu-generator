@@ -6,6 +6,7 @@ use crate::coordinate_resolver::LyricFontSizes;
 pub struct RenderConfig {
     pub row_height: u32,
     pub note_number_width: u32,
+    pub part_label_width_pt: u32,
     pub max_measures_per_system: u32,
     pub lyrics_font_size: u32,
     pub hide_system_dividers: bool,
@@ -17,6 +18,7 @@ impl RenderConfig {
         RenderConfig {
             row_height: meta.row_height,
             note_number_width: meta.note_number_width,
+            part_label_width_pt: meta.part_label_width_pt,
             max_measures_per_system: meta.max_measures_per_system,
             lyrics_font_size: meta.lyrics_font_size,
             hide_system_dividers: meta.hide_system_dividers,
@@ -56,6 +58,7 @@ mod tests {
             author: None,
             row_height: 30,
             note_number_width: 12,
+            part_label_width_pt: 40,
             max_measures_per_system: 6,
             parts_list_columns: 3,
             lyrics_font_size: 18,
@@ -67,6 +70,7 @@ mod tests {
         let cfg = RenderConfig::from_metadata(&meta);
         assert_eq!(cfg.row_height, 30);
         assert_eq!(cfg.note_number_width, 12);
+        assert_eq!(cfg.part_label_width_pt, 40);
         assert_eq!(cfg.max_measures_per_system, 6);
         assert_eq!(cfg.lyrics_font_size, 18);
         assert_eq!(cfg.lyric_font_size(), 18.0);

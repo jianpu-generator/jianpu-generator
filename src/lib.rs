@@ -211,6 +211,7 @@ fn render_svgs_with_parts(
     let abs = coordinate_resolver::resolve(
         &grid_pages,
         config.note_number_width as f32,
+        config.part_label_width_pt as f32,
         config.lyric_font_sizes(),
     )?;
     let docs = renderer::new_renderer::render_new(&abs, &config);
@@ -321,6 +322,7 @@ pub fn render_svgs_with_highlight_range(
     let abs = coordinate_resolver::resolve(
         &grid_pages,
         config.note_number_width as f32,
+        config.part_label_width_pt as f32,
         config.lyric_font_sizes(),
     )?;
     let docs = renderer::new_renderer::render_new(&abs, &config);

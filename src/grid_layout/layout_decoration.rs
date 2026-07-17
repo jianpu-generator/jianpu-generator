@@ -94,6 +94,7 @@ pub(super) fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow
     GridRow {
         height_pt: decoration_row_height(base),
         column_count: music_column_count,
+        has_label_region: true,
         elements,
     }
 }
@@ -102,6 +103,7 @@ pub(super) fn make_separator_row() -> GridRow {
     GridRow {
         height_pt: separator_row_height(),
         column_count: 1,
+        has_label_region: false,
         elements: vec![GridElement {
             column: 0,
             column_span: 1,
@@ -122,11 +124,13 @@ fn make_sequence_rows(header: &Header, base: f32, include_part_list: bool) -> Ve
                 GridRow {
                     height_pt: header_gap_row_height(base),
                     column_count: 1,
+                    has_label_region: false,
                     elements: vec![],
                 },
                 GridRow {
                     height_pt: decoration_row_height(base),
                     column_count: 1,
+                    has_label_region: false,
                     elements: vec![GridElement {
                         column: 0,
                         column_span: 1,
@@ -146,6 +150,7 @@ fn make_title_row(header: &Header, base: f32) -> Option<GridRow> {
     header.title.as_ref().map(|title| GridRow {
         height_pt: header_title_row_height(base),
         column_count: 1,
+        has_label_region: false,
         elements: vec![GridElement {
             column: 0,
             column_span: 1,
@@ -194,6 +199,7 @@ fn make_subtitle_author_row(header: &Header, base: f32) -> GridRow {
     GridRow {
         height_pt: header_subtitle_author_row_height(base),
         column_count: 1,
+        has_label_region: false,
         elements,
     }
 }
@@ -228,6 +234,7 @@ fn make_part_list_rows(entries: &[&PartListEntry], base: f32, columns: u32) -> V
         .map(|chunk| GridRow {
             height_pt: header_part_list_row_height(base),
             column_count: columns,
+            has_label_region: false,
             elements: chunk
                 .iter()
                 .enumerate()

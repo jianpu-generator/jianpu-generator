@@ -91,6 +91,7 @@ struct MetadataAccumulator {
     row_height: Option<u32>,
     max_measures_per_system: Option<u32>,
     note_number_width: Option<u32>,
+    part_label_width_pt: Option<u32>,
     parts_list_columns: Option<u32>,
     lyrics_font_size: Option<u32>,
     merge_duplicate_measures_across_parts: Option<bool>,
@@ -125,6 +126,13 @@ impl MetadataAccumulator {
             "note_number_width" => {
                 parse_numeric_field(&mut self.note_number_width, key, value, value_span, errors)
             }
+            "part_label_width_pt" => parse_numeric_field(
+                &mut self.part_label_width_pt,
+                key,
+                value,
+                value_span,
+                errors,
+            ),
             "parts_list_columns" => {
                 parse_numeric_field(&mut self.parts_list_columns, key, value, value_span, errors)
             }
@@ -203,6 +211,7 @@ pub fn parse_metadata(
             row_height: accumulator.row_height,
             max_measures_per_system: accumulator.max_measures_per_system,
             note_number_width: accumulator.note_number_width,
+            part_label_width_pt: accumulator.part_label_width_pt,
             parts_list_columns: accumulator.parts_list_columns,
             lyrics_font_size: accumulator.lyrics_font_size,
             merge_duplicate_measures_across_parts: accumulator
