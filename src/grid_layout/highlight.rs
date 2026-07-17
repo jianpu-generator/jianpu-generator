@@ -51,6 +51,7 @@ pub(crate) fn compute_measure_highlights_for_range(
     end_index: usize,
     header: &Header,
     base: f32,
+    hide_system_dividers: bool,
 ) -> Vec<(usize, MeasureHighlight)> {
     let mut global_measure_index: usize = 0;
     let mut results: Vec<(usize, MeasureHighlight)> = Vec::new();
@@ -59,7 +60,7 @@ pub(crate) fn compute_measure_highlights_for_range(
         let header_row_count = make_header_rows(header, base, page_idx == 0).len();
         let mut row_offset = header_row_count;
         for (sys_idx, system) in page_sys.iter().enumerate() {
-            if sys_idx > 0 {
+            if sys_idx > 0 && !hide_system_dividers {
                 row_offset += 1;
             }
             if system.is_empty() {
@@ -101,6 +102,7 @@ pub(crate) fn compute_measure_highlight_location(
     highlighted_measure_index: usize,
     header: &Header,
     base: f32,
+    hide_system_dividers: bool,
 ) -> Option<(usize, MeasureHighlight)> {
     let mut global_measure_index: usize = 0;
 
@@ -108,7 +110,7 @@ pub(crate) fn compute_measure_highlight_location(
         let header_row_count = make_header_rows(header, base, page_idx == 0).len();
         let mut row_offset = header_row_count;
         for (sys_idx, system) in page_sys.iter().enumerate() {
-            if sys_idx > 0 {
+            if sys_idx > 0 && !hide_system_dividers {
                 row_offset += 1; // separator row
             }
             system.first()?;
@@ -148,6 +150,7 @@ pub(crate) fn compute_error_highlight_infos(
     page_systems: &[Vec<Vec<MeasureBlock>>],
     header: &Header,
     base: f32,
+    hide_system_dividers: bool,
 ) -> Vec<(usize, MeasureHighlight)> {
     let mut measure_idx: usize = 0;
     let mut results: Vec<(usize, MeasureHighlight)> = Vec::new();
@@ -158,6 +161,7 @@ pub(crate) fn compute_error_highlight_infos(
                 measure_idx,
                 header,
                 base,
+                hide_system_dividers,
             ));
         }
         measure_idx += block.represents_measures;
@@ -180,6 +184,7 @@ pub(crate) fn compute_all_measure_click_targets(
     page_systems: &[Vec<Vec<MeasureBlock>>],
     header: &Header,
     base: f32,
+    hide_system_dividers: bool,
 ) -> Vec<(usize, MeasureClickTarget)> {
     let mut global_measure_index: usize = 0;
     let mut results: Vec<(usize, MeasureClickTarget)> = Vec::new();
@@ -188,7 +193,7 @@ pub(crate) fn compute_all_measure_click_targets(
         let header_row_count = make_header_rows(header, base, page_idx == 0).len();
         let mut row_offset = header_row_count;
         for (sys_idx, system) in page_sys.iter().enumerate() {
-            if sys_idx > 0 {
+            if sys_idx > 0 && !hide_system_dividers {
                 row_offset += 1;
             }
             if system.is_empty() {

@@ -20,12 +20,12 @@
 - [x] Why cargo test takes so long?
 - [x] Unexplained vertical gap on measure 9 of 今山古道
 - [x] One 0 should autofill 4 zeroes?
-- [ ] Edit Metadata modal should overlay on top on monaco editor space
+- [x] Edit Metadata modal should overlay on top on monaco editor space
+- [x] Help tooltip for every fields in Edit Metadata
 - [ ] syntax highlighting
 - [ ] LSP rename
 - [ ] Formatter: align lyric syllables with their corresponding notes
-- [ ] Help tooltip for every fields in Edit Metadata
 - [ ] clicking on a merge rest bar should highlight all measures in monaco editor
-- [ ] when system divier is hidden, the hover bounding box is wrong
+- [x] when system divier is hidden, the hover bounding box is wrong
 - [ ] when edit data modal is open, the preview should be scrollable
 - [ ] Legends of Group label should show what they consist of, for example `V - Vocal (S1,S2,A1,A2)`

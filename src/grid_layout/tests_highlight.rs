@@ -56,7 +56,7 @@ fn no_header() -> Header {
 fn returns_none_for_out_of_range_measure_index() {
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4), simple_block(4)]]];
-    let result = compute_measure_highlight_location(&page_systems, 2, &no_header(), 20.0);
+    let result = compute_measure_highlight_location(&page_systems, 2, &no_header(), 20.0, false);
     assert!(result.is_none());
 }
 
@@ -69,7 +69,7 @@ fn first_block_in_single_system_has_correct_column_range() {
     // column_end = (2 + 5) - 0.5 = 6.5.
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4), simple_block(4)]]];
-    let result = compute_measure_highlight_location(&page_systems, 0, &no_header(), 20.0)
+    let result = compute_measure_highlight_location(&page_systems, 0, &no_header(), 20.0, false)
         .expect("should find measure 0");
     let (_, highlight) = result;
     assert_eq!(
@@ -88,7 +88,7 @@ fn second_block_column_start_follows_first_block_width() {
     // its own ending bar line is centered in column 12, i.e. column_end = 11.5
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4), simple_block(4)]]];
-    let result = compute_measure_highlight_location(&page_systems, 1, &no_header(), 20.0)
+    let result = compute_measure_highlight_location(&page_systems, 1, &no_header(), 20.0, false)
         .expect("should find measure 1");
     let (_, highlight) = result;
     assert_eq!(highlight.column_start, 6.5);
@@ -100,7 +100,7 @@ fn measure_on_second_page_returns_correct_page_index() {
     // page 0: system with measure 0; page 1: system with measure 1
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4)]], vec![vec![simple_block(4)]]];
-    let result = compute_measure_highlight_location(&page_systems, 1, &no_header(), 20.0)
+    let result = compute_measure_highlight_location(&page_systems, 1, &no_header(), 20.0, false)
         .expect("should find measure 1");
     let (page_idx, _) = result;
     assert_eq!(page_idx, 1, "measure 1 is on page 1");
@@ -110,7 +110,8 @@ fn measure_on_second_page_returns_correct_page_index() {
 fn range_with_single_index_returns_one_highlight_matching_location() {
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4), simple_block(4)]]];
-    let highlights = compute_measure_highlights_for_range(&page_systems, 0, 0, &no_header(), 20.0);
+    let highlights =
+        compute_measure_highlights_for_range(&page_systems, 0, 0, &no_header(), 20.0, false);
     assert_eq!(highlights.len(), 1);
     let (page_idx, h) = highlights
         .into_iter()
@@ -125,7 +126,8 @@ fn range_with_single_index_returns_one_highlight_matching_location() {
 fn range_spanning_two_measures_returns_two_highlights() {
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4), simple_block(4)]]];
-    let highlights = compute_measure_highlights_for_range(&page_systems, 0, 1, &no_header(), 20.0);
+    let highlights =
+        compute_measure_highlights_for_range(&page_systems, 0, 1, &no_header(), 20.0, false);
     assert_eq!(highlights.len(), 2);
     let mut iter = highlights.into_iter();
     let (_, first_h) = iter.next().expect("first highlight");
@@ -138,7 +140,8 @@ fn range_spanning_two_measures_returns_two_highlights() {
 fn range_out_of_bounds_returns_empty_vec() {
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4), simple_block(4)]]];
-    let highlights = compute_measure_highlights_for_range(&page_systems, 5, 5, &no_header(), 20.0);
+    let highlights =
+        compute_measure_highlights_for_range(&page_systems, 5, 5, &no_header(), 20.0, false);
     assert!(highlights.is_empty());
 }
 
@@ -146,7 +149,8 @@ fn range_out_of_bounds_returns_empty_vec() {
 fn range_spanning_two_pages_reports_correct_page_indices() {
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4)]], vec![vec![simple_block(4)]]];
-    let highlights = compute_measure_highlights_for_range(&page_systems, 0, 1, &no_header(), 20.0);
+    let highlights =
+        compute_measure_highlights_for_range(&page_systems, 0, 1, &no_header(), 20.0, false);
     assert_eq!(highlights.len(), 2);
     let mut iter = highlights.into_iter();
     let (first_page, _) = iter.next().expect("first highlight");
@@ -167,13 +171,13 @@ fn global_measure_index_accounts_for_a_merged_block() {
         merged_block(4, 3),
         simple_block(4),
     ]]];
-    let result = compute_measure_highlight_location(&page_systems, 4, &no_header(), 20.0);
+    let result = compute_measure_highlight_location(&page_systems, 4, &no_header(), 20.0, false);
     assert!(
         result.is_some(),
         "measure index 4 should resolve to the block after the merged run"
     );
 
-    let targets = compute_all_measure_click_targets(&page_systems, &no_header(), 20.0);
+    let targets = compute_all_measure_click_targets(&page_systems, &no_header(), 20.0, false);
     let measure_indices: Vec<usize> = targets.iter().map(|(_, t)| t.measure_index).collect();
     assert_eq!(
         measure_indices,
@@ -229,6 +233,67 @@ fn erroneous_measure_produces_error_highlight() {
         pages[0].error_highlights.len(),
         1,
         "erroneous measure should produce one error highlight"
+    );
+}
+
+#[test]
+fn click_target_row_start_skips_hidden_system_divider() {
+    // Two systems (forced apart via max_measures_per_system = 1), each a
+    // single-row 4-note block, so each system contributes 6 musical rows
+    // (system_musical_row_count: 4 notes -> 6 sub-rows, no lyrics).
+    //
+    // With hide_system_dividers: false, build_page_rows inserts a separator
+    // row between the two systems, so the second system's click target
+    // should start 1 row later than when the divider is hidden and no such
+    // row exists.
+    let header = no_header();
+    let blocks = vec![simple_block(4), simple_block(4)];
+
+    let shown_config = crate::render_config::RenderConfig {
+        row_height: 24,
+        max_measures_per_system: 1,
+        note_number_width: 8,
+        part_label_width_pt: 40,
+        lyrics_font_size: 14,
+        hide_system_dividers: false,
+        section_label_offset: crate::ast::parsed::Offset::default(),
+    };
+    let shown_pages = crate::grid_layout::layout(
+        &crate::compiler::types::CompileResult {
+            blocks: blocks.clone(),
+            slur_spans: vec![],
+        },
+        &shown_config,
+        &header,
+        595.0,
+        842.0,
+        None,
+    );
+    let hidden_config = crate::render_config::RenderConfig {
+        hide_system_dividers: true,
+        ..shown_config
+    };
+    let hidden_pages = crate::grid_layout::layout(
+        &crate::compiler::types::CompileResult {
+            blocks,
+            slur_spans: vec![],
+        },
+        &hidden_config,
+        &header,
+        595.0,
+        842.0,
+        None,
+    );
+
+    let shown_second_row_start = shown_pages[0].measure_click_targets[1].row_start;
+    let hidden_second_row_start = hidden_pages[0].measure_click_targets[1].row_start;
+
+    assert_eq!(
+        hidden_second_row_start,
+        shown_second_row_start - 1,
+        "when system dividers are hidden, the second system's rows shift up \
+         by one (no separator row is rendered), so its click target's \
+         row_start must shift up by one too instead of staying put"
     );
 }
 

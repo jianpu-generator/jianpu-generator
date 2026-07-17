@@ -256,6 +256,45 @@ pub(crate) use super::highlight::compute_measure_highlight_location;
 pub(crate) use super::highlight::compute_measure_highlights_for_range;
 use super::highlight::{click_targets_on_page, compute_all_measure_click_targets};
 
+struct HighlightAndClickInfos {
+    highlight_infos: Vec<(usize, crate::grid_layout::types::MeasureHighlight)>,
+    error_highlight_infos: Vec<(usize, crate::grid_layout::types::MeasureHighlight)>,
+    all_click_target_infos: Vec<(usize, crate::grid_layout::types::MeasureClickTarget)>,
+}
+
+fn compute_highlight_and_click_infos(
+    blocks: &[MeasureBlock],
+    page_systems: &[Vec<Vec<MeasureBlock>>],
+    header: &Header,
+    base: f32,
+    hide_system_dividers: bool,
+    highlighted_measure_range: Option<(usize, usize)>,
+) -> HighlightAndClickInfos {
+    let highlight_infos = highlighted_measure_range
+        .map(|(start, end)| {
+            compute_measure_highlights_for_range(
+                page_systems,
+                start,
+                end,
+                header,
+                base,
+                hide_system_dividers,
+            )
+        })
+        .unwrap_or_default();
+
+    let error_highlight_infos =
+        compute_error_highlight_infos(blocks, page_systems, header, base, hide_system_dividers);
+    let all_click_target_infos =
+        compute_all_measure_click_targets(page_systems, header, base, hide_system_dividers);
+
+    HighlightAndClickInfos {
+        highlight_infos,
+        error_highlight_infos,
+        all_click_target_infos,
+    }
+}
+
 /// Public entry point: convert compiler blocks to GridPages.
 pub fn layout(
     compile_result: &CompileResult,
@@ -299,15 +338,18 @@ pub fn layout(
     }
     page_systems.push(current_page);
 
-    let highlight_infos: Vec<(usize, crate::grid_layout::types::MeasureHighlight)> =
-        highlighted_measure_range
-            .map(|(start, end)| {
-                compute_measure_highlights_for_range(&page_systems, start, end, header, base)
-            })
-            .unwrap_or_default();
-
-    let error_highlight_infos = compute_error_highlight_infos(blocks, &page_systems, header, base);
-    let all_click_target_infos = compute_all_measure_click_targets(&page_systems, header, base);
+    let HighlightAndClickInfos {
+        highlight_infos,
+        error_highlight_infos,
+        all_click_target_infos,
+    } = compute_highlight_and_click_infos(
+        blocks,
+        &page_systems,
+        header,
+        base,
+        config.hide_system_dividers,
+        highlighted_measure_range,
+    );
 
     let total_pages = page_systems.len() as u32;
     let mut abs_system_index_start: usize = 0;
