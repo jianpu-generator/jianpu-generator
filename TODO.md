@@ -29,4 +29,3 @@
 - [ ] when system divier is hidden, the hover bounding box is wrong
 - [ ] when edit data modal is open, the preview should be scrollable
 - [ ] Legends of Group label should show what they consist of, for example `V - Vocal (S1,S2,A1,A2)`
-- [ ] The part label width is not even across systems

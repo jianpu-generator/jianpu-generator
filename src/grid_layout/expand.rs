@@ -39,6 +39,12 @@ pub(crate) struct MeasureRenderParams {
     pub(crate) sub_count: usize,
     pub(crate) bar_height: f32,
     pub(crate) part_idx: usize,
+    /// True when this measure is the last one in its system, so its closing
+    /// `BarLine` should sit flush against the right edge of the column it
+    /// occupies (`HAlign::End`) rather than centered within it — the same
+    /// density-drift issue the leading barline has, mirrored at the right
+    /// margin.
+    pub(crate) is_last_block: bool,
 }
 
 /// The collapsed multi-measure-rest glyph gets a fixed wide `column_span`
@@ -56,14 +62,14 @@ fn push_multi_measure_rest(sub_rows: &mut [GridRow], head_sub: usize, column: u3
     }
 }
 
-fn push_bar_line(sub_rows: &mut [GridRow], column: u32, bar_height: f32) {
+fn push_bar_line(sub_rows: &mut [GridRow], column: u32, bar_height: f32, halign: HAlign) {
     if let Some(row) = sub_rows.get_mut(0) {
         row.elements.push(grid_el(
             column,
             GridContent::BarLine {
                 height_pt: bar_height,
             },
-            HAlign::Center,
+            halign,
             VAlign::Top,
         ));
     }
@@ -141,7 +147,12 @@ pub(crate) fn expand_measure_elements(
             }
             ElementContent::BarLine => {
                 if params.part_idx == 0 {
-                    push_bar_line(sub_rows, grid_col, params.bar_height);
+                    let halign = if params.is_last_block {
+                        HAlign::End
+                    } else {
+                        HAlign::Center
+                    };
+                    push_bar_line(sub_rows, grid_col, params.bar_height, halign);
                 }
             }
             ElementContent::Lyric { .. } => {} // handled in lyric-row branch above
@@ -236,7 +247,14 @@ pub(crate) fn expand_note_part(
             row.elements.push(GridElement {
                 column: LABEL_COLS,
                 column_span: 1,
-                halign: HAlign::Center,
+                // `Start`, not `Center`: this column's width tracks each
+                // system's musical density, but its x_start is pinned to the
+                // fixed-width label region's right edge (see
+                // `GridRow::column_geometry`). Centering here would offset
+                // the line by half of a density-dependent column width,
+                // making it drift left/right between systems even though
+                // the label region itself is now fixed-width.
+                halign: HAlign::Start,
                 valign: VAlign::Top,
                 content: GridContent::BarLine {
                     height_pt: bar_height,
@@ -245,7 +263,8 @@ pub(crate) fn expand_note_part(
         }
     }
     let mut measure_col_offset: u32 = 0;
-    for block in system {
+    let last_block_idx = system.len().saturating_sub(1);
+    for (block_idx, block) in system.iter().enumerate() {
         let col_w = block_column_width(block);
         if let Some(part_row) = block.rows.get(part_idx) {
             expand_measure_elements(
@@ -256,6 +275,7 @@ pub(crate) fn expand_note_part(
                     sub_count,
                     bar_height,
                     part_idx,
+                    is_last_block: block_idx == last_block_idx,
                 },
                 &mut sub_rows,
             );

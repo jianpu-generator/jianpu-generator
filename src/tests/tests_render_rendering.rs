@@ -222,6 +222,98 @@ fn part_label_width_is_consistent_across_systems_of_differing_density() {
 }
 
 #[test]
+fn leading_and_trailing_bar_lines_align_across_systems_of_differing_density() {
+    // Regression test: the leading bar line (right after the part label) and
+    // the trailing bar line (closing the last measure) of every system must
+    // land at the same x-position, even though systems differ in musical
+    // density — a sparse one-measure system ("a" only) vs. a denser system
+    // with an extra chord-symbol part ("b"). Uses the same input as
+    // `part_label_width_is_consistent_across_systems_of_differing_density`,
+    // which packs into a 2-measure system followed by a 1-measure system.
+    let input = concat!(
+        "# parts\n",
+        "a = notes\n",
+        "b = chords\n",
+        "\n",
+        "# score\n",
+        "[a] 1\n",
+        "\n",
+        "[a]1\n",
+        "\n",
+        "[a]1\n",
+        "[b] 6m __~_6m__0_\n",
+    );
+    let score = compile(input, "test", &[]).unwrap();
+    let config = render_config::RenderConfig::from_metadata(&score.metadata);
+    let header = grid_layout::types::Header {
+        title: score.metadata.title.clone(),
+        subtitle: score.metadata.subtitle.clone(),
+        author: score.metadata.author.clone(),
+        part_list: vec![],
+        parts_list_columns: 3,
+        sequence: None,
+    };
+    let compile_result = compiler::compile(&score);
+    let compile_result = consolidator::consolidate(compile_result);
+    let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
+    let abs = coordinate_resolver::resolve(
+        &grid_pages,
+        config.note_number_width as f32,
+        config.part_label_width_pt as f32,
+        config.lyric_font_sizes(),
+    )
+    .expect("coordinate resolver should not fail in tests");
+
+    // Bar lines are drawn once per system on the note-head sub-row of the
+    // first part, so their y-coordinate uniquely identifies which system a
+    // bar line belongs to.
+    let mut bar_lines_by_row: std::collections::BTreeMap<i64, Vec<f32>> =
+        std::collections::BTreeMap::new();
+    for e in &abs[0].elements {
+        if matches!(
+            e.content,
+            compositor::types::AbsoluteContent::BarLine { .. }
+        ) {
+            bar_lines_by_row
+                .entry((e.y * 1000.0).round() as i64)
+                .or_default()
+                .push(e.x);
+        }
+    }
+
+    assert!(
+        bar_lines_by_row.len() >= 2,
+        "expected bar lines across at least two systems, got {}",
+        bar_lines_by_row.len()
+    );
+
+    let leading_x_positions: Vec<f32> = bar_lines_by_row
+        .values()
+        .map(|xs| xs.iter().cloned().fold(f32::INFINITY, f32::min))
+        .collect();
+    let trailing_x_positions: Vec<f32> = bar_lines_by_row
+        .values()
+        .map(|xs| xs.iter().cloned().fold(f32::NEG_INFINITY, f32::max))
+        .collect();
+
+    let first_leading = leading_x_positions[0];
+    assert!(
+        leading_x_positions
+            .iter()
+            .all(|&x| (x - first_leading).abs() < 0.01),
+        "leading bar line x-position should be identical across systems: {leading_x_positions:?}"
+    );
+
+    let first_trailing = trailing_x_positions[0];
+    assert!(
+        trailing_x_positions
+            .iter()
+            .all(|&x| (x - first_trailing).abs() < 0.01),
+        "trailing bar line x-position should be identical across systems: {trailing_x_positions:?}"
+    );
+}
+
+#[test]
 fn tie_operator_on_notes_renders_exactly_two_arcs() {
     // 7_6=5=~5~5 has two ~ tie operators, so exactly 2 arcs should be rendered.
     let input = concat!(
