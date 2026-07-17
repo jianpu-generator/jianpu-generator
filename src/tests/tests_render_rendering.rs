@@ -24,6 +24,34 @@ fn render_svgs_from_source_smoke() {
 }
 
 #[test]
+fn bpm_change_mid_score_renders_both_bpm_labels() {
+    let input = concat!(
+        "# parts\n",
+        "b = notes\n",
+        "\n",
+        "# score\n",
+        "bpm=60\n",
+        "[b] 1\n",
+        "\n",
+        "bpm=130\n",
+        "[b] 1\n",
+    );
+    let svgs = render_svgs_from_source(input, "test.jianpu", &[])
+        .unwrap()
+        .svgs;
+    assert_eq!(svgs.len(), 1);
+    let svg = &svgs[0];
+    assert!(
+        svg.contains("\u{2669}=60"),
+        "should render the initial bpm=60 label"
+    );
+    assert!(
+        svg.contains("\u{2669}=130"),
+        "should render the changed bpm=130 label"
+    );
+}
+
+#[test]
 fn lyrics_underflow_render_returns_svgs_and_non_empty_errors() {
     let input = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",

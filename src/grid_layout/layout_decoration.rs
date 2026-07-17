@@ -82,8 +82,18 @@ pub(super) fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow
     for (index, block) in system.iter().enumerate() {
         if let Some(dec) = block.decorations.first() {
             let should_emit = index == 0 || {
-                let has_label = matches!(dec, Decoration::DirectiveLine { label: Some(_), .. });
-                has_label || decoration_has_navigation_marker(dec)
+                let Decoration::DirectiveLine {
+                    label,
+                    key,
+                    bpm,
+                    time_signature,
+                    ..
+                } = dec;
+                label.is_some()
+                    || key.is_some()
+                    || bpm.is_some()
+                    || time_signature.is_some()
+                    || decoration_has_navigation_marker(dec)
             };
             if should_emit {
                 elements.push(directive_line_element(dec, leading_barline_col));
