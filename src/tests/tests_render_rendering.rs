@@ -125,10 +125,7 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
         sequence: None,
     };
     let compile_result = compiler::compile(&score);
-    let compile_result = consolidator::consolidate(
-        compile_result,
-        score.metadata.merge_duplicate_measures_across_parts,
-    );
+    let compile_result = consolidator::consolidate(compile_result);
     let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
     let abs = coordinate_resolver::resolve(
         &grid_pages,

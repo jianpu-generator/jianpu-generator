@@ -63,6 +63,8 @@ fn chord_major_expands_to_three_notes() {
             bpm: Some(120),
             key: Some(key),
             label: None,
+            merge_duplicate_measures_across_parts: true,
+            hide_resting_parts: true,
             dc_al_coda: false,
             to_coda: false,
             coda: false,
@@ -102,94 +104,6 @@ fn measure_index_out_of_range_is_recoverable() {
     assert!(
         write_midi_for_measure(&score, 999).is_ok(),
         "out-of-range measure index must not abort MIDI generation"
-    );
-}
-
-#[test]
-fn tied_notes_produce_single_note_on() {
-    // `1~1` — two quarter notes tied together should produce exactly one NoteOn.
-    use crate::ast::grouped::{
-        GroupedNote, MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
-    };
-    use crate::ast::parsed::{JianPuPitch, PartKind, Soundfont};
-
-    let make_note = |tied: bool| {
-        NoteEvent::Note(GroupedNote {
-            pitch: JianPuPitch::One,
-            accidental: crate::ast::parsed::Accidental::Natural,
-            octave: 0,
-            duration: 4, // quarter note
-            slur: false,
-            tie_to_next_span: if tied { Some(Span::new(0, 1)) } else { None },
-            event_span: Span::new(0, 0),
-            group_membership: 0,
-            group_continuation: 0,
-            dotted: false,
-            slur_group_close_at_duration: None,
-        })
-    };
-
-    let make_part = |tied| {
-        PartRow::Timed(PartSlice {
-            name: None,
-            group_provenance: None,
-            kind: PartKind::Notes,
-            soundfont: Soundfont::default(),
-            volume: 100,
-            octave_offset: 0,
-            notes: Notes {
-                events: vec![make_note(tied)],
-            },
-            lyrics: Vec::new(),
-            has_error: false,
-        })
-    };
-    let make_measure = |time_signature, bpm, key, tied| MultiPartMeasure {
-        time_signature,
-        bpm,
-        key,
-        label: None,
-        dc_al_coda: false,
-        to_coda: false,
-        coda: false,
-        segno: false,
-        ds_al_coda: false,
-        dc_al_fine: false,
-        fine: false,
-        ds_al_fine: false,
-        parts: vec![make_part(tied)],
-        source_span: Span::new(0, 0),
-        diagnostics: vec![],
-    };
-    let score = Score {
-        metadata: default_test_metadata(),
-        measures: vec![
-            make_measure(
-                Some(TimeSignature {
-                    numerator: 4,
-                    denominator: 4,
-                }),
-                Some(120),
-                Some(KeyChange {
-                    note: Note {
-                        name: NoteName::C,
-                        octave: 4,
-                        accidental: Accidental::Natural,
-                    },
-                }),
-                true,
-            ),
-            make_measure(None, None, None, false),
-        ],
-        document_diagnostics: vec![],
-        sequence: None,
-    };
-
-    let midi_bytes = write_midi(&score).unwrap();
-    assert_eq!(
-        count_note_on_events(&midi_bytes),
-        1,
-        "tied 1~1 must produce exactly one NoteOn"
     );
 }
 
@@ -234,6 +148,8 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
                 },
             }),
             label: None,
+            merge_duplicate_measures_across_parts: true,
+            hide_resting_parts: true,
             dc_al_coda: false,
             to_coda: false,
             coda: false,

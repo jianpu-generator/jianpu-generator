@@ -87,10 +87,7 @@ time=4/4 key=C4 bpm=120
 "#;
     let score = compile(input, "test.jianpu", &[]).unwrap();
     let compile_result = compiler::compile(&score);
-    let compile_result = consolidator::consolidate(
-        compile_result,
-        score.metadata.merge_duplicate_measures_across_parts,
-    );
+    let compile_result = consolidator::consolidate(compile_result);
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
     let systems = grid_layout::layout::pack_into_systems(&compile_result.blocks, &config);
     assert_eq!(

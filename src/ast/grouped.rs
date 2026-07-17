@@ -44,11 +44,17 @@ pub struct Metadata {
     pub parts_list_columns: u32,
     /// Lyrics font size in points. Default: 60% of row_height.
     pub lyrics_font_size: u32,
-    /// When `false`, identical measure rows from different parts are no longer merged
-    /// into one row (see `consolidator::consolidate`). Default: `true`.
+    /// Score-wide default for `merge_duplicate_measures_across_parts=`: when `false`,
+    /// identical measure rows from different parts are no longer merged into one row
+    /// (see `consolidator::consolidate`). Default: `true`. A `merge_duplicate_measures_across_parts=`
+    /// directive line can override this from a given measure onward (see
+    /// `MultiPartMeasure::merge_duplicate_measures_across_parts`).
     pub merge_duplicate_measures_across_parts: bool,
-    /// When `false`, an all-rest part is no longer omitted from a measure that has other
-    /// parts with real content (see `compiler::compile_measure`). Default: `true`.
+    /// Score-wide default for `hide_resting_parts=`: when `false`, an all-rest part is
+    /// no longer omitted from a measure that has other parts with real content (see
+    /// `compiler::compile_measure`). Default: `true`. A `hide_resting_parts=` directive
+    /// line can override this from a given measure onward (see
+    /// `MultiPartMeasure::hide_resting_parts`).
     pub hide_resting_parts: bool,
     /// When `true`, the horizontal divider line drawn between systems is omitted (see
     /// `grid_layout::layout`). Default: `false`.
@@ -93,6 +99,14 @@ pub struct MultiPartMeasure {
     pub bpm: Option<u32>,
     pub key: Option<KeyChange>,
     pub label: Option<String>,
+    /// Resolved value of `merge_duplicate_measures_across_parts=` in effect on this
+    /// measure — either an override starting here or carried forward from an earlier
+    /// measure or the `#metadata` default (see `consolidator::consolidate`).
+    pub merge_duplicate_measures_across_parts: bool,
+    /// Resolved value of `hide_resting_parts=` in effect on this measure — either an
+    /// override starting here or carried forward from an earlier measure or the
+    /// `#metadata` default (see `compiler::compile_measure`).
+    pub hide_resting_parts: bool,
     /// `dcalcoda` on this measure: after playing it, playback restarts from measure 0.
     pub dc_al_coda: bool,
     /// `tocoda` on this measure: on the second pass only, playback cuts to the `coda` measure.
@@ -191,6 +205,8 @@ pub(crate) struct MeasureDirectives {
     pub(crate) bpm: Option<u32>,
     pub(crate) key: Option<KeyChange>,
     pub(crate) label: Option<String>,
+    pub(crate) merge_duplicate_measures_across_parts: bool,
+    pub(crate) hide_resting_parts: bool,
     pub(crate) dc_al_coda: bool,
     pub(crate) to_coda: bool,
     pub(crate) coda: bool,

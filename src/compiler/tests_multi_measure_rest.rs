@@ -145,6 +145,47 @@ fn labeled_measure_starts_a_new_rest_run_instead_of_joining_the_previous_one() {
 }
 
 #[test]
+fn hide_resting_parts_change_interrupts_a_rest_run() {
+    // Measures 2-3 are all-rest; measure 4 changes hide_resting_parts but is
+    // also all-rest, so it must not be absorbed into the preceding run.
+    // Measures 4-5 (both under the new setting) then form their own run.
+    let score = score_from(&notes_doc(
+        "time=4/4 key=C4 bpm=120\n[S] 1\n\n[S] 0 0 0 0\n\n[S] 0 0 0 0\n\nhide_resting_parts=no\n[S] 0 0 0 0\n\n[S] 0 0 0 0\n",
+    ));
+    let result = compile(&score);
+    let blocks = result.blocks;
+    assert_eq!(blocks.len(), 3, "blocks={blocks:#?}");
+    assert_eq!(blocks[0].represents_measures, 1);
+    assert_eq!(
+        blocks[1].represents_measures, 2,
+        "measures 2-3 merge before the setting change"
+    );
+    assert_eq!(
+        blocks[2].represents_measures, 2,
+        "measures 4-5 merge separately under the new setting"
+    );
+}
+
+#[test]
+fn merge_duplicate_measures_across_parts_change_interrupts_a_rest_run() {
+    let score = score_from(&notes_doc(
+        "time=4/4 key=C4 bpm=120\n[S] 1\n\n[S] 0 0 0 0\n\n[S] 0 0 0 0\n\nmerge_duplicate_measures_across_parts=no\n[S] 0 0 0 0\n\n[S] 0 0 0 0\n",
+    ));
+    let result = compile(&score);
+    let blocks = result.blocks;
+    assert_eq!(blocks.len(), 3, "blocks={blocks:#?}");
+    assert_eq!(blocks[0].represents_measures, 1);
+    assert_eq!(
+        blocks[1].represents_measures, 2,
+        "measures 2-3 merge before the setting change"
+    );
+    assert_eq!(
+        blocks[2].represents_measures, 2,
+        "measures 4-5 merge separately under the new setting"
+    );
+}
+
+#[test]
 fn hiding_a_track_lets_plain_rest_measures_from_hidden_track_collapse() {
     let source = "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nm = chords\nn = notes\n\n# score\n[n] 1\n\n[n] 1\n";
     let mut score = {

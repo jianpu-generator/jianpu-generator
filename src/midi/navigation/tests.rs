@@ -27,6 +27,8 @@ fn bare_measure(index: usize) -> MultiPartMeasure {
         bpm: None,
         key: None,
         label: None,
+        merge_duplicate_measures_across_parts: true,
+        hide_resting_parts: true,
         dc_al_coda: false,
         to_coda: false,
         coda: false,

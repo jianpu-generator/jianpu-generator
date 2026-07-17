@@ -223,6 +223,12 @@ pub enum ScoreEvent {
     /// Legacy tie marker retained for lyric-slot counting paths; use `(…)` groups in input.
     TieMarker,
     LabelChange(String),
+    /// `merge_duplicate_measures_across_parts=` — in effect from this measure onward
+    /// until the next occurrence.
+    MergeDuplicateMeasuresAcrossPartsChange(bool),
+    /// `hide_resting_parts=` — in effect from this measure onward until the next
+    /// occurrence.
+    HideRestingPartsChange(bool),
     /// `dcalcoda` — after this measure, playback restarts from measure 0.
     DcAlCoda,
     /// `tocoda` — on the second pass only, playback cuts away here to the `Coda` measure.

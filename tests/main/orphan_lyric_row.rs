@@ -38,10 +38,7 @@ const SOURCE: &str = concat!(
 fn no_orphan_empty_lyric_row_when_no_part_has_lyric_text() {
     let score = jianpu_generator::compile(SOURCE, "test.jianpu", &[]).unwrap();
     let compile_result = jianpu_generator::compiler::compile(&score);
-    let compile_result = jianpu_generator::consolidator::consolidate(
-        compile_result,
-        score.metadata.merge_duplicate_measures_across_parts,
-    );
+    let compile_result = jianpu_generator::consolidator::consolidate(compile_result);
     let config = RenderConfig::from_metadata(&score.metadata);
     let header = Header {
         title: None,

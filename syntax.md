@@ -66,8 +66,8 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | `note_number_width` | no | `8` | Horizontal space per note column (pixels) |
 | `parts_list_columns` | no | `4` | Number of columns in the parts list header |
 | `lyrics_font_size` | no | `row_height * 0.6` | Font size of lyric syllables (points) |
-| `merge_duplicate_measures_across_parts` | no | `yes` | Whether identical measures from different parts are merged into a single row (`yes`/`no`) |
-| `hide_resting_parts` | no | `yes` | Whether an all-rest part is omitted from a measure where other parts have content (`yes`/`no`) |
+| `merge_duplicate_measures_across_parts` | no | `yes` | Score-wide default for whether identical measures from different parts are merged into a single row (`yes`/`no`); can be overridden from a given measure onward with the `merge_duplicate_measures_across_parts=` directive line — see [Directive lines](#directive-lines) |
+| `hide_resting_parts` | no | `yes` | Score-wide default for whether an all-rest part is omitted from a measure where other parts have content (`yes`/`no`); can be overridden from a given measure onward with the `hide_resting_parts=` directive line — see [Directive lines](#directive-lines) |
 | `hide_system_dividers` | no | `no` | Whether the horizontal divider line between systems is omitted (`yes`/`no`) |
 | `section_label_offset` | no | `0 0` | Translation `"x y"` (points) applied to a rendered section label, moving it away from its default position without affecting the layout of anything else |
 
@@ -175,7 +175,7 @@ bpm=92 key=C4 time=4/4 label="Verse 1"
 
 ### Group layout
 
-1. **Optional directive line** — first line containing at least one directive keyword (`bpm=`, `key=`, `time=`, or `label=`)
+1. **Optional directive line** — first line containing at least one directive keyword (`bpm=`, `key=`, `time=`, `label=`, `merge_duplicate_measures_across_parts=`, or `hide_resting_parts=`)
 2. **Data lines** — every data line **must** begin with a `[Abbrev]` prefix (see below); there are no unprefixed/positional lines
 
 Lines are trimmed; leading/trailing spaces on a line are ignored. A completely empty line separates measure groups (it is not a data line).
@@ -294,6 +294,8 @@ bpm=92 key=C4 time=4/4 label="Verse 1"
 | `key=` | `key=C4`, `key=F#3`, `key=Bb4` | Key signature (`1` = this note) |
 | `time=` | `time=4/4`, `time=3/4` | Time signature |
 | `label=` | `label="Verse 1"` | Section label rendered above the row group |
+| `merge_duplicate_measures_across_parts=` | `merge_duplicate_measures_across_parts=no` | Overrides the `#metadata` default from this measure onward (`yes`/`no`) |
+| `hide_resting_parts=` | `hide_resting_parts=no` | Overrides the `#metadata` default from this measure onward (`yes`/`no`) |
 | `dcalcoda` | `dcalcoda` | D.C. al Coda: after this measure, playback restarts from measure 0 |
 | `tocoda` | `tocoda` | To Coda: on the second pass only, playback cuts away here to the `coda` measure |
 | `coda` | `coda` | Coda: playback resumes here (on the second pass) and continues to the end |
@@ -310,6 +312,7 @@ Rules:
 - Directives apply to **all** parts. They are stored on the first notes part and propagate through grouping.
 - `label` applies only to the measure where it is declared (does not persist to the next bar) — this is true for rendering purposes and whenever no `# sequence` section is present. When a `# sequence` section **is** present, each label additionally denotes a *span* of measures for playback-order purposes: see [`# sequence` — explicit playback order](#sequence--explicit-playback-order) below.
 - `bpm`, `key`, and `time` persist until the next directive line overrides them.
+- `merge_duplicate_measures_across_parts` and `hide_resting_parts` also persist until the next directive line overrides them; unset, they start from the `#metadata` value (or its default of `yes`) for the first measure.
 - `dcalcoda`, `tocoda`, and `coda` are bare keywords (no `=value`) that, like `label`, apply only to the measure where declared and do not persist. They must appear **all three together or not at all** (a partial set is an error), at most once each, and `tocoda` must occur before `coda`.
 - `segno`, `dsalcoda`, `tocoda`, and `coda` are the equivalent "D.S. al Coda" marker set: they must appear **all four together or not at all**, at most once each, `segno` must occur at or before `dsalcoda`, and `tocoda` must occur before `coda`.
 - `dcalfine` and `fine` are a marker set: they must appear **both together or not at all**, at most once each.

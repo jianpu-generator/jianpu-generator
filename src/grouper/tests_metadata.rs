@@ -97,3 +97,86 @@ fn label_on_second_measure_not_first() {
     assert_eq!(score.measures[0].label, None);
     assert_eq!(score.measures[1].label, Some("Chorus".to_string()));
 }
+
+#[test]
+fn hide_resting_parts_defaults_to_true_when_never_declared() {
+    let score = parse_and_group(concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n",
+    ));
+    assert!(score.measures[0].hide_resting_parts);
+}
+
+#[test]
+fn hide_resting_parts_directive_propagates_and_persists_to_next_measure() {
+    let score = parse_and_group(concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120 hide_resting_parts=no\n[Melody] 1 2 3 4\n\n[Melody] 5 6 7 1\n",
+    ));
+    assert!(!score.measures[0].hide_resting_parts);
+    assert!(
+        !score.measures[1].hide_resting_parts,
+        "sticky: stays disabled on the next measure with no override"
+    );
+}
+
+#[test]
+fn hide_resting_parts_seeds_from_metadata_default_then_can_be_overridden_mid_score() {
+    let score = parse_and_group(concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\nhide_resting_parts=no\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n\nhide_resting_parts=yes\n[Melody] 5 6 7 1\n",
+    ));
+    assert!(
+        !score.measures[0].hide_resting_parts,
+        "seeded from #metadata default"
+    );
+    assert!(
+        score.measures[1].hide_resting_parts,
+        "overridden mid-score by the directive line"
+    );
+}
+
+#[test]
+fn merge_duplicate_measures_across_parts_defaults_to_true_when_never_declared() {
+    let score = parse_and_group(concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n",
+    ));
+    assert!(score.measures[0].merge_duplicate_measures_across_parts);
+}
+
+#[test]
+fn merge_duplicate_measures_across_parts_directive_propagates_and_persists() {
+    let score = parse_and_group(concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120 merge_duplicate_measures_across_parts=no\n[Melody] 1 2 3 4\n\n[Melody] 5 6 7 1\n",
+    ));
+    assert!(!score.measures[0].merge_duplicate_measures_across_parts);
+    assert!(
+        !score.measures[1].merge_duplicate_measures_across_parts,
+        "sticky: stays disabled on the next measure with no override"
+    );
+}
+
+#[test]
+fn merge_duplicate_measures_across_parts_can_be_re_enabled_after_being_disabled() {
+    let score = parse_and_group(concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120 merge_duplicate_measures_across_parts=no\n[Melody] 1 2 3 4\n\n",
+        "merge_duplicate_measures_across_parts=yes\n[Melody] 5 6 7 1\n",
+    ));
+    assert!(!score.measures[0].merge_duplicate_measures_across_parts);
+    assert!(score.measures[1].merge_duplicate_measures_across_parts);
+}
+
+#[test]
+fn invalid_hide_resting_parts_directive_value_attaches_diagnostic_to_measure() {
+    let score = parse_and_group(concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120 hide_resting_parts=maybe\n[Melody] 1 2 3 4\n",
+    ));
+    assert!(
+        !score.measures[0].diagnostics.is_empty(),
+        "an invalid hide_resting_parts value should be a recoverable error"
+    );
+}

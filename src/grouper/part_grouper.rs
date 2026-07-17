@@ -284,6 +284,8 @@ impl PartGrouper {
             ScoreEvent::BpmChange(_)
             | ScoreEvent::KeyChange(_)
             | ScoreEvent::LabelChange(_)
+            | ScoreEvent::MergeDuplicateMeasuresAcrossPartsChange(_)
+            | ScoreEvent::HideRestingPartsChange(_)
             | ScoreEvent::DcAlCoda
             | ScoreEvent::ToCoda
             | ScoreEvent::Coda

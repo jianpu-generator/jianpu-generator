@@ -38,13 +38,22 @@ pub(super) struct DirectiveGrouper {
     current_bpm: u32,
     current_time_sig: TimeSignature,
     current_key: KeyChange,
+    current_merge_duplicate_measures_across_parts: bool,
+    current_hide_resting_parts: bool,
     bpm_changed: bool,
     time_sig_changed: bool,
     key_changed: bool,
 }
 
 impl DirectiveGrouper {
-    pub(super) fn new() -> Self {
+    /// `merge_duplicate_measures_across_parts`/`hide_resting_parts` seed the sticky
+    /// carry-forward state with the score-wide `#metadata` default (or its hardcoded
+    /// default when unset in `#metadata`); a directive line can override either from
+    /// the measure it appears on until the next occurrence.
+    pub(super) fn new(
+        merge_duplicate_measures_across_parts: bool,
+        hide_resting_parts: bool,
+    ) -> Self {
         Self {
             current_bpm: 120,
             current_time_sig: TimeSignature {
@@ -58,6 +67,8 @@ impl DirectiveGrouper {
                     accidental: Accidental::Natural,
                 },
             },
+            current_merge_duplicate_measures_across_parts: merge_duplicate_measures_across_parts,
+            current_hide_resting_parts: hide_resting_parts,
             bpm_changed: true,
             time_sig_changed: true,
             key_changed: true,
@@ -102,6 +113,12 @@ impl DirectiveGrouper {
                     ScoreEvent::LabelChange(text) => {
                         pending_label = Some(text.clone());
                     }
+                    ScoreEvent::MergeDuplicateMeasuresAcrossPartsChange(value) => {
+                        self.current_merge_duplicate_measures_across_parts = *value;
+                    }
+                    ScoreEvent::HideRestingPartsChange(value) => {
+                        self.current_hide_resting_parts = *value;
+                    }
                     other => markers.apply(other),
                 }
             }
@@ -125,6 +142,9 @@ impl DirectiveGrouper {
                     None
                 },
                 label: pending_label,
+                merge_duplicate_measures_across_parts: self
+                    .current_merge_duplicate_measures_across_parts,
+                hide_resting_parts: self.current_hide_resting_parts,
                 dc_al_coda: markers.dc_al_coda,
                 to_coda: markers.to_coda,
                 coda: markers.coda,

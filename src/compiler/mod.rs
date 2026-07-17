@@ -45,7 +45,7 @@ pub fn compile(score: &Score) -> CompileResult {
                 measure_index,
                 &mut cross_states,
                 &mut slur_spans,
-                score.metadata.hide_resting_parts,
+                measure.hide_resting_parts,
             )
         })
         .collect();
@@ -131,11 +131,16 @@ fn merge_rest_run(run: &[MeasureBlock]) -> MeasureBlock {
         .first()
         .map(|first| first.decorations.clone())
         .unwrap_or_default();
+    let merge_duplicate_measures_across_parts = run
+        .first()
+        .map(|first| first.merge_duplicate_measures_across_parts)
+        .unwrap_or(true);
     MeasureBlock {
         rows,
         decorations,
         diagnostics: vec![],
         represents_measures: count,
+        merge_duplicate_measures_across_parts,
     }
 }
 
@@ -151,9 +156,15 @@ fn merge_rest_runs(
     // Each collapsible measure gets a run id; a label always starts a fresh
     // id (breaking off from whatever run precedes it) so the label stays
     // attached to the merged block it heads instead of being swallowed by an
-    // earlier run. Non-collapsible measures get `None` and are never merged.
+    // earlier run. A change in `hide_resting_parts`/`merge_duplicate_measures_across_parts`
+    // starts a fresh id too, since a merged block carries one resolved setting
+    // pair for the whole run (taken from its first measure, see `merge_rest_run`) —
+    // absorbing a setting change into an earlier run would silently apply the
+    // wrong setting to the measures after the change. Non-collapsible measures
+    // get `None` and are never merged.
     let mut next_run_id = 0usize;
     let mut in_run = false;
+    let mut prev_settings: Option<(bool, bool)> = None;
     let run_ids: Vec<Option<usize>> = measures
         .iter()
         .zip(&blocks)
@@ -161,12 +172,18 @@ fn merge_rest_runs(
         .map(|(measure_index, (measure, block))| {
             if !is_collapsible(measure, measure_index, block) {
                 in_run = false;
+                prev_settings = None;
                 return None;
             }
-            if measure.label.is_some() && in_run {
+            let settings = (
+                measure.merge_duplicate_measures_across_parts,
+                measure.hide_resting_parts,
+            );
+            if in_run && (measure.label.is_some() || prev_settings != Some(settings)) {
                 next_run_id += 1;
             }
             in_run = true;
+            prev_settings = Some(settings);
             Some(next_run_id)
         })
         .collect();
@@ -286,6 +303,7 @@ fn compile_measure(
         decorations,
         diagnostics: measure.diagnostics.clone(),
         represents_measures: 1,
+        merge_duplicate_measures_across_parts: measure.merge_duplicate_measures_across_parts,
     }
 }
 
@@ -330,6 +348,8 @@ fn collect_decorations(measure: &MultiPartMeasure, bar_number: usize) -> Vec<Dec
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_directive_mid_score;
 #[cfg(test)]
 mod tests_lyrics_and_diagnostics;
 #[cfg(test)]

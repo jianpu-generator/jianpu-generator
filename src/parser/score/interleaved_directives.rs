@@ -130,6 +130,12 @@ fn parse_directive_line(
                     Some(ScoreEvent::LabelChange(text))
                 }
             }
+        } else if let Some(rest) = token.strip_prefix("merge_duplicate_measures_across_parts=") {
+            parse_bool_directive_value(rest, span, &mut errors)
+                .map(ScoreEvent::MergeDuplicateMeasuresAcrossPartsChange)
+        } else if let Some(rest) = token.strip_prefix("hide_resting_parts=") {
+            parse_bool_directive_value(rest, span, &mut errors)
+                .map(ScoreEvent::HideRestingPartsChange)
         } else if let Some(ev) = navigation_keyword_event(token) {
             Some(ev)
         } else {
@@ -229,6 +235,24 @@ fn parse_key_value(
             accidental,
         },
     }))
+}
+
+fn parse_bool_directive_value(
+    value: &str,
+    span: Span,
+    errors: &mut Vec<RecoverableError>,
+) -> Option<bool> {
+    match value {
+        "yes" => Some(true),
+        "no" => Some(false),
+        _ => {
+            errors.push(RecoverableError::general(
+                span,
+                format!("invalid value: '{value}', expected 'yes' or 'no'"),
+            ));
+            None
+        }
+    }
 }
 
 fn parse_time_value(

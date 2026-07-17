@@ -34,6 +34,7 @@ fn make_block_with_decorations(decorations: Vec<Decoration>) -> MeasureBlock {
         decorations,
         diagnostics: vec![],
         represents_measures: 1,
+        merge_duplicate_measures_across_parts: true,
     }
 }
 
@@ -110,6 +111,7 @@ fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
         decorations: vec![],
         diagnostics: vec![],
         represents_measures: 1,
+        merge_duplicate_measures_across_parts: true,
     }
 }
 

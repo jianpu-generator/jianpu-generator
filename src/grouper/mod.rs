@@ -44,7 +44,15 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
         });
     }
 
-    let measure_directives = DirectiveGrouper::new().process_all(&doc.directive_events_per_measure);
+    let measure_directives = DirectiveGrouper::new(
+        metadata
+            .merge_duplicate_measures_across_parts
+            .unwrap_or(DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS),
+        metadata
+            .hide_resting_parts
+            .unwrap_or(DEFAULT_HIDE_RESTING_PARTS),
+    )
+    .process_all(&doc.directive_events_per_measure);
 
     let grouped_score = GroupedScore {
         measure_directives,

@@ -7,6 +7,8 @@ use midly::{MidiMessage, Smf, TrackEventKind};
 
 #[path = "tests_chords.rs"]
 mod tests_chords;
+#[path = "tests_tied_notes.rs"]
+mod tests_tied_notes;
 #[path = "tests_timing.rs"]
 mod tests_timing;
 
@@ -140,6 +142,8 @@ pub(super) fn one_measure_score() -> Score {
                 },
             }),
             label: None,
+            merge_duplicate_measures_across_parts: true,
+            hide_resting_parts: true,
             dc_al_coda: false,
             to_coda: false,
             coda: false,
@@ -238,6 +242,8 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
                 },
             }),
             label: None,
+            merge_duplicate_measures_across_parts: true,
+            hide_resting_parts: true,
             dc_al_coda: false,
             to_coda: false,
             coda: false,

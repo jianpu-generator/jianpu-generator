@@ -7,7 +7,7 @@ fn consolidated_blocks(source: &str) -> Vec<MeasureBlock> {
     let document = parse(source, "test", &[]).unwrap();
     let score = group(document).unwrap();
     let result = compile(&score);
-    consolidate(result, score.metadata.merge_duplicate_measures_across_parts).blocks
+    consolidate(result).blocks
 }
 
 #[test]
@@ -144,6 +144,34 @@ B = notes
     assert_eq!(blocks[0].rows.len(), 2);
     assert_eq!(blocks[0].rows[0].label, "A");
     assert_eq!(blocks[0].rows[1].label, "B");
+}
+
+#[test]
+fn merge_duplicate_measures_across_parts_directive_toggles_mid_score() {
+    let source = concat!(
+        "# parts\n",
+        "A = notes\n",
+        "B = notes\n",
+        "\n",
+        "# score\n",
+        "[A] 1 2 3 4\n",
+        "[B] 1 2 3 4\n",
+        "\n",
+        "merge_duplicate_measures_across_parts=no\n",
+        "[A] 5 6 7 1\n",
+        "[B] 5 6 7 1\n",
+    );
+    let blocks = consolidated_blocks(source);
+    assert_eq!(
+        blocks[0].rows.len(),
+        1,
+        "measure 1: identical rows merge by default"
+    );
+    assert_eq!(
+        blocks[1].rows.len(),
+        2,
+        "measure 2: merging disabled from here, identical rows stay separate"
+    );
 }
 
 #[test]

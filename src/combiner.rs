@@ -1,6 +1,6 @@
 use crate::ast::grouped::{
     GroupedMeasure, GroupedScore, GroupedTrack, Lyrics, MeasureDirectives, MultiPartMeasure, Notes,
-    PartRow, PartSlice,
+    PartRow, PartSlice, DEFAULT_HIDE_RESTING_PARTS, DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
 };
 use crate::ast::parsed::PartKind;
 use crate::error::{Diagnostic, RecoverableError, Span};
@@ -106,6 +106,8 @@ fn combine_measure(
         bpm: directives.bpm,
         key: directives.key.clone(),
         label: directives.label.clone(),
+        merge_duplicate_measures_across_parts: directives.merge_duplicate_measures_across_parts,
+        hide_resting_parts: directives.hide_resting_parts,
         dc_al_coda: directives.dc_al_coda,
         to_coda: directives.to_coda,
         coda: directives.coda,
@@ -164,6 +166,8 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> (Vec<MultiPartMeasure>, V
         bpm: None,
         key: None,
         label: None,
+        merge_duplicate_measures_across_parts: DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
+        hide_resting_parts: DEFAULT_HIDE_RESTING_PARTS,
         dc_al_coda: false,
         to_coda: false,
         coda: false,

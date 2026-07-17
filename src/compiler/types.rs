@@ -25,6 +25,9 @@ pub struct MeasureBlock {
     /// every normal block; > 1 when a run of all-rest measures has been
     /// folded into a single `MultiMeasureRest` block.
     pub represents_measures: usize,
+    /// Resolved `merge_duplicate_measures_across_parts=` setting in effect on the
+    /// measure this block was compiled from (see `consolidator::consolidate_block`).
+    pub merge_duplicate_measures_across_parts: bool,
 }
 
 impl PartialEq for MeasureBlock {

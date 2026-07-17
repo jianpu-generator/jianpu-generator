@@ -2,16 +2,13 @@ use crate::compiler::types::{
     ColumnElement, CompileResult, ElementContent, MeasureBlock, MeasureRow, RowId,
 };
 
-pub fn consolidate(mut result: CompileResult, merge_across_parts: bool) -> CompileResult {
-    result.blocks = result
-        .blocks
-        .into_iter()
-        .map(|block| consolidate_block(block, merge_across_parts))
-        .collect();
+pub fn consolidate(mut result: CompileResult) -> CompileResult {
+    result.blocks = result.blocks.into_iter().map(consolidate_block).collect();
     result
 }
 
-fn consolidate_block(mut block: MeasureBlock, merge_across_parts: bool) -> MeasureBlock {
+fn consolidate_block(mut block: MeasureBlock) -> MeasureBlock {
+    let merge_across_parts = block.merge_duplicate_measures_across_parts;
     block.rows = consolidate_rows(expand_mixed_rows(block.rows), merge_across_parts);
     block
 }

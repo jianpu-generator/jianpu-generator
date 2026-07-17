@@ -31,6 +31,7 @@ fn simple_block(col_count: u32) -> MeasureBlock {
         decorations: vec![],
         diagnostics: vec![],
         represents_measures: 1,
+        merge_duplicate_measures_across_parts: true,
     }
 }
 
@@ -193,6 +194,7 @@ fn erroneous_measure_produces_error_highlight() {
             "lyrics underflow",
         ))],
         represents_measures: 1,
+        merge_duplicate_measures_across_parts: true,
     };
     let header = Header {
         title: Some("T".into()),

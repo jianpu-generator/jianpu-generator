@@ -19,10 +19,7 @@ fn render_documents(
     let config = crate::render_config::RenderConfig::from_metadata(&score.metadata);
     let header = crate::build_header(score, parts, groups);
     let compile_result = crate::compiler::compile(score);
-    let compile_result = crate::consolidator::consolidate(
-        compile_result,
-        score.metadata.merge_duplicate_measures_across_parts,
-    );
+    let compile_result = crate::consolidator::consolidate(compile_result);
     let grid_pages =
         crate::grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
     let abs = crate::coordinate_resolver::resolve(
@@ -43,10 +40,7 @@ fn render_documents_with_range(
     let config = crate::render_config::RenderConfig::from_metadata(&score.metadata);
     let header = crate::build_header(score, parts, groups);
     let compile_result = crate::compiler::compile(score);
-    let compile_result = crate::consolidator::consolidate(
-        compile_result,
-        score.metadata.merge_duplicate_measures_across_parts,
-    );
+    let compile_result = crate::consolidator::consolidate(compile_result);
     let grid_pages = crate::grid_layout::layout(
         &compile_result,
         &config,
