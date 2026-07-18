@@ -15,9 +15,9 @@ fn resolve_single_measure_highlight(
         return None;
     }
     let geometry = start_row.column_geometry(usable_width, part_label_width_pt);
-    let col_width = geometry.col_width(highlight.column_start);
     let highlight_x = PAGE_MARGIN + geometry.x_start(highlight.column_start);
-    let highlight_width = (highlight.column_end - highlight.column_start) * col_width;
+    let highlight_width =
+        geometry.x_start(highlight.column_end) - geometry.x_start(highlight.column_start);
     let highlight_height = rows
         .get(highlight.row_start..=highlight.row_end)
         .map(|slice| slice.iter().map(|row| row.height_pt).sum())
@@ -63,9 +63,8 @@ pub(super) fn resolve_error_highlights(
                 return None;
             }
             let geometry = start_row.column_geometry(usable_width, part_label_width_pt);
-            let col_width = geometry.col_width(h.column_start);
             let highlight_x = PAGE_MARGIN + geometry.x_start(h.column_start);
-            let highlight_width = (h.column_end - h.column_start) * col_width;
+            let highlight_width = geometry.x_start(h.column_end) - geometry.x_start(h.column_start);
             let highlight_height = rows
                 .get(h.row_start..=h.row_end)
                 .map(|slice| slice.iter().map(|row| row.height_pt).sum())
@@ -95,9 +94,8 @@ pub(super) fn resolve_measure_click_target(
         return None;
     }
     let geometry = start_row.column_geometry(usable_width, part_label_width_pt);
-    let col_width = geometry.col_width(target.column_start);
     let target_x = PAGE_MARGIN + geometry.x_start(target.column_start);
-    let target_width = (target.column_end - target.column_start) * col_width;
+    let target_width = geometry.x_start(target.column_end) - geometry.x_start(target.column_start);
     let target_height = rows
         .get(target.row_start..=target.row_end)
         .map(|slice| slice.iter().map(|row| row.height_pt).sum())

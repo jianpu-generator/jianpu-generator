@@ -117,6 +117,12 @@ pub(crate) fn block_column_width(block: &MeasureBlock) -> u32 {
         .unwrap_or(1)
 }
 
+#[path = "layout_spacing.rs"]
+mod spacing;
+#[cfg(test)]
+pub(crate) use spacing::measure_column_weights;
+pub(crate) use spacing::{build_measure_column_layout, MIN_MEASURE_WIDTH_PT};
+
 /// Total height in points for all musical sub-rows in a system
 /// (sum over all non-lyric part rows).
 pub(crate) fn system_musical_height_pt(block: &MeasureBlock, base: f32) -> f32 {
@@ -197,7 +203,7 @@ pub(crate) fn system_has_any_decoration(system: &[MeasureBlock]) -> bool {
 mod decoration;
 pub(crate) use super::expand::expand_system_to_rows;
 use super::expand::make_footer_row;
-use super::highlight::{compute_error_highlight_infos, measure_highlights_on_page};
+use super::highlight::{click_targets_on_page, measure_highlights_on_page};
 pub(crate) use decoration::make_header_rows;
 use decoration::{make_decoration_row, make_separator_row};
 
@@ -232,8 +238,9 @@ fn build_page_rows(
         let Some(first) = system.first() else {
             continue;
         };
+        let measure_layout = build_measure_column_layout(system);
         if system_has_any_decoration(system) {
-            rows.push(make_decoration_row(system, base));
+            rows.push(make_decoration_row(system, base, &measure_layout));
         }
         let abs_sys = abs_system_index_start + sys_idx;
         let system_arcs: HashMap<usize, Vec<GridElement>> = first
@@ -246,54 +253,19 @@ fn build_page_rows(
                     .map(|arcs| (consolidated_idx, arcs.clone()))
             })
             .collect();
-        rows.extend(expand_system_to_rows(system, base, &system_arcs));
+        rows.extend(expand_system_to_rows(
+            system,
+            base,
+            &system_arcs,
+            &measure_layout,
+        ));
     }
     rows
 }
 
 #[cfg(test)]
 pub(crate) use super::highlight::compute_measure_highlight_location;
-pub(crate) use super::highlight::compute_measure_highlights_for_range;
-use super::highlight::{click_targets_on_page, compute_all_measure_click_targets};
-
-struct HighlightAndClickInfos {
-    highlight_infos: Vec<(usize, crate::grid_layout::types::MeasureHighlight)>,
-    error_highlight_infos: Vec<(usize, crate::grid_layout::types::MeasureHighlight)>,
-    all_click_target_infos: Vec<(usize, crate::grid_layout::types::MeasureClickTarget)>,
-}
-
-fn compute_highlight_and_click_infos(
-    blocks: &[MeasureBlock],
-    page_systems: &[Vec<Vec<MeasureBlock>>],
-    header: &Header,
-    base: f32,
-    hide_system_dividers: bool,
-    highlighted_measure_range: Option<(usize, usize)>,
-) -> HighlightAndClickInfos {
-    let highlight_infos = highlighted_measure_range
-        .map(|(start, end)| {
-            compute_measure_highlights_for_range(
-                page_systems,
-                start,
-                end,
-                header,
-                base,
-                hide_system_dividers,
-            )
-        })
-        .unwrap_or_default();
-
-    let error_highlight_infos =
-        compute_error_highlight_infos(blocks, page_systems, header, base, hide_system_dividers);
-    let all_click_target_infos =
-        compute_all_measure_click_targets(page_systems, header, base, hide_system_dividers);
-
-    HighlightAndClickInfos {
-        highlight_infos,
-        error_highlight_infos,
-        all_click_target_infos,
-    }
-}
+use super::highlight::{compute_highlight_and_click_infos, HighlightAndClickInfos};
 
 /// Public entry point: convert compiler blocks to GridPages.
 pub fn layout(

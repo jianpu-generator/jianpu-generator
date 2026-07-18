@@ -13,3 +13,5 @@ pub(crate) const PAGE_MARGIN: f32 = 25.0;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_measure_spacing;

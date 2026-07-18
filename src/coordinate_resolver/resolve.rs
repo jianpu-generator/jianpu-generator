@@ -79,9 +79,12 @@ fn resolve_row_element(
     note_number_width: f32,
     lyric_font_sizes: LyricFontSizes,
 ) -> Result<Option<AbsoluteElement>, IrrecoverableError> {
-    let col_width = geometry.col_width(el.column as f32);
-    let x_start = PAGE_MARGIN + geometry.x_start(el.column as f32);
-    let span_width = el.column_span as f32 * col_width;
+    let raw_x_start = geometry.x_start(el.column as f32);
+    let x_start = PAGE_MARGIN + raw_x_start;
+    // Computed from the actual start/end columns (not `col_width * span`) so
+    // a span crossing measures of differing proportional width still gets
+    // its true pixel extent.
+    let span_width = geometry.x_start(el.column as f32 + el.column_span as f32) - raw_x_start;
     let x = match el.halign {
         HAlign::Start => x_start,
         HAlign::Center => x_start + span_width * 0.5,
@@ -99,56 +102,10 @@ fn resolve_row_element(
         VAlign::Bottom => row_y + row.height_pt - bottom_padding,
     };
 
+    if let Some(el) = resolve_span_marking(el, y, geometry, note_number_width) {
+        return Ok(Some(el));
+    }
     match &el.content {
-        GridContent::Underline { level } => {
-            let note_center_x = x_start + col_width * 0.5;
-            let ul_x = note_center_x - note_number_width * 0.5;
-            let ul_width = (el.column_span as f32 - 1.0) * col_width + note_number_width;
-            Ok(Some(AbsoluteElement {
-                x: ul_x,
-                y,
-                content: AbsoluteContent::Underline {
-                    width: ul_width,
-                    level: *level,
-                },
-            }))
-        }
-        GridContent::TieOrSlur { kind } => {
-            let arc_x = x_start + col_width * 0.5;
-            let arc_width = (el.column_span as f32 - 1.0) * col_width;
-            Ok(Some(AbsoluteElement {
-                x: arc_x,
-                y,
-                content: AbsoluteContent::TieOrSlur {
-                    kind: kind.clone(),
-                    width: arc_width,
-                },
-            }))
-        }
-        GridContent::TieOrSlurTail { kind } => {
-            let arc_x = x_start + col_width * 0.5;
-            let arc_width = el.column_span as f32 * col_width - col_width * 0.5;
-            Ok(Some(AbsoluteElement {
-                x: arc_x,
-                y,
-                content: AbsoluteContent::TieOrSlur {
-                    kind: kind.clone(),
-                    width: arc_width,
-                },
-            }))
-        }
-        GridContent::TieOrSlurHead { kind } => {
-            let arc_x = x_start;
-            let arc_width = (el.column_span as f32 - 1.0) * col_width + col_width * 0.5;
-            Ok(Some(AbsoluteElement {
-                x: arc_x,
-                y,
-                content: AbsoluteContent::TieOrSlur {
-                    kind: kind.clone(),
-                    width: arc_width,
-                },
-            }))
-        }
         GridContent::MultiMeasureRest { count } => Ok(Some(resolve_multi_measure_rest(
             *count, x_start, span_width, y,
         ))),
@@ -159,6 +116,70 @@ fn resolve_row_element(
             Ok(grid_to_absolute(&post_arc_content, span_width, el.halign)?
                 .map(|content| AbsoluteElement { x, y, content }))
         }
+    }
+}
+
+/// Handles the underline/tie/slur variants, whose x-extent is defined in
+/// terms of column centers/edges rather than the halign/valign math above.
+/// Returns `None` for every other `GridContent` variant.
+fn resolve_span_marking(
+    el: &GridElement,
+    y: f32,
+    geometry: &ColumnGeometry,
+    note_number_width: f32,
+) -> Option<AbsoluteElement> {
+    match &el.content {
+        GridContent::Underline { level } => {
+            let start_center = geometry.column_center(el.column as f32);
+            let end_center = geometry.column_center(el.column as f32 + el.column_span as f32 - 1.0);
+            let ul_x = PAGE_MARGIN + start_center - note_number_width * 0.5;
+            let ul_width = end_center - start_center + note_number_width;
+            Some(AbsoluteElement {
+                x: ul_x,
+                y,
+                content: AbsoluteContent::Underline {
+                    width: ul_width,
+                    level: *level,
+                },
+            })
+        }
+        GridContent::TieOrSlur { kind } => {
+            let start_center = geometry.column_center(el.column as f32);
+            let end_center = geometry.column_center(el.column as f32 + el.column_span as f32 - 1.0);
+            Some(AbsoluteElement {
+                x: PAGE_MARGIN + start_center,
+                y,
+                content: AbsoluteContent::TieOrSlur {
+                    kind: kind.clone(),
+                    width: end_center - start_center,
+                },
+            })
+        }
+        GridContent::TieOrSlurTail { kind } => {
+            let start_center = geometry.column_center(el.column as f32);
+            let system_right_edge = geometry.x_start(el.column as f32 + el.column_span as f32);
+            Some(AbsoluteElement {
+                x: PAGE_MARGIN + start_center,
+                y,
+                content: AbsoluteContent::TieOrSlur {
+                    kind: kind.clone(),
+                    width: system_right_edge - start_center,
+                },
+            })
+        }
+        GridContent::TieOrSlurHead { kind } => {
+            let system_left_edge = geometry.x_start(el.column as f32);
+            let end_center = geometry.column_center(el.column as f32 + el.column_span as f32 - 1.0);
+            Some(AbsoluteElement {
+                x: PAGE_MARGIN + system_left_edge,
+                y,
+                content: AbsoluteContent::TieOrSlur {
+                    kind: kind.clone(),
+                    width: end_center - system_left_edge,
+                },
+            })
+        }
+        _ => None,
     }
 }
 

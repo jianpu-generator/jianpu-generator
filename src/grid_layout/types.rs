@@ -1,6 +1,5 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compiler::types::ArcKind;
-use crate::grid_layout::layout::LABEL_COLS;
 
 #[derive(Debug, Clone)]
 pub struct GridPage {
@@ -25,6 +24,31 @@ pub struct MeasureClickTarget {
     pub measure_index_end: usize,
 }
 
+/// One measure's extent within a `GridRow`'s musical column range, plus its
+/// weight data — the raw material `column_geometry` uses to give denser
+/// measures more pixel width than sparser ones, and to give individual
+/// columns within a measure (e.g. a notehead vs. the dash after it)
+/// different widths too. Shared by every row of a system (built once in
+/// `expand::expand_system_to_rows`).
+#[derive(Debug, Clone)]
+pub struct MeasureColumnLayout {
+    /// First musical grid column of this measure (absolute, i.e. already
+    /// offset past the label region).
+    pub start_col: u32,
+    /// Number of grid columns this measure occupies (`block_column_width`).
+    pub col_count: u32,
+    /// Relative note-density weight of the whole measure vs. other measures
+    /// in the system (`measure_note_weight`); higher = wider. Independent of
+    /// `column_weights` below — dashes and bar lines don't affect this.
+    pub weight: f32,
+    /// Per-column weight within this measure (`measure_column_weights`),
+    /// one entry per column in `start_col..start_col + col_count`; higher =
+    /// wider relative to other columns in the same measure. Its sum is
+    /// unrelated to `weight` — used only to split the measure's own pixel
+    /// width across its columns, never to compare against other measures.
+    pub column_weights: Vec<f32>,
+}
+
 #[derive(Debug, Clone)]
 pub struct GridRow {
     pub height_pt: f32,
@@ -34,70 +58,15 @@ pub struct GridRow {
     /// (see [`GridRow::column_geometry`]). False for header/footer/separator
     /// rows, which divide their full width evenly across `column_count`.
     pub has_label_region: bool,
+    /// Per-measure column layout for this row's system, shared by every row
+    /// in the system. Empty for rows with `has_label_region: false`.
+    pub measure_layout: Vec<MeasureColumnLayout>,
     pub elements: Vec<GridElement>,
 }
 
-impl GridRow {
-    /// Column geometry for this row, given the usable page width and the
-    /// score-wide fixed part-label width. Rows with `has_label_region: true`
-    /// (system rows) get a label column width independent of the row's own
-    /// musical density; other rows (headers, footers) divide the full width
-    /// evenly as before.
-    pub fn column_geometry(&self, usable_width_pt: f32, label_width_pt: f32) -> ColumnGeometry {
-        if self.has_label_region {
-            let music_cols = self.column_count - LABEL_COLS;
-            ColumnGeometry {
-                label_cols: LABEL_COLS,
-                label_col_width: label_width_pt / LABEL_COLS as f32,
-                label_width_pt,
-                music_col_width: (usable_width_pt - label_width_pt) / music_cols as f32,
-            }
-        } else {
-            let col_width = usable_width_pt / self.column_count as f32;
-            ColumnGeometry {
-                label_cols: 0,
-                label_col_width: col_width,
-                label_width_pt: 0.0,
-                music_col_width: col_width,
-            }
-        }
-    }
-}
-
-/// Resolves a grid column index to a pixel x-offset (from the row's left
-/// edge) and column width, so the fixed-width label region (columns
-/// `0..label_cols`) and the variable-width music region (`label_cols..`)
-/// can share a `GridRow` without the label's rendered width depending on
-/// how many musical columns the row has.
-#[derive(Debug, Clone, Copy)]
-pub struct ColumnGeometry {
-    label_cols: u32,
-    label_col_width: f32,
-    label_width_pt: f32,
-    music_col_width: f32,
-}
-
-impl ColumnGeometry {
-    /// x-offset of the start of `column`, relative to the row's left edge.
-    /// `column` may be fractional (e.g. a highlight's `column_start`); it is
-    /// never expected to straddle the label/music boundary.
-    pub fn x_start(&self, column: f32) -> f32 {
-        if column < self.label_cols as f32 {
-            column * self.label_col_width
-        } else {
-            self.label_width_pt + (column - self.label_cols as f32) * self.music_col_width
-        }
-    }
-
-    /// Width of a single column at `column`.
-    pub fn col_width(&self, column: f32) -> f32 {
-        if column < self.label_cols as f32 {
-            self.label_col_width
-        } else {
-            self.music_col_width
-        }
-    }
-}
+#[path = "column_geometry.rs"]
+mod geometry;
+pub use geometry::ColumnGeometry;
 
 #[derive(Debug, Clone)]
 pub struct GridElement {

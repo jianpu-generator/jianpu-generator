@@ -9,6 +9,7 @@ fn column_geometry_divides_evenly_without_label_region() {
         height_pt: 30.0,
         column_count: 10,
         has_label_region: false,
+        measure_layout: vec![],
         elements: vec![],
     };
     let geometry = row.column_geometry(500.0, 40.0);
@@ -23,6 +24,7 @@ fn column_geometry_gives_label_region_a_fixed_width() {
         height_pt: 30.0,
         column_count: 16,
         has_label_region: true,
+        measure_layout: vec![],
         elements: vec![],
     };
     let geometry = row.column_geometry(400.0, 40.0);
@@ -41,12 +43,14 @@ fn column_geometry_label_width_is_independent_of_musical_density() {
         height_pt: 30.0,
         column_count: 3, // 1 label col + 1 barline col + 1 musical col
         has_label_region: true,
+        measure_layout: vec![],
         elements: vec![],
     };
     let dense_row = GridRow {
         height_pt: 30.0,
         column_count: 21, // 1 label col + 1 barline col + 19 musical cols
         has_label_region: true,
+        measure_layout: vec![],
         elements: vec![],
     };
     let sparse_geometry = sparse_row.column_geometry(545.0, 40.0);
@@ -213,14 +217,14 @@ fn make_system_single_note_block() -> Vec<MeasureBlock> {
 
 #[test]
 fn note_block_expands_to_six_sub_rows() {
-    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new());
+    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new(), &[]);
     // 1 note part × 6 sub-rows, no lyric
     assert_eq!(rows.len(), 6);
 }
 
 #[test]
 fn note_head_element_is_in_sub_row_index_2() {
-    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new());
+    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new(), &[]);
     let note_row = &rows[2]; // note-head sub-row
     let has_note = note_row
         .elements
@@ -231,7 +235,7 @@ fn note_head_element_is_in_sub_row_index_2() {
 
 #[test]
 fn bar_line_element_has_positive_height_pt() {
-    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new());
+    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new(), &[]);
     let bar = rows
         .iter()
         .flat_map(|r| r.elements.iter())
@@ -295,7 +299,7 @@ fn bar_line_height_includes_lyric_rows() {
     let expected_height =
         system_musical_height_pt(first, base) + system_lyric_height_pt(first, base);
 
-    let rows = expand_system_to_rows(&system, base, &HashMap::new());
+    let rows = expand_system_to_rows(&system, base, &HashMap::new(), &[]);
     let bar = rows
         .iter()
         .flat_map(|r| r.elements.iter())
@@ -312,7 +316,7 @@ fn bar_line_height_includes_lyric_rows() {
 
 #[test]
 fn row_label_is_in_note_head_sub_row_at_column_0_span_1() {
-    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new());
+    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new(), &[]);
     let note_row = &rows[2];
     let label = note_row
         .elements
@@ -325,7 +329,7 @@ fn row_label_is_in_note_head_sub_row_at_column_0_span_1() {
 
 #[test]
 fn column_count_is_label_cols_plus_musical_cols() {
-    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new());
+    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new(), &[]);
     // 1 label col + 1 leading bar line col + 4 musical cols (bar at col 3 → block width=4)
     assert_eq!(rows[0].column_count, 6);
 }

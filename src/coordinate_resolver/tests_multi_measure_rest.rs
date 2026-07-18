@@ -10,6 +10,7 @@ fn single_row_page(element: GridElement) -> GridPage {
             height_pt: 30.0,
             column_count: 10,
             has_label_region: false,
+            measure_layout: vec![],
             elements: vec![element],
         }],
         measure_highlights: vec![],

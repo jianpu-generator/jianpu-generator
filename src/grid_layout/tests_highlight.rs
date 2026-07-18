@@ -1,7 +1,7 @@
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
 use crate::grid_layout::highlight::compute_all_measure_click_targets;
+use crate::grid_layout::highlight::compute_measure_highlights_for_range;
 use crate::grid_layout::layout::compute_measure_highlight_location;
-use crate::grid_layout::layout::compute_measure_highlights_for_range;
 use crate::grid_layout::types::Header;
 
 fn simple_block(col_count: u32) -> MeasureBlock {

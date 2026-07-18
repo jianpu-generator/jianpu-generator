@@ -5,7 +5,7 @@ use crate::grid_layout::layout::{
     MUSIC_START_COL,
 };
 use crate::grid_layout::types::{
-    GridContent, GridElement, GridRow, HAlign, Header, PartListEntry, VAlign,
+    GridContent, GridElement, GridRow, HAlign, Header, MeasureColumnLayout, PartListEntry, VAlign,
 };
 
 fn directive_line_element(dec: &Decoration, col: u32) -> GridElement {
@@ -62,7 +62,11 @@ fn decoration_has_navigation_marker(dec: &Decoration) -> bool {
     *dc_al_coda || *to_coda || *coda || *segno || *ds_al_coda || *dc_al_fine || *fine || *ds_al_fine
 }
 
-pub(super) fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow {
+pub(super) fn make_decoration_row(
+    system: &[MeasureBlock],
+    base: f32,
+    measure_layout: &[MeasureColumnLayout],
+) -> GridRow {
     let total_musical_cols: u32 = system.iter().map(block_column_width).sum();
     let music_column_count = MUSIC_START_COL + total_musical_cols;
     let mut elements: Vec<GridElement> = Vec::new();
@@ -106,6 +110,7 @@ pub(super) fn make_decoration_row(system: &[MeasureBlock], base: f32) -> GridRow
         height_pt: decoration_row_height(base),
         column_count: music_column_count,
         has_label_region: true,
+        measure_layout: measure_layout.to_vec(),
         elements,
     }
 }
@@ -115,6 +120,7 @@ pub(super) fn make_separator_row() -> GridRow {
         height_pt: separator_row_height(),
         column_count: 1,
         has_label_region: false,
+        measure_layout: vec![],
         elements: vec![GridElement {
             column: 0,
             column_span: 1,
@@ -136,12 +142,14 @@ fn make_sequence_rows(header: &Header, base: f32, include_part_list: bool) -> Ve
                     height_pt: header_gap_row_height(base),
                     column_count: 1,
                     has_label_region: false,
+                    measure_layout: vec![],
                     elements: vec![],
                 },
                 GridRow {
                     height_pt: decoration_row_height(base),
                     column_count: 1,
                     has_label_region: false,
+                    measure_layout: vec![],
                     elements: vec![GridElement {
                         column: 0,
                         column_span: 1,
@@ -162,6 +170,7 @@ fn make_title_row(header: &Header, base: f32) -> Option<GridRow> {
         height_pt: header_title_row_height(base),
         column_count: 1,
         has_label_region: false,
+        measure_layout: vec![],
         elements: vec![GridElement {
             column: 0,
             column_span: 1,
@@ -211,6 +220,7 @@ fn make_subtitle_author_row(header: &Header, base: f32) -> GridRow {
         height_pt: header_subtitle_author_row_height(base),
         column_count: 1,
         has_label_region: false,
+        measure_layout: vec![],
         elements,
     }
 }
@@ -246,6 +256,7 @@ fn make_part_list_rows(entries: &[&PartListEntry], base: f32, columns: u32) -> V
             height_pt: header_part_list_row_height(base),
             column_count: columns,
             has_label_region: false,
+            measure_layout: vec![],
             elements: chunk
                 .iter()
                 .enumerate()

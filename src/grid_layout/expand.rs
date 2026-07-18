@@ -4,7 +4,9 @@ use crate::grid_layout::layout::{
     is_chord_only_row, is_lyric_row, lyric_row_height, note_part_sub_row_heights, LABEL_COLS,
     MUSIC_START_COL,
 };
-use crate::grid_layout::types::{GridContent, GridElement, GridRow, HAlign, VAlign};
+use crate::grid_layout::types::{
+    GridContent, GridElement, GridRow, HAlign, MeasureColumnLayout, VAlign,
+};
 use std::collections::HashMap;
 
 pub(crate) fn grid_el(
@@ -165,11 +167,13 @@ pub(crate) fn expand_lyric_part(
     part_idx: usize,
     base: f32,
     column_count: u32,
+    measure_layout: &[MeasureColumnLayout],
 ) -> GridRow {
     let mut row = GridRow {
         height_pt: lyric_row_height(base),
         column_count,
         has_label_region: true,
+        measure_layout: measure_layout.to_vec(),
         elements: vec![],
     };
     let mut measure_col_offset: u32 = 0;
@@ -200,6 +204,7 @@ pub(crate) struct NotePartParams<'a> {
     pub(crate) column_count: u32,
     pub(crate) bar_height: f32,
     pub(crate) part_arcs: &'a [GridElement],
+    pub(crate) measure_layout: &'a [MeasureColumnLayout],
 }
 
 pub(crate) fn expand_note_part(
@@ -223,6 +228,7 @@ pub(crate) fn expand_note_part(
             height_pt: h,
             column_count,
             has_label_region: true,
+            measure_layout: params.measure_layout.to_vec(),
             elements: vec![],
         })
         .collect();
@@ -294,6 +300,7 @@ pub(crate) fn expand_system_to_rows(
     system: &[MeasureBlock],
     base: f32,
     system_arcs: &HashMap<usize, Vec<GridElement>>,
+    measure_layout: &[MeasureColumnLayout],
 ) -> Vec<GridRow> {
     let Some(first) = system.first() else {
         return vec![];
@@ -304,7 +311,13 @@ pub(crate) fn expand_system_to_rows(
     let mut all_rows: Vec<GridRow> = Vec::new();
     for (part_idx, part_template) in first.rows.iter().enumerate() {
         if is_lyric_row(part_template) {
-            all_rows.push(expand_lyric_part(system, part_idx, base, column_count));
+            all_rows.push(expand_lyric_part(
+                system,
+                part_idx,
+                base,
+                column_count,
+                measure_layout,
+            ));
         } else {
             let part_arcs: &[GridElement] =
                 system_arcs.get(&part_idx).map_or(&[], |v| v.as_slice());
@@ -317,10 +330,17 @@ pub(crate) fn expand_system_to_rows(
                     column_count,
                     bar_height,
                     part_arcs,
+                    measure_layout,
                 },
             ));
             if has_lyrics(part_template) {
-                all_rows.push(expand_lyric_part(system, part_idx, base, column_count));
+                all_rows.push(expand_lyric_part(
+                    system,
+                    part_idx,
+                    base,
+                    column_count,
+                    measure_layout,
+                ));
             }
         }
     }
@@ -337,6 +357,7 @@ pub(crate) fn make_footer_row(
         height_pt,
         column_count: 1,
         has_label_region: false,
+        measure_layout: vec![],
         elements: vec![GridElement {
             column: 0,
             column_span: 1,

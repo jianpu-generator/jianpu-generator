@@ -1,0 +1,160 @@
+use super::GridRow;
+use crate::grid_layout::layout::{LABEL_COLS, MIN_MEASURE_WIDTH_PT};
+
+impl GridRow {
+    /// Column geometry for this row, given the usable page width and the
+    /// score-wide fixed part-label width. Rows with `has_label_region: true`
+    /// (system rows) get a label column width independent of the row's own
+    /// musical density; the music region is split proportionally across
+    /// `measure_layout`'s measures by their spacing weight (denser measures
+    /// get more width), and each measure's own width is in turn split across
+    /// its columns by `column_weights` (e.g. a notehead column wider than a
+    /// dash column). Rows without a label region (headers, footers) or an
+    /// empty `measure_layout` divide the full width evenly, as before.
+    pub fn column_geometry(&self, usable_width_pt: f32, label_width_pt: f32) -> ColumnGeometry {
+        if self.has_label_region {
+            let label_col_width = label_width_pt / LABEL_COLS as f32;
+            if self.measure_layout.is_empty() {
+                let music_cols = self.column_count - LABEL_COLS;
+                return ColumnGeometry {
+                    label_cols: LABEL_COLS,
+                    label_col_width,
+                    first_segment: ColumnSegment {
+                        start_col: LABEL_COLS as f32,
+                        col_count: music_cols as f32,
+                        col_width: (usable_width_pt - label_width_pt) / music_cols as f32,
+                        x_start: label_width_pt,
+                    },
+                    rest_segments: Vec::new(),
+                };
+            }
+            let usable_music_width = usable_width_pt - label_width_pt;
+            let n = self.measure_layout.len() as f32;
+            let total_weight: f32 = self.measure_layout.iter().map(|m| m.weight).sum();
+            let mut x = label_width_pt;
+            let segments: Vec<ColumnSegment> = self
+                .measure_layout
+                .iter()
+                .flat_map(|m| {
+                    let measure_width = MIN_MEASURE_WIDTH_PT
+                        + (usable_music_width - n * MIN_MEASURE_WIDTH_PT) * m.weight / total_weight;
+                    let column_weight_sum: f32 = m.column_weights.iter().sum();
+                    m.column_weights
+                        .iter()
+                        .enumerate()
+                        .map(|(i, &w)| {
+                            let col_width = measure_width * w / column_weight_sum;
+                            let seg = ColumnSegment {
+                                start_col: m.start_col as f32 + i as f32,
+                                col_count: 1.0,
+                                col_width,
+                                x_start: x,
+                            };
+                            x += col_width;
+                            seg
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect();
+            let mut segments = segments.into_iter();
+            let first_segment = segments.next().unwrap_or(ColumnSegment {
+                start_col: LABEL_COLS as f32,
+                col_count: 0.0,
+                col_width: 0.0,
+                x_start: label_width_pt,
+            });
+            ColumnGeometry {
+                label_cols: LABEL_COLS,
+                label_col_width,
+                first_segment,
+                rest_segments: segments.collect(),
+            }
+        } else {
+            let col_width = usable_width_pt / self.column_count as f32;
+            ColumnGeometry {
+                label_cols: 0,
+                label_col_width: col_width,
+                first_segment: ColumnSegment {
+                    start_col: 0.0,
+                    col_count: self.column_count as f32,
+                    col_width,
+                    x_start: 0.0,
+                },
+                rest_segments: Vec::new(),
+            }
+        }
+    }
+}
+
+/// One contiguous run of uniform-width columns within `ColumnGeometry`'s
+/// music region — one per musical column once per-column proportional
+/// widths are in effect (`col_count` is then always `1.0`), or a single
+/// segment spanning the whole music region otherwise.
+#[derive(Debug, Clone, Copy)]
+struct ColumnSegment {
+    start_col: f32,
+    col_count: f32,
+    col_width: f32,
+    /// x-offset (from the row's left edge) of this segment's start.
+    x_start: f32,
+}
+
+/// Resolves a grid column index to a pixel x-offset (from the row's left
+/// edge) and column width, so the fixed-width label region (columns
+/// `0..label_cols`) and the variable-width music region (`label_cols..`)
+/// can share a `GridRow` without the label's rendered width depending on
+/// how many musical columns the row has. The music region may itself be
+/// split into multiple `ColumnSegment`s of differing width (one per
+/// measure), making `x_start` a piecewise-linear (but still continuous)
+/// function of `column`.
+#[derive(Debug, Clone)]
+pub struct ColumnGeometry {
+    label_cols: u32,
+    label_col_width: f32,
+    /// The music region's first segment, split out from `rest_segments` so
+    /// the region is structurally guaranteed non-empty — `segment_for` can
+    /// then fall back to it without any panicking `unwrap`/`expect`.
+    first_segment: ColumnSegment,
+    rest_segments: Vec<ColumnSegment>,
+}
+
+impl ColumnGeometry {
+    /// Finds the segment `column` falls into. Segments are contiguous and
+    /// sorted by `start_col`; a column past the last segment's end resolves
+    /// to that last segment (segments are never empty).
+    fn segment_for(&self, column: f32) -> &ColumnSegment {
+        if column < self.first_segment.start_col + self.first_segment.col_count {
+            return &self.first_segment;
+        }
+        self.rest_segments
+            .iter()
+            .find(|seg| column < seg.start_col + seg.col_count)
+            .unwrap_or_else(|| self.rest_segments.last().unwrap_or(&self.first_segment))
+    }
+
+    /// x-offset of the start of `column`, relative to the row's left edge.
+    /// `column` may be fractional (e.g. a highlight's `column_start`); it is
+    /// never expected to straddle the label/music boundary.
+    pub fn x_start(&self, column: f32) -> f32 {
+        if column < self.label_cols as f32 {
+            column * self.label_col_width
+        } else {
+            let seg = self.segment_for(column);
+            seg.x_start + (column - seg.start_col) * seg.col_width
+        }
+    }
+
+    /// Width of a single column at `column`.
+    pub fn col_width(&self, column: f32) -> f32 {
+        if column < self.label_cols as f32 {
+            self.label_col_width
+        } else {
+            self.segment_for(column).col_width
+        }
+    }
+
+    /// x-offset of the horizontal center of `column`.
+    pub fn column_center(&self, column: f32) -> f32 {
+        self.x_start(column) + self.col_width(column) * 0.5
+    }
+}

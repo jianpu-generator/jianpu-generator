@@ -275,3 +275,42 @@ pub(crate) fn click_targets_on_page(
         .map(|(_, t)| t.clone())
         .collect()
 }
+
+pub(crate) struct HighlightAndClickInfos {
+    pub(crate) highlight_infos: Vec<(usize, MeasureHighlight)>,
+    pub(crate) error_highlight_infos: Vec<(usize, MeasureHighlight)>,
+    pub(crate) all_click_target_infos: Vec<(usize, MeasureClickTarget)>,
+}
+
+pub(crate) fn compute_highlight_and_click_infos(
+    blocks: &[MeasureBlock],
+    page_systems: &[Vec<Vec<MeasureBlock>>],
+    header: &Header,
+    base: f32,
+    hide_system_dividers: bool,
+    highlighted_measure_range: Option<(usize, usize)>,
+) -> HighlightAndClickInfos {
+    let highlight_infos = highlighted_measure_range
+        .map(|(start, end)| {
+            compute_measure_highlights_for_range(
+                page_systems,
+                start,
+                end,
+                header,
+                base,
+                hide_system_dividers,
+            )
+        })
+        .unwrap_or_default();
+
+    let error_highlight_infos =
+        compute_error_highlight_infos(blocks, page_systems, header, base, hide_system_dividers);
+    let all_click_target_infos =
+        compute_all_measure_click_targets(page_systems, header, base, hide_system_dividers);
+
+    HighlightAndClickInfos {
+        highlight_infos,
+        error_highlight_infos,
+        all_click_target_infos,
+    }
+}
