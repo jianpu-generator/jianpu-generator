@@ -25,7 +25,6 @@ struct PartGrouper {
     part_name: Option<String>,
     measure_span_start: Option<usize>,
     measure_span_end: usize,
-    pending_dash_after_rest_error: Option<RecoverableError>,
     pending_overflow_error: Option<Warning>,
     pending_dotted_eighth_errors: Vec<Diagnostic>,
     pending_extension_no_preceding_event_error: Option<RecoverableError>,
@@ -49,7 +48,6 @@ impl PartGrouper {
             part_name: Some(part.abbreviation.clone()),
             measure_span_start: None,
             measure_span_end: 0,
-            pending_dash_after_rest_error: None,
             pending_overflow_error: None,
             pending_dotted_eighth_errors: Vec::new(),
             pending_extension_no_preceding_event_error: None,
@@ -74,7 +72,6 @@ impl PartGrouper {
             paired_lyrics: Vec::new(),
             lyrics_error: Vec::new(),
             beat_overflow_error: self.pending_overflow_error.take(),
-            dash_after_rest_error: self.pending_dash_after_rest_error.take(),
             dotted_eighth_errors: std::mem::take(&mut self.pending_dotted_eighth_errors),
             chord_errors: Vec::new(),
             lex_error: None,
@@ -152,12 +149,9 @@ impl PartGrouper {
                 p.duration += 4;
                 self.current_beat += 4;
             }
-            Some(NoteEvent::Rest(_)) => {
-                if self.pending_dash_after_rest_error.is_none() {
-                    self.pending_dash_after_rest_error =
-                        Some(RecoverableError::dash_after_rest(span));
-                }
-                return Ok(());
+            Some(NoteEvent::Rest(r)) => {
+                r.duration += 4;
+                self.current_beat += 4;
             }
             None => {
                 let chord_track = self.part_kind == PartKind::Chords;
@@ -325,7 +319,6 @@ impl PartGrouper {
                 paired_lyrics: Vec::new(),
                 lyrics_error: Vec::new(),
                 beat_overflow_error: None,
-                dash_after_rest_error: self.pending_dash_after_rest_error.take(),
                 dotted_eighth_errors: std::mem::take(&mut self.pending_dotted_eighth_errors),
                 chord_errors: Vec::new(),
                 lex_error: None,

@@ -4,7 +4,7 @@ use super::groups::{apply_closed_group_depth, GroupStack};
 use super::timed_lexer::TimedLexToken;
 use super::{ParseHeadError, TimedUnitHead};
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Spanned};
+use crate::error::{Diagnostic, IrrecoverableError, Span, Spanned};
 
 #[path = "timed_recursive_descent_parser/group_and_repeat.rs"]
 mod group_and_repeat;
@@ -21,16 +21,11 @@ pub struct TimedRecursiveDescentParser<'a, H: TimedUnitHead> {
     stack: &'a mut GroupStack,
     /// Staging area: events with their pending depth accumulators.
     staging: Vec<DepthEvent>,
-    dash_after_rest_error: Option<RecoverableError>,
     chord_errors: Vec<Diagnostic>,
     head: std::marker::PhantomData<H>,
 }
 
-type TimedLineParseResult = (
-    Vec<Spanned<ScoreEvent>>,
-    Option<RecoverableError>,
-    Vec<Diagnostic>,
-);
+type TimedLineParseResult = (Vec<Spanned<ScoreEvent>>, Vec<Diagnostic>);
 
 impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
     pub fn parse_line(
@@ -53,7 +48,6 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
             pos: 0,
             stack,
             staging: Vec::new(),
-            dash_after_rest_error: None,
             chord_errors: Vec::new(),
             head: std::marker::PhantomData,
         };
@@ -65,7 +59,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
             .into_iter()
             .map(|d| d.into_spanned())
             .collect();
-        Ok((events, parser.dash_after_rest_error, parser.chord_errors))
+        Ok((events, parser.chord_errors))
     }
 
     // -----------------------------------------------------------------------
@@ -217,7 +211,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
     }
 
     /// Collect the recoverable diagnostics attached to a parsed `DurationParse` into
-    /// `self.chord_errors` / `self.dash_after_rest_error`.
+    /// `self.chord_errors`.
     fn collect_duration_suffix_diagnostics(&mut self, duration_meta: &super::DurationParse) {
         if let Some(error) = duration_meta.unexpected_char_error.clone() {
             self.chord_errors.push(Diagnostic::Error(error));
@@ -227,9 +221,6 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
         }
         if let Some(error) = duration_meta.cannot_dot_quarter_beat_error.clone() {
             self.chord_errors.push(Diagnostic::Error(error));
-        }
-        if duration_meta.dash_after_rest_error.is_some() && self.dash_after_rest_error.is_none() {
-            self.dash_after_rest_error = duration_meta.dash_after_rest_error.clone();
         }
         if let Some(error) = duration_meta.tie_on_rest_error.clone() {
             self.chord_errors.push(Diagnostic::Error(error));

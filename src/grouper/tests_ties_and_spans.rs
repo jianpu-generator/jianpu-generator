@@ -2,31 +2,49 @@ use super::*;
 use crate::ast::parsed::JianPuPitch;
 
 #[test]
-fn suffix_dash_after_rest_is_recoverable() {
-    use crate::error::{Diagnostic, RecoverableErrorKind};
+fn suffix_dash_after_rest_is_allowed() {
+    // `0---` is conventional jianpu for a rest held across the whole measure.
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 0---\n[Melody] _\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\na = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[a] 0---\n",
     ));
-    assert_eq!(score.measures[0].diagnostics.len(), 1);
-    assert!(matches!(
-        &score.measures[0].diagnostics[0],
-        Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::DashAfterRest)
-    ));
+    assert_eq!(
+        score.measures[0].diagnostics.len(),
+        0,
+        "0--- should parse without error, got {:?}",
+        score.measures[0].diagnostics
+    );
+    let notes = first_part_notes(&score, 0);
+    assert_eq!(notes.len(), 1);
+    match &notes[0] {
+        NoteEvent::Rest(r) => assert_eq!(r.duration, 16, "0--- should hold the rest for 4 beats"),
+        NoteEvent::Note(_) | NoteEvent::Chord(_) | NoteEvent::Percussion(_) => {
+            panic!("expected Rest")
+        }
+    }
 }
 
 #[test]
-fn dash_after_rest_is_recoverable() {
-    use crate::error::{Diagnostic, RecoverableErrorKind};
+fn standalone_dash_after_rest_is_allowed() {
+    // `0 - - -` is the space-separated equivalent of `0---`.
     let score = parse_and_group(concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 0 - - -\n[Melody] _\n",
     ));
-    assert_eq!(score.measures[0].diagnostics.len(), 1);
-    assert!(matches!(
-        &score.measures[0].diagnostics[0],
-        Diagnostic::Error(e) if matches!(e.kind, RecoverableErrorKind::DashAfterRest)
-    ));
+    assert_eq!(
+        score.measures[0].diagnostics.len(),
+        0,
+        "0 - - - should parse without error, got {:?}",
+        score.measures[0].diagnostics
+    );
+    let notes = first_part_notes(&score, 0);
+    assert_eq!(notes.len(), 1);
+    match &notes[0] {
+        NoteEvent::Rest(r) => assert_eq!(r.duration, 16),
+        NoteEvent::Note(_) | NoteEvent::Chord(_) | NoteEvent::Percussion(_) => {
+            panic!("expected Rest")
+        }
+    }
 }
 
 #[test]

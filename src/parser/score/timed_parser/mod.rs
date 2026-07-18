@@ -57,7 +57,6 @@ type ParseHeadResult<H> = Result<(H, usize, bool, Vec<Diagnostic>), ParseHeadErr
 /// Parsed events from one timed notation line, plus any recoverable errors collected while parsing.
 pub struct TimedLineParse {
     pub events: Vec<Spanned<ScoreEvent>>,
-    pub dash_after_rest_error: Option<RecoverableError>,
     pub chord_errors: Vec<Diagnostic>,
     pub lex_errors: Vec<RecoverableError>,
 }
@@ -70,11 +69,10 @@ pub fn parse_timed_line<H: TimedUnitHead>(
     context: LexContext,
 ) -> Result<TimedLineParse, IrrecoverableError> {
     let (tokens, lex_errors) = lex_line(line, base_offset, context)?;
-    let (events, dash_after_rest_error, chord_errors) =
+    let (events, chord_errors) =
         TimedRecursiveDescentParser::<H>::parse_line(line, base_offset, &tokens, stack)?;
     Ok(TimedLineParse {
         events,
-        dash_after_rest_error,
         chord_errors,
         lex_errors,
     })

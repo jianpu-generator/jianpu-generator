@@ -9,8 +9,6 @@ fn collect_part_measure_diagnostics(m: Option<&GroupedMeasure>) -> Vec<Diagnosti
     [
         m.and_then(|m| m.beat_overflow_error.clone())
             .map(Diagnostic::Warning),
-        m.and_then(|m| m.dash_after_rest_error.clone())
-            .map(Diagnostic::Error),
         m.and_then(|m| m.lex_error.clone()).map(Diagnostic::Error),
         m.and_then(|m| m.lyrics_parse_error.clone())
             .map(Diagnostic::Error),
@@ -33,8 +31,7 @@ fn collect_part_measure_diagnostics(m: Option<&GroupedMeasure>) -> Vec<Diagnosti
 }
 
 fn measure_has_error(m: &GroupedMeasure) -> bool {
-    m.dash_after_rest_error.is_some()
-        || m.lex_error.is_some()
+    m.lex_error.is_some()
         || m.lyrics_parse_error.is_some()
         || m.extension_no_preceding_event_error.is_some()
         || m.dotted_eighth_errors

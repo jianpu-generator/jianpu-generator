@@ -29,8 +29,6 @@ pub enum RecoverableErrorKind {
     MeasureMissingRoleLine { role: String, abbrev: String },
     /// A dotted eighth note or rest is not followed by a sixteenth — rhythmic structure is broken.
     DottedEighthNeedsSixteenth,
-    /// `-` used to extend a rest — duration intent not fulfilled.
-    DashAfterRest,
     /// A chord symbol did not start with a degree digit (0–7) — chord is dropped.
     ChordExpectedDegreeDigit { ch: char },
     /// A chord token is entirely invalid — chord is dropped.
@@ -143,7 +141,6 @@ impl RecoverableErrorKind {
                 format!("missing {role} line for '{abbrev}'; treating as {treatment}")
             }
             Self::DottedEighthNeedsSixteenth => "dotted eighth must be followed by a sixteenth note or rest".to_string(),
-            Self::DashAfterRest => "`-` cannot extend a rest; use repeated `0` for longer rests (e.g. `0 0` for a half rest)".to_string(),
             Self::ChordExpectedDegreeDigit { ch } => format!("expected chord degree digit (0-7), got: {ch}"),
             Self::ChordInvalidToken { message } => message.clone(),
             Self::DurationUnexpectedChar { ch } => format!("unexpected character in note duration: {ch}"),

@@ -246,8 +246,6 @@ pub(crate) struct GroupedMeasure {
     pub(crate) lyrics_error: Vec<Warning>,
     /// Recoverable beat overflow for this measure (notes trimmed), if any.
     pub(crate) beat_overflow_error: Option<Warning>,
-    /// Recoverable error from `-` used after a rest in this measure, if any.
-    pub(crate) dash_after_rest_error: Option<RecoverableError>,
     /// Grouping diagnostics: dotted-eighth RecoverableErrors and half-bar-boundary Warnings.
     pub(crate) dotted_eighth_errors: Vec<Diagnostic>,
     /// Chord parse diagnostics: promoted kinds are Error, others are Warning.

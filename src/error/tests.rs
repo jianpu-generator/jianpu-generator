@@ -29,12 +29,6 @@ fn without_path_is_none() {
 }
 
 #[test]
-fn dash_after_rest_recoverable_has_message() {
-    let e = RecoverableError::dash_after_rest(Span::new(5, 6));
-    assert!(e.message().contains("repeated `0`"));
-}
-
-#[test]
 fn recoverable_error_measure_directives_missing_has_correct_kind() {
     let e = RecoverableError::measure_directives_missing(Span::new(0, 0));
     assert!(matches!(

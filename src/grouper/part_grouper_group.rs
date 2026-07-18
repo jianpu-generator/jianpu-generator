@@ -19,7 +19,6 @@ pub(in crate::grouper) fn group_timed_track(
     let measure_syllables = part.lyrics.as_ref().map(|l| l.measure_syllables.clone());
     let per_measure_beat_errors = part.per_measure_beat_errors.clone();
     let per_measure_dotted_eighth_errors = part.per_measure_dotted_eighth_errors.clone();
-    let per_measure_dash_after_rest_errors = part.per_measure_dash_after_rest_errors.clone();
     let per_measure_chord_errors = part.per_measure_chord_errors.clone();
     let per_measure_lex_errors = part.per_measure_lex_errors.clone();
     let per_measure_lyrics_errors = part.per_measure_lyrics_errors.clone();
@@ -45,7 +44,6 @@ pub(in crate::grouper) fn group_timed_track(
         &PerMeasureErrors {
             beat_errors: &per_measure_beat_errors,
             dotted_eighth_errors: &per_measure_dotted_eighth_errors,
-            dash_after_rest_errors: &per_measure_dash_after_rest_errors,
             chord_errors: &per_measure_chord_errors,
             lex_errors: &per_measure_lex_errors,
             lyrics_errors: &per_measure_lyrics_errors,

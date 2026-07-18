@@ -431,19 +431,14 @@ Rests (`0`) do not accept accidentals.
 | Suffix | Meaning |
 |--------|---------|
 | `.` | Dotted (add half the base duration). Cannot combine with `=` (sixteenth) notes. |
-| `-` | Extend the previous **note** by one beat (4 quarter-beats) |
+| `-` | Extend the previous **note or rest** by one beat (4 quarter-beats) |
 | `~` | Tie this note to the next note (same pitch and octave required) |
 
-Example: `2 - - -` is a whole note in 4/4 (equivalent to `2---`).
+Example: `2 - - -` is a whole note in 4/4 (equivalent to `2---`). Likewise, `0 - - -` (or `0---`) is a whole rest.
 
-You can also attach dashes as suffixes on a note (`2---`). Both forms may be mixed in one measure.
+You can also attach dashes as suffixes on a note or rest (`2---`, `0---`). Both forms may be mixed in one measure. Repeated rests (`0 0`, `0 0 0 0`) remain equally valid — `0---` and `0 0 0 0` both produce a whole rest in 4/4.
 
-**Rests cannot use `-`.** Conventional 简谱 lengthens rests by repeating `0`, not增时线. These are errors:
-
-- `0-`, `0---` (suffix dashes on a rest)
-- `0 -`, `0 - - -` (standalone dashes after a rest)
-
-Use repeated rests instead: `0 0` (half rest in 4/4), `0 0 0 0` (whole rest). Shorter rests still use `_`, `=`, or `.` on a single `0` (`0_`, `0=`, `0.`).
+Shorter rests still use `_`, `=`, or `.` on a single `0` (`0_`, `0=`, `0.`).
 
 ### Tie and slur groups
 
@@ -527,7 +522,7 @@ Note and rest durations in a row must fill the measure capacity. For time signat
 measure capacity = N × (16 / D) quarter-beats
 ```
 
-(e.g. 4/4 → 16, 3/4 → 12). Too many quarter-beats is a parse error. A shortfall extends the last note when possible. For a shortfall after a rest, additional one-beat rests are appended instead (so a lone `0` filling an empty measure renders as repeated `0` glyphs, matching conventional 简谱, rather than one glyph stretched across the measure). Otherwise it is a parse error.
+(e.g. 4/4 → 16, 3/4 → 12). Too many quarter-beats is a parse error. A shortfall extends the last note or rest when possible (so a lone `0` filling an empty measure is equivalent to `0---`). Otherwise it is a parse error.
 
 #### Grouping validation (4/4 only)
 

@@ -236,8 +236,8 @@ fn segno_dsalfine_directive_sets_decoration_flag() {
 
 #[test]
 fn rest_produces_rest_element() {
-    // A lone `0` fills the whole 4/4 measure, but renders as four one-beat rest
-    // glyphs (matching conventional 简谱 `0 0 0 0`) rather than one stretched glyph.
+    // A lone `0` fills the whole 4/4 measure by extending its duration
+    // (equivalent to `0---`), matching how a lone note pads with dashes.
     let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 0\n"));
     let result = compile(&score);
     let blocks = result.blocks;
@@ -247,7 +247,7 @@ fn rest_produces_rest_element() {
         .iter()
         .filter(|e| matches!(e.content, ElementContent::Rest { .. }))
         .collect();
-    assert_eq!(rests.len(), 4);
+    assert_eq!(rests.len(), 1);
 }
 
 #[test]

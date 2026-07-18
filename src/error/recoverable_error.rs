@@ -71,13 +71,6 @@ impl RecoverableError {
         }
     }
 
-    pub fn dash_after_rest(span: Span) -> Self {
-        Self {
-            span,
-            kind: RecoverableErrorKind::DashAfterRest,
-        }
-    }
-
     pub fn extension_no_preceding_event(span: Span, chord_track: bool) -> Self {
         Self {
             span,

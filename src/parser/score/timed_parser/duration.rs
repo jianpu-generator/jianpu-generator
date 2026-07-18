@@ -8,7 +8,6 @@ pub struct DurationParse {
     pub octave_down: i8,
     pub tie_to_next_span: Option<Span>,
     pub next_index: usize,
-    pub dash_after_rest_error: Option<RecoverableError>,
     pub tie_on_rest_error: Option<RecoverableError>,
     pub unexpected_char_error: Option<RecoverableError>,
     pub mixed_octave_markers_error: Option<RecoverableError>,
@@ -21,7 +20,6 @@ struct DurationSuffixState {
     octave_up: i8,
     octave_down: i8,
     tie_to_next_span: Option<Span>,
-    dash_after_rest_error: Option<RecoverableError>,
     tie_on_rest_error: Option<RecoverableError>,
     unexpected_char_error: Option<RecoverableError>,
 }
@@ -78,18 +76,8 @@ impl DurationSuffixContext<'_> {
                 Ok(Some(index + 1))
             }
             '-' => {
-                if self.is_rest {
-                    let pos = self.span.start
-                        + byte_offset_at_char_index_from_chars(self.chars, self.start, index);
-                    if self.state.dash_after_rest_error.is_none() {
-                        self.state.dash_after_rest_error =
-                            Some(RecoverableError::dash_after_rest(Span::new(pos, pos + 1)));
-                    }
-                    Ok(Some(index + 1))
-                } else {
-                    self.state.duration += 4;
-                    Ok(Some(index + 1))
-                }
+                self.state.duration += 4;
+                Ok(Some(index + 1))
             }
             ')' | '(' => Ok(None),
             character if !self.allows_octave && matches!(character, '\'' | ',') => {
@@ -136,7 +124,6 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
             octave_up: 0,
             octave_down: 0,
             tie_to_next_span: None,
-            dash_after_rest_error: None,
             tie_on_rest_error: None,
             unexpected_char_error: None,
         },
@@ -182,7 +169,6 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
         octave_down: context.state.octave_down,
         tie_to_next_span: context.state.tie_to_next_span,
         next_index: index,
-        dash_after_rest_error: context.state.dash_after_rest_error,
         tie_on_rest_error: context.state.tie_on_rest_error,
         unexpected_char_error: context.state.unexpected_char_error,
         mixed_octave_markers_error,

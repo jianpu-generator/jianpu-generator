@@ -340,6 +340,16 @@ fn compile_rest(state: &mut PartState<'_>, rest: &GroupedRest, measure_col_start
         });
     }
 
+    if !rest.dotted {
+        let rest_col = *state.col;
+        for dash_col in (rest_col + 4..rest_col + rest.duration).step_by(4) {
+            state.elements.push(ColumnElement {
+                column: dash_col,
+                content: ElementContent::NoteDash,
+            });
+        }
+    }
+
     *state.col += rest.duration;
     *state.prev_tie = false;
     *state.prev_tie_column = None;

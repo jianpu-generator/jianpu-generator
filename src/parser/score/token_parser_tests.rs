@@ -188,27 +188,17 @@ fn parses_dotted_half_beat_rest() {
 }
 
 #[test]
-fn recovers_dash_suffix_on_rest() {
-    use crate::error::RecoverableErrorKind;
+fn dash_suffix_extends_rest() {
     let parsed = parse("0---").unwrap();
     assert_eq!(parsed.events.len(), 1);
-    assert_eq!(rest(&parsed.events, 0).duration, 4);
-    assert!(matches!(
-        parsed.dash_after_rest_error.as_ref().unwrap().kind,
-        RecoverableErrorKind::DashAfterRest
-    ));
+    assert_eq!(rest(&parsed.events, 0).duration, 16);
 }
 
 #[test]
-fn recovers_dash_suffix_on_rest_in_group() {
-    use crate::error::RecoverableErrorKind;
+fn dash_suffix_extends_rest_in_group() {
     let parsed = parse("(0-1)").unwrap();
     assert_eq!(parsed.events.len(), 2);
-    assert_eq!(rest(&parsed.events, 0).duration, 4);
-    assert!(matches!(
-        parsed.dash_after_rest_error.as_ref().unwrap().kind,
-        RecoverableErrorKind::DashAfterRest
-    ));
+    assert_eq!(rest(&parsed.events, 0).duration, 8);
 }
 
 #[test]

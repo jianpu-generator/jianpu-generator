@@ -139,7 +139,6 @@ fn push_skipped_notes_measure(
     let TrackAccumulator::Timed {
         per_measure_beat_errors,
         per_measure_dotted_eighth_errors,
-        per_measure_dash_after_rest_errors,
         per_measure_lex_errors,
         per_measure_chord_errors,
         per_measure_group_provenance,
@@ -148,7 +147,6 @@ fn push_skipped_notes_measure(
     } = acc;
     per_measure_beat_errors.push(None);
     per_measure_dotted_eighth_errors.push(vec![]);
-    per_measure_dash_after_rest_errors.push(None);
     per_measure_lex_errors.push(lex_error);
     per_measure_chord_errors.push(vec![]);
     per_measure_group_provenance.push(group.map(str::to_string));
@@ -209,7 +207,6 @@ fn process_notes_column_line(
         pending_events,
         per_measure_beat_errors,
         per_measure_dotted_eighth_errors,
-        per_measure_dash_after_rest_errors,
         per_measure_lex_errors,
         per_measure_chord_errors,
         per_measure_group_provenance,
@@ -219,7 +216,6 @@ fn process_notes_column_line(
     slot_events.extend(padded.events);
     per_measure_beat_errors.push(padded.beat_overflow_error);
     per_measure_dotted_eighth_errors.push(padded.dotted_eighth_errors);
-    per_measure_dash_after_rest_errors.push(notes_parse.dash_after_rest_error);
     per_measure_lex_errors.push(lex_error);
     per_measure_chord_errors.push(notes_parse.chord_errors);
     per_measure_group_provenance.push(group.map(str::to_string));
@@ -247,15 +243,11 @@ fn process_chord_column_line(
         .ok_or_else(|| invariant(line_span, "internal error: group state index out of range"))?;
     let chord_result =
         token_parser::parse_chord_line(line, ctx.base_offset + line_offset, group_state);
-    let (chord_events, line_chord_errors, dash_after_rest_error) = match chord_result {
-        Ok(parsed) => (
-            parsed.events,
-            parsed.chord_errors,
-            parsed.dash_after_rest_error,
-        ),
+    let (chord_events, line_chord_errors) = match chord_result {
+        Ok(parsed) => (parsed.events, parsed.chord_errors),
         Err(error) if is_recoverable_chord_line_error(&error.kind) => {
             let recoverable = Diagnostic::from_chord_irrecoverable(&error);
-            (vec![], vec![recoverable], None)
+            (vec![], vec![recoverable])
         }
         Err(error) => return Err(error),
     };
@@ -281,7 +273,6 @@ fn process_chord_column_line(
         pending_events,
         per_measure_beat_errors,
         per_measure_dotted_eighth_errors,
-        per_measure_dash_after_rest_errors,
         per_measure_chord_errors,
         per_measure_group_provenance,
         ..
@@ -290,7 +281,6 @@ fn process_chord_column_line(
     slot_events.extend(final_padded.events);
     per_measure_beat_errors.push(final_padded.beat_overflow_error);
     per_measure_dotted_eighth_errors.push(final_padded.dotted_eighth_errors);
-    per_measure_dash_after_rest_errors.push(dash_after_rest_error);
     per_measure_chord_errors.push(line_chord_errors);
     per_measure_group_provenance.push(group.map(str::to_string));
     measure_slots.push(ParsedMeasureSlot::Real {

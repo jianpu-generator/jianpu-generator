@@ -56,8 +56,6 @@ enum TrackAccumulator {
         per_measure_beat_errors: Vec<Option<crate::error::Warning>>,
         /// Per-measure grouping diagnostics (dotted-eighth errors and half-bar warnings).
         per_measure_dotted_eighth_errors: Vec<Vec<Diagnostic>>,
-        /// Per-measure dash-after-rest errors from suffix dashes on rests during token parse.
-        per_measure_dash_after_rest_errors: Vec<Option<RecoverableError>>,
         /// Per-measure recoverable chord parse diagnostics (empty = no violations for that measure).
         per_measure_chord_errors: Vec<Vec<Diagnostic>>,
         /// Per-measure recoverable lex error from an unexpected character on the notes line.
