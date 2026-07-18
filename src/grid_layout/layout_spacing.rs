@@ -12,13 +12,17 @@ pub(crate) const MIN_MEASURE_WIDTH_PT: f32 = 24.0;
 
 /// Relative width weight of a single column's content, per element type.
 /// A full note-like event (notehead, rest, percussion hit, chord symbol)
-/// needs a full share of width; a `NoteDash` or `BarLine` is just a thin
-/// mark — even though a dash represents a full beat of duration, it doesn't
-/// need nearly as much horizontal room as an actual notehead, so it gets
-/// much less than a fresh note despite "meaning" the same beat. Elements
-/// that don't occupy their own column-worth of ink (`Underline`, `Lyric`) or
-/// that are handled separately (`MultiMeasureRest`) contribute nothing here.
+/// needs a full share of width; a `BarLine` is just a thin mark, so it gets
+/// much less than a fresh note. Elements that don't occupy their own
+/// column-worth of ink (`Underline`) or that are handled separately
+/// (`MultiMeasureRest`) contribute nothing here.
 const THIN_MARK_WEIGHT: f32 = 0.25;
+
+/// Relative width weight for a `NoteDash` or `Lyric` column — even though a
+/// dash represents a full beat of duration, it doesn't need nearly as much
+/// horizontal room as an actual notehead, so it gets less than a fresh note
+/// despite "meaning" the same beat.
+const MEDIUM_MARK_WEIGHT: f32 = 0.5;
 
 fn column_weight(content: &ElementContent) -> f32 {
     match content {
@@ -26,10 +30,9 @@ fn column_weight(content: &ElementContent) -> f32 {
         | ElementContent::Rest { .. }
         | ElementContent::PercussionHit
         | ElementContent::ChordSymbol(_) => 1.0,
-        ElementContent::NoteDash | ElementContent::BarLine => THIN_MARK_WEIGHT,
-        ElementContent::MultiMeasureRest { .. }
-        | ElementContent::Underline { .. }
-        | ElementContent::Lyric { .. } => 0.0,
+        ElementContent::NoteDash | ElementContent::Lyric { .. } => MEDIUM_MARK_WEIGHT,
+        ElementContent::BarLine => THIN_MARK_WEIGHT,
+        ElementContent::MultiMeasureRest { .. } | ElementContent::Underline { .. } => 0.0,
     }
 }
 
