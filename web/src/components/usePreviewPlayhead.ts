@@ -1,11 +1,5 @@
 import { useEffect } from 'react'
-
-function findMeasureSegmentAtTime(times: number[], t: number): number {
-  for (let i = times.length - 2; i >= 0; i--) {
-    if (t >= times[i]) return i
-  }
-  return 0
-}
+import { computePlayheadRect, resolvePlayheadSegment } from './playheadPosition'
 
 /**
  * Imperatively drives an SVG playhead `<rect>` across measures in sync with
@@ -42,9 +36,12 @@ export function usePlayhead(
 
     const updatePosition = () => {
       const t = audio.currentTime
-      const segment = findMeasureSegmentAtTime(measureTimes, t)
-      const measureIndex =
-        writtenIndices?.[segment] ?? measureIndexOffset + segment
+      const { measureIndex, fraction } = resolvePlayheadSegment(
+        t,
+        measureTimes,
+        measureIndexOffset,
+        writtenIndices,
+      )
       const group = container.querySelector<SVGGElement>(
         `[data-tag="measure"][data-measure-index="${measureIndex}"]`,
       )
@@ -58,19 +55,16 @@ export function usePlayhead(
         svg.appendChild(playhead)
         currentSvg = svg
       }
-      const x = Number.parseFloat(targetRect.getAttribute('x') ?? '0')
-      const y = Number.parseFloat(targetRect.getAttribute('y') ?? '0')
-      const width = Number.parseFloat(targetRect.getAttribute('width') ?? '0')
-      const height = Number.parseFloat(targetRect.getAttribute('height') ?? '0')
-      const segStart = measureTimes[segment]
-      const segEnd = measureTimes[segment + 1] ?? segStart
-      const fraction =
-        segEnd > segStart
-          ? Math.min(1, Math.max(0, (t - segStart) / (segEnd - segStart)))
-          : 0
-      playhead.setAttribute('x', String(x + fraction * width))
-      playhead.setAttribute('y', String(y))
-      playhead.setAttribute('height', String(height))
+      const measureRect = {
+        x: Number.parseFloat(targetRect.getAttribute('x') ?? '0'),
+        y: Number.parseFloat(targetRect.getAttribute('y') ?? '0'),
+        width: Number.parseFloat(targetRect.getAttribute('width') ?? '0'),
+        height: Number.parseFloat(targetRect.getAttribute('height') ?? '0'),
+      }
+      const rect = computePlayheadRect(measureRect, fraction)
+      playhead.setAttribute('x', String(rect.x))
+      playhead.setAttribute('y', String(rect.y))
+      playhead.setAttribute('height', String(rect.height))
     }
 
     const tick = () => {
