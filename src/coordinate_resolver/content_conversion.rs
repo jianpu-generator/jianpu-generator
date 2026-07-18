@@ -160,15 +160,20 @@ fn push_navigation_marker_spans<const N: usize>(
 
 /// Builds the text spans for the `# sequence` header line: a plain
 /// "Sequence: " prefix, each label styled like an inline section label (see
-/// [`section_label_span`]), joined by a plain " → " arrow.
-fn sequence_line_content(entries: &[String]) -> Vec<TextSpan> {
+/// [`section_label_span`]) — followed by a plain, non-bold/italic
+/// `(-abbrev -abbrev ...)` span when that entry's `(-abbrev ...)` suffix
+/// omits any parts from that occurrence's MIDI/WAV playback — joined by a
+/// plain " → " arrow.
+fn sequence_line_content(
+    entries: &[crate::grid_layout::types::SequenceEntryInfo],
+) -> Vec<TextSpan> {
     let mut spans = vec![TextSpan {
         content: "Sequence: ".to_string(),
         bold: false,
         italic: false,
         font_size: 12.0,
     }];
-    for (index, label) in entries.iter().enumerate() {
+    for (index, entry) in entries.iter().enumerate() {
         if index > 0 {
             spans.push(TextSpan {
                 content: " \u{2192} ".to_string(),
@@ -177,7 +182,15 @@ fn sequence_line_content(entries: &[String]) -> Vec<TextSpan> {
                 font_size: 12.0,
             });
         }
-        spans.push(section_label_span(label));
+        spans.push(section_label_span(&entry.label));
+        if !entry.omit_parts.is_empty() {
+            spans.push(TextSpan {
+                content: format!(" (-{})", entry.omit_parts.join(" -")),
+                bold: false,
+                italic: false,
+                font_size: 12.0,
+            });
+        }
     }
     spans
 }

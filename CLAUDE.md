@@ -18,6 +18,8 @@ cargo run -- generate svg simple.jianpu
 
 ## Committing
 
+Commit message titles must always include a scope: `<type>(<scope>): <description>`, e.g. `feat(sequence): allow entries to omit parts for a single occurrence`. The scope is the module/area the change is centered on (e.g. `sequence`, `grid-layout`, `midi`) — never omit it, even for small or single-file changes. Don't restate the scope word in the description; the scope already says it.
+
 Do not manually run `cargo build`/`cargo test`/the e2e suite as a pre-commit check — the pre-commit hook already runs them, acting like a CI gate. It's fine to run tests during development to verify your own fix, but don't re-run the full suite right before `git commit` just to double-check.
 
 The pre-commit hook runs the full e2e (Playwright) suite plus cargo checks, which regularly takes a few minutes — longer than the default 2-minute Bash tool timeout. A plain `git commit` will hit that timeout even though the hook itself is still running to completion in the background. Always pass an explicit `timeout` of at least 300000ms (5 minutes), and prefer 480000ms (8 minutes) to be safe, on the `git commit` Bash call to avoid wasting a turn on a false timeout.

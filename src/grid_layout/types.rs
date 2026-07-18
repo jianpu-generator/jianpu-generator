@@ -167,8 +167,18 @@ pub enum GridContent {
     /// followed by each label (styled like an inline section label) joined
     /// by " → ".
     SequenceLine {
-        entries: Vec<String>,
+        entries: Vec<SequenceEntryInfo>,
     },
+}
+
+/// One `# sequence` entry as rendered on the "Sequence: ..." header line:
+/// a label, plus any part abbreviations that entry's `(-abbrev ...)` suffix
+/// omits from that occurrence's MIDI/WAV playback (rendered parenthetically
+/// next to the label; empty when the entry has no omissions).
+#[derive(Debug, Clone)]
+pub struct SequenceEntryInfo {
+    pub label: String,
+    pub omit_parts: Vec<String>,
 }
 
 /// `GridContent` after arc variants have been resolved.
@@ -224,7 +234,7 @@ pub enum PostArcGridContent {
         italic: bool,
     },
     SequenceLine {
-        entries: Vec<String>,
+        entries: Vec<SequenceEntryInfo>,
     },
 }
 
@@ -247,7 +257,7 @@ pub struct Header {
     /// The resolved `# sequence` playback order, one entry per label
     /// reference (e.g. `["A", "B", "A"]`), if present. Rendered as a line
     /// near the top of the score; does not affect SVG/PDF measure order.
-    pub sequence: Option<Vec<String>>,
+    pub sequence: Option<Vec<SequenceEntryInfo>>,
 }
 
 #[derive(Debug, Clone)]

@@ -200,6 +200,15 @@ pub struct SequenceSpan {
     pub start: usize,
     /// Inclusive index into `Score.measures`.
     pub end: usize,
+    /// Individual part abbreviations to omit from this occurrence's MIDI/WAV
+    /// playback (from a `# sequence` entry's `(-abbrev -abbrev ...)` suffix;
+    /// any group abbreviation is expanded to its member parts here).
+    pub omit_parts: Vec<String>,
+    /// The `(-abbrev ...)` suffix's abbreviations as written — a group
+    /// abbreviation is kept as-is, unexpanded — for display on the SVG/PDF
+    /// "Sequence: ..." summary line, which shows the group's own label
+    /// rather than spelling out its members.
+    pub omit_parts_display: Vec<String>,
 }
 
 // ── Intermediate grouper types (not part of the public API) ─────────────────

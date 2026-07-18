@@ -68,3 +68,45 @@ fn entry_span_points_to_absolute_offset() {
     assert_eq!(sequence.entries[0].span, Span::new(100, 103));
     assert_eq!(sequence.entries[1].span, Span::new(105, 108));
 }
+
+#[test]
+fn parses_part_omission_suffix() {
+    let (sequence, errors) = parse_sequence("Verse, Chorus(-S -A2), Verse, Chorus(-A2)", 0);
+    assert!(errors.is_empty());
+    let sequence = sequence.expect("expected a sequence");
+    assert_eq!(sequence.entries[0].label, "Verse");
+    assert!(sequence.entries[0].omit_parts.is_empty());
+    assert_eq!(sequence.entries[1].label, "Chorus");
+    assert_eq!(sequence.entries[1].omit_parts, vec!["S", "A2"]);
+    assert_eq!(sequence.entries[2].label, "Verse");
+    assert!(sequence.entries[2].omit_parts.is_empty());
+    assert_eq!(sequence.entries[3].label, "Chorus");
+    assert_eq!(sequence.entries[3].omit_parts, vec!["A2"]);
+}
+
+#[test]
+fn part_omission_suffix_tolerates_no_space_before_paren() {
+    let (sequence, errors) = parse_sequence("Chorus(-S)", 0);
+    assert!(errors.is_empty());
+    let sequence = sequence.expect("expected a sequence");
+    assert_eq!(sequence.entries[0].label, "Chorus");
+    assert_eq!(sequence.entries[0].omit_parts, vec!["S"]);
+}
+
+#[test]
+fn unclosed_part_omission_suffix_is_a_recoverable_error() {
+    let (sequence, errors) = parse_sequence("Chorus(-S", 0);
+    assert_eq!(errors.len(), 1);
+    let sequence = sequence.expect("expected a sequence");
+    assert_eq!(sequence.entries[0].label, "Chorus");
+    assert!(sequence.entries[0].omit_parts.is_empty());
+}
+
+#[test]
+fn part_omission_token_without_dash_prefix_is_a_recoverable_error() {
+    let (sequence, errors) = parse_sequence("Chorus(S -A2)", 0);
+    assert_eq!(errors.len(), 1);
+    let sequence = sequence.expect("expected a sequence");
+    assert_eq!(sequence.entries[0].label, "Chorus");
+    assert_eq!(sequence.entries[0].omit_parts, vec!["A2"]);
+}

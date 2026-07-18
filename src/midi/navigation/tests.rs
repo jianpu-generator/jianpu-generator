@@ -157,16 +157,22 @@ fn sequence_origins_replay_spans_in_stated_order() {
                 label: "A".to_string(),
                 start: 0,
                 end: 0,
+                omit_parts: Vec::new(),
+                omit_parts_display: Vec::new(),
             },
             SequenceSpan {
                 label: "B".to_string(),
                 start: 1,
                 end: 3,
+                omit_parts: Vec::new(),
+                omit_parts_display: Vec::new(),
             },
             SequenceSpan {
                 label: "A".to_string(),
                 start: 0,
                 end: 0,
+                omit_parts: Vec::new(),
+                omit_parts_display: Vec::new(),
             },
         ],
     );
@@ -188,6 +194,8 @@ fn sequence_takes_precedence_over_markers_when_present() {
             label: "A".to_string(),
             start: 0,
             end: 1,
+            omit_parts: Vec::new(),
+            omit_parts_display: Vec::new(),
         }],
     );
     let (_, origins) = expand_navigation_with_origins(&score).unwrap();

@@ -125,6 +125,10 @@ pub fn expand_navigation(score: &Score) -> Result<Score, IrrecoverableError> {
     expand_navigation_with_origins(score).map(|(score, _)| score)
 }
 
+/// No part omissions: used for playback positions that aren't governed by a
+/// `# sequence` entry's `(-abbrev ...)` suffix.
+const NO_OMISSIONS: &[String] = &[];
+
 /// Same as [`expand_navigation`], but also returns a same-length `Vec<usize>`
 /// mapping each measure in the expanded score back to its index in the
 /// original written `score.measures`.
@@ -136,11 +140,11 @@ pub fn expand_navigation_with_origins(
     }
 
     if let Some(spans) = &score.sequence {
-        let idx: Vec<usize> = spans
+        let idx: Vec<(usize, &[String])> = spans
             .iter()
-            .flat_map(|span| span.start..=span.end)
+            .flat_map(|span| (span.start..=span.end).map(move |i| (i, span.omit_parts.as_slice())))
             .collect();
-        return Ok(build_expanded(score, idx));
+        return Ok(build_expanded(score, &idx));
     }
 
     let markers =
@@ -163,16 +167,28 @@ pub fn expand_navigation_with_origins(
         }
     }
 
-    Ok(build_expanded(score, idx))
+    let idx: Vec<(usize, &[String])> = idx.into_iter().map(|i| (i, NO_OMISSIONS)).collect();
+    Ok(build_expanded(score, &idx))
 }
 
-/// Clones `score.measures` at each index in `idx` (playback order) into a new
-/// `Score`, alongside `idx` itself as the origins mapping.
-fn build_expanded(score: &Score, idx: Vec<usize>) -> (Score, Vec<usize>) {
+/// Clones `score.measures` at each `(index, omit_parts)` pair (playback
+/// order) into a new `Score`, dropping any part whose abbreviation appears
+/// in that occurrence's `omit_parts`, alongside the plain index list as the
+/// origins mapping.
+fn build_expanded(score: &Score, idx: &[(usize, &[String])]) -> (Score, Vec<usize>) {
     let measures = idx
         .iter()
-        .filter_map(|&i| score.measures.get(i).cloned())
+        .filter_map(|&(i, omit_parts)| {
+            let mut measure = score.measures.get(i).cloned()?;
+            if !omit_parts.is_empty() {
+                measure
+                    .parts
+                    .retain(|part| !part.name().is_some_and(|name| omit_parts.contains(name)));
+            }
+            Some(measure)
+        })
         .collect();
+    let origins = idx.iter().map(|&(i, _)| i).collect();
 
     (
         Score {
@@ -181,7 +197,7 @@ fn build_expanded(score: &Score, idx: Vec<usize>) -> (Score, Vec<usize>) {
             document_diagnostics: score.document_diagnostics.clone(),
             sequence: None,
         },
-        idx,
+        origins,
     )
 }
 
@@ -268,3 +284,5 @@ pub fn expand_for_measure_range(
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_sequence_omission;

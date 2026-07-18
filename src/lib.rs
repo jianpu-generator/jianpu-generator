@@ -186,10 +186,15 @@ fn build_header(
                 }),
         )
         .collect();
-    let sequence = score
-        .sequence
-        .as_ref()
-        .map(|spans| spans.iter().map(|span| span.label.clone()).collect());
+    let sequence = score.sequence.as_ref().map(|spans| {
+        spans
+            .iter()
+            .map(|span| grid_layout::types::SequenceEntryInfo {
+                label: span.label.clone(),
+                omit_parts: span.omit_parts_display.clone(),
+            })
+            .collect()
+    });
     grid_layout::types::Header {
         title: score.metadata.title.clone(),
         subtitle: score.metadata.subtitle.clone(),
