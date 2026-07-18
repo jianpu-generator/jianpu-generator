@@ -46,6 +46,7 @@ export function useJianpuWorker(
   const [writtenMeasureIndices, setWrittenMeasureIndices] = useState<number[]>(
     [],
   )
+  const [columnBoundaries, setColumnBoundaries] = useState<number[][]>([])
   const [audioAvailable, setAudioAvailable] = useState(false)
   const [pdfAvailable, setPdfAvailable] = useState(false)
   const [pdfExporting, setPdfExporting] = useState(false)
@@ -217,6 +218,7 @@ export function useJianpuWorker(
     setNextWavUrl,
     setMeasureTimes,
     setWrittenMeasureIndices,
+    setColumnBoundaries,
     latestMeasureAudioIdRef,
     setMeasureAudioGenerating,
     setNextMeasureWavUrl,
@@ -350,6 +352,7 @@ export function useJianpuWorker(
     wavFilename,
     measureTimes,
     writtenMeasureIndices,
+    columnBoundaries,
     audioAvailable,
     pdfAvailable,
     pdfExporting,

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   computePlayheadRect,
   findMeasureSegmentAtTime,
+  mapLinearFractionToPixelFraction,
   resolvePlayheadSegment,
 } from './playheadPosition'
 
@@ -67,10 +68,40 @@ describe('resolvePlayheadSegment', () => {
   })
 })
 
+describe('mapLinearFractionToPixelFraction', () => {
+  it('falls back to the linear fraction when boundaries are unavailable', () => {
+    expect(mapLinearFractionToPixelFraction(0.3, undefined)).toBe(0.3)
+    expect(mapLinearFractionToPixelFraction(0.3, [1])).toBe(0.3)
+  })
+
+  it('lands exactly on a column boundary at a column-aligned fraction', () => {
+    // 3 duration-equal columns (e.g. notehead, dash, bar line) whose
+    // rendered pixel widths are density-weighted: 80% / 10% / 10%.
+    const boundaries = [0, 0.8, 0.9, 1]
+    expect(mapLinearFractionToPixelFraction(0, boundaries)).toBe(0)
+    expect(mapLinearFractionToPixelFraction(1 / 3, boundaries)).toBeCloseTo(0.8)
+    expect(mapLinearFractionToPixelFraction(2 / 3, boundaries)).toBeCloseTo(0.9)
+    expect(mapLinearFractionToPixelFraction(1, boundaries)).toBeCloseTo(1)
+  })
+
+  it('interpolates within a column proportional to its own weight', () => {
+    const boundaries = [0, 0.8, 0.9, 1]
+    // Halfway through the wide first column (weight 0.8) should be well
+    // past the halfway point of the measure's linear-time fraction.
+    expect(mapLinearFractionToPixelFraction(1 / 6, boundaries)).toBeCloseTo(0.4)
+  })
+
+  it('clamps fractions outside [0, 1]', () => {
+    const boundaries = [0, 0.5, 1]
+    expect(mapLinearFractionToPixelFraction(-1, boundaries)).toBe(0)
+    expect(mapLinearFractionToPixelFraction(2, boundaries)).toBe(1)
+  })
+})
+
 describe('computePlayheadRect', () => {
   const measureRect = { x: 10, y: 20, width: 100, height: 30 }
 
-  it('interpolates x linearly across the measure width by fraction', () => {
+  it('interpolates x linearly across the measure width by fraction when no boundaries are given', () => {
     expect(computePlayheadRect(measureRect, 0)).toEqual({
       x: 10,
       y: 20,
@@ -89,5 +120,11 @@ describe('computePlayheadRect', () => {
       width: 2,
       height: 30,
     })
+  })
+
+  it('interpolates non-linearly across the measure width when boundaries are given', () => {
+    const boundaries = [0, 0.8, 0.9, 1]
+    const rect = computePlayheadRect(measureRect, 1 / 3, boundaries)
+    expect(rect.x).toBeCloseTo(10 + 0.8 * 100)
   })
 })

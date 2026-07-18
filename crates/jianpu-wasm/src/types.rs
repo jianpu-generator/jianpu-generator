@@ -5,6 +5,18 @@ use tsify::Tsify;
 
 use crate::svg_types::SvgDocumentOut;
 
+#[cfg(feature = "midi")]
+pub(crate) use crate::types_export::{
+    GenerateMidiResponse, GenerateSplitMidisResponse, WrittenMeasureIndicesResponse,
+};
+#[cfg(feature = "pdf")]
+pub(crate) use crate::types_export::{GeneratePdfResponse, GenerateSplitPdfsResponse};
+#[cfg(feature = "wav")]
+pub(crate) use crate::types_export::{
+    GenerateSplitWavsResponse, GenerateWavResponse, ListMeasureColumnBoundariesResponse,
+    ListMeasureTimesResponse,
+};
+
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
 #[tsify(into_wasm_abi)]
 pub struct SpanOut {
@@ -153,121 +165,6 @@ pub enum ListMeasureSpansResponse {
         section_ranges: Vec<SectionRangeOut>,
     },
     Err,
-}
-
-#[cfg(feature = "wav")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
-pub enum GenerateWavResponse {
-    Ok {
-        #[tsify(type = "Uint8Array")]
-        wav: Vec<u8>,
-    },
-    Err {
-        diagnostics: Vec<DiagnosticOut>,
-    },
-}
-
-#[cfg(feature = "wav")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq)]
-#[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
-pub enum ListMeasureTimesResponse {
-    Ok {
-        /// Elapsed-seconds offset of each measure boundary, length = `measures + 1`.
-        times: Vec<f64>,
-    },
-    Err {
-        diagnostics: Vec<DiagnosticOut>,
-    },
-}
-
-#[cfg(feature = "pdf")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
-pub enum GeneratePdfResponse {
-    Ok {
-        #[tsify(type = "Uint8Array")]
-        pdf: Vec<u8>,
-    },
-    Err {
-        diagnostics: Vec<DiagnosticOut>,
-    },
-}
-
-#[cfg(feature = "pdf")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
-pub enum GenerateSplitPdfsResponse {
-    Ok {
-        #[tsify(type = "Uint8Array")]
-        zip: Vec<u8>,
-    },
-    Err {
-        diagnostics: Vec<DiagnosticOut>,
-    },
-}
-
-#[cfg(feature = "midi")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
-pub enum GenerateMidiResponse {
-    Ok {
-        #[tsify(type = "Uint8Array")]
-        midi: Vec<u8>,
-    },
-    Err {
-        diagnostics: Vec<DiagnosticOut>,
-    },
-}
-
-#[cfg(feature = "midi")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
-pub enum WrittenMeasureIndicesResponse {
-    Ok {
-        /// Written measure index at each playback position; entry `i` is the
-        /// written measure to highlight while playing back position `i`
-        /// (i.e. between `times[i]` and `times[i + 1]` from the paired
-        /// [`ListMeasureTimesResponse`]).
-        indices: Vec<usize>,
-    },
-    Err {
-        diagnostics: Vec<DiagnosticOut>,
-    },
-}
-
-#[cfg(feature = "midi")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
-pub enum GenerateSplitMidisResponse {
-    Ok {
-        #[tsify(type = "Uint8Array")]
-        zip: Vec<u8>,
-    },
-    Err {
-        diagnostics: Vec<DiagnosticOut>,
-    },
-}
-
-#[cfg(feature = "wav")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
-pub enum GenerateSplitWavsResponse {
-    Ok {
-        #[tsify(type = "Uint8Array")]
-        zip: Vec<u8>,
-    },
-    Err {
-        diagnostics: Vec<DiagnosticOut>,
-    },
 }
 
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]

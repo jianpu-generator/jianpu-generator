@@ -5,6 +5,8 @@ mod part_declarations;
 mod responses;
 mod svg_types;
 mod types;
+#[cfg(any(feature = "wav", feature = "pdf", feature = "midi"))]
+mod types_export;
 
 #[cfg(feature = "wav")]
 #[path = "lib_wav.rs"]

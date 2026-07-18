@@ -1,6 +1,7 @@
 use crate::error::IrrecoverableError;
 use crate::parser::parts_parser::InstrumentInfo;
 use crate::{apply_track_filter, compile};
+use crate::{compiler, consolidator, grid_layout};
 
 /// Parse, group, optionally filter tracks, and synthesize WAV bytes.
 ///
@@ -171,6 +172,27 @@ pub fn written_measure_indices_for_range_from_source(
         .get(start_pos..=end_pos)
         .map(<[usize]>::to_vec)
         .unwrap_or_default())
+}
+
+/// Parse, group, and optionally filter tracks, then return the cumulative
+/// pixel-weight column boundaries of every rendered measure (one entry per
+/// `data-measure-index`, see [`grid_layout::measure_column_boundaries`]).
+///
+/// Used to map a playhead's linear elapsed-time fraction within a measure
+/// (from [`measure_start_times_from_source`]) onto the non-linear pixel
+/// position notes actually render at, since measure/column width is
+/// density-weighted rather than duration-proportional.
+pub fn measure_column_boundaries_from_source(
+    source: &str,
+    filename: &str,
+    enabled_tracks: Option<&[String]>,
+    instruments: &[InstrumentInfo],
+) -> Result<Vec<Vec<f32>>, IrrecoverableError> {
+    let mut score = compile(source, filename, instruments)?;
+    apply_track_filter(&mut score, enabled_tracks);
+    let compile_result = compiler::compile(&score);
+    let compile_result = consolidator::consolidate(compile_result);
+    Ok(grid_layout::measure_column_boundaries(&compile_result))
 }
 
 /// Parse, group, optionally filter tracks, and generate MIDI (SMF) bytes.

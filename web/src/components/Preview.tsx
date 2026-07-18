@@ -14,6 +14,8 @@ interface PreviewProps {
   measureTimes?: number[]
   /** Written measure index to highlight at each playback position of `measureTimes`, following D.C. al Coda navigation. */
   writtenMeasureIndices?: number[]
+  /** Cumulative pixel-weight column boundaries of every rendered measure, entry `i` pairs with `data-measure-index="i"`. */
+  columnBoundaries?: number[][]
   /** Elapsed-seconds offset of each measure boundary within the selected range's audio, relative to the range start. */
   measureAudioTimes?: number[]
   /** Written measure index to highlight at each playback position of `measureAudioTimes`, following D.C. al Coda navigation. */
@@ -94,6 +96,7 @@ export function Preview({
   wavFilename = 'audio.wav',
   measureTimes,
   writtenMeasureIndices,
+  columnBoundaries,
   measureAudioTimes,
   measureAudioWrittenIndices,
   measureAudioElement,
@@ -114,6 +117,7 @@ export function Preview({
     measureTimes,
     0,
     writtenMeasureIndices,
+    columnBoundaries,
   )
   usePlayhead(
     previewPagesRef,
@@ -121,6 +125,7 @@ export function Preview({
     measureAudioTimes,
     selectedMeasureRange?.start ?? 0,
     measureAudioWrittenIndices,
+    columnBoundaries,
   )
   const dragStateRef = useRef<{
     anchor: MeasureRange

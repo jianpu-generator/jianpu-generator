@@ -3,9 +3,13 @@ use wasm_bindgen::prelude::*;
 use crate::responses::{
     generate_instrument_preview_wav_response, generate_percussion_preview_wav_response,
     generate_split_wavs_response, generate_wav_for_measure_range_response, generate_wav_response,
-    list_measure_times_for_range_response, list_measure_times_response,
+    list_measure_column_boundaries_response, list_measure_times_for_range_response,
+    list_measure_times_response,
 };
-use crate::types::{GenerateSplitWavsResponse, GenerateWavResponse, ListMeasureTimesResponse};
+use crate::types::{
+    GenerateSplitWavsResponse, GenerateWavResponse, ListMeasureColumnBoundariesResponse,
+    ListMeasureTimesResponse,
+};
 
 /// Parse `.jianpu` source and synthesize WAV audio bytes.
 ///
@@ -104,6 +108,27 @@ pub fn list_measure_times_for_range(
         extend_to_last_occurrence,
         enabled_tracks.as_deref(),
     )
+}
+
+/// Return the cumulative pixel-weight column boundaries of every rendered
+/// measure in the whole score (entry `i` pairs with `data-measure-index="i"`
+/// in the rendered SVG).
+///
+/// Available only when the `wav` feature is enabled at build time.
+/// Used to map a linear elapsed-time fraction within a measure (derived from
+/// [`list_measure_times`]) onto the non-linear pixel position notes actually
+/// render at, since measure/column width is density-weighted rather than
+/// duration-proportional. Returns:
+/// - `{ "status": "ok", "boundaries": [[f32, ...], ...] }` — each inner array
+///   starts at `0.0` and ends at `1.0`.
+/// - `{ "status": "err", "diagnostics": [...] }`
+#[allow(clippy::needless_pass_by_value)]
+#[wasm_bindgen]
+pub fn list_measure_column_boundaries(
+    source: &str,
+    enabled_tracks: Option<Vec<String>>,
+) -> ListMeasureColumnBoundariesResponse {
+    list_measure_column_boundaries_response(source, enabled_tracks.as_deref())
 }
 
 /// Synthesize a short WAV preview note for a General MIDI program number.

@@ -34,15 +34,45 @@ export function resolvePlayheadSegment(
 }
 
 /**
- * Positions the playhead within a measure's click-target rect, linearly
- * interpolating across its width by `fraction`.
+ * Maps a linear time `fraction` elapsed within a measure onto the pixel
+ * fraction across that measure's width, via `boundaries` — the cumulative
+ * pixel-weight at each of the measure's grid-column boundaries (from `0` to
+ * `1`), since grid columns are duration-proportional but their rendered
+ * pixel widths are density-weighted (see `measure_column_boundaries` in the
+ * Rust `grid_layout` module). Falls back to `fraction` itself (linear
+ * interpolation) when `boundaries` isn't available.
+ */
+export function mapLinearFractionToPixelFraction(
+  fraction: number,
+  boundaries: number[] | undefined,
+): number {
+  if (!boundaries || boundaries.length < 2) return fraction
+  const columnCount = boundaries.length - 1
+  const columnPosition = Math.min(
+    columnCount,
+    Math.max(0, fraction * columnCount),
+  )
+  const column = Math.min(columnCount - 1, Math.floor(columnPosition))
+  const withinColumn = columnPosition - column
+  return (
+    boundaries[column] +
+    withinColumn * (boundaries[column + 1] - boundaries[column])
+  )
+}
+
+/**
+ * Positions the playhead within a measure's click-target rect, interpolating
+ * across its width by `fraction` — non-linearly via `boundaries` when given
+ * (see [`mapLinearFractionToPixelFraction`]), otherwise linearly.
  */
 export function computePlayheadRect(
   measureRect: PlayheadRect,
   fraction: number,
+  boundaries?: number[],
 ): PlayheadRect {
+  const pixelFraction = mapLinearFractionToPixelFraction(fraction, boundaries)
   return {
-    x: measureRect.x + fraction * measureRect.width,
+    x: measureRect.x + pixelFraction * measureRect.width,
     y: measureRect.y,
     width: 2,
     height: measureRect.height,

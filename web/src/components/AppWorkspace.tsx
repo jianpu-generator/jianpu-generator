@@ -77,6 +77,7 @@ interface AppWorkspaceProps {
   wavFilename: string
   measureTimes: number[]
   writtenMeasureIndices: number[]
+  columnBoundaries: number[][]
   measureAudioTimes: number[]
   measureAudioWrittenIndices: number[]
   measureAudioElement: HTMLAudioElement | null
@@ -133,6 +134,7 @@ export function AppWorkspace({
   wavFilename,
   measureTimes,
   writtenMeasureIndices,
+  columnBoundaries,
   measureAudioTimes,
   measureAudioWrittenIndices,
   measureAudioElement,
@@ -240,6 +242,7 @@ export function AppWorkspace({
           wavFilename={wavFilename}
           measureTimes={measureTimes}
           writtenMeasureIndices={writtenMeasureIndices}
+          columnBoundaries={columnBoundaries}
           measureAudioTimes={measureAudioTimes}
           measureAudioWrittenIndices={measureAudioWrittenIndices}
           measureAudioElement={measureAudioElement}

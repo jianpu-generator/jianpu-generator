@@ -112,6 +112,7 @@ export default function App() {
     wavFilename,
     measureTimes,
     writtenMeasureIndices,
+    columnBoundaries,
     audioAvailable,
     pdfAvailable,
     pdfExporting,
@@ -373,6 +374,7 @@ export default function App() {
         wavFilename={wavFilename}
         measureTimes={measureTimes}
         writtenMeasureIndices={writtenMeasureIndices}
+        columnBoundaries={columnBoundaries}
         measureAudioTimes={measureAudioTimes}
         measureAudioWrittenIndices={measureAudioWrittenIndices}
         measureAudioElement={measureAudioElement}

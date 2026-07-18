@@ -53,6 +53,7 @@ export interface WorkerMessageHandlerDeps {
   setNextWavUrl: (value: string | null) => void
   setMeasureTimes: (value: number[]) => void
   setWrittenMeasureIndices: (value: number[]) => void
+  setColumnBoundaries: (value: number[][]) => void
   latestMeasureAudioIdRef: RefObject<number>
   setMeasureAudioGenerating: (value: boolean) => void
   setNextMeasureWavUrl: (
@@ -206,6 +207,7 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       deps.setNextWavUrl(url)
       deps.setMeasureTimes(msg.measureTimes)
       deps.setWrittenMeasureIndices(msg.writtenMeasureIndices)
+      deps.setColumnBoundaries(msg.columnBoundaries)
       return
     }
 
@@ -223,6 +225,7 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
         msg.measureTimes,
         msg.writtenMeasureIndices,
       )
+      deps.setColumnBoundaries(msg.columnBoundaries)
       return
     }
 

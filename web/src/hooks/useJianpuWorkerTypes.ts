@@ -20,6 +20,8 @@ export interface JianpuWorkerState {
   measureTimes: number[]
   /** Written measure index to highlight at each playback position of `measureTimes`, following D.C. al Coda navigation; entry `i` pairs with `measureTimes[i]`. */
   writtenMeasureIndices: number[]
+  /** Cumulative pixel-weight column boundaries of every rendered measure, entry `i` pairs with `data-measure-index="i"`. Used to map a linear time position within a measure onto its actual (density-weighted) pixel position. */
+  columnBoundaries: number[][]
   audioAvailable: boolean
   pdfAvailable: boolean
   pdfExporting: boolean

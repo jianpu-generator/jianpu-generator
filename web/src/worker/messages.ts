@@ -118,6 +118,7 @@ export type WorkerResponse =
       wav: ArrayBuffer
       measureTimes: number[]
       writtenMeasureIndices: number[]
+      columnBoundaries: number[][]
     }
   | { type: 'audioErr'; id: number }
   | {
@@ -154,6 +155,7 @@ export type WorkerResponse =
       wav: ArrayBuffer
       measureTimes: number[]
       writtenMeasureIndices: number[]
+      columnBoundaries: number[][]
     }
   | { type: 'measureRangeAudioErr'; id: number }
   | { type: 'instrumentPreview'; id: number; wav: ArrayBuffer }

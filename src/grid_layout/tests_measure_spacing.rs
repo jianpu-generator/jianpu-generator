@@ -1,10 +1,13 @@
 // ── Proportional (density-based) measure widths ──────────────────────────────
 
 use crate::ast::parsed::JianPuPitch;
+use crate::compiler::types::CompileResult;
 use crate::compiler::types::MULTI_MEASURE_REST_WIDTH;
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
 use crate::grid_layout::expand::expand_system_to_rows;
-use crate::grid_layout::layout::{build_measure_column_layout, measure_column_weights};
+use crate::grid_layout::layout::{
+    build_measure_column_layout, measure_column_boundaries, measure_column_weights,
+};
 use std::collections::HashMap;
 
 fn make_block_with_notes(row_id: &str, note_count: u32, bar_col: u32) -> MeasureBlock {
@@ -237,6 +240,46 @@ fn equal_density_measures_render_at_equal_width() {
         (widths[0] - widths[1]).abs() < 0.001,
         "widths={widths:?} should be equal for equal-density measures"
     );
+}
+
+#[test]
+fn measure_column_boundaries_starts_at_zero_and_ends_at_one_per_measure() {
+    let compile_result = CompileResult {
+        blocks: vec![
+            make_block_with_notes("S", 4, 4),
+            make_block_with_dash("S", 2),
+        ],
+        slur_spans: vec![],
+    };
+    let boundaries = measure_column_boundaries(&compile_result);
+    assert_eq!(boundaries.len(), 2);
+    for measure_boundaries in &boundaries {
+        assert_eq!(*measure_boundaries.first().unwrap(), 0.0);
+        assert_eq!(*measure_boundaries.last().unwrap(), 1.0);
+    }
+    // 4 notes + bar line at column 4 -> 5 columns -> 6 boundaries.
+    assert_eq!(boundaries[0].len(), 6);
+    // note + dash + bar line at column 2 -> 3 columns -> 4 boundaries.
+    assert_eq!(boundaries[1].len(), 4);
+}
+
+#[test]
+fn measure_column_boundaries_reflects_dash_weighing_less_than_a_notehead() {
+    // A half note (notehead + dash) should reach its column-2 boundary
+    // (past the dash) sooner, proportionally, than a linear/duration-based
+    // mapping would put it — since the dash column weighs less than the
+    // notehead column that precedes it.
+    let compile_result = CompileResult {
+        blocks: vec![make_block_with_dash("S", 2)],
+        slur_spans: vec![],
+    };
+    let boundaries = &measure_column_boundaries(&compile_result)[0];
+    // Columns: [notehead, dash, barline] -> boundaries has 4 entries.
+    assert_eq!(boundaries.len(), 4);
+    // The notehead column (weight 1.0) should take up more than half the
+    // measure's pixel width, even though it's only one of two note-bearing
+    // columns (notehead + dash) before the bar line.
+    assert!(boundaries[1] > 0.5, "boundaries={boundaries:?}");
 }
 
 #[test]

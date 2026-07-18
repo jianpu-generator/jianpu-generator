@@ -1,3 +1,4 @@
+use jianpu_generator::measure_column_boundaries_from_source;
 use jianpu_generator::measure_start_times_for_range_from_source;
 use jianpu_generator::measure_start_times_from_source;
 use jianpu_generator::wav;
@@ -7,7 +8,10 @@ use jianpu_generator::zip_split_entries;
 use jianpu_generator::{write_wav_for_measure_range_from_source, MeasureRangeSelection};
 
 use super::diagnostic_from_error;
-use crate::types::{GenerateSplitWavsResponse, GenerateWavResponse, ListMeasureTimesResponse};
+use crate::types::{
+    GenerateSplitWavsResponse, GenerateWavResponse, ListMeasureColumnBoundariesResponse,
+    ListMeasureTimesResponse,
+};
 
 #[allow(clippy::needless_pass_by_value)]
 pub(crate) fn generate_wav_response(
@@ -79,6 +83,18 @@ pub(crate) fn list_measure_times_for_range_response(
     ) {
         Ok(times) => ListMeasureTimesResponse::Ok { times },
         Err(e) => ListMeasureTimesResponse::Err {
+            diagnostics: vec![diagnostic_from_error(source, &e)],
+        },
+    }
+}
+
+pub(crate) fn list_measure_column_boundaries_response(
+    source: &str,
+    enabled_tracks: Option<&[String]>,
+) -> ListMeasureColumnBoundariesResponse {
+    match measure_column_boundaries_from_source(source, "input.jianpu", enabled_tracks, &[]) {
+        Ok(boundaries) => ListMeasureColumnBoundariesResponse::Ok { boundaries },
+        Err(e) => ListMeasureColumnBoundariesResponse::Err {
             diagnostics: vec![diagnostic_from_error(source, &e)],
         },
     }

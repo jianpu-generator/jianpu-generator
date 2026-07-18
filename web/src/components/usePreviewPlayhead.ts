@@ -16,6 +16,7 @@ export function usePlayhead(
   measureTimes: number[] | undefined,
   measureIndexOffset: number,
   writtenIndices?: number[],
+  columnBoundaries?: number[][],
 ) {
   useEffect(() => {
     const container = containerRef.current
@@ -61,7 +62,11 @@ export function usePlayhead(
         width: Number.parseFloat(targetRect.getAttribute('width') ?? '0'),
         height: Number.parseFloat(targetRect.getAttribute('height') ?? '0'),
       }
-      const rect = computePlayheadRect(measureRect, fraction)
+      const rect = computePlayheadRect(
+        measureRect,
+        fraction,
+        columnBoundaries?.[measureIndex],
+      )
       playhead.setAttribute('x', String(rect.x))
       playhead.setAttribute('y', String(rect.y))
       playhead.setAttribute('height', String(rect.height))
@@ -94,5 +99,12 @@ export function usePlayhead(
       audio.removeEventListener('ended', stop)
       stop()
     }
-  }, [containerRef, audio, measureTimes, measureIndexOffset, writtenIndices])
+  }, [
+    containerRef,
+    audio,
+    measureTimes,
+    measureIndexOffset,
+    writtenIndices,
+    columnBoundaries,
+  ])
 }

@@ -1,5 +1,6 @@
 import type {
   GenerateWavResponse,
+  ListMeasureColumnBoundariesResponse,
   ListMeasureTimesResponse,
   WrittenMeasureIndicesResponse,
 } from 'jianpu-wasm'
@@ -52,6 +53,21 @@ function measureTimesForRangeFromSource(
     enabledTracks,
   )
   return result.status === 'ok' ? result.times : []
+}
+
+function columnBoundariesFromSource(
+  listMeasureColumnBoundaries:
+    | ((
+        source: string,
+        enabledTracks?: string[],
+      ) => ListMeasureColumnBoundariesResponse)
+    | null,
+  source: string,
+  enabledTracks: string[] | undefined,
+): number[][] {
+  if (!listMeasureColumnBoundaries) return []
+  const result = listMeasureColumnBoundaries(source, enabledTracks)
+  return result.status === 'ok' ? result.boundaries : []
 }
 
 function writtenMeasureIndicesFromSource(
@@ -115,11 +131,19 @@ type WrittenMeasureIndicesFn =
     ) => WrittenMeasureIndicesResponse)
   | null
 
+type ListMeasureColumnBoundariesFn =
+  | ((
+      source: string,
+      enabledTracks?: string[],
+    ) => ListMeasureColumnBoundariesResponse)
+  | null
+
 export function handleGenerateAudio(
   msg: Extract<WorkerRequest, { type: 'generateAudio' }>,
   generateWav: GenerateWavFn,
   listMeasureTimes: ListMeasureTimesFn,
   writtenMeasureIndices: WrittenMeasureIndicesFn,
+  listMeasureColumnBoundaries: ListMeasureColumnBoundariesFn,
   loadedSoundfont: Uint8Array | null,
 ): void {
   if (!generateWav || !loadedSoundfont) {
@@ -141,6 +165,11 @@ export function handleGenerateAudio(
         ),
         writtenMeasureIndices: writtenMeasureIndicesFromSource(
           writtenMeasureIndices,
+          msg.source,
+          msg.enabledTracks,
+        ),
+        columnBoundaries: columnBoundariesFromSource(
+          listMeasureColumnBoundaries,
           msg.source,
           msg.enabledTracks,
         ),
@@ -188,6 +217,7 @@ export function handleGenerateMeasureRangeAudio(
   generateWavForMeasureRange: GenerateWavForMeasureRangeFn,
   listMeasureTimesForRange: ListMeasureTimesForRangeFn,
   writtenMeasureIndicesForRange: WrittenMeasureIndicesForRangeFn,
+  listMeasureColumnBoundaries: ListMeasureColumnBoundariesFn,
   loadedSoundfont: Uint8Array | null,
 ): void {
   if (!generateWavForMeasureRange || !loadedSoundfont) {
@@ -226,6 +256,11 @@ export function handleGenerateMeasureRangeAudio(
           msg.startMeasureIndex,
           msg.endMeasureIndex,
           msg.extendToLastOccurrence,
+          msg.enabledTracks,
+        ),
+        columnBoundaries: columnBoundariesFromSource(
+          listMeasureColumnBoundaries,
+          msg.source,
           msg.enabledTracks,
         ),
       } satisfies WorkerResponse,

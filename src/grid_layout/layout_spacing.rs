@@ -1,5 +1,7 @@
 use super::{block_column_width, LABEL_COLS, MUSIC_START_COL};
-use crate::compiler::types::{ElementContent, MeasureBlock, MULTI_MEASURE_REST_WIDTH};
+use crate::compiler::types::{
+    CompileResult, ElementContent, MeasureBlock, MULTI_MEASURE_REST_WIDTH,
+};
 use crate::grid_layout::types::MeasureColumnLayout;
 
 /// Minimum floor a measure's column-region gets, in points, regardless of its
@@ -121,6 +123,34 @@ fn measure_note_weight(block: &MeasureBlock) -> f32 {
 /// first measure's weight. It's given `THIN_MARK_WEIGHT` for the intra-
 /// measure split (like any other bar line) but never affects `weight`,
 /// which is purely `measure_note_weight`.
+/// For every measure block in `compile_result` (in the same order as the
+/// rendered `data-measure-index`), the cumulative pixel-weight fraction at
+/// each of its column boundaries — length `col_count + 1`, starting at `0.0`
+/// and ending at `1.0`. Lets a consumer that only knows a *linear* time
+/// position within the measure (e.g. a MIDI-driven playhead, where grid
+/// columns are duration-proportional) map it onto the *density*-weighted
+/// pixel position [`measure_column_weights`] assigns that column in the
+/// actual rendered SVG.
+pub fn measure_column_boundaries(compile_result: &CompileResult) -> Vec<Vec<f32>> {
+    compile_result
+        .blocks
+        .iter()
+        .map(|block| {
+            let col_count = block_column_width(block);
+            let weights = measure_column_weights(block, col_count);
+            let total: f32 = weights.iter().sum();
+            let mut cumulative = Vec::with_capacity(weights.len() + 1);
+            let mut acc = 0.0_f32;
+            cumulative.push(0.0);
+            for w in &weights {
+                acc += w;
+                cumulative.push(if total > 0.0 { acc / total } else { 0.0 });
+            }
+            cumulative
+        })
+        .collect()
+}
+
 pub(crate) fn build_measure_column_layout(system: &[MeasureBlock]) -> Vec<MeasureColumnLayout> {
     let mut start_col = MUSIC_START_COL;
     system
