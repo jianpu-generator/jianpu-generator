@@ -1,14 +1,29 @@
 import type { SvgDocumentOut, SvgElementOut } from 'jianpu-wasm'
 import type { ReactNode } from 'react'
 
+// The directive line (bar number, section label, key/bpm/time signature,
+// navigation markers) is the sole user of the `textWithTspans` case below.
+// It's pinned to a specific font — loaded via the `@font-face` rule in
+// index.css, which points at the same font file bundled for PDF export
+// (see `set_sans_serif_family` in src/pdf.rs) — instead of the generic
+// `sans-serif` alias, so glyph widths stay consistent across viewers that
+// have the font available. See Task 1 of
+// PLAN-section-label-engraving-quality.md.
+const DIRECTIVE_LINE_FONT_FAMILY = '"Source Han Sans SC", sans-serif'
+
 function transparentRectRoleToDataVariant(
-  role: 'measureClickTarget' | 'sectionLabelBackground',
+  role:
+    | 'measureClickTarget'
+    | 'sectionLabelBackground'
+    | 'sectionLabelClickTarget',
 ): string {
   switch (role) {
     case 'measureClickTarget':
       return 'measure-click-target-rect'
     case 'sectionLabelBackground':
       return 'section-label-bg'
+    case 'sectionLabelClickTarget':
+      return 'section-label-click-target-rect'
   }
 }
 
@@ -81,7 +96,7 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
                 ? 'hanging'
                 : 'ideographic'
           }
-          fontFamily="sans-serif"
+          fontFamily={DIRECTIVE_LINE_FONT_FAMILY}
         >
           {kind.spans.map((span, spanIndex) => (
             <tspan
@@ -156,6 +171,8 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           height={kind.height}
           data-variant={transparentRectRoleToDataVariant(kind.role)}
           fill="transparent"
+          stroke={kind.role === 'sectionLabelBackground' ? 'black' : undefined}
+          strokeWidth={kind.role === 'sectionLabelBackground' ? 1 : undefined}
           rx={2}
           style={{ cursor: 'pointer' }}
         />

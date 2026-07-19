@@ -1,3 +1,15 @@
+/* Pins the directive-line text (bar number, section label, key/bpm/time
+   signature, navigation markers) in the preview SVG to the same font
+   bundled for PDF export, rather than letting the browser substitute
+   whatever it resolves generic sans-serif to — see Task 1 of
+   PLAN-section-label-engraving-quality.md. Served from the fonts/ dir at
+   the repo root (see vite.config.ts's copy-fonts/serve-fonts plugins). */
+@font-face {
+  font-family: "Source Han Sans SC";
+  src: url("/fonts/SourceHanSansSC-Regular.otf") format("opentype");
+  font-display: swap;
+}
+
 :root {
   --text: #1a1a1a;
   --muted: #6b7280;

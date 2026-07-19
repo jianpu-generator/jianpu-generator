@@ -1,5 +1,7 @@
 use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
-use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, SvgVariant, Tag, TspanData};
+use crate::renderer::new_types::{
+    SvgDocument, SvgElement, SvgKind, SvgVariant, Tag, TransparentRectRole, TspanData,
+};
 
 pub fn serialize(documents: &[SvgDocument]) -> Vec<String> {
     documents.iter().map(serialize_doc).collect()
@@ -73,6 +75,15 @@ fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) {
     ));
 }
 
+/// The directive line (bar number, section label, key/bpm/time signature,
+/// navigation markers) is the sole user of [`serialize_text_with_tspans`].
+/// It's pinned to the same specific font family PDF export already resolves
+/// `sans-serif` to (see `set_sans_serif_family` in `src/pdf.rs`), rather
+/// than the generic `sans-serif` alias, so glyph widths are consistent
+/// between viewers that have this font installed and the PDF export path —
+/// see Task 1 of `PLAN-section-label-engraving-quality.md`.
+const DIRECTIVE_LINE_FONT_FAMILY: &str = r#""Source Han Sans SC", sans-serif"#;
+
 fn serialize_text_with_tspans(
     el: &SvgElement,
     out: &mut String,
@@ -92,13 +103,14 @@ fn serialize_text_with_tspans(
         DominantBaseline::Ideographic => "ideographic",
     };
     out.push_str(&format!(
-        r#"<text x="{:.1}" y="{:.1}"{} font-size="{:.1}" text-anchor="{}" dominant-baseline="{}" font-family="sans-serif">"#,
+        r#"<text x="{:.1}" y="{:.1}"{} font-size="{:.1}" text-anchor="{}" dominant-baseline="{}" font-family='{}'>"#,
         el.x,
         el.y,
         variant_attr(el.variant),
         font_size,
         anchor_str,
-        baseline_str
+        baseline_str,
+        DIRECTIVE_LINE_FONT_FAMILY
     ));
     for span in spans {
         let mut attrs = String::new();
@@ -239,9 +251,16 @@ fn serialize_rect_element(el: &SvgElement, out: &mut String, kind: &SvgKind) {
             height,
             role,
         } => {
+            let stroke = match role {
+                TransparentRectRole::SectionLabelBackground => {
+                    r#" stroke="black" stroke-width="1""#
+                }
+                TransparentRectRole::MeasureClickTarget
+                | TransparentRectRole::SectionLabelClickTarget => "",
+            };
             out.push_str(&format!(
-                r#"<rect x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" data-variant="{}" fill="transparent" rx="2" style="cursor:pointer"/>"#,
-                el.x, el.y, width, height, role.as_str()
+                r#"<rect x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" data-variant="{}" fill="transparent" rx="2"{} style="cursor:pointer"/>"#,
+                el.x, el.y, width, height, role.as_str(), stroke
             ));
         }
         _ => {}

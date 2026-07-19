@@ -32,7 +32,9 @@ fn sans_serif_text(
 
 /// Builds the text span for a section label (bold + italic, 12pt), matching
 /// how a `label="..."` directive is rendered inline on a measure. Shared by
-/// [`directive_line_content`] and the `# sequence` header line.
+/// the `# sequence` header line; the directive line's own label is rendered
+/// as an independent text element (see [`AbsoluteContent::DirectiveLine`],
+/// `label`/`label_x_offset`) rather than through this span.
 fn section_label_span(label_text: &str) -> TextSpan {
     TextSpan {
         content: label_text.to_string(),
@@ -42,23 +44,106 @@ fn section_label_span(label_text: &str) -> TextSpan {
     }
 }
 
-/// Rough estimate (in points) of a span's rendered width, used only to
-/// position the vector Segno glyph inline with the directive-line text (see
-/// [`directive_line_content`]). Sans-serif glyphs average roughly half their
-/// font size in width.
-fn estimate_span_width(span: &TextSpan) -> f32 {
-    const LATIN_AVG_CHAR_WIDTH_RATIO: f32 = 0.51;
-    span.content.chars().count() as f32 * span.font_size * LATIN_AVG_CHAR_WIDTH_RATIO
+/// Gap (in points) reserved between two adjacent directive-line elements
+/// (bar number, section label, key/bpm/time-signature/markers) so that,
+/// when rendered as independently-positioned text elements, they never
+/// overlap regardless of their actual measured widths.
+const DIRECTIVE_LINE_ELEMENT_GAP: f32 = 20.0;
+
+/// Result of [`directive_line_content`]: the line's text spans plus layout
+/// hints for elements positioned separately from the monolithic `<text>`
+/// (the bar number, the Segno glyph, the section-label bounding box).
+struct DirectiveLineContent {
+    /// Bar-number span, rendered as its own text element at the line's
+    /// start (offset 0).
+    bar_number: Option<TextSpan>,
+    spans: Vec<TextSpan>,
+    /// X offset (in points, from the line's start) where `spans` begins:
+    /// see the field of the same name on
+    /// [`crate::compositor::types::AbsoluteContent::DirectiveLine`].
+    spans_x_offset: f32,
+    /// X offset (in points, from `spans_x_offset`) where the vector Segno
+    /// glyph should be drawn, if a Segno marker is present.
+    segno_icon_offset: Option<f32>,
+    /// X offset (in points, from the line's start) where the label's own,
+    /// independently-positioned text element begins: past `bar_number`'s
+    /// measured width (plus a gap) when one is present, zero otherwise.
+    label_x_offset: f32,
 }
 
-/// Builds the text spans for a directive line, plus (if a Segno marker is
-/// present) the x offset from the line's start where the vector Segno glyph
-/// should be drawn. The offset is a rough estimate based on the combined
-/// width of the spans preceding it, since actual text layout happens in the
-/// browser and isn't available here.
-fn directive_line_content(content: &PostArcGridContent) -> (Vec<TextSpan>, Option<f32>) {
+/// Builds the text spans for a directive line (excluding the bar number
+/// and section label, which are rendered as their own independent text
+/// elements — see `bar_number`/`label_x_offset`), plus layout hints for the
+/// Segno glyph and section-label box (see [`DirectiveLineContent`]).
+///
+/// Two explicit passes, per Task 4 of
+/// `PLAN-section-label-engraving-quality.md`: pass 1
+/// ([`build_directive_line_spans`]) builds the line's logical elements
+/// (content/style only, no positions); pass 2 below walks that list once,
+/// measuring each element with real font-metrics glyph advances (see
+/// [`crate::font_metrics`]) to find the Segno glyph's x offset, since
+/// actual text layout happens in the browser and isn't otherwise available
+/// here. Elements are laid out left to right in a fixed order — bar
+/// number, then section label, then the rest of the directives — so a
+/// label never intersects the directives that follow it, regardless of how
+/// short or long the bar number is (this ordering is a follow-up fix on top
+/// of the 5 tasks in `PLAN-section-label-engraving-quality.md`, not one of
+/// the tasks itself).
+fn directive_line_content(content: &PostArcGridContent) -> DirectiveLineContent {
+    let PostArcGridContent::DirectiveLine { label, .. } = content else {
+        return DirectiveLineContent {
+            bar_number: None,
+            spans: Vec::new(),
+            spans_x_offset: 0.0,
+            segno_icon_offset: None,
+            label_x_offset: 0.0,
+        };
+    };
+
+    let (bar_number_span, spans) = build_directive_line_spans(content);
+    let bar_number_width = bar_number_span
+        .as_ref()
+        .map(crate::font_metrics::span_width)
+        .unwrap_or(0.0);
+
+    let label_x_offset = if label.is_some() && bar_number_span.is_some() {
+        bar_number_width + DIRECTIVE_LINE_ELEMENT_GAP
+    } else {
+        0.0
+    };
+    let spans_x_offset = match label {
+        Some(label_str) => {
+            label_x_offset
+                + crate::font_metrics::section_label_box_width(label_str)
+                + DIRECTIVE_LINE_ELEMENT_GAP
+        }
+        None => bar_number_width,
+    };
+
+    let mut segno_icon_offset = None;
+    let mut x_offset = 0.0;
+    for span in &spans {
+        if span.content.trim_start() == "Segno" {
+            segno_icon_offset = Some(x_offset);
+        }
+        x_offset += crate::font_metrics::span_width(span);
+    }
+
+    DirectiveLineContent {
+        bar_number: bar_number_span,
+        spans,
+        spans_x_offset,
+        segno_icon_offset,
+        label_x_offset,
+    }
+}
+
+/// Pass 1 of [`directive_line_content`]: builds the directive line's
+/// ordered logical elements — the bar number, plus key/bpm/time
+/// signature/navigation markers — with their content/style, but no
+/// positions — positions are assigned in pass 2.
+fn build_directive_line_spans(content: &PostArcGridContent) -> (Option<TextSpan>, Vec<TextSpan>) {
     let PostArcGridContent::DirectiveLine {
-        label,
         bar_number,
         key,
         bpm,
@@ -71,27 +156,18 @@ fn directive_line_content(content: &PostArcGridContent) -> (Vec<TextSpan>, Optio
         dc_al_fine,
         fine,
         ds_al_fine,
+        ..
     } = content
     else {
-        return (Vec::new(), None);
+        return (None, Vec::new());
     };
+    let bar_number_span = bar_number.map(|n| TextSpan {
+        content: n.to_string(),
+        bold: false,
+        italic: false,
+        font_size: 10.0,
+    });
     let mut spans: Vec<TextSpan> = Vec::new();
-    if let Some(n) = bar_number {
-        spans.push(TextSpan {
-            content: n.to_string(),
-            bold: false,
-            italic: false,
-            font_size: 10.0,
-        });
-    }
-    if let Some(label_text) = label {
-        let text = if bar_number.is_some() {
-            format!("  {label_text}")
-        } else {
-            label_text.clone()
-        };
-        spans.push(section_label_span(&text));
-    }
     if let Some(key_str) = key {
         spans.push(TextSpan {
             content: format!("  {key_str}"),
@@ -129,24 +205,9 @@ fn directive_line_content(content: &PostArcGridContent) -> (Vec<TextSpan>, Optio
         (*dc_al_fine, "  D.C. al Fine"),
         (*ds_al_fine, "  D.S. al Fine"),
     ];
-    let segno_offset = push_navigation_marker_spans(&mut spans, navigation_markers);
-    (spans, segno_offset)
-}
-
-/// Appends each present navigation marker span to `spans`, returning the x
-/// offset (in points) where the Segno span starts, if a Segno marker is
-/// present.
-fn push_navigation_marker_spans<const N: usize>(
-    spans: &mut Vec<TextSpan>,
-    navigation_markers: [(bool, &str); N],
-) -> Option<f32> {
-    let mut segno_offset: Option<f32> = None;
     for (present, text) in navigation_markers {
         if !present {
             continue;
-        }
-        if text.trim_start() == "Segno" {
-            segno_offset = Some(spans.iter().map(estimate_span_width).sum());
         }
         spans.push(TextSpan {
             content: text.to_string(),
@@ -155,7 +216,7 @@ fn push_navigation_marker_spans<const N: usize>(
             font_size: 12.0,
         });
     }
-    segno_offset
+    (bar_number_span, spans)
 }
 
 /// Builds the text spans for the `# sequence` header line: a plain
@@ -218,11 +279,14 @@ fn grid_text_to_absolute(
             false,
         )),
         PostArcGridContent::DirectiveLine { label, .. } => {
-            let (spans, segno_icon_offset) = directive_line_content(content);
+            let directive_line = directive_line_content(content);
             Some(AbsoluteContent::DirectiveLine {
+                bar_number: directive_line.bar_number,
                 label: label.clone(),
-                spans,
-                segno_icon_offset,
+                spans: directive_line.spans,
+                spans_x_offset: directive_line.spans_x_offset,
+                segno_icon_offset: directive_line.segno_icon_offset,
+                label_x_offset: directive_line.label_x_offset,
                 apply_row_offset: true,
             })
         }
@@ -246,9 +310,12 @@ fn grid_text_to_absolute(
             Some(AbsoluteContent::HorizontalLine { width: span_width })
         }
         PostArcGridContent::SequenceLine { entries } => Some(AbsoluteContent::DirectiveLine {
+            bar_number: None,
             label: None,
             spans: sequence_line_content(entries),
+            spans_x_offset: 0.0,
             segno_icon_offset: None,
+            label_x_offset: 0.0,
             apply_row_offset: false,
         }),
         _ => None,

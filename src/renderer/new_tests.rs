@@ -3,9 +3,10 @@ use crate::compiler::types::ArcKind;
 use crate::compositor::types::{
     AbsoluteContent, AbsoluteElement, AbsolutePage, TextAnchor, TextSpan,
 };
+use crate::font_metrics::section_label_box_padding;
 use crate::render_config::RenderConfig;
 use crate::renderer::new_renderer::render_new;
-use crate::renderer::new_types::{SvgKind, SvgVariant};
+use crate::renderer::new_types::{SvgKind, SvgVariant, TransparentRectRole};
 
 fn cfg() -> RenderConfig {
     RenderConfig {
@@ -149,9 +150,12 @@ fn upper_octave_note_produces_circle() {
 fn labelless_directive_line_shifts_by_directive_row_offset() {
     let offset = Offset { x: 5, y: 12 };
     let page = make_page(AbsoluteContent::DirectiveLine {
+        bar_number: None,
         label: None,
         spans: vec![bpm_span()],
+        spans_x_offset: 0.0,
         segno_icon_offset: None,
+        label_x_offset: 0.0,
         apply_row_offset: true,
     });
     let docs = render_new(&[page], &cfg_with_directive_row_offset(offset));
@@ -168,9 +172,12 @@ fn labelless_directive_line_shifts_by_directive_row_offset() {
 fn sequence_header_ignores_directive_row_offset() {
     let offset = Offset { x: 5, y: 12 };
     let page = make_page(AbsoluteContent::DirectiveLine {
+        bar_number: None,
         label: None,
         spans: vec![bpm_span()],
+        spans_x_offset: 0.0,
         segno_icon_offset: None,
+        label_x_offset: 0.0,
         apply_row_offset: false,
     });
     let docs = render_new(&[page], &cfg_with_directive_row_offset(offset));
@@ -187,9 +194,12 @@ fn sequence_header_ignores_directive_row_offset() {
 fn labeled_directive_line_moves_label_background_text_and_segno_together() {
     let offset = Offset { x: 5, y: 12 };
     let page = make_page(AbsoluteContent::DirectiveLine {
+        bar_number: None,
         label: Some("Verse 1".to_string()),
         spans: vec![bpm_span()],
+        spans_x_offset: 0.0,
         segno_icon_offset: Some(20.0),
+        label_x_offset: 0.0,
         apply_row_offset: true,
     });
     let docs = render_new(&[page], &cfg_with_directive_row_offset(offset));
@@ -204,7 +214,15 @@ fn labeled_directive_line_moves_label_background_text_and_segno_together() {
 
     let background = children
         .iter()
-        .find(|e| matches!(&e.kind, SvgKind::TransparentRect { .. }))
+        .find(|e| {
+            matches!(
+                &e.kind,
+                SvgKind::TransparentRect {
+                    role: TransparentRectRole::SectionLabelBackground,
+                    ..
+                }
+            )
+        })
         .expect("label background rect should be present");
     let text = children
         .iter()
@@ -217,6 +235,156 @@ fn labeled_directive_line_moves_label_background_text_and_segno_together() {
 
     assert_eq!(text.x, 100.0 + offset.x as f32);
     assert_eq!(text.y, 200.0 + offset.y as f32);
-    assert_eq!(background.x, text.x - 3.0);
+    assert_eq!(background.x, text.x - section_label_box_padding());
     assert_eq!(segno.x, text.x + 20.0);
+}
+
+#[test]
+fn label_background_starts_past_a_preceding_bar_number() {
+    let page = make_page(AbsoluteContent::DirectiveLine {
+        bar_number: None,
+        label: Some("Verse 1".to_string()),
+        spans: vec![bpm_span()],
+        spans_x_offset: 0.0,
+        segno_icon_offset: None,
+        label_x_offset: 30.0,
+        apply_row_offset: false,
+    });
+    let docs = render_new(&[page], &cfg());
+    let group = docs[0]
+        .elements
+        .iter()
+        .find(|e| matches!(&e.kind, SvgKind::Group { .. }))
+        .expect("section label group should be present");
+    let SvgKind::Group { children, .. } = &group.kind else {
+        unreachable!()
+    };
+    let background = children
+        .iter()
+        .find(|e| {
+            matches!(
+                &e.kind,
+                SvgKind::TransparentRect {
+                    role: TransparentRectRole::SectionLabelBackground,
+                    ..
+                }
+            )
+        })
+        .expect("label background rect should be present");
+    let text = children
+        .iter()
+        .find(|e| e.variant == Some(SvgVariant::DirectiveLine))
+        .expect("directive line text element should be present");
+
+    assert_eq!(background.x, text.x + 30.0 - section_label_box_padding());
+}
+
+#[test]
+fn cjk_label_gets_a_wider_background_than_an_equal_length_ascii_label() {
+    let page_ascii = make_page(AbsoluteContent::DirectiveLine {
+        bar_number: None,
+        label: Some("Verse".to_string()),
+        spans: vec![bpm_span()],
+        spans_x_offset: 0.0,
+        segno_icon_offset: None,
+        label_x_offset: 0.0,
+        apply_row_offset: false,
+    });
+    let page_cjk = make_page(AbsoluteContent::DirectiveLine {
+        bar_number: None,
+        label: Some("副歌一".to_string()),
+        spans: vec![bpm_span()],
+        spans_x_offset: 0.0,
+        segno_icon_offset: None,
+        label_x_offset: 0.0,
+        apply_row_offset: false,
+    });
+
+    let background_width = |page: AbsolutePage| -> f32 {
+        let docs = render_new(&[page], &cfg());
+        let group = docs[0]
+            .elements
+            .iter()
+            .find(|e| matches!(&e.kind, SvgKind::Group { .. }))
+            .expect("section label group should be present");
+        let SvgKind::Group { children, .. } = &group.kind else {
+            unreachable!()
+        };
+        let SvgKind::TransparentRect { width, .. } = children
+            .iter()
+            .find(|e| {
+                matches!(
+                    &e.kind,
+                    SvgKind::TransparentRect {
+                        role: TransparentRectRole::SectionLabelBackground,
+                        ..
+                    }
+                )
+            })
+            .expect("label background rect should be present")
+            .kind
+        else {
+            unreachable!()
+        };
+        width
+    };
+
+    assert!(background_width(page_cjk) > background_width(page_ascii));
+}
+
+#[test]
+fn label_background_width_matches_real_font_metrics() {
+    // Cross-check against the pinned font's own `hmtx` advances (see
+    // `DIRECTIVE_LINE_FONT` in `src/font_metrics.rs`), independent of the
+    // renderer's internal helpers, so this asserts an exact width rather
+    // than only a relative CJK-vs-ASCII comparison.
+    let font_bytes = include_bytes!("../../fonts/SourceHanSansSC-Regular.otf");
+    let face = ttf_parser::Face::parse(font_bytes, 0).expect("embedded font should parse");
+    let label = "Verse 1";
+    let font_size = 12.0_f32;
+    let synthetic_bold_ratio = 1.08_f32;
+    let padding = section_label_box_padding();
+    let expected_text_width: f32 = label
+        .chars()
+        .map(|c| {
+            let glyph_id = face.glyph_index(c).expect("glyph should exist in font");
+            let advance = face
+                .glyph_hor_advance(glyph_id)
+                .expect("glyph should have an advance width");
+            advance as f32 / face.units_per_em() as f32 * font_size
+        })
+        .sum();
+    let expected_width = expected_text_width * synthetic_bold_ratio + padding * 2.0;
+
+    let page = make_page(AbsoluteContent::DirectiveLine {
+        bar_number: None,
+        label: Some(label.to_string()),
+        spans: vec![bpm_span()],
+        spans_x_offset: 0.0,
+        segno_icon_offset: None,
+        label_x_offset: 0.0,
+        apply_row_offset: false,
+    });
+    let docs = render_new(&[page], &cfg());
+    let group = docs[0]
+        .elements
+        .iter()
+        .find(|e| matches!(&e.kind, SvgKind::Group { .. }))
+        .expect("section label group should be present");
+    let SvgKind::Group { children, .. } = &group.kind else {
+        unreachable!()
+    };
+    let SvgKind::TransparentRect { width, .. } = children
+        .iter()
+        .find(|e| matches!(&e.kind, SvgKind::TransparentRect { .. }))
+        .expect("label background rect should be present")
+        .kind
+    else {
+        unreachable!()
+    };
+
+    assert!(
+        (width - expected_width).abs() < 0.01,
+        "background width {width} should match real-font-metrics width {expected_width}"
+    );
 }

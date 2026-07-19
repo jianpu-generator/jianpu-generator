@@ -1,17 +1,19 @@
 use crate::ast::parsed::Offset;
 use crate::compositor::types::{
-    AbsoluteContent, AbsoluteElement, AbsolutePage, DominantBaseline, TextAnchor, TextSpan,
+    AbsoluteContent, AbsoluteElement, AbsolutePage, DominantBaseline, TextAnchor,
 };
 use crate::render_config::RenderConfig;
 use crate::renderer::new_types::{
-    SvgDocument, SvgElement, SvgKind, SvgVariant, Tag, TransparentRectRole, TspanData,
+    SvgDocument, SvgElement, SvgKind, SvgVariant, Tag, TransparentRectRole,
 };
+use directive_line::{render_directive_line, DirectiveLineArgs};
 use glyph_renderers::{
     render_bar_line, render_chord_symbol, render_horizontal_line, render_lyric,
     render_multi_measure_rest, render_note_head, render_percussion_hit, render_rest,
     render_tie_or_slur, render_underline, NoteRenderParams,
 };
 
+mod directive_line;
 mod glyph_renderers;
 
 pub fn render_new(pages: &[AbsolutePage], config: &RenderConfig) -> Vec<SvgDocument> {
@@ -138,17 +140,25 @@ fn render_overlay_element(
             note_id,
         } => render_note_highlight_target(elem, *width, *height, *source_part_index, *note_id),
         AbsoluteContent::DirectiveLine {
+            bar_number,
             label,
             spans,
+            spans_x_offset,
             segno_icon_offset,
+            label_x_offset,
             apply_row_offset,
         } => render_directive_line(
             elem,
-            label,
-            spans,
-            *segno_icon_offset,
-            *apply_row_offset,
-            directive_row_offset,
+            &DirectiveLineArgs {
+                bar_number,
+                label,
+                spans,
+                spans_x_offset: *spans_x_offset,
+                segno_icon_offset: *segno_icon_offset,
+                label_x_offset: *label_x_offset,
+                apply_row_offset: *apply_row_offset,
+                directive_row_offset,
+            },
         ),
         _ => Vec::new(),
     }
@@ -205,97 +215,6 @@ fn render_rect(elem: &AbsoluteElement, kind: SvgKind) -> SvgElement {
         y: elem.y,
         variant: None,
         kind,
-    }
-}
-
-fn spans_to_tspans(spans: &[TextSpan]) -> Vec<TspanData> {
-    spans
-        .iter()
-        .map(|s| TspanData {
-            content: s.content.clone(),
-            bold: s.bold,
-            italic: s.italic,
-            font_size: if (s.font_size - 12.0).abs() < 0.001 {
-                None
-            } else {
-                Some(s.font_size)
-            },
-        })
-        .collect()
-}
-
-/// Rendered width/height (in points) of the vector Segno glyph, matching the
-/// 12pt text it's drawn alongside.
-const SEGNO_GLYPH_SIZE: f32 = 13.0;
-
-fn render_directive_line(
-    elem: &AbsoluteElement,
-    label: &Option<String>,
-    spans: &[TextSpan],
-    segno_icon_offset: Option<f32>,
-    apply_row_offset: bool,
-    directive_row_offset: Offset,
-) -> Vec<SvgElement> {
-    let (row_x, row_y) = if apply_row_offset {
-        (
-            elem.x + directive_row_offset.x as f32,
-            elem.y + directive_row_offset.y as f32,
-        )
-    } else {
-        (elem.x, elem.y)
-    };
-
-    let text_element = SvgElement {
-        x: row_x,
-        y: row_y,
-        variant: Some(SvgVariant::DirectiveLine),
-        kind: SvgKind::TextWithTspans {
-            font_size: 12.0,
-            anchor: TextAnchor::Start,
-            baseline: DominantBaseline::Middle,
-            spans: spans_to_tspans(spans),
-        },
-    };
-
-    let segno_element = segno_icon_offset.map(|offset| SvgElement {
-        x: row_x + offset,
-        y: row_y - SEGNO_GLYPH_SIZE / 2.0,
-        variant: None,
-        kind: SvgKind::SegnoGlyph {
-            size: SEGNO_GLYPH_SIZE,
-        },
-    });
-
-    if let Some(label_str) = label {
-        let bg_width = label_str.len() as f32 * 8.0 + 6.0;
-        let bg_height = 18.0;
-        let mut children = vec![
-            SvgElement {
-                x: row_x - 3.0,
-                y: row_y - bg_height / 2.0,
-                variant: None,
-                kind: SvgKind::TransparentRect {
-                    width: bg_width,
-                    height: bg_height,
-                    role: TransparentRectRole::SectionLabelBackground,
-                },
-            },
-            text_element,
-        ];
-        children.extend(segno_element);
-        vec![SvgElement {
-            x: elem.x,
-            y: elem.y,
-            variant: None,
-            kind: SvgKind::Group {
-                tag: Some(Tag::SectionLabel {
-                    label: label_str.clone(),
-                }),
-                children,
-            },
-        }]
-    } else {
-        std::iter::once(text_element).chain(segno_element).collect()
     }
 }
 

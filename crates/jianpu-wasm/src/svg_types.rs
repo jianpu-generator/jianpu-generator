@@ -29,6 +29,7 @@ pub struct SvgElementOut {
 pub enum TransparentRectRoleOut {
     MeasureClickTarget,
     SectionLabelBackground,
+    SectionLabelClickTarget,
 }
 
 #[derive(Debug, Clone, Tsify, Serialize)]
@@ -232,6 +233,9 @@ fn transparent_rect_role_to_out(role: &TransparentRectRole) -> TransparentRectRo
         TransparentRectRole::MeasureClickTarget => TransparentRectRoleOut::MeasureClickTarget,
         TransparentRectRole::SectionLabelBackground => {
             TransparentRectRoleOut::SectionLabelBackground
+        }
+        TransparentRectRole::SectionLabelClickTarget => {
+            TransparentRectRoleOut::SectionLabelClickTarget
         }
     }
 }

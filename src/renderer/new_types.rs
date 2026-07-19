@@ -41,6 +41,18 @@ impl SvgVariant {
 pub enum TransparentRectRole {
     MeasureClickTarget,
     SectionLabelBackground,
+    /// Invisible rect spanning the section label's whole directive line (bar
+    /// number through the trailing key/bpm/time-signature/navigation-marker
+    /// text), drawn underneath `SectionLabelBackground` inside the same
+    /// group. Without it, the group's actual clickable area is only the sum
+    /// of its children's painted pixels — since Task 2 of
+    /// `PLAN-section-label-engraving-quality.md` split those children into
+    /// independently-positioned elements with gaps between them, a line
+    /// with no trailing spans (e.g. a bare `label="B"` directive) leaves an
+    /// unpainted gap between the bar number and the label box that a click
+    /// falls through, even though the group still shows `cursor: pointer`
+    /// there.
+    SectionLabelClickTarget,
 }
 
 impl TransparentRectRole {
@@ -48,6 +60,7 @@ impl TransparentRectRole {
         match self {
             Self::MeasureClickTarget => "measure-click-target-rect",
             Self::SectionLabelBackground => "section-label-bg",
+            Self::SectionLabelClickTarget => "section-label-click-target-rect",
         }
     }
 }

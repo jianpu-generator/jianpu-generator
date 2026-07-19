@@ -21,6 +21,7 @@ mod document_render;
 pub mod error;
 pub mod error_reporter;
 pub mod filters;
+mod font_metrics;
 mod gm_percussion;
 pub mod grid_layout;
 pub mod grouper;

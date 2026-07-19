@@ -397,7 +397,7 @@ dependencies = [
  "memmap2",
  "slotmap",
  "tinyvec",
- "ttf-parser",
+ "ttf-parser 0.24.1",
 ]
 
 [[package]]
@@ -550,6 +550,7 @@ dependencies = [
  "serde",
  "serde_json",
  "svg2pdf",
+ "ttf-parser 0.25.1",
  "zip",
 ]
 
@@ -906,7 +907,7 @@ dependencies = [
  "core_maths",
  "log",
  "smallvec",
- "ttf-parser",
+ "ttf-parser 0.24.1",
  "unicode-bidi-mirroring",
  "unicode-ccc",
  "unicode-properties",
@@ -1088,7 +1089,7 @@ dependencies = [
  "siphasher",
  "subsetter",
  "tiny-skia",
- "ttf-parser",
+ "ttf-parser 0.24.1",
  "usvg",
 ]
 
@@ -1226,6 +1227,12 @@ checksum = "5be21190ff5d38e8b4a2d3b6a3ae57f612cc39c96e83cedeaf7abc338a8bac4a"
 dependencies = [
  "core_maths",
 ]
+
+[[package]]
+name = "ttf-parser"
+version = "0.25.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
 
 [[package]]
 name = "unicode-bidi"
