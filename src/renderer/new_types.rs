@@ -78,6 +78,13 @@ pub enum Tag {
     SectionLabel {
         label: String,
     },
+    /// Identifies the sounding note/rest a `NoteHighlightRect` sits behind,
+    /// matching `crate::midi::timing::NoteTiming`'s `(source_part_index,
+    /// note_id)` key so playback can look up which group(s) to highlight.
+    Note {
+        source_part_index: usize,
+        note_id: usize,
+    },
 }
 
 #[derive(Debug)]
@@ -114,6 +121,14 @@ pub enum SvgKind {
     },
     /// Red semi-transparent overlay for erroneous measures (15% opacity).
     ErrorRect {
+        width: f32,
+        height: f32,
+    },
+    /// Background rect behind a note/rest glyph, rendered `fill="transparent"`
+    /// by default; the frontend toggles its fill at playback time to
+    /// highlight whichever note/rest is currently sounding for its part. See
+    /// `Tag::Note` for the group it renders inside.
+    NoteHighlightRect {
         width: f32,
         height: f32,
     },

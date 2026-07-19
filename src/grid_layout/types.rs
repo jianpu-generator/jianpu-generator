@@ -9,6 +9,7 @@ pub struct GridPage {
     pub measure_highlights: Vec<MeasureHighlight>,
     pub error_highlights: Vec<MeasureHighlight>,
     pub measure_click_targets: Vec<MeasureClickTarget>,
+    pub note_highlight_targets: Vec<NoteHighlightTarget>,
 }
 
 #[derive(Debug, Clone)]
@@ -266,4 +267,19 @@ pub struct MeasureHighlight {
     pub row_end: usize,
     pub column_start: f32,
     pub column_end: f32,
+}
+
+/// The screen extent of one sounding note/rest (or one contiguous piece of
+/// one, when a tie splits it across measures/systems), keyed by
+/// `(source_part_index, note_id)` — the same identity used by
+/// [`crate::midi::timing::NoteTiming`], so playback can look up which grid
+/// position(s) to highlight for a given part's currently-sounding note.
+#[derive(Debug, Clone)]
+pub struct NoteHighlightTarget {
+    pub row_start: usize,
+    pub row_end: usize,
+    pub column_start: f32,
+    pub column_end: f32,
+    pub source_part_index: usize,
+    pub note_id: usize,
 }

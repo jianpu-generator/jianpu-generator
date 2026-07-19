@@ -160,6 +160,20 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           style={{ cursor: 'pointer' }}
         />
       )
+    case 'noteHighlightRect':
+      return (
+        <rect
+          key={key}
+          data-variant="note-highlight-rect"
+          x={el.x}
+          y={el.y}
+          width={kind.width}
+          height={kind.height}
+          fill="transparent"
+          rx={2}
+          style={{ pointerEvents: 'none' }}
+        />
+      )
     case 'group': {
       const measureIndex =
         kind.tag?.type === 'measure' ? kind.tag.index : undefined
@@ -167,6 +181,9 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
         kind.tag?.type === 'measure' ? kind.tag.end : undefined
       const sectionLabel =
         kind.tag?.type === 'sectionLabel' ? kind.tag.label : undefined
+      const notePartIndex =
+        kind.tag?.type === 'note' ? kind.tag.source_part_index : undefined
+      const noteId = kind.tag?.type === 'note' ? kind.tag.note_id : undefined
       return (
         <g
           key={key}
@@ -175,11 +192,15 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
               ? 'measure'
               : sectionLabel !== undefined
                 ? 'section-label'
-                : undefined
+                : notePartIndex !== undefined
+                  ? 'note'
+                  : undefined
           }
           data-measure-index={measureIndex}
           data-measure-index-end={measureIndexEnd}
           data-section-label={sectionLabel}
+          data-part-index={notePartIndex}
+          data-note-id={noteId}
           style={
             measureIndex !== undefined || sectionLabel !== undefined
               ? { cursor: 'pointer' }

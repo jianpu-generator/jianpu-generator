@@ -71,6 +71,15 @@ pub enum AbsoluteContent {
         measure_index: usize,
         measure_index_end: usize,
     },
+    /// Background rect behind one part's sounding note/rest, toggled at
+    /// playback time by the frontend rather than filled here (see
+    /// `renderer::new_types::SvgKind::NoteHighlightRect`).
+    NoteHighlightTarget {
+        width: f32,
+        height: f32,
+        source_part_index: usize,
+        note_id: usize,
+    },
     DirectiveLine {
         label: Option<String>,
         spans: Vec<TextSpan>,

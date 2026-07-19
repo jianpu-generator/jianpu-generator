@@ -57,6 +57,14 @@ const listMeasureColumnBoundaries =
     ? jianpuWasm.list_measure_column_boundaries
     : null
 
+const listNoteTimings =
+  'list_note_timings' in jianpuWasm ? jianpuWasm.list_note_timings : null
+
+const listNoteTimingsForRange =
+  'list_note_timings_for_range' in jianpuWasm
+    ? jianpuWasm.list_note_timings_for_range
+    : null
+
 const renderWithHighlightRange =
   'render_with_highlight_range' in jianpuWasm
     ? jianpuWasm.render_with_highlight_range
@@ -214,6 +222,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       listMeasureTimes,
       writtenMeasureIndices,
       listMeasureColumnBoundaries,
+      listNoteTimings,
       loadedSoundfont,
     )
     return
@@ -226,6 +235,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       listMeasureTimesForRange,
       writtenMeasureIndicesForRange,
       listMeasureColumnBoundaries,
+      listNoteTimingsForRange,
       loadedSoundfont,
     )
     return

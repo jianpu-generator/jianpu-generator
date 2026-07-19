@@ -10,13 +10,15 @@ mod event_processing;
 mod midi_notes;
 mod navigation;
 mod timing;
+mod timing_note_events;
+mod timing_range;
 use event_processing::{
     flush_pending_ties, flush_pending_ties_at_tick, process_chord_events, process_measure_notes,
     process_percussion_events,
 };
 pub use navigation::{
     earliest_playback_position, expand_for_measure, expand_for_measure_range, expand_navigation,
-    expand_navigation_with_origins,
+    expand_navigation_with_note_positions, expand_navigation_with_origins, ExpandedMeasureOrigin,
 };
 pub(crate) const TPQ: u16 = 480; // ticks per quarter note
 const VELOCITY: u8 = 80;
@@ -221,7 +223,8 @@ pub fn write_midi_for_measure_range(
 
 pub use timing::{
     build_measure_range_score, build_single_measure_score, measure_start_times_seconds,
-    measure_start_times_seconds_for_range,
+    measure_start_times_seconds_for_range, note_timings_seconds, note_timings_seconds_for_range,
+    NoteTiming,
 };
 
 pub(crate) fn default_active_key() -> KeyChange {

@@ -1,4 +1,4 @@
-import type { SvgDocumentOut } from 'jianpu-wasm'
+import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import type { RefObject } from 'react'
 import { useState } from 'react'
 import type { SharePayload } from '../shareUrl'
@@ -75,11 +75,8 @@ interface AppWorkspaceProps {
   audioGenerating: boolean
   wavUrl: string | null
   wavFilename: string
-  measureTimes: number[]
-  writtenMeasureIndices: number[]
-  columnBoundaries: number[][]
-  measureAudioTimes: number[]
-  measureAudioWrittenIndices: number[]
+  noteTimings: NoteTimingOut[]
+  measureAudioNoteTimings: NoteTimingOut[]
   measureAudioElement: HTMLAudioElement | null
   noPartsSelected: boolean
   disabledParts: ReadonlySet<string>
@@ -132,11 +129,8 @@ export function AppWorkspace({
   audioGenerating,
   wavUrl,
   wavFilename,
-  measureTimes,
-  writtenMeasureIndices,
-  columnBoundaries,
-  measureAudioTimes,
-  measureAudioWrittenIndices,
+  noteTimings,
+  measureAudioNoteTimings,
   measureAudioElement,
   noPartsSelected,
   disabledParts,
@@ -240,13 +234,9 @@ export function AppWorkspace({
           audioGenerating={audioGenerating}
           wavUrl={wavUrl}
           wavFilename={wavFilename}
-          measureTimes={measureTimes}
-          writtenMeasureIndices={writtenMeasureIndices}
-          columnBoundaries={columnBoundaries}
-          measureAudioTimes={measureAudioTimes}
-          measureAudioWrittenIndices={measureAudioWrittenIndices}
+          noteTimings={noteTimings}
+          measureAudioNoteTimings={measureAudioNoteTimings}
           measureAudioElement={measureAudioElement}
-          selectedMeasureRange={selectedMeasureRange}
           emptyMessage={
             noPartsSelected ? 'No parts selected.' : 'No preview yet.'
           }

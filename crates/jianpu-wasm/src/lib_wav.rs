@@ -4,11 +4,11 @@ use crate::responses::{
     generate_instrument_preview_wav_response, generate_percussion_preview_wav_response,
     generate_split_wavs_response, generate_wav_for_measure_range_response, generate_wav_response,
     list_measure_column_boundaries_response, list_measure_times_for_range_response,
-    list_measure_times_response,
+    list_measure_times_response, list_note_timings_for_range_response, list_note_timings_response,
 };
 use crate::types::{
     GenerateSplitWavsResponse, GenerateWavResponse, ListMeasureColumnBoundariesResponse,
-    ListMeasureTimesResponse,
+    ListMeasureTimesResponse, NoteTimingsResponse,
 };
 
 /// Parse `.jianpu` source and synthesize WAV audio bytes.
@@ -129,6 +129,51 @@ pub fn list_measure_column_boundaries(
     enabled_tracks: Option<Vec<String>>,
 ) -> ListMeasureColumnBoundariesResponse {
     list_measure_column_boundaries_response(source, enabled_tracks.as_deref())
+}
+
+/// Return the elapsed-seconds start/end of every sounding note/rest, keyed
+/// by `(source_part_index, note_id)`.
+///
+/// Available only when the `wav` feature is enabled at build time.
+/// Used to drive the SVG preview's per-part, per-note playback highlight:
+/// each returned timing pairs with a `data-tag="note"` group in the rendered
+/// SVG via its `data-part-index`/`data-note-id` attributes. Replaces the old
+/// measure-level playhead built from [`list_measure_times`]. Returns:
+/// - `{ "status": "ok", "timings": [{ source_part_index, note_id, start_s, end_s }, ...] }`
+/// - `{ "status": "err", "diagnostics": [...] }`
+#[allow(clippy::needless_pass_by_value)]
+#[wasm_bindgen]
+pub fn list_note_timings(source: &str, enabled_tracks: Option<Vec<String>>) -> NoteTimingsResponse {
+    list_note_timings_response(source, enabled_tracks.as_deref())
+}
+
+/// Return the elapsed-seconds start/end of every sounding note/rest within a
+/// consecutive measure range, relative to the start of that range.
+///
+/// Available only when the `wav` feature is enabled at build time.
+/// Used to drive the SVG preview's per-note playback highlight when playing
+/// via [`generate_wav_for_measure_range`] instead of the whole score (e.g.
+/// "play from this measure"): unlike [`list_note_timings`], `start_s`/`end_s`
+/// are relative to the start of that clip, not the start of the whole piece.
+/// `note_id`s still agree with the full-score render's `data-note-id`.
+/// Returns the same envelope as [`list_note_timings`].
+/// See [`generate_wav_for_measure_range`] for `extend_to_last_occurrence`.
+#[allow(clippy::needless_pass_by_value)]
+#[wasm_bindgen]
+pub fn list_note_timings_for_range(
+    source: &str,
+    start_index: usize,
+    end_index: usize,
+    extend_to_last_occurrence: bool,
+    enabled_tracks: Option<Vec<String>>,
+) -> NoteTimingsResponse {
+    list_note_timings_for_range_response(
+        source,
+        start_index,
+        end_index,
+        extend_to_last_occurrence,
+        enabled_tracks.as_deref(),
+    )
 }
 
 /// Synthesize a short WAV preview note for a General MIDI program number.

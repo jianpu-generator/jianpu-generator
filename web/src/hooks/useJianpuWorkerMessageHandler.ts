@@ -1,4 +1,4 @@
-import type { SvgDocumentOut } from 'jianpu-wasm'
+import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import type { RefObject } from 'react'
 import type {
   Diagnostic,
@@ -54,12 +54,14 @@ export interface WorkerMessageHandlerDeps {
   setMeasureTimes: (value: number[]) => void
   setWrittenMeasureIndices: (value: number[]) => void
   setColumnBoundaries: (value: number[][]) => void
+  setNoteTimings: (value: NoteTimingOut[]) => void
   latestMeasureAudioIdRef: RefObject<number>
   setMeasureAudioGenerating: (value: boolean) => void
   setNextMeasureWavUrl: (
     value: string | null,
     measureTimes: number[],
     writtenMeasureIndices: number[],
+    noteTimings: NoteTimingOut[],
   ) => void
   latestHighlightRenderIdRef: RefObject<number>
   setHighlightedDocuments: (value: SvgDocumentOut[]) => void
@@ -208,6 +210,7 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       deps.setMeasureTimes(msg.measureTimes)
       deps.setWrittenMeasureIndices(msg.writtenMeasureIndices)
       deps.setColumnBoundaries(msg.columnBoundaries)
+      deps.setNoteTimings(msg.noteTimings)
       return
     }
 
@@ -224,6 +227,7 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
         URL.createObjectURL(new Blob([msg.wav], { type: 'audio/wav' })),
         msg.measureTimes,
         msg.writtenMeasureIndices,
+        msg.noteTimings,
       )
       deps.setColumnBoundaries(msg.columnBoundaries)
       return

@@ -1,6 +1,8 @@
 use jianpu_generator::measure_column_boundaries_from_source;
 use jianpu_generator::measure_start_times_for_range_from_source;
 use jianpu_generator::measure_start_times_from_source;
+use jianpu_generator::note_timings_for_range_from_source;
+use jianpu_generator::note_timings_from_source;
 use jianpu_generator::wav;
 use jianpu_generator::write_split_wavs_from_source;
 use jianpu_generator::write_wav_from_source_filtered;
@@ -10,7 +12,7 @@ use jianpu_generator::{write_wav_for_measure_range_from_source, MeasureRangeSele
 use super::diagnostic_from_error;
 use crate::types::{
     GenerateSplitWavsResponse, GenerateWavResponse, ListMeasureColumnBoundariesResponse,
-    ListMeasureTimesResponse,
+    ListMeasureTimesResponse, NoteTimingOut, NoteTimingsResponse,
 };
 
 #[allow(clippy::needless_pass_by_value)]
@@ -83,6 +85,60 @@ pub(crate) fn list_measure_times_for_range_response(
     ) {
         Ok(times) => ListMeasureTimesResponse::Ok { times },
         Err(e) => ListMeasureTimesResponse::Err {
+            diagnostics: vec![diagnostic_from_error(source, &e)],
+        },
+    }
+}
+
+pub(crate) fn list_note_timings_response(
+    source: &str,
+    enabled_tracks: Option<&[String]>,
+) -> NoteTimingsResponse {
+    match note_timings_from_source(source, "input.jianpu", enabled_tracks, &[]) {
+        Ok(timings) => NoteTimingsResponse::Ok {
+            timings: timings
+                .into_iter()
+                .map(|t| NoteTimingOut {
+                    source_part_index: t.source_part_index,
+                    note_id: t.note_id,
+                    start_s: t.start_s,
+                    end_s: t.end_s,
+                })
+                .collect(),
+        },
+        Err(e) => NoteTimingsResponse::Err {
+            diagnostics: vec![diagnostic_from_error(source, &e)],
+        },
+    }
+}
+
+pub(crate) fn list_note_timings_for_range_response(
+    source: &str,
+    start_index: usize,
+    end_index: usize,
+    extend_to_last_occurrence: bool,
+    enabled_tracks: Option<&[String]>,
+) -> NoteTimingsResponse {
+    match note_timings_for_range_from_source(
+        source,
+        "input.jianpu",
+        start_index..=end_index,
+        extend_to_last_occurrence,
+        enabled_tracks,
+        &[],
+    ) {
+        Ok(timings) => NoteTimingsResponse::Ok {
+            timings: timings
+                .into_iter()
+                .map(|t| NoteTimingOut {
+                    source_part_index: t.source_part_index,
+                    note_id: t.note_id,
+                    start_s: t.start_s,
+                    end_s: t.end_s,
+                })
+                .collect(),
+        },
+        Err(e) => NoteTimingsResponse::Err {
             diagnostics: vec![diagnostic_from_error(source, &e)],
         },
     }

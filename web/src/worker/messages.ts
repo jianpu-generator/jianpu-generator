@@ -1,4 +1,4 @@
-import type { SvgDocumentOut } from 'jianpu-wasm'
+import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -119,6 +119,7 @@ export type WorkerResponse =
       measureTimes: number[]
       writtenMeasureIndices: number[]
       columnBoundaries: number[][]
+      noteTimings: NoteTimingOut[]
     }
   | { type: 'audioErr'; id: number }
   | {
@@ -156,6 +157,7 @@ export type WorkerResponse =
       measureTimes: number[]
       writtenMeasureIndices: number[]
       columnBoundaries: number[][]
+      noteTimings: NoteTimingOut[]
     }
   | { type: 'measureRangeAudioErr'; id: number }
   | { type: 'instrumentPreview'; id: number; wav: ArrayBuffer }

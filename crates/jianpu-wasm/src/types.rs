@@ -14,7 +14,7 @@ pub(crate) use crate::types_export::{GeneratePdfResponse, GenerateSplitPdfsRespo
 #[cfg(feature = "wav")]
 pub(crate) use crate::types_export::{
     GenerateSplitWavsResponse, GenerateWavResponse, ListMeasureColumnBoundariesResponse,
-    ListMeasureTimesResponse,
+    ListMeasureTimesResponse, NoteTimingOut, NoteTimingsResponse,
 };
 
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]

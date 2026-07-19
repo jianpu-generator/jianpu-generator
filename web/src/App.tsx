@@ -110,9 +110,7 @@ export default function App() {
     documents,
     wavUrl,
     wavFilename,
-    measureTimes,
-    writtenMeasureIndices,
-    columnBoundaries,
+    noteTimings,
     audioAvailable,
     pdfAvailable,
     pdfExporting,
@@ -134,8 +132,7 @@ export default function App() {
     selectedMeasureRange,
     measureAudioGenerating,
     measureAudioPlaying,
-    measureAudioTimes,
-    measureAudioWrittenIndices,
+    measureAudioNoteTimings,
     measureAudioElement,
     measureSpans,
     sectionRanges,
@@ -372,11 +369,8 @@ export default function App() {
         audioGenerating={audioGenerating}
         wavUrl={wavUrl}
         wavFilename={wavFilename}
-        measureTimes={measureTimes}
-        writtenMeasureIndices={writtenMeasureIndices}
-        columnBoundaries={columnBoundaries}
-        measureAudioTimes={measureAudioTimes}
-        measureAudioWrittenIndices={measureAudioWrittenIndices}
+        noteTimings={noteTimings}
+        measureAudioNoteTimings={measureAudioNoteTimings}
         measureAudioElement={measureAudioElement}
         noPartsSelected={noPartsSelected}
         disabledParts={disabledParts}

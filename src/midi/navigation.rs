@@ -135,6 +135,38 @@ const NO_OMISSIONS: &[String] = &[];
 pub fn expand_navigation_with_origins(
     score: &Score,
 ) -> Result<(Score, Vec<usize>), IrrecoverableError> {
+    let (expanded, origins) = expand_navigation_with_note_positions(score)?;
+    Ok((
+        expanded,
+        origins
+            .into_iter()
+            .map(|o| o.written_measure_index)
+            .collect(),
+    ))
+}
+
+/// One measure of the expanded (playback-order) score, tracing back to where
+/// it came from in the written score.
+pub struct ExpandedMeasureOrigin {
+    /// Index into the original written `score.measures`.
+    pub written_measure_index: usize,
+    /// `part_written_indices[i]` is the index this expanded measure's
+    /// `parts[i]` had in the written measure's `parts`, before any
+    /// `(-abbrev ...)` omission dropped some entries and shifted the rest —
+    /// so callers keying data by the written `(part_index, note_id)` (e.g.
+    /// `ColumnElement::note_id`) can still look it up after expansion.
+    pub part_written_indices: Vec<usize>,
+}
+
+/// Same as [`expand_navigation_with_origins`], but the origins additionally
+/// carry, per expanded measure, the written index of each surviving part —
+/// needed to key note-level playback timing (see
+/// [`super::timing::note_timings_seconds`]) back to the written
+/// `(source_part_index, note_id)` identity after `(-abbrev ...)` omissions
+/// have shifted part positions.
+pub fn expand_navigation_with_note_positions(
+    score: &Score,
+) -> Result<(Score, Vec<ExpandedMeasureOrigin>), IrrecoverableError> {
     if score.measures.is_empty() {
         return Ok((score.clone(), Vec::new()));
     }
@@ -150,7 +182,15 @@ pub fn expand_navigation_with_origins(
     let markers =
         resolve_marker_indices(score).map_err(|error| into_irrecoverable_error(score, error))?;
     let Some(markers) = markers else {
-        let origins = (0..score.measures.len()).collect();
+        let origins = score
+            .measures
+            .iter()
+            .enumerate()
+            .map(|(i, measure)| ExpandedMeasureOrigin {
+                written_measure_index: i,
+                part_written_indices: (0..measure.parts.len()).collect(),
+            })
+            .collect();
         return Ok((score.clone(), origins));
     };
 
@@ -173,22 +213,36 @@ pub fn expand_navigation_with_origins(
 
 /// Clones `score.measures` at each `(index, omit_parts)` pair (playback
 /// order) into a new `Score`, dropping any part whose abbreviation appears
-/// in that occurrence's `omit_parts`, alongside the plain index list as the
-/// origins mapping.
-fn build_expanded(score: &Score, idx: &[(usize, &[String])]) -> (Score, Vec<usize>) {
+/// in that occurrence's `omit_parts`, alongside origin info for each
+/// resulting measure (its written index, and the written index of each
+/// surviving part).
+fn build_expanded(
+    score: &Score,
+    idx: &[(usize, &[String])],
+) -> (Score, Vec<ExpandedMeasureOrigin>) {
+    let mut origins = Vec::with_capacity(idx.len());
     let measures = idx
         .iter()
         .filter_map(|&(i, omit_parts)| {
             let mut measure = score.measures.get(i).cloned()?;
-            if !omit_parts.is_empty() {
-                measure
-                    .parts
-                    .retain(|part| !part.name().is_some_and(|name| omit_parts.contains(name)));
-            }
+            let mut part_written_indices = Vec::with_capacity(measure.parts.len());
+            let mut written_idx = 0usize;
+            measure.parts.retain(|part| {
+                let omitted = !omit_parts.is_empty()
+                    && part.name().is_some_and(|name| omit_parts.contains(name));
+                if !omitted {
+                    part_written_indices.push(written_idx);
+                }
+                written_idx += 1;
+                !omitted
+            });
+            origins.push(ExpandedMeasureOrigin {
+                written_measure_index: i,
+                part_written_indices,
+            });
             Some(measure)
         })
         .collect();
-    let origins = idx.iter().map(|&(i, _)| i).collect();
 
     (
         Score {

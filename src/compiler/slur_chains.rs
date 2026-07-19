@@ -13,6 +13,12 @@ pub(super) struct PartCrossState {
     pub(super) prev_tie: bool,
     pub(super) prev_tie_column: Option<u32>,
     pub(super) prev_tie_measure: Option<usize>,
+    /// `note_id` of the note a pending tie continues from, so the
+    /// continuation reuses it instead of allocating a fresh id.
+    pub(super) prev_tie_note_id: Option<usize>,
+    /// Next `note_id` to assign for this part; a running counter across the
+    /// whole score, never reset per measure (see `ColumnElement::note_id`).
+    pub(super) next_note_id: usize,
 }
 
 impl PartCrossState {
@@ -22,6 +28,8 @@ impl PartCrossState {
             prev_tie: false,
             prev_tie_column: None,
             prev_tie_measure: None,
+            prev_tie_note_id: None,
+            next_note_id: 0,
         }
     }
 

@@ -6,6 +6,8 @@ mod beam;
 mod part_slice;
 use part_slice::{compile_part_slice, PartSliceInput};
 
+mod part_slice_unit;
+
 mod timed_unit;
 
 mod slur_chains;
@@ -21,6 +23,8 @@ struct PartSliceResult {
     final_tie: bool,
     final_tie_column: Option<u32>,
     final_tie_measure: Option<usize>,
+    final_tie_note_id: Option<usize>,
+    final_next_note_id: usize,
 }
 
 pub fn compile(score: &Score) -> CompileResult {
@@ -45,7 +49,6 @@ pub fn compile(score: &Score) -> CompileResult {
                 measure_index,
                 &mut cross_states,
                 &mut slur_spans,
-                measure.hide_resting_parts,
             )
         })
         .collect();
@@ -115,10 +118,16 @@ fn merge_rest_run(run: &[MeasureBlock]) -> MeasureBlock {
                         ColumnElement {
                             column: 0,
                             content: ElementContent::MultiMeasureRest { count },
+                            // Reuse the first underlying measure's rest note_id so the
+                            // whole merged run still highlights as one note/rest during
+                            // playback (see `midi::timing::note_timings_seconds`, which
+                            // reads this same field back to build a matching NoteTiming).
+                            note_id: row.first_note_id(),
                         },
                         ColumnElement {
                             column: MULTI_MEASURE_REST_WIDTH,
                             content: ElementContent::BarLine,
+                            note_id: None,
                         },
                     ],
                     source_part_index: row.source_part_index,
@@ -211,6 +220,33 @@ fn merge_rest_runs(
     (merged_blocks, measure_to_block)
 }
 
+/// Indices into `measure.parts` that are actually compiled/sounded for this
+/// measure — i.e. `measure.parts` minus whichever all-rest parts
+/// `hide_resting_parts` hides when at least one other part has real content.
+/// Shared with `midi::timing::note_timings_seconds`, which must walk exactly
+/// these same parts in the same order for its `note_id` counters to line up
+/// with `ColumnElement::note_id` (see `compile_measure`, which uses this too).
+pub(crate) fn visible_part_indices(measure: &MultiPartMeasure) -> Vec<usize> {
+    let visible_part_count =
+        if measure.hide_resting_parts && measure.parts.iter().any(|p| !is_rest_filled(p)) {
+            measure.parts.iter().filter(|p| !is_rest_filled(p)).count()
+        } else {
+            measure.parts.len()
+        };
+    measure
+        .parts
+        .iter()
+        .enumerate()
+        .filter_map(|(part_idx, part_row)| {
+            if visible_part_count < measure.parts.len() && is_rest_filled(part_row) {
+                None
+            } else {
+                Some(part_idx)
+            }
+        })
+        .collect()
+}
+
 fn is_rest_filled(part_row: &PartRow) -> bool {
     !part_row.slice().notes.events.is_empty()
         && part_row
@@ -226,6 +262,8 @@ fn update_cross_state(cs: &mut PartCrossState, result: &mut PartSliceResult) {
     cs.prev_tie = result.final_tie;
     cs.prev_tie_column = result.final_tie_column;
     cs.prev_tie_measure = result.final_tie_measure;
+    cs.prev_tie_note_id = result.final_tie_note_id;
+    cs.next_note_id = result.final_next_note_id;
 }
 
 fn compile_measure(
@@ -234,40 +272,36 @@ fn compile_measure(
     measure_index: usize,
     cross_states: &mut Vec<PartCrossState>,
     slur_spans: &mut Vec<SlurSpan>,
-    hide_resting_parts: bool,
 ) -> MeasureBlock {
     while cross_states.len() < measure.parts.len() {
         cross_states.push(PartCrossState::new());
     }
 
-    let visible_part_count =
-        if hide_resting_parts && measure.parts.iter().any(|p| !is_rest_filled(p)) {
-            measure.parts.iter().filter(|p| !is_rest_filled(p)).count()
-        } else {
-            measure.parts.len()
-        };
+    let visible = visible_part_indices(measure);
 
     let decorations = collect_decorations(measure, bar_number);
     let mut rows: Vec<MeasureRow> = Vec::new();
     for (part_idx, part_row) in measure.parts.iter().enumerate() {
-        if visible_part_count < measure.parts.len() && is_rest_filled(part_row) {
+        if !visible.contains(&part_idx) {
             continue;
         }
         let Some(cs) = cross_states.get(part_idx) else {
             continue;
         };
         // Drop any incoming cross-measure tie/slur arc when this slice has errors (#28).
-        let (init_pending_opens, init_tie, init_tie_column, init_tie_measure) =
+        let (init_pending_opens, init_tie, init_tie_column, init_tie_measure, init_tie_note_id) =
             if part_row.slice().has_error {
-                (vec![], false, None, None)
+                (vec![], false, None, None, None)
             } else {
                 (
                     cs.clone_pending_opens(),
                     cs.prev_tie,
                     cs.prev_tie_column,
                     cs.prev_tie_measure,
+                    cs.prev_tie_note_id,
                 )
             };
+        let init_next_note_id = cs.next_note_id;
 
         let mut slice_result = compile_part_slice(
             part_row.slice(),
@@ -276,6 +310,8 @@ fn compile_measure(
                 prev_tie: init_tie,
                 prev_tie_column: init_tie_column,
                 prev_tie_measure: init_tie_measure,
+                prev_tie_note_id: init_tie_note_id,
+                next_note_id: init_next_note_id,
                 measure_index,
                 part_index: part_idx,
             },

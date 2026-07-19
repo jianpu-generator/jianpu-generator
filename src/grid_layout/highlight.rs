@@ -3,7 +3,10 @@ use crate::grid_layout::layout::{
     block_column_width, is_chord_only_row, is_lyric_row, make_header_rows,
     system_has_any_decoration, MUSIC_START_COL,
 };
-use crate::grid_layout::types::{Header, MeasureClickTarget, MeasureHighlight};
+use crate::grid_layout::note_highlight::compute_all_note_highlight_targets;
+use crate::grid_layout::types::{
+    Header, MeasureClickTarget, MeasureHighlight, NoteHighlightTarget,
+};
 
 fn has_lyrics(row: &crate::compiler::types::MeasureRow) -> bool {
     row.elements.iter().any(|e| {
@@ -280,6 +283,7 @@ pub(crate) struct HighlightAndClickInfos {
     pub(crate) highlight_infos: Vec<(usize, MeasureHighlight)>,
     pub(crate) error_highlight_infos: Vec<(usize, MeasureHighlight)>,
     pub(crate) all_click_target_infos: Vec<(usize, MeasureClickTarget)>,
+    pub(crate) all_note_highlight_target_infos: Vec<(usize, NoteHighlightTarget)>,
 }
 
 pub(crate) fn compute_highlight_and_click_infos(
@@ -307,10 +311,13 @@ pub(crate) fn compute_highlight_and_click_infos(
         compute_error_highlight_infos(blocks, page_systems, header, base, hide_system_dividers);
     let all_click_target_infos =
         compute_all_measure_click_targets(page_systems, header, base, hide_system_dividers);
+    let all_note_highlight_target_infos =
+        compute_all_note_highlight_targets(page_systems, header, base, hide_system_dividers);
 
     HighlightAndClickInfos {
         highlight_infos,
         error_highlight_infos,
         all_click_target_infos,
+        all_note_highlight_target_infos,
     }
 }

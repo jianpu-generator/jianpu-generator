@@ -1,4 +1,4 @@
-import type { SvgDocumentOut } from 'jianpu-wasm'
+import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -22,6 +22,8 @@ export interface JianpuWorkerState {
   writtenMeasureIndices: number[]
   /** Cumulative pixel-weight column boundaries of every rendered measure, entry `i` pairs with `data-measure-index="i"`. Used to map a linear time position within a measure onto its actual (density-weighted) pixel position. */
   columnBoundaries: number[][]
+  /** Elapsed-seconds start/end of every sounding note/rest for `wavUrl`'s audio, keyed by `(source_part_index, note_id)`. Drives the per-part, per-note playback highlight. */
+  noteTimings: NoteTimingOut[]
   audioAvailable: boolean
   pdfAvailable: boolean
   pdfExporting: boolean
@@ -47,6 +49,8 @@ export interface JianpuWorkerState {
   measureAudioTimes: number[]
   /** Written measure index to highlight at each playback position of `measureAudioTimes`, following D.C. al Coda navigation; entry `i` pairs with `measureAudioTimes[i]`. */
   measureAudioWrittenIndices: number[]
+  /** Elapsed-seconds start/end of every sounding note/rest for the selected range's audio, keyed by `(source_part_index, note_id)`. */
+  measureAudioNoteTimings: NoteTimingOut[]
   /** The `<audio>` element currently playing the selected measure range, if any; a new element each time playback starts. */
   measureAudioElement: HTMLAudioElement | null
   notifySelection: (startLine: number, endLine: number) => void

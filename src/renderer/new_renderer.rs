@@ -87,6 +87,18 @@ fn render_element(
         AbsoluteContent::BarLine { height } => render_bar_line(elem, height),
         AbsoluteContent::HorizontalLine { width } => render_horizontal_line(elem, width),
         AbsoluteContent::Lyric(s) => render_lyric(elem, s, base_font_size, cjk_font_size),
+        content => render_overlay_element(elem, content, directive_row_offset),
+    }
+}
+
+/// The text/overlay half of [`render_element`]'s dispatch, split out to stay
+/// under the file's line-count cap per function.
+fn render_overlay_element(
+    elem: &AbsoluteElement,
+    content: &AbsoluteContent,
+    directive_row_offset: Offset,
+) -> Vec<SvgElement> {
+    match content {
         AbsoluteContent::Text {
             content,
             font_size,
@@ -119,6 +131,12 @@ fn render_element(
             measure_index,
             measure_index_end,
         } => render_measure_click_target(elem, *width, *height, *measure_index, *measure_index_end),
+        AbsoluteContent::NoteHighlightTarget {
+            width,
+            height,
+            source_part_index,
+            note_id,
+        } => render_note_highlight_target(elem, *width, *height, *source_part_index, *note_id),
         AbsoluteContent::DirectiveLine {
             label,
             spans,
@@ -132,6 +150,7 @@ fn render_element(
             *apply_row_offset,
             directive_row_offset,
         ),
+        _ => Vec::new(),
     }
 }
 
@@ -278,6 +297,32 @@ fn render_directive_line(
     } else {
         std::iter::once(text_element).chain(segno_element).collect()
     }
+}
+
+fn render_note_highlight_target(
+    elem: &AbsoluteElement,
+    width: f32,
+    height: f32,
+    source_part_index: usize,
+    note_id: usize,
+) -> Vec<SvgElement> {
+    vec![SvgElement {
+        x: elem.x,
+        y: elem.y,
+        variant: None,
+        kind: SvgKind::Group {
+            children: vec![SvgElement {
+                x: elem.x,
+                y: elem.y,
+                variant: None,
+                kind: SvgKind::NoteHighlightRect { width, height },
+            }],
+            tag: Some(Tag::Note {
+                source_part_index,
+                note_id,
+            }),
+        },
+    }]
 }
 
 fn render_measure_click_target(

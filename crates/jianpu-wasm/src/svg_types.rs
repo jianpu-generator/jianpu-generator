@@ -67,6 +67,10 @@ pub enum SvgKindOut {
         width: f32,
         height: f32,
     },
+    NoteHighlightRect {
+        width: f32,
+        height: f32,
+    },
     TransparentRect {
         width: f32,
         height: f32,
@@ -101,8 +105,17 @@ pub struct TspanOut {
 #[serde(tag = "type", rename_all = "camelCase")]
 #[tsify(into_wasm_abi)]
 pub enum TagOut {
-    Measure { index: usize, end: usize },
-    SectionLabel { label: String },
+    Measure {
+        index: usize,
+        end: usize,
+    },
+    SectionLabel {
+        label: String,
+    },
+    Note {
+        source_part_index: usize,
+        note_id: usize,
+    },
 }
 
 #[derive(Debug, Clone, Tsify, Serialize)]
@@ -204,6 +217,13 @@ fn tag_to_out(tag: &Tag) -> TagOut {
         Tag::SectionLabel { label } => TagOut::SectionLabel {
             label: label.clone(),
         },
+        Tag::Note {
+            source_part_index,
+            note_id,
+        } => TagOut::Note {
+            source_part_index: *source_part_index,
+            note_id: *note_id,
+        },
     }
 }
 
@@ -263,6 +283,10 @@ fn svg_kind_to_out(kind: &SvgKind) -> SvgKindOut {
             height: *height,
         },
         SvgKind::ErrorRect { width, height } => SvgKindOut::ErrorRect {
+            width: *width,
+            height: *height,
+        },
+        SvgKind::NoteHighlightRect { width, height } => SvgKindOut::NoteHighlightRect {
             width: *width,
             height: *height,
         },

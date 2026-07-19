@@ -1,4 +1,4 @@
-import type { SvgDocumentOut } from 'jianpu-wasm'
+import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import type {
   Diagnostic,
@@ -47,6 +47,7 @@ export function useJianpuWorker(
     [],
   )
   const [columnBoundaries, setColumnBoundaries] = useState<number[][]>([])
+  const [noteTimings, setNoteTimings] = useState<NoteTimingOut[]>([])
   const [audioAvailable, setAudioAvailable] = useState(false)
   const [pdfAvailable, setPdfAvailable] = useState(false)
   const [pdfExporting, setPdfExporting] = useState(false)
@@ -154,6 +155,7 @@ export function useJianpuWorker(
     measureAudioPlaying,
     measureAudioTimes,
     measureAudioWrittenIndices,
+    measureAudioNoteTimings,
     measureAudioElement,
     setNextMeasureWavUrl,
     stopMeasurePlayback,
@@ -219,6 +221,7 @@ export function useJianpuWorker(
     setMeasureTimes,
     setWrittenMeasureIndices,
     setColumnBoundaries,
+    setNoteTimings,
     latestMeasureAudioIdRef,
     setMeasureAudioGenerating,
     setNextMeasureWavUrl,
@@ -353,6 +356,7 @@ export function useJianpuWorker(
     measureTimes,
     writtenMeasureIndices,
     columnBoundaries,
+    noteTimings,
     audioAvailable,
     pdfAvailable,
     pdfExporting,
@@ -376,6 +380,7 @@ export function useJianpuWorker(
     measureAudioPlaying,
     measureAudioTimes,
     measureAudioWrittenIndices,
+    measureAudioNoteTimings,
     measureAudioElement,
     notifySelection,
     playSelectedMeasures,

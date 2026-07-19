@@ -1,7 +1,7 @@
-import type { SvgDocumentOut } from 'jianpu-wasm'
+import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { renderSvgDocument } from './PreviewSvgRenderer'
-import { usePlayhead } from './usePreviewPlayhead'
+import { useNoteHighlight } from './useNoteHighlight'
 
 interface PreviewProps {
   documents: SvgDocumentOut[]
@@ -10,19 +10,12 @@ interface PreviewProps {
   audioGenerating?: boolean
   wavUrl?: string | null
   wavFilename?: string
-  /** Elapsed-seconds offset of each measure boundary for `wavUrl`'s audio, length = measure count + 1. */
-  measureTimes?: number[]
-  /** Written measure index to highlight at each playback position of `measureTimes`, following D.C. al Coda navigation. */
-  writtenMeasureIndices?: number[]
-  /** Cumulative pixel-weight column boundaries of every rendered measure, entry `i` pairs with `data-measure-index="i"`. */
-  columnBoundaries?: number[][]
-  /** Elapsed-seconds offset of each measure boundary within the selected range's audio, relative to the range start. */
-  measureAudioTimes?: number[]
-  /** Written measure index to highlight at each playback position of `measureAudioTimes`, following D.C. al Coda navigation. */
-  measureAudioWrittenIndices?: number[]
+  /** Elapsed-seconds start/end of every sounding note/rest for `wavUrl`'s audio, keyed by `(source_part_index, note_id)`. */
+  noteTimings?: NoteTimingOut[]
+  /** Elapsed-seconds start/end of every sounding note/rest for the selected range's audio, keyed by `(source_part_index, note_id)`. */
+  measureAudioNoteTimings?: NoteTimingOut[]
   /** The `<audio>` element currently playing the selected measure range, if any. */
   measureAudioElement?: HTMLAudioElement | null
-  selectedMeasureRange?: { start: number; end: number } | null
   emptyMessage?: string
   toolbar?: ReactNode
   onMeasureRangeSelect?: (startIndex: number, endIndex: number) => void
@@ -94,13 +87,9 @@ export function Preview({
   audioGenerating = false,
   wavUrl = null,
   wavFilename = 'audio.wav',
-  measureTimes,
-  writtenMeasureIndices,
-  columnBoundaries,
-  measureAudioTimes,
-  measureAudioWrittenIndices,
+  noteTimings,
+  measureAudioNoteTimings,
   measureAudioElement,
-  selectedMeasureRange,
   emptyMessage = 'No preview yet.',
   toolbar,
   onMeasureRangeSelect,
@@ -111,21 +100,11 @@ export function Preview({
     null,
   )
 
-  usePlayhead(
-    previewPagesRef,
-    audioElement,
-    measureTimes,
-    0,
-    writtenMeasureIndices,
-    columnBoundaries,
-  )
-  usePlayhead(
+  useNoteHighlight(previewPagesRef, audioElement, noteTimings)
+  useNoteHighlight(
     previewPagesRef,
     measureAudioElement,
-    measureAudioTimes,
-    selectedMeasureRange?.start ?? 0,
-    measureAudioWrittenIndices,
-    columnBoundaries,
+    measureAudioNoteTimings,
   )
   const dragStateRef = useRef<{
     anchor: MeasureRange

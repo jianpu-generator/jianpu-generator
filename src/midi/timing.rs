@@ -1,20 +1,81 @@
-use crate::ast::grouped::Score;
-use crate::ast::parsed::KeyChange;
+use crate::ast::grouped::{MultiPartMeasure, Score};
 use crate::error::IrrecoverableError;
 
+use super::navigation::expand_navigation_with_note_positions;
 use super::{default_active_key, process_measure, RawEvent, RawKind, TieState, TPQ};
+use crate::compiler::compile;
 
-/// Return the elapsed-seconds offset of each measure boundary in `score`,
-/// accounting for BPM changes. Length is `score.measures.len() + 1`: the
-/// last entry is the total duration of the whole score.
-pub fn measure_start_times_seconds(score: &Score) -> Result<Vec<f64>, IrrecoverableError> {
+use super::timing_note_events::{
+    build_written_note_id_lookup, record_measure_note_timings, MeasureTimingContext,
+    PartTimingCursor,
+};
+pub use super::timing_range::{build_measure_range_score, build_single_measure_score};
+
+/// Identity of one sounding note/rest's elapsed-seconds extent, matching the
+/// `(source_part_index, note_id)` key stamped onto `ColumnElement`s by the
+/// compiler (see `compiler::types::ColumnElement::note_id`) and surfaced in
+/// rendered SVG via `renderer::new_types::Tag::Note`. A tie that spans a
+/// measure boundary is merged into a single `NoteTiming` (its `end_s` is the
+/// tied-to note's own end), mirroring how the MIDI writer merges tied notes
+/// into one NoteOn/NoteOff pair.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NoteTiming {
+    pub source_part_index: usize,
+    pub note_id: usize,
+    pub start_s: f64,
+    pub end_s: f64,
+}
+
+/// Maps each written measure index to the index of the compiled block it
+/// ended up in — consecutive all-rest written measures may be collapsed by
+/// the compiler into a single `MultiMeasureRest` glyph
+/// (`compiler::merge_rest_runs`), so several written measures can share one
+/// block.
+fn written_measure_to_block(written_blocks: &[crate::compiler::MeasureBlock]) -> Vec<usize> {
+    written_blocks
+        .iter()
+        .enumerate()
+        .flat_map(|(block_index, block)| {
+            std::iter::repeat_n(block_index, block.represents_measures)
+        })
+        .collect()
+}
+
+/// The number of `PartTimingCursor`s needed to cover every written part,
+/// keyed by *written* part index (stable across playback occurrences), not
+/// by position within a given occurrence's (possibly omission-shrunk)
+/// `parts` vec — so a tie held open across an expanded measure boundary
+/// stays attached to the right part even if a neighboring occurrence's
+/// `(-abbrev ...)` omissions shifted positions around.
+fn new_part_timing_cursors(score: &Score) -> Vec<PartTimingCursor> {
+    let max_written_parts = score
+        .measures
+        .iter()
+        .map(|m| m.parts.len())
+        .max()
+        .unwrap_or(0);
+    (0..max_written_parts)
+        .map(|_| PartTimingCursor::new())
+        .collect()
+}
+
+/// Measure-start tick boundaries (length `measures.len() + 1`) paired with
+/// the tempo table (`(change_tick, micros_per_beat)`, ascending) accumulated
+/// while walking those measures in order.
+type TickBoundariesAndTempo = (Vec<u32>, Vec<(u32, u32)>);
+
+/// Shared by every function in this module that needs to convert ticks to
+/// seconds.
+fn measure_tick_boundaries_and_tempo(
+    measures: &[MultiPartMeasure],
+) -> Result<TickBoundariesAndTempo, IrrecoverableError> {
     let mut raw: Vec<RawEvent> = Vec::new();
     let mut tie_state = TieState::default();
     let mut active_key = default_active_key();
     let mut current_tick: u32 = 0;
     let mut boundaries = vec![0u32];
 
-    for measure in &score.measures {
+    for measure in measures {
         current_tick = process_measure(
             measure,
             current_tick,
@@ -33,6 +94,193 @@ pub fn measure_start_times_seconds(score: &Score) -> Result<Vec<f64>, Irrecovera
         })
         .collect();
 
+    Ok((boundaries, tempo_changes))
+}
+
+/// Elapsed-seconds start/end of every sounding note, rest, or chord actually
+/// heard when `score` is played back, keyed by `(source_part_index,
+/// note_id)` — the same identity `ColumnElement::note_id` uses.
+///
+/// Playback order follows `# sequence`/D.C.-al-Coda-Fine navigation exactly
+/// like [`super::write_midi`] does (via
+/// [`expand_navigation_with_note_positions`]), so a repeated or reordered
+/// written measure produces one [`NoteTiming`] per occurrence it's actually
+/// played — all sharing the written event's `(source_part_index, note_id)`,
+/// since that identity names *which written note*, not which time it sounds.
+/// `note_id`s themselves are computed once over the *written* score
+/// ([`build_written_note_id_lookup`]), so they agree with `ColumnElement`
+/// regardless of how many times playback repeats them.
+///
+/// Ties across measures are merged into a single `NoteTiming` per occurrence
+/// (matching how the compiler reuses a note's id for its tie continuation,
+/// and how the MIDI writer merges the underlying NoteOn/NoteOff pair) rather
+/// than producing one entry per tied fragment. Likewise, a run of consecutive
+/// all-rest written measures the compiler collapses into one
+/// `MultiMeasureRest` glyph (`compiler::merge_rest_runs`) produces a single
+/// `NoteTiming` spanning the whole run, using the glyph's own `note_id`
+/// (`MeasureRow::first_note_id`), rather than one entry per underlying
+/// measure.
+pub fn note_timings_seconds(score: &Score) -> Result<Vec<NoteTiming>, IrrecoverableError> {
+    let note_id_lookup = build_written_note_id_lookup(score);
+    let written_blocks = compile(score).blocks;
+    let block_lookup = written_measure_to_block(&written_blocks);
+
+    let (expanded, origins) = expand_navigation_with_note_positions(score)?;
+    // Tick boundaries/tempo are built over the expanded (playback-order)
+    // measures, matching `write_midi`.
+    let (measure_start_ticks, tempo_changes) =
+        measure_tick_boundaries_and_tempo(&expanded.measures)?;
+
+    let mut cursors = new_part_timing_cursors(score);
+    // (source_part_index, note_id, start_tick, end_tick)
+    let mut results: Vec<(usize, usize, u32, u32)> = Vec::new();
+
+    for (measure, (tick_window, origin)) in expanded
+        .measures
+        .iter()
+        .zip(measure_start_ticks.windows(2).zip(origins.iter()))
+    {
+        let Some(ctx) = measure_timing_context(
+            tick_window,
+            origin,
+            &block_lookup,
+            &written_blocks,
+            &note_id_lookup,
+        ) else {
+            continue;
+        };
+        record_measure_note_timings(measure, ctx, &mut cursors, &mut results);
+    }
+
+    Ok(results
+        .into_iter()
+        .map(
+            |(source_part_index, note_id, start_tick, end_tick)| NoteTiming {
+                source_part_index,
+                note_id,
+                start_s: ticks_to_seconds(start_tick, &tempo_changes, TPQ),
+                end_s: ticks_to_seconds(end_tick, &tempo_changes, TPQ),
+            },
+        )
+        .collect())
+}
+
+/// Same as [`note_timings_seconds`], but scoped to a measure range and
+/// relative to the start of that range, matching the audio clip returned by
+/// [`super::write_midi_for_measure_range`].
+///
+/// `start_pos`/`end_pos` are *playback positions* — i.e. already resolved
+/// against `# sequence`/D.C.-al-Coda-Fine navigation, exactly like
+/// [`super::expand_for_measure_range`] resolves them for
+/// [`super::write_midi_for_measure_range`]'s caller and
+/// [`measure_start_times_seconds_for_range`]'s caller — not raw written
+/// measure indices. Unlike those two, `score` here must still be the
+/// *original, unexpanded* written score: this function re-derives the
+/// expanded (playback-order) timeline itself via
+/// [`expand_navigation_with_note_positions`] so it can look `note_id`s up
+/// against `build_written_note_id_lookup(score)`/`compile(score).blocks` —
+/// both computed once over the *written* score, so they agree with the
+/// `note_id` `ColumnElement`s carry in the full-score render regardless of
+/// how navigation reorders playback. If `end_pos` falls outside the expanded
+/// timeline (only possible if the caller derived `start_pos`/`end_pos` from a
+/// different score), this returns an empty result rather than panicking.
+pub fn note_timings_seconds_for_range(
+    score: &Score,
+    start_pos: usize,
+    end_pos: usize,
+) -> Result<Vec<NoteTiming>, IrrecoverableError> {
+    if score.measures.is_empty() || start_pos > end_pos {
+        return Ok(Vec::new());
+    }
+
+    let note_id_lookup = build_written_note_id_lookup(score);
+    let written_blocks = compile(score).blocks;
+    let block_lookup = written_measure_to_block(&written_blocks);
+
+    let (expanded, origins) = expand_navigation_with_note_positions(score)?;
+    if end_pos >= expanded.measures.len() {
+        return Ok(Vec::new());
+    }
+    let Some(range_score) = build_measure_range_score(&expanded, start_pos, end_pos) else {
+        return Ok(Vec::new());
+    };
+
+    let (measure_start_ticks, tempo_changes) =
+        measure_tick_boundaries_and_tempo(&range_score.measures)?;
+
+    let mut cursors = new_part_timing_cursors(score);
+    let mut results: Vec<(usize, usize, u32, u32)> = Vec::new();
+
+    for (measure, (tick_window, origin)) in range_score.measures.iter().zip(
+        measure_start_ticks
+            .windows(2)
+            .zip(origins.iter().skip(start_pos)),
+    ) {
+        let Some(ctx) = measure_timing_context(
+            tick_window,
+            origin,
+            &block_lookup,
+            &written_blocks,
+            &note_id_lookup,
+        ) else {
+            continue;
+        };
+        record_measure_note_timings(measure, ctx, &mut cursors, &mut results);
+    }
+
+    Ok(results
+        .into_iter()
+        .map(
+            |(source_part_index, note_id, start_tick, end_tick)| NoteTiming {
+                source_part_index,
+                note_id,
+                start_s: ticks_to_seconds(start_tick, &tempo_changes, TPQ),
+                end_s: ticks_to_seconds(end_tick, &tempo_changes, TPQ),
+            },
+        )
+        .collect())
+}
+
+/// Builds one measure's [`MeasureTimingContext`] from a length-2
+/// `measure_start_ticks.windows(2)` slice and its navigation origin. Returns
+/// `None` if any of the invariants documented on [`MeasureTimingContext`]
+/// don't hold (which shouldn't happen for a `tick_window`/`origin` pair
+/// produced by this module's own callers), so the caller can skip the
+/// measure rather than panic.
+fn measure_timing_context<'a>(
+    tick_window: &[u32],
+    origin: &'a super::navigation::ExpandedMeasureOrigin,
+    block_lookup: &'a [usize],
+    written_blocks: &'a [crate::compiler::MeasureBlock],
+    note_id_lookup: &'a std::collections::HashMap<(usize, usize, usize), usize>,
+) -> Option<MeasureTimingContext<'a, impl Fn(usize) -> usize + 'a>> {
+    let &[measure_start_tick, measure_end_tick] = tick_window else {
+        return None;
+    };
+    let block_index = *block_lookup.get(origin.written_measure_index)?;
+    let block = written_blocks.get(block_index)?;
+    Some(MeasureTimingContext {
+        written_measure_index: origin.written_measure_index,
+        part_written_index: |part_idx| {
+            origin
+                .part_written_indices
+                .get(part_idx)
+                .copied()
+                .unwrap_or(part_idx)
+        },
+        measure_start_tick,
+        measure_end_tick,
+        block_index,
+        block,
+        note_id_lookup,
+    })
+}
+
+/// Return the elapsed-seconds offset of each measure boundary in `score`,
+/// accounting for BPM changes. Length is `score.measures.len() + 1`: the
+/// last entry is the total duration of the whole score.
+pub fn measure_start_times_seconds(score: &Score) -> Result<Vec<f64>, IrrecoverableError> {
+    let (boundaries, tempo_changes) = measure_tick_boundaries_and_tempo(&score.measures)?;
     Ok(boundaries
         .iter()
         .map(|&tick| ticks_to_seconds(tick, &tempo_changes, TPQ))
@@ -52,87 +300,6 @@ pub fn measure_start_times_seconds_for_range(
         return Ok(vec![0.0]);
     };
     measure_start_times_seconds(&range_score)
-}
-
-pub fn build_single_measure_score(score: &Score, measure_index: usize) -> Option<Score> {
-    let clamped_index = measure_index.min(score.measures.len().saturating_sub(1));
-    let target = score.measures.get(clamped_index)?;
-
-    // Accumulate BPM and key from all measures before the target
-    let mut accumulated_bpm: Option<u32> = None;
-    let mut accumulated_key: Option<KeyChange> = None;
-    for measure in score.measures.iter().take(measure_index) {
-        if let Some(bpm) = measure.bpm {
-            accumulated_bpm = Some(bpm);
-        }
-        if let Some(key) = &measure.key {
-            accumulated_key = Some(key.clone());
-        }
-    }
-
-    // Clone target and inject accumulated context for fields the target doesn't override
-    let mut patched = target.clone();
-    if patched.bpm.is_none() {
-        patched.bpm = accumulated_bpm;
-    }
-    if patched.key.is_none() {
-        patched.key = accumulated_key;
-    }
-
-    Some(Score {
-        metadata: score.metadata.clone(),
-        measures: vec![patched],
-        document_diagnostics: vec![],
-        sequence: None,
-    })
-}
-
-pub fn build_measure_range_score(
-    score: &Score,
-    start_index: usize,
-    end_index: usize,
-) -> Option<Score> {
-    if score.measures.is_empty() {
-        return None;
-    }
-    let last = score.measures.len() - 1;
-    let (start_index, end_index) = if start_index > end_index {
-        (end_index.min(last), start_index.min(last))
-    } else {
-        (start_index.min(last), end_index.min(last))
-    };
-    let mut accumulated_bpm: Option<u32> = None;
-    let mut accumulated_key: Option<KeyChange> = None;
-    for measure in score.measures.iter().take(start_index) {
-        if let Some(bpm) = measure.bpm {
-            accumulated_bpm = Some(bpm);
-        }
-        if let Some(key) = &measure.key {
-            accumulated_key = Some(key.clone());
-        }
-    }
-    let count = end_index - start_index + 1;
-    let mut measures: Vec<_> = score
-        .measures
-        .iter()
-        .skip(start_index)
-        .take(count)
-        .cloned()
-        .collect();
-    if let Some(first) = measures.first_mut() {
-        if first.bpm.is_none() {
-            first.bpm = accumulated_bpm;
-        }
-        if first.key.is_none() {
-            first.key = accumulated_key;
-        }
-    }
-    Some(Score {
-        metadata: score.metadata.clone(),
-        measures,
-        document_diagnostics: vec![],
-        sequence: None,
-    })
 }
 
 /// Convert an absolute MIDI tick into elapsed seconds from the start of the

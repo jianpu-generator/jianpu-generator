@@ -14,10 +14,12 @@ fn simple_block(col_count: u32) -> MeasureBlock {
                 octave: 0,
                 dotted: false,
             },
+            note_id: None,
         })
         .chain(std::iter::once(ColumnElement {
             column: col_count,
             content: ElementContent::BarLine,
+            note_id: None,
         }))
         .collect();
     MeasureBlock {

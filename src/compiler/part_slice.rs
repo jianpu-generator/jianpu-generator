@@ -1,113 +1,11 @@
 use super::beam::{flush_beam_buffer, BeamEntry};
+use super::part_slice_unit::{compile_unit, CompiledUnit, PartState};
 use super::slur_chains::{extend_note_chains, PendingSlurOpen, SlurChainContext, SlurKey};
+use super::timed_unit::TimedUnit;
 use super::PartSliceResult;
 use crate::ast::grouped::{GroupedRest, NoteEvent, PartSlice};
 use crate::ast::parsed::PartKind;
 use crate::compiler::types::{ArcKind, ColumnElement, ElementContent, SlurSpan};
-
-// ── Part slice compiler ───────────────────────────────────────────────────────
-
-struct PartState<'a> {
-    elements: &'a mut Vec<ColumnElement>,
-    beam_buf: &'a mut Vec<BeamEntry>,
-    pending_chains: &'a mut Vec<Vec<(u32, SlurKey)>>,
-    pending_slur_opens: &'a mut Vec<Option<PendingSlurOpen>>,
-    slur_spans: &'a mut Vec<SlurSpan>,
-    col: &'a mut u32,
-    prev_tie: &'a mut bool,
-    prev_tie_column: &'a mut Option<u32>,
-    prev_tie_measure: &'a mut Option<usize>,
-    measure_index: usize,
-    part_index: usize,
-}
-
-use super::timed_unit::TimedUnit;
-
-// ── Shared compile-unit abstraction ──────────────────────────────────────────
-
-struct CompiledUnit {
-    duration: u32,
-    dotted: bool,
-    group_membership: u8,
-    group_continuation: u8,
-    slur_close_at: Option<u32>,
-    slur_key: SlurKey,
-    head: ElementContent,
-}
-
-fn compile_unit(state: &mut PartState<'_>, unit: CompiledUnit, measure_col_start: u32) {
-    state.elements.push(ColumnElement {
-        column: *state.col,
-        content: unit.head,
-    });
-
-    let underline_count = match unit.duration {
-        1 => 2,
-        2 | 3 => 1,
-        _ => 0,
-    };
-
-    if underline_count == 0 {
-        flush_beam_buffer(state.beam_buf, state.elements);
-    }
-
-    extend_note_chains(
-        SlurChainContext {
-            chains: state.pending_chains,
-            pending_slur_opens: state.pending_slur_opens,
-            slur_spans: state.slur_spans,
-            measure_index: state.measure_index,
-            part_index: state.part_index,
-        },
-        unit.group_membership,
-        unit.group_continuation,
-        *state.col,
-        &unit.slur_key,
-    );
-
-    if let Some(close_offset) = unit.slur_close_at {
-        if unit.group_membership > 0 {
-            extend_note_chains(
-                SlurChainContext {
-                    chains: state.pending_chains,
-                    pending_slur_opens: state.pending_slur_opens,
-                    slur_spans: state.slur_spans,
-                    measure_index: state.measure_index,
-                    part_index: state.part_index,
-                },
-                unit.group_membership,
-                0,
-                *state.col + close_offset,
-                &SlurKey::Rest,
-            );
-        }
-    }
-
-    if !unit.dotted {
-        let note_col = *state.col;
-        for dash_col in (note_col + 4..note_col + unit.duration).step_by(4) {
-            state.elements.push(ColumnElement {
-                column: dash_col,
-                content: ElementContent::NoteDash,
-            });
-        }
-    }
-
-    if underline_count > 0 {
-        state.beam_buf.push(BeamEntry {
-            column: *state.col,
-            underline_count,
-            duration: unit.duration,
-        });
-    }
-
-    *state.col += unit.duration;
-
-    let beat_position = *state.col - measure_col_start;
-    if underline_count > 0 && beat_position % 4 == 0 {
-        flush_beam_buffer(state.beam_buf, state.elements);
-    }
-}
 
 // ── Top-level entry point ─────────────────────────────────────────────────────
 
@@ -116,6 +14,8 @@ pub(super) struct PartSliceInput {
     pub(super) prev_tie: bool,
     pub(super) prev_tie_column: Option<u32>,
     pub(super) prev_tie_measure: Option<usize>,
+    pub(super) prev_tie_note_id: Option<usize>,
+    pub(super) next_note_id: usize,
     pub(super) measure_index: usize,
     pub(super) part_index: usize,
 }
@@ -132,6 +32,8 @@ pub(super) fn compile_part_slice(
     let mut prev_tie = input.prev_tie;
     let mut prev_tie_column = input.prev_tie_column;
     let mut prev_tie_measure = input.prev_tie_measure;
+    let mut prev_tie_note_id = input.prev_tie_note_id;
+    let mut next_note_id = input.next_note_id;
     let mut col: u32 = 0;
     let measure_index = input.measure_index;
 
@@ -146,6 +48,8 @@ pub(super) fn compile_part_slice(
             prev_tie: &mut prev_tie,
             prev_tie_column: &mut prev_tie_column,
             prev_tie_measure: &mut prev_tie_measure,
+            prev_tie_note_id: &mut prev_tie_note_id,
+            next_note_id: &mut next_note_id,
             measure_index,
             part_index: input.part_index,
         };
@@ -157,6 +61,7 @@ pub(super) fn compile_part_slice(
     elements.push(ColumnElement {
         column: col,
         content: ElementContent::BarLine,
+        note_id: None,
     });
 
     PartSliceResult {
@@ -165,12 +70,16 @@ pub(super) fn compile_part_slice(
         final_tie: prev_tie,
         final_tie_column: prev_tie_column,
         final_tie_measure: prev_tie_measure,
+        final_tie_note_id: prev_tie_note_id,
+        final_next_note_id: next_note_id,
     }
 }
 
 fn process_events(state: &mut PartState<'_>, slice: &PartSlice) {
     let mut lyrics_iters: Vec<_> = slice.lyrics.iter().map(|l| l.syllables.iter()).collect();
     for event in &slice.notes.events {
+        let note_id = *state.next_note_id;
+        *state.next_note_id += 1;
         match event {
             NoteEvent::Note(note) => {
                 let is_tie_continuation = *state.prev_tie;
@@ -189,11 +98,11 @@ fn process_events(state: &mut PartState<'_>, slice: &PartSlice) {
                     } else {
                         Vec::new()
                     };
-                compile_timed_unit(state, note, 0, lyrics);
+                compile_timed_unit(state, note, 0, lyrics, note_id);
             }
-            NoteEvent::Rest(rest) => compile_rest(state, rest, 0),
-            NoteEvent::Chord(chord) => compile_timed_unit(state, chord, 0, Vec::new()),
-            NoteEvent::Percussion(hit) => compile_timed_unit(state, hit, 0, Vec::new()),
+            NoteEvent::Rest(rest) => compile_rest(state, rest, 0, note_id),
+            NoteEvent::Chord(chord) => compile_timed_unit(state, chord, 0, Vec::new(), note_id),
+            NoteEvent::Percussion(hit) => compile_timed_unit(state, hit, 0, Vec::new(), note_id),
         }
     }
     flush_beam_buffer(state.beam_buf, state.elements);
@@ -245,8 +154,17 @@ fn compile_timed_unit<T: TimedUnit>(
     unit: &T,
     measure_col_start: u32,
     lyrics: Vec<ElementContent>,
+    note_id: usize,
 ) {
     let is_tie_continuation = *state.prev_tie;
+    // A tie continuation is the same sounding note as the one it continues
+    // from, so it reuses that note's id rather than allocating a fresh one —
+    // this mirrors the MIDI side merging tied notes into a single NoteOn/NoteOff.
+    let note_id = if is_tie_continuation {
+        state.prev_tie_note_id.unwrap_or(note_id)
+    } else {
+        note_id
+    };
     if is_tie_continuation {
         if let (Some(from_col), Some(from_measure)) =
             (*state.prev_tie_column, *state.prev_tie_measure)
@@ -263,12 +181,14 @@ fn compile_timed_unit<T: TimedUnit>(
         *state.prev_tie = false;
         *state.prev_tie_column = None;
         *state.prev_tie_measure = None;
+        *state.prev_tie_note_id = None;
     }
 
     for content in lyrics {
         state.elements.push(ColumnElement {
             column: *state.col,
             content,
+            note_id: None,
         });
     }
 
@@ -285,20 +205,28 @@ fn compile_timed_unit<T: TimedUnit>(
             head: unit.element_content(),
         },
         measure_col_start,
+        note_id,
     );
 
     if unit.tie_to_next() {
         *state.prev_tie = true;
         *state.prev_tie_column = Some(event_col);
         *state.prev_tie_measure = Some(state.measure_index);
+        *state.prev_tie_note_id = Some(note_id);
     } else {
         *state.prev_tie = false;
         *state.prev_tie_column = None;
         *state.prev_tie_measure = None;
+        *state.prev_tie_note_id = None;
     }
 }
 
-fn compile_rest(state: &mut PartState<'_>, rest: &GroupedRest, measure_col_start: u32) {
+fn compile_rest(
+    state: &mut PartState<'_>,
+    rest: &GroupedRest,
+    measure_col_start: u32,
+    note_id: usize,
+) {
     let underline_count = match rest.duration {
         1 => 2,
         2 => 1,
@@ -314,6 +242,7 @@ fn compile_rest(state: &mut PartState<'_>, rest: &GroupedRest, measure_col_start
         content: ElementContent::Rest {
             dotted: rest.dotted,
         },
+        note_id: Some(note_id),
     });
 
     if rest.group_membership > 0 {
@@ -346,6 +275,7 @@ fn compile_rest(state: &mut PartState<'_>, rest: &GroupedRest, measure_col_start
             state.elements.push(ColumnElement {
                 column: dash_col,
                 content: ElementContent::NoteDash,
+                note_id: Some(note_id),
             });
         }
     }
@@ -354,6 +284,7 @@ fn compile_rest(state: &mut PartState<'_>, rest: &GroupedRest, measure_col_start
     *state.prev_tie = false;
     *state.prev_tie_column = None;
     *state.prev_tie_measure = None;
+    *state.prev_tie_note_id = None;
 
     let beat_position = *state.col - measure_col_start;
     if underline_count > 0 && beat_position % 4 == 0 {

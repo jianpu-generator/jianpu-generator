@@ -81,6 +81,37 @@ pub(super) fn resolve_error_highlights(
         .collect()
 }
 
+pub(super) fn resolve_note_highlight_target(
+    target: &crate::grid_layout::types::NoteHighlightTarget,
+    rows: &[GridRow],
+    row_tops: &[f32],
+    usable_width: f32,
+    part_label_width_pt: f32,
+) -> Option<AbsoluteElement> {
+    let start_row = rows.get(target.row_start)?;
+    let target_y = row_tops.get(target.row_start)?;
+    if target.row_end >= rows.len() {
+        return None;
+    }
+    let geometry = start_row.column_geometry(usable_width, part_label_width_pt);
+    let target_x = PAGE_MARGIN + geometry.x_start(target.column_start);
+    let target_width = geometry.x_start(target.column_end) - geometry.x_start(target.column_start);
+    let target_height = rows
+        .get(target.row_start..=target.row_end)
+        .map(|slice| slice.iter().map(|row| row.height_pt).sum())
+        .unwrap_or(0.0);
+    Some(AbsoluteElement {
+        x: target_x,
+        y: *target_y,
+        content: AbsoluteContent::NoteHighlightTarget {
+            width: target_width,
+            height: target_height,
+            source_part_index: target.source_part_index,
+            note_id: target.note_id,
+        },
+    })
+}
+
 pub(super) fn resolve_measure_click_target(
     target: &crate::grid_layout::types::MeasureClickTarget,
     rows: &[GridRow],

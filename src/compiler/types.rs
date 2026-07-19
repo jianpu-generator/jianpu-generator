@@ -51,6 +51,17 @@ pub struct MeasureRow {
     pub group_provenance: Option<String>,
 }
 
+impl MeasureRow {
+    /// The `note_id` of this row's first sounding element, if any — used to
+    /// pick a single representative identity for a collapsed
+    /// `MultiMeasureRest` row (see `merge_rest_run`) and by
+    /// `midi::timing::note_timings_seconds`, which reads it back off the
+    /// compiled block to stay in agreement with whatever the row carries.
+    pub fn first_note_id(&self) -> Option<usize> {
+        self.elements.iter().find_map(|el| el.note_id)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RowId(pub String);
 
@@ -58,6 +69,15 @@ pub struct RowId(pub String);
 pub struct ColumnElement {
     pub column: u32,
     pub content: ElementContent,
+    /// Identity of the sounding note/rest this element belongs to, unique per
+    /// `(source_part_index, note_id)` across the whole score (not reset per
+    /// measure). Shared by a note's dash/tie-continuation columns so they
+    /// highlight together during playback. `None` for elements that never
+    /// sound on their own (lyrics, bar lines, underlines). A `MultiMeasureRest`
+    /// collapsed-rest-run glyph reuses the `note_id` of the first underlying
+    /// measure's rest for the part it stands in for (see `merge_rest_run`),
+    /// so the whole run still highlights as one note during playback.
+    pub note_id: Option<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

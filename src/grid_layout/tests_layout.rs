@@ -46,10 +46,12 @@ fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
                         octave: 0,
                         dotted: false,
                     },
+                    note_id: None,
                 },
                 ColumnElement {
                     column: bar_col,
                     content: ElementContent::BarLine,
+                    note_id: None,
                 },
             ],
             source_part_index: 0,

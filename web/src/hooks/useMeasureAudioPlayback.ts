@@ -1,3 +1,4 @@
+import type { NoteTimingOut } from 'jianpu-wasm'
 import type { RefObject } from 'react'
 import { useCallback, useRef, useState } from 'react'
 import type { MeasureSpan } from '../types'
@@ -25,6 +26,9 @@ export function useMeasureAudioPlayback({
   const [measureAudioWrittenIndices, setMeasureAudioWrittenIndices] = useState<
     number[]
   >([])
+  const [measureAudioNoteTimings, setMeasureAudioNoteTimings] = useState<
+    NoteTimingOut[]
+  >([])
   const [measureAudioElement, setMeasureAudioElement] =
     useState<HTMLAudioElement | null>(null)
   const currentMeasureAudioRef = useRef<HTMLAudioElement | null>(null)
@@ -37,6 +41,7 @@ export function useMeasureAudioPlayback({
       next: string | null,
       nextMeasureTimes: number[] = [],
       nextWrittenIndices: number[] = [],
+      nextNoteTimings: NoteTimingOut[] = [],
     ) => {
       if (currentMeasureAudioRef.current) {
         currentMeasureAudioRef.current.pause()
@@ -48,6 +53,7 @@ export function useMeasureAudioPlayback({
       measureWavUrlRef.current = next
       setMeasureAudioTimes(nextMeasureTimes)
       setMeasureAudioWrittenIndices(nextWrittenIndices)
+      setMeasureAudioNoteTimings(nextNoteTimings)
       if (next) {
         const audio = new Audio(next)
         currentMeasureAudioRef.current = audio
@@ -126,6 +132,7 @@ export function useMeasureAudioPlayback({
     measureAudioPlaying,
     measureAudioTimes,
     measureAudioWrittenIndices,
+    measureAudioNoteTimings,
     measureAudioElement,
     setNextMeasureWavUrl,
     stopMeasurePlayback,

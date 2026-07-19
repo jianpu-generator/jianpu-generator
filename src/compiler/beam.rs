@@ -31,6 +31,7 @@ fn compute_underline_levels(buffer: &[BeamEntry]) -> Vec<ColumnElement> {
             last_head_column: last.column,
             level: 0,
         },
+        note_id: None,
     });
 
     let mut run_start: Option<u32> = None;
@@ -52,6 +53,7 @@ fn compute_underline_levels(buffer: &[BeamEntry]) -> Vec<ColumnElement> {
                     last_head_column: run_last_head,
                     level: 1,
                 },
+                note_id: None,
             });
         }
     }
@@ -64,6 +66,7 @@ fn compute_underline_levels(buffer: &[BeamEntry]) -> Vec<ColumnElement> {
                 last_head_column: run_last_head,
                 level: 1,
             },
+            note_id: None,
         });
     }
 

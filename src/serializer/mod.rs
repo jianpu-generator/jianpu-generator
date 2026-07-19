@@ -133,6 +133,14 @@ fn serialize_group(out: &mut String, children: &[SvgElement], tag: &Option<Tag>)
                 escape_xml(label)
             ));
         }
+        Some(Tag::Note {
+            source_part_index,
+            note_id,
+        }) => {
+            out.push_str(&format!(
+                r#"<g data-tag="note" data-part-index="{source_part_index}" data-note-id="{note_id}">"#
+            ));
+        }
         None => {
             out.push_str("<g>");
         }
@@ -189,6 +197,25 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
                 stroke_width
             ));
         }
+        SvgKind::Rect { .. }
+        | SvgKind::ErrorRect { .. }
+        | SvgKind::NoteHighlightRect { .. }
+        | SvgKind::TransparentRect { .. } => serialize_rect_element(el, out, &el.kind),
+        SvgKind::TextWithTspans {
+            font_size,
+            anchor,
+            baseline,
+            spans,
+        } => serialize_text_with_tspans(el, out, *font_size, anchor, baseline, spans),
+        SvgKind::Group { children, tag } => serialize_group(out, children, tag),
+        SvgKind::SegnoGlyph { size } => serialize_segno_glyph(el, out, *size),
+    }
+}
+
+/// The rect-shaped half of [`serialize_element`]'s dispatch, split out to
+/// stay under the file's line-count cap per function.
+fn serialize_rect_element(el: &SvgElement, out: &mut String, kind: &SvgKind) {
+    match kind {
         SvgKind::Rect { width, height } => {
             out.push_str(&format!(
                 r#"<rect data-testid="measure-highlight" x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" fill="rgba(255,200,0,0.25)" rx="2"/>"#,
@@ -198,6 +225,12 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
         SvgKind::ErrorRect { width, height } => {
             out.push_str(&format!(
                 r#"<rect data-testid="error-highlight" x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" fill="rgba(255,0,0,0.15)" rx="2"/>"#,
+                el.x, el.y, width, height
+            ));
+        }
+        SvgKind::NoteHighlightRect { width, height } => {
+            out.push_str(&format!(
+                r#"<rect data-variant="note-highlight-rect" x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" fill="transparent" rx="2"/>"#,
                 el.x, el.y, width, height
             ));
         }
@@ -211,14 +244,7 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
                 el.x, el.y, width, height, role.as_str()
             ));
         }
-        SvgKind::TextWithTspans {
-            font_size,
-            anchor,
-            baseline,
-            spans,
-        } => serialize_text_with_tspans(el, out, *font_size, anchor, baseline, spans),
-        SvgKind::Group { children, tag } => serialize_group(out, children, tag),
-        SvgKind::SegnoGlyph { size } => serialize_segno_glyph(el, out, *size),
+        _ => {}
     }
 }
 

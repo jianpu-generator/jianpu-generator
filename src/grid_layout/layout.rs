@@ -205,6 +205,7 @@ mod decoration;
 pub(crate) use super::expand::expand_system_to_rows;
 use super::expand::make_footer_row;
 use super::highlight::{click_targets_on_page, measure_highlights_on_page};
+use super::note_highlight::note_highlight_targets_on_page;
 pub(crate) use decoration::make_header_rows;
 use decoration::{make_decoration_row, make_separator_row};
 
@@ -315,6 +316,7 @@ pub fn layout(
         highlight_infos,
         error_highlight_infos,
         all_click_target_infos,
+        all_note_highlight_target_infos,
     } = compute_highlight_and_click_infos(
         blocks,
         &page_systems,
@@ -348,6 +350,8 @@ pub fn layout(
         let measure_highlights = measure_highlights_on_page(&highlight_infos, page_idx);
         let error_highlights = measure_highlights_on_page(&error_highlight_infos, page_idx);
         let measure_click_targets = click_targets_on_page(&all_click_target_infos, page_idx);
+        let note_highlight_targets =
+            note_highlight_targets_on_page(&all_note_highlight_target_infos, page_idx);
         pages.push(GridPage {
             width_pt: page_width_pt,
             height_pt: page_height_pt,
@@ -355,6 +359,7 @@ pub fn layout(
             measure_highlights,
             error_highlights,
             measure_click_targets,
+            note_highlight_targets,
         });
     }
     pages
@@ -371,3 +376,7 @@ mod tests_layout_directives;
 #[cfg(test)]
 #[path = "tests_highlight.rs"]
 mod tests_highlight;
+
+#[cfg(test)]
+#[path = "tests_note_highlight.rs"]
+mod tests_note_highlight;

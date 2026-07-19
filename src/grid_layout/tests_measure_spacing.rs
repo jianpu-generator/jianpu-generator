@@ -20,11 +20,13 @@ fn make_block_with_notes(row_id: &str, note_count: u32, bar_col: u32) -> Measure
                 octave: 0,
                 dotted: false,
             },
+            note_id: None,
         })
         .collect();
     elements.push(ColumnElement {
         column: bar_col,
         content: ElementContent::BarLine,
+        note_id: None,
     });
     MeasureBlock {
         rows: vec![MeasureRow {
@@ -51,10 +53,12 @@ fn make_multi_measure_rest_block(row_id: &str, bar_col: u32, count: usize) -> Me
                 ColumnElement {
                     column: 0,
                     content: ElementContent::MultiMeasureRest { count },
+                    note_id: None,
                 },
                 ColumnElement {
                     column: bar_col,
                     content: ElementContent::BarLine,
+                    note_id: None,
                 },
             ],
             source_part_index: 0,
@@ -82,14 +86,17 @@ fn make_block_with_dash(row_id: &str, bar_col: u32) -> MeasureBlock {
                         octave: 0,
                         dotted: false,
                     },
+                    note_id: None,
                 },
                 ColumnElement {
                     column: 1,
                     content: ElementContent::NoteDash,
+                    note_id: None,
                 },
                 ColumnElement {
                     column: bar_col,
                     content: ElementContent::BarLine,
+                    note_id: None,
                 },
             ],
             source_part_index: 0,

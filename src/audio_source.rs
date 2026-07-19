@@ -98,6 +98,30 @@ pub fn measure_start_times_from_source(
     crate::midi::measure_start_times_seconds(&score)
 }
 
+/// Parse, group, optionally filter tracks, and compute the elapsed-seconds
+/// start/end of every sounding note/rest, keyed by `(source_part_index,
+/// note_id)`. Used to drive the SVG preview's per-part, per-note playback
+/// highlight (see [`crate::midi::NoteTiming`]), replacing the old
+/// measure-level playhead built from [`measure_start_times_from_source`].
+///
+/// Follows the same `# sequence`/D.C.-al-Coda-Fine playback order as the
+/// actual audio (see [`crate::midi::note_timings_seconds`]), so a repeated
+/// or reordered written note is highlighted every time it's actually heard,
+/// not just its first pass — while `note_id`s themselves still agree with
+/// `ColumnElement::note_id`/the rendered SVG's `data-note-id`, since those
+/// are computed from the written score, not the expanded timeline.
+#[cfg(feature = "midi")]
+pub fn note_timings_from_source(
+    source: &str,
+    filename: &str,
+    enabled_tracks: Option<&[String]>,
+    instruments: &[InstrumentInfo],
+) -> Result<Vec<crate::midi::NoteTiming>, IrrecoverableError> {
+    let mut score = compile(source, filename, instruments)?;
+    apply_track_filter(&mut score, enabled_tracks);
+    crate::midi::note_timings_seconds(&score)
+}
+
 /// Same as [`measure_start_times_from_source`], but scoped to a measure range
 /// and relative to the start of that range. Used to sync a playhead against
 /// the audio clip returned by [`write_wav_for_measure_range_from_source`].
@@ -121,6 +145,32 @@ pub fn measure_start_times_for_range_from_source(
         extend_to_last_occurrence,
     )?;
     crate::midi::measure_start_times_seconds_for_range(&score, start, end)
+}
+
+/// Same as [`note_timings_from_source`], but scoped to a measure range and
+/// relative to the start of that range (`start_s`/`end_s` are seconds from
+/// the start of the clip [`write_wav_for_measure_range_from_source`]
+/// produces for the same range, not from the start of the whole piece).
+///
+/// See [`write_wav_for_measure_range_from_source`] for `extend_to_last_occurrence`.
+#[cfg(feature = "midi")]
+pub fn note_timings_for_range_from_source(
+    source: &str,
+    filename: &str,
+    measure_range: std::ops::RangeInclusive<usize>,
+    extend_to_last_occurrence: bool,
+    enabled_tracks: Option<&[String]>,
+    instruments: &[InstrumentInfo],
+) -> Result<Vec<crate::midi::NoteTiming>, IrrecoverableError> {
+    let mut score = compile(source, filename, instruments)?;
+    apply_track_filter(&mut score, enabled_tracks);
+    let (_, start_pos, end_pos) = crate::midi::expand_for_measure_range(
+        &score,
+        *measure_range.start(),
+        *measure_range.end(),
+        extend_to_last_occurrence,
+    )?;
+    crate::midi::note_timings_seconds_for_range(&score, start_pos, end_pos)
 }
 
 /// Parse, group, optionally filter tracks, and return the written measure

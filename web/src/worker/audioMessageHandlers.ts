@@ -2,6 +2,8 @@ import type {
   GenerateWavResponse,
   ListMeasureColumnBoundariesResponse,
   ListMeasureTimesResponse,
+  NoteTimingOut,
+  NoteTimingsResponse,
   WrittenMeasureIndicesResponse,
 } from 'jianpu-wasm'
 import type { WorkerRequest, WorkerResponse } from './jianpu.worker'
@@ -70,6 +72,18 @@ function columnBoundariesFromSource(
   return result.status === 'ok' ? result.boundaries : []
 }
 
+function noteTimingsFromSource(
+  listNoteTimings:
+    | ((source: string, enabledTracks?: string[]) => NoteTimingsResponse)
+    | null,
+  source: string,
+  enabledTracks: string[] | undefined,
+): NoteTimingOut[] {
+  if (!listNoteTimings) return []
+  const result = listNoteTimings(source, enabledTracks)
+  return result.status === 'ok' ? result.timings : []
+}
+
 function writtenMeasureIndicesFromSource(
   writtenMeasureIndices:
     | ((
@@ -83,6 +97,33 @@ function writtenMeasureIndicesFromSource(
   if (!writtenMeasureIndices) return []
   const result = writtenMeasureIndices(source, enabledTracks)
   return result.status === 'ok' ? result.indices : []
+}
+
+function noteTimingsForRangeFromSource(
+  listNoteTimingsForRange:
+    | ((
+        source: string,
+        startIndex: number,
+        endIndex: number,
+        extendToLastOccurrence: boolean,
+        enabledTracks?: string[],
+      ) => NoteTimingsResponse)
+    | null,
+  source: string,
+  startMeasureIndex: number,
+  endMeasureIndex: number,
+  extendToLastOccurrence: boolean,
+  enabledTracks: string[] | undefined,
+): NoteTimingOut[] {
+  if (!listNoteTimingsForRange) return []
+  const result = listNoteTimingsForRange(
+    source,
+    startMeasureIndex,
+    endMeasureIndex,
+    extendToLastOccurrence,
+    enabledTracks,
+  )
+  return result.status === 'ok' ? result.timings : []
 }
 
 function writtenMeasureIndicesForRangeFromSource(
@@ -138,12 +179,17 @@ type ListMeasureColumnBoundariesFn =
     ) => ListMeasureColumnBoundariesResponse)
   | null
 
+type ListNoteTimingsFn =
+  | ((source: string, enabledTracks?: string[]) => NoteTimingsResponse)
+  | null
+
 export function handleGenerateAudio(
   msg: Extract<WorkerRequest, { type: 'generateAudio' }>,
   generateWav: GenerateWavFn,
   listMeasureTimes: ListMeasureTimesFn,
   writtenMeasureIndices: WrittenMeasureIndicesFn,
   listMeasureColumnBoundaries: ListMeasureColumnBoundariesFn,
+  listNoteTimings: ListNoteTimingsFn,
   loadedSoundfont: Uint8Array | null,
 ): void {
   if (!generateWav || !loadedSoundfont) {
@@ -170,6 +216,11 @@ export function handleGenerateAudio(
         ),
         columnBoundaries: columnBoundariesFromSource(
           listMeasureColumnBoundaries,
+          msg.source,
+          msg.enabledTracks,
+        ),
+        noteTimings: noteTimingsFromSource(
+          listNoteTimings,
           msg.source,
           msg.enabledTracks,
         ),
@@ -212,12 +263,23 @@ type WrittenMeasureIndicesForRangeFn =
     ) => WrittenMeasureIndicesResponse)
   | null
 
+type ListNoteTimingsForRangeFn =
+  | ((
+      source: string,
+      startIndex: number,
+      endIndex: number,
+      extendToLastOccurrence: boolean,
+      enabledTracks?: string[],
+    ) => NoteTimingsResponse)
+  | null
+
 export function handleGenerateMeasureRangeAudio(
   msg: Extract<WorkerRequest, { type: 'generateMeasureRangeAudio' }>,
   generateWavForMeasureRange: GenerateWavForMeasureRangeFn,
   listMeasureTimesForRange: ListMeasureTimesForRangeFn,
   writtenMeasureIndicesForRange: WrittenMeasureIndicesForRangeFn,
   listMeasureColumnBoundaries: ListMeasureColumnBoundariesFn,
+  listNoteTimingsForRange: ListNoteTimingsForRangeFn,
   loadedSoundfont: Uint8Array | null,
 ): void {
   if (!generateWavForMeasureRange || !loadedSoundfont) {
@@ -261,6 +323,14 @@ export function handleGenerateMeasureRangeAudio(
         columnBoundaries: columnBoundariesFromSource(
           listMeasureColumnBoundaries,
           msg.source,
+          msg.enabledTracks,
+        ),
+        noteTimings: noteTimingsForRangeFromSource(
+          listNoteTimingsForRange,
+          msg.source,
+          msg.startMeasureIndex,
+          msg.endMeasureIndex,
+          msg.extendToLastOccurrence,
           msg.enabledTracks,
         ),
       } satisfies WorkerResponse,
