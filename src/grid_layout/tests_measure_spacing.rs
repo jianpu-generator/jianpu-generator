@@ -154,9 +154,20 @@ fn measure_column_weights_takes_max_across_parts_not_sum() {
 
 #[test]
 fn measure_column_weights_gives_multi_measure_rest_uniform_weight() {
-    let block = make_multi_measure_rest_block("S", 0, 4);
-    let weights = measure_column_weights(&block, MULTI_MEASURE_REST_WIDTH);
-    assert_eq!(weights, vec![1.0; MULTI_MEASURE_REST_WIDTH as usize]);
+    // Mirrors the real shape built by `merge_rest_run`: the rest's own span
+    // (columns `0..MULTI_MEASURE_REST_WIDTH`) plus one trailing `BarLine`
+    // column at `MULTI_MEASURE_REST_WIDTH`.
+    let block = make_multi_measure_rest_block("S", MULTI_MEASURE_REST_WIDTH, 4);
+    let col_count = MULTI_MEASURE_REST_WIDTH + 1;
+    let weights = measure_column_weights(&block, col_count);
+    let mut expected = vec![1.0; MULTI_MEASURE_REST_WIDTH as usize];
+    expected.push(0.25);
+    assert_eq!(
+        weights, expected,
+        "rest span columns should stay uniform, but the trailing bar-line \
+         column should keep its normal thin weight instead of ballooning to \
+         match a full rest column"
+    );
 }
 
 #[test]

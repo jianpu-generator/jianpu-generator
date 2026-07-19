@@ -39,8 +39,9 @@ fn column_weight(content: &ElementContent) -> f32 {
 /// column's weight is the max [`column_weight`] of any row's element at
 /// that column, so a column isn't under-weighted just because one part
 /// sustains a dash there while another part has a fresh note. A collapsed
-/// `MultiMeasureRest` row gets a flat weight of `1.0` on every column
-/// instead, keeping its previous even (undifferentiated) sizing.
+/// `MultiMeasureRest` row gets a flat weight of `1.0` on every column of its
+/// own span instead, keeping its previous even (undifferentiated) sizing;
+/// its trailing `BarLine` column still gets the usual thin weight.
 pub(crate) fn measure_column_weights(block: &MeasureBlock, col_count: u32) -> Vec<f32> {
     let has_multi_measure_rest = block.rows.iter().any(|row| {
         row.elements
@@ -48,7 +49,21 @@ pub(crate) fn measure_column_weights(block: &MeasureBlock, col_count: u32) -> Ve
             .any(|e| matches!(e.content, ElementContent::MultiMeasureRest { .. }))
     });
     if has_multi_measure_rest {
-        return vec![1.0; col_count as usize];
+        // The block is always the rest's own span (flat 1.0 weight, so its
+        // bar/count render evenly) followed by exactly one trailing `BarLine`
+        // column, which should keep the usual thin weight rather than
+        // ballooning to match a full rest column — otherwise the bar line's
+        // slot eats a disproportionate share of the measure's width, leaving
+        // a lopsided gap to the right of the rest bar.
+        return (0..col_count)
+            .map(|col| {
+                if col + 1 == col_count {
+                    THIN_MARK_WEIGHT
+                } else {
+                    1.0
+                }
+            })
+            .collect();
     }
     (0..col_count)
         .map(|col| {
