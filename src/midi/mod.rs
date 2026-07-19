@@ -223,8 +223,8 @@ pub fn write_midi_for_measure_range(
 
 pub use timing::{
     build_measure_range_score, build_single_measure_score, measure_start_times_seconds,
-    measure_start_times_seconds_for_range, note_timings_seconds, note_timings_seconds_for_range,
-    NoteTiming,
+    measure_start_times_seconds_for_range, note_timings_seconds,
+    note_timings_seconds_for_literal_range, note_timings_seconds_for_range, NoteTiming,
 };
 
 pub(crate) fn default_active_key() -> KeyChange {

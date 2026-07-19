@@ -181,6 +181,9 @@ pub fn note_timings_for_range_from_source(
         selection.extend_to_last_occurrence,
         selection.respect_sequence,
     )?;
+    if !selection.respect_sequence {
+        return crate::midi::note_timings_seconds_for_literal_range(&score, start_pos, end_pos);
+    }
     crate::midi::note_timings_seconds_for_range(&score, start_pos, end_pos)
 }
 

@@ -312,3 +312,75 @@ fn note_timings_for_range_start_at_zero_and_match_full_score_ids() {
          to the clip, got {first_start_s}"
     );
 }
+
+/// A `# sequence` that reorders/repeats labeled spans (`A, B, B, C`), so a
+/// written measure's position in playback order differs from its literal
+/// written index — `C` is written measure 2 but plays at position 3.
+fn sequence_source_with_reordered_spans() -> &'static str {
+    concat!(
+        "# metadata\n",
+        "title = \"note highlight identity respect_sequence false\"\n",
+        "\n",
+        "# parts\n",
+        "Soprano [S] = notes\n",
+        "\n",
+        "# sequence\n",
+        "A, B, B, C\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120 label=\"A\"\n",
+        "[S] 1\n",
+        "\n",
+        "label=\"B\"\n",
+        "[S] 2\n",
+        "\n",
+        "label=\"C\"\n",
+        "[S] 3\n",
+    )
+}
+
+/// Regression test: "play current measure" (`respect_sequence: false`) on a
+/// written measure that a `# sequence` also plays at a *different* position
+/// elsewhere (here, `C` is written index 2 but plays at position 3, since `B`
+/// occupies position 2) must still report `C`'s own `note_id`, not whichever
+/// measure occupies that position in the `# sequence`-expanded timeline.
+#[test]
+fn note_timings_for_range_ignore_sequence_use_written_index_identity() {
+    let source = sequence_source_with_reordered_spans();
+    let filename = "note_highlight_identity_ignore_sequence.jianpu";
+
+    let render_output = render_svgs_from_source(source, filename, &[]).unwrap();
+    let svg_ids = note_ids_in_svg(&render_output.svgs);
+
+    // Written measure 2 is section "C".
+    let range_timings = note_timings_for_range_from_source(
+        source,
+        filename,
+        &MeasureRangeSelection {
+            range: 2..=2,
+            extend_to_last_occurrence: false,
+            respect_sequence: false,
+        },
+        None,
+        &[],
+    )
+    .unwrap();
+
+    assert_eq!(
+        range_timings.len(),
+        1,
+        "expected exactly one note timing for the single-note measure C"
+    );
+    let timing = &range_timings[0];
+    assert!(
+        svg_ids.contains(&(timing.source_part_index, timing.note_id)),
+        "range timing {timing:?} must use an (source_part_index, note_id) pair that exists in \
+         the full-score render's data-note-id"
+    );
+    assert_eq!(
+        timing.note_id, 2,
+        "measure C is the third written note (note_id 2, after A's 0 and B's 1); \
+         `respect_sequence: false` must not resolve it against the # sequence-expanded \
+         playback position (which would land on B's note_id 1)"
+    );
+}

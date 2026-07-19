@@ -1,7 +1,7 @@
 use crate::ast::grouped::{MultiPartMeasure, Score};
 use crate::error::IrrecoverableError;
 
-use super::navigation::expand_navigation_with_note_positions;
+use super::navigation::{expand_navigation_with_note_positions, ExpandedMeasureOrigin};
 use super::{default_active_key, process_measure, RawEvent, RawKind, TieState, TPQ};
 use crate::compiler::compile;
 
@@ -241,6 +241,77 @@ pub fn note_timings_seconds_for_range(
         .collect())
 }
 
+/// Same as [`note_timings_seconds_for_range`], but for a range that ignores
+/// `# sequence`/D.C.-al-Coda-Fine navigation entirely (`respect_sequence:
+/// false` in [`super::MeasureRangeSelection`]) — the "play current measure"
+/// case. `start_index`/`end_index` are literal indices into `score.measures`
+/// (not playback positions), matching what
+/// [`super::expand_for_measure_range`] returns unchanged when
+/// `respect_sequence` is `false`. Unlike [`note_timings_seconds_for_range`],
+/// this never re-derives the expanded (playback-order) timeline: each
+/// measure's own written index is its origin, so a written measure that also
+/// happens to recur elsewhere in `# sequence` (e.g. selecting "C" when the
+/// sequence is `A, B, B, C`) still resolves to its own `note_id`s rather than
+/// to whichever measure occupies that same position in the expanded
+/// timeline.
+pub fn note_timings_seconds_for_literal_range(
+    score: &Score,
+    start_index: usize,
+    end_index: usize,
+) -> Result<Vec<NoteTiming>, IrrecoverableError> {
+    if score.measures.is_empty() || start_index > end_index {
+        return Ok(Vec::new());
+    }
+
+    let note_id_lookup = build_written_note_id_lookup(score);
+    let written_blocks = compile(score).blocks;
+    let block_lookup = written_measure_to_block(&written_blocks);
+
+    let Some(range_score) = build_measure_range_score(score, start_index, end_index) else {
+        return Ok(Vec::new());
+    };
+
+    let (measure_start_ticks, tempo_changes) =
+        measure_tick_boundaries_and_tempo(&range_score.measures)?;
+
+    let mut cursors = new_part_timing_cursors(score);
+    let mut results: Vec<(usize, usize, u32, u32)> = Vec::new();
+
+    for (measure_offset, (measure, tick_window)) in range_score
+        .measures
+        .iter()
+        .zip(measure_start_ticks.windows(2))
+        .enumerate()
+    {
+        let origin = ExpandedMeasureOrigin {
+            written_measure_index: start_index + measure_offset,
+            part_written_indices: Vec::new(),
+        };
+        let Some(ctx) = measure_timing_context(
+            tick_window,
+            &origin,
+            &block_lookup,
+            &written_blocks,
+            &note_id_lookup,
+        ) else {
+            continue;
+        };
+        record_measure_note_timings(measure, ctx, &mut cursors, &mut results);
+    }
+
+    Ok(results
+        .into_iter()
+        .map(
+            |(source_part_index, note_id, start_tick, end_tick)| NoteTiming {
+                source_part_index,
+                note_id,
+                start_s: ticks_to_seconds(start_tick, &tempo_changes, TPQ),
+                end_s: ticks_to_seconds(end_tick, &tempo_changes, TPQ),
+            },
+        )
+        .collect())
+}
+
 /// Builds one measure's [`MeasureTimingContext`] from a length-2
 /// `measure_start_ticks.windows(2)` slice and its navigation origin. Returns
 /// `None` if any of the invariants documented on [`MeasureTimingContext`]
@@ -249,7 +320,7 @@ pub fn note_timings_seconds_for_range(
 /// measure rather than panic.
 fn measure_timing_context<'a>(
     tick_window: &[u32],
-    origin: &'a super::navigation::ExpandedMeasureOrigin,
+    origin: &'a ExpandedMeasureOrigin,
     block_lookup: &'a [usize],
     written_blocks: &'a [crate::compiler::MeasureBlock],
     note_id_lookup: &'a std::collections::HashMap<(usize, usize, usize), usize>,
