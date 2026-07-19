@@ -90,3 +90,23 @@ pub(crate) fn section_label_box_width(label: &str) -> f32 {
         .sum::<f32>()
         + section_label_box_padding() * 2.0
 }
+
+/// Gap (in points) kept between a directive line and the row above it.
+/// Larger than `DIRECTIVE_LINE_BOTTOM_PADDING` so the line reads as
+/// attached to the musical row it annotates (below it) rather than the one
+/// above.
+pub(crate) const DIRECTIVE_LINE_TOP_PADDING: f32 = 24.0;
+
+/// Gap (in points) kept between a bottom-aligned directive line (section
+/// label, key, bpm, time signature) and the top of the musical row below
+/// it, so the vertically-centered text doesn't dip into the measure
+/// underneath.
+pub(crate) const DIRECTIVE_LINE_BOTTOM_PADDING: f32 = 12.0;
+
+/// Height of a directive-line row: exactly enough to hold its top and
+/// bottom padding, since the directive text's own font size doesn't scale
+/// with `base` (see `DirectiveLineArgs`'s fixed 12pt font in
+/// `new_renderer/directive_line.rs`), so the row it sits in doesn't either.
+pub(crate) fn directive_line_row_height() -> f32 {
+    DIRECTIVE_LINE_TOP_PADDING + DIRECTIVE_LINE_BOTTOM_PADDING
+}
