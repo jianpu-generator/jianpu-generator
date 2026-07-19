@@ -224,7 +224,7 @@ fn build_directive_line_spans(content: &PostArcGridContent) -> (Option<TextSpan>
 /// [`section_label_span`]) — followed by a plain, non-bold/italic
 /// `(-abbrev -abbrev ...)` span when that entry's `(-abbrev ...)` suffix
 /// omits any parts from that occurrence's MIDI/WAV playback — joined by a
-/// plain " → " arrow.
+/// plain " › ".
 fn sequence_line_content(
     entries: &[crate::grid_layout::types::SequenceEntryInfo],
 ) -> Vec<TextSpan> {
@@ -237,7 +237,7 @@ fn sequence_line_content(
     for (index, entry) in entries.iter().enumerate() {
         if index > 0 {
             spans.push(TextSpan {
-                content: " \u{2192} ".to_string(),
+                content: " \u{203a} ".to_string(),
                 bold: false,
                 italic: false,
                 font_size: 12.0,

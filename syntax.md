@@ -359,7 +359,7 @@ label="B"
 - Each label must be declared **exactly once** in `# score`; declaring the same label on more than one measure is an error.
 - Referencing a label in `# sequence` that was never declared in `# score` is an error; that entry is skipped and the rest of the sequence still resolves.
 - `# sequence` and the inline navigation markers (`dcalcoda`/`tocoda`/`coda`/`segno`/`dsalcoda`/`dcalfine`/`fine`/`dsalfine`) are **mutually exclusive** — using both in the same score is an error.
-- Like the inline markers, `# sequence` only affects **MIDI/WAV playback order** — measures always render once, in written order, with normal bar numbers. However, SVG/PDF output does show the resolved order as a left-aligned line ("Sequence: A → B → A") on the first page, with a blank line of space above it, below the title/subtitle/author/part list. Each label is styled the same as an inline `label="..."` directive (bold, italic).
+- Like the inline markers, `# sequence` only affects **MIDI/WAV playback order** — measures always render once, in written order, with normal bar numbers. However, SVG/PDF output does show the resolved order as a left-aligned line ("Sequence: A › B › A") on the first page, with a blank line of space above it, below the title/subtitle/author/part list. Each label is styled the same as an inline `label="..."` directive (bold, italic).
 
 An entry may carry a `(-abbrev -abbrev ...)` suffix naming part or group abbreviations (as declared in `# parts`/`# groups`) to omit from that specific occurrence's playback — e.g. a chorus written once but replayed several times with a voice dropping out on later repeats:
 
@@ -371,7 +371,7 @@ Verse, Chorus(-S -A2), Verse, Chorus(-A2), Chorus
 - The suffix affects **only that occurrence**: here, the first `Chorus` omits Soprano and Alto 2, the second omits only Alto 2, and the third (unmarked) plays every part.
 - Omitting a group abbreviation omits every part it resolves to (including transitively, through nested groups).
 - An abbreviation that matches no declared part or group is an error; that abbreviation is dropped and the rest of the entry (and sequence) still resolves.
-- The written-order rendering itself is unaffected — the score's written-out `Chorus` section always renders with every part, once, per the written-order rule above. However, the omissions **are** shown on the "Sequence: ..." summary line (SVG/PDF, first page), right after the label in plain (non-bold/non-italic) text: `Sequence: Verse → Chorus (-S -A2) → Verse → Chorus (-A2) → Chorus`. This is a reader-facing note only, telling a performer which voices tacet on which repeat — the underlying `Chorus` measures are not duplicated or altered.
+- The written-order rendering itself is unaffected — the score's written-out `Chorus` section always renders with every part, once, per the written-order rule above. However, the omissions **are** shown on the "Sequence: ..." summary line (SVG/PDF, first page), right after the label in plain (non-bold/non-italic) text: `Sequence: Verse › Chorus (-S -A2) › Verse › Chorus (-A2) › Chorus`. This is a reader-facing note only, telling a performer which voices tacet on which repeat — the underlying `Chorus` measures are not duplicated or altered.
 - A group abbreviation is shown **as written** on the summary line, not expanded to its members: `Chorus(-U)` renders as `Chorus (-U)`, not `Chorus (-S -A2)`, even though playback omits every part `U` resolves to.
 
 ---

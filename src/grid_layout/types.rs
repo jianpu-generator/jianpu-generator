@@ -166,7 +166,7 @@ pub enum GridContent {
     },
     /// The resolved `# sequence` playback order, rendered as "Sequence: "
     /// followed by each label (styled like an inline section label) joined
-    /// by " → ".
+    /// by " › ".
     SequenceLine {
         entries: Vec<SequenceEntryInfo>,
     },
