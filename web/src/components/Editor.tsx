@@ -9,6 +9,10 @@ import {
   useLayoutEffect,
   useRef,
 } from 'react'
+import {
+  JIANPU_LANGUAGE_ID,
+  registerJianpuLanguage,
+} from '../monacoJianpuLanguage'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -231,7 +235,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
     codeLensProviderRef.current?.dispose()
     codeLensProviderRef.current = monacoApi.languages.registerCodeLensProvider(
-      'plaintext',
+      JIANPU_LANGUAGE_ID,
       {
         provideCodeLenses(model: editor.ITextModel) {
           const lenses: languages.CodeLens[] = []
@@ -320,7 +324,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       <div className="editor-surface">
         <MonacoEditor
           height="100%"
-          language="plaintext"
+          language={JIANPU_LANGUAGE_ID}
           theme={EDITOR_THEME}
           path={path}
           value={value}
@@ -329,10 +333,33 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             onChange(next ?? '')
           }}
           beforeMount={(monacoApi) => {
+            registerJianpuLanguage(monacoApi)
             monacoApi.editor.defineTheme(EDITOR_THEME, {
               base: 'vs',
               inherit: true,
-              rules: [],
+              rules: [
+                {
+                  token: 'comment',
+                  foreground: '008000',
+                  fontStyle: 'italic',
+                },
+                { token: 'string', foreground: 'a31515' },
+                {
+                  token: 'keyword.section',
+                  foreground: '0000ff',
+                  fontStyle: 'bold',
+                },
+                { token: 'tag', foreground: '267f99', fontStyle: 'bold' },
+                { token: 'keyword.directive', foreground: '0000ff' },
+                {
+                  token: 'keyword.control',
+                  foreground: 'af00db',
+                  fontStyle: 'bold italic',
+                },
+                { token: 'type', foreground: '267f99' },
+                { token: 'variable', foreground: '001080' },
+                { token: 'operator', foreground: '795e26' },
+              ],
               colors: {
                 'editor.lineHighlightBackground': MEASURE_HIGHLIGHT_COLOR,
                 'editor.lineHighlightBorder': '#00000000',
