@@ -303,6 +303,7 @@ fn write_wav_for_measure_range_from_source_returns_riff_wav() {
         &MeasureRangeSelection {
             range: 0..=1,
             extend_to_last_occurrence: false,
+            respect_sequence: true,
         },
         None,
         SF2_BYTES,
@@ -325,6 +326,7 @@ fn write_wav_for_measure_range_from_source_single_measure_matches_range_of_one()
         &MeasureRangeSelection {
             range: 0..=0,
             extend_to_last_occurrence: false,
+            respect_sequence: true,
         },
         None,
         SF2_BYTES,
@@ -346,6 +348,7 @@ fn write_wav_for_measure_range_from_source_out_of_range_clamps_to_last_measure()
         &MeasureRangeSelection {
             range: 0..=99,
             extend_to_last_occurrence: false,
+            respect_sequence: true,
         },
         None,
         SF2_BYTES,

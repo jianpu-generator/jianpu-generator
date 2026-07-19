@@ -1,4 +1,4 @@
-use super::expand_navigation_with_origins;
+use super::{expand_for_measure_range, expand_navigation_with_origins};
 use crate::ast::grouped::{
     Metadata, MultiPartMeasure, Notes, PartRow, PartSlice, Score, SequenceSpan,
 };
@@ -114,4 +114,32 @@ fn sequence_omit_parts_drops_named_parts_per_occurrence() {
     assert_eq!(names(&expanded.measures[1]), vec!["S", "T"]);
     // The original written score is untouched.
     assert_eq!(score.measures[0].parts.len(), 3);
+}
+
+#[test]
+fn expand_for_measure_range_respect_sequence_false_ignores_sequence_omission() {
+    // A single measure "Chorus" with three parts, played twice via
+    // `# sequence` with the first occurrence omitting S and A2. Selecting
+    // the written measure with `respect_sequence: false` (as "play current
+    // measure" does) must play it exactly as written, with all three parts,
+    // regardless of what any `# sequence` occurrence would have omitted.
+    let measures = vec![measure_with_parts(0, &["S", "A2", "T"])];
+    let score = score_with_sequence(
+        measures,
+        vec![SequenceSpan {
+            label: "Chorus".to_string(),
+            start: 0,
+            end: 0,
+            omit_parts: vec!["S".to_string(), "A2".to_string()],
+            omit_parts_display: Vec::new(),
+        }],
+    );
+
+    let (literal, start, end) = expand_for_measure_range(&score, 0, 0, false, false).unwrap();
+    assert_eq!((start, end), (0, 0));
+    assert_eq!(literal.measures[0].parts.len(), 3);
+
+    let (respected, start, end) = expand_for_measure_range(&score, 0, 0, false, true).unwrap();
+    assert_eq!((start, end), (0, 0));
+    assert_eq!(respected.measures[0].parts.len(), 1);
 }

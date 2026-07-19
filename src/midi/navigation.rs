@@ -304,6 +304,12 @@ pub fn expand_for_measure(
 ///   including when `end` is itself a navigation marker measure (`coda`,
 ///   `dcalcoda`/`dsalcoda`) that also happens to be the score's last
 ///   written measure, which is the normal case for a `coda` section.
+/// - If `respect_sequence` is `false`, D.C./D.S. markers and `# sequence`
+///   (including any `(-abbrev ...)` part omissions it applies to a given
+///   occurrence) are ignored entirely: the range is returned unchanged
+///   against the literal written score, so e.g. "play current measure"
+///   always plays the measure exactly as written, regardless of which
+///   occurrence(s) of it a `# sequence` entry might otherwise select.
 ///
 /// Falls back to the original written range if either endpoint has no
 /// reachable position, or if `start_index > end_index`.
@@ -312,8 +318,12 @@ pub fn expand_for_measure_range(
     start_index: usize,
     end_index: usize,
     extend_to_last_occurrence: bool,
+    respect_sequence: bool,
 ) -> Result<(Score, usize, usize), IrrecoverableError> {
     if start_index > end_index {
+        return Ok((score.clone(), start_index, end_index));
+    }
+    if !respect_sequence {
         return Ok((score.clone(), start_index, end_index));
     }
     let (expanded, origins) = expand_navigation_with_origins(score)?;

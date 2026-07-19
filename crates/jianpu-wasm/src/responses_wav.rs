@@ -29,12 +29,13 @@ pub(crate) fn generate_wav_response(
     }
 }
 
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 pub(crate) fn generate_wav_for_measure_range_response(
     source: &str,
     start_index: usize,
     end_index: usize,
     extend_to_last_occurrence: bool,
+    respect_sequence: bool,
     enabled_tracks: Option<&[String]>,
     soundfont: Vec<u8>,
 ) -> GenerateWavResponse {
@@ -44,6 +45,7 @@ pub(crate) fn generate_wav_for_measure_range_response(
         &MeasureRangeSelection {
             range: start_index..=end_index,
             extend_to_last_occurrence,
+            respect_sequence,
         },
         enabled_tracks,
         &soundfont,
@@ -73,13 +75,17 @@ pub(crate) fn list_measure_times_for_range_response(
     start_index: usize,
     end_index: usize,
     extend_to_last_occurrence: bool,
+    respect_sequence: bool,
     enabled_tracks: Option<&[String]>,
 ) -> ListMeasureTimesResponse {
     match measure_start_times_for_range_from_source(
         source,
         "input.jianpu",
-        start_index..=end_index,
-        extend_to_last_occurrence,
+        &MeasureRangeSelection {
+            range: start_index..=end_index,
+            extend_to_last_occurrence,
+            respect_sequence,
+        },
         enabled_tracks,
         &[],
     ) {
@@ -117,13 +123,17 @@ pub(crate) fn list_note_timings_for_range_response(
     start_index: usize,
     end_index: usize,
     extend_to_last_occurrence: bool,
+    respect_sequence: bool,
     enabled_tracks: Option<&[String]>,
 ) -> NoteTimingsResponse {
     match note_timings_for_range_from_source(
         source,
         "input.jianpu",
-        start_index..=end_index,
-        extend_to_last_occurrence,
+        &MeasureRangeSelection {
+            range: start_index..=end_index,
+            extend_to_last_occurrence,
+            respect_sequence,
+        },
         enabled_tracks,
         &[],
     ) {

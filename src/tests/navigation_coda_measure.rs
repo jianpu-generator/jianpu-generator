@@ -45,6 +45,7 @@ fn play_current_measure_on_final_coda_measure_plays_one_measure() {
         &MeasureRangeSelection {
             range: 4..=4,
             extend_to_last_occurrence: false,
+            respect_sequence: true,
         },
         None,
         SF2_BYTES,
@@ -60,6 +61,7 @@ fn play_current_measure_on_final_coda_measure_plays_one_measure() {
         &MeasureRangeSelection {
             range: 3..=3,
             extend_to_last_occurrence: false,
+            respect_sequence: true,
         },
         None,
         SF2_BYTES,

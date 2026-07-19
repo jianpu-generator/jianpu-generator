@@ -37,6 +37,7 @@ function measureTimesForRangeFromSource(
         startIndex: number,
         endIndex: number,
         extendToLastOccurrence: boolean,
+        respectSequence: boolean,
         enabledTracks?: string[],
       ) => ListMeasureTimesResponse)
     | null,
@@ -44,6 +45,7 @@ function measureTimesForRangeFromSource(
   startMeasureIndex: number,
   endMeasureIndex: number,
   extendToLastOccurrence: boolean,
+  respectSequence: boolean,
   enabledTracks: string[] | undefined,
 ): number[] {
   if (!listMeasureTimesForRange) return []
@@ -52,6 +54,7 @@ function measureTimesForRangeFromSource(
     startMeasureIndex,
     endMeasureIndex,
     extendToLastOccurrence,
+    respectSequence,
     enabledTracks,
   )
   return result.status === 'ok' ? result.times : []
@@ -106,6 +109,7 @@ function noteTimingsForRangeFromSource(
         startIndex: number,
         endIndex: number,
         extendToLastOccurrence: boolean,
+        respectSequence: boolean,
         enabledTracks?: string[],
       ) => NoteTimingsResponse)
     | null,
@@ -113,6 +117,7 @@ function noteTimingsForRangeFromSource(
   startMeasureIndex: number,
   endMeasureIndex: number,
   extendToLastOccurrence: boolean,
+  respectSequence: boolean,
   enabledTracks: string[] | undefined,
 ): NoteTimingOut[] {
   if (!listNoteTimingsForRange) return []
@@ -121,6 +126,7 @@ function noteTimingsForRangeFromSource(
     startMeasureIndex,
     endMeasureIndex,
     extendToLastOccurrence,
+    respectSequence,
     enabledTracks,
   )
   return result.status === 'ok' ? result.timings : []
@@ -133,6 +139,7 @@ function writtenMeasureIndicesForRangeFromSource(
         startIndex: number,
         endIndex: number,
         extendToLastOccurrence: boolean,
+        respectSequence: boolean,
         enabledTracks?: string[],
       ) => WrittenMeasureIndicesResponse)
     | null,
@@ -140,6 +147,7 @@ function writtenMeasureIndicesForRangeFromSource(
   startMeasureIndex: number,
   endMeasureIndex: number,
   extendToLastOccurrence: boolean,
+  respectSequence: boolean,
   enabledTracks: string[] | undefined,
 ): number[] {
   if (!writtenMeasureIndicesForRange) return []
@@ -148,6 +156,7 @@ function writtenMeasureIndicesForRangeFromSource(
     startMeasureIndex,
     endMeasureIndex,
     extendToLastOccurrence,
+    respectSequence,
     enabledTracks,
   )
   return result.status === 'ok' ? result.indices : []
@@ -238,6 +247,7 @@ type GenerateWavForMeasureRangeFn =
       startIndex: number,
       endIndex: number,
       extendToLastOccurrence: boolean,
+      respectSequence: boolean,
       enabledTracks: string[] | undefined,
       soundfont: Uint8Array,
     ) => GenerateWavResponse)
@@ -249,6 +259,7 @@ type ListMeasureTimesForRangeFn =
       startIndex: number,
       endIndex: number,
       extendToLastOccurrence: boolean,
+      respectSequence: boolean,
       enabledTracks?: string[],
     ) => ListMeasureTimesResponse)
   | null
@@ -259,6 +270,7 @@ type WrittenMeasureIndicesForRangeFn =
       startIndex: number,
       endIndex: number,
       extendToLastOccurrence: boolean,
+      respectSequence: boolean,
       enabledTracks?: string[],
     ) => WrittenMeasureIndicesResponse)
   | null
@@ -269,6 +281,7 @@ type ListNoteTimingsForRangeFn =
       startIndex: number,
       endIndex: number,
       extendToLastOccurrence: boolean,
+      respectSequence: boolean,
       enabledTracks?: string[],
     ) => NoteTimingsResponse)
   | null
@@ -294,6 +307,7 @@ export function handleGenerateMeasureRangeAudio(
     msg.startMeasureIndex,
     msg.endMeasureIndex,
     msg.extendToLastOccurrence,
+    msg.respectSequence,
     msg.enabledTracks,
     loadedSoundfont,
   )
@@ -310,6 +324,7 @@ export function handleGenerateMeasureRangeAudio(
           msg.startMeasureIndex,
           msg.endMeasureIndex,
           msg.extendToLastOccurrence,
+          msg.respectSequence,
           msg.enabledTracks,
         ),
         writtenMeasureIndices: writtenMeasureIndicesForRangeFromSource(
@@ -318,6 +333,7 @@ export function handleGenerateMeasureRangeAudio(
           msg.startMeasureIndex,
           msg.endMeasureIndex,
           msg.extendToLastOccurrence,
+          msg.respectSequence,
           msg.enabledTracks,
         ),
         columnBoundaries: columnBoundariesFromSource(
@@ -331,6 +347,7 @@ export function handleGenerateMeasureRangeAudio(
           msg.startMeasureIndex,
           msg.endMeasureIndex,
           msg.extendToLastOccurrence,
+          msg.respectSequence,
           msg.enabledTracks,
         ),
       } satisfies WorkerResponse,

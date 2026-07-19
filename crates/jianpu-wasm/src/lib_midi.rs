@@ -46,7 +46,7 @@ pub fn written_measure_indices(
 /// Available only when the `midi` feature is enabled at build time.
 ///
 /// See `generate_wav_for_measure_range` (in the `wav` feature) for
-/// `extend_to_last_occurrence`.
+/// `extend_to_last_occurrence` and `respect_sequence`.
 #[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
 pub fn written_measure_indices_for_range(
@@ -54,6 +54,7 @@ pub fn written_measure_indices_for_range(
     start_index: usize,
     end_index: usize,
     extend_to_last_occurrence: bool,
+    respect_sequence: bool,
     enabled_tracks: Option<Vec<String>>,
 ) -> WrittenMeasureIndicesResponse {
     written_measure_indices_for_range_response(
@@ -61,6 +62,7 @@ pub fn written_measure_indices_for_range(
         start_index,
         end_index,
         extend_to_last_occurrence,
+        respect_sequence,
         enabled_tracks.as_deref(),
     )
 }

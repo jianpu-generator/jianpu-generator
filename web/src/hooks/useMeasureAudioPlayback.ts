@@ -87,6 +87,7 @@ export function useMeasureAudioPlayback({
       startMeasureIndex: number,
       endMeasureIndex: number,
       extendToLastOccurrence: boolean,
+      respectSequence: boolean,
     ) => {
       const worker = workerRef.current
       if (!worker) return
@@ -100,6 +101,7 @@ export function useMeasureAudioPlayback({
         startMeasureIndex,
         endMeasureIndex,
         extendToLastOccurrence,
+        respectSequence,
         enabledTracks: enabledTracksRef.current,
       } satisfies WorkerRequest)
     },
@@ -110,10 +112,14 @@ export function useMeasureAudioPlayback({
     if (selectedMeasureRange === null) return
     // Exact range: stop at the end measure's first occurrence, so a
     // single-measure selection (e.g. "play current measure") doesn't
-    // overrun into a later D.C./D.S. al Coda repeat pass.
+    // overrun into a later D.C./D.S. al Coda repeat pass. Ignore
+    // # sequence/D.C./D.S. entirely, so "play current measure" always plays
+    // exactly what is written, regardless of any part omission a # sequence
+    // entry might apply to this measure's occurrence(s).
     playMeasureRange(
       selectedMeasureRange.start,
       selectedMeasureRange.end,
+      false,
       false,
     )
   }, [selectedMeasureRange, playMeasureRange])
@@ -122,8 +128,13 @@ export function useMeasureAudioPlayback({
     if (selectedMeasureRange === null || measureSpans.length === 0) return
     // "Play to the end": follow every repeat/jump through to the true end
     // of the performance instead of stopping at the last written measure's
-    // first occurrence.
-    playMeasureRange(selectedMeasureRange.start, measureSpans.length - 1, true)
+    // first occurrence, respecting # sequence/D.C./D.S. navigation.
+    playMeasureRange(
+      selectedMeasureRange.start,
+      measureSpans.length - 1,
+      true,
+      true,
+    )
   }, [selectedMeasureRange, measureSpans, playMeasureRange])
 
   return {

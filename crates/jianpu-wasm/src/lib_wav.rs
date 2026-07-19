@@ -47,13 +47,19 @@ pub fn generate_wav(
 /// `end_index`) or `false` to stop at its first occurrence at or after
 /// `start_index` (needed for an exact range selection, e.g. "play current
 /// measure").
-#[allow(clippy::needless_pass_by_value)]
+///
+/// `respect_sequence`: pass `false` to ignore D.C./D.S. markers and
+/// `# sequence` (including any part omissions it applies) and play the
+/// range exactly as written — what "play current measure" needs. Pass
+/// `true` to follow them — what "play from current measure" needs.
+#[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 #[wasm_bindgen]
 pub fn generate_wav_for_measure_range(
     source: &str,
     start_index: usize,
     end_index: usize,
     extend_to_last_occurrence: bool,
+    respect_sequence: bool,
     enabled_tracks: Option<Vec<String>>,
     soundfont: Vec<u8>,
 ) -> GenerateWavResponse {
@@ -62,6 +68,7 @@ pub fn generate_wav_for_measure_range(
         start_index,
         end_index,
         extend_to_last_occurrence,
+        respect_sequence,
         enabled_tracks.as_deref(),
         soundfont,
     )
@@ -91,7 +98,8 @@ pub fn list_measure_times(
 /// Used to sync a UI playhead against the audio produced by
 /// [`generate_wav_for_measure_range`]. Returns the same envelope as
 /// [`list_measure_times`].
-/// See [`generate_wav_for_measure_range`] for `extend_to_last_occurrence`.
+/// See [`generate_wav_for_measure_range`] for `extend_to_last_occurrence` and
+/// `respect_sequence`.
 #[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
 pub fn list_measure_times_for_range(
@@ -99,6 +107,7 @@ pub fn list_measure_times_for_range(
     start_index: usize,
     end_index: usize,
     extend_to_last_occurrence: bool,
+    respect_sequence: bool,
     enabled_tracks: Option<Vec<String>>,
 ) -> ListMeasureTimesResponse {
     list_measure_times_for_range_response(
@@ -106,6 +115,7 @@ pub fn list_measure_times_for_range(
         start_index,
         end_index,
         extend_to_last_occurrence,
+        respect_sequence,
         enabled_tracks.as_deref(),
     )
 }
@@ -157,7 +167,8 @@ pub fn list_note_timings(source: &str, enabled_tracks: Option<Vec<String>>) -> N
 /// are relative to the start of that clip, not the start of the whole piece.
 /// `note_id`s still agree with the full-score render's `data-note-id`.
 /// Returns the same envelope as [`list_note_timings`].
-/// See [`generate_wav_for_measure_range`] for `extend_to_last_occurrence`.
+/// See [`generate_wav_for_measure_range`] for `extend_to_last_occurrence` and
+/// `respect_sequence`.
 #[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
 pub fn list_note_timings_for_range(
@@ -165,6 +176,7 @@ pub fn list_note_timings_for_range(
     start_index: usize,
     end_index: usize,
     extend_to_last_occurrence: bool,
+    respect_sequence: bool,
     enabled_tracks: Option<Vec<String>>,
 ) -> NoteTimingsResponse {
     list_note_timings_for_range_response(
@@ -172,6 +184,7 @@ pub fn list_note_timings_for_range(
         start_index,
         end_index,
         extend_to_last_occurrence,
+        respect_sequence,
         enabled_tracks.as_deref(),
     )
 }

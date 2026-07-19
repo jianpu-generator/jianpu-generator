@@ -1,7 +1,7 @@
 #![allow(clippy::disallowed_macros)]
 use jianpu_generator::{
     measure_start_times_from_source, note_timings_for_range_from_source, note_timings_from_source,
-    render_svgs_from_source,
+    render_svgs_from_source, MeasureRangeSelection,
 };
 use std::collections::HashSet;
 
@@ -262,8 +262,11 @@ fn note_timings_for_range_start_at_zero_and_match_full_score_ids() {
     let range_timings = note_timings_for_range_from_source(
         source,
         filename,
-        start_measure_index..=start_measure_index,
-        false,
+        &MeasureRangeSelection {
+            range: start_measure_index..=start_measure_index,
+            extend_to_last_occurrence: false,
+            respect_sequence: true,
+        },
         None,
         &[],
     )

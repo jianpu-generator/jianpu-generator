@@ -25,7 +25,8 @@
 - [x] when system divier is hidden, the hover bounding box is wrong
 - [x] when edit data modal is open, the preview should be scrollable
 - [x] Legends of Group label should show what they consist of, for example `V - Vocal (S1,S2,A1,A2)`
+- [x] clicking on a merge rest bar should highlight all measures in monaco editor
 - [ ] syntax highlighting
 - [ ] LSP rename
 - [ ] Formatter: align lyric syllables with their corresponding notes
-- [ ] clicking on a merge rest bar should highlight all measures in monaco editor
+- [x] Play current measure should be different from play from current measure, the former should always play what is written, while the latter always respect #sequence

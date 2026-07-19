@@ -52,9 +52,17 @@ pub fn write_wav_for_measure_from_source(
 /// When `false`, the range stops at the end measure's first occurrence at or
 /// after the start — what an exact range selection (e.g. "play current
 /// measure") needs to avoid overrunning into a later repeat/jump pass.
+///
+/// When `respect_sequence` is `false`, D.C./D.S. markers and `# sequence`
+/// (and any part omissions it applies) are ignored: the range plays exactly
+/// as written. This is what "play current measure" needs — it always plays
+/// what is written, regardless of how `# sequence` might otherwise reorder
+/// or omit parts for that measure's occurrence(s). "Play from current
+/// measure" passes `true` so it follows `# sequence` to the true end.
 pub struct MeasureRangeSelection {
     pub range: std::ops::RangeInclusive<usize>,
     pub extend_to_last_occurrence: bool,
+    pub respect_sequence: bool,
 }
 
 /// Parse, group, optionally filter tracks, and synthesize WAV for a consecutive measure range.
@@ -76,6 +84,7 @@ pub fn write_wav_for_measure_range_from_source(
         *selection.range.start(),
         *selection.range.end(),
         selection.extend_to_last_occurrence,
+        selection.respect_sequence,
     )?;
     let midi_bytes = crate::midi::write_midi_for_measure_range(&score, start, end)?;
     crate::wav::write_wav(&midi_bytes, sf2_bytes)
@@ -126,13 +135,13 @@ pub fn note_timings_from_source(
 /// and relative to the start of that range. Used to sync a playhead against
 /// the audio clip returned by [`write_wav_for_measure_range_from_source`].
 ///
-/// See [`write_wav_for_measure_range_from_source`] for `extend_to_last_occurrence`.
+/// See [`MeasureRangeSelection`] for `extend_to_last_occurrence` and
+/// `respect_sequence`.
 #[cfg(feature = "midi")]
 pub fn measure_start_times_for_range_from_source(
     source: &str,
     filename: &str,
-    measure_range: std::ops::RangeInclusive<usize>,
-    extend_to_last_occurrence: bool,
+    selection: &MeasureRangeSelection,
     enabled_tracks: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<f64>, IrrecoverableError> {
@@ -140,9 +149,10 @@ pub fn measure_start_times_for_range_from_source(
     apply_track_filter(&mut score, enabled_tracks);
     let (score, start, end) = crate::midi::expand_for_measure_range(
         &score,
-        *measure_range.start(),
-        *measure_range.end(),
-        extend_to_last_occurrence,
+        *selection.range.start(),
+        *selection.range.end(),
+        selection.extend_to_last_occurrence,
+        selection.respect_sequence,
     )?;
     crate::midi::measure_start_times_seconds_for_range(&score, start, end)
 }
@@ -152,13 +162,13 @@ pub fn measure_start_times_for_range_from_source(
 /// the start of the clip [`write_wav_for_measure_range_from_source`]
 /// produces for the same range, not from the start of the whole piece).
 ///
-/// See [`write_wav_for_measure_range_from_source`] for `extend_to_last_occurrence`.
+/// See [`MeasureRangeSelection`] for `extend_to_last_occurrence` and
+/// `respect_sequence`.
 #[cfg(feature = "midi")]
 pub fn note_timings_for_range_from_source(
     source: &str,
     filename: &str,
-    measure_range: std::ops::RangeInclusive<usize>,
-    extend_to_last_occurrence: bool,
+    selection: &MeasureRangeSelection,
     enabled_tracks: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<crate::midi::NoteTiming>, IrrecoverableError> {
@@ -166,9 +176,10 @@ pub fn note_timings_for_range_from_source(
     apply_track_filter(&mut score, enabled_tracks);
     let (_, start_pos, end_pos) = crate::midi::expand_for_measure_range(
         &score,
-        *measure_range.start(),
-        *measure_range.end(),
-        extend_to_last_occurrence,
+        *selection.range.start(),
+        *selection.range.end(),
+        selection.extend_to_last_occurrence,
+        selection.respect_sequence,
     )?;
     crate::midi::note_timings_seconds_for_range(&score, start_pos, end_pos)
 }
@@ -199,25 +210,29 @@ pub fn written_measure_indices_from_source(
 /// range: entries correspond 1:1 to [`measure_start_times_for_range_from_source`]'s
 /// timeline for the same range.
 ///
-/// See [`write_wav_for_measure_range_from_source`] for `extend_to_last_occurrence`.
+/// See [`MeasureRangeSelection`] for `extend_to_last_occurrence` and
+/// `respect_sequence`.
 #[cfg(feature = "midi")]
 pub fn written_measure_indices_for_range_from_source(
     source: &str,
     filename: &str,
-    measure_range: std::ops::RangeInclusive<usize>,
-    extend_to_last_occurrence: bool,
+    selection: &MeasureRangeSelection,
     enabled_tracks: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<usize>, IrrecoverableError> {
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
-    let (_, origins) = crate::midi::expand_navigation_with_origins(&score)?;
     let (_, start_pos, end_pos) = crate::midi::expand_for_measure_range(
         &score,
-        *measure_range.start(),
-        *measure_range.end(),
-        extend_to_last_occurrence,
+        *selection.range.start(),
+        *selection.range.end(),
+        selection.extend_to_last_occurrence,
+        selection.respect_sequence,
     )?;
+    if !selection.respect_sequence {
+        return Ok((start_pos..=end_pos).collect());
+    }
+    let (_, origins) = crate::midi::expand_navigation_with_origins(&score)?;
     Ok(origins
         .get(start_pos..=end_pos)
         .map(<[usize]>::to_vec)

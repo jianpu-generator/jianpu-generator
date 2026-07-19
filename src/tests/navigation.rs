@@ -133,6 +133,7 @@ fn play_from_current_measure_after_navigation_includes_repeat() {
         &MeasureRangeSelection {
             range: 0..=3,
             extend_to_last_occurrence: true,
+            respect_sequence: true,
         },
         None,
         SF2_BYTES,
@@ -157,8 +158,11 @@ fn measure_start_times_for_range_reflects_navigation() {
     let times = measure_start_times_for_range_from_source(
         navigation_source(),
         "test.jianpu",
-        0..=3,
-        true,
+        &MeasureRangeSelection {
+            range: 0..=3,
+            extend_to_last_occurrence: true,
+            respect_sequence: true,
+        },
         None,
         &[],
     )
@@ -179,6 +183,7 @@ fn play_from_dead_zone_measure_falls_back_to_written_order() {
         &MeasureRangeSelection {
             range: 3..=4,
             extend_to_last_occurrence: true,
+            respect_sequence: true,
         },
         None,
         SF2_BYTES,
@@ -199,6 +204,7 @@ fn no_markers_measure_range_playback_unchanged() {
         &MeasureRangeSelection {
             range: 0..=3,
             extend_to_last_occurrence: true,
+            respect_sequence: true,
         },
         None,
         SF2_BYTES,
@@ -247,6 +253,7 @@ fn play_current_measure_inside_dsalcoda_repeat_window_plays_one_measure() {
         &MeasureRangeSelection {
             range: 1..=1,
             extend_to_last_occurrence: false,
+            respect_sequence: true,
         },
         None,
         SF2_BYTES,
@@ -260,6 +267,7 @@ fn play_current_measure_inside_dsalcoda_repeat_window_plays_one_measure() {
         &MeasureRangeSelection {
             range: 1..=1,
             extend_to_last_occurrence: false,
+            respect_sequence: true,
         },
         None,
         SF2_BYTES,
@@ -289,6 +297,7 @@ fn play_from_literal_end_measure_still_follows_navigation() {
         &MeasureRangeSelection {
             range: 4..=4,
             extend_to_last_occurrence: true,
+            respect_sequence: true,
         },
         None,
         SF2_BYTES,

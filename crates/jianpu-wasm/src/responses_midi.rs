@@ -1,7 +1,7 @@
 use jianpu_generator::{
     write_midi_from_source_filtered, write_split_midis_from_source,
     written_measure_indices_for_range_from_source, written_measure_indices_from_source,
-    zip_split_entries,
+    zip_split_entries, MeasureRangeSelection,
 };
 
 use super::diagnostic_from_error;
@@ -38,13 +38,17 @@ pub(crate) fn written_measure_indices_for_range_response(
     start_index: usize,
     end_index: usize,
     extend_to_last_occurrence: bool,
+    respect_sequence: bool,
     enabled_tracks: Option<&[String]>,
 ) -> WrittenMeasureIndicesResponse {
     match written_measure_indices_for_range_from_source(
         source,
         "input.jianpu",
-        start_index..=end_index,
-        extend_to_last_occurrence,
+        &MeasureRangeSelection {
+            range: start_index..=end_index,
+            extend_to_last_occurrence,
+            respect_sequence,
+        },
         enabled_tracks,
         &[],
     ) {
