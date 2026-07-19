@@ -67,11 +67,6 @@ fn clamp_lyric_x(x: f32, x_start: f32, content: &GridContent, fonts: LyricFontSi
     x.max(x_start + half_width)
 }
 
-/// Gap kept between a bottom-aligned directive line (section label, key,
-/// bpm, time signature) and the top of the musical row below it, so the
-/// vertically-centered text doesn't dip into the measure underneath.
-const DIRECTIVE_LINE_BOTTOM_PADDING: f32 = 16.0;
-
 fn resolve_row_element(
     el: &GridElement,
     row: &GridRow,
@@ -93,7 +88,7 @@ fn resolve_row_element(
     };
     let x = clamp_lyric_x(x, x_start, &el.content, lyric_font_sizes);
     let bottom_padding = if matches!(el.content, GridContent::DirectiveLine { .. }) {
-        DIRECTIVE_LINE_BOTTOM_PADDING
+        crate::font_metrics::DIRECTIVE_LINE_BOTTOM_PADDING
     } else {
         0.0
     };

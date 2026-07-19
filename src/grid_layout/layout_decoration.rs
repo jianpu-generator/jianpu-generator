@@ -64,7 +64,6 @@ fn decoration_has_navigation_marker(dec: &Decoration) -> bool {
 
 pub(super) fn make_decoration_row(
     system: &[MeasureBlock],
-    base: f32,
     measure_layout: &[MeasureColumnLayout],
 ) -> GridRow {
     let total_musical_cols: u32 = system.iter().map(block_column_width).sum();
@@ -107,7 +106,7 @@ pub(super) fn make_decoration_row(
     }
 
     GridRow {
-        height_pt: decoration_row_height(base),
+        height_pt: crate::font_metrics::directive_line_row_height(),
         column_count: music_column_count,
         has_label_region: true,
         measure_layout: measure_layout.to_vec(),

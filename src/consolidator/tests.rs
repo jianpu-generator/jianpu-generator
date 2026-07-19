@@ -284,3 +284,41 @@ fn narrower_group_broadcast_overrides_broader_group_broadcast_for_shared_members
         "S1/S2 should be overridden by the later, narrower S broadcast and merge under the S group label"
     );
 }
+
+#[test]
+fn identical_measure_merges_across_parts_even_after_note_id_drift() {
+    // Measure 1: A2 and S have different rhythms (A2 uses rests, S uses a
+    // dashed note), so A2 accumulates a different number of note events than
+    // S. This makes their internal `note_id` counters diverge permanently.
+    //
+    // Measure 2: A2 and S have identical pitches and rhythm ("7_) 1'_~1' --"
+    // vs "7_ 1'_~1' --" render the same notes/dashes), so this measure should
+    // merge into a single row — but `note_id` is part of `ColumnElement` and
+    // is compared by `content_equal`, so the drift from measure 1 keeps the
+    // otherwise-identical rows apart.
+    let source = concat!(
+        "# parts\n",
+        "A2 = notes\n",
+        "S = notes\n",
+        "\n",
+        "# score\n",
+        "label=\"CE3\"\n",
+        "[A2]0000_.(7=~\n",
+        "[S]0 - 7~ -\n",
+        "\n",
+        "[A2]7_) 1'_~1' --\n",
+        "[S]7_ 1'_~1' --\n",
+    );
+    let blocks = consolidated_blocks(source);
+
+    assert_eq!(
+        blocks[1].rows.len(),
+        1,
+        "measure 2: A2 and S have identical pitches/rhythm and should merge into one row; got rows: {:?}",
+        blocks[1]
+            .rows
+            .iter()
+            .map(|row| &row.label)
+            .collect::<Vec<_>>()
+    );
+}

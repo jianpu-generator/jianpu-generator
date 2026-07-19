@@ -151,8 +151,17 @@ fn consolidate_rows(mut rows: Vec<MeasureRow>, merge_across_parts: bool) -> Vec<
     rows
 }
 
+/// Elements are compared by `column`/`content` only, ignoring `note_id`: it's
+/// a per-part running counter (not reset per measure), so two parts with
+/// visually identical notes can carry different `note_id`s once their event
+/// counts have diverged in an earlier measure.
 fn content_equal(left: &MeasureRow, right: &MeasureRow) -> bool {
-    left.elements == right.elements
+    left.elements.len() == right.elements.len()
+        && left
+            .elements
+            .iter()
+            .zip(right.elements.iter())
+            .all(|(l, r)| l.column == r.column && l.content == r.content)
 }
 
 #[cfg(test)]

@@ -216,7 +216,7 @@ fn system_total_height(system: &[MeasureBlock], base: f32) -> f32 {
     let musical = system_musical_height_pt(first, base);
     let lyric = system_lyric_height_pt(first, base);
     let deco = if system_has_any_decoration(system) {
-        decoration_row_height(base)
+        crate::font_metrics::directive_line_row_height()
     } else {
         0.0
     };
@@ -242,7 +242,7 @@ fn build_page_rows(
         };
         let measure_layout = build_measure_column_layout(system);
         if system_has_any_decoration(system) {
-            rows.push(make_decoration_row(system, base, &measure_layout));
+            rows.push(make_decoration_row(system, &measure_layout));
         }
         let abs_sys = abs_system_index_start + sys_idx;
         let system_arcs: HashMap<usize, Vec<GridElement>> = first
