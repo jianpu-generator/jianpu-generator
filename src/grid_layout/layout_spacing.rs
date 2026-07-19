@@ -18,11 +18,8 @@ pub(crate) const MIN_MEASURE_WIDTH_PT: f32 = 24.0;
 /// (`MultiMeasureRest`) contribute nothing here.
 const THIN_MARK_WEIGHT: f32 = 0.25;
 
-/// Relative width weight for a `NoteDash` or `Lyric` column — even though a
-/// dash represents a full beat of duration, it doesn't need nearly as much
-/// horizontal room as an actual notehead, so it gets less than a fresh note
-/// despite "meaning" the same beat.
-const MEDIUM_MARK_WEIGHT: f32 = 0.5;
+/// Relative width weight for a `NoteDash` or `Lyric` column.
+const MEDIUM_MARK_WEIGHT: f32 = 1.0;
 
 fn column_weight(content: &ElementContent) -> f32 {
     match content {

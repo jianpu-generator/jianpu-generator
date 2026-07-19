@@ -118,25 +118,24 @@ fn measure_column_weights_scales_with_note_count() {
 }
 
 #[test]
-fn measure_column_weights_gives_dash_less_weight_than_a_fresh_note() {
+fn measure_column_weights_gives_dash_same_weight_as_a_fresh_note() {
     // A half note (`NoteHead` + `NoteDash`) spans the same 2 columns as two
-    // quarter notes, but the dash column should weigh less than a real
-    // notehead column, even though it represents a full beat of duration.
+    // quarter notes, and the dash column weighs the same as a real notehead
+    // column.
     let half_note = make_block_with_dash("S", 2);
     let weights = measure_column_weights(&half_note, 3);
-    assert!(
-        weights[1] < weights[0],
-        "dash weight {} should be less than notehead weight {}",
-        weights[1],
-        weights[0]
+    assert_eq!(
+        weights[1], weights[0],
+        "dash weight {} should equal notehead weight {}",
+        weights[1], weights[0]
     );
 
     let two_quarters = make_block_with_notes("S", 2, 2);
     let quarters_weight: f32 = measure_column_weights(&two_quarters, 3).iter().sum();
     let half_note_weight: f32 = weights.iter().sum();
-    assert!(
-        quarters_weight > half_note_weight,
-        "two quarter notes ({quarters_weight}) should weigh more than one half note ({half_note_weight})"
+    assert_eq!(
+        quarters_weight, half_note_weight,
+        "two quarter notes ({quarters_weight}) should weigh the same as one half note ({half_note_weight})"
     );
 }
 
@@ -271,11 +270,11 @@ fn measure_column_boundaries_starts_at_zero_and_ends_at_one_per_measure() {
 }
 
 #[test]
-fn measure_column_boundaries_reflects_dash_weighing_less_than_a_notehead() {
+fn measure_column_boundaries_reflects_dash_weighing_the_same_as_a_notehead() {
     // A half note (notehead + dash) should reach its column-2 boundary
-    // (past the dash) sooner, proportionally, than a linear/duration-based
-    // mapping would put it — since the dash column weighs less than the
-    // notehead column that precedes it.
+    // (past the dash) at the halfway point of the note-bearing columns,
+    // since the dash column now weighs the same as the notehead column
+    // that precedes it.
     let compile_result = CompileResult {
         blocks: vec![make_block_with_dash("S", 2)],
         slur_spans: vec![],
@@ -283,10 +282,14 @@ fn measure_column_boundaries_reflects_dash_weighing_less_than_a_notehead() {
     let boundaries = &measure_column_boundaries(&compile_result)[0];
     // Columns: [notehead, dash, barline] -> boundaries has 4 entries.
     assert_eq!(boundaries.len(), 4);
-    // The notehead column (weight 1.0) should take up more than half the
-    // measure's pixel width, even though it's only one of two note-bearing
-    // columns (notehead + dash) before the bar line.
-    assert!(boundaries[1] > 0.5, "boundaries={boundaries:?}");
+    // The notehead column and dash column (both weight 1.0) split the
+    // note-bearing portion of the measure evenly, so the column-2 boundary
+    // sits at less than half the *total* width once the thin bar line is
+    // counted in.
+    assert!(
+        (boundaries[1] - 0.444_444_45).abs() < 1e-5,
+        "boundaries={boundaries:?}"
+    );
 }
 
 #[test]
