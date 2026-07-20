@@ -21,6 +21,7 @@ export function SectionJumpToolbar({
 
   return (
     <div className="workspace-toolbar">
+      <span className="workspace-toolbar-label">Sections</span>
       <div
         role="toolbar"
         className="workspace-toolbar-sections"

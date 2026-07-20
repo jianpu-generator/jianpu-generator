@@ -23,6 +23,7 @@ export function SequenceJumpToolbar({
 
   return (
     <div className="workspace-toolbar">
+      <span className="workspace-toolbar-label">Sequence</span>
       <div
         role="toolbar"
         className="workspace-toolbar-sections"

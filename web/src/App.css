@@ -45,6 +45,13 @@
   min-height: 2rem;
 }
 
+.workspace-toolbar-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
 .workspace-toolbar-sections {
   display: flex;
   align-items: center;
