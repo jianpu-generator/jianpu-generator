@@ -5,6 +5,7 @@ interface UseKeyboardShortcutsOptions {
   measureAudioGenerating: boolean
   soundfontReady: boolean
   selectedMeasureRange: { start: number; end: number } | null
+  selectedSequenceRange: { start: number; end: number } | null
   playSelectedMeasures: () => void
   playFromCurrentMeasure: () => void
   stopMeasurePlayback: () => void
@@ -16,6 +17,7 @@ export function useKeyboardShortcuts({
   measureAudioGenerating,
   soundfontReady,
   selectedMeasureRange,
+  selectedSequenceRange,
   playSelectedMeasures,
   playFromCurrentMeasure,
   stopMeasurePlayback,
@@ -23,6 +25,8 @@ export function useKeyboardShortcuts({
 }: UseKeyboardShortcutsOptions) {
   const canPlaySelection =
     selectedMeasureRange !== null && !measureAudioGenerating && soundfontReady
+  const canPlayFromCurrentMeasure =
+    selectedSequenceRange !== null && !measureAudioGenerating && soundfontReady
 
   const playMeasureRef = useRef<(() => void) | undefined>(undefined)
   playMeasureRef.current = measureAudioPlaying
@@ -34,7 +38,7 @@ export function useKeyboardShortcuts({
   const playFromCurrentMeasureRef = useRef<(() => void) | undefined>(undefined)
   playFromCurrentMeasureRef.current = measureAudioPlaying
     ? stopMeasurePlayback
-    : canPlaySelection
+    : canPlayFromCurrentMeasure
       ? playFromCurrentMeasure
       : undefined
 

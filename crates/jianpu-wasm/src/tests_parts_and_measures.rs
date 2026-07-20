@@ -124,3 +124,66 @@ fn list_measure_spans_returns_empty_for_invalid_source() {
         ListMeasureSpansResponse::Err => {}
     }
 }
+
+#[test]
+fn list_measure_spans_returns_sequence_entries_in_playback_order_with_repeats() {
+    // `# sequence` replays the "Chorus" span twice, so the resolved entries
+    // must reflect playback order (Verse, Chorus, Chorus), not written order
+    // (Verse, Chorus), and each occurrence must carry its own measure range.
+    let input = concat!(
+        "# metadata\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "# parts\n",
+        "Melody = notes\n",
+        "\n",
+        "# sequence\n",
+        "Verse, Chorus, Chorus\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120 label=\"Verse\"\n",
+        "[Melody] 1 2 3 4\n",
+        "\n",
+        "label=\"Chorus\"\n",
+        "[Melody] 5 6 7 1\n",
+    );
+    let resp = list_measure_spans_response(input);
+    match resp {
+        ListMeasureSpansResponse::Ok {
+            sequence_entries, ..
+        } => {
+            let labels: Vec<&str> = sequence_entries.iter().map(|e| e.label.as_str()).collect();
+            assert_eq!(labels, vec!["Verse", "Chorus", "Chorus"]);
+            assert_eq!(sequence_entries[0].start_measure_index, 0);
+            assert_eq!(sequence_entries[0].end_measure_index, 0);
+            assert_eq!(sequence_entries[1].start_measure_index, 1);
+            assert_eq!(sequence_entries[1].end_measure_index, 1);
+            assert_eq!(sequence_entries[2].start_measure_index, 1);
+            assert_eq!(sequence_entries[2].end_measure_index, 1);
+        }
+        ListMeasureSpansResponse::Err => panic!("expected ok"),
+    }
+}
+
+#[test]
+fn list_measure_spans_returns_empty_sequence_entries_without_sequence_section() {
+    let input = concat!(
+        "# metadata\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "# parts\n",
+        "Melody = notes\n",
+        "\n",
+        "# score\n",
+        "[Melody] 1 2 3 4\n",
+    );
+    let resp = list_measure_spans_response(input);
+    match resp {
+        ListMeasureSpansResponse::Ok {
+            sequence_entries, ..
+        } => assert!(sequence_entries.is_empty()),
+        ListMeasureSpansResponse::Err => panic!("expected ok"),
+    }
+}

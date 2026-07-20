@@ -17,6 +17,7 @@ interface MeasureRange {
 interface AppHeaderProps {
   audioAvailable?: boolean
   selectedMeasureRange: MeasureRange | null
+  selectedSequenceRange: MeasureRange | null
   measureAudioGenerating: boolean
   soundfontReady: boolean
   measureAudioPlaying: boolean
@@ -67,6 +68,7 @@ interface AppHeaderProps {
 export function AppHeader({
   audioAvailable,
   selectedMeasureRange,
+  selectedSequenceRange,
   measureAudioGenerating,
   soundfontReady,
   measureAudioPlaying,
@@ -152,13 +154,13 @@ export function AppHeader({
       {audioAvailable && (
         <PlayFromCurrentMeasureButton
           disabled={
-            selectedMeasureRange === null ||
+            selectedSequenceRange === null ||
             measureAudioGenerating ||
             !soundfontReady
           }
           loading={measureAudioGenerating}
           playing={measureAudioPlaying}
-          currentMeasure={selectedMeasureRange?.start ?? null}
+          currentMeasure={selectedSequenceRange?.start ?? null}
           onClick={playFromCurrentMeasure}
           onPause={stopMeasurePlayback}
           shortcutLabel={playFromCurrentMeasureShortcutLabel}

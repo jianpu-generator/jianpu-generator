@@ -7,6 +7,7 @@ import type {
   PartDeclaration,
   PartInfo,
   SectionRange,
+  SequenceEntry,
 } from '../types'
 import type { WorkerResponse } from '../worker/jianpu.worker'
 import {
@@ -68,6 +69,7 @@ export interface WorkerMessageHandlerDeps {
   latestMeasureSpansIdRef: RefObject<number>
   setMeasureSpans: (value: MeasureSpan[]) => void
   setSectionRanges: (value: SectionRange[]) => void
+  setSequenceEntries: (value: SequenceEntry[]) => void
   latestPreviewAudioIdRef: RefObject<number>
   currentPreviewAudioRef: RefObject<HTMLAudioElement | null>
   setPreviewAudioPlaying: (value: boolean) => void
@@ -261,6 +263,7 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       if (msg.status === 'ok') {
         deps.setMeasureSpans(msg.spans)
         deps.setSectionRanges(msg.sectionRanges)
+        deps.setSequenceEntries(msg.sequenceEntries)
       }
       return
     }

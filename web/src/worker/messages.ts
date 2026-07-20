@@ -7,6 +7,7 @@ import type {
   PartInfo,
   PartMode,
   SectionRange,
+  SequenceEntry,
 } from '../types'
 
 export type WorkerRequest =
@@ -179,6 +180,7 @@ export type WorkerResponse =
       status: 'ok' | 'err'
       spans: MeasureSpan[]
       sectionRanges: SectionRange[]
+      sequenceEntries: SequenceEntry[]
     }
   | { type: 'importOk'; id: number; source: string }
   | { type: 'importErr'; id: number }

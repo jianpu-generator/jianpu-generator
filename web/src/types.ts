@@ -14,6 +14,7 @@ export type {
   PartOut as PartInfo,
   RenderResponse as RenderResult,
   SectionRangeOut as SectionRange,
+  SequenceEntryOut as SequenceEntry,
   SpanOut as ByteSpan,
 } from 'jianpu-wasm'
 

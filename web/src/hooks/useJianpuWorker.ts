@@ -7,6 +7,7 @@ import type {
   PartDeclaration,
   PartInfo,
   SectionRange,
+  SequenceEntry,
 } from '../types'
 import type { WorkerRequest } from '../worker/jianpu.worker'
 import { useInstrumentPreview } from './useInstrumentPreview'
@@ -17,6 +18,7 @@ import { useJianpuWorkerPartDeclaration } from './useJianpuWorkerPartDeclaration
 import { useJianpuWorkerRenderRequests } from './useJianpuWorkerRenderRequests'
 import type { JianpuWorkerState } from './useJianpuWorkerTypes'
 import { useMeasureAudioPlayback } from './useMeasureAudioPlayback'
+import { useSequenceNavigation } from './useSequenceNavigation'
 import {
   disabledLyricsForRender,
   enabledPartNamesForFilename,
@@ -72,6 +74,8 @@ export function useJianpuWorker(
   >([])
   const [measureSpans, setMeasureSpans] = useState<MeasureSpan[]>([])
   const [sectionRanges, setSectionRanges] = useState<SectionRange[]>([])
+  const [sequenceEntries, setSequenceEntries] = useState<SequenceEntry[]>([])
+  const sequenceNav = useSequenceNavigation(sequenceEntries)
   const highlightRenderRequestIdRef = useRef(0)
   const latestHighlightRenderIdRef = useRef(0)
   const measureSpansRequestIdRef = useRef(0)
@@ -176,7 +180,7 @@ export function useJianpuWorker(
     sourceRef,
     enabledTracksRef,
     selectedMeasureRange,
-    measureSpans,
+    selectedSequenceRangeRef: sequenceNav.selectedSequenceRangeRef,
   })
 
   const {
@@ -238,6 +242,7 @@ export function useJianpuWorker(
     latestMeasureSpansIdRef,
     setMeasureSpans,
     setSectionRanges,
+    setSequenceEntries,
     latestPreviewAudioIdRef,
     currentPreviewAudioRef,
     setPreviewAudioPlaying,
@@ -379,6 +384,9 @@ export function useJianpuWorker(
     highlightedDocuments,
     measureSpans,
     sectionRanges,
+    sequenceEntries,
+    selectedSequenceRange: sequenceNav.selectedSequenceRange,
+    sequenceJumpToolbarProps: sequenceNav.sequenceJumpToolbarProps,
     previewInstrument,
     previewPercussion,
     stopPreviewInstrument,

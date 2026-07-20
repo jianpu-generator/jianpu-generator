@@ -29,7 +29,7 @@
 - [x] syntax highlighting
 - [x] Create a score of canon in D
 - [x] LSP rename
-- [ ] Formatter: align lyric syllables with their corresponding notes
 - [x] Play current measure should be different from play from current measure, the former should always play what is written, while the latter always respect #sequence
-- [ ] Embed input source code in SVG as hidden section (so that we can import from PDF/SVG)
-- [ ] Allow playing from particular section in the sequence
+- [x] Embed input source code in SVG as hidden section (so that we can import from PDF/SVG)
+- [ ] Formatter: align lyric syllables with their corresponding notes
+- [x] Allow playing from particular section in the sequence

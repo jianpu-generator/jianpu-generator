@@ -74,9 +74,7 @@ export function PlayFromCurrentMeasureButton({
         disabled={disabled}
         onClick={onClick}
         aria-label={
-          label
-            ? `Play from ${label} to end`
-            : 'Play from current measure to end'
+          label ? `Play sequence from ${label}` : 'Play selected sequence'
         }
       >
         {loading ? (
@@ -89,8 +87,8 @@ export function PlayFromCurrentMeasureButton({
         shortcutLabel={shortcutLabel}
         text={
           currentMeasure === null
-            ? 'Move cursor into a measure to enable'
-            : 'Play from current measure to end'
+            ? 'Select a section in the sequence toolbar to enable'
+            : 'Play selected sequence range'
         }
       />
     </div>

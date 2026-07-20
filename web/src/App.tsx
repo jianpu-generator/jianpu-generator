@@ -4,6 +4,7 @@ import { AppOverlays } from './components/AppOverlays'
 import { AppWorkspace } from './components/AppWorkspace'
 import { AssetLoadingBanner } from './components/AssetLoadingBanner'
 import { SectionJumpToolbar } from './components/SectionJumpToolbar'
+import { SequenceJumpToolbar } from './components/SequenceJumpToolbar'
 import {
   fileContent,
   fileIdForName,
@@ -137,6 +138,8 @@ export default function App() {
     measureAudioElement,
     measureSpans,
     sectionRanges,
+    selectedSequenceRange,
+    sequenceJumpToolbarProps,
     notifySelection,
     playSelectedMeasures,
     playFromCurrentMeasure,
@@ -170,6 +173,7 @@ export default function App() {
     measureAudioGenerating,
     soundfontReady,
     selectedMeasureRange,
+    selectedSequenceRange,
     playSelectedMeasures,
     playFromCurrentMeasure,
     stopMeasurePlayback,
@@ -231,14 +235,9 @@ export default function App() {
 
   const {
     setSelectedLineRange,
-    sectionLabels,
-    dragStartLabel,
-    setDragStartLabel,
-    setDragCurrentLabel,
-    activeHighlightedLabels,
-    handleSectionRangeSelect,
     handleSectionJump,
     handleMeasureRangeSelect,
+    sectionJumpToolbarProps,
   } = useSectionNavigation(
     sectionRanges,
     measureSpans,
@@ -265,6 +264,7 @@ export default function App() {
       <AppHeader
         audioAvailable={audioAvailable}
         selectedMeasureRange={selectedMeasureRange}
+        selectedSequenceRange={selectedSequenceRange}
         measureAudioGenerating={measureAudioGenerating}
         soundfontReady={soundfontReady}
         measureAudioPlaying={measureAudioPlaying}
@@ -330,15 +330,8 @@ export default function App() {
         handleImportShared={handleImportShared}
         handleDismissShared={handleDismissShared}
       />
-      <SectionJumpToolbar
-        sectionLabels={sectionLabels}
-        dragStartLabel={dragStartLabel}
-        setDragStartLabel={setDragStartLabel}
-        setDragCurrentLabel={setDragCurrentLabel}
-        activeHighlightedLabels={activeHighlightedLabels}
-        handleSectionJump={handleSectionJump}
-        handleSectionRangeSelect={handleSectionRangeSelect}
-      />
+      <SectionJumpToolbar {...sectionJumpToolbarProps} />
+      <SequenceJumpToolbar {...sequenceJumpToolbarProps} />
       <AppWorkspace
         editorCollapsed={editorCollapsed}
         setEditorCollapsed={setEditorCollapsed}

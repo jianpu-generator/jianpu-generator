@@ -1,4 +1,4 @@
-use crate::ast::grouped::Score;
+use crate::ast::grouped::{Score, SequenceSpan};
 use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
 use crate::parser;
 
@@ -61,13 +61,22 @@ pub struct MeasureSourceSpan {
     pub end_line: usize,
 }
 
-/// Return the source byte span of every measure in the compiled score.
+/// Result of [`list_measure_spans_from_source`].
+pub struct MeasureSpansResult {
+    /// Source byte span of every measure, in source order, 1-to-1 with measures.
+    pub spans: Vec<MeasureSourceSpan>,
+    /// Resolved playback order from a `# sequence` section, if present and valid.
+    pub sequence: Option<Vec<SequenceSpan>>,
+}
+
+/// Return the source byte span of every measure in the compiled score, along
+/// with the score's resolved `# sequence` spans (if any).
 ///
 /// Spans are in source order and correspond 1-to-1 with measures.
 pub fn list_measure_spans_from_source(
     source: &str,
     filename: &str,
-) -> Result<Vec<MeasureSourceSpan>, IrrecoverableError> {
+) -> Result<MeasureSpansResult, IrrecoverableError> {
     let (sections, _section_errors) = parser::load_document_sections(source);
     let (score_content, score_offset) = sections.score;
     let base_line = source[..score_offset.min(source.len())]
@@ -92,7 +101,8 @@ pub fn list_measure_spans_from_source(
         ));
     }
 
-    Ok(score
+    let sequence = score.sequence.clone();
+    let spans = score
         .measures
         .iter()
         .zip(group_bounds)
@@ -104,7 +114,9 @@ pub fn list_measure_spans_from_source(
             start_line: bounds.start_line,
             end_line: bounds.end_line,
         })
-        .collect())
+        .collect();
+
+    Ok(MeasureSpansResult { spans, sequence })
 }
 
 #[cfg(test)]
@@ -142,7 +154,9 @@ mod tests {
             "[A1,T] la la la\n",
             "[C] 6m/3\n",
         );
-        let spans = list_measure_spans_from_source(source, "test.jianpu").unwrap();
+        let spans = list_measure_spans_from_source(source, "test.jianpu")
+            .unwrap()
+            .spans;
         assert_eq!(spans.len(), 2);
         assert_eq!(
             spans[0].end_line, 17,
@@ -177,7 +191,9 @@ mod tests {
             "\n",
             "4 3 2 1\n",
         );
-        let spans = list_measure_spans_from_source(source, "test.jianpu").unwrap();
+        let spans = list_measure_spans_from_source(source, "test.jianpu")
+            .unwrap()
+            .spans;
         assert_eq!(spans.len(), 4);
         assert_eq!(spans[0].section_label.as_deref(), Some("A"));
         assert_eq!(spans[1].section_label, None);

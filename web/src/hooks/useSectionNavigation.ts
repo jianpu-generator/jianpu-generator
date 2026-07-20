@@ -94,14 +94,16 @@ export function useSectionNavigation(
   return {
     selectedLineRange,
     setSelectedLineRange,
-    sectionLabels,
-    dragStartLabel,
-    setDragStartLabel,
-    dragCurrentLabel,
-    setDragCurrentLabel,
-    activeHighlightedLabels,
-    handleSectionRangeSelect,
     handleSectionJump,
     handleMeasureRangeSelect,
+    sectionJumpToolbarProps: {
+      sectionLabels,
+      dragStartLabel,
+      setDragStartLabel,
+      setDragCurrentLabel,
+      activeHighlightedLabels,
+      handleSectionJump,
+      handleSectionRangeSelect,
+    },
   }
 }

@@ -8,7 +8,7 @@ use crate::svg_types::svg_document_to_out;
 use crate::types::{
     diagnostic_from_diagnostic, diagnostic_from_error, group_diagnostics_into_view_zones,
     ListMeasureSpansResponse, MeasureAtOffsetResponse, MeasureSpanOut, RenderResponse,
-    SectionRangeOut,
+    SectionRangeOut, SequenceEntryOut,
 };
 
 #[cfg(feature = "wav")]
@@ -164,8 +164,9 @@ fn compute_section_ranges(spans: &[MeasureSpanOut]) -> Vec<SectionRangeOut> {
 
 pub(crate) fn list_measure_spans_response(source: &str) -> ListMeasureSpansResponse {
     match list_measure_spans_from_source(source, "input.jianpu") {
-        Ok(raw_spans) => {
-            let spans: Vec<MeasureSpanOut> = raw_spans
+        Ok(result) => {
+            let spans: Vec<MeasureSpanOut> = result
+                .spans
                 .into_iter()
                 .map(|span| MeasureSpanOut {
                     start: span.start,
@@ -177,9 +178,20 @@ pub(crate) fn list_measure_spans_response(source: &str) -> ListMeasureSpansRespo
                 })
                 .collect();
             let section_ranges = compute_section_ranges(&spans);
+            let sequence_entries = result
+                .sequence
+                .unwrap_or_default()
+                .into_iter()
+                .map(|entry| SequenceEntryOut {
+                    label: entry.label,
+                    start_measure_index: entry.start,
+                    end_measure_index: entry.end,
+                })
+                .collect();
             ListMeasureSpansResponse::Ok {
                 spans,
                 section_ranges,
+                sequence_entries,
             }
         }
         Err(_) => ListMeasureSpansResponse::Err,

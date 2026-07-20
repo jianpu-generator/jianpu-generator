@@ -1,7 +1,6 @@
 import type { NoteTimingOut } from 'jianpu-wasm'
 import type { RefObject } from 'react'
 import { useCallback, useRef, useState } from 'react'
-import type { MeasureSpan } from '../types'
 import type { WorkerRequest } from '../worker/jianpu.worker'
 
 interface UseMeasureAudioPlaybackParams {
@@ -9,7 +8,13 @@ interface UseMeasureAudioPlaybackParams {
   sourceRef: RefObject<string>
   enabledTracksRef: RefObject<string[] | undefined>
   selectedMeasureRange: { start: number; end: number } | null
-  measureSpans: MeasureSpan[]
+  /**
+   * Read at click time rather than depended on directly, since the selection
+   * is owned by `useSequenceNavigation` in `App.tsx`, downstream of this hook
+   * (which is itself owned by `useJianpuWorker`) — a ref avoids the circular
+   * dependency of threading a fresh value back into this hook's own call.
+   */
+  selectedSequenceRangeRef: RefObject<{ start: number; end: number } | null>
 }
 
 /** Manages generating and playing back audio for a range of measures (e.g. the currently selected measures). */
@@ -18,7 +23,7 @@ export function useMeasureAudioPlayback({
   sourceRef,
   enabledTracksRef,
   selectedMeasureRange,
-  measureSpans,
+  selectedSequenceRangeRef,
 }: UseMeasureAudioPlaybackParams) {
   const [measureAudioGenerating, setMeasureAudioGenerating] = useState(false)
   const [measureAudioPlaying, setMeasureAudioPlaying] = useState(false)
@@ -124,18 +129,14 @@ export function useMeasureAudioPlayback({
     )
   }, [selectedMeasureRange, playMeasureRange])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: selectedSequenceRangeRef is a stable ref read at call time, not a reactive dependency
   const playFromCurrentMeasure = useCallback(() => {
-    if (selectedMeasureRange === null || measureSpans.length === 0) return
-    // "Play to the end": follow every repeat/jump through to the true end
-    // of the performance instead of stopping at the last written measure's
-    // first occurrence, respecting # sequence/D.C./D.S. navigation.
-    playMeasureRange(
-      selectedMeasureRange.start,
-      measureSpans.length - 1,
-      true,
-      true,
-    )
-  }, [selectedMeasureRange, measureSpans, playMeasureRange])
+    const range = selectedSequenceRangeRef.current
+    if (range === null) return
+    // Exact range: play only the selected `# sequence` entries, stopping at
+    // the end of the last one. No D.C./D.S./sequence continuation past it.
+    playMeasureRange(range.start, range.end, false, false)
+  }, [playMeasureRange])
 
   return {
     measureAudioGenerating,

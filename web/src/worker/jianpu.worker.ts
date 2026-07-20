@@ -307,6 +307,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       status: result.status,
       spans: result.status === 'ok' ? result.spans : [],
       sectionRanges: result.status === 'ok' ? result.section_ranges : [],
+      sequenceEntries: result.status === 'ok' ? result.sequence_entries : [],
     } satisfies WorkerResponse)
     return
   }

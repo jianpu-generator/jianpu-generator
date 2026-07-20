@@ -216,6 +216,14 @@ pub struct SectionRangeOut {
     pub labels: Vec<String>,
 }
 
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[tsify(into_wasm_abi)]
+pub struct SequenceEntryOut {
+    pub label: String,
+    pub start_measure_index: usize,
+    pub end_measure_index: usize,
+}
+
 #[derive(Debug, Clone, Tsify, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
 #[tsify(into_wasm_abi)]
@@ -223,6 +231,7 @@ pub enum ListMeasureSpansResponse {
     Ok {
         spans: Vec<MeasureSpanOut>,
         section_ranges: Vec<SectionRangeOut>,
+        sequence_entries: Vec<SequenceEntryOut>,
     },
     Err,
 }
