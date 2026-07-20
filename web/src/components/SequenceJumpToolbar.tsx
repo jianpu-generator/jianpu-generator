@@ -42,7 +42,8 @@ export function SequenceJumpToolbar({
       >
         {sequenceEntries.map((entry, index) => (
           <button
-            key={entry.start_measure_index}
+            // biome-ignore lint/suspicious/noArrayIndexKey: two entries (an omission and its later repeat) can share the same start_measure_index, so the array index is the only stable key
+            key={index}
             type="button"
             className={[
               'section-jump-btn',

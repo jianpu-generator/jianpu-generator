@@ -38,6 +38,8 @@ function measureTimesForRangeFromSource(
         endIndex: number,
         extendToLastOccurrence: boolean,
         respectSequence: boolean,
+        sequenceEntryStartIndex: number | undefined,
+        sequenceEntryEndIndex: number | undefined,
         enabledTracks?: string[],
       ) => ListMeasureTimesResponse)
     | null,
@@ -46,6 +48,8 @@ function measureTimesForRangeFromSource(
   endMeasureIndex: number,
   extendToLastOccurrence: boolean,
   respectSequence: boolean,
+  sequenceEntryStartIndex: number | undefined,
+  sequenceEntryEndIndex: number | undefined,
   enabledTracks: string[] | undefined,
 ): number[] {
   if (!listMeasureTimesForRange) return []
@@ -55,6 +59,8 @@ function measureTimesForRangeFromSource(
     endMeasureIndex,
     extendToLastOccurrence,
     respectSequence,
+    sequenceEntryStartIndex,
+    sequenceEntryEndIndex,
     enabledTracks,
   )
   return result.status === 'ok' ? result.times : []
@@ -110,6 +116,8 @@ function noteTimingsForRangeFromSource(
         endIndex: number,
         extendToLastOccurrence: boolean,
         respectSequence: boolean,
+        sequenceEntryStartIndex: number | undefined,
+        sequenceEntryEndIndex: number | undefined,
         enabledTracks?: string[],
       ) => NoteTimingsResponse)
     | null,
@@ -118,6 +126,8 @@ function noteTimingsForRangeFromSource(
   endMeasureIndex: number,
   extendToLastOccurrence: boolean,
   respectSequence: boolean,
+  sequenceEntryStartIndex: number | undefined,
+  sequenceEntryEndIndex: number | undefined,
   enabledTracks: string[] | undefined,
 ): NoteTimingOut[] {
   if (!listNoteTimingsForRange) return []
@@ -127,6 +137,8 @@ function noteTimingsForRangeFromSource(
     endMeasureIndex,
     extendToLastOccurrence,
     respectSequence,
+    sequenceEntryStartIndex,
+    sequenceEntryEndIndex,
     enabledTracks,
   )
   return result.status === 'ok' ? result.timings : []
@@ -140,6 +152,8 @@ function writtenMeasureIndicesForRangeFromSource(
         endIndex: number,
         extendToLastOccurrence: boolean,
         respectSequence: boolean,
+        sequenceEntryStartIndex: number | undefined,
+        sequenceEntryEndIndex: number | undefined,
         enabledTracks?: string[],
       ) => WrittenMeasureIndicesResponse)
     | null,
@@ -148,6 +162,8 @@ function writtenMeasureIndicesForRangeFromSource(
   endMeasureIndex: number,
   extendToLastOccurrence: boolean,
   respectSequence: boolean,
+  sequenceEntryStartIndex: number | undefined,
+  sequenceEntryEndIndex: number | undefined,
   enabledTracks: string[] | undefined,
 ): number[] {
   if (!writtenMeasureIndicesForRange) return []
@@ -157,6 +173,8 @@ function writtenMeasureIndicesForRangeFromSource(
     endMeasureIndex,
     extendToLastOccurrence,
     respectSequence,
+    sequenceEntryStartIndex,
+    sequenceEntryEndIndex,
     enabledTracks,
   )
   return result.status === 'ok' ? result.indices : []
@@ -248,6 +266,8 @@ type GenerateWavForMeasureRangeFn =
       endIndex: number,
       extendToLastOccurrence: boolean,
       respectSequence: boolean,
+      sequenceEntryStartIndex: number | undefined,
+      sequenceEntryEndIndex: number | undefined,
       enabledTracks: string[] | undefined,
       soundfont: Uint8Array,
     ) => GenerateWavResponse)
@@ -260,6 +280,8 @@ type ListMeasureTimesForRangeFn =
       endIndex: number,
       extendToLastOccurrence: boolean,
       respectSequence: boolean,
+      sequenceEntryStartIndex: number | undefined,
+      sequenceEntryEndIndex: number | undefined,
       enabledTracks?: string[],
     ) => ListMeasureTimesResponse)
   | null
@@ -271,6 +293,8 @@ type WrittenMeasureIndicesForRangeFn =
       endIndex: number,
       extendToLastOccurrence: boolean,
       respectSequence: boolean,
+      sequenceEntryStartIndex: number | undefined,
+      sequenceEntryEndIndex: number | undefined,
       enabledTracks?: string[],
     ) => WrittenMeasureIndicesResponse)
   | null
@@ -282,6 +306,8 @@ type ListNoteTimingsForRangeFn =
       endIndex: number,
       extendToLastOccurrence: boolean,
       respectSequence: boolean,
+      sequenceEntryStartIndex: number | undefined,
+      sequenceEntryEndIndex: number | undefined,
       enabledTracks?: string[],
     ) => NoteTimingsResponse)
   | null
@@ -308,6 +334,8 @@ export function handleGenerateMeasureRangeAudio(
     msg.endMeasureIndex,
     msg.extendToLastOccurrence,
     msg.respectSequence,
+    msg.sequenceEntryStartIndex,
+    msg.sequenceEntryEndIndex,
     msg.enabledTracks,
     loadedSoundfont,
   )
@@ -325,6 +353,8 @@ export function handleGenerateMeasureRangeAudio(
           msg.endMeasureIndex,
           msg.extendToLastOccurrence,
           msg.respectSequence,
+          msg.sequenceEntryStartIndex,
+          msg.sequenceEntryEndIndex,
           msg.enabledTracks,
         ),
         writtenMeasureIndices: writtenMeasureIndicesForRangeFromSource(
@@ -334,6 +364,8 @@ export function handleGenerateMeasureRangeAudio(
           msg.endMeasureIndex,
           msg.extendToLastOccurrence,
           msg.respectSequence,
+          msg.sequenceEntryStartIndex,
+          msg.sequenceEntryEndIndex,
           msg.enabledTracks,
         ),
         columnBoundaries: columnBoundariesFromSource(
@@ -348,6 +380,8 @@ export function handleGenerateMeasureRangeAudio(
           msg.endMeasureIndex,
           msg.extendToLastOccurrence,
           msg.respectSequence,
+          msg.sequenceEntryStartIndex,
+          msg.sequenceEntryEndIndex,
           msg.enabledTracks,
         ),
       } satisfies WorkerResponse,

@@ -36,6 +36,22 @@ use types::{
 };
 use wasm_bindgen::prelude::*;
 
+/// Combines a `# sequence` entry index pair from the wasm boundary (where
+/// `Option<RangeInclusive<usize>>` can't cross directly) back into the range
+/// [`jianpu_generator::MeasureRangeSelection::sequence_entry_range`] expects.
+/// `None` unless both bounds are present, since a partial pair can't name a
+/// range.
+#[cfg(any(feature = "wav", feature = "midi"))]
+pub(crate) fn sequence_entry_range(
+    start: Option<usize>,
+    end: Option<usize>,
+) -> Option<std::ops::RangeInclusive<usize>> {
+    match (start, end) {
+        (Some(start), Some(end)) => Some(start..=end),
+        _ => None,
+    }
+}
+
 /// Return the byte span of every measure in the source.
 ///
 /// - `{ "status": "ok", "spans": [{ "start": N, "end": N }, ...] }` on success

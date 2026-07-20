@@ -52,6 +52,17 @@ pub fn generate_wav(
 /// `# sequence` (including any part omissions it applies) and play the
 /// range exactly as written — what "play current measure" needs. Pass
 /// `true` to follow them — what "play from current measure" needs.
+///
+/// `sequence_entry_start_index`/`sequence_entry_end_index`: when both are
+/// present, name the exact `# sequence` entry/entries to play by their
+/// 0-based index into the `# sequence` list (as returned by
+/// `list_measure_spans`'s `sequence_entries`) rather than resolving
+/// `start_index`/`end_index` by earliest/last-occurrence search — needed by
+/// the sequence-jump toolbar's "play selected sequence range" to
+/// disambiguate a repeated label (e.g. `A, B(-x), B`), where every
+/// occurrence of `B` shares the same written measure range. Pass `None` for
+/// both when there's no specific entry to disambiguate (e.g. "play current
+/// measure"/"play from current measure" outside a `# sequence` selection).
 #[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 #[wasm_bindgen]
 pub fn generate_wav_for_measure_range(
@@ -60,6 +71,8 @@ pub fn generate_wav_for_measure_range(
     end_index: usize,
     extend_to_last_occurrence: bool,
     respect_sequence: bool,
+    sequence_entry_start_index: Option<usize>,
+    sequence_entry_end_index: Option<usize>,
     enabled_tracks: Option<Vec<String>>,
     soundfont: Vec<u8>,
 ) -> GenerateWavResponse {
@@ -69,6 +82,7 @@ pub fn generate_wav_for_measure_range(
         end_index,
         extend_to_last_occurrence,
         respect_sequence,
+        crate::sequence_entry_range(sequence_entry_start_index, sequence_entry_end_index),
         enabled_tracks.as_deref(),
         soundfont,
     )
@@ -98,9 +112,10 @@ pub fn list_measure_times(
 /// Used to sync a UI playhead against the audio produced by
 /// [`generate_wav_for_measure_range`]. Returns the same envelope as
 /// [`list_measure_times`].
-/// See [`generate_wav_for_measure_range`] for `extend_to_last_occurrence` and
-/// `respect_sequence`.
-#[allow(clippy::needless_pass_by_value)]
+/// See [`generate_wav_for_measure_range`] for `extend_to_last_occurrence`,
+/// `respect_sequence`, and `sequence_entry_start_index`/
+/// `sequence_entry_end_index`.
+#[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 #[wasm_bindgen]
 pub fn list_measure_times_for_range(
     source: &str,
@@ -108,6 +123,8 @@ pub fn list_measure_times_for_range(
     end_index: usize,
     extend_to_last_occurrence: bool,
     respect_sequence: bool,
+    sequence_entry_start_index: Option<usize>,
+    sequence_entry_end_index: Option<usize>,
     enabled_tracks: Option<Vec<String>>,
 ) -> ListMeasureTimesResponse {
     list_measure_times_for_range_response(
@@ -116,6 +133,7 @@ pub fn list_measure_times_for_range(
         end_index,
         extend_to_last_occurrence,
         respect_sequence,
+        crate::sequence_entry_range(sequence_entry_start_index, sequence_entry_end_index),
         enabled_tracks.as_deref(),
     )
 }
@@ -167,9 +185,10 @@ pub fn list_note_timings(source: &str, enabled_tracks: Option<Vec<String>>) -> N
 /// are relative to the start of that clip, not the start of the whole piece.
 /// `note_id`s still agree with the full-score render's `data-note-id`.
 /// Returns the same envelope as [`list_note_timings`].
-/// See [`generate_wav_for_measure_range`] for `extend_to_last_occurrence` and
-/// `respect_sequence`.
-#[allow(clippy::needless_pass_by_value)]
+/// See [`generate_wav_for_measure_range`] for `extend_to_last_occurrence`,
+/// `respect_sequence`, and `sequence_entry_start_index`/
+/// `sequence_entry_end_index`.
+#[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 #[wasm_bindgen]
 pub fn list_note_timings_for_range(
     source: &str,
@@ -177,6 +196,8 @@ pub fn list_note_timings_for_range(
     end_index: usize,
     extend_to_last_occurrence: bool,
     respect_sequence: bool,
+    sequence_entry_start_index: Option<usize>,
+    sequence_entry_end_index: Option<usize>,
     enabled_tracks: Option<Vec<String>>,
 ) -> NoteTimingsResponse {
     list_note_timings_for_range_response(
@@ -185,6 +206,7 @@ pub fn list_note_timings_for_range(
         end_index,
         extend_to_last_occurrence,
         respect_sequence,
+        crate::sequence_entry_range(sequence_entry_start_index, sequence_entry_end_index),
         enabled_tracks.as_deref(),
     )
 }

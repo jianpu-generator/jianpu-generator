@@ -59,10 +59,21 @@ pub fn write_wav_for_measure_from_source(
 /// what is written, regardless of how `# sequence` might otherwise reorder
 /// or omit parts for that measure's occurrence(s). "Play from current
 /// measure" passes `true` so it follows `# sequence` to the true end.
+///
+/// `sequence_entry_range`, when `Some`, names the exact `# sequence`
+/// entry/entries `range` refers to by their 0-based index into
+/// `score.sequence` (the order entries are written in `# sequence`) rather
+/// than leaving `range`'s written measure indices to be resolved by
+/// earliest/last-occurrence search. This is what the sequence-jump
+/// toolbar's "play selected sequence range" needs: without it, a repeated
+/// label (e.g. `A, B(-x), B`) can't be disambiguated, since every
+/// occurrence of `B` shares the same written measure range and search
+/// always finds the first one.
 pub struct MeasureRangeSelection {
     pub range: std::ops::RangeInclusive<usize>,
     pub extend_to_last_occurrence: bool,
     pub respect_sequence: bool,
+    pub sequence_entry_range: Option<std::ops::RangeInclusive<usize>>,
 }
 
 /// Parse, group, optionally filter tracks, and synthesize WAV for a consecutive measure range.
@@ -85,6 +96,7 @@ pub fn write_wav_for_measure_range_from_source(
         *selection.range.end(),
         selection.extend_to_last_occurrence,
         selection.respect_sequence,
+        selection.sequence_entry_range.clone(),
     )?;
     let midi_bytes = crate::midi::write_midi_for_measure_range(&score, start, end)?;
     crate::wav::write_wav(&midi_bytes, sf2_bytes)
@@ -153,6 +165,7 @@ pub fn measure_start_times_for_range_from_source(
         *selection.range.end(),
         selection.extend_to_last_occurrence,
         selection.respect_sequence,
+        selection.sequence_entry_range.clone(),
     )?;
     crate::midi::measure_start_times_seconds_for_range(&score, start, end)
 }
@@ -180,6 +193,7 @@ pub fn note_timings_for_range_from_source(
         *selection.range.end(),
         selection.extend_to_last_occurrence,
         selection.respect_sequence,
+        selection.sequence_entry_range.clone(),
     )?;
     if !selection.respect_sequence {
         return crate::midi::note_timings_seconds_for_literal_range(&score, start_pos, end_pos);
@@ -231,6 +245,7 @@ pub fn written_measure_indices_for_range_from_source(
         *selection.range.end(),
         selection.extend_to_last_occurrence,
         selection.respect_sequence,
+        selection.sequence_entry_range.clone(),
     )?;
     if !selection.respect_sequence {
         return Ok((start_pos..=end_pos).collect());

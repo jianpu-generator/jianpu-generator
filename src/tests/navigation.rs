@@ -7,7 +7,7 @@ mod navigation_coda_measure;
 #[cfg(feature = "wav")]
 static SF2_BYTES: &[u8] = include_bytes!("../../fonts/GeneralUser_GS.sf2");
 
-fn count_note_on_events(midi_bytes: &[u8]) -> usize {
+pub(super) fn count_note_on_events(midi_bytes: &[u8]) -> usize {
     let smf = Smf::parse(midi_bytes).expect("valid MIDI");
     smf.tracks
         .iter()
@@ -134,6 +134,7 @@ fn play_from_current_measure_after_navigation_includes_repeat() {
             range: 0..=3,
             extend_to_last_occurrence: true,
             respect_sequence: true,
+            sequence_entry_range: None,
         },
         None,
         SF2_BYTES,
@@ -162,6 +163,7 @@ fn measure_start_times_for_range_reflects_navigation() {
             range: 0..=3,
             extend_to_last_occurrence: true,
             respect_sequence: true,
+            sequence_entry_range: None,
         },
         None,
         &[],
@@ -184,6 +186,7 @@ fn play_from_dead_zone_measure_falls_back_to_written_order() {
             range: 3..=4,
             extend_to_last_occurrence: true,
             respect_sequence: true,
+            sequence_entry_range: None,
         },
         None,
         SF2_BYTES,
@@ -205,6 +208,7 @@ fn no_markers_measure_range_playback_unchanged() {
             range: 0..=3,
             extend_to_last_occurrence: true,
             respect_sequence: true,
+            sequence_entry_range: None,
         },
         None,
         SF2_BYTES,
@@ -254,6 +258,7 @@ fn play_current_measure_inside_dsalcoda_repeat_window_plays_one_measure() {
             range: 1..=1,
             extend_to_last_occurrence: false,
             respect_sequence: true,
+            sequence_entry_range: None,
         },
         None,
         SF2_BYTES,
@@ -268,6 +273,7 @@ fn play_current_measure_inside_dsalcoda_repeat_window_plays_one_measure() {
             range: 1..=1,
             extend_to_last_occurrence: false,
             respect_sequence: true,
+            sequence_entry_range: None,
         },
         None,
         SF2_BYTES,
@@ -298,6 +304,7 @@ fn play_from_literal_end_measure_still_follows_navigation() {
             range: 4..=4,
             extend_to_last_occurrence: true,
             respect_sequence: true,
+            sequence_entry_range: None,
         },
         None,
         SF2_BYTES,

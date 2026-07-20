@@ -36,6 +36,12 @@ export function useSequenceNavigation(sequenceEntries: SequenceEntry[]) {
     return {
       start: startEntry.start_measure_index,
       end: endEntry.end_measure_index,
+      // The selected entries' own 0-based index into `# sequence`, needed
+      // to disambiguate a repeated label (e.g. `A, B(-x), B`): every
+      // occurrence shares the same written measure range above, so without
+      // this the backend can't tell which occurrence was actually clicked.
+      entryStartIndex: selectedIndexRange.start,
+      entryEndIndex: selectedIndexRange.end,
     }
   }, [selectedIndexRange, sequenceEntries])
 
@@ -71,6 +77,8 @@ export function useSequenceNavigation(sequenceEntries: SequenceEntry[]) {
   const selectedSequenceRangeRef = useRef<{
     start: number
     end: number
+    entryStartIndex: number
+    entryEndIndex: number
   } | null>(null)
   selectedSequenceRangeRef.current = selectedSequenceRange
 

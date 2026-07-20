@@ -8,7 +8,8 @@ fn generate_wav_for_measure_range_response_returns_riff_wav() {
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n",
     );
     let soundfont = include_bytes!("../../../fonts/GeneralUser_GS.sf2").to_vec();
-    let resp = generate_wav_for_measure_range_response(source, 0, 0, false, true, None, soundfont);
+    let resp =
+        generate_wav_for_measure_range_response(source, 0, 0, false, true, None, None, soundfont);
     match resp {
         GenerateWavResponse::Ok { wav } => {
             assert!(wav.len() > 4);

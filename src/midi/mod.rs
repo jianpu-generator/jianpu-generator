@@ -11,6 +11,7 @@ mod midi_notes;
 mod navigation;
 mod timing;
 mod timing_note_events;
+mod timing_note_timings;
 mod timing_range;
 use event_processing::{
     flush_pending_ties, flush_pending_ties_at_tick, process_chord_events, process_measure_notes,
@@ -35,6 +36,60 @@ fn part_index_to_midi_channel(index: usize) -> u8 {
     } else {
         after_chord
     }
+}
+
+/// A melodic part's MIDI channel and instrument, keyed by the part's own
+/// (stable, unique) name rather than its positional index within any single
+/// measure's `parts` vec — a `# sequence` `(-abbrev ...)` omission removes
+/// that part from some measures' `parts` vecs (see `navigation::build_expanded`),
+/// which shifts positional indices of the parts that remain, but never
+/// changes their relative order or a part's own name.
+pub(crate) struct PartChannelAssignment {
+    name: Option<String>,
+    channel: u8,
+    soundfont: u8,
+    volume: u8,
+}
+
+/// Assigns each distinct melodic part appearing anywhere in `measures` a
+/// stable channel, in order of first appearance across all measures (not
+/// just the first one) — so a part that's absent from the first measure
+/// (e.g. because that occurrence omitted it) still gets a channel and
+/// instrument from wherever it's first seen.
+fn build_part_channel_assignments(
+    measures: &[crate::ast::grouped::MultiPartMeasure],
+) -> Vec<PartChannelAssignment> {
+    let mut assignments: Vec<PartChannelAssignment> = Vec::new();
+    for measure in measures {
+        for slice in measure
+            .parts
+            .iter()
+            .map(|r| r.slice())
+            .filter(|p| is_melodic(p.kind))
+        {
+            if assignments.iter().any(|a| a.name == slice.name) {
+                continue;
+            }
+            let channel = part_index_to_midi_channel(assignments.len());
+            assignments.push(PartChannelAssignment {
+                name: slice.name.clone(),
+                channel,
+                soundfont: slice.soundfont.0,
+                volume: slice.volume,
+            });
+        }
+    }
+    assignments
+}
+
+// `assignments` is always built from the same measures being rendered here
+// (see call sites), so every part looked up is present; channel 0 is an
+// arbitrary but harmless fallback that's never actually reached.
+fn channel_for_part(assignments: &[PartChannelAssignment], name: &Option<String>) -> u8 {
+    assignments
+        .iter()
+        .find(|a| &a.name == name)
+        .map_or(0, |a| a.channel)
 }
 
 fn is_melodic(kind: PartKind) -> bool {
@@ -83,14 +138,17 @@ pub(crate) enum RawKind {
 /// bundled so `process_measure` can thread them through as a single argument.
 #[derive(Default)]
 pub(crate) struct TieState {
-    per_part_ties: Vec<(u8, HashMap<u8, u32>)>,
+    /// Keyed by MIDI channel (a part's channel is a stable identity for the
+    /// lifetime of a render, see [`PartChannelAssignment`]) rather than by
+    /// position in any single measure's part list.
+    per_part_ties: HashMap<u8, HashMap<u8, u32>>,
     chord_ties: Vec<HashMap<u8, u32>>,
     percussion_ties: HashMap<u8, u32>,
 }
 
 impl TieState {
     fn flush(mut self, raw: &mut Vec<RawEvent>, current_tick: u32) {
-        flush_pending_ties(raw, self.per_part_ties);
+        flush_pending_ties(raw, self.per_part_ties.into_iter().collect());
         for ties in &mut self.chord_ties {
             flush_pending_ties_at_tick(ties, current_tick, raw, CHORD_CHANNEL);
         }
@@ -103,40 +161,35 @@ impl TieState {
     }
 }
 
-fn write_program_change_preamble(score: &Score, raw: &mut Vec<RawEvent>) {
-    let Some(first_measure) = score.measures.first() else {
-        return;
-    };
-
-    for (index, row) in first_measure
-        .parts
-        .iter()
-        .filter(|r| is_melodic(r.slice().kind))
-        .enumerate()
-    {
-        let channel = part_index_to_midi_channel(index);
-        let part = row.slice();
+fn write_program_change_preamble(
+    score: &Score,
+    part_channels: &[PartChannelAssignment],
+    raw: &mut Vec<RawEvent>,
+) {
+    for assignment in part_channels {
         raw.push(RawEvent {
             tick: 0,
             kind: RawKind::ProgramChange {
-                channel,
-                program: part.soundfont.0,
+                channel: assignment.channel,
+                program: assignment.soundfont,
             },
         });
         raw.push(RawEvent {
             tick: 0,
             kind: RawKind::ControlChange {
-                channel,
+                channel: assignment.channel,
                 controller: 7,
-                value: (part.volume as u32 * 127 / 100) as u8,
+                value: (assignment.volume as u32 * 127 / 100) as u8,
             },
         });
     }
 
-    let chord_part = first_measure
-        .parts
-        .iter()
-        .find(|r| r.slice().kind == PartKind::Chords);
+    let chord_part = score.measures.iter().find_map(|measure| {
+        measure
+            .parts
+            .iter()
+            .find(|r| r.slice().kind == PartKind::Chords)
+    });
     let chord_program = chord_part.map(|r| r.slice().soundfont.0).unwrap_or(0);
     let chord_volume = chord_part.map(|r| r.slice().volume).unwrap_or(100);
     raw.push(RawEvent {
@@ -155,10 +208,12 @@ fn write_program_change_preamble(score: &Score, raw: &mut Vec<RawEvent>) {
         },
     });
 
-    let has_percussion = first_measure
-        .parts
-        .iter()
-        .any(|r| r.slice().kind == PartKind::Percussion);
+    let has_percussion = score.measures.iter().any(|measure| {
+        measure
+            .parts
+            .iter()
+            .any(|r| r.slice().kind == PartKind::Percussion)
+    });
     if has_percussion {
         // Percussion parts share channel 9; per-part channel volume (CC7) isn't
         // meaningful on a shared channel without a per-note-velocity refactor, so it's
@@ -175,7 +230,8 @@ fn write_program_change_preamble(score: &Score, raw: &mut Vec<RawEvent>) {
 
 pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
     let mut raw: Vec<RawEvent> = Vec::new();
-    write_program_change_preamble(score, &mut raw);
+    let part_channels = build_part_channel_assignments(&score.measures);
+    write_program_change_preamble(score, &part_channels, &mut raw);
 
     let mut current_tick: u32 = 0;
     let mut tie_state = TieState::default();
@@ -188,6 +244,7 @@ pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
             &mut raw,
             &mut tie_state,
             &mut active_key,
+            &part_channels,
         )?;
     }
 
@@ -243,6 +300,7 @@ pub(crate) fn process_measure(
     raw: &mut Vec<RawEvent>,
     tie_state: &mut TieState,
     active_key: &mut KeyChange,
+    part_channels: &[PartChannelAssignment],
 ) -> Result<u32, IrrecoverableError> {
     let TieState {
         per_part_ties,
@@ -266,14 +324,11 @@ pub(crate) fn process_measure(
     // Ditto parts still sound — only rendering skips them.
     let notes_parts = parts_matching(measure, is_melodic);
 
-    while per_part_ties.len() < notes_parts.len() {
-        let channel = part_index_to_midi_channel(per_part_ties.len());
-        per_part_ties.push((channel, HashMap::new()));
-    }
-
-    for (part, (channel, ties)) in notes_parts.iter().zip(per_part_ties.iter_mut()) {
+    for part in &notes_parts {
+        let channel = channel_for_part(part_channels, &part.name);
+        let ties = per_part_ties.entry(channel).or_default();
         let part_duration =
-            process_measure_notes(part, current_tick, raw, ties, active_key, *channel)?;
+            process_measure_notes(part, current_tick, raw, ties, active_key, channel)?;
         if part_duration > measure_duration {
             measure_duration = part_duration;
         }
@@ -316,3 +371,5 @@ use smf_writer::{build_track_events, sort_raw_events, write_smf};
 mod percussion_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_part_channel_assignment;

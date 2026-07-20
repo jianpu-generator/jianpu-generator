@@ -14,7 +14,12 @@ interface UseMeasureAudioPlaybackParams {
    * (which is itself owned by `useJianpuWorker`) — a ref avoids the circular
    * dependency of threading a fresh value back into this hook's own call.
    */
-  selectedSequenceRangeRef: RefObject<{ start: number; end: number } | null>
+  selectedSequenceRangeRef: RefObject<{
+    start: number
+    end: number
+    entryStartIndex: number
+    entryEndIndex: number
+  } | null>
 }
 
 /** Manages generating and playing back audio for a range of measures (e.g. the currently selected measures). */
@@ -93,6 +98,8 @@ export function useMeasureAudioPlayback({
       endMeasureIndex: number,
       extendToLastOccurrence: boolean,
       respectSequence: boolean,
+      sequenceEntryStartIndex?: number,
+      sequenceEntryEndIndex?: number,
     ) => {
       const worker = workerRef.current
       if (!worker) return
@@ -107,6 +114,8 @@ export function useMeasureAudioPlayback({
         endMeasureIndex,
         extendToLastOccurrence,
         respectSequence,
+        sequenceEntryStartIndex,
+        sequenceEntryEndIndex,
         enabledTracks: enabledTracksRef.current,
       } satisfies WorkerRequest)
     },
@@ -135,7 +144,21 @@ export function useMeasureAudioPlayback({
     if (range === null) return
     // Exact range: play only the selected `# sequence` entries, stopping at
     // the end of the last one. No D.C./D.S./sequence continuation past it.
-    playMeasureRange(range.start, range.end, false, false)
+    // `respectSequence: true` so any `(-abbrev ...)` part omission on the
+    // selected entry/entries is honored, not just the written score.
+    // The entry index range (rather than just the written measure range)
+    // disambiguates a repeated label (e.g. `A, B(-x), B`): every occurrence
+    // shares the same written measure range, so without it the backend
+    // always resolves to the first occurrence regardless of which one was
+    // actually selected.
+    playMeasureRange(
+      range.start,
+      range.end,
+      false,
+      true,
+      range.entryStartIndex,
+      range.entryEndIndex,
+    )
   }, [playMeasureRange])
 
   return {
