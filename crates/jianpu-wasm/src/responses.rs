@@ -182,10 +182,17 @@ pub(crate) fn list_measure_spans_response(source: &str) -> ListMeasureSpansRespo
                 .sequence
                 .unwrap_or_default()
                 .into_iter()
-                .map(|entry| SequenceEntryOut {
-                    label: entry.label,
-                    start_measure_index: entry.start,
-                    end_measure_index: entry.end,
+                .map(|entry| {
+                    let label = if entry.omit_parts_display.is_empty() {
+                        entry.label
+                    } else {
+                        format!("{}(-{})", entry.label, entry.omit_parts_display.join(" -"))
+                    };
+                    SequenceEntryOut {
+                        label,
+                        start_measure_index: entry.start,
+                        end_measure_index: entry.end,
+                    }
                 })
                 .collect();
             ListMeasureSpansResponse::Ok {

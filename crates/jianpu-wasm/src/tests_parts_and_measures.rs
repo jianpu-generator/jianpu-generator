@@ -167,6 +167,43 @@ fn list_measure_spans_returns_sequence_entries_in_playback_order_with_repeats() 
 }
 
 #[test]
+fn list_measure_spans_sequence_entry_label_includes_part_omission_suffix() {
+    // `Y(-b)` omits part "b" from that one occurrence's playback; the entry's
+    // label must carry that suffix so the sequence jump toolbar can show
+    // "Y(-b)" distinctly from the plain "Y" entries that follow it.
+    let input = concat!(
+        "# metadata\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "# parts\n",
+        "a = notes\n",
+        "b = notes\n",
+        "\n",
+        "# sequence\n",
+        "X, Y(-b), Y, X\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120 label=\"X\"\n",
+        "[a] 1\n",
+        "\n",
+        "label=\"Y\"\n",
+        "[a] 2\n",
+        "[b] 5\n",
+    );
+    let resp = list_measure_spans_response(input);
+    match resp {
+        ListMeasureSpansResponse::Ok {
+            sequence_entries, ..
+        } => {
+            let labels: Vec<&str> = sequence_entries.iter().map(|e| e.label.as_str()).collect();
+            assert_eq!(labels, vec!["X", "Y(-b)", "Y", "X"]);
+        }
+        ListMeasureSpansResponse::Err => panic!("expected ok"),
+    }
+}
+
+#[test]
 fn list_measure_spans_returns_empty_sequence_entries_without_sequence_section() {
     let input = concat!(
         "# metadata\n",
