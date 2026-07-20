@@ -47,6 +47,24 @@ export function useNoteHighlight(
       }
     }
 
+    const scrollIntoViewIfNeeded = (
+      sourcePartIndex: number,
+      noteId: number,
+    ) => {
+      const rect = container.querySelector<SVGRectElement>(
+        `[data-tag="note"][data-part-index="${sourcePartIndex}"][data-note-id="${noteId}"] rect[data-variant="note-highlight-rect"]`,
+      )
+      if (!rect) return
+      const noteBounds = rect.getBoundingClientRect()
+      const viewBounds = container.getBoundingClientRect()
+      const isVisible =
+        noteBounds.top >= viewBounds.top &&
+        noteBounds.bottom <= viewBounds.bottom
+      if (!isVisible) {
+        rect.scrollIntoView({ block: 'center', inline: 'nearest' })
+      }
+    }
+
     const clearActive = () => {
       for (const key of activeKeys) {
         const [partIndex, noteId] = key.split(':')
@@ -66,13 +84,18 @@ export function useNoteHighlight(
           setHighlight(Number(partIndex), Number(noteId), false)
         }
       }
+      let newlyActive: { sourcePartIndex: number; noteId: number } | null = null
       for (const a of active) {
         const key = noteKey(a.sourcePartIndex, a.noteId)
         if (!activeKeys.has(key)) {
           setHighlight(a.sourcePartIndex, a.noteId, true)
+          newlyActive ??= a
         }
       }
       activeKeys = nextKeys
+      if (newlyActive) {
+        scrollIntoViewIfNeeded(newlyActive.sourcePartIndex, newlyActive.noteId)
+      }
     }
 
     const tick = () => {
