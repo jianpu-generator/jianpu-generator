@@ -109,6 +109,11 @@ time=4/4 key=C4 bpm=120 label="Verse"
         .find(|o| o.role == OccurrenceRole::Declaration)
         .expect("expected a declaration occurrence");
     assert_eq!(span_text(source, declaration.span), "Verse");
+    assert_eq!(
+        span_text(source, declaration.hit_span),
+        r#"label="Verse""#,
+        "hit_span should cover the whole label=\"...\" token, not just the quoted text"
+    );
 }
 
 #[test]

@@ -40,6 +40,10 @@ fn symbol_to_out(symbol: Symbol) -> SymbolOut {
                     start: occurrence.span.start,
                     end: occurrence.span.end,
                 },
+                hit_span: SpanOut {
+                    start: occurrence.hit_span.start,
+                    end: occurrence.hit_span.end,
+                },
                 role: occurrence_role_to_out(occurrence.role),
             })
             .collect(),

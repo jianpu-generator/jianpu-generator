@@ -3,6 +3,7 @@ import type * as monacoEditor from 'monaco-editor'
 import { JIANPU_LANGUAGE_ID } from './monacoJianpuLanguage'
 import {
   listRenameSymbols,
+  occurrenceAtByteOffset,
   renameSymbolEdits,
   symbolAtByteOffset,
 } from './renameSymbol'
@@ -49,9 +50,7 @@ export function registerJianpuRenameProvider(monacoApi: Monaco) {
       )
       const symbols = await listRenameSymbols(source)
       const symbol = symbolAtByteOffset(symbols, byteOffset)
-      const occurrence = symbol?.occurrences.find(
-        (o) => byteOffset >= o.span.start && byteOffset < o.span.end,
-      )
+      const occurrence = symbol && occurrenceAtByteOffset(symbol, byteOffset)
       if (!symbol || !occurrence) {
         return {
           range: new monacoApi.Range(

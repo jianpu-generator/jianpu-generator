@@ -23,8 +23,28 @@ pub enum OccurrenceRole {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SymbolOccurrence {
+    /// The exact renamable text; used for the rename edit and for the
+    /// text shown/typed in the editor's rename widget.
     pub span: Span,
+    /// The region a caret may rest in to trigger a rename of this occurrence.
+    /// Usually equal to `span`, but wider for occurrences whose renamable
+    /// text sits inside a larger token (e.g. a section label's `span` covers
+    /// just the quoted text in `label="C"`, while `hit_span` covers the
+    /// whole `label="C"` token) so placing the caret anywhere in that token
+    /// still triggers a rename.
+    pub hit_span: Span,
     pub role: OccurrenceRole,
+}
+
+impl SymbolOccurrence {
+    /// An occurrence whose hit-test region is exactly its renamable text.
+    fn exact(span: Span, role: OccurrenceRole) -> Self {
+        SymbolOccurrence {
+            span,
+            hit_span: span,
+            role,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -63,10 +83,7 @@ fn collect_abbreviation_symbols(document: &ParsedDocument, abbreviations: &mut V
             abbreviations,
             SymbolKind::Abbreviation,
             &decl.abbreviation,
-            SymbolOccurrence {
-                span: decl.abbreviation_span,
-                role: OccurrenceRole::Declaration,
-            },
+            SymbolOccurrence::exact(decl.abbreviation_span, OccurrenceRole::Declaration),
         );
     }
 
@@ -76,20 +93,14 @@ fn collect_abbreviation_symbols(document: &ParsedDocument, abbreviations: &mut V
                 abbreviations,
                 SymbolKind::Abbreviation,
                 &group.abbreviation,
-                SymbolOccurrence {
-                    span: group.abbreviation_span,
-                    role: OccurrenceRole::Declaration,
-                },
+                SymbolOccurrence::exact(group.abbreviation_span, OccurrenceRole::Declaration),
             );
             for (member, member_span) in group.members.iter().zip(&group.member_spans) {
                 push_occurrence(
                     abbreviations,
                     SymbolKind::Abbreviation,
                     member,
-                    SymbolOccurrence {
-                        span: *member_span,
-                        role: OccurrenceRole::Reference,
-                    },
+                    SymbolOccurrence::exact(*member_span, OccurrenceRole::Reference),
                 );
             }
         }
@@ -100,10 +111,7 @@ fn collect_abbreviation_symbols(document: &ParsedDocument, abbreviations: &mut V
             abbreviations,
             SymbolKind::Abbreviation,
             &reference.abbreviation,
-            SymbolOccurrence {
-                span: reference.span,
-                role: OccurrenceRole::Reference,
-            },
+            SymbolOccurrence::exact(reference.span, OccurrenceRole::Reference),
         );
     }
 }
@@ -122,6 +130,7 @@ fn collect_section_label_symbols(
                     text,
                     SymbolOccurrence {
                         span: event.span,
+                        hit_span: label_token_span(event.span),
                         role: OccurrenceRole::Declaration,
                     },
                 );
@@ -137,23 +146,26 @@ fn collect_section_label_symbols(
             labels,
             SymbolKind::SectionLabel,
             &entry.label,
-            SymbolOccurrence {
-                span: entry.label_span,
-                role: OccurrenceRole::Reference,
-            },
+            SymbolOccurrence::exact(entry.label_span, OccurrenceRole::Reference),
         );
         for (part, part_span) in entry.omit_parts.iter().zip(&entry.omit_part_spans) {
             push_occurrence(
                 abbreviations,
                 SymbolKind::Abbreviation,
                 part,
-                SymbolOccurrence {
-                    span: *part_span,
-                    role: OccurrenceRole::Reference,
-                },
+                SymbolOccurrence::exact(*part_span, OccurrenceRole::Reference),
             );
         }
     }
+}
+
+/// Widens a `label="..."` declaration's quoted-text span (as narrowed by the
+/// directive parser, see `label=` handling in `interleaved_directives.rs`)
+/// back out to the whole `label="..."` token, so a caret resting anywhere in
+/// `label="C"` — not just inside the quotes — still hits this occurrence.
+fn label_token_span(text_span: Span) -> Span {
+    let prefix_and_quote_len = "label=\"".len();
+    Span::new(text_span.start - prefix_and_quote_len, text_span.end + 1)
 }
 
 fn push_occurrence(

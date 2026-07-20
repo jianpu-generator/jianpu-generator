@@ -142,6 +142,12 @@ pub enum OccurrenceRoleOut {
 #[tsify(into_wasm_abi)]
 pub struct SymbolOccurrenceOut {
     pub span: SpanOut,
+    /// The region a caret may rest in to trigger a rename of this occurrence;
+    /// usually equal to `span` but wider for occurrences whose renamable text
+    /// sits inside a larger token (e.g. a section label declaration's `span`
+    /// covers just the quoted text in `label="C"`, while `hit_span` covers
+    /// the whole token).
+    pub hit_span: SpanOut,
     pub role: OccurrenceRoleOut,
 }
 
