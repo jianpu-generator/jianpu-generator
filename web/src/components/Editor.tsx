@@ -13,6 +13,7 @@ import {
   JIANPU_LANGUAGE_ID,
   registerJianpuLanguage,
 } from '../monacoJianpuLanguage'
+import { registerJianpuRenameProvider } from '../monacoRenameProvider'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -334,15 +335,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           }}
           beforeMount={(monacoApi) => {
             registerJianpuLanguage(monacoApi)
+            registerJianpuRenameProvider(monacoApi)
             monacoApi.editor.defineTheme(EDITOR_THEME, {
               base: 'vs',
               inherit: true,
               rules: [
-                {
-                  token: 'comment',
-                  foreground: '008000',
-                  fontStyle: 'italic',
-                },
+                { token: 'comment', foreground: '008000', fontStyle: 'italic' },
                 { token: 'string', foreground: 'a31515' },
                 {
                   token: 'keyword.section',

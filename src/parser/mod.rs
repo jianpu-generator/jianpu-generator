@@ -156,9 +156,9 @@ pub fn parse(
         None => Vec::new(),
     };
 
-    let (tracks, directive_events_per_measure, per_measure_parse_errors) =
+    let (tracks, directive_events_per_measure, per_measure_parse_errors, abbreviation_references) =
         if declarations.is_empty() {
-            (Vec::new(), Vec::new(), Vec::new())
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new())
         } else {
             score::interleaved_parser::parse(
                 &score_content,
@@ -180,6 +180,7 @@ pub fn parse(
         declarations,
         tracks,
         directive_events_per_measure,
+        abbreviation_references,
         per_measure_parse_errors,
         metadata_parse_errors,
         parts_parse_errors,

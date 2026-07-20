@@ -57,6 +57,7 @@ pub struct SourceRawPartDecl {
 struct RawDecl {
     display_name: String,
     abbreviation: String,
+    abbreviation_span: Span,
     span: Span,
     kind: RawKind,
     /// `None` when omitted on the declaration line (follow parts inherit from target).
@@ -128,6 +129,7 @@ struct ParsedPartRhs {
 struct LhsParsed {
     display_name: String,
     abbreviation: String,
+    abbreviation_span: Span,
 }
 
 struct RhsSuffixes {
@@ -188,6 +190,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
         let RawDecl {
             display_name,
             abbreviation,
+            abbreviation_span,
             span,
             kind,
             soundfont,
@@ -216,6 +219,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                     }
                     Some(target_decl) => declarations.push(PartDecl {
                         abbreviation,
+                        abbreviation_span,
                         display_name,
                         kind: target_decl.kind,
                         follow_target: Some(target),
@@ -227,6 +231,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
             }
             RawKind::Concrete(kind) => declarations.push(PartDecl {
                 abbreviation,
+                abbreviation_span,
                 display_name,
                 kind,
                 follow_target: None,

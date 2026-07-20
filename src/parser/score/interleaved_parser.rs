@@ -1,4 +1,6 @@
-use crate::ast::parsed::{ParsedMeasureSlot, ParsedTrack, PartDecl, ScoreEvent, ScoreLineSlot};
+use crate::ast::parsed::{
+    AbbreviationReference, ParsedMeasureSlot, ParsedTrack, PartDecl, ScoreEvent, ScoreLineSlot,
+};
 use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Spanned};
 use crate::parser::score::token_parser::GroupStack;
 use crate::utils::LyricTieState;
@@ -24,12 +26,14 @@ use directives::split_directive;
 /// One entry per bar group: all directive events emitted by that group's directive row.
 pub(super) type DirectiveEventsPerMeasure = Vec<Vec<Spanned<ScoreEvent>>>;
 
-/// Return type of `parse`: tracks, directive events per measure, and per-measure desugar errors.
+/// Return type of `parse`: tracks, directive events per measure, per-measure desugar
+/// errors, and every `[Abbrev]` key-prefix reference found in the score section.
 type ParseResult = Result<
     (
         Vec<ParsedTrack>,
         DirectiveEventsPerMeasure,
         Vec<Option<RecoverableError>>,
+        Vec<AbbreviationReference>,
     ),
     IrrecoverableError,
 >;
@@ -149,7 +153,7 @@ pub fn parse(
     resolved_groups: &[crate::parser::group_parser::ResolvedGroup],
 ) -> ParseResult {
     let groups = collect_groups(content);
-    let (groups, slots_per_group, per_group_desugar_errors) =
+    let (groups, slots_per_group, per_group_desugar_errors, abbreviation_references) =
         crate::desugar::desugar_groups(groups, declarations, resolved_groups, base_offset)?;
 
     let mut accumulators = init_accumulators(declarations);
@@ -211,6 +215,7 @@ pub fn parse(
         tracks,
         directive_events_per_measure,
         per_group_desugar_errors,
+        abbreviation_references,
     ))
 }
 

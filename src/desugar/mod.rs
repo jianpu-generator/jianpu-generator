@@ -1,4 +1,4 @@
-use crate::ast::parsed::{PartDecl, PartKind, ScoreLineRole, ScoreLineSlot};
+use crate::ast::parsed::{AbbreviationReference, PartDecl, PartKind, ScoreLineRole, ScoreLineSlot};
 use crate::error::{IrrecoverableError, RecoverableError, Span};
 use crate::parser::group_parser::ResolvedGroup;
 use crate::parser::score::measure_group;
@@ -25,11 +25,19 @@ type DesugarGroupsResult = Result<
         Vec<MeasureGroup>,
         Vec<Vec<ScoreLineSlot>>,
         Vec<Option<RecoverableError>>,
+        Vec<AbbreviationReference>,
     ),
     IrrecoverableError,
 >;
-type ExpandMeasureGroupResult =
-    Result<(MeasureGroup, Vec<ScoreLineSlot>, Option<RecoverableError>), IrrecoverableError>;
+type ExpandMeasureGroupResult = Result<
+    (
+        MeasureGroup,
+        Vec<ScoreLineSlot>,
+        Option<RecoverableError>,
+        Vec<AbbreviationReference>,
+    ),
+    IrrecoverableError,
+>;
 
 fn extract_time_numerator(group: &[RawSourceLine]) -> Option<u8> {
     let (first_line, _) = group.first()?;
@@ -52,12 +60,13 @@ pub(crate) fn desugar_groups(
     let mut desugared = Vec::with_capacity(groups.len());
     let mut slots_per_group = Vec::with_capacity(groups.len());
     let mut per_group_errors = Vec::with_capacity(groups.len());
+    let mut abbreviation_references = Vec::new();
     let mut current_time_num: u8 = 4;
     for group in groups {
         if let Some(num) = extract_time_numerator(&group) {
             current_time_num = num;
         }
-        let (expanded, slots, error) = expand_measure_group(
+        let (expanded, slots, error, references) = expand_measure_group(
             &group,
             declarations,
             resolved_groups,
@@ -67,8 +76,14 @@ pub(crate) fn desugar_groups(
         desugared.push(expanded);
         slots_per_group.push(slots);
         per_group_errors.push(error);
+        abbreviation_references.extend(references);
     }
-    Ok((desugared, slots_per_group, per_group_errors))
+    Ok((
+        desugared,
+        slots_per_group,
+        per_group_errors,
+        abbreviation_references,
+    ))
 }
 
 pub(crate) fn parse_key_prefix(line: &str) -> Option<(&str, &str)> {
@@ -97,6 +112,10 @@ struct KeyedLine {
     content: String,
     content_offset: usize,
     key_prefix_span: Span,
+    /// Span of just the trimmed abbreviation text (excluding `[`/`]` and inner
+    /// whitespace), distinct from `key_prefix_span` which covers the whole
+    /// bracketed prefix and must keep doing so for `part_key_unknown`'s error span.
+    key_span: Span,
 }
 
 fn key_prefix_span_in_line(line: &str, line_offset: usize, base_offset: usize) -> Span {
@@ -105,6 +124,18 @@ fn key_prefix_span_in_line(line: &str, line_offset: usize, base_offset: usize) -
         .map(|index| index + 1)
         .unwrap_or_else(|| line.len().min(1));
     Span::new(base_offset + line_offset, base_offset + line_offset + end)
+}
+
+/// Span of just the trimmed abbreviation text inside a `[Key]` prefix, e.g. for
+/// `[ Sop ] 1 2 3 4` this is the span of `Sop`, excluding brackets/whitespace.
+fn key_span_in_line(line: &str, line_offset: usize, base_offset: usize) -> Option<Span> {
+    let inner = line.strip_prefix('[')?;
+    let close = inner.find(']')?;
+    let raw_key = &inner[..close];
+    let leading_ws = raw_key.len() - raw_key.trim_start().len();
+    let trimmed = raw_key.trim();
+    let key_start = base_offset + line_offset + 1 + leading_ws;
+    Some(Span::new(key_start, key_start + trimmed.len()))
 }
 
 fn expand_measure_group(
@@ -138,11 +169,14 @@ fn expand_measure_group(
     for (line, offset) in data_lines {
         if let Some((key, content)) = parse_key_prefix(line) {
             let prefix_length = line.len().saturating_sub(content.len());
+            let key_span = key_span_in_line(line, *offset, base_offset)
+                .unwrap_or_else(|| key_prefix_span_in_line(line, *offset, base_offset));
             keyed.push(KeyedLine {
                 key: key.to_string(),
                 content: content.to_string(),
                 content_offset: *offset + prefix_length,
                 key_prefix_span: key_prefix_span_in_line(line, *offset, base_offset),
+                key_span,
             });
         } else {
             recoverable_error.get_or_insert_with(|| {
@@ -153,6 +187,14 @@ fn expand_measure_group(
             });
         }
     }
+
+    let abbreviation_references: Vec<AbbreviationReference> = keyed
+        .iter()
+        .map(|line| AbbreviationReference {
+            abbreviation: line.key.clone(),
+            span: line.key_span,
+        })
+        .collect();
 
     let (result_data, slots) = if keyed.is_empty() {
         recoverable_error.replace(RecoverableError::measure_no_data_lines(context.span));
@@ -190,7 +232,7 @@ fn expand_measure_group(
         })
         .collect();
     result.extend(result_data);
-    Ok((result, slots, recoverable_error))
+    Ok((result, slots, recoverable_error, abbreviation_references))
 }
 
 fn expand_keyed(

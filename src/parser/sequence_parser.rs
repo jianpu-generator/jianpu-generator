@@ -4,9 +4,15 @@ use crate::error::{RecoverableError, Span};
 #[derive(Debug, Clone, PartialEq)]
 pub struct SequenceEntry {
     pub label: String,
+    /// Byte span of just the label substring (not the `(-abbrev ...)` suffix),
+    /// used by rename-symbol to locate this reference site.
+    pub label_span: Span,
     /// Part abbreviations to omit from this occurrence's playback, from an
     /// optional `(-abbrev -abbrev ...)` suffix (e.g. `Chorus(-S -A2)`).
     pub omit_parts: Vec<String>,
+    /// Byte span of each `omit_parts` abbreviation (excluding the leading `-`),
+    /// parallel to `omit_parts`, used by rename-symbol to locate these references.
+    pub omit_part_spans: Vec<Span>,
     pub span: Span,
 }
 
@@ -56,11 +62,14 @@ pub fn parse_sequence(
             continue;
         }
 
-        let (label, omit_parts) = parse_entry(trimmed, start, &mut errors);
+        let (label, label_span, omit_parts, omit_part_spans) =
+            parse_entry(trimmed, start, &mut errors);
 
         entries.push(SequenceEntry {
             label,
+            label_span,
             omit_parts,
+            omit_part_spans,
             span: Span::new(start, start + trimmed.len()),
         });
     }
@@ -70,16 +79,29 @@ pub fn parse_sequence(
 
 /// Splits a single trimmed entry into its label and, if present, the part
 /// abbreviations named in a `(-abbrev -abbrev ...)` suffix.
+/// Yields `(word, byte_offset_in_s)` pairs for each whitespace-separated token in `s`.
+fn split_whitespace_with_offsets(s: &str) -> impl Iterator<Item = (&str, usize)> {
+    let mut cursor = 0;
+    s.split_whitespace().map(move |token| {
+        let offset = cursor + s[cursor..].find(token).unwrap_or(0);
+        cursor = offset + token.len();
+        (token, offset)
+    })
+}
+
 fn parse_entry(
     trimmed: &str,
     start: usize,
     errors: &mut Vec<RecoverableError>,
-) -> (String, Vec<String>) {
+) -> (String, Span, Vec<String>, Vec<Span>) {
     let Some(paren_pos) = trimmed.find('(') else {
-        return (trimmed.to_string(), Vec::new());
+        let label = trimmed.to_string();
+        let label_span = Span::new(start, start + label.len());
+        return (label, label_span, Vec::new(), Vec::new());
     };
 
     let label = trimmed[..paren_pos].trim_end().to_string();
+    let label_span = Span::new(start, start + label.len());
 
     let Some(modifiers) = trimmed[paren_pos..]
         .strip_prefix('(')
@@ -89,14 +111,21 @@ fn parse_entry(
             Span::new(start, start + trimmed.len()),
             format!("sequence entry \"{trimmed}\" has an unclosed \"(...)\" part-omission suffix"),
         ));
-        return (label, Vec::new());
+        return (label, label_span, Vec::new(), Vec::new());
     };
 
+    let modifiers_start = start + paren_pos + 1;
     let mut omit_parts = Vec::new();
-    for token in modifiers.split_whitespace() {
+    let mut omit_part_spans = Vec::new();
+    for (token, token_offset) in split_whitespace_with_offsets(modifiers) {
         match token.strip_prefix('-') {
             Some(abbreviation) if !abbreviation.is_empty() => {
+                let abbreviation_start = modifiers_start + token_offset + 1;
                 omit_parts.push(abbreviation.to_string());
+                omit_part_spans.push(Span::new(
+                    abbreviation_start,
+                    abbreviation_start + abbreviation.len(),
+                ));
             }
             _ => {
                 errors.push(RecoverableError::general(
@@ -109,7 +138,7 @@ fn parse_entry(
         }
     }
 
-    (label, omit_parts)
+    (label, label_span, omit_parts, omit_part_spans)
 }
 
 #[cfg(test)]

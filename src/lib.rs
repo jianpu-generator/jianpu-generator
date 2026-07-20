@@ -36,6 +36,7 @@ pub mod renderer;
 pub mod serializer;
 pub mod source_edit;
 pub mod split_track;
+pub mod symbols;
 pub mod utils;
 
 #[cfg(feature = "midi")]

@@ -6,8 +6,14 @@ use crate::error::{RecoverableError, Span};
 pub struct GroupDef {
     pub display_name: String,
     pub abbreviation: String,
+    /// Byte span of the abbreviation token on its declaration line, used by
+    /// rename-symbol to locate the declaration site.
+    pub abbreviation_span: Span,
     /// Raw member abbreviations (parts or earlier groups).
     pub members: Vec<String>,
+    /// Byte span of each entry in `members`, parallel to it, used by
+    /// rename-symbol to locate these reference sites.
+    pub member_spans: Vec<Span>,
     pub span: Span,
 }
 
@@ -37,7 +43,8 @@ pub fn parse_group(content: &str, offset: usize) -> (Option<GroupSection>, Vec<R
             continue;
         }
         let line_span = Span::new(line_start, line_start + line.len());
-        match parse_group_line(trimmed, line_span) {
+        let trimmed_start = line_start + (line.len() - line.trim_start().len());
+        match parse_group_line(trimmed, trimmed_start, line_span) {
             Ok(group_def) => groups.push(group_def),
             Err(error) => errors.push(error),
         }
@@ -46,7 +53,11 @@ pub fn parse_group(content: &str, offset: usize) -> (Option<GroupSection>, Vec<R
     (Some(GroupSection { groups }), errors)
 }
 
-fn parse_group_line(line: &str, span: Span) -> Result<GroupDef, RecoverableError> {
+fn parse_group_line(
+    line: &str,
+    line_start: usize,
+    span: Span,
+) -> Result<GroupDef, RecoverableError> {
     let Some((lhs, rhs)) = line.split_once('=') else {
         return Err(RecoverableError::general(
             span,
@@ -54,9 +65,16 @@ fn parse_group_line(line: &str, span: Span) -> Result<GroupDef, RecoverableError
         ));
     };
 
-    let (display_name, abbreviation) = parse_lhs(lhs.trim(), span)?;
+    let (display_name, abbreviation, abbreviation_span) = parse_lhs(lhs, line_start, span)?;
 
-    let members: Vec<String> = rhs.split_whitespace().map(str::to_string).collect();
+    let rhs_start = line_start + lhs.len() + 1;
+    let mut members = Vec::new();
+    let mut member_spans = Vec::new();
+    for (member, offset) in split_whitespace_with_offsets(rhs) {
+        members.push(member.to_string());
+        let member_start = rhs_start + offset;
+        member_spans.push(Span::new(member_start, member_start + member.len()));
+    }
     if members.is_empty() {
         return Err(RecoverableError::general(
             span,
@@ -67,26 +85,46 @@ fn parse_group_line(line: &str, span: Span) -> Result<GroupDef, RecoverableError
     Ok(GroupDef {
         display_name,
         abbreviation,
+        abbreviation_span,
         members,
+        member_spans,
         span,
     })
 }
 
-fn parse_lhs(lhs: &str, span: Span) -> Result<(String, String), RecoverableError> {
+/// Yields `(word, byte_offset_in_s)` pairs for each whitespace-separated token in `s`.
+fn split_whitespace_with_offsets(s: &str) -> impl Iterator<Item = (&str, usize)> {
+    let mut cursor = 0;
+    s.split_whitespace().map(move |token| {
+        let offset = cursor + s[cursor..].find(token).unwrap_or(0);
+        cursor = offset + token.len();
+        (token, offset)
+    })
+}
+
+fn parse_lhs(
+    raw_lhs: &str,
+    line_start: usize,
+    span: Span,
+) -> Result<(String, String, Span), RecoverableError> {
+    let lhs = raw_lhs.trim();
     if lhs.is_empty() {
         return Err(RecoverableError::general(
             span,
             "group name cannot be empty",
         ));
     }
+    let lhs_start = line_start + (raw_lhs.len() - raw_lhs.trim_start().len());
 
     let Some(bracket_start) = lhs.find('[') else {
-        return Ok((lhs.to_string(), lhs.to_string()));
+        let name_span = Span::new(lhs_start, lhs_start + lhs.len());
+        return Ok((lhs.to_string(), lhs.to_string(), name_span));
     };
 
     let display_name = lhs[..bracket_start].trim();
-    let bracketed = lhs[bracket_start..].trim();
-    let Some(abbreviation) = bracketed
+    let bracketed = &lhs[bracket_start..];
+    let bracketed_trimmed = bracketed.trim();
+    let Some(abbreviation) = bracketed_trimmed
         .strip_prefix('[')
         .and_then(|rest| rest.strip_suffix(']'))
     else {
@@ -110,7 +148,17 @@ fn parse_lhs(lhs: &str, span: Span) -> Result<(String, String), RecoverableError
         ));
     }
 
-    Ok((display_name.to_string(), abbreviation.to_string()))
+    // Locate the abbreviation's own byte range within `lhs[bracket_start..]`,
+    // accounting for the `[` and any inner whitespace before it.
+    let abbrev_offset_in_bracketed = bracketed.find(abbreviation).unwrap_or(0);
+    let abbreviation_start = lhs_start + bracket_start + abbrev_offset_in_bracketed;
+    let abbreviation_span = Span::new(abbreviation_start, abbreviation_start + abbreviation.len());
+
+    Ok((
+        display_name.to_string(),
+        abbreviation.to_string(),
+        abbreviation_span,
+    ))
 }
 
 /// Resolves a group's members to the set of concrete part abbreviations it ultimately

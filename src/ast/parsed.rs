@@ -33,6 +33,9 @@ impl Default for Soundfont {
 #[derive(Debug, Clone, PartialEq)]
 pub struct PartDecl {
     pub abbreviation: String,
+    /// Byte span of the abbreviation token on its `# parts`/`# groups` declaration line,
+    /// used by rename-symbol to locate the declaration site.
+    pub abbreviation_span: Span,
     pub display_name: String,
     pub kind: PartKind,
     pub follow_target: Option<String>,
@@ -115,12 +118,27 @@ pub struct ParsedTimedTrack {
     pub per_measure_group_provenance: Vec<Option<String>>,
 }
 
+/// One `[Abbrev]` key-prefix reference to a part or group abbreviation in the
+/// `# score` section, with the abbreviation text's own byte span (excluding
+/// the surrounding brackets and whitespace). Used by rename-symbol to locate
+/// this reference site; kept separate from the wider bracket span used by
+/// `RecoverableError::part_key_unknown`, which must keep covering `[Abbrev]`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AbbreviationReference {
+    pub abbreviation: String,
+    pub span: Span,
+}
+
 #[derive(Debug)]
 pub struct ParsedDocument {
     pub metadata: ParsedMetadata,
     pub declarations: Vec<PartDecl>,
     pub tracks: Vec<ParsedTrack>,
     pub directive_events_per_measure: Vec<Vec<Spanned<ScoreEvent>>>,
+    /// Every `[Abbrev]` key-prefix reference found in the `# score` section,
+    /// in file order, for both part and group abbreviations. Used by
+    /// rename-symbol to find all reference sites.
+    pub abbreviation_references: Vec<AbbreviationReference>,
     /// Per-measure recoverable errors from desugaring (e.g. missing lyrics line).
     pub per_measure_parse_errors: Vec<Option<RecoverableError>>,
     /// Recoverable errors from parsing the [metadata] section.

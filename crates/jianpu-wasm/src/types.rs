@@ -122,6 +122,60 @@ pub enum ListPartDeclarationsResponse {
     },
 }
 
+#[derive(Debug, Clone, Copy, Tsify, Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub enum SymbolKindOut {
+    Abbreviation,
+    SectionLabel,
+}
+
+#[derive(Debug, Clone, Copy, Tsify, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum OccurrenceRoleOut {
+    Declaration,
+    Reference,
+}
+
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[tsify(into_wasm_abi)]
+pub struct SymbolOccurrenceOut {
+    pub span: SpanOut,
+    pub role: OccurrenceRoleOut,
+}
+
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[tsify(into_wasm_abi)]
+pub struct SymbolOut {
+    pub name: String,
+    pub kind: SymbolKindOut,
+    pub occurrences: Vec<SymbolOccurrenceOut>,
+}
+
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[serde(tag = "status", rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum ListSymbolsResponse {
+    Ok { symbols: Vec<SymbolOut> },
+    Err { diagnostics: Vec<DiagnosticOut> },
+}
+
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[tsify(into_wasm_abi)]
+pub struct TextEditOut {
+    pub span: SpanOut,
+    pub replacement: String,
+}
+
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[serde(tag = "status", rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum RenameSymbolResponse {
+    Ok { edits: Vec<TextEditOut> },
+    Err { diagnostics: Vec<DiagnosticOut> },
+}
+
 #[derive(Debug, Clone, Tsify, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
 #[tsify(into_wasm_abi)]

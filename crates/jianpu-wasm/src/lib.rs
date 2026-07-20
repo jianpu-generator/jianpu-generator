@@ -4,6 +4,7 @@ mod metadata_types;
 mod part_declarations;
 mod responses;
 mod svg_types;
+mod symbols;
 mod types;
 #[cfg(any(feature = "wav", feature = "pdf", feature = "midi"))]
 mod types_export;
@@ -27,8 +28,8 @@ use responses::{
     render_with_highlight_range_response,
 };
 use types::{
-    ListMeasureSpansResponse, ListPartDeclarationsResponse, ListPartsResponse,
-    MeasureAtOffsetResponse, RenderResponse,
+    ListMeasureSpansResponse, ListPartDeclarationsResponse, ListPartsResponse, ListSymbolsResponse,
+    MeasureAtOffsetResponse, RenameSymbolResponse, RenderResponse, SymbolKindOut,
 };
 use wasm_bindgen::prelude::*;
 
@@ -149,6 +150,37 @@ pub fn update_part_declaration(
         new_volume,
         new_octave_offset,
     )
+}
+
+/// Parse `.jianpu` source and return every renamable symbol (part/group
+/// abbreviations, section labels), each with its declaration and reference spans.
+///
+/// - `{ "status": "ok", "symbols": [{ "name", "kind", "occurrences": [{ "span", "role" }] }] }`
+/// - `{ "status": "err", "diagnostics": [...] }`
+#[wasm_bindgen]
+pub fn list_symbols(source: &str, raw_instruments: JsValue) -> ListSymbolsResponse {
+    let instruments: Vec<InstrumentInfo> =
+        serde_wasm_bindgen::from_value(raw_instruments).unwrap_or_default();
+    symbols::list_symbols_response(source, &instruments)
+}
+
+/// Compute the text edits needed to rename every occurrence of a part/group
+/// abbreviation or section label to `new_name`. Returns an empty `edits` list
+/// (not an error) if `old_name` names no symbol of `kind`.
+///
+/// - `{ "status": "ok", "edits": [{ "span", "replacement" }] }`
+/// - `{ "status": "err", "diagnostics": [...] }`
+#[wasm_bindgen]
+pub fn rename_symbol(
+    source: &str,
+    kind: SymbolKindOut,
+    old_name: &str,
+    new_name: &str,
+    raw_instruments: JsValue,
+) -> RenameSymbolResponse {
+    let instruments: Vec<InstrumentInfo> =
+        serde_wasm_bindgen::from_value(raw_instruments).unwrap_or_default();
+    symbols::rename_symbol_response(source, kind, old_name, new_name, &instruments)
 }
 
 /// Find the measure index at a UTF-8 byte offset in the source.

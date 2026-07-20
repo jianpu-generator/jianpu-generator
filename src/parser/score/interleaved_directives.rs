@@ -96,6 +96,7 @@ fn parse_directive_line(
         let token_file_offset = inner_offset + token_inner_offset;
         let span = Span::new(token_file_offset, token_file_offset + token.len());
 
+        let mut event_span = span;
         let event = if let Some(rest) = token.strip_prefix("bpm=") {
             match rest.parse::<u32>() {
                 Ok(bpm) => Some(ScoreEvent::BpmChange(bpm)),
@@ -127,6 +128,10 @@ fn parse_directive_line(
                     ));
                     None
                 } else {
+                    // Narrow the event span to just the quoted text (not the whole
+                    // `label="..."` token), so rename-symbol can replace it in place.
+                    let text_start = token_file_offset + (token.len() - rest.len()) + 1;
+                    event_span = Span::new(text_start, text_start + text.len());
                     Some(ScoreEvent::LabelChange(text))
                 }
             }
@@ -147,7 +152,7 @@ fn parse_directive_line(
         };
 
         if let Some(event) = event {
-            events.push(Spanned::new(event, span));
+            events.push(Spanned::new(event, event_span));
         }
     }
 

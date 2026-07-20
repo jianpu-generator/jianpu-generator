@@ -48,6 +48,7 @@ use crate::ast::parsed::{PartDecl, PartKind};
 fn decl(name: &str, kind: PartKind) -> PartDecl {
     PartDecl {
         abbreviation: name.to_string(),
+        abbreviation_span: Span::new(0, 0),
         display_name: name.to_string(),
         kind,
         follow_target: None,

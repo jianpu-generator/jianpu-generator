@@ -21,6 +21,7 @@ pub(super) fn parse_declaration_line(
     let LhsParsed {
         display_name,
         abbreviation,
+        abbreviation_span,
     } = match parse_lhs_tokens(lhs_tokens, line_span) {
         Ok(parsed) => parsed,
         Err(error) => {
@@ -45,6 +46,7 @@ pub(super) fn parse_declaration_line(
     Some(RawDecl {
         display_name,
         abbreviation,
+        abbreviation_span,
         span: line_span,
         kind,
         soundfont,
@@ -64,7 +66,7 @@ fn parse_lhs_tokens(
     match tokens {
         [Spanned {
             value: PartsToken::Name(display_name),
-            ..
+            span: name_span,
         }] => {
             if display_name.is_empty() {
                 return Err(RecoverableError::parts_empty_track_name(span));
@@ -72,6 +74,7 @@ fn parse_lhs_tokens(
             Ok(LhsParsed {
                 display_name: display_name.clone(),
                 abbreviation: display_name.clone(),
+                abbreviation_span: *name_span,
             })
         }
         [Spanned {
@@ -82,7 +85,7 @@ fn parse_lhs_tokens(
             ..
         }, Spanned {
             value: PartsToken::Abbreviation(abbreviation),
-            ..
+            span: abbreviation_span,
         }, Spanned {
             value: PartsToken::RBracket,
             ..
@@ -96,6 +99,7 @@ fn parse_lhs_tokens(
             Ok(LhsParsed {
                 display_name: display_name.clone(),
                 abbreviation: abbreviation.clone(),
+                abbreviation_span: *abbreviation_span,
             })
         }
         _ => Err(RecoverableError::parts_invalid_columns(span, "")),
