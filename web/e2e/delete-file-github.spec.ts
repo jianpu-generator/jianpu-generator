@@ -64,9 +64,7 @@ test('deleting a file persists via the GitHub storage backend', async ({
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
   await openFileActions(page)
-  // Positional locator, tracking the menu's item order: New, Duplicate,
-  // Rename, Share, Delete.
-  const deleteButton = page.locator('.export-menu-item').nth(4)
+  const deleteButton = page.getByRole('menuitem', { name: 'Delete' })
   await deleteButton.click()
 
   // The "⋯" dropdown stays open while the delete is pending, so its spinner

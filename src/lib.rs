@@ -379,7 +379,7 @@ pub fn write_pdf_from_source_filtered_with_lyrics(
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
     let svgs = render_svgs(&score)?;
-    pdf::write_pdf(&svgs, fonts)
+    pdf::write_pdf(&svgs, fonts, Some(source))
 }
 
 #[cfg(test)]

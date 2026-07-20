@@ -17,6 +17,7 @@ import {
 import { useDismissableOpen } from '../hooks/useDismissableOpen'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SaveStatus } from '../storage/types'
+import { ImportButton } from './ImportButton'
 import { ShareButton } from './ShareButton'
 
 export interface FileSwitcherProps {
@@ -50,6 +51,8 @@ export interface FileSwitcherProps {
   /** Whether the GitHub backend is still fetching its file list — shows a
    * spinner on the trigger and a loading hint instead of the demo hint. */
   isLoadingGithub?: boolean
+  importing?: boolean
+  onImportFile?: (file: File) => void
 }
 
 const SAVE_STATUS_LABEL: Record<SaveStatus, string> = {
@@ -216,6 +219,8 @@ export function FileSwitcher({
   duplicating = false,
   renamingName = null,
   isLoadingGithub = false,
+  importing = false,
+  onImportFile,
 }: FileSwitcherProps) {
   const names = sortedUserFileNames(store)
   const showEmptyHint = !isLoadingGithub && names.length === 0
@@ -347,6 +352,16 @@ export function FileSwitcher({
               content={fileContent(store, store.active)}
               className="export-menu-item"
             />
+            {onImportFile ? (
+              <ImportButton
+                disabled={isLoadingGithub}
+                importing={importing}
+                onImportFile={(file) => {
+                  onImportFile(file)
+                  setActionsOpen(false)
+                }}
+              />
+            ) : null}
             <button
               type="button"
               role="menuitem"

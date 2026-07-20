@@ -1,5 +1,6 @@
 use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
-use pdf_writer::{Content, Finish, Name, Pdf, Rect, Ref};
+use base64::Engine;
+use pdf_writer::{Content, Finish, Name, Pdf, Rect, Ref, TextStr};
 use std::collections::HashMap;
 
 pub struct PdfFonts {
@@ -8,7 +9,17 @@ pub struct PdfFonts {
     pub monospace: Vec<u8>,
 }
 
-pub fn write_pdf(svgs: &[String], fonts: &PdfFonts) -> Result<Vec<u8>, IrrecoverableError> {
+/// Writes PDF bytes for the given rendered SVG pages, optionally embedding
+/// `source` (the original `.jianpu` text) as a base64-encoded `/JianpuSource`
+/// key in the PDF's `/Info` dictionary. `usvg` (used to parse `svgs` before
+/// PDF conversion) strips `<metadata>` tags, so unlike SVG output the source
+/// can't ride along inside the page content — see `extract_embedded_source_from_pdf`
+/// for the matching extraction side.
+pub fn write_pdf(
+    svgs: &[String],
+    fonts: &PdfFonts,
+    source: Option<&str>,
+) -> Result<Vec<u8>, IrrecoverableError> {
     if svgs.is_empty() {
         return Ok(Vec::new());
     }
@@ -90,6 +101,13 @@ pub fn write_pdf(svgs: &[String], fonts: &PdfFonts) -> Result<Vec<u8>, Irrecover
         page.finish();
     }
 
+    if let Some(source) = source {
+        let info_id = alloc.bump();
+        let encoded = base64::engine::general_purpose::STANDARD.encode(source);
+        pdf.document_info(info_id)
+            .pair(Name(b"JianpuSource"), TextStr(&encoded));
+    }
+
     Ok(pdf.finish())
 }
 
@@ -109,7 +127,7 @@ mod tests {
             sans_serif_tc: include_bytes!("../fonts/SourceHanSansTC-Regular.otf").to_vec(),
             monospace: include_bytes!("../fonts/NotoSansMono-Regular.ttf").to_vec(),
         };
-        write_pdf(&svgs, &fonts).unwrap()
+        write_pdf(&svgs, &fonts, None).unwrap()
     }
 
     #[test]

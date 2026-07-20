@@ -98,6 +98,12 @@ export type WorkerRequest =
   | { type: 'listMeasureSpans'; source: string; id: number }
   | { type: 'previewInstrument'; id: number; programNumber: number }
   | { type: 'previewPercussion'; id: number; key: number }
+  | {
+      type: 'importFromFile'
+      id: number
+      bytes: ArrayBuffer
+      kind: 'svg' | 'pdf'
+    }
 
 export type WorkerResponse =
   | {
@@ -174,3 +180,5 @@ export type WorkerResponse =
       spans: MeasureSpan[]
       sectionRanges: SectionRange[]
     }
+  | { type: 'importOk'; id: number; source: string }
+  | { type: 'importErr'; id: number }

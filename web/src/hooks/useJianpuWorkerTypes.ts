@@ -72,4 +72,10 @@ export interface JianpuWorkerState {
     volume: number | null,
     octaveOffset: number | null,
   ) => Promise<string>
+  /**
+   * Recovers the `.jianpu` source embedded in a previously exported SVG/PDF
+   * file (see `source_embed::extract_embedded_source`). Rejects if the file
+   * has no embedded source.
+   */
+  importFromFile: (file: File) => Promise<string>
 }

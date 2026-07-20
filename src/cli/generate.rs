@@ -131,11 +131,12 @@ pub fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
         }
     }
 
+    let content = super::read_source(&opts.input)?;
     let score = super::parse_and_group(&opts.input)?;
     let mut score = score;
     jg::filter_tracks(&mut score, &opts.tracks);
     let svgs = jg::render_svgs(&score)?;
-    let pdf_bytes = jg::pdf::write_pdf(&svgs, &super::default_pdf_fonts())?;
+    let pdf_bytes = jg::pdf::write_pdf(&svgs, &super::default_pdf_fonts(), Some(&content))?;
     let output_path =
         output_stem(&opts.input, &opts.tracks, opts.output.as_deref()).with_extension("pdf");
     super::write_file(&output_path, &pdf_bytes)?;

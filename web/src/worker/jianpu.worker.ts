@@ -1,5 +1,7 @@
 import init, * as jianpuWasm from 'jianpu-wasm'
 import {
+  extract_source_from_pdf,
+  extract_source_from_svg,
   list_measure_spans,
   list_parts,
   render,
@@ -18,6 +20,7 @@ import {
   handleGenerateSplitPdf,
   handleGenerateSplitWav,
 } from './exportMessageHandlers'
+import { handleImportFromFile } from './importMessageHandlers'
 import type { WorkerRequest, WorkerResponse } from './messages'
 import {
   handlePreviewInstrument,
@@ -288,6 +291,11 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       id: msg.id,
       diagnostics: result.diagnostics,
     } satisfies WorkerResponse)
+    return
+  }
+
+  if (msg.type === 'importFromFile') {
+    handleImportFromFile(msg, extract_source_from_svg, extract_source_from_pdf)
     return
   }
 

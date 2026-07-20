@@ -90,6 +90,7 @@ source (&str)
 - Module: `src/serializer/`
 - Entry: `serializer::serialize(docs: &[SvgDocument], source: Option<&str>) -> Vec<String>`
 - When `source` is `Some`, each emitted `<svg>` gets a base64-encoded, non-rendering `<metadata id="jianpu-source">` child holding the original `.jianpu` text, so a lost source file can be recovered from a previously exported SVG. `source_embed::extract_embedded_source(svg: &str) -> Option<String>` (`src/source_embed.rs`) reverses this. Only call sites with source in scope (e.g. `render_svgs_from_source_filtered_with_lyrics`, `render_svgs_with_highlight_range`) pass `Some`; the `Score`-only `render_svgs` path passes `None` and emits no metadata tag.
+- PDF export (`pdf::write_pdf(svgs: &[String], fonts: &PdfFonts, source: Option<&str>) -> Result<Vec<u8>, IrrecoverableError>`, `src/pdf.rs`) can't reuse this `<metadata>` embedding — `usvg` (which parses each page's SVG string before `svg2pdf` conversion) strips `<metadata>` tags. Instead, when `source` is `Some`, it base64-encodes the source into a custom `/JianpuSource` key in the PDF's `/Info` dictionary via `pdf_writer`'s `DocumentInfo`. `source_embed::extract_embedded_source_from_pdf(pdf: &[u8]) -> Option<String>` reverses this by string-searching the (uncompressed) `/Info` dictionary bytes. `write_pdf_from_source_filtered_with_lyrics` and the CLI's non-split `generate_pdf` pass `Some`; `write_split_pdfs_from_source` (split-track export) passes `None`, matching split-track SVG export's `None` for the same reason.
 
 ## Glossary
 
@@ -173,6 +174,8 @@ The React app (`web/`) runs the compiler in a dedicated worker (`web/src/worker/
 | `update_part_declaration(source, abbreviation, new_mode, new_soundfont, new_volume, new_octave_offset)` | Returns updated source; empty strings for soundfont/volume/octave mean “omit / default” |
 | `compress_share_payload(payload) -> Vec<u8>` | Brotli-compresses a share-link JSON payload (quality 11); caller base64url-encodes the result |
 | `decompress_share_payload(bytes) -> Option<String>` | Inverse of the above; `None` if `bytes` isn't valid brotli or decodes to invalid UTF-8 |
+| `extract_source_from_svg(svg_bytes) -> Option<String>` | Recovers the `.jianpu` source embedded in a previously exported SVG (`source_embed::extract_embedded_source`); `None` if absent/invalid |
+| `extract_source_from_pdf(pdf_bytes) -> Option<String>` | Recovers the `.jianpu` source embedded in a previously exported PDF (`source_embed::extract_embedded_source_from_pdf`); `None` if absent/invalid |
 | `generate_midi(source, enabled_tracks)` | Generates MIDI (SMF) bytes for the whole score. `midi` feature only. |
 | `generate_split_midis(source, base_name)` | One MIDI file per part, zipped. `midi` feature only. |
 | `generate_split_wavs(source, base_name, soundfont)` | One WAV file per part, zipped; `soundfont` is raw SF2 bytes supplied by the caller. `wav` feature only. |
@@ -188,4 +191,4 @@ The React app (`web/`) runs the compiler in a dedicated worker (`web/src/worker/
 
 `web/src/shareUrl.ts` calls `compress_share_payload`/`decompress_share_payload` directly from the main thread (a separate WASM instance from the render worker's), lazily `init()`-ing on first use, to build/parse `#share=<base64url>` links. `decodeShareHashSuffix` falls back to the legacy `lz-string`-encoded format, then plain-JSON, for links created before this switch.
 
-Worker messages: `listParts` → `{ parts, declarations }`; `updatePartDeclaration` → `{ source, declarations }` (hook updates `partDeclarations` immediately, without waiting for the debounced re-render).
+Worker messages: `listParts` → `{ parts, declarations }`; `updatePartDeclaration` → `{ source, declarations }` (hook updates `partDeclarations` immediately, without waiting for the debounced re-render); `importFromFile { bytes, kind: 'svg' | 'pdf' }` → `importOk { source }` / `importErr` (`web/src/worker/importMessageHandlers.ts` calls `extract_source_from_svg`/`extract_source_from_pdf`; `useJianpuWorkerImport.ts`'s `importFromFile(file: File) -> Promise<string>` is the promise-based wrapper `App.tsx`'s Import button uses, resolved/rejected from `useJianpuWorkerMessageHandler.ts`'s `pendingImportsRef` map keyed by request id, mirroring `updatePartDeclaration`'s pending-map pattern).

@@ -116,7 +116,7 @@ pub fn write_split_pdfs_from_source(
         let mut score_clone = score.clone();
         filter_tracks(&mut score_clone, std::slice::from_ref(&track));
         let svgs = render_svgs(&score_clone)?;
-        let pdf = crate::pdf::write_pdf(&svgs, fonts)?;
+        let pdf = crate::pdf::write_pdf(&svgs, fonts, None)?;
         let label = split_track_label(&display_names, &track);
         entries.push(SplitPdfEntry {
             track_name: track.clone(),

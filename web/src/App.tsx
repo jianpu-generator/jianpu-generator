@@ -11,6 +11,7 @@ import {
   selectFile,
 } from './fileStore'
 import { useAssetLoader } from './hooks/useAssetLoader'
+import { useFileImport } from './hooks/useFileImport'
 import { useFileOperations } from './hooks/useFileOperations'
 import { useFontsLoader } from './hooks/useFontsLoader'
 import { useJianpuWorker } from './hooks/useJianpuWorker'
@@ -146,6 +147,7 @@ export default function App() {
     stopPreviewInstrument,
     previewAudioPlaying,
     updatePartDeclaration,
+    importFromFile,
   } = useJianpuWorker(
     source,
     disabledParts,
@@ -187,6 +189,14 @@ export default function App() {
       setStore((prev) => selectFile(prev, name))
     },
     [setStore, flushPendingSave],
+  )
+
+  const { importingFile, handleImportFile } = useFileImport(
+    store,
+    backend,
+    setStore,
+    setFileOpError,
+    importFromFile,
   )
 
   const handlePartDeclarationChange = useCallback(
@@ -300,6 +310,8 @@ export default function App() {
         splitWavExporting={splitWavExporting}
         onExportSplitWav={exportSplitWav}
         partsCount={parts.length}
+        importing={importingFile}
+        onImportFile={handleImportFile}
       />
       <AppOverlays
         fileOpError={fileOpError}

@@ -71,6 +71,12 @@ export interface WorkerMessageHandlerDeps {
   latestPreviewAudioIdRef: RefObject<number>
   currentPreviewAudioRef: RefObject<HTMLAudioElement | null>
   setPreviewAudioPlaying: (value: boolean) => void
+  pendingImportsRef: RefObject<
+    Map<
+      number,
+      { resolve: (source: string) => void; reject: (error: Error) => void }
+    >
+  >
 }
 
 export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
@@ -276,6 +282,24 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       })
       audio.addEventListener('pause', () => deps.setPreviewAudioPlaying(false))
       audio.play().catch(() => {})
+      return
+    }
+
+    if (msg.type === 'importOk') {
+      deps.pendingImportsRef.current.get(msg.id)?.resolve(msg.source)
+      deps.pendingImportsRef.current.delete(msg.id)
+      return
+    }
+
+    if (msg.type === 'importErr') {
+      deps.pendingImportsRef.current
+        .get(msg.id)
+        ?.reject(
+          new Error(
+            'No embedded source found in this file. It may have been hand-edited or created by a different tool.',
+          ),
+        )
+      deps.pendingImportsRef.current.delete(msg.id)
       return
     }
 

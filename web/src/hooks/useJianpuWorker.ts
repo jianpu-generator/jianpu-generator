@@ -6,13 +6,14 @@ import type {
   MeasureSpan,
   PartDeclaration,
   PartInfo,
-  PartMode,
   SectionRange,
 } from '../types'
 import type { WorkerRequest } from '../worker/jianpu.worker'
 import { useInstrumentPreview } from './useInstrumentPreview'
 import { useJianpuWorkerExports } from './useJianpuWorkerExports'
+import { useJianpuWorkerImport } from './useJianpuWorkerImport'
 import { useJianpuWorkerLifecycle } from './useJianpuWorkerLifecycle'
+import { useJianpuWorkerPartDeclaration } from './useJianpuWorkerPartDeclaration'
 import { useJianpuWorkerRenderRequests } from './useJianpuWorkerRenderRequests'
 import type { JianpuWorkerState } from './useJianpuWorkerTypes'
 import { useMeasureAudioPlayback } from './useMeasureAudioPlayback'
@@ -83,6 +84,13 @@ export function useJianpuWorker(
   const latestUpdatePartDeclarationIdRef = useRef(0)
   const pendingPartDeclarationUpdatesRef = useRef(
     new Map<number, (source: string) => void>(),
+  )
+  const importRequestIdRef = useRef(0)
+  const pendingImportsRef = useRef(
+    new Map<
+      number,
+      { resolve: (source: string) => void; reject: (error: Error) => void }
+    >(),
   )
   const renderRequestIdRef = useRef(0)
   const audioRequestIdRef = useRef(0)
@@ -233,6 +241,7 @@ export function useJianpuWorker(
     latestPreviewAudioIdRef,
     currentPreviewAudioRef,
     setPreviewAudioPlaying,
+    pendingImportsRef,
   })
 
   const { notifySelection } = useJianpuWorkerRenderRequests({
@@ -313,38 +322,19 @@ export function useJianpuWorker(
     latestSplitWavIdRef,
   })
 
-  const updatePartDeclaration = useCallback(
-    (
-      abbreviation: string,
-      mode: PartMode,
-      followTarget: string | null,
-      soundfont: string | null,
-      volume: number | null,
-      octaveOffset: number | null,
-    ) =>
-      new Promise<string>((resolve) => {
-        const worker = workerRef.current
-        if (!worker) {
-          resolve(sourceRef.current)
-          return
-        }
-        const id = ++updatePartDeclarationRequestIdRef.current
-        latestUpdatePartDeclarationIdRef.current = id
-        pendingPartDeclarationUpdatesRef.current.set(id, resolve)
-        worker.postMessage({
-          type: 'updatePartDeclaration',
-          source: sourceRef.current,
-          abbreviation,
-          mode,
-          followTarget,
-          soundfont,
-          volume,
-          octaveOffset,
-          id,
-        } satisfies WorkerRequest)
-      }),
-    [],
-  )
+  const { updatePartDeclaration } = useJianpuWorkerPartDeclaration({
+    workerRef,
+    sourceRef,
+    updatePartDeclarationRequestIdRef,
+    latestUpdatePartDeclarationIdRef,
+    pendingPartDeclarationUpdatesRef,
+  })
+
+  const { importFromFile } = useJianpuWorkerImport({
+    workerRef,
+    importRequestIdRef,
+    pendingImportsRef,
+  })
 
   return {
     parts,
@@ -394,5 +384,6 @@ export function useJianpuWorker(
     stopPreviewInstrument,
     previewAudioPlaying,
     updatePartDeclaration,
+    importFromFile,
   }
 }

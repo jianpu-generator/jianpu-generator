@@ -60,6 +60,8 @@ interface AppHeaderProps {
   splitWavExporting?: boolean
   onExportSplitWav?: () => void
   partsCount?: number
+  importing?: boolean
+  onImportFile?: (file: File) => void
 }
 
 export function AppHeader({
@@ -108,6 +110,8 @@ export function AppHeader({
   splitWavExporting,
   onExportSplitWav,
   partsCount,
+  importing,
+  onImportFile,
 }: AppHeaderProps) {
   // The "My Files" trigger keeps showing the last user file that was active
   // even while a (separately-dropdown'd) demo file is currently open, so
@@ -177,6 +181,8 @@ export function AppHeader({
           duplicating={duplicatingFile}
           renamingName={renamingFileName}
           isLoadingGithub={isLoadingGithub}
+          importing={importing}
+          onImportFile={onImportFile}
         />
         <DemoFileSwitcher active={store.active} onSelect={onSelect} />
         <BinMenu

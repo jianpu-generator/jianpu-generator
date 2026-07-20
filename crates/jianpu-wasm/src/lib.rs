@@ -21,6 +21,9 @@ pub mod lib_pdf;
 #[path = "lib_midi.rs"]
 pub mod lib_midi;
 
+#[path = "lib_import.rs"]
+pub mod lib_import;
+
 use jianpu_generator::parser::parts_parser::InstrumentInfo;
 use metadata_types::MetadataDefaultsOut;
 use responses::{
