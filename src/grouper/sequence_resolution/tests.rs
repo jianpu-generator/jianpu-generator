@@ -145,21 +145,3 @@ fn part_omission_suffix_with_unknown_abbreviation_is_a_recoverable_error() {
         "expected an unknown-omission error, got: {messages:?}"
     );
 }
-
-#[test]
-fn sequence_conflicting_with_inline_marker_is_a_recoverable_error() {
-    let body = concat!(
-        "time=4/4 key=C4 bpm=120 label=\"A\" dcalcoda\n[Melody] 1 2 3 4\n\n",
-        "tocoda\n[Melody] 5 6 7 1\n\n",
-        "coda\n[Melody] 1 1 1 1\n",
-    );
-    let score = parse_and_group(&source_with(body, "A"));
-    assert!(score.sequence.is_none());
-    let messages = all_error_messages(&score);
-    assert!(
-        messages
-            .iter()
-            .any(|m| m.contains("cannot be combined with a `# sequence` section")),
-        "expected a mutual-exclusion error, got: {messages:?}"
-    );
-}

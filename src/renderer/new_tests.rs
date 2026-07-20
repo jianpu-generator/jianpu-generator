@@ -154,7 +154,6 @@ fn labelless_directive_line_shifts_by_directive_row_offset() {
         label: None,
         spans: vec![bpm_span()],
         spans_x_offset: 0.0,
-        segno_icon_offset: None,
         label_x_offset: 0.0,
         apply_row_offset: true,
     });
@@ -176,7 +175,6 @@ fn sequence_header_ignores_directive_row_offset() {
         label: None,
         spans: vec![bpm_span()],
         spans_x_offset: 0.0,
-        segno_icon_offset: None,
         label_x_offset: 0.0,
         apply_row_offset: false,
     });
@@ -191,14 +189,13 @@ fn sequence_header_ignores_directive_row_offset() {
 }
 
 #[test]
-fn labeled_directive_line_moves_label_background_text_and_segno_together() {
+fn labeled_directive_line_moves_label_background_and_text_together() {
     let offset = Offset { x: 5, y: 12 };
     let page = make_page(AbsoluteContent::DirectiveLine {
         bar_number: None,
         label: Some("Verse 1".to_string()),
         spans: vec![bpm_span()],
         spans_x_offset: 0.0,
-        segno_icon_offset: Some(20.0),
         label_x_offset: 0.0,
         apply_row_offset: true,
     });
@@ -228,15 +225,9 @@ fn labeled_directive_line_moves_label_background_text_and_segno_together() {
         .iter()
         .find(|e| e.variant == Some(SvgVariant::DirectiveLine))
         .expect("directive line text element should be present");
-    let segno = children
-        .iter()
-        .find(|e| matches!(&e.kind, SvgKind::SegnoGlyph { .. }))
-        .expect("segno glyph should be present");
-
     assert_eq!(text.x, 100.0 + offset.x as f32);
     assert_eq!(text.y, 200.0 + offset.y as f32);
     assert_eq!(background.x, text.x - section_label_box_padding());
-    assert_eq!(segno.x, text.x + 20.0);
 }
 
 #[test]
@@ -246,7 +237,6 @@ fn label_background_starts_past_a_preceding_bar_number() {
         label: Some("Verse 1".to_string()),
         spans: vec![bpm_span()],
         spans_x_offset: 0.0,
-        segno_icon_offset: None,
         label_x_offset: 30.0,
         apply_row_offset: false,
     });
@@ -286,7 +276,6 @@ fn cjk_label_gets_a_wider_background_than_an_equal_length_ascii_label() {
         label: Some("Verse".to_string()),
         spans: vec![bpm_span()],
         spans_x_offset: 0.0,
-        segno_icon_offset: None,
         label_x_offset: 0.0,
         apply_row_offset: false,
     });
@@ -295,7 +284,6 @@ fn cjk_label_gets_a_wider_background_than_an_equal_length_ascii_label() {
         label: Some("副歌一".to_string()),
         spans: vec![bpm_span()],
         spans_x_offset: 0.0,
-        segno_icon_offset: None,
         label_x_offset: 0.0,
         apply_row_offset: false,
     });
@@ -361,7 +349,6 @@ fn label_background_width_matches_real_font_metrics() {
         label: Some(label.to_string()),
         spans: vec![bpm_span()],
         spans_x_offset: 0.0,
-        segno_icon_offset: None,
         label_x_offset: 0.0,
         apply_row_offset: false,
     });

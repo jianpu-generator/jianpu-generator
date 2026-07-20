@@ -8,14 +8,6 @@ pub(super) fn is_directive_line(line: &str) -> bool {
             || t.starts_with("label=")
             || t.starts_with("merge_duplicate_measures_across_parts=")
             || t.starts_with("hide_resting_parts=")
-            || t == "dcalcoda"
-            || t == "tocoda"
-            || t == "coda"
-            || t == "segno"
-            || t == "dsalcoda"
-            || t == "dcalfine"
-            || t == "fine"
-            || t == "dsalfine"
     })
 }
 

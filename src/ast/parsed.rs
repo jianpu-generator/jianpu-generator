@@ -247,22 +247,6 @@ pub enum ScoreEvent {
     /// `hide_resting_parts=` — in effect from this measure onward until the next
     /// occurrence.
     HideRestingPartsChange(bool),
-    /// `dcalcoda` — after this measure, playback restarts from measure 0.
-    DcAlCoda,
-    /// `tocoda` — on the second pass only, playback cuts away here to the `Coda` measure.
-    ToCoda,
-    /// `coda` — playback resumes here (on the second pass) and continues to the end.
-    Coda,
-    /// `segno` — marks the measure that `dsalcoda`/`dsalfine` jumps back to.
-    Segno,
-    /// `dsalcoda` — after this measure, playback restarts from the `Segno` measure.
-    DsAlCoda,
-    /// `dcalfine` — after this measure, playback restarts from measure 0 and stops at `Fine`.
-    DcAlFine,
-    /// `fine` — on the second pass only, playback stops here.
-    Fine,
-    /// `dsalfine` — after this measure, playback restarts from the `Segno` measure and stops at `Fine`.
-    DsAlFine,
 }
 
 #[derive(Debug, Clone, PartialEq)]

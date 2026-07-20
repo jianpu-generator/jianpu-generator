@@ -111,22 +111,6 @@ pub struct MultiPartMeasure {
     /// override starting here or carried forward from an earlier measure or the
     /// `#metadata` default (see `compiler::compile_measure`).
     pub hide_resting_parts: bool,
-    /// `dcalcoda` on this measure: after playing it, playback restarts from measure 0.
-    pub dc_al_coda: bool,
-    /// `tocoda` on this measure: on the second pass only, playback cuts to the `coda` measure.
-    pub to_coda: bool,
-    /// `coda` on this measure: playback resumes here on the second pass.
-    pub coda: bool,
-    /// `segno` on this measure: marks the measure `dsalcoda`/`dsalfine` jumps back to.
-    pub segno: bool,
-    /// `dsalcoda` on this measure: after playing it, playback restarts from the `segno` measure.
-    pub ds_al_coda: bool,
-    /// `dcalfine` on this measure: after playing it, playback restarts from measure 0 and stops at `fine`.
-    pub dc_al_fine: bool,
-    /// `fine` on this measure: on the second pass only, playback stops here.
-    pub fine: bool,
-    /// `dsalfine` on this measure: after playing it, playback restarts from the `segno` measure and stops at `fine`.
-    pub ds_al_fine: bool,
     pub parts: Vec<PartRow>,
     /// Byte range of this measure's note events in the original source.
     /// Used to map editor cursor position to a measure index.
@@ -185,8 +169,7 @@ pub struct Score {
     pub document_diagnostics: Vec<Diagnostic>,
     /// Resolved playback order from a `# sequence` section, if present and
     /// valid: each span is a labeled section's inclusive measure-index range
-    /// in `measures`, in the order they should play. Mutually exclusive with
-    /// the D.C./D.S. al Coda/Fine navigation markers on `MultiPartMeasure`.
+    /// in `measures`, in the order they should play.
     pub sequence: Option<Vec<SequenceSpan>>,
 }
 
@@ -220,14 +203,6 @@ pub(crate) struct MeasureDirectives {
     pub(crate) label: Option<String>,
     pub(crate) merge_duplicate_measures_across_parts: bool,
     pub(crate) hide_resting_parts: bool,
-    pub(crate) dc_al_coda: bool,
-    pub(crate) to_coda: bool,
-    pub(crate) coda: bool,
-    pub(crate) segno: bool,
-    pub(crate) ds_al_coda: bool,
-    pub(crate) dc_al_fine: bool,
-    pub(crate) fine: bool,
-    pub(crate) ds_al_fine: bool,
 }
 
 pub(crate) struct GroupedScore {

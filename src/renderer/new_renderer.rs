@@ -144,7 +144,6 @@ fn render_overlay_element(
             label,
             spans,
             spans_x_offset,
-            segno_icon_offset,
             label_x_offset,
             apply_row_offset,
         } => render_directive_line(
@@ -154,7 +153,6 @@ fn render_overlay_element(
                 label,
                 spans,
                 spans_x_offset: *spans_x_offset,
-                segno_icon_offset: *segno_icon_offset,
                 label_x_offset: *label_x_offset,
                 apply_row_offset: *apply_row_offset,
                 directive_row_offset,

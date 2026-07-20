@@ -53,7 +53,7 @@ Can be overridden from a specific measure onward with a
 
   hide_system_dividers: `When on, the horizontal divider line normally drawn between consecutive systems (rows of measures) is omitted.`,
 
-  directive_row_offset: `Translation (points, \`"x y"\`) applied to every rendered directive row — bar number, section label, key, bpm, time signature, and D.C./Segno/Coda/Fine markers.
+  directive_row_offset: `Translation (points, \`"x y"\`) applied to every rendered directive row — bar number, section label, key, bpm, and time signature.
 
 Moves that row's text without affecting the layout or spacing of anything else on the page.
 

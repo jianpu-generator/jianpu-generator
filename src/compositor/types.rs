@@ -90,18 +90,14 @@ pub enum AbsoluteContent {
         /// of `spans`'s tspans, so it doesn't need to know their combined
         /// rendered width.
         label: Option<String>,
-        /// Key/bpm/time-signature/navigation-marker spans, i.e. everything
-        /// on the line except `bar_number` and `label`.
+        /// Key/bpm/time-signature spans, i.e. everything on the line except
+        /// `bar_number` and `label`.
         spans: Vec<TextSpan>,
         /// X offset (in points, from the line's start) where `spans`
         /// begins: right after `bar_number` when there is no `label`, or
         /// past `label`'s bounding box when there is, so the three
         /// elements never overlap regardless of their measured widths.
         spans_x_offset: f32,
-        /// X offset (in points, from `spans_x_offset`) where the vector
-        /// Segno glyph should be drawn, if a Segno marker is present. `None`
-        /// when there is no Segno marker on this line.
-        segno_icon_offset: Option<f32>,
         /// X offset (in points, from the line's start) where the
         /// independent `label` text element begins: past `bar_number`'s
         /// measured width when one is present, zero otherwise.

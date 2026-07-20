@@ -14,13 +14,11 @@ mod empty_note_measures;
 
 mod directive_grouper;
 mod lyrics_pairing;
-mod navigation_validation;
 mod part_grouper;
 mod sequence_resolution;
 mod tie_validation;
 
 use directive_grouper::DirectiveGrouper;
-use navigation_validation::validate_navigation_markers;
 use part_grouper::group_timed_track;
 use sequence_resolution::resolve_sequence;
 use tie_validation::validate_ties;
@@ -81,9 +79,6 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
         &declarations,
         group.as_ref(),
     );
-    if score.sequence.is_none() {
-        validate_navigation_markers(&mut score);
-    }
     Ok(score)
 }
 

@@ -28,7 +28,6 @@ pub mod grouper;
 pub mod grouping;
 pub mod layout;
 pub mod measure_spans;
-mod navigation_markers;
 pub mod parser;
 mod part_info;
 pub mod render_config;

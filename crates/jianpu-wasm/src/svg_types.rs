@@ -87,9 +87,6 @@ pub enum SvgKindOut {
         children: Vec<SvgElementOut>,
         tag: Option<TagOut>,
     },
-    SegnoGlyph {
-        size: f32,
-    },
 }
 
 #[derive(Debug, Clone, Tsify, Serialize)]
@@ -318,6 +315,5 @@ fn svg_kind_to_out(kind: &SvgKind) -> SvgKindOut {
             children: children.iter().map(svg_element_to_out).collect(),
             tag: tag.as_ref().map(tag_to_out),
         },
-        SvgKind::SegnoGlyph { size } => SvgKindOut::SegnoGlyph { size: *size },
     }
 }

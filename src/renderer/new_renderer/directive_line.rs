@@ -20,16 +20,11 @@ fn spans_to_tspans(spans: &[TextSpan]) -> Vec<TspanData> {
         .collect()
 }
 
-/// Rendered width/height (in points) of the vector Segno glyph, matching the
-/// 12pt text it's drawn alongside.
-const SEGNO_GLYPH_SIZE: f32 = 13.0;
-
 pub(super) struct DirectiveLineArgs<'a> {
     pub bar_number: &'a Option<TextSpan>,
     pub label: &'a Option<String>,
     pub spans: &'a [TextSpan],
     pub spans_x_offset: f32,
-    pub segno_icon_offset: Option<f32>,
     pub label_x_offset: f32,
     pub apply_row_offset: bool,
     pub directive_row_offset: Offset,
@@ -72,15 +67,6 @@ pub(super) fn render_directive_line(
         },
     };
 
-    let segno_element = args.segno_icon_offset.map(|offset| SvgElement {
-        x: row_x + args.spans_x_offset + offset,
-        y: row_y - SEGNO_GLYPH_SIZE / 2.0,
-        variant: None,
-        kind: SvgKind::SegnoGlyph {
-            size: SEGNO_GLYPH_SIZE,
-        },
-    });
-
     match args.label {
         Some(label_str) => {
             let bar_number_width = args
@@ -92,14 +78,7 @@ pub(super) fn render_directive_line(
                 args.label_x_offset + crate::font_metrics::section_label_box_width(label_str);
             let spans_width: f32 = args.spans.iter().map(crate::font_metrics::span_width).sum();
             let spans_right = args.spans_x_offset + spans_width;
-            let segno_right = args
-                .segno_icon_offset
-                .map(|offset| args.spans_x_offset + offset + SEGNO_GLYPH_SIZE)
-                .unwrap_or(0.0);
-            let line_width = bar_number_width
-                .max(label_box_right)
-                .max(spans_right)
-                .max(segno_right);
+            let line_width = bar_number_width.max(label_box_right).max(spans_right);
 
             vec![render_section_label_group(
                 elem,
@@ -113,14 +92,12 @@ pub(super) fn render_directive_line(
                 SectionLabelSiblingElements {
                     bar_number_element,
                     text_element,
-                    segno_element,
                 },
             )]
         }
         None => bar_number_element
             .into_iter()
             .chain(std::iter::once(text_element))
-            .chain(segno_element)
             .collect(),
     }
 }
@@ -130,7 +107,6 @@ pub(super) fn render_directive_line(
 struct SectionLabelSiblingElements {
     bar_number_element: Option<SvgElement>,
     text_element: SvgElement,
-    segno_element: Option<SvgElement>,
 }
 
 /// Where a section label's own text/box and its full-line click target sit,
@@ -193,7 +169,6 @@ fn render_section_label_group(
     });
     children.push(label_element);
     children.push(siblings.text_element);
-    children.extend(siblings.segno_element);
     SvgElement {
         x: elem.x,
         y: elem.y,

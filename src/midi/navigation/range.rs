@@ -21,9 +21,9 @@ pub fn earliest_playback_position(
 
 /// Translates a written measure index into its position in actual playback
 /// order (see [`super::expand_navigation`]). Falls back to the written index
-/// against the original score if the measure has no reachable position
-/// (e.g. it lies between `dcalcoda` and `coda`, or navigation markers are
-/// absent — in which case the mapping is already the identity).
+/// against the original score if the measure has no reachable position, or
+/// if no `# sequence` section is present — in which case the mapping is
+/// already the identity.
 pub fn expand_for_measure(
     score: &Score,
     measure_index: usize,
@@ -96,11 +96,8 @@ fn expand_for_sequence_entry_range(
 /// - If `false`, `end` is mapped to its *earliest* occurrence at or after
 ///   `start`'s position, so that selecting an exact written range (e.g. the
 ///   web app's "play current measure", where `start == end`) plays only
-///   that occurrence instead of overrunning into a later repeat/jump pass —
-///   including when `end` is itself a navigation marker measure (`coda`,
-///   `dcalcoda`/`dsalcoda`) that also happens to be the score's last
-///   written measure, which is the normal case for a `coda` section.
-/// - If `respect_sequence` is `false`, D.C./D.S. markers and `# sequence`
+///   that occurrence instead of overrunning into a later repeat pass.
+/// - If `respect_sequence` is `false`, `# sequence`
 ///   (including any `(-abbrev ...)` part omissions it applies to a given
 ///   occurrence) are ignored entirely: the range is returned unchanged
 ///   against the literal written score, so e.g. "play current measure"

@@ -1,7 +1,6 @@
 use crate::ast::grouped::{Score, SequenceSpan};
 use crate::ast::parsed::PartDecl;
 use crate::error::{Diagnostic, RecoverableError};
-use crate::navigation_markers::{gather_marker_indices, no_markers_present};
 use crate::parser::group_parser::GroupSection;
 use crate::parser::sequence_parser::SequenceSection;
 
@@ -9,10 +8,6 @@ use crate::parser::sequence_parser::SequenceSection;
 /// and stores the result on `score.sequence`, or leaves it `None` if the
 /// section is absent or invalid.
 ///
-/// - Mutually exclusive with inline D.C./D.S. al Coda/Fine navigation
-///   markers: if both are present, a recoverable error is attached to the
-///   first marker measure and the sequence is ignored (the score falls back
-///   to marker-based navigation).
 /// - Each label must be defined on at most one measure; a duplicate
 ///   definition is a recoverable error (attached to the second occurrence)
 ///   and the sequence is dropped, since it would be ambiguous which measure
@@ -39,10 +34,6 @@ pub(super) fn resolve_sequence(
     let Some(sequence) = sequence else {
         return;
     };
-
-    if flag_conflict_with_inline_markers(score) {
-        return;
-    }
 
     let Some(label_starts) = collect_unique_label_starts(score) else {
         return;
@@ -105,41 +96,6 @@ fn expand_abbreviation_visited<'a>(
             })
             .collect(),
     )
-}
-
-/// Attaches a recoverable error to the earliest inline navigation marker
-/// measure and returns `true` if any such marker is present alongside a
-/// `# sequence` section (the two schemes are mutually exclusive).
-fn flag_conflict_with_inline_markers(score: &mut Score) -> bool {
-    let markers = gather_marker_indices(score);
-    if no_markers_present(&markers) {
-        return false;
-    }
-
-    let measure_idx = [
-        &markers.dc,
-        &markers.segno,
-        &markers.ds,
-        &markers.to_coda,
-        &markers.coda,
-        &markers.dc_fine,
-        &markers.ds_fine,
-        &markers.fine,
-    ]
-    .iter()
-    .filter_map(|indices| indices.first())
-    .min()
-    .copied();
-    if let Some(measure_idx) = measure_idx {
-        if let Some(measure) = score.measures.get_mut(measure_idx) {
-            let span = measure.source_span;
-            measure.diagnostics.push(Diagnostic::Error(RecoverableError::general(
-                span,
-                "inline navigation markers (dcalcoda/segno/tocoda/coda/dcalfine/fine/dsalcoda/dsalfine) cannot be combined with a `# sequence` section",
-            )));
-        }
-    }
-    true
 }
 
 /// Collects each label's first-occurrence measure index, or attaches a

@@ -79,22 +79,14 @@ fn measure_carries_no_directive(measure: &MultiPartMeasure, measure_index: usize
     // reason to keep the measure from collapsing into a rest run — it just
     // needs to be preserved on the merged block, see `merge_rest_run`.
     //
-    // A `label` is deliberately not checked here: unlike the markers below, a
-    // label is just a section marker, so a labeled rest measure is still
-    // collapsible — it just can't be absorbed into a run that started before
-    // it, since the label must remain visible at the position it marks. That
-    // run-boundary rule lives in `merge_rest_runs`, not here.
+    // A `label` is deliberately not checked here: it's just a section
+    // marker, so a labeled rest measure is still collapsible — it just can't
+    // be absorbed into a run that started before it, since the label must
+    // remain visible at the position it marks. That run-boundary rule lives
+    // in `merge_rest_runs`, not here.
     let carries_initial_signature =
         measure.time_signature.is_some() || measure.bpm.is_some() || measure.key.is_some();
-    !measure.dc_al_coda
-        && !measure.to_coda
-        && !measure.coda
-        && !measure.segno
-        && !measure.ds_al_coda
-        && !measure.dc_al_fine
-        && !measure.fine
-        && !measure.ds_al_fine
-        && (measure_index == 0 || !carries_initial_signature)
+    measure_index == 0 || !carries_initial_signature
 }
 
 fn is_collapsible(measure: &MultiPartMeasure, measure_index: usize, block: &MeasureBlock) -> bool {
@@ -371,14 +363,6 @@ fn collect_decorations(measure: &MultiPartMeasure, bar_number: usize) -> Vec<Dec
             .time_signature
             .as_ref()
             .map(|ts| (ts.numerator as u32, ts.denominator as u32)),
-        dc_al_coda: measure.dc_al_coda,
-        to_coda: measure.to_coda,
-        coda: measure.coda,
-        segno: measure.segno,
-        ds_al_coda: measure.ds_al_coda,
-        dc_al_fine: measure.dc_al_fine,
-        fine: measure.fine,
-        ds_al_fine: measure.ds_al_fine,
     }]
 }
 
