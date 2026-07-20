@@ -88,7 +88,8 @@ source (&str)
 
 ### Serializer
 - Module: `src/serializer/`
-- Entry: `serializer::serialize(docs: &[SvgDocument]) -> Vec<String>`
+- Entry: `serializer::serialize(docs: &[SvgDocument], source: Option<&str>) -> Vec<String>`
+- When `source` is `Some`, each emitted `<svg>` gets a base64-encoded, non-rendering `<metadata id="jianpu-source">` child holding the original `.jianpu` text, so a lost source file can be recovered from a previously exported SVG. `source_embed::extract_embedded_source(svg: &str) -> Option<String>` (`src/source_embed.rs`) reverses this. Only call sites with source in scope (e.g. `render_svgs_from_source_filtered_with_lyrics`, `render_svgs_with_highlight_range`) pass `Some`; the `Score`-only `render_svgs` path passes `None` and emits no metadata tag.
 
 ## Glossary
 

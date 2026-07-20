@@ -182,7 +182,7 @@ fn render_documents_from_source_filtered_with_lyrics_hides_legend_entry_for_filt
     )
     .unwrap()
     .documents;
-    let svgs = serializer::serialize(&soprano_only);
+    let svgs = serializer::serialize(&soprano_only, None);
     assert!(svgs[0].contains("S \u{2014} Soprano"));
     assert!(!svgs[0].contains("A \u{2014} Alto"));
 }

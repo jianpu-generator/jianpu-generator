@@ -1,14 +1,25 @@
+use base64::Engine;
+
 use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
 use crate::renderer::new_types::{
     SvgDocument, SvgElement, SvgKind, SvgVariant, Tag, TransparentRectRole, TspanData,
 };
 
-pub fn serialize(documents: &[SvgDocument]) -> Vec<String> {
-    documents.iter().map(serialize_doc).collect()
+pub fn serialize(documents: &[SvgDocument], source: Option<&str>) -> Vec<String> {
+    documents
+        .iter()
+        .map(|doc| serialize_doc(doc, source))
+        .collect()
 }
 
-fn serialize_doc(doc: &SvgDocument) -> String {
+fn serialize_doc(doc: &SvgDocument, source: Option<&str>) -> String {
     let mut body = String::new();
+    if let Some(source) = source {
+        body.push_str(&format!(
+            r#"<metadata id="jianpu-source">{}</metadata>"#,
+            base64::engine::general_purpose::STANDARD.encode(source)
+        ));
+    }
     for el in &doc.elements {
         serialize_element(el, &mut body);
     }

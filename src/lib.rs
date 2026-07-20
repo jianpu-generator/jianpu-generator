@@ -35,6 +35,7 @@ pub mod render_config;
 pub mod renderer;
 pub mod serializer;
 pub mod source_edit;
+pub mod source_embed;
 pub mod split_track;
 pub mod symbols;
 pub mod utils;
@@ -211,6 +212,7 @@ fn render_svgs_with_parts(
     score: &Score,
     parts: &[PartInfo],
     groups: &[GroupInfo],
+    source: Option<&str>,
 ) -> Result<Vec<String>, IrrecoverableError> {
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
     let header = build_header(score, parts, groups);
@@ -224,12 +226,12 @@ fn render_svgs_with_parts(
         config.lyric_font_sizes(),
     )?;
     let docs = renderer::new_renderer::render_new(&abs, &config);
-    Ok(serializer::serialize(&docs))
+    Ok(serializer::serialize(&docs, source))
 }
 
 /// Layout and render a [`Score`] into one SVG string per page.
 pub fn render_svgs(score: &Score) -> Result<Vec<String>, IrrecoverableError> {
-    render_svgs_with_parts(score, &[], &[])
+    render_svgs_with_parts(score, &[], &[], None)
 }
 
 /// Parse, group, and render a `.jianpu` source string into SVG page strings.
@@ -285,7 +287,7 @@ pub fn render_svgs_from_source_filtered_with_lyrics(
     apply_lyrics_filter(&mut score, disabled_lyrics);
     let diagnostics = collect_measure_diagnostics(&score);
     Ok(RenderOutput {
-        svgs: render_svgs_with_parts(&score, &parts, &groups)?,
+        svgs: render_svgs_with_parts(&score, &parts, &groups, Some(source))?,
         diagnostics,
     })
 }
@@ -336,7 +338,7 @@ pub fn render_svgs_with_highlight_range(
     )?;
     let docs = renderer::new_renderer::render_new(&abs, &config);
     Ok(RenderOutput {
-        svgs: serializer::serialize(&docs),
+        svgs: serializer::serialize(&docs, Some(source)),
         diagnostics,
     })
 }

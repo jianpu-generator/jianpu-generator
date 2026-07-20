@@ -27,7 +27,7 @@ fn text_doc(content: &str) -> SvgDocument {
 
 #[test]
 fn produces_valid_svg_wrapper() {
-    let result = serialize(&[text_doc("hello")]);
+    let result = serialize(&[text_doc("hello")], None);
     assert_eq!(result.len(), 1);
     assert!(result[0].starts_with("<svg"), "should start with <svg");
     assert!(result[0].ends_with("</svg>"), "should end with </svg>");
@@ -35,7 +35,7 @@ fn produces_valid_svg_wrapper() {
 
 #[test]
 fn xml_special_chars_are_escaped() {
-    let result = serialize(&[text_doc("<b>&\"</b>")]);
+    let result = serialize(&[text_doc("<b>&\"</b>")], None);
     assert!(result[0].contains("&lt;b&gt;&amp;&quot;&lt;/b&gt;"));
 }
 
@@ -51,7 +51,7 @@ fn circle_serializes_correctly() {
             kind: SvgKind::Circle { r: 3.0 },
         }],
     };
-    let result = serialize(&[doc]);
+    let result = serialize(&[doc], None);
     assert!(result[0].contains("<circle"), "should contain circle");
     assert!(result[0].contains(r#"r="3.0""#));
 }
@@ -72,7 +72,7 @@ fn line_serializes_correctly() {
             },
         }],
     };
-    let result = serialize(&[doc]);
+    let result = serialize(&[doc], None);
     assert!(result[0].contains("<line"), "should contain line");
 }
 
@@ -94,14 +94,14 @@ fn path_serializes_correctly() {
             },
         }],
     };
-    let result = serialize(&[doc]);
+    let result = serialize(&[doc], None);
     assert!(result[0].contains("<path"), "should contain path");
     assert!(result[0].contains("fill=\"none\""));
 }
 
 #[test]
 fn text_element_has_data_variant() {
-    let result = serialize(&[text_doc("hello")]);
+    let result = serialize(&[text_doc("hello")], None);
     assert!(result[0].contains(&format!(r#"data-variant="{}""#, SvgVariant::Text.as_str())));
 }
 
@@ -117,7 +117,7 @@ fn circle_element_has_data_variant() {
             kind: SvgKind::Circle { r: 3.0 },
         }],
     };
-    let result = serialize(&[doc]);
+    let result = serialize(&[doc], None);
     assert!(result[0].contains(&format!(
         r#"data-variant="{}""#,
         SvgVariant::NoteHead.as_str()
@@ -140,7 +140,7 @@ fn line_element_has_data_variant() {
             },
         }],
     };
-    let result = serialize(&[doc]);
+    let result = serialize(&[doc], None);
     assert!(result[0].contains(&format!(
         r#"data-variant="{}""#,
         SvgVariant::BarLine.as_str()
@@ -165,7 +165,7 @@ fn path_element_has_data_variant() {
             },
         }],
     };
-    let result = serialize(&[doc]);
+    let result = serialize(&[doc], None);
     assert!(result[0].contains(&format!(
         r#"data-variant="{}""#,
         SvgVariant::TieOrSlur.as_str()
@@ -187,7 +187,7 @@ fn rect_serializes_with_amber_fill() {
             },
         }],
     };
-    let result = serialize(&[doc]);
+    let result = serialize(&[doc], None);
     assert!(result[0].contains("<rect"), "should contain rect");
     assert!(
         result[0].contains(r#"data-testid="measure-highlight""#),
@@ -223,7 +223,7 @@ fn error_rect_serializes_with_red_fill() {
             },
         }],
     };
-    let result = serialize(&[doc]);
+    let result = serialize(&[doc], None);
     assert!(
         result[0].contains(r#"data-testid="error-highlight""#),
         "should have error-highlight testid"
@@ -255,7 +255,7 @@ fn transparent_rect_serializes_with_data_variant_and_rx() {
             },
         }],
     };
-    let result = serialize(&[doc]);
+    let result = serialize(&[doc], None);
     assert!(
         result[0].contains(&format!(
             r#"data-variant="{}""#,

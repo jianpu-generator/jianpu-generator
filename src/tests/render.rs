@@ -11,3 +11,5 @@ mod tests_render_rendering;
 mod tests_render_split_pdf;
 #[path = "tests_section_label_alignment.rs"]
 mod tests_section_label_alignment;
+#[path = "tests_source_embed.rs"]
+mod tests_source_embed;
