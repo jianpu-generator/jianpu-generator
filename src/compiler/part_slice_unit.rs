@@ -32,9 +32,9 @@ pub(super) struct PartState<'a> {
     /// correctly. Untagged (non-tuplet) notes/rests in a rescaled measure have their
     /// `duration` scaled by exactly this factor too, so the comparisons stay exact for
     /// them; a tuplet-tagged unit's `duration` is additionally ratio-compressed
-    /// (`* den / num`), so it generally will *not* land on one of these thresholds —
-    /// its underline count is a known follow-up (see **Tuplet** in `ARCHITECTURE.md`),
-    /// deferred alongside the Step 7 tuplet-bracket rendering work.
+    /// (`* den / num`) — `compile_unit` undoes that compression before comparing
+    /// against these thresholds, so underline count still reflects the note's written
+    /// duration, not its rescaled one.
     pub(super) multiplier: u32,
 }
 
@@ -75,9 +75,21 @@ pub(super) fn compile_unit(
     });
 
     let multiplier = state.multiplier;
-    let underline_count = if unit.duration == multiplier {
+    // Beam/underline count reflects each note's *written* duration (e.g. `=` sixteenth
+    // notes always get a double underline), not its tuplet-rescaled duration — a triplet
+    // squeezing 3 sixteenth notes into an eighth note's space is still notated with the
+    // sixteenth note's double beam underneath, with the tuplet bracket/number drawn as a
+    // separate overlay (see `tuplet_spans.rs`). For tuplet-tagged units, undo the
+    // `* den / num` rescale (exact, since `unit.duration` was constructed as a multiple
+    // of `den`) to recover the multiplier-scaled written duration before comparing it
+    // against the thresholds below.
+    let scaled_written_duration = match unit.tuplet {
+        Some(TupletInfo { num, den }) => unit.duration / den * num,
+        None => unit.duration,
+    };
+    let underline_count = if scaled_written_duration == multiplier {
         2
-    } else if unit.duration == 2 * multiplier || unit.duration == 3 * multiplier {
+    } else if scaled_written_duration == 2 * multiplier || scaled_written_duration == 3 * multiplier {
         1
     } else {
         0

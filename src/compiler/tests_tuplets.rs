@@ -55,18 +55,21 @@ fn tuplet_measure_flushes_underlines_at_multiplier_scaled_quarter_beat_boundarie
         })
         .collect();
 
-    // The 3 triplet notes (rescaled duration 4 each) don't land on any of the scaled
-    // underline-count thresholds (multiplier, 2*multiplier, 3*multiplier = 3, 6, 9) so
-    // they produce no underline of their own (a known follow-up — see the doc comment
-    // on `PartState::multiplier` in `compiler/part_slice_unit.rs`). The 5 plain eighth
-    // notes (rescaled duration 6 = 2*multiplier) each get underline_count=1 and flush in
-    // pairs at every scaled quarter-beat boundary (column 24, 36), with the final,
-    // unpaired note flushed once at the end of the measure (column 42).
+    // The 3 triplet notes (rescaled duration 4 each) have their compression undone
+    // before the underline-count check (`compile_unit` divides by `den` and multiplies
+    // by `num`), recovering their written eighth-note duration scaled by the multiplier
+    // (2 * 3 = 6 = 2*multiplier) — so, like plain eighth notes, they get
+    // underline_count=1 and flush together into one run spanning the whole triplet
+    // (column 0 to 12). The 5 plain eighth notes (rescaled duration 6 = 2*multiplier)
+    // each also get underline_count=1 and flush in pairs at every scaled quarter-beat
+    // boundary (column 24, 36), with the final, unpaired note flushed once at the end
+    // of the measure (column 42).
     assert_eq!(
         underlines,
-        vec![(12, 24), (24, 36), (36, 42)],
-        "plain eighth notes following the triplet should flush into 3 underline runs \
-         at the multiplier-scaled quarter-beat boundaries"
+        vec![(0, 12), (12, 24), (24, 36), (36, 42)],
+        "the eighth-note triplet should flush into its own underline run, followed by \
+         the plain eighth notes' 3 underline runs at the multiplier-scaled \
+         quarter-beat boundaries"
     );
 
     let bar_line = row
