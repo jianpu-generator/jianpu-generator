@@ -234,6 +234,10 @@ pub(crate) struct GroupedMeasure {
     /// Abbreviation of the group whose `[GroupAbbrev]` broadcast produced this
     /// measure's content, when this part didn't override it with its own line.
     pub(crate) group_provenance: Option<String>,
+    /// Factor by which every duration in this measure's events was multiplied by
+    /// the tuplet-rescale pass so that tuplet ratios (e.g. 3-in-2) resolve to
+    /// whole numbers. `1` when the measure has no tuplets (the common case).
+    pub(crate) resolution_multiplier: u32,
 }
 
 pub(crate) struct GroupedPart {

@@ -2,6 +2,7 @@ use super::{
     align_empty_note_measures, attach_paired_lyrics, GroupedPart, IrrecoverableError,
     ParsedMeasureSlot, ParsedTimedTrack, PartGrouper, PartKind, PerMeasureErrors, Span,
 };
+use crate::grouper::tuplet_rescale::{rescale_tuplets, RescaledEvents};
 
 pub(in crate::grouper) fn group_timed_track(
     part: ParsedTimedTrack,
@@ -32,6 +33,11 @@ pub(in crate::grouper) fn group_timed_track(
         match slot {
             ParsedMeasureSlot::EmptyNote { span } => grouper.push_empty_note_slot(span),
             ParsedMeasureSlot::Real { events } => {
+                let RescaledEvents {
+                    events,
+                    resolution_multiplier,
+                } = rescale_tuplets(events);
+                grouper.begin_measure_slot(resolution_multiplier);
                 for spanned in events {
                     grouper.process_event(spanned)?;
                 }

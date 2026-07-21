@@ -8,6 +8,8 @@ mod tests_chords;
 mod tests_metadata;
 #[path = "tests_ties_and_spans.rs"]
 mod tests_ties_and_spans;
+#[path = "tests_tuplets.rs"]
+mod tests_tuplets;
 
 pub(super) fn parse_and_group(input: &str) -> Score {
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();

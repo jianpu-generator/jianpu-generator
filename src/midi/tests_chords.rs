@@ -52,6 +52,7 @@ fn chord_major_expands_to_three_notes() {
         group_continuation: 0,
         dotted: false,
         slur_group_close_at_duration: None,
+        tuplet: None,
     };
     let score = Score {
         metadata: test_metadata(),
@@ -121,6 +122,7 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
             group_continuation: if slur { 1 } else { 0 },
             dotted: false,
             slur_group_close_at_duration: None,
+            tuplet: None,
         })
     };
 

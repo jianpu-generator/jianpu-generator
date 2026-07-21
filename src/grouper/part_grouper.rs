@@ -22,6 +22,10 @@ struct PartGrouper {
     current_notes: Vec<NoteEvent>,
     current_beat: u32,
     capacity: u32,
+    /// Tuplet-rescale factor for the measure currently being accumulated (see
+    /// `tuplet_rescale::rescale_tuplets`), set via `begin_measure_slot` before that
+    /// measure's events are pushed. `1` for measures with no tuplets.
+    resolution_multiplier: u32,
     part_name: Option<String>,
     measure_span_start: Option<usize>,
     measure_span_end: usize,
@@ -45,6 +49,7 @@ impl PartGrouper {
             current_notes: Vec::new(),
             current_beat: 0,
             capacity,
+            resolution_multiplier: 1,
             part_name: Some(part.abbreviation.clone()),
             measure_span_start: None,
             measure_span_end: 0,
@@ -58,12 +63,29 @@ impl PartGrouper {
         (ts.numerator as u32) * 16 / (ts.denominator as u32)
     }
 
+    /// Sets the tuplet-rescale multiplier to apply to `self.capacity` while accumulating
+    /// the measure about to be pushed via `process_event`. Stays in effect until that
+    /// measure is actually flushed (`flush_measure` resets it back to `1`), regardless of
+    /// how many `process_event` calls that takes — a measure isn't always flushed by the
+    /// time all of its events have been pushed (e.g. the score's trailing measure, only
+    /// flushed later by `finish`).
+    fn begin_measure_slot(&mut self, resolution_multiplier: u32) {
+        self.resolution_multiplier = resolution_multiplier;
+    }
+
+    /// `self.capacity` scaled by the current measure's tuplet-rescale multiplier — the
+    /// unit `current_beat` must be compared against while a tuplet-rescaled measure is
+    /// being accumulated (see `tuplet_rescale::rescale_tuplets`).
+    fn effective_capacity(&self) -> u32 {
+        self.capacity * self.resolution_multiplier
+    }
+
     fn flush_measure(&mut self) {
         if self.current_notes.is_empty() {
             return;
         }
         let source_span = Span::new(self.measure_span_start.unwrap_or(0), self.measure_span_end);
-        self.slots.push(MeasureSlot::Real(Box::new(GroupedMeasure {
+        let measure = GroupedMeasure {
             notes: Notes {
                 events: std::mem::take(&mut self.current_notes),
             },
@@ -79,10 +101,21 @@ impl PartGrouper {
             extension_no_preceding_event_error: self
                 .pending_extension_no_preceding_event_error
                 .take(),
-        })));
+            resolution_multiplier: self.resolution_multiplier,
+        };
+        debug_assert!(
+            self.current_beat <= self.capacity * measure.resolution_multiplier,
+            "flushed measure's tallied beats ({}) must not exceed its capacity ({}) scaled \
+             by its own resolution_multiplier ({})",
+            self.current_beat,
+            self.capacity,
+            measure.resolution_multiplier,
+        );
+        self.slots.push(MeasureSlot::Real(Box::new(measure)));
         self.current_beat = 0;
         self.measure_span_start = None;
         self.measure_span_end = 0;
+        self.resolution_multiplier = 1;
     }
 
     fn push_empty_note_slot(&mut self, span: Span) {
@@ -90,7 +123,7 @@ impl PartGrouper {
     }
 
     fn flush_if_full(&mut self) {
-        if self.current_beat >= self.capacity {
+        if self.current_beat >= self.effective_capacity() {
             self.flush_measure();
         }
     }
@@ -116,7 +149,8 @@ impl PartGrouper {
         self.measure_span_end = span.end;
         self.current_notes.push(event);
         self.current_beat += duration;
-        if self.current_beat > self.capacity {
+        let effective_capacity = self.effective_capacity();
+        if self.current_beat > effective_capacity {
             self.current_notes.pop();
             self.current_beat -= duration;
             let message = self.with_part_prefix(format!(
@@ -128,7 +162,7 @@ impl PartGrouper {
             self.flush_measure();
             return Ok(());
         }
-        if self.current_beat == self.capacity {
+        if self.current_beat == effective_capacity {
             self.flush_measure();
         }
         Ok(())
@@ -136,22 +170,23 @@ impl PartGrouper {
 
     fn handle_extension(&mut self, span: Span) -> Result<(), IrrecoverableError> {
         self.measure_span_end = span.end.max(self.measure_span_end);
+        let extension_beats = 4 * self.resolution_multiplier;
         match self.current_notes.last_mut() {
             Some(NoteEvent::Note(n)) => {
-                n.duration += 4;
-                self.current_beat += 4;
+                n.duration += extension_beats;
+                self.current_beat += extension_beats;
             }
             Some(NoteEvent::Chord(c)) => {
-                c.duration += 4;
-                self.current_beat += 4;
+                c.duration += extension_beats;
+                self.current_beat += extension_beats;
             }
             Some(NoteEvent::Percussion(p)) => {
-                p.duration += 4;
-                self.current_beat += 4;
+                p.duration += extension_beats;
+                self.current_beat += extension_beats;
             }
             Some(NoteEvent::Rest(r)) => {
-                r.duration += 4;
-                self.current_beat += 4;
+                r.duration += extension_beats;
+                self.current_beat += extension_beats;
             }
             None => {
                 let chord_track = self.part_kind == PartKind::Chords;
@@ -162,7 +197,7 @@ impl PartGrouper {
                 return Ok(());
             }
         }
-        if self.current_beat >= self.capacity {
+        if self.current_beat >= self.effective_capacity() {
             self.flush_measure();
         }
         Ok(())
@@ -206,6 +241,7 @@ impl PartGrouper {
                 group_continuation: pn.group_continuation,
                 dotted: pn.dotted,
                 slur_group_close_at_duration: pn.slur_group_close_at_duration,
+                tuplet: pn.tuplet,
             }),
             "note",
         )
@@ -229,6 +265,7 @@ impl PartGrouper {
                 group_continuation: pc.group_continuation,
                 dotted: pc.dotted,
                 slur_group_close_at_duration: pc.slur_group_close_at_duration,
+                tuplet: pc.tuplet,
             }),
             "chord",
         )
@@ -251,6 +288,7 @@ impl PartGrouper {
                 group_continuation: ph.group_continuation,
                 dotted: ph.dotted,
                 slur_group_close_at_duration: ph.slur_group_close_at_duration,
+                tuplet: ph.tuplet,
             }),
             "percussion hit",
         )
@@ -265,6 +303,7 @@ impl PartGrouper {
                 dotted: pr.dotted,
                 group_membership: pr.group_membership,
                 group_continuation: pr.group_continuation,
+                tuplet: pr.tuplet,
             }),
             "rest",
         )
@@ -299,27 +338,7 @@ impl PartGrouper {
     }
 
     fn finish(mut self) -> (Vec<MeasureSlot>, Option<String>, PartKind, Soundfont) {
-        if !self.current_notes.is_empty() {
-            let source_span =
-                Span::new(self.measure_span_start.unwrap_or(0), self.measure_span_end);
-            self.slots.push(MeasureSlot::Real(Box::new(GroupedMeasure {
-                notes: Notes {
-                    events: std::mem::take(&mut self.current_notes),
-                },
-                source_span,
-                group_provenance: None,
-                paired_lyrics: Vec::new(),
-                lyrics_error: Vec::new(),
-                beat_overflow_error: None,
-                dotted_eighth_errors: std::mem::take(&mut self.pending_dotted_eighth_errors),
-                chord_errors: Vec::new(),
-                lex_error: None,
-                lyrics_parse_error: None,
-                extension_no_preceding_event_error: self
-                    .pending_extension_no_preceding_event_error
-                    .take(),
-            })));
-        }
+        self.flush_measure();
 
         (self.slots, self.part_name, self.part_kind, self.soundfont)
     }

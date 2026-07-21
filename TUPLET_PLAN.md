@@ -43,7 +43,7 @@ repeated in the step descriptions.
   other construction sites of these structs (test helpers, desugar.rs, etc.) to set
   `tuplet: None` — grep for struct-literal construction of these 4 types.
 
-- [ ] **Step 4 — Grouped IR + new rescale pass**
+- [x] **Step 4 — Grouped IR + new rescale pass**
   `src/ast/grouped_notes.rs`: add `resolution_multiplier: u32` (default 1) to
   `GroupedMeasure` (find this type — may need to check `src/grouper/` for where measures are
   assembled if not in this file), and `tuplet: Option<TupletInfo>` on `GroupedNote`,
@@ -55,6 +55,32 @@ repeated in the step descriptions.
   tuplet-tagged events further multiplies by `den/num`. Returns the multiplier alongside the
   rescaled events for attachment to the produced `GroupedMeasure`. Add grouper-level tests:
   a tuplet correctly filling a beat (e.g. `{3:1_1_1_}` filling exactly 1 beat in 4/4).
+
+  Implemented as: `rescale_tuplets` in `src/grouper/tuplet_rescale.rs`, wired into
+  `part_grouper_group::group_timed_track` (called once per `ParsedMeasureSlot::Real`,
+  before its events reach `PartGrouper`). `PartGrouper` gained a `resolution_multiplier`
+  field (`begin_measure_slot`/`effective_capacity`) so its capacity/flush/`handle_extension`
+  math stays correct for a rescaled measure — a small slice of Step 5's job pulled forward
+  here because it was needed both for a genuinely passing test and to satisfy
+  `#![forbid(dead_code)]` (the new `resolution_multiplier`/`tuplet` fields need a real
+  production reader, not just a writer). Step 5 should still do its own pass over
+  `grouping.rs`/`compiler/part_slice*.rs`.
+
+  **Discovered gap, not yet fixed (unassigned to a step)**: the parser's own per-measure
+  capacity check (`interleaved_beat_padding::validate_and_pad_beats`, upstream of
+  `rescale_tuplets`) compares each tuplet atom's *written* (nominal, uncompressed)
+  duration against the bar's raw capacity — it has no concept of tuplet compression. A
+  tuplet written with its natural/nominal duration (the common case — e.g. an eighth-note
+  triplet in `syntax.md`'s own suggested notation, `3:{1_1_1_}`, written as three eighth
+  notes) sums to *more* raw quarter-beats than it should occupy once compressed, so once
+  other notes fill out the rest of the bar, the parser's raw-sum check can truncate or
+  reject the measure before `rescale_tuplets` ever gets a chance to compress it down to
+  size. The grouper-level test added for this step (`measure_with_a_triplet_groups_with_correctly_rescaled_durations`
+  in `src/grouper/tests_tuplets.rs`) works around this by choosing note counts whose raw,
+  pre-compression sum already equals the bar's capacity exactly — real-world tuplet usage
+  will need `interleaved_beat_padding.rs` made tuplet-aware (comparing against each
+  tuplet's *compressed* duration, not its written one) before this fully works
+  end-to-end. See the **Tuplet** glossary entry in `ARCHITECTURE.md` for more detail.
 
 - [ ] **Step 5 — Thread `multiplier` through grouping/compiler**
   `PartGrouper` (find in `src/grouper/`), `src/grouper/grouping.rs`,

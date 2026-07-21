@@ -63,6 +63,7 @@ pub(super) fn align_empty_note_measures(
                 lyrics_parse_error: errors.lyrics_errors.get(idx).and_then(|e| e.clone()),
                 extension_no_preceding_event_error: None,
                 group_provenance: errors.group_provenance.get(idx).cloned().flatten(),
+                resolution_multiplier: 1,
             }),
             MeasureSlot::Real(boxed_measure) => {
                 let mut measure = *boxed_measure;

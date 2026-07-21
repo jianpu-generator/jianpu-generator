@@ -17,6 +17,7 @@ mod lyrics_pairing;
 mod part_grouper;
 mod sequence_resolution;
 mod tie_validation;
+mod tuplet_rescale;
 
 use directive_grouper::DirectiveGrouper;
 use part_grouper::group_timed_track;
