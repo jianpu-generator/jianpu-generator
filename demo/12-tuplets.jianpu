@@ -1,0 +1,10 @@
+# metadata
+title = "Tuplets"
+max_measures_per_system = 1
+
+# parts
+Melody [M] = notes
+
+# score
+label="Duplet 2:{...} / Triplet 3:{...} / Quintuplet 5:4:{...}, then plain eighths"
+[M] 2:{1=2=} 3:{1=1=1=} 5:4:{1=1=1=1=1=} 2_3_4_

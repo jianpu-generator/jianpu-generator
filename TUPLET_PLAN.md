@@ -188,7 +188,7 @@ repeated in the step descriptions.
   `GridContent::TupletBracket`/`AbsoluteContent::TupletBracket`, and the tuplet-rescale pass
   in the pipeline-layers section + glossary.
 
-- [ ] **Step 9 — E2E fixture + final verification**
+- [x] **Step 9 — E2E fixture + final verification**
   New `demo/12-tuplets.jianpu` (check existing numbered `demo/*.jianpu` files for the next
   free number first) exercising a triplet, a duplet, and a quintuplet.
   `cargo run -- generate svg demo/12-tuplets.jianpu` — visually confirm brackets render above
@@ -196,6 +196,54 @@ repeated in the step descriptions.
   If the project has SVG snapshot/golden-file tests under `tests/`, add one for this fixture.
   Run full `cargo test` and the e2e suite. Delete this file (`TUPLET_PLAN.md`) once all steps
   are checked off and merged, or leave it — check with the user.
+
+  Implemented as: `tests/main/demo_source.rs` already iterates every file under `demo/` and
+  asserts each parses/renders with zero diagnostics, so no separate snapshot test was needed —
+  `demo/12-tuplets.jianpu` is automatically covered by `demo_files_parse_and_render`,
+  `demo_files_have_no_diagnostics`, and `demo_files_render_expected_content` the moment it
+  exists in that directory.
+
+  Getting a zero-diagnostic fixture took substantially more empirical trial-and-error than the
+  known duplet/`flush_measure` bug alone predicted, because the "solo duplet in its own measure"
+  workaround from this plan's own instructions is necessary but **not sufficient**. Discovered
+  two more failure modes while iterating (neither fixed — both out of scope, same as the
+  documented one; recorded here for whoever tackles the tuplet-capacity gap for real):
+
+  1. **A tuplet measure that isn't a part's very last measure corrupts the *next* measure's
+     flush, regardless of tuplet type.** `PartGrouper::begin_measure_slot` (called when the
+     next measure's events start arriving) overwrites `self.resolution_multiplier` *before*
+     the previous, still-pending measure has been flushed — and any tuplet measure whose
+     scaled duration doesn't exactly equal its effective capacity (which, per Step 4's gap,
+     is *every* tuplet measure today: compressing ratios always land short, and duplet's
+     expanding ratio always overflows if written to nominally fill the bar) stays pending
+     rather than self-flushing. The result ranges from a spurious `extension '-' without a
+     preceding note or rest` warning to the same `flush_measure` `debug_assert` panic this
+     plan already documents, depending on multiplier/timing. Empirically, *any* tuplet
+     measure — triplet and quintuplet included, not just duplet — is only safe if it is the
+     last measure ever pushed to its part's track.
+  2. **Grid column width is not multiplier-invariant when a system combines parts with
+     different tuplet multipliers.** Two parts in the same system, one holding a triplet
+     (multiplier 3) and the other a quintuplet (multiplier 5), render with columns wide
+     enough to push content far past the page's viewBox (observed x-coordinates up to ~3400
+     against a 595-wide A4 page) — contradicting Step 6's "grid width is multiplier-invariant"
+     verification, which only checked *uniform*, non-tuplet (multiplier-1) content across
+     parts.
+
+  The shipped fixture sidesteps both: all three tuplets (duplet `2:{...}`, triplet `3:{...}`,
+  quintuplet `5:4:{...}`) live in **one measure of one single part**, immediately followed by
+  three plain eighth notes, with every note count and value chosen so the measure's nominal
+  (pre-rescale) duration sums to exactly 16 quarter-beats — satisfying the parse-time capacity
+  check with no padding or truncation, and being both the first and only measure means there's
+  no next `begin_measure_slot` call to corrupt it. Visually verified (via a headless-Chromium
+  screenshot of the generated SVG, `rsvg-convert`/`resvg`/`inkscape` all being unavailable in
+  this environment): the duplet/triplet/quintuplet brackets each sit cleanly above their own
+  note span with a centered digit label, and the trailing beam underline under the three plain
+  eighth notes sits in a disjoint column range — no collisions. Full `cargo test` passes (762
+  tests: 709 lib + 53 integration). `cargo clippy --all-targets` fails on this branch
+  independent of this step's change (`git diff --stat` for this commit touches only
+  `demo/12-tuplets.jianpu` and this file) — the failures are pre-existing `too_many_arguments`/
+  `too_many_lines` lints plus a `disallowed_macros` hit on the `debug_assert!` in
+  `part_grouper.rs` added by Step 4, all predating this step and out of scope to fix here.
 
 ## Full plan
 
