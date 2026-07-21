@@ -1,5 +1,6 @@
 use super::note_head::NoteHead;
 use super::{parse_timed_line, GroupStack, LexContext};
+use crate::ast::parsed::{ScoreEvent, TupletInfo};
 use crate::error::{Diagnostic, RecoverableErrorKind};
 
 fn parse(line: &str) -> crate::parser::score::timed_parser::TimedLineParse {
@@ -105,4 +106,71 @@ fn tuplet_nested_inside_group_both_directions() {
     let result = parse("3:{(1 1) 1}");
     assert_eq!(result.events.len(), 3);
     assert!(result.chord_errors.is_empty(), "{:?}", result.chord_errors);
+}
+
+fn tuplet_of(event: &ScoreEvent) -> Option<TupletInfo> {
+    match event {
+        ScoreEvent::Note(n) => n.tuplet,
+        ScoreEvent::Rest(r) => r.tuplet,
+        _ => panic!("expected Note or Rest, got {event:?}"),
+    }
+}
+
+#[test]
+fn notes_inside_tuplet_carry_tuplet_info() {
+    let result = parse("3:{1 1 1}");
+    for event in &result.events {
+        assert_eq!(
+            tuplet_of(&event.value),
+            Some(TupletInfo { num: 3, den: 2 }),
+            "{:?}",
+            event.value
+        );
+    }
+}
+
+#[test]
+fn explicit_ratio_is_reflected_in_tuplet_info() {
+    let result = parse("5:4:{1 1 1 1 1}");
+    for event in &result.events {
+        assert_eq!(
+            tuplet_of(&event.value),
+            Some(TupletInfo { num: 5, den: 4 }),
+            "{:?}",
+            event.value
+        );
+    }
+}
+
+#[test]
+fn notes_outside_tuplet_have_no_tuplet_info() {
+    let result = parse("1 1 1");
+    for event in &result.events {
+        assert_eq!(tuplet_of(&event.value), None, "{:?}", event.value);
+    }
+}
+
+#[test]
+fn repeat_atom_inside_tuplet_carries_tuplet_info() {
+    let result = parse("3:{1 _ _}");
+    assert_eq!(result.events.len(), 3);
+    for event in &result.events {
+        assert_eq!(
+            tuplet_of(&event.value),
+            Some(TupletInfo { num: 3, den: 2 }),
+            "{:?}",
+            event.value
+        );
+    }
+}
+
+#[test]
+fn nested_tuplet_note_carries_innermost_ratio() {
+    // Group wrapping a tuplet: notes inside the tuplet get the tuplet's ratio.
+    let result = parse("(3:{1 1 1} 5)");
+    assert_eq!(
+        tuplet_of(&result.events[0].value),
+        Some(TupletInfo { num: 3, den: 2 })
+    );
+    assert_eq!(tuplet_of(&result.events[3].value), None);
 }

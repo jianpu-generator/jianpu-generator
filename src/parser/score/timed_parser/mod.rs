@@ -38,7 +38,7 @@ pub use groups::{
     TupletFrame, TupletStack,
 };
 
-use crate::ast::parsed::ScoreEvent;
+use crate::ast::parsed::{ScoreEvent, TupletInfo};
 use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Spanned};
 
 /// Error returned by `parse_head`.
@@ -97,14 +97,19 @@ pub trait TimedUnitHead: Sized {
         true
     }
 
-    fn to_event(
-        head: &Self,
-        duration: u32,
-        dotted: bool,
-        octave: i8,
-        group_membership: u8,
-        group_continuation: u8,
-    ) -> ScoreEvent;
+    fn to_event(head: &Self, attrs: EventAttrs) -> ScoreEvent;
+}
+
+/// Shared attributes computed by `parse_timed_unit` and threaded through to
+/// `TimedUnitHead::to_event`, which maps them onto the concrete `Parsed*` event fields.
+#[derive(Debug, Clone, Copy)]
+pub struct EventAttrs {
+    pub duration: u32,
+    pub dotted: bool,
+    pub octave: i8,
+    pub group_membership: u8,
+    pub group_continuation: u8,
+    pub tuplet: Option<TupletInfo>,
 }
 
 /// Head-boundary check shared by `NoteHead`/`ChordHead`: a fresh degree digit always starts a

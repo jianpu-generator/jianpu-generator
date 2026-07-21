@@ -1,7 +1,8 @@
 use crate::ast::parsed::{ParsedPercussionHit, ParsedRest, ScoreEvent};
 use crate::error::{Diagnostic, RecoverableErrorKind, Span, Spanned};
 use crate::parser::score::timed_parser::{
-    parse_timed_line, GroupStack, LexContext, ParseHeadError, PercussionHead, TimedUnitHead,
+    parse_timed_line, EventAttrs, GroupStack, LexContext, ParseHeadError, PercussionHead,
+    TimedUnitHead,
 };
 
 fn parse_events(input: &str) -> Vec<Spanned<ScoreEvent>> {
@@ -66,7 +67,17 @@ fn parses_hit() {
         PercussionHead::parse_head(&chars, 0, &span).expect("parse_head should succeed");
     assert_eq!(next, 1);
     assert!(!is_rest);
-    let event = PercussionHead::to_event(&head, 4, false, 0, 0, 0);
+    let event = PercussionHead::to_event(
+        &head,
+        EventAttrs {
+            duration: 4,
+            dotted: false,
+            octave: 0,
+            group_membership: 0,
+            group_continuation: 0,
+            tuplet: None,
+        },
+    );
     assert!(matches!(event, ScoreEvent::PercussionHit(_)));
 }
 
@@ -78,7 +89,17 @@ fn parses_rest() {
         PercussionHead::parse_head(&chars, 0, &span).expect("parse_head should succeed");
     assert_eq!(next, 1);
     assert!(is_rest);
-    let event = PercussionHead::to_event(&head, 4, false, 0, 0, 0);
+    let event = PercussionHead::to_event(
+        &head,
+        EventAttrs {
+            duration: 4,
+            dotted: false,
+            octave: 0,
+            group_membership: 0,
+            group_continuation: 0,
+            tuplet: None,
+        },
+    );
     assert!(matches!(event, ScoreEvent::Rest(_)));
 }
 

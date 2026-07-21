@@ -1,4 +1,5 @@
 use super::{ParseHeadError, TimedUnitHead};
+use super::EventAttrs;
 use crate::ast::parsed::{Accidental, JianPuPitch, ParsedNote, ParsedRest, ScoreEvent};
 use crate::error::{Diagnostic, RecoverableError, RecoverableErrorKind, Span};
 
@@ -82,20 +83,22 @@ impl TimedUnitHead for NoteHead {
         true
     }
 
-    fn to_event(
-        head: &Self,
-        duration: u32,
-        dotted: bool,
-        octave: i8,
-        group_membership: u8,
-        group_continuation: u8,
-    ) -> ScoreEvent {
+    fn to_event(head: &Self, attrs: EventAttrs) -> ScoreEvent {
+        let EventAttrs {
+            duration,
+            dotted,
+            octave,
+            group_membership,
+            group_continuation,
+            tuplet,
+        } = attrs;
         if head.is_rest {
             ScoreEvent::Rest(ParsedRest {
                 duration,
                 dotted,
                 group_membership: 0,
                 group_continuation: 0,
+                tuplet,
             })
         } else {
             ScoreEvent::Note(ParsedNote {
@@ -109,6 +112,7 @@ impl TimedUnitHead for NoteHead {
                 group_continuation,
                 dotted,
                 slur_group_close_at_duration: None,
+                tuplet,
             })
         }
     }

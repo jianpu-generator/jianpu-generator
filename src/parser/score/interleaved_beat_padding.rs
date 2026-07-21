@@ -186,6 +186,7 @@ fn pad_incomplete_measure(
                 dotted: false,
                 group_membership: 0,
                 group_continuation: 0,
+                tuplet: None,
             }),
             rest_span,
         ));

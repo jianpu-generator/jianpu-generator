@@ -57,6 +57,7 @@ fn chord_column_events_are_parsed() {
             group_continuation: 0,
             dotted: false,
             slur_group_close_at_duration: None,
+            tuplet: None,
         })
     );
     assert!(matches!(events[4], ScoreEvent::Extension));

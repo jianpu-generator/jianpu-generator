@@ -2,8 +2,8 @@ use super::depth_event::DepthEvent;
 use super::duration::parse_duration_suffixes;
 use super::groups::{apply_closed_group_depth, GroupStack, TupletStack};
 use super::timed_lexer::TimedLexToken;
-use super::{ParseHeadError, TimedUnitHead};
-use crate::ast::parsed::ScoreEvent;
+use super::{EventAttrs, ParseHeadError, TimedUnitHead};
+use crate::ast::parsed::{ScoreEvent, TupletInfo};
 use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Spanned};
 
 #[path = "timed_recursive_descent_parser/group_and_repeat.rs"]
@@ -312,23 +312,16 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
 
         let mut event = H::to_event(
             &head,
-            duration_meta.duration,
-            duration_meta.dotted,
-            octave,
-            0,
-            0,
+            EventAttrs {
+                duration: duration_meta.duration,
+                dotted: duration_meta.dotted,
+                octave,
+                group_membership: 0,
+                group_continuation: 0,
+                tuplet: self.current_tuplet(),
+            },
         );
-        if let Some(tie_span) = duration_meta.tie_to_next_span {
-            if let ScoreEvent::Note(ref mut note) = event {
-                note.tie_to_next_span = Some(tie_span);
-            }
-            if let ScoreEvent::Chord(ref mut chord) = event {
-                chord.tie_to_next_span = Some(tie_span);
-            }
-            if let ScoreEvent::PercussionHit(ref mut hit) = event {
-                hit.tie_to_next_span = Some(tie_span);
-            }
-        }
+        Self::attach_tie_to_next(&mut event, duration_meta.tie_to_next_span);
         if matches!(
             event,
             ScoreEvent::Note(_) | ScoreEvent::Chord(_) | ScoreEvent::PercussionHit(_)
@@ -358,6 +351,30 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
         }
 
         Ok(())
+    }
+
+    /// The ratio of the innermost currently-open `{...}` tuplet, if any.
+    fn current_tuplet(&self) -> Option<TupletInfo> {
+        self.tuplet_stack
+            .frames
+            .last()
+            .map(|frame| TupletInfo {
+                num: frame.num,
+                den: frame.den,
+            })
+    }
+
+    /// Attach a `~` tie span to whichever event variant carries one.
+    fn attach_tie_to_next(event: &mut ScoreEvent, tie_span: Option<Span>) {
+        let Some(tie_span) = tie_span else {
+            return;
+        };
+        match event {
+            ScoreEvent::Note(note) => note.tie_to_next_span = Some(tie_span),
+            ScoreEvent::Chord(chord) => chord.tie_to_next_span = Some(tie_span),
+            ScoreEvent::PercussionHit(hit) => hit.tie_to_next_span = Some(tie_span),
+            _ => {}
+        }
     }
 
     fn unit_end_abs(&self, digit_offset: usize) -> usize {

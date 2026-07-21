@@ -33,7 +33,7 @@ repeated in the step descriptions.
   mismatch on close is a recoverable error. Add tests in a new
   `src/parser/score/timed_parser/tuplet_tests.rs`.
 
-- [ ] **Step 3 — AST: `TupletInfo` on parsed nodes**
+- [x] **Step 3 — AST: `TupletInfo` on parsed nodes**
   `src/ast/parsed.rs`: add `pub struct TupletInfo { pub num: u32, pub den: u32 }` (no tuples)
   and `pub tuplet: Option<TupletInfo>` field to `ParsedNote`, `ParsedChordNote`,
   `ParsedPercussionHit`, `ParsedRest`. Wire it up in

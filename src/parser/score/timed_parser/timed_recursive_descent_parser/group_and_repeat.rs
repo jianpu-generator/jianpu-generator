@@ -34,6 +34,8 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
             return Ok(());
         };
 
+        let tuplet = self.current_tuplet();
+
         match &mut event {
             ScoreEvent::Note(note) => {
                 note.duration = duration;
@@ -43,6 +45,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
                 note.group_continuation = 0;
                 note.slur = false;
                 note.slur_group_close_at_duration = None;
+                note.tuplet = tuplet;
             }
             ScoreEvent::Chord(chord) => {
                 chord.duration = duration;
@@ -52,6 +55,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
                 chord.group_continuation = 0;
                 chord.slur = false;
                 chord.slur_group_close_at_duration = None;
+                chord.tuplet = tuplet;
             }
             ScoreEvent::PercussionHit(hit) => {
                 hit.duration = duration;
@@ -61,6 +65,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
                 hit.group_continuation = 0;
                 hit.slur = false;
                 hit.slur_group_close_at_duration = None;
+                hit.tuplet = tuplet;
             }
             _ => {}
         }

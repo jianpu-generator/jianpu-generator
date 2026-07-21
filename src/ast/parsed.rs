@@ -249,6 +249,15 @@ pub enum ScoreEvent {
     HideRestingPartsChange(bool),
 }
 
+/// Tuplet ratio tag attached to a parsed note/chord/rest/percussion-hit that falls inside
+/// an open `{N:...}`/`{N:M:...}` bracket: `num` notes take the time of `den` notes of the
+/// same written value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TupletInfo {
+    pub num: u32,
+    pub den: u32,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParsedNote {
     pub pitch: JianPuPitch,
@@ -271,6 +280,8 @@ pub struct ParsedNote {
     /// this holds the offset in quarter-beats from the note's start where the slur arc
     /// should end. `None` means the slur closes at the note's head position (normal case).
     pub slur_group_close_at_duration: Option<u32>,
+    /// The innermost `{...}` tuplet bracket this note belongs to, if any.
+    pub tuplet: Option<TupletInfo>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -287,6 +298,8 @@ pub struct ParsedChordNote {
     pub group_continuation: u8,
     pub dotted: bool,
     pub slur_group_close_at_duration: Option<u32>,
+    /// The innermost `{...}` tuplet bracket this chord note belongs to, if any.
+    pub tuplet: Option<TupletInfo>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -304,6 +317,8 @@ pub struct ParsedPercussionHit {
     /// Whether `.` was present as a dotted-hit suffix.
     pub dotted: bool,
     pub slur_group_close_at_duration: Option<u32>,
+    /// The innermost `{...}` tuplet bracket this hit belongs to, if any.
+    pub tuplet: Option<TupletInfo>,
 }
 
 impl ParsedPercussionHit {
@@ -332,6 +347,8 @@ pub struct ParsedRest {
     pub dotted: bool,
     pub group_membership: u8,
     pub group_continuation: u8,
+    /// The innermost `{...}` tuplet bracket this rest belongs to, if any.
+    pub tuplet: Option<TupletInfo>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

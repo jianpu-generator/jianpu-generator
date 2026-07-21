@@ -1,6 +1,6 @@
 use crate::ast::parsed::{Accidental, JianPuPitch, ScoreEvent};
 use crate::error::{Diagnostic, RecoverableErrorKind, Span};
-use crate::parser::score::timed_parser::{NoteHead, ParseHeadError, TimedUnitHead};
+use crate::parser::score::timed_parser::{EventAttrs, NoteHead, ParseHeadError, TimedUnitHead};
 
 #[test]
 fn parse_head_returns_recoverable_for_unexpected_char() {
@@ -41,7 +41,17 @@ fn parse_to_note(input: &str) -> (JianPuPitch, Accidental, usize) {
     let span = Span::new(0, input.len());
     let (head, next, _is_rest, _diags) =
         NoteHead::parse_head(&chars, 0, &span).expect("parse_head should succeed");
-    let event = NoteHead::to_event(&head, 4, false, 0, 0, 0);
+    let event = NoteHead::to_event(
+        &head,
+        EventAttrs {
+            duration: 4,
+            dotted: false,
+            octave: 0,
+            group_membership: 0,
+            group_continuation: 0,
+            tuplet: None,
+        },
+    );
     let ScoreEvent::Note(note) = event else {
         panic!("expected ScoreEvent::Note, got rest");
     };
