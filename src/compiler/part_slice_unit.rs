@@ -18,6 +18,17 @@ pub(super) struct PartState<'a> {
     pub(super) next_note_id: &'a mut usize,
     pub(super) measure_index: usize,
     pub(super) part_index: usize,
+    /// This measure's tuplet-rescale factor (`GroupedMeasure::resolution_multiplier`,
+    /// carried onto `PartSlice`). `1` for measures with no tuplets — every
+    /// quarter-beat-grid literal below (`4` per beat, underline-count thresholds
+    /// `1`/`2`/`3`) is scaled by this factor so a rescaled measure still lays out
+    /// correctly. Untagged (non-tuplet) notes/rests in a rescaled measure have their
+    /// `duration` scaled by exactly this factor too, so the comparisons stay exact for
+    /// them; a tuplet-tagged unit's `duration` is additionally ratio-compressed
+    /// (`* den / num`), so it generally will *not* land on one of these thresholds —
+    /// its underline count is a known follow-up (see **Tuplet** in `ARCHITECTURE.md`),
+    /// deferred alongside the Step 7 tuplet-bracket rendering work.
+    pub(super) multiplier: u32,
 }
 
 // ── Shared compile-unit abstraction ──────────────────────────────────────────
@@ -44,10 +55,13 @@ pub(super) fn compile_unit(
         note_id: Some(note_id),
     });
 
-    let underline_count = match unit.duration {
-        1 => 2,
-        2 | 3 => 1,
-        _ => 0,
+    let multiplier = state.multiplier;
+    let underline_count = if unit.duration == multiplier {
+        2
+    } else if unit.duration == 2 * multiplier || unit.duration == 3 * multiplier {
+        1
+    } else {
+        0
     };
 
     if underline_count == 0 {
@@ -87,8 +101,9 @@ pub(super) fn compile_unit(
     }
 
     if !unit.dotted {
+        let beat = 4 * multiplier;
         let note_col = *state.col;
-        for dash_col in (note_col + 4..note_col + unit.duration).step_by(4) {
+        for dash_col in (note_col + beat..note_col + unit.duration).step_by(beat as usize) {
             state.elements.push(ColumnElement {
                 column: dash_col,
                 content: ElementContent::NoteDash,
@@ -108,7 +123,7 @@ pub(super) fn compile_unit(
     *state.col += unit.duration;
 
     let beat_position = *state.col - measure_col_start;
-    if underline_count > 0 && beat_position % 4 == 0 {
+    if underline_count > 0 && beat_position % (4 * multiplier) == 0 {
         flush_beam_buffer(state.beam_buf, state.elements);
     }
 }

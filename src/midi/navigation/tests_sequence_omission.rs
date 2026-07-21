@@ -61,6 +61,7 @@ fn measure_with_parts(index: usize, part_names: &[&str]) -> MultiPartMeasure {
                     lyrics: vec![],
                     has_error: false,
                     group_provenance: None,
+                    resolution_multiplier: 1,
                 })
             })
             .collect(),

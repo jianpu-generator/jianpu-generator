@@ -147,6 +147,7 @@ pub(super) fn one_measure_score() -> Score {
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
                 group_provenance: None,
+                resolution_multiplier: 1,
                 kind: PartKind::Notes,
                 soundfont: Soundfont::default(),
                 volume: 100,
@@ -240,6 +241,7 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
                 group_provenance: None,
+                resolution_multiplier: 1,
                 kind: PartKind::Notes,
                 soundfont: Soundfont::default(),
                 volume: 100,

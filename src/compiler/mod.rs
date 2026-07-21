@@ -376,3 +376,5 @@ mod tests_lyrics_and_diagnostics;
 mod tests_multi_measure_rest;
 #[cfg(test)]
 mod tests_slur;
+#[cfg(test)]
+mod tests_tuplets;

@@ -52,6 +52,7 @@ pub(super) fn compile_part_slice(
             next_note_id: &mut next_note_id,
             measure_index,
             part_index: input.part_index,
+            multiplier: slice.resolution_multiplier,
         };
         process_events(&mut state, slice);
     }
@@ -227,10 +228,13 @@ fn compile_rest(
     measure_col_start: u32,
     note_id: usize,
 ) {
-    let underline_count = match rest.duration {
-        1 => 2,
-        2 => 1,
-        _ => 0,
+    let multiplier = state.multiplier;
+    let underline_count = if rest.duration == multiplier {
+        2
+    } else if rest.duration == 2 * multiplier {
+        1
+    } else {
+        0
     };
 
     if underline_count == 0 {
@@ -270,8 +274,9 @@ fn compile_rest(
     }
 
     if !rest.dotted {
+        let beat = 4 * multiplier;
         let rest_col = *state.col;
-        for dash_col in (rest_col + 4..rest_col + rest.duration).step_by(4) {
+        for dash_col in (rest_col + beat..rest_col + rest.duration).step_by(beat as usize) {
             state.elements.push(ColumnElement {
                 column: dash_col,
                 content: ElementContent::NoteDash,
@@ -287,7 +292,7 @@ fn compile_rest(
     *state.prev_tie_note_id = None;
 
     let beat_position = *state.col - measure_col_start;
-    if underline_count > 0 && beat_position % 4 == 0 {
+    if underline_count > 0 && beat_position % (4 * multiplier) == 0 {
         flush_beam_buffer(state.beam_buf, state.elements);
     }
 }

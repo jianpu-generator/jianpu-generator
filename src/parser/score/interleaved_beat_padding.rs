@@ -256,8 +256,12 @@ pub(super) fn validate_and_pad_beats(
         events = padded.events;
     }
 
+    // `multiplier = 1`: this check runs at parse time, before the grouper-stage
+    // `tuplet_rescale::rescale_tuplets` pass has computed the measure's real tuplet
+    // multiplier — see the **Tuplet** glossary entry in `ARCHITECTURE.md` for this
+    // known, tracked limitation.
     let dotted_eighth_errors =
-        crate::grouping::validate_measure_grouping(&events, time_num, time_den)?;
+        crate::grouping::validate_measure_grouping(&events, time_num, time_den, 1)?;
 
     Ok(PaddedBeats {
         events,

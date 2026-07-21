@@ -26,6 +26,7 @@ fn tied_note_part(tied: bool) -> PartRow {
     PartRow::Timed(PartSlice {
         name: None,
         group_provenance: None,
+        resolution_multiplier: 1,
         kind: PartKind::Notes,
         soundfont: Soundfont::default(),
         volume: 100,

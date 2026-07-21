@@ -82,7 +82,7 @@ repeated in the step descriptions.
   tuplet's *compressed* duration, not its written one) before this fully works
   end-to-end. See the **Tuplet** glossary entry in `ARCHITECTURE.md` for more detail.
 
-- [ ] **Step 5 — Thread `multiplier` through grouping/compiler**
+- [x] **Step 5 — Thread `multiplier` through grouping/compiler**
   `PartGrouper` (find in `src/grouper/`), `src/grouper/grouping.rs`,
   `src/compiler/part_slice.rs`, `src/compiler/part_slice_unit.rs`: every literal that
   hardcodes "quarter-beat = 4 sixteenths" (`4`, `8`, `16`, `3`, `1`) becomes

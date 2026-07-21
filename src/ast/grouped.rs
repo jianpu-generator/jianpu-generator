@@ -95,6 +95,13 @@ pub struct PartSlice {
     /// Abbreviation of the group whose `[GroupAbbrev]` broadcast produced this
     /// measure's content, when this part didn't override it with its own line.
     pub group_provenance: Option<String>,
+    /// Copied from the source `GroupedMeasure::resolution_multiplier`: the factor
+    /// every duration in `notes` was multiplied by during tuplet rescaling. `1`
+    /// when the measure has no tuplets (the common case, a no-op). The compiler
+    /// (`compiler::part_slice`) scales its column/underline arithmetic by this
+    /// value so a rescaled measure still lays out correctly — see **Tuplet** in
+    /// `ARCHITECTURE.md`.
+    pub resolution_multiplier: u32,
 }
 
 #[derive(Clone)]

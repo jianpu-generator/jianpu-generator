@@ -45,14 +45,15 @@ fn push_half_bar_crossing_warning(
     tied_from_previous: bool,
     pos: u32,
     head_duration: u32,
+    half_bar_boundary: u32,
     span: Span,
     recoverable_errors: &mut Vec<Diagnostic>,
 ) {
     if group_membership == 0
         && !tied_from_previous
         && pos > 0
-        && pos < HALF_BAR_BOUNDARY
-        && pos + head_duration > HALF_BAR_BOUNDARY
+        && pos < half_bar_boundary
+        && pos + head_duration > half_bar_boundary
     {
         recoverable_errors.push(Diagnostic::Warning(Warning::half_bar_boundary_crossed(
             span,
@@ -66,30 +67,44 @@ fn advance_timed_cluster(
     pos: &mut u32,
     fields: &TimedBeatFields,
     span: &Span,
+    multiplier: u32,
     recoverable_errors: &mut Vec<Diagnostic>,
 ) -> Result<usize, IrrecoverableError> {
-    if is_dotted_eighth_at_beat_start(fields.dotted, fields.duration, *pos) {
+    if is_dotted_eighth_at_beat_start(fields.dotted, fields.duration, *pos, multiplier) {
         let next_timed = next_timed_index(events, index);
-        if let Some(error) = validate_dotted_eighth_tail(events, next_timed, span)? {
+        if let Some(error) = validate_dotted_eighth_tail(events, next_timed, span, multiplier)? {
             recoverable_errors.push(error);
         }
-        *pos += fields.duration + 1;
+        *pos += fields.duration + multiplier;
         return Ok(next_timed.map(|next| next + 1).unwrap_or(events.len()));
     }
 
-    *pos += timed_cluster_duration(events, index);
+    *pos += timed_cluster_duration(events, index, multiplier);
     Ok(index + timed_cluster_len(events, index))
 }
 
+/// Validates half-bar-boundary crossing and dotted-eighth-tail rules for one measure's
+/// events, scaled by `multiplier` (see `GroupedMeasure::resolution_multiplier`).
+///
+/// `multiplier` is always `1` at the current (only) call site
+/// (`interleaved_beat_padding::validate_and_pad_beats`), since that call happens at
+/// parse time, before `tuplet_rescale::rescale_tuplets` (a grouper-stage pass) has run
+/// and computed the real per-measure multiplier — see the **Tuplet** glossary entry in
+/// `ARCHITECTURE.md` for this known, tracked limitation. The parameter still exists (and
+/// every threshold below is expressed as `BASE_CONST * multiplier`) so this function
+/// itself is tuplet-rescale-correct and can be exercised directly with a non-1
+/// multiplier, as the unit tests in `grouping_tuplet_tests.rs` do.
 pub fn validate_measure_grouping(
     events: &[Spanned<ScoreEvent>],
     time_num: u8,
     time_den: u8,
+    multiplier: u32,
 ) -> Result<Vec<Diagnostic>, IrrecoverableError> {
     if time_num != 4 || time_den != 4 {
         return Ok(vec![]);
     }
 
+    let half_bar_boundary = HALF_BAR_BOUNDARY * multiplier;
     let mut pos = 0u32;
     let mut index = 0usize;
     let mut tied_from_previous = false;
@@ -114,6 +129,7 @@ pub fn validate_measure_grouping(
                     tied_from_previous,
                     pos,
                     timed_head_duration(events, index),
+                    half_bar_boundary,
                     event.span,
                     &mut recoverable_errors,
                 );
@@ -123,6 +139,7 @@ pub fn validate_measure_grouping(
                     &mut pos,
                     &fields,
                     &event.span,
+                    multiplier,
                     &mut recoverable_errors,
                 )?;
                 tied_from_previous = current_tie_to_next;
@@ -144,7 +161,7 @@ fn timed_head_duration(events: &[Spanned<ScoreEvent>], start: usize) -> u32 {
     }
 }
 
-fn timed_cluster_duration(events: &[Spanned<ScoreEvent>], start: usize) -> u32 {
+fn timed_cluster_duration(events: &[Spanned<ScoreEvent>], start: usize, multiplier: u32) -> u32 {
     let Some(event) = events.get(start) else {
         return 0;
     };
@@ -159,7 +176,7 @@ fn timed_cluster_duration(events: &[Spanned<ScoreEvent>], start: usize) -> u32 {
     let mut index = start + 1;
     while let Some(event) = events.get(index) {
         if matches!(event.value, ScoreEvent::Extension) {
-            duration += 4;
+            duration += 4 * multiplier;
             index += 1;
         } else {
             break;
@@ -202,14 +219,15 @@ fn next_timed_index(events: &[Spanned<ScoreEvent>], start: usize) -> Option<usiz
     None
 }
 
-fn is_dotted_eighth_at_beat_start(dotted: bool, duration: u32, pos: u32) -> bool {
-    dotted && duration == 3 && pos % 4 == 0
+fn is_dotted_eighth_at_beat_start(dotted: bool, duration: u32, pos: u32, multiplier: u32) -> bool {
+    dotted && duration == 3 * multiplier && pos % (4 * multiplier) == 0
 }
 
 fn validate_dotted_eighth_tail(
     events: &[Spanned<ScoreEvent>],
     next_timed: Option<usize>,
     span: &Span,
+    multiplier: u32,
 ) -> Result<Option<Diagnostic>, IrrecoverableError> {
     let Some(next_index) = next_timed else {
         return Ok(Some(Diagnostic::Error(
@@ -234,7 +252,7 @@ fn validate_dotted_eighth_tail(
         }
     };
 
-    if tail_duration == 1 {
+    if tail_duration == multiplier {
         Ok(None)
     } else {
         Ok(Some(Diagnostic::Error(
@@ -333,7 +351,7 @@ mod tests {
         let events = token_parser::parse_notes_line(bar, 0, &mut Default::default())
             .unwrap()
             .events;
-        let errors = validate_measure_grouping(&events, 4, 4).unwrap();
+        let errors = validate_measure_grouping(&events, 4, 4, 1).unwrap();
         assert!(!errors.is_empty());
         assert!(errors[0].message().contains("dotted eighth"));
     }
@@ -378,6 +396,10 @@ mod tests {
         let events = token_parser::parse_notes_line(bar2, 0, &mut state)
             .unwrap()
             .events;
-        validate_measure_grouping(&events, 4, 4).expect("grouped crossing should be allowed");
+        validate_measure_grouping(&events, 4, 4, 1).expect("grouped crossing should be allowed");
     }
 }
+
+#[cfg(test)]
+#[path = "grouping_tuplet_tests.rs"]
+mod grouping_tuplet_tests;
