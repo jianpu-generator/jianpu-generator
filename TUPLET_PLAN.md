@@ -10,7 +10,7 @@ repeated in the step descriptions.
 
 ## Steps
 
-- [ ] **Step 1 — Lexer: `{`/`}` tokens**
+- [x] **Step 1 — Lexer: `{`/`}` tokens**
   `src/parser/score/timed_parser/timed_lexer.rs`, `timed_lexer/directive_lexing.rs`:
   add `LBrace { num: u32, den: Option<u32> }` / `RBrace` tokens (mirror `LParen`/`RParen`).
   Add `try_lex_tuplet_open` (parallel to `try_lex_time_signature`) recognizing `N:{` or

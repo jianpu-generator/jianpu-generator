@@ -105,6 +105,15 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
                 Some(TimedLexToken::LParen) => {
                     self.open_group()?;
                 }
+                // Full tuplet-bracket parsing (TupletStack, ratio resolution) lands in a
+                // later step; for now, just consume the tokens so the lexer's new
+                // variants don't break this exhaustive match.
+                Some(TimedLexToken::LBrace { .. }) => {
+                    self.bump();
+                }
+                Some(TimedLexToken::RBrace) => {
+                    self.bump();
+                }
                 Some(TimedLexToken::Extension) => {
                     let span = self.current_span();
                     self.bump();
@@ -237,7 +246,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
         // Duration suffixes are never whitespace, so the unit ends at the first whitespace char.
         let raw_text = self.source.get(rel..).unwrap_or_default();
         let text = raw_text
-            .find(|c: char| c.is_whitespace() || c == '(' || c == ')')
+            .find(|c: char| c.is_whitespace() || matches!(c, '(' | ')' | '{' | '}'))
             .map(|ws_pos| &raw_text[..ws_pos])
             .unwrap_or(raw_text);
 
@@ -334,7 +343,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
         let rel = digit_offset.saturating_sub(self.base_offset);
         let raw_text = self.source.get(rel..).unwrap_or("");
         raw_text
-            .find(|c: char| c.is_whitespace() || c == '(' || c == ')')
+            .find(|c: char| c.is_whitespace() || matches!(c, '(' | ')' | '{' | '}'))
             .map(|ws_pos| digit_offset + ws_pos)
             .unwrap_or_else(|| self.base_offset + self.source.len())
     }

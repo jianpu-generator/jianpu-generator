@@ -1,5 +1,8 @@
 use super::super::directives::{build_key_change, key_change_lexeme_len, KeyChangeToken};
-use super::{LexBpmResult, LexCharResult, LexTimeSigResult, LexTokenMaybeResult, TimedLexToken};
+use super::{
+    LexBpmResult, LexCharResult, LexTimeSigResult, LexTokenMaybeResult, LexTupletOpenResult,
+    TimedLexToken,
+};
 use crate::error::{RecoverableError, Span, Spanned};
 
 pub(super) fn lex_bpm_or_recover(
@@ -157,6 +160,89 @@ pub(super) fn try_lex_time_signature(line: &str, i: usize, start: usize) -> LexT
     let span = Span::new(start, start + consumed);
     Ok(Some((
         Spanned::new(TimedLexToken::TimeSignature { num, den }, span),
+        consumed,
+    )))
+}
+
+/// Try to lex a tuplet opener `<N>:{` (implicit ratio) or `<N>:<M>:{` (explicit ratio) starting
+/// at byte offset `i` within `line`. Returns `Some((token, bytes_consumed))` on success, `None`
+/// if the text doesn't look like a tuplet opener (no digits followed by `:`), or
+/// `Err((span, message))` for a malformed tuplet opener — `:` is otherwise unused in this
+/// grammar, so once digits followed by `:` are seen, this is committed to being a tuplet opener.
+pub(super) fn try_lex_tuplet_open(line: &str, i: usize, start: usize) -> LexTupletOpenResult {
+    let slice = &line[i..];
+
+    let num_len = slice.bytes().take_while(|b| b.is_ascii_digit()).count();
+    if num_len == 0 {
+        return Ok(None);
+    }
+    if slice.as_bytes().get(num_len) != Some(&b':') {
+        return Ok(None);
+    }
+    let num_str = &slice[..num_len];
+    let num = num_str.parse::<u32>().map_err(|_| {
+        (
+            Span::new(start, start + num_len),
+            format!("invalid tuplet count: {num_str}"),
+        )
+    })?;
+
+    // Position right after the first `:`.
+    let after_first_colon = num_len + 1;
+
+    // Form 1: `N:{` — implicit ratio.
+    if slice.as_bytes().get(after_first_colon) == Some(&b'{') {
+        let consumed = after_first_colon + 1;
+        let span = Span::new(start, start + consumed);
+        return Ok(Some((
+            Spanned::new(TimedLexToken::LBrace { num, den: None }, span),
+            consumed,
+        )));
+    }
+
+    // Form 2: `N:M:{` — explicit ratio.
+    let den_len = slice[after_first_colon..]
+        .bytes()
+        .take_while(|b| b.is_ascii_digit())
+        .count();
+    if den_len == 0 {
+        return Err((
+            Span::new(start, start + after_first_colon),
+            format!("expected '{{' or a denominator after tuplet count '{num_str}:'"),
+        ));
+    }
+    let den_str = &slice[after_first_colon..after_first_colon + den_len];
+    let den = den_str.parse::<u32>().map_err(|_| {
+        (
+            Span::new(start + after_first_colon, start + after_first_colon + den_len),
+            format!("invalid tuplet denominator: {den_str}"),
+        )
+    })?;
+
+    let after_second_colon = after_first_colon + den_len;
+    if slice.as_bytes().get(after_second_colon) != Some(&b':') {
+        return Err((
+            Span::new(start, start + after_second_colon),
+            format!("expected ':{{' after tuplet ratio '{num_str}:{den_str}'"),
+        ));
+    }
+    if slice.as_bytes().get(after_second_colon + 1) != Some(&b'{') {
+        return Err((
+            Span::new(start, start + after_second_colon + 1),
+            format!("expected '{{' after tuplet ratio '{num_str}:{den_str}:'"),
+        ));
+    }
+
+    let consumed = after_second_colon + 2;
+    let span = Span::new(start, start + consumed);
+    Ok(Some((
+        Spanned::new(
+            TimedLexToken::LBrace {
+                num,
+                den: Some(den),
+            },
+            span,
+        ),
         consumed,
     )))
 }

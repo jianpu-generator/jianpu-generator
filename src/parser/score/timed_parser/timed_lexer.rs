@@ -3,7 +3,9 @@ use crate::error::{IrrecoverableError, RecoverableError, Span, Spanned};
 
 #[path = "timed_lexer/directive_lexing.rs"]
 mod directive_lexing;
-use directive_lexing::{lex_bpm_or_recover, try_lex_key_change, try_lex_time_signature};
+use directive_lexing::{
+    lex_bpm_or_recover, try_lex_key_change, try_lex_time_signature, try_lex_tuplet_open,
+};
 
 type LexLineResult =
     Result<(Vec<Spanned<TimedLexToken>>, Vec<RecoverableError>), IrrecoverableError>;
@@ -12,6 +14,7 @@ type LexTokenMaybeResult = Result<Option<(Spanned<TimedLexToken>, usize)>, Irrec
 type LexSoftError = (Span, String);
 type LexBpmResult = Result<(Spanned<TimedLexToken>, usize), LexSoftError>;
 type LexTimeSigResult = Result<Option<(Spanned<TimedLexToken>, usize)>, LexSoftError>;
+type LexTupletOpenResult = Result<Option<(Spanned<TimedLexToken>, usize)>, LexSoftError>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LexContext {
@@ -24,6 +27,8 @@ pub enum LexContext {
 pub enum TimedLexToken {
     LParen,
     RParen,
+    LBrace { num: u32, den: Option<u32> },
+    RBrace,
     Extension,
     HeadStart { offset: usize },
     Bpm(u32),
@@ -113,6 +118,7 @@ fn lex_one_char(
     match c {
         '(' => emit_single_token(TimedLexToken::LParen, start, len, true),
         ')' => emit_single_token(TimedLexToken::RParen, start, len, true),
+        '}' => emit_single_token(TimedLexToken::RBrace, start, len, true),
         '-' if at_word_boundary => emit_single_token(TimedLexToken::Extension, start, len, true),
         // `-` inside a word: duration-suffix dash; skip it.
         '-' => Ok((None, len, false)),
@@ -209,6 +215,18 @@ fn lex_low_digit(
                 return Ok((None, consumed, true));
             }
         }
+        match try_lex_tuplet_open(line, i, start) {
+            Ok(Some((tok, consumed))) => return Ok((Some(tok), consumed, true)),
+            Ok(None) => {}
+            Err((span, message)) => {
+                recoverable_errors.push(RecoverableError::general(span, message));
+                let consumed = line[i..]
+                    .bytes()
+                    .take_while(|b| !b.is_ascii_whitespace())
+                    .count();
+                return Ok((None, consumed, true));
+            }
+        }
     }
     Ok(chord_head_start_token(start, len))
 }
@@ -255,6 +273,18 @@ fn lex_high_digit_or_error(
     } = ctx;
     if at_word_boundary && context == LexContext::Notes {
         match try_lex_time_signature(line, i, start) {
+            Ok(Some((tok, consumed))) => return Ok((Some(tok), consumed, true)),
+            Ok(None) => {}
+            Err((span, message)) => {
+                recoverable_errors.push(RecoverableError::general(span, message));
+                let consumed = line[i..]
+                    .bytes()
+                    .take_while(|b| !b.is_ascii_whitespace())
+                    .count();
+                return Ok((None, consumed, true));
+            }
+        }
+        match try_lex_tuplet_open(line, i, start) {
             Ok(Some((tok, consumed))) => return Ok((Some(tok), consumed, true)),
             Ok(None) => {}
             Err((span, message)) => {
