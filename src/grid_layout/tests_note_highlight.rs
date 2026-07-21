@@ -139,10 +139,10 @@ fn note_highlight_target_extends_over_its_lyric_verse_row() {
     for target in targets {
         assert_eq!(
             target.row_end - target.row_start,
-            7,
-            "note's highlight span should cover its 7 note sub-rows plus \
-             the 1 lyric-verse row that follows them, not just the note \
-             sub-rows"
+            6,
+            "note's highlight span should cover its 6 note sub-rows (no \
+             tuplet in this block, so no tuplet_bracket sub-row) plus the 1 \
+             lyric-verse row that follows them, not just the note sub-rows"
         );
     }
 }

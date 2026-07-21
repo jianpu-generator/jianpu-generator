@@ -1,12 +1,13 @@
 use crate::compiler::types::MeasureBlock;
 use crate::grid_layout::layout::{
     block_column_width, is_chord_only_row, is_lyric_row, make_header_rows,
-    system_has_any_decoration, MUSIC_START_COL,
+    system_has_any_decoration, system_tuplet_part_indices, MUSIC_START_COL,
 };
 use crate::grid_layout::note_highlight::compute_all_note_highlight_targets;
 use crate::grid_layout::types::{
-    Header, MeasureClickTarget, MeasureHighlight, NoteHighlightTarget,
+    GridElement, Header, MeasureClickTarget, MeasureHighlight, NoteHighlightTarget,
 };
+use std::collections::HashMap;
 
 fn has_lyrics(row: &crate::compiler::types::MeasureRow) -> bool {
     row.elements.iter().any(|e| {
@@ -42,21 +43,31 @@ fn measure_column_bounds(
     (column_start, column_end)
 }
 
-pub(crate) fn system_musical_row_count(system: &[MeasureBlock]) -> usize {
+/// Number of grid rows a system's musical part rows expand to (see
+/// `expand_system_to_rows`). `tuplet_part_indices` (consolidated part indices,
+/// see `system_tuplet_part_indices`) marks which parts keep their
+/// `tuplet_bracket` sub-row in this particular system.
+pub(crate) fn system_musical_row_count(
+    system: &[MeasureBlock],
+    tuplet_part_indices: &std::collections::HashSet<usize>,
+) -> usize {
     let Some(first) = system.first() else {
         return 0;
     };
     first
         .rows
         .iter()
-        .map(|part_template| {
+        .enumerate()
+        .map(|(idx, part_template)| {
             if is_lyric_row(part_template) {
                 1
             } else {
                 let sub_count = if is_chord_only_row(part_template) {
                     4
-                } else {
+                } else if tuplet_part_indices.contains(&idx) {
                     7
+                } else {
+                    6
                 };
                 sub_count + if has_lyrics(part_template) { 1 } else { 0 }
             }
@@ -64,14 +75,32 @@ pub(crate) fn system_musical_row_count(system: &[MeasureBlock]) -> usize {
         .sum()
 }
 
+/// Absolute system index of `page_systems[page_idx][sys_idx]`, matching the
+/// `abs_sys` used to key `tuplet_bracket_map` (see `layout::layout`, which
+/// numbers systems sequentially across the whole score before splitting them
+/// into pages).
+pub(crate) fn abs_sys_index(
+    page_systems: &[Vec<Vec<MeasureBlock>>],
+    page_idx: usize,
+    sys_idx: usize,
+) -> usize {
+    page_systems
+        .iter()
+        .take(page_idx)
+        .map(Vec::len)
+        .sum::<usize>()
+        + sys_idx
+}
+
 pub(crate) fn compute_measure_highlights_for_range(
     page_systems: &[Vec<Vec<MeasureBlock>>],
-    start_index: usize,
-    end_index: usize,
+    tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
+    measure_index_range: (usize, usize),
     header: &Header,
     base: f32,
     hide_system_dividers: bool,
 ) -> Vec<(usize, MeasureHighlight)> {
+    let (start_index, end_index) = measure_index_range;
     let mut global_measure_index: usize = 0;
     let mut results: Vec<(usize, MeasureHighlight)> = Vec::new();
 
@@ -88,7 +117,10 @@ pub(crate) fn compute_measure_highlights_for_range(
             if system_has_any_decoration(system) {
                 row_offset += 1;
             }
-            let musical_row_count = system_musical_row_count(system);
+            let abs_sys = abs_sys_index(page_systems, page_idx, sys_idx);
+            let tuplet_part_indices =
+                system_tuplet_part_indices(system, tuplet_bracket_map, abs_sys);
+            let musical_row_count = system_musical_row_count(system, &tuplet_part_indices);
             let row_start = row_offset;
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 
@@ -124,6 +156,7 @@ pub(crate) fn compute_measure_highlights_for_range(
 
 pub(crate) fn compute_measure_highlight_location(
     page_systems: &[Vec<Vec<MeasureBlock>>],
+    tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
     highlighted_measure_index: usize,
     header: &Header,
     base: f32,
@@ -142,7 +175,10 @@ pub(crate) fn compute_measure_highlight_location(
             if system_has_any_decoration(system) {
                 row_offset += 1; // decoration row
             }
-            let musical_row_count = system_musical_row_count(system);
+            let abs_sys = abs_sys_index(page_systems, page_idx, sys_idx);
+            let tuplet_part_indices =
+                system_tuplet_part_indices(system, tuplet_bracket_map, abs_sys);
+            let musical_row_count = system_musical_row_count(system, &tuplet_part_indices);
             let row_start = row_offset;
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 
@@ -179,6 +215,7 @@ pub(crate) fn compute_measure_highlight_location(
 pub(crate) fn compute_error_highlight_infos(
     blocks: &[MeasureBlock],
     page_systems: &[Vec<Vec<MeasureBlock>>],
+    tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
     header: &Header,
     base: f32,
     hide_system_dividers: bool,
@@ -189,6 +226,7 @@ pub(crate) fn compute_error_highlight_infos(
         if !block.diagnostics.is_empty() {
             results.extend(compute_measure_highlight_location(
                 page_systems,
+                tuplet_bracket_map,
                 measure_idx,
                 header,
                 base,
@@ -213,6 +251,7 @@ pub(crate) fn measure_highlights_on_page(
 
 pub(crate) fn compute_all_measure_click_targets(
     page_systems: &[Vec<Vec<MeasureBlock>>],
+    tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
     header: &Header,
     base: f32,
     hide_system_dividers: bool,
@@ -233,7 +272,10 @@ pub(crate) fn compute_all_measure_click_targets(
             if system_has_any_decoration(system) {
                 row_offset += 1;
             }
-            let musical_row_count = system_musical_row_count(system);
+            let abs_sys = abs_sys_index(page_systems, page_idx, sys_idx);
+            let tuplet_part_indices =
+                system_tuplet_part_indices(system, tuplet_bracket_map, abs_sys);
+            let musical_row_count = system_musical_row_count(system, &tuplet_part_indices);
             let row_start = row_offset;
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 
@@ -286,20 +328,35 @@ pub(crate) struct HighlightAndClickInfos {
     pub(crate) all_note_highlight_target_infos: Vec<(usize, NoteHighlightTarget)>,
 }
 
+#[derive(Clone, Copy)]
+pub(crate) struct HighlightAndClickInfosParams<'a> {
+    pub(crate) blocks: &'a [MeasureBlock],
+    pub(crate) page_systems: &'a [Vec<Vec<MeasureBlock>>],
+    pub(crate) tuplet_bracket_map: &'a HashMap<(usize, usize), Vec<GridElement>>,
+    pub(crate) header: &'a Header,
+    pub(crate) base: f32,
+    pub(crate) hide_system_dividers: bool,
+    pub(crate) highlighted_measure_range: Option<(usize, usize)>,
+}
+
 pub(crate) fn compute_highlight_and_click_infos(
-    blocks: &[MeasureBlock],
-    page_systems: &[Vec<Vec<MeasureBlock>>],
-    header: &Header,
-    base: f32,
-    hide_system_dividers: bool,
-    highlighted_measure_range: Option<(usize, usize)>,
+    params: &HighlightAndClickInfosParams<'_>,
 ) -> HighlightAndClickInfos {
+    let HighlightAndClickInfosParams {
+        blocks,
+        page_systems,
+        tuplet_bracket_map,
+        header,
+        base,
+        hide_system_dividers,
+        highlighted_measure_range,
+    } = *params;
     let highlight_infos = highlighted_measure_range
-        .map(|(start, end)| {
+        .map(|range| {
             compute_measure_highlights_for_range(
                 page_systems,
-                start,
-                end,
+                tuplet_bracket_map,
+                range,
                 header,
                 base,
                 hide_system_dividers,
@@ -307,12 +364,28 @@ pub(crate) fn compute_highlight_and_click_infos(
         })
         .unwrap_or_default();
 
-    let error_highlight_infos =
-        compute_error_highlight_infos(blocks, page_systems, header, base, hide_system_dividers);
-    let all_click_target_infos =
-        compute_all_measure_click_targets(page_systems, header, base, hide_system_dividers);
-    let all_note_highlight_target_infos =
-        compute_all_note_highlight_targets(page_systems, header, base, hide_system_dividers);
+    let error_highlight_infos = compute_error_highlight_infos(
+        blocks,
+        page_systems,
+        tuplet_bracket_map,
+        header,
+        base,
+        hide_system_dividers,
+    );
+    let all_click_target_infos = compute_all_measure_click_targets(
+        page_systems,
+        tuplet_bracket_map,
+        header,
+        base,
+        hide_system_dividers,
+    );
+    let all_note_highlight_target_infos = compute_all_note_highlight_targets(
+        page_systems,
+        tuplet_bracket_map,
+        header,
+        base,
+        hide_system_dividers,
+    );
 
     HighlightAndClickInfos {
         highlight_infos,

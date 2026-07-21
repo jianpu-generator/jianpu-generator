@@ -211,6 +211,63 @@ pub(crate) struct NotePartParams<'a> {
     pub(crate) measure_layout: &'a [MeasureColumnLayout],
 }
 
+/// A part's sub-rows before any elements are pushed into them, plus the
+/// `(arc_sub, head_sub)` indices locating its arc/note-head bands within
+/// them, and the `sub_count` used by `expand_measure_elements` to derive the
+/// underline sub-rows. A chord-only row has no `tuplet_bracket` sub-row, so
+/// its topmost row (index 0) is the arc row. A note row without a tuplet in
+/// this system also drops that sub-row, so its arc row is index 0 too. A
+/// note row with a tuplet keeps `tuplet_bracket` as index 0, pushing its arc
+/// row to index 1 (see `note_part_sub_row_heights`).
+struct PartSubRows {
+    rows: Vec<GridRow>,
+    sub_count: usize,
+    arc_sub: usize,
+    head_sub: usize,
+}
+
+fn build_part_sub_rows(
+    is_chord_only: bool,
+    has_tuplet: bool,
+    base: f32,
+    column_count: u32,
+    measure_layout: &[MeasureColumnLayout],
+) -> PartSubRows {
+    let (sub_heights, sub_count): (Vec<f32>, usize) = if is_chord_only {
+        (chord_part_sub_row_heights(base).to_vec(), 4)
+    } else if has_tuplet {
+        (note_part_sub_row_heights(base).to_vec(), 7)
+    } else {
+        // No tuplet in this system for this part: drop the `tuplet_bracket`
+        // sub-row entirely rather than reserving its height unused (see
+        // `note_part_height_pt`, which mirrors this for system-height math).
+        (note_part_sub_row_heights(base)[1..].to_vec(), 6)
+    };
+    let rows: Vec<GridRow> = sub_heights
+        .iter()
+        .map(|&h| GridRow {
+            height_pt: h,
+            column_count,
+            has_label_region: true,
+            measure_layout: measure_layout.to_vec(),
+            elements: vec![],
+        })
+        .collect();
+    let (arc_sub, head_sub) = if is_chord_only {
+        (0, 1)
+    } else if has_tuplet {
+        (1, 3)
+    } else {
+        (0, 2)
+    };
+    PartSubRows {
+        rows,
+        sub_count,
+        arc_sub,
+        head_sub,
+    }
+}
+
 pub(crate) fn expand_note_part(
     system: &[MeasureBlock],
     params: &NotePartParams<'_>,
@@ -222,25 +279,19 @@ pub(crate) fn expand_note_part(
     let bar_height = params.bar_height;
     let part_arcs = params.part_arcs;
     let is_chord_only = is_chord_only_row(part_template);
-    let (sub_heights, sub_count): (Vec<f32>, usize) = if is_chord_only {
-        (chord_part_sub_row_heights(base).to_vec(), 4)
-    } else {
-        (note_part_sub_row_heights(base).to_vec(), 7)
-    };
-    let mut sub_rows: Vec<GridRow> = sub_heights
-        .iter()
-        .map(|&h| GridRow {
-            height_pt: h,
-            column_count,
-            has_label_region: true,
-            measure_layout: params.measure_layout.to_vec(),
-            elements: vec![],
-        })
-        .collect();
-    // A chord-only row has no `tuplet_bracket` sub-row, so its topmost row
-    // (index 0) is the arc row; a note row's topmost row is `tuplet_bracket`
-    // and its arc row is index 1 (see `note_part_sub_row_heights`).
-    let (arc_sub, head_sub) = if is_chord_only { (0, 1) } else { (1, 3) };
+    let has_tuplet = !params.part_tuplet_brackets.is_empty();
+    let PartSubRows {
+        rows: mut sub_rows,
+        sub_count,
+        arc_sub,
+        head_sub,
+    } = build_part_sub_rows(
+        is_chord_only,
+        has_tuplet,
+        base,
+        column_count,
+        params.measure_layout,
+    );
     if !part_template.label.is_empty() {
         if let Some(row) = sub_rows.get_mut(head_sub) {
             row.elements.push(GridElement {
@@ -295,7 +346,7 @@ pub(crate) fn expand_note_part(
     if let Some(row) = sub_rows.get_mut(arc_sub) {
         row.elements.extend_from_slice(part_arcs);
     }
-    if !is_chord_only {
+    if has_tuplet {
         if let Some(row) = sub_rows.get_mut(0) {
             row.elements.extend_from_slice(params.part_tuplet_brackets);
         }
@@ -317,7 +368,9 @@ pub(crate) fn expand_system_to_rows(
     };
     let total_musical_cols: u32 = system.iter().map(block_column_width).sum();
     let column_count = MUSIC_START_COL + total_musical_cols;
-    let bar_height = compute_bar_height(first, base);
+    let tuplet_part_indices: std::collections::HashSet<usize> =
+        system_tuplet_brackets.keys().copied().collect();
+    let bar_height = compute_bar_height(first, base, &tuplet_part_indices);
     let mut all_rows: Vec<GridRow> = Vec::new();
     for (part_idx, part_template) in first.rows.iter().enumerate() {
         if is_lyric_row(part_template) {

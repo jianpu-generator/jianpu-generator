@@ -309,7 +309,7 @@ pub(super) fn render_tuplet_bracket(
     row_height: &f32,
     base_font_size: &f32,
 ) -> Vec<SvgElement> {
-    let tick_height = row_height * 0.25;
+    let tick_height = row_height * 0.35;
     let tick_bottom = elem.y + row_height * 0.15;
     let line_y = tick_bottom - tick_height;
     let font_size = *base_font_size * 0.8;

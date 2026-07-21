@@ -3,6 +3,7 @@ use crate::grid_layout::highlight::compute_all_measure_click_targets;
 use crate::grid_layout::highlight::compute_measure_highlights_for_range;
 use crate::grid_layout::layout::compute_measure_highlight_location;
 use crate::grid_layout::types::Header;
+use std::collections::HashMap;
 
 fn simple_block(col_count: u32) -> MeasureBlock {
     let elements: Vec<ColumnElement> = (0..col_count)
@@ -58,7 +59,7 @@ fn no_header() -> Header {
 fn returns_none_for_out_of_range_measure_index() {
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4), simple_block(4)]]];
-    let result = compute_measure_highlight_location(&page_systems, 2, &no_header(), 20.0, false);
+    let result = compute_measure_highlight_location(&page_systems, &HashMap::new(), 2, &no_header(), 20.0, false);
     assert!(result.is_none());
 }
 
@@ -72,7 +73,7 @@ fn first_block_in_single_system_has_correct_column_range() {
     // centered in its own column: column_end = (2 + 5) - 0.5 = 6.5.
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4), simple_block(4)]]];
-    let result = compute_measure_highlight_location(&page_systems, 0, &no_header(), 20.0, false)
+    let result = compute_measure_highlight_location(&page_systems, &HashMap::new(), 0, &no_header(), 20.0, false)
         .expect("should find measure 0");
     let (_, highlight) = result;
     assert_eq!(
@@ -92,7 +93,7 @@ fn second_block_column_start_follows_first_block_width() {
     // end of its column (HAlign::End): column_end = 7 + 5 = 12.0.
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4), simple_block(4)]]];
-    let result = compute_measure_highlight_location(&page_systems, 1, &no_header(), 20.0, false)
+    let result = compute_measure_highlight_location(&page_systems, &HashMap::new(), 1, &no_header(), 20.0, false)
         .expect("should find measure 1");
     let (_, highlight) = result;
     assert_eq!(highlight.column_start, 6.5);
@@ -104,7 +105,7 @@ fn measure_on_second_page_returns_correct_page_index() {
     // page 0: system with measure 0; page 1: system with measure 1
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4)]], vec![vec![simple_block(4)]]];
-    let result = compute_measure_highlight_location(&page_systems, 1, &no_header(), 20.0, false)
+    let result = compute_measure_highlight_location(&page_systems, &HashMap::new(), 1, &no_header(), 20.0, false)
         .expect("should find measure 1");
     let (page_idx, _) = result;
     assert_eq!(page_idx, 1, "measure 1 is on page 1");
@@ -115,7 +116,7 @@ fn range_with_single_index_returns_one_highlight_matching_location() {
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4), simple_block(4)]]];
     let highlights =
-        compute_measure_highlights_for_range(&page_systems, 0, 0, &no_header(), 20.0, false);
+        compute_measure_highlights_for_range(&page_systems, &HashMap::new(), (0, 0), &no_header(), 20.0, false);
     assert_eq!(highlights.len(), 1);
     let (page_idx, h) = highlights
         .into_iter()
@@ -131,7 +132,7 @@ fn range_spanning_two_measures_returns_two_highlights() {
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4), simple_block(4)]]];
     let highlights =
-        compute_measure_highlights_for_range(&page_systems, 0, 1, &no_header(), 20.0, false);
+        compute_measure_highlights_for_range(&page_systems, &HashMap::new(), (0, 1), &no_header(), 20.0, false);
     assert_eq!(highlights.len(), 2);
     let mut iter = highlights.into_iter();
     let (_, first_h) = iter.next().expect("first highlight");
@@ -145,7 +146,7 @@ fn range_out_of_bounds_returns_empty_vec() {
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4), simple_block(4)]]];
     let highlights =
-        compute_measure_highlights_for_range(&page_systems, 5, 5, &no_header(), 20.0, false);
+        compute_measure_highlights_for_range(&page_systems, &HashMap::new(), (5, 5), &no_header(), 20.0, false);
     assert!(highlights.is_empty());
 }
 
@@ -154,7 +155,7 @@ fn range_spanning_two_pages_reports_correct_page_indices() {
     let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
         vec![vec![vec![simple_block(4)]], vec![vec![simple_block(4)]]];
     let highlights =
-        compute_measure_highlights_for_range(&page_systems, 0, 1, &no_header(), 20.0, false);
+        compute_measure_highlights_for_range(&page_systems, &HashMap::new(), (0, 1), &no_header(), 20.0, false);
     assert_eq!(highlights.len(), 2);
     let mut iter = highlights.into_iter();
     let (first_page, _) = iter.next().expect("first highlight");
@@ -175,13 +176,13 @@ fn global_measure_index_accounts_for_a_merged_block() {
         merged_block(4, 3),
         simple_block(4),
     ]]];
-    let result = compute_measure_highlight_location(&page_systems, 4, &no_header(), 20.0, false);
+    let result = compute_measure_highlight_location(&page_systems, &HashMap::new(), 4, &no_header(), 20.0, false);
     assert!(
         result.is_some(),
         "measure index 4 should resolve to the block after the merged run"
     );
 
-    let targets = compute_all_measure_click_targets(&page_systems, &no_header(), 20.0, false);
+    let targets = compute_all_measure_click_targets(&page_systems, &HashMap::new(), &no_header(), 20.0, false);
     let measure_indices: Vec<usize> = targets.iter().map(|(_, t)| t.measure_index).collect();
     assert_eq!(
         measure_indices,

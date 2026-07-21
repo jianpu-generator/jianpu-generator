@@ -4,7 +4,7 @@ use crate::grid_layout::tuplet_placement::resolve_tuplet_spans;
 use crate::grid_layout::types::Header;
 use crate::grid_layout::types::{GridElement, GridPage, GridRow};
 use crate::render_config::RenderConfig;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 // ── Row classification ────────────────────────────────────────────────────────
 
@@ -53,7 +53,7 @@ pub(crate) fn is_chord_only_row(row: &MeasureRow) -> bool {
 /// [tuplet_bracket, arc, above_dot, note_head, below_dot, half_ul, quarter_ul]
 pub(crate) fn note_part_sub_row_heights(base: f32) -> [f32; 7] {
     [
-        base * 0.30, // tuplet bracket (label + short bracket path)
+        base * 1.0, // tuplet bracket (label + short bracket path)
         base * 0.30, // tie/slur arc
         base * 0.25, // above-octave dots
         base,        // note head (main)
@@ -61,6 +61,20 @@ pub(crate) fn note_part_sub_row_heights(base: f32) -> [f32; 7] {
         base * 0.15, // half-beat underline
         base * 0.15, // quarter-beat underline
     ]
+}
+
+/// Total height in points for a Note/Chord part's musical sub-rows, omitting
+/// the `tuplet_bracket` band's height when the part has no tuplet in this
+/// system — so a part without a tuplet doesn't reserve dead space for a
+/// bracket it never draws (see `expand_note_part`, which mirrors this by
+/// skipping the sub-row itself).
+pub(crate) fn note_part_height_pt(base: f32, has_tuplet_bracket: bool) -> f32 {
+    let heights = note_part_sub_row_heights(base);
+    if has_tuplet_bracket {
+        heights.iter().sum()
+    } else {
+        heights[1..].iter().sum()
+    }
 }
 
 /// Returns the 4 sub-row_heights for a Chord-symbol-only part, in order:
@@ -127,17 +141,51 @@ pub(crate) use spacing::measure_column_weights;
 pub(crate) use spacing::{build_measure_column_layout, MIN_MEASURE_WIDTH_PT};
 
 /// Total height in points for all musical sub-rows in a system
-/// (sum over all non-lyric part rows).
-pub(crate) fn system_musical_height_pt(block: &MeasureBlock, base: f32) -> f32 {
+/// (sum over all non-lyric part rows). `tuplet_part_indices` holds the
+/// consolidated part indices (row position within `block.rows`) that have a
+/// tuplet bracket in this system, so parts without one don't count the
+/// `tuplet_bracket` sub-row's height (see `note_part_height_pt`).
+/// Consolidated part indices (row position within `system`'s first block's
+/// `rows`) that have a tuplet bracket in this system, per `tuplet_bracket_map`
+/// (keyed by `(abs_sys, source_part_index)`, see `resolve_tuplet_spans`).
+/// Shared by every pass that needs to know whether a part's `tuplet_bracket`
+/// sub-row is reserved in this particular system — layout height math
+/// (`system_musical_height_pt`), row expansion (`expand_note_part`), and the
+/// highlight/click/note-highlight row-counting passes (`grid_layout::highlight`,
+/// `grid_layout::note_highlight`) all must agree on this or their row indices
+/// drift apart.
+pub(crate) fn system_tuplet_part_indices(
+    system: &[MeasureBlock],
+    tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
+    abs_sys: usize,
+) -> HashSet<usize> {
+    let Some(first) = system.first() else {
+        return HashSet::new();
+    };
+    first
+        .rows
+        .iter()
+        .enumerate()
+        .filter(|(_, row)| tuplet_bracket_map.contains_key(&(abs_sys, row.source_part_index)))
+        .map(|(idx, _)| idx)
+        .collect()
+}
+
+pub(crate) fn system_musical_height_pt(
+    block: &MeasureBlock,
+    base: f32,
+    tuplet_part_indices: &HashSet<usize>,
+) -> f32 {
     block
         .rows
         .iter()
-        .filter(|r| !is_lyric_row(r))
-        .map(|r| {
+        .enumerate()
+        .filter(|(_, r)| !is_lyric_row(r))
+        .map(|(idx, r)| {
             if is_chord_only_row(r) {
                 chord_part_sub_row_heights(base).iter().sum::<f32>()
             } else {
-                note_part_sub_row_heights(base).iter().sum::<f32>()
+                note_part_height_pt(base, tuplet_part_indices.contains(&idx))
             }
         })
         .sum()
@@ -194,8 +242,12 @@ pub(crate) fn pack_into_systems(
     systems
 }
 
-pub(crate) fn compute_bar_height(first: &MeasureBlock, base: f32) -> f32 {
-    system_musical_height_pt(first, base) + system_lyric_height_pt(first, base)
+pub(crate) fn compute_bar_height(
+    first: &MeasureBlock,
+    base: f32,
+    tuplet_part_indices: &HashSet<usize>,
+) -> f32 {
+    system_musical_height_pt(first, base, tuplet_part_indices) + system_lyric_height_pt(first, base)
 }
 
 pub(crate) fn system_has_any_decoration(system: &[MeasureBlock]) -> bool {
@@ -211,11 +263,15 @@ use super::note_highlight::note_highlight_targets_on_page;
 pub(crate) use decoration::make_header_rows;
 use decoration::{make_decoration_row, make_separator_row};
 
-fn system_total_height(system: &[MeasureBlock], base: f32) -> f32 {
+fn system_total_height(
+    system: &[MeasureBlock],
+    base: f32,
+    tuplet_part_indices: &HashSet<usize>,
+) -> f32 {
     let Some(first) = system.first() else {
         return 0.0;
     };
-    let musical = system_musical_height_pt(first, base);
+    let musical = system_musical_height_pt(first, base, tuplet_part_indices);
     let lyric = system_lyric_height_pt(first, base);
     let deco = if system_has_any_decoration(system) {
         crate::font_metrics::directive_line_row_height()
@@ -281,7 +337,42 @@ fn build_page_rows(
 
 #[cfg(test)]
 pub(crate) use super::highlight::compute_measure_highlight_location;
-use super::highlight::{compute_highlight_and_click_infos, HighlightAndClickInfos};
+use super::highlight::{
+    compute_highlight_and_click_infos, HighlightAndClickInfos, HighlightAndClickInfosParams,
+};
+
+/// Greedily packs `systems` into pages, each page holding as many systems as
+/// fit within `usable_h` (accounting for inter-system separator gaps). Split
+/// out of `layout` to keep that function under its line-count cap.
+fn pack_page_systems(
+    systems: Vec<Vec<MeasureBlock>>,
+    tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
+    base: f32,
+    usable_h: f32,
+    hide_system_dividers: bool,
+) -> Vec<Vec<Vec<MeasureBlock>>> {
+    let mut page_systems: Vec<Vec<Vec<MeasureBlock>>> = Vec::new();
+    let mut current_page: Vec<Vec<MeasureBlock>> = Vec::new();
+    let mut used_h: f32 = 0.0;
+
+    for (abs_sys, system) in systems.into_iter().enumerate() {
+        let tuplet_part_indices = system_tuplet_part_indices(&system, tuplet_bracket_map, abs_sys);
+        let sys_h = system_total_height(&system, base, &tuplet_part_indices);
+        let gap = if current_page.is_empty() || hide_system_dividers {
+            0.0
+        } else {
+            separator_row_height()
+        };
+        if !current_page.is_empty() && used_h + gap + sys_h > usable_h {
+            page_systems.push(std::mem::take(&mut current_page));
+            used_h = 0.0;
+        }
+        used_h += gap + sys_h;
+        current_page.push(system);
+    }
+    page_systems.push(current_page);
+    page_systems
+}
 
 /// Public entry point: convert compiler blocks to GridPages.
 pub fn layout(
@@ -308,39 +399,28 @@ pub fn layout(
     let footer_h = base * 0.40;
     let usable_h = page_height_pt - 2.0 * super::PAGE_MARGIN - header_h - footer_h;
 
-    let mut page_systems: Vec<Vec<Vec<MeasureBlock>>> = Vec::new();
-    let mut current_page: Vec<Vec<MeasureBlock>> = Vec::new();
-    let mut used_h: f32 = 0.0;
-
-    for system in systems {
-        let sys_h = system_total_height(&system, base);
-        let gap = if current_page.is_empty() || config.hide_system_dividers {
-            0.0
-        } else {
-            separator_row_height()
-        };
-        if !current_page.is_empty() && used_h + gap + sys_h > usable_h {
-            page_systems.push(std::mem::take(&mut current_page));
-            used_h = 0.0;
-        }
-        used_h += gap + sys_h;
-        current_page.push(system);
-    }
-    page_systems.push(current_page);
+    let page_systems = pack_page_systems(
+        systems,
+        &tuplet_bracket_map,
+        base,
+        usable_h,
+        config.hide_system_dividers,
+    );
 
     let HighlightAndClickInfos {
         highlight_infos,
         error_highlight_infos,
         all_click_target_infos,
         all_note_highlight_target_infos,
-    } = compute_highlight_and_click_infos(
+    } = compute_highlight_and_click_infos(&HighlightAndClickInfosParams {
         blocks,
-        &page_systems,
+        page_systems: &page_systems,
+        tuplet_bracket_map: &tuplet_bracket_map,
         header,
         base,
-        config.hide_system_dividers,
+        hide_system_dividers: config.hide_system_dividers,
         highlighted_measure_range,
-    );
+    });
 
     let total_pages = page_systems.len() as u32;
     let mut abs_system_index_start: usize = 0;
