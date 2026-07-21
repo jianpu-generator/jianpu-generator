@@ -2,15 +2,12 @@ import { expect, test } from '@playwright/test'
 import { focusEditor } from './fileSwitcherHelpers'
 
 /**
- * The default demo source ("Jianpu Postcard" syntax reference) declares two
- * parts, in this order:
+ * The default demo source (demo/01-pitches.jianpu) declares a single part:
  *
  *   # parts
  *   Melody [M] = notes+lyrics
- *   Chords [C] = chords
  *
- * Line 16 in the editor (`[M] 0 0 0 0`) is the first note line of measure 1,
- * containing only a melody line (no chords).
+ * Line 10 in the editor (`[M] 1 2 3 0`) is the first note line of measure 1.
  *
  * Regression: when the cursor is inside a measure, `highlightedSvgs` is shown
  * in the Preview. Toggling a part should re-render `highlightedSvgs` with the
@@ -28,7 +25,7 @@ test('toggling a part rerenders the highlighted SVG while a measure is focused',
   // Focus the Monaco editor and navigate to the first measure.
   await focusEditor(page)
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('16')
+  await page.keyboard.type('10')
   await page.keyboard.press('Enter')
 
   // Allow the debounce + highlight render worker round-trip.

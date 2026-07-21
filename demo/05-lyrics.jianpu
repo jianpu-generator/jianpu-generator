@@ -6,18 +6,27 @@ max_measures_per_system = 1
 Melody [M] = notes+lyrics
 
 # score
-label="Lyrics: CJK syllables"
+label="CJK syllables"
 [M] 1 2 3 4
 [M] 春天来了
 
-label="Lyrics: Latin syllables"
+label="Latin syllables"
 [M] 1 2 3 4
 [M] do re mi fa
 
-label="Lyrics: syllable break (-)"
-[M] 1 2 3 4
-[M] La la la la
+label="Syllable break (-)"
+[M] 1 1 5 5
+[M] twin- kle twin- kle
 
-label="Lyrics: no-lyrics marker (_)"
+label="Held syllable (-)"
+[M] 4~4 3 2
+[M] he - world
+
+label="No-lyrics marker (_)"
 [M] 0
 [M] _
+
+label="Multiple verses"
+[M] 1 2 3 4
+[M] do re mi fa
+[M] one two three four

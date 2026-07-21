@@ -2,14 +2,14 @@ import { expect, test } from '@playwright/test'
 import { focusEditor } from './fileSwitcherHelpers'
 
 /**
- * The default demo source ("Jianpu Postcard" syntax reference) has the
- * following Monaco line numbers (1-based):
+ * The default demo source (demo/01-pitches.jianpu) has the following Monaco
+ * line numbers (1-based):
  *
  *   1  # metadata
  *   ...
- *  15  # score
- *  16  [M] 0 0 0 0   ← melody note line → measure 1 (all rests)
- *  17  (blank)
+ *   8  # score
+ *   9  label="Scale degrees & rest"
+ *  10  [M] 1 2 3 0   ← melody note line → measure 1
  *
  * Line 1 (`# metadata`) sits outside any measure span.
  */
@@ -23,9 +23,9 @@ test('renders amber highlight rect when cursor is inside a measure', async ({
 
   await focusEditor(page)
 
-  // Navigate to line 16 (first note line of measure 1).
+  // Navigate to line 10 (first note line of measure 1).
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('16')
+  await page.keyboard.type('10')
   await page.keyboard.press('Enter')
 
   // Allow the 300 ms debounce plus the highlight render worker round-trip.
@@ -50,7 +50,7 @@ test('removes highlight rect when cursor moves outside all measures', async ({
 
   // First put cursor inside a measure so the highlight appears.
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('16')
+  await page.keyboard.type('10')
   await page.keyboard.press('Enter')
   await page.waitForTimeout(1_000)
 

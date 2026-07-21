@@ -6,24 +6,20 @@ max_measures_per_system = 1
 Melody [M] = notes+lyrics
 
 # score
-label="Duration: eighth (_) & sixteenth (=)"
+label="Eighth & sixteenth (_/=)"
 [M] 1_ 1_ 1= 1= 1= 1= 1 -
 [M] _
 
-label="Duration: dotted (.)"
+label="Dotted (.)"
 [M] 1. 2_ 1_. 2= 0
 [M] _
 
-label="Duration: extension (-)"
+label="Extension (-)"
 [M] 1 - - -
 
 
-label="Repeat: repeat last note (r) & bare eighth/sixteenth (_/=)"
+label="Repeat (r, _, =)"
 [M] 1 r r -
 
 [M] __ 0 0 0
-[M] _
-
-label="Duplicate: works with tie (1~_)"
-[M] 1~ _0_ 00
 [M] _
