@@ -181,7 +181,7 @@ repeated in the step descriptions.
   tuplet grouping without a beam underneath it, and fixing beaming was explicitly out of scope for
   this step.
 
-- [ ] **Step 8 — Docs**
+- [x] **Step 8 — Docs**
   `syntax.md`: new "Tuplets" subsection under Duration suffixes — `{N:notes}`,
   `{N:M:notes}`, implicit-ratio table, nesting with `(...)`, no-cross-line-tuplets rule.
   `ARCHITECTURE.md`: document `TupletInfo`, `resolution_multiplier` on `GroupedMeasure`,

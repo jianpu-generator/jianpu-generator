@@ -374,6 +374,40 @@ Duration is measured in **quarter-beats** (sixteenth-note units). In 4/4, one fu
 
 Suffix order is flexible (`1_,'` and `1',_` are equivalent).
 
+### Tuplets
+
+`N:{notes}` brackets `N` notes to be played in the time normally taken by a standard "against" count (3-in-2, 2-in-3, 5-in-4, ...); `N:M:{notes}` overrides that with an explicit `M`. The brace opens right after the count, not before it — `3:{1_1_1_}`, not `{3:1_1_1_}`.
+
+```
+3:{1_1_1_} 2_ 3_ 4_ 5_ 6_    an eighth-note triplet, then five plain eighth notes
+5:4:{1=1=1=1=1=}             a quintuplet of sixteenth notes, explicit 5-in-4
+```
+
+| `N` | Implied `M` (against count) |
+|-----|------------------------------|
+| 2 | 3 |
+| 3 | 2 |
+| 4 | 3 |
+| 5 | 4 |
+| 6 | 4 |
+| 7 | 4 |
+| 9 | 8 |
+
+Any other `N` has no standard implied ratio — omitting `:M` is a recoverable error ("tuplet ratio for N is ambiguous; use `{N:M:...}` to specify explicitly"); write `N:M:{notes}` instead.
+
+The bracket must contain exactly `N` notes/rests/repeat-atoms (each counts once, same rule as `(…)` group note-counting) — a mismatch at the closing `}` is a recoverable error, though the notes present are still emitted and rendered.
+
+Tuplets nest with `(…)` slur/tie groups in either direction:
+
+```
+(3:{1_1_1_} 2_) 3_ 4_ 5_ 6_    slur group wrapping a triplet
+3:{(1_1_) 1_} 2_ 3_ 4_ 5_ 6_   triplet wrapping a slur group
+```
+
+Unlike `(…)` groups, a tuplet **cannot span lines**: an unclosed `{` at the end of a line is a hard parse error, not a cross-line continuation.
+
+**Note:** the measure-capacity check (below) currently compares each tuplet's *written* (nominal, uncompressed) duration against the bar, not its actual rescaled duration — so a tuplet that only fits the bar once compressed/expanded (the whole point of writing one) can be misjudged as too short or too long at parse time. The triplet example above works because its notes' nominal durations, ignoring the tuplet, already sum to the bar's capacity on their own. Until this is fixed, keep a tuplet's *nominal* duration matching what the bar needs, or use it as a measure's only content.
+
 ### Octave markers
 
 | Suffix | Meaning |
