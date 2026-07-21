@@ -35,6 +35,7 @@ pub(super) fn process_measure_notes(
         raw,
         ties,
         channel,
+        part.resolution_multiplier,
         |event| match event {
             NoteEvent::Note(n) => EventResolution::Notes {
                 midi_notes: vec![resolve_midi_note_with_accidental(
@@ -78,6 +79,7 @@ fn process_events_with_ties(
     raw: &mut Vec<RawEvent>,
     ties: &mut HashMap<u8, u32>,
     channel: u8,
+    multiplier: u32,
     resolve: impl Fn(&NoteEvent) -> EventResolution,
 ) -> u32 {
     let mut tick = current_tick;
@@ -86,7 +88,7 @@ fn process_events_with_ties(
             EventResolution::Skip => {}
             EventResolution::Rest { duration } => {
                 flush_pending_ties_at_tick(ties, tick, raw, channel);
-                tick += duration_to_ticks(duration);
+                tick += duration_to_ticks(duration, multiplier);
             }
             EventResolution::Notes {
                 midi_notes,
@@ -102,7 +104,7 @@ fn process_events_with_ties(
                         kind: RawKind::NoteOn { channel, note: n },
                     });
                 }
-                let off_tick = tick + duration_to_ticks(duration);
+                let off_tick = tick + duration_to_ticks(duration, multiplier);
                 if slur {
                     for &n in &midi_notes {
                         ties.insert(n, off_tick);
@@ -115,7 +117,7 @@ fn process_events_with_ties(
                         });
                     }
                 }
-                tick += duration_to_ticks(duration);
+                tick += duration_to_ticks(duration, multiplier);
             }
         }
     }
@@ -128,6 +130,7 @@ pub(super) fn process_chord_events(
     raw: &mut Vec<RawEvent>,
     active_key: &KeyChange,
     chord_ties: &mut HashMap<u8, u32>,
+    multiplier: u32,
 ) -> u32 {
     process_events_with_ties(
         events,
@@ -135,6 +138,7 @@ pub(super) fn process_chord_events(
         raw,
         chord_ties,
         CHORD_CHANNEL,
+        multiplier,
         |event| match event {
             NoteEvent::Chord(c) => EventResolution::Notes {
                 midi_notes: chord_midi_notes(c, active_key),
@@ -161,6 +165,7 @@ pub(super) fn process_percussion_events(
         raw,
         percussion_ties,
         PERCUSSION_CHANNEL,
+        part.resolution_multiplier,
         |event| match event {
             // The soundfont-string number is reinterpreted as a fixed GM percussion key
             // (not a MIDI program number) for percussion parts.

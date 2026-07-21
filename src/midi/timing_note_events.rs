@@ -120,6 +120,10 @@ struct TickSpanEvent {
     start_tick: u32,
     duration: u32,
     tie_to_next: bool,
+    /// This event's measure's tuplet-rescale factor (`GroupedMeasure::resolution_multiplier`,
+    /// carried onto `PartSlice`), divided back out when converting `duration` to ticks. `1`
+    /// for a measure with no tuplets.
+    multiplier: u32,
 }
 
 /// Appends (or extends, for a tie continuation) one event's tick span onto
@@ -129,7 +133,7 @@ fn push_or_extend_tick_span(
     results: &mut Vec<(usize, usize, u32, u32)>,
     event: &TickSpanEvent,
 ) -> u32 {
-    let end_tick = event.start_tick + duration_to_ticks(event.duration);
+    let end_tick = event.start_tick + duration_to_ticks(event.duration, event.multiplier);
     if let Some((tie_note_id, result_idx)) = cursor.open_tie.take() {
         if let Some(entry) = results.get_mut(result_idx) {
             entry.3 = end_tick;
@@ -225,6 +229,10 @@ struct PartEventContext<'a> {
     written_measure_index: usize,
     measure_start_tick: u32,
     note_id_lookup: &'a HashMap<(usize, usize, usize), usize>,
+    /// This part's slice's tuplet-rescale factor (`PartSlice::resolution_multiplier`),
+    /// divided back out when converting event durations to ticks. `1` for a measure
+    /// with no tuplets.
+    multiplier: u32,
 }
 
 /// Records (or extends) tick spans for every visible event of one part's
@@ -240,6 +248,7 @@ fn record_part_note_events(
         written_measure_index,
         measure_start_tick,
         note_id_lookup,
+        multiplier,
     } = *ctx;
     let mut tick = measure_start_tick;
     for (event_idx, event) in events.iter().enumerate() {
@@ -257,7 +266,7 @@ fn record_part_note_events(
                 // matching `compiler::part_slice::compile_rest`, which
                 // unconditionally drops any pending tie state.
                 cursor.open_tie = None;
-                let end_tick = tick + duration_to_ticks(r.duration);
+                let end_tick = tick + duration_to_ticks(r.duration, multiplier);
                 results.push((written_part_idx, event_note_id, tick, end_tick));
                 end_tick
             }
@@ -270,6 +279,7 @@ fn record_part_note_events(
                     start_tick: tick,
                     duration: n.duration,
                     tie_to_next: n.tie_to_next(),
+                    multiplier,
                 },
             ),
             NoteEvent::Chord(c) => push_or_extend_tick_span(
@@ -281,6 +291,7 @@ fn record_part_note_events(
                     start_tick: tick,
                     duration: c.duration,
                     tie_to_next: c.tie_to_next(),
+                    multiplier,
                 },
             ),
             NoteEvent::Percussion(p) => push_or_extend_tick_span(
@@ -292,6 +303,7 @@ fn record_part_note_events(
                     start_tick: tick,
                     duration: p.duration,
                     tie_to_next: p.tie_to_next(),
+                    multiplier,
                 },
             ),
         };
@@ -354,6 +366,7 @@ pub(super) fn record_measure_note_timings(
                 written_measure_index,
                 measure_start_tick,
                 note_id_lookup,
+                multiplier: part_row.slice().resolution_multiplier,
             },
             cursors,
             results,

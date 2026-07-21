@@ -11,6 +11,8 @@ mod tests_chords;
 mod tests_tied_notes;
 #[path = "tests_timing.rs"]
 mod tests_timing;
+#[path = "tests_tuplets.rs"]
+mod tests_tuplets;
 
 fn default_test_metadata() -> Metadata {
     Metadata {
@@ -93,17 +95,17 @@ fn key_g4_degree_one_is_midi_67() {
 
 #[test]
 fn duration_quarter_note_is_480_ticks() {
-    assert_eq!(duration_to_ticks(4), 480);
+    assert_eq!(duration_to_ticks(4, 1), 480);
 }
 
 #[test]
 fn duration_eighth_note_is_240_ticks() {
-    assert_eq!(duration_to_ticks(2), 240);
+    assert_eq!(duration_to_ticks(2, 1), 240);
 }
 
 #[test]
 fn duration_half_note_is_960_ticks() {
-    assert_eq!(duration_to_ticks(8), 960);
+    assert_eq!(duration_to_ticks(8, 1), 960);
 }
 
 pub(super) fn one_measure_score() -> Score {

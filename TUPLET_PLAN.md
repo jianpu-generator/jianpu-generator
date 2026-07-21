@@ -93,7 +93,7 @@ repeated in the step descriptions.
   half-bar-boundary / dotted-eighth-tail tests around a tuplet to confirm rules still fire
   correctly.
 
-- [ ] **Step 6 — Grid width + MIDI ticks divide back out**
+- [x] **Step 6 — Grid width + MIDI ticks divide back out**
   `src/grid_layout/layout_spacing.rs`: `column_weight` (~line 24) and any other grid-width
   literal (`MULTI_MEASURE_REST_WIDTH` etc. in `compiler/types.rs`/`layout_spacing.rs`) must
   divide by that measure's `multiplier` so pixel width reflects real musical content, not
@@ -106,6 +106,27 @@ repeated in the step descriptions.
   **Verify**: existing demo files (none use tuplets) render pixel-identically before/after —
   multiplier defaults to 1, should be a no-op diff. Diff generated SVG output for
   `demo/01-pitches.jianpu` etc. before/after this step.
+
+  Implemented as: `midi::midi_notes::duration_to_ticks(quarter_beats, multiplier)` now takes
+  `multiplier` and computes `quarter_beats * TPQ / (4 * multiplier)`, threaded from
+  `PartSlice::resolution_multiplier` through `midi::event_processing`'s
+  `process_measure_notes`/`process_chord_events`/`process_percussion_events` and
+  `midi::timing_note_events`'s `PartEventContext`/`TickSpanEvent`. New tests in
+  `src/midi/tests_tuplets.rs` confirm a rescaled triplet's ticks sum to the same total as
+  the equivalent non-tuplet measure, both at the `duration_to_ticks` unit level and
+  end-to-end through `measure_start_times_seconds`.
+
+  Grid width turned out to need **no code change**: investigated `column_weight`/
+  `measure_column_weights`/`measure_note_weight` in `src/grid_layout/layout_spacing.rs` and
+  confirmed (both by reading the width-allocation math and empirically, via generated SVG
+  x-coordinates for a single-measure triplet) that pixel width is already
+  multiplier-invariant — `measure_note_weight` counts written note *occurrences*, not
+  columns or duration, and `measure_column_weights` normalizes within-measure by
+  `column_weight_sum`, so a tuplet-inflated `col_count`'s extra columns (all
+  zero-weight, since no element sits at them) never reach a raw pixel width. Documented
+  this invariant with comments on both functions and in the **Tuplet** glossary entry
+  (`ARCHITECTURE.md`) rather than force an artificial division. All 14 `demo/*.jianpu`
+  files render byte-identical SVG *and* MIDI output before/after this step.
 
 - [ ] **Step 7 — Rendering: tuplet brackets**
   Follow the slur-arc pipeline as template (`SlurSpan` → `resolve_slur_spans` in
