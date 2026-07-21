@@ -10,7 +10,7 @@ use directive_line::{render_directive_line, DirectiveLineArgs};
 use glyph_renderers::{
     render_bar_line, render_chord_symbol, render_horizontal_line, render_lyric,
     render_multi_measure_rest, render_note_head, render_percussion_hit, render_rest,
-    render_tie_or_slur, render_underline, NoteRenderParams,
+    render_tie_or_slur, render_tuplet_bracket, render_underline, NoteRenderParams,
 };
 
 mod directive_line;
@@ -85,6 +85,9 @@ fn render_element(
         AbsoluteContent::Underline { width, level: _ } => render_underline(elem, width),
         AbsoluteContent::TieOrSlur { kind: _, width } => {
             render_tie_or_slur(elem, width, row_height)
+        }
+        AbsoluteContent::TupletBracket { label, width } => {
+            render_tuplet_bracket(elem, label, *width, row_height, base_font_size)
         }
         AbsoluteContent::BarLine { height } => render_bar_line(elem, height),
         AbsoluteContent::HorizontalLine { width } => render_horizontal_line(elem, width),

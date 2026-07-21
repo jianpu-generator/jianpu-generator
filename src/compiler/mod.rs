@@ -13,6 +13,8 @@ mod timed_unit;
 mod slur_chains;
 use slur_chains::{PartCrossState, PendingSlurOpen};
 
+mod tuplet_spans;
+
 use crate::ast::grouped::{MultiPartMeasure, NoteEvent, PartRow, Score};
 use crate::ast::parsed::{Accidental, KeyChange, NoteName};
 use itertools::Itertools;
@@ -38,6 +40,7 @@ pub fn compile(score: &Score) -> CompileResult {
         (0..max_parts).map(|_| PartCrossState::new()).collect();
 
     let mut slur_spans: Vec<SlurSpan> = Vec::new();
+    let mut tuplet_spans: Vec<TupletSpan> = Vec::new();
     let blocks: Vec<MeasureBlock> = score
         .measures
         .iter()
@@ -49,6 +52,7 @@ pub fn compile(score: &Score) -> CompileResult {
                 measure_index,
                 &mut cross_states,
                 &mut slur_spans,
+                &mut tuplet_spans,
             )
         })
         .collect();
@@ -64,8 +68,18 @@ pub fn compile(score: &Score) -> CompileResult {
         span.from_measure = from;
         span.to_measure = to;
     }
+    for span in &mut tuplet_spans {
+        let Some(&mapped) = measure_to_block.get(span.measure_index) else {
+            continue;
+        };
+        span.measure_index = mapped;
+    }
 
-    CompileResult { blocks, slur_spans }
+    CompileResult {
+        blocks,
+        slur_spans,
+        tuplet_spans,
+    }
 }
 
 /// Minimum length of a consecutive all-rest run before it gets collapsed
@@ -264,6 +278,7 @@ fn compile_measure(
     measure_index: usize,
     cross_states: &mut Vec<PartCrossState>,
     slur_spans: &mut Vec<SlurSpan>,
+    tuplet_spans: &mut Vec<TupletSpan>,
 ) -> MeasureBlock {
     while cross_states.len() < measure.parts.len() {
         cross_states.push(PartCrossState::new());
@@ -308,6 +323,7 @@ fn compile_measure(
                 part_index: part_idx,
             },
             slur_spans,
+            tuplet_spans,
         );
 
         let Some(cs) = cross_states.get_mut(part_idx) else {

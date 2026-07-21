@@ -40,6 +40,13 @@ pub enum AbsoluteContent {
         kind: ArcKind,
         width: f32,
     },
+    /// Tuplet bracket: short vertical ticks + horizontal line spanning
+    /// `width`, with `label` (the tuplet digit, e.g. `"3"`) centered above
+    /// the midpoint. See `GridContent::TupletBracket`.
+    TupletBracket {
+        label: String,
+        width: f32,
+    },
     BarLine {
         height: f32,
     },

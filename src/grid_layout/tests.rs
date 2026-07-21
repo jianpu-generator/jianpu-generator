@@ -178,11 +178,11 @@ fn is_chord_only_row_detects_chord() {
 #[test]
 fn note_part_sub_row_heights_sums_correctly() {
     let heights = note_part_sub_row_heights(30.0);
-    // arc + above_dot + note_head + below_dot + ul + ul
-    // = 9.0 + 7.5 + 30.0 + 7.5 + 4.5 + 4.5 = 63.0
+    // tuplet_bracket + arc + above_dot + note_head + below_dot + ul + ul
+    // = 9.0 + 9.0 + 7.5 + 30.0 + 7.5 + 4.5 + 4.5 = 72.0
     let sum: f32 = heights.iter().sum();
-    assert!((sum - 63.0).abs() < 0.001, "sum={sum}");
-    assert_eq!(heights.len(), 6);
+    assert!((sum - 72.0).abs() < 0.001, "sum={sum}");
+    assert_eq!(heights.len(), 7);
 }
 
 #[test]
@@ -221,26 +221,44 @@ fn make_system_single_note_block() -> Vec<MeasureBlock> {
 }
 
 #[test]
-fn note_block_expands_to_six_sub_rows() {
-    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new(), &[]);
-    // 1 note part × 6 sub-rows, no lyric
-    assert_eq!(rows.len(), 6);
+fn note_block_expands_to_seven_sub_rows() {
+    let rows = expand_system_to_rows(
+        &make_system_single_note_block(),
+        30.0,
+        &HashMap::new(),
+        &HashMap::new(),
+        &[],
+    );
+    // 1 note part × 7 sub-rows, no lyric
+    assert_eq!(rows.len(), 7);
 }
 
 #[test]
-fn note_head_element_is_in_sub_row_index_2() {
-    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new(), &[]);
-    let note_row = &rows[2]; // note-head sub-row
+fn note_head_element_is_in_sub_row_index_3() {
+    let rows = expand_system_to_rows(
+        &make_system_single_note_block(),
+        30.0,
+        &HashMap::new(),
+        &HashMap::new(),
+        &[],
+    );
+    let note_row = &rows[3]; // note-head sub-row
     let has_note = note_row
         .elements
         .iter()
         .any(|e| matches!(e.content, GridContent::NoteHead { .. }));
-    assert!(has_note, "note head should be in sub-row 2");
+    assert!(has_note, "note head should be in sub-row 3");
 }
 
 #[test]
 fn bar_line_element_has_positive_height_pt() {
-    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new(), &[]);
+    let rows = expand_system_to_rows(
+        &make_system_single_note_block(),
+        30.0,
+        &HashMap::new(),
+        &HashMap::new(),
+        &[],
+    );
     let bar = rows
         .iter()
         .flat_map(|r| r.elements.iter())
@@ -307,7 +325,7 @@ fn bar_line_height_includes_lyric_rows() {
     let expected_height =
         system_musical_height_pt(first, base) + system_lyric_height_pt(first, base);
 
-    let rows = expand_system_to_rows(&system, base, &HashMap::new(), &[]);
+    let rows = expand_system_to_rows(&system, base, &HashMap::new(), &HashMap::new(), &[]);
     let bar = rows
         .iter()
         .flat_map(|r| r.elements.iter())
@@ -324,8 +342,14 @@ fn bar_line_height_includes_lyric_rows() {
 
 #[test]
 fn row_label_is_in_note_head_sub_row_at_column_0_span_1() {
-    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new(), &[]);
-    let note_row = &rows[2];
+    let rows = expand_system_to_rows(
+        &make_system_single_note_block(),
+        30.0,
+        &HashMap::new(),
+        &HashMap::new(),
+        &[],
+    );
+    let note_row = &rows[3];
     let label = note_row
         .elements
         .iter()
@@ -337,7 +361,13 @@ fn row_label_is_in_note_head_sub_row_at_column_0_span_1() {
 
 #[test]
 fn column_count_is_label_cols_plus_musical_cols() {
-    let rows = expand_system_to_rows(&make_system_single_note_block(), 30.0, &HashMap::new(), &[]);
+    let rows = expand_system_to_rows(
+        &make_system_single_note_block(),
+        30.0,
+        &HashMap::new(),
+        &HashMap::new(),
+        &[],
+    );
     // 1 label col + 1 leading bar line col + 4 musical cols (bar at col 3 → block width=4)
     assert_eq!(rows[0].column_count, 6);
 }

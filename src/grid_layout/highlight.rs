@@ -56,7 +56,7 @@ pub(crate) fn system_musical_row_count(system: &[MeasureBlock]) -> usize {
                 let sub_count = if is_chord_only_row(part_template) {
                     4
                 } else {
-                    6
+                    7
                 };
                 sub_count + if has_lyrics(part_template) { 1 } else { 0 }
             }

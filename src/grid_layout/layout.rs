@@ -1,5 +1,6 @@
 use crate::compiler::types::{CompileResult, ElementContent, MeasureBlock, MeasureRow, RowId};
 use crate::grid_layout::slur_placement::{build_measure_placements, resolve_slur_spans};
+use crate::grid_layout::tuplet_placement::resolve_tuplet_spans;
 use crate::grid_layout::types::Header;
 use crate::grid_layout::types::{GridElement, GridPage, GridRow};
 use crate::render_config::RenderConfig;
@@ -48,10 +49,11 @@ pub(crate) fn is_chord_only_row(row: &MeasureRow) -> bool {
 
 // ── Sub-row_heights ───────────────────────────────────────────────────────────
 
-/// Returns the 6 sub-row_heights for a Note/Chord part, in order:
-/// [arc, above_dot, note_head, below_dot, half_ul, quarter_ul]
-pub(crate) fn note_part_sub_row_heights(base: f32) -> [f32; 6] {
+/// Returns the 7 sub-row_heights for a Note/Chord part, in order:
+/// [tuplet_bracket, arc, above_dot, note_head, below_dot, half_ul, quarter_ul]
+pub(crate) fn note_part_sub_row_heights(base: f32) -> [f32; 7] {
     [
+        base * 0.30, // tuplet bracket (label + short bracket path)
         base * 0.30, // tie/slur arc
         base * 0.25, // above-octave dots
         base,        // note head (main)
@@ -228,6 +230,7 @@ fn build_page_rows(
     header: &Header,
     config: &RenderConfig,
     arc_map: &HashMap<(usize, usize), Vec<GridElement>>,
+    tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
     abs_system_index_start: usize,
     is_first_page: bool,
 ) -> Vec<GridRow> {
@@ -255,10 +258,21 @@ fn build_page_rows(
                     .map(|arcs| (consolidated_idx, arcs.clone()))
             })
             .collect();
+        let system_tuplet_brackets: HashMap<usize, Vec<GridElement>> = first
+            .rows
+            .iter()
+            .enumerate()
+            .filter_map(|(consolidated_idx, row)| {
+                tuplet_bracket_map
+                    .get(&(abs_sys, row.source_part_index))
+                    .map(|brackets| (consolidated_idx, brackets.clone()))
+            })
+            .collect();
         rows.extend(expand_system_to_rows(
             system,
             base,
             &system_arcs,
+            &system_tuplet_brackets,
             &measure_layout,
         ));
     }
@@ -284,6 +298,8 @@ pub fn layout(
 
     let measure_placements = build_measure_placements(&systems);
     let arc_map = resolve_slur_spans(&compile_result.slur_spans, &measure_placements, &systems);
+    let tuplet_bracket_map =
+        resolve_tuplet_spans(&compile_result.tuplet_spans, &measure_placements);
 
     let header_h: f32 = make_header_rows(header, base, true)
         .iter()
@@ -335,6 +351,7 @@ pub fn layout(
             header,
             config,
             &arc_map,
+            &tuplet_bracket_map,
             abs_system_index_start,
             page_idx == 0,
         );

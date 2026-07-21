@@ -204,6 +204,10 @@ pub(crate) struct NotePartParams<'a> {
     pub(crate) column_count: u32,
     pub(crate) bar_height: f32,
     pub(crate) part_arcs: &'a [GridElement],
+    /// Tuplet brackets for this part, placed in the topmost sub-row (see
+    /// `note_part_sub_row_heights`). Always empty for a chord-only row,
+    /// which has no `tuplet_bracket` sub-row.
+    pub(crate) part_tuplet_brackets: &'a [GridElement],
     pub(crate) measure_layout: &'a [MeasureColumnLayout],
 }
 
@@ -217,10 +221,11 @@ pub(crate) fn expand_note_part(
     let column_count = params.column_count;
     let bar_height = params.bar_height;
     let part_arcs = params.part_arcs;
-    let (sub_heights, sub_count): (Vec<f32>, usize) = if is_chord_only_row(part_template) {
+    let is_chord_only = is_chord_only_row(part_template);
+    let (sub_heights, sub_count): (Vec<f32>, usize) = if is_chord_only {
         (chord_part_sub_row_heights(base).to_vec(), 4)
     } else {
-        (note_part_sub_row_heights(base).to_vec(), 6)
+        (note_part_sub_row_heights(base).to_vec(), 7)
     };
     let mut sub_rows: Vec<GridRow> = sub_heights
         .iter()
@@ -232,11 +237,10 @@ pub(crate) fn expand_note_part(
             elements: vec![],
         })
         .collect();
-    let head_sub = if is_chord_only_row(part_template) {
-        1
-    } else {
-        2
-    };
+    // A chord-only row has no `tuplet_bracket` sub-row, so its topmost row
+    // (index 0) is the arc row; a note row's topmost row is `tuplet_bracket`
+    // and its arc row is index 1 (see `note_part_sub_row_heights`).
+    let (arc_sub, head_sub) = if is_chord_only { (0, 1) } else { (1, 3) };
     if !part_template.label.is_empty() {
         if let Some(row) = sub_rows.get_mut(head_sub) {
             row.elements.push(GridElement {
@@ -288,8 +292,13 @@ pub(crate) fn expand_note_part(
         }
         measure_col_offset += col_w;
     }
-    if let Some(row) = sub_rows.get_mut(0) {
+    if let Some(row) = sub_rows.get_mut(arc_sub) {
         row.elements.extend_from_slice(part_arcs);
+    }
+    if !is_chord_only {
+        if let Some(row) = sub_rows.get_mut(0) {
+            row.elements.extend_from_slice(params.part_tuplet_brackets);
+        }
     }
     sub_rows
 }
@@ -300,6 +309,7 @@ pub(crate) fn expand_system_to_rows(
     system: &[MeasureBlock],
     base: f32,
     system_arcs: &HashMap<usize, Vec<GridElement>>,
+    system_tuplet_brackets: &HashMap<usize, Vec<GridElement>>,
     measure_layout: &[MeasureColumnLayout],
 ) -> Vec<GridRow> {
     let Some(first) = system.first() else {
@@ -321,6 +331,9 @@ pub(crate) fn expand_system_to_rows(
         } else {
             let part_arcs: &[GridElement] =
                 system_arcs.get(&part_idx).map_or(&[], |v| v.as_slice());
+            let part_tuplet_brackets: &[GridElement] = system_tuplet_brackets
+                .get(&part_idx)
+                .map_or(&[], |v| v.as_slice());
             all_rows.extend(expand_note_part(
                 system,
                 &NotePartParams {
@@ -330,6 +343,7 @@ pub(crate) fn expand_system_to_rows(
                     column_count,
                     bar_height,
                     part_arcs,
+                    part_tuplet_brackets,
                     measure_layout,
                 },
             ));

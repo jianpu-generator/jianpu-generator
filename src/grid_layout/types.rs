@@ -133,6 +133,15 @@ pub enum GridContent {
     TieOrSlurHead {
         kind: ArcKind,
     },
+    /// Tuplet bracket spanning a contiguous run of tuplet-tagged notes/rests
+    /// within one measure: from center of from-column to center of
+    /// to-column, like `TieOrSlur`. Never crosses a measure or system
+    /// boundary (see **Tuplet** in `ARCHITECTURE.md`), so unlike
+    /// `TieOrSlur` there is no `Tail`/`Head` cross-system variant. `label`
+    /// is the tuplet's printed digit, e.g. `"3"` for a triplet.
+    TupletBracket {
+        label: String,
+    },
     /// Vertical bar line. `height_pt` baked in by grid layout layer.
     BarLine {
         height_pt: f32,

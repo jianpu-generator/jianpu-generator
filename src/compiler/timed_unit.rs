@@ -1,5 +1,6 @@
 use super::slur_chains::SlurKey;
 use crate::ast::grouped::{GroupedChordNote, GroupedNote, GroupedPercussionHit};
+use crate::ast::parsed::TupletInfo;
 use crate::compiler::types::ElementContent;
 
 // ── TimedUnit trait ───────────────────────────────────────────────────────────
@@ -12,6 +13,7 @@ pub(super) trait TimedUnit {
     fn slur_close_at(&self) -> Option<u32>;
     fn slur_key(&self) -> SlurKey;
     fn tie_to_next(&self) -> bool;
+    fn tuplet(&self) -> Option<TupletInfo>;
     fn element_content(&self) -> ElementContent;
 }
 
@@ -36,6 +38,9 @@ impl TimedUnit for GroupedNote {
     }
     fn tie_to_next(&self) -> bool {
         self.tie_to_next_span.is_some()
+    }
+    fn tuplet(&self) -> Option<TupletInfo> {
+        self.tuplet
     }
     fn element_content(&self) -> ElementContent {
         ElementContent::NoteHead {
@@ -69,6 +74,9 @@ impl TimedUnit for GroupedChordNote {
     fn tie_to_next(&self) -> bool {
         self.tie_to_next_span.is_some()
     }
+    fn tuplet(&self) -> Option<TupletInfo> {
+        self.tuplet
+    }
     fn element_content(&self) -> ElementContent {
         ElementContent::ChordSymbol(self.format_symbol())
     }
@@ -95,6 +103,9 @@ impl TimedUnit for GroupedPercussionHit {
     }
     fn tie_to_next(&self) -> bool {
         self.tie_to_next_span.is_some()
+    }
+    fn tuplet(&self) -> Option<TupletInfo> {
+        self.tuplet
     }
     fn element_content(&self) -> ElementContent {
         ElementContent::PercussionHit

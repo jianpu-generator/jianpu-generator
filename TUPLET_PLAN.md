@@ -128,7 +128,7 @@ repeated in the step descriptions.
   (`ARCHITECTURE.md`) rather than force an artificial division. All 14 `demo/*.jianpu`
   files render byte-identical SVG *and* MIDI output before/after this step.
 
-- [ ] **Step 7 — Rendering: tuplet brackets**
+- [x] **Step 7 — Rendering: tuplet brackets**
   Follow the slur-arc pipeline as template (`SlurSpan` → `resolve_slur_spans` in
   `src/grid_layout/slur_placement.rs` → `resolve_span_marking` in
   `src/coordinate_resolver/resolve.rs` → `render_tie_or_slur` in
@@ -149,6 +149,37 @@ repeated in the step descriptions.
      `src/renderer/new_renderer.rs`.
   Tuplets don't span line/system breaks, so no `TieOrSlurTail`/`Head` cross-system-break
   equivalent is needed.
+
+  Implemented as described, with `TupletSpan` built one step earlier than the plan's "grid_layout"
+  wording implies: `compiler::part_slice`/`part_slice_unit` accumulate it directly (mirroring
+  `SlurSpan`'s own construction site — `slur_chains.rs`'s `extend_note_chains`), in a new
+  `compiler::tuplet_spans` module (`record_tuplet_tag`/`finish_tuplet_spans`, tracking one
+  `PendingTupletSpan` per part slice — never carried cross-measure, unlike `PendingSlurOpen`).
+  `TupletSpan { part_index, measure_index, from_column, to_column, label }` (one `measure_index`,
+  not `from_measure`/`to_measure`, since a tuplet never crosses a measure) lands on
+  `CompileResult.tuplet_spans`, remapped through `merge_rest_runs`'s `measure_to_block` exactly
+  like `slur_spans`. `grid_layout::tuplet_placement::resolve_tuplet_spans` (new file, mirroring
+  `slur_placement.rs`) then resolves it to a `GridElement` per system — only ever the
+  same-system case of `resolve_slur_spans`, no tail/head split. `TimedUnit::tuplet()` was added to
+  the trait (`compiler::timed_unit`) alongside `duration()`/`slur_key()` etc. so
+  `compile_timed_unit`/`compile_unit` can read a note/chord-note/percussion-hit's tag the same way
+  as its other span-relevant fields; `GroupedRest.tuplet` is read directly in `compile_rest` (rests
+  aren't `TimedUnit`s). `note_part_sub_row_heights` grew from 6 to 7 elements; every fixed sub-row
+  index downstream that assumed 6 (`expand_note_part`'s `head_sub`/arc-row index,
+  `highlight::system_musical_row_count`, `note_highlight::part_row_ranges`) was updated to 7 — a
+  chord-only row is unaffected (still 4, no tuplet-bracket row, since chord notes carry no
+  practical tuplet use case in current syntax). This reserves the tuplet-bracket row's height for
+  *every* note-part row unconditionally (matching how the arc row already reserves space whether
+  or not that part has any slurs), so — unlike Step 6 — non-tuplet scores do *not* render
+  pixel-identical to before this step; every note row grows taller by one sub-row. Visually
+  verified via `cargo run -- generate svg` on a `3:{1_1_1_} 2_ 3_ 4_ 5_ 6_` measure: the bracket's
+  two ticks + horizontal line span exactly the first-to-third-triplet-note columns, with the `"3"`
+  label centered above, sitting cleanly above the note-head row with no collision against the
+  underlines rendered below the plain eighth notes that follow. The known `underline_count = 0`
+  gap for tuplet-tagged notes (documented in `PartState::multiplier`'s doc comment and the
+  **Tuplet** glossary entry) was deliberately left alone — the bracket alone reads clearly as a
+  tuplet grouping without a beam underneath it, and fixing beaming was explicitly out of scope for
+  this step.
 
 - [ ] **Step 8 — Docs**
   `syntax.md`: new "Tuplets" subsection under Duration suffixes — `{N:notes}`,

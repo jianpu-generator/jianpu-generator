@@ -2,10 +2,11 @@ use super::beam::{flush_beam_buffer, BeamEntry};
 use super::part_slice_unit::{compile_unit, CompiledUnit, PartState};
 use super::slur_chains::{extend_note_chains, PendingSlurOpen, SlurChainContext, SlurKey};
 use super::timed_unit::TimedUnit;
+use super::tuplet_spans::{finish_tuplet_spans, record_tuplet_tag, TupletSpanContext};
 use super::PartSliceResult;
 use crate::ast::grouped::{GroupedRest, NoteEvent, PartSlice};
 use crate::ast::parsed::PartKind;
-use crate::compiler::types::{ArcKind, ColumnElement, ElementContent, SlurSpan};
+use crate::compiler::types::{ArcKind, ColumnElement, ElementContent, SlurSpan, TupletSpan};
 
 // ── Top-level entry point ─────────────────────────────────────────────────────
 
@@ -24,6 +25,7 @@ pub(super) fn compile_part_slice(
     slice: &PartSlice,
     input: PartSliceInput,
     slur_spans: &mut Vec<SlurSpan>,
+    tuplet_spans: &mut Vec<TupletSpan>,
 ) -> PartSliceResult {
     let mut elements: Vec<ColumnElement> = Vec::new();
     let mut beam_buf: Vec<BeamEntry> = Vec::new();
@@ -36,6 +38,7 @@ pub(super) fn compile_part_slice(
     let mut next_note_id = input.next_note_id;
     let mut col: u32 = 0;
     let measure_index = input.measure_index;
+    let mut current_tuplet = None;
 
     {
         let mut state = PartState {
@@ -44,6 +47,8 @@ pub(super) fn compile_part_slice(
             pending_chains: &mut pending_chains,
             pending_slur_opens: &mut pending_slur_opens,
             slur_spans,
+            current_tuplet: &mut current_tuplet,
+            tuplet_spans,
             col: &mut col,
             prev_tie: &mut prev_tie,
             prev_tie_column: &mut prev_tie_column,
@@ -55,6 +60,12 @@ pub(super) fn compile_part_slice(
             multiplier: slice.resolution_multiplier,
         };
         process_events(&mut state, slice);
+        finish_tuplet_spans(&mut TupletSpanContext {
+            current: state.current_tuplet,
+            tuplet_spans: state.tuplet_spans,
+            measure_index: state.measure_index,
+            part_index: state.part_index,
+        });
     }
 
     preserve_cross_measure_slur_opens(&pending_chains, &mut pending_slur_opens, measure_index);
@@ -203,6 +214,7 @@ fn compile_timed_unit<T: TimedUnit>(
             group_continuation: unit.group_continuation(),
             slur_close_at: unit.slur_close_at(),
             slur_key: unit.slur_key(),
+            tuplet: unit.tuplet(),
             head: unit.element_content(),
         },
         measure_col_start,
@@ -240,6 +252,17 @@ fn compile_rest(
     if underline_count == 0 {
         flush_beam_buffer(state.beam_buf, state.elements);
     }
+
+    record_tuplet_tag(
+        &mut TupletSpanContext {
+            current: state.current_tuplet,
+            tuplet_spans: state.tuplet_spans,
+            measure_index: state.measure_index,
+            part_index: state.part_index,
+        },
+        *state.col,
+        rest.tuplet,
+    );
 
     state.elements.push(ColumnElement {
         column: *state.col,

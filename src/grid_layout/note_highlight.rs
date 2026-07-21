@@ -67,7 +67,7 @@ fn part_row_ranges(system: &[MeasureBlock], row_offset: usize) -> Vec<(usize, us
         let sub_count = if is_chord_only_row(part_template) {
             4
         } else {
-            6
+            7
         };
         let start = cursor;
         cursor += sub_count;

@@ -231,6 +231,7 @@ fn erroneous_measure_produces_error_highlight() {
         &crate::compiler::types::CompileResult {
             blocks: vec![erroneous_block],
             slur_spans: vec![],
+            tuplet_spans: vec![],
         },
         &config,
         &header,
@@ -272,6 +273,7 @@ fn click_target_row_start_skips_hidden_system_divider() {
         &crate::compiler::types::CompileResult {
             blocks: blocks.clone(),
             slur_spans: vec![],
+            tuplet_spans: vec![],
         },
         &shown_config,
         &header,
@@ -287,6 +289,7 @@ fn click_target_row_start_skips_hidden_system_divider() {
         &crate::compiler::types::CompileResult {
             blocks,
             slur_spans: vec![],
+            tuplet_spans: vec![],
         },
         &hidden_config,
         &header,
@@ -331,6 +334,7 @@ fn non_erroneous_measure_produces_no_error_highlight() {
         &crate::compiler::types::CompileResult {
             blocks: vec![block],
             slur_spans: vec![],
+            tuplet_spans: vec![],
         },
         &config,
         &header,

@@ -295,6 +295,70 @@ pub(super) fn render_tie_or_slur(
     }]
 }
 
+/// Two short downward ticks joined by a horizontal line spanning `width`,
+/// with `label` (the tuplet digit, e.g. `"3"`) centered above the midpoint —
+/// the flat-bracket convention used for tuplets, distinct from the curved
+/// `render_tie_or_slur` arc. `elem.y`/`elem.x` are the tuplet-bracket
+/// sub-row's own center/left-edge (see `resolve_span_marking`'s
+/// `GridContent::TupletBracket` arm), like `render_tie_or_slur`'s `elem.x`.
+pub(super) fn render_tuplet_bracket(
+    elem: &AbsoluteElement,
+    label: &str,
+    width: f32,
+    row_height: &f32,
+    base_font_size: &f32,
+) -> Vec<SvgElement> {
+    let tick_height = row_height * 0.25;
+    let line_y = elem.y + row_height * 0.15;
+    let line_top = line_y - tick_height;
+    vec![
+        SvgElement {
+            x: elem.x,
+            y: line_top,
+            variant: Some(SvgVariant::TupletBracket),
+            kind: SvgKind::Line {
+                x2: elem.x,
+                y2: line_y,
+                stroke_width: 1.0,
+            },
+        },
+        SvgElement {
+            x: elem.x,
+            y: line_y,
+            variant: Some(SvgVariant::TupletBracket),
+            kind: SvgKind::Line {
+                x2: elem.x + width,
+                y2: line_y,
+                stroke_width: 1.0,
+            },
+        },
+        SvgElement {
+            x: elem.x + width,
+            y: line_top,
+            variant: Some(SvgVariant::TupletBracket),
+            kind: SvgKind::Line {
+                x2: elem.x + width,
+                y2: line_y,
+                stroke_width: 1.0,
+            },
+        },
+        SvgElement {
+            x: elem.x + width * 0.5,
+            y: line_top,
+            variant: Some(SvgVariant::TupletBracket),
+            kind: SvgKind::Text {
+                content: label.to_string(),
+                font_size: *base_font_size * 0.8,
+                anchor: TextAnchor::Middle,
+                baseline: DominantBaseline::Middle,
+                font: FontFamily::Monospace,
+                weight: FontWeight::Normal,
+                italic: false,
+            },
+        },
+    ]
+}
+
 pub(super) fn render_bar_line(elem: &AbsoluteElement, height: &f32) -> Vec<SvgElement> {
     vec![SvgElement {
         x: elem.x,

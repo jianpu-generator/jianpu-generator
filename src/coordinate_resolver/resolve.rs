@@ -175,6 +175,18 @@ fn resolve_span_marking(
                 },
             })
         }
+        GridContent::TupletBracket { label } => {
+            let start_center = geometry.column_center(el.column as f32);
+            let end_center = geometry.column_center(el.column as f32 + el.column_span as f32 - 1.0);
+            Some(AbsoluteElement {
+                x: PAGE_MARGIN + start_center,
+                y,
+                content: AbsoluteContent::TupletBracket {
+                    label: label.clone(),
+                    width: end_center - start_center,
+                },
+            })
+        }
         _ => None,
     }
 }
@@ -194,7 +206,8 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
     match content {
         GridContent::TieOrSlur { .. }
         | GridContent::TieOrSlurTail { .. }
-        | GridContent::TieOrSlurHead { .. } => None,
+        | GridContent::TieOrSlurHead { .. }
+        | GridContent::TupletBracket { .. } => None,
         GridContent::NoteHead {
             pitch,
             accidental,
