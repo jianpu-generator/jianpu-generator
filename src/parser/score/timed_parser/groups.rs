@@ -41,6 +41,62 @@ impl GroupStack {
     }
 }
 
+/// Tracks currently-open `{...}` tuplet brackets on a single line. Unlike `GroupStack`,
+/// tuplets never span lines, so a fresh stack is created per `parse_line` call.
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct TupletStack {
+    pub frames: Vec<TupletFrame>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TupletFrame {
+    pub note_count: usize,
+    pub segment_start: usize,
+    pub num: u32,
+    pub den: u32,
+}
+
+impl TupletStack {
+    pub fn is_open(&self) -> bool {
+        !self.frames.is_empty()
+    }
+
+    pub fn open_tuplet(&mut self, segment_start: usize, num: u32, den: u32) {
+        self.frames.push(TupletFrame {
+            note_count: 0,
+            segment_start,
+            num,
+            den,
+        });
+    }
+
+    pub fn close_tuplet(&mut self) -> Option<TupletFrame> {
+        self.frames.pop()
+    }
+
+    pub fn increment_note_count(&mut self) {
+        for frame in self.frames.iter_mut() {
+            frame.note_count += 1;
+        }
+    }
+}
+
+/// Standard implied "against" count for a bare `{N:...}` tuplet with no explicit `:M`
+/// override. Returns `None` when `N` has no conventional ratio, in which case the caller
+/// must require an explicit `{N:M:...}`.
+pub fn implicit_tuplet_ratio(num: u32) -> Option<u32> {
+    match num {
+        2 => Some(3),
+        3 => Some(2),
+        4 => Some(3),
+        5 => Some(4),
+        6 => Some(4),
+        7 => Some(4),
+        9 => Some(8),
+        _ => None,
+    }
+}
+
 pub fn validate_group_note_count(count: usize, span: &Span) -> Option<Warning> {
     if count < 2 {
         Some(Warning::group_too_few_notes(*span))

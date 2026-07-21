@@ -121,6 +121,10 @@ pub enum RecoverableErrorKind {
     GroupsUnknownMember { group: String, member: String },
     /// A group's resolved members do not all share the same part kind — the group is skipped.
     GroupsMemberKindMismatch { group: String },
+    /// A `{N:...}` tuplet has no standard implied ratio and no explicit `{N:M:...}` override.
+    TupletAmbiguousRatio { num: u32 },
+    /// A tuplet's note count at `}` doesn't match its declared `N`.
+    TupletNoteCountMismatch { expected: u32, got: usize },
 }
 
 impl RecoverableErrorKind {
@@ -199,6 +203,8 @@ impl RecoverableErrorKind {
             Self::GroupsAbbreviationCollidesWithPart { abbrev } => format!("group abbreviation '{abbrev}' collides with a declared part abbreviation; group ignored"),
             Self::GroupsUnknownMember { group, member } => format!("group '{group}' member '{member}' does not match any declared part; group ignored"),
             Self::GroupsMemberKindMismatch { group } => format!("group '{group}' members must all have the same part kind (e.g. all 'notes' or all 'notes+lyrics'); group ignored"),
+            Self::TupletAmbiguousRatio { num } => format!("tuplet ratio for {num} is ambiguous; use {{{num}:M:...}} to specify explicitly"),
+            Self::TupletNoteCountMismatch { expected, got } => format!("tuplet declared {expected} notes but got {got}; note count must match"),
         }
     }
 

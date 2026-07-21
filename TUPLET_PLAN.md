@@ -19,7 +19,7 @@ repeated in the step descriptions.
   boundary scanners to also stop at `{`/`}`. Add lexer unit tests in
   `timed_lexer_tests.rs`.
 
-- [ ] **Step 2 — Groups: `TupletStack`, ratio resolution, errors**
+- [x] **Step 2 — Groups: `TupletStack`, ratio resolution, errors**
   `src/parser/score/timed_parser/groups.rs`: add `TupletStack`/`TupletFrame { note_count,
   segment_start, num, den }` alongside `GroupStack`, with `open_tuplet`/`close_tuplet`.
   `src/parser/score/timed_parser/timed_recursive_descent_parser.rs` /

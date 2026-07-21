@@ -1,10 +1,10 @@
 use super::depth_event::DepthEvent;
 use super::duration::parse_duration_suffixes;
-use super::groups::{apply_closed_group_depth, GroupStack};
+use super::groups::{apply_closed_group_depth, GroupStack, TupletStack};
 use super::timed_lexer::TimedLexToken;
 use super::{ParseHeadError, TimedUnitHead};
 use crate::ast::parsed::ScoreEvent;
-use crate::error::{Diagnostic, IrrecoverableError, Span, Spanned};
+use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Spanned};
 
 #[path = "timed_recursive_descent_parser/group_and_repeat.rs"]
 mod group_and_repeat;
@@ -13,12 +13,23 @@ mod group_and_repeat;
 // Parser
 // ---------------------------------------------------------------------------
 
+/// What closing token (if any) should end the current `parse_atoms` call and return
+/// control to its caller.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StopAt {
+    None,
+    RParen,
+    RBrace,
+}
+
 pub struct TimedRecursiveDescentParser<'a, H: TimedUnitHead> {
     source: &'a str,
     base_offset: usize,
     tokens: &'a [Spanned<TimedLexToken>],
     pos: usize,
     stack: &'a mut GroupStack,
+    /// Tuplets never span lines (unlike groups), so this stack is always fresh per line.
+    tuplet_stack: TupletStack,
     /// Staging area: events with their pending depth accumulators.
     staging: Vec<DepthEvent>,
     chord_errors: Vec<Diagnostic>,
@@ -47,12 +58,13 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
             tokens,
             pos: 0,
             stack,
+            tuplet_stack: TupletStack::default(),
             staging: Vec::new(),
             chord_errors: Vec::new(),
             head: std::marker::PhantomData,
         };
         std::hint::black_box(parser.head);
-        parser.parse_atoms(false)?;
+        parser.parse_atoms(StopAt::None)?;
         parser.finalize_open_frames()?;
         let events = parser
             .staging
@@ -92,12 +104,12 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
     // Core recursive methods
     // -----------------------------------------------------------------------
 
-    fn parse_atoms(&mut self, stop_at_rparen: bool) -> Result<(), IrrecoverableError> {
+    fn parse_atoms(&mut self, stop_at: StopAt) -> Result<(), IrrecoverableError> {
         loop {
             match self.peek() {
                 None => return Ok(()),
                 Some(TimedLexToken::RParen) => {
-                    if stop_at_rparen {
+                    if stop_at == StopAt::RParen {
                         return Ok(());
                     }
                     self.close_group()?;
@@ -105,14 +117,22 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
                 Some(TimedLexToken::LParen) => {
                     self.open_group()?;
                 }
-                // Full tuplet-bracket parsing (TupletStack, ratio resolution) lands in a
-                // later step; for now, just consume the tokens so the lexer's new
-                // variants don't break this exhaustive match.
-                Some(TimedLexToken::LBrace { .. }) => {
-                    self.bump();
+                Some(TimedLexToken::LBrace { num, den }) => {
+                    let (num, den) = (*num, *den);
+                    self.open_tuplet(num, den)?;
                 }
                 Some(TimedLexToken::RBrace) => {
+                    if stop_at == StopAt::RBrace {
+                        return Ok(());
+                    }
+                    // No cross-line tuplets, so there is no "still open" leniency like
+                    // groups get: a `}` with no matching `{` on this line is dropped.
+                    let span = self.current_span();
                     self.bump();
+                    self.chord_errors.push(Diagnostic::Error(RecoverableError::general(
+                        span,
+                        "unexpected '}' — no open tuplet; '}' ignored",
+                    )));
                 }
                 Some(TimedLexToken::Extension) => {
                     let span = self.current_span();
@@ -319,8 +339,9 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
         self.staging
             .push(DepthEvent::new(Spanned::new(event, unit_span)));
 
-        // Increment note count in the innermost open group frame.
+        // Increment note count in the innermost open group frame(s) and tuplet frame(s).
         self.stack.increment_note_count();
+        self.tuplet_stack.increment_note_count();
 
         // Consume the HeadStart token for this unit.
         self.bump();

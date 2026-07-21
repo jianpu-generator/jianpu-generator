@@ -20,6 +20,10 @@ mod timed_recursive_descent_parser_tests;
 #[cfg(test)]
 mod repeat_tests;
 
+#[path = "tuplet_tests.rs"]
+#[cfg(test)]
+mod tuplet_tests;
+
 pub use timed_lexer::{lex_line, LexContext, TimedLexToken};
 pub use timed_recursive_descent_parser::TimedRecursiveDescentParser;
 
@@ -30,7 +34,8 @@ pub use percussion_head::PercussionHead;
 pub use duration::{parse_duration_suffixes, DurationParse};
 pub use groups::{
     apply_closed_group_depth, apply_closing_segment_depth, apply_open_group_depth,
-    validate_group_note_count, GroupFrame, GroupStack, HasGroupDepth,
+    implicit_tuplet_ratio, validate_group_note_count, GroupFrame, GroupStack, HasGroupDepth,
+    TupletFrame, TupletStack,
 };
 
 use crate::ast::parsed::ScoreEvent;
