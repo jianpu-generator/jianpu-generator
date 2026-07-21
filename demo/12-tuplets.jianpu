@@ -6,17 +6,17 @@ max_measures_per_system = 1
 Melody [M] = notes
 
 # score
-label="Sixteenth notes — Duplet 2:{...} / Triplet 3:{...} / Quintuplet 5:4:{...}, then plain eighths"
-[M] 2:{1=2=} 3:{1=1=1=} 5:4:{1=1=1=1=1=} 2_3_4_
+time=6/8 label="Sixteenth notes — Duplet 2:{...} / Triplet 3:{...} / Quintuplet 5:4:{...}, then a plain eighth"
+[M] 2:{1=2=} 3:{1=1=1=} 5:4:{1=1=1=1=1=} 2_
 
-label="Eighth notes — Duplet 2:{...} / Triplet 3:{...}, then plain eighths"
-[M] 2:{1_2_} 3:{1_1_1_} 2_3_4_
+time=6/8 label="Eighth notes — Duplet 2:{...} / Triplet 3:{...}, then a plain eighth"
+[M] 2:{1_2_} 3:{1_1_1_} 2_
 
-label="Eighth notes — Quintuplet 5:4:{...}, then plain eighths"
+time=4/4 label="Eighth notes — Quintuplet 5:4:{...}, then plain eighths"
 [M] 5:4:{1_1_1_1_1_} 2_3_4_
 
 label="Quarter notes — Triplet 3:{...}, then a plain quarter"
 [M] 3:{1 1 1} 4
 
-label="Quarter notes — Duplet 2:{...}"
+time=6/8 label="Quarter notes — Duplet 2:{...}"
 [M] 2:{1 2}
