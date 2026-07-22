@@ -23,7 +23,7 @@ struct PartGrouper {
     current_beat: u32,
     capacity: u32,
     /// Tuplet-rescale factor for the measure currently being accumulated (see
-    /// `tuplet_rescale::rescale_tuplets`), set via `begin_measure_slot` before that
+    /// `crate::tuplet::apply_resolution_multiplier`), set via `begin_measure_slot` before that
     /// measure's events are pushed. `1` for measures with no tuplets.
     resolution_multiplier: u32,
     part_name: Option<String>,
@@ -75,7 +75,7 @@ impl PartGrouper {
 
     /// `self.capacity` scaled by the current measure's tuplet-rescale multiplier — the
     /// unit `current_beat` must be compared against while a tuplet-rescaled measure is
-    /// being accumulated (see `tuplet_rescale::rescale_tuplets`).
+    /// being accumulated (see `crate::tuplet::apply_resolution_multiplier`).
     fn effective_capacity(&self) -> u32 {
         self.capacity * self.resolution_multiplier
     }

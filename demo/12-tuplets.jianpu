@@ -4,19 +4,25 @@ max_measures_per_system = 1
 
 # parts
 Melody [M] = notes
+Beat [B] = notes
 
 # score
-time=6/8 label="Sixteenth notes — Duplet 2:{...} / Triplet 3:{...} / Quintuplet 5:4:{...}, then a plain eighth"
-[M] 2:{1=2=} 3:{1=1=1=} 5:4:{1=1=1=1=1=} 2_
+bpm=60 time=6/8 label="Sixteenth notes — Duplet, Triplet, Quintuplet, then a plain eighth"
+[M] 2:{1=2=} 3:{1=1=1=} 5:4:{1=1=1=1=1=} 2_.
+[B] 1_1_1_1_1_1_
 
-time=6/8 label="Eighth notes — Duplet 2:{...} / Triplet 3:{...}, then a plain eighth"
+time=6/8 label="Eighth notes — Duplet / Triplet, then a plain eighth"
 [M] 2:{1_2_} 3:{1_1_1_} 2_
+[B] 1_1_1_1_1_1_
 
-time=4/4 label="Eighth notes — Quintuplet 5:4:{...}, then plain eighths"
-[M] 5:4:{1_1_1_1_1_} 2_3_4_
+time=4/4 label="Eighth notes — Quintuplet, then plain eighths"
+[M] 5:4:{1_1_1_1_1_} 2_3_4_5_
+[B] 1_1_1_1_1_1_1_1_
 
-label="Quarter notes — Triplet 3:{...}, then a plain quarter"
+label="Quarter notes — Triplet, then a plain quarter"
 [M] 3:{1 1 1} 4
+[B] 1_1_1_1_1_1_1_1_
 
-time=6/8 label="Quarter notes — Duplet 2:{...}"
+time=6/8 label="Quarter notes — Duplet"
 [M] 2:{1 2}
+[B] 1_1_1_1_1_1_

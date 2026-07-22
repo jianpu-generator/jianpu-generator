@@ -2,7 +2,7 @@
 //! a tuplet-rescaled measure's note durations must convert to the same total tick span as
 //! the musically equivalent non-tuplet measure, since `GroupedNote::duration` etc. is
 //! already scaled up by `PartSlice::resolution_multiplier` before it ever reaches MIDI
-//! export (see `grouper::tuplet_rescale`).
+//! export (see `crate::tuplet`).
 
 use super::midi_notes::duration_to_ticks;
 use super::one_measure_score;

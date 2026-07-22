@@ -3,39 +3,37 @@
 //! Tuplet ratios (e.g. 3-in-2, 5-in-4) don't generally divide the quarter-beat grid
 //! evenly. Rather than switch the whole engine to fractional durations, each measure's
 //! events are rescaled to a finer integer grid just large enough to make every tuplet
-//! ratio present resolve to a whole number, before `PartGrouper` (and everything
-//! downstream) ever sees them.
+//! ratio present resolve to a whole number.
 //!
-//! This pass must run once per measure (i.e. once per `ParsedMeasureSlot::Real`'s event
-//! list), *before* those events reach `PartGrouper`.
+//! Used both at parse time (`parser::score::interleaved_beat_padding::validate_and_pad_beats`,
+//! to make its capacity check tuplet-aware) and at grouper time (`grouper::part_grouper_group::group_timed_track`,
+//! before events reach `PartGrouper`), so it lives here rather than under either module.
 
 use crate::ast::parsed::{ScoreEvent, TupletInfo};
 use crate::error::Spanned;
 
-/// One measure's events after tuplet rescaling, alongside the factor every duration was
-/// multiplied by.
-pub(super) struct RescaledEvents {
-    pub(super) events: Vec<Spanned<ScoreEvent>>,
-    /// Factor every event's `duration` in `events` was multiplied by. `1` when the
-    /// measure has no tuplets — a no-op rescale, so non-tuplet music is unaffected.
-    pub(super) resolution_multiplier: u32,
-}
-
 /// Scans `events` for `TupletInfo` tags and computes `multiplier = lcm(every tagged
-/// event's num)`. Multiplies every event's `duration` by `multiplier` — plain,
-/// untagged notes too, so the whole measure's grid stays proportionally consistent —
-/// and, for tuplet-tagged events, further multiplies by `den / num` (exact, since
-/// `multiplier` is by construction a multiple of `num`) so that an N-tuplet's N notes
-/// together take the same rescaled duration as `den` plain notes of the same written
-/// value.
-pub(super) fn rescale_tuplets(events: Vec<Spanned<ScoreEvent>>) -> RescaledEvents {
-    let resolution_multiplier = events
+/// event's num)` — the smallest rescale factor that makes every tuplet ratio present in
+/// `events` resolve to a whole number.
+pub(crate) fn resolution_multiplier_of(events: &[Spanned<ScoreEvent>]) -> u32 {
+    events
         .iter()
         .filter_map(|spanned| tuplet_of(&spanned.value))
         .map(|info| info.num)
-        .fold(1, lcm);
+        .fold(1, lcm)
+}
 
-    let events = events
+/// Multiplies every event's `duration` by `resolution_multiplier` — plain, untagged
+/// notes too, so the whole measure's grid stays proportionally consistent — and, for
+/// tuplet-tagged events, further multiplies by `den / num` (exact, as long as
+/// `resolution_multiplier` is a multiple of `num`, which callers must guarantee — see
+/// `resolution_multiplier_of`) so that an N-tuplet's N notes together take the same
+/// rescaled duration as `den` plain notes of the same written value.
+pub(crate) fn apply_resolution_multiplier(
+    events: Vec<Spanned<ScoreEvent>>,
+    resolution_multiplier: u32,
+) -> Vec<Spanned<ScoreEvent>> {
+    events
         .into_iter()
         .map(|mut spanned| {
             let tuplet = tuplet_of(&spanned.value);
@@ -48,12 +46,7 @@ pub(super) fn rescale_tuplets(events: Vec<Spanned<ScoreEvent>>) -> RescaledEvent
             }
             spanned
         })
-        .collect();
-
-    RescaledEvents {
-        events,
-        resolution_multiplier,
-    }
+        .collect()
 }
 
 /// The `TupletInfo` tag of a note/chord/rest/percussion-hit event, or `None` for events
@@ -88,14 +81,10 @@ fn gcd(a: u32, b: u32) -> u32 {
     }
 }
 
-fn lcm(a: u32, b: u32) -> u32 {
+pub(crate) fn lcm(a: u32, b: u32) -> u32 {
     if a == 0 || b == 0 {
         0
     } else {
         a / gcd(a, b) * b
     }
 }
-
-#[cfg(test)]
-#[path = "tuplet_rescale_tests.rs"]
-mod tuplet_rescale_tests;

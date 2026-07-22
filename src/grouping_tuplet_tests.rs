@@ -1,10 +1,10 @@
 //! `validate_measure_grouping`'s `multiplier` parameter, exercised directly against
 //! artificially-rescaled events (simulating what a tuplet-rescaled measure's events
-//! would look like once `tuplet_rescale::rescale_tuplets` has run). See the doc comment
-//! on `validate_measure_grouping` for why the real call site
-//! (`interleaved_beat_padding::validate_and_pad_beats`) always passes `multiplier = 1`
-//! today, and why these tests instead call the function directly with a non-1
-//! multiplier.
+//! would look like once `crate::tuplet::apply_resolution_multiplier` has run). The real
+//! call site (`interleaved_beat_padding::validate_and_pad_beats`) now also exercises
+//! non-1 multipliers, computed via `crate::tuplet::resolution_multiplier_of`; these
+//! tests remain as fast, targeted unit coverage of `validate_measure_grouping` in
+//! isolation, independent of the parser.
 
 use super::validate_measure_grouping;
 use crate::ast::parsed::ScoreEvent;
@@ -12,7 +12,7 @@ use crate::error::Spanned;
 use crate::parser::score::token_parser;
 
 /// Scales every timed event's `duration` by `multiplier`, mirroring what
-/// `tuplet_rescale::rescale_tuplets` does to a real measure's events (for a
+/// `crate::tuplet::apply_resolution_multiplier` does to a real measure's events (for a
 /// non-tuplet-tagged event; that pass's own tests cover the further `den/num`
 /// adjustment tuplet-tagged events get).
 fn scale_durations(

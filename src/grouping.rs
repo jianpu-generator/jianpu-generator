@@ -86,13 +86,12 @@ fn advance_timed_cluster(
 /// Validates half-bar-boundary crossing and dotted-eighth-tail rules for one measure's
 /// events, scaled by `multiplier` (see `GroupedMeasure::resolution_multiplier`).
 ///
-/// `multiplier` is always `1` at the current (only) call site
-/// (`interleaved_beat_padding::validate_and_pad_beats`), since that call happens at
-/// parse time, before `tuplet_rescale::rescale_tuplets` (a grouper-stage pass) has run
-/// and computed the real per-measure multiplier — see the **Tuplet** glossary entry in
-/// `ARCHITECTURE.md` for this known, tracked limitation. The parameter still exists (and
-/// every threshold below is expressed as `BASE_CONST * multiplier`) so this function
-/// itself is tuplet-rescale-correct and can be exercised directly with a non-1
+/// The only call site (`interleaved_beat_padding::validate_and_pad_beats`) now passes
+/// the measure's real tuplet-rescale multiplier — computed at parse time via
+/// `crate::tuplet::resolution_multiplier_of`, the same math the grouper-stage rescale
+/// pass uses — instead of always `1`; see the **Tuplet** glossary entry in
+/// `ARCHITECTURE.md`. Every threshold below is expressed as `BASE_CONST * multiplier` so
+/// this function is tuplet-rescale-correct; it is also exercised directly with a non-1
 /// multiplier, as the unit tests in `grouping_tuplet_tests.rs` do.
 pub fn validate_measure_grouping(
     events: &[Spanned<ScoreEvent>],

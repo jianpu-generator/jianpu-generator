@@ -212,17 +212,21 @@ pub(super) fn validate_and_pad_beats(
     time_den: u8,
     line_span: Span,
 ) -> Result<PaddedBeats, IrrecoverableError> {
-    let mut total = 0u32;
+    let multiplier = crate::tuplet::resolution_multiplier_of(&events);
+    let expected_rescaled = expected * multiplier;
+    let rescaled = crate::tuplet::apply_resolution_multiplier(events.clone(), multiplier);
+
+    let mut total_rescaled = 0u32;
     let mut truncate_at: Option<usize> = None;
 
-    for (i, e) in events.iter().enumerate() {
+    for (i, e) in rescaled.iter().enumerate() {
         let beats = timed_beats(&e.value);
         if beats > 0 {
-            if total + beats > expected {
+            if total_rescaled + beats > expected_rescaled {
                 truncate_at = Some(i);
                 break;
             }
-            total += beats;
+            total_rescaled += beats;
         }
     }
 
@@ -248,20 +252,19 @@ pub(super) fn validate_and_pad_beats(
         });
     }
 
-    if total < expected {
-        let padded = pad_incomplete_measure(events, expected, total, line_span);
+    if total_rescaled < expected_rescaled {
+        debug_assert_eq!((expected_rescaled - total_rescaled) % multiplier, 0);
+        let deficit_written = (expected_rescaled - total_rescaled) / multiplier;
+        let total_written = expected - deficit_written;
+        let padded = pad_incomplete_measure(events, expected, total_written, line_span);
         if padded.beat_overflow_error.is_some() {
             return Ok(padded);
         }
         events = padded.events;
     }
 
-    // `multiplier = 1`: this check runs at parse time, before the grouper-stage
-    // `tuplet_rescale::rescale_tuplets` pass has computed the measure's real tuplet
-    // multiplier — see the **Tuplet** glossary entry in `ARCHITECTURE.md` for this
-    // known, tracked limitation.
     let dotted_eighth_errors =
-        crate::grouping::validate_measure_grouping(&events, time_num, time_den, 1)?;
+        crate::grouping::validate_measure_grouping(&events, time_num, time_den, multiplier)?;
 
     Ok(PaddedBeats {
         events,

@@ -22,13 +22,13 @@ fn notes_doc(score_content: &str) -> String {
     )
 }
 
-/// `3:{1_1_1_} 2_ 3_ 4_ 5_ 6_` — the same eighth-note-triplet-plus-five-plain-eighths
+/// `3:{1_1_1_} 2_ 3_ 4_ 5_ 6_ 7_` — the same eighth-note-triplet-plus-six-plain-eighths
 /// measure as `measure_with_a_triplet_groups_with_correctly_rescaled_durations` in
-/// `src/grouper/tests_tuplets.rs` (chosen there, and reused here, because its raw
-/// pre-rescale duration sum already fills the 4/4 bar exactly — see that test's doc
-/// comment for why an ordinary nominal-duration tuplet can't yet be used end-to-end).
-/// `resolution_multiplier = lcm(3) = 3`; the 3 triplet notes rescale to duration 4 each,
-/// the 5 plain eighth notes rescale to duration 6 each (`2 * 3`).
+/// `src/grouper/tests_tuplets.rs` (chosen there, and reused here, because the triplet
+/// rescales to exactly one beat and the 6 plain eighth notes exactly fill the remaining
+/// 3 beats — see that test's doc comment). `resolution_multiplier = lcm(3) = 3`; the 3
+/// triplet notes rescale to duration 4 each, the 6 plain eighth notes rescale to
+/// duration 6 each (`2 * 3`).
 ///
 /// A quarter-beat is therefore `4 * 3 = 12` rescaled columns, not the base-scale `4` —
 /// `compile_unit`'s beam-flush check (`beat_position % (4 * multiplier) == 0`) must use
@@ -37,7 +37,7 @@ fn notes_doc(score_content: &str) -> String {
 #[test]
 fn tuplet_measure_flushes_underlines_at_multiplier_scaled_quarter_beat_boundaries() {
     let score = score_from(&notes_doc(
-        "time=4/4 key=C4 bpm=120\n[S] 3:{1_1_1_} 2_ 3_ 4_ 5_ 6_\n",
+        "time=4/4 key=C4 bpm=120\n[S] 3:{1_1_1_} 2_ 3_ 4_ 5_ 6_ 7_\n",
     ));
     let result = compile(&score);
     let row = &result.blocks[0].rows[0];
@@ -60,13 +60,12 @@ fn tuplet_measure_flushes_underlines_at_multiplier_scaled_quarter_beat_boundarie
     // by `num`), recovering their written eighth-note duration scaled by the multiplier
     // (2 * 3 = 6 = 2*multiplier) — so, like plain eighth notes, they get
     // underline_count=1 and flush together into one run spanning the whole triplet
-    // (column 0 to 12). The 5 plain eighth notes (rescaled duration 6 = 2*multiplier)
+    // (column 0 to 12). The 6 plain eighth notes (rescaled duration 6 = 2*multiplier)
     // each also get underline_count=1 and flush in pairs at every scaled quarter-beat
-    // boundary (column 24, 36), with the final, unpaired note flushed once at the end
-    // of the measure (column 42).
+    // boundary (column 24, 36, 48), with no leftover unpaired note.
     assert_eq!(
         underlines,
-        vec![(0, 12), (12, 24), (24, 36), (36, 42)],
+        vec![(0, 12), (12, 24), (24, 36), (36, 48)],
         "the eighth-note triplet should flush into its own underline run, followed by \
          the plain eighth notes' 3 underline runs at the multiplier-scaled \
          quarter-beat boundaries"
@@ -78,7 +77,7 @@ fn tuplet_measure_flushes_underlines_at_multiplier_scaled_quarter_beat_boundarie
         .find(|e| matches!(e.content, ElementContent::BarLine))
         .unwrap();
     assert_eq!(
-        bar_line.column, 42,
-        "bar line column should equal the rescaled total duration (3*4 + 5*6 = 42)"
+        bar_line.column, 48,
+        "bar line column should equal the rescaled total duration (3*4 + 6*6 = 48)"
     );
 }

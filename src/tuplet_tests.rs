@@ -1,6 +1,12 @@
-use super::{rescale_tuplets, RescaledEvents};
+use crate::tuplet::{apply_resolution_multiplier, resolution_multiplier_of};
 use crate::ast::parsed::{Accidental, JianPuPitch, ParsedNote, ParsedRest, ScoreEvent, TupletInfo};
 use crate::error::{Span, Spanned};
+
+fn rescale_tuplets(events: Vec<Spanned<ScoreEvent>>) -> (Vec<Spanned<ScoreEvent>>, u32) {
+    let resolution_multiplier = resolution_multiplier_of(&events);
+    let events = apply_resolution_multiplier(events, resolution_multiplier);
+    (events, resolution_multiplier)
+}
 
 fn note(duration: u32, tuplet: Option<TupletInfo>) -> Spanned<ScoreEvent> {
     Spanned::new(
@@ -45,10 +51,7 @@ fn duration_of(spanned: &Spanned<ScoreEvent>) -> u32 {
 #[test]
 fn no_tuplets_is_a_no_op() {
     let events = vec![note(4, None), note(4, None), rest(4, None), note(4, None)];
-    let RescaledEvents {
-        events,
-        resolution_multiplier,
-    } = rescale_tuplets(events);
+    let (events, resolution_multiplier) = rescale_tuplets(events);
     assert_eq!(resolution_multiplier, 1);
     assert_eq!(
         events.iter().map(duration_of).collect::<Vec<_>>(),
@@ -61,10 +64,7 @@ fn eighth_note_triplet_fills_exactly_one_beat() {
     // `3:{1_1_1_}` — three eighth notes (duration 2 each) compressed 3-in-2.
     let tuplet = Some(TupletInfo { num: 3, den: 2 });
     let events = vec![note(2, tuplet), note(2, tuplet), note(2, tuplet)];
-    let RescaledEvents {
-        events,
-        resolution_multiplier,
-    } = rescale_tuplets(events);
+    let (events, resolution_multiplier) = rescale_tuplets(events);
     assert_eq!(resolution_multiplier, 3);
     let durations: Vec<u32> = events.iter().map(duration_of).collect();
     assert_eq!(durations, vec![4, 4, 4]);
@@ -86,10 +86,7 @@ fn plain_notes_in_the_same_measure_are_scaled_by_the_same_multiplier() {
         note(4, None),
         note(4, None),
     ];
-    let RescaledEvents {
-        events,
-        resolution_multiplier,
-    } = rescale_tuplets(events);
+    let (events, resolution_multiplier) = rescale_tuplets(events);
     assert_eq!(resolution_multiplier, 3);
     let durations: Vec<u32> = events.iter().map(duration_of).collect();
     // Triplet notes: 2 * 3 * 2 / 3 = 4 each. Plain notes: 4 * 3 = 12 each.
@@ -104,10 +101,7 @@ fn multiplier_is_lcm_of_every_tuplet_num_present() {
     let triplet = Some(TupletInfo { num: 3, den: 2 });
     let quintuplet = Some(TupletInfo { num: 5, den: 4 });
     let events = vec![note(1, triplet), note(1, quintuplet)];
-    let RescaledEvents {
-        resolution_multiplier,
-        ..
-    } = rescale_tuplets(events);
+    let (_, resolution_multiplier) = rescale_tuplets(events);
     assert_eq!(resolution_multiplier, 15);
 }
 
@@ -115,7 +109,7 @@ fn multiplier_is_lcm_of_every_tuplet_num_present() {
 fn rests_inside_a_tuplet_are_rescaled_like_notes() {
     let tuplet = Some(TupletInfo { num: 3, den: 2 });
     let events = vec![note(2, tuplet), rest(2, tuplet), note(2, tuplet)];
-    let RescaledEvents { events, .. } = rescale_tuplets(events);
+    let (events, _) = rescale_tuplets(events);
     let durations: Vec<u32> = events.iter().map(duration_of).collect();
     assert_eq!(durations, vec![4, 4, 4]);
 }
