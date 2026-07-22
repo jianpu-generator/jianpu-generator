@@ -1,11 +1,11 @@
 use crate::compiler::types::{ColumnElement, MeasureBlock};
-use crate::grid_layout::highlight::system_musical_row_count;
+use crate::grid_layout::highlight::{abs_sys_index, system_musical_row_count};
 use crate::grid_layout::layout::{
     block_column_width, is_chord_only_row, is_lyric_row, make_header_rows,
-    system_has_any_decoration, MUSIC_START_COL,
+    system_has_any_decoration, system_tuplet_part_indices, MUSIC_START_COL,
 };
-use crate::grid_layout::types::{Header, NoteHighlightTarget};
-use std::collections::BTreeMap;
+use crate::grid_layout::types::{GridElement, Header, NoteHighlightTarget};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 /// Groups a `MeasureRow`'s elements by `note_id`, returning `(note_id,
 /// min_column, max_column)` for each contiguous note/rest found in this
@@ -47,7 +47,11 @@ fn group_elements_by_note_id(elements: &[ColumnElement]) -> Vec<(usize, u32, u32
 /// verse row the same span as its note row — verse rows never carry a
 /// `note_id`, so `compute_all_note_highlight_targets` never emits a
 /// highlight target for their own entry anyway.
-fn part_row_ranges(system: &[MeasureBlock], row_offset: usize) -> Vec<(usize, usize)> {
+fn part_row_ranges(
+    system: &[MeasureBlock],
+    row_offset: usize,
+    tuplet_part_indices: &HashSet<usize>,
+) -> Vec<(usize, usize)> {
     let Some(first) = system.first() else {
         return Vec::new();
     };
@@ -66,6 +70,8 @@ fn part_row_ranges(system: &[MeasureBlock], row_offset: usize) -> Vec<(usize, us
         }
         let sub_count = if is_chord_only_row(part_template) {
             4
+        } else if tuplet_part_indices.contains(&idx) {
+            7
         } else {
             6
         };
@@ -88,6 +94,7 @@ fn part_row_ranges(system: &[MeasureBlock], row_offset: usize) -> Vec<(usize, us
 
 pub(crate) fn compute_all_note_highlight_targets(
     page_systems: &[Vec<Vec<MeasureBlock>>],
+    tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
     header: &Header,
     base: f32,
     hide_system_dividers: bool,
@@ -107,8 +114,11 @@ pub(crate) fn compute_all_note_highlight_targets(
             if system_has_any_decoration(system) {
                 row_offset += 1;
             }
-            let musical_row_count = system_musical_row_count(system);
-            let part_ranges = part_row_ranges(system, row_offset);
+            let abs_sys = abs_sys_index(page_systems, page_idx, sys_idx);
+            let tuplet_part_indices =
+                system_tuplet_part_indices(system, tuplet_bracket_map, abs_sys);
+            let musical_row_count = system_musical_row_count(system, &tuplet_part_indices);
+            let part_ranges = part_row_ranges(system, row_offset, &tuplet_part_indices);
 
             let mut col_offset: u32 = MUSIC_START_COL;
             for block in system.iter() {

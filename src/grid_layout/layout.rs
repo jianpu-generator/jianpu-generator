@@ -1,9 +1,10 @@
-use crate::compiler::types::{CompileResult, ElementContent, MeasureBlock, MeasureRow, RowId};
+use crate::compiler::types::{CompileResult, ElementContent, MeasureBlock, MeasureRow};
 use crate::grid_layout::slur_placement::{build_measure_placements, resolve_slur_spans};
+use crate::grid_layout::tuplet_placement::resolve_tuplet_spans;
 use crate::grid_layout::types::Header;
 use crate::grid_layout::types::{GridElement, GridPage, GridRow};
 use crate::render_config::RenderConfig;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 // ── Row classification ────────────────────────────────────────────────────────
 
@@ -46,60 +47,9 @@ pub(crate) fn is_chord_only_row(row: &MeasureRow) -> bool {
             .any(|e| matches!(e.content, ElementContent::ChordSymbol(_)))
 }
 
-// ── Sub-row_heights ───────────────────────────────────────────────────────────
-
-/// Returns the 6 sub-row_heights for a Note/Chord part, in order:
-/// [arc, above_dot, note_head, below_dot, half_ul, quarter_ul]
-pub(crate) fn note_part_sub_row_heights(base: f32) -> [f32; 6] {
-    [
-        base * 0.30, // tie/slur arc
-        base * 0.25, // above-octave dots
-        base,        // note head (main)
-        base * 0.25, // below-octave dots
-        base * 0.15, // half-beat underline
-        base * 0.15, // quarter-beat underline
-    ]
-}
-
-/// Returns the 4 sub-row_heights for a Chord-symbol-only part, in order:
-/// [arc, chord_main, half_ul, quarter_ul]
-pub(crate) fn chord_part_sub_row_heights(base: f32) -> [f32; 4] {
-    [
-        base * 0.30, // tie/slur arc
-        base * 0.75, // chord symbol (main)
-        base * 0.15, // half-beat underline
-        base * 0.15, // quarter-beat underline
-    ]
-}
-
-pub(crate) fn lyric_row_height(base: f32) -> f32 {
-    base * 1.5
-}
-
-pub(crate) fn decoration_row_height(base: f32) -> f32 {
-    base * 1.5
-}
-
-pub(crate) fn separator_row_height() -> f32 {
-    4.0
-}
-
-/// One row of blank vertical space, used above the sequence line.
-pub(crate) fn header_gap_row_height(base: f32) -> f32 {
-    base
-}
-
-pub(crate) fn header_title_row_height(base: f32) -> f32 {
-    base * 0.80
-}
-
-pub(crate) fn header_subtitle_author_row_height(base: f32) -> f32 {
-    base * 2.625
-}
-
-pub(crate) fn header_part_list_row_height(base: f32) -> f32 {
-    base * 0.9
-}
+#[path = "layout_heights.rs"]
+mod heights;
+pub(crate) use heights::*;
 
 // ── Column width helper ───────────────────────────────────────────────────────
 
@@ -124,81 +74,12 @@ pub use spacing::measure_column_boundaries;
 pub(crate) use spacing::measure_column_weights;
 pub(crate) use spacing::{build_measure_column_layout, MIN_MEASURE_WIDTH_PT};
 
-/// Total height in points for all musical sub-rows in a system
-/// (sum over all non-lyric part rows).
-pub(crate) fn system_musical_height_pt(block: &MeasureBlock, base: f32) -> f32 {
-    block
-        .rows
-        .iter()
-        .filter(|r| !is_lyric_row(r))
-        .map(|r| {
-            if is_chord_only_row(r) {
-                chord_part_sub_row_heights(base).iter().sum::<f32>()
-            } else {
-                note_part_sub_row_heights(base).iter().sum::<f32>()
-            }
-        })
-        .sum()
-}
-
-/// Total height in points for lyric rows in a system.
-pub(crate) fn system_lyric_height_pt(block: &MeasureBlock, base: f32) -> f32 {
-    block.rows.iter().filter(|r| has_lyrics(r)).count() as f32 * lyric_row_height(base)
-}
-
-// ── System packing ───────────────────────────────────────────────────────────
-
-fn row_ids(block: &MeasureBlock) -> Vec<&RowId> {
-    block.rows.iter().map(|r| &r.id).collect()
-}
-
-/// The fixed-width column reserved at the start of every system row for the
-/// part label (see [`crate::grid_layout::types::GridRow::column_geometry`]).
-/// A single column, not a subdivided region — nothing else places elements
-/// at fractional positions within it.
-pub(crate) const LABEL_COLS: u32 = 1;
-
-/// First musical column, leaving a dedicated column at `LABEL_COLS` for the
-/// leading barline so it gets the same breathing room as inter-measure barlines.
-pub(crate) const MUSIC_START_COL: u32 = LABEL_COLS + 1;
-
-/// Break `blocks` into systems. Each system is a `Vec<MeasureBlock>`.
-pub(crate) fn pack_into_systems(
-    blocks: &[MeasureBlock],
-    config: &RenderConfig,
-) -> Vec<Vec<MeasureBlock>> {
-    let mut systems: Vec<Vec<MeasureBlock>> = Vec::new();
-    let mut current: Vec<MeasureBlock> = Vec::new();
-
-    for block in blocks {
-        let needs_new = if let Some(first) = current.first() {
-            current.len() as u32 >= config.max_measures_per_system
-                || row_ids(block) != row_ids(first)
-        } else {
-            false
-        };
-
-        if needs_new && !current.is_empty() {
-            systems.push(std::mem::take(&mut current));
-        }
-
-        current.push(block.clone());
-    }
-
-    if !current.is_empty() {
-        systems.push(current);
-    }
-
-    systems
-}
-
-pub(crate) fn compute_bar_height(first: &MeasureBlock, base: f32) -> f32 {
-    system_musical_height_pt(first, base) + system_lyric_height_pt(first, base)
-}
-
-pub(crate) fn system_has_any_decoration(system: &[MeasureBlock]) -> bool {
-    system.iter().any(|block| !block.decorations.is_empty())
-}
+#[path = "layout_systems.rs"]
+mod systems;
+pub(crate) use systems::{
+    compute_bar_height, pack_into_systems, system_has_any_decoration, system_lyric_height_pt,
+    system_musical_height_pt, system_tuplet_part_indices, LABEL_COLS, MUSIC_START_COL,
+};
 
 #[path = "layout_decoration.rs"]
 mod decoration;
@@ -209,11 +90,15 @@ use super::note_highlight::note_highlight_targets_on_page;
 pub(crate) use decoration::make_header_rows;
 use decoration::{make_decoration_row, make_separator_row};
 
-fn system_total_height(system: &[MeasureBlock], base: f32) -> f32 {
+fn system_total_height(
+    system: &[MeasureBlock],
+    base: f32,
+    tuplet_part_indices: &HashSet<usize>,
+) -> f32 {
     let Some(first) = system.first() else {
         return 0.0;
     };
-    let musical = system_musical_height_pt(first, base);
+    let musical = system_musical_height_pt(first, base, tuplet_part_indices);
     let lyric = system_lyric_height_pt(first, base);
     let deco = if system_has_any_decoration(system) {
         crate::font_metrics::directive_line_row_height()
@@ -223,14 +108,27 @@ fn system_total_height(system: &[MeasureBlock], base: f32) -> f32 {
     musical + lyric + deco
 }
 
-fn build_page_rows(
-    systems: &[Vec<MeasureBlock>],
-    header: &Header,
-    config: &RenderConfig,
-    arc_map: &HashMap<(usize, usize), Vec<GridElement>>,
+#[derive(Clone, Copy)]
+struct PageRowsParams<'a> {
+    systems: &'a [Vec<MeasureBlock>],
+    header: &'a Header,
+    config: &'a RenderConfig,
+    arc_map: &'a HashMap<(usize, usize), Vec<GridElement>>,
+    tuplet_bracket_map: &'a HashMap<(usize, usize), Vec<GridElement>>,
     abs_system_index_start: usize,
     is_first_page: bool,
-) -> Vec<GridRow> {
+}
+
+fn build_page_rows(params: &PageRowsParams<'_>) -> Vec<GridRow> {
+    let PageRowsParams {
+        systems,
+        header,
+        config,
+        arc_map,
+        tuplet_bracket_map,
+        abs_system_index_start,
+        is_first_page,
+    } = *params;
     let base = config.row_height as f32;
     let mut rows: Vec<GridRow> = make_header_rows(header, base, is_first_page);
     for (sys_idx, system) in systems.iter().enumerate() {
@@ -255,10 +153,21 @@ fn build_page_rows(
                     .map(|arcs| (consolidated_idx, arcs.clone()))
             })
             .collect();
+        let system_tuplet_brackets: HashMap<usize, Vec<GridElement>> = first
+            .rows
+            .iter()
+            .enumerate()
+            .filter_map(|(consolidated_idx, row)| {
+                tuplet_bracket_map
+                    .get(&(abs_sys, row.source_part_index))
+                    .map(|brackets| (consolidated_idx, brackets.clone()))
+            })
+            .collect();
         rows.extend(expand_system_to_rows(
             system,
             base,
             &system_arcs,
+            &system_tuplet_brackets,
             &measure_layout,
         ));
     }
@@ -267,7 +176,42 @@ fn build_page_rows(
 
 #[cfg(test)]
 pub(crate) use super::highlight::compute_measure_highlight_location;
-use super::highlight::{compute_highlight_and_click_infos, HighlightAndClickInfos};
+use super::highlight::{
+    compute_highlight_and_click_infos, HighlightAndClickInfos, HighlightAndClickInfosParams,
+};
+
+/// Greedily packs `systems` into pages, each page holding as many systems as
+/// fit within `usable_h` (accounting for inter-system separator gaps). Split
+/// out of `layout` to keep that function under its line-count cap.
+fn pack_page_systems(
+    systems: Vec<Vec<MeasureBlock>>,
+    tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
+    base: f32,
+    usable_h: f32,
+    hide_system_dividers: bool,
+) -> Vec<Vec<Vec<MeasureBlock>>> {
+    let mut page_systems: Vec<Vec<Vec<MeasureBlock>>> = Vec::new();
+    let mut current_page: Vec<Vec<MeasureBlock>> = Vec::new();
+    let mut used_h: f32 = 0.0;
+
+    for (abs_sys, system) in systems.into_iter().enumerate() {
+        let tuplet_part_indices = system_tuplet_part_indices(&system, tuplet_bracket_map, abs_sys);
+        let sys_h = system_total_height(&system, base, &tuplet_part_indices);
+        let gap = if current_page.is_empty() || hide_system_dividers {
+            0.0
+        } else {
+            separator_row_height()
+        };
+        if !current_page.is_empty() && used_h + gap + sys_h > usable_h {
+            page_systems.push(std::mem::take(&mut current_page));
+            used_h = 0.0;
+        }
+        used_h += gap + sys_h;
+        current_page.push(system);
+    }
+    page_systems.push(current_page);
+    page_systems
+}
 
 /// Public entry point: convert compiler blocks to GridPages.
 pub fn layout(
@@ -284,6 +228,8 @@ pub fn layout(
 
     let measure_placements = build_measure_placements(&systems);
     let arc_map = resolve_slur_spans(&compile_result.slur_spans, &measure_placements, &systems);
+    let tuplet_bracket_map =
+        resolve_tuplet_spans(&compile_result.tuplet_spans, &measure_placements);
 
     let header_h: f32 = make_header_rows(header, base, true)
         .iter()
@@ -292,52 +238,42 @@ pub fn layout(
     let footer_h = base * 0.40;
     let usable_h = page_height_pt - 2.0 * super::PAGE_MARGIN - header_h - footer_h;
 
-    let mut page_systems: Vec<Vec<Vec<MeasureBlock>>> = Vec::new();
-    let mut current_page: Vec<Vec<MeasureBlock>> = Vec::new();
-    let mut used_h: f32 = 0.0;
-
-    for system in systems {
-        let sys_h = system_total_height(&system, base);
-        let gap = if current_page.is_empty() || config.hide_system_dividers {
-            0.0
-        } else {
-            separator_row_height()
-        };
-        if !current_page.is_empty() && used_h + gap + sys_h > usable_h {
-            page_systems.push(std::mem::take(&mut current_page));
-            used_h = 0.0;
-        }
-        used_h += gap + sys_h;
-        current_page.push(system);
-    }
-    page_systems.push(current_page);
+    let page_systems = pack_page_systems(
+        systems,
+        &tuplet_bracket_map,
+        base,
+        usable_h,
+        config.hide_system_dividers,
+    );
 
     let HighlightAndClickInfos {
         highlight_infos,
         error_highlight_infos,
         all_click_target_infos,
         all_note_highlight_target_infos,
-    } = compute_highlight_and_click_infos(
+    } = compute_highlight_and_click_infos(&HighlightAndClickInfosParams {
         blocks,
-        &page_systems,
+        page_systems: &page_systems,
+        tuplet_bracket_map: &tuplet_bracket_map,
         header,
         base,
-        config.hide_system_dividers,
+        hide_system_dividers: config.hide_system_dividers,
         highlighted_measure_range,
-    );
+    });
 
     let total_pages = page_systems.len() as u32;
     let mut abs_system_index_start: usize = 0;
     let mut pages: Vec<GridPage> = Vec::new();
     for (page_idx, page_sys) in page_systems.into_iter().enumerate() {
-        let mut rows = build_page_rows(
-            &page_sys,
+        let mut rows = build_page_rows(&PageRowsParams {
+            systems: &page_sys,
             header,
             config,
-            &arc_map,
+            arc_map: &arc_map,
+            tuplet_bracket_map: &tuplet_bracket_map,
             abs_system_index_start,
-            page_idx == 0,
-        );
+            is_first_page: page_idx == 0,
+        });
         let body_height: f32 = rows.iter().map(|r| r.height_pt).sum();
         let remaining_height = page_height_pt - 2.0 * super::PAGE_MARGIN - body_height;
         rows.push(make_footer_row(

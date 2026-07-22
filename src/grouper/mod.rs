@@ -5,7 +5,7 @@ use crate::ast::grouped::{
     DEFAULT_NOTE_NUMBER_WIDTH, DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_PART_LABEL_WIDTH_PT,
     DEFAULT_ROW_HEIGHT,
 };
-use crate::ast::parsed::{ParsedDocument, ParsedMetadata, ParsedTrack};
+use crate::ast::parsed::{ParsedDocument, ParsedMeasureSlot, ParsedMetadata, ParsedTrack};
 use crate::combiner;
 use crate::error::{Diagnostic, IrrecoverableError};
 
@@ -14,13 +14,11 @@ mod empty_note_measures;
 
 mod directive_grouper;
 mod lyrics_pairing;
-mod navigation_validation;
 mod part_grouper;
 mod sequence_resolution;
 mod tie_validation;
 
 use directive_grouper::DirectiveGrouper;
-use navigation_validation::validate_navigation_markers;
 use part_grouper::group_timed_track;
 use sequence_resolution::resolve_sequence;
 use tie_validation::validate_ties;
@@ -39,10 +37,13 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
         .chain(doc.group_parse_errors)
         .map(Diagnostic::Error)
         .collect();
+    let global_resolution_multipliers = compute_global_resolution_multipliers(&doc.tracks);
     let mut grouped_tracks = Vec::new();
     for track in doc.tracks {
         grouped_tracks.push(match track {
-            ParsedTrack::Timed(part) => GroupedTrack::Timed(group_timed_track(part)?),
+            ParsedTrack::Timed(part) => {
+                GroupedTrack::Timed(group_timed_track(part, &global_resolution_multipliers)?)
+            }
         });
     }
 
@@ -81,10 +82,41 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
         &declarations,
         group.as_ref(),
     );
-    if score.sequence.is_none() {
-        validate_navigation_markers(&mut score);
-    }
     Ok(score)
+}
+
+/// For each measure index, the tuplet-rescale multiplier every part must use at that
+/// measure: `lcm` of every part's own `resolution_multiplier_of` at that index. Parts
+/// share a measure's column space (see `MeasureBlock` in `grid_layout`), so if each part
+/// rescaled tuplets against only its own content, a triplet in one part would desync
+/// that measure's grid from a sibling part with no tuplet (or a different tuplet ratio),
+/// leaving their notes misaligned at matching beats. Computing one multiplier per
+/// measure index up front, before any part is grouped, keeps every part on the same
+/// rescaled grid for that measure.
+fn compute_global_resolution_multipliers(tracks: &[ParsedTrack]) -> Vec<u32> {
+    let measure_count = tracks
+        .iter()
+        .map(|track| match track {
+            ParsedTrack::Timed(part) => part.measure_slots.len(),
+        })
+        .max()
+        .unwrap_or(0);
+    (0..measure_count)
+        .map(|slot_index| {
+            tracks
+                .iter()
+                .filter_map(|track| match track {
+                    ParsedTrack::Timed(part) => part.measure_slots.get(slot_index),
+                })
+                .filter_map(|slot| match slot {
+                    ParsedMeasureSlot::Real { events } => {
+                        Some(crate::tuplet::resolution_multiplier_of(events))
+                    }
+                    ParsedMeasureSlot::EmptyNote { .. } => None,
+                })
+                .fold(1, crate::tuplet::lcm)
+        })
+        .collect()
 }
 
 /// Fills in each unset `metadata` field with its documented default.

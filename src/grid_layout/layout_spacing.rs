@@ -42,6 +42,17 @@ fn column_weight(content: &ElementContent) -> f32 {
 /// `MultiMeasureRest` row gets a flat weight of `1.0` on every column of its
 /// own span instead, keeping its previous even (undifferentiated) sizing;
 /// its trailing `BarLine` column still gets the usual thin weight.
+///
+/// `col_count` is not divided by `block`'s tuplet `resolution_multiplier` before use here.
+/// A multiplier > 1 inflates `col_count` (more raw grid columns stand in for the same real
+/// duration — see **Tuplet** in `ARCHITECTURE.md`), but every one of those extra columns
+/// that has no element gets weight `0.0` from `column_weight` and so contributes nothing to
+/// `column_geometry`'s `column_weight_sum` split; the columns that *do* carry weight
+/// (notehead/dash/bar-line) are exactly as many as an equivalent non-tuplet measure would
+/// have, so the resulting proportional column widths already come out multiplier-invariant
+/// without any explicit division. Confirmed empirically: a single-measure triplet
+/// (`3:{1_1_1_} 2_ 3_ 4_ 5_ 6_`, multiplier 3) renders its 8 notes at uniform column
+/// spacing, identical in kind to a non-tuplet measure of 8 same-weight notes.
 pub(crate) fn measure_column_weights(block: &MeasureBlock, col_count: u32) -> Vec<f32> {
     let has_multi_measure_rest = block.rows.iter().any(|row| {
         row.elements
@@ -96,6 +107,17 @@ pub(crate) fn measure_column_weights(block: &MeasureBlock, col_count: u32) -> Ve
 /// regardless of which one happens to open the system (see
 /// `build_measure_column_layout`'s leading bar-line column, which never
 /// contributes here).
+///
+/// Deliberately **not** divided by the measure's tuplet `resolution_multiplier` (see
+/// **Tuplet** in `ARCHITECTURE.md`): this counts *written note occurrences*, not raw grid
+/// columns, and a tuplet's rescaled duration never changes how many `NoteHead`/`Rest`/
+/// `PercussionHit` elements a measure has — 3 triplet-eighth notes still count as 3, the
+/// same as 3 plain notes elsewhere, matching this function's existing note-count (not
+/// note-duration) philosophy. A tuplet measure's grid column *count* is inflated by its
+/// multiplier (see `block_column_width`), but that inflation never reaches a raw pixel
+/// width anywhere in this module — every consumer of `col_count` below only ever indexes
+/// or iterates it, then folds back down to a proportional (multiplier-invariant) split via
+/// `measure_column_weights`/`column_weight`.
 fn measure_note_weight(block: &MeasureBlock) -> f32 {
     block
         .rows

@@ -1,133 +1,16 @@
 use crate::ast::grouped::Score;
-use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
-use crate::navigation_markers::{self, NavigationMarkerError, RawMarkerIndices, TerminalIndices};
+use crate::error::IrrecoverableError;
 
-fn invalid_at(score: &Score, measure_idx: usize, detail: String) -> IrrecoverableError {
-    let span = score
-        .measures
-        .get(measure_idx)
-        .map(|m| m.source_span)
-        .unwrap_or(Span::new(0, 0));
-    IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(span, detail))
-}
-
-fn into_irrecoverable_error(score: &Score, error: NavigationMarkerError) -> IrrecoverableError {
-    invalid_at(score, error.measure_idx, error.message)
-}
-
-/// Resolved measure indices of a validated navigation marker set.
-struct NavigationMarkers {
-    /// The `dcalcoda`/`dsalcoda`/`dcalfine`/`dsalfine` measure: pass 1 plays
-    /// through this measure.
-    repeat_after: usize,
-    /// Where pass 2 restarts: measure 0 for `dcalcoda`/`dcalfine`, the
-    /// `segno` measure for `dsalcoda`/`dsalfine`.
-    repeat_from: usize,
-    /// Where and how pass 2 ends.
-    terminal: Terminal,
-}
-
-/// How the second pass ends: cutting to a `coda` section, or stopping dead
-/// at `fine`.
-enum Terminal {
-    /// The `tocoda` measure: pass 2 plays through this measure before jumping
-    /// to `coda`. The `coda` measure: pass 2 resumes here and continues to
-    /// the literal end.
-    ToCoda { to_coda: usize, coda: usize },
-    /// The `fine` measure: pass 2 stops here.
-    Fine { fine: usize },
-}
-
-/// Resolves the terminal indices into a validated [`Terminal`]: `tocoda`
-/// must precede `coda`; `fine` must occur at or after `repeat_from`.
-fn resolve_terminal(
-    terminal_indices: TerminalIndices,
-    repeat_from: usize,
-) -> Result<Terminal, NavigationMarkerError> {
-    navigation_markers::validate_terminal_order(&terminal_indices, repeat_from)?;
-    Ok(match terminal_indices {
-        TerminalIndices::ToCoda {
-            to_coda_indices,
-            coda_indices,
-        } => Terminal::ToCoda {
-            to_coda: to_coda_indices.first().copied().unwrap_or_default(),
-            coda: coda_indices.first().copied().unwrap_or_default(),
-        },
-        TerminalIndices::Fine { fine_indices } => Terminal::Fine {
-            fine: fine_indices.first().copied().unwrap_or_default(),
-        },
-    })
-}
-
-/// Validates the navigation markers and returns their resolved measure
-/// indices.
+/// Rebuilds `score.measures` to reflect a `# sequence` section's resolved
+/// playback order, so downstream MIDI/WAV generation replays measures in
+/// actual playback order instead of written order.
 ///
-/// Exactly one of four marker schemes is accepted (or neither, for no
-/// navigation at all):
-/// - `dcalcoda`/`tocoda`/`coda`, each exactly once.
-/// - `segno`/`dsalcoda`/`tocoda`/`coda`, each exactly once, with `segno` at
-///   or before `dsalcoda`.
-/// - `dcalfine`/`fine`, each exactly once.
-/// - `segno`/`dsalfine`/`fine`, each exactly once, with `segno` at or before
-///   `dsalfine`.
-///
-/// In the coda schemes, `tocoda` must precede `coda`. In the fine schemes,
-/// `fine` must occur at or after `segno` (dsalfine) or at or after measure 0
-/// (dcalfine, trivially true). Mixing schemes is an error.
-fn resolve_marker_indices(
-    score: &Score,
-) -> Result<Option<NavigationMarkers>, NavigationMarkerError> {
-    let Some(raw) = navigation_markers::scheme_indices(score)? else {
-        return Ok(None);
-    };
-    navigation_markers::validate_marker_counts(&raw)?;
-
-    // Each `.first()` is `Some` here: `validate_marker_counts` already
-    // confirmed exactly one element in each of these vecs.
-    let repeat_after = navigation_markers::repeat_after(&raw);
-    let repeat_from = navigation_markers::repeat_from(&raw);
-    navigation_markers::validate_segno_order(&raw, repeat_after, repeat_from)?;
-    let RawMarkerIndices {
-        terminal_indices, ..
-    } = raw;
-    let terminal = resolve_terminal(terminal_indices, repeat_from)?;
-
-    Ok(Some(NavigationMarkers {
-        repeat_after,
-        repeat_from,
-        terminal,
-    }))
-}
-
-/// Rebuilds `score.measures` to reflect D.C./D.S. al Coda/Fine navigation
-/// (`dcalcoda`/`tocoda`/`coda`, `segno`/`dsalcoda`/`tocoda`/`coda`,
-/// `dcalfine`/`fine`, or `segno`/`dsalfine`/`fine` markers), so downstream
-/// MIDI/WAV generation replays measures in actual playback order instead of
-/// written order.
-///
-/// - No markers present: returns the score unchanged.
-/// - `dcalcoda`/`tocoda`/`coda` all present exactly once, with `tocoda`
-///   before `coda`: returns a score whose measures are the expanded playback
-///   sequence (pass 1 through D.C. al Coda, then pass 2 from the start
-///   through To Coda, then Coda through the literal end).
-/// - `segno`/`dsalcoda`/`tocoda`/`coda` all present exactly once, with
-///   `segno` at or before `dsalcoda` and `tocoda` before `coda`: same as
-///   above, but pass 2 restarts from `segno` instead of the start.
-/// - `dcalfine`/`fine` all present exactly once: pass 1 through D.C. al
-///   Fine, then pass 2 from the start through Fine, then stops (no coda
-///   section).
-/// - `segno`/`dsalfine`/`fine` all present exactly once, with `segno` at or
-///   before `dsalfine` and at or before `fine`: same as above, but pass 2
-///   restarts from `segno` instead of the start.
-/// - Any other combination (partial set, duplicates, mixing schemes, or
-///   `tocoda` at/after `coda`) is an error.
+/// - No `# sequence` section present: returns the score unchanged.
+/// - Otherwise: returns a score whose measures are the expanded playback
+///   sequence, with each occurrence's `(-abbrev ...)` part omissions applied.
 pub fn expand_navigation(score: &Score) -> Result<Score, IrrecoverableError> {
     expand_navigation_with_origins(score).map(|(score, _)| score)
 }
-
-/// No part omissions: used for playback positions that aren't governed by a
-/// `# sequence` entry's `(-abbrev ...)` suffix.
-const NO_OMISSIONS: &[String] = &[];
 
 /// Same as [`expand_navigation`], but also returns a same-length `Vec<usize>`
 /// mapping each measure in the expanded score back to its index in the
@@ -179,36 +62,16 @@ pub fn expand_navigation_with_note_positions(
         return Ok(build_expanded(score, &idx));
     }
 
-    let markers =
-        resolve_marker_indices(score).map_err(|error| into_irrecoverable_error(score, error))?;
-    let Some(markers) = markers else {
-        let origins = score
-            .measures
-            .iter()
-            .enumerate()
-            .map(|(i, measure)| ExpandedMeasureOrigin {
-                written_measure_index: i,
-                part_written_indices: (0..measure.parts.len()).collect(),
-            })
-            .collect();
-        return Ok((score.clone(), origins));
-    };
-
-    let last = score.measures.len() - 1;
-    let mut idx: Vec<usize> = Vec::new();
-    idx.extend(0..=markers.repeat_after);
-    match markers.terminal {
-        Terminal::ToCoda { to_coda, coda } => {
-            idx.extend(markers.repeat_from..=to_coda);
-            idx.extend(coda..=last);
-        }
-        Terminal::Fine { fine } => {
-            idx.extend(markers.repeat_from..=fine);
-        }
-    }
-
-    let idx: Vec<(usize, &[String])> = idx.into_iter().map(|i| (i, NO_OMISSIONS)).collect();
-    Ok(build_expanded(score, &idx))
+    let origins = score
+        .measures
+        .iter()
+        .enumerate()
+        .map(|(i, measure)| ExpandedMeasureOrigin {
+            written_measure_index: i,
+            part_written_indices: (0..measure.parts.len()).collect(),
+        })
+        .collect();
+    Ok((score.clone(), origins))
 }
 
 /// Clones `score.measures` at each `(index, omit_parts)` pair (playback
@@ -258,7 +121,5 @@ fn build_expanded(
 mod range;
 pub use range::{earliest_playback_position, expand_for_measure, expand_for_measure_range};
 
-#[cfg(test)]
-mod tests;
 #[cfg(test)]
 mod tests_sequence_omission;

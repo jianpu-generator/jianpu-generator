@@ -11,6 +11,8 @@ mod tests_chords;
 mod tests_tied_notes;
 #[path = "tests_timing.rs"]
 mod tests_timing;
+#[path = "tests_tuplets.rs"]
+mod tests_tuplets;
 
 fn default_test_metadata() -> Metadata {
     Metadata {
@@ -93,17 +95,17 @@ fn key_g4_degree_one_is_midi_67() {
 
 #[test]
 fn duration_quarter_note_is_480_ticks() {
-    assert_eq!(duration_to_ticks(4), 480);
+    assert_eq!(duration_to_ticks(4, 1), 480);
 }
 
 #[test]
 fn duration_eighth_note_is_240_ticks() {
-    assert_eq!(duration_to_ticks(2), 240);
+    assert_eq!(duration_to_ticks(2, 1), 240);
 }
 
 #[test]
 fn duration_half_note_is_960_ticks() {
-    assert_eq!(duration_to_ticks(8), 960);
+    assert_eq!(duration_to_ticks(8, 1), 960);
 }
 
 pub(super) fn one_measure_score() -> Score {
@@ -144,17 +146,10 @@ pub(super) fn one_measure_score() -> Score {
             label: None,
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
-            dc_al_coda: false,
-            to_coda: false,
-            coda: false,
-            segno: false,
-            ds_al_coda: false,
-            dc_al_fine: false,
-            fine: false,
-            ds_al_fine: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
                 group_provenance: None,
+                resolution_multiplier: 1,
                 kind: PartKind::Notes,
                 soundfont: Soundfont::default(),
                 volume: 100,
@@ -172,6 +167,7 @@ pub(super) fn one_measure_score() -> Score {
                         group_continuation: 0,
                         dotted: false,
                         slur_group_close_at_duration: None,
+                        tuplet: None,
                     })],
                 },
                 lyrics: Vec::new(),
@@ -244,17 +240,10 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
             label: None,
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
-            dc_al_coda: false,
-            to_coda: false,
-            coda: false,
-            segno: false,
-            ds_al_coda: false,
-            dc_al_fine: false,
-            fine: false,
-            ds_al_fine: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
                 group_provenance: None,
+                resolution_multiplier: 1,
                 kind: PartKind::Notes,
                 soundfont: Soundfont::default(),
                 volume: 100,
@@ -272,6 +261,7 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
                         group_continuation: 0,
                         dotted: false,
                         slur_group_close_at_duration: None,
+                        tuplet: None,
                     })],
                 },
                 lyrics: Vec::new(),

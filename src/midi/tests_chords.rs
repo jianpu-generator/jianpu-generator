@@ -52,6 +52,7 @@ fn chord_major_expands_to_three_notes() {
         group_continuation: 0,
         dotted: false,
         slur_group_close_at_duration: None,
+        tuplet: None,
     };
     let score = Score {
         metadata: test_metadata(),
@@ -65,17 +66,10 @@ fn chord_major_expands_to_three_notes() {
             label: None,
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
-            dc_al_coda: false,
-            to_coda: false,
-            coda: false,
-            segno: false,
-            ds_al_coda: false,
-            dc_al_fine: false,
-            fine: false,
-            ds_al_fine: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
                 group_provenance: None,
+                resolution_multiplier: 1,
                 kind: PartKind::Chords,
                 soundfont: Soundfont::default(),
                 volume: 100,
@@ -129,6 +123,7 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
             group_continuation: if slur { 1 } else { 0 },
             dotted: false,
             slur_group_close_at_duration: None,
+            tuplet: None,
         })
     };
 
@@ -150,17 +145,10 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
             label: None,
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
-            dc_al_coda: false,
-            to_coda: false,
-            coda: false,
-            segno: false,
-            ds_al_coda: false,
-            dc_al_fine: false,
-            fine: false,
-            ds_al_fine: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
                 group_provenance: None,
+                resolution_multiplier: 1,
                 kind: PartKind::Notes,
                 soundfont: Soundfont::default(),
                 volume: 100,

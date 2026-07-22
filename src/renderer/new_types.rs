@@ -12,6 +12,7 @@ pub enum SvgVariant {
     HorizontalLine,
     Underline,
     TieOrSlur,
+    TupletBracket,
     BarLine,
     Lyric,
     DirectiveLine,
@@ -30,6 +31,7 @@ impl SvgVariant {
             Self::HorizontalLine => "horizontal-line",
             Self::Underline => "underline",
             Self::TieOrSlur => "tie-or-slur",
+            Self::TupletBracket => "tuplet-bracket",
             Self::BarLine => "bar-line",
             Self::Lyric => "lyric",
             Self::DirectiveLine => "directive-line",
@@ -159,13 +161,6 @@ pub enum SvgKind {
         anchor: TextAnchor,
         baseline: DominantBaseline,
         spans: Vec<TspanData>,
-    },
-    /// Vector Segno glyph (rendered in place of the unicode
-    /// `\u{1d10b}` character, which is missing from most system fonts).
-    /// `size` is the glyph's rendered width/height in points; `(x, y)` on
-    /// the enclosing [`SvgElement`] is its vertical center / left edge.
-    SegnoGlyph {
-        size: f32,
     },
 }
 

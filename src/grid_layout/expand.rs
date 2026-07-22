@@ -1,4 +1,4 @@
-use crate::compiler::types::{ElementContent, MeasureBlock, MeasureRow, MULTI_MEASURE_REST_WIDTH};
+use crate::compiler::types::{ElementContent, MeasureBlock, MeasureRow};
 use crate::grid_layout::layout::{
     block_column_width, chord_part_sub_row_heights, compute_bar_height, has_lyrics,
     is_chord_only_row, is_lyric_row, lyric_row_height, note_part_sub_row_heights, LABEL_COLS,
@@ -9,158 +9,9 @@ use crate::grid_layout::types::{
 };
 use std::collections::HashMap;
 
-pub(crate) fn grid_el(
-    column: u32,
-    content: GridContent,
-    halign: HAlign,
-    valign: VAlign,
-) -> GridElement {
-    GridElement {
-        column,
-        column_span: 1,
-        halign,
-        valign,
-        content,
-    }
-}
-
-pub(crate) fn push_head(
-    sub_rows: &mut [GridRow],
-    head_sub: usize,
-    column: u32,
-    content: GridContent,
-) {
-    if let Some(row) = sub_rows.get_mut(head_sub) {
-        row.elements
-            .push(grid_el(column, content, HAlign::Center, VAlign::Center));
-    }
-}
-
-pub(crate) struct MeasureRenderParams {
-    pub(crate) head_sub: usize,
-    pub(crate) sub_count: usize,
-    pub(crate) bar_height: f32,
-    pub(crate) part_idx: usize,
-    /// True when this measure is the last one in its system, so its closing
-    /// `BarLine` should sit flush against the right edge of the column it
-    /// occupies (`HAlign::End`) rather than centered within it — the same
-    /// density-drift issue the leading barline has, mirrored at the right
-    /// margin.
-    pub(crate) is_last_block: bool,
-}
-
-/// The collapsed multi-measure-rest glyph gets a fixed wide `column_span`
-/// (unlike `push_head`, which always spans a single column), so it's built
-/// as its own `GridElement` rather than routed through `push_head`.
-fn push_multi_measure_rest(sub_rows: &mut [GridRow], head_sub: usize, column: u32, count: u32) {
-    if let Some(row) = sub_rows.get_mut(head_sub) {
-        row.elements.push(GridElement {
-            column,
-            column_span: MULTI_MEASURE_REST_WIDTH,
-            halign: HAlign::Center,
-            valign: VAlign::Center,
-            content: GridContent::MultiMeasureRest { count },
-        });
-    }
-}
-
-fn push_bar_line(sub_rows: &mut [GridRow], column: u32, bar_height: f32, halign: HAlign) {
-    if let Some(row) = sub_rows.get_mut(0) {
-        row.elements.push(grid_el(
-            column,
-            GridContent::BarLine {
-                height_pt: bar_height,
-            },
-            halign,
-            VAlign::Top,
-        ));
-    }
-}
-
-pub(crate) fn expand_measure_elements(
-    row: &MeasureRow,
-    measure_col_offset: u32,
-    params: &MeasureRenderParams,
-    sub_rows: &mut [GridRow],
-) {
-    let head_sub = params.head_sub;
-    let sub_count = params.sub_count;
-    for el in &row.elements {
-        let grid_col = MUSIC_START_COL + measure_col_offset + el.column;
-        match &el.content {
-            ElementContent::NoteHead {
-                pitch,
-                accidental,
-                octave,
-                dotted,
-            } => push_head(
-                sub_rows,
-                head_sub,
-                grid_col,
-                GridContent::NoteHead {
-                    pitch: pitch.clone(),
-                    accidental: accidental.clone(),
-                    octave: *octave,
-                    dotted: *dotted,
-                },
-            ),
-            ElementContent::Rest { dotted } => push_head(
-                sub_rows,
-                head_sub,
-                grid_col,
-                GridContent::Rest { dotted: *dotted },
-            ),
-            ElementContent::MultiMeasureRest { count } => {
-                push_multi_measure_rest(sub_rows, head_sub, grid_col, *count as u32);
-            }
-            ElementContent::NoteDash => {
-                push_head(sub_rows, head_sub, grid_col, GridContent::NoteDash);
-            }
-            ElementContent::PercussionHit => {
-                push_head(sub_rows, head_sub, grid_col, GridContent::PercussionHit);
-            }
-            ElementContent::ChordSymbol(s) => {
-                if let Some(row) = sub_rows.get_mut(head_sub) {
-                    row.elements.push(grid_el(
-                        grid_col,
-                        GridContent::ChordSymbol(s.clone()),
-                        HAlign::Start,
-                        VAlign::Center,
-                    ));
-                }
-            }
-            ElementContent::Underline {
-                from_column,
-                last_head_column,
-                level,
-                ..
-            } => {
-                let span = last_head_column.saturating_sub(*from_column) + 1;
-                let ul_sub = (sub_count - 2) + *level as usize;
-                if let Some(row) = sub_rows.get_mut(ul_sub) {
-                    row.elements.push(GridElement {
-                        column: MUSIC_START_COL + measure_col_offset + from_column,
-                        column_span: span,
-                        halign: HAlign::Start,
-                        valign: VAlign::Center,
-                        content: GridContent::Underline { level: *level },
-                    });
-                }
-            }
-            ElementContent::BarLine => {
-                if params.part_idx == 0 {
-                    let halign = if params.is_last_block {
-                        HAlign::End
-                    } else {
-                        HAlign::Center
-                    };
-                    push_bar_line(sub_rows, grid_col, params.bar_height, halign);
-                }
-            }
-            ElementContent::Lyric { .. } => {} // handled in lyric-row branch above
-        }
-    }
-}
+#[path = "expand_elements.rs"]
+mod elements;
+use elements::{expand_measure_elements, MeasureRenderParams};
 
 pub(crate) fn expand_lyric_part(
     system: &[MeasureBlock],
@@ -204,7 +55,68 @@ pub(crate) struct NotePartParams<'a> {
     pub(crate) column_count: u32,
     pub(crate) bar_height: f32,
     pub(crate) part_arcs: &'a [GridElement],
+    /// Tuplet brackets for this part, placed in the topmost sub-row (see
+    /// `note_part_sub_row_heights`). Always empty for a chord-only row,
+    /// which has no `tuplet_bracket` sub-row.
+    pub(crate) part_tuplet_brackets: &'a [GridElement],
     pub(crate) measure_layout: &'a [MeasureColumnLayout],
+}
+
+/// A part's sub-rows before any elements are pushed into them, plus the
+/// `(arc_sub, head_sub)` indices locating its arc/note-head bands within
+/// them, and the `sub_count` used by `expand_measure_elements` to derive the
+/// underline sub-rows. A chord-only row has no `tuplet_bracket` sub-row, so
+/// its topmost row (index 0) is the arc row. A note row without a tuplet in
+/// this system also drops that sub-row, so its arc row is index 0 too. A
+/// note row with a tuplet keeps `tuplet_bracket` as index 0, pushing its arc
+/// row to index 1 (see `note_part_sub_row_heights`).
+struct PartSubRows {
+    rows: Vec<GridRow>,
+    sub_count: usize,
+    arc_sub: usize,
+    head_sub: usize,
+}
+
+fn build_part_sub_rows(
+    is_chord_only: bool,
+    has_tuplet: bool,
+    base: f32,
+    column_count: u32,
+    measure_layout: &[MeasureColumnLayout],
+) -> PartSubRows {
+    let (sub_heights, sub_count): (Vec<f32>, usize) = if is_chord_only {
+        (chord_part_sub_row_heights(base).to_vec(), 4)
+    } else if has_tuplet {
+        (note_part_sub_row_heights(base).to_vec(), 7)
+    } else {
+        // No tuplet in this system for this part: drop the `tuplet_bracket`
+        // sub-row entirely rather than reserving its height unused (see
+        // `note_part_height_pt`, which mirrors this for system-height math).
+        (note_part_sub_row_heights(base)[1..].to_vec(), 6)
+    };
+    let rows: Vec<GridRow> = sub_heights
+        .iter()
+        .map(|&h| GridRow {
+            height_pt: h,
+            column_count,
+            has_label_region: true,
+            measure_layout: measure_layout.to_vec(),
+            elements: vec![],
+        })
+        .collect();
+    let (arc_sub, head_sub) = if is_chord_only {
+        (0, 1)
+    } else if has_tuplet {
+        (1, 3)
+    } else {
+        (0, 2)
+    };
+    PartSubRows {
+        rows,
+        sub_count,
+        arc_sub,
+        head_sub,
+    }
 }
 
 pub(crate) fn expand_note_part(
@@ -217,26 +129,20 @@ pub(crate) fn expand_note_part(
     let column_count = params.column_count;
     let bar_height = params.bar_height;
     let part_arcs = params.part_arcs;
-    let (sub_heights, sub_count): (Vec<f32>, usize) = if is_chord_only_row(part_template) {
-        (chord_part_sub_row_heights(base).to_vec(), 4)
-    } else {
-        (note_part_sub_row_heights(base).to_vec(), 6)
-    };
-    let mut sub_rows: Vec<GridRow> = sub_heights
-        .iter()
-        .map(|&h| GridRow {
-            height_pt: h,
-            column_count,
-            has_label_region: true,
-            measure_layout: params.measure_layout.to_vec(),
-            elements: vec![],
-        })
-        .collect();
-    let head_sub = if is_chord_only_row(part_template) {
-        1
-    } else {
-        2
-    };
+    let is_chord_only = is_chord_only_row(part_template);
+    let has_tuplet = !params.part_tuplet_brackets.is_empty();
+    let PartSubRows {
+        rows: mut sub_rows,
+        sub_count,
+        arc_sub,
+        head_sub,
+    } = build_part_sub_rows(
+        is_chord_only,
+        has_tuplet,
+        base,
+        column_count,
+        params.measure_layout,
+    );
     if !part_template.label.is_empty() {
         if let Some(row) = sub_rows.get_mut(head_sub) {
             row.elements.push(GridElement {
@@ -288,8 +194,13 @@ pub(crate) fn expand_note_part(
         }
         measure_col_offset += col_w;
     }
-    if let Some(row) = sub_rows.get_mut(0) {
+    if let Some(row) = sub_rows.get_mut(arc_sub) {
         row.elements.extend_from_slice(part_arcs);
+    }
+    if has_tuplet {
+        if let Some(row) = sub_rows.get_mut(0) {
+            row.elements.extend_from_slice(params.part_tuplet_brackets);
+        }
     }
     sub_rows
 }
@@ -300,6 +211,7 @@ pub(crate) fn expand_system_to_rows(
     system: &[MeasureBlock],
     base: f32,
     system_arcs: &HashMap<usize, Vec<GridElement>>,
+    system_tuplet_brackets: &HashMap<usize, Vec<GridElement>>,
     measure_layout: &[MeasureColumnLayout],
 ) -> Vec<GridRow> {
     let Some(first) = system.first() else {
@@ -307,7 +219,9 @@ pub(crate) fn expand_system_to_rows(
     };
     let total_musical_cols: u32 = system.iter().map(block_column_width).sum();
     let column_count = MUSIC_START_COL + total_musical_cols;
-    let bar_height = compute_bar_height(first, base);
+    let tuplet_part_indices: std::collections::HashSet<usize> =
+        system_tuplet_brackets.keys().copied().collect();
+    let bar_height = compute_bar_height(first, base, &tuplet_part_indices);
     let mut all_rows: Vec<GridRow> = Vec::new();
     for (part_idx, part_template) in first.rows.iter().enumerate() {
         if is_lyric_row(part_template) {
@@ -321,6 +235,9 @@ pub(crate) fn expand_system_to_rows(
         } else {
             let part_arcs: &[GridElement] =
                 system_arcs.get(&part_idx).map_or(&[], |v| v.as_slice());
+            let part_tuplet_brackets: &[GridElement] = system_tuplet_brackets
+                .get(&part_idx)
+                .map_or(&[], |v| v.as_slice());
             all_rows.extend(expand_note_part(
                 system,
                 &NotePartParams {
@@ -330,6 +247,7 @@ pub(crate) fn expand_system_to_rows(
                     column_count,
                     bar_height,
                     part_arcs,
+                    part_tuplet_brackets,
                     measure_layout,
                 },
             ));

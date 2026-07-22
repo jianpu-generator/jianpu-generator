@@ -1,6 +1,8 @@
 use super::beam::{flush_beam_buffer, BeamEntry};
 use super::slur_chains::{extend_note_chains, PendingSlurOpen, SlurChainContext, SlurKey};
-use crate::compiler::types::{ColumnElement, ElementContent, SlurSpan};
+use super::tuplet_spans::{record_tuplet_tag, PendingTupletSpan, TupletSpanContext};
+use crate::ast::parsed::TupletInfo;
+use crate::compiler::types::{ColumnElement, ElementContent, SlurSpan, TupletSpan};
 
 // ── Part slice compiler ───────────────────────────────────────────────────────
 
@@ -10,6 +12,11 @@ pub(super) struct PartState<'a> {
     pub(super) pending_chains: &'a mut Vec<Vec<(u32, SlurKey)>>,
     pub(super) pending_slur_opens: &'a mut Vec<Option<PendingSlurOpen>>,
     pub(super) slur_spans: &'a mut Vec<SlurSpan>,
+    /// Tuplet-bracket run currently being accumulated for this part, if any
+    /// (see `tuplet_spans::record_tuplet_tag`). Never carried across
+    /// measures — a fresh `None` is seeded per `compile_part_slice` call.
+    pub(super) current_tuplet: &'a mut Option<PendingTupletSpan>,
+    pub(super) tuplet_spans: &'a mut Vec<TupletSpan>,
     pub(super) col: &'a mut u32,
     pub(super) prev_tie: &'a mut bool,
     pub(super) prev_tie_column: &'a mut Option<u32>,
@@ -18,6 +25,17 @@ pub(super) struct PartState<'a> {
     pub(super) next_note_id: &'a mut usize,
     pub(super) measure_index: usize,
     pub(super) part_index: usize,
+    /// This measure's tuplet-rescale factor (`GroupedMeasure::resolution_multiplier`,
+    /// carried onto `PartSlice`). `1` for measures with no tuplets — every
+    /// quarter-beat-grid literal below (`4` per beat, underline-count thresholds
+    /// `1`/`2`/`3`) is scaled by this factor so a rescaled measure still lays out
+    /// correctly. Untagged (non-tuplet) notes/rests in a rescaled measure have their
+    /// `duration` scaled by exactly this factor too, so the comparisons stay exact for
+    /// them; a tuplet-tagged unit's `duration` is additionally ratio-compressed
+    /// (`* den / num`) — `compile_unit` undoes that compression before comparing
+    /// against these thresholds, so underline count still reflects the note's written
+    /// duration, not its rescaled one.
+    pub(super) multiplier: u32,
 }
 
 // ── Shared compile-unit abstraction ──────────────────────────────────────────
@@ -29,7 +47,31 @@ pub(super) struct CompiledUnit {
     pub(super) group_continuation: u8,
     pub(super) slur_close_at: Option<u32>,
     pub(super) slur_key: SlurKey,
+    pub(super) tuplet: Option<TupletInfo>,
     pub(super) head: ElementContent,
+}
+
+/// Beam/underline count reflects each note's *written* duration (e.g. `=` sixteenth
+/// notes always get a double underline), not its tuplet-rescaled duration — a triplet
+/// squeezing 3 sixteenth notes into an eighth note's space is still notated with the
+/// sixteenth note's double beam underneath, with the tuplet bracket/number drawn as a
+/// separate overlay (see `tuplet_spans.rs`). For tuplet-tagged units, undo the
+/// `* den / num` rescale (exact, since `unit.duration` was constructed as a multiple
+/// of `den`) to recover the multiplier-scaled written duration before comparing it
+/// against the thresholds below.
+fn written_underline_count(unit: &CompiledUnit, multiplier: u32) -> u32 {
+    let scaled_written_duration = match unit.tuplet {
+        Some(TupletInfo { num, den, .. }) => unit.duration / den * num,
+        None => unit.duration,
+    };
+    if scaled_written_duration == multiplier {
+        2
+    } else if scaled_written_duration == 2 * multiplier || scaled_written_duration == 3 * multiplier
+    {
+        1
+    } else {
+        0
+    }
 }
 
 pub(super) fn compile_unit(
@@ -38,17 +80,25 @@ pub(super) fn compile_unit(
     measure_col_start: u32,
     note_id: usize,
 ) {
+    record_tuplet_tag(
+        &mut TupletSpanContext {
+            current: state.current_tuplet,
+            tuplet_spans: state.tuplet_spans,
+            measure_index: state.measure_index,
+            part_index: state.part_index,
+        },
+        *state.col,
+        unit.tuplet,
+    );
+
+    let multiplier = state.multiplier;
+    let underline_count = written_underline_count(&unit, multiplier);
+
     state.elements.push(ColumnElement {
         column: *state.col,
         content: unit.head,
         note_id: Some(note_id),
     });
-
-    let underline_count = match unit.duration {
-        1 => 2,
-        2 | 3 => 1,
-        _ => 0,
-    };
 
     if underline_count == 0 {
         flush_beam_buffer(state.beam_buf, state.elements);
@@ -87,8 +137,9 @@ pub(super) fn compile_unit(
     }
 
     if !unit.dotted {
+        let beat = 4 * multiplier;
         let note_col = *state.col;
-        for dash_col in (note_col + 4..note_col + unit.duration).step_by(4) {
+        for dash_col in (note_col + beat..note_col + unit.duration).step_by(beat as usize) {
             state.elements.push(ColumnElement {
                 column: dash_col,
                 content: ElementContent::NoteDash,
@@ -108,7 +159,7 @@ pub(super) fn compile_unit(
     *state.col += unit.duration;
 
     let beat_position = *state.col - measure_col_start;
-    if underline_count > 0 && beat_position % 4 == 0 {
+    if underline_count > 0 && beat_position % (4 * multiplier) == 0 {
         flush_beam_buffer(state.beam_buf, state.elements);
     }
 }

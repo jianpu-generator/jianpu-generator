@@ -358,33 +358,3 @@ fn key_directive_parses_sharp() {
         assert_eq!(kc.note.accidental, Accidental::Sharp);
     }
 }
-
-#[test]
-fn percussion_hits_count_toward_measure_completeness() {
-    // Regression test: `timed_beats` previously only recognized Note/Chord/Rest/Extension,
-    // so PercussionHit events were counted as 0 duration. A fully-filled percussion measure
-    // (x __ 0_ x_ _== sums to 4+2+2+2+2+2+1+1 = 16 quarter-beats) was wrongly flagged as
-    // an incomplete measure and padded with an extra rest.
-    let content = "time=4/4 key=C4 bpm=120\n[] x __ 0_ x_ _==\n";
-    let declarations = vec![decl("", PartKind::Percussion)];
-    let tracks = parse(content, 0, &declarations).unwrap();
-    let track = notes_track(&tracks, "");
-    assert_eq!(track.per_measure_beat_errors.len(), 1);
-    assert!(
-        track.per_measure_beat_errors[0].is_none(),
-        "a full 16-quarter-beat percussion measure must not be flagged as incomplete, got: {:?}",
-        track.per_measure_beat_errors[0]
-            .as_ref()
-            .map(|w| &w.message)
-    );
-
-    let total: u32 = all_events(track)
-        .iter()
-        .map(|e| match &e.value {
-            ScoreEvent::PercussionHit(hit) => hit.duration,
-            ScoreEvent::Rest(rest) => rest.duration,
-            _ => 0,
-        })
-        .sum();
-    assert_eq!(total, 16, "measure must sum to a full 4/4 bar");
-}

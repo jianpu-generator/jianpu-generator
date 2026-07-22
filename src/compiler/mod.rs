@@ -13,6 +13,8 @@ mod timed_unit;
 mod slur_chains;
 use slur_chains::{PartCrossState, PendingSlurOpen};
 
+mod tuplet_spans;
+
 use crate::ast::grouped::{MultiPartMeasure, NoteEvent, PartRow, Score};
 use crate::ast::parsed::{Accidental, KeyChange, NoteName};
 use itertools::Itertools;
@@ -38,6 +40,7 @@ pub fn compile(score: &Score) -> CompileResult {
         (0..max_parts).map(|_| PartCrossState::new()).collect();
 
     let mut slur_spans: Vec<SlurSpan> = Vec::new();
+    let mut tuplet_spans: Vec<TupletSpan> = Vec::new();
     let blocks: Vec<MeasureBlock> = score
         .measures
         .iter()
@@ -49,6 +52,7 @@ pub fn compile(score: &Score) -> CompileResult {
                 measure_index,
                 &mut cross_states,
                 &mut slur_spans,
+                &mut tuplet_spans,
             )
         })
         .collect();
@@ -64,8 +68,18 @@ pub fn compile(score: &Score) -> CompileResult {
         span.from_measure = from;
         span.to_measure = to;
     }
+    for span in &mut tuplet_spans {
+        let Some(&mapped) = measure_to_block.get(span.measure_index) else {
+            continue;
+        };
+        span.measure_index = mapped;
+    }
 
-    CompileResult { blocks, slur_spans }
+    CompileResult {
+        blocks,
+        slur_spans,
+        tuplet_spans,
+    }
 }
 
 /// Minimum length of a consecutive all-rest run before it gets collapsed
@@ -79,22 +93,14 @@ fn measure_carries_no_directive(measure: &MultiPartMeasure, measure_index: usize
     // reason to keep the measure from collapsing into a rest run — it just
     // needs to be preserved on the merged block, see `merge_rest_run`.
     //
-    // A `label` is deliberately not checked here: unlike the markers below, a
-    // label is just a section marker, so a labeled rest measure is still
-    // collapsible — it just can't be absorbed into a run that started before
-    // it, since the label must remain visible at the position it marks. That
-    // run-boundary rule lives in `merge_rest_runs`, not here.
+    // A `label` is deliberately not checked here: it's just a section
+    // marker, so a labeled rest measure is still collapsible — it just can't
+    // be absorbed into a run that started before it, since the label must
+    // remain visible at the position it marks. That run-boundary rule lives
+    // in `merge_rest_runs`, not here.
     let carries_initial_signature =
         measure.time_signature.is_some() || measure.bpm.is_some() || measure.key.is_some();
-    !measure.dc_al_coda
-        && !measure.to_coda
-        && !measure.coda
-        && !measure.segno
-        && !measure.ds_al_coda
-        && !measure.dc_al_fine
-        && !measure.fine
-        && !measure.ds_al_fine
-        && (measure_index == 0 || !carries_initial_signature)
+    measure_index == 0 || !carries_initial_signature
 }
 
 fn is_collapsible(measure: &MultiPartMeasure, measure_index: usize, block: &MeasureBlock) -> bool {
@@ -272,6 +278,7 @@ fn compile_measure(
     measure_index: usize,
     cross_states: &mut Vec<PartCrossState>,
     slur_spans: &mut Vec<SlurSpan>,
+    tuplet_spans: &mut Vec<TupletSpan>,
 ) -> MeasureBlock {
     while cross_states.len() < measure.parts.len() {
         cross_states.push(PartCrossState::new());
@@ -316,6 +323,7 @@ fn compile_measure(
                 part_index: part_idx,
             },
             slur_spans,
+            tuplet_spans,
         );
 
         let Some(cs) = cross_states.get_mut(part_idx) else {
@@ -371,14 +379,6 @@ fn collect_decorations(measure: &MultiPartMeasure, bar_number: usize) -> Vec<Dec
             .time_signature
             .as_ref()
             .map(|ts| (ts.numerator as u32, ts.denominator as u32)),
-        dc_al_coda: measure.dc_al_coda,
-        to_coda: measure.to_coda,
-        coda: measure.coda,
-        segno: measure.segno,
-        ds_al_coda: measure.ds_al_coda,
-        dc_al_fine: measure.dc_al_fine,
-        fine: measure.fine,
-        ds_al_fine: measure.ds_al_fine,
     }]
 }
 
@@ -392,3 +392,5 @@ mod tests_lyrics_and_diagnostics;
 mod tests_multi_measure_rest;
 #[cfg(test)]
 mod tests_slur;
+#[cfg(test)]
+mod tests_tuplets;

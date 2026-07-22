@@ -1,5 +1,8 @@
 use crate::error::{Diagnostic, RecoverableError, Span, Spanned, Warning};
 
+mod pitch;
+pub use pitch::*;
+
 #[derive(Debug)]
 pub enum ParsedMeasureSlot {
     EmptyNote { span: Span },
@@ -188,15 +191,6 @@ pub struct ParsedChordSymbol {
     pub bass: Option<BassDegree>,
 }
 
-/// A translation in points, applied to a rendered element after its layout
-/// position has been resolved. Does not affect the position of any other
-/// element.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct Offset {
-    pub x: i32,
-    pub y: i32,
-}
-
 #[derive(Debug)]
 pub struct ParsedMetadata {
     pub title: Option<String>,
@@ -247,22 +241,20 @@ pub enum ScoreEvent {
     /// `hide_resting_parts=` — in effect from this measure onward until the next
     /// occurrence.
     HideRestingPartsChange(bool),
-    /// `dcalcoda` — after this measure, playback restarts from measure 0.
-    DcAlCoda,
-    /// `tocoda` — on the second pass only, playback cuts away here to the `Coda` measure.
-    ToCoda,
-    /// `coda` — playback resumes here (on the second pass) and continues to the end.
-    Coda,
-    /// `segno` — marks the measure that `dsalcoda`/`dsalfine` jumps back to.
-    Segno,
-    /// `dsalcoda` — after this measure, playback restarts from the `Segno` measure.
-    DsAlCoda,
-    /// `dcalfine` — after this measure, playback restarts from measure 0 and stops at `Fine`.
-    DcAlFine,
-    /// `fine` — on the second pass only, playback stops here.
-    Fine,
-    /// `dsalfine` — after this measure, playback restarts from the `Segno` measure and stops at `Fine`.
-    DsAlFine,
+}
+
+/// Tuplet ratio tag attached to a parsed note/chord/rest/percussion-hit that falls inside
+/// an open `{N:...}`/`{N:M:...}` bracket: `num` notes take the time of `den` notes of the
+/// same written value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TupletInfo {
+    pub num: u32,
+    pub den: u32,
+    /// Identifies which `{...}` bracket this tag came from, distinguishing
+    /// directly-adjacent brackets that share the same `num`/`den` ratio (e.g.
+    /// `3:{3 6 1} 3:{3 6 1}`) so they don't merge into a single tuplet span/bracket.
+    /// Unique per opened bracket within a line; not meaningful beyond identity/equality.
+    pub id: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -287,6 +279,8 @@ pub struct ParsedNote {
     /// this holds the offset in quarter-beats from the note's start where the slur arc
     /// should end. `None` means the slur closes at the note's head position (normal case).
     pub slur_group_close_at_duration: Option<u32>,
+    /// The innermost `{...}` tuplet bracket this note belongs to, if any.
+    pub tuplet: Option<TupletInfo>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -303,6 +297,8 @@ pub struct ParsedChordNote {
     pub group_continuation: u8,
     pub dotted: bool,
     pub slur_group_close_at_duration: Option<u32>,
+    /// The innermost `{...}` tuplet bracket this chord note belongs to, if any.
+    pub tuplet: Option<TupletInfo>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -320,6 +316,8 @@ pub struct ParsedPercussionHit {
     /// Whether `.` was present as a dotted-hit suffix.
     pub dotted: bool,
     pub slur_group_close_at_duration: Option<u32>,
+    /// The innermost `{...}` tuplet bracket this hit belongs to, if any.
+    pub tuplet: Option<TupletInfo>,
 }
 
 impl ParsedPercussionHit {
@@ -348,47 +346,8 @@ pub struct ParsedRest {
     pub dotted: bool,
     pub group_membership: u8,
     pub group_continuation: u8,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum JianPuPitch {
-    One,
-    Two,
-    Three,
-    Four,
-    Five,
-    Six,
-    Seven,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct KeyChange {
-    pub note: Note,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Note {
-    pub name: NoteName,
-    pub octave: u8,
-    pub accidental: Accidental,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum NoteName {
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    G,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Accidental {
-    Flat,
-    Sharp,
-    Natural,
+    /// The innermost `{...}` tuplet bracket this rest belongs to, if any.
+    pub tuplet: Option<TupletInfo>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

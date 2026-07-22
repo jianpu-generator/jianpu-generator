@@ -6,14 +6,14 @@ max_measures_per_system = 1
 Melody [M] = notes+lyrics
 
 # score
-label="Scale degrees 1-7 & rest 0"
+label="Scale degrees & rest"
 [M] 1 2 3 0
-[M] do re mi
+[M] _
 
-label="Accidentals: sharp (#) & flat (b)"
+label="Accidentals (#/b)"
 [M] 7# 1b 4# 4b
 [M] _
 
-label="Octave: up (') & down (,)"
+label="Octave ('/,)"
 [M] 1' 2' 1, 2,
 [M] _

@@ -295,6 +295,10 @@ pub(super) fn render_tie_or_slur(
     }]
 }
 
+#[path = "glyph_renderers_tuplet_bracket.rs"]
+mod tuplet_bracket;
+pub(super) use tuplet_bracket::render_tuplet_bracket;
+
 pub(super) fn render_bar_line(elem: &AbsoluteElement, height: &f32) -> Vec<SvgElement> {
     vec![SvgElement {
         x: elem.x,

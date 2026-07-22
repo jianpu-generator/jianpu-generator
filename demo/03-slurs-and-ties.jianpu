@@ -13,11 +13,15 @@ label="Slur group"
 label="Tie: basic"
 [M] 4~4 3 2
 
-label="Tie: across duration extensions"
+label="Tie across extension"
 [M] 4~-4-
 
 label="Tie: chained"
 [M] 1~1~1 0
+
+label="Tie + repeat"
+[M] 5__~5 0 0
+[M] _
 
 label="Tie inside slur"
 [M] (4~4 3) 2
@@ -26,7 +30,7 @@ label="Nested slur"
 [M] ((1_ 2_) 3) 4
 [M] _
 
-label="Cross-measure slur (bar 1 of 2)"
+label="Cross-measure slur"
 [M] 1 2 3 (4
 
 

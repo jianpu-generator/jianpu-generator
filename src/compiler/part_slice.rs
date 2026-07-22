@@ -2,10 +2,11 @@ use super::beam::{flush_beam_buffer, BeamEntry};
 use super::part_slice_unit::{compile_unit, CompiledUnit, PartState};
 use super::slur_chains::{extend_note_chains, PendingSlurOpen, SlurChainContext, SlurKey};
 use super::timed_unit::TimedUnit;
+use super::tuplet_spans::{finish_tuplet_spans, record_tuplet_tag, TupletSpanContext};
 use super::PartSliceResult;
 use crate::ast::grouped::{GroupedRest, NoteEvent, PartSlice};
 use crate::ast::parsed::PartKind;
-use crate::compiler::types::{ArcKind, ColumnElement, ElementContent, SlurSpan};
+use crate::compiler::types::{ArcKind, ColumnElement, ElementContent, SlurSpan, TupletSpan};
 
 // ── Top-level entry point ─────────────────────────────────────────────────────
 
@@ -24,6 +25,7 @@ pub(super) fn compile_part_slice(
     slice: &PartSlice,
     input: PartSliceInput,
     slur_spans: &mut Vec<SlurSpan>,
+    tuplet_spans: &mut Vec<TupletSpan>,
 ) -> PartSliceResult {
     let mut elements: Vec<ColumnElement> = Vec::new();
     let mut beam_buf: Vec<BeamEntry> = Vec::new();
@@ -36,6 +38,7 @@ pub(super) fn compile_part_slice(
     let mut next_note_id = input.next_note_id;
     let mut col: u32 = 0;
     let measure_index = input.measure_index;
+    let mut current_tuplet = None;
 
     {
         let mut state = PartState {
@@ -44,6 +47,8 @@ pub(super) fn compile_part_slice(
             pending_chains: &mut pending_chains,
             pending_slur_opens: &mut pending_slur_opens,
             slur_spans,
+            current_tuplet: &mut current_tuplet,
+            tuplet_spans,
             col: &mut col,
             prev_tie: &mut prev_tie,
             prev_tie_column: &mut prev_tie_column,
@@ -52,8 +57,15 @@ pub(super) fn compile_part_slice(
             next_note_id: &mut next_note_id,
             measure_index,
             part_index: input.part_index,
+            multiplier: slice.resolution_multiplier,
         };
         process_events(&mut state, slice);
+        finish_tuplet_spans(&mut TupletSpanContext {
+            current: state.current_tuplet,
+            tuplet_spans: state.tuplet_spans,
+            measure_index: state.measure_index,
+            part_index: state.part_index,
+        });
     }
 
     preserve_cross_measure_slur_opens(&pending_chains, &mut pending_slur_opens, measure_index);
@@ -202,6 +214,7 @@ fn compile_timed_unit<T: TimedUnit>(
             group_continuation: unit.group_continuation(),
             slur_close_at: unit.slur_close_at(),
             slur_key: unit.slur_key(),
+            tuplet: unit.tuplet(),
             head: unit.element_content(),
         },
         measure_col_start,
@@ -227,15 +240,29 @@ fn compile_rest(
     measure_col_start: u32,
     note_id: usize,
 ) {
-    let underline_count = match rest.duration {
-        1 => 2,
-        2 => 1,
-        _ => 0,
+    let multiplier = state.multiplier;
+    let underline_count = if rest.duration == multiplier {
+        2
+    } else if rest.duration == 2 * multiplier {
+        1
+    } else {
+        0
     };
 
     if underline_count == 0 {
         flush_beam_buffer(state.beam_buf, state.elements);
     }
+
+    record_tuplet_tag(
+        &mut TupletSpanContext {
+            current: state.current_tuplet,
+            tuplet_spans: state.tuplet_spans,
+            measure_index: state.measure_index,
+            part_index: state.part_index,
+        },
+        *state.col,
+        rest.tuplet,
+    );
 
     state.elements.push(ColumnElement {
         column: *state.col,
@@ -270,8 +297,9 @@ fn compile_rest(
     }
 
     if !rest.dotted {
+        let beat = 4 * multiplier;
         let rest_col = *state.col;
-        for dash_col in (rest_col + 4..rest_col + rest.duration).step_by(4) {
+        for dash_col in (rest_col + beat..rest_col + rest.duration).step_by(beat as usize) {
             state.elements.push(ColumnElement {
                 column: dash_col,
                 content: ElementContent::NoteDash,
@@ -287,7 +315,7 @@ fn compile_rest(
     *state.prev_tie_note_id = None;
 
     let beat_position = *state.col - measure_col_start;
-    if underline_count > 0 && beat_position % 4 == 0 {
+    if underline_count > 0 && beat_position % (4 * multiplier) == 0 {
         flush_beam_buffer(state.beam_buf, state.elements);
     }
 }

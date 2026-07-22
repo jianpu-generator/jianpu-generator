@@ -28,7 +28,6 @@ pub mod grouper;
 pub mod grouping;
 pub mod layout;
 pub mod measure_spans;
-mod navigation_markers;
 pub mod parser;
 mod part_info;
 pub mod render_config;
@@ -38,6 +37,7 @@ pub mod source_edit;
 pub mod source_embed;
 pub mod split_track;
 pub mod symbols;
+mod tuplet;
 pub mod utils;
 
 #[cfg(feature = "midi")]
@@ -384,3 +384,7 @@ pub fn write_pdf_from_source_filtered_with_lyrics(
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[path = "tuplet_tests.rs"]
+mod tuplet_tests;

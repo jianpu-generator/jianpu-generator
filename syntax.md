@@ -69,7 +69,7 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | `merge_duplicate_measures_across_parts` | no | `yes` | Score-wide default for whether identical measures from different parts are merged into a single row (`yes`/`no`); can be overridden from a given measure onward with the `merge_duplicate_measures_across_parts=` directive line — see [Directive lines](#directive-lines) |
 | `hide_resting_parts` | no | `yes` | Score-wide default for whether an all-rest part is omitted from a measure where other parts have content (`yes`/`no`); can be overridden from a given measure onward with the `hide_resting_parts=` directive line — see [Directive lines](#directive-lines) |
 | `hide_system_dividers` | no | `no` | Whether the horizontal divider line between systems is omitted (`yes`/`no`) |
-| `directive_row_offset` | no | `0 0` | Translation `"x y"` (points) applied to every rendered directive row (bar number, section label, key, bpm, time signature, D.C./Segno/Coda/Fine markers), moving that row's text without affecting the layout of anything else. Not applied to the `# sequence` summary header. |
+| `directive_row_offset` | no | `0 0` | Translation `"x y"` (points) applied to every rendered directive row (bar number, section label, key, bpm, time signature), moving that row's text without affecting the layout of anything else. Not applied to the `# sequence` summary header. |
 
 ---
 
@@ -296,14 +296,6 @@ bpm=92 key=C4 time=4/4 label="Verse 1"
 | `label=` | `label="Verse 1"` | Section label rendered above the row group |
 | `merge_duplicate_measures_across_parts=` | `merge_duplicate_measures_across_parts=no` | Overrides the `#metadata` default from this measure onward (`yes`/`no`) |
 | `hide_resting_parts=` | `hide_resting_parts=no` | Overrides the `#metadata` default from this measure onward (`yes`/`no`) |
-| `dcalcoda` | `dcalcoda` | D.C. al Coda: after this measure, playback restarts from measure 0 |
-| `tocoda` | `tocoda` | To Coda: on the second pass only, playback cuts away here to the `coda` measure |
-| `coda` | `coda` | Coda: playback resumes here (on the second pass) and continues to the end |
-| `segno` | `segno` | Segno: marks the measure that `dsalcoda`/`dsalfine` jumps back to |
-| `dsalcoda` | `dsalcoda` | D.S. al Coda: after this measure, playback restarts from the `segno` measure |
-| `dcalfine` | `dcalfine` | D.C. al Fine: after this measure, playback restarts from measure 0 and stops at `fine` |
-| `fine` | `fine` | Fine: on the second pass only, playback stops here |
-| `dsalfine` | `dsalfine` | D.S. al Fine: after this measure, playback restarts from the `segno` measure and stops at `fine` |
 
 Rules:
 
@@ -313,34 +305,16 @@ Rules:
 - `label` applies only to the measure where it is declared (does not persist to the next bar) — this is true for rendering purposes and whenever no `# sequence` section is present. When a `# sequence` section **is** present, each label additionally denotes a *span* of measures for playback-order purposes: see [`# sequence` — explicit playback order](#sequence--explicit-playback-order) below.
 - `bpm`, `key`, and `time` persist until the next directive line overrides them.
 - `merge_duplicate_measures_across_parts` and `hide_resting_parts` also persist until the next directive line overrides them; unset, they start from the `#metadata` value (or its default of `yes`) for the first measure.
-- `dcalcoda`, `tocoda`, and `coda` are bare keywords (no `=value`) that, like `label`, apply only to the measure where declared and do not persist. They must appear **all three together or not at all** (a partial set is an error), at most once each, and `tocoda` must occur before `coda`.
-- `segno`, `dsalcoda`, `tocoda`, and `coda` are the equivalent "D.S. al Coda" marker set: they must appear **all four together or not at all**, at most once each, `segno` must occur at or before `dsalcoda`, and `tocoda` must occur before `coda`.
-- `dcalfine` and `fine` are a marker set: they must appear **both together or not at all**, at most once each.
-- `segno`, `dsalfine`, and `fine` are the equivalent "D.S. al Fine" marker set: they must appear **all three together or not at all**, at most once each, `segno` must occur at or before `dsalfine`, and `fine` must occur at or after `segno`.
-- Exactly one of `dcalcoda`, `dsalcoda`, `dcalfine`, or `dsalfine` may be used per score — mixing navigation schemes is an error. `tocoda`/`coda` cannot be combined with `dcalfine`/`dsalfine`, and `fine` cannot be combined with `dcalcoda`/`dsalcoda`.
 
 ### Rendering
 
-When `time=` or `bpm=` changes on a measure, the generator may add a **directive row** above the bar-number / section-label row for that system line. Time signature and BPM appear once on that row (not on each part row), aligned with each measure’s note-start column. They do not shift notes or lyrics horizontally. If neither value changes on any measure in the line, the directive row is omitted. A measure with `dcalcoda`, `tocoda`, `coda`, `segno`, `dsalcoda`, `dcalfine`, `fine`, or `dsalfine` set also forces a directive row for that measure, even without a label.
+When `time=` or `bpm=` changes on a measure, the generator may add a **directive row** above the bar-number / section-label row for that system line. Time signature and BPM appear once on that row (not on each part row), aligned with each measure’s note-start column. They do not shift notes or lyrics horizontally. If neither value changes on any measure in the line, the directive row is omitted.
 
 Note names: `A` `B` `C` `D` `E` `F` `G`, with optional `#` or `b` accidental, followed by octave digit (e.g. `4`).
 
-### D.C./D.S. al Coda/Fine navigation (SVG vs. MIDI/WAV)
-
-`dcalcoda`/`tocoda`/`coda`/`segno`/`dsalcoda`/`dcalfine`/`fine`/`dsalfine` render as annotations only — "D.C. al Coda" (italic), "⊕ To Coda", "⊕ Coda", a vector Segno glyph followed by "Segno" (italic), "D.S. al Coda" (italic), "D.C. al Fine" (italic), "Fine" (italic), and "D.S. al Fine" (italic) — on the measure where each is declared. The Segno marker draws as a small vector icon rather than a unicode character, since the `𝄋` Segno codepoint is missing from most system fonts and renders as a tofu box. **SVG (and PDF) output always shows measures in written order**; the markers are just text/vector annotations, they never reorder or duplicate anything visually.
-
-**MIDI and WAV output actually replay measures according to the markers**, since this generator also produces playable audio:
-
-- With `dcalcoda`/`tocoda`/`coda`: measures play from the start through the `dcalcoda` measure, then restart from the start and play through the `tocoda` measure, then jump to the `coda` measure and play through to the literal end of the score.
-- With `segno`/`dsalcoda`/`tocoda`/`coda`: measures play from the start through the `dsalcoda` measure, then restart from the `segno` measure and play through the `tocoda` measure, then jump to the `coda` measure and play through to the literal end of the score.
-- With `dcalfine`/`fine`: measures play from the start through the `dcalfine` measure, then restart from the start and play through the `fine` measure, then stop.
-- With `segno`/`dsalfine`/`fine`: measures play from the start through the `dsalfine` measure, then restart from the `segno` measure and play through the `fine` measure, then stop.
-
-On the first pass, the `tocoda`/`fine` measure is just a normal measure — the cut/stop only happens on the second pass.
-
 ### `# sequence` — explicit playback order
 
-As an alternative to the `dcalcoda`/`tocoda`/`coda`/`segno`/`dsalcoda`/`dcalfine`/`fine`/`dsalfine` markers, a score may include an optional `# sequence` section — placed after `# parts` and before `# score` — that states the playback order directly, as a comma-separated list of section labels (the same labels set via `label="..."` on a measure's directive line):
+A score may include an optional `# sequence` section — placed after `# parts` and before `# score` — that states the playback order directly, as a comma-separated list of section labels (the same labels set via `label="..."` on a measure's directive line):
 
 ```
 # sequence
@@ -358,8 +332,7 @@ label="B"
 - Labels may be repeated in `# sequence` (e.g. `A, B, A`) to replay a span more than once.
 - Each label must be declared **exactly once** in `# score`; declaring the same label on more than one measure is an error.
 - Referencing a label in `# sequence` that was never declared in `# score` is an error; that entry is skipped and the rest of the sequence still resolves.
-- `# sequence` and the inline navigation markers (`dcalcoda`/`tocoda`/`coda`/`segno`/`dsalcoda`/`dcalfine`/`fine`/`dsalfine`) are **mutually exclusive** — using both in the same score is an error.
-- Like the inline markers, `# sequence` only affects **MIDI/WAV playback order** — measures always render once, in written order, with normal bar numbers. However, SVG/PDF output does show the resolved order as a left-aligned line ("Sequence: A › B › A") on the first page, with a blank line of space above it, below the title/subtitle/author/part list. Each label is styled the same as an inline `label="..."` directive (bold, italic).
+- `# sequence` only affects **MIDI/WAV playback order** — measures always render once, in written order, with normal bar numbers. However, SVG/PDF output does show the resolved order as a left-aligned line ("Sequence: A › B › A") on the first page, with a blank line of space above it, below the title/subtitle/author/part list. Each label is styled the same as an inline `label="..."` directive (bold, italic).
 
 An entry may carry a `(-abbrev -abbrev ...)` suffix naming part or group abbreviations (as declared in `# parts`/`# groups`) to omit from that specific occurrence's playback — e.g. a chorus written once but replayed several times with a voice dropping out on later repeats:
 
@@ -400,6 +373,40 @@ Duration is measured in **quarter-beats** (sixteenth-note units). In 4/4, one fu
 | `=` | 1 | Sixteenth note |
 
 Suffix order is flexible (`1_,'` and `1',_` are equivalent).
+
+### Tuplets
+
+`N:{notes}` brackets `N` notes to be played in the time normally taken by a standard "against" count (3-in-2, 2-in-3, 5-in-4, ...); `N:M:{notes}` overrides that with an explicit `M`. The brace opens right after the count, not before it — `3:{1_1_1_}`, not `{3:1_1_1_}`.
+
+```
+3:{1_1_1_} 2_ 3_ 4_ 5_ 6_    an eighth-note triplet, then five plain eighth notes
+5:4:{1=1=1=1=1=}             a quintuplet of sixteenth notes, explicit 5-in-4
+```
+
+| `N` | Implied `M` (against count) |
+|-----|------------------------------|
+| 2 | 3 |
+| 3 | 2 |
+| 4 | 3 |
+| 5 | 4 |
+| 6 | 4 |
+| 7 | 4 |
+| 9 | 8 |
+
+Any other `N` has no standard implied ratio — omitting `:M` is a recoverable error ("tuplet ratio for N is ambiguous; use `{N:M:...}` to specify explicitly"); write `N:M:{notes}` instead.
+
+The bracket must contain exactly `N` notes/rests/repeat-atoms (each counts once, same rule as `(…)` group note-counting) — a mismatch at the closing `}` is a recoverable error, though the notes present are still emitted and rendered.
+
+Tuplets nest with `(…)` slur/tie groups in either direction:
+
+```
+(3:{1_1_1_} 2_) 3_ 4_ 5_ 6_    slur group wrapping a triplet
+3:{(1_1_) 1_} 2_ 3_ 4_ 5_ 6_   triplet wrapping a slur group
+```
+
+Unlike `(…)` groups, a tuplet **cannot span lines**: an unclosed `{` at the end of a line is a hard parse error, not a cross-line continuation.
+
+**Note:** the measure-capacity check (below) currently compares each tuplet's *written* (nominal, uncompressed) duration against the bar, not its actual rescaled duration — so a tuplet that only fits the bar once compressed/expanded (the whole point of writing one) can be misjudged as too short or too long at parse time. The triplet example above works because its notes' nominal durations, ignoring the tuplet, already sum to the bar's capacity on their own. Until this is fixed, keep a tuplet's *nominal* duration matching what the bar needs, or use it as a measure's only content.
 
 ### Octave markers
 

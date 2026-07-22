@@ -20,6 +20,10 @@ mod timed_recursive_descent_parser_tests;
 #[cfg(test)]
 mod repeat_tests;
 
+#[path = "tuplet_tests.rs"]
+#[cfg(test)]
+mod tuplet_tests;
+
 pub use timed_lexer::{lex_line, LexContext, TimedLexToken};
 pub use timed_recursive_descent_parser::TimedRecursiveDescentParser;
 
@@ -30,10 +34,11 @@ pub use percussion_head::PercussionHead;
 pub use duration::{parse_duration_suffixes, DurationParse};
 pub use groups::{
     apply_closed_group_depth, apply_closing_segment_depth, apply_open_group_depth,
-    validate_group_note_count, GroupFrame, GroupStack, HasGroupDepth,
+    implicit_tuplet_ratio, validate_group_note_count, GroupFrame, GroupStack, HasGroupDepth,
+    TupletFrame, TupletStack,
 };
 
-use crate::ast::parsed::ScoreEvent;
+use crate::ast::parsed::{ScoreEvent, TupletInfo};
 use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Spanned};
 
 /// Error returned by `parse_head`.
@@ -92,14 +97,19 @@ pub trait TimedUnitHead: Sized {
         true
     }
 
-    fn to_event(
-        head: &Self,
-        duration: u32,
-        dotted: bool,
-        octave: i8,
-        group_membership: u8,
-        group_continuation: u8,
-    ) -> ScoreEvent;
+    fn to_event(head: &Self, attrs: EventAttrs) -> ScoreEvent;
+}
+
+/// Shared attributes computed by `parse_timed_unit` and threaded through to
+/// `TimedUnitHead::to_event`, which maps them onto the concrete `Parsed*` event fields.
+#[derive(Debug, Clone, Copy)]
+pub struct EventAttrs {
+    pub duration: u32,
+    pub dotted: bool,
+    pub octave: i8,
+    pub group_membership: u8,
+    pub group_continuation: u8,
+    pub tuplet: Option<TupletInfo>,
 }
 
 /// Head-boundary check shared by `NoteHead`/`ChordHead`: a fresh degree digit always starts a

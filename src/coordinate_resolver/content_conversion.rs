@@ -52,7 +52,7 @@ const DIRECTIVE_LINE_ELEMENT_GAP: f32 = 20.0;
 
 /// Result of [`directive_line_content`]: the line's text spans plus layout
 /// hints for elements positioned separately from the monolithic `<text>`
-/// (the bar number, the Segno glyph, the section-label bounding box).
+/// (the bar number, the section-label bounding box).
 struct DirectiveLineContent {
     /// Bar-number span, rendered as its own text element at the line's
     /// start (offset 0).
@@ -62,9 +62,6 @@ struct DirectiveLineContent {
     /// see the field of the same name on
     /// [`crate::compositor::types::AbsoluteContent::DirectiveLine`].
     spans_x_offset: f32,
-    /// X offset (in points, from `spans_x_offset`) where the vector Segno
-    /// glyph should be drawn, if a Segno marker is present.
-    segno_icon_offset: Option<f32>,
     /// X offset (in points, from the line's start) where the label's own,
     /// independently-positioned text element begins: past `bar_number`'s
     /// measured width (plus a gap) when one is present, zero otherwise.
@@ -74,28 +71,26 @@ struct DirectiveLineContent {
 /// Builds the text spans for a directive line (excluding the bar number
 /// and section label, which are rendered as their own independent text
 /// elements — see `bar_number`/`label_x_offset`), plus layout hints for the
-/// Segno glyph and section-label box (see [`DirectiveLineContent`]).
+/// section-label box (see [`DirectiveLineContent`]).
 ///
 /// Two explicit passes, per Task 4 of
 /// `PLAN-section-label-engraving-quality.md`: pass 1
 /// ([`build_directive_line_spans`]) builds the line's logical elements
 /// (content/style only, no positions); pass 2 below walks that list once,
 /// measuring each element with real font-metrics glyph advances (see
-/// [`crate::font_metrics`]) to find the Segno glyph's x offset, since
-/// actual text layout happens in the browser and isn't otherwise available
-/// here. Elements are laid out left to right in a fixed order — bar
-/// number, then section label, then the rest of the directives — so a
-/// label never intersects the directives that follow it, regardless of how
-/// short or long the bar number is (this ordering is a follow-up fix on top
-/// of the 5 tasks in `PLAN-section-label-engraving-quality.md`, not one of
-/// the tasks itself).
+/// [`crate::font_metrics`]), since actual text layout happens in the
+/// browser and isn't otherwise available here. Elements are laid out left
+/// to right in a fixed order — bar number, then section label, then the
+/// rest of the directives — so a label never intersects the directives
+/// that follow it, regardless of how short or long the bar number is (this
+/// ordering is a follow-up fix on top of the 5 tasks in
+/// `PLAN-section-label-engraving-quality.md`, not one of the tasks itself).
 fn directive_line_content(content: &PostArcGridContent) -> DirectiveLineContent {
     let PostArcGridContent::DirectiveLine { label, .. } = content else {
         return DirectiveLineContent {
             bar_number: None,
             spans: Vec::new(),
             spans_x_offset: 0.0,
-            segno_icon_offset: None,
             label_x_offset: 0.0,
         };
     };
@@ -120,42 +115,24 @@ fn directive_line_content(content: &PostArcGridContent) -> DirectiveLineContent 
         None => bar_number_width,
     };
 
-    let mut segno_icon_offset = None;
-    let mut x_offset = 0.0;
-    for span in &spans {
-        if span.content.trim_start() == "Segno" {
-            segno_icon_offset = Some(x_offset);
-        }
-        x_offset += crate::font_metrics::span_width(span);
-    }
-
     DirectiveLineContent {
         bar_number: bar_number_span,
         spans,
         spans_x_offset,
-        segno_icon_offset,
         label_x_offset,
     }
 }
 
 /// Pass 1 of [`directive_line_content`]: builds the directive line's
-/// ordered logical elements — the bar number, plus key/bpm/time
-/// signature/navigation markers — with their content/style, but no
-/// positions — positions are assigned in pass 2.
+/// ordered logical elements — the bar number, plus key/bpm/time signature —
+/// with their content/style, but no positions — positions are assigned in
+/// pass 2.
 fn build_directive_line_spans(content: &PostArcGridContent) -> (Option<TextSpan>, Vec<TextSpan>) {
     let PostArcGridContent::DirectiveLine {
         bar_number,
         key,
         bpm,
         time_signature,
-        dc_al_coda,
-        to_coda,
-        coda,
-        segno,
-        ds_al_coda,
-        dc_al_fine,
-        fine,
-        ds_al_fine,
         ..
     } = content
     else {
@@ -189,30 +166,6 @@ fn build_directive_line_spans(content: &PostArcGridContent) -> (Option<TextSpan>
             content: format!("  {n}/{d}"),
             bold: false,
             italic: false,
-            font_size: 12.0,
-        });
-    }
-    let navigation_markers = [
-        (*to_coda, "  \u{2295} To Coda"),
-        (*coda, "  \u{2295} Coda"),
-        (*dc_al_coda, "  D.C. al Coda"),
-        // Leading non-breaking spaces (regular spaces collapse under SVG's
-        // default `xml:space` whitespace handling) reserve room for the
-        // vector Segno glyph drawn over this gap; see `segno_icon_offset`.
-        (*segno, "  \u{a0}\u{a0}\u{a0}\u{a0}\u{a0}Segno"),
-        (*ds_al_coda, "  D.S. al Coda"),
-        (*fine, "  Fine"),
-        (*dc_al_fine, "  D.C. al Fine"),
-        (*ds_al_fine, "  D.S. al Fine"),
-    ];
-    for (present, text) in navigation_markers {
-        if !present {
-            continue;
-        }
-        spans.push(TextSpan {
-            content: text.to_string(),
-            bold: false,
-            italic: true,
             font_size: 12.0,
         });
     }
@@ -285,7 +238,6 @@ fn grid_text_to_absolute(
                 label: label.clone(),
                 spans: directive_line.spans,
                 spans_x_offset: directive_line.spans_x_offset,
-                segno_icon_offset: directive_line.segno_icon_offset,
                 label_x_offset: directive_line.label_x_offset,
                 apply_row_offset: true,
             })
@@ -314,7 +266,6 @@ fn grid_text_to_absolute(
             label: None,
             spans: sequence_line_content(entries),
             spans_x_offset: 0.0,
-            segno_icon_offset: None,
             label_x_offset: 0.0,
             apply_row_offset: false,
         }),

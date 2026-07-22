@@ -126,11 +126,25 @@ pub struct SlurSpan {
     pub to_column: u32, // measure-relative column of the closing note
 }
 
+/// The full logical extent of one tuplet bracket over a contiguous run of
+/// tuplet-tagged notes/rests sharing the same ratio. Unlike `SlurSpan`,
+/// never crosses a measure or system boundary — tuplets can't span lines
+/// (see **Tuplet** in `ARCHITECTURE.md`) — so one `measure_index` suffices.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TupletSpan {
+    pub part_index: usize,
+    pub measure_index: usize, // 0-indexed position in the final `CompileResult.blocks` list, after rest-run merging
+    pub from_column: u32,     // measure-relative column of the first tuplet-tagged note/rest
+    pub to_column: u32,       // measure-relative column of the last tuplet-tagged note/rest
+    pub label: String,        // the tuplet's printed digit, e.g. "3" for a triplet
+}
+
 /// Return value of `compiler::compile`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CompileResult {
     pub blocks: Vec<MeasureBlock>,
     pub slur_spans: Vec<SlurSpan>,
+    pub tuplet_spans: Vec<TupletSpan>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -141,13 +155,5 @@ pub enum Decoration {
         key: Option<String>,
         bpm: Option<u32>,
         time_signature: Option<(u32, u32)>,
-        dc_al_coda: bool,
-        to_coda: bool,
-        coda: bool,
-        segno: bool,
-        ds_al_coda: bool,
-        dc_al_fine: bool,
-        fine: bool,
-        ds_al_fine: bool,
     },
 }

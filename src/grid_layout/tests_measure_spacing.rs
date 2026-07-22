@@ -218,7 +218,13 @@ fn dense_measure_renders_wider_than_sparse_measure_in_same_system() {
         make_block_with_notes("S", 16, 16), // dense: 16 notes
     ];
     let measure_layout = build_measure_column_layout(&system);
-    let rows = expand_system_to_rows(&system, 30.0, &HashMap::new(), &measure_layout);
+    let rows = expand_system_to_rows(
+        &system,
+        30.0,
+        &HashMap::new(),
+        &HashMap::new(),
+        &measure_layout,
+    );
     let row = &rows[0];
     let geometry = row.column_geometry(1000.0, 40.0);
 
@@ -242,7 +248,13 @@ fn equal_density_measures_render_at_equal_width() {
         make_block_with_notes("S", 4, 7),
     ];
     let measure_layout = build_measure_column_layout(&system);
-    let rows = expand_system_to_rows(&system, 30.0, &HashMap::new(), &measure_layout);
+    let rows = expand_system_to_rows(
+        &system,
+        30.0,
+        &HashMap::new(),
+        &HashMap::new(),
+        &measure_layout,
+    );
     let row = &rows[0];
     let geometry = row.column_geometry(1000.0, 40.0);
 
@@ -267,6 +279,7 @@ fn measure_column_boundaries_starts_at_zero_and_ends_at_one_per_measure() {
             make_block_with_dash("S", 2),
         ],
         slur_spans: vec![],
+        tuplet_spans: vec![],
     };
     let boundaries = measure_column_boundaries(&compile_result);
     assert_eq!(boundaries.len(), 2);
@@ -289,6 +302,7 @@ fn measure_column_boundaries_reflects_dash_weighing_the_same_as_a_notehead() {
     let compile_result = CompileResult {
         blocks: vec![make_block_with_dash("S", 2)],
         slur_spans: vec![],
+        tuplet_spans: vec![],
     };
     let boundaries = &measure_column_boundaries(&compile_result)[0];
     // Columns: [notehead, dash, barline] -> boundaries has 4 entries.
@@ -311,7 +325,13 @@ fn proportional_widths_sum_to_full_usable_music_width() {
         make_block_with_notes("S", 16, 16),
     ];
     let measure_layout = build_measure_column_layout(&system);
-    let rows = expand_system_to_rows(&system, 30.0, &HashMap::new(), &measure_layout);
+    let rows = expand_system_to_rows(
+        &system,
+        30.0,
+        &HashMap::new(),
+        &HashMap::new(),
+        &measure_layout,
+    );
     let row = &rows[0];
     let usable_width = 1000.0_f32;
     let label_width = 40.0_f32;

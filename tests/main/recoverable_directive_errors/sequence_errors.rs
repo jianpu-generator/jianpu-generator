@@ -9,30 +9,6 @@ fn fixture_with_sequence(score_section: &str, sequence: &str) -> String {
 }
 
 #[test]
-fn sequence_combined_with_inline_marker_is_recoverable() {
-    let source = fixture_with_sequence(
-        concat!(
-            "time=4/4 key=C4 bpm=120 label=\"A\" dcalcoda\n[Melody] 1 2 3 4\n\n",
-            "tocoda\n[Melody] 5 6 7 1\n\n",
-            "coda\n[Melody] 1 1 1 1\n",
-        ),
-        "A",
-    );
-    let output = render_svgs_from_source(&source, "test.jianpu", &[])
-        .expect("sequence combined with inline marker must not abort the render");
-    assert!(!output.svgs.is_empty());
-    assert!(
-        has_error_containing(&output, "cannot be combined with a `# sequence` section"),
-        "expected error about sequence/marker conflict, got: {:?}",
-        output
-            .diagnostics
-            .iter()
-            .map(|d| d.message())
-            .collect::<Vec<_>>()
-    );
-}
-
-#[test]
 fn sequence_referencing_undefined_label_is_recoverable() {
     let source = fixture_with_sequence(
         "time=4/4 key=C4 bpm=120 label=\"A\"\n[Melody] 1 2 3 4\n",

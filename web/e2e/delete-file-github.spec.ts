@@ -91,7 +91,7 @@ test('deleting a file persists via the GitHub storage backend', async ({
   // read-only demo file: the "My Files" trigger reverts to its placeholder
   // and the separate "Demo" trigger shows the (first) active demo file.
   await expect(fileSwitcherTrigger(page)).toContainText('Untitled')
-  await expect(demoFileSwitcherTrigger(page)).toContainText('00-header.jianpu')
+  await expect(demoFileSwitcherTrigger(page)).toContainText('01-pitches.jianpu')
 
   // Reloading re-fetches from the (mocked) GitHub API, so the deleted file
   // staying gone from the main tab list and present in the bin proves the

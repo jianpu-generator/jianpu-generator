@@ -1,4 +1,6 @@
-use crate::ast::parsed::{Accidental, BassDegree, Extension, JianPuPitch, TriadQuality};
+use crate::ast::parsed::{
+    Accidental, BassDegree, Extension, JianPuPitch, TriadQuality, TupletInfo,
+};
 use crate::error::Span;
 
 #[derive(Clone, PartialEq)]
@@ -30,6 +32,9 @@ pub struct GroupedChordNote {
     pub group_continuation: u8,
     pub dotted: bool,
     pub slur_group_close_at_duration: Option<u32>,
+    /// The innermost `{...}` tuplet bracket this chord note belonged to before
+    /// rescaling, if any.
+    pub tuplet: Option<TupletInfo>,
 }
 
 #[derive(Clone)]
@@ -52,6 +57,9 @@ pub struct GroupedNote {
     /// True if this note was written with `*` (dotted duration).
     pub dotted: bool,
     pub slur_group_close_at_duration: Option<u32>,
+    /// The innermost `{...}` tuplet bracket this note belonged to before rescaling,
+    /// if any.
+    pub tuplet: Option<TupletInfo>,
 }
 
 impl GroupedNote {
@@ -77,6 +85,9 @@ pub struct GroupedPercussionHit {
     /// True if this hit was written with `*` (dotted duration).
     pub dotted: bool,
     pub slur_group_close_at_duration: Option<u32>,
+    /// The innermost `{...}` tuplet bracket this hit belonged to before rescaling,
+    /// if any.
+    pub tuplet: Option<TupletInfo>,
 }
 
 impl GroupedPercussionHit {
@@ -154,4 +165,7 @@ pub struct GroupedRest {
     pub dotted: bool,
     pub group_membership: u8,
     pub group_continuation: u8,
+    /// The innermost `{...}` tuplet bracket this rest belonged to before rescaling,
+    /// if any.
+    pub tuplet: Option<TupletInfo>,
 }

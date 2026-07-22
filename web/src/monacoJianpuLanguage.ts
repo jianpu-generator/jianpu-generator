@@ -42,11 +42,6 @@ export function registerJianpuLanguage(monacoApi: Monaco) {
           /\b(bpm|key|time|label|merge_duplicate_measures_across_parts|hide_resting_parts)(?=\s*=)/,
           'keyword.directive',
         ],
-        // Navigation markers, e.g. `dcalcoda`, `tocoda`, `segno`, `fine`.
-        [
-          /\b(dcalcoda|tocoda|coda|segno|dsalcoda|dcalfine|fine|dsalfine)\b/,
-          'keyword.control',
-        ],
         // Part-kind keywords in `# parts` declarations.
         [/\bfollow(?=\[)/, 'type'],
         [/\bnotes\+lyrics\b/, 'type'],

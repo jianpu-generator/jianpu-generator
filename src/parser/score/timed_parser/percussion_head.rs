@@ -1,4 +1,4 @@
-use super::{ParseHeadError, TimedUnitHead};
+use super::{EventAttrs, ParseHeadError, TimedUnitHead};
 use crate::ast::parsed::{ParsedPercussionHit, ParsedRest, ScoreEvent};
 use crate::error::{Diagnostic, RecoverableError, RecoverableErrorKind, Span};
 
@@ -58,20 +58,22 @@ impl TimedUnitHead for PercussionHead {
         false
     }
 
-    fn to_event(
-        head: &Self,
-        duration: u32,
-        dotted: bool,
-        _octave: i8,
-        group_membership: u8,
-        group_continuation: u8,
-    ) -> ScoreEvent {
+    fn to_event(head: &Self, attrs: EventAttrs) -> ScoreEvent {
+        let EventAttrs {
+            duration,
+            dotted,
+            group_membership,
+            group_continuation,
+            tuplet,
+            ..
+        } = attrs;
         if head.is_rest {
             ScoreEvent::Rest(ParsedRest {
                 duration,
                 dotted,
                 group_membership: 0,
                 group_continuation: 0,
+                tuplet,
             })
         } else {
             ScoreEvent::PercussionHit(ParsedPercussionHit {
@@ -82,6 +84,7 @@ impl TimedUnitHead for PercussionHead {
                 group_continuation,
                 dotted,
                 slur_group_close_at_duration: None,
+                tuplet,
             })
         }
     }

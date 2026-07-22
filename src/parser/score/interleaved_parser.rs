@@ -318,5 +318,9 @@ mod tests;
 mod padding_tests;
 
 #[cfg(test)]
+#[path = "interleaved_parser_padding_tuplet_tests.rs"]
+mod padding_tuplet_tests;
+
+#[cfg(test)]
 #[path = "interleaved_lone_rest_padding_tests.rs"]
 mod lone_rest_padding_tests;

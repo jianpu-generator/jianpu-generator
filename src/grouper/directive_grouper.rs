@@ -2,38 +2,6 @@ use crate::ast::grouped::{MeasureDirectives, TimeSignature};
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName, ScoreEvent};
 use crate::error::Spanned;
 
-/// Which navigation markers were declared on a single measure's directive
-/// line. Collected separately from `DirectiveGrouper`'s persisting state
-/// since navigation markers, like `label`, apply only to the measure where
-/// declared.
-#[derive(Default)]
-struct PendingNavigationMarkers {
-    dc_al_coda: bool,
-    to_coda: bool,
-    coda: bool,
-    segno: bool,
-    ds_al_coda: bool,
-    dc_al_fine: bool,
-    fine: bool,
-    ds_al_fine: bool,
-}
-
-impl PendingNavigationMarkers {
-    fn apply(&mut self, event: &ScoreEvent) {
-        match event {
-            ScoreEvent::DcAlCoda => self.dc_al_coda = true,
-            ScoreEvent::ToCoda => self.to_coda = true,
-            ScoreEvent::Coda => self.coda = true,
-            ScoreEvent::Segno => self.segno = true,
-            ScoreEvent::DsAlCoda => self.ds_al_coda = true,
-            ScoreEvent::DcAlFine => self.dc_al_fine = true,
-            ScoreEvent::Fine => self.fine = true,
-            ScoreEvent::DsAlFine => self.ds_al_fine = true,
-            _ => {}
-        }
-    }
-}
-
 pub(super) struct DirectiveGrouper {
     current_bpm: u32,
     current_time_sig: TimeSignature,
@@ -82,7 +50,6 @@ impl DirectiveGrouper {
         let mut result = Vec::new();
         for events in directive_events_per_measure {
             let mut pending_label: Option<String> = None;
-            let mut markers = PendingNavigationMarkers::default();
             for event in events {
                 match &event.value {
                     ScoreEvent::BpmChange(bpm) => {
@@ -119,7 +86,7 @@ impl DirectiveGrouper {
                     ScoreEvent::HideRestingPartsChange(value) => {
                         self.current_hide_resting_parts = *value;
                     }
-                    other => markers.apply(other),
+                    _ => {}
                 }
             }
             result.push(MeasureDirectives {
@@ -145,14 +112,6 @@ impl DirectiveGrouper {
                 merge_duplicate_measures_across_parts: self
                     .current_merge_duplicate_measures_across_parts,
                 hide_resting_parts: self.current_hide_resting_parts,
-                dc_al_coda: markers.dc_al_coda,
-                to_coda: markers.to_coda,
-                coda: markers.coda,
-                segno: markers.segno,
-                ds_al_coda: markers.ds_al_coda,
-                dc_al_fine: markers.dc_al_fine,
-                fine: markers.fine,
-                ds_al_fine: markers.ds_al_fine,
             });
             self.bpm_changed = false;
             self.time_sig_changed = false;

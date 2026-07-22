@@ -1,10 +1,11 @@
 use super::super::depth_event::{annotate_slur_close_via_extension, DepthEvent};
 use super::super::groups::{
-    apply_closed_group_depth, apply_open_group_depth, validate_group_note_count,
+    apply_closed_group_depth, apply_open_group_depth, implicit_tuplet_ratio,
+    validate_group_note_count,
 };
 use super::super::timed_lexer::TimedLexToken;
 use super::super::TimedUnitHead;
-use super::TimedRecursiveDescentParser;
+use super::{StopAt, TimedRecursiveDescentParser};
 use crate::ast::parsed::ScoreEvent;
 use crate::error::{
     Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned,
@@ -33,6 +34,8 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
             return Ok(());
         };
 
+        let tuplet = self.current_tuplet();
+
         match &mut event {
             ScoreEvent::Note(note) => {
                 note.duration = duration;
@@ -42,6 +45,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
                 note.group_continuation = 0;
                 note.slur = false;
                 note.slur_group_close_at_duration = None;
+                note.tuplet = tuplet;
             }
             ScoreEvent::Chord(chord) => {
                 chord.duration = duration;
@@ -51,6 +55,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
                 chord.group_continuation = 0;
                 chord.slur = false;
                 chord.slur_group_close_at_duration = None;
+                chord.tuplet = tuplet;
             }
             ScoreEvent::PercussionHit(hit) => {
                 hit.duration = duration;
@@ -60,6 +65,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
                 hit.group_continuation = 0;
                 hit.slur = false;
                 hit.slur_group_close_at_duration = None;
+                hit.tuplet = tuplet;
             }
             _ => {}
         }
@@ -68,6 +74,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
         self.staging
             .push(DepthEvent::new(Spanned::new(event, span)));
         self.stack.increment_note_count();
+        self.tuplet_stack.increment_note_count();
         self.bump();
 
         Ok(())
@@ -80,7 +87,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
         self.stack.push(segment_start);
 
         // Parse inner atoms until `)` or end of token stream.
-        self.parse_atoms(true)?;
+        self.parse_atoms(StopAt::RParen)?;
 
         // Now we should see `)` or end of stream.
         match self.peek() {
@@ -132,6 +139,71 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
         } else if let Some(slice) = self.staging.get_mut(frame.segment_start..) {
             apply_closed_group_depth(slice);
             annotate_slur_close_via_extension(slice);
+        }
+
+        Ok(())
+    }
+
+    /// Handle `N:{` / `N:M:{` — push a new tuplet frame, resolve its ratio, and recurse
+    /// into the inner atom sequence until the matching `}`.
+    pub(super) fn open_tuplet(
+        &mut self,
+        num: u32,
+        den: Option<u32>,
+    ) -> Result<(), IrrecoverableError> {
+        let lbrace_span = self.current_span();
+        self.bump(); // consume LBrace
+
+        let resolved_den = den.or_else(|| implicit_tuplet_ratio(num));
+        if resolved_den.is_none() {
+            self.chord_errors
+                .push(Diagnostic::Error(RecoverableError::tuplet_ambiguous_ratio(
+                    lbrace_span,
+                    num,
+                )));
+        }
+        // Fall back to an identity ratio (no rescale) so parsing/note-counting can still
+        // proceed sanely after the error above has been reported.
+        let den = resolved_den.unwrap_or(num);
+
+        let segment_start = self.staging.len();
+        self.tuplet_stack.open_tuplet(segment_start, num, den);
+
+        // Parse inner atoms until `}` or end of token stream.
+        self.parse_atoms(StopAt::RBrace)?;
+
+        match self.peek() {
+            Some(TimedLexToken::RBrace) => {
+                let rbrace_span = self.current_span();
+                self.bump();
+
+                let frame = self.tuplet_stack.close_tuplet().ok_or_else(|| {
+                    IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
+                        rbrace_span,
+                        "open_tuplet: stack empty after push",
+                    ))
+                })?;
+
+                if frame.note_count != frame.num as usize {
+                    self.chord_errors.push(Diagnostic::Error(
+                        RecoverableError::tuplet_note_count_mismatch(
+                            rbrace_span,
+                            frame.num,
+                            frame.note_count,
+                        ),
+                    ));
+                }
+            }
+            _ => {
+                // No cross-line tuplets: an unclosed `{` at end of line is a hard parse
+                // error, unlike `(` groups which get silently treated as still-open.
+                self.tuplet_stack.close_tuplet();
+                self.chord_errors
+                    .push(Diagnostic::Error(RecoverableError::general(
+                        lbrace_span,
+                        "unclosed '{' tuplet at end of line",
+                    )));
+            }
         }
 
         Ok(())

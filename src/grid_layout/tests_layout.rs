@@ -69,6 +69,7 @@ fn layout_single_block_produces_one_page() {
     let compile_result = CompileResult {
         blocks,
         slur_spans: vec![],
+        tuplet_spans: vec![],
     };
     let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
     assert_eq!(pages.len(), 1);
@@ -80,6 +81,7 @@ fn layout_page_has_correct_dimensions() {
     let compile_result = CompileResult {
         blocks,
         slur_spans: vec![],
+        tuplet_spans: vec![],
     };
     let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
     assert!((pages[0].width_pt - 595.0).abs() < 0.001);
@@ -92,6 +94,7 @@ fn layout_rows_include_header_and_footer() {
     let compile_result = CompileResult {
         blocks,
         slur_spans: vec![],
+        tuplet_spans: vec![],
     };
     let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
     // At minimum: header title row, header subtitle+author row, footer row
@@ -104,6 +107,7 @@ fn layout_page_total_height_does_not_exceed_page_height() {
     let compile_result = CompileResult {
         blocks,
         slur_spans: vec![],
+        tuplet_spans: vec![],
     };
     let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
     for page in &pages {
@@ -122,6 +126,7 @@ fn footer_row_fills_remaining_page_height() {
     let compile_result = CompileResult {
         blocks,
         slur_spans: vec![],
+        tuplet_spans: vec![],
     };
     let page_height = 842.0_f32;
     let pages = layout(
@@ -151,6 +156,7 @@ fn footer_element_valign_is_bottom() {
     let compile_result = CompileResult {
         blocks,
         slur_spans: vec![],
+        tuplet_spans: vec![],
     };
     let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
     let footer_row = pages[0].rows.last().unwrap();
@@ -187,6 +193,7 @@ fn layout_draws_divider_between_systems_by_default() {
     let compile_result = CompileResult {
         blocks,
         slur_spans: vec![],
+        tuplet_spans: vec![],
     };
     let pages = layout(
         &compile_result,
@@ -205,6 +212,7 @@ fn layout_omits_divider_when_hide_system_dividers_is_set() {
     let compile_result = CompileResult {
         blocks,
         slur_spans: vec![],
+        tuplet_spans: vec![],
     };
     let pages = layout(
         &compile_result,

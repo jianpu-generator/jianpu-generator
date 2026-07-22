@@ -1,4 +1,4 @@
-use super::{ParseHeadError, TimedUnitHead};
+use super::{EventAttrs, ParseHeadError, TimedUnitHead};
 use crate::ast::parsed::{
     Accidental, BassDegree, Extension, JianPuPitch, ParsedChordNote, ParsedRest, ScoreEvent,
     TriadQuality,
@@ -95,14 +95,15 @@ impl TimedUnitHead for ChordHead {
         false
     }
 
-    fn to_event(
-        head: &Self,
-        duration: u32,
-        dotted: bool,
-        octave: i8,
-        group_membership: u8,
-        group_continuation: u8,
-    ) -> ScoreEvent {
+    fn to_event(head: &Self, attrs: EventAttrs) -> ScoreEvent {
+        let EventAttrs {
+            duration,
+            dotted,
+            octave,
+            group_membership,
+            group_continuation,
+            tuplet,
+        } = attrs;
         std::hint::black_box(octave);
         if head.is_rest {
             ScoreEvent::Rest(ParsedRest {
@@ -110,6 +111,7 @@ impl TimedUnitHead for ChordHead {
                 dotted,
                 group_membership: 0,
                 group_continuation: 0,
+                tuplet,
             })
         } else {
             ScoreEvent::Chord(ParsedChordNote {
@@ -125,6 +127,7 @@ impl TimedUnitHead for ChordHead {
                 group_continuation,
                 dotted,
                 slur_group_close_at_duration: None,
+                tuplet,
             })
         }
     }

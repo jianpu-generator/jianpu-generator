@@ -341,8 +341,14 @@ pub(crate) fn process_measure(
     }
 
     for (part, ties) in chord_parts.iter().zip(chord_ties.iter_mut()) {
-        let chord_duration =
-            process_chord_events(&part.notes.events, current_tick, raw, active_key, ties);
+        let chord_duration = process_chord_events(
+            &part.notes.events,
+            current_tick,
+            raw,
+            active_key,
+            ties,
+            part.resolution_multiplier,
+        );
         if chord_duration > measure_duration {
             measure_duration = chord_duration;
         }

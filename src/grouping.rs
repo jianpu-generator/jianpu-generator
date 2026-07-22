@@ -40,56 +40,86 @@ fn timed_beat_fields(event: &ScoreEvent) -> Option<TimedBeatFields> {
     }
 }
 
-fn push_half_bar_crossing_warning(
+struct HalfBarCrossingCheck {
     group_membership: u8,
     tied_from_previous: bool,
     pos: u32,
     head_duration: u32,
+    half_bar_boundary: u32,
     span: Span,
+}
+
+fn push_half_bar_crossing_warning(
+    check: &HalfBarCrossingCheck,
     recoverable_errors: &mut Vec<Diagnostic>,
 ) {
-    if group_membership == 0
-        && !tied_from_previous
-        && pos > 0
-        && pos < HALF_BAR_BOUNDARY
-        && pos + head_duration > HALF_BAR_BOUNDARY
+    if check.group_membership == 0
+        && !check.tied_from_previous
+        && check.pos > 0
+        && check.pos < check.half_bar_boundary
+        && check.pos + check.head_duration > check.half_bar_boundary
     {
         recoverable_errors.push(Diagnostic::Warning(Warning::half_bar_boundary_crossed(
-            span,
+            check.span,
         )));
     }
 }
 
-fn advance_timed_cluster(
-    events: &[Spanned<ScoreEvent>],
+#[derive(Clone, Copy)]
+struct TimedClusterAdvance<'a> {
+    events: &'a [Spanned<ScoreEvent>],
     index: usize,
+    fields: &'a TimedBeatFields,
+    span: &'a Span,
+    multiplier: u32,
+}
+
+fn advance_timed_cluster(
+    advance: &TimedClusterAdvance<'_>,
     pos: &mut u32,
-    fields: &TimedBeatFields,
-    span: &Span,
     recoverable_errors: &mut Vec<Diagnostic>,
 ) -> Result<usize, IrrecoverableError> {
-    if is_dotted_eighth_at_beat_start(fields.dotted, fields.duration, *pos) {
+    let TimedClusterAdvance {
+        events,
+        index,
+        fields,
+        span,
+        multiplier,
+    } = *advance;
+    if is_dotted_eighth_at_beat_start(fields.dotted, fields.duration, *pos, multiplier) {
         let next_timed = next_timed_index(events, index);
-        if let Some(error) = validate_dotted_eighth_tail(events, next_timed, span)? {
+        if let Some(error) = validate_dotted_eighth_tail(events, next_timed, span, multiplier)? {
             recoverable_errors.push(error);
         }
-        *pos += fields.duration + 1;
+        *pos += fields.duration + multiplier;
         return Ok(next_timed.map(|next| next + 1).unwrap_or(events.len()));
     }
 
-    *pos += timed_cluster_duration(events, index);
+    *pos += timed_cluster_duration(events, index, multiplier);
     Ok(index + timed_cluster_len(events, index))
 }
 
+/// Validates half-bar-boundary crossing and dotted-eighth-tail rules for one measure's
+/// events, scaled by `multiplier` (see `GroupedMeasure::resolution_multiplier`).
+///
+/// The only call site (`interleaved_beat_padding::validate_and_pad_beats`) now passes
+/// the measure's real tuplet-rescale multiplier — computed at parse time via
+/// `crate::tuplet::resolution_multiplier_of`, the same math the grouper-stage rescale
+/// pass uses — instead of always `1`; see the **Tuplet** glossary entry in
+/// `ARCHITECTURE.md`. Every threshold below is expressed as `BASE_CONST * multiplier` so
+/// this function is tuplet-rescale-correct; it is also exercised directly with a non-1
+/// multiplier, as the unit tests in `grouping_tuplet_tests.rs` do.
 pub fn validate_measure_grouping(
     events: &[Spanned<ScoreEvent>],
     time_num: u8,
     time_den: u8,
+    multiplier: u32,
 ) -> Result<Vec<Diagnostic>, IrrecoverableError> {
     if time_num != 4 || time_den != 4 {
         return Ok(vec![]);
     }
 
+    let half_bar_boundary = HALF_BAR_BOUNDARY * multiplier;
     let mut pos = 0u32;
     let mut index = 0usize;
     let mut tied_from_previous = false;
@@ -110,19 +140,25 @@ pub fn validate_measure_grouping(
                 };
                 let current_tie_to_next = fields.tie_to_next;
                 push_half_bar_crossing_warning(
-                    fields.group_membership,
-                    tied_from_previous,
-                    pos,
-                    timed_head_duration(events, index),
-                    event.span,
+                    &HalfBarCrossingCheck {
+                        group_membership: fields.group_membership,
+                        tied_from_previous,
+                        pos,
+                        head_duration: timed_head_duration(events, index),
+                        half_bar_boundary,
+                        span: event.span,
+                    },
                     &mut recoverable_errors,
                 );
                 index = advance_timed_cluster(
-                    events,
-                    index,
+                    &TimedClusterAdvance {
+                        events,
+                        index,
+                        fields: &fields,
+                        span: &event.span,
+                        multiplier,
+                    },
                     &mut pos,
-                    &fields,
-                    &event.span,
                     &mut recoverable_errors,
                 )?;
                 tied_from_previous = current_tie_to_next;
@@ -144,7 +180,7 @@ fn timed_head_duration(events: &[Spanned<ScoreEvent>], start: usize) -> u32 {
     }
 }
 
-fn timed_cluster_duration(events: &[Spanned<ScoreEvent>], start: usize) -> u32 {
+fn timed_cluster_duration(events: &[Spanned<ScoreEvent>], start: usize, multiplier: u32) -> u32 {
     let Some(event) = events.get(start) else {
         return 0;
     };
@@ -159,7 +195,7 @@ fn timed_cluster_duration(events: &[Spanned<ScoreEvent>], start: usize) -> u32 {
     let mut index = start + 1;
     while let Some(event) = events.get(index) {
         if matches!(event.value, ScoreEvent::Extension) {
-            duration += 4;
+            duration += 4 * multiplier;
             index += 1;
         } else {
             break;
@@ -202,14 +238,15 @@ fn next_timed_index(events: &[Spanned<ScoreEvent>], start: usize) -> Option<usiz
     None
 }
 
-fn is_dotted_eighth_at_beat_start(dotted: bool, duration: u32, pos: u32) -> bool {
-    dotted && duration == 3 && pos % 4 == 0
+fn is_dotted_eighth_at_beat_start(dotted: bool, duration: u32, pos: u32, multiplier: u32) -> bool {
+    dotted && duration == 3 * multiplier && pos % (4 * multiplier) == 0
 }
 
 fn validate_dotted_eighth_tail(
     events: &[Spanned<ScoreEvent>],
     next_timed: Option<usize>,
     span: &Span,
+    multiplier: u32,
 ) -> Result<Option<Diagnostic>, IrrecoverableError> {
     let Some(next_index) = next_timed else {
         return Ok(Some(Diagnostic::Error(
@@ -234,7 +271,7 @@ fn validate_dotted_eighth_tail(
         }
     };
 
-    if tail_duration == 1 {
+    if tail_duration == multiplier {
         Ok(None)
     } else {
         Ok(Some(Diagnostic::Error(
@@ -244,140 +281,9 @@ fn validate_dotted_eighth_tail(
 }
 
 #[cfg(test)]
-mod tests {
-    fn parse_score(
-        notes_line: &str,
-    ) -> Result<crate::RenderOutput, crate::error::IrrecoverableError> {
-        let input = format!(
-            concat!(
-                "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
-                "# score\ntime=4/4 key=C4 bpm=120\n",
-                "[Melody] {notes_line}"
-            ),
-            notes_line = notes_line
-        );
-        crate::render_svgs_from_source(&input, "test.jianpu", &[])
-    }
+#[path = "grouping_tests.rs"]
+mod tests;
 
-    #[test]
-    fn chord_half_bar_boundary_validation_matches_notes() {
-        let input = concat!(
-            "# metadata\n",
-            "title = \"t\"\n",
-            "author = \"a\"\n",
-            "\n",
-            "# parts\n",
-            "c = chords\n",
-            "n = notes\n",
-            "\n",
-            "# score\n",
-            "time=4/4 key=C4 bpm=120\n",
-            "[c] 1. 2. 3_ 4_\n",
-            "[n] 1 2 3 4\n",
-        );
-        let output = crate::render_svgs_from_source(input, "t.jianpu", &[]).unwrap();
-        assert!(output
-            .diagnostics
-            .iter()
-            .any(|e| e.message().contains("half-bar boundary")));
-    }
-
-    #[test]
-    fn recovers_half_bar_crossing() {
-        let output = parse_score("1. 2. 3_ 4_\n").unwrap();
-        assert!(output
-            .diagnostics
-            .iter()
-            .any(|e| e.message().contains("half-bar boundary")));
-    }
-
-    #[test]
-    fn recovers_half_bar_crossing_on_half_note() {
-        let output = parse_score("1 2- 0_ 0_\n").unwrap();
-        assert!(output
-            .diagnostics
-            .iter()
-            .any(|e| e.message().contains("half-bar boundary")));
-    }
-
-    #[test]
-    fn accepts_half_bar_split_with_beam_group() {
-        assert!(parse_score("1. (2_ 2_) 3_ 4_ 0_\n").is_ok());
-    }
-
-    #[test]
-    fn accepts_tied_note_crossing_half_bar() {
-        // 2~2-0: quarter tied to half note, then quarter rest.
-        // The second note (2-) starts at beat 2 and spans the half-bar;
-        // because the composer explicitly tied across the boundary, no warning should fire.
-        let output = parse_score("2~2-0\n").unwrap();
-        assert!(
-            !output
-                .diagnostics
-                .iter()
-                .any(|e| e.message().contains("half-bar boundary")),
-            "tied note crossing half-bar should not warn, but got: {:?}",
-            output
-                .diagnostics
-                .iter()
-                .map(|e| e.message())
-                .collect::<Vec<_>>()
-        );
-    }
-
-    #[test]
-    fn recovers_dotted_eighth_without_tail_group() {
-        use super::validate_measure_grouping;
-        use crate::parser::score::token_parser;
-        let bar = "1_. 2_ 3_ 4_ 5_ 6_ 7_ 0=";
-        let events = token_parser::parse_notes_line(bar, 0, &mut Default::default())
-            .unwrap()
-            .events;
-        let errors = validate_measure_grouping(&events, 4, 4).unwrap();
-        assert!(!errors.is_empty());
-        assert!(errors[0].message().contains("dotted eighth"));
-    }
-
-    #[test]
-    fn accepts_dotted_eighth_with_sixteenth_tail() {
-        assert!(parse_score("1_. 2= 3_ 4_ 5_ 6_ 7_ 1_\n").is_ok());
-    }
-
-    #[test]
-    fn recovers_dotted_eighth_rest_without_tail_group() {
-        let output = parse_score("0_. 1_ 2_ 3_ 4_ 5_ 6_ 0=\n").unwrap();
-        assert!(output
-            .diagnostics
-            .iter()
-            .any(|e| e.message().contains("dotted eighth")));
-    }
-
-    #[test]
-    fn accepts_extension_notes_that_start_on_beat_three() {
-        assert!(parse_score("(6- 7-)\n").is_ok());
-    }
-
-    #[test]
-    fn skips_validation_for_non_four_four() {
-        let input = concat!(
-            "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
-            "# score\ntime=3/4 key=C4 bpm=120\n",
-            "[Melody] 1 2 3\n",
-        );
-        assert!(crate::render_svgs_from_source(input, "test.jianpu", &[]).is_ok());
-    }
-
-    #[test]
-    fn allows_half_bar_crossing_inside_beam_group() {
-        use super::validate_measure_grouping;
-        use crate::parser::score::token_parser;
-        let mut state = token_parser::GroupStack::default();
-        let bar1 = "5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_";
-        token_parser::parse_notes_line(bar1, 0, &mut state).unwrap();
-        let bar2 = "3_) (1_1-) 0_ 1= 1=";
-        let events = token_parser::parse_notes_line(bar2, 0, &mut state)
-            .unwrap()
-            .events;
-        validate_measure_grouping(&events, 4, 4).expect("grouped crossing should be allowed");
-    }
-}
+#[cfg(test)]
+#[path = "grouping_tuplet_tests.rs"]
+mod grouping_tuplet_tests;

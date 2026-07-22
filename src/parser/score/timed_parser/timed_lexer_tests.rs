@@ -114,6 +114,49 @@ fn time_signature_zero_denominator_recoverable() {
 }
 
 #[test]
+fn lexes_implicit_tuplet_open() {
+    use TimedLexToken::*;
+    let tokens = kinds("3:{1 1 1}");
+    assert_eq!(
+        tokens,
+        vec![
+            LBrace { num: 3, den: None },
+            HeadStart { offset: 3 },
+            HeadStart { offset: 5 },
+            HeadStart { offset: 7 },
+            RBrace,
+        ]
+    );
+}
+
+#[test]
+fn lexes_explicit_tuplet_open() {
+    use TimedLexToken::*;
+    let tokens = kinds("5:4:{1 1 1 1 1}");
+    assert_eq!(
+        tokens[0],
+        LBrace {
+            num: 5,
+            den: Some(4)
+        }
+    );
+    assert_eq!(tokens.last(), Some(&RBrace));
+}
+
+#[test]
+fn tuplet_open_requires_colon_after_digits() {
+    // Digits followed by `:` but nothing that looks like a tuplet opener afterwards is a
+    // recoverable error, since `:` is otherwise unused in this grammar.
+    let (tokens, errors) = lex_line("3:", 0, LexContext::Notes).unwrap();
+    assert!(tokens.is_empty());
+    assert_eq!(errors.len(), 1);
+
+    let (tokens, errors) = lex_line("5:4x", 0, LexContext::Notes).unwrap();
+    assert!(tokens.is_empty());
+    assert_eq!(errors.len(), 1);
+}
+
+#[test]
 fn chord_context_treats_slash_as_part_of_chord() {
     // In Chords context, `1/5` must NOT be consumed as a TimeSignature.
     // The lexer should emit a HeadStart for `1`, and leave `/5` for the RD parser

@@ -6,6 +6,8 @@ mod tests_render_filtering;
 mod tests_render_filtering_slur;
 #[path = "tests_render_rendering.rs"]
 mod tests_render_rendering;
+#[path = "tests_render_rendering_tuplets.rs"]
+mod tests_render_rendering_tuplets;
 #[cfg(feature = "pdf")]
 #[path = "tests_render_split_pdf.rs"]
 mod tests_render_split_pdf;

@@ -141,8 +141,6 @@ fn parse_directive_line(
         } else if let Some(rest) = token.strip_prefix("hide_resting_parts=") {
             parse_bool_directive_value(rest, span, &mut errors)
                 .map(ScoreEvent::HideRestingPartsChange)
-        } else if let Some(ev) = navigation_keyword_event(token) {
-            Some(ev)
         } else {
             errors.push(RecoverableError::general(
                 span,
@@ -157,21 +155,6 @@ fn parse_directive_line(
     }
 
     (events, errors)
-}
-
-/// Matches the bare-keyword (no `=value`) navigation directives.
-fn navigation_keyword_event(token: &str) -> Option<ScoreEvent> {
-    match token {
-        "dcalcoda" => Some(ScoreEvent::DcAlCoda),
-        "tocoda" => Some(ScoreEvent::ToCoda),
-        "coda" => Some(ScoreEvent::Coda),
-        "segno" => Some(ScoreEvent::Segno),
-        "dsalcoda" => Some(ScoreEvent::DsAlCoda),
-        "dcalfine" => Some(ScoreEvent::DcAlFine),
-        "fine" => Some(ScoreEvent::Fine),
-        "dsalfine" => Some(ScoreEvent::DsAlFine),
-        _ => None,
-    }
 }
 
 fn parse_key_value(

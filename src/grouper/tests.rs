@@ -8,6 +8,8 @@ mod tests_chords;
 mod tests_metadata;
 #[path = "tests_ties_and_spans.rs"]
 mod tests_ties_and_spans;
+#[path = "tests_tuplets.rs"]
+mod tests_tuplets;
 
 pub(super) fn parse_and_group(input: &str) -> Score {
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
@@ -35,26 +37,6 @@ fn splits_into_two_measures_at_bar_boundary() {
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n\n[Melody] 5 6 7 1\n[Melody] e f g h\n",
     ));
     assert_eq!(score.measures.len(), 2);
-}
-
-#[test]
-fn navigation_markers_land_on_correct_measures() {
-    let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
-        "# score\n",
-        "time=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n\n",
-        "tocoda\n[Melody] 5 6 7 1'\n\n",
-        "coda\n[Melody] 1' 7 6 5\n\n",
-        "dcalcoda\n[Melody] 4 3 2 1\n",
-    ));
-    assert_eq!(score.measures.len(), 4);
-    assert!(!score.measures[0].to_coda && !score.measures[0].coda && !score.measures[0].dc_al_coda);
-    assert!(score.measures[1].to_coda);
-    assert!(!score.measures[1].coda && !score.measures[1].dc_al_coda);
-    assert!(score.measures[2].coda);
-    assert!(!score.measures[2].to_coda && !score.measures[2].dc_al_coda);
-    assert!(score.measures[3].dc_al_coda);
-    assert!(!score.measures[3].to_coda && !score.measures[3].coda);
 }
 
 #[test]

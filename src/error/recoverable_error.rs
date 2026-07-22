@@ -99,6 +99,20 @@ impl RecoverableError {
         }
     }
 
+    pub fn tuplet_ambiguous_ratio(span: Span, num: u32) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::TupletAmbiguousRatio { num },
+        }
+    }
+
+    pub fn tuplet_note_count_mismatch(span: Span, expected: u32, got: usize) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::TupletNoteCountMismatch { expected, got },
+        }
+    }
+
     pub fn measure_directives_missing(span: Span) -> Self {
         Self {
             span,

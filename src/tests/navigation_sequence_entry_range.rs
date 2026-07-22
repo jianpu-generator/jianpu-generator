@@ -1,4 +1,3 @@
-use super::navigation::count_note_on_events;
 use super::*;
 
 fn sequence_omission_source() -> &'static str {

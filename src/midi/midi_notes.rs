@@ -56,6 +56,20 @@ pub(crate) fn resolve_midi_note_with_accidental(
     midi.clamp(0, 127) as u8
 }
 
-pub(crate) fn duration_to_ticks(quarter_beats: u32) -> u32 {
-    quarter_beats * (TPQ as u32) / 4
+/// Converts a duration in quarter-beats (sixteenth-note units) to MIDI ticks.
+///
+/// `quarter_beats` is read directly off a `GroupedNote`/`GroupedRest`/etc., which for a
+/// tuplet-rescaled measure has already been multiplied by that measure's
+/// `resolution_multiplier` (see `GroupedMeasure::resolution_multiplier`) — `multiplier`
+/// divides that scaling back out so a tuplet note converts to the same tick count as the
+/// equivalent plain note. `multiplier` is `1` for every non-tuplet measure, making this a
+/// no-op division.
+///
+/// Known limitation: `TPQ` (480) only divides evenly by multipliers built from small prime
+/// factors (2, 3, 5); a multiplier that pulls in a larger prime (e.g. `7` for a septuplet)
+/// doesn't divide `quarter_beats * TPQ` evenly, so the result rounds down to the nearest
+/// tick. This is accepted rounding error, not bumped away by raising `TPQ` — see the
+/// **Tuplet** glossary entry in `ARCHITECTURE.md`.
+pub(crate) fn duration_to_ticks(quarter_beats: u32, multiplier: u32) -> u32 {
+    quarter_beats * (TPQ as u32) / (4 * multiplier)
 }

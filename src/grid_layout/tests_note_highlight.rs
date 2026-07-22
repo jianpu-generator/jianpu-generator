@@ -121,6 +121,7 @@ fn note_highlight_target_extends_over_its_lyric_verse_row() {
         &CompileResult {
             blocks: vec![block],
             slur_spans: vec![],
+            tuplet_spans: vec![],
         },
         &test_render_config(),
         &no_header(),
@@ -139,9 +140,9 @@ fn note_highlight_target_extends_over_its_lyric_verse_row() {
         assert_eq!(
             target.row_end - target.row_start,
             6,
-            "note's highlight span should cover its 6 note sub-rows plus \
-             the 1 lyric-verse row that follows them, not just the note \
-             sub-rows"
+            "note's highlight span should cover its 6 note sub-rows (no \
+             tuplet in this block, so no tuplet_bracket sub-row) plus the 1 \
+             lyric-verse row that follows them, not just the note sub-rows"
         );
     }
 }

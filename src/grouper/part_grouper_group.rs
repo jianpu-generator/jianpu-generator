@@ -2,9 +2,16 @@ use super::{
     align_empty_note_measures, attach_paired_lyrics, GroupedPart, IrrecoverableError,
     ParsedMeasureSlot, ParsedTimedTrack, PartGrouper, PartKind, PerMeasureErrors, Span,
 };
+use crate::tuplet::apply_resolution_multiplier;
 
+/// `global_resolution_multipliers[i]` is the tuplet-rescale multiplier every part must
+/// use for measure index `i`, already accounting for tuplets in *any* part at that
+/// measure (see `compute_global_resolution_multipliers` in `grouper::mod`) — so that
+/// sibling parts sharing a measure stay on the same rescaled grid and their notes line
+/// up column-for-column at matching beats.
 pub(in crate::grouper) fn group_timed_track(
     part: ParsedTimedTrack,
+    global_resolution_multipliers: &[u32],
 ) -> Result<GroupedPart, IrrecoverableError> {
     let lyrics_measure_ends: Vec<usize> = part
         .lyrics
@@ -28,13 +35,27 @@ pub(in crate::grouper) fn group_timed_track(
     let part_volume = part.volume;
     let part_octave_offset = part.octave_offset;
     let mut grouper = PartGrouper::new(&part);
-    for slot in part.measure_slots {
+    for (slot_index, slot) in part.measure_slots.into_iter().enumerate() {
         match slot {
             ParsedMeasureSlot::EmptyNote { span } => grouper.push_empty_note_slot(span),
             ParsedMeasureSlot::Real { events } => {
+                let resolution_multiplier = global_resolution_multipliers
+                    .get(slot_index)
+                    .copied()
+                    .unwrap_or(1);
+                let events = apply_resolution_multiplier(events, resolution_multiplier);
+                grouper.begin_measure_slot(resolution_multiplier);
                 for spanned in events {
                     grouper.process_event(spanned)?;
                 }
+                // `validate_and_pad_beats` (parse time) already guarantees this slot's
+                // events sum to exactly one measure's nominal capacity, but tuplet
+                // rescaling can make the *actual* (rescaled) total miss the rescaled
+                // capacity by a beat or two — see the **Tuplet** glossary entry in
+                // ARCHITECTURE.md. `process_event` only flushes on an exact match, so
+                // without this, such a measure would never close and its notes would
+                // bleed into the next measure slot. Force the boundary here instead.
+                grouper.flush_measure();
             }
         }
     }

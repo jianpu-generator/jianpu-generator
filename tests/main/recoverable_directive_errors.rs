@@ -5,9 +5,6 @@ use jianpu_generator::render_svgs_from_source;
 #[path = "recoverable_directive_errors/duration_and_group_errors.rs"]
 mod duration_and_group_errors;
 
-#[path = "recoverable_directive_errors/navigation_marker_set_errors.rs"]
-mod navigation_marker_set_errors;
-
 #[path = "recoverable_directive_errors/sequence_errors.rs"]
 mod sequence_errors;
 

@@ -15,14 +15,6 @@ fn directive_line_element(dec: &Decoration, col: u32) -> GridElement {
         key,
         bpm,
         time_signature,
-        dc_al_coda,
-        to_coda,
-        coda,
-        segno,
-        ds_al_coda,
-        dc_al_fine,
-        fine,
-        ds_al_fine,
     } = dec;
     GridElement {
         column: col,
@@ -35,31 +27,8 @@ fn directive_line_element(dec: &Decoration, col: u32) -> GridElement {
             key: key.clone(),
             bpm: *bpm,
             time_signature: *time_signature,
-            dc_al_coda: *dc_al_coda,
-            to_coda: *to_coda,
-            coda: *coda,
-            segno: *segno,
-            ds_al_coda: *ds_al_coda,
-            dc_al_fine: *dc_al_fine,
-            fine: *fine,
-            ds_al_fine: *ds_al_fine,
         },
     }
-}
-
-fn decoration_has_navigation_marker(dec: &Decoration) -> bool {
-    let Decoration::DirectiveLine {
-        dc_al_coda,
-        to_coda,
-        coda,
-        segno,
-        ds_al_coda,
-        dc_al_fine,
-        fine,
-        ds_al_fine,
-        ..
-    } = dec;
-    *dc_al_coda || *to_coda || *coda || *segno || *ds_al_coda || *dc_al_fine || *fine || *ds_al_fine
 }
 
 pub(super) fn make_decoration_row(
@@ -80,7 +49,7 @@ pub(super) fn make_decoration_row(
     // consistent position relative to its own bar line across systems.
     //
     // For non-first blocks, only emit a DirectiveLine when there is a label
-    // or a navigation marker.
+    // or another directive change.
     let mut leading_barline_col = LABEL_COLS;
     for (index, block) in system.iter().enumerate() {
         if let Some(dec) = block.decorations.first() {
@@ -92,11 +61,7 @@ pub(super) fn make_decoration_row(
                     time_signature,
                     ..
                 } = dec;
-                label.is_some()
-                    || key.is_some()
-                    || bpm.is_some()
-                    || time_signature.is_some()
-                    || decoration_has_navigation_marker(dec)
+                label.is_some() || key.is_some() || bpm.is_some() || time_signature.is_some()
             };
             if should_emit {
                 elements.push(directive_line_element(dec, leading_barline_col));
