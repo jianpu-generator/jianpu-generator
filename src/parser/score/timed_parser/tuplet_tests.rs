@@ -122,7 +122,7 @@ fn notes_inside_tuplet_carry_tuplet_info() {
     for event in &result.events {
         assert_eq!(
             tuplet_of(&event.value),
-            Some(TupletInfo { num: 3, den: 2 }),
+            Some(TupletInfo { num: 3, den: 2, id: 0 }),
             "{:?}",
             event.value
         );
@@ -135,7 +135,7 @@ fn explicit_ratio_is_reflected_in_tuplet_info() {
     for event in &result.events {
         assert_eq!(
             tuplet_of(&event.value),
-            Some(TupletInfo { num: 5, den: 4 }),
+            Some(TupletInfo { num: 5, den: 4, id: 0 }),
             "{:?}",
             event.value
         );
@@ -157,7 +157,7 @@ fn repeat_atom_inside_tuplet_carries_tuplet_info() {
     for event in &result.events {
         assert_eq!(
             tuplet_of(&event.value),
-            Some(TupletInfo { num: 3, den: 2 }),
+            Some(TupletInfo { num: 3, den: 2, id: 0 }),
             "{:?}",
             event.value
         );
@@ -170,7 +170,7 @@ fn nested_tuplet_note_carries_innermost_ratio() {
     let result = parse("(3:{1 1 1} 5)");
     assert_eq!(
         tuplet_of(&result.events[0].value),
-        Some(TupletInfo { num: 3, den: 2 })
+        Some(TupletInfo { num: 3, den: 2, id: 0 })
     );
     assert_eq!(tuplet_of(&result.events[3].value), None);
 }

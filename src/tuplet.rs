@@ -39,7 +39,7 @@ pub(crate) fn apply_resolution_multiplier(
             let tuplet = tuplet_of(&spanned.value);
             if let Some(duration) = duration_mut(&mut spanned.value) {
                 *duration *= resolution_multiplier;
-                if let Some(TupletInfo { num, den }) = tuplet {
+                if let Some(TupletInfo { num, den, .. }) = tuplet {
                     // `resolution_multiplier` is a multiple of `num`, so this is exact.
                     *duration = *duration / num * den;
                 }

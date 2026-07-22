@@ -81,3 +81,22 @@ fn tuplet_measure_flushes_underlines_at_multiplier_scaled_quarter_beat_boundarie
         "bar line column should equal the rescaled total duration (3*4 + 6*6 = 48)"
     );
 }
+
+/// `3:{3 6 1} 3:{3 6 1}` — two directly-adjacent triplets with the same ratio and no
+/// untagged event between them. Each `{...}` bracket should still produce its own
+/// `TupletSpan`/bracket, even though nothing but the bracket boundary itself
+/// distinguishes them.
+#[test]
+fn two_adjacent_same_ratio_tuplets_produce_two_spans() {
+    let score = score_from(&notes_doc(
+        "time=4/4 key=C4 bpm=120\n[S] 3:{3 6 1}  3:{3 6 1}\n",
+    ));
+    let result = compile(&score);
+
+    assert_eq!(
+        result.tuplet_spans.len(),
+        2,
+        "two adjacent same-ratio tuplet brackets should not merge into one span, got {:?}",
+        result.tuplet_spans
+    );
+}

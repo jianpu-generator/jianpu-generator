@@ -46,6 +46,10 @@ impl GroupStack {
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct TupletStack {
     pub frames: Vec<TupletFrame>,
+    /// Monotonically increasing counter, incremented on every `open_tuplet`, so each
+    /// bracket gets a distinct `TupletFrame::id` even when two brackets on the same
+    /// line share the same `num`/`den` ratio.
+    next_id: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,6 +58,7 @@ pub struct TupletFrame {
     pub segment_start: usize,
     pub num: u32,
     pub den: u32,
+    pub id: u32,
 }
 
 impl TupletStack {
@@ -62,11 +67,14 @@ impl TupletStack {
     }
 
     pub fn open_tuplet(&mut self, segment_start: usize, num: u32, den: u32) {
+        let id = self.next_id;
+        self.next_id += 1;
         self.frames.push(TupletFrame {
             note_count: 0,
             segment_start,
             num,
             den,
+            id,
         });
     }
 

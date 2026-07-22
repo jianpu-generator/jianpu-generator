@@ -361,6 +361,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
             .map(|frame| TupletInfo {
                 num: frame.num,
                 den: frame.den,
+                id: frame.id,
             })
     }
 

@@ -256,6 +256,11 @@ pub enum ScoreEvent {
 pub struct TupletInfo {
     pub num: u32,
     pub den: u32,
+    /// Identifies which `{...}` bracket this tag came from, distinguishing
+    /// directly-adjacent brackets that share the same `num`/`den` ratio (e.g.
+    /// `3:{3 6 1} 3:{3 6 1}`) so they don't merge into a single tuplet span/bracket.
+    /// Unique per opened bracket within a line; not meaningful beyond identity/equality.
+    pub id: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]

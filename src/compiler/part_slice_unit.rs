@@ -84,7 +84,7 @@ pub(super) fn compile_unit(
     // of `den`) to recover the multiplier-scaled written duration before comparing it
     // against the thresholds below.
     let scaled_written_duration = match unit.tuplet {
-        Some(TupletInfo { num, den }) => unit.duration / den * num,
+        Some(TupletInfo { num, den, .. }) => unit.duration / den * num,
         None => unit.duration,
     };
     let underline_count = if scaled_written_duration == multiplier {
