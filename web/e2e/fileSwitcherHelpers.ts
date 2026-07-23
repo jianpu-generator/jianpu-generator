@@ -98,8 +98,10 @@ export async function typeAtEditorEnd(page: Page, text: string) {
   throw new Error(`typeAtEditorEnd: "${text}" never landed after retries`)
 }
 
-/** The "My Files" ("<filename> ▾") trigger button in the header — its text
- * is the last-active user file's name, or a placeholder if none exists. */
+/** The file-switcher ("<filename> ▾") trigger button in the header — its
+ * text is the currently active file's name, whether that's a user file or
+ * one of the read-only demo files (which live in the nested "Demo" submenu
+ * of this same dropdown). */
 export function fileSwitcherTrigger(page: Page) {
   return page
     .locator('.file-tab-bar .export-menu')
@@ -107,11 +109,10 @@ export function fileSwitcherTrigger(page: Page) {
     .locator('.preview-export-btn')
 }
 
-/** The "Demo" trigger button in the header — a separate dropdown listing
- * the read-only `demo/*.jianpu` files; its text is the currently active
- * demo file's name, or "Demo" when a user file is active instead. */
-export function demoFileSwitcherTrigger(page: Page) {
-  return page.getByRole('button', { name: 'Demo files' })
+/** The "Demo" disclosure item inside the file-switcher dropdown — expands
+ * to the read-only `demo/*.jianpu` file list nested underneath it. */
+export function demoDisclosure(page: Page) {
+  return page.getByRole('button', { name: 'Demo', exact: true })
 }
 
 /** Opens the file-switcher dropdown (the "<filename> ▾" trigger in the
@@ -123,17 +124,18 @@ export async function openFileList(page: Page) {
   await trigger.click()
 }
 
-/** Opens the "Demo" dropdown (the read-only `demo/*.jianpu` file list).
- * Idempotent — the trigger toggles open/closed, so this is a no-op if
- * already open. */
+/** Opens the file-switcher dropdown and expands its nested "Demo" submenu
+ * (the read-only `demo/*.jianpu` file list). Idempotent — a no-op if the
+ * submenu is already expanded. */
 export async function openDemoFileList(page: Page) {
-  const trigger = demoFileSwitcherTrigger(page)
-  if ((await trigger.getAttribute('aria-expanded')) === 'true') return
-  await trigger.click()
+  await openFileList(page)
+  const disclosure = demoDisclosure(page)
+  if ((await disclosure.getAttribute('aria-expanded')) === 'true') return
+  await disclosure.click()
 }
 
-/** Opens the "Demo" dropdown and selects the fragment named `name` (e.g.
- * `02-durations.jianpu`), closing the dropdown. */
+/** Expands the "Demo" submenu and selects the fragment named `name` (e.g.
+ * `02-durations.jianpu`), closing the file-switcher dropdown. */
 export async function selectDemoFile(page: Page, name: string) {
   await openDemoFileList(page)
   await page.locator('.file-tab-name', { hasText: name }).click()
@@ -148,10 +150,19 @@ export async function openFileActions(page: Page) {
   await trigger.click()
 }
 
-/** Opens the "Bin (N)" dropdown in the header. Idempotent — the trigger
- * toggles open/closed, so this is a no-op if already open. */
+/** Opens the Bin modal via the "Bin (N)" item in the "⋯" file-actions
+ * dropdown. Idempotent — a no-op if the modal is already open. */
 export async function openBin(page: Page) {
-  const trigger = page.locator('.file-tab-bar-bin-trigger')
-  if ((await trigger.getAttribute('aria-expanded')) === 'true') return
-  await trigger.click()
+  if (await page.locator('[data-testid="bin-modal"]').count()) return
+  await openFileActions(page)
+  await page.locator('.file-tab-bar-bin-trigger').click()
+}
+
+/** Closes the Bin modal via Escape. Unlike the old submenu, this is a real
+ * modal — it hides the rest of the page from interaction (and from the
+ * accessibility tree) while open, so tests must close it before touching
+ * anything else. */
+export async function closeBin(page: Page) {
+  await page.keyboard.press('Escape')
+  await page.locator('[data-testid="bin-modal"]').waitFor({ state: 'hidden' })
 }

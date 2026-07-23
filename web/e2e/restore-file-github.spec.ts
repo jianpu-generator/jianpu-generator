@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import {
   fileSwitcherTrigger,
   openBin,
+  openFileActions,
   openFileList,
 } from './fileSwitcherHelpers'
 import { mockGithubContentsApi, OWNER } from './github-contents-mock'
@@ -51,12 +52,14 @@ test('restoring a file persists via the GitHub storage backend', async ({
 
   await openFileList(page)
   // The seeded file loads straight into the bin, not the main tab list.
-  await expect(page.locator('.file-tab-bar-bin-trigger')).toContainText(
-    'Bin (1)',
-  )
   await expect(
     page.locator('.file-tabs .file-tab-name', { hasText: 'original.jianpu' }),
   ).toHaveCount(0)
+
+  await openFileActions(page)
+  await expect(page.locator('.file-tab-bar-bin-trigger')).toContainText(
+    'Bin (1)',
+  )
 
   await openBin(page)
   await expect(page.locator('.file-tab-bar-bin-name')).toHaveText(
@@ -73,9 +76,14 @@ test('restoring a file persists via the GitHub storage backend', async ({
   // in flight, made observable by the mocked mutation delay (above).
   await expect(restoreButton.locator('.file-tab-bar-spinner')).toBeVisible()
 
-  // Once the restore resolves, the file reappears as an active tab...
-  // (Restoring is a click outside the file-switcher dropdown, which
-  // dismisses it — reopen it to see the tab list.)
+  // Once the restore resolves, the bin empties out and the modal — which
+  // blocks interaction with the rest of the page while it's open — closes
+  // itself automatically.
+  await expect(page.locator('[data-testid="bin-modal"]')).toHaveCount(0, {
+    timeout: 5_000,
+  })
+
+  // The restored file reappears as an active tab...
   await openFileList(page)
   const originalTab = page.locator('.file-tab-name', {
     hasText: 'original.jianpu',
@@ -84,6 +92,7 @@ test('restoring a file persists via the GitHub storage backend', async ({
   await expect(fileSwitcherTrigger(page)).toContainText('original.jianpu')
 
   // ...and the bin empties out, so its control no longer renders.
+  await openFileActions(page)
   await expect(page.locator('.file-tab-bar-bin-trigger')).toHaveCount(0)
 
   // Reloading re-fetches from the (mocked) GitHub API, so the restored file
@@ -96,5 +105,6 @@ test('restoring a file persists via the GitHub storage backend', async ({
   await page.locator('.file-tab-name', { hasText: 'original.jianpu' }).waitFor({
     timeout: 15_000,
   })
-  await expect(page.locator('.file-tab-bar-bin')).toHaveCount(0)
+  await openFileActions(page)
+  await expect(page.locator('.file-tab-bar-bin-trigger')).toHaveCount(0)
 })

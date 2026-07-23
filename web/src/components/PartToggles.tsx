@@ -29,7 +29,7 @@ export function PartToggles({
   return (
     <Tooltip.Provider delayDuration={400}>
       <fieldset className="part-toggles">
-        <legend className="part-toggles-label">Parts</legend>
+        <legend className="visually-hidden">Parts</legend>
         <ul className="part-toggles-list">
           {parts.map((part) => {
             const enabled = !disabledParts.has(part.abbreviation)

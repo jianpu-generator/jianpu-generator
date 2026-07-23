@@ -28,7 +28,8 @@ test('opens a shared score preview without saving it, then imports on demand', a
   await expect(page.locator('.shared-preview-banner')).toContainText(
     SHARED_FILENAME,
   )
-  await expect(fileSwitcherTrigger(page)).not.toContainText(SHARED_FILENAME)
+  // The file switcher is hidden entirely while previewing a shared score.
+  await expect(fileSwitcherTrigger(page)).toHaveCount(0)
 
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
   const previewContent = await page.locator('.preview-page').first().innerHTML()
@@ -36,7 +37,8 @@ test('opens a shared score preview without saving it, then imports on demand', a
 
   // Reloading without importing must not have persisted the shared score.
   await page.reload()
-  await expect(fileSwitcherTrigger(page)).not.toContainText(SHARED_FILENAME)
+  // The file switcher is hidden entirely while previewing a shared score.
+  await expect(fileSwitcherTrigger(page)).toHaveCount(0)
 
   await gotoShareUrl(page, SHARED_FILENAME, SHARED_SOURCE)
   await page.getByRole('button', { name: 'Import to my scores' }).click()
@@ -81,6 +83,7 @@ test('discarding a shared preview does not save it', async ({ page }) => {
   await page.getByRole('button', { name: 'Discard' }).click()
 
   await expect(page.locator('.shared-preview-banner')).toHaveCount(0)
+  // The file switcher reappears once the preview is discarded.
   await expect(fileSwitcherTrigger(page)).not.toContainText(SHARED_FILENAME)
 })
 

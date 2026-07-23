@@ -71,7 +71,9 @@ test('Import recovers the original source from a previously exported PDF', async
     buffer: pdfBytes,
   })
 
-  await expect(fileSwitcherTrigger(page)).toContainText('test.jianpu')
+  // "test.jianpu" is already open, so the recovered file lands under a
+  // deduped name rather than overwriting it.
+  await expect(fileSwitcherTrigger(page)).toContainText('test 2.jianpu')
   await page.waitForFunction(
     (expected) =>
       window.monaco?.editor.getEditors()[0]?.getModel()?.getValue() ===

@@ -1,5 +1,7 @@
 import {
+  ArchiveIcon,
   ChevronDownIcon,
+  ChevronRightIcon,
   CopyIcon,
   DotsHorizontalIcon,
   GearIcon,
@@ -9,6 +11,7 @@ import {
 } from '@radix-ui/react-icons'
 import { useEffect, useRef, useState } from 'react'
 import {
+  DEMO_FILE_NAMES,
   type FileStoreState,
   fileContent,
   isReadOnlyFile,
@@ -16,15 +19,17 @@ import {
 } from '../fileStore'
 import { useDismissableOpen } from '../hooks/useDismissableOpen'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
-import type { SaveStatus } from '../storage/types'
+import { FileTabName } from './FileTabName'
 import { ImportButton } from './ImportButton'
+import { SaveStatusBadge } from './SaveStatusBadge'
 import { ShareButton } from './ShareButton'
+import { SpinnerLabel } from './SpinnerLabel'
 
 export interface FileSwitcherProps {
   store: FileStoreState
-  /** Label shown on the trigger button — the last-active user file's name,
-   * or a placeholder when none exists yet (a demo file may be active
-   * instead; demo files have their own dropdown, see `DemoFileSwitcher`). */
+  /** Label shown on the trigger button — the currently active file's name,
+   * whether it's a user file or one of the read-only demo files (which live
+   * in the "Demo" submenu nested inside this same dropdown). */
   triggerLabel: string
   onSelect: (name: string) => void
   onCreate: () => void
@@ -53,154 +58,11 @@ export interface FileSwitcherProps {
   isLoadingGithub?: boolean
   importing?: boolean
   onImportFile?: (file: File) => void
-}
-
-const SAVE_STATUS_LABEL: Record<SaveStatus, string> = {
-  idle: '',
-  saving: 'Saving…',
-  saved: 'Saved',
-  error: 'Save failed',
-  offline: 'Offline',
-}
-
-/** Ticks once a second while `deadline` is non-null, so a rendered countdown
- * stays in sync without the parent re-rendering on every store change. */
-function useCountdownSeconds(deadline: number | null): number | null {
-  const [now, setNow] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (deadline === null) return
-    const interval = setInterval(() => setNow(Date.now()), 1_000)
-    return () => clearInterval(interval)
-  }, [deadline])
-
-  return deadline === null
-    ? null
-    : Math.max(0, Math.ceil((deadline - now) / 1_000))
-}
-
-/** Shows the shared spinner alongside a button's label while `pending` is true. */
-function SpinnerLabel({ pending, label }: { pending: boolean; label: string }) {
-  return (
-    <>
-      {pending ? (
-        <span
-          className="file-tab-bar-spinner file-tab-bar-spinner--inline"
-          aria-hidden="true"
-        />
-      ) : null}
-      {label}
-    </>
-  )
-}
-
-function SaveStatusBadge({
-  status,
-  autosaveDeadline,
-}: {
-  status: DisplaySaveStatus
-  autosaveDeadline: number | null
-}) {
-  const remainingSeconds = useCountdownSeconds(
-    status === 'unsaved' ? autosaveDeadline : null,
-  )
-  const label =
-    status === 'unsaved'
-      ? remainingSeconds !== null
-        ? `Unsaved (autosaving in ${remainingSeconds}s)`
-        : 'Unsaved'
-      : SAVE_STATUS_LABEL[status]
-  if (!label) return null
-  return (
-    <span
-      className={`file-tab-bar-save-status file-tab-bar-save-status--${status}`}
-      data-testid="save-status-badge"
-    >
-      {label}
-    </span>
-  )
-}
-
-function FileTabName({
-  name,
-  active,
-  onSelect,
-  onRename,
-  renaming = false,
-}: {
-  name: string
-  active: boolean
-  onSelect: (name: string) => void
-  onRename: (from: string, to: string) => void
-  renaming?: boolean
-}) {
-  const readOnly = isReadOnlyFile(name)
-  const [draft, setDraft] = useState(name)
-  const [editing, setEditing] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    setDraft(name)
-  }, [name])
-
-  useEffect(() => {
-    if (!active) setEditing(false)
-  }, [active])
-
-  useEffect(() => {
-    if (editing) {
-      inputRef.current?.focus()
-      inputRef.current?.select()
-    }
-  }, [editing])
-
-  if (active && editing && !readOnly) {
-    return (
-      <input
-        ref={inputRef}
-        type="text"
-        className="file-tab-name"
-        value={draft}
-        aria-current="true"
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={() => {
-          const trimmed = draft.trim()
-          if (trimmed && trimmed !== name) {
-            onRename(name, trimmed)
-          } else {
-            setDraft(name)
-          }
-          setEditing(false)
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.currentTarget.blur()
-          } else if (e.key === 'Escape') {
-            setDraft(name)
-            setEditing(false)
-            e.currentTarget.blur()
-          }
-        }}
-      />
-    )
-  }
-
-  return (
-    <button
-      type="button"
-      className="file-tab-name"
-      aria-current={active ? 'true' : undefined}
-      onClick={() => {
-        if (!active) onSelect(name)
-      }}
-      onDoubleClick={() => {
-        if (active && !readOnly) setEditing(true)
-      }}
-      disabled={renaming}
-    >
-      <SpinnerLabel pending={renaming} label={name} />
-    </button>
-  )
+  /** Names of files currently in the trash — used for the "Bin (N)" menu
+   * item's count and to decide whether it renders at all. */
+  binNames: string[]
+  /** Opens the Bin modal, which lists `binNames` and handles restoring. */
+  onOpenBin: () => void
 }
 
 export function FileSwitcher({
@@ -221,12 +83,18 @@ export function FileSwitcher({
   isLoadingGithub = false,
   importing = false,
   onImportFile,
+  binNames,
+  onOpenBin,
 }: FileSwitcherProps) {
   const names = sortedUserFileNames(store)
   const showEmptyHint = !isLoadingGithub && names.length === 0
 
   const filesContainerRef = useRef<HTMLDivElement>(null)
   const [filesOpen, setFilesOpen] = useDismissableOpen(filesContainerRef)
+  const [demoOpen, setDemoOpen] = useState(false)
+  useEffect(() => {
+    if (!filesOpen) setDemoOpen(false)
+  }, [filesOpen])
 
   const actionsContainerRef = useRef<HTMLDivElement>(null)
   const [actionsOpen, setActionsOpen] = useDismissableOpen(actionsContainerRef)
@@ -284,6 +152,49 @@ export function FileSwitcher({
                 )
               })}
             </ul>
+            <div className="file-tab-bar-demo-section">
+              <button
+                type="button"
+                className="file-tab-bar-demo-toggle"
+                aria-haspopup="menu"
+                aria-expanded={demoOpen}
+                onClick={() => setDemoOpen((prev) => !prev)}
+              >
+                {demoOpen ? (
+                  <ChevronDownIcon aria-hidden="true" />
+                ) : (
+                  <ChevronRightIcon aria-hidden="true" />
+                )}
+                Demo
+              </button>
+              {demoOpen ? (
+                <ul
+                  className="file-tabs file-tab-bar-demo-list"
+                  aria-label="Demo files"
+                >
+                  {DEMO_FILE_NAMES.map((name) => {
+                    const active = name === store.active
+
+                    return (
+                      <li
+                        key={name}
+                        className={`file-tab${active ? ' file-tab--active' : ''}`}
+                      >
+                        <FileTabName
+                          name={name}
+                          active={active}
+                          onSelect={(selected) => {
+                            onSelect(selected)
+                            setFilesOpen(false)
+                          }}
+                          onRename={onRename}
+                        />
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </div>
@@ -380,6 +291,21 @@ export function FileSwitcher({
                 label="Delete"
               />
             </button>
+            {binNames.length > 0 ? (
+              <button
+                type="button"
+                role="menuitem"
+                className="export-menu-item file-tab-bar-bin-trigger"
+                aria-haspopup="dialog"
+                onClick={() => {
+                  setActionsOpen(false)
+                  onOpenBin()
+                }}
+              >
+                <ArchiveIcon aria-hidden="true" />
+                {`Bin (${binNames.length})`}
+              </button>
+            ) : null}
             <button
               type="button"
               role="menuitem"

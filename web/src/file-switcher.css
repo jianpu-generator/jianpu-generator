@@ -142,6 +142,43 @@ input.file-tab-name:focus {
   font-weight: 500;
 }
 
+.file-tab-bar-demo-section {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.file-tab-bar-demo-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  width: 100%;
+  padding: 0.3rem 0.35rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.file-tab-bar-demo-toggle:hover {
+  background: var(--preview-bg);
+  color: var(--text);
+}
+
+.file-tab-bar-demo-toggle svg {
+  flex: none;
+  width: 0.8em;
+  height: 0.8em;
+}
+
+.file-tab-bar-demo-list {
+  padding-left: 0.9rem;
+}
+
 .file-tab-bar-bin-items {
   list-style: none;
   margin: 0;

@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import {
   fileSwitcherTrigger,
   openBin,
+  openFileActions,
   openFileList,
 } from './fileSwitcherHelpers'
 import { mockGithubContentsApi, OWNER } from './github-contents-mock'
@@ -68,9 +69,6 @@ test('restoring a file that collides with an active file renames it via the GitH
   await openFileList(page)
   // Initial state: one active tab (the pre-existing scores/original.jianpu)
   // and one bin entry sharing the same base name.
-  await expect(page.locator('.file-tab-bar-bin-trigger')).toContainText(
-    'Bin (1)',
-  )
   await expect(
     page.locator('.file-tabs .file-tab-name', { hasText: 'original.jianpu' }),
   ).toHaveCount(1)
@@ -79,6 +77,11 @@ test('restoring a file that collides with an active file renames it via the GitH
       hasText: 'original 2.jianpu',
     }),
   ).toHaveCount(0)
+
+  await openFileActions(page)
+  await expect(page.locator('.file-tab-bar-bin-trigger')).toContainText(
+    'Bin (1)',
+  )
 
   await openBin(page)
   await expect(page.locator('.file-tab-bar-bin-name')).toHaveText(
@@ -92,10 +95,15 @@ test('restoring a file that collides with an active file renames it via the GitH
 
   await expect(restoreButton.locator('.file-tab-bar-spinner')).toBeVisible()
 
+  // Once the restore resolves, the bin empties out and the modal — which
+  // blocks interaction with the rest of the page while it's open — closes
+  // itself automatically.
+  await expect(page.locator('[data-testid="bin-modal"]')).toHaveCount(0, {
+    timeout: 5_000,
+  })
+
   // The restored file gets renamed to avoid colliding with the existing
   // active `original.jianpu` tab.
-  // (Restoring is a click outside the file-switcher dropdown, which
-  // dismisses it — reopen it to see the tab list.)
   await openFileList(page)
   const restoredTab = page.locator('.file-tab-name', {
     hasText: 'original 2.jianpu',
@@ -117,7 +125,8 @@ test('restoring a file that collides with an active file renames it via the GitH
   await expect(fileSwitcherTrigger(page)).toContainText('original 2.jianpu')
 
   // The bin is now empty.
-  await expect(page.locator('.file-tab-bar-bin')).toHaveCount(0)
+  await openFileActions(page)
+  await expect(page.locator('.file-tab-bar-bin-trigger')).toHaveCount(0)
 
   // The restore must never have PUT to the pre-existing file's path — it
   // should only create `scores/original 2.jianpu` and delete
@@ -143,9 +152,11 @@ test('restoring a file that collides with an active file renames it via the GitH
       hasText: 'original 2.jianpu',
     }),
   ).toHaveCount(1)
+  await openFileActions(page)
   await expect(page.locator('.file-tab-bar-bin-trigger')).toHaveCount(0)
 
   // The pre-existing tab's content must be untouched by the restore.
+  await openFileList(page)
   await page.locator('.file-tab-name', { hasText: 'original.jianpu' }).click()
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await expect(page.locator('.monaco-editor .view-lines')).toContainText(

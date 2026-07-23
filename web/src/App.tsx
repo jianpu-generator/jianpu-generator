@@ -54,6 +54,7 @@ export default function App() {
   const [editPartsOpen, setEditPartsOpen] = useState(false)
   const [editMetadataOpen, setEditMetadataOpen] = useState(false)
   const [storageSettingsOpen, setStorageSettingsOpen] = useState(false)
+  const [binOpen, setBinOpen] = useState(false)
   const [editorCollapsed, setEditorCollapsed] = useState(false)
 
   useUrlFileSync(store, setStore, isLoadingGithub)
@@ -289,8 +290,7 @@ export default function App() {
         duplicatingFile={duplicatingFile}
         renamingFileName={renamingFileName}
         isLoadingGithub={isLoadingGithub}
-        onRestore={handleRestore}
-        restoringFileName={restoringFileName}
+        onOpenBin={() => setBinOpen(true)}
         hasDocuments={documents.length > 0}
         rendering={rendering}
         audioGenerating={audioGenerating}
@@ -312,6 +312,9 @@ export default function App() {
         partsCount={parts.length}
         importing={importingFile}
         onImportFile={handleImportFile}
+        sharedPreview={sharedPreview}
+        onImportShared={handleImportShared}
+        onDismissShared={handleDismissShared}
       />
       <AppOverlays
         fileOpError={fileOpError}
@@ -326,9 +329,10 @@ export default function App() {
         setStore={setStore}
         refreshSaveStatus={refreshSaveStatus}
         selectedMeasureRange={selectedMeasureRange}
-        sharedPreview={sharedPreview}
-        handleImportShared={handleImportShared}
-        handleDismissShared={handleDismissShared}
+        binOpen={binOpen}
+        setBinOpen={setBinOpen}
+        onRestore={handleRestore}
+        restoringFileName={restoringFileName}
       />
       <SectionJumpToolbar {...sectionJumpToolbarProps} />
       <SequenceJumpToolbar {...sequenceJumpToolbarProps} />

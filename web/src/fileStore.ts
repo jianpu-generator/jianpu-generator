@@ -51,8 +51,9 @@ export function fileContent(state: FileStoreState, name: string): string {
   return state.userFiles[name] ?? ''
 }
 
-/** Names shown in the "My Files" dropdown — user files only; the read-only
- * demo files live in their own dropdown (`DEMO_FILE_NAMES`). */
+/** Names shown in the top level of the file-switcher dropdown — user files
+ * only; the read-only demo files live in its nested "Demo" submenu
+ * (`DEMO_FILE_NAMES`). */
 export function sortedUserFileNames(state: FileStoreState): string[] {
   return Object.keys(state.userFiles).sort((a, b) => a.localeCompare(b))
 }

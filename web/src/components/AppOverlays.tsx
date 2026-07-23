@@ -1,13 +1,13 @@
 import type { FileStoreState } from '../fileStore'
+import { sortedBinNames } from '../fileStore'
 import type { FileOpError } from '../hooks/useFileOperations'
 import type {
   StorageBackendPreference,
   StorageBackendTarget,
 } from '../hooks/useStorageBackend'
-import type { SharePayload } from '../shareUrl'
 import type { StorageBackend } from '../storage/types'
+import { BinModal } from './BinModal'
 import { ErrorModal } from './ErrorModal'
-import { SharedPreviewBanner } from './SharedPreviewBanner'
 import { StorageSettingsModal } from './StorageSettingsModal'
 
 interface AppOverlaysProps {
@@ -25,14 +25,15 @@ interface AppOverlaysProps {
   ) => void
   refreshSaveStatus: (syncedStore?: FileStoreState) => void
   selectedMeasureRange: { start: number; end: number } | null
-  sharedPreview: SharePayload | null
-  handleImportShared: () => void
-  handleDismissShared: () => void
+  binOpen: boolean
+  setBinOpen: (open: boolean) => void
+  onRestore: (name: string) => void
+  restoringFileName?: string | null
 }
 
-/** Modals, the shared-preview banner, and the hidden test-probe span that sit
- * above the main editor/preview workspace. Grouped here purely to keep
- * App.tsx's JSX under the project's per-file line limit. */
+/** Modals and the hidden test-probe span that sit above the main
+ * editor/preview workspace. Grouped here purely to keep App.tsx's JSX under
+ * the project's per-file line limit. */
 export function AppOverlays({
   fileOpError,
   setFileOpError,
@@ -46,9 +47,10 @@ export function AppOverlays({
   setStore,
   refreshSaveStatus,
   selectedMeasureRange,
-  sharedPreview,
-  handleImportShared,
-  handleDismissShared,
+  binOpen,
+  setBinOpen,
+  onRestore,
+  restoringFileName,
 }: AppOverlaysProps) {
   return (
     <>
@@ -72,6 +74,13 @@ export function AppOverlays({
         setStore={setStore}
         refreshSaveStatus={refreshSaveStatus}
       />
+      <BinModal
+        open={binOpen}
+        onOpenChange={setBinOpen}
+        binNames={sortedBinNames(store)}
+        onRestore={onRestore}
+        restoringName={restoringFileName}
+      />
       <span
         data-testid="selected-measure-range"
         aria-hidden="true"
@@ -81,13 +90,6 @@ export function AppOverlays({
           ? `${selectedMeasureRange.start}-${selectedMeasureRange.end}`
           : ''}
       </span>
-      {sharedPreview ? (
-        <SharedPreviewBanner
-          filename={sharedPreview.filename}
-          onImport={handleImportShared}
-          onDiscard={handleDismissShared}
-        />
-      ) : null}
     </>
   )
 }
