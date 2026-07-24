@@ -116,7 +116,10 @@ pub enum GridContent {
     },
     /// Spacing-only row for octave dots. Resolver emits nothing for this.
     OctaveDot,
-    ChordSymbol(String),
+    ChordSymbol {
+        text: String,
+        dotted: bool,
+    },
     /// Percussion hit glyph (unpitched GM drum key), centered like a note head.
     PercussionHit,
     /// Durational underline. `level=0` half-beat, `level=1` quarter-beat.
@@ -207,7 +210,10 @@ pub enum PostArcGridContent {
         dotted: bool,
     },
     OctaveDot,
-    ChordSymbol(String),
+    ChordSymbol {
+        text: String,
+        dotted: bool,
+    },
     PercussionHit,
     Underline {
         level: u32,

@@ -78,7 +78,10 @@ impl TimedUnit for GroupedChordNote {
         self.tuplet
     }
     fn element_content(&self) -> ElementContent {
-        ElementContent::ChordSymbol(self.format_symbol())
+        ElementContent::ChordSymbol {
+            text: self.format_symbol(),
+            dotted: self.dotted,
+        }
     }
 }
 

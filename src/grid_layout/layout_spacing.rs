@@ -24,7 +24,7 @@ fn column_weight(content: &ElementContent) -> f32 {
         ElementContent::NoteHead { .. }
         | ElementContent::Rest { .. }
         | ElementContent::PercussionHit
-        | ElementContent::ChordSymbol(_) => 1.0,
+        | ElementContent::ChordSymbol { .. } => 1.0,
         ElementContent::NoteDash { .. } | ElementContent::Lyric { .. } => MEDIUM_MARK_WEIGHT,
         ElementContent::BarLine => THIN_MARK_WEIGHT,
         ElementContent::MultiMeasureRest { .. } | ElementContent::Underline { .. } => 0.0,

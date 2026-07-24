@@ -296,6 +296,25 @@ fn extended_chord_produces_note_dash_at_each_extra_beat() {
 }
 
 #[test]
+fn dotted_chord_produces_chord_symbol_with_dotted_flag_set() {
+    let score = score_from(&chord_doc("time=4/4 key=C4 bpm=120\n[C] 1. 3\n"));
+    let result = compile(&score);
+    let row = &result.blocks[0].rows[0];
+    let chord_symbols: Vec<_> = row
+        .elements
+        .iter()
+        .filter_map(|e| match &e.content {
+            ElementContent::ChordSymbol { text, dotted } => Some((text.clone(), *dotted)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        chord_symbols,
+        vec![("1".to_string(), true), ("3".to_string(), false)]
+    );
+}
+
+#[test]
 fn dotted_note_extended_with_dotted_beats_produces_note_dash_at_each_extra_beat() {
     // In 9/8, "1. -. -." is a dotted quarter (6 quarter-beats) plus two dotted-beat
     // extensions (6 + 6), filling the whole 18-quarter-beat measure.

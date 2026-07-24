@@ -304,7 +304,10 @@ pub(super) fn grid_to_absolute(
             width: span_width,
         }),
         PostArcGridContent::OctaveDot => None,
-        PostArcGridContent::ChordSymbol(s) => Some(AbsoluteContent::ChordSymbol(s.clone())),
+        PostArcGridContent::ChordSymbol { text, dotted } => Some(AbsoluteContent::ChordSymbol {
+            text: text.clone(),
+            dotted: *dotted,
+        }),
         PostArcGridContent::PercussionHit => Some(AbsoluteContent::PercussionHit),
         PostArcGridContent::Underline { level } => Some(AbsoluteContent::Underline {
             width: span_width,

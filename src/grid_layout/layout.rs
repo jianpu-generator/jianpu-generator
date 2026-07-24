@@ -44,7 +44,7 @@ pub(crate) fn is_chord_only_row(row: &MeasureRow) -> bool {
         && row
             .elements
             .iter()
-            .any(|e| matches!(e.content, ElementContent::ChordSymbol(_)))
+            .any(|e| matches!(e.content, ElementContent::ChordSymbol { .. }))
 }
 
 #[path = "layout_heights.rs"]

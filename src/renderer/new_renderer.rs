@@ -80,7 +80,9 @@ fn render_element(
         AbsoluteContent::MultiMeasureRest { count, width } => {
             render_multi_measure_rest(elem, *count, *width, row_height, base_font_size)
         }
-        AbsoluteContent::ChordSymbol(s) => render_chord_symbol(elem, s, base_font_size),
+        AbsoluteContent::ChordSymbol { text, dotted } => {
+            render_chord_symbol(elem, text, *dotted, row_height, base_font_size)
+        }
         AbsoluteContent::PercussionHit => render_percussion_hit(elem, base_font_size),
         AbsoluteContent::Underline { width, level: _ } => render_underline(elem, width),
         AbsoluteContent::TieOrSlur { kind: _, width } => {

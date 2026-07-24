@@ -96,7 +96,10 @@ pub enum ElementContent {
     MultiMeasureRest {
         count: usize,
     },
-    ChordSymbol(String),
+    ChordSymbol {
+        text: String,
+        dotted: bool,
+    },
     PercussionHit,
     Underline {
         from_column: u32,

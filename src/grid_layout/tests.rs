@@ -87,7 +87,10 @@ fn chord_row(id: &str) -> MeasureRow {
         label: id.to_string(),
         elements: vec![ColumnElement {
             column: 0,
-            content: ElementContent::ChordSymbol("Am".to_string()),
+            content: ElementContent::ChordSymbol {
+                text: "Am".to_string(),
+                dotted: false,
+            },
             note_id: None,
         }],
         source_part_index: 0,

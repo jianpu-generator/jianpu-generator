@@ -30,7 +30,10 @@ pub enum AbsoluteContent {
         count: u32,
         width: f32,
     },
-    ChordSymbol(String),
+    ChordSymbol {
+        text: String,
+        dotted: bool,
+    },
     PercussionHit,
     Underline {
         width: f32,

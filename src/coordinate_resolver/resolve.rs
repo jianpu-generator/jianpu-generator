@@ -225,7 +225,10 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
         }
         GridContent::NoteDash { dotted } => Some(PostArcGridContent::NoteDash { dotted: *dotted }),
         GridContent::OctaveDot => Some(PostArcGridContent::OctaveDot),
-        GridContent::ChordSymbol(s) => Some(PostArcGridContent::ChordSymbol(s.clone())),
+        GridContent::ChordSymbol { text, dotted } => Some(PostArcGridContent::ChordSymbol {
+            text: text.clone(),
+            dotted: *dotted,
+        }),
         GridContent::PercussionHit => Some(PostArcGridContent::PercussionHit),
         GridContent::Underline { level } => Some(PostArcGridContent::Underline { level: *level }),
         GridContent::BarLine { height_pt } => Some(PostArcGridContent::BarLine {

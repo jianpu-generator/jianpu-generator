@@ -230,9 +230,11 @@ pub(super) fn render_percussion_hit(
 pub(super) fn render_chord_symbol(
     elem: &AbsoluteElement,
     s: &str,
+    dotted: bool,
+    row_height: &f32,
     base_font_size: &f32,
 ) -> Vec<SvgElement> {
-    vec![SvgElement {
+    let mut results = vec![SvgElement {
         x: elem.x,
         y: elem.y,
         variant: Some(SvgVariant::ChordSymbol),
@@ -245,7 +247,21 @@ pub(super) fn render_chord_symbol(
             weight: FontWeight::Normal,
             italic: false,
         },
-    }]
+    }];
+
+    if dotted {
+        let dot_radius = *row_height * 0.06;
+        let half_text_width = s.chars().count() as f32 * *base_font_size * 0.3;
+        let dot_x = elem.x + half_text_width + *base_font_size * 0.4;
+        results.push(SvgElement {
+            x: dot_x,
+            y: elem.y,
+            variant: Some(SvgVariant::ChordSymbol),
+            kind: SvgKind::Circle { r: dot_radius },
+        });
+    }
+
+    results
 }
 
 pub(super) fn render_horizontal_line(elem: &AbsoluteElement, width: &f32) -> Vec<SvgElement> {
