@@ -140,7 +140,7 @@ pub(crate) fn compute_all_playback_cursor_targets(
                     let Some(block_row) = block.rows.get(part_idx) else {
                         continue;
                     };
-                    let groups = group_elements_by_note_id(&block_row.elements);
+                    let mut groups = group_elements_by_note_id(&block_row.elements);
                     // The row's overall leftmost/rightmost occupied column,
                     // used below to detect the measure's first/last note.
                     // This is compared against each group's own min/max
@@ -154,9 +154,17 @@ pub(crate) fn compute_all_playback_cursor_targets(
                     if groups.is_empty() {
                         continue;
                     }
+                    // Sorted by column (rather than `note_id`, which happens
+                    // to already match column order but isn't defined to)
+                    // so the loop below can look at each note's immediate
+                    // successor in the row.
+                    groups.sort_by_key(|(_, min_col, _)| *min_col);
                     let row_min_col = groups.iter().map(|(_, min, _)| *min).min().unwrap_or(0);
                     let row_max_col = groups.iter().map(|(_, _, max)| *max).max().unwrap_or(0);
-                    for (note_id, min_col, max_col) in groups {
+                    for idx in 0..groups.len() {
+                        let Some(&(note_id, min_col, max_col)) = groups.get(idx) else {
+                            continue;
+                        };
                         // Snap the left edge to the rendered x of the bar line
                         // immediately before this note (only relevant for a
                         // measure's first note), matching the `HAlign`
@@ -180,7 +188,14 @@ pub(crate) fn compute_all_playback_cursor_targets(
                         // own trailing bar line (only relevant for a
                         // measure's last note): centered unless this is the
                         // system's last measure, whose closing bar line is
-                        // `End`-aligned (flush right).
+                        // `End`-aligned (flush right). A note that isn't the
+                        // row's last instead extends to the next note's own
+                        // left edge (rather than its own `max_col + 1`):
+                        // a dotted note's sustained columns past its head
+                        // carry no `ColumnElement` of their own (dashes are
+                        // only emitted for non-dotted notes, to avoid a
+                        // stray dash glyph after the dot), so `max_col` alone
+                        // would understate how long it actually sounds.
                         let column_end = if has_bar_line && max_col == row_max_col {
                             let bar_line_col = (col_offset + col_w - 1) as f32;
                             if block_idx == last_block_idx {
@@ -188,6 +203,8 @@ pub(crate) fn compute_all_playback_cursor_targets(
                             } else {
                                 bar_line_col + 0.5
                             }
+                        } else if let Some(&(_, next_min_col, _)) = groups.get(idx + 1) {
+                            (col_offset + next_min_col) as f32
                         } else {
                             (col_offset + max_col + 1) as f32
                         };

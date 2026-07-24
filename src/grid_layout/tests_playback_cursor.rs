@@ -301,3 +301,81 @@ fn playback_cursor_target_snaps_to_bar_line_despite_trailing_subdivision_padding
     // column is `MUSIC_START_COL + 5 = 7`, so `7.0 + 1.0`.
     assert_eq!(target.column_end, 8.0);
 }
+
+#[test]
+fn playback_cursor_target_extends_to_next_note_without_its_own_trailing_column() {
+    // A dotted note only ever gets a `ColumnElement` at its own head column
+    // (no `NoteDash` continuation columns — those are only emitted for
+    // non-dotted notes, to avoid a stray dash glyph right after the dot; see
+    // `compile_unit` in `part_slice_unit.rs`). Mirror that here with a note
+    // at column 0 and nothing else until the next note at column 3: its
+    // right edge must still reach that next note's left edge, not stop short
+    // at its own column boundary (which previously left a visible gap
+    // between the two notes' playback-cursor rects).
+    let block = MeasureBlock {
+        rows: vec![MeasureRow {
+            id: RowId("V".to_string()),
+            group_provenance: None,
+            label: String::new(),
+            elements: vec![
+                ColumnElement {
+                    column: 0,
+                    content: ElementContent::NoteHead {
+                        pitch: JianPuPitch::Six,
+                        accidental: Accidental::Natural,
+                        octave: 0,
+                        dotted: true,
+                    },
+                    note_id: Some(0),
+                },
+                ColumnElement {
+                    column: 3,
+                    content: ElementContent::NoteHead {
+                        pitch: JianPuPitch::One,
+                        accidental: Accidental::Natural,
+                        octave: 0,
+                        dotted: false,
+                    },
+                    note_id: Some(1),
+                },
+                ColumnElement {
+                    column: 4,
+                    content: ElementContent::BarLine,
+                    note_id: None,
+                },
+            ],
+            source_part_index: 0,
+        }],
+        decorations: vec![],
+        diagnostics: vec![],
+        represents_measures: 1,
+        merge_duplicate_measures_across_parts: true,
+    };
+
+    let pages = crate::grid_layout::layout(
+        &CompileResult {
+            blocks: vec![block],
+            slur_spans: vec![],
+            tuplet_spans: vec![],
+        },
+        &test_render_config(),
+        &no_header(),
+        595.0,
+        842.0,
+        None,
+    );
+
+    let targets = &pages[0].playback_cursor_targets;
+    let target_for = |note_id: usize| {
+        targets
+            .iter()
+            .find(|t| t.note_id == note_id)
+            .unwrap_or_else(|| panic!("no target for note_id {note_id}"))
+    };
+
+    // Note 1's left edge (column 3, within a block starting at
+    // `MUSIC_START_COL` = 2, so 5.0) is where note 0's right edge must land
+    // too, leaving no gap between the two rects.
+    assert_eq!(target_for(0).column_end, target_for(1).column_start);
+    assert_eq!(target_for(0).column_end, 5.0);
+}
