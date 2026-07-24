@@ -122,9 +122,9 @@ fn parses_concatenated_notes() {
 fn parses_standalone_extension() {
     let events = parse_events("2 - - -");
     assert!(matches!(events[0].value, ScoreEvent::Note(_)));
-    assert!(matches!(events[1].value, ScoreEvent::Extension));
-    assert!(matches!(events[2].value, ScoreEvent::Extension));
-    assert!(matches!(events[3].value, ScoreEvent::Extension));
+    assert!(matches!(events[1].value, ScoreEvent::Extension { .. }));
+    assert!(matches!(events[2].value, ScoreEvent::Extension { .. }));
+    assert!(matches!(events[3].value, ScoreEvent::Extension { .. }));
 }
 
 #[test]

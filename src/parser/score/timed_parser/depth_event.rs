@@ -85,7 +85,9 @@ pub(super) fn annotate_slur_close_via_extension(group_slice: &mut [DepthEvent]) 
     // Check if the last element in the group is a closing Extension (continuation == 0).
     let last_is_closing_ext = group_slice
         .last()
-        .map(|e| matches!(e.spanned.value, ScoreEvent::Extension) && e.group_continuation == 0)
+        .map(|e| {
+            matches!(e.spanned.value, ScoreEvent::Extension { .. }) && e.group_continuation == 0
+        })
         .unwrap_or(false);
 
     if !last_is_closing_ext {
@@ -110,7 +112,9 @@ pub(super) fn annotate_slur_close_via_extension(group_slice: &mut [DepthEvent]) 
         .get(note_idx + 1..)
         .unwrap_or_default()
         .iter()
-        .filter(|e| matches!(e.spanned.value, ScoreEvent::Extension) && e.group_continuation > 0)
+        .filter(|e| {
+            matches!(e.spanned.value, ScoreEvent::Extension { .. }) && e.group_continuation > 0
+        })
         .count() as u32;
 
     let Some(note_event) = group_slice.get(note_idx) else {

@@ -272,7 +272,7 @@ fn parses_extend() {
             None
         )
     );
-    assert!(matches!(events[1], ScoreEvent::Extension));
+    assert!(matches!(events[1], ScoreEvent::Extension { .. }));
 }
 
 #[test]

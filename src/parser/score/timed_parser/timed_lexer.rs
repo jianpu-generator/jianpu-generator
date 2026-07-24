@@ -29,7 +29,7 @@ pub enum TimedLexToken {
     RParen,
     LBrace { num: u32, den: Option<u32> },
     RBrace,
-    Extension,
+    Extension { dotted: bool },
     HeadStart { offset: usize },
     Bpm(u32),
     KeyChange(KeyChange),
@@ -119,7 +119,17 @@ fn lex_one_char(
         '(' => emit_single_token(TimedLexToken::LParen, start, len, true),
         ')' => emit_single_token(TimedLexToken::RParen, start, len, true),
         '}' => emit_single_token(TimedLexToken::RBrace, start, len, true),
-        '-' if at_word_boundary => emit_single_token(TimedLexToken::Extension, start, len, true),
+        // `-.` (glued, no space between the dash and the dot) extends by a dotted beat —
+        // the natural full beat of a compound meter (e.g. 9/8's dotted-quarter beat).
+        '-' if at_word_boundary && line[i + len..].starts_with('.') => emit_single_token(
+            TimedLexToken::Extension { dotted: true },
+            start,
+            len + 1,
+            true,
+        ),
+        '-' if at_word_boundary => {
+            emit_single_token(TimedLexToken::Extension { dotted: false }, start, len, true)
+        }
         // `-` inside a word: duration-suffix dash; skip it.
         '-' => Ok((None, len, false)),
         '1' if at_word_boundary && line[i..].starts_with("1=") => {

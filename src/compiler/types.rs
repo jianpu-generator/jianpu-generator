@@ -106,7 +106,11 @@ pub enum ElementContent {
     },
     BarLine,
     /// Visual dash rendered after a note head for each extra beat of duration (e.g. `1-`).
-    NoteDash,
+    /// `dotted` is true when the dash came from a `-.` (dotted-beat) extension rather
+    /// than a plain `-`, and is rendered with a trailing dot to match.
+    NoteDash {
+        dotted: bool,
+    },
     /// A syllable for one verse (0-indexed) of a `notes+lyrics` part.
     Lyric {
         text: String,

@@ -160,9 +160,9 @@ impl PartGrouper {
         Ok(())
     }
 
-    fn handle_extension(&mut self, span: Span) -> Result<(), IrrecoverableError> {
+    fn handle_extension(&mut self, span: Span, dotted: bool) -> Result<(), IrrecoverableError> {
         self.measure_span_end = span.end.max(self.measure_span_end);
-        let extension_beats = 4 * self.resolution_multiplier;
+        let extension_beats = if dotted { 6 } else { 4 } * self.resolution_multiplier;
         match self.current_notes.last_mut() {
             Some(NoteEvent::Note(n)) => {
                 n.duration += extension_beats;
@@ -320,7 +320,7 @@ impl PartGrouper {
                 self.capacity = (numerator as u32) * 16 / (denominator as u32);
                 Ok(())
             }
-            ScoreEvent::Extension => self.handle_extension(spanned.span),
+            ScoreEvent::Extension { dotted } => self.handle_extension(spanned.span, dotted),
             ScoreEvent::TieMarker => self.handle_tie_marker(spanned.span),
             ScoreEvent::Note(pn) => self.handle_note(spanned.span, pn),
             ScoreEvent::Chord(pc) => self.handle_chord(spanned.span, pc),

@@ -259,7 +259,7 @@ fn extended_note_produces_note_dash_at_each_extra_beat() {
     let dashes: Vec<_> = row
         .elements
         .iter()
-        .filter(|e| matches!(e.content, ElementContent::NoteDash))
+        .filter(|e| matches!(e.content, ElementContent::NoteDash { .. }))
         .collect();
     assert_eq!(
         dashes.len(),
@@ -283,7 +283,7 @@ fn extended_chord_produces_note_dash_at_each_extra_beat() {
     let dashes: Vec<_> = row
         .elements
         .iter()
-        .filter(|e| matches!(e.content, ElementContent::NoteDash))
+        .filter(|e| matches!(e.content, ElementContent::NoteDash { .. }))
         .collect();
     assert_eq!(
         dashes.len(),
@@ -293,6 +293,30 @@ fn extended_chord_produces_note_dash_at_each_extra_beat() {
     assert_eq!(dashes[0].column, 4, "first dash at column 4");
     assert_eq!(dashes[1].column, 8, "second dash at column 8");
     assert_eq!(dashes[2].column, 12, "third dash at column 12");
+}
+
+#[test]
+fn dotted_note_extended_with_dotted_beats_produces_note_dash_at_each_extra_beat() {
+    // In 9/8, "1. -. -." is a dotted quarter (6 quarter-beats) plus two dotted-beat
+    // extensions (6 + 6), filling the whole 18-quarter-beat measure.
+    // Each `-.` extension should produce a NoteDash, same as plain `-` does for
+    // undotted notes — but the note head itself is dotted, which currently makes
+    // `compile_unit`'s `if !unit.dotted` guard skip the dash-emission loop entirely.
+    let score = score_from(&notes_doc("time=9/8 key=C4 bpm=120\n[S] 1. -. -.\n"));
+    let result = compile(&score);
+    let row = &result.blocks[0].rows[0];
+    let dashes: Vec<_> = row
+        .elements
+        .iter()
+        .filter(|e| matches!(e.content, ElementContent::NoteDash { .. }))
+        .collect();
+    assert_eq!(
+        dashes.len(),
+        2,
+        "two `-.` tokens should produce two NoteDash elements"
+    );
+    assert_eq!(dashes[0].column, 6, "first dash at column 6");
+    assert_eq!(dashes[1].column, 12, "second dash at column 12");
 }
 
 #[test]

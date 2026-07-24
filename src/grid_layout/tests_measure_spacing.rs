@@ -87,7 +87,7 @@ fn make_block_with_dash(row_id: &str, bar_col: u32) -> MeasureBlock {
                 },
                 ColumnElement {
                     column: 1,
-                    content: ElementContent::NoteDash,
+                    content: ElementContent::NoteDash { dotted: false },
                     note_id: None,
                 },
                 ColumnElement {

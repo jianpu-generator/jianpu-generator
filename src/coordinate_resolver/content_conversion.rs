@@ -215,8 +215,12 @@ fn grid_text_to_absolute(
     halign: HAlign,
 ) -> Option<AbsoluteContent> {
     match content {
-        PostArcGridContent::NoteDash => Some(AbsoluteContent::Text {
-            content: "\u{2014}".to_string(),
+        PostArcGridContent::NoteDash { dotted } => Some(AbsoluteContent::Text {
+            content: if *dotted {
+                "\u{2014}.".to_string()
+            } else {
+                "\u{2014}".to_string()
+            },
             font_size: 12.0,
             anchor: TextAnchor::Middle,
             baseline: DominantBaseline::Middle,

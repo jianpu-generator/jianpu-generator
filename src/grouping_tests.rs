@@ -131,3 +131,25 @@ fn allows_half_bar_crossing_inside_beam_group() {
         .events;
     validate_measure_grouping(&events, 4, 4, 1).expect("grouped crossing should be allowed");
 }
+
+#[test]
+fn dotted_extension_fills_compound_meter_measure() {
+    // In 9/8 (a compound triple meter), each beat is a dotted quarter (6 quarter-beats).
+    // `-.` extends the previous note by one dotted-quarter beat, so a note followed by
+    // two `-.` atoms spans the whole 3-beat measure (6 + 6 + 6 = 18 quarter-beats).
+    let input = concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\na = notes\n\n",
+        "# score\ntime=9/8\n",
+        "[a] 1. -. -.\n",
+    );
+    let output = crate::render_svgs_from_source(input, "test.jianpu", &[]).unwrap();
+    assert!(
+        output.diagnostics.is_empty(),
+        "expected no diagnostics, got: {:?}",
+        output
+            .diagnostics
+            .iter()
+            .map(|e| e.message())
+            .collect::<Vec<_>>()
+    );
+}

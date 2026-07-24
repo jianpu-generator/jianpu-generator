@@ -18,7 +18,13 @@ fn timed_beats(event: &ScoreEvent) -> u32 {
         ScoreEvent::Chord(c) => c.duration,
         ScoreEvent::PercussionHit(p) => p.duration,
         ScoreEvent::Rest(r) => r.duration,
-        ScoreEvent::Extension => 4,
+        ScoreEvent::Extension { dotted } => {
+            if *dotted {
+                6
+            } else {
+                4
+            }
+        }
         _ => 0,
     }
 }
@@ -49,8 +55,8 @@ fn timed_cluster_duration_at(events: &[Spanned<ScoreEvent>], start: usize) -> u3
     }
     let mut index = start + 1;
     while let Some(event) = events.get(index) {
-        if matches!(event.value, ScoreEvent::Extension) {
-            duration += 4;
+        if let ScoreEvent::Extension { dotted } = event.value {
+            duration += if dotted { 6 } else { 4 };
             index += 1;
         } else {
             break;
@@ -63,7 +69,7 @@ fn timed_cluster_len_at(events: &[Spanned<ScoreEvent>], start: usize) -> usize {
     let mut len = 1usize;
     let mut index = start + 1;
     while let Some(event) = events.get(index) {
-        if matches!(event.value, ScoreEvent::Extension) {
+        if matches!(event.value, ScoreEvent::Extension { .. }) {
             len += 1;
             index += 1;
         } else {
@@ -137,7 +143,10 @@ fn pad_beat_deficit(events: &mut Vec<Spanned<ScoreEvent>>, deficit: u32) {
     if extending_last_crosses_half_bar(events, deficit) {
         let pad_span = timed_event_span(events);
         for _ in 0..(deficit / 4) {
-            events.push(Spanned::new(ScoreEvent::Extension, pad_span));
+            events.push(Spanned::new(
+                ScoreEvent::Extension { dotted: false },
+                pad_span,
+            ));
         }
         return;
     }

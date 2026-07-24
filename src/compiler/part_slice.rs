@@ -296,16 +296,23 @@ fn compile_rest(
         });
     }
 
-    if !rest.dotted {
-        let beat = 4 * multiplier;
-        let rest_col = *state.col;
-        for dash_col in (rest_col + beat..rest_col + rest.duration).step_by(beat as usize) {
-            state.elements.push(ColumnElement {
-                column: dash_col,
-                content: ElementContent::NoteDash,
-                note_id: Some(note_id),
-            });
-        }
+    // See the matching comment in `part_slice_unit::compile_unit`: a dotted rest's
+    // own written duration is one full dotted beat, so its `-.` extensions land on
+    // 6-quarter-beat boundaries rather than the 4-quarter-beat ones a plain `-` uses.
+    let beat = if rest.dotted {
+        6 * multiplier
+    } else {
+        4 * multiplier
+    };
+    let rest_col = *state.col;
+    for dash_col in (rest_col + beat..rest_col + rest.duration).step_by(beat as usize) {
+        state.elements.push(ColumnElement {
+            column: dash_col,
+            content: ElementContent::NoteDash {
+                dotted: rest.dotted,
+            },
+            note_id: Some(note_id),
+        });
     }
 
     *state.col += rest.duration;

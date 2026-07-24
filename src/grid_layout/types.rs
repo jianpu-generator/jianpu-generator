@@ -111,7 +111,9 @@ pub enum GridContent {
     MultiMeasureRest {
         count: u32,
     },
-    NoteDash,
+    NoteDash {
+        dotted: bool,
+    },
     /// Spacing-only row for octave dots. Resolver emits nothing for this.
     OctaveDot,
     ChordSymbol(String),
@@ -201,7 +203,9 @@ pub enum PostArcGridContent {
     MultiMeasureRest {
         count: u32,
     },
-    NoteDash,
+    NoteDash {
+        dotted: bool,
+    },
     OctaveDot,
     ChordSymbol(String),
     PercussionHit,

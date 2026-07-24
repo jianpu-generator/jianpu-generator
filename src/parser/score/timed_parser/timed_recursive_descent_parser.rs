@@ -135,15 +135,8 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
                             "unexpected '}' — no open tuplet; '}' ignored",
                         )));
                 }
-                Some(TimedLexToken::Extension) => {
-                    let span = self.current_span();
-                    self.bump();
-                    self.staging
-                        .push(DepthEvent::new(Spanned::new(ScoreEvent::Extension, span)));
-                }
-                Some(TimedLexToken::Tilde) => {
-                    self.parse_tilde()?;
-                }
+                Some(TimedLexToken::Extension { dotted }) => self.parse_extension(*dotted),
+                Some(TimedLexToken::Tilde) => self.parse_tilde()?,
                 Some(TimedLexToken::HeadStart { offset }) => {
                     let offset = *offset;
                     self.parse_timed_unit(offset)?;
@@ -185,6 +178,15 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
                 }
             }
         }
+    }
+
+    fn parse_extension(&mut self, dotted: bool) {
+        let span = self.current_span();
+        self.bump();
+        self.staging.push(DepthEvent::new(Spanned::new(
+            ScoreEvent::Extension { dotted },
+            span,
+        )));
     }
 
     /// Handle a `~` token: it ties the most recently pushed event to the timed unit that

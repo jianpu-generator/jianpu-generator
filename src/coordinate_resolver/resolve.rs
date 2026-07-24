@@ -223,7 +223,7 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
         GridContent::MultiMeasureRest { count } => {
             Some(PostArcGridContent::MultiMeasureRest { count: *count })
         }
-        GridContent::NoteDash => Some(PostArcGridContent::NoteDash),
+        GridContent::NoteDash { dotted } => Some(PostArcGridContent::NoteDash { dotted: *dotted }),
         GridContent::OctaveDot => Some(PostArcGridContent::OctaveDot),
         GridContent::ChordSymbol(s) => Some(PostArcGridContent::ChordSymbol(s.clone())),
         GridContent::PercussionHit => Some(PostArcGridContent::PercussionHit),

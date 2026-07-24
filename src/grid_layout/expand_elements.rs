@@ -106,8 +106,13 @@ pub(crate) fn expand_measure_elements(
             ElementContent::MultiMeasureRest { count } => {
                 push_multi_measure_rest(sub_rows, head_sub, grid_col, *count as u32);
             }
-            ElementContent::NoteDash => {
-                push_head(sub_rows, head_sub, grid_col, GridContent::NoteDash);
+            ElementContent::NoteDash { dotted } => {
+                push_head(
+                    sub_rows,
+                    head_sub,
+                    grid_col,
+                    GridContent::NoteDash { dotted: *dotted },
+                );
             }
             ElementContent::PercussionHit => {
                 push_head(sub_rows, head_sub, grid_col, GridContent::PercussionHit);

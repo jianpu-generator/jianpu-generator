@@ -439,9 +439,12 @@ Rests (`0`) do not accept accidentals.
 |--------|---------|
 | `.` | Dotted (add half the base duration). Cannot combine with `=` (sixteenth) notes. |
 | `-` | Extend the previous **note or rest** by one beat (4 quarter-beats) |
+| `-.` | Extend the previous **note or rest** by one *dotted* beat (6 quarter-beats) — the natural beat of a compound meter (e.g. 9/8) |
 | `~` | Tie this note to the next note (same pitch and octave required) |
 
 Example: `2 - - -` is a whole note in 4/4 (equivalent to `2---`). Likewise, `0 - - -` (or `0---`) is a whole rest.
+
+`-.` is a standalone extension atom (the `.` must be glued directly after the `-`, with no space) — it is not the same as a `-` suffix followed by a separate dotted note. In 9/8, `1. -. -.` is a note held across the full measure: a dotted quarter (`1.`, 6 quarter-beats) plus two dotted-beat extensions (6 + 6), totaling 18 quarter-beats.
 
 You can also attach dashes as suffixes on a note or rest (`2---`, `0---`). Both forms may be mixed in one measure. Repeated rests (`0 0`, `0 0 0 0`) remain equally valid — `0---` and `0 0 0 0` both produce a whole rest in 4/4.
 

@@ -60,7 +60,7 @@ fn chord_column_events_are_parsed() {
             tuplet: None,
         })
     );
-    assert!(matches!(events[4], ScoreEvent::Extension));
+    assert!(matches!(events[4], ScoreEvent::Extension { .. }));
     assert_eq!(all_events(notes_track(&tracks, "N")).len(), 4);
 }
 

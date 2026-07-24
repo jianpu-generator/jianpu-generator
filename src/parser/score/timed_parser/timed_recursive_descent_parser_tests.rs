@@ -33,7 +33,7 @@ fn parses_rest() {
 fn parses_extension() {
     let events = parse_note_events("5 -", &mut GroupStack::default());
     assert_eq!(events.len(), 2);
-    assert!(matches!(events[1].value, ScoreEvent::Extension));
+    assert!(matches!(events[1].value, ScoreEvent::Extension { .. }));
 }
 
 #[test]

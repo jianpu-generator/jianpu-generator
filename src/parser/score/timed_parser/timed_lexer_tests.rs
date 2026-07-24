@@ -45,9 +45,21 @@ fn extension_vs_suffix_dash() {
         kinds("2 - - -"),
         vec![
             TimedLexToken::HeadStart { offset: 0 },
-            TimedLexToken::Extension,
-            TimedLexToken::Extension,
-            TimedLexToken::Extension,
+            TimedLexToken::Extension { dotted: false },
+            TimedLexToken::Extension { dotted: false },
+            TimedLexToken::Extension { dotted: false },
+        ]
+    );
+}
+
+#[test]
+fn dotted_extension_dash() {
+    assert_eq!(
+        kinds("1. -. -."),
+        vec![
+            TimedLexToken::HeadStart { offset: 0 },
+            TimedLexToken::Extension { dotted: true },
+            TimedLexToken::Extension { dotted: true },
         ]
     );
 }

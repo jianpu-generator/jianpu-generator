@@ -110,7 +110,7 @@ fn timed_cluster_duration(events: &[&Spanned<ScoreEvent>], start: usize) -> u32 
     };
     let mut index = start + 1;
     while let Some(event) = events.get(index) {
-        if matches!(event.value, ScoreEvent::Extension) {
+        if matches!(event.value, ScoreEvent::Extension { .. }) {
             duration += 4;
             index += 1;
         } else {

@@ -136,16 +136,23 @@ pub(super) fn compile_unit(
         }
     }
 
-    if !unit.dotted {
-        let beat = 4 * multiplier;
-        let note_col = *state.col;
-        for dash_col in (note_col + beat..note_col + unit.duration).step_by(beat as usize) {
-            state.elements.push(ColumnElement {
-                column: dash_col,
-                content: ElementContent::NoteDash,
-                note_id: Some(note_id),
-            });
-        }
+    // A dotted note's own written duration (e.g. a dotted quarter, 6 quarter-beats) is
+    // one full dotted beat, so extensions past it (`-.`) land on 6-quarter-beat
+    // boundaries rather than the 4-quarter-beat ones a plain note's `-` extensions use.
+    let beat = if unit.dotted {
+        6 * multiplier
+    } else {
+        4 * multiplier
+    };
+    let note_col = *state.col;
+    for dash_col in (note_col + beat..note_col + unit.duration).step_by(beat as usize) {
+        state.elements.push(ColumnElement {
+            column: dash_col,
+            content: ElementContent::NoteDash {
+                dotted: unit.dotted,
+            },
+            note_id: Some(note_id),
+        });
     }
 
     if underline_count > 0 {
