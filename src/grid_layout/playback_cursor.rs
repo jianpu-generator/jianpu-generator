@@ -1,8 +1,8 @@
-use crate::compiler::types::{ColumnElement, MeasureBlock};
+use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock};
 use crate::grid_layout::highlight::{abs_sys_index, system_musical_row_count};
 use crate::grid_layout::layout::{
     block_column_width, is_chord_only_row, is_lyric_row, make_header_rows,
-    system_has_any_decoration, system_tuplet_part_indices, MUSIC_START_COL,
+    system_has_any_decoration, system_tuplet_part_indices, LABEL_COLS, MUSIC_START_COL,
 };
 use crate::grid_layout::types::{GridElement, Header, PlaybackCursorTarget};
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -11,6 +11,17 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 /// min_column, max_column)` for each contiguous note/rest found in this
 /// block (a note only ever appears once per block, so min/max already
 /// captures its full attack + dash-continuation extent here).
+/// Whether `block`'s first row ends in a `BarLine` element — mirrors
+/// `block_column_width`'s own lookup, which returns `1` (as if the block held
+/// only a bar-line-less single column) when none is found.
+fn block_has_bar_line(block: &MeasureBlock) -> bool {
+    block.rows.first().is_some_and(|row| {
+        row.elements
+            .iter()
+            .any(|e| e.content == ElementContent::BarLine)
+    })
+}
+
 fn group_elements_by_note_id(elements: &[ColumnElement]) -> Vec<(usize, u32, u32)> {
     let mut groups: BTreeMap<usize, (u32, u32)> = BTreeMap::new();
     for el in elements {
@@ -120,18 +131,66 @@ pub(crate) fn compute_all_playback_cursor_targets(
             let musical_row_count = system_musical_row_count(system, &tuplet_part_indices);
             let part_ranges = part_row_ranges(system, row_offset, &tuplet_part_indices);
 
+            let last_block_idx = system.len() - 1;
             let mut col_offset: u32 = MUSIC_START_COL;
-            for block in system.iter() {
+            for (block_idx, block) in system.iter().enumerate() {
                 let col_w = block_column_width(block);
+                let has_bar_line = block_has_bar_line(block);
                 for (part_idx, (row_start, row_end)) in part_ranges.iter().enumerate() {
                     let Some(block_row) = block.rows.get(part_idx) else {
                         continue;
                     };
-                    for (note_id, min_col, max_col) in
-                        group_elements_by_note_id(&block_row.elements)
-                    {
-                        let column_start = (col_offset + min_col) as f32;
-                        let column_end = (col_offset + max_col + 1) as f32;
+                    let groups = group_elements_by_note_id(&block_row.elements);
+                    // The row's overall leftmost/rightmost occupied column,
+                    // used below to detect the measure's first/last note.
+                    // This is compared against each group's own min/max
+                    // rather than assuming the last note sits immediately
+                    // next to the bar-line column (`col_w - 1`): a note
+                    // shorter than the column grid's finest subdivision (e.g.
+                    // a quarter note in a sixteenth-note grid) leaves empty
+                    // trailing columns of its own before the bar line, so
+                    // that adjacency never held for it even though it's
+                    // still the measure's last note.
+                    if groups.is_empty() {
+                        continue;
+                    }
+                    let row_min_col = groups.iter().map(|(_, min, _)| *min).min().unwrap_or(0);
+                    let row_max_col = groups.iter().map(|(_, _, max)| *max).max().unwrap_or(0);
+                    for (note_id, min_col, max_col) in groups {
+                        // Snap the left edge to the rendered x of the bar line
+                        // immediately before this note (only relevant for a
+                        // measure's first note), matching the `HAlign`
+                        // `expand_note_part`/`expand_measure_elements` give
+                        // it: the system's leading bar line sits flush left
+                        // (`Start`) at `LABEL_COLS`, an inter-measure one sits
+                        // centered (`Center`) within its own column. Without
+                        // this the rect's edge stops at the raw grid-column
+                        // boundary, short of (or past) where the glyph itself
+                        // is actually drawn.
+                        let column_start = if min_col == row_min_col {
+                            if block_idx == 0 {
+                                LABEL_COLS as f32
+                            } else {
+                                (col_offset - 1) as f32 + 0.5
+                            }
+                        } else {
+                            (col_offset + min_col) as f32
+                        };
+                        // Mirror that for the right edge against this block's
+                        // own trailing bar line (only relevant for a
+                        // measure's last note): centered unless this is the
+                        // system's last measure, whose closing bar line is
+                        // `End`-aligned (flush right).
+                        let column_end = if has_bar_line && max_col == row_max_col {
+                            let bar_line_col = (col_offset + col_w - 1) as f32;
+                            if block_idx == last_block_idx {
+                                bar_line_col + 1.0
+                            } else {
+                                bar_line_col + 0.5
+                            }
+                        } else {
+                            (col_offset + max_col + 1) as f32
+                        };
                         results.push((
                             page_idx,
                             PlaybackCursorTarget {

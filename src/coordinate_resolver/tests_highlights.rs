@@ -1,6 +1,9 @@
 use crate::compositor::types::AbsoluteContent;
 use crate::coordinate_resolver::resolve::{resolve, LyricFontSizes};
-use crate::grid_layout::types::{GridPage, GridRow, MeasureHighlight};
+use crate::grid_layout::types::{
+    GridContent, GridElement, GridPage, GridRow, HAlign, MeasureColumnLayout, MeasureHighlight,
+    PlaybackCursorTarget, VAlign,
+};
 
 #[test]
 fn measure_highlight_produces_prepended_rect_element() {
@@ -132,4 +135,86 @@ fn page_with_no_highlight_produces_no_extra_element() {
     )
     .unwrap();
     assert!(abs[0].elements.is_empty());
+}
+
+#[test]
+fn playback_cursor_reaches_final_bar_line_of_its_measure() {
+    // One system row: a note in music column 1, followed by its measure's
+    // trailing bar-line column (column 2), rendered `HAlign::End` — i.e.
+    // flush to the right edge of its own column, exactly like the final bar
+    // line of a system in `expand_elements.rs`. The bar-line column is much
+    // thinner than the note column, mirroring `THIN_MARK_WEIGHT`.
+    let page = GridPage {
+        width_pt: 595.0,
+        height_pt: 842.0,
+        rows: vec![GridRow {
+            height_pt: 24.0,
+            column_count: 3,
+            has_label_region: true,
+            measure_layout: vec![MeasureColumnLayout {
+                start_col: 1,
+                col_count: 2,
+                weight: 1.0,
+                column_weights: vec![1.0, 0.25],
+            }],
+            elements: vec![GridElement {
+                column: 2,
+                column_span: 1,
+                halign: HAlign::End,
+                valign: VAlign::Top,
+                content: GridContent::BarLine { height_pt: 24.0 },
+            }],
+        }],
+        measure_highlights: vec![],
+        error_highlights: vec![],
+        measure_click_targets: vec![],
+        // `column_end` is snapped to the bar line's own rendered position
+        // (`bar_line_col + 1.0` for an `End`-aligned bar line — see
+        // `compute_all_playback_cursor_targets` in
+        // `src/grid_layout/playback_cursor.rs`) rather than stopping at the
+        // note's own column boundary (`2.0`), so the resolved rect's right
+        // edge lands exactly on the bar line's rendered x below.
+        playback_cursor_targets: vec![PlaybackCursorTarget {
+            row_start: 0,
+            row_end: 0,
+            column_start: 1.0,
+            column_end: 3.0,
+            source_part_index: 0,
+            note_id: 0,
+        }],
+    };
+    let abs_pages = resolve(
+        &[page],
+        8.0,
+        40.0,
+        LyricFontSizes {
+            base: 14.4,
+            cjk: 17.28,
+        },
+    )
+    .unwrap();
+
+    let bar_line_x = abs_pages[0]
+        .elements
+        .iter()
+        .find(|e| matches!(e.content, AbsoluteContent::BarLine { .. }))
+        .map(|e| e.x)
+        .expect("expected a BarLine element");
+    let cursor = abs_pages[0]
+        .elements
+        .iter()
+        .find_map(|e| match &e.content {
+            AbsoluteContent::PlaybackCursorTarget { width, .. } => Some(e.x + width),
+            _ => None,
+        })
+        .expect("expected a PlaybackCursorTarget element");
+
+    // The cursor's right edge should reach the bar line it sits against, not
+    // stop short at the left edge of the bar line's (thinner) own column.
+    assert!(
+        (cursor - bar_line_x).abs() < 0.1,
+        "playback cursor's right edge ({cursor}) should reach the final bar \
+         line's rendered x ({bar_line_x}), but stops short by {}",
+        bar_line_x - cursor
+    );
 }
