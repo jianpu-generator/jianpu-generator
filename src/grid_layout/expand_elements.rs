@@ -113,14 +113,12 @@ pub(crate) fn expand_measure_elements(
                 push_head(sub_rows, head_sub, grid_col, GridContent::PercussionHit);
             }
             ElementContent::ChordSymbol(s) => {
-                if let Some(row) = sub_rows.get_mut(head_sub) {
-                    row.elements.push(grid_el(
-                        grid_col,
-                        GridContent::ChordSymbol(s.clone()),
-                        HAlign::Start,
-                        VAlign::Center,
-                    ));
-                }
+                push_head(
+                    sub_rows,
+                    head_sub,
+                    grid_col,
+                    GridContent::ChordSymbol(s.clone()),
+                );
             }
             ElementContent::Underline {
                 from_column,

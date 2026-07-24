@@ -239,7 +239,7 @@ pub(super) fn render_chord_symbol(
         kind: SvgKind::Text {
             content: s.to_string(),
             font_size: *base_font_size,
-            anchor: TextAnchor::Start,
+            anchor: TextAnchor::Middle,
             baseline: DominantBaseline::Middle,
             font: FontFamily::Monospace,
             weight: FontWeight::Normal,
