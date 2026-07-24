@@ -63,8 +63,7 @@ pub fn measure_start_times_seconds(score: &Score) -> Result<Vec<f64>, Irrecovera
 
 /// Same as [`measure_start_times_seconds`], but scoped to a measure range and
 /// relative to the start of that range, carrying BPM/key context accumulated
-/// from preceding measures. Used to sync a playhead against the audio clip
-/// returned by [`super::write_midi_for_measure_range`].
+/// from preceding measures.
 pub fn measure_start_times_seconds_for_range(
     score: &Score,
     start_index: usize,

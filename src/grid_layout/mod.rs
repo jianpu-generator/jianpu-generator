@@ -1,7 +1,7 @@
 pub(crate) mod expand;
 pub(crate) mod highlight;
 pub mod layout;
-pub(crate) mod note_highlight;
+pub(crate) mod playback_cursor;
 pub(crate) mod slur_placement;
 pub(crate) mod tuplet_placement;
 pub mod types;

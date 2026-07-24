@@ -1,7 +1,7 @@
 import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { renderSvgDocument } from './PreviewSvgRenderer'
-import { useNoteHighlight } from './useNoteHighlight'
+import { usePlaybackCursor } from './usePlaybackCursor'
 
 interface PreviewProps {
   documents: SvgDocumentOut[]
@@ -100,8 +100,8 @@ export function Preview({
     null,
   )
 
-  useNoteHighlight(previewPagesRef, audioElement, noteTimings)
-  useNoteHighlight(
+  usePlaybackCursor(previewPagesRef, audioElement, noteTimings)
+  usePlaybackCursor(
     previewPagesRef,
     measureAudioElement,
     measureAudioNoteTimings,

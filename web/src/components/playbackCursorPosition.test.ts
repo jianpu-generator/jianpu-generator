@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   groupNoteTimingsByPart,
   resolveActiveNotes,
-} from './noteHighlightPosition'
+} from './playbackCursorPosition'
 
 function timing(
   sourcePartIndex: number,

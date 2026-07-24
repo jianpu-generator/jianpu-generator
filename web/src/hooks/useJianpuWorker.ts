@@ -45,11 +45,6 @@ export function useJianpuWorker(
   const [partsLoading, setPartsLoading] = useState(false)
   const [documents, setDocuments] = useState<SvgDocumentOut[]>([])
   const [wavUrl, setWavUrl] = useState<string | null>(null)
-  const [measureTimes, setMeasureTimes] = useState<number[]>([])
-  const [writtenMeasureIndices, setWrittenMeasureIndices] = useState<number[]>(
-    [],
-  )
-  const [columnBoundaries, setColumnBoundaries] = useState<number[][]>([])
   const [noteTimings, setNoteTimings] = useState<NoteTimingOut[]>([])
   const [audioAvailable, setAudioAvailable] = useState(false)
   const [pdfAvailable, setPdfAvailable] = useState(false)
@@ -165,8 +160,6 @@ export function useJianpuWorker(
     measureAudioGenerating,
     setMeasureAudioGenerating,
     measureAudioPlaying,
-    measureAudioTimes,
-    measureAudioWrittenIndices,
     measureAudioNoteTimings,
     measureAudioElement,
     setNextMeasureWavUrl,
@@ -230,9 +223,6 @@ export function useJianpuWorker(
     latestAudioIdRef,
     setAudioGenerating,
     setNextWavUrl,
-    setMeasureTimes,
-    setWrittenMeasureIndices,
-    setColumnBoundaries,
     setNoteTimings,
     latestMeasureAudioIdRef,
     setMeasureAudioGenerating,
@@ -348,9 +338,6 @@ export function useJianpuWorker(
     documents,
     wavUrl,
     wavFilename,
-    measureTimes,
-    writtenMeasureIndices,
-    columnBoundaries,
     noteTimings,
     audioAvailable,
     pdfAvailable,
@@ -373,8 +360,6 @@ export function useJianpuWorker(
     selectedMeasureRange,
     measureAudioGenerating,
     measureAudioPlaying,
-    measureAudioTimes,
-    measureAudioWrittenIndices,
     measureAudioNoteTimings,
     measureAudioElement,
     notifySelection,

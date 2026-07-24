@@ -8,7 +8,7 @@ use crate::grid_layout::PAGE_MARGIN;
 use super::content_conversion::grid_to_absolute;
 use super::highlights::{
     resolve_error_highlights, resolve_measure_click_target, resolve_measure_highlights,
-    resolve_note_highlight_target,
+    resolve_playback_cursor_target,
 };
 
 /// Font sizes used to estimate lyric syllable width, so a clamp can keep
@@ -325,11 +325,11 @@ fn resolve_page(
         .collect();
     highlight_elements.extend(click_target_elements);
 
-    let note_highlight_target_elements: Vec<AbsoluteElement> = page
-        .note_highlight_targets
+    let playback_cursor_target_elements: Vec<AbsoluteElement> = page
+        .playback_cursor_targets
         .iter()
         .filter_map(|t| {
-            resolve_note_highlight_target(
+            resolve_playback_cursor_target(
                 t,
                 &page.rows,
                 &row_tops,
@@ -338,7 +338,7 @@ fn resolve_page(
             )
         })
         .collect();
-    highlight_elements.extend(note_highlight_target_elements);
+    highlight_elements.extend(playback_cursor_target_elements);
 
     Ok(AbsolutePage {
         width_pt: page.width_pt,

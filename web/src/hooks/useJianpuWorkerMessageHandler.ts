@@ -52,16 +52,11 @@ export interface WorkerMessageHandlerDeps {
   latestAudioIdRef: RefObject<number>
   setAudioGenerating: (value: boolean) => void
   setNextWavUrl: (value: string | null) => void
-  setMeasureTimes: (value: number[]) => void
-  setWrittenMeasureIndices: (value: number[]) => void
-  setColumnBoundaries: (value: number[][]) => void
   setNoteTimings: (value: NoteTimingOut[]) => void
   latestMeasureAudioIdRef: RefObject<number>
   setMeasureAudioGenerating: (value: boolean) => void
   setNextMeasureWavUrl: (
     value: string | null,
-    measureTimes: number[],
-    writtenMeasureIndices: number[],
     noteTimings: NoteTimingOut[],
   ) => void
   latestHighlightRenderIdRef: RefObject<number>
@@ -215,9 +210,6 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
         new Blob([msg.wav], { type: 'audio/wav' }),
       )
       deps.setNextWavUrl(url)
-      deps.setMeasureTimes(msg.measureTimes)
-      deps.setWrittenMeasureIndices(msg.writtenMeasureIndices)
-      deps.setColumnBoundaries(msg.columnBoundaries)
       deps.setNoteTimings(msg.noteTimings)
       return
     }
@@ -233,11 +225,8 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       deps.setMeasureAudioGenerating(false)
       deps.setNextMeasureWavUrl(
         URL.createObjectURL(new Blob([msg.wav], { type: 'audio/wav' })),
-        msg.measureTimes,
-        msg.writtenMeasureIndices,
         msg.noteTimings,
       )
-      deps.setColumnBoundaries(msg.columnBoundaries)
       return
     }
 

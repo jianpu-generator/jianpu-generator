@@ -160,11 +160,11 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           style={{ cursor: 'pointer' }}
         />
       )
-    case 'noteHighlightRect':
+    case 'playbackCursorRect':
       return (
         <rect
           key={key}
-          data-variant="note-highlight-rect"
+          data-variant="playback-cursor-rect"
           x={el.x}
           y={el.y}
           width={kind.width}

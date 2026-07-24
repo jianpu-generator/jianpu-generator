@@ -17,7 +17,7 @@ fn single_row_page(element: GridElement) -> GridPage {
         measure_highlights: vec![],
         error_highlights: vec![],
         measure_click_targets: vec![],
-        note_highlight_targets: vec![],
+        playback_cursor_targets: vec![],
     }
 }
 
@@ -108,7 +108,7 @@ fn valign_top_places_y_at_row_top() {
         measure_highlights: vec![],
         error_highlights: vec![],
         measure_click_targets: vec![],
-        note_highlight_targets: vec![],
+        playback_cursor_targets: vec![],
     };
     let abs = resolve(
         &[page],

@@ -81,8 +81,8 @@ pub(super) fn resolve_error_highlights(
         .collect()
 }
 
-pub(super) fn resolve_note_highlight_target(
-    target: &crate::grid_layout::types::NoteHighlightTarget,
+pub(super) fn resolve_playback_cursor_target(
+    target: &crate::grid_layout::types::PlaybackCursorTarget,
     rows: &[GridRow],
     row_tops: &[f32],
     usable_width: f32,
@@ -103,7 +103,7 @@ pub(super) fn resolve_note_highlight_target(
     Some(AbsoluteElement {
         x: target_x,
         y: *target_y,
-        content: AbsoluteContent::NoteHighlightTarget {
+        content: AbsoluteContent::PlaybackCursorTarget {
             width: target_width,
             height: target_height,
             source_part_index: target.source_part_index,

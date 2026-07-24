@@ -1,7 +1,6 @@
 use crate::error::IrrecoverableError;
 use crate::parser::parts_parser::InstrumentInfo;
 use crate::{apply_track_filter, compile};
-use crate::{compiler, consolidator, grid_layout};
 
 /// Parse, group, optionally filter tracks, and synthesize WAV bytes.
 ///
@@ -103,9 +102,10 @@ pub fn write_wav_for_measure_range_from_source(
 }
 
 /// Parse, group, optionally filter tracks, and compute the elapsed-seconds
-/// offset of each measure boundary (length = `measures + 1`; the last entry
-/// is the total duration). Used to sync a UI playhead against WAV audio
-/// returned by [`write_wav_from_source_filtered`].
+/// offset of each measure boundary in playback order (length = playback
+/// measure count + 1; the last entry is the total duration), following
+/// `# sequence`/D.C.-al-Coda-Fine navigation the same way the actual audio
+/// does (see [`crate::midi::expand_navigation`]).
 #[cfg(feature = "midi")]
 pub fn measure_start_times_from_source(
     source: &str,
@@ -122,8 +122,7 @@ pub fn measure_start_times_from_source(
 /// Parse, group, optionally filter tracks, and compute the elapsed-seconds
 /// start/end of every sounding note/rest, keyed by `(source_part_index,
 /// note_id)`. Used to drive the SVG preview's per-part, per-note playback
-/// highlight (see [`crate::midi::NoteTiming`]), replacing the old
-/// measure-level playhead built from [`measure_start_times_from_source`].
+/// cursor (see [`crate::midi::NoteTiming`]).
 ///
 /// Follows the same `# sequence`/D.C.-al-Coda-Fine playback order as the
 /// actual audio (see [`crate::midi::note_timings_seconds`]), so a repeated
@@ -141,33 +140,6 @@ pub fn note_timings_from_source(
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     crate::midi::note_timings_seconds(&score)
-}
-
-/// Same as [`measure_start_times_from_source`], but scoped to a measure range
-/// and relative to the start of that range. Used to sync a playhead against
-/// the audio clip returned by [`write_wav_for_measure_range_from_source`].
-///
-/// See [`MeasureRangeSelection`] for `extend_to_last_occurrence` and
-/// `respect_sequence`.
-#[cfg(feature = "midi")]
-pub fn measure_start_times_for_range_from_source(
-    source: &str,
-    filename: &str,
-    selection: &MeasureRangeSelection,
-    enabled_tracks: Option<&[String]>,
-    instruments: &[InstrumentInfo],
-) -> Result<Vec<f64>, IrrecoverableError> {
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
-    let (score, start, end) = crate::midi::expand_for_measure_range(
-        &score,
-        *selection.range.start(),
-        *selection.range.end(),
-        selection.extend_to_last_occurrence,
-        selection.respect_sequence,
-        selection.sequence_entry_range.clone(),
-    )?;
-    crate::midi::measure_start_times_seconds_for_range(&score, start, end)
 }
 
 /// Same as [`note_timings_from_source`], but scoped to a measure range and
@@ -199,83 +171,6 @@ pub fn note_timings_for_range_from_source(
         return crate::midi::note_timings_seconds_for_literal_range(&score, start_pos, end_pos);
     }
     crate::midi::note_timings_seconds_for_range(&score, start_pos, end_pos)
-}
-
-/// Parse, group, optionally filter tracks, and return the written measure
-/// index that each position in [`measure_start_times_from_source`]'s
-/// playback-ordered timeline corresponds to (length = playback-sequence
-/// length, i.e. `measure_start_times_from_source(...).len() - 1`).
-///
-/// Used to translate a playback position into the written measure to
-/// highlight via [`crate::render_svgs_with_highlight_range`], so a UI
-/// playhead follows D.C. al Coda navigation (repeats/jumps) instead of
-/// assuming playback position and written measure index are the same thing.
-#[cfg(feature = "midi")]
-pub fn written_measure_indices_from_source(
-    source: &str,
-    filename: &str,
-    enabled_tracks: Option<&[String]>,
-    instruments: &[InstrumentInfo],
-) -> Result<Vec<usize>, IrrecoverableError> {
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
-    let (_, origins) = crate::midi::expand_navigation_with_origins(&score)?;
-    Ok(origins)
-}
-
-/// Same as [`written_measure_indices_from_source`], but scoped to a measure
-/// range: entries correspond 1:1 to [`measure_start_times_for_range_from_source`]'s
-/// timeline for the same range.
-///
-/// See [`MeasureRangeSelection`] for `extend_to_last_occurrence` and
-/// `respect_sequence`.
-#[cfg(feature = "midi")]
-pub fn written_measure_indices_for_range_from_source(
-    source: &str,
-    filename: &str,
-    selection: &MeasureRangeSelection,
-    enabled_tracks: Option<&[String]>,
-    instruments: &[InstrumentInfo],
-) -> Result<Vec<usize>, IrrecoverableError> {
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
-    let (_, start_pos, end_pos) = crate::midi::expand_for_measure_range(
-        &score,
-        *selection.range.start(),
-        *selection.range.end(),
-        selection.extend_to_last_occurrence,
-        selection.respect_sequence,
-        selection.sequence_entry_range.clone(),
-    )?;
-    if !selection.respect_sequence {
-        return Ok((start_pos..=end_pos).collect());
-    }
-    let (_, origins) = crate::midi::expand_navigation_with_origins(&score)?;
-    Ok(origins
-        .get(start_pos..=end_pos)
-        .map(<[usize]>::to_vec)
-        .unwrap_or_default())
-}
-
-/// Parse, group, and optionally filter tracks, then return the cumulative
-/// pixel-weight column boundaries of every rendered measure (one entry per
-/// `data-measure-index`, see [`grid_layout::measure_column_boundaries`]).
-///
-/// Used to map a playhead's linear elapsed-time fraction within a measure
-/// (from [`measure_start_times_from_source`]) onto the non-linear pixel
-/// position notes actually render at, since measure/column width is
-/// density-weighted rather than duration-proportional.
-pub fn measure_column_boundaries_from_source(
-    source: &str,
-    filename: &str,
-    enabled_tracks: Option<&[String]>,
-    instruments: &[InstrumentInfo],
-) -> Result<Vec<Vec<f32>>, IrrecoverableError> {
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
-    let compile_result = compiler::compile(&score);
-    let compile_result = consolidator::consolidate(compile_result);
-    Ok(grid_layout::measure_column_boundaries(&compile_result))
 }
 
 /// Parse, group, optionally filter tracks, and generate MIDI (SMF) bytes.

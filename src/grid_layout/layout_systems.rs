@@ -28,8 +28,8 @@ pub(crate) const MUSIC_START_COL: u32 = LABEL_COLS + 1;
 /// Shared by every pass that needs to know whether a part's `tuplet_bracket`
 /// sub-row is reserved in this particular system — layout height math
 /// (`system_musical_height_pt`), row expansion (`expand_note_part`), and the
-/// highlight/click/note-highlight row-counting passes (`grid_layout::highlight`,
-/// `grid_layout::note_highlight`) all must agree on this or their row indices
+/// highlight/click/playback-cursor row-counting passes (`grid_layout::highlight`,
+/// `grid_layout::playback_cursor`) all must agree on this or their row indices
 /// drift apart.
 pub(crate) fn system_tuplet_part_indices(
     system: &[MeasureBlock],

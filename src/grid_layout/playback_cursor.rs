@@ -4,7 +4,7 @@ use crate::grid_layout::layout::{
     block_column_width, is_chord_only_row, is_lyric_row, make_header_rows,
     system_has_any_decoration, system_tuplet_part_indices, MUSIC_START_COL,
 };
-use crate::grid_layout::types::{GridElement, Header, NoteHighlightTarget};
+use crate::grid_layout::types::{GridElement, Header, PlaybackCursorTarget};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 /// Groups a `MeasureRow`'s elements by `note_id`, returning `(note_id,
@@ -33,8 +33,8 @@ fn group_elements_by_note_id(elements: &[ColumnElement]) -> Vec<(usize, u32, u32
 
 /// Per-part row span (`(row_start, row_end)`) for every row template in
 /// `first.rows`, in the same order and using the same sub-row counts as
-/// `expand_system_to_rows`/`system_musical_row_count`, so a note's highlight
-/// rect lines up with the sub-rows its own part actually renders into
+/// `expand_system_to_rows`/`system_musical_row_count`, so a note's playback
+/// cursor rect lines up with the sub-rows its own part actually renders into
 /// (rather than the whole system's row range, which `MeasureHighlight` uses).
 ///
 /// A `notes+lyrics` part's verses are compiled as separate sibling rows in
@@ -42,11 +42,11 @@ fn group_elements_by_note_id(elements: &[ColumnElement]) -> Vec<(usize, u32, u32
 /// the notes row, sharing its `source_part_index`) rather than being mixed
 /// into the notes row itself — see `ElementContent::Lyric`'s doc comment.
 /// So a note row's own `has_lyrics` is always false; instead this absorbs
-/// those following verse rows into the note row's span (so its highlight
-/// rect extends down to cover the lyric text), and gives each absorbed
+/// those following verse rows into the note row's span (so its playback
+/// cursor rect extends down to cover the lyric text), and gives each absorbed
 /// verse row the same span as its note row — verse rows never carry a
-/// `note_id`, so `compute_all_note_highlight_targets` never emits a
-/// highlight target for their own entry anyway.
+/// `note_id`, so `compute_all_playback_cursor_targets` never emits a
+/// playback cursor target for their own entry anyway.
 fn part_row_ranges(
     system: &[MeasureBlock],
     row_offset: usize,
@@ -92,14 +92,14 @@ fn part_row_ranges(
     ranges
 }
 
-pub(crate) fn compute_all_note_highlight_targets(
+pub(crate) fn compute_all_playback_cursor_targets(
     page_systems: &[Vec<Vec<MeasureBlock>>],
     tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
     header: &Header,
     base: f32,
     hide_system_dividers: bool,
-) -> Vec<(usize, NoteHighlightTarget)> {
-    let mut results: Vec<(usize, NoteHighlightTarget)> = Vec::new();
+) -> Vec<(usize, PlaybackCursorTarget)> {
+    let mut results: Vec<(usize, PlaybackCursorTarget)> = Vec::new();
 
     for (page_idx, page_sys) in page_systems.iter().enumerate() {
         let header_row_count = make_header_rows(header, base, page_idx == 0).len();
@@ -134,7 +134,7 @@ pub(crate) fn compute_all_note_highlight_targets(
                         let column_end = (col_offset + max_col + 1) as f32;
                         results.push((
                             page_idx,
-                            NoteHighlightTarget {
+                            PlaybackCursorTarget {
                                 row_start: *row_start,
                                 row_end: *row_end,
                                 column_start,
@@ -153,10 +153,10 @@ pub(crate) fn compute_all_note_highlight_targets(
     results
 }
 
-pub(crate) fn note_highlight_targets_on_page(
-    targets: &[(usize, NoteHighlightTarget)],
+pub(crate) fn playback_cursor_targets_on_page(
+    targets: &[(usize, PlaybackCursorTarget)],
     page_idx: usize,
-) -> Vec<NoteHighlightTarget> {
+) -> Vec<PlaybackCursorTarget> {
     targets
         .iter()
         .filter(|(p, _)| *p == page_idx)

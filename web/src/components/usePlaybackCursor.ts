@@ -3,9 +3,9 @@ import { useEffect } from 'react'
 import {
   groupNoteTimingsByPart,
   resolveActiveNotes,
-} from './noteHighlightPosition'
+} from './playbackCursorPosition'
 
-const HIGHLIGHT_FILL = 'rgba(220,38,38,0.25)'
+const PLAYBACK_CURSOR_FILL = 'rgba(220,38,38,0.25)'
 
 function noteKey(sourcePartIndex: number, noteId: number): string {
   return `${sourcePartIndex}:${noteId}`
@@ -19,7 +19,7 @@ function noteKey(sourcePartIndex: number, noteId: number): string {
  * React state/rendering (rAF, direct attribute writes) since it updates
  * every animation frame.
  */
-export function useNoteHighlight(
+export function usePlaybackCursor(
   containerRef: React.RefObject<HTMLDivElement | null>,
   audio: HTMLAudioElement | null | undefined,
   noteTimings: NoteTimingOut[] | undefined,
@@ -40,10 +40,10 @@ export function useNoteHighlight(
       on: boolean,
     ) => {
       const rects = container.querySelectorAll<SVGRectElement>(
-        `[data-tag="note"][data-part-index="${sourcePartIndex}"][data-note-id="${noteId}"] rect[data-variant="note-highlight-rect"]`,
+        `[data-tag="note"][data-part-index="${sourcePartIndex}"][data-note-id="${noteId}"] rect[data-variant="playback-cursor-rect"]`,
       )
       for (const rect of rects) {
-        rect.setAttribute('fill', on ? HIGHLIGHT_FILL : 'transparent')
+        rect.setAttribute('fill', on ? PLAYBACK_CURSOR_FILL : 'transparent')
       }
     }
 
@@ -52,7 +52,7 @@ export function useNoteHighlight(
       noteId: number,
     ) => {
       const rect = container.querySelector<SVGRectElement>(
-        `[data-tag="note"][data-part-index="${sourcePartIndex}"][data-note-id="${noteId}"] rect[data-variant="note-highlight-rect"]`,
+        `[data-tag="note"][data-part-index="${sourcePartIndex}"][data-note-id="${noteId}"] rect[data-variant="playback-cursor-rect"]`,
       )
       if (!rect) return
       const noteBounds = rect.getBoundingClientRect()

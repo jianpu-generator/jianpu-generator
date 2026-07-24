@@ -32,10 +32,6 @@ export function useMeasureAudioPlayback({
 }: UseMeasureAudioPlaybackParams) {
   const [measureAudioGenerating, setMeasureAudioGenerating] = useState(false)
   const [measureAudioPlaying, setMeasureAudioPlaying] = useState(false)
-  const [measureAudioTimes, setMeasureAudioTimes] = useState<number[]>([])
-  const [measureAudioWrittenIndices, setMeasureAudioWrittenIndices] = useState<
-    number[]
-  >([])
   const [measureAudioNoteTimings, setMeasureAudioNoteTimings] = useState<
     NoteTimingOut[]
   >([])
@@ -47,12 +43,7 @@ export function useMeasureAudioPlayback({
   const measureWavUrlRef = useRef<string | null>(null)
 
   const setNextMeasureWavUrl = useCallback(
-    (
-      next: string | null,
-      nextMeasureTimes: number[] = [],
-      nextWrittenIndices: number[] = [],
-      nextNoteTimings: NoteTimingOut[] = [],
-    ) => {
+    (next: string | null, nextNoteTimings: NoteTimingOut[] = []) => {
       if (currentMeasureAudioRef.current) {
         currentMeasureAudioRef.current.pause()
         currentMeasureAudioRef.current = null
@@ -61,8 +52,6 @@ export function useMeasureAudioPlayback({
         URL.revokeObjectURL(measureWavUrlRef.current)
       }
       measureWavUrlRef.current = next
-      setMeasureAudioTimes(nextMeasureTimes)
-      setMeasureAudioWrittenIndices(nextWrittenIndices)
       setMeasureAudioNoteTimings(nextNoteTimings)
       if (next) {
         const audio = new Audio(next)
@@ -165,8 +154,6 @@ export function useMeasureAudioPlayback({
     measureAudioGenerating,
     setMeasureAudioGenerating,
     measureAudioPlaying,
-    measureAudioTimes,
-    measureAudioWrittenIndices,
     measureAudioNoteTimings,
     measureAudioElement,
     setNextMeasureWavUrl,

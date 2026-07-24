@@ -17,13 +17,7 @@ export interface JianpuWorkerState {
   documents: SvgDocumentOut[]
   wavUrl: string | null
   wavFilename: string
-  /** Elapsed-seconds offset of each measure boundary for `wavUrl`'s audio, length = measure count + 1. */
-  measureTimes: number[]
-  /** Written measure index to highlight at each playback position of `measureTimes`, following D.C. al Coda navigation; entry `i` pairs with `measureTimes[i]`. */
-  writtenMeasureIndices: number[]
-  /** Cumulative pixel-weight column boundaries of every rendered measure, entry `i` pairs with `data-measure-index="i"`. Used to map a linear time position within a measure onto its actual (density-weighted) pixel position. */
-  columnBoundaries: number[][]
-  /** Elapsed-seconds start/end of every sounding note/rest for `wavUrl`'s audio, keyed by `(source_part_index, note_id)`. Drives the per-part, per-note playback highlight. */
+  /** Elapsed-seconds start/end of every sounding note/rest for `wavUrl`'s audio, keyed by `(source_part_index, note_id)`. Drives the per-part, per-note playback cursor. */
   noteTimings: NoteTimingOut[]
   audioAvailable: boolean
   pdfAvailable: boolean
@@ -46,10 +40,6 @@ export interface JianpuWorkerState {
   selectedMeasureRange: { start: number; end: number } | null
   measureAudioGenerating: boolean
   measureAudioPlaying: boolean
-  /** Elapsed-seconds offset of each measure boundary within the selected range's audio, relative to the range start. */
-  measureAudioTimes: number[]
-  /** Written measure index to highlight at each playback position of `measureAudioTimes`, following D.C. al Coda navigation; entry `i` pairs with `measureAudioTimes[i]`. */
-  measureAudioWrittenIndices: number[]
   /** Elapsed-seconds start/end of every sounding note/rest for the selected range's audio, keyed by `(source_part_index, note_id)`. */
   measureAudioNoteTimings: NoteTimingOut[]
   /** The `<audio>` element currently playing the selected measure range, if any; a new element each time playback starts. */

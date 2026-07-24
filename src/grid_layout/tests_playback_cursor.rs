@@ -102,7 +102,7 @@ fn test_render_config() -> RenderConfig {
 }
 
 #[test]
-fn note_highlight_target_extends_over_its_lyric_verse_row() {
+fn playback_cursor_target_extends_over_its_lyric_verse_row() {
     // A `notes+lyrics` part compiles to two sibling `MeasureRow`s sharing
     // `source_part_index` — a notes row and a separate lyric-verse row (see
     // `ElementContent::Lyric`'s doc comment) — rather than lyrics being
@@ -130,7 +130,7 @@ fn note_highlight_target_extends_over_its_lyric_verse_row() {
         None,
     );
 
-    let targets = &pages[0].note_highlight_targets;
+    let targets = &pages[0].playback_cursor_targets;
     assert_eq!(
         targets.len(),
         2,

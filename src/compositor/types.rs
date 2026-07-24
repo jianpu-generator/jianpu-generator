@@ -80,8 +80,8 @@ pub enum AbsoluteContent {
     },
     /// Background rect behind one part's sounding note/rest, toggled at
     /// playback time by the frontend rather than filled here (see
-    /// `renderer::new_types::SvgKind::NoteHighlightRect`).
-    NoteHighlightTarget {
+    /// `renderer::new_types::SvgKind::PlaybackCursorRect`).
+    PlaybackCursorTarget {
         width: f32,
         height: f32,
         source_part_index: usize,

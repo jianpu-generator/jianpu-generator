@@ -37,29 +37,6 @@ const generateWavForMeasureRange =
     ? jianpuWasm.generate_wav_for_measure_range
     : null
 
-const listMeasureTimes =
-  'list_measure_times' in jianpuWasm ? jianpuWasm.list_measure_times : null
-
-const listMeasureTimesForRange =
-  'list_measure_times_for_range' in jianpuWasm
-    ? jianpuWasm.list_measure_times_for_range
-    : null
-
-const writtenMeasureIndices =
-  'written_measure_indices' in jianpuWasm
-    ? jianpuWasm.written_measure_indices
-    : null
-
-const writtenMeasureIndicesForRange =
-  'written_measure_indices_for_range' in jianpuWasm
-    ? jianpuWasm.written_measure_indices_for_range
-    : null
-
-const listMeasureColumnBoundaries =
-  'list_measure_column_boundaries' in jianpuWasm
-    ? jianpuWasm.list_measure_column_boundaries
-    : null
-
 const listNoteTimings =
   'list_note_timings' in jianpuWasm ? jianpuWasm.list_note_timings : null
 
@@ -219,15 +196,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'generateAudio') {
-    handleGenerateAudio(
-      msg,
-      generateWav,
-      listMeasureTimes,
-      writtenMeasureIndices,
-      listMeasureColumnBoundaries,
-      listNoteTimings,
-      loadedSoundfont,
-    )
+    handleGenerateAudio(msg, generateWav, listNoteTimings, loadedSoundfont)
     return
   }
 
@@ -235,9 +204,6 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     handleGenerateMeasureRangeAudio(
       msg,
       generateWavForMeasureRange,
-      listMeasureTimesForRange,
-      writtenMeasureIndicesForRange,
-      listMeasureColumnBoundaries,
       listNoteTimingsForRange,
       loadedSoundfont,
     )

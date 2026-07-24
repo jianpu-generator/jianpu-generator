@@ -9,7 +9,7 @@ pub struct GridPage {
     pub measure_highlights: Vec<MeasureHighlight>,
     pub error_highlights: Vec<MeasureHighlight>,
     pub measure_click_targets: Vec<MeasureClickTarget>,
-    pub note_highlight_targets: Vec<NoteHighlightTarget>,
+    pub playback_cursor_targets: Vec<PlaybackCursorTarget>,
 }
 
 #[derive(Debug, Clone)]
@@ -268,7 +268,7 @@ pub struct MeasureHighlight {
 /// [`crate::midi::timing::NoteTiming`], so playback can look up which grid
 /// position(s) to highlight for a given part's currently-sounding note.
 #[derive(Debug, Clone)]
-pub struct NoteHighlightTarget {
+pub struct PlaybackCursorTarget {
     pub row_start: usize,
     pub row_end: usize,
     pub column_start: f32,

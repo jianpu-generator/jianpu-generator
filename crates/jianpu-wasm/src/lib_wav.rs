@@ -3,13 +3,9 @@ use wasm_bindgen::prelude::*;
 use crate::responses::{
     generate_instrument_preview_wav_response, generate_percussion_preview_wav_response,
     generate_split_wavs_response, generate_wav_for_measure_range_response, generate_wav_response,
-    list_measure_column_boundaries_response, list_measure_times_for_range_response,
-    list_measure_times_response, list_note_timings_for_range_response, list_note_timings_response,
+    list_note_timings_for_range_response, list_note_timings_response,
 };
-use crate::types::{
-    GenerateSplitWavsResponse, GenerateWavResponse, ListMeasureColumnBoundariesResponse,
-    ListMeasureTimesResponse, NoteTimingsResponse,
-};
+use crate::types::{GenerateSplitWavsResponse, GenerateWavResponse, NoteTimingsResponse};
 
 /// Parse `.jianpu` source and synthesize WAV audio bytes.
 ///
@@ -88,85 +84,13 @@ pub fn generate_wav_for_measure_range(
     )
 }
 
-/// Return the elapsed-seconds offset of each measure boundary in the whole score.
-///
-/// Available only when the `wav` feature is enabled at build time.
-/// Used to sync a UI playhead against the audio produced by [`generate_wav`].
-/// Returns:
-/// - `{ "status": "ok", "times": [f64, ...] }` — length is `measure count + 1`;
-///   the last entry is the total duration.
-/// - `{ "status": "err", "diagnostics": [...] }`
-#[allow(clippy::needless_pass_by_value)]
-#[wasm_bindgen]
-pub fn list_measure_times(
-    source: &str,
-    enabled_tracks: Option<Vec<String>>,
-) -> ListMeasureTimesResponse {
-    list_measure_times_response(source, enabled_tracks.as_deref())
-}
-
-/// Return the elapsed-seconds offset of each measure boundary within a
-/// consecutive measure range, relative to the start of that range.
-///
-/// Available only when the `wav` feature is enabled at build time.
-/// Used to sync a UI playhead against the audio produced by
-/// [`generate_wav_for_measure_range`]. Returns the same envelope as
-/// [`list_measure_times`].
-/// See [`generate_wav_for_measure_range`] for `extend_to_last_occurrence`,
-/// `respect_sequence`, and `sequence_entry_start_index`/
-/// `sequence_entry_end_index`.
-#[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
-#[wasm_bindgen]
-pub fn list_measure_times_for_range(
-    source: &str,
-    start_index: usize,
-    end_index: usize,
-    extend_to_last_occurrence: bool,
-    respect_sequence: bool,
-    sequence_entry_start_index: Option<usize>,
-    sequence_entry_end_index: Option<usize>,
-    enabled_tracks: Option<Vec<String>>,
-) -> ListMeasureTimesResponse {
-    list_measure_times_for_range_response(
-        source,
-        start_index,
-        end_index,
-        extend_to_last_occurrence,
-        respect_sequence,
-        crate::sequence_entry_range(sequence_entry_start_index, sequence_entry_end_index),
-        enabled_tracks.as_deref(),
-    )
-}
-
-/// Return the cumulative pixel-weight column boundaries of every rendered
-/// measure in the whole score (entry `i` pairs with `data-measure-index="i"`
-/// in the rendered SVG).
-///
-/// Available only when the `wav` feature is enabled at build time.
-/// Used to map a linear elapsed-time fraction within a measure (derived from
-/// [`list_measure_times`]) onto the non-linear pixel position notes actually
-/// render at, since measure/column width is density-weighted rather than
-/// duration-proportional. Returns:
-/// - `{ "status": "ok", "boundaries": [[f32, ...], ...] }` — each inner array
-///   starts at `0.0` and ends at `1.0`.
-/// - `{ "status": "err", "diagnostics": [...] }`
-#[allow(clippy::needless_pass_by_value)]
-#[wasm_bindgen]
-pub fn list_measure_column_boundaries(
-    source: &str,
-    enabled_tracks: Option<Vec<String>>,
-) -> ListMeasureColumnBoundariesResponse {
-    list_measure_column_boundaries_response(source, enabled_tracks.as_deref())
-}
-
 /// Return the elapsed-seconds start/end of every sounding note/rest, keyed
 /// by `(source_part_index, note_id)`.
 ///
 /// Available only when the `wav` feature is enabled at build time.
-/// Used to drive the SVG preview's per-part, per-note playback highlight:
+/// Used to drive the SVG preview's per-part, per-note playback cursor:
 /// each returned timing pairs with a `data-tag="note"` group in the rendered
-/// SVG via its `data-part-index`/`data-note-id` attributes. Replaces the old
-/// measure-level playhead built from [`list_measure_times`]. Returns:
+/// SVG via its `data-part-index`/`data-note-id` attributes. Returns:
 /// - `{ "status": "ok", "timings": [{ source_part_index, note_id, start_s, end_s }, ...] }`
 /// - `{ "status": "err", "diagnostics": [...] }`
 #[allow(clippy::needless_pass_by_value)]
@@ -179,7 +103,7 @@ pub fn list_note_timings(source: &str, enabled_tracks: Option<Vec<String>>) -> N
 /// consecutive measure range, relative to the start of that range.
 ///
 /// Available only when the `wav` feature is enabled at build time.
-/// Used to drive the SVG preview's per-note playback highlight when playing
+/// Used to drive the SVG preview's per-note playback cursor when playing
 /// via [`generate_wav_for_measure_range`] instead of the whole score (e.g.
 /// "play from this measure"): unlike [`list_note_timings`], `start_s`/`end_s`
 /// are relative to the start of that clip, not the start of the whole piece.

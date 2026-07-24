@@ -3,9 +3,9 @@ use crate::grid_layout::layout::{
     block_column_width, is_chord_only_row, is_lyric_row, make_header_rows,
     system_has_any_decoration, system_tuplet_part_indices, MUSIC_START_COL,
 };
-use crate::grid_layout::note_highlight::compute_all_note_highlight_targets;
+use crate::grid_layout::playback_cursor::compute_all_playback_cursor_targets;
 use crate::grid_layout::types::{
-    GridElement, Header, MeasureClickTarget, MeasureHighlight, NoteHighlightTarget,
+    GridElement, Header, MeasureClickTarget, MeasureHighlight, PlaybackCursorTarget,
 };
 use std::collections::HashMap;
 
@@ -325,7 +325,7 @@ pub(crate) struct HighlightAndClickInfos {
     pub(crate) highlight_infos: Vec<(usize, MeasureHighlight)>,
     pub(crate) error_highlight_infos: Vec<(usize, MeasureHighlight)>,
     pub(crate) all_click_target_infos: Vec<(usize, MeasureClickTarget)>,
-    pub(crate) all_note_highlight_target_infos: Vec<(usize, NoteHighlightTarget)>,
+    pub(crate) all_playback_cursor_target_infos: Vec<(usize, PlaybackCursorTarget)>,
 }
 
 #[derive(Clone, Copy)]
@@ -379,7 +379,7 @@ pub(crate) fn compute_highlight_and_click_infos(
         base,
         hide_system_dividers,
     );
-    let all_note_highlight_target_infos = compute_all_note_highlight_targets(
+    let all_playback_cursor_target_infos = compute_all_playback_cursor_targets(
         page_systems,
         tuplet_bracket_map,
         header,
@@ -391,6 +391,6 @@ pub(crate) fn compute_highlight_and_click_infos(
         highlight_infos,
         error_highlight_infos,
         all_click_target_infos,
-        all_note_highlight_target_infos,
+        all_playback_cursor_target_infos,
     }
 }

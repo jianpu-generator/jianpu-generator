@@ -222,7 +222,7 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
         }
         SvgKind::Rect { .. }
         | SvgKind::ErrorRect { .. }
-        | SvgKind::NoteHighlightRect { .. }
+        | SvgKind::PlaybackCursorRect { .. }
         | SvgKind::TransparentRect { .. } => serialize_rect_element(el, out, &el.kind),
         SvgKind::TextWithTspans {
             font_size,
@@ -250,9 +250,9 @@ fn serialize_rect_element(el: &SvgElement, out: &mut String, kind: &SvgKind) {
                 el.x, el.y, width, height
             ));
         }
-        SvgKind::NoteHighlightRect { width, height } => {
+        SvgKind::PlaybackCursorRect { width, height } => {
             out.push_str(&format!(
-                r#"<rect data-variant="note-highlight-rect" x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" fill="transparent" rx="2"/>"#,
+                r#"<rect data-variant="playback-cursor-rect" x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" fill="transparent" rx="2"/>"#,
                 el.x, el.y, width, height
             ));
         }

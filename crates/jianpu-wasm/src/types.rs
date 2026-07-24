@@ -6,15 +6,12 @@ use tsify::Tsify;
 use crate::svg_types::SvgDocumentOut;
 
 #[cfg(feature = "midi")]
-pub(crate) use crate::types_export::{
-    GenerateMidiResponse, GenerateSplitMidisResponse, WrittenMeasureIndicesResponse,
-};
+pub(crate) use crate::types_export::{GenerateMidiResponse, GenerateSplitMidisResponse};
 #[cfg(feature = "pdf")]
 pub(crate) use crate::types_export::{GeneratePdfResponse, GenerateSplitPdfsResponse};
 #[cfg(feature = "wav")]
 pub(crate) use crate::types_export::{
-    GenerateSplitWavsResponse, GenerateWavResponse, ListMeasureColumnBoundariesResponse,
-    ListMeasureTimesResponse, NoteTimingOut, NoteTimingsResponse,
+    GenerateSplitWavsResponse, GenerateWavResponse, NoteTimingOut, NoteTimingsResponse,
 };
 
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]

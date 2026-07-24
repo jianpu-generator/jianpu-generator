@@ -93,7 +93,7 @@ pub enum Tag {
     SectionLabel {
         label: String,
     },
-    /// Identifies the sounding note/rest a `NoteHighlightRect` sits behind,
+    /// Identifies the sounding note/rest a `PlaybackCursorRect` sits behind,
     /// matching `crate::midi::timing::NoteTiming`'s `(source_part_index,
     /// note_id)` key so playback can look up which group(s) to highlight.
     Note {
@@ -143,7 +143,7 @@ pub enum SvgKind {
     /// by default; the frontend toggles its fill at playback time to
     /// highlight whichever note/rest is currently sounding for its part. See
     /// `Tag::Note` for the group it renders inside.
-    NoteHighlightRect {
+    PlaybackCursorRect {
         width: f32,
         height: f32,
     },

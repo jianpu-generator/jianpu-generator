@@ -1,13 +1,9 @@
 use jianpu_generator::{
-    write_midi_from_source_filtered, write_split_midis_from_source,
-    written_measure_indices_for_range_from_source, written_measure_indices_from_source,
-    zip_split_entries, MeasureRangeSelection,
+    write_midi_from_source_filtered, write_split_midis_from_source, zip_split_entries,
 };
 
 use super::diagnostic_from_error;
-use crate::types::{
-    GenerateMidiResponse, GenerateSplitMidisResponse, WrittenMeasureIndicesResponse,
-};
+use crate::types::{GenerateMidiResponse, GenerateSplitMidisResponse};
 
 pub(crate) fn generate_midi_response(
     source: &str,
@@ -16,47 +12,6 @@ pub(crate) fn generate_midi_response(
     match write_midi_from_source_filtered(source, "input.jianpu", enabled_tracks, &[]) {
         Ok(midi) => GenerateMidiResponse::Ok { midi },
         Err(e) => GenerateMidiResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &e)],
-        },
-    }
-}
-
-pub(crate) fn written_measure_indices_response(
-    source: &str,
-    enabled_tracks: Option<&[String]>,
-) -> WrittenMeasureIndicesResponse {
-    match written_measure_indices_from_source(source, "input.jianpu", enabled_tracks, &[]) {
-        Ok(indices) => WrittenMeasureIndicesResponse::Ok { indices },
-        Err(e) => WrittenMeasureIndicesResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &e)],
-        },
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn written_measure_indices_for_range_response(
-    source: &str,
-    start_index: usize,
-    end_index: usize,
-    extend_to_last_occurrence: bool,
-    respect_sequence: bool,
-    sequence_entry_range: Option<std::ops::RangeInclusive<usize>>,
-    enabled_tracks: Option<&[String]>,
-) -> WrittenMeasureIndicesResponse {
-    match written_measure_indices_for_range_from_source(
-        source,
-        "input.jianpu",
-        &MeasureRangeSelection {
-            range: start_index..=end_index,
-            extend_to_last_occurrence,
-            respect_sequence,
-            sequence_entry_range,
-        },
-        enabled_tracks,
-        &[],
-    ) {
-        Ok(indices) => WrittenMeasureIndicesResponse::Ok { indices },
-        Err(e) => WrittenMeasureIndicesResponse::Err {
             diagnostics: vec![diagnostic_from_error(source, &e)],
         },
     }

@@ -1,10 +1,7 @@
 import type {
   GenerateWavResponse,
-  ListMeasureColumnBoundariesResponse,
-  ListMeasureTimesResponse,
   NoteTimingOut,
   NoteTimingsResponse,
-  WrittenMeasureIndicesResponse,
 } from 'jianpu-wasm'
 import type { WorkerRequest, WorkerResponse } from './jianpu.worker'
 
@@ -18,69 +15,6 @@ function binaryBufferFromResult(
   return view.slice().buffer
 }
 
-function measureTimesFromSource(
-  listMeasureTimes:
-    | ((source: string, enabledTracks?: string[]) => ListMeasureTimesResponse)
-    | null,
-  source: string,
-  enabledTracks: string[] | undefined,
-): number[] {
-  if (!listMeasureTimes) return []
-  const result = listMeasureTimes(source, enabledTracks)
-  return result.status === 'ok' ? result.times : []
-}
-
-function measureTimesForRangeFromSource(
-  listMeasureTimesForRange:
-    | ((
-        source: string,
-        startIndex: number,
-        endIndex: number,
-        extendToLastOccurrence: boolean,
-        respectSequence: boolean,
-        sequenceEntryStartIndex: number | undefined,
-        sequenceEntryEndIndex: number | undefined,
-        enabledTracks?: string[],
-      ) => ListMeasureTimesResponse)
-    | null,
-  source: string,
-  startMeasureIndex: number,
-  endMeasureIndex: number,
-  extendToLastOccurrence: boolean,
-  respectSequence: boolean,
-  sequenceEntryStartIndex: number | undefined,
-  sequenceEntryEndIndex: number | undefined,
-  enabledTracks: string[] | undefined,
-): number[] {
-  if (!listMeasureTimesForRange) return []
-  const result = listMeasureTimesForRange(
-    source,
-    startMeasureIndex,
-    endMeasureIndex,
-    extendToLastOccurrence,
-    respectSequence,
-    sequenceEntryStartIndex,
-    sequenceEntryEndIndex,
-    enabledTracks,
-  )
-  return result.status === 'ok' ? result.times : []
-}
-
-function columnBoundariesFromSource(
-  listMeasureColumnBoundaries:
-    | ((
-        source: string,
-        enabledTracks?: string[],
-      ) => ListMeasureColumnBoundariesResponse)
-    | null,
-  source: string,
-  enabledTracks: string[] | undefined,
-): number[][] {
-  if (!listMeasureColumnBoundaries) return []
-  const result = listMeasureColumnBoundaries(source, enabledTracks)
-  return result.status === 'ok' ? result.boundaries : []
-}
-
 function noteTimingsFromSource(
   listNoteTimings:
     | ((source: string, enabledTracks?: string[]) => NoteTimingsResponse)
@@ -91,21 +25,6 @@ function noteTimingsFromSource(
   if (!listNoteTimings) return []
   const result = listNoteTimings(source, enabledTracks)
   return result.status === 'ok' ? result.timings : []
-}
-
-function writtenMeasureIndicesFromSource(
-  writtenMeasureIndices:
-    | ((
-        source: string,
-        enabledTracks?: string[],
-      ) => WrittenMeasureIndicesResponse)
-    | null,
-  source: string,
-  enabledTracks: string[] | undefined,
-): number[] {
-  if (!writtenMeasureIndices) return []
-  const result = writtenMeasureIndices(source, enabledTracks)
-  return result.status === 'ok' ? result.indices : []
 }
 
 function noteTimingsForRangeFromSource(
@@ -144,66 +63,12 @@ function noteTimingsForRangeFromSource(
   return result.status === 'ok' ? result.timings : []
 }
 
-function writtenMeasureIndicesForRangeFromSource(
-  writtenMeasureIndicesForRange:
-    | ((
-        source: string,
-        startIndex: number,
-        endIndex: number,
-        extendToLastOccurrence: boolean,
-        respectSequence: boolean,
-        sequenceEntryStartIndex: number | undefined,
-        sequenceEntryEndIndex: number | undefined,
-        enabledTracks?: string[],
-      ) => WrittenMeasureIndicesResponse)
-    | null,
-  source: string,
-  startMeasureIndex: number,
-  endMeasureIndex: number,
-  extendToLastOccurrence: boolean,
-  respectSequence: boolean,
-  sequenceEntryStartIndex: number | undefined,
-  sequenceEntryEndIndex: number | undefined,
-  enabledTracks: string[] | undefined,
-): number[] {
-  if (!writtenMeasureIndicesForRange) return []
-  const result = writtenMeasureIndicesForRange(
-    source,
-    startMeasureIndex,
-    endMeasureIndex,
-    extendToLastOccurrence,
-    respectSequence,
-    sequenceEntryStartIndex,
-    sequenceEntryEndIndex,
-    enabledTracks,
-  )
-  return result.status === 'ok' ? result.indices : []
-}
-
 type GenerateWavFn =
   | ((
       source: string,
       enabledTracks: string[] | undefined,
       soundfont: Uint8Array,
     ) => GenerateWavResponse)
-  | null
-
-type ListMeasureTimesFn =
-  | ((source: string, enabledTracks?: string[]) => ListMeasureTimesResponse)
-  | null
-
-type WrittenMeasureIndicesFn =
-  | ((
-      source: string,
-      enabledTracks?: string[],
-    ) => WrittenMeasureIndicesResponse)
-  | null
-
-type ListMeasureColumnBoundariesFn =
-  | ((
-      source: string,
-      enabledTracks?: string[],
-    ) => ListMeasureColumnBoundariesResponse)
   | null
 
 type ListNoteTimingsFn =
@@ -213,9 +78,6 @@ type ListNoteTimingsFn =
 export function handleGenerateAudio(
   msg: Extract<WorkerRequest, { type: 'generateAudio' }>,
   generateWav: GenerateWavFn,
-  listMeasureTimes: ListMeasureTimesFn,
-  writtenMeasureIndices: WrittenMeasureIndicesFn,
-  listMeasureColumnBoundaries: ListMeasureColumnBoundariesFn,
   listNoteTimings: ListNoteTimingsFn,
   loadedSoundfont: Uint8Array | null,
 ): void {
@@ -231,21 +93,6 @@ export function handleGenerateAudio(
         type: 'audio',
         id: msg.id,
         wav: wavBuffer,
-        measureTimes: measureTimesFromSource(
-          listMeasureTimes,
-          msg.source,
-          msg.enabledTracks,
-        ),
-        writtenMeasureIndices: writtenMeasureIndicesFromSource(
-          writtenMeasureIndices,
-          msg.source,
-          msg.enabledTracks,
-        ),
-        columnBoundaries: columnBoundariesFromSource(
-          listMeasureColumnBoundaries,
-          msg.source,
-          msg.enabledTracks,
-        ),
         noteTimings: noteTimingsFromSource(
           listNoteTimings,
           msg.source,
@@ -273,32 +120,6 @@ type GenerateWavForMeasureRangeFn =
     ) => GenerateWavResponse)
   | null
 
-type ListMeasureTimesForRangeFn =
-  | ((
-      source: string,
-      startIndex: number,
-      endIndex: number,
-      extendToLastOccurrence: boolean,
-      respectSequence: boolean,
-      sequenceEntryStartIndex: number | undefined,
-      sequenceEntryEndIndex: number | undefined,
-      enabledTracks?: string[],
-    ) => ListMeasureTimesResponse)
-  | null
-
-type WrittenMeasureIndicesForRangeFn =
-  | ((
-      source: string,
-      startIndex: number,
-      endIndex: number,
-      extendToLastOccurrence: boolean,
-      respectSequence: boolean,
-      sequenceEntryStartIndex: number | undefined,
-      sequenceEntryEndIndex: number | undefined,
-      enabledTracks?: string[],
-    ) => WrittenMeasureIndicesResponse)
-  | null
-
 type ListNoteTimingsForRangeFn =
   | ((
       source: string,
@@ -315,9 +136,6 @@ type ListNoteTimingsForRangeFn =
 export function handleGenerateMeasureRangeAudio(
   msg: Extract<WorkerRequest, { type: 'generateMeasureRangeAudio' }>,
   generateWavForMeasureRange: GenerateWavForMeasureRangeFn,
-  listMeasureTimesForRange: ListMeasureTimesForRangeFn,
-  writtenMeasureIndicesForRange: WrittenMeasureIndicesForRangeFn,
-  listMeasureColumnBoundaries: ListMeasureColumnBoundariesFn,
   listNoteTimingsForRange: ListNoteTimingsForRangeFn,
   loadedSoundfont: Uint8Array | null,
 ): void {
@@ -346,33 +164,6 @@ export function handleGenerateMeasureRangeAudio(
         type: 'measureRangeAudio',
         id: msg.id,
         wav: wavBuffer,
-        measureTimes: measureTimesForRangeFromSource(
-          listMeasureTimesForRange,
-          msg.source,
-          msg.startMeasureIndex,
-          msg.endMeasureIndex,
-          msg.extendToLastOccurrence,
-          msg.respectSequence,
-          msg.sequenceEntryStartIndex,
-          msg.sequenceEntryEndIndex,
-          msg.enabledTracks,
-        ),
-        writtenMeasureIndices: writtenMeasureIndicesForRangeFromSource(
-          writtenMeasureIndicesForRange,
-          msg.source,
-          msg.startMeasureIndex,
-          msg.endMeasureIndex,
-          msg.extendToLastOccurrence,
-          msg.respectSequence,
-          msg.sequenceEntryStartIndex,
-          msg.sequenceEntryEndIndex,
-          msg.enabledTracks,
-        ),
-        columnBoundaries: columnBoundariesFromSource(
-          listMeasureColumnBoundaries,
-          msg.source,
-          msg.enabledTracks,
-        ),
         noteTimings: noteTimingsForRangeFromSource(
           listNoteTimingsForRange,
           msg.source,

@@ -68,7 +68,7 @@ pub enum SvgKindOut {
         width: f32,
         height: f32,
     },
-    NoteHighlightRect {
+    PlaybackCursorRect {
         width: f32,
         height: f32,
     },
@@ -287,7 +287,7 @@ fn svg_kind_to_out(kind: &SvgKind) -> SvgKindOut {
             width: *width,
             height: *height,
         },
-        SvgKind::NoteHighlightRect { width, height } => SvgKindOut::NoteHighlightRect {
+        SvgKind::PlaybackCursorRect { width, height } => SvgKindOut::PlaybackCursorRect {
             width: *width,
             height: *height,
         },

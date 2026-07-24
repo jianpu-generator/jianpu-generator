@@ -136,12 +136,12 @@ fn render_overlay_element(
             measure_index,
             measure_index_end,
         } => render_measure_click_target(elem, *width, *height, *measure_index, *measure_index_end),
-        AbsoluteContent::NoteHighlightTarget {
+        AbsoluteContent::PlaybackCursorTarget {
             width,
             height,
             source_part_index,
             note_id,
-        } => render_note_highlight_target(elem, *width, *height, *source_part_index, *note_id),
+        } => render_playback_cursor_target(elem, *width, *height, *source_part_index, *note_id),
         AbsoluteContent::DirectiveLine {
             bar_number,
             label,
@@ -219,7 +219,7 @@ fn render_rect(elem: &AbsoluteElement, kind: SvgKind) -> SvgElement {
     }
 }
 
-fn render_note_highlight_target(
+fn render_playback_cursor_target(
     elem: &AbsoluteElement,
     width: f32,
     height: f32,
@@ -235,7 +235,7 @@ fn render_note_highlight_target(
                 x: elem.x,
                 y: elem.y,
                 variant: None,
-                kind: SvgKind::NoteHighlightRect { width, height },
+                kind: SvgKind::PlaybackCursorRect { width, height },
             }],
             tag: Some(Tag::Note {
                 source_part_index,
