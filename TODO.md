@@ -31,7 +31,7 @@
 - [x] LSP rename
 - [x] Play current measure should be different from play from current measure, the former should always play what is written, while the latter always respect #sequence
 - [x] Embed input source code in SVG as hidden section (so that we can import from PDF/SVG)
-- [ ] Formatter: align lyric syllables with their corresponding notes
 - [x] Allow playing from particular section in the sequence
-- [ ] Dead-code analysis, unused deps analysis
-- [ ] first/last Playback cursor of each measure doesn't fit to the bar line nicely, there's still some columnar gap  
+- [x] Dead-code analysis, unused deps analysis
+- [ ] Formatter: align lyric syllables with their corresponding notes
+- [x] first/last Playback cursor of each measure doesn't fit to the bar line nicely, there's still some columnar gap

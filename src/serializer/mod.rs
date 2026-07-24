@@ -251,8 +251,13 @@ fn serialize_rect_element(el: &SvgElement, out: &mut String, kind: &SvgKind) {
             ));
         }
         SvgKind::PlaybackCursorRect { width, height } => {
+            // No `rx`: adjacent notes' rects are laid out edge-to-edge
+            // (`compute_all_playback_cursor_targets`), and a rounded corner
+            // here would carve a visible sliver out of each rect's shared
+            // edge, leaving a gap between the two fills during playback even
+            // though their `x`/`width` line up exactly.
             out.push_str(&format!(
-                r#"<rect data-variant="playback-cursor-rect" x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" fill="transparent" rx="2"/>"#,
+                r#"<rect data-variant="playback-cursor-rect" x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" fill="transparent"/>"#,
                 el.x, el.y, width, height
             ));
         }

@@ -240,6 +240,37 @@ fn error_rect_serializes_with_red_fill() {
 }
 
 #[test]
+fn playback_cursor_rect_has_no_rounded_corners() {
+    // Adjacent notes' playback-cursor rects are laid out edge-to-edge (see
+    // `compute_all_playback_cursor_targets` in `grid_layout/playback_cursor.rs`)
+    // so that during playback the highlighted fill of one note visually meets
+    // the next with no gap. A rounded corner (`rx`) on this rect undermines
+    // that: two touching rounded rects each carve a sliver out of their own
+    // shared edge, leaving a visible gap between the two fills even though
+    // their `x`/`width` numbers touch exactly.
+    let doc = SvgDocument {
+        width_pt: 100.0,
+        height_pt: 100.0,
+        elements: vec![SvgElement {
+            x: 10.0,
+            y: 20.0,
+            variant: None,
+            kind: SvgKind::PlaybackCursorRect {
+                width: 50.0,
+                height: 30.0,
+            },
+        }],
+    };
+    let result = serialize(&[doc], None);
+    assert!(
+        !result[0].contains("rx="),
+        "playback cursor rect should not have rounded corners, so adjacent \
+         notes' rects meet with no visual gap, got: {}",
+        result[0]
+    );
+}
+
+#[test]
 fn transparent_rect_serializes_with_data_variant_and_rx() {
     let doc = SvgDocument {
         width_pt: 100.0,
