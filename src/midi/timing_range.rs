@@ -1,39 +1,6 @@
 use crate::ast::grouped::Score;
 use crate::ast::parsed::KeyChange;
 
-pub fn build_single_measure_score(score: &Score, measure_index: usize) -> Option<Score> {
-    let clamped_index = measure_index.min(score.measures.len().saturating_sub(1));
-    let target = score.measures.get(clamped_index)?;
-
-    // Accumulate BPM and key from all measures before the target
-    let mut accumulated_bpm: Option<u32> = None;
-    let mut accumulated_key: Option<KeyChange> = None;
-    for measure in score.measures.iter().take(measure_index) {
-        if let Some(bpm) = measure.bpm {
-            accumulated_bpm = Some(bpm);
-        }
-        if let Some(key) = &measure.key {
-            accumulated_key = Some(key.clone());
-        }
-    }
-
-    // Clone target and inject accumulated context for fields the target doesn't override
-    let mut patched = target.clone();
-    if patched.bpm.is_none() {
-        patched.bpm = accumulated_bpm;
-    }
-    if patched.key.is_none() {
-        patched.key = accumulated_key;
-    }
-
-    Some(Score {
-        metadata: score.metadata.clone(),
-        measures: vec![patched],
-        document_diagnostics: vec![],
-        sequence: None,
-    })
-}
-
 pub fn build_measure_range_score(
     score: &Score,
     start_index: usize,

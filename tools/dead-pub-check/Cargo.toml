@@ -1,0 +1,13 @@
+[package]
+name = "dead-pub-check"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "dead-pub-check"
+path = "src/main.rs"
+
+[dependencies]
+syn = { version = "2", features = ["full", "visit", "extra-traits"] }
+proc-macro2 = { version = "1", features = ["span-locations"] }

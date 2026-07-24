@@ -45,9 +45,15 @@ mod pdf_embedding {
     fn round_trip_recovers_original_source_from_pdf() {
         let source =
             "# metadata\ntitle = \"Testing\"\n\n# parts\nMelody = notes\n\n# score\n[Melody] 1 2 3 4\n";
-        let pdf_bytes =
-            write_pdf_from_source_filtered(source, "test.jianpu", None, &test_pdf_fonts(), &[])
-                .unwrap();
+        let pdf_bytes = write_pdf_from_source_filtered_with_lyrics(
+            source,
+            "test.jianpu",
+            None,
+            None,
+            &test_pdf_fonts(),
+            &[],
+        )
+        .unwrap();
         assert_eq!(
             extract_embedded_source_from_pdf(&pdf_bytes).as_deref(),
             Some(source)

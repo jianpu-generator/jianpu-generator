@@ -33,9 +33,8 @@ pub use percussion_head::PercussionHead;
 
 pub use duration::{parse_duration_suffixes, DurationParse};
 pub use groups::{
-    apply_closed_group_depth, apply_closing_segment_depth, apply_open_group_depth,
-    implicit_tuplet_ratio, validate_group_note_count, GroupFrame, GroupStack, HasGroupDepth,
-    TupletFrame, TupletStack,
+    apply_closed_group_depth, apply_open_group_depth, implicit_tuplet_ratio,
+    validate_group_note_count, GroupFrame, GroupStack, HasGroupDepth, TupletFrame, TupletStack,
 };
 
 use crate::ast::parsed::{ScoreEvent, TupletInfo};
@@ -127,11 +126,4 @@ pub(crate) fn repeat_atom_boundary(chars: &[char], i: usize) -> bool {
         }
         _ => false,
     }
-}
-
-pub fn byte_offset_at_char_index(text: &str, char_index: usize) -> usize {
-    text.char_indices()
-        .nth(char_index)
-        .map(|(b, _)| b)
-        .unwrap_or(text.len())
 }

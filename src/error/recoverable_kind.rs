@@ -17,16 +17,6 @@ pub enum RecoverableErrorKind {
     LexUnexpectedChar { ch: char },
     /// Measure group has no data lines at all.
     MeasureNoDataLines,
-    /// Measure group has fewer data lines than declared parts.
-    MeasureWrongLineCount { got: usize, expected: usize },
-    /// Measure group has more data lines than declared parts — extra lines are ignored.
-    MeasureTooManyLines {
-        got: usize,
-        expected: usize,
-        parts: String,
-    },
-    /// A required role line (notes/lyrics/chord) is missing for a part in this measure.
-    MeasureMissingRoleLine { role: String, abbrev: String },
     /// A dotted eighth note or rest is not followed by a sixteenth — rhythmic structure is broken.
     DottedEighthNeedsSixteenth,
     /// A chord symbol did not start with a degree digit (0–7) — chord is dropped.
@@ -101,8 +91,6 @@ pub enum RecoverableErrorKind {
     TiePitchMismatch { expected: String, got: String },
     /// A `follow[Target]` clause names an abbreviation not in the parts declaration — the clause is ignored.
     PartsFollowUnknownTarget { target: String },
-    /// A `follow[Target]` clause names a part declared after the follower — the clause is ignored.
-    PartsFollowTargetAfterFollower { target: String },
     /// The first declared part uses `follow[...]`, which is not allowed.
     PartsFirstPartCannotFollow,
     /// Soundfont string does not match any known instrument — declaration is kept with the parsed
@@ -136,14 +124,6 @@ impl RecoverableErrorKind {
             Self::General { message } => message.clone(),
             Self::LexUnexpectedChar { ch } => format!("unexpected character: {ch}"),
             Self::MeasureNoDataLines => "measure has no data lines; treating all parts as empty".to_string(),
-            Self::MeasureWrongLineCount { got, expected } => format!("expected {expected} lines (one per score line), got {got}"),
-            Self::MeasureTooManyLines { got, expected, parts } => format!(
-                "this measure has {got} lines but only {expected} expected (declared parts: {parts}); extra lines ignored"
-            ),
-            Self::MeasureMissingRoleLine { role, abbrev } => {
-                let treatment = if role == "lyrics" { "no lyrics" } else { "empty" };
-                format!("missing {role} line for '{abbrev}'; treating as {treatment}")
-            }
             Self::DottedEighthNeedsSixteenth => "dotted eighth must be followed by a sixteenth note or rest".to_string(),
             Self::ChordExpectedDegreeDigit { ch } => format!("expected chord degree digit (0-7), got: {ch}"),
             Self::ChordInvalidToken { message } => message.clone(),
@@ -186,9 +166,6 @@ impl RecoverableErrorKind {
                 format!(
                     "no part with abbreviation '{target}'; follow targets must match a part declared earlier in #parts"
                 )
-            }
-            Self::PartsFollowTargetAfterFollower { target } => {
-                format!("follow[{target}]: target must be declared before the follower")
             }
             Self::PartsFirstPartCannotFollow => {
                 "the first declared part cannot use follow[...]".to_string()

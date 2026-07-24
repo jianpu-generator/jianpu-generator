@@ -6,7 +6,7 @@ pub(crate) mod slur_placement;
 pub(crate) mod tuplet_placement;
 pub mod types;
 
-pub use layout::{layout, measure_column_boundaries};
+pub use layout::layout;
 pub use types::{
     GridContent, GridElement, GridPage, GridRow, HAlign, Header, PostArcGridContent, VAlign,
 };

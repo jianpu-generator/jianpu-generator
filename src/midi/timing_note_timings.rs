@@ -134,9 +134,8 @@ pub fn note_timings_seconds(score: &Score) -> Result<Vec<NoteTiming>, Irrecovera
 /// `start_pos`/`end_pos` are *playback positions* — i.e. already resolved
 /// against `# sequence`/D.C.-al-Coda-Fine navigation, exactly like
 /// [`super::expand_for_measure_range`] resolves them for
-/// [`super::write_midi_for_measure_range`]'s caller and
-/// [`super::measure_start_times_seconds_for_range`]'s caller — not raw
-/// written measure indices. Unlike those two, `score` here must still be the
+/// [`super::write_midi_for_measure_range`]'s caller — not raw written
+/// measure indices. Unlike that caller, `score` here must still be the
 /// *original, unexpanded* written score: this function re-derives the
 /// expanded (playback-order) timeline itself via
 /// [`expand_navigation_with_note_positions`] so it can look `note_id`s up

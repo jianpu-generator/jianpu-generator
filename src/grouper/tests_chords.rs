@@ -43,7 +43,7 @@ fn chord_expected_degree_digit_is_recoverable() {
 
 #[test]
 fn chord_unknown_suffix_is_recoverable() {
-    use crate::error::WarningKind;
+    use crate::error::{Diagnostic, WarningKind};
     let score = parse_and_group(concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "# parts\nChords = chords\nMelody = notes\n\n",
@@ -52,12 +52,12 @@ fn chord_unknown_suffix_is_recoverable() {
     assert!(score.measures[0]
         .diagnostics
         .iter()
-        .any(|d| d.warning_kind() == Some(WarningKind::ChordUnknownSuffix)));
+        .any(|d| matches!(d, Diagnostic::Warning(w) if w.kind == WarningKind::ChordUnknownSuffix)));
 }
 
 #[test]
 fn chord_invalid_bass_is_recoverable() {
-    use crate::error::WarningKind;
+    use crate::error::{Diagnostic, WarningKind};
     let score = parse_and_group(concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "# parts\nChords = chords\nMelody = notes\n\n",
@@ -66,35 +66,33 @@ fn chord_invalid_bass_is_recoverable() {
     assert!(score.measures[0]
         .diagnostics
         .iter()
-        .any(|d| d.warning_kind() == Some(WarningKind::ChordInvalidBass)));
+        .any(|d| matches!(d, Diagnostic::Warning(w) if w.kind == WarningKind::ChordInvalidBass)));
 }
 
 #[test]
 fn chord_bass_unexpected_char_is_recoverable() {
-    use crate::error::WarningKind;
+    use crate::error::{Diagnostic, WarningKind};
     let score = parse_and_group(concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "# parts\nChords = chords\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Chords] 1/5x 2 3 4\n[Melody] 1 2 3 4\n",
     ));
-    assert!(score.measures[0]
-        .diagnostics
-        .iter()
-        .any(|d| d.warning_kind() == Some(WarningKind::ChordBassUnexpectedChar)));
+    assert!(score.measures[0].diagnostics.iter().any(
+        |d| matches!(d, Diagnostic::Warning(w) if w.kind == WarningKind::ChordBassUnexpectedChar)
+    ));
 }
 
 #[test]
 fn chord_bass_trailing_chars_is_recoverable() {
-    use crate::error::WarningKind;
+    use crate::error::{Diagnostic, WarningKind};
     let score = parse_and_group(concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "# parts\nChords = chords\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Chords] 1/5bb 2 3 4\n[Melody] 1 2 3 4\n",
     ));
-    assert!(score.measures[0]
-        .diagnostics
-        .iter()
-        .any(|d| d.warning_kind() == Some(WarningKind::ChordBassTrailingChars)));
+    assert!(score.measures[0].diagnostics.iter().any(
+        |d| matches!(d, Diagnostic::Warning(w) if w.kind == WarningKind::ChordBassTrailingChars)
+    ));
 }
 
 #[test]

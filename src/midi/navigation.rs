@@ -119,7 +119,7 @@ fn build_expanded(
 }
 
 mod range;
-pub use range::{earliest_playback_position, expand_for_measure, expand_for_measure_range};
+pub use range::{earliest_playback_position, expand_for_measure_range};
 
 #[cfg(test)]
 mod tests_sequence_omission;

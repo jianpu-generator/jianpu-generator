@@ -96,7 +96,7 @@ fn chord_major_expands_to_three_notes() {
 fn measure_index_out_of_range_is_recoverable() {
     let score = one_measure_score();
     assert!(
-        write_midi_for_measure(&score, 999).is_ok(),
+        write_midi_for_measure_range(&score, 999, 999).is_ok(),
         "out-of-range measure index must not abort MIDI generation"
     );
 }

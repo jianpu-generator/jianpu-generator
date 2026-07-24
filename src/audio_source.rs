@@ -21,26 +21,6 @@ pub fn write_wav_from_source_filtered(
     crate::wav::write_wav(&midi_bytes, sf2_bytes)
 }
 
-/// Parse, group, optionally filter tracks, and synthesize WAV for a single measure.
-///
-/// BPM and key context is accumulated from all preceding measures so
-/// that mid-piece measures sound correct even without explicit directives.
-#[cfg(feature = "wav")]
-pub fn write_wav_for_measure_from_source(
-    source: &str,
-    filename: &str,
-    measure_index: usize,
-    enabled_tracks: Option<&[String]>,
-    sf2_bytes: &[u8],
-    instruments: &[InstrumentInfo],
-) -> Result<Vec<u8>, IrrecoverableError> {
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
-    let (score, measure_index) = crate::midi::expand_for_measure(&score, measure_index)?;
-    let midi_bytes = crate::midi::write_midi_for_measure(&score, measure_index)?;
-    crate::wav::write_wav(&midi_bytes, sf2_bytes)
-}
-
 /// A measure range to synthesize, plus how its end measure should be
 /// resolved when it recurs later in the performance (due to a repeat/jump).
 ///

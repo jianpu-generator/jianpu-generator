@@ -128,15 +128,6 @@ impl RecoverableError {
         }
     }
 
-    pub fn parts_follow_target_after_follower(span: Span, target: &str) -> Self {
-        Self {
-            span,
-            kind: RecoverableErrorKind::PartsFollowTargetAfterFollower {
-                target: target.to_string(),
-            },
-        }
-    }
-
     pub fn part_key_unknown(span: Span, key: &str) -> Self {
         Self {
             span,

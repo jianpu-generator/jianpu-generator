@@ -80,16 +80,6 @@ impl PartDecl {
     }
 }
 
-pub fn flatten_score_line_slots(declarations: &[PartDecl]) -> Vec<ScoreLineSlot> {
-    let mut slots = Vec::new();
-    for (track_index, decl) in declarations.iter().enumerate() {
-        for &role in decl.score_line_roles() {
-            slots.push(ScoreLineSlot { track_index, role });
-        }
-    }
-    slots
-}
-
 #[derive(Debug)]
 pub enum ParsedTrack {
     Timed(ParsedTimedTrack),
@@ -180,15 +170,6 @@ pub enum Extension {
 pub struct BassDegree {
     pub degree: JianPuPitch,
     pub accidental: Accidental,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ParsedChordSymbol {
-    pub degree: JianPuPitch,
-    pub accidental: Accidental,
-    pub triad: TriadQuality,
-    pub extension: Option<Extension>,
-    pub bass: Option<BassDegree>,
 }
 
 #[derive(Debug)]

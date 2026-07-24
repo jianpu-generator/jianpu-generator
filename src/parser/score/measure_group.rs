@@ -93,18 +93,6 @@ pub fn collect_group_bounds(
     groups
 }
 
-/// Byte offset in the full source of the first line in each measure group.
-///
-/// When a group begins with a directive row, that line's offset is returned;
-/// otherwise the first data line's offset is returned. Used to place editor
-/// view zones above the full measure block (directives included).
-pub fn view_zone_starts(content: &str, base_offset: usize) -> Vec<usize> {
-    collect_group_bounds(content, base_offset, 1)
-        .into_iter()
-        .map(|b| b.view_zone_start)
-        .collect()
-}
-
 /// Returns groups of `(trimmed_line, byte_offset_within_content)` pairs.
 pub fn collect_groups(content: &str) -> Vec<Vec<SourceLine>> {
     let mut groups: Vec<Vec<SourceLine>> = Vec::new();

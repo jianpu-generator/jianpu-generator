@@ -18,7 +18,7 @@ use event_processing::{
     process_percussion_events,
 };
 pub use navigation::{
-    earliest_playback_position, expand_for_measure, expand_for_measure_range, expand_navigation,
+    earliest_playback_position, expand_for_measure_range, expand_navigation,
     expand_navigation_with_note_positions, expand_navigation_with_origins, ExpandedMeasureOrigin,
 };
 pub(crate) const TPQ: u16 = 480; // ticks per quarter note
@@ -255,18 +255,6 @@ pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
     write_smf(track)
 }
 
-/// Generate MIDI bytes for a single measure, carrying BPM and key context
-/// accumulated from all preceding measures.
-pub fn write_midi_for_measure(
-    score: &Score,
-    measure_index: usize,
-) -> Result<Vec<u8>, IrrecoverableError> {
-    let Some(single_score) = build_single_measure_score(score, measure_index) else {
-        return Ok(Vec::new());
-    };
-    write_midi(&single_score)
-}
-
 pub fn write_midi_for_measure_range(
     score: &Score,
     start_index: usize,
@@ -279,8 +267,7 @@ pub fn write_midi_for_measure_range(
 }
 
 pub use timing::{
-    build_measure_range_score, build_single_measure_score, measure_start_times_seconds,
-    measure_start_times_seconds_for_range, note_timings_seconds,
+    build_measure_range_score, measure_start_times_seconds, note_timings_seconds,
     note_timings_seconds_for_literal_range, note_timings_seconds_for_range, NoteTiming,
 };
 

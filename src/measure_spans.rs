@@ -13,37 +13,6 @@ pub fn find_measure_at_byte_offset(score: &Score, byte_offset: usize) -> Option<
         .position(|m| m.source_span.start <= byte_offset && byte_offset <= m.source_span.end)
 }
 
-/// Find the index of the measure that contains the given 0-based line number.
-///
-/// Checks whether any byte position on the given line falls within a measure's
-/// `source_span`. Returns `None` when the line falls outside all measure spans
-/// (e.g. `# metadata`, `# parts`, directive lines, or blank separator lines).
-///
-/// A line-range check is used (rather than just the line start) so that lines
-/// with a `[Abbrev]` prefix map to the correct measure even when the cursor is
-/// positioned on the prefix characters.
-pub fn find_measure_at_line_number(
-    score: &Score,
-    source: &str,
-    line_number: usize,
-) -> Option<usize> {
-    let line_start: usize = source
-        .split('\n')
-        .take(line_number)
-        .map(|line| line.len() + 1) // +1 for the '\n' byte
-        .sum();
-    let line_len = source
-        .split('\n')
-        .nth(line_number)
-        .map(|l| l.len())
-        .unwrap_or(0);
-    let line_end = line_start + line_len;
-    score
-        .measures
-        .iter()
-        .position(|m| m.source_span.start <= line_end && m.source_span.end >= line_start)
-}
-
 /// Source byte ranges for a measure in the editor.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MeasureSourceSpan {

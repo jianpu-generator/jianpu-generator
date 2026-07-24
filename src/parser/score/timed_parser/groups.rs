@@ -136,17 +136,3 @@ pub fn apply_open_group_depth<T: HasGroupDepth>(atoms: &mut [T]) {
         atom.set_group_continuation(atom.group_continuation().saturating_add(1));
     }
 }
-
-pub fn apply_closing_segment_depth<T: HasGroupDepth>(atoms: &mut [T], group_still_open: bool) {
-    for atom in atoms.iter_mut() {
-        atom.set_group_membership(atom.group_membership().saturating_add(1));
-    }
-    let continuation_count = if group_still_open {
-        atoms.len()
-    } else {
-        atoms.len().saturating_sub(1)
-    };
-    for atom in atoms.iter_mut().take(continuation_count) {
-        atom.set_group_continuation(atom.group_continuation().saturating_add(1));
-    }
-}

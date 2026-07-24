@@ -36,34 +36,6 @@ impl RecoverableError {
         }
     }
 
-    pub fn measure_wrong_line_count(span: Span, got: usize, expected: usize) -> Self {
-        Self {
-            span,
-            kind: RecoverableErrorKind::MeasureWrongLineCount { got, expected },
-        }
-    }
-
-    pub fn measure_too_many_lines(span: Span, got: usize, expected: usize, parts: &str) -> Self {
-        Self {
-            span,
-            kind: RecoverableErrorKind::MeasureTooManyLines {
-                got,
-                expected,
-                parts: parts.to_string(),
-            },
-        }
-    }
-
-    pub fn measure_missing_role_line(span: Span, role: &str, abbrev: &str) -> Self {
-        Self {
-            span,
-            kind: RecoverableErrorKind::MeasureMissingRoleLine {
-                role: role.to_string(),
-                abbrev: abbrev.to_string(),
-            },
-        }
-    }
-
     pub fn dotted_eighth_needs_sixteenth(span: Span) -> Self {
         Self {
             span,

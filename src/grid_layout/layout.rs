@@ -69,7 +69,6 @@ pub(crate) fn block_column_width(block: &MeasureBlock) -> u32 {
 
 #[path = "layout_spacing.rs"]
 mod spacing;
-pub use spacing::measure_column_boundaries;
 #[cfg(test)]
 pub(crate) use spacing::measure_column_weights;
 pub(crate) use spacing::{build_measure_column_layout, MIN_MEASURE_WIDTH_PT};

@@ -142,13 +142,6 @@ impl Diagnostic {
         }
     }
 
-    pub fn warning_kind(&self) -> Option<WarningKind> {
-        match self {
-            Self::Warning(w) => Some(w.kind),
-            Self::Error(_) => None,
-        }
-    }
-
     /// Convert an `IrrecoverableError` that was caught on a chord line into a `Diagnostic`.
     /// Promoted kinds become `Diagnostic::Error`; others remain `Diagnostic::Warning`.
     pub fn from_chord_irrecoverable(error: &IrrecoverableError) -> Self {

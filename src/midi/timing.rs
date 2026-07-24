@@ -3,7 +3,7 @@ use crate::error::IrrecoverableError;
 
 use super::{default_active_key, process_measure, RawEvent, RawKind, TieState, TPQ};
 
-pub use super::timing_range::{build_measure_range_score, build_single_measure_score};
+pub use super::timing_range::build_measure_range_score;
 
 pub use super::timing_note_timings::{
     note_timings_seconds, note_timings_seconds_for_literal_range, note_timings_seconds_for_range,
@@ -59,20 +59,6 @@ pub fn measure_start_times_seconds(score: &Score) -> Result<Vec<f64>, Irrecovera
         .iter()
         .map(|&tick| ticks_to_seconds(tick, &tempo_changes, TPQ))
         .collect())
-}
-
-/// Same as [`measure_start_times_seconds`], but scoped to a measure range and
-/// relative to the start of that range, carrying BPM/key context accumulated
-/// from preceding measures.
-pub fn measure_start_times_seconds_for_range(
-    score: &Score,
-    start_index: usize,
-    end_index: usize,
-) -> Result<Vec<f64>, IrrecoverableError> {
-    let Some(range_score) = build_measure_range_score(score, start_index, end_index) else {
-        return Ok(vec![0.0]);
-    };
-    measure_start_times_seconds(&range_score)
 }
 
 /// Convert an absolute MIDI tick into elapsed seconds from the start of the

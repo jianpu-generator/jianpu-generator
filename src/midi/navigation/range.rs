@@ -19,22 +19,6 @@ pub fn earliest_playback_position(
         .map(|(pos, _)| pos)
 }
 
-/// Translates a written measure index into its position in actual playback
-/// order (see [`super::expand_navigation`]). Falls back to the written index
-/// against the original score if the measure has no reachable position, or
-/// if no `# sequence` section is present — in which case the mapping is
-/// already the identity.
-pub fn expand_for_measure(
-    score: &Score,
-    measure_index: usize,
-) -> Result<(Score, usize), IrrecoverableError> {
-    let (expanded, origins) = expand_navigation_with_origins(score)?;
-    match earliest_playback_position(&origins, measure_index, 0) {
-        Some(position) => Ok((expanded, position)),
-        None => Ok((score.clone(), measure_index)),
-    }
-}
-
 /// Resolves a `start..=end` range of **`# sequence` entry indices** (0-based
 /// positions in `score.sequence`, i.e. the order entries are written in
 /// `# sequence` — not written measure indices) directly into their playback
@@ -83,7 +67,7 @@ fn expand_for_sequence_entry_range(
     (expanded, start_pos, end_pos)
 }
 
-/// Same as [`expand_for_measure`], but for a `start..=end` written range: maps
+/// Maps a `start..=end` written range to a playback position range: maps
 /// `start` to its earliest playback position at or after position 0.
 ///
 /// - If `extend_to_last_occurrence` is `true`, `end` is mapped to its *last*
