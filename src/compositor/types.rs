@@ -34,6 +34,9 @@ pub enum AbsoluteContent {
         text: String,
         dotted: bool,
     },
+    NoteDash {
+        dotted: bool,
+    },
     PercussionHit,
     Underline {
         width: f32,

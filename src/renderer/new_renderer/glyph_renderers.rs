@@ -106,6 +106,10 @@ pub(super) fn render_note_head(
     results
 }
 
+#[path = "glyph_renderers_note_dash.rs"]
+mod note_dash;
+pub(super) use note_dash::render_note_dash;
+
 pub(super) fn render_rest(
     elem: &AbsoluteElement,
     dotted: bool,

@@ -215,19 +215,9 @@ fn grid_text_to_absolute(
     halign: HAlign,
 ) -> Option<AbsoluteContent> {
     match content {
-        PostArcGridContent::NoteDash { dotted } => Some(AbsoluteContent::Text {
-            content: if *dotted {
-                "\u{2014}.".to_string()
-            } else {
-                "\u{2014}".to_string()
-            },
-            font_size: 12.0,
-            anchor: TextAnchor::Middle,
-            baseline: DominantBaseline::Middle,
-            font: FontFamily::Monospace,
-            weight: FontWeight::Normal,
-            italic: false,
-        }),
+        PostArcGridContent::NoteDash { dotted } => {
+            Some(AbsoluteContent::NoteDash { dotted: *dotted })
+        }
         PostArcGridContent::RowLabel(s) => Some(sans_serif_text(
             s.clone(),
             12.0,

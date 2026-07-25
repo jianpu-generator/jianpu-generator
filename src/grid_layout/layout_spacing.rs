@@ -19,13 +19,25 @@ const THIN_MARK_WEIGHT: f32 = 0.25;
 /// Relative width weight for a `NoteDash` or `Lyric` column.
 const MEDIUM_MARK_WEIGHT: f32 = 1.0;
 
+/// Extra weight given to a dotted column (`NoteHead`, `Rest`, `ChordSymbol`,
+/// `NoteDash`) to make room for its augmentation dot, which is drawn
+/// alongside the glyph rather than being baked into it (see
+/// `glyph_renderers.rs`'s `render_note_head`/`render_rest`/
+/// `render_chord_symbol`/`render_note_dash`).
+const DOTTED_EXTRA_WEIGHT: f32 = 1.0;
+
 fn column_weight(content: &ElementContent) -> f32 {
     match content {
-        ElementContent::NoteHead { .. }
-        | ElementContent::Rest { .. }
-        | ElementContent::PercussionHit
-        | ElementContent::ChordSymbol { .. } => 1.0,
-        ElementContent::NoteDash { .. } | ElementContent::Lyric { .. } => MEDIUM_MARK_WEIGHT,
+        ElementContent::NoteHead { dotted, .. }
+        | ElementContent::Rest { dotted }
+        | ElementContent::ChordSymbol { dotted, .. } => {
+            1.0 + if *dotted { DOTTED_EXTRA_WEIGHT } else { 0.0 }
+        }
+        ElementContent::PercussionHit => 1.0,
+        ElementContent::NoteDash { dotted } => {
+            MEDIUM_MARK_WEIGHT + if *dotted { DOTTED_EXTRA_WEIGHT } else { 0.0 }
+        }
+        ElementContent::Lyric { .. } => MEDIUM_MARK_WEIGHT,
         ElementContent::BarLine => THIN_MARK_WEIGHT,
         ElementContent::MultiMeasureRest { .. } | ElementContent::Underline { .. } => 0.0,
     }

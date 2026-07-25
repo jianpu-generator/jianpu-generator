@@ -9,8 +9,8 @@ use crate::renderer::new_types::{
 use directive_line::{render_directive_line, DirectiveLineArgs};
 use glyph_renderers::{
     render_bar_line, render_chord_symbol, render_horizontal_line, render_lyric,
-    render_multi_measure_rest, render_note_head, render_percussion_hit, render_rest,
-    render_tie_or_slur, render_tuplet_bracket, render_underline, NoteRenderParams,
+    render_multi_measure_rest, render_note_dash, render_note_head, render_percussion_hit,
+    render_rest, render_tie_or_slur, render_tuplet_bracket, render_underline, NoteRenderParams,
 };
 
 mod directive_line;
@@ -76,6 +76,9 @@ fn render_element(
         ),
         AbsoluteContent::Rest { dotted } => {
             render_rest(elem, *dotted, row_height, base_font_size, note_number_width)
+        }
+        AbsoluteContent::NoteDash { dotted } => {
+            render_note_dash(elem, *dotted, row_height, note_number_width)
         }
         AbsoluteContent::MultiMeasureRest { count, width } => {
             render_multi_measure_rest(elem, *count, *width, row_height, base_font_size)
