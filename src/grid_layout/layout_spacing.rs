@@ -9,11 +9,14 @@ use crate::grid_layout::types::MeasureColumnLayout;
 pub(crate) const MIN_MEASURE_WIDTH_PT: f32 = 24.0;
 
 /// Relative width weight of a single column's content, per element type.
-/// A full note-like event (notehead, rest, percussion hit, chord symbol)
-/// needs a full share of width; a `BarLine` is just a thin mark, so it gets
-/// much less than a fresh note. Elements that don't occupy their own
-/// column-worth of ink (`Underline`) or that are handled separately
-/// (`MultiMeasureRest`) contribute nothing here.
+/// A full note-like event (notehead, rest, percussion hit) needs a full
+/// share of width; a `BarLine` is just a thin mark, so it gets much less
+/// than a fresh note. Elements that don't occupy their own column-worth of
+/// ink (`Underline`) or that are handled separately (`MultiMeasureRest`)
+/// contribute nothing here. `ChordSymbol` scales with its own rendered
+/// character count instead of a flat share (see [`chord_symbol_weight`]),
+/// since a slash chord's bass suffix (e.g. `2m/5`) renders visibly wider
+/// than a bare degree (e.g. `1`) in the chord's monospace font.
 const THIN_MARK_WEIGHT: f32 = 0.25;
 
 /// Relative width weight for a `NoteDash` or `Lyric` column.
@@ -26,12 +29,22 @@ const MEDIUM_MARK_WEIGHT: f32 = 1.0;
 /// `render_chord_symbol`/`render_note_dash`).
 const DOTTED_EXTRA_WEIGHT: f32 = 1.0;
 
+/// Width weight for a chord symbol's own glyph, proportional to its rendered
+/// character count (chord symbols render in a monospace font, so character
+/// count is directly proportional to glyph width). Floored at `1.0` so a
+/// single-character chord (e.g. `1`) keeps the same weight as any other
+/// note-like event.
+fn chord_symbol_weight(symbol: &str) -> f32 {
+    (symbol.chars().count() as f32).max(1.0)
+}
+
 fn column_weight(content: &ElementContent) -> f32 {
     match content {
-        ElementContent::NoteHead { dotted, .. }
-        | ElementContent::Rest { dotted }
-        | ElementContent::ChordSymbol { dotted, .. } => {
+        ElementContent::NoteHead { dotted, .. } | ElementContent::Rest { dotted } => {
             1.0 + if *dotted { DOTTED_EXTRA_WEIGHT } else { 0.0 }
+        }
+        ElementContent::ChordSymbol { text, dotted } => {
+            chord_symbol_weight(text) + if *dotted { DOTTED_EXTRA_WEIGHT } else { 0.0 }
         }
         ElementContent::PercussionHit => 1.0,
         ElementContent::NoteDash { dotted } => {
@@ -102,12 +115,15 @@ pub(crate) fn measure_column_weights(block: &MeasureBlock, col_count: u32) -> Ve
 /// How much horizontal room `block` should get relative to *other measures*
 /// in its system — not to be confused with [`measure_column_weights`], which
 /// splits width *within* one measure. Only counts real note-starting
-/// elements (notehead, rest, percussion hit); dashes and bar lines don't
-/// contribute, so a measure of quarter notes gets roughly double the
-/// aggregate weight of a measure of half notes spanning the same duration
-/// (4 fresh notes vs. 2 notes + 2 dashes) — the whole point being that
-/// dash-extended measures shouldn't out-compete note-dense measures for
-/// width just because a dash happens to occupy its own column. Weight is
+/// elements (notehead, rest, percussion hit, chord symbol); dashes and bar
+/// lines don't contribute, so a measure of quarter notes gets roughly
+/// double the aggregate weight of a measure of half notes spanning the same
+/// duration (4 fresh notes vs. 2 notes + 2 dashes) — the whole point being
+/// that dash-extended measures shouldn't out-compete note-dense measures for
+/// width just because a dash happens to occupy its own column. A chord
+/// symbol contributes its own [`chord_symbol_weight`] rather than a flat
+/// `1.0`, so a slash chord with a bass note (e.g. `2m/5`) out-competes a
+/// bare-degree chord (e.g. `1`) for width. Weight is
 /// the max (not sum) across the block's part rows, so a measure isn't
 /// penalized for having many parts, only sized for its densest one. A
 /// collapsed `MultiMeasureRest` row gets a fixed weight matching its current
@@ -142,15 +158,14 @@ fn measure_note_weight(block: &MeasureBlock) -> f32 {
             } else {
                 row.elements
                     .iter()
-                    .filter(|e| {
-                        matches!(
-                            e.content,
-                            ElementContent::NoteHead { .. }
-                                | ElementContent::Rest { .. }
-                                | ElementContent::PercussionHit
-                        )
+                    .map(|e| match &e.content {
+                        ElementContent::NoteHead { .. }
+                        | ElementContent::Rest { .. }
+                        | ElementContent::PercussionHit => 1.0,
+                        ElementContent::ChordSymbol { text, .. } => chord_symbol_weight(text),
+                        _ => 0.0,
                     })
-                    .count() as f32
+                    .sum::<f32>()
             }
         })
         .fold(1.0_f32, f32::max)

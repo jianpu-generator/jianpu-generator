@@ -1,5 +1,7 @@
 use super::*;
 
+#[path = "tests_chord_bass_note_width.rs"]
+mod tests_chord_bass_note_width;
 #[path = "tests_part_kind_x_alignment.rs"]
 mod tests_part_kind_x_alignment;
 #[path = "tests_render_filtering.rs"]
