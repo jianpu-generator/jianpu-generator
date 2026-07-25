@@ -64,6 +64,7 @@ pub(super) fn align_empty_note_measures(
                 extension_no_preceding_event_error: None,
                 group_provenance: errors.group_provenance.get(idx).cloned().flatten(),
                 resolution_multiplier: 1,
+                beat_group_size: 4,
             }),
             MeasureSlot::Real(boxed_measure) => {
                 let mut measure = *boxed_measure;

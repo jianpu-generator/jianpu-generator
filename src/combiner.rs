@@ -208,6 +208,7 @@ fn build_part_rows(
                     has_error: measure_has_error(measure),
                     group_provenance: measure.group_provenance.clone(),
                     resolution_multiplier: measure.resolution_multiplier,
+                    beat_group_size: measure.beat_group_size,
                 };
                 part_rows.push(PartRow::Timed(slice));
             }

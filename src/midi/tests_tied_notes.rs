@@ -27,6 +27,7 @@ fn tied_note_part(tied: bool) -> PartRow {
         name: None,
         group_provenance: None,
         resolution_multiplier: 1,
+        beat_group_size: 4,
         kind: PartKind::Notes,
         soundfont: Soundfont::default(),
         volume: 100,

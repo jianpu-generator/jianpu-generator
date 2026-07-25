@@ -102,6 +102,12 @@ pub struct PartSlice {
     /// value so a rescaled measure still lays out correctly — see **Tuplet** in
     /// `ARCHITECTURE.md`.
     pub resolution_multiplier: u32,
+    /// Copied from the source `GroupedMeasure::beat_group_size`: the quarter-beat
+    /// width of one beam group under this measure's time signature (`4` for simple
+    /// meters, `6` for compound meters like 6/8, 9/8, 12/8). The compiler scales
+    /// this by `resolution_multiplier` before comparing against it, same as the
+    /// other quarter-beat-grid constants.
+    pub beat_group_size: u32,
 }
 
 #[derive(Clone)]
@@ -245,6 +251,12 @@ pub(crate) struct GroupedMeasure {
     /// the tuplet-rescale pass so that tuplet ratios (e.g. 3-in-2) resolve to
     /// whole numbers. `1` when the measure has no tuplets (the common case).
     pub(crate) resolution_multiplier: u32,
+    /// Quarter-beat width of one beam group under the time signature in effect
+    /// for this measure — `4` (one quarter note) for simple meters, `6` (one
+    /// dotted quarter) for compound meters like 6/8, 9/8, 12/8. Unscaled by
+    /// `resolution_multiplier`; the compiler applies that scaling itself, the
+    /// same way it does for the `4`/`6` constants used elsewhere.
+    pub(crate) beat_group_size: u32,
 }
 
 pub(crate) struct GroupedPart {

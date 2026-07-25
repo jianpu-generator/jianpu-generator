@@ -339,6 +339,31 @@ fn dotted_note_extended_with_dotted_beats_produces_note_dash_at_each_extra_beat(
 }
 
 #[test]
+fn compound_meter_nine_eighth_groups_underlines_three_by_three() {
+    // In 9/8 (a compound meter), the beat is a dotted quarter = 3 eighth notes, so
+    // nine eighth notes filling the measure should beam into 3 groups of 3 — not
+    // the 2-by-2 (quarter-note) grouping used for simple meters like 4/4.
+    let score = score_from(&notes_doc(
+        "time=9/8 key=C4 bpm=120\n[S] 1_1_1_ 2_2_2_ 3_3_3_\n",
+    ));
+    let result = compile(&score);
+    let row = &result.blocks[0].rows[0];
+    let underline_starts: Vec<u32> = row
+        .elements
+        .iter()
+        .filter_map(|e| match e.content {
+            ElementContent::Underline { level: 0, .. } => Some(e.column),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        underline_starts,
+        vec![0, 6, 12],
+        "expected three beam groups of 3 eighth notes each (columns 0, 6, 12)"
+    );
+}
+
+#[test]
 fn note_head_column_is_zero_indexed() {
     // First note in measure should be at column 0
     let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 1\n"));

@@ -22,6 +22,10 @@ struct PartGrouper {
     current_notes: Vec<NoteEvent>,
     current_beat: u32,
     capacity: u32,
+    /// Quarter-beat width of one beam group under the time signature currently in
+    /// effect (see `GroupedMeasure::beat_group_size`): `4` for simple meters, `6`
+    /// for compound meters (6/8, 9/8, 12/8, ...).
+    beat_group_size: u32,
     /// Tuplet-rescale factor for the measure currently being accumulated (see
     /// `crate::tuplet::apply_resolution_multiplier`), set via `begin_measure_slot` before that
     /// measure's events are pushed. `1` for measures with no tuplets.
@@ -49,6 +53,7 @@ impl PartGrouper {
             current_notes: Vec::new(),
             current_beat: 0,
             capacity,
+            beat_group_size: Self::beat_group_size(&current_time_sig),
             resolution_multiplier: 1,
             part_name: Some(part.abbreviation.clone()),
             measure_span_start: None,
@@ -61,6 +66,17 @@ impl PartGrouper {
 
     fn measure_capacity(ts: &TimeSignature) -> u32 {
         (ts.numerator as u32) * 16 / (ts.denominator as u32)
+    }
+
+    /// Compound meters (denominator 8, numerator a multiple of 3 greater than 3 —
+    /// 6/8, 9/8, 12/8, ...) beam in groups of one dotted quarter (3 eighth notes);
+    /// every other meter beams in groups of one quarter note.
+    fn beat_group_size(ts: &TimeSignature) -> u32 {
+        if ts.denominator == 8 && ts.numerator % 3 == 0 && ts.numerator > 3 {
+            6
+        } else {
+            4
+        }
     }
 
     /// Sets the tuplet-rescale multiplier to apply to `self.capacity` while accumulating
@@ -102,6 +118,7 @@ impl PartGrouper {
                 .pending_extension_no_preceding_event_error
                 .take(),
             resolution_multiplier: self.resolution_multiplier,
+            beat_group_size: self.beat_group_size,
         };
         self.slots.push(MeasureSlot::Real(Box::new(measure)));
         self.current_beat = 0;
@@ -317,7 +334,12 @@ impl PartGrouper {
                 numerator,
                 denominator,
             } => {
-                self.capacity = (numerator as u32) * 16 / (denominator as u32);
+                let ts = TimeSignature {
+                    numerator,
+                    denominator,
+                };
+                self.capacity = Self::measure_capacity(&ts);
+                self.beat_group_size = Self::beat_group_size(&ts);
                 Ok(())
             }
             ScoreEvent::Extension { dotted } => self.handle_extension(spanned.span, dotted),

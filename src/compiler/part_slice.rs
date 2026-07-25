@@ -58,6 +58,7 @@ pub(super) fn compile_part_slice(
             measure_index,
             part_index: input.part_index,
             multiplier: slice.resolution_multiplier,
+            beat_group_size: slice.beat_group_size,
         };
         process_events(&mut state, slice);
         finish_tuplet_spans(&mut TupletSpanContext {
@@ -322,7 +323,7 @@ fn compile_rest(
     *state.prev_tie_note_id = None;
 
     let beat_position = *state.col - measure_col_start;
-    if underline_count > 0 && beat_position % (4 * multiplier) == 0 {
+    if underline_count > 0 && beat_position % (state.beat_group_size * multiplier) == 0 {
         flush_beam_buffer(state.beam_buf, state.elements);
     }
 }

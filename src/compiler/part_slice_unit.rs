@@ -36,6 +36,11 @@ pub(super) struct PartState<'a> {
     /// against these thresholds, so underline count still reflects the note's written
     /// duration, not its rescaled one.
     pub(super) multiplier: u32,
+    /// This measure's beam-group width in quarter-beats (`PartSlice::beat_group_size`):
+    /// `4` for simple meters, `6` for compound meters (6/8, 9/8, 12/8, ...). Scaled by
+    /// `multiplier`, same as the other quarter-beat-grid constants, to decide when a
+    /// run of beamed notes/rests flushes into a beam group.
+    pub(super) beat_group_size: u32,
 }
 
 // ── Shared compile-unit abstraction ──────────────────────────────────────────
@@ -166,7 +171,7 @@ pub(super) fn compile_unit(
     *state.col += unit.duration;
 
     let beat_position = *state.col - measure_col_start;
-    if underline_count > 0 && beat_position % (4 * multiplier) == 0 {
+    if underline_count > 0 && beat_position % (state.beat_group_size * multiplier) == 0 {
         flush_beam_buffer(state.beam_buf, state.elements);
     }
 }
