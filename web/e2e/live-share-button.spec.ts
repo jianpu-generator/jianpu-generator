@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { fileSwitcherTrigger } from './fileSwitcherHelpers'
 
 const FILE_STORE_KEY = 'jianpu:files:v1'
 const LIVE_FILENAME = 'live-test.jianpu'
@@ -170,6 +171,55 @@ test('stopping live ends the link for viewers, and going live again on the same 
     .first()
     .innerHTML()
   expect(previewContent).toContain('Live Score')
+})
+
+test('a viewer importing the live score clears the #live= hash and focuses the imported file', async ({
+  page,
+  context,
+  browser,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.addInitScript(
+    ({
+      key,
+      filename,
+      source,
+    }: {
+      key: string
+      filename: string
+      source: string
+    }) => {
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          active: filename,
+          userFiles: { [filename]: source },
+          bin: {},
+          fileIds: { [filename]: 'live-test-id' },
+        }),
+      )
+    },
+    { key: FILE_STORE_KEY, filename: LIVE_FILENAME, source: LIVE_SOURCE },
+  )
+  await page.goto('/')
+  await page.getByTestId('go-live-button').click()
+  await expect(page.getByTestId('live-link-copied-toast')).toBeVisible()
+  const liveUrl = await page.evaluate(() => navigator.clipboard.readText())
+
+  // A separate browser context, since a real viewer is a different browser
+  // that doesn't share the owner's localStorage.
+  const viewerContext = await browser.newContext()
+  const viewerPage = await viewerContext.newPage()
+  await viewerPage.goto(liveUrl)
+  await viewerPage.waitForSelector('.preview-page', { timeout: 15_000 })
+
+  await viewerPage.getByRole('button', { name: 'Import to my scores' }).click()
+
+  await expect(viewerPage.locator('.shared-preview-banner')).toHaveCount(0)
+  expect(new URL(viewerPage.url()).hash).toEqual('')
+
+  await expect(fileSwitcherTrigger(viewerPage)).toContainText(LIVE_FILENAME)
+  await viewerContext.close()
 })
 
 test('re-going-live on the same file reproduces the same link, so it never needs re-sharing', async ({

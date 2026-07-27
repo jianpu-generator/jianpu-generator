@@ -1,8 +1,8 @@
 import PartySocket from 'partysocket'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FileStoreState } from '../fileStore'
 import type { LiveServerMessage } from '../live/protocol'
-import { parseLiveShareFromHash } from '../liveShareUrl'
+import { clearLiveShareHash, parseLiveShareFromHash } from '../liveShareUrl'
 import type { SharePayload } from '../shareUrl'
 import type { StorageBackend } from '../storage/types'
 import { useImportToStorage } from './useImportToStorage'
@@ -41,6 +41,8 @@ export function useLiveViewer(
     setStore,
     setFileOpError,
   )
+  const socketRef = useRef<PartySocket | null>(null)
+  const importedRef = useRef(false)
   const handleImportLive = useCallback(async () => {
     if (!liveViewerPreview) return
     try {
@@ -48,6 +50,10 @@ export function useLiveViewer(
         liveViewerPreview.filename,
         liveViewerPreview.content,
       )
+      importedRef.current = true
+      socketRef.current?.close()
+      clearLiveShareHash()
+      setLiveViewerPreview(null)
     } catch {
       // handled by importToStorage via setFileOpError
     }
@@ -62,12 +68,14 @@ export function useLiveViewer(
     setEditorCollapsed(true)
 
     const socket = new PartySocket({ host, room: parsed.roomId })
+    socketRef.current = socket
 
     const handleOpen = () =>
       setLiveViewerStatus((prev) => (prev === 'ended' ? prev : 'live'))
     const handleClose = () =>
       setLiveViewerStatus((prev) => (prev === 'ended' ? prev : 'disconnected'))
     const handleMessage = (event: MessageEvent<string>) => {
+      if (importedRef.current) return
       const message: LiveServerMessage = JSON.parse(event.data)
       if (message.type === 'sync') {
         if (message.ended) {
@@ -103,6 +111,7 @@ export function useLiveViewer(
       socket.removeEventListener('error', handleClose)
       socket.removeEventListener('message', handleMessage)
       socket.close()
+      socketRef.current = null
     }
   }, [setEditorCollapsed])
 
