@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { type FileStoreState, mergeBackendResult } from '../fileStore'
+import type { FileStoreState } from '../fileStore'
 import {
   clearShareHash,
   parseShareFromHash,
   type SharePayload,
 } from '../shareUrl'
 import type { StorageBackend } from '../storage/types'
+import { useImportToStorage } from './useImportToStorage'
 
 interface FileOpError {
   title: string
@@ -28,6 +29,12 @@ export function useSharedPreview(
   setEditorCollapsed: (collapsed: boolean) => void,
 ) {
   const [sharedPreview, setSharedPreview] = useState<SharePayload | null>(null)
+  const importToStorage = useImportToStorage(
+    store,
+    backend,
+    setStore,
+    setFileOpError,
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -49,24 +56,14 @@ export function useSharedPreview(
 
   const handleImportShared = useCallback(async () => {
     if (!sharedPreview) return
-    const base = store
     try {
-      const next = await backend.importFile(
-        base,
-        sharedPreview.filename,
-        sharedPreview.content,
-      )
-      setStore((prev) => mergeBackendResult(prev, base, next))
+      await importToStorage(sharedPreview.filename, sharedPreview.content)
       clearShareHash()
       setSharedPreview(null)
-    } catch (error) {
-      setFileOpError({
-        title: 'Could not import shared score',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      })
+    } catch {
+      // handled by importToStorage via setFileOpError
     }
-  }, [sharedPreview, store, backend, setStore, setFileOpError])
+  }, [sharedPreview, importToStorage])
 
   return {
     sharedPreview,

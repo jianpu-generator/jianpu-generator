@@ -1,9 +1,12 @@
 import type { FileStoreState } from '../fileStore'
 import { sortedBinNames } from '../fileStore'
+import type { LiveViewerStatus } from '../hooks/useLiveViewer'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SharePayload } from '../shareUrl'
 import { ExportControls } from './ExportControls'
 import { FileSwitcher } from './FileSwitcher'
+import { GoLiveButton } from './GoLiveButton'
+import { LiveShareBanner } from './LiveShareBanner'
 import { PlayFromCurrentMeasureButton } from './PlayFromCurrentMeasureButton'
 import { PlayMeasureButton } from './PlayMeasureButton'
 import { SharedPreviewBanner } from './SharedPreviewBanner'
@@ -11,6 +14,23 @@ import { SharedPreviewBanner } from './SharedPreviewBanner'
 interface MeasureRange {
   start: number
   end: number
+}
+
+interface LiveShareHeaderProps {
+  sharedPreview: SharePayload | null
+  onImportShared: () => void
+  onDismissShared: () => void
+  /** Non-null while a `#live=` link is being viewed. Takes a back seat to
+   * `sharedPreview` if both are somehow present at once (documented edge
+   * case in the Live Share plan). */
+  viewerActive: boolean
+  viewerStatus: LiveViewerStatus
+  viewerFilename: string | null
+  onImportLive: () => void
+  isLive: boolean
+  liveUrl: string | null
+  onStartLive: () => string
+  onStopLive: () => void
 }
 
 interface AppHeaderProps {
@@ -61,9 +81,7 @@ interface AppHeaderProps {
   partsCount?: number
   importing?: boolean
   onImportFile?: (file: File) => void
-  sharedPreview: SharePayload | null
-  onImportShared: () => void
-  onDismissShared: () => void
+  liveShare: LiveShareHeaderProps
 }
 
 export function AppHeader({
@@ -114,19 +132,26 @@ export function AppHeader({
   partsCount,
   importing,
   onImportFile,
-  sharedPreview,
-  onImportShared,
-  onDismissShared,
+  liveShare,
 }: AppHeaderProps) {
+  const { sharedPreview, viewerActive: liveViewerActive } = liveShare
   return (
     <header className="app-header">
       <h1>簡譜</h1>
-      {sharedPreview && (
+      {sharedPreview ? (
         <SharedPreviewBanner
           filename={sharedPreview.filename}
-          onImport={onImportShared}
-          onDiscard={onDismissShared}
+          onImport={liveShare.onImportShared}
+          onDiscard={liveShare.onDismissShared}
         />
+      ) : (
+        liveViewerActive && (
+          <LiveShareBanner
+            status={liveShare.viewerStatus}
+            filename={liveShare.viewerFilename}
+            onImport={liveShare.onImportLive}
+          />
+        )
       )}
       {audioAvailable && (
         <PlayMeasureButton
@@ -159,7 +184,7 @@ export function AppHeader({
         />
       )}
       <div className="app-header-actions">
-        {!sharedPreview && (
+        {!sharedPreview && !liveViewerActive && (
           <FileSwitcher
             store={store}
             triggerLabel={store.active}
@@ -180,6 +205,14 @@ export function AppHeader({
             onImportFile={onImportFile}
             binNames={sortedBinNames(store)}
             onOpenBin={onOpenBin}
+          />
+        )}
+        {!sharedPreview && !liveViewerActive && (
+          <GoLiveButton
+            isLive={liveShare.isLive}
+            liveUrl={liveShare.liveUrl}
+            onStartLive={liveShare.onStartLive}
+            onStopLive={liveShare.onStopLive}
           />
         )}
         <ExportControls

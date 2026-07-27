@@ -6,12 +6,7 @@ import { AssetLoadingBanner } from './components/AssetLoadingBanner'
 import { ExportAudioToast } from './components/ExportAudioToast'
 import { SectionJumpToolbar } from './components/SectionJumpToolbar'
 import { SequenceJumpToolbar } from './components/SequenceJumpToolbar'
-import {
-  fileContent,
-  fileIdForName,
-  isReadOnlyFile,
-  selectFile,
-} from './fileStore'
+import { fileIdForName, selectFile } from './fileStore'
 import { useAssetLoader } from './hooks/useAssetLoader'
 import { useFileImport } from './hooks/useFileImport'
 import { useFileOperations } from './hooks/useFileOperations'
@@ -23,8 +18,8 @@ import {
   noPartsSelected as computeNoPartsSelected,
   usePartToggles,
 } from './hooks/usePartToggles'
+import { useScoreSource } from './hooks/useScoreSource'
 import { useSectionNavigation } from './hooks/useSectionNavigation'
-import { useSharedPreview } from './hooks/useSharedPreview'
 import { useStorageBackend } from './hooks/useStorageBackend'
 import { useUrlFileSync } from './hooks/useUrlFileSync'
 import type { EditorHandle, PartMode, SoundfontValue } from './types'
@@ -75,19 +70,20 @@ export default function App() {
     handleRestore,
   } = useFileOperations(store, setStore, backend)
 
-  const { sharedPreview, handleDismissShared, handleImportShared } =
-    useSharedPreview(
-      store,
-      backend,
-      setStore,
-      setFileOpError,
-      setEditorCollapsed,
-    )
-
-  const source = sharedPreview
-    ? sharedPreview.content
-    : fileContent(store, store.active)
-  const readOnly = sharedPreview !== null || isReadOnlyFile(store.active)
+  const {
+    sharedPreview,
+    liveOwner,
+    liveViewerActive,
+    source,
+    readOnly,
+    liveShare,
+  } = useScoreSource(
+    store,
+    backend,
+    setStore,
+    setFileOpError,
+    setEditorCollapsed,
+  )
   const fileId = fileIdForName(store, store.active)
 
   const editorRef = useRef<EditorHandle>(null)
@@ -185,8 +181,9 @@ export default function App() {
   const handleSourceChange = useCallback(
     (value: string) => {
       setStore((prev) => backend.updateActiveContent(prev, value))
+      if (liveOwner.isLive) liveOwner.broadcastContent(value)
     },
-    [setStore, backend],
+    [setStore, backend, liveOwner],
   )
 
   const handleSelect = useCallback(
@@ -313,9 +310,7 @@ export default function App() {
         partsCount={parts.length}
         importing={importingFile}
         onImportFile={handleImportFile}
-        sharedPreview={sharedPreview}
-        onImportShared={handleImportShared}
-        onDismissShared={handleDismissShared}
+        liveShare={liveShare}
       />
       <AppOverlays
         fileOpError={fileOpError}
@@ -341,7 +336,7 @@ export default function App() {
       <AppWorkspace
         editorCollapsed={editorCollapsed}
         setEditorCollapsed={setEditorCollapsed}
-        sharedPreview={sharedPreview}
+        hideEditor={sharedPreview !== null || liveViewerActive}
         editorRef={editorRef}
         fileId={fileId}
         source={source}

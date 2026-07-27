@@ -1,7 +1,6 @@
 import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import type { RefObject } from 'react'
 import { useState } from 'react'
-import type { SharePayload } from '../shareUrl'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -27,7 +26,10 @@ interface MeasureRange {
 interface AppWorkspaceProps {
   editorCollapsed: boolean
   setEditorCollapsed: (updater: (collapsed: boolean) => boolean) => void
-  sharedPreview: SharePayload | null
+  /** True while viewing a `#share=` or `#live=` read-only preview — hides
+   * the `Editor` entirely and the pane-divider toggle, since there is
+   * nothing to edit or expand back into. */
+  hideEditor: boolean
   editorRef: RefObject<EditorHandle | null>
   fileId: string
   source: string
@@ -90,7 +92,7 @@ interface AppWorkspaceProps {
 export function AppWorkspace({
   editorCollapsed,
   setEditorCollapsed,
-  sharedPreview,
+  hideEditor,
   editorRef,
   fileId,
   source,
@@ -154,7 +156,7 @@ export function AppWorkspace({
       >
         <div className="editor-layout">
           <div className="editor-main" ref={setEditorPaneEl}>
-            {sharedPreview ? null : (
+            {hideEditor ? null : (
               <Editor
                 ref={editorRef}
                 path={fileId}
@@ -204,7 +206,7 @@ export function AppWorkspace({
         </div>
       </section>
       <div className="pane-divider">
-        {sharedPreview ? null : (
+        {hideEditor ? null : (
           <button
             type="button"
             className="pane-divider-toggle"
