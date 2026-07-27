@@ -56,6 +56,11 @@ jobs:
           # construct its requests. Replace with the real OAuth App's client
           # ID for clarity/future-proofing once one is registered.
           VITE_GITHUB_OAUTH_CLIENT_ID: placeholder-client-id
+          # PartyKit/Cloudflare Worker host for live-share sessions. Not a
+          # secret (exposed client-side regardless), but only ever set in
+          # the gitignored `web/.env.local` for local dev, so it's absent
+          # here unless declared explicitly.
+          VITE_PARTYKIT_HOST: jianpu-live.hou32hou.workers.dev
         run: pnpm build
 
       - name: Add .nojekyll
