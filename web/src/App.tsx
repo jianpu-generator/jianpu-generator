@@ -3,6 +3,7 @@ import { AppHeader } from './components/AppHeader'
 import { AppOverlays } from './components/AppOverlays'
 import { AppWorkspace } from './components/AppWorkspace'
 import { AssetLoadingBanner } from './components/AssetLoadingBanner'
+import { ExportAudioToast } from './components/ExportAudioToast'
 import { SectionJumpToolbar } from './components/SectionJumpToolbar'
 import { SequenceJumpToolbar } from './components/SequenceJumpToolbar'
 import {
@@ -334,6 +335,7 @@ export default function App() {
         onRestore={handleRestore}
         restoringFileName={restoringFileName}
       />
+      <ExportAudioToast open={audioGenerating} />
       <SectionJumpToolbar {...sectionJumpToolbarProps} />
       <SequenceJumpToolbar {...sequenceJumpToolbarProps} />
       <AppWorkspace
