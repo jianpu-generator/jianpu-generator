@@ -1,4 +1,4 @@
-import { ChevronDownIcon, VideoIcon } from '@radix-ui/react-icons'
+import { ChevronDownIcon, Link2Icon, VideoIcon } from '@radix-ui/react-icons'
 import * as Toast from '@radix-ui/react-toast'
 import { useCallback, useRef, useState } from 'react'
 import { useDismissableOpen } from '../hooks/useDismissableOpen'
@@ -73,6 +73,7 @@ export function GoLiveButton({
               if (liveUrl) void copyUrl(liveUrl)
             }}
           >
+            <Link2Icon aria-hidden="true" />
             Copy Live Link
           </button>
           <button
@@ -85,6 +86,15 @@ export function GoLiveButton({
               onStopLive()
             }}
           >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 15 15"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <rect x="2" y="2" width="11" height="11" rx="1.5" />
+            </svg>
             Stop Live
           </button>
         </div>
