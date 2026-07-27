@@ -63,6 +63,48 @@ test('a viewer opening the live link sees the current score immediately, before 
   expect(previewContent).toContain('Live Score')
 })
 
+test('a viewer opening the live link does not get a ?file= param populated in the URL', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.addInitScript(
+    ({
+      key,
+      filename,
+      source,
+    }: {
+      key: string
+      filename: string
+      source: string
+    }) => {
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          active: filename,
+          userFiles: { [filename]: source },
+          bin: {},
+          fileIds: { [filename]: 'live-test-id' },
+        }),
+      )
+    },
+    { key: FILE_STORE_KEY, filename: LIVE_FILENAME, source: LIVE_SOURCE },
+  )
+  await page.goto('/')
+  await page.getByTestId('go-live-button').click()
+  await expect(page.getByTestId('live-link-copied-toast')).toBeVisible()
+
+  const liveUrl = await page.evaluate(async () => {
+    return navigator.clipboard.readText()
+  })
+
+  const viewerPage = await context.newPage()
+  await viewerPage.goto(liveUrl)
+  await viewerPage.waitForSelector('.preview-page', { timeout: 15_000 })
+
+  expect(new URL(viewerPage.url()).search).toEqual('')
+})
+
 test('go live button copies a #live= link and shows a toast, then a dropdown offers copy/stop', async ({
   page,
   context,

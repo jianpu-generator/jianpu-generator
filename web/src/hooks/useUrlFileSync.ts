@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FileStoreState } from '../fileStore'
 import { selectFile } from '../fileStore'
+import { parseLiveShareFromHash } from '../liveShareUrl'
 import { readFileNameFromUrl, writeFileNameToUrl } from '../urlFileParam'
 
 /**
@@ -17,6 +18,10 @@ import { readFileNameFromUrl, writeFileNameToUrl } from '../urlFileParam'
  * re-render: the URL-sync effect then only ever observes the *resolved*
  * active file, never a stale default it would otherwise briefly (or, if the
  * URL's file turns out not to exist, permanently) overwrite the URL with.
+ *
+ * Skipped entirely while a `#live=` link is open: a viewer's `store.active`
+ * is just whatever local file happened to be selected before/independent of
+ * the live session, and it must not leak into the address bar as `?file=`.
  */
 export function useUrlFileSync(
   store: FileStoreState,
@@ -27,17 +32,19 @@ export function useUrlFileSync(
 ): void {
   const initialUrlFileAppliedRef = useRef(false)
   const [initialSelectionReady, setInitialSelectionReady] = useState(false)
+  const isLiveViewer = parseLiveShareFromHash() !== null
 
   useEffect(() => {
-    if (initialUrlFileAppliedRef.current || isLoadingGithub) return
+    if (initialUrlFileAppliedRef.current || isLoadingGithub || isLiveViewer)
+      return
     initialUrlFileAppliedRef.current = true
     const urlFile = readFileNameFromUrl()
     if (urlFile) setStore((prev) => selectFile(prev, urlFile))
     setInitialSelectionReady(true)
-  }, [isLoadingGithub, setStore])
+  }, [isLoadingGithub, isLiveViewer, setStore])
 
   useEffect(() => {
-    if (!initialSelectionReady) return
+    if (!initialSelectionReady || isLiveViewer) return
     writeFileNameToUrl(store.active)
-  }, [initialSelectionReady, store.active])
+  }, [initialSelectionReady, isLiveViewer, store.active])
 }
