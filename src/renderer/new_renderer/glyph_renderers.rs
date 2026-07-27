@@ -238,14 +238,25 @@ pub(super) fn render_chord_symbol(
     row_height: &f32,
     base_font_size: &f32,
 ) -> Vec<SvgElement> {
+    // A chord symbol like "2m" shares its column with a single-digit note
+    // ("2") that renders centered on `elem.x`. Left-anchoring the whole
+    // string at `elem.x` would push its root digit half a character to the
+    // right of the note; instead, shift the string left by half its first
+    // character's width so that the root digit itself lands centered on
+    // `elem.x`, matching the note.
+    let root_char = s.chars().next().unwrap_or_default();
+    let root_char_width =
+        crate::font_metrics::monospace_char_advance_width(root_char, *base_font_size);
+    let text_x = elem.x - root_char_width * 0.5;
+
     let mut results = vec![SvgElement {
-        x: elem.x,
+        x: text_x,
         y: elem.y,
         variant: Some(SvgVariant::ChordSymbol),
         kind: SvgKind::Text {
             content: s.to_string(),
             font_size: *base_font_size,
-            anchor: TextAnchor::Middle,
+            anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
             font: FontFamily::Monospace,
             weight: FontWeight::Normal,
@@ -255,8 +266,8 @@ pub(super) fn render_chord_symbol(
 
     if dotted {
         let dot_radius = *row_height * 0.06;
-        let half_text_width = crate::font_metrics::monospace_text_width(s, *base_font_size) / 2.0;
-        let dot_x = elem.x + half_text_width + *base_font_size * 0.4;
+        let text_width = crate::font_metrics::monospace_text_width(s, *base_font_size);
+        let dot_x = text_x + text_width + *base_font_size * 0.4;
         results.push(SvgElement {
             x: dot_x,
             y: elem.y,
