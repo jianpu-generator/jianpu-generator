@@ -264,6 +264,105 @@ test('a viewer importing the live score clears the #live= hash and focuses the i
   await viewerContext.close()
 })
 
+test('dragging across measures in a live viewer highlights them, even though the viewer has no editor pane', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  const dragFilename = 'live-drag-test.jianpu'
+  const dragSource = [
+    '# metadata',
+    'title = "Live Drag Score"',
+    'max_measures_per_system = 48',
+    '',
+    '# parts',
+    'Melody [M] = notes',
+    '',
+    '# score',
+    '[M] 1_ 1_ 1= 1= 1= 1= 1 -',
+    '',
+    '[M] 1. 2_ 1_. 2= 0',
+    '',
+    '[M] 1 - - -',
+  ].join('\n')
+  await page.addInitScript(
+    ({
+      key,
+      filename,
+      source,
+    }: {
+      key: string
+      filename: string
+      source: string
+    }) => {
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          active: filename,
+          userFiles: { [filename]: source },
+          bin: {},
+          fileIds: { [filename]: 'live-drag-test-id' },
+        }),
+      )
+    },
+    { key: FILE_STORE_KEY, filename: dragFilename, source: dragSource },
+  )
+  await page.goto('/')
+  await page.getByTestId('go-live-button').click()
+  await expect(page.getByTestId('live-link-copied-toast')).toBeVisible()
+  const liveUrl = await page.evaluate(() => navigator.clipboard.readText())
+
+  const viewerPage = await context.newPage()
+  await viewerPage.goto(liveUrl)
+  await viewerPage.waitForSelector(
+    '[data-tag="measure"][data-measure-index="2"]',
+    { timeout: 15_000 },
+  )
+
+  const measure0 = viewerPage
+    .locator('[data-tag="measure"][data-measure-index="0"]')
+    .first()
+  const measure2 = viewerPage
+    .locator('[data-tag="measure"][data-measure-index="2"]')
+    .first()
+  await expect(measure0).toBeVisible()
+  await expect(measure2).toBeVisible()
+
+  const box0 = await measure0.boundingBox()
+  const box2 = await measure2.boundingBox()
+  if (!box0 || !box2) {
+    throw new Error('Could not get bounding boxes for measures 0 and 2.')
+  }
+
+  // Drag from measure 0 to measure 2 inside the read-only viewer, which has
+  // no Monaco editor mounted at all.
+  await viewerPage.mouse.move(box0.x + box0.width / 2, box0.y + box0.height / 2)
+  await viewerPage.mouse.down()
+  await viewerPage.mouse.move(
+    box2.x + box2.width / 2,
+    box2.y + box2.height / 2,
+    {
+      steps: 10,
+    },
+  )
+  await viewerPage.mouse.up()
+
+  // The selection must still land, purely via the notifySelection callback
+  // (there is no editorRef for the drag handler to fall back on here).
+  await expect(
+    viewerPage
+      .locator('.preview-page [data-testid="measure-highlight"]')
+      .first(),
+  ).toBeVisible({ timeout: 5_000 })
+
+  // The play-current-measure button lives in AppHeader (not gated on the
+  // editor pane), so its label must also pick up the selected range — this
+  // reflects `selectedMeasureRange` becoming non-null, independent of
+  // whether the (separately-loaded) soundfont asset is ready yet.
+  const playBtn = viewerPage.locator('[data-testid="play-measure-button"]')
+  await expect(playBtn).toHaveText(/Measures 1.3/, { timeout: 5_000 })
+})
+
 test('re-going-live on the same file reproduces the same link, so it never needs re-sharing', async ({
   page,
   context,

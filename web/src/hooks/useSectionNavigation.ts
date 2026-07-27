@@ -87,8 +87,10 @@ export function useSectionNavigation(
       const e = measureSpans[end]
       if (!s || !e) return
       editorRef.current?.setSelectionByLines(s.start_line, e.end_line)
+      setSelectedLineRange(null)
+      notifySelection(s.start_line, e.end_line)
     },
-    [measureSpans, editorRef],
+    [measureSpans, editorRef, notifySelection],
   )
 
   return {
