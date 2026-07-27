@@ -137,7 +137,7 @@ fn build_page_rows(params: &PageRowsParams<'_>) -> Vec<GridRow> {
         let Some(first) = system.first() else {
             continue;
         };
-        let measure_layout = build_measure_column_layout(system);
+        let measure_layout = build_measure_column_layout(system, config);
         if system_has_any_decoration(system) {
             rows.push(make_decoration_row(system, &measure_layout));
         }

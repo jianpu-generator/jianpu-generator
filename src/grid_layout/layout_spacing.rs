@@ -1,6 +1,8 @@
 use super::{block_column_width, LABEL_COLS, MUSIC_START_COL};
 use crate::compiler::types::{ElementContent, MeasureBlock, MULTI_MEASURE_REST_WIDTH};
+use crate::font_metrics;
 use crate::grid_layout::types::MeasureColumnLayout;
+use crate::render_config::RenderConfig;
 
 /// Minimum floor a measure's column-region gets, in points, regardless of its
 /// spacing weight — enough room for a barline plus one note head, so a
@@ -8,49 +10,93 @@ use crate::grid_layout::types::MeasureColumnLayout;
 /// maximally-dense one in the same system.
 pub(crate) const MIN_MEASURE_WIDTH_PT: f32 = 24.0;
 
-/// Relative width weight of a single column's content, per element type.
-/// A full note-like event (notehead, rest, percussion hit) needs a full
-/// share of width; a `BarLine` is just a thin mark, so it gets much less
-/// than a fresh note. Elements that don't occupy their own column-worth of
-/// ink (`Underline`) or that are handled separately (`MultiMeasureRest`)
-/// contribute nothing here. `ChordSymbol` scales with its own rendered
-/// character count instead of a flat share (see [`chord_symbol_weight`]),
-/// since a slash chord's bass suffix (e.g. `2m/5`) renders visibly wider
-/// than a bare degree (e.g. `1`) in the chord's monospace font.
+/// Relative width weight of a `BarLine` column — just a thin mark, so it
+/// gets much less than a fresh note. Elements that don't occupy their own
+/// column-worth of ink (`Underline`) or that are handled separately
+/// (`MultiMeasureRest`) contribute nothing here. Kept as an arbitrary flat
+/// ratio rather than a measured width: a bar line is a drawn stroke, not a
+/// glyph, so "actual rendered width" doesn't apply to it.
 const THIN_MARK_WEIGHT: f32 = 0.25;
 
-/// Relative width weight for a `NoteDash` or `Lyric` column.
-const MEDIUM_MARK_WEIGHT: f32 = 1.0;
+/// Real advance width (in points) of one notehead/rest/percussion-hit digit
+/// glyph at `config`'s lyric font size — the unit every other weight below
+/// is expressed in relative terms of, since notehead/rest/percussion glyphs
+/// all render as a single monospace character (see `render_note_head`/
+/// `render_rest`/`render_percussion_hit` in `glyph_renderers.rs`), so any one
+/// of their digits/`0`/`x` characters measures the same.
+fn note_glyph_weight(config: &RenderConfig) -> f32 {
+    font_metrics::monospace_char_advance_width('0', config.lyric_font_size())
+}
 
 /// Extra weight given to a dotted column (`NoteHead`, `Rest`, `ChordSymbol`,
 /// `NoteDash`) to make room for its augmentation dot, which is drawn
 /// alongside the glyph rather than being baked into it (see
 /// `glyph_renderers.rs`'s `render_note_head`/`render_rest`/
-/// `render_chord_symbol`/`render_note_dash`).
-const DOTTED_EXTRA_WEIGHT: f32 = 1.0;
-
-/// Width weight for a chord symbol's own glyph, proportional to its rendered
-/// character count (chord symbols render in a monospace font, so character
-/// count is directly proportional to glyph width). Floored at `1.0` so a
-/// single-character chord (e.g. `1`) keeps the same weight as any other
-/// note-like event.
-fn chord_symbol_weight(symbol: &str) -> f32 {
-    (symbol.chars().count() as f32).max(1.0)
+/// `render_chord_symbol`/`render_note_dash`). Matches the dot's real
+/// rendered diameter (`dot_radius = row_height * 0.06` in those renderers).
+fn dotted_extra_weight(config: &RenderConfig) -> f32 {
+    2.0 * config.row_height as f32 * 0.06
 }
 
-fn column_weight(content: &ElementContent) -> f32 {
+/// Real advance width (in points) of the note-dash glyph (`—`), measured at
+/// its own fixed rendered font size (`NOTE_DASH_FONT_SIZE`) rather than
+/// `config`'s lyric font size, matching what `render_note_dash` actually
+/// draws.
+fn dash_weight() -> f32 {
+    font_metrics::monospace_char_advance_width('\u{2014}', font_metrics::NOTE_DASH_FONT_SIZE)
+}
+
+/// Width weight for a chord symbol's own glyph, measured from its real
+/// rendered width in the monospace font (chord symbols render as monospace
+/// text — see `render_chord_symbol`). Floored at [`note_glyph_weight`] so a
+/// single-character chord (e.g. `1`) keeps the same weight as any other
+/// note-like event.
+fn chord_symbol_weight(symbol: &str, config: &RenderConfig) -> f32 {
+    font_metrics::monospace_text_width(symbol, config.lyric_font_size())
+        .max(note_glyph_weight(config))
+}
+
+/// Width weight for a lyric syllable, measured from its real rendered width
+/// — the CJK font/size if the syllable contains a CJK codepoint, the
+/// monospace font/size otherwise — mirroring the same check `render_lyric`
+/// already does to pick a font size.
+fn lyric_weight(text: &str, config: &RenderConfig) -> f32 {
+    let is_cjk = text.chars().any(|c| ('\u{4E00}'..='\u{9FFF}').contains(&c));
+    if is_cjk {
+        font_metrics::cjk_text_width(text, config.lyric_cjk_font_size())
+    } else {
+        font_metrics::monospace_text_width(text, config.lyric_font_size())
+    }
+}
+
+fn column_weight(content: &ElementContent, config: &RenderConfig) -> f32 {
     match content {
         ElementContent::NoteHead { dotted, .. } | ElementContent::Rest { dotted } => {
-            1.0 + if *dotted { DOTTED_EXTRA_WEIGHT } else { 0.0 }
+            note_glyph_weight(config)
+                + if *dotted {
+                    dotted_extra_weight(config)
+                } else {
+                    0.0
+                }
         }
         ElementContent::ChordSymbol { text, dotted } => {
-            chord_symbol_weight(text) + if *dotted { DOTTED_EXTRA_WEIGHT } else { 0.0 }
+            chord_symbol_weight(text, config)
+                + if *dotted {
+                    dotted_extra_weight(config)
+                } else {
+                    0.0
+                }
         }
-        ElementContent::PercussionHit => 1.0,
+        ElementContent::PercussionHit => note_glyph_weight(config),
         ElementContent::NoteDash { dotted } => {
-            MEDIUM_MARK_WEIGHT + if *dotted { DOTTED_EXTRA_WEIGHT } else { 0.0 }
+            dash_weight()
+                + if *dotted {
+                    dotted_extra_weight(config)
+                } else {
+                    0.0
+                }
         }
-        ElementContent::Lyric { .. } => MEDIUM_MARK_WEIGHT,
+        ElementContent::Lyric { text, .. } => lyric_weight(text, config),
         ElementContent::BarLine => THIN_MARK_WEIGHT,
         ElementContent::MultiMeasureRest { .. } | ElementContent::Underline { .. } => 0.0,
     }
@@ -76,14 +122,18 @@ fn column_weight(content: &ElementContent) -> f32 {
 /// without any explicit division. Confirmed empirically: a single-measure triplet
 /// (`3:{1_1_1_} 2_ 3_ 4_ 5_ 6_`, multiplier 3) renders its 8 notes at uniform column
 /// spacing, identical in kind to a non-tuplet measure of 8 same-weight notes.
-pub(crate) fn measure_column_weights(block: &MeasureBlock, col_count: u32) -> Vec<f32> {
+pub(crate) fn measure_column_weights(
+    block: &MeasureBlock,
+    col_count: u32,
+    config: &RenderConfig,
+) -> Vec<f32> {
     let has_multi_measure_rest = block.rows.iter().any(|row| {
         row.elements
             .iter()
             .any(|e| matches!(e.content, ElementContent::MultiMeasureRest { .. }))
     });
     if has_multi_measure_rest {
-        // The block is always the rest's own span (flat 1.0 weight, so its
+        // The block is always the rest's own span (flat weight, so its
         // bar/count render evenly) followed by exactly one trailing `BarLine`
         // column, which should keep the usual thin weight rather than
         // ballooning to match a full rest column — otherwise the bar line's
@@ -106,7 +156,7 @@ pub(crate) fn measure_column_weights(block: &MeasureBlock, col_count: u32) -> Ve
                 .iter()
                 .flat_map(|row| row.elements.iter())
                 .filter(|e| e.column == col)
-                .map(|e| column_weight(&e.content))
+                .map(|e| column_weight(&e.content, config))
                 .fold(0.0_f32, f32::max)
         })
         .collect()
@@ -121,15 +171,16 @@ pub(crate) fn measure_column_weights(block: &MeasureBlock, col_count: u32) -> Ve
 /// duration (4 fresh notes vs. 2 notes + 2 dashes) — the whole point being
 /// that dash-extended measures shouldn't out-compete note-dense measures for
 /// width just because a dash happens to occupy its own column. A chord
-/// symbol contributes its own [`chord_symbol_weight`] rather than a flat
-/// `1.0`, so a slash chord with a bass note (e.g. `2m/5`) out-competes a
-/// bare-degree chord (e.g. `1`) for width. Weight is
-/// the max (not sum) across the block's part rows, so a measure isn't
-/// penalized for having many parts, only sized for its densest one. A
-/// collapsed `MultiMeasureRest` row gets a fixed weight matching its current
-/// fixed column allocation instead of being counted as one note. Clamped to
-/// a minimum of `1.0` so an empty/rest-only measure never collapses to zero
-/// weight, and so two equal-density measures always compare equal
+/// symbol contributes its own [`chord_symbol_weight`] (its real rendered
+/// width) rather than a flat [`note_glyph_weight`], so a slash chord with a
+/// bass note (e.g. `2m/5`) out-competes a bare-degree chord (e.g. `1`) for
+/// width. Weight is the max (not sum) across the block's part rows, so a
+/// measure isn't penalized for having many parts, only sized for its
+/// densest one. A collapsed `MultiMeasureRest` row gets a fixed weight
+/// matching its current fixed column allocation instead of being counted as
+/// one note. Clamped to a minimum of one note glyph's width
+/// ([`note_glyph_weight`]) so an empty/rest-only measure never collapses to
+/// zero weight, and so two equal-density measures always compare equal
 /// regardless of which one happens to open the system (see
 /// `build_measure_column_layout`'s leading bar-line column, which never
 /// contributes here).
@@ -144,7 +195,7 @@ pub(crate) fn measure_column_weights(block: &MeasureBlock, col_count: u32) -> Ve
 /// width anywhere in this module — every consumer of `col_count` below only ever indexes
 /// or iterates it, then folds back down to a proportional (multiplier-invariant) split via
 /// `measure_column_weights`/`column_weight`.
-fn measure_note_weight(block: &MeasureBlock) -> f32 {
+fn measure_note_weight(block: &MeasureBlock, config: &RenderConfig) -> f32 {
     block
         .rows
         .iter()
@@ -161,14 +212,16 @@ fn measure_note_weight(block: &MeasureBlock) -> f32 {
                     .map(|e| match &e.content {
                         ElementContent::NoteHead { .. }
                         | ElementContent::Rest { .. }
-                        | ElementContent::PercussionHit => 1.0,
-                        ElementContent::ChordSymbol { text, .. } => chord_symbol_weight(text),
+                        | ElementContent::PercussionHit => note_glyph_weight(config),
+                        ElementContent::ChordSymbol { text, .. } => {
+                            chord_symbol_weight(text, config)
+                        }
                         _ => 0.0,
                     })
                     .sum::<f32>()
             }
         })
-        .fold(1.0_f32, f32::max)
+        .fold(note_glyph_weight(config), f32::max)
 }
 
 /// Per-measure column layout (position, column count, weights) for every
@@ -185,7 +238,10 @@ fn measure_note_weight(block: &MeasureBlock) -> f32 {
 /// first measure's weight. It's given `THIN_MARK_WEIGHT` for the intra-
 /// measure split (like any other bar line) but never affects `weight`,
 /// which is purely `measure_note_weight`.
-pub(crate) fn build_measure_column_layout(system: &[MeasureBlock]) -> Vec<MeasureColumnLayout> {
+pub(crate) fn build_measure_column_layout(
+    system: &[MeasureBlock],
+    config: &RenderConfig,
+) -> Vec<MeasureColumnLayout> {
     let mut start_col = MUSIC_START_COL;
     system
         .iter()
@@ -198,11 +254,11 @@ pub(crate) fn build_measure_column_layout(system: &[MeasureBlock]) -> Vec<Measur
                 0
             };
             let mut column_weights = vec![THIN_MARK_WEIGHT; leading_extra as usize];
-            column_weights.extend(measure_column_weights(block, col_count));
+            column_weights.extend(measure_column_weights(block, col_count, config));
             let layout = MeasureColumnLayout {
                 start_col: start_col - leading_extra,
                 col_count: col_count + leading_extra,
-                weight: measure_note_weight(block),
+                weight: measure_note_weight(block, config),
                 column_weights,
             };
             start_col += col_count;

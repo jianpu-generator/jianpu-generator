@@ -59,8 +59,8 @@ fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) {
         DominantBaseline::Ideographic => "ideographic",
     };
     let font_str = match font {
-        FontFamily::Monospace => "monospace",
-        FontFamily::SansSerif => "sans-serif",
+        FontFamily::Monospace => MONOSPACE_FONT_FAMILY,
+        FontFamily::SansSerif => DIRECTIVE_LINE_FONT_FAMILY,
     };
     let weight_str = match weight {
         FontWeight::Normal => "normal",
@@ -72,7 +72,7 @@ fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) {
         ""
     };
     out.push_str(&format!(
-        r#"<text x="{:.1}" y="{:.1}"{} font-size="{:.1}" text-anchor="{}" dominant-baseline="{}" font-family="{}" font-weight="{}" {}>{}</text>"#,
+        r#"<text x="{:.1}" y="{:.1}"{} font-size="{:.1}" text-anchor="{}" dominant-baseline="{}" font-family='{}' font-weight="{}" {}>{}</text>"#,
         el.x,
         el.y,
         variant_attr(el.variant),
@@ -86,14 +86,21 @@ fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) {
     ));
 }
 
-/// The directive line (bar number, section label, key/bpm/time signature,
-/// navigation markers) is the sole user of [`serialize_text_with_tspans`].
-/// It's pinned to the same specific font family PDF export already resolves
-/// `sans-serif` to (see `set_sans_serif_family` in `src/pdf.rs`), rather
-/// than the generic `sans-serif` alias, so glyph widths are consistent
-/// between viewers that have this font installed and the PDF export path —
-/// see Task 1 of `PLAN-section-label-engraving-quality.md`.
+/// Every `FontFamily::SansSerif` glyph (the directive line's bar number,
+/// section label, key/bpm/time signature, navigation markers, and CJK lyric
+/// syllables) is pinned to this concrete font family — the same one PDF
+/// export already resolves `sans-serif` to (see `set_sans_serif_family` in
+/// `src/pdf.rs`) — rather than the generic `sans-serif` alias, so glyph
+/// widths are consistent between viewers that have this font installed and
+/// the PDF export path — see Task 1 of `PLAN-section-label-engraving-quality.md`.
 const DIRECTIVE_LINE_FONT_FAMILY: &str = r#""Source Han Sans SC", sans-serif"#;
+
+/// Every `FontFamily::Monospace` glyph (notehead, rest, chord symbol,
+/// percussion, multi-measure-rest count, note dash, Latin lyric) is pinned to
+/// this concrete family so raw-SVG viewers render at the same width measured
+/// by `font_metrics::monospace_text_width`/`monospace_char_advance_width`,
+/// mirroring `DIRECTIVE_LINE_FONT_FAMILY` above.
+const MONOSPACE_FONT_FAMILY: &str = r#""Noto Sans Mono", monospace"#;
 
 fn serialize_text_with_tspans(
     el: &SvgElement,

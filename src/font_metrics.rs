@@ -5,6 +5,13 @@
 //! measure against the same pinned font so a width computed during layout
 //! matches what actually renders (see Task 3/4 of
 //! `PLAN-section-label-engraving-quality.md`).
+//!
+//! Also used by `grid_layout::layout_spacing` for measure-spacing weights
+//! (notehead/rest/chord-symbol/note-dash/lyric glyph widths, via
+//! `monospace_char_advance_width`/`monospace_text_width`/`cjk_text_width`)
+//! and by `renderer::new_renderer::glyph_renderers` (chord-symbol dot
+//! placement, note-dash font size), so a measure's computed layout width and
+//! its actually-rendered glyph widths can't drift apart.
 
 use crate::compositor::types::TextSpan;
 
@@ -18,6 +25,16 @@ static DIRECTIVE_LINE_FONT: std::sync::LazyLock<Option<ttf_parser::Face<'static>
         ttf_parser::Face::parse(include_bytes!("../fonts/SourceHanSansSC-Regular.otf"), 0).ok()
     });
 
+/// The font pinned for monospace glyphs (notehead digits, rests, chord
+/// symbols, note dashes, Latin lyric syllables — see `FontFamily::Monospace`
+/// resolving to `"Noto Sans Mono", monospace` in `src/serializer/mod.rs`),
+/// parsed once so layout weights can be measured against the same font that
+/// actually renders.
+static MONOSPACE_FONT: std::sync::LazyLock<Option<ttf_parser::Face<'static>>> =
+    std::sync::LazyLock::new(|| {
+        ttf_parser::Face::parse(include_bytes!("../fonts/NotoSansMono-Regular.ttf"), 0).ok()
+    });
+
 /// The pinned font only ships a Regular weight, so bold text (e.g. a section
 /// label) is approximated by scaling Regular advance widths up, rather than
 /// measuring an actual bold font that doesn't exist here.
@@ -28,14 +45,25 @@ const SYNTHETIC_BOLD_WIDTH_RATIO: f32 = 1.08;
 const FALLBACK_ADVANCE_WIDTH_RATIO: f32 = 0.6;
 
 /// Real advance width (in points) of one character at the given font size,
-/// measured from the pinned font's `hmtx` table (see `DIRECTIVE_LINE_FONT`).
-pub(crate) fn char_advance_width(c: char, font_size: f32, bold: bool) -> f32 {
-    let measured = DIRECTIVE_LINE_FONT.as_ref().and_then(|face| {
+/// measured from `face`'s `hmtx` table, or the fallback ratio if the
+/// character is missing from the font (or the font failed to parse).
+fn face_char_advance_width(
+    face: &Option<ttf_parser::Face<'static>>,
+    c: char,
+    font_size: f32,
+) -> f32 {
+    let measured = face.as_ref().and_then(|face| {
         let glyph_id = face.glyph_index(c)?;
         let advance_units = face.glyph_hor_advance(glyph_id)?;
         Some(advance_units as f32 / face.units_per_em() as f32 * font_size)
     });
-    let width = measured.unwrap_or(font_size * FALLBACK_ADVANCE_WIDTH_RATIO);
+    measured.unwrap_or(font_size * FALLBACK_ADVANCE_WIDTH_RATIO)
+}
+
+/// Real advance width (in points) of one character at the given font size,
+/// measured from the pinned font's `hmtx` table (see `DIRECTIVE_LINE_FONT`).
+pub(crate) fn char_advance_width(c: char, font_size: f32, bold: bool) -> f32 {
+    let width = face_char_advance_width(&DIRECTIVE_LINE_FONT, c, font_size);
     if bold {
         width * SYNTHETIC_BOLD_WIDTH_RATIO
     } else {
@@ -52,6 +80,37 @@ pub(crate) fn span_width(span: &TextSpan) -> f32 {
         .map(|c| char_advance_width(c, span.font_size, span.bold))
         .sum()
 }
+
+/// Real advance width (in points) of one character in the pinned monospace
+/// font (see `MONOSPACE_FONT`), used for notehead/rest/chord/dash/Latin-lyric
+/// glyphs.
+pub(crate) fn monospace_char_advance_width(c: char, font_size: f32) -> f32 {
+    face_char_advance_width(&MONOSPACE_FONT, c, font_size)
+}
+
+/// Real rendered width (in points) of a string in the pinned monospace font,
+/// summing `monospace_char_advance_width` for each character.
+pub(crate) fn monospace_text_width(s: &str, font_size: f32) -> f32 {
+    s.chars()
+        .map(|c| monospace_char_advance_width(c, font_size))
+        .sum()
+}
+
+/// Real rendered width (in points) of a string in the pinned CJK font (see
+/// `DIRECTIVE_LINE_FONT`), used for CJK lyric syllables. A plain-`&str`
+/// counterpart to `span_width`, which requires a `TextSpan`.
+pub(crate) fn cjk_text_width(s: &str, font_size: f32) -> f32 {
+    s.chars()
+        .map(|c| char_advance_width(c, font_size, false))
+        .sum()
+}
+
+/// Font size (points) at which a note-dash glyph (`—`) is rendered (see
+/// `render_note_dash`), fixed independently of `base_font_size` so it always
+/// reads as visually smaller than a full notehead. Shared with the layout
+/// pass's dash weight (`layout_spacing.rs`) so the two can't silently drift
+/// apart.
+pub(crate) const NOTE_DASH_FONT_SIZE: f32 = 12.0;
 
 /// Font size (points) of a section label's own text run, shared by the
 /// layout pass (`content_conversion.rs`, sizing the gap reserved before the

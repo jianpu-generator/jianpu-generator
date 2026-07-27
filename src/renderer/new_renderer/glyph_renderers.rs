@@ -255,7 +255,7 @@ pub(super) fn render_chord_symbol(
 
     if dotted {
         let dot_radius = *row_height * 0.06;
-        let half_text_width = s.chars().count() as f32 * *base_font_size * 0.3;
+        let half_text_width = crate::font_metrics::monospace_text_width(s, *base_font_size) / 2.0;
         let dot_x = elem.x + half_text_width + *base_font_size * 0.4;
         results.push(SvgElement {
             x: dot_x,

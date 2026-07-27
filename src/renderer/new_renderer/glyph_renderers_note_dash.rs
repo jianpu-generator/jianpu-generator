@@ -16,7 +16,7 @@ pub(in crate::renderer::new_renderer) fn render_note_dash(
         variant: Some(SvgVariant::Text),
         kind: SvgKind::Text {
             content: "\u{2014}".to_string(),
-            font_size: 12.0,
+            font_size: crate::font_metrics::NOTE_DASH_FONT_SIZE,
             anchor: TextAnchor::Middle,
             baseline: DominantBaseline::Middle,
             font: FontFamily::Monospace,
