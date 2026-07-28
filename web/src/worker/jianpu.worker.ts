@@ -75,19 +75,27 @@ const generatePercussionPreviewWav =
     ? jianpuWasm.generate_percussion_preview_wav
     : null
 
-let initialized = false
+let resolveWasmModule: (module: WebAssembly.Module) => void
+const wasmModulePromise = new Promise<WebAssembly.Module>((resolve) => {
+  resolveWasmModule = resolve
+})
 
-async function ensureInit() {
-  if (!initialized) {
-    await init()
-    initialized = true
-    postMessage({
-      type: 'ready',
-      audioAvailable: generateWav !== null,
-      pdfAvailable: generatePdf !== null,
-      midiAvailable: generateMidi !== null,
-    } satisfies WorkerResponse)
+let initPromise: Promise<void> | null = null
+
+function ensureInit(): Promise<void> {
+  if (!initPromise) {
+    initPromise = wasmModulePromise
+      .then((module) => init({ module_or_path: module }))
+      .then(() => {
+        postMessage({
+          type: 'ready',
+          audioAvailable: generateWav !== null,
+          pdfAvailable: generatePdf !== null,
+          midiAvailable: generateMidi !== null,
+        } satisfies WorkerResponse)
+      })
   }
+  return initPromise
 }
 
 let loadedSoundfont: Uint8Array | null = null
@@ -114,6 +122,11 @@ function listDeclarationsFromSource(source: string): PartDeclaration[] {
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const msg = event.data
+
+  if (msg.type === 'wasmModule') {
+    resolveWasmModule(msg.module)
+    return
+  }
 
   if (msg.type === 'loadSoundfont') {
     loadedSoundfont = new Uint8Array(msg.soundfont)

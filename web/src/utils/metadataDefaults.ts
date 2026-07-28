@@ -1,19 +1,11 @@
-import init, {
+import {
   get_default_lyrics_font_size,
   get_metadata_defaults,
   type MetadataDefaultsOut,
 } from 'jianpu-wasm'
+import { ensureWasmInit } from '../wasmInit'
 
 export type MetadataDefaults = MetadataDefaultsOut
-
-let wasmReady: Promise<void> | null = null
-
-function ensureWasmInit(): Promise<void> {
-  if (!wasmReady) {
-    wasmReady = init().then(() => undefined)
-  }
-  return wasmReady
-}
 
 let cached: Promise<MetadataDefaults> | null = null
 

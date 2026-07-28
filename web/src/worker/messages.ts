@@ -11,6 +11,7 @@ import type {
 } from '../types'
 
 export type WorkerRequest =
+  | { type: 'wasmModule'; module: WebAssembly.Module }
   | {
       type: 'loadSoundfont'
       soundfont: ArrayBuffer

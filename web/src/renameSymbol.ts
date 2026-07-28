@@ -1,19 +1,11 @@
-import init, {
+import {
   list_symbols,
   rename_symbol,
   type SymbolKindOut,
   type SymbolOut,
 } from 'jianpu-wasm'
 import { GM_INSTRUMENTS } from './utils/gmInstruments'
-
-let wasmReady: Promise<void> | null = null
-
-function ensureWasmInit(): Promise<void> {
-  if (!wasmReady) {
-    wasmReady = init().then(() => undefined)
-  }
-  return wasmReady
-}
+import { ensureWasmInit } from './wasmInit'
 
 /** Every renamable symbol (part/group abbreviation, section label) in `source`. */
 export async function listRenameSymbols(source: string): Promise<SymbolOut[]> {

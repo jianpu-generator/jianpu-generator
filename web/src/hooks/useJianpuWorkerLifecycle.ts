@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
 import { useEffect } from 'react'
+import { ensureWasmModule } from '../wasmInit'
 import type { WorkerRequest } from '../worker/jianpu.worker'
 import {
   createWorkerMessageHandler,
@@ -27,6 +28,17 @@ export function useJianpuWorkerLifecycle(deps: JianpuWorkerLifecycleDeps) {
       { type: 'module' },
     )
     workerRef.current = worker
+
+    ensureWasmModule()
+      .then((module) => {
+        if (workerRef.current === worker) {
+          worker.postMessage({
+            type: 'wasmModule',
+            module,
+          } satisfies WorkerRequest)
+        }
+      })
+      .catch(() => {})
 
     worker.onmessage = createWorkerMessageHandler(deps)
 

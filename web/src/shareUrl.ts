@@ -1,8 +1,6 @@
-import init, {
-  compress_share_payload,
-  decompress_share_payload,
-} from 'jianpu-wasm'
+import { compress_share_payload, decompress_share_payload } from 'jianpu-wasm'
 import LZString from 'lz-string'
+import { ensureWasmInit } from './wasmInit'
 
 export interface SharePayload {
   filename: string
@@ -10,15 +8,6 @@ export interface SharePayload {
 }
 
 const SHARE_HASH_PREFIX = '#share='
-
-let wasmReady: Promise<void> | null = null
-
-function ensureWasmInit(): Promise<void> {
-  if (!wasmReady) {
-    wasmReady = init().then(() => undefined)
-  }
-  return wasmReady
-}
 
 function bytesToBase64Url(bytes: Uint8Array): string {
   let binary = ''
