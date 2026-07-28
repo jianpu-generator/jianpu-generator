@@ -15,7 +15,6 @@ import type { MetadataKey, ParsedMetadataFields } from '../utils/metadataSource'
 import { EditMetadataModal } from './EditMetadataModal'
 import { Editor } from './Editor'
 import { EditPartsModal } from './EditPartsModal'
-import { PartToggles } from './PartToggles'
 import { Preview } from './Preview'
 
 interface MeasureRange {
@@ -81,12 +80,6 @@ interface AppWorkspaceProps {
   measureAudioNoteTimings: NoteTimingOut[]
   measureAudioElement: HTMLAudioElement | null
   noPartsSelected: boolean
-  disabledParts: ReadonlySet<string>
-  disabledLyrics: ReadonlySet<string>
-  soloedParts: ReadonlySet<string>
-  handlePartToggle: (abbreviation: string, enabled: boolean) => void
-  handleLyricsToggle: (abbreviation: string, enabled: boolean) => void
-  handleSoloToggle: (abbreviation: string, soloed: boolean) => void
 }
 
 export function AppWorkspace({
@@ -135,12 +128,6 @@ export function AppWorkspace({
   measureAudioNoteTimings,
   measureAudioElement,
   noPartsSelected,
-  disabledParts,
-  disabledLyrics,
-  soloedParts,
-  handlePartToggle,
-  handleLyricsToggle,
-  handleSoloToggle,
 }: AppWorkspaceProps) {
   const [editorPaneEl, setEditorPaneEl] = useState<HTMLDivElement | null>(null)
   return (
@@ -241,17 +228,6 @@ export function AppWorkspace({
           measureAudioElement={measureAudioElement}
           emptyMessage={
             noPartsSelected ? 'No parts selected.' : 'No preview yet.'
-          }
-          toolbar={
-            <PartToggles
-              parts={parts}
-              disabledParts={disabledParts}
-              disabledLyrics={disabledLyrics}
-              soloedParts={soloedParts}
-              onPartToggle={handlePartToggle}
-              onLyricsToggle={handleLyricsToggle}
-              onSoloToggle={handleSoloToggle}
-            />
           }
         />
       </section>

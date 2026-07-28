@@ -4,6 +4,7 @@ import { AppOverlays } from './components/AppOverlays'
 import { AppWorkspace } from './components/AppWorkspace'
 import { AssetLoadingBanner } from './components/AssetLoadingBanner'
 import { ExportAudioToast } from './components/ExportAudioToast'
+import { PartToggles } from './components/PartToggles'
 import { SectionJumpToolbar } from './components/SectionJumpToolbar'
 import { SequenceJumpToolbar } from './components/SequenceJumpToolbar'
 import { fileIdForName, selectFile } from './fileStore'
@@ -333,6 +334,15 @@ export default function App() {
       <ExportAudioToast open={audioGenerating} />
       <SectionJumpToolbar {...sectionJumpToolbarProps} />
       <SequenceJumpToolbar {...sequenceJumpToolbarProps} />
+      <PartToggles
+        parts={parts}
+        disabledParts={disabledParts}
+        disabledLyrics={disabledLyrics}
+        soloedParts={soloedParts}
+        onPartToggle={handlePartToggle}
+        onLyricsToggle={handleLyricsToggle}
+        onSoloToggle={handleSoloToggle}
+      />
       <AppWorkspace
         editorCollapsed={editorCollapsed}
         setEditorCollapsed={setEditorCollapsed}
@@ -379,12 +389,6 @@ export default function App() {
         measureAudioNoteTimings={measureAudioNoteTimings}
         measureAudioElement={measureAudioElement}
         noPartsSelected={noPartsSelected}
-        disabledParts={disabledParts}
-        disabledLyrics={disabledLyrics}
-        soloedParts={soloedParts}
-        handlePartToggle={handlePartToggle}
-        handleLyricsToggle={handleLyricsToggle}
-        handleSoloToggle={handleSoloToggle}
       />
     </div>
   )

@@ -1,5 +1,5 @@
 import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
-import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { renderSvgDocument } from './PreviewSvgRenderer'
 import { usePlaybackCursor } from './usePlaybackCursor'
 
@@ -17,7 +17,6 @@ interface PreviewProps {
   /** The `<audio>` element currently playing the selected measure range, if any. */
   measureAudioElement?: HTMLAudioElement | null
   emptyMessage?: string
-  toolbar?: ReactNode
   onMeasureRangeSelect?: (startIndex: number, endIndex: number) => void
   onSectionLabelClick?: (label: string) => void
 }
@@ -91,7 +90,6 @@ export function Preview({
   measureAudioNoteTimings,
   measureAudioElement,
   emptyMessage = 'No preview yet.',
-  toolbar,
   onMeasureRangeSelect,
   onSectionLabelClick,
 }: PreviewProps) {
@@ -184,7 +182,6 @@ export function Preview({
 
   return (
     <div className="preview">
-      {toolbar ? <div className="preview-toolbar">{toolbar}</div> : null}
       {wavUrl ? (
         <div
           className={

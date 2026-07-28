@@ -7,13 +7,6 @@
   min-height: 0;
 }
 
-.preview-toolbar {
-  padding: 0.4rem 1rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  min-height: 2rem;
-}
-
 .preview-export-btn {
   display: inline-flex;
   align-items: center;

@@ -318,6 +318,13 @@ test('dragging across measures in a live viewer highlights them, even though the
     '[data-tag="measure"][data-measure-index="2"]',
     { timeout: 15_000 },
   )
+  // The Parts toolbar only mounts once the worker reports the score's parts,
+  // which can land just after the measures above — wait for it so the page
+  // layout has settled before measuring bounding boxes below.
+  await viewerPage.locator('.part-toggles').first().waitFor({
+    state: 'visible',
+    timeout: 15_000,
+  })
 
   const measure0 = viewerPage
     .locator('[data-tag="measure"][data-measure-index="0"]')
