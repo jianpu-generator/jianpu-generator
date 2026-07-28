@@ -37,5 +37,5 @@
 - [x] dot not showing for chord
 - [ ] Formatter: align lyric syllables with their corresponding notes
 - [x] select measures not working when viewing shared link
-- [ ] go live dropdown menu items should have icons
+- [x] go live dropdown menu items should have icons
 - [x] when opening a live link, the ?file= params should not be populated
