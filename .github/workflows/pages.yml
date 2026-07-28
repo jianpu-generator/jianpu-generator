@@ -79,3 +79,49 @@ jobs:
     steps:
       - uses: actions/deploy-pages@v4
         id: deployment
+
+  deploy-cloudflare:
+    runs-on: ubuntu-latest
+    environment:
+      name: cloudflare-pages
+      url: https://jianpu-generator.pages.dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install dependencies
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      # Rebuilt separately from the GitHub Pages `build` job above because
+      # Cloudflare Pages serves from the domain root, so this needs
+      # VITE_BASE_PATH=/ baked in rather than /jianpu-generator/.
+      - name: Build
+        working-directory: web
+        env:
+          VITE_BASE_PATH: /
+          VITE_GITHUB_OAUTH_PROXY_URL: https://jianpu-oauth-proxy.pages.dev
+          VITE_GITHUB_OAUTH_CLIENT_ID: placeholder-client-id
+          VITE_PARTYKIT_HOST: jianpu-live.hou32hou.workers.dev
+        run: pnpm build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: web
+          command: pages deploy dist --project-name=jianpu-generator --branch=master
