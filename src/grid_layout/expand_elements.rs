@@ -152,7 +152,7 @@ pub(crate) fn expand_measure_elements(
                     push_bar_line(sub_rows, grid_col, params.bar_height, halign);
                 }
             }
-            ElementContent::Lyric { .. } => {} // handled in lyric-row branch above
+            ElementContent::Lyric { .. } | ElementContent::LyricLine { .. } => {} // handled in lyric-row branch above
         }
     }
 }

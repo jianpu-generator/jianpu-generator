@@ -38,6 +38,7 @@ pub enum SourcePartMode {
     Notes,
     NotesLyrics,
     Percussion,
+    Lyrics,
     Follow,
 }
 
@@ -89,6 +90,7 @@ fn raw_kind_to_source_mode(kind: &RawKind) -> (SourcePartMode, Option<String>) {
         RawKind::Concrete(PartKind::Notes) => (SourcePartMode::Notes, None),
         RawKind::Concrete(PartKind::NotesWithLyrics) => (SourcePartMode::NotesLyrics, None),
         RawKind::Concrete(PartKind::Percussion) => (SourcePartMode::Percussion, None),
+        RawKind::Concrete(PartKind::Lyrics) => (SourcePartMode::Lyrics, None),
         RawKind::Follow { target, .. } => (SourcePartMode::Follow, Some(target.clone())),
     }
 }

@@ -120,7 +120,7 @@ pub fn list_parts_from_source(
         .map(|d| PartInfo {
             abbreviation: d.abbreviation,
             display_name: d.display_name,
-            has_lyrics: matches!(d.kind, PartKind::NotesWithLyrics),
+            has_lyrics: matches!(d.kind, PartKind::NotesWithLyrics | PartKind::Lyrics),
         })
         .collect())
 }

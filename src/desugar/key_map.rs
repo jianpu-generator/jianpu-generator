@@ -98,9 +98,9 @@ pub(super) fn filter_keyed_into_key_map(
 
     for (abbrev, lines) in &key_map {
         if let Some(decl) = declarations.iter().find(|d| &d.abbreviation == abbrev) {
-            // `NotesWithLyrics` parts accept any number of lyric-verse lines after
-            // the notes line, so only fixed-schema kinds are capacity-checked here.
-            if matches!(decl.kind, PartKind::NotesWithLyrics) {
+            // `NotesWithLyrics` and `Lyrics` parts accept any number of lyric-verse
+            // lines, so only fixed-schema kinds are capacity-checked here.
+            if matches!(decl.kind, PartKind::NotesWithLyrics | PartKind::Lyrics) {
                 continue;
             }
             let slot_count = decl.score_line_roles().len();

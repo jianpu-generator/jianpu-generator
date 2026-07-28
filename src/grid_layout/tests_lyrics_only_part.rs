@@ -1,0 +1,125 @@
+use crate::ast::parsed::{JianPuPitch, Offset};
+use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
+use crate::font_metrics;
+use crate::grid_layout::layout::{block_column_width, build_measure_column_layout};
+use crate::render_config::RenderConfig;
+
+fn test_config() -> RenderConfig {
+    RenderConfig {
+        row_height: 30,
+        note_number_width: 12,
+        part_label_width_pt: 40,
+        max_measures_per_system: 48,
+        lyrics_font_size: 18,
+        hide_system_dividers: false,
+        directive_row_offset: Offset::default(),
+    }
+}
+
+fn notes_row(note_count: u32, bar_col: u32) -> MeasureRow {
+    let mut elements: Vec<ColumnElement> = (0..note_count)
+        .map(|col| ColumnElement {
+            column: col,
+            content: ElementContent::NoteHead {
+                pitch: JianPuPitch::One,
+                accidental: crate::ast::parsed::Accidental::Natural,
+                octave: 0,
+                dotted: false,
+            },
+            note_id: None,
+        })
+        .collect();
+    elements.push(ColumnElement {
+        column: bar_col,
+        content: ElementContent::BarLine,
+        note_id: None,
+    });
+    MeasureRow {
+        id: RowId("notes".to_string()),
+        group_provenance: None,
+        label: "M".to_string(),
+        elements,
+        source_part_index: 0,
+    }
+}
+
+fn lyric_line_row(text: &str) -> MeasureRow {
+    MeasureRow {
+        id: RowId("lyrics".to_string()),
+        group_provenance: None,
+        label: "C".to_string(),
+        elements: vec![
+            ColumnElement {
+                column: 0,
+                content: ElementContent::LyricLine {
+                    text: text.to_string(),
+                    verse: 0,
+                },
+                note_id: None,
+            },
+            ColumnElement {
+                column: 0,
+                content: ElementContent::BarLine,
+                note_id: None,
+            },
+        ],
+        source_part_index: 1,
+    }
+}
+
+fn make_block(rows: Vec<MeasureRow>) -> MeasureBlock {
+    MeasureBlock {
+        rows,
+        decorations: vec![],
+        diagnostics: vec![],
+        represents_measures: 1,
+        merge_duplicate_measures_across_parts: true,
+    }
+}
+
+#[test]
+fn block_column_width_uses_max_barline_column_across_rows() {
+    // A `lyrics`-only row's `BarLine` always sits at column 0, regardless of
+    // how many columns a sibling `notes` row needs — `block_column_width`
+    // must not shrink the block to match whichever row happens to come first.
+    let lyrics_first = make_block(vec![lyric_line_row("hi"), notes_row(4, 4)]);
+    assert_eq!(block_column_width(&lyrics_first), 5);
+
+    let notes_first = make_block(vec![notes_row(4, 4), lyric_line_row("hi")]);
+    assert_eq!(block_column_width(&notes_first), 5);
+}
+
+#[test]
+fn lyric_line_widens_measure_past_short_text() {
+    let config = test_config();
+    let short = make_block(vec![lyric_line_row("hi")]);
+    let long = make_block(vec![lyric_line_row("this is a much longer caption line")]);
+    let short_layout = &build_measure_column_layout(&[short], &config)[0];
+    let long_layout = &build_measure_column_layout(&[long], &config)[0];
+    assert!(
+        long_layout.weight > short_layout.weight,
+        "long lyric line ({}) should out-weigh short one ({})",
+        long_layout.weight,
+        short_layout.weight
+    );
+}
+
+#[test]
+fn measure_weight_is_max_of_notes_and_lyrics() {
+    let config = test_config();
+    // Few notes, but a very long caption: the measure's width should be
+    // driven by the lyric text, not collapse to the sparse note count.
+    let mixed = make_block(vec![
+        notes_row(1, 1),
+        lyric_line_row("a very long caption that should widen this sparse measure"),
+    ]);
+    let notes_only = make_block(vec![notes_row(1, 1)]);
+    let mixed_layout = &build_measure_column_layout(&[mixed], &config)[0];
+    let notes_only_layout = &build_measure_column_layout(&[notes_only], &config)[0];
+    assert!(mixed_layout.weight > notes_only_layout.weight);
+
+    // Sanity: the lyric weight really is real text width, not a flat constant.
+    let note_glyph_weight =
+        font_metrics::monospace_char_advance_width('0', config.lyric_font_size());
+    assert!(mixed_layout.weight > note_glyph_weight * 2.0);
+}

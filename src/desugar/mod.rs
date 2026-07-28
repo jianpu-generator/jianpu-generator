@@ -272,6 +272,10 @@ fn roles_for_group(
         (PartKind::NotesWithLyrics, None) => follow_target_roles
             .map(|roles| roles.to_vec())
             .unwrap_or_else(|| decl.score_line_roles().to_vec()),
+        (PartKind::Lyrics, Some(lines)) => {
+            let verse_count = lines.len().max(1);
+            itertools::repeat_n(ScoreLineRole::Lyrics, verse_count).collect()
+        }
         _ => decl.score_line_roles().to_vec(),
     }
 }

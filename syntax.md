@@ -102,6 +102,7 @@ One track per line. Blank lines are ignored.
 | `notes` | Notes only (instrumental) | 1 |
 | `notes+lyrics` | Notes + lyrics | notes, then 1 or more lyric-verse lines |
 | `percussion` | Unpitched GM drum hits | 1 |
+| `lyrics` | Lyrics-only, adurational | 1 or more lyric-verse lines |
 | `follow[X]` | Inherit column layout from the part with abbreviation `X` | same as target |
 
 An optional soundfont string `"<number>: <name>"` may follow the kind token (or `follow[X]` bracket) to select the MIDI timbre for that part. The number is the General MIDI program number (0–127). The `<name>` portion is a quoted string and may contain `=` and other characters (for example `"1: Grand = Piano"`). For example: `notes "52: Choir Aahs"` or `follow[A] "1: Grand Piano"`. If omitted on a concrete part, the default is program 52 (Choir Aahs). On a `follow[X]` part, the soundfont is inherited from the target when omitted.
@@ -210,7 +211,7 @@ Here `S1` gets `5_ 5_ 5_ 5=` from the group broadcast; `S2` has its own `[S2]` l
 
 - Multiple `[GroupAbbrev]` lines fill slots in occurrence order, same as a part key — the group's first line fills every member's first slot, the second line fills every member's second slot, and so on.
 - A member's own `[MemberAbbrev]` line always takes precedence over the group broadcast for that slot, regardless of which appears first in the file.
-- A group is only usable this way if all of its resolved members share the same part kind (`notes`, `chords`, `notes+lyrics`, or `percussion`) and its abbreviation does not collide with any part's abbreviation; otherwise the group is invalid and using it as a key produces the same "unrecognised abbreviation" error as an unknown key.
+- A group is only usable this way if all of its resolved members share the same part kind (`notes`, `chords`, `notes+lyrics`, `percussion`, or `lyrics`) and its abbreviation does not collide with any part's abbreviation; otherwise the group is invalid and using it as a key produces the same "unrecognised abbreviation" error as an unknown key.
 
 **Row label when members render as one unison row:** when two or more members' compiled content ends up identical (typically because they all took the unmodified group broadcast for that measure), the renderer already merges them into a single row. If every merged member traces to the same `[GroupAbbrev]` broadcast, that row is labeled with the **group's abbreviation** instead of the members' concatenated abbreviations. A member with its own overriding `[MemberAbbrev]` line never merges into that row (it keeps its own row, labeled with its own abbreviation), even if the override happens to be one of two members left in the group:
 
@@ -638,6 +639,24 @@ A `notes+lyrics` part can carry more than one lyric line per measure. Every cons
 Each verse renders as its own row directly under the notes row, in verse order, and each verse is tallied and tie-paired against the notes row independently — a verse can have its own `-` held syllables and `_` no-lyrics marker.
 
 The number of verse lines is per-measure: one measure can have one verse while the next has two. A part's verse count changing from one measure to the next always starts a new system at that measure boundary, regardless of how much horizontal space is left on the current line — verses can't silently appear or disappear mid-system.
+
+### Standalone `lyrics` parts
+
+A `lyrics`-kind part (see [Right-hand side](#right-hand-side)) is lyrics-only and **adurational** — it has no notes of its own, so nothing to tie syllables to. Every `[Abbrev]` line for it is a full verse line, not a stream of per-note syllables: the whole line renders as **one** left-aligned text block spanning the entire measure's width, however many columns that measure's other parts need.
+
+```
+# parts
+Melody [M] = notes
+Caption [C] = lyrics
+
+# score
+[M] 1 2 3 4
+[C] a caption for this measure, unrelated to any note
+```
+
+- Unlike `notes+lyrics`, there is no leading notes line to pair against — every consecutive `[Abbrev]` line is itself a verse (verse 1, verse 2, …), the same way extra `notes+lyrics` verse lines work.
+- `tokenize_lyrics`' word/CJK-character splitting still applies, but only to decide the rendered text (syllables are rejoined with spaces) — a `lyrics` part has no per-syllable columns, no `-` held-syllable semantics, and no lyrics–notes tally check.
+- A wide `lyrics` line can widen its measure past what the other parts' notes alone would need, since the block competes for the measure's total pixel width even though it never affects the measure's column *count*.
 
 ---
 

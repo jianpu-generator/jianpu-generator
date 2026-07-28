@@ -1,5 +1,6 @@
 use crate::ast::parsed::{
-    AbbreviationReference, ParsedMeasureSlot, ParsedTrack, PartDecl, ScoreEvent, ScoreLineSlot,
+    AbbreviationReference, ParsedMeasureSlot, ParsedTrack, PartDecl, PartKind, ScoreEvent,
+    ScoreLineSlot,
 };
 use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Spanned};
 use crate::parser::score::token_parser::GroupStack;
@@ -20,7 +21,7 @@ use crate::desugar::SourceLine;
 use crate::parser::score::measure_group::collect_groups;
 use accumulators::{build_parse_result, build_slot_actions, init_accumulators};
 use beat_padding::{beats_per_measure, validate_and_pad_group_lines};
-use column_lines::process_padded_columns;
+use column_lines::{process_padded_columns, push_skipped_notes_measure};
 use directives::split_directive;
 
 /// One entry per bar group: all directive events emitted by that group's directive row.
@@ -273,7 +274,31 @@ fn process_bar_group(
     }
 
     let beats_expected = beats_per_measure(*ctx.time_num, *ctx.time_den);
-    process_padded_columns(&padded_data, beats_expected, ctx)
+    process_padded_columns(&padded_data, beats_expected, ctx)?;
+
+    // `Lyrics`-only parts have no `Notes` role, so nothing above ever pushes into
+    // their `measure_slots`. Push an empty slot per measure here instead, so this
+    // track's measure count still matches every other part's.
+    let group_span = group_lines
+        .first()
+        .map(|line| {
+            Span::new(
+                ctx.base_offset + line.offset,
+                ctx.base_offset + line.offset + line.content.len(),
+            )
+        })
+        .unwrap_or_else(|| Span::new(ctx.base_offset, ctx.base_offset));
+    let lyrics_track_indices: Vec<usize> = ctx
+        .declarations
+        .iter()
+        .enumerate()
+        .filter(|(_, decl)| decl.kind == PartKind::Lyrics)
+        .map(|(index, _)| index)
+        .collect();
+    for track_index in lyrics_track_indices {
+        push_skipped_notes_measure(ctx, track_index, group_span, None, None)?;
+    }
+    Ok(())
 }
 
 fn timed_events_mut(

@@ -60,6 +60,9 @@ pub enum AbsoluteContent {
         width: f32,
     },
     Lyric(String),
+    /// A standalone `lyrics` part's whole verse line, left-aligned starting
+    /// at the element's `x` rather than centered like [`AbsoluteContent::Lyric`].
+    LyricLine(String),
     Text {
         content: String,
         font_size: f32,

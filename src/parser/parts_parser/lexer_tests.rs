@@ -155,7 +155,7 @@ fn rejects_empty_follow_abbreviation() {
 
 #[test]
 fn rejects_unknown_rhs_token() {
-    let line = "X = lyrics";
+    let line = "X = bogus";
     let error = lex_line(line, 0, Span::new(0, line.len())).expect_err("error");
     assert!(matches!(
         error.kind,

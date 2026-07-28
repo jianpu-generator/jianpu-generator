@@ -12,6 +12,7 @@ fn part_declaration_mode_to_out(mode: &SourcePartMode) -> PartDeclarationModeOut
         SourcePartMode::NotesLyrics => PartDeclarationModeOut::NotesLyrics,
         SourcePartMode::Percussion => PartDeclarationModeOut::Percussion,
         SourcePartMode::Follow => PartDeclarationModeOut::Follow,
+        SourcePartMode::Lyrics => PartDeclarationModeOut::Lyrics,
     }
 }
 

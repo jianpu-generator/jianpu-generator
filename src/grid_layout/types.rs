@@ -156,6 +156,11 @@ pub enum GridContent {
     /// Part name at column=0, column_span=4 in the note-head sub-row.
     RowLabel(String),
     LyricSyllable(String),
+    /// One verse's full text line for a standalone `lyrics` part, rendered as
+    /// a single left-aligned block spanning the whole measure (via
+    /// `GridElement::column_span`) rather than positioned per note like
+    /// `LyricSyllable`.
+    LyricLine(String),
     DirectiveLine {
         label: Option<String>,
         bar_number: Option<u32>,
@@ -224,6 +229,7 @@ pub enum PostArcGridContent {
     HorizontalLine,
     RowLabel(String),
     LyricSyllable(String),
+    LyricLine(String),
     DirectiveLine {
         label: Option<String>,
         bar_number: Option<u32>,

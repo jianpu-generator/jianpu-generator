@@ -1,0 +1,19 @@
+# metadata
+title = "Lyrics-only part"
+max_measures_per_system = 1
+
+# parts
+Melody [M] = notes
+Caption [C] = lyrics
+
+# score
+label="Caption alone, no notes in this measure"
+[C] a standalone caption line, not tied to any note
+
+label="Caption widens a sparse notes measure"
+[M] 1 2 3 4
+[C] this caption text is much longer than the four notes above it
+
+label="Multiple verses"
+[C] first verse of the caption
+[C] second verse of the caption

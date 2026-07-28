@@ -71,8 +71,10 @@ fn part_row_ranges(
     let mut idx = 0;
     while let Some(part_template) = first.rows.get(idx) {
         if is_lyric_row(part_template) {
-            // A verse row not immediately preceded by its notes row
-            // (shouldn't normally happen): give it its own single-row span.
+            // A verse row not immediately preceded by its notes row: either a
+            // standalone `lyrics` part (which has no notes row at all) or an
+            // otherwise-unexpected ordering. Either way, give it its own
+            // single-row span.
             let start = cursor;
             cursor += 1;
             ranges.push((start, cursor - 1));

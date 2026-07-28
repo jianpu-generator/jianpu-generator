@@ -16,10 +16,17 @@ fn consolidate_block(mut block: MeasureBlock) -> MeasureBlock {
 fn expand_mixed_rows(rows: Vec<MeasureRow>) -> Vec<MeasureRow> {
     rows.into_iter()
         .flat_map(|row| {
-            if is_mixed_row(&row) {
+            let has_note_or_rest = row_has_note_or_rest(&row);
+            let verse_count = lyric_verse_count(&row);
+            if has_note_or_rest && verse_count > 0 {
+                // A notes+lyrics row: split into the notes row plus one row per verse.
                 let mut expanded = vec![notes_row(&row)];
                 expanded.extend(lyrics_rows(&row));
                 expanded
+            } else if !has_note_or_rest && verse_count > 1 {
+                // A standalone lyrics part (`PartKind::Lyrics`) with multiple verses:
+                // there's no notes row to split off, just one row per verse.
+                lyrics_rows(&row)
             } else {
                 vec![row]
             }
@@ -27,18 +34,26 @@ fn expand_mixed_rows(rows: Vec<MeasureRow>) -> Vec<MeasureRow> {
         .collect()
 }
 
-fn is_mixed_row(row: &MeasureRow) -> bool {
-    let has_note_or_rest = row.elements.iter().any(|element| {
+fn row_has_note_or_rest(row: &MeasureRow) -> bool {
+    row.elements.iter().any(|element| {
         matches!(
             element.content,
             ElementContent::NoteHead { .. } | ElementContent::Rest { .. }
         )
-    });
-    let has_lyric = row
-        .elements
+    })
+}
+
+fn lyric_verse_count(row: &MeasureRow) -> usize {
+    row.elements
         .iter()
-        .any(|element| matches!(element.content, ElementContent::Lyric { .. }));
-    has_note_or_rest && has_lyric
+        .filter_map(|element| match &element.content {
+            ElementContent::Lyric { verse, .. } | ElementContent::LyricLine { verse, .. } => {
+                Some(*verse + 1)
+            }
+            _ => None,
+        })
+        .max()
+        .unwrap_or(0)
 }
 
 fn notes_row(row: &MeasureRow) -> MeasureRow {
@@ -48,7 +63,12 @@ fn notes_row(row: &MeasureRow) -> MeasureRow {
         elements: row
             .elements
             .iter()
-            .filter(|element| !matches!(element.content, ElementContent::Lyric { .. }))
+            .filter(|element| {
+                !matches!(
+                    element.content,
+                    ElementContent::Lyric { .. } | ElementContent::LyricLine { .. }
+                )
+            })
             .cloned()
             .collect(),
         source_part_index: row.source_part_index,
@@ -67,22 +87,19 @@ fn lyrics_rows(row: &MeasureRow) -> Vec<MeasureRow> {
         .iter()
         .find(|element| matches!(element.content, ElementContent::BarLine))
         .cloned();
-    let verse_count = row
-        .elements
-        .iter()
-        .filter_map(|element| match &element.content {
-            ElementContent::Lyric { verse, .. } => Some(*verse + 1),
-            _ => None,
-        })
-        .max()
-        .unwrap_or(0);
+    let verse_count = lyric_verse_count(row);
     (0..verse_count)
         .map(|verse| {
             let mut elements: Vec<ColumnElement> = row
                 .elements
                 .iter()
                 .filter(|element| {
-                    matches!(&element.content, ElementContent::Lyric { verse: v, .. } if *v == verse)
+                    matches!(
+                        &element.content,
+                        ElementContent::Lyric { verse: v, .. }
+                            | ElementContent::LyricLine { verse: v, .. }
+                        if *v == verse
+                    )
                 })
                 .cloned()
                 .collect();

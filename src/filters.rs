@@ -27,7 +27,11 @@ pub fn filter_tracks(score: &mut Score, tracks: &[String]) {
 
 /// Hide lyrics on parts whose abbreviations appear in `disabled_lyrics`.
 ///
-/// `None` and `Some([])` keep every lyric line.
+/// `None` and `Some([])` keep every lyric line. A standalone `lyrics` part is
+/// never affected: this filter hides lyric *annotations* attached to a
+/// notes part, but a `lyrics` part's text isn't an annotation, it's the
+/// part's only content — akin to how `chords`/`notes`/`percussion` parts
+/// are unaffected too.
 pub fn apply_lyrics_filter(score: &mut Score, disabled_lyrics: Option<&[String]>) {
     let Some(tracks) = disabled_lyrics else {
         return;
@@ -38,6 +42,9 @@ pub fn apply_lyrics_filter(score: &mut Score, disabled_lyrics: Option<&[String]>
     for measure in &mut score.measures {
         for part in &mut measure.parts {
             let part_slice = part.slice_mut();
+            if part_slice.kind == PartKind::Lyrics {
+                continue;
+            }
             if part_slice
                 .name
                 .as_ref()

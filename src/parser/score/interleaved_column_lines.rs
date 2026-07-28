@@ -123,7 +123,7 @@ fn process_lyrics_column_line(
     Ok(())
 }
 
-fn push_skipped_notes_measure(
+pub(super) fn push_skipped_notes_measure(
     ctx: &mut BarGroupContext<'_>,
     track_index: usize,
     line_span: Span,

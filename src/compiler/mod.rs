@@ -389,6 +389,8 @@ mod tests_directive_mid_score;
 #[cfg(test)]
 mod tests_lyrics_and_diagnostics;
 #[cfg(test)]
+mod tests_lyrics_only_part;
+#[cfg(test)]
 mod tests_multi_measure_rest;
 #[cfg(test)]
 mod tests_slur;

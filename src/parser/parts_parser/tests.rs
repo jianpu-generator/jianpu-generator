@@ -48,19 +48,13 @@ fn skips_duplicate_abbreviation_and_keeps_first() {
 }
 
 #[test]
-fn skips_lyrics_without_notes_and_collects_error() {
-    let content = "X = lyrics\n";
+fn parses_standalone_lyrics_track() {
+    let content = "Caption [C] = lyrics\n";
     let (decls, errors) = parse_parts(content, 0, &[]);
-    assert!(decls.is_empty());
-    assert_eq!(errors.len(), 2); // PartsInvalidColumns + PartsEmptySection
-    assert!(matches!(
-        errors[0].kind,
-        RecoverableErrorKind::PartsInvalidColumns { .. }
-    ));
-    assert!(matches!(
-        errors[1].kind,
-        RecoverableErrorKind::PartsEmptySection
-    ));
+    assert!(errors.is_empty());
+    assert_eq!(decls.len(), 1);
+    assert_eq!(decls[0].abbreviation, "C");
+    assert_eq!(decls[0].kind, PartKind::Lyrics);
 }
 
 #[test]

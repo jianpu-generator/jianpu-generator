@@ -9,10 +9,12 @@ use std::collections::{HashMap, HashSet};
 // ── Row classification ────────────────────────────────────────────────────────
 
 pub(crate) fn is_lyric_row(row: &MeasureRow) -> bool {
-    let has_lyric = row
-        .elements
-        .iter()
-        .any(|e| matches!(e.content, ElementContent::Lyric { .. }));
+    let has_lyric = row.elements.iter().any(|e| {
+        matches!(
+            e.content,
+            ElementContent::Lyric { .. } | ElementContent::LyricLine { .. }
+        )
+    });
     let has_note = row.elements.iter().any(|e| {
         matches!(
             e.content,
@@ -23,9 +25,12 @@ pub(crate) fn is_lyric_row(row: &MeasureRow) -> bool {
 }
 
 pub(crate) fn has_lyrics(row: &MeasureRow) -> bool {
-    row.elements
-        .iter()
-        .any(|e| matches!(e.content, ElementContent::Lyric { .. }))
+    row.elements.iter().any(|e| {
+        matches!(
+            e.content,
+            ElementContent::Lyric { .. } | ElementContent::LyricLine { .. }
+        )
+    })
 }
 
 pub(crate) fn is_chord_only_row(row: &MeasureRow) -> bool {
@@ -54,16 +59,25 @@ pub(crate) use heights::*;
 // ── Column width helper ───────────────────────────────────────────────────────
 
 /// Number of columns in a MeasureBlock (BarLine column + 1).
+///
+/// Takes the `max` `BarLine` column across **all** rows, not just the first:
+/// every part's notes normally consume the same total columns (same time
+/// signature/duration), so today all rows already agree and this is a no-op
+/// change — but a standalone `lyrics` part's row always has its `BarLine` at
+/// column `0` regardless of what other parts in the measure need, so relying
+/// on `rows.first()` alone would wrongly shrink the block if such a row
+/// happened to come first.
 pub(crate) fn block_column_width(block: &MeasureBlock) -> u32 {
     block
         .rows
-        .first()
-        .and_then(|row| {
+        .iter()
+        .filter_map(|row| {
             row.elements
                 .iter()
                 .find(|e| e.content == ElementContent::BarLine)
         })
         .map(|e| e.column + 1)
+        .max()
         .unwrap_or(1)
 }
 
@@ -315,3 +329,7 @@ mod tests_highlight;
 #[cfg(test)]
 #[path = "tests_playback_cursor.rs"]
 mod tests_playback_cursor;
+
+#[cfg(test)]
+#[path = "tests_lyrics_only_part.rs"]
+mod tests_lyrics_only_part;

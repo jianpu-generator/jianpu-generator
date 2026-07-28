@@ -237,6 +237,7 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
         GridContent::HorizontalLine => Some(PostArcGridContent::HorizontalLine),
         GridContent::RowLabel(s) => Some(PostArcGridContent::RowLabel(s.clone())),
         GridContent::LyricSyllable(s) => Some(PostArcGridContent::LyricSyllable(s.clone())),
+        GridContent::LyricLine(s) => Some(PostArcGridContent::LyricLine(s.clone())),
         GridContent::DirectiveLine {
             label,
             bar_number,

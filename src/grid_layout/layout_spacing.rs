@@ -97,6 +97,10 @@ fn column_weight(content: &ElementContent, config: &RenderConfig) -> f32 {
                 }
         }
         ElementContent::Lyric { text, .. } => lyric_weight(text, config),
+        // A `LyricLine` spans the whole measure via `column_span` rather than
+        // occupying one grid column, so it contributes no per-column weight here;
+        // its width is instead folded into the measure's total via `measure_note_weight`.
+        ElementContent::LyricLine { .. } => 0.0,
         ElementContent::BarLine => THIN_MARK_WEIGHT,
         ElementContent::MultiMeasureRest { .. } | ElementContent::Underline { .. } => 0.0,
     }
@@ -216,6 +220,7 @@ fn measure_note_weight(block: &MeasureBlock, config: &RenderConfig) -> f32 {
                         ElementContent::ChordSymbol { text, .. } => {
                             chord_symbol_weight(text, config)
                         }
+                        ElementContent::LyricLine { text, .. } => lyric_weight(text, config),
                         _ => 0.0,
                     })
                     .sum::<f32>()

@@ -59,6 +59,7 @@ pub enum PartDeclarationModeOut {
     NotesLyrics,
     Percussion,
     Follow,
+    Lyrics,
 }
 
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]

@@ -54,6 +54,7 @@ pub enum PartKind {
     Notes,
     NotesWithLyrics,
     Percussion,
+    Lyrics,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -76,6 +77,7 @@ impl PartDecl {
             PartKind::Notes => &[ScoreLineRole::Notes],
             PartKind::NotesWithLyrics => &[ScoreLineRole::Notes, ScoreLineRole::Lyrics],
             PartKind::Percussion => &[ScoreLineRole::Notes],
+            PartKind::Lyrics => &[ScoreLineRole::Lyrics],
         }
     }
 }

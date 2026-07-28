@@ -13,33 +13,90 @@ use std::collections::HashMap;
 mod elements;
 use elements::{expand_measure_elements, MeasureRenderParams};
 
-pub(crate) fn expand_lyric_part(
-    system: &[MeasureBlock],
-    part_idx: usize,
-    base: f32,
-    column_count: u32,
-    measure_layout: &[MeasureColumnLayout],
-) -> GridRow {
+pub(crate) struct LyricPartParams<'a> {
+    pub(crate) part_idx: usize,
+    pub(crate) base: f32,
+    pub(crate) column_count: u32,
+    pub(crate) bar_height: f32,
+    /// False for a `notes+lyrics` verse row, which shares `part_idx` with its
+    /// own notes row — that row already drew the bar line, so drawing it
+    /// again here would duplicate/overshoot it. True for a standalone
+    /// `lyrics` part's row, which has no notes row to draw it instead.
+    pub(crate) draw_bar_line: bool,
+    pub(crate) measure_layout: &'a [MeasureColumnLayout],
+}
+
+pub(crate) fn expand_lyric_part(system: &[MeasureBlock], params: &LyricPartParams<'_>) -> GridRow {
+    let part_idx = params.part_idx;
+    let base = params.base;
+    let column_count = params.column_count;
+    let bar_height = params.bar_height;
+    let draw_bar_line = params.draw_bar_line;
     let mut row = GridRow {
         height_pt: lyric_row_height(base),
         column_count,
         has_label_region: true,
-        measure_layout: measure_layout.to_vec(),
+        measure_layout: params.measure_layout.to_vec(),
         elements: vec![],
     };
+    // Every other row type only draws bar lines when it's the block's first
+    // row (`part_idx == 0`) — a lyric row is no exception, since it can end
+    // up first when a standalone `lyrics` part shares a measure with an
+    // all-rest `notes` part that `hide_resting_parts` has hidden. Without
+    // this, such a measure would render with no bar line at all.
+    if part_idx == 0 && draw_bar_line {
+        row.elements.push(GridElement {
+            column: LABEL_COLS,
+            column_span: 1,
+            halign: HAlign::Start,
+            valign: VAlign::Top,
+            content: GridContent::BarLine {
+                height_pt: bar_height,
+            },
+        });
+    }
     let mut measure_col_offset: u32 = 0;
-    for block in system {
+    let last_block_idx = system.len().saturating_sub(1);
+    for (block_idx, block) in system.iter().enumerate() {
         let col_w = block_column_width(block);
         if let Some(part_row) = block.rows.get(part_idx) {
             for el in &part_row.elements {
-                if let ElementContent::Lyric { text, .. } = &el.content {
-                    row.elements.push(GridElement {
-                        column: MUSIC_START_COL + measure_col_offset + el.column,
-                        column_span: 1,
-                        halign: HAlign::Center,
-                        valign: VAlign::Center,
-                        content: GridContent::LyricSyllable(text.clone()),
-                    });
+                match &el.content {
+                    ElementContent::Lyric { text, .. } => {
+                        row.elements.push(GridElement {
+                            column: MUSIC_START_COL + measure_col_offset + el.column,
+                            column_span: 1,
+                            halign: HAlign::Center,
+                            valign: VAlign::Center,
+                            content: GridContent::LyricSyllable(text.clone()),
+                        });
+                    }
+                    ElementContent::LyricLine { text, .. } => {
+                        row.elements.push(GridElement {
+                            column: MUSIC_START_COL + measure_col_offset,
+                            column_span: col_w,
+                            halign: HAlign::Start,
+                            valign: VAlign::Center,
+                            content: GridContent::LyricLine(text.clone()),
+                        });
+                    }
+                    ElementContent::BarLine if part_idx == 0 && draw_bar_line => {
+                        let halign = if block_idx == last_block_idx {
+                            HAlign::End
+                        } else {
+                            HAlign::Center
+                        };
+                        row.elements.push(GridElement {
+                            column: MUSIC_START_COL + measure_col_offset + el.column,
+                            column_span: 1,
+                            halign,
+                            valign: VAlign::Top,
+                            content: GridContent::BarLine {
+                                height_pt: bar_height,
+                            },
+                        });
+                    }
+                    _ => {}
                 }
             }
         }
@@ -227,10 +284,14 @@ pub(crate) fn expand_system_to_rows(
         if is_lyric_row(part_template) {
             all_rows.push(expand_lyric_part(
                 system,
-                part_idx,
-                base,
-                column_count,
-                measure_layout,
+                &LyricPartParams {
+                    part_idx,
+                    base,
+                    column_count,
+                    bar_height,
+                    draw_bar_line: true,
+                    measure_layout,
+                },
             ));
         } else {
             let part_arcs: &[GridElement] =
@@ -254,10 +315,14 @@ pub(crate) fn expand_system_to_rows(
             if has_lyrics(part_template) {
                 all_rows.push(expand_lyric_part(
                     system,
-                    part_idx,
-                    base,
-                    column_count,
-                    measure_layout,
+                    &LyricPartParams {
+                        part_idx,
+                        base,
+                        column_count,
+                        bar_height,
+                        draw_bar_line: false,
+                        measure_layout,
+                    },
                 ));
             }
         }

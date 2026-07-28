@@ -187,7 +187,7 @@ fn build_part_rows(
                     continue;
                 };
                 let lyrics = match part.kind {
-                    PartKind::NotesWithLyrics => measure
+                    PartKind::NotesWithLyrics | PartKind::Lyrics => measure
                         .paired_lyrics
                         .iter()
                         .cloned()

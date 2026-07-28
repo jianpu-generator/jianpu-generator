@@ -119,6 +119,13 @@ pub enum ElementContent {
         text: String,
         verse: usize,
     },
+    /// One verse's (0-indexed) full text line for a standalone `lyrics` part —
+    /// adurational, not tied to any note, rendered as a single left-aligned
+    /// block spanning the whole measure rather than one syllable per column.
+    LyricLine {
+        text: String,
+        verse: usize,
+    },
 }
 
 /// The full logical extent of one slur or tie arc across measures.

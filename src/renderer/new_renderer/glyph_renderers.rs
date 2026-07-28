@@ -343,33 +343,9 @@ pub(super) fn render_bar_line(elem: &AbsoluteElement, height: &f32) -> Vec<SvgEl
     }]
 }
 
-pub(super) fn render_lyric(
-    elem: &AbsoluteElement,
-    s: &str,
-    base_font_size: &f32,
-    cjk_font_size: &f32,
-) -> Vec<SvgElement> {
-    let is_cjk = s.chars().any(|c| ('\u{4E00}'..='\u{9FFF}').contains(&c));
-    let font_size = if is_cjk {
-        *cjk_font_size
-    } else {
-        *base_font_size
-    };
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: Some(SvgVariant::Lyric),
-        kind: SvgKind::Text {
-            content: s.to_string(),
-            font_size,
-            anchor: TextAnchor::Middle,
-            baseline: DominantBaseline::Hanging,
-            font: FontFamily::SansSerif,
-            weight: FontWeight::Normal,
-            italic: false,
-        },
-    }]
-}
+#[path = "glyph_renderers_lyric.rs"]
+mod lyric;
+pub(super) use lyric::{render_lyric, render_lyric_line};
 
 fn pitch_to_digit(pitch: &JianPuPitch) -> char {
     use crate::ast::parsed::JianPuPitch::*;

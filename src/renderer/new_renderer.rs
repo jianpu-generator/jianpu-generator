@@ -8,7 +8,7 @@ use crate::renderer::new_types::{
 };
 use directive_line::{render_directive_line, DirectiveLineArgs};
 use glyph_renderers::{
-    render_bar_line, render_chord_symbol, render_horizontal_line, render_lyric,
+    render_bar_line, render_chord_symbol, render_horizontal_line, render_lyric, render_lyric_line,
     render_multi_measure_rest, render_note_dash, render_note_head, render_percussion_hit,
     render_rest, render_tie_or_slur, render_tuplet_bracket, render_underline, NoteRenderParams,
 };
@@ -97,6 +97,7 @@ fn render_element(
         AbsoluteContent::BarLine { height } => render_bar_line(elem, height),
         AbsoluteContent::HorizontalLine { width } => render_horizontal_line(elem, width),
         AbsoluteContent::Lyric(s) => render_lyric(elem, s, base_font_size, cjk_font_size),
+        AbsoluteContent::LyricLine(s) => render_lyric_line(elem, s, base_font_size, cjk_font_size),
         content => render_overlay_element(elem, content, directive_row_offset),
     }
 }
