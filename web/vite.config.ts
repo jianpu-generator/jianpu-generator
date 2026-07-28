@@ -142,6 +142,30 @@ const DEPLOYED_ASSET_FILES = [
 
 const fontsDir = path.resolve(__dirname, '..', 'fonts')
 
+// Cloudflare Pages rejects any single deployed file over 25 MiB, so assets
+// above that (currently just the soundfont) are split into parts plus a
+// manifest that `useAssetLoader` reassembles client-side.
+const MAX_DEPLOYED_FILE_BYTES = 20 * 1024 * 1024
+
+function splitLargeFile(srcPath: string, outDir: string, name: string): void {
+  const data = fs.readFileSync(srcPath)
+  const chunkCount = Math.ceil(data.byteLength / MAX_DEPLOYED_FILE_BYTES)
+  const chunkSize = Math.ceil(data.byteLength / chunkCount)
+  const parts: string[] = []
+  const partBytes: number[] = []
+  for (let i = 0; i < chunkCount; i++) {
+    const partName = `${name}.part${i}`
+    const chunk = data.subarray(i * chunkSize, (i + 1) * chunkSize)
+    fs.writeFileSync(path.join(outDir, partName), chunk)
+    parts.push(partName)
+    partBytes.push(chunk.byteLength)
+  }
+  fs.writeFileSync(
+    path.join(outDir, `${name}.manifest.json`),
+    JSON.stringify({ totalBytes: data.byteLength, parts, partBytes }),
+  )
+}
+
 function copyFontsPlugin(): Plugin {
   return {
     name: 'copy-fonts',
@@ -150,7 +174,12 @@ function copyFontsPlugin(): Plugin {
       const outFonts = path.resolve(__dirname, 'dist', 'fonts')
       fs.mkdirSync(outFonts, { recursive: true })
       for (const name of DEPLOYED_ASSET_FILES) {
-        fs.copyFileSync(path.join(fontsDir, name), path.join(outFonts, name))
+        const srcPath = path.join(fontsDir, name)
+        if (fs.statSync(srcPath).size > MAX_DEPLOYED_FILE_BYTES) {
+          splitLargeFile(srcPath, outFonts, name)
+        } else {
+          fs.copyFileSync(srcPath, path.join(outFonts, name))
+        }
       }
     },
   }
