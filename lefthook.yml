@@ -40,7 +40,7 @@ pre-commit:
         jobs:
           - name: web-typecheck
             glob: "{crates/jianpu-wasm/**,web/**}"
-            run: cd web && pnpm run build:wasm && pnpm exec tsc -b
+            run: cd web && pnpm run build:wasm && python3 ../scripts/check-wasm-size.py && pnpm exec tsc -b
 
           - name: e2e-tests
             glob: "{web/src/**,web/e2e/**,crates/**,src/**}"

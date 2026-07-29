@@ -100,6 +100,22 @@ pub fn compile(
     grouper::group(doc)
 }
 
+/// Supply the directive-line font's raw bytes for real glyph-advance
+/// measurement during layout. Only meaningful on `wasm32`, where the wasm
+/// binary doesn't embed the font at compile time (see `font_metrics`); a
+/// no-op on the host CLI build, which embeds the font via `include_bytes!`
+/// instead.
+pub fn set_directive_line_font_bytes(bytes: Vec<u8>) {
+    font_metrics::set_directive_line_font_bytes(bytes);
+}
+
+/// Supply the monospace font's raw bytes for real glyph-advance measurement
+/// during layout. Only meaningful on `wasm32` — see
+/// [`set_directive_line_font_bytes`].
+pub fn set_monospace_font_bytes(bytes: Vec<u8>) {
+    font_metrics::set_monospace_font_bytes(bytes);
+}
+
 /// Drop parts whose abbreviation is not in `enabled_tracks`, so the header's part-list
 /// legend does not list parts hidden by a track filter.
 ///

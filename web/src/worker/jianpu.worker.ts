@@ -5,6 +5,7 @@ import {
   list_measure_spans,
   list_parts,
   render,
+  set_layout_fonts,
   update_part_declaration,
 } from 'jianpu-wasm'
 import type { PartDeclaration, PartMode } from '../types'
@@ -98,6 +99,21 @@ function ensureInit(): Promise<void> {
   return initPromise
 }
 
+// Applies the layout fonts to the wasm module as soon as they've both
+// arrived (from the `loadPdfFonts` message, reusing the bytes the app
+// already fetches for PDF export) and the module is ready to receive them.
+// Deliberately not awaited by any render: renders that happen before the
+// fonts land just use the character-bucket fallback for that render, the
+// same graceful degradation as a font fetch that fails outright. Blocking
+// render on a network fetch would turn a slow or failed fetch into a stuck
+// preview instead of a merely imprecise one.
+function applyCoreFontsWhenReady(fonts: {
+  sc: Uint8Array
+  mono: Uint8Array
+}): void {
+  ensureInit().then(() => set_layout_fonts(fonts.sc, fonts.mono))
+}
+
 let loadedSoundfont: Uint8Array | null = null
 let loadedFonts: { sc: Uint8Array; tc: Uint8Array; mono: Uint8Array } | null =
   null
@@ -134,11 +150,14 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'loadPdfFonts') {
+    const sc = new Uint8Array(msg.scFont)
+    const mono = new Uint8Array(msg.monoFont)
     loadedFonts = {
-      sc: new Uint8Array(msg.scFont),
+      sc,
       tc: new Uint8Array(msg.tcFont),
-      mono: new Uint8Array(msg.monoFont),
+      mono,
     }
+    applyCoreFontsWhenReady({ sc, mono })
     return
   }
 
