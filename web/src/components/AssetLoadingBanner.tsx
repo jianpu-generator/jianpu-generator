@@ -19,6 +19,9 @@ interface AssetLoadingBannerProps {
   fontsStatus: AssetStatus
   fontsLoadedBytes: number
   fontsTotalBytes: number
+  wasmStatus: AssetStatus
+  wasmLoadedBytes: number
+  wasmTotalBytes: number
 }
 
 interface RowProps {
@@ -86,8 +89,16 @@ export function AssetLoadingBanner({
   fontsStatus,
   fontsLoadedBytes,
   fontsTotalBytes,
+  wasmStatus,
+  wasmLoadedBytes,
+  wasmTotalBytes,
 }: AssetLoadingBannerProps) {
-  if (soundfontStatus === 'ready' && fontsStatus === 'ready') return null
+  if (
+    soundfontStatus === 'ready' &&
+    fontsStatus === 'ready' &&
+    wasmStatus === 'ready'
+  )
+    return null
 
   return (
     <>
@@ -117,6 +128,14 @@ export function AssetLoadingBanner({
             status={fontsStatus}
             loadedBytes={fontsLoadedBytes}
             totalBytes={fontsTotalBytes}
+          />
+        )}
+        {wasmStatus !== 'ready' && (
+          <AssetRow
+            label="WebAssembly module"
+            status={wasmStatus}
+            loadedBytes={wasmLoadedBytes}
+            totalBytes={wasmTotalBytes}
           />
         )}
       </div>

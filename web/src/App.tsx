@@ -23,6 +23,7 @@ import { useScoreSource } from './hooks/useScoreSource'
 import { useSectionNavigation } from './hooks/useSectionNavigation'
 import { useStorageBackend } from './hooks/useStorageBackend'
 import { useUrlFileSync } from './hooks/useUrlFileSync'
+import { useWasmLoader } from './hooks/useWasmLoader'
 import type { EditorHandle, PartMode, SoundfontValue } from './types'
 import type { MetadataKey } from './utils/metadataSource'
 import { parseMetadata, updateMetadataField } from './utils/metadataSource'
@@ -90,6 +91,7 @@ export default function App() {
   const editorRef = useRef<EditorHandle>(null)
   const soundfont = useAssetLoader('/fonts/GeneralUser_GS.sf2')
   const fonts = useFontsLoader()
+  const wasm = useWasmLoader()
   const soundfontReady = soundfont.status === 'ready'
   const pdfFontsReady = fonts.status === 'ready'
 
@@ -260,6 +262,9 @@ export default function App() {
         fontsStatus={fonts.status}
         fontsLoadedBytes={fonts.loadedBytes}
         fontsTotalBytes={fonts.totalBytes}
+        wasmStatus={wasm.status}
+        wasmLoadedBytes={wasm.loadedBytes}
+        wasmTotalBytes={wasm.totalBytes}
       />
       <AppHeader
         audioAvailable={audioAvailable}
