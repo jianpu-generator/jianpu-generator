@@ -16,7 +16,7 @@ describe('liveShareUrl', () => {
   })
 
   it('rejects a malformed room id', () => {
-    expect(parseLiveShareFromHash('#live=not-a-uuid')).toBeNull()
+    expect(parseLiveShareFromHash('#live=not@valid@id')).toBeNull()
     expect(parseLiveShareFromHash('#live=')).toBeNull()
   })
 
@@ -45,21 +45,34 @@ describe('liveShareUrl', () => {
     expect(ownerToken).toMatch(/^[A-Za-z0-9_-]+$/)
   })
 
-  it('parses an optional name= param alongside the room id', async () => {
+  it('parses a --filename suffix after the fixed-length room id, appending .jianpu', async () => {
     const { roomId } = await deriveLiveIdentity(SECRET_A, 'some-file-id')
-    expect(
-      parseLiveShareFromHash(
-        `#live=${roomId}&name=${encodeURIComponent('My Song.jianpu')}`,
-      ),
-    ).toEqual({ roomId, filename: 'My Song.jianpu' })
+    expect(parseLiveShareFromHash(`#live=${roomId}--My Song`)).toEqual({
+      roomId,
+      filename: 'My Song.jianpu',
+    })
   })
 
-  it('omits filename from the payload when name= is absent', async () => {
+  it('leaves CJK and other non-ASCII filenames, and any character, unescaped', async () => {
+    const { roomId } = await deriveLiveIdentity(SECRET_A, 'some-file-id')
+    const hash = `#live=${roomId}--快樂天堂 100% A & B -- more`
+    expect(parseLiveShareFromHash(hash)).toEqual({
+      roomId,
+      filename: '快樂天堂 100% A & B -- more.jianpu',
+    })
+  })
+
+  it('omits filename from the payload when no --suffix is present', async () => {
     const { roomId } = await deriveLiveIdentity(SECRET_A, 'some-file-id')
     expect(parseLiveShareFromHash(`#live=${roomId}`)).toEqual({ roomId })
   })
 
-  it('still rejects a malformed room id even with a name= param', () => {
-    expect(parseLiveShareFromHash('#live=not-a-uuid&name=foo')).toBeNull()
+  it('rejects trailing content that is not a --filename suffix', async () => {
+    const { roomId } = await deriveLiveIdentity(SECRET_A, 'some-file-id')
+    expect(parseLiveShareFromHash(`#live=${roomId}foo`)).toBeNull()
+  })
+
+  it('still rejects a malformed room id even with a --filename suffix', () => {
+    expect(parseLiveShareFromHash('#live=not@valid@id--foo')).toBeNull()
   })
 })

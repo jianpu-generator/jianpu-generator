@@ -1,10 +1,22 @@
 const LIVE_HASH_PREFIX = '#live='
 
-// A UUID-shaped room id, deterministically derived (see deriveLiveIdentity)
-// so the same file always reproduces the same link — the only thing
-// embedded in the copyable viewer link.
-const ROOM_ID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const FILENAME_EXTENSION = '.jianpu'
+
+// Base64url encoding of 8 random/derived bytes (64 bits) is *always* exactly
+// this many characters — base64 maps fixed-size byte groups to fixed-size
+// char groups, so length depends only on byte count, never byte values.
+// PartyKit only needs an opaque room name, not a UUID shape — 64 bits keeps
+// accidental collisions negligible (rooms are never deleted, see
+// server.ts) while staying short, since every char here lands directly in
+// a copy-pasted URL.
+const ROOM_ID_LENGTH = 11
+const ROOM_ID_PATTERN = new RegExp(`^[0-9A-Za-z_-]{${ROOM_ID_LENGTH}}$`)
+
+// Purely cosmetic — separates the room id from the filename so a copied
+// link reads clearly. Parsing doesn't need it to find the boundary (the
+// room id's length is fixed, see above), so the filename after it is never
+// escaped and may contain any character, including further dashes.
+const FILENAME_SEPARATOR = '--'
 
 const DEVICE_SECRET_KEY = 'jianpu:live-device-secret:v1'
 
@@ -27,24 +39,6 @@ function toBase64Url(bytes: Uint8Array): string {
   let binary = ''
   for (const byte of bytes) binary += String.fromCharCode(byte)
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-}
-
-function toHex(bytes: Uint8Array): string {
-  return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')
-}
-
-/** Formats 16 bytes as a UUID-shaped string (not a real v4 UUID — no
- * version/variant bits are forced) so a derived room id still satisfies
- * `ROOM_ID_PATTERN` and slots into the existing `#live=` hash format. */
-function formatAsRoomId(bytes: Uint8Array): string {
-  const hex = toHex(bytes.slice(0, 16))
-  return [
-    hex.slice(0, 8),
-    hex.slice(8, 12),
-    hex.slice(12, 16),
-    hex.slice(16, 20),
-    hex.slice(20, 32),
-  ].join('-')
 }
 
 /** Random per-browser secret that never leaves the device — mixed with a
@@ -95,14 +89,17 @@ export async function deriveLiveIdentity(
     hmacSha256(secret, `owner:${fileId}`),
   ])
   return {
-    roomId: formatAsRoomId(roomBytes),
+    roomId: toBase64Url(roomBytes.slice(0, 8)),
     ownerToken: toBase64Url(ownerBytes),
   }
 }
 
 export function buildLiveShareUrl(roomId: string, filename?: string): string {
   const base = new URL(import.meta.env.BASE_URL, window.location.origin)
-  const namePart = filename ? `&name=${encodeURIComponent(filename)}` : ''
+  const bareName = filename?.endsWith(FILENAME_EXTENSION)
+    ? filename.slice(0, -FILENAME_EXTENSION.length)
+    : filename
+  const namePart = bareName ? `${FILENAME_SEPARATOR}${bareName}` : ''
   return `${base.href}${LIVE_HASH_PREFIX}${roomId}${namePart}`
 }
 
@@ -110,13 +107,14 @@ export function parseLiveShareFromHash(
   hash: string = window.location.hash,
 ): LiveSharePayload | null {
   if (!hash.startsWith(LIVE_HASH_PREFIX)) return null
-  const [roomId, ...rest] = hash.slice(LIVE_HASH_PREFIX.length).split('&')
+  const body = hash.slice(LIVE_HASH_PREFIX.length)
+  const roomId = body.slice(0, ROOM_ID_LENGTH)
   if (!ROOM_ID_PATTERN.test(roomId)) return null
-  const namePart = rest.find((part) => part.startsWith('name='))
-  const filename = namePart
-    ? decodeURIComponent(namePart.slice('name='.length))
-    : undefined
-  return filename ? { roomId, filename } : { roomId }
+  const rest = body.slice(ROOM_ID_LENGTH)
+  if (rest === '') return { roomId }
+  if (!rest.startsWith(FILENAME_SEPARATOR)) return null
+  const filename = `${rest.slice(FILENAME_SEPARATOR.length)}${FILENAME_EXTENSION}`
+  return { roomId, filename }
 }
 
 export function clearLiveShareHash(): void {

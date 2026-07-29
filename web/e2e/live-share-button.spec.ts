@@ -74,7 +74,7 @@ test('a viewer opening the live link sees the current score immediately, before 
   expect(previewContent).toContain('Live Score')
 })
 
-test('the copied live link carries the filename as a human-readable name= param, and a viewer opening it still sees the score', async ({
+test('the copied live link carries the filename as a human-readable --suffix, and a viewer opening it still sees the score', async ({
   page,
   context,
 }) => {
@@ -87,7 +87,7 @@ test('the copied live link carries the filename as a human-readable name= param,
   const liveUrl = await page.evaluate(async () => {
     return navigator.clipboard.readText()
   })
-  expect(liveUrl).toContain(`name=${encodeURIComponent(LIVE_FILENAME)}`)
+  expect(liveUrl).toContain(`--${LIVE_FILENAME.replace(/\.jianpu$/, '')}`)
 
   const viewerPage = await context.newPage()
   await viewerPage.goto(liveUrl)
@@ -135,9 +135,7 @@ test('go live button copies a #live= link and shows a toast, then a dropdown off
   const liveUrl = await page.evaluate(async () => {
     return navigator.clipboard.readText()
   })
-  expect(liveUrl).toMatch(
-    /#live=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(&name=.+)?$/i,
-  )
+  expect(liveUrl).toMatch(/#live=[0-9A-Za-z_-]{11}(--.+)?$/)
 
   // Once live, the trigger becomes a dropdown offering Copy / Stop.
   await expect(page.getByTestId('go-live-button')).toHaveText('Live')
