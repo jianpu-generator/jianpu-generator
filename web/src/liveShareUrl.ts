@@ -10,6 +10,12 @@ const DEVICE_SECRET_KEY = 'jianpu:live-device-secret:v1'
 
 export interface LiveSharePayload {
   roomId: string
+  /** Filename at share-time, carried in the URL purely so the link reads as
+   * something a human can recognize (in chat, browser history, etc). Never
+   * authoritative — the room's live `sync`/`update` messages are the source
+   * of truth, so a rename after sharing doesn't invalidate the link, it just
+   * makes this cosmetic copy stale. */
+  filename?: string
 }
 
 export interface LiveIdentity {
@@ -94,17 +100,23 @@ export async function deriveLiveIdentity(
   }
 }
 
-export function buildLiveShareUrl(roomId: string): string {
+export function buildLiveShareUrl(roomId: string, filename?: string): string {
   const base = new URL(import.meta.env.BASE_URL, window.location.origin)
-  return `${base.href}${LIVE_HASH_PREFIX}${roomId}`
+  const namePart = filename ? `&name=${encodeURIComponent(filename)}` : ''
+  return `${base.href}${LIVE_HASH_PREFIX}${roomId}${namePart}`
 }
 
 export function parseLiveShareFromHash(
   hash: string = window.location.hash,
 ): LiveSharePayload | null {
   if (!hash.startsWith(LIVE_HASH_PREFIX)) return null
-  const roomId = hash.slice(LIVE_HASH_PREFIX.length)
-  return ROOM_ID_PATTERN.test(roomId) ? { roomId } : null
+  const [roomId, ...rest] = hash.slice(LIVE_HASH_PREFIX.length).split('&')
+  if (!ROOM_ID_PATTERN.test(roomId)) return null
+  const namePart = rest.find((part) => part.startsWith('name='))
+  const filename = namePart
+    ? decodeURIComponent(namePart.slice('name='.length))
+    : undefined
+  return filename ? { roomId, filename } : { roomId }
 }
 
 export function clearLiveShareHash(): void {

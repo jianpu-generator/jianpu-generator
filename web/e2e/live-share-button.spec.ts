@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, type Page, test } from '@playwright/test'
 import { fileSwitcherTrigger } from './fileSwitcherHelpers'
 
 const FILE_STORE_KEY = 'jianpu:files:v1'
@@ -15,20 +15,23 @@ const LIVE_SOURCE = [
   '1 2 3 4',
 ].join('\n')
 
-test('a viewer opening the live link sees the current score immediately, before any owner edit', async ({
-  page,
-  context,
-}) => {
-  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+async function seedFileStore(
+  page: Page,
+  filename: string,
+  source: string,
+  fileId = 'live-test-id',
+): Promise<void> {
   await page.addInitScript(
     ({
       key,
       filename,
       source,
+      fileId,
     }: {
       key: string
       filename: string
       source: string
+      fileId: string
     }) => {
       localStorage.setItem(
         key,
@@ -36,12 +39,20 @@ test('a viewer opening the live link sees the current score immediately, before 
           active: filename,
           userFiles: { [filename]: source },
           bin: {},
-          fileIds: { [filename]: 'live-test-id' },
+          fileIds: { [filename]: fileId },
         }),
       )
     },
-    { key: FILE_STORE_KEY, filename: LIVE_FILENAME, source: LIVE_SOURCE },
+    { key: FILE_STORE_KEY, filename, source, fileId },
   )
+}
+
+test('a viewer opening the live link sees the current score immediately, before any owner edit', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await seedFileStore(page, LIVE_FILENAME, LIVE_SOURCE)
   await page.goto('/')
   await page.getByTestId('go-live-button').click()
   await expect(page.getByTestId('live-link-copied-toast')).toBeVisible()
@@ -63,33 +74,37 @@ test('a viewer opening the live link sees the current score immediately, before 
   expect(previewContent).toContain('Live Score')
 })
 
+test('the copied live link carries the filename as a human-readable name= param, and a viewer opening it still sees the score', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await seedFileStore(page, LIVE_FILENAME, LIVE_SOURCE)
+  await page.goto('/')
+  await page.getByTestId('go-live-button').click()
+  await expect(page.getByTestId('live-link-copied-toast')).toBeVisible()
+
+  const liveUrl = await page.evaluate(async () => {
+    return navigator.clipboard.readText()
+  })
+  expect(liveUrl).toContain(`name=${encodeURIComponent(LIVE_FILENAME)}`)
+
+  const viewerPage = await context.newPage()
+  await viewerPage.goto(liveUrl)
+  await viewerPage.waitForSelector('.preview-page', { timeout: 15_000 })
+  const previewContent = await viewerPage
+    .locator('.preview-page')
+    .first()
+    .innerHTML()
+  expect(previewContent).toContain('Live Score')
+})
+
 test('a viewer opening the live link does not get a ?file= param populated in the URL', async ({
   page,
   context,
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-  await page.addInitScript(
-    ({
-      key,
-      filename,
-      source,
-    }: {
-      key: string
-      filename: string
-      source: string
-    }) => {
-      localStorage.setItem(
-        key,
-        JSON.stringify({
-          active: filename,
-          userFiles: { [filename]: source },
-          bin: {},
-          fileIds: { [filename]: 'live-test-id' },
-        }),
-      )
-    },
-    { key: FILE_STORE_KEY, filename: LIVE_FILENAME, source: LIVE_SOURCE },
-  )
+  await seedFileStore(page, LIVE_FILENAME, LIVE_SOURCE)
   await page.goto('/')
   await page.getByTestId('go-live-button').click()
   await expect(page.getByTestId('live-link-copied-toast')).toBeVisible()
@@ -121,7 +136,7 @@ test('go live button copies a #live= link and shows a toast, then a dropdown off
     return navigator.clipboard.readText()
   })
   expect(liveUrl).toMatch(
-    /#live=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    /#live=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(&name=.+)?$/i,
   )
 
   // Once live, the trigger becomes a dropdown offering Copy / Stop.
@@ -146,28 +161,7 @@ test('stopping live ends the link for viewers, and going live again on the same 
   context,
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-  await page.addInitScript(
-    ({
-      key,
-      filename,
-      source,
-    }: {
-      key: string
-      filename: string
-      source: string
-    }) => {
-      localStorage.setItem(
-        key,
-        JSON.stringify({
-          active: filename,
-          userFiles: { [filename]: source },
-          bin: {},
-          fileIds: { [filename]: 'live-test-id' },
-        }),
-      )
-    },
-    { key: FILE_STORE_KEY, filename: LIVE_FILENAME, source: LIVE_SOURCE },
-  )
+  await seedFileStore(page, LIVE_FILENAME, LIVE_SOURCE)
   await page.goto('/')
   await page.getByTestId('go-live-button').click()
   await expect(page.getByTestId('live-link-copied-toast')).toBeVisible()
@@ -221,28 +215,7 @@ test('a viewer importing the live score clears the #live= hash and focuses the i
   browser,
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-  await page.addInitScript(
-    ({
-      key,
-      filename,
-      source,
-    }: {
-      key: string
-      filename: string
-      source: string
-    }) => {
-      localStorage.setItem(
-        key,
-        JSON.stringify({
-          active: filename,
-          userFiles: { [filename]: source },
-          bin: {},
-          fileIds: { [filename]: 'live-test-id' },
-        }),
-      )
-    },
-    { key: FILE_STORE_KEY, filename: LIVE_FILENAME, source: LIVE_SOURCE },
-  )
+  await seedFileStore(page, LIVE_FILENAME, LIVE_SOURCE)
   await page.goto('/')
   await page.getByTestId('go-live-button').click()
   await expect(page.getByTestId('live-link-copied-toast')).toBeVisible()
@@ -285,28 +258,7 @@ test('dragging across measures in a live viewer highlights them, even though the
     '',
     '[M] 1 - - -',
   ].join('\n')
-  await page.addInitScript(
-    ({
-      key,
-      filename,
-      source,
-    }: {
-      key: string
-      filename: string
-      source: string
-    }) => {
-      localStorage.setItem(
-        key,
-        JSON.stringify({
-          active: filename,
-          userFiles: { [filename]: source },
-          bin: {},
-          fileIds: { [filename]: 'live-drag-test-id' },
-        }),
-      )
-    },
-    { key: FILE_STORE_KEY, filename: dragFilename, source: dragSource },
-  )
+  await seedFileStore(page, dragFilename, dragSource, 'live-drag-test-id')
   await page.goto('/')
   await page.getByTestId('go-live-button').click()
   await expect(page.getByTestId('live-link-copied-toast')).toBeVisible()

@@ -125,8 +125,8 @@ export function useLiveOwner(
     localStorage.setItem(activeFlagKey(fileId), 'true')
     revisionRef.current = 0
     setIsActive(true)
-    return buildLiveShareUrl(current.roomId)
-  }, [fileId])
+    return buildLiveShareUrl(current.roomId, filename)
+  }, [fileId, filename])
 
   const stopLive = useCallback(() => {
     // Tell the server to mark the room ended *before* the socket closes
@@ -166,7 +166,7 @@ export function useLiveOwner(
 
   return {
     isLive: session !== null,
-    liveUrl: session ? buildLiveShareUrl(session.roomId) : null,
+    liveUrl: session ? buildLiveShareUrl(session.roomId, filename) : null,
     startLive,
     stopLive,
     broadcastContent,

@@ -44,4 +44,22 @@ describe('liveShareUrl', () => {
     const { ownerToken } = await deriveLiveIdentity(SECRET_A, 'file-a')
     expect(ownerToken).toMatch(/^[A-Za-z0-9_-]+$/)
   })
+
+  it('parses an optional name= param alongside the room id', async () => {
+    const { roomId } = await deriveLiveIdentity(SECRET_A, 'some-file-id')
+    expect(
+      parseLiveShareFromHash(
+        `#live=${roomId}&name=${encodeURIComponent('My Song.jianpu')}`,
+      ),
+    ).toEqual({ roomId, filename: 'My Song.jianpu' })
+  })
+
+  it('omits filename from the payload when name= is absent', async () => {
+    const { roomId } = await deriveLiveIdentity(SECRET_A, 'some-file-id')
+    expect(parseLiveShareFromHash(`#live=${roomId}`)).toEqual({ roomId })
+  })
+
+  it('still rejects a malformed room id even with a name= param', () => {
+    expect(parseLiveShareFromHash('#live=not-a-uuid&name=foo')).toBeNull()
+  })
 })
