@@ -175,3 +175,67 @@ test('dragging from the "A" entry to the "B" entry selects the merged range and 
   await expect(buttonA).toHaveClass(/section-jump-btn--dragging/)
   await expect(buttonB).toHaveClass(/section-jump-btn--dragging/)
 })
+
+// Touch equivalent of the drag test above. Real touchmove events (unlike
+// mouse) keep their `target` pinned to whatever element the touch started on,
+// so SequenceJumpToolbar resolves the button under the finger via
+// `document.elementFromPoint` instead of relying on onMouseEnter — dispatch
+// actual touch events (via CDP) to exercise that path directly.
+test('touch-dragging from the "A" entry to the "B" entry selects the merged range and highlights both buttons', async ({
+  page,
+}) => {
+  const buttons = sequenceToolbarButtons(page)
+  const buttonA = buttons.nth(0)
+  const buttonB = buttons.nth(1)
+
+  const fromBox = await buttonA.boundingBox()
+  const toBox = await buttonB.boundingBox()
+  if (!fromBox || !toBox) {
+    throw new Error('Could not get bounding boxes for sequence entry buttons.')
+  }
+
+  const fromPoint = {
+    x: fromBox.x + fromBox.width / 2,
+    y: fromBox.y + fromBox.height / 2,
+  }
+  const toPoint = {
+    x: toBox.x + toBox.width / 2,
+    y: toBox.y + toBox.height / 2,
+  }
+
+  const client = await page.context().newCDPSession(page)
+
+  await client.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [{ x: fromPoint.x, y: fromPoint.y }],
+  })
+  await expect(buttonA).toHaveClass(/section-jump-btn--dragging/, {
+    timeout: 3_000,
+  })
+
+  const steps = 10
+  for (let step = 1; step <= steps; step += 1) {
+    const x = fromPoint.x + ((toPoint.x - fromPoint.x) * step) / steps
+    const y = fromPoint.y + ((toPoint.y - fromPoint.y) * step) / steps
+    await client.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ x, y }],
+    })
+  }
+  await expect(buttonB).toHaveClass(/section-jump-btn--dragging/, {
+    timeout: 3_000,
+  })
+
+  await client.send('Input.dispatchTouchEvent', {
+    type: 'touchEnd',
+    touchPoints: [],
+  })
+
+  const playBtn = page.getByTestId('play-from-current-measure-button')
+  await expect(playBtn).toHaveAttribute(
+    'aria-label',
+    'Play sequence from Measure 1',
+  )
+  await expect(buttonA).toHaveClass(/section-jump-btn--dragging/)
+  await expect(buttonB).toHaveClass(/section-jump-btn--dragging/)
+})

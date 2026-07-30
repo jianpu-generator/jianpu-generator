@@ -55,6 +55,7 @@ export function SequenceJumpToolbar({
           className="workspace-toolbar-sections toolbar-scroll-list"
           style={{
             userSelect: dragStartIndex !== null ? 'none' : undefined,
+            touchAction: dragStartIndex !== null ? 'none' : undefined,
           }}
           onMouseDown={(e) => e.preventDefault()}
           onMouseUp={() => {
@@ -65,12 +66,36 @@ export function SequenceJumpToolbar({
             setDragStartIndex(null)
             setDragCurrentIndex(null)
           }}
+          onTouchMove={(e) => {
+            if (dragStartIndex === null) return
+            const touch = e.touches[0]
+            const target = document.elementFromPoint(
+              touch.clientX,
+              touch.clientY,
+            )
+            const indexAttr = target
+              ?.closest('[data-sequence-index]')
+              ?.getAttribute('data-sequence-index')
+            if (indexAttr === null || indexAttr === undefined) return
+            const index = Number(indexAttr)
+            setDragCurrentIndex(index)
+            handleSequenceEntryRangeSelect(dragStartIndex, index)
+          }}
+          onTouchEnd={() => {
+            setDragStartIndex(null)
+            setDragCurrentIndex(null)
+          }}
+          onTouchCancel={() => {
+            setDragStartIndex(null)
+            setDragCurrentIndex(null)
+          }}
         >
           {sequenceEntries.map((entry, index) => (
             <button
               // biome-ignore lint/suspicious/noArrayIndexKey: two entries (an omission and its later repeat) can share the same start_measure_index, so the array index is the only stable key
               key={index}
               type="button"
+              data-sequence-index={index}
               className={[
                 'section-jump-btn',
                 activeHighlightedIndices.has(index)
@@ -90,6 +115,11 @@ export function SequenceJumpToolbar({
                   setDragCurrentIndex(index)
                   handleSequenceEntryRangeSelect(dragStartIndex, index)
                 }
+              }}
+              onTouchStart={() => {
+                setDragStartIndex(index)
+                setDragCurrentIndex(index)
+                handleSequenceEntryClick(index)
               }}
             >
               {entry.label}

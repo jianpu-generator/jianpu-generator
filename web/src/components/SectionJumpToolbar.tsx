@@ -54,6 +54,7 @@ export function SectionJumpToolbar({
           className="workspace-toolbar-sections toolbar-scroll-list"
           style={{
             userSelect: dragStartLabel !== null ? 'none' : undefined,
+            touchAction: dragStartLabel !== null ? 'none' : undefined,
           }}
           onMouseDown={(e) => e.preventDefault()}
           onMouseUp={() => {
@@ -64,11 +65,34 @@ export function SectionJumpToolbar({
             setDragStartLabel(null)
             setDragCurrentLabel(null)
           }}
+          onTouchMove={(e) => {
+            if (dragStartLabel === null) return
+            const touch = e.touches[0]
+            const target = document.elementFromPoint(
+              touch.clientX,
+              touch.clientY,
+            )
+            const label = target
+              ?.closest('[data-section-label]')
+              ?.getAttribute('data-section-label')
+            if (!label) return
+            setDragCurrentLabel(label)
+            handleSectionRangeSelect(dragStartLabel, label)
+          }}
+          onTouchEnd={() => {
+            setDragStartLabel(null)
+            setDragCurrentLabel(null)
+          }}
+          onTouchCancel={() => {
+            setDragStartLabel(null)
+            setDragCurrentLabel(null)
+          }}
         >
           {sectionLabels.map((label) => (
             <button
               key={label}
               type="button"
+              data-section-label={label}
               className={[
                 'section-jump-btn',
                 activeHighlightedLabels.has(label)
@@ -88,6 +112,11 @@ export function SectionJumpToolbar({
                   setDragCurrentLabel(label)
                   handleSectionRangeSelect(dragStartLabel, label)
                 }
+              }}
+              onTouchStart={() => {
+                setDragStartLabel(label)
+                setDragCurrentLabel(label)
+                handleSectionJump(label)
               }}
             >
               {label}

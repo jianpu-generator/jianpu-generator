@@ -236,6 +236,79 @@ test('dragging between section buttons highlights them while dragging', async ({
   await expect(buttonB).toHaveClass(/section-jump-btn--dragging/)
 })
 
+// Touch equivalent of dragBetweenSectionButtons above. Real touchmove events
+// (unlike mouse) keep their `target` pinned to whatever element the touch
+// started on, so SectionJumpToolbar resolves the button under the finger via
+// `document.elementFromPoint` instead of relying on onMouseEnter — this drives
+// that path with actual dispatched touch events (via CDP) rather than mouse
+// events, so a regression to the elementFromPoint lookup would still be
+// caught even though mouse-based tests keep passing.
+async function dragBetweenSectionButtonsWithTouch(
+  page: import('@playwright/test').Page,
+  from: import('@playwright/test').Locator,
+  to: import('@playwright/test').Locator,
+) {
+  const fromBox = await from.boundingBox()
+  const toBox = await to.boundingBox()
+  if (!fromBox || !toBox) {
+    throw new Error('Could not get bounding boxes for section buttons.')
+  }
+
+  const fromPoint = {
+    x: fromBox.x + fromBox.width / 2,
+    y: fromBox.y + fromBox.height / 2,
+  }
+  const toPoint = {
+    x: toBox.x + toBox.width / 2,
+    y: toBox.y + toBox.height / 2,
+  }
+
+  const client = await page.context().newCDPSession(page)
+
+  await client.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [{ x: fromPoint.x, y: fromPoint.y }],
+  })
+  await expect(from).toHaveClass(/section-jump-btn--dragging/, {
+    timeout: 3_000,
+  })
+
+  const steps = 10
+  for (let step = 1; step <= steps; step += 1) {
+    const x = fromPoint.x + ((toPoint.x - fromPoint.x) * step) / steps
+    const y = fromPoint.y + ((toPoint.y - fromPoint.y) * step) / steps
+    await client.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ x, y }],
+    })
+  }
+  await expect(to).toHaveClass(/section-jump-btn--dragging/, {
+    timeout: 3_000,
+  })
+
+  await client.send('Input.dispatchTouchEvent', {
+    type: 'touchEnd',
+    touchPoints: [],
+  })
+}
+
+test('touch-dragging from section A button to section B button selects the merged range', async ({
+  page,
+}) => {
+  const buttonA = page.locator('button.section-jump-btn', { hasText: 'A' })
+  const buttonB = page.locator('button.section-jump-btn', { hasText: 'B' })
+
+  await dragBetweenSectionButtonsWithTouch(page, buttonA, buttonB)
+
+  await expect(page.getByTestId('selected-measure-range')).toHaveText('0-3', {
+    timeout: 3_000,
+  })
+
+  await expect
+    .poll(() => getEditorSelection(page), { timeout: 3_000 })
+    .toEqual({ startLineNumber: 8, endLineNumber: 16 })
+})
+
 // Section labels are also rendered inside the SVG preview itself (as a
 // `<g data-tag="section-label" data-section-label="…">` group) and are
 // clickable there via the same onMouseDown -> elementFromPoint lookup that
