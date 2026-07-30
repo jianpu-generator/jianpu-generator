@@ -150,10 +150,16 @@ export interface UseStorageBackendResult {
  * covered by "already saved" — that's instead handled by `flushPendingSave`,
  * which callers should invoke before changing the active file.
  */
+type ContentSnapshot = { active: string; content: string }
+
+function activeContentSnapshot(store: FileStoreState): ContentSnapshot {
+  return { active: store.active, content: fileContent(store, store.active) }
+}
+
 export function shouldScheduleAutosave(
   backendKind: StorageBackend['kind'],
-  previous: { active: string; content: string } | null,
-  next: { active: string; content: string },
+  previous: ContentSnapshot | null,
+  next: ContentSnapshot,
 ): boolean {
   if (backendKind !== 'github') return false
   if (!previous) return false
@@ -270,8 +276,13 @@ export function useStorageBackend(): UseStorageBackendResult {
   )
 
   const pendingSaveRef = useRef<Promise<void> | null>(null)
+  const lastContentRef = useRef<ContentSnapshot | null>(null)
   const runSave = useCallback(
     (state: FileStoreState) => {
+      // Mark accounted-for now — a same-content run of the scheduling effect
+      // below, delayed by React under load, could otherwise re-arm
+      // autosaveDeadline right after this clears it.
+      lastContentRef.current = activeContentSnapshot(state)
       setAutosaveDeadline(null)
       setSaveStatus('saving')
       const promise = backend
@@ -288,14 +299,8 @@ export function useStorageBackend(): UseStorageBackendResult {
   )
   const debouncedSave = useDebouncedCallback(runSave, AUTOSAVE_DEBOUNCE_MS)
 
-  const lastContentRef = useRef<{ active: string; content: string } | null>(
-    null,
-  )
   useEffect(() => {
-    const next = {
-      active: store.active,
-      content: fileContent(store, store.active),
-    }
+    const next = activeContentSnapshot(store)
     if (shouldScheduleAutosave(backend.kind, lastContentRef.current, next)) {
       debouncedSave(store)
       setAutosaveDeadline(Date.now() + AUTOSAVE_DEBOUNCE_MS)
@@ -352,10 +357,7 @@ export function useStorageBackend(): UseStorageBackendResult {
   const refreshSaveStatus = useCallback(
     (syncedStore?: FileStoreState) => {
       if (syncedStore) {
-        lastContentRef.current = {
-          active: syncedStore.active,
-          content: fileContent(syncedStore, syncedStore.active),
-        }
+        lastContentRef.current = activeContentSnapshot(syncedStore)
         setAutosaveDeadline(null)
       }
       setSaveStatus(displaySaveStatus(backend.status()))
