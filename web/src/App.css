@@ -104,6 +104,11 @@
 
 .pane--editor {
   background: var(--editor-bg);
+}
+
+/* Shared by `.pane--editor` and `.pane--preview`, which collapse to make
+   room for the other pane on mobile (see AppWorkspace.tsx). */
+.pane--collapsible {
   flex: 1 1 0%;
   overflow: hidden;
   opacity: 1;
@@ -113,7 +118,8 @@
     opacity 0.2s ease;
 }
 
-.pane--editor-collapsed {
+.pane--editor-collapsed,
+.pane--preview-collapsed {
   flex-grow: 0;
   flex-basis: 0;
   opacity: 0;
@@ -223,6 +229,30 @@
 .pane-divider-toggle-icon {
   display: inline-block;
   transition: transform 0.25s ease;
+}
+
+/* Mobile: stack panes vertically and show only one at a time (see
+   `pane--editor-collapsed` / `pane--preview-collapsed` in AppWorkspace.tsx). */
+@media (max-width: 768px) {
+  .workspace {
+    flex-direction: column;
+  }
+
+  .pane-divider {
+    width: auto;
+    height: 20px;
+  }
+
+  .pane-divider::before,
+  .pane-divider-toggle {
+    inset: 50% 0 auto 0;
+  }
+
+  .pane-divider-toggle {
+    transform: translateY(-50%);
+    width: auto;
+    height: 18px;
+  }
 }
 
 /* Editor */

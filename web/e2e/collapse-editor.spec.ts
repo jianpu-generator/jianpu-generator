@@ -35,7 +35,7 @@ test('hides the editor pane and expands the preview when toggled', async ({
   const editorPane = page.locator('.pane--editor')
   const toggleButton = page.locator('.pane-divider-toggle')
 
-  await expect(editorPane).toHaveClass(/pane--editor$/)
+  await expect(editorPane).not.toHaveClass(/pane--editor-collapsed/)
   const expandedWidth = await editorPane.evaluate(
     (el) => el.getBoundingClientRect().width,
   )

@@ -1,6 +1,7 @@
 import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import type { RefObject } from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { MOBILE_BREAKPOINT_QUERY, useMediaQuery } from '../hooks/useMediaQuery'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -130,12 +131,34 @@ export function AppWorkspace({
   noPartsSelected,
 }: AppWorkspaceProps) {
   const [editorPaneEl, setEditorPaneEl] = useState<HTMLDivElement | null>(null)
+  const isMobile = useMediaQuery(MOBILE_BREAKPOINT_QUERY)
+  // Below the mobile breakpoint only one pane is visible at a time, so
+  // showing the editor must collapse the preview instead of sitting beside it.
+  const previewCollapsed = isMobile && !hideEditor && !editorCollapsed
+  // On mobile the divider sits between a stacked editor (above) and preview
+  // (below), so the chevron points up/down instead of left/right.
+  const toggleIconRotationDeg = isMobile
+    ? editorCollapsed
+      ? -90
+      : 90
+    : editorCollapsed
+      ? 180
+      : 0
+
+  // Default to showing the preview on mobile, where only one pane fits.
+  useEffect(() => {
+    if (window.matchMedia(MOBILE_BREAKPOINT_QUERY).matches) {
+      setEditorCollapsed(() => true)
+    }
+  }, [setEditorCollapsed])
+
   return (
     <main className="workspace">
       <section
         className={[
           'pane',
           'pane--editor',
+          'pane--collapsible',
           editorCollapsed ? 'pane--editor-collapsed' : '',
         ]
           .filter(Boolean)
@@ -204,7 +227,7 @@ export function AppWorkspace({
             <span
               className="pane-divider-toggle-icon"
               style={{
-                transform: editorCollapsed ? 'rotate(180deg)' : 'none',
+                transform: `rotate(${toggleIconRotationDeg}deg)`,
               }}
               aria-hidden="true"
             >
@@ -213,7 +236,16 @@ export function AppWorkspace({
           </button>
         )}
       </div>
-      <section className="pane pane--preview">
+      <section
+        className={[
+          'pane',
+          'pane--preview',
+          'pane--collapsible',
+          previewCollapsed ? 'pane--preview-collapsed' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
         <Preview
           documents={documents}
           highlightedDocuments={highlightedDocuments}
