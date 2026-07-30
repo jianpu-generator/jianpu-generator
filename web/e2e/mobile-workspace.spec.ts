@@ -50,6 +50,25 @@ test('shows only the preview by default below the mobile breakpoint', async ({
   await expect(toggleIcon).toHaveCSS('transform', 'matrix(0, -1, 1, 0, 0, 0)')
 })
 
+test('header scrolls horizontally instead of wrapping to a new row', async ({
+  page,
+}) => {
+  const header = page.locator('.app-header')
+
+  const { scrollWidth, clientHeight } = await header.evaluate((el) => ({
+    scrollWidth: el.scrollWidth,
+    clientHeight: el.getBoundingClientRect().height,
+  }))
+
+  // On a 375px-wide viewport the header's content (title, playback buttons,
+  // file switcher, export controls) is wider than the viewport, so it only
+  // fits without wrapping if it overflows horizontally instead.
+  expect(scrollWidth).toBeGreaterThan(375)
+  // A single, non-wrapped row stays well under the height a two-row wrap
+  // would produce.
+  expect(clientHeight).toBeLessThan(60)
+})
+
 test('toggling swaps to the editor and hides the preview', async ({ page }) => {
   const editorPane = page.locator('.pane--editor')
   const previewPane = page.locator('.pane--preview')

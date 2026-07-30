@@ -218,7 +218,6 @@
     color 0.15s ease,
     border-color 0.15s ease;
 }
-
 .pane-divider-toggle:hover {
   background: var(--accent);
   color: #fff;
@@ -252,6 +251,20 @@
     width: auto;
     height: 18px;
   }
+
+  .app-header {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-header > * {
+    flex-shrink: 0;
+  }
+
+  .app-header-actions {
+    flex-wrap: nowrap;
+  }
 }
 
 /* Editor */
@@ -278,7 +291,6 @@
 .codelens-decoration {
   font-size: 16px;
 }
-
 .codelens-decoration a {
   color: #2563eb;
   text-decoration: underline;
@@ -294,13 +306,11 @@
   border-top: 1px solid color-mix(in srgb, var(--error) 20%, transparent);
   font-size: 0.8rem;
 }
-
 .editor-error-zone hr {
   border: none;
   border-top: 1px solid color-mix(in srgb, var(--error) 15%, transparent);
   margin: 0.35rem 0;
 }
-
 .editor-error-zone-message {
   color: var(--error);
   font-weight: 500;
@@ -324,7 +334,6 @@
   border-top: 1px solid color-mix(in srgb, var(--warning) 20%, transparent);
   font-size: 0.8rem;
 }
-
 .editor-warning-zone hr {
   border: none;
   border-top: 1px solid color-mix(in srgb, var(--warning) 15%, transparent);
@@ -353,11 +362,9 @@
   height: 24px;
   white-space: nowrap;
 }
-
 .section-jump-btn:hover {
   background: #f0f0f0;
 }
-
 .section-jump-btn--dragging {
   background: #dbeafe;
   border-color: #3b82f6;
@@ -379,7 +386,6 @@
   z-index: 2000;
   outline: none;
 }
-
 .export-audio-toast {
   display: flex;
   align-items: center;
