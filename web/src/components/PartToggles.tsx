@@ -72,9 +72,21 @@ export function PartToggles({
               return (
                 <li key={part.abbreviation}>
                   <div className="part-toggle-pill">
-                    <span className="part-toggle-abbr">
-                      {part.abbreviation}
-                    </span>
+                    <Tooltip.Root>
+                      <Tooltip.Trigger asChild>
+                        <span className="part-toggle-abbr">
+                          {part.abbreviation}
+                        </span>
+                      </Tooltip.Trigger>
+                      <Tooltip.Portal>
+                        <Tooltip.Content
+                          className="part-toggle-tooltip-content"
+                          sideOffset={4}
+                        >
+                          {part.display_name}
+                        </Tooltip.Content>
+                      </Tooltip.Portal>
+                    </Tooltip.Root>
 
                     <Tooltip.Root>
                       <Tooltip.Trigger asChild>
