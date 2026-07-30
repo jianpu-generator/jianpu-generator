@@ -83,7 +83,6 @@
 .workspace-toolbar-sections {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: 0.25rem;
   flex-shrink: 1;
 }

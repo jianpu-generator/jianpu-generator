@@ -1,6 +1,6 @@
 .part-toggles {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.5rem 0.75rem;
   margin: 0;
@@ -31,11 +31,23 @@
 
 .part-toggles-list {
   display: flex;
-  flex-wrap: wrap;
   gap: 0.35rem 0.75rem;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.part-toggles-list > li {
+  flex-shrink: 0;
+}
+
+/* Shared by toolbar item lists (see SequenceJumpToolbar/SectionJumpToolbar
+   too): scroll horizontally instead of wrapping. */
+.toolbar-scroll-list {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
 }
 
 /* Segmented pill */

@@ -52,7 +52,7 @@ export function SequenceJumpToolbar({
       {collapsed ? null : (
         <div
           role="toolbar"
-          className="workspace-toolbar-sections"
+          className="workspace-toolbar-sections toolbar-scroll-list"
           style={{
             userSelect: dragStartIndex !== null ? 'none' : undefined,
           }}

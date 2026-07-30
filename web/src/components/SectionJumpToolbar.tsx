@@ -51,7 +51,7 @@ export function SectionJumpToolbar({
       {collapsed ? null : (
         <div
           role="toolbar"
-          className="workspace-toolbar-sections"
+          className="workspace-toolbar-sections toolbar-scroll-list"
           style={{
             userSelect: dragStartLabel !== null ? 'none' : undefined,
           }}

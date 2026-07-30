@@ -63,7 +63,7 @@ export function PartToggles({
           Parts
         </button>
         {collapsed ? null : (
-          <ul className="part-toggles-list">
+          <ul className="part-toggles-list toolbar-scroll-list">
             {parts.map((part) => {
               const enabled = !disabledParts.has(part.abbreviation)
               const lyricsEnabled = !disabledLyrics.has(part.abbreviation)
