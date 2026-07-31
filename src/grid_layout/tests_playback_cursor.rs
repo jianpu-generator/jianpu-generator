@@ -96,6 +96,8 @@ fn test_render_config() -> RenderConfig {
         note_number_width: 8,
         part_label_width_pt: 40,
         lyrics_font_size: 14,
+        notes_font_size: 14,
+        chords_font_size: 14,
         hide_system_dividers: false,
         directive_row_offset: Offset::default(),
     }

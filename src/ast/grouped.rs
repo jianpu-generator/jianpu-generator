@@ -46,6 +46,10 @@ pub struct Metadata {
     pub parts_list_columns: u32,
     /// Lyrics font size in points. Default: 60% of row_height.
     pub lyrics_font_size: u32,
+    /// Note head/rest/percussion-hit/tuplet-bracket font size in points. Default: `lyrics_font_size`.
+    pub notes_font_size: u32,
+    /// Chord symbol font size in points. Default: `lyrics_font_size`.
+    pub chords_font_size: u32,
     /// Score-wide default for `merge_duplicate_measures_across_parts=`: when `false`,
     /// identical measure rows from different parts are no longer merged into one row
     /// (see `consolidator::consolidate`). Default: `true`. A `merge_duplicate_measures_across_parts=`

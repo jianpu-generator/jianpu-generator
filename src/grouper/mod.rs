@@ -122,6 +122,9 @@ fn compute_global_resolution_multipliers(tracks: &[ParsedTrack]) -> Vec<u32> {
 /// Fills in each unset `metadata` field with its documented default.
 fn resolve_metadata(metadata: ParsedMetadata) -> Metadata {
     let row_height = metadata.row_height.unwrap_or(DEFAULT_ROW_HEIGHT);
+    let lyrics_font_size = metadata
+        .lyrics_font_size
+        .unwrap_or_else(|| default_lyrics_font_size(row_height));
     Metadata {
         title: metadata.title,
         subtitle: metadata.subtitle,
@@ -139,9 +142,9 @@ fn resolve_metadata(metadata: ParsedMetadata) -> Metadata {
         parts_list_columns: metadata
             .parts_list_columns
             .unwrap_or(DEFAULT_PARTS_LIST_COLUMNS),
-        lyrics_font_size: metadata
-            .lyrics_font_size
-            .unwrap_or_else(|| default_lyrics_font_size(row_height)),
+        lyrics_font_size,
+        notes_font_size: metadata.notes_font_size.unwrap_or(lyrics_font_size),
+        chords_font_size: metadata.chords_font_size.unwrap_or(lyrics_font_size),
         merge_duplicate_measures_across_parts: metadata
             .merge_duplicate_measures_across_parts
             .unwrap_or(DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS),

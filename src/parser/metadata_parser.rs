@@ -94,6 +94,8 @@ struct MetadataAccumulator {
     part_label_width_pt: Option<u32>,
     parts_list_columns: Option<u32>,
     lyrics_font_size: Option<u32>,
+    notes_font_size: Option<u32>,
+    chords_font_size: Option<u32>,
     merge_duplicate_measures_across_parts: Option<bool>,
     hide_resting_parts: Option<bool>,
     hide_system_dividers: Option<bool>,
@@ -138,6 +140,12 @@ impl MetadataAccumulator {
             }
             "lyrics_font_size" => {
                 parse_numeric_field(&mut self.lyrics_font_size, key, value, value_span, errors)
+            }
+            "notes_font_size" => {
+                parse_numeric_field(&mut self.notes_font_size, key, value, value_span, errors)
+            }
+            "chords_font_size" => {
+                parse_numeric_field(&mut self.chords_font_size, key, value, value_span, errors)
             }
             "merge_duplicate_measures_across_parts" => parse_bool_field(
                 &mut self.merge_duplicate_measures_across_parts,
@@ -214,6 +222,8 @@ pub fn parse_metadata(
             part_label_width_pt: accumulator.part_label_width_pt,
             parts_list_columns: accumulator.parts_list_columns,
             lyrics_font_size: accumulator.lyrics_font_size,
+            notes_font_size: accumulator.notes_font_size,
+            chords_font_size: accumulator.chords_font_size,
             merge_duplicate_measures_across_parts: accumulator
                 .merge_duplicate_measures_across_parts,
             hide_resting_parts: accumulator.hide_resting_parts,

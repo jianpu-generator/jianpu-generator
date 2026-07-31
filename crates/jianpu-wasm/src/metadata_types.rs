@@ -17,6 +17,8 @@ pub struct MetadataDefaultsOut {
     pub part_label_width_pt: u32,
     pub parts_list_columns: u32,
     pub lyrics_font_size: u32,
+    pub notes_font_size: u32,
+    pub chords_font_size: u32,
     pub merge_duplicate_measures_across_parts: bool,
     pub hide_resting_parts: bool,
     pub hide_system_dividers: bool,
@@ -26,13 +28,16 @@ pub struct MetadataDefaultsOut {
 
 impl Default for MetadataDefaultsOut {
     fn default() -> Self {
+        let lyrics_font_size = default_lyrics_font_size(DEFAULT_ROW_HEIGHT);
         MetadataDefaultsOut {
             row_height: DEFAULT_ROW_HEIGHT,
             max_measures_per_system: DEFAULT_MAX_MEASURES_PER_SYSTEM,
             note_number_width: DEFAULT_NOTE_NUMBER_WIDTH,
             part_label_width_pt: DEFAULT_PART_LABEL_WIDTH_PT,
             parts_list_columns: DEFAULT_PARTS_LIST_COLUMNS,
-            lyrics_font_size: default_lyrics_font_size(DEFAULT_ROW_HEIGHT),
+            lyrics_font_size,
+            notes_font_size: lyrics_font_size,
+            chords_font_size: lyrics_font_size,
             merge_duplicate_measures_across_parts: DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
             hide_resting_parts: DEFAULT_HIDE_RESTING_PARTS,
             hide_system_dividers: DEFAULT_HIDE_SYSTEM_DIVIDERS,

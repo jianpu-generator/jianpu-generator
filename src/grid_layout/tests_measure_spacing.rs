@@ -16,17 +16,19 @@ fn test_config() -> RenderConfig {
         part_label_width_pt: 40,
         max_measures_per_system: 48,
         lyrics_font_size: 18,
+        notes_font_size: 18,
+        chords_font_size: 18,
         hide_system_dividers: false,
         directive_row_offset: Offset::default(),
     }
 }
 
 /// Real rendered width of a single notehead/rest/percussion-hit digit glyph
-/// at `config`'s lyric font size — the ground-truth unit `measure_column_weights`/
+/// at `config`'s notes font size — the ground-truth unit `measure_column_weights`/
 /// `build_measure_column_layout` now weigh a fresh note-onset column in,
 /// mirroring `layout_spacing::note_glyph_weight`.
 fn notehead_weight(config: &RenderConfig) -> f32 {
-    font_metrics::monospace_char_advance_width('0', config.lyric_font_size())
+    font_metrics::monospace_char_advance_width('0', config.notes_font_size())
 }
 
 /// Real rendered width of the note-dash glyph at its own fixed font size,

@@ -41,6 +41,18 @@ Also affects how far a syllable is allowed to shift horizontally to avoid overla
 
 Defaults to \`row_height × 0.6\` when unset.`,
 
+  notes_font_size: `Font size (points) of note heads, rests, percussion hits, and tuplet brackets.
+
+Also affects the width allotted to a note column, since these glyphs render as monospace characters.
+
+Defaults to \`lyrics_font_size\` when unset.`,
+
+  chords_font_size: `Font size (points) of chord symbol text.
+
+Also affects the width allotted to a chord symbol's column.
+
+Defaults to \`lyrics_font_size\` when unset.`,
+
   merge_duplicate_measures_across_parts: `When on, measures with identical content across different parts are drawn as a single merged row instead of one row per part.
 
 Can be overridden from a specific measure onward with a

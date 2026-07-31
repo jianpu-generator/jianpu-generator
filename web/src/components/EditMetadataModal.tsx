@@ -64,6 +64,11 @@ export function EditMetadataModal({
 
   const d = defaults
 
+  // notes_font_size/chords_font_size default to the *effective* lyrics font
+  // size — either the explicit override or its own row_height-derived default.
+  const effectiveLyricsFontSize =
+    metadata.lyrics_font_size ?? lyricsFontSizeDefault
+
   const setText =
     (key: MetadataKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
       onFieldChange(key, e.target.value === '' ? null : e.target.value)
@@ -229,6 +234,30 @@ export function EditMetadataModal({
                       : undefined
                   }
                   onChange={setNumber('lyrics_font_size')}
+                />
+                <NumberFieldRow
+                  label="Notes Font Size"
+                  help={metadataFieldHelp.notes_font_size}
+                  onShowHelp={showHelp}
+                  value={metadata.notes_font_size ?? ''}
+                  placeholder={
+                    effectiveLyricsFontSize !== null
+                      ? String(effectiveLyricsFontSize)
+                      : undefined
+                  }
+                  onChange={setNumber('notes_font_size')}
+                />
+                <NumberFieldRow
+                  label="Chords Font Size"
+                  help={metadataFieldHelp.chords_font_size}
+                  onShowHelp={showHelp}
+                  value={metadata.chords_font_size ?? ''}
+                  placeholder={
+                    effectiveLyricsFontSize !== null
+                      ? String(effectiveLyricsFontSize)
+                      : undefined
+                  }
+                  onChange={setNumber('chords_font_size')}
                 />
                 <CheckboxFieldRow
                   label="Merge Duplicate Measures Across Parts"

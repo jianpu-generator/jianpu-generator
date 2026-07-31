@@ -9,6 +9,8 @@ pub struct RenderConfig {
     pub part_label_width_pt: u32,
     pub max_measures_per_system: u32,
     pub lyrics_font_size: u32,
+    pub notes_font_size: u32,
+    pub chords_font_size: u32,
     pub hide_system_dividers: bool,
     pub directive_row_offset: Offset,
 }
@@ -21,6 +23,8 @@ impl RenderConfig {
             part_label_width_pt: meta.part_label_width_pt,
             max_measures_per_system: meta.max_measures_per_system,
             lyrics_font_size: meta.lyrics_font_size,
+            notes_font_size: meta.notes_font_size,
+            chords_font_size: meta.chords_font_size,
             hide_system_dividers: meta.hide_system_dividers,
             directive_row_offset: meta.directive_row_offset,
         }
@@ -43,6 +47,16 @@ impl RenderConfig {
             cjk: self.lyric_cjk_font_size(),
         }
     }
+
+    /// Font size used for note heads, rests, percussion hits, and tuplet brackets.
+    pub fn notes_font_size(&self) -> f32 {
+        self.notes_font_size as f32
+    }
+
+    /// Font size used for chord symbols.
+    pub fn chords_font_size(&self) -> f32 {
+        self.chords_font_size as f32
+    }
 }
 
 #[cfg(test)]
@@ -62,6 +76,8 @@ mod tests {
             max_measures_per_system: 6,
             parts_list_columns: 3,
             lyrics_font_size: 18,
+            notes_font_size: 18,
+            chords_font_size: 18,
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
             hide_system_dividers: false,

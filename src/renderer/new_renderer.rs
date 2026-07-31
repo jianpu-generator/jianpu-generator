@@ -22,23 +22,26 @@ pub fn render_new(pages: &[AbsolutePage], config: &RenderConfig) -> Vec<SvgDocum
 
 fn render_page(page: &AbsolutePage, config: &RenderConfig) -> SvgDocument {
     let row_height = config.row_height as f32;
-    let base_font_size = config.lyric_font_size();
+    let lyric_font_size = config.lyric_font_size();
     let cjk_font_size = config.lyric_cjk_font_size();
+    let notes_font_size = config.notes_font_size();
+    let chords_font_size = config.chords_font_size();
     let note_number_width = config.note_number_width as f32;
+
+    let params = RenderElementParams {
+        row_height,
+        lyric_font_size,
+        cjk_font_size,
+        notes_font_size,
+        chords_font_size,
+        note_number_width,
+        directive_row_offset: config.directive_row_offset,
+    };
 
     let elements = page
         .elements
         .iter()
-        .flat_map(|elem| {
-            render_element(
-                elem,
-                &row_height,
-                &base_font_size,
-                &cjk_font_size,
-                &note_number_width,
-                config.directive_row_offset,
-            )
-        })
+        .flat_map(|elem| render_element(elem, &params))
         .collect();
 
     SvgDocument {
@@ -48,14 +51,26 @@ fn render_page(page: &AbsolutePage, config: &RenderConfig) -> SvgDocument {
     }
 }
 
-fn render_element(
-    elem: &AbsoluteElement,
-    row_height: &f32,
-    base_font_size: &f32,
-    cjk_font_size: &f32,
-    note_number_width: &f32,
+struct RenderElementParams {
+    row_height: f32,
+    lyric_font_size: f32,
+    cjk_font_size: f32,
+    notes_font_size: f32,
+    chords_font_size: f32,
+    note_number_width: f32,
     directive_row_offset: Offset,
-) -> Vec<SvgElement> {
+}
+
+fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<SvgElement> {
+    let RenderElementParams {
+        row_height,
+        lyric_font_size,
+        cjk_font_size,
+        notes_font_size,
+        chords_font_size,
+        note_number_width,
+        directive_row_offset,
+    } = params;
     match &elem.content {
         AbsoluteContent::NoteHead {
             pitch,
@@ -70,35 +85,39 @@ fn render_element(
             *dotted,
             &NoteRenderParams {
                 row_height,
-                base_font_size,
+                base_font_size: notes_font_size,
                 note_number_width,
             },
         ),
-        AbsoluteContent::Rest { dotted } => {
-            render_rest(elem, *dotted, row_height, base_font_size, note_number_width)
-        }
+        AbsoluteContent::Rest { dotted } => render_rest(
+            elem,
+            *dotted,
+            row_height,
+            notes_font_size,
+            note_number_width,
+        ),
         AbsoluteContent::NoteDash { dotted } => {
             render_note_dash(elem, *dotted, row_height, note_number_width)
         }
         AbsoluteContent::MultiMeasureRest { count, width } => {
-            render_multi_measure_rest(elem, *count, *width, row_height, base_font_size)
+            render_multi_measure_rest(elem, *count, *width, row_height, notes_font_size)
         }
         AbsoluteContent::ChordSymbol { text, dotted } => {
-            render_chord_symbol(elem, text, *dotted, row_height, base_font_size)
+            render_chord_symbol(elem, text, *dotted, row_height, chords_font_size)
         }
-        AbsoluteContent::PercussionHit => render_percussion_hit(elem, base_font_size),
+        AbsoluteContent::PercussionHit => render_percussion_hit(elem, notes_font_size),
         AbsoluteContent::Underline { width, level: _ } => render_underline(elem, width),
         AbsoluteContent::TieOrSlur { kind: _, width } => {
             render_tie_or_slur(elem, width, row_height)
         }
         AbsoluteContent::TupletBracket { label, width } => {
-            render_tuplet_bracket(elem, label, *width, row_height, base_font_size)
+            render_tuplet_bracket(elem, label, *width, row_height, notes_font_size)
         }
         AbsoluteContent::BarLine { height } => render_bar_line(elem, height),
         AbsoluteContent::HorizontalLine { width } => render_horizontal_line(elem, width),
-        AbsoluteContent::Lyric(s) => render_lyric(elem, s, base_font_size, cjk_font_size),
-        AbsoluteContent::LyricLine(s) => render_lyric_line(elem, s, base_font_size, cjk_font_size),
-        content => render_overlay_element(elem, content, directive_row_offset),
+        AbsoluteContent::Lyric(s) => render_lyric(elem, s, lyric_font_size, cjk_font_size),
+        AbsoluteContent::LyricLine(s) => render_lyric_line(elem, s, lyric_font_size, cjk_font_size),
+        content => render_overlay_element(elem, content, *directive_row_offset),
     }
 }
 

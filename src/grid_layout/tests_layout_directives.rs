@@ -74,6 +74,8 @@ fn cfg_wide() -> RenderConfig {
         part_label_width_pt: 40,
         max_measures_per_system: 48,
         lyrics_font_size: 18,
+        notes_font_size: 18,
+        chords_font_size: 18,
         hide_system_dividers: false,
         directive_row_offset: Offset::default(),
     }

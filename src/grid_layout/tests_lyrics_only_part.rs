@@ -11,6 +11,8 @@ fn test_config() -> RenderConfig {
         part_label_width_pt: 40,
         max_measures_per_system: 48,
         lyrics_font_size: 18,
+        notes_font_size: 18,
+        chords_font_size: 18,
         hide_system_dividers: false,
         directive_row_offset: Offset::default(),
     }
@@ -120,6 +122,6 @@ fn measure_weight_is_max_of_notes_and_lyrics() {
 
     // Sanity: the lyric weight really is real text width, not a flat constant.
     let note_glyph_weight =
-        font_metrics::monospace_char_advance_width('0', config.lyric_font_size());
+        font_metrics::monospace_char_advance_width('0', config.notes_font_size());
     assert!(mixed_layout.weight > note_glyph_weight * 2.0);
 }

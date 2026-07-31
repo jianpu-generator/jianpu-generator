@@ -16,6 +16,8 @@ fn metadata() -> Metadata {
         part_label_width_pt: 40,
         parts_list_columns: 3,
         lyrics_font_size: 14,
+        notes_font_size: 14,
+        chords_font_size: 14,
         merge_duplicate_measures_across_parts: true,
         hide_resting_parts: true,
         hide_system_dividers: false,

@@ -8,6 +8,8 @@ export type MetadataKey =
   | 'part_label_width_pt'
   | 'parts_list_columns'
   | 'lyrics_font_size'
+  | 'notes_font_size'
+  | 'chords_font_size'
   | 'merge_duplicate_measures_across_parts'
   | 'hide_resting_parts'
   | 'hide_system_dividers'
@@ -23,6 +25,8 @@ export interface ParsedMetadataFields {
   part_label_width_pt: number | null
   parts_list_columns: number | null
   lyrics_font_size: number | null
+  notes_font_size: number | null
+  chords_font_size: number | null
   merge_duplicate_measures_across_parts: boolean | null
   hide_resting_parts: boolean | null
   hide_system_dividers: boolean | null
@@ -36,6 +40,8 @@ const numericKeys: MetadataKey[] = [
   'part_label_width_pt',
   'parts_list_columns',
   'lyrics_font_size',
+  'notes_font_size',
+  'chords_font_size',
 ]
 
 const unquotedKeys: MetadataKey[] = [
@@ -56,6 +62,8 @@ const canonicalKeyOrder: MetadataKey[] = [
   'part_label_width_pt',
   'parts_list_columns',
   'lyrics_font_size',
+  'notes_font_size',
+  'chords_font_size',
   'merge_duplicate_measures_across_parts',
   'hide_resting_parts',
   'hide_system_dividers',
@@ -136,6 +144,8 @@ export function parseMetadata(source: string): ParsedMetadataFields {
     part_label_width_pt: null,
     parts_list_columns: null,
     lyrics_font_size: null,
+    notes_font_size: null,
+    chords_font_size: null,
     merge_duplicate_measures_across_parts: null,
     hide_resting_parts: null,
     hide_system_dividers: null,
@@ -175,6 +185,16 @@ export function parseMetadata(source: string): ParsedMetadataFields {
   if (fieldMap.has('lyrics_font_size'))
     result.lyrics_font_size = parseInt(
       fieldMap.get('lyrics_font_size') as string,
+      10,
+    )
+  if (fieldMap.has('notes_font_size'))
+    result.notes_font_size = parseInt(
+      fieldMap.get('notes_font_size') as string,
+      10,
+    )
+  if (fieldMap.has('chords_font_size'))
+    result.chords_font_size = parseInt(
+      fieldMap.get('chords_font_size') as string,
       10,
     )
   if (fieldMap.has('merge_duplicate_measures_across_parts'))

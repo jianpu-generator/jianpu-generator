@@ -19,13 +19,13 @@ pub(crate) const MIN_MEASURE_WIDTH_PT: f32 = 24.0;
 const THIN_MARK_WEIGHT: f32 = 0.25;
 
 /// Real advance width (in points) of one notehead/rest/percussion-hit digit
-/// glyph at `config`'s lyric font size — the unit every other weight below
+/// glyph at `config`'s notes font size — the unit every other weight below
 /// is expressed in relative terms of, since notehead/rest/percussion glyphs
 /// all render as a single monospace character (see `render_note_head`/
 /// `render_rest`/`render_percussion_hit` in `glyph_renderers.rs`), so any one
 /// of their digits/`0`/`x` characters measures the same.
 fn note_glyph_weight(config: &RenderConfig) -> f32 {
-    font_metrics::monospace_char_advance_width('0', config.lyric_font_size())
+    font_metrics::monospace_char_advance_width('0', config.notes_font_size())
 }
 
 /// Extra weight given to a dotted column (`NoteHead`, `Rest`, `ChordSymbol`,
@@ -52,7 +52,7 @@ fn dash_weight() -> f32 {
 /// single-character chord (e.g. `1`) keeps the same weight as any other
 /// note-like event.
 fn chord_symbol_weight(symbol: &str, config: &RenderConfig) -> f32 {
-    font_metrics::monospace_text_width(symbol, config.lyric_font_size())
+    font_metrics::monospace_text_width(symbol, config.chords_font_size())
         .max(note_glyph_weight(config))
 }
 
