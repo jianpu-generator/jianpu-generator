@@ -14,6 +14,7 @@ export type MetadataKey =
   | 'subtitle_font_size'
   | 'author_font_size'
   | 'sequence_font_size'
+  | 'part_legend_font_size'
   | 'merge_duplicate_measures_across_parts'
   | 'hide_resting_parts'
   | 'hide_system_dividers'
@@ -35,6 +36,7 @@ export interface ParsedMetadataFields {
   subtitle_font_size: number | null
   author_font_size: number | null
   sequence_font_size: number | null
+  part_legend_font_size: number | null
   merge_duplicate_measures_across_parts: boolean | null
   hide_resting_parts: boolean | null
   hide_system_dividers: boolean | null
@@ -54,6 +56,7 @@ const numericKeys: MetadataKey[] = [
   'subtitle_font_size',
   'author_font_size',
   'sequence_font_size',
+  'part_legend_font_size',
 ]
 
 const unquotedKeys: MetadataKey[] = [
@@ -80,6 +83,7 @@ const canonicalKeyOrder: MetadataKey[] = [
   'subtitle_font_size',
   'author_font_size',
   'sequence_font_size',
+  'part_legend_font_size',
   'merge_duplicate_measures_across_parts',
   'hide_resting_parts',
   'hide_system_dividers',
@@ -166,6 +170,7 @@ export function parseMetadata(source: string): ParsedMetadataFields {
     subtitle_font_size: null,
     author_font_size: null,
     sequence_font_size: null,
+    part_legend_font_size: null,
     merge_duplicate_measures_across_parts: null,
     hide_resting_parts: null,
     hide_system_dividers: null,
@@ -235,6 +240,11 @@ export function parseMetadata(source: string): ParsedMetadataFields {
   if (fieldMap.has('sequence_font_size'))
     result.sequence_font_size = parseInt(
       fieldMap.get('sequence_font_size') as string,
+      10,
+    )
+  if (fieldMap.has('part_legend_font_size'))
+    result.part_legend_font_size = parseInt(
+      fieldMap.get('part_legend_font_size') as string,
       10,
     )
   if (fieldMap.has('merge_duplicate_measures_across_parts'))

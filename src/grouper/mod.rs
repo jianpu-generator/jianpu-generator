@@ -1,7 +1,7 @@
 use crate::ast::grouped::{
-    default_author_font_size, default_lyrics_font_size, default_subtitle_font_size,
-    default_title_font_size, GroupedScore, GroupedTrack, Metadata, Score,
-    DEFAULT_DIRECTIVE_ROW_OFFSET, DEFAULT_HIDE_RESTING_PARTS, DEFAULT_HIDE_SYSTEM_DIVIDERS,
+    default_author_font_size, default_lyrics_font_size, default_part_legend_font_size,
+    default_subtitle_font_size, default_title_font_size, GroupedScore, GroupedTrack, Metadata,
+    Score, DEFAULT_DIRECTIVE_ROW_OFFSET, DEFAULT_HIDE_RESTING_PARTS, DEFAULT_HIDE_SYSTEM_DIVIDERS,
     DEFAULT_MAX_MEASURES_PER_SYSTEM, DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
     DEFAULT_NOTE_NUMBER_WIDTH, DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_PART_LABEL_WIDTH_PT,
     DEFAULT_ROW_HEIGHT, DEFAULT_SEQUENCE_FONT_SIZE,
@@ -158,6 +158,9 @@ fn resolve_metadata(metadata: ParsedMetadata) -> Metadata {
         sequence_font_size: metadata
             .sequence_font_size
             .unwrap_or(DEFAULT_SEQUENCE_FONT_SIZE),
+        part_legend_font_size: metadata
+            .part_legend_font_size
+            .unwrap_or_else(|| default_part_legend_font_size(row_height)),
         merge_duplicate_measures_across_parts: metadata
             .merge_duplicate_measures_across_parts
             .unwrap_or(DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS),

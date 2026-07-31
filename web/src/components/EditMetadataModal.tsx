@@ -4,6 +4,7 @@ import type { MetadataDefaults } from '../utils/metadataDefaults'
 import {
   defaultAuthorFontSize,
   defaultLyricsFontSize,
+  defaultPartLegendFontSize,
   defaultSubtitleFontSize,
   defaultTitleFontSize,
   loadMetadataDefaults,
@@ -57,6 +58,9 @@ export function EditMetadataModal({
   const [authorFontSizeDefault, setAuthorFontSizeDefault] = useState<
     number | null
   >(null)
+  const [partLegendFontSizeDefault, setPartLegendFontSizeDefault] = useState<
+    number | null
+  >(null)
   const [helpContent, setHelpContent] = useState<{
     label: string
     help: string
@@ -75,6 +79,9 @@ export function EditMetadataModal({
     defaultTitleFontSize(effectiveRowHeight).then(setTitleFontSizeDefault)
     defaultSubtitleFontSize(effectiveRowHeight).then(setSubtitleFontSizeDefault)
     defaultAuthorFontSize(effectiveRowHeight).then(setAuthorFontSizeDefault)
+    defaultPartLegendFontSize(effectiveRowHeight).then(
+      setPartLegendFontSizeDefault,
+    )
   }, [effectiveRowHeight])
 
   const d = defaults
@@ -273,6 +280,18 @@ export function EditMetadataModal({
                   value={metadata.parts_list_columns ?? ''}
                   placeholder={d ? String(d.parts_list_columns) : undefined}
                   onChange={setNumber('parts_list_columns')}
+                />
+                <NumberFieldRow
+                  label="Part Legend Font Size"
+                  help={metadataFieldHelp.part_legend_font_size}
+                  onShowHelp={showHelp}
+                  value={metadata.part_legend_font_size ?? ''}
+                  placeholder={
+                    partLegendFontSizeDefault !== null
+                      ? String(partLegendFontSizeDefault)
+                      : undefined
+                  }
+                  onChange={setNumber('part_legend_font_size')}
                 />
                 <NumberFieldRow
                   label="Lyrics Font Size"

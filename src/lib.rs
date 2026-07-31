@@ -225,6 +225,7 @@ fn build_header(
         subtitle_font_size: score.metadata.subtitle_font_size as f32,
         author_font_size: score.metadata.author_font_size as f32,
         sequence_font_size: score.metadata.sequence_font_size as f32,
+        part_legend_font_size: score.metadata.part_legend_font_size as f32,
     }
 }
 

@@ -28,6 +28,7 @@ fn erroneous_measure_produces_error_highlight() {
         subtitle_font_size: 19.0,
         author_font_size: 14.0,
         sequence_font_size: 12.0,
+        part_legend_font_size: 12.0,
     };
     let config = crate::render_config::RenderConfig {
         row_height: 24,
@@ -139,6 +140,7 @@ fn non_erroneous_measure_produces_no_error_highlight() {
         subtitle_font_size: 19.0,
         author_font_size: 14.0,
         sequence_font_size: 12.0,
+        part_legend_font_size: 12.0,
     };
     let config = crate::render_config::RenderConfig {
         row_height: 24,

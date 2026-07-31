@@ -201,7 +201,12 @@ pub(crate) fn make_header_rows(
             .iter()
             .filter(|entry| entry.abbreviation != entry.display_name)
             .collect();
-        make_part_list_rows(&entries, base, header.parts_list_columns)
+        make_part_list_rows(
+            &entries,
+            base,
+            header.parts_list_columns,
+            header.part_legend_font_size,
+        )
     } else {
         vec![]
     };
@@ -214,7 +219,12 @@ pub(crate) fn make_header_rows(
         .collect()
 }
 
-fn make_part_list_rows(entries: &[&PartListEntry], base: f32, columns: u32) -> Vec<GridRow> {
+fn make_part_list_rows(
+    entries: &[&PartListEntry],
+    base: f32,
+    columns: u32,
+    font_size: f32,
+) -> Vec<GridRow> {
     entries
         .chunks(columns as usize)
         .map(|chunk| GridRow {
@@ -241,7 +251,7 @@ fn make_part_list_rows(entries: &[&PartListEntry], base: f32, columns: u32) -> V
                                 entry.members.join(",")
                             )
                         },
-                        font_size: base * 0.6,
+                        font_size,
                         bold: false,
                         italic: false,
                     },

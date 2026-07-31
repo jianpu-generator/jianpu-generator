@@ -45,6 +45,11 @@ pub fn default_author_font_size(row_height: u32) -> u32 {
 /// Default `sequence_font_size` in points, used when unset in `# metadata`.
 pub const DEFAULT_SEQUENCE_FONT_SIZE: u32 = 12;
 
+/// Default `part_legend_font_size` in points: 60% of `row_height`, used when unset in `# metadata`.
+pub fn default_part_legend_font_size(row_height: u32) -> u32 {
+    (row_height as f32 * 0.6).round() as u32
+}
+
 #[derive(Clone)]
 pub struct Metadata {
     pub title: Option<String>,
@@ -77,6 +82,9 @@ pub struct Metadata {
     /// Font size in points of the `# sequence` summary line rendered near the
     /// top of the score. Default: 12.
     pub sequence_font_size: u32,
+    /// Font size in points of the part-name legend entries shown in the header
+    /// (e.g. `V — Vocal (S1,S2,A1,A2)`). Default: 60% of `row_height`.
+    pub part_legend_font_size: u32,
     /// Score-wide default for `merge_duplicate_measures_across_parts=`: when `false`,
     /// identical measure rows from different parts are no longer merged into one row
     /// (see `consolidator::consolidate`). Default: `true`. A `merge_duplicate_measures_across_parts=`

@@ -82,6 +82,7 @@ mod tests {
             subtitle_font_size: 24,
             author_font_size: 18,
             sequence_font_size: 12,
+            part_legend_font_size: 12,
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
             hide_system_dividers: false,

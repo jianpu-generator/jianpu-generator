@@ -279,6 +279,9 @@ pub struct Header {
     /// Font size in points for the `# sequence` summary line (see
     /// `Metadata::sequence_font_size`).
     pub sequence_font_size: f32,
+    /// Font size in points for the part-name legend entries (see
+    /// `Metadata::part_legend_font_size`).
+    pub part_legend_font_size: f32,
 }
 
 #[derive(Debug, Clone)]

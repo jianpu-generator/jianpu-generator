@@ -47,6 +47,10 @@ This width is the same for every system in the score, regardless of how many mea
 
   parts_list_columns: `Number of columns used to lay out the part-name legend shown in the header.`,
 
+  part_legend_font_size: `Font size (points) of the part-name legend entries shown in the header.
+
+Defaults to \`row_height × 0.6\` when unset.`,
+
   lyrics_font_size: `Font size (points) of lyric syllable text under notes.
 
 Also affects how far a syllable is allowed to shift horizontally to avoid overlapping its neighbors.

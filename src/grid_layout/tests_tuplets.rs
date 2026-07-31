@@ -36,6 +36,7 @@ time=4/4
         subtitle_font_size: 19.0,
         author_font_size: 14.0,
         sequence_font_size: 12.0,
+        part_legend_font_size: 12.0,
     };
     let config = cfg();
     let pages = crate::grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);

@@ -22,6 +22,7 @@ fn metadata() -> Metadata {
         subtitle_font_size: 19,
         author_font_size: 14,
         sequence_font_size: 12,
+        part_legend_font_size: 12,
         merge_duplicate_measures_across_parts: true,
         hide_resting_parts: true,
         hide_system_dividers: false,

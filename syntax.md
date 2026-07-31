@@ -68,6 +68,7 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | `note_number_width` | no | `8` | Horizontal space per note column (pixels) |
 | `part_label_width_pt` | no | `40` | Fixed width (points) of the part-label column at the start of each system, shared by every system in the score regardless of how many measures/columns that system's music needs |
 | `parts_list_columns` | no | `4` | Number of columns in the parts list header |
+| `part_legend_font_size` | no | `row_height * 0.6` | Font size of the part-name legend entries shown in the header (points) |
 | `lyrics_font_size` | no | `row_height * 0.6` | Font size of lyric syllables (points) |
 | `notes_font_size` | no | `lyrics_font_size` | Font size of note heads, rests, percussion hits, and tuplet brackets (points) |
 | `chords_font_size` | no | `lyrics_font_size` | Font size of chord symbols (points) |

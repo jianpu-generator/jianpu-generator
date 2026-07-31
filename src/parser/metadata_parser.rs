@@ -100,6 +100,7 @@ struct MetadataAccumulator {
     subtitle_font_size: Option<u32>,
     author_font_size: Option<u32>,
     sequence_font_size: Option<u32>,
+    part_legend_font_size: Option<u32>,
     merge_duplicate_measures_across_parts: Option<bool>,
     hide_resting_parts: Option<bool>,
     hide_system_dividers: Option<bool>,
@@ -107,6 +108,27 @@ struct MetadataAccumulator {
 }
 
 impl MetadataAccumulator {
+    /// Numeric fields all share the same `parse_numeric_field` handling, so this maps a key
+    /// directly to the `Option<u32>` it targets rather than repeating that call per field.
+    fn numeric_field_mut(&mut self, key: &str) -> Option<&mut Option<u32>> {
+        match key {
+            "row_height" => Some(&mut self.row_height),
+            "max_measures_per_system" => Some(&mut self.max_measures_per_system),
+            "note_number_width" => Some(&mut self.note_number_width),
+            "part_label_width_pt" => Some(&mut self.part_label_width_pt),
+            "parts_list_columns" => Some(&mut self.parts_list_columns),
+            "lyrics_font_size" => Some(&mut self.lyrics_font_size),
+            "notes_font_size" => Some(&mut self.notes_font_size),
+            "chords_font_size" => Some(&mut self.chords_font_size),
+            "title_font_size" => Some(&mut self.title_font_size),
+            "subtitle_font_size" => Some(&mut self.subtitle_font_size),
+            "author_font_size" => Some(&mut self.author_font_size),
+            "sequence_font_size" => Some(&mut self.sequence_font_size),
+            "part_legend_font_size" => Some(&mut self.part_legend_font_size),
+            _ => None,
+        }
+    }
+
     fn apply_field(
         &mut self,
         key: &str,
@@ -115,54 +137,13 @@ impl MetadataAccumulator {
         value_span: &Span,
         errors: &mut Vec<RecoverableError>,
     ) {
+        if let Some(target) = self.numeric_field_mut(key) {
+            return parse_numeric_field(target, key, value, value_span, errors);
+        }
         match key {
             "title" => self.title = Some(value.to_string()),
             "subtitle" => self.subtitle = Some(value.to_string()),
             "author" => self.author = Some(value.to_string()),
-            "row_height" => {
-                parse_numeric_field(&mut self.row_height, key, value, value_span, errors)
-            }
-            "max_measures_per_system" => parse_numeric_field(
-                &mut self.max_measures_per_system,
-                key,
-                value,
-                value_span,
-                errors,
-            ),
-            "note_number_width" => {
-                parse_numeric_field(&mut self.note_number_width, key, value, value_span, errors)
-            }
-            "part_label_width_pt" => parse_numeric_field(
-                &mut self.part_label_width_pt,
-                key,
-                value,
-                value_span,
-                errors,
-            ),
-            "parts_list_columns" => {
-                parse_numeric_field(&mut self.parts_list_columns, key, value, value_span, errors)
-            }
-            "lyrics_font_size" => {
-                parse_numeric_field(&mut self.lyrics_font_size, key, value, value_span, errors)
-            }
-            "notes_font_size" => {
-                parse_numeric_field(&mut self.notes_font_size, key, value, value_span, errors)
-            }
-            "chords_font_size" => {
-                parse_numeric_field(&mut self.chords_font_size, key, value, value_span, errors)
-            }
-            "title_font_size" => {
-                parse_numeric_field(&mut self.title_font_size, key, value, value_span, errors)
-            }
-            "subtitle_font_size" => {
-                parse_numeric_field(&mut self.subtitle_font_size, key, value, value_span, errors)
-            }
-            "author_font_size" => {
-                parse_numeric_field(&mut self.author_font_size, key, value, value_span, errors)
-            }
-            "sequence_font_size" => {
-                parse_numeric_field(&mut self.sequence_font_size, key, value, value_span, errors)
-            }
             "merge_duplicate_measures_across_parts" => parse_bool_field(
                 &mut self.merge_duplicate_measures_across_parts,
                 key,
@@ -244,6 +225,7 @@ pub fn parse_metadata(
             subtitle_font_size: accumulator.subtitle_font_size,
             author_font_size: accumulator.author_font_size,
             sequence_font_size: accumulator.sequence_font_size,
+            part_legend_font_size: accumulator.part_legend_font_size,
             merge_duplicate_measures_across_parts: accumulator
                 .merge_duplicate_measures_across_parts,
             hide_resting_parts: accumulator.hide_resting_parts,
