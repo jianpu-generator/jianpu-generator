@@ -9,6 +9,18 @@ export const metadataFieldHelp: Record<MetadataKey, string> = {
 
   author: `Rendered in the header, below the title/subtitle.`,
 
+  title_font_size: `Font size (points) of the title text.
+
+Defaults to \`row_height × 1.5\` when unset.`,
+
+  subtitle_font_size: `Font size (points) of the subtitle text.
+
+Defaults to \`row_height × 0.8\` when unset.`,
+
+  author_font_size: `Font size (points) of the author text.
+
+Defaults to \`row_height × 0.6\` when unset.`,
+
   row_height: `Vertical spacing (points) of one part row.
 
 Affects:
@@ -52,6 +64,10 @@ Defaults to \`lyrics_font_size\` when unset.`,
 Also affects the width allotted to a chord symbol's column.
 
 Defaults to \`lyrics_font_size\` when unset.`,
+
+  sequence_font_size: `Font size (points) of the \`# sequence\` summary line rendered near the top of the score.
+
+Defaults to 12.`,
 
   merge_duplicate_measures_across_parts: `When on, measures with identical content across different parts are drawn as a single merged row instead of one row per part.
 

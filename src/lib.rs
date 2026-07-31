@@ -221,6 +221,10 @@ fn build_header(
         part_list,
         parts_list_columns: score.metadata.parts_list_columns,
         sequence,
+        title_font_size: score.metadata.title_font_size as f32,
+        subtitle_font_size: score.metadata.subtitle_font_size as f32,
+        author_font_size: score.metadata.author_font_size as f32,
+        sequence_font_size: score.metadata.sequence_font_size as f32,
     }
 }
 

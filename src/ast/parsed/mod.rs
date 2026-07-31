@@ -187,6 +187,10 @@ pub struct ParsedMetadata {
     pub lyrics_font_size: Option<u32>,
     pub notes_font_size: Option<u32>,
     pub chords_font_size: Option<u32>,
+    pub title_font_size: Option<u32>,
+    pub subtitle_font_size: Option<u32>,
+    pub author_font_size: Option<u32>,
+    pub sequence_font_size: Option<u32>,
     /// When `false`, disables merging of identical measure rows that come from different
     /// parts (see `consolidator::consolidate`). Default: `true`.
     pub merge_duplicate_measures_across_parts: Option<bool>,

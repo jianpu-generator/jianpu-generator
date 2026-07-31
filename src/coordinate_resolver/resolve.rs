@@ -262,9 +262,12 @@ fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
             bold: *bold,
             italic: *italic,
         }),
-        GridContent::SequenceLine { entries } => Some(PostArcGridContent::SequenceLine {
-            entries: entries.clone(),
-        }),
+        GridContent::SequenceLine { entries, font_size } => {
+            Some(PostArcGridContent::SequenceLine {
+                entries: entries.clone(),
+                font_size: *font_size,
+            })
+        }
     }
 }
 

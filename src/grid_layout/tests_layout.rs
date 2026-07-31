@@ -16,6 +16,10 @@ fn hdr() -> Header {
         part_list: vec![],
         parts_list_columns: 3,
         sequence: None,
+        title_font_size: 45.0,
+        subtitle_font_size: 24.0,
+        author_font_size: 18.0,
+        sequence_font_size: 12.0,
     }
 }
 

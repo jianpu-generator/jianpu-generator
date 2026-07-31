@@ -10,6 +10,10 @@ export type MetadataKey =
   | 'lyrics_font_size'
   | 'notes_font_size'
   | 'chords_font_size'
+  | 'title_font_size'
+  | 'subtitle_font_size'
+  | 'author_font_size'
+  | 'sequence_font_size'
   | 'merge_duplicate_measures_across_parts'
   | 'hide_resting_parts'
   | 'hide_system_dividers'
@@ -27,6 +31,10 @@ export interface ParsedMetadataFields {
   lyrics_font_size: number | null
   notes_font_size: number | null
   chords_font_size: number | null
+  title_font_size: number | null
+  subtitle_font_size: number | null
+  author_font_size: number | null
+  sequence_font_size: number | null
   merge_duplicate_measures_across_parts: boolean | null
   hide_resting_parts: boolean | null
   hide_system_dividers: boolean | null
@@ -42,6 +50,10 @@ const numericKeys: MetadataKey[] = [
   'lyrics_font_size',
   'notes_font_size',
   'chords_font_size',
+  'title_font_size',
+  'subtitle_font_size',
+  'author_font_size',
+  'sequence_font_size',
 ]
 
 const unquotedKeys: MetadataKey[] = [
@@ -64,6 +76,10 @@ const canonicalKeyOrder: MetadataKey[] = [
   'lyrics_font_size',
   'notes_font_size',
   'chords_font_size',
+  'title_font_size',
+  'subtitle_font_size',
+  'author_font_size',
+  'sequence_font_size',
   'merge_duplicate_measures_across_parts',
   'hide_resting_parts',
   'hide_system_dividers',
@@ -146,6 +162,10 @@ export function parseMetadata(source: string): ParsedMetadataFields {
     lyrics_font_size: null,
     notes_font_size: null,
     chords_font_size: null,
+    title_font_size: null,
+    subtitle_font_size: null,
+    author_font_size: null,
+    sequence_font_size: null,
     merge_duplicate_measures_across_parts: null,
     hide_resting_parts: null,
     hide_system_dividers: null,
@@ -195,6 +215,26 @@ export function parseMetadata(source: string): ParsedMetadataFields {
   if (fieldMap.has('chords_font_size'))
     result.chords_font_size = parseInt(
       fieldMap.get('chords_font_size') as string,
+      10,
+    )
+  if (fieldMap.has('title_font_size'))
+    result.title_font_size = parseInt(
+      fieldMap.get('title_font_size') as string,
+      10,
+    )
+  if (fieldMap.has('subtitle_font_size'))
+    result.subtitle_font_size = parseInt(
+      fieldMap.get('subtitle_font_size') as string,
+      10,
+    )
+  if (fieldMap.has('author_font_size'))
+    result.author_font_size = parseInt(
+      fieldMap.get('author_font_size') as string,
+      10,
+    )
+  if (fieldMap.has('sequence_font_size'))
+    result.sequence_font_size = parseInt(
+      fieldMap.get('sequence_font_size') as string,
       10,
     )
   if (fieldMap.has('merge_duplicate_measures_across_parts'))

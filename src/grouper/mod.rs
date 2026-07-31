@@ -1,9 +1,10 @@
 use crate::ast::grouped::{
-    default_lyrics_font_size, GroupedScore, GroupedTrack, Metadata, Score,
+    default_author_font_size, default_lyrics_font_size, default_subtitle_font_size,
+    default_title_font_size, GroupedScore, GroupedTrack, Metadata, Score,
     DEFAULT_DIRECTIVE_ROW_OFFSET, DEFAULT_HIDE_RESTING_PARTS, DEFAULT_HIDE_SYSTEM_DIVIDERS,
     DEFAULT_MAX_MEASURES_PER_SYSTEM, DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
     DEFAULT_NOTE_NUMBER_WIDTH, DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_PART_LABEL_WIDTH_PT,
-    DEFAULT_ROW_HEIGHT,
+    DEFAULT_ROW_HEIGHT, DEFAULT_SEQUENCE_FONT_SIZE,
 };
 use crate::ast::parsed::{ParsedDocument, ParsedMeasureSlot, ParsedMetadata, ParsedTrack};
 use crate::combiner;
@@ -145,6 +146,18 @@ fn resolve_metadata(metadata: ParsedMetadata) -> Metadata {
         lyrics_font_size,
         notes_font_size: metadata.notes_font_size.unwrap_or(lyrics_font_size),
         chords_font_size: metadata.chords_font_size.unwrap_or(lyrics_font_size),
+        title_font_size: metadata
+            .title_font_size
+            .unwrap_or_else(|| default_title_font_size(row_height)),
+        subtitle_font_size: metadata
+            .subtitle_font_size
+            .unwrap_or_else(|| default_subtitle_font_size(row_height)),
+        author_font_size: metadata
+            .author_font_size
+            .unwrap_or_else(|| default_author_font_size(row_height)),
+        sequence_font_size: metadata
+            .sequence_font_size
+            .unwrap_or(DEFAULT_SEQUENCE_FONT_SIZE),
         merge_duplicate_measures_across_parts: metadata
             .merge_duplicate_measures_across_parts
             .unwrap_or(DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS),

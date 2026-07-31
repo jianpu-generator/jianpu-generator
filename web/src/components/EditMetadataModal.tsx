@@ -2,7 +2,10 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useState } from 'react'
 import type { MetadataDefaults } from '../utils/metadataDefaults'
 import {
+  defaultAuthorFontSize,
   defaultLyricsFontSize,
+  defaultSubtitleFontSize,
+  defaultTitleFontSize,
   loadMetadataDefaults,
 } from '../utils/metadataDefaults'
 import { metadataFieldHelp } from '../utils/metadataFieldHelp'
@@ -45,6 +48,15 @@ export function EditMetadataModal({
   const [lyricsFontSizeDefault, setLyricsFontSizeDefault] = useState<
     number | null
   >(null)
+  const [titleFontSizeDefault, setTitleFontSizeDefault] = useState<
+    number | null
+  >(null)
+  const [subtitleFontSizeDefault, setSubtitleFontSizeDefault] = useState<
+    number | null
+  >(null)
+  const [authorFontSizeDefault, setAuthorFontSizeDefault] = useState<
+    number | null
+  >(null)
   const [helpContent, setHelpContent] = useState<{
     label: string
     help: string
@@ -60,6 +72,9 @@ export function EditMetadataModal({
   useEffect(() => {
     if (effectiveRowHeight === null) return
     defaultLyricsFontSize(effectiveRowHeight).then(setLyricsFontSizeDefault)
+    defaultTitleFontSize(effectiveRowHeight).then(setTitleFontSizeDefault)
+    defaultSubtitleFontSize(effectiveRowHeight).then(setSubtitleFontSizeDefault)
+    defaultAuthorFontSize(effectiveRowHeight).then(setAuthorFontSizeDefault)
   }, [effectiveRowHeight])
 
   const d = defaults
@@ -167,6 +182,18 @@ export function EditMetadataModal({
                   value={metadata.title}
                   onChange={(e) => onFieldChange('title', e.target.value)}
                 />
+                <NumberFieldRow
+                  label="Title Font Size"
+                  help={metadataFieldHelp.title_font_size}
+                  onShowHelp={showHelp}
+                  value={metadata.title_font_size ?? ''}
+                  placeholder={
+                    titleFontSizeDefault !== null
+                      ? String(titleFontSizeDefault)
+                      : undefined
+                  }
+                  onChange={setNumber('title_font_size')}
+                />
                 <TextFieldRow
                   label="Subtitle"
                   help={metadataFieldHelp.subtitle}
@@ -174,12 +201,36 @@ export function EditMetadataModal({
                   value={metadata.subtitle ?? ''}
                   onChange={setText('subtitle')}
                 />
+                <NumberFieldRow
+                  label="Subtitle Font Size"
+                  help={metadataFieldHelp.subtitle_font_size}
+                  onShowHelp={showHelp}
+                  value={metadata.subtitle_font_size ?? ''}
+                  placeholder={
+                    subtitleFontSizeDefault !== null
+                      ? String(subtitleFontSizeDefault)
+                      : undefined
+                  }
+                  onChange={setNumber('subtitle_font_size')}
+                />
                 <TextFieldRow
                   label="Author"
                   help={metadataFieldHelp.author}
                   onShowHelp={showHelp}
                   value={metadata.author ?? ''}
                   onChange={setText('author')}
+                />
+                <NumberFieldRow
+                  label="Author Font Size"
+                  help={metadataFieldHelp.author_font_size}
+                  onShowHelp={showHelp}
+                  value={metadata.author_font_size ?? ''}
+                  placeholder={
+                    authorFontSizeDefault !== null
+                      ? String(authorFontSizeDefault)
+                      : undefined
+                  }
+                  onChange={setNumber('author_font_size')}
                 />
                 <NumberFieldRow
                   label="Row Height"
@@ -258,6 +309,14 @@ export function EditMetadataModal({
                       : undefined
                   }
                   onChange={setNumber('chords_font_size')}
+                />
+                <NumberFieldRow
+                  label="Sequence Font Size"
+                  help={metadataFieldHelp.sequence_font_size}
+                  onShowHelp={showHelp}
+                  value={metadata.sequence_font_size ?? ''}
+                  placeholder={d ? String(d.sequence_font_size) : undefined}
+                  onChange={setNumber('sequence_font_size')}
                 />
                 <CheckboxFieldRow
                   label="Merge Duplicate Measures Across Parts"

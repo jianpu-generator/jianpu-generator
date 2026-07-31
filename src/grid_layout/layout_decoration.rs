@@ -121,6 +121,7 @@ fn make_sequence_rows(header: &Header, base: f32, include_part_list: bool) -> Ve
                         valign: VAlign::Center,
                         content: GridContent::SequenceLine {
                             entries: entries.clone(),
+                            font_size: header.sequence_font_size,
                         },
                     }],
                 },
@@ -142,7 +143,7 @@ fn make_title_row(header: &Header, base: f32) -> Option<GridRow> {
             valign: VAlign::Center,
             content: GridContent::Text {
                 content: title.clone(),
-                font_size: base * 1.5,
+                font_size: header.title_font_size,
                 bold: false,
                 italic: false,
             },
@@ -160,7 +161,7 @@ fn make_subtitle_author_row(header: &Header, base: f32) -> GridRow {
             valign: VAlign::Center,
             content: GridContent::Text {
                 content: subtitle.clone(),
-                font_size: base * 0.8,
+                font_size: header.subtitle_font_size,
                 bold: false,
                 italic: true,
             },
@@ -174,7 +175,7 @@ fn make_subtitle_author_row(header: &Header, base: f32) -> GridRow {
             valign: VAlign::Center,
             content: GridContent::Text {
                 content: author.clone(),
-                font_size: base * 0.6,
+                font_size: header.author_font_size,
                 bold: false,
                 italic: false,
             },

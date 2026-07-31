@@ -22,6 +22,10 @@ fn triplet_of_sixteenth_notes_gets_double_underline_matching_written_duration() 
         part_list: vec![],
         parts_list_columns: 3,
         sequence: None,
+        title_font_size: score.metadata.title_font_size as f32,
+        subtitle_font_size: score.metadata.subtitle_font_size as f32,
+        author_font_size: score.metadata.author_font_size as f32,
+        sequence_font_size: score.metadata.sequence_font_size as f32,
     };
     let compile_result = compiler::compile(&score);
     let compile_result = consolidator::consolidate(compile_result);

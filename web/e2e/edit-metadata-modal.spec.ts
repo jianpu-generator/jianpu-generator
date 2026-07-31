@@ -108,7 +108,9 @@ test('editing a numeric field updates the source', async ({ page }) => {
   await openEditMetadataModal(page)
 
   const modal = page.getByTestId('edit-metadata-modal')
-  const rowHeightInput = modal.locator('input[type="number"]').first()
+  const rowHeightInput = modal
+    .locator('tr', { hasText: 'Row Height' })
+    .locator('input[type="number"]')
   await rowHeightInput.fill('30')
 
   await page.keyboard.press('Escape')
@@ -275,7 +277,9 @@ test('editing part_label_width_pt updates the source', async ({ page }) => {
   await openEditMetadataModal(page)
 
   const modal = page.getByTestId('edit-metadata-modal')
-  const partLabelWidthInput = modal.locator('input[type="number"]').nth(3)
+  const partLabelWidthInput = modal
+    .locator('tr', { hasText: 'Part Label Width (pt)' })
+    .locator('input[type="number"]')
   await partLabelWidthInput.fill('60')
 
   await page.keyboard.press('Escape')

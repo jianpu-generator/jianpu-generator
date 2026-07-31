@@ -27,6 +27,24 @@ pub fn default_lyrics_font_size(row_height: u32) -> u32 {
     (row_height as f32 * 0.6).round() as u32
 }
 
+/// Default `title_font_size` in points: 150% of `row_height`, used when unset in `# metadata`.
+pub fn default_title_font_size(row_height: u32) -> u32 {
+    (row_height as f32 * 1.5).round() as u32
+}
+
+/// Default `subtitle_font_size` in points: 80% of `row_height`, used when unset in `# metadata`.
+pub fn default_subtitle_font_size(row_height: u32) -> u32 {
+    (row_height as f32 * 0.8).round() as u32
+}
+
+/// Default `author_font_size` in points: 60% of `row_height`, used when unset in `# metadata`.
+pub fn default_author_font_size(row_height: u32) -> u32 {
+    (row_height as f32 * 0.6).round() as u32
+}
+
+/// Default `sequence_font_size` in points, used when unset in `# metadata`.
+pub const DEFAULT_SEQUENCE_FONT_SIZE: u32 = 12;
+
 #[derive(Clone)]
 pub struct Metadata {
     pub title: Option<String>,
@@ -50,6 +68,15 @@ pub struct Metadata {
     pub notes_font_size: u32,
     /// Chord symbol font size in points. Default: `lyrics_font_size`.
     pub chords_font_size: u32,
+    /// Title font size in points. Default: 150% of `row_height`.
+    pub title_font_size: u32,
+    /// Subtitle font size in points. Default: 80% of `row_height`.
+    pub subtitle_font_size: u32,
+    /// Author font size in points. Default: 60% of `row_height`.
+    pub author_font_size: u32,
+    /// Font size in points of the `# sequence` summary line rendered near the
+    /// top of the score. Default: 12.
+    pub sequence_font_size: u32,
     /// Score-wide default for `merge_duplicate_measures_across_parts=`: when `false`,
     /// identical measure rows from different parts are no longer merged into one row
     /// (see `consolidator::consolidate`). Default: `true`. A `merge_duplicate_measures_across_parts=`

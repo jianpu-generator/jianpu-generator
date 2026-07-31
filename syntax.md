@@ -58,8 +58,11 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `title` | no | none | Piece title (rendered in header) |
+| `title_font_size` | no | `row_height * 1.5` | Font size of the title (points) |
 | `author` | no | none | Author name (rendered in header) |
+| `author_font_size` | no | `row_height * 0.6` | Font size of the author line (points) |
 | `subtitle` | no | none | Subtitle line |
+| `subtitle_font_size` | no | `row_height * 0.8` | Font size of the subtitle (points) |
 | `max_measures_per_system` | no | `4` | Maximum number of measures per system line before wrapping |
 | `row_height` | no | `24` | Vertical spacing of one part row (pixels) |
 | `note_number_width` | no | `8` | Horizontal space per note column (pixels) |
@@ -68,6 +71,7 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | `lyrics_font_size` | no | `row_height * 0.6` | Font size of lyric syllables (points) |
 | `notes_font_size` | no | `lyrics_font_size` | Font size of note heads, rests, percussion hits, and tuplet brackets (points) |
 | `chords_font_size` | no | `lyrics_font_size` | Font size of chord symbols (points) |
+| `sequence_font_size` | no | `12` | Font size of the `# sequence` summary line rendered near the top of the score (points) |
 | `merge_duplicate_measures_across_parts` | no | `yes` | Score-wide default for whether identical measures from different parts are merged into a single row (`yes`/`no`); can be overridden from a given measure onward with the `merge_duplicate_measures_across_parts=` directive line — see [Directive lines](#directive-lines) |
 | `hide_resting_parts` | no | `yes` | Score-wide default for whether an all-rest part is omitted from a measure where other parts have content (`yes`/`no`); can be overridden from a given measure onward with the `hide_resting_parts=` directive line — see [Directive lines](#directive-lines) |
 | `hide_system_dividers` | no | `no` | Whether the horizontal divider line between systems is omitted (`yes`/`no`) |

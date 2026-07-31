@@ -180,6 +180,7 @@ pub enum GridContent {
     /// by " › ".
     SequenceLine {
         entries: Vec<SequenceEntryInfo>,
+        font_size: f32,
     },
 }
 
@@ -245,6 +246,7 @@ pub enum PostArcGridContent {
     },
     SequenceLine {
         entries: Vec<SequenceEntryInfo>,
+        font_size: f32,
     },
 }
 
@@ -268,6 +270,15 @@ pub struct Header {
     /// reference (e.g. `["A", "B", "A"]`), if present. Rendered as a line
     /// near the top of the score; does not affect SVG/PDF measure order.
     pub sequence: Option<Vec<SequenceEntryInfo>>,
+    /// Font size in points for `title` (see `Metadata::title_font_size`).
+    pub title_font_size: f32,
+    /// Font size in points for `subtitle` (see `Metadata::subtitle_font_size`).
+    pub subtitle_font_size: f32,
+    /// Font size in points for `author` (see `Metadata::author_font_size`).
+    pub author_font_size: f32,
+    /// Font size in points for the `# sequence` summary line (see
+    /// `Metadata::sequence_font_size`).
+    pub sequence_font_size: f32,
 }
 
 #[derive(Debug, Clone)]

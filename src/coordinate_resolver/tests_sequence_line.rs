@@ -40,6 +40,7 @@ fn sequence_line_renders_label_and_omit_parts_spans() {
                     omit_parts: vec!["S".to_string(), "A2".to_string()],
                 },
             ],
+            font_size: 12.0,
         },
     };
     let page = single_row_page(el);

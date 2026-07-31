@@ -13,6 +13,10 @@ fn no_header() -> Header {
         part_list: vec![],
         parts_list_columns: 3,
         sequence: None,
+        title_font_size: 36.0,
+        subtitle_font_size: 19.0,
+        author_font_size: 14.0,
+        sequence_font_size: 12.0,
     }
 }
 

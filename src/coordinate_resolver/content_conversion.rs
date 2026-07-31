@@ -30,17 +30,18 @@ fn sans_serif_text(
     }
 }
 
-/// Builds the text span for a section label (bold + italic, 12pt), matching
-/// how a `label="..."` directive is rendered inline on a measure. Shared by
-/// the `# sequence` header line; the directive line's own label is rendered
-/// as an independent text element (see [`AbsoluteContent::DirectiveLine`],
-/// `label`/`label_x_offset`) rather than through this span.
-fn section_label_span(label_text: &str) -> TextSpan {
+/// Builds the text span for a section label (bold + italic), matching how a
+/// `label="..."` directive is rendered inline on a measure. Used by the
+/// `# sequence` header line at `font_size` (see `Metadata::sequence_font_size`);
+/// the directive line's own label is rendered as an independent text element
+/// (see [`AbsoluteContent::DirectiveLine`], `label`/`label_x_offset`) rather
+/// than through this span.
+fn section_label_span(label_text: &str, font_size: f32) -> TextSpan {
     TextSpan {
         content: label_text.to_string(),
         bold: true,
         italic: true,
-        font_size: 12.0,
+        font_size,
     }
 }
 
@@ -180,12 +181,13 @@ fn build_directive_line_spans(content: &PostArcGridContent) -> (Option<TextSpan>
 /// plain " › ".
 fn sequence_line_content(
     entries: &[crate::grid_layout::types::SequenceEntryInfo],
+    font_size: f32,
 ) -> Vec<TextSpan> {
     let mut spans = vec![TextSpan {
         content: "Sequence: ".to_string(),
         bold: false,
         italic: false,
-        font_size: 12.0,
+        font_size,
     }];
     for (index, entry) in entries.iter().enumerate() {
         if index > 0 {
@@ -193,16 +195,16 @@ fn sequence_line_content(
                 content: " \u{203a} ".to_string(),
                 bold: false,
                 italic: false,
-                font_size: 12.0,
+                font_size,
             });
         }
-        spans.push(section_label_span(&entry.label));
+        spans.push(section_label_span(&entry.label, font_size));
         if !entry.omit_parts.is_empty() {
             spans.push(TextSpan {
                 content: format!(" (-{})", entry.omit_parts.join(" -")),
                 bold: false,
                 italic: false,
-                font_size: 12.0,
+                font_size,
             });
         }
     }
@@ -255,14 +257,16 @@ fn grid_text_to_absolute(
         PostArcGridContent::HorizontalLine => {
             Some(AbsoluteContent::HorizontalLine { width: span_width })
         }
-        PostArcGridContent::SequenceLine { entries } => Some(AbsoluteContent::DirectiveLine {
-            bar_number: None,
-            label: None,
-            spans: sequence_line_content(entries),
-            spans_x_offset: 0.0,
-            label_x_offset: 0.0,
-            apply_row_offset: false,
-        }),
+        PostArcGridContent::SequenceLine { entries, font_size } => {
+            Some(AbsoluteContent::DirectiveLine {
+                bar_number: None,
+                label: None,
+                spans: sequence_line_content(entries, *font_size),
+                spans_x_offset: 0.0,
+                label_x_offset: 0.0,
+                apply_row_offset: false,
+            })
+        }
         _ => None,
     }
 }

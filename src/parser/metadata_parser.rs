@@ -96,6 +96,10 @@ struct MetadataAccumulator {
     lyrics_font_size: Option<u32>,
     notes_font_size: Option<u32>,
     chords_font_size: Option<u32>,
+    title_font_size: Option<u32>,
+    subtitle_font_size: Option<u32>,
+    author_font_size: Option<u32>,
+    sequence_font_size: Option<u32>,
     merge_duplicate_measures_across_parts: Option<bool>,
     hide_resting_parts: Option<bool>,
     hide_system_dividers: Option<bool>,
@@ -146,6 +150,18 @@ impl MetadataAccumulator {
             }
             "chords_font_size" => {
                 parse_numeric_field(&mut self.chords_font_size, key, value, value_span, errors)
+            }
+            "title_font_size" => {
+                parse_numeric_field(&mut self.title_font_size, key, value, value_span, errors)
+            }
+            "subtitle_font_size" => {
+                parse_numeric_field(&mut self.subtitle_font_size, key, value, value_span, errors)
+            }
+            "author_font_size" => {
+                parse_numeric_field(&mut self.author_font_size, key, value, value_span, errors)
+            }
+            "sequence_font_size" => {
+                parse_numeric_field(&mut self.sequence_font_size, key, value, value_span, errors)
             }
             "merge_duplicate_measures_across_parts" => parse_bool_field(
                 &mut self.merge_duplicate_measures_across_parts,
@@ -224,6 +240,10 @@ pub fn parse_metadata(
             lyrics_font_size: accumulator.lyrics_font_size,
             notes_font_size: accumulator.notes_font_size,
             chords_font_size: accumulator.chords_font_size,
+            title_font_size: accumulator.title_font_size,
+            subtitle_font_size: accumulator.subtitle_font_size,
+            author_font_size: accumulator.author_font_size,
+            sequence_font_size: accumulator.sequence_font_size,
             merge_duplicate_measures_across_parts: accumulator
                 .merge_duplicate_measures_across_parts,
             hide_resting_parts: accumulator.hide_resting_parts,
