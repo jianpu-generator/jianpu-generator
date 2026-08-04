@@ -133,7 +133,7 @@ fn sharp_accidental_renders_to_the_right_of_note() {
 }
 
 #[test]
-fn upper_octave_note_produces_circle() {
+fn upper_octave_note_produces_dot_glyph() {
     let page = make_page(AbsoluteContent::NoteHead {
         pitch: JianPuPitch::One,
         accidental: crate::ast::parsed::Accidental::Natural,
@@ -141,11 +141,14 @@ fn upper_octave_note_produces_circle() {
         dotted: false,
     });
     let docs = render_new(&[page], &cfg());
-    let has_circle = docs[0]
+    let has_dot = docs[0]
         .elements
         .iter()
-        .any(|e| matches!(e.kind, SvgKind::Circle { .. }));
-    assert!(has_circle, "upper octave note should produce a dot circle");
+        .any(|e| matches!(&e.kind, SvgKind::Text { content, .. } if content == "\u{b7}"));
+    assert!(
+        has_dot,
+        "upper octave note should produce an octave dot glyph"
+    );
 }
 
 #[test]

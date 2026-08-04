@@ -84,26 +84,19 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
             *octave,
             *dotted,
             &NoteRenderParams {
-                row_height,
                 base_font_size: notes_font_size,
                 note_number_width,
             },
         ),
-        AbsoluteContent::Rest { dotted } => render_rest(
-            elem,
-            *dotted,
-            row_height,
-            notes_font_size,
-            note_number_width,
-        ),
-        AbsoluteContent::NoteDash { dotted } => {
-            render_note_dash(elem, *dotted, row_height, note_number_width)
+        AbsoluteContent::Rest { dotted } => {
+            render_rest(elem, *dotted, notes_font_size, note_number_width)
         }
+        AbsoluteContent::NoteDash { dotted } => render_note_dash(elem, *dotted, note_number_width),
         AbsoluteContent::MultiMeasureRest { count, width } => {
             render_multi_measure_rest(elem, *count, *width, row_height, notes_font_size)
         }
         AbsoluteContent::ChordSymbol { text, dotted } => {
-            render_chord_symbol(elem, text, *dotted, row_height, chords_font_size)
+            render_chord_symbol(elem, text, *dotted, chords_font_size)
         }
         AbsoluteContent::PercussionHit => render_percussion_hit(elem, notes_font_size),
         AbsoluteContent::Underline { width, level: _ } => render_underline(elem, width),

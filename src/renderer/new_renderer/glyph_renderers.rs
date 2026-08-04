@@ -4,9 +4,27 @@ use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnc
 use crate::renderer::new_types::{SvgElement, SvgKind, SvgVariant};
 
 pub(super) struct NoteRenderParams<'a> {
-    pub(super) row_height: &'a f32,
     pub(super) base_font_size: &'a f32,
     pub(super) note_number_width: &'a f32,
+}
+
+/// A middle dot (`·`) rendered as text so it scales with `font_size`,
+/// unlike a fixed-radius SVG circle.
+pub(super) fn dot_glyph(x: f32, y: f32, font_size: f32, variant: SvgVariant) -> SvgElement {
+    SvgElement {
+        x,
+        y,
+        variant: Some(variant),
+        kind: SvgKind::Text {
+            content: "\u{b7}".to_string(),
+            font_size,
+            anchor: TextAnchor::Middle,
+            baseline: DominantBaseline::Middle,
+            font: FontFamily::Monospace,
+            weight: FontWeight::Normal,
+            italic: false,
+        },
+    }
 }
 
 pub(super) fn render_note_head(
@@ -18,7 +36,6 @@ pub(super) fn render_note_head(
     params: &NoteRenderParams<'_>,
 ) -> Vec<SvgElement> {
     let NoteRenderParams {
-        row_height,
         base_font_size,
         note_number_width,
     } = params;
@@ -63,16 +80,16 @@ pub(super) fn render_note_head(
         });
     }
 
-    let dot_radius = *row_height * 0.06;
+    let dot_radius = *base_font_size * 0.1;
 
     if dotted {
         let dot_x = elem.x + *note_number_width * 1.5;
-        results.push(SvgElement {
-            x: dot_x,
-            y: elem.y,
-            variant: Some(SvgVariant::NoteHead),
-            kind: SvgKind::Circle { r: dot_radius },
-        });
+        results.push(dot_glyph(
+            dot_x,
+            elem.y,
+            **base_font_size,
+            SvgVariant::NoteHead,
+        ));
     }
 
     if octave > 0 {
@@ -81,12 +98,12 @@ pub(super) fn render_note_head(
         for i in 0..octave {
             let dot_y =
                 elem.y - *base_font_size / 2.0 - dot_radius - gap - (i as f32) * dot_spacing;
-            results.push(SvgElement {
-                x: elem.x,
-                y: dot_y,
-                variant: Some(SvgVariant::NoteHead),
-                kind: SvgKind::Circle { r: dot_radius },
-            });
+            results.push(dot_glyph(
+                elem.x,
+                dot_y,
+                **base_font_size,
+                SvgVariant::NoteHead,
+            ));
         }
     }
 
@@ -94,12 +111,12 @@ pub(super) fn render_note_head(
         let dot_spacing = dot_radius * 3.0;
         for i in 0..(-octave) {
             let dot_y = elem.y + *base_font_size / 2.0 + dot_radius + (i as f32) * dot_spacing;
-            results.push(SvgElement {
-                x: elem.x,
-                y: dot_y,
-                variant: Some(SvgVariant::NoteHead),
-                kind: SvgKind::Circle { r: dot_radius },
-            });
+            results.push(dot_glyph(
+                elem.x,
+                dot_y,
+                **base_font_size,
+                SvgVariant::NoteHead,
+            ));
         }
     }
 
@@ -113,7 +130,6 @@ pub(super) use note_dash::render_note_dash;
 pub(super) fn render_rest(
     elem: &AbsoluteElement,
     dotted: bool,
-    row_height: &f32,
     base_font_size: &f32,
     note_number_width: &f32,
 ) -> Vec<SvgElement> {
@@ -137,14 +153,8 @@ pub(super) fn render_rest(
 
     // Optional dot
     if dotted {
-        let dot_radius = row_height * 0.06;
         let dot_x = elem.x + note_number_width * 1.5;
-        results.push(SvgElement {
-            x: dot_x,
-            y: elem.y,
-            variant: Some(SvgVariant::Rest),
-            kind: SvgKind::Circle { r: dot_radius },
-        });
+        results.push(dot_glyph(dot_x, elem.y, *base_font_size, SvgVariant::Rest));
     }
 
     results
@@ -235,7 +245,6 @@ pub(super) fn render_chord_symbol(
     elem: &AbsoluteElement,
     s: &str,
     dotted: bool,
-    row_height: &f32,
     base_font_size: &f32,
 ) -> Vec<SvgElement> {
     // A chord symbol like "2m" shares its column with a single-digit note
@@ -265,15 +274,14 @@ pub(super) fn render_chord_symbol(
     }];
 
     if dotted {
-        let dot_radius = *row_height * 0.06;
         let text_width = crate::font_metrics::monospace_text_width(s, *base_font_size);
         let dot_x = text_x + text_width + *base_font_size * 0.4;
-        results.push(SvgElement {
-            x: dot_x,
-            y: elem.y,
-            variant: Some(SvgVariant::ChordSymbol),
-            kind: SvgKind::Circle { r: dot_radius },
-        });
+        results.push(dot_glyph(
+            dot_x,
+            elem.y,
+            *base_font_size,
+            SvgVariant::ChordSymbol,
+        ));
     }
 
     results
