@@ -1,4 +1,5 @@
-import { useCallback } from 'react'
+import { type RefObject, useCallback } from 'react'
+import type { EditorHandle } from '../types'
 import type { WorkerRequest } from '../worker/jianpu.worker'
 import { useInstrumentPreview } from './useInstrumentPreview'
 import { useJianpuWorkerExports } from './useJianpuWorkerExports'
@@ -11,6 +12,7 @@ import { useJianpuWorkerState } from './useJianpuWorkerState'
 import type { JianpuWorkerState } from './useJianpuWorkerTypes'
 import { useMeasureAudioPlayback } from './useMeasureAudioPlayback'
 import { useSequenceNavigation } from './useSequenceNavigation'
+import { useUnzippedTextFormat } from './useUnzippedTextFormat'
 import { useUnzippedTextSnapshot } from './useUnzippedTextSnapshot'
 
 export type { JianpuWorkerState } from './useJianpuWorkerTypes'
@@ -24,6 +26,7 @@ export function useJianpuWorker(
   soundfontBytes: Uint8Array | null,
   fontBytes: { sc: Uint8Array; tc: Uint8Array; mono: Uint8Array } | null,
   unzippedView: boolean,
+  editorRef: RefObject<EditorHandle | null>,
   debounceMs = 300,
 ): JianpuWorkerState {
   const {
@@ -333,6 +336,13 @@ export function useJianpuWorker(
     pendingImportsRef,
   })
 
+  const formatUnzippedText = useUnzippedTextFormat({
+    source,
+    unzippedText,
+    editorRef,
+    setUnzippedText,
+  })
+
   return {
     parts,
     partDeclarations,
@@ -384,6 +394,7 @@ export function useJianpuWorker(
     previewAudioPlaying,
     updatePartDeclaration,
     formatScore,
+    formatUnzippedText,
     importFromFile,
   }
 }

@@ -36,7 +36,9 @@ use types::{
     MeasureAtOffsetResponse, RenameSymbolResponse, RenderResponse, SymbolKindOut,
     UnzippedEditResponse,
 };
-use unzipped_edit::{extract_unzipped_text_response, merge_unzipped_text_response};
+use unzipped_edit::{
+    extract_unzipped_text_response, format_unzipped_text_response, merge_unzipped_text_response,
+};
 use wasm_bindgen::prelude::*;
 
 /// Combines a `# sequence` entry index pair from the wasm boundary (where
@@ -319,6 +321,21 @@ pub fn extract_unzipped_text(source: &str) -> UnzippedEditResponse {
 #[wasm_bindgen]
 pub fn merge_unzipped_text(source: &str, unzipped_text: &str) -> UnzippedEditResponse {
     merge_unzipped_text_response(source, unzipped_text)
+}
+
+/// Unzipped-view "Format" action: breaks each measure in `unzipped_text` onto
+/// its own line (purely cosmetic — merging back collapses newlines within a
+/// block to spaces regardless). Merges `unzipped_text` back into `source`
+/// first (validating and re-barring it exactly as a real edit would), so the
+/// returned text/ranges reflect the same measures a follow-up
+/// `merge_unzipped_text` call would produce.
+///
+/// - `{ "status": "ok", "text": "...", "partMeasureRanges": [...], "lyricsVerseRanges": [...] }`
+/// - `{ "status": "unknownPart" }`
+/// - `{ "status": "err" }`
+#[wasm_bindgen]
+pub fn format_unzipped_text(source: &str, unzipped_text: &str) -> UnzippedEditResponse {
+    format_unzipped_text_response(source, unzipped_text)
 }
 
 #[cfg(test)]

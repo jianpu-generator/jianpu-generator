@@ -108,34 +108,49 @@ struct BlockSlot {
     occurrence: usize,
 }
 
-/// Appends one block's flattened, space-joined measure tokens (no header) to
-/// `text` and returns its per-measure byte ranges.
+/// The whole-document data shared by every [`append_block_ranges`] call for a
+/// given [`extract_unzipped_text_with_separator`] run.
+struct ExtractContext<'a> {
+    desugared: &'a [Vec<SourceLine>],
+    slots_per_group: &'a [Vec<ScoreLineSlot>],
+    capacities: &'a [u32],
+    /// The character joining consecutive measures within a block: `' '` for
+    /// [`extract_unzipped_text`]'s space-joined shape, `'\n'` for
+    /// [`super::format::format_unzipped_text`]'s one-measure-per-line shape.
+    measure_separator: char,
+}
+
+/// Appends one block's flattened, measure-separator-joined tokens (no
+/// header) to `text` and returns its per-measure byte ranges.
 ///
 /// `pad_kind` is `Some(decl.kind)` only for the primary block of a
 /// Notes/Chords/Percussion/NotesWithLyrics part (i.e. `role !=
 /// ScoreLineRole::Lyrics`); when set, each measure's text is rewritten via
-/// [`pad_to_explicit_weight`] against `capacities` before being appended.
-/// Lyrics-role content has no beat/duration grammar (and thus no implicit
-/// shortfall-extension to worry about), so callers pass `None` for it.
+/// [`pad_to_explicit_weight`] against `context.capacities` before being
+/// appended. Lyrics-role content has no beat/duration grammar (and thus no
+/// implicit shortfall-extension to worry about), so callers pass `None` for
+/// it.
 fn append_block_ranges(
     text: &mut String,
-    desugared: &[Vec<SourceLine>],
-    slots_per_group: &[Vec<ScoreLineSlot>],
+    context: &ExtractContext,
     slot: &BlockSlot,
     pad_kind: Option<PartKind>,
-    capacities: &[u32],
 ) -> Vec<(usize, usize)> {
-    let mut ranges = Vec::with_capacity(desugared.len());
-    for (measure_index, (group, slots)) in desugared.iter().zip(slots_per_group.iter()).enumerate()
+    let mut ranges = Vec::with_capacity(context.desugared.len());
+    for (measure_index, (group, slots)) in context
+        .desugared
+        .iter()
+        .zip(context.slots_per_group.iter())
+        .enumerate()
     {
         if measure_index > 0 {
-            text.push(' ');
+            text.push(context.measure_separator);
         }
         let start = text.len();
         let line = extract_part_line(group, slots, slot.target_index, slot.role, slot.occurrence);
         let line = match pad_kind {
             Some(kind) => {
-                pad_to_explicit_weight(&line, kind, capacity_at(capacities, measure_index))
+                pad_to_explicit_weight(&line, kind, capacity_at(context.capacities, measure_index))
             }
             None => line,
         };
@@ -159,6 +174,19 @@ fn append_block_ranges(
 /// Blocks are unzipped by a blank line, in declaration then verse order.
 /// Implicit rests are filled in as explicit `0`s (or `_` for lyrics).
 pub fn extract_unzipped_text(source: &str) -> Result<UnzippedExtractOutput, UnzippedEditError> {
+    extract_unzipped_text_with_separator(source, ' ')
+}
+
+/// Same as [`extract_unzipped_text`], except each block's measures are
+/// joined by `measure_separator` instead of a hardcoded space — used by
+/// [`super::format::format_unzipped_text`] to break each measure onto its
+/// own line (`'\n'`) rather than changing `extract_unzipped_text`'s own
+/// space-joined shape, which the live view-switch snapshot
+/// (`useUnzippedTextSnapshot` on the frontend) still relies on.
+pub(super) fn extract_unzipped_text_with_separator(
+    source: &str,
+    measure_separator: char,
+) -> Result<UnzippedExtractOutput, UnzippedEditError> {
     let context = resolve_document_context(source);
     let raw_groups = parser::score::measure_group::collect_groups(&context.score_content);
     let (desugared, slots_per_group, _errors, _references) = desugar::desugar_groups(
@@ -169,6 +197,12 @@ pub fn extract_unzipped_text(source: &str) -> Result<UnzippedExtractOutput, Unzi
     )
     .map_err(|_| UnzippedEditError::ParseFailed)?;
     let capacities = scan_measure_capacities(&context.score_content);
+    let extract_context = ExtractContext {
+        desugared: &desugared,
+        slots_per_group: &slots_per_group,
+        capacities: &capacities,
+        measure_separator,
+    };
 
     let mut text = String::new();
     let mut part_measure_ranges = Vec::with_capacity(context.declarations.len());
@@ -187,15 +221,13 @@ pub fn extract_unzipped_text(source: &str) -> Result<UnzippedExtractOutput, Unzi
         text.push_str("]\n");
         let ranges = append_block_ranges(
             &mut text,
-            &desugared,
-            &slots_per_group,
+            &extract_context,
             &BlockSlot {
                 target_index: part_index,
                 role: primary_role,
                 occurrence: 0,
             },
             pad_kind,
-            &capacities,
         );
         part_measure_ranges.push(ranges);
 
@@ -210,15 +242,13 @@ pub fn extract_unzipped_text(source: &str) -> Result<UnzippedExtractOutput, Unzi
                 let occurrence = verse_number - 1;
                 let verse_ranges = append_block_ranges(
                     &mut text,
-                    &desugared,
-                    &slots_per_group,
+                    &extract_context,
                     &BlockSlot {
                         target_index: part_index,
                         role: ScoreLineRole::Lyrics,
                         occurrence,
                     },
                     None,
-                    &capacities,
                 );
                 verse_blocks.push(LyricsVerseRanges {
                     verse_number,

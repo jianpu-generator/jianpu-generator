@@ -26,10 +26,11 @@
 //!
 //! This algorithm is split across submodules: [`capacity`] scans the
 //! original document for per-measure beat/token capacities,
-//! [`extract`] implements [`extract_unzipped_text`], and [`merge`]
-//! implements [`merge_unzipped_text`]. Shared setup (parsing `# parts`/`#
-//! groups`) and a few small helpers used by more than one submodule live
-//! here.
+//! [`extract`] implements [`extract_unzipped_text`], [`merge`]
+//! implements [`merge_unzipped_text`], and [`format`] implements
+//! [`format_unzipped_text`] (a readability-only pass built on the other two).
+//! Shared setup (parsing `# parts`/`# groups`) and a few small helpers used
+//! by more than one submodule live here.
 
 use crate::ast::parsed::{PartDecl, ScoreEvent, ScoreLineRole, ScoreLineSlot};
 use crate::desugar::SourceLine;
@@ -38,6 +39,7 @@ use crate::parser::{self, group_parser::ResolvedGroup};
 
 mod capacity;
 mod extract;
+mod format;
 mod merge;
 mod parse;
 mod reassemble;
@@ -45,6 +47,7 @@ mod repack;
 
 pub use capacity::{scan_measure_capacities, scan_measure_token_counts};
 pub use extract::extract_unzipped_text;
+pub use format::format_unzipped_text;
 pub use merge::merge_unzipped_text;
 
 /// One declared part's tagged verse blocks (`[Abbrev:lyrics:N]`), in verse order.
@@ -214,6 +217,8 @@ fn fold_extensions(events: Vec<Spanned<ScoreEvent>>) -> Vec<(Span, u32)> {
 mod tests_capacity;
 #[cfg(test)]
 mod tests_extract;
+#[cfg(test)]
+mod tests_format;
 #[cfg(test)]
 mod tests_merge;
 #[cfg(test)]

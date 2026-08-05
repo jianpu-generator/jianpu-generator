@@ -80,6 +80,29 @@ pub(crate) fn extract_unzipped_text_response(source: &str) -> UnzippedEditRespon
     }
 }
 
+/// Unzipped-view "Format" action: breaks each measure onto its own line
+/// within every block. Returns fresh `part_measure_ranges`/
+/// `lyrics_verse_ranges` against the reformatted `text`, exactly like
+/// [`extract_unzipped_text_response`].
+pub(crate) fn format_unzipped_text_response(
+    source: &str,
+    unzipped_text: &str,
+) -> UnzippedEditResponse {
+    match unzipped_edit_impl::format_unzipped_text(source, unzipped_text) {
+        Ok(output) => UnzippedEditResponse::Ok {
+            part_measure_ranges: part_measure_ranges_out(source, output.part_measure_ranges),
+            lyrics_verse_ranges: lyrics_verse_ranges_out(source, output.lyrics_verse_ranges),
+            text: output.text,
+        },
+        Err(UnzippedEditError::UnknownPart) => UnzippedEditResponse::UnknownPart,
+        Err(
+            UnzippedEditError::ParseFailed
+            | UnzippedEditError::MalformedHeader
+            | UnzippedEditError::UnexpectedLyricsBlock,
+        ) => UnzippedEditResponse::Err,
+    }
+}
+
 /// `merge_unzipped_text` returns the full updated `.jianpu` source (not
 /// unzipped text), so there is no unzipped-text byte space for
 /// `part_measure_ranges`/`lyrics_verse_ranges` to index into here — callers

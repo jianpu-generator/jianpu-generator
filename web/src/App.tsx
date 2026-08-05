@@ -155,6 +155,7 @@ export default function App() {
     previewAudioPlaying,
     updatePartDeclaration,
     formatScore,
+    formatUnzippedText,
     importFromFile,
   } = useJianpuWorker(
     source,
@@ -165,8 +166,8 @@ export default function App() {
     soundfont.bytes,
     fonts.fonts,
     unzippedView,
+    editorRef,
   )
-
   usePartTogglePruning(
     parts,
     setDisabledParts,
@@ -350,6 +351,7 @@ export default function App() {
         source={source}
         handleSourceChange={handleSourceChange}
         handleFormatScore={handleFormatScore}
+        handleFormatUnzippedText={formatUnzippedText}
         readOnly={readOnly}
         diagnostics={diagnostics}
         diagnosticViewZones={diagnosticViewZones}

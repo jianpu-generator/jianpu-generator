@@ -99,6 +99,14 @@ export interface JianpuWorkerState {
    */
   formatScore: (source: string) => Promise<string>
   /**
+   * Unzipped-view "Format" action: breaks each measure in the current
+   * Unzipped editor text onto its own line (purely cosmetic — merging back
+   * collapses those newlines to spaces regardless). Merges `unzippedText`
+   * into `source` first, then updates `unzippedText` state with the
+   * reformatted result; no-ops if merging fails (unknown/malformed block).
+   */
+  formatUnzippedText: () => void
+  /**
    * Recovers the `.jianpu` source embedded in a previously exported SVG/PDF
    * file (see `source_embed::extract_embedded_source`). Rejects if the file
    * has no embedded source.

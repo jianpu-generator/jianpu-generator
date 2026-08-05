@@ -110,3 +110,28 @@ fn merge_unzipped_text_response_returns_err_for_a_lyrics_tag_on_a_non_lyrics_par
     let response = merge_unzipped_text_response(TWO_PART_SOURCE, unzipped_text);
     assert!(matches!(response, UnzippedEditResponse::Err));
 }
+
+#[test]
+fn format_unzipped_text_response_breaks_each_measure_onto_its_own_line() {
+    let unzipped_text = "[Soprano]\n1 2 3 4 5 6 7 1\n\n[Alto]\n5 6 7 1 1 2 3 4";
+    let response = format_unzipped_text_response(TWO_PART_SOURCE, unzipped_text);
+    match response {
+        UnzippedEditResponse::Ok {
+            text,
+            part_measure_ranges,
+            ..
+        } => {
+            assert!(text.contains("[Soprano]\n1 2 3 4\n5 6 7 1"));
+            assert!(text.contains("[Alto]\n5 6 7 1\n1 2 3 4"));
+            assert_eq!(part_measure_ranges.len(), 2);
+        }
+        other => panic!("expected Ok, got {other:?}"),
+    }
+}
+
+#[test]
+fn format_unzipped_text_response_returns_unknown_part_for_an_undeclared_header() {
+    let unzipped_text = "[NotAPart]\n1 2 3 4";
+    let response = format_unzipped_text_response(SIMPLE_SOURCE, unzipped_text);
+    assert!(matches!(response, UnzippedEditResponse::UnknownPart));
+}

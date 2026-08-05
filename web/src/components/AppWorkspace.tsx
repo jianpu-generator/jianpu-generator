@@ -37,8 +37,11 @@ interface AppWorkspaceProps {
   source: string
   handleSourceChange: (value: string) => void
   /** Zipped-view "Format" toolbar action: drops redundant `# score` lines
-   * and normalizes whitespace. Hidden while Unzipped view is active. */
+   * and normalizes whitespace. Active only while Unzipped view is off. */
   handleFormatScore: () => void
+  /** Unzipped-view "Format" toolbar action: breaks each measure onto its own
+   * line. Active only while Unzipped view is on. */
+  handleFormatUnzippedText: () => void
   readOnly: boolean
   diagnostics: Diagnostic[]
   diagnosticViewZones: DiagnosticViewZone[]
@@ -105,6 +108,7 @@ export function AppWorkspace({
   source,
   handleSourceChange,
   handleFormatScore,
+  handleFormatUnzippedText,
   readOnly,
   diagnostics,
   diagnosticViewZones,
@@ -274,17 +278,19 @@ export function AppWorkspace({
             >
               <Columns2 size={12} aria-hidden="true" />
             </button>
-            {unzippedView ? null : (
-              <button
-                type="button"
-                className="pane-divider-format-toggle"
-                onClick={handleFormatScore}
-                title="Format score"
-                aria-label="Format score"
-              >
-                <AlignLeft size={12} aria-hidden="true" />
-              </button>
-            )}
+            <button
+              type="button"
+              className="pane-divider-format-toggle"
+              onClick={
+                unzippedView ? handleFormatUnzippedText : handleFormatScore
+              }
+              title={unzippedView ? 'Format unzipped text' : 'Format score'}
+              aria-label={
+                unzippedView ? 'Format unzipped text' : 'Format score'
+              }
+            >
+              <AlignLeft size={12} aria-hidden="true" />
+            </button>
             <button
               type="button"
               className="pane-divider-toggle"
