@@ -91,7 +91,13 @@ pub(crate) fn parse_key_prefix(line: &str) -> Option<(&str, &str)> {
         .and_then(|s| s.find(']').map(|i| (s[..i].trim(), s[i + 1..].trim())))
 }
 
-fn implicit_fill(role: ScoreLineRole, time_num: u8) -> String {
+/// `pub(crate)` (rather than private) so `unzipped_edit::merge_unzipped_text` can
+/// reuse it directly for measures where every declared part comes up blank after a
+/// repack — the only case where that module can't rely on `desugar_groups`'s own
+/// per-declaration implicit-fill fallback (that fallback only fires for a
+/// declaration that's *absent* from an otherwise-nonempty keyed group; a group with
+/// zero keyed lines at all short-circuits before ever reaching it).
+pub(crate) fn implicit_fill(role: ScoreLineRole, time_num: u8) -> String {
     match role {
         ScoreLineRole::Lyrics => "_".to_string(),
         ScoreLineRole::Notes | ScoreLineRole::Chord => {

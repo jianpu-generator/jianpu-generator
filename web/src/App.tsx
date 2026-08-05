@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppHeader } from './components/AppHeader'
 import { AppOverlays } from './components/AppOverlays'
 import { AppWorkspace } from './components/AppWorkspace'
@@ -8,6 +8,7 @@ import { PartToggles } from './components/PartToggles'
 import { SectionJumpToolbar } from './components/SectionJumpToolbar'
 import { SequenceJumpToolbar } from './components/SequenceJumpToolbar'
 import { fileIdForName, selectFile } from './fileStore'
+import { useAppPanels } from './hooks/useAppPanels'
 import { useAssetLoader } from './hooks/useAssetLoader'
 import { useFileImport } from './hooks/useFileImport'
 import { useFileOperations } from './hooks/useFileOperations'
@@ -24,9 +25,7 @@ import { useSectionNavigation } from './hooks/useSectionNavigation'
 import { useStorageBackend } from './hooks/useStorageBackend'
 import { useUrlFileSync } from './hooks/useUrlFileSync'
 import { useWasmLoader } from './hooks/useWasmLoader'
-import type { EditorHandle, PartMode, SoundfontValue } from './types'
-import type { MetadataKey } from './utils/metadataSource'
-import { parseMetadata, updateMetadataField } from './utils/metadataSource'
+import type { EditorHandle } from './types'
 import {
   playFromCurrentMeasureShortcutLabel,
   shortcutLabel,
@@ -49,11 +48,8 @@ export default function App() {
     flushPendingSave,
     refreshSaveStatus,
   } = useStorageBackend()
-  const [editPartsOpen, setEditPartsOpen] = useState(false)
-  const [editMetadataOpen, setEditMetadataOpen] = useState(false)
-  const [storageSettingsOpen, setStorageSettingsOpen] = useState(false)
-  const [binOpen, setBinOpen] = useState(false)
   const [editorCollapsed, setEditorCollapsed] = useState(false)
+  const [unzippedView, setUnzippedView] = useState(false)
 
   useUrlFileSync(store, setStore, isLoadingGithub)
 
@@ -87,6 +83,10 @@ export default function App() {
     setEditorCollapsed,
   )
   const fileId = fileIdForName(store, store.active)
+
+  useEffect(() => {
+    setUnzippedView(false)
+  }, [fileId])
 
   const editorRef = useRef<EditorHandle>(null)
   const soundfont = useAssetLoader('/fonts/GeneralUser_GS.sf2')
@@ -142,6 +142,8 @@ export default function App() {
     selectedSequenceRange,
     sequenceJumpToolbarProps,
     notifySelection,
+    notifyUnzippedSelection,
+    unzippedText,
     playSelectedMeasures,
     playFromCurrentMeasure,
     stopMeasurePlayback,
@@ -160,6 +162,7 @@ export default function App() {
     store.active,
     soundfont.bytes,
     fonts.fonts,
+    unzippedView,
   )
 
   usePartTogglePruning(
@@ -205,35 +208,19 @@ export default function App() {
     importFromFile,
   )
 
-  const handlePartDeclarationChange = useCallback(
-    (
-      abbreviation: string,
-      mode: PartMode,
-      followTarget: string | null,
-      soundfont: SoundfontValue | null,
-      volume: number | null,
-      octaveOffset: number | null,
-    ) => {
-      void updatePartDeclaration(
-        abbreviation,
-        mode,
-        followTarget,
-        soundfont,
-        volume,
-        octaveOffset,
-      ).then(handleSourceChange)
-    },
-    [updatePartDeclaration, handleSourceChange],
-  )
-
-  const parsedMetadata = useMemo(() => parseMetadata(source), [source])
-
-  const handleMetadataFieldChange = useCallback(
-    (key: MetadataKey, value: string | null) => {
-      handleSourceChange(updateMetadataField(source, key, value))
-    },
-    [source, handleSourceChange],
-  )
+  const {
+    editPartsOpen,
+    setEditPartsOpen,
+    editMetadataOpen,
+    setEditMetadataOpen,
+    storageSettingsOpen,
+    setStorageSettingsOpen,
+    binOpen,
+    setBinOpen,
+    handlePartDeclarationChange,
+    parsedMetadata,
+    handleMetadataFieldChange,
+  } = useAppPanels(source, updatePartDeclaration, handleSourceChange)
 
   const {
     setSelectedLineRange,
@@ -362,6 +349,7 @@ export default function App() {
         measureSpans={measureSpans}
         setSelectedLineRange={setSelectedLineRange}
         notifySelection={notifySelection}
+        notifyUnzippedSelection={notifyUnzippedSelection}
         setEditPartsOpen={setEditPartsOpen}
         setEditMetadataOpen={setEditMetadataOpen}
         forceSave={forceSave}
@@ -394,6 +382,9 @@ export default function App() {
         measureAudioNoteTimings={measureAudioNoteTimings}
         measureAudioElement={measureAudioElement}
         noPartsSelected={noPartsSelected}
+        unzippedView={unzippedView}
+        onToggleUnzippedView={() => setUnzippedView((value) => !value)}
+        unzippedText={unzippedText}
       />
     </div>
   )

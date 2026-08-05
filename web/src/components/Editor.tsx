@@ -20,13 +20,17 @@ import type {
   EditorHandle,
   MeasureSpan,
 } from '../types'
-import { byteOffsetToStringIndex } from '../utils/byteSpan'
+import { stringIndexToByteOffset } from '../utils/byteSpan'
 import {
   createDiagnosticViewZoneDomNode,
   diagnosticRange,
   errorViewZoneHeightInPx,
 } from './editorDiagnosticViewZones'
 import { createEditorImperativeHandle } from './editorImperativeHandle'
+import {
+  createMeasureViewZoneDomNode,
+  measureViewZoneLineNumber,
+} from './editorMeasureViewZones'
 
 export interface EditorProps {
   /** Unique per-file ID; gives each file its own Monaco model and undo stack. */
@@ -39,6 +43,10 @@ export interface EditorProps {
   measureSpans?: MeasureSpan[]
   toolbar?: ReactNode
   onSelectionChange?: (startLine: number, endLine: number) => void
+  /** Same selection as `onSelectionChange`, but as UTF-16 code-unit offsets
+   * via `model.getOffsetAt` — used by the Unzipped view caller, whose
+   * measure mapping is byte-offset-based rather than line-based. */
+  onSelectionOffsetChange?: (startOffset: number, endOffset: number) => void
   onCursorLineChange?: (line: number) => void
   onPlayMeasure?: () => void
   onForceSave?: () => void
@@ -62,6 +70,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     measureSpans = [],
     toolbar,
     onSelectionChange,
+    onSelectionOffsetChange,
     onCursorLineChange,
     onPlayMeasure,
     onForceSave,
@@ -75,6 +84,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const measureViewZoneIdsRef = useRef<string[]>([])
   const diagnosticViewZoneIdsRef = useRef<string[]>([])
   const onSelectionChangeRef = useRef(onSelectionChange)
+  const onSelectionOffsetChangeRef = useRef(onSelectionOffsetChange)
   const onCursorLineChangeRef = useRef(onCursorLineChange)
   const onPlayMeasureRef = useRef(onPlayMeasure)
   const onForceSaveRef = useRef(onForceSave)
@@ -85,6 +95,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const codeLensProviderRef = useRef<IDisposable | null>(null)
   useEffect(() => {
     onSelectionChangeRef.current = onSelectionChange
+    onSelectionOffsetChangeRef.current = onSelectionOffsetChange
     onCursorLineChangeRef.current = onCursorLineChange
     onPlayMeasureRef.current = onPlayMeasure
     onForceSaveRef.current = onForceSave
@@ -137,28 +148,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       const source = model.getValue()
 
       measureSpans.forEach((span, index) => {
-        const stringIndex = byteOffsetToStringIndex(
-          source,
-          span.view_zone_start,
-        )
-        const lineNumber = model.getPositionAt(stringIndex).lineNumber
-
-        const hasLabel = span.section_label != null
-        const domNode = document.createElement('div')
-        domNode.style.cssText = [
-          'width: 100%',
-          'height: 21px',
-          hasLabel ? 'background: #dbeafe' : 'background: #f5f5f5',
-          hasLabel ? 'color: #1e40af' : 'color: #666666',
-          'font-family: var(--mono)',
-          'font-size: 14px',
-          'font-weight: bold',
-          'display: flex',
-          'align-items: center',
-          'padding-left: 8px',
-          'box-sizing: border-box',
-        ].join(';')
-        domNode.textContent = span.section_label ?? `${index + 1}`
+        const lineNumber = measureViewZoneLineNumber(model, source, span)
+        const domNode = createMeasureViewZoneDomNode(span, index)
 
         const id = accessor.addZone({
           afterLineNumber: lineNumber - 1,
@@ -274,6 +265,18 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         selection.startLineNumber,
         selection.endLineNumber,
       )
+      if (onSelectionOffsetChangeRef.current) {
+        const text = model.getValue()
+        const startOffset = stringIndexToByteOffset(
+          text,
+          model.getOffsetAt(selection.getStartPosition()),
+        )
+        const endOffset = stringIndexToByteOffset(
+          text,
+          model.getOffsetAt(selection.getEndPosition()),
+        )
+        onSelectionOffsetChangeRef.current(startOffset, endOffset)
+      }
       onCursorLineChangeRef.current?.(selection.startLineNumber)
     }
     ed.onDidChangeCursorPosition(notifyCursor)

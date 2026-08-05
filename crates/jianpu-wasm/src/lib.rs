@@ -8,6 +8,7 @@ mod symbols;
 mod types;
 #[cfg(any(feature = "wav", feature = "pdf", feature = "midi"))]
 mod types_export;
+mod unzipped_edit;
 
 #[cfg(feature = "wav")]
 #[path = "lib_wav.rs"]
@@ -33,7 +34,9 @@ use responses::{
 use types::{
     ListMeasureSpansResponse, ListPartDeclarationsResponse, ListPartsResponse, ListSymbolsResponse,
     MeasureAtOffsetResponse, RenameSymbolResponse, RenderResponse, SymbolKindOut,
+    UnzippedEditResponse,
 };
+use unzipped_edit::{extract_unzipped_text_response, merge_unzipped_text_response};
 use wasm_bindgen::prelude::*;
 
 /// Combines a `# sequence` entry index pair from the wasm boundary (where
@@ -285,6 +288,28 @@ pub fn decompress_share_payload(bytes: &[u8]) -> Option<String> {
     let mut output = Vec::new();
     brotli::BrotliDecompress(&mut &bytes[..], &mut output).ok()?;
     String::from_utf8(output).ok()
+}
+
+/// Extract every declared part's resolved score lines from `source` for the
+/// Unzipped view, flattened per part into one continuous token stream.
+///
+/// - `{ "status": "ok", "text": "..." }`
+/// - `{ "status": "unknownPart" }`
+/// - `{ "status": "err" }`
+#[wasm_bindgen]
+pub fn extract_unzipped_text(source: &str) -> UnzippedEditResponse {
+    extract_unzipped_text_response(source)
+}
+
+/// Merge edited whole-document Unzipped Edit text back into `source`'s
+/// `# score` section, returning the full updated source.
+///
+/// - `{ "status": "ok", "text": "<full source>" }`
+/// - `{ "status": "unknownPart" }`
+/// - `{ "status": "err" }`
+#[wasm_bindgen]
+pub fn merge_unzipped_text(source: &str, unzipped_text: &str) -> UnzippedEditResponse {
+    merge_unzipped_text_response(source, unzipped_text)
 }
 
 #[cfg(test)]

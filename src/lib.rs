@@ -38,6 +38,7 @@ pub mod source_embed;
 pub mod split_track;
 pub mod symbols;
 mod tuplet;
+pub mod unzipped_edit;
 pub mod utils;
 
 #[cfg(feature = "midi")]
@@ -229,12 +230,11 @@ fn build_header(
     }
 }
 
-fn render_svgs_with_parts(
+fn render_svg_docs_with_parts(
     score: &Score,
     parts: &[PartInfo],
     groups: &[GroupInfo],
-    source: Option<&str>,
-) -> Result<Vec<String>, IrrecoverableError> {
+) -> Result<Vec<renderer::new_types::SvgDocument>, IrrecoverableError> {
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
     let header = build_header(score, parts, groups);
     let compile_result = compiler::compile(score);
@@ -246,8 +246,33 @@ fn render_svgs_with_parts(
         config.part_label_width_pt as f32,
         config.lyric_font_sizes(),
     )?;
-    let docs = renderer::new_renderer::render_new(&abs, &config);
+    Ok(renderer::new_renderer::render_new(&abs, &config))
+}
+
+fn render_svgs_with_parts(
+    score: &Score,
+    parts: &[PartInfo],
+    groups: &[GroupInfo],
+    source: Option<&str>,
+) -> Result<Vec<String>, IrrecoverableError> {
+    let docs = render_svg_docs_with_parts(score, parts, groups)?;
     Ok(serializer::serialize(&docs, source))
+}
+
+/// Parse, group, and render a `.jianpu` source string into the pre-serialization
+/// [`renderer::new_types::SvgDocument`] tree — for tests that want to assert
+/// two documents render the same *shape* without being sensitive to
+/// serialization-only differences (e.g. the embedded-source metadata blob).
+#[cfg(test)]
+pub(crate) fn render_svg_docs_from_source(
+    source: &str,
+    filename: &str,
+    instruments: &[InstrumentInfo],
+) -> Result<Vec<renderer::new_types::SvgDocument>, IrrecoverableError> {
+    let parts = list_parts_from_source(source, filename, instruments)?;
+    let groups = list_groups_from_source(source, filename, instruments)?;
+    let score = compile(source, filename, instruments)?;
+    render_svg_docs_with_parts(&score, &parts, &groups)
 }
 
 /// Layout and render a [`Score`] into one SVG string per page.

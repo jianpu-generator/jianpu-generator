@@ -1,4 +1,5 @@
 import * as Toast from '@radix-ui/react-toast'
+import './ExportAudioToast.css'
 
 /** Shows a toast with a spinner while WAV export is running in the background.
  *  Needed because the export dropdown closes as soon as an item is clicked,

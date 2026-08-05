@@ -1,6 +1,8 @@
 import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
+import { merge_unzipped_text } from 'jianpu-wasm'
+import { Columns2 } from 'lucide-react'
 import type { RefObject } from 'react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { MOBILE_BREAKPOINT_QUERY, useMediaQuery } from '../hooks/useMediaQuery'
 import type {
   Diagnostic,
@@ -42,6 +44,7 @@ interface AppWorkspaceProps {
     range: { firstLine: number; lastLine: number } | null,
   ) => void
   notifySelection: (startLine: number, endLine: number) => void
+  notifyUnzippedSelection: (startOffset: number, endOffset: number) => void
   setEditPartsOpen: (open: boolean) => void
   setEditMetadataOpen: (open: boolean) => void
   forceSave: () => void
@@ -81,6 +84,13 @@ interface AppWorkspaceProps {
   measureAudioNoteTimings: NoteTimingOut[]
   measureAudioElement: HTMLAudioElement | null
   noPartsSelected: boolean
+  /** Whether the whole-document Unzipped view (Zipped⇄Unzipped toggle) is
+   * currently shown instead of the normal Zipped editor. */
+  unzippedView: boolean
+  onToggleUnzippedView: () => void
+  /** The Unzipped view projection of `source`, kept in sync by the caller
+   * whenever `unzippedView` is true. */
+  unzippedText: string
 }
 
 export function AppWorkspace({
@@ -97,6 +107,7 @@ export function AppWorkspace({
   measureSpans,
   setSelectedLineRange,
   notifySelection,
+  notifyUnzippedSelection,
   setEditPartsOpen,
   setEditMetadataOpen,
   forceSave,
@@ -129,6 +140,9 @@ export function AppWorkspace({
   measureAudioNoteTimings,
   measureAudioElement,
   noPartsSelected,
+  unzippedView,
+  onToggleUnzippedView,
+  unzippedText,
 }: AppWorkspaceProps) {
   const [editorPaneEl, setEditorPaneEl] = useState<HTMLDivElement | null>(null)
   const isMobile = useMediaQuery(MOBILE_BREAKPOINT_QUERY)
@@ -152,6 +166,20 @@ export function AppWorkspace({
     }
   }, [setEditorCollapsed])
 
+  const handleEditorChange = useCallback(
+    (value: string) => {
+      if (!unzippedView) {
+        handleSourceChange(value)
+        return
+      }
+      const result = merge_unzipped_text(source, value)
+      if (result.status === 'ok') {
+        handleSourceChange(result.text)
+      }
+    },
+    [unzippedView, source, handleSourceChange],
+  )
+
   return (
     <main className="workspace">
       <section
@@ -169,16 +197,23 @@ export function AppWorkspace({
             {hideEditor ? null : (
               <Editor
                 ref={editorRef}
-                path={fileId}
-                value={source}
-                onChange={handleSourceChange}
+                path={unzippedView ? `${fileId}::unzipped` : fileId}
+                value={unzippedView ? unzippedText : source}
+                onChange={handleEditorChange}
                 readOnly={readOnly}
                 diagnostics={diagnostics}
                 diagnosticViewZones={diagnosticViewZones}
                 measureSpans={measureSpans}
                 onSelectionChange={(firstLine, lastLine) => {
                   setSelectedLineRange(null)
-                  notifySelection(firstLine, lastLine)
+                  if (!unzippedView) {
+                    notifySelection(firstLine, lastLine)
+                  }
+                }}
+                onSelectionOffsetChange={(startOffset, endOffset) => {
+                  if (unzippedView) {
+                    notifyUnzippedSelection(startOffset, endOffset)
+                  }
                 }}
                 onEditPartsClick={() => setEditPartsOpen(true)}
                 onEditMetadataClick={() => setEditMetadataOpen(true)}
@@ -217,23 +252,42 @@ export function AppWorkspace({
       </section>
       <div className="pane-divider">
         {hideEditor ? null : (
-          <button
-            type="button"
-            className="pane-divider-toggle"
-            onClick={() => setEditorCollapsed((collapsed) => !collapsed)}
-            title={editorCollapsed ? 'Show editor' : 'Hide editor'}
-            aria-label={editorCollapsed ? 'Show editor' : 'Hide editor'}
-          >
-            <span
-              className="pane-divider-toggle-icon"
-              style={{
-                transform: `rotate(${toggleIconRotationDeg}deg)`,
-              }}
-              aria-hidden="true"
+          <div className="pane-divider-toggles">
+            <button
+              type="button"
+              className={[
+                'pane-divider-view-toggle',
+                unzippedView ? 'pane-divider-view-toggle--active' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={onToggleUnzippedView}
+              title={unzippedView ? 'Show Zipped view' : 'Show Unzipped view'}
+              aria-label={
+                unzippedView ? 'Show Zipped view' : 'Show Unzipped view'
+              }
+              aria-pressed={unzippedView}
             >
-              ‹
-            </span>
-          </button>
+              <Columns2 size={12} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="pane-divider-toggle"
+              onClick={() => setEditorCollapsed((collapsed) => !collapsed)}
+              title={editorCollapsed ? 'Show editor' : 'Hide editor'}
+              aria-label={editorCollapsed ? 'Show editor' : 'Hide editor'}
+            >
+              <span
+                className="pane-divider-toggle-icon"
+                style={{
+                  transform: `rotate(${toggleIconRotationDeg}deg)`,
+                }}
+                aria-hidden="true"
+              >
+                ‹
+              </span>
+            </button>
+          </div>
         )}
       </div>
       <section

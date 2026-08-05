@@ -1,14 +1,6 @@
-import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
-import { useCallback, useMemo, useRef, useState } from 'react'
-import type {
-  Diagnostic,
-  DiagnosticViewZone,
-  MeasureSpan,
-  PartDeclaration,
-  PartInfo,
-  SectionRange,
-  SequenceEntry,
-} from '../types'
+import { extract_unzipped_text } from 'jianpu-wasm'
+import { useCallback, useEffect } from 'react'
+import { ensureWasmInit } from '../wasmInit'
 import type { WorkerRequest } from '../worker/jianpu.worker'
 import { useInstrumentPreview } from './useInstrumentPreview'
 import { useJianpuWorkerExports } from './useJianpuWorkerExports'
@@ -16,15 +8,10 @@ import { useJianpuWorkerImport } from './useJianpuWorkerImport'
 import { useJianpuWorkerLifecycle } from './useJianpuWorkerLifecycle'
 import { useJianpuWorkerPartDeclaration } from './useJianpuWorkerPartDeclaration'
 import { useJianpuWorkerRenderRequests } from './useJianpuWorkerRenderRequests'
+import { useJianpuWorkerState } from './useJianpuWorkerState'
 import type { JianpuWorkerState } from './useJianpuWorkerTypes'
 import { useMeasureAudioPlayback } from './useMeasureAudioPlayback'
 import { useSequenceNavigation } from './useSequenceNavigation'
-import {
-  disabledLyricsForRender,
-  enabledPartNamesForFilename,
-  enabledTracksForRender,
-  wavFilenameFromActiveFile,
-} from './workerHelpers'
 
 export type { JianpuWorkerState } from './useJianpuWorkerTypes'
 
@@ -36,117 +23,130 @@ export function useJianpuWorker(
   activeFile: string,
   soundfontBytes: Uint8Array | null,
   fontBytes: { sc: Uint8Array; tc: Uint8Array; mono: Uint8Array } | null,
+  unzippedView: boolean,
   debounceMs = 300,
 ): JianpuWorkerState {
-  const [parts, setParts] = useState<PartInfo[]>([])
-  const [partDeclarations, setPartDeclarations] = useState<PartDeclaration[]>(
-    [],
+  const {
+    parts,
+    setParts,
+    partDeclarations,
+    setPartDeclarations,
+    partsLoading,
+    setPartsLoading,
+    documents,
+    setDocuments,
+    wavUrl,
+    setWavUrl,
+    noteTimings,
+    setNoteTimings,
+    audioAvailable,
+    setAudioAvailable,
+    pdfAvailable,
+    setPdfAvailable,
+    pdfExporting,
+    setPdfExporting,
+    splitPdfExporting,
+    setSplitPdfExporting,
+    midiAvailable,
+    setMidiAvailable,
+    midiExporting,
+    setMidiExporting,
+    splitMidiExporting,
+    setSplitMidiExporting,
+    splitWavExporting,
+    setSplitWavExporting,
+    diagnostics,
+    setDiagnostics,
+    diagnosticViewZones,
+    setDiagnosticViewZones,
+    rendering,
+    setRendering,
+    audioGenerating,
+    setAudioGenerating,
+    selectedMeasureRange,
+    setSelectedMeasureRange,
+    highlightedDocuments,
+    setHighlightedDocuments,
+    measureSpans,
+    setMeasureSpans,
+    unzippedText,
+    setUnzippedText,
+    partMeasureRanges,
+    setPartMeasureRanges,
+    lyricsVerseRanges,
+    setLyricsVerseRanges,
+    sectionRanges,
+    setSectionRanges,
+    sequenceEntries,
+    setSequenceEntries,
+    highlightRenderRequestIdRef,
+    latestHighlightRenderIdRef,
+    measureSpansRequestIdRef,
+    latestMeasureSpansIdRef,
+    measureSpansRef,
+    partMeasureRangesRef,
+    lyricsVerseRangesRef,
+    workerRef,
+    wavUrlRef,
+    partsRequestIdRef,
+    updatePartDeclarationRequestIdRef,
+    latestUpdatePartDeclarationIdRef,
+    pendingPartDeclarationUpdatesRef,
+    importRequestIdRef,
+    pendingImportsRef,
+    renderRequestIdRef,
+    audioRequestIdRef,
+    pdfRequestIdRef,
+    splitPdfRequestIdRef,
+    midiRequestIdRef,
+    splitMidiRequestIdRef,
+    splitWavRequestIdRef,
+    latestPartsIdRef,
+    latestRenderIdRef,
+    latestAudioIdRef,
+    latestPdfIdRef,
+    latestSplitPdfIdRef,
+    latestMidiIdRef,
+    latestSplitMidiIdRef,
+    latestSplitWavIdRef,
+    sourceRef,
+    activeFileRef,
+    enabledTracksRef,
+    enabledPartNamesRef,
+    disabledLyricsRef,
+    audioAvailableRef,
+    cursorOffsetTimerRef,
+    lastSelectionRef,
+    enabledTracks,
+    disabledLyricsTracks,
+    wavFilename,
+  } = useJianpuWorkerState(
+    source,
+    activeFile,
+    disabledParts,
+    disabledLyrics,
+    soloedParts,
   )
-  const [partsLoading, setPartsLoading] = useState(false)
-  const [documents, setDocuments] = useState<SvgDocumentOut[]>([])
-  const [wavUrl, setWavUrl] = useState<string | null>(null)
-  const [noteTimings, setNoteTimings] = useState<NoteTimingOut[]>([])
-  const [audioAvailable, setAudioAvailable] = useState(false)
-  const [pdfAvailable, setPdfAvailable] = useState(false)
-  const [pdfExporting, setPdfExporting] = useState(false)
-  const [splitPdfExporting, setSplitPdfExporting] = useState(false)
-  const [midiAvailable, setMidiAvailable] = useState(false)
-  const [midiExporting, setMidiExporting] = useState(false)
-  const [splitMidiExporting, setSplitMidiExporting] = useState(false)
-  const [splitWavExporting, setSplitWavExporting] = useState(false)
-  const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([])
-  const [diagnosticViewZones, setDiagnosticViewZones] = useState<
-    DiagnosticViewZone[]
-  >([])
-  const [rendering, setRendering] = useState(false)
-  const [audioGenerating, setAudioGenerating] = useState(false)
-  const [selectedMeasureRange, setSelectedMeasureRange] = useState<{
-    start: number
-    end: number
-  } | null>(null)
-  const [highlightedDocuments, setHighlightedDocuments] = useState<
-    SvgDocumentOut[]
-  >([])
-  const [measureSpans, setMeasureSpans] = useState<MeasureSpan[]>([])
-  const [sectionRanges, setSectionRanges] = useState<SectionRange[]>([])
-  const [sequenceEntries, setSequenceEntries] = useState<SequenceEntry[]>([])
+
   const sequenceNav = useSequenceNavigation(sequenceEntries)
-  const highlightRenderRequestIdRef = useRef(0)
-  const latestHighlightRenderIdRef = useRef(0)
-  const measureSpansRequestIdRef = useRef(0)
-  const latestMeasureSpansIdRef = useRef(0)
-  const measureSpansRef = useRef<MeasureSpan[]>([])
-  const workerRef = useRef<Worker | null>(null)
-  const wavUrlRef = useRef<string | null>(null)
-  const partsRequestIdRef = useRef(0)
-  const updatePartDeclarationRequestIdRef = useRef(0)
-  const latestUpdatePartDeclarationIdRef = useRef(0)
-  const pendingPartDeclarationUpdatesRef = useRef(
-    new Map<number, (source: string) => void>(),
-  )
-  const importRequestIdRef = useRef(0)
-  const pendingImportsRef = useRef(
-    new Map<
-      number,
-      { resolve: (source: string) => void; reject: (error: Error) => void }
-    >(),
-  )
-  const renderRequestIdRef = useRef(0)
-  const audioRequestIdRef = useRef(0)
-  const pdfRequestIdRef = useRef(0)
-  const splitPdfRequestIdRef = useRef(0)
-  const midiRequestIdRef = useRef(0)
-  const splitMidiRequestIdRef = useRef(0)
-  const splitWavRequestIdRef = useRef(0)
-  const latestPartsIdRef = useRef(0)
-  const latestRenderIdRef = useRef(0)
-  const latestAudioIdRef = useRef(0)
-  const latestPdfIdRef = useRef(0)
-  const latestSplitPdfIdRef = useRef(0)
-  const latestMidiIdRef = useRef(0)
-  const latestSplitMidiIdRef = useRef(0)
-  const latestSplitWavIdRef = useRef(0)
-  const sourceRef = useRef(source)
-  const activeFileRef = useRef(activeFile)
-  const enabledTracksRef = useRef<string[] | undefined>(undefined)
-  const enabledPartNamesRef = useRef<string[] | undefined>(undefined)
-  const disabledLyricsRef = useRef<string[] | undefined>(undefined)
-  const audioAvailableRef = useRef(false)
-  const cursorOffsetTimerRef = useRef<number | null>(null)
-  const lastSelectionRef = useRef<{ start: number; end: number } | null>(null)
 
-  const effectiveDisabledParts = useMemo(() => {
-    if (soloedParts.size === 0) return disabledParts
-    return new Set(
-      parts
-        .map((part) => part.abbreviation)
-        .filter((abbr) => !soloedParts.has(abbr)),
-    )
-  }, [soloedParts, parts, disabledParts])
-
-  const enabledTracks = useMemo(
-    () => enabledTracksForRender(parts, effectiveDisabledParts),
-    [parts, effectiveDisabledParts],
-  )
-  const enabledPartNames = useMemo(
-    () => enabledPartNamesForFilename(parts, effectiveDisabledParts),
-    [parts, effectiveDisabledParts],
-  )
-  const disabledLyricsTracks = useMemo(
-    () => disabledLyricsForRender(parts, disabledLyrics),
-    [parts, disabledLyrics],
-  )
-  const wavFilename = useMemo(
-    () => wavFilenameFromActiveFile(activeFile, enabledPartNames),
-    [activeFile, enabledPartNames],
-  )
-
-  sourceRef.current = source
-  activeFileRef.current = activeFile
-  enabledTracksRef.current = enabledTracks
-  enabledPartNamesRef.current = enabledPartNames
-  disabledLyricsRef.current = disabledLyricsTracks
-  measureSpansRef.current = measureSpans
+  // Snapshot `extract_unzipped_text(source)` exactly when Unzipped view is
+  // switched on, so subsequent keystrokes in the Unzipped editor aren't
+  // overwritten by re-extraction while the user is still typing. `source` is
+  // intentionally excluded from the dependency array — this must only
+  // re-run when `unzippedView` flips, not on every edit.
+  useEffect(() => {
+    if (!unzippedView) return
+    let cancelled = false
+    ensureWasmInit().then(() => {
+      if (cancelled) return
+      const result = extract_unzipped_text(sourceRef.current)
+      setUnzippedText(result.status === 'ok' ? result.text : '')
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [unzippedView])
 
   const setNextWavUrl = useCallback((next: string | null) => {
     if (wavUrlRef.current) {
@@ -239,35 +239,41 @@ export function useJianpuWorker(
     pendingImportsRef,
   })
 
-  const { notifySelection } = useJianpuWorkerRenderRequests({
-    workerRef,
-    sourceRef,
-    source,
-    activeFile,
-    debounceMs,
-    enabledTracks,
-    disabledLyricsTracks,
-    setDocuments,
-    setNextWavUrl,
-    setDiagnostics,
-    setPartsLoading,
-    partsRequestIdRef,
-    latestPartsIdRef,
-    setRendering,
-    renderRequestIdRef,
-    latestRenderIdRef,
-    selectedMeasureRange,
-    setSelectedMeasureRange,
-    setHighlightedDocuments,
-    highlightRenderRequestIdRef,
-    latestHighlightRenderIdRef,
-    measureSpans,
-    measureSpansRef,
-    measureSpansRequestIdRef,
-    latestMeasureSpansIdRef,
-    cursorOffsetTimerRef,
-    lastSelectionRef,
-  })
+  const { notifySelection, notifyUnzippedSelection } =
+    useJianpuWorkerRenderRequests({
+      workerRef,
+      sourceRef,
+      source,
+      activeFile,
+      debounceMs,
+      enabledTracks,
+      disabledLyricsTracks,
+      setDocuments,
+      setNextWavUrl,
+      setDiagnostics,
+      setPartsLoading,
+      partsRequestIdRef,
+      latestPartsIdRef,
+      setRendering,
+      renderRequestIdRef,
+      latestRenderIdRef,
+      selectedMeasureRange,
+      setSelectedMeasureRange,
+      setHighlightedDocuments,
+      highlightRenderRequestIdRef,
+      latestHighlightRenderIdRef,
+      measureSpans,
+      measureSpansRef,
+      measureSpansRequestIdRef,
+      latestMeasureSpansIdRef,
+      cursorOffsetTimerRef,
+      lastSelectionRef,
+      unzippedView,
+      partMeasureRangesRef,
+      setPartMeasureRanges,
+      lyricsVerseRangesRef,
+      setLyricsVerseRanges,
+    })
 
   const generateFullAudio = useCallback(() => {
     const worker = workerRef.current
@@ -363,6 +369,10 @@ export function useJianpuWorker(
     measureAudioNoteTimings,
     measureAudioElement,
     notifySelection,
+    notifyUnzippedSelection,
+    unzippedText,
+    partMeasureRanges,
+    lyricsVerseRanges,
     playSelectedMeasures,
     playFromCurrentMeasure,
     stopMeasurePlayback,

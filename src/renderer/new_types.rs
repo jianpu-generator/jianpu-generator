@@ -67,14 +67,14 @@ impl TransparentRectRole {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct SvgDocument {
     pub width_pt: f32,
     pub height_pt: f32,
     pub elements: Vec<SvgElement>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct SvgElement {
     pub x: f32,
     pub y: f32,
@@ -82,7 +82,7 @@ pub struct SvgElement {
     pub kind: SvgKind,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Tag {
     /// `end` is the last original source measure index this click target
     /// represents; equal to `index` except for merged multi-measure rests.
@@ -102,7 +102,7 @@ pub enum Tag {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 
 pub enum SvgKind {
     Text {
@@ -164,7 +164,7 @@ pub enum SvgKind {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct TspanData {
     pub content: String,
     pub bold: bool,

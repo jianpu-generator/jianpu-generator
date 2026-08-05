@@ -1,4 +1,9 @@
-import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
+import type {
+  LyricsVerseRangesOut,
+  NoteTimingOut,
+  PartMeasureRangesOut,
+  SvgDocumentOut,
+} from 'jianpu-wasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -45,6 +50,19 @@ export interface JianpuWorkerState {
   /** The `<audio>` element currently playing the selected measure range, if any; a new element each time playback starts. */
   measureAudioElement: HTMLAudioElement | null
   notifySelection: (startLine: number, endLine: number) => void
+  /** Same as `notifySelection`, but for Unzipped view text, whose byte offsets map
+   * to measure indices via `partMeasureRanges` instead of `measureSpans`. */
+  notifyUnzippedSelection: (startOffset: number, endOffset: number) => void
+  /** The whole-document Unzipped view projection of `source` (empty until
+   * `unzippedView` is enabled), recomputed alongside `measureSpans`. */
+  unzippedText: string
+  /** Per declared part, per measure index: byte range within `unzippedText`
+   * covering that measure's tokens. */
+  partMeasureRanges: PartMeasureRangesOut[]
+  /** Per declared part, per lyrics verse, per measure index: byte range
+   * within `unzippedText` covering that verse's tagged `[Abbrev:lyrics:N]`
+   * block tokens for that measure. */
+  lyricsVerseRanges: LyricsVerseRangesOut[]
   playSelectedMeasures: () => void
   playFromCurrentMeasure: () => void
   stopMeasurePlayback: () => void

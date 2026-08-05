@@ -13,6 +13,122 @@ export function measureRangeInSpan(
   return start === -1 ? null : { start, end }
 }
 
+/** A declared part's primary block of Unzipped view text and the
+ * per-measure byte ranges within it, as returned by
+ * `extract_unzipped_text`. */
+interface PartMeasureRangesLike {
+  abbreviation: string
+  ranges: { start: number; end: number }[]
+}
+
+/** One declared part's tagged `[Abbrev:lyrics:N]` verse block and its
+ * per-measure byte ranges, as returned by `extract_unzipped_text`. */
+interface LyricsVerseRangesLike {
+  abbreviation: string
+  verseNumber: number
+  ranges: { start: number; end: number }[]
+}
+
+/** One block of Unzipped view text — either a part's primary block
+ * (`verseNumber: null`) or a tagged lyrics verse block. */
+interface UnzippedTextBlock {
+  abbreviation: string
+  verseNumber: number | null
+  ranges: { start: number; end: number }[]
+}
+
+/** Combines primary and lyrics-verse blocks into one offset-sorted list.
+ * Every declared part contributes at most one primary block plus, for
+ * `notes+lyrics`/`lyrics`-kind parts, zero or more tagged verse blocks —
+ * these no longer form one contiguous block per part (a part can now have
+ * several, interleaved with other parts' blocks in emission order), so
+ * lookup can't assume a part's bounds run up to the next part's start. */
+function collectUnzippedTextBlocks(
+  partMeasureRanges: PartMeasureRangesLike[],
+  lyricsVerseRanges: LyricsVerseRangesLike[],
+): UnzippedTextBlock[] {
+  const primary: UnzippedTextBlock[] = partMeasureRanges.map((part) => ({
+    abbreviation: part.abbreviation,
+    verseNumber: null,
+    ranges: part.ranges,
+  }))
+  const verses: UnzippedTextBlock[] = lyricsVerseRanges.map((verse) => ({
+    abbreviation: verse.abbreviation,
+    verseNumber: verse.verseNumber,
+    ranges: verse.ranges,
+  }))
+  return [...primary, ...verses]
+    .filter((block) => block.ranges[0] !== undefined)
+    .sort((a, b) => a.ranges[0].start - b.ranges[0].start)
+}
+
+/** Unzipped view text is a sequence of blocks (see
+ * `collectUnzippedTextBlocks`), each starting at its first range's start
+ * and extending up to (but not including) the next block's start, since
+ * blocks are contiguous and offset-sorted; the last block extends to
+ * infinity. A byte offset into the generated text first identifies which
+ * block it falls in, then which of that block's measures it falls in (or is
+ * nearest to, for offsets landing in inter-token whitespace). */
+export function measureRangeInUnzippedText(
+  partMeasureRanges: PartMeasureRangesLike[],
+  cursorOffset: number,
+  lyricsVerseRanges: LyricsVerseRangesLike[] = [],
+): { start: number; end: number } | null {
+  const blocks = collectUnzippedTextBlocks(partMeasureRanges, lyricsVerseRanges)
+  const block = findBlockForOffset(blocks, cursorOffset)
+  if (block === null) return null
+  const measureIndex = findMeasureIndexForOffset(block.ranges, cursorOffset)
+  if (measureIndex === null) return null
+  return { start: measureIndex, end: measureIndex }
+}
+
+function findBlockForOffset(
+  blocks: UnzippedTextBlock[],
+  cursorOffset: number,
+): UnzippedTextBlock | null {
+  if (blocks.length === 0) return null
+  let result = blocks[0]
+  for (const block of blocks) {
+    if (cursorOffset < block.ranges[0].start) break
+    result = block
+  }
+  return result
+}
+
+function findMeasureIndexForOffset(
+  ranges: { start: number; end: number }[],
+  cursorOffset: number,
+): number | null {
+  if (ranges.length === 0) return null
+  // Binary-search for the measure whose [start, end) contains cursorOffset;
+  // fall back to the nearest measure for offsets in inter-token whitespace.
+  let low = 0
+  let high = ranges.length - 1
+  while (low <= high) {
+    const mid = (low + high) >> 1
+    const range = ranges[mid]
+    if (cursorOffset < range.start) {
+      high = mid - 1
+    } else if (cursorOffset >= range.end) {
+      low = mid + 1
+    } else {
+      return mid
+    }
+  }
+  // `low` is now the first measure whose range starts after cursorOffset
+  // (or ranges.length if past the end); the nearest measure is either that
+  // one or the one before it.
+  const after = Math.min(low, ranges.length - 1)
+  const before = Math.max(low - 1, 0)
+  const distanceTo = (index: number) => {
+    const range = ranges[index]
+    if (cursorOffset < range.start) return range.start - cursorOffset
+    if (cursorOffset >= range.end) return cursorOffset - (range.end - 1)
+    return 0
+  }
+  return distanceTo(before) <= distanceTo(after) ? before : after
+}
+
 export function enabledTracksForRender(
   parts: PartInfo[],
   disabledParts: ReadonlySet<string>,

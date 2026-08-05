@@ -27,6 +27,19 @@ use directives::split_directive;
 /// One entry per bar group: all directive events emitted by that group's directive row.
 pub(super) type DirectiveEventsPerMeasure = Vec<Vec<Spanned<ScoreEvent>>>;
 
+/// Parse just the directive events (if any) from a single measure group's leading
+/// directive line, discarding the remaining data lines and any directive-parse errors.
+/// Thin `pub(crate)` wrapper around the private `directives::split_directive`, so callers
+/// outside this module (e.g. `unzipped_edit`'s capacity scanning) can reuse directive-line
+/// parsing without the whole `directives` submodule being made visible.
+pub(crate) fn directive_events_for_group(
+    group: &[SourceLine],
+    base_offset: usize,
+) -> Vec<Spanned<ScoreEvent>> {
+    let (events, _remaining, _errors) = split_directive(group, base_offset);
+    events
+}
+
 /// Return type of `parse`: tracks, directive events per measure, per-measure desugar
 /// errors, and every `[Abbrev]` key-prefix reference found in the score section.
 type ParseResult = Result<
