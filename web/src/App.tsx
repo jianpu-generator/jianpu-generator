@@ -84,6 +84,7 @@ export default function App() {
   )
   const fileId = fileIdForName(store, store.active)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fileId is the trigger for resetting the view on file switch, not read in the body
   useEffect(() => {
     setUnzippedView(false)
   }, [fileId])
@@ -153,6 +154,7 @@ export default function App() {
     stopPreviewInstrument,
     previewAudioPlaying,
     updatePartDeclaration,
+    formatScore,
     importFromFile,
   } = useJianpuWorker(
     source,
@@ -199,6 +201,10 @@ export default function App() {
     },
     [setStore, flushPendingSave],
   )
+
+  const handleFormatScore = useCallback(() => {
+    void formatScore(source).then(handleSourceChange)
+  }, [formatScore, source, handleSourceChange])
 
   const { importingFile, handleImportFile } = useFileImport(
     store,
@@ -343,6 +349,7 @@ export default function App() {
         fileId={fileId}
         source={source}
         handleSourceChange={handleSourceChange}
+        handleFormatScore={handleFormatScore}
         readOnly={readOnly}
         diagnostics={diagnostics}
         diagnosticViewZones={diagnosticViewZones}

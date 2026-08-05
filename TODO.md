@@ -35,7 +35,7 @@
 - [x] Dead-code analysis, unused deps analysis
 - [x] first/last Playback cursor of each measure doesn't fit to the bar line nicely, there's still some columnar gap
 - [x] dot not showing for chord
-- [ ] Formatter: align lyric syllables with their corresponding notes
 - [x] select measures not working when viewing shared link
 - [x] go live dropdown menu items should have icons
 - [x] when opening a live link, the ?file= params should not be populated
+- [ ] Formatter: Auto remove content that can be elided, such as rests

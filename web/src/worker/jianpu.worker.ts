@@ -2,6 +2,7 @@ import init, * as jianpuWasm from 'jianpu-wasm'
 import {
   extract_source_from_pdf,
   extract_source_from_svg,
+  format_score,
   list_measure_spans,
   list_parts,
   render,
@@ -198,6 +199,15 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       id: msg.id,
       source: newSource,
       declarations: listDeclarationsFromSource(newSource),
+    } satisfies WorkerResponse)
+    return
+  }
+
+  if (msg.type === 'formatScore') {
+    postMessage({
+      type: 'scoreFormatted',
+      id: msg.id,
+      source: format_score(msg.source),
     } satisfies WorkerResponse)
     return
   }

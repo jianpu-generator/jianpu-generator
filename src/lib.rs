@@ -22,6 +22,7 @@ pub mod error;
 pub mod error_reporter;
 pub mod filters;
 mod font_metrics;
+pub mod format_source;
 mod gm_percussion;
 pub mod grid_layout;
 pub mod grouper;

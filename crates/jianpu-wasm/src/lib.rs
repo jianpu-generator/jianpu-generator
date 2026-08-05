@@ -185,6 +185,15 @@ pub fn update_part_declaration(
     )
 }
 
+/// Zipped-view "Format" action: drops `# score` `[Key]` data lines that are
+/// entirely redundant with implicit-fill, and collapses whitespace to single
+/// spaces on every surviving directive/data line. Returns `source` unchanged
+/// if `# parts`/`# score` can't be resolved.
+#[wasm_bindgen]
+pub fn format_score(source: &str) -> String {
+    jianpu_generator::format_source::format_score(source)
+}
+
 /// Parse `.jianpu` source and return every renamable symbol (part/group
 /// abbreviations, section labels), each with its declaration and reference spans.
 ///

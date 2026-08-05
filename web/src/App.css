@@ -207,7 +207,8 @@
 }
 
 .pane-divider-toggle,
-.pane-divider-view-toggle {
+.pane-divider-view-toggle,
+.pane-divider-format-toggle {
   flex: 1;
   width: 18px;
   padding: 0;
@@ -227,7 +228,8 @@
     border-color 0.15s ease;
 }
 .pane-divider-toggle:hover,
-.pane-divider-view-toggle:hover {
+.pane-divider-view-toggle:hover,
+.pane-divider-format-toggle:hover {
   background: var(--accent);
   color: #fff;
   border-color: transparent;
@@ -268,7 +270,8 @@
     flex-direction: row;
   }
 
-  .pane-divider-toggle {
+  .pane-divider-toggle,
+  .pane-divider-format-toggle {
     width: auto;
     height: 18px;
   }

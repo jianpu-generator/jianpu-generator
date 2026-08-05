@@ -94,6 +94,11 @@ export function useJianpuWorkerState(
   const pendingPartDeclarationUpdatesRef = useRef(
     new Map<number, (source: string) => void>(),
   )
+  const formatScoreRequestIdRef = useRef(0)
+  const latestFormatScoreIdRef = useRef(0)
+  const pendingFormatScoreRequestsRef = useRef(
+    new Map<number, (source: string) => void>(),
+  )
   const importRequestIdRef = useRef(0)
   const pendingImportsRef = useRef(
     new Map<
@@ -230,6 +235,9 @@ export function useJianpuWorkerState(
     updatePartDeclarationRequestIdRef,
     latestUpdatePartDeclarationIdRef,
     pendingPartDeclarationUpdatesRef,
+    formatScoreRequestIdRef,
+    latestFormatScoreIdRef,
+    pendingFormatScoreRequestsRef,
     importRequestIdRef,
     pendingImportsRef,
     renderRequestIdRef,

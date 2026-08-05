@@ -32,6 +32,10 @@ export interface WorkerMessageHandlerDeps {
   pendingPartDeclarationUpdatesRef: RefObject<
     Map<number, (source: string) => void>
   >
+  latestFormatScoreIdRef: RefObject<number>
+  pendingFormatScoreRequestsRef: RefObject<
+    Map<number, (source: string) => void>
+  >
   latestPdfIdRef: RefObject<number>
   setPdfExporting: (value: boolean) => void
   activeFileRef: RefObject<string>
@@ -100,6 +104,13 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       deps.setPartDeclarations(msg.declarations)
       deps.pendingPartDeclarationUpdatesRef.current.get(msg.id)?.(msg.source)
       deps.pendingPartDeclarationUpdatesRef.current.delete(msg.id)
+      return
+    }
+
+    if (msg.type === 'scoreFormatted') {
+      if (msg.id !== deps.latestFormatScoreIdRef.current) return
+      deps.pendingFormatScoreRequestsRef.current.get(msg.id)?.(msg.source)
+      deps.pendingFormatScoreRequestsRef.current.delete(msg.id)
       return
     }
 

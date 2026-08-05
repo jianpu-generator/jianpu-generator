@@ -10,9 +10,7 @@ use crate::parser;
 
 use super::capacity::scan_measure_capacities;
 use super::parse::{split_unzipped_blocks, validate_unzipped_blocks};
-use super::reassemble::{
-    build_raw_groups_for_desugar, reconcile_bucket_lengths, render_score_lines,
-};
+use super::reassemble::{build_raw_groups_for_desugar, reconcile_bucket_lengths};
 use super::repack::repack_all_parts;
 use super::{resolve_document_context, UnzippedEditError};
 
@@ -63,7 +61,8 @@ pub fn merge_unzipped_text(source: &str, unzipped_text: &str) -> Result<String, 
     )
     .map_err(|_| UnzippedEditError::ParseFailed)?;
 
-    let score_lines = render_score_lines(&context.declarations, &desugared, &slots_per_group);
+    let score_lines =
+        desugar::render_score_lines(&context.declarations, &desugared, &slots_per_group);
     let new_score_content = if score_lines.is_empty() {
         String::new()
     } else {

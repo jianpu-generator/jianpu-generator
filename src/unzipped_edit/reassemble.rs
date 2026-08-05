@@ -3,8 +3,8 @@
 //! `desugar::desugar_groups` pass, and renders that pass's output back into
 //! `# score`-section text.
 
-use crate::ast::parsed::{PartDecl, PartKind, ScoreLineRole, ScoreLineSlot};
-use crate::desugar::{self, SourceLine};
+use crate::ast::parsed::{PartDecl, PartKind, ScoreLineRole};
+use crate::desugar;
 use crate::parser;
 
 use super::capacity::scan_time_signatures;
@@ -246,41 +246,6 @@ pub(super) fn build_raw_groups_for_desugar(
                 }
             }
             lines
-        })
-        .collect()
-}
-
-/// Renders desugared measure groups (with their positional `ScoreLineSlot`s)
-/// back into `# score`-section text, restoring each line's `[Abbrev]` key
-/// prefix from its slot's `track_index`.
-pub(super) fn render_score_lines(
-    declarations: &[PartDecl],
-    desugared: &[Vec<SourceLine>],
-    slots_per_group: &[Vec<ScoreLineSlot>],
-) -> Vec<String> {
-    desugared
-        .iter()
-        .zip(slots_per_group.iter())
-        .map(|(group, slots)| {
-            let data_start = group.len().saturating_sub(slots.len());
-            let mut lines: Vec<String> = group
-                .get(..data_start)
-                .unwrap_or(&[])
-                .iter()
-                .map(|line| line.content.clone())
-                .collect();
-            lines.extend(
-                group
-                    .get(data_start..)
-                    .unwrap_or(&[])
-                    .iter()
-                    .zip(slots.iter())
-                    .filter_map(|(line, slot)| {
-                        let abbrev = &declarations.get(slot.track_index)?.abbreviation;
-                        Some(format!("[{abbrev}] {}", line.content))
-                    }),
-            );
-            lines.join("\n")
         })
         .collect()
 }

@@ -1,6 +1,6 @@
 import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import { merge_unzipped_text } from 'jianpu-wasm'
-import { Columns2 } from 'lucide-react'
+import { AlignLeft, Columns2 } from 'lucide-react'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { MOBILE_BREAKPOINT_QUERY, useMediaQuery } from '../hooks/useMediaQuery'
@@ -36,6 +36,9 @@ interface AppWorkspaceProps {
   fileId: string
   source: string
   handleSourceChange: (value: string) => void
+  /** Zipped-view "Format" toolbar action: drops redundant `# score` lines
+   * and normalizes whitespace. Hidden while Unzipped view is active. */
+  handleFormatScore: () => void
   readOnly: boolean
   diagnostics: Diagnostic[]
   diagnosticViewZones: DiagnosticViewZone[]
@@ -101,6 +104,7 @@ export function AppWorkspace({
   fileId,
   source,
   handleSourceChange,
+  handleFormatScore,
   readOnly,
   diagnostics,
   diagnosticViewZones,
@@ -270,6 +274,17 @@ export function AppWorkspace({
             >
               <Columns2 size={12} aria-hidden="true" />
             </button>
+            {unzippedView ? null : (
+              <button
+                type="button"
+                className="pane-divider-format-toggle"
+                onClick={handleFormatScore}
+                title="Format score"
+                aria-label="Format score"
+              >
+                <AlignLeft size={12} aria-hidden="true" />
+              </button>
+            )}
             <button
               type="button"
               className="pane-divider-toggle"

@@ -116,6 +116,11 @@ export type WorkerRequest =
       bytes: ArrayBuffer
       kind: 'svg' | 'pdf'
     }
+  | {
+      type: 'formatScore'
+      source: string
+      id: number
+    }
 
 export type WorkerResponse =
   | {
@@ -189,3 +194,4 @@ export type WorkerResponse =
     }
   | { type: 'importOk'; id: number; source: string }
   | { type: 'importErr'; id: number }
+  | { type: 'scoreFormatted'; id: number; source: string }

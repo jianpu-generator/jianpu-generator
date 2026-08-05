@@ -93,6 +93,12 @@ export interface JianpuWorkerState {
     octaveOffset: number | null,
   ) => Promise<string>
   /**
+   * Zipped-view "Format" action: drops `# score` `[Key]` data lines that are
+   * entirely redundant with implicit-fill, and collapses whitespace on
+   * every surviving directive/data line (see `format_source::format_score`).
+   */
+  formatScore: (source: string) => Promise<string>
+  /**
    * Recovers the `.jianpu` source embedded in a previously exported SVG/PDF
    * file (see `source_embed::extract_embedded_source`). Rejects if the file
    * has no embedded source.

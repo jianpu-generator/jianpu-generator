@@ -1,9 +1,8 @@
-import { extract_unzipped_text } from 'jianpu-wasm'
-import { useCallback, useEffect } from 'react'
-import { ensureWasmInit } from '../wasmInit'
+import { useCallback } from 'react'
 import type { WorkerRequest } from '../worker/jianpu.worker'
 import { useInstrumentPreview } from './useInstrumentPreview'
 import { useJianpuWorkerExports } from './useJianpuWorkerExports'
+import { useJianpuWorkerFormat } from './useJianpuWorkerFormat'
 import { useJianpuWorkerImport } from './useJianpuWorkerImport'
 import { useJianpuWorkerLifecycle } from './useJianpuWorkerLifecycle'
 import { useJianpuWorkerPartDeclaration } from './useJianpuWorkerPartDeclaration'
@@ -12,6 +11,7 @@ import { useJianpuWorkerState } from './useJianpuWorkerState'
 import type { JianpuWorkerState } from './useJianpuWorkerTypes'
 import { useMeasureAudioPlayback } from './useMeasureAudioPlayback'
 import { useSequenceNavigation } from './useSequenceNavigation'
+import { useUnzippedTextSnapshot } from './useUnzippedTextSnapshot'
 
 export type { JianpuWorkerState } from './useJianpuWorkerTypes'
 
@@ -92,6 +92,9 @@ export function useJianpuWorker(
     updatePartDeclarationRequestIdRef,
     latestUpdatePartDeclarationIdRef,
     pendingPartDeclarationUpdatesRef,
+    formatScoreRequestIdRef,
+    latestFormatScoreIdRef,
+    pendingFormatScoreRequestsRef,
     importRequestIdRef,
     pendingImportsRef,
     renderRequestIdRef,
@@ -130,23 +133,7 @@ export function useJianpuWorker(
 
   const sequenceNav = useSequenceNavigation(sequenceEntries)
 
-  // Snapshot `extract_unzipped_text(source)` exactly when Unzipped view is
-  // switched on, so subsequent keystrokes in the Unzipped editor aren't
-  // overwritten by re-extraction while the user is still typing. `source` is
-  // intentionally excluded from the dependency array — this must only
-  // re-run when `unzippedView` flips, not on every edit.
-  useEffect(() => {
-    if (!unzippedView) return
-    let cancelled = false
-    ensureWasmInit().then(() => {
-      if (cancelled) return
-      const result = extract_unzipped_text(sourceRef.current)
-      setUnzippedText(result.status === 'ok' ? result.text : '')
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [unzippedView])
+  useUnzippedTextSnapshot(unzippedView, sourceRef, setUnzippedText)
 
   const setNextWavUrl = useCallback((next: string | null) => {
     if (wavUrlRef.current) {
@@ -203,6 +190,8 @@ export function useJianpuWorker(
     setPartDeclarations,
     latestUpdatePartDeclarationIdRef,
     pendingPartDeclarationUpdatesRef,
+    latestFormatScoreIdRef,
+    pendingFormatScoreRequestsRef,
     latestPdfIdRef,
     setPdfExporting,
     activeFileRef,
@@ -331,6 +320,13 @@ export function useJianpuWorker(
     pendingPartDeclarationUpdatesRef,
   })
 
+  const { formatScore } = useJianpuWorkerFormat({
+    workerRef,
+    formatScoreRequestIdRef,
+    latestFormatScoreIdRef,
+    pendingFormatScoreRequestsRef,
+  })
+
   const { importFromFile } = useJianpuWorkerImport({
     workerRef,
     importRequestIdRef,
@@ -387,6 +383,7 @@ export function useJianpuWorker(
     stopPreviewInstrument,
     previewAudioPlaying,
     updatePartDeclaration,
+    formatScore,
     importFromFile,
   }
 }
