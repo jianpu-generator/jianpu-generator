@@ -1,4 +1,8 @@
-import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
+import type {
+  NoteTimingOut,
+  PartMeasureRangesOut,
+  SvgDocumentOut,
+} from 'jianpu-wasm'
 import { merge_unzipped_text } from 'jianpu-wasm'
 import { AlignLeft, Columns2 } from 'lucide-react'
 import type { RefObject } from 'react'
@@ -97,6 +101,9 @@ interface AppWorkspaceProps {
   /** The Unzipped view projection of `source`, kept in sync by the caller
    * whenever `unzippedView` is true. */
   unzippedText: string
+  /** Per-part, per-measure byte ranges into `unzippedText`, used to relocate
+   * Zipped-source-relative diagnostics onto the Unzipped view's text. */
+  partMeasureRanges: PartMeasureRangesOut[]
 }
 
 export function AppWorkspace({
@@ -151,6 +158,7 @@ export function AppWorkspace({
   unzippedView,
   onToggleUnzippedView,
   unzippedText,
+  partMeasureRanges,
 }: AppWorkspaceProps) {
   const [editorPaneEl, setEditorPaneEl] = useState<HTMLDivElement | null>(null)
   const isMobile = useMediaQuery(MOBILE_BREAKPOINT_QUERY)
@@ -212,6 +220,8 @@ export function AppWorkspace({
                 diagnostics={diagnostics}
                 diagnosticViewZones={diagnosticViewZones}
                 measureSpans={measureSpans}
+                unzippedView={unzippedView}
+                partMeasureRanges={partMeasureRanges}
                 onSelectionChange={(firstLine, lastLine) => {
                   setSelectedLineRange(null)
                   if (!unzippedView) {

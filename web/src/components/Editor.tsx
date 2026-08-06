@@ -1,4 +1,5 @@
 import MonacoEditor, { type Monaco, type OnMount } from '@monaco-editor/react'
+import type { PartMeasureRangesOut } from 'jianpu-wasm'
 import type { editor, IDisposable, ISelection, languages } from 'monaco-editor'
 import {
   forwardRef,
@@ -22,15 +23,17 @@ import type {
 } from '../types'
 import { stringIndexToByteOffset } from '../utils/byteSpan'
 import {
+  buildDiagnosticMarkers,
   createDiagnosticViewZoneDomNode,
-  diagnosticRange,
   errorViewZoneHeightInPx,
+  resolveDiagnosticViewZones,
 } from './editorDiagnosticViewZones'
 import { createEditorImperativeHandle } from './editorImperativeHandle'
 import {
   createMeasureViewZoneDomNode,
   measureViewZoneLineNumber,
 } from './editorMeasureViewZones'
+import { defineJianpuEditorTheme, EDITOR_THEME } from './editorTheme'
 
 export interface EditorProps {
   /** Unique per-file ID; gives each file its own Monaco model and undo stack. */
@@ -41,6 +44,12 @@ export interface EditorProps {
   diagnostics?: Diagnostic[]
   diagnosticViewZones?: DiagnosticViewZone[]
   measureSpans?: MeasureSpan[]
+  /** True when showing the Unzipped view's generated text; `diagnostics`
+   * spans are always Zipped-source-relative, so they get relocated via
+   * `measureSpans` + `partMeasureRanges` (see `editorDiagnosticViewZones`). */
+  unzippedView?: boolean
+  /** Per-part, per-measure byte ranges into the Unzipped view's text. */
+  partMeasureRanges?: PartMeasureRangesOut[]
   toolbar?: ReactNode
   onSelectionChange?: (startLine: number, endLine: number) => void
   /** Same selection as `onSelectionChange`, but as UTF-16 code-unit offsets
@@ -55,9 +64,6 @@ export interface EditorProps {
 }
 
 const MARKER_OWNER = 'jianpu'
-const EDITOR_THEME = 'jianpu'
-// Matches preview measure highlight (rgba(255, 200, 0, 0.25)); Monaco only accepts hex.
-const MEASURE_HIGHLIGHT_COLOR = '#ffc80040'
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   {
@@ -68,6 +74,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     diagnostics = [],
     diagnosticViewZones = [],
     measureSpans = [],
+    unzippedView = false,
+    partMeasureRanges = [],
     toolbar,
     onSelectionChange,
     onSelectionOffsetChange,
@@ -109,30 +117,16 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     const model = ed?.getModel()
     if (!ed || !monacoApi || !model) return
 
-    const source = model.getValue()
-
-    if (diagnostics.length === 0) {
-      monacoApi.editor.setModelMarkers(model, MARKER_OWNER, [])
-      return
-    }
-
-    const markers = diagnostics.map((d) => {
-      const range = diagnosticRange(model, source, d, monacoApi)
-      return {
-        severity:
-          d.severity === 'warning'
-            ? monacoApi.MarkerSeverity.Warning
-            : monacoApi.MarkerSeverity.Error,
-        message: d.message,
-        startLineNumber: range.startLineNumber,
-        startColumn: range.startColumn,
-        endLineNumber: range.endLineNumber,
-        endColumn: range.endColumn,
-      }
-    })
-
+    const markers = buildDiagnosticMarkers(
+      model,
+      monacoApi,
+      diagnostics,
+      unzippedView,
+      measureSpans,
+      partMeasureRanges,
+    )
     monacoApi.editor.setModelMarkers(model, MARKER_OWNER, markers)
-  }, [diagnostics])
+  }, [diagnostics, unzippedView, measureSpans, partMeasureRanges])
 
   const applyMeasureViewZones = useCallback(() => {
     const ed = editorRef.current
@@ -163,7 +157,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
   const applyDiagnosticViewZones = useCallback(() => {
     const ed = editorRef.current
-    if (!ed) return
+    const model = ed?.getModel()
+    if (!ed || !model) return
+
+    const zones = resolveDiagnosticViewZones(
+      model,
+      unzippedView,
+      diagnostics,
+      diagnosticViewZones,
+      measureSpans,
+      partMeasureRanges,
+    )
 
     ed.changeViewZones((accessor) => {
       for (const id of diagnosticViewZoneIdsRef.current) {
@@ -171,7 +175,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       }
       diagnosticViewZoneIdsRef.current = []
 
-      for (const zone of diagnosticViewZones) {
+      for (const zone of zones) {
         const domNode = createDiagnosticViewZoneDomNode(
           zone.severity,
           zone.messages,
@@ -188,7 +192,13 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         diagnosticViewZoneIdsRef.current.push(id)
       }
     })
-  }, [diagnosticViewZones])
+  }, [
+    diagnosticViewZones,
+    unzippedView,
+    diagnostics,
+    measureSpans,
+    partMeasureRanges,
+  ])
 
   useImperativeHandle(
     ref,
@@ -339,33 +349,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           beforeMount={(monacoApi) => {
             registerJianpuLanguage(monacoApi)
             registerJianpuRenameProvider(monacoApi)
-            monacoApi.editor.defineTheme(EDITOR_THEME, {
-              base: 'vs',
-              inherit: true,
-              rules: [
-                { token: 'comment', foreground: '008000', fontStyle: 'italic' },
-                { token: 'string', foreground: 'a31515' },
-                {
-                  token: 'keyword.section',
-                  foreground: '0000ff',
-                  fontStyle: 'bold',
-                },
-                { token: 'tag', foreground: '267f99', fontStyle: 'bold' },
-                { token: 'keyword.directive', foreground: '0000ff' },
-                {
-                  token: 'keyword.control',
-                  foreground: 'af00db',
-                  fontStyle: 'bold italic',
-                },
-                { token: 'type', foreground: '267f99' },
-                { token: 'variable', foreground: '001080' },
-                { token: 'operator', foreground: '795e26' },
-              ],
-              colors: {
-                'editor.lineHighlightBackground': MEASURE_HIGHLIGHT_COLOR,
-                'editor.lineHighlightBorder': '#00000000',
-              },
-            })
+            defineJianpuEditorTheme(monacoApi)
           }}
           onMount={handleMount}
           options={{

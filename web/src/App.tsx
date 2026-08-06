@@ -142,6 +142,7 @@ export default function App() {
     notifySelection,
     notifyUnzippedSelection,
     unzippedText,
+    partMeasureRanges,
     playSelectedMeasures,
     playFromCurrentMeasure,
     stopMeasurePlayback,
@@ -171,7 +172,6 @@ export default function App() {
     setDisabledLyrics,
     setSoloedParts,
   )
-
   useKeyboardShortcuts({
     measureAudioPlaying,
     measureAudioGenerating,
@@ -214,7 +214,6 @@ export default function App() {
     setFileOpError,
     importFromFile,
   )
-
   const {
     editPartsOpen,
     setEditPartsOpen,
@@ -394,6 +393,7 @@ export default function App() {
         unzippedView={unzippedView}
         onToggleUnzippedView={handleToggleUnzippedView}
         unzippedText={unzippedText}
+        partMeasureRanges={partMeasureRanges}
       />
     </div>
   )
