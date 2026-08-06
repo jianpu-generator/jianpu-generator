@@ -82,7 +82,7 @@ pub fn list_measure_spans(source: &str) -> ListMeasureSpansResponse {
 /// Always returns a structured value (never throws for parse/render errors):
 /// - `{ "status": "ok", "svgs": ["<svg>...</svg>", ...] }`
 /// - `{ "status": "err", "diagnostics": [{ "severity": "error", "message": "...",
-///   "span": { "start", "end" }, "report": "..." }] }`
+///   "span": { "start", "end" } }] }`
 ///
 /// When `enabled_tracks` is omitted, every part is rendered. When provided, only
 /// listed abbreviations are kept (`[]` renders no parts).

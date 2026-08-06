@@ -1,5 +1,4 @@
 use jianpu_generator::error::{Diagnostic, IrrecoverableError, Warning};
-use jianpu_generator::error_reporter;
 use serde::Serialize;
 use tsify::Tsify;
 
@@ -37,8 +36,6 @@ pub struct DiagnosticOut {
     pub severity: DiagnosticSeverity,
     pub message: String,
     pub span: SpanOut,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub report: Option<String>,
 }
 
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
@@ -269,8 +266,6 @@ pub enum UnzippedEditResponse {
 #[tsify(into_wasm_abi)]
 pub struct DiagnosticMessageOut {
     pub message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub report: Option<String>,
 }
 
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
@@ -282,8 +277,7 @@ pub struct DiagnosticViewZoneOut {
     pub messages: Vec<DiagnosticMessageOut>,
 }
 
-pub(crate) fn diagnostic_from_error(source: &str, e: &IrrecoverableError) -> DiagnosticOut {
-    let report = error_reporter::render_with_source(source, e);
+pub(crate) fn diagnostic_from_error(e: &IrrecoverableError) -> DiagnosticOut {
     let span = e
         .span()
         .map(|s| SpanOut {
@@ -295,12 +289,10 @@ pub(crate) fn diagnostic_from_error(source: &str, e: &IrrecoverableError) -> Dia
         severity: DiagnosticSeverity::Error,
         message: e.message(),
         span,
-        report: Some(report),
     }
 }
 
-pub(crate) fn diagnostic_from_warning(source: &str, e: Warning) -> DiagnosticOut {
-    let report = error_reporter::render_warning_with_source(source, &e);
+pub(crate) fn diagnostic_from_warning(e: Warning) -> DiagnosticOut {
     DiagnosticOut {
         severity: DiagnosticSeverity::Warning,
         message: e.message,
@@ -308,13 +300,12 @@ pub(crate) fn diagnostic_from_warning(source: &str, e: Warning) -> DiagnosticOut
             start: e.span.start,
             end: e.span.end,
         },
-        report: Some(report),
     }
 }
 
-pub(crate) fn diagnostic_from_diagnostic(source: &str, d: Diagnostic) -> DiagnosticOut {
+pub(crate) fn diagnostic_from_diagnostic(d: Diagnostic) -> DiagnosticOut {
     match d {
-        Diagnostic::Warning(w) => diagnostic_from_warning(source, w),
+        Diagnostic::Warning(w) => diagnostic_from_warning(w),
         Diagnostic::Error(e) => DiagnosticOut {
             severity: DiagnosticSeverity::Error,
             message: e.message(),
@@ -322,7 +313,6 @@ pub(crate) fn diagnostic_from_diagnostic(source: &str, d: Diagnostic) -> Diagnos
                 start: e.span.start,
                 end: e.span.end,
             },
-            report: None,
         },
     }
 }
@@ -364,7 +354,6 @@ pub(crate) fn group_diagnostics_into_view_zones(
             });
         entry.messages.push(DiagnosticMessageOut {
             message: d.message.clone(),
-            report: d.report.clone(),
         });
     }
 

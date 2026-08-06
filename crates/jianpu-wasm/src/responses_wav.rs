@@ -20,7 +20,7 @@ pub(crate) fn generate_wav_response(
     match write_wav_from_source_filtered(source, "input.jianpu", enabled_tracks, &soundfont, &[]) {
         Ok(wav) => GenerateWavResponse::Ok { wav },
         Err(e) => GenerateWavResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &e)],
+            diagnostics: vec![diagnostic_from_error(&e)],
         },
     }
 }
@@ -51,7 +51,7 @@ pub(crate) fn generate_wav_for_measure_range_response(
     ) {
         Ok(wav) => GenerateWavResponse::Ok { wav },
         Err(e) => GenerateWavResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &e)],
+            diagnostics: vec![diagnostic_from_error(&e)],
         },
     }
 }
@@ -73,7 +73,7 @@ pub(crate) fn list_note_timings_response(
                 .collect(),
         },
         Err(e) => NoteTimingsResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &e)],
+            diagnostics: vec![diagnostic_from_error(&e)],
         },
     }
 }
@@ -112,7 +112,7 @@ pub(crate) fn list_note_timings_for_range_response(
                 .collect(),
         },
         Err(e) => NoteTimingsResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &e)],
+            diagnostics: vec![diagnostic_from_error(&e)],
         },
     }
 }
@@ -125,7 +125,7 @@ pub(crate) fn generate_instrument_preview_wav_response(
     match wav::write_preview_wav(program_number, &soundfont) {
         Ok(wav) => GenerateWavResponse::Ok { wav },
         Err(e) => GenerateWavResponse::Err {
-            diagnostics: vec![diagnostic_from_error("", &e)],
+            diagnostics: vec![diagnostic_from_error(&e)],
         },
     }
 }
@@ -138,7 +138,7 @@ pub(crate) fn generate_percussion_preview_wav_response(
     match wav::write_percussion_preview_wav(key, &soundfont) {
         Ok(wav) => GenerateWavResponse::Ok { wav },
         Err(e) => GenerateWavResponse::Err {
-            diagnostics: vec![diagnostic_from_error("", &e)],
+            diagnostics: vec![diagnostic_from_error(&e)],
         },
     }
 }
@@ -153,11 +153,11 @@ pub(crate) fn generate_split_wavs_response(
         Ok(entries) => match zip_split_entries(&entries) {
             Ok(zip) => GenerateSplitWavsResponse::Ok { zip },
             Err(e) => GenerateSplitWavsResponse::Err {
-                diagnostics: vec![diagnostic_from_error(source, &e)],
+                diagnostics: vec![diagnostic_from_error(&e)],
             },
         },
         Err(e) => GenerateSplitWavsResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &e)],
+            diagnostics: vec![diagnostic_from_error(&e)],
         },
     }
 }

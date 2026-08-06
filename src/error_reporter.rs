@@ -1,47 +1,8 @@
-use crate::error::{IrrecoverableError, Span, Warning};
+use crate::error::{IrrecoverableError, Span};
 use ariadne::Config;
 
 pub fn render(e: &IrrecoverableError) {
     render_to_writer(e, std::io::stderr(), None, Config::default());
-}
-
-/// Render a pretty error using an in-memory source string (for WASM and other non-FS hosts).
-///
-/// Uses plain text (no ANSI color codes) so the output is safe to display in a web UI.
-pub fn render_with_source(source: &str, e: &IrrecoverableError) -> String {
-    let mut buf = Vec::new();
-    render_to_writer(
-        e,
-        &mut buf,
-        Some(source),
-        Config::default().with_color(false),
-    );
-    String::from_utf8_lossy(&buf).into_owned()
-}
-
-/// Render a pretty warning for a [`Warning`] using an in-memory source string.
-///
-/// Uses plain text (no ANSI color codes) so the output is safe to display in a web UI.
-pub fn render_warning_with_source(source: &str, e: &Warning) -> String {
-    use ariadne::{Label, Report, ReportKind, Source};
-
-    let filename = "input";
-    let char_start = source[..e.span.start.min(source.len())].chars().count();
-    let char_end = source[..e.span.end.min(source.len())].chars().count();
-    let span = (filename, char_start..char_end);
-
-    let mut buf = Vec::new();
-    if Report::build(ReportKind::Warning, span.clone())
-        .with_config(Config::default().with_color(false))
-        .with_message(&e.message)
-        .with_label(Label::new(span).with_message(&e.message))
-        .finish()
-        .write((filename, Source::from(source)), &mut buf)
-        .is_err()
-    {
-        buf.extend_from_slice(format!("warning: {}", e.message).as_bytes());
-    }
-    String::from_utf8_lossy(&buf).into_owned()
 }
 
 fn render_to_writer(
@@ -121,37 +82,6 @@ mod tests {
         assert!(
             output.contains("something went wrong"),
             "output was: {output}"
-        );
-    }
-
-    #[test]
-    fn render_with_source_shows_code_block() {
-        let source = "1 2 3 4\n";
-        let e = IrrecoverableError::new(IrrecoverableErrorKind::InternalInvariant {
-            span: Span::new(0, 1),
-            detail: "something went wrong".to_string(),
-        });
-
-        let output = render_with_source(source, &e);
-        assert!(
-            output.contains('│'),
-            "expected ariadne code block, got: {output}"
-        );
-        assert!(output.contains("something went wrong"));
-    }
-
-    #[test]
-    fn render_with_source_has_no_ansi_codes() {
-        let source = "1 2 3 4\n";
-        let e = IrrecoverableError::new(IrrecoverableErrorKind::InternalInvariant {
-            span: Span::new(0, 1),
-            detail: "something went wrong".to_string(),
-        });
-
-        let output = render_with_source(source, &e);
-        assert!(
-            !output.contains('\x1b'),
-            "web report must not contain ANSI escapes, got: {output}"
         );
     }
 

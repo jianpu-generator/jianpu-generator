@@ -12,7 +12,7 @@ pub(crate) fn generate_midi_response(
     match write_midi_from_source_filtered(source, "input.jianpu", enabled_tracks, &[]) {
         Ok(midi) => GenerateMidiResponse::Ok { midi },
         Err(e) => GenerateMidiResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &e)],
+            diagnostics: vec![diagnostic_from_error(&e)],
         },
     }
 }
@@ -25,11 +25,11 @@ pub(crate) fn generate_split_midis_response(
         Ok(entries) => match zip_split_entries(&entries) {
             Ok(zip) => GenerateSplitMidisResponse::Ok { zip },
             Err(e) => GenerateSplitMidisResponse::Err {
-                diagnostics: vec![diagnostic_from_error(source, &e)],
+                diagnostics: vec![diagnostic_from_error(&e)],
             },
         },
         Err(e) => GenerateSplitMidisResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &e)],
+            diagnostics: vec![diagnostic_from_error(&e)],
         },
     }
 }

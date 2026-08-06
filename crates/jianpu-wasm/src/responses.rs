@@ -46,7 +46,7 @@ pub(crate) fn render_response(
             let diagnostics: Vec<_> = output
                 .diagnostics
                 .into_iter()
-                .map(|d| diagnostic_from_diagnostic(source, d))
+                .map(diagnostic_from_diagnostic)
                 .collect();
             let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
             RenderResponse::Ok {
@@ -56,7 +56,7 @@ pub(crate) fn render_response(
             }
         }
         Err(e) => {
-            let diagnostics = vec![diagnostic_from_error(source, &e)];
+            let diagnostics = vec![diagnostic_from_error(&e)];
             let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
             RenderResponse::Err {
                 diagnostics,
@@ -86,7 +86,7 @@ pub(crate) fn render_with_highlight_range_response(
             let diagnostics: Vec<_> = output
                 .diagnostics
                 .into_iter()
-                .map(|d| diagnostic_from_diagnostic(source, d))
+                .map(diagnostic_from_diagnostic)
                 .collect();
             let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
             RenderResponse::Ok {
@@ -96,7 +96,7 @@ pub(crate) fn render_with_highlight_range_response(
             }
         }
         Err(e) => {
-            let diagnostics = vec![diagnostic_from_error(source, &e)];
+            let diagnostics = vec![diagnostic_from_error(&e)];
             let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
             RenderResponse::Err {
                 diagnostics,

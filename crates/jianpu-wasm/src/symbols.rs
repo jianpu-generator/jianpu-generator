@@ -62,7 +62,7 @@ pub(crate) fn list_symbols_response(
                 .collect(),
         },
         Err(error) => ListSymbolsResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &error)],
+            diagnostics: vec![diagnostic_from_error(&error)],
         },
     }
 }
@@ -88,7 +88,7 @@ pub(crate) fn rename_symbol_response(
                 .collect(),
         },
         Err(error) => RenameSymbolResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &error)],
+            diagnostics: vec![diagnostic_from_error(&error)],
         },
     }
 }

@@ -43,7 +43,7 @@ pub(crate) fn list_part_declarations_response(
                 .collect(),
         },
         Err(error) => ListPartDeclarationsResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &error)],
+            diagnostics: vec![diagnostic_from_error(&error)],
         },
     }
 }
@@ -76,7 +76,7 @@ pub(crate) fn list_parts_response(
             declarations,
         },
         Err(error) => ListPartsResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &error)],
+            diagnostics: vec![diagnostic_from_error(&error)],
         },
     }
 }

@@ -36,7 +36,7 @@ pub(crate) fn generate_pdf_response(
     ) {
         Ok(pdf) => GeneratePdfResponse::Ok { pdf },
         Err(e) => GeneratePdfResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &e)],
+            diagnostics: vec![diagnostic_from_error(&e)],
         },
     }
 }
@@ -53,11 +53,11 @@ pub(crate) fn generate_split_pdfs_response(
         Ok(entries) => match zip_split_pdfs(&entries) {
             Ok(zip) => GenerateSplitPdfsResponse::Ok { zip },
             Err(e) => GenerateSplitPdfsResponse::Err {
-                diagnostics: vec![diagnostic_from_error(source, &e)],
+                diagnostics: vec![diagnostic_from_error(&e)],
             },
         },
         Err(e) => GenerateSplitPdfsResponse::Err {
-            diagnostics: vec![diagnostic_from_error(source, &e)],
+            diagnostics: vec![diagnostic_from_error(&e)],
         },
     }
 }

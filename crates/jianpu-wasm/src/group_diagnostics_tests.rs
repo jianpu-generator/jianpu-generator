@@ -8,7 +8,6 @@ fn make_diagnostic(severity: DiagnosticSeverity, message: &str, span_end: usize)
             start: 0,
             end: span_end,
         },
-        report: None,
     }
 }
 

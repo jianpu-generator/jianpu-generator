@@ -107,7 +107,7 @@ export function buildUnzippedDiagnosticViewZones(
     const line = model.getPositionAt(index).lineNumber
     const severityOrder = diagnostic.severity === 'warning' ? 1 : 0
     const key = `${line}:${severityOrder}`
-    const message = { message: diagnostic.message, report: diagnostic.report }
+    const message = { message: diagnostic.message }
 
     const existing = groups.get(key)
     if (existing) {
@@ -175,13 +175,6 @@ export function createDiagnosticViewZoneDomNode(
     messageEl.className = messageClass
     messageEl.textContent = msg.message
     domNode.appendChild(messageEl)
-
-    if (msg.report) {
-      const report = document.createElement('pre')
-      report.className = 'editor-error-zone-report'
-      report.textContent = msg.report
-      domNode.appendChild(report)
-    }
   }
 
   return domNode
