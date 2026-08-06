@@ -182,6 +182,23 @@ pub(crate) fn cjk_text_width(s: &str, font_size: f32) -> f32 {
 /// apart.
 pub(crate) const NOTE_DASH_FONT_SIZE: f32 = 12.0;
 
+/// Horizontal gap (as a ratio of `note_number_width`) between a note head
+/// and its sharp/flat accidental glyph, drawn to the accidental's left in
+/// `render_note_head`. Kept small so the accidental visually hugs the note
+/// it modifies, rather than reading as its own free-floating glyph. Shared
+/// with the layout pass's accidental weight (`layout_spacing.rs`) so the two
+/// can't silently drift apart.
+pub(crate) const ACCIDENTAL_LEFT_GAP_RATIO: f32 = 0.2;
+
+/// Horizontal padding (as a ratio of `note_number_width`) reserved to the
+/// right of a sharp/flat accidental's own glyph, on top of
+/// [`ACCIDENTAL_LEFT_GAP_RATIO`]'s note-to-accidental gap. Deliberately
+/// larger than the left gap: a small gap on the left reads as "this
+/// accidental belongs to the note on its left," while a larger gap on the
+/// right keeps it from reading as belonging to the *next* note/dash column
+/// instead.
+pub(crate) const ACCIDENTAL_RIGHT_PADDING_RATIO: f32 = 1.0;
+
 /// Font size (points) of a section label's own text run, shared by the
 /// layout pass (`content_conversion.rs`, sizing the gap reserved before the
 /// directives that follow a label) and the renderer pass (`new_renderer.rs`,

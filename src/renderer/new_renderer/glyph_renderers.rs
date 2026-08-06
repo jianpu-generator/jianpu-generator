@@ -1,6 +1,7 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compositor::types::AbsoluteElement;
 use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
+use crate::font_metrics;
 use crate::renderer::new_types::{SvgElement, SvgKind, SvgVariant};
 
 pub(super) struct NoteRenderParams<'a> {
@@ -63,7 +64,7 @@ pub(super) fn render_note_head(
     };
 
     if let Some(symbol) = accidental_symbol {
-        let accidental_x = elem.x + *note_number_width * 0.5;
+        let accidental_x = elem.x + *note_number_width * font_metrics::ACCIDENTAL_LEFT_GAP_RATIO;
         results.push(SvgElement {
             x: accidental_x,
             y: elem.y,
@@ -254,8 +255,7 @@ pub(super) fn render_chord_symbol(
     // character's width so that the root digit itself lands centered on
     // `elem.x`, matching the note.
     let root_char = s.chars().next().unwrap_or_default();
-    let root_char_width =
-        crate::font_metrics::monospace_char_advance_width(root_char, *base_font_size);
+    let root_char_width = font_metrics::monospace_char_advance_width(root_char, *base_font_size);
     let text_x = elem.x - root_char_width * 0.5;
 
     let mut results = vec![SvgElement {
@@ -274,7 +274,7 @@ pub(super) fn render_chord_symbol(
     }];
 
     if dotted {
-        let text_width = crate::font_metrics::monospace_text_width(s, *base_font_size);
+        let text_width = font_metrics::monospace_text_width(s, *base_font_size);
         let dot_x = text_x + text_width + *base_font_size * 0.4;
         results.push(dot_glyph(
             dot_x,

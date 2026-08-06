@@ -1,4 +1,5 @@
 use super::{block_column_width, LABEL_COLS, MUSIC_START_COL};
+use crate::ast::parsed::Accidental;
 use crate::compiler::types::{ElementContent, MeasureBlock, MULTI_MEASURE_REST_WIDTH};
 use crate::font_metrics;
 use crate::grid_layout::types::MeasureColumnLayout;
@@ -38,6 +39,32 @@ fn dotted_extra_weight(config: &RenderConfig) -> f32 {
     2.0 * config.row_height as f32 * 0.06
 }
 
+/// Extra weight given to a `NoteHead` column carrying a sharp/flat
+/// accidental, to make room for the `♯`/`♭` glyph drawn to the right of the
+/// note head rather than being baked into it (see `render_note_head` in
+/// `glyph_renderers.rs`, which starts the glyph at `elem.x +
+/// note_number_width * ACCIDENTAL_LEFT_GAP_RATIO` and draws it at `1.25x`
+/// the notes font size). The reach is asymmetric on purpose — a small left
+/// gap keeps the glyph visually hugging the note it modifies, while a larger
+/// right gap ([`font_metrics::ACCIDENTAL_RIGHT_PADDING_RATIO`]) keeps it
+/// from crowding the next column, so the accidental reads unambiguously as
+/// belonging to the note on its left. Only the reach beyond what
+/// [`note_glyph_weight`] already covers is added, so an accidental that
+/// happens to fit within the note glyph's own width (e.g. at a large
+/// `note_number_width`) contributes nothing extra. `Natural` renders no
+/// glyph (see `render_note_head`), so it needs no extra weight either.
+fn accidental_extra_weight(accidental: &Accidental, config: &RenderConfig) -> f32 {
+    let symbol = match accidental {
+        Accidental::Sharp => "\u{266F}",
+        Accidental::Flat => "\u{266D}",
+        Accidental::Natural => return 0.0,
+    };
+    let reach = config.note_number_width as f32
+        * (font_metrics::ACCIDENTAL_LEFT_GAP_RATIO + font_metrics::ACCIDENTAL_RIGHT_PADDING_RATIO)
+        + font_metrics::monospace_text_width(symbol, config.notes_font_size() * 1.25);
+    (reach - note_glyph_weight(config)).max(0.0)
+}
+
 /// Real advance width (in points) of the note-dash glyph (`—`), measured at
 /// its own fixed rendered font size (`NOTE_DASH_FONT_SIZE`) rather than
 /// `config`'s lyric font size, matching what `render_note_dash` actually
@@ -71,7 +98,18 @@ fn lyric_weight(text: &str, config: &RenderConfig) -> f32 {
 
 fn column_weight(content: &ElementContent, config: &RenderConfig) -> f32 {
     match content {
-        ElementContent::NoteHead { dotted, .. } | ElementContent::Rest { dotted } => {
+        ElementContent::NoteHead {
+            accidental, dotted, ..
+        } => {
+            note_glyph_weight(config)
+                + accidental_extra_weight(accidental, config)
+                + if *dotted {
+                    dotted_extra_weight(config)
+                } else {
+                    0.0
+                }
+        }
+        ElementContent::Rest { dotted } => {
             note_glyph_weight(config)
                 + if *dotted {
                     dotted_extra_weight(config)
@@ -214,9 +252,12 @@ fn measure_note_weight(block: &MeasureBlock, config: &RenderConfig) -> f32 {
                 row.elements
                     .iter()
                     .map(|e| match &e.content {
-                        ElementContent::NoteHead { .. }
-                        | ElementContent::Rest { .. }
-                        | ElementContent::PercussionHit => note_glyph_weight(config),
+                        ElementContent::NoteHead { accidental, .. } => {
+                            note_glyph_weight(config) + accidental_extra_weight(accidental, config)
+                        }
+                        ElementContent::Rest { .. } | ElementContent::PercussionHit => {
+                            note_glyph_weight(config)
+                        }
                         ElementContent::ChordSymbol { text, .. } => {
                             chord_symbol_weight(text, config)
                         }

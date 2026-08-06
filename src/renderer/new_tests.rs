@@ -125,7 +125,10 @@ fn sharp_accidental_renders_to_the_right_of_note() {
         accidental.x,
         note_x
     );
-    assert_eq!(accidental.x, note_x + note_number_width * 0.5);
+    assert_eq!(
+        accidental.x,
+        note_x + note_number_width * crate::font_metrics::ACCIDENTAL_LEFT_GAP_RATIO
+    );
     assert!(
         matches!(&accidental.kind, SvgKind::Text { anchor, .. } if *anchor == TextAnchor::Start),
         "accidental should use TextAnchor::Start"
