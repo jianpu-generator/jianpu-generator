@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { AppHeader } from './components/AppHeader'
 import { AppOverlays } from './components/AppOverlays'
 import { AppWorkspace } from './components/AppWorkspace'
@@ -23,6 +23,8 @@ import {
 import { useScoreSource } from './hooks/useScoreSource'
 import { useSectionNavigation } from './hooks/useSectionNavigation'
 import { useStorageBackend } from './hooks/useStorageBackend'
+import { useUnzippedViewState } from './hooks/useUnzippedViewState'
+import { useUnzippedViewToggle } from './hooks/useUnzippedViewToggle'
 import { useUrlFileSync } from './hooks/useUrlFileSync'
 import { useWasmLoader } from './hooks/useWasmLoader'
 import type { EditorHandle } from './types'
@@ -49,7 +51,6 @@ export default function App() {
     refreshSaveStatus,
   } = useStorageBackend()
   const [editorCollapsed, setEditorCollapsed] = useState(false)
-  const [unzippedView, setUnzippedView] = useState(false)
 
   useUrlFileSync(store, setStore, isLoadingGithub)
 
@@ -83,11 +84,7 @@ export default function App() {
     setEditorCollapsed,
   )
   const fileId = fileIdForName(store, store.active)
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: fileId is the trigger for resetting the view on file switch, not read in the body
-  useEffect(() => {
-    setUnzippedView(false)
-  }, [fileId])
+  const [unzippedView, setUnzippedView] = useUnzippedViewState(fileId)
 
   const editorRef = useRef<EditorHandle>(null)
   const soundfont = useAssetLoader('/fonts/GeneralUser_GS.sf2')
@@ -194,7 +191,6 @@ export default function App() {
     },
     [setStore, backend, liveOwner],
   )
-
   const handleSelect = useCallback(
     (name: string) => {
       flushPendingSave()
@@ -202,11 +198,15 @@ export default function App() {
     },
     [setStore, flushPendingSave],
   )
-
-  const handleFormatScore = useCallback(() => {
-    void formatScore(source).then(handleSourceChange)
-  }, [formatScore, source, handleSourceChange])
-
+  const { handleFormatScore, handleToggleUnzippedView } = useUnzippedViewToggle(
+    {
+      unzippedView,
+      setUnzippedView,
+      formatScore,
+      source,
+      handleSourceChange,
+    },
+  )
   const { importingFile, handleImportFile } = useFileImport(
     store,
     backend,
@@ -392,7 +392,7 @@ export default function App() {
         measureAudioElement={measureAudioElement}
         noPartsSelected={noPartsSelected}
         unzippedView={unzippedView}
-        onToggleUnzippedView={() => setUnzippedView((value) => !value)}
+        onToggleUnzippedView={handleToggleUnzippedView}
         unzippedText={unzippedText}
       />
     </div>

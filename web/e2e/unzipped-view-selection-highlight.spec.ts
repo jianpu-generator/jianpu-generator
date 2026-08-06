@@ -8,23 +8,31 @@ declare global {
 }
 
 /**
- * Unzipped view flattens each declared part's notes into one continuous
- * token stream per `[Abbrev]` block — no per-measure line breaks — so a
- * cursor position maps to a measure index via `part_measure_ranges` byte
- * ranges, not via source lines. Newlines inside a part's block are purely
- * cosmetic wrapping and must not change which measure a token belongs to.
+ * Switching to Unzipped view auto-applies the Unzipped formatter, which
+ * flattens each declared part's notes into one `[Abbrev]`-headed block with
+ * one measure per line. A cursor position maps to a measure index via
+ * `part_measure_ranges` byte ranges, not via source lines, so newlines
+ * within that block — whether inserted by the auto-formatter or typed by
+ * the user — are purely cosmetic and must not change which measure a token
+ * belongs to.
  *
  * Measure 0 : [M] 1 2 3 4     / [C] 1 - - -
  * Measure 1 : [M] 5 6 7 1'    / [C] 4 - - -
- * Measure 2 : [M] 1_ 2_ 3_ 4_ / [C] 5 - - -
+ * Measure 2 : [M] 2 4 6 1'    / [C] 5 - - -
  * Measure 3 : [M] 0 0 0 0     / [C] 1 - - -
  *
  * Unzipped view text for this source is therefore:
  *   [M]
- *   1 2 3 4 5 6 7 1' 1_ 2_ 3_ 4_ 0 0 0 0
+ *   1 2 3 4
+ *   5 6 7 1'
+ *   2 4 6 1'
+ *   0 0 0 0
  *
  *   [C]
- *   1 - - - 4 - - - 5 - - - 1 - - -
+ *   1 - - -
+ *   4 - - -
+ *   5 - - -
+ *   1 - - -
  */
 const SOURCE = [
   '# metadata',
@@ -42,7 +50,7 @@ const SOURCE = [
   "[M] 5 6 7 1'",
   '[C] 4 - - -',
   '',
-  '[M] 1_ 2_ 3_ 4_',
+  "[M] 2 4 6 1'",
   '[C] 5 - - -',
   '',
   '[M] 0 0 0 0',
@@ -119,9 +127,10 @@ test('clicking a token in Unzipped view highlights the corresponding measure', a
   await waitForUnzippedText(page)
   await focusEditor(page)
 
-  // Line 2, column 24 lands inside "3_" — the third token of measure index 2
-  // ("1_ 2_ 3_ 4_", displayed as Measure 3) in [M]'s flattened line.
-  await clickAtPosition(page, 2, 24)
+  // Line 4, column 6 lands inside "6" — the third token of measure index 2
+  // ("2 4 6 1'", displayed as Measure 3), now on its own line after the
+  // auto-formatter breaks each measure onto one.
+  await clickAtPosition(page, 4, 6)
 
   // Allow the 300 ms debounce plus the highlight render worker round-trip.
   await page.waitForTimeout(1_000)
@@ -152,13 +161,14 @@ test('typing a partial note in Unzipped view is not clobbered by rest-padding fr
   await waitForUnzippedText(page)
   await focusEditor(page)
 
-  // Land on [M]'s flattened line, then move to its very end and append a
-  // single note. That note starts a new, not-yet-full 5th measure — exactly
-  // the case where `merge_unzipped_text` rest-pads the measure (e.g. to
-  // "5 0 0 0") once it's merged into `source`. Before the fix, the very next
-  // debounced re-extraction would snap the Unzipped editor's own displayed
-  // text to that padded form while the user was still typing.
-  await clickAtPosition(page, 2, 24)
+  // Land on [M]'s last measure line (measure index 3, "0 0 0 0"), then move
+  // to its very end and append a single note. That note starts a new,
+  // not-yet-full 5th measure — exactly the case where `merge_unzipped_text`
+  // rest-pads the measure (e.g. to "5 0 0 0") once it's merged into
+  // `source`. Before the fix, the very next debounced re-extraction would
+  // snap the Unzipped editor's own displayed text to that padded form while
+  // the user was still typing.
+  await clickAtPosition(page, 5, 1)
   await page.keyboard.press('End')
   await page.keyboard.type(' 5')
 
@@ -166,12 +176,12 @@ test('typing a partial note in Unzipped view is not clobbered by rest-padding fr
   // re-extraction would have already landed.
   await page.waitForTimeout(1_500)
 
-  const mLine = await page.evaluate(() => {
+  const mLastLine = await page.evaluate(() => {
     const model = window.monaco?.editor.getEditors()[0]?.getModel()
-    return model?.getValue().split('\n')[1] ?? ''
+    return model?.getValue().split(/\r?\n/)[4] ?? ''
   })
 
-  expect(mLine.trimEnd()).toBe("1 2 3 4 5 6 7 1' 1_ 2_ 3_ 4_ 0 0 0 0 5")
+  expect(mLastLine.trimEnd()).toBe('0 0 0 0 5')
 })
 
 test('a part wrapped across two visual lines still maps clicks to the correct measure', async ({
@@ -191,19 +201,19 @@ test('a part wrapped across two visual lines still maps clicks to the correct me
   await waitForUnzippedText(page)
   await focusEditor(page)
 
-  // Column 17 sits right before the single space separating "1'" (end of
-  // measure index 1) from "1_" (start of measure index 2). Replacing that
-  // one space with a newline keeps every later byte offset unchanged, so
-  // the still-stale (pre-edit) part_measure_ranges the click below resolves
-  // against remain valid — this isolates "does a mid-stream newline break
-  // the mapping" from unrelated re-extraction/debounce timing.
-  await clickAtPosition(page, 2, 17)
+  // Line 4 is measure index 2's own line ("2 4 6 1'"). Column 4 sits right
+  // before the space separating "4" from "6". Replacing that one space with
+  // a newline keeps every later byte offset unchanged, so the still-stale
+  // (pre-edit) part_measure_ranges the click below resolves against remain
+  // valid — this isolates "does a mid-stream newline break the mapping"
+  // from unrelated re-extraction/debounce timing.
+  await clickAtPosition(page, 4, 4)
   await page.keyboard.press('Delete')
   await page.keyboard.press('Enter')
 
-  // "1_ 2_ 3_ 4_ 0 0 0 0" is now its own visual line (line 3); "4_" — still
-  // measure index 2, displayed as Measure 3 — sits at column 10 on it.
-  await clickAtPosition(page, 3, 10)
+  // "6 1'" is now its own visual line (line 5); "6" — still measure index
+  // 2, displayed as Measure 3 — sits at column 1 on it.
+  await clickAtPosition(page, 5, 1)
 
   await page.waitForTimeout(1_000)
 
@@ -236,11 +246,12 @@ test.describe('CRLF/LF drift regression', () => {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   })
 
-  // Three declared parts means the third part's content starts on line 8
-  // (7 preceding newlines: "[M]\n<M>\n\n[Ch]\n<Ch>\n\n[C]\n"), so an unfixed
-  // CRLF model drifts the click's computed byte offset forward by 7 bytes —
-  // enough to cross from measure 0 into measure 1 of the Caption part's
-  // flattened, non-ASCII ("你好 世界 測試 偏移") content.
+  // Three declared parts, each auto-formatted to one measure per line, means
+  // the third part's content starts on line 14 (13 preceding newlines:
+  // "[M]\n<4 measure lines>\n\n[Ch]\n<4 measure lines>\n\n[C]\n"), so an
+  // unfixed CRLF model drifts the click's computed byte offset forward by 13
+  // bytes — enough to cross from measure 0 into measure 1 of the Caption
+  // part's non-ASCII ("你好" / "世界" / "測試" / "偏移") content.
   const CRLF_SOURCE = [
     '# metadata',
     'title = "crlf drift test"',
@@ -260,7 +271,7 @@ test.describe('CRLF/LF drift regression', () => {
     '[Ch] 4 - - -',
     '[C] 世界',
     '',
-    '[M] 1_ 2_ 3_ 4_',
+    "[M] 2 4 6 1'",
     '[Ch] 5 - - -',
     '[C] 測試',
     '',
@@ -300,11 +311,11 @@ test.describe('CRLF/LF drift regression', () => {
     await waitForUnzippedText(page)
     await focusEditor(page)
 
-    // Line 8, column 1 is the very first character of the Caption part's
-    // flattened content ("你好 世界 測試 偏移") — the start of measure
-    // index 0. With an unfixed CRLF model, the drift lands exactly on the
-    // start of measure index 1 instead.
-    await clickAtPosition(page, 8, 1)
+    // Line 14, column 1 is the very first character of the Caption part's
+    // first measure line ("你好") — the start of measure index 0. With an
+    // unfixed CRLF model, the drift lands exactly on the start of measure
+    // index 1 instead.
+    await clickAtPosition(page, 14, 1)
 
     await page.waitForTimeout(1_000)
 
