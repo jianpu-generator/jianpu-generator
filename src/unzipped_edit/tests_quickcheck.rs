@@ -65,7 +65,7 @@ fn generate_beat_filled_measure(
 /// Small closed vocabulary for generated standalone `lyrics` parts — the
 /// actual words don't matter, only that a measure's word count is whatever
 /// this generator wrote (lyrics-part repack capacity is self-referential,
-/// see [`super::scan_measure_token_counts`]).
+/// see `super::capacity::scan_measure_tokens`).
 const LYRIC_WORDS: [&str; 4] = ["la", "da", "na", "yo"];
 
 /// One measure's worth of a standalone `lyrics` part's verse line: 1-4 words,

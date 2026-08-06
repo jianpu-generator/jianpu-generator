@@ -52,7 +52,7 @@ mod parse;
 mod reassemble;
 mod repack;
 
-pub use capacity::{scan_measure_capacities, scan_measure_token_counts};
+pub use capacity::scan_measure_capacities;
 pub use extract::extract_unzipped_text;
 pub use format::format_unzipped_text;
 pub use merge::merge_unzipped_text;

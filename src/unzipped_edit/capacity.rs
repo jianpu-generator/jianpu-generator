@@ -1,8 +1,7 @@
-//! Beat/token capacity scanning: [`scan_measure_capacities`],
-//! [`scan_measure_tokens`], and [`scan_measure_token_counts`] give
-//! [`super::merge::merge_unzipped_text`]'s repack algorithm the per-measure
-//! capacities (and, for Lyrics-role content, original tokens) it re-bars
-//! against.
+//! Beat/token capacity scanning: [`scan_measure_capacities`] and
+//! [`scan_measure_tokens`] give [`super::merge::merge_unzipped_text`]'s
+//! repack algorithm the per-measure capacities (and, for Lyrics-role
+//! content, original tokens) it re-bars against.
 
 use crate::ast::parsed::{PartDecl, ScoreEvent, ScoreLineRole};
 use crate::desugar::{self, SourceLine};
@@ -98,27 +97,4 @@ pub(super) fn scan_measure_tokens(
             line.split_whitespace().map(str::to_string).collect()
         })
         .collect()
-}
-
-/// One token (syllable) count per original measure-group index — a thin wrapper over
-/// [`scan_measure_tokens`] for callers that only need counts, not the tokens themselves.
-pub fn scan_measure_token_counts(
-    score_content: &str,
-    declarations: &[PartDecl],
-    resolved_groups: &[ResolvedGroup],
-    target_index: usize,
-    role: ScoreLineRole,
-    occurrence: usize,
-) -> Vec<u32> {
-    scan_measure_tokens(
-        score_content,
-        declarations,
-        resolved_groups,
-        target_index,
-        role,
-        occurrence,
-    )
-    .iter()
-    .map(|tokens| tokens.len() as u32)
-    .collect()
 }

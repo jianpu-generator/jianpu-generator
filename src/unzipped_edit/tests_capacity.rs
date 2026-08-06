@@ -1,6 +1,5 @@
-//! Tests for [`super::scan_measure_capacities`]/[`super::scan_measure_token_counts`]/
-//! `super::capacity::scan_measure_tokens`, the beat-capacity (and, for
-//! `Lyrics` parts, token) scanning utility that
+//! Tests for [`super::scan_measure_capacities`]/`super::capacity::scan_measure_tokens`,
+//! the beat-capacity (and, for `Lyrics` parts, token) scanning utility that
 //! [`super::merge_unzipped_text`]'s repack algorithm is built on.
 
 use super::*;
@@ -75,14 +74,17 @@ Words = lyrics
         .iter()
         .position(|decl| decl.abbreviation == "Words")
         .expect("Words part declared");
-    let counts = scan_measure_token_counts(
+    let counts: Vec<u32> = capacity::scan_measure_tokens(
         &score_content,
         &declarations,
         &[],
         target_index,
         ScoreLineRole::Lyrics,
         0,
-    );
+    )
+    .iter()
+    .map(|tokens| tokens.len() as u32)
+    .collect();
 
     // First measure's lyrics line has 2 whitespace-unzipped tokens ("Ave",
     // "Ma-ri-a"), the second has 4 — token count, not beat count, is what
@@ -116,14 +118,17 @@ Words = lyrics
         .iter()
         .position(|decl| decl.abbreviation == "Words")
         .expect("Words part declared");
-    let counts = scan_measure_token_counts(
+    let counts: Vec<u32> = capacity::scan_measure_tokens(
         &score_content,
         &declarations,
         &[],
         target_index,
         ScoreLineRole::Lyrics,
         0,
-    );
+    )
+    .iter()
+    .map(|tokens| tokens.len() as u32)
+    .collect();
 
     assert_eq!(counts.len(), 2);
     assert_eq!(counts[0], 4);
@@ -166,14 +171,17 @@ Words = lyrics
         .iter()
         .position(|decl| decl.abbreviation == "Words")
         .expect("Words part declared");
-    let counts = scan_measure_token_counts(
+    let counts: Vec<u32> = capacity::scan_measure_tokens(
         &score_content,
         &declarations,
         &[],
         target_index,
         ScoreLineRole::Lyrics,
         1,
-    );
+    )
+    .iter()
+    .map(|tokens| tokens.len() as u32)
+    .collect();
 
     assert_eq!(counts, vec![4, 0]);
 }
