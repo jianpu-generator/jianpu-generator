@@ -1,6 +1,8 @@
-//! Beat/token capacity scanning: [`scan_measure_capacities`] and
-//! [`scan_measure_token_counts`] give [`super::merge::merge_unzipped_text`]'s
-//! repack algorithm the per-measure capacities it re-bars against.
+//! Beat/token capacity scanning: [`scan_measure_capacities`],
+//! [`scan_measure_tokens`], and [`scan_measure_token_counts`] give
+//! [`super::merge::merge_unzipped_text`]'s repack algorithm the per-measure
+//! capacities (and, for Lyrics-role content, original tokens) it re-bars
+//! against.
 
 use crate::ast::parsed::{PartDecl, ScoreEvent, ScoreLineRole};
 use crate::desugar::{self, SourceLine};
@@ -66,20 +68,21 @@ pub fn scan_measure_capacities(score_content: &str) -> Vec<u32> {
 }
 
 /// Scan `score_content` for `declarations[target_index]`'s `(role, occurrence)` score-line
-/// slot and return one token (syllable) count per original measure-group index. Lyrics-role
-/// content has no beat/duration grammar, so its "capacity" for the merge-back repack is a
-/// whitespace token count rather than a quarter-beat count (see [`scan_measure_capacities`]).
+/// slot and return its exact original whitespace tokens (syllables), one `Vec<String>` per
+/// original measure-group index. Lyrics-role content has no beat/duration grammar, so the
+/// merge-back repack works against these original tokens (and, for genuinely new content,
+/// a token-count ceiling — see [`scan_measure_capacities`]) rather than a quarter-beat count.
 /// `occurrence` is 0-based among same-role slots for this part (e.g. verse 2 is `role =
 /// Lyrics, occurrence = 1`); a measure where this occurrence doesn't exist at all (fewer
-/// verses written there than elsewhere) yields a `0` count, not an error.
-pub fn scan_measure_token_counts(
+/// verses written there than elsewhere) yields an empty `Vec`, not an error.
+pub(super) fn scan_measure_tokens(
     score_content: &str,
     declarations: &[PartDecl],
     resolved_groups: &[ResolvedGroup],
     target_index: usize,
     role: ScoreLineRole,
     occurrence: usize,
-) -> Vec<u32> {
+) -> Vec<Vec<String>> {
     let raw_groups = parser::score::measure_group::collect_groups(score_content);
     let (desugared, slots_per_group, _errors, _references) =
         match desugar::desugar_groups(raw_groups, declarations, resolved_groups, 0) {
@@ -92,7 +95,30 @@ pub fn scan_measure_token_counts(
         .zip(slots_per_group.iter())
         .map(|(group, slots)| {
             let line = extract_part_line(group, slots, target_index, role, occurrence);
-            line.split_whitespace().count() as u32
+            line.split_whitespace().map(str::to_string).collect()
         })
         .collect()
+}
+
+/// One token (syllable) count per original measure-group index — a thin wrapper over
+/// [`scan_measure_tokens`] for callers that only need counts, not the tokens themselves.
+pub fn scan_measure_token_counts(
+    score_content: &str,
+    declarations: &[PartDecl],
+    resolved_groups: &[ResolvedGroup],
+    target_index: usize,
+    role: ScoreLineRole,
+    occurrence: usize,
+) -> Vec<u32> {
+    scan_measure_tokens(
+        score_content,
+        declarations,
+        resolved_groups,
+        target_index,
+        role,
+        occurrence,
+    )
+    .iter()
+    .map(|tokens| tokens.len() as u32)
+    .collect()
 }

@@ -189,6 +189,58 @@ impl Arbitrary for RandomJianpuDocument {
     }
 }
 
+/// A single, `Arbitrary`-generated whitespace-token edit: append, insert, or
+/// delete one token, applied to whatever extracted text a given
+/// `RandomJianpuDocument` happens to produce. Kept as its own `Arbitrary`
+/// type (rather than a plain closure over a `Gen`) since quickcheck's
+/// `quickcheck!` macro only accepts `Arbitrary` property arguments.
+#[derive(Clone, Debug)]
+struct RandomTokenEdit {
+    variant: u8,
+    position_seed: usize,
+    word_index: usize,
+}
+
+impl Arbitrary for RandomTokenEdit {
+    fn arbitrary(g: &mut Gen) -> Self {
+        RandomTokenEdit {
+            variant: u8::arbitrary(g) % 3,
+            position_seed: usize::arbitrary(g),
+            word_index: usize::arbitrary(g),
+        }
+    }
+}
+
+impl RandomTokenEdit {
+    /// Applies this edit to `text`'s whitespace tokens before the *first*
+    /// `merge_unzipped_text` call: appends, inserts, or deletes a single
+    /// token. This is what actually exercises the diff-anchored lyrics
+    /// repack path beyond the unedited case — the existing property already
+    /// passes on zero edits, which alone doesn't validate that a genuine
+    /// edit round-trips correctly (this is the scenario that caught the
+    /// original bug and the reverted naive fix). A no-op (returns `text`
+    /// unchanged) when `text` has no tokens to edit.
+    fn apply(&self, text: &str) -> String {
+        let mut tokens: Vec<String> = text.split_whitespace().map(String::from).collect();
+        if tokens.is_empty() {
+            return text.to_string();
+        }
+        let word = LYRIC_WORDS[self.word_index % LYRIC_WORDS.len()].to_string();
+        match self.variant % 3 {
+            0 => tokens.push(word),
+            1 => {
+                let index = self.position_seed % (tokens.len() + 1);
+                tokens.insert(index, word);
+            }
+            _ => {
+                let index = self.position_seed % tokens.len();
+                tokens.remove(index);
+            }
+        }
+        tokens.join(" ")
+    }
+}
+
 quickcheck::quickcheck! {
     fn prop_extract_merge_round_trip_is_idempotent(doc: RandomJianpuDocument) -> TestResult {
         let source = doc.source;
@@ -196,6 +248,38 @@ quickcheck::quickcheck! {
             return TestResult::discard();
         };
         let Ok(merged) = merge_unzipped_text(&source, &extracted.text) else {
+            return TestResult::discard();
+        };
+        let Ok(reextracted) = extract_unzipped_text(&merged) else {
+            return TestResult::discard();
+        };
+        let Ok(remerged) = merge_unzipped_text(&merged, &reextracted.text) else {
+            return TestResult::discard();
+        };
+
+        let (Some(rendered_merged), Some(rendered_remerged)) = (render(&merged), render(&remerged))
+        else {
+            return TestResult::discard();
+        };
+
+        TestResult::from_bool(rendered_merged == rendered_remerged)
+    }
+
+    /// Same oracle as `prop_extract_merge_round_trip_is_idempotent`, but the
+    /// *first* `merge_unzipped_text` call is fed a small single-token edit
+    /// (append/insert/delete, via `RandomTokenEdit::apply`) rather than the
+    /// untouched extracted text — the round trip from `merged` onward should
+    /// still be a fixed point.
+    fn prop_extract_merge_round_trip_is_idempotent_after_one_edit(
+        doc: RandomJianpuDocument,
+        edit: RandomTokenEdit
+    ) -> TestResult {
+        let source = doc.source;
+        let Ok(extracted) = extract_unzipped_text(&source) else {
+            return TestResult::discard();
+        };
+        let edited_text = edit.apply(&extracted.text);
+        let Ok(merged) = merge_unzipped_text(&source, &edited_text) else {
             return TestResult::discard();
         };
         let Ok(reextracted) = extract_unzipped_text(&merged) else {

@@ -3,13 +3,17 @@
 //! that block back into the full `# score` section.
 //!
 //! [`merge_unzipped_text`] re-bars each part's flat token stream into
-//! measures by greedily filling against each original measure's beat (or,
-//! for `Lyrics` parts, token) capacity, then reassembles the `# score`
-//! section and runs one final `desugar::desugar_groups` pass so the existing
-//! implicit-rest-fill machinery produces correct rest tokens for parts that
-//! come up short. See the "Phase 3" write-up this was implemented from for
-//! the full algorithm; do not "simplify" the repack/reconcile arithmetic
-//! without re-reading it.
+//! measures, then reassembles the `# score` section and runs one final
+//! `desugar::desugar_groups` pass so the existing implicit-rest-fill
+//! machinery produces correct rest tokens for parts that come up short.
+//! Notes/Chords/Percussion (and the Notes half of `notes+lyrics`) re-bar by
+//! greedily filling against each original measure's real, intrinsic beat
+//! capacity; every Lyrics-role occurrence instead re-bars by diffing the
+//! edited text against its own *original* per-measure tokens, since a
+//! verse's per-measure token count has no intrinsic capacity of its own to
+//! recompute (see [`repack`]'s doc comment for why). See the "Phase 3"
+//! write-up this was implemented from for the full algorithm; do not
+//! "simplify" the repack/reconcile arithmetic without re-reading it.
 //!
 //! **Multi-verse lyrics.** A `notes+lyrics` part's notes line and every verse
 //! line share the same `track_index` (they're distinguished only by
@@ -25,8 +29,10 @@
 //! whenever a higher verse has real content in that same measure.
 //!
 //! This algorithm is split across submodules: [`capacity`] scans the
-//! original document for per-measure beat/token capacities,
-//! [`extract`] implements [`extract_unzipped_text`], [`merge`]
+//! original document for per-measure beat capacities and (for Lyrics-role
+//! content) original per-measure tokens, [`diff`] is the domain-free token
+//! diff Lyrics-role repack is built on, [`repack`] implements both repack
+//! mechanisms, [`extract`] implements [`extract_unzipped_text`], [`merge`]
 //! implements [`merge_unzipped_text`], and [`format`] implements
 //! [`format_unzipped_text`] (a readability-only pass built on the other two).
 //! Shared setup (parsing `# parts`/`# groups`) and a few small helpers used
@@ -38,6 +44,7 @@ use crate::error::{Span, Spanned};
 use crate::parser::{self, group_parser::ResolvedGroup};
 
 mod capacity;
+mod diff;
 mod extract;
 mod format;
 mod merge;

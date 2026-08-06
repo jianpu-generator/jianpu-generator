@@ -227,11 +227,19 @@ Melody = notes+lyrics
 ";
 
 fn find_verse_range(output: &UnzippedExtractOutput, verse_number: usize) -> (usize, usize) {
+    find_verse_range_at(output, verse_number, 0)
+}
+
+fn find_verse_range_at(
+    output: &UnzippedExtractOutput,
+    verse_number: usize,
+    measure_index: usize,
+) -> (usize, usize) {
     output.lyrics_verse_ranges[0]
         .iter()
         .find(|verse| verse.verse_number == verse_number)
         .unwrap_or_else(|| panic!("verse {verse_number} not found"))
-        .measure_ranges[0]
+        .measure_ranges[measure_index]
 }
 
 #[test]
@@ -338,3 +346,101 @@ Melody = notes+lyrics
 [Melody] 5 6 7 1
 [Melody] ti ti ti ti
 ";
+
+const MELISMA_VERSE_SOURCE: &str = "\
+# metadata
+title = \"Test\"
+
+# parts
+a = notes+lyrics
+
+# score
+[a] 1 2 3 4
+[a] he llo world yes
+
+[a] 5 6 7 1
+[a] ba ha ta
+";
+
+#[test]
+fn appending_a_syllable_to_a_below_notes_capacity_verse_stays_in_the_same_measure() {
+    // The literal confirmed-bug fixture (mirrors
+    // `web/e2e/unzipped-lyrics-edit-zip-roundtrip.spec.ts`): the second
+    // measure's verse ("ba ha ta", 3 tokens) trails the notes line's 4-token
+    // capacity there. Appending "na" should land in the *same* measure
+    // (there's room under the notes-derived ceiling), not spill a phantom
+    // third measure that force-pads the notes line and other content.
+    let extracted = extract_unzipped_text(MELISMA_VERSE_SOURCE).unwrap();
+    let edited = extracted.text.replace("ba ha ta", "ba ha ta na");
+
+    let merged = merge_unzipped_text(MELISMA_VERSE_SOURCE, &edited).unwrap();
+    let reextracted = extract_unzipped_text(&merged).unwrap();
+
+    assert_eq!(reextracted.part_measure_ranges[0].len(), 2);
+    let (start, end) = reextracted.part_measure_ranges[0][1];
+    assert_eq!(&reextracted.text[start..end], "5 6 7 1");
+    let (start, end) = find_verse_range_at(&reextracted, 1, 1);
+    assert_eq!(&reextracted.text[start..end], "ba ha ta na");
+}
+
+const UNEVEN_CAPACITY_MELISMA_SOURCE: &str = "\
+# metadata
+title = \"Test\"
+
+# parts
+a = notes+lyrics
+
+# score
+[a] 1 2 3 4
+[a] ba ha ta
+
+[a] 5 6 7 1
+[a] na na na na
+";
+
+#[test]
+fn unedited_melisma_verse_with_uneven_capacity_across_measures_round_trips_exactly() {
+    // Directly encodes the naive "recompute capacity differently" fix's
+    // failure mode: the verse has fewer syllables than notes early (measure
+    // 0: 3 tokens against a 4-onset ceiling) and exactly matches the ceiling
+    // later (measure 1: 4 tokens). An unedited round trip must reproduce
+    // this exact split, not swallow measure 1's tokens into measure 0's
+    // inflated ceiling.
+    let extracted = extract_unzipped_text(UNEVEN_CAPACITY_MELISMA_SOURCE).unwrap();
+    let merged = merge_unzipped_text(UNEVEN_CAPACITY_MELISMA_SOURCE, &extracted.text).unwrap();
+    let reextracted = extract_unzipped_text(&merged).unwrap();
+    assert_eq!(extracted.text, reextracted.text);
+}
+
+const LYRICS_KIND_TWO_VERSE_SOURCE: &str = "\
+# metadata
+title = \"Test\"
+
+# parts
+Words = lyrics
+
+# score
+[Words] he llo world yes
+[Words] ba ha ta
+";
+
+#[test]
+fn appending_a_syllable_to_a_lyrics_kind_verse_within_verse_ones_capacity_stays_in_the_same_measure(
+) {
+    // `lyrics`-kind (no Notes line): verse 2's "ba ha ta" (3 tokens) trails
+    // verse 1's own 4-token count for the same measure. Appending "na"
+    // should stay in that one measure, anchored to verse 1's own capacity,
+    // mirroring the `notes+lyrics` case above but with no notes line at all.
+    let extracted = extract_unzipped_text(LYRICS_KIND_TWO_VERSE_SOURCE).unwrap();
+    assert!(extracted.text.contains("[Words:lyrics:2]"));
+    let edited = extracted.text.replace("ba ha ta", "ba ha ta na");
+
+    let merged = merge_unzipped_text(LYRICS_KIND_TWO_VERSE_SOURCE, &edited).unwrap();
+    let reextracted = extract_unzipped_text(&merged).unwrap();
+
+    assert_eq!(reextracted.part_measure_ranges[0].len(), 1);
+    let (start, end) = reextracted.part_measure_ranges[0][0];
+    assert_eq!(&reextracted.text[start..end], "he llo world yes");
+    let (start, end) = find_verse_range(&reextracted, 2);
+    assert_eq!(&reextracted.text[start..end], "ba ha ta na");
+}
