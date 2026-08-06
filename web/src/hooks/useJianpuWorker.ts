@@ -1,7 +1,7 @@
-import { type RefObject, useCallback } from 'react'
+import type { RefObject } from 'react'
 import type { EditorHandle } from '../types'
-import type { WorkerRequest } from '../worker/jianpu.worker'
 import { useInstrumentPreview } from './useInstrumentPreview'
+import { useJianpuWorkerAudioActions } from './useJianpuWorkerAudioActions'
 import { useJianpuWorkerExports } from './useJianpuWorkerExports'
 import { useJianpuWorkerFormat } from './useJianpuWorkerFormat'
 import { useJianpuWorkerImport } from './useJianpuWorkerImport'
@@ -138,13 +138,17 @@ export function useJianpuWorker(
 
   useUnzippedTextSnapshot(unzippedView, sourceRef, setUnzippedText)
 
-  const setNextWavUrl = useCallback((next: string | null) => {
-    if (wavUrlRef.current) {
-      URL.revokeObjectURL(wavUrlRef.current)
-    }
-    wavUrlRef.current = next
-    setWavUrl(next)
-  }, [])
+  const { setNextWavUrl, generateFullAudio } = useJianpuWorkerAudioActions({
+    workerRef,
+    sourceRef,
+    enabledTracksRef,
+    wavUrlRef,
+    setWavUrl,
+    audioGenerating,
+    setAudioGenerating,
+    audioRequestIdRef,
+    latestAudioIdRef,
+  })
 
   const {
     measureAudioGenerating,
@@ -266,20 +270,6 @@ export function useJianpuWorker(
       lyricsVerseRangesRef,
       setLyricsVerseRanges,
     })
-
-  const generateFullAudio = useCallback(() => {
-    const worker = workerRef.current
-    if (!worker || audioGenerating) return
-    const id = ++audioRequestIdRef.current
-    latestAudioIdRef.current = id
-    setAudioGenerating(true)
-    worker.postMessage({
-      type: 'generateAudio',
-      source: sourceRef.current,
-      id,
-      enabledTracks: enabledTracksRef.current,
-    } satisfies WorkerRequest)
-  }, [audioGenerating])
 
   const {
     exportPdf,
