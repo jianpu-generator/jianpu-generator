@@ -101,6 +101,42 @@ fn chord_major_expands_to_three_notes() {
 }
 
 #[test]
+fn sus4_chord_expands_to_root_fourth_fifth() {
+    let input = concat!(
+        "# metadata\ntitle=\"\"\nauthor=\"\"\n\n",
+        "# parts\nC = chords\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n",
+        "[C] 1sus4\n",
+    );
+    let doc = crate::parser::parse(input, "test", &[]).unwrap();
+    let score = crate::grouper::group(doc).unwrap();
+    let midi_bytes = write_midi(&score).unwrap();
+    assert_eq!(
+        note_on_keys(&midi_bytes),
+        vec![60, 65, 67],
+        "1sus4 in key C should expand to C, F, G"
+    );
+}
+
+#[test]
+fn sus2_chord_expands_to_root_second_fifth() {
+    let input = concat!(
+        "# metadata\ntitle=\"\"\nauthor=\"\"\n\n",
+        "# parts\nC = chords\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n",
+        "[C] 1sus2\n",
+    );
+    let doc = crate::parser::parse(input, "test", &[]).unwrap();
+    let score = crate::grouper::group(doc).unwrap();
+    let midi_bytes = write_midi(&score).unwrap();
+    assert_eq!(
+        note_on_keys(&midi_bytes),
+        vec![60, 62, 67],
+        "1sus2 in key C should expand to C, D, G"
+    );
+}
+
+#[test]
 fn measure_index_out_of_range_is_recoverable() {
     let score = one_measure_score();
     assert!(

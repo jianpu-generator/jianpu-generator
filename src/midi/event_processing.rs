@@ -212,6 +212,8 @@ fn chord_midi_notes(
         crate::ast::parsed::TriadQuality::Minor => &[0, 3, 7],
         crate::ast::parsed::TriadQuality::Diminished => &[0, 3, 6],
         crate::ast::parsed::TriadQuality::Augmented => &[0, 4, 8],
+        crate::ast::parsed::TriadQuality::Sus2 => &[0, 2, 7],
+        crate::ast::parsed::TriadQuality::Sus4 => &[0, 5, 7],
     };
 
     let ext_offset: Option<i32> = match &chord.extension {

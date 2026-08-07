@@ -125,6 +125,8 @@ impl GroupedChordNote {
             TriadQuality::Minor => "m",
             TriadQuality::Diminished => "°",
             TriadQuality::Augmented => "⁺",
+            TriadQuality::Sus2 => "sus2",
+            TriadQuality::Sus4 => "sus4",
         };
         let extension = match &self.extension {
             Some(Extension::DominantSeventh) => "⁷",

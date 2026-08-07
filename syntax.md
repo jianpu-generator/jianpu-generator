@@ -683,12 +683,12 @@ Chord lines use Nashville number symbols. Duration works like notes: each token 
 <chord>      ::= <degree> <accidental>? <triad>? <extension>? ("/" <bass>)?
 <degree>     ::= 1–7
 <accidental> ::= "#" | "b"
-<triad>      ::= "m" | "o" | "+"
+<triad>      ::= "m" | "o" | "+" | "sus2" | "sus4" | "sus"
 <extension>  ::= "M7" | "7"
 <bass>       ::= <degree> <accidental>?
 ```
 
-Parsing checks longest suffix first (`M7` before `7`; `m` before extension).
+Parsing checks longest suffix first (`M7` before `7`; `sus2`/`sus4` before bare `sus`; `m` before extension). Bare `sus` (no digit) means `sus4`, matching standard chord-chart convention.
 
 | Input | Meaning |
 |-------|---------|
@@ -696,6 +696,9 @@ Parsing checks longest suffix first (`M7` before `7`; `m` before extension).
 | `1m` | I minor |
 | `1o` | I diminished |
 | `1+` | I augmented |
+| `1sus2` | I suspended 2nd |
+| `1sus4` | I suspended 4th |
+| `1sus` | I suspended 4th (alias for `1sus4`) |
 | `17` | I dominant 7th |
 | `1M7` | I major 7th |
 | `1m7` | I minor 7th |

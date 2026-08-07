@@ -160,6 +160,8 @@ pub enum TriadQuality {
     Minor,
     Augmented,
     Diminished,
+    Sus2,
+    Sus4,
 }
 
 #[derive(Debug, Clone, PartialEq)]

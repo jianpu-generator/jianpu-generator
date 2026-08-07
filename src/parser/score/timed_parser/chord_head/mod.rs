@@ -194,7 +194,13 @@ fn parse_chord_symbol(token: &str, span: Span) -> Option<ChordSymbolParse> {
         None => (rest, None),
     };
 
-    let (triad, ext_str) = if let Some(stripped) = chord_part.strip_prefix('m') {
+    let (triad, ext_str) = if let Some(stripped) = chord_part.strip_prefix("sus2") {
+        (TriadQuality::Sus2, stripped)
+    } else if let Some(stripped) = chord_part.strip_prefix("sus4") {
+        (TriadQuality::Sus4, stripped)
+    } else if let Some(stripped) = chord_part.strip_prefix("sus") {
+        (TriadQuality::Sus4, stripped)
+    } else if let Some(stripped) = chord_part.strip_prefix('m') {
         (TriadQuality::Minor, stripped)
     } else if let Some(stripped) = chord_part.strip_prefix('o') {
         (TriadQuality::Diminished, stripped)
