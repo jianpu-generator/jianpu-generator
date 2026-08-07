@@ -44,6 +44,7 @@ fn measure_highlight_produces_prepended_rect_element() {
             base: 14.4,
             cjk: 17.28,
         },
+        12.0,
     )
     .unwrap();
     assert!(!abs[0].elements.is_empty(), "should have elements");
@@ -93,6 +94,7 @@ fn error_highlight_resolves_to_absolute_error_highlight() {
             base: 14.4,
             cjk: 17.28,
         },
+        12.0,
     )
     .unwrap();
     let error_elements: Vec<_> = abs_pages[0]
@@ -132,6 +134,7 @@ fn page_with_no_highlight_produces_no_extra_element() {
             base: 14.4,
             cjk: 17.28,
         },
+        12.0,
     )
     .unwrap();
     assert!(abs[0].elements.is_empty());
@@ -191,6 +194,7 @@ fn playback_cursor_reaches_final_bar_line_of_its_measure() {
             base: 14.4,
             cjk: 17.28,
         },
+        12.0,
     )
     .unwrap();
 

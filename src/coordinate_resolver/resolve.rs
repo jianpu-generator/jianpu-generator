@@ -25,6 +25,7 @@ pub fn resolve(
     note_number_width: f32,
     part_label_width_pt: f32,
     lyric_font_sizes: LyricFontSizes,
+    notes_font_size: f32,
 ) -> Result<Vec<AbsolutePage>, IrrecoverableError> {
     pages
         .iter()
@@ -34,9 +35,32 @@ pub fn resolve(
                 note_number_width,
                 part_label_width_pt,
                 lyric_font_sizes,
+                notes_font_size,
             )
         })
         .collect()
+}
+
+/// The "core" glyph weight a timed unit's `HAlign::Center` anchor is scaled
+/// against — mirrors `layout_spacing::note_glyph_weight`/`dash_weight` (the
+/// base weight before `measure_column_weights` adds accidental/dot/
+/// chord-text extras), so those extras widen the column without dragging the
+/// anchor along with them. `None` for content with no such column-weight
+/// relationship (falls back to plain center).
+fn glyph_anchor_weight(content: &GridContent, notes_font_size: f32) -> Option<f32> {
+    match content {
+        GridContent::NoteHead { .. }
+        | GridContent::Rest { .. }
+        | GridContent::PercussionHit
+        | GridContent::ChordSymbol { .. } => Some(
+            crate::font_metrics::monospace_char_advance_width('0', notes_font_size),
+        ),
+        GridContent::NoteDash { .. } => Some(crate::font_metrics::monospace_char_advance_width(
+            '\u{2014}',
+            crate::font_metrics::NOTE_DASH_FONT_SIZE,
+        )),
+        _ => None,
+    }
 }
 
 /// Rough estimate (in points) of a lyric syllable's rendered width, used only
@@ -67,13 +91,21 @@ fn clamp_lyric_x(x: f32, x_start: f32, content: &GridContent, fonts: LyricFontSi
     x.max(x_start + half_width)
 }
 
+/// Bundles the config threaded through row-element resolution, kept constant
+/// across a page, so `resolve_row_element` stays under the clippy arg limit.
+#[derive(Clone, Copy)]
+struct RowResolveConfig {
+    note_number_width: f32,
+    lyric_font_sizes: LyricFontSizes,
+    notes_font_size: f32,
+}
+
 fn resolve_row_element(
     el: &GridElement,
     row: &GridRow,
     row_y: f32,
     geometry: &ColumnGeometry,
-    note_number_width: f32,
-    lyric_font_sizes: LyricFontSizes,
+    config: RowResolveConfig,
 ) -> Result<Option<AbsoluteElement>, IrrecoverableError> {
     let raw_x_start = geometry.x_start(el.column as f32);
     let x_start = PAGE_MARGIN + raw_x_start;
@@ -83,10 +115,15 @@ fn resolve_row_element(
     let span_width = geometry.x_start(el.column as f32 + el.column_span as f32) - raw_x_start;
     let x = match el.halign {
         HAlign::Start => x_start,
-        HAlign::Center => x_start + span_width * 0.5,
+        HAlign::Center => match glyph_anchor_weight(&el.content, config.notes_font_size) {
+            Some(core_weight) => {
+                PAGE_MARGIN + geometry.glyph_anchor_x(el.column as f32, core_weight)
+            }
+            None => x_start + span_width * 0.5,
+        },
         HAlign::End => x_start + span_width,
     };
-    let x = clamp_lyric_x(x, x_start, &el.content, lyric_font_sizes);
+    let x = clamp_lyric_x(x, x_start, &el.content, config.lyric_font_sizes);
     let bottom_padding = if matches!(el.content, GridContent::DirectiveLine { .. }) {
         crate::font_metrics::DIRECTIVE_LINE_BOTTOM_PADDING
     } else {
@@ -98,7 +135,7 @@ fn resolve_row_element(
         VAlign::Bottom => row_y + row.height_pt - bottom_padding,
     };
 
-    if let Some(el) = resolve_span_marking(el, y, geometry, note_number_width) {
+    if let Some(el) = resolve_span_marking(el, y, geometry, config) {
         return Ok(Some(el));
     }
     match &el.content {
@@ -115,6 +152,13 @@ fn resolve_row_element(
     }
 }
 
+/// The glyph anchor of a span's last column, mirroring `start_center`'s
+/// `geometry.glyph_anchor_x(el.column as f32, ...)` but for `el.column +
+/// el.column_span - 1`.
+fn span_end_center(geometry: &ColumnGeometry, el: &GridElement, glyph_weight: f32) -> f32 {
+    geometry.glyph_anchor_x(el.column as f32 + el.column_span as f32 - 1.0, glyph_weight)
+}
+
 /// Handles the underline/tie/slur variants, whose x-extent is defined in
 /// terms of column centers/edges rather than the halign/valign math above.
 /// Returns `None` for every other `GridContent` variant.
@@ -122,14 +166,16 @@ fn resolve_span_marking(
     el: &GridElement,
     y: f32,
     geometry: &ColumnGeometry,
-    note_number_width: f32,
+    config: RowResolveConfig,
 ) -> Option<AbsoluteElement> {
+    let note_glyph_weight =
+        crate::font_metrics::monospace_char_advance_width('0', config.notes_font_size);
     match &el.content {
         GridContent::Underline { level } => {
-            let start_center = geometry.column_center(el.column as f32);
-            let end_center = geometry.column_center(el.column as f32 + el.column_span as f32 - 1.0);
-            let ul_x = PAGE_MARGIN + start_center - note_number_width * 0.5;
-            let ul_width = end_center - start_center + note_number_width;
+            let start_center = geometry.glyph_anchor_x(el.column as f32, note_glyph_weight);
+            let end_center = span_end_center(geometry, el, note_glyph_weight);
+            let ul_x = PAGE_MARGIN + start_center - config.note_number_width * 0.5;
+            let ul_width = end_center - start_center + config.note_number_width;
             Some(AbsoluteElement {
                 x: ul_x,
                 y,
@@ -140,8 +186,8 @@ fn resolve_span_marking(
             })
         }
         GridContent::TieOrSlur { kind } => {
-            let start_center = geometry.column_center(el.column as f32);
-            let end_center = geometry.column_center(el.column as f32 + el.column_span as f32 - 1.0);
+            let start_center = geometry.glyph_anchor_x(el.column as f32, note_glyph_weight);
+            let end_center = span_end_center(geometry, el, note_glyph_weight);
             Some(AbsoluteElement {
                 x: PAGE_MARGIN + start_center,
                 y,
@@ -152,7 +198,7 @@ fn resolve_span_marking(
             })
         }
         GridContent::TieOrSlurTail { kind } => {
-            let start_center = geometry.column_center(el.column as f32);
+            let start_center = geometry.glyph_anchor_x(el.column as f32, note_glyph_weight);
             let system_right_edge = geometry.x_start(el.column as f32 + el.column_span as f32);
             Some(AbsoluteElement {
                 x: PAGE_MARGIN + start_center,
@@ -165,7 +211,7 @@ fn resolve_span_marking(
         }
         GridContent::TieOrSlurHead { kind } => {
             let system_left_edge = geometry.x_start(el.column as f32);
-            let end_center = geometry.column_center(el.column as f32 + el.column_span as f32 - 1.0);
+            let end_center = span_end_center(geometry, el, note_glyph_weight);
             Some(AbsoluteElement {
                 x: PAGE_MARGIN + system_left_edge,
                 y,
@@ -176,8 +222,8 @@ fn resolve_span_marking(
             })
         }
         GridContent::TupletBracket { label } => {
-            let start_center = geometry.column_center(el.column as f32);
-            let end_center = geometry.column_center(el.column as f32 + el.column_span as f32 - 1.0);
+            let start_center = geometry.glyph_anchor_x(el.column as f32, note_glyph_weight);
+            let end_center = span_end_center(geometry, el, note_glyph_weight);
             Some(AbsoluteElement {
                 x: PAGE_MARGIN + start_center,
                 y,
@@ -276,24 +322,23 @@ fn resolve_page(
     note_number_width: f32,
     part_label_width_pt: f32,
     lyric_font_sizes: LyricFontSizes,
+    notes_font_size: f32,
 ) -> Result<AbsolutePage, IrrecoverableError> {
     let usable_width = page.width_pt - 2.0 * PAGE_MARGIN;
     let mut elements: Vec<AbsoluteElement> = Vec::new();
     let mut row_y = PAGE_MARGIN;
     let mut row_tops: Vec<f32> = Vec::with_capacity(page.rows.len());
 
+    let row_config = RowResolveConfig {
+        note_number_width,
+        lyric_font_sizes,
+        notes_font_size,
+    };
     for row in &page.rows {
         row_tops.push(row_y);
         let geometry = row.column_geometry(usable_width, part_label_width_pt);
         for el in &row.elements {
-            if let Some(element) = resolve_row_element(
-                el,
-                row,
-                row_y,
-                &geometry,
-                note_number_width,
-                lyric_font_sizes,
-            )? {
+            if let Some(element) = resolve_row_element(el, row, row_y, &geometry, row_config)? {
                 elements.push(element);
             }
         }

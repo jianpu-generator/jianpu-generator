@@ -246,6 +246,7 @@ fn render_svg_docs_with_parts(
         config.note_number_width as f32,
         config.part_label_width_pt as f32,
         config.lyric_font_sizes(),
+        config.notes_font_size(),
     )?;
     Ok(renderer::new_renderer::render_new(&abs, &config))
 }

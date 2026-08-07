@@ -36,6 +36,7 @@ fn triplet_of_sixteenth_notes_gets_double_underline_matching_written_duration() 
         config.note_number_width as f32,
         config.part_label_width_pt as f32,
         config.lyric_font_sizes(),
+        config.notes_font_size(),
     )
     .expect("coordinate resolver should not fail in tests");
 

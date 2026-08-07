@@ -24,6 +24,7 @@ impl GridRow {
                         col_count: music_cols as f32,
                         col_width: (usable_width_pt - label_width_pt) / music_cols as f32,
                         x_start: label_width_pt,
+                        weight: None,
                     },
                     rest_segments: Vec::new(),
                 };
@@ -49,6 +50,7 @@ impl GridRow {
                                 col_count: 1.0,
                                 col_width,
                                 x_start: x,
+                                weight: Some(w),
                             };
                             x += col_width;
                             seg
@@ -62,6 +64,7 @@ impl GridRow {
                 col_count: 0.0,
                 col_width: 0.0,
                 x_start: label_width_pt,
+                weight: None,
             });
             ColumnGeometry {
                 label_cols: LABEL_COLS,
@@ -79,6 +82,7 @@ impl GridRow {
                     col_count: self.column_count as f32,
                     col_width,
                     x_start: 0.0,
+                    weight: None,
                 },
                 rest_segments: Vec::new(),
             }
@@ -97,6 +101,13 @@ struct ColumnSegment {
     col_width: f32,
     /// x-offset (from the row's left edge) of this segment's start.
     x_start: f32,
+    /// This column's total spacing weight (`column_weights`'s per-column max
+    /// across every row sharing it), used by `glyph_anchor_x` to scale a
+    /// timed unit's own anchor down when the column is wider than that
+    /// unit's own content needs. `None` in the uniform-width fallback
+    /// segments (label-less rows, empty `measure_layout`), which carry no
+    /// real weight data and never host timed-unit content in practice.
+    weight: Option<f32>,
 }
 
 /// Resolves a grid column index to a pixel x-offset (from the row's left
@@ -156,5 +167,21 @@ impl ColumnGeometry {
     /// x-offset of the horizontal center of `column`.
     pub fn column_center(&self, column: f32) -> f32 {
         self.x_start(column) + self.col_width(column) * 0.5
+    }
+
+    /// x-offset of a timed unit's own glyph anchor within `column`, scaled by
+    /// how much of the column's total weight is this element's own
+    /// `core_weight` — so a column widened by another row's heavier content
+    /// (e.g. a long chord symbol) doesn't drag a plain note's anchor toward
+    /// the middle. Falls back to the column's plain center when no weight
+    /// data is available (uniform-width rows never carry timed-unit content).
+    pub fn glyph_anchor_x(&self, column: f32, core_weight: f32) -> f32 {
+        match self.segment_for(column).weight {
+            Some(column_weight) if column_weight > 0.0 => {
+                self.x_start(column)
+                    + self.col_width(column) * (core_weight / column_weight).min(1.0) * 0.5
+            }
+            _ => self.column_center(column),
+        }
     }
 }
