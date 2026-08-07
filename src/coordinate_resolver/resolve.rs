@@ -11,9 +11,9 @@ use super::highlights::{
     resolve_playback_cursor_target,
 };
 
-/// Font sizes used to estimate lyric syllable width, so a clamp can keep
-/// wide syllables from bleeding past their grid column (see
-/// [`estimate_lyric_width`]).
+/// Font sizes used to measure lyric syllable width, both for the
+/// `HAlign::Center` anchor's weight scaling and the clamp that keeps wide
+/// syllables from bleeding past their grid column (see [`lyric_glyph_width`]).
 #[derive(Clone, Copy)]
 pub struct LyricFontSizes {
     pub base: f32,
@@ -42,42 +42,38 @@ pub fn resolve(
 }
 
 /// The "core" glyph weight a timed unit's `HAlign::Center` anchor is scaled
-/// against — mirrors `layout_spacing::note_glyph_weight`/`dash_weight` (the
-/// base weight before `measure_column_weights` adds accidental/dot/
-/// chord-text extras), so those extras widen the column without dragging the
-/// anchor along with them. `None` for content with no such column-weight
-/// relationship (falls back to plain center).
-fn glyph_anchor_weight(content: &GridContent, notes_font_size: f32) -> Option<f32> {
+/// against — mirrors `layout_spacing::note_glyph_weight`/`dash_weight`/
+/// `lyric_weight` (the base weight before `measure_column_weights` adds
+/// accidental/dot/chord-text extras), so those extras widen the column
+/// without dragging the anchor along with them. `None` for content with no
+/// such column-weight relationship (falls back to plain center).
+fn glyph_anchor_weight(content: &GridContent, config: RowResolveConfig) -> Option<f32> {
     match content {
         GridContent::NoteHead { .. }
         | GridContent::Rest { .. }
         | GridContent::PercussionHit
         | GridContent::ChordSymbol { .. } => Some(
-            crate::font_metrics::monospace_char_advance_width('0', notes_font_size),
+            crate::font_metrics::monospace_char_advance_width('0', config.notes_font_size),
         ),
         GridContent::NoteDash { .. } => Some(crate::font_metrics::monospace_char_advance_width(
             '\u{2014}',
             crate::font_metrics::NOTE_DASH_FONT_SIZE,
         )),
+        GridContent::LyricSyllable(s) => Some(lyric_glyph_width(s, config.lyric_font_sizes)),
         _ => None,
     }
 }
 
-/// Rough estimate (in points) of a lyric syllable's rendered width, used only
-/// to keep long syllables from bleeding past the left edge of their grid
-/// column and into the bar line to their left. Sans-serif glyphs average
-/// roughly half their font size in width; CJK glyphs render roughly square.
-fn estimate_lyric_width(s: &str, fonts: LyricFontSizes) -> f32 {
-    const LATIN_AVG_CHAR_WIDTH_RATIO: f32 = 0.55;
-    s.chars()
-        .map(|c| {
-            if ('\u{4E00}'..='\u{9FFF}').contains(&c) {
-                fonts.cjk
-            } else {
-                fonts.base * LATIN_AVG_CHAR_WIDTH_RATIO
-            }
-        })
-        .sum()
+/// Real rendered width (in points) of a lyric syllable, mirroring
+/// `layout_spacing::lyric_weight` exactly so the anchor scaling above and the
+/// bleed-left clamp below agree with the width `measure_column_weights`
+/// actually reserved for it.
+fn lyric_glyph_width(s: &str, fonts: LyricFontSizes) -> f32 {
+    if s.chars().any(|c| ('\u{4E00}'..='\u{9FFF}').contains(&c)) {
+        crate::font_metrics::cjk_text_width(s, fonts.cjk)
+    } else {
+        crate::font_metrics::monospace_text_width(s, fonts.base)
+    }
 }
 
 /// Clamps a centered lyric syllable's x so its left edge never crosses
@@ -87,7 +83,7 @@ fn clamp_lyric_x(x: f32, x_start: f32, content: &GridContent, fonts: LyricFontSi
     let GridContent::LyricSyllable(s) = content else {
         return x;
     };
-    let half_width = estimate_lyric_width(s, fonts) * 0.5;
+    let half_width = lyric_glyph_width(s, fonts) * 0.5;
     x.max(x_start + half_width)
 }
 
@@ -115,7 +111,7 @@ fn resolve_row_element(
     let span_width = geometry.x_start(el.column as f32 + el.column_span as f32) - raw_x_start;
     let x = match el.halign {
         HAlign::Start => x_start,
-        HAlign::Center => match glyph_anchor_weight(&el.content, config.notes_font_size) {
+        HAlign::Center => match glyph_anchor_weight(&el.content, config) {
             Some(core_weight) => {
                 PAGE_MARGIN + geometry.glyph_anchor_x(el.column as f32, core_weight)
             }
