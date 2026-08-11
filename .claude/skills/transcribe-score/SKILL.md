@@ -169,6 +169,30 @@ Hand-roll a small parser rather than reading rhythm by eye. Key rules:
   harmonic-rhythm granularity) from one already-transcribed measure compared
   against the parsed source for that same instant — don't assume a
   one-chord-per-measure or triad-only convention.
+- **Chord symbols are Nashville-number style, not diatonic-auto-quality**: a
+  bare degree (`1`, `2`, `5`...) always means **major**, regardless of
+  whether that scale degree is diatonically minor/diminished in the key —
+  you must explicitly append `m`/`o`/etc. any time the source harmony is
+  minor or diminished (e.g. the diatonic ii chord in a major key is written
+  `2m`, not `2`). This also means a bare-degree secondary dominant (e.g.
+  V/V, built on the *raised* 2nd degree) needs no extra quality marking —
+  it's already just the plain major chord `2`.
+- **Piano/keyboard sources sometimes split one hand into two written voices**
+  for a few bars only (LilyPond `<< {\stemUp ...} {\context Voice = "ii"
+  {\stemDown ...}} >>`), typically to add a decorative inner/tenor line
+  above the real bass for a climactic passage. When reducing to "two notes
+  parts" (one per hand), use the `\stemDown`/`"ii"` voice as that hand's
+  actual notes-part line — it's the real bass motion — and fold the
+  `\stemUp` voice's pitches into the chord-part's harmony reasoning for
+  that beat instead of inventing a third notes part. Confirm which voice is
+  "real" by checking whether it continues the surrounding bars' bass-line
+  logic (stepwise/functional motion) versus being a one-off addition.
+- **Scaling factor is not always a doubling** — verify it fresh per piece,
+  don't assume the previous piece's ratio. `Air on G String` needed 1 real
+  4/4 bar → 2 jianpu measures; `Minuet in G` (3/4) needed a plain 1:1
+  mapping (one real bar = one jianpu measure, no rescaling of durations at
+  all). Always confirm on a simple single-note-per-bar measure before
+  trusting it for the rest of the piece.
 - Be upfront with the user about which choices are "verified against the
   source" versus "a reasonable interpretation" (chord quality on ambiguous
   chromatic passages is often genuine judgment, not a mechanical fact).
