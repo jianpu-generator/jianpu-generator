@@ -148,6 +148,22 @@ Hand-roll a small parser rather than reading rhythm by eye. Key rules:
      most likely to expose a formula bug.
   If no such already-verified counterpart exists, fall back to
   render-and-inspect (§6) note-by-note instead.
+- **Gotcha — bare `7` next to `1` (caught late, after a whole piece was
+  transcribed with this mistake repeated ~4 times in one file): this is not
+  only a formula-derivation risk, it trips up plain note-by-note literal
+  transcription too.** jianpu degree numbers are diatonic *positions*, not
+  chromatic distance: an unmarked `7` is a 7th **above** an unmarked `1`
+  (10-11 semitones), while the leading tone you actually hear immediately
+  before/after a tonic in the source is almost always the neighbor a
+  semitone **below** it, i.e. `7,` (one octave-comma down), not bare `7`.
+  Every time the parsed source shows degree-1 and degree-7 landing in the
+  *same* LilyPond octave number (or one apart, adjacent by letter), that's
+  the semitone-neighbor relationship and needs the comma — don't transcribe
+  the bare digit just because the source's octave mark on that note "looks
+  unchanged" from the previous note. Before finishing, grep the new measures
+  for a `1` immediately followed by a comma-less `7` (or vice versa) and
+  re-derive each hit's register from the parsed source data rather than
+  assuming it's fine.
 - **Chords**: derive the exact reduction rule (root+quality from combined
   harmony+bass notes, slash-bass from whatever the bass actually plays,
   harmonic-rhythm granularity) from one already-transcribed measure compared
@@ -175,7 +191,9 @@ Hand-roll a small parser rather than reading rhythm by eye. Key rules:
 
 - `cargo run -- check "<file>"` — must print only `"<file>": ok`. Any
   diagnostic names the problem and which line/part; isolate with a scratch
-  file containing just the suspect measure if needed.
+  file containing just the suspect measure if needed. `check` only catches
+  *syntax* errors, not wrong-but-valid pitches like the bare-`7`-next-to-`1`
+  gotcha above — that needs the source-data cross-check, not just this.
 - `cargo run -- generate svg "<file>"` — must render with **no pink
   (error-highlight) measures**. Always run `check` too, since `generate`
   doesn't print diagnostics to the console.
