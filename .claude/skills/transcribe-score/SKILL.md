@@ -57,6 +57,24 @@ whole procedure, including a part (`d`, second violin) added later from a
   `musicxml`, an editor's name, or an instrument name).
 - Always confirm public-domain/license status; prefer plain-text engraving
   markup (LilyPond, MusicXML) over image/PDF-only scores.
+- **IMSLP now blocks direct engraving-file (zip/Capella/MusiXTeX) downloads**
+  behind a JS bot-check captcha on the `/wiki/File:...` route — not scriptable,
+  don't try. **PDF downloads still work via curl** if you use the *direct*
+  asset URL (`https://s9.imslp.org/files/imglnks/usimg/.../IMSLP######-....pdf`)
+  rather than the `/wiki/File:...` page — grab that direct link from a web
+  search result snippet or the page's rendered HTML, not from the wikitext
+  API (which only gives the wiki filename, not the CDN path).
+- **When literally no plain-text source exists** (checked Mutopia, IMSLP's
+  engraving-file list, and there's no downloadable MusicXML elsewhere) but
+  IMSLP has a **typeset** (not scanned) PDF — description says "Typeset",
+  not "Normal Scan" — check whether it was produced by a notation program
+  (MuseScore, Finale, Capella): these embed noteheads/clefs/accidentals as a
+  private-use-area **SMuFL font** (commonly named `MScore`) rather than
+  drawing them as raster images. That turns the PDF into a fully
+  programmatically-parseable OMR source — see §2b below. This is
+  meaningfully more reliable than eyeballing a rendered image for anything
+  beyond a handful of measures (dense ledger-line pitches and beam/dot
+  rhythms are exactly what's easy to misjudge by eye).
 
 ## 2. Parsing a LilyPond source
 
@@ -92,6 +110,133 @@ Hand-roll a small parser rather than reading rhythm by eye. Key rules:
   you do need to manually unnest into a linear pass, matching however the
   existing `.jianpu` file already handles repeats (usually: no repeats at
   all, just written out once).
+
+## 2b. OMR-parsing a notation-software PDF (no LilyPond/MusicXML available)
+
+Worked example: `scores/Minuet in G.jianpu`'s G-minor companion section
+(BWV Anh. 115), transcribed entirely from an IMSLP PDF with no plain-text
+source anywhere. Use `pymupdf` (`pip3 install pymupdf`, imported as `fitz`).
+
+- **Detect the font first**: `page.get_text("dict")`, collect the set of
+  `span["font"]` values. A music-glyph font (often literally named `MScore`)
+  alongside `TimesNewRoman*`/`FreeSerif` text spans confirms this is a
+  parseable OMR source, not a raster scan.
+- **Use `"rawdict"`, not `"dict"`, for glyph extraction.** `"dict"` spans can
+  report the *same* `origin` for every character in a multi-char span even
+  when the underlying content stream actually positions each glyph
+  independently (seen here: three stacked noteheads collapsed to one
+  reported position, silently dropping 2 of 3 notes). `"rawdict"` exposes
+  each span's `chars[]` with correct per-glyph `origin`. Deduplicate by
+  `(round(x,3), round(y,3), code)` afterward — MuseScore's PDF export does
+  sometimes draw a true duplicate glyph at the exact same spot (bold
+  simulation) and that dedup is legitimate; a `"dict"`-level collapse is not.
+- **Identify SMuFL codepoints** by cross-referencing the [SMuFL glyph
+  table](https://w3c.github.io/smufl/) or just cross-checking counts against
+  what's visually in the score (e.g. "5 gClef + 5 gClef15mb-ish glyphs" for a
+  5-system piece with a transposed lower staff strongly suggests those two
+  codepoints). Codepoints used in this transcription: `U+E0A4`
+  noteheadBlack, `U+E0A3` noteheadHalf, `U+E1E7` augmentationDot (also reused
+  for repeat-sign dots — disambiguate by proximity to a notehead vs. a
+  barline), `U+E260`/`E261`/`E262` flat/natural/sharp, `U+E4E5` restQuarter.
+- **Staff geometry comes for free from `page.get_drawings()`**: filter
+  `type=='s'` drawings whose `items` is a list of exactly 5 `'l'` (line)
+  entries — that's one staff-line group, and its `rect` gives you the top/
+  bottom line y-coordinates *and* left/right x-bounds. In MuseScore's export
+  these are drawn **once per measure**, which hands you exact measure
+  x-boundaries for free — no separate barline detection needed. Group these
+  by y0 to identify systems and RH/LH (or per-instrument) staff pairs.
+- **Pitch from y-position**: line spacing is uniform (5pt in a 400dpi-source
+  PDF at 1x scale here, i.e. half-step = 2.5pt). `step = round((bottom_line_y
+  - notehead_y) / half_step)` gives a diatonic step count above the bottom
+  line's pitch (treble clef bottom line = E4); map `step % 7` through
+  `['E','F','G','A','B','C','D']` for the letter and `4 + step // 7` for the
+  octave. This is exact, not approximate — use it as ground truth over any
+  visual reading.
+- **Verify the per-note octave field, don't just trust it — a `step // 7`
+  boundary bug can silently mislabel specific letters by a whole octave.**
+  Caught post-hoc in `Minuet in G.jianpu`'s BWV Anh. 115 section: every
+  single letter-C and letter-D note across the whole piece (both staves) had
+  been extracted one octave too low, while every other letter was correct —
+  a fencepost error at the C-boundary in whatever `step`→octave conversion
+  ran, not a random OMR noise. It reproduced faithfully into the `.jianpu`
+  output (each buggy note was internally consistent with its own wrong
+  octave, so `check`/render showed no error) and was only caught because a
+  human listener noticed degree 4/5 sitting an octave below its neighbors.
+  To verify before trusting the extraction: group notes by `(system, staff
+  role)`, and for each note compute `y + half_step * (letter_pos +
+  7*recorded_octave)` — this should be a near-constant across the group (the
+  y-axis calibration constant). Take the **mode** of that constant (most
+  notes are correct, so the mode reflects the true calibration), then
+  recompute each note's step from `y` against that fitted constant and
+  compare to its recorded step. Any note where they disagree by exactly one
+  octave (not a smaller/random amount) is a systematic mislabel, not noise —
+  fix by shifting that note (and only that note) by the disagreement.
+- **A "15mb" (quindicesima bassa) marking is easy to miss**: it may render as
+  just a small "15" below the clef, easy to mistake for a stray page-layout
+  artifact. If a piano piece's second staff is also in treble clef (not bass
+  clef), check for this — it means that staff's *sounding* pitch is the
+  notated pitch **minus two octaves**, applied *after* the y-position pitch
+  computation above, before doing any scale-degree/octave-mark math.
+- **Accidental/dot association needs y-tolerance, not just x-proximity**: an
+  augmentation dot for a note sitting *on* a staff line is engraved in the
+  adjacent *space* (offset by one half-step, e.g. 2.5pt), not at the note's
+  exact y. Use `abs(dy) <= half_step + 0.1` (not `< 1.3`) when matching a dot
+  or accidental glyph to its notehead, or you'll silently miss dotted notes
+  on-line while still catching dotted notes in-space.
+- **Beam/rhythm detection is the hard part — verify by construction, not by
+  eye.** Quarter and eighth (and sixteenth) notes share the *identical*
+  notehead codepoint; only the beam distinguishes them, and there's no
+  reliable x-proximity threshold that works for both stem-up and stem-down
+  notes (the stem attaches at the notehead's left edge for one direction,
+  right edge — offset ~one notehead-width, e.g. 6.5pt — for the other).
+  Instead:
+  1. Extract note **stems** as `get_drawings()` items with `type=='s'`,
+     exactly one `'l'` item, and a plausible stem-length height (roughly
+     10–30pt; shorter is a flag/dot artifact, taller is a barline).
+  2. Extract **beams** as `type=='f'` (fill-only) items with a small height
+     (a slanted rectangle, `<20pt` tall — taller `'f'` items at a fixed
+     narrow x-width across the whole page height are the grand-staff brace,
+     not a beam).
+  3. For each notehead, find its stem (matching x within the up/down offset
+     window, y near one end of the stem), then check whether the stem's
+     **far endpoint** (the end away from the notehead) falls inside a beam
+     rect's bounding box (small x/y tolerance, e.g. 2–3pt).
+  4. **Count how many separate beam rects contain that endpoint** — 1 beam
+     = eighth note, 2 overlapping beams (a full-length primary beam plus a
+     shorter secondary one covering only part of the group) = sixteenth
+     note. Don't assume "beamed = eighth"; a beam count check is what
+     catches eighth-plus-two-sixteenths groupings (`♪ ♬`-style), which look
+     almost identical to a plain 3-note eighth beam at a glance.
+  5. **Automate a per-measure/per-voice duration-sum check** (should equal
+     the time signature's beat count) as you refine this pipeline, and iterate
+     until every measure/voice passes — this is what actually catches beam-
+     detection bugs (an x-window too narrow silently drops notes to "quarter
+     when it should be eighth," which shows up as a measure summing to more
+     beats than it should). Treat "0 mismatches across every measure" as the
+     bar for trusting the extraction, not "looks right on the ones I
+     spot-checked."
+- **Rests**: same font, distinct codepoints per duration (`U+E4E5` =
+  quarter rest). Assign to a measure/voice the same way as noteheads (by x
+  and staff-y), and fold into the duration-sum check above.
+- **Chord/harmony reduction for non-chord parts**: when a `notes`-kind part
+  (unlike a `chords`-kind part) hits a genuine multi-pitch simultaneity in
+  the source (e.g. a block chord in one hand), this syntax's notes parts
+  can't represent a chord — pick one representative pitch (top note for a
+  melody/RH-ish part, bottom/bass note for a sustain/LH-ish part) and let the
+  `chords` part carry the full harmony at that beat.
+- **Movable-do accidentals for a minor-key piece**: this repo's degree
+  numbers (`1`–`7`) are always relative to the tonic's **major** scale,
+  regardless of the piece's actual mode. For a natural-minor piece, expect
+  `3b`/`6b`/`7b` as the *default* (no accidental glyph in the source needed)
+  for scale-degrees 3/6/7, and a bare (unmarked) `7` exactly when the source
+  has an explicit raised leading tone (harmonic minor) — because raising the
+  natural-minor `b7` by a semitone lands exactly back on the major scale's
+  (unmarked) reference pitch. Derive each note's *effective* accidental by
+  simulating standard notation's per-measure, per-letter accidental
+  persistence (an explicit accidental on a letter holds for the rest of that
+  measure for subsequent notes of the same letter, absent a new one),
+  seeded by the key signature's default-flatted letters — don't hand-wave
+  this from the printed accidentals alone.
 
 ## 3. Establishing alignment and scaling
 
