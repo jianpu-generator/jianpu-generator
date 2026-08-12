@@ -219,6 +219,16 @@ pub fn update_part_declaration(
     )
 }
 
+/// Rewrites the `'`/`,` octave markers on every note belonging to the named
+/// part, shifting each by `delta` octaves. Measures whose content came from
+/// a `[GroupAbbrev]` broadcast this part didn't override are left untouched.
+/// Returns `source` unchanged if the abbreviation is not found or names a
+/// `follow[X]` part.
+#[wasm_bindgen]
+pub fn shift_part_octave(source: &str, abbreviation: &str, delta: i32) -> String {
+    jianpu_generator::source_edit::shift_part_octave(source, abbreviation, delta as i8)
+}
+
 /// Zipped-view "Format" action: drops `# score` `[Key]` data lines that are
 /// entirely redundant with implicit-fill, and collapses whitespace to single
 /// spaces on every surviving directive/data line. Returns `source` unchanged

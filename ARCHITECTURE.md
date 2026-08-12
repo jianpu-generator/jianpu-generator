@@ -153,8 +153,9 @@ The React app (`web/`) runs the compiler in a dedicated worker (`web/src/worker/
 ### Source editing
 
 - Module: `src/source_edit/`
-- Entry: `source_edit::update_part_declaration(source, abbreviation, new_mode, new_soundfont, new_volume, new_octave_offset) -> Option<String>`
-- Rewrites a single `# parts` declaration line in place (mode, optional quoted soundfont, optional volume `%`, optional octave offset). Used by the Edit Parts modal instead of any TypeScript parser.
+- Entries: `source_edit::update_part_declaration(source, abbreviation, new_mode, new_soundfont, new_volume, new_octave_offset) -> Option<String>`; `source_edit::shift_part_octave(source, abbreviation, delta: i8) -> String`
+- `update_part_declaration` rewrites a single `# parts` declaration line in place (mode, optional quoted soundfont, optional volume `%`, optional octave offset). Used by the Edit Parts modal instead of any TypeScript parser.
+- `shift_part_octave` bulk-rewrites the `'`/`,` octave marker on every `ScoreEvent::Note` belonging to one part in `# score` (the "notation octave" control in the web editor — distinct from `update_part_declaration`'s MIDI-only `octave_offset`, which never touches rendered notation). Parses via `parser::parse` to read each note's resolved `octave: i8` and full-token `Span` (`ParsedTimedTrack::measure_slots`), then splices new marker text into the raw source back-to-front by span. Measures where `per_measure_group_provenance[i]` is `Some(_)` (this measure's content came from a `[GroupAbbrev]` broadcast the part didn't override, so the source text is shared with sibling parts) are skipped entirely, never partially rewritten. Infallible / best-effort, mirroring `update_part_declaration`'s "not found → unchanged" convention: an unknown abbreviation, a `follow[X]` part (no notes of its own), `delta == 0`, or a parse failure all return `source` unchanged. No clamping on the resulting octave.
 
 ### Split-track export
 
@@ -209,6 +210,7 @@ The React app (`web/`) runs the compiler in a dedicated worker (`web/src/worker/
 | `list_parts(source, raw_instruments)` | Part summaries for preview toggles **and** `declarations: PartDeclarationOut[]` for the Edit Parts modal |
 | `list_part_declarations(source, raw_instruments)` | Declarations only (re-list after a write) |
 | `update_part_declaration(source, abbreviation, new_mode, new_soundfont, new_volume, new_octave_offset)` | Returns updated source; empty strings for soundfont/volume/octave mean “omit / default” |
+| `shift_part_octave(source, abbreviation, delta)` | Rewrites `'`/`,` octave markers on every note in the named part by `delta` octaves (see **Source editing**); returns the updated source directly, no response envelope (same infallible shape as `update_part_declaration`) |
 | `compress_share_payload(payload) -> Vec<u8>` | Brotli-compresses a share-link JSON payload (quality 11); caller base64url-encodes the result |
 | `decompress_share_payload(bytes) -> Option<String>` | Inverse of the above; `None` if `bytes` isn't valid brotli or decodes to invalid UTF-8 |
 | `extract_unzipped_text(source)` | Whole-document, per-part-flattened Unzipped text plus `part_measure_ranges`/`lyrics_verse_ranges: LyricsVerseRangesOut[]`, for the Unzipped editor view (see **Unzipped View**); returns `UnzippedEditResponse::{Ok { text, part_measure_ranges: PartMeasureRangesOut[], lyrics_verse_ranges: LyricsVerseRangesOut[] }, UnknownPart, Err}` |

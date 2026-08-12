@@ -123,6 +123,13 @@ export type WorkerRequest =
       source: string
       id: number
     }
+  | {
+      type: 'shiftPartOctave'
+      source: string
+      abbreviation: string
+      delta: number
+      id: number
+    }
 
 export type WorkerResponse =
   | {
@@ -203,3 +210,4 @@ export type WorkerResponse =
   | { type: 'importOk'; id: number; source: string }
   | { type: 'importErr'; id: number }
   | { type: 'scoreFormatted'; id: number; source: string }
+  | { type: 'partOctaveShifted'; id: number; source: string }

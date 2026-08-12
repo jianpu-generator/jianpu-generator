@@ -1,3 +1,6 @@
+mod octave_shift;
+pub use octave_shift::shift_part_octave;
+
 pub enum PartMode {
     Chords,
     Notes,

@@ -11,6 +11,7 @@ import type {
   SequenceEntry,
 } from '../types'
 import type { WorkerResponse } from '../worker/jianpu.worker'
+import type { TextRequestTracker } from './useJianpuWorkerTypes'
 import {
   downloadMidi,
   downloadPdf,
@@ -37,6 +38,7 @@ export interface WorkerMessageHandlerDeps {
   pendingFormatScoreRequestsRef: RefObject<
     Map<number, (source: string) => void>
   >
+  shiftPartOctaveTracker: TextRequestTracker
   latestPdfIdRef: RefObject<number>
   setPdfExporting: (value: boolean) => void
   activeFileRef: RefObject<string>
@@ -114,6 +116,15 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       if (msg.id !== deps.latestFormatScoreIdRef.current) return
       deps.pendingFormatScoreRequestsRef.current.get(msg.id)?.(msg.source)
       deps.pendingFormatScoreRequestsRef.current.delete(msg.id)
+      return
+    }
+
+    if (msg.type === 'partOctaveShifted') {
+      if (msg.id !== deps.shiftPartOctaveTracker.latestIdRef.current) return
+      deps.shiftPartOctaveTracker.pendingRequestsRef.current.get(msg.id)?.(
+        msg.source,
+      )
+      deps.shiftPartOctaveTracker.pendingRequestsRef.current.delete(msg.id)
       return
     }
 

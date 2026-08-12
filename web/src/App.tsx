@@ -122,6 +122,7 @@ export default function App() {
     binOpen,
     setBinOpen,
     handlePartDeclarationChange,
+    handleShiftPartOctave,
     parsedMetadata,
     handleMetadataFieldChange,
     setSelectedLineRange,
@@ -278,6 +279,7 @@ export default function App() {
         partDeclarations={partDeclarations}
         parts={parts}
         handlePartDeclarationChange={handlePartDeclarationChange}
+        handleShiftPartOctave={handleShiftPartOctave}
         previewInstrument={previewInstrument}
         previewPercussion={previewPercussion}
         stopPreviewInstrument={stopPreviewInstrument}

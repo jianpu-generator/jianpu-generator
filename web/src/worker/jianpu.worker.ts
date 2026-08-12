@@ -8,6 +8,7 @@ import {
   list_parts,
   render,
   set_layout_fonts,
+  shift_part_octave,
   update_part_declaration,
 } from 'jianpu-wasm'
 import type { PartDeclaration, PartMode } from '../types'
@@ -209,6 +210,15 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       type: 'scoreFormatted',
       id: msg.id,
       source: format_score(msg.source),
+    } satisfies WorkerResponse)
+    return
+  }
+
+  if (msg.type === 'shiftPartOctave') {
+    postMessage({
+      type: 'partOctaveShifted',
+      id: msg.id,
+      source: shift_part_octave(msg.source, msg.abbreviation, msg.delta),
     } satisfies WorkerResponse)
     return
   }

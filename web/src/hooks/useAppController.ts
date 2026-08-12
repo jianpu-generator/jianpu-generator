@@ -144,6 +144,7 @@ export function useAppController() {
     previewAudioPlaying,
     updatePartDeclaration,
     formatScore,
+    shiftPartOctave,
     formatUnzippedText,
     importFromFile,
   } = useJianpuWorker(
@@ -204,9 +205,15 @@ export function useAppController() {
     binOpen,
     setBinOpen,
     handlePartDeclarationChange,
+    handleShiftPartOctave,
     parsedMetadata,
     handleMetadataFieldChange,
-  } = useAppPanels(source, updatePartDeclaration, handleSourceChange)
+  } = useAppPanels(
+    source,
+    updatePartDeclaration,
+    shiftPartOctave,
+    handleSourceChange,
+  )
 
   const { setSelectedLineRange, handleSectionJump, sectionJumpToolbarProps } =
     useSectionNavigation(sectionRanges, editorRef, notifySelection)
@@ -344,6 +351,7 @@ export function useAppController() {
     binOpen,
     setBinOpen,
     handlePartDeclarationChange,
+    handleShiftPartOctave,
     parsedMetadata,
     handleMetadataFieldChange,
     setSelectedLineRange,

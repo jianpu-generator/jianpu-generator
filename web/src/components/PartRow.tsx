@@ -1,4 +1,5 @@
 import * as Slider from '@radix-ui/react-slider'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
 import type { PartDeclaration, PartInfo, SoundfontValue } from '../types'
 import type { EditPartsModalProps } from './EditPartsModal'
@@ -22,6 +23,7 @@ export function PartRow({
   allParts,
   isFirstPart,
   onPartDeclarationChange,
+  onShiftPartOctave,
   rowIndex,
   previewInstrument,
   previewPercussion,
@@ -32,6 +34,7 @@ export function PartRow({
   allParts: PartInfo[]
   isFirstPart: boolean
   onPartDeclarationChange: EditPartsModalProps['onPartDeclarationChange']
+  onShiftPartOctave: EditPartsModalProps['onShiftPartOctave']
   rowIndex: number
   previewInstrument: (programNumber: number) => void
   previewPercussion: (key: number) => void
@@ -283,8 +286,47 @@ export function PartRow({
           ))}
         </RadixSelect>
       </td>
+      <td style={tdStyle}>
+        {declaration.mode !== 'follow' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+            <button
+              type="button"
+              onClick={() => onShiftPartOctave(declaration.abbreviation, -1)}
+              data-testid={`notation-octave-down-${declaration.abbreviation}`}
+              title="Shift notation down one octave"
+              aria-label="Shift notation down one octave"
+              style={octaveShiftButtonStyle}
+            >
+              <ChevronDown size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onShiftPartOctave(declaration.abbreviation, 1)}
+              data-testid={`notation-octave-up-${declaration.abbreviation}`}
+              title="Shift notation up one octave"
+              aria-label="Shift notation up one octave"
+              style={octaveShiftButtonStyle}
+            >
+              <ChevronUp size={14} />
+            </button>
+          </div>
+        )}
+      </td>
     </tr>
   )
+}
+
+const octaveShiftButtonStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '22px',
+  height: '22px',
+  border: '1px solid #cbd5e0',
+  borderRadius: '3px',
+  background: '#fff',
+  color: '#2d3748',
+  cursor: 'pointer',
 }
 
 const tdStyle: React.CSSProperties = {

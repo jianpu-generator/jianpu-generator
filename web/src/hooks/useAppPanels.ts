@@ -16,6 +16,7 @@ export function useAppPanels(
     volume: number | null,
     octaveOffset: number | null,
   ) => Promise<string>,
+  shiftPartOctave: (abbreviation: string, delta: number) => Promise<string>,
   handleSourceChange: (value: string) => void,
 ) {
   const [editPartsOpen, setEditPartsOpen] = useState(false)
@@ -44,6 +45,13 @@ export function useAppPanels(
     [updatePartDeclaration, handleSourceChange],
   )
 
+  const handleShiftPartOctave = useCallback(
+    (abbreviation: string, delta: number) => {
+      void shiftPartOctave(abbreviation, delta).then(handleSourceChange)
+    },
+    [shiftPartOctave, handleSourceChange],
+  )
+
   const parsedMetadata = useMemo(() => parseMetadata(source), [source])
 
   const handleMetadataFieldChange = useCallback(
@@ -63,6 +71,7 @@ export function useAppPanels(
     binOpen,
     setBinOpen,
     handlePartDeclarationChange,
+    handleShiftPartOctave,
     parsedMetadata,
     handleMetadataFieldChange,
   }

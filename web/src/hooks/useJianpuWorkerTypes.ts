@@ -4,6 +4,7 @@ import type {
   PartMeasureRangesOut,
   SvgDocumentOut,
 } from 'jianpu-wasm'
+import type { RefObject } from 'react'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -15,6 +16,15 @@ import type {
   SectionRange,
   SequenceEntry,
 } from '../types'
+
+/** Tracks one in-flight "send source, get rewritten source back" round trip
+ * to the render worker, so a stale reply (superseded by a newer request for
+ * the same action) can be dropped instead of resolving out of order. */
+export interface TextRequestTracker {
+  requestIdRef: RefObject<number>
+  latestIdRef: RefObject<number>
+  pendingRequestsRef: RefObject<Map<number, (source: string) => void>>
+}
 
 export interface JianpuWorkerState {
   parts: PartInfo[]
@@ -119,6 +129,14 @@ export interface JianpuWorkerState {
    * every surviving directive/data line (see `format_source::format_score`).
    */
   formatScore: (source: string) => Promise<string>
+  /**
+   * Rewrites the `'`/`,` octave marker on every note in the named part by
+   * `delta` octaves (see `source_edit::shift_part_octave`) — the "notation
+   * octave" control, distinct from the MIDI-only `octaveOffset` in
+   * `updatePartDeclaration`. Resolves with the updated source; a `follow[X]`
+   * part or unknown abbreviation resolves with the source unchanged.
+   */
+  shiftPartOctave: (abbreviation: string, delta: number) => Promise<string>
   /**
    * Unzipped-view "Format" action: breaks each measure in the current
    * Unzipped editor text onto its own line (purely cosmetic — merging back

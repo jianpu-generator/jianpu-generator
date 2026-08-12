@@ -90,6 +90,7 @@ interface AppWorkspaceProps {
     volume: number | null,
     octaveOffset: number | null,
   ) => void
+  handleShiftPartOctave: (abbreviation: string, delta: number) => void
   previewInstrument: (programNumber: number) => void
   previewPercussion: (key: number) => void
   stopPreviewInstrument: () => void
@@ -164,6 +165,7 @@ export function AppWorkspace({
   partDeclarations,
   parts,
   handlePartDeclarationChange,
+  handleShiftPartOctave,
   previewInstrument,
   previewPercussion,
   stopPreviewInstrument,
@@ -288,6 +290,7 @@ export function AppWorkspace({
               partDeclarations={partDeclarations}
               allParts={parts}
               onPartDeclarationChange={handlePartDeclarationChange}
+              onShiftPartOctave={handleShiftPartOctave}
               previewInstrument={previewInstrument}
               previewPercussion={previewPercussion}
               stopPreviewInstrument={stopPreviewInstrument}

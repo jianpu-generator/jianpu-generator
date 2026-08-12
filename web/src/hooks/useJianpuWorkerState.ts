@@ -15,6 +15,7 @@ import type {
   SectionRange,
   SequenceEntry,
 } from '../types'
+import type { TextRequestTracker } from './useJianpuWorkerTypes'
 import {
   disabledLyricsForRender,
   enabledPartNamesForFilename,
@@ -103,6 +104,11 @@ export function useJianpuWorkerState(
   const pendingFormatScoreRequestsRef = useRef(
     new Map<number, (source: string) => void>(),
   )
+  const shiftPartOctaveTracker: TextRequestTracker = {
+    requestIdRef: useRef(0),
+    latestIdRef: useRef(0),
+    pendingRequestsRef: useRef(new Map<number, (source: string) => void>()),
+  }
   const importRequestIdRef = useRef(0)
   const pendingImportsRef = useRef(
     new Map<
@@ -247,6 +253,7 @@ export function useJianpuWorkerState(
     formatScoreRequestIdRef,
     latestFormatScoreIdRef,
     pendingFormatScoreRequestsRef,
+    shiftPartOctaveTracker,
     importRequestIdRef,
     pendingImportsRef,
     renderRequestIdRef,

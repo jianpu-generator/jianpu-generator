@@ -8,6 +8,7 @@ import { useJianpuWorkerImport } from './useJianpuWorkerImport'
 import { useJianpuWorkerLifecycle } from './useJianpuWorkerLifecycle'
 import { useJianpuWorkerPartDeclaration } from './useJianpuWorkerPartDeclaration'
 import { useJianpuWorkerRenderRequests } from './useJianpuWorkerRenderRequests'
+import { useJianpuWorkerShiftOctave } from './useJianpuWorkerShiftOctave'
 import { useJianpuWorkerState } from './useJianpuWorkerState'
 import type { JianpuWorkerState } from './useJianpuWorkerTypes'
 import { useMeasureAudioPlayback } from './useMeasureAudioPlayback'
@@ -102,6 +103,7 @@ export function useJianpuWorker(
     formatScoreRequestIdRef,
     latestFormatScoreIdRef,
     pendingFormatScoreRequestsRef,
+    shiftPartOctaveTracker,
     importRequestIdRef,
     pendingImportsRef,
     renderRequestIdRef,
@@ -203,6 +205,7 @@ export function useJianpuWorker(
     pendingPartDeclarationUpdatesRef,
     latestFormatScoreIdRef,
     pendingFormatScoreRequestsRef,
+    shiftPartOctaveTracker,
     latestPdfIdRef,
     setPdfExporting,
     activeFileRef,
@@ -328,6 +331,12 @@ export function useJianpuWorker(
     pendingFormatScoreRequestsRef,
   })
 
+  const { shiftPartOctave } = useJianpuWorkerShiftOctave({
+    workerRef,
+    sourceRef,
+    shiftPartOctaveTracker,
+  })
+
   const { importFromFile } = useJianpuWorkerImport({
     workerRef,
     importRequestIdRef,
@@ -394,6 +403,7 @@ export function useJianpuWorker(
     previewAudioPlaying,
     updatePartDeclaration,
     formatScore,
+    shiftPartOctave,
     formatUnzippedText,
     importFromFile,
   }

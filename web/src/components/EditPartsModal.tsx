@@ -20,6 +20,10 @@ export interface EditPartsModalProps {
     volume: number | null,
     octaveOffset: number | null,
   ) => void
+  /** Bulk-shifts every note already written for this part by `delta`
+   * octaves, rewriting `'`/`,` markers in the source (distinct from
+   * `octaveOffset` above, which is MIDI-playback-only). */
+  onShiftPartOctave: (abbreviation: string, delta: number) => void
   previewInstrument: (programNumber: number) => void
   previewPercussion: (key: number) => void
   stopPreviewInstrument: () => void
@@ -42,6 +46,7 @@ export function EditPartsModal({
   partDeclarations,
   allParts,
   onPartDeclarationChange,
+  onShiftPartOctave,
   previewInstrument,
   previewPercussion,
   stopPreviewInstrument,
@@ -107,12 +112,13 @@ export function EditPartsModal({
               }}
             >
               <colgroup>
+                <col style={{ width: '14%' }} />
+                <col style={{ width: '7%' }} />
+                <col style={{ width: '20%' }} />
+                <col style={{ width: '21%' }} />
                 <col style={{ width: '16%' }} />
-                <col style={{ width: '8%' }} />
-                <col style={{ width: '24%' }} />
-                <col style={{ width: '22%' }} />
-                <col style={{ width: '18%' }} />
                 <col style={{ width: '12%' }} />
+                <col style={{ width: '10%' }} />
               </colgroup>
               <thead>
                 <tr>
@@ -121,7 +127,8 @@ export function EditPartsModal({
                   <th style={thStyle}>Kind / Follow</th>
                   <th style={thStyle}>Soundfont</th>
                   <th style={thStyle}>Volume</th>
-                  <th style={thStyle}>Octave</th>
+                  <th style={thStyle}>MIDI octave</th>
+                  <th style={thStyle}>Notation octave</th>
                 </tr>
               </thead>
               <tbody>
@@ -132,6 +139,7 @@ export function EditPartsModal({
                     allParts={allParts}
                     isFirstPart={index === 0}
                     onPartDeclarationChange={onPartDeclarationChange}
+                    onShiftPartOctave={onShiftPartOctave}
                     rowIndex={index}
                     previewInstrument={previewInstrument}
                     previewPercussion={previewPercussion}
