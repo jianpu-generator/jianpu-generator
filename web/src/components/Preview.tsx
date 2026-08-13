@@ -182,6 +182,10 @@ export function Preview({
                 mode: 'part-label',
                 anchor: point,
                 current: point,
+                anchorSystem: {
+                  measureIndexStart: partLabel.measureIndexStart,
+                  measureIndexEnd: partLabel.measureIndexEnd,
+                },
               }
               const container = previewPagesRef.current
               if (container) {

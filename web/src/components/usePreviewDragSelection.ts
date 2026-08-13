@@ -33,7 +33,12 @@ import {
 export type PreviewDragState =
   | { mode: 'measure'; anchor: MeasureRange; current: MeasureRange }
   | { mode: 'note'; anchor: DragPoint; current: DragPoint }
-  | { mode: 'part-label'; anchor: DragPoint; current: DragPoint }
+  | {
+      mode: 'part-label'
+      anchor: DragPoint
+      current: DragPoint
+      anchorSystem: { measureIndexStart: number; measureIndexEnd: number }
+    }
   | {
       mode: 'pending'
       anchor: DragPoint
@@ -102,6 +107,7 @@ export function usePreviewDragSelection(
           container,
           dragState.anchor,
           dragState.current,
+          dragState.anchorSystem,
         )
         applyPartLabelDragHighlight(container, hits)
         applyPersistedNoteHighlights(
@@ -164,7 +170,12 @@ export function usePreviewDragSelection(
       if (dragState.mode === 'part-label') {
         const current = { x: e.clientX, y: e.clientY }
         const hits = container
-          ? partLabelsInMarquee(container, dragState.anchor, current)
+          ? partLabelsInMarquee(
+              container,
+              dragState.anchor,
+              current,
+              dragState.anchorSystem,
+            )
           : []
         const cells = noteCellsForPartLabels(noteSpansRef.current, hits)
         if (container) {

@@ -16,12 +16,24 @@ export interface DragPoint {
 export const NOTE_DRAG_ARM_THRESHOLD_PX = 4
 
 /** Every part-label click target whose rect overlaps the axis-aligned
- * marquee spanned by `anchor`/`current` — the vertical extent naturally picks
- * up every part row a vertical drag crosses, matching `selectedNoteCellsInMarquee`. */
+ * marquee spanned by `anchor`/`current`, restricted to `anchorSystem` — the
+ * `measureIndexStart`/`measureIndexEnd` of the label the drag started on.
+ *
+ * Every part label in a given system shares the same `measureIndexStart`/
+ * `measureIndexEnd` (one `PartLabelClickTarget` per part *per system*, see
+ * `grid_layout::click_targets::compute_all_part_label_click_targets`), so
+ * that pair is a reliable key for "which system". Without this filter, a
+ * vertical drag that travels far enough to reach a different system's label
+ * row would splice that system's notes into the selection too — the marquee
+ * rect has no innate awareness of the gap between systems, it just
+ * intersects against every label in the whole document. The vertical extent
+ * still naturally picks up every part row *within the anchor's own system*
+ * that a drag crosses, matching `selectedNoteCellsInMarquee`. */
 export function partLabelsInMarquee(
   container: HTMLElement,
   anchor: DragPoint,
   current: DragPoint,
+  anchorSystem: { measureIndexStart: number; measureIndexEnd: number },
 ): PartLabelHit[] {
   const minX = Math.min(anchor.x, current.x)
   const maxX = Math.max(anchor.x, current.x)
@@ -51,10 +63,17 @@ export function partLabelsInMarquee(
       measureIndexEnd === undefined
     )
       continue
+    const start = Number.parseInt(measureIndexStart, 10)
+    const end = Number.parseInt(measureIndexEnd, 10)
+    if (
+      start !== anchorSystem.measureIndexStart ||
+      end !== anchorSystem.measureIndexEnd
+    )
+      continue
     hits.push({
       sourcePartIndex: Number.parseInt(partIndex, 10),
-      measureIndexStart: Number.parseInt(measureIndexStart, 10),
-      measureIndexEnd: Number.parseInt(measureIndexEnd, 10),
+      measureIndexStart: start,
+      measureIndexEnd: end,
     })
   }
   return hits
