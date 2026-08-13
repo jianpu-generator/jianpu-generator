@@ -4,6 +4,10 @@ use tsify::Tsify;
 
 use crate::svg_types::SvgDocumentOut;
 
+pub(crate) use crate::note_selection_types::{
+    GroupNoteSelectionResponse, NoteCellIn, NoteSelectionRunOut,
+};
+
 #[cfg(feature = "midi")]
 pub(crate) use crate::types_export::{GenerateMidiResponse, GenerateSplitMidisResponse};
 #[cfg(feature = "pdf")]
@@ -203,7 +207,7 @@ pub struct MeasureSpanOut {
     pub end_line: usize,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Tsify, Serialize, serde::Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[tsify(into_wasm_abi)]
 pub struct NoteSpanOut {

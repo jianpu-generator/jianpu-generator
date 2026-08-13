@@ -111,3 +111,193 @@ Melody [M] = notes
     assert!(spans[2].start.is_some());
     assert!(spans[3].start.is_some());
 }
+
+fn span(
+    source_part_index: usize,
+    note_id: usize,
+    measure_index: usize,
+    start: usize,
+    end: usize,
+) -> NoteSourceSpan {
+    NoteSourceSpan {
+        source_part_index,
+        note_id,
+        measure_index,
+        start: Some(start),
+        end: Some(end),
+    }
+}
+
+fn rest_span(source_part_index: usize, note_id: usize, measure_index: usize) -> NoteSourceSpan {
+    NoteSourceSpan {
+        source_part_index,
+        note_id,
+        measure_index,
+        start: None,
+        end: None,
+    }
+}
+
+#[test]
+fn multiple_selected_cells_merge_into_one_run_per_part_measure() {
+    let spans = vec![
+        span(0, 0, 0, 10, 11),
+        span(0, 1, 0, 12, 13),
+        span(0, 2, 0, 14, 15),
+    ];
+    let cells = vec![
+        NoteCell {
+            source_part_index: 0,
+            note_id: 0,
+        },
+        NoteCell {
+            source_part_index: 0,
+            note_id: 1,
+        },
+        NoteCell {
+            source_part_index: 0,
+            note_id: 2,
+        },
+    ];
+
+    let runs = group_selected_notes_into_contiguous_runs(&cells, &spans);
+
+    assert_eq!(
+        runs,
+        vec![NoteSelectionRun {
+            source_part_index: 0,
+            measure_index: 0,
+            start_byte: 10,
+            end_byte: 15,
+        }]
+    );
+}
+
+#[test]
+fn selected_rest_does_not_break_contiguity() {
+    let spans = vec![
+        span(0, 0, 0, 10, 11),
+        rest_span(0, 1, 0),
+        span(0, 2, 0, 14, 15),
+    ];
+    let cells = vec![
+        NoteCell {
+            source_part_index: 0,
+            note_id: 0,
+        },
+        NoteCell {
+            source_part_index: 0,
+            note_id: 1,
+        },
+        NoteCell {
+            source_part_index: 0,
+            note_id: 2,
+        },
+    ];
+
+    let runs = group_selected_notes_into_contiguous_runs(&cells, &spans);
+
+    assert_eq!(
+        runs,
+        vec![NoteSelectionRun {
+            source_part_index: 0,
+            measure_index: 0,
+            start_byte: 10,
+            end_byte: 15,
+        }]
+    );
+}
+
+#[test]
+fn different_parts_and_measures_produce_separate_runs() {
+    let spans = vec![
+        span(0, 0, 0, 10, 11),
+        span(1, 0, 0, 20, 21),
+        span(0, 1, 1, 30, 31),
+    ];
+    let cells = vec![
+        NoteCell {
+            source_part_index: 0,
+            note_id: 0,
+        },
+        NoteCell {
+            source_part_index: 1,
+            note_id: 0,
+        },
+        NoteCell {
+            source_part_index: 0,
+            note_id: 1,
+        },
+    ];
+
+    let runs = group_selected_notes_into_contiguous_runs(&cells, &spans);
+
+    assert_eq!(
+        runs,
+        vec![
+            NoteSelectionRun {
+                source_part_index: 0,
+                measure_index: 0,
+                start_byte: 10,
+                end_byte: 11,
+            },
+            NoteSelectionRun {
+                source_part_index: 0,
+                measure_index: 1,
+                start_byte: 30,
+                end_byte: 31,
+            },
+            NoteSelectionRun {
+                source_part_index: 1,
+                measure_index: 0,
+                start_byte: 20,
+                end_byte: 21,
+            },
+        ]
+    );
+}
+
+#[test]
+fn empty_selection_produces_no_runs() {
+    let spans = vec![span(0, 0, 0, 10, 11)];
+
+    let runs = group_selected_notes_into_contiguous_runs(&[], &spans);
+
+    assert!(runs.is_empty());
+}
+
+#[test]
+fn output_is_sorted_by_part_then_measure() {
+    let spans = vec![
+        span(1, 0, 2, 50, 51),
+        span(0, 0, 1, 30, 31),
+        span(1, 1, 0, 10, 11),
+        span(0, 1, 0, 20, 21),
+    ];
+    let cells = vec![
+        NoteCell {
+            source_part_index: 1,
+            note_id: 0,
+        },
+        NoteCell {
+            source_part_index: 0,
+            note_id: 0,
+        },
+        NoteCell {
+            source_part_index: 1,
+            note_id: 1,
+        },
+        NoteCell {
+            source_part_index: 0,
+            note_id: 1,
+        },
+    ];
+
+    let runs = group_selected_notes_into_contiguous_runs(&cells, &spans);
+
+    let keys: Vec<(usize, usize)> = runs
+        .iter()
+        .map(|r| (r.source_part_index, r.measure_index))
+        .collect();
+    assert_eq!(keys, vec![(0, 0), (0, 1), (1, 0), (1, 2)]);
+}

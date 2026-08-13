@@ -1,6 +1,7 @@
 #![cfg_attr(test, allow(clippy::disallowed_macros))]
 
 mod metadata_types;
+mod note_selection_types;
 mod part_declarations;
 mod responses;
 mod svg_types;
@@ -28,13 +29,14 @@ pub mod lib_import;
 use jianpu_generator::parser::parts_parser::InstrumentInfo;
 use metadata_types::MetadataDefaultsOut;
 use responses::{
-    get_measure_at_offset_response, list_measure_spans_response, list_note_spans_response,
-    render_response, render_with_highlight_range_response,
+    get_measure_at_offset_response, group_note_selection_response, list_measure_spans_response,
+    list_note_spans_response, render_response, render_with_highlight_range_response,
 };
 use types::{
-    ListMeasureSpansResponse, ListNoteSpansResponse, ListPartDeclarationsResponse,
-    ListPartsResponse, ListSymbolsResponse, MeasureAtOffsetResponse, RenameSymbolResponse,
-    RenderResponse, SymbolKindOut, UnzippedEditResponse,
+    GroupNoteSelectionResponse, ListMeasureSpansResponse, ListNoteSpansResponse,
+    ListPartDeclarationsResponse, ListPartsResponse, ListSymbolsResponse, MeasureAtOffsetResponse,
+    NoteCellIn, NoteSpanOut, RenameSymbolResponse, RenderResponse, SymbolKindOut,
+    UnzippedEditResponse,
 };
 use unzipped_edit::{
     extract_unzipped_text_response, format_unzipped_text_response, merge_unzipped_text_response,
@@ -87,6 +89,24 @@ pub fn list_measure_spans(source: &str) -> ListMeasureSpansResponse {
 #[wasm_bindgen]
 pub fn list_note_spans(source: &str) -> ListNoteSpansResponse {
     list_note_spans_response(source)
+}
+
+/// Groups a drag-selected set of `(sourcePartIndex, noteId)` cells into
+/// contiguous per-`(part, measure)` source byte runs, ready to become a
+/// Monaco multicursor selection. Pure grouping over the already-fetched
+/// `note_spans` (from `list_note_spans`) — does not re-parse `source`, so
+/// callers should call this directly on the main thread (not via the render
+/// worker) to keep it responsive on every selection-change tick.
+#[wasm_bindgen]
+pub fn group_note_selection(
+    raw_note_spans: JsValue,
+    raw_selected_cells: JsValue,
+) -> GroupNoteSelectionResponse {
+    let note_spans: Vec<NoteSpanOut> =
+        serde_wasm_bindgen::from_value(raw_note_spans).unwrap_or_default();
+    let selected_cells: Vec<NoteCellIn> =
+        serde_wasm_bindgen::from_value(raw_selected_cells).unwrap_or_default();
+    group_note_selection_response(&note_spans, &selected_cells)
 }
 
 /// Parse and render `.jianpu` source into SVG page strings.

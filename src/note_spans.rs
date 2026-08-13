@@ -104,6 +104,68 @@ pub fn list_note_spans_from_source(
     Ok(NoteSpansResult { spans })
 }
 
+/// One selected `(source_part_index, note_id)` cell — see `NoteSourceSpan`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct NoteCell {
+    pub source_part_index: usize,
+    pub note_id: usize,
+}
+
+/// One contiguous drag-selected byte range within a single part's single
+/// measure, ready to become a Monaco multicursor selection.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NoteSelectionRun {
+    pub source_part_index: usize,
+    pub measure_index: usize,
+    pub start_byte: usize,
+    pub end_byte: usize,
+}
+
+/// Groups a drag-selected set of `(source_part_index, note_id)` cells into
+/// contiguous per-`(part, measure)` source byte runs. A rest cell (whose
+/// `NoteSourceSpan` has `start`/`end` both `None`) is skipped rather than
+/// letting it break an otherwise-contiguous run — a run with no non-rest
+/// cells never appears in the result. Output is sorted by
+/// `(source_part_index, measure_index)`.
+pub fn group_selected_notes_into_contiguous_runs(
+    selected_cells: &[NoteCell],
+    note_spans: &[NoteSourceSpan],
+) -> Vec<NoteSelectionRun> {
+    let selected: std::collections::HashSet<NoteCell> = selected_cells.iter().copied().collect();
+
+    let mut runs_by_part_measure: std::collections::HashMap<(usize, usize), NoteSelectionRun> =
+        std::collections::HashMap::new();
+    for span in note_spans {
+        let cell = NoteCell {
+            source_part_index: span.source_part_index,
+            note_id: span.note_id,
+        };
+        if !selected.contains(&cell) {
+            continue;
+        }
+        let (Some(start), Some(end)) = (span.start, span.end) else {
+            continue; // rest: skip, don't break contiguity
+        };
+
+        runs_by_part_measure
+            .entry((span.source_part_index, span.measure_index))
+            .and_modify(|run| {
+                run.start_byte = run.start_byte.min(start);
+                run.end_byte = run.end_byte.max(end);
+            })
+            .or_insert(NoteSelectionRun {
+                source_part_index: span.source_part_index,
+                measure_index: span.measure_index,
+                start_byte: start,
+                end_byte: end,
+            });
+    }
+
+    let mut runs: Vec<NoteSelectionRun> = runs_by_part_measure.into_values().collect();
+    runs.sort_by_key(|run| (run.source_part_index, run.measure_index));
+    runs
+}
+
 #[cfg(test)]
 #[path = "note_spans_tests.rs"]
 mod tests;

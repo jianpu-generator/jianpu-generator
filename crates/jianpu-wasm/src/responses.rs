@@ -8,8 +8,9 @@ use jianpu_generator::{
 use crate::svg_types::svg_document_to_out;
 use crate::types::{
     diagnostic_from_diagnostic, diagnostic_from_error, group_diagnostics_into_view_zones,
-    ListMeasureSpansResponse, ListNoteSpansResponse, MeasureAtOffsetResponse, MeasureSpanOut,
-    NoteSpanOut, RenderResponse, SectionRangeOut, SequenceEntryOut,
+    GroupNoteSelectionResponse, ListMeasureSpansResponse, ListNoteSpansResponse,
+    MeasureAtOffsetResponse, MeasureSpanOut, NoteCellIn, NoteSelectionRunOut, NoteSpanOut,
+    RenderResponse, SectionRangeOut, SequenceEntryOut,
 };
 
 #[cfg(feature = "wav")]
@@ -223,5 +224,44 @@ pub(crate) fn list_note_spans_response(source: &str) -> ListNoteSpansResponse {
             ListNoteSpansResponse::Ok { spans }
         }
         Err(_) => ListNoteSpansResponse::Err,
+    }
+}
+
+pub(crate) fn group_note_selection_response(
+    note_spans: &[NoteSpanOut],
+    selected_cells: &[NoteCellIn],
+) -> GroupNoteSelectionResponse {
+    let core_spans: Vec<jianpu_generator::note_spans::NoteSourceSpan> = note_spans
+        .iter()
+        .map(|s| jianpu_generator::note_spans::NoteSourceSpan {
+            source_part_index: s.source_part_index,
+            note_id: s.note_id,
+            measure_index: s.measure_index,
+            start: s.start,
+            end: s.end,
+        })
+        .collect();
+    let cells: Vec<jianpu_generator::note_spans::NoteCell> = selected_cells
+        .iter()
+        .map(|c| jianpu_generator::note_spans::NoteCell {
+            source_part_index: c.source_part_index,
+            note_id: c.note_id,
+        })
+        .collect();
+
+    let runs = jianpu_generator::note_spans::group_selected_notes_into_contiguous_runs(
+        &cells,
+        &core_spans,
+    );
+    GroupNoteSelectionResponse::Ok {
+        runs: runs
+            .into_iter()
+            .map(|r| NoteSelectionRunOut {
+                source_part_index: r.source_part_index,
+                measure_index: r.measure_index,
+                start_byte: r.start_byte,
+                end_byte: r.end_byte,
+            })
+            .collect(),
     }
 }

@@ -1,11 +1,31 @@
+import { group_note_selection } from 'jianpu-wasm'
 import type { RefObject } from 'react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import type { EditorHandle, MeasureSpan, NoteSpan, PartInfo } from '../types'
-import {
-  groupSelectedNotesIntoContiguousRuns,
-  type NoteCell,
-  type NoteSelectionRun,
-} from '../utils/noteSpanSelection'
+import type { NoteCell, NoteSelectionRun } from '../utils/noteSpanSelection'
+import { ensureWasmInit } from '../wasmInit'
+
+/** Calls the wasm `group_note_selection` export directly on the main
+ * thread (bypassing the debounced render worker), mirroring
+ * `extract_unzipped_text`'s main-thread usage in
+ * `useJianpuWorkerRenderRequests.ts` — this is pure grouping over an
+ * already-fetched flat `note_spans` array, so it doesn't need to re-parse
+ * `source` and stays responsive on every selection-change tick. */
+async function groupSelectedNotesIntoContiguousRuns(
+  selectedCells: NoteCell[],
+  noteSpans: NoteSpan[],
+): Promise<NoteSelectionRun[]> {
+  await ensureWasmInit()
+  const response = group_note_selection(noteSpans, selectedCells)
+  return response.status === 'ok'
+    ? response.runs.map((r) => ({
+        sourcePartIndex: r.sourcePartIndex,
+        measureIndex: r.measureIndex,
+        startByte: r.startByte,
+        endByte: r.endByte,
+      }))
+    : []
+}
 
 export interface SelectedNoteRangePlaybackInfo {
   minMeasureIndex: number
@@ -49,8 +69,8 @@ export function useNoteSelection(
   const suppressNextEditorSelectionSyncRef = useRef(false)
 
   const handleNoteRangeSelect = useCallback(
-    (selectedCells: NoteCell[]) => {
-      const runs = groupSelectedNotesIntoContiguousRuns(
+    async (selectedCells: NoteCell[]) => {
+      const runs = await groupSelectedNotesIntoContiguousRuns(
         selectedCells,
         noteSpans,
       )
@@ -100,7 +120,7 @@ export function useNoteSelection(
    * `noteSpans` has no meaning against the Unzipped view's projected text.
    */
   const handleEditorSelectionChange = useCallback(
-    (startByte: number, endByte: number) => {
+    async (startByte: number, endByte: number) => {
       if (suppressNextEditorSelectionSyncRef.current) {
         suppressNextEditorSelectionSyncRef.current = false
         return
@@ -121,7 +141,7 @@ export function useNoteSelection(
                 noteId: span.noteId,
               }))
       setLastSelectedCells(cells)
-      setLastRuns(groupSelectedNotesIntoContiguousRuns(cells, noteSpans))
+      setLastRuns(await groupSelectedNotesIntoContiguousRuns(cells, noteSpans))
     },
     [noteSpans],
   )
