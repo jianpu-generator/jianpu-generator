@@ -5,7 +5,11 @@ import type { EditorHandle, SectionRange } from '../types'
 export function useSectionNavigation(
   sectionRanges: SectionRange[],
   editorRef: RefObject<EditorHandle | null>,
-  notifySelection: (firstLine: number, lastLine: number) => void,
+  notifySelection: (
+    firstLine: number,
+    lastLine: number,
+    isEmpty: boolean,
+  ) => void,
 ) {
   const [dragStartLabel, setDragStartLabel] = useState<string | null>(null)
   const [dragCurrentLabel, setDragCurrentLabel] = useState<string | null>(null)
@@ -46,7 +50,10 @@ export function useSectionNavigation(
       editorRef.current?.setSelectionByLines(firstLine, lastLine)
       editorRef.current?.focus()
       setSelectedLineRange({ firstLine, lastLine })
-      notifySelection(firstLine, lastLine)
+      // A section jump selects a real (non-empty) line range, so the
+      // preview's caret-only measure-background highlight stays off; the
+      // section buttons carry their own highlighting for this.
+      notifySelection(firstLine, lastLine, false)
     },
     [editorRef, notifySelection],
   )

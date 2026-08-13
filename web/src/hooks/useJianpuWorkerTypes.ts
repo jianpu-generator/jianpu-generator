@@ -50,10 +50,18 @@ export interface JianpuWorkerState {
   measureAudioNoteTimings: NoteTimingOut[]
   /** The `<audio>` element currently playing the selected measure range, if any; a new element each time playback starts. */
   measureAudioElement: HTMLAudioElement | null
-  notifySelection: (startLine: number, endLine: number) => void
+  notifySelection: (
+    startLine: number,
+    endLine: number,
+    isEmpty: boolean,
+  ) => void
   /** Same as `notifySelection`, but for Unzipped view text, whose byte offsets map
    * to measure indices via `partMeasureRanges` instead of `measureSpans`. */
-  notifyUnzippedSelection: (startOffset: number, endOffset: number) => void
+  notifyUnzippedSelection: (
+    startOffset: number,
+    endOffset: number,
+    isEmpty: boolean,
+  ) => void
   /** The whole-document Unzipped view projection of `source` (empty until
    * `unzippedView` is enabled), recomputed alongside `measureSpans`. */
   unzippedText: string

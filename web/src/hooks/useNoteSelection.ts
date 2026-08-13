@@ -25,7 +25,11 @@ export function useNoteSelection(
   parts: PartInfo[],
   editorRef: RefObject<EditorHandle | null>,
   measureSpans: MeasureSpan[],
-  notifySelection: (startLine: number, endLine: number) => void,
+  notifySelection: (
+    startLine: number,
+    endLine: number,
+    isEmpty: boolean,
+  ) => void,
 ) {
   const [lastRuns, setLastRuns] = useState<NoteSelectionRun[]>([])
   // The raw cells behind `lastRuns`, kept around so the SVG preview can
@@ -62,7 +66,12 @@ export function useNoteSelection(
         const startSpan = measureSpans[Math.min(...measureIndices)]
         const endSpan = measureSpans[Math.max(...measureIndices)]
         if (!startSpan || !endSpan) return
-        notifySelection(startSpan.start_line, endSpan.end_line)
+        // No mounted editor here (Live/shared view) to show a Monaco
+        // selection, so the amber measure-background highlight is this
+        // fallback's only visual feedback for the drag — keep it on by
+        // reporting the range as caret-only, unlike the editor-mounted path
+        // below where the Monaco selection itself is the feedback.
+        notifySelection(startSpan.start_line, endSpan.end_line, true)
         return
       }
       setLastSelectedCells(selectedCells)

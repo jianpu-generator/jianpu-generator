@@ -5,7 +5,7 @@ import type {
 } from 'jianpu-wasm'
 import { extract_unzipped_text } from 'jianpu-wasm'
 import type { RefObject } from 'react'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import type { Diagnostic, MeasureSpan } from '../types'
 import { ensureWasmInit } from '../wasmInit'
 import type { WorkerRequest } from '../worker/jianpu.worker'
@@ -46,6 +46,7 @@ interface UseJianpuWorkerRenderRequestsParams {
     start: number
     end: number
     mode: 'source' | 'unzipped'
+    isEmpty: boolean
   } | null>
   /** Whether the whole-document Unzipped view is currently shown; gates the
    * `extract_unzipped_text` re-fetch below. */
@@ -94,6 +95,14 @@ export function useJianpuWorkerRenderRequests({
   lyricsVerseRangesRef,
   setLyricsVerseRanges,
 }: UseJianpuWorkerRenderRequestsParams) {
+  // Tracks whether the selection behind the current `selectedMeasureRange`
+  // is a bare caret (0-length) rather than a highlighted range. Kept
+  // separate from `selectedMeasureRange` itself, which other consumers
+  // (the play-selection button, the selected-range badge) still need
+  // populated for a real text selection — only the preview's amber
+  // measure-background rect is gated on this.
+  const measureRangeIsCaretOnlyRef = useRef(true)
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: activeFile is intentional trigger
   useEffect(() => {
     setDocuments([])
@@ -173,17 +182,19 @@ export function useJianpuWorkerRenderRequests({
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: lastSelectionRef/cursorOffsetTimerRef/measureSpansRef are stable refs passed in as params
   const notifySelection = useCallback(
-    (startLine: number, endLine: number) => {
+    (startLine: number, endLine: number, isEmpty: boolean) => {
       lastSelectionRef.current = {
         start: startLine,
         end: endLine,
         mode: 'source',
+        isEmpty,
       }
       if (cursorOffsetTimerRef.current !== null) {
         window.clearTimeout(cursorOffsetTimerRef.current)
       }
       cursorOffsetTimerRef.current = window.setTimeout(() => {
         cursorOffsetTimerRef.current = null
+        measureRangeIsCaretOnlyRef.current = isEmpty
         setSelectedMeasureRange(
           measureRangeInSpan(measureSpansRef.current, startLine, endLine),
         )
@@ -196,17 +207,19 @@ export function useJianpuWorkerRenderRequests({
   // `partMeasureRanges`, not through the full source's lines/byte offsets.
   // biome-ignore lint/correctness/useExhaustiveDependencies: lastSelectionRef/cursorOffsetTimerRef/partMeasureRangesRef are stable refs passed in as params
   const notifyUnzippedSelection = useCallback(
-    (startOffset: number, endOffset: number) => {
+    (startOffset: number, endOffset: number, isEmpty: boolean) => {
       lastSelectionRef.current = {
         start: startOffset,
         end: endOffset,
         mode: 'unzipped',
+        isEmpty,
       }
       if (cursorOffsetTimerRef.current !== null) {
         window.clearTimeout(cursorOffsetTimerRef.current)
       }
       cursorOffsetTimerRef.current = window.setTimeout(() => {
         cursorOffsetTimerRef.current = null
+        measureRangeIsCaretOnlyRef.current = isEmpty
         const startRange = measureRangeInUnzippedText(
           partMeasureRangesRef.current,
           startOffset,
@@ -234,6 +247,7 @@ export function useJianpuWorkerRenderRequests({
   useEffect(() => {
     const sel = lastSelectionRef.current
     if (!sel) return
+    measureRangeIsCaretOnlyRef.current = sel.isEmpty
     if (sel.mode === 'unzipped') {
       const startRange = measureRangeInUnzippedText(
         partMeasureRangesRef.current,
@@ -262,7 +276,10 @@ export function useJianpuWorkerRenderRequests({
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: workerRef/sourceRef/highlightRenderRequestIdRef/latestHighlightRenderIdRef are stable refs passed in as params
   useEffect(() => {
-    if (selectedMeasureRange === null) {
+    // The amber measure-background highlight is only for a bare caret —
+    // an actual text/note selection still populates `selectedMeasureRange`
+    // for playback/badge purposes, but shouldn't paint this background.
+    if (selectedMeasureRange === null || !measureRangeIsCaretOnlyRef.current) {
       setHighlightedDocuments([])
       return
     }

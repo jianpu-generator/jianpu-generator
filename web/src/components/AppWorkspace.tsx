@@ -55,8 +55,16 @@ interface AppWorkspaceProps {
   setSelectedLineRange: (
     range: { firstLine: number; lastLine: number } | null,
   ) => void
-  notifySelection: (startLine: number, endLine: number) => void
-  notifyUnzippedSelection: (startOffset: number, endOffset: number) => void
+  notifySelection: (
+    startLine: number,
+    endLine: number,
+    isEmpty: boolean,
+  ) => void
+  notifyUnzippedSelection: (
+    startOffset: number,
+    endOffset: number,
+    isEmpty: boolean,
+  ) => void
   setEditPartsOpen: (open: boolean) => void
   setEditMetadataOpen: (open: boolean) => void
   forceSave: () => void
@@ -245,15 +253,15 @@ export function AppWorkspace({
                 measureSpans={measureSpans}
                 unzippedView={unzippedView}
                 partMeasureRanges={partMeasureRanges}
-                onSelectionChange={(firstLine, lastLine) => {
+                onSelectionChange={(firstLine, lastLine, isEmpty) => {
                   setSelectedLineRange(null)
                   if (!unzippedView) {
-                    notifySelection(firstLine, lastLine)
+                    notifySelection(firstLine, lastLine, isEmpty)
                   }
                 }}
-                onSelectionOffsetChange={(startOffset, endOffset) => {
+                onSelectionOffsetChange={(startOffset, endOffset, isEmpty) => {
                   if (unzippedView) {
-                    notifyUnzippedSelection(startOffset, endOffset)
+                    notifyUnzippedSelection(startOffset, endOffset, isEmpty)
                   } else {
                     handleEditorSelectionChange(startOffset, endOffset)
                   }

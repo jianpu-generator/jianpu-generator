@@ -68,3 +68,35 @@ test('removes highlight rect when cursor moves outside all measures', async ({
   // Highlight should be gone; the plain (non-highlighted) SVGs are shown.
   await expect(highlightRect).not.toBeVisible({ timeout: 3_000 })
 })
+
+test('hides the highlight rect while text is selected, and restores it once the selection collapses back to a caret', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
+
+  await focusEditor(page)
+
+  // Place the caret inside measure 1's line so the highlight appears.
+  await page.keyboard.press('Control+g')
+  await page.keyboard.type('10')
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(1_000)
+
+  const highlightRect = page.locator(
+    '.preview-page [data-testid="measure-highlight"]',
+  )
+  await expect(highlightRect).toBeVisible({ timeout: 5_000 })
+
+  // Select the whole line — a real (non-empty) selection, not just a caret.
+  await page.keyboard.press('Home')
+  await page.keyboard.press('Shift+End')
+  await expect(highlightRect).not.toBeVisible({ timeout: 3_000 })
+
+  // Collapse the selection back to a bare caret — the highlight returns.
+  await page.keyboard.press('End')
+  await page.waitForTimeout(1_000)
+  await expect(highlightRect).toBeVisible({ timeout: 5_000 })
+})

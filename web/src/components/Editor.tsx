@@ -51,11 +51,22 @@ export interface EditorProps {
   /** Per-part, per-measure byte ranges into the Unzipped view's text. */
   partMeasureRanges?: PartMeasureRangesOut[]
   toolbar?: ReactNode
-  onSelectionChange?: (startLine: number, endLine: number) => void
+  /** `isEmpty` is true when the selection is a plain caret (0-length) rather
+   * than a highlighted range — callers use this to gate the preview's
+   * measure-background highlight, which should only show for a bare caret. */
+  onSelectionChange?: (
+    startLine: number,
+    endLine: number,
+    isEmpty: boolean,
+  ) => void
   /** Same selection as `onSelectionChange`, but as UTF-16 code-unit offsets
    * via `model.getOffsetAt` — used by the Unzipped view caller, whose
    * measure mapping is byte-offset-based rather than line-based. */
-  onSelectionOffsetChange?: (startOffset: number, endOffset: number) => void
+  onSelectionOffsetChange?: (
+    startOffset: number,
+    endOffset: number,
+    isEmpty: boolean,
+  ) => void
   onCursorLineChange?: (line: number) => void
   onPlayMeasure?: () => void
   onForceSave?: () => void
@@ -271,9 +282,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       if (!model) return
       const selection = ed.getSelection()
       if (!selection) return
+      const isEmpty = selection.isEmpty()
       onSelectionChangeRef.current?.(
         selection.startLineNumber,
         selection.endLineNumber,
+        isEmpty,
       )
       if (onSelectionOffsetChangeRef.current) {
         const text = model.getValue()
@@ -285,7 +298,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           text,
           model.getOffsetAt(selection.getEndPosition()),
         )
-        onSelectionOffsetChangeRef.current(startOffset, endOffset)
+        onSelectionOffsetChangeRef.current(startOffset, endOffset, isEmpty)
       }
       onCursorLineChangeRef.current?.(selection.startLineNumber)
     }

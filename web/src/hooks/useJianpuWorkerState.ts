@@ -136,6 +136,7 @@ export function useJianpuWorkerState(
     start: number
     end: number
     mode: 'source' | 'unzipped'
+    isEmpty: boolean
   } | null>(null)
 
   const effectiveDisabledParts = useMemo(() => {
