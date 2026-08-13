@@ -1,10 +1,9 @@
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { EditorHandle, MeasureSpan, SectionRange } from '../types'
+import type { EditorHandle, SectionRange } from '../types'
 
 export function useSectionNavigation(
   sectionRanges: SectionRange[],
-  measureSpans: MeasureSpan[],
   editorRef: RefObject<EditorHandle | null>,
   notifySelection: (firstLine: number, lastLine: number) => void,
 ) {
@@ -81,23 +80,10 @@ export function useSectionNavigation(
     return () => window.removeEventListener('mouseup', clearDrag)
   }, [])
 
-  const handleMeasureRangeSelect = useCallback(
-    (start: number, end: number) => {
-      const s = measureSpans[start]
-      const e = measureSpans[end]
-      if (!s || !e) return
-      editorRef.current?.setSelectionByLines(s.start_line, e.end_line)
-      setSelectedLineRange(null)
-      notifySelection(s.start_line, e.end_line)
-    },
-    [measureSpans, editorRef, notifySelection],
-  )
-
   return {
     selectedLineRange,
     setSelectedLineRange,
     handleSectionJump,
-    handleMeasureRangeSelect,
     sectionJumpToolbarProps: {
       sectionLabels,
       dragStartLabel,

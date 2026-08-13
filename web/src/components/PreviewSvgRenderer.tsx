@@ -15,7 +15,9 @@ function transparentRectRoleToDataVariant(
   role:
     | 'measureClickTarget'
     | 'sectionLabelBackground'
-    | 'sectionLabelClickTarget',
+    | 'sectionLabelClickTarget'
+    | 'noteClickTarget'
+    | 'partLabelClickTarget',
 ): string {
   switch (role) {
     case 'measureClickTarget':
@@ -24,6 +26,10 @@ function transparentRectRoleToDataVariant(
       return 'section-label-bg'
     case 'sectionLabelClickTarget':
       return 'section-label-click-target-rect'
+    case 'noteClickTarget':
+      return 'note-click-target-rect'
+    case 'partLabelClickTarget':
+      return 'part-label-click-target-rect'
   }
 }
 
@@ -184,6 +190,14 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
       const notePartIndex =
         kind.tag?.type === 'note' ? kind.tag.source_part_index : undefined
       const noteId = kind.tag?.type === 'note' ? kind.tag.note_id : undefined
+      const partLabelPartIndex =
+        kind.tag?.type === 'partLabel' ? kind.tag.source_part_index : undefined
+      const partLabelMeasureIndexStart =
+        kind.tag?.type === 'partLabel'
+          ? kind.tag.measure_index_start
+          : undefined
+      const partLabelMeasureIndexEnd =
+        kind.tag?.type === 'partLabel' ? kind.tag.measure_index_end : undefined
       return (
         <g
           key={key}
@@ -194,15 +208,20 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
                 ? 'section-label'
                 : notePartIndex !== undefined
                   ? 'note'
-                  : undefined
+                  : partLabelPartIndex !== undefined
+                    ? 'part-label'
+                    : undefined
           }
           data-measure-index={measureIndex}
-          data-measure-index-end={measureIndexEnd}
+          data-measure-index-end={measureIndexEnd ?? partLabelMeasureIndexEnd}
           data-section-label={sectionLabel}
-          data-part-index={notePartIndex}
+          data-part-index={notePartIndex ?? partLabelPartIndex}
           data-note-id={noteId}
+          data-measure-index-start={partLabelMeasureIndexStart}
           style={
-            measureIndex !== undefined || sectionLabel !== undefined
+            measureIndex !== undefined ||
+            sectionLabel !== undefined ||
+            partLabelPartIndex !== undefined
               ? { cursor: 'pointer' }
               : undefined
           }

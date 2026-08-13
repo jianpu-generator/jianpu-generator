@@ -1,15 +1,16 @@
 use crate::compositor::types::{AbsoluteContent, AbsoluteElement, AbsolutePage};
 use crate::error::IrrecoverableError;
 use crate::grid_layout::types::{
-    ColumnGeometry, GridContent, GridElement, GridPage, GridRow, HAlign, PostArcGridContent, VAlign,
+    ColumnGeometry, GridContent, GridElement, GridPage, GridRow, HAlign, VAlign,
 };
 use crate::grid_layout::PAGE_MARGIN;
 
 use super::content_conversion::grid_to_absolute;
 use super::highlights::{
     resolve_error_highlights, resolve_measure_click_target, resolve_measure_highlights,
-    resolve_playback_cursor_target,
+    resolve_note_click_target, resolve_part_label_click_target, resolve_playback_cursor_target,
 };
+use super::post_arc_conversion::to_post_arc_content;
 
 /// Font sizes used to measure lyric syllable width, both for the
 /// `HAlign::Center` anchor's weight scaling and the clamp that keeps wide
@@ -244,73 +245,37 @@ fn resolve_multi_measure_rest(count: u32, x_start: f32, width: f32, y: f32) -> A
     }
 }
 
-fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridContent> {
-    match content {
-        GridContent::TieOrSlur { .. }
-        | GridContent::TieOrSlurTail { .. }
-        | GridContent::TieOrSlurHead { .. }
-        | GridContent::TupletBracket { .. } => None,
-        GridContent::NoteHead {
-            pitch,
-            accidental,
-            octave,
-            dotted,
-        } => Some(PostArcGridContent::NoteHead {
-            pitch: pitch.clone(),
-            accidental: accidental.clone(),
-            octave: *octave,
-            dotted: *dotted,
-        }),
-        GridContent::Rest { dotted } => Some(PostArcGridContent::Rest { dotted: *dotted }),
-        GridContent::MultiMeasureRest { count } => {
-            Some(PostArcGridContent::MultiMeasureRest { count: *count })
-        }
-        GridContent::NoteDash { dotted } => Some(PostArcGridContent::NoteDash { dotted: *dotted }),
-        GridContent::OctaveDot => Some(PostArcGridContent::OctaveDot),
-        GridContent::ChordSymbol { text, dotted } => Some(PostArcGridContent::ChordSymbol {
-            text: text.clone(),
-            dotted: *dotted,
-        }),
-        GridContent::PercussionHit => Some(PostArcGridContent::PercussionHit),
-        GridContent::Underline { level } => Some(PostArcGridContent::Underline { level: *level }),
-        GridContent::BarLine { height_pt } => Some(PostArcGridContent::BarLine {
-            height_pt: *height_pt,
-        }),
-        GridContent::HorizontalLine => Some(PostArcGridContent::HorizontalLine),
-        GridContent::RowLabel(s) => Some(PostArcGridContent::RowLabel(s.clone())),
-        GridContent::LyricSyllable(s) => Some(PostArcGridContent::LyricSyllable(s.clone())),
-        GridContent::LyricLine(s) => Some(PostArcGridContent::LyricLine(s.clone())),
-        GridContent::DirectiveLine {
-            label,
-            bar_number,
-            key,
-            bpm,
-            time_signature,
-        } => Some(PostArcGridContent::DirectiveLine {
-            label: label.clone(),
-            bar_number: *bar_number,
-            key: key.clone(),
-            bpm: *bpm,
-            time_signature: *time_signature,
-        }),
-        GridContent::Text {
-            content,
-            font_size,
-            bold,
-            italic,
-        } => Some(PostArcGridContent::Text {
-            content: content.clone(),
-            font_size: *font_size,
-            bold: *bold,
-            italic: *italic,
-        }),
-        GridContent::SequenceLine { entries, font_size } => {
-            Some(PostArcGridContent::SequenceLine {
-                entries: entries.clone(),
-                font_size: *font_size,
-            })
-        }
-    }
+/// Resolves every click/drag hit target on a page — measure, playback
+/// cursor, note, and part-label — appended in that order so later ones stay
+/// topmost for `elementFromPoint` hit-testing (e.g. a note click target over
+/// its enclosing measure's).
+fn resolve_click_target_elements(
+    page: &GridPage,
+    row_tops: &[f32],
+    usable_width: f32,
+    part_label_width_pt: f32,
+) -> Vec<AbsoluteElement> {
+    let mut elements: Vec<AbsoluteElement> = page
+        .measure_click_targets
+        .iter()
+        .filter_map(|t| {
+            resolve_measure_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
+        })
+        .collect();
+
+    elements.extend(page.playback_cursor_targets.iter().filter_map(|t| {
+        resolve_playback_cursor_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
+    }));
+
+    elements.extend(page.playback_cursor_targets.iter().filter_map(|t| {
+        resolve_note_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
+    }));
+
+    elements.extend(page.part_label_click_targets.iter().filter_map(|t| {
+        resolve_part_label_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
+    }));
+
+    elements
 }
 
 fn resolve_page(
@@ -357,36 +322,12 @@ fn resolve_page(
     );
     highlight_elements.extend(error_elements);
     highlight_elements.extend(elements);
-
-    let click_target_elements: Vec<AbsoluteElement> = page
-        .measure_click_targets
-        .iter()
-        .filter_map(|t| {
-            resolve_measure_click_target(
-                t,
-                &page.rows,
-                &row_tops,
-                usable_width,
-                part_label_width_pt,
-            )
-        })
-        .collect();
-    highlight_elements.extend(click_target_elements);
-
-    let playback_cursor_target_elements: Vec<AbsoluteElement> = page
-        .playback_cursor_targets
-        .iter()
-        .filter_map(|t| {
-            resolve_playback_cursor_target(
-                t,
-                &page.rows,
-                &row_tops,
-                usable_width,
-                part_label_width_pt,
-            )
-        })
-        .collect();
-    highlight_elements.extend(playback_cursor_target_elements);
+    highlight_elements.extend(resolve_click_target_elements(
+        page,
+        &row_tops,
+        usable_width,
+        part_label_width_pt,
+    ));
 
     Ok(AbsolutePage {
         width_pt: page.width_pt,

@@ -96,6 +96,29 @@ pub enum AbsoluteContent {
         source_part_index: usize,
         note_id: usize,
     },
+    /// Invisible click/drag hit target layered above `PlaybackCursorTarget`
+    /// for the same note/rest, since that rect is `pointer-events: none`
+    /// (its `fill` is owned exclusively by playback highlighting — see
+    /// `renderer::new_types::TransparentRectRole::NoteClickTarget`).
+    NoteClickTarget {
+        width: f32,
+        height: f32,
+        source_part_index: usize,
+        note_id: usize,
+    },
+    /// Invisible click/drag hit target laid over a part's `RowLabel` text
+    /// (see `grid_layout::types::PartLabelClickTarget`), spanning that
+    /// part's own sub-rows within the fixed-width label region. Clicking or
+    /// drag-selecting it selects every note/rest that part sounds across
+    /// `measure_index_start..=measure_index_end` (the whole system the
+    /// label sits in).
+    PartLabelClickTarget {
+        width: f32,
+        height: f32,
+        source_part_index: usize,
+        measure_index_start: usize,
+        measure_index_end: usize,
+    },
     DirectiveLine {
         /// Bar-number span, rendered as its own text element pinned to the
         /// line's start (offset 0) so it always precedes `label` and

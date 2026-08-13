@@ -72,6 +72,8 @@ export function useJianpuWorker(
     setHighlightedDocuments,
     measureSpans,
     setMeasureSpans,
+    noteSpans,
+    setNoteSpans,
     unzippedText,
     setUnzippedText,
     partMeasureRanges,
@@ -87,6 +89,8 @@ export function useJianpuWorker(
     measureSpansRequestIdRef,
     latestMeasureSpansIdRef,
     measureSpansRef,
+    noteSpansRequestIdRef,
+    latestNoteSpansIdRef,
     partMeasureRangesRef,
     lyricsVerseRangesRef,
     workerRef,
@@ -135,7 +139,6 @@ export function useJianpuWorker(
   )
 
   const sequenceNav = useSequenceNavigation(sequenceEntries)
-
   useUnzippedTextSnapshot(unzippedView, sourceRef, setUnzippedText)
 
   const { setNextWavUrl, generateFullAudio } = useJianpuWorkerAudioActions({
@@ -160,6 +163,7 @@ export function useJianpuWorker(
     stopMeasurePlayback,
     playSelectedMeasures,
     playFromCurrentMeasure,
+    playNoteSelection,
     latestMeasureAudioIdRef,
     measureWavUrlRef,
   } = useMeasureAudioPlayback({
@@ -227,6 +231,8 @@ export function useJianpuWorker(
     setHighlightedDocuments,
     latestMeasureSpansIdRef,
     setMeasureSpans,
+    latestNoteSpansIdRef,
+    setNoteSpans,
     setSectionRanges,
     setSequenceEntries,
     latestPreviewAudioIdRef,
@@ -262,6 +268,8 @@ export function useJianpuWorker(
       measureSpansRef,
       measureSpansRequestIdRef,
       latestMeasureSpansIdRef,
+      noteSpansRequestIdRef,
+      latestNoteSpansIdRef,
       cursorOffsetTimerRef,
       lastSelectionRef,
       unzippedView,
@@ -371,9 +379,11 @@ export function useJianpuWorker(
     lyricsVerseRanges,
     playSelectedMeasures,
     playFromCurrentMeasure,
+    playNoteSelection,
     stopMeasurePlayback,
     highlightedDocuments,
     measureSpans,
+    noteSpans,
     sectionRanges,
     sequenceEntries,
     selectedSequenceRange: sequenceNav.selectedSequenceRange,

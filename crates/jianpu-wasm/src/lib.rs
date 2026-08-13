@@ -28,13 +28,13 @@ pub mod lib_import;
 use jianpu_generator::parser::parts_parser::InstrumentInfo;
 use metadata_types::MetadataDefaultsOut;
 use responses::{
-    get_measure_at_offset_response, list_measure_spans_response, render_response,
-    render_with_highlight_range_response,
+    get_measure_at_offset_response, list_measure_spans_response, list_note_spans_response,
+    render_response, render_with_highlight_range_response,
 };
 use types::{
-    ListMeasureSpansResponse, ListPartDeclarationsResponse, ListPartsResponse, ListSymbolsResponse,
-    MeasureAtOffsetResponse, RenameSymbolResponse, RenderResponse, SymbolKindOut,
-    UnzippedEditResponse,
+    ListMeasureSpansResponse, ListNoteSpansResponse, ListPartDeclarationsResponse,
+    ListPartsResponse, ListSymbolsResponse, MeasureAtOffsetResponse, RenameSymbolResponse,
+    RenderResponse, SymbolKindOut, UnzippedEditResponse,
 };
 use unzipped_edit::{
     extract_unzipped_text_response, format_unzipped_text_response, merge_unzipped_text_response,
@@ -75,6 +75,18 @@ pub fn set_layout_fonts(directive_line_font: Vec<u8>, monospace_font: Vec<u8>) {
 #[wasm_bindgen]
 pub fn list_measure_spans(source: &str) -> ListMeasureSpansResponse {
     list_measure_spans_response(source)
+}
+
+/// Return the source byte span of every note/chord/percussion/rest event,
+/// keyed by `(sourcePartIndex, noteId)` matching the SVG's `data-part-index`/
+/// `data-note-id` attributes on each `Tag::Note` group.
+///
+/// - `{ "status": "ok", "spans": [{ "sourcePartIndex", "noteId", "measureIndex",
+///   "start", "end" }, ...] }` on success
+/// - `{ "status": "err" }` on parse failure
+#[wasm_bindgen]
+pub fn list_note_spans(source: &str) -> ListNoteSpansResponse {
+    list_note_spans_response(source)
 }
 
 /// Parse and render `.jianpu` source into SVG page strings.

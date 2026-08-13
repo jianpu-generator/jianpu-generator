@@ -160,6 +160,26 @@ fn render_overlay_element(
             source_part_index,
             note_id,
         } => render_playback_cursor_target(elem, *width, *height, *source_part_index, *note_id),
+        AbsoluteContent::NoteClickTarget {
+            width,
+            height,
+            source_part_index,
+            note_id,
+        } => render_note_click_target(elem, *width, *height, *source_part_index, *note_id),
+        AbsoluteContent::PartLabelClickTarget {
+            width,
+            height,
+            source_part_index,
+            measure_index_start,
+            measure_index_end,
+        } => render_part_label_click_target(
+            elem,
+            *width,
+            *height,
+            *source_part_index,
+            *measure_index_start,
+            *measure_index_end,
+        ),
         AbsoluteContent::DirectiveLine {
             bar_number,
             label,
@@ -258,6 +278,74 @@ fn render_playback_cursor_target(
             tag: Some(Tag::Note {
                 source_part_index,
                 note_id,
+            }),
+        },
+    }]
+}
+
+/// Sibling group to [`render_playback_cursor_target`] for the same note/rest,
+/// giving it a clickable/draggable hit target — `PlaybackCursorRect` is
+/// `pointer-events: none` since its `fill` is owned exclusively by
+/// `usePlaybackCursor.ts`, so a separate transparent rect handles clicks.
+/// Carries the same `Tag::Note` `source_part_index`/`note_id` so a click on
+/// it resolves to the same note as the playback cursor rect underneath.
+fn render_note_click_target(
+    elem: &AbsoluteElement,
+    width: f32,
+    height: f32,
+    source_part_index: usize,
+    note_id: usize,
+) -> Vec<SvgElement> {
+    vec![SvgElement {
+        x: elem.x,
+        y: elem.y,
+        variant: None,
+        kind: SvgKind::Group {
+            children: vec![SvgElement {
+                x: elem.x,
+                y: elem.y,
+                variant: None,
+                kind: SvgKind::TransparentRect {
+                    width,
+                    height,
+                    role: TransparentRectRole::NoteClickTarget,
+                },
+            }],
+            tag: Some(Tag::Note {
+                source_part_index,
+                note_id,
+            }),
+        },
+    }]
+}
+
+fn render_part_label_click_target(
+    elem: &AbsoluteElement,
+    width: f32,
+    height: f32,
+    source_part_index: usize,
+    measure_index_start: usize,
+    measure_index_end: usize,
+) -> Vec<SvgElement> {
+    vec![SvgElement {
+        x: elem.x,
+        y: elem.y,
+        variant: None,
+        kind: SvgKind::Group {
+            children: vec![SvgElement {
+                x: elem.x,
+                y: elem.y,
+                variant: None,
+                kind: SvgKind::TransparentRect {
+                    width,
+                    height,
+                    role: TransparentRectRole::PartLabelClickTarget,
+                },
+            }],
+            tag: Some(Tag::PartLabel {
+                source_part_index,
+                measure_index_start,
+                measure_index_end,
             }),
         },
     }]

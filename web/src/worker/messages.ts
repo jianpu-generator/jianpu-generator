@@ -3,6 +3,7 @@ import type {
   Diagnostic,
   DiagnosticViewZone,
   MeasureSpan,
+  NoteSpan,
   PartDeclaration,
   PartInfo,
   PartMode,
@@ -108,6 +109,7 @@ export type WorkerRequest =
       disabledLyrics?: string[]
     }
   | { type: 'listMeasureSpans'; source: string; id: number }
+  | { type: 'listNoteSpans'; source: string; id: number }
   | { type: 'previewInstrument'; id: number; programNumber: number }
   | { type: 'previewPercussion'; id: number; key: number }
   | {
@@ -191,6 +193,12 @@ export type WorkerResponse =
       spans: MeasureSpan[]
       sectionRanges: SectionRange[]
       sequenceEntries: SequenceEntry[]
+    }
+  | {
+      type: 'noteSpans'
+      id: number
+      status: 'ok' | 'err'
+      spans: NoteSpan[]
     }
   | { type: 'importOk'; id: number; source: string }
   | { type: 'importErr'; id: number }

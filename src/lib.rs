@@ -29,6 +29,7 @@ pub mod grouper;
 pub mod grouping;
 pub mod layout;
 pub mod measure_spans;
+pub mod note_spans;
 pub mod parser;
 mod part_info;
 pub mod render_config;
@@ -56,6 +57,7 @@ pub use document_render::{
 };
 pub use filters::*;
 pub use measure_spans::*;
+pub use note_spans::*;
 pub use part_info::{
     list_groups_from_source, list_part_declarations_from_source, list_parts_from_source, GroupInfo,
     PartInfo, SourcePartDeclaration,

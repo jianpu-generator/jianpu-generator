@@ -1,7 +1,25 @@
 import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import { useEffect, useRef, useState } from 'react'
+import type { NoteSpan } from '../types'
 import { renderSvgDocument } from './PreviewSvgRenderer'
+import {
+  applyPartLabelDragHighlight,
+  applyPersistedNoteHighlights,
+  applyPersistedPartLabelHighlights,
+} from './previewDragHighlights'
+import {
+  getMeasureAtPoint,
+  getNoteAtPoint,
+  getPartLabelAtPoint,
+  getSectionLabelAtPoint,
+  type NoteCell,
+  noteCellsForPartLabels,
+  noteCellsInMeasureRange,
+} from './previewSelection'
 import { usePlaybackCursor } from './usePlaybackCursor'
+import { usePreviewDragSelection } from './usePreviewDragSelection'
+
+export type { NoteCell } from './previewSelection'
 
 interface PreviewProps {
   documents: SvgDocumentOut[]
@@ -17,66 +35,20 @@ interface PreviewProps {
   /** The `<audio>` element currently playing the selected measure range, if any. */
   measureAudioElement?: HTMLAudioElement | null
   emptyMessage?: string
-  onMeasureRangeSelect?: (startIndex: number, endIndex: number) => void
   onSectionLabelClick?: (label: string) => void
-}
-
-function getSectionLabelAtPoint(x: number, y: number): string | undefined {
-  const el = document.elementFromPoint(x, y)
-  if (!el) return undefined
-  const group = el.closest('[data-tag="section-label"]')
-  if (!group) return undefined
-  return (group as HTMLElement).dataset.sectionLabel
-}
-
-interface MeasureRange {
-  start: number
-  end: number
-}
-
-/**
- * The measure range under the given point. A merged multi-measure rest bar
- * carries a `start`/`end` wider than a single measure, so clicking anywhere
- * on it resolves to every source measure it represents.
- */
-function getMeasureAtPoint(x: number, y: number): MeasureRange | undefined {
-  const el = document.elementFromPoint(x, y)
-  if (!el) return undefined
-  const group = el.closest('[data-tag="measure"]')
-  if (!group) return undefined
-  const { measureIndex, measureIndexEnd } = (group as HTMLElement).dataset
-  if (measureIndex === undefined) return undefined
-  const start = Number.parseInt(measureIndex, 10)
-  const end = Number.parseInt(measureIndexEnd ?? measureIndex, 10)
-  if (Number.isNaN(start) || Number.isNaN(end)) return undefined
-  return { start, end }
-}
-
-function applyDragHighlights(
-  container: HTMLElement,
-  start: number,
-  current: number,
-): void {
-  const min = Math.min(start, current)
-  const max = Math.max(start, current)
-  for (const group of Array.from(
-    container.querySelectorAll<HTMLElement>('[data-tag="measure"]'),
-  )) {
-    const index = Number.parseInt(group.dataset.measureIndex ?? '', 10)
-    if (index >= min && index <= max) {
-      group.dataset.dragSelected = ''
-    } else {
-      delete group.dataset.dragSelected
-    }
-  }
-}
-
-function clearDragHighlights(container: HTMLElement): void {
-  for (const group of Array.from(
-    container.querySelectorAll<HTMLElement>('[data-tag="measure"]'),
-  )) {
-    delete group.dataset.dragSelected
-  }
+  /** Fired on mouseup after a note-level drag-select (see `getNoteAtPoint`),
+   * with every note/rest cell the drag's marquee overlapped. */
+  onNoteRangeSelect?: (selectedCells: NoteCell[]) => void
+  /** The note/rest cells from the most recent note drag-select (see
+   * `onNoteRangeSelect`), echoed back so the highlight can be re-applied
+   * declaratively — including after a re-render swaps in fresh SVG DOM
+   * (e.g. the Monaco selection this drag pushed triggering a highlighted
+   * re-render), which would otherwise silently drop the highlight. */
+  selectedNoteCells?: NoteCell[]
+  /** Per-note/rest `(source_part_index, note_id) → measure_index` mapping,
+   * used by `noteCellsInMeasureRange` to resolve a measure click/drag into
+   * every note cell it contains by index rather than pixel geometry. */
+  noteSpans?: NoteSpan[]
 }
 
 export function Preview({
@@ -90,13 +62,17 @@ export function Preview({
   measureAudioNoteTimings,
   measureAudioElement,
   emptyMessage = 'No preview yet.',
-  onMeasureRangeSelect,
   onSectionLabelClick,
+  onNoteRangeSelect,
+  selectedNoteCells = [],
+  noteSpans = [],
 }: PreviewProps) {
   const previewPagesRef = useRef<HTMLDivElement>(null)
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
     null,
   )
+  const noteSpansRef = useRef(noteSpans)
+  noteSpansRef.current = noteSpans
 
   usePlaybackCursor(previewPagesRef, audioElement, noteTimings)
   usePlaybackCursor(
@@ -104,12 +80,11 @@ export function Preview({
     measureAudioElement,
     measureAudioNoteTimings,
   )
-  const dragStateRef = useRef<{
-    anchor: MeasureRange
-    current: MeasureRange
-  } | null>(null)
-  const onMeasureRangeSelectRef = useRef(onMeasureRangeSelect)
-  onMeasureRangeSelectRef.current = onMeasureRangeSelect
+  const dragStateRef = usePreviewDragSelection(
+    previewPagesRef,
+    noteSpans,
+    onNoteRangeSelect,
+  )
   const onSectionLabelClickRef = useRef(onSectionLabelClick)
   onSectionLabelClickRef.current = onSectionLabelClick
 
@@ -139,43 +114,22 @@ export function Preview({
     return () => cancelAnimationFrame(frameId)
   }, [highlightedDocuments])
 
+  // Re-applies the note drag-select highlight declaratively from
+  // `selectedNoteCells` on every relevant render, rather than leaving it as
+  // a one-shot imperative toggle on mouseup — a re-render can swap in fresh
+  // SVG DOM (e.g. `documents`/`highlightedDocuments` changing after the
+  // Monaco selection this drag pushed), which would silently wipe any
+  // dataset attribute set only during the drag itself.
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const dragState = dragStateRef.current
-      if (!dragState) return
-      const container = previewPagesRef.current
-      if (!container) return
-      const range = getMeasureAtPoint(e.clientX, e.clientY)
-      if (range !== undefined) {
-        dragState.current = range
-        const min = Math.min(dragState.anchor.start, dragState.current.start)
-        const max = Math.max(dragState.anchor.end, dragState.current.end)
-        applyDragHighlights(container, min, max)
-      }
-    }
-
-    const handleMouseUp = (e: MouseEvent) => {
-      const dragState = dragStateRef.current
-      if (!dragState) return
-      const container = previewPagesRef.current
-      if (container) {
-        clearDragHighlights(container)
-      }
-      const finalRange =
-        getMeasureAtPoint(e.clientX, e.clientY) ?? dragState.current
-      const min = Math.min(dragState.anchor.start, finalRange.start)
-      const max = Math.max(dragState.anchor.end, finalRange.end)
-      onMeasureRangeSelectRef.current?.(min, max)
-      dragStateRef.current = null
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
-  }, [])
+    const container = previewPagesRef.current
+    if (!container) return
+    applyPersistedNoteHighlights(container, selectedNoteCells)
+    applyPersistedPartLabelHighlights(
+      container,
+      noteSpansRef.current,
+      selectedNoteCells,
+    )
+  }, [selectedNoteCells, documents, highlightedDocuments])
 
   const activeDocs =
     highlightedDocuments.length > 0 ? highlightedDocuments : documents
@@ -210,7 +164,7 @@ export function Preview({
         </div>
       ) : null}
       <div className="preview-pages-wrapper">
-        {/* biome-ignore lint/a11y/noStaticElementInteractions: drag-to-select measures uses mousedown, mousemove, mouseup — not a standard interactive role */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: drag/click-to-select notes uses mousedown, mousemove, mouseup — not a standard interactive role */}
         <div
           className="preview-pages"
           ref={previewPagesRef}
@@ -221,12 +175,64 @@ export function Preview({
               e.preventDefault()
               return
             }
+            const partLabel = getPartLabelAtPoint(e.clientX, e.clientY)
+            if (partLabel !== undefined) {
+              const point = { x: e.clientX, y: e.clientY }
+              dragStateRef.current = {
+                mode: 'part-label',
+                anchor: point,
+                current: point,
+              }
+              const container = previewPagesRef.current
+              if (container) {
+                applyPartLabelDragHighlight(container, [partLabel])
+                applyPersistedNoteHighlights(
+                  container,
+                  noteCellsForPartLabels(noteSpans, [partLabel]),
+                )
+              }
+              e.preventDefault()
+              return
+            }
+            const noteCell = getNoteAtPoint(e.clientX, e.clientY)
+            if (noteCell !== undefined) {
+              const point = { x: e.clientX, y: e.clientY }
+              const measureRangeAtAnchor = getMeasureAtPoint(
+                e.clientX,
+                e.clientY,
+              )
+              dragStateRef.current = {
+                mode: 'pending',
+                anchor: point,
+                noteCellAtAnchor: noteCell,
+                measureRangeAtAnchor,
+              }
+              // Eagerly show the whole-measure highlight, matching a plain
+              // click's instant-highlight-on-mousedown — overwritten if this
+              // turns into a real note-drag (see `usePreviewDragSelection`).
+              const container = previewPagesRef.current
+              if (container && measureRangeAtAnchor !== undefined) {
+                applyPersistedNoteHighlights(
+                  container,
+                  noteCellsInMeasureRange(noteSpans, measureRangeAtAnchor),
+                )
+              }
+              e.preventDefault()
+              return
+            }
             const range = getMeasureAtPoint(e.clientX, e.clientY)
             if (range === undefined) return
-            dragStateRef.current = { anchor: range, current: range }
+            dragStateRef.current = {
+              mode: 'measure',
+              anchor: range,
+              current: range,
+            }
             const container = previewPagesRef.current
             if (container) {
-              applyDragHighlights(container, range.start, range.end)
+              applyPersistedNoteHighlights(
+                container,
+                noteCellsInMeasureRange(noteSpans, range),
+              )
             }
             e.preventDefault()
           }}

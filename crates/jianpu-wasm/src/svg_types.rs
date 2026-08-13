@@ -30,6 +30,8 @@ pub enum TransparentRectRoleOut {
     MeasureClickTarget,
     SectionLabelBackground,
     SectionLabelClickTarget,
+    NoteClickTarget,
+    PartLabelClickTarget,
 }
 
 #[derive(Debug, Clone, Tsify, Serialize)]
@@ -113,6 +115,11 @@ pub enum TagOut {
     Note {
         source_part_index: usize,
         note_id: usize,
+    },
+    PartLabel {
+        source_part_index: usize,
+        measure_index_start: usize,
+        measure_index_end: usize,
     },
 }
 
@@ -222,6 +229,15 @@ fn tag_to_out(tag: &Tag) -> TagOut {
             source_part_index: *source_part_index,
             note_id: *note_id,
         },
+        Tag::PartLabel {
+            source_part_index,
+            measure_index_start,
+            measure_index_end,
+        } => TagOut::PartLabel {
+            source_part_index: *source_part_index,
+            measure_index_start: *measure_index_start,
+            measure_index_end: *measure_index_end,
+        },
     }
 }
 
@@ -234,6 +250,8 @@ fn transparent_rect_role_to_out(role: &TransparentRectRole) -> TransparentRectRo
         TransparentRectRole::SectionLabelClickTarget => {
             TransparentRectRoleOut::SectionLabelClickTarget
         }
+        TransparentRectRole::NoteClickTarget => TransparentRectRoleOut::NoteClickTarget,
+        TransparentRectRole::PartLabelClickTarget => TransparentRectRoleOut::PartLabelClickTarget,
     }
 }
 

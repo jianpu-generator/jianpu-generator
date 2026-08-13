@@ -2,6 +2,7 @@ import type { Monaco } from '@monaco-editor/react'
 import type { editor } from 'monaco-editor'
 import type { RefObject } from 'react'
 import type { EditorHandle } from '../types'
+import { buildMonacoSelections } from '../utils/noteSpanSelection'
 
 /** Builds the imperative `EditorHandle` exposed via `useImperativeHandle`, wiring each
  * method to the Monaco editor/API instances captured in refs by `onMount`. */
@@ -54,6 +55,26 @@ export function createEditorImperativeHandle(
           endPos.column,
         ),
       )
+      ed.focus()
+    },
+    setSelections(ranges: Array<{ start: number; end: number }>) {
+      const ed = editorRef.current
+      const model = ed?.getModel()
+      const monacoApi = monacoRef.current
+      if (!ed || !model || !monacoApi || ranges.length === 0) return
+
+      const source = model.getValue()
+      const selections = buildMonacoSelections(
+        ranges.map((range) => ({
+          startByte: range.start,
+          endByte: range.end,
+        })),
+        source,
+        monacoApi,
+        model,
+      )
+      ed.setSelections(selections)
+      ed.revealRangeInCenter(selections[0])
       ed.focus()
     },
     setSelectionByLines(startLine: number, endLine: number) {

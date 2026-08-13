@@ -3,6 +3,10 @@ interface PlayMeasureButtonProps {
   loading: boolean
   playing: boolean
   measureRange: { start: number; end: number } | null
+  /** True while a note drag-select (see `useNoteSelection`) is active. When
+   * set, the button plays only the selected notes instead of the measure(s)
+   * under the cursor, and its label/tooltip reflect that. */
+  noteSelectionActive: boolean
   onClick: () => void
   onPause: () => void
   shortcutLabel: string
@@ -49,11 +53,16 @@ export function PlayMeasureButton({
   loading,
   playing,
   measureRange,
+  noteSelectionActive,
   onClick,
   onPause,
   shortcutLabel,
 }: PlayMeasureButtonProps) {
-  const label = measureRange !== null ? measureLabel(measureRange) : null
+  const label = noteSelectionActive
+    ? 'Selection'
+    : measureRange !== null
+      ? measureLabel(measureRange)
+      : null
 
   if (playing) {
     return (
@@ -80,7 +89,13 @@ export function PlayMeasureButton({
         data-testid="play-measure-button"
         disabled={disabled}
         onClick={onClick}
-        aria-label={label ? `▶ ${label}` : 'Play selected measure(s)'}
+        aria-label={
+          label
+            ? `▶ ${label}`
+            : noteSelectionActive
+              ? 'Play selection'
+              : 'Play selected measure(s)'
+        }
       >
         {loading ? (
           <span className="play-measure-spinner" aria-hidden="true" />
@@ -93,9 +108,11 @@ export function PlayMeasureButton({
       <Tooltip
         shortcutLabel={shortcutLabel}
         text={
-          measureRange === null
-            ? 'Move cursor into a measure to enable'
-            : 'Play selected measure(s)'
+          noteSelectionActive
+            ? 'Play selected notes'
+            : measureRange === null
+              ? 'Move cursor into a measure to enable'
+              : 'Play selected measure(s)'
         }
       />
     </div>

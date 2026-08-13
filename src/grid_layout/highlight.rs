@@ -3,10 +3,7 @@ use crate::grid_layout::layout::{
     block_column_width, is_chord_only_row, is_lyric_row, make_header_rows,
     system_has_any_decoration, system_tuplet_part_indices, MUSIC_START_COL,
 };
-use crate::grid_layout::playback_cursor::compute_all_playback_cursor_targets;
-use crate::grid_layout::types::{
-    GridElement, Header, MeasureClickTarget, MeasureHighlight, PlaybackCursorTarget,
-};
+use crate::grid_layout::types::{GridElement, Header, MeasureHighlight};
 use std::collections::HashMap;
 
 fn has_lyrics(row: &crate::compiler::types::MeasureRow) -> bool {
@@ -24,7 +21,7 @@ fn has_lyrics(row: &crate::compiler::types::MeasureRow) -> bool {
 /// against the start of its column (`HAlign::Start`) and the system-trailing bar line
 /// (`is_last_block`) is flush against the end of its column (`HAlign::End`) — see
 /// `expand.rs`'s `is_last_block` handling and the `part_idx == 0` leading bar line.
-fn measure_column_bounds(
+pub(crate) fn measure_column_bounds(
     col_offset: u32,
     col_w: u32,
     is_first_block: bool,
@@ -247,150 +244,4 @@ pub(crate) fn measure_highlights_on_page(
         .filter(|(p, _)| *p == page_idx)
         .map(|(_, h)| h.clone())
         .collect()
-}
-
-pub(crate) fn compute_all_measure_click_targets(
-    page_systems: &[Vec<Vec<MeasureBlock>>],
-    tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
-    header: &Header,
-    base: f32,
-    hide_system_dividers: bool,
-) -> Vec<(usize, MeasureClickTarget)> {
-    let mut global_measure_index: usize = 0;
-    let mut results: Vec<(usize, MeasureClickTarget)> = Vec::new();
-
-    for (page_idx, page_sys) in page_systems.iter().enumerate() {
-        let header_row_count = make_header_rows(header, base, page_idx == 0).len();
-        let mut row_offset = header_row_count;
-        for (sys_idx, system) in page_sys.iter().enumerate() {
-            if sys_idx > 0 && !hide_system_dividers {
-                row_offset += 1;
-            }
-            if system.is_empty() {
-                continue;
-            }
-            if system_has_any_decoration(system) {
-                row_offset += 1;
-            }
-            let abs_sys = abs_sys_index(page_systems, page_idx, sys_idx);
-            let tuplet_part_indices =
-                system_tuplet_part_indices(system, tuplet_bracket_map, abs_sys);
-            let musical_row_count = system_musical_row_count(system, &tuplet_part_indices);
-            let row_start = row_offset;
-            let row_end = row_offset + musical_row_count.saturating_sub(1);
-
-            let mut col_offset: u32 = MUSIC_START_COL;
-            let last_block_idx = system.len().saturating_sub(1);
-            for (block_idx, block) in system.iter().enumerate() {
-                let col_w = block_column_width(block);
-                let (column_start, column_end) = measure_column_bounds(
-                    col_offset,
-                    col_w,
-                    block_idx == 0,
-                    block_idx == last_block_idx,
-                );
-                results.push((
-                    page_idx,
-                    MeasureClickTarget {
-                        row_start,
-                        row_end,
-                        column_start,
-                        column_end,
-                        measure_index: global_measure_index,
-                        measure_index_end: global_measure_index
-                            + block.represents_measures.saturating_sub(1),
-                    },
-                ));
-                col_offset += col_w;
-                global_measure_index += block.represents_measures;
-            }
-            row_offset += musical_row_count;
-        }
-    }
-    results
-}
-
-pub(crate) fn click_targets_on_page(
-    targets: &[(usize, MeasureClickTarget)],
-    page_idx: usize,
-) -> Vec<MeasureClickTarget> {
-    targets
-        .iter()
-        .filter(|(p, _)| *p == page_idx)
-        .map(|(_, t)| t.clone())
-        .collect()
-}
-
-pub(crate) struct HighlightAndClickInfos {
-    pub(crate) highlight_infos: Vec<(usize, MeasureHighlight)>,
-    pub(crate) error_highlight_infos: Vec<(usize, MeasureHighlight)>,
-    pub(crate) all_click_target_infos: Vec<(usize, MeasureClickTarget)>,
-    pub(crate) all_playback_cursor_target_infos: Vec<(usize, PlaybackCursorTarget)>,
-}
-
-#[derive(Clone, Copy)]
-pub(crate) struct HighlightAndClickInfosParams<'a> {
-    pub(crate) blocks: &'a [MeasureBlock],
-    pub(crate) page_systems: &'a [Vec<Vec<MeasureBlock>>],
-    pub(crate) tuplet_bracket_map: &'a HashMap<(usize, usize), Vec<GridElement>>,
-    pub(crate) header: &'a Header,
-    pub(crate) base: f32,
-    pub(crate) hide_system_dividers: bool,
-    pub(crate) highlighted_measure_range: Option<(usize, usize)>,
-}
-
-pub(crate) fn compute_highlight_and_click_infos(
-    params: &HighlightAndClickInfosParams<'_>,
-) -> HighlightAndClickInfos {
-    let HighlightAndClickInfosParams {
-        blocks,
-        page_systems,
-        tuplet_bracket_map,
-        header,
-        base,
-        hide_system_dividers,
-        highlighted_measure_range,
-    } = *params;
-    let highlight_infos = highlighted_measure_range
-        .map(|range| {
-            compute_measure_highlights_for_range(
-                page_systems,
-                tuplet_bracket_map,
-                range,
-                header,
-                base,
-                hide_system_dividers,
-            )
-        })
-        .unwrap_or_default();
-
-    let error_highlight_infos = compute_error_highlight_infos(
-        blocks,
-        page_systems,
-        tuplet_bracket_map,
-        header,
-        base,
-        hide_system_dividers,
-    );
-    let all_click_target_infos = compute_all_measure_click_targets(
-        page_systems,
-        tuplet_bracket_map,
-        header,
-        base,
-        hide_system_dividers,
-    );
-    let all_playback_cursor_target_infos = compute_all_playback_cursor_targets(
-        page_systems,
-        tuplet_bracket_map,
-        header,
-        base,
-        hide_system_dividers,
-    );
-
-    HighlightAndClickInfos {
-        highlight_infos,
-        error_highlight_infos,
-        all_click_target_infos,
-        all_playback_cursor_target_infos,
-    }
 }

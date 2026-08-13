@@ -117,9 +117,12 @@ pub fn note_timings_from_source(
     enabled_tracks: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<crate::midi::NoteTiming>, IrrecoverableError> {
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
-    crate::midi::note_timings_seconds(&score)
+    let score = compile(source, filename, instruments)?;
+    // `score` is deliberately left unfiltered here: `note_timings_seconds`
+    // applies `enabled_tracks` itself, after resolving each kept note's true
+    // written `source_part_index`, so it isn't renumbered by that part's
+    // position among the surviving parts (see `filter_expanded_tracks`).
+    crate::midi::note_timings_seconds(&score, enabled_tracks)
 }
 
 /// Same as [`note_timings_from_source`], but scoped to a measure range and
@@ -137,8 +140,10 @@ pub fn note_timings_for_range_from_source(
     enabled_tracks: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<crate::midi::NoteTiming>, IrrecoverableError> {
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
+    let score = compile(source, filename, instruments)?;
+    // As in `note_timings_from_source`, `score` stays unfiltered — filtering
+    // happens inside `note_timings_seconds_for_range`/`_for_literal_range` so
+    // `source_part_index` keeps its true written value.
     let (_, start_pos, end_pos) = crate::midi::expand_for_measure_range(
         &score,
         *selection.range.start(),
@@ -148,9 +153,14 @@ pub fn note_timings_for_range_from_source(
         selection.sequence_entry_range.clone(),
     )?;
     if !selection.respect_sequence {
-        return crate::midi::note_timings_seconds_for_literal_range(&score, start_pos, end_pos);
+        return crate::midi::note_timings_seconds_for_literal_range(
+            &score,
+            start_pos,
+            end_pos,
+            enabled_tracks,
+        );
     }
-    crate::midi::note_timings_seconds_for_range(&score, start_pos, end_pos)
+    crate::midi::note_timings_seconds_for_range(&score, start_pos, end_pos, enabled_tracks)
 }
 
 /// Parse, group, optionally filter tracks, and generate MIDI (SMF) bytes.

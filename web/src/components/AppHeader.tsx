@@ -42,6 +42,12 @@ interface AppHeaderProps {
   measureAudioPlaying: boolean
   playSelectedMeasures: () => void
   playFromCurrentMeasure: () => void
+  /** True while a note drag-select (see `useNoteSelection`) is active; when
+   * set, `PlayMeasureButton` plays only the selected parts, muted elsewhere,
+   * over the selection's measure range instead of the measure(s) under the
+   * cursor. */
+  notePlaybackSelectionActive: boolean
+  playNoteSelection: () => void
   stopMeasurePlayback: () => void
   shortcutLabel: string
   playFromCurrentMeasureShortcutLabel: string
@@ -93,6 +99,8 @@ export function AppHeader({
   measureAudioPlaying,
   playSelectedMeasures,
   playFromCurrentMeasure,
+  notePlaybackSelectionActive,
+  playNoteSelection,
   stopMeasurePlayback,
   shortcutLabel,
   playFromCurrentMeasureShortcutLabel,
@@ -156,14 +164,21 @@ export function AppHeader({
       {audioAvailable && (
         <PlayMeasureButton
           disabled={
-            selectedMeasureRange === null ||
+            (notePlaybackSelectionActive
+              ? false
+              : selectedMeasureRange === null) ||
             measureAudioGenerating ||
             !soundfontReady
           }
           loading={measureAudioGenerating}
           playing={measureAudioPlaying}
           measureRange={selectedMeasureRange}
-          onClick={playSelectedMeasures}
+          noteSelectionActive={notePlaybackSelectionActive}
+          onClick={
+            notePlaybackSelectionActive
+              ? playNoteSelection
+              : playSelectedMeasures
+          }
           onPause={stopMeasurePlayback}
           shortcutLabel={shortcutLabel}
         />

@@ -13,6 +13,7 @@ import type {
   DiagnosticViewZone,
   EditorHandle,
   MeasureSpan,
+  NoteSpan,
   PartDeclaration,
   PartInfo,
   PartMode,
@@ -22,6 +23,7 @@ import type { MetadataKey, ParsedMetadataFields } from '../utils/metadataSource'
 import { EditMetadataModal } from './EditMetadataModal'
 import { Editor } from './Editor'
 import { EditPartsModal } from './EditPartsModal'
+import type { NoteCell } from './Preview'
 import { Preview } from './Preview'
 
 interface MeasureRange {
@@ -64,6 +66,11 @@ interface AppWorkspaceProps {
   measureAudioGenerating: boolean
   soundfontReady: boolean
   playSelectedMeasures: () => void
+  /** True while a note drag-select (see `useNoteSelection`) is active; when
+   * set, the editor's Cmd/Ctrl+Enter shortcut plays the selected notes
+   * instead of the measure(s) under the cursor. */
+  notePlaybackSelectionActive: boolean
+  playNoteSelection: () => void
   editPartsOpen: boolean
   partDeclarations: PartDeclaration[]
   parts: PartInfo[]
@@ -85,8 +92,19 @@ interface AppWorkspaceProps {
   documents: SvgDocumentOut[]
   highlightedDocuments: SvgDocumentOut[]
   rendering: boolean
-  handleMeasureRangeSelect: (start: number, end: number) => void
   handleSectionJump: (label: string) => void
+  handleNoteRangeSelect: (selectedCells: NoteCell[]) => void
+  /** Keeps the preview's note highlight in sync with the editor's own
+   * current selection (Zipped view only — see `useNoteSelection`'s
+   * `handleEditorSelectionChange`), the reverse direction of
+   * `handleNoteRangeSelect`. */
+  handleEditorSelectionChange: (startByte: number, endByte: number) => void
+  selectedNoteCells: NoteCell[]
+  /** Per-note/rest `(source_part_index, note_id) → measure_index` mapping,
+   * used to resolve a measure click/drag into every note cell it contains
+   * (see `Preview.tsx`'s `noteCellsInMeasureRange`) without relying on
+   * pixel geometry. */
+  noteSpans: NoteSpan[]
   audioGenerating: boolean
   wavUrl: string | null
   wavFilename: string
@@ -132,6 +150,8 @@ export function AppWorkspace({
   measureAudioGenerating,
   soundfontReady,
   playSelectedMeasures,
+  notePlaybackSelectionActive,
+  playNoteSelection,
   editPartsOpen,
   partDeclarations,
   parts,
@@ -146,8 +166,11 @@ export function AppWorkspace({
   documents,
   highlightedDocuments,
   rendering,
-  handleMeasureRangeSelect,
   handleSectionJump,
+  handleNoteRangeSelect,
+  handleEditorSelectionChange,
+  selectedNoteCells,
+  noteSpans,
   audioGenerating,
   wavUrl,
   wavFilename,
@@ -231,6 +254,8 @@ export function AppWorkspace({
                 onSelectionOffsetChange={(startOffset, endOffset) => {
                   if (unzippedView) {
                     notifyUnzippedSelection(startOffset, endOffset)
+                  } else {
+                    handleEditorSelectionChange(startOffset, endOffset)
                   }
                 }}
                 onEditPartsClick={() => setEditPartsOpen(true)}
@@ -239,10 +264,12 @@ export function AppWorkspace({
                 onPlayMeasure={
                   measureAudioPlaying
                     ? stopMeasurePlayback
-                    : selectedMeasureRange !== null &&
-                        !measureAudioGenerating &&
-                        soundfontReady
-                      ? playSelectedMeasures
+                    : !measureAudioGenerating && soundfontReady
+                      ? notePlaybackSelectionActive
+                        ? playNoteSelection
+                        : selectedMeasureRange !== null
+                          ? playSelectedMeasures
+                          : undefined
                       : undefined
                 }
               />
@@ -335,8 +362,10 @@ export function AppWorkspace({
           documents={documents}
           highlightedDocuments={highlightedDocuments}
           rendering={rendering}
-          onMeasureRangeSelect={handleMeasureRangeSelect}
           onSectionLabelClick={handleSectionJump}
+          onNoteRangeSelect={handleNoteRangeSelect}
+          selectedNoteCells={selectedNoteCells}
+          noteSpans={noteSpans}
           audioGenerating={audioGenerating}
           wavUrl={wavUrl}
           wavFilename={wavFilename}

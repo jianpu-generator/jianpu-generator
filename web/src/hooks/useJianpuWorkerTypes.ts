@@ -8,6 +8,7 @@ import type {
   Diagnostic,
   DiagnosticViewZone,
   MeasureSpan,
+  NoteSpan,
   PartDeclaration,
   PartInfo,
   PartMode,
@@ -65,9 +66,21 @@ export interface JianpuWorkerState {
   lyricsVerseRanges: LyricsVerseRangesOut[]
   playSelectedMeasures: () => void
   playFromCurrentMeasure: () => void
+  /** Plays only `selectedPartNames`, muting the rest, over
+   * `[minMeasureIndex, maxMeasureIndex]` — see `useNoteSelection`'s
+   * `selectedNoteRangePlaybackInfo`. */
+  playNoteSelection: (
+    minMeasureIndex: number,
+    maxMeasureIndex: number,
+    selectedPartNames: string[],
+  ) => void
   stopMeasurePlayback: () => void
   highlightedDocuments: SvgDocumentOut[]
   measureSpans: MeasureSpan[]
+  /** Source byte span of every note/chord/percussion/rest event, keyed by
+   * `(source_part_index, note_id)` matching the SVG's `data-part-index`/
+   * `data-note-id` attributes — see `useNoteSelection`. */
+  noteSpans: NoteSpan[]
   sectionRanges: SectionRange[]
   sequenceEntries: SequenceEntry[]
   selectedSequenceRange: { start: number; end: number } | null

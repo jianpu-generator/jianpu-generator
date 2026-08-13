@@ -49,6 +49,12 @@ body,
   height: 100%;
 }
 
-[data-tag="measure"][data-drag-selected] {
-  outline: 2px solid rgba(255, 160, 0, 0.6);
+[data-tag="note"][data-note-drag-selected]
+  rect[data-variant="note-click-target-rect"] {
+  fill: rgba(37, 99, 235, 0.25);
+}
+
+rect[data-variant="part-label-click-target-rect"]:hover,
+rect[data-variant="part-label-click-target-rect"][data-part-label-drag-active] {
+  fill: rgba(37, 99, 235, 0.12);
 }

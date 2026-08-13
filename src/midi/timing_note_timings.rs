@@ -1,7 +1,9 @@
 use crate::ast::grouped::Score;
 use crate::error::IrrecoverableError;
 
-use super::navigation::{expand_navigation_with_note_positions, ExpandedMeasureOrigin};
+use super::navigation::{
+    expand_navigation_with_note_positions, filter_expanded_tracks, ExpandedMeasureOrigin,
+};
 use super::timing::{measure_tick_boundaries_and_tempo, ticks_to_seconds};
 use super::timing_note_events::{
     build_written_note_id_lookup, record_measure_note_timings, MeasureTimingContext,
@@ -82,12 +84,24 @@ fn new_part_timing_cursors(score: &Score) -> Vec<PartTimingCursor> {
 /// `NoteTiming` spanning the whole run, using the glyph's own `note_id`
 /// (`MeasureRow::first_note_id`), rather than one entry per underlying
 /// measure.
-pub fn note_timings_seconds(score: &Score) -> Result<Vec<NoteTiming>, IrrecoverableError> {
+///
+/// `enabled_tracks` mutes playback down to a subset of parts (e.g. the web
+/// app's note drag-select playback) without disturbing `source_part_index`:
+/// filtering is applied to the *expanded* timeline via
+/// [`filter_expanded_tracks`], after `note_id_lookup`/`written_blocks` are
+/// built from the full, unfiltered `score` — so a kept part still reports
+/// its true written index, matching the full-score render's `data-note-id`.
+/// `None` keeps every part.
+pub fn note_timings_seconds(
+    score: &Score,
+    enabled_tracks: Option<&[String]>,
+) -> Result<Vec<NoteTiming>, IrrecoverableError> {
     let note_id_lookup = build_written_note_id_lookup(score);
     let written_blocks = compile(score).blocks;
     let block_lookup = written_measure_to_block(&written_blocks);
 
-    let (expanded, origins) = expand_navigation_with_note_positions(score)?;
+    let (mut expanded, mut origins) = expand_navigation_with_note_positions(score)?;
+    filter_expanded_tracks(&mut expanded, &mut origins, enabled_tracks);
     // Tick boundaries/tempo are built over the expanded (playback-order)
     // measures, matching `write_midi`.
     let (measure_start_ticks, tempo_changes) =
@@ -149,6 +163,7 @@ pub fn note_timings_seconds_for_range(
     score: &Score,
     start_pos: usize,
     end_pos: usize,
+    enabled_tracks: Option<&[String]>,
 ) -> Result<Vec<NoteTiming>, IrrecoverableError> {
     if score.measures.is_empty() || start_pos > end_pos {
         return Ok(Vec::new());
@@ -158,7 +173,8 @@ pub fn note_timings_seconds_for_range(
     let written_blocks = compile(score).blocks;
     let block_lookup = written_measure_to_block(&written_blocks);
 
-    let (expanded, origins) = expand_navigation_with_note_positions(score)?;
+    let (mut expanded, mut origins) = expand_navigation_with_note_positions(score)?;
+    filter_expanded_tracks(&mut expanded, &mut origins, enabled_tracks);
     if end_pos >= expanded.measures.len() {
         return Ok(Vec::new());
     }
@@ -219,6 +235,7 @@ pub fn note_timings_seconds_for_literal_range(
     score: &Score,
     start_index: usize,
     end_index: usize,
+    enabled_tracks: Option<&[String]>,
 ) -> Result<Vec<NoteTiming>, IrrecoverableError> {
     if score.measures.is_empty() || start_index > end_index {
         return Ok(Vec::new());
@@ -228,9 +245,19 @@ pub fn note_timings_seconds_for_literal_range(
     let written_blocks = compile(score).blocks;
     let block_lookup = written_measure_to_block(&written_blocks);
 
-    let Some(range_score) = build_measure_range_score(score, start_index, end_index) else {
+    let Some(mut range_score) = build_measure_range_score(score, start_index, end_index) else {
         return Ok(Vec::new());
     };
+    let mut origins: Vec<ExpandedMeasureOrigin> = range_score
+        .measures
+        .iter()
+        .enumerate()
+        .map(|(measure_offset, measure)| ExpandedMeasureOrigin {
+            written_measure_index: start_index + measure_offset,
+            part_written_indices: (0..measure.parts.len()).collect(),
+        })
+        .collect();
+    filter_expanded_tracks(&mut range_score, &mut origins, enabled_tracks);
 
     let (measure_start_ticks, tempo_changes) =
         measure_tick_boundaries_and_tempo(&range_score.measures)?;
@@ -238,19 +265,14 @@ pub fn note_timings_seconds_for_literal_range(
     let mut cursors = new_part_timing_cursors(score);
     let mut results: Vec<(usize, usize, u32, u32)> = Vec::new();
 
-    for (measure_offset, (measure, tick_window)) in range_score
+    for (measure, (tick_window, origin)) in range_score
         .measures
         .iter()
-        .zip(measure_start_ticks.windows(2))
-        .enumerate()
+        .zip(measure_start_ticks.windows(2).zip(origins.iter()))
     {
-        let origin = ExpandedMeasureOrigin {
-            written_measure_index: start_index + measure_offset,
-            part_written_indices: Vec::new(),
-        };
         let Some(ctx) = measure_timing_context(
             tick_window,
-            &origin,
+            origin,
             &block_lookup,
             &written_blocks,
             &note_id_lookup,

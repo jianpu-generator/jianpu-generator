@@ -1,14 +1,15 @@
 use jianpu_generator::parser::parts_parser::InstrumentInfo;
 use jianpu_generator::{
     compile, find_measure_at_byte_offset, list_measure_spans_from_source,
-    render_documents_from_source_filtered_with_lyrics, render_documents_with_highlight_range,
+    list_note_spans_from_source, render_documents_from_source_filtered_with_lyrics,
+    render_documents_with_highlight_range,
 };
 
 use crate::svg_types::svg_document_to_out;
 use crate::types::{
     diagnostic_from_diagnostic, diagnostic_from_error, group_diagnostics_into_view_zones,
-    ListMeasureSpansResponse, MeasureAtOffsetResponse, MeasureSpanOut, RenderResponse,
-    SectionRangeOut, SequenceEntryOut,
+    ListMeasureSpansResponse, ListNoteSpansResponse, MeasureAtOffsetResponse, MeasureSpanOut,
+    NoteSpanOut, RenderResponse, SectionRangeOut, SequenceEntryOut,
 };
 
 #[cfg(feature = "wav")]
@@ -202,5 +203,25 @@ pub(crate) fn list_measure_spans_response(source: &str) -> ListMeasureSpansRespo
             }
         }
         Err(_) => ListMeasureSpansResponse::Err,
+    }
+}
+
+pub(crate) fn list_note_spans_response(source: &str) -> ListNoteSpansResponse {
+    match list_note_spans_from_source(source, "input.jianpu") {
+        Ok(result) => {
+            let spans: Vec<NoteSpanOut> = result
+                .spans
+                .into_iter()
+                .map(|span| NoteSpanOut {
+                    source_part_index: span.source_part_index,
+                    note_id: span.note_id,
+                    measure_index: span.measure_index,
+                    start: span.start,
+                    end: span.end,
+                })
+                .collect();
+            ListNoteSpansResponse::Ok { spans }
+        }
+        Err(_) => ListNoteSpansResponse::Err,
     }
 }

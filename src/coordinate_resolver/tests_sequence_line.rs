@@ -19,6 +19,7 @@ fn single_row_page(element: GridElement) -> GridPage {
         error_highlights: vec![],
         measure_click_targets: vec![],
         playback_cursor_targets: vec![],
+        part_label_click_targets: vec![],
     }
 }
 

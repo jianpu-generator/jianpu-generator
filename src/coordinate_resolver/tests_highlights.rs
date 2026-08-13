@@ -35,6 +35,7 @@ fn measure_highlight_produces_prepended_rect_element() {
         error_highlights: vec![],
         measure_click_targets: vec![],
         playback_cursor_targets: vec![],
+        part_label_click_targets: vec![],
     };
     let abs = resolve(
         &[page],
@@ -85,6 +86,7 @@ fn error_highlight_resolves_to_absolute_error_highlight() {
         }],
         measure_click_targets: vec![],
         playback_cursor_targets: vec![],
+        part_label_click_targets: vec![],
     };
     let abs_pages: Vec<AbsolutePage> = resolve(
         &[page],
@@ -125,6 +127,7 @@ fn page_with_no_highlight_produces_no_extra_element() {
         error_highlights: vec![],
         measure_click_targets: vec![],
         playback_cursor_targets: vec![],
+        part_label_click_targets: vec![],
     };
     let abs = resolve(
         &[page],
@@ -185,6 +188,7 @@ fn playback_cursor_reaches_final_bar_line_of_its_measure() {
             source_part_index: 0,
             note_id: 0,
         }],
+        part_label_click_targets: vec![],
     };
     let abs_pages = resolve(
         &[page],

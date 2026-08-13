@@ -1,5 +1,6 @@
 mod content_conversion;
 mod highlights;
+mod post_arc_conversion;
 pub mod resolve;
 pub use resolve::{resolve, LyricFontSizes};
 

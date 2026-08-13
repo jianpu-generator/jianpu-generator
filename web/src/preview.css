@@ -196,15 +196,15 @@
 
 .preview-page
   svg
-  g[data-tag="measure"]:hover
-  > rect[data-variant="measure-click-target-rect"] {
+  g[data-tag="section-label"]:hover
+  > rect[data-variant="section-label-bg"] {
   fill: rgba(100, 160, 255, 0.2);
 }
 
 .preview-page
   svg
-  g[data-tag="section-label"]:hover
-  > rect[data-variant="section-label-bg"] {
+  g[data-tag="note"]:hover
+  > rect[data-variant="note-click-target-rect"] {
   fill: rgba(100, 160, 255, 0.2);
 }
 

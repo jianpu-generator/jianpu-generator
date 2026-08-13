@@ -8,6 +8,11 @@ interface UseKeyboardShortcutsOptions {
   selectedSequenceRange: { start: number; end: number } | null
   playSelectedMeasures: () => void
   playFromCurrentMeasure: () => void
+  /** True while a note drag-select (see `useNoteSelection`) is active; when
+   * set, Cmd/Ctrl+Enter plays the selected notes instead of the measure(s)
+   * under the cursor. */
+  notePlaybackSelectionActive: boolean
+  playNoteSelection: () => void
   stopMeasurePlayback: () => void
   forceSave: () => void
 }
@@ -20,11 +25,15 @@ export function useKeyboardShortcuts({
   selectedSequenceRange,
   playSelectedMeasures,
   playFromCurrentMeasure,
+  notePlaybackSelectionActive,
+  playNoteSelection,
   stopMeasurePlayback,
   forceSave,
 }: UseKeyboardShortcutsOptions) {
   const canPlaySelection =
-    selectedMeasureRange !== null && !measureAudioGenerating && soundfontReady
+    !measureAudioGenerating &&
+    soundfontReady &&
+    (notePlaybackSelectionActive || selectedMeasureRange !== null)
   const canPlayFromCurrentMeasure =
     selectedSequenceRange !== null && !measureAudioGenerating && soundfontReady
 
@@ -32,7 +41,9 @@ export function useKeyboardShortcuts({
   playMeasureRef.current = measureAudioPlaying
     ? stopMeasurePlayback
     : canPlaySelection
-      ? playSelectedMeasures
+      ? notePlaybackSelectionActive
+        ? playNoteSelection
+        : playSelectedMeasures
       : undefined
 
   const playFromCurrentMeasureRef = useRef<(() => void) | undefined>(undefined)

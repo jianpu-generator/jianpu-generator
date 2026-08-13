@@ -6,9 +6,11 @@ export type {
   GenerateSplitPdfsResponse as GenerateSplitPdfResult,
   GenerateWavResponse as GenerateWavResult,
   ListMeasureSpansResponse as ListMeasureSpansResult,
+  ListNoteSpansResponse as ListNoteSpansResult,
   ListPartsResponse as ListPartsResult,
   MeasureAtOffsetResponse as MeasureAtOffsetResult,
   MeasureSpanOut as MeasureSpan,
+  NoteSpanOut as NoteSpan,
   PartDeclarationModeOut as PartMode,
   PartDeclarationOut as PartDeclaration,
   PartOut as PartInfo,
@@ -32,6 +34,11 @@ export interface EditorHandle {
   insertAtCursor: (text: string) => void
   getSelection: () => EditorSelection
   setSelection: (start: number, end: number) => void
+  /**
+   * Select a disjoint set of ranges (Monaco multicursor) by UTF-8 byte
+   * offset, matching `setSelection`'s convention. Reveals the first range.
+   */
+  setSelections: (ranges: Array<{ start: number; end: number }>) => void
   /** Select a range of lines by 1-indexed line numbers and reveal the start. */
   setSelectionByLines: (startLine: number, endLine: number) => void
   /** Move the cursor to the given JS string char offset and reveal the line. */

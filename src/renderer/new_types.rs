@@ -55,6 +55,14 @@ pub enum TransparentRectRole {
     /// falls through, even though the group still shows `cursor: pointer`
     /// there.
     SectionLabelClickTarget,
+    /// Invisible rect layered on top of `PlaybackCursorRect` inside the same
+    /// `Tag::Note` group, giving each note/rest a clickable/draggable hit
+    /// target — `PlaybackCursorRect` itself is `pointer-events: none` since
+    /// its `fill` is owned by playback highlighting, not click handling.
+    NoteClickTarget,
+    /// Invisible rect layered over a part's `RowLabel` text, giving it a
+    /// clickable/draggable hit target — see `Tag::PartLabel`.
+    PartLabelClickTarget,
 }
 
 impl TransparentRectRole {
@@ -63,6 +71,8 @@ impl TransparentRectRole {
             Self::MeasureClickTarget => "measure-click-target-rect",
             Self::SectionLabelBackground => "section-label-bg",
             Self::SectionLabelClickTarget => "section-label-click-target-rect",
+            Self::NoteClickTarget => "note-click-target-rect",
+            Self::PartLabelClickTarget => "part-label-click-target-rect",
         }
     }
 }
@@ -99,6 +109,15 @@ pub enum Tag {
     Note {
         source_part_index: usize,
         note_id: usize,
+    },
+    /// Identifies a part's `RowLabel` click target — see
+    /// `AbsoluteContent::PartLabelClickTarget`. `measure_index_start`/
+    /// `measure_index_end` scope a click/drag on this label to the whole
+    /// system it sits in.
+    PartLabel {
+        source_part_index: usize,
+        measure_index_start: usize,
+        measure_index_end: usize,
     },
 }
 

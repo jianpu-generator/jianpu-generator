@@ -203,6 +203,34 @@ pub struct MeasureSpanOut {
     pub end_line: usize,
 }
 
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub struct NoteSpanOut {
+    /// Index into the compiled score's parts, matching the SVG's
+    /// `data-part-index` attribute on a `Tag::Note` group.
+    pub source_part_index: usize,
+    /// Matches the SVG's `data-note-id` attribute on a `Tag::Note` group.
+    pub note_id: usize,
+    /// Index into the score's measures, in source order.
+    pub measure_index: usize,
+    /// Inclusive start byte of this event's token in the original source.
+    /// Absent for a rest, which has no single source token to map to.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start: Option<usize>,
+    /// Exclusive end byte of this event's token in the original source.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end: Option<usize>,
+}
+
+#[derive(Debug, Clone, Tsify, Serialize)]
+#[serde(tag = "status", rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum ListNoteSpansResponse {
+    Ok { spans: Vec<NoteSpanOut> },
+    Err,
+}
+
 #[derive(Debug, Clone, Tsify, Serialize)]
 #[tsify(into_wasm_abi)]
 pub struct SectionRangeOut {

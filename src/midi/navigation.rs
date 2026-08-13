@@ -118,6 +118,46 @@ fn build_expanded(
     )
 }
 
+/// Filters `expanded.measures`/`origins` in lockstep to keep only parts whose
+/// name is in `enabled_tracks`, preserving each surviving part's true
+/// written index in `origins[i].part_written_indices` — the counterpart to
+/// [`crate::filters::apply_track_filter`]'s physical removal, but applied
+/// *after* [`expand_navigation_with_note_positions`] so track-filtered
+/// playback timing (`note_timings_seconds`) still reports the original
+/// written `source_part_index` rather than a part's position among the
+/// surviving parts. Mirrors [`build_expanded`]'s `omit_parts` retain, but
+/// keyed by inclusion (`enabled_tracks`) instead of exclusion, and applied
+/// uniformly to every measure rather than per-`# sequence`-entry.
+///
+/// `None` keeps every part (no-op). Every `origin.part_written_indices` must
+/// already be the same length as its measure's `parts` (true for both
+/// [`expand_navigation_with_note_positions`]'s branches).
+pub(super) fn filter_expanded_tracks(
+    expanded: &mut Score,
+    origins: &mut [ExpandedMeasureOrigin],
+    enabled_tracks: Option<&[String]>,
+) {
+    let Some(tracks) = enabled_tracks else {
+        return;
+    };
+    for (measure, origin) in expanded.measures.iter_mut().zip(origins.iter_mut()) {
+        let mut kept_parts = Vec::with_capacity(measure.parts.len());
+        let mut kept_indices = Vec::with_capacity(measure.parts.len());
+        for (part, &written_index) in measure
+            .parts
+            .drain(..)
+            .zip(origin.part_written_indices.iter())
+        {
+            if part.name().is_some_and(|name| tracks.contains(name)) {
+                kept_indices.push(written_index);
+                kept_parts.push(part);
+            }
+        }
+        measure.parts = kept_parts;
+        origin.part_written_indices = kept_indices;
+    }
+}
+
 mod range;
 pub use range::{earliest_playback_position, expand_for_measure_range};
 

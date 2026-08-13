@@ -1,4 +1,3 @@
-import { useCallback, useRef, useState } from 'react'
 import { AppHeader } from './components/AppHeader'
 import { AppOverlays } from './components/AppOverlays'
 import { AppWorkspace } from './components/AppWorkspace'
@@ -7,27 +6,8 @@ import { ExportAudioToast } from './components/ExportAudioToast'
 import { PartToggles } from './components/PartToggles'
 import { SectionJumpToolbar } from './components/SectionJumpToolbar'
 import { SequenceJumpToolbar } from './components/SequenceJumpToolbar'
-import { fileIdForName, selectFile } from './fileStore'
-import { useAppPanels } from './hooks/useAppPanels'
-import { useAssetLoader } from './hooks/useAssetLoader'
-import { useFileImport } from './hooks/useFileImport'
-import { useFileOperations } from './hooks/useFileOperations'
-import { useFontsLoader } from './hooks/useFontsLoader'
-import { useJianpuWorker } from './hooks/useJianpuWorker'
+import { useAppController } from './hooks/useAppController'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
-import { usePartTogglePruning } from './hooks/usePartTogglePruning'
-import {
-  noPartsSelected as computeNoPartsSelected,
-  usePartToggles,
-} from './hooks/usePartToggles'
-import { useScoreSource } from './hooks/useScoreSource'
-import { useSectionNavigation } from './hooks/useSectionNavigation'
-import { useStorageBackend } from './hooks/useStorageBackend'
-import { useUnzippedViewState } from './hooks/useUnzippedViewState'
-import { useUnzippedViewToggle } from './hooks/useUnzippedViewToggle'
-import { useUrlFileSync } from './hooks/useUrlFileSync'
-import { useWasmLoader } from './hooks/useWasmLoader'
-import type { EditorHandle } from './types'
 import {
   playFromCurrentMeasureShortcutLabel,
   shortcutLabel,
@@ -47,14 +27,9 @@ export default function App() {
     preference,
     switchBackend,
     forceSave,
-    flushPendingSave,
     refreshSaveStatus,
-  } = useStorageBackend()
-  const [editorCollapsed, setEditorCollapsed] = useState(false)
-
-  useUrlFileSync(store, setStore, isLoadingGithub)
-
-  const {
+    editorCollapsed,
+    setEditorCollapsed,
     creatingFile,
     deletingFileName,
     duplicatingFile,
@@ -67,45 +42,25 @@ export default function App() {
     handleRename,
     handleDelete,
     handleRestore,
-  } = useFileOperations(store, setStore, backend)
-
-  const {
     sharedPreview,
-    liveOwner,
     liveViewerActive,
     source,
     readOnly,
     liveShare,
-  } = useScoreSource(
-    store,
-    backend,
-    setStore,
-    setFileOpError,
-    setEditorCollapsed,
-  )
-  const fileId = fileIdForName(store, store.active)
-  const [unzippedView, setUnzippedView] = useUnzippedViewState(fileId)
-
-  const editorRef = useRef<EditorHandle>(null)
-  const soundfont = useAssetLoader('/fonts/GeneralUser_GS.sf2')
-  const fonts = useFontsLoader()
-  const wasm = useWasmLoader()
-  const soundfontReady = soundfont.status === 'ready'
-  const pdfFontsReady = fonts.status === 'ready'
-
-  const {
+    fileId,
+    unzippedView,
+    editorRef,
+    soundfont,
+    fonts,
+    wasm,
+    soundfontReady,
+    pdfFontsReady,
     disabledParts,
-    setDisabledParts,
     disabledLyrics,
-    setDisabledLyrics,
     soloedParts,
-    setSoloedParts,
     handlePartToggle,
     handleLyricsToggle,
     handleSoloToggle,
-  } = usePartToggles(fileId)
-
-  const {
     parts,
     partDeclarations,
     documents,
@@ -136,7 +91,6 @@ export default function App() {
     measureAudioNoteTimings,
     measureAudioElement,
     measureSpans,
-    sectionRanges,
     selectedSequenceRange,
     sequenceJumpToolbarProps,
     notifySelection,
@@ -147,74 +101,18 @@ export default function App() {
     playFromCurrentMeasure,
     stopMeasurePlayback,
     highlightedDocuments,
+    noteSpans,
     previewInstrument,
     previewPercussion,
     stopPreviewInstrument,
     previewAudioPlaying,
-    updatePartDeclaration,
-    formatScore,
     formatUnzippedText,
-    importFromFile,
-  } = useJianpuWorker(
-    source,
-    disabledParts,
-    disabledLyrics,
-    soloedParts,
-    store.active,
-    soundfont.bytes,
-    fonts.fonts,
-    unzippedView,
-    editorRef,
-  )
-  usePartTogglePruning(
-    parts,
-    setDisabledParts,
-    setDisabledLyrics,
-    setSoloedParts,
-  )
-  useKeyboardShortcuts({
-    measureAudioPlaying,
-    measureAudioGenerating,
-    soundfontReady,
-    selectedMeasureRange,
-    selectedSequenceRange,
-    playSelectedMeasures,
-    playFromCurrentMeasure,
-    stopMeasurePlayback,
-    forceSave,
-  })
-
-  const handleSourceChange = useCallback(
-    (value: string) => {
-      setStore((prev) => backend.updateActiveContent(prev, value))
-      if (liveOwner.isLive) liveOwner.broadcastContent(value)
-    },
-    [setStore, backend, liveOwner],
-  )
-  const handleSelect = useCallback(
-    (name: string) => {
-      flushPendingSave()
-      setStore((prev) => selectFile(prev, name))
-    },
-    [setStore, flushPendingSave],
-  )
-  const { handleFormatScore, handleToggleUnzippedView } = useUnzippedViewToggle(
-    {
-      unzippedView,
-      setUnzippedView,
-      formatScore,
-      source,
-      handleSourceChange,
-    },
-  )
-  const { importingFile, handleImportFile } = useFileImport(
-    store,
-    backend,
-    setStore,
-    setFileOpError,
-    importFromFile,
-  )
-  const {
+    handleSourceChange,
+    handleSelect,
+    handleFormatScore,
+    handleToggleUnzippedView,
+    importingFile,
+    handleImportFile,
     editPartsOpen,
     setEditPartsOpen,
     editMetadataOpen,
@@ -226,25 +124,30 @@ export default function App() {
     handlePartDeclarationChange,
     parsedMetadata,
     handleMetadataFieldChange,
-  } = useAppPanels(source, updatePartDeclaration, handleSourceChange)
-
-  const {
     setSelectedLineRange,
     handleSectionJump,
-    handleMeasureRangeSelect,
     sectionJumpToolbarProps,
-  } = useSectionNavigation(
-    sectionRanges,
-    measureSpans,
-    editorRef,
-    notifySelection,
-  )
+    handleNoteRangeSelect,
+    handleEditorSelectionChange,
+    selectedNoteRangePlaybackInfo,
+    selectedNoteCells,
+    handlePlayNoteSelection,
+    noPartsSelected,
+  } = useAppController()
 
-  const noPartsSelected = computeNoPartsSelected(
-    parts,
-    disabledParts,
-    soloedParts,
-  )
+  useKeyboardShortcuts({
+    measureAudioPlaying,
+    measureAudioGenerating,
+    soundfontReady,
+    selectedMeasureRange,
+    selectedSequenceRange,
+    playSelectedMeasures,
+    playFromCurrentMeasure,
+    notePlaybackSelectionActive: selectedNoteRangePlaybackInfo !== null,
+    playNoteSelection: handlePlayNoteSelection,
+    stopMeasurePlayback,
+    forceSave,
+  })
 
   return (
     <div className="app">
@@ -268,6 +171,8 @@ export default function App() {
         measureAudioPlaying={measureAudioPlaying}
         playSelectedMeasures={playSelectedMeasures}
         playFromCurrentMeasure={playFromCurrentMeasure}
+        notePlaybackSelectionActive={selectedNoteRangePlaybackInfo !== null}
+        playNoteSelection={handlePlayNoteSelection}
         stopMeasurePlayback={stopMeasurePlayback}
         shortcutLabel={shortcutLabel}
         playFromCurrentMeasureShortcutLabel={
@@ -367,6 +272,8 @@ export default function App() {
         measureAudioGenerating={measureAudioGenerating}
         soundfontReady={soundfontReady}
         playSelectedMeasures={playSelectedMeasures}
+        notePlaybackSelectionActive={selectedNoteRangePlaybackInfo !== null}
+        playNoteSelection={handlePlayNoteSelection}
         editPartsOpen={editPartsOpen}
         partDeclarations={partDeclarations}
         parts={parts}
@@ -381,8 +288,11 @@ export default function App() {
         documents={documents}
         highlightedDocuments={highlightedDocuments}
         rendering={rendering}
-        handleMeasureRangeSelect={handleMeasureRangeSelect}
         handleSectionJump={handleSectionJump}
+        handleNoteRangeSelect={handleNoteRangeSelect}
+        handleEditorSelectionChange={handleEditorSelectionChange}
+        selectedNoteCells={selectedNoteCells}
+        noteSpans={noteSpans}
         audioGenerating={audioGenerating}
         wavUrl={wavUrl}
         wavFilename={wavFilename}

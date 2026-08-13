@@ -58,7 +58,7 @@ fn group_elements_by_note_id(elements: &[ColumnElement]) -> Vec<(usize, u32, u32
 /// verse row the same span as its note row — verse rows never carry a
 /// `note_id`, so `compute_all_playback_cursor_targets` never emits a
 /// playback cursor target for their own entry anyway.
-fn part_row_ranges(
+pub(crate) fn part_row_ranges(
     system: &[MeasureBlock],
     row_offset: usize,
     tuplet_part_indices: &HashSet<usize>,

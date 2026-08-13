@@ -4,6 +4,7 @@ import type {
   Diagnostic,
   DiagnosticViewZone,
   MeasureSpan,
+  NoteSpan,
   PartDeclaration,
   PartInfo,
   SectionRange,
@@ -67,6 +68,8 @@ export interface WorkerMessageHandlerDeps {
   setHighlightedDocuments: (value: SvgDocumentOut[]) => void
   latestMeasureSpansIdRef: RefObject<number>
   setMeasureSpans: (value: MeasureSpan[]) => void
+  latestNoteSpansIdRef: RefObject<number>
+  setNoteSpans: (value: NoteSpan[]) => void
   setSectionRanges: (value: SectionRange[]) => void
   setSequenceEntries: (value: SequenceEntry[]) => void
   latestPreviewAudioIdRef: RefObject<number>
@@ -264,6 +267,14 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
         deps.setMeasureSpans(msg.spans)
         deps.setSectionRanges(msg.sectionRanges)
         deps.setSequenceEntries(msg.sequenceEntries)
+      }
+      return
+    }
+
+    if (msg.type === 'noteSpans') {
+      if (msg.id !== deps.latestNoteSpansIdRef.current) return
+      if (msg.status === 'ok') {
+        deps.setNoteSpans(msg.spans)
       }
       return
     }

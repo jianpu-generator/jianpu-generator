@@ -1,3 +1,4 @@
+pub(crate) mod click_targets;
 pub(crate) mod expand;
 pub(crate) mod highlight;
 pub mod layout;

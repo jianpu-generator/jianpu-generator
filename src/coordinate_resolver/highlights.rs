@@ -112,6 +112,40 @@ pub(super) fn resolve_playback_cursor_target(
     })
 }
 
+/// Same column-bounds math as [`resolve_playback_cursor_target`], reused for
+/// the note's click/drag hit target rather than its playback highlight rect
+/// — see `AbsoluteContent::NoteClickTarget`.
+pub(super) fn resolve_note_click_target(
+    target: &crate::grid_layout::types::PlaybackCursorTarget,
+    rows: &[GridRow],
+    row_tops: &[f32],
+    usable_width: f32,
+    part_label_width_pt: f32,
+) -> Option<AbsoluteElement> {
+    let start_row = rows.get(target.row_start)?;
+    let target_y = row_tops.get(target.row_start)?;
+    if target.row_end >= rows.len() {
+        return None;
+    }
+    let geometry = start_row.column_geometry(usable_width, part_label_width_pt);
+    let target_x = PAGE_MARGIN + geometry.x_start(target.column_start);
+    let target_width = geometry.x_start(target.column_end) - geometry.x_start(target.column_start);
+    let target_height = rows
+        .get(target.row_start..=target.row_end)
+        .map(|slice| slice.iter().map(|row| row.height_pt).sum())
+        .unwrap_or(0.0);
+    Some(AbsoluteElement {
+        x: target_x,
+        y: *target_y,
+        content: AbsoluteContent::NoteClickTarget {
+            width: target_width,
+            height: target_height,
+            source_part_index: target.source_part_index,
+            note_id: target.note_id,
+        },
+    })
+}
+
 pub(super) fn resolve_measure_click_target(
     target: &crate::grid_layout::types::MeasureClickTarget,
     rows: &[GridRow],
@@ -138,6 +172,41 @@ pub(super) fn resolve_measure_click_target(
             width: target_width,
             height: target_height,
             measure_index: target.measure_index,
+            measure_index_end: target.measure_index_end,
+        },
+    })
+}
+
+/// Same row-bounds math as the click targets above, but fixed to the
+/// label region (columns `0..LABEL_COLS`) rather than a `column_start`/
+/// `column_end` the target itself carries — see `AbsoluteContent::PartLabelClickTarget`.
+pub(super) fn resolve_part_label_click_target(
+    target: &crate::grid_layout::types::PartLabelClickTarget,
+    rows: &[GridRow],
+    row_tops: &[f32],
+    usable_width: f32,
+    part_label_width_pt: f32,
+) -> Option<AbsoluteElement> {
+    let start_row = rows.get(target.row_start)?;
+    let target_y = row_tops.get(target.row_start)?;
+    if target.row_end >= rows.len() {
+        return None;
+    }
+    let geometry = start_row.column_geometry(usable_width, part_label_width_pt);
+    let target_x = PAGE_MARGIN + geometry.x_start(0.0);
+    let target_width = geometry.x_start(crate::grid_layout::layout::LABEL_COLS as f32);
+    let target_height = rows
+        .get(target.row_start..=target.row_end)
+        .map(|slice| slice.iter().map(|row| row.height_pt).sum())
+        .unwrap_or(0.0);
+    Some(AbsoluteElement {
+        x: target_x,
+        y: *target_y,
+        content: AbsoluteContent::PartLabelClickTarget {
+            width: target_width,
+            height: target_height,
+            source_part_index: target.source_part_index,
+            measure_index_start: target.measure_index_start,
             measure_index_end: target.measure_index_end,
         },
     })

@@ -96,9 +96,10 @@ pub(crate) use systems::{
 
 #[path = "layout_decoration.rs"]
 mod decoration;
+use super::click_targets::{click_targets_on_page, part_label_click_targets_on_page};
 pub(crate) use super::expand::expand_system_to_rows;
 use super::expand::make_footer_row;
-use super::highlight::{click_targets_on_page, measure_highlights_on_page};
+use super::highlight::measure_highlights_on_page;
 use super::playback_cursor::playback_cursor_targets_on_page;
 pub(crate) use decoration::make_header_rows;
 use decoration::{make_decoration_row, make_separator_row};
@@ -187,11 +188,11 @@ fn build_page_rows(params: &PageRowsParams<'_>) -> Vec<GridRow> {
     rows
 }
 
-#[cfg(test)]
-pub(crate) use super::highlight::compute_measure_highlight_location;
-use super::highlight::{
+use super::click_targets::{
     compute_highlight_and_click_infos, HighlightAndClickInfos, HighlightAndClickInfosParams,
 };
+#[cfg(test)]
+pub(crate) use super::highlight::compute_measure_highlight_location;
 
 /// Greedily packs `systems` into pages, each page holding as many systems as
 /// fit within `usable_h` (accounting for inter-system separator gaps). Split
@@ -264,6 +265,7 @@ pub fn layout(
         error_highlight_infos,
         all_click_target_infos,
         all_playback_cursor_target_infos,
+        all_part_label_click_target_infos,
     } = compute_highlight_and_click_infos(&HighlightAndClickInfosParams {
         blocks,
         page_systems: &page_systems,
@@ -301,6 +303,8 @@ pub fn layout(
         let measure_click_targets = click_targets_on_page(&all_click_target_infos, page_idx);
         let playback_cursor_targets =
             playback_cursor_targets_on_page(&all_playback_cursor_target_infos, page_idx);
+        let part_label_click_targets =
+            part_label_click_targets_on_page(&all_part_label_click_target_infos, page_idx);
         pages.push(GridPage {
             width_pt: page_width_pt,
             height_pt: page_height_pt,
@@ -309,6 +313,7 @@ pub fn layout(
             error_highlights,
             measure_click_targets,
             playback_cursor_targets,
+            part_label_click_targets,
         });
     }
     pages

@@ -19,6 +19,7 @@ fn single_row_page(element: GridElement) -> GridPage {
         error_highlights: vec![],
         measure_click_targets: vec![],
         playback_cursor_targets: vec![],
+        part_label_click_targets: vec![],
     }
 }
 
@@ -56,6 +57,7 @@ fn lyric_syllable_halign_center_scales_down_when_column_weight_is_inflated_by_an
         error_highlights: vec![],
         measure_click_targets: vec![],
         playback_cursor_targets: vec![],
+        part_label_click_targets: vec![],
     };
     let lyric_font_sizes = LyricFontSizes {
         base: 14.4,

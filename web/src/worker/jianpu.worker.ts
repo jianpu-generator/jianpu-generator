@@ -4,6 +4,7 @@ import {
   extract_source_from_svg,
   format_score,
   list_measure_spans,
+  list_note_spans,
   list_parts,
   render,
   set_layout_fonts,
@@ -316,6 +317,17 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       spans: result.status === 'ok' ? result.spans : [],
       sectionRanges: result.status === 'ok' ? result.section_ranges : [],
       sequenceEntries: result.status === 'ok' ? result.sequence_entries : [],
+    } satisfies WorkerResponse)
+    return
+  }
+
+  if (msg.type === 'listNoteSpans') {
+    const result = list_note_spans(msg.source)
+    postMessage({
+      type: 'noteSpans',
+      id: msg.id,
+      status: result.status,
+      spans: result.status === 'ok' ? result.spans : [],
     } satisfies WorkerResponse)
     return
   }

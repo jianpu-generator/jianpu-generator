@@ -89,6 +89,10 @@ export function useMeasureAudioPlayback({
       respectSequence: boolean,
       sequenceEntryStartIndex?: number,
       sequenceEntryEndIndex?: number,
+      /** When given, overrides the normally-enabled tracks (mute/solo state)
+       * for just this playback — e.g. "play selection" muting every part
+       * outside the drag-selected notes. */
+      enabledTracksOverride?: string[],
     ) => {
       const worker = workerRef.current
       if (!worker) return
@@ -105,7 +109,7 @@ export function useMeasureAudioPlayback({
         respectSequence,
         sequenceEntryStartIndex,
         sequenceEntryEndIndex,
-        enabledTracks: enabledTracksRef.current,
+        enabledTracks: enabledTracksOverride ?? enabledTracksRef.current,
       } satisfies WorkerRequest)
     },
     [],
@@ -150,6 +154,32 @@ export function useMeasureAudioPlayback({
     )
   }, [playMeasureRange])
 
+  // Plays only the drag-selected parts (see `useNoteSelection`), muting every
+  // other part, over the selection's measure range. Accepted trade-off: this
+  // plays the *entire* boundary measures the selection touches, not a
+  // sub-measure time-trimmed window — e.g. selecting beats 2-3 of measure 5
+  // still plays all of measure 5. Precise trimming via
+  // `NoteTiming.start_s`/`end_s` is a possible future enhancement, not
+  // justified for v1.
+  const playNoteSelection = useCallback(
+    (
+      minMeasureIndex: number,
+      maxMeasureIndex: number,
+      selectedPartNames: string[],
+    ) => {
+      playMeasureRange(
+        minMeasureIndex,
+        maxMeasureIndex,
+        false,
+        false,
+        undefined,
+        undefined,
+        selectedPartNames,
+      )
+    },
+    [playMeasureRange],
+  )
+
   return {
     measureAudioGenerating,
     setMeasureAudioGenerating,
@@ -161,6 +191,7 @@ export function useMeasureAudioPlayback({
     playMeasureRange,
     playSelectedMeasures,
     playFromCurrentMeasure,
+    playNoteSelection,
     latestMeasureAudioIdRef,
     measureWavUrlRef,
   }

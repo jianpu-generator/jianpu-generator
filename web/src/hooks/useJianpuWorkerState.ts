@@ -9,6 +9,7 @@ import type {
   Diagnostic,
   DiagnosticViewZone,
   MeasureSpan,
+  NoteSpan,
   PartDeclaration,
   PartInfo,
   SectionRange,
@@ -63,6 +64,7 @@ export function useJianpuWorkerState(
     SvgDocumentOut[]
   >([])
   const [measureSpans, setMeasureSpans] = useState<MeasureSpan[]>([])
+  const [noteSpans, setNoteSpans] = useState<NoteSpan[]>([])
   // A one-time snapshot of `extract_unzipped_text(source)`, taken only when
   // Unzipped view is switched on (see effect in useJianpuWorker) — NOT
   // re-derived on every source change, so the Unzipped editor's displayed
@@ -84,6 +86,8 @@ export function useJianpuWorkerState(
   const measureSpansRequestIdRef = useRef(0)
   const latestMeasureSpansIdRef = useRef(0)
   const measureSpansRef = useRef<MeasureSpan[]>([])
+  const noteSpansRequestIdRef = useRef(0)
+  const latestNoteSpansIdRef = useRef(0)
   const partMeasureRangesRef = useRef<PartMeasureRangesOut[]>([])
   const lyricsVerseRangesRef = useRef<LyricsVerseRangesOut[]>([])
   const workerRef = useRef<Worker | null>(null)
@@ -212,6 +216,8 @@ export function useJianpuWorkerState(
     setHighlightedDocuments,
     measureSpans,
     setMeasureSpans,
+    noteSpans,
+    setNoteSpans,
     unzippedText,
     setUnzippedText,
     partMeasureRanges,
@@ -227,6 +233,8 @@ export function useJianpuWorkerState(
     measureSpansRequestIdRef,
     latestMeasureSpansIdRef,
     measureSpansRef,
+    noteSpansRequestIdRef,
+    latestNoteSpansIdRef,
     partMeasureRangesRef,
     lyricsVerseRangesRef,
     workerRef,

@@ -235,7 +235,7 @@ test('a viewer importing the live score clears the #live= hash and focuses the i
   await viewerContext.close()
 })
 
-test('dragging across measures in a live viewer highlights them, even though the viewer has no editor pane', async ({
+test('dragging across measures in a live viewer highlights them, even without a mounted editor to round-trip the selection through', async ({
   page,
   context,
 }) => {
@@ -275,6 +275,11 @@ test('dragging across measures in a live viewer highlights them, even though the
     state: 'visible',
     timeout: 15_000,
   })
+  // `liveViewerActive` (and the `hideEditor` it drives) flips true async,
+  // just after the score itself renders — wait for the Editor to actually
+  // unmount before dragging, otherwise the drag can race a still-mounted
+  // Editor and take the Monaco-selection path this test isn't about.
+  await expect(viewerPage.locator('.monaco-editor')).toHaveCount(0)
 
   const measure0 = viewerPage
     .locator('[data-tag="measure"][data-measure-index="0"]')
@@ -291,8 +296,9 @@ test('dragging across measures in a live viewer highlights them, even though the
     throw new Error('Could not get bounding boxes for measures 0 and 2.')
   }
 
-  // Drag from measure 0 to measure 2 inside the read-only viewer, which has
-  // no Monaco editor mounted at all.
+  // Drag from measure 0 to measure 2 in the read-only viewer — a shortcut
+  // for selecting every note/rest cell across those measures, same as it is
+  // in the editable app (see `Preview.tsx`'s `noteCellsInMeasureRange`).
   await viewerPage.mouse.move(box0.x + box0.width / 2, box0.y + box0.height / 2)
   await viewerPage.mouse.down()
   await viewerPage.mouse.move(
@@ -304,8 +310,9 @@ test('dragging across measures in a live viewer highlights them, even though the
   )
   await viewerPage.mouse.up()
 
-  // The selection must still land, purely via the notifySelection callback
-  // (there is no editorRef for the drag handler to fall back on here).
+  // The selection must still land even on a run where the drag handler has
+  // no mounted `editorRef` to push a Monaco selection through (see
+  // `useNoteSelection`'s fallback to `notifySelection` directly).
   await expect(
     viewerPage
       .locator('.preview-page [data-testid="measure-highlight"]')
@@ -315,7 +322,11 @@ test('dragging across measures in a live viewer highlights them, even though the
   // The play-current-measure button lives in AppHeader (not gated on the
   // editor pane), so its label must also pick up the selected range — this
   // reflects `selectedMeasureRange` becoming non-null, independent of
-  // whether the (separately-loaded) soundfont asset is ready yet.
+  // whether the (separately-loaded) soundfont asset is ready yet. Unlike the
+  // editor-mounted case (where the same drag also lands a Monaco selection
+  // and shows "Selection" instead, see `measure-click-selects-notes.spec.ts`),
+  // there's no editor here to push a note selection into, so the plain
+  // measure-range fallback is what's on screen.
   const playBtn = viewerPage.locator('[data-testid="play-measure-button"]')
   await expect(playBtn).toHaveText(/Measures 1.3/, { timeout: 5_000 })
 })
