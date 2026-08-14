@@ -5,10 +5,59 @@ import {
   resolveActiveNotes,
 } from './playbackCursorPosition'
 
-const PLAYBACK_CURSOR_FILL = 'rgba(220,38,38,0.25)'
+export const PLAYBACK_CURSOR_FILL = 'rgba(220,38,38,0.25)'
 
 function noteKey(sourcePartIndex: number, noteId: number): string {
   return `${sourcePartIndex}:${noteId}`
+}
+
+// Minimal DOM surface `clearStaleHighlights` needs — kept narrow (rather
+// than typed against `Element`/`SVGRectElement` directly) so it's testable
+// with plain duck-typed objects, no jsdom required.
+interface CursorGroupLike {
+  getAttribute(name: string): string | null
+}
+interface CursorRectLike {
+  closest(selector: string): CursorGroupLike | null
+  setAttribute(name: string, value: string): void
+}
+interface CursorContainerLike {
+  querySelectorAll(selector: string): Iterable<CursorRectLike>
+}
+
+/**
+ * Ground-truth sweep: finds every rect the DOM currently shows as
+ * highlighted (fill === `PLAYBACK_CURSOR_FILL`) and turns off whichever
+ * ones aren't in `keep` (a set of `"sourcePartIndex:noteId"` keys).
+ *
+ * Deliberately doesn't trust a remembered set of "currently active" keys
+ * instead — React keys the note `<g>` groups by array index
+ * (`renderSvgElement` in `PreviewSvgRenderer.tsx`), and always renders
+ * `fill="transparent"` as a literal prop on `playbackCursorRect`. Since the
+ * highlight is applied imperatively via `setAttribute` (bypassing React), a
+ * re-render that doesn't change that literal prop leaves the manual fill
+ * untouched; if the score also reshuffles note order, the same DOM node can
+ * get reused for a *different* note's data, and a lookup keyed on the old
+ * (sourcePartIndex, noteId) would never find it again — leaving a stale
+ * cursor stuck on an unrelated note. Reading each highlighted rect's own
+ * current attributes instead sidesteps that entirely.
+ */
+export function clearStaleHighlights(
+  container: CursorContainerLike,
+  keep: Set<string>,
+): void {
+  const highlighted = container.querySelectorAll(
+    `[data-tag="note"] rect[data-variant="playback-cursor-rect"][fill="${PLAYBACK_CURSOR_FILL}"]`,
+  )
+  for (const rect of highlighted) {
+    const group = rect.closest('[data-tag="note"]')
+    const partIndex = group?.getAttribute('data-part-index')
+    const noteId = group?.getAttribute('data-note-id')
+    const key = partIndex && noteId ? `${partIndex}:${noteId}` : null
+    if (!key || !keep.has(key)) {
+      rect.setAttribute('fill', 'transparent')
+    }
+  }
 }
 
 /**
@@ -66,10 +115,7 @@ export function usePlaybackCursor(
     }
 
     const clearActive = () => {
-      for (const key of activeKeys) {
-        const [partIndex, noteId] = key.split(':')
-        setHighlight(Number(partIndex), Number(noteId), false)
-      }
+      clearStaleHighlights(container, new Set())
       activeKeys = new Set()
     }
 
@@ -78,12 +124,7 @@ export function usePlaybackCursor(
       const nextKeys = new Set(
         active.map((a) => noteKey(a.sourcePartIndex, a.noteId)),
       )
-      for (const key of activeKeys) {
-        if (!nextKeys.has(key)) {
-          const [partIndex, noteId] = key.split(':')
-          setHighlight(Number(partIndex), Number(noteId), false)
-        }
-      }
+      clearStaleHighlights(container, nextKeys)
       let newlyActive: { sourcePartIndex: number; noteId: number } | null = null
       for (const a of active) {
         const key = noteKey(a.sourcePartIndex, a.noteId)
