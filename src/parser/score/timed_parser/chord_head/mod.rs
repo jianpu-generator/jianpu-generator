@@ -99,6 +99,7 @@ impl TimedUnitHead for ChordHead {
         let EventAttrs {
             duration,
             dotted,
+            double_dotted,
             octave,
             group_membership,
             group_continuation,
@@ -109,6 +110,7 @@ impl TimedUnitHead for ChordHead {
             ScoreEvent::Rest(ParsedRest {
                 duration,
                 dotted,
+                double_dotted,
                 group_membership: 0,
                 group_continuation: 0,
                 tuplet,
@@ -126,6 +128,7 @@ impl TimedUnitHead for ChordHead {
                 group_membership,
                 group_continuation,
                 dotted,
+                double_dotted,
                 slur_group_close_at_duration: None,
                 tuplet,
             })

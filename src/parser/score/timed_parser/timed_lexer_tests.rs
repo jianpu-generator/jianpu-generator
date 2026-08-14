@@ -45,9 +45,18 @@ fn extension_vs_suffix_dash() {
         kinds("2 - - -"),
         vec![
             TimedLexToken::HeadStart { offset: 0 },
-            TimedLexToken::Extension { dotted: false },
-            TimedLexToken::Extension { dotted: false },
-            TimedLexToken::Extension { dotted: false },
+            TimedLexToken::Extension {
+                dotted: false,
+                double_dotted: false,
+            },
+            TimedLexToken::Extension {
+                dotted: false,
+                double_dotted: false,
+            },
+            TimedLexToken::Extension {
+                dotted: false,
+                double_dotted: false,
+            },
         ]
     );
 }
@@ -58,8 +67,48 @@ fn dotted_extension_dash() {
         kinds("1. -. -."),
         vec![
             TimedLexToken::HeadStart { offset: 0 },
-            TimedLexToken::Extension { dotted: true },
-            TimedLexToken::Extension { dotted: true },
+            TimedLexToken::Extension {
+                dotted: true,
+                double_dotted: false,
+            },
+            TimedLexToken::Extension {
+                dotted: true,
+                double_dotted: false,
+            },
+        ]
+    );
+}
+
+#[test]
+fn double_dotted_extension_dash() {
+    assert_eq!(
+        kinds("1.. -.. -.."),
+        vec![
+            TimedLexToken::HeadStart { offset: 0 },
+            TimedLexToken::Extension {
+                dotted: true,
+                double_dotted: true,
+            },
+            TimedLexToken::Extension {
+                dotted: true,
+                double_dotted: true,
+            },
+        ]
+    );
+}
+
+#[test]
+fn triple_dot_extension_dash_clamps_to_double_dot() {
+    // 3+ glued dots behave exactly like 2 (double-dotted), with no error and no
+    // leftover stray `.` token.
+    assert_eq!(
+        kinds("1... -..."),
+        vec![
+            TimedLexToken::HeadStart { offset: 0 },
+            TimedLexToken::Extension {
+                dotted: true,
+                double_dotted: true,
+            },
         ]
     );
 }

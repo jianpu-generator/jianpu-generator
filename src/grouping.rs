@@ -194,8 +194,18 @@ fn timed_cluster_duration(events: &[Spanned<ScoreEvent>], start: usize, multipli
 
     let mut index = start + 1;
     while let Some(event) = events.get(index) {
-        if let ScoreEvent::Extension { dotted } = event.value {
-            duration += if dotted { 6 } else { 4 } * multiplier;
+        if let ScoreEvent::Extension {
+            dotted,
+            double_dotted,
+        } = event.value
+        {
+            duration += if double_dotted {
+                7
+            } else if dotted {
+                6
+            } else {
+                4
+            } * multiplier;
             index += 1;
         } else {
             break;

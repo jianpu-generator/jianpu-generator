@@ -54,6 +54,7 @@ fn make_block_with_accidental_note(
                         accidental,
                         octave: 0,
                         dotted: false,
+                        double_dotted: false,
                     },
                     note_id: None,
                 },

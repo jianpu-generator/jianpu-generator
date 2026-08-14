@@ -217,9 +217,13 @@ fn grid_text_to_absolute(
     halign: HAlign,
 ) -> Option<AbsoluteContent> {
     match content {
-        PostArcGridContent::NoteDash { dotted } => {
-            Some(AbsoluteContent::NoteDash { dotted: *dotted })
-        }
+        PostArcGridContent::NoteDash {
+            dotted,
+            double_dotted,
+        } => Some(AbsoluteContent::NoteDash {
+            dotted: *dotted,
+            double_dotted: *double_dotted,
+        }),
         PostArcGridContent::RowLabel(s) => Some(sans_serif_text(
             s.clone(),
             12.0,
@@ -286,21 +290,34 @@ pub(super) fn grid_to_absolute(
             accidental,
             octave,
             dotted,
+            double_dotted,
         } => Some(AbsoluteContent::NoteHead {
             pitch: pitch.clone(),
             accidental: accidental.clone(),
             octave: *octave,
             dotted: *dotted,
+            double_dotted: *double_dotted,
         }),
-        PostArcGridContent::Rest { dotted } => Some(AbsoluteContent::Rest { dotted: *dotted }),
+        PostArcGridContent::Rest {
+            dotted,
+            double_dotted,
+        } => Some(AbsoluteContent::Rest {
+            dotted: *dotted,
+            double_dotted: *double_dotted,
+        }),
         PostArcGridContent::MultiMeasureRest { count } => Some(AbsoluteContent::MultiMeasureRest {
             count: *count,
             width: span_width,
         }),
         PostArcGridContent::OctaveDot => None,
-        PostArcGridContent::ChordSymbol { text, dotted } => Some(AbsoluteContent::ChordSymbol {
+        PostArcGridContent::ChordSymbol {
+            text,
+            dotted,
+            double_dotted,
+        } => Some(AbsoluteContent::ChordSymbol {
             text: text.clone(),
             dotted: *dotted,
+            double_dotted: *double_dotted,
         }),
         PostArcGridContent::PercussionHit => Some(AbsoluteContent::PercussionHit),
         PostArcGridContent::Underline { level } => Some(AbsoluteContent::Underline {

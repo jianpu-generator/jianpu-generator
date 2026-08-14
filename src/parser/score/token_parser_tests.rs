@@ -358,3 +358,6 @@ fn open_group_closes_on_spaced_tokens_across_measures() {
     assert!(note(&events, 0).pitch == JianPuPitch::Seven);
     assert!(!note(&events, 0).slur);
 }
+
+#[path = "token_parser_double_dot_tests.rs"]
+mod double_dot_tests;

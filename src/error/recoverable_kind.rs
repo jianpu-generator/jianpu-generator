@@ -75,6 +75,9 @@ pub enum RecoverableErrorKind {
     PercussionExpectedHitOrRest { ch: char },
     /// A dot was applied to a quarter-beat (`=`) note — dot is ignored, duration stays 1.
     DurationCannotDotQuarterBeat,
+    /// A second dot (`..`) was applied but the base duration doesn't divide evenly into
+    /// quarter-beats — the second dot is dropped, the first dot (if any) is kept.
+    DurationCannotDoubleDot,
     /// A `)` appeared with no matching `(` — the `)` is ignored.
     GroupUnexpectedCloseParen,
     /// A `(` was not closed before the end of the score — group treated as open.
@@ -155,6 +158,7 @@ impl RecoverableErrorKind {
             Self::PercussionExpectedHitOrRest { ch } => format!("expected 'x' (hit) or '0' (rest), got: {ch}"),
             Self::DurationMixedOctaveMarkers => "mixed octave markers: use ' for up or , for down, not both; octave shift ignored".to_string(),
             Self::DurationCannotDotQuarterBeat => "cannot dot a quarter-beat (=) note; dot ignored, duration stays at 1 beat".to_string(),
+            Self::DurationCannotDoubleDot => "cannot apply a second dot here; the note's duration doesn't divide evenly into quarter-beats; second dot ignored".to_string(),
             Self::GroupUnexpectedCloseParen => "unexpected `)` — no open group; `)` ignored".to_string(),
             Self::UnclosedGroupAtEnd { part } => format!("unclosed '(' group at end of score in part '{part}'"),
             Self::PartKeyUnknown { key } => format!("`[{key}]` does not match any declared part abbreviation; line dropped"),

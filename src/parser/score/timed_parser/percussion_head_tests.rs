@@ -72,6 +72,7 @@ fn parses_hit() {
         EventAttrs {
             duration: 4,
             dotted: false,
+            double_dotted: false,
             octave: 0,
             group_membership: 0,
             group_continuation: 0,
@@ -94,6 +95,7 @@ fn parses_rest() {
         EventAttrs {
             duration: 4,
             dotted: false,
+            double_dotted: false,
             octave: 0,
             group_membership: 0,
             group_continuation: 0,

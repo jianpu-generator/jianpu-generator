@@ -304,7 +304,7 @@ fn dotted_chord_produces_chord_symbol_with_dotted_flag_set() {
         .elements
         .iter()
         .filter_map(|e| match &e.content {
-            ElementContent::ChordSymbol { text, dotted } => Some((text.clone(), *dotted)),
+            ElementContent::ChordSymbol { text, dotted, .. } => Some((text.clone(), *dotted)),
             _ => None,
         })
         .collect();

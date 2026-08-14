@@ -48,6 +48,7 @@ pub(super) struct PartState<'a> {
 pub(super) struct CompiledUnit {
     pub(super) duration: u32,
     pub(super) dotted: bool,
+    pub(super) double_dotted: bool,
     pub(super) group_membership: u8,
     pub(super) group_continuation: u8,
     pub(super) slur_close_at: Option<u32>,
@@ -141,10 +142,13 @@ pub(super) fn compile_unit(
         }
     }
 
-    // A dotted note's own written duration (e.g. a dotted quarter, 6 quarter-beats) is
-    // one full dotted beat, so extensions past it (`-.`) land on 6-quarter-beat
-    // boundaries rather than the 4-quarter-beat ones a plain note's `-` extensions use.
-    let beat = if unit.dotted {
+    // A dotted (or double-dotted) note's own written duration (e.g. a dotted quarter,
+    // 6 quarter-beats) is one full dotted beat, so extensions past it (`-.`/`-..`) land
+    // on 6-/7-quarter-beat boundaries rather than the 4-quarter-beat ones a plain note's
+    // `-` extensions use.
+    let beat = if unit.double_dotted {
+        7 * multiplier
+    } else if unit.dotted {
         6 * multiplier
     } else {
         4 * multiplier
@@ -155,6 +159,7 @@ pub(super) fn compile_unit(
             column: dash_col,
             content: ElementContent::NoteDash {
                 dotted: unit.dotted,
+                double_dotted: unit.double_dotted,
             },
             note_id: Some(note_id),
         });

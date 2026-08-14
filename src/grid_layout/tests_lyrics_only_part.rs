@@ -27,6 +27,7 @@ fn notes_row(note_count: u32, bar_col: u32) -> MeasureRow {
                 accidental: crate::ast::parsed::Accidental::Natural,
                 octave: 0,
                 dotted: false,
+                double_dotted: false,
             },
             note_id: None,
         })

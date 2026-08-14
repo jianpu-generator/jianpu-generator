@@ -106,7 +106,7 @@ source (&str)
 | **Measure** | One bar of music. The score is a flat sequence of `MultiPartMeasure`s. |
 | **Part** | A single instrument or voice track (e.g. soprano, bass). Declared in `[parts]`. |
 | **Part Slice** | One part's notes and lyrics (one or more verses) for a single measure (`PartSlice`). |
-| **Timed unit** | The compiler-stage trait (`TimedUnit`, `src/compiler/timed_unit.rs`) unifying `GroupedNote`, `GroupedChordNote`, and `GroupedPercussionHit` — anything that occupies a duration in the grid and exposes `duration`/`dotted`/`group_membership`/`group_continuation`/`slur_key`/`tie_to_next`/`tuplet`/`element_content()`. Used as shorthand in conversation/docs for "note, chord, or percussion hit" collectively, since all three compile through the same grid-column machinery. |
+| **Timed unit** | The compiler-stage trait (`TimedUnit`, `src/compiler/timed_unit.rs`) unifying `GroupedNote`, `GroupedChordNote`, and `GroupedPercussionHit` — anything that occupies a duration in the grid and exposes `duration`/`dotted`/`double_dotted`/`group_membership`/`group_continuation`/`slur_key`/`tie_to_next`/`tuplet`/`element_content()`. Used as shorthand in conversation/docs for "note, chord, or percussion hit" collectively, since all three compile through the same grid-column machinery. |
 | **Ditto** | A measure where every input line was `"`, meaning it repeats the previous measure. Rendered as blank; audio output still uses the resolved content. |
 | **Column** | A logical horizontal slot in the compiler's grid. Each beat occupies one or more columns. |
 | **Quarter-beat** | The smallest time unit used for duration arithmetic. A standard quarter note = 4 quarter-beats. |

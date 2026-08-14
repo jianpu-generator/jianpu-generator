@@ -57,6 +57,7 @@ fn note_head_produces_text_element() {
         accidental: crate::ast::parsed::Accidental::Natural,
         octave: 0,
         dotted: false,
+        double_dotted: false,
     });
     let docs = render_new(&[page], &cfg());
     assert_eq!(docs.len(), 1);
@@ -94,7 +95,10 @@ fn tie_produces_path() {
 
 #[test]
 fn rest_produces_zero_text() {
-    let page = make_page(AbsoluteContent::Rest { dotted: false });
+    let page = make_page(AbsoluteContent::Rest {
+        dotted: false,
+        double_dotted: false,
+    });
     let docs = render_new(&[page], &cfg());
     let has_zero = docs[0]
         .elements
@@ -110,6 +114,7 @@ fn sharp_accidental_renders_to_the_right_of_note() {
         accidental: crate::ast::parsed::Accidental::Sharp,
         octave: 0,
         dotted: false,
+        double_dotted: false,
     });
     let note_number_width = cfg().note_number_width as f32;
     let note_x = 100.0_f32;
@@ -142,6 +147,7 @@ fn upper_octave_note_produces_dot_glyph() {
         accidental: crate::ast::parsed::Accidental::Natural,
         octave: 1,
         dotted: false,
+        double_dotted: false,
     });
     let docs = render_new(&[page], &cfg());
     let has_dot = docs[0]

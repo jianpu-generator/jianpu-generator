@@ -223,9 +223,11 @@ pub enum ScoreEvent {
         denominator: u8,
     },
     /// Internal or explicit padding: extends the previous note by one beat — one full beat
-    /// (4 quarter-beats), or one dotted beat (6 quarter-beats, written `-.`) for compound meters.
+    /// (4 quarter-beats), one dotted beat (6 quarter-beats, written `-.`) for compound
+    /// meters, or one double-dotted beat (7 quarter-beats, written `-..`).
     Extension {
         dotted: bool,
+        double_dotted: bool,
     },
     /// Legacy tie marker retained for lyric-slot counting paths; use `(…)` groups in input.
     TieMarker,
@@ -270,6 +272,9 @@ pub struct ParsedNote {
     pub group_continuation: u8,
     /// Whether `.` was present as a dotted-note suffix.
     pub dotted: bool,
+    /// Whether `..` was present as a double-dotted-note suffix. Only ever `true` when
+    /// `dotted` is also `true`.
+    pub double_dotted: bool,
     /// When the slur group closes on an extension within this note (e.g. `(5 -)`),
     /// this holds the offset in quarter-beats from the note's start where the slur arc
     /// should end. `None` means the slur closes at the note's head position (normal case).
@@ -291,6 +296,7 @@ pub struct ParsedChordNote {
     pub group_membership: u8,
     pub group_continuation: u8,
     pub dotted: bool,
+    pub double_dotted: bool,
     pub slur_group_close_at_duration: Option<u32>,
     /// The innermost `{...}` tuplet bracket this chord note belongs to, if any.
     pub tuplet: Option<TupletInfo>,
@@ -310,6 +316,8 @@ pub struct ParsedPercussionHit {
     pub group_continuation: u8,
     /// Whether `.` was present as a dotted-hit suffix.
     pub dotted: bool,
+    /// Whether `..` was present as a double-dotted-hit suffix.
+    pub double_dotted: bool,
     pub slur_group_close_at_duration: Option<u32>,
     /// The innermost `{...}` tuplet bracket this hit belongs to, if any.
     pub tuplet: Option<TupletInfo>,
@@ -339,6 +347,8 @@ pub struct ParsedRest {
     pub duration: u32,
     /// Whether `.` was present as a dotted-rest suffix.
     pub dotted: bool,
+    /// Whether `..` was present as a double-dotted-rest suffix.
+    pub double_dotted: bool,
     pub group_membership: u8,
     pub group_continuation: u8,
     /// The innermost `{...}` tuplet bracket this rest belongs to, if any.

@@ -100,6 +100,29 @@ fn dotted_quarter_beat_is_recoverable() {
     );
 }
 
+// DurationCannotDoubleDot
+
+#[test]
+fn double_dotted_eighth_falls_back_to_single_dot_and_is_recoverable() {
+    // `1_..` applies a second dot to an eighth note (duration 2, before dotting).
+    // 2 % 4 != 0, so the second dot is invalid; it's dropped and the first dot survives,
+    // producing the same duration as a plain dotted eighth (`1_.`, duration 3). The render
+    // must continue and surface a diagnostic about the failed second dot.
+    let source = minimal_fixture("time=4/4 key=C4 bpm=120\n[Melody] 1_.. 2= 3_ 4_ 5_ 6_ 7_ 1_\n");
+    let output = render_svgs_from_source(&source, "test.jianpu", &[])
+        .expect("double-dotted eighth must not abort the render");
+    assert!(!output.svgs.is_empty());
+    assert!(
+        has_error_containing(&output, "cannot apply a second dot"),
+        "expected error about the second dot, got: {:?}",
+        output
+            .diagnostics
+            .iter()
+            .map(|d| d.message())
+            .collect::<Vec<_>>()
+    );
+}
+
 // GroupUnexpectedCloseParen
 
 #[test]

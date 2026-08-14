@@ -52,6 +52,7 @@ fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
                         accidental: crate::ast::parsed::Accidental::Natural,
                         octave: 0,
                         dotted: false,
+                        double_dotted: false,
                     },
                     note_id: None,
                 },

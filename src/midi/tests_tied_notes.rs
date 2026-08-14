@@ -17,6 +17,7 @@ fn tied_note_event(tied: bool) -> NoteEvent {
         group_membership: 0,
         group_continuation: 0,
         dotted: false,
+        double_dotted: false,
         slur_group_close_at_duration: None,
         tuplet: None,
     })

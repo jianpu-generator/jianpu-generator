@@ -202,8 +202,17 @@ fn fold_extensions(events: Vec<Spanned<ScoreEvent>>) -> Vec<(Span, u32)> {
             ScoreEvent::Chord(chord) => clusters.push((spanned.span, chord.duration)),
             ScoreEvent::PercussionHit(hit) => clusters.push((spanned.span, hit.duration)),
             ScoreEvent::Rest(rest) => clusters.push((spanned.span, rest.duration)),
-            ScoreEvent::Extension { dotted } => {
-                let beats = if dotted { 6 } else { 4 };
+            ScoreEvent::Extension {
+                dotted,
+                double_dotted,
+            } => {
+                let beats = if double_dotted {
+                    7
+                } else if dotted {
+                    6
+                } else {
+                    4
+                };
                 if let Some(last) = clusters.last_mut() {
                     last.0.end = last.0.end.max(spanned.span.end);
                     last.1 += beats;

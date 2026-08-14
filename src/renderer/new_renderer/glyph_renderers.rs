@@ -9,6 +9,22 @@ pub(super) struct NoteRenderParams<'a> {
     pub(super) note_number_width: &'a f32,
 }
 
+/// Whether a note/rest/chord-symbol/note-dash carries a first and/or second
+/// duration dot (`.`/`..`).
+pub(super) struct DotState {
+    pub(super) dotted: bool,
+    pub(super) double_dotted: bool,
+}
+
+impl DotState {
+    pub(super) fn new(dotted: bool, double_dotted: bool) -> Self {
+        Self {
+            dotted,
+            double_dotted,
+        }
+    }
+}
+
 /// A middle dot (`·`) rendered as text so it scales with `font_size`,
 /// unlike a fixed-radius SVG circle.
 pub(super) fn dot_glyph(x: f32, y: f32, font_size: f32, variant: SvgVariant) -> SvgElement {
@@ -28,12 +44,31 @@ pub(super) fn dot_glyph(x: f32, y: f32, font_size: f32, variant: SvgVariant) -> 
     }
 }
 
+/// Renders `dots`' glyph(s) (0, 1, or 2), starting at `first_dot_x` and spacing each further dot `spacing` along.
+pub(super) fn dot_glyphs(
+    first_dot_x: f32,
+    y: f32,
+    spacing: f32,
+    font_size: f32,
+    variant: SvgVariant,
+    dots: &DotState,
+) -> Vec<SvgElement> {
+    if !dots.dotted {
+        return Vec::new();
+    }
+    let mut glyphs = vec![dot_glyph(first_dot_x, y, font_size, variant)];
+    if dots.double_dotted {
+        glyphs.push(dot_glyph(first_dot_x + spacing, y, font_size, variant));
+    }
+    glyphs
+}
+
 pub(super) fn render_note_head(
     elem: &AbsoluteElement,
     pitch: &JianPuPitch,
     accidental: &Accidental,
     octave: i8,
-    dotted: bool,
+    dots: &DotState,
     params: &NoteRenderParams<'_>,
 ) -> Vec<SvgElement> {
     let NoteRenderParams {
@@ -83,42 +118,32 @@ pub(super) fn render_note_head(
 
     let dot_radius = *base_font_size * 0.1;
 
-    if dotted {
-        let dot_x = elem.x + *note_number_width * 1.5;
+    results.extend(dot_glyphs(
+        elem.x + *note_number_width * 1.5,
+        elem.y,
+        *note_number_width * font_metrics::DOT_SPACING_RATIO,
+        **base_font_size,
+        SvgVariant::NoteHead,
+        dots,
+    ));
+
+    // Octave-up dots sit above the digit and need extra clearance (`gap`) that
+    // octave-down dots, sitting below, don't.
+    let dot_spacing = dot_radius * 3.0;
+    let gap = dot_radius * 2.0;
+    for i in 0..octave.unsigned_abs() {
+        let offset = dot_radius + (i as f32) * dot_spacing;
+        let dot_y = if octave > 0 {
+            elem.y - *base_font_size / 2.0 - offset - gap
+        } else {
+            elem.y + *base_font_size / 2.0 + offset
+        };
         results.push(dot_glyph(
-            dot_x,
-            elem.y,
+            elem.x,
+            dot_y,
             **base_font_size,
             SvgVariant::NoteHead,
         ));
-    }
-
-    if octave > 0 {
-        let dot_spacing = dot_radius * 3.0;
-        let gap = dot_radius * 2.0;
-        for i in 0..octave {
-            let dot_y =
-                elem.y - *base_font_size / 2.0 - dot_radius - gap - (i as f32) * dot_spacing;
-            results.push(dot_glyph(
-                elem.x,
-                dot_y,
-                **base_font_size,
-                SvgVariant::NoteHead,
-            ));
-        }
-    }
-
-    if octave < 0 {
-        let dot_spacing = dot_radius * 3.0;
-        for i in 0..(-octave) {
-            let dot_y = elem.y + *base_font_size / 2.0 + dot_radius + (i as f32) * dot_spacing;
-            results.push(dot_glyph(
-                elem.x,
-                dot_y,
-                **base_font_size,
-                SvgVariant::NoteHead,
-            ));
-        }
     }
 
     results
@@ -130,14 +155,11 @@ pub(super) use note_dash::render_note_dash;
 
 pub(super) fn render_rest(
     elem: &AbsoluteElement,
-    dotted: bool,
+    dots: &DotState,
     base_font_size: &f32,
     note_number_width: &f32,
 ) -> Vec<SvgElement> {
-    let mut results = Vec::new();
-
-    // "0" text
-    results.push(SvgElement {
+    let mut results = vec![SvgElement {
         x: elem.x,
         y: elem.y,
         variant: Some(SvgVariant::Rest),
@@ -150,20 +172,22 @@ pub(super) fn render_rest(
             weight: FontWeight::Normal,
             italic: false,
         },
-    });
+    }];
 
-    // Optional dot
-    if dotted {
-        let dot_x = elem.x + note_number_width * 1.5;
-        results.push(dot_glyph(dot_x, elem.y, *base_font_size, SvgVariant::Rest));
-    }
+    results.extend(dot_glyphs(
+        elem.x + note_number_width * 1.5,
+        elem.y,
+        note_number_width * font_metrics::DOT_SPACING_RATIO,
+        *base_font_size,
+        SvgVariant::Rest,
+        dots,
+    ));
 
     results
 }
 
-/// Standard multi-bar-rest engraving: a thick horizontal bar with short
-/// vertical ticks at both ends, and the collapsed measure count printed
-/// centered above it.
+/// Standard multi-bar-rest engraving: a thick horizontal bar with short vertical
+/// ticks at both ends, and the collapsed measure count printed centered above it.
 pub(super) fn render_multi_measure_rest(
     elem: &AbsoluteElement,
     count: u32,
@@ -245,7 +269,7 @@ pub(super) fn render_percussion_hit(
 pub(super) fn render_chord_symbol(
     elem: &AbsoluteElement,
     s: &str,
-    dotted: bool,
+    dots: &DotState,
     base_font_size: &f32,
 ) -> Vec<SvgElement> {
     // A chord symbol like "2m" shares its column with a single-digit note
@@ -273,16 +297,15 @@ pub(super) fn render_chord_symbol(
         },
     }];
 
-    if dotted {
-        let text_width = font_metrics::monospace_text_width(s, *base_font_size);
-        let dot_x = text_x + text_width + *base_font_size * 0.4;
-        results.push(dot_glyph(
-            dot_x,
-            elem.y,
-            *base_font_size,
-            SvgVariant::ChordSymbol,
-        ));
-    }
+    let text_width = font_metrics::monospace_text_width(s, *base_font_size);
+    results.extend(dot_glyphs(
+        text_x + text_width + *base_font_size * 0.4,
+        elem.y,
+        *base_font_size * 0.4,
+        *base_font_size,
+        SvgVariant::ChordSymbol,
+        dots,
+    ));
 
     results
 }

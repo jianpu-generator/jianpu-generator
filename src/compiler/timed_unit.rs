@@ -8,6 +8,7 @@ use crate::compiler::types::ElementContent;
 pub(super) trait TimedUnit {
     fn duration(&self) -> u32;
     fn dotted(&self) -> bool;
+    fn double_dotted(&self) -> bool;
     fn group_membership(&self) -> u8;
     fn group_continuation(&self) -> u8;
     fn slur_close_at(&self) -> Option<u32>;
@@ -23,6 +24,9 @@ impl TimedUnit for GroupedNote {
     }
     fn dotted(&self) -> bool {
         self.dotted
+    }
+    fn double_dotted(&self) -> bool {
+        self.double_dotted
     }
     fn group_membership(&self) -> u8 {
         self.group_membership
@@ -48,6 +52,7 @@ impl TimedUnit for GroupedNote {
             accidental: self.accidental.clone(),
             octave: self.octave,
             dotted: self.dotted,
+            double_dotted: self.double_dotted,
         }
     }
 }
@@ -58,6 +63,9 @@ impl TimedUnit for GroupedChordNote {
     }
     fn dotted(&self) -> bool {
         self.dotted
+    }
+    fn double_dotted(&self) -> bool {
+        self.double_dotted
     }
     fn group_membership(&self) -> u8 {
         self.group_membership
@@ -81,6 +89,7 @@ impl TimedUnit for GroupedChordNote {
         ElementContent::ChordSymbol {
             text: self.format_symbol(),
             dotted: self.dotted,
+            double_dotted: self.double_dotted,
         }
     }
 }
@@ -91,6 +100,9 @@ impl TimedUnit for GroupedPercussionHit {
     }
     fn dotted(&self) -> bool {
         self.dotted
+    }
+    fn double_dotted(&self) -> bool {
+        self.double_dotted
     }
     fn group_membership(&self) -> u8 {
         self.group_membership

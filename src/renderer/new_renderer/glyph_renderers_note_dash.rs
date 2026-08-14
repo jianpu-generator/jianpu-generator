@@ -1,16 +1,14 @@
-use super::dot_glyph;
+use super::{dot_glyphs, DotState};
 use crate::compositor::types::AbsoluteElement;
 use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
 use crate::renderer::new_types::{SvgElement, SvgKind, SvgVariant};
 
 pub(in crate::renderer::new_renderer) fn render_note_dash(
     elem: &AbsoluteElement,
-    dotted: bool,
+    dots: &DotState,
     note_number_width: &f32,
 ) -> Vec<SvgElement> {
-    let mut results = Vec::new();
-
-    results.push(SvgElement {
+    let mut results = vec![SvgElement {
         x: elem.x,
         y: elem.y,
         variant: Some(SvgVariant::Text),
@@ -23,17 +21,16 @@ pub(in crate::renderer::new_renderer) fn render_note_dash(
             weight: FontWeight::Normal,
             italic: false,
         },
-    });
+    }];
 
-    if dotted {
-        let dot_x = elem.x + note_number_width * 1.5;
-        results.push(dot_glyph(
-            dot_x,
-            elem.y,
-            crate::font_metrics::NOTE_DASH_FONT_SIZE,
-            SvgVariant::Text,
-        ));
-    }
+    results.extend(dot_glyphs(
+        elem.x + note_number_width * 1.5,
+        elem.y,
+        note_number_width * crate::font_metrics::DOT_SPACING_RATIO,
+        crate::font_metrics::NOTE_DASH_FONT_SIZE,
+        SvgVariant::Text,
+        dots,
+    ));
 
     results
 }

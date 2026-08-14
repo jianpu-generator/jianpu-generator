@@ -81,49 +81,6 @@ pub(crate) fn expand_measure_elements(
     for el in &row.elements {
         let grid_col = MUSIC_START_COL + measure_col_offset + el.column;
         match &el.content {
-            ElementContent::NoteHead {
-                pitch,
-                accidental,
-                octave,
-                dotted,
-            } => push_head(
-                sub_rows,
-                head_sub,
-                grid_col,
-                GridContent::NoteHead {
-                    pitch: pitch.clone(),
-                    accidental: accidental.clone(),
-                    octave: *octave,
-                    dotted: *dotted,
-                },
-            ),
-            ElementContent::Rest { dotted } => push_head(
-                sub_rows,
-                head_sub,
-                grid_col,
-                GridContent::Rest { dotted: *dotted },
-            ),
-            ElementContent::MultiMeasureRest { count } => {
-                push_multi_measure_rest(sub_rows, head_sub, grid_col, *count as u32);
-            }
-            ElementContent::NoteDash { dotted } => push_head(
-                sub_rows,
-                head_sub,
-                grid_col,
-                GridContent::NoteDash { dotted: *dotted },
-            ),
-            ElementContent::PercussionHit => {
-                push_head(sub_rows, head_sub, grid_col, GridContent::PercussionHit);
-            }
-            ElementContent::ChordSymbol { text, dotted } => push_head(
-                sub_rows,
-                head_sub,
-                grid_col,
-                GridContent::ChordSymbol {
-                    text: text.clone(),
-                    dotted: *dotted,
-                },
-            ),
             ElementContent::Underline {
                 from_column,
                 last_head_column,
@@ -153,6 +110,86 @@ pub(crate) fn expand_measure_elements(
                 }
             }
             ElementContent::Lyric { .. } | ElementContent::LyricLine { .. } => {} // handled in lyric-row branch above
+            content => push_note_element(sub_rows, head_sub, grid_col, content),
         }
+    }
+}
+
+/// The note/rest/chord-symbol half of [`expand_measure_elements`]'s dispatch,
+/// split out to stay under the file's line-count cap per function.
+fn push_note_element(
+    sub_rows: &mut [GridRow],
+    head_sub: usize,
+    grid_col: u32,
+    content: &ElementContent,
+) {
+    match content {
+        ElementContent::NoteHead {
+            pitch,
+            accidental,
+            octave,
+            dotted,
+            double_dotted,
+        } => push_head(
+            sub_rows,
+            head_sub,
+            grid_col,
+            GridContent::NoteHead {
+                pitch: pitch.clone(),
+                accidental: accidental.clone(),
+                octave: *octave,
+                dotted: *dotted,
+                double_dotted: *double_dotted,
+            },
+        ),
+        ElementContent::Rest {
+            dotted,
+            double_dotted,
+        } => push_head(
+            sub_rows,
+            head_sub,
+            grid_col,
+            GridContent::Rest {
+                dotted: *dotted,
+                double_dotted: *double_dotted,
+            },
+        ),
+        ElementContent::MultiMeasureRest { count } => {
+            push_multi_measure_rest(sub_rows, head_sub, grid_col, *count as u32);
+        }
+        ElementContent::NoteDash {
+            dotted,
+            double_dotted,
+        } => push_head(
+            sub_rows,
+            head_sub,
+            grid_col,
+            GridContent::NoteDash {
+                dotted: *dotted,
+                double_dotted: *double_dotted,
+            },
+        ),
+        ElementContent::PercussionHit => {
+            push_head(sub_rows, head_sub, grid_col, GridContent::PercussionHit);
+        }
+        ElementContent::ChordSymbol {
+            text,
+            dotted,
+            double_dotted,
+        } => push_head(
+            sub_rows,
+            head_sub,
+            grid_col,
+            GridContent::ChordSymbol {
+                text: text.clone(),
+                dotted: *dotted,
+                double_dotted: *double_dotted,
+            },
+        ),
+        // Handled directly in `expand_measure_elements` before dispatching here.
+        ElementContent::Underline { .. }
+        | ElementContent::BarLine
+        | ElementContent::Lyric { .. }
+        | ElementContent::LyricLine { .. } => {}
     }
 }

@@ -18,8 +18,13 @@ fn timed_beats(event: &ScoreEvent) -> u32 {
         ScoreEvent::Chord(c) => c.duration,
         ScoreEvent::PercussionHit(p) => p.duration,
         ScoreEvent::Rest(r) => r.duration,
-        ScoreEvent::Extension { dotted } => {
-            if *dotted {
+        ScoreEvent::Extension {
+            dotted,
+            double_dotted,
+        } => {
+            if *double_dotted {
+                7
+            } else if *dotted {
                 6
             } else {
                 4
@@ -55,8 +60,18 @@ fn timed_cluster_duration_at(events: &[Spanned<ScoreEvent>], start: usize) -> u3
     }
     let mut index = start + 1;
     while let Some(event) = events.get(index) {
-        if let ScoreEvent::Extension { dotted } = event.value {
-            duration += if dotted { 6 } else { 4 };
+        if let ScoreEvent::Extension {
+            dotted,
+            double_dotted,
+        } = event.value
+        {
+            duration += if double_dotted {
+                7
+            } else if dotted {
+                6
+            } else {
+                4
+            };
             index += 1;
         } else {
             break;
@@ -144,7 +159,10 @@ fn pad_beat_deficit(events: &mut Vec<Spanned<ScoreEvent>>, deficit: u32) {
         let pad_span = timed_event_span(events);
         for _ in 0..(deficit / 4) {
             events.push(Spanned::new(
-                ScoreEvent::Extension { dotted: false },
+                ScoreEvent::Extension {
+                    dotted: false,
+                    double_dotted: false,
+                },
                 pad_span,
             ));
         }
@@ -193,6 +211,7 @@ fn pad_incomplete_measure(
             ScoreEvent::Rest(crate::ast::parsed::ParsedRest {
                 duration: deficit,
                 dotted: false,
+                double_dotted: false,
                 group_membership: 0,
                 group_continuation: 0,
                 tuplet: None,

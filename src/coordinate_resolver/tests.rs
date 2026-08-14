@@ -54,6 +54,7 @@ fn note_head_halign_center_has_x_at_center_of_column() {
             accidental: crate::ast::parsed::Accidental::Natural,
             octave: 0,
             dotted: false,
+            double_dotted: false,
         },
     };
     let page = single_row_page(el);
@@ -99,6 +100,7 @@ fn note_head_halign_center_scales_down_when_column_weight_is_inflated_by_another
             accidental: crate::ast::parsed::Accidental::Natural,
             octave: 0,
             dotted: false,
+            double_dotted: false,
         },
     };
     let page = GridPage {

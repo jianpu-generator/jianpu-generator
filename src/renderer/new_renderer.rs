@@ -10,7 +10,8 @@ use directive_line::{render_directive_line, DirectiveLineArgs};
 use glyph_renderers::{
     render_bar_line, render_chord_symbol, render_horizontal_line, render_lyric, render_lyric_line,
     render_multi_measure_rest, render_note_dash, render_note_head, render_percussion_hit,
-    render_rest, render_tie_or_slur, render_tuplet_bracket, render_underline, NoteRenderParams,
+    render_rest, render_tie_or_slur, render_tuplet_bracket, render_underline, DotState,
+    NoteRenderParams,
 };
 
 mod directive_line;
@@ -77,27 +78,48 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
             accidental,
             octave,
             dotted,
+            double_dotted,
         } => render_note_head(
             elem,
             pitch,
             accidental,
             *octave,
-            *dotted,
+            &DotState::new(*dotted, *double_dotted),
             &NoteRenderParams {
                 base_font_size: notes_font_size,
                 note_number_width,
             },
         ),
-        AbsoluteContent::Rest { dotted } => {
-            render_rest(elem, *dotted, notes_font_size, note_number_width)
-        }
-        AbsoluteContent::NoteDash { dotted } => render_note_dash(elem, *dotted, note_number_width),
+        AbsoluteContent::Rest {
+            dotted,
+            double_dotted,
+        } => render_rest(
+            elem,
+            &DotState::new(*dotted, *double_dotted),
+            notes_font_size,
+            note_number_width,
+        ),
+        AbsoluteContent::NoteDash {
+            dotted,
+            double_dotted,
+        } => render_note_dash(
+            elem,
+            &DotState::new(*dotted, *double_dotted),
+            note_number_width,
+        ),
         AbsoluteContent::MultiMeasureRest { count, width } => {
             render_multi_measure_rest(elem, *count, *width, row_height, notes_font_size)
         }
-        AbsoluteContent::ChordSymbol { text, dotted } => {
-            render_chord_symbol(elem, text, *dotted, chords_font_size)
-        }
+        AbsoluteContent::ChordSymbol {
+            text,
+            dotted,
+            double_dotted,
+        } => render_chord_symbol(
+            elem,
+            text,
+            &DotState::new(*dotted, *double_dotted),
+            chords_font_size,
+        ),
         AbsoluteContent::PercussionHit => render_percussion_hit(elem, notes_font_size),
         AbsoluteContent::Underline { width, level: _ } => render_underline(elem, width),
         AbsoluteContent::TieOrSlur { kind: _, width } => {
@@ -114,8 +136,7 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
     }
 }
 
-/// The text/overlay half of [`render_element`]'s dispatch, split out to stay
-/// under the file's line-count cap per function.
+/// The text/overlay half of [`render_element`]'s dispatch, split out for length.
 fn render_overlay_element(
     elem: &AbsoluteElement,
     content: &AbsoluteContent,
@@ -240,20 +261,15 @@ fn render_highlight_rect(
     height: f32,
     is_error: bool,
 ) -> SvgElement {
-    let kind = if is_error {
-        SvgKind::ErrorRect { width, height }
-    } else {
-        SvgKind::Rect { width, height }
-    };
-    render_rect(elem, kind)
-}
-
-fn render_rect(elem: &AbsoluteElement, kind: SvgKind) -> SvgElement {
     SvgElement {
         x: elem.x,
         y: elem.y,
         variant: None,
-        kind,
+        kind: if is_error {
+            SvgKind::ErrorRect { width, height }
+        } else {
+            SvgKind::Rect { width, height }
+        },
     }
 }
 

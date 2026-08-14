@@ -46,6 +46,7 @@ fn make_block_with_notes(row_id: &str, note_count: u32, bar_col: u32) -> Measure
                 accidental: crate::ast::parsed::Accidental::Natural,
                 octave: 0,
                 dotted: false,
+                double_dotted: false,
             },
             note_id: None,
         })
@@ -112,12 +113,16 @@ fn make_block_with_dash(row_id: &str, bar_col: u32) -> MeasureBlock {
                         accidental: crate::ast::parsed::Accidental::Natural,
                         octave: 0,
                         dotted: false,
+                        double_dotted: false,
                     },
                     note_id: None,
                 },
                 ColumnElement {
                     column: 1,
-                    content: ElementContent::NoteDash { dotted: false },
+                    content: ElementContent::NoteDash {
+                        dotted: false,
+                        double_dotted: false,
+                    },
                     note_id: None,
                 },
                 ColumnElement {

@@ -30,13 +30,18 @@ fn note_glyph_weight(config: &RenderConfig) -> f32 {
 }
 
 /// Extra weight given to a dotted column (`NoteHead`, `Rest`, `ChordSymbol`,
-/// `NoteDash`) to make room for its augmentation dot, which is drawn
+/// `NoteDash`) to make room for its augmentation dot(s), which are drawn
 /// alongside the glyph rather than being baked into it (see
 /// `glyph_renderers.rs`'s `render_note_head`/`render_rest`/
 /// `render_chord_symbol`/`render_note_dash`). Matches the dot's real
-/// rendered diameter (`dot_radius = row_height * 0.06` in those renderers).
-fn dotted_extra_weight(config: &RenderConfig) -> f32 {
-    2.0 * config.row_height as f32 * 0.06
+/// rendered diameter (`dot_radius = row_height * 0.06` in those renderers),
+/// doubled when `double_dotted` for the second dot glyph.
+fn dotted_extra_weight(dotted: bool, double_dotted: bool, config: &RenderConfig) -> f32 {
+    if !dotted {
+        return 0.0;
+    }
+    let dot_count = if double_dotted { 2 } else { 1 };
+    dot_count as f32 * 2.0 * config.row_height as f32 * 0.06
 }
 
 /// Extra weight given to a `NoteHead` column carrying a sharp/flat
@@ -99,41 +104,31 @@ fn lyric_weight(text: &str, config: &RenderConfig) -> f32 {
 fn column_weight(content: &ElementContent, config: &RenderConfig) -> f32 {
     match content {
         ElementContent::NoteHead {
-            accidental, dotted, ..
+            accidental,
+            dotted,
+            double_dotted,
+            ..
         } => {
             note_glyph_weight(config)
                 + accidental_extra_weight(accidental, config)
-                + if *dotted {
-                    dotted_extra_weight(config)
-                } else {
-                    0.0
-                }
+                + dotted_extra_weight(*dotted, *double_dotted, config)
         }
-        ElementContent::Rest { dotted } => {
-            note_glyph_weight(config)
-                + if *dotted {
-                    dotted_extra_weight(config)
-                } else {
-                    0.0
-                }
-        }
-        ElementContent::ChordSymbol { text, dotted } => {
-            chord_symbol_weight(text, config)
-                + if *dotted {
-                    dotted_extra_weight(config)
-                } else {
-                    0.0
-                }
+        ElementContent::Rest {
+            dotted,
+            double_dotted,
+        } => note_glyph_weight(config) + dotted_extra_weight(*dotted, *double_dotted, config),
+        ElementContent::ChordSymbol {
+            text,
+            dotted,
+            double_dotted,
+        } => {
+            chord_symbol_weight(text, config) + dotted_extra_weight(*dotted, *double_dotted, config)
         }
         ElementContent::PercussionHit => note_glyph_weight(config),
-        ElementContent::NoteDash { dotted } => {
-            dash_weight()
-                + if *dotted {
-                    dotted_extra_weight(config)
-                } else {
-                    0.0
-                }
-        }
+        ElementContent::NoteDash {
+            dotted,
+            double_dotted,
+        } => dash_weight() + dotted_extra_weight(*dotted, *double_dotted, config),
         ElementContent::Lyric { text, .. } => lyric_weight(text, config),
         // A `LyricLine` spans the whole measure via `column_span` rather than
         // occupying one grid column, so it contributes no per-column weight here;

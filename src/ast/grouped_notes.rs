@@ -31,6 +31,7 @@ pub struct GroupedChordNote {
     pub group_membership: u8,
     pub group_continuation: u8,
     pub dotted: bool,
+    pub double_dotted: bool,
     pub slur_group_close_at_duration: Option<u32>,
     /// The innermost `{...}` tuplet bracket this chord note belonged to before
     /// rescaling, if any.
@@ -56,6 +57,9 @@ pub struct GroupedNote {
     pub group_continuation: u8,
     /// True if this note was written with `*` (dotted duration).
     pub dotted: bool,
+    /// True if this note was written with a second dot (double-dotted duration).
+    /// Only ever `true` when `dotted` is also `true`.
+    pub double_dotted: bool,
     pub slur_group_close_at_duration: Option<u32>,
     /// The innermost `{...}` tuplet bracket this note belonged to before rescaling,
     /// if any.
@@ -84,6 +88,8 @@ pub struct GroupedPercussionHit {
     pub group_continuation: u8,
     /// True if this hit was written with `*` (dotted duration).
     pub dotted: bool,
+    /// True if this hit was written with a second dot (double-dotted duration).
+    pub double_dotted: bool,
     pub slur_group_close_at_duration: Option<u32>,
     /// The innermost `{...}` tuplet bracket this hit belonged to before rescaling,
     /// if any.
@@ -165,6 +171,8 @@ pub struct GroupedRest {
     pub duration: u32,
     /// True if this rest was written with `*` (dotted duration).
     pub dotted: bool,
+    /// True if this rest was written with a second dot (double-dotted duration).
+    pub double_dotted: bool,
     pub group_membership: u8,
     pub group_continuation: u8,
     /// The innermost `{...}` tuplet bracket this rest belonged to before rescaling,

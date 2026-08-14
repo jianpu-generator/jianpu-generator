@@ -120,9 +120,11 @@ pub enum GridContent {
         accidental: Accidental,
         octave: i8,
         dotted: bool,
+        double_dotted: bool,
     },
     Rest {
         dotted: bool,
+        double_dotted: bool,
     },
     /// A single wide rest bar standing in for `count` consecutive
     /// all-rest source measures.
@@ -131,12 +133,14 @@ pub enum GridContent {
     },
     NoteDash {
         dotted: bool,
+        double_dotted: bool,
     },
     /// Spacing-only row for octave dots. Resolver emits nothing for this.
     OctaveDot,
     ChordSymbol {
         text: String,
         dotted: bool,
+        double_dotted: bool,
     },
     /// Percussion hit glyph (unpitched GM drum key), centered like a note head.
     PercussionHit,
@@ -221,9 +225,11 @@ pub enum PostArcGridContent {
         accidental: Accidental,
         octave: i8,
         dotted: bool,
+        double_dotted: bool,
     },
     Rest {
         dotted: bool,
+        double_dotted: bool,
     },
     /// A single wide rest bar standing in for `count` consecutive
     /// all-rest source measures.
@@ -232,11 +238,13 @@ pub enum PostArcGridContent {
     },
     NoteDash {
         dotted: bool,
+        double_dotted: bool,
     },
     OctaveDot,
     ChordSymbol {
         text: String,
         dotted: bool,
+        double_dotted: bool,
     },
     PercussionHit,
     Underline {

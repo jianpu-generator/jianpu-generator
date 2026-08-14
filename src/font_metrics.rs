@@ -199,6 +199,13 @@ pub(crate) const ACCIDENTAL_LEFT_GAP_RATIO: f32 = 0.2;
 /// instead.
 pub(crate) const ACCIDENTAL_RIGHT_PADDING_RATIO: f32 = 1.0;
 
+/// Horizontal spacing (as a ratio of `note_number_width`) between a
+/// double-dotted note/rest/dash's first and second dot glyph, matching the
+/// gap already used between the note/rest/dash glyph itself and its first
+/// dot (`elem.x + note_number_width * 1.5`) — the second dot simply repeats
+/// that same increment past the first.
+pub(crate) const DOT_SPACING_RATIO: f32 = 0.5;
+
 /// Font size (points) of a section label's own text run, shared by the
 /// layout pass (`content_conversion.rs`, sizing the gap reserved before the
 /// directives that follow a label) and the renderer pass (`new_renderer.rs`,

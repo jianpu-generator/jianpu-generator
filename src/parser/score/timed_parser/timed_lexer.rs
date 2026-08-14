@@ -29,7 +29,7 @@ pub enum TimedLexToken {
     RParen,
     LBrace { num: u32, den: Option<u32> },
     RBrace,
-    Extension { dotted: bool },
+    Extension { dotted: bool, double_dotted: bool },
     HeadStart { offset: usize },
     Bpm(u32),
     KeyChange(KeyChange),
@@ -100,6 +100,34 @@ fn emit_single_token(
     ))
 }
 
+/// Lexes a `-` at a word boundary into an `Extension` token: plain (bare
+/// `-`), dotted (`-.`, glued no space), or double-dotted (`-..`, glued) — the
+/// natural full beat of a compound meter (e.g. 9/8's dotted-quarter beat) or
+/// one quarter-beat further still. 3+ glued dots are consumed but behave
+/// exactly like 2 (double-dotted), with no error. Mid-word, `-` is a
+/// duration-suffix dash and is skipped.
+fn lex_dash(
+    line: &str,
+    i: usize,
+    start: usize,
+    len: usize,
+    at_word_boundary: bool,
+) -> LexCharResult {
+    if !at_word_boundary {
+        return Ok((None, len, false));
+    }
+    let dot_count = line[i + len..].chars().take_while(|&c| c == '.').count();
+    emit_single_token(
+        TimedLexToken::Extension {
+            dotted: dot_count >= 1,
+            double_dotted: dot_count >= 2,
+        },
+        start,
+        len + dot_count,
+        true,
+    )
+}
+
 /// Lex one non-whitespace character.  Returns `(token, bytes_consumed, new_at_word_boundary)`.
 /// When the character is a suffix that belongs to the current head, `token` is `None`.
 fn lex_one_char(
@@ -119,19 +147,7 @@ fn lex_one_char(
         '(' => emit_single_token(TimedLexToken::LParen, start, len, true),
         ')' => emit_single_token(TimedLexToken::RParen, start, len, true),
         '}' => emit_single_token(TimedLexToken::RBrace, start, len, true),
-        // `-.` (glued, no space between the dash and the dot) extends by a dotted beat —
-        // the natural full beat of a compound meter (e.g. 9/8's dotted-quarter beat).
-        '-' if at_word_boundary && line[i + len..].starts_with('.') => emit_single_token(
-            TimedLexToken::Extension { dotted: true },
-            start,
-            len + 1,
-            true,
-        ),
-        '-' if at_word_boundary => {
-            emit_single_token(TimedLexToken::Extension { dotted: false }, start, len, true)
-        }
-        // `-` inside a word: duration-suffix dash; skip it.
-        '-' => Ok((None, len, false)),
+        '-' => lex_dash(line, i, start, len, at_word_boundary),
         '1' if at_word_boundary && line[i..].starts_with("1=") => {
             if let Some((tok, consumed)) = try_lex_key_change(line, i, start, recoverable_errors)? {
                 return Ok((Some(tok), consumed, true));

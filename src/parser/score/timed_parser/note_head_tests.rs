@@ -46,6 +46,7 @@ fn parse_to_note(input: &str) -> (JianPuPitch, Accidental, usize) {
         EventAttrs {
             duration: 4,
             dotted: false,
+            double_dotted: false,
             octave: 0,
             group_membership: 0,
             group_continuation: 0,

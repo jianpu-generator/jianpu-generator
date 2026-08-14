@@ -20,6 +20,7 @@ fn note(duration: u32, tuplet: Option<TupletInfo>) -> Spanned<ScoreEvent> {
             group_membership: 0,
             group_continuation: 0,
             dotted: false,
+            double_dotted: false,
             slur_group_close_at_duration: None,
             tuplet,
         }),
@@ -32,6 +33,7 @@ fn rest(duration: u32, tuplet: Option<TupletInfo>) -> Spanned<ScoreEvent> {
         ScoreEvent::Rest(ParsedRest {
             duration,
             dotted: false,
+            double_dotted: false,
             group_membership: 0,
             group_continuation: 0,
             tuplet,

@@ -135,7 +135,10 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
                             "unexpected '}' — no open tuplet; '}' ignored",
                         )));
                 }
-                Some(TimedLexToken::Extension { dotted }) => self.parse_extension(*dotted),
+                Some(TimedLexToken::Extension {
+                    dotted,
+                    double_dotted,
+                }) => self.parse_extension(*dotted, *double_dotted),
                 Some(TimedLexToken::Tilde) => self.parse_tilde()?,
                 Some(TimedLexToken::HeadStart { offset }) => {
                     let offset = *offset;
@@ -180,11 +183,14 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
         }
     }
 
-    fn parse_extension(&mut self, dotted: bool) {
+    fn parse_extension(&mut self, dotted: bool, double_dotted: bool) {
         let span = self.current_span();
         self.bump();
         self.staging.push(DepthEvent::new(Spanned::new(
-            ScoreEvent::Extension { dotted },
+            ScoreEvent::Extension {
+                dotted,
+                double_dotted,
+            },
             span,
         )));
     }
@@ -245,18 +251,15 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
     /// Collect the recoverable diagnostics attached to a parsed `DurationParse` into
     /// `self.chord_errors`.
     fn collect_duration_suffix_diagnostics(&mut self, duration_meta: &super::DurationParse) {
-        if let Some(error) = duration_meta.unexpected_char_error.clone() {
-            self.chord_errors.push(Diagnostic::Error(error));
-        }
-        if let Some(error) = duration_meta.mixed_octave_markers_error.clone() {
-            self.chord_errors.push(Diagnostic::Error(error));
-        }
-        if let Some(error) = duration_meta.cannot_dot_quarter_beat_error.clone() {
-            self.chord_errors.push(Diagnostic::Error(error));
-        }
-        if let Some(error) = duration_meta.tie_on_rest_error.clone() {
-            self.chord_errors.push(Diagnostic::Error(error));
-        }
+        let errors = [
+            &duration_meta.unexpected_char_error,
+            &duration_meta.mixed_octave_markers_error,
+            &duration_meta.cannot_dot_quarter_beat_error,
+            &duration_meta.cannot_double_dot_error,
+            &duration_meta.tie_on_rest_error,
+        ];
+        self.chord_errors
+            .extend(errors.into_iter().flatten().cloned().map(Diagnostic::Error));
     }
 
     /// Parse one timed unit (note/rest/chord head + duration suffixes) starting at `digit_offset`
@@ -318,6 +321,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
             EventAttrs {
                 duration: duration_meta.duration,
                 dotted: duration_meta.dotted,
+                double_dotted: duration_meta.double_dotted,
                 octave,
                 group_membership: 0,
                 group_continuation: 0,
@@ -345,13 +349,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
         // Skip any HeadStart tokens that fall within the byte range of the unit we just parsed.
         // This happens when the lexer emits a HeadStart for a digit inside a multi-char symbol
         // (e.g. the `7` in chord `1m7`).
-        while let Some(TimedLexToken::HeadStart { offset }) = self.peek() {
-            if *offset < unit_end_abs {
-                self.bump();
-            } else {
-                break;
-            }
-        }
+        self.skip_head_starts_before(unit_end_abs);
 
         Ok(())
     }

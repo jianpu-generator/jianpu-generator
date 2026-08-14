@@ -105,6 +105,7 @@ pub trait TimedUnitHead: Sized {
 pub struct EventAttrs {
     pub duration: u32,
     pub dotted: bool,
+    pub double_dotted: bool,
     pub octave: i8,
     pub group_membership: u8,
     pub group_continuation: u8,

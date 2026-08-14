@@ -177,9 +177,20 @@ impl PartGrouper {
         Ok(())
     }
 
-    fn handle_extension(&mut self, span: Span, dotted: bool) -> Result<(), IrrecoverableError> {
+    fn handle_extension(
+        &mut self,
+        span: Span,
+        dotted: bool,
+        double_dotted: bool,
+    ) -> Result<(), IrrecoverableError> {
         self.measure_span_end = span.end.max(self.measure_span_end);
-        let extension_beats = if dotted { 6 } else { 4 } * self.resolution_multiplier;
+        let extension_beats = if double_dotted {
+            7
+        } else if dotted {
+            6
+        } else {
+            4
+        } * self.resolution_multiplier;
         match self.current_notes.last_mut() {
             Some(NoteEvent::Note(n)) => {
                 n.duration += extension_beats;
@@ -249,6 +260,7 @@ impl PartGrouper {
                 group_membership: pn.group_membership,
                 group_continuation: pn.group_continuation,
                 dotted: pn.dotted,
+                double_dotted: pn.double_dotted,
                 slur_group_close_at_duration: pn.slur_group_close_at_duration,
                 tuplet: pn.tuplet,
             }),
@@ -273,6 +285,7 @@ impl PartGrouper {
                 group_membership: pc.group_membership,
                 group_continuation: pc.group_continuation,
                 dotted: pc.dotted,
+                double_dotted: pc.double_dotted,
                 slur_group_close_at_duration: pc.slur_group_close_at_duration,
                 tuplet: pc.tuplet,
             }),
@@ -296,6 +309,7 @@ impl PartGrouper {
                 group_membership: ph.group_membership,
                 group_continuation: ph.group_continuation,
                 dotted: ph.dotted,
+                double_dotted: ph.double_dotted,
                 slur_group_close_at_duration: ph.slur_group_close_at_duration,
                 tuplet: ph.tuplet,
             }),
@@ -310,6 +324,7 @@ impl PartGrouper {
             NoteEvent::Rest(GroupedRest {
                 duration: pr.duration,
                 dotted: pr.dotted,
+                double_dotted: pr.double_dotted,
                 group_membership: pr.group_membership,
                 group_continuation: pr.group_continuation,
                 tuplet: pr.tuplet,
@@ -342,7 +357,10 @@ impl PartGrouper {
                 self.beat_group_size = Self::beat_group_size(&ts);
                 Ok(())
             }
-            ScoreEvent::Extension { dotted } => self.handle_extension(spanned.span, dotted),
+            ScoreEvent::Extension {
+                dotted,
+                double_dotted,
+            } => self.handle_extension(spanned.span, dotted, double_dotted),
             ScoreEvent::TieMarker => self.handle_tie_marker(spanned.span),
             ScoreEvent::Note(pn) => self.handle_note(spanned.span, pn),
             ScoreEvent::Chord(pc) => self.handle_chord(spanned.span, pc),

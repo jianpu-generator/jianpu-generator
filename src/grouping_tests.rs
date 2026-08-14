@@ -153,3 +153,25 @@ fn dotted_extension_fills_compound_meter_measure() {
             .collect::<Vec<_>>()
     );
 }
+
+#[test]
+fn double_dotted_extension_fills_measure() {
+    // In 7/4, each measure holds 28 quarter-beats. A double-dotted quarter note
+    // (4 + 2 + 1 = 7 quarter-beats) followed by three `-..` (double-dotted-beat)
+    // extensions spans the whole measure (7 + 7 + 7 + 7 = 28 quarter-beats).
+    let input = concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\na = notes\n\n",
+        "# score\ntime=7/4\n",
+        "[a] 1.. -.. -.. -..\n",
+    );
+    let output = crate::render_svgs_from_source(input, "test.jianpu", &[]).unwrap();
+    assert!(
+        output.diagnostics.is_empty(),
+        "expected no diagnostics, got: {:?}",
+        output
+            .diagnostics
+            .iter()
+            .map(|e| e.message())
+            .collect::<Vec<_>>()
+    );
+}

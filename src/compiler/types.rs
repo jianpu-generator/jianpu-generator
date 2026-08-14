@@ -87,9 +87,11 @@ pub enum ElementContent {
         accidental: Accidental,
         octave: i8,
         dotted: bool,
+        double_dotted: bool,
     },
     Rest {
         dotted: bool,
+        double_dotted: bool,
     },
     /// A single wide rest bar standing in for `count` consecutive
     /// all-rest source measures (cross-measure collapsing).
@@ -99,6 +101,7 @@ pub enum ElementContent {
     ChordSymbol {
         text: String,
         dotted: bool,
+        double_dotted: bool,
     },
     PercussionHit,
     Underline {
@@ -109,10 +112,12 @@ pub enum ElementContent {
     },
     BarLine,
     /// Visual dash rendered after a note head for each extra beat of duration (e.g. `1-`).
-    /// `dotted` is true when the dash came from a `-.` (dotted-beat) extension rather
-    /// than a plain `-`, and is rendered with a trailing dot to match.
+    /// `dotted`/`double_dotted` are true when the dash came from a `-.`/`-..`
+    /// (dotted-beat/double-dotted-beat) extension rather than a plain `-`, and are
+    /// rendered with trailing dot(s) to match.
     NoteDash {
         dotted: bool,
+        double_dotted: bool,
     },
     /// A syllable for one verse (0-indexed) of a `notes+lyrics` part.
     Lyric {

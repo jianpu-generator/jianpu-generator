@@ -4,6 +4,7 @@ use crate::error::{IrrecoverableError, RecoverableError, Span};
 pub struct DurationParse {
     pub duration: u32,
     pub dotted: bool,
+    pub double_dotted: bool,
     pub octave_up: i8,
     pub octave_down: i8,
     pub tie_to_next_span: Option<Span>,
@@ -12,11 +13,15 @@ pub struct DurationParse {
     pub unexpected_char_error: Option<RecoverableError>,
     pub mixed_octave_markers_error: Option<RecoverableError>,
     pub cannot_dot_quarter_beat_error: Option<RecoverableError>,
+    pub cannot_double_dot_error: Option<RecoverableError>,
 }
 
 struct DurationSuffixState {
     duration: u32,
-    dotted: bool,
+    /// Number of consecutive `.` chars glued onto this token. Clamped to 2 for
+    /// behavior purposes when computing `dotted`/`double_dotted` below — typing
+    /// 3+ dots silently behaves the same as typing exactly 2, with no error.
+    dot_count: u32,
     octave_up: i8,
     octave_down: i8,
     tie_to_next_span: Option<Span>,
@@ -56,7 +61,7 @@ impl DurationSuffixContext<'_> {
                 Ok(Some(index + 1))
             }
             '.' => {
-                self.state.dotted = true;
+                self.state.dot_count += 1;
                 Ok(Some(index + 1))
             }
             '~' => {
@@ -120,7 +125,7 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
         allows_octave: H::allows_octave_suffixes(),
         state: DurationSuffixState {
             duration: 4,
-            dotted: false,
+            dot_count: 0,
             octave_up: 0,
             octave_down: 0,
             tie_to_next_span: None,
@@ -149,22 +154,41 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
         None
     };
 
-    let cannot_dot_quarter_beat_error = if context.state.dotted && context.state.duration == 1 {
-        context.state.dotted = false;
+    // 3+ dots behave exactly like 2 (double-dotted) — no additional feature, no error.
+    let mut dotted = context.state.dot_count >= 1;
+    let mut double_dotted = context.state.dot_count >= 2;
+
+    let cannot_dot_quarter_beat_error = if dotted && context.state.duration == 1 {
+        dotted = false;
+        double_dotted = false;
         Some(RecoverableError::duration_cannot_dot_quarter_beat(*span))
     } else {
         None
     };
 
-    let duration = if context.state.dotted {
-        context.state.duration + context.state.duration / 2
+    let cannot_double_dot_error = if double_dotted && context.state.duration % 4 != 0 {
+        double_dotted = false;
+        Some(RecoverableError::duration_cannot_double_dot(*span))
     } else {
-        context.state.duration
+        None
     };
+
+    let duration = context.state.duration
+        + if dotted {
+            context.state.duration / 2
+        } else {
+            0
+        }
+        + if double_dotted {
+            context.state.duration / 4
+        } else {
+            0
+        };
 
     Ok(DurationParse {
         duration,
-        dotted: context.state.dotted,
+        dotted,
+        double_dotted,
         octave_up: context.state.octave_up,
         octave_down: context.state.octave_down,
         tie_to_next_span: context.state.tie_to_next_span,
@@ -173,6 +197,7 @@ pub fn parse_duration_suffixes<H: TimedUnitHead>(
         unexpected_char_error: context.state.unexpected_char_error,
         mixed_octave_markers_error,
         cannot_dot_quarter_beat_error,
+        cannot_double_dot_error,
     })
 }
 

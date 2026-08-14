@@ -71,6 +71,13 @@ impl RecoverableError {
         }
     }
 
+    pub fn duration_cannot_double_dot(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::DurationCannotDoubleDot,
+        }
+    }
+
     pub fn tuplet_ambiguous_ratio(span: Span, num: u32) -> Self {
         Self {
             span,

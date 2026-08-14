@@ -15,23 +15,50 @@ pub(super) fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridCo
             accidental,
             octave,
             dotted,
+            double_dotted,
         } => Some(PostArcGridContent::NoteHead {
             pitch: pitch.clone(),
             accidental: accidental.clone(),
             octave: *octave,
             dotted: *dotted,
+            double_dotted: *double_dotted,
         }),
-        GridContent::Rest { dotted } => Some(PostArcGridContent::Rest { dotted: *dotted }),
+        GridContent::Rest {
+            dotted,
+            double_dotted,
+        } => Some(PostArcGridContent::Rest {
+            dotted: *dotted,
+            double_dotted: *double_dotted,
+        }),
         GridContent::MultiMeasureRest { count } => {
             Some(PostArcGridContent::MultiMeasureRest { count: *count })
         }
-        GridContent::NoteDash { dotted } => Some(PostArcGridContent::NoteDash { dotted: *dotted }),
+        GridContent::NoteDash {
+            dotted,
+            double_dotted,
+        } => Some(PostArcGridContent::NoteDash {
+            dotted: *dotted,
+            double_dotted: *double_dotted,
+        }),
         GridContent::OctaveDot => Some(PostArcGridContent::OctaveDot),
-        GridContent::ChordSymbol { text, dotted } => Some(PostArcGridContent::ChordSymbol {
+        GridContent::ChordSymbol {
+            text,
+            dotted,
+            double_dotted,
+        } => Some(PostArcGridContent::ChordSymbol {
             text: text.clone(),
             dotted: *dotted,
+            double_dotted: *double_dotted,
         }),
         GridContent::PercussionHit => Some(PostArcGridContent::PercussionHit),
+        content => to_post_arc_text_content(content),
+    }
+}
+
+/// The text/directive/label half of [`to_post_arc_content`]'s dispatch, split
+/// out to stay under the file's line-count cap per function.
+fn to_post_arc_text_content(content: &GridContent) -> Option<PostArcGridContent> {
+    match content {
         GridContent::Underline { level } => Some(PostArcGridContent::Underline { level: *level }),
         GridContent::BarLine { height_pt } => Some(PostArcGridContent::BarLine {
             height_pt: *height_pt,
@@ -70,5 +97,6 @@ pub(super) fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridCo
                 font_size: *font_size,
             })
         }
+        _ => None,
     }
 }

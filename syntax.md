@@ -446,13 +446,17 @@ Rests (`0`) do not accept accidentals.
 | Suffix | Meaning |
 |--------|---------|
 | `.` | Dotted (add half the base duration). Cannot combine with `=` (sixteenth) notes. |
+| `..` | Double-dotted (add half the base duration, then a quarter of it). Only valid when the base duration divides evenly by 4 (see below). |
 | `-` | Extend the previous **note or rest** by one beat (4 quarter-beats) |
 | `-.` | Extend the previous **note or rest** by one *dotted* beat (6 quarter-beats) — the natural beat of a compound meter (e.g. 9/8) |
+| `-..` | Extend the previous **note or rest** by one *double-dotted* beat (7 quarter-beats) |
 | `~` | Tie this note to the next note (same pitch and octave required) |
 
 Example: `2 - - -` is a whole note in 4/4 (equivalent to `2---`). Likewise, `0 - - -` (or `0---`) is a whole rest.
 
-`-.` is a standalone extension atom (the `.` must be glued directly after the `-`, with no space) — it is not the same as a `-` suffix followed by a separate dotted note. In 9/8, `1. -. -.` is a note held across the full measure: a dotted quarter (`1.`, 6 quarter-beats) plus two dotted-beat extensions (6 + 6), totaling 18 quarter-beats.
+`-.`/`-..` are standalone extension atoms (the dot(s) must be glued directly after the `-`, with no space) — they are not the same as a `-` suffix followed by a separate dotted/double-dotted note. In 9/8, `1. -. -.` is a note held across the full measure: a dotted quarter (`1.`, 6 quarter-beats) plus two dotted-beat extensions (6 + 6), totaling 18 quarter-beats. Similarly, `1.. -.. -.. -..` in 7/4 is a note held across the full measure: a double-dotted quarter (`1..`, 7 quarter-beats) plus three double-dotted-beat extensions (7 + 7 + 7), totaling 28 quarter-beats.
+
+A second dot (`..`) adds a quarter of the base duration on top of the dot's own half — e.g. a double-dotted quarter note is `4 + 2 + 1 = 7` quarter-beats. This only lands on a whole quarter-beat when the base duration is a multiple of 4 (quarter notes, half notes, whole notes, ...). Applying `..` to a note whose base duration isn't a multiple of 4 — e.g. an eighth note, `1_..` (base duration 2) — is a recoverable error: the second dot is dropped and the note falls back to being singly dotted (`1_..` behaves like `1_.`, duration 3), with a diagnostic surfaced on the measure. Typing three or more dots (`1...`) is not a distinct feature — it's silently treated the same as two.
 
 You can also attach dashes as suffixes on a note or rest (`2---`, `0---`). Both forms may be mixed in one measure. Repeated rests (`0 0`, `0 0 0 0`) remain equally valid — `0---` and `0 0 0 0` both produce a whole rest in 4/4.
 

@@ -223,6 +223,7 @@ fn compile_timed_unit<T: TimedUnit>(
         CompiledUnit {
             duration: unit.duration(),
             dotted: unit.dotted(),
+            double_dotted: unit.double_dotted(),
             group_membership: unit.group_membership(),
             group_continuation: unit.group_continuation(),
             slur_close_at: unit.slur_close_at(),
@@ -281,6 +282,7 @@ fn compile_rest(
         column: *state.col,
         content: ElementContent::Rest {
             dotted: rest.dotted,
+            double_dotted: rest.double_dotted,
         },
         note_id: Some(note_id),
     });
@@ -309,10 +311,13 @@ fn compile_rest(
         });
     }
 
-    // See the matching comment in `part_slice_unit::compile_unit`: a dotted rest's
-    // own written duration is one full dotted beat, so its `-.` extensions land on
-    // 6-quarter-beat boundaries rather than the 4-quarter-beat ones a plain `-` uses.
-    let beat = if rest.dotted {
+    // See the matching comment in `part_slice_unit::compile_unit`: a dotted (or
+    // double-dotted) rest's own written duration is one full dotted beat, so its
+    // `-.`/`-..` extensions land on 6-/7-quarter-beat boundaries rather than the
+    // 4-quarter-beat ones a plain `-` uses.
+    let beat = if rest.double_dotted {
+        7 * multiplier
+    } else if rest.dotted {
         6 * multiplier
     } else {
         4 * multiplier
@@ -323,6 +328,7 @@ fn compile_rest(
             column: dash_col,
             content: ElementContent::NoteDash {
                 dotted: rest.dotted,
+                double_dotted: rest.double_dotted,
             },
             note_id: Some(note_id),
         });

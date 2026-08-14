@@ -22,9 +22,11 @@ pub enum AbsoluteContent {
         accidental: Accidental,
         octave: i8,
         dotted: bool,
+        double_dotted: bool,
     },
     Rest {
         dotted: bool,
+        double_dotted: bool,
     },
     MultiMeasureRest {
         count: u32,
@@ -33,9 +35,11 @@ pub enum AbsoluteContent {
     ChordSymbol {
         text: String,
         dotted: bool,
+        double_dotted: bool,
     },
     NoteDash {
         dotted: bool,
+        double_dotted: bool,
     },
     PercussionHit,
     Underline {
