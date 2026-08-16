@@ -20,6 +20,9 @@ interface UseMeasureAudioPlaybackParams {
     entryStartIndex: number
     entryEndIndex: number
   } | null>
+  /** Total measures in the score (`measureSpans.length`), used by `playAll`
+   * to span from the first measure through the last written one. */
+  totalMeasures: number
 }
 
 /** Manages generating and playing back audio for a range of measures (e.g. the currently selected measures). */
@@ -29,6 +32,7 @@ export function useMeasureAudioPlayback({
   enabledTracksRef,
   selectedMeasureRange,
   selectedSequenceRangeRef,
+  totalMeasures,
 }: UseMeasureAudioPlaybackParams) {
   const [measureAudioGenerating, setMeasureAudioGenerating] = useState(false)
   const [measureAudioPlaying, setMeasureAudioPlaying] = useState(false)
@@ -154,6 +158,16 @@ export function useMeasureAudioPlayback({
     )
   }, [playMeasureRange])
 
+  // Plays the whole score from its first measure, following any D.C./D.S./
+  // `# sequence` repeat structure through to the last occurrence of the
+  // final written measure — the same performance `generateFullAudio`
+  // (Export WAV) renders, but through this hook's autoplay + cursor-sync
+  // channel instead of a static downloadable player.
+  const playAll = useCallback(() => {
+    if (totalMeasures === 0) return
+    playMeasureRange(0, totalMeasures - 1, true, true)
+  }, [playMeasureRange, totalMeasures])
+
   // Plays only the drag-selected parts (see `useNoteSelection`), muting every
   // other part, over the selection's measure range. Accepted trade-off: this
   // plays the *entire* boundary measures the selection touches, not a
@@ -192,6 +206,7 @@ export function useMeasureAudioPlayback({
     playSelectedMeasures,
     playFromCurrentMeasure,
     playNoteSelection,
+    playAll,
     latestMeasureAudioIdRef,
     measureWavUrlRef,
   }

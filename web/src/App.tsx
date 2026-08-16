@@ -99,6 +99,7 @@ export default function App() {
     partMeasureRanges,
     playSelectedMeasures,
     playFromCurrentMeasure,
+    playAll,
     stopMeasurePlayback,
     highlightedDocuments,
     noteSpans,
@@ -172,6 +173,7 @@ export default function App() {
         measureAudioPlaying={measureAudioPlaying}
         playSelectedMeasures={playSelectedMeasures}
         playFromCurrentMeasure={playFromCurrentMeasure}
+        playAll={playAll}
         notePlaybackSelectionActive={selectedNoteRangePlaybackInfo !== null}
         playNoteSelection={handlePlayNoteSelection}
         stopMeasurePlayback={stopMeasurePlayback}

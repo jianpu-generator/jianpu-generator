@@ -92,6 +92,10 @@ export interface JianpuWorkerState {
     maxMeasureIndex: number,
     selectedPartNames: string[],
   ) => void
+  /** Plays the whole score from its first measure through the last written
+   * one, following any D.C./D.S./`# sequence` repeat structure — the "Play
+   * All" button. */
+  playAll: () => void
   stopMeasurePlayback: () => void
   highlightedDocuments: SvgDocumentOut[]
   measureSpans: MeasureSpan[]

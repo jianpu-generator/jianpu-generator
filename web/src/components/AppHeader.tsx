@@ -7,6 +7,7 @@ import { ExportControls } from './ExportControls'
 import { FileSwitcher } from './FileSwitcher'
 import { GoLiveButton } from './GoLiveButton'
 import { LiveShareBanner } from './LiveShareBanner'
+import { PlayAllButton } from './PlayAllButton'
 import { PlayFromCurrentMeasureButton } from './PlayFromCurrentMeasureButton'
 import { PlayMeasureButton } from './PlayMeasureButton'
 import { SharedPreviewBanner } from './SharedPreviewBanner'
@@ -42,6 +43,7 @@ interface AppHeaderProps {
   measureAudioPlaying: boolean
   playSelectedMeasures: () => void
   playFromCurrentMeasure: () => void
+  playAll: () => void
   /** True while a note drag-select (see `useNoteSelection`) is active; when
    * set, `PlayMeasureButton` plays only the selected parts, muted elsewhere,
    * over the selection's measure range instead of the measure(s) under the
@@ -99,6 +101,7 @@ export function AppHeader({
   measureAudioPlaying,
   playSelectedMeasures,
   playFromCurrentMeasure,
+  playAll,
   notePlaybackSelectionActive,
   playNoteSelection,
   stopMeasurePlayback,
@@ -196,6 +199,15 @@ export function AppHeader({
           onClick={playFromCurrentMeasure}
           onPause={stopMeasurePlayback}
           shortcutLabel={playFromCurrentMeasureShortcutLabel}
+        />
+      )}
+      {audioAvailable && (
+        <PlayAllButton
+          disabled={measureAudioGenerating || !soundfontReady}
+          loading={measureAudioGenerating}
+          playing={measureAudioPlaying}
+          onClick={playAll}
+          onPause={stopMeasurePlayback}
         />
       )}
       <div className="app-header-actions">

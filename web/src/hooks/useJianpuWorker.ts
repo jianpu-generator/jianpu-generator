@@ -30,11 +30,19 @@ export function useJianpuWorker(
   editorRef: RefObject<EditorHandle | null>,
   debounceMs = 300,
 ): JianpuWorkerState {
+  // Captured whole (not just destructured) so `useJianpuWorkerLifecycle`
+  // below can receive it via a single spread instead of ~50 individually
+  // named fields — keeps this file under the per-file line cap.
+  const state = useJianpuWorkerState(
+    source,
+    activeFile,
+    disabledParts,
+    disabledLyrics,
+    soloedParts,
+  )
   const {
     parts,
-    setParts,
     partDeclarations,
-    setPartDeclarations,
     partsLoading,
     setPartsLoading,
     documents,
@@ -42,17 +50,13 @@ export function useJianpuWorker(
     wavUrl,
     setWavUrl,
     noteTimings,
-    setNoteTimings,
     audioAvailable,
-    setAudioAvailable,
     pdfAvailable,
-    setPdfAvailable,
     pdfExporting,
     setPdfExporting,
     splitPdfExporting,
     setSplitPdfExporting,
     midiAvailable,
-    setMidiAvailable,
     midiExporting,
     setMidiExporting,
     splitMidiExporting,
@@ -62,7 +66,6 @@ export function useJianpuWorker(
     diagnostics,
     setDiagnostics,
     diagnosticViewZones,
-    setDiagnosticViewZones,
     rendering,
     setRendering,
     audioGenerating,
@@ -72,9 +75,7 @@ export function useJianpuWorker(
     highlightedDocuments,
     setHighlightedDocuments,
     measureSpans,
-    setMeasureSpans,
     noteSpans,
-    setNoteSpans,
     unzippedText,
     setUnzippedText,
     partMeasureRanges,
@@ -82,9 +83,7 @@ export function useJianpuWorker(
     lyricsVerseRanges,
     setLyricsVerseRanges,
     sectionRanges,
-    setSectionRanges,
     sequenceEntries,
-    setSequenceEntries,
     highlightRenderRequestIdRef,
     latestHighlightRenderIdRef,
     measureSpansRequestIdRef,
@@ -124,21 +123,13 @@ export function useJianpuWorker(
     sourceRef,
     activeFileRef,
     enabledTracksRef,
-    enabledPartNamesRef,
     disabledLyricsRef,
-    audioAvailableRef,
     cursorOffsetTimerRef,
     lastSelectionRef,
     enabledTracks,
     disabledLyricsTracks,
     wavFilename,
-  } = useJianpuWorkerState(
-    source,
-    activeFile,
-    disabledParts,
-    disabledLyrics,
-    soloedParts,
-  )
+  } = state
 
   const sequenceNav = useSequenceNavigation(sequenceEntries)
   useUnzippedTextSnapshot(unzippedView, sourceRef, setUnzippedText)
@@ -166,6 +157,7 @@ export function useJianpuWorker(
     playSelectedMeasures,
     playFromCurrentMeasure,
     playNoteSelection,
+    playAll,
     latestMeasureAudioIdRef,
     measureWavUrlRef,
   } = useMeasureAudioPlayback({
@@ -174,6 +166,7 @@ export function useJianpuWorker(
     enabledTracksRef,
     selectedMeasureRange,
     selectedSequenceRangeRef: sequenceNav.selectedSequenceRangeRef,
+    totalMeasures: measureSpans.length,
   })
 
   const {
@@ -187,61 +180,21 @@ export function useJianpuWorker(
   } = useInstrumentPreview({ workerRef })
 
   useJianpuWorkerLifecycle({
-    workerRef,
-    wavUrlRef,
+    // `state` alone covers every `WorkerMessageHandlerDeps` field sourced
+    // from `useJianpuWorkerState` (spread is exempt from excess-property
+    // checks, so its handful of fields unused here are harmless); only the
+    // outputs of sibling hooks need to be named explicitly.
+    ...state,
     measureWavUrlRef,
-    cursorOffsetTimerRef,
     soundfontBytes,
     fontBytes,
-    audioAvailableRef,
-    setAudioAvailable,
-    setPdfAvailable,
-    setMidiAvailable,
-    latestPartsIdRef,
-    setPartsLoading,
-    setParts,
-    setPartDeclarations,
-    latestUpdatePartDeclarationIdRef,
-    pendingPartDeclarationUpdatesRef,
-    latestFormatScoreIdRef,
-    pendingFormatScoreRequestsRef,
-    shiftPartOctaveTracker,
-    latestPdfIdRef,
-    setPdfExporting,
-    activeFileRef,
-    enabledPartNamesRef,
-    setDiagnostics,
-    latestSplitPdfIdRef,
-    setSplitPdfExporting,
-    latestMidiIdRef,
-    setMidiExporting,
-    latestSplitMidiIdRef,
-    setSplitMidiExporting,
-    latestSplitWavIdRef,
-    setSplitWavExporting,
-    latestRenderIdRef,
-    setRendering,
-    setDocuments,
-    setDiagnosticViewZones,
-    latestAudioIdRef,
-    setAudioGenerating,
     setNextWavUrl,
-    setNoteTimings,
     latestMeasureAudioIdRef,
     setMeasureAudioGenerating,
     setNextMeasureWavUrl,
-    latestHighlightRenderIdRef,
-    setHighlightedDocuments,
-    latestMeasureSpansIdRef,
-    setMeasureSpans,
-    latestNoteSpansIdRef,
-    setNoteSpans,
-    setSectionRanges,
-    setSequenceEntries,
     latestPreviewAudioIdRef,
     currentPreviewAudioRef,
     setPreviewAudioPlaying,
-    pendingImportsRef,
   })
 
   const { notifySelection, notifyUnzippedSelection } =
@@ -389,6 +342,7 @@ export function useJianpuWorker(
     playSelectedMeasures,
     playFromCurrentMeasure,
     playNoteSelection,
+    playAll,
     stopMeasurePlayback,
     highlightedDocuments,
     measureSpans,
