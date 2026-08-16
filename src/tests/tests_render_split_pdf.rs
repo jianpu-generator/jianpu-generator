@@ -80,6 +80,103 @@ fn write_split_pdfs_from_source_no_sections_returns_empty() {
     assert!(entries.is_empty());
 }
 
+// `svg2pdf` embeds font subsets using a randomized-hasher `HashSet`/`HashMap`
+// internally, so byte-for-byte PDF output is not deterministic across calls
+// even for identical input SVGs — only content-driven properties like output
+// length are stable. These tests compare a part declared with a display name
+// distinct from its abbreviation (which adds a legend row, e.g. "S — Soprano")
+// against an otherwise-identical score whose part has no distinct display
+// name (abbreviation == display_name, so no legend row is emitted, per
+// `build_header` in lib.rs), and assert the legend-bearing PDF is larger.
+
+fn with_legend_input() -> &'static str {
+    concat!(
+        "# metadata\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "# parts\n",
+        "Soprano [S] = notes\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[S] 1 2 3 4\n",
+    )
+}
+
+fn without_legend_input() -> &'static str {
+    concat!(
+        "# metadata\n",
+        "title = \"t\"\n",
+        "author = \"a\"\n",
+        "\n",
+        "# parts\n",
+        "S = notes\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[S] 1 2 3 4\n",
+    )
+}
+
+#[test]
+fn write_pdf_from_source_filtered_with_lyrics_includes_part_legend() {
+    let with_legend_pdf = write_pdf_from_source_filtered_with_lyrics(
+        with_legend_input(),
+        "test.jianpu",
+        None,
+        None,
+        &test_pdf_fonts(),
+        &[],
+    )
+    .unwrap();
+    let without_legend_pdf = write_pdf_from_source_filtered_with_lyrics(
+        without_legend_input(),
+        "test.jianpu",
+        None,
+        None,
+        &test_pdf_fonts(),
+        &[],
+    )
+    .unwrap();
+    assert!(
+        with_legend_pdf.len() > without_legend_pdf.len(),
+        "PDF for a part with a distinct display name ({} bytes) should be larger \
+         than one without a legend row ({} bytes)",
+        with_legend_pdf.len(),
+        without_legend_pdf.len()
+    );
+}
+
+#[test]
+fn write_split_pdfs_from_source_includes_part_legend() {
+    let with_legend_entries = write_split_pdfs_from_source(
+        with_legend_input(),
+        "test.jianpu",
+        "song",
+        &[],
+        &test_pdf_fonts(),
+    )
+    .unwrap();
+    let without_legend_entries = write_split_pdfs_from_source(
+        without_legend_input(),
+        "test.jianpu",
+        "song",
+        &[],
+        &test_pdf_fonts(),
+    )
+    .unwrap();
+    assert_eq!(with_legend_entries.len(), 1);
+    assert_eq!(without_legend_entries.len(), 1);
+    assert!(
+        with_legend_entries[0].pdf.len() > without_legend_entries[0].pdf.len(),
+        "split PDF for a part with a distinct display name ({} bytes) should be larger \
+         than one without a legend row ({} bytes)",
+        with_legend_entries[0].pdf.len(),
+        without_legend_entries[0].pdf.len()
+    );
+}
+
 #[test]
 fn zip_split_pdfs_contains_named_entries() {
     let entries = write_split_pdfs_from_source(

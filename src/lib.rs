@@ -253,7 +253,7 @@ fn render_svg_docs_with_parts(
     Ok(renderer::new_renderer::render_new(&abs, &config))
 }
 
-fn render_svgs_with_parts(
+pub(crate) fn render_svgs_with_parts(
     score: &Score,
     parts: &[PartInfo],
     groups: &[GroupInfo],
@@ -352,11 +352,14 @@ pub fn write_pdf_from_source_filtered_with_lyrics(
     fonts: &pdf::PdfFonts,
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<u8>, IrrecoverableError> {
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
-    apply_lyrics_filter(&mut score, disabled_lyrics);
-    let svgs = render_svgs(&score)?;
-    pdf::write_pdf(&svgs, fonts, Some(source))
+    let render_output = render_svgs_from_source_filtered_with_lyrics(
+        source,
+        filename,
+        enabled_tracks,
+        disabled_lyrics,
+        instruments,
+    )?;
+    pdf::write_pdf(&render_output.svgs, fonts, Some(source))
 }
 
 #[cfg(test)]
