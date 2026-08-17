@@ -98,3 +98,23 @@ test('toggling swaps to the editor and hides the preview', async ({ page }) => {
   await expect(editorPane).toHaveClass(/pane--editor-collapsed/)
   await expect(previewPane).not.toHaveClass(/pane--preview-collapsed/)
 })
+
+test('export dropdown items are reachable on a mobile viewport', async ({
+  page,
+}) => {
+  const menuButton = page.getByRole('button', { name: 'Export', exact: true })
+  await expect(menuButton).toBeEnabled({ timeout: 30_000 })
+  await menuButton.click()
+
+  const menu = page.getByRole('menu')
+  await expect(menu).toBeVisible()
+
+  // The header scrolls horizontally on mobile (see previous test), which
+  // implicitly clips the dropdown's vertical overflow too, trapping it
+  // inside the ~48px-tall header strip instead of floating over the page.
+  const items = await menu.getByRole('menuitem').all()
+  expect(items.length).toBeGreaterThan(0)
+  for (const item of items) {
+    await expect(item).toBeInViewport()
+  }
+})
