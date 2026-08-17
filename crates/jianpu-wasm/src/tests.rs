@@ -32,9 +32,6 @@ mod tests_pdf;
 #[path = "tests_render.rs"]
 mod tests_render;
 
-#[path = "tests_unzipped_edit.rs"]
-mod tests_unzipped_edit;
-
 #[path = "tests_share.rs"]
 mod tests_share;
 

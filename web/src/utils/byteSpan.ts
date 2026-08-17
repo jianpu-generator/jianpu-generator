@@ -15,9 +15,9 @@ function utf8ByteLengthOfCodePoint(ch: string): number {
  *
  * Monaco's `ITextModel` normalizes line endings independently of the source
  * text it was created from — in particular, a model created with empty
- * content (as happens transiently while the Unzipped view's text is still
- * being fetched asynchronously) can default to CRLF (`\r\n`) even though
- * the Rust/wasm core always generates and measures its byte offsets against
+ * content (as happens transiently on file switch) can default to CRLF
+ * (`\r\n`) even though the Rust/wasm core always generates and measures its
+ * byte offsets against
  * LF-only (`\n`) text. `charIndex`, from `model.getOffsetAt`, is a UTF-16
  * code unit count into whatever the model's *actual* buffer contains, so if
  * that buffer is CRLF, `source` (from `model.getValue()`) is too, and it

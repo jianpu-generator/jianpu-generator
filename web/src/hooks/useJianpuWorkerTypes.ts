@@ -1,9 +1,4 @@
-import type {
-  LyricsVerseRangesOut,
-  NoteTimingOut,
-  PartMeasureRangesOut,
-  SvgDocumentOut,
-} from 'jianpu-wasm'
+import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import type { RefObject } from 'react'
 import type {
   Diagnostic,
@@ -65,23 +60,6 @@ export interface JianpuWorkerState {
     endLine: number,
     isEmpty: boolean,
   ) => void
-  /** Same as `notifySelection`, but for Unzipped view text, whose byte offsets map
-   * to measure indices via `partMeasureRanges` instead of `measureSpans`. */
-  notifyUnzippedSelection: (
-    startOffset: number,
-    endOffset: number,
-    isEmpty: boolean,
-  ) => void
-  /** The whole-document Unzipped view projection of `source` (empty until
-   * `unzippedView` is enabled), recomputed alongside `measureSpans`. */
-  unzippedText: string
-  /** Per declared part, per measure index: byte range within `unzippedText`
-   * covering that measure's tokens. */
-  partMeasureRanges: PartMeasureRangesOut[]
-  /** Per declared part, per lyrics verse, per measure index: byte range
-   * within `unzippedText` covering that verse's tagged `[Abbrev:lyrics:N]`
-   * block tokens for that measure. */
-  lyricsVerseRanges: LyricsVerseRangesOut[]
   playSelectedMeasures: () => void
   playFromCurrentMeasure: () => void
   /** Plays only `selectedPartNames`, muting the rest, over
@@ -141,14 +119,6 @@ export interface JianpuWorkerState {
    * part or unknown abbreviation resolves with the source unchanged.
    */
   shiftPartOctave: (abbreviation: string, delta: number) => Promise<string>
-  /**
-   * Unzipped-view "Format" action: breaks each measure in the current
-   * Unzipped editor text onto its own line (purely cosmetic — merging back
-   * collapses those newlines to spaces regardless). Merges `unzippedText`
-   * into `source` first, then updates `unzippedText` state with the
-   * reformatted result; no-ops if merging fails (unknown/malformed block).
-   */
-  formatUnzippedText: () => void
   /**
    * Recovers the `.jianpu` source embedded in a previously exported SVG/PDF
    * file (see `source_embed::extract_embedded_source`). Rejects if the file

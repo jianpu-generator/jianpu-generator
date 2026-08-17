@@ -1,12 +1,7 @@
-import type {
-  NoteTimingOut,
-  PartMeasureRangesOut,
-  SvgDocumentOut,
-} from 'jianpu-wasm'
-import { merge_unzipped_text } from 'jianpu-wasm'
-import { AlignLeft, Columns2 } from 'lucide-react'
+import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
+import { AlignLeft } from 'lucide-react'
 import type { RefObject } from 'react'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MOBILE_BREAKPOINT_QUERY, useMediaQuery } from '../hooks/useMediaQuery'
 import type {
   Diagnostic,
@@ -42,12 +37,9 @@ interface AppWorkspaceProps {
   fileId: string
   source: string
   handleSourceChange: (value: string) => void
-  /** Zipped-view "Format" toolbar action: drops redundant `# score` lines
-   * and normalizes whitespace. Active only while Unzipped view is off. */
+  /** "Format" toolbar action: drops redundant `# score` lines and
+   * normalizes whitespace. */
   handleFormatScore: () => void
-  /** Unzipped-view "Format" toolbar action: breaks each measure onto its own
-   * line. Active only while Unzipped view is on. */
-  handleFormatUnzippedText: () => void
   readOnly: boolean
   diagnostics: Diagnostic[]
   diagnosticViewZones: DiagnosticViewZone[]
@@ -58,11 +50,6 @@ interface AppWorkspaceProps {
   notifySelection: (
     startLine: number,
     endLine: number,
-    isEmpty: boolean,
-  ) => void
-  notifyUnzippedSelection: (
-    startOffset: number,
-    endOffset: number,
     isEmpty: boolean,
   ) => void
   setEditPartsOpen: (open: boolean) => void
@@ -104,7 +91,7 @@ interface AppWorkspaceProps {
   handleSectionJump: (label: string) => void
   handleNoteRangeSelect: (selectedCells: NoteCell[]) => void
   /** Keeps the preview's note highlight in sync with the editor's own
-   * current selection (Zipped view only — see `useNoteSelection`'s
+   * current selection (see `useNoteSelection`'s
    * `handleEditorSelectionChange`), the reverse direction of
    * `handleNoteRangeSelect`. */
   handleEditorSelectionChange: (startByte: number, endByte: number) => void
@@ -121,16 +108,6 @@ interface AppWorkspaceProps {
   measureAudioNoteTimings: NoteTimingOut[]
   measureAudioElement: HTMLAudioElement | null
   noPartsSelected: boolean
-  /** Whether the whole-document Unzipped view (Zipped⇄Unzipped toggle) is
-   * currently shown instead of the normal Zipped editor. */
-  unzippedView: boolean
-  onToggleUnzippedView: () => void
-  /** The Unzipped view projection of `source`, kept in sync by the caller
-   * whenever `unzippedView` is true. */
-  unzippedText: string
-  /** Per-part, per-measure byte ranges into `unzippedText`, used to relocate
-   * Zipped-source-relative diagnostics onto the Unzipped view's text. */
-  partMeasureRanges: PartMeasureRangesOut[]
 }
 
 export function AppWorkspace({
@@ -142,14 +119,12 @@ export function AppWorkspace({
   source,
   handleSourceChange,
   handleFormatScore,
-  handleFormatUnzippedText,
   readOnly,
   diagnostics,
   diagnosticViewZones,
   measureSpans,
   setSelectedLineRange,
   notifySelection,
-  notifyUnzippedSelection,
   setEditPartsOpen,
   setEditMetadataOpen,
   forceSave,
@@ -188,10 +163,6 @@ export function AppWorkspace({
   measureAudioNoteTimings,
   measureAudioElement,
   noPartsSelected,
-  unzippedView,
-  onToggleUnzippedView,
-  unzippedText,
-  partMeasureRanges,
 }: AppWorkspaceProps) {
   const [editorPaneEl, setEditorPaneEl] = useState<HTMLDivElement | null>(null)
   const isMobile = useMediaQuery(MOBILE_BREAKPOINT_QUERY)
@@ -215,20 +186,6 @@ export function AppWorkspace({
     }
   }, [setEditorCollapsed])
 
-  const handleEditorChange = useCallback(
-    (value: string) => {
-      if (!unzippedView) {
-        handleSourceChange(value)
-        return
-      }
-      const result = merge_unzipped_text(source, value)
-      if (result.status === 'ok') {
-        handleSourceChange(result.text)
-      }
-    },
-    [unzippedView, source, handleSourceChange],
-  )
-
   return (
     <main className="workspace">
       <section
@@ -246,27 +203,19 @@ export function AppWorkspace({
             {hideEditor ? null : (
               <Editor
                 ref={editorRef}
-                path={unzippedView ? `${fileId}::unzipped` : fileId}
-                value={unzippedView ? unzippedText : source}
-                onChange={handleEditorChange}
+                path={fileId}
+                value={source}
+                onChange={handleSourceChange}
                 readOnly={readOnly}
                 diagnostics={diagnostics}
                 diagnosticViewZones={diagnosticViewZones}
                 measureSpans={measureSpans}
-                unzippedView={unzippedView}
-                partMeasureRanges={partMeasureRanges}
                 onSelectionChange={(firstLine, lastLine, isEmpty) => {
                   setSelectedLineRange(null)
-                  if (!unzippedView) {
-                    notifySelection(firstLine, lastLine, isEmpty)
-                  }
+                  notifySelection(firstLine, lastLine, isEmpty)
                 }}
-                onSelectionOffsetChange={(startOffset, endOffset, isEmpty) => {
-                  if (unzippedView) {
-                    notifyUnzippedSelection(startOffset, endOffset, isEmpty)
-                  } else {
-                    handleEditorSelectionChange(startOffset, endOffset)
-                  }
+                onSelectionOffsetChange={(startOffset, endOffset) => {
+                  handleEditorSelectionChange(startOffset, endOffset)
                 }}
                 onEditPartsClick={() => setEditPartsOpen(true)}
                 onEditMetadataClick={() => setEditMetadataOpen(true)}
@@ -311,31 +260,10 @@ export function AppWorkspace({
           <div className="pane-divider-toggles">
             <button
               type="button"
-              className={[
-                'pane-divider-view-toggle',
-                unzippedView ? 'pane-divider-view-toggle--active' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              onClick={onToggleUnzippedView}
-              title={unzippedView ? 'Show Zipped view' : 'Show Unzipped view'}
-              aria-label={
-                unzippedView ? 'Show Zipped view' : 'Show Unzipped view'
-              }
-              aria-pressed={unzippedView}
-            >
-              <Columns2 size={12} aria-hidden="true" />
-            </button>
-            <button
-              type="button"
               className="pane-divider-format-toggle"
-              onClick={
-                unzippedView ? handleFormatUnzippedText : handleFormatScore
-              }
-              title={unzippedView ? 'Format unzipped text' : 'Format score'}
-              aria-label={
-                unzippedView ? 'Format unzipped text' : 'Format score'
-              }
+              onClick={handleFormatScore}
+              title="Format score"
+              aria-label="Format score"
             >
               <AlignLeft size={12} aria-hidden="true" />
             </button>

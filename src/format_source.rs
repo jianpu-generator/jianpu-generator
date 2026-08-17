@@ -16,8 +16,7 @@
 //!    (quote-aware for directive lines, so `label="Two Words"` survives as a
 //!    single token).
 //!
-//! The redundant-line removal reuses `desugar::desugar_groups` (the same
-//! implicit-fill pass `unzipped_edit::merge_unzipped_text` runs) rather than
+//! The redundant-line removal reuses `desugar::desugar_groups` rather than
 //! re-implementing "how would this resolve": once the eligible trailing
 //! lines are stripped from the raw input, feeding the result back through
 //! `desugar_groups` fills the dropped slots correctly for free.

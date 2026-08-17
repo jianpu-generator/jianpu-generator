@@ -1,5 +1,4 @@
 import MonacoEditor, { type Monaco, type OnMount } from '@monaco-editor/react'
-import type { PartMeasureRangesOut } from 'jianpu-wasm'
 import type { editor, IDisposable, ISelection, languages } from 'monaco-editor'
 import {
   forwardRef,
@@ -26,7 +25,6 @@ import {
   buildDiagnosticMarkers,
   createDiagnosticViewZoneDomNode,
   errorViewZoneHeightInPx,
-  resolveDiagnosticViewZones,
 } from './editorDiagnosticViewZones'
 import { createEditorImperativeHandle } from './editorImperativeHandle'
 import {
@@ -44,12 +42,6 @@ export interface EditorProps {
   diagnostics?: Diagnostic[]
   diagnosticViewZones?: DiagnosticViewZone[]
   measureSpans?: MeasureSpan[]
-  /** True when showing the Unzipped view's generated text; `diagnostics`
-   * spans are always Zipped-source-relative, so they get relocated via
-   * `measureSpans` + `partMeasureRanges` (see `editorDiagnosticViewZones`). */
-  unzippedView?: boolean
-  /** Per-part, per-measure byte ranges into the Unzipped view's text. */
-  partMeasureRanges?: PartMeasureRangesOut[]
   toolbar?: ReactNode
   /** `isEmpty` is true when the selection is a plain caret (0-length) rather
    * than a highlighted range — callers use this to gate the preview's
@@ -60,8 +52,9 @@ export interface EditorProps {
     isEmpty: boolean,
   ) => void
   /** Same selection as `onSelectionChange`, but as UTF-16 code-unit offsets
-   * via `model.getOffsetAt` — used by the Unzipped view caller, whose
-   * measure mapping is byte-offset-based rather than line-based. */
+   * via `model.getOffsetAt` — used by callers whose measure mapping is
+   * byte-offset-based rather than line-based (see `useNoteSelection`'s
+   * `handleEditorSelectionChange`). */
   onSelectionOffsetChange?: (
     startOffset: number,
     endOffset: number,
@@ -85,8 +78,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     diagnostics = [],
     diagnosticViewZones = [],
     measureSpans = [],
-    unzippedView = false,
-    partMeasureRanges = [],
     toolbar,
     onSelectionChange,
     onSelectionOffsetChange,
@@ -128,16 +119,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     const model = ed?.getModel()
     if (!ed || !monacoApi || !model) return
 
-    const markers = buildDiagnosticMarkers(
-      model,
-      monacoApi,
-      diagnostics,
-      unzippedView,
-      measureSpans,
-      partMeasureRanges,
-    )
+    const markers = buildDiagnosticMarkers(model, monacoApi, diagnostics)
     monacoApi.editor.setModelMarkers(model, MARKER_OWNER, markers)
-  }, [diagnostics, unzippedView, measureSpans, partMeasureRanges])
+  }, [diagnostics])
 
   const applyMeasureViewZones = useCallback(() => {
     const ed = editorRef.current
@@ -171,22 +155,13 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     const model = ed?.getModel()
     if (!ed || !model) return
 
-    const zones = resolveDiagnosticViewZones(
-      model,
-      unzippedView,
-      diagnostics,
-      diagnosticViewZones,
-      measureSpans,
-      partMeasureRanges,
-    )
-
     ed.changeViewZones((accessor) => {
       for (const id of diagnosticViewZoneIdsRef.current) {
         accessor.removeZone(id)
       }
       diagnosticViewZoneIdsRef.current = []
 
-      for (const zone of zones) {
+      for (const zone of diagnosticViewZones) {
         const domNode = createDiagnosticViewZoneDomNode(
           zone.severity,
           zone.messages,
@@ -203,13 +178,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         diagnosticViewZoneIdsRef.current.push(id)
       }
     })
-  }, [
-    diagnosticViewZones,
-    unzippedView,
-    diagnostics,
-    measureSpans,
-    partMeasureRanges,
-  ])
+  }, [diagnosticViewZones])
 
   useImperativeHandle(
     ref,

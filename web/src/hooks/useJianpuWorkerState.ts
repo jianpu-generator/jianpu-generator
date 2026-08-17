@@ -1,9 +1,4 @@
-import type {
-  LyricsVerseRangesOut,
-  NoteTimingOut,
-  PartMeasureRangesOut,
-  SvgDocumentOut,
-} from 'jianpu-wasm'
+import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import { useMemo, useRef, useState } from 'react'
 import type {
   Diagnostic,
@@ -66,20 +61,6 @@ export function useJianpuWorkerState(
   >([])
   const [measureSpans, setMeasureSpans] = useState<MeasureSpan[]>([])
   const [noteSpans, setNoteSpans] = useState<NoteSpan[]>([])
-  // A one-time snapshot of `extract_unzipped_text(source)`, taken only when
-  // Unzipped view is switched on (see effect in useJianpuWorker) — NOT
-  // re-derived on every source change, so the Unzipped editor's displayed
-  // text doesn't get clobbered by rest-padding while the user is mid-edit.
-  // Contrast with `partMeasureRanges`, which is intentionally re-derived on
-  // every source change inside `useJianpuWorkerRenderRequests` for
-  // (stale-tolerated) cursor->measure highlighting.
-  const [unzippedText, setUnzippedText] = useState('')
-  const [partMeasureRanges, setPartMeasureRanges] = useState<
-    PartMeasureRangesOut[]
-  >([])
-  const [lyricsVerseRanges, setLyricsVerseRanges] = useState<
-    LyricsVerseRangesOut[]
-  >([])
   const [sectionRanges, setSectionRanges] = useState<SectionRange[]>([])
   const [sequenceEntries, setSequenceEntries] = useState<SequenceEntry[]>([])
   const highlightRenderRequestIdRef = useRef(0)
@@ -89,8 +70,6 @@ export function useJianpuWorkerState(
   const measureSpansRef = useRef<MeasureSpan[]>([])
   const noteSpansRequestIdRef = useRef(0)
   const latestNoteSpansIdRef = useRef(0)
-  const partMeasureRangesRef = useRef<PartMeasureRangesOut[]>([])
-  const lyricsVerseRangesRef = useRef<LyricsVerseRangesOut[]>([])
   const workerRef = useRef<Worker | null>(null)
   const wavUrlRef = useRef<string | null>(null)
   const partsRequestIdRef = useRef(0)
@@ -141,7 +120,6 @@ export function useJianpuWorkerState(
   const lastSelectionRef = useRef<{
     start: number
     end: number
-    mode: 'source' | 'unzipped'
     isEmpty: boolean
   } | null>(null)
 
@@ -177,8 +155,6 @@ export function useJianpuWorkerState(
   enabledPartNamesRef.current = enabledPartNames
   disabledLyricsRef.current = disabledLyricsTracks
   measureSpansRef.current = measureSpans
-  partMeasureRangesRef.current = partMeasureRanges
-  lyricsVerseRangesRef.current = lyricsVerseRanges
 
   return {
     parts,
@@ -225,12 +201,6 @@ export function useJianpuWorkerState(
     setMeasureSpans,
     noteSpans,
     setNoteSpans,
-    unzippedText,
-    setUnzippedText,
-    partMeasureRanges,
-    setPartMeasureRanges,
-    lyricsVerseRanges,
-    setLyricsVerseRanges,
     sectionRanges,
     setSectionRanges,
     sequenceEntries,
@@ -242,8 +212,6 @@ export function useJianpuWorkerState(
     measureSpansRef,
     noteSpansRequestIdRef,
     latestNoteSpansIdRef,
-    partMeasureRangesRef,
-    lyricsVerseRangesRef,
     workerRef,
     wavUrlRef,
     partsRequestIdRef,

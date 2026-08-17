@@ -91,12 +91,8 @@ pub(crate) fn parse_key_prefix(line: &str) -> Option<(&str, &str)> {
         .and_then(|s| s.find(']').map(|i| (s[..i].trim(), s[i + 1..].trim())))
 }
 
-/// `pub(crate)` (rather than private) so `unzipped_edit::merge_unzipped_text` can
-/// reuse it directly for measures where every declared part comes up blank after a
-/// repack — the only case where that module can't rely on `desugar_groups`'s own
-/// per-declaration implicit-fill fallback (that fallback only fires for a
-/// declaration that's *absent* from an otherwise-nonempty keyed group; a group with
-/// zero keyed lines at all short-circuits before ever reaching it).
+/// Produces the implicit-fill content (rest line / all-`_` lyrics line) for a
+/// declaration that's absent from an otherwise-nonempty keyed group.
 pub(crate) fn implicit_fill(role: ScoreLineRole, time_num: u8) -> String {
     match role {
         ScoreLineRole::Lyrics => "_".to_string(),
@@ -104,41 +100,6 @@ pub(crate) fn implicit_fill(role: ScoreLineRole, time_num: u8) -> String {
             itertools::join(std::iter::repeat_n("0", time_num as usize), " ")
         }
     }
-}
-
-/// Renders desugared measure groups (with their positional `ScoreLineSlot`s)
-/// back into `# score`-section text, restoring each line's `[Abbrev]` key
-/// prefix from its slot's `track_index`.
-pub(crate) fn render_score_lines(
-    declarations: &[PartDecl],
-    desugared: &[Vec<SourceLine>],
-    slots_per_group: &[Vec<ScoreLineSlot>],
-) -> Vec<String> {
-    desugared
-        .iter()
-        .zip(slots_per_group.iter())
-        .map(|(group, slots)| {
-            let data_start = group.len().saturating_sub(slots.len());
-            let mut lines: Vec<String> = group
-                .get(..data_start)
-                .unwrap_or(&[])
-                .iter()
-                .map(|line| line.content.clone())
-                .collect();
-            lines.extend(
-                group
-                    .get(data_start..)
-                    .unwrap_or(&[])
-                    .iter()
-                    .zip(slots.iter())
-                    .filter_map(|(line, slot)| {
-                        let abbrev = &declarations.get(slot.track_index)?.abbreviation;
-                        Some(format!("[{abbrev}] {}", line.content))
-                    }),
-            );
-            lines.join("\n")
-        })
-        .collect()
 }
 
 struct GroupContext {

@@ -16,8 +16,6 @@ import {
 import { useScoreSource } from './useScoreSource'
 import { useSectionNavigation } from './useSectionNavigation'
 import { useStorageBackend } from './useStorageBackend'
-import { useUnzippedViewState } from './useUnzippedViewState'
-import { useUnzippedViewToggle } from './useUnzippedViewToggle'
 import { useUrlFileSync } from './useUrlFileSync'
 import { useWasmLoader } from './useWasmLoader'
 
@@ -73,7 +71,6 @@ export function useAppController() {
     setEditorCollapsed,
   )
   const fileId = fileIdForName(store, store.active)
-  const [unzippedView, setUnzippedView] = useUnzippedViewState(fileId)
 
   const editorRef = useRef<EditorHandle>(null)
   const soundfont = useAssetLoader('/fonts/GeneralUser_GS.sf2')
@@ -129,9 +126,6 @@ export function useAppController() {
     selectedSequenceRange,
     sequenceJumpToolbarProps,
     notifySelection,
-    notifyUnzippedSelection,
-    unzippedText,
-    partMeasureRanges,
     playSelectedMeasures,
     playFromCurrentMeasure,
     playNoteSelection,
@@ -146,7 +140,6 @@ export function useAppController() {
     updatePartDeclaration,
     formatScore,
     shiftPartOctave,
-    formatUnzippedText,
     importFromFile,
   } = useJianpuWorker(
     source,
@@ -156,8 +149,6 @@ export function useAppController() {
     store.active,
     soundfont.bytes,
     fonts.fonts,
-    unzippedView,
-    editorRef,
   )
   usePartTogglePruning(
     parts,
@@ -180,15 +171,9 @@ export function useAppController() {
     },
     [setStore, flushPendingSave],
   )
-  const { handleFormatScore, handleToggleUnzippedView } = useUnzippedViewToggle(
-    {
-      unzippedView,
-      setUnzippedView,
-      formatScore,
-      source,
-      handleSourceChange,
-    },
-  )
+  const handleFormatScore = useCallback(() => {
+    void formatScore(source).then(handleSourceChange)
+  }, [formatScore, source, handleSourceChange])
   const { importingFile, handleImportFile } = useFileImport(
     store,
     backend,
@@ -278,7 +263,6 @@ export function useAppController() {
     readOnly,
     liveShare,
     fileId,
-    unzippedView,
     editorRef,
     soundfont,
     fonts,
@@ -324,9 +308,6 @@ export function useAppController() {
     selectedSequenceRange,
     sequenceJumpToolbarProps,
     notifySelection,
-    notifyUnzippedSelection,
-    unzippedText,
-    partMeasureRanges,
     playSelectedMeasures,
     playFromCurrentMeasure,
     playAll,
@@ -337,11 +318,9 @@ export function useAppController() {
     previewPercussion,
     stopPreviewInstrument,
     previewAudioPlaying,
-    formatUnzippedText,
     handleSourceChange,
     handleSelect,
     handleFormatScore,
-    handleToggleUnzippedView,
     importingFile,
     handleImportFile,
     editPartsOpen,

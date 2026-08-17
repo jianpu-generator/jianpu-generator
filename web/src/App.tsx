@@ -48,7 +48,6 @@ export default function App() {
     readOnly,
     liveShare,
     fileId,
-    unzippedView,
     editorRef,
     soundfont,
     fonts,
@@ -94,9 +93,6 @@ export default function App() {
     selectedSequenceRange,
     sequenceJumpToolbarProps,
     notifySelection,
-    notifyUnzippedSelection,
-    unzippedText,
-    partMeasureRanges,
     playSelectedMeasures,
     playFromCurrentMeasure,
     playAll,
@@ -107,11 +103,9 @@ export default function App() {
     previewPercussion,
     stopPreviewInstrument,
     previewAudioPlaying,
-    formatUnzippedText,
     handleSourceChange,
     handleSelect,
     handleFormatScore,
-    handleToggleUnzippedView,
     importingFile,
     handleImportFile,
     editPartsOpen,
@@ -258,14 +252,12 @@ export default function App() {
         source={source}
         handleSourceChange={handleSourceChange}
         handleFormatScore={handleFormatScore}
-        handleFormatUnzippedText={formatUnzippedText}
         readOnly={readOnly}
         diagnostics={diagnostics}
         diagnosticViewZones={diagnosticViewZones}
         measureSpans={measureSpans}
         setSelectedLineRange={setSelectedLineRange}
         notifySelection={notifySelection}
-        notifyUnzippedSelection={notifyUnzippedSelection}
         setEditPartsOpen={setEditPartsOpen}
         setEditMetadataOpen={setEditMetadataOpen}
         forceSave={forceSave}
@@ -304,10 +296,6 @@ export default function App() {
         measureAudioNoteTimings={measureAudioNoteTimings}
         measureAudioElement={measureAudioElement}
         noPartsSelected={noPartsSelected}
-        unzippedView={unzippedView}
-        onToggleUnzippedView={handleToggleUnzippedView}
-        unzippedText={unzippedText}
-        partMeasureRanges={partMeasureRanges}
       />
     </div>
   )

@@ -40,7 +40,6 @@ pub mod source_embed;
 pub mod split_track;
 pub mod symbols;
 mod tuplet;
-pub mod unzipped_edit;
 pub mod utils;
 
 #[cfg(feature = "midi")]
@@ -261,22 +260,6 @@ pub(crate) fn render_svgs_with_parts(
 ) -> Result<Vec<String>, IrrecoverableError> {
     let docs = render_svg_docs_with_parts(score, parts, groups)?;
     Ok(serializer::serialize(&docs, source))
-}
-
-/// Parse, group, and render a `.jianpu` source string into the pre-serialization
-/// [`renderer::new_types::SvgDocument`] tree — for tests that want to assert
-/// two documents render the same *shape* without being sensitive to
-/// serialization-only differences (e.g. the embedded-source metadata blob).
-#[cfg(test)]
-pub(crate) fn render_svg_docs_from_source(
-    source: &str,
-    filename: &str,
-    instruments: &[InstrumentInfo],
-) -> Result<Vec<renderer::new_types::SvgDocument>, IrrecoverableError> {
-    let parts = list_parts_from_source(source, filename, instruments)?;
-    let groups = list_groups_from_source(source, filename, instruments)?;
-    let score = compile(source, filename, instruments)?;
-    render_svg_docs_with_parts(&score, &parts, &groups)
 }
 
 /// Layout and render a [`Score`] into one SVG string per page.

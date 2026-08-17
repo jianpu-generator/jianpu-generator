@@ -18,7 +18,6 @@ export type {
   SectionRangeOut as SectionRange,
   SequenceEntryOut as SequenceEntry,
   SpanOut as ByteSpan,
-  UnzippedEditResponse as UnzippedEditResult,
 } from 'jianpu-wasm'
 
 // Format: "N: Instrument Name" e.g. "48: String Ensemble 1"

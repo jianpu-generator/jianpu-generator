@@ -264,37 +264,6 @@ pub enum ListMeasureSpansResponse {
 }
 
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
-pub struct PartMeasureRangesOut {
-    pub abbreviation: String,
-    pub ranges: Vec<SpanOut>,
-}
-
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
-pub struct LyricsVerseRangesOut {
-    pub abbreviation: String,
-    /// 1-based verse number.
-    pub verse_number: usize,
-    pub ranges: Vec<SpanOut>,
-}
-
-#[derive(Debug, Clone, Tsify, Serialize)]
-#[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
-pub enum UnzippedEditResponse {
-    Ok {
-        text: String,
-        part_measure_ranges: Vec<PartMeasureRangesOut>,
-        lyrics_verse_ranges: Vec<LyricsVerseRangesOut>,
-    },
-    UnknownPart,
-    Err,
-}
-
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
 #[tsify(into_wasm_abi)]
 pub struct DiagnosticMessageOut {
     pub message: String,

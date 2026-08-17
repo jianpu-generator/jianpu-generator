@@ -6,11 +6,9 @@ import type { NoteCell, NoteSelectionRun } from '../utils/noteSpanSelection'
 import { ensureWasmInit } from '../wasmInit'
 
 /** Calls the wasm `group_note_selection` export directly on the main
- * thread (bypassing the debounced render worker), mirroring
- * `extract_unzipped_text`'s main-thread usage in
- * `useJianpuWorkerRenderRequests.ts` — this is pure grouping over an
- * already-fetched flat `note_spans` array, so it doesn't need to re-parse
- * `source` and stays responsive on every selection-change tick. */
+ * thread (bypassing the debounced render worker) — this is pure grouping
+ * over an already-fetched flat `note_spans` array, so it doesn't need to
+ * re-parse `source` and stays responsive on every selection-change tick. */
 async function groupSelectedNotesIntoContiguousRuns(
   selectedCells: NoteCell[],
   noteSpans: NoteSpan[],
@@ -115,9 +113,7 @@ export function useNoteSelection(
    * other way.
    *
    * `startByte`/`endByte` are byte offsets into the same source `noteSpans`
-   * is keyed against (see `Editor.tsx`'s `onSelectionOffsetChange`) — the
-   * caller is expected to only invoke this for the Zipped view, since
-   * `noteSpans` has no meaning against the Unzipped view's projected text.
+   * is keyed against (see `Editor.tsx`'s `onSelectionOffsetChange`).
    */
   const handleEditorSelectionChange = useCallback(
     async (startByte: number, endByte: number) => {

@@ -1,15 +1,9 @@
-import type {
-  LyricsVerseRangesOut,
-  PartMeasureRangesOut,
-  SvgDocumentOut,
-} from 'jianpu-wasm'
-import { extract_unzipped_text } from 'jianpu-wasm'
+import type { SvgDocumentOut } from 'jianpu-wasm'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef } from 'react'
 import type { Diagnostic, MeasureSpan } from '../types'
-import { ensureWasmInit } from '../wasmInit'
 import type { WorkerRequest } from '../worker/jianpu.worker'
-import { measureRangeInSpan, measureRangeInUnzippedText } from './workerHelpers'
+import { measureRangeInSpan } from './workerHelpers'
 
 interface UseJianpuWorkerRenderRequestsParams {
   workerRef: RefObject<Worker | null>
@@ -45,16 +39,8 @@ interface UseJianpuWorkerRenderRequestsParams {
   lastSelectionRef: RefObject<{
     start: number
     end: number
-    mode: 'source' | 'unzipped'
     isEmpty: boolean
   } | null>
-  /** Whether the whole-document Unzipped view is currently shown; gates the
-   * `extract_unzipped_text` re-fetch below. */
-  unzippedView: boolean
-  partMeasureRangesRef: RefObject<PartMeasureRangesOut[]>
-  setPartMeasureRanges: (value: PartMeasureRangesOut[]) => void
-  lyricsVerseRangesRef: RefObject<LyricsVerseRangesOut[]>
-  setLyricsVerseRanges: (value: LyricsVerseRangesOut[]) => void
 }
 
 /** Debounced worker requests that keep parts, rendered documents, highlighted documents and
@@ -89,11 +75,6 @@ export function useJianpuWorkerRenderRequests({
   latestNoteSpansIdRef,
   cursorOffsetTimerRef,
   lastSelectionRef,
-  unzippedView,
-  partMeasureRangesRef,
-  setPartMeasureRanges,
-  lyricsVerseRangesRef,
-  setLyricsVerseRanges,
 }: UseJianpuWorkerRenderRequestsParams) {
   // Tracks whether the selection behind the current `selectedMeasureRange`
   // is a bare caret (0-length) rather than a highlighted range. Kept
@@ -114,35 +95,6 @@ export function useJianpuWorkerRenderRequests({
   useEffect(() => {
     setSelectedMeasureRange(null)
   }, [source])
-
-  // Re-derives `partMeasureRanges` (used for stale-but-tolerated
-  // cursor->measure highlighting in Unzipped view) on every source change.
-  // This intentionally does NOT feed the Unzipped editor's displayed text —
-  // that comes from a one-time snapshot taken when Unzipped view is
-  // switched on (see `useJianpuWorker`'s `unzippedText` snapshot effect) so
-  // that in-progress edits aren't clobbered by rest-padding from repeated
-  // merge/re-extract cycles while the user is still typing.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: setPartMeasureRanges is a stable setState function passed in as a param
-  useEffect(() => {
-    if (!unzippedView) return
-    let cancelled = false
-    const timer = window.setTimeout(() => {
-      ensureWasmInit().then(() => {
-        if (cancelled) return
-        const result = extract_unzipped_text(source)
-        setPartMeasureRanges(
-          result.status === 'ok' ? result.part_measure_ranges : [],
-        )
-        setLyricsVerseRanges(
-          result.status === 'ok' ? result.lyrics_verse_ranges : [],
-        )
-      })
-    }, debounceMs)
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
-    }
-  }, [source, unzippedView, debounceMs])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: workerRef/partsRequestIdRef/latestPartsIdRef are stable refs passed in as params
   useEffect(() => {
@@ -186,7 +138,6 @@ export function useJianpuWorkerRenderRequests({
       lastSelectionRef.current = {
         start: startLine,
         end: endLine,
-        mode: 'source',
         isEmpty,
       }
       if (cursorOffsetTimerRef.current !== null) {
@@ -203,75 +154,14 @@ export function useJianpuWorkerRenderRequests({
     [debounceMs],
   )
 
-  // Unzipped view text's byte offsets map to measure indices via
-  // `partMeasureRanges`, not through the full source's lines/byte offsets.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: lastSelectionRef/cursorOffsetTimerRef/partMeasureRangesRef are stable refs passed in as params
-  const notifyUnzippedSelection = useCallback(
-    (startOffset: number, endOffset: number, isEmpty: boolean) => {
-      lastSelectionRef.current = {
-        start: startOffset,
-        end: endOffset,
-        mode: 'unzipped',
-        isEmpty,
-      }
-      if (cursorOffsetTimerRef.current !== null) {
-        window.clearTimeout(cursorOffsetTimerRef.current)
-      }
-      cursorOffsetTimerRef.current = window.setTimeout(() => {
-        cursorOffsetTimerRef.current = null
-        measureRangeIsCaretOnlyRef.current = isEmpty
-        const startRange = measureRangeInUnzippedText(
-          partMeasureRangesRef.current,
-          startOffset,
-          lyricsVerseRangesRef.current,
-        )
-        const endRange = measureRangeInUnzippedText(
-          partMeasureRangesRef.current,
-          endOffset,
-          lyricsVerseRangesRef.current,
-        )
-        if (startRange === null || endRange === null) {
-          setSelectedMeasureRange(null)
-          return
-        }
-        setSelectedMeasureRange({
-          start: Math.min(startRange.start, endRange.start),
-          end: Math.max(startRange.end, endRange.end),
-        })
-      }, debounceMs)
-    },
-    [debounceMs],
-  )
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: lastSelectionRef/partMeasureRangesRef are stable refs passed in as params
+  // biome-ignore lint/correctness/useExhaustiveDependencies: lastSelectionRef is a stable ref passed in as a param
   useEffect(() => {
     const sel = lastSelectionRef.current
     if (!sel) return
     measureRangeIsCaretOnlyRef.current = sel.isEmpty
-    if (sel.mode === 'unzipped') {
-      const startRange = measureRangeInUnzippedText(
-        partMeasureRangesRef.current,
-        sel.start,
-        lyricsVerseRangesRef.current,
-      )
-      const endRange = measureRangeInUnzippedText(
-        partMeasureRangesRef.current,
-        sel.end,
-        lyricsVerseRangesRef.current,
-      )
-      setSelectedMeasureRange(
-        startRange === null || endRange === null
-          ? null
-          : {
-              start: Math.min(startRange.start, endRange.start),
-              end: Math.max(startRange.end, endRange.end),
-            },
-      )
-    } else {
-      setSelectedMeasureRange(
-        measureRangeInSpan(measureSpans, sel.start, sel.end),
-      )
-    }
+    setSelectedMeasureRange(
+      measureRangeInSpan(measureSpans, sel.start, sel.end),
+    )
   }, [measureSpans])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: workerRef/sourceRef/highlightRenderRequestIdRef/latestHighlightRenderIdRef are stable refs passed in as params
@@ -336,5 +226,5 @@ export function useJianpuWorkerRenderRequests({
     return () => window.clearTimeout(timer)
   }, [source, debounceMs])
 
-  return { notifySelection, notifyUnzippedSelection }
+  return { notifySelection }
 }

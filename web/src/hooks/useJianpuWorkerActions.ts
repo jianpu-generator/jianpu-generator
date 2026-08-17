@@ -18,7 +18,6 @@ interface UseJianpuWorkerActionsParams {
   activeFile: string
   soundfontBytes: Uint8Array | null
   fontBytes: { sc: Uint8Array; tc: Uint8Array; mono: Uint8Array } | null
-  unzippedView: boolean
   debounceMs: number
 }
 
@@ -43,7 +42,6 @@ export function useJianpuWorkerActions({
   activeFile,
   soundfontBytes,
   fontBytes,
-  unzippedView,
   debounceMs,
 }: UseJianpuWorkerActionsParams) {
   const { setNextWavUrl, generateFullAudio } = useJianpuWorkerAudioActions({
@@ -149,43 +147,37 @@ export function useJianpuWorkerActions({
     pendingImportsRef: state.pendingImportsRef,
   })
 
-  const { notifySelection, notifyUnzippedSelection } =
-    useJianpuWorkerRenderRequests({
-      workerRef: state.workerRef,
-      sourceRef: state.sourceRef,
-      source,
-      activeFile,
-      debounceMs,
-      cursorOffsetTimerRef: state.cursorOffsetTimerRef,
-      enabledTracks: state.enabledTracks,
-      disabledLyricsTracks: state.disabledLyricsTracks,
-      setDocuments: state.setDocuments,
-      setNextWavUrl,
-      setDiagnostics: state.setDiagnostics,
-      setPartsLoading: state.setPartsLoading,
-      partsRequestIdRef: state.partsRequestIdRef,
-      latestPartsIdRef: state.latestPartsIdRef,
-      setRendering: state.setRendering,
-      renderRequestIdRef: state.renderRequestIdRef,
-      latestRenderIdRef: state.latestRenderIdRef,
-      selectedMeasureRange: state.selectedMeasureRange,
-      setSelectedMeasureRange: state.setSelectedMeasureRange,
-      setHighlightedDocuments: state.setHighlightedDocuments,
-      highlightRenderRequestIdRef: state.highlightRenderRequestIdRef,
-      latestHighlightRenderIdRef: state.latestHighlightRenderIdRef,
-      measureSpans: state.measureSpans,
-      measureSpansRef: state.measureSpansRef,
-      measureSpansRequestIdRef: state.measureSpansRequestIdRef,
-      latestMeasureSpansIdRef: state.latestMeasureSpansIdRef,
-      noteSpansRequestIdRef: state.noteSpansRequestIdRef,
-      latestNoteSpansIdRef: state.latestNoteSpansIdRef,
-      lastSelectionRef: state.lastSelectionRef,
-      unzippedView,
-      partMeasureRangesRef: state.partMeasureRangesRef,
-      setPartMeasureRanges: state.setPartMeasureRanges,
-      lyricsVerseRangesRef: state.lyricsVerseRangesRef,
-      setLyricsVerseRanges: state.setLyricsVerseRanges,
-    })
+  const { notifySelection } = useJianpuWorkerRenderRequests({
+    workerRef: state.workerRef,
+    sourceRef: state.sourceRef,
+    source,
+    activeFile,
+    debounceMs,
+    cursorOffsetTimerRef: state.cursorOffsetTimerRef,
+    enabledTracks: state.enabledTracks,
+    disabledLyricsTracks: state.disabledLyricsTracks,
+    setDocuments: state.setDocuments,
+    setNextWavUrl,
+    setDiagnostics: state.setDiagnostics,
+    setPartsLoading: state.setPartsLoading,
+    partsRequestIdRef: state.partsRequestIdRef,
+    latestPartsIdRef: state.latestPartsIdRef,
+    setRendering: state.setRendering,
+    renderRequestIdRef: state.renderRequestIdRef,
+    latestRenderIdRef: state.latestRenderIdRef,
+    selectedMeasureRange: state.selectedMeasureRange,
+    setSelectedMeasureRange: state.setSelectedMeasureRange,
+    setHighlightedDocuments: state.setHighlightedDocuments,
+    highlightRenderRequestIdRef: state.highlightRenderRequestIdRef,
+    latestHighlightRenderIdRef: state.latestHighlightRenderIdRef,
+    measureSpans: state.measureSpans,
+    measureSpansRef: state.measureSpansRef,
+    measureSpansRequestIdRef: state.measureSpansRequestIdRef,
+    latestMeasureSpansIdRef: state.latestMeasureSpansIdRef,
+    noteSpansRequestIdRef: state.noteSpansRequestIdRef,
+    latestNoteSpansIdRef: state.latestNoteSpansIdRef,
+    lastSelectionRef: state.lastSelectionRef,
+  })
 
   const {
     exportPdf,
@@ -260,7 +252,6 @@ export function useJianpuWorkerActions({
     playNoteSelection,
     playAll,
     notifySelection,
-    notifyUnzippedSelection,
     exportPdf,
     exportSplitPdf,
     exportMidi,

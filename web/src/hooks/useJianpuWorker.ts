@@ -1,11 +1,7 @@
-import type { RefObject } from 'react'
-import type { EditorHandle } from '../types'
 import { useJianpuWorkerActions } from './useJianpuWorkerActions'
 import { useJianpuWorkerState } from './useJianpuWorkerState'
 import type { JianpuWorkerState } from './useJianpuWorkerTypes'
 import { useSequenceNavigation } from './useSequenceNavigation'
-import { useUnzippedTextFormat } from './useUnzippedTextFormat'
-import { useUnzippedTextSnapshot } from './useUnzippedTextSnapshot'
 
 export type { JianpuWorkerState } from './useJianpuWorkerTypes'
 
@@ -17,8 +13,6 @@ export function useJianpuWorker(
   activeFile: string,
   soundfontBytes: Uint8Array | null,
   fontBytes: { sc: Uint8Array; tc: Uint8Array; mono: Uint8Array } | null,
-  unzippedView: boolean,
-  editorRef: RefObject<EditorHandle | null>,
   debounceMs = 300,
 ): JianpuWorkerState {
   const state = useJianpuWorkerState(
@@ -52,17 +46,11 @@ export function useJianpuWorker(
     highlightedDocuments,
     measureSpans,
     noteSpans,
-    unzippedText,
-    setUnzippedText,
-    partMeasureRanges,
-    lyricsVerseRanges,
     sectionRanges,
     sequenceEntries,
-    sourceRef,
   } = state
 
   const sequenceNav = useSequenceNavigation(sequenceEntries)
-  useUnzippedTextSnapshot(unzippedView, sourceRef, setUnzippedText)
 
   const actions = useJianpuWorkerActions({
     state,
@@ -71,15 +59,7 @@ export function useJianpuWorker(
     activeFile,
     soundfontBytes,
     fontBytes,
-    unzippedView,
     debounceMs,
-  })
-
-  const formatUnzippedText = useUnzippedTextFormat({
-    source,
-    unzippedText,
-    editorRef,
-    setUnzippedText,
   })
 
   return {
@@ -114,10 +94,6 @@ export function useJianpuWorker(
     measureAudioNoteTimings: actions.measureAudioNoteTimings,
     measureAudioElement: actions.measureAudioElement,
     notifySelection: actions.notifySelection,
-    notifyUnzippedSelection: actions.notifyUnzippedSelection,
-    unzippedText,
-    partMeasureRanges,
-    lyricsVerseRanges,
     playSelectedMeasures: actions.playSelectedMeasures,
     playFromCurrentMeasure: actions.playFromCurrentMeasure,
     playNoteSelection: actions.playNoteSelection,
@@ -137,7 +113,6 @@ export function useJianpuWorker(
     updatePartDeclaration: actions.updatePartDeclaration,
     formatScore: actions.formatScore,
     shiftPartOctave: actions.shiftPartOctave,
-    formatUnzippedText,
     importFromFile: actions.importFromFile,
   }
 }
