@@ -1,17 +1,8 @@
 import type { RefObject } from 'react'
 import type { EditorHandle } from '../types'
-import { useInstrumentPreview } from './useInstrumentPreview'
-import { useJianpuWorkerAudioActions } from './useJianpuWorkerAudioActions'
-import { useJianpuWorkerExports } from './useJianpuWorkerExports'
-import { useJianpuWorkerFormat } from './useJianpuWorkerFormat'
-import { useJianpuWorkerImport } from './useJianpuWorkerImport'
-import { useJianpuWorkerLifecycle } from './useJianpuWorkerLifecycle'
-import { useJianpuWorkerPartDeclaration } from './useJianpuWorkerPartDeclaration'
-import { useJianpuWorkerRenderRequests } from './useJianpuWorkerRenderRequests'
-import { useJianpuWorkerShiftOctave } from './useJianpuWorkerShiftOctave'
+import { useJianpuWorkerActions } from './useJianpuWorkerActions'
 import { useJianpuWorkerState } from './useJianpuWorkerState'
 import type { JianpuWorkerState } from './useJianpuWorkerTypes'
-import { useMeasureAudioPlayback } from './useMeasureAudioPlayback'
 import { useSequenceNavigation } from './useSequenceNavigation'
 import { useUnzippedTextFormat } from './useUnzippedTextFormat'
 import { useUnzippedTextSnapshot } from './useUnzippedTextSnapshot'
@@ -30,9 +21,6 @@ export function useJianpuWorker(
   editorRef: RefObject<EditorHandle | null>,
   debounceMs = 300,
 ): JianpuWorkerState {
-  // Captured whole (not just destructured) so `useJianpuWorkerLifecycle`
-  // below can receive it via a single spread instead of ~50 individually
-  // named fields — keeps this file under the per-file line cap.
   const state = useJianpuWorkerState(
     source,
     activeFile,
@@ -44,256 +32,47 @@ export function useJianpuWorker(
     parts,
     partDeclarations,
     partsLoading,
-    setPartsLoading,
     documents,
-    setDocuments,
     wavUrl,
-    setWavUrl,
+    wavFilename,
     noteTimings,
     audioAvailable,
     pdfAvailable,
     pdfExporting,
-    setPdfExporting,
     splitPdfExporting,
-    setSplitPdfExporting,
     midiAvailable,
     midiExporting,
-    setMidiExporting,
     splitMidiExporting,
-    setSplitMidiExporting,
     splitWavExporting,
-    setSplitWavExporting,
     diagnostics,
-    setDiagnostics,
     diagnosticViewZones,
     rendering,
-    setRendering,
     audioGenerating,
-    setAudioGenerating,
     selectedMeasureRange,
-    setSelectedMeasureRange,
     highlightedDocuments,
-    setHighlightedDocuments,
     measureSpans,
     noteSpans,
     unzippedText,
     setUnzippedText,
     partMeasureRanges,
-    setPartMeasureRanges,
     lyricsVerseRanges,
-    setLyricsVerseRanges,
     sectionRanges,
     sequenceEntries,
-    highlightRenderRequestIdRef,
-    latestHighlightRenderIdRef,
-    measureSpansRequestIdRef,
-    latestMeasureSpansIdRef,
-    measureSpansRef,
-    noteSpansRequestIdRef,
-    latestNoteSpansIdRef,
-    partMeasureRangesRef,
-    lyricsVerseRangesRef,
-    workerRef,
-    wavUrlRef,
-    partsRequestIdRef,
-    updatePartDeclarationRequestIdRef,
-    latestUpdatePartDeclarationIdRef,
-    pendingPartDeclarationUpdatesRef,
-    formatScoreRequestIdRef,
-    latestFormatScoreIdRef,
-    pendingFormatScoreRequestsRef,
-    shiftPartOctaveTracker,
-    importRequestIdRef,
-    pendingImportsRef,
-    renderRequestIdRef,
-    audioRequestIdRef,
-    pdfRequestIdRef,
-    splitPdfRequestIdRef,
-    midiRequestIdRef,
-    splitMidiRequestIdRef,
-    splitWavRequestIdRef,
-    latestPartsIdRef,
-    latestRenderIdRef,
-    latestAudioIdRef,
-    latestPdfIdRef,
-    latestSplitPdfIdRef,
-    latestMidiIdRef,
-    latestSplitMidiIdRef,
-    latestSplitWavIdRef,
     sourceRef,
-    activeFileRef,
-    enabledTracksRef,
-    disabledLyricsRef,
-    cursorOffsetTimerRef,
-    lastSelectionRef,
-    enabledTracks,
-    disabledLyricsTracks,
-    wavFilename,
   } = state
 
   const sequenceNav = useSequenceNavigation(sequenceEntries)
   useUnzippedTextSnapshot(unzippedView, sourceRef, setUnzippedText)
 
-  const { setNextWavUrl, generateFullAudio } = useJianpuWorkerAudioActions({
-    workerRef,
-    sourceRef,
-    enabledTracksRef,
-    wavUrlRef,
-    setWavUrl,
-    audioGenerating,
-    setAudioGenerating,
-    audioRequestIdRef,
-    latestAudioIdRef,
-  })
-
-  const {
-    measureAudioGenerating,
-    setMeasureAudioGenerating,
-    measureAudioPlaying,
-    measureAudioNoteTimings,
-    measureAudioElement,
-    setNextMeasureWavUrl,
-    stopMeasurePlayback,
-    playSelectedMeasures,
-    playFromCurrentMeasure,
-    playNoteSelection,
-    playAll,
-    latestMeasureAudioIdRef,
-    measureWavUrlRef,
-  } = useMeasureAudioPlayback({
-    workerRef,
-    sourceRef,
-    enabledTracksRef,
-    selectedMeasureRange,
-    selectedSequenceRangeRef: sequenceNav.selectedSequenceRangeRef,
-    totalMeasures: measureSpans.length,
-  })
-
-  const {
-    previewAudioPlaying,
-    setPreviewAudioPlaying,
-    previewInstrument,
-    previewPercussion,
-    stopPreviewInstrument,
-    latestPreviewAudioIdRef,
-    currentPreviewAudioRef,
-  } = useInstrumentPreview({ workerRef })
-
-  useJianpuWorkerLifecycle({
-    // `state` alone covers every `WorkerMessageHandlerDeps` field sourced
-    // from `useJianpuWorkerState` (spread is exempt from excess-property
-    // checks, so its handful of fields unused here are harmless); only the
-    // outputs of sibling hooks need to be named explicitly.
-    ...state,
-    measureWavUrlRef,
+  const actions = useJianpuWorkerActions({
+    state,
+    sequenceNav,
+    source,
+    activeFile,
     soundfontBytes,
     fontBytes,
-    setNextWavUrl,
-    latestMeasureAudioIdRef,
-    setMeasureAudioGenerating,
-    setNextMeasureWavUrl,
-    latestPreviewAudioIdRef,
-    currentPreviewAudioRef,
-    setPreviewAudioPlaying,
-  })
-
-  const { notifySelection, notifyUnzippedSelection } =
-    useJianpuWorkerRenderRequests({
-      workerRef,
-      sourceRef,
-      source,
-      activeFile,
-      debounceMs,
-      enabledTracks,
-      disabledLyricsTracks,
-      setDocuments,
-      setNextWavUrl,
-      setDiagnostics,
-      setPartsLoading,
-      partsRequestIdRef,
-      latestPartsIdRef,
-      setRendering,
-      renderRequestIdRef,
-      latestRenderIdRef,
-      selectedMeasureRange,
-      setSelectedMeasureRange,
-      setHighlightedDocuments,
-      highlightRenderRequestIdRef,
-      latestHighlightRenderIdRef,
-      measureSpans,
-      measureSpansRef,
-      measureSpansRequestIdRef,
-      latestMeasureSpansIdRef,
-      noteSpansRequestIdRef,
-      latestNoteSpansIdRef,
-      cursorOffsetTimerRef,
-      lastSelectionRef,
-      unzippedView,
-      partMeasureRangesRef,
-      setPartMeasureRanges,
-      lyricsVerseRangesRef,
-      setLyricsVerseRanges,
-    })
-
-  const {
-    exportPdf,
-    exportSplitPdf,
-    exportMidi,
-    exportSplitMidi,
-    exportSplitWav,
-  } = useJianpuWorkerExports({
-    workerRef,
-    sourceRef,
-    activeFileRef,
-    enabledTracksRef,
-    disabledLyricsRef,
-    pdfExporting,
-    splitPdfExporting,
-    midiExporting,
-    splitMidiExporting,
-    splitWavExporting,
-    setPdfExporting,
-    setSplitPdfExporting,
-    setMidiExporting,
-    setSplitMidiExporting,
-    setSplitWavExporting,
-    pdfRequestIdRef,
-    latestPdfIdRef,
-    splitPdfRequestIdRef,
-    latestSplitPdfIdRef,
-    midiRequestIdRef,
-    latestMidiIdRef,
-    splitMidiRequestIdRef,
-    latestSplitMidiIdRef,
-    splitWavRequestIdRef,
-    latestSplitWavIdRef,
-  })
-
-  const { updatePartDeclaration } = useJianpuWorkerPartDeclaration({
-    workerRef,
-    sourceRef,
-    updatePartDeclarationRequestIdRef,
-    latestUpdatePartDeclarationIdRef,
-    pendingPartDeclarationUpdatesRef,
-  })
-
-  const { formatScore } = useJianpuWorkerFormat({
-    workerRef,
-    formatScoreRequestIdRef,
-    latestFormatScoreIdRef,
-    pendingFormatScoreRequestsRef,
-  })
-
-  const { shiftPartOctave } = useJianpuWorkerShiftOctave({
-    workerRef,
-    sourceRef,
-    shiftPartOctaveTracker,
-  })
-
-  const { importFromFile } = useJianpuWorkerImport({
-    workerRef,
-    importRequestIdRef,
-    pendingImportsRef,
+    unzippedView,
+    debounceMs,
   })
 
   const formatUnzippedText = useUnzippedTextFormat({
@@ -323,27 +102,27 @@ export function useJianpuWorker(
     diagnosticViewZones,
     rendering,
     audioGenerating,
-    exportPdf,
-    exportSplitPdf,
-    exportMidi,
-    exportSplitMidi,
-    exportSplitWav,
-    generateFullAudio,
+    exportPdf: actions.exportPdf,
+    exportSplitPdf: actions.exportSplitPdf,
+    exportMidi: actions.exportMidi,
+    exportSplitMidi: actions.exportSplitMidi,
+    exportSplitWav: actions.exportSplitWav,
+    generateFullAudio: actions.generateFullAudio,
     selectedMeasureRange,
-    measureAudioGenerating,
-    measureAudioPlaying,
-    measureAudioNoteTimings,
-    measureAudioElement,
-    notifySelection,
-    notifyUnzippedSelection,
+    measureAudioGenerating: actions.measureAudioGenerating,
+    measureAudioPlaying: actions.measureAudioPlaying,
+    measureAudioNoteTimings: actions.measureAudioNoteTimings,
+    measureAudioElement: actions.measureAudioElement,
+    notifySelection: actions.notifySelection,
+    notifyUnzippedSelection: actions.notifyUnzippedSelection,
     unzippedText,
     partMeasureRanges,
     lyricsVerseRanges,
-    playSelectedMeasures,
-    playFromCurrentMeasure,
-    playNoteSelection,
-    playAll,
-    stopMeasurePlayback,
+    playSelectedMeasures: actions.playSelectedMeasures,
+    playFromCurrentMeasure: actions.playFromCurrentMeasure,
+    playNoteSelection: actions.playNoteSelection,
+    playAll: actions.playAll,
+    stopMeasurePlayback: actions.stopMeasurePlayback,
     highlightedDocuments,
     measureSpans,
     noteSpans,
@@ -351,14 +130,14 @@ export function useJianpuWorker(
     sequenceEntries,
     selectedSequenceRange: sequenceNav.selectedSequenceRange,
     sequenceJumpToolbarProps: sequenceNav.sequenceJumpToolbarProps,
-    previewInstrument,
-    previewPercussion,
-    stopPreviewInstrument,
-    previewAudioPlaying,
-    updatePartDeclaration,
-    formatScore,
-    shiftPartOctave,
+    previewInstrument: actions.previewInstrument,
+    previewPercussion: actions.previewPercussion,
+    stopPreviewInstrument: actions.stopPreviewInstrument,
+    previewAudioPlaying: actions.previewAudioPlaying,
+    updatePartDeclaration: actions.updatePartDeclaration,
+    formatScore: actions.formatScore,
+    shiftPartOctave: actions.shiftPartOctave,
     formatUnzippedText,
-    importFromFile,
+    importFromFile: actions.importFromFile,
   }
 }

@@ -1,0 +1,278 @@
+import { useInstrumentPreview } from './useInstrumentPreview'
+import { useJianpuWorkerAudioActions } from './useJianpuWorkerAudioActions'
+import { useJianpuWorkerExports } from './useJianpuWorkerExports'
+import { useJianpuWorkerFormat } from './useJianpuWorkerFormat'
+import { useJianpuWorkerImport } from './useJianpuWorkerImport'
+import { useJianpuWorkerLifecycle } from './useJianpuWorkerLifecycle'
+import { useJianpuWorkerPartDeclaration } from './useJianpuWorkerPartDeclaration'
+import { useJianpuWorkerRenderRequests } from './useJianpuWorkerRenderRequests'
+import { useJianpuWorkerShiftOctave } from './useJianpuWorkerShiftOctave'
+import type { useJianpuWorkerState } from './useJianpuWorkerState'
+import { useMeasureAudioPlayback } from './useMeasureAudioPlayback'
+import type { useSequenceNavigation } from './useSequenceNavigation'
+
+interface UseJianpuWorkerActionsParams {
+  state: ReturnType<typeof useJianpuWorkerState>
+  sequenceNav: ReturnType<typeof useSequenceNavigation>
+  source: string
+  activeFile: string
+  soundfontBytes: Uint8Array | null
+  fontBytes: { sc: Uint8Array; tc: Uint8Array; mono: Uint8Array } | null
+  unzippedView: boolean
+  debounceMs: number
+}
+
+/**
+ * Wires every `useJianpuWorker` sub-hook that isn't plain state
+ * (`useJianpuWorkerState`) or sequence navigation — audio/measure/instrument
+ * playback, worker lifecycle callbacks, render requests, exports, and the
+ * one-off part-declaration/format/shift-octave/import actions — and returns
+ * everything `useJianpuWorker` needs beyond `state` itself to assemble its
+ * public return value.
+ *
+ * Split out of `useJianpuWorker` purely to stay under the 400-line file
+ * cap; the two only make sense read together, and reads `state`'s fields
+ * directly (rather than destructuring them into locals) so nothing here
+ * shadows or drifts from the single `useJianpuWorkerState` call in the
+ * caller.
+ */
+export function useJianpuWorkerActions({
+  state,
+  sequenceNav,
+  source,
+  activeFile,
+  soundfontBytes,
+  fontBytes,
+  unzippedView,
+  debounceMs,
+}: UseJianpuWorkerActionsParams) {
+  const { setNextWavUrl, generateFullAudio } = useJianpuWorkerAudioActions({
+    workerRef: state.workerRef,
+    sourceRef: state.sourceRef,
+    enabledTracksRef: state.enabledTracksRef,
+    wavUrlRef: state.wavUrlRef,
+    setWavUrl: state.setWavUrl,
+    audioGenerating: state.audioGenerating,
+    setAudioGenerating: state.setAudioGenerating,
+    audioRequestIdRef: state.audioRequestIdRef,
+    latestAudioIdRef: state.latestAudioIdRef,
+  })
+
+  const {
+    measureAudioGenerating,
+    setMeasureAudioGenerating,
+    measureAudioPlaying,
+    measureAudioNoteTimings,
+    measureAudioElement,
+    setNextMeasureWavUrl,
+    stopMeasurePlayback,
+    playSelectedMeasures,
+    playFromCurrentMeasure,
+    playNoteSelection,
+    playAll,
+    latestMeasureAudioIdRef,
+    measureWavUrlRef,
+  } = useMeasureAudioPlayback({
+    workerRef: state.workerRef,
+    sourceRef: state.sourceRef,
+    enabledTracksRef: state.enabledTracksRef,
+    selectedMeasureRange: state.selectedMeasureRange,
+    selectedSequenceRangeRef: sequenceNav.selectedSequenceRangeRef,
+    totalMeasures: state.measureSpans.length,
+  })
+
+  const {
+    previewAudioPlaying,
+    setPreviewAudioPlaying,
+    previewInstrument,
+    previewPercussion,
+    stopPreviewInstrument,
+    latestPreviewAudioIdRef,
+    currentPreviewAudioRef,
+  } = useInstrumentPreview({ workerRef: state.workerRef })
+
+  useJianpuWorkerLifecycle({
+    workerRef: state.workerRef,
+    wavUrlRef: state.wavUrlRef,
+    measureWavUrlRef,
+    cursorOffsetTimerRef: state.cursorOffsetTimerRef,
+    soundfontBytes,
+    fontBytes,
+    audioAvailableRef: state.audioAvailableRef,
+    setAudioAvailable: state.setAudioAvailable,
+    setPdfAvailable: state.setPdfAvailable,
+    setMidiAvailable: state.setMidiAvailable,
+    latestPartsIdRef: state.latestPartsIdRef,
+    setPartsLoading: state.setPartsLoading,
+    setParts: state.setParts,
+    setPartDeclarations: state.setPartDeclarations,
+    latestUpdatePartDeclarationIdRef: state.latestUpdatePartDeclarationIdRef,
+    pendingPartDeclarationUpdatesRef: state.pendingPartDeclarationUpdatesRef,
+    latestFormatScoreIdRef: state.latestFormatScoreIdRef,
+    pendingFormatScoreRequestsRef: state.pendingFormatScoreRequestsRef,
+    shiftPartOctaveTracker: state.shiftPartOctaveTracker,
+    latestPdfIdRef: state.latestPdfIdRef,
+    setPdfExporting: state.setPdfExporting,
+    activeFileRef: state.activeFileRef,
+    enabledPartNamesRef: state.enabledPartNamesRef,
+    setDiagnostics: state.setDiagnostics,
+    latestSplitPdfIdRef: state.latestSplitPdfIdRef,
+    setSplitPdfExporting: state.setSplitPdfExporting,
+    latestMidiIdRef: state.latestMidiIdRef,
+    setMidiExporting: state.setMidiExporting,
+    latestSplitMidiIdRef: state.latestSplitMidiIdRef,
+    setSplitMidiExporting: state.setSplitMidiExporting,
+    latestSplitWavIdRef: state.latestSplitWavIdRef,
+    setSplitWavExporting: state.setSplitWavExporting,
+    latestRenderIdRef: state.latestRenderIdRef,
+    setRendering: state.setRendering,
+    setDocuments: state.setDocuments,
+    setDiagnosticViewZones: state.setDiagnosticViewZones,
+    latestAudioIdRef: state.latestAudioIdRef,
+    setAudioGenerating: state.setAudioGenerating,
+    setNextWavUrl,
+    setNoteTimings: state.setNoteTimings,
+    latestMeasureAudioIdRef,
+    setMeasureAudioGenerating,
+    setNextMeasureWavUrl,
+    latestHighlightRenderIdRef: state.latestHighlightRenderIdRef,
+    setHighlightedDocuments: state.setHighlightedDocuments,
+    latestMeasureSpansIdRef: state.latestMeasureSpansIdRef,
+    setMeasureSpans: state.setMeasureSpans,
+    latestNoteSpansIdRef: state.latestNoteSpansIdRef,
+    setNoteSpans: state.setNoteSpans,
+    setSectionRanges: state.setSectionRanges,
+    setSequenceEntries: state.setSequenceEntries,
+    latestPreviewAudioIdRef,
+    currentPreviewAudioRef,
+    setPreviewAudioPlaying,
+    pendingImportsRef: state.pendingImportsRef,
+  })
+
+  const { notifySelection, notifyUnzippedSelection } =
+    useJianpuWorkerRenderRequests({
+      workerRef: state.workerRef,
+      sourceRef: state.sourceRef,
+      source,
+      activeFile,
+      debounceMs,
+      cursorOffsetTimerRef: state.cursorOffsetTimerRef,
+      enabledTracks: state.enabledTracks,
+      disabledLyricsTracks: state.disabledLyricsTracks,
+      setDocuments: state.setDocuments,
+      setNextWavUrl,
+      setDiagnostics: state.setDiagnostics,
+      setPartsLoading: state.setPartsLoading,
+      partsRequestIdRef: state.partsRequestIdRef,
+      latestPartsIdRef: state.latestPartsIdRef,
+      setRendering: state.setRendering,
+      renderRequestIdRef: state.renderRequestIdRef,
+      latestRenderIdRef: state.latestRenderIdRef,
+      selectedMeasureRange: state.selectedMeasureRange,
+      setSelectedMeasureRange: state.setSelectedMeasureRange,
+      setHighlightedDocuments: state.setHighlightedDocuments,
+      highlightRenderRequestIdRef: state.highlightRenderRequestIdRef,
+      latestHighlightRenderIdRef: state.latestHighlightRenderIdRef,
+      measureSpans: state.measureSpans,
+      measureSpansRef: state.measureSpansRef,
+      measureSpansRequestIdRef: state.measureSpansRequestIdRef,
+      latestMeasureSpansIdRef: state.latestMeasureSpansIdRef,
+      noteSpansRequestIdRef: state.noteSpansRequestIdRef,
+      latestNoteSpansIdRef: state.latestNoteSpansIdRef,
+      lastSelectionRef: state.lastSelectionRef,
+      unzippedView,
+      partMeasureRangesRef: state.partMeasureRangesRef,
+      setPartMeasureRanges: state.setPartMeasureRanges,
+      lyricsVerseRangesRef: state.lyricsVerseRangesRef,
+      setLyricsVerseRanges: state.setLyricsVerseRanges,
+    })
+
+  const {
+    exportPdf,
+    exportSplitPdf,
+    exportMidi,
+    exportSplitMidi,
+    exportSplitWav,
+  } = useJianpuWorkerExports({
+    workerRef: state.workerRef,
+    sourceRef: state.sourceRef,
+    activeFileRef: state.activeFileRef,
+    enabledTracksRef: state.enabledTracksRef,
+    disabledLyricsRef: state.disabledLyricsRef,
+    pdfExporting: state.pdfExporting,
+    splitPdfExporting: state.splitPdfExporting,
+    midiExporting: state.midiExporting,
+    splitMidiExporting: state.splitMidiExporting,
+    splitWavExporting: state.splitWavExporting,
+    setPdfExporting: state.setPdfExporting,
+    setSplitPdfExporting: state.setSplitPdfExporting,
+    setMidiExporting: state.setMidiExporting,
+    setSplitMidiExporting: state.setSplitMidiExporting,
+    setSplitWavExporting: state.setSplitWavExporting,
+    pdfRequestIdRef: state.pdfRequestIdRef,
+    latestPdfIdRef: state.latestPdfIdRef,
+    splitPdfRequestIdRef: state.splitPdfRequestIdRef,
+    latestSplitPdfIdRef: state.latestSplitPdfIdRef,
+    midiRequestIdRef: state.midiRequestIdRef,
+    latestMidiIdRef: state.latestMidiIdRef,
+    splitMidiRequestIdRef: state.splitMidiRequestIdRef,
+    latestSplitMidiIdRef: state.latestSplitMidiIdRef,
+    splitWavRequestIdRef: state.splitWavRequestIdRef,
+    latestSplitWavIdRef: state.latestSplitWavIdRef,
+  })
+
+  const { updatePartDeclaration } = useJianpuWorkerPartDeclaration({
+    workerRef: state.workerRef,
+    sourceRef: state.sourceRef,
+    updatePartDeclarationRequestIdRef: state.updatePartDeclarationRequestIdRef,
+    latestUpdatePartDeclarationIdRef: state.latestUpdatePartDeclarationIdRef,
+    pendingPartDeclarationUpdatesRef: state.pendingPartDeclarationUpdatesRef,
+  })
+
+  const { formatScore } = useJianpuWorkerFormat({
+    workerRef: state.workerRef,
+    formatScoreRequestIdRef: state.formatScoreRequestIdRef,
+    latestFormatScoreIdRef: state.latestFormatScoreIdRef,
+    pendingFormatScoreRequestsRef: state.pendingFormatScoreRequestsRef,
+  })
+
+  const { shiftPartOctave } = useJianpuWorkerShiftOctave({
+    workerRef: state.workerRef,
+    sourceRef: state.sourceRef,
+    shiftPartOctaveTracker: state.shiftPartOctaveTracker,
+  })
+
+  const { importFromFile } = useJianpuWorkerImport({
+    workerRef: state.workerRef,
+    importRequestIdRef: state.importRequestIdRef,
+    pendingImportsRef: state.pendingImportsRef,
+  })
+
+  return {
+    generateFullAudio,
+    measureAudioGenerating,
+    measureAudioPlaying,
+    measureAudioNoteTimings,
+    measureAudioElement,
+    stopMeasurePlayback,
+    playSelectedMeasures,
+    playFromCurrentMeasure,
+    playNoteSelection,
+    playAll,
+    notifySelection,
+    notifyUnzippedSelection,
+    exportPdf,
+    exportSplitPdf,
+    exportMidi,
+    exportSplitMidi,
+    exportSplitWav,
+    updatePartDeclaration,
+    formatScore,
+    shiftPartOctave,
+    importFromFile,
+    previewInstrument,
+    previewPercussion,
+    stopPreviewInstrument,
+    previewAudioPlaying,
+  }
+}
