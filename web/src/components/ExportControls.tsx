@@ -4,7 +4,11 @@ import {
   FileTextIcon,
   SpeakerLoudIcon,
 } from '@radix-ui/react-icons'
-import { ExportMenuButton, type ExportMenuItem } from './ExportMenuButton'
+import {
+  ExportMenuButton,
+  type ExportMenuItem,
+  type ExportMenuSection,
+} from './ExportMenuButton'
 
 interface ExportControlsProps {
   hasDocuments: boolean
@@ -180,8 +184,15 @@ export function ExportControls({
       : []),
   ]
 
-  const exportDisabled = exportItems.every((item) => item.disabled)
-  const exportPartsDisabled = exportPartsItems.every((item) => item.disabled)
+  const sections: ExportMenuSection[] = [
+    { title: canExportParts ? 'Visible Parts' : undefined, items: exportItems },
+    ...(canExportParts
+      ? [{ title: 'All Parts', items: exportPartsItems }]
+      : []),
+  ]
+  const exportDisabled = sections.every((section) =>
+    section.items.every((item) => item.disabled),
+  )
 
   return (
     <div className="export-controls">
@@ -189,16 +200,8 @@ export function ExportControls({
         <ExportMenuButton
           label="Export"
           icon={<DownloadIcon aria-hidden="true" />}
-          items={exportItems}
+          sections={sections}
           disabled={exportDisabled}
-        />
-      ) : null}
-      {canExportParts ? (
-        <ExportMenuButton
-          label="Export Parts"
-          icon={<DownloadIcon aria-hidden="true" />}
-          items={exportPartsItems}
-          disabled={exportPartsDisabled}
         />
       ) : null}
     </div>

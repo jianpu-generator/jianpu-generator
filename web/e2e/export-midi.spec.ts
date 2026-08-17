@@ -62,10 +62,6 @@ function exportMenuButton(page: import('@playwright/test').Page) {
   return page.getByRole('button', { name: 'Export', exact: true })
 }
 
-function exportPartsMenuButton(page: import('@playwright/test').Page) {
-  return page.getByRole('button', { name: 'Export Parts', exact: true })
-}
-
 test('Export > MIDI produces a non-empty downloaded file', async ({ page }) => {
   await loadSource(page, SINGLE_PART_SOURCE)
   await page.goto('/')
@@ -100,7 +96,7 @@ test('Export Parts > MIDI (ZIP) produces a non-empty downloaded zip for a multi-
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
-  const menuButton = exportPartsMenuButton(page)
+  const menuButton = exportMenuButton(page)
   await expect(menuButton).toBeEnabled({ timeout: 30_000 })
   await menuButton.click()
 

@@ -167,10 +167,6 @@ test('audio download link filename includes only the enabled parts when a part i
   await expect(downloadLink).toHaveAttribute('download', 'test (Melody).wav')
 })
 
-function exportPartsMenuButton(page: import('@playwright/test').Page) {
-  return page.getByRole('button', { name: 'Export Parts', exact: true })
-}
-
 test('Export Parts > WAV (ZIP) produces a non-empty downloaded zip for a multi-part score', async ({
   page,
 }) => {
@@ -181,7 +177,7 @@ test('Export Parts > WAV (ZIP) produces a non-empty downloaded zip for a multi-p
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
-  const menuButton = exportPartsMenuButton(page)
+  const menuButton = exportMenuButton(page)
   await expect(menuButton).toBeEnabled({ timeout: 30_000 })
   await menuButton.click()
 

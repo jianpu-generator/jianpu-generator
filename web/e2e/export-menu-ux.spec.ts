@@ -47,11 +47,7 @@ function exportMenuButton(page: import('@playwright/test').Page) {
   return page.getByRole('button', { name: 'Export', exact: true })
 }
 
-function exportPartsMenuButton(page: import('@playwright/test').Page) {
-  return page.getByRole('button', { name: 'Export Parts', exact: true })
-}
-
-test('Export Parts button only appears when the score has more than one part', async ({
+test('Export menu has no "All Parts" section when the score has only one part', async ({
   page,
 }) => {
   await loadSource(page, SINGLE_PART_SOURCE)
@@ -59,11 +55,19 @@ test('Export Parts button only appears when the score has more than one part', a
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
-  await expect(exportMenuButton(page)).toBeVisible({ timeout: 30_000 })
-  await expect(exportPartsMenuButton(page)).toHaveCount(0)
+  const menuButton = exportMenuButton(page)
+  await expect(menuButton).toBeEnabled({ timeout: 30_000 })
+  await menuButton.click()
+
+  const menu = page.getByRole('menu')
+  await expect(menu).toBeVisible()
+  await expect(menu.getByText('All Parts')).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: 'PDF (ZIP)' })).toHaveCount(0)
 })
 
-test('Export menu lists PDF, WAV, and MIDI', async ({ page }) => {
+test('Export menu lists PDF, WAV, and MIDI for a single-part score', async ({
+  page,
+}) => {
   await loadSource(page, SINGLE_PART_SOURCE)
   await page.goto('/')
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
@@ -79,7 +83,7 @@ test('Export menu lists PDF, WAV, and MIDI', async ({ page }) => {
   expect(itemLabels).toEqual(['PDF', 'WAV', 'MIDI'])
 })
 
-test('Export Parts menu lists PDF (ZIP), WAV (ZIP), and MIDI (ZIP) for a multi-part score', async ({
+test('Export menu lists Visible Parts and All Parts sections for a multi-part score', async ({
   page,
 }) => {
   await loadSource(page, MULTI_PART_SOURCE)
@@ -87,14 +91,23 @@ test('Export Parts menu lists PDF (ZIP), WAV (ZIP), and MIDI (ZIP) for a multi-p
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
-  const menuButton = exportPartsMenuButton(page)
+  const menuButton = exportMenuButton(page)
   await expect(menuButton).toBeEnabled({ timeout: 30_000 })
   await menuButton.click()
 
   const menu = page.getByRole('menu')
   await expect(menu).toBeVisible()
+  await expect(menu.getByText('Visible Parts')).toBeVisible()
+  await expect(menu.getByText('All Parts')).toBeVisible()
   const itemLabels = await menu.getByRole('menuitem').allTextContents()
-  expect(itemLabels).toEqual(['PDF (ZIP)', 'WAV (ZIP)', 'MIDI (ZIP)'])
+  expect(itemLabels).toEqual([
+    'PDF',
+    'WAV',
+    'MIDI',
+    'PDF (ZIP)',
+    'WAV (ZIP)',
+    'MIDI (ZIP)',
+  ])
 })
 
 test('pressing Escape closes an open export menu', async ({ page }) => {
@@ -127,26 +140,4 @@ test('clicking outside an open export menu closes it', async ({ page }) => {
   await page.locator('.preview-pages').click({ position: { x: 5, y: 5 } })
   await expect(page.getByRole('menu')).toHaveCount(0)
   await expect(menuButton).toHaveAttribute('aria-expanded', 'false')
-})
-
-test('opening the Export Parts menu closes an already-open Export menu, since the click lands outside it', async ({
-  page,
-}) => {
-  await loadSource(page, MULTI_PART_SOURCE)
-  await page.goto('/')
-  await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
-  await page.waitForSelector('.preview-page', { timeout: 15_000 })
-
-  const menuButton = exportMenuButton(page)
-  const partsMenuButton = exportPartsMenuButton(page)
-  await expect(menuButton).toBeEnabled({ timeout: 30_000 })
-  await expect(partsMenuButton).toBeEnabled({ timeout: 30_000 })
-
-  await menuButton.click()
-  await expect(page.getByRole('menu')).toHaveCount(1)
-
-  await partsMenuButton.click()
-  await expect(page.getByRole('menu')).toHaveCount(1)
-  await expect(menuButton).toHaveAttribute('aria-expanded', 'false')
-  await expect(partsMenuButton).toHaveAttribute('aria-expanded', 'true')
 })

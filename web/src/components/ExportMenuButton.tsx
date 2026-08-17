@@ -13,17 +13,24 @@ export interface ExportMenuItem {
   icon?: ReactNode
 }
 
+export interface ExportMenuSection {
+  /** Heading shown above the section's items. Omit for an unlabelled group
+   * (e.g. the first section in a menu that needs no introduction). */
+  title?: string
+  items: ExportMenuItem[]
+}
+
 interface ExportMenuButtonProps {
   label: string
   icon?: ReactNode
-  items: ExportMenuItem[]
+  sections: ExportMenuSection[]
   disabled?: boolean
 }
 
 export function ExportMenuButton({
   label,
   icon,
-  items,
+  sections,
   disabled = false,
 }: ExportMenuButtonProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -80,21 +87,30 @@ export function ExportMenuButton({
           role="menu"
           style={menuStyle ?? undefined}
         >
-          {items.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              role="menuitem"
-              className="export-menu-item"
-              disabled={item.disabled}
-              onClick={() => {
-                setOpen(false)
-                item.onSelect()
-              }}
-            >
-              {item.icon}
-              {item.busy ? item.busyLabel : item.label}
-            </button>
+          {sections.map((section, index) => (
+            <div className="export-menu-section" key={section.title ?? index}>
+              {section.title ? (
+                <div className="export-menu-section-title" role="presentation">
+                  {section.title}
+                </div>
+              ) : null}
+              {section.items.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  role="menuitem"
+                  className="export-menu-item"
+                  disabled={item.disabled}
+                  onClick={() => {
+                    setOpen(false)
+                    item.onSelect()
+                  }}
+                >
+                  {item.icon}
+                  {item.busy ? item.busyLabel : item.label}
+                </button>
+              ))}
+            </div>
           ))}
         </div>
       ) : null}
