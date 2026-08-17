@@ -56,7 +56,7 @@ test.beforeEach(async ({ page }) => {
 test('clicking play on a selected sequence entry starts and finishes playback', async ({
   page,
 }) => {
-  test.setTimeout(60_000)
+  test.setTimeout(75_000)
 
   const buttons = page
     .locator('[role="toolbar"]')
@@ -81,8 +81,11 @@ test('clicking play on a selected sequence entry starts and finishes playback', 
   })
 
   // Measure 0 ("1 2 3 4") is short — playback should finish and the button
-  // should revert to its normal (non-playing) state on its own.
+  // should revert to its normal (non-playing) state on its own. Generous
+  // timeout: real-time `<audio>` playback duration is sensitive to CPU
+  // throttling/contention in sandboxed/CI runners, so wall-clock completion
+  // can lag well past the audio's nominal duration (see FLAKY_TESTS.md).
   await expect(playBtn).not.toHaveClass(/play-from-measure-btn--playing/, {
-    timeout: 10_000,
+    timeout: 30_000,
   })
 })

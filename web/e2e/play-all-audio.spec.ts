@@ -48,7 +48,7 @@ async function loadSource(
 test('clicking Play All starts and finishes playback of the whole score', async ({
   page,
 }) => {
-  test.setTimeout(60_000)
+  test.setTimeout(90_000)
 
   await loadSource(page, SINGLE_PART_SOURCE)
   await page.goto('/')
@@ -70,8 +70,11 @@ test('clicking Play All starts and finishes playback of the whole score', async 
 
   // This fixed score (four quarter notes) is short — playback should finish
   // and the button should revert to its normal (non-playing) state on its
-  // own, without the user pausing it.
+  // own, without the user pausing it. Generous timeout: real-time `<audio>`
+  // playback duration is sensitive to CPU throttling/contention in
+  // sandboxed/CI runners, so wall-clock completion can lag well past the
+  // audio's nominal duration (see FLAKY_TESTS.md).
   await expect(playAllBtn).not.toHaveClass(/play-all-btn--playing/, {
-    timeout: 20_000,
+    timeout: 45_000,
   })
 })

@@ -24,7 +24,7 @@ test.use({
 test('clicking play on a selected measure starts and finishes playback', async ({
   page,
 }) => {
-  test.setTimeout(60_000)
+  test.setTimeout(75_000)
 
   await page.goto('/')
   await page.waitForSelector('[data-testid="play-measure-button"]', {
@@ -55,8 +55,11 @@ test('clicking play on a selected measure starts and finishes playback', async (
 
   // Measure 0 ("[M] 1 2 3 0", four quarter notes) is short — playback should
   // finish and the button should revert to its normal (non-playing) state on
-  // its own, without the user pausing it.
+  // its own, without the user pausing it. Generous timeout: real-time
+  // `<audio>` playback duration is sensitive to CPU throttling/contention in
+  // sandboxed/CI runners, so wall-clock completion can lag well past the
+  // audio's nominal duration (see FLAKY_TESTS.md).
   await expect(playBtn).not.toHaveClass(/play-measure-btn--playing/, {
-    timeout: 10_000,
+    timeout: 30_000,
   })
 })

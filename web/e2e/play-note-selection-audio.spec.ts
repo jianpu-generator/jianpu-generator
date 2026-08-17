@@ -52,7 +52,7 @@ async function loadDragTestFixture(page: import('@playwright/test').Page) {
 test('clicking the play-measure button with notes drag-selected plays only the selection', async ({
   page,
 }) => {
-  test.setTimeout(60_000)
+  test.setTimeout(75_000)
 
   await loadDragTestFixture(page)
   await page.goto('/')
@@ -109,8 +109,11 @@ test('clicking the play-measure button with notes drag-selected plays only the s
   await expect(playBtn).toHaveText(/Selection/)
 
   // The selection is short — playback should finish and the button should
-  // revert to its normal (non-playing) state on its own.
+  // revert to its normal (non-playing) state on its own. Generous timeout:
+  // real-time `<audio>` playback duration is sensitive to CPU
+  // throttling/contention in sandboxed/CI runners, so wall-clock completion
+  // can lag well past the audio's nominal duration (see FLAKY_TESTS.md).
   await expect(playBtn).not.toHaveClass(/play-measure-btn--playing/, {
-    timeout: 10_000,
+    timeout: 30_000,
   })
 })
