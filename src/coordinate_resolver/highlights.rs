@@ -2,33 +2,59 @@ use crate::compositor::types::{AbsoluteContent, AbsoluteElement};
 use crate::grid_layout::types::GridRow;
 use crate::grid_layout::PAGE_MARGIN;
 
-fn resolve_single_measure_highlight(
-    highlight: &crate::grid_layout::types::MeasureHighlight,
-    rows: &[GridRow],
-    row_tops: &[f32],
-    usable_width: f32,
-    part_label_width_pt: f32,
-) -> Option<AbsoluteElement> {
-    let start_row = rows.get(highlight.row_start)?;
-    let highlight_y = row_tops.get(highlight.row_start)?;
-    if highlight.row_end >= rows.len() {
+/// The per-page layout data every row-range resolver below needs, bundled
+/// into one value so `resolve_row_range_geometry` stays under the repo's
+/// max-argument-count lint (it would otherwise need 8 parameters).
+#[derive(Clone, Copy)]
+pub(super) struct RowLayoutContext<'a> {
+    pub(super) rows: &'a [GridRow],
+    pub(super) row_tops: &'a [f32],
+    pub(super) usable_width: f32,
+    pub(super) part_label_width_pt: f32,
+}
+
+/// Pixel geometry of one row range (`row_start..=row_end`) restricted to one
+/// column range (`column_start..column_end`) — the shared math behind every
+/// row-range-shaped highlight/click target below (measure highlight, error
+/// highlight, playback cursor, note/measure/part-label click targets). `None`
+/// when `row_start` or `row_end` falls outside `ctx.rows`.
+struct RowRangeGeometry {
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+}
+
+fn resolve_row_range_geometry(
+    row_start: usize,
+    row_end: usize,
+    column_start: f32,
+    column_end: f32,
+    ctx: RowLayoutContext,
+) -> Option<RowRangeGeometry> {
+    let RowLayoutContext {
+        rows,
+        row_tops,
+        usable_width,
+        part_label_width_pt,
+    } = ctx;
+    let start_row = rows.get(row_start)?;
+    let y = row_tops.get(row_start)?;
+    if row_end >= rows.len() {
         return None;
     }
     let geometry = start_row.column_geometry(usable_width, part_label_width_pt);
-    let highlight_x = PAGE_MARGIN + geometry.x_start(highlight.column_start);
-    let highlight_width =
-        geometry.x_start(highlight.column_end) - geometry.x_start(highlight.column_start);
-    let highlight_height = rows
-        .get(highlight.row_start..=highlight.row_end)
+    let x = PAGE_MARGIN + geometry.x_start(column_start);
+    let width = geometry.x_start(column_end) - geometry.x_start(column_start);
+    let height = rows
+        .get(row_start..=row_end)
         .map(|slice| slice.iter().map(|row| row.height_pt).sum())
         .unwrap_or(0.0);
-    Some(AbsoluteElement {
-        x: highlight_x,
-        y: *highlight_y,
-        content: AbsoluteContent::MeasureHighlight {
-            width: highlight_width,
-            height: highlight_height,
-        },
+    Some(RowRangeGeometry {
+        x,
+        y: *y,
+        width,
+        height,
     })
 }
 
@@ -39,10 +65,30 @@ pub(super) fn resolve_measure_highlights(
     usable_width: f32,
     part_label_width_pt: f32,
 ) -> Vec<AbsoluteElement> {
+    let ctx = RowLayoutContext {
+        rows,
+        row_tops,
+        usable_width,
+        part_label_width_pt,
+    };
     highlights
         .iter()
         .filter_map(|h| {
-            resolve_single_measure_highlight(h, rows, row_tops, usable_width, part_label_width_pt)
+            let geometry = resolve_row_range_geometry(
+                h.row_start,
+                h.row_end,
+                h.column_start,
+                h.column_end,
+                ctx,
+            )?;
+            Some(AbsoluteElement {
+                x: geometry.x,
+                y: geometry.y,
+                content: AbsoluteContent::MeasureHighlight {
+                    width: geometry.width,
+                    height: geometry.height,
+                },
+            })
         })
         .collect()
 }
@@ -54,27 +100,28 @@ pub(super) fn resolve_error_highlights(
     usable_width: f32,
     part_label_width_pt: f32,
 ) -> Vec<AbsoluteElement> {
+    let ctx = RowLayoutContext {
+        rows,
+        row_tops,
+        usable_width,
+        part_label_width_pt,
+    };
     highlights
         .iter()
         .filter_map(|h| {
-            let start_row = rows.get(h.row_start)?;
-            let highlight_y = row_tops.get(h.row_start)?;
-            if h.row_end >= rows.len() {
-                return None;
-            }
-            let geometry = start_row.column_geometry(usable_width, part_label_width_pt);
-            let highlight_x = PAGE_MARGIN + geometry.x_start(h.column_start);
-            let highlight_width = geometry.x_start(h.column_end) - geometry.x_start(h.column_start);
-            let highlight_height = rows
-                .get(h.row_start..=h.row_end)
-                .map(|slice| slice.iter().map(|row| row.height_pt).sum())
-                .unwrap_or(0.0);
+            let geometry = resolve_row_range_geometry(
+                h.row_start,
+                h.row_end,
+                h.column_start,
+                h.column_end,
+                ctx,
+            )?;
             Some(AbsoluteElement {
-                x: highlight_x,
-                y: *highlight_y,
+                x: geometry.x,
+                y: geometry.y,
                 content: AbsoluteContent::ErrorHighlight {
-                    width: highlight_width,
-                    height: highlight_height,
+                    width: geometry.width,
+                    height: geometry.height,
                 },
             })
         })
@@ -88,33 +135,36 @@ pub(super) fn resolve_playback_cursor_target(
     usable_width: f32,
     part_label_width_pt: f32,
 ) -> Option<AbsoluteElement> {
-    let start_row = rows.get(target.row_start)?;
-    let target_y = row_tops.get(target.row_start)?;
-    if target.row_end >= rows.len() {
-        return None;
-    }
-    let geometry = start_row.column_geometry(usable_width, part_label_width_pt);
-    let target_x = PAGE_MARGIN + geometry.x_start(target.column_start);
-    let target_width = geometry.x_start(target.column_end) - geometry.x_start(target.column_start);
-    let target_height = rows
-        .get(target.row_start..=target.row_end)
-        .map(|slice| slice.iter().map(|row| row.height_pt).sum())
-        .unwrap_or(0.0);
+    let ctx = RowLayoutContext {
+        rows,
+        row_tops,
+        usable_width,
+        part_label_width_pt,
+    };
+    let geometry = resolve_row_range_geometry(
+        target.row_start,
+        target.row_end,
+        target.column_start,
+        target.column_end,
+        ctx,
+    )?;
     Some(AbsoluteElement {
-        x: target_x,
-        y: *target_y,
+        x: geometry.x,
+        y: geometry.y,
         content: AbsoluteContent::PlaybackCursorTarget {
-            width: target_width,
-            height: target_height,
+            width: geometry.width,
+            height: geometry.height,
             source_part_index: target.source_part_index,
             note_id: target.note_id,
         },
     })
 }
 
-/// Same column-bounds math as [`resolve_playback_cursor_target`], reused for
-/// the note's click/drag hit target rather than its playback highlight rect
-/// — see `AbsoluteContent::NoteClickTarget`.
+/// Uses `target.click_row_end` rather than `target.row_end` — unlike the
+/// playback cursor rect above, a note's own click/selection target never
+/// extends down into a following lyric verse row (a lyric syllable has its
+/// own independent [`crate::grid_layout::types::LyricClickTarget`]); see
+/// `PlaybackCursorTarget::click_row_end`'s doc comment.
 pub(super) fn resolve_note_click_target(
     target: &crate::grid_layout::types::PlaybackCursorTarget,
     rows: &[GridRow],
@@ -122,24 +172,25 @@ pub(super) fn resolve_note_click_target(
     usable_width: f32,
     part_label_width_pt: f32,
 ) -> Option<AbsoluteElement> {
-    let start_row = rows.get(target.row_start)?;
-    let target_y = row_tops.get(target.row_start)?;
-    if target.row_end >= rows.len() {
-        return None;
-    }
-    let geometry = start_row.column_geometry(usable_width, part_label_width_pt);
-    let target_x = PAGE_MARGIN + geometry.x_start(target.column_start);
-    let target_width = geometry.x_start(target.column_end) - geometry.x_start(target.column_start);
-    let target_height = rows
-        .get(target.row_start..=target.row_end)
-        .map(|slice| slice.iter().map(|row| row.height_pt).sum())
-        .unwrap_or(0.0);
+    let ctx = RowLayoutContext {
+        rows,
+        row_tops,
+        usable_width,
+        part_label_width_pt,
+    };
+    let geometry = resolve_row_range_geometry(
+        target.row_start,
+        target.click_row_end,
+        target.column_start,
+        target.column_end,
+        ctx,
+    )?;
     Some(AbsoluteElement {
-        x: target_x,
-        y: *target_y,
+        x: geometry.x,
+        y: geometry.y,
         content: AbsoluteContent::NoteClickTarget {
-            width: target_width,
-            height: target_height,
+            width: geometry.width,
+            height: geometry.height,
             source_part_index: target.source_part_index,
             note_id: target.note_id,
         },
@@ -153,24 +204,25 @@ pub(super) fn resolve_measure_click_target(
     usable_width: f32,
     part_label_width_pt: f32,
 ) -> Option<AbsoluteElement> {
-    let start_row = rows.get(target.row_start)?;
-    let target_y = row_tops.get(target.row_start)?;
-    if target.row_end >= rows.len() {
-        return None;
-    }
-    let geometry = start_row.column_geometry(usable_width, part_label_width_pt);
-    let target_x = PAGE_MARGIN + geometry.x_start(target.column_start);
-    let target_width = geometry.x_start(target.column_end) - geometry.x_start(target.column_start);
-    let target_height = rows
-        .get(target.row_start..=target.row_end)
-        .map(|slice| slice.iter().map(|row| row.height_pt).sum())
-        .unwrap_or(0.0);
+    let ctx = RowLayoutContext {
+        rows,
+        row_tops,
+        usable_width,
+        part_label_width_pt,
+    };
+    let geometry = resolve_row_range_geometry(
+        target.row_start,
+        target.row_end,
+        target.column_start,
+        target.column_end,
+        ctx,
+    )?;
     Some(AbsoluteElement {
-        x: target_x,
-        y: *target_y,
+        x: geometry.x,
+        y: geometry.y,
         content: AbsoluteContent::MeasureClickTarget {
-            width: target_width,
-            height: target_height,
+            width: geometry.width,
+            height: geometry.height,
             measure_index: target.measure_index,
             measure_index_end: target.measure_index_end,
         },
@@ -187,24 +239,25 @@ pub(super) fn resolve_part_label_click_target(
     usable_width: f32,
     part_label_width_pt: f32,
 ) -> Option<AbsoluteElement> {
-    let start_row = rows.get(target.row_start)?;
-    let target_y = row_tops.get(target.row_start)?;
-    if target.row_end >= rows.len() {
-        return None;
-    }
-    let geometry = start_row.column_geometry(usable_width, part_label_width_pt);
-    let target_x = PAGE_MARGIN + geometry.x_start(0.0);
-    let target_width = geometry.x_start(crate::grid_layout::layout::LABEL_COLS as f32);
-    let target_height = rows
-        .get(target.row_start..=target.row_end)
-        .map(|slice| slice.iter().map(|row| row.height_pt).sum())
-        .unwrap_or(0.0);
+    let ctx = RowLayoutContext {
+        rows,
+        row_tops,
+        usable_width,
+        part_label_width_pt,
+    };
+    let geometry = resolve_row_range_geometry(
+        target.row_start,
+        target.row_end,
+        0.0,
+        crate::grid_layout::layout::LABEL_COLS as f32,
+        ctx,
+    )?;
     Some(AbsoluteElement {
-        x: target_x,
-        y: *target_y,
+        x: geometry.x,
+        y: geometry.y,
         content: AbsoluteContent::PartLabelClickTarget {
-            width: target_width,
-            height: target_height,
+            width: geometry.width,
+            height: geometry.height,
             source_part_index: target.source_part_index,
             measure_index_start: target.measure_index_start,
             measure_index_end: target.measure_index_end,
@@ -215,8 +268,8 @@ pub(super) fn resolve_part_label_click_target(
 /// A lyric syllable's click target is simpler than the targets above: it
 /// always sits on exactly one row (`target.row`) and one grid column
 /// (`target.column_start..target.column_end`), with no bar-line-snapping —
-/// a syllable never touches a bar line — so no row-range or edge-snapping
-/// math is needed, unlike [`resolve_note_click_target`].
+/// a syllable never touches a bar line — and no bounds check against
+/// `rows.len()`, so it doesn't go through [`resolve_row_range_geometry`].
 pub(super) fn resolve_lyric_click_target(
     target: &crate::grid_layout::types::LyricClickTarget,
     rows: &[GridRow],

@@ -186,6 +186,7 @@ fn playback_cursor_reaches_final_bar_line_of_its_measure() {
         playback_cursor_targets: vec![PlaybackCursorTarget {
             row_start: 0,
             row_end: 0,
+            click_row_end: 0,
             column_start: 1.0,
             column_end: 3.0,
             source_part_index: 0,

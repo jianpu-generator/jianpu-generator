@@ -343,7 +343,16 @@ pub struct MeasureHighlight {
 #[derive(Debug, Clone)]
 pub struct PlaybackCursorTarget {
     pub row_start: usize,
+    /// Bottom row of the *playback-cursor* rect — may extend past
+    /// `click_row_end` to cover this part's lyric verse row(s), so the "now
+    /// playing" highlight visually covers the lyric text sounding with the
+    /// note. Read only by `resolve_playback_cursor_target`.
     pub row_end: usize,
+    /// Bottom row of the note's own *click/selection* target — always just
+    /// this note row's own sub-rows, never a following lyric verse row (a
+    /// lyric syllable has its own independent [`LyricClickTarget`], selected
+    /// independently of its note). Read only by `resolve_note_click_target`.
+    pub click_row_end: usize,
     pub column_start: f32,
     pub column_end: f32,
     pub source_part_index: usize,

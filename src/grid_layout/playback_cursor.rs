@@ -1,9 +1,8 @@
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock};
-use crate::grid_layout::highlight::{abs_sys_index, system_musical_row_count};
 use crate::grid_layout::layout::{
-    block_column_width, is_chord_only_row, is_lyric_row, make_header_rows,
-    system_has_any_decoration, system_tuplet_part_indices, LABEL_COLS, MUSIC_START_COL,
+    block_column_width, is_chord_only_row, is_lyric_row, LABEL_COLS, MUSIC_START_COL,
 };
+use crate::grid_layout::system_walk::for_each_system;
 use crate::grid_layout::types::{GridElement, Header, PlaybackCursorTarget};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -42,32 +41,47 @@ fn group_elements_by_note_id(elements: &[ColumnElement]) -> Vec<(usize, u32, u32
         .collect()
 }
 
-/// Per-part row span (`(row_start, row_end)`) for every row template in
-/// `first.rows`, in the same order and using the same sub-row counts as
+/// Per-part row span for every row template in `first.rows`, in the same
+/// order and using the same sub-row counts as
 /// `expand_system_to_rows`/`system_musical_row_count`, so a note's playback
 /// cursor rect lines up with the sub-rows its own part actually renders into
 /// (rather than the whole system's row range, which `MeasureHighlight` uses).
-///
+#[derive(Clone)]
+pub(crate) struct NoteRowSpan {
+    pub row_start: usize,
+    /// Absorbs any immediately-following lyric verse row(s) — today's
+    /// playback-cursor behavior, unchanged. See [`PlaybackCursorTarget::row_end`].
+    pub playback_row_end: usize,
+    /// `row_start + sub_count - 1`: never absorbs a following lyric verse
+    /// row, since a lyric syllable's click target is independent of its
+    /// note's. See [`PlaybackCursorTarget::click_row_end`].
+    ///
+    /// [`PlaybackCursorTarget::row_end`]: crate::grid_layout::types::PlaybackCursorTarget::row_end
+    /// [`PlaybackCursorTarget::click_row_end`]: crate::grid_layout::types::PlaybackCursorTarget::click_row_end
+    pub click_row_end: usize,
+}
+
 /// A `notes+lyrics` part's verses are compiled as separate sibling rows in
 /// `first.rows` (one `is_lyric_row` entry per verse, immediately following
 /// the notes row, sharing its `source_part_index`) rather than being mixed
 /// into the notes row itself — see `ElementContent::Lyric`'s doc comment.
 /// So a note row's own `has_lyrics` is always false; instead this absorbs
-/// those following verse rows into the note row's span (so its playback
-/// cursor rect extends down to cover the lyric text), and gives each absorbed
-/// verse row the same span as its note row — verse rows never carry a
-/// `note_id`, so `compute_all_playback_cursor_targets` never emits a
-/// playback cursor target for their own entry anyway.
-pub(crate) fn part_row_ranges(
+/// those following verse rows into the note row's `playback_row_end` (so its
+/// playback cursor rect extends down to cover the lyric text) while capturing
+/// `click_row_end` *before* that absorption, and gives each absorbed verse
+/// row the same span as its note row — verse rows never carry a `note_id`,
+/// so `compute_all_playback_cursor_targets` never emits a playback cursor
+/// target for their own entry anyway.
+pub(crate) fn note_row_spans(
     system: &[MeasureBlock],
     row_offset: usize,
     tuplet_part_indices: &HashSet<usize>,
-) -> Vec<(usize, usize)> {
+) -> Vec<NoteRowSpan> {
     let Some(first) = system.first() else {
         return Vec::new();
     };
     let mut cursor = row_offset;
-    let mut ranges: Vec<(usize, usize)> = Vec::with_capacity(first.rows.len());
+    let mut spans: Vec<NoteRowSpan> = Vec::with_capacity(first.rows.len());
     let mut idx = 0;
     while let Some(part_template) = first.rows.get(idx) {
         if is_lyric_row(part_template) {
@@ -77,7 +91,11 @@ pub(crate) fn part_row_ranges(
             // single-row span.
             let start = cursor;
             cursor += 1;
-            ranges.push((start, cursor - 1));
+            spans.push(NoteRowSpan {
+                row_start: start,
+                playback_row_end: cursor - 1,
+                click_row_end: cursor - 1,
+            });
             idx += 1;
             continue;
         }
@@ -90,6 +108,7 @@ pub(crate) fn part_row_ranges(
         };
         let start = cursor;
         cursor += sub_count;
+        let click_row_end = cursor - 1;
         let mut verse_end = idx + 1;
         while first.rows.get(verse_end).is_some_and(|verse_row| {
             is_lyric_row(verse_row)
@@ -98,11 +117,18 @@ pub(crate) fn part_row_ranges(
             cursor += 1;
             verse_end += 1;
         }
-        let end = cursor - 1;
-        ranges.extend(std::iter::repeat_n((start, end), verse_end - idx));
+        let playback_row_end = cursor - 1;
+        spans.extend(std::iter::repeat_n(
+            NoteRowSpan {
+                row_start: start,
+                playback_row_end,
+                click_row_end,
+            },
+            verse_end - idx,
+        ));
         idx = verse_end;
     }
-    ranges
+    spans
 }
 
 pub(crate) fn compute_all_playback_cursor_targets(
@@ -114,31 +140,21 @@ pub(crate) fn compute_all_playback_cursor_targets(
 ) -> Vec<(usize, PlaybackCursorTarget)> {
     let mut results: Vec<(usize, PlaybackCursorTarget)> = Vec::new();
 
-    for (page_idx, page_sys) in page_systems.iter().enumerate() {
-        let header_row_count = make_header_rows(header, base, page_idx == 0).len();
-        let mut row_offset = header_row_count;
-        for (sys_idx, system) in page_sys.iter().enumerate() {
-            if sys_idx > 0 && !hide_system_dividers {
-                row_offset += 1;
-            }
-            if system.is_empty() {
-                continue;
-            }
-            if system_has_any_decoration(system) {
-                row_offset += 1;
-            }
-            let abs_sys = abs_sys_index(page_systems, page_idx, sys_idx);
-            let tuplet_part_indices =
-                system_tuplet_part_indices(system, tuplet_bracket_map, abs_sys);
-            let musical_row_count = system_musical_row_count(system, &tuplet_part_indices);
-            let part_ranges = part_row_ranges(system, row_offset, &tuplet_part_indices);
+    for_each_system(
+        page_systems,
+        tuplet_bracket_map,
+        header,
+        base,
+        hide_system_dividers,
+        |page_idx, system, row_offset, tuplet_part_indices, _musical_row_count| {
+            let part_spans = note_row_spans(system, row_offset, tuplet_part_indices);
 
             let last_block_idx = system.len() - 1;
             let mut col_offset: u32 = MUSIC_START_COL;
             for (block_idx, block) in system.iter().enumerate() {
                 let col_w = block_column_width(block);
                 let has_bar_line = block_has_bar_line(block);
-                for (part_idx, (row_start, row_end)) in part_ranges.iter().enumerate() {
+                for (part_idx, span) in part_spans.iter().enumerate() {
                     let Some(block_row) = block.rows.get(part_idx) else {
                         continue;
                     };
@@ -213,8 +229,9 @@ pub(crate) fn compute_all_playback_cursor_targets(
                         results.push((
                             page_idx,
                             PlaybackCursorTarget {
-                                row_start: *row_start,
-                                row_end: *row_end,
+                                row_start: span.row_start,
+                                row_end: span.playback_row_end,
+                                click_row_end: span.click_row_end,
                                 column_start,
                                 column_end,
                                 source_part_index: block_row.source_part_index,
@@ -225,19 +242,7 @@ pub(crate) fn compute_all_playback_cursor_targets(
                 }
                 col_offset += col_w;
             }
-            row_offset += musical_row_count;
-        }
-    }
+        },
+    );
     results
-}
-
-pub(crate) fn playback_cursor_targets_on_page(
-    targets: &[(usize, PlaybackCursorTarget)],
-    page_idx: usize,
-) -> Vec<PlaybackCursorTarget> {
-    targets
-        .iter()
-        .filter(|(p, _)| *p == page_idx)
-        .map(|(_, t)| t.clone())
-        .collect()
 }

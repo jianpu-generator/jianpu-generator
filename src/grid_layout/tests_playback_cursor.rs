@@ -158,6 +158,56 @@ fn playback_cursor_target_extends_over_its_lyric_verse_row() {
     }
 }
 
+#[test]
+fn note_click_target_does_not_extend_over_its_lyric_verse_row() {
+    // Same fixture as `playback_cursor_target_extends_over_its_lyric_verse_row`,
+    // but asserting the click/selection-target field (`click_row_end`)
+    // instead of the playback-cursor field (`row_end`): a note's own
+    // click/selection target must stop at its own note row, never reaching
+    // into a following lyric-verse row — a lyric syllable is independently
+    // selectable via its own `LyricClickTarget`. Regression test for the
+    // bug where hovering/selecting a note with a lyric underneath drew a
+    // selection box that also covered the lyric text.
+    let block = MeasureBlock {
+        rows: vec![notes_row_with_two_notes(), lyric_verse_row()],
+        decorations: vec![],
+        diagnostics: vec![],
+        represents_measures: 1,
+        merge_duplicate_measures_across_parts: true,
+    };
+
+    let pages = crate::grid_layout::layout(
+        &CompileResult {
+            blocks: vec![block],
+            slur_spans: vec![],
+            tuplet_spans: vec![],
+        },
+        &test_render_config(),
+        &no_header(),
+        595.0,
+        842.0,
+        None,
+    );
+
+    let targets = &pages[0].playback_cursor_targets;
+    assert_eq!(targets.len(), 2);
+    for target in targets {
+        assert_eq!(
+            target.click_row_end - target.row_start,
+            5,
+            "note's click/selection span should cover only its 6 note \
+             sub-rows (rows row_start..=row_start+5), not the lyric-verse \
+             row that follows"
+        );
+        assert!(
+            target.row_end > target.click_row_end,
+            "playback-cursor row_end should still extend past click_row_end \
+             to cover the lyric-verse row, so the two fields genuinely \
+             differ for this fixture"
+        );
+    }
+}
+
 /// A notes-only row (no lyrics) with two plain notes followed by a bar line,
 /// like `notes_row_with_two_notes` but with the note ids and grid columns
 /// parameterized so two of these can sit in adjacent measures of the same

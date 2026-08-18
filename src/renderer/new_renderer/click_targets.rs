@@ -1,6 +1,27 @@
 use crate::compositor::types::{AbsoluteContent, AbsoluteElement};
 use crate::renderer::new_types::{SvgElement, SvgKind, Tag, TransparentRectRole};
 
+/// Shared shape behind every `render_*_click_target`/`render_playback_cursor_target`
+/// function below: a single-child `SvgKind::Group` (both elements positioned
+/// at `elem`'s origin) carrying `tag`, with `rect_kind` as its one child's
+/// content. Each caller only needs to build its own rect kind and `Tag`.
+fn wrap_click_target(elem: &AbsoluteElement, rect_kind: SvgKind, tag: Tag) -> Vec<SvgElement> {
+    vec![SvgElement {
+        x: elem.x,
+        y: elem.y,
+        variant: None,
+        kind: SvgKind::Group {
+            children: vec![SvgElement {
+                x: elem.x,
+                y: elem.y,
+                variant: None,
+                kind: rect_kind,
+            }],
+            tag: Some(tag),
+        },
+    }]
+}
+
 /// Split out of `render_overlay_element` to keep it under the max function
 /// length — [`AbsoluteContent::PartLabelClickTarget`] and
 /// [`AbsoluteContent::LyricClickTarget`] are the two lowest-traffic click
@@ -42,23 +63,14 @@ pub(super) fn render_playback_cursor_target(
     source_part_index: usize,
     note_id: usize,
 ) -> Vec<SvgElement> {
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: None,
-        kind: SvgKind::Group {
-            children: vec![SvgElement {
-                x: elem.x,
-                y: elem.y,
-                variant: None,
-                kind: SvgKind::PlaybackCursorRect { width, height },
-            }],
-            tag: Some(Tag::Note {
-                source_part_index,
-                note_id,
-            }),
+    wrap_click_target(
+        elem,
+        SvgKind::PlaybackCursorRect { width, height },
+        Tag::Note {
+            source_part_index,
+            note_id,
         },
-    }]
+    )
 }
 
 /// Sibling group to [`render_playback_cursor_target`] for the same note/rest,
@@ -74,27 +86,18 @@ pub(super) fn render_note_click_target(
     source_part_index: usize,
     note_id: usize,
 ) -> Vec<SvgElement> {
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: None,
-        kind: SvgKind::Group {
-            children: vec![SvgElement {
-                x: elem.x,
-                y: elem.y,
-                variant: None,
-                kind: SvgKind::TransparentRect {
-                    width,
-                    height,
-                    role: TransparentRectRole::NoteClickTarget,
-                },
-            }],
-            tag: Some(Tag::Note {
-                source_part_index,
-                note_id,
-            }),
+    wrap_click_target(
+        elem,
+        SvgKind::TransparentRect {
+            width,
+            height,
+            role: TransparentRectRole::NoteClickTarget,
         },
-    }]
+        Tag::Note {
+            source_part_index,
+            note_id,
+        },
+    )
 }
 
 fn render_part_label_click_target(
@@ -105,28 +108,19 @@ fn render_part_label_click_target(
     measure_index_start: usize,
     measure_index_end: usize,
 ) -> Vec<SvgElement> {
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: None,
-        kind: SvgKind::Group {
-            children: vec![SvgElement {
-                x: elem.x,
-                y: elem.y,
-                variant: None,
-                kind: SvgKind::TransparentRect {
-                    width,
-                    height,
-                    role: TransparentRectRole::PartLabelClickTarget,
-                },
-            }],
-            tag: Some(Tag::PartLabel {
-                source_part_index,
-                measure_index_start,
-                measure_index_end,
-            }),
+    wrap_click_target(
+        elem,
+        SvgKind::TransparentRect {
+            width,
+            height,
+            role: TransparentRectRole::PartLabelClickTarget,
         },
-    }]
+        Tag::PartLabel {
+            source_part_index,
+            measure_index_start,
+            measure_index_end,
+        },
+    )
 }
 
 /// Sibling overlay to a lyric syllable's own text element, giving it a
@@ -143,28 +137,19 @@ fn render_lyric_click_target(
     note_id: usize,
     verse: usize,
 ) -> Vec<SvgElement> {
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: None,
-        kind: SvgKind::Group {
-            children: vec![SvgElement {
-                x: elem.x,
-                y: elem.y,
-                variant: None,
-                kind: SvgKind::TransparentRect {
-                    width,
-                    height,
-                    role: TransparentRectRole::LyricClickTarget,
-                },
-            }],
-            tag: Some(Tag::Lyric {
-                source_part_index,
-                note_id,
-                verse,
-            }),
+    wrap_click_target(
+        elem,
+        SvgKind::TransparentRect {
+            width,
+            height,
+            role: TransparentRectRole::LyricClickTarget,
         },
-    }]
+        Tag::Lyric {
+            source_part_index,
+            note_id,
+            verse,
+        },
+    )
 }
 
 pub(super) fn render_measure_click_target(
@@ -174,25 +159,16 @@ pub(super) fn render_measure_click_target(
     measure_index: usize,
     measure_index_end: usize,
 ) -> Vec<SvgElement> {
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: None,
-        kind: SvgKind::Group {
-            children: vec![SvgElement {
-                x: elem.x,
-                y: elem.y,
-                variant: None,
-                kind: SvgKind::TransparentRect {
-                    width,
-                    height,
-                    role: TransparentRectRole::MeasureClickTarget,
-                },
-            }],
-            tag: Some(Tag::Measure {
-                index: measure_index,
-                end: measure_index_end,
-            }),
+    wrap_click_target(
+        elem,
+        SvgKind::TransparentRect {
+            width,
+            height,
+            role: TransparentRectRole::MeasureClickTarget,
         },
-    }]
+        Tag::Measure {
+            index: measure_index,
+            end: measure_index_end,
+        },
+    )
 }

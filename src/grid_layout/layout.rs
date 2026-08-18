@@ -96,13 +96,10 @@ pub(crate) use systems::{
 
 #[path = "layout_decoration.rs"]
 mod decoration;
-use super::click_targets::{
-    click_targets_on_page, lyric_click_targets_on_page, part_label_click_targets_on_page,
-};
+use super::click_targets::targets_on_page;
 pub(crate) use super::expand::expand_system_to_rows;
 use super::expand::make_footer_row;
 use super::highlight::measure_highlights_on_page;
-use super::playback_cursor::playback_cursor_targets_on_page;
 pub(crate) use decoration::make_header_rows;
 use decoration::{make_decoration_row, make_separator_row};
 
@@ -303,13 +300,11 @@ pub fn layout(
         abs_system_index_start += page_sys.len();
         let measure_highlights = measure_highlights_on_page(&highlight_infos, page_idx);
         let error_highlights = measure_highlights_on_page(&error_highlight_infos, page_idx);
-        let measure_click_targets = click_targets_on_page(&all_click_target_infos, page_idx);
-        let playback_cursor_targets =
-            playback_cursor_targets_on_page(&all_playback_cursor_target_infos, page_idx);
+        let measure_click_targets = targets_on_page(&all_click_target_infos, page_idx);
+        let playback_cursor_targets = targets_on_page(&all_playback_cursor_target_infos, page_idx);
         let part_label_click_targets =
-            part_label_click_targets_on_page(&all_part_label_click_target_infos, page_idx);
-        let lyric_click_targets =
-            lyric_click_targets_on_page(&all_lyric_click_target_infos, page_idx);
+            targets_on_page(&all_part_label_click_target_infos, page_idx);
+        let lyric_click_targets = targets_on_page(&all_lyric_click_target_infos, page_idx);
         pages.push(GridPage {
             width_pt: page_width_pt,
             height_pt: page_height_pt,
