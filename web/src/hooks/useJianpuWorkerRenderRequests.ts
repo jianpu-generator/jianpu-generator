@@ -35,6 +35,8 @@ interface UseJianpuWorkerRenderRequestsParams {
   latestMeasureSpansIdRef: RefObject<number>
   noteSpansRequestIdRef: RefObject<number>
   latestNoteSpansIdRef: RefObject<number>
+  lyricSpansRequestIdRef: RefObject<number>
+  latestLyricSpansIdRef: RefObject<number>
   cursorOffsetTimerRef: RefObject<number | null>
   lastSelectionRef: RefObject<{
     start: number
@@ -73,6 +75,8 @@ export function useJianpuWorkerRenderRequests({
   latestMeasureSpansIdRef,
   noteSpansRequestIdRef,
   latestNoteSpansIdRef,
+  lyricSpansRequestIdRef,
+  latestLyricSpansIdRef,
   cursorOffsetTimerRef,
   lastSelectionRef,
 }: UseJianpuWorkerRenderRequestsParams) {
@@ -218,6 +222,25 @@ export function useJianpuWorkerRenderRequests({
     const timer = window.setTimeout(() => {
       worker.postMessage({
         type: 'listNoteSpans',
+        source,
+        id,
+      } satisfies WorkerRequest)
+    }, debounceMs)
+
+    return () => window.clearTimeout(timer)
+  }, [source, debounceMs])
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: workerRef/lyricSpansRequestIdRef/latestLyricSpansIdRef are stable refs passed in as params
+  useEffect(() => {
+    const worker = workerRef.current
+    if (!worker) return
+
+    const id = ++lyricSpansRequestIdRef.current
+    latestLyricSpansIdRef.current = id
+
+    const timer = window.setTimeout(() => {
+      worker.postMessage({
+        type: 'listLyricSpans',
         source,
         id,
       } satisfies WorkerRequest)

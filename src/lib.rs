@@ -28,6 +28,7 @@ pub mod grid_layout;
 pub mod grouper;
 pub mod grouping;
 pub mod layout;
+pub mod lyric_spans;
 pub mod measure_spans;
 pub mod note_spans;
 pub mod parser;
@@ -55,6 +56,7 @@ pub use document_render::{
     RenderDocumentOutput,
 };
 pub use filters::*;
+pub use lyric_spans::*;
 pub use measure_spans::*;
 pub use note_spans::*;
 pub use part_info::{

@@ -62,13 +62,22 @@ pub(crate) fn expand_lyric_part(system: &[MeasureBlock], params: &LyricPartParam
         if let Some(part_row) = block.rows.get(part_idx) {
             for el in &part_row.elements {
                 match &el.content {
-                    ElementContent::Lyric { text, .. } => {
+                    ElementContent::Lyric {
+                        text,
+                        note_id,
+                        verse,
+                    } => {
                         row.elements.push(GridElement {
                             column: MUSIC_START_COL + measure_col_offset + el.column,
                             column_span: 1,
                             halign: HAlign::Center,
                             valign: VAlign::Center,
-                            content: GridContent::LyricSyllable(text.clone()),
+                            content: GridContent::LyricSyllable {
+                                text: text.clone(),
+                                source_part_index: part_row.source_part_index,
+                                note_id: *note_id,
+                                verse: *verse,
+                            },
                         });
                     }
                     ElementContent::LyricLine { text, .. } => {

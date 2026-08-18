@@ -65,7 +65,7 @@ fn no_orphan_empty_lyric_row_when_no_part_has_lyric_text() {
     let has_orphan_lyric_row = pages[0].rows.iter().any(|row| {
         !row.elements.is_empty()
             && row.elements.iter().all(|e| {
-                matches!(&e.content, GridContent::LyricSyllable(text) if text.trim().is_empty())
+                matches!(&e.content, GridContent::LyricSyllable { text, .. } if text.trim().is_empty())
             })
     });
 

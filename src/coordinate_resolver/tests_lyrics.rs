@@ -20,6 +20,7 @@ fn single_row_page(element: GridElement) -> GridPage {
         measure_click_targets: vec![],
         playback_cursor_targets: vec![],
         part_label_click_targets: vec![],
+        lyric_click_targets: vec![],
     }
 }
 
@@ -36,7 +37,12 @@ fn lyric_syllable_halign_center_scales_down_when_column_weight_is_inflated_by_an
         column_span: 1,
         halign: HAlign::Center,
         valign: VAlign::Center,
-        content: GridContent::LyricSyllable("la".to_string()),
+        content: GridContent::LyricSyllable {
+            text: "la".to_string(),
+            source_part_index: 0,
+            note_id: 0,
+            verse: 0,
+        },
     };
     let page = GridPage {
         width_pt: 595.0,
@@ -58,6 +64,7 @@ fn lyric_syllable_halign_center_scales_down_when_column_weight_is_inflated_by_an
         measure_click_targets: vec![],
         playback_cursor_targets: vec![],
         part_label_click_targets: vec![],
+        lyric_click_targets: vec![],
     };
     let lyric_font_sizes = LyricFontSizes {
         base: 14.4,
@@ -67,7 +74,7 @@ fn lyric_syllable_halign_center_scales_down_when_column_weight_is_inflated_by_an
     let lyric = abs[0]
         .elements
         .iter()
-        .find(|e| matches!(e.content, AbsoluteContent::Lyric(_)))
+        .find(|e| matches!(e.content, AbsoluteContent::Lyric { .. }))
         .expect("should have Lyric");
 
     // Column 2 is the system's sole music column: x_start = label_width_pt
@@ -101,7 +108,12 @@ fn wide_lyric_syllable_does_not_bleed_left_of_its_column() {
         column_span: 1,
         halign: HAlign::Center,
         valign: VAlign::Center,
-        content: GridContent::LyricSyllable("Supercalifragilisticexpialidocious".to_string()),
+        content: GridContent::LyricSyllable {
+            text: "Supercalifragilisticexpialidocious".to_string(),
+            source_part_index: 0,
+            note_id: 0,
+            verse: 0,
+        },
     };
     let page = single_row_page(el);
     let abs = resolve(
@@ -118,7 +130,7 @@ fn wide_lyric_syllable_does_not_bleed_left_of_its_column() {
     let lyric = abs[0]
         .elements
         .iter()
-        .find(|e| matches!(e.content, AbsoluteContent::Lyric(_)))
+        .find(|e| matches!(e.content, AbsoluteContent::Lyric { .. }))
         .expect("should have Lyric");
     let col_width = (595.0 - 50.0) / 10.0; // 54.5
     let x_start = 25.0 + 0.0 * col_width;
@@ -137,7 +149,12 @@ fn short_lyric_syllable_stays_centered_in_its_column() {
         column_span: 1,
         halign: HAlign::Center,
         valign: VAlign::Center,
-        content: GridContent::LyricSyllable("la".to_string()),
+        content: GridContent::LyricSyllable {
+            text: "la".to_string(),
+            source_part_index: 0,
+            note_id: 0,
+            verse: 0,
+        },
     };
     let page = single_row_page(el);
     let abs = resolve(
@@ -154,7 +171,7 @@ fn short_lyric_syllable_stays_centered_in_its_column() {
     let lyric = abs[0]
         .elements
         .iter()
-        .find(|e| matches!(e.content, AbsoluteContent::Lyric(_)))
+        .find(|e| matches!(e.content, AbsoluteContent::Lyric { .. }))
         .expect("should have Lyric");
     let col_width = (595.0 - 50.0) / 10.0;
     let expected_x = 25.0 + col_width * 0.5;

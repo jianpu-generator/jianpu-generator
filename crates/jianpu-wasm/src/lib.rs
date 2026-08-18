@@ -1,5 +1,6 @@
 #![cfg_attr(test, allow(clippy::disallowed_macros))]
 
+mod lyric_selection_types;
 mod metadata_types;
 mod note_selection_types;
 mod part_declarations;
@@ -28,12 +29,14 @@ pub mod lib_import;
 use jianpu_generator::parser::parts_parser::InstrumentInfo;
 use metadata_types::MetadataDefaultsOut;
 use responses::{
-    get_measure_at_offset_response, group_note_selection_response, list_measure_spans_response,
-    list_note_spans_response, render_response, render_with_highlight_range_response,
+    get_measure_at_offset_response, group_lyric_selection_response, group_note_selection_response,
+    list_lyric_spans_response, list_measure_spans_response, list_note_spans_response,
+    render_response, render_with_highlight_range_response,
 };
 use types::{
-    GroupNoteSelectionResponse, ListMeasureSpansResponse, ListNoteSpansResponse,
-    ListPartDeclarationsResponse, ListPartsResponse, ListSymbolsResponse, MeasureAtOffsetResponse,
+    GroupLyricSelectionResponse, GroupNoteSelectionResponse, ListLyricSpansResponse,
+    ListMeasureSpansResponse, ListNoteSpansResponse, ListPartDeclarationsResponse,
+    ListPartsResponse, ListSymbolsResponse, LyricCellIn, LyricSpanOut, MeasureAtOffsetResponse,
     NoteCellIn, NoteSpanOut, RenameSymbolResponse, RenderResponse, SymbolKindOut,
 };
 use wasm_bindgen::prelude::*;
@@ -102,6 +105,37 @@ pub fn group_note_selection(
     let selected_cells: Vec<NoteCellIn> =
         serde_wasm_bindgen::from_value(raw_selected_cells).unwrap_or_default();
     group_note_selection_response(&note_spans, &selected_cells)
+}
+
+/// Return the source byte span of every lyric syllable, keyed by
+/// `(sourcePartIndex, noteId, verse)` matching the SVG's `data-part-index`/
+/// `data-note-id`/`data-verse` attributes on each `Tag::Lyric` group.
+///
+/// - `{ "status": "ok", "spans": [{ "sourcePartIndex", "noteId", "verse",
+///   "measureIndex", "start", "end" }, ...] }` on success
+/// - `{ "status": "err" }` on parse failure
+#[wasm_bindgen]
+pub fn list_lyric_spans(source: &str) -> ListLyricSpansResponse {
+    list_lyric_spans_response(source)
+}
+
+/// Groups a drag-selected set of `(sourcePartIndex, noteId, verse)` cells
+/// into contiguous per-`(part, verse, measure)` source byte runs, ready to
+/// become a Monaco multicursor selection. Pure grouping over the
+/// already-fetched `lyric_spans` (from `list_lyric_spans`) — does not
+/// re-parse `source`, so callers should call this directly on the main
+/// thread (not via the render worker) to keep it responsive on every
+/// selection-change tick.
+#[wasm_bindgen]
+pub fn group_lyric_selection(
+    raw_lyric_spans: JsValue,
+    raw_selected_cells: JsValue,
+) -> GroupLyricSelectionResponse {
+    let lyric_spans: Vec<LyricSpanOut> =
+        serde_wasm_bindgen::from_value(raw_lyric_spans).unwrap_or_default();
+    let selected_cells: Vec<LyricCellIn> =
+        serde_wasm_bindgen::from_value(raw_selected_cells).unwrap_or_default();
+    group_lyric_selection_response(&lyric_spans, &selected_cells)
 }
 
 /// Parse and render `.jianpu` source into SVG page strings.

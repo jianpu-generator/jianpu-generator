@@ -1,17 +1,17 @@
-use crate::compiler::types::MeasureBlock;
+use crate::compiler::types::{ElementContent, MeasureBlock};
 use crate::grid_layout::highlight::{
     abs_sys_index, measure_column_bounds, system_musical_row_count,
 };
 use crate::grid_layout::layout::{
-    block_column_width, is_lyric_row, make_header_rows, system_has_any_decoration,
-    system_tuplet_part_indices, MUSIC_START_COL,
+    block_column_width, is_chord_only_row, is_lyric_row, make_header_rows,
+    system_has_any_decoration, system_tuplet_part_indices, MUSIC_START_COL,
 };
 use crate::grid_layout::playback_cursor::{compute_all_playback_cursor_targets, part_row_ranges};
 use crate::grid_layout::types::{
-    GridElement, Header, MeasureClickTarget, MeasureHighlight, PartLabelClickTarget,
-    PlaybackCursorTarget,
+    GridElement, Header, LyricClickTarget, MeasureClickTarget, MeasureHighlight,
+    PartLabelClickTarget, PlaybackCursorTarget,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::highlight::{compute_error_highlight_infos, compute_measure_highlights_for_range};
 
@@ -171,12 +171,141 @@ pub(crate) fn part_label_click_targets_on_page(
         .collect()
 }
 
+/// One absolute row index per entry in `first.rows`, `Some` only for entries
+/// that are a lyric row (`is_lyric_row`) — `None` for note rows. Mirrors
+/// `part_row_ranges`'s cursor walk exactly (same sub-row counts, same
+/// verse-absorption order), but records each verse row's own single row
+/// index instead of merging it into its note row's combined span, since a
+/// lyric syllable's click target needs to sit on exactly the one row its
+/// text is drawn on.
+fn lyric_row_absolute_indices(
+    system: &[MeasureBlock],
+    row_offset: usize,
+    tuplet_part_indices: &HashSet<usize>,
+) -> Vec<Option<usize>> {
+    let Some(first) = system.first() else {
+        return Vec::new();
+    };
+    let mut cursor = row_offset;
+    let mut result: Vec<Option<usize>> = Vec::with_capacity(first.rows.len());
+    let mut idx = 0;
+    while let Some(part_template) = first.rows.get(idx) {
+        if is_lyric_row(part_template) {
+            result.push(Some(cursor));
+            cursor += 1;
+            idx += 1;
+            continue;
+        }
+        let sub_count = if is_chord_only_row(part_template) {
+            4
+        } else if tuplet_part_indices.contains(&idx) {
+            7
+        } else {
+            6
+        };
+        result.push(None);
+        cursor += sub_count;
+        let mut verse_end = idx + 1;
+        while first.rows.get(verse_end).is_some_and(|verse_row| {
+            is_lyric_row(verse_row)
+                && verse_row.source_part_index == part_template.source_part_index
+        }) {
+            result.push(Some(cursor));
+            cursor += 1;
+            verse_end += 1;
+        }
+        idx = verse_end;
+    }
+    result
+}
+
+/// One [`LyricClickTarget`] per lyric syllable in every system, keyed by page
+/// index like `compute_all_measure_click_targets`. Unlike
+/// `compute_all_playback_cursor_targets`'s note targets (which can span a
+/// variable multi-column range), each syllable's own target is exactly the
+/// one grid column `expand_lyric_part` placed it in.
+pub(crate) fn compute_all_lyric_click_targets(
+    page_systems: &[Vec<Vec<MeasureBlock>>],
+    tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
+    header: &Header,
+    base: f32,
+    hide_system_dividers: bool,
+) -> Vec<(usize, LyricClickTarget)> {
+    let mut results: Vec<(usize, LyricClickTarget)> = Vec::new();
+
+    for (page_idx, page_sys) in page_systems.iter().enumerate() {
+        let header_row_count = make_header_rows(header, base, page_idx == 0).len();
+        let mut row_offset = header_row_count;
+        for (sys_idx, system) in page_sys.iter().enumerate() {
+            if sys_idx > 0 && !hide_system_dividers {
+                row_offset += 1;
+            }
+            if system.is_empty() {
+                continue;
+            }
+            if system_has_any_decoration(system) {
+                row_offset += 1;
+            }
+            let abs_sys = abs_sys_index(page_systems, page_idx, sys_idx);
+            let tuplet_part_indices =
+                system_tuplet_part_indices(system, tuplet_bracket_map, abs_sys);
+            let musical_row_count = system_musical_row_count(system, &tuplet_part_indices);
+            let row_indices = lyric_row_absolute_indices(system, row_offset, &tuplet_part_indices);
+
+            let mut col_offset: u32 = MUSIC_START_COL;
+            for block in system {
+                let col_w = block_column_width(block);
+                for (part_idx, row_idx) in row_indices.iter().enumerate() {
+                    let Some(row_idx) = row_idx else {
+                        continue;
+                    };
+                    let Some(part_row) = block.rows.get(part_idx) else {
+                        continue;
+                    };
+                    for el in &part_row.elements {
+                        let ElementContent::Lyric { note_id, verse, .. } = &el.content else {
+                            continue;
+                        };
+                        let column_start = (col_offset + el.column) as f32;
+                        results.push((
+                            page_idx,
+                            LyricClickTarget {
+                                row: *row_idx,
+                                column_start,
+                                column_end: column_start + 1.0,
+                                source_part_index: part_row.source_part_index,
+                                note_id: *note_id,
+                                verse: *verse,
+                            },
+                        ));
+                    }
+                }
+                col_offset += col_w;
+            }
+            row_offset += musical_row_count;
+        }
+    }
+    results
+}
+
+pub(crate) fn lyric_click_targets_on_page(
+    targets: &[(usize, LyricClickTarget)],
+    page_idx: usize,
+) -> Vec<LyricClickTarget> {
+    targets
+        .iter()
+        .filter(|(p, _)| *p == page_idx)
+        .map(|(_, t)| t.clone())
+        .collect()
+}
+
 pub(crate) struct HighlightAndClickInfos {
     pub(crate) highlight_infos: Vec<(usize, MeasureHighlight)>,
     pub(crate) error_highlight_infos: Vec<(usize, MeasureHighlight)>,
     pub(crate) all_click_target_infos: Vec<(usize, MeasureClickTarget)>,
     pub(crate) all_playback_cursor_target_infos: Vec<(usize, PlaybackCursorTarget)>,
     pub(crate) all_part_label_click_target_infos: Vec<(usize, PartLabelClickTarget)>,
+    pub(crate) all_lyric_click_target_infos: Vec<(usize, LyricClickTarget)>,
 }
 
 #[derive(Clone, Copy)]
@@ -244,6 +373,13 @@ pub(crate) fn compute_highlight_and_click_infos(
         base,
         hide_system_dividers,
     );
+    let all_lyric_click_target_infos = compute_all_lyric_click_targets(
+        page_systems,
+        tuplet_bracket_map,
+        header,
+        base,
+        hide_system_dividers,
+    );
 
     HighlightAndClickInfos {
         highlight_infos,
@@ -251,5 +387,6 @@ pub(crate) fn compute_highlight_and_click_infos(
         all_click_target_infos,
         all_playback_cursor_target_infos,
         all_part_label_click_target_infos,
+        all_lyric_click_target_infos,
     }
 }

@@ -139,6 +139,8 @@ export function useJianpuWorkerActions({
     setMeasureSpans: state.setMeasureSpans,
     latestNoteSpansIdRef: state.latestNoteSpansIdRef,
     setNoteSpans: state.setNoteSpans,
+    latestLyricSpansIdRef: state.latestLyricSpansIdRef,
+    setLyricSpans: state.setLyricSpans,
     setSectionRanges: state.setSectionRanges,
     setSequenceEntries: state.setSequenceEntries,
     latestPreviewAudioIdRef,
@@ -176,6 +178,8 @@ export function useJianpuWorkerActions({
     latestMeasureSpansIdRef: state.latestMeasureSpansIdRef,
     noteSpansRequestIdRef: state.noteSpansRequestIdRef,
     latestNoteSpansIdRef: state.latestNoteSpansIdRef,
+    lyricSpansRequestIdRef: state.lyricSpansRequestIdRef,
+    latestLyricSpansIdRef: state.latestLyricSpansIdRef,
     lastSelectionRef: state.lastSelectionRef,
   })
 

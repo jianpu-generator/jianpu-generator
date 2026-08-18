@@ -11,6 +11,7 @@ pub struct GridPage {
     pub measure_click_targets: Vec<MeasureClickTarget>,
     pub playback_cursor_targets: Vec<PlaybackCursorTarget>,
     pub part_label_click_targets: Vec<PartLabelClickTarget>,
+    pub lyric_click_targets: Vec<LyricClickTarget>,
 }
 
 #[derive(Debug, Clone)]
@@ -177,7 +178,18 @@ pub enum GridContent {
     HorizontalLine,
     /// Part name at column=0, column_span=4 in the note-head sub-row.
     RowLabel(String),
-    LyricSyllable(String),
+    /// `source_part_index`/`note_id` identify the note this syllable is sung
+    /// on, and `verse` (0-indexed) disambiguates which verse line it belongs
+    /// to when a part has more than one (see
+    /// `compiler::types::ElementContent::Lyric`), letting the SVG preview
+    /// give this syllable its own click target independent of its note's —
+    /// see `renderer::new_types::Tag::Lyric`.
+    LyricSyllable {
+        text: String,
+        source_part_index: usize,
+        note_id: usize,
+        verse: usize,
+    },
     /// One verse's full text line for a standalone `lyrics` part, rendered as
     /// a single left-aligned block spanning the whole measure (via
     /// `GridElement::column_span`) rather than positioned per note like
@@ -255,7 +267,12 @@ pub enum PostArcGridContent {
     },
     HorizontalLine,
     RowLabel(String),
-    LyricSyllable(String),
+    LyricSyllable {
+        text: String,
+        source_part_index: usize,
+        note_id: usize,
+        verse: usize,
+    },
     LyricLine(String),
     DirectiveLine {
         label: Option<String>,
@@ -331,4 +348,19 @@ pub struct PlaybackCursorTarget {
     pub column_end: f32,
     pub source_part_index: usize,
     pub note_id: usize,
+}
+
+/// Invisible click/drag hit target for one lyric syllable, spanning exactly
+/// its own grid column in its own row — independent of its note's own
+/// (wider) [`PlaybackCursorTarget`]-derived click target, so a click on the
+/// syllable itself always wins hit-testing there (see
+/// `renderer::new_types::Tag::Lyric`).
+#[derive(Debug, Clone)]
+pub struct LyricClickTarget {
+    pub row: usize,
+    pub column_start: f32,
+    pub column_end: f32,
+    pub source_part_index: usize,
+    pub note_id: usize,
+    pub verse: usize,
 }

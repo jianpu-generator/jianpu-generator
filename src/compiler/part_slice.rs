@@ -117,6 +117,7 @@ fn process_events(state: &mut PartState<'_>, slice: &PartSlice) {
                                 it.next().map(|s| ElementContent::Lyric {
                                     text: s.text.clone(),
                                     verse,
+                                    note_id,
                                 })
                             })
                             .collect()

@@ -3,6 +3,7 @@ import type { RefObject } from 'react'
 import type {
   Diagnostic,
   DiagnosticViewZone,
+  LyricSpan,
   MeasureSpan,
   NoteSpan,
   PartDeclaration,
@@ -72,6 +73,8 @@ export interface WorkerMessageHandlerDeps {
   setMeasureSpans: (value: MeasureSpan[]) => void
   latestNoteSpansIdRef: RefObject<number>
   setNoteSpans: (value: NoteSpan[]) => void
+  latestLyricSpansIdRef: RefObject<number>
+  setLyricSpans: (value: LyricSpan[]) => void
   setSectionRanges: (value: SectionRange[]) => void
   setSequenceEntries: (value: SequenceEntry[]) => void
   latestPreviewAudioIdRef: RefObject<number>
@@ -286,6 +289,14 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       if (msg.id !== deps.latestNoteSpansIdRef.current) return
       if (msg.status === 'ok') {
         deps.setNoteSpans(msg.spans)
+      }
+      return
+    }
+
+    if (msg.type === 'lyricSpans') {
+      if (msg.id !== deps.latestLyricSpansIdRef.current) return
+      if (msg.status === 'ok') {
+        deps.setLyricSpans(msg.spans)
       }
       return
     }

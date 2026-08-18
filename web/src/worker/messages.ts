@@ -2,6 +2,7 @@ import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
+  LyricSpan,
   MeasureSpan,
   NoteSpan,
   PartDeclaration,
@@ -110,6 +111,7 @@ export type WorkerRequest =
     }
   | { type: 'listMeasureSpans'; source: string; id: number }
   | { type: 'listNoteSpans'; source: string; id: number }
+  | { type: 'listLyricSpans'; source: string; id: number }
   | { type: 'previewInstrument'; id: number; programNumber: number }
   | { type: 'previewPercussion'; id: number; key: number }
   | {
@@ -206,6 +208,12 @@ export type WorkerResponse =
       id: number
       status: 'ok' | 'err'
       spans: NoteSpan[]
+    }
+  | {
+      type: 'lyricSpans'
+      id: number
+      status: 'ok' | 'err'
+      spans: LyricSpan[]
     }
   | { type: 'importOk'; id: number; source: string }
   | { type: 'importErr'; id: number }

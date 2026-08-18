@@ -63,6 +63,12 @@ pub enum TransparentRectRole {
     /// Invisible rect layered over a part's `RowLabel` text, giving it a
     /// clickable/draggable hit target — see `Tag::PartLabel`.
     PartLabelClickTarget,
+    /// Invisible rect layered over one lyric syllable, giving it its own
+    /// clickable/draggable hit target independent of its note's
+    /// `NoteClickTarget` — see `Tag::Lyric`. Painted last (after
+    /// `PartLabelClickTarget`) so it always wins hit-testing over the wider
+    /// `NoteClickTarget` rect that geometrically covers the same lyric row.
+    LyricClickTarget,
 }
 
 impl TransparentRectRole {
@@ -73,6 +79,7 @@ impl TransparentRectRole {
             Self::SectionLabelClickTarget => "section-label-click-target-rect",
             Self::NoteClickTarget => "note-click-target-rect",
             Self::PartLabelClickTarget => "part-label-click-target-rect",
+            Self::LyricClickTarget => "lyric-click-target-rect",
         }
     }
 }
@@ -118,6 +125,16 @@ pub enum Tag {
         source_part_index: usize,
         measure_index_start: usize,
         measure_index_end: usize,
+    },
+    /// Identifies a lyric syllable's own click target — see
+    /// `AbsoluteContent::LyricClickTarget`. `source_part_index`/`note_id`
+    /// match the syllable's underlying note's own `Tag::Note` identity;
+    /// `verse` (0-indexed) disambiguates which verse line the syllable
+    /// belongs to when a part has more than one.
+    Lyric {
+        source_part_index: usize,
+        note_id: usize,
+        verse: usize,
     },
 }
 

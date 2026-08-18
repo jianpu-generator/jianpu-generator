@@ -1,0 +1,198 @@
+use crate::compositor::types::{AbsoluteContent, AbsoluteElement};
+use crate::renderer::new_types::{SvgElement, SvgKind, Tag, TransparentRectRole};
+
+/// Split out of `render_overlay_element` to keep it under the max function
+/// length — [`AbsoluteContent::PartLabelClickTarget`] and
+/// [`AbsoluteContent::LyricClickTarget`] are the two lowest-traffic click
+/// target variants, so they're grouped here together.
+pub(super) fn render_secondary_click_target(
+    elem: &AbsoluteElement,
+    content: &AbsoluteContent,
+) -> Vec<SvgElement> {
+    match content {
+        AbsoluteContent::PartLabelClickTarget {
+            width,
+            height,
+            source_part_index,
+            measure_index_start,
+            measure_index_end,
+        } => render_part_label_click_target(
+            elem,
+            *width,
+            *height,
+            *source_part_index,
+            *measure_index_start,
+            *measure_index_end,
+        ),
+        AbsoluteContent::LyricClickTarget {
+            width,
+            height,
+            source_part_index,
+            note_id,
+            verse,
+        } => render_lyric_click_target(elem, *width, *height, *source_part_index, *note_id, *verse),
+        _ => Vec::new(),
+    }
+}
+
+pub(super) fn render_playback_cursor_target(
+    elem: &AbsoluteElement,
+    width: f32,
+    height: f32,
+    source_part_index: usize,
+    note_id: usize,
+) -> Vec<SvgElement> {
+    vec![SvgElement {
+        x: elem.x,
+        y: elem.y,
+        variant: None,
+        kind: SvgKind::Group {
+            children: vec![SvgElement {
+                x: elem.x,
+                y: elem.y,
+                variant: None,
+                kind: SvgKind::PlaybackCursorRect { width, height },
+            }],
+            tag: Some(Tag::Note {
+                source_part_index,
+                note_id,
+            }),
+        },
+    }]
+}
+
+/// Sibling group to [`render_playback_cursor_target`] for the same note/rest,
+/// giving it a clickable/draggable hit target — `PlaybackCursorRect` is
+/// `pointer-events: none` since its `fill` is owned exclusively by
+/// `usePlaybackCursor.ts`, so a separate transparent rect handles clicks.
+/// Carries the same `Tag::Note` `source_part_index`/`note_id` so a click on
+/// it resolves to the same note as the playback cursor rect underneath.
+pub(super) fn render_note_click_target(
+    elem: &AbsoluteElement,
+    width: f32,
+    height: f32,
+    source_part_index: usize,
+    note_id: usize,
+) -> Vec<SvgElement> {
+    vec![SvgElement {
+        x: elem.x,
+        y: elem.y,
+        variant: None,
+        kind: SvgKind::Group {
+            children: vec![SvgElement {
+                x: elem.x,
+                y: elem.y,
+                variant: None,
+                kind: SvgKind::TransparentRect {
+                    width,
+                    height,
+                    role: TransparentRectRole::NoteClickTarget,
+                },
+            }],
+            tag: Some(Tag::Note {
+                source_part_index,
+                note_id,
+            }),
+        },
+    }]
+}
+
+fn render_part_label_click_target(
+    elem: &AbsoluteElement,
+    width: f32,
+    height: f32,
+    source_part_index: usize,
+    measure_index_start: usize,
+    measure_index_end: usize,
+) -> Vec<SvgElement> {
+    vec![SvgElement {
+        x: elem.x,
+        y: elem.y,
+        variant: None,
+        kind: SvgKind::Group {
+            children: vec![SvgElement {
+                x: elem.x,
+                y: elem.y,
+                variant: None,
+                kind: SvgKind::TransparentRect {
+                    width,
+                    height,
+                    role: TransparentRectRole::PartLabelClickTarget,
+                },
+            }],
+            tag: Some(Tag::PartLabel {
+                source_part_index,
+                measure_index_start,
+                measure_index_end,
+            }),
+        },
+    }]
+}
+
+/// Sibling overlay to a lyric syllable's own text element, giving it a
+/// clickable/draggable hit target independent of its note's — see
+/// `Tag::Lyric`. Painted after `PartLabelClickTarget` (see
+/// `resolve_click_target_elements`'s append order), so its narrow rect wins
+/// hit-testing over the wider `NoteClickTarget` that geometrically covers
+/// the same lyric row.
+fn render_lyric_click_target(
+    elem: &AbsoluteElement,
+    width: f32,
+    height: f32,
+    source_part_index: usize,
+    note_id: usize,
+    verse: usize,
+) -> Vec<SvgElement> {
+    vec![SvgElement {
+        x: elem.x,
+        y: elem.y,
+        variant: None,
+        kind: SvgKind::Group {
+            children: vec![SvgElement {
+                x: elem.x,
+                y: elem.y,
+                variant: None,
+                kind: SvgKind::TransparentRect {
+                    width,
+                    height,
+                    role: TransparentRectRole::LyricClickTarget,
+                },
+            }],
+            tag: Some(Tag::Lyric {
+                source_part_index,
+                note_id,
+                verse,
+            }),
+        },
+    }]
+}
+
+pub(super) fn render_measure_click_target(
+    elem: &AbsoluteElement,
+    width: f32,
+    height: f32,
+    measure_index: usize,
+    measure_index_end: usize,
+) -> Vec<SvgElement> {
+    vec![SvgElement {
+        x: elem.x,
+        y: elem.y,
+        variant: None,
+        kind: SvgKind::Group {
+            children: vec![SvgElement {
+                x: elem.x,
+                y: elem.y,
+                variant: None,
+                kind: SvgKind::TransparentRect {
+                    width,
+                    height,
+                    role: TransparentRectRole::MeasureClickTarget,
+                },
+            }],
+            tag: Some(Tag::Measure {
+                index: measure_index,
+                end: measure_index_end,
+            }),
+        },
+    }]
+}

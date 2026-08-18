@@ -211,3 +211,33 @@ pub(super) fn resolve_part_label_click_target(
         },
     })
 }
+
+/// A lyric syllable's click target is simpler than the targets above: it
+/// always sits on exactly one row (`target.row`) and one grid column
+/// (`target.column_start..target.column_end`), with no bar-line-snapping —
+/// a syllable never touches a bar line — so no row-range or edge-snapping
+/// math is needed, unlike [`resolve_note_click_target`].
+pub(super) fn resolve_lyric_click_target(
+    target: &crate::grid_layout::types::LyricClickTarget,
+    rows: &[GridRow],
+    row_tops: &[f32],
+    usable_width: f32,
+    part_label_width_pt: f32,
+) -> Option<AbsoluteElement> {
+    let row = rows.get(target.row)?;
+    let target_y = row_tops.get(target.row)?;
+    let geometry = row.column_geometry(usable_width, part_label_width_pt);
+    let target_x = PAGE_MARGIN + geometry.x_start(target.column_start);
+    let target_width = geometry.x_start(target.column_end) - geometry.x_start(target.column_start);
+    Some(AbsoluteElement {
+        x: target_x,
+        y: *target_y,
+        content: AbsoluteContent::LyricClickTarget {
+            width: target_width,
+            height: row.height_pt,
+            source_part_index: target.source_part_index,
+            note_id: target.note_id,
+            verse: target.verse,
+        },
+    })
+}

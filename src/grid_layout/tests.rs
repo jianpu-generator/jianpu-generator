@@ -109,6 +109,7 @@ fn lyric_row(id: &str) -> MeasureRow {
             content: ElementContent::Lyric {
                 text: "la".to_string(),
                 verse: 0,
+                note_id: 0,
             },
             note_id: None,
         }],
@@ -314,6 +315,7 @@ fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
                     content: ElementContent::Lyric {
                         text: "la".to_string(),
                         verse: 0,
+                        note_id: 0,
                     },
                     note_id: None,
                 }],

@@ -2,6 +2,7 @@ import type { RefObject } from 'react'
 import { useEffect, useRef } from 'react'
 import type { NoteSpan } from '../types'
 import {
+  applyLyricDragHighlights,
   applyNoteDragHighlights,
   applyPartLabelDragHighlight,
   applyPersistedNoteHighlights,
@@ -12,6 +13,7 @@ import {
 } from './previewDragHighlights'
 import {
   getMeasureAtPoint,
+  type LyricCell,
   type MeasureRange,
   type NoteCell,
   noteCellsForPartLabels,
@@ -45,6 +47,17 @@ export type PreviewDragState =
       noteCellAtAnchor: NoteCell
       measureRangeAtAnchor: MeasureRange | undefined
     }
+  | {
+      // No 'pending'-style click/drag distinction needed here, unlike
+      // 'note': a lyric syllable's click target is already exactly one grid
+      // column (see `LyricClickTarget`), so a plain click naturally
+      // resolves to just that one syllable via the marquee test below with
+      // zero movement — there's no "expand to the whole measure" shortcut
+      // to arm into, unlike a note click.
+      mode: 'lyric'
+      anchor: DragPoint
+      current: DragPoint
+    }
   | null
 
 /** Owns the note/measure/part-label drag-select gesture for `Preview`: a
@@ -58,6 +71,7 @@ export function usePreviewDragSelection(
   previewPagesRef: RefObject<HTMLDivElement | null>,
   noteSpans: NoteSpan[],
   onNoteRangeSelect: ((selectedCells: NoteCell[]) => void) | undefined,
+  onLyricRangeSelect?: (selectedCells: LyricCell[]) => void,
 ) {
   // The mousemove/mouseup handlers below live in a `useEffect(() => {...},
   // [])` with an empty dep array (registered once on mount), so they'd
@@ -67,6 +81,8 @@ export function usePreviewDragSelection(
   noteSpansRef.current = noteSpans
   const onNoteRangeSelectRef = useRef(onNoteRangeSelect)
   onNoteRangeSelectRef.current = onNoteRangeSelect
+  const onLyricRangeSelectRef = useRef(onLyricRangeSelect)
+  onLyricRangeSelectRef.current = onLyricRangeSelect
 
   const dragStateRef = useRef<PreviewDragState>(null)
 
@@ -98,6 +114,12 @@ export function usePreviewDragSelection(
       if (dragState.mode === 'note') {
         dragState.current = { x: e.clientX, y: e.clientY }
         applyNoteDragHighlights(container, dragState.anchor, dragState.current)
+        return
+      }
+
+      if (dragState.mode === 'lyric') {
+        dragState.current = { x: e.clientX, y: e.clientY }
+        applyLyricDragHighlights(container, dragState.anchor, dragState.current)
         return
       }
 
@@ -163,6 +185,19 @@ export function usePreviewDragSelection(
           ? applyNoteDragHighlights(container, dragState.anchor, current)
           : []
         onNoteRangeSelectRef.current?.(cells)
+        dragStateRef.current = null
+        return
+      }
+
+      if (dragState.mode === 'lyric') {
+        const current = { x: e.clientX, y: e.clientY }
+        // Leave the highlight as the drag left it, same as 'note' mode —
+        // `onLyricRangeSelectRef` feeds `selectedLyricCells` back in, and
+        // `Preview`'s declarative effect keeps it applied.
+        const cells = container
+          ? applyLyricDragHighlights(container, dragState.anchor, current)
+          : []
+        onLyricRangeSelectRef.current?.(cells)
         dragStateRef.current = null
         return
       }

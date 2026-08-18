@@ -3,8 +3,10 @@ use crate::compositor::types::{
     AbsoluteContent, AbsoluteElement, AbsolutePage, DominantBaseline, TextAnchor,
 };
 use crate::render_config::RenderConfig;
-use crate::renderer::new_types::{
-    SvgDocument, SvgElement, SvgKind, SvgVariant, Tag, TransparentRectRole,
+use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, SvgVariant};
+use click_targets::{
+    render_measure_click_target, render_note_click_target, render_playback_cursor_target,
+    render_secondary_click_target,
 };
 use directive_line::{render_directive_line, DirectiveLineArgs};
 use glyph_renderers::{
@@ -14,6 +16,7 @@ use glyph_renderers::{
     NoteRenderParams,
 };
 
+mod click_targets;
 mod directive_line;
 mod glyph_renderers;
 
@@ -130,7 +133,9 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
         }
         AbsoluteContent::BarLine { height } => render_bar_line(elem, height),
         AbsoluteContent::HorizontalLine { width } => render_horizontal_line(elem, width),
-        AbsoluteContent::Lyric(s) => render_lyric(elem, s, lyric_font_size, cjk_font_size),
+        AbsoluteContent::Lyric { text, .. } => {
+            render_lyric(elem, text, lyric_font_size, cjk_font_size)
+        }
         AbsoluteContent::LyricLine(s) => render_lyric_line(elem, s, lyric_font_size, cjk_font_size),
         content => render_overlay_element(elem, content, *directive_row_offset),
     }
@@ -187,20 +192,9 @@ fn render_overlay_element(
             source_part_index,
             note_id,
         } => render_note_click_target(elem, *width, *height, *source_part_index, *note_id),
-        AbsoluteContent::PartLabelClickTarget {
-            width,
-            height,
-            source_part_index,
-            measure_index_start,
-            measure_index_end,
-        } => render_part_label_click_target(
-            elem,
-            *width,
-            *height,
-            *source_part_index,
-            *measure_index_start,
-            *measure_index_end,
-        ),
+        AbsoluteContent::PartLabelClickTarget { .. } | AbsoluteContent::LyricClickTarget { .. } => {
+            render_secondary_click_target(elem, content)
+        }
         AbsoluteContent::DirectiveLine {
             bar_number,
             label,
@@ -271,128 +265,4 @@ fn render_highlight_rect(
             SvgKind::Rect { width, height }
         },
     }
-}
-
-fn render_playback_cursor_target(
-    elem: &AbsoluteElement,
-    width: f32,
-    height: f32,
-    source_part_index: usize,
-    note_id: usize,
-) -> Vec<SvgElement> {
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: None,
-        kind: SvgKind::Group {
-            children: vec![SvgElement {
-                x: elem.x,
-                y: elem.y,
-                variant: None,
-                kind: SvgKind::PlaybackCursorRect { width, height },
-            }],
-            tag: Some(Tag::Note {
-                source_part_index,
-                note_id,
-            }),
-        },
-    }]
-}
-
-/// Sibling group to [`render_playback_cursor_target`] for the same note/rest,
-/// giving it a clickable/draggable hit target — `PlaybackCursorRect` is
-/// `pointer-events: none` since its `fill` is owned exclusively by
-/// `usePlaybackCursor.ts`, so a separate transparent rect handles clicks.
-/// Carries the same `Tag::Note` `source_part_index`/`note_id` so a click on
-/// it resolves to the same note as the playback cursor rect underneath.
-fn render_note_click_target(
-    elem: &AbsoluteElement,
-    width: f32,
-    height: f32,
-    source_part_index: usize,
-    note_id: usize,
-) -> Vec<SvgElement> {
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: None,
-        kind: SvgKind::Group {
-            children: vec![SvgElement {
-                x: elem.x,
-                y: elem.y,
-                variant: None,
-                kind: SvgKind::TransparentRect {
-                    width,
-                    height,
-                    role: TransparentRectRole::NoteClickTarget,
-                },
-            }],
-            tag: Some(Tag::Note {
-                source_part_index,
-                note_id,
-            }),
-        },
-    }]
-}
-
-fn render_part_label_click_target(
-    elem: &AbsoluteElement,
-    width: f32,
-    height: f32,
-    source_part_index: usize,
-    measure_index_start: usize,
-    measure_index_end: usize,
-) -> Vec<SvgElement> {
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: None,
-        kind: SvgKind::Group {
-            children: vec![SvgElement {
-                x: elem.x,
-                y: elem.y,
-                variant: None,
-                kind: SvgKind::TransparentRect {
-                    width,
-                    height,
-                    role: TransparentRectRole::PartLabelClickTarget,
-                },
-            }],
-            tag: Some(Tag::PartLabel {
-                source_part_index,
-                measure_index_start,
-                measure_index_end,
-            }),
-        },
-    }]
-}
-
-fn render_measure_click_target(
-    elem: &AbsoluteElement,
-    width: f32,
-    height: f32,
-    measure_index: usize,
-    measure_index_end: usize,
-) -> Vec<SvgElement> {
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: None,
-        kind: SvgKind::Group {
-            children: vec![SvgElement {
-                x: elem.x,
-                y: elem.y,
-                variant: None,
-                kind: SvgKind::TransparentRect {
-                    width,
-                    height,
-                    role: TransparentRectRole::MeasureClickTarget,
-                },
-            }],
-            tag: Some(Tag::Measure {
-                index: measure_index,
-                end: measure_index_end,
-            }),
-        },
-    }]
 }

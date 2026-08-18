@@ -327,7 +327,17 @@ pub(super) fn grid_to_absolute(
         PostArcGridContent::BarLine { height_pt } => {
             Some(AbsoluteContent::BarLine { height: *height_pt })
         }
-        PostArcGridContent::LyricSyllable(s) => Some(AbsoluteContent::Lyric(s.clone())),
+        PostArcGridContent::LyricSyllable {
+            text,
+            source_part_index,
+            note_id,
+            verse,
+        } => Some(AbsoluteContent::Lyric {
+            text: text.clone(),
+            source_part_index: *source_part_index,
+            note_id: *note_id,
+            verse: *verse,
+        }),
         PostArcGridContent::LyricLine(s) => Some(AbsoluteContent::LyricLine(s.clone())),
         _ => None,
     })

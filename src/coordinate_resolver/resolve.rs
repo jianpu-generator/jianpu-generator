@@ -7,8 +7,9 @@ use crate::grid_layout::PAGE_MARGIN;
 
 use super::content_conversion::grid_to_absolute;
 use super::highlights::{
-    resolve_error_highlights, resolve_measure_click_target, resolve_measure_highlights,
-    resolve_note_click_target, resolve_part_label_click_target, resolve_playback_cursor_target,
+    resolve_error_highlights, resolve_lyric_click_target, resolve_measure_click_target,
+    resolve_measure_highlights, resolve_note_click_target, resolve_part_label_click_target,
+    resolve_playback_cursor_target,
 };
 use super::post_arc_conversion::to_post_arc_content;
 
@@ -60,7 +61,9 @@ fn glyph_anchor_weight(content: &GridContent, config: RowResolveConfig) -> Optio
             '\u{2014}',
             crate::font_metrics::NOTE_DASH_FONT_SIZE,
         )),
-        GridContent::LyricSyllable(s) => Some(lyric_glyph_width(s, config.lyric_font_sizes)),
+        GridContent::LyricSyllable { text, .. } => {
+            Some(lyric_glyph_width(text, config.lyric_font_sizes))
+        }
         _ => None,
     }
 }
@@ -81,10 +84,10 @@ fn lyric_glyph_width(s: &str, fonts: LyricFontSizes) -> f32 {
 /// `x_start`, its column's left boundary (and thus the bar line one column
 /// to its left).
 fn clamp_lyric_x(x: f32, x_start: f32, content: &GridContent, fonts: LyricFontSizes) -> f32 {
-    let GridContent::LyricSyllable(s) = content else {
+    let GridContent::LyricSyllable { text, .. } = content else {
         return x;
     };
-    let half_width = lyric_glyph_width(s, fonts) * 0.5;
+    let half_width = lyric_glyph_width(text, fonts) * 0.5;
     x.max(x_start + half_width)
 }
 
@@ -246,9 +249,10 @@ fn resolve_multi_measure_rest(count: u32, x_start: f32, width: f32, y: f32) -> A
 }
 
 /// Resolves every click/drag hit target on a page — measure, playback
-/// cursor, note, and part-label — appended in that order so later ones stay
-/// topmost for `elementFromPoint` hit-testing (e.g. a note click target over
-/// its enclosing measure's).
+/// cursor, note, part-label, and lyric — appended in that order so later
+/// ones stay topmost for `elementFromPoint` hit-testing (e.g. a note click
+/// target over its enclosing measure's, and a lyric syllable's own target
+/// over the note click target that geometrically covers its row).
 fn resolve_click_target_elements(
     page: &GridPage,
     row_tops: &[f32],
@@ -273,6 +277,10 @@ fn resolve_click_target_elements(
 
     elements.extend(page.part_label_click_targets.iter().filter_map(|t| {
         resolve_part_label_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
+    }));
+
+    elements.extend(page.lyric_click_targets.iter().filter_map(|t| {
+        resolve_lyric_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
     }));
 
     elements

@@ -3,6 +3,7 @@ import type { RefObject } from 'react'
 import type {
   Diagnostic,
   DiagnosticViewZone,
+  LyricSpan,
   MeasureSpan,
   NoteSpan,
   PartDeclaration,
@@ -81,6 +82,11 @@ export interface JianpuWorkerState {
    * `(source_part_index, note_id)` matching the SVG's `data-part-index`/
    * `data-note-id` attributes — see `useNoteSelection`. */
   noteSpans: NoteSpan[]
+  /** Source byte span of every lyric syllable, keyed by
+   * `(source_part_index, note_id, verse)` matching the SVG's
+   * `data-part-index`/`data-note-id`/`data-verse` attributes — see
+   * `useLyricSelection`. */
+  lyricSpans: LyricSpan[]
   sectionRanges: SectionRange[]
   sequenceEntries: SequenceEntry[]
   selectedSequenceRange: { start: number; end: number } | null

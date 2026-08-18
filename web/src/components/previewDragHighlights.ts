@@ -1,5 +1,6 @@
 import type { NoteSpan } from '../types'
 import {
+  type LyricCell,
   type NoteCell,
   noteCellsForPartLabels,
   type PartLabelHit,
@@ -210,6 +211,101 @@ export function applyPersistedNoteHighlights(
       group.dataset.noteDragSelected = ''
     } else {
       delete group.dataset.noteDragSelected
+    }
+  }
+}
+
+/**
+ * Every lyric syllable cell whose click-target rect overlaps the axis-aligned
+ * marquee spanned by `anchor`/`current` — mirrors `selectedNoteCellsInMarquee`
+ * exactly, but scoped to `[data-tag="lyric"]` groups/`lyric-click-target-rect`
+ * rects so it's independent of any note selection happening at the same time.
+ */
+export function selectedLyricCellsInMarquee(
+  container: HTMLElement,
+  anchor: DragPoint,
+  current: DragPoint,
+): LyricCell[] {
+  const minX = Math.min(anchor.x, current.x)
+  const maxX = Math.max(anchor.x, current.x)
+  const minY = Math.min(anchor.y, current.y)
+  const maxY = Math.max(anchor.y, current.y)
+  const cells: LyricCell[] = []
+  for (const rect of Array.from(
+    container.querySelectorAll<SVGRectElement>(
+      'rect[data-variant="lyric-click-target-rect"]',
+    ),
+  )) {
+    const bounds = rect.getBoundingClientRect()
+    const intersects =
+      bounds.left < maxX &&
+      bounds.right > minX &&
+      bounds.top < maxY &&
+      bounds.bottom > minY
+    if (!intersects) continue
+    const group = rect.closest('[data-tag="lyric"]')
+    if (!group) continue
+    const { partIndex, noteId, verse } = (group as HTMLElement).dataset
+    if (partIndex === undefined || noteId === undefined || verse === undefined)
+      continue
+    cells.push({
+      sourcePartIndex: Number.parseInt(partIndex, 10),
+      noteId: Number.parseInt(noteId, 10),
+      verse: Number.parseInt(verse, 10),
+    })
+  }
+  return cells
+}
+
+export function applyLyricDragHighlights(
+  container: HTMLElement,
+  anchor: DragPoint,
+  current: DragPoint,
+): LyricCell[] {
+  const cells = selectedLyricCellsInMarquee(container, anchor, current)
+  const selectedKeys = new Set(
+    cells.map((c) => `${c.sourcePartIndex}:${c.noteId}:${c.verse}`),
+  )
+  for (const rect of Array.from(
+    container.querySelectorAll<SVGRectElement>(
+      'rect[data-variant="lyric-click-target-rect"]',
+    ),
+  )) {
+    const group = rect.closest('[data-tag="lyric"]') as HTMLElement | null
+    if (!group) continue
+    const key = `${group.dataset.partIndex}:${group.dataset.noteId}:${group.dataset.verse}`
+    if (selectedKeys.has(key)) {
+      group.dataset.lyricDragSelected = ''
+    } else {
+      delete group.dataset.lyricDragSelected
+    }
+  }
+  return cells
+}
+
+/** Re-applies the lyric-drag highlight from a fixed cell list rather than a
+ * live marquee test — mirrors `applyPersistedNoteHighlights`, used to keep
+ * the selection visible after mouseup and to restore it whenever the SVG DOM
+ * is swapped out from under it. */
+export function applyPersistedLyricHighlights(
+  container: HTMLElement,
+  cells: LyricCell[],
+): void {
+  const selectedKeys = new Set(
+    cells.map((c) => `${c.sourcePartIndex}:${c.noteId}:${c.verse}`),
+  )
+  for (const rect of Array.from(
+    container.querySelectorAll<SVGRectElement>(
+      'rect[data-variant="lyric-click-target-rect"]',
+    ),
+  )) {
+    const group = rect.closest('[data-tag="lyric"]') as HTMLElement | null
+    if (!group) continue
+    const key = `${group.dataset.partIndex}:${group.dataset.noteId}:${group.dataset.verse}`
+    if (selectedKeys.has(key)) {
+      group.dataset.lyricDragSelected = ''
+    } else {
+      delete group.dataset.lyricDragSelected
     }
   }
 }

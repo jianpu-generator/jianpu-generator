@@ -123,6 +123,15 @@ pub enum ElementContent {
     Lyric {
         text: String,
         verse: usize,
+        /// Identity of the note this syllable is sung on — the same id its
+        /// note's own `ColumnElement::note_id` carries (not stored on this
+        /// element's own `ColumnElement::note_id`, which stays `None`: see
+        /// that field's doc comment). Lets the SVG preview select a syllable
+        /// independently of its note while still being able to map back to
+        /// the right source note if ever needed; primarily used together
+        /// with `source_part_index` to give each syllable a click target
+        /// distinct from its note's (see `renderer::new_types::Tag::Lyric`).
+        note_id: usize,
     },
     /// One verse's (0-indexed) full text line for a standalone `lyrics` part —
     /// adurational, not tied to any note, rendered as a single left-aligned

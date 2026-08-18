@@ -127,6 +127,9 @@ export default function App() {
     handleEditorSelectionChange,
     selectedNoteRangePlaybackInfo,
     selectedNoteCells,
+    handleLyricRangeSelect,
+    handleLyricEditorSelectionChange,
+    selectedLyricCells,
     handlePlayNoteSelection,
     noPartsSelected,
   } = useAppController()
@@ -289,6 +292,9 @@ export default function App() {
         handleEditorSelectionChange={handleEditorSelectionChange}
         selectedNoteCells={selectedNoteCells}
         noteSpans={noteSpans}
+        handleLyricRangeSelect={handleLyricRangeSelect}
+        handleLyricEditorSelectionChange={handleLyricEditorSelectionChange}
+        selectedLyricCells={selectedLyricCells}
         audioGenerating={audioGenerating}
         wavUrl={wavUrl}
         wavFilename={wavFilename}

@@ -221,6 +221,21 @@
   fill: rgba(100, 160, 255, 0.2);
 }
 
+.preview-page
+  svg
+  g[data-tag="lyric"]:hover
+  > rect[data-variant="lyric-click-target-rect"] {
+  fill: rgba(74, 222, 128, 0.25);
+}
+
+.preview-page svg line.bar-line-drag-handle {
+  cursor: col-resize;
+}
+
+.preview-page svg line.bar-line-drag-handle:hover {
+  stroke: rgba(100, 160, 255, 0.45);
+}
+
 .play-measure-wrapper {
   position: relative;
   display: inline-flex;

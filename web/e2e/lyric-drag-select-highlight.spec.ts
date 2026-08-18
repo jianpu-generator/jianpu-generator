@@ -1,17 +1,16 @@
 import { expect, test } from '@playwright/test'
 
 /**
- * A lyric syllable has no `data-tag`/`data-note-id` of its own — it's a bare
- * `<text>` glyph (see `render_lyric` in
- * `src/renderer/new_renderer/glyph_renderers_lyric.rs`). It's still
- * individually selectable though: the note it belongs to gets a
- * `NoteClickTarget` rect (`Tag::Note`) whose row span is deliberately
- * widened to cover that note's lyric row too (see `part_row_ranges` in
- * `src/grid_layout/playback_cursor.rs`), and that rect paints after — so sits
- * on top of — the lyric text in SVG document order (`resolve_page` in
- * `src/coordinate_resolver/resolve.rs`). A click landing on the lyric glyph's
- * ink therefore still hits the rect underneath, resolving to the same
- * `(source_part_index, note_id)` as clicking the note itself.
+ * A lyric syllable has its own `Tag::Lyric` click-target rect
+ * (`data-tag="lyric"`, see `render_lyric_click_target` in
+ * `src/renderer/new_renderer.rs`), sized to its own column and resolved
+ * after — so painted on top of, for `elementFromPoint` hit-testing purposes
+ * — the wider `NoteClickTarget` rect that also covers that note's lyric row
+ * (see `resolve_click_target_elements` in `src/coordinate_resolver/resolve.rs`).
+ * A click landing on or near the lyric glyph's ink therefore resolves to the
+ * lyric's own selection, independent of the note it belongs to — see
+ * `lyric-syllable-independent-selection.spec.ts` for the fuller independence
+ * matrix (note-click vs. lyric-click, multi-verse, Monaco sync).
  *
  * Self-contained source (not a demo file) with a generous "max measures per
  * system" and four single-beat notes with one syllable each, so all four
@@ -45,7 +44,7 @@ async function loadDragTestFixture(page: import('@playwright/test').Page) {
   }, dragTestSource)
 }
 
-test('dragging a marquee across lyric syllables selects their underlying notes', async ({
+test('dragging a marquee across lyric syllables selects the syllables, not their underlying notes', async ({
   page,
 }) => {
   await loadDragTestFixture(page)
@@ -81,32 +80,26 @@ test('dragging a marquee across lyric syllables selects their underlying notes',
   await page.mouse.move(endX, endY, { steps: 10 })
   await page.mouse.up()
 
-  // The drag must resolve through the notes' own click targets — the same
-  // three note/rest cells a drag across the note glyphs themselves would
-  // select — not zero cells (lyric ink ignored) or some lyric-only selection
-  // state.
-  const highlightedNotes = page.locator(
-    '[data-tag="note"][data-note-drag-selected]',
+  // The drag resolves through the syllables' own lyric click targets —
+  // lyric selection is independent of note selection, so no note cell gets
+  // highlighted by this drag at all.
+  const highlightedLyrics = page.locator(
+    '[data-tag="lyric"][data-lyric-drag-selected]',
   )
-  await expect(highlightedNotes).toHaveCount(3)
+  await expect(highlightedLyrics).toHaveCount(3)
   for (const noteId of [0, 1, 2]) {
     await expect(
       page.locator(
-        `[data-tag="note"][data-note-drag-selected][data-note-id="${noteId}"]`,
+        `[data-tag="lyric"][data-lyric-drag-selected][data-note-id="${noteId}"]`,
       ),
     ).toHaveCount(1)
   }
-
-  // The repurposed play-measure button switching to "▶ Selection" confirms
-  // the drag pushed a real note range into Monaco/App state, same as an
-  // ordinary note-glyph drag-select.
-  await expect(page.locator('button.play-measure-btn')).toHaveText(
-    /Selection/,
-    { timeout: 3_000 },
-  )
+  await expect(
+    page.locator('[data-tag="note"][data-note-drag-selected]'),
+  ).toHaveCount(0)
 })
 
-test('clicking a single lyric syllable selects its measure, same as clicking the note', async ({
+test('clicking a single lyric syllable selects only that syllable, not the note', async ({
   page,
 }) => {
   await loadDragTestFixture(page)
@@ -122,9 +115,9 @@ test('clicking a single lyric syllable selects its measure, same as clicking the
   const lyricTexts = page.locator('svg text[dominant-baseline="hanging"]')
   await expect(lyricTexts).toHaveCount(4, { timeout: 10_000 })
 
-  // A plain click (mousedown + mouseup at the same point, no drag) is a
-  // shortcut for selecting the whole measure — same behavior a plain click
-  // on the note glyph itself has (see `measure-click-selects-notes.spec.ts`).
+  // A plain click (mousedown + mouseup at the same point, no drag) selects
+  // just this syllable — unlike a plain click on the note glyph itself,
+  // which selects the whole measure (see `measure-click-selects-notes.spec.ts`).
   const box = await lyricTexts.nth(1).boundingBox() // "re", under note 1
   if (!box) throw new Error('no box')
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
@@ -132,8 +125,15 @@ test('clicking a single lyric syllable selects its measure, same as clicking the
   await page.waitForTimeout(50)
   await page.mouse.up()
 
-  const highlightedNotes = page.locator(
-    '[data-tag="note"][data-note-drag-selected]',
-  )
-  await expect(highlightedNotes).toHaveCount(4)
+  await expect(
+    page.locator('[data-tag="lyric"][data-lyric-drag-selected]'),
+  ).toHaveCount(1)
+  await expect(
+    page.locator(
+      '[data-tag="lyric"][data-lyric-drag-selected][data-note-id="1"]',
+    ),
+  ).toHaveCount(1)
+  await expect(
+    page.locator('[data-tag="note"][data-note-drag-selected]'),
+  ).toHaveCount(0)
 })

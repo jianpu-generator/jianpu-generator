@@ -46,6 +46,7 @@ export function useJianpuWorker(
     highlightedDocuments,
     measureSpans,
     noteSpans,
+    lyricSpans,
     sectionRanges,
     sequenceEntries,
   } = state
@@ -102,6 +103,7 @@ export function useJianpuWorker(
     highlightedDocuments,
     measureSpans,
     noteSpans,
+    lyricSpans,
     sectionRanges,
     sequenceEntries,
     selectedSequenceRange: sequenceNav.selectedSequenceRange,

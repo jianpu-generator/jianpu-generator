@@ -1,16 +1,17 @@
 use jianpu_generator::parser::parts_parser::InstrumentInfo;
 use jianpu_generator::{
-    compile, find_measure_at_byte_offset, list_measure_spans_from_source,
-    list_note_spans_from_source, render_documents_from_source_filtered_with_lyrics,
-    render_documents_with_highlight_range,
+    compile, find_measure_at_byte_offset, list_lyric_spans_from_source,
+    list_measure_spans_from_source, list_note_spans_from_source,
+    render_documents_from_source_filtered_with_lyrics, render_documents_with_highlight_range,
 };
 
 use crate::svg_types::svg_document_to_out;
 use crate::types::{
     diagnostic_from_diagnostic, diagnostic_from_error, group_diagnostics_into_view_zones,
-    GroupNoteSelectionResponse, ListMeasureSpansResponse, ListNoteSpansResponse,
-    MeasureAtOffsetResponse, MeasureSpanOut, NoteCellIn, NoteSelectionRunOut, NoteSpanOut,
-    RenderResponse, SectionRangeOut, SequenceEntryOut,
+    GroupLyricSelectionResponse, GroupNoteSelectionResponse, ListLyricSpansResponse,
+    ListMeasureSpansResponse, ListNoteSpansResponse, LyricCellIn, LyricSelectionRunOut,
+    LyricSpanOut, MeasureAtOffsetResponse, MeasureSpanOut, NoteCellIn, NoteSelectionRunOut,
+    NoteSpanOut, RenderResponse, SectionRangeOut, SequenceEntryOut,
 };
 
 #[cfg(feature = "wav")]
@@ -257,6 +258,68 @@ pub(crate) fn group_note_selection_response(
         runs: runs
             .into_iter()
             .map(|r| NoteSelectionRunOut {
+                source_part_index: r.source_part_index,
+                measure_index: r.measure_index,
+                start_byte: r.start_byte,
+                end_byte: r.end_byte,
+            })
+            .collect(),
+    }
+}
+
+pub(crate) fn list_lyric_spans_response(source: &str) -> ListLyricSpansResponse {
+    match list_lyric_spans_from_source(source, "input.jianpu") {
+        Ok(result) => {
+            let spans: Vec<LyricSpanOut> = result
+                .spans
+                .into_iter()
+                .map(|span| LyricSpanOut {
+                    source_part_index: span.source_part_index,
+                    note_id: span.note_id,
+                    verse: span.verse,
+                    measure_index: span.measure_index,
+                    start: span.start,
+                    end: span.end,
+                })
+                .collect();
+            ListLyricSpansResponse::Ok { spans }
+        }
+        Err(_) => ListLyricSpansResponse::Err,
+    }
+}
+
+pub(crate) fn group_lyric_selection_response(
+    lyric_spans: &[LyricSpanOut],
+    selected_cells: &[LyricCellIn],
+) -> GroupLyricSelectionResponse {
+    let core_spans: Vec<jianpu_generator::lyric_spans::LyricSourceSpan> = lyric_spans
+        .iter()
+        .map(|s| jianpu_generator::lyric_spans::LyricSourceSpan {
+            source_part_index: s.source_part_index,
+            note_id: s.note_id,
+            verse: s.verse,
+            measure_index: s.measure_index,
+            start: s.start,
+            end: s.end,
+        })
+        .collect();
+    let cells: Vec<jianpu_generator::lyric_spans::LyricCell> = selected_cells
+        .iter()
+        .map(|c| jianpu_generator::lyric_spans::LyricCell {
+            source_part_index: c.source_part_index,
+            note_id: c.note_id,
+            verse: c.verse,
+        })
+        .collect();
+
+    let runs = jianpu_generator::lyric_spans::group_selected_lyrics_into_contiguous_runs(
+        &cells,
+        &core_spans,
+    );
+    GroupLyricSelectionResponse::Ok {
+        runs: runs
+            .into_iter()
+            .map(|r| LyricSelectionRunOut {
                 source_part_index: r.source_part_index,
                 measure_index: r.measure_index,
                 start_byte: r.start_byte,

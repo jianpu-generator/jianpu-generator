@@ -21,6 +21,7 @@ fn single_row_page(element: GridElement) -> GridPage {
         measure_click_targets: vec![],
         playback_cursor_targets: vec![],
         part_label_click_targets: vec![],
+        lyric_click_targets: vec![],
     }
 }
 
@@ -123,6 +124,7 @@ fn note_head_halign_center_scales_down_when_column_weight_is_inflated_by_another
         measure_click_targets: vec![],
         playback_cursor_targets: vec![],
         part_label_click_targets: vec![],
+        lyric_click_targets: vec![],
     };
     let notes_font_size = 12.0;
     let abs = resolve(
@@ -196,6 +198,7 @@ fn valign_top_places_y_at_row_top() {
         measure_click_targets: vec![],
         playback_cursor_targets: vec![],
         part_label_click_targets: vec![],
+        lyric_click_targets: vec![],
     };
     let abs = resolve(
         &[page],

@@ -181,3 +181,41 @@ export function getNoteAtPoint(x: number, y: number): NoteCell | undefined {
   if (Number.isNaN(sourcePartIndex) || Number.isNaN(id)) return undefined
   return { sourcePartIndex, noteId: id }
 }
+
+/** One rendered lyric syllable, keyed the same way as `Tag::Lyric`'s
+ * `data-part-index`/`data-note-id`/`data-verse` SVG attributes. Structurally
+ * identical to `NoteCell` but kept as its own type — a lyric cell and a note
+ * cell sharing the same underlying note number are not interchangeable,
+ * they're just keyed by the same note for convenience (see
+ * `lyric_spans::LyricCell`). */
+export interface LyricCell {
+  sourcePartIndex: number
+  noteId: number
+  verse: number
+}
+
+/** The lyric syllable under the given point, if any — reads the invisible
+ * `LyricClickTarget` rect's enclosing `Tag::Lyric` group (see
+ * `renderer::new_renderer::render_lyric_click_target`), which paints on top
+ * of the wider `NoteClickTarget` rect that geometrically covers the same
+ * lyric row, so a click that lands on the syllable's own rect always
+ * resolves here rather than to `getNoteAtPoint`. */
+export function getLyricAtPoint(x: number, y: number): LyricCell | undefined {
+  const el = document.elementFromPoint(x, y)
+  if (!el) return undefined
+  const group = el.closest('[data-tag="lyric"]')
+  if (!group) return undefined
+  const { partIndex, noteId, verse } = (group as HTMLElement).dataset
+  if (partIndex === undefined || noteId === undefined || verse === undefined)
+    return undefined
+  const sourcePartIndex = Number.parseInt(partIndex, 10)
+  const id = Number.parseInt(noteId, 10)
+  const verseIndex = Number.parseInt(verse, 10)
+  if (
+    Number.isNaN(sourcePartIndex) ||
+    Number.isNaN(id) ||
+    Number.isNaN(verseIndex)
+  )
+    return undefined
+  return { sourcePartIndex, noteId: id, verse: verseIndex }
+}

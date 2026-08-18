@@ -4,6 +4,9 @@ use tsify::Tsify;
 
 use crate::svg_types::SvgDocumentOut;
 
+pub(crate) use crate::lyric_selection_types::{
+    GroupLyricSelectionResponse, LyricCellIn, LyricSelectionRunOut,
+};
 pub(crate) use crate::note_selection_types::{
     GroupNoteSelectionResponse, NoteCellIn, NoteSelectionRunOut,
 };
@@ -232,6 +235,33 @@ pub struct NoteSpanOut {
 #[tsify(into_wasm_abi)]
 pub enum ListNoteSpansResponse {
     Ok { spans: Vec<NoteSpanOut> },
+    Err,
+}
+
+#[derive(Debug, Clone, Tsify, Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub struct LyricSpanOut {
+    /// Index into the compiled score's parts, matching the SVG's
+    /// `data-part-index` attribute on a `Tag::Lyric` group.
+    pub source_part_index: usize,
+    /// Matches the SVG's `data-note-id` attribute on a `Tag::Lyric` group.
+    pub note_id: usize,
+    /// Matches the SVG's `data-verse` attribute on a `Tag::Lyric` group.
+    pub verse: usize,
+    /// Index into the score's measures, in source order.
+    pub measure_index: usize,
+    /// Inclusive start byte of this syllable's own token in the original source.
+    pub start: usize,
+    /// Exclusive end byte of this syllable's own token in the original source.
+    pub end: usize,
+}
+
+#[derive(Debug, Clone, Tsify, Serialize)]
+#[serde(tag = "status", rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum ListLyricSpansResponse {
+    Ok { spans: Vec<LyricSpanOut> },
     Err,
 }
 

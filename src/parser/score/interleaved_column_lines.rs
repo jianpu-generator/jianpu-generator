@@ -57,7 +57,7 @@ fn process_lyrics_column_line(
     let syllables = if line.is_empty() || line == "_" {
         Vec::new()
     } else {
-        tokenize_lyrics(line)
+        tokenize_lyrics(line, line_span.start)
     };
 
     let verse = ctx

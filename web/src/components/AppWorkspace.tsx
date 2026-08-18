@@ -18,7 +18,7 @@ import type { MetadataKey, ParsedMetadataFields } from '../utils/metadataSource'
 import { EditMetadataModal } from './EditMetadataModal'
 import { Editor } from './Editor'
 import { EditPartsModal } from './EditPartsModal'
-import type { NoteCell } from './Preview'
+import type { LyricCell, NoteCell } from './Preview'
 import { Preview } from './Preview'
 
 interface MeasureRange {
@@ -101,6 +101,15 @@ interface AppWorkspaceProps {
    * (see `Preview.tsx`'s `noteCellsInMeasureRange`) without relying on
    * pixel geometry. */
   noteSpans: NoteSpan[]
+  /** Fired on mouseup after a lyric-syllable drag-select (see
+   * `useLyricSelection`). Independent of `handleNoteRangeSelect` — a lyric
+   * drag never selects/highlights notes and vice versa. */
+  handleLyricRangeSelect: (selectedCells: LyricCell[]) => void
+  /** Keeps the preview's lyric highlight in sync with the editor's own
+   * current selection, the reverse direction of `handleLyricRangeSelect`
+   * (mirrors `handleEditorSelectionChange`, kept fully separate). */
+  handleLyricEditorSelectionChange: (startByte: number, endByte: number) => void
+  selectedLyricCells: LyricCell[]
   audioGenerating: boolean
   wavUrl: string | null
   wavFilename: string
@@ -156,6 +165,9 @@ export function AppWorkspace({
   handleEditorSelectionChange,
   selectedNoteCells,
   noteSpans,
+  handleLyricRangeSelect,
+  handleLyricEditorSelectionChange,
+  selectedLyricCells,
   audioGenerating,
   wavUrl,
   wavFilename,
@@ -216,6 +228,7 @@ export function AppWorkspace({
                 }}
                 onSelectionOffsetChange={(startOffset, endOffset) => {
                   handleEditorSelectionChange(startOffset, endOffset)
+                  handleLyricEditorSelectionChange(startOffset, endOffset)
                 }}
                 onEditPartsClick={() => setEditPartsOpen(true)}
                 onEditMetadataClick={() => setEditMetadataOpen(true)}
@@ -305,6 +318,8 @@ export function AppWorkspace({
           onNoteRangeSelect={handleNoteRangeSelect}
           selectedNoteCells={selectedNoteCells}
           noteSpans={noteSpans}
+          onLyricRangeSelect={handleLyricRangeSelect}
+          selectedLyricCells={selectedLyricCells}
           audioGenerating={audioGenerating}
           wavUrl={wavUrl}
           wavFilename={wavFilename}

@@ -4,14 +4,17 @@ import type { NoteSpan } from '../types'
 import { renderSvgDocument } from './PreviewSvgRenderer'
 import {
   applyPartLabelDragHighlight,
+  applyPersistedLyricHighlights,
   applyPersistedNoteHighlights,
   applyPersistedPartLabelHighlights,
 } from './previewDragHighlights'
 import {
+  getLyricAtPoint,
   getMeasureAtPoint,
   getNoteAtPoint,
   getPartLabelAtPoint,
   getSectionLabelAtPoint,
+  type LyricCell,
   type NoteCell,
   noteCellsForPartLabels,
   noteCellsInMeasureRange,
@@ -19,7 +22,7 @@ import {
 import { usePlaybackCursor } from './usePlaybackCursor'
 import { usePreviewDragSelection } from './usePreviewDragSelection'
 
-export type { NoteCell } from './previewSelection'
+export type { LyricCell, NoteCell } from './previewSelection'
 
 interface PreviewProps {
   documents: SvgDocumentOut[]
@@ -49,6 +52,15 @@ interface PreviewProps {
    * used by `noteCellsInMeasureRange` to resolve a measure click/drag into
    * every note cell it contains by index rather than pixel geometry. */
   noteSpans?: NoteSpan[]
+  /** Fired on mouseup after a lyric-syllable drag-select (see
+   * `getLyricAtPoint`), with every syllable cell the drag's marquee
+   * overlapped. Independent of `onNoteRangeSelect` — a lyric drag never
+   * selects/highlights notes and vice versa. */
+  onLyricRangeSelect?: (selectedCells: LyricCell[]) => void
+  /** The lyric syllable cells from the most recent lyric drag-select (see
+   * `onLyricRangeSelect`), echoed back so the highlight can be re-applied
+   * declaratively, mirroring `selectedNoteCells`. */
+  selectedLyricCells?: LyricCell[]
 }
 
 export function Preview({
@@ -66,6 +78,8 @@ export function Preview({
   onNoteRangeSelect,
   selectedNoteCells = [],
   noteSpans = [],
+  onLyricRangeSelect,
+  selectedLyricCells = [],
 }: PreviewProps) {
   const previewPagesRef = useRef<HTMLDivElement>(null)
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
@@ -84,6 +98,7 @@ export function Preview({
     previewPagesRef,
     noteSpans,
     onNoteRangeSelect,
+    onLyricRangeSelect,
   )
   const onSectionLabelClickRef = useRef(onSectionLabelClick)
   onSectionLabelClickRef.current = onSectionLabelClick
@@ -130,6 +145,15 @@ export function Preview({
       selectedNoteCells,
     )
   }, [selectedNoteCells, documents, highlightedDocuments])
+
+  // Mirrors the effect above for lyric syllable selection — independent of
+  // `selectedNoteCells`, since a lyric selection never drives note
+  // highlighting and vice versa (see `useLyricSelection`).
+  useEffect(() => {
+    const container = previewPagesRef.current
+    if (!container) return
+    applyPersistedLyricHighlights(container, selectedLyricCells)
+  }, [selectedLyricCells, documents, highlightedDocuments])
 
   const activeDocs =
     highlightedDocuments.length > 0 ? highlightedDocuments : documents
@@ -194,6 +218,27 @@ export function Preview({
                   container,
                   noteCellsForPartLabels(noteSpans, [partLabel]),
                 )
+              }
+              e.preventDefault()
+              return
+            }
+            // Checked before the note click-target below: a lyric
+            // syllable's own click target paints on top of (and never
+            // overlaps outside of) the note's wider click-target rect, so a
+            // hit here means the click landed on the syllable's own rect —
+            // see `Tag::Lyric`'s doc comment and
+            // `resolve_click_target_elements`'s append order.
+            const lyricCell = getLyricAtPoint(e.clientX, e.clientY)
+            if (lyricCell !== undefined) {
+              const point = { x: e.clientX, y: e.clientY }
+              dragStateRef.current = {
+                mode: 'lyric',
+                anchor: point,
+                current: point,
+              }
+              const container = previewPagesRef.current
+              if (container) {
+                applyPersistedLyricHighlights(container, [lyricCell])
               }
               e.preventDefault()
               return

@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from 'react'
 import type {
   Diagnostic,
   DiagnosticViewZone,
+  LyricSpan,
   MeasureSpan,
   NoteSpan,
   PartDeclaration,
@@ -61,6 +62,7 @@ export function useJianpuWorkerState(
   >([])
   const [measureSpans, setMeasureSpans] = useState<MeasureSpan[]>([])
   const [noteSpans, setNoteSpans] = useState<NoteSpan[]>([])
+  const [lyricSpans, setLyricSpans] = useState<LyricSpan[]>([])
   const [sectionRanges, setSectionRanges] = useState<SectionRange[]>([])
   const [sequenceEntries, setSequenceEntries] = useState<SequenceEntry[]>([])
   const highlightRenderRequestIdRef = useRef(0)
@@ -70,6 +72,8 @@ export function useJianpuWorkerState(
   const measureSpansRef = useRef<MeasureSpan[]>([])
   const noteSpansRequestIdRef = useRef(0)
   const latestNoteSpansIdRef = useRef(0)
+  const lyricSpansRequestIdRef = useRef(0)
+  const latestLyricSpansIdRef = useRef(0)
   const workerRef = useRef<Worker | null>(null)
   const wavUrlRef = useRef<string | null>(null)
   const partsRequestIdRef = useRef(0)
@@ -201,6 +205,8 @@ export function useJianpuWorkerState(
     setMeasureSpans,
     noteSpans,
     setNoteSpans,
+    lyricSpans,
+    setLyricSpans,
     sectionRanges,
     setSectionRanges,
     sequenceEntries,
@@ -212,6 +218,8 @@ export function useJianpuWorkerState(
     measureSpansRef,
     noteSpansRequestIdRef,
     latestNoteSpansIdRef,
+    lyricSpansRequestIdRef,
+    latestLyricSpansIdRef,
     workerRef,
     wavUrlRef,
     partsRequestIdRef,

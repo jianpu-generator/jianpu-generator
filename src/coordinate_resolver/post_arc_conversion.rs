@@ -65,7 +65,17 @@ fn to_post_arc_text_content(content: &GridContent) -> Option<PostArcGridContent>
         }),
         GridContent::HorizontalLine => Some(PostArcGridContent::HorizontalLine),
         GridContent::RowLabel(s) => Some(PostArcGridContent::RowLabel(s.clone())),
-        GridContent::LyricSyllable(s) => Some(PostArcGridContent::LyricSyllable(s.clone())),
+        GridContent::LyricSyllable {
+            text,
+            source_part_index,
+            note_id,
+            verse,
+        } => Some(PostArcGridContent::LyricSyllable {
+            text: text.clone(),
+            source_part_index: *source_part_index,
+            note_id: *note_id,
+            verse: *verse,
+        }),
         GridContent::LyricLine(s) => Some(PostArcGridContent::LyricLine(s.clone())),
         GridContent::DirectiveLine {
             label,

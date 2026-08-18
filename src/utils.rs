@@ -1,5 +1,5 @@
 use crate::ast::parsed::{ScoreEvent, Syllable};
-use crate::error::Spanned;
+use crate::error::{Span, Spanned};
 
 /// Tracks tie state across measure boundaries for lyric-slot counting.
 #[derive(Debug, Clone, Default)]
@@ -43,50 +43,11 @@ pub fn is_cjk_char(c: char) -> bool {
     )
 }
 
-pub fn tokenize_lyrics(content: &str) -> Vec<Syllable> {
-    let mut raw: Vec<Syllable> = Vec::new();
-    let mut current_latin = String::new();
-
-    // Flush the current latin buffer as a syllable (if non-empty).
-    let flush = |current_latin: &mut String, raw: &mut Vec<Syllable>| {
-        let trimmed = current_latin.trim().to_string();
-        if !trimmed.is_empty() {
-            raw.push(Syllable {
-                text: trimmed,
-                held: false,
-            });
-        }
-        current_latin.clear();
-    };
-
-    for c in content.chars() {
-        if is_cjk_char(c) {
-            flush(&mut current_latin, &mut raw);
-            raw.push(Syllable {
-                text: c.to_string(),
-                held: false,
-            });
-        } else if c == '-' {
-            if current_latin.is_empty() {
-                // Standalone `-` (surrounded by whitespace): held-syllable delimiter.
-                raw.push(Syllable {
-                    text: "-".to_string(),
-                    held: false,
-                });
-            } else {
-                // Trailing `-` attached to a word: syllable break across notes (e.g. `twin-`).
-                current_latin.push('-');
-                flush(&mut current_latin, &mut raw);
-            }
-        } else if c.is_whitespace() {
-            flush(&mut current_latin, &mut raw);
-        } else {
-            current_latin.push(c);
-        }
-    }
-
-    // Flush remaining latin
-    flush(&mut current_latin, &mut raw);
+/// Tokenizes a lyrics line's text into syllables. `base_offset` is the
+/// absolute byte offset in the whole source document where `content` begins,
+/// so each syllable's `span` can be recorded absolutely — see `Syllable::span`.
+pub fn tokenize_lyrics(content: &str, base_offset: usize) -> Vec<Syllable> {
+    let raw = tokenize_lyrics_raw(content, base_offset);
 
     // Post-process: each `-` token marks the previous syllable as held.
     let mut result: Vec<Syllable> = Vec::new();
@@ -98,6 +59,7 @@ pub fn tokenize_lyrics(content: &str) -> Vec<Syllable> {
             result.push(Syllable {
                 text: "-".to_string(),
                 held: false,
+                span: syllable.span,
             });
         } else {
             result.push(syllable);
@@ -107,228 +69,97 @@ pub fn tokenize_lyrics(content: &str) -> Vec<Syllable> {
     result
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// The raw tokenization pass behind [`tokenize_lyrics`] — splits `content`
+/// into one [`Syllable`] per CJK character or whitespace/`-`-delimited Latin
+/// word, without yet resolving the "trailing `-` marks the previous syllable
+/// as held" post-process (see the caller).
+fn tokenize_lyrics_raw(content: &str, base_offset: usize) -> Vec<Syllable> {
+    let mut raw: Vec<Syllable> = Vec::new();
+    let mut current_latin = String::new();
+    let mut current_latin_start: Option<usize> = None;
+    let mut current_latin_end: usize = 0;
 
-    #[test]
-    fn tokenises_cjk_without_spaces() {
-        let syllables = tokenize_lyrics("你好世界");
-        assert_eq!(syllables.len(), 4);
-        assert_eq!(syllables[0].text, "你");
-        assert_eq!(syllables[1].text, "好");
-        assert_eq!(syllables[2].text, "世");
-        assert_eq!(syllables[3].text, "界");
+    // Flush the current latin buffer as a syllable (if non-empty). Never
+    // leading/trailing whitespace by construction (whitespace always
+    // triggers a flush below before any is appended), so `current_latin`'s
+    // own start/end already bound the trimmed text exactly.
+    let flush = |current_latin: &mut String,
+                 current_latin_start: &mut Option<usize>,
+                 current_latin_end: usize,
+                 raw: &mut Vec<Syllable>| {
+        let trimmed = current_latin.trim().to_string();
+        if !trimmed.is_empty() {
+            let start = current_latin_start.unwrap_or(current_latin_end);
+            raw.push(Syllable {
+                text: trimmed,
+                held: false,
+                span: Span::new(base_offset + start, base_offset + current_latin_end),
+            });
+        }
+        current_latin.clear();
+        *current_latin_start = None;
+    };
+
+    for (idx, c) in content.char_indices() {
+        let char_end = idx + c.len_utf8();
+        if is_cjk_char(c) {
+            flush(
+                &mut current_latin,
+                &mut current_latin_start,
+                current_latin_end,
+                &mut raw,
+            );
+            raw.push(Syllable {
+                text: c.to_string(),
+                held: false,
+                span: Span::new(base_offset + idx, base_offset + char_end),
+            });
+        } else if c == '-' {
+            if current_latin.is_empty() {
+                // Standalone `-` (surrounded by whitespace): held-syllable delimiter.
+                raw.push(Syllable {
+                    text: "-".to_string(),
+                    held: false,
+                    span: Span::new(base_offset + idx, base_offset + char_end),
+                });
+            } else {
+                // Trailing `-` attached to a word: syllable break across notes (e.g. `twin-`).
+                current_latin.push('-');
+                current_latin_end = char_end;
+                flush(
+                    &mut current_latin,
+                    &mut current_latin_start,
+                    current_latin_end,
+                    &mut raw,
+                );
+            }
+        } else if c.is_whitespace() {
+            flush(
+                &mut current_latin,
+                &mut current_latin_start,
+                current_latin_end,
+                &mut raw,
+            );
+        } else {
+            if current_latin.is_empty() {
+                current_latin_start = Some(idx);
+            }
+            current_latin.push(c);
+            current_latin_end = char_end;
+        }
     }
 
-    #[test]
-    fn tokenises_non_cjk_by_space() {
-        let syllables = tokenize_lyrics("he llo world");
-        assert_eq!(syllables.len(), 3);
-        assert_eq!(syllables[0].text, "he");
-        assert_eq!(syllables[1].text, "llo");
-        assert_eq!(syllables[2].text, "world");
-    }
+    // Flush remaining latin
+    flush(
+        &mut current_latin,
+        &mut current_latin_start,
+        current_latin_end,
+        &mut raw,
+    );
 
-    #[test]
-    fn mixed_cjk_and_latin() {
-        let syllables = tokenize_lyrics("你好world");
-        assert_eq!(syllables.len(), 3);
-        assert_eq!(syllables[0].text, "你");
-        assert_eq!(syllables[1].text, "好");
-        assert_eq!(syllables[2].text, "world");
-    }
-
-    #[test]
-    fn spaces_around_cjk_are_ignored() {
-        let syllables = tokenize_lyrics("你好 world");
-        assert_eq!(syllables.len(), 3);
-        assert_eq!(syllables[2].text, "world");
-    }
-
-    #[test]
-    fn dash_marks_held_syllable() {
-        // `he llo - world` → 4 syllables: he, llo (held=true), - (placeholder), world
-        let syllables = tokenize_lyrics("he llo - world");
-        assert_eq!(syllables.len(), 4);
-        assert!(!syllables[0].held);
-        assert!(syllables[1].held);
-        assert_eq!(syllables[2].text, "-");
-        assert!(!syllables[3].held);
-    }
-
-    #[test]
-    fn held_is_false_by_default() {
-        let syllables = tokenize_lyrics("你好");
-        assert!(!syllables[0].held);
-        assert!(!syllables[1].held);
-    }
-
-    #[test]
-    fn ignores_leading_trailing_whitespace() {
-        let syllables = tokenize_lyrics("  hello  ");
-        assert_eq!(syllables.len(), 1);
-        assert_eq!(syllables[0].text, "hello");
-    }
-
-    // --- new tests ---
-
-    #[test]
-    fn empty_string_returns_empty() {
-        assert_eq!(tokenize_lyrics(""), Vec::<Syllable>::new());
-    }
-
-    #[test]
-    fn dash_at_start_no_panic() {
-        let syllables = tokenize_lyrics("- hello");
-        // first token is "-" (no previous syllable to mark held), second is "hello"
-        assert_eq!(syllables.len(), 2);
-        assert_eq!(syllables[0].text, "-");
-        assert!(!syllables[0].held);
-        assert_eq!(syllables[1].text, "hello");
-        assert!(!syllables[1].held);
-    }
-
-    #[test]
-    fn dash_at_end() {
-        let syllables = tokenize_lyrics("hello -");
-        assert_eq!(syllables.len(), 2);
-        assert_eq!(syllables[0].text, "hello");
-        assert!(syllables[0].held);
-        assert_eq!(syllables[1].text, "-");
-        assert!(!syllables[1].held);
-    }
-
-    #[test]
-    fn trailing_dash_on_word_is_syllable_break() {
-        let syllables = tokenize_lyrics("twin- kle twin- kle");
-        assert_eq!(syllables.len(), 4);
-        assert_eq!(syllables[0].text, "twin-");
-        assert!(!syllables[0].held);
-        assert_eq!(syllables[1].text, "kle");
-        assert_eq!(syllables[2].text, "twin-");
-        assert_eq!(syllables[3].text, "kle");
-    }
-
-    #[test]
-    fn count_lyric_slots_skips_tie_continuation() {
-        use crate::ast::parsed::{JianPuPitch, ParsedNote, ScoreEvent};
-        use crate::error::{Span, Spanned};
-
-        let events = vec![
-            Spanned::new(
-                ScoreEvent::Note(ParsedNote {
-                    pitch: JianPuPitch::Three,
-                    accidental: crate::ast::parsed::Accidental::Natural,
-                    octave: 0,
-                    duration: 4,
-                    slur: false,
-                    group_membership: 0,
-                    group_continuation: 0,
-                    dotted: false,
-                    double_dotted: false,
-                    tie_to_next_span: Some(Span::new(0, 1)),
-                    slur_group_close_at_duration: None,
-                    tuplet: None,
-                }),
-                Span::new(0, 1),
-            ),
-            Spanned::new(
-                ScoreEvent::Note(ParsedNote {
-                    pitch: JianPuPitch::Three,
-                    accidental: crate::ast::parsed::Accidental::Natural,
-                    octave: 0,
-                    duration: 4,
-                    slur: false,
-                    group_membership: 0,
-                    group_continuation: 0,
-                    dotted: false,
-                    double_dotted: false,
-                    tie_to_next_span: None,
-                    slur_group_close_at_duration: None,
-                    tuplet: None,
-                }),
-                Span::new(1, 2),
-            ),
-            Spanned::new(
-                ScoreEvent::Note(ParsedNote {
-                    pitch: JianPuPitch::One,
-                    accidental: crate::ast::parsed::Accidental::Natural,
-                    octave: 0,
-                    duration: 4,
-                    slur: false,
-                    group_membership: 0,
-                    group_continuation: 0,
-                    dotted: false,
-                    double_dotted: false,
-                    tie_to_next_span: None,
-                    slur_group_close_at_duration: None,
-                    tuplet: None,
-                }),
-                Span::new(2, 3),
-            ),
-        ];
-        let mut state = LyricTieState::default();
-        assert_eq!(count_lyric_slots_in_events(&events, &mut state), 2);
-        assert!(!state.prev_tie_to_next);
-    }
-
-    #[test]
-    fn count_lyric_slots_carries_tie_across_bars() {
-        use crate::ast::parsed::{JianPuPitch, ParsedNote, ScoreEvent};
-        use crate::error::{Span, Spanned};
-
-        let bar1 = vec![Spanned::new(
-            ScoreEvent::Note(ParsedNote {
-                pitch: JianPuPitch::Three,
-                accidental: crate::ast::parsed::Accidental::Natural,
-                octave: 0,
-                duration: 4,
-                slur: false,
-                tie_to_next_span: Some(Span::new(0, 1)),
-                group_membership: 0,
-                group_continuation: 0,
-                dotted: false,
-                double_dotted: false,
-                slur_group_close_at_duration: None,
-                tuplet: None,
-            }),
-            Span::new(0, 1),
-        )];
-        let bar2 = vec![Spanned::new(
-            ScoreEvent::Note(ParsedNote {
-                pitch: JianPuPitch::Three,
-                accidental: crate::ast::parsed::Accidental::Natural,
-                octave: 0,
-                duration: 4,
-                slur: false,
-                tie_to_next_span: None,
-                group_membership: 0,
-                group_continuation: 0,
-                dotted: false,
-                double_dotted: false,
-                slur_group_close_at_duration: None,
-                tuplet: None,
-            }),
-            Span::new(0, 1),
-        )];
-        let mut state = LyricTieState::default();
-        assert_eq!(count_lyric_slots_in_events(&bar1, &mut state), 1);
-        assert_eq!(count_lyric_slots_in_events(&bar2, &mut state), 0);
-    }
-
-    #[test]
-    fn consecutive_dashes() {
-        // "你 - - 好" → 4 syllables: "你" held=true, "-" held=true, "-", "好"
-        let syllables = tokenize_lyrics("你 - - 好");
-        assert_eq!(syllables.len(), 4);
-        assert_eq!(syllables[0].text, "你");
-        assert!(syllables[0].held);
-        assert_eq!(syllables[1].text, "-");
-        assert!(syllables[1].held);
-        assert_eq!(syllables[2].text, "-");
-        assert!(!syllables[2].held);
-        assert_eq!(syllables[3].text, "好");
-        assert!(!syllables[3].held);
-    }
+    raw
 }
+
+#[cfg(test)]
+#[path = "utils_tests.rs"]
+mod tests;

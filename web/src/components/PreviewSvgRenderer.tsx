@@ -17,7 +17,8 @@ function transparentRectRoleToDataVariant(
     | 'sectionLabelBackground'
     | 'sectionLabelClickTarget'
     | 'noteClickTarget'
-    | 'partLabelClickTarget',
+    | 'partLabelClickTarget'
+    | 'lyricClickTarget',
 ): string {
   switch (role) {
     case 'measureClickTarget':
@@ -30,6 +31,8 @@ function transparentRectRoleToDataVariant(
       return 'note-click-target-rect'
     case 'partLabelClickTarget':
       return 'part-label-click-target-rect'
+    case 'lyricClickTarget':
+      return 'lyric-click-target-rect'
   }
 }
 
@@ -198,6 +201,11 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           : undefined
       const partLabelMeasureIndexEnd =
         kind.tag?.type === 'partLabel' ? kind.tag.measure_index_end : undefined
+      const lyricPartIndex =
+        kind.tag?.type === 'lyric' ? kind.tag.source_part_index : undefined
+      const lyricNoteId =
+        kind.tag?.type === 'lyric' ? kind.tag.note_id : undefined
+      const lyricVerse = kind.tag?.type === 'lyric' ? kind.tag.verse : undefined
       return (
         <g
           key={key}
@@ -210,13 +218,18 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
                   ? 'note'
                   : partLabelPartIndex !== undefined
                     ? 'part-label'
-                    : undefined
+                    : lyricPartIndex !== undefined
+                      ? 'lyric'
+                      : undefined
           }
           data-measure-index={measureIndex}
           data-measure-index-end={measureIndexEnd ?? partLabelMeasureIndexEnd}
           data-section-label={sectionLabel}
-          data-part-index={notePartIndex ?? partLabelPartIndex}
-          data-note-id={noteId}
+          data-part-index={
+            notePartIndex ?? partLabelPartIndex ?? lyricPartIndex
+          }
+          data-note-id={noteId ?? lyricNoteId}
+          data-verse={lyricVerse}
           data-measure-index-start={partLabelMeasureIndexStart}
           style={
             measureIndex !== undefined ||
