@@ -7,6 +7,40 @@ export interface NoteCell {
   noteId: number
 }
 
+/** Shape driving `getCellAtPoint`: which `data-tag` group to look up, and how
+ * to parse a `Cell` out of that group's `dataset`. */
+interface CellAtPointSpec<Cell> {
+  tag: string
+  parseCell: (dataset: DOMStringMap) => Cell | undefined
+}
+
+/**
+ * Generic hit-test behind `getNoteAtPoint`/`getLyricAtPoint`/
+ * `getPartLabelAtPoint`: reads the element under `(x, y)`, walks up to its
+ * nearest `[data-tag="{spec.tag}"]` ancestor group, and parses a `Cell` out
+ * of that group's `dataset` via `spec.parseCell`.
+ */
+function getCellAtPoint<Cell>(
+  x: number,
+  y: number,
+  spec: CellAtPointSpec<Cell>,
+): Cell | undefined {
+  const el = document.elementFromPoint(x, y)
+  if (!el) return undefined
+  const group = el.closest(`[data-tag="${spec.tag}"]`)
+  if (!group) return undefined
+  return spec.parseCell((group as HTMLElement).dataset)
+}
+
+/** Parses a `dataset` string into an integer, or `undefined` if the string is
+ * missing or not a valid integer — the common per-field step behind every
+ * `parseCell` below. */
+function parseDatasetInt(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined
+  const parsed = Number.parseInt(value, 10)
+  return Number.isNaN(parsed) ? undefined : parsed
+}
+
 export function getSectionLabelAtPoint(
   x: number,
   y: number,
@@ -39,25 +73,25 @@ export function getPartLabelAtPoint(
   x: number,
   y: number,
 ): PartLabelHit | undefined {
-  const el = document.elementFromPoint(x, y)
-  if (!el) return undefined
-  const group = el.closest('[data-tag="part-label"]')
-  if (!group) return undefined
-  const { partIndex, measureIndexStart, measureIndexEnd } = (
-    group as HTMLElement
-  ).dataset
-  if (
-    partIndex === undefined ||
-    measureIndexStart === undefined ||
-    measureIndexEnd === undefined
-  )
-    return undefined
-  const sourcePartIndex = Number.parseInt(partIndex, 10)
-  const start = Number.parseInt(measureIndexStart, 10)
-  const end = Number.parseInt(measureIndexEnd, 10)
-  if (Number.isNaN(sourcePartIndex) || Number.isNaN(start) || Number.isNaN(end))
-    return undefined
-  return { sourcePartIndex, measureIndexStart: start, measureIndexEnd: end }
+  return getCellAtPoint(x, y, {
+    tag: 'part-label',
+    parseCell: ({ partIndex, measureIndexStart, measureIndexEnd }) => {
+      const sourcePartIndex = parseDatasetInt(partIndex)
+      const start = parseDatasetInt(measureIndexStart)
+      const end = parseDatasetInt(measureIndexEnd)
+      if (
+        sourcePartIndex === undefined ||
+        start === undefined ||
+        end === undefined
+      )
+        return undefined
+      return {
+        sourcePartIndex,
+        measureIndexStart: start,
+        measureIndexEnd: end,
+      }
+    },
+  })
 }
 
 /** Every note/rest cell belonging to the given part-label hits — each hit
@@ -226,16 +260,15 @@ export function noteCellsInMeasureRange(
  * `renderer::new_renderer::render_note_click_target`), which sits on top of
  * the `pointer-events: none` playback cursor rect for the same note. */
 export function getNoteAtPoint(x: number, y: number): NoteCell | undefined {
-  const el = document.elementFromPoint(x, y)
-  if (!el) return undefined
-  const group = el.closest('[data-tag="note"]')
-  if (!group) return undefined
-  const { partIndex, noteId } = (group as HTMLElement).dataset
-  if (partIndex === undefined || noteId === undefined) return undefined
-  const sourcePartIndex = Number.parseInt(partIndex, 10)
-  const id = Number.parseInt(noteId, 10)
-  if (Number.isNaN(sourcePartIndex) || Number.isNaN(id)) return undefined
-  return { sourcePartIndex, noteId: id }
+  return getCellAtPoint(x, y, {
+    tag: 'note',
+    parseCell: ({ partIndex, noteId }) => {
+      const sourcePartIndex = parseDatasetInt(partIndex)
+      const id = parseDatasetInt(noteId)
+      if (sourcePartIndex === undefined || id === undefined) return undefined
+      return { sourcePartIndex, noteId: id }
+    },
+  })
 }
 
 /** One rendered lyric syllable, keyed the same way as `Tag::Lyric`'s
@@ -257,21 +290,19 @@ export interface LyricCell {
  * lyric row, so a click that lands on the syllable's own rect always
  * resolves here rather than to `getNoteAtPoint`. */
 export function getLyricAtPoint(x: number, y: number): LyricCell | undefined {
-  const el = document.elementFromPoint(x, y)
-  if (!el) return undefined
-  const group = el.closest('[data-tag="lyric"]')
-  if (!group) return undefined
-  const { partIndex, noteId, verse } = (group as HTMLElement).dataset
-  if (partIndex === undefined || noteId === undefined || verse === undefined)
-    return undefined
-  const sourcePartIndex = Number.parseInt(partIndex, 10)
-  const id = Number.parseInt(noteId, 10)
-  const verseIndex = Number.parseInt(verse, 10)
-  if (
-    Number.isNaN(sourcePartIndex) ||
-    Number.isNaN(id) ||
-    Number.isNaN(verseIndex)
-  )
-    return undefined
-  return { sourcePartIndex, noteId: id, verse: verseIndex }
+  return getCellAtPoint(x, y, {
+    tag: 'lyric',
+    parseCell: ({ partIndex, noteId, verse }) => {
+      const sourcePartIndex = parseDatasetInt(partIndex)
+      const id = parseDatasetInt(noteId)
+      const verseIndex = parseDatasetInt(verse)
+      if (
+        sourcePartIndex === undefined ||
+        id === undefined ||
+        verseIndex === undefined
+      )
+        return undefined
+      return { sourcePartIndex, noteId: id, verse: verseIndex }
+    },
+  })
 }
