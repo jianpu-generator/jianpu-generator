@@ -199,6 +199,19 @@ pub(crate) const ACCIDENTAL_LEFT_GAP_RATIO: f32 = 0.2;
 /// instead.
 pub(crate) const ACCIDENTAL_RIGHT_PADDING_RATIO: f32 = 1.0;
 
+/// Fixed horizontal padding (in points) between a column's left edge and the
+/// anchor of every glyph inside it — note head, rest, percussion hit, chord
+/// symbol, note dash, and lyric syllable — plus the
+/// tie/slur/underline/tuplet-bracket span markings that key off the same
+/// anchor. A flat point value rather than a ratio of `note_number_width`
+/// (unlike `ACCIDENTAL_LEFT_GAP_RATIO` and friends): the padding should read
+/// as a fixed visual gap from the bar line/column edge, not shrink toward
+/// invisible as the user's configured note size shrinks. The same value
+/// everywhere so everything in a column lines up flush at one offset from
+/// `x_start`, regardless of the column's own width or what else shares it
+/// (see `ColumnGeometry::glyph_left_anchor_x`).
+pub(crate) const GLYPH_LEFT_PADDING: f32 = 10.0;
+
 /// Horizontal spacing (as a ratio of `note_number_width`) between a
 /// double-dotted note/rest/dash's first and second dot glyph, matching the
 /// gap already used between the note/rest/dash glyph itself and its first

@@ -24,7 +24,7 @@ pub(in crate::renderer::new_renderer) fn render_lyric(
         kind: SvgKind::Text {
             content: s.to_string(),
             font_size: lyric_font_size(s, base_font_size, cjk_font_size),
-            anchor: TextAnchor::Middle,
+            anchor: TextAnchor::Start,
             baseline: DominantBaseline::Hanging,
             font: FontFamily::SansSerif,
             weight: FontWeight::Normal,
@@ -34,9 +34,8 @@ pub(in crate::renderer::new_renderer) fn render_lyric(
 }
 
 /// Renders a standalone `lyrics` part's whole verse line, left-aligned at
-/// `elem.x` (the measure's left edge) rather than centered like
-/// [`render_lyric`], since it spans the full measure width instead of being
-/// positioned per note.
+/// `elem.x` (the measure's left edge), since it spans the full measure width
+/// instead of being positioned per note like [`render_lyric`].
 pub(in crate::renderer::new_renderer) fn render_lyric_line(
     elem: &AbsoluteElement,
     s: &str,

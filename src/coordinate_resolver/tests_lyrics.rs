@@ -25,15 +25,83 @@ fn single_row_page(element: GridElement) -> GridPage {
 }
 
 #[test]
-fn lyric_syllable_halign_center_scales_down_when_column_weight_is_inflated_by_another_row() {
-    // Same bug as `note_head_halign_center_scales_down_when_column_weight_is_inflated_by_another_row`
-    // (see tests.rs), but for a lyric syllable: column 2's weight (100.0,
-    // comfortably above "la"'s own rendered width) stands in for another
-    // row's much wider content sharing the same column, and the syllable's
-    // own weight should scale its anchor down instead of landing at the
-    // column's full (inflated) center.
+fn lyric_syllable_halign_center_is_independent_of_column_weight() {
+    // Same shape as `note_head_halign_center_is_independent_of_column_weight`
+    // (see tests.rs), but for a lyric syllable: under flush-left anchoring, a
+    // syllable's anchor must land at the same offset from the column's left
+    // edge regardless of how much unrelated weight (e.g. a wide chord symbol
+    // sharing the column) inflates the column's total width.
+    let make_page = |column_weight: f32| -> GridPage {
+        let el = GridElement {
+            column: 2,
+            column_span: 1,
+            halign: HAlign::Center,
+            valign: VAlign::Center,
+            content: GridContent::LyricSyllable {
+                text: "la".to_string(),
+                source_part_index: 0,
+                note_id: 0,
+                verse: 0,
+            },
+        };
+        GridPage {
+            width_pt: 595.0,
+            height_pt: 842.0,
+            rows: vec![GridRow {
+                height_pt: 30.0,
+                column_count: 3,
+                has_label_region: true,
+                measure_layout: vec![MeasureColumnLayout {
+                    start_col: 2,
+                    col_count: 1,
+                    weight: 1.0,
+                    column_weights: vec![column_weight],
+                }],
+                elements: vec![el],
+            }],
+            measure_highlights: vec![],
+            error_highlights: vec![],
+            measure_click_targets: vec![],
+            playback_cursor_targets: vec![],
+            part_label_click_targets: vec![],
+            lyric_click_targets: vec![],
+        }
+    };
+    let resolve_lyric_x = |column_weight: f32| -> f32 {
+        let abs = resolve(
+            &[make_page(column_weight)],
+            12.0,
+            40.0,
+            LyricFontSizes {
+                base: 14.4,
+                cjk: 17.28,
+            },
+            12.0,
+        )
+        .unwrap();
+        abs[0]
+            .elements
+            .iter()
+            .find(|e| matches!(e.content, AbsoluteContent::Lyric { .. }))
+            .expect("should have Lyric")
+            .x
+    };
+
+    let narrow_x = resolve_lyric_x(1.0);
+    let inflated_x = resolve_lyric_x(100.0);
+
+    assert!(
+        (narrow_x - inflated_x).abs() < 0.01,
+        "narrow_x={narrow_x} inflated_x={inflated_x} should match: the syllable's anchor must \
+         not depend on the column's weight"
+    );
+}
+
+#[test]
+fn lyric_syllable_shares_the_note_head_padding_formula() {
+    let note_number_width = 12.0;
     let el = GridElement {
-        column: 2,
+        column: 0,
         column_span: 1,
         halign: HAlign::Center,
         valign: VAlign::Center,
@@ -44,140 +112,28 @@ fn lyric_syllable_halign_center_scales_down_when_column_weight_is_inflated_by_an
             verse: 0,
         },
     };
-    let page = GridPage {
-        width_pt: 595.0,
-        height_pt: 842.0,
-        rows: vec![GridRow {
-            height_pt: 30.0,
-            column_count: 3,
-            has_label_region: true,
-            measure_layout: vec![MeasureColumnLayout {
-                start_col: 2,
-                col_count: 1,
-                weight: 1.0,
-                column_weights: vec![100.0],
-            }],
-            elements: vec![el],
-        }],
-        measure_highlights: vec![],
-        error_highlights: vec![],
-        measure_click_targets: vec![],
-        playback_cursor_targets: vec![],
-        part_label_click_targets: vec![],
-        lyric_click_targets: vec![],
-    };
-    let lyric_font_sizes = LyricFontSizes {
-        base: 14.4,
-        cjk: 17.28,
-    };
-    let abs = resolve(&[page], 12.0, 40.0, lyric_font_sizes, 12.0).unwrap();
+    let page = single_row_page(el);
+    let abs = resolve(
+        &[page],
+        note_number_width,
+        40.0,
+        LyricFontSizes {
+            base: 14.4,
+            cjk: 17.28,
+        },
+        12.0,
+    )
+    .unwrap();
     let lyric = abs[0]
         .elements
         .iter()
         .find(|e| matches!(e.content, AbsoluteContent::Lyric { .. }))
         .expect("should have Lyric");
-
-    // Column 2 is the system's sole music column: x_start = label_width_pt
-    // (40.0), width = the whole usable music region (595 - 2*25 - 40).
-    let x_start = 40.0;
-    let width = (595.0 - 2.0 * 25.0) - 40.0;
-    let column_weight = 100.0_f32;
-    let core_weight = crate::font_metrics::monospace_text_width("la", lyric_font_sizes.base);
-    let naive_center = 25.0 + x_start + width * 0.5;
-    let expected_x = 25.0 + x_start + width * (core_weight / column_weight).min(1.0) * 0.5;
-
-    assert!(
-        lyric.x < naive_center - 0.01,
-        "lyric x={} should be left of the naive (inflated) column center={naive_center}",
-        lyric.x
-    );
+    let x_start = 0.0; // column 0 starts at the row's own left edge
+    let expected_x = 25.0 + x_start + crate::font_metrics::GLYPH_LEFT_PADDING;
     assert!(
         (lyric.x - expected_x).abs() < 0.01,
         "x={} expected={expected_x}",
-        lyric.x
-    );
-}
-
-#[test]
-fn wide_lyric_syllable_does_not_bleed_left_of_its_column() {
-    // A long lyric syllable centered on a narrow column would naturally
-    // extend left past the column's start and into the bar line to its
-    // left; resolve() must clamp it so its left edge never crosses x_start.
-    let el = GridElement {
-        column: 0,
-        column_span: 1,
-        halign: HAlign::Center,
-        valign: VAlign::Center,
-        content: GridContent::LyricSyllable {
-            text: "Supercalifragilisticexpialidocious".to_string(),
-            source_part_index: 0,
-            note_id: 0,
-            verse: 0,
-        },
-    };
-    let page = single_row_page(el);
-    let abs = resolve(
-        &[page],
-        12.0,
-        40.0,
-        LyricFontSizes {
-            base: 14.4,
-            cjk: 17.28,
-        },
-        12.0,
-    )
-    .unwrap();
-    let lyric = abs[0]
-        .elements
-        .iter()
-        .find(|e| matches!(e.content, AbsoluteContent::Lyric { .. }))
-        .expect("should have Lyric");
-    let col_width = (595.0 - 50.0) / 10.0; // 54.5
-    let x_start = 25.0 + 0.0 * col_width;
-    assert!(
-        lyric.x >= x_start,
-        "lyric center x={} should not be left of column start x_start={x_start} \
-         (its left edge would otherwise cross the bar line)",
-        lyric.x
-    );
-}
-
-#[test]
-fn short_lyric_syllable_stays_centered_in_its_column() {
-    let el = GridElement {
-        column: 0,
-        column_span: 1,
-        halign: HAlign::Center,
-        valign: VAlign::Center,
-        content: GridContent::LyricSyllable {
-            text: "la".to_string(),
-            source_part_index: 0,
-            note_id: 0,
-            verse: 0,
-        },
-    };
-    let page = single_row_page(el);
-    let abs = resolve(
-        &[page],
-        12.0,
-        40.0,
-        LyricFontSizes {
-            base: 14.4,
-            cjk: 17.28,
-        },
-        12.0,
-    )
-    .unwrap();
-    let lyric = abs[0]
-        .elements
-        .iter()
-        .find(|e| matches!(e.content, AbsoluteContent::Lyric { .. }))
-        .expect("should have Lyric");
-    let col_width = (595.0 - 50.0) / 10.0;
-    let expected_x = 25.0 + col_width * 0.5;
-    assert!(
-        (lyric.x - expected_x).abs() < 0.01,
-        "short syllable should be unaffected by the clamp: x={} expected={expected_x}",
         lyric.x
     );
 }

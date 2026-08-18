@@ -74,7 +74,8 @@ pub enum AbsoluteContent {
         verse: usize,
     },
     /// A standalone `lyrics` part's whole verse line, left-aligned starting
-    /// at the element's `x` rather than centered like [`AbsoluteContent::Lyric`].
+    /// at the element's `x`, same as [`AbsoluteContent::Lyric`] but spanning
+    /// the full measure width instead of being positioned per note.
     LyricLine(String),
     Text {
         content: String,

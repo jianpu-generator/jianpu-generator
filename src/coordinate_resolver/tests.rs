@@ -42,9 +42,10 @@ fn resolve_empty_pages_returns_empty() {
 }
 
 #[test]
-fn note_head_halign_center_has_x_at_center_of_column() {
+fn note_head_halign_center_is_flush_left_plus_fixed_padding() {
     // usable = 595 - 50 = 545, col_width = 545/10 = 54.5
-    // column=0, halign=Center → x = 25 + 0*54.5 + 54.5*0.5 = 52.25
+    // column=0, halign=Center → x = 25 + x_start(0) + GLYPH_LEFT_PADDING
+    let note_number_width = 12.0;
     let el = GridElement {
         column: 0,
         column_span: 1,
@@ -61,7 +62,7 @@ fn note_head_halign_center_has_x_at_center_of_column() {
     let page = single_row_page(el);
     let abs = resolve(
         &[page],
-        12.0,
+        note_number_width,
         40.0,
         LyricFontSizes {
             base: 14.4,
@@ -75,8 +76,8 @@ fn note_head_halign_center_has_x_at_center_of_column() {
         .iter()
         .find(|e| matches!(e.content, AbsoluteContent::NoteHead { .. }))
         .expect("should have NoteHead");
-    let col_width = (595.0 - 50.0) / 10.0; // 54.5
-    let expected_x = 25.0 + 0.0 * col_width + col_width * 0.5;
+    let x_start = 0.0; // column 0 starts at the row's own left edge
+    let expected_x = 25.0 + x_start + crate::font_metrics::GLYPH_LEFT_PADDING;
     assert!(
         (note.x - expected_x).abs() < 0.01,
         "x={} expected={expected_x}",
@@ -85,83 +86,77 @@ fn note_head_halign_center_has_x_at_center_of_column() {
 }
 
 #[test]
-fn note_head_halign_center_scales_down_when_column_weight_is_inflated_by_another_row() {
-    // Column 2's weight (10.0) stands in for another row's much wider
-    // content sharing the same column (e.g. a "2sus4" chord symbol). A plain
-    // NoteHead's `HAlign::Center` anchor should scale down proportionally to
-    // its own small core weight rather than landing at the column's full
-    // (inflated) center, which is the bug this test guards against.
-    let el = GridElement {
-        column: 2,
-        column_span: 1,
-        halign: HAlign::Center,
-        valign: VAlign::Center,
-        content: GridContent::NoteHead {
-            pitch: JianPuPitch::One,
-            accidental: crate::ast::parsed::Accidental::Natural,
-            octave: 0,
-            dotted: false,
-            double_dotted: false,
-        },
-    };
-    let page = GridPage {
-        width_pt: 595.0,
-        height_pt: 842.0,
-        rows: vec![GridRow {
-            height_pt: 30.0,
-            column_count: 3,
-            has_label_region: true,
-            measure_layout: vec![MeasureColumnLayout {
-                start_col: 2,
-                col_count: 1,
-                weight: 1.0,
-                column_weights: vec![10.0],
+fn note_head_halign_center_is_independent_of_column_weight() {
+    // Column 2's weight stands in for another row's much wider content
+    // sharing the same column (e.g. a "2sus4" chord symbol). Under
+    // flush-left anchoring, a plain NoteHead's `HAlign::Center` anchor must
+    // land at the same offset from the column's left edge regardless of how
+    // much unrelated weight inflates the column — this is the drift the old
+    // weighted-centering formula used to introduce.
+    let make_page = |column_weight: f32| -> GridPage {
+        let el = GridElement {
+            column: 2,
+            column_span: 1,
+            halign: HAlign::Center,
+            valign: VAlign::Center,
+            content: GridContent::NoteHead {
+                pitch: JianPuPitch::One,
+                accidental: crate::ast::parsed::Accidental::Natural,
+                octave: 0,
+                dotted: false,
+                double_dotted: false,
+            },
+        };
+        GridPage {
+            width_pt: 595.0,
+            height_pt: 842.0,
+            rows: vec![GridRow {
+                height_pt: 30.0,
+                column_count: 3,
+                has_label_region: true,
+                measure_layout: vec![MeasureColumnLayout {
+                    start_col: 2,
+                    col_count: 1,
+                    weight: 1.0,
+                    column_weights: vec![column_weight],
+                }],
+                elements: vec![el],
             }],
-            elements: vec![el],
-        }],
-        measure_highlights: vec![],
-        error_highlights: vec![],
-        measure_click_targets: vec![],
-        playback_cursor_targets: vec![],
-        part_label_click_targets: vec![],
-        lyric_click_targets: vec![],
+            measure_highlights: vec![],
+            error_highlights: vec![],
+            measure_click_targets: vec![],
+            playback_cursor_targets: vec![],
+            part_label_click_targets: vec![],
+            lyric_click_targets: vec![],
+        }
     };
-    let notes_font_size = 12.0;
-    let abs = resolve(
-        &[page],
-        12.0,
-        40.0,
-        LyricFontSizes {
-            base: 14.4,
-            cjk: 17.28,
-        },
-        notes_font_size,
-    )
-    .unwrap();
-    let note = abs[0]
-        .elements
-        .iter()
-        .find(|e| matches!(e.content, AbsoluteContent::NoteHead { .. }))
-        .expect("should have NoteHead");
+    let resolve_note_x = |column_weight: f32| -> f32 {
+        let abs = resolve(
+            &[make_page(column_weight)],
+            12.0,
+            40.0,
+            LyricFontSizes {
+                base: 14.4,
+                cjk: 17.28,
+            },
+            12.0,
+        )
+        .unwrap();
+        abs[0]
+            .elements
+            .iter()
+            .find(|e| matches!(e.content, AbsoluteContent::NoteHead { .. }))
+            .expect("should have NoteHead")
+            .x
+    };
 
-    // Column 2 is the system's sole music column: x_start = label_width_pt
-    // (40.0), width = the whole usable music region (595 - 2*25 - 40).
-    let x_start = 40.0;
-    let width = (595.0 - 2.0 * 25.0) - 40.0;
-    let column_weight = 10.0_f32;
-    let core_weight = crate::font_metrics::monospace_char_advance_width('0', notes_font_size);
-    let naive_center = 25.0 + x_start + width * 0.5;
-    let expected_x = 25.0 + x_start + width * (core_weight / column_weight).min(1.0) * 0.5;
+    let narrow_x = resolve_note_x(1.0);
+    let inflated_x = resolve_note_x(100.0);
 
     assert!(
-        note.x < naive_center - 0.01,
-        "note x={} should be left of the naive (inflated) column center={naive_center}",
-        note.x
-    );
-    assert!(
-        (note.x - expected_x).abs() < 0.01,
-        "x={} expected={expected_x}",
-        note.x
+        (narrow_x - inflated_x).abs() < 0.01,
+        "narrow_x={narrow_x} inflated_x={inflated_x} should match: the note's anchor must not \
+         depend on the column's weight"
     );
 }
 
