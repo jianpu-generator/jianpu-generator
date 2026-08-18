@@ -111,10 +111,71 @@ export function noteCellsForPartLabels(
  * the previous measure, even though that's the nearest whole pixel to where
  * the boundary actually renders.
  */
+function measureRangeFromElement(el: HTMLElement): MeasureRange | undefined {
+  const { measureIndex, measureIndexEnd } = el.dataset
+  if (measureIndex === undefined) return undefined
+  const start = Number.parseInt(measureIndex, 10)
+  const end = Number.parseInt(measureIndexEnd ?? measureIndex, 10)
+  if (Number.isNaN(start) || Number.isNaN(end)) return undefined
+  return { start, end }
+}
+
+/**
+ * Resolves a click/drag point that's actually over a bar line's invisible
+ * `.bar-line-drag-handle` (see `PreviewSvgRenderer.tsx`'s
+ * `renderBarLineDragHandle`) to a measure range. A bar line visually
+ * introduces the measure *after* it, so that's what it always selects —
+ * except a system's *last* bar line (its closing line, with no following
+ * measure on the same row), which has nothing after it to introduce and so
+ * falls back to the measure *before* it instead.
+ *
+ * Deliberately re-derives the true boundary from the handle element's own
+ * `getBoundingClientRect()` rather than trusting `x` directly: the handle is
+ * `BAR_LINE_HIT_WIDTH` pixels wide precisely so a real mouse doesn't have to
+ * land on the exact boundary pixel, but that padding means `x` can fall a
+ * couple of pixels to either side of the true boundary — enough to flip
+ * which measure `getMeasureAtPoint`'s plain geometry scan below would
+ * otherwise resolve to.
+ *
+ * Returns `undefined` when `x`/`y` isn't over a bar-line handle at all, so
+ * callers can fall through to the generic point-based lookup.
+ */
+function getBarLineMeasureAtPoint(
+  x: number,
+  y: number,
+): MeasureRange | undefined {
+  const hit = document.elementFromPoint(x, y)
+  const handle = hit?.closest('.bar-line-drag-handle')
+  if (!handle) return undefined
+  const lineRect = handle.getBoundingClientRect()
+  const boundaryX = Math.round((lineRect.left + lineRect.right) / 2)
+  const centerY = (lineRect.top + lineRect.bottom) / 2
+
+  let next: { rect: DOMRect; el: HTMLElement } | undefined
+  let prev: { rect: DOMRect; el: HTMLElement } | undefined
+  for (const el of document.querySelectorAll<HTMLElement>(
+    '[data-tag="measure"]',
+  )) {
+    const rect = el.getBoundingClientRect()
+    if (centerY < rect.top || centerY >= rect.bottom) continue
+    const left = Math.round(rect.left)
+    if (left >= boundaryX) {
+      if (!next || left < next.rect.left) next = { rect, el }
+    } else if (!prev || rect.left > prev.rect.left) {
+      prev = { rect, el }
+    }
+  }
+  const chosen = next ?? prev
+  return chosen && measureRangeFromElement(chosen.el)
+}
+
 export function getMeasureAtPoint(
   x: number,
   y: number,
 ): MeasureRange | undefined {
+  const barLineRange = getBarLineMeasureAtPoint(x, y)
+  if (barLineRange) return barLineRange
+
   let best: { rect: DOMRect; el: HTMLElement } | undefined
   for (const el of document.querySelectorAll<HTMLElement>(
     '[data-tag="measure"]',
@@ -127,12 +188,7 @@ export function getMeasureAtPoint(
     }
   }
   if (!best) return undefined
-  const { measureIndex, measureIndexEnd } = best.el.dataset
-  if (measureIndex === undefined) return undefined
-  const start = Number.parseInt(measureIndex, 10)
-  const end = Number.parseInt(measureIndexEnd ?? measureIndex, 10)
-  if (Number.isNaN(start) || Number.isNaN(end)) return undefined
-  return { start, end }
+  return measureRangeFromElement(best.el)
 }
 
 /**
