@@ -339,3 +339,7 @@ mod tests_playback_cursor;
 #[cfg(test)]
 #[path = "tests_lyrics_only_part.rs"]
 mod tests_lyrics_only_part;
+
+#[cfg(test)]
+#[path = "tests_lyric_click_targets.rs"]
+mod tests_lyric_click_targets;

@@ -21,7 +21,7 @@ fn block_has_bar_line(block: &MeasureBlock) -> bool {
     })
 }
 
-fn group_elements_by_note_id(elements: &[ColumnElement]) -> Vec<(usize, u32, u32)> {
+pub(crate) fn group_elements_by_note_id(elements: &[ColumnElement]) -> Vec<(usize, u32, u32)> {
     let mut groups: BTreeMap<usize, (u32, u32)> = BTreeMap::new();
     for el in elements {
         let Some(note_id) = el.note_id else {

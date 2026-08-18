@@ -3,7 +3,9 @@ use crate::grid_layout::highlight::measure_column_bounds;
 use crate::grid_layout::layout::{
     block_column_width, is_chord_only_row, is_lyric_row, MUSIC_START_COL,
 };
-use crate::grid_layout::playback_cursor::{compute_all_playback_cursor_targets, note_row_spans};
+use crate::grid_layout::playback_cursor::{
+    compute_all_playback_cursor_targets, group_elements_by_note_id, note_row_spans,
+};
 use crate::grid_layout::system_walk::for_each_system;
 use crate::grid_layout::types::{
     GridElement, Header, LyricClickTarget, MeasureClickTarget, MeasureHighlight,
@@ -187,11 +189,47 @@ fn lyric_row_absolute_indices(
     result
 }
 
+/// One entry per `first.rows` index, `Some(note_part_idx)` for a lyric verse
+/// row naming the note row it's paired with (the nearest preceding row
+/// sharing its `source_part_index`), `None` for a note row (or a lyric row
+/// with no such owner, which shouldn't occur in practice). Mirrors the same
+/// verse-absorption walk `note_row_spans`/`lyric_row_absolute_indices` use,
+/// so a lyric syllable's click target can be widened to match its note's own
+/// written column span.
+fn lyric_owner_note_row_indices(system: &[MeasureBlock]) -> Vec<Option<usize>> {
+    let Some(first) = system.first() else {
+        return Vec::new();
+    };
+    let mut result: Vec<Option<usize>> = vec![None; first.rows.len()];
+    let mut idx = 0;
+    while let Some(part_template) = first.rows.get(idx) {
+        if is_lyric_row(part_template) {
+            idx += 1;
+            continue;
+        }
+        let note_idx = idx;
+        let mut verse_idx = idx + 1;
+        while first.rows.get(verse_idx).is_some_and(|verse_row| {
+            is_lyric_row(verse_row)
+                && verse_row.source_part_index == part_template.source_part_index
+        }) {
+            if let Some(slot) = result.get_mut(verse_idx) {
+                *slot = Some(note_idx);
+            }
+            verse_idx += 1;
+        }
+        idx = verse_idx;
+    }
+    result
+}
+
 /// One [`LyricClickTarget`] per lyric syllable in every system, keyed by page
-/// index like `compute_all_measure_click_targets`. Unlike
-/// `compute_all_playback_cursor_targets`'s note targets (which can span a
-/// variable multi-column range), each syllable's own target is exactly the
-/// one grid column `expand_lyric_part` placed it in.
+/// index like `compute_all_measure_click_targets`. A syllable's target
+/// starts at the one grid column `expand_lyric_part` placed it in, but its
+/// `column_end` is widened to match its own note's full written column span
+/// (attack plus any dash-continuation columns, via `group_elements_by_note_id`
+/// on the paired note row) so a multi-beat note's hover/click box covers its
+/// whole duration rather than stopping after the first beat.
 pub(crate) fn compute_all_lyric_click_targets(
     page_systems: &[Vec<Vec<MeasureBlock>>],
     tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
@@ -209,6 +247,7 @@ pub(crate) fn compute_all_lyric_click_targets(
         hide_system_dividers,
         |page_idx, system, row_offset, tuplet_part_indices, _musical_row_count| {
             let row_indices = lyric_row_absolute_indices(system, row_offset, tuplet_part_indices);
+            let owner_note_row_indices = lyric_owner_note_row_indices(system);
 
             let mut col_offset: u32 = MUSIC_START_COL;
             for block in system {
@@ -220,17 +259,37 @@ pub(crate) fn compute_all_lyric_click_targets(
                     let Some(part_row) = block.rows.get(part_idx) else {
                         continue;
                     };
+                    // The paired note row's own `(note_id -> max_col)` map,
+                    // used below to widen each syllable's `column_end` to
+                    // its note's full written span rather than the single
+                    // column the syllable text itself sits in.
+                    let note_max_cols: HashMap<usize, u32> = owner_note_row_indices
+                        .get(part_idx)
+                        .copied()
+                        .flatten()
+                        .and_then(|note_idx| block.rows.get(note_idx))
+                        .map(|note_row| {
+                            group_elements_by_note_id(&note_row.elements)
+                                .into_iter()
+                                .map(|(note_id, _min_col, max_col)| (note_id, max_col))
+                                .collect()
+                        })
+                        .unwrap_or_default();
                     for el in &part_row.elements {
                         let ElementContent::Lyric { note_id, verse, .. } = &el.content else {
                             continue;
                         };
                         let column_start = (col_offset + el.column) as f32;
+                        let column_end = note_max_cols
+                            .get(note_id)
+                            .map(|max_col| (col_offset + max_col + 1) as f32)
+                            .unwrap_or(column_start + 1.0);
                         results.push((
                             page_idx,
                             LyricClickTarget {
                                 row: *row_idx,
                                 column_start,
-                                column_end: column_start + 1.0,
+                                column_end,
                                 source_part_index: part_row.source_part_index,
                                 note_id: *note_id,
                                 verse: *verse,

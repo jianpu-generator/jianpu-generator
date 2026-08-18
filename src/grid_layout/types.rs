@@ -359,11 +359,14 @@ pub struct PlaybackCursorTarget {
     pub note_id: usize,
 }
 
-/// Invisible click/drag hit target for one lyric syllable, spanning exactly
-/// its own grid column in its own row — independent of its note's own
-/// (wider) [`PlaybackCursorTarget`]-derived click target, so a click on the
-/// syllable itself always wins hit-testing there (see
-/// `renderer::new_types::Tag::Lyric`).
+/// Invisible click/drag hit target for one lyric syllable, in its own row,
+/// starting at the syllable's own grid column but widened to match its
+/// note's full written column span (attack plus any dash-continuation
+/// columns — see `grid_layout::click_targets::compute_all_lyric_click_targets`)
+/// so a multi-beat note's syllable box covers its whole duration —
+/// independent of its note's own [`PlaybackCursorTarget`]-derived click
+/// target, so a click on the syllable itself always wins hit-testing there
+/// (see `renderer::new_types::Tag::Lyric`).
 #[derive(Debug, Clone)]
 pub struct LyricClickTarget {
     pub row: usize,
