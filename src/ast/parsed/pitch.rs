@@ -18,6 +18,25 @@ pub enum JianPuPitch {
     Seven,
 }
 
+impl JianPuPitch {
+    /// The jianpu digit glyph (`1`-`7`) a pitch renders as, shared by the
+    /// renderer (`render_note_head`) and the coordinate resolver (which needs
+    /// the same leading character to measure the note head's own left-side
+    /// bearing — see `coordinate_resolver::resolve::flush_left_padding`).
+    pub(crate) fn to_digit(&self) -> char {
+        use JianPuPitch::*;
+        match self {
+            One => '1',
+            Two => '2',
+            Three => '3',
+            Four => '4',
+            Five => '5',
+            Six => '6',
+            Seven => '7',
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct KeyChange {
     pub note: Note,

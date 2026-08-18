@@ -93,8 +93,7 @@ fn chord_symbol_weight(symbol: &str, config: &RenderConfig) -> f32 {
 /// monospace font/size otherwise — mirroring the same check `render_lyric`
 /// already does to pick a font size.
 fn lyric_weight(text: &str, config: &RenderConfig) -> f32 {
-    let is_cjk = text.chars().any(|c| ('\u{4E00}'..='\u{9FFF}').contains(&c));
-    if is_cjk {
+    if text.chars().any(font_metrics::is_cjk_char) {
         font_metrics::cjk_text_width(text, config.lyric_cjk_font_size())
     } else {
         font_metrics::monospace_text_width(text, config.lyric_font_size())

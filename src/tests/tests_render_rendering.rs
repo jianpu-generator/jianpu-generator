@@ -166,6 +166,7 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
         config.part_label_width_pt as f32,
         config.lyric_font_sizes(),
         config.notes_font_size(),
+        config.chords_font_size(),
     )
     .expect("coordinate resolver should not fail in tests");
 
@@ -236,6 +237,7 @@ fn part_label_width_is_consistent_across_systems_of_differing_density() {
         config.part_label_width_pt as f32,
         config.lyric_font_sizes(),
         config.notes_font_size(),
+        config.chords_font_size(),
     )
     .expect("coordinate resolver should not fail in tests");
 
@@ -307,6 +309,7 @@ fn leading_and_trailing_bar_lines_align_across_systems_of_differing_density() {
         config.part_label_width_pt as f32,
         config.lyric_font_sizes(),
         config.notes_font_size(),
+        config.chords_font_size(),
     )
     .expect("coordinate resolver should not fail in tests");
 

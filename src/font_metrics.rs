@@ -155,6 +155,35 @@ pub(crate) fn cjk_glyph_left_bearing(c: char, font_size: f32) -> f32 {
     face_glyph_left_bearing(font_source::directive_line_font(), c, font_size)
 }
 
+/// Left-side bearing (in points) of one character in the pinned monospace
+/// font (see `font_source::monospace_font`), used to compensate a
+/// centered/flush-left glyph's anchor for its own leading character's
+/// built-in inset — the monospace counterpart to `cjk_glyph_left_bearing`.
+pub(crate) fn monospace_glyph_left_bearing(c: char, font_size: f32) -> f32 {
+    face_glyph_left_bearing(font_source::monospace_font(), c, font_size)
+}
+
+/// Whether `c` falls in the CJK Unified Ideographs block, the single check
+/// shared by every place that needs to pick a CJK-sized font/glyph metric
+/// for a character or decide a string counts as CJK (a lyric syllable's
+/// rendered font size, its layout weight, and its left-side-bearing
+/// correction all key off this).
+pub(crate) fn is_cjk_char(c: char) -> bool {
+    ('\u{4E00}'..='\u{9FFF}').contains(&c)
+}
+
+/// Font size (points) a lyric syllable/word renders at: `cjk` if any
+/// character in `text` is CJK (see [`is_cjk_char`]), `base` otherwise —
+/// mirroring `render_lyric`'s own font-size choice so a syllable's measured
+/// width/bearing never disagrees with what actually renders.
+pub(crate) fn lyric_font_size(text: &str, base: f32, cjk: f32) -> f32 {
+    if text.chars().any(is_cjk_char) {
+        cjk
+    } else {
+        base
+    }
+}
+
 /// Real advance width (in points) of one character at the given font size,
 /// measured from the pinned font's `hmtx` table (see `font_source::directive_line_font`).
 pub(crate) fn char_advance_width(c: char, font_size: f32, bold: bool) -> f32 {
@@ -304,7 +333,7 @@ pub(crate) fn directive_line_row_height() -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use super::cjk_glyph_left_bearing;
+    use super::{cjk_glyph_left_bearing, monospace_glyph_left_bearing};
 
     #[test]
     fn cjk_glyph_left_bearing_is_positive_for_a_real_cjk_character() {
@@ -320,6 +349,24 @@ mod tests {
         // A private-use-area code point has no glyph in the pinned CJK font,
         // so it falls back to 0.0 rather than a spurious measurement.
         let bearing = cjk_glyph_left_bearing('\u{E000}', 17.28);
+        assert_eq!(bearing, 0.0);
+    }
+
+    #[test]
+    fn monospace_glyph_left_bearing_is_positive_for_a_real_monospace_character() {
+        // A jianpu digit is conventionally drawn inset within its advance
+        // box even in a monospace font, so a real character in the pinned
+        // monospace font should measure a nonzero left-side bearing.
+        let bearing = monospace_glyph_left_bearing('1', 12.0);
+        assert!(bearing > 0.0, "bearing={bearing} should be > 0.0");
+    }
+
+    #[test]
+    fn monospace_glyph_left_bearing_is_zero_for_a_character_missing_from_the_font() {
+        // A private-use-area code point has no glyph in the pinned
+        // monospace font, so it falls back to 0.0 rather than a spurious
+        // measurement.
+        let bearing = monospace_glyph_left_bearing('\u{E000}', 12.0);
         assert_eq!(bearing, 0.0);
     }
 }

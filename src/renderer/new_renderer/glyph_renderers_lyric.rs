@@ -2,15 +2,6 @@ use crate::compositor::types::AbsoluteElement;
 use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
 use crate::renderer::new_types::{SvgElement, SvgKind, SvgVariant};
 
-fn lyric_font_size(s: &str, base_font_size: &f32, cjk_font_size: &f32) -> f32 {
-    let is_cjk = s.chars().any(|c| ('\u{4E00}'..='\u{9FFF}').contains(&c));
-    if is_cjk {
-        *cjk_font_size
-    } else {
-        *base_font_size
-    }
-}
-
 pub(in crate::renderer::new_renderer) fn render_lyric(
     elem: &AbsoluteElement,
     s: &str,
@@ -23,7 +14,7 @@ pub(in crate::renderer::new_renderer) fn render_lyric(
         variant: Some(SvgVariant::Lyric),
         kind: SvgKind::Text {
             content: s.to_string(),
-            font_size: lyric_font_size(s, base_font_size, cjk_font_size),
+            font_size: crate::font_metrics::lyric_font_size(s, *base_font_size, *cjk_font_size),
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Hanging,
             font: FontFamily::SansSerif,
@@ -48,7 +39,7 @@ pub(in crate::renderer::new_renderer) fn render_lyric_line(
         variant: Some(SvgVariant::Lyric),
         kind: SvgKind::Text {
             content: s.to_string(),
-            font_size: lyric_font_size(s, base_font_size, cjk_font_size),
+            font_size: crate::font_metrics::lyric_font_size(s, *base_font_size, *cjk_font_size),
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Hanging,
             font: FontFamily::SansSerif,

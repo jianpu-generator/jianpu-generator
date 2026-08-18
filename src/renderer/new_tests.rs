@@ -130,9 +130,15 @@ fn sharp_accidental_renders_to_the_right_of_note() {
         accidental.x,
         note_x
     );
+    // The accidental sits relative to the note digit's nominal center (`note_x
+    // + note_number_width * 0.5`), not `note_x` itself — the digit now draws
+    // flush-left (`TextAnchor::Start`) at `note_x`, while every decoration
+    // still positions off the note's center box (see `center` in
+    // `render_note_head`).
+    let center = note_x + note_number_width * 0.5;
     assert_eq!(
         accidental.x,
-        note_x + note_number_width * crate::font_metrics::ACCIDENTAL_LEFT_GAP_RATIO
+        center + note_number_width * crate::font_metrics::ACCIDENTAL_LEFT_GAP_RATIO
     );
     assert!(
         matches!(&accidental.kind, SvgKind::Text { anchor, .. } if *anchor == TextAnchor::Start),

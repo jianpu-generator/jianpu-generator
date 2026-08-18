@@ -36,6 +36,7 @@ fn resolve_empty_pages_returns_empty() {
             cjk: 17.28,
         },
         12.0,
+        12.0,
     )
     .unwrap()
     .is_empty());
@@ -69,6 +70,7 @@ fn note_head_halign_center_is_flush_left_plus_fixed_padding() {
             cjk: 17.28,
         },
         12.0,
+        12.0,
     )
     .unwrap();
     let note = abs[0]
@@ -77,7 +79,8 @@ fn note_head_halign_center_is_flush_left_plus_fixed_padding() {
         .find(|e| matches!(e.content, AbsoluteContent::NoteHead { .. }))
         .expect("should have NoteHead");
     let x_start = 0.0; // column 0 starts at the row's own left edge
-    let expected_x = 25.0 + x_start + crate::font_metrics::GLYPH_LEFT_PADDING;
+    let bearing = crate::font_metrics::monospace_glyph_left_bearing('1', 12.0);
+    let expected_x = 25.0 + x_start + crate::font_metrics::GLYPH_LEFT_PADDING - bearing;
     assert!(
         (note.x - expected_x).abs() < 0.01,
         "x={} expected={expected_x}",
@@ -139,6 +142,7 @@ fn note_head_halign_center_is_independent_of_column_weight() {
                 base: 14.4,
                 cjk: 17.28,
             },
+            12.0,
             12.0,
         )
         .unwrap();
@@ -204,6 +208,7 @@ fn valign_top_places_y_at_row_top() {
             cjk: 17.28,
         },
         12.0,
+        12.0,
     )
     .unwrap();
     let line = abs[0]
@@ -238,6 +243,7 @@ fn halign_end_places_x_at_right_of_column_span() {
             base: 14.4,
             cjk: 17.28,
         },
+        12.0,
         12.0,
     )
     .unwrap();
@@ -275,6 +281,7 @@ fn octave_dot_grid_content_emits_nothing() {
             base: 14.4,
             cjk: 17.28,
         },
+        12.0,
         12.0,
     )
     .unwrap();

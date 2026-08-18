@@ -55,6 +55,7 @@ fn sequence_line_renders_label_and_omit_parts_spans() {
             cjk: 17.28,
         },
         12.0,
+        12.0,
     )
     .unwrap();
     let AbsoluteContent::DirectiveLine { spans, .. } = &abs[0].elements[0].content else {

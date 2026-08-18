@@ -26,6 +26,7 @@ pub fn resolve(
     part_label_width_pt: f32,
     lyric_font_sizes: LyricFontSizes,
     notes_font_size: f32,
+    chords_font_size: f32,
 ) -> Result<Vec<AbsolutePage>, IrrecoverableError> {
     pages
         .iter()
@@ -36,6 +37,7 @@ pub fn resolve(
                 part_label_width_pt,
                 lyric_font_sizes,
                 notes_font_size,
+                chords_font_size,
             )
         })
         .collect()
@@ -59,39 +61,64 @@ fn is_flush_left_glyph(content: &GridContent) -> bool {
     )
 }
 
-/// The padding between a flush-left glyph's column and its anchor. For a
-/// CJK lyric syllable, `GLYPH_LEFT_PADDING` is reduced by that syllable's
-/// own leading character's left-side bearing (floored at `0.0`), so the
-/// *visible* gap from the bar line reads the same as a Latin syllable's or
-/// a note's, rather than stacking the font's own inset on top of the flat
-/// padding. Every other flush-left glyph gets the flat padding unchanged.
-fn flush_left_padding(content: &GridContent, cjk_font_size: f32) -> f32 {
-    let GridContent::LyricSyllable { text, .. } = content else {
-        return crate::font_metrics::GLYPH_LEFT_PADDING;
+/// The padding between a flush-left glyph's column and its anchor.
+/// `GLYPH_LEFT_PADDING` is reduced by the glyph's own leading character's
+/// left-side bearing (floored at `0.0`), so the *visible* gap from the bar
+/// line reads the same regardless of which glyph — note head, rest,
+/// percussion hit, chord symbol, note dash, or lyric syllable — happens to
+/// share the column, rather than stacking each font's own inset on top of
+/// the flat padding. Every flush-left renderer now draws `TextAnchor::Start`
+/// at exactly this anchor (see `glyph_renderers.rs`/
+/// `glyph_renderers_note_dash.rs`), so one formula (`padding - bearing`)
+/// covers all six content types; only the bearing's font/size/leading-char
+/// differ per type.
+fn flush_left_padding(content: &GridContent, config: RowResolveConfig) -> f32 {
+    let bearing = match content {
+        GridContent::NoteHead { pitch, .. } => crate::font_metrics::monospace_glyph_left_bearing(
+            pitch.to_digit(),
+            config.notes_font_size,
+        ),
+        GridContent::Rest { .. } => {
+            crate::font_metrics::monospace_glyph_left_bearing('0', config.notes_font_size)
+        }
+        GridContent::PercussionHit => {
+            crate::font_metrics::monospace_glyph_left_bearing('x', config.notes_font_size)
+        }
+        GridContent::ChordSymbol { text, .. } => {
+            let leading_char = text.chars().next().unwrap_or_default();
+            crate::font_metrics::monospace_glyph_left_bearing(leading_char, config.chords_font_size)
+        }
+        GridContent::NoteDash { .. } => crate::font_metrics::monospace_glyph_left_bearing(
+            '\u{2014}',
+            crate::font_metrics::NOTE_DASH_FONT_SIZE,
+        ),
+        GridContent::LyricSyllable { text, .. } => {
+            let Some(leading_char) = text.chars().next() else {
+                return crate::font_metrics::GLYPH_LEFT_PADDING;
+            };
+            let font_size = crate::font_metrics::lyric_font_size(
+                text,
+                config.lyric_font_sizes.base,
+                config.lyric_font_sizes.cjk,
+            );
+            crate::font_metrics::cjk_glyph_left_bearing(leading_char, font_size)
+        }
+        _ => return crate::font_metrics::GLYPH_LEFT_PADDING,
     };
-    let Some(leading_char) = text.chars().next() else {
-        return crate::font_metrics::GLYPH_LEFT_PADDING;
-    };
-    if !('\u{4E00}'..='\u{9FFF}').contains(&leading_char) {
-        return crate::font_metrics::GLYPH_LEFT_PADDING;
-    }
-    let bearing = crate::font_metrics::cjk_glyph_left_bearing(leading_char, cjk_font_size);
     (crate::font_metrics::GLYPH_LEFT_PADDING - bearing).max(0.0)
 }
 
 /// Bundles the config threaded through row-element resolution, kept constant
 /// across a page, so `resolve_row_element` stays under the clippy arg limit.
-/// `notes_font_size` used to size this too, back when `HAlign::Center` scaled
-/// a glyph's anchor by its own measured width; now that flush-left anchoring
-/// uses a flat `GLYPH_LEFT_PADDING` (see `crate::font_metrics`) instead, it's
-/// no longer threaded in here (though `resolve()`'s public signature still
-/// accepts and forwards it — see its doc comment). `lyric_font_sizes` is back
-/// in use: a CJK lyric syllable's own font size is needed to measure its
-/// leading character's left-side bearing (see `flush_left_padding`).
+/// `notes_font_size`/`chords_font_size` size a note/chord glyph's own
+/// left-side-bearing correction (see `flush_left_padding`); `lyric_font_sizes`
+/// does the same for a lyric syllable's leading character.
 #[derive(Clone, Copy)]
 struct RowResolveConfig {
     note_number_width: f32,
     lyric_font_sizes: LyricFontSizes,
+    notes_font_size: f32,
+    chords_font_size: f32,
 }
 
 fn resolve_row_element(
@@ -114,7 +141,7 @@ fn resolve_row_element(
                 PAGE_MARGIN
                     + geometry.glyph_left_anchor_x(
                         el.column as f32,
-                        flush_left_padding(&el.content, config.lyric_font_sizes.cjk),
+                        flush_left_padding(&el.content, config),
                     )
             } else {
                 x_start + span_width * 0.5
@@ -166,7 +193,14 @@ fn resolve_span_marking(
     geometry: &ColumnGeometry,
     config: RowResolveConfig,
 ) -> Option<AbsoluteElement> {
-    let padding = crate::font_metrics::GLYPH_LEFT_PADDING;
+    // A span marking's own glyph anchor keys off the note's *center*, unlike
+    // the flush-left glyphs above (which draw `TextAnchor::Start` at exactly
+    // `GLYPH_LEFT_PADDING - bearing`). A span can cover notes of differing
+    // pitches/widths, so per-glyph bearing tracking isn't practical here;
+    // this approximates the note's center with the same flat
+    // `note_number_width` nominal box the renderer itself uses (see
+    // `center` in `glyph_renderers.rs::render_note_head`).
+    let padding = crate::font_metrics::GLYPH_LEFT_PADDING + config.note_number_width * 0.5;
     match &el.content {
         GridContent::Underline { level } => {
             let start_center = geometry.glyph_left_anchor_x(el.column as f32, padding);
@@ -288,7 +322,8 @@ fn resolve_page(
     note_number_width: f32,
     part_label_width_pt: f32,
     lyric_font_sizes: LyricFontSizes,
-    _notes_font_size: f32,
+    notes_font_size: f32,
+    chords_font_size: f32,
 ) -> Result<AbsolutePage, IrrecoverableError> {
     let usable_width = page.width_pt - 2.0 * PAGE_MARGIN;
     let mut elements: Vec<AbsoluteElement> = Vec::new();
@@ -298,6 +333,8 @@ fn resolve_page(
     let row_config = RowResolveConfig {
         note_number_width,
         lyric_font_sizes,
+        notes_font_size,
+        chords_font_size,
     };
     for row in &page.rows {
         row_tops.push(row_y);

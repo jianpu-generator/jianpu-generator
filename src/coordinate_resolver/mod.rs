@@ -9,6 +9,8 @@ mod tests;
 #[cfg(test)]
 mod tests_highlights;
 #[cfg(test)]
+mod tests_left_edge_alignment;
+#[cfg(test)]
 mod tests_lyrics;
 #[cfg(test)]
 mod tests_multi_measure_rest;

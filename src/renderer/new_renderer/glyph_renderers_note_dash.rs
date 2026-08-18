@@ -8,6 +8,8 @@ pub(in crate::renderer::new_renderer) fn render_note_dash(
     dots: &DotState,
     note_number_width: &f32,
 ) -> Vec<SvgElement> {
+    let center = elem.x + note_number_width * 0.5;
+
     let mut results = vec![SvgElement {
         x: elem.x,
         y: elem.y,
@@ -15,7 +17,7 @@ pub(in crate::renderer::new_renderer) fn render_note_dash(
         kind: SvgKind::Text {
             content: "\u{2014}".to_string(),
             font_size: crate::font_metrics::NOTE_DASH_FONT_SIZE,
-            anchor: TextAnchor::Middle,
+            anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
             font: FontFamily::Monospace,
             weight: FontWeight::Normal,
@@ -24,7 +26,7 @@ pub(in crate::renderer::new_renderer) fn render_note_dash(
     }];
 
     results.extend(dot_glyphs(
-        elem.x + note_number_width * 1.5,
+        center + note_number_width * 1.5,
         elem.y,
         note_number_width * crate::font_metrics::DOT_SPACING_RATIO,
         crate::font_metrics::NOTE_DASH_FONT_SIZE,

@@ -77,6 +77,7 @@ fn lyric_syllable_halign_center_is_independent_of_column_weight() {
                 cjk: 17.28,
             },
             12.0,
+            12.0,
         )
         .unwrap();
         abs[0]
@@ -99,7 +100,14 @@ fn lyric_syllable_halign_center_is_independent_of_column_weight() {
 
 #[test]
 fn lyric_syllable_shares_the_note_head_padding_formula() {
+    // Every lyric syllable (Latin or CJK) is now bearing-corrected against
+    // the CJK font `render_lyric` always draws in (see
+    // `resolve::flush_left_padding`) — a Latin leading character's bearing
+    // in that font is nonzero too, so a Latin syllable's `x` sits left of
+    // the flat `GLYPH_LEFT_PADDING` value, the same shape as
+    // `cjk_lyric_syllable_compensates_its_leading_glyphs_left_bearing`.
     let note_number_width = 12.0;
+    let base_font_size = 14.4;
     let el = GridElement {
         column: 0,
         column_span: 1,
@@ -118,9 +126,10 @@ fn lyric_syllable_shares_the_note_head_padding_formula() {
         note_number_width,
         40.0,
         LyricFontSizes {
-            base: 14.4,
+            base: base_font_size,
             cjk: 17.28,
         },
+        12.0,
         12.0,
     )
     .unwrap();
@@ -130,10 +139,11 @@ fn lyric_syllable_shares_the_note_head_padding_formula() {
         .find(|e| matches!(e.content, AbsoluteContent::Lyric { .. }))
         .expect("should have Lyric");
     let x_start = 0.0; // column 0 starts at the row's own left edge
-    let expected_x = 25.0 + x_start + crate::font_metrics::GLYPH_LEFT_PADDING;
+    let bearing = crate::font_metrics::cjk_glyph_left_bearing('l', base_font_size);
+    let expected_x = 25.0 + x_start + (crate::font_metrics::GLYPH_LEFT_PADDING - bearing).max(0.0);
     assert!(
         (lyric.x - expected_x).abs() < 0.01,
-        "x={} expected={expected_x}",
+        "x={} expected={expected_x} bearing={bearing}",
         lyric.x
     );
 }
@@ -168,6 +178,7 @@ fn cjk_lyric_syllable_compensates_its_leading_glyphs_left_bearing() {
             base: 14.4,
             cjk: cjk_font_size,
         },
+        12.0,
         12.0,
     )
     .unwrap();

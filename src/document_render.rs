@@ -28,6 +28,7 @@ fn render_documents(
         config.part_label_width_pt as f32,
         config.lyric_font_sizes(),
         config.notes_font_size(),
+        config.chords_font_size(),
     )?;
     Ok(crate::renderer::new_renderer::render_new(&abs, &config))
 }
@@ -57,6 +58,7 @@ fn render_documents_with_range(
         config.part_label_width_pt as f32,
         config.lyric_font_sizes(),
         config.notes_font_size(),
+        config.chords_font_size(),
     )?;
     Ok(crate::renderer::new_renderer::render_new(&abs, &config))
 }

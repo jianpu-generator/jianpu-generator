@@ -43,6 +43,7 @@ fn multi_measure_rest_resolves_width_from_column_span() {
             cjk: 17.28,
         },
         12.0,
+        12.0,
     )
     .unwrap();
     let rest = abs[0]
