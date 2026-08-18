@@ -8,6 +8,7 @@ import { useFileOperations } from './useFileOperations'
 import { useFontsLoader } from './useFontsLoader'
 import { useJianpuWorker } from './useJianpuWorker'
 import { useLyricSelection } from './useLyricSelection'
+import { useMeasureRangeSelection } from './useMeasureRangeSelection'
 import { useNoteSelection } from './useNoteSelection'
 import { usePartTogglePruning } from './usePartTogglePruning'
 import {
@@ -211,6 +212,7 @@ export function useAppController() {
     handleEditorSelectionChange,
     selectedNoteRangePlaybackInfo,
     selectedNoteCells,
+    applyNoteSelectionSilently,
   } = useNoteSelection(
     noteSpans,
     parts,
@@ -223,7 +225,18 @@ export function useAppController() {
     handleLyricRangeSelect,
     handleEditorSelectionChange: handleLyricEditorSelectionChange,
     selectedLyricCells,
+    applyLyricSelectionSilently,
   } = useLyricSelection(lyricSpans, editorRef)
+
+  const handleMeasureRangeSelect = useMeasureRangeSelection(
+    editorRef,
+    noteSpans,
+    lyricSpans,
+    handleNoteRangeSelect,
+    handleLyricRangeSelect,
+    applyNoteSelectionSilently,
+    applyLyricSelectionSilently,
+  )
 
   const handlePlayNoteSelection = useCallback(() => {
     if (selectedNoteRangePlaybackInfo === null) return
@@ -354,6 +367,7 @@ export function useAppController() {
     handleLyricRangeSelect,
     handleLyricEditorSelectionChange,
     selectedLyricCells,
+    handleMeasureRangeSelect,
     handlePlayNoteSelection,
     noPartsSelected,
   }

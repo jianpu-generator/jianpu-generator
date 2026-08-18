@@ -10,7 +10,11 @@ import { useByteRangeSelectionCore } from './useByteRangeSelectionCore'
  * thread (bypassing the debounced render worker) — this is pure grouping
  * over an already-fetched flat `note_spans` array, so it doesn't need to
  * re-parse `source` and stays responsive on every selection-change tick. */
-async function groupSelectedNotesIntoContiguousRuns(
+/** Exported for `useAppController`'s `handleMeasureRangeSelect`, which groups
+ * a measure click's note cells itself so it can push them into Monaco in the
+ * same combined selection as the measure's lyric cells (see
+ * `useByteRangeSelectionCore`'s `applySelectionSilently`). */
+export async function groupSelectedNotesIntoContiguousRuns(
   selectedCells: NoteCell[],
   noteSpans: NoteSpan[],
 ): Promise<NoteSelectionRun[]> {
@@ -30,7 +34,9 @@ function cellFromNoteSpan(span: NoteSpan): NoteCell {
   return { sourcePartIndex: span.sourcePartIndex, noteId: span.noteId }
 }
 
-function noteRunByteRange(run: NoteSelectionRun) {
+/** Exported alongside `groupSelectedNotesIntoContiguousRuns` for
+ * `useAppController`'s `handleMeasureRangeSelect`. */
+export function noteRunByteRange(run: NoteSelectionRun) {
   return { start: run.startByte, end: run.endByte }
 }
 
@@ -86,6 +92,7 @@ export function useNoteSelection(
     runs: lastRuns,
     handleRangeSelect: handleNoteRangeSelect,
     handleEditorSelectionChange,
+    applySelectionSilently: applyNoteSelectionSilently,
   } = useByteRangeSelectionCore<NoteCell, NoteSpan, NoteSelectionRun>(
     noteSpans,
     editorRef,
@@ -122,5 +129,6 @@ export function useNoteSelection(
     handleEditorSelectionChange,
     selectedNoteRangePlaybackInfo,
     selectedNoteCells: lastSelectedCells,
+    applyNoteSelectionSilently,
   }
 }

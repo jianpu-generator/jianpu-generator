@@ -99,6 +99,7 @@ export default function App() {
     stopMeasurePlayback,
     highlightedDocuments,
     noteSpans,
+    lyricSpans,
     previewInstrument,
     previewPercussion,
     stopPreviewInstrument,
@@ -130,6 +131,7 @@ export default function App() {
     handleLyricRangeSelect,
     handleLyricEditorSelectionChange,
     selectedLyricCells,
+    handleMeasureRangeSelect,
     handlePlayNoteSelection,
     noPartsSelected,
   } = useAppController()
@@ -295,6 +297,8 @@ export default function App() {
         handleLyricRangeSelect={handleLyricRangeSelect}
         handleLyricEditorSelectionChange={handleLyricEditorSelectionChange}
         selectedLyricCells={selectedLyricCells}
+        lyricSpans={lyricSpans}
+        handleMeasureRangeSelect={handleMeasureRangeSelect}
         audioGenerating={audioGenerating}
         wavUrl={wavUrl}
         wavFilename={wavFilename}

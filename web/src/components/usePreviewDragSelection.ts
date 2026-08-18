@@ -1,10 +1,11 @@
 import type { RefObject } from 'react'
 import { useEffect, useRef } from 'react'
-import type { NoteSpan } from '../types'
+import type { LyricSpan, NoteSpan } from '../types'
 import {
   applyLyricDragHighlights,
   applyNoteDragHighlights,
   applyPartLabelDragHighlight,
+  applyPersistedLyricHighlights,
   applyPersistedNoteHighlights,
   applyPersistedPartLabelHighlights,
   type DragPoint,
@@ -14,6 +15,7 @@ import {
 import {
   getMeasureAtPoint,
   type LyricCell,
+  lyricCellsInMeasureRange,
   type MeasureRange,
   type NoteCell,
   noteCellsForPartLabels,
@@ -72,6 +74,17 @@ export function usePreviewDragSelection(
   noteSpans: NoteSpan[],
   onNoteRangeSelect: ((selectedCells: NoteCell[]) => void) | undefined,
   onLyricRangeSelect?: (selectedCells: LyricCell[]) => void,
+  lyricSpans: LyricSpan[] = [],
+  // Fired instead of `onNoteRangeSelect`/`onLyricRangeSelect` for a
+  // measure/bar-line click or drag, which resolves both note cells and lyric
+  // cells at once — see `useAppController`'s `handleMeasureRangeSelect` for
+  // why those two can't just be called back-to-back (each independently
+  // pushes its own Monaco selection, and the second call's push clobbers the
+  // first's).
+  onMeasureRangeSelect?: (
+    noteCells: NoteCell[],
+    lyricCells: LyricCell[],
+  ) => void,
 ) {
   // The mousemove/mouseup handlers below live in a `useEffect(() => {...},
   // [])` with an empty dep array (registered once on mount), so they'd
@@ -79,10 +92,14 @@ export function usePreviewDragSelection(
   // render — refs keep them reading the latest value.
   const noteSpansRef = useRef(noteSpans)
   noteSpansRef.current = noteSpans
+  const lyricSpansRef = useRef(lyricSpans)
+  lyricSpansRef.current = lyricSpans
   const onNoteRangeSelectRef = useRef(onNoteRangeSelect)
   onNoteRangeSelectRef.current = onNoteRangeSelect
   const onLyricRangeSelectRef = useRef(onLyricRangeSelect)
   onLyricRangeSelectRef.current = onLyricRangeSelect
+  const onMeasureRangeSelectRef = useRef(onMeasureRangeSelect)
+  onMeasureRangeSelectRef.current = onMeasureRangeSelect
 
   const dragStateRef = useRef<PreviewDragState>(null)
 
@@ -144,12 +161,14 @@ export function usePreviewDragSelection(
         dragState.current = range
         const min = Math.min(dragState.anchor.start, dragState.current.start)
         const max = Math.max(dragState.anchor.end, dragState.current.end)
+        const measureRange = { start: min, end: max }
         applyPersistedNoteHighlights(
           container,
-          noteCellsInMeasureRange(noteSpansRef.current, {
-            start: min,
-            end: max,
-          }),
+          noteCellsInMeasureRange(noteSpansRef.current, measureRange),
+        )
+        applyPersistedLyricHighlights(
+          container,
+          lyricCellsInMeasureRange(lyricSpansRef.current, measureRange),
         )
       }
     }
@@ -161,7 +180,8 @@ export function usePreviewDragSelection(
 
       if (dragState.mode === 'pending') {
         // Never armed into a note-drag — a plain click, which is a shortcut
-        // for selecting every note/rest cell in the clicked note's measure.
+        // for selecting every note/rest cell in the clicked note's measure
+        // (and, alongside them, every lyric syllable in that same measure).
         const cells =
           dragState.measureRangeAtAnchor !== undefined
             ? noteCellsInMeasureRange(
@@ -169,8 +189,18 @@ export function usePreviewDragSelection(
                 dragState.measureRangeAtAnchor,
               )
             : [dragState.noteCellAtAnchor]
-        if (container) applyPersistedNoteHighlights(container, cells)
-        onNoteRangeSelectRef.current?.(cells)
+        const lyricCells =
+          dragState.measureRangeAtAnchor !== undefined
+            ? lyricCellsInMeasureRange(
+                lyricSpansRef.current,
+                dragState.measureRangeAtAnchor,
+              )
+            : []
+        if (container) {
+          applyPersistedNoteHighlights(container, cells)
+          applyPersistedLyricHighlights(container, lyricCells)
+        }
+        onMeasureRangeSelectRef.current?.(cells, lyricCells)
         dragStateRef.current = null
         return
       }
@@ -235,12 +265,17 @@ export function usePreviewDragSelection(
         getMeasureAtPoint(e.clientX, e.clientY) ?? dragState.current
       const min = Math.min(dragState.anchor.start, finalRange.start)
       const max = Math.max(dragState.anchor.end, finalRange.end)
-      const cells = noteCellsInMeasureRange(noteSpansRef.current, {
-        start: min,
-        end: max,
-      })
-      if (container) applyPersistedNoteHighlights(container, cells)
-      onNoteRangeSelectRef.current?.(cells)
+      const measureRange = { start: min, end: max }
+      const cells = noteCellsInMeasureRange(noteSpansRef.current, measureRange)
+      const lyricCells = lyricCellsInMeasureRange(
+        lyricSpansRef.current,
+        measureRange,
+      )
+      if (container) {
+        applyPersistedNoteHighlights(container, cells)
+        applyPersistedLyricHighlights(container, lyricCells)
+      }
+      onMeasureRangeSelectRef.current?.(cells, lyricCells)
       dragStateRef.current = null
     }
 

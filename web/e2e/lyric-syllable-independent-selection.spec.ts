@@ -2,14 +2,17 @@ import { expect, test } from '@playwright/test'
 
 /**
  * Each lyric syllable gets its own `Tag::Lyric` click target
- * (`data-tag="lyric"`, `data-part-index`/`data-note-id`/`data-verse`), fully
+ * (`data-tag="lyric"`, `data-part-index`/`data-note-id`/`data-verse`), kept
  * independent of the note-selection stack (`Tag::Note`,
- * `[data-tag="note"][data-note-drag-selected]`) — see `useLyricSelection.ts`
- * and `Preview.tsx`'s `onLyricRangeSelect`/`selectedLyricCells`. This spec
- * covers the cross-cutting independence matrix: a lyric click/drag never
- * touches note selection and vice versa, a lyric drag's Monaco selection
- * matches the dragged source text, and separate verse rows select
- * independently.
+ * `[data-tag="note"][data-note-drag-selected]`) for a *syllable-level*
+ * click/drag — see `useLyricSelection.ts` and `Preview.tsx`'s
+ * `onLyricRangeSelect`/`selectedLyricCells`. This spec covers the
+ * cross-cutting independence matrix: a syllable-level lyric click/drag never
+ * touches note selection, a lyric drag's Monaco selection matches the
+ * dragged source text, and separate verse rows select independently — except
+ * a *measure*-level click/drag (on a note or the space around it), which is
+ * a shortcut that intentionally selects both notes and every verse's lyrics
+ * in that measure at once (see `Preview.tsx`'s `onMeasureRangeSelect`).
  *
  * Self-contained source (not a demo file) with a generous "max measures per
  * system", one measure of four single-beat notes, and two verses so both
@@ -135,7 +138,7 @@ test('dragging across syllables selects exactly those cells and the matching edi
   expect(selectedText).toBe('do re mi')
 })
 
-test('clicking a note directly still selects only the note, never a lyric', async ({
+test('clicking a note directly selects the whole measure, notes and every verse of lyrics alike', async ({
   page,
 }) => {
   await ready(page)
@@ -156,13 +159,16 @@ test('clicking a note directly still selects only the note, never a lyric', asyn
   await page.mouse.up()
   await page.waitForTimeout(100)
 
-  // A plain click on a note selects the whole measure (existing behavior).
+  // A plain click on a note selects the whole measure (existing behavior) —
+  // and, alongside its 4 notes, every syllable of every verse in that
+  // measure (4 syllables x 2 verses), not just the note's own row (see
+  // `previewSelection.ts`'s `lyricCellsInMeasureRange`).
   await expect(
     page.locator('[data-tag="note"][data-note-drag-selected]'),
   ).toHaveCount(4)
   await expect(
     page.locator('[data-tag="lyric"][data-lyric-drag-selected]'),
-  ).toHaveCount(0)
+  ).toHaveCount(8)
 })
 
 test('verses select independently and each syllable maps to its own verse line', async ({

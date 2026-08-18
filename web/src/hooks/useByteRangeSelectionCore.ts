@@ -19,6 +19,18 @@ export interface ByteRangeSelectionCore<Cell, Run> {
     startByte: number,
     endByte: number,
   ) => Promise<void>
+  /** Commits `cells`/`runs` as this core's state without pushing a Monaco
+   * selection of its own — for a caller that's about to push a *combined*
+   * multicursor selection spanning more than just this core's own cells
+   * (e.g. a measure click's note cells and lyric cells together, see
+   * `useAppController`'s `handleMeasureRangeSelect`), so each core's own
+   * `editorRef.current.setSelections` doesn't clobber the other's. Also arms
+   * `suppressNextEditorSelectionSyncRef`, since the caller's own combined
+   * push still fires this editor's `onDidChangeCursorSelection` once — and
+   * without suppressing it, `handleEditorSelectionChange` would immediately
+   * re-derive (and typically empty out) `selectedCells` from whatever byte
+   * range the *other* core's cells happened to land on. */
+  applySelectionSilently: (cells: Cell[], runs: Run[]) => void
 }
 
 /**
@@ -131,5 +143,20 @@ export function useByteRangeSelectionCore<
     [spans, groupSelectedCellsIntoRuns, cellFromSpan],
   )
 
-  return { selectedCells, runs, handleRangeSelect, handleEditorSelectionChange }
+  const applySelectionSilently = useCallback(
+    (cells: Cell[], newRuns: Run[]) => {
+      setSelectedCells(cells)
+      setRuns(newRuns)
+      suppressNextEditorSelectionSyncRef.current = true
+    },
+    [],
+  )
+
+  return {
+    selectedCells,
+    runs,
+    handleRangeSelect,
+    handleEditorSelectionChange,
+    applySelectionSilently,
+  }
 }

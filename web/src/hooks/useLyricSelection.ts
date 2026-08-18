@@ -20,7 +20,11 @@ export interface LyricSelectionRun {
  * thread (bypassing the debounced render worker) — this is pure grouping
  * over an already-fetched flat `lyric_spans` array, so it doesn't need to
  * re-parse `source` and stays responsive on every selection-change tick. */
-async function groupSelectedLyricsIntoContiguousRuns(
+/** Exported for `useAppController`'s `handleMeasureRangeSelect`, which groups
+ * a measure click's lyric cells itself so it can push them into Monaco in
+ * the same combined selection as the measure's note cells (see
+ * `useByteRangeSelectionCore`'s `applySelectionSilently`). */
+export async function groupSelectedLyricsIntoContiguousRuns(
   selectedCells: LyricCell[],
   lyricSpans: LyricSpan[],
 ): Promise<LyricSelectionRun[]> {
@@ -44,7 +48,9 @@ function cellFromLyricSpan(span: LyricSpan): LyricCell {
   }
 }
 
-function lyricRunByteRange(run: LyricSelectionRun) {
+/** Exported alongside `groupSelectedLyricsIntoContiguousRuns` for
+ * `useAppController`'s `handleMeasureRangeSelect`. */
+export function lyricRunByteRange(run: LyricSelectionRun) {
   return { start: run.startByte, end: run.endByte }
 }
 
@@ -67,6 +73,7 @@ export function useLyricSelection(
     selectedCells: lastSelectedCells,
     handleRangeSelect: handleLyricRangeSelect,
     handleEditorSelectionChange,
+    applySelectionSilently: applyLyricSelectionSilently,
   } = useByteRangeSelectionCore<LyricCell, LyricSpan, LyricSelectionRun>(
     lyricSpans,
     editorRef,
@@ -79,5 +86,6 @@ export function useLyricSelection(
     handleLyricRangeSelect,
     handleEditorSelectionChange,
     selectedLyricCells: lastSelectedCells,
+    applyLyricSelectionSilently,
   }
 }

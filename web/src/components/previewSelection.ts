@@ -1,4 +1,4 @@
-import type { NoteSpan } from '../types'
+import type { LyricSpan, NoteSpan } from '../types'
 
 /** One rendered note/rest, keyed the same way as `Tag::Note`'s
  * `data-part-index`/`data-note-id` SVG attributes. */
@@ -305,4 +305,24 @@ export function getLyricAtPoint(x: number, y: number): LyricCell | undefined {
       return { sourcePartIndex, noteId: id, verse: verseIndex }
     },
   })
+}
+
+/** Every lyric syllable cell belonging to the given measure range, resolved
+ * from `lyricSpans`' `(source_part_index, note_id, verse) → measure_index`
+ * mapping — the lyric-side mirror of `noteCellsInMeasureRange`, so a measure
+ * click/drag can select the verse lyrics under it alongside its notes. */
+export function lyricCellsInMeasureRange(
+  lyricSpans: LyricSpan[],
+  range: MeasureRange,
+): LyricCell[] {
+  return lyricSpans
+    .filter(
+      (span) =>
+        span.measureIndex >= range.start && span.measureIndex <= range.end,
+    )
+    .map((span) => ({
+      sourcePartIndex: span.sourcePartIndex,
+      noteId: span.noteId,
+      verse: span.verse,
+    }))
 }

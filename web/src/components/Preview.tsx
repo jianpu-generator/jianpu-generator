@@ -1,6 +1,6 @@
 import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import { useEffect, useRef, useState } from 'react'
-import type { NoteSpan } from '../types'
+import type { LyricSpan, NoteSpan } from '../types'
 import { renderSvgDocument } from './PreviewSvgRenderer'
 import {
   applyPartLabelDragHighlight,
@@ -15,6 +15,7 @@ import {
   getPartLabelAtPoint,
   getSectionLabelAtPoint,
   type LyricCell,
+  lyricCellsInMeasureRange,
   type NoteCell,
   noteCellsForPartLabels,
   noteCellsInMeasureRange,
@@ -61,6 +62,21 @@ interface PreviewProps {
    * `onLyricRangeSelect`), echoed back so the highlight can be re-applied
    * declaratively, mirroring `selectedNoteCells`. */
   selectedLyricCells?: LyricCell[]
+  /** Per-lyric-syllable `(source_part_index, note_id, verse) → measure_index`
+   * mapping, used by `lyricCellsInMeasureRange` so a measure click/drag also
+   * selects the verse lyrics under it, alongside `noteSpans` for notes. */
+  lyricSpans?: LyricSpan[]
+  /** Fired instead of `onNoteRangeSelect`/`onLyricRangeSelect` for a
+   * measure/bar-line click or drag (see `usePreviewDragSelection`), with
+   * every note cell and every lyric cell the resolved measure range
+   * contains. A measure selects both at once, so this is a single combined
+   * callback rather than one call to each of the other two — see
+   * `useAppController`'s `handleMeasureRangeSelect` for why calling both
+   * independently doesn't work. */
+  onMeasureRangeSelect?: (
+    noteCells: NoteCell[],
+    lyricCells: LyricCell[],
+  ) => void
 }
 
 export function Preview({
@@ -80,6 +96,8 @@ export function Preview({
   noteSpans = [],
   onLyricRangeSelect,
   selectedLyricCells = [],
+  lyricSpans = [],
+  onMeasureRangeSelect,
 }: PreviewProps) {
   const previewPagesRef = useRef<HTMLDivElement>(null)
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
@@ -99,6 +117,8 @@ export function Preview({
     noteSpans,
     onNoteRangeSelect,
     onLyricRangeSelect,
+    lyricSpans,
+    onMeasureRangeSelect,
   )
   const onSectionLabelClickRef = useRef(onSectionLabelClick)
   onSectionLabelClickRef.current = onSectionLabelClick
@@ -265,6 +285,10 @@ export function Preview({
                   container,
                   noteCellsInMeasureRange(noteSpans, measureRangeAtAnchor),
                 )
+                applyPersistedLyricHighlights(
+                  container,
+                  lyricCellsInMeasureRange(lyricSpans, measureRangeAtAnchor),
+                )
               }
               e.preventDefault()
               return
@@ -281,6 +305,10 @@ export function Preview({
               applyPersistedNoteHighlights(
                 container,
                 noteCellsInMeasureRange(noteSpans, range),
+              )
+              applyPersistedLyricHighlights(
+                container,
+                lyricCellsInMeasureRange(lyricSpans, range),
               )
             }
             e.preventDefault()

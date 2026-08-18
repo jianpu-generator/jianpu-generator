@@ -7,6 +7,7 @@ import type {
   Diagnostic,
   DiagnosticViewZone,
   EditorHandle,
+  LyricSpan,
   MeasureSpan,
   NoteSpan,
   PartDeclaration,
@@ -110,6 +111,17 @@ interface AppWorkspaceProps {
    * (mirrors `handleEditorSelectionChange`, kept fully separate). */
   handleLyricEditorSelectionChange: (startByte: number, endByte: number) => void
   selectedLyricCells: LyricCell[]
+  /** Per-lyric-syllable `(source_part_index, note_id, verse) → measure_index`
+   * mapping, used to resolve a measure click/drag into every lyric cell it
+   * contains alongside `noteSpans` (see `Preview.tsx`'s
+   * `lyricCellsInMeasureRange`). */
+  lyricSpans: LyricSpan[]
+  /** Fired for a measure/bar-line click or drag with both the note cells and
+   * lyric cells it resolved — see `Preview.tsx`'s `onMeasureRangeSelect`. */
+  handleMeasureRangeSelect: (
+    noteCells: NoteCell[],
+    lyricCells: LyricCell[],
+  ) => void
   audioGenerating: boolean
   wavUrl: string | null
   wavFilename: string
@@ -168,6 +180,8 @@ export function AppWorkspace({
   handleLyricRangeSelect,
   handleLyricEditorSelectionChange,
   selectedLyricCells,
+  lyricSpans,
+  handleMeasureRangeSelect,
   audioGenerating,
   wavUrl,
   wavFilename,
@@ -320,6 +334,8 @@ export function AppWorkspace({
           noteSpans={noteSpans}
           onLyricRangeSelect={handleLyricRangeSelect}
           selectedLyricCells={selectedLyricCells}
+          lyricSpans={lyricSpans}
+          onMeasureRangeSelect={handleMeasureRangeSelect}
           audioGenerating={audioGenerating}
           wavUrl={wavUrl}
           wavFilename={wavFilename}
