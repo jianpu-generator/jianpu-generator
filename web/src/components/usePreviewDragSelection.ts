@@ -15,6 +15,7 @@ import {
 import {
   getMeasureAtPoint,
   type LyricCell,
+  lyricCellsForPartLabels,
   lyricCellsInMeasureRange,
   type MeasureRange,
   type NoteCell,
@@ -168,6 +169,12 @@ export function usePreviewDragSelection(
           container,
           noteCellsForPartLabels(noteSpansRef.current, hits),
         )
+        // Swept part rows carry their lyric rows too — union those in, same
+        // as every other drag mode above.
+        applyPersistedLyricHighlights(
+          container,
+          lyricCellsForPartLabels(lyricSpansRef.current, hits),
+        )
         return
       }
 
@@ -284,8 +291,10 @@ export function usePreviewDragSelection(
             )
           : []
         const cells = noteCellsForPartLabels(noteSpansRef.current, hits)
+        const lyricCells = lyricCellsForPartLabels(lyricSpansRef.current, hits)
         if (container) {
           applyPersistedNoteHighlights(container, cells)
+          applyPersistedLyricHighlights(container, lyricCells)
           // Replaces the transient marquee-driven fill with the persisted
           // one immediately, rather than waiting for `selectedNoteCells` to
           // round-trip back down as a prop — otherwise every dragged-over
@@ -297,7 +306,12 @@ export function usePreviewDragSelection(
             cells,
           )
         }
-        onNoteRangeSelectRef.current?.(cells)
+        if (onMeasureRangeSelectRef.current) {
+          onMeasureRangeSelectRef.current(cells, lyricCells)
+        } else {
+          onNoteRangeSelectRef.current?.(cells)
+          onLyricRangeSelectRef.current?.(lyricCells)
+        }
         dragStateRef.current = null
         return
       }

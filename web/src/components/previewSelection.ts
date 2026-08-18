@@ -116,6 +116,29 @@ export function noteCellsForPartLabels(
   )
 }
 
+/** Every lyric syllable cell belonging to the given part-label hits —
+ * the lyric-side mirror of `noteCellsForPartLabels`, so a part-label drag
+ * selects the verse lyrics under its swept part rows alongside their notes. */
+export function lyricCellsForPartLabels(
+  lyricSpans: LyricSpan[],
+  hits: PartLabelHit[],
+): LyricCell[] {
+  return hits.flatMap((hit) =>
+    lyricSpans
+      .filter(
+        (span) =>
+          span.sourcePartIndex === hit.sourcePartIndex &&
+          span.measureIndex >= hit.measureIndexStart &&
+          span.measureIndex <= hit.measureIndexEnd,
+      )
+      .map((span) => ({
+        sourcePartIndex: span.sourcePartIndex,
+        noteId: span.noteId,
+        verse: span.verse,
+      })),
+  )
+}
+
 /**
  * The measure range under the given point. A merged multi-measure rest bar
  * carries a `start`/`end` wider than a single measure, so clicking anywhere
