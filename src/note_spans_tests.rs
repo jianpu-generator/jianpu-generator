@@ -13,7 +13,7 @@ Bass [B] = notes
 [M] 1 2 3 4
 [B] 5 6 7 1'
 "#;
-    let spans = list_note_spans_from_source(source, "test.jianpu")
+    let spans = list_note_spans_from_source(source, "test.jianpu", None)
         .unwrap()
         .spans;
 
@@ -45,7 +45,7 @@ Melody [M] = notes
 # score
 [M] 4~4 3 2
 "#;
-    let spans = list_note_spans_from_source(source, "test.jianpu")
+    let spans = list_note_spans_from_source(source, "test.jianpu", None)
         .unwrap()
         .spans;
 
@@ -72,7 +72,7 @@ Perc [P] = percussion "38: Acoustic Snare"
 [C] 1 1m 1 1m
 [P] x x x x
 "#;
-    let spans = list_note_spans_from_source(source, "test.jianpu")
+    let spans = list_note_spans_from_source(source, "test.jianpu", None)
         .unwrap()
         .spans;
 
@@ -100,7 +100,7 @@ Melody [M] = notes
 # score
 [M] 1 0 3 4
 "#;
-    let spans = list_note_spans_from_source(source, "test.jianpu")
+    let spans = list_note_spans_from_source(source, "test.jianpu", None)
         .unwrap()
         .spans;
 
@@ -229,7 +229,7 @@ Melody [M] = notes
 # score
 [M] 1 0 3 4
 "#;
-    let spans = list_note_spans_from_source(source, "test.jianpu")
+    let spans = list_note_spans_from_source(source, "test.jianpu", None)
         .unwrap()
         .spans;
     let rest_cell = NoteCell {

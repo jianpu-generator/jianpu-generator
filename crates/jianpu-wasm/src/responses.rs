@@ -208,8 +208,11 @@ pub(crate) fn list_measure_spans_response(source: &str) -> ListMeasureSpansRespo
     }
 }
 
-pub(crate) fn list_note_spans_response(source: &str) -> ListNoteSpansResponse {
-    match list_note_spans_from_source(source, "input.jianpu") {
+pub(crate) fn list_note_spans_response(
+    source: &str,
+    enabled_tracks: Option<&[String]>,
+) -> ListNoteSpansResponse {
+    match list_note_spans_from_source(source, "input.jianpu", enabled_tracks) {
         Ok(result) => {
             let spans: Vec<NoteSpanOut> = result
                 .spans
@@ -267,8 +270,11 @@ pub(crate) fn group_note_selection_response(
     }
 }
 
-pub(crate) fn list_lyric_spans_response(source: &str) -> ListLyricSpansResponse {
-    match list_lyric_spans_from_source(source, "input.jianpu") {
+pub(crate) fn list_lyric_spans_response(
+    source: &str,
+    enabled_tracks: Option<&[String]>,
+) -> ListLyricSpansResponse {
+    match list_lyric_spans_from_source(source, "input.jianpu", enabled_tracks) {
         Ok(result) => {
             let spans: Vec<LyricSpanOut> = result
                 .spans

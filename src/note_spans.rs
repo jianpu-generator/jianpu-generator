@@ -47,11 +47,22 @@ struct PartCounterState {
 /// Return the source byte span of every note/chord/percussion/rest event in
 /// the compiled score, one entry per event, with note ids matching the
 /// compiled `ColumnElement::note_id` values (including tie-continuation reuse).
+///
+/// `enabled_tracks` must mirror whatever the caller passed to the render
+/// pipeline (see `render_svgs_with_parts`/`apply_track_filter`): hiding a
+/// part `Vec::retain`s it out of every measure's `parts` before compiling,
+/// which shifts every later part's index down by one. Every `source_part_index`
+/// emitted here matches the SVG's `data-part-index` only when the same
+/// filter is applied here too — passing `None` when tracks are actually
+/// hidden would emit indices for the *unfiltered* part list, which no longer
+/// agree with the compacted indices the hidden-aware SVG renders.
 pub fn list_note_spans_from_source(
     source: &str,
     filename: &str,
+    enabled_tracks: Option<&[String]>,
 ) -> Result<NoteSpansResult, IrrecoverableError> {
-    let score = crate::compile(source, filename, &[])?;
+    let mut score = crate::compile(source, filename, &[])?;
+    crate::filters::apply_track_filter(&mut score, enabled_tracks);
 
     let max_parts = score
         .measures

@@ -81,12 +81,19 @@ pub fn list_measure_spans(source: &str) -> ListMeasureSpansResponse {
 /// keyed by `(sourcePartIndex, noteId)` matching the SVG's `data-part-index`/
 /// `data-note-id` attributes on each `Tag::Note` group.
 ///
+/// `enabled_tracks` must match whatever was passed to [`render`]/
+/// [`render_with_highlight_range`] for the same source: hiding a part
+/// compacts every later part's rendered `data-part-index` down by one, and
+/// `sourcePartIndex` here only lines up with that when the same filter is
+/// applied on both sides.
+///
 /// - `{ "status": "ok", "spans": [{ "sourcePartIndex", "noteId", "measureIndex",
 ///   "start", "end" }, ...] }` on success
 /// - `{ "status": "err" }` on parse failure
+#[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
-pub fn list_note_spans(source: &str) -> ListNoteSpansResponse {
-    list_note_spans_response(source)
+pub fn list_note_spans(source: &str, enabled_tracks: Option<Vec<String>>) -> ListNoteSpansResponse {
+    list_note_spans_response(source, enabled_tracks.as_deref())
 }
 
 /// Groups a drag-selected set of `(sourcePartIndex, noteId)` cells into
@@ -111,12 +118,20 @@ pub fn group_note_selection(
 /// `(sourcePartIndex, noteId, verse)` matching the SVG's `data-part-index`/
 /// `data-note-id`/`data-verse` attributes on each `Tag::Lyric` group.
 ///
+/// `enabled_tracks` must match whatever was passed to [`render`]/
+/// [`render_with_highlight_range`] for the same source — see
+/// [`list_note_spans`]'s doc comment for why.
+///
 /// - `{ "status": "ok", "spans": [{ "sourcePartIndex", "noteId", "verse",
 ///   "measureIndex", "start", "end" }, ...] }` on success
 /// - `{ "status": "err" }` on parse failure
+#[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
-pub fn list_lyric_spans(source: &str) -> ListLyricSpansResponse {
-    list_lyric_spans_response(source)
+pub fn list_lyric_spans(
+    source: &str,
+    enabled_tracks: Option<Vec<String>>,
+) -> ListLyricSpansResponse {
+    list_lyric_spans_response(source, enabled_tracks.as_deref())
 }
 
 /// Groups a drag-selected set of `(sourcePartIndex, noteId, verse)` cells

@@ -333,7 +333,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'listNoteSpans') {
-    const result = list_note_spans(msg.source)
+    const result = list_note_spans(msg.source, msg.enabledTracks)
     postMessage({
       type: 'noteSpans',
       id: msg.id,
@@ -344,7 +344,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'listLyricSpans') {
-    const result = list_lyric_spans(msg.source)
+    const result = list_lyric_spans(msg.source, msg.enabledTracks)
     postMessage({
       type: 'lyricSpans',
       id: msg.id,

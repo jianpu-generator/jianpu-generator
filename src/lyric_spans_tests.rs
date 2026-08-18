@@ -12,7 +12,7 @@ Melody [M] = notes+lyrics
 [M] 1 2 3 4
 [M] a b c d
 "#;
-    let spans = list_lyric_spans_from_source(source, "test.jianpu")
+    let spans = list_lyric_spans_from_source(source, "test.jianpu", None)
         .unwrap()
         .spans;
 
@@ -40,7 +40,7 @@ Melody [M] = notes+lyrics
 [M] 4~4 3 2
 [M] la di dum
 "#;
-    let spans = list_lyric_spans_from_source(source, "test.jianpu")
+    let spans = list_lyric_spans_from_source(source, "test.jianpu", None)
         .unwrap()
         .spans;
 
@@ -72,7 +72,7 @@ Melody [M] = notes+lyrics
 [M] a b
 [M] one two
 "#;
-    let spans = list_lyric_spans_from_source(source, "test.jianpu")
+    let spans = list_lyric_spans_from_source(source, "test.jianpu", None)
         .unwrap()
         .spans;
 
@@ -106,7 +106,7 @@ Words [W] = lyrics
 [M] 1 2 3 4
 [W] full verse line here
 "#;
-    let spans = list_lyric_spans_from_source(source, "test.jianpu")
+    let spans = list_lyric_spans_from_source(source, "test.jianpu", None)
         .unwrap()
         .spans;
 

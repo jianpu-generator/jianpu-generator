@@ -51,11 +51,19 @@ struct PartCounterState {
 /// per-syllable spans; a standalone `lyrics` part's whole-line verses (see
 /// `ElementContent::LyricLine`) have no per-note identity to key a syllable
 /// selection by, so they're never emitted here.
+///
+/// `enabled_tracks` must mirror whatever the caller passed to the render
+/// pipeline — see `note_spans::list_note_spans_from_source`'s doc comment
+/// for why: without it, `source_part_index` here would disagree with the
+/// hidden-aware SVG's compacted `data-part-index` for every part declared
+/// after a hidden one.
 pub fn list_lyric_spans_from_source(
     source: &str,
     filename: &str,
+    enabled_tracks: Option<&[String]>,
 ) -> Result<LyricSpansResult, IrrecoverableError> {
-    let score = crate::compile(source, filename, &[])?;
+    let mut score = crate::compile(source, filename, &[])?;
+    crate::filters::apply_track_filter(&mut score, enabled_tracks);
 
     let max_parts = score
         .measures

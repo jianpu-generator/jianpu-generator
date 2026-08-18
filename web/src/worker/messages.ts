@@ -110,8 +110,18 @@ export type WorkerRequest =
       disabledLyrics?: string[]
     }
   | { type: 'listMeasureSpans'; source: string; id: number }
-  | { type: 'listNoteSpans'; source: string; id: number }
-  | { type: 'listLyricSpans'; source: string; id: number }
+  | {
+      type: 'listNoteSpans'
+      source: string
+      id: number
+      enabledTracks?: string[]
+    }
+  | {
+      type: 'listLyricSpans'
+      source: string
+      id: number
+      enabledTracks?: string[]
+    }
   | { type: 'previewInstrument'; id: number; programNumber: number }
   | { type: 'previewPercussion'; id: number; key: number }
   | {

@@ -224,11 +224,12 @@ export function useJianpuWorkerRenderRequests({
         type: 'listNoteSpans',
         source,
         id,
+        enabledTracks,
       } satisfies WorkerRequest)
     }, debounceMs)
 
     return () => window.clearTimeout(timer)
-  }, [source, debounceMs])
+  }, [source, debounceMs, enabledTracks])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: workerRef/lyricSpansRequestIdRef/latestLyricSpansIdRef are stable refs passed in as params
   useEffect(() => {
@@ -243,11 +244,12 @@ export function useJianpuWorkerRenderRequests({
         type: 'listLyricSpans',
         source,
         id,
+        enabledTracks,
       } satisfies WorkerRequest)
     }, debounceMs)
 
     return () => window.clearTimeout(timer)
-  }, [source, debounceMs])
+  }, [source, debounceMs, enabledTracks])
 
   return { notifySelection }
 }
