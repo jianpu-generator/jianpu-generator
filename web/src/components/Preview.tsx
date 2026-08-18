@@ -167,6 +167,7 @@ export function Preview({
   // SVG DOM (e.g. `documents`/`highlightedDocuments` changing after the
   // Monaco selection this drag pushed), which would silently wipe any
   // dataset attribute set only during the drag itself.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: documents/highlightedDocuments aren't read in the body, but must stay listed so this re-runs after they swap in fresh SVG DOM (see comment above).
   useEffect(() => {
     const container = previewPagesRef.current
     if (!container) return
@@ -181,6 +182,7 @@ export function Preview({
   // Mirrors the effect above for lyric syllable selection — independent of
   // `selectedNoteCells`, since a lyric selection never drives note
   // highlighting and vice versa (see `useLyricSelection`).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: documents/highlightedDocuments aren't read in the body, but must stay listed so this re-runs after they swap in fresh SVG DOM (see comment above).
   useEffect(() => {
     const container = previewPagesRef.current
     if (!container) return

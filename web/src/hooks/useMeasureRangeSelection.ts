@@ -43,6 +43,7 @@ export function useMeasureRangeSelection(
     runs: Awaited<ReturnType<typeof groupSelectedLyricsIntoContiguousRuns>>,
   ) => void,
 ) {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: editorRef is a ref object with a stable identity across renders (standard React convention); listing editorRef.current/.setSelections would stale-capture the ref's value at callback-creation time instead of reading it live on each call.
   return useCallback(
     async (noteCells: NoteCell[], lyricCells: LyricCell[]) => {
       if (!editorRef.current) {
