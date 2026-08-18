@@ -41,7 +41,10 @@ interface PreviewProps {
   emptyMessage?: string
   onSectionLabelClick?: (label: string) => void
   /** Fired on mouseup after a note-level drag-select (see `getNoteAtPoint`),
-   * with every note/rest cell the drag's marquee overlapped. */
+   * with every note/rest cell the drag's marquee overlapped — but only when
+   * `onMeasureRangeSelect` isn't supplied (see `onLyricRangeSelect` below for
+   * why: a note drag's marquee can also cover lyric syllables underneath
+   * it, which then routes through `onMeasureRangeSelect` instead). */
   onNoteRangeSelect?: (selectedCells: NoteCell[]) => void
   /** The note/rest cells from the most recent note drag-select (see
    * `onNoteRangeSelect`), echoed back so the highlight can be re-applied
@@ -55,8 +58,15 @@ interface PreviewProps {
   noteSpans?: NoteSpan[]
   /** Fired on mouseup after a lyric-syllable drag-select (see
    * `getLyricAtPoint`), with every syllable cell the drag's marquee
-   * overlapped. Independent of `onNoteRangeSelect` — a lyric drag never
-   * selects/highlights notes and vice versa. */
+   * overlapped — but only when `onMeasureRangeSelect` isn't supplied. A
+   * lyric drag's marquee can also visually cover notes above it (and vice
+   * versa for a note drag), so whenever `onMeasureRangeSelect` is wired up
+   * it's used instead — with both the note cells and the lyric cells the
+   * marquee overlapped, empty array or not — since a mounted editor's Monaco
+   * selection can only take one combined push per gesture rather than one
+   * from each of this and `onNoteRangeSelect` independently (see
+   * `usePreviewDragSelection`'s mouseup handler and `onMeasureRangeSelect`
+   * below). */
   onLyricRangeSelect?: (selectedCells: LyricCell[]) => void
   /** The lyric syllable cells from the most recent lyric drag-select (see
    * `onLyricRangeSelect`), echoed back so the highlight can be re-applied
@@ -67,12 +77,14 @@ interface PreviewProps {
    * selects the verse lyrics under it, alongside `noteSpans` for notes. */
   lyricSpans?: LyricSpan[]
   /** Fired instead of `onNoteRangeSelect`/`onLyricRangeSelect` for a
-   * measure/bar-line click or drag (see `usePreviewDragSelection`), with
-   * every note cell and every lyric cell the resolved measure range
-   * contains. A measure selects both at once, so this is a single combined
-   * callback rather than one call to each of the other two — see
-   * `useAppController`'s `handleMeasureRangeSelect` for why calling both
-   * independently doesn't work. */
+   * measure/bar-line click or drag, and also for a note- or lyric-level
+   * drag/click whose marquee visually covers the other cell type too (see
+   * `usePreviewDragSelection`), with every note cell and every lyric cell
+   * the gesture resolved to. Any of the three gestures can select both cell
+   * types at once, so this is a single combined callback rather than one
+   * call to each of the other two — see `useAppController`'s
+   * `handleMeasureRangeSelect` for why calling both independently doesn't
+   * work. */
   onMeasureRangeSelect?: (
     noteCells: NoteCell[],
     lyricCells: LyricCell[],

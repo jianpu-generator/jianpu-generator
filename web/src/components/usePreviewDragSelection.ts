@@ -24,7 +24,13 @@ import {
 
 // One discriminated ref rather than a separate measure-drag and note-drag
 // ref: a single mousedown can only ever arm one mode (see the handler
-// below), and two independent refs risk both firing at once.
+// below), and two independent refs risk both firing at once. This only
+// governs which mode a mousedown *arms* — it doesn't stop a single armed
+// mode's move/up handlers from resolving cells of more than one type. Both
+// 'note' and 'lyric' mode union in the other cell type's marquee hits (via
+// `applyNoteDragHighlights`/`applyLyricDragHighlights`, which are stateless
+// pure functions over the note/lyric specs, not stateful refs), the same way
+// 'measure' mode always has.
 //
 // A mousedown that lands on a note doesn't commit to 'note' mode right
 // away — it starts 'pending' instead, and only arms into 'note' once the
@@ -125,18 +131,27 @@ export function usePreviewDragSelection(
           current,
         }
         applyNoteDragHighlights(container, dragState.anchor, current)
+        // A note-drag's marquee can visually sweep over the lyric row
+        // underneath it too — union in whatever lyric cells it also
+        // overlaps, mirroring 'measure' mode below (which unions
+        // `noteCellsInMeasureRange`/`lyricCellsInMeasureRange` together).
+        applyLyricDragHighlights(container, dragState.anchor, current)
         return
       }
 
       if (dragState.mode === 'note') {
         dragState.current = { x: e.clientX, y: e.clientY }
         applyNoteDragHighlights(container, dragState.anchor, dragState.current)
+        applyLyricDragHighlights(container, dragState.anchor, dragState.current)
         return
       }
 
       if (dragState.mode === 'lyric') {
         dragState.current = { x: e.clientX, y: e.clientY }
         applyLyricDragHighlights(container, dragState.anchor, dragState.current)
+        // Symmetric to 'note' mode above — a lyric-drag's marquee can also
+        // sweep over the notes above it, so union those in too.
+        applyNoteDragHighlights(container, dragState.anchor, dragState.current)
         return
       }
 
@@ -208,13 +223,29 @@ export function usePreviewDragSelection(
       if (dragState.mode === 'note') {
         const current = { x: e.clientX, y: e.clientY }
         // Leave the highlight as the drag left it — don't clear it here.
-        // `onNoteRangeSelectRef` feeds `selectedNoteCells` back in, and
+        // `onMeasureRangeSelectRef` (or the `onNoteRangeSelectRef` fallback)
+        // feeds `selectedNoteCells`/`selectedLyricCells` back in, and
         // `Preview`'s declarative effect keeps it applied (and re-applies it
         // if a re-render swaps the DOM out from under it).
         const cells = container
           ? applyNoteDragHighlights(container, dragState.anchor, current)
           : []
-        onNoteRangeSelectRef.current?.(cells)
+        // The marquee can also cover lyric syllables underneath — union them
+        // in, same as `handleMouseMove` above and mirroring 'measure' mode's
+        // combined note+lyric resolution.
+        const lyricCells = container
+          ? applyLyricDragHighlights(container, dragState.anchor, current)
+          : []
+        if (onMeasureRangeSelectRef.current) {
+          onMeasureRangeSelectRef.current(cells, lyricCells)
+        } else {
+          // No combined callback wired up — fall back to the two
+          // independent ones (safe here since there's no editor-mounted
+          // Monaco push to clobber; see `onMeasureRangeSelect`'s doc comment
+          // for why a mounted editor needs the combined path instead).
+          onNoteRangeSelectRef.current?.(cells)
+          onLyricRangeSelectRef.current?.(lyricCells)
+        }
         dragStateRef.current = null
         return
       }
@@ -222,12 +253,22 @@ export function usePreviewDragSelection(
       if (dragState.mode === 'lyric') {
         const current = { x: e.clientX, y: e.clientY }
         // Leave the highlight as the drag left it, same as 'note' mode —
-        // `onLyricRangeSelectRef` feeds `selectedLyricCells` back in, and
-        // `Preview`'s declarative effect keeps it applied.
+        // the combined callback feeds `selectedNoteCells`/`selectedLyricCells`
+        // back in, and `Preview`'s declarative effect keeps it applied.
         const cells = container
           ? applyLyricDragHighlights(container, dragState.anchor, current)
           : []
-        onLyricRangeSelectRef.current?.(cells)
+        // Symmetric to 'note' mode above — union in whatever notes the
+        // marquee also covers.
+        const noteCells = container
+          ? applyNoteDragHighlights(container, dragState.anchor, current)
+          : []
+        if (onMeasureRangeSelectRef.current) {
+          onMeasureRangeSelectRef.current(noteCells, cells)
+        } else {
+          onLyricRangeSelectRef.current?.(cells)
+          onNoteRangeSelectRef.current?.(noteCells)
+        }
         dragStateRef.current = null
         return
       }
