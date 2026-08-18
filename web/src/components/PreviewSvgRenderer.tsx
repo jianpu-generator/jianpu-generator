@@ -11,6 +11,13 @@ import type { ReactNode } from 'react'
 // PLAN-section-label-engraving-quality.md.
 const DIRECTIVE_LINE_FONT_FAMILY = '"Source Han Sans SC", sans-serif'
 
+/** Stroke width (SVG units) of the invisible hit-line drawn over each bar
+ * line — wide enough to be reliably hoverable/draggable (the real bar line
+ * is only 0.5pt), narrow enough to stay inside its own measure-column
+ * share (`MIN_MEASURE_WIDTH_PT` floors every measure at 24pt) and not eat
+ * into a neighboring note's or part label's own click target. */
+const BAR_LINE_HIT_WIDTH = 6
+
 function transparentRectRoleToDataVariant(
   role:
     | 'measureClickTarget'
@@ -246,7 +253,47 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
   }
 }
 
+/** Bar lines render inline with everything else in `doc.elements`' original
+ * order, so a note's or measure's own click-target rect (added later in that
+ * order, per `render_new_renderer`'s element sequencing) normally paints
+ * over — and wins hit-testing against — the thin bar-line stroke beneath it.
+ * `renderSvgDocument` renders a second, invisible, wider hit-line for each
+ * one *after* every other element, so it's reliably topmost for hover/click
+ * regardless of where the bar line falls in the original sequence. Bar
+ * lines are always emitted flat into `page.elements` (see
+ * `render_bar_line`), never nested inside a `Group`, so a shallow scan is
+ * enough. */
+function collectBarLines(elements: SvgElementOut[]): SvgElementOut[] {
+  return elements.filter(
+    (el) => el.kind.type === 'line' && el.variant === 'bar-line',
+  )
+}
+
+/** The invisible, wider drag handle drawn over a bar line (see
+ * `collectBarLines`) — gives the divider a real hover/cursor affordance and
+ * lets a mousedown here fall through past section-label/part-label/note hit
+ * detection (all `elementFromPoint`-based) straight to `Preview.tsx`'s
+ * measure-range fallback, so grabbing a bar line always starts a clean
+ * measure-range drag instead of racing whatever note or label happens to
+ * share that pixel. */
+function renderBarLineDragHandle(el: SvgElementOut, key: number): ReactNode {
+  if (el.kind.type !== 'line') return null
+  return (
+    <line
+      key={key}
+      x1={el.x}
+      y1={el.y}
+      x2={el.kind.x2}
+      y2={el.kind.y2}
+      stroke="transparent"
+      strokeWidth={BAR_LINE_HIT_WIDTH}
+      className="bar-line-drag-handle"
+    />
+  )
+}
+
 export function renderSvgDocument(doc: SvgDocumentOut, key: number): ReactNode {
+  const barLines = collectBarLines(doc.elements)
   return (
     // biome-ignore lint/a11y/noSvgWithoutTitle: synthesized score SVG; title would be redundant with surrounding page context
     <svg
@@ -257,6 +304,7 @@ export function renderSvgDocument(doc: SvgDocumentOut, key: number): ReactNode {
       viewBox={`0 0 ${Math.round(doc.width_pt)} ${Math.round(doc.height_pt)}`}
     >
       {doc.elements.map((el, i) => renderSvgElement(el, i))}
+      {barLines.map((el, i) => renderBarLineDragHandle(el, i))}
     </svg>
   )
 }
