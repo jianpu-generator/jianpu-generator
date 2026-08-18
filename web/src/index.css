@@ -54,12 +54,9 @@ body,
   fill: rgba(37, 99, 235, 0.25);
 }
 
-/* Green, distinct from the note selection's blue above, so both selection
-   kinds stay visually distinguishable when a lyric syllable's selection is
-   visible independently of its note's (see Tag::Lyric). */
 [data-tag="lyric"][data-lyric-drag-selected]
   rect[data-variant="lyric-click-target-rect"] {
-  fill: rgba(22, 163, 74, 0.25);
+  fill: rgba(37, 99, 235, 0.25);
 }
 
 rect[data-variant="part-label-click-target-rect"]:hover,
