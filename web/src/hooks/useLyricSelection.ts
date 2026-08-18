@@ -1,9 +1,9 @@
 import { group_lyric_selection } from 'jianpu-wasm'
 import type { RefObject } from 'react'
-import { useCallback, useRef, useState } from 'react'
 import type { LyricCell } from '../components/previewSelection'
 import type { EditorHandle, LyricSpan } from '../types'
 import { ensureWasmInit } from '../wasmInit'
+import { useByteRangeSelectionCore } from './useByteRangeSelectionCore'
 
 /** One contiguous drag-selected byte range within a single verse line of a
  * single part's single measure, as grouped by the wasm export
@@ -36,6 +36,18 @@ async function groupSelectedLyricsIntoContiguousRuns(
     : []
 }
 
+function cellFromLyricSpan(span: LyricSpan): LyricCell {
+  return {
+    sourcePartIndex: span.sourcePartIndex,
+    noteId: span.noteId,
+    verse: span.verse,
+  }
+}
+
+function lyricRunByteRange(run: LyricSelectionRun) {
+  return { start: run.startByte, end: run.endByte }
+}
+
 /**
  * Turns a click/drag-select over lyric syllables (a set of `(source_part_index,
  * note_id, verse)` cells hit-tested off the SVG, see `Preview.tsx`) into a
@@ -43,56 +55,24 @@ async function groupSelectedLyricsIntoContiguousRuns(
  * `(part, verse, measure)` the drag touched.
  *
  * Deliberately independent of `useNoteSelection`: a lyric selection never
- * drives note highlighting and vice versa, so this hook keeps its own state
- * and its own Monaco-push logic rather than threading lyric cells through
- * `useNoteSelection`'s `selectedNoteCells`/`runs` machinery.
+ * drives note highlighting and vice versa, so this hook keeps its own call to
+ * `useByteRangeSelectionCore` (and thus its own state) rather than threading
+ * lyric cells through `useNoteSelection`'s `selectedNoteCells`/`runs`.
  */
 export function useLyricSelection(
   lyricSpans: LyricSpan[],
   editorRef: RefObject<EditorHandle | null>,
 ) {
-  const [lastSelectedCells, setLastSelectedCells] = useState<LyricCell[]>([])
-  // Mirrors `useNoteSelection`'s `suppressNextEditorSelectionSyncRef`: set
-  // right before `handleLyricRangeSelect` pushes a selection into Monaco, so
-  // the echoed-back `handleEditorSelectionChange` call doesn't redundantly
-  // re-derive `lastSelectedCells` from a selection that already matches it.
-  const suppressNextEditorSelectionSyncRef = useRef(false)
-
-  const handleLyricRangeSelect = useCallback(
-    async (selectedCells: LyricCell[]) => {
-      const runs = await groupSelectedLyricsIntoContiguousRuns(
-        selectedCells,
-        lyricSpans,
-      )
-      setLastSelectedCells(selectedCells)
-      if (!editorRef.current || runs.length === 0) return
-      suppressNextEditorSelectionSyncRef.current = true
-      editorRef.current.setSelections(
-        runs.map((run) => ({ start: run.startByte, end: run.endByte })),
-      )
-    },
-    [lyricSpans, editorRef],
-  )
-
-  const handleEditorSelectionChange = useCallback(
-    async (startByte: number, endByte: number) => {
-      if (suppressNextEditorSelectionSyncRef.current) {
-        suppressNextEditorSelectionSyncRef.current = false
-        return
-      }
-      const cells: LyricCell[] =
-        startByte === endByte
-          ? []
-          : lyricSpans
-              .filter((span) => span.start < endByte && span.end > startByte)
-              .map((span) => ({
-                sourcePartIndex: span.sourcePartIndex,
-                noteId: span.noteId,
-                verse: span.verse,
-              }))
-      setLastSelectedCells(cells)
-    },
-    [lyricSpans],
+  const {
+    selectedCells: lastSelectedCells,
+    handleRangeSelect: handleLyricRangeSelect,
+    handleEditorSelectionChange,
+  } = useByteRangeSelectionCore<LyricCell, LyricSpan, LyricSelectionRun>(
+    lyricSpans,
+    editorRef,
+    groupSelectedLyricsIntoContiguousRuns,
+    cellFromLyricSpan,
+    lyricRunByteRange,
   )
 
   return {
