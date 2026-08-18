@@ -130,6 +130,31 @@ fn face_char_advance_width(
     measured.unwrap_or(font_size * FALLBACK_ADVANCE_WIDTH_RATIO)
 }
 
+/// Left-side bearing (in points) of one character in `face` at `font_size`
+/// — the gap between the glyph's advance-box origin and where its ink
+/// actually starts, per `glyph_bounding_box`. `0.0` if the glyph is
+/// missing, has no outline (e.g. a space), or the font failed to parse.
+fn face_glyph_left_bearing(
+    face: Option<&ttf_parser::Face<'static>>,
+    c: char,
+    font_size: f32,
+) -> f32 {
+    let bearing = face.and_then(|face| {
+        let glyph_id = face.glyph_index(c)?;
+        let bbox = face.glyph_bounding_box(glyph_id)?;
+        Some(bbox.x_min.max(0) as f32 / face.units_per_em() as f32 * font_size)
+    });
+    bearing.unwrap_or(0.0)
+}
+
+/// Left-side bearing (in points) of one character in the pinned CJK font
+/// (see `directive_line_font`), used to compensate `GLYPH_LEFT_PADDING` for
+/// CJK lyric syllables' own built-in inset — see
+/// `coordinate_resolver::resolve::flush_left_padding`.
+pub(crate) fn cjk_glyph_left_bearing(c: char, font_size: f32) -> f32 {
+    face_glyph_left_bearing(font_source::directive_line_font(), c, font_size)
+}
+
 /// Real advance width (in points) of one character at the given font size,
 /// measured from the pinned font's `hmtx` table (see `font_source::directive_line_font`).
 pub(crate) fn char_advance_width(c: char, font_size: f32, bold: bool) -> f32 {
@@ -275,4 +300,26 @@ pub(crate) const DIRECTIVE_LINE_BOTTOM_PADDING: f32 = 12.0;
 /// `new_renderer/directive_line.rs`), so the row it sits in doesn't either.
 pub(crate) fn directive_line_row_height() -> f32 {
     DIRECTIVE_LINE_TOP_PADDING + DIRECTIVE_LINE_BOTTOM_PADDING
+}
+
+#[cfg(test)]
+mod tests {
+    use super::cjk_glyph_left_bearing;
+
+    #[test]
+    fn cjk_glyph_left_bearing_is_positive_for_a_real_cjk_character() {
+        // A full-width CJK glyph is conventionally drawn inset within its
+        // advance box, so a real character in the pinned CJK font should
+        // measure a nonzero left-side bearing.
+        let bearing = cjk_glyph_left_bearing('漢', 17.28);
+        assert!(bearing > 0.0, "bearing={bearing} should be > 0.0");
+    }
+
+    #[test]
+    fn cjk_glyph_left_bearing_is_zero_for_a_character_missing_from_the_font() {
+        // A private-use-area code point has no glyph in the pinned CJK font,
+        // so it falls back to 0.0 rather than a spurious measurement.
+        let bearing = cjk_glyph_left_bearing('\u{E000}', 17.28);
+        assert_eq!(bearing, 0.0);
+    }
 }

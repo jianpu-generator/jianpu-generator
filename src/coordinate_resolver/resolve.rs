@@ -59,17 +59,39 @@ fn is_flush_left_glyph(content: &GridContent) -> bool {
     )
 }
 
+/// The padding between a flush-left glyph's column and its anchor. For a
+/// CJK lyric syllable, `GLYPH_LEFT_PADDING` is reduced by that syllable's
+/// own leading character's left-side bearing (floored at `0.0`), so the
+/// *visible* gap from the bar line reads the same as a Latin syllable's or
+/// a note's, rather than stacking the font's own inset on top of the flat
+/// padding. Every other flush-left glyph gets the flat padding unchanged.
+fn flush_left_padding(content: &GridContent, cjk_font_size: f32) -> f32 {
+    let GridContent::LyricSyllable { text, .. } = content else {
+        return crate::font_metrics::GLYPH_LEFT_PADDING;
+    };
+    let Some(leading_char) = text.chars().next() else {
+        return crate::font_metrics::GLYPH_LEFT_PADDING;
+    };
+    if !('\u{4E00}'..='\u{9FFF}').contains(&leading_char) {
+        return crate::font_metrics::GLYPH_LEFT_PADDING;
+    }
+    let bearing = crate::font_metrics::cjk_glyph_left_bearing(leading_char, cjk_font_size);
+    (crate::font_metrics::GLYPH_LEFT_PADDING - bearing).max(0.0)
+}
+
 /// Bundles the config threaded through row-element resolution, kept constant
 /// across a page, so `resolve_row_element` stays under the clippy arg limit.
-/// `lyric_font_sizes`/`notes_font_size` used to size this too, back when
-/// `HAlign::Center` scaled a glyph's anchor by its own measured width; now
-/// that flush-left anchoring uses a flat `GLYPH_LEFT_PADDING` (see
-/// `crate::font_metrics`) instead, they're no longer threaded in here (though
-/// `resolve()`'s public signature still accepts and forwards them — see its
-/// doc comment).
+/// `notes_font_size` used to size this too, back when `HAlign::Center` scaled
+/// a glyph's anchor by its own measured width; now that flush-left anchoring
+/// uses a flat `GLYPH_LEFT_PADDING` (see `crate::font_metrics`) instead, it's
+/// no longer threaded in here (though `resolve()`'s public signature still
+/// accepts and forwards it — see its doc comment). `lyric_font_sizes` is back
+/// in use: a CJK lyric syllable's own font size is needed to measure its
+/// leading character's left-side bearing (see `flush_left_padding`).
 #[derive(Clone, Copy)]
 struct RowResolveConfig {
     note_number_width: f32,
+    lyric_font_sizes: LyricFontSizes,
 }
 
 fn resolve_row_element(
@@ -92,7 +114,7 @@ fn resolve_row_element(
                 PAGE_MARGIN
                     + geometry.glyph_left_anchor_x(
                         el.column as f32,
-                        crate::font_metrics::GLYPH_LEFT_PADDING,
+                        flush_left_padding(&el.content, config.lyric_font_sizes.cjk),
                     )
             } else {
                 x_start + span_width * 0.5
@@ -265,7 +287,7 @@ fn resolve_page(
     page: &GridPage,
     note_number_width: f32,
     part_label_width_pt: f32,
-    _lyric_font_sizes: LyricFontSizes,
+    lyric_font_sizes: LyricFontSizes,
     _notes_font_size: f32,
 ) -> Result<AbsolutePage, IrrecoverableError> {
     let usable_width = page.width_pt - 2.0 * PAGE_MARGIN;
@@ -273,7 +295,10 @@ fn resolve_page(
     let mut row_y = PAGE_MARGIN;
     let mut row_tops: Vec<f32> = Vec::with_capacity(page.rows.len());
 
-    let row_config = RowResolveConfig { note_number_width };
+    let row_config = RowResolveConfig {
+        note_number_width,
+        lyric_font_sizes,
+    };
     for row in &page.rows {
         row_tops.push(row_y);
         let geometry = row.column_geometry(usable_width, part_label_width_pt);

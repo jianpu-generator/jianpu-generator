@@ -137,3 +137,57 @@ fn lyric_syllable_shares_the_note_head_padding_formula() {
         lyric.x
     );
 }
+
+#[test]
+fn cjk_lyric_syllable_compensates_its_leading_glyphs_left_bearing() {
+    // A CJK syllable's own leading character carries a built-in left-side
+    // bearing, so its resolved x must sit `bearing` points left of what the
+    // plain `GLYPH_LEFT_PADDING` formula (see
+    // `lyric_syllable_shares_the_note_head_padding_formula`) would give a
+    // Latin syllable at the same column.
+    let note_number_width = 12.0;
+    let cjk_font_size = 17.28;
+    let el = GridElement {
+        column: 0,
+        column_span: 1,
+        halign: HAlign::Center,
+        valign: VAlign::Center,
+        content: GridContent::LyricSyllable {
+            text: "漢字".to_string(),
+            source_part_index: 0,
+            note_id: 0,
+            verse: 0,
+        },
+    };
+    let page = single_row_page(el);
+    let abs = resolve(
+        &[page],
+        note_number_width,
+        40.0,
+        LyricFontSizes {
+            base: 14.4,
+            cjk: cjk_font_size,
+        },
+        12.0,
+    )
+    .unwrap();
+    let lyric = abs[0]
+        .elements
+        .iter()
+        .find(|e| matches!(e.content, AbsoluteContent::Lyric { .. }))
+        .expect("should have Lyric");
+
+    let x_start = 0.0; // column 0 starts at the row's own left edge
+    let bearing = crate::font_metrics::cjk_glyph_left_bearing('漢', cjk_font_size);
+    let expected_x = 25.0 + x_start + (crate::font_metrics::GLYPH_LEFT_PADDING - bearing).max(0.0);
+    assert!(bearing > 0.0, "test is only meaningful if bearing > 0.0");
+    assert!(
+        (lyric.x - expected_x).abs() < 0.01,
+        "x={} expected={expected_x} bearing={bearing}",
+        lyric.x
+    );
+    assert!(
+        lyric.x < 25.0 + x_start + crate::font_metrics::GLYPH_LEFT_PADDING,
+        "a CJK syllable's x should sit left of the flat GLYPH_LEFT_PADDING x"
+    );
+}
