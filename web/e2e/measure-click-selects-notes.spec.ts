@@ -296,12 +296,10 @@ test('clicking a merged rest bar selects its one merged-run note cell', async ({
   )
   await expect(highlightedNotes).toHaveCount(1)
 
-  // Unlike the other two tests, the button does NOT switch to "▶ Selection"
-  // here: a rest has no source byte span, so `groupSelectedNotesIntoContiguousRuns`
-  // (see `noteSpanSelection.ts`) intentionally drops a selection made up
-  // entirely of rest cells rather than pushing an empty/unplayable Monaco
-  // selection.
-  await expect(page.locator('button.play-measure-btn')).not.toHaveText(
+  // Same as clicking any other note: the merged run's rest cell has a real
+  // source byte span (see `note_spans.rs`'s `list_note_spans_from_source`),
+  // so the click still pushes a Monaco selection.
+  await expect(page.locator('button.play-measure-btn')).toHaveText(
     /Selection/,
     { timeout: 3_000 },
   )

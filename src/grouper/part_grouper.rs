@@ -325,6 +325,7 @@ impl PartGrouper {
                 duration: pr.duration,
                 dotted: pr.dotted,
                 double_dotted: pr.double_dotted,
+                event_span: span,
                 group_membership: pr.group_membership,
                 group_continuation: pr.group_continuation,
                 tuplet: pr.tuplet,

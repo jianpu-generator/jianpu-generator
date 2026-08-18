@@ -173,6 +173,8 @@ pub struct GroupedRest {
     pub dotted: bool,
     /// True if this rest was written with a second dot (double-dotted duration).
     pub double_dotted: bool,
+    /// Byte range of this rest token in the original source.
+    pub event_span: Span,
     pub group_membership: u8,
     pub group_continuation: u8,
     /// The innermost `{...}` tuplet bracket this rest belonged to before rescaling,

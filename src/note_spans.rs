@@ -19,10 +19,11 @@ pub struct NoteSourceSpan {
     /// Index into `Score.measures`.
     pub measure_index: usize,
     /// Inclusive start byte of this event's token in the original source.
-    /// `None` for a rest, which has no single source token worth mapping to.
+    /// Always `Some` in practice (every `NoteEvent` variant, including
+    /// `Rest`, carries an `event_span`); kept `Option` so a future event
+    /// kind without a mappable token has somewhere to signal that.
     pub start: Option<usize>,
     /// Exclusive end byte of this event's token in the original source.
-    /// `None` for a rest.
     pub end: Option<usize>,
 }
 
@@ -78,7 +79,7 @@ pub fn list_note_spans_from_source(
                     NoteEvent::Note(note) => (Some(note.event_span), note.tie_to_next()),
                     NoteEvent::Chord(chord) => (Some(chord.event_span), chord.tie_to_next()),
                     NoteEvent::Percussion(hit) => (Some(hit.event_span), hit.tie_to_next()),
-                    NoteEvent::Rest(_) => (None, false),
+                    NoteEvent::Rest(rest) => (Some(rest.event_span), false),
                 };
 
                 let note_id = if state.prev_tie {
@@ -122,11 +123,12 @@ pub struct NoteSelectionRun {
 }
 
 /// Groups a drag-selected set of `(source_part_index, note_id)` cells into
-/// contiguous per-`(part, measure)` source byte runs. A rest cell (whose
-/// `NoteSourceSpan` has `start`/`end` both `None`) is skipped rather than
-/// letting it break an otherwise-contiguous run — a run with no non-rest
-/// cells never appears in the result. Output is sorted by
-/// `(source_part_index, measure_index)`.
+/// contiguous per-`(part, measure)` source byte runs, folding each selected
+/// cell's byte span into the running min/max for its `(part, measure)` key.
+/// A cell with no mappable `NoteSourceSpan` (`start`/`end` both `None`,
+/// which no current event kind produces, but is left possible for a future
+/// one) is skipped rather than letting it break an otherwise-contiguous
+/// run. Output is sorted by `(source_part_index, measure_index)`.
 pub fn group_selected_notes_into_contiguous_runs(
     selected_cells: &[NoteCell],
     note_spans: &[NoteSourceSpan],

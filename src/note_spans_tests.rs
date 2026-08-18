@@ -90,7 +90,7 @@ Perc [P] = percussion "38: Acoustic Snare"
 }
 
 #[test]
-fn rest_yields_no_span() {
+fn rest_yields_a_span_over_its_own_token() {
     let source = r#"# metadata
 title = "t"
 
@@ -105,11 +105,10 @@ Melody [M] = notes
         .spans;
 
     assert_eq!(spans.len(), 4);
-    assert!(spans[0].start.is_some());
-    assert_eq!(spans[1].start, None);
-    assert_eq!(spans[1].end, None);
-    assert!(spans[2].start.is_some());
-    assert!(spans[3].start.is_some());
+    assert!(spans.iter().all(|s| s.start.is_some() && s.end.is_some()));
+    let rest_start = spans[1].start.unwrap();
+    let rest_end = spans[1].end.unwrap();
+    assert_eq!(&source[rest_start..rest_end], "0");
 }
 
 fn span(
@@ -128,7 +127,15 @@ fn span(
     }
 }
 
-fn rest_span(source_part_index: usize, note_id: usize, measure_index: usize) -> NoteSourceSpan {
+/// A cell with no mappable source span. No current event kind produces
+/// this (every `NoteEvent` variant, including `Rest`, carries a byte span),
+/// but `group_selected_notes_into_contiguous_runs` still guards against it
+/// for a future event kind that might.
+fn unmappable_span(
+    source_part_index: usize,
+    note_id: usize,
+    measure_index: usize,
+) -> NoteSourceSpan {
     NoteSourceSpan {
         source_part_index,
         note_id,
@@ -174,10 +181,10 @@ fn multiple_selected_cells_merge_into_one_run_per_part_measure() {
 }
 
 #[test]
-fn selected_rest_does_not_break_contiguity() {
+fn selected_cell_with_no_mappable_span_does_not_break_contiguity() {
     let spans = vec![
         span(0, 0, 0, 10, 11),
-        rest_span(0, 1, 0),
+        unmappable_span(0, 1, 0),
         span(0, 2, 0, 14, 15),
     ];
     let cells = vec![
@@ -206,6 +213,34 @@ fn selected_rest_does_not_break_contiguity() {
             end_byte: 15,
         }]
     );
+}
+
+#[test]
+fn selecting_only_a_rest_selects_its_source_token() {
+    // Clicking the "0" rest in the SVG preview should select the "0" in
+    // the Monaco editor: a selection containing only a rest cell must
+    // still produce a run, not be silently dropped.
+    let source = r#"# metadata
+title = "t"
+
+# parts
+Melody [M] = notes
+
+# score
+[M] 1 0 3 4
+"#;
+    let spans = list_note_spans_from_source(source, "test.jianpu")
+        .unwrap()
+        .spans;
+    let rest_cell = NoteCell {
+        source_part_index: 0,
+        note_id: spans[1].note_id,
+    };
+
+    let runs = group_selected_notes_into_contiguous_runs(&[rest_cell], &spans);
+
+    assert_eq!(runs.len(), 1);
+    assert_eq!(&source[runs[0].start_byte..runs[0].end_byte], "0");
 }
 
 #[test]
