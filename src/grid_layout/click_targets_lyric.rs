@@ -7,7 +7,7 @@ use crate::grid_layout::layout::{
     block_column_width, is_chord_only_row, is_lyric_row, lyric_row_verse, LABEL_COLS,
     MUSIC_START_COL,
 };
-use crate::grid_layout::playback_cursor::group_elements_by_note_id;
+use crate::grid_layout::playback_cursor::{block_has_bar_line, group_elements_by_note_id};
 use crate::grid_layout::system_walk::for_each_system;
 use crate::grid_layout::types::{GridElement, Header, LyricClickTarget, LyricLabelClickTarget};
 use std::collections::{HashMap, HashSet};
@@ -100,7 +100,11 @@ fn lyric_owner_note_row_indices(system: &[MeasureBlock]) -> Vec<Option<usize>> {
 /// `column_end` is widened to match its own note's full written column span
 /// (attack plus any dash-continuation columns, via `group_elements_by_note_id`
 /// on the paired note row) so a multi-beat note's hover/click box covers its
-/// whole duration rather than stopping after the first beat.
+/// whole duration rather than stopping after the first beat. Both edges are
+/// then snapped to a system's leading/trailing bar line where relevant
+/// (`column_start` for the first syllable, `column_end` for the last),
+/// exactly like `compute_all_playback_cursor_targets` snaps a note's own
+/// click target.
 pub(crate) fn compute_all_lyric_click_targets(
     page_systems: &[Vec<Vec<MeasureBlock>>],
     tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
@@ -120,9 +124,11 @@ pub(crate) fn compute_all_lyric_click_targets(
             let row_indices = lyric_row_absolute_indices(system, row_offset, tuplet_part_indices);
             let owner_note_row_indices = lyric_owner_note_row_indices(system);
 
+            let last_block_idx = system.len().saturating_sub(1);
             let mut col_offset: u32 = MUSIC_START_COL;
             for (block_idx, block) in system.iter().enumerate() {
                 let col_w = block_column_width(block);
+                let has_bar_line = block_has_bar_line(block);
                 for (part_idx, row_idx) in row_indices.iter().enumerate() {
                     let Some(row_idx) = row_idx else {
                         continue;
@@ -146,6 +152,10 @@ pub(crate) fn compute_all_lyric_click_targets(
                                 .collect()
                         })
                         .unwrap_or_default();
+                    // The paired note row's own rightmost written column,
+                    // used below to detect the measure's last note — mirrors
+                    // `compute_all_playback_cursor_targets`'s `row_max_col`.
+                    let row_max_col = note_max_cols.values().copied().max();
                     // The row's own leftmost lyric column, used below to
                     // detect its first syllable — mirrors
                     // `compute_all_playback_cursor_targets`'s `row_min_col`.
@@ -171,10 +181,29 @@ pub(crate) fn compute_all_lyric_click_targets(
                         } else {
                             (col_offset + el.column) as f32
                         };
-                        let column_end = note_max_cols
-                            .get(note_id)
-                            .map(|max_col| (col_offset + max_col + 1) as f32)
-                            .unwrap_or(column_start + 1.0);
+                        // Snap the right edge to the rendered x of this
+                        // block's own trailing bar line for the measure's
+                        // last syllable, mirroring
+                        // `compute_all_playback_cursor_targets`'s own
+                        // `column_end` snap: flush right
+                        // (`bar_line_col + 1.0`) for the system's last
+                        // measure, otherwise centered on the bar line
+                        // (`bar_line_col + 0.5`) like an inter-measure one
+                        // is drawn. Without this the box stops a whole
+                        // column short of (or past) where the bar line is
+                        // actually drawn.
+                        let column_end = match note_max_cols.get(note_id) {
+                            Some(&max_col) if has_bar_line && Some(max_col) == row_max_col => {
+                                let bar_line_col = (col_offset + col_w - 1) as f32;
+                                if block_idx == last_block_idx {
+                                    bar_line_col + 1.0
+                                } else {
+                                    bar_line_col + 0.5
+                                }
+                            }
+                            Some(&max_col) => (col_offset + max_col + 1) as f32,
+                            None => column_start + 1.0,
+                        };
                         results.push((
                             page_idx,
                             LyricClickTarget {

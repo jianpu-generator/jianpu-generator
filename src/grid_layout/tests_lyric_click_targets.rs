@@ -179,10 +179,15 @@ fn lyric_click_target_spans_its_note_full_column_width() {
         .iter()
         .find(|t| t.note_id == 1)
         .expect("syllable for the one-beat note");
+    // This is also the measure's last (and only measure's) last syllable,
+    // so its right edge snaps flush to the system's trailing bar line (see
+    // `lyric_click_target_of_last_syllable_snaps_to_trailing_bar_line`),
+    // one column past its raw `max_col + 1`.
     assert_eq!(
         one_beat.column_end - one_beat.column_start,
-        1.0,
-        "a plain one-beat note's syllable box should still span exactly one column"
+        2.0,
+        "a plain one-beat note's syllable box should span its own column \
+         plus the trailing bar-line snap"
     );
 }
 
@@ -228,5 +233,100 @@ fn lyric_click_target_of_first_syllable_snaps_to_leading_bar_line() {
         first_syllable.column_start, 1.0,
         "the first syllable's left edge should snap to the system's leading \
          bar line, matching the first note's own click target"
+    );
+}
+
+/// The `notes_row_with_a_two_beat_note`/`lyric_verse_row` pair, but with
+/// `note_id`s shifted by 2 so a second copy can share a system with the
+/// first without colliding note IDs.
+fn notes_row_with_a_two_beat_note_shifted() -> MeasureRow {
+    let mut row = notes_row_with_a_two_beat_note();
+    for el in &mut row.elements {
+        if let Some(id) = el.note_id.as_mut() {
+            *id += 2;
+        }
+    }
+    row
+}
+
+fn lyric_verse_row_shifted() -> MeasureRow {
+    let mut row = lyric_verse_row();
+    for el in &mut row.elements {
+        if let ElementContent::Lyric { note_id, .. } = &mut el.content {
+            *note_id += 2;
+        }
+    }
+    row
+}
+
+/// The last syllable of a system's *last* measure should have its click
+/// box's right edge snapped flush to the system's trailing bar line
+/// (`column_end == bar_line_col + 1.0`), while the same-shaped last syllable
+/// of an *inter-measure* block only snaps to the bar line's own centered x
+/// (`bar_line_col + 0.5`) — mirroring exactly how
+/// `compute_all_playback_cursor_targets` treats a measure's last note in
+/// `playback_cursor_targets_snap_to_bar_lines_at_measure_edges`. Without this
+/// snap, a last syllable's box stops a whole column short of (or past) where
+/// the bar line is actually drawn.
+#[test]
+fn lyric_click_target_of_last_syllable_snaps_to_trailing_bar_line() {
+    let block1 = MeasureBlock {
+        rows: vec![notes_row_with_a_two_beat_note(), lyric_verse_row()],
+        decorations: vec![],
+        diagnostics: vec![],
+        represents_measures: 1,
+        merge_duplicate_measures_across_parts: true,
+        source_span: crate::error::Span::new(0, 0),
+    };
+    let block2 = MeasureBlock {
+        rows: vec![
+            notes_row_with_a_two_beat_note_shifted(),
+            lyric_verse_row_shifted(),
+        ],
+        decorations: vec![],
+        diagnostics: vec![],
+        represents_measures: 1,
+        merge_duplicate_measures_across_parts: true,
+        source_span: crate::error::Span::new(0, 0),
+    };
+
+    let pages = crate::grid_layout::layout(
+        &CompileResult {
+            blocks: vec![block1, block2],
+            slur_spans: vec![],
+            tuplet_spans: vec![],
+        },
+        &test_render_config(),
+        &no_header(),
+        595.0,
+        842.0,
+        None,
+    )
+    .pages;
+
+    let targets = &pages[0].lyric_click_targets;
+
+    let inter_measure_last = targets
+        .iter()
+        .find(|t| t.note_id == 1)
+        .expect("syllable for the first measure's last note");
+    let system_last = targets
+        .iter()
+        .find(|t| t.note_id == 3)
+        .expect("syllable for the system's last note");
+
+    assert_eq!(
+        inter_measure_last.column_end.fract(),
+        0.5,
+        "an inter-measure bar line is drawn centered on its column, so the \
+         preceding syllable's right edge should snap to its half-column x, \
+         not the next whole column"
+    );
+    assert_eq!(
+        system_last.column_end.fract(),
+        0.0,
+        "the system's closing bar line is drawn flush right at a whole \
+         column, so the last syllable's right edge should snap there \
+         exactly, not to a half-column x"
     );
 }

@@ -13,7 +13,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 /// Whether `block`'s first row ends in a `BarLine` element — mirrors
 /// `block_column_width`'s own lookup, which returns `1` (as if the block held
 /// only a bar-line-less single column) when none is found.
-fn block_has_bar_line(block: &MeasureBlock) -> bool {
+pub(crate) fn block_has_bar_line(block: &MeasureBlock) -> bool {
     block.rows.first().is_some_and(|row| {
         row.elements
             .iter()
