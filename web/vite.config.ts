@@ -2,7 +2,8 @@ import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
-import { defineConfig, type Plugin, type ViteDevServer } from 'vite'
+import type { Plugin, ViteDevServer } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 const WASM_PACK_ARGS = [
   'build',
@@ -226,5 +227,11 @@ export default defineConfig({
     fs: {
       allow: ['..'],
     },
+  },
+  test: {
+    // Vitest's default include glob also matches `*.spec.ts`, which is the
+    // extension Playwright's e2e suite (web/e2e/**) uses — restrict to the
+    // unit tests under src/ so `vitest run` doesn't try to execute those.
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 })

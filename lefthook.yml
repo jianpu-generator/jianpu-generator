@@ -40,6 +40,10 @@ pre-commit:
             glob: "web/**"
             run: cd web && pnpm exec biome check .
 
+          - name: web-unit-tests
+            glob: "web/**"
+            run: cd web && pnpm run test:unit
+
           - name: web-typecheck
             glob: "{crates/jianpu-wasm/**,web/**}"
             run: cd web && pnpm run build:wasm && python3 ../scripts/check-wasm-size.py && pnpm exec tsc -b

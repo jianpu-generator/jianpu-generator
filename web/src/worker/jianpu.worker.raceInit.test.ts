@@ -93,7 +93,8 @@ const raceMessages: WorkerRequest[] = [
 describe('jianpu.worker ensureInit', () => {
   it('only calls wasm init() once, no matter how many messages race in before it resolves', async () => {
     vi.stubGlobal('self', globalThis)
-    vi.stubGlobal('postMessage', vi.fn())
+    const postMessageMock = vi.fn()
+    vi.stubGlobal('postMessage', postMessageMock)
 
     await import('./jianpu.worker')
 
@@ -106,13 +107,15 @@ describe('jianpu.worker ensureInit', () => {
       onmessage({ data })
     }
 
-    await Promise.resolve()
-    await Promise.resolve()
-    await Promise.resolve()
-
-    expect(hoisted.initCallCount).toBe(1)
+    // The shared ensureInit() chain (wasmModulePromise -> init() -> the
+    // "ready" postMessage) resolves over several microtask hops; wait for
+    // init() to actually fire rather than hardcoding a tick count.
+    await vi.waitFor(() => expect(hoisted.initCallCount).toBe(1))
 
     hoisted.resolveInit?.()
+    // Likewise, wait for the "ready" postMessage that init() resolving
+    // triggers before unstubbing postMessage out from under it.
+    await vi.waitFor(() => expect(postMessageMock).toHaveBeenCalled())
     vi.unstubAllGlobals()
   })
 })

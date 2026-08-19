@@ -55,11 +55,11 @@ describe('main-thread wasm init', () => {
     void loadMetadataDefaults()
     void ensureWasmModule()
 
-    await Promise.resolve()
-    await Promise.resolve()
-    await Promise.resolve()
-
-    expect(hoisted.initCallCount).toBe(1)
+    // The shared `ensureWasmInit()` chain (fetch -> compileStreaming -> init)
+    // resolves over several microtask hops; wait for `init()` to actually
+    // fire rather than hardcoding a tick count that drifts with the chain's
+    // shape.
+    await vi.waitFor(() => expect(hoisted.initCallCount).toBe(1))
     expect(compileStreamingMock).toHaveBeenCalledTimes(1)
     expect(fetchMock).toHaveBeenCalledTimes(1)
 
