@@ -32,28 +32,18 @@ fn dash_weight() -> f32 {
     font_metrics::monospace_char_advance_width('\u{2014}', font_metrics::NOTE_DASH_FONT_SIZE)
 }
 
-/// Small dedicated clearance added on top of a dot's own measured reach,
-/// mirroring `layout_spacing_weights::DOT_CLEARANCE_PT` — kept smaller than
-/// a fresh column's general clearance so a dot still reads as bound tightly
-/// to the note/rest/dash it decorates.
-const DOT_CLEARANCE_PT: f32 = 0.5;
-
-/// Independently recomputed expected reach of a dotted note/rest/dash's
-/// rightmost dot from its own glyph's left edge, mirroring the offset/
-/// spacing formula `render_note_head`/`render_rest`/`render_note_dash`
-/// actually draw at (`center + note_number_width * 1.5`, further dots
-/// `note_number_width * DOT_SPACING_RATIO` apart, `TextAnchor::Middle` so a
-/// dot's right edge sits half its own advance width past its anchor) —
-/// deliberately not just calling `font_metrics::note_ish_dot_reach` back, so
-/// this test can't pass merely because production and test share a bug.
-fn expected_note_ish_dot_reach(dot_count: u32, note_number_width: f32, dot_font_size: f32) -> f32 {
-    let center_offset = note_number_width * 0.5;
-    let last_dot_anchor = center_offset
-        + note_number_width * 1.5
-        + (dot_count - 1) as f32 * note_number_width * font_metrics::DOT_SPACING_RATIO;
-    let half_dot_advance =
-        font_metrics::monospace_char_advance_width('\u{b7}', dot_font_size) / 2.0;
-    last_dot_anchor + half_dot_advance
+/// Independently recomputed expected extra weight of a dotted note/rest/
+/// dash's augmentation dot(s) — mirroring what `render_note_head`/
+/// `render_rest`/`render_note_dash` now actually draw: the dot(s) appended
+/// directly onto the glyph's own text run (see
+/// `font_metrics::augmentation_dot_suffix`), so their real rendered width at
+/// `dot_font_size` is exactly the extra room needed. Deliberately not just
+/// calling `font_metrics::augmentation_dot_suffix`/`monospace_text_width`
+/// back, so this test can't pass merely because production and test share a
+/// bug.
+fn expected_dot_extra_weight(dot_count: u32, dot_font_size: f32) -> f32 {
+    let dot_advance = font_metrics::monospace_char_advance_width('\u{b7}', dot_font_size);
+    dot_count as f32 * dot_advance
 }
 
 fn make_block(row_id: &str, content: ElementContent, bar_col: u32) -> MeasureBlock {
@@ -109,12 +99,7 @@ fn note_dash(dotted: bool, double_dotted: bool) -> ElementContent {
 }
 
 #[test]
-fn dotted_note_head_column_clears_its_dot_s_real_rendered_right_edge() {
-    // A dotted note's rod must reach at least as far right as the dot's own
-    // rendered right edge (see `render_note_head`'s `center + note_number_width
-    // * 1.5` dot anchor, `TextAnchor::Middle`) plus the dedicated dot clearance —
-    // not the old flat, position-unaware guess that fell short of even the
-    // dot's *position*, let alone its size.
+fn dotted_note_head_column_reserves_exactly_its_dot_s_own_rendered_width() {
     let config = test_config();
     let plain = make_block("S", note_head(false, false), 1);
     let dotted = make_block("S", note_head(true, false), 1);
@@ -124,22 +109,18 @@ fn dotted_note_head_column_clears_its_dot_s_real_rendered_right_edge() {
     let dotted_weight = measure_column_weights(&dotted, 2, &config)[0];
     let double_dotted_weight = measure_column_weights(&double_dotted, 2, &config)[0];
 
-    let expected_dotted_reach =
-        expected_note_ish_dot_reach(1, config.note_number_width as f32, config.notes_font_size());
-    let expected_double_dotted_reach =
-        expected_note_ish_dot_reach(2, config.note_number_width as f32, config.notes_font_size());
-
     assert_eq!(plain_weight, notehead_weight(&config));
     assert!(
-        (dotted_weight - (notehead_weight(&config).max(expected_dotted_reach) + DOT_CLEARANCE_PT))
-            .abs()
+        (dotted_weight
+            - (notehead_weight(&config) + expected_dot_extra_weight(1, config.notes_font_size())))
+        .abs()
             < 0.001,
         "dotted_weight={dotted_weight}"
     );
     assert!(
         (double_dotted_weight
-            - (notehead_weight(&config).max(expected_double_dotted_reach) + DOT_CLEARANCE_PT))
-            .abs()
+            - (notehead_weight(&config) + expected_dot_extra_weight(2, config.notes_font_size())))
+        .abs()
             < 0.001,
         "double_dotted_weight={double_dotted_weight}"
     );
@@ -150,36 +131,31 @@ fn dotted_note_head_column_clears_its_dot_s_real_rendered_right_edge() {
 }
 
 #[test]
-fn dotted_rest_column_clears_its_dot_s_real_rendered_right_edge() {
+fn dotted_rest_column_reserves_exactly_its_dot_s_own_rendered_width() {
     let config = test_config();
     let dotted = make_block("S", rest(true, false), 1);
     let dotted_weight = measure_column_weights(&dotted, 2, &config)[0];
 
-    let expected_reach =
-        expected_note_ish_dot_reach(1, config.note_number_width as f32, config.notes_font_size());
+    let expected =
+        notehead_weight(&config) + expected_dot_extra_weight(1, config.notes_font_size());
     assert!(
-        (dotted_weight - (notehead_weight(&config).max(expected_reach) + DOT_CLEARANCE_PT)).abs()
-            < 0.001,
+        (dotted_weight - expected).abs() < 0.001,
         "dotted_weight={dotted_weight}"
     );
 }
 
 #[test]
-fn dotted_note_dash_column_clears_its_dot_s_real_rendered_right_edge_at_its_own_fixed_font_size() {
+fn dotted_note_dash_column_reserves_its_dot_s_own_rendered_width_at_its_own_fixed_font_size() {
     // `render_note_dash` draws its dot(s) at `NOTE_DASH_FONT_SIZE`, not
-    // `config`'s notes font size, so the dash's own reach must be measured at
-    // that fixed size to match what's actually drawn.
+    // `config`'s notes font size, so the dash's own extra weight must be
+    // measured at that fixed size to match what's actually drawn.
     let config = test_config();
     let dotted = make_block("S", note_dash(true, false), 1);
     let dotted_weight = measure_column_weights(&dotted, 2, &config)[0];
 
-    let expected_reach = expected_note_ish_dot_reach(
-        1,
-        config.note_number_width as f32,
-        font_metrics::NOTE_DASH_FONT_SIZE,
-    );
+    let expected = dash_weight() + expected_dot_extra_weight(1, font_metrics::NOTE_DASH_FONT_SIZE);
     assert!(
-        (dotted_weight - (dash_weight().max(expected_reach) + DOT_CLEARANCE_PT)).abs() < 0.001,
+        (dotted_weight - expected).abs() < 0.001,
         "dotted_weight={dotted_weight}"
     );
 }

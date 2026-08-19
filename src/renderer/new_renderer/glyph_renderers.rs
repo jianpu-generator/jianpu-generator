@@ -25,8 +25,12 @@ impl DotState {
     }
 }
 
-/// A middle dot (`·`) rendered as text so it scales with `font_size`,
-/// unlike a fixed-radius SVG circle.
+/// A middle dot (`·`) rendered as its own centered text glyph, used only for
+/// a note's *octave* dots (drawn above/below the digit — see
+/// `render_note_head`'s `octave` loop). A note/rest/chord/dash's
+/// *augmentation* dot(s) are handled differently: appended directly onto the
+/// glyph's own text run (see `font_metrics::augmentation_dot_suffix`)
+/// instead of drawn as a separate positioned glyph like this one.
 pub(super) fn dot_glyph(x: f32, y: f32, font_size: f32, variant: SvgVariant) -> SvgElement {
     SvgElement {
         x,
@@ -44,25 +48,6 @@ pub(super) fn dot_glyph(x: f32, y: f32, font_size: f32, variant: SvgVariant) -> 
     }
 }
 
-/// Renders `dots`' glyph(s) (0, 1, or 2), starting at `first_dot_x` and spacing each further dot `spacing` along.
-pub(super) fn dot_glyphs(
-    first_dot_x: f32,
-    y: f32,
-    spacing: f32,
-    font_size: f32,
-    variant: SvgVariant,
-    dots: &DotState,
-) -> Vec<SvgElement> {
-    if !dots.dotted {
-        return Vec::new();
-    }
-    let mut glyphs = vec![dot_glyph(first_dot_x, y, font_size, variant)];
-    if dots.double_dotted {
-        glyphs.push(dot_glyph(first_dot_x + spacing, y, font_size, variant));
-    }
-    glyphs
-}
-
 pub(super) fn render_note_head(
     elem: &AbsoluteElement,
     pitch: &JianPuPitch,
@@ -77,21 +62,32 @@ pub(super) fn render_note_head(
     } = params;
     let mut results = Vec::new();
 
-    // The digit itself draws flush-left at `elem.x` (see
+    let accidental_symbol = match accidental {
+        Accidental::Sharp => "♯",
+        Accidental::Flat => "♭",
+        Accidental::Natural => "",
+    };
+
+    // The digit, its sharp/flat accidental (if any), and its augmentation
+    // dot(s) (if any) all draw as one flush-left text run at `elem.x` (see
     // `coordinate_resolver::resolve::flush_left_padding`, which already
-    // corrects `elem.x` for this glyph's own left-side bearing); every
-    // decoration below still wants to sit relative to the digit's nominal
-    // center, so `center` reconstructs that from the flat, user-configurable
-    // `note_number_width` box, exactly as before this glyph was flush-left
-    // anchored.
-    let center = elem.x + *note_number_width * 0.5;
+    // corrects `elem.x` for this glyph's own left-side bearing) — the
+    // accidental and dot(s) simply fall out of normal text flow immediately
+    // after the digit, rather than each being drawn as its own
+    // separately-positioned glyph at a hand-computed offset.
+    let content = format!(
+        "{}{}{}",
+        pitch.to_digit(),
+        accidental_symbol,
+        font_metrics::augmentation_dot_suffix(dots.dotted, dots.double_dotted)
+    );
 
     results.push(SvgElement {
         x: elem.x,
         y: elem.y,
         variant: Some(SvgVariant::NoteHead),
         kind: SvgKind::Text {
-            content: pitch.to_digit().to_string(),
+            content,
             font_size: **base_font_size,
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
@@ -101,40 +97,12 @@ pub(super) fn render_note_head(
         },
     });
 
-    let accidental_symbol = match accidental {
-        Accidental::Sharp => Some("♯"),
-        Accidental::Flat => Some("♭"),
-        Accidental::Natural => None,
-    };
-
-    if let Some(symbol) = accidental_symbol {
-        let accidental_x = center + *note_number_width * font_metrics::ACCIDENTAL_LEFT_GAP_RATIO;
-        results.push(SvgElement {
-            x: accidental_x,
-            y: elem.y,
-            variant: Some(SvgVariant::NoteHeadAccidental),
-            kind: SvgKind::Text {
-                content: symbol.to_string(),
-                font_size: **base_font_size * 1.25,
-                anchor: TextAnchor::Start,
-                baseline: DominantBaseline::Middle,
-                font: FontFamily::Monospace,
-                weight: FontWeight::Normal,
-                italic: false,
-            },
-        });
-    }
-
+    // Every decoration below still wants to sit relative to the digit's
+    // nominal center, so `center` reconstructs that from the flat,
+    // user-configurable `note_number_width` box, exactly as before this
+    // glyph was flush-left anchored.
+    let center = elem.x + *note_number_width * 0.5;
     let dot_radius = *base_font_size * 0.1;
-
-    results.extend(dot_glyphs(
-        center + *note_number_width * 1.5,
-        elem.y,
-        *note_number_width * font_metrics::DOT_SPACING_RATIO,
-        **base_font_size,
-        SvgVariant::NoteHead,
-        dots,
-    ));
 
     // Octave-up dots sit above the digit and need extra clearance (`gap`) that
     // octave-down dots, sitting below, don't.
@@ -166,16 +134,18 @@ pub(super) fn render_rest(
     elem: &AbsoluteElement,
     dots: &DotState,
     base_font_size: &f32,
-    note_number_width: &f32,
 ) -> Vec<SvgElement> {
-    let center = elem.x + note_number_width * 0.5;
+    let content = format!(
+        "0{}",
+        font_metrics::augmentation_dot_suffix(dots.dotted, dots.double_dotted)
+    );
 
-    let mut results = vec![SvgElement {
+    vec![SvgElement {
         x: elem.x,
         y: elem.y,
         variant: Some(SvgVariant::Rest),
         kind: SvgKind::Text {
-            content: "0".to_string(),
+            content,
             font_size: *base_font_size,
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
@@ -183,18 +153,7 @@ pub(super) fn render_rest(
             weight: FontWeight::Normal,
             italic: false,
         },
-    }];
-
-    results.extend(dot_glyphs(
-        center + note_number_width * 1.5,
-        elem.y,
-        note_number_width * font_metrics::DOT_SPACING_RATIO,
-        *base_font_size,
-        SvgVariant::Rest,
-        dots,
-    ));
-
-    results
+    }]
 }
 
 /// Standard multi-bar-rest engraving: a thick horizontal bar with short vertical
@@ -287,13 +246,21 @@ pub(super) fn render_chord_symbol(
     // left-side bearing (see
     // `coordinate_resolver::resolve::flush_left_padding`), so the string can
     // draw flush-left at `elem.x` directly, exactly like `render_lyric` —
-    // no renderer-side recentering needed.
-    let mut results = vec![SvgElement {
+    // no renderer-side recentering needed. The augmentation dot(s), if any,
+    // are appended directly onto the chord text itself so they fall out of
+    // normal text flow rather than being drawn as separately-positioned
+    // glyphs.
+    let content = format!(
+        "{s}{}",
+        font_metrics::augmentation_dot_suffix(dots.dotted, dots.double_dotted)
+    );
+
+    vec![SvgElement {
         x: elem.x,
         y: elem.y,
         variant: Some(SvgVariant::ChordSymbol),
         kind: SvgKind::Text {
-            content: s.to_string(),
+            content,
             font_size: *base_font_size,
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
@@ -301,19 +268,7 @@ pub(super) fn render_chord_symbol(
             weight: FontWeight::Normal,
             italic: false,
         },
-    }];
-
-    let text_width = font_metrics::monospace_text_width(s, *base_font_size);
-    results.extend(dot_glyphs(
-        elem.x + text_width + *base_font_size * 0.4,
-        elem.y,
-        *base_font_size * 0.4,
-        *base_font_size,
-        SvgVariant::ChordSymbol,
-        dots,
-    ));
-
-    results
+    }]
 }
 
 pub(super) fn render_horizontal_line(elem: &AbsoluteElement, width: &f32) -> Vec<SvgElement> {

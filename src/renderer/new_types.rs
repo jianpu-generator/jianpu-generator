@@ -4,7 +4,6 @@ use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnc
 pub enum SvgVariant {
     Text,
     NoteHead,
-    NoteHeadAccidental,
     Rest,
     MultiMeasureRest,
     ChordSymbol,
@@ -23,7 +22,6 @@ impl SvgVariant {
         match self {
             Self::Text => "text",
             Self::NoteHead => "note-head",
-            Self::NoteHeadAccidental => "note-head-accidental",
             Self::Rest => "rest",
             Self::MultiMeasureRest => "multi-measure-rest",
             Self::ChordSymbol => "chord-symbol",

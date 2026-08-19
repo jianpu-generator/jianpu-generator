@@ -108,7 +108,12 @@ fn rest_produces_zero_text() {
 }
 
 #[test]
-fn sharp_accidental_renders_to_the_right_of_note() {
+fn sharp_accidental_renders_as_part_of_the_note_s_own_text_run() {
+    // The accidental is appended directly onto the note digit's own text
+    // run (see `render_note_head`) rather than drawn as its own
+    // separately-positioned glyph, so it shows up as part of the single
+    // `NoteHead`-variant text element's content instead of a distinct
+    // element.
     let page = make_page(AbsoluteContent::NoteHead {
         pitch: JianPuPitch::One,
         accidental: crate::ast::parsed::Accidental::Sharp,
@@ -116,33 +121,18 @@ fn sharp_accidental_renders_to_the_right_of_note() {
         dotted: false,
         double_dotted: false,
     });
-    let note_number_width = cfg().note_number_width as f32;
     let note_x = 100.0_f32;
     let docs = render_new(&[page], &cfg());
-    let accidental = docs[0]
+    let note_head = docs[0]
         .elements
         .iter()
-        .find(|e| e.variant == Some(SvgVariant::NoteHeadAccidental));
-    let accidental = accidental.expect("accidental element should be present");
+        .find(|e| e.variant == Some(SvgVariant::NoteHead))
+        .expect("note head element should be present");
+    assert_eq!(note_head.x, note_x);
     assert!(
-        accidental.x > note_x,
-        "accidental x ({}) should be to the right of the note x ({})",
-        accidental.x,
-        note_x
-    );
-    // The accidental sits relative to the note digit's nominal center (`note_x
-    // + note_number_width * 0.5`), not `note_x` itself — the digit now draws
-    // flush-left (`TextAnchor::Start`) at `note_x`, while every decoration
-    // still positions off the note's center box (see `center` in
-    // `render_note_head`).
-    let center = note_x + note_number_width * 0.5;
-    assert_eq!(
-        accidental.x,
-        center + note_number_width * crate::font_metrics::ACCIDENTAL_LEFT_GAP_RATIO
-    );
-    assert!(
-        matches!(&accidental.kind, SvgKind::Text { anchor, .. } if *anchor == TextAnchor::Start),
-        "accidental should use TextAnchor::Start"
+        matches!(&note_head.kind, SvgKind::Text { content, anchor, .. }
+            if content == "1♯" && *anchor == TextAnchor::Start),
+        "note head should render digit and accidental as one flush-left text run"
     );
 }
 

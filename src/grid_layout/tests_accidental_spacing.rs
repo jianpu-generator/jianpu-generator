@@ -26,21 +26,13 @@ fn notehead_weight(config: &RenderConfig) -> f32 {
     font_metrics::monospace_char_advance_width('0', config.notes_font_size())
 }
 
-/// Small dedicated clearance added on top of an accidental's own measured
-/// reach, mirroring `layout_spacing_weights::ACCIDENTAL_CLEARANCE_PT` — kept
-/// smaller than a fresh column's general clearance so the accidental still
-/// reads as bound tightly to the note it modifies.
-const ACCIDENTAL_CLEARANCE_PT: f32 = 0.5;
-
 /// Expected total column weight of a `NoteHead` carrying `symbol` (`"♯"` or
-/// `"♭"`) as its accidental, mirroring `layout_spacing::accidental_extra_weight`'s
-/// real-metrics reach (measured glyph width plus a small dedicated
-/// clearance) rather than a flat guessed ratio.
+/// `"♭"`) as its accidental, mirroring `layout_spacing::accidental_extra_weight`:
+/// the accidental now renders as part of the note digit's own text run, at
+/// the same font size as the digit (see `render_note_head`), so its own real
+/// rendered width at that size is exactly the extra room needed.
 fn accidental_note_weight(symbol: &str, config: &RenderConfig) -> f32 {
-    let reach = config.note_number_width as f32 * font_metrics::ACCIDENTAL_LEFT_GAP_RATIO
-        + font_metrics::monospace_text_width(symbol, config.notes_font_size() * 1.25)
-        + ACCIDENTAL_CLEARANCE_PT;
-    notehead_weight(config) + (reach - notehead_weight(config)).max(0.0)
+    notehead_weight(config) + font_metrics::monospace_text_width(symbol, config.notes_font_size())
 }
 
 fn make_block_with_accidental_note(
@@ -83,9 +75,10 @@ fn make_block_with_accidental_note(
 
 #[test]
 fn measure_column_weights_gives_sharp_or_flat_note_wider_weight_than_plain_note() {
-    // A sharp/flat glyph renders to the right of the note head (see
-    // `render_note_head` in `glyph_renderers.rs`) and needs its own reserved
-    // room, unlike a natural note which draws no accidental glyph at all.
+    // A sharp/flat glyph renders as part of the note head's own text run
+    // (see `render_note_head` in `glyph_renderers.rs`) and needs its own
+    // reserved room, unlike a natural note which appends no accidental
+    // character at all.
     let config = test_config();
     let plain = make_block_with_accidental_note("S", Accidental::Natural, 1);
     let sharp = make_block_with_accidental_note("S", Accidental::Sharp, 1);
