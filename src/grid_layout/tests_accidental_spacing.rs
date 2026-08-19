@@ -26,13 +26,20 @@ fn notehead_weight(config: &RenderConfig) -> f32 {
     font_metrics::monospace_char_advance_width('0', config.notes_font_size())
 }
 
+/// Small dedicated clearance added on top of an accidental's own measured
+/// reach, mirroring `layout_spacing_weights::ACCIDENTAL_CLEARANCE_PT` — kept
+/// smaller than a fresh column's general clearance so the accidental still
+/// reads as bound tightly to the note it modifies.
+const ACCIDENTAL_CLEARANCE_PT: f32 = 0.5;
+
 /// Expected total column weight of a `NoteHead` carrying `symbol` (`"♯"` or
 /// `"♭"`) as its accidental, mirroring `layout_spacing::accidental_extra_weight`'s
-/// asymmetric small-left/large-right reach.
+/// real-metrics reach (measured glyph width plus a small dedicated
+/// clearance) rather than a flat guessed ratio.
 fn accidental_note_weight(symbol: &str, config: &RenderConfig) -> f32 {
-    let reach = config.note_number_width as f32
-        * (font_metrics::ACCIDENTAL_LEFT_GAP_RATIO + font_metrics::ACCIDENTAL_RIGHT_PADDING_RATIO)
-        + font_metrics::monospace_text_width(symbol, config.notes_font_size() * 1.25);
+    let reach = config.note_number_width as f32 * font_metrics::ACCIDENTAL_LEFT_GAP_RATIO
+        + font_metrics::monospace_text_width(symbol, config.notes_font_size() * 1.25)
+        + ACCIDENTAL_CLEARANCE_PT;
     notehead_weight(config) + (reach - notehead_weight(config)).max(0.0)
 }
 

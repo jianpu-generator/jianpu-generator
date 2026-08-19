@@ -26,19 +26,69 @@ fn note_glyph_weight(config: &RenderConfig) -> f32 {
     font_metrics::monospace_char_advance_width('0', config.notes_font_size())
 }
 
-/// Extra weight given to a dotted column (`NoteHead`, `Rest`, `ChordSymbol`,
-/// `NoteDash`) to make room for its augmentation dot(s), which are drawn
-/// alongside the glyph rather than being baked into it (see
-/// `glyph_renderers.rs`'s `render_note_head`/`render_rest`/
-/// `render_chord_symbol`/`render_note_dash`). Matches the dot's real
-/// rendered diameter (`dot_radius = row_height * 0.06` in those renderers),
-/// doubled when `double_dotted` for the second dot glyph.
-fn dotted_extra_weight(dotted: bool, double_dotted: bool, config: &RenderConfig) -> f32 {
+/// Extra clearance (points) added on top of a dot glyph's own measured reach
+/// ([`font_metrics::note_ish_dot_reach`]), so a dotted column's rod doesn't
+/// land exactly flush with the dot's rightmost ink. Its own dedicated
+/// padding, deliberately smaller than the general `super::COLUMN_CLEARANCE_PT`
+/// every column gets, so a dot still reads as bound tightly to the
+/// note/rest/dash it decorates rather than as spaced out like a column of
+/// its own.
+const DOT_CLEARANCE_PT: f32 = 0.5;
+
+/// Extra clearance (points) added on top of an accidental glyph's own
+/// measured reach ([`accidental_extra_weight`]). Its own dedicated padding,
+/// deliberately smaller than the general `super::COLUMN_CLEARANCE_PT` every
+/// column gets, so a sharp/flat still reads as bound tightly to the note it
+/// modifies.
+const ACCIDENTAL_CLEARANCE_PT: f32 = 0.5;
+
+/// Extra weight given to a dotted `NoteHead`/`Rest`/`NoteDash` column to make
+/// room for its augmentation dot(s), which are drawn alongside the glyph
+/// rather than being baked into it (see `glyph_renderers.rs`'s
+/// `render_note_head`/`render_rest` and `glyph_renderers_note_dash.rs`'s
+/// `render_note_dash`). `base_weight` is what `column_weight` already
+/// reserves for the glyph itself ([`note_glyph_weight`]/[`dash_weight`]) —
+/// only the reach beyond that, plus [`DOT_CLEARANCE_PT`], is added, so a dot
+/// that happens to fit within the glyph's own width contributes nothing
+/// extra beyond that small clearance.
+fn note_ish_dotted_extra_weight(
+    dotted: bool,
+    double_dotted: bool,
+    note_number_width: f32,
+    dot_font_size: f32,
+    base_weight: f32,
+) -> f32 {
     if !dotted {
         return 0.0;
     }
     let dot_count = if double_dotted { 2 } else { 1 };
-    dot_count as f32 * 2.0 * config.row_height as f32 * 0.06
+    let reach = font_metrics::note_ish_dot_reach(dot_count, note_number_width, dot_font_size);
+    (reach - base_weight).max(0.0) + DOT_CLEARANCE_PT
+}
+
+/// Extra weight given to a dotted `ChordSymbol` column, mirroring
+/// [`note_ish_dotted_extra_weight`] but against `render_chord_symbol`'s own
+/// distinct offset formula (first dot at `text_width + chords_font_size *
+/// 0.4`, further dots `chords_font_size * 0.4` apart) rather than the
+/// note/rest/dash one.
+fn chord_symbol_dotted_extra_weight(
+    text: &str,
+    dotted: bool,
+    double_dotted: bool,
+    config: &RenderConfig,
+) -> f32 {
+    if !dotted {
+        return 0.0;
+    }
+    let dot_count = if double_dotted { 2 } else { 1 };
+    let font_size = config.chords_font_size();
+    let spacing = font_size * 0.4;
+    let last_dot_anchor = font_metrics::monospace_text_width(text, font_size)
+        + spacing
+        + (dot_count - 1) as f32 * spacing;
+    let reach =
+        last_dot_anchor + font_metrics::monospace_char_advance_width('\u{b7}', font_size) / 2.0;
+    (reach - chord_symbol_weight(text, config)).max(0.0) + DOT_CLEARANCE_PT
 }
 
 /// Extra weight given to a `NoteHead` column carrying a sharp/flat
@@ -46,11 +96,11 @@ fn dotted_extra_weight(dotted: bool, double_dotted: bool, config: &RenderConfig)
 /// note head rather than being baked into it (see `render_note_head` in
 /// `glyph_renderers.rs`, which starts the glyph at `elem.x +
 /// note_number_width * ACCIDENTAL_LEFT_GAP_RATIO` and draws it at `1.25x`
-/// the notes font size). The reach is asymmetric on purpose — a small left
-/// gap keeps the glyph visually hugging the note it modifies, while a larger
-/// right gap ([`font_metrics::ACCIDENTAL_RIGHT_PADDING_RATIO`]) keeps it
-/// from crowding the next column, so the accidental reads unambiguously as
-/// belonging to the note on its left. Only the reach beyond what
+/// the notes font size). The left gap keeps the glyph visually hugging the
+/// note it modifies; on the right, rather than a flat guessed ratio, the
+/// glyph's own measured advance width is used plus a small dedicated
+/// [`ACCIDENTAL_CLEARANCE_PT`] so the reach tracks what the renderer actually
+/// draws instead of over- or under-shooting it. Only the reach beyond what
 /// [`note_glyph_weight`] already covers is added, so an accidental that
 /// happens to fit within the note glyph's own width (e.g. at a large
 /// `note_number_width`) contributes nothing extra. `Natural` renders no
@@ -61,9 +111,9 @@ pub(super) fn accidental_extra_weight(accidental: &Accidental, config: &RenderCo
         Accidental::Flat => "\u{266D}",
         Accidental::Natural => return 0.0,
     };
-    let reach = config.note_number_width as f32
-        * (font_metrics::ACCIDENTAL_LEFT_GAP_RATIO + font_metrics::ACCIDENTAL_RIGHT_PADDING_RATIO)
-        + font_metrics::monospace_text_width(symbol, config.notes_font_size() * 1.25);
+    let reach = config.note_number_width as f32 * font_metrics::ACCIDENTAL_LEFT_GAP_RATIO
+        + font_metrics::monospace_text_width(symbol, config.notes_font_size() * 1.25)
+        + ACCIDENTAL_CLEARANCE_PT;
     (reach - note_glyph_weight(config)).max(0.0)
 }
 
@@ -105,26 +155,51 @@ pub(super) fn column_weight(content: &ElementContent, config: &RenderConfig) -> 
             double_dotted,
             ..
         } => {
-            note_glyph_weight(config)
-                + accidental_extra_weight(accidental, config)
-                + dotted_extra_weight(*dotted, *double_dotted, config)
+            let base = note_glyph_weight(config);
+            base + accidental_extra_weight(accidental, config)
+                + note_ish_dotted_extra_weight(
+                    *dotted,
+                    *double_dotted,
+                    config.note_number_width as f32,
+                    config.notes_font_size(),
+                    base,
+                )
         }
         ElementContent::Rest {
             dotted,
             double_dotted,
-        } => note_glyph_weight(config) + dotted_extra_weight(*dotted, *double_dotted, config),
+        } => {
+            let base = note_glyph_weight(config);
+            base + note_ish_dotted_extra_weight(
+                *dotted,
+                *double_dotted,
+                config.note_number_width as f32,
+                config.notes_font_size(),
+                base,
+            )
+        }
         ElementContent::ChordSymbol {
             text,
             dotted,
             double_dotted,
         } => {
-            chord_symbol_weight(text, config) + dotted_extra_weight(*dotted, *double_dotted, config)
+            chord_symbol_weight(text, config)
+                + chord_symbol_dotted_extra_weight(text, *dotted, *double_dotted, config)
         }
         ElementContent::PercussionHit => note_glyph_weight(config),
         ElementContent::NoteDash {
             dotted,
             double_dotted,
-        } => dash_weight() + dotted_extra_weight(*dotted, *double_dotted, config),
+        } => {
+            let base = dash_weight();
+            base + note_ish_dotted_extra_weight(
+                *dotted,
+                *double_dotted,
+                config.note_number_width as f32,
+                font_metrics::NOTE_DASH_FONT_SIZE,
+                base,
+            )
+        }
         ElementContent::Lyric { text, .. } => lyric_weight(text, config),
         // A `LyricLine` spans the whole measure via `column_span` rather than
         // occupying one grid column, so it contributes no per-column weight here;

@@ -244,15 +244,6 @@ pub(crate) const NOTE_DASH_FONT_SIZE: f32 = 12.0;
 /// can't silently drift apart.
 pub(crate) const ACCIDENTAL_LEFT_GAP_RATIO: f32 = 0.2;
 
-/// Horizontal padding (as a ratio of `note_number_width`) reserved to the
-/// right of a sharp/flat accidental's own glyph, on top of
-/// [`ACCIDENTAL_LEFT_GAP_RATIO`]'s note-to-accidental gap. Deliberately
-/// larger than the left gap: a small gap on the left reads as "this
-/// accidental belongs to the note on its left," while a larger gap on the
-/// right keeps it from reading as belonging to the *next* note/dash column
-/// instead.
-pub(crate) const ACCIDENTAL_RIGHT_PADDING_RATIO: f32 = 1.0;
-
 /// Fixed horizontal padding (in points) between a column's left edge and the
 /// anchor of every glyph inside it — note head, rest, percussion hit, chord
 /// symbol, note dash, and lyric syllable — plus the
@@ -272,6 +263,29 @@ pub(crate) const GLYPH_LEFT_PADDING: f32 = 10.0;
 /// dot (`elem.x + note_number_width * 1.5`) — the second dot simply repeats
 /// that same increment past the first.
 pub(crate) const DOT_SPACING_RATIO: f32 = 0.5;
+
+/// How far right of a note/rest/dash glyph's own left edge its rendered
+/// augmentation dot(s) reach, mirroring the offset/spacing formula
+/// `render_note_head`/`render_rest`/`render_note_dash` actually draw at
+/// (`center + note_number_width * 1.5`, further dots `note_number_width *
+/// DOT_SPACING_RATIO` apart) — `center` itself sits `note_number_width *
+/// 0.5` right of the glyph's left edge. Each dot is drawn with
+/// `TextAnchor::Middle`, so its own right edge sits half its advance width
+/// past its anchor; only the last dot's reach matters since dots are drawn
+/// left to right. `0.0` if `dot_count` is `0`.
+pub(crate) fn note_ish_dot_reach(
+    dot_count: u32,
+    note_number_width: f32,
+    dot_font_size: f32,
+) -> f32 {
+    if dot_count == 0 {
+        return 0.0;
+    }
+    let last_dot_anchor = note_number_width * 0.5
+        + note_number_width * 1.5
+        + (dot_count - 1) as f32 * note_number_width * DOT_SPACING_RATIO;
+    last_dot_anchor + monospace_char_advance_width('\u{b7}', dot_font_size) / 2.0
+}
 
 /// Font size (points) of a section label's own text run, shared by the
 /// layout pass (`content_conversion.rs`, sizing the gap reserved before the

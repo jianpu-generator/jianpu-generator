@@ -33,4 +33,6 @@ mod tests_accidental_spacing;
 #[cfg(test)]
 mod tests_column_rod_spring;
 #[cfg(test)]
+mod tests_dot_spacing;
+#[cfg(test)]
 mod tests_measure_spacing;
