@@ -229,6 +229,13 @@ pub(super) fn resolve_measure_click_target(
     })
 }
 
+/// A digit's own glyph metrics (e.g. a single "1" at font-size 10) make for
+/// an unusably thin hit box — a few points wide is smaller than a cursor can
+/// reliably land on. This pads [`resolve_bar_number_click_target`]'s rect
+/// out on both sides so the box stays comfortably hoverable/clickable even
+/// for a one- or two-digit bar number.
+const BAR_NUMBER_CLICK_TARGET_HORIZONTAL_PADDING: f32 = 6.0;
+
 /// Sibling to [`resolve_measure_click_target`] for one measure's own bar
 /// number (see [`crate::grid_layout::types::BarNumberClickTarget`]): unlike
 /// every other row-range target above, its width isn't a `column_start`/
@@ -237,7 +244,9 @@ pub(super) fn resolve_measure_click_target(
 /// — so its width is measured here from the identical `TextSpan`
 /// `AbsoluteContent::DirectiveLine::bar_number` renders (see
 /// `content_conversion::bar_number_text_span`), the same way the renderer
-/// itself lays that text out.
+/// itself lays that text out, then padded on both sides (see
+/// `BAR_NUMBER_CLICK_TARGET_HORIZONTAL_PADDING`) so the digits' own glyph
+/// width alone doesn't leave an unusably thin hit box.
 pub(super) fn resolve_bar_number_click_target(
     target: &crate::grid_layout::types::BarNumberClickTarget,
     rows: &[GridRow],
@@ -249,14 +258,14 @@ pub(super) fn resolve_bar_number_click_target(
     let y = *row_tops.get(target.row)?;
     let geometry = row.column_geometry(usable_width, part_label_width_pt);
     let x = PAGE_MARGIN + geometry.x_start(target.column as f32);
-    let width = crate::font_metrics::span_width(&super::content_conversion::bar_number_text_span(
-        target.measure_index as u32 + 1,
-    ));
+    let digits_width = crate::font_metrics::span_width(
+        &super::content_conversion::bar_number_text_span(target.measure_index as u32 + 1),
+    );
     Some(AbsoluteElement {
-        x,
+        x: x - BAR_NUMBER_CLICK_TARGET_HORIZONTAL_PADDING,
         y,
         content: AbsoluteContent::BarNumberClickTarget {
-            width,
+            width: digits_width + BAR_NUMBER_CLICK_TARGET_HORIZONTAL_PADDING * 2.0,
             height: row.height_pt,
             measure_index: target.measure_index,
             measure_index_end: target.measure_index_end,

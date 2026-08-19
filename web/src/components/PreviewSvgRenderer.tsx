@@ -201,6 +201,10 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
         kind.tag?.type === 'measure' ? kind.tag.index : undefined
       const measureIndexEnd =
         kind.tag?.type === 'measure' ? kind.tag.end : undefined
+      const barNumberIndex =
+        kind.tag?.type === 'barNumber' ? kind.tag.index : undefined
+      const barNumberIndexEnd =
+        kind.tag?.type === 'barNumber' ? kind.tag.end : undefined
       const sectionLabel =
         kind.tag?.type === 'sectionLabel' ? kind.tag.label : undefined
       const notePartIndex =
@@ -235,21 +239,24 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           data-tag={
             measureIndex !== undefined
               ? 'measure'
-              : sectionLabel !== undefined
-                ? 'section-label'
-                : notePartIndex !== undefined
-                  ? 'note'
-                  : partLabelPartIndex !== undefined
-                    ? 'part-label'
-                    : lyricPartIndex !== undefined
-                      ? 'lyric'
-                      : lyricLabelPartIndex !== undefined
-                        ? 'lyric-label'
-                        : undefined
+              : barNumberIndex !== undefined
+                ? 'bar-number'
+                : sectionLabel !== undefined
+                  ? 'section-label'
+                  : notePartIndex !== undefined
+                    ? 'note'
+                    : partLabelPartIndex !== undefined
+                      ? 'part-label'
+                      : lyricPartIndex !== undefined
+                        ? 'lyric'
+                        : lyricLabelPartIndex !== undefined
+                          ? 'lyric-label'
+                          : undefined
           }
-          data-measure-index={measureIndex}
+          data-measure-index={measureIndex ?? barNumberIndex}
           data-measure-index-end={
             measureIndexEnd ??
+            barNumberIndexEnd ??
             partLabelMeasureIndexEnd ??
             lyricLabelMeasureIndexEnd
           }
@@ -267,6 +274,7 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           }
           style={
             measureIndex !== undefined ||
+            barNumberIndex !== undefined ||
             sectionLabel !== undefined ||
             partLabelPartIndex !== undefined ||
             lyricLabelPartIndex !== undefined
