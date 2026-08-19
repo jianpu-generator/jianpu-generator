@@ -1,7 +1,8 @@
 use super::{block_column_width, LABEL_COLS, MUSIC_START_COL};
-use crate::compiler::types::{ElementContent, MeasureBlock};
+use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock};
 use crate::grid_layout::types::MeasureColumnLayout;
 use crate::render_config::RenderConfig;
+use std::collections::BTreeSet;
 
 #[path = "layout_spacing_weights.rs"]
 mod weights;
@@ -88,27 +89,60 @@ fn measure_column_sizes(
             })
             .collect();
     }
-    (0..col_count)
-        .map(|col| {
-            block
-                .rows
+    // The set of ticks any row actually anchors an element to — an
+    // empirical scan of what's in use, not a uniform GCD/divisor of the
+    // measure's durations (see this function's doc comment and **Rod and
+    // spring** in `ARCHITECTURE.md` for why a global divisor would wrongly
+    // re-split a coarser region that sits next to a finer one).
+    let active_columns: BTreeSet<u32> = block
+        .rows
+        .iter()
+        .flat_map(|row| row.elements.iter().map(|e| e.column))
+        .collect();
+
+    let mut weight_by_col = vec![0.0f32; col_count as usize];
+    let mut rod_by_col = vec![0.0f32; col_count as usize];
+    for row in &block.rows {
+        let mut elements: Vec<&ColumnElement> = row.elements.iter().collect();
+        elements.sort_by_key(|e| e.column);
+        let mut distinct_columns: Vec<u32> = elements.iter().map(|e| e.column).collect();
+        distinct_columns.dedup();
+        for e in &elements {
+            // Rod stays concentrated entirely on the element's own start
+            // tick — a wide glyph genuinely needs that much *contiguous*
+            // space before anything else can safely start (see **Rod and
+            // spring** in `ARCHITECTURE.md`).
+            if let Some(rod) = rod_by_col.get_mut(e.column as usize) {
+                *rod = rod.max(column_rod(&e.content, config));
+            }
+
+            // Weight, by contrast, is shared across every *active* column
+            // in this element's span — up to (but excluding) the next
+            // distinct column this same row anchors something to, or
+            // `col_count` if it's the row's last.
+            let next_distinct_column = distinct_columns
                 .iter()
-                .flat_map(|row| row.elements.iter())
-                .filter(|e| e.column == col)
-                .map(|e| ColumnSizing {
-                    weight: column_weight(&e.content, config),
-                    rod_pt: column_rod(&e.content, config),
-                })
-                .fold(
-                    ColumnSizing {
-                        weight: 0.0,
-                        rod_pt: 0.0,
-                    },
-                    |acc, s| ColumnSizing {
-                        weight: acc.weight.max(s.weight),
-                        rod_pt: acc.rod_pt.max(s.rod_pt),
-                    },
-                )
+                .find(|&&c| c > e.column)
+                .copied()
+                .unwrap_or(col_count);
+            let span_columns: Vec<u32> = active_columns
+                .range(e.column..next_distinct_column)
+                .copied()
+                .collect();
+            let span = span_columns.len().max(1) as f32;
+            let share = column_weight(&e.content, config) / span;
+            for col in span_columns {
+                if let Some(weight) = weight_by_col.get_mut(col as usize) {
+                    *weight = weight.max(share);
+                }
+            }
+        }
+    }
+
+    (0..col_count)
+        .map(|col| ColumnSizing {
+            weight: weight_by_col.get(col as usize).copied().unwrap_or(0.0),
+            rod_pt: rod_by_col.get(col as usize).copied().unwrap_or(0.0),
         })
         .collect()
 }
