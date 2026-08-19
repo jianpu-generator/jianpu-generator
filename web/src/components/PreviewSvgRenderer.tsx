@@ -1,4 +1,4 @@
-import type { SvgDocumentOut, SvgElementOut } from 'jianpu-wasm'
+import type { SvgDocumentOut, SvgElementOut, TagOut } from 'jianpu-wasm'
 import type { ReactNode } from 'react'
 
 // The directive line (bar number, section label, key/bpm/time signature,
@@ -46,6 +46,82 @@ function transparentRectRoleToDataVariant(
       return 'lyric-label-click-target-rect'
     case 'barNumberClickTarget':
       return 'bar-number-click-target-rect'
+  }
+}
+
+interface GroupTagAttrs {
+  dataTag?: string
+  dataMeasureIndex?: number
+  dataMeasureIndexEnd?: number
+  dataSectionLabel?: string
+  dataPartIndex?: number
+  dataNoteId?: number
+  dataVerse?: number
+  dataMeasureIndexStart?: number
+  cursor: boolean
+}
+
+function groupAttrsForTag(tag: TagOut | undefined): GroupTagAttrs {
+  if (!tag) return { cursor: false }
+  switch (tag.type) {
+    case 'measure':
+      return {
+        dataTag: 'measure',
+        dataMeasureIndex: tag.index,
+        dataMeasureIndexEnd: tag.end,
+        cursor: true,
+      }
+    case 'barNumber':
+      return {
+        dataTag: 'bar-number',
+        dataMeasureIndex: tag.index,
+        dataMeasureIndexEnd: tag.end,
+        cursor: true,
+      }
+    case 'sectionLabel':
+      return {
+        dataTag: 'section-label',
+        dataSectionLabel: tag.label,
+        cursor: true,
+      }
+    case 'note':
+      return {
+        dataTag: 'note',
+        dataPartIndex: tag.source_part_index,
+        dataNoteId: tag.note_id,
+        cursor: false,
+      }
+    case 'partLabel':
+      return {
+        dataTag: 'part-label',
+        dataPartIndex: tag.source_part_index,
+        dataMeasureIndexStart: tag.measure_index_start,
+        dataMeasureIndexEnd: tag.measure_index_end,
+        cursor: true,
+      }
+    case 'lyric':
+      return {
+        dataTag: 'lyric',
+        dataPartIndex: tag.source_part_index,
+        dataNoteId: tag.note_id,
+        dataVerse: tag.verse,
+        cursor: false,
+      }
+    case 'lyricLabel':
+      return {
+        dataTag: 'lyric-label',
+        dataPartIndex: tag.source_part_index,
+        dataVerse: tag.verse,
+        dataMeasureIndexStart: tag.measure_index_start,
+        dataMeasureIndexEnd: tag.measure_index_end,
+        cursor: true,
+      }
+    default: {
+      const exhaustiveCheck: never = tag
+      throw new Error(
+        `Unhandled Tag variant: ${JSON.stringify(exhaustiveCheck)}`,
+      )
+    }
   }
 }
 
@@ -197,90 +273,19 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
         />
       )
     case 'group': {
-      const measureIndex =
-        kind.tag?.type === 'measure' ? kind.tag.index : undefined
-      const measureIndexEnd =
-        kind.tag?.type === 'measure' ? kind.tag.end : undefined
-      const barNumberIndex =
-        kind.tag?.type === 'barNumber' ? kind.tag.index : undefined
-      const barNumberIndexEnd =
-        kind.tag?.type === 'barNumber' ? kind.tag.end : undefined
-      const sectionLabel =
-        kind.tag?.type === 'sectionLabel' ? kind.tag.label : undefined
-      const notePartIndex =
-        kind.tag?.type === 'note' ? kind.tag.source_part_index : undefined
-      const noteId = kind.tag?.type === 'note' ? kind.tag.note_id : undefined
-      const partLabelPartIndex =
-        kind.tag?.type === 'partLabel' ? kind.tag.source_part_index : undefined
-      const partLabelMeasureIndexStart =
-        kind.tag?.type === 'partLabel'
-          ? kind.tag.measure_index_start
-          : undefined
-      const partLabelMeasureIndexEnd =
-        kind.tag?.type === 'partLabel' ? kind.tag.measure_index_end : undefined
-      const lyricPartIndex =
-        kind.tag?.type === 'lyric' ? kind.tag.source_part_index : undefined
-      const lyricNoteId =
-        kind.tag?.type === 'lyric' ? kind.tag.note_id : undefined
-      const lyricVerse = kind.tag?.type === 'lyric' ? kind.tag.verse : undefined
-      const lyricLabelPartIndex =
-        kind.tag?.type === 'lyricLabel' ? kind.tag.source_part_index : undefined
-      const lyricLabelVerse =
-        kind.tag?.type === 'lyricLabel' ? kind.tag.verse : undefined
-      const lyricLabelMeasureIndexStart =
-        kind.tag?.type === 'lyricLabel'
-          ? kind.tag.measure_index_start
-          : undefined
-      const lyricLabelMeasureIndexEnd =
-        kind.tag?.type === 'lyricLabel' ? kind.tag.measure_index_end : undefined
+      const attrs = groupAttrsForTag(kind.tag)
       return (
         <g
           key={key}
-          data-tag={
-            measureIndex !== undefined
-              ? 'measure'
-              : barNumberIndex !== undefined
-                ? 'bar-number'
-                : sectionLabel !== undefined
-                  ? 'section-label'
-                  : notePartIndex !== undefined
-                    ? 'note'
-                    : partLabelPartIndex !== undefined
-                      ? 'part-label'
-                      : lyricPartIndex !== undefined
-                        ? 'lyric'
-                        : lyricLabelPartIndex !== undefined
-                          ? 'lyric-label'
-                          : undefined
-          }
-          data-measure-index={measureIndex ?? barNumberIndex}
-          data-measure-index-end={
-            measureIndexEnd ??
-            barNumberIndexEnd ??
-            partLabelMeasureIndexEnd ??
-            lyricLabelMeasureIndexEnd
-          }
-          data-section-label={sectionLabel}
-          data-part-index={
-            notePartIndex ??
-            partLabelPartIndex ??
-            lyricPartIndex ??
-            lyricLabelPartIndex
-          }
-          data-note-id={noteId ?? lyricNoteId}
-          data-verse={lyricVerse ?? lyricLabelVerse}
-          data-measure-index-start={
-            partLabelMeasureIndexStart ?? lyricLabelMeasureIndexStart
-          }
-          style={
-            measureIndex !== undefined ||
-            barNumberIndex !== undefined ||
-            sectionLabel !== undefined ||
-            partLabelPartIndex !== undefined ||
-            lyricLabelPartIndex !== undefined
-              ? { cursor: 'pointer' }
-              : undefined
-          }
+          data-tag={attrs.dataTag}
+          data-measure-index={attrs.dataMeasureIndex}
+          data-measure-index-end={attrs.dataMeasureIndexEnd}
+          data-section-label={attrs.dataSectionLabel}
+          data-part-index={attrs.dataPartIndex}
+          data-note-id={attrs.dataNoteId}
+          data-verse={attrs.dataVerse}
+          data-measure-index-start={attrs.dataMeasureIndexStart}
+          style={attrs.cursor ? { cursor: 'pointer' } : undefined}
         >
           {kind.children.map((child, i) => renderSvgElement(child, i))}
         </g>
