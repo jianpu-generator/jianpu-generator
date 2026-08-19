@@ -158,11 +158,19 @@ fn lyric_click_target_spans_its_note_full_column_width() {
         .iter()
         .find(|t| t.note_id == 0)
         .expect("syllable for the two-beat note");
+    // This is also the measure's first syllable, so its left edge snaps to
+    // the system's leading bar line (`LABEL_COLS as f32` = 1.0 — see
+    // `lyric_click_target_of_first_syllable_snaps_to_leading_bar_line`),
+    // one column earlier than its raw grid column (2.0). Its `column_end`
+    // is unaffected by that snap, so the span is 1.0 wider than the note's
+    // own two written columns (attack + dash-continuation) would otherwise
+    // give.
     assert_eq!(
         two_beat.column_end - two_beat.column_start,
-        2.0,
+        3.0,
         "the two-beat note's syllable box should span both of its columns \
-         (attack + dash-continuation), not just the attack column"
+         (attack + dash-continuation) plus the leading bar-line snap, not \
+         just the attack column"
     );
 
     let one_beat = targets
@@ -173,5 +181,48 @@ fn lyric_click_target_spans_its_note_full_column_width() {
         one_beat.column_end - one_beat.column_start,
         1.0,
         "a plain one-beat note's syllable box should still span exactly one column"
+    );
+}
+
+/// The first syllable of a system's first measure should have its click
+/// box's left edge snapped to the system's leading bar line (`column_start
+/// == LABEL_COLS as f32 == 1.0`), exactly like `compute_all_playback_cursor_targets`
+/// snaps the first note's own click target in
+/// `playback_cursor_targets_snap_to_bar_lines_at_measure_edges`. Without that
+/// snap, the syllable's box starts at the raw `MUSIC_START_COL` grid column
+/// (2.0) — one whole column short of the bar line — leaving a visible gap
+/// between the bar line and the hover box's left edge.
+#[test]
+fn lyric_click_target_of_first_syllable_snaps_to_leading_bar_line() {
+    let block = MeasureBlock {
+        rows: vec![notes_row_with_a_two_beat_note(), lyric_verse_row()],
+        decorations: vec![],
+        diagnostics: vec![],
+        represents_measures: 1,
+        merge_duplicate_measures_across_parts: true,
+    };
+
+    let pages = crate::grid_layout::layout(
+        &CompileResult {
+            blocks: vec![block],
+            slur_spans: vec![],
+            tuplet_spans: vec![],
+        },
+        &test_render_config(),
+        &no_header(),
+        595.0,
+        842.0,
+        None,
+    );
+
+    let targets = &pages[0].lyric_click_targets;
+    let first_syllable = targets
+        .iter()
+        .find(|t| t.note_id == 0)
+        .expect("syllable for the measure's first note");
+    assert_eq!(
+        first_syllable.column_start, 1.0,
+        "the first syllable's left edge should snap to the system's leading \
+         bar line, matching the first note's own click target"
     );
 }

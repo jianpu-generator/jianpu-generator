@@ -4,7 +4,8 @@
 
 use crate::compiler::types::{ElementContent, MeasureBlock};
 use crate::grid_layout::layout::{
-    block_column_width, is_chord_only_row, is_lyric_row, lyric_row_verse, MUSIC_START_COL,
+    block_column_width, is_chord_only_row, is_lyric_row, lyric_row_verse, LABEL_COLS,
+    MUSIC_START_COL,
 };
 use crate::grid_layout::playback_cursor::group_elements_by_note_id;
 use crate::grid_layout::system_walk::for_each_system;
@@ -120,7 +121,7 @@ pub(crate) fn compute_all_lyric_click_targets(
             let owner_note_row_indices = lyric_owner_note_row_indices(system);
 
             let mut col_offset: u32 = MUSIC_START_COL;
-            for block in system {
+            for (block_idx, block) in system.iter().enumerate() {
                 let col_w = block_column_width(block);
                 for (part_idx, row_idx) in row_indices.iter().enumerate() {
                     let Some(row_idx) = row_idx else {
@@ -145,11 +146,31 @@ pub(crate) fn compute_all_lyric_click_targets(
                                 .collect()
                         })
                         .unwrap_or_default();
+                    // The row's own leftmost lyric column, used below to
+                    // detect its first syllable — mirrors
+                    // `compute_all_playback_cursor_targets`'s `row_min_col`.
+                    let row_min_col = part_row
+                        .elements
+                        .iter()
+                        .filter(|e| matches!(e.content, ElementContent::Lyric { .. }))
+                        .map(|e| e.column)
+                        .min();
                     for el in &part_row.elements {
                         let ElementContent::Lyric { note_id, verse, .. } = &el.content else {
                             continue;
                         };
-                        let column_start = (col_offset + el.column) as f32;
+                        // Snap the left edge to the rendered x of the
+                        // system's leading bar line for the measure's first
+                        // syllable, exactly like
+                        // `compute_all_playback_cursor_targets` snaps the
+                        // first note's own click target — otherwise the box
+                        // starts a whole column short of (or past) where the
+                        // bar line is actually drawn.
+                        let column_start = if block_idx == 0 && Some(el.column) == row_min_col {
+                            LABEL_COLS as f32
+                        } else {
+                            (col_offset + el.column) as f32
+                        };
                         let column_end = note_max_cols
                             .get(note_id)
                             .map(|max_col| (col_offset + max_col + 1) as f32)
