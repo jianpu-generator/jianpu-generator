@@ -28,6 +28,7 @@ pub struct SvgElementOut {
 #[tsify(into_wasm_abi)]
 pub enum TransparentRectRoleOut {
     MeasureClickTarget,
+    BarNumberClickTarget,
     SectionLabelBackground,
     SectionLabelClickTarget,
     NoteClickTarget,
@@ -108,6 +109,10 @@ pub struct TspanOut {
 #[tsify(into_wasm_abi)]
 pub enum TagOut {
     Measure {
+        index: usize,
+        end: usize,
+    },
+    BarNumber {
         index: usize,
         end: usize,
     },
@@ -232,6 +237,10 @@ fn tag_to_out(tag: &Tag) -> TagOut {
             index: *index,
             end: *end,
         },
+        Tag::BarNumber { index, end } => TagOut::BarNumber {
+            index: *index,
+            end: *end,
+        },
         Tag::SectionLabel { label } => TagOut::SectionLabel {
             label: label.clone(),
         },
@@ -277,6 +286,7 @@ fn tag_to_out(tag: &Tag) -> TagOut {
 fn transparent_rect_role_to_out(role: &TransparentRectRole) -> TransparentRectRoleOut {
     match role {
         TransparentRectRole::MeasureClickTarget => TransparentRectRoleOut::MeasureClickTarget,
+        TransparentRectRole::BarNumberClickTarget => TransparentRectRoleOut::BarNumberClickTarget,
         TransparentRectRole::SectionLabelBackground => {
             TransparentRectRoleOut::SectionLabelBackground
         }

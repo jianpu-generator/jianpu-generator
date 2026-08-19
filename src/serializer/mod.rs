@@ -157,6 +157,11 @@ fn serialize_group(out: &mut String, children: &[SvgElement], tag: &Option<Tag>)
                 r#"<g data-tag="measure" data-measure-index="{index}" data-measure-index-end="{end}">"#
             ));
         }
+        Some(Tag::BarNumber { index, end }) => {
+            out.push_str(&format!(
+                r#"<g data-tag="bar-number" data-measure-index="{index}" data-measure-index-end="{end}">"#
+            ));
+        }
         Some(Tag::SectionLabel { label }) => {
             out.push_str(&format!(
                 r#"<g data-tag="section-label" data-section-label="{}" style="cursor:pointer">"#,
@@ -306,6 +311,7 @@ fn serialize_rect_element(el: &SvgElement, out: &mut String, kind: &SvgKind) {
                     r#" stroke="black" stroke-width="1""#
                 }
                 TransparentRectRole::MeasureClickTarget
+                | TransparentRectRole::BarNumberClickTarget
                 | TransparentRectRole::SectionLabelClickTarget
                 | TransparentRectRole::NoteClickTarget
                 | TransparentRectRole::PartLabelClickTarget

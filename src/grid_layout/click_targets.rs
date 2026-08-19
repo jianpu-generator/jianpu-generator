@@ -1,11 +1,13 @@
 use crate::compiler::types::MeasureBlock;
 use crate::grid_layout::highlight::measure_column_bounds;
-use crate::grid_layout::layout::{block_column_width, is_lyric_row, MUSIC_START_COL};
+use crate::grid_layout::layout::{
+    block_column_width, directive_line_should_emit, is_lyric_row, LABEL_COLS, MUSIC_START_COL,
+};
 use crate::grid_layout::playback_cursor::{compute_all_playback_cursor_targets, note_row_spans};
 use crate::grid_layout::system_walk::for_each_system;
 use crate::grid_layout::types::{
-    GridElement, Header, LyricClickTarget, LyricLabelClickTarget, MeasureClickTarget,
-    MeasureHighlight, PartLabelClickTarget, PlaybackCursorTarget,
+    BarNumberClickTarget, GridElement, Header, LyricClickTarget, LyricLabelClickTarget,
+    MeasureClickTarget, MeasureHighlight, PartLabelClickTarget, PlaybackCursorTarget,
 };
 use std::collections::HashMap;
 
@@ -60,6 +62,64 @@ pub(crate) fn compute_all_measure_click_targets(
                     },
                 ));
                 col_offset += col_w;
+                global_measure_index += block.represents_measures;
+            }
+        },
+    );
+    results
+}
+
+/// One [`BarNumberClickTarget`] per bar number actually drawn in every
+/// system, keyed by page index like `compute_all_measure_click_targets`.
+/// Walks `page_systems` in the same order (and with the same
+/// `global_measure_index` accumulation) as `compute_all_measure_click_targets`
+/// and `make_decoration_row`, so a target's `measure_index`/`measure_index_end`
+/// and its `column` (the block's own leading-barline column) always agree
+/// with what's actually drawn there.
+pub(crate) fn compute_all_bar_number_click_targets(
+    page_systems: &[Vec<Vec<MeasureBlock>>],
+    tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
+    header: &Header,
+    base: f32,
+    hide_system_dividers: bool,
+) -> Vec<(usize, BarNumberClickTarget)> {
+    let mut global_measure_index: usize = 0;
+    let mut results: Vec<(usize, BarNumberClickTarget)> = Vec::new();
+
+    for_each_system(
+        page_systems,
+        tuplet_bracket_map,
+        header,
+        base,
+        hide_system_dividers,
+        |page_idx, system, row_offset, _tuplet_part_indices, _musical_row_count| {
+            // The decoration row is always the row immediately above
+            // `row_offset` when the system draws one — see
+            // `for_each_system`'s doc comment. In practice every non-empty
+            // system does (every block compiled from real source always
+            // carries a `DirectiveLine` decoration — see
+            // `compiler::collect_decorations`), but `row` is only ever read
+            // below when a block actually has a decoration to draw, so an
+            // artificial system with none (as in some tests) is harmless.
+            let row = row_offset.saturating_sub(1);
+
+            let mut leading_barline_col = LABEL_COLS;
+            for (index, block) in system.iter().enumerate() {
+                if let Some(dec) = block.decorations.first() {
+                    if directive_line_should_emit(index, dec) {
+                        results.push((
+                            page_idx,
+                            BarNumberClickTarget {
+                                row,
+                                column: leading_barline_col,
+                                measure_index: global_measure_index,
+                                measure_index_end: global_measure_index
+                                    + block.represents_measures.saturating_sub(1),
+                            },
+                        ));
+                    }
+                }
+                leading_barline_col += block_column_width(block);
                 global_measure_index += block.represents_measures;
             }
         },
@@ -151,6 +211,7 @@ pub(crate) struct HighlightAndClickInfos {
     pub(crate) all_part_label_click_target_infos: Vec<(usize, PartLabelClickTarget)>,
     pub(crate) all_lyric_click_target_infos: Vec<(usize, LyricClickTarget)>,
     pub(crate) all_lyric_label_click_target_infos: Vec<(usize, LyricLabelClickTarget)>,
+    pub(crate) all_bar_number_click_target_infos: Vec<(usize, BarNumberClickTarget)>,
 }
 
 #[derive(Clone, Copy)]
@@ -188,7 +249,6 @@ pub(crate) fn compute_highlight_and_click_infos(
             )
         })
         .unwrap_or_default();
-
     let error_highlight_infos = compute_error_highlight_infos(
         blocks,
         page_systems,
@@ -197,41 +257,29 @@ pub(crate) fn compute_highlight_and_click_infos(
         base,
         hide_system_dividers,
     );
-    let all_click_target_infos = compute_all_measure_click_targets(
-        page_systems,
-        tuplet_bracket_map,
-        header,
-        base,
-        hide_system_dividers,
-    );
-    let all_playback_cursor_target_infos = compute_all_playback_cursor_targets(
-        page_systems,
-        tuplet_bracket_map,
-        header,
-        base,
-        hide_system_dividers,
-    );
-    let all_part_label_click_target_infos = compute_all_part_label_click_targets(
-        page_systems,
-        tuplet_bracket_map,
-        header,
-        base,
-        hide_system_dividers,
-    );
-    let all_lyric_click_target_infos = compute_all_lyric_click_targets(
-        page_systems,
-        tuplet_bracket_map,
-        header,
-        base,
-        hide_system_dividers,
-    );
-    let all_lyric_label_click_target_infos = compute_all_lyric_label_click_targets(
-        page_systems,
-        tuplet_bracket_map,
-        header,
-        base,
-        hide_system_dividers,
-    );
+
+    // Every `compute_all_*_click_targets` below shares this same
+    // `(page_systems, tuplet_bracket_map, header, base, hide_system_dividers)`
+    // signature (see `for_each_system`), so a local macro collapses each
+    // call to one line instead of a 6-line block, keeping this function
+    // under the repo's max-line-count lint.
+    macro_rules! compute_all {
+        ($f:expr) => {
+            $f(
+                page_systems,
+                tuplet_bracket_map,
+                header,
+                base,
+                hide_system_dividers,
+            )
+        };
+    }
+    let all_click_target_infos = compute_all!(compute_all_measure_click_targets);
+    let all_playback_cursor_target_infos = compute_all!(compute_all_playback_cursor_targets);
+    let all_part_label_click_target_infos = compute_all!(compute_all_part_label_click_targets);
+    let all_lyric_click_target_infos = compute_all!(compute_all_lyric_click_targets);
+    let all_lyric_label_click_target_infos = compute_all!(compute_all_lyric_label_click_targets);
+    let all_bar_number_click_target_infos = compute_all!(compute_all_bar_number_click_targets);
 
     HighlightAndClickInfos {
         highlight_infos,
@@ -241,5 +289,6 @@ pub(crate) fn compute_highlight_and_click_infos(
         all_part_label_click_target_infos,
         all_lyric_click_target_infos,
         all_lyric_label_click_target_infos,
+        all_bar_number_click_target_infos,
     }
 }

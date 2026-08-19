@@ -26,7 +26,8 @@ function transparentRectRoleToDataVariant(
     | 'noteClickTarget'
     | 'partLabelClickTarget'
     | 'lyricClickTarget'
-    | 'lyricLabelClickTarget',
+    | 'lyricLabelClickTarget'
+    | 'barNumberClickTarget',
 ): string {
   switch (role) {
     case 'measureClickTarget':
@@ -43,6 +44,8 @@ function transparentRectRoleToDataVariant(
       return 'lyric-click-target-rect'
     case 'lyricLabelClickTarget':
       return 'lyric-label-click-target-rect'
+    case 'barNumberClickTarget':
+      return 'bar-number-click-target-rect'
   }
 }
 

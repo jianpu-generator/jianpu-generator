@@ -45,6 +45,19 @@ fn section_label_span(label_text: &str, font_size: f32) -> TextSpan {
     }
 }
 
+/// The bar-number `TextSpan` a `DirectiveLine`'s `bar_number` renders as —
+/// shared with `highlights::resolve_bar_number_click_target`, which needs
+/// the identical span (content and `font_size`) to measure the same click
+/// target's width via `font_metrics::span_width`.
+pub(super) fn bar_number_text_span(n: u32) -> TextSpan {
+    TextSpan {
+        content: n.to_string(),
+        bold: false,
+        italic: false,
+        font_size: 10.0,
+    }
+}
+
 /// Gap (in points) reserved between two adjacent directive-line elements
 /// (bar number, section label, key/bpm/time-signature/markers) so that,
 /// when rendered as independently-positioned text elements, they never
@@ -139,12 +152,7 @@ fn build_directive_line_spans(content: &PostArcGridContent) -> (Option<TextSpan>
     else {
         return (None, Vec::new());
     };
-    let bar_number_span = bar_number.map(|n| TextSpan {
-        content: n.to_string(),
-        bold: false,
-        italic: false,
-        font_size: 10.0,
-    });
+    let bar_number_span = bar_number.map(bar_number_text_span);
     let mut spans: Vec<TextSpan> = Vec::new();
     if let Some(key_str) = key {
         spans.push(TextSpan {

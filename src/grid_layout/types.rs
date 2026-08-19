@@ -1,6 +1,10 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compiler::types::ArcKind;
 
+#[path = "click_target_types.rs"]
+mod click_target_types;
+pub use click_target_types::{BarNumberClickTarget, MeasureClickTarget, PartLabelClickTarget};
+
 #[derive(Debug, Clone)]
 pub struct GridPage {
     pub width_pt: f32,
@@ -13,36 +17,7 @@ pub struct GridPage {
     pub part_label_click_targets: Vec<PartLabelClickTarget>,
     pub lyric_click_targets: Vec<LyricClickTarget>,
     pub lyric_label_click_targets: Vec<LyricLabelClickTarget>,
-}
-
-#[derive(Debug, Clone)]
-pub struct MeasureClickTarget {
-    pub row_start: usize,
-    pub row_end: usize,
-    pub column_start: f32,
-    pub column_end: f32,
-    pub measure_index: usize,
-    /// Last original source measure index this click target represents. Equal to
-    /// `measure_index` for an ordinary measure block; greater than `measure_index`
-    /// for a merged multi-measure rest, so clicking it can highlight the whole span.
-    pub measure_index_end: usize,
-}
-
-/// Invisible hit target laid over a part's `RowLabel` text, spanning that
-/// part's own sub-rows (see `playback_cursor::part_row_ranges`) within the
-/// fixed-width label region (columns `0..LABEL_COLS`). Clicking or
-/// drag-selecting it is a shortcut for selecting every note/rest that part
-/// sounds across the whole system the label sits in — `measure_index_start`/
-/// `measure_index_end` give that system's full measure range, mirroring how
-/// `MeasureClickTarget::measure_index`/`measure_index_end` scope a measure
-/// click.
-#[derive(Debug, Clone)]
-pub struct PartLabelClickTarget {
-    pub row_start: usize,
-    pub row_end: usize,
-    pub source_part_index: usize,
-    pub measure_index_start: usize,
-    pub measure_index_end: usize,
+    pub bar_number_click_targets: Vec<BarNumberClickTarget>,
 }
 
 /// One measure's extent within a `GridRow`'s musical column range, plus its

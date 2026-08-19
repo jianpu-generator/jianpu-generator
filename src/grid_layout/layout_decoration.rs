@@ -8,6 +8,26 @@ use crate::grid_layout::types::{
     GridContent, GridElement, GridRow, HAlign, Header, MeasureColumnLayout, PartListEntry, VAlign,
 };
 
+/// Whether `block`'s (index `index` within its system) `DirectiveLine`
+/// decoration actually draws a line — the system's first block always does;
+/// a later block only does when it changes something a reader needs to see
+/// (a label, or a key/bpm/time-signature change), so an otherwise-plain
+/// mid-system measure doesn't grow a redundant, bare bar number. Shared with
+/// `click_targets::compute_all_bar_number_click_targets`, which needs to
+/// know the same thing to place each drawn bar number's own click target.
+pub(crate) fn directive_line_should_emit(index: usize, dec: &Decoration) -> bool {
+    index == 0 || {
+        let Decoration::DirectiveLine {
+            label,
+            key,
+            bpm,
+            time_signature,
+            ..
+        } = dec;
+        label.is_some() || key.is_some() || bpm.is_some() || time_signature.is_some()
+    }
+}
+
 fn directive_line_element(dec: &Decoration, col: u32) -> GridElement {
     let Decoration::DirectiveLine {
         label,
@@ -53,17 +73,7 @@ pub(super) fn make_decoration_row(
     let mut leading_barline_col = LABEL_COLS;
     for (index, block) in system.iter().enumerate() {
         if let Some(dec) = block.decorations.first() {
-            let should_emit = index == 0 || {
-                let Decoration::DirectiveLine {
-                    label,
-                    key,
-                    bpm,
-                    time_signature,
-                    ..
-                } = dec;
-                label.is_some() || key.is_some() || bpm.is_some() || time_signature.is_some()
-            };
-            if should_emit {
+            if directive_line_should_emit(index, dec) {
                 elements.push(directive_line_element(dec, leading_barline_col));
             }
         }

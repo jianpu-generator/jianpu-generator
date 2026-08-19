@@ -101,6 +101,23 @@ pub enum AbsoluteContent {
         measure_index: usize,
         measure_index_end: usize,
     },
+    /// Invisible click/drag hit target laid over one measure's own bar
+    /// number (see `grid_layout::types::BarNumberClickTarget`), tightly
+    /// sized to the digits themselves rather than the whole measure body —
+    /// unlike `MeasureClickTarget`, which never sits above the musical rows
+    /// where the bar number is actually drawn. Rendered with its own
+    /// `TransparentRectRole::BarNumberClickTarget` (not
+    /// `MeasureClickTarget`'s) purely so it can get its own hover styling
+    /// without also lighting up on every note hover the way a hover rule on
+    /// `MeasureClickTarget` would (that rect already spans every note in
+    /// the measure) — both still carry `Tag::Measure` so a click resolves
+    /// through the same `getMeasureAtPoint` path either way.
+    BarNumberClickTarget {
+        width: f32,
+        height: f32,
+        measure_index: usize,
+        measure_index_end: usize,
+    },
     /// Background rect behind one part's sounding note/rest, toggled at
     /// playback time by the frontend rather than filled here (see
     /// `renderer::new_types::SvgKind::PlaybackCursorRect`).

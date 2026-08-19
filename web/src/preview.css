@@ -228,6 +228,13 @@
   fill: rgba(100, 160, 255, 0.2);
 }
 
+.preview-page
+  svg
+  g[data-tag="bar-number"]:hover
+  > rect[data-variant="bar-number-click-target-rect"] {
+  fill: rgba(100, 160, 255, 0.2);
+}
+
 .preview-page svg line.bar-line-drag-handle {
   cursor: col-resize;
 }

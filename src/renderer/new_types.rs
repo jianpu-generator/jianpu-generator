@@ -42,6 +42,11 @@ impl SvgVariant {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransparentRectRole {
     MeasureClickTarget,
+    /// Sibling to `MeasureClickTarget` for one measure's own bar number —
+    /// see `compositor::types::AbsoluteContent::BarNumberClickTarget` for
+    /// why it needs its own role (distinct hover styling) rather than
+    /// reusing `MeasureClickTarget`'s.
+    BarNumberClickTarget,
     SectionLabelBackground,
     /// Invisible rect spanning the section label's whole directive line (bar
     /// number through the trailing key/bpm/time-signature/navigation-marker
@@ -78,6 +83,7 @@ impl TransparentRectRole {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::MeasureClickTarget => "measure-click-target-rect",
+            Self::BarNumberClickTarget => "bar-number-click-target-rect",
             Self::SectionLabelBackground => "section-label-bg",
             Self::SectionLabelClickTarget => "section-label-click-target-rect",
             Self::NoteClickTarget => "note-click-target-rect",
@@ -108,6 +114,17 @@ pub enum Tag {
     /// `end` is the last original source measure index this click target
     /// represents; equal to `index` except for merged multi-measure rests.
     Measure {
+        index: usize,
+        end: usize,
+    },
+    /// Identifies one measure's own bar-number click target — see
+    /// `AbsoluteContent::BarNumberClickTarget`. A distinct tag from
+    /// `Tag::Measure` (rather than reusing it) so the frontend can hover-style
+    /// it independently and so `[data-tag="measure"]`'s existing
+    /// one-element-per-measure DOM shape (several e2e tests key off it via
+    /// index) stays unaffected. `index`/`end` mean the same thing as
+    /// `Tag::Measure`'s.
+    BarNumber {
         index: usize,
         end: usize,
     },

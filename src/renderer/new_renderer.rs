@@ -194,7 +194,8 @@ fn render_overlay_element(
         } => render_note_click_target(elem, *width, *height, *source_part_index, *note_id),
         AbsoluteContent::PartLabelClickTarget { .. }
         | AbsoluteContent::LyricClickTarget { .. }
-        | AbsoluteContent::LyricLabelClickTarget { .. } => {
+        | AbsoluteContent::LyricLabelClickTarget { .. }
+        | AbsoluteContent::BarNumberClickTarget { .. } => {
             render_secondary_click_target(elem, content)
         }
         AbsoluteContent::DirectiveLine {

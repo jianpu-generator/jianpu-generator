@@ -1,7 +1,7 @@
 use super::*;
 use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
 use crate::renderer::new_types::{
-    SvgDocument, SvgElement, SvgKind, SvgVariant, TransparentRectRole,
+    SvgDocument, SvgElement, SvgKind, SvgVariant, Tag, TransparentRectRole,
 };
 
 fn text_doc(content: &str) -> SvgDocument {
@@ -295,4 +295,40 @@ fn transparent_rect_serializes_with_data_variant_and_rx() {
         "should emit data-variant for hover target rects"
     );
     assert!(result[0].contains(r#"rx="2""#), "should have corner radius");
+}
+
+#[test]
+fn bar_number_group_serializes_with_its_own_data_tag() {
+    // `Tag::BarNumber` is deliberately a different `data-tag` from
+    // `Tag::Measure`'s (see `renderer::new_types::Tag::BarNumber`'s doc
+    // comment) — several e2e tests key off `[data-tag="measure"]` matching
+    // exactly one element per measure, so a bar number's own click target
+    // must not fold into that tag even though both resolve a click to the
+    // same measure in the frontend.
+    let doc = SvgDocument {
+        width_pt: 100.0,
+        height_pt: 100.0,
+        elements: vec![SvgElement {
+            x: 1.0,
+            y: 2.0,
+            variant: None,
+            kind: SvgKind::Group {
+                children: vec![],
+                tag: Some(Tag::BarNumber { index: 3, end: 5 }),
+            },
+        }],
+    };
+    let result = serialize(&[doc], None);
+    assert!(
+        result[0].contains(
+            r#"<g data-tag="bar-number" data-measure-index="3" data-measure-index-end="5">"#
+        ),
+        "got: {}",
+        result[0]
+    );
+    assert!(
+        !result[0].contains(r#"data-tag="measure""#),
+        "should not also carry the plain measure tag, got: {}",
+        result[0]
+    );
 }

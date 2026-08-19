@@ -3,8 +3,8 @@ use crate::grid_layout::slur_placement::{build_measure_placements, resolve_slur_
 use crate::grid_layout::tuplet_placement::resolve_tuplet_spans;
 use crate::grid_layout::types::Header;
 use crate::grid_layout::types::{
-    GridElement, GridPage, GridRow, LyricClickTarget, LyricLabelClickTarget, MeasureClickTarget,
-    MeasureHighlight, PartLabelClickTarget, PlaybackCursorTarget,
+    BarNumberClickTarget, GridElement, GridPage, GridRow, LyricClickTarget, LyricLabelClickTarget,
+    MeasureClickTarget, MeasureHighlight, PartLabelClickTarget, PlaybackCursorTarget,
 };
 use crate::render_config::RenderConfig;
 use std::collections::{HashMap, HashSet};
@@ -117,7 +117,7 @@ use super::click_targets::targets_on_page;
 pub(crate) use super::expand::expand_system_to_rows;
 use super::expand::make_footer_row;
 use super::highlight::measure_highlights_on_page;
-pub(crate) use decoration::make_header_rows;
+pub(crate) use decoration::{directive_line_should_emit, make_header_rows};
 use decoration::{make_decoration_row, make_separator_row};
 
 fn system_total_height(
@@ -321,6 +321,7 @@ pub fn layout(
             part_label_click_targets: page_targets.part_label_click_targets,
             lyric_click_targets: page_targets.lyric_click_targets,
             lyric_label_click_targets: page_targets.lyric_label_click_targets,
+            bar_number_click_targets: page_targets.bar_number_click_targets,
         });
     }
     pages
@@ -337,6 +338,7 @@ struct PageHighlightsAndTargets {
     part_label_click_targets: Vec<PartLabelClickTarget>,
     lyric_click_targets: Vec<LyricClickTarget>,
     lyric_label_click_targets: Vec<LyricLabelClickTarget>,
+    bar_number_click_targets: Vec<BarNumberClickTarget>,
 }
 
 impl PageHighlightsAndTargets {
@@ -356,6 +358,10 @@ impl PageHighlightsAndTargets {
             lyric_click_targets: targets_on_page(&infos.all_lyric_click_target_infos, page_idx),
             lyric_label_click_targets: targets_on_page(
                 &infos.all_lyric_label_click_target_infos,
+                page_idx,
+            ),
+            bar_number_click_targets: targets_on_page(
+                &infos.all_bar_number_click_target_infos,
                 page_idx,
             ),
         }

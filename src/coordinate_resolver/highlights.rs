@@ -229,6 +229,41 @@ pub(super) fn resolve_measure_click_target(
     })
 }
 
+/// Sibling to [`resolve_measure_click_target`] for one measure's own bar
+/// number (see [`crate::grid_layout::types::BarNumberClickTarget`]): unlike
+/// every other row-range target above, its width isn't a `column_start`/
+/// `column_end` bound — the bar number is a small, precisely-positioned text
+/// element within its (single, exact) grid column, not a whole measure body
+/// — so its width is measured here from the identical `TextSpan`
+/// `AbsoluteContent::DirectiveLine::bar_number` renders (see
+/// `content_conversion::bar_number_text_span`), the same way the renderer
+/// itself lays that text out.
+pub(super) fn resolve_bar_number_click_target(
+    target: &crate::grid_layout::types::BarNumberClickTarget,
+    rows: &[GridRow],
+    row_tops: &[f32],
+    usable_width: f32,
+    part_label_width_pt: f32,
+) -> Option<AbsoluteElement> {
+    let row = rows.get(target.row)?;
+    let y = *row_tops.get(target.row)?;
+    let geometry = row.column_geometry(usable_width, part_label_width_pt);
+    let x = PAGE_MARGIN + geometry.x_start(target.column as f32);
+    let width = crate::font_metrics::span_width(&super::content_conversion::bar_number_text_span(
+        target.measure_index as u32 + 1,
+    ));
+    Some(AbsoluteElement {
+        x,
+        y,
+        content: AbsoluteContent::BarNumberClickTarget {
+            width,
+            height: row.height_pt,
+            measure_index: target.measure_index,
+            measure_index_end: target.measure_index_end,
+        },
+    })
+}
+
 /// Same row-bounds math as the click targets above, but fixed to the
 /// label region (columns `0..LABEL_COLS`) rather than a `column_start`/
 /// `column_end` the target itself carries — see `AbsoluteContent::PartLabelClickTarget`.

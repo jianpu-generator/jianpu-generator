@@ -7,9 +7,9 @@ use crate::grid_layout::PAGE_MARGIN;
 
 use super::content_conversion::grid_to_absolute;
 use super::highlights::{
-    resolve_error_highlights, resolve_lyric_click_target, resolve_lyric_label_click_target,
-    resolve_measure_click_target, resolve_measure_highlights, resolve_note_click_target,
-    resolve_part_label_click_target, resolve_playback_cursor_target,
+    resolve_bar_number_click_target, resolve_error_highlights, resolve_lyric_click_target,
+    resolve_lyric_label_click_target, resolve_measure_click_target, resolve_measure_highlights,
+    resolve_note_click_target, resolve_part_label_click_target, resolve_playback_cursor_target,
 };
 use super::post_arc_conversion::to_post_arc_content;
 
@@ -317,6 +317,10 @@ fn resolve_click_target_elements(
 
     elements.extend(page.lyric_label_click_targets.iter().filter_map(|t| {
         resolve_lyric_label_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
+    }));
+
+    elements.extend(page.bar_number_click_targets.iter().filter_map(|t| {
+        resolve_bar_number_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
     }));
 
     elements

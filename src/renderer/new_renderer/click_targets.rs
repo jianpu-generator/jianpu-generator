@@ -70,6 +70,18 @@ pub(super) fn render_secondary_click_target(
                 measure_index_end: *measure_index_end,
             },
         ),
+        AbsoluteContent::BarNumberClickTarget {
+            width,
+            height,
+            measure_index,
+            measure_index_end,
+        } => render_bar_number_click_target(
+            elem,
+            *width,
+            *height,
+            *measure_index,
+            *measure_index_end,
+        ),
         _ => Vec::new(),
     }
 }
@@ -219,6 +231,34 @@ pub(super) fn render_measure_click_target(
             role: TransparentRectRole::MeasureClickTarget,
         },
         Tag::Measure {
+            index: measure_index,
+            end: measure_index_end,
+        },
+    )
+}
+
+/// Sibling to [`render_measure_click_target`] for one measure's own bar
+/// number — its own `Tag::BarNumber` and `TransparentRectRole` (rather than
+/// reusing `Tag::Measure`'s) so it can get its own hover styling without
+/// disturbing `[data-tag="measure"]`'s existing one-group-per-measure DOM
+/// shape — see `compositor::types::AbsoluteContent::BarNumberClickTarget`.
+/// The frontend's `getMeasureAtPoint` (`previewSelection.ts`) queries both
+/// tags together, so a click still resolves to the same measure either way.
+pub(super) fn render_bar_number_click_target(
+    elem: &AbsoluteElement,
+    width: f32,
+    height: f32,
+    measure_index: usize,
+    measure_index_end: usize,
+) -> Vec<SvgElement> {
+    wrap_click_target(
+        elem,
+        SvgKind::TransparentRect {
+            width,
+            height,
+            role: TransparentRectRole::BarNumberClickTarget,
+        },
+        Tag::BarNumber {
             index: measure_index,
             end: measure_index_end,
         },

@@ -145,6 +145,17 @@ function getBarLineMeasureAtPoint(
   return chosen && measureRangeFromElement(chosen.el)
 }
 
+/**
+ * Elements a click/hover point can resolve a measure range from:
+ * `[data-tag="measure"]` (a measure's own musical-row body) and
+ * `[data-tag="bar-number"]` (that same measure's own bar number, drawn in
+ * the directive row above — see `BarNumberClickTarget`/`Tag::BarNumber`,
+ * kept as a separate, smaller tag rather than folded into `[data-tag="measure"]`
+ * so several e2e tests' `[data-tag="measure"]` DOM-order/count assumptions
+ * stay unaffected).
+ */
+const MEASURE_RANGE_SELECTOR = '[data-tag="measure"], [data-tag="bar-number"]'
+
 export function getMeasureAtPoint(
   x: number,
   y: number,
@@ -154,7 +165,7 @@ export function getMeasureAtPoint(
 
   let best: { rect: DOMRect; el: HTMLElement } | undefined
   for (const el of document.querySelectorAll<HTMLElement>(
-    '[data-tag="measure"]',
+    MEASURE_RANGE_SELECTOR,
   )) {
     const rect = el.getBoundingClientRect()
     if (y < rect.top || y >= rect.bottom) continue
