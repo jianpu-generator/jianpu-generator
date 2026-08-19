@@ -3,21 +3,29 @@ import { useEffect, useRef, useState } from 'react'
 import type { LyricSpan, NoteSpan } from '../types'
 import { renderSvgDocument } from './PreviewSvgRenderer'
 import {
-  applyPartLabelDragHighlight,
   applyPersistedLyricHighlights,
   applyPersistedNoteHighlights,
-  applyPersistedPartLabelHighlights,
 } from './previewDragHighlights'
+import {
+  applyLyricLabelDragHighlight,
+  applyPartLabelDragHighlight,
+  applyPersistedLyricLabelHighlights,
+  applyPersistedPartLabelHighlights,
+} from './previewLabelDragHighlights'
+import {
+  getLyricLabelAtPoint,
+  getPartLabelAtPoint,
+  lyricCellsForLyricLabels,
+  noteCellsForPartLabels,
+} from './previewLabelSelection'
 import {
   getLyricAtPoint,
   getMeasureAtPoint,
   getNoteAtPoint,
-  getPartLabelAtPoint,
   getSectionLabelAtPoint,
   type LyricCell,
   lyricCellsInMeasureRange,
   type NoteCell,
-  noteCellsForPartLabels,
   noteCellsInMeasureRange,
 } from './previewSelection'
 import { usePlaybackCursor } from './usePlaybackCursor'
@@ -117,6 +125,8 @@ export function Preview({
   )
   const noteSpansRef = useRef(noteSpans)
   noteSpansRef.current = noteSpans
+  const lyricSpansRef = useRef(lyricSpans)
+  lyricSpansRef.current = lyricSpans
 
   usePlaybackCursor(previewPagesRef, audioElement, noteTimings)
   usePlaybackCursor(
@@ -187,6 +197,11 @@ export function Preview({
     const container = previewPagesRef.current
     if (!container) return
     applyPersistedLyricHighlights(container, selectedLyricCells)
+    applyPersistedLyricLabelHighlights(
+      container,
+      lyricSpansRef.current,
+      selectedLyricCells,
+    )
   }, [selectedLyricCells, documents, highlightedDocuments])
 
   const activeDocs =
@@ -251,6 +266,32 @@ export function Preview({
                 applyPersistedNoteHighlights(
                   container,
                   noteCellsForPartLabels(noteSpans, [partLabel]),
+                )
+              }
+              e.preventDefault()
+              return
+            }
+            // The lyric-side mirror of the part-label check above — a verse
+            // row's own label (e.g. "M:v1"), scoped to that one verse
+            // instead of a whole part.
+            const lyricLabel = getLyricLabelAtPoint(e.clientX, e.clientY)
+            if (lyricLabel !== undefined) {
+              const point = { x: e.clientX, y: e.clientY }
+              dragStateRef.current = {
+                mode: 'lyric-label',
+                anchor: point,
+                current: point,
+                anchorSystem: {
+                  measureIndexStart: lyricLabel.measureIndexStart,
+                  measureIndexEnd: lyricLabel.measureIndexEnd,
+                },
+              }
+              const container = previewPagesRef.current
+              if (container) {
+                applyLyricLabelDragHighlight(container, [lyricLabel])
+                applyPersistedLyricHighlights(
+                  container,
+                  lyricCellsForLyricLabels(lyricSpans, [lyricLabel]),
                 )
               }
               e.preventDefault()

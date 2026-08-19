@@ -52,6 +52,24 @@ pub(super) fn render_secondary_click_target(
             note_id,
             verse,
         } => render_lyric_click_target(elem, *width, *height, *source_part_index, *note_id, *verse),
+        AbsoluteContent::LyricLabelClickTarget {
+            width,
+            height,
+            source_part_index,
+            verse,
+            measure_index_start,
+            measure_index_end,
+        } => render_lyric_label_click_target(
+            elem,
+            &LyricLabelClickTargetArgs {
+                width: *width,
+                height: *height,
+                source_part_index: *source_part_index,
+                verse: *verse,
+                measure_index_start: *measure_index_start,
+                measure_index_end: *measure_index_end,
+            },
+        ),
         _ => Vec::new(),
     }
 }
@@ -119,6 +137,40 @@ fn render_part_label_click_target(
             source_part_index,
             measure_index_start,
             measure_index_end,
+        },
+    )
+}
+
+/// Args for `render_lyric_label_click_target`, bundled to stay under the
+/// max-arguments lint (its `AbsoluteContent::LyricLabelClickTarget` source
+/// already carries one field more than a plain arg list allows).
+struct LyricLabelClickTargetArgs {
+    width: f32,
+    height: f32,
+    source_part_index: usize,
+    verse: usize,
+    measure_index_start: usize,
+    measure_index_end: usize,
+}
+
+/// The lyric-side mirror of `render_part_label_click_target`, for one
+/// verse's own `RowLabel` text.
+fn render_lyric_label_click_target(
+    elem: &AbsoluteElement,
+    args: &LyricLabelClickTargetArgs,
+) -> Vec<SvgElement> {
+    wrap_click_target(
+        elem,
+        SvgKind::TransparentRect {
+            width: args.width,
+            height: args.height,
+            role: TransparentRectRole::LyricLabelClickTarget,
+        },
+        Tag::LyricLabel {
+            source_part_index: args.source_part_index,
+            verse: args.verse,
+            measure_index_start: args.measure_index_start,
+            measure_index_end: args.measure_index_end,
         },
     )
 }

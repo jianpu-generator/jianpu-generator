@@ -12,6 +12,7 @@ pub struct GridPage {
     pub playback_cursor_targets: Vec<PlaybackCursorTarget>,
     pub part_label_click_targets: Vec<PartLabelClickTarget>,
     pub lyric_click_targets: Vec<LyricClickTarget>,
+    pub lyric_label_click_targets: Vec<LyricLabelClickTarget>,
 }
 
 #[derive(Debug, Clone)]
@@ -375,4 +376,20 @@ pub struct LyricClickTarget {
     pub source_part_index: usize,
     pub note_id: usize,
     pub verse: usize,
+}
+
+/// Invisible hit target laid over one verse's `RowLabel` text (e.g.
+/// "M:v1"), spanning that one verse row within the fixed-width label region
+/// (columns `0..LABEL_COLS`) — the lyric-side mirror of
+/// [`PartLabelClickTarget`]. Clicking or drag-selecting it is a shortcut for
+/// selecting every syllable that verse sings across the whole system the
+/// label sits in — `measure_index_start`/`measure_index_end` give that
+/// system's full measure range, same as `PartLabelClickTarget`'s.
+#[derive(Debug, Clone)]
+pub struct LyricLabelClickTarget {
+    pub row: usize,
+    pub source_part_index: usize,
+    pub verse: usize,
+    pub measure_index_start: usize,
+    pub measure_index_end: usize,
 }

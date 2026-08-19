@@ -2,7 +2,10 @@ use crate::compiler::types::{CompileResult, ElementContent, MeasureBlock, Measur
 use crate::grid_layout::slur_placement::{build_measure_placements, resolve_slur_spans};
 use crate::grid_layout::tuplet_placement::resolve_tuplet_spans;
 use crate::grid_layout::types::Header;
-use crate::grid_layout::types::{GridElement, GridPage, GridRow};
+use crate::grid_layout::types::{
+    GridElement, GridPage, GridRow, LyricClickTarget, LyricLabelClickTarget, MeasureClickTarget,
+    MeasureHighlight, PartLabelClickTarget, PlaybackCursorTarget,
+};
 use crate::render_config::RenderConfig;
 use std::collections::{HashMap, HashSet};
 
@@ -30,6 +33,20 @@ pub(crate) fn has_lyrics(row: &MeasureRow) -> bool {
             e.content,
             ElementContent::Lyric { .. } | ElementContent::LyricLine { .. }
         )
+    })
+}
+
+/// The verse number (0-indexed) an `is_lyric_row` row renders, read from its
+/// own content. A part's multiple verses each compile into their own sibling
+/// `MeasureRow` (see `ElementContent::Lyric`'s doc comment), so every element
+/// in one such row shares the same `verse` field — the first one found is
+/// authoritative for the whole row. `None` for a row with no lyric content at
+/// all (shouldn't occur for an `is_lyric_row` row in practice).
+pub(crate) fn lyric_row_verse(row: &MeasureRow) -> Option<usize> {
+    row.elements.iter().find_map(|e| match &e.content {
+        ElementContent::Lyric { verse, .. } => Some(*verse),
+        ElementContent::LyricLine { verse, .. } => Some(*verse),
+        _ => None,
     })
 }
 
@@ -259,22 +276,16 @@ pub fn layout(
         config.hide_system_dividers,
     );
 
-    let HighlightAndClickInfos {
-        highlight_infos,
-        error_highlight_infos,
-        all_click_target_infos,
-        all_playback_cursor_target_infos,
-        all_part_label_click_target_infos,
-        all_lyric_click_target_infos,
-    } = compute_highlight_and_click_infos(&HighlightAndClickInfosParams {
-        blocks,
-        page_systems: &page_systems,
-        tuplet_bracket_map: &tuplet_bracket_map,
-        header,
-        base,
-        hide_system_dividers: config.hide_system_dividers,
-        highlighted_measure_range,
-    });
+    let highlight_and_click_infos =
+        compute_highlight_and_click_infos(&HighlightAndClickInfosParams {
+            blocks,
+            page_systems: &page_systems,
+            tuplet_bracket_map: &tuplet_bracket_map,
+            header,
+            base,
+            hide_system_dividers: config.hide_system_dividers,
+            highlighted_measure_range,
+        });
 
     let total_pages = page_systems.len() as u32;
     let mut abs_system_index_start: usize = 0;
@@ -298,26 +309,57 @@ pub fn layout(
             remaining_height,
         ));
         abs_system_index_start += page_sys.len();
-        let measure_highlights = measure_highlights_on_page(&highlight_infos, page_idx);
-        let error_highlights = measure_highlights_on_page(&error_highlight_infos, page_idx);
-        let measure_click_targets = targets_on_page(&all_click_target_infos, page_idx);
-        let playback_cursor_targets = targets_on_page(&all_playback_cursor_target_infos, page_idx);
-        let part_label_click_targets =
-            targets_on_page(&all_part_label_click_target_infos, page_idx);
-        let lyric_click_targets = targets_on_page(&all_lyric_click_target_infos, page_idx);
+        let page_targets = PageHighlightsAndTargets::for_page(&highlight_and_click_infos, page_idx);
         pages.push(GridPage {
             width_pt: page_width_pt,
             height_pt: page_height_pt,
             rows,
-            measure_highlights,
-            error_highlights,
-            measure_click_targets,
-            playback_cursor_targets,
-            part_label_click_targets,
-            lyric_click_targets,
+            measure_highlights: page_targets.measure_highlights,
+            error_highlights: page_targets.error_highlights,
+            measure_click_targets: page_targets.measure_click_targets,
+            playback_cursor_targets: page_targets.playback_cursor_targets,
+            part_label_click_targets: page_targets.part_label_click_targets,
+            lyric_click_targets: page_targets.lyric_click_targets,
+            lyric_label_click_targets: page_targets.lyric_label_click_targets,
         });
     }
     pages
+}
+
+/// One page's slice of every `HighlightAndClickInfos` list, filtered by
+/// `targets_on_page`/`measure_highlights_on_page` — split out of `layout()`
+/// to keep it under the max function-length lint.
+struct PageHighlightsAndTargets {
+    measure_highlights: Vec<MeasureHighlight>,
+    error_highlights: Vec<MeasureHighlight>,
+    measure_click_targets: Vec<MeasureClickTarget>,
+    playback_cursor_targets: Vec<PlaybackCursorTarget>,
+    part_label_click_targets: Vec<PartLabelClickTarget>,
+    lyric_click_targets: Vec<LyricClickTarget>,
+    lyric_label_click_targets: Vec<LyricLabelClickTarget>,
+}
+
+impl PageHighlightsAndTargets {
+    fn for_page(infos: &HighlightAndClickInfos, page_idx: usize) -> Self {
+        Self {
+            measure_highlights: measure_highlights_on_page(&infos.highlight_infos, page_idx),
+            error_highlights: measure_highlights_on_page(&infos.error_highlight_infos, page_idx),
+            measure_click_targets: targets_on_page(&infos.all_click_target_infos, page_idx),
+            playback_cursor_targets: targets_on_page(
+                &infos.all_playback_cursor_target_infos,
+                page_idx,
+            ),
+            part_label_click_targets: targets_on_page(
+                &infos.all_part_label_click_target_infos,
+                page_idx,
+            ),
+            lyric_click_targets: targets_on_page(&infos.all_lyric_click_target_infos, page_idx),
+            lyric_label_click_targets: targets_on_page(
+                &infos.all_lyric_label_click_target_infos,
+                page_idx,
+            ),
+        }
+    }
 }
 
 #[cfg(test)]

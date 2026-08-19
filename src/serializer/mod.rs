@@ -189,6 +189,16 @@ fn serialize_group(out: &mut String, children: &[SvgElement], tag: &Option<Tag>)
                 r#"<g data-tag="lyric" data-part-index="{source_part_index}" data-note-id="{note_id}" data-verse="{verse}">"#
             ));
         }
+        Some(Tag::LyricLabel {
+            source_part_index,
+            verse,
+            measure_index_start,
+            measure_index_end,
+        }) => {
+            out.push_str(&format!(
+                r#"<g data-tag="lyric-label" data-part-index="{source_part_index}" data-verse="{verse}" data-measure-index-start="{measure_index_start}" data-measure-index-end="{measure_index_end}" style="cursor:pointer">"#
+            ));
+        }
         None => {
             out.push_str("<g>");
         }
@@ -299,7 +309,8 @@ fn serialize_rect_element(el: &SvgElement, out: &mut String, kind: &SvgKind) {
                 | TransparentRectRole::SectionLabelClickTarget
                 | TransparentRectRole::NoteClickTarget
                 | TransparentRectRole::PartLabelClickTarget
-                | TransparentRectRole::LyricClickTarget => "",
+                | TransparentRectRole::LyricClickTarget
+                | TransparentRectRole::LyricLabelClickTarget => "",
             };
             out.push_str(&format!(
                 r#"<rect x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" data-variant="{}" fill="transparent" rx="2"{} style="cursor:pointer"/>"#,

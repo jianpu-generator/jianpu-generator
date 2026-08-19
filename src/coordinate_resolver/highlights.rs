@@ -265,6 +265,43 @@ pub(super) fn resolve_part_label_click_target(
     })
 }
 
+/// Same fixed label-region geometry as `resolve_part_label_click_target`,
+/// but for exactly one verse row (`target.row..=target.row`) rather than a
+/// part's whole span of sub-rows — the lyric-side mirror of that function.
+pub(super) fn resolve_lyric_label_click_target(
+    target: &crate::grid_layout::types::LyricLabelClickTarget,
+    rows: &[GridRow],
+    row_tops: &[f32],
+    usable_width: f32,
+    part_label_width_pt: f32,
+) -> Option<AbsoluteElement> {
+    let ctx = RowLayoutContext {
+        rows,
+        row_tops,
+        usable_width,
+        part_label_width_pt,
+    };
+    let geometry = resolve_row_range_geometry(
+        target.row,
+        target.row,
+        0.0,
+        crate::grid_layout::layout::LABEL_COLS as f32,
+        ctx,
+    )?;
+    Some(AbsoluteElement {
+        x: geometry.x,
+        y: geometry.y,
+        content: AbsoluteContent::LyricLabelClickTarget {
+            width: geometry.width,
+            height: geometry.height,
+            source_part_index: target.source_part_index,
+            verse: target.verse,
+            measure_index_start: target.measure_index_start,
+            measure_index_end: target.measure_index_end,
+        },
+    })
+}
+
 /// A lyric syllable's click target is simpler than the targets above: it
 /// always sits on exactly one row (`target.row`) and one grid column
 /// (`target.column_start..target.column_end`), with no bar-line-snapping —

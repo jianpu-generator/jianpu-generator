@@ -21,6 +21,7 @@ fn single_row_page(element: GridElement) -> GridPage {
         playback_cursor_targets: vec![],
         part_label_click_targets: vec![],
         lyric_click_targets: vec![],
+        lyric_label_click_targets: vec![],
     }
 }
 
@@ -65,6 +66,7 @@ fn lyric_syllable_halign_center_is_independent_of_column_weight() {
             playback_cursor_targets: vec![],
             part_label_click_targets: vec![],
             lyric_click_targets: vec![],
+            lyric_label_click_targets: vec![],
         }
     };
     let resolve_lyric_x = |column_weight: f32| -> f32 {

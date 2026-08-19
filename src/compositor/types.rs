@@ -143,6 +143,20 @@ pub enum AbsoluteContent {
         note_id: usize,
         verse: usize,
     },
+    /// Invisible click/drag hit target laid over one verse's `RowLabel` text
+    /// (see `grid_layout::types::LyricLabelClickTarget`) — the lyric-side
+    /// mirror of `PartLabelClickTarget`. Clicking or drag-selecting it
+    /// selects every syllable that verse sings across
+    /// `measure_index_start..=measure_index_end` (the whole system the
+    /// label sits in).
+    LyricLabelClickTarget {
+        width: f32,
+        height: f32,
+        source_part_index: usize,
+        verse: usize,
+        measure_index_start: usize,
+        measure_index_end: usize,
+    },
     DirectiveLine {
         /// Bar-number span, rendered as its own text element pinned to the
         /// line's start (offset 0) so it always precedes `label` and

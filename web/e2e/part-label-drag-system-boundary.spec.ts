@@ -3,7 +3,8 @@ import { focusEditor } from './fileSwitcherHelpers'
 
 /**
  * Regression test: a part-label drag (see `Preview.tsx`'s
- * `getPartLabelAtPoint`/`partLabelsInMarquee` in `previewDragHighlights.ts`)
+ * `getPartLabelAtPoint` in `previewLabelSelection.ts` and
+ * `partLabelsInMarquee` in `previewLabelDragHighlights.ts`)
  * is meant to be a vertical shortcut for selecting more *parts within the
  * same system* the drag started in — every part label's click target only
  * ever covers its own system's measure range (`measureIndexStart`/

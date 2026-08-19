@@ -33,6 +33,7 @@ pub enum TransparentRectRoleOut {
     NoteClickTarget,
     PartLabelClickTarget,
     LyricClickTarget,
+    LyricLabelClickTarget,
 }
 
 #[derive(Debug, Clone, Tsify, Serialize)]
@@ -126,6 +127,12 @@ pub enum TagOut {
         source_part_index: usize,
         note_id: usize,
         verse: usize,
+    },
+    LyricLabel {
+        source_part_index: usize,
+        verse: usize,
+        measure_index_start: usize,
+        measure_index_end: usize,
     },
 }
 
@@ -253,6 +260,17 @@ fn tag_to_out(tag: &Tag) -> TagOut {
             note_id: *note_id,
             verse: *verse,
         },
+        Tag::LyricLabel {
+            source_part_index,
+            verse,
+            measure_index_start,
+            measure_index_end,
+        } => TagOut::LyricLabel {
+            source_part_index: *source_part_index,
+            verse: *verse,
+            measure_index_start: *measure_index_start,
+            measure_index_end: *measure_index_end,
+        },
     }
 }
 
@@ -268,6 +286,7 @@ fn transparent_rect_role_to_out(role: &TransparentRectRole) -> TransparentRectRo
         TransparentRectRole::NoteClickTarget => TransparentRectRoleOut::NoteClickTarget,
         TransparentRectRole::PartLabelClickTarget => TransparentRectRoleOut::PartLabelClickTarget,
         TransparentRectRole::LyricClickTarget => TransparentRectRoleOut::LyricClickTarget,
+        TransparentRectRole::LyricLabelClickTarget => TransparentRectRoleOut::LyricLabelClickTarget,
     }
 }
 

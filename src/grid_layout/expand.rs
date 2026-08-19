@@ -1,8 +1,8 @@
 use crate::compiler::types::{ElementContent, MeasureBlock, MeasureRow};
 use crate::grid_layout::layout::{
     block_column_width, chord_part_sub_row_heights, compute_bar_height, has_lyrics,
-    is_chord_only_row, is_lyric_row, lyric_row_height, note_part_sub_row_heights, LABEL_COLS,
-    MUSIC_START_COL,
+    is_chord_only_row, is_lyric_row, lyric_row_height, lyric_row_verse, note_part_sub_row_heights,
+    LABEL_COLS, MUSIC_START_COL,
 };
 use crate::grid_layout::types::{
     GridContent, GridElement, GridRow, HAlign, MeasureColumnLayout, VAlign,
@@ -26,6 +26,54 @@ pub(crate) struct LyricPartParams<'a> {
     pub(crate) measure_layout: &'a [MeasureColumnLayout],
 }
 
+/// Every verse gets its own label at column 0, mirroring `expand_note_part`'s
+/// `RowLabel` push for the note row — "{abbreviation}:v{1-based verse}",
+/// e.g. "M:v1", "M:v2". `system.first()` always has a `part_idx` entry
+/// matching this row's own template (only ever called for an `is_lyric_row`
+/// row), and every verse row's `label` already carries its part's
+/// abbreviation (the user writes `[M]` again for each verse line — see
+/// `compile_measure`). Split out of `expand_lyric_part` to keep it under the
+/// max function-length lint.
+fn push_verse_row_label(row: &mut GridRow, system: &[MeasureBlock], part_idx: usize) {
+    let Some(part_template) = system.first().and_then(|b| b.rows.get(part_idx)) else {
+        return;
+    };
+    if part_template.label.is_empty() {
+        return;
+    }
+    let Some(verse) = lyric_row_verse(part_template) else {
+        return;
+    };
+    row.elements.push(GridElement {
+        column: 0,
+        column_span: LABEL_COLS,
+        halign: HAlign::Center,
+        valign: VAlign::Center,
+        content: GridContent::RowLabel(format!("{}:v{}", part_template.label, verse + 1)),
+    });
+}
+
+/// Every other row type only draws bar lines when it's the block's first row
+/// (`part_idx == 0`) — a lyric row is no exception, since it can end up
+/// first when a standalone `lyrics` part shares a measure with an all-rest
+/// `notes` part that `hide_resting_parts` has hidden. Without this, such a
+/// measure would render with no bar line at all. Split out of
+/// `expand_lyric_part` to keep it under the max function-length lint.
+fn push_leading_bar_line(row: &mut GridRow, part_idx: usize, draw_bar_line: bool, bar_height: f32) {
+    if part_idx != 0 || !draw_bar_line {
+        return;
+    }
+    row.elements.push(GridElement {
+        column: LABEL_COLS,
+        column_span: 1,
+        halign: HAlign::Start,
+        valign: VAlign::Top,
+        content: GridContent::BarLine {
+            height_pt: bar_height,
+        },
+    });
+}
+
 pub(crate) fn expand_lyric_part(system: &[MeasureBlock], params: &LyricPartParams<'_>) -> GridRow {
     let part_idx = params.part_idx;
     let base = params.base;
@@ -39,22 +87,8 @@ pub(crate) fn expand_lyric_part(system: &[MeasureBlock], params: &LyricPartParam
         measure_layout: params.measure_layout.to_vec(),
         elements: vec![],
     };
-    // Every other row type only draws bar lines when it's the block's first
-    // row (`part_idx == 0`) — a lyric row is no exception, since it can end
-    // up first when a standalone `lyrics` part shares a measure with an
-    // all-rest `notes` part that `hide_resting_parts` has hidden. Without
-    // this, such a measure would render with no bar line at all.
-    if part_idx == 0 && draw_bar_line {
-        row.elements.push(GridElement {
-            column: LABEL_COLS,
-            column_span: 1,
-            halign: HAlign::Start,
-            valign: VAlign::Top,
-            content: GridContent::BarLine {
-                height_pt: bar_height,
-            },
-        });
-    }
+    push_leading_bar_line(&mut row, part_idx, draw_bar_line, bar_height);
+    push_verse_row_label(&mut row, system, part_idx);
     let mut measure_col_offset: u32 = 0;
     let last_block_idx = system.len().saturating_sub(1);
     for (block_idx, block) in system.iter().enumerate() {

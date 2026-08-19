@@ -7,9 +7,9 @@ use crate::grid_layout::PAGE_MARGIN;
 
 use super::content_conversion::grid_to_absolute;
 use super::highlights::{
-    resolve_error_highlights, resolve_lyric_click_target, resolve_measure_click_target,
-    resolve_measure_highlights, resolve_note_click_target, resolve_part_label_click_target,
-    resolve_playback_cursor_target,
+    resolve_error_highlights, resolve_lyric_click_target, resolve_lyric_label_click_target,
+    resolve_measure_click_target, resolve_measure_highlights, resolve_note_click_target,
+    resolve_part_label_click_target, resolve_playback_cursor_target,
 };
 use super::post_arc_conversion::to_post_arc_content;
 
@@ -280,10 +280,11 @@ fn resolve_multi_measure_rest(count: u32, x_start: f32, width: f32, y: f32) -> A
 }
 
 /// Resolves every click/drag hit target on a page — measure, playback
-/// cursor, note, part-label, and lyric — appended in that order so later
-/// ones stay topmost for `elementFromPoint` hit-testing (e.g. a note click
-/// target over its enclosing measure's, and a lyric syllable's own target
-/// over the note click target that geometrically covers its row).
+/// cursor, note, part-label, lyric, and lyric-label — appended in that order
+/// so later ones stay topmost for `elementFromPoint` hit-testing (e.g. a
+/// note click target over its enclosing measure's, and a lyric syllable's
+/// own target over the note click target that geometrically covers its
+/// row).
 fn resolve_click_target_elements(
     page: &GridPage,
     row_tops: &[f32],
@@ -312,6 +313,10 @@ fn resolve_click_target_elements(
 
     elements.extend(page.lyric_click_targets.iter().filter_map(|t| {
         resolve_lyric_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
+    }));
+
+    elements.extend(page.lyric_label_click_targets.iter().filter_map(|t| {
+        resolve_lyric_label_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
     }));
 
     elements

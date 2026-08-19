@@ -69,6 +69,9 @@ pub enum TransparentRectRole {
     /// `PartLabelClickTarget`) so it always wins hit-testing over the wider
     /// `NoteClickTarget` rect that geometrically covers the same lyric row.
     LyricClickTarget,
+    /// Invisible rect layered over one verse's `RowLabel` text, giving it a
+    /// clickable/draggable hit target — see `Tag::LyricLabel`.
+    LyricLabelClickTarget,
 }
 
 impl TransparentRectRole {
@@ -80,6 +83,7 @@ impl TransparentRectRole {
             Self::NoteClickTarget => "note-click-target-rect",
             Self::PartLabelClickTarget => "part-label-click-target-rect",
             Self::LyricClickTarget => "lyric-click-target-rect",
+            Self::LyricLabelClickTarget => "lyric-label-click-target-rect",
         }
     }
 }
@@ -135,6 +139,16 @@ pub enum Tag {
         source_part_index: usize,
         note_id: usize,
         verse: usize,
+    },
+    /// Identifies one verse's `RowLabel` click target — see
+    /// `AbsoluteContent::LyricLabelClickTarget`. `measure_index_start`/
+    /// `measure_index_end` scope a click/drag on this label to the whole
+    /// system it sits in, mirroring `Tag::PartLabel`.
+    LyricLabel {
+        source_part_index: usize,
+        verse: usize,
+        measure_index_start: usize,
+        measure_index_end: usize,
     },
 }
 

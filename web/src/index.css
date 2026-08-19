@@ -63,3 +63,8 @@ rect[data-variant="part-label-click-target-rect"]:hover,
 rect[data-variant="part-label-click-target-rect"][data-part-label-drag-active] {
   fill: rgba(37, 99, 235, 0.12);
 }
+
+rect[data-variant="lyric-label-click-target-rect"]:hover,
+rect[data-variant="lyric-label-click-target-rect"][data-lyric-label-drag-active] {
+  fill: rgba(37, 99, 235, 0.12);
+}

@@ -4,70 +4,33 @@ import type { LyricSpan, NoteSpan } from '../types'
 import {
   applyLyricDragHighlights,
   applyNoteDragHighlights,
-  applyPartLabelDragHighlight,
   applyPersistedLyricHighlights,
   applyPersistedNoteHighlights,
-  applyPersistedPartLabelHighlights,
-  type DragPoint,
   NOTE_DRAG_ARM_THRESHOLD_PX,
-  partLabelsInMarquee,
 } from './previewDragHighlights'
+import type { PreviewDragState } from './previewDragState'
+import {
+  applyLyricLabelDragHighlight,
+  applyPartLabelDragHighlight,
+  applyPersistedLyricLabelHighlights,
+  applyPersistedPartLabelHighlights,
+  lyricLabelsInMarquee,
+  partLabelsInMarquee,
+} from './previewLabelDragHighlights'
+import {
+  lyricCellsForLyricLabels,
+  lyricCellsForPartLabels,
+  noteCellsForPartLabels,
+} from './previewLabelSelection'
 import {
   getMeasureAtPoint,
   type LyricCell,
-  lyricCellsForPartLabels,
   lyricCellsInMeasureRange,
-  type MeasureRange,
   type NoteCell,
-  noteCellsForPartLabels,
   noteCellsInMeasureRange,
 } from './previewSelection'
 
-// One discriminated ref rather than a separate measure-drag and note-drag
-// ref: a single mousedown can only ever arm one mode (see the handler
-// below), and two independent refs risk both firing at once. This only
-// governs which mode a mousedown *arms* — it doesn't stop a single armed
-// mode's move/up handlers from resolving cells of more than one type. Both
-// 'note' and 'lyric' mode union in the other cell type's marquee hits (via
-// `applyNoteDragHighlights`/`applyLyricDragHighlights`, which are stateless
-// pure functions over the note/lyric specs, not stateful refs), the same way
-// 'measure' mode always has.
-//
-// A mousedown that lands on a note doesn't commit to 'note' mode right
-// away — it starts 'pending' instead, and only arms into 'note' once the
-// pointer has actually moved past `NOTE_DRAG_ARM_THRESHOLD_PX` (see
-// `handleMouseMove`). A plain click on a note (mouseup with no meaningful
-// movement) resolves as a shortcut for selecting every note in that note's
-// measure instead, using `measureRangeAtAnchor` — clicking a measure (on a
-// note or the empty space around it) is just a fast way to select all of
-// its notes, there's no separate "measure selected" state anymore.
-export type PreviewDragState =
-  | { mode: 'measure'; anchor: MeasureRange; current: MeasureRange }
-  | { mode: 'note'; anchor: DragPoint; current: DragPoint }
-  | {
-      mode: 'part-label'
-      anchor: DragPoint
-      current: DragPoint
-      anchorSystem: { measureIndexStart: number; measureIndexEnd: number }
-    }
-  | {
-      mode: 'pending'
-      anchor: DragPoint
-      noteCellAtAnchor: NoteCell
-      measureRangeAtAnchor: MeasureRange | undefined
-    }
-  | {
-      // No 'pending'-style click/drag distinction needed here, unlike
-      // 'note': a lyric syllable's click target is already exactly one grid
-      // column (see `LyricClickTarget`), so a plain click naturally
-      // resolves to just that one syllable via the marquee test below with
-      // zero movement — there's no "expand to the whole measure" shortcut
-      // to arm into, unlike a note click.
-      mode: 'lyric'
-      anchor: DragPoint
-      current: DragPoint
-    }
-  | null
+export type { PreviewDragState } from './previewDragState'
 
 /** Owns the note/measure/part-label drag-select gesture for `Preview`: a
  * `mousedown` on the SVG (handled by `Preview` itself, which writes the
@@ -174,6 +137,22 @@ export function usePreviewDragSelection(
         applyPersistedLyricHighlights(
           container,
           lyricCellsForPartLabels(lyricSpansRef.current, hits),
+        )
+        return
+      }
+
+      if (dragState.mode === 'lyric-label') {
+        dragState.current = { x: e.clientX, y: e.clientY }
+        const hits = lyricLabelsInMarquee(
+          container,
+          dragState.anchor,
+          dragState.current,
+          dragState.anchorSystem,
+        )
+        applyLyricLabelDragHighlight(container, hits)
+        applyPersistedLyricHighlights(
+          container,
+          lyricCellsForLyricLabels(lyricSpansRef.current, hits),
         )
         return
       }
@@ -310,6 +289,37 @@ export function usePreviewDragSelection(
           onMeasureRangeSelectRef.current(cells, lyricCells)
         } else {
           onNoteRangeSelectRef.current?.(cells)
+          onLyricRangeSelectRef.current?.(lyricCells)
+        }
+        dragStateRef.current = null
+        return
+      }
+
+      if (dragState.mode === 'lyric-label') {
+        const current = { x: e.clientX, y: e.clientY }
+        const hits = container
+          ? lyricLabelsInMarquee(
+              container,
+              dragState.anchor,
+              current,
+              dragState.anchorSystem,
+            )
+          : []
+        const lyricCells = lyricCellsForLyricLabels(lyricSpansRef.current, hits)
+        if (container) {
+          applyPersistedLyricHighlights(container, lyricCells)
+          // Replaces the transient marquee-driven fill with the persisted
+          // one immediately, mirroring 'part-label' mode's own mouseup —
+          // see its comment for why.
+          applyPersistedLyricLabelHighlights(
+            container,
+            lyricSpansRef.current,
+            lyricCells,
+          )
+        }
+        if (onMeasureRangeSelectRef.current) {
+          onMeasureRangeSelectRef.current([], lyricCells)
+        } else {
           onLyricRangeSelectRef.current?.(lyricCells)
         }
         dragStateRef.current = null

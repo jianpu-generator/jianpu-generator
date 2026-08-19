@@ -12,7 +12,7 @@ import { focusEditor } from './fileSwitcherHelpers'
  * `usePreviewDragSelection.ts`'s `'part-label'` mode used to resolve only
  * `noteCellsForPartLabels` and never a lyric-side counterpart, so a
  * part-label drag silently skipped every lyric row underneath the swept
- * parts. `lyricCellsForPartLabels` (in `previewSelection.ts`) is the fix.
+ * parts. `lyricCellsForPartLabels` (in `previewLabelSelection.ts`) is the fix.
  *
  * Self-contained source (not a demo file) with a generous "max measures per
  * system" so both measures render in one system and both part labels stay

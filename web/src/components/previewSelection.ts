@@ -9,18 +9,19 @@ export interface NoteCell {
 
 /** Shape driving `getCellAtPoint`: which `data-tag` group to look up, and how
  * to parse a `Cell` out of that group's `dataset`. */
-interface CellAtPointSpec<Cell> {
+export interface CellAtPointSpec<Cell> {
   tag: string
   parseCell: (dataset: DOMStringMap) => Cell | undefined
 }
 
 /**
  * Generic hit-test behind `getNoteAtPoint`/`getLyricAtPoint`/
- * `getPartLabelAtPoint`: reads the element under `(x, y)`, walks up to its
- * nearest `[data-tag="{spec.tag}"]` ancestor group, and parses a `Cell` out
- * of that group's `dataset` via `spec.parseCell`.
+ * `getPartLabelAtPoint`/`getLyricLabelAtPoint`: reads the element under
+ * `(x, y)`, walks up to its nearest `[data-tag="{spec.tag}"]` ancestor
+ * group, and parses a `Cell` out of that group's `dataset` via
+ * `spec.parseCell`.
  */
-function getCellAtPoint<Cell>(
+export function getCellAtPoint<Cell>(
   x: number,
   y: number,
   spec: CellAtPointSpec<Cell>,
@@ -34,8 +35,8 @@ function getCellAtPoint<Cell>(
 
 /** Parses a `dataset` string into an integer, or `undefined` if the string is
  * missing or not a valid integer — the common per-field step behind every
- * `parseCell` below. */
-function parseDatasetInt(value: string | undefined): number | undefined {
+ * `parseCell` below (and in `previewLabelSelection.ts`). */
+export function parseDatasetInt(value: string | undefined): number | undefined {
   if (value === undefined) return undefined
   const parsed = Number.parseInt(value, 10)
   return Number.isNaN(parsed) ? undefined : parsed
@@ -55,88 +56,6 @@ export function getSectionLabelAtPoint(
 export interface MeasureRange {
   start: number
   end: number
-}
-
-/** One rendered part-label click target, keyed the same way as
- * `Tag::PartLabel`'s `data-part-index`/`data-measure-index-start`/
- * `data-measure-index-end` SVG attributes — see `getPartLabelAtPoint`. */
-export interface PartLabelHit {
-  sourcePartIndex: number
-  measureIndexStart: number
-  measureIndexEnd: number
-}
-
-/** The part-label click target under the given point, if any — reads the
- * invisible `PartLabelClickTarget` rect's enclosing `Tag::PartLabel` group
- * (see `renderer::new_renderer::render_part_label_click_target`). */
-export function getPartLabelAtPoint(
-  x: number,
-  y: number,
-): PartLabelHit | undefined {
-  return getCellAtPoint(x, y, {
-    tag: 'part-label',
-    parseCell: ({ partIndex, measureIndexStart, measureIndexEnd }) => {
-      const sourcePartIndex = parseDatasetInt(partIndex)
-      const start = parseDatasetInt(measureIndexStart)
-      const end = parseDatasetInt(measureIndexEnd)
-      if (
-        sourcePartIndex === undefined ||
-        start === undefined ||
-        end === undefined
-      )
-        return undefined
-      return {
-        sourcePartIndex,
-        measureIndexStart: start,
-        measureIndexEnd: end,
-      }
-    },
-  })
-}
-
-/** Every note/rest cell belonging to the given part-label hits — each hit
- * selects its own part's notes across its own `measureIndexStart..=measureIndexEnd`
- * (the whole system the label sits in), mirroring `noteCellsInMeasureRange`. */
-export function noteCellsForPartLabels(
-  noteSpans: NoteSpan[],
-  hits: PartLabelHit[],
-): NoteCell[] {
-  return hits.flatMap((hit) =>
-    noteSpans
-      .filter(
-        (span) =>
-          span.sourcePartIndex === hit.sourcePartIndex &&
-          span.measureIndex >= hit.measureIndexStart &&
-          span.measureIndex <= hit.measureIndexEnd,
-      )
-      .map((span) => ({
-        sourcePartIndex: span.sourcePartIndex,
-        noteId: span.noteId,
-      })),
-  )
-}
-
-/** Every lyric syllable cell belonging to the given part-label hits —
- * the lyric-side mirror of `noteCellsForPartLabels`, so a part-label drag
- * selects the verse lyrics under its swept part rows alongside their notes. */
-export function lyricCellsForPartLabels(
-  lyricSpans: LyricSpan[],
-  hits: PartLabelHit[],
-): LyricCell[] {
-  return hits.flatMap((hit) =>
-    lyricSpans
-      .filter(
-        (span) =>
-          span.sourcePartIndex === hit.sourcePartIndex &&
-          span.measureIndex >= hit.measureIndexStart &&
-          span.measureIndex <= hit.measureIndexEnd,
-      )
-      .map((span) => ({
-        sourcePartIndex: span.sourcePartIndex,
-        noteId: span.noteId,
-        verse: span.verse,
-      })),
-  )
 }
 
 /**

@@ -37,6 +37,7 @@ fn measure_highlight_produces_prepended_rect_element() {
         playback_cursor_targets: vec![],
         part_label_click_targets: vec![],
         lyric_click_targets: vec![],
+        lyric_label_click_targets: vec![],
     };
     let abs = resolve(
         &[page],
@@ -90,6 +91,7 @@ fn error_highlight_resolves_to_absolute_error_highlight() {
         playback_cursor_targets: vec![],
         part_label_click_targets: vec![],
         lyric_click_targets: vec![],
+        lyric_label_click_targets: vec![],
     };
     let abs_pages: Vec<AbsolutePage> = resolve(
         &[page],
@@ -133,6 +135,7 @@ fn page_with_no_highlight_produces_no_extra_element() {
         playback_cursor_targets: vec![],
         part_label_click_targets: vec![],
         lyric_click_targets: vec![],
+        lyric_label_click_targets: vec![],
     };
     let abs = resolve(
         &[page],
@@ -197,6 +200,7 @@ fn playback_cursor_reaches_final_bar_line_of_its_measure() {
         }],
         part_label_click_targets: vec![],
         lyric_click_targets: vec![],
+        lyric_label_click_targets: vec![],
     };
     let abs_pages = resolve(
         &[page],

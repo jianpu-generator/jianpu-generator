@@ -25,7 +25,8 @@ function transparentRectRoleToDataVariant(
     | 'sectionLabelClickTarget'
     | 'noteClickTarget'
     | 'partLabelClickTarget'
-    | 'lyricClickTarget',
+    | 'lyricClickTarget'
+    | 'lyricLabelClickTarget',
 ): string {
   switch (role) {
     case 'measureClickTarget':
@@ -40,6 +41,8 @@ function transparentRectRoleToDataVariant(
       return 'part-label-click-target-rect'
     case 'lyricClickTarget':
       return 'lyric-click-target-rect'
+    case 'lyricLabelClickTarget':
+      return 'lyric-label-click-target-rect'
   }
 }
 
@@ -213,6 +216,16 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
       const lyricNoteId =
         kind.tag?.type === 'lyric' ? kind.tag.note_id : undefined
       const lyricVerse = kind.tag?.type === 'lyric' ? kind.tag.verse : undefined
+      const lyricLabelPartIndex =
+        kind.tag?.type === 'lyricLabel' ? kind.tag.source_part_index : undefined
+      const lyricLabelVerse =
+        kind.tag?.type === 'lyricLabel' ? kind.tag.verse : undefined
+      const lyricLabelMeasureIndexStart =
+        kind.tag?.type === 'lyricLabel'
+          ? kind.tag.measure_index_start
+          : undefined
+      const lyricLabelMeasureIndexEnd =
+        kind.tag?.type === 'lyricLabel' ? kind.tag.measure_index_end : undefined
       return (
         <g
           key={key}
@@ -227,21 +240,33 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
                     ? 'part-label'
                     : lyricPartIndex !== undefined
                       ? 'lyric'
-                      : undefined
+                      : lyricLabelPartIndex !== undefined
+                        ? 'lyric-label'
+                        : undefined
           }
           data-measure-index={measureIndex}
-          data-measure-index-end={measureIndexEnd ?? partLabelMeasureIndexEnd}
+          data-measure-index-end={
+            measureIndexEnd ??
+            partLabelMeasureIndexEnd ??
+            lyricLabelMeasureIndexEnd
+          }
           data-section-label={sectionLabel}
           data-part-index={
-            notePartIndex ?? partLabelPartIndex ?? lyricPartIndex
+            notePartIndex ??
+            partLabelPartIndex ??
+            lyricPartIndex ??
+            lyricLabelPartIndex
           }
           data-note-id={noteId ?? lyricNoteId}
-          data-verse={lyricVerse}
-          data-measure-index-start={partLabelMeasureIndexStart}
+          data-verse={lyricVerse ?? lyricLabelVerse}
+          data-measure-index-start={
+            partLabelMeasureIndexStart ?? lyricLabelMeasureIndexStart
+          }
           style={
             measureIndex !== undefined ||
             sectionLabel !== undefined ||
-            partLabelPartIndex !== undefined
+            partLabelPartIndex !== undefined ||
+            lyricLabelPartIndex !== undefined
               ? { cursor: 'pointer' }
               : undefined
           }

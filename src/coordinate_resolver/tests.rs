@@ -22,6 +22,7 @@ fn single_row_page(element: GridElement) -> GridPage {
         playback_cursor_targets: vec![],
         part_label_click_targets: vec![],
         lyric_click_targets: vec![],
+        lyric_label_click_targets: vec![],
     }
 }
 
@@ -131,6 +132,7 @@ fn note_head_halign_center_is_independent_of_column_weight() {
             playback_cursor_targets: vec![],
             part_label_click_targets: vec![],
             lyric_click_targets: vec![],
+            lyric_label_click_targets: vec![],
         }
     };
     let resolve_note_x = |column_weight: f32| -> f32 {
@@ -198,6 +200,7 @@ fn valign_top_places_y_at_row_top() {
         playback_cursor_targets: vec![],
         part_label_click_targets: vec![],
         lyric_click_targets: vec![],
+        lyric_label_click_targets: vec![],
     };
     let abs = resolve(
         &[page],
