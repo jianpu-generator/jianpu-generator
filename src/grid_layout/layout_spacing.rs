@@ -1,141 +1,116 @@
 use super::{block_column_width, LABEL_COLS, MUSIC_START_COL};
-use crate::ast::parsed::Accidental;
-use crate::compiler::types::{ElementContent, MeasureBlock, MULTI_MEASURE_REST_WIDTH};
-use crate::font_metrics;
+use crate::compiler::types::{ElementContent, MeasureBlock};
 use crate::grid_layout::types::MeasureColumnLayout;
 use crate::render_config::RenderConfig;
 
+#[path = "layout_spacing_weights.rs"]
+mod weights;
+use weights::{column_weight, measure_note_weight, THIN_MARK_WEIGHT};
+
 /// Minimum floor a measure's column-region gets, in points, regardless of its
-/// spacing weight — enough room for a barline plus one note head, so a
-/// maximally-sparse measure never collapses below readability next to a
-/// maximally-dense one in the same system.
+/// spacing weight or its own columns' rods — a degenerate-case safety net
+/// (e.g. an empty measure) now that [`MeasureColumnLayout::rod_pt`] is
+/// normally content-derived (see that field's doc comment).
 pub(crate) const MIN_MEASURE_WIDTH_PT: f32 = 24.0;
 
-/// Relative width weight of a `BarLine` column — just a thin mark, so it
-/// gets much less than a fresh note. Elements that don't occupy their own
-/// column-worth of ink (`Underline`) or that are handled separately
-/// (`MultiMeasureRest`) contribute nothing here. Kept as an arbitrary flat
-/// ratio rather than a measured width: a bar line is a drawn stroke, not a
-/// glyph, so "actual rendered width" doesn't apply to it.
-const THIN_MARK_WEIGHT: f32 = 0.25;
+/// Extra clearance (in points) added on top of a note-ish column's own
+/// [`column_weight`] to form its hard-minimum rod — the "spring and rod"
+/// model's rod is real content width plus a little breathing room, not just
+/// the bare glyph width, so a column never renders flush against whatever
+/// follows it (see **Rod and spring** in `ARCHITECTURE.md`).
+const COLUMN_CLEARANCE_PT: f32 = 1.0;
 
-/// Real advance width (in points) of one notehead/rest/percussion-hit digit
-/// glyph at `config`'s notes font size — the unit every other weight below
-/// is expressed in relative terms of, since notehead/rest/percussion glyphs
-/// all render as a single monospace character (see `render_note_head`/
-/// `render_rest`/`render_percussion_hit` in `glyph_renderers.rs`), so any one
-/// of their digits/`0`/`x` characters measures the same.
-fn note_glyph_weight(config: &RenderConfig) -> f32 {
-    font_metrics::monospace_char_advance_width('0', config.notes_font_size())
-}
+/// Hard-minimum rod (in points) for a `BarLine` column. Unlike note-ish
+/// columns, a bar line's [`THIN_MARK_WEIGHT`] is an arbitrary relative ratio
+/// rather than a measured width (see that constant's doc comment), so it
+/// can't double as a rod the way [`column_weight`] does elsewhere — this is
+/// a small dedicated floor instead, just enough for the drawn stroke plus a
+/// sliver of clearance on each side.
+const BARLINE_MIN_WIDTH_PT: f32 = 4.0;
 
-/// Extra weight given to a dotted column (`NoteHead`, `Rest`, `ChordSymbol`,
-/// `NoteDash`) to make room for its augmentation dot(s), which are drawn
-/// alongside the glyph rather than being baked into it (see
-/// `glyph_renderers.rs`'s `render_note_head`/`render_rest`/
-/// `render_chord_symbol`/`render_note_dash`). Matches the dot's real
-/// rendered diameter (`dot_radius = row_height * 0.06` in those renderers),
-/// doubled when `double_dotted` for the second dot glyph.
-fn dotted_extra_weight(dotted: bool, double_dotted: bool, config: &RenderConfig) -> f32 {
-    if !dotted {
-        return 0.0;
-    }
-    let dot_count = if double_dotted { 2 } else { 1 };
-    dot_count as f32 * 2.0 * config.row_height as f32 * 0.06
-}
-
-/// Extra weight given to a `NoteHead` column carrying a sharp/flat
-/// accidental, to make room for the `♯`/`♭` glyph drawn to the right of the
-/// note head rather than being baked into it (see `render_note_head` in
-/// `glyph_renderers.rs`, which starts the glyph at `elem.x +
-/// note_number_width * ACCIDENTAL_LEFT_GAP_RATIO` and draws it at `1.25x`
-/// the notes font size). The reach is asymmetric on purpose — a small left
-/// gap keeps the glyph visually hugging the note it modifies, while a larger
-/// right gap ([`font_metrics::ACCIDENTAL_RIGHT_PADDING_RATIO`]) keeps it
-/// from crowding the next column, so the accidental reads unambiguously as
-/// belonging to the note on its left. Only the reach beyond what
-/// [`note_glyph_weight`] already covers is added, so an accidental that
-/// happens to fit within the note glyph's own width (e.g. at a large
-/// `note_number_width`) contributes nothing extra. `Natural` renders no
-/// glyph (see `render_note_head`), so it needs no extra weight either.
-fn accidental_extra_weight(accidental: &Accidental, config: &RenderConfig) -> f32 {
-    let symbol = match accidental {
-        Accidental::Sharp => "\u{266F}",
-        Accidental::Flat => "\u{266D}",
-        Accidental::Natural => return 0.0,
-    };
-    let reach = config.note_number_width as f32
-        * (font_metrics::ACCIDENTAL_LEFT_GAP_RATIO + font_metrics::ACCIDENTAL_RIGHT_PADDING_RATIO)
-        + font_metrics::monospace_text_width(symbol, config.notes_font_size() * 1.25);
-    (reach - note_glyph_weight(config)).max(0.0)
-}
-
-/// Real advance width (in points) of the note-dash glyph (`—`), measured at
-/// its own fixed rendered font size (`NOTE_DASH_FONT_SIZE`) rather than
-/// `config`'s lyric font size, matching what `render_note_dash` actually
-/// draws.
-fn dash_weight() -> f32 {
-    font_metrics::monospace_char_advance_width('\u{2014}', font_metrics::NOTE_DASH_FONT_SIZE)
-}
-
-/// Width weight for a chord symbol's own glyph, measured from its real
-/// rendered width in the monospace font (chord symbols render as monospace
-/// text — see `render_chord_symbol`). Floored at [`note_glyph_weight`] so a
-/// single-character chord (e.g. `1`) keeps the same weight as any other
-/// note-like event.
-fn chord_symbol_weight(symbol: &str, config: &RenderConfig) -> f32 {
-    font_metrics::monospace_text_width(symbol, config.chords_font_size())
-        .max(note_glyph_weight(config))
-}
-
-/// Width weight for a lyric syllable, measured from its real rendered width
-/// — the CJK font/size if the syllable contains a CJK codepoint, the
-/// monospace font/size otherwise — mirroring the same check `render_lyric`
-/// already does to pick a font size.
-fn lyric_weight(text: &str, config: &RenderConfig) -> f32 {
-    if text.chars().any(font_metrics::is_cjk_char) {
-        font_metrics::cjk_text_width(text, config.lyric_cjk_font_size())
-    } else {
-        font_metrics::monospace_text_width(text, config.lyric_font_size())
-    }
-}
-
-fn column_weight(content: &ElementContent, config: &RenderConfig) -> f32 {
+/// Hard-minimum rod (in points) for a column carrying `content` — the floor
+/// [`column_geometry`](super::geometry) gives that column regardless of how
+/// tightly its system is packed. Note-ish columns get their real rendered
+/// width ([`column_weight`]) plus a little clearance
+/// ([`COLUMN_CLEARANCE_PT`]); a `BarLine` gets its own small dedicated floor
+/// ([`BARLINE_MIN_WIDTH_PT`]) since [`THIN_MARK_WEIGHT`] isn't a real width;
+/// `Underline`/`MultiMeasureRest` need no floor of their own, matching their
+/// zero spring weight.
+fn column_rod(content: &ElementContent, config: &RenderConfig) -> f32 {
     match content {
-        ElementContent::NoteHead {
-            accidental,
-            dotted,
-            double_dotted,
-            ..
-        } => {
-            note_glyph_weight(config)
-                + accidental_extra_weight(accidental, config)
-                + dotted_extra_weight(*dotted, *double_dotted, config)
-        }
-        ElementContent::Rest {
-            dotted,
-            double_dotted,
-        } => note_glyph_weight(config) + dotted_extra_weight(*dotted, *double_dotted, config),
-        ElementContent::ChordSymbol {
-            text,
-            dotted,
-            double_dotted,
-        } => {
-            chord_symbol_weight(text, config) + dotted_extra_weight(*dotted, *double_dotted, config)
-        }
-        ElementContent::PercussionHit => note_glyph_weight(config),
-        ElementContent::NoteDash {
-            dotted,
-            double_dotted,
-        } => dash_weight() + dotted_extra_weight(*dotted, *double_dotted, config),
-        ElementContent::Lyric { text, .. } => lyric_weight(text, config),
-        // A `LyricLine` spans the whole measure via `column_span` rather than
-        // occupying one grid column, so it contributes no per-column weight here;
-        // its width is instead folded into the measure's total via `measure_note_weight`.
-        ElementContent::LyricLine { .. } => 0.0,
-        ElementContent::BarLine => THIN_MARK_WEIGHT,
+        ElementContent::BarLine => BARLINE_MIN_WIDTH_PT,
         ElementContent::MultiMeasureRest { .. } | ElementContent::Underline { .. } => 0.0,
+        _ => column_weight(content, config) + COLUMN_CLEARANCE_PT,
     }
+}
+
+/// A column's spring-and-rod sizing: `weight` is its spring (relative share
+/// of any slack left after every column's rod is satisfied — see
+/// [`column_weight`]), `rod_pt` is its hard-minimum floor in points (see
+/// [`column_rod`]). See **Rod and spring** in `ARCHITECTURE.md`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct ColumnSizing {
+    pub weight: f32,
+    pub rod_pt: f32,
+}
+
+/// Per-column [`ColumnSizing`] across `block`'s `col_count` columns — the
+/// combined weight/rod computation [`measure_column_weights`] and
+/// [`build_measure_column_layout`] both draw from, so the per-row
+/// max-across-parts logic lives in one place. See
+/// [`measure_column_weights`]'s doc comment for the full column-splitting
+/// rationale (multi-measure-rest handling, tuplet multiplier-invariance,
+/// etc.) — this differs from it only in also carrying each column's rod.
+fn measure_column_sizes(
+    block: &MeasureBlock,
+    col_count: u32,
+    config: &RenderConfig,
+) -> Vec<ColumnSizing> {
+    let has_multi_measure_rest = block.rows.iter().any(|row| {
+        row.elements
+            .iter()
+            .any(|e| matches!(e.content, ElementContent::MultiMeasureRest { .. }))
+    });
+    if has_multi_measure_rest {
+        // Mirrors `measure_column_weights`'s own special case: the rest's
+        // span keeps its flat weight, and every column here (including the
+        // trailing bar line) gets rod `0.0` — the block's fixed
+        // `MULTI_MEASURE_REST_WIDTH` span already gives it real width, so no
+        // per-column floor is needed on top.
+        return (0..col_count)
+            .map(|col| ColumnSizing {
+                weight: if col + 1 == col_count {
+                    THIN_MARK_WEIGHT
+                } else {
+                    1.0
+                },
+                rod_pt: 0.0,
+            })
+            .collect();
+    }
+    (0..col_count)
+        .map(|col| {
+            block
+                .rows
+                .iter()
+                .flat_map(|row| row.elements.iter())
+                .filter(|e| e.column == col)
+                .map(|e| ColumnSizing {
+                    weight: column_weight(&e.content, config),
+                    rod_pt: column_rod(&e.content, config),
+                })
+                .fold(
+                    ColumnSizing {
+                        weight: 0.0,
+                        rod_pt: 0.0,
+                    },
+                    |acc, s| ColumnSizing {
+                        weight: acc.weight.max(s.weight),
+                        rod_pt: acc.rod_pt.max(s.rod_pt),
+                    },
+                )
+        })
+        .collect()
 }
 
 /// Per-column width weight across `block`'s `col_count` columns, used to
@@ -158,110 +133,16 @@ fn column_weight(content: &ElementContent, config: &RenderConfig) -> f32 {
 /// without any explicit division. Confirmed empirically: a single-measure triplet
 /// (`3:{1_1_1_} 2_ 3_ 4_ 5_ 6_`, multiplier 3) renders its 8 notes at uniform column
 /// spacing, identical in kind to a non-tuplet measure of 8 same-weight notes.
+#[cfg(test)]
 pub(crate) fn measure_column_weights(
     block: &MeasureBlock,
     col_count: u32,
     config: &RenderConfig,
 ) -> Vec<f32> {
-    let has_multi_measure_rest = block.rows.iter().any(|row| {
-        row.elements
-            .iter()
-            .any(|e| matches!(e.content, ElementContent::MultiMeasureRest { .. }))
-    });
-    if has_multi_measure_rest {
-        // The block is always the rest's own span (flat weight, so its
-        // bar/count render evenly) followed by exactly one trailing `BarLine`
-        // column, which should keep the usual thin weight rather than
-        // ballooning to match a full rest column — otherwise the bar line's
-        // slot eats a disproportionate share of the measure's width, leaving
-        // a lopsided gap to the right of the rest bar.
-        return (0..col_count)
-            .map(|col| {
-                if col + 1 == col_count {
-                    THIN_MARK_WEIGHT
-                } else {
-                    1.0
-                }
-            })
-            .collect();
-    }
-    (0..col_count)
-        .map(|col| {
-            block
-                .rows
-                .iter()
-                .flat_map(|row| row.elements.iter())
-                .filter(|e| e.column == col)
-                .map(|e| column_weight(&e.content, config))
-                .fold(0.0_f32, f32::max)
-        })
+    measure_column_sizes(block, col_count, config)
+        .into_iter()
+        .map(|s| s.weight)
         .collect()
-}
-
-/// How much horizontal room `block` should get relative to *other measures*
-/// in its system — not to be confused with [`measure_column_weights`], which
-/// splits width *within* one measure. Only counts real note-starting
-/// elements (notehead, rest, percussion hit, chord symbol); dashes and bar
-/// lines don't contribute, so a measure of quarter notes gets roughly
-/// double the aggregate weight of a measure of half notes spanning the same
-/// duration (4 fresh notes vs. 2 notes + 2 dashes) — the whole point being
-/// that dash-extended measures shouldn't out-compete note-dense measures for
-/// width just because a dash happens to occupy its own column. A chord
-/// symbol contributes its own [`chord_symbol_weight`] (its real rendered
-/// width) rather than a flat [`note_glyph_weight`], so a slash chord with a
-/// bass note (e.g. `2m/5`) out-competes a bare-degree chord (e.g. `1`) for
-/// width. Weight is the max (not sum) across the block's part rows, so a
-/// measure isn't penalized for having many parts, only sized for its
-/// densest one. A collapsed `MultiMeasureRest` row gets a fixed weight
-/// matching its current fixed column allocation instead of being counted as
-/// one note. Clamped to a minimum of one note glyph's width
-/// ([`note_glyph_weight`]) so an empty/rest-only measure never collapses to
-/// zero weight, and so two equal-density measures always compare equal
-/// regardless of which one happens to open the system (see
-/// `build_measure_column_layout`'s leading bar-line column, which never
-/// contributes here).
-///
-/// Deliberately **not** divided by the measure's tuplet `resolution_multiplier` (see
-/// **Tuplet** in `ARCHITECTURE.md`): this counts *written note occurrences*, not raw grid
-/// columns, and a tuplet's rescaled duration never changes how many `NoteHead`/`Rest`/
-/// `PercussionHit` elements a measure has — 3 triplet-eighth notes still count as 3, the
-/// same as 3 plain notes elsewhere, matching this function's existing note-count (not
-/// note-duration) philosophy. A tuplet measure's grid column *count* is inflated by its
-/// multiplier (see `block_column_width`), but that inflation never reaches a raw pixel
-/// width anywhere in this module — every consumer of `col_count` below only ever indexes
-/// or iterates it, then folds back down to a proportional (multiplier-invariant) split via
-/// `measure_column_weights`/`column_weight`.
-fn measure_note_weight(block: &MeasureBlock, config: &RenderConfig) -> f32 {
-    block
-        .rows
-        .iter()
-        .map(|row| {
-            let has_multi_measure_rest = row
-                .elements
-                .iter()
-                .any(|e| matches!(e.content, ElementContent::MultiMeasureRest { .. }));
-            if has_multi_measure_rest {
-                MULTI_MEASURE_REST_WIDTH as f32
-            } else {
-                row.elements
-                    .iter()
-                    .map(|e| match &e.content {
-                        ElementContent::NoteHead { accidental, .. } => {
-                            note_glyph_weight(config) + accidental_extra_weight(accidental, config)
-                        }
-                        ElementContent::Rest { .. } | ElementContent::PercussionHit => {
-                            note_glyph_weight(config)
-                        }
-                        ElementContent::ChordSymbol { text, .. } => {
-                            chord_symbol_weight(text, config)
-                        }
-                        ElementContent::LyricLine { text, .. } => lyric_weight(text, config),
-                        _ => 0.0,
-                    })
-                    .sum::<f32>()
-            }
-        })
-        .fold(note_glyph_weight(config), f32::max)
 }
 
 /// Per-measure column layout (position, column count, weights) for every
@@ -276,8 +157,9 @@ fn measure_note_weight(block: &MeasureBlock, config: &RenderConfig) -> f32 {
 /// `ColumnSegment` so `x_start(LABEL_COLS)` keeps landing exactly on
 /// `label_width_pt` (where the leading bar line is drawn) regardless of the
 /// first measure's weight. It's given `THIN_MARK_WEIGHT` for the intra-
-/// measure split (like any other bar line) but never affects `weight`,
-/// which is purely `measure_note_weight`.
+/// measure weight split (like any other bar line) but rod `0.0` (see
+/// `build_measure_column_layout`'s inline comment) — like `weight`, which
+/// is purely `measure_note_weight`, neither ever counts the leading column.
 pub(crate) fn build_measure_column_layout(
     system: &[MeasureBlock],
     config: &RenderConfig,
@@ -293,13 +175,41 @@ pub(crate) fn build_measure_column_layout(
             } else {
                 0
             };
+            let sizes = measure_column_sizes(block, col_count, config);
             let mut column_weights = vec![THIN_MARK_WEIGHT; leading_extra as usize];
-            column_weights.extend(measure_column_weights(block, col_count, config));
+            column_weights.extend(sizes.iter().map(|s| s.weight));
+            // The leading placeholder column (like `weight` above) never
+            // gets a rod of its own — it still takes a proportional slice
+            // of whatever slack the measure ends up with, via its
+            // `column_weights` entry, but doesn't inflate this measure's
+            // `rod_pt` relative to a measure with no leading column. That
+            // keeps two equal-density measures at equal width regardless of
+            // which one opens the system (see
+            // `equal_density_measures_render_at_equal_width`).
+            let mut column_rods = vec![0.0; leading_extra as usize];
+            column_rods.extend(sizes.iter().map(|s| s.rod_pt));
+            let content_rod: f32 = column_rods.iter().sum();
+            let rod_pt = MIN_MEASURE_WIDTH_PT.max(content_rod);
+            if rod_pt > content_rod && content_rod > 0.0 {
+                // `MIN_MEASURE_WIDTH_PT`'s degenerate-case floor (e.g. an
+                // almost-empty measure) pushed `rod_pt` above what this
+                // measure's own columns actually need. Scale every column's
+                // rod up proportionally so `column_rods` still sums to
+                // exactly `rod_pt` — preserving the measure's internal
+                // proportions while keeping `column_geometry`'s segments
+                // gapless (see `proportional_widths_sum_to_full_usable_music_width`).
+                let scale = rod_pt / content_rod;
+                for r in &mut column_rods {
+                    *r *= scale;
+                }
+            }
             let layout = MeasureColumnLayout {
                 start_col: start_col - leading_extra,
                 col_count: col_count + leading_extra,
                 weight: measure_note_weight(block, config),
                 column_weights,
+                column_rods,
+                rod_pt,
             };
             start_col += col_count;
             layout

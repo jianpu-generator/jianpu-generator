@@ -68,6 +68,7 @@ fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
         diagnostics: vec![],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        source_span: crate::error::Span::new(0, 0),
     }
 }
 
@@ -79,7 +80,7 @@ fn layout_single_block_produces_one_page() {
         slur_spans: vec![],
         tuplet_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     assert_eq!(pages.len(), 1);
 }
 
@@ -91,7 +92,7 @@ fn layout_page_has_correct_dimensions() {
         slur_spans: vec![],
         tuplet_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     assert!((pages[0].width_pt - 595.0).abs() < 0.001);
     assert!((pages[0].height_pt - 842.0).abs() < 0.001);
 }
@@ -104,7 +105,7 @@ fn layout_rows_include_header_and_footer() {
         slur_spans: vec![],
         tuplet_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     // At minimum: header title row, header subtitle+author row, footer row
     assert!(pages[0].rows.len() >= 3, "len={}", pages[0].rows.len());
 }
@@ -117,7 +118,7 @@ fn layout_page_total_height_does_not_exceed_page_height() {
         slur_spans: vec![],
         tuplet_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     for page in &pages {
         let total: f32 = page.rows.iter().map(|r| r.height_pt).sum();
         assert!(
@@ -144,7 +145,8 @@ fn footer_row_fills_remaining_page_height() {
         595.0,
         page_height,
         None,
-    );
+    )
+    .pages;
     let page = &pages[0];
     let non_footer_height: f32 = page.rows[..page.rows.len() - 1]
         .iter()
@@ -166,7 +168,7 @@ fn footer_element_valign_is_bottom() {
         slur_spans: vec![],
         tuplet_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     let footer_row = pages[0].rows.last().unwrap();
     assert!(
         footer_row
@@ -210,7 +212,8 @@ fn layout_draws_divider_between_systems_by_default() {
         595.0,
         842.0,
         None,
-    );
+    )
+    .pages;
     assert!(has_divider(&pages), "divider should be drawn by default");
 }
 
@@ -229,7 +232,8 @@ fn layout_omits_divider_when_hide_system_dividers_is_set() {
         595.0,
         842.0,
         None,
-    );
+    )
+    .pages;
     assert!(
         !has_divider(&pages),
         "divider should be omitted when hide_system_dividers is true"

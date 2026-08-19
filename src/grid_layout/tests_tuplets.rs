@@ -39,7 +39,8 @@ time=4/4
         part_legend_font_size: 12.0,
     };
     let config = cfg();
-    let pages = crate::grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
+    let pages =
+        crate::grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None).pages;
 
     let note_heads: Vec<(JianPuPitch, u32)> = pages
         .iter()

@@ -4,6 +4,8 @@ mod check_command;
 mod demo_source;
 #[path = "main/integration.rs"]
 mod integration;
+#[path = "main/measure_overflow_diagnostic.rs"]
+mod measure_overflow_diagnostic;
 #[path = "main/measure_spans.rs"]
 mod measure_spans;
 #[path = "main/new_file_template.rs"]

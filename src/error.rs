@@ -68,6 +68,10 @@ pub enum WarningKind {
     HalfBarBoundaryCrossed,
     /// A tie/slur group `(…)` contains fewer than 2 notes — group depth is not applied.
     GroupTooFewNotes,
+    /// A system's measures' combined rod (hard minimum) width exceeds the
+    /// page's usable music width — the layout overflows rather than
+    /// over-compressing glyphs (see **Rod and spring** in `ARCHITECTURE.md`).
+    MeasureOverflow,
 }
 
 impl WarningKind {
@@ -80,6 +84,7 @@ impl WarningKind {
             Self::ChordBassTrailingChars => "chord_bass_trailing_chars",
             Self::HalfBarBoundaryCrossed => "half_bar_boundary_crossed",
             Self::GroupTooFewNotes => "group_too_few_notes",
+            Self::MeasureOverflow => "measure_overflow",
         }
     }
 }
@@ -115,6 +120,17 @@ impl Warning {
             span,
             message: "tie/slur group `(…)` must contain at least 2 notes".to_string(),
             kind: WarningKind::GroupTooFewNotes,
+        }
+    }
+
+    pub fn measure_overflow(span: Span, needed_pt: f32, available_pt: f32) -> Self {
+        Self {
+            span,
+            message: format!(
+                "system needs {needed_pt:.1}pt of minimum width but only {available_pt:.1}pt \
+                 is available; reduce measures per system or font size"
+            ),
+            kind: WarningKind::MeasureOverflow,
         }
     }
 }

@@ -43,6 +43,22 @@ pub struct MeasureColumnLayout {
     /// unrelated to `weight` — used only to split the measure's own pixel
     /// width across its columns, never to compare against other measures.
     pub column_weights: Vec<f32>,
+    /// This measure's hard-minimum width in points — the "rod" of the
+    /// spring-and-rod spacing model (see **Rod and spring** in
+    /// `ARCHITECTURE.md`): `max(MIN_MEASURE_WIDTH_PT, sum of column_rods)`.
+    /// `column_geometry` never renders the measure narrower than this,
+    /// giving any remaining page width ("slack") to `weight` proportionally
+    /// instead; if a system's summed `rod_pt`s exceed the page's usable
+    /// music width, the system overflows rather than compressing below its
+    /// own content (see `layout::layout`'s overflow diagnostic).
+    pub rod_pt: f32,
+    /// Per-column hard-minimum width in points (`measure_column_sizes`), one
+    /// entry per column in `start_col..start_col + col_count`, parallel to
+    /// `column_weights`. Always sums to exactly `rod_pt` — when
+    /// `MIN_MEASURE_WIDTH_PT`'s degenerate-case floor pushes `rod_pt` above
+    /// what the columns' own content needs, `build_measure_column_layout`
+    /// scales every entry up proportionally rather than leaving a gap.
+    pub column_rods: Vec<f32>,
 }
 
 #[derive(Debug, Clone)]

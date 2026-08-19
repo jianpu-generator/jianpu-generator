@@ -11,17 +11,27 @@ pub struct RenderDocumentOutput {
     pub diagnostics: Vec<crate::error::Diagnostic>,
 }
 
+/// Typed SVG document trees plus any diagnostics found during layout (e.g.
+/// `WarningKind::MeasureOverflow`) — merged by callers on top of
+/// `collect_measure_diagnostics`'s pre-layout, grouped-`Score` diagnostics.
+struct DocumentsResult {
+    documents: Vec<crate::renderer::new_types::SvgDocument>,
+    diagnostics: Vec<crate::error::Diagnostic>,
+}
+
 fn render_documents(
     score: &Score,
     parts: &[PartInfo],
     groups: &[GroupInfo],
-) -> Result<Vec<crate::renderer::new_types::SvgDocument>, IrrecoverableError> {
+) -> Result<DocumentsResult, IrrecoverableError> {
     let config = crate::render_config::RenderConfig::from_metadata(&score.metadata);
     let header = crate::build_header(score, parts, groups);
     let compile_result = crate::compiler::compile(score);
     let compile_result = crate::consolidator::consolidate(compile_result);
-    let grid_pages =
-        crate::grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
+    let crate::grid_layout::LayoutOutput {
+        pages: grid_pages,
+        diagnostics,
+    } = crate::grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
     let abs = crate::coordinate_resolver::resolve(
         &grid_pages,
         config.note_number_width as f32,
@@ -30,7 +40,10 @@ fn render_documents(
         config.notes_font_size(),
         config.chords_font_size(),
     )?;
-    Ok(crate::renderer::new_renderer::render_new(&abs, &config))
+    Ok(DocumentsResult {
+        documents: crate::renderer::new_renderer::render_new(&abs, &config),
+        diagnostics,
+    })
 }
 
 fn render_documents_with_range(
@@ -39,12 +52,15 @@ fn render_documents_with_range(
     groups: &[GroupInfo],
     start_index: usize,
     end_index: usize,
-) -> Result<Vec<crate::renderer::new_types::SvgDocument>, IrrecoverableError> {
+) -> Result<DocumentsResult, IrrecoverableError> {
     let config = crate::render_config::RenderConfig::from_metadata(&score.metadata);
     let header = crate::build_header(score, parts, groups);
     let compile_result = crate::compiler::compile(score);
     let compile_result = crate::consolidator::consolidate(compile_result);
-    let grid_pages = crate::grid_layout::layout(
+    let crate::grid_layout::LayoutOutput {
+        pages: grid_pages,
+        diagnostics,
+    } = crate::grid_layout::layout(
         &compile_result,
         &config,
         &header,
@@ -60,7 +76,10 @@ fn render_documents_with_range(
         config.notes_font_size(),
         config.chords_font_size(),
     )?;
-    Ok(crate::renderer::new_renderer::render_new(&abs, &config))
+    Ok(DocumentsResult {
+        documents: crate::renderer::new_renderer::render_new(&abs, &config),
+        diagnostics,
+    })
 }
 
 /// Parse, group, optionally filter tracks and lyrics, and return typed SVG document trees.
@@ -86,9 +105,11 @@ pub fn render_documents_from_source_filtered_with_lyrics(
     let mut score = crate::compile(source, filename, instruments)?;
     crate::apply_track_filter(&mut score, enabled_tracks);
     crate::apply_lyrics_filter(&mut score, disabled_lyrics);
-    let diagnostics = crate::collect_measure_diagnostics(&score);
+    let mut diagnostics = crate::collect_measure_diagnostics(&score);
+    let result = render_documents(&score, &parts, &groups)?;
+    diagnostics.extend(result.diagnostics);
     Ok(RenderDocumentOutput {
-        documents: render_documents(&score, &parts, &groups)?,
+        documents: result.documents,
         diagnostics,
     })
 }
@@ -118,15 +139,17 @@ pub fn render_documents_with_highlight_range(
     let mut score = crate::compile(source, filename, instruments)?;
     crate::apply_track_filter(&mut score, enabled_tracks);
     crate::apply_lyrics_filter(&mut score, disabled_lyrics);
-    let diagnostics = crate::collect_measure_diagnostics(&score);
+    let mut diagnostics = crate::collect_measure_diagnostics(&score);
+    let result = render_documents_with_range(
+        &score,
+        &parts,
+        &groups,
+        *measure_range.start(),
+        *measure_range.end(),
+    )?;
+    diagnostics.extend(result.diagnostics);
     Ok(RenderDocumentOutput {
-        documents: render_documents_with_range(
-            &score,
-            &parts,
-            &groups,
-            *measure_range.start(),
-            *measure_range.end(),
-        )?,
+        documents: result.documents,
         diagnostics,
     })
 }

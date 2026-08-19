@@ -40,6 +40,7 @@ fn simple_block(col_count: u32) -> MeasureBlock {
         diagnostics: vec![],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        source_span: crate::error::Span::new(0, 0),
     }
 }
 

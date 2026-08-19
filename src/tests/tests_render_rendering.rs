@@ -1,4 +1,5 @@
 use super::*;
+use compositor::types::AbsoluteContent;
 
 #[test]
 fn render_svgs_from_source_smoke() {
@@ -159,7 +160,8 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
     };
     let compile_result = compiler::compile(&score);
     let compile_result = consolidator::consolidate(compile_result);
-    let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
+    let grid_pages =
+        grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None).pages;
     let abs = coordinate_resolver::resolve(
         &grid_pages,
         config.note_number_width as f32,
@@ -174,7 +176,7 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
         .elements
         .iter()
         .filter_map(|e| {
-            if let compositor::types::AbsoluteContent::Underline { width, level: 0 } = &e.content {
+            if let AbsoluteContent::Underline { width, level: 0 } = &e.content {
                 Some((e.x, *width))
             } else {
                 None
@@ -230,7 +232,8 @@ fn part_label_width_is_consistent_across_systems_of_differing_density() {
     };
     let compile_result = compiler::compile(&score);
     let compile_result = consolidator::consolidate(compile_result);
-    let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
+    let grid_pages =
+        grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None).pages;
     let abs = coordinate_resolver::resolve(
         &grid_pages,
         config.note_number_width as f32,
@@ -245,7 +248,7 @@ fn part_label_width_is_consistent_across_systems_of_differing_density() {
         .elements
         .iter()
         .filter_map(|e| match &e.content {
-            compositor::types::AbsoluteContent::Text { content, .. } if content == "a" => Some(e.x),
+            AbsoluteContent::Text { content, .. } if content == "a" => Some(e.x),
             _ => None,
         })
         .collect();
@@ -270,8 +273,7 @@ fn leading_and_trailing_bar_lines_align_across_systems_of_differing_density() {
     // land at the same x-position, even though systems differ in musical
     // density — a sparse one-measure system ("a" only) vs. a denser system
     // with an extra chord-symbol part ("b"). Uses the same input as
-    // `part_label_width_is_consistent_across_systems_of_differing_density`,
-    // which packs into a 2-measure system followed by a 1-measure system.
+    // `part_label_width_is_consistent_across_systems_of_differing_density`.
     let input = concat!(
         "# parts\n",
         "a = notes\n",
@@ -302,7 +304,8 @@ fn leading_and_trailing_bar_lines_align_across_systems_of_differing_density() {
     };
     let compile_result = compiler::compile(&score);
     let compile_result = consolidator::consolidate(compile_result);
-    let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
+    let grid_pages =
+        grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None).pages;
     let abs = coordinate_resolver::resolve(
         &grid_pages,
         config.note_number_width as f32,
@@ -312,17 +315,13 @@ fn leading_and_trailing_bar_lines_align_across_systems_of_differing_density() {
         config.chords_font_size(),
     )
     .expect("coordinate resolver should not fail in tests");
-
     // Bar lines are drawn once per system on the note-head sub-row of the
     // first part, so their y-coordinate uniquely identifies which system a
     // bar line belongs to.
     let mut bar_lines_by_row: std::collections::BTreeMap<i64, Vec<f32>> =
         std::collections::BTreeMap::new();
     for e in &abs[0].elements {
-        if matches!(
-            e.content,
-            compositor::types::AbsoluteContent::BarLine { .. }
-        ) {
+        if matches!(e.content, AbsoluteContent::BarLine { .. }) {
             bar_lines_by_row
                 .entry((e.y * 1000.0).round() as i64)
                 .or_default()

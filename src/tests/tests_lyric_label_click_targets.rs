@@ -22,7 +22,8 @@ fn resolve_test_score(input: &str) -> Vec<compositor::types::AbsolutePage> {
     };
     let compile_result = compiler::compile(&score);
     let compile_result = consolidator::consolidate(compile_result);
-    let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
+    let grid_pages =
+        grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None).pages;
     coordinate_resolver::resolve(
         &grid_pages,
         config.note_number_width as f32,

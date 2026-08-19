@@ -1,5 +1,5 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
-use crate::error::Diagnostic;
+use crate::error::{Diagnostic, Span};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ArcKind {
@@ -28,6 +28,11 @@ pub struct MeasureBlock {
     /// Resolved `merge_duplicate_measures_across_parts=` setting in effect on the
     /// measure this block was compiled from (see `consolidator::consolidate_block`).
     pub merge_duplicate_measures_across_parts: bool,
+    /// Source span of the measure(s) this block was compiled from (see
+    /// `MultiPartMeasure::source_span`) — carried forward so a layout-stage
+    /// diagnostic (e.g. `WarningKind::MeasureOverflow`) can point at real
+    /// source text even though layout runs after grouping/compiling.
+    pub source_span: Span,
 }
 
 impl PartialEq for MeasureBlock {

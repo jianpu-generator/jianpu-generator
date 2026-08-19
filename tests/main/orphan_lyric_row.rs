@@ -60,7 +60,8 @@ fn no_orphan_empty_lyric_row_when_no_part_has_lyric_text() {
         595.0,
         842.0,
         None,
-    );
+    )
+    .pages;
 
     let has_orphan_lyric_row = pages[0].rows.iter().any(|row| {
         !row.elements.is_empty()

@@ -136,6 +136,7 @@ fn lyric_click_target_spans_its_note_full_column_width() {
         diagnostics: vec![],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        source_span: crate::error::Span::new(0, 0),
     };
 
     let pages = crate::grid_layout::layout(
@@ -149,7 +150,8 @@ fn lyric_click_target_spans_its_note_full_column_width() {
         595.0,
         842.0,
         None,
-    );
+    )
+    .pages;
 
     let targets = &pages[0].lyric_click_targets;
     assert_eq!(targets.len(), 2, "one click target per syllable");
@@ -200,6 +202,7 @@ fn lyric_click_target_of_first_syllable_snaps_to_leading_bar_line() {
         diagnostics: vec![],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        source_span: crate::error::Span::new(0, 0),
     };
 
     let pages = crate::grid_layout::layout(
@@ -213,7 +216,8 @@ fn lyric_click_target_of_first_syllable_snaps_to_leading_bar_line() {
         595.0,
         842.0,
         None,
-    );
+    )
+    .pages;
 
     let targets = &pages[0].lyric_click_targets;
     let first_syllable = targets

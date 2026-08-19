@@ -30,7 +30,8 @@ fn triplet_of_sixteenth_notes_gets_double_underline_matching_written_duration() 
     };
     let compile_result = compiler::compile(&score);
     let compile_result = consolidator::consolidate(compile_result);
-    let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
+    let grid_pages =
+        grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None).pages;
     let abs = coordinate_resolver::resolve(
         &grid_pages,
         config.note_number_width as f32,

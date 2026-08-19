@@ -1,16 +1,24 @@
 use super::GridRow;
-use crate::grid_layout::layout::{LABEL_COLS, MIN_MEASURE_WIDTH_PT};
+use crate::grid_layout::layout::LABEL_COLS;
 
 impl GridRow {
     /// Column geometry for this row, given the usable page width and the
     /// score-wide fixed part-label width. Rows with `has_label_region: true`
     /// (system rows) get a label column width independent of the row's own
-    /// musical density; the music region is split proportionally across
-    /// `measure_layout`'s measures by their spacing weight (denser measures
-    /// get more width), and each measure's own width is in turn split across
-    /// its columns by `column_weights` (e.g. a notehead column wider than a
-    /// dash column). Rows without a label region (headers, footers) or an
-    /// empty `measure_layout` divide the full width evenly, as before.
+    /// musical density; the music region is split across `measure_layout`'s
+    /// measures, and each measure's own width in turn across its columns,
+    /// by the spring-and-rod model (see **Rod and spring** in
+    /// `ARCHITECTURE.md`): every measure/column first gets its own hard-
+    /// minimum rod (`rod_pt`/`column_rods`, derived from real content
+    /// width), and only the slack left over after every rod in the row is
+    /// satisfied is distributed proportionally by spacing weight (denser
+    /// measures/columns get more of it). If a system's summed rods exceed
+    /// the space available, slack clamps to zero and every measure/column
+    /// renders at exactly its rod — the system overflows the page instead
+    /// of compressing below its own content (see `layout::layout`'s
+    /// overflow diagnostic). Rows without a label region (headers, footers)
+    /// or an empty `measure_layout` divide the full width evenly, as
+    /// before.
     pub fn column_geometry(&self, usable_width_pt: f32, label_width_pt: f32) -> ColumnGeometry {
         if self.has_label_region {
             let label_col_width = label_width_pt / LABEL_COLS as f32;
@@ -29,21 +37,28 @@ impl GridRow {
                 };
             }
             let usable_music_width = usable_width_pt - label_width_pt;
-            let n = self.measure_layout.len() as f32;
+            let total_rod: f32 = self.measure_layout.iter().map(|m| m.rod_pt).sum();
             let total_weight: f32 = self.measure_layout.iter().map(|m| m.weight).sum();
+            let system_slack = (usable_music_width - total_rod).max(0.0);
             let mut x = label_width_pt;
             let segments: Vec<ColumnSegment> = self
                 .measure_layout
                 .iter()
                 .flat_map(|m| {
-                    let measure_width = MIN_MEASURE_WIDTH_PT
-                        + (usable_music_width - n * MIN_MEASURE_WIDTH_PT) * m.weight / total_weight;
+                    let measure_width = m.rod_pt + system_slack * m.weight / total_weight;
+                    // Always >= 0: `measure_width` is `rod_pt` plus a
+                    // non-negative share of `system_slack`. `column_rods`
+                    // always sums to exactly `rod_pt` (see that field's doc
+                    // comment), so this measure's columns sum to exactly
+                    // `measure_width` — no gap, no overlap.
+                    let measure_slack = measure_width - m.rod_pt;
                     let column_weight_sum: f32 = m.column_weights.iter().sum();
                     m.column_weights
                         .iter()
+                        .zip(&m.column_rods)
                         .enumerate()
-                        .map(|(i, &w)| {
-                            let col_width = measure_width * w / column_weight_sum;
+                        .map(|(i, (&w, &rod))| {
+                            let col_width = rod + measure_slack * w / column_weight_sum;
                             let seg = ColumnSegment {
                                 start_col: m.start_col as f32 + i as f32,
                                 col_count: 1.0,

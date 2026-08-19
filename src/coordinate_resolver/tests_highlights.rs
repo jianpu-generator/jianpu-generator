@@ -174,6 +174,8 @@ fn playback_cursor_reaches_final_bar_line_of_its_measure() {
                 col_count: 2,
                 weight: 1.0,
                 column_weights: vec![1.0, 0.25],
+                rod_pt: 24.0,
+                column_rods: vec![1.0, 0.25],
             }],
             elements: vec![GridElement {
                 column: 2,

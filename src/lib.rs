@@ -234,16 +234,28 @@ fn build_header(
     }
 }
 
+/// Typed SVG document trees plus any diagnostics found during layout (e.g.
+/// `WarningKind::MeasureOverflow`) — distinct from the per-measure
+/// diagnostics `collect_measure_diagnostics` gathers from the pre-layout
+/// grouped `Score`, which callers merge in on top.
+struct SvgDocsResult {
+    documents: Vec<renderer::new_types::SvgDocument>,
+    diagnostics: Vec<Diagnostic>,
+}
+
 fn render_svg_docs_with_parts(
     score: &Score,
     parts: &[PartInfo],
     groups: &[GroupInfo],
-) -> Result<Vec<renderer::new_types::SvgDocument>, IrrecoverableError> {
+) -> Result<SvgDocsResult, IrrecoverableError> {
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
     let header = build_header(score, parts, groups);
     let compile_result = compiler::compile(score);
     let compile_result = consolidator::consolidate(compile_result);
-    let grid_pages = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
+    let grid_layout::LayoutOutput {
+        pages: grid_pages,
+        diagnostics,
+    } = grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None);
     let abs = coordinate_resolver::resolve(
         &grid_pages,
         config.note_number_width as f32,
@@ -252,7 +264,17 @@ fn render_svg_docs_with_parts(
         config.notes_font_size(),
         config.chords_font_size(),
     )?;
-    Ok(renderer::new_renderer::render_new(&abs, &config))
+    Ok(SvgDocsResult {
+        documents: renderer::new_renderer::render_new(&abs, &config),
+        diagnostics,
+    })
+}
+
+/// Serialized SVG page strings plus any diagnostics found during layout —
+/// the serialized-string mirror of [`SvgDocsResult`].
+pub(crate) struct SvgsResult {
+    pub(crate) svgs: Vec<String>,
+    pub(crate) diagnostics: Vec<Diagnostic>,
 }
 
 pub(crate) fn render_svgs_with_parts(
@@ -260,14 +282,17 @@ pub(crate) fn render_svgs_with_parts(
     parts: &[PartInfo],
     groups: &[GroupInfo],
     source: Option<&str>,
-) -> Result<Vec<String>, IrrecoverableError> {
-    let docs = render_svg_docs_with_parts(score, parts, groups)?;
-    Ok(serializer::serialize(&docs, source))
+) -> Result<SvgsResult, IrrecoverableError> {
+    let result = render_svg_docs_with_parts(score, parts, groups)?;
+    Ok(SvgsResult {
+        svgs: serializer::serialize(&result.documents, source),
+        diagnostics: result.diagnostics,
+    })
 }
 
 /// Layout and render a [`Score`] into one SVG string per page.
 pub fn render_svgs(score: &Score) -> Result<Vec<String>, IrrecoverableError> {
-    render_svgs_with_parts(score, &[], &[], None)
+    Ok(render_svgs_with_parts(score, &[], &[], None)?.svgs)
 }
 
 /// Parse, group, and render a `.jianpu` source string into SVG page strings.
@@ -321,9 +346,11 @@ pub fn render_svgs_from_source_filtered_with_lyrics(
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
-    let diagnostics = collect_measure_diagnostics(&score);
+    let mut diagnostics = collect_measure_diagnostics(&score);
+    let result = render_svgs_with_parts(&score, &parts, &groups, Some(source))?;
+    diagnostics.extend(result.diagnostics);
     Ok(RenderOutput {
-        svgs: render_svgs_with_parts(&score, &parts, &groups, Some(source))?,
+        svgs: result.svgs,
         diagnostics,
     })
 }

@@ -58,6 +58,8 @@ fn lyric_syllable_halign_center_is_independent_of_column_weight() {
                     col_count: 1,
                     weight: 1.0,
                     column_weights: vec![column_weight],
+                    rod_pt: 24.0,
+                    column_rods: vec![column_weight],
                 }],
                 elements: vec![el],
             }],

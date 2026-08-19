@@ -1,11 +1,9 @@
 use crate::compiler::types::{CompileResult, ElementContent, MeasureBlock, MeasureRow};
+use crate::error::{Diagnostic, Span, Warning};
 use crate::grid_layout::slur_placement::{build_measure_placements, resolve_slur_spans};
 use crate::grid_layout::tuplet_placement::resolve_tuplet_spans;
 use crate::grid_layout::types::Header;
-use crate::grid_layout::types::{
-    BarNumberClickTarget, GridElement, GridPage, GridRow, LyricClickTarget, LyricLabelClickTarget,
-    MeasureClickTarget, MeasureHighlight, PartLabelClickTarget, PlaybackCursorTarget,
-};
+use crate::grid_layout::types::{GridElement, GridPage, GridRow, MeasureColumnLayout};
 use crate::render_config::RenderConfig;
 use std::collections::{HashMap, HashSet};
 
@@ -100,9 +98,9 @@ pub(crate) fn block_column_width(block: &MeasureBlock) -> u32 {
 
 #[path = "layout_spacing.rs"]
 mod spacing;
+pub(crate) use spacing::build_measure_column_layout;
 #[cfg(test)]
 pub(crate) use spacing::measure_column_weights;
-pub(crate) use spacing::{build_measure_column_layout, MIN_MEASURE_WIDTH_PT};
 
 #[path = "layout_systems.rs"]
 mod systems;
@@ -113,10 +111,8 @@ pub(crate) use systems::{
 
 #[path = "layout_decoration.rs"]
 mod decoration;
-use super::click_targets::targets_on_page;
 pub(crate) use super::expand::expand_system_to_rows;
 use super::expand::make_footer_row;
-use super::highlight::measure_highlights_on_page;
 pub(crate) use decoration::{directive_line_should_emit, make_header_rows};
 use decoration::{make_decoration_row, make_separator_row};
 
@@ -138,6 +134,32 @@ fn system_total_height(
     musical + lyric + deco
 }
 
+/// One system's summed column rods against the page's usable music width —
+/// the overflow check for the spring-and-rod spacing model (see **Rod and
+/// spring** in `ARCHITECTURE.md`). `None` when the system fits; `Some` with
+/// a `Diagnostic::Warning(WarningKind::MeasureOverflow)` spanning the union
+/// of `system`'s measures' source spans otherwise, so the editor can point
+/// at the real source text behind an overflowing system.
+fn system_overflow_diagnostic(
+    system: &[MeasureBlock],
+    measure_layout: &[MeasureColumnLayout],
+    page_width_pt: f32,
+    config: &RenderConfig,
+) -> Option<Diagnostic> {
+    let total_rod: f32 = measure_layout.iter().map(|m| m.rod_pt).sum();
+    let available = super::usable_music_width_pt(page_width_pt, config.part_label_width_pt as f32);
+    if total_rod <= available {
+        return None;
+    }
+    let span = system
+        .iter()
+        .map(|block| block.source_span)
+        .reduce(|a, b| Span::new(a.start.min(b.start), a.end.max(b.end)))?;
+    Some(Diagnostic::Warning(Warning::measure_overflow(
+        span, total_rod, available,
+    )))
+}
+
 #[derive(Clone, Copy)]
 struct PageRowsParams<'a> {
     systems: &'a [Vec<MeasureBlock>],
@@ -147,9 +169,17 @@ struct PageRowsParams<'a> {
     tuplet_bracket_map: &'a HashMap<(usize, usize), Vec<GridElement>>,
     abs_system_index_start: usize,
     is_first_page: bool,
+    page_width_pt: f32,
 }
 
-fn build_page_rows(params: &PageRowsParams<'_>) -> Vec<GridRow> {
+/// [`build_page_rows`]'s output: the page's rows plus any overflow
+/// diagnostics found while laying out its systems.
+struct PageRowsResult {
+    rows: Vec<GridRow>,
+    diagnostics: Vec<Diagnostic>,
+}
+
+fn build_page_rows(params: &PageRowsParams<'_>) -> PageRowsResult {
     let PageRowsParams {
         systems,
         header,
@@ -158,9 +188,11 @@ fn build_page_rows(params: &PageRowsParams<'_>) -> Vec<GridRow> {
         tuplet_bracket_map,
         abs_system_index_start,
         is_first_page,
+        page_width_pt,
     } = *params;
     let base = config.row_height as f32;
     let mut rows: Vec<GridRow> = make_header_rows(header, base, is_first_page);
+    let mut diagnostics: Vec<Diagnostic> = Vec::new();
     for (sys_idx, system) in systems.iter().enumerate() {
         if sys_idx > 0 && !config.hide_system_dividers {
             rows.push(make_separator_row());
@@ -169,6 +201,12 @@ fn build_page_rows(params: &PageRowsParams<'_>) -> Vec<GridRow> {
             continue;
         };
         let measure_layout = build_measure_column_layout(system, config);
+        diagnostics.extend(system_overflow_diagnostic(
+            system,
+            &measure_layout,
+            page_width_pt,
+            config,
+        ));
         if system_has_any_decoration(system) {
             rows.push(make_decoration_row(system, &measure_layout));
         }
@@ -201,12 +239,10 @@ fn build_page_rows(params: &PageRowsParams<'_>) -> Vec<GridRow> {
             &measure_layout,
         ));
     }
-    rows
+    PageRowsResult { rows, diagnostics }
 }
 
-use super::click_targets::{
-    compute_highlight_and_click_infos, HighlightAndClickInfos, HighlightAndClickInfosParams,
-};
+use super::click_targets::{compute_highlight_and_click_infos, HighlightAndClickInfosParams};
 #[cfg(test)]
 pub(crate) use super::highlight::compute_measure_highlight_location;
 
@@ -243,6 +279,16 @@ fn pack_page_systems(
     page_systems
 }
 
+/// [`layout`]'s return value: the laid-out pages plus any diagnostics found
+/// during layout itself (currently just `WarningKind::MeasureOverflow`,
+/// from [`system_overflow_diagnostic`]) — distinct from the diagnostics
+/// `collect_measure_diagnostics` gathers from the pre-layout, grouped
+/// `Score`, which has no visibility into layout-stage spacing.
+pub struct LayoutOutput {
+    pub pages: Vec<GridPage>,
+    pub diagnostics: Vec<Diagnostic>,
+}
+
 /// Public entry point: convert compiler blocks to GridPages.
 pub fn layout(
     compile_result: &CompileResult,
@@ -251,7 +297,7 @@ pub fn layout(
     page_width_pt: f32,
     page_height_pt: f32,
     highlighted_measure_range: Option<(usize, usize)>,
-) -> Vec<GridPage> {
+) -> LayoutOutput {
     let base = config.row_height as f32;
     let blocks = &compile_result.blocks;
     let systems = pack_into_systems(blocks, config);
@@ -290,8 +336,12 @@ pub fn layout(
     let total_pages = page_systems.len() as u32;
     let mut abs_system_index_start: usize = 0;
     let mut pages: Vec<GridPage> = Vec::new();
+    let mut diagnostics: Vec<Diagnostic> = Vec::new();
     for (page_idx, page_sys) in page_systems.into_iter().enumerate() {
-        let mut rows = build_page_rows(&PageRowsParams {
+        let PageRowsResult {
+            mut rows,
+            diagnostics: page_diagnostics,
+        } = build_page_rows(&PageRowsParams {
             systems: &page_sys,
             header,
             config,
@@ -299,7 +349,9 @@ pub fn layout(
             tuplet_bracket_map: &tuplet_bracket_map,
             abs_system_index_start,
             is_first_page: page_idx == 0,
+            page_width_pt,
         });
+        diagnostics.extend(page_diagnostics);
         let body_height: f32 = rows.iter().map(|r| r.height_pt).sum();
         let remaining_height = page_height_pt - 2.0 * super::PAGE_MARGIN - body_height;
         rows.push(make_footer_row(
@@ -324,70 +376,13 @@ pub fn layout(
             bar_number_click_targets: page_targets.bar_number_click_targets,
         });
     }
-    pages
+    LayoutOutput { pages, diagnostics }
 }
 
-/// One page's slice of every `HighlightAndClickInfos` list, filtered by
-/// `targets_on_page`/`measure_highlights_on_page` — split out of `layout()`
-/// to keep it under the max function-length lint.
-struct PageHighlightsAndTargets {
-    measure_highlights: Vec<MeasureHighlight>,
-    error_highlights: Vec<MeasureHighlight>,
-    measure_click_targets: Vec<MeasureClickTarget>,
-    playback_cursor_targets: Vec<PlaybackCursorTarget>,
-    part_label_click_targets: Vec<PartLabelClickTarget>,
-    lyric_click_targets: Vec<LyricClickTarget>,
-    lyric_label_click_targets: Vec<LyricLabelClickTarget>,
-    bar_number_click_targets: Vec<BarNumberClickTarget>,
-}
-
-impl PageHighlightsAndTargets {
-    fn for_page(infos: &HighlightAndClickInfos, page_idx: usize) -> Self {
-        Self {
-            measure_highlights: measure_highlights_on_page(&infos.highlight_infos, page_idx),
-            error_highlights: measure_highlights_on_page(&infos.error_highlight_infos, page_idx),
-            measure_click_targets: targets_on_page(&infos.all_click_target_infos, page_idx),
-            playback_cursor_targets: targets_on_page(
-                &infos.all_playback_cursor_target_infos,
-                page_idx,
-            ),
-            part_label_click_targets: targets_on_page(
-                &infos.all_part_label_click_target_infos,
-                page_idx,
-            ),
-            lyric_click_targets: targets_on_page(&infos.all_lyric_click_target_infos, page_idx),
-            lyric_label_click_targets: targets_on_page(
-                &infos.all_lyric_label_click_target_infos,
-                page_idx,
-            ),
-            bar_number_click_targets: targets_on_page(
-                &infos.all_bar_number_click_target_infos,
-                page_idx,
-            ),
-        }
-    }
-}
+#[path = "layout_page_targets.rs"]
+mod page_targets;
+use page_targets::PageHighlightsAndTargets;
 
 #[cfg(test)]
-#[path = "tests_layout.rs"]
-mod tests_layout;
-
-#[cfg(test)]
-#[path = "tests_layout_directives.rs"]
-mod tests_layout_directives;
-
-#[cfg(test)]
-#[path = "tests_highlight.rs"]
-mod tests_highlight;
-
-#[cfg(test)]
-#[path = "tests_playback_cursor.rs"]
-mod tests_playback_cursor;
-
-#[cfg(test)]
-#[path = "tests_lyrics_only_part.rs"]
-mod tests_lyrics_only_part;
-
-#[cfg(test)]
-#[path = "tests_lyric_click_targets.rs"]
-mod tests_lyric_click_targets;
+#[path = "layout_tests.rs"]
+mod tests;

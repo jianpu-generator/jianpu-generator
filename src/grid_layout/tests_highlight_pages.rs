@@ -16,6 +16,7 @@ fn erroneous_measure_produces_error_highlight() {
         ))],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        source_span: Span::new(0, 0),
     };
     let header = Header {
         title: Some("T".into()),
@@ -52,7 +53,8 @@ fn erroneous_measure_produces_error_highlight() {
         595.0,
         842.0,
         None,
-    );
+    )
+    .pages;
     assert!(!pages.is_empty());
     assert_eq!(
         pages[0].error_highlights.len(),
@@ -96,7 +98,8 @@ fn click_target_row_start_skips_hidden_system_divider() {
         595.0,
         842.0,
         None,
-    );
+    )
+    .pages;
     let hidden_config = crate::render_config::RenderConfig {
         hide_system_dividers: true,
         ..shown_config
@@ -112,7 +115,8 @@ fn click_target_row_start_skips_hidden_system_divider() {
         595.0,
         842.0,
         None,
-    );
+    )
+    .pages;
 
     let shown_second_row_start = shown_pages[0].measure_click_targets[1].row_start;
     let hidden_second_row_start = hidden_pages[0].measure_click_targets[1].row_start;
@@ -164,7 +168,8 @@ fn non_erroneous_measure_produces_no_error_highlight() {
         595.0,
         842.0,
         None,
-    );
+    )
+    .pages;
     assert!(!pages.is_empty());
     assert!(pages[0].error_highlights.is_empty());
 }

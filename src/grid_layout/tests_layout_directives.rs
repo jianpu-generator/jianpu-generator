@@ -38,6 +38,7 @@ fn make_block_with_decorations(decorations: Vec<Decoration>) -> MeasureBlock {
         diagnostics: vec![],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        source_span: crate::error::Span::new(0, 0),
     }
 }
 
@@ -117,6 +118,7 @@ fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
         diagnostics: vec![],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        source_span: crate::error::Span::new(0, 0),
     }
 }
 
@@ -129,7 +131,7 @@ fn layout_with_bpm_decoration_has_decoration_row() {
         slur_spans: vec![],
         tuplet_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     let has_directive = pages[0]
         .rows
         .iter()
@@ -155,7 +157,7 @@ fn decoration_row_shares_column_count_with_music_rows() {
         slur_spans: vec![],
         tuplet_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     let deco_row = pages[0]
         .rows
         .iter()
@@ -189,7 +191,7 @@ fn decoration_items_start_at_first_measure_left_edge() {
         slur_spans: vec![],
         tuplet_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     let directive_el = pages[0]
         .rows
         .iter()
@@ -212,7 +214,7 @@ fn label_and_bpm_are_merged_into_single_directive_line() {
         slur_spans: vec![],
         tuplet_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     let directive_elements: Vec<_> = pages[0]
         .rows
         .iter()
@@ -250,7 +252,7 @@ fn bpm_and_time_signature_merged_into_single_directive_line_at_column_1() {
         slur_spans: vec![],
         tuplet_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     let directive_el = pages[0]
         .rows
         .iter()
@@ -283,7 +285,7 @@ fn section_label_on_non_first_measure_of_system_is_rendered() {
         slur_spans: vec![],
         tuplet_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     let has_label = pages[0]
         .rows
         .iter()
@@ -312,7 +314,7 @@ fn section_label_on_non_first_measure_is_right_of_column_1() {
         slur_spans: vec![],
         tuplet_spans: vec![],
     };
-    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None);
+    let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     let label_col = pages[0]
         .rows
         .iter()
