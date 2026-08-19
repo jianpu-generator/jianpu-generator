@@ -649,7 +649,7 @@ A `notes+lyrics` part can carry more than one lyric line per measure. Every cons
 
 Each verse renders as its own row directly under the notes row, in verse order, and each verse is tallied and tie-paired against the notes row independently — a verse can have its own `-` held syllables and `_` no-lyrics marker.
 
-Each verse row also gets its own label at the left margin, `{abbreviation}:v{verse number}` (e.g. `M:v1`, `M:v2`) — clicking or drag-selecting it selects every syllable that verse sings across the system, the same way clicking a part's own label selects every note that part sounds.
+Each verse row also gets its own label at the left margin, showing the part's abbreviation (e.g. `M`, same on every verse row) — clicking or drag-selecting it selects every syllable that verse sings across the system, the same way clicking a part's own label selects every note that part sounds.
 
 The number of verse lines is per-measure: one measure can have one verse while the next has two. A part's verse count changing from one measure to the next always starts a new system at that measure boundary, regardless of how much horizontal space is left on the current line — verses can't silently appear or disappear mid-system.
 
@@ -667,7 +667,7 @@ Caption [C] = lyrics
 [C] a caption for this measure, unrelated to any note
 ```
 
-- Unlike `notes+lyrics`, there is no leading notes line to pair against — every consecutive `[Abbrev]` line is itself a verse (verse 1, verse 2, …), the same way extra `notes+lyrics` verse lines work. Each verse row gets its own label too (`C:v1`, `C:v2`, …), clickable/drag-selectable the same way.
+- Unlike `notes+lyrics`, there is no leading notes line to pair against — every consecutive `[Abbrev]` line is itself a verse (verse 1, verse 2, …), the same way extra `notes+lyrics` verse lines work. Each verse row gets its own label too (the part's abbreviation, e.g. `C` on every row), clickable/drag-selectable the same way.
 - `tokenize_lyrics`' word/CJK-character splitting still applies, but only to decide the rendered text (syllables are rejoined with spaces) — a `lyrics` part has no per-syllable columns, no `-` held-syllable semantics, and no lyrics–notes tally check.
 - A wide `lyrics` line can widen its measure past what the other parts' notes alone would need, since the block competes for the measure's total pixel width even though it never affects the measure's column *count*.
 

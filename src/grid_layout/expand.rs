@@ -27,13 +27,12 @@ pub(crate) struct LyricPartParams<'a> {
 }
 
 /// Every verse gets its own label at column 0, mirroring `expand_note_part`'s
-/// `RowLabel` push for the note row — "{abbreviation}:v{1-based verse}",
-/// e.g. "M:v1", "M:v2". `system.first()` always has a `part_idx` entry
-/// matching this row's own template (only ever called for an `is_lyric_row`
-/// row), and every verse row's `label` already carries its part's
-/// abbreviation (the user writes `[M]` again for each verse line — see
-/// `compile_measure`). Split out of `expand_lyric_part` to keep it under the
-/// max function-length lint.
+/// `RowLabel` push for the note row — just the part's abbreviation, with no
+/// verse suffix (a multi-verse part's verse rows share the same label text;
+/// their stacked order distinguishes them). `system.first()` always has a
+/// `part_idx` entry matching this row's own template (only ever called for
+/// an `is_lyric_row` row). Split out of `expand_lyric_part` to keep it under
+/// the max function-length lint.
 fn push_verse_row_label(row: &mut GridRow, system: &[MeasureBlock], part_idx: usize) {
     let Some(part_template) = system.first().and_then(|b| b.rows.get(part_idx)) else {
         return;
@@ -41,7 +40,7 @@ fn push_verse_row_label(row: &mut GridRow, system: &[MeasureBlock], part_idx: us
     if part_template.label.is_empty() {
         return;
     }
-    let Some(verse) = lyric_row_verse(part_template) else {
+    if lyric_row_verse(part_template).is_none() {
         return;
     };
     row.elements.push(GridElement {
@@ -49,7 +48,7 @@ fn push_verse_row_label(row: &mut GridRow, system: &[MeasureBlock], part_idx: us
         column_span: LABEL_COLS,
         halign: HAlign::Center,
         valign: VAlign::Center,
-        content: GridContent::RowLabel(format!("{}:v{}", part_template.label, verse + 1)),
+        content: GridContent::RowLabel(part_template.label.clone()),
     });
 }
 

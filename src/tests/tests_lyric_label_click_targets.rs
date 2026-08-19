@@ -1,9 +1,10 @@
 use super::*;
 
 /// Regression coverage for the lyric-verse-label feature: each verse row
-/// (e.g. "M:v1", "M:v2") gets its own visible `RowLabel` text plus its own
-/// invisible click target, mirroring how a part gets its own `RowLabel`
-/// text plus `PartLabelClickTarget`.
+/// gets its own visible `RowLabel` text (just the part's abbreviation, same
+/// as every other verse row's) plus its own invisible click target,
+/// mirroring how a part gets its own `RowLabel` text plus
+/// `PartLabelClickTarget`.
 fn resolve_test_score(input: &str) -> Vec<compositor::types::AbsolutePage> {
     let score = compile(input, "test", &[]).unwrap();
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
@@ -60,13 +61,10 @@ fn each_verse_row_renders_its_own_label_text() {
             _ => None,
         })
         .collect();
-    assert!(
-        label_texts.contains(&"M:v1"),
-        "expected a \"M:v1\" verse label, got {label_texts:?}"
-    );
-    assert!(
-        label_texts.contains(&"M:v2"),
-        "expected a \"M:v2\" verse label, got {label_texts:?}"
+    assert_eq!(
+        label_texts.iter().filter(|&&t| t == "M").count(),
+        3,
+        "expected an \"M\" label on the notes row and both verse rows, got {label_texts:?}"
     );
 }
 
