@@ -12,6 +12,7 @@ import type {
   SectionRange,
   SequenceEntry,
 } from '../types'
+import type { NoteCell } from '../utils/noteSpanSelection'
 
 /** Tracks one in-flight "send source, get rewritten source back" round trip
  * to the render worker, so a stale reply (superseded by a newer request for
@@ -64,12 +65,14 @@ export interface JianpuWorkerState {
   playSelectedMeasures: () => void
   playFromCurrentMeasure: () => void
   /** Plays only `selectedPartNames`, muting the rest, over
-   * `[minMeasureIndex, maxMeasureIndex]` — see `useNoteSelection`'s
-   * `selectedNoteRangePlaybackInfo`. */
+   * `[minMeasureIndex, maxMeasureIndex]`, then trims playback to the exact
+   * elapsed-seconds window of `selectedCells` — see `useNoteSelection`'s
+   * `selectedNoteRangePlaybackInfo`/`selectedNoteCells`. */
   playNoteSelection: (
     minMeasureIndex: number,
     maxMeasureIndex: number,
     selectedPartNames: string[],
+    selectedCells: NoteCell[],
   ) => void
   /** Plays the whole score from its first measure through the last written
    * one, following any D.C./D.S./`# sequence` repeat structure — the "Play

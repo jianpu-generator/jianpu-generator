@@ -244,8 +244,9 @@ export function useAppController() {
       selectedNoteRangePlaybackInfo.minMeasureIndex,
       selectedNoteRangePlaybackInfo.maxMeasureIndex,
       selectedNoteRangePlaybackInfo.selectedPartNames,
+      selectedNoteCells,
     )
-  }, [selectedNoteRangePlaybackInfo, playNoteSelection])
+  }, [selectedNoteRangePlaybackInfo, selectedNoteCells, playNoteSelection])
 
   const noPartsSelected = computeNoPartsSelected(
     parts,

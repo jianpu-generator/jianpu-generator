@@ -262,7 +262,7 @@ pub fn generate_wav(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
             &display_names,
             |score_clone, _, label, base, base_name| {
                 let midi_bytes = jg::midi::write_midi(score_clone)?;
-                let wav_bytes = jg::wav::write_wav(&midi_bytes, super::SF2_BYTES)?;
+                let wav_bytes = jg::wav::write_wav(&midi_bytes, super::SF2_BYTES, None)?;
                 let track_path = track_output_path(base, base_name, label, "wav");
                 super::write_file(&track_path, &wav_bytes)?;
                 println!("written to {track_path:?}");
@@ -277,7 +277,7 @@ pub fn generate_wav(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
     let mut score = score;
     jg::filter_tracks(&mut score, &opts.tracks);
     let midi_bytes = jg::midi::write_midi(&score)?;
-    let wav_bytes = jg::wav::write_wav(&midi_bytes, super::SF2_BYTES)?;
+    let wav_bytes = jg::wav::write_wav(&midi_bytes, super::SF2_BYTES, None)?;
     let output_path =
         output_stem(&opts.input, &opts.tracks, opts.output.as_deref()).with_extension("wav");
     super::write_file(&output_path, &wav_bytes)?;

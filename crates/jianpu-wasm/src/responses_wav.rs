@@ -4,7 +4,9 @@ use jianpu_generator::wav;
 use jianpu_generator::write_split_wavs_from_source;
 use jianpu_generator::write_wav_from_source_filtered;
 use jianpu_generator::zip_split_entries;
-use jianpu_generator::{write_wav_for_measure_range_from_source, MeasureRangeSelection};
+use jianpu_generator::{
+    write_wav_for_measure_range_from_source, MeasureRangeAudioOptions, MeasureRangeSelection,
+};
 
 use super::diagnostic_from_error;
 use crate::types::{
@@ -34,6 +36,7 @@ pub(crate) fn generate_wav_for_measure_range_response(
     respect_sequence: bool,
     sequence_entry_range: Option<std::ops::RangeInclusive<usize>>,
     enabled_tracks: Option<&[String]>,
+    trim: Option<wav::TrimWindow>,
     soundfont: Vec<u8>,
 ) -> GenerateWavResponse {
     match write_wav_for_measure_range_from_source(
@@ -45,7 +48,10 @@ pub(crate) fn generate_wav_for_measure_range_response(
             respect_sequence,
             sequence_entry_range,
         },
-        enabled_tracks,
+        &MeasureRangeAudioOptions {
+            enabled_tracks,
+            trim,
+        },
         &soundfont,
         &[],
     ) {

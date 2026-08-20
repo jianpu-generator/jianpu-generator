@@ -18,7 +18,7 @@ pub fn write_wav_from_source_filtered(
     apply_track_filter(&mut score, enabled_tracks);
     let score = crate::midi::expand_navigation(&score)?;
     let midi_bytes = crate::midi::write_midi(&score)?;
-    crate::wav::write_wav(&midi_bytes, sf2_bytes)
+    crate::wav::write_wav(&midi_bytes, sf2_bytes, None)
 }
 
 /// A measure range to synthesize, plus how its end measure should be
@@ -55,6 +55,23 @@ pub struct MeasureRangeSelection {
     pub sequence_entry_range: Option<std::ops::RangeInclusive<usize>>,
 }
 
+/// Track-mute and clip-trim options for
+/// [`write_wav_for_measure_range_from_source`], grouped into one param to
+/// stay under the crate's argument-count limit.
+#[cfg(feature = "wav")]
+pub struct MeasureRangeAudioOptions<'a> {
+    pub enabled_tracks: Option<&'a [String]>,
+    /// When `Some`, narrows the returned clip down to that elapsed-seconds
+    /// window (plus a short release tail, sample-accurately faded at the
+    /// cut points — see [`crate::wav::TrimWindow`]) instead of playing the
+    /// range's full boundary measures — what the web app's "play
+    /// selection" needs to play only the drag-selected notes' actual time
+    /// span. The boundary measures are still synthesized in full either
+    /// way, since that's needed for correct tempo/key context and to leave
+    /// room for the trimmed clip's own release tail.
+    pub trim: Option<crate::wav::TrimWindow>,
+}
+
 /// Parse, group, optionally filter tracks, and synthesize WAV for a consecutive measure range.
 ///
 /// BPM and key context is accumulated from all measures before the range's start.
@@ -63,12 +80,12 @@ pub fn write_wav_for_measure_range_from_source(
     source: &str,
     filename: &str,
     selection: &MeasureRangeSelection,
-    enabled_tracks: Option<&[String]>,
+    options: &MeasureRangeAudioOptions,
     sf2_bytes: &[u8],
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<u8>, IrrecoverableError> {
     let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
+    apply_track_filter(&mut score, options.enabled_tracks);
     let (score, start, end) = crate::midi::expand_for_measure_range(
         &score,
         *selection.range.start(),
@@ -78,7 +95,7 @@ pub fn write_wav_for_measure_range_from_source(
         selection.sequence_entry_range.clone(),
     )?;
     let midi_bytes = crate::midi::write_midi_for_measure_range(&score, start, end)?;
-    crate::wav::write_wav(&midi_bytes, sf2_bytes)
+    crate::wav::write_wav(&midi_bytes, sf2_bytes, options.trim)
 }
 
 /// Parse, group, optionally filter tracks, and compute the elapsed-seconds

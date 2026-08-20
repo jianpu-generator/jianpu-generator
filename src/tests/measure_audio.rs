@@ -1,4 +1,5 @@
 use super::write_wav_for_measure_range_from_source;
+use super::MeasureRangeAudioOptions;
 use super::MeasureRangeSelection;
 use super::*;
 
@@ -226,7 +227,10 @@ fn write_wav_for_measure_range_from_source_second_measure_uses_context_key() {
             respect_sequence: true,
             sequence_entry_range: None,
         },
-        None,
+        &MeasureRangeAudioOptions {
+            enabled_tracks: None,
+            trim: None,
+        },
         SF2_BYTES,
         &[],
     );
@@ -246,7 +250,10 @@ fn write_wav_for_measure_range_from_source_returns_riff_wav() {
             respect_sequence: true,
             sequence_entry_range: None,
         },
-        None,
+        &MeasureRangeAudioOptions {
+            enabled_tracks: None,
+            trim: None,
+        },
         SF2_BYTES,
         &[],
     )
@@ -268,7 +275,10 @@ fn write_wav_for_measure_range_from_source_out_of_range_clamps_to_last_measure()
             respect_sequence: true,
             sequence_entry_range: None,
         },
-        None,
+        &MeasureRangeAudioOptions {
+            enabled_tracks: None,
+            trim: None,
+        },
         SF2_BYTES,
         &[],
     );

@@ -3,6 +3,7 @@ import type {
   NoteTimingOut,
   NoteTimingsResponse,
 } from 'jianpu-wasm'
+import { computeNoteSelectionTrimWindow } from '../utils/noteSelectionTrim'
 import type { WorkerRequest, WorkerResponse } from './jianpu.worker'
 
 function binaryBufferFromResult(
@@ -116,6 +117,8 @@ type GenerateWavForMeasureRangeFn =
       sequenceEntryStartIndex: number | undefined,
       sequenceEntryEndIndex: number | undefined,
       enabledTracks: string[] | undefined,
+      trimStartS: number | undefined,
+      trimEndS: number | undefined,
       soundfont: Uint8Array,
     ) => GenerateWavResponse)
   | null
@@ -133,6 +136,22 @@ type ListNoteTimingsForRangeFn =
     ) => NoteTimingsResponse)
   | null
 
+/** Shifts every timing's `start_s`/`end_s` back by `trimStartS`, so they
+ * stay relative to the start of a clip that Rust has sample-accurately
+ * trimmed down to `[trimStartS, trimEndS]` (see `crate::wav::TrimWindow`)
+ * instead of the full, untrimmed measure-range clip they were originally
+ * computed against. */
+function shiftNoteTimings(
+  timings: NoteTimingOut[],
+  trimStartS: number,
+): NoteTimingOut[] {
+  return timings.map((t) => ({
+    ...t,
+    start_s: t.start_s - trimStartS,
+    end_s: t.end_s - trimStartS,
+  }))
+}
+
 export function handleGenerateMeasureRangeAudio(
   msg: Extract<WorkerRequest, { type: 'generateMeasureRangeAudio' }>,
   generateWavForMeasureRange: GenerateWavForMeasureRangeFn,
@@ -146,6 +165,28 @@ export function handleGenerateMeasureRangeAudio(
     } satisfies WorkerResponse)
     return
   }
+  const fullRangeNoteTimings = noteTimingsForRangeFromSource(
+    listNoteTimingsForRange,
+    msg.source,
+    msg.startMeasureIndex,
+    msg.endMeasureIndex,
+    msg.extendToLastOccurrence,
+    msg.respectSequence,
+    msg.sequenceEntryStartIndex,
+    msg.sequenceEntryEndIndex,
+    msg.enabledTracks,
+  )
+  // "Play selection": narrow the clip Rust synthesizes down to exactly the
+  // drag-selected notes' elapsed-seconds span (sample-accurate trim/fade —
+  // see `crate::wav::TrimWindow`), derived from the full range's note
+  // timings fetched above. `undefined` for a plain measure-range play
+  // (every other caller), which always plays the range in full.
+  const trim = msg.trimToSelectedNoteCells
+    ? computeNoteSelectionTrimWindow(
+        msg.trimToSelectedNoteCells,
+        fullRangeNoteTimings,
+      )
+    : null
   const wavResult = generateWavForMeasureRange(
     msg.source,
     msg.startMeasureIndex,
@@ -155,6 +196,8 @@ export function handleGenerateMeasureRangeAudio(
     msg.sequenceEntryStartIndex,
     msg.sequenceEntryEndIndex,
     msg.enabledTracks,
+    trim?.start,
+    trim?.end,
     loadedSoundfont,
   )
   if (wavResult.status === 'ok' && wavResult.wav != null) {
@@ -164,17 +207,9 @@ export function handleGenerateMeasureRangeAudio(
         type: 'measureRangeAudio',
         id: msg.id,
         wav: wavBuffer,
-        noteTimings: noteTimingsForRangeFromSource(
-          listNoteTimingsForRange,
-          msg.source,
-          msg.startMeasureIndex,
-          msg.endMeasureIndex,
-          msg.extendToLastOccurrence,
-          msg.respectSequence,
-          msg.sequenceEntryStartIndex,
-          msg.sequenceEntryEndIndex,
-          msg.enabledTracks,
-        ),
+        noteTimings: trim
+          ? shiftNoteTimings(fullRangeNoteTimings, trim.start)
+          : fullRangeNoteTimings,
       } satisfies WorkerResponse,
       { transfer: [wavBuffer] },
     )

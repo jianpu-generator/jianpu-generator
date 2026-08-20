@@ -11,6 +11,7 @@ import type {
   SectionRange,
   SequenceEntry,
 } from '../types'
+import type { NoteCell } from '../utils/noteSpanSelection'
 
 export type WorkerRequest =
   | { type: 'wasmModule'; module: WebAssembly.Module }
@@ -99,6 +100,17 @@ export type WorkerRequest =
       sequenceEntryStartIndex?: number
       sequenceEntryEndIndex?: number
       enabledTracks?: string[]
+      /**
+       * When present, narrows the generated clip down to exactly these
+       * drag-selected `(sourcePartIndex, noteId)` cells' elapsed-seconds
+       * span (sample-accurately trimmed/faded in Rust — see
+       * `jianpu_generator::wav::TrimWindow`) instead of playing the whole
+       * `[startMeasureIndex, endMeasureIndex]` range — what the web app's
+       * "play selection" needs. Omit for every other measure-range playback
+       * (e.g. "play current measure"/"play from current measure"/"play
+       * all"), which always plays the range in full.
+       */
+      trimToSelectedNoteCells?: NoteCell[]
     }
   | {
       type: 'renderWithHighlightRange'

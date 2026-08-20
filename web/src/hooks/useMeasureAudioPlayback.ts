@@ -1,6 +1,7 @@
 import type { NoteTimingOut } from 'jianpu-wasm'
 import type { RefObject } from 'react'
 import { useCallback, useRef, useState } from 'react'
+import type { NoteCell } from '../utils/noteSpanSelection'
 import type { WorkerRequest } from '../worker/jianpu.worker'
 
 interface UseMeasureAudioPlaybackParams {
@@ -97,6 +98,12 @@ export function useMeasureAudioPlayback({
        * for just this playback — e.g. "play selection" muting every part
        * outside the drag-selected notes. */
       enabledTracksOverride?: string[],
+      /** When given, narrows the generated clip down to exactly these
+       * drag-selected notes' elapsed-seconds span — sample-accurately
+       * trimmed and fade-cut in Rust (see `crate::wav::TrimWindow`) rather
+       * than playing the whole `[startMeasureIndex, endMeasureIndex]`
+       * range. Only "play selection" (`playNoteSelection`) passes this. */
+      trimToSelectedNoteCells?: NoteCell[],
     ) => {
       const worker = workerRef.current
       if (!worker) return
@@ -114,6 +121,7 @@ export function useMeasureAudioPlayback({
         sequenceEntryStartIndex,
         sequenceEntryEndIndex,
         enabledTracks: enabledTracksOverride ?? enabledTracksRef.current,
+        trimToSelectedNoteCells,
       } satisfies WorkerRequest)
     },
     [],
@@ -168,18 +176,17 @@ export function useMeasureAudioPlayback({
     playMeasureRange(0, totalMeasures - 1, true, true)
   }, [playMeasureRange, totalMeasures])
 
-  // Plays only the drag-selected parts (see `useNoteSelection`), muting every
-  // other part, over the selection's measure range. Accepted trade-off: this
-  // plays the *entire* boundary measures the selection touches, not a
-  // sub-measure time-trimmed window — e.g. selecting beats 2-3 of measure 5
-  // still plays all of measure 5. Precise trimming via
-  // `NoteTiming.start_s`/`end_s` is a possible future enhancement, not
-  // justified for v1.
+  // Plays only the drag-selected parts (see `useNoteSelection`), muting
+  // every other part, then trims the generated clip down to exactly the
+  // selected notes' elapsed-seconds span (sample-accurate trim/fade done in
+  // Rust — see `crate::wav::TrimWindow`) instead of playing the selection's
+  // full boundary measures.
   const playNoteSelection = useCallback(
     (
       minMeasureIndex: number,
       maxMeasureIndex: number,
       selectedPartNames: string[],
+      selectedCells: NoteCell[],
     ) => {
       playMeasureRange(
         minMeasureIndex,
@@ -189,6 +196,7 @@ export function useMeasureAudioPlayback({
         undefined,
         undefined,
         selectedPartNames,
+        selectedCells,
       )
     },
     [playMeasureRange],

@@ -7,6 +7,20 @@ use crate::responses::{
 };
 use crate::types::{GenerateSplitWavsResponse, GenerateWavResponse, NoteTimingsResponse};
 
+/// Combines a trim-window second pair from the wasm boundary into the
+/// [`jianpu_generator::wav::TrimWindow`] [`jianpu_generator::write_wav_for_measure_range_from_source`]
+/// expects. `None` unless both bounds are present, since a partial pair
+/// can't name a window — see [`generate_wav_for_measure_range`].
+pub(crate) fn trim_window(
+    start_s: Option<f64>,
+    end_s: Option<f64>,
+) -> Option<jianpu_generator::wav::TrimWindow> {
+    match (start_s, end_s) {
+        (Some(start_s), Some(end_s)) => Some(jianpu_generator::wav::TrimWindow { start_s, end_s }),
+        _ => None,
+    }
+}
+
 /// Parse `.jianpu` source and synthesize WAV audio bytes.
 ///
 /// Available only when the `wav` feature is enabled at build time.
@@ -59,6 +73,15 @@ pub fn generate_wav(
 /// occurrence of `B` shares the same written measure range. Pass `None` for
 /// both when there's no specific entry to disambiguate (e.g. "play current
 /// measure"/"play from current measure" outside a `# sequence` selection).
+///
+/// `trim_start_s`/`trim_end_s`: when both are present, narrow the returned
+/// clip down to that elapsed-seconds window (plus a short, sample-accurately
+/// faded release tail — see `jianpu_generator::wav::TrimWindow`) instead of
+/// the range's full boundary measures. Used by the web app's "play
+/// selection" to play only the drag-selected notes' actual time span: the
+/// caller derives the window from `list_note_timings_for_range`'s response,
+/// matched against the selected `(sourcePartIndex, noteId)` cells. Pass
+/// `None` for both to play the range in full (every other caller).
 #[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 #[wasm_bindgen]
 pub fn generate_wav_for_measure_range(
@@ -70,6 +93,8 @@ pub fn generate_wav_for_measure_range(
     sequence_entry_start_index: Option<usize>,
     sequence_entry_end_index: Option<usize>,
     enabled_tracks: Option<Vec<String>>,
+    trim_start_s: Option<f64>,
+    trim_end_s: Option<f64>,
     soundfont: Vec<u8>,
 ) -> GenerateWavResponse {
     generate_wav_for_measure_range_response(
@@ -80,6 +105,7 @@ pub fn generate_wav_for_measure_range(
         respect_sequence,
         crate::sequence_entry_range(sequence_entry_start_index, sequence_entry_end_index),
         enabled_tracks.as_deref(),
+        trim_window(trim_start_s, trim_end_s),
         soundfont,
     )
 }

@@ -8,6 +8,11 @@ const SAMPLE_RATE: u32 = 44100;
 /// Target peak level before encoding (0.95 ≈ −0.4 dBFS), matching typical mastered music.
 const TARGET_PEAK: f32 = 0.95;
 
+#[path = "wav_trim.rs"]
+mod wav_trim;
+use wav_trim::trim_and_fade;
+pub use wav_trim::TrimWindow;
+
 fn init_synth(sf2_bytes: &[u8]) -> Result<Synth, IrrecoverableError> {
     let mut synth = Synth::new(SynthDescriptor {
         sample_rate: SAMPLE_RATE as f32,
@@ -95,7 +100,11 @@ fn render_track(
     }
 }
 
-pub fn write_wav(midi_bytes: &[u8], sf2_bytes: &[u8]) -> Result<Vec<u8>, IrrecoverableError> {
+pub fn write_wav(
+    midi_bytes: &[u8],
+    sf2_bytes: &[u8],
+    trim: Option<TrimWindow>,
+) -> Result<Vec<u8>, IrrecoverableError> {
     let smf = Smf::parse(midi_bytes).map_err(|_| {
         IrrecoverableError::new(IrrecoverableErrorKind::WavInvalidMidiBytes {
             span: Span::new(0, 0),
@@ -120,6 +129,10 @@ pub fn write_wav(midi_bytes: &[u8], sf2_bytes: &[u8]) -> Result<Vec<u8>, Irrecov
 
     // Render 1 second of tail so reverb fully decays
     render_samples(&mut synth, SAMPLE_RATE as usize, &mut all_l, &mut all_r);
+
+    if let Some(trim) = trim {
+        trim_and_fade(&mut all_l, &mut all_r, trim);
+    }
 
     normalize_peak(&mut all_l, &mut all_r);
     encode_wav(&all_l, &all_r)
