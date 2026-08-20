@@ -26,10 +26,10 @@ fn notehead_weight(config: &RenderConfig) -> f32 {
     font_metrics::monospace_char_advance_width('0', config.notes_font_size())
 }
 
-/// Real rendered width of the note-dash glyph at its own fixed font size,
+/// Real rendered width of the note-dash glyph at `config`'s notes font size,
 /// mirroring `layout_spacing::dash_weight`.
-fn dash_weight() -> f32 {
-    font_metrics::monospace_char_advance_width('\u{2014}', font_metrics::NOTE_DASH_FONT_SIZE)
+fn dash_weight(config: &RenderConfig) -> f32 {
+    font_metrics::monospace_char_advance_width('\u{2014}', config.notes_font_size())
 }
 
 /// Independently recomputed expected extra weight of a dotted note/rest/
@@ -145,15 +145,15 @@ fn dotted_rest_column_reserves_exactly_its_dot_s_own_rendered_width() {
 }
 
 #[test]
-fn dotted_note_dash_column_reserves_its_dot_s_own_rendered_width_at_its_own_fixed_font_size() {
-    // `render_note_dash` draws its dot(s) at `NOTE_DASH_FONT_SIZE`, not
-    // `config`'s notes font size, so the dash's own extra weight must be
-    // measured at that fixed size to match what's actually drawn.
+fn dotted_note_dash_column_reserves_its_dot_s_own_rendered_width_at_notes_font_size() {
+    // `render_note_dash` draws its dot(s) at `config`'s notes font size, so
+    // the dash's own extra weight must be measured at that size to match
+    // what's actually drawn.
     let config = test_config();
     let dotted = make_block("S", note_dash(true, false), 1);
     let dotted_weight = measure_column_weights(&dotted, 2, &config)[0];
 
-    let expected = dash_weight() + expected_dot_extra_weight(1, font_metrics::NOTE_DASH_FONT_SIZE);
+    let expected = dash_weight(&config) + expected_dot_extra_weight(1, config.notes_font_size());
     assert!(
         (dotted_weight - expected).abs() < 0.001,
         "dotted_weight={dotted_weight}"

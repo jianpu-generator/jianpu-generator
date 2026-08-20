@@ -104,7 +104,11 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
         AbsoluteContent::NoteDash {
             dotted,
             double_dotted,
-        } => render_note_dash(elem, &DotState::new(*dotted, *double_dotted)),
+        } => render_note_dash(
+            elem,
+            &DotState::new(*dotted, *double_dotted),
+            *notes_font_size,
+        ),
         AbsoluteContent::MultiMeasureRest { count, width } => {
             render_multi_measure_rest(elem, *count, *width, row_height, notes_font_size)
         }

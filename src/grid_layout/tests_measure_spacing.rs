@@ -31,10 +31,10 @@ fn notehead_weight(config: &RenderConfig) -> f32 {
     font_metrics::monospace_char_advance_width('0', config.notes_font_size())
 }
 
-/// Real rendered width of the note-dash glyph at its own fixed font size,
+/// Real rendered width of the note-dash glyph at `config`'s notes font size,
 /// mirroring `layout_spacing::dash_weight`.
-fn dash_weight() -> f32 {
-    font_metrics::monospace_char_advance_width('\u{2014}', font_metrics::NOTE_DASH_FONT_SIZE)
+fn dash_weight(config: &RenderConfig) -> f32 {
+    font_metrics::monospace_char_advance_width('\u{2014}', config.notes_font_size())
 }
 
 fn make_block_with_notes(row_id: &str, note_count: u32, bar_col: u32) -> MeasureBlock {
@@ -154,23 +154,22 @@ fn measure_column_weights_scales_with_note_count() {
 }
 
 #[test]
-fn measure_column_weights_gives_dash_a_narrower_weight_than_a_fresh_note() {
+fn measure_column_weights_gives_dash_the_same_weight_as_a_fresh_note() {
     // A half note (`NoteHead` + `NoteDash`) spans the same 2 columns as two
-    // quarter notes. Unlike the old flat-1.0-per-column model (where a dash
-    // and a notehead always weighed the same), the dash's glyph renders at
-    // its own fixed, smaller font size (`NOTE_DASH_FONT_SIZE`) rather than
-    // the lyric font size, so it now measures narrower than a fresh notehead
-    // column — a real behavior change, not a regression.
+    // quarter notes. The dash's glyph renders at `config`'s notes font size
+    // (matching a fresh notehead), so the two columns weigh the same and a
+    // half note weighs the same as two quarter notes.
     let config = test_config();
     let half_note = make_block_with_dash("S", 2);
     let weights = measure_column_weights(&half_note, 3, &config);
     assert_eq!(weights[0], notehead_weight(&config));
-    assert_eq!(weights[1], dash_weight());
-    assert!(
-        dash_weight() < notehead_weight(&config),
-        "dash weight {} should be narrower than notehead weight {} since it \
-         renders at a smaller fixed font size",
-        dash_weight(),
+    assert_eq!(weights[1], dash_weight(&config));
+    assert_eq!(
+        dash_weight(&config),
+        notehead_weight(&config),
+        "dash weight {} should equal notehead weight {} since both render \
+         at the notes font size",
+        dash_weight(&config),
         notehead_weight(&config)
     );
 
@@ -179,11 +178,11 @@ fn measure_column_weights_gives_dash_a_narrower_weight_than_a_fresh_note() {
         .iter()
         .sum();
     let half_note_weight: f32 = weights.iter().sum();
-    assert!(
-        half_note_weight < quarters_weight,
-        "one half note ({half_note_weight}) should now weigh less than two \
-         quarter notes ({quarters_weight}), since its dash is narrower than \
-         a fresh notehead"
+    assert_eq!(
+        half_note_weight, quarters_weight,
+        "one half note ({half_note_weight}) should weigh the same as two \
+         quarter notes ({quarters_weight}), since its dash now renders at \
+         the same size as a fresh notehead"
     );
 }
 

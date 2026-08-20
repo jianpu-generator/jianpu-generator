@@ -229,13 +229,6 @@ pub(crate) fn cjk_text_width(s: &str, font_size: f32) -> f32 {
         .sum()
 }
 
-/// Font size (points) at which a note-dash glyph (`—`) is rendered (see
-/// `render_note_dash`), fixed independently of `base_font_size` so it always
-/// reads as visually smaller than a full notehead. Shared with the layout
-/// pass's dash weight (`layout_spacing.rs`) so the two can't silently drift
-/// apart.
-pub(crate) const NOTE_DASH_FONT_SIZE: f32 = 12.0;
-
 /// Fixed horizontal padding (in points) between a column's left edge and the
 /// anchor of every glyph inside it — note head, rest, percussion hit, chord
 /// symbol, note dash, and lyric syllable — plus the

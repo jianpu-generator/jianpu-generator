@@ -88,10 +88,9 @@ fn flush_left_padding(content: &GridContent, config: RowResolveConfig) -> f32 {
             let leading_char = text.chars().next().unwrap_or_default();
             crate::font_metrics::monospace_glyph_left_bearing(leading_char, config.chords_font_size)
         }
-        GridContent::NoteDash { .. } => crate::font_metrics::monospace_glyph_left_bearing(
-            '\u{2014}',
-            crate::font_metrics::NOTE_DASH_FONT_SIZE,
-        ),
+        GridContent::NoteDash { .. } => {
+            crate::font_metrics::monospace_glyph_left_bearing('\u{2014}', config.notes_font_size)
+        }
         GridContent::LyricSyllable { text, .. } => {
             let Some(leading_char) = text.chars().next() else {
                 return crate::font_metrics::GLYPH_LEFT_PADDING;

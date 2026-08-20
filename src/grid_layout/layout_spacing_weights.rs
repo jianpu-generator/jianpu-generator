@@ -59,11 +59,10 @@ pub(super) fn accidental_extra_weight(accidental: &Accidental, config: &RenderCo
 }
 
 /// Real advance width (in points) of the note-dash glyph (`—`), measured at
-/// its own fixed rendered font size (`NOTE_DASH_FONT_SIZE`) rather than
-/// `config`'s lyric font size, matching what `render_note_dash` actually
+/// `config`'s notes font size, matching what `render_note_dash` actually
 /// draws.
-fn dash_weight() -> f32 {
-    font_metrics::monospace_char_advance_width('\u{2014}', font_metrics::NOTE_DASH_FONT_SIZE)
+fn dash_weight(config: &RenderConfig) -> f32 {
+    font_metrics::monospace_char_advance_width('\u{2014}', config.notes_font_size())
 }
 
 /// Width weight for a chord symbol's own glyph, measured from its real
@@ -120,8 +119,8 @@ pub(super) fn column_weight(content: &ElementContent, config: &RenderConfig) -> 
             dotted,
             double_dotted,
         } => {
-            dash_weight()
-                + dot_extra_weight(*dotted, *double_dotted, font_metrics::NOTE_DASH_FONT_SIZE)
+            dash_weight(config)
+                + dot_extra_weight(*dotted, *double_dotted, config.notes_font_size())
         }
         ElementContent::Lyric { text, .. } => lyric_weight(text, config),
         // A `LyricLine` spans the whole measure via `column_span` rather than

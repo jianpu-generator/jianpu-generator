@@ -7,6 +7,7 @@ use crate::renderer::new_types::{SvgElement, SvgKind, SvgVariant};
 pub(in crate::renderer::new_renderer) fn render_note_dash(
     elem: &AbsoluteElement,
     dots: &DotState,
+    notes_font_size: f32,
 ) -> Vec<SvgElement> {
     // The dash and its augmentation dot(s), if any, draw as one flush-left
     // text run, matching `render_note_head`/`render_rest`/
@@ -24,7 +25,7 @@ pub(in crate::renderer::new_renderer) fn render_note_dash(
         variant: Some(SvgVariant::Text),
         kind: SvgKind::Text {
             content,
-            font_size: font_metrics::NOTE_DASH_FONT_SIZE,
+            font_size: notes_font_size,
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
             font: FontFamily::Monospace,
