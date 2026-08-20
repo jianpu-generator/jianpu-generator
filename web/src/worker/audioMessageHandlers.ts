@@ -119,6 +119,7 @@ type GenerateWavForMeasureRangeFn =
       enabledTracks: string[] | undefined,
       trimStartS: number | undefined,
       trimEndS: number | undefined,
+      trimNextNoteStartS: number | undefined,
       soundfont: Uint8Array,
     ) => GenerateWavResponse)
   | null
@@ -198,6 +199,7 @@ export function handleGenerateMeasureRangeAudio(
     msg.enabledTracks,
     trim?.start,
     trim?.end,
+    trim?.nextNoteStart,
     loadedSoundfont,
   )
   if (wavResult.status === 'ok' && wavResult.wav != null) {

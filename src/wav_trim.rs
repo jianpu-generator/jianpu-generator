@@ -8,6 +8,14 @@ use super::SAMPLE_RATE;
 pub struct TrimWindow {
     pub start_s: f64,
     pub end_s: f64,
+    /// Elapsed-seconds start of the next unselected note after `end_s`, if
+    /// any, in the *untrimmed* clip — a hard cap on how far
+    /// [`TRIM_RELEASE_TAIL_SAMPLES`] is allowed to extend. Without it, a
+    /// tightly-packed passage (the next note starting well within the
+    /// release tail's 300 ms) would bleed that note's attack into the
+    /// trimmed clip, audibly playing one more note than was selected.
+    /// `None` when there's no next note, or it starts safely past the tail.
+    pub next_note_start_s: Option<f64>,
 }
 
 /// Linear fade applied at a trim's cut points, long enough to mask the
@@ -30,9 +38,13 @@ const TRIM_RELEASE_TAIL_SAMPLES: usize = SAMPLE_RATE as usize * 3 / 10; // 300 m
 pub(super) fn trim_and_fade(l: &mut Vec<f32>, r: &mut Vec<f32>, trim: TrimWindow) {
     let total = l.len();
     let start = ((trim.start_s * f64::from(SAMPLE_RATE)).round() as usize).min(total);
-    let end = (((trim.end_s * f64::from(SAMPLE_RATE)).round() as usize)
+    let mut end = (((trim.end_s * f64::from(SAMPLE_RATE)).round() as usize)
         + TRIM_RELEASE_TAIL_SAMPLES)
         .min(total);
+    if let Some(next_note_start_s) = trim.next_note_start_s {
+        let next_note_start = (next_note_start_s * f64::from(SAMPLE_RATE)).round() as usize;
+        end = end.min(next_note_start);
+    }
     if end <= start {
         return;
     }

@@ -12,6 +12,7 @@ fn trim_and_fade_keeps_only_the_windowed_samples_plus_release_tail() {
     let trim = TrimWindow {
         start_s: 0.2,
         end_s: 0.4,
+        next_note_start_s: None,
     };
     trim_and_fade(&mut l, &mut r, trim);
 
@@ -31,6 +32,7 @@ fn trim_and_fade_clamps_to_the_buffer_length() {
     let trim = TrimWindow {
         start_s: 0.0,
         end_s: 5.0,
+        next_note_start_s: None,
     };
     trim_and_fade(&mut l, &mut r, trim);
     assert_eq!(l.len(), total);
@@ -44,10 +46,33 @@ fn trim_and_fade_is_a_no_op_for_an_inverted_window() {
     let trim = TrimWindow {
         start_s: 0.5,
         end_s: 0.1,
+        next_note_start_s: None,
     };
     trim_and_fade(&mut l, &mut r, trim);
     assert_eq!(l.len(), 1000);
     assert_eq!(r.len(), 1000);
+}
+
+#[test]
+fn trim_and_fade_caps_the_release_tail_at_the_next_note_so_it_is_not_audible() {
+    // 1 s of audio; selection nominally ends at 0.2 s, but another
+    // (unselected) note starts at 0.22 s — well inside the 300 ms release
+    // tail. Without the cap, that note's attack would bleed into the clip
+    // and be heard as one extra note.
+    let total = SAMPLE_RATE as usize;
+    let mut l = ramp(total, 0.5);
+    let mut r = ramp(total, 0.5);
+    let trim = TrimWindow {
+        start_s: 0.1,
+        end_s: 0.2,
+        next_note_start_s: Some(0.22),
+    };
+    trim_and_fade(&mut l, &mut r, trim);
+
+    let expected_start = (0.1 * SAMPLE_RATE as f64).round() as usize;
+    let expected_end = (0.22 * SAMPLE_RATE as f64).round() as usize;
+    assert_eq!(l.len(), expected_end - expected_start);
+    assert_eq!(r.len(), expected_end - expected_start);
 }
 
 #[test]

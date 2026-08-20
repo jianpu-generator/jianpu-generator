@@ -14,9 +14,14 @@ use crate::types::{GenerateSplitWavsResponse, GenerateWavResponse, NoteTimingsRe
 pub(crate) fn trim_window(
     start_s: Option<f64>,
     end_s: Option<f64>,
+    next_note_start_s: Option<f64>,
 ) -> Option<jianpu_generator::wav::TrimWindow> {
     match (start_s, end_s) {
-        (Some(start_s), Some(end_s)) => Some(jianpu_generator::wav::TrimWindow { start_s, end_s }),
+        (Some(start_s), Some(end_s)) => Some(jianpu_generator::wav::TrimWindow {
+            start_s,
+            end_s,
+            next_note_start_s,
+        }),
         _ => None,
     }
 }
@@ -82,6 +87,12 @@ pub fn generate_wav(
 /// caller derives the window from `list_note_timings_for_range`'s response,
 /// matched against the selected `(sourcePartIndex, noteId)` cells. Pass
 /// `None` for both to play the range in full (every other caller).
+///
+/// `trim_next_note_start_s`: when present, the elapsed-seconds start of the
+/// next unselected note after `trim_end_s`, so the release tail can't bleed
+/// into it and be heard as an extra note (see
+/// `jianpu_generator::wav::TrimWindow::next_note_start_s`). Ignored unless
+/// `trim_start_s`/`trim_end_s` are both present.
 #[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 #[wasm_bindgen]
 pub fn generate_wav_for_measure_range(
@@ -95,6 +106,7 @@ pub fn generate_wav_for_measure_range(
     enabled_tracks: Option<Vec<String>>,
     trim_start_s: Option<f64>,
     trim_end_s: Option<f64>,
+    trim_next_note_start_s: Option<f64>,
     soundfont: Vec<u8>,
 ) -> GenerateWavResponse {
     generate_wav_for_measure_range_response(
@@ -105,7 +117,7 @@ pub fn generate_wav_for_measure_range(
         respect_sequence,
         crate::sequence_entry_range(sequence_entry_start_index, sequence_entry_end_index),
         enabled_tracks.as_deref(),
-        trim_window(trim_start_s, trim_end_s),
+        trim_window(trim_start_s, trim_end_s, trim_next_note_start_s),
         soundfont,
     )
 }

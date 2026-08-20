@@ -5,6 +5,11 @@ import type { NoteCell } from './noteSpanSelection'
 export interface TrimWindow {
   start: number
   end: number
+  /** Elapsed-seconds start of the next unselected note after `end`, if any
+   * — passed to Rust as a hard cap so the release tail it adds past `end`
+   * (see `crate::wav::TrimWindow::next_note_start_s`) can't bleed into that
+   * note and be heard as one extra note beyond the selection. */
+  nextNoteStart?: number
 }
 
 /**
@@ -30,5 +35,15 @@ export function computeNoteSelectionTrimWindow(
   const start = Math.min(...matched.map((t) => t.start_s))
   const end = Math.max(...matched.map((t) => t.end_s))
   if (end <= start) return null
-  return { start, end }
+  // The earliest unselected note that starts at or after `end` — passed to
+  // Rust as a hard cap on the release tail (see `TrimWindow.nextNoteStart`)
+  // so a tightly-packed next note doesn't get partially/fully played,
+  // which would sound like one extra note beyond the selection.
+  const nextNoteStarts = noteTimings
+    .filter((t) => !keys.has(`${t.source_part_index}:${t.note_id}`))
+    .map((t) => t.start_s)
+    .filter((s) => s >= end)
+  const nextNoteStart =
+    nextNoteStarts.length > 0 ? Math.min(...nextNoteStarts) : undefined
+  return { start, end, nextNoteStart }
 }

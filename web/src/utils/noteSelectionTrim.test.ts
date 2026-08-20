@@ -31,7 +31,32 @@ describe('computeNoteSelectionTrimWindow', () => {
       ],
       noteTimings,
     )
-    expect(trim).toEqual({ start: 1, end: 3 })
+    expect(trim).toEqual({ start: 1, end: 3, nextNoteStart: 3 })
+  })
+
+  it('caps at the earliest unselected note starting at or after the window end', () => {
+    const noteTimings = [
+      timing(0, 0, 0, 1),
+      timing(0, 1, 1, 1.5),
+      timing(0, 2, 1.5, 4),
+      timing(0, 3, 4, 5),
+    ]
+    const trim = computeNoteSelectionTrimWindow(
+      [{ sourcePartIndex: 0, noteId: 1 }],
+      noteTimings,
+    )
+    // Selection ends at 1.5 s; note 2 starts right there, so it becomes the
+    // hard cap even though note 3 (starting later) is also unselected.
+    expect(trim).toEqual({ start: 1, end: 1.5, nextNoteStart: 1.5 })
+  })
+
+  it('omits nextNoteStart when the selection reaches the last note', () => {
+    const noteTimings = [timing(0, 0, 0, 1), timing(0, 1, 1, 2)]
+    const trim = computeNoteSelectionTrimWindow(
+      [{ sourcePartIndex: 0, noteId: 1 }],
+      noteTimings,
+    )
+    expect(trim).toEqual({ start: 1, end: 2, nextNoteStart: undefined })
   })
 
   it('ignores timings from parts/notes not in the selection', () => {
