@@ -19,7 +19,22 @@ pub(crate) const MIN_MEASURE_WIDTH_PT: f32 = 24.0;
 /// model's rod is real content width plus a little breathing room, not just
 /// the bare glyph width, so a column never renders flush against whatever
 /// follows it (see **Rod and spring** in `ARCHITECTURE.md`).
-const COLUMN_CLEARANCE_PT: f32 = 1.0;
+///
+/// This has to be [`font_metrics::GLYPH_LEFT_PADDING`], not some smaller
+/// hand-tuned value: every flush-left glyph (note head, rest, chord symbol,
+/// note dash, lyric syllable) is drawn starting `GLYPH_LEFT_PADDING`
+/// (minus its own left-side bearing) past the column's left edge —
+/// `coordinate_resolver::resolve::flush_left_padding`/
+/// `ColumnGeometry::glyph_left_anchor_x` — so a rod smaller than that
+/// leading offset plus the glyph's own width leaves the column's own rod
+/// too small to contain what actually gets drawn in it. That's invisible
+/// most of the time (slack usually pads columns well past their rod, and a
+/// glyph bleeding into a neighboring *note* column reads as normal
+/// spacing), but becomes visible ink-on-stroke overlap when the column is
+/// this tight *and* immediately followed by a `BarLine`, whose own rod
+/// ([`BARLINE_MIN_WIDTH_PT`]) is far smaller than a glyph needs to safely
+/// finish inside it.
+const COLUMN_CLEARANCE_PT: f32 = crate::font_metrics::GLYPH_LEFT_PADDING;
 
 /// Hard-minimum rod (in points) for a `BarLine` column. Unlike note-ish
 /// columns, a bar line's [`THIN_MARK_WEIGHT`] is an arbitrary relative ratio

@@ -205,13 +205,23 @@ fn resolve_span_marking(
         GridContent::Underline { level } => {
             let start_center = geometry.glyph_left_anchor_x(el.column as f32, padding);
             let end_center = span_end_center(geometry, el, padding);
-            let ul_x = PAGE_MARGIN + start_center - config.note_number_width * 0.5;
-            let ul_width = end_center - start_center + config.note_number_width;
+            // The half-`note_number_width` pad on each end assumes there's a
+            // neighboring note column to bleed into, same as any other note
+            // glyph. That's not true at a measure boundary — the column just
+            // past the span may belong to a `BarLine`, whose rod is far
+            // narrower than a note's — so clamp each end to the span's own
+            // column edges (`geometry.x_start`) rather than let the pad
+            // overshoot into whatever sits next door.
+            let span_left = geometry.x_start(el.column as f32);
+            let span_right = geometry.x_start(el.column as f32 + el.column_span as f32);
+            let ul_x = PAGE_MARGIN + (start_center - config.note_number_width * 0.5).max(span_left);
+            let ul_right =
+                PAGE_MARGIN + (end_center + config.note_number_width * 0.5).min(span_right);
             Some(AbsoluteElement {
                 x: ul_x,
                 y,
                 content: AbsoluteContent::Underline {
-                    width: ul_width,
+                    width: ul_right - ul_x,
                     level: *level,
                 },
             })

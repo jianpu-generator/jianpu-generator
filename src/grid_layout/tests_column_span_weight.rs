@@ -156,8 +156,8 @@ fn chord_weight_splits_across_eighth_note_columns_in_its_span_but_rod_stays_on_i
     // this block's own column 0.
     let layout = build_measure_column_layout(&[b], &config);
     let leading_extra = 1; // MUSIC_START_COL - LABEL_COLS
-    let chord_rod = chord_weight(text, &config) + 1.0; // column_rod's COLUMN_CLEARANCE_PT
-    let note_rod = note_weight + 1.0;
+    let chord_rod = chord_weight(text, &config) + font_metrics::GLYPH_LEFT_PADDING; // column_rod's COLUMN_CLEARANCE_PT
+    let note_rod = note_weight + font_metrics::GLYPH_LEFT_PADDING;
     assert!(
         (layout[0].column_rods[leading_extra] - chord_rod).abs() < 0.01,
         "column 0's rod should be exactly the chord's own (unsplit) rod: \
