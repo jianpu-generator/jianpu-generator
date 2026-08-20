@@ -239,7 +239,7 @@ pub(crate) fn cjk_text_width(s: &str, font_size: f32) -> f32 {
 /// shrinks. The same value everywhere so everything in a column lines up
 /// flush at one offset from `x_start`, regardless of the column's own width
 /// or what else shares it (see `ColumnGeometry::glyph_left_anchor_x`).
-pub(crate) const GLYPH_LEFT_PADDING: f32 = 10.0;
+pub(crate) const GLYPH_LEFT_PADDING: f32 = 4.0;
 
 /// The augmentation-dot(s) text (`.`/`..`, drawn as literal middle-dot
 /// characters) appended directly onto a note/rest/chord/dash glyph's own
