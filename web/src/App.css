@@ -12,7 +12,13 @@
   padding: 0.6rem 1rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-header > * {
+  flex-shrink: 0;
 }
 
 .app-header-actions {
@@ -20,7 +26,7 @@
   align-items: center;
   gap: 0.5rem;
   margin-left: auto;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .app-header h1 {
@@ -142,7 +148,7 @@
 
 .shared-preview-banner {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.5rem;
   color: var(--muted);
@@ -151,6 +157,7 @@
 
 .shared-preview-banner p {
   margin: 0;
+  white-space: nowrap;
 }
 
 .shared-preview-actions {
@@ -274,20 +281,6 @@
   .pane-divider-format-toggle {
     width: auto;
     height: 18px;
-  }
-
-  .app-header {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .app-header > * {
-    flex-shrink: 0;
-  }
-
-  .app-header-actions {
-    flex-wrap: nowrap;
   }
 }
 

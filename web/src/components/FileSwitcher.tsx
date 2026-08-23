@@ -18,6 +18,7 @@ import {
   sortedUserFileNames,
 } from '../fileStore'
 import { useDismissableOpen } from '../hooks/useDismissableOpen'
+import { useFixedMenuPosition } from '../hooks/useFixedMenuPosition'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import { FileTabName } from './FileTabName'
 import { ImportButton } from './ImportButton'
@@ -90,14 +91,18 @@ export function FileSwitcher({
   const showEmptyHint = !isLoadingGithub && names.length === 0
 
   const filesContainerRef = useRef<HTMLDivElement>(null)
+  const filesButtonRef = useRef<HTMLButtonElement>(null)
   const [filesOpen, setFilesOpen] = useDismissableOpen(filesContainerRef)
+  const filesMenuStyle = useFixedMenuPosition(filesButtonRef, filesOpen)
   const [demoOpen, setDemoOpen] = useState(false)
   useEffect(() => {
     if (!filesOpen) setDemoOpen(false)
   }, [filesOpen])
 
   const actionsContainerRef = useRef<HTMLDivElement>(null)
+  const actionsButtonRef = useRef<HTMLButtonElement>(null)
   const [actionsOpen, setActionsOpen] = useDismissableOpen(actionsContainerRef)
+  const actionsMenuStyle = useFixedMenuPosition(actionsButtonRef, actionsOpen)
 
   return (
     <div className="file-tab-bar">
@@ -108,6 +113,7 @@ export function FileSwitcher({
       <div className="export-menu" ref={filesContainerRef}>
         <button
           type="button"
+          ref={filesButtonRef}
           className="preview-export-btn"
           aria-haspopup="menu"
           aria-expanded={filesOpen}
@@ -121,7 +127,10 @@ export function FileSwitcher({
           )}
         </button>
         {filesOpen ? (
-          <div className="export-menu-list file-tab-bar-files-list">
+          <div
+            className="export-menu-list file-tab-bar-files-list"
+            style={filesMenuStyle}
+          >
             {isLoadingGithub ? (
               <p className="file-tab-bar-hint">Loading files from GitHub…</p>
             ) : showEmptyHint ? (
@@ -201,6 +210,7 @@ export function FileSwitcher({
       <div className="export-menu" ref={actionsContainerRef}>
         <button
           type="button"
+          ref={actionsButtonRef}
           className="preview-export-btn"
           aria-haspopup="menu"
           aria-expanded={actionsOpen}
@@ -210,7 +220,11 @@ export function FileSwitcher({
           <DotsHorizontalIcon aria-hidden="true" />
         </button>
         {actionsOpen ? (
-          <div className="export-menu-list" role="menu">
+          <div
+            className="export-menu-list"
+            role="menu"
+            style={actionsMenuStyle}
+          >
             <button
               type="button"
               role="menuitem"

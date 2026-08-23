@@ -2,6 +2,7 @@ import { ChevronDownIcon, Link2Icon, VideoIcon } from '@radix-ui/react-icons'
 import * as Toast from '@radix-ui/react-toast'
 import { useCallback, useRef, useState } from 'react'
 import { useDismissableOpen } from '../hooks/useDismissableOpen'
+import { useFixedMenuPosition } from '../hooks/useFixedMenuPosition'
 
 interface GoLiveButtonProps {
   isLive: boolean
@@ -20,7 +21,9 @@ export function GoLiveButton({
 }: GoLiveButtonProps) {
   const [toastOpen, setToastOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const [menuOpen, setMenuOpen] = useDismissableOpen(containerRef)
+  const menuStyle = useFixedMenuPosition(buttonRef, isLive && menuOpen)
 
   const copyUrl = useCallback(async (url: string) => {
     try {
@@ -43,6 +46,7 @@ export function GoLiveButton({
     <div className="export-menu" ref={containerRef}>
       <button
         type="button"
+        ref={buttonRef}
         className={className}
         data-testid="go-live-button"
         aria-haspopup={isLive ? 'menu' : undefined}
@@ -62,7 +66,7 @@ export function GoLiveButton({
         )}
       </button>
       {isLive && menuOpen ? (
-        <div className="export-menu-list" role="menu">
+        <div className="export-menu-list" role="menu" style={menuStyle}>
           <button
             type="button"
             role="menuitem"
