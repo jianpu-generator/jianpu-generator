@@ -6,7 +6,7 @@ import {
   applyNoteDragHighlights,
   applyPersistedLyricHighlights,
   applyPersistedNoteHighlights,
-  NOTE_DRAG_ARM_THRESHOLD_PX,
+  isBelowDragArmThreshold,
 } from './previewDragHighlights'
 import type { PreviewDragState } from './previewDragState'
 import {
@@ -83,14 +83,12 @@ export function usePreviewDragSelection(
       if (!container) return
 
       if (dragState.mode === 'pending') {
-        const dx = e.clientX - dragState.anchor.x
-        const dy = e.clientY - dragState.anchor.y
-        if (Math.hypot(dx, dy) < NOTE_DRAG_ARM_THRESHOLD_PX) return
+        const current = { x: e.clientX, y: e.clientY }
+        if (isBelowDragArmThreshold(dragState.anchor, current)) return
         // Real movement past the threshold — this is a note-drag, not a
         // plain click. The eager per-measure highlight (if any) gets
         // overwritten below since `applyNoteDragHighlights` re-marks every
         // note-click-target rect from scratch on each call.
-        const current = { x: e.clientX, y: e.clientY }
         dragStateRef.current = {
           mode: 'note',
           anchor: dragState.anchor,
@@ -281,7 +279,9 @@ export function usePreviewDragSelection(
             )
           : []
         const cells = noteCellsForPartLabels(noteSpansRef.current, hits)
-        const lyricCells = lyricCellsForPartLabels(lyricSpansRef.current, hits)
+        const lyricCells = isBelowDragArmThreshold(dragState.anchor, current) // drag-only union
+          ? []
+          : lyricCellsForPartLabels(lyricSpansRef.current, hits)
         if (container) {
           applyPersistedNoteHighlights(container, cells)
           applyPersistedLyricHighlights(container, lyricCells)

@@ -2,12 +2,15 @@ import { expect, test } from '@playwright/test'
 import { focusEditor } from './fileSwitcherHelpers'
 
 /**
- * Regression test: clicking (or drag-selecting vertically across) a part
- * label is supposed to select every note/rest *and* every lyric syllable
- * that part sounds across the whole system the label sits in — mirroring
- * how 'measure' mode's click/drag resolves both `noteCellsInMeasureRange`
- * and `lyricCellsInMeasureRange` together (see
- * `measure-click-selects-lyrics.spec.ts`).
+ * Regression test: drag-selecting vertically across a part label is supposed
+ * to select every note/rest *and* every lyric syllable that part sounds
+ * across the whole system the label sits in — mirroring how 'measure' mode's
+ * click/drag resolves both `noteCellsInMeasureRange` and
+ * `lyricCellsInMeasureRange` together (see
+ * `measure-click-selects-lyrics.spec.ts`). A *plain click* (no drag) is
+ * deliberately narrower and selects only the notes row, not the lyric row —
+ * see `part-label-click-selects-notes.spec.ts`'s
+ * "plain click does not also select the lyric row" test.
  *
  * `usePreviewDragSelection.ts`'s `'part-label'` mode used to resolve only
  * `noteCellsForPartLabels` and never a lyric-side counterpart, so a
@@ -70,44 +73,6 @@ async function primeMeasureSpans(page: import('@playwright/test').Page) {
     page.locator('.preview-page [data-testid="measure-highlight"]').first(),
   ).toBeVisible({ timeout: 5_000 })
 }
-
-test('clicking a part label also selects the lyric syllables that part sings across the system', async ({
-  page,
-}) => {
-  await loadFixture(page)
-  await page.goto('/')
-
-  await page.waitForSelector('[data-testid="play-measure-button"]', {
-    timeout: 15_000,
-  })
-  await page.waitForSelector('[data-tag="part-label"][data-part-index="0"]', {
-    timeout: 10_000,
-  })
-  await primeMeasureSpans(page)
-
-  const melodyLabel = page
-    .locator('[data-tag="part-label"][data-part-index="0"]')
-    .first()
-  await expect(melodyLabel).toBeVisible({ timeout: 5_000 })
-  const box = await melodyLabel.boundingBox()
-  if (!box) throw new Error('Could not get bounding box for the Melody label.')
-
-  // A plain click (mousedown + mouseup at the same point, no drag).
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
-  await page.mouse.down()
-  await page.mouse.up()
-
-  // Melody sounds 4 notes total across both measures ("1 2" + "3 4").
-  await expect(
-    page.locator('[data-tag="note"][data-note-drag-selected]'),
-  ).toHaveCount(4)
-
-  // Melody sings 4 syllables total ("do re" + "mi fa") — these must be
-  // selected too, not skipped.
-  await expect(
-    page.locator('[data-tag="lyric"][data-lyric-drag-selected]'),
-  ).toHaveCount(4)
-})
 
 test('dragging vertically across part labels selects both parts notes and the lyrics under them', async ({
   page,

@@ -126,6 +126,77 @@ test('clicking a part label selects every note that part sounds across the syste
   ).not.toHaveAttribute('data-part-label-drag-active', '')
 })
 
+test('a plain click on a notes+lyrics part label does not also select the lyric row', async ({
+  page,
+}) => {
+  // Regression test: 'part-label' drag-selection unions in the lyric row
+  // underneath the swept part(s) — a real feature for drags (see
+  // `part-label-drag-selects-lyrics.spec.ts`) — but a plain click (zero
+  // pointer movement) used to go through that exact same code path and
+  // incorrectly pick up the lyric row too.
+  const lyricSource = [
+    '# metadata',
+    'title = "part label click no-lyric test"',
+    'max_measures_per_system = 48',
+    '',
+    '# parts',
+    'Melody [M] = notes+lyrics',
+    '',
+    '# score',
+    '[M] 1 2', // measure 0
+    '[M] do re', // verse 0
+    '',
+    '[M] 3 4', // measure 1
+    '[M] mi fa', // verse 0
+  ].join('\n')
+
+  await page.addInitScript((source) => {
+    localStorage.setItem(
+      'jianpu:files:v1',
+      JSON.stringify({
+        active: 'part-label-click-no-lyric-test.jianpu',
+        userFiles: { 'part-label-click-no-lyric-test.jianpu': source },
+        bin: {},
+        fileIds: {
+          'part-label-click-no-lyric-test.jianpu':
+            'part-label-click-no-lyric-test-id-001',
+        },
+      }),
+    )
+  }, lyricSource)
+  await page.goto('/')
+
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
+  await page.waitForSelector('[data-tag="part-label"][data-part-index="0"]', {
+    timeout: 10_000,
+  })
+  await primeMeasureSpans(page)
+
+  const melodyLabel = page
+    .locator('[data-tag="part-label"][data-part-index="0"]')
+    .first()
+  await expect(melodyLabel).toBeVisible({ timeout: 5_000 })
+  const box = await melodyLabel.boundingBox()
+  if (!box) throw new Error('Could not get bounding box for the Melody label.')
+
+  // A plain click (mousedown + mouseup at the same point, no drag).
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.up()
+
+  // Melody's 4 notes get selected, same as the notes-only fixture above...
+  await expect(
+    page.locator('[data-tag="note"][data-note-drag-selected]'),
+  ).toHaveCount(4)
+  // ...but none of the 4 lyric syllables should be, since this was a click,
+  // not a drag.
+  await expect(
+    page.locator('[data-tag="lyric"][data-lyric-drag-selected]'),
+  ).toHaveCount(0)
+})
+
 test('dragging from one part label to another selects both parts notes', async ({
   page,
 }) => {
