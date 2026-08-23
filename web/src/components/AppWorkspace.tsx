@@ -336,6 +336,7 @@ export function AppWorkspace({
           selectedLyricCells={selectedLyricCells}
           lyricSpans={lyricSpans}
           onMeasureRangeSelect={handleMeasureRangeSelect}
+          selectedMeasureRange={selectedMeasureRange}
           audioGenerating={audioGenerating}
           wavUrl={wavUrl}
           wavFilename={wavFilename}
