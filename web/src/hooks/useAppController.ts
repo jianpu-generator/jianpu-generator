@@ -17,6 +17,7 @@ import {
 } from './usePartToggles'
 import { useScoreSource } from './useScoreSource'
 import { useSectionNavigation } from './useSectionNavigation'
+import { useSequenceNavigation } from './useSequenceNavigation'
 import { useStorageBackend } from './useStorageBackend'
 import { useUrlFileSync } from './useUrlFileSync'
 import { useWasmLoader } from './useWasmLoader'
@@ -75,6 +76,12 @@ export function useAppController() {
   const fileId = fileIdForName(store, store.active)
 
   const editorRef = useRef<EditorHandle>(null)
+  const selectedSequenceRangeRef = useRef<{
+    start: number
+    end: number
+    entryStartIndex: number
+    entryEndIndex: number
+  } | null>(null)
   const soundfont = useAssetLoader('/fonts/GeneralUser_GS.sf2')
   const fonts = useFontsLoader()
   const wasm = useWasmLoader()
@@ -125,8 +132,7 @@ export function useAppController() {
     measureAudioElement,
     measureSpans,
     sectionRanges,
-    selectedSequenceRange,
-    sequenceJumpToolbarProps,
+    sequenceEntries,
     notifySelection,
     playSelectedMeasures,
     playFromCurrentMeasure,
@@ -152,6 +158,7 @@ export function useAppController() {
     store.active,
     soundfont.bytes,
     fonts.fonts,
+    selectedSequenceRangeRef,
   )
   usePartTogglePruning(
     parts,
@@ -206,6 +213,15 @@ export function useAppController() {
 
   const { setSelectedLineRange, handleSectionJump, sectionJumpToolbarProps } =
     useSectionNavigation(sectionRanges, editorRef, notifySelection)
+
+  const { selectedSequenceRange, sequenceJumpToolbarProps } =
+    useSequenceNavigation(
+      sequenceEntries,
+      measureSpans,
+      editorRef,
+      notifySelection,
+      selectedSequenceRangeRef,
+    )
 
   const {
     handleNoteRangeSelect,

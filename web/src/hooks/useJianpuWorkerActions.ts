@@ -1,3 +1,4 @@
+import type { RefObject } from 'react'
 import { useInstrumentPreview } from './useInstrumentPreview'
 import { useJianpuWorkerAudioActions } from './useJianpuWorkerAudioActions'
 import { useJianpuWorkerExports } from './useJianpuWorkerExports'
@@ -9,11 +10,15 @@ import { useJianpuWorkerRenderRequests } from './useJianpuWorkerRenderRequests'
 import { useJianpuWorkerShiftOctave } from './useJianpuWorkerShiftOctave'
 import type { useJianpuWorkerState } from './useJianpuWorkerState'
 import { useMeasureAudioPlayback } from './useMeasureAudioPlayback'
-import type { useSequenceNavigation } from './useSequenceNavigation'
 
 interface UseJianpuWorkerActionsParams {
   state: ReturnType<typeof useJianpuWorkerState>
-  sequenceNav: ReturnType<typeof useSequenceNavigation>
+  selectedSequenceRangeRef: RefObject<{
+    start: number
+    end: number
+    entryStartIndex: number
+    entryEndIndex: number
+  } | null>
   source: string
   activeFile: string
   soundfontBytes: Uint8Array | null
@@ -23,9 +28,9 @@ interface UseJianpuWorkerActionsParams {
 
 /**
  * Wires every `useJianpuWorker` sub-hook that isn't plain state
- * (`useJianpuWorkerState`) or sequence navigation — audio/measure/instrument
- * playback, worker lifecycle callbacks, render requests, exports, and the
- * one-off part-declaration/format/shift-octave/import actions — and returns
+ * (`useJianpuWorkerState`) — audio/measure/instrument playback, worker
+ * lifecycle callbacks, render requests, exports, and the one-off
+ * part-declaration/format/shift-octave/import actions — and returns
  * everything `useJianpuWorker` needs beyond `state` itself to assemble its
  * public return value.
  *
@@ -37,7 +42,7 @@ interface UseJianpuWorkerActionsParams {
  */
 export function useJianpuWorkerActions({
   state,
-  sequenceNav,
+  selectedSequenceRangeRef,
   source,
   activeFile,
   soundfontBytes,
@@ -75,7 +80,7 @@ export function useJianpuWorkerActions({
     sourceRef: state.sourceRef,
     enabledTracksRef: state.enabledTracksRef,
     selectedMeasureRange: state.selectedMeasureRange,
-    selectedSequenceRangeRef: sequenceNav.selectedSequenceRangeRef,
+    selectedSequenceRangeRef,
     totalMeasures: state.measureSpans.length,
   })
 

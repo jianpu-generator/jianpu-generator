@@ -92,16 +92,6 @@ export interface JianpuWorkerState {
   lyricSpans: LyricSpan[]
   sectionRanges: SectionRange[]
   sequenceEntries: SequenceEntry[]
-  selectedSequenceRange: { start: number; end: number } | null
-  sequenceJumpToolbarProps: {
-    sequenceEntries: SequenceEntry[]
-    dragStartIndex: number | null
-    setDragStartIndex: (index: number | null) => void
-    setDragCurrentIndex: (index: number | null) => void
-    activeHighlightedIndices: Set<number>
-    handleSequenceEntryClick: (index: number) => void
-    handleSequenceEntryRangeSelect: (indexA: number, indexB: number) => void
-  }
   previewInstrument: (programNumber: number) => void
   previewPercussion: (key: number) => void
   stopPreviewInstrument: () => void

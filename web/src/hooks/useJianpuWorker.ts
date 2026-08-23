@@ -1,7 +1,7 @@
+import type { RefObject } from 'react'
 import { useJianpuWorkerActions } from './useJianpuWorkerActions'
 import { useJianpuWorkerState } from './useJianpuWorkerState'
 import type { JianpuWorkerState } from './useJianpuWorkerTypes'
-import { useSequenceNavigation } from './useSequenceNavigation'
 
 export type { JianpuWorkerState } from './useJianpuWorkerTypes'
 
@@ -13,6 +13,20 @@ export function useJianpuWorker(
   activeFile: string,
   soundfontBytes: Uint8Array | null,
   fontBytes: { sc: Uint8Array; tc: Uint8Array; mono: Uint8Array } | null,
+  /**
+   * Owned by the caller (`useAppController`, which also feeds it to its own
+   * `useSequenceNavigation` call) rather than this hook, since
+   * `useMeasureAudioPlayback` below needs it before `useSequenceNavigation`
+   * can run — that hook needs `notifySelection`, which this hook only
+   * produces further down. See `useSequenceNavigation`'s matching parameter
+   * doc comment.
+   */
+  selectedSequenceRangeRef: RefObject<{
+    start: number
+    end: number
+    entryStartIndex: number
+    entryEndIndex: number
+  } | null>,
   debounceMs = 300,
 ): JianpuWorkerState {
   const state = useJianpuWorkerState(
@@ -51,11 +65,9 @@ export function useJianpuWorker(
     sequenceEntries,
   } = state
 
-  const sequenceNav = useSequenceNavigation(sequenceEntries)
-
   const actions = useJianpuWorkerActions({
     state,
-    sequenceNav,
+    selectedSequenceRangeRef,
     source,
     activeFile,
     soundfontBytes,
@@ -106,8 +118,6 @@ export function useJianpuWorker(
     lyricSpans,
     sectionRanges,
     sequenceEntries,
-    selectedSequenceRange: sequenceNav.selectedSequenceRange,
-    sequenceJumpToolbarProps: sequenceNav.sequenceJumpToolbarProps,
     previewInstrument: actions.previewInstrument,
     previewPercussion: actions.previewPercussion,
     stopPreviewInstrument: actions.stopPreviewInstrument,
