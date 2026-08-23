@@ -56,6 +56,13 @@ export interface SelectedNoteRangePlaybackInfo {
 export function useNoteSelection(
   noteSpans: NoteSpan[],
   parts: PartInfo[],
+  /** The same `enabledTracks` filter threaded through the `listNoteSpans`
+   * worker message (see `useJianpuWorkerRenderRequests.ts`) — needed to
+   * resolve `sourcePartIndex` correctly, since `noteSpans` is fetched with
+   * hidden parts filtered/compacted out while `parts` (from `list_parts`)
+   * always stays the full, unfiltered list. `undefined` means every part is
+   * enabled. */
+  enabledTracks: string[] | undefined,
   editorRef: RefObject<EditorHandle | null>,
   measureSpans: MeasureSpan[],
   notifySelection: (
@@ -107,22 +114,26 @@ export function useNoteSelection(
       if (lastRuns.length === 0) return null
       const measureIndices = lastRuns.map((run) => run.measureIndex)
       const partIndices = new Set(lastRuns.map((run) => run.sourcePartIndex))
-      // `sourcePartIndex` is the compiled `measure.parts` index, which is
-      // index-aligned 1:1 with `parts` (the `PartInfo[]` from `list_parts`):
-      // both ultimately derive from the same `ParsedDocument.declarations`
-      // order (see `src/parser/mod.rs` — `declarations` feeds both
-      // `list_parts_from_source` and `interleaved_parser::parse`, whose
-      // per-part accumulators are `vec![...; declarations.len()]`, so no
-      // reordering or gaps can occur between the two arrays).
+      // `sourcePartIndex` comes from `noteSpans`, fetched via the
+      // `listNoteSpans` worker message *with* the current `enabledTracks` —
+      // hidden parts are filtered out of the compiled score before indices
+      // are assigned, so `sourcePartIndex` is a compacted, visible-parts-only
+      // index (see `list_note_spans_from_source`'s doc comment in
+      // `note_spans.rs`). `parts` (from `list_parts`, sent with no
+      // `enabledTracks`) is always the full, unfiltered declaration-order
+      // list, so it must be filtered the same way before indexing.
+      const visibleParts = enabledTracks
+        ? parts.filter((part) => enabledTracks.includes(part.abbreviation))
+        : parts
       const selectedPartNames = Array.from(partIndices)
-        .map((partIndex) => parts[partIndex]?.abbreviation)
+        .map((partIndex) => visibleParts[partIndex]?.abbreviation)
         .filter((abbreviation): abbreviation is string => abbreviation != null)
       return {
         minMeasureIndex: Math.min(...measureIndices),
         maxMeasureIndex: Math.max(...measureIndices),
         selectedPartNames,
       }
-    }, [lastRuns, parts])
+    }, [lastRuns, parts, enabledTracks])
 
   return {
     handleNoteRangeSelect,

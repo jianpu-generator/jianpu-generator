@@ -63,6 +63,7 @@ export function useJianpuWorker(
     lyricSpans,
     sectionRanges,
     sequenceEntries,
+    enabledTracks,
   } = state
 
   const actions = useJianpuWorkerActions({
@@ -118,6 +119,7 @@ export function useJianpuWorker(
     lyricSpans,
     sectionRanges,
     sequenceEntries,
+    enabledTracks,
     previewInstrument: actions.previewInstrument,
     previewPercussion: actions.previewPercussion,
     stopPreviewInstrument: actions.stopPreviewInstrument,

@@ -142,6 +142,7 @@ export function useAppController() {
     highlightedDocuments,
     noteSpans,
     lyricSpans,
+    enabledTracks,
     previewInstrument,
     previewPercussion,
     stopPreviewInstrument,
@@ -232,6 +233,7 @@ export function useAppController() {
   } = useNoteSelection(
     noteSpans,
     parts,
+    enabledTracks,
     editorRef,
     measureSpans,
     notifySelection,

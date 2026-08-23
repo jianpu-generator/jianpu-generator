@@ -92,6 +92,13 @@ export interface JianpuWorkerState {
   lyricSpans: LyricSpan[]
   sectionRanges: SectionRange[]
   sequenceEntries: SequenceEntry[]
+  /** The current mute/solo filter as sent to the `listNoteSpans`/
+   * `listLyricSpans`/render worker messages — `undefined` means every part
+   * is enabled. `undefined`-vs-empty-array (rather than always an array)
+   * matches `enabledTracksForRender`'s contract. Needed by `useNoteSelection`
+   * to resolve `sourcePartIndex` against the same visible-parts-only index
+   * space `noteSpans` was compiled with. */
+  enabledTracks: string[] | undefined
   previewInstrument: (programNumber: number) => void
   previewPercussion: (key: number) => void
   stopPreviewInstrument: () => void
