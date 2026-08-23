@@ -89,10 +89,11 @@ test('selecting a rest in the SVG preview selects its "0" in the editor', async 
     )
   }
 
-  // A plain click would select the whole measure (see
-  // `usePreviewDragSelection.ts`'s 'pending' mode) — drag just past the
-  // note-drag arm threshold while staying inside the rest's own click
-  // target, so only the rest itself gets selected.
+  // A plain click already selects just the rest itself (see
+  // `usePreviewDragSelection.ts`'s 'pending' mode) — this drags just past
+  // the note-drag arm threshold instead, while staying inside the rest's own
+  // click target, to exercise the 'note' drag-marquee path specifically
+  // rather than the plain-click path.
   await page.mouse.move(restBox.x + 2, restBox.y + restBox.height / 2)
   await page.mouse.down()
   await page.mouse.move(

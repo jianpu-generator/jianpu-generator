@@ -2,10 +2,13 @@ import { expect, test } from '@playwright/test'
 import { focusEditor } from './fileSwitcherHelpers'
 
 /**
- * Clicking (or dragging across) a measure in the SVG preview selects every
- * note/rest cell in that measure (see `measure-click-selects-notes.spec.ts`)
- * — and, alongside them, every lyric syllable in that same measure, via
- * `previewSelection.ts`'s `lyricCellsInMeasureRange`.
+ * Cmd/Ctrl-clicking (or -dragging across) a measure in the SVG preview
+ * selects every note/rest cell in that measure (see
+ * `measure-click-selects-notes.spec.ts`) — and, alongside them, every lyric
+ * syllable in that same measure, via `previewSelection.ts`'s
+ * `lyricCellsInMeasureRange`. A plain click/drag resolves to note/chord/
+ * syllable granularity instead and never pulls in lyric cells from a note
+ * hit (see `Preview.tsx`'s `onMouseDown`).
  *
  * Self-contained source (not a demo file) with a generous "max measures per
  * system" so all measures render in one row and stay within the viewport.
@@ -61,7 +64,7 @@ async function primeMeasureSpans(page: import('@playwright/test').Page) {
   ).toBeVisible({ timeout: 5_000 })
 }
 
-test('clicking a measure also selects the lyric syllables in that measure', async ({
+test('clicking a measure selects just the note under the pointer, with no lyric selection', async ({
   page,
 }) => {
   await loadClickTestFixture(page)
@@ -91,6 +94,44 @@ test('clicking a measure also selects the lyric syllables in that measure', asyn
   await page.mouse.down()
   await page.mouse.up()
 
+  await expect(
+    page.locator('[data-tag="note"][data-note-drag-selected]'),
+  ).toHaveCount(1)
+  await expect(
+    page.locator('[data-tag="lyric"][data-lyric-drag-selected]'),
+  ).toHaveCount(0)
+})
+
+test('Cmd/Ctrl-clicking a measure also selects the lyric syllables in that measure', async ({
+  page,
+}) => {
+  await loadClickTestFixture(page)
+  await page.goto('/')
+
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
+  await page.waitForSelector('[data-tag="measure"][data-measure-index="1"]', {
+    timeout: 10_000,
+  })
+  await primeMeasureSpans(page)
+
+  const measure1 = page
+    .locator('[data-tag="measure"][data-measure-index="1"]')
+    .first()
+  await expect(measure1).toBeVisible({ timeout: 5_000 })
+  const box = await measure1.boundingBox()
+  if (!box) throw new Error('Could not get bounding box for measure 1.')
+
+  // A Cmd/Ctrl-modified plain click (mousedown + mouseup at the same point,
+  // no drag) — the only remaining way to reach whole-measure selection (see
+  // `Preview.tsx`'s `onMouseDown`).
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.25)
+  await page.keyboard.down('Control')
+  await page.mouse.down()
+  await page.mouse.up()
+  await page.keyboard.up('Control')
+
   // Measure 1 ("5 6" / "sol la") has exactly 2 notes and 2 lyric syllables.
   await expect(
     page.locator('[data-tag="note"][data-note-drag-selected]'),
@@ -108,7 +149,7 @@ test('clicking a measure also selects the lyric syllables in that measure', asyn
   }
 })
 
-test('dragging across measures selects every lyric syllable in the range', async ({
+test('Cmd/Ctrl-dragging across measures selects every lyric syllable in the range', async ({
   page,
 }) => {
   await loadClickTestFixture(page)
@@ -137,13 +178,20 @@ test('dragging across measures selects every lyric syllable in the range', async
     throw new Error('Could not get bounding boxes for measures 0 and 1.')
   }
 
-  // As above, drag from/to points on the note row rather than the lyric row.
+  // As above, drag from/to points on the note row rather than the lyric row
+  // — this drag's anchor point actually misses every note/lyric click
+  // target (the lyric row's presence shifts the note row's own click-target
+  // down slightly), so without Cmd/Ctrl it would now resolve through the
+  // nearest-note fallback into a plain note-marquee drag instead of the
+  // whole-measure-range shortcut this test means to exercise.
   await page.mouse.move(box0.x + 1, box0.y + 1)
+  await page.keyboard.down('Control')
   await page.mouse.down()
   await page.mouse.move(box1.x + box1.width - 1, box1.y + box1.height * 0.25, {
     steps: 10,
   })
   await page.mouse.up()
+  await page.keyboard.up('Control')
 
   // Measures 0-1 have 4 + 2 = 6 notes and 6 lyric syllables in total.
   await expect(

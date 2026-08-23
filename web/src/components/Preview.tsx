@@ -7,27 +7,11 @@ import {
   applyPersistedNoteHighlights,
 } from './previewDragHighlights'
 import {
-  applyLyricLabelDragHighlight,
-  applyPartLabelDragHighlight,
   applyPersistedLyricLabelHighlights,
   applyPersistedPartLabelHighlights,
 } from './previewLabelDragHighlights'
-import {
-  getLyricLabelAtPoint,
-  getPartLabelAtPoint,
-  lyricCellsForLyricLabels,
-  noteCellsForPartLabels,
-} from './previewLabelSelection'
-import {
-  getLyricAtPoint,
-  getMeasureAtPoint,
-  getNoteAtPoint,
-  getSectionLabelAtPoint,
-  type LyricCell,
-  lyricCellsInMeasureRange,
-  type NoteCell,
-  noteCellsInMeasureRange,
-} from './previewSelection'
+import { handlePreviewMouseDown } from './previewMouseDownHandler'
+import type { LyricCell, NoteCell } from './previewSelection'
 import { usePlaybackCursor } from './usePlaybackCursor'
 import { usePreviewDragSelection } from './usePreviewDragSelection'
 
@@ -241,133 +225,15 @@ export function Preview({
         <div
           className="preview-pages"
           ref={previewPagesRef}
-          onMouseDown={(e) => {
-            const sectionLabel = getSectionLabelAtPoint(e.clientX, e.clientY)
-            if (sectionLabel !== undefined) {
-              onSectionLabelClickRef.current?.(sectionLabel)
-              e.preventDefault()
-              return
-            }
-            const partLabel = getPartLabelAtPoint(e.clientX, e.clientY)
-            if (partLabel !== undefined) {
-              const point = { x: e.clientX, y: e.clientY }
-              dragStateRef.current = {
-                mode: 'part-label',
-                anchor: point,
-                current: point,
-                anchorSystem: {
-                  measureIndexStart: partLabel.measureIndexStart,
-                  measureIndexEnd: partLabel.measureIndexEnd,
-                },
-              }
-              const container = previewPagesRef.current
-              if (container) {
-                applyPartLabelDragHighlight(container, [partLabel])
-                applyPersistedNoteHighlights(
-                  container,
-                  noteCellsForPartLabels(noteSpans, [partLabel]),
-                )
-              }
-              e.preventDefault()
-              return
-            }
-            // The lyric-side mirror of the part-label check above — a verse
-            // row's own label (e.g. "M:v1"), scoped to that one verse
-            // instead of a whole part.
-            const lyricLabel = getLyricLabelAtPoint(e.clientX, e.clientY)
-            if (lyricLabel !== undefined) {
-              const point = { x: e.clientX, y: e.clientY }
-              dragStateRef.current = {
-                mode: 'lyric-label',
-                anchor: point,
-                current: point,
-                anchorSystem: {
-                  measureIndexStart: lyricLabel.measureIndexStart,
-                  measureIndexEnd: lyricLabel.measureIndexEnd,
-                },
-              }
-              const container = previewPagesRef.current
-              if (container) {
-                applyLyricLabelDragHighlight(container, [lyricLabel])
-                applyPersistedLyricHighlights(
-                  container,
-                  lyricCellsForLyricLabels(lyricSpans, [lyricLabel]),
-                )
-              }
-              e.preventDefault()
-              return
-            }
-            // Checked before the note click-target below: a lyric
-            // syllable's own click target paints on top of (and never
-            // overlaps outside of) the note's wider click-target rect, so a
-            // hit here means the click landed on the syllable's own rect —
-            // see `Tag::Lyric`'s doc comment and
-            // `resolve_click_target_elements`'s append order.
-            const lyricCell = getLyricAtPoint(e.clientX, e.clientY)
-            if (lyricCell !== undefined) {
-              const point = { x: e.clientX, y: e.clientY }
-              dragStateRef.current = {
-                mode: 'lyric',
-                anchor: point,
-                current: point,
-              }
-              const container = previewPagesRef.current
-              if (container) {
-                applyPersistedLyricHighlights(container, [lyricCell])
-              }
-              e.preventDefault()
-              return
-            }
-            const noteCell = getNoteAtPoint(e.clientX, e.clientY)
-            if (noteCell !== undefined) {
-              const point = { x: e.clientX, y: e.clientY }
-              const measureRangeAtAnchor = getMeasureAtPoint(
-                e.clientX,
-                e.clientY,
-              )
-              dragStateRef.current = {
-                mode: 'pending',
-                anchor: point,
-                noteCellAtAnchor: noteCell,
-                measureRangeAtAnchor,
-              }
-              // Eagerly show the whole-measure highlight, matching a plain
-              // click's instant-highlight-on-mousedown — overwritten if this
-              // turns into a real note-drag (see `usePreviewDragSelection`).
-              const container = previewPagesRef.current
-              if (container && measureRangeAtAnchor !== undefined) {
-                applyPersistedNoteHighlights(
-                  container,
-                  noteCellsInMeasureRange(noteSpans, measureRangeAtAnchor),
-                )
-                applyPersistedLyricHighlights(
-                  container,
-                  lyricCellsInMeasureRange(lyricSpans, measureRangeAtAnchor),
-                )
-              }
-              e.preventDefault()
-              return
-            }
-            const range = getMeasureAtPoint(e.clientX, e.clientY)
-            if (range === undefined) return
-            dragStateRef.current = {
-              mode: 'measure',
-              anchor: range,
-              current: range,
-            }
-            const container = previewPagesRef.current
-            if (container) {
-              applyPersistedNoteHighlights(
-                container,
-                noteCellsInMeasureRange(noteSpans, range),
-              )
-              applyPersistedLyricHighlights(
-                container,
-                lyricCellsInMeasureRange(lyricSpans, range),
-              )
-            }
-            e.preventDefault()
-          }}
+          onMouseDown={(e) =>
+            handlePreviewMouseDown(e, {
+              dragStateRef,
+              previewPagesRef,
+              noteSpans,
+              lyricSpans,
+              onSectionLabelClick: onSectionLabelClickRef.current,
+            })
+          }
         >
           {documents.length === 0 &&
           highlightedDocuments.length === 0 &&

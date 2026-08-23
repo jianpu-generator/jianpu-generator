@@ -16,11 +16,11 @@ import type { MeasureRange, NoteCell } from './previewSelection'
 // away — it starts 'pending' instead, and only arms into 'note' once the
 // pointer has actually moved past `NOTE_DRAG_ARM_THRESHOLD_PX` (see
 // `usePreviewDragSelection`'s `handleMouseMove`). A plain click on a note
-// (mouseup with no meaningful movement) resolves as a shortcut for
-// selecting every note in that note's measure instead, using
-// `measureRangeAtAnchor` — clicking a measure (on a note or the empty space
-// around it) is just a fast way to select all of its notes, there's no
-// separate "measure selected" state anymore.
+// (mouseup with no meaningful movement) resolves to just that one
+// note/chord cell (`noteCellAtAnchor`) — whole-measure selection is a
+// separate gesture entirely now, only reachable by holding Cmd/Ctrl at
+// mousedown (see `Preview.tsx`'s `onMouseDown`, which arms 'measure'
+// directly for that case rather than going through 'pending' at all).
 export type PreviewDragState =
   | { mode: 'measure'; anchor: MeasureRange; current: MeasureRange }
   | { mode: 'note'; anchor: DragPoint; current: DragPoint }
@@ -44,7 +44,6 @@ export type PreviewDragState =
       mode: 'pending'
       anchor: DragPoint
       noteCellAtAnchor: NoteCell
-      measureRangeAtAnchor: MeasureRange | undefined
     }
   | {
       // No 'pending'-style click/drag distinction needed here, unlike

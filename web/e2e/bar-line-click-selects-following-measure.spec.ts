@@ -2,13 +2,16 @@ import { expect, test } from '@playwright/test'
 import { focusEditor } from './fileSwitcherHelpers'
 
 /**
- * Clicking anywhere on a bar line's wide `.bar-line-drag-handle` (see
- * `PreviewSvgRenderer.tsx`'s `renderBarLineDragHandle`) must resolve to the
- * measure *after* that line, never the one before — the handle is padded
- * several pixels wider than the visible stroke specifically so a real mouse
- * doesn't have to land on the exact boundary pixel, and that padding must
- * not flip which measure the click resolves to (see
- * `previewSelection.ts`'s `getBarLineMeasureAtPoint`).
+ * Cmd/Ctrl-clicking anywhere on a bar line's wide `.bar-line-drag-handle`
+ * (see `PreviewSvgRenderer.tsx`'s `renderBarLineDragHandle`) must resolve to
+ * the measure *after* that line, never the one before — the handle is
+ * padded several pixels wider than the visible stroke specifically so a real
+ * mouse doesn't have to land on the exact boundary pixel, and that padding
+ * must not flip which measure the click resolves to (see
+ * `previewSelection.ts`'s `getBarLineMeasureAtPoint`). The Cmd/Ctrl modifier
+ * is required since these tests click a bar line's own gutter, not a note's
+ * click target, and a plain click there now resolves to the nearest note
+ * instead of the whole measure (see `Preview.tsx`'s `onMouseDown`).
  *
  * The sole exception is a system's *last* bar line — its closing line, with
  * no following measure on the same row — which resolves to the measure
@@ -91,10 +94,13 @@ test('clicking a few pixels into the hit-padding of a mid-system bar line still 
 
   // Click a couple pixels to the *left* of measure 1's true left edge — still
   // inside the bar line's wide invisible hit target, but on the measure-0
-  // side of the true boundary pixel.
+  // side of the true boundary pixel. Held under Cmd/Ctrl (see this file's
+  // top-of-file comment).
   await page.mouse.move(box1.x - 2, box1.y + box1.height / 2)
+  await page.keyboard.down('Control')
   await page.mouse.down()
   await page.mouse.up()
+  await page.keyboard.up('Control')
 
   // Measure 1 ("5 6") has exactly 2 notes; measure 0 ("1 2 3 4") has 4 — a
   // fall-back to measure 0 would show 4 notes selected instead.
@@ -124,10 +130,13 @@ test("clicking a system's last bar line selects the measure before it, not the n
   const box1 = await measure1.boundingBox()
   if (!box1) throw new Error('Could not get bounding box for measure 1.')
 
-  // The bar line closing system 0 sits at measure 1's own right edge.
+  // The bar line closing system 0 sits at measure 1's own right edge. Held
+  // under Cmd/Ctrl (see this file's top-of-file comment).
   await page.mouse.move(box1.x + box1.width, box1.y + box1.height / 2)
+  await page.keyboard.down('Control')
   await page.mouse.down()
   await page.mouse.up()
+  await page.keyboard.up('Control')
 
   // Measure 1 ("5 6") has exactly 2 notes; measure 2 ("7 1'") also has 2, but
   // with different note ids — assert on those ids to distinguish the two.

@@ -224,6 +224,41 @@ export function getNoteAtPoint(x: number, y: number): NoteCell | undefined {
   })
 }
 
+/**
+ * The note/chord cell in `range` whose click-target group is geometrically
+ * closest (by rect-center distance) to `(x, y)`. Used as the fallback for a
+ * plain click that lands on a bar-line/gutter point rather than directly on
+ * a note's own click target — since plain clicks no longer expand to the
+ * whole measure (see `PreviewDragState`'s doc comment), this resolves such a
+ * click to *something* selectable in that measure instead of a no-op.
+ *
+ * Only ever runs on that rare "missed every note/lyric click target" path,
+ * so a `querySelector` per candidate is fine — no need for a precomputed
+ * index.
+ */
+export function nearestNoteCellInMeasureRange(
+  noteSpans: NoteSpan[],
+  range: MeasureRange,
+  x: number,
+  y: number,
+): NoteCell | undefined {
+  let best: { cell: NoteCell; distance: number } | undefined
+  for (const cell of noteCellsInMeasureRange(noteSpans, range)) {
+    const group = document.querySelector<HTMLElement>(
+      `[data-tag="note"][data-part-index="${cell.sourcePartIndex}"][data-note-id="${cell.noteId}"]`,
+    )
+    if (!group) continue
+    const rect = group.getBoundingClientRect()
+    const centerX = (rect.left + rect.right) / 2
+    const centerY = (rect.top + rect.bottom) / 2
+    const distance = Math.hypot(centerX - x, centerY - y)
+    if (!best || distance < best.distance) {
+      best = { cell, distance }
+    }
+  }
+  return best?.cell
+}
+
 /** One rendered lyric syllable, keyed the same way as `Tag::Lyric`'s
  * `data-part-index`/`data-note-id`/`data-verse` SVG attributes. Structurally
  * identical to `NoteCell` but kept as its own type — a lyric cell and a note

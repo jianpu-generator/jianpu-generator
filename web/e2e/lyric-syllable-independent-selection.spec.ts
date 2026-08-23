@@ -138,7 +138,7 @@ test('dragging across syllables selects exactly those cells and the matching edi
   expect(selectedText).toBe('do re mi')
 })
 
-test('clicking a note directly selects the whole measure, notes and every verse of lyrics alike', async ({
+test('clicking a note directly selects just that note, no lyrics', async ({
   page,
 }) => {
   await ready(page)
@@ -159,9 +159,40 @@ test('clicking a note directly selects the whole measure, notes and every verse 
   await page.mouse.up()
   await page.waitForTimeout(100)
 
-  // A plain click on a note selects the whole measure (existing behavior) —
-  // and, alongside its 4 notes, every syllable of every verse in that
-  // measure (4 syllables x 2 verses), not just the note's own row (see
+  await expect(
+    page.locator('[data-tag="note"][data-note-drag-selected]'),
+  ).toHaveCount(1)
+  await expect(
+    page.locator('[data-tag="lyric"][data-lyric-drag-selected]'),
+  ).toHaveCount(0)
+})
+
+test('Cmd/Ctrl-clicking a note selects the whole measure, notes and every verse of lyrics alike', async ({
+  page,
+}) => {
+  await ready(page)
+
+  // The note's click target row is widened to also cover both verse rows
+  // beneath it (see `part_row_ranges`), so its vertical center can land
+  // inside a lyric row once there's more than one verse. Click near the top
+  // of the rect instead — solidly inside the note glyph's own zone, above
+  // where the lyric rows start.
+  const noteRect = page
+    .locator('[data-tag="note"][data-note-id="1"]')
+    .locator('rect[data-variant="note-click-target-rect"]')
+  const box = await noteRect.boundingBox()
+  if (!box) throw new Error('no box')
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.15)
+  await page.keyboard.down('Control')
+  await page.mouse.down()
+  await page.waitForTimeout(50)
+  await page.mouse.up()
+  await page.keyboard.up('Control')
+  await page.waitForTimeout(100)
+
+  // A Cmd/Ctrl-held click on a note selects the whole measure — and,
+  // alongside its 4 notes, every syllable of every verse in that measure (4
+  // syllables x 2 verses), not just the note's own row (see
   // `previewSelection.ts`'s `lyricCellsInMeasureRange`).
   await expect(
     page.locator('[data-tag="note"][data-note-drag-selected]'),

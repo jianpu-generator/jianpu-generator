@@ -2,11 +2,12 @@ import { expect, test } from '@playwright/test'
 import { focusEditor } from './fileSwitcherHelpers'
 
 /**
- * Clicking (or dragging across) a measure in the SVG preview is a shortcut
- * for selecting every note/rest cell in that measure — there is no separate
- * "measure selected" state anymore (see `Preview.tsx`'s
- * `noteCellsInMeasureRange`). It reuses the same note drag-select highlight
- * (`[data-note-drag-selected]`) and Monaco multicursor pathway
+ * A plain click (or drag) in the SVG preview resolves to note/chord/syllable
+ * granularity — clicking a note selects just that note. Selecting every
+ * note/rest cell in a whole measure at once now requires holding Cmd/Ctrl
+ * (see `Preview.tsx`'s `onMouseDown`, which gates `'measure'` mode behind
+ * `e.metaKey || e.ctrlKey`). Both paths reuse the same note drag-select
+ * highlight (`[data-note-drag-selected]`) and Monaco multicursor pathway
  * (`onNoteRangeSelect`) that dragging a marquee over individual notes uses.
  *
  * Self-contained source (not a demo file) with a generous "max measures per
@@ -65,7 +66,7 @@ async function primeMeasureSpans(page: import('@playwright/test').Page) {
   ).toBeVisible({ timeout: 5_000 })
 }
 
-test('clicking a measure selects every note in that measure', async ({
+test('clicking a measure selects just the note under the pointer', async ({
   page,
 }) => {
   await loadClickTestFixture(page)
@@ -86,16 +87,18 @@ test('clicking a measure selects every note in that measure', async ({
   const box = await measure1.boundingBox()
   if (!box) throw new Error('Could not get bounding box for measure 1.')
 
-  // A plain click (mousedown + mouseup at the same point, no drag).
+  // A plain click (mousedown + mouseup at the same point, no drag). Notes
+  // fully tile their measure's width (no gaps between click-target rects —
+  // see the drag test below), so this always lands on exactly one of
+  // measure 1's two notes.
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
   await page.mouse.down()
   await page.mouse.up()
 
-  // Measure 1 ("5 6") has exactly 2 notes.
   const highlightedNotes = page.locator(
     '[data-tag="note"][data-note-drag-selected]',
   )
-  await expect(highlightedNotes).toHaveCount(2)
+  await expect(highlightedNotes).toHaveCount(1)
 
   // The repurposed play-measure button switching to "▶ Selection" confirms a
   // note range was pushed into Monaco/App state, same as an ordinary note
@@ -106,7 +109,49 @@ test('clicking a measure selects every note in that measure', async ({
   )
 })
 
-test('clicking right at a measure boundary selects that measure, not its neighbor', async ({
+test('Cmd/Ctrl-clicking a measure selects every note in that measure', async ({
+  page,
+}) => {
+  await loadClickTestFixture(page)
+  await page.goto('/')
+
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
+  await page.waitForSelector('[data-tag="measure"][data-measure-index="1"]', {
+    timeout: 10_000,
+  })
+  await primeMeasureSpans(page)
+
+  const measure1 = page
+    .locator('[data-tag="measure"][data-measure-index="1"]')
+    .first()
+  await expect(measure1).toBeVisible({ timeout: 5_000 })
+  const box = await measure1.boundingBox()
+  if (!box) throw new Error('Could not get bounding box for measure 1.')
+
+  // A Cmd/Ctrl-modified plain click (mousedown + mouseup at the same point,
+  // no drag) — the only remaining way to reach whole-measure selection (see
+  // `Preview.tsx`'s `onMouseDown`).
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.keyboard.down('Control')
+  await page.mouse.down()
+  await page.mouse.up()
+  await page.keyboard.up('Control')
+
+  // Measure 1 ("5 6") has exactly 2 notes.
+  const highlightedNotes = page.locator(
+    '[data-tag="note"][data-note-drag-selected]',
+  )
+  await expect(highlightedNotes).toHaveCount(2)
+
+  await expect(page.locator('button.play-measure-btn')).toHaveText(
+    /Selection/,
+    { timeout: 3_000 },
+  )
+})
+
+test('Cmd/Ctrl-clicking right at a measure boundary selects that measure, not its neighbor', async ({
   page,
 }) => {
   await loadClickTestFixture(page)
@@ -133,10 +178,14 @@ test('clicking right at a measure boundary selects that measure, not its neighbo
   // belonging to), not measure 0: at a coincident rect edge,
   // `elementsFromPoint`'s z-order is not a reliable tie-break (see
   // `Preview.tsx`'s `getMeasureAtPoint`), which previously made this click
-  // resolve to the wrong (previous) measure.
+  // resolve to the wrong (previous) measure. Held under Cmd/Ctrl since a
+  // plain click no longer goes through `getMeasureAtPoint` at all when it
+  // lands on a note's own click target.
   await page.mouse.move(box.x, box.y + box.height / 2)
+  await page.keyboard.down('Control')
   await page.mouse.down()
   await page.mouse.up()
+  await page.keyboard.up('Control')
 
   // Measure 1 ("5 6") has exactly 2 notes; measure 0 ("1 2 3 4") has 4.
   const highlightedNotes = page.locator(

@@ -3,10 +3,12 @@ import { focusEditor } from './fileSwitcherHelpers'
 
 /**
  * The visible bar line (measure divider) between two measures should be a
- * reliable, hoverable drag handle for measure-range selection: dragging
- * starting exactly on the divider pixel between measure 0 and measure 1
+ * reliable, hoverable drag handle for measure-range selection: a Cmd/Ctrl
+ * drag starting exactly on the divider pixel between measure 0 and measure 1
  * must select whole measures, not fall into a per-note marquee drag (see
- * `PreviewSvgRenderer.tsx`'s `renderBarLineDragHandle`).
+ * `PreviewSvgRenderer.tsx`'s `renderBarLineDragHandle`). Cmd/Ctrl is required
+ * since a plain drag now resolves to note/chord/syllable granularity (see
+ * `Preview.tsx`'s `onMouseDown`).
  *
  * Same fixture as `measure-click-selects-notes.spec.ts`:
  * Measure 0 : [M] 1 2 3 4   — 4 notes
@@ -87,7 +89,7 @@ test('hovering the bar line between two measures shows a drag cursor', async ({
   await expect(handle).toHaveCSS('cursor', 'col-resize')
 })
 
-test('dragging from a bar line into a further measure selects every note in the full range', async ({
+test('Cmd/Ctrl-dragging from a bar line into a further measure selects every note in the full range', async ({
   page,
 }) => {
   await loadBarLineTestFixture(page)
@@ -114,13 +116,16 @@ test('dragging from a bar line into a further measure selects every note in the 
   }
 
   // Start the drag exactly on the bar line between measure 0 and measure 1
-  // (measure 1's own left edge), then drag into measure 2's interior.
+  // (measure 1's own left edge), then drag into measure 2's interior. Held
+  // under Cmd/Ctrl (see this file's top-of-file comment).
   await page.mouse.move(box1.x, box1.y + box1.height / 2)
+  await page.keyboard.down('Control')
   await page.mouse.down()
   await page.mouse.move(box2.x + box2.width / 2, box2.y + box2.height / 2, {
     steps: 8,
   })
   await page.mouse.up()
+  await page.keyboard.up('Control')
 
   // Measures 1-2 have 2 + 2 = 4 notes in total — the full measure range, not
   // a partial note marquee.

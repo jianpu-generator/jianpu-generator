@@ -116,8 +116,7 @@ test('clicking a single lyric syllable selects only that syllable, not the note'
   await expect(lyricTexts).toHaveCount(4, { timeout: 10_000 })
 
   // A plain click (mousedown + mouseup at the same point, no drag) selects
-  // just this syllable — unlike a plain click on the note glyph itself,
-  // which selects the whole measure (see `measure-click-selects-notes.spec.ts`).
+  // just this syllable.
   const box = await lyricTexts.nth(1).boundingBox() // "re", under note 1
   if (!box) throw new Error('no box')
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)

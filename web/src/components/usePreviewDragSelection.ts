@@ -180,28 +180,16 @@ export function usePreviewDragSelection(
       const container = previewPagesRef.current
 
       if (dragState.mode === 'pending') {
-        // Never armed into a note-drag — a plain click, which is a shortcut
-        // for selecting every note/rest cell in the clicked note's measure
-        // (and, alongside them, every lyric syllable in that same measure).
-        const cells =
-          dragState.measureRangeAtAnchor !== undefined
-            ? noteCellsInMeasureRange(
-                noteSpansRef.current,
-                dragState.measureRangeAtAnchor,
-              )
-            : [dragState.noteCellAtAnchor]
-        const lyricCells =
-          dragState.measureRangeAtAnchor !== undefined
-            ? lyricCellsInMeasureRange(
-                lyricSpansRef.current,
-                dragState.measureRangeAtAnchor,
-              )
-            : []
+        // Never armed into a note-drag — a plain click, which resolves to
+        // just the one note/chord cell it landed on (or, for the
+        // nearest-note fallback, the nearest one in that measure — see
+        // `Preview.tsx`'s `onMouseDown`).
+        const cells = [dragState.noteCellAtAnchor]
         if (container) {
           applyPersistedNoteHighlights(container, cells)
-          applyPersistedLyricHighlights(container, lyricCells)
+          applyPersistedLyricHighlights(container, [])
         }
-        onMeasureRangeSelectRef.current?.(cells, lyricCells)
+        onMeasureRangeSelectRef.current?.(cells, [])
         dragStateRef.current = null
         return
       }

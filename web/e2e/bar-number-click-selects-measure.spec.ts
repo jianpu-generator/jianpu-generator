@@ -4,8 +4,8 @@ import { focusEditor } from './fileSwitcherHelpers'
 /**
  * A measure's own bar number (drawn in its system's shared directive row,
  * above the musical rows the plain measure click target covers) should be
- * its own hoverable/clickable shortcut for selecting that measure — see
- * `BarNumberClickTarget` in ARCHITECTURE.md.
+ * its own hoverable/Cmd-Ctrl-clickable shortcut for selecting that measure
+ * — see `BarNumberClickTarget` in ARCHITECTURE.md.
  *
  * Self-contained source (not a demo file), one measure per system so the
  * first block's bar number ("1") always draws (see
@@ -87,7 +87,7 @@ test("hovering a measure's bar number shows a highlight background", async ({
     .not.toMatch(/^(none|rgba?\(0, ?0, ?0, ?0\))$/)
 })
 
-test("clicking a measure's bar number selects every note in that measure", async ({
+test("Cmd/Ctrl-clicking a measure's bar number selects every note in that measure", async ({
   page,
 }) => {
   await loadFixture(page)
@@ -108,10 +108,16 @@ test("clicking a measure's bar number selects every note in that measure", async
   const box = await barNumberRect.boundingBox()
   if (!box) throw new Error('Could not get bounding box for the bar number.')
 
-  // A plain click (mousedown + mouseup at the same point, no drag).
+  // A Cmd/Ctrl-modified plain click (mousedown + mouseup at the same point,
+  // no drag) — a bar number is outside any note's own click target, so a
+  // plain click there now resolves to the nearest note instead of the whole
+  // measure (see `Preview.tsx`'s `onMouseDown`); Cmd/Ctrl is the only
+  // remaining way to reach whole-measure selection here.
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.keyboard.down('Control')
   await page.mouse.down()
   await page.mouse.up()
+  await page.keyboard.up('Control')
 
   // Measure 0 ("1 2 3 4") has exactly 4 notes.
   const highlightedNotes = page.locator(

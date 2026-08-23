@@ -117,8 +117,11 @@ test('a measure drag across systems selects every visible part’s notes even wh
   }
 
   // Start the drag exactly on measure 0's left bar line and drag into
-  // measure 1's interior — a measure-mode drag spanning both systems.
+  // measure 1's interior — a measure-mode drag spanning both systems. Held
+  // under Cmd/Ctrl, the only way to reach 'measure' mode now (see
+  // `Preview.tsx`'s `onMouseDown`).
   await page.mouse.move(firstBox.x, firstBox.y + firstBox.height / 2)
+  await page.keyboard.down('Control')
   await page.mouse.down()
   await page.mouse.move(
     lastBox.x + lastBox.width / 2,
@@ -126,6 +129,7 @@ test('a measure drag across systems selects every visible part’s notes even wh
     { steps: 10 },
   )
   await page.mouse.up()
+  await page.keyboard.up('Control')
 
   // Every rendered note (Melody's 4 + Bass's 4) should be selected — Bass
   // is a fully visible part and both its measures sit inside the dragged
