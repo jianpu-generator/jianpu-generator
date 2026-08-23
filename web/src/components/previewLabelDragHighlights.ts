@@ -72,6 +72,65 @@ export function partLabelsInMarquee(
   return hits
 }
 
+/** Every part-label click target belonging to any system the axis-aligned
+ * marquee spanned by `anchor`/`current` touches — the Cmd/Ctrl-gated,
+ * cross-system sibling of `partLabelsInMarquee`. Where `partLabelsInMarquee`
+ * restricts to one `anchorSystem`, this drops that restriction entirely: it
+ * first finds every *system* (a `measureIndexStart`/`measureIndexEnd` pair)
+ * with at least one part-label rect touched by the marquee, then returns
+ * *every* part in each of those systems, touched or not — so brushing past
+ * even one part row of a system pulls in that whole system, matching how
+ * 'measure' mode selects whole measures rather than partially-overlapped
+ * note ranges. A zero-movement marquee (a plain click, `anchor === current`)
+ * touches only the row directly under the pointer, so this still resolves a
+ * bare Cmd/Ctrl-click on one label to every part in that one system. */
+export function partLabelsInMarqueeAcrossSystems(
+  container: HTMLElement,
+  anchor: DragPoint,
+  current: DragPoint,
+): PartLabelHit[] {
+  const minX = Math.min(anchor.x, current.x)
+  const maxX = Math.max(anchor.x, current.x)
+  const minY = Math.min(anchor.y, current.y)
+  const maxY = Math.max(anchor.y, current.y)
+  const allHits: PartLabelHit[] = []
+  const touchedSystems = new Set<string>()
+  for (const rect of Array.from(
+    container.querySelectorAll<SVGRectElement>(
+      'rect[data-variant="part-label-click-target-rect"]',
+    ),
+  )) {
+    const group = rect.closest('[data-tag="part-label"]')
+    if (!group) continue
+    const { partIndex, measureIndexStart, measureIndexEnd } = (
+      group as HTMLElement
+    ).dataset
+    if (
+      partIndex === undefined ||
+      measureIndexStart === undefined ||
+      measureIndexEnd === undefined
+    )
+      continue
+    const start = Number.parseInt(measureIndexStart, 10)
+    const end = Number.parseInt(measureIndexEnd, 10)
+    allHits.push({
+      sourcePartIndex: Number.parseInt(partIndex, 10),
+      measureIndexStart: start,
+      measureIndexEnd: end,
+    })
+    const bounds = rect.getBoundingClientRect()
+    const intersects =
+      bounds.left < maxX &&
+      bounds.right > minX &&
+      bounds.top < maxY &&
+      bounds.bottom > minY
+    if (intersects) touchedSystems.add(`${start}:${end}`)
+  }
+  return allHits.filter((hit) =>
+    touchedSystems.has(`${hit.measureIndexStart}:${hit.measureIndexEnd}`),
+  )
+}
+
 /** Marks every part-label click-target rect belonging to `hits` with
  * `data-part-label-drag-active`, clearing it from every other one. Driven
  * from JS state rather than left to pure CSS `:hover` — the label a

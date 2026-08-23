@@ -8,6 +8,7 @@ import type { PreviewDragState } from './previewDragState'
 import {
   applyLyricLabelDragHighlight,
   applyPartLabelDragHighlight,
+  partLabelsInMarqueeAcrossSystems,
 } from './previewLabelDragHighlights'
 import {
   getLyricLabelAtPoint,
@@ -60,6 +61,28 @@ export function handlePreviewMouseDown(
   const partLabel = getPartLabelAtPoint(e.clientX, e.clientY)
   if (partLabel !== undefined) {
     const point = { x: e.clientX, y: e.clientY }
+    const container = previewPagesRef.current
+    // Cmd/Ctrl-click(-drag) on a part label elevates the selection from
+    // "this one part's system" to "every part in every system touched" —
+    // see `PreviewDragState`'s 'part-label-system' doc comment. Checked
+    // ahead of the plain part-label arm below so it takes priority.
+    if (e.metaKey || e.ctrlKey) {
+      dragStateRef.current = {
+        mode: 'part-label-system',
+        anchor: point,
+        current: point,
+      }
+      if (container) {
+        const hits = partLabelsInMarqueeAcrossSystems(container, point, point)
+        applyPartLabelDragHighlight(container, hits)
+        applyPersistedNoteHighlights(
+          container,
+          noteCellsForPartLabels(noteSpans, hits),
+        )
+      }
+      e.preventDefault()
+      return
+    }
     dragStateRef.current = {
       mode: 'part-label',
       anchor: point,
@@ -69,7 +92,6 @@ export function handlePreviewMouseDown(
         measureIndexEnd: partLabel.measureIndexEnd,
       },
     }
-    const container = previewPagesRef.current
     if (container) {
       applyPartLabelDragHighlight(container, [partLabel])
       applyPersistedNoteHighlights(

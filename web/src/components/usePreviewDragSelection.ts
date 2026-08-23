@@ -16,6 +16,7 @@ import {
   applyPersistedPartLabelHighlights,
   lyricLabelsInMarquee,
   partLabelsInMarquee,
+  partLabelsInMarqueeAcrossSystems,
 } from './previewLabelDragHighlights'
 import {
   lyricCellsForLyricLabels,
@@ -34,8 +35,9 @@ export type { PreviewDragState } from './previewDragState'
 
 /** Owns the note/measure/part-label drag-select gesture for `Preview`: a
  * `mousedown` on the SVG (handled by `Preview` itself, which writes the
- * initial mode into the returned ref) arms one of the four modes above, and
- * the document-level `mousemove`/`mouseup` handlers registered here carry it
+ * initial mode into the returned ref) arms one of `PreviewDragState`'s
+ * modes, and the document-level `mousemove`/`mouseup` handlers registered
+ * here carry it
  * through to completion, calling `onNoteRangeSelect` with the resolved note
  * cells on mouseup. Split out of `Preview` to keep that component under its
  * line-count cap. */
@@ -134,6 +136,27 @@ export function usePreviewDragSelection(
         )
         // Swept part rows carry their lyric rows too — union those in, same
         // as every other drag mode above.
+        applyPersistedLyricHighlights(
+          container,
+          lyricCellsForPartLabels(lyricSpansRef.current, hits),
+        )
+        return
+      }
+
+      if (dragState.mode === 'part-label-system') {
+        dragState.current = { x: e.clientX, y: e.clientY }
+        const hits = partLabelsInMarqueeAcrossSystems(
+          container,
+          dragState.anchor,
+          dragState.current,
+        )
+        applyPartLabelDragHighlight(container, hits)
+        applyPersistedNoteHighlights(
+          container,
+          noteCellsForPartLabels(noteSpansRef.current, hits),
+        )
+        // Swept systems carry their lyric rows too — union those in, same as
+        // 'part-label' mode above.
         applyPersistedLyricHighlights(
           container,
           lyricCellsForPartLabels(lyricSpansRef.current, hits),
@@ -267,6 +290,39 @@ export function usePreviewDragSelection(
           // round-trip back down as a prop — otherwise every dragged-over
           // label's fill would flash off for a frame between mouseup and
           // that round-trip landing.
+          applyPersistedPartLabelHighlights(
+            container,
+            noteSpansRef.current,
+            cells,
+          )
+        }
+        if (onMeasureRangeSelectRef.current) {
+          onMeasureRangeSelectRef.current(cells, lyricCells)
+        } else {
+          onNoteRangeSelectRef.current?.(cells)
+          onLyricRangeSelectRef.current?.(lyricCells)
+        }
+        dragStateRef.current = null
+        return
+      }
+
+      if (dragState.mode === 'part-label-system') {
+        const current = { x: e.clientX, y: e.clientY }
+        const hits = container
+          ? partLabelsInMarqueeAcrossSystems(
+              container,
+              dragState.anchor,
+              current,
+            )
+          : []
+        const cells = noteCellsForPartLabels(noteSpansRef.current, hits)
+        const lyricCells = lyricCellsForPartLabels(lyricSpansRef.current, hits)
+        if (container) {
+          applyPersistedNoteHighlights(container, cells)
+          applyPersistedLyricHighlights(container, lyricCells)
+          // Replaces the transient marquee-driven fill with the persisted
+          // one immediately, mirroring 'part-label' mode's own mouseup — see
+          // its comment for why.
           applyPersistedPartLabelHighlights(
             container,
             noteSpansRef.current,

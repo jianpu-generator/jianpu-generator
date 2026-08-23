@@ -31,6 +31,20 @@ export type PreviewDragState =
       anchorSystem: { measureIndexStart: number; measureIndexEnd: number }
     }
   | {
+      // Cmd/Ctrl-click(-drag) on a part label — the label-side mirror of
+      // 'measure' mode's Cmd/Ctrl gate above. Elevates 'part-label' mode's
+      // granularity from "one part, one system" to "every part in every
+      // system the gesture touches": a bare click resolves to the whole
+      // system the clicked label sits in, and dragging further sweeps in
+      // whole additional systems as it touches their label rows (see
+      // `partLabelsInMarqueeAcrossSystems`). No `anchorSystem` needed here,
+      // unlike 'part-label' — this mode is deliberately unrestricted to any
+      // one system.
+      mode: 'part-label-system'
+      anchor: DragPoint
+      current: DragPoint
+    }
+  | {
       // The lyric-label mirror of 'part-label' above — a mousedown on a
       // verse row's own label (e.g. "M:v1") arms this instead, scoped to
       // its own system the same way, but resolving only that one verse's
