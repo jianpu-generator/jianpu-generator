@@ -186,11 +186,18 @@ pub(crate) fn compute_all_part_label_click_targets(
                         page_idx,
                         PartLabelClickTarget {
                             row_start: span.row_start,
-                            // A part label is a shortcut for "select
-                            // everything under this label," lyrics included,
-                            // so (unlike a note's own click target) it
-                            // absorbs any following lyric verse row(s).
-                            row_end: span.playback_row_end,
+                            // Stops at the note row's own rows — unlike
+                            // `PlaybackCursorTarget`, this rect must not
+                            // reach into a following lyric verse row, since
+                            // that row draws its own `LyricLabelClickTarget`
+                            // rect in the same label gutter column; absorbing
+                            // it here would make this rect's hover fill
+                            // visually paint over that separate label too. A
+                            // part-label drag still selects the lyrics under
+                            // it (see `lyricCellsForPartLabels`), which is
+                            // resolved from `source_part_index` and the
+                            // measure range, not from this rect's height.
+                            row_end: span.click_row_end,
                             source_part_index: part_template.source_part_index,
                             measure_index_start,
                             measure_index_end,

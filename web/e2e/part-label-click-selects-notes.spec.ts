@@ -197,6 +197,68 @@ test('a plain click on a notes+lyrics part label does not also select the lyric 
   ).toHaveCount(0)
 })
 
+test('a notes+lyrics part label does not visually overlap its own lyric label, so hovering it does not also paint the lyric label', async ({
+  page,
+}) => {
+  // Regression test: the part label's click-target rect used to absorb its
+  // lyric verse row's height too, fully overlapping the `lyric-label` rect
+  // one row down — since `:hover` paints the whole rect, hovering the note
+  // label visually painted over the lyric label too.
+  const lyricSource = [
+    '# metadata',
+    'title = "part label no lyric-label overlap test"',
+    'max_measures_per_system = 48',
+    '',
+    '# parts',
+    'Melody [M] = notes+lyrics',
+    '',
+    '# score',
+    '[M] 1 2', // measure 0
+    '[M] do re', // verse 0
+  ].join('\n')
+
+  await page.addInitScript((source) => {
+    localStorage.setItem(
+      'jianpu:files:v1',
+      JSON.stringify({
+        active: 'part-label-no-overlap-test.jianpu',
+        userFiles: { 'part-label-no-overlap-test.jianpu': source },
+        bin: {},
+        fileIds: {
+          'part-label-no-overlap-test.jianpu':
+            'part-label-no-overlap-test-id-001',
+        },
+      }),
+    )
+  }, lyricSource)
+  await page.goto('/')
+
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
+  await page.waitForSelector('[data-tag="part-label"][data-part-index="0"]')
+  await primeMeasureSpans(page)
+
+  const partLabelRect = page
+    .locator(
+      '[data-tag="part-label"][data-part-index="0"] rect[data-variant="part-label-click-target-rect"]',
+    )
+    .first()
+  const lyricLabelRect = page
+    .locator(
+      '[data-tag="lyric-label"][data-part-index="0"][data-verse="0"] rect[data-variant="lyric-label-click-target-rect"]',
+    )
+    .first()
+  const partBox = await partLabelRect.boundingBox()
+  const lyricBox = await lyricLabelRect.boundingBox()
+  if (!partBox || !lyricBox) {
+    throw new Error('Could not get bounding boxes for the label rects.')
+  }
+
+  // No vertical overlap between the two rects.
+  expect(partBox.y + partBox.height).toBeLessThanOrEqual(lyricBox.y + 0.5)
+})
+
 test('dragging from one part label to another selects both parts notes', async ({
   page,
 }) => {
