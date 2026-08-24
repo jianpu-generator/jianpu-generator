@@ -25,6 +25,12 @@ import { Preview } from './Preview'
 interface MeasureRange {
   start: number
   end: number
+  /** Which measure the preview should scroll to for this selection, when
+   * it differs from `start` — see `Preview`'s matching prop doc comment. */
+  revealMeasureIndex: number
+  /** The exact disjoint measure ranges to highlight in the SVG preview —
+   * see `Preview`'s matching prop doc comment. */
+  highlightRanges?: { start: number; end: number }[]
 }
 
 interface AppWorkspaceProps {
@@ -52,6 +58,8 @@ interface AppWorkspaceProps {
     startLine: number,
     endLine: number,
     isEmpty: boolean,
+    revealLine?: number,
+    measureRanges?: { start: number; end: number }[],
   ) => void
   setEditPartsOpen: (open: boolean) => void
   setEditMetadataOpen: (open: boolean) => void

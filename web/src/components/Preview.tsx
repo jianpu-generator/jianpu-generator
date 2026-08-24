@@ -86,8 +86,23 @@ interface PreviewProps {
    * the selection even when `highlightedDocuments` isn't populated (e.g. a
    * section/sequence jump, which selects a real range and therefore opts
    * out of the amber caret-only highlight). See `selectedNoteCells` above
-   * for the note/lyric-level analogue. */
-  selectedMeasureRange?: { start: number; end: number } | null
+   * for the note/lyric-level analogue. `revealMeasureIndex` is which
+   * measure to scroll to, when it isn't `start` — a section/sequence chain
+   * selection can resolve to a written-measure range whose document-order
+   * start isn't where the user actually navigated to. */
+  selectedMeasureRange?: {
+    start: number
+    end: number
+    revealMeasureIndex: number
+    /** The exact disjoint measure ranges highlighted in the SVG preview for
+     * this selection (a `# sequence` chain), when it differs from the
+     * single `[start, end]` span above. Not read directly by `Preview`
+     * itself — the highlight rects it drives come back through
+     * `highlightedDocuments`, already rendered — but kept here so this
+     * duplicated local type matches `selectedMeasureRange`'s shape
+     * everywhere else it's declared. */
+    highlightRanges?: { start: number; end: number }[]
+  } | null
 }
 
 export function Preview({
@@ -148,13 +163,17 @@ export function Preview({
   // caret-only highlight rect (present only when `highlightedDocuments` is
   // populated) so the highlighted measure lands dead center; otherwise
   // falls back to the plain document's own `[data-tag="measure"]` group for
-  // the range's first measure, which exists regardless of highlight state
-  // — covering range selections (e.g. section/sequence jumps) that
-  // deliberately opt out of the caret-only highlight but still need the
-  // preview to scroll to them.
+  // `selectedMeasureRange.revealMeasureIndex`, which exists regardless of
+  // highlight state — covering range selections (e.g. section/sequence
+  // jumps) that deliberately opt out of the caret-only highlight but still
+  // need the preview to scroll to them. `revealMeasureIndex` matters
+  // because a chain selection's own `start` is wherever the chain's
+  // earliest entry sits in document order, not necessarily where the user
+  // navigated to (see `measureRangeInSpanWithReveal`).
   // biome-ignore lint/correctness/useExhaustiveDependencies: documents/highlightedDocuments aren't read in the body, but must stay listed so this re-runs after they swap in fresh SVG DOM (see comment above effect near the top of this file).
   useEffect(() => {
     if (selectedMeasureRange === null) return
+    const targetMeasureIndex = selectedMeasureRange.revealMeasureIndex
 
     const frameId = requestAnimationFrame(() => {
       const container = previewPagesRef.current
@@ -163,7 +182,7 @@ export function Preview({
       const target =
         container.querySelector('[data-testid="measure-highlight"]') ??
         container.querySelector(
-          `[data-tag="measure"][data-measure-index="${selectedMeasureRange.start}"]`,
+          `[data-tag="measure"][data-measure-index="${targetMeasureIndex}"]`,
         )
       target?.scrollIntoView({
         block: 'center',

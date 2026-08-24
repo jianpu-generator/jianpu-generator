@@ -327,6 +327,17 @@ pub struct MeasureHighlight {
     pub column_end: f32,
 }
 
+/// One inclusive `global_measure_index` range to highlight in the SVG
+/// preview. A `# sequence` chain selection (e.g. dragging "C" -> "A" across
+/// "A, B, C, A") can highlight several disjoint measures at once, so callers
+/// pass a `Vec<MeasureRange>` rather than a single range — see
+/// `compute_measure_highlights_for_range`.
+#[derive(Debug, Clone, Copy)]
+pub struct MeasureRange {
+    pub start: usize,
+    pub end: usize,
+}
+
 /// The screen extent of one sounding note/rest (or one contiguous piece of
 /// one, when a tie splits it across measures/systems), keyed by
 /// `(source_part_index, note_id)` — the same identity used by

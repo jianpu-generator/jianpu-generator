@@ -37,7 +37,7 @@ use types::{
     GroupLyricSelectionResponse, GroupNoteSelectionResponse, ListLyricSpansResponse,
     ListMeasureSpansResponse, ListNoteSpansResponse, ListPartDeclarationsResponse,
     ListPartsResponse, ListSymbolsResponse, LyricCellIn, LyricSpanOut, MeasureAtOffsetResponse,
-    NoteCellIn, NoteSpanOut, RenameSymbolResponse, RenderResponse, SymbolKindOut,
+    MeasureRangeIn, NoteCellIn, NoteSpanOut, RenameSymbolResponse, RenderResponse, SymbolKindOut,
 };
 use wasm_bindgen::prelude::*;
 
@@ -184,7 +184,13 @@ pub fn render(
     )
 }
 
-/// Render `.jianpu` source with a range of measures highlighted.
+/// Render `.jianpu` source with one or more disjoint ranges of measures
+/// highlighted (a `# sequence` chain selection can span several disjoint
+/// ranges at once — e.g. dragging "C" to a later repeat of "A" across
+/// "A, B, C, A" highlights "C" and "A" but not "B").
+///
+/// `raw_measure_ranges` deserializes to `{ start: number; end: number }[]`,
+/// each pair an inclusive measure-index range.
 ///
 /// Returns the same structured value as [`render`]:
 /// - `{ "status": "ok", "svgs": ["<svg>...</svg>", ...] }`
@@ -193,18 +199,22 @@ pub fn render(
 #[wasm_bindgen]
 pub fn render_with_highlight_range(
     source: &str,
-    start_index: usize,
-    end_index: usize,
+    raw_measure_ranges: JsValue,
     enabled_tracks: Option<Vec<String>>,
     disabled_lyrics: Option<Vec<String>>,
     raw_instruments: JsValue,
 ) -> RenderResponse {
     let instruments: Vec<InstrumentInfo> =
         serde_wasm_bindgen::from_value(raw_instruments).unwrap_or_default();
+    let measure_ranges: Vec<jianpu_generator::grid_layout::MeasureRange> =
+        serde_wasm_bindgen::from_value::<Vec<MeasureRangeIn>>(raw_measure_ranges)
+            .unwrap_or_default()
+            .into_iter()
+            .map(Into::into)
+            .collect();
     render_with_highlight_range_response(
         source,
-        start_index,
-        end_index,
+        &measure_ranges,
         enabled_tracks.as_deref(),
         disabled_lyrics.as_deref(),
         &instruments,

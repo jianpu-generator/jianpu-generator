@@ -67,6 +67,35 @@ export function computeSequenceSelectionLineRanges(
 }
 
 /**
+ * Resolves a chain-order range of `# sequence` entries to one measure-index
+ * range per entry — the disjoint-measure-range analogue of
+ * `computeSequenceSelectionLineRanges`, but simpler: a sequence entry
+ * already carries its own `start_measure_index`/`end_measure_index`
+ * directly, with no `measureSpans` round-trip needed. Feeds the SVG
+ * preview's highlight (`notifySelection`'s `measureRanges` argument), which
+ * — like the Monaco selection — must highlight exactly the selected entries
+ * and nothing merely sitting between them in the document (e.g. "B" when
+ * the chain is "C, A").
+ */
+export function computeSequenceSelectionMeasureRanges(
+  sequenceEntries: SequenceEntry[],
+  startIndex: number,
+  endIndex: number,
+): { start: number; end: number }[] {
+  const ranges: { start: number; end: number }[] = []
+  for (let i = startIndex; i <= endIndex; i++) {
+    const entry = sequenceEntries[i]
+    if (entry) {
+      ranges.push({
+        start: entry.start_measure_index,
+        end: entry.end_measure_index,
+      })
+    }
+  }
+  return ranges
+}
+
+/**
  * The smallest single line range spanning every given range — used where a
  * single contiguous range is unavoidable (the `selectedMeasureRange`
  * envelope that drives the selection badge, "play selection", the
@@ -90,6 +119,8 @@ export function useSequenceNavigation(
     firstLine: number,
     lastLine: number,
     isEmpty: boolean,
+    revealLine?: number,
+    measureRanges?: { start: number; end: number }[],
   ) => void,
   /**
    * Owned by the caller (`useAppController`) rather than this hook, and
@@ -165,6 +196,17 @@ export function useSequenceNavigation(
       const envelope = envelopeOfLineRanges(lineRanges)
       if (!envelope) return
 
+      // The exact disjoint measure ranges to highlight in the SVG preview —
+      // one per selected entry, mirroring `lineRanges` above rather than
+      // the envelope, so "B" (sitting between "C" and "A" in the chain
+      // "C, A") is never highlighted just because it falls inside the
+      // envelope's document-order span.
+      const measureRanges = computeSequenceSelectionMeasureRanges(
+        sequenceEntries,
+        start,
+        end,
+      )
+
       // Two disjoint entries can sit far apart in a large score (e.g. a
       // repeated `Intro` resolves to the same written lines as its first
       // occurrence, way earlier in the source than a later entry it's
@@ -186,8 +228,19 @@ export function useSequenceNavigation(
       // doc comment. A sequence jump selects a real (non-empty) range, so —
       // like section jumps — the preview's caret-only measure-background
       // highlight stays off; the toolbar buttons carry their own
-      // highlighting instead.
-      notifySelection(envelope.startLine, envelope.endLine, false)
+      // highlighting instead. The envelope's own start line is wherever the
+      // chain's earliest entry sits in document order, which isn't
+      // necessarily where the user navigated to (same disjoint-chain
+      // concern as `revealRange` above) — pass `revealRange.startLine`
+      // explicitly so the preview scrolls to that entry too, instead of
+      // silently defaulting to the envelope's.
+      notifySelection(
+        envelope.startLine,
+        envelope.endLine,
+        false,
+        revealRange.startLine,
+        measureRanges,
+      )
     },
     [sequenceEntries, measureSpans, editorRef, notifySelection],
   )

@@ -71,8 +71,7 @@ pub(crate) fn render_response(
 
 pub(crate) fn render_with_highlight_range_response(
     source: &str,
-    start_index: usize,
-    end_index: usize,
+    measure_ranges: &[jianpu_generator::grid_layout::MeasureRange],
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
     instruments: &[InstrumentInfo],
@@ -80,7 +79,7 @@ pub(crate) fn render_with_highlight_range_response(
     match render_documents_with_highlight_range(
         source,
         "input.jianpu",
-        start_index..=end_index,
+        measure_ranges,
         enabled_tracks,
         disabled_lyrics,
         instruments,

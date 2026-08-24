@@ -9,6 +9,8 @@ export function useSectionNavigation(
     firstLine: number,
     lastLine: number,
     isEmpty: boolean,
+    revealLine?: number,
+    measureRanges?: { start: number; end: number }[],
   ) => void,
 ) {
   const [dragStartLabel, setDragStartLabel] = useState<string | null>(null)

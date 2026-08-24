@@ -13,6 +13,43 @@ export function measureRangeInSpan(
   return start === -1 ? null : { start, end }
 }
 
+/**
+ * Like `measureRangeInSpan`, but also resolves `revealLine` to its own
+ * measure index and attaches it as `revealMeasureIndex` — the measure the
+ * preview should scroll to for this selection, when it differs from
+ * `start` (e.g. a `# sequence` chain selection whose envelope start, in
+ * document order, isn't the entry the user actually navigated to). Falls
+ * back to `start` when `revealLine` doesn't resolve to a measure of its
+ * own.
+ *
+ * `measureRanges`, when given, is folded in as `highlightRanges` — the
+ * exact disjoint measure ranges to highlight in the SVG preview for a `#
+ * sequence` chain selection, bypassing `measureRangeInSpan`'s single-span
+ * derivation entirely (it can't represent "C and A but not B in between").
+ */
+export function measureRangeInSpanWithReveal(
+  spans: MeasureSpan[],
+  startLine: number,
+  endLine: number,
+  revealLine: number,
+  measureRanges?: { start: number; end: number }[],
+): {
+  start: number
+  end: number
+  revealMeasureIndex: number
+  highlightRanges?: { start: number; end: number }[]
+} | null {
+  const range = measureRangeInSpan(spans, startLine, endLine)
+  if (!range) return null
+  const revealMeasureIndex =
+    measureRangeInSpan(spans, revealLine, revealLine)?.start ?? range.start
+  return {
+    ...range,
+    revealMeasureIndex,
+    ...(measureRanges ? { highlightRanges: measureRanges } : {}),
+  }
+}
+
 export function enabledTracksForRender(
   parts: PartInfo[],
   disabledParts: ReadonlySet<string>,

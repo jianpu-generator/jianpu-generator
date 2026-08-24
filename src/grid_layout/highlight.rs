@@ -3,7 +3,7 @@ use crate::grid_layout::layout::{
     block_column_width, is_chord_only_row, is_lyric_row, make_header_rows,
     system_has_any_decoration, system_tuplet_part_indices, MUSIC_START_COL,
 };
-use crate::grid_layout::types::{GridElement, Header, MeasureHighlight};
+use crate::grid_layout::types::{GridElement, Header, MeasureHighlight, MeasureRange};
 use std::collections::HashMap;
 
 fn has_lyrics(row: &crate::compiler::types::MeasureRow) -> bool {
@@ -92,12 +92,11 @@ pub(crate) fn abs_sys_index(
 pub(crate) fn compute_measure_highlights_for_range(
     page_systems: &[Vec<Vec<MeasureBlock>>],
     tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
-    measure_index_range: (usize, usize),
+    measure_index_ranges: &[MeasureRange],
     header: &Header,
     base: f32,
     hide_system_dividers: bool,
 ) -> Vec<(usize, MeasureHighlight)> {
-    let (start_index, end_index) = measure_index_range;
     let mut global_measure_index: usize = 0;
     let mut results: Vec<(usize, MeasureHighlight)> = Vec::new();
 
@@ -125,7 +124,10 @@ pub(crate) fn compute_measure_highlights_for_range(
             let last_block_idx = system.len().saturating_sub(1);
             for (block_idx, block) in system.iter().enumerate() {
                 let col_w = block_column_width(block);
-                if global_measure_index >= start_index && global_measure_index <= end_index {
+                let in_range = measure_index_ranges
+                    .iter()
+                    .any(|r| r.start <= global_measure_index && global_measure_index <= r.end);
+                if in_range {
                     let (column_start, column_end) = measure_column_bounds(
                         col_offset,
                         col_w,

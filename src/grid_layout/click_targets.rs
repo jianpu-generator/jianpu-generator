@@ -7,7 +7,7 @@ use crate::grid_layout::playback_cursor::{compute_all_playback_cursor_targets, n
 use crate::grid_layout::system_walk::for_each_system;
 use crate::grid_layout::types::{
     BarNumberClickTarget, GridElement, Header, LyricClickTarget, LyricLabelClickTarget,
-    MeasureClickTarget, MeasureHighlight, PartLabelClickTarget, PlaybackCursorTarget,
+    MeasureClickTarget, MeasureHighlight, MeasureRange, PartLabelClickTarget, PlaybackCursorTarget,
 };
 use std::collections::HashMap;
 
@@ -221,7 +221,6 @@ pub(crate) struct HighlightAndClickInfos {
     pub(crate) all_bar_number_click_target_infos: Vec<(usize, BarNumberClickTarget)>,
 }
 
-#[derive(Clone, Copy)]
 pub(crate) struct HighlightAndClickInfosParams<'a> {
     pub(crate) blocks: &'a [MeasureBlock],
     pub(crate) page_systems: &'a [Vec<Vec<MeasureBlock>>],
@@ -229,7 +228,7 @@ pub(crate) struct HighlightAndClickInfosParams<'a> {
     pub(crate) header: &'a Header,
     pub(crate) base: f32,
     pub(crate) hide_system_dividers: bool,
-    pub(crate) highlighted_measure_range: Option<(usize, usize)>,
+    pub(crate) highlighted_measure_ranges: Option<Vec<MeasureRange>>,
 }
 
 pub(crate) fn compute_highlight_and_click_infos(
@@ -242,14 +241,24 @@ pub(crate) fn compute_highlight_and_click_infos(
         header,
         base,
         hide_system_dividers,
-        highlighted_measure_range,
-    } = *params;
-    let highlight_infos = highlighted_measure_range
-        .map(|range| {
+        highlighted_measure_ranges,
+    } = params;
+    let (blocks, page_systems, tuplet_bracket_map, header, base, hide_system_dividers) = (
+        *blocks,
+        *page_systems,
+        *tuplet_bracket_map,
+        *header,
+        *base,
+        *hide_system_dividers,
+    );
+    let highlight_infos = highlighted_measure_ranges
+        .as_ref()
+        .map(Vec::as_slice)
+        .map(|ranges| {
             compute_measure_highlights_for_range(
                 page_systems,
                 tuplet_bracket_map,
-                range,
+                ranges,
                 header,
                 base,
                 hide_system_dividers,

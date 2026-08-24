@@ -129,8 +129,11 @@ export type WorkerRequest =
       type: 'renderWithHighlightRange'
       source: string
       id: number
-      startMeasureIndex: number
-      endMeasureIndex: number
+      /** Disjoint, inclusive measure-index ranges to highlight — a `#
+       * sequence` chain selection spanning out-of-order entries can
+       * highlight several disjoint measures at once (e.g. "C" and a later
+       * repeat of "A", but not "B" in between). */
+      ranges: { start: number; end: number }[]
       enabledTracks?: string[]
       disabledLyrics?: string[]
     }

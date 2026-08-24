@@ -56,6 +56,12 @@ export function useJianpuWorkerState(
   const [selectedMeasureRange, setSelectedMeasureRange] = useState<{
     start: number
     end: number
+    /** Which measure the preview should scroll to for this selection, when
+     * it differs from `start` — see `measureRangeInSpanWithReveal`. */
+    revealMeasureIndex: number
+    /** The exact disjoint measure ranges to highlight in the SVG preview —
+     * see `measureRangeInSpanWithReveal`. */
+    highlightRanges?: { start: number; end: number }[]
   } | null>(null)
   const [highlightedDocuments, setHighlightedDocuments] = useState<
     SvgDocumentOut[]
@@ -125,6 +131,7 @@ export function useJianpuWorkerState(
     start: number
     end: number
     isEmpty: boolean
+    revealLine: number
   } | null>(null)
 
   const effectiveDisabledParts = useMemo(() => {

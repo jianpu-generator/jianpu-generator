@@ -29,6 +29,26 @@ pub struct SpanOut {
     pub end: usize,
 }
 
+/// One inclusive measure-index range from JS, deserialized via
+/// `serde_wasm_bindgen::from_value` rather than a wasm-bindgen `Vec<T>` param
+/// (which only works for `JsCast` types) — see [`crate::note_selection_types::NoteCellIn`]
+/// for the same convention. Maps 1:1 onto [`jianpu_generator::grid_layout::MeasureRange`].
+#[derive(Debug, Clone, Copy, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct MeasureRangeIn {
+    pub start: usize,
+    pub end: usize,
+}
+
+impl From<MeasureRangeIn> for jianpu_generator::grid_layout::MeasureRange {
+    fn from(r: MeasureRangeIn) -> Self {
+        jianpu_generator::grid_layout::MeasureRange {
+            start: r.start,
+            end: r.end,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 #[tsify(into_wasm_abi)]
