@@ -1,9 +1,13 @@
 import type {
   GenerateWavResponse,
+  ListPartsResponse,
   NoteTimingOut,
   NoteTimingsResponse,
+  PartOut,
 } from 'jianpu-wasm'
+import { GM_INSTRUMENTS } from '../utils/gmInstruments'
 import { computeNoteSelectionTrimWindow } from '../utils/noteSelectionTrim'
+import { remapNoteTimingsToVisiblePartIndex } from '../utils/noteTimingsPartIndex'
 import type { WorkerRequest, WorkerResponse } from './jianpu.worker'
 
 function binaryBufferFromResult(
@@ -14,6 +18,22 @@ function binaryBufferFromResult(
   }
   const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
   return view.slice().buffer
+}
+
+type ListPartsFn =
+  | ((source: string, instruments: typeof GM_INSTRUMENTS) => ListPartsResponse)
+  | null
+
+/** Declaration-order parts, used only to rebuild the hidden-parts-compacted
+ * index space `remapNoteTimingsToVisiblePartIndex` needs — see its doc
+ * comment. */
+function visiblePartsFromSource(
+  listParts: ListPartsFn,
+  source: string,
+): PartOut[] {
+  if (!listParts) return []
+  const result = listParts(source, GM_INSTRUMENTS)
+  return result.status === 'ok' ? result.parts : []
 }
 
 function noteTimingsFromSource(
@@ -80,6 +100,7 @@ export function handleGenerateAudio(
   msg: Extract<WorkerRequest, { type: 'generateAudio' }>,
   generateWav: GenerateWavFn,
   listNoteTimings: ListNoteTimingsFn,
+  listParts: ListPartsFn,
   loadedSoundfont: Uint8Array | null,
 ): void {
   if (!generateWav || !loadedSoundfont) {
@@ -89,16 +110,20 @@ export function handleGenerateAudio(
   const wavResult = generateWav(msg.source, msg.enabledTracks, loadedSoundfont)
   if (wavResult.status === 'ok' && wavResult.wav != null) {
     const wavBuffer = binaryBufferFromResult(wavResult.wav)
+    // `enabledTracks` here is always the part-visibility toggle's state
+    // (never a playback-only mute override — this handler has no such
+    // concept), so it doubles as the compaction basis.
+    const noteTimings = remapNoteTimingsToVisiblePartIndex(
+      noteTimingsFromSource(listNoteTimings, msg.source, msg.enabledTracks),
+      visiblePartsFromSource(listParts, msg.source),
+      msg.enabledTracks,
+    )
     postMessage(
       {
         type: 'audio',
         id: msg.id,
         wav: wavBuffer,
-        noteTimings: noteTimingsFromSource(
-          listNoteTimings,
-          msg.source,
-          msg.enabledTracks,
-        ),
+        noteTimings,
       } satisfies WorkerResponse,
       { transfer: [wavBuffer] },
     )
@@ -157,6 +182,7 @@ export function handleGenerateMeasureRangeAudio(
   msg: Extract<WorkerRequest, { type: 'generateMeasureRangeAudio' }>,
   generateWavForMeasureRange: GenerateWavForMeasureRangeFn,
   listNoteTimingsForRange: ListNoteTimingsForRangeFn,
+  listParts: ListPartsFn,
   loadedSoundfont: Uint8Array | null,
 ): void {
   if (!generateWavForMeasureRange || !loadedSoundfont) {
@@ -166,16 +192,24 @@ export function handleGenerateMeasureRangeAudio(
     } satisfies WorkerResponse)
     return
   }
-  const fullRangeNoteTimings = noteTimingsForRangeFromSource(
-    listNoteTimingsForRange,
-    msg.source,
-    msg.startMeasureIndex,
-    msg.endMeasureIndex,
-    msg.extendToLastOccurrence,
-    msg.respectSequence,
-    msg.sequenceEntryStartIndex,
-    msg.sequenceEntryEndIndex,
-    msg.enabledTracks,
+  // Rebuild the hidden-parts-compacted index space (matching the currently
+  // rendered SVG's `data-part-index`) before this clip's own, possibly
+  // narrower, playback mute (`msg.enabledTracks` — e.g. "play selection")
+  // gets applied — see `remapNoteTimingsToVisiblePartIndex`'s doc comment.
+  const fullRangeNoteTimings = remapNoteTimingsToVisiblePartIndex(
+    noteTimingsForRangeFromSource(
+      listNoteTimingsForRange,
+      msg.source,
+      msg.startMeasureIndex,
+      msg.endMeasureIndex,
+      msg.extendToLastOccurrence,
+      msg.respectSequence,
+      msg.sequenceEntryStartIndex,
+      msg.sequenceEntryEndIndex,
+      msg.enabledTracks,
+    ),
+    visiblePartsFromSource(listParts, msg.source),
+    msg.visibleTracks,
   )
   // "Play selection": narrow the clip Rust synthesizes down to exactly the
   // drag-selected notes' elapsed-seconds span (sample-accurate trim/fade —

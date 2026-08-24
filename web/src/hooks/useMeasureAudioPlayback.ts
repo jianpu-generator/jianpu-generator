@@ -121,6 +121,10 @@ export function useMeasureAudioPlayback({
         sequenceEntryStartIndex,
         sequenceEntryEndIndex,
         enabledTracks: enabledTracksOverride ?? enabledTracksRef.current,
+        // Always the part-visibility toggle's own state (never the
+        // selection override above) — see `visibleTracks`'s doc comment in
+        // `worker/messages.ts`.
+        visibleTracks: enabledTracksRef.current,
         trimToSelectedNoteCells,
       } satisfies WorkerRequest)
     },
