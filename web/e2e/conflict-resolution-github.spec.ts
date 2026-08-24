@@ -58,10 +58,10 @@ async function setUpConflictingEdit(
   await page.goto('/')
 
   await openFileList(page)
-  const tab = page.locator('.file-tab-name', { hasText: 'conflict.jianpu' })
+  const tab = page.locator('.file-tab-name', { hasText: 'conflict' })
   await tab.waitFor({ timeout: 15_000 })
   await tab.click()
-  await expect(fileSwitcherTrigger(page)).toContainText('conflict.jianpu')
+  await expect(fileSwitcherTrigger(page)).toContainText('conflict')
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 

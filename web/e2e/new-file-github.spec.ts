@@ -53,7 +53,7 @@ test('creating a new file persists via the GitHub storage backend', async ({
   // dropdown now, so they no longer share this list).
   await openFileList(page)
   const originalTab = page.locator('.file-tab-name', {
-    hasText: 'original.jianpu',
+    hasText: 'original',
   })
   await originalTab.waitFor({ timeout: 15_000 })
 
@@ -71,8 +71,8 @@ test('creating a new file persists via the GitHub storage backend', async ({
 
   // `createFile` names the new file `untitled.jianpu` since that name isn't
   // already taken, and it becomes the active tab.
-  const newTab = page.locator('.file-tab-name', { hasText: 'untitled.jianpu' })
-  await expect(fileSwitcherTrigger(page)).toContainText('untitled.jianpu')
+  const newTab = page.locator('.file-tab-name', { hasText: 'untitled' })
+  await expect(fileSwitcherTrigger(page)).toContainText('untitled')
 
   // Once the create resolves, the dropdown closes automatically.
   await expect(newButton).toHaveCount(0)
@@ -93,6 +93,6 @@ test('creating a new file persists via the GitHub storage backend', async ({
   await openFileList(page)
   await newTab.waitFor({ timeout: 15_000 })
   await expect(
-    page.locator('.file-tab-name', { hasText: 'original.jianpu' }),
+    page.locator('.file-tab-name', { hasText: 'original' }),
   ).toHaveCount(1)
 })

@@ -53,7 +53,7 @@ test('restoring a file persists via the GitHub storage backend', async ({
   await openFileList(page)
   // The seeded file loads straight into the bin, not the main tab list.
   await expect(
-    page.locator('.file-tabs .file-tab-name', { hasText: 'original.jianpu' }),
+    page.locator('.file-tabs .file-tab-name', { hasText: 'original' }),
   ).toHaveCount(0)
 
   await openFileActions(page)
@@ -62,9 +62,7 @@ test('restoring a file persists via the GitHub storage backend', async ({
   )
 
   await openBin(page)
-  await expect(page.locator('.file-tab-bar-bin-name')).toHaveText(
-    'original.jianpu',
-  )
+  await expect(page.locator('.file-tab-bar-bin-name')).toHaveText('original')
 
   const restoreButton = page.locator(
     '.file-tab-bar-restore[aria-label="Restore original.jianpu"]',
@@ -86,10 +84,10 @@ test('restoring a file persists via the GitHub storage backend', async ({
   // The restored file reappears as an active tab...
   await openFileList(page)
   const originalTab = page.locator('.file-tab-name', {
-    hasText: 'original.jianpu',
+    hasText: 'original',
   })
   await originalTab.waitFor({ timeout: 5_000 })
-  await expect(fileSwitcherTrigger(page)).toContainText('original.jianpu')
+  await expect(fileSwitcherTrigger(page)).toContainText('original')
 
   // ...and the bin empties out, so its control no longer renders.
   await openFileActions(page)
@@ -102,7 +100,7 @@ test('restoring a file persists via the GitHub storage backend', async ({
   await page.reload()
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
   await openFileList(page)
-  await page.locator('.file-tab-name', { hasText: 'original.jianpu' }).waitFor({
+  await page.locator('.file-tab-name', { hasText: 'original' }).waitFor({
     timeout: 15_000,
   })
   await openFileActions(page)

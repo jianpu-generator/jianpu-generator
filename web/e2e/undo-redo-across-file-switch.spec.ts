@@ -114,20 +114,20 @@ test("an unsaved edit in file A survives switching to file B and back, and undo/
 
   // Switch to file B without explicitly saving.
   await openFileList(page)
-  await page.locator('.file-tab-name', { hasText: 'b.jianpu' }).click()
+  await page.locator('.file-tab-name', { hasText: 'b' }).click()
   await openFileList(page)
   await expect(
-    page.locator('.file-tab-name', { hasText: 'b.jianpu' }),
+    page.locator('.file-tab-name', { hasText: 'b' }),
   ).toHaveAttribute('aria-current', 'true')
   await expect(page.locator('.monaco-editor .view-lines')).toContainText(
     '5 6 7 1',
   )
 
   // Switch back to file A: the edit must still be there.
-  await page.locator('.file-tab-name', { hasText: 'a.jianpu' }).click()
+  await page.locator('.file-tab-name', { hasText: 'a' }).click()
   await openFileList(page)
   await expect(
-    page.locator('.file-tab-name', { hasText: 'a.jianpu' }),
+    page.locator('.file-tab-name', { hasText: 'a' }),
   ).toHaveAttribute('aria-current', 'true')
   await expect(page.locator('.monaco-editor .view-lines')).toContainText(
     '1 2 3 4 5',

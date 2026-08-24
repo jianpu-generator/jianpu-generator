@@ -112,7 +112,7 @@ test('disconnect reverts to the local backend and stops saving to github', async
   await page.goto('/')
 
   await openFileList(page)
-  const tab = page.locator('.file-tab-name', { hasText: 'song.jianpu' })
+  const tab = page.locator('.file-tab-name', { hasText: 'song' })
   await tab.waitFor({ timeout: 15_000 })
   await tab.click()
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })

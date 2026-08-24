@@ -55,7 +55,9 @@ test('importing a shared score persists via the GitHub storage backend', async (
 
   // The banner is dismissed and the imported file becomes the active tab
   // once `backend.importFile`'s create-only `PUT` resolves.
-  await expect(fileSwitcherTrigger(page)).toContainText(SHARED_FILENAME)
+  await expect(fileSwitcherTrigger(page)).toContainText(
+    SHARED_FILENAME.replace(/\.jianpu$/, ''),
+  )
   await expect(page.locator('.shared-preview-banner')).toHaveCount(0)
 
   // Create-only: the PUT that lands the import must not carry a `sha` — a
@@ -73,6 +75,8 @@ test('importing a shared score persists via the GitHub storage backend', async (
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
   await openFileList(page)
   await page
-    .locator('.file-tab-name', { hasText: SHARED_FILENAME })
+    .locator('.file-tab-name', {
+      hasText: SHARED_FILENAME.replace(/\.jianpu$/, ''),
+    })
     .waitFor({ timeout: 15_000 })
 })

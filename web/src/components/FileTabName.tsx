@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { isReadOnlyFile } from '../fileStore'
+import { displayFileName, isReadOnlyFile } from '../fileStore'
 import { SpinnerLabel } from './SpinnerLabel'
 
 export function FileTabName({
@@ -16,12 +16,12 @@ export function FileTabName({
   renaming?: boolean
 }) {
   const readOnly = isReadOnlyFile(name)
-  const [draft, setDraft] = useState(name)
+  const [draft, setDraft] = useState(displayFileName(name))
   const [editing, setEditing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    setDraft(name)
+    setDraft(displayFileName(name))
   }, [name])
 
   useEffect(() => {
@@ -46,10 +46,10 @@ export function FileTabName({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={() => {
           const trimmed = draft.trim()
-          if (trimmed && trimmed !== name) {
+          if (trimmed && trimmed !== displayFileName(name)) {
             onRename(name, trimmed)
           } else {
-            setDraft(name)
+            setDraft(displayFileName(name))
           }
           setEditing(false)
         }}
@@ -57,7 +57,7 @@ export function FileTabName({
           if (e.key === 'Enter') {
             e.currentTarget.blur()
           } else if (e.key === 'Escape') {
-            setDraft(name)
+            setDraft(displayFileName(name))
             setEditing(false)
             e.currentTarget.blur()
           }
@@ -79,7 +79,7 @@ export function FileTabName({
       }}
       disabled={renaming}
     >
-      <SpinnerLabel pending={renaming} label={name} />
+      <SpinnerLabel pending={renaming} label={displayFileName(name)} />
     </button>
   )
 }

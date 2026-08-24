@@ -68,14 +68,14 @@ test('duplicating a file persists via the GitHub storage backend', async ({
   // dropdown now, so they no longer share this list).
   await openFileList(page)
   const originalTab = page.locator('.file-tab-name', {
-    hasText: 'original.jianpu',
+    hasText: /^original$/,
   })
   await originalTab.waitFor({ timeout: 15_000 })
 
   // Select it (duplicateFile duplicates the active file), then wait for its
   // preview to render before duplicating. Selecting closes the dropdown.
   await originalTab.click()
-  await expect(fileSwitcherTrigger(page)).toContainText('original.jianpu')
+  await expect(fileSwitcherTrigger(page)).toContainText('original')
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
   const sourceContent = await getEditorSource(page)
@@ -94,9 +94,9 @@ test('duplicating a file persists via the GitHub storage backend', async ({
 
   // `duplicateFile` names the copy `original 2.jianpu` since `original.jianpu`
   // is already taken, and it becomes the active tab.
-  await expect(fileSwitcherTrigger(page)).toContainText('original 2.jianpu')
+  await expect(fileSwitcherTrigger(page)).toContainText('original 2')
   const duplicateTab = page.locator('.file-tab-name', {
-    hasText: 'original 2.jianpu',
+    hasText: 'original 2',
   })
 
   // Once the duplicate resolves, the dropdown closes automatically; reopen

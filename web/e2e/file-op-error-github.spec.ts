@@ -75,7 +75,7 @@ test('a failed create shows the error modal, resets pending state, and a retry s
 
   await openFileList(page)
   const originalTab = page.locator('.file-tab-name', {
-    hasText: 'original.jianpu',
+    hasText: 'original',
   })
   await originalTab.waitFor({ timeout: 15_000 })
 
@@ -117,7 +117,7 @@ test('a failed create shows the error modal, resets pending state, and a retry s
   // and the active tab is unchanged.
   await openFileList(page)
   await expect(
-    page.locator('.file-tab-name', { hasText: 'untitled.jianpu' }),
+    page.locator('.file-tab-name', { hasText: 'untitled' }),
   ).toHaveCount(0)
   await expect(fileSwitcherTrigger(page)).toHaveText(
     activeTabBeforeCreate ?? '',
@@ -128,7 +128,7 @@ test('a failed create shows the error modal, resets pending state, and a retry s
   // user can actually recover from the failure.
   await openFileActions(page)
   await newButton.click()
-  await expect(fileSwitcherTrigger(page)).toContainText('untitled.jianpu')
+  await expect(fileSwitcherTrigger(page)).toContainText('untitled')
   await openFileActions(page)
   await expect(newButton.locator('.file-tab-bar-spinner')).toHaveCount(0)
 })

@@ -68,6 +68,6 @@ test('header file switcher shows a loading spinner while GitHub files load', asy
 
   await openFileList(page)
   await expect(
-    page.locator('.file-tabs .file-tab-name', { hasText: 'loading.jianpu' }),
+    page.locator('.file-tabs .file-tab-name', { hasText: 'loading' }),
   ).toBeVisible()
 })

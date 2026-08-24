@@ -47,7 +47,7 @@ test('renaming a file persists via the GitHub storage backend', async ({
   // dropdown now, so they no longer share this list).
   await openFileList(page)
   const originalTab = page.locator('.file-tab-name', {
-    hasText: 'original.jianpu',
+    hasText: 'original',
   })
   await originalTab.waitFor({ timeout: 15_000 })
 
@@ -55,7 +55,7 @@ test('renaming a file persists via the GitHub storage backend', async ({
   // the demo file), then double-click to enter rename mode. Selecting closes
   // the file-switcher dropdown, so reopen it to reach the (now-active) tab.
   await originalTab.click()
-  await expect(fileSwitcherTrigger(page)).toContainText('original.jianpu')
+  await expect(fileSwitcherTrigger(page)).toContainText('original')
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
   await openFileList(page)
@@ -74,7 +74,7 @@ test('renaming a file persists via the GitHub storage backend', async ({
   // The tab reflects the new name, and its content/preview survive the
   // rename (i.e. the rename resolved through the mocked create+delete
   // Contents API calls rather than getting stuck or reverting).
-  await expect(activeTabName).toHaveText('renamed.jianpu')
+  await expect(activeTabName).toHaveText('renamed')
   await expect(page.locator('.preview-page').first()).toBeVisible({
     timeout: 5_000,
   })
@@ -84,10 +84,10 @@ test('renaming a file persists via the GitHub storage backend', async ({
   // actually landed in the fake remote, not just in in-memory React state.
   await page.reload()
   await openFileList(page)
-  await page.locator('.file-tab-name', { hasText: 'renamed.jianpu' }).waitFor({
+  await page.locator('.file-tab-name', { hasText: 'renamed' }).waitFor({
     timeout: 15_000,
   })
   await expect(
-    page.locator('.file-tab-name', { hasText: 'original.jianpu' }),
+    page.locator('.file-tab-name', { hasText: 'original' }),
   ).toHaveCount(0)
 })

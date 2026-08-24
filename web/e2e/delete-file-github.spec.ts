@@ -53,14 +53,14 @@ test('deleting a file persists via the GitHub storage backend', async ({
   // submenu, so they don't share this top-level list).
   await openFileList(page)
   const originalTab = page.locator('.file-tab-name', {
-    hasText: 'original.jianpu',
+    hasText: 'original',
   })
   await originalTab.waitFor({ timeout: 15_000 })
 
   // Select it (it isn't active by default — the backend always loads onto
   // the demo file). Selecting closes the file-switcher dropdown.
   await originalTab.click()
-  await expect(fileSwitcherTrigger(page)).toContainText('original.jianpu')
+  await expect(fileSwitcherTrigger(page)).toContainText('original')
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
   await openFileActions(page)
@@ -83,14 +83,12 @@ test('deleting a file persists via the GitHub storage backend', async ({
     'Bin (1)',
   )
   await openBin(page)
-  await expect(page.locator('.file-tab-bar-bin-name')).toHaveText(
-    'original.jianpu',
-  )
+  await expect(page.locator('.file-tab-bar-bin-name')).toHaveText('original')
   await closeBin(page)
 
   // With no other user files remaining, the active tab falls back to the
   // (first) read-only demo file, and the trigger reflects it directly.
-  await expect(fileSwitcherTrigger(page)).toContainText('01-pitches.jianpu')
+  await expect(fileSwitcherTrigger(page)).toContainText('01-pitches')
 
   // Reloading re-fetches from the (mocked) GitHub API, so the deleted file
   // staying gone from the main tab list and present in the bin proves the
@@ -100,14 +98,12 @@ test('deleting a file persists via the GitHub storage backend', async ({
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
   await openFileList(page)
   await expect(
-    page.locator('.file-tabs .file-tab-name', { hasText: 'original.jianpu' }),
+    page.locator('.file-tabs .file-tab-name', { hasText: 'original' }),
   ).toHaveCount(0)
   await openFileActions(page)
   await expect(page.locator('.file-tab-bar-bin-trigger')).toContainText(
     'Bin (1)',
   )
   await openBin(page)
-  await expect(page.locator('.file-tab-bar-bin-name')).toHaveText(
-    'original.jianpu',
-  )
+  await expect(page.locator('.file-tab-bar-bin-name')).toHaveText('original')
 })

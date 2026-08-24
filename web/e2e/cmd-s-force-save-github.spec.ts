@@ -56,10 +56,10 @@ test('Cmd/Ctrl+S force-flushes a pending debounced GitHub save immediately', asy
   await page.goto('/')
 
   await openFileList(page)
-  const saveTab = page.locator('.file-tab-name', { hasText: 'save.jianpu' })
+  const saveTab = page.locator('.file-tab-name', { hasText: 'save' })
   await saveTab.waitFor({ timeout: 15_000 })
   await saveTab.click()
-  await expect(fileSwitcherTrigger(page)).toContainText('save.jianpu')
+  await expect(fileSwitcherTrigger(page)).toContainText('save')
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
@@ -84,10 +84,10 @@ test('Cmd/Ctrl+S force-flushes a pending debounced GitHub save immediately', asy
   // in-memory React state.
   await page.reload()
   await openFileList(page)
-  await page.locator('.file-tab-name', { hasText: 'save.jianpu' }).waitFor({
+  await page.locator('.file-tab-name', { hasText: 'save' }).waitFor({
     timeout: 15_000,
   })
-  await page.locator('.file-tab-name', { hasText: 'save.jianpu' }).click()
+  await page.locator('.file-tab-name', { hasText: 'save' }).click()
   await expect(page.locator('.monaco-editor .view-lines')).toContainText(
     '1 2 3 4 5',
   )

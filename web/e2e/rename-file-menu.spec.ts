@@ -34,13 +34,13 @@ test('renaming via the "⋯" menu prompt updates the active tab and trigger', as
   page,
 }) => {
   page.once('dialog', (dialog) => {
-    void dialog.accept('renamed.jianpu')
+    void dialog.accept('renamed')
   })
 
   await openFileActions(page)
   await page.getByRole('menuitem', { name: 'Rename' }).click()
 
-  await expect(fileSwitcherTrigger(page)).toContainText('renamed.jianpu')
+  await expect(fileSwitcherTrigger(page)).toContainText('renamed')
 })
 
 test('cancelling the rename prompt leaves the filename unchanged', async ({
@@ -53,5 +53,5 @@ test('cancelling the rename prompt leaves the filename unchanged', async ({
   await openFileActions(page)
   await page.getByRole('menuitem', { name: 'Rename' }).click()
 
-  await expect(fileSwitcherTrigger(page)).toContainText('original.jianpu')
+  await expect(fileSwitcherTrigger(page)).toContainText('original')
 })

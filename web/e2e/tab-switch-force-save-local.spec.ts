@@ -80,10 +80,10 @@ test('switching tabs on the local backend never loses an edit that has not been 
   const editedFileA = await getStoredFile(page, 'a.jianpu')
 
   await openFileList(page)
-  await page.locator('.file-tab-name', { hasText: 'b.jianpu' }).click()
+  await page.locator('.file-tab-name', { hasText: 'b' }).click()
   await openFileList(page)
   await expect(
-    page.locator('.file-tab-name', { hasText: 'b.jianpu' }),
+    page.locator('.file-tab-name', { hasText: 'b' }),
   ).toHaveAttribute('aria-current', 'true')
   await expect(page.locator('.monaco-editor .view-lines')).toContainText(
     '5 6 7 1',
@@ -91,7 +91,7 @@ test('switching tabs on the local backend never loses an edit that has not been 
 
   expect(await getStoredFile(page, 'a.jianpu')).toBe(editedFileA)
 
-  await page.locator('.file-tab-name', { hasText: 'a.jianpu' }).click()
+  await page.locator('.file-tab-name', { hasText: 'a' }).click()
   await expect(page.locator('.monaco-editor .view-lines')).toContainText(
     '1 2 3 4 5',
   )

@@ -54,10 +54,10 @@ async function setUpAndEdit(
   await page.goto('/')
 
   await openFileList(page)
-  const tab = page.locator('.file-tab-name', { hasText: 'banner.jianpu' })
+  const tab = page.locator('.file-tab-name', { hasText: 'banner' })
   await tab.waitFor({ timeout: 15_000 })
   await tab.click()
-  await expect(fileSwitcherTrigger(page)).toContainText('banner.jianpu')
+  await expect(fileSwitcherTrigger(page)).toContainText('banner')
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 

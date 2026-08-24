@@ -61,10 +61,10 @@ test('editing a file schedules a debounced autosave to the GitHub storage backen
   await page.goto('/')
 
   await openFileList(page)
-  const autoTab = page.locator('.file-tab-name', { hasText: 'auto.jianpu' })
+  const autoTab = page.locator('.file-tab-name', { hasText: 'auto' })
   await autoTab.waitFor({ timeout: 15_000 })
   await autoTab.click()
-  await expect(fileSwitcherTrigger(page)).toContainText('auto.jianpu')
+  await expect(fileSwitcherTrigger(page)).toContainText('auto')
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
@@ -89,10 +89,10 @@ test('editing a file schedules a debounced autosave to the GitHub storage backen
   // just in in-memory React state.
   await page.reload()
   await openFileList(page)
-  await page.locator('.file-tab-name', { hasText: 'auto.jianpu' }).waitFor({
+  await page.locator('.file-tab-name', { hasText: 'auto' }).waitFor({
     timeout: 15_000,
   })
-  await page.locator('.file-tab-name', { hasText: 'auto.jianpu' }).click()
+  await page.locator('.file-tab-name', { hasText: 'auto' }).click()
   await expect(page.locator('.monaco-editor .view-lines')).toContainText(
     '1 2 3 4 5',
   )

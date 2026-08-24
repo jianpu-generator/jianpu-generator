@@ -86,6 +86,12 @@ function uniqueName(base: string, taken: Set<string>): string {
   return `${stem} ${n}${ext}`
 }
 
+/** Strips the redundant `.jianpu` extension for display — every file is a
+ * `.jianpu` file, so showing it in pickers/tabs is just noise. */
+export function displayFileName(name: string): string {
+  return name.endsWith('.jianpu') ? name.slice(0, -'.jianpu'.length) : name
+}
+
 function sanitizeFileName(raw: string): string {
   const trimmed = raw.trim()
   if (!trimmed) return 'untitled.jianpu'

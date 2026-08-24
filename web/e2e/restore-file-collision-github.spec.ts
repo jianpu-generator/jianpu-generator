@@ -70,11 +70,11 @@ test('restoring a file that collides with an active file renames it via the GitH
   // Initial state: one active tab (the pre-existing scores/original.jianpu)
   // and one bin entry sharing the same base name.
   await expect(
-    page.locator('.file-tabs .file-tab-name', { hasText: 'original.jianpu' }),
+    page.locator('.file-tabs .file-tab-name', { hasText: /^original$/ }),
   ).toHaveCount(1)
   await expect(
     page.locator('.file-tabs .file-tab-name', {
-      hasText: 'original 2.jianpu',
+      hasText: 'original 2',
     }),
   ).toHaveCount(0)
 
@@ -84,9 +84,7 @@ test('restoring a file that collides with an active file renames it via the GitH
   )
 
   await openBin(page)
-  await expect(page.locator('.file-tab-bar-bin-name')).toHaveText(
-    'original.jianpu',
-  )
+  await expect(page.locator('.file-tab-bar-bin-name')).toHaveText('original')
 
   const restoreButton = page.locator(
     '.file-tab-bar-restore[aria-label="Restore original.jianpu"]',
@@ -106,23 +104,23 @@ test('restoring a file that collides with an active file renames it via the GitH
   // active `original.jianpu` tab.
   await openFileList(page)
   const restoredTab = page.locator('.file-tab-name', {
-    hasText: 'original 2.jianpu',
+    hasText: 'original 2',
   })
   await restoredTab.waitFor({ timeout: 5_000 })
 
   // Both tabs now coexist: the pre-existing one, untouched, and the newly
   // restored one under its renamed identity.
   await expect(
-    page.locator('.file-tabs .file-tab-name', { hasText: 'original.jianpu' }),
+    page.locator('.file-tabs .file-tab-name', { hasText: /^original$/ }),
   ).toHaveCount(1)
   await expect(
     page.locator('.file-tabs .file-tab-name', {
-      hasText: 'original 2.jianpu',
+      hasText: 'original 2',
     }),
   ).toHaveCount(1)
 
   // The newly restored file is the active tab.
-  await expect(fileSwitcherTrigger(page)).toContainText('original 2.jianpu')
+  await expect(fileSwitcherTrigger(page)).toContainText('original 2')
 
   // The bin is now empty.
   await openFileActions(page)
@@ -142,14 +140,14 @@ test('restoring a file that collides with an active file renames it via the GitH
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
   await openFileList(page)
   await page
-    .locator('.file-tab-name', { hasText: 'original.jianpu' })
+    .locator('.file-tab-name', { hasText: /^original$/ })
     .waitFor({ timeout: 15_000 })
   await expect(
-    page.locator('.file-tabs .file-tab-name', { hasText: 'original.jianpu' }),
+    page.locator('.file-tabs .file-tab-name', { hasText: /^original$/ }),
   ).toHaveCount(1)
   await expect(
     page.locator('.file-tabs .file-tab-name', {
-      hasText: 'original 2.jianpu',
+      hasText: 'original 2',
     }),
   ).toHaveCount(1)
   await openFileActions(page)
@@ -157,7 +155,7 @@ test('restoring a file that collides with an active file renames it via the GitH
 
   // The pre-existing tab's content must be untouched by the restore.
   await openFileList(page)
-  await page.locator('.file-tab-name', { hasText: 'original.jianpu' }).click()
+  await page.locator('.file-tab-name', { hasText: /^original$/ }).click()
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await expect(page.locator('.monaco-editor .view-lines')).toContainText(
     'Existing Active File',

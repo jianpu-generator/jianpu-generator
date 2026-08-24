@@ -231,7 +231,9 @@ test('a viewer importing the live score clears the #live= hash and focuses the i
   await expect(viewerPage.locator('.shared-preview-banner')).toHaveCount(0)
   expect(new URL(viewerPage.url()).hash).toEqual('')
 
-  await expect(fileSwitcherTrigger(viewerPage)).toContainText(LIVE_FILENAME)
+  await expect(fileSwitcherTrigger(viewerPage)).toContainText(
+    LIVE_FILENAME.replace(/\.jianpu$/, ''),
+  )
   await viewerContext.close()
 })
 

@@ -45,9 +45,9 @@ test('switching the active file updates the ?file= URL param', async ({
   await expect(page).toHaveURL(/[?&]file=a\.jianpu(&|$)/)
 
   await openFileList(page)
-  await page.locator('.file-tab-name', { hasText: 'b.jianpu' }).click()
+  await page.locator('.file-tab-name', { hasText: 'b' }).click()
 
-  await expect(fileSwitcherTrigger(page)).toContainText('b.jianpu')
+  await expect(fileSwitcherTrigger(page)).toContainText('b')
   await expect(page).toHaveURL(/[?&]file=b\.jianpu(&|$)/)
 })
 
@@ -57,11 +57,9 @@ test('loading with a ?file= URL param selects that file', async ({ page }) => {
   await page.goto('/?file=b.jianpu')
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
-  await expect(fileSwitcherTrigger(page)).toContainText('b.jianpu')
+  await expect(fileSwitcherTrigger(page)).toContainText('b')
   await openFileList(page)
-  await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
-    'b.jianpu',
-  )
+  await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText('b')
 })
 
 test('loading with a non-ASCII ?file= URL param selects that file without reverting', async ({
@@ -89,10 +87,11 @@ test('loading with a non-ASCII ?file= URL param selects that file without revert
   await page.goto(`/?file=${encodeURIComponent(cjkName)}`)
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
 
-  await expect(fileSwitcherTrigger(page)).toContainText(cjkName)
+  const displayName = cjkName.replace(/\.jianpu$/, '')
+  await expect(fileSwitcherTrigger(page)).toContainText(displayName)
   await openFileList(page)
   await expect(page.locator('.file-tab--active .file-tab-name')).toHaveText(
-    cjkName,
+    displayName,
   )
 
   // The URL param must keep naming the selected file, not silently revert

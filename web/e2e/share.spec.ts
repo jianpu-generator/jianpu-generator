@@ -43,7 +43,9 @@ test('opens a shared score preview without saving it, then imports on demand', a
   await gotoShareUrl(page, SHARED_FILENAME, SHARED_SOURCE)
   await page.getByRole('button', { name: 'Import to my scores' }).click()
 
-  await expect(fileSwitcherTrigger(page)).toContainText(SHARED_FILENAME)
+  await expect(fileSwitcherTrigger(page)).toContainText(
+    SHARED_FILENAME.replace(/\.jianpu$/, ''),
+  )
   await expect(page.locator('.shared-preview-banner')).toHaveCount(0)
 })
 
@@ -84,7 +86,9 @@ test('discarding a shared preview does not save it', async ({ page }) => {
 
   await expect(page.locator('.shared-preview-banner')).toHaveCount(0)
   // The file switcher reappears once the preview is discarded.
-  await expect(fileSwitcherTrigger(page)).not.toContainText(SHARED_FILENAME)
+  await expect(fileSwitcherTrigger(page)).not.toContainText(
+    SHARED_FILENAME.replace(/\.jianpu$/, ''),
+  )
 })
 
 test('opens legacy uncompressed share links', async ({ page }) => {

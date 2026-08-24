@@ -1,6 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { CounterClockwiseClockIcon } from '@radix-ui/react-icons'
 import { useEffect } from 'react'
+import { displayFileName } from '../fileStore'
 
 export interface BinModalProps {
   open: boolean
@@ -101,7 +102,9 @@ export function BinModal({
             <div className="file-tab-bar-bin-items" role="menu">
               {binNames.map((name) => (
                 <div key={name} className="file-tab-bar-bin-item">
-                  <span className="file-tab-bar-bin-name">{name}</span>
+                  <span className="file-tab-bar-bin-name">
+                    {displayFileName(name)}
+                  </span>
                   <button
                     type="button"
                     role="menuitem"
