@@ -88,6 +88,25 @@ export function createEditorImperativeHandle(
       })
       ed.revealLineInCenter(startLine)
     },
+    setSelectionsByLines(ranges, revealStartLine) {
+      const ed = editorRef.current
+      const model = ed?.getModel()
+      const monacoApi = monacoRef.current
+      if (!ed || !model || !monacoApi || ranges.length === 0) return
+
+      const selections = ranges.map(
+        (range) =>
+          new monacoApi.Selection(
+            range.startLine,
+            1,
+            range.endLine,
+            model.getLineMaxColumn(range.endLine),
+          ),
+      )
+      ed.setSelections(selections)
+      ed.revealLineInCenter(revealStartLine ?? ranges[0].startLine)
+      ed.focus()
+    },
     jumpToOffset(charOffset: number) {
       const ed = editorRef.current
       const model = ed?.getModel()

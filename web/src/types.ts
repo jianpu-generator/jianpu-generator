@@ -42,6 +42,20 @@ export interface EditorHandle {
   setSelections: (ranges: Array<{ start: number; end: number }>) => void
   /** Select a range of lines by 1-indexed line numbers and reveal the start. */
   setSelectionByLines: (startLine: number, endLine: number) => void
+  /**
+   * Select a disjoint set of whole-line ranges (Monaco multicursor) by
+   * 1-indexed line numbers — the line-range analogue of `setSelections`,
+   * for callers (e.g. a `# sequence` chain selection spanning out-of-order
+   * sections) that resolve to lines rather than byte offsets. Reveals
+   * `revealStartLine` (defaulting to the first range's start) — two
+   * disjoint ranges can sit too far apart in the source to both fit on
+   * screen at once, so callers should pass whichever one the user is
+   * currently pointing at.
+   */
+  setSelectionsByLines: (
+    ranges: Array<{ startLine: number; endLine: number }>,
+    revealStartLine?: number,
+  ) => void
   /** Move the cursor to the given JS string char offset and reveal the line. */
   jumpToOffset: (charOffset: number) => void
   focus: () => void
