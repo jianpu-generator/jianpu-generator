@@ -3,7 +3,9 @@ use crate::error::{Diagnostic, Span, Warning};
 use crate::grid_layout::slur_placement::{build_measure_placements, resolve_slur_spans};
 use crate::grid_layout::tuplet_placement::resolve_tuplet_spans;
 use crate::grid_layout::types::Header;
-use crate::grid_layout::types::{GridElement, GridPage, GridRow, MeasureColumnLayout};
+use crate::grid_layout::types::{
+    GridElement, GridPage, GridRow, MeasureColumnLayout, MeasureRange,
+};
 use crate::render_config::RenderConfig;
 use std::collections::{HashMap, HashSet};
 
@@ -296,7 +298,7 @@ pub fn layout(
     header: &Header,
     page_width_pt: f32,
     page_height_pt: f32,
-    highlighted_measure_range: Option<(usize, usize)>,
+    highlighted_measure_ranges: Option<Vec<MeasureRange>>,
 ) -> LayoutOutput {
     let base = config.row_height as f32;
     let blocks = &compile_result.blocks;
@@ -330,7 +332,7 @@ pub fn layout(
             header,
             base,
             hide_system_dividers: config.hide_system_dividers,
-            highlighted_measure_range,
+            highlighted_measure_ranges,
         });
 
     let total_pages = page_systems.len() as u32;

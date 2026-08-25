@@ -6,8 +6,8 @@ Feature: Import a shared score via GitHub storage backend
     When I navigate to the share URL for "shared-test.jianpu"
     Then the shared-preview banner shows "shared-test.jianpu"
     When I click the "Import to my scores" button
-    Then the active tab becomes the imported file "shared-test.jianpu"
+    Then the active tab becomes the imported file "shared-test"
     And the shared-preview banner is gone
     And the import-create PUT for "scores/shared-test.jianpu" carries no sha
     When I reload the page after importing
-    Then the file list shows "shared-test.jianpu" after reload
+    Then the file list shows "shared-test" after reload

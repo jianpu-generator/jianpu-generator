@@ -143,9 +143,14 @@ Then(
   'both {string} and {string} tabs exist exactly once each',
   async ({ page }, nameA: string, nameB: string) => {
     // Both tabs now coexist: the pre-existing one, untouched, and the newly
-    // restored one under its renamed identity.
+    // restored one under its renamed identity. Exact-text match, not
+    // `hasText: nameA` — since display names drop the `.jianpu` suffix,
+    // nameA (e.g. "original") is now a substring of nameB (e.g.
+    // "original 2"), so a plain substring match would match both tabs.
     await expect(
-      page.locator('.file-tabs .file-tab-name', { hasText: nameA }),
+      page.locator('.file-tabs .file-tab-name', {
+        hasText: new RegExp(`^${nameA}$`),
+      }),
     ).toHaveCount(1)
     await expect(
       page.locator('.file-tabs .file-tab-name', { hasText: nameB }),
@@ -188,15 +193,18 @@ When('I reload the page after the collision restore', async ({ page }) => {
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
   await openFileList(page)
   await page
-    .locator('.file-tab-name', { hasText: 'original.jianpu' })
+    .locator('.file-tab-name', { hasText: /^original$/ })
     .waitFor({ timeout: 15_000 })
 })
 
 Then(
   'both {string} and {string} tabs exist exactly once each after reload',
   async ({ page }, nameA: string, nameB: string) => {
+    // Exact-text match for nameA — see the non-reload version of this step.
     await expect(
-      page.locator('.file-tabs .file-tab-name', { hasText: nameA }),
+      page.locator('.file-tabs .file-tab-name', {
+        hasText: new RegExp(`^${nameA}$`),
+      }),
     ).toHaveCount(1)
     await expect(
       page.locator('.file-tabs .file-tab-name', { hasText: nameB }),
@@ -214,7 +222,7 @@ Then(
   async ({ page }, text: string) => {
     // The pre-existing tab's content must be untouched by the restore.
     await openFileList(page)
-    await page.locator('.file-tab-name', { hasText: 'original.jianpu' }).click()
+    await page.locator('.file-tab-name', { hasText: /^original$/ }).click()
     await page.waitForSelector('.monaco-editor .view-lines', {
       timeout: 15_000,
     })

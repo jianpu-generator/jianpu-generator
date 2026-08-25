@@ -12,6 +12,7 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import {
   DEMO_FILE_NAMES,
+  displayFileName,
   type FileStoreState,
   fileContent,
   isReadOnlyFile,
@@ -119,7 +120,7 @@ export function FileSwitcher({
           aria-expanded={filesOpen}
           onClick={() => setFilesOpen((prev) => !prev)}
         >
-          {triggerLabel}
+          {displayFileName(triggerLabel)}
           {isLoadingGithub ? (
             <span className="file-tab-bar-spinner" aria-hidden="true" />
           ) : (
@@ -259,7 +260,10 @@ export function FileSwitcher({
                 isReadOnlyFile(store.active) || renamingName === store.active
               }
               onClick={async () => {
-                const next = window.prompt('Rename file', store.active)
+                const next = window.prompt(
+                  'Rename file',
+                  displayFileName(store.active),
+                )
                 const trimmed = next?.trim()
                 if (!trimmed || trimmed === store.active) return
                 await onRename(store.active, trimmed)

@@ -91,7 +91,7 @@ When(
   async ({ page }) => {
     await page.goto('/')
     await openFileList(page)
-    const tab = page.locator('.file-tab-name', { hasText: 'song.jianpu' })
+    const tab = page.locator('.file-tab-name', { hasText: 'song' })
     await tab.waitFor({ timeout: 15_000 })
   },
 )

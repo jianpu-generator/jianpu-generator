@@ -5,9 +5,11 @@ use jianpu_generator::{
     render_documents_from_source_filtered_with_lyrics, render_documents_with_highlight_range,
 };
 
+use crate::diagnostics::{
+    diagnostic_from_diagnostic, diagnostic_from_error, group_diagnostics_into_view_zones,
+};
 use crate::svg_types::svg_document_to_out;
 use crate::types::{
-    diagnostic_from_diagnostic, diagnostic_from_error, group_diagnostics_into_view_zones,
     GroupLyricSelectionResponse, GroupNoteSelectionResponse, ListLyricSpansResponse,
     ListMeasureSpansResponse, ListNoteSpansResponse, LyricCellIn, LyricSelectionRunOut,
     LyricSpanOut, MeasureAtOffsetResponse, MeasureSpanOut, NoteCellIn, NoteSelectionRunOut,
@@ -71,8 +73,7 @@ pub(crate) fn render_response(
 
 pub(crate) fn render_with_highlight_range_response(
     source: &str,
-    start_index: usize,
-    end_index: usize,
+    measure_ranges: &[jianpu_generator::grid_layout::MeasureRange],
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
     instruments: &[InstrumentInfo],
@@ -80,7 +81,7 @@ pub(crate) fn render_with_highlight_range_response(
     match render_documents_with_highlight_range(
         source,
         "input.jianpu",
-        start_index..=end_index,
+        measure_ranges,
         enabled_tracks,
         disabled_lyrics,
         instruments,

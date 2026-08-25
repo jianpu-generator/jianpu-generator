@@ -3,7 +3,7 @@ Feature: Storage settings error banner for GitHub autosave failures
   Scenario: A rate-limited autosave shows the rate-limit banner, which clears once a save succeeds
     Given the GitHub repo is seeded with a file named "scores/banner.jianpu" for a rate-limit banner
     And the first autosave PUT will fail with a 403 rate-limit response
-    And I open and edit "banner.jianpu" with suffix " 5" and a fake clock installed
+    And I open and edit "banner" with suffix " 5" and a fake clock installed
     When I fast-forward the clock past the autosave debounce interval for the error banner
     And I open the storage settings modal to check the error banner
     Then the status banner is visible and mentions "rate limit"
@@ -18,7 +18,7 @@ Feature: Storage settings error banner for GitHub autosave failures
   Scenario: A network-failed autosave shows the offline banner, which clears once a save succeeds
     Given the GitHub repo is seeded with a file named "scores/banner.jianpu" for an offline banner
     And the first autosave PUT will be aborted as a network failure
-    And I open and edit "banner.jianpu" with suffix " 5" and a fake clock installed
+    And I open and edit "banner" with suffix " 5" and a fake clock installed
     When I fast-forward the clock past the autosave debounce interval for the error banner
     And I open the storage settings modal to check the error banner
     Then the status banner is visible and mentions "offline"

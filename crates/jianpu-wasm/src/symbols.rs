@@ -1,6 +1,7 @@
+use crate::diagnostics::diagnostic_from_error;
 use crate::types::{
-    diagnostic_from_error, ListSymbolsResponse, OccurrenceRoleOut, RenameSymbolResponse, SpanOut,
-    SymbolKindOut, SymbolOccurrenceOut, SymbolOut, TextEditOut,
+    ListSymbolsResponse, OccurrenceRoleOut, RenameSymbolResponse, SpanOut, SymbolKindOut,
+    SymbolOccurrenceOut, SymbolOut, TextEditOut,
 };
 use jianpu_generator::parser::parts_parser::InstrumentInfo;
 use jianpu_generator::symbols::{

@@ -75,11 +75,12 @@ Given(
 
     await page.goto('/')
 
+    const displayName = filename.replace(/\.jianpu$/, '')
     await openFileList(page)
-    const tab = page.locator('.file-tab-name', { hasText: filename })
+    const tab = page.locator('.file-tab-name', { hasText: displayName })
     await tab.waitFor({ timeout: 15_000 })
     await tab.click()
-    await expect(fileSwitcherTrigger(page)).toContainText(filename)
+    await expect(fileSwitcherTrigger(page)).toContainText(displayName)
     await page.waitForSelector('.monaco-editor .view-lines', {
       timeout: 15_000,
     })

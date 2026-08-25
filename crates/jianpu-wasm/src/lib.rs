@@ -1,5 +1,6 @@
 #![cfg_attr(test, allow(clippy::disallowed_macros))]
 
+mod diagnostics;
 mod lyric_selection_types;
 mod metadata_types;
 mod note_selection_types;
@@ -26,6 +27,9 @@ pub mod lib_midi;
 #[path = "lib_import.rs"]
 pub mod lib_import;
 
+#[path = "share_payload.rs"]
+pub mod share_payload;
+
 use jianpu_generator::parser::parts_parser::InstrumentInfo;
 use metadata_types::MetadataDefaultsOut;
 use responses::{
@@ -37,7 +41,7 @@ use types::{
     GroupLyricSelectionResponse, GroupNoteSelectionResponse, ListLyricSpansResponse,
     ListMeasureSpansResponse, ListNoteSpansResponse, ListPartDeclarationsResponse,
     ListPartsResponse, ListSymbolsResponse, LyricCellIn, LyricSpanOut, MeasureAtOffsetResponse,
-    NoteCellIn, NoteSpanOut, RenameSymbolResponse, RenderResponse, SymbolKindOut,
+    MeasureRangeIn, NoteCellIn, NoteSpanOut, RenameSymbolResponse, RenderResponse, SymbolKindOut,
 };
 use wasm_bindgen::prelude::*;
 
@@ -184,7 +188,13 @@ pub fn render(
     )
 }
 
-/// Render `.jianpu` source with a range of measures highlighted.
+/// Render `.jianpu` source with one or more disjoint ranges of measures
+/// highlighted (a `# sequence` chain selection can span several disjoint
+/// ranges at once — e.g. dragging "C" to a later repeat of "A" across
+/// "A, B, C, A" highlights "C" and "A" but not "B").
+///
+/// `raw_measure_ranges` deserializes to `{ start: number; end: number }[]`,
+/// each pair an inclusive measure-index range.
 ///
 /// Returns the same structured value as [`render`]:
 /// - `{ "status": "ok", "svgs": ["<svg>...</svg>", ...] }`
@@ -193,18 +203,22 @@ pub fn render(
 #[wasm_bindgen]
 pub fn render_with_highlight_range(
     source: &str,
-    start_index: usize,
-    end_index: usize,
+    raw_measure_ranges: JsValue,
     enabled_tracks: Option<Vec<String>>,
     disabled_lyrics: Option<Vec<String>>,
     raw_instruments: JsValue,
 ) -> RenderResponse {
     let instruments: Vec<InstrumentInfo> =
         serde_wasm_bindgen::from_value(raw_instruments).unwrap_or_default();
+    let measure_ranges: Vec<jianpu_generator::grid_layout::MeasureRange> =
+        serde_wasm_bindgen::from_value::<Vec<MeasureRangeIn>>(raw_measure_ranges)
+            .unwrap_or_default()
+            .into_iter()
+            .map(Into::into)
+            .collect();
     render_with_highlight_range_response(
         source,
-        start_index,
-        end_index,
+        &measure_ranges,
         enabled_tracks.as_deref(),
         disabled_lyrics.as_deref(),
         &instruments,
@@ -357,34 +371,6 @@ pub fn get_default_author_font_size(row_height: u32) -> u32 {
 #[wasm_bindgen]
 pub fn get_default_part_legend_font_size(row_height: u32) -> u32 {
     jianpu_generator::ast::grouped::default_part_legend_font_size(row_height)
-}
-
-/// Compress a share-link payload with brotli (quality 11).
-///
-/// The caller is responsible for base64url-encoding the result for use in a URL.
-#[wasm_bindgen]
-pub fn compress_share_payload(payload: &str) -> Vec<u8> {
-    let params = brotli::enc::BrotliEncoderParams {
-        quality: 11,
-        ..Default::default()
-    };
-    let mut output = Vec::new();
-    // Writing to an in-memory `Vec<u8>` cannot produce an I/O error, so any
-    // `Err` here is unreachable in practice; ignore it rather than panicking.
-    if brotli::BrotliCompress(&mut payload.as_bytes(), &mut output, &params).is_err() {
-        return Vec::new();
-    }
-    output
-}
-
-/// Decompress a brotli-compressed share-link payload back into a UTF-8 string.
-///
-/// Returns `None` if `bytes` is not valid brotli, or decompresses to invalid UTF-8.
-#[wasm_bindgen]
-pub fn decompress_share_payload(bytes: &[u8]) -> Option<String> {
-    let mut output = Vec::new();
-    brotli::BrotliDecompress(&mut &bytes[..], &mut output).ok()?;
-    String::from_utf8(output).ok()
 }
 
 #[cfg(test)]

@@ -171,8 +171,14 @@ Then(
       hasText: duplicateName,
     })
     await duplicateTab.waitFor({ timeout: 15_000 })
+    // Exact-text match, not `hasText: originalName` — since the display name
+    // no longer carries the `.jianpu` suffix, the original's name (e.g.
+    // "original") is now a substring of the duplicate's (e.g. "original 2"),
+    // so a plain substring match would match both tabs.
     await expect(
-      page.locator('.file-tab-name', { hasText: originalName }),
+      page.locator('.file-tab-name', {
+        hasText: new RegExp(`^${originalName}$`),
+      }),
     ).toHaveCount(1)
     await duplicateTab.click()
     await page.waitForSelector('.monaco-editor .view-lines', {

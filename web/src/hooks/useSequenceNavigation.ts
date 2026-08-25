@@ -9,6 +9,108 @@ interface SelectedSequenceRange {
   entryEndIndex: number
 }
 
+interface LineRange {
+  startLine: number
+  endLine: number
+}
+
+/**
+ * Resolves a single `# sequence` entry (by its 0-based index into
+ * `sequenceEntries`) to its own source line range. A repeated label (e.g.
+ * the closing `Intro` in `Intro, A, B, C, Intro`) resolves to the same
+ * written measures — and therefore the same lines — as every other
+ * occurrence, since `# sequence` only replays already-written measures
+ * rather than duplicating them in the source.
+ */
+function resolveEntryLineRange(
+  sequenceEntries: SequenceEntry[],
+  measureSpans: MeasureSpan[],
+  index: number,
+): LineRange | null {
+  const entry = sequenceEntries[index]
+  const startSpan = measureSpans[entry?.start_measure_index ?? -1]
+  const endSpan = measureSpans[entry?.end_measure_index ?? -1]
+  if (!startSpan || !endSpan) return null
+  return { startLine: startSpan.start_line, endLine: endSpan.end_line }
+}
+
+/**
+ * Resolves a chain-order range of `# sequence` entries (indices into
+ * `sequenceEntries`, already sorted so `startIndex <= endIndex`) to one
+ * source line range per entry.
+ *
+ * A chain can reference sections out of document order (e.g. `c, a` when
+ * the file declares sections `a, b, c`), so the entries aren't necessarily
+ * contiguous, or even ascending, in the source. Returning one range per
+ * entry — rather than collapsing the whole selection into a single
+ * min/max span — lets the caller build a genuinely disjoint Monaco
+ * selection that covers exactly the selected entries and nothing that
+ * merely sits between them in the document (e.g. "b", when the chain is
+ * "c, a"). See the regression test for the concrete case.
+ *
+ * An entry with no resolvable measure span (out of bounds, or referencing a
+ * measure index `measureSpans` doesn't have) is skipped rather than failing
+ * the whole selection.
+ */
+export function computeSequenceSelectionLineRanges(
+  sequenceEntries: SequenceEntry[],
+  measureSpans: MeasureSpan[],
+  startIndex: number,
+  endIndex: number,
+): LineRange[] {
+  const ranges: LineRange[] = []
+  for (let i = startIndex; i <= endIndex; i++) {
+    const range = resolveEntryLineRange(sequenceEntries, measureSpans, i)
+    if (range) ranges.push(range)
+  }
+  return ranges
+}
+
+/**
+ * Resolves a chain-order range of `# sequence` entries to one measure-index
+ * range per entry — the disjoint-measure-range analogue of
+ * `computeSequenceSelectionLineRanges`, but simpler: a sequence entry
+ * already carries its own `start_measure_index`/`end_measure_index`
+ * directly, with no `measureSpans` round-trip needed. Feeds the SVG
+ * preview's highlight (`notifySelection`'s `measureRanges` argument), which
+ * — like the Monaco selection — must highlight exactly the selected entries
+ * and nothing merely sitting between them in the document (e.g. "B" when
+ * the chain is "C, A").
+ */
+export function computeSequenceSelectionMeasureRanges(
+  sequenceEntries: SequenceEntry[],
+  startIndex: number,
+  endIndex: number,
+): { start: number; end: number }[] {
+  const ranges: { start: number; end: number }[] = []
+  for (let i = startIndex; i <= endIndex; i++) {
+    const entry = sequenceEntries[i]
+    if (entry) {
+      ranges.push({
+        start: entry.start_measure_index,
+        end: entry.end_measure_index,
+      })
+    }
+  }
+  return ranges
+}
+
+/**
+ * The smallest single line range spanning every given range — used where a
+ * single contiguous range is unavoidable (the `selectedMeasureRange`
+ * envelope that drives the selection badge, "play selection", the
+ * keyboard-shortcut gate, and the preview's scroll-to-selection target),
+ * as opposed to `computeSequenceSelectionLineRanges`'s disjoint per-entry
+ * ranges, which drive the actual Monaco selection.
+ */
+export function envelopeOfLineRanges(ranges: LineRange[]): LineRange | null {
+  if (ranges.length === 0) return null
+  return {
+    startLine: Math.min(...ranges.map((r) => r.startLine)),
+    endLine: Math.max(...ranges.map((r) => r.endLine)),
+  }
+}
+
 export function useSequenceNavigation(
   sequenceEntries: SequenceEntry[],
   measureSpans: MeasureSpan[],
@@ -17,6 +119,8 @@ export function useSequenceNavigation(
     firstLine: number,
     lastLine: number,
     isEmpty: boolean,
+    revealLine?: number,
+    measureRanges?: { start: number; end: number }[],
   ) => void,
   /**
    * Owned by the caller (`useAppController`) rather than this hook, and
@@ -77,26 +181,66 @@ export function useSequenceNavigation(
       const end = Math.max(indexA, indexB)
       setSelectedIndexRange({ start, end })
 
-      // Mirrors `useSectionNavigation`'s `selectSectionRange`: push the
-      // range into the Monaco selection and the SVG preview's highlight
-      // pipeline. A sequence entry only carries measure indices, not
-      // lines, so resolve each end's measure index to a source line via
-      // `measureSpans` first.
-      const startSpan =
-        measureSpans[sequenceEntries[start]?.start_measure_index ?? -1]
-      const endSpan =
-        measureSpans[sequenceEntries[end]?.end_measure_index ?? -1]
-      if (!startSpan || !endSpan) return
-
-      editorRef.current?.setSelectionByLines(
-        startSpan.start_line,
-        endSpan.end_line,
+      // A sequence entry only carries measure indices, not lines, so
+      // resolve each selected entry to its own source line range via
+      // `measureSpans` first — one range per entry, since the chain can
+      // reference sections out of document order (e.g. `c, a`), so a single
+      // min/max span would also select whatever sits between them (`b`).
+      const lineRanges = computeSequenceSelectionLineRanges(
+        sequenceEntries,
+        measureSpans,
+        start,
+        end,
       )
-      editorRef.current?.focus()
-      // A sequence jump selects a real (non-empty) range, so — like section
-      // jumps — the preview's caret-only measure-background highlight stays
-      // off; the toolbar buttons carry their own highlighting instead.
-      notifySelection(startSpan.start_line, endSpan.end_line, false)
+      if (lineRanges.length === 0) return
+      const envelope = envelopeOfLineRanges(lineRanges)
+      if (!envelope) return
+
+      // The exact disjoint measure ranges to highlight in the SVG preview —
+      // one per selected entry, mirroring `lineRanges` above rather than
+      // the envelope, so "B" (sitting between "C" and "A" in the chain
+      // "C, A") is never highlighted just because it falls inside the
+      // envelope's document-order span.
+      const measureRanges = computeSequenceSelectionMeasureRanges(
+        sequenceEntries,
+        start,
+        end,
+      )
+
+      // Two disjoint entries can sit far apart in a large score (e.g. a
+      // repeated `Intro` resolves to the same written lines as its first
+      // occurrence, way earlier in the source than a later entry it's
+      // selected alongside) — too far apart to both fit on screen at once.
+      // Reveal wherever the drag actually ended (`indexB`, not the smaller
+      // of the two chain indices `start`/`end` above) so the editor scrolls
+      // to the entry the user is currently pointing at, not always
+      // whichever one happens to sit first in the chain.
+      const revealRange =
+        resolveEntryLineRange(sequenceEntries, measureSpans, indexB) ??
+        lineRanges[0]
+
+      // The actual Monaco selection: one disjoint range per entry.
+      editorRef.current?.setSelectionsByLines(lineRanges, revealRange.startLine)
+      // Mirrors `useSectionNavigation`'s `selectSectionRange` for everything
+      // else that only understands a single contiguous range (the selection
+      // badge, "play selection", the keyboard-shortcut gate, and the
+      // preview's scroll-to-selection target) — see `envelopeOfLineRanges`'s
+      // doc comment. A sequence jump selects a real (non-empty) range, so —
+      // like section jumps — the preview's caret-only measure-background
+      // highlight stays off; the toolbar buttons carry their own
+      // highlighting instead. The envelope's own start line is wherever the
+      // chain's earliest entry sits in document order, which isn't
+      // necessarily where the user navigated to (same disjoint-chain
+      // concern as `revealRange` above) — pass `revealRange.startLine`
+      // explicitly so the preview scrolls to that entry too, instead of
+      // silently defaulting to the envelope's.
+      notifySelection(
+        envelope.startLine,
+        envelope.endLine,
+        false,
+        revealRange.startLine,
+        measureRanges,
+      )
     },
     [sequenceEntries, measureSpans, editorRef, notifySelection],
   )

@@ -299,8 +299,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     }
     const result = renderWithHighlightRange(
       msg.source,
-      msg.startMeasureIndex,
-      msg.endMeasureIndex,
+      msg.ranges,
       msg.enabledTracks,
       msg.disabledLyrics,
       GM_INSTRUMENTS,

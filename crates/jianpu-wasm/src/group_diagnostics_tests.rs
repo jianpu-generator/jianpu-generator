@@ -1,4 +1,5 @@
-use crate::types::{group_diagnostics_into_view_zones, DiagnosticOut, DiagnosticSeverity, SpanOut};
+use crate::diagnostics::group_diagnostics_into_view_zones;
+use crate::types::{DiagnosticOut, DiagnosticSeverity, SpanOut};
 
 fn make_diagnostic(severity: DiagnosticSeverity, message: &str, span_end: usize) -> DiagnosticOut {
     DiagnosticOut {

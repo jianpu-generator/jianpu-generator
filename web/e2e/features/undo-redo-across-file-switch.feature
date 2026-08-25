@@ -5,11 +5,11 @@ Feature: Undo/redo scoping across a file switch
     When the app loads the undo-redo file-switch test files
     And I type " 5" at the end of the editor to edit file A
     Then the stored file "a.jianpu" contains "1 2 3 4 5", as seen in undo redo across file switch
-    When I switch the active tab to "b.jianpu" without saving
-    Then the "b.jianpu" tab is the active tab
+    When I switch the active tab to "b" without saving
+    Then the "b" tab is the active tab
     And the editor view-lines show file B's content "5 6 7 1"
-    When I switch the active tab back to "a.jianpu"
-    Then the "a.jianpu" tab is the active tab
+    When I switch the active tab back to "a"
+    Then the "a" tab is the active tab
     And the editor view-lines show file A's edited content "1 2 3 4 5"
     When I focus the editor and press undo until file A's original content is restored
     Then the editor model value equals file A's original source

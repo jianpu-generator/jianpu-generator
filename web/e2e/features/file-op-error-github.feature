@@ -11,8 +11,8 @@ Feature: File-op failure handling for the GitHub storage backend
     And the error modal is shown with message "Could not create file" containing "Internal Server Error"
     When I close the error modal
     Then the new-file button spinner clears and its label resets to "New"
-    And no "untitled.jianpu" tab exists
+    And no "untitled" tab exists
     And the active tab is unchanged from before the failed create
     When I retry the "New" button in the file actions menu
-    Then the retried create succeeds and the active tab becomes "untitled.jianpu"
+    Then the retried create succeeds and the active tab becomes "untitled"
     And the new-file button has no pending spinner

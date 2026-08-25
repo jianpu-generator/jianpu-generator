@@ -69,6 +69,8 @@ export function useNoteSelection(
     startLine: number,
     endLine: number,
     isEmpty: boolean,
+    revealLine?: number,
+    measureRanges?: { start: number; end: number }[],
   ) => void,
 ) {
   // Live/shared views never mount an Editor, so there's no Monaco

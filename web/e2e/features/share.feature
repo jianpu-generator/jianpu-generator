@@ -10,7 +10,7 @@ Feature: Share links
     Then the file switcher is hidden entirely
     When I open the share URL for "shared-test.jianpu" again
     And I click "Import to my scores"
-    Then the file switcher shows "shared-test.jianpu"
+    Then the file switcher shows "shared-test"
     And the shared preview banner is gone
 
   Scenario: Collapses the editor pane and hides its toggle when viewing a shared score
@@ -29,7 +29,7 @@ Feature: Share links
     Then the shared preview banner is visible
     When I click "Discard"
     Then the shared preview banner is gone
-    And the file switcher no longer shows "shared-test.jianpu"
+    And the file switcher no longer shows "shared-test"
 
   Scenario: Opens legacy uncompressed share links
     Given local storage is cleared, as seen in share

@@ -1,4 +1,5 @@
 use super::*;
+use crate::share_payload::{compress_share_payload, decompress_share_payload};
 
 #[test]
 fn share_payload_round_trips_through_brotli() {

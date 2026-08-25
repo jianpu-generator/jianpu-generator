@@ -1,6 +1,7 @@
+use crate::diagnostics::diagnostic_from_error;
 use crate::types::{
-    diagnostic_from_error, ListPartDeclarationsResponse, ListPartsResponse, PartDeclarationModeOut,
-    PartDeclarationOut, PartOut,
+    ListPartDeclarationsResponse, ListPartsResponse, PartDeclarationModeOut, PartDeclarationOut,
+    PartOut,
 };
 use jianpu_generator::parser::parts_parser::{InstrumentInfo, SourcePartMode};
 use jianpu_generator::{list_part_declarations_from_source, list_parts_from_source, source_edit};

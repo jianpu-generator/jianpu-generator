@@ -7,7 +7,7 @@ Feature: Import a jianpu source from a previously exported file
   Scenario: Import recovers the original source from a previously exported PDF
     When I export the active file as a PDF
     And I import the exported PDF file
-    Then the recovered file opens under a deduped name "test 2.jianpu"
+    Then the recovered file opens under a deduped name "test 2"
     And the Monaco editor model value equals the original source
 
   Scenario: Import shows a graceful error for a file with no embedded source

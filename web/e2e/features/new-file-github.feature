@@ -6,9 +6,9 @@ Feature: New file via GitHub storage backend
     When the app loads the GitHub-backed file list for new-file creation
     And I click the "New" button to create a new file
     Then the new-file button shows a pending spinner
-    And the active tab becomes the new file "untitled.jianpu"
+    And the active tab becomes the new file "untitled"
     And the new-file button disappears once the create resolves
     And the new-file create PUT for "scores/untitled.jianpu" carries no sha
     When I reload the page after creating
-    Then the file list still shows the new file "untitled.jianpu" after reload
-    And the file list still shows "original.jianpu" exactly once
+    Then the file list still shows the new file "untitled" after reload
+    And the file list still shows "original" exactly once

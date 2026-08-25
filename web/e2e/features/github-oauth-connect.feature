@@ -17,7 +17,7 @@ Feature: GitHub OAuth device-flow connect and disconnect
     And the mocked GitHub user exists for disconnect
     And the GitHub Contents API is mocked with a seeded file "scores/song.jianpu" and PUT forbidden
     When the app loads the GitHub-backed file list for disconnect
-    And I select the "song.jianpu" tab before disconnecting
+    And I select the "song" tab before disconnecting
     And I open the storage settings modal for OAuth
     Then the app shows connected as the mocked owner
     When I click the GitHub OAuth "Disconnect" button

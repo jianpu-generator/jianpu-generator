@@ -3,7 +3,7 @@ import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef } from 'react'
 import type { Diagnostic, MeasureSpan } from '../types'
 import type { WorkerRequest } from '../worker/jianpu.worker'
-import { measureRangeInSpan } from './workerHelpers'
+import { measureRangeInSpanWithReveal } from './workerHelpers'
 
 interface UseJianpuWorkerRenderRequestsParams {
   workerRef: RefObject<Worker | null>
@@ -22,9 +22,19 @@ interface UseJianpuWorkerRenderRequestsParams {
   setRendering: (value: boolean) => void
   renderRequestIdRef: RefObject<number>
   latestRenderIdRef: RefObject<number>
-  selectedMeasureRange: { start: number; end: number } | null
+  selectedMeasureRange: {
+    start: number
+    end: number
+    revealMeasureIndex: number
+    highlightRanges?: { start: number; end: number }[]
+  } | null
   setSelectedMeasureRange: (
-    value: { start: number; end: number } | null,
+    value: {
+      start: number
+      end: number
+      revealMeasureIndex: number
+      highlightRanges?: { start: number; end: number }[]
+    } | null,
   ) => void
   setHighlightedDocuments: (value: SvgDocumentOut[]) => void
   highlightRenderRequestIdRef: RefObject<number>
@@ -42,6 +52,8 @@ interface UseJianpuWorkerRenderRequestsParams {
     start: number
     end: number
     isEmpty: boolean
+    revealLine: number
+    measureRanges?: { start: number; end: number }[]
   } | null>
 }
 
@@ -138,11 +150,19 @@ export function useJianpuWorkerRenderRequests({
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: lastSelectionRef/cursorOffsetTimerRef/measureSpansRef are stable refs passed in as params
   const notifySelection = useCallback(
-    (startLine: number, endLine: number, isEmpty: boolean) => {
+    (
+      startLine: number,
+      endLine: number,
+      isEmpty: boolean,
+      revealLine: number = startLine,
+      measureRanges?: { start: number; end: number }[],
+    ) => {
       lastSelectionRef.current = {
         start: startLine,
         end: endLine,
         isEmpty,
+        revealLine,
+        measureRanges,
       }
       if (cursorOffsetTimerRef.current !== null) {
         window.clearTimeout(cursorOffsetTimerRef.current)
@@ -151,7 +171,13 @@ export function useJianpuWorkerRenderRequests({
         cursorOffsetTimerRef.current = null
         measureRangeIsCaretOnlyRef.current = isEmpty
         setSelectedMeasureRange(
-          measureRangeInSpan(measureSpansRef.current, startLine, endLine),
+          measureRangeInSpanWithReveal(
+            measureSpansRef.current,
+            startLine,
+            endLine,
+            revealLine,
+            measureRanges,
+          ),
         )
       }, debounceMs)
     },
@@ -164,16 +190,33 @@ export function useJianpuWorkerRenderRequests({
     if (!sel) return
     measureRangeIsCaretOnlyRef.current = sel.isEmpty
     setSelectedMeasureRange(
-      measureRangeInSpan(measureSpans, sel.start, sel.end),
+      measureRangeInSpanWithReveal(
+        measureSpans,
+        sel.start,
+        sel.end,
+        sel.revealLine,
+        sel.measureRanges,
+      ),
     )
   }, [measureSpans])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: workerRef/sourceRef/highlightRenderRequestIdRef/latestHighlightRenderIdRef are stable refs passed in as params
   useEffect(() => {
-    // The amber measure-background highlight is only for a bare caret —
-    // an actual text/note selection still populates `selectedMeasureRange`
-    // for playback/badge purposes, but shouldn't paint this background.
-    if (selectedMeasureRange === null || !measureRangeIsCaretOnlyRef.current) {
+    // A `# sequence` chain selection carries its own exact disjoint
+    // highlight ranges (`highlightRanges`, from `computeSequenceSelectionMeasureRanges`)
+    // — bypassing the caret-only gate below entirely, since it's the only
+    // caller that ever needs a real (non-caret) range highlighted. Every
+    // other range selection (section jumps, note/lyric drag-select, plain
+    // Monaco text selection) keeps today's behavior: only a bare caret gets
+    // the amber measure-background highlight; a real selection still
+    // populates `selectedMeasureRange` for playback/badge purposes, but
+    // shouldn't paint this background.
+    const highlightRanges =
+      selectedMeasureRange?.highlightRanges ??
+      (measureRangeIsCaretOnlyRef.current && selectedMeasureRange
+        ? [{ start: selectedMeasureRange.start, end: selectedMeasureRange.end }]
+        : null)
+    if (!highlightRanges) {
       setHighlightedDocuments([])
       return
     }
@@ -185,8 +228,7 @@ export function useJianpuWorkerRenderRequests({
       type: 'renderWithHighlightRange',
       source: sourceRef.current,
       id,
-      startMeasureIndex: selectedMeasureRange.start,
-      endMeasureIndex: selectedMeasureRange.end,
+      ranges: highlightRanges,
       enabledTracks,
       disabledLyrics: disabledLyricsTracks,
     } satisfies WorkerRequest)

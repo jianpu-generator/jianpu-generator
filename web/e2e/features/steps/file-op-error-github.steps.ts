@@ -69,7 +69,7 @@ When(
 
     await openFileList(page)
     const originalTab = page.locator('.file-tab-name', {
-      hasText: 'original.jianpu',
+      hasText: 'original',
     })
     await originalTab.waitFor({ timeout: 15_000 })
   },

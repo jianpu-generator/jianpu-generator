@@ -6,7 +6,7 @@ use crate::grid_layout::highlight::compute_measure_highlights_for_range;
 use crate::grid_layout::layout::{
     block_column_width, compute_measure_highlight_location, LABEL_COLS,
 };
-use crate::grid_layout::types::Header;
+use crate::grid_layout::types::{Header, MeasureRange};
 use std::collections::HashMap;
 
 fn simple_block(col_count: u32) -> MeasureBlock {
@@ -157,7 +157,7 @@ fn range_with_single_index_returns_one_highlight_matching_location() {
     let highlights = compute_measure_highlights_for_range(
         &page_systems,
         &HashMap::new(),
-        (0, 0),
+        &[MeasureRange { start: 0, end: 0 }],
         &no_header(),
         20.0,
         false,
@@ -179,7 +179,7 @@ fn range_spanning_two_measures_returns_two_highlights() {
     let highlights = compute_measure_highlights_for_range(
         &page_systems,
         &HashMap::new(),
-        (0, 1),
+        &[MeasureRange { start: 0, end: 1 }],
         &no_header(),
         20.0,
         false,
@@ -199,7 +199,7 @@ fn range_out_of_bounds_returns_empty_vec() {
     let highlights = compute_measure_highlights_for_range(
         &page_systems,
         &HashMap::new(),
-        (5, 5),
+        &[MeasureRange { start: 5, end: 5 }],
         &no_header(),
         20.0,
         false,
@@ -214,7 +214,7 @@ fn range_spanning_two_pages_reports_correct_page_indices() {
     let highlights = compute_measure_highlights_for_range(
         &page_systems,
         &HashMap::new(),
-        (0, 1),
+        &[MeasureRange { start: 0, end: 1 }],
         &no_header(),
         20.0,
         false,
@@ -376,3 +376,7 @@ fn bar_number_click_target_includes_a_later_block_with_a_label() {
 #[cfg(test)]
 #[path = "tests_highlight_pages.rs"]
 mod tests_highlight_pages;
+
+#[cfg(test)]
+#[path = "tests_highlight_disjoint_ranges.rs"]
+mod tests_highlight_disjoint_ranges;

@@ -41,7 +41,7 @@ Then("the viewer's page URL has no hash", async () => {
 Then("the viewer's file switcher shows the live filename", async () => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
   await expect(fileSwitcherTrigger(state.viewerPage)).toContainText(
-    LIVE_FILENAME,
+    LIVE_FILENAME.replace(/\.jianpu$/, ''),
   )
 })
 

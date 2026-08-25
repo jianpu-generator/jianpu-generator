@@ -9,4 +9,4 @@ Feature: File switcher loading spinner for the GitHub storage backend
     And opening the file list shows the hint "Loading files from GitHub…"
     When the GitHub directory listing resolves
     Then the file switcher trigger spinner is gone and the caret is visible
-    And the file list shows "loading.jianpu"
+    And the file list shows "loading"

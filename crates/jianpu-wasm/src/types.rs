@@ -1,4 +1,3 @@
-use jianpu_generator::error::{Diagnostic, IrrecoverableError, Warning};
 use serde::Serialize;
 use tsify::Tsify;
 
@@ -27,6 +26,26 @@ pub struct SpanOut {
     pub start: usize,
     /// UTF-8 byte offset (exclusive).
     pub end: usize,
+}
+
+/// One inclusive measure-index range from JS, deserialized via
+/// `serde_wasm_bindgen::from_value` rather than a wasm-bindgen `Vec<T>` param
+/// (which only works for `JsCast` types) — see [`crate::note_selection_types::NoteCellIn`]
+/// for the same convention. Maps 1:1 onto [`jianpu_generator::grid_layout::MeasureRange`].
+#[derive(Debug, Clone, Copy, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct MeasureRangeIn {
+    pub start: usize,
+    pub end: usize,
+}
+
+impl From<MeasureRangeIn> for jianpu_generator::grid_layout::MeasureRange {
+    fn from(r: MeasureRangeIn) -> Self {
+        jianpu_generator::grid_layout::MeasureRange {
+            start: r.start,
+            end: r.end,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
@@ -306,94 +325,4 @@ pub struct DiagnosticViewZoneOut {
     /// 1-based line number; view zone is inserted after this line.
     pub after_line_number: usize,
     pub messages: Vec<DiagnosticMessageOut>,
-}
-
-pub(crate) fn diagnostic_from_error(e: &IrrecoverableError) -> DiagnosticOut {
-    let span = e
-        .span()
-        .map(|s| SpanOut {
-            start: s.start,
-            end: s.end,
-        })
-        .unwrap_or(SpanOut { start: 0, end: 0 });
-    DiagnosticOut {
-        severity: DiagnosticSeverity::Error,
-        message: e.message(),
-        span,
-    }
-}
-
-pub(crate) fn diagnostic_from_warning(e: Warning) -> DiagnosticOut {
-    DiagnosticOut {
-        severity: DiagnosticSeverity::Warning,
-        message: e.message,
-        span: SpanOut {
-            start: e.span.start,
-            end: e.span.end,
-        },
-    }
-}
-
-pub(crate) fn diagnostic_from_diagnostic(d: Diagnostic) -> DiagnosticOut {
-    match d {
-        Diagnostic::Warning(w) => diagnostic_from_warning(w),
-        Diagnostic::Error(e) => DiagnosticOut {
-            severity: DiagnosticSeverity::Error,
-            message: e.message(),
-            span: SpanOut {
-                start: e.span.start,
-                end: e.span.end,
-            },
-        },
-    }
-}
-
-fn byte_offset_to_line_number(source: &str, byte_offset: usize) -> usize {
-    source
-        .as_bytes()
-        .iter()
-        .take(byte_offset.min(source.len()))
-        .filter(|&&b| b == b'\n')
-        .count()
-        + 1
-}
-
-struct ViewZoneAccumulator {
-    severity: DiagnosticSeverity,
-    messages: Vec<DiagnosticMessageOut>,
-}
-
-pub(crate) fn group_diagnostics_into_view_zones(
-    source: &str,
-    diagnostics: &[DiagnosticOut],
-) -> Vec<DiagnosticViewZoneOut> {
-    use std::collections::BTreeMap;
-
-    let mut groups: BTreeMap<(usize, u8), ViewZoneAccumulator> = BTreeMap::new();
-
-    for d in diagnostics {
-        let line = byte_offset_to_line_number(source, d.span.end);
-        let severity_order = match d.severity {
-            DiagnosticSeverity::Error => 0,
-            DiagnosticSeverity::Warning => 1,
-        };
-        let entry = groups
-            .entry((line, severity_order))
-            .or_insert_with(|| ViewZoneAccumulator {
-                severity: d.severity.clone(),
-                messages: Vec::new(),
-            });
-        entry.messages.push(DiagnosticMessageOut {
-            message: d.message.clone(),
-        });
-    }
-
-    groups
-        .into_iter()
-        .map(|((line, _), accumulator)| DiagnosticViewZoneOut {
-            severity: accumulator.severity,
-            after_line_number: line,
-            messages: accumulator.messages,
-        })
-        .collect()
 }

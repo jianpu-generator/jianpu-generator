@@ -5,13 +5,13 @@ Feature: Tab switch force-save via GitHub storage backend
     And GitHub auth is seeded for the mocked owner
     And a fake clock is installed to prevent an autosave race with the tab switch
     When the app loads the GitHub-backed file list for a tab-switch save
-    And I select the "a.jianpu" tab to test the tab switch
+    And I select the "a" tab to test the tab switch
     And I append " 5" to the editor to trigger a tab-switch save
     Then no PUT has been sent yet before the tab switch
     And the tab-switch status badge shows "Unsaved"
-    When I switch to the "b.jianpu" tab from the file list
+    When I switch to the "b" tab from the file list
     Then the tab-switch PUT lands for "scores/a.jianpu" containing "1 2 3 4 5"
-    When I switch to the "a.jianpu" tab from the file list
+    When I switch to the "a" tab from the file list
     And I reload the page after the tab-switch save
-    Then the tab-switch-saved file list still shows "a.jianpu" after reload
+    Then the tab-switch-saved file list still shows "a" after reload
     And the reloaded editor still contains the tab-switch-saved edit "1 2 3 4 5"
