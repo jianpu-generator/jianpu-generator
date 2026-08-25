@@ -64,11 +64,14 @@ time=4/4 key=C4 bpm=120
     assert_eq!(verse_texts(1), vec!["one", "two", "three", "four"]);
 }
 
-/// A part whose verse count changes between two consecutive measures must never
-/// have those measures combined into the same rendering system, regardless of
-/// available horizontal space.
+/// A part whose verse count changes between two consecutive measures no
+/// longer forces a new system: systems pack purely by count, and a system's
+/// rows become the union of every verse used across its measures (see the
+/// "union-of-parts system packing" feature — union_row_order/pad_chunk_to_union
+/// in `grid_layout::layout_systems`). The measure missing a verse gets it
+/// padded in as a blank verse row rather than triggering an early break.
 #[test]
-fn verse_count_change_forces_new_system() {
+fn verse_count_change_does_not_force_new_system() {
     let input = r#"# metadata
 title = "t"
 author = "a"
@@ -92,7 +95,7 @@ time=4/4 key=C4 bpm=120
     let systems = grid_layout::layout::pack_into_systems(&compile_result.blocks, &config);
     assert_eq!(
         systems.len(),
-        2,
-        "a verse-count change for the same part must force a new system even though both measures would fit in one"
+        1,
+        "a verse-count change alone should not force a new system; both measures fit in one"
     );
 }

@@ -651,7 +651,7 @@ Each verse renders as its own row directly under the notes row, in verse order, 
 
 Each verse row also gets its own label at the left margin, showing the part's abbreviation (e.g. `M`, same on every verse row) — clicking or drag-selecting it selects every syllable that verse sings across the system, the same way clicking a part's own label selects every note that part sounds.
 
-The number of verse lines is per-measure: one measure can have one verse while the next has two. A part's verse count changing from one measure to the next always starts a new system at that measure boundary, regardless of how much horizontal space is left on the current line — verses can't silently appear or disappear mid-system.
+The number of verse lines is per-measure: one measure can have one verse while the next has two. A part's verse count changing from one measure to the next no longer forces a new system: a system's verse rows for a part are the union of every verse it has across the system's measures (see [Not-mentioned parts](#not-mentioned-parts) below), and a measure missing a verse renders that row blank for that measure only.
 
 ### Standalone `lyrics` parts
 
@@ -766,7 +766,7 @@ When a part is **not mentioned** in a measure (no `[Key]` line covers it), it is
 
 - A `follow[X]` part that is not mentioned copies `X`'s content (audio plays the same as X).
 - A non-follow part that is not mentioned is filled with rests (`0`) or no-lyrics (`_`).
-- All measures sharing a system line must render identical rows. A measure whose rendered shape differs starts a new system line.
+- Measures sharing a system line no longer need to render identical rows. A system's rows are the union of every part (and, per part, every verse) across all of its measures, in `[parts]` declaration order then verse order. A measure missing a row its system has (a part it doesn't mention, a resting part hidden via `hide_resting_parts`, or a verse it lacks) gets that row padded in as a full-measure rest or blank verse — it isn't clickable or selectable there, since no note/syllable actually sounds. Systems are otherwise packed purely by count, up to `max_measures_per_system` measures. The one exception that still starts a new system line is a `merge_duplicate_measures_across_parts=` change between measures: since that setting controls whether identical parts merge into one shared row, a change partway through would make the union ambiguous.
 
 ### Omitted lines — fill table
 

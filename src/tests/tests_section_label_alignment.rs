@@ -18,7 +18,20 @@ fn section_label_x(svg: &str, label: &str) -> f32 {
 
 #[test]
 fn section_labels_align_when_leading_measures_are_hidden_via_part_filter() {
+    // With part `a` filtered out below, measures 0-1 have zero parts each —
+    // vacuously "all rest" — so `merge_rest_runs` collapses them into a
+    // single `MultiMeasureRest` block (labeled XXX) before layout ever sees
+    // them; measure 2 (`b`+`c`) is a second, separate block. That leaves only
+    // 2 blocks total by the time `pack_into_systems` runs, so
+    // `max_measures_per_system = 1` is needed to force them into two
+    // separate systems — union-of-parts packing packs purely by count, so
+    // without this cap both blocks would land in one system and XXX/YYY
+    // would legitimately sit at different measure-column x-positions rather
+    // than both at each system's own start.
     let input = concat!(
+        "# metadata\n",
+        "max_measures_per_system = 1\n",
+        "\n",
         "# parts\n",
         "a = notes\n",
         "b = notes\n",

@@ -196,13 +196,18 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
     );
 }
 
-#[test]
-fn part_label_width_is_consistent_across_systems_of_differing_density() {
-    // Regression test: a system containing only a sparse part ("a") must
-    // render its part label at the same x-position as a denser system
-    // containing an extra chord-symbol part ("b"), even though the two
-    // systems have very different musical column counts.
+/// Shared fixture for the two density regression tests below: a sparse
+/// system ("a" only) followed by a denser one (extra chord-symbol part "b"),
+/// forced into two systems via `max_measures_per_system = 2` — union-of-parts
+/// packing packs purely by count now, so without this cap all 3 measures
+/// (despite "a"-only vs "a"+"b" differing parts) would land in a single
+/// system and there'd be nothing cross-system to compare. Returns page 0's
+/// resolved absolute elements.
+fn density_fixture_page_elements() -> Vec<compositor::types::AbsoluteElement> {
     let input = concat!(
+        "# metadata\n",
+        "max_measures_per_system = 2\n",
+        "\n",
         "# parts\n",
         "a = notes\n",
         "b = chords\n",
@@ -234,7 +239,7 @@ fn part_label_width_is_consistent_across_systems_of_differing_density() {
     let compile_result = consolidator::consolidate(compile_result);
     let grid_pages =
         grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None).pages;
-    let abs = coordinate_resolver::resolve(
+    let mut abs = coordinate_resolver::resolve(
         &grid_pages,
         config.note_number_width as f32,
         config.part_label_width_pt as f32,
@@ -243,9 +248,18 @@ fn part_label_width_is_consistent_across_systems_of_differing_density() {
         config.chords_font_size(),
     )
     .expect("coordinate resolver should not fail in tests");
+    abs.swap_remove(0).elements
+}
 
-    let label_x_positions: Vec<f32> = abs[0]
-        .elements
+#[test]
+fn part_label_width_is_consistent_across_systems_of_differing_density() {
+    // Regression test: a system containing only a sparse part ("a") must
+    // render its part label at the same x-position as a denser system
+    // containing an extra chord-symbol part ("b"), even though the two
+    // systems have very different musical column counts.
+    let elements = density_fixture_page_elements();
+
+    let label_x_positions: Vec<f32> = elements
         .iter()
         .filter_map(|e| match &e.content {
             AbsoluteContent::Text { content, .. } if content == "a" => Some(e.x),
@@ -272,55 +286,15 @@ fn leading_and_trailing_bar_lines_align_across_systems_of_differing_density() {
     // the trailing bar line (closing the last measure) of every system must
     // land at the same x-position, even though systems differ in musical
     // density — a sparse one-measure system ("a" only) vs. a denser system
-    // with an extra chord-symbol part ("b"). Uses the same input as
+    // with an extra chord-symbol part ("b"). Uses the same fixture as
     // `part_label_width_is_consistent_across_systems_of_differing_density`.
-    let input = concat!(
-        "# parts\n",
-        "a = notes\n",
-        "b = chords\n",
-        "\n",
-        "# score\n",
-        "[a] 1\n",
-        "\n",
-        "[a]1\n",
-        "\n",
-        "[a]1\n",
-        "[b] 6m __~_6m__0_\n",
-    );
-    let score = compile(input, "test", &[]).unwrap();
-    let config = render_config::RenderConfig::from_metadata(&score.metadata);
-    let header = grid_layout::types::Header {
-        title: score.metadata.title.clone(),
-        subtitle: score.metadata.subtitle.clone(),
-        author: score.metadata.author.clone(),
-        part_list: vec![],
-        parts_list_columns: 3,
-        sequence: None,
-        title_font_size: score.metadata.title_font_size as f32,
-        subtitle_font_size: score.metadata.subtitle_font_size as f32,
-        author_font_size: score.metadata.author_font_size as f32,
-        sequence_font_size: score.metadata.sequence_font_size as f32,
-        part_legend_font_size: score.metadata.part_legend_font_size as f32,
-    };
-    let compile_result = compiler::compile(&score);
-    let compile_result = consolidator::consolidate(compile_result);
-    let grid_pages =
-        grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None).pages;
-    let abs = coordinate_resolver::resolve(
-        &grid_pages,
-        config.note_number_width as f32,
-        config.part_label_width_pt as f32,
-        config.lyric_font_sizes(),
-        config.notes_font_size(),
-        config.chords_font_size(),
-    )
-    .expect("coordinate resolver should not fail in tests");
+    let elements = density_fixture_page_elements();
     // Bar lines are drawn once per system on the note-head sub-row of the
     // first part, so their y-coordinate uniquely identifies which system a
     // bar line belongs to.
     let mut bar_lines_by_row: std::collections::BTreeMap<i64, Vec<f32>> =
         std::collections::BTreeMap::new();
-    for e in &abs[0].elements {
+    for e in &elements {
         if matches!(e.content, AbsoluteContent::BarLine { .. }) {
             bar_lines_by_row
                 .entry((e.y * 1000.0).round() as i64)

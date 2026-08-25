@@ -219,13 +219,6 @@ fn blocks_exceeding_max_measures_per_system_split_into_two_systems() {
     assert_eq!(systems[1].len(), 1);
 }
 
-#[test]
-fn different_row_ids_start_new_system() {
-    let blocks = vec![make_block("A", 3), make_block("B", 3)];
-    let systems = pack_into_systems(&blocks, &cfg());
-    assert_eq!(systems.len(), 2);
-}
-
 fn make_system_single_note_block() -> Vec<MeasureBlock> {
     vec![make_block("S", 3)] // 4 musical cols, bar at compiler col 3
 }
