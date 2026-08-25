@@ -1,0 +1,127 @@
+import { expect } from '@playwright/test'
+import { focusEditor } from '../../fileSwitcherHelpers'
+import { Given, Then, When } from './fixtures'
+
+/**
+ * Self-contained source (not a demo file) with a generous "max measures per
+ * system" so both measures render in one system and both part labels stay
+ * within the viewport. Melody carries lyrics; Harmony doesn't, so the test
+ * can also assert Harmony's absence stays a no-op rather than an error.
+ *
+ * Measure 0: Melody "1 2" + lyrics "do re", Harmony "5 6" (2 notes)
+ * Measure 1: Melody "3 4" + lyrics "mi fa", Harmony "7 1'" (2 notes)
+ */
+const source = [
+  '# metadata',
+  'title = "part label drag lyric test"',
+  'max_measures_per_system = 48',
+  '',
+  '# parts',
+  'Melody [M] = notes+lyrics',
+  'Harmony [H] = notes',
+  '',
+  '# score',
+  '[M] 1 2', // measure 0
+  '[M] do re', // verse 0
+  '[H] 5 6',
+  '',
+  '[M] 3 4', // measure 1
+  '[M] mi fa', // verse 0
+  "[H] 7 1'",
+].join('\n')
+
+async function loadFixture(page: import('@playwright/test').Page) {
+  await page.addInitScript((source) => {
+    localStorage.setItem(
+      'jianpu:files:v1',
+      JSON.stringify({
+        active: 'part-label-drag-lyric-test.jianpu',
+        userFiles: { 'part-label-drag-lyric-test.jianpu': source },
+        bin: {},
+        fileIds: {
+          'part-label-drag-lyric-test.jianpu':
+            'part-label-drag-lyric-test-id-001',
+        },
+      }),
+    )
+  }, source)
+}
+
+async function primeMeasureSpans(page: import('@playwright/test').Page) {
+  await focusEditor(page)
+  await page.keyboard.press('Control+g')
+  await page.keyboard.type('10')
+  await page.keyboard.press('Enter')
+  await expect(page.locator('button.play-measure-btn')).toHaveText(/Measure/, {
+    timeout: 5_000,
+  })
+  await expect(
+    page.locator('.preview-page [data-testid="measure-highlight"]').first(),
+  ).toBeVisible({ timeout: 5_000 })
+}
+
+Given('the part-label lyric-drag fixture is loaded', async ({ page }) => {
+  await loadFixture(page)
+  await page.goto('/')
+
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
+  await page.waitForSelector('[data-tag="part-label"][data-part-index="1"]', {
+    timeout: 10_000,
+  })
+  await primeMeasureSpans(page)
+})
+
+When(
+  'I drag from the Melody part label to the Harmony part label, as seen in part label drag selects lyrics',
+  async ({ page }) => {
+    const melodyLabel = page
+      .locator('[data-tag="part-label"][data-part-index="0"]')
+      .first()
+    const harmonyLabel = page
+      .locator('[data-tag="part-label"][data-part-index="1"]')
+      .first()
+    await expect(melodyLabel).toBeVisible({ timeout: 5_000 })
+    await expect(harmonyLabel).toBeVisible({ timeout: 5_000 })
+
+    const melodyBox = await melodyLabel.boundingBox()
+    const harmonyBox = await harmonyLabel.boundingBox()
+    if (!melodyBox || !harmonyBox) {
+      throw new Error('Could not get bounding boxes for the part labels.')
+    }
+
+    await page.mouse.move(
+      melodyBox.x + melodyBox.width / 2,
+      melodyBox.y + melodyBox.height / 2,
+    )
+    await page.mouse.down()
+    await page.mouse.move(
+      harmonyBox.x + harmonyBox.width / 2,
+      harmonyBox.y + harmonyBox.height / 2,
+      { steps: 10 },
+    )
+    await page.mouse.up()
+  },
+)
+
+Then(
+  '{int} notes are drag-selected in total, as seen in part label drag selects lyrics',
+  async ({ page }, count: number) => {
+    // Melody's 4 notes + Harmony's 4 notes = 8.
+    await expect(
+      page.locator('[data-tag="note"][data-note-drag-selected]'),
+    ).toHaveCount(count)
+  },
+)
+
+Then(
+  '{int} lyrics are drag-selected in total, as seen in part label drag selects lyrics',
+  async ({ page }, count: number) => {
+    // Only Melody carries lyrics (4 syllables); Harmony has none, so the total
+    // stays 4 rather than erroring or double-counting.
+    await expect(
+      page.locator('[data-tag="lyric"][data-lyric-drag-selected]'),
+    ).toHaveCount(count)
+  },
+)

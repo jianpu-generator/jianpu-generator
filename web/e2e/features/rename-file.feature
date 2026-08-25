@@ -1,0 +1,10 @@
+Feature: Rename file via the local storage backend
+
+  Scenario: SVG preview persists after renaming the active file
+    Given a local-storage-backed file "original.jianpu" is seeded for renaming
+    When the app loads the seeded rename test file
+    And I double-click the active tab name to enter rename mode
+    And I fill the active tab's rename input with "renamed.jianpu" and press Enter
+    Then the active tab shows the name "renamed.jianpu"
+    And the file switcher trigger shows the renamed file "renamed.jianpu"
+    And the SVG preview is still visible without any manual edits

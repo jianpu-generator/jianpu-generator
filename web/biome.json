@@ -38,6 +38,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["e2e/features/steps/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noEmptyPattern": "off"
+          }
+        }
+      }
     }
   ],
   "assist": {

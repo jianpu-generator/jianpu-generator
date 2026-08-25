@@ -13,6 +13,7 @@ dist-ssr
 .vite
 *.local
 test-results
+.features-gen
 
 # Editor directories and files
 .vscode/*

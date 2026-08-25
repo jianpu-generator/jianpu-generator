@@ -16,7 +16,7 @@
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "preview": "vite preview",
-    "test:e2e": "playwright test",
+    "test:e2e": "bddgen && playwright test",
     "test:unit": "vitest run"
   },
   "dependencies": {
@@ -51,6 +51,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "knip": "^6.16.1",
+    "playwright-bdd": "^9.2.0",
     "typescript": "~7.0.2",
     "vite": "^7.3.1",
     "vitest": "^4.1.9",
