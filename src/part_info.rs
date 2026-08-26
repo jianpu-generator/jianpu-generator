@@ -124,34 +124,3 @@ pub fn list_parts_from_source(
         })
         .collect())
 }
-
-/// A group declared in the `# groups` section.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GroupInfo {
-    /// Abbreviation used for `--tracks` filtering and legend display.
-    pub abbreviation: String,
-    /// Full display name from the declaration left-hand side.
-    pub display_name: String,
-    /// Raw member abbreviations (parts or earlier groups).
-    pub members: Vec<String>,
-}
-
-/// List group declarations from a `.jianpu` source string.
-pub fn list_groups_from_source(
-    source: &str,
-    filename: &str,
-    instruments: &[InstrumentInfo],
-) -> Result<Vec<GroupInfo>, IrrecoverableError> {
-    let doc = crate::parser::parse(source, filename, instruments)?;
-    Ok(doc
-        .group
-        .map(|group_section| group_section.groups)
-        .unwrap_or_default()
-        .into_iter()
-        .map(|g| GroupInfo {
-            abbreviation: g.abbreviation,
-            display_name: g.display_name,
-            members: g.members,
-        })
-        .collect())
-}

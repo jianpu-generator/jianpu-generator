@@ -29,13 +29,11 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
     let sequence = doc.sequence;
     let sequence_parse_errors = doc.sequence_parse_errors;
     let declarations = doc.declarations;
-    let group = doc.group;
     let document_diagnostics: Vec<Diagnostic> = doc
         .section_structure_errors
         .into_iter()
         .chain(doc.metadata_parse_errors)
         .chain(doc.parts_parse_errors)
-        .chain(doc.group_parse_errors)
         .map(Diagnostic::Error)
         .collect();
     let global_resolution_multipliers = compute_global_resolution_multipliers(&doc.tracks);
@@ -76,13 +74,7 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
         sequence: None,
     };
     validate_ties(&mut score);
-    resolve_sequence(
-        &mut score,
-        sequence,
-        sequence_parse_errors,
-        &declarations,
-        group.as_ref(),
-    );
+    resolve_sequence(&mut score, sequence, sequence_parse_errors, &declarations);
     Ok(score)
 }
 

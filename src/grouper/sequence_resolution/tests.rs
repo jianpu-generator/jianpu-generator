@@ -8,7 +8,7 @@ fn source_with(body: &str, sequence: &str) -> String {
 
 fn source_with_voices(body: &str, sequence: &str) -> String {
     format!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nSoprano [S] = notes\nAlto 2 [A2] = notes\nTenor [T] = notes\n\n# groups\nUpper voices [U] = S A2\n\n# sequence\n{sequence}\n\n# score\n{body}\n"
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nSoprano [S] = notes\nAlto 2 [A2] = notes\nTenor [T] = notes\n\n# sequence\n{sequence}\n\n# score\n{body}\n"
     )
 }
 
@@ -121,18 +121,6 @@ fn part_omission_suffix_resolves_to_omit_parts_on_the_span() {
 }
 
 #[test]
-fn part_omission_suffix_expands_a_group_to_its_member_parts() {
-    let score = parse_and_group(&source_with_voices(voices_body(), "Chorus(-U)"));
-    let sequence = score.sequence.expect("expected a resolved sequence");
-    // The group `U` [Upper voices] = S A2 expands to its member parts for
-    // MIDI/WAV part filtering...
-    assert_eq!(sequence[0].omit_parts, vec!["S", "A2"]);
-    // ...but stays unexpanded, as written, for the "Sequence: ..." summary
-    // line: it should show "(-U)", not "(-S -A2)".
-    assert_eq!(sequence[0].omit_parts_display, vec!["U"]);
-}
-
-#[test]
 fn part_omission_suffix_with_unknown_abbreviation_is_a_recoverable_error() {
     let score = parse_and_group(&source_with_voices(voices_body(), "Chorus(-Bogus)"));
     let messages = all_error_messages(&score);
@@ -141,7 +129,7 @@ fn part_omission_suffix_with_unknown_abbreviation_is_a_recoverable_error() {
     assert!(
         messages
             .iter()
-            .any(|m| m.contains("omits unknown part/group \"Bogus\"")),
+            .any(|m| m.contains("omits unknown part \"Bogus\"")),
         "expected an unknown-omission error, got: {messages:?}"
     );
 }

@@ -10,7 +10,6 @@ fn make_block(row_id: &str, bar_col: u32, system_break: bool) -> MeasureBlock {
         rows: vec![MeasureRow {
             absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
-            group_provenance: None,
             label: row_id.to_string(),
             elements: vec![
                 ColumnElement {

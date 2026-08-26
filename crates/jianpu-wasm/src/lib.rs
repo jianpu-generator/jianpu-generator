@@ -296,7 +296,7 @@ pub fn format_score(source: &str) -> String {
     jianpu_generator::format_source::format_score(source)
 }
 
-/// Parse `.jianpu` source and return every renamable symbol (part/group
+/// Parse `.jianpu` source and return every renamable symbol (part
 /// abbreviations, section labels), each with its declaration and reference spans.
 ///
 /// - `{ "status": "ok", "symbols": [{ "name", "kind", "occurrences": [{ "span", "role" }] }] }`
@@ -308,7 +308,7 @@ pub fn list_symbols(source: &str, raw_instruments: JsValue) -> ListSymbolsRespon
     symbols::list_symbols_response(source, &instruments)
 }
 
-/// Compute the text edits needed to rename every occurrence of a part/group
+/// Compute the text edits needed to rename every occurrence of a part
 /// abbreviation or section label to `new_name`. Returns an empty `edits` list
 /// (not an error) if `old_name` names no symbol of `kind`.
 ///

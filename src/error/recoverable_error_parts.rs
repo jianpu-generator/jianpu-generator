@@ -144,34 +144,6 @@ impl RecoverableError {
         }
     }
 
-    pub fn groups_abbreviation_collides_with_part(span: Span, abbrev: &str) -> Self {
-        Self {
-            span,
-            kind: RecoverableErrorKind::GroupsAbbreviationCollidesWithPart {
-                abbrev: abbrev.to_string(),
-            },
-        }
-    }
-
-    pub fn groups_unknown_member(span: Span, group: &str, member: &str) -> Self {
-        Self {
-            span,
-            kind: RecoverableErrorKind::GroupsUnknownMember {
-                group: group.to_string(),
-                member: member.to_string(),
-            },
-        }
-    }
-
-    pub fn groups_member_kind_mismatch(span: Span, group: &str) -> Self {
-        Self {
-            span,
-            kind: RecoverableErrorKind::GroupsMemberKindMismatch {
-                group: group.to_string(),
-            },
-        }
-    }
-
     pub fn tie_on_rest(span: Span) -> Self {
         Self {
             span,

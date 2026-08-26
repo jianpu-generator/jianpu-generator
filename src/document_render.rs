@@ -1,6 +1,6 @@
 use crate::ast::grouped::Score;
 use crate::error::IrrecoverableError;
-use crate::part_info::{GroupInfo, PartInfo};
+use crate::part_info::PartInfo;
 
 /// Output of a successful render: typed SVG document tree and any diagnostics.
 #[derive(Debug)]
@@ -22,10 +22,9 @@ struct DocumentsResult {
 fn render_documents(
     score: &Score,
     parts: &[PartInfo],
-    groups: &[GroupInfo],
 ) -> Result<DocumentsResult, IrrecoverableError> {
     let config = crate::render_config::RenderConfig::from_metadata(&score.metadata);
-    let header = crate::build_header(score, parts, groups);
+    let header = crate::build_header(score, parts);
     let compile_result = crate::compiler::compile(score);
     let compile_result = crate::consolidator::consolidate(compile_result);
     let crate::grid_layout::LayoutOutput {
@@ -49,11 +48,10 @@ fn render_documents(
 fn render_documents_with_range(
     score: &Score,
     parts: &[PartInfo],
-    groups: &[GroupInfo],
     measure_ranges: &[crate::grid_layout::MeasureRange],
 ) -> Result<DocumentsResult, IrrecoverableError> {
     let config = crate::render_config::RenderConfig::from_metadata(&score.metadata);
-    let header = crate::build_header(score, parts, groups);
+    let header = crate::build_header(score, parts);
     let compile_result = crate::compiler::compile(score);
     let compile_result = crate::consolidator::consolidate(compile_result);
     let crate::grid_layout::LayoutOutput {
@@ -97,15 +95,11 @@ pub fn render_documents_from_source_filtered_with_lyrics(
         crate::list_parts_from_source(source, filename, instruments)?,
         enabled_tracks,
     );
-    let groups = crate::filter_group_list(
-        crate::list_groups_from_source(source, filename, instruments)?,
-        enabled_tracks,
-    );
     let mut score = crate::compile(source, filename, instruments)?;
     crate::apply_track_filter(&mut score, enabled_tracks);
     crate::apply_lyrics_filter(&mut score, disabled_lyrics);
     let mut diagnostics = crate::collect_measure_diagnostics(&score);
-    let result = render_documents(&score, &parts, &groups)?;
+    let result = render_documents(&score, &parts)?;
     diagnostics.extend(result.diagnostics);
     Ok(RenderDocumentOutput {
         documents: result.documents,
@@ -132,15 +126,11 @@ pub fn render_documents_with_highlight_range(
         crate::list_parts_from_source(source, filename, instruments)?,
         enabled_tracks,
     );
-    let groups = crate::filter_group_list(
-        crate::list_groups_from_source(source, filename, instruments)?,
-        enabled_tracks,
-    );
     let mut score = crate::compile(source, filename, instruments)?;
     crate::apply_track_filter(&mut score, enabled_tracks);
     crate::apply_lyrics_filter(&mut score, disabled_lyrics);
     let mut diagnostics = crate::collect_measure_diagnostics(&score);
-    let result = render_documents_with_range(&score, &parts, &groups, measure_ranges)?;
+    let result = render_documents_with_range(&score, &parts, measure_ranges)?;
     diagnostics.extend(result.diagnostics);
     Ok(RenderDocumentOutput {
         documents: result.documents,

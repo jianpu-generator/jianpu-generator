@@ -197,7 +197,6 @@ fn compile_measure(
             label,
             elements: slice_result.elements,
             source_part_index: part_idx,
-            group_provenance: part_row.slice().group_provenance.clone(),
             absorbed_rows: Vec::new(),
         });
     }

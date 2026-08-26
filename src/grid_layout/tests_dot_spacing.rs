@@ -51,7 +51,6 @@ fn make_block(row_id: &str, content: ElementContent, bar_col: u32) -> MeasureBlo
         rows: vec![MeasureRow {
             absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
-            group_provenance: None,
             label: row_id.to_string(),
             elements: vec![
                 ColumnElement {

@@ -42,7 +42,6 @@ fn row(id: &str, elements: Vec<ColumnElement>) -> MeasureRow {
     MeasureRow {
         absorbed_rows: Vec::new(),
         id: RowId(id.to_string()),
-        group_provenance: None,
         label: id.to_string(),
         elements,
         source_part_index: 0,

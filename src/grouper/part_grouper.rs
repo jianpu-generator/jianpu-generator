@@ -106,7 +106,6 @@ impl PartGrouper {
                 events: std::mem::take(&mut self.current_notes),
             },
             source_span,
-            group_provenance: None,
             paired_lyrics: Vec::new(),
             lyrics_error: Vec::new(),
             beat_overflow_error: self.pending_overflow_error.take(),

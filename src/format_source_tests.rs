@@ -49,35 +49,6 @@ Melody = notes+lyrics
 }
 
 #[test]
-fn drops_an_all_rest_group_broadcast_line() {
-    // Tenor has real content alongside the Choir broadcast in the first
-    // measure group, so dropping the broadcast doesn't leave the group empty.
-    let source = "\
-# parts
-Soprano = notes
-Alto = notes
-Tenor = notes
-
-# groups
-Choir = Soprano Alto
-
-# score
-[Choir] 0 0 0 0
-[Tenor] 1 2 3 4
-
-[Soprano] 1 2 3 4
-[Alto] 5 6 7 1
-[Tenor] 2 2 2 2
-";
-    let formatted = format_score(source);
-    assert!(
-        !formatted.contains("[Choir]"),
-        "all-rest broadcast line should be dropped:\n{formatted}"
-    );
-    assert!(formatted.contains("[Tenor] 1 2 3 4"));
-}
-
-#[test]
 fn never_drops_an_explicit_all_rest_line_on_a_follow_part() {
     let source = "\
 # parts

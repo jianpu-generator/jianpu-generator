@@ -77,7 +77,6 @@ fn chord_major_expands_to_three_notes() {
             system_break: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
-                group_provenance: None,
                 resolution_multiplier: 1,
                 beat_group_size: 4,
                 kind: PartKind::Chords,
@@ -195,7 +194,6 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
             system_break: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
-                group_provenance: None,
                 resolution_multiplier: 1,
                 beat_group_size: 4,
                 kind: PartKind::Notes,

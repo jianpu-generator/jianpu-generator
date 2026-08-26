@@ -68,7 +68,6 @@ fn measure_with_parts(index: usize, part_names: &[&str]) -> MultiPartMeasure {
                     notes: Notes { events: vec![] },
                     lyrics: vec![],
                     has_error: false,
-                    group_provenance: None,
                     resolution_multiplier: 1,
                     beat_group_size: 4,
                 })

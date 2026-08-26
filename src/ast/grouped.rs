@@ -131,9 +131,6 @@ pub struct PartSlice {
     /// True when this slice's source measure had at least one `Diagnostic::Error`.
     /// The compiler uses this to drop incoming cross-measure tie/slur arcs.
     pub has_error: bool,
-    /// Abbreviation of the group whose `[GroupAbbrev]` broadcast produced this
-    /// measure's content, when this part didn't override it with its own line.
-    pub group_provenance: Option<String>,
     /// Copied from the source `GroupedMeasure::resolution_multiplier`: the factor
     /// every duration in `notes` was multiplied by during tuplet rescaling. `1`
     /// when the measure has no tuplets (the common case, a no-op). The compiler
@@ -240,13 +237,10 @@ pub struct SequenceSpan {
     /// Inclusive index into `Score.measures`.
     pub end: usize,
     /// Individual part abbreviations to omit from this occurrence's MIDI/WAV
-    /// playback (from a `# sequence` entry's `(-abbrev -abbrev ...)` suffix;
-    /// any group abbreviation is expanded to its member parts here).
+    /// playback (from a `# sequence` entry's `(-abbrev -abbrev ...)` suffix).
     pub omit_parts: Vec<String>,
-    /// The `(-abbrev ...)` suffix's abbreviations as written — a group
-    /// abbreviation is kept as-is, unexpanded — for display on the SVG/PDF
-    /// "Sequence: ..." summary line, which shows the group's own label
-    /// rather than spelling out its members.
+    /// The `(-abbrev ...)` suffix's abbreviations as written, for display on
+    /// the SVG/PDF "Sequence: ..." summary line.
     pub omit_parts_display: Vec<String>,
 }
 
@@ -288,9 +282,6 @@ pub(crate) struct GroupedMeasure {
     pub(crate) lyrics_parse_error: Option<RecoverableError>,
     /// Recoverable error from `-` at the start of a measure with no preceding event, if any.
     pub(crate) extension_no_preceding_event_error: Option<RecoverableError>,
-    /// Abbreviation of the group whose `[GroupAbbrev]` broadcast produced this
-    /// measure's content, when this part didn't override it with its own line.
-    pub(crate) group_provenance: Option<String>,
     /// Factor by which every duration in this measure's events was multiplied by
     /// the tuplet-rescale pass so that tuplet ratios (e.g. 3-in-2) resolve to
     /// whole numbers. `1` when the measure has no tuplets (the common case).

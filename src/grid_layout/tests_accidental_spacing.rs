@@ -44,7 +44,6 @@ fn make_block_with_accidental_note(
         rows: vec![MeasureRow {
             absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
-            group_provenance: None,
             label: row_id.to_string(),
             elements: vec![
                 ColumnElement {

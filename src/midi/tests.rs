@@ -163,7 +163,6 @@ pub(super) fn one_measure_score() -> Score {
             system_break: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
-                group_provenance: None,
                 resolution_multiplier: 1,
                 beat_group_size: 4,
                 kind: PartKind::Notes,
@@ -267,7 +266,6 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
             system_break: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
-                group_provenance: None,
                 resolution_multiplier: 1,
                 beat_group_size: 4,
                 kind: PartKind::Notes,

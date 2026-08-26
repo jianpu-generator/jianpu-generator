@@ -302,16 +302,7 @@ fn make_part_list_rows(
                     halign: HAlign::Start,
                     valign: VAlign::Center,
                     content: GridContent::Text {
-                        content: if entry.members.is_empty() {
-                            format!("{} \u{2014} {}", entry.abbreviation, entry.display_name)
-                        } else {
-                            format!(
-                                "{} \u{2014} {} ({})",
-                                entry.abbreviation,
-                                entry.display_name,
-                                entry.members.join(",")
-                            )
-                        },
+                        content: format!("{} \u{2014} {}", entry.abbreviation, entry.display_name),
                         font_size,
                         bold: false,
                         italic: false,

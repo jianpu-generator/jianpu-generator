@@ -6,7 +6,7 @@ This document describes the input syntax accepted by **jianpu-generator** as imp
 
 ## File structure
 
-A `.jianpu` file has up to five sections, which may appear in any order:
+A `.jianpu` file has up to four sections, which may appear in any order:
 
 ```
 # metadata
@@ -14,9 +14,6 @@ A `.jianpu` file has up to five sections, which may appear in any order:
 
 # parts
 …track declarations…
-
-# groups
-…group alias declarations…
 
 # sequence
 …comma-separated section labels…
@@ -27,7 +24,6 @@ A `.jianpu` file has up to five sections, which may appear in any order:
 
 - `# metadata` — **optional**
 - `# parts` — **required**
-- `# groups` — **optional**
 - `# sequence` — **optional**
 - `# score` — **required**
 - Sections may appear in any order.
@@ -149,25 +145,6 @@ Melody = notes+lyrics
 
 ---
 
-## Groups section
-
-An optional `# groups` section — placed after `# parts` and before `# score`.
-
-```
-# groups
-Soprano [s] = s1 s2
-Alto [a] = a1 a2
-```
-
-- Same left-hand-side syntax as `# parts`: `<display-name> [<abbreviation>] = <members>`; when brackets are omitted, the abbreviation equals the display name.
-- The right-hand side is a space-separated list of member abbreviations.
-
-Each group with an explicit abbreviation (i.e. `[abbreviation]` differs from the display name) is listed in the part-list legend in the SVG/PDF output, alongside part entries. A group is hidden from the legend when a track filter excludes all of its members.
-
-A group's abbreviation may also be used as a `[GroupAbbrev]` key prefix in `# score` to broadcast a line to all of its members at once — see [Key-based part prefix](#key-based-part-prefix-abbrev) below. This requires every resolved member to share the same part kind; a group whose members don't (or whose abbreviation collides with a part's) can still appear in the legend but cannot be used as a score key.
-
----
-
 ## Score section — measure groups
 
 The `[score]` body is split into **measure groups** by **blank lines**. Each group is exactly one bar (measure).
@@ -202,43 +179,7 @@ Every data line must begin with `[Abbrev]` to route it to a specific part by abb
 - Parts not covered by any `[Key]` line use their `follow[X]` target's content when declared as such, or are filled with implicit rests/no-lyrics otherwise.
 - A measure group with zero valid keyed lines is an error (`measure_no_data_lines`).
 
-`[Abbrev]` may also name a `# groups` abbreviation, broadcasting that line to every part the group resolves to (expanding nested groups transitively):
-
-```
-# groups
-Soprano [s] = S1 S2
-
-# score
-bpm=92 key=C4 time=4/4
-[s] 5_ 5_ 5_ 5=
-[S2] 6_ 6_ 6_ 6=
-```
-
-Here `S1` gets `5_ 5_ 5_ 5=` from the group broadcast; `S2` has its own `[S2]` line, which wins over the broadcast for that slot. Rules:
-
-- Multiple `[GroupAbbrev]` lines fill slots in occurrence order, same as a part key — the group's first line fills every member's first slot, the second line fills every member's second slot, and so on.
-- A member's own `[MemberAbbrev]` line always takes precedence over the group broadcast for that slot, regardless of which appears first in the file.
-- A group is only usable this way if all of its resolved members share the same part kind (`notes`, `chords`, `notes+lyrics`, `percussion`, or `lyrics`) and its abbreviation does not collide with any part's abbreviation; otherwise the group is invalid and using it as a key produces the same "unrecognised abbreviation" error as an unknown key.
-
-**Row label when members render as one unison row:** when two or more members' compiled content ends up identical (typically because they all took the unmodified group broadcast for that measure), the renderer already merges them into a single row. If every merged member traces to the same `[GroupAbbrev]` broadcast, that row is labeled with the **group's abbreviation** instead of the members' concatenated abbreviations. A member with its own overriding `[MemberAbbrev]` line never merges into that row (it keeps its own row, labeled with its own abbreviation), even if the override happens to be one of two members left in the group:
-
-```
-# parts
-Soprano 1 [S1] = notes
-Soprano 2 [S2] = notes
-Soprano 3 [S3] = notes
-
-# groups
-Soprano [s] = S1 S2 S3
-
-# score
-[s] 1 2 3 4=
-[S2] 5 5 5 5=
-```
-
-S1 and S3 both take the `[s]` broadcast unmodified and merge into one row labeled `s`; S2 overrides it and renders on its own row labeled `S2`.
-
-This also applies when a group rests as a whole rather than being explicitly broadcast to: if *every* member of a group is left unmentioned by any key line in a measure (so each implicit-fills to a rest — see "Parts not covered by any `[Key]` line" above), that's treated the same as an implicit `[GroupAbbrev]` broadcast of silence. So when those members' rows later merge with each other (or with an unrelated resting part), the merged row is still labeled with the group's abbreviation rather than every member's own abbreviation. If even one member of the group has its own line in that measure — even a rest — the group isn't considered wholly resting, and the other members' implicit rests are labeled individually as usual.
+**Row label when parts render as one unison row:** when two or more parts' compiled content ends up identical for a system (a system being one printed line of music, spanning however many measures were packed onto it), the renderer merges them into a single row, labeled by concatenating the merged parts' own abbreviations with a space (e.g. `S1 S2`).
 
 **Row label omitted when a system boils down to one all-rest row:** a row label only earns its place by distinguishing one row from another sharing the same system (a system being one printed line of music, spanning however many measures were packed onto it). When every row that would otherwise appear in a system — after all merging above — collapses to a single row, and that row's content is entirely rest (whether one resting measure or a run collapsed into a wide multi-measure rest bar), there's nothing else in the system for the label to distinguish it from, so the label is omitted. This applies regardless of *why* it's the system's only row — a genuinely single-part score, or every other part being hidden by `hide_resting_parts=` — but not when that lone row actually sounds something, and not when more than one row shares the system even if all of them happen to be resting.
 
@@ -348,7 +289,7 @@ label="B"
 - Referencing a label in `# sequence` that was never declared in `# score` is an error; that entry is skipped and the rest of the sequence still resolves.
 - `# sequence` only affects **MIDI/WAV playback order** — measures always render once, in written order, with normal bar numbers. However, SVG/PDF output does show the resolved order as a left-aligned line ("Sequence: A › B › A") on the first page, with a blank line of space above it, below the title/subtitle/author/part list. Each label is styled the same as an inline `label="..."` directive (bold, italic).
 
-An entry may carry a `(-abbrev -abbrev ...)` suffix naming part or group abbreviations (as declared in `# parts`/`# groups`) to omit from that specific occurrence's playback — e.g. a chorus written once but replayed several times with a voice dropping out on later repeats:
+An entry may carry a `(-abbrev -abbrev ...)` suffix naming part abbreviations (as declared in `# parts`) to omit from that specific occurrence's playback — e.g. a chorus written once but replayed several times with a voice dropping out on later repeats:
 
 ```
 # sequence
@@ -356,10 +297,8 @@ Verse, Chorus(-S -A2), Verse, Chorus(-A2), Chorus
 ```
 
 - The suffix affects **only that occurrence**: here, the first `Chorus` omits Soprano and Alto 2, the second omits only Alto 2, and the third (unmarked) plays every part.
-- Omitting a group abbreviation omits every part it resolves to (including transitively, through nested groups).
-- An abbreviation that matches no declared part or group is an error; that abbreviation is dropped and the rest of the entry (and sequence) still resolves.
+- An abbreviation that matches no declared part is an error; that abbreviation is dropped and the rest of the entry (and sequence) still resolves.
 - The written-order rendering itself is unaffected — the score's written-out `Chorus` section always renders with every part, once, per the written-order rule above. However, the omissions **are** shown on the "Sequence: ..." summary line (SVG/PDF, first page), right after the label in plain (non-bold/non-italic) text: `Sequence: Verse › Chorus (-S -A2) › Verse › Chorus (-A2) › Chorus`. This is a reader-facing note only, telling a performer which voices tacet on which repeat — the underlying `Chorus` measures are not duplicated or altered.
-- A group abbreviation is shown **as written** on the summary line, not expanded to its members: `Chorus(-U)` renders as `Chorus (-U)`, not `Chorus (-S -A2)`, even though playback omits every part `U` resolves to.
 
 ---
 

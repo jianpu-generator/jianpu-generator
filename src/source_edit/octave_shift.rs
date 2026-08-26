@@ -12,9 +12,7 @@ use crate::error::Span;
 use crate::parser;
 
 /// Shifts every note in the part named `abbreviation` by `delta` octaves,
-/// rewriting each note's `'`/`,` marker run in place. Measures whose content
-/// came from a `[GroupAbbrev]` broadcast this part didn't override are left
-/// untouched, since that source text is shared with other group members.
+/// rewriting each note's `'`/`,` marker run in place.
 pub fn shift_part_octave(source: &str, abbreviation: &str, delta: i8) -> String {
     if delta == 0 {
         return source.to_string();
@@ -43,14 +41,7 @@ pub fn shift_part_octave(source: &str, abbreviation: &str, delta: i8) -> String 
     let mut edits: Vec<(Span, String)> = track
         .measure_slots
         .iter()
-        .enumerate()
-        .filter(|(index, _)| {
-            track
-                .per_measure_group_provenance
-                .get(*index)
-                .is_none_or(Option::is_none)
-        })
-        .filter_map(|(_, slot)| match slot {
+        .filter_map(|slot| match slot {
             ParsedMeasureSlot::Real { events } => Some(events),
             ParsedMeasureSlot::EmptyNote { .. } => None,
         })

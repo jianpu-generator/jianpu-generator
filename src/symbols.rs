@@ -1,5 +1,5 @@
 //! Symbol collection and rename-edit computation for user-renamable identifiers:
-//! part/group abbreviations and `# sequence` section labels. Built on top of
+//! part abbreviations and `# sequence` section labels. Built on top of
 //! [`crate::ast::parsed::ParsedDocument`]'s already-tracked declaration and
 //! reference spans, for use by editor tooling (e.g. a Monaco rename provider).
 
@@ -8,8 +8,7 @@ use crate::error::Span;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SymbolKind {
-    /// A part or group abbreviation. Parts and groups share one namespace, so
-    /// both kinds of declaration are collected under this single symbol kind.
+    /// A part abbreviation.
     Abbreviation,
     /// A `label="..."` section label, referenced from `# sequence` entries.
     SectionLabel,
@@ -61,12 +60,8 @@ pub struct TextEdit {
     pub replacement: String,
 }
 
-/// Collects every renamable symbol (part/group abbreviations, section labels)
-/// in `document`, each paired with its declaration and reference occurrences.
-///
-/// Occurrences are grouped by name: if a `# groups` abbreviation happens to
-/// collide with a part's (itself a validation error elsewhere), they are still
-/// merged into one `Symbol` here, since a rename must still update both sites.
+/// Collects every renamable symbol (part abbreviations, section labels) in
+/// `document`, each paired with its declaration and reference occurrences.
 pub fn collect_symbols(document: &ParsedDocument) -> Vec<Symbol> {
     let mut abbreviations: Vec<Symbol> = Vec::new();
     let mut labels: Vec<Symbol> = Vec::new();
@@ -85,25 +80,6 @@ fn collect_abbreviation_symbols(document: &ParsedDocument, abbreviations: &mut V
             &decl.abbreviation,
             SymbolOccurrence::exact(decl.abbreviation_span, OccurrenceRole::Declaration),
         );
-    }
-
-    if let Some(group_section) = &document.group {
-        for group in &group_section.groups {
-            push_occurrence(
-                abbreviations,
-                SymbolKind::Abbreviation,
-                &group.abbreviation,
-                SymbolOccurrence::exact(group.abbreviation_span, OccurrenceRole::Declaration),
-            );
-            for (member, member_span) in group.members.iter().zip(&group.member_spans) {
-                push_occurrence(
-                    abbreviations,
-                    SymbolKind::Abbreviation,
-                    member,
-                    SymbolOccurrence::exact(*member_span, OccurrenceRole::Reference),
-                );
-            }
-        }
     }
 
     for reference in &document.abbreviation_references {

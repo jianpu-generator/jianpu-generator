@@ -11,7 +11,7 @@ pub(super) fn parse(
     base_offset: usize,
     declarations: &[PartDecl],
 ) -> Result<Vec<ParsedTrack>, IrrecoverableError> {
-    super::parse(content, base_offset, declarations, &[]).map(|(tracks, _, _, _)| tracks)
+    super::parse(content, base_offset, declarations).map(|(tracks, _, _, _)| tracks)
 }
 
 /// Convenience wrapper that calls `parse` and returns the recoverable errors,
@@ -21,7 +21,7 @@ pub(super) fn parse_recoverable_errors(
     base_offset: usize,
     declarations: &[PartDecl],
 ) -> Result<Vec<Option<RecoverableError>>, IrrecoverableError> {
-    super::parse(content, base_offset, declarations, &[]).map(|(_, _, errors, _)| errors)
+    super::parse(content, base_offset, declarations).map(|(_, _, errors, _)| errors)
 }
 
 pub(super) fn decl(name: &str, kind: PartKind) -> PartDecl {

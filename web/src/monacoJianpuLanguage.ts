@@ -31,10 +31,7 @@ export function registerJianpuLanguage(monacoApi: Monaco) {
         // Quoted strings first: a `//` inside a string is not a comment.
         [/"([^"\\]|\\.)*"/, 'string'],
         [/\/\/.*$/, 'comment'],
-        [
-          /^\s*#\s*(metadata|parts|groups|sequence|score)\s*$/,
-          'keyword.section',
-        ],
+        [/^\s*#\s*(metadata|parts|sequence|score)\s*$/, 'keyword.section'],
         // [Abbrev] key prefix on parts/score lines.
         [/\[[^\]\n]*\]/, 'tag'],
         // Directive-line keywords, e.g. `bpm=92 key=C4 time=4/4 label="..."`.

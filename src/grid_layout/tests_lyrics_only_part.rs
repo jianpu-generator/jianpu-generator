@@ -40,7 +40,6 @@ fn notes_row(note_count: u32, bar_col: u32) -> MeasureRow {
     MeasureRow {
         absorbed_rows: Vec::new(),
         id: RowId("notes".to_string()),
-        group_provenance: None,
         label: "M".to_string(),
         elements,
         source_part_index: 0,
@@ -51,7 +50,6 @@ fn lyric_line_row(text: &str) -> MeasureRow {
     MeasureRow {
         absorbed_rows: Vec::new(),
         id: RowId("lyrics".to_string()),
-        group_provenance: None,
         label: "C".to_string(),
         elements: vec![
             ColumnElement {

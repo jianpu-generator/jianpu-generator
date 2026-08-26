@@ -67,9 +67,6 @@ enum TrackAccumulator {
         per_measure_lex_errors: Vec<Option<RecoverableError>>,
         /// Per-measure recoverable error on the lyrics line (e.g. empty lyrics line).
         per_measure_lyrics_errors: Vec<Option<RecoverableError>>,
-        /// Per-measure group broadcast provenance (`Some(abbrev)` when this measure's
-        /// primary score line came from a `[GroupAbbrev]` broadcast this member didn't override).
-        per_measure_group_provenance: Vec<Option<String>>,
     },
 }
 
@@ -147,15 +144,10 @@ fn attach_document_error(
     }
 }
 
-pub fn parse(
-    content: &str,
-    base_offset: usize,
-    declarations: &[PartDecl],
-    resolved_groups: &[crate::parser::group_parser::ResolvedGroup],
-) -> ParseResult {
+pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> ParseResult {
     let groups = collect_groups(content);
     let (groups, slots_per_group, per_group_desugar_errors, abbreviation_references) =
-        crate::desugar::desugar_groups(groups, declarations, resolved_groups, base_offset)?;
+        crate::desugar::desugar_groups(groups, declarations, base_offset)?;
 
     let mut accumulators = init_accumulators(declarations);
 
@@ -296,7 +288,7 @@ fn process_bar_group(
         .map(|(index, _)| index)
         .collect();
     for track_index in lyrics_track_indices {
-        push_skipped_notes_measure(ctx, track_index, group_span, None, None)?;
+        push_skipped_notes_measure(ctx, track_index, group_span, None)?;
     }
     Ok(())
 }

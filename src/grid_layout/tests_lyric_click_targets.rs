@@ -43,7 +43,6 @@ fn notes_row_with_a_two_beat_note() -> MeasureRow {
     MeasureRow {
         absorbed_rows: Vec::new(),
         id: RowId("V".to_string()),
-        group_provenance: None,
         label: String::new(),
         elements: vec![
             ColumnElement {
@@ -94,7 +93,6 @@ fn lyric_verse_row() -> MeasureRow {
     MeasureRow {
         absorbed_rows: Vec::new(),
         id: RowId("V-lyrics-0".to_string()),
-        group_provenance: None,
         label: String::new(),
         elements: vec![
             ColumnElement {

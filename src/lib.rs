@@ -60,8 +60,7 @@ pub use lyric_spans::*;
 pub use measure_spans::*;
 pub use note_spans::*;
 pub use part_info::{
-    list_groups_from_source, list_part_declarations_from_source, list_parts_from_source, GroupInfo,
-    PartInfo, SourcePartDeclaration,
+    list_part_declarations_from_source, list_parts_from_source, PartInfo, SourcePartDeclaration,
 };
 pub use split_track::*;
 
@@ -138,77 +137,14 @@ pub(crate) fn filter_part_list(
         .collect()
 }
 
-/// Resolves a group's members to the set of part abbreviations it ultimately contains,
-/// expanding any member that names another group (transitively). A `visited` guard
-/// against self-referential group cycles skips an already-visited group abbreviation.
-fn resolve_group_parts<'a>(
-    group: &'a GroupInfo,
-    groups: &'a [GroupInfo],
-    visited: &mut Vec<&'a str>,
-) -> Vec<String> {
-    if visited.contains(&group.abbreviation.as_str()) {
-        return Vec::new();
-    }
-    visited.push(&group.abbreviation);
-    group
-        .members
-        .iter()
-        .flat_map(
-            |member| match groups.iter().find(|g| &g.abbreviation == member) {
-                Some(nested) => resolve_group_parts(nested, groups, visited),
-                None => vec![member.clone()],
-            },
-        )
-        .collect()
-}
-
-/// Drop groups whose fully-resolved parts (expanding any nested group members) have no
-/// overlap with `enabled_tracks`, so the header's part-list legend does not list groups
-/// made entirely of parts hidden by a track filter.
-///
-/// `None` keeps every group.
-pub(crate) fn filter_group_list(
-    groups: Vec<GroupInfo>,
-    enabled_tracks: Option<&[String]>,
-) -> Vec<GroupInfo> {
-    let Some(tracks) = enabled_tracks else {
-        return groups;
-    };
-    let resolved_parts: Vec<Vec<String>> = groups
-        .iter()
-        .map(|group| resolve_group_parts(group, &groups, &mut Vec::new()))
-        .collect();
-    groups
-        .into_iter()
-        .zip(resolved_parts)
-        .filter(|(_, parts)| parts.iter().any(|part| tracks.contains(part)))
-        .map(|(group, _)| group)
-        .collect()
-}
-
-fn build_header(
-    score: &Score,
-    parts: &[PartInfo],
-    groups: &[GroupInfo],
-) -> grid_layout::types::Header {
+fn build_header(score: &Score, parts: &[PartInfo]) -> grid_layout::types::Header {
     let part_list = parts
         .iter()
         .filter(|part| part.abbreviation != part.display_name)
         .map(|part| grid_layout::types::PartListEntry {
             abbreviation: part.abbreviation.clone(),
             display_name: part.display_name.clone(),
-            members: Vec::new(),
         })
-        .chain(
-            groups
-                .iter()
-                .filter(|group| group.abbreviation != group.display_name)
-                .map(|group| grid_layout::types::PartListEntry {
-                    abbreviation: group.abbreviation.clone(),
-                    display_name: group.display_name.clone(),
-                    members: resolve_group_parts(group, groups, &mut Vec::new()),
-                }),
-        )
         .collect();
     let sequence = score.sequence.as_ref().map(|spans| {
         spans
@@ -246,10 +182,9 @@ struct SvgDocsResult {
 fn render_svg_docs_with_parts(
     score: &Score,
     parts: &[PartInfo],
-    groups: &[GroupInfo],
 ) -> Result<SvgDocsResult, IrrecoverableError> {
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
-    let header = build_header(score, parts, groups);
+    let header = build_header(score, parts);
     let compile_result = compiler::compile(score);
     let compile_result = consolidator::consolidate(compile_result);
     let grid_layout::LayoutOutput {
@@ -280,10 +215,9 @@ pub(crate) struct SvgsResult {
 pub(crate) fn render_svgs_with_parts(
     score: &Score,
     parts: &[PartInfo],
-    groups: &[GroupInfo],
     source: Option<&str>,
 ) -> Result<SvgsResult, IrrecoverableError> {
-    let result = render_svg_docs_with_parts(score, parts, groups)?;
+    let result = render_svg_docs_with_parts(score, parts)?;
     Ok(SvgsResult {
         svgs: serializer::serialize(&result.documents, source),
         diagnostics: result.diagnostics,
@@ -292,7 +226,7 @@ pub(crate) fn render_svgs_with_parts(
 
 /// Layout and render a [`Score`] into one SVG string per page.
 pub fn render_svgs(score: &Score) -> Result<Vec<String>, IrrecoverableError> {
-    Ok(render_svgs_with_parts(score, &[], &[], None)?.svgs)
+    Ok(render_svgs_with_parts(score, &[], None)?.svgs)
 }
 
 /// Parse, group, and render a `.jianpu` source string into SVG page strings.
@@ -339,15 +273,11 @@ pub fn render_svgs_from_source_filtered_with_lyrics(
         list_parts_from_source(source, filename, instruments)?,
         enabled_tracks,
     );
-    let groups = filter_group_list(
-        list_groups_from_source(source, filename, instruments)?,
-        enabled_tracks,
-    );
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     apply_lyrics_filter(&mut score, disabled_lyrics);
     let mut diagnostics = collect_measure_diagnostics(&score);
-    let result = render_svgs_with_parts(&score, &parts, &groups, Some(source))?;
+    let result = render_svgs_with_parts(&score, &parts, Some(source))?;
     diagnostics.extend(result.diagnostics);
     Ok(RenderOutput {
         svgs: result.svgs,

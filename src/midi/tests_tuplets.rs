@@ -80,7 +80,6 @@ fn triplet_measure_produces_same_total_ticks_as_equivalent_non_tuplet_measure() 
     let mut triplet_score = one_measure_score();
     triplet_score.measures[0].parts[0] = PartRow::Timed(PartSlice {
         name: None,
-        group_provenance: None,
         resolution_multiplier: 3,
         beat_group_size: 4,
         kind: PartKind::Notes,
@@ -101,7 +100,6 @@ fn triplet_measure_produces_same_total_ticks_as_equivalent_non_tuplet_measure() 
     let mut plain_score = one_measure_score();
     plain_score.measures[0].parts[0] = PartRow::Timed(PartSlice {
         name: None,
-        group_provenance: None,
         resolution_multiplier: 1,
         beat_group_size: 4,
         kind: PartKind::Notes,

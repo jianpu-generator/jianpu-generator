@@ -1,7 +1,6 @@
 use crate::ast::parsed::ParsedDocument;
 use crate::error::{DocumentSection, IrrecoverableError, RecoverableError, Span};
 
-pub mod group_parser;
 pub mod lyrics;
 pub mod metadata_parser;
 pub mod parts_parser;
@@ -14,7 +13,6 @@ pub(crate) struct DocumentSectionContents {
     pub score: (String, usize),
     pub metadata: (String, usize),
     pub sequence: Option<(String, usize)>,
-    pub group: Option<(String, usize)>,
 }
 
 fn unwrap_or_missing(
@@ -35,7 +33,6 @@ struct RawSections {
     parts: Option<(String, usize)>,
     score: Option<(String, usize)>,
     sequence: Option<(String, usize)>,
-    group: Option<(String, usize)>,
 }
 
 fn partition_sections(
@@ -70,9 +67,6 @@ fn partition_sections(
                 occurrence,
                 errors,
             ),
-            SectionKind::Groups => {
-                record_section(&mut raw.group, DocumentSection::Groups, occurrence, errors)
-            }
         }
     }
     raw
@@ -118,7 +112,6 @@ pub(crate) fn load_document_sections(
             parts,
             score,
             sequence: raw.sequence,
-            group: raw.group,
         },
         errors,
     )
@@ -140,33 +133,12 @@ pub fn parse(
     let (declarations, parts_parse_errors) =
         parts_parser::parse_parts(&parts_content, parts_offset, instruments);
 
-    let (group, mut group_parse_errors) = match sections.group {
-        Some((group_content, group_offset)) => {
-            group_parser::parse_group(&group_content, group_offset)
-        }
-        None => (None, Vec::new()),
-    };
-    let resolved_groups = match &group {
-        Some(group_section) => {
-            let (resolved, errors) =
-                group_parser::resolve_and_validate_groups(group_section, &declarations);
-            group_parse_errors.extend(errors);
-            resolved
-        }
-        None => Vec::new(),
-    };
-
     let (tracks, directive_events_per_measure, per_measure_parse_errors, abbreviation_references) =
         if declarations.is_empty() {
             (Vec::new(), Vec::new(), Vec::new(), Vec::new())
         } else {
-            score::interleaved_parser::parse(
-                &score_content,
-                score_offset,
-                &declarations,
-                &resolved_groups,
-            )
-            .map_err(|error| error.with_path(path))?
+            score::interleaved_parser::parse(&score_content, score_offset, &declarations)
+                .map_err(|error| error.with_path(path))?
         };
     let (sequence, sequence_parse_errors) = match sections.sequence {
         Some((sequence_content, sequence_offset)) => {
@@ -187,8 +159,6 @@ pub fn parse(
         section_structure_errors,
         sequence,
         sequence_parse_errors,
-        group,
-        group_parse_errors,
     })
 }
 

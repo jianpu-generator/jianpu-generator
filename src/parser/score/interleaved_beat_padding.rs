@@ -304,7 +304,6 @@ fn implicit_source_line(offset: usize) -> SourceLine {
     SourceLine {
         content: "_".to_string(),
         offset,
-        group: None,
     }
 }
 

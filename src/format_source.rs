@@ -27,7 +27,7 @@
 
 use crate::ast::parsed::{PartDecl, PartKind, ScoreLineRole};
 use crate::desugar;
-use crate::parser::{self, group_parser::ResolvedGroup};
+use crate::parser;
 
 /// A raw, not-yet-desugared score line paired with its byte offset within
 /// its containing section, matching `measure_group::collect_groups`'s output.
@@ -51,28 +51,10 @@ pub fn format_score(source: &str) -> String {
         return source.to_string();
     }
 
-    let resolved_groups = match sections.group {
-        Some((group_content, group_offset)) => {
-            let (group_section, _group_errors) =
-                parser::group_parser::parse_group(&group_content, group_offset);
-            match group_section {
-                Some(group_section) => {
-                    let (resolved, _errors) = parser::group_parser::resolve_and_validate_groups(
-                        &group_section,
-                        &declarations,
-                    );
-                    resolved
-                }
-                None => Vec::new(),
-            }
-        }
-        None => Vec::new(),
-    };
-
     let raw_groups = parser::score::measure_group::collect_groups(&score_content);
     let filtered_groups: Vec<Vec<RawSourceLine>> = raw_groups
         .iter()
-        .map(|group| format_group(group, &declarations, &resolved_groups))
+        .map(|group| format_group(group, &declarations))
         .collect();
 
     // Validate that the filtered groups still desugar cleanly (best-effort
@@ -84,14 +66,7 @@ pub fn format_score(source: &str) -> String {
     // below, so intentionally-dropped lines stay dropped and real `.jianpu`
     // parsing's own implicit-fill covers them, exactly as it already does
     // for any measure group that omits a part's line.
-    if desugar::desugar_groups(
-        filtered_groups.clone(),
-        &declarations,
-        &resolved_groups,
-        score_offset,
-    )
-    .is_err()
-    {
+    if desugar::desugar_groups(filtered_groups.clone(), &declarations, score_offset).is_err() {
         return source.to_string();
     }
 
@@ -150,27 +125,14 @@ fn role_at_occurrence(decl: &PartDecl, occurrence_index: usize) -> Option<ScoreL
     }
 }
 
-/// The part declaration a raw `[Key]` line's role list should be read from:
-/// a direct, non-`follow[X]` part declaration, or — for a `[GroupAbbrev]`
-/// broadcast — the declaration of the resolved group's first member (every
-/// member of a `ResolvedGroup` is guaranteed the same `PartKind` by
-/// `resolve_and_validate_groups`). `None` for an unknown key or a
+/// The part declaration a raw `[Key]` line's role list should be read from: a
+/// direct, non-`follow[X]` part declaration. `None` for an unknown key or a
 /// `follow[X]` part (excluded entirely: its implicit fill is the follow
 /// target's content, not rest, so an explicit rest line there is real
 /// content).
-fn decl_for_key<'a>(
-    key: &str,
-    declarations: &'a [PartDecl],
-    resolved_groups: &[ResolvedGroup],
-) -> Option<&'a PartDecl> {
-    if let Some(decl) = declarations.iter().find(|d| d.abbreviation == key) {
-        return decl.follow_target.is_none().then_some(decl);
-    }
-    let group = resolved_groups.iter().find(|g| g.abbreviation == key)?;
-    let first_member = group.members.first()?;
-    declarations
-        .iter()
-        .find(|d| &d.abbreviation == first_member)
+fn decl_for_key<'a>(key: &str, declarations: &'a [PartDecl]) -> Option<&'a PartDecl> {
+    let decl = declarations.iter().find(|d| d.abbreviation == key)?;
+    decl.follow_target.is_none().then_some(decl)
 }
 
 /// Every whitespace-split token is a rest: `0` optionally followed by a run
@@ -215,11 +177,7 @@ struct KeyLines<'a> {
 /// directive line(s) normalized, unparseable data lines passed through
 /// untouched, and eligible trailing redundant `[Key]` lines dropped from the
 /// rest (see module docs).
-fn format_group(
-    group: &[RawSourceLine],
-    declarations: &[PartDecl],
-    resolved_groups: &[ResolvedGroup],
-) -> Vec<RawSourceLine> {
+fn format_group(group: &[RawSourceLine], declarations: &[PartDecl]) -> Vec<RawSourceLine> {
     let directive_count = parser::score::measure_group::directive_line_count(group);
     let directive_lines = group.get(..directive_count).unwrap_or(&[]);
     let data_lines = group.get(directive_count..).unwrap_or(&[]);
@@ -241,7 +199,7 @@ fn format_group(
             key_lines.push(KeyLines {
                 key: key.to_string(),
                 indices: vec![index],
-                decl: decl_for_key(key, declarations, resolved_groups),
+                decl: decl_for_key(key, declarations),
             });
         }
     }

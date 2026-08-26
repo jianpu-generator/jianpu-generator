@@ -36,7 +36,7 @@ impl Default for Soundfont {
 #[derive(Debug, Clone, PartialEq)]
 pub struct PartDecl {
     pub abbreviation: String,
-    /// Byte span of the abbreviation token on its `# parts`/`# groups` declaration line,
+    /// Byte span of the abbreviation token on its `# parts` declaration line,
     /// used by rename-symbol to locate the declaration site.
     pub abbreviation_span: Span,
     pub display_name: String,
@@ -108,9 +108,6 @@ pub struct ParsedTimedTrack {
     pub per_measure_lex_errors: Vec<Option<RecoverableError>>,
     /// Per-measure recoverable error on the lyrics line (e.g. empty lyrics line).
     pub per_measure_lyrics_errors: Vec<Option<RecoverableError>>,
-    /// Per-measure group broadcast provenance (`Some(abbrev)` when this measure's
-    /// primary score line came from a `[GroupAbbrev]` broadcast this member didn't override).
-    pub per_measure_group_provenance: Vec<Option<String>>,
 }
 
 /// One `[Abbrev]` key-prefix reference to a part or group abbreviation in the
@@ -131,8 +128,7 @@ pub struct ParsedDocument {
     pub tracks: Vec<ParsedTrack>,
     pub directive_events_per_measure: Vec<Vec<Spanned<ScoreEvent>>>,
     /// Every `[Abbrev]` key-prefix reference found in the `# score` section,
-    /// in file order, for both part and group abbreviations. Used by
-    /// rename-symbol to find all reference sites.
+    /// in file order. Used by rename-symbol to find all reference sites.
     pub abbreviation_references: Vec<AbbreviationReference>,
     /// Per-measure recoverable errors from desugaring (e.g. missing lyrics line).
     pub per_measure_parse_errors: Vec<Option<RecoverableError>>,
@@ -147,11 +143,6 @@ pub struct ParsedDocument {
     pub sequence: Option<crate::parser::sequence_parser::SequenceSection>,
     /// Recoverable errors from parsing the `# sequence` section (e.g. empty entries).
     pub sequence_parse_errors: Vec<RecoverableError>,
-    /// The parsed `# groups` section, if present: an ordered list of
-    /// group declarations.
-    pub group: Option<crate::parser::group_parser::GroupSection>,
-    /// Recoverable errors from parsing the `# groups` section.
-    pub group_parse_errors: Vec<RecoverableError>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

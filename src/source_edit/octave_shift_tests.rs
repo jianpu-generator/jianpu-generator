@@ -52,20 +52,6 @@ fn preserves_dot_suffix() {
 }
 
 #[test]
-fn group_broadcast_measure_is_left_untouched() {
-    let source = "# metadata\ntitle = \"t\"\nauthor = \"a\"\n\n# parts\nSoprano [S] = notes\nAlto [A] = notes\n\n# groups\nChoir = S A\n\n# score\ntime=4/4 key=C4 bpm=120\n[Choir] 1 2 3 4\n\n[S] 5 6 7 1\n";
-    let result = shift_part_octave(source, "S", 1);
-    assert!(
-        result.contains("[Choir] 1 2 3 4"),
-        "broadcast measure shared with Alto must not be edited:\n{result}"
-    );
-    assert!(
-        result.contains("[S] 5' 6' 7' 1'"),
-        "S's own overriding measure should still be edited:\n{result}"
-    );
-}
-
-#[test]
 fn unknown_abbreviation_returns_source_unchanged() {
     let source = source_with_score("Melody [M] = notes", "[M] 1 2 3 4\n");
     let result = shift_part_octave(&source, "NOMATCH", 1);

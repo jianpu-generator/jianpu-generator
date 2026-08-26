@@ -1,7 +1,6 @@
 use crate::ast::grouped::{Score, SequenceSpan};
 use crate::ast::parsed::PartDecl;
 use crate::error::{Diagnostic, RecoverableError};
-use crate::parser::group_parser::GroupSection;
 use crate::parser::sequence_parser::SequenceSection;
 
 /// Resolves a parsed `# sequence` section against `score.measures`' labels
@@ -17,15 +16,14 @@ use crate::parser::sequence_parser::SequenceSection;
 ///   sequence still resolves.
 /// - A label defined but never referenced by `# sequence` is not an error.
 /// - An entry's `(-abbrev ...)` suffix referencing an abbreviation that
-///   matches no declared part or group is a recoverable document-level
-///   error; that abbreviation is dropped from the entry's omissions but the
-///   rest of the entry still resolves.
+///   matches no declared part is a recoverable document-level error; that
+///   abbreviation is dropped from the entry's omissions but the rest of the
+///   entry still resolves.
 pub(super) fn resolve_sequence(
     score: &mut Score,
     sequence: Option<SequenceSection>,
     parse_errors: Vec<RecoverableError>,
     declarations: &[PartDecl],
-    group: Option<&GroupSection>,
 ) {
     score
         .document_diagnostics
@@ -40,62 +38,14 @@ pub(super) fn resolve_sequence(
     };
 
     let spans = build_spans(&label_starts, score.measures.len());
-    score.sequence = Some(resolve_entries(
-        score,
-        sequence,
-        &spans,
-        declarations,
-        group,
-    ));
+    score.sequence = Some(resolve_entries(score, sequence, &spans, declarations));
 }
 
-/// Expands a `# sequence` omission abbreviation into the individual part
-/// abbreviations it refers to: a plain part abbreviation expands to itself;
-/// a group abbreviation expands (recursively, since a group's members may
-/// themselves be earlier groups) to its member parts' abbreviations.
-/// Returns `None` if the abbreviation matches neither a declared part nor a
-/// declared group.
-fn expand_abbreviation(
-    abbreviation: &str,
-    declarations: &[PartDecl],
-    group: Option<&GroupSection>,
-) -> Option<Vec<String>> {
-    expand_abbreviation_visited(abbreviation, declarations, group, &mut Vec::new())
-}
-
-/// Same as [`expand_abbreviation`], but tracks already-visited group
-/// abbreviations in `visited` to guard against self-referential group
-/// cycles (an already-visited group expands to nothing further).
-fn expand_abbreviation_visited<'a>(
-    abbreviation: &'a str,
-    declarations: &[PartDecl],
-    group: Option<&'a GroupSection>,
-    visited: &mut Vec<&'a str>,
-) -> Option<Vec<String>> {
-    if declarations
+/// Whether `abbreviation` matches a declared part.
+fn is_declared(abbreviation: &str, declarations: &[PartDecl]) -> bool {
+    declarations
         .iter()
         .any(|decl| decl.abbreviation == abbreviation)
-    {
-        return Some(vec![abbreviation.to_string()]);
-    }
-    let group_def = group?
-        .groups
-        .iter()
-        .find(|def| def.abbreviation == abbreviation)?;
-    if visited.contains(&abbreviation) {
-        return Some(Vec::new());
-    }
-    visited.push(abbreviation);
-    Some(
-        group_def
-            .members
-            .iter()
-            .flat_map(|member| {
-                expand_abbreviation_visited(member, declarations, group, visited)
-                    .unwrap_or_default()
-            })
-            .collect(),
-    )
 }
 
 /// Collects each label's first-occurrence measure index, or attaches a
@@ -151,7 +101,6 @@ fn resolve_entries(
     sequence: SequenceSection,
     spans: &[SequenceSpan],
     declarations: &[PartDecl],
-    group: Option<&GroupSection>,
 ) -> Vec<SequenceSpan> {
     sequence
         .entries
@@ -165,7 +114,6 @@ fn resolve_entries(
                         &entry.omit_parts,
                         entry.span,
                         declarations,
-                        group,
                     );
                     Some(SequenceSpan {
                         label: span.label.clone(),
@@ -189,45 +137,36 @@ fn resolve_entries(
         .collect()
 }
 
-/// The result of resolving an entry's `(-abbrev ...)` suffix: the
-/// individual part abbreviations to filter out at MIDI-expansion time
-/// (`expanded`, with any group abbreviation spelled out to its members),
-/// and the abbreviations as written, for display (`display`, which keeps a
-/// group abbreviation as-is rather than expanding it).
+/// The result of resolving an entry's `(-abbrev ...)` suffix: the part
+/// abbreviations to filter out at MIDI-expansion time (`expanded`), and the
+/// abbreviations as written, for display (`display`).
 struct ResolvedOmitParts {
     expanded: Vec<String>,
     display: Vec<String>,
 }
 
-/// Validates each omitted abbreviation against the declared parts/groups,
-/// attaching a recoverable error and dropping any abbreviation that matches
-/// neither.
+/// Validates each omitted abbreviation against the declared parts, attaching
+/// a recoverable error and dropping any abbreviation that matches none.
 fn resolve_omit_parts(
     score: &mut Score,
     label: &str,
     omit_parts: &[String],
     span: crate::error::Span,
     declarations: &[PartDecl],
-    group: Option<&GroupSection>,
 ) -> ResolvedOmitParts {
     let mut expanded = Vec::new();
     let mut display = Vec::new();
     for abbreviation in omit_parts {
-        match expand_abbreviation(abbreviation, declarations, group) {
-            Some(parts) => {
-                expanded.extend(parts);
-                display.push(abbreviation.clone());
-            }
-            None => {
-                score
-                    .document_diagnostics
-                    .push(Diagnostic::Error(RecoverableError::general(
-                        span,
-                        format!(
-                            "sequence entry \"{label}\" omits unknown part/group \"{abbreviation}\""
-                        ),
-                    )));
-            }
+        if is_declared(abbreviation, declarations) {
+            expanded.push(abbreviation.clone());
+            display.push(abbreviation.clone());
+        } else {
+            score
+                .document_diagnostics
+                .push(Diagnostic::Error(RecoverableError::general(
+                    span,
+                    format!("sequence entry \"{label}\" omits unknown part \"{abbreviation}\""),
+                )));
         }
     }
     ResolvedOmitParts { expanded, display }

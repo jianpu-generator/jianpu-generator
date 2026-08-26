@@ -30,7 +30,6 @@ pub(in crate::grouper) fn group_timed_track(
     let per_measure_chord_errors = part.per_measure_chord_errors.clone();
     let per_measure_lex_errors = part.per_measure_lex_errors.clone();
     let per_measure_lyrics_errors = part.per_measure_lyrics_errors.clone();
-    let per_measure_group_provenance = part.per_measure_group_provenance.clone();
     let part_abbreviation = part.abbreviation.clone();
     let part_kind = part.kind;
     let part_volume = part.volume;
@@ -69,7 +68,6 @@ pub(in crate::grouper) fn group_timed_track(
             chord_errors: &per_measure_chord_errors,
             lex_errors: &per_measure_lex_errors,
             lyrics_errors: &per_measure_lyrics_errors,
-            group_provenance: &per_measure_group_provenance,
         },
     )?;
     for (measure, &lyrics_end) in measures.iter_mut().zip(lyrics_measure_ends.iter()) {

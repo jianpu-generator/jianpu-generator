@@ -13,13 +13,12 @@ fn is_recoverable_chord_line_error(_kind: &IrrecoverableErrorKind) -> bool {
     false
 }
 
-/// A single column's source line plus its group-broadcast provenance, bundled to keep
-/// downstream `process_*_column_line` functions under clippy's argument-count limit.
+/// A single column's source line, bundled to keep downstream
+/// `process_*_column_line` functions under clippy's argument-count limit.
 #[derive(Clone, Copy)]
 struct ColumnLine<'a> {
     text: &'a str,
     offset: usize,
-    group: Option<&'a str>,
 }
 
 pub(super) fn process_padded_columns(
@@ -33,7 +32,6 @@ pub(super) fn process_padded_columns(
             ColumnLine {
                 text: &line.content,
                 offset: line.offset,
-                group: line.group.as_deref(),
             },
             beats_expected,
             ctx,
@@ -128,7 +126,6 @@ pub(super) fn push_skipped_notes_measure(
     track_index: usize,
     line_span: Span,
     lex_error: Option<RecoverableError>,
-    group: Option<&str>,
 ) -> Result<(), IrrecoverableError> {
     let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
         invariant(
@@ -141,7 +138,6 @@ pub(super) fn push_skipped_notes_measure(
         per_measure_dotted_eighth_errors,
         per_measure_lex_errors,
         per_measure_chord_errors,
-        per_measure_group_provenance,
         measure_slots,
         ..
     } = acc;
@@ -149,7 +145,6 @@ pub(super) fn push_skipped_notes_measure(
     per_measure_dotted_eighth_errors.push(vec![]);
     per_measure_lex_errors.push(lex_error);
     per_measure_chord_errors.push(vec![]);
-    per_measure_group_provenance.push(group.map(str::to_string));
     measure_slots.push(ParsedMeasureSlot::EmptyNote { span: line_span });
     Ok(())
 }
@@ -164,10 +159,9 @@ fn process_notes_column_line(
     let ColumnLine {
         text: line,
         offset: line_offset,
-        group,
     } = line;
     if line == "_" {
-        return push_skipped_notes_measure(ctx, track_index, line_span, None, group);
+        return push_skipped_notes_measure(ctx, track_index, line_span, None);
     }
     let group_state = ctx
         .group_states
@@ -209,7 +203,6 @@ fn process_notes_column_line(
         per_measure_dotted_eighth_errors,
         per_measure_lex_errors,
         per_measure_chord_errors,
-        per_measure_group_provenance,
         ..
     } = acc;
     let mut slot_events = std::mem::take(pending_events);
@@ -218,7 +211,6 @@ fn process_notes_column_line(
     per_measure_dotted_eighth_errors.push(padded.dotted_eighth_errors);
     per_measure_lex_errors.push(lex_error);
     per_measure_chord_errors.push(notes_parse.chord_errors);
-    per_measure_group_provenance.push(group.map(str::to_string));
     measure_slots.push(ParsedMeasureSlot::Real {
         events: slot_events,
     });
@@ -235,7 +227,6 @@ fn process_chord_column_line(
     let ColumnLine {
         text: line,
         offset: line_offset,
-        group,
     } = line;
     let group_state = ctx
         .group_states
@@ -274,7 +265,6 @@ fn process_chord_column_line(
         per_measure_beat_errors,
         per_measure_dotted_eighth_errors,
         per_measure_chord_errors,
-        per_measure_group_provenance,
         ..
     } = acc;
     let mut slot_events = std::mem::take(pending_events);
@@ -282,7 +272,6 @@ fn process_chord_column_line(
     per_measure_beat_errors.push(final_padded.beat_overflow_error);
     per_measure_dotted_eighth_errors.push(final_padded.dotted_eighth_errors);
     per_measure_chord_errors.push(line_chord_errors);
-    per_measure_group_provenance.push(group.map(str::to_string));
     measure_slots.push(ParsedMeasureSlot::Real {
         events: slot_events,
     });

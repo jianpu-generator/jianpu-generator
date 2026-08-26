@@ -54,11 +54,6 @@ pub struct MeasureRow {
     /// The original part index this row was compiled from, before consolidation.
     /// Used to look up slur arcs keyed by original part index.
     pub source_part_index: usize,
-    /// Abbreviation of the group whose `[GroupAbbrev]` broadcast produced this
-    /// row's content, when the source part didn't override it with its own line.
-    /// Used by the consolidator to label a fully-merged unison row with the
-    /// group's abbreviation instead of concatenating member labels.
-    pub group_provenance: Option<String>,
     /// Other parts' rows that `consolidator::consolidate_rows` merged into
     /// this one because their content was identical (see
     /// `merge_duplicate_measures_across_parts`), kept in full (not just their

@@ -1,6 +1,5 @@
 use crate::ast::parsed::{AbbreviationReference, PartDecl, PartKind, ScoreLineRole, ScoreLineSlot};
 use crate::error::{IrrecoverableError, RecoverableError, Span};
-use crate::parser::group_parser::ResolvedGroup;
 use crate::parser::score::measure_group;
 use key_map::KeyMap;
 
@@ -14,9 +13,6 @@ type RawSourceLine = (String, usize);
 pub(crate) struct SourceLine {
     pub(crate) content: String,
     pub(crate) offset: usize,
-    /// Abbreviation of the group whose `[GroupAbbrev]` broadcast produced this line's
-    /// content, when this member did not override it with its own `[MemberAbbrev]` line.
-    pub(crate) group: Option<String>,
 }
 
 type MeasureGroup = Vec<SourceLine>;
@@ -54,7 +50,6 @@ fn extract_time_numerator(group: &[RawSourceLine]) -> Option<u8> {
 pub(crate) fn desugar_groups(
     groups: Vec<Vec<RawSourceLine>>,
     declarations: &[PartDecl],
-    resolved_groups: &[ResolvedGroup],
     base_offset: usize,
 ) -> DesugarGroupsResult {
     let mut desugared = Vec::with_capacity(groups.len());
@@ -66,13 +61,8 @@ pub(crate) fn desugar_groups(
         if let Some(num) = extract_time_numerator(&group) {
             current_time_num = num;
         }
-        let (expanded, slots, error, references) = expand_measure_group(
-            &group,
-            declarations,
-            resolved_groups,
-            base_offset,
-            current_time_num,
-        )?;
+        let (expanded, slots, error, references) =
+            expand_measure_group(&group, declarations, base_offset, current_time_num)?;
         desugared.push(expanded);
         slots_per_group.push(slots);
         per_group_errors.push(error);
@@ -143,7 +133,6 @@ fn key_span_in_line(line: &str, line_offset: usize, base_offset: usize) -> Optio
 fn expand_measure_group(
     group: &[RawSourceLine],
     declarations: &[PartDecl],
-    resolved_groups: &[ResolvedGroup],
     base_offset: usize,
     time_num: u8,
 ) -> ExpandMeasureGroupResult {
@@ -216,13 +205,7 @@ fn expand_measure_group(
             .collect();
         (Vec::new(), default_slots)
     } else {
-        expand_keyed(
-            keyed,
-            declarations,
-            resolved_groups,
-            &context,
-            &mut recoverable_error,
-        )
+        expand_keyed(keyed, declarations, &context, &mut recoverable_error)
     };
 
     let mut result: Vec<SourceLine> = directive_lines
@@ -230,7 +213,6 @@ fn expand_measure_group(
         .map(|(content, offset)| SourceLine {
             content: content.clone(),
             offset: *offset,
-            group: None,
         })
         .collect();
     result.extend(result_data);
@@ -240,45 +222,12 @@ fn expand_measure_group(
 fn expand_keyed(
     keyed: Vec<KeyedLine>,
     declarations: &[PartDecl],
-    resolved_groups: &[ResolvedGroup],
     context: &GroupContext,
     recoverable_error: &mut Option<RecoverableError>,
 ) -> (Vec<SourceLine>, Vec<ScoreLineSlot>) {
-    let key_map = key_map::filter_keyed_into_key_map(
-        keyed,
-        declarations,
-        resolved_groups,
-        context,
-        recoverable_error,
-    );
-    resolve_tracks(&key_map, declarations, resolved_groups, context)
-}
-
-/// The narrowest group (fewest members) in `resolved_groups` that `abbreviation`
-/// belongs to and whose *every* member is absent from `key_map` — i.e. a group
-/// that is, as a whole, implicitly resting this measure because none of its
-/// members were given a line (their own or a broadcast). Mirrors the
-/// `[GroupAbbrev]` broadcast provenance rule for the case where the "broadcast"
-/// is implicit silence rather than an actual `[GroupAbbrev]` line: a part that
-/// rests only because its whole group rests should still be labeled with the
-/// group's abbreviation once such members merge into one row downstream (see
-/// `grid_layout::layout_systems::resolve_label`), not listed individually.
-/// Narrowest-first mirrors `merge_group_broadcasts`' broader-loses-to-narrower
-/// precedence for nested groups.
-fn implicitly_resting_group<'a>(
-    abbreviation: &str,
-    key_map: &KeyMap,
-    resolved_groups: &'a [ResolvedGroup],
-) -> Option<&'a ResolvedGroup> {
-    resolved_groups
-        .iter()
-        .filter(|g| g.members.iter().any(|m| m == abbreviation))
-        .filter(|g| {
-            g.members
-                .iter()
-                .all(|m| !key_map.iter().any(|(k, _)| k == m))
-        })
-        .min_by_key(|g| g.members.len())
+    let key_map =
+        key_map::filter_keyed_into_key_map(keyed, declarations, context, recoverable_error);
+    resolve_tracks(&key_map, declarations, context)
 }
 
 /// The score-line roles this part contributes to this specific measure group.
@@ -312,7 +261,6 @@ fn roles_for_group(
 fn resolve_tracks(
     key_map: &KeyMap,
     declarations: &[PartDecl],
-    resolved_groups: &[ResolvedGroup],
     context: &GroupContext,
 ) -> (Vec<SourceLine>, Vec<ScoreLineSlot>) {
     let mut resolved_per_track: Vec<Vec<SourceLine>> = Vec::with_capacity(declarations.len());
@@ -326,10 +274,6 @@ fn resolve_tracks(
             .iter()
             .find(|(k, _)| k == &decl.abbreviation)
             .map(|(_, v)| v.as_slice());
-        let resting_group = key_lines
-            .is_none()
-            .then(|| implicitly_resting_group(&decl.abbreviation, key_map, resolved_groups))
-            .flatten();
         let follow_target_index = decl.follow_target.as_ref().and_then(|target| {
             declarations
                 .get(..i)
@@ -362,7 +306,6 @@ fn resolve_tracks(
                 SourceLine {
                     content: implicit_fill(role, context.time_num),
                     offset: context.pad_offset,
-                    group: resting_group.map(|g| g.abbreviation.clone()),
                 }
             })
             .collect();
@@ -386,7 +329,3 @@ fn resolve_tracks(
 #[cfg(test)]
 #[path = "tests.rs"]
 mod tests;
-
-#[cfg(test)]
-#[path = "tests_groups.rs"]
-mod tests_groups;

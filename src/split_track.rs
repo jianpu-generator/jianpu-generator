@@ -6,7 +6,7 @@ use crate::error::{IrrecoverableErrorKind, Span};
 use crate::filters::filter_tracks;
 use crate::list_parts_from_source;
 #[cfg(feature = "pdf")]
-use crate::{filter_group_list, filter_part_list, list_groups_from_source, render_svgs_with_parts};
+use crate::{filter_part_list, render_svgs_with_parts};
 
 /// Sanitize a track name for use in filenames (mirrors CLI).
 pub fn sanitize_track_name(name: &str) -> String {
@@ -112,15 +112,13 @@ pub fn write_split_pdfs_from_source(
     let track_names = split_track_names(source, filename, &score, tracks_filter)?;
     let display_names = part_display_name_map(source, filename)?;
     let all_parts = list_parts_from_source(source, filename, &[])?;
-    let all_groups = list_groups_from_source(source, filename, &[])?;
     let mut entries = Vec::with_capacity(track_names.len());
     for track in track_names {
         let mut score_clone = score.clone();
         filter_tracks(&mut score_clone, std::slice::from_ref(&track));
         let enabled_tracks = [track.clone()];
         let parts = filter_part_list(all_parts.clone(), Some(&enabled_tracks));
-        let groups = filter_group_list(all_groups.clone(), Some(&enabled_tracks));
-        let svgs = render_svgs_with_parts(&score_clone, &parts, &groups, None)?.svgs;
+        let svgs = render_svgs_with_parts(&score_clone, &parts, None)?.svgs;
         let pdf = crate::pdf::write_pdf(&svgs, fonts, None)?;
         let label = split_track_label(&display_names, &track);
         entries.push(SplitPdfEntry {

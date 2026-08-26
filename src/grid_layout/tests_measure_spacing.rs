@@ -59,7 +59,6 @@ fn make_block_with_notes(row_id: &str, note_count: u32, bar_col: u32) -> Measure
         rows: vec![MeasureRow {
             absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
-            group_provenance: None,
             label: row_id.to_string(),
             elements,
             source_part_index: 0,
@@ -79,7 +78,6 @@ fn make_block_with_dash(row_id: &str, bar_col: u32) -> MeasureBlock {
         rows: vec![MeasureRow {
             absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
-            group_provenance: None,
             label: row_id.to_string(),
             elements: vec![
                 ColumnElement {

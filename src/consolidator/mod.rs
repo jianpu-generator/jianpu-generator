@@ -72,7 +72,6 @@ fn notes_row(row: &MeasureRow) -> MeasureRow {
             .cloned()
             .collect(),
         source_part_index: row.source_part_index,
-        group_provenance: row.group_provenance.clone(),
         absorbed_rows: row.absorbed_rows.clone(),
     }
 }
@@ -112,7 +111,6 @@ fn lyrics_rows(row: &MeasureRow) -> Vec<MeasureRow> {
                 label: row.label.clone(),
                 elements,
                 source_part_index: row.source_part_index,
-                group_provenance: row.group_provenance.clone(),
                 absorbed_rows: row.absorbed_rows.clone(),
             }
         })
@@ -120,7 +118,7 @@ fn lyrics_rows(row: &MeasureRow) -> Vec<MeasureRow> {
 }
 
 /// Merges rows with identical content within a single measure block, but
-/// deliberately leaves `label`/`group_provenance` untouched — those stay each
+/// deliberately leaves `label` untouched — it stays each
 /// row's own, per-part identity (as compiled) regardless of merging. A block
 /// is consolidated in isolation, before systems (and thus the multi-measure
 /// context a display label needs) exist: whether a coincidentally-identical

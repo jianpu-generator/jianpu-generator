@@ -26,7 +26,6 @@ fn tied_note_event(tied: bool) -> NoteEvent {
 fn tied_note_part(tied: bool) -> PartRow {
     PartRow::Timed(PartSlice {
         name: None,
-        group_provenance: None,
         resolution_multiplier: 1,
         beat_group_size: 4,
         kind: PartKind::Notes,
