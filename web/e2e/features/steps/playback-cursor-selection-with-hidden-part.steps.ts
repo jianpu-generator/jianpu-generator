@@ -117,7 +117,16 @@ When(
     if (!firstBox || !secondBox) {
       throw new Error("Could not get bounding boxes for Bass's notes.")
     }
-    await page.mouse.move(firstBox.x + 2, firstBox.y + firstBox.height / 2)
+    // Start from the note's own center, not its left edge: the left edge of
+    // a measure's first note sits right on the bar-line divider's own hit
+    // region (see `BAR_LINE_HIT_WIDTH`), which now always wins a mousedown
+    // on its own, whole-measure-drag terms regardless of modifier keys (see
+    // `previewMouseDownHandler.ts`'s bar-line-handle check) — landing there
+    // would grab the bar line instead of this note.
+    await page.mouse.move(
+      firstBox.x + firstBox.width / 2,
+      firstBox.y + firstBox.height / 2,
+    )
     await page.mouse.down()
     await page.mouse.move(
       secondBox.x + secondBox.width - 2,

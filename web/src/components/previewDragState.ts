@@ -17,10 +17,14 @@ import type { MeasureRange, NoteCell } from './previewSelection'
 // pointer has actually moved past `NOTE_DRAG_ARM_THRESHOLD_PX` (see
 // `usePreviewDragSelection`'s `handleMouseMove`). A plain click on a note
 // (mouseup with no meaningful movement) resolves to just that one
-// note/chord cell (`noteCellAtAnchor`) — whole-measure selection is a
-// separate gesture entirely now, only reachable by holding Cmd/Ctrl at
-// mousedown (see `Preview.tsx`'s `onMouseDown`, which arms 'measure'
-// directly for that case rather than going through 'pending' at all).
+// note/chord cell (`noteCellAtAnchor`) — whole-measure selection off a note/
+// lyric/gutter pixel is a separate gesture entirely, only reachable by
+// holding Cmd/Ctrl at mousedown (see `previewMouseDownHandler.ts`, which
+// arms 'measure' directly for that case rather than going through 'pending'
+// at all). Landing exactly on a bar line's own divider is the one
+// exception: it always arms 'measure' unconditionally, no modifier needed
+// (see that same file's bar-line-handle check) — grabbing the divider
+// itself is unambiguous in a way clicking a note or empty gutter isn't.
 export type PreviewDragState =
   | { mode: 'measure'; anchor: MeasureRange; current: MeasureRange }
   | { mode: 'note'; anchor: DragPoint; current: DragPoint }

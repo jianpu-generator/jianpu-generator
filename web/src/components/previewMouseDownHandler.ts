@@ -17,6 +17,7 @@ import {
   noteCellsForPartLabels,
 } from './previewLabelSelection'
 import {
+  getBarLineMeasureAtPoint,
   getLyricAtPoint,
   getMeasureAtPoint,
   getNoteAtPoint,
@@ -127,12 +128,39 @@ export function handlePreviewMouseDown(
     e.preventDefault()
     return
   }
+  // Grabbing a bar line's own divider always starts a measure-range drag, no
+  // Cmd/Ctrl required: the divider is a dedicated drag handle (see
+  // `renderBarLineDragHandle`), so landing on it is an unambiguous request
+  // to select measures, unlike a plain click on a note/lyric/gutter pixel
+  // (ambiguous enough to need the modifier gate below).
+  const barLineRange = getBarLineMeasureAtPoint(e.clientX, e.clientY)
+  if (barLineRange !== undefined) {
+    dragStateRef.current = {
+      mode: 'measure',
+      anchor: barLineRange,
+      current: barLineRange,
+    }
+    const container = previewPagesRef.current
+    if (container) {
+      applyPersistedNoteHighlights(
+        container,
+        noteCellsInMeasureRange(noteSpans, barLineRange),
+      )
+      applyPersistedLyricHighlights(
+        container,
+        lyricCellsInMeasureRange(lyricSpans, barLineRange),
+      )
+    }
+    e.preventDefault()
+    return
+  }
   // Cmd/Ctrl-click(-drag) always selects the whole measure under the
   // pointer, regardless of what structurally sits under it (note, chord,
   // lyric, bar-line, or empty gutter) — checked ahead of the lyric/note
-  // checks below so it takes priority over them. This is the only way to
-  // reach 'measure' mode now; a plain click/drag resolves to note/chord/
-  // syllable granularity instead (see `PreviewDragState`'s doc comment).
+  // checks below so it takes priority over them. Off a bar line, this is the
+  // only way to reach 'measure' mode; a plain click/drag elsewhere resolves
+  // to note/chord/syllable granularity instead (see `PreviewDragState`'s doc
+  // comment).
   if (e.metaKey || e.ctrlKey) {
     const range = getMeasureAtPoint(e.clientX, e.clientY)
     if (range !== undefined) {
