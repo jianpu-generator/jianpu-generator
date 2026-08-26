@@ -97,3 +97,58 @@ fn coincidental_match_with_an_unrelated_part_does_not_widen_the_group_label() {
     );
     assert_eq!(row_labels(source), vec!["s".to_string(), "T".to_string()]);
 }
+
+#[test]
+fn two_distinct_groups_and_an_outside_part_all_merge_into_one_row() {
+    // Regression test: S1/S2 (group "S"), A1/A2 (group "A"), and T (no group)
+    // all broadcast identical notes for every measure of this system, so
+    // they all fold into one row. The old `resolve_label` tracked a single
+    // running (label, provenance) accumulator across the whole fold: once it
+    // hit A1 right after collapsing S1/S2 to "S", the provenance mismatch
+    // cleared the accumulator's provenance to `None` for good, so A1 and A2
+    // could never re-collapse into "A" afterwards and rendered individually
+    // as "S A1 A2 T" instead of "S A T".
+    let source = concat!(
+        "# parts\n",
+        "Soprano 1 [S1] = notes\n",
+        "Soprano 2 [S2] = notes\n",
+        "Alto 1 [A1] = notes\n",
+        "Alto 2 [A2] = notes\n",
+        "Tenor [T] = notes\n",
+        "\n",
+        "# groups\n",
+        "Soprano [S] = S1 S2\n",
+        "Alto [A] = A1 A2\n",
+        "\n",
+        "# score\n",
+        "[S] 6 6 6 6\n",
+        "[A] 6 6 6 6\n",
+        "[T] 6 6 6 6\n",
+    );
+    assert_eq!(row_labels(source), vec!["S A T".to_string()]);
+}
+
+#[test]
+fn group_members_collapse_even_when_not_contiguous_in_row_order() {
+    // Regression test: a group's members don't have to sit next to each
+    // other in the row's declaration order. Here Tenor is declared (and thus
+    // ordered) between S1 and S2, and it happens to share S1/S2's notes for
+    // every measure of this system too, so all three fold into one row. The
+    // label must still collapse S1/S2 into "S" even though Tenor's entry
+    // sits between them, rather than treating the interruption as splitting
+    // the group into two separate "S" segments ("S T S").
+    let source = concat!(
+        "# parts\n",
+        "Soprano 1 [S1] = notes\n",
+        "Tenor [T] = notes\n",
+        "Soprano 2 [S2] = notes\n",
+        "\n",
+        "# groups\n",
+        "Soprano [S] = S1 S2\n",
+        "\n",
+        "# score\n",
+        "[S] 6 6 6 6\n",
+        "[T] 6 6 6 6\n",
+    );
+    assert_eq!(row_labels(source), vec!["S T".to_string()]);
+}

@@ -5,6 +5,7 @@ use super::{
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
 use crate::grid_layout::types::GridElement;
 use crate::render_config::RenderConfig;
+use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
 /// The fixed-width column reserved at the start of every system row for the
@@ -177,30 +178,54 @@ fn make_padding_row(template_row: &MeasureRow, block: &MeasureBlock) -> MeasureR
     }
 }
 
-/// The displayed label for `row`, folding its own (part-level) identity
-/// together with whichever of its `absorbed_rows` are still genuinely,
-/// permanently merged into it — i.e. every `RowId` this system needs, per
-/// `union_ids`, gets its own separate row *somewhere*, so an absorbed row
-/// whose id is in `union_ids` only matched `row`'s content by coincidence in
-/// this one measure (see [`pad_chunk_to_union`]) and must not affect `row`'s
-/// label here. Mirrors the group-abbreviation rule `consolidator` used to
-/// apply eagerly per-measure: the running label becomes the shared group
-/// abbreviation while every folded-in row traces to the same `[GroupAbbrev]`
-/// broadcast, falling back to a space-joined concatenation (and clearing
-/// provenance, so a later fold in the same pass can't mistake a
-/// partially-diverged cluster for a fully in-group one) the moment one
-/// doesn't.
+/// The displayed label for `row`, combining its own (part-level) identity
+/// with whichever of its `absorbed_rows` are still genuinely, permanently
+/// merged into it — i.e. every `RowId` this system needs, per `union_ids`,
+/// gets its own separate row *somewhere*, so an absorbed row whose id is in
+/// `union_ids` only matched `row`'s content by coincidence in this one
+/// measure (see [`pad_chunk_to_union`]) and must not affect `row`'s label
+/// here.
+///
+/// Mirrors the group-abbreviation rule `consolidator` used to apply eagerly
+/// per-measure: every member that traces to the *same* `[GroupAbbrev]`
+/// broadcast collapses into one shared segment labeled with that group's
+/// abbreviation, regardless of *where* in the row's declaration order each
+/// member falls — a group's members need not be contiguous, since an
+/// unrelated part's coincidental match (or another group's members) can end
+/// up interleaved between them. Members with no provenance each keep their
+/// own segment. This is a per-group decision, not a single row-wide one — a
+/// row can fold together more than one distinct group (plus possibly some
+/// ungrouped members), and each group's segment must collapse independently
+/// rather than one group's members (or a mismatch) disabling collapsing for
+/// the rest of the row (see `tests_group_broadcast_label.rs`'s
+/// `two_distinct_groups_*` and `*_non_contiguous_*` cases for the
+/// regressions this guards against).
 fn resolve_label(row: &MeasureRow, union_ids: &HashSet<RowId>) -> (String, Option<String>) {
-    row.absorbed_rows
-        .iter()
-        .filter(|absorbed| !union_ids.contains(&absorbed.id))
-        .fold(
-            (row.label.clone(), row.group_provenance.clone()),
-            |(label, provenance), absorbed| match (&provenance, &absorbed.group_provenance) {
-                (Some(p), Some(q)) if p == q => (p.clone(), Some(p.clone())),
-                _ => (format!("{label} {}", absorbed.label), None),
-            },
-        )
+    let members = std::iter::once((row.label.clone(), row.group_provenance.clone())).chain(
+        row.absorbed_rows
+            .iter()
+            .filter(|absorbed| !union_ids.contains(&absorbed.id))
+            .map(|absorbed| (absorbed.label.clone(), absorbed.group_provenance.clone())),
+    );
+
+    let segments = members.fold(
+        Vec::<(Option<String>, String)>::new(),
+        |mut segments, (label, provenance)| {
+            match &provenance {
+                Some(p) if segments.iter().any(|(seen, _)| seen.as_deref() == Some(p)) => {}
+                Some(p) => segments.push((provenance.clone(), p.clone())),
+                None => segments.push((None, label)),
+            }
+            segments
+        },
+    );
+
+    let label = segments.iter().map(|(_, label)| label.as_str()).join(" ");
+    let group_provenance = match segments.as_slice() {
+        [(provenance @ Some(_), _)] => provenance.clone(),
+        _ => None,
+    };
+    (label, group_provenance)
 }
 
 /// Rebuilds every block in `chunk` so its `rows` match `union` exactly, in
