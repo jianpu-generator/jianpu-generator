@@ -101,6 +101,7 @@ impl TimedUnitHead for NoteHead {
                 group_membership: 0,
                 group_continuation: 0,
                 tuplet,
+                implicit_fill: false,
             })
         } else {
             ScoreEvent::Note(ParsedNote {

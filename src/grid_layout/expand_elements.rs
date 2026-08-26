@@ -70,6 +70,53 @@ fn push_bar_line(sub_rows: &mut [GridRow], column: u32, bar_height: f32, halign:
     }
 }
 
+/// True for a `Rest` synthesized to fill a part not mentioned in this
+/// measure (see `ElementContent::Rest::implicit_fill`) — the elements
+/// [`expand_measure_elements`] consolidates into one centered whole-rest
+/// glyph rather than laying out beat by beat.
+fn is_implicit_fill_rest(content: &ElementContent) -> bool {
+    matches!(
+        content,
+        ElementContent::Rest {
+            implicit_fill: true,
+            ..
+        }
+    )
+}
+
+/// A run of `implicit_fill` rests (see `is_implicit_fill_rest`) stands in for
+/// a whole measure a part wasn't written for — normally several one-beat
+/// `Rest` events (`0 0 0 0`), one per column, since the composer never wrote
+/// a real whole rest to collapse them at the source level. Rendered
+/// side-by-side they'd read as separate written rests; consolidated into a
+/// single wide `GridElement` spanning from the run's first column to
+/// whatever follows it (a bar line), they instead read as one glyph
+/// centered between the measure's bar lines (see `resolve_implicit_fill_rest`
+/// in `coordinate_resolver::resolve`), matching the conventional Western
+/// whole-rest engraving.
+fn push_implicit_fill_rest(
+    sub_rows: &mut [GridRow],
+    head_sub: usize,
+    column: u32,
+    column_span: u32,
+    dotted: bool,
+    double_dotted: bool,
+) {
+    if let Some(row) = sub_rows.get_mut(head_sub) {
+        row.elements.push(GridElement {
+            column,
+            column_span,
+            halign: HAlign::Center,
+            valign: VAlign::Center,
+            content: GridContent::Rest {
+                dotted,
+                double_dotted,
+                implicit_fill: true,
+            },
+        });
+    }
+}
+
 pub(crate) fn expand_measure_elements(
     row: &MeasureRow,
     measure_col_offset: u32,
@@ -78,7 +125,38 @@ pub(crate) fn expand_measure_elements(
 ) {
     let head_sub = params.head_sub;
     let sub_count = params.sub_count;
-    for el in &row.elements {
+    let mut elements = row.elements.iter().peekable();
+    while let Some(el) = elements.next() {
+        // A run's first `Rest` is destructured here (rather than reusing
+        // `is_implicit_fill_rest`, which only tests the content) so its own
+        // `dotted`/`double_dotted` carry through without a redundant,
+        // never-taken fallback arm for a shape `is_implicit_fill_rest`
+        // already ruled out.
+        if let ElementContent::Rest {
+            dotted,
+            double_dotted,
+            implicit_fill: true,
+        } = &el.content
+        {
+            let start_column = el.column;
+            while elements
+                .next_if(|next| is_implicit_fill_rest(&next.content))
+                .is_some()
+            {}
+            let column_span = elements
+                .peek()
+                .map_or(1, |next| next.column - start_column)
+                .max(1);
+            push_implicit_fill_rest(
+                sub_rows,
+                head_sub,
+                MUSIC_START_COL + measure_col_offset + start_column,
+                column_span,
+                *dotted,
+                *double_dotted,
+            );
+            continue;
+        }
         let grid_col = MUSIC_START_COL + measure_col_offset + el.column;
         match &el.content {
             ElementContent::Underline {
@@ -145,6 +223,7 @@ fn push_note_element(
         ElementContent::Rest {
             dotted,
             double_dotted,
+            implicit_fill,
         } => push_head(
             sub_rows,
             head_sub,
@@ -152,6 +231,7 @@ fn push_note_element(
             GridContent::Rest {
                 dotted: *dotted,
                 double_dotted: *double_dotted,
+                implicit_fill: *implicit_fill,
             },
         ),
         ElementContent::MultiMeasureRest { count } => {

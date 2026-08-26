@@ -328,6 +328,7 @@ impl PartGrouper {
                 group_membership: pr.group_membership,
                 group_continuation: pr.group_continuation,
                 tuplet: pr.tuplet,
+                implicit_fill: pr.implicit_fill,
             }),
             "rest",
         )

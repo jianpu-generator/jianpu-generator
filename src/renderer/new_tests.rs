@@ -98,6 +98,7 @@ fn rest_produces_zero_text() {
     let page = make_page(AbsoluteContent::Rest {
         dotted: false,
         double_dotted: false,
+        implicit_fill: false,
     });
     let docs = render_new(&[page], &cfg());
     let has_zero = docs[0]

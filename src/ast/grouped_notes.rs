@@ -180,4 +180,8 @@ pub struct GroupedRest {
     /// The innermost `{...}` tuplet bracket this rest belonged to before rescaling,
     /// if any.
     pub tuplet: Option<TupletInfo>,
+    /// Copied from `ParsedRest::implicit_fill` — true when this rest fills a
+    /// part not mentioned in this measure, rather than being written by the
+    /// composer. See `ParsedRest::implicit_fill`.
+    pub implicit_fill: bool,
 }

@@ -68,6 +68,7 @@ fn rest(column: u32) -> ColumnElement {
         content: ElementContent::Rest {
             dotted: false,
             double_dotted: false,
+            implicit_fill: false,
         },
         note_id: None,
     }

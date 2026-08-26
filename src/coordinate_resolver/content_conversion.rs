@@ -303,9 +303,11 @@ pub(super) fn grid_to_absolute(
         PostArcGridContent::Rest {
             dotted,
             double_dotted,
+            implicit_fill,
         } => Some(AbsoluteContent::Rest {
             dotted: *dotted,
             double_dotted: *double_dotted,
+            implicit_fill: *implicit_fill,
         }),
         PostArcGridContent::MultiMeasureRest { count } => Some(AbsoluteContent::MultiMeasureRest {
             count: *count,

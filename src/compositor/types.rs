@@ -27,6 +27,7 @@ pub enum AbsoluteContent {
     Rest {
         dotted: bool,
         double_dotted: bool,
+        implicit_fill: bool,
     },
     MultiMeasureRest {
         count: u32,

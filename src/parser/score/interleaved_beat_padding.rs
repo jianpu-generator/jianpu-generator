@@ -215,6 +215,7 @@ fn pad_incomplete_measure(
                 group_membership: 0,
                 group_continuation: 0,
                 tuplet: None,
+                implicit_fill: false,
             }),
             rest_span,
         ));
@@ -304,6 +305,7 @@ fn implicit_source_line(offset: usize) -> SourceLine {
     SourceLine {
         content: "_".to_string(),
         offset,
+        is_implicit_fill: false,
     }
 }
 

@@ -118,6 +118,7 @@ pub enum GridContent {
     Rest {
         dotted: bool,
         double_dotted: bool,
+        implicit_fill: bool,
     },
     /// A single wide rest bar standing in for `count` consecutive
     /// all-rest source measures.
@@ -234,6 +235,7 @@ pub enum PostArcGridContent {
     Rest {
         dotted: bool,
         double_dotted: bool,
+        implicit_fill: bool,
     },
     /// A single wide rest bar standing in for `count` consecutive
     /// all-rest source measures.

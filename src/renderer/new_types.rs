@@ -5,6 +5,10 @@ pub enum SvgVariant {
     Text,
     NoteHead,
     Rest,
+    /// A rest that fills a part not mentioned in this measure, rendered
+    /// with a distinct glyph so it reads as "not written" rather than
+    /// "written as silent". See `ParsedRest::implicit_fill`.
+    OmittedPartRest,
     MultiMeasureRest,
     ChordSymbol,
     PercussionHit,
@@ -23,6 +27,7 @@ impl SvgVariant {
             Self::Text => "text",
             Self::NoteHead => "note-head",
             Self::Rest => "rest",
+            Self::OmittedPartRest => "omitted-part-rest",
             Self::MultiMeasureRest => "multi-measure-rest",
             Self::ChordSymbol => "chord-symbol",
             Self::PercussionHit => "percussion-hit",

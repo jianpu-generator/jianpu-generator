@@ -89,6 +89,7 @@ fn rest(dotted: bool, double_dotted: bool) -> ElementContent {
     ElementContent::Rest {
         dotted,
         double_dotted,
+        implicit_fill: false,
     }
 }
 

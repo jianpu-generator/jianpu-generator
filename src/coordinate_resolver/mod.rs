@@ -3,6 +3,7 @@ mod content_conversion;
 mod highlights;
 mod post_arc_conversion;
 pub mod resolve;
+mod rest_run;
 pub use resolve::{resolve, LyricFontSizes};
 
 #[cfg(test)]

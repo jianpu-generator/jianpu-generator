@@ -130,31 +130,9 @@ pub(super) fn render_note_head(
 mod note_dash;
 pub(super) use note_dash::render_note_dash;
 
-pub(super) fn render_rest(
-    elem: &AbsoluteElement,
-    dots: &DotState,
-    base_font_size: &f32,
-) -> Vec<SvgElement> {
-    let content = format!(
-        "0{}",
-        font_metrics::augmentation_dot_suffix(dots.dotted, dots.double_dotted)
-    );
-
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: Some(SvgVariant::Rest),
-        kind: SvgKind::Text {
-            content,
-            font_size: *base_font_size,
-            anchor: TextAnchor::Start,
-            baseline: DominantBaseline::Middle,
-            font: FontFamily::Monospace,
-            weight: FontWeight::Normal,
-            italic: false,
-        },
-    }]
-}
+#[path = "glyph_renderers_rest.rs"]
+mod rest;
+pub(super) use rest::render_rest;
 
 /// Standard multi-bar-rest engraving: a thick horizontal bar with short vertical
 /// ticks at both ends, and the collapsed measure count printed centered above it.

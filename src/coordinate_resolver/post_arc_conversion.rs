@@ -26,9 +26,11 @@ pub(super) fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridCo
         GridContent::Rest {
             dotted,
             double_dotted,
+            implicit_fill,
         } => Some(PostArcGridContent::Rest {
             dotted: *dotted,
             double_dotted: *double_dotted,
+            implicit_fill: *implicit_fill,
         }),
         GridContent::MultiMeasureRest { count } => {
             Some(PostArcGridContent::MultiMeasureRest { count: *count })

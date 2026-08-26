@@ -247,6 +247,8 @@ mod tests;
 #[cfg(test)]
 mod tests_directive_mid_score;
 #[cfg(test)]
+mod tests_implicit_fill_rest;
+#[cfg(test)]
 mod tests_lyrics_and_diagnostics;
 #[cfg(test)]
 mod tests_lyrics_only_part;

@@ -13,6 +13,11 @@ type RawSourceLine = (String, usize);
 pub(crate) struct SourceLine {
     pub(crate) content: String,
     pub(crate) offset: usize,
+    /// True when `content` was synthesized by [`implicit_fill`] to stand in for
+    /// a declaration absent from this measure group, rather than written by
+    /// the composer. Threaded through to `ParsedRest::implicit_fill` so an
+    /// omitted part's filled-in rest renders with a distinct glyph.
+    pub(crate) is_implicit_fill: bool,
 }
 
 type MeasureGroup = Vec<SourceLine>;
@@ -213,6 +218,7 @@ fn expand_measure_group(
         .map(|(content, offset)| SourceLine {
             content: content.clone(),
             offset: *offset,
+            is_implicit_fill: false,
         })
         .collect();
     result.extend(result_data);
@@ -306,6 +312,7 @@ fn resolve_tracks(
                 SourceLine {
                     content: implicit_fill(role, context.time_num),
                     offset: context.pad_offset,
+                    is_implicit_fill: true,
                 }
             })
             .collect();

@@ -1,10 +1,10 @@
 use super::beat_padding::validate_and_pad_beats;
 use super::errors::invariant;
 use super::{notes_syllables_mut, BarGroupContext, SlotAction, TrackAccumulator};
-use crate::ast::parsed::ParsedMeasureSlot;
+use crate::ast::parsed::{ParsedMeasureSlot, ScoreEvent};
 use crate::desugar::SourceLine;
 use crate::error::{
-    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span,
+    Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned,
 };
 use crate::parser::score::token_parser;
 use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics};
@@ -13,12 +13,28 @@ fn is_recoverable_chord_line_error(_kind: &IrrecoverableErrorKind) -> bool {
     false
 }
 
+/// Tags every `Rest` event in `events` as `implicit_fill` — used when the whole
+/// line they came from was synthesized to stand in for a part not mentioned
+/// in this measure (see `SourceLine::is_implicit_fill`), so the rest renders
+/// with a distinct glyph instead of an ordinary written `0`.
+fn tag_implicit_rests(events: &mut [Spanned<ScoreEvent>]) {
+    for event in events {
+        if let ScoreEvent::Rest(rest) = &mut event.value {
+            rest.implicit_fill = true;
+        }
+    }
+}
+
 /// A single column's source line, bundled to keep downstream
 /// `process_*_column_line` functions under clippy's argument-count limit.
 #[derive(Clone, Copy)]
 struct ColumnLine<'a> {
     text: &'a str,
     offset: usize,
+    /// True when this line was synthesized to fill a part not mentioned in
+    /// this measure (see `SourceLine::is_implicit_fill`) — every `Rest`
+    /// event parsed from it is tagged `ParsedRest::implicit_fill` to match.
+    is_implicit_fill: bool,
 }
 
 pub(super) fn process_padded_columns(
@@ -32,6 +48,7 @@ pub(super) fn process_padded_columns(
             ColumnLine {
                 text: &line.content,
                 offset: line.offset,
+                is_implicit_fill: line.is_implicit_fill,
             },
             beats_expected,
             ctx,
@@ -159,6 +176,7 @@ fn process_notes_column_line(
     let ColumnLine {
         text: line,
         offset: line_offset,
+        is_implicit_fill,
     } = line;
     if line == "_" {
         return push_skipped_notes_measure(ctx, track_index, line_span, None);
@@ -177,13 +195,16 @@ fn process_notes_column_line(
         token_parser::parse_notes_line(line, ctx.base_offset + line_offset, group_state)?
     };
     let lex_error = notes_parse.lex_errors.into_iter().next();
-    let padded = validate_and_pad_beats(
+    let mut padded = validate_and_pad_beats(
         notes_parse.events,
         beats_expected,
         *ctx.time_num,
         *ctx.time_den,
         line_span,
     )?;
+    if is_implicit_fill {
+        tag_implicit_rests(&mut padded.events);
+    }
     if let Some(tie_state) = ctx.lyric_tie_states.get_mut(track_index) {
         let slots = count_lyric_slots_in_events(&padded.events, tie_state);
         if let Some(bar_slot) = ctx.bar_lyric_slots.get_mut(track_index) {
@@ -227,6 +248,7 @@ fn process_chord_column_line(
     let ColumnLine {
         text: line,
         offset: line_offset,
+        is_implicit_fill,
     } = line;
     let group_state = ctx
         .group_states
@@ -252,6 +274,9 @@ fn process_chord_column_line(
     )?;
     if line_failed {
         final_padded.beat_overflow_error = None;
+    }
+    if is_implicit_fill {
+        tag_implicit_rests(&mut final_padded.events);
     }
     let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
         invariant(

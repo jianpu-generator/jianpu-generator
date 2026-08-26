@@ -96,10 +96,12 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
         AbsoluteContent::Rest {
             dotted,
             double_dotted,
+            implicit_fill,
         } => render_rest(
             elem,
             &DotState::new(*dotted, *double_dotted),
             notes_font_size,
+            *implicit_fill,
         ),
         AbsoluteContent::NoteDash {
             dotted,

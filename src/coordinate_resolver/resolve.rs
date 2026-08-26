@@ -9,6 +9,7 @@ use super::click_targets::resolve_click_target_elements;
 use super::content_conversion::grid_to_absolute;
 use super::highlights::{resolve_error_highlights, resolve_measure_highlights};
 use super::post_arc_conversion::to_post_arc_content;
+use super::rest_run::{resolve_implicit_fill_rest, resolve_multi_measure_rest};
 
 /// Font sizes used to measure lyric syllable width.
 #[derive(Clone, Copy)]
@@ -163,6 +164,18 @@ fn resolve_row_element(
         GridContent::MultiMeasureRest { count } => Ok(Some(resolve_multi_measure_rest(
             *count, x_start, span_width, y,
         ))),
+        GridContent::Rest {
+            dotted,
+            double_dotted,
+            implicit_fill: true,
+        } => Ok(Some(resolve_implicit_fill_rest(
+            *dotted,
+            *double_dotted,
+            el.column,
+            el.column_span,
+            geometry,
+            y,
+        ))),
         content => {
             let Some(post_arc_content) = to_post_arc_content(content) else {
                 return Ok(None);
@@ -271,26 +284,6 @@ fn resolve_span_marking(
             })
         }
         _ => None,
-    }
-}
-
-/// The collapsed multi-measure-rest bar spans its custom column_span width
-/// starting at the column's left edge, rather than the generic per-column
-/// halign/valign math above — but inset by `GLYPH_LEFT_PADDING` on both
-/// ends, mirroring the same clearance every other column keeps before
-/// whatever follows it, so the bar's own end ticks don't render flush
-/// against the enclosing measure dividers. `layout_spacing::multi_measure_rest_weight`
-/// reserves this same padding on both ends when sizing the block's column
-/// span, so the two can't drift apart.
-fn resolve_multi_measure_rest(count: u32, x_start: f32, width: f32, y: f32) -> AbsoluteElement {
-    let padding = crate::font_metrics::GLYPH_LEFT_PADDING;
-    AbsoluteElement {
-        x: x_start + padding,
-        y,
-        content: AbsoluteContent::MultiMeasureRest {
-            count,
-            width: (width - padding * 2.0).max(0.0),
-        },
     }
 }
 

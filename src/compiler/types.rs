@@ -109,6 +109,10 @@ pub enum ElementContent {
     Rest {
         dotted: bool,
         double_dotted: bool,
+        /// True when this rest fills a part not mentioned in this measure
+        /// rather than being written by the composer — rendered with a
+        /// distinct glyph. See `ParsedRest::implicit_fill`.
+        implicit_fill: bool,
     },
     /// A single wide rest bar standing in for `count` consecutive
     /// all-rest source measures (cross-measure collapsing).

@@ -157,6 +157,7 @@ fn make_padding_row(template_row: &MeasureRow, block: &MeasureBlock) -> MeasureR
                 content: ElementContent::Rest {
                     dotted: false,
                     double_dotted: false,
+                    implicit_fill: true,
                 },
                 note_id: None,
             },

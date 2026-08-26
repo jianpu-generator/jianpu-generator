@@ -125,6 +125,7 @@ pub(super) fn column_weight(content: &ElementContent, config: &RenderConfig) -> 
         ElementContent::Rest {
             dotted,
             double_dotted,
+            ..
         } => {
             note_glyph_weight(config)
                 + dot_extra_weight(*dotted, *double_dotted, config.notes_font_size())

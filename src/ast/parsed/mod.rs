@@ -347,6 +347,11 @@ pub struct ParsedRest {
     pub group_continuation: u8,
     /// The innermost `{...}` tuplet bracket this rest belongs to, if any.
     pub tuplet: Option<TupletInfo>,
+    /// True when this rest was synthesized to fill a part not mentioned in
+    /// this measure (see "Not-mentioned parts" in syntax.md), rather than
+    /// written by the composer as an explicit `0`. Rendered with a distinct
+    /// glyph — see `render_rest` in `src/renderer/new_renderer/glyph_renderers.rs`.
+    pub implicit_fill: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -13,6 +13,7 @@ fn group_by_key(lines: Vec<KeyedLine>) -> KeyMap {
         let entry = SourceLine {
             content: line.content,
             offset: line.content_offset,
+            is_implicit_fill: false,
         };
         if let Some(existing) = map.iter_mut().find(|(k, _)| k == &line.key) {
             existing.1.push(entry);
