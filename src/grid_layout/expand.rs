@@ -26,10 +26,11 @@ pub(crate) struct LyricPartParams<'a> {
     pub(crate) measure_layout: &'a [MeasureColumnLayout],
 }
 
-/// Every verse gets its own label at column 0, mirroring `expand_note_part`'s
-/// `RowLabel` push for the note row — just the part's abbreviation, with no
-/// verse suffix (a multi-verse part's verse rows share the same label text;
-/// their stacked order distinguishes them). `system.first()` always has a
+/// A verse row's `RowLabel` is always this fixed glyph, not the part's
+/// abbreviation — the notes row above already conveys part identity.
+const LYRIC_ROW_LABEL: &str = "*";
+
+/// Every verse gets its own label at column 0. `system.first()` always has a
 /// `part_idx` entry matching this row's own template (only ever called for
 /// an `is_lyric_row` row). Split out of `expand_lyric_part` to keep it under
 /// the max function-length lint.
@@ -48,7 +49,7 @@ fn push_verse_row_label(row: &mut GridRow, system: &[MeasureBlock], part_idx: us
         column_span: LABEL_COLS,
         halign: HAlign::Center,
         valign: VAlign::Center,
-        content: GridContent::RowLabel(part_template.label.clone()),
+        content: GridContent::RowLabel(LYRIC_ROW_LABEL.to_string()),
     });
 }
 
