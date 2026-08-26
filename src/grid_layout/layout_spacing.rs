@@ -1,5 +1,6 @@
 use super::{block_column_width, LABEL_COLS, MUSIC_START_COL};
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock};
+use crate::grid_layout::layout::{directive_line_rod_width, directive_line_should_emit};
 use crate::grid_layout::types::MeasureColumnLayout;
 use crate::render_config::RenderConfig;
 use std::collections::BTreeSet;
@@ -251,7 +252,35 @@ pub(crate) fn build_measure_column_layout(
             let mut column_rods = vec![0.0; leading_extra as usize];
             column_rods.extend(sizes.iter().map(|s| s.rod_pt));
             let content_rod: f32 = column_rods.iter().sum();
-            let rod_pt = MIN_MEASURE_WIDTH_PT.max(content_rod);
+            let directive_width_pt = block
+                .decorations
+                .first()
+                .filter(|dec| directive_line_should_emit(idx, dec))
+                .map(directive_line_rod_width)
+                .unwrap_or(0.0);
+            // The directive line draws starting at this block's own leading
+            // anchor (the previous block's trailing bar line, or the
+            // system's leading placeholder column for the first block — see
+            // `make_decoration_row`) and must finish before this block's OWN
+            // trailing bar-line column starts, since that's where the
+            // *next* block's directive begins drawing. The rescale below
+            // proportionally inflates every column's rod — including the
+            // trailing bar line's own — so solve in closed form for how
+            // much this block's rod needs to grow so the directive still
+            // fits after that rescale: with `C = content_rod` and
+            // `B = BARLINE_MIN_WIDTH_PT`, the bar line's post-scale rod is
+            // `B * rod_pt / C`, leaving `rod_pt * (C - B) / C` of non-bar-
+            // line width for the directive — setting that `>= D` gives
+            // `rod_pt >= D * C / (C - B)`.
+            let directive_target_rod_pt =
+                if directive_width_pt > 0.0 && content_rod > BARLINE_MIN_WIDTH_PT {
+                    directive_width_pt * content_rod / (content_rod - BARLINE_MIN_WIDTH_PT)
+                } else {
+                    directive_width_pt
+                };
+            let rod_pt = MIN_MEASURE_WIDTH_PT
+                .max(content_rod)
+                .max(directive_target_rod_pt);
             if rod_pt > content_rod && content_rod > 0.0 {
                 // `MIN_MEASURE_WIDTH_PT`'s degenerate-case floor (e.g. an
                 // almost-empty measure) pushed `rod_pt` above what this

@@ -69,16 +69,11 @@ pub(super) fn render_directive_line(
 
     match args.label {
         Some(label_str) => {
-            let bar_number_width = args
-                .bar_number
-                .as_ref()
-                .map(crate::font_metrics::span_width)
-                .unwrap_or(0.0);
-            let label_box_right =
-                args.label_x_offset + crate::font_metrics::section_label_box_width(label_str);
-            let spans_width: f32 = args.spans.iter().map(crate::font_metrics::span_width).sum();
-            let spans_right = args.spans_x_offset + spans_width;
-            let line_width = bar_number_width.max(label_box_right).max(spans_right);
+            let line_width = crate::font_metrics::directive_line_width(
+                args.bar_number.as_ref(),
+                Some(label_str),
+                args.spans,
+            );
 
             vec![render_section_label_group(
                 elem,

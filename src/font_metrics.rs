@@ -299,6 +299,44 @@ pub(crate) fn section_label_box_width(label: &str) -> f32 {
         + section_label_box_padding() * 2.0
 }
 
+/// Gap (points) reserved between adjacent directive-line elements (bar
+/// number, section label, key/bpm/time-signature spans) — shared by
+/// `coordinate_resolver::content_conversion` (positions them) and
+/// `grid_layout::layout_decoration` (must reserve enough measure width for
+/// them before positions are known).
+pub(crate) const DIRECTIVE_LINE_ELEMENT_GAP: f32 = 20.0;
+
+/// Total rendered width (points) of a directive line's bar number, section
+/// label box, and trailing spans, laid out left-to-right in that order.
+/// Mirrors the offset math in
+/// `coordinate_resolver::content_conversion::directive_line_content` (the
+/// authoritative positioning logic) — kept here so that layer and
+/// `grid_layout::layout_decoration` (which must reserve width for this line
+/// before rendering happens) share one implementation.
+pub(crate) fn directive_line_width(
+    bar_number: Option<&TextSpan>,
+    label: Option<&str>,
+    spans: &[TextSpan],
+) -> f32 {
+    let bar_number_width = bar_number.map(span_width).unwrap_or(0.0);
+    let spans_width: f32 = spans.iter().map(span_width).sum();
+    match label {
+        Some(label_str) => {
+            let label_x_offset = if bar_number.is_some() {
+                bar_number_width + DIRECTIVE_LINE_ELEMENT_GAP
+            } else {
+                0.0
+            };
+            let label_box_right = label_x_offset + section_label_box_width(label_str);
+            let spans_x_offset = label_box_right + DIRECTIVE_LINE_ELEMENT_GAP;
+            bar_number_width
+                .max(label_box_right)
+                .max(spans_x_offset + spans_width)
+        }
+        None => bar_number_width + spans_width,
+    }
+}
+
 /// Gap (in points) kept between a directive line and the row above it.
 /// Larger than `DIRECTIVE_LINE_BOTTOM_PADDING` so the line reads as
 /// attached to the musical row it annotates (below it) rather than the one

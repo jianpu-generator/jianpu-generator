@@ -373,7 +373,15 @@ fn label_background_width_matches_real_font_metrics() {
     };
     let SvgKind::TransparentRect { width, .. } = children
         .iter()
-        .find(|e| matches!(&e.kind, SvgKind::TransparentRect { .. }))
+        .find(|e| {
+            matches!(
+                &e.kind,
+                SvgKind::TransparentRect {
+                    role: TransparentRectRole::SectionLabelBackground,
+                    ..
+                }
+            )
+        })
         .expect("label background rect should be present")
         .kind
     else {

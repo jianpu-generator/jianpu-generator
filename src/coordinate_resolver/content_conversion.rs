@@ -58,12 +58,6 @@ pub(super) fn bar_number_text_span(n: u32) -> TextSpan {
     }
 }
 
-/// Gap (in points) reserved between two adjacent directive-line elements
-/// (bar number, section label, key/bpm/time-signature/markers) so that,
-/// when rendered as independently-positioned text elements, they never
-/// overlap regardless of their actual measured widths.
-const DIRECTIVE_LINE_ELEMENT_GAP: f32 = 20.0;
-
 /// Result of [`directive_line_content`]: the line's text spans plus layout
 /// hints for elements positioned separately from the monolithic `<text>`
 /// (the bar number, the section-label bounding box).
@@ -116,7 +110,7 @@ fn directive_line_content(content: &PostArcGridContent) -> DirectiveLineContent 
         .unwrap_or(0.0);
 
     let label_x_offset = if label.is_some() && bar_number_span.is_some() {
-        bar_number_width + DIRECTIVE_LINE_ELEMENT_GAP
+        bar_number_width + crate::font_metrics::DIRECTIVE_LINE_ELEMENT_GAP
     } else {
         0.0
     };
@@ -124,7 +118,7 @@ fn directive_line_content(content: &PostArcGridContent) -> DirectiveLineContent 
         Some(label_str) => {
             label_x_offset
                 + crate::font_metrics::section_label_box_width(label_str)
-                + DIRECTIVE_LINE_ELEMENT_GAP
+                + crate::font_metrics::DIRECTIVE_LINE_ELEMENT_GAP
         }
         None => bar_number_width,
     };

@@ -134,6 +134,7 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           key={key}
           x={el.x}
           y={el.y}
+          data-variant={el.variant}
           fontSize={kind.font_size}
           textAnchor={
             kind.anchor === 'start'
@@ -162,6 +163,7 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           key={key}
           x={el.x}
           y={el.y}
+          data-variant={el.variant}
           fontSize={kind.font_size}
           textAnchor={
             kind.anchor === 'start'

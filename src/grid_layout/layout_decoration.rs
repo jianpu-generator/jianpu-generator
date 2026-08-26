@@ -1,4 +1,5 @@
 use crate::compiler::types::{Decoration, MeasureBlock};
+use crate::compositor::types::TextSpan;
 use crate::grid_layout::layout::{
     block_column_width, decoration_row_height, header_gap_row_height, header_part_list_row_height,
     header_subtitle_author_row_height, header_title_row_height, separator_row_height, LABEL_COLS,
@@ -26,6 +27,56 @@ pub(crate) fn directive_line_should_emit(index: usize, dec: &Decoration) -> bool
         } = dec;
         label.is_some() || key.is_some() || bpm.is_some() || time_signature.is_some()
     }
+}
+
+/// The rendered width (points) `dec`'s directive line will need once drawn
+/// — computed the same way `content_conversion::directive_line_content`
+/// positions the actual line, just against `Decoration`'s pre-render fields
+/// instead of the resolved `PostArcGridContent`. Keep the span text built
+/// here in sync with `build_directive_line_spans` in
+/// `coordinate_resolver/content_conversion.rs` if a directive field is ever
+/// added/changed — both build the same line from the same source data, one
+/// before layout, one after.
+pub(crate) fn directive_line_rod_width(dec: &Decoration) -> f32 {
+    let Decoration::DirectiveLine {
+        label,
+        bar_number,
+        key,
+        bpm,
+        time_signature,
+    } = dec;
+    let bar_number_span = bar_number.map(|n| TextSpan {
+        content: n.to_string(),
+        bold: false,
+        italic: false,
+        font_size: 10.0,
+    });
+    let mut spans = Vec::new();
+    if let Some(key_str) = key {
+        spans.push(TextSpan {
+            content: format!("  {key_str}"),
+            bold: false,
+            italic: false,
+            font_size: 12.0,
+        });
+    }
+    if let Some(b) = bpm {
+        spans.push(TextSpan {
+            content: format!("  \u{2669}={b}"),
+            bold: false,
+            italic: false,
+            font_size: 12.0,
+        });
+    }
+    if let Some((n, d)) = time_signature {
+        spans.push(TextSpan {
+            content: format!("  {n}/{d}"),
+            bold: false,
+            italic: false,
+            font_size: 12.0,
+        });
+    }
+    crate::font_metrics::directive_line_width(bar_number_span.as_ref(), label.as_deref(), &spans)
 }
 
 fn directive_line_element(dec: &Decoration, col: u32) -> GridElement {

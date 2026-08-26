@@ -115,7 +115,9 @@ pub(crate) use systems::{
 mod decoration;
 pub(crate) use super::expand::expand_system_to_rows;
 use super::expand::make_footer_row;
-pub(crate) use decoration::{directive_line_should_emit, make_header_rows};
+pub(crate) use decoration::{
+    directive_line_rod_width, directive_line_should_emit, make_header_rows,
+};
 use decoration::{make_decoration_row, make_separator_row};
 
 fn system_total_height(
