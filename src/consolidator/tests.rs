@@ -38,7 +38,15 @@ fn follow_part_identical_to_source_is_omitted_per_measure() {
     );
     let blocks = consolidated_blocks(source);
 
-    // Measure 1: B is identical to A → only A's notes and lyrics rows remain
+    // Measure 1: B is identical to A → only A's notes and lyrics rows remain.
+    // `consolidate()` alone leaves each surviving row's `label` as its own
+    // per-part identity ("A") rather than folding in what it absorbed — the
+    // final displayed label (e.g. "A B") is only resolved once
+    // `grid_layout::layout_systems` knows the whole system (see
+    // `group_broadcast_label_after_union` in `grid_layout`'s test suite for
+    // that end-to-end check), since only then is it known whether B's
+    // absorption here holds for the whole system or was a one-measure
+    // coincidence.
     assert_eq!(
         blocks[0].rows.len(),
         2,
@@ -50,12 +58,17 @@ fn follow_part_identical_to_source_is_omitted_per_measure() {
             .collect::<Vec<_>>()
     );
     assert_eq!(
-        blocks[0].rows[0].label, "A B",
-        "measure 1: notes row should merge B into A"
+        blocks[0].rows[0].label, "A",
+        "measure 1: notes row survives as A, with B recorded as absorbed"
     );
     assert_eq!(
-        blocks[0].rows[1].label, "A B",
-        "measure 1: lyrics row should merge B into A"
+        blocks[0].rows[0].absorbed_rows.len(),
+        1,
+        "measure 1: B's notes should be recorded as absorbed into A's row"
+    );
+    assert_eq!(
+        blocks[0].rows[1].label, "A",
+        "measure 1: lyrics row survives as A, with B recorded as absorbed"
     );
 
     // Measure 2: B has different notes → A notes, A lyrics, and B notes appear
@@ -69,8 +82,8 @@ fn follow_part_identical_to_source_is_omitted_per_measure() {
         "measure 2: first row should be A notes"
     );
     assert_eq!(
-        blocks[1].rows[1].label, "A B",
-        "measure 2: lyrics row should merge B into A"
+        blocks[1].rows[1].label, "A",
+        "measure 2: lyrics row survives as A, with B recorded as absorbed"
     );
     assert_eq!(
         blocks[1].rows[2].label, "B",
@@ -123,7 +136,11 @@ B = notes
 "#;
     let blocks = consolidated_blocks(source);
     assert_eq!(blocks[0].rows.len(), 1);
-    assert_eq!(blocks[0].rows[0].label, "A B");
+    // The final "A B" display label is resolved later, once
+    // `grid_layout::layout_systems` knows the whole system — see
+    // `group_broadcast_label_after_union` in `grid_layout`'s test suite.
+    assert_eq!(blocks[0].rows[0].label, "A");
+    assert_eq!(blocks[0].rows[0].absorbed_rows.len(), 1);
 }
 
 #[test]
@@ -175,7 +192,11 @@ fn merge_duplicate_measures_across_parts_directive_toggles_mid_score() {
 }
 
 #[test]
-fn group_broadcast_merge_uses_group_abbreviation_as_label() {
+fn group_broadcast_merge_records_both_members_as_one_row() {
+    // The final group-abbreviation label ("s", not concatenated member
+    // labels) is resolved later, once `grid_layout::layout_systems` knows
+    // the whole system — see `group_broadcast_label_after_union` in
+    // `grid_layout`'s test suite. This layer only owns the merge *decision*.
     let source = concat!(
         "# metadata\n",
         "title = \"hello\"\n",
@@ -199,8 +220,20 @@ fn group_broadcast_merge_uses_group_abbreviation_as_label() {
         "both members broadcast identical content, so they merge into one row"
     );
     assert_eq!(
-        blocks[0].rows[0].label, "s",
-        "merged row should be labeled with the group's abbreviation, not concatenated part labels"
+        blocks[0].rows[0].label, "S1",
+        "the surviving row keeps its own per-part label at this layer"
+    );
+    assert_eq!(
+        blocks[0].rows[0].absorbed_rows.len(),
+        1,
+        "S2 should be recorded as absorbed into S1's row"
+    );
+    assert_eq!(
+        blocks[0].rows[0].absorbed_rows[0]
+            .group_provenance
+            .as_deref(),
+        Some("s"),
+        "S2's own group provenance should survive untouched inside absorbed_rows"
     );
 }
 
@@ -231,8 +264,13 @@ fn group_broadcast_partial_override_keeps_diverged_member_separate() {
         "S2 diverges from the broadcast so it splits off; S1/S3 still merge"
     );
     assert_eq!(
-        blocks[0].rows[0].label, "s",
-        "S1 and S3 both trace to the group broadcast and merge under the group abbreviation"
+        blocks[0].rows[0].label, "S1",
+        "S1 and S3 merge into one row, kept under S1's own per-part label at this layer"
+    );
+    assert_eq!(
+        blocks[0].rows[0].absorbed_rows.len(),
+        1,
+        "S3 should be recorded as absorbed into S1's row"
     );
     assert_eq!(
         blocks[0].rows[1].label, "S2",
@@ -276,12 +314,15 @@ fn narrower_group_broadcast_overrides_broader_group_broadcast_for_shared_members
             .collect::<Vec<_>>()
     );
     assert_eq!(
-        blocks[0].rows[0].label, "V",
-        "A1/A2 only ever got the V broadcast, so they merge under the V group label"
+        blocks[0].rows[0].label, "A1",
+        "A1/A2 merge into one row, kept under A1's own per-part label at this layer \
+         (the final \"V\" group label is resolved later by grid_layout)"
     );
     assert_eq!(
-        blocks[0].rows[1].label, "S",
-        "S1/S2 should be overridden by the later, narrower S broadcast and merge under the S group label"
+        blocks[0].rows[1].label, "S1",
+        "S1/S2 (overridden by the narrower S broadcast) merge into one row, kept under \
+         S1's own per-part label at this layer (the final \"S\" group label is resolved \
+         later by grid_layout)"
     );
 }
 

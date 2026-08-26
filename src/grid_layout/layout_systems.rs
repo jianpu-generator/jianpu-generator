@@ -177,6 +177,32 @@ fn make_padding_row(template_row: &MeasureRow, block: &MeasureBlock) -> MeasureR
     }
 }
 
+/// The displayed label for `row`, folding its own (part-level) identity
+/// together with whichever of its `absorbed_rows` are still genuinely,
+/// permanently merged into it — i.e. every `RowId` this system needs, per
+/// `union_ids`, gets its own separate row *somewhere*, so an absorbed row
+/// whose id is in `union_ids` only matched `row`'s content by coincidence in
+/// this one measure (see [`pad_chunk_to_union`]) and must not affect `row`'s
+/// label here. Mirrors the group-abbreviation rule `consolidator` used to
+/// apply eagerly per-measure: the running label becomes the shared group
+/// abbreviation while every folded-in row traces to the same `[GroupAbbrev]`
+/// broadcast, falling back to a space-joined concatenation (and clearing
+/// provenance, so a later fold in the same pass can't mistake a
+/// partially-diverged cluster for a fully in-group one) the moment one
+/// doesn't.
+fn resolve_label(row: &MeasureRow, union_ids: &HashSet<RowId>) -> (String, Option<String>) {
+    row.absorbed_rows
+        .iter()
+        .filter(|absorbed| !union_ids.contains(&absorbed.id))
+        .fold(
+            (row.label.clone(), row.group_provenance.clone()),
+            |(label, provenance), absorbed| match (&provenance, &absorbed.group_provenance) {
+                (Some(p), Some(q)) if p == q => (p.clone(), Some(p.clone())),
+                _ => (format!("{label} {}", absorbed.label), None),
+            },
+        )
+}
+
 /// Rebuilds every block in `chunk` so its `rows` match `union` exactly, in
 /// order. For each `union` template's `RowId`, in priority order: a block's
 /// own matching row wins if present; otherwise, if some other row in this
@@ -185,15 +211,19 @@ fn make_padding_row(template_row: &MeasureRow, block: &MeasureBlock) -> MeasureR
 /// own — it's genuinely this part's own real content (real `note_id`s, real
 /// click/playback targets), just also drawn merged into another row elsewhere
 /// in this same system; only when neither holds is the `RowId` genuinely
-/// absent here, padded via [`make_padding_row`].
+/// absent here, padded via [`make_padding_row`]. Every resolved row's
+/// `label`/`group_provenance` is then (re)computed by [`resolve_label`], now
+/// that `union`'s full `RowId` membership — unknown to `consolidator`, which
+/// only ever sees one measure at a time — is available.
 fn pad_chunk_to_union(chunk: &[MeasureBlock], union: &[MeasureRow]) -> Vec<MeasureBlock> {
+    let union_ids: HashSet<RowId> = union.iter().map(|row| row.id.clone()).collect();
     chunk
         .iter()
         .map(|block| {
             let rows = union
                 .iter()
                 .map(|template| {
-                    block
+                    let mut row = block
                         .rows
                         .iter()
                         .find(|r| r.id == template.id)
@@ -206,7 +236,11 @@ fn pad_chunk_to_union(chunk: &[MeasureBlock], union: &[MeasureRow]) -> Vec<Measu
                                     .cloned()
                             })
                         })
-                        .unwrap_or_else(|| make_padding_row(template, block))
+                        .unwrap_or_else(|| make_padding_row(template, block));
+                    let (label, group_provenance) = resolve_label(&row, &union_ids);
+                    row.label = label;
+                    row.group_provenance = group_provenance;
+                    row
                 })
                 .collect();
 

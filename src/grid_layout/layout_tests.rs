@@ -18,3 +18,6 @@ mod tests_lyrics_only_part;
 
 #[path = "tests_lyric_click_targets.rs"]
 mod tests_lyric_click_targets;
+
+#[path = "tests_group_broadcast_label.rs"]
+mod tests_group_broadcast_label;

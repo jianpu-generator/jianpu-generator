@@ -119,21 +119,17 @@ fn lyrics_rows(row: &MeasureRow) -> Vec<MeasureRow> {
         .collect()
 }
 
-/// A merged row's label is the shared group abbreviation when every row being
-/// merged traces back to the same `[GroupAbbrev]` broadcast; otherwise it falls
-/// back to concatenating the individual labels (the pre-existing behavior for
-/// coincidentally-identical content). The returned provenance is only `Some`
-/// when the label is the group abbreviation, so a later merge in the same pass
-/// can't mistake a partially-diverged cluster for a fully in-group one.
-fn merge_labels(left: &MeasureRow, right: &MeasureRow) -> (String, Option<String>) {
-    match (&left.group_provenance, &right.group_provenance) {
-        (Some(left_group), Some(right_group)) if left_group == right_group => {
-            (left_group.clone(), Some(left_group.clone()))
-        }
-        _ => (format!("{} {}", left.label, right.label), None),
-    }
-}
-
+/// Merges rows with identical content within a single measure block, but
+/// deliberately leaves `label`/`group_provenance` untouched — those stay each
+/// row's own, per-part identity (as compiled) regardless of merging. A block
+/// is consolidated in isolation, before systems (and thus the multi-measure
+/// context a display label needs) exist: whether a coincidentally-identical
+/// row is "genuinely" merged for the whole system, or only matched by
+/// per-measure accident, can only be decided once `grid_layout::layout_systems`
+/// knows every measure in the system (see its `resolve_label`, which folds
+/// each row's own identity with its still-genuinely-absorbed rows once that
+/// context exists — this function only decides *which* rows to fold content
+/// into, not what to call the result).
 fn consolidate_rows(mut rows: Vec<MeasureRow>, merge_across_parts: bool) -> Vec<MeasureRow> {
     let mut index = 0;
     while index < rows.len() {
@@ -148,15 +144,8 @@ fn consolidate_rows(mut rows: Vec<MeasureRow>, merge_across_parts: bool) -> Vec<
                     (merge_across_parts || !is_cross_part) && content_equal(left, right)
                 });
             if equal {
-                let merged_label = rows
-                    .get(index)
-                    .zip(rows.get(inner))
-                    .map(|(left, right)| merge_labels(left, right));
                 let removed = rows.remove(inner);
-                if let (Some(row), Some((label, provenance))) = (rows.get_mut(index), merged_label)
-                {
-                    row.label = label;
-                    row.group_provenance = provenance;
+                if let Some(row) = rows.get_mut(index) {
                     // `removed` disappears from `rows` entirely, so its own
                     // content (and anything already merged into it) has to be
                     // recorded here — otherwise a later pass has no way to
