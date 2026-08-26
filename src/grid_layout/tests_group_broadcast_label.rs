@@ -166,13 +166,26 @@ fn implicitly_resting_groups_collapse_when_merged_with_an_outside_resting_part()
     // list every member individually ("S1 S2 A1 A2 T") just because the
     // "broadcast" S1/S2 and A1/A2 each share is implicit silence rather than
     // an actual `[GroupAbbrev]` line.
+    //
+    // B has real (non-rest) notes, so the system doesn't boil down to a
+    // single row — without it, `layout_systems::clear_label_if_lone_resting_row`
+    // would clear the merged row's label entirely, since it'd be the system's
+    // only row and it's entirely rest (see
+    // `tests_lone_resting_row_label.rs`), which would defeat the point of
+    // this test. `hide_resting_parts=no` keeps the merged rest row itself
+    // from being hidden outright now that B (a genuinely sounding part)
+    // shares the measure with it.
     let source = concat!(
+        "# metadata\n",
+        "hide_resting_parts=no\n",
+        "\n",
         "# parts\n",
         "Soprano 1 [S1] = notes\n",
         "Soprano 2 [S2] = notes\n",
         "Alto 1 [A1] = notes\n",
         "Alto 2 [A2] = notes\n",
         "Tenor [T] = notes\n",
+        "Bass [B] = notes\n",
         "\n",
         "# groups\n",
         "Soprano [S] = S1 S2\n",
@@ -180,6 +193,10 @@ fn implicitly_resting_groups_collapse_when_merged_with_an_outside_resting_part()
         "\n",
         "# score\n",
         "[T] 0 0 0 0\n",
+        "[B] 1 2 3 4\n",
     );
-    assert_eq!(row_labels(source), vec!["S A T".to_string()]);
+    assert_eq!(
+        row_labels(source),
+        vec!["S A T".to_string(), "B".to_string()]
+    );
 }

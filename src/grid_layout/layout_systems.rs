@@ -277,6 +277,53 @@ fn pad_chunk_to_union(chunk: &[MeasureBlock], union: &[MeasureRow]) -> Vec<Measu
         .collect()
 }
 
+/// True when `row`'s own content is nothing but rest — a plain `Rest` or a
+/// collapsed `MultiMeasureRest` (bar lines don't count either way). Used to
+/// decide whether a lone row's part label is worth showing at all (see
+/// [`clear_label_if_lone_resting_row`]).
+fn row_is_entirely_rest(row: &MeasureRow) -> bool {
+    row.elements.iter().all(|el| {
+        matches!(
+            el.content,
+            ElementContent::Rest { .. }
+                | ElementContent::MultiMeasureRest { .. }
+                | ElementContent::BarLine
+        )
+    })
+}
+
+/// A part-abbreviation label only earns its keep by distinguishing one row
+/// from another sharing the same system. When a system boils down to a
+/// single row (`union_row_order` found only one distinct `RowId` across the
+/// whole chunk) and that row is entirely rest — whether a single resting
+/// measure or a run collapsed into one `MultiMeasureRest` — there's nothing
+/// else in the system for the label to distinguish it from, so it's cleared
+/// on every block's copy of that row. A lone row that actually plays
+/// something keeps its label, and a system with more than one row is left
+/// untouched even if every row in it happens to be resting.
+fn clear_label_if_lone_resting_row(padded: &mut [MeasureBlock]) {
+    let Some(first_block) = padded.first() else {
+        return;
+    };
+    let [only_row] = first_block.rows.as_slice() else {
+        return;
+    };
+    if is_lyric_row(only_row) {
+        return;
+    }
+    if !padded
+        .iter()
+        .all(|block| block.rows.first().is_some_and(row_is_entirely_rest))
+    {
+        return;
+    }
+    for block in padded {
+        if let Some(row) = block.rows.first_mut() {
+            row.label.clear();
+        }
+    }
+}
+
 /// Break `blocks` into systems. Each system is a `Vec<MeasureBlock>`, packed
 /// purely by count (chunks of up to `config.max_measures_per_system`
 /// measures) — differing parts or lyric verse counts across measures never
@@ -294,7 +341,9 @@ pub(crate) fn pack_into_systems(
 ) -> Vec<Vec<MeasureBlock>> {
     fn finish_chunk(chunk: &[MeasureBlock]) -> Vec<MeasureBlock> {
         let union = union_row_order(chunk);
-        pad_chunk_to_union(chunk, &union)
+        let mut padded = pad_chunk_to_union(chunk, &union);
+        clear_label_if_lone_resting_row(&mut padded);
+        padded
     }
 
     let mut systems: Vec<Vec<MeasureBlock>> = Vec::new();

@@ -21,3 +21,6 @@ mod tests_lyric_click_targets;
 
 #[path = "tests_group_broadcast_label.rs"]
 mod tests_group_broadcast_label;
+
+#[path = "tests_lone_resting_row_label.rs"]
+mod tests_lone_resting_row_label;
