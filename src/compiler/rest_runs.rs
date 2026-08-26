@@ -78,6 +78,7 @@ fn merge_rest_run(run: &[MeasureBlock]) -> MeasureBlock {
         .first()
         .map(|first| first.merge_duplicate_measures_across_parts)
         .unwrap_or(true);
+    let system_break = run.first().is_some_and(|first| first.system_break);
     let source_span = run
         .iter()
         .map(|block| block.source_span)
@@ -89,6 +90,7 @@ fn merge_rest_run(run: &[MeasureBlock]) -> MeasureBlock {
         diagnostics: vec![],
         represents_measures: count,
         merge_duplicate_measures_across_parts,
+        system_break,
         source_span,
     }
 }
@@ -109,8 +111,11 @@ pub(super) fn merge_rest_runs(
     // starts a fresh id too, since a merged block carries one resolved setting
     // pair for the whole run (taken from its first measure, see `merge_rest_run`) —
     // absorbing a setting change into an earlier run would silently apply the
-    // wrong setting to the measures after the change. Non-collapsible measures
-    // get `None` and are never merged.
+    // wrong setting to the measures after the change. A `system_break` measure
+    // starts a fresh id for the same reason as a label: merging it into an
+    // earlier run would move the forced system boundary to wherever that run
+    // started, instead of the measure the user actually marked. Non-collapsible
+    // measures get `None` and are never merged.
     let mut next_run_id = 0usize;
     let mut in_run = false;
     let mut prev_settings: Option<(bool, bool)> = None;
@@ -128,7 +133,11 @@ pub(super) fn merge_rest_runs(
                 measure.merge_duplicate_measures_across_parts,
                 measure.hide_resting_parts,
             );
-            if in_run && (measure.label.is_some() || prev_settings != Some(settings)) {
+            if in_run
+                && (measure.label.is_some()
+                    || measure.system_break
+                    || prev_settings != Some(settings))
+            {
                 next_run_id += 1;
             }
             in_run = true;

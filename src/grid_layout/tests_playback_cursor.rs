@@ -128,6 +128,7 @@ fn playback_cursor_target_extends_over_its_lyric_verse_row() {
         diagnostics: vec![],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        system_break: false,
         source_span: crate::error::Span::new(0, 0),
     };
 
@@ -178,6 +179,7 @@ fn note_click_target_does_not_extend_over_its_lyric_verse_row() {
         diagnostics: vec![],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        system_break: false,
         source_span: crate::error::Span::new(0, 0),
     };
 

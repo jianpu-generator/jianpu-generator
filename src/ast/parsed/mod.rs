@@ -238,6 +238,9 @@ pub enum ScoreEvent {
     /// `hide_resting_parts=` — in effect from this measure onward until the next
     /// occurrence.
     HideRestingPartsChange(bool),
+    /// `break` — forces a new system to start at this measure. Applies only
+    /// to the measure it's written on; does not persist to later measures.
+    SystemBreak,
 }
 
 /// Tuplet ratio tag attached to a parsed note/chord/rest/percussion-hit that falls inside

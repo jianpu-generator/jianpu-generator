@@ -258,6 +258,11 @@ fn pad_chunk_to_union(chunk: &[MeasureBlock], union: &[MeasureRow]) -> Vec<Measu
 /// force an early break. Each system's rows are the union of every row
 /// across its measures (see [`union_row_order`]); measures missing a row
 /// their system has get it padded in (see [`pad_chunk_to_union`]).
+///
+/// A block with `system_break` set (from a `break` directive on its measure)
+/// always starts a new system, even if the current one has room left under
+/// `max_measures_per_system` — a no-op if the block would already be first
+/// in its system.
 pub(crate) fn pack_into_systems(
     blocks: &[MeasureBlock],
     config: &RenderConfig,
@@ -275,6 +280,7 @@ pub(crate) fn pack_into_systems(
             current.len() as u32 >= config.max_measures_per_system
                 || block.merge_duplicate_measures_across_parts
                     != first.merge_duplicate_measures_across_parts
+                || block.system_break
         } else {
             false
         };

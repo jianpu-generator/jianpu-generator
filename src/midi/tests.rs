@@ -160,6 +160,7 @@ pub(super) fn one_measure_score() -> Score {
             label: None,
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
+            system_break: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
                 group_provenance: None,
@@ -263,6 +264,7 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
             label: None,
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
+            system_break: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
                 group_provenance: None,

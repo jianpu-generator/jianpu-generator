@@ -207,6 +207,7 @@ fn compile_measure(
         diagnostics: measure.diagnostics.clone(),
         represents_measures: 1,
         merge_duplicate_measures_across_parts: measure.merge_duplicate_measures_across_parts,
+        system_break: measure.system_break,
         source_span: measure.source_span,
     }
 }
@@ -256,5 +257,7 @@ mod tests_multi_measure_rest;
 mod tests_slur;
 #[cfg(test)]
 mod tests_source_span;
+#[cfg(test)]
+mod tests_system_break;
 #[cfg(test)]
 mod tests_tuplets;

@@ -16,6 +16,7 @@ fn erroneous_measure_produces_error_highlight() {
         ))],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        system_break: false,
         source_span: Span::new(0, 0),
     };
     let header = Header {

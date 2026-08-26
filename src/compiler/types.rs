@@ -28,6 +28,11 @@ pub struct MeasureBlock {
     /// Resolved `merge_duplicate_measures_across_parts=` setting in effect on the
     /// measure this block was compiled from (see `consolidator::consolidate_block`).
     pub merge_duplicate_measures_across_parts: bool,
+    /// `break` directive in effect on the measure this block was compiled from:
+    /// forces a new system to start at this block (see
+    /// `grid_layout::layout_systems::pack_into_systems`). A no-op if the block
+    /// would already start a system.
+    pub system_break: bool,
     /// Source span of the measure(s) this block was compiled from (see
     /// `MultiPartMeasure::source_span`) — carried forward so a layout-stage
     /// diagnostic (e.g. `WarningKind::MeasureOverflow`) can point at real

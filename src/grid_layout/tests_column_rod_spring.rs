@@ -61,6 +61,7 @@ fn make_block_with_notes(row_id: &str, note_count: u32, bar_col: u32) -> Measure
         diagnostics: vec![],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        system_break: false,
         source_span: crate::error::Span::new(0, 0),
     }
 }

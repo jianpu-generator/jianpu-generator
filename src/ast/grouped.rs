@@ -163,6 +163,10 @@ pub struct MultiPartMeasure {
     /// override starting here or carried forward from an earlier measure or the
     /// `#metadata` default (see `compiler::compile_measure`).
     pub hide_resting_parts: bool,
+    /// `break` directive on this measure's directive line: forces a new system
+    /// to start at this measure (see `grid_layout::layout_systems::pack_into_systems`).
+    /// Applies only to this measure; does not persist to later ones.
+    pub system_break: bool,
     pub parts: Vec<PartRow>,
     /// Byte range of this measure's note events in the original source.
     /// Used to map editor cursor position to a measure index.
@@ -255,6 +259,7 @@ pub(crate) struct MeasureDirectives {
     pub(crate) label: Option<String>,
     pub(crate) merge_duplicate_measures_across_parts: bool,
     pub(crate) hide_resting_parts: bool,
+    pub(crate) system_break: bool,
 }
 
 pub(crate) struct GroupedScore {

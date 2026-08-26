@@ -343,7 +343,8 @@ impl PartGrouper {
             | ScoreEvent::KeyChange(_)
             | ScoreEvent::LabelChange(_)
             | ScoreEvent::MergeDuplicateMeasuresAcrossPartsChange(_)
-            | ScoreEvent::HideRestingPartsChange(_) => {
+            | ScoreEvent::HideRestingPartsChange(_)
+            | ScoreEvent::SystemBreak => {
                 Ok(()) // handled by DirectiveGrouper
             }
             ScoreEvent::TimeSignatureChange {

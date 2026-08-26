@@ -54,6 +54,7 @@ fn tied_note_measure(
         label: None,
         merge_duplicate_measures_across_parts: true,
         hide_resting_parts: true,
+        system_break: false,
         parts: vec![tied_note_part(tied)],
         source_span: Span::new(0, 0),
         diagnostics: vec![],

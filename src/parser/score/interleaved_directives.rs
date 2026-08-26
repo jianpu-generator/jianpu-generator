@@ -141,6 +141,8 @@ fn parse_directive_line(
         } else if let Some(rest) = token.strip_prefix("hide_resting_parts=") {
             parse_bool_directive_value(rest, span, &mut errors)
                 .map(ScoreEvent::HideRestingPartsChange)
+        } else if token == "break" {
+            Some(ScoreEvent::SystemBreak)
         } else {
             errors.push(RecoverableError::general(
                 span,

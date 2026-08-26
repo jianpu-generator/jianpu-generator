@@ -50,6 +50,7 @@ impl DirectiveGrouper {
         let mut result = Vec::new();
         for events in directive_events_per_measure {
             let mut pending_label: Option<String> = None;
+            let mut pending_system_break = false;
             for event in events {
                 match &event.value {
                     ScoreEvent::BpmChange(bpm) => {
@@ -86,6 +87,9 @@ impl DirectiveGrouper {
                     ScoreEvent::HideRestingPartsChange(value) => {
                         self.current_hide_resting_parts = *value;
                     }
+                    ScoreEvent::SystemBreak => {
+                        pending_system_break = true;
+                    }
                     _ => {}
                 }
             }
@@ -112,6 +116,7 @@ impl DirectiveGrouper {
                 merge_duplicate_measures_across_parts: self
                     .current_merge_duplicate_measures_across_parts,
                 hide_resting_parts: self.current_hide_resting_parts,
+                system_break: pending_system_break,
             });
             self.bpm_changed = false;
             self.time_sig_changed = false;

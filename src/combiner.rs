@@ -105,6 +105,7 @@ fn combine_measure(
         label: directives.label.clone(),
         merge_duplicate_measures_across_parts: directives.merge_duplicate_measures_across_parts,
         hide_resting_parts: directives.hide_resting_parts,
+        system_break: directives.system_break,
         parts: part_rows,
         source_span,
         diagnostics: measure_diagnostics,
@@ -157,6 +158,7 @@ pub(crate) fn combine(grouped_score: &GroupedScore) -> (Vec<MultiPartMeasure>, V
         label: None,
         merge_duplicate_measures_across_parts: DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
         hide_resting_parts: DEFAULT_HIDE_RESTING_PARTS,
+        system_break: false,
     };
     let combined = (0..max_len)
         .map(|measure_idx| combine_measure(grouped_score, measure_idx, &directives_fallback))

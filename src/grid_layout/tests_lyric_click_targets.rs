@@ -138,6 +138,7 @@ fn lyric_click_target_spans_its_note_full_column_width() {
         diagnostics: vec![],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        system_break: false,
         source_span: crate::error::Span::new(0, 0),
     };
 
@@ -209,6 +210,7 @@ fn lyric_click_target_of_first_syllable_snaps_to_leading_bar_line() {
         diagnostics: vec![],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        system_break: false,
         source_span: crate::error::Span::new(0, 0),
     };
 
@@ -278,6 +280,7 @@ fn lyric_click_target_of_last_syllable_snaps_to_trailing_bar_line() {
         diagnostics: vec![],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        system_break: false,
         source_span: crate::error::Span::new(0, 0),
     };
     let block2 = MeasureBlock {
@@ -289,6 +292,7 @@ fn lyric_click_target_of_last_syllable_snaps_to_trailing_bar_line() {
         diagnostics: vec![],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        system_break: false,
         source_span: crate::error::Span::new(0, 0),
     };
 

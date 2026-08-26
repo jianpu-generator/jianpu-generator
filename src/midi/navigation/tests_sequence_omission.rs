@@ -38,6 +38,7 @@ fn bare_measure(index: usize) -> MultiPartMeasure {
         label: None,
         merge_duplicate_measures_across_parts: true,
         hide_resting_parts: true,
+        system_break: false,
         parts: vec![],
         source_span: Span::new(index, index + 1),
         diagnostics: vec![],

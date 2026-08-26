@@ -74,6 +74,7 @@ fn chord_major_expands_to_three_notes() {
             label: None,
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
+            system_break: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
                 group_provenance: None,
@@ -191,6 +192,7 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
             label: None,
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
+            system_break: false,
             parts: vec![PartRow::Timed(PartSlice {
                 name: None,
                 group_provenance: None,

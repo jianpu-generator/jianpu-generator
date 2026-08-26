@@ -304,6 +304,7 @@ bpm=92 key=C4 time=4/4 label="Verse 1"
 | `label=` | `label="Verse 1"` | Section label rendered above the row group |
 | `merge_duplicate_measures_across_parts=` | `merge_duplicate_measures_across_parts=no` | Overrides the `#metadata` default from this measure onward (`yes`/`no`) |
 | `hide_resting_parts=` | `hide_resting_parts=no` | Overrides the `#metadata` default from this measure onward (`yes`/`no`) |
+| `break` | `break` | Forces a new system (line) to start at this measure |
 
 Rules:
 
@@ -313,6 +314,7 @@ Rules:
 - `label` applies only to the measure where it is declared (does not persist to the next bar) — this is true for rendering purposes and whenever no `# sequence` section is present. When a `# sequence` section **is** present, each label additionally denotes a *span* of measures for playback-order purposes: see [`# sequence` — explicit playback order](#sequence--explicit-playback-order) below.
 - `bpm`, `key`, and `time` persist until the next directive line overrides them.
 - `merge_duplicate_measures_across_parts` and `hide_resting_parts` also persist until the next directive line overrides them; unset, they start from the `#metadata` value (or its default of `yes`) for the first measure.
+- `break` is a bare keyword (no `=value`). It applies only to the measure it's written on — it does not persist — and forces that measure to start a new system, even if `max_measures_per_system` hasn't been reached yet. It's a no-op if the measure would already be first in its system (e.g. it's the very first measure of the score, or the previous measure already filled its system). Since it changes where a system boundary falls, a `break` measure is never absorbed into a collapsed multi-measure rest run that would otherwise start before it — see [Multi-measure rests](#multi-measure-rests).
 
 ### Rendering
 
@@ -766,7 +768,7 @@ When a part is **not mentioned** in a measure (no `[Key]` line covers it), it is
 
 - A `follow[X]` part that is not mentioned copies `X`'s content (audio plays the same as X).
 - A non-follow part that is not mentioned is filled with rests (`0`) or no-lyrics (`_`).
-- Measures sharing a system line no longer need to render identical rows. A system's rows are the union of every part (and, per part, every verse) across all of its measures, in `[parts]` declaration order then verse order. A measure missing a row its system has (a part it doesn't mention, a resting part hidden via `hide_resting_parts`, or a verse it lacks) gets that row padded in as a full-measure rest or blank verse — it isn't clickable or selectable there, since no note/syllable actually sounds. Systems are otherwise packed purely by count, up to `max_measures_per_system` measures. The one exception that still starts a new system line is a `merge_duplicate_measures_across_parts=` change between measures: since that setting controls whether identical parts merge into one shared row, a change partway through would make the union ambiguous.
+- Measures sharing a system line no longer need to render identical rows. A system's rows are the union of every part (and, per part, every verse) across all of its measures, in `[parts]` declaration order then verse order. A measure missing a row its system has (a part it doesn't mention, a resting part hidden via `hide_resting_parts`, or a verse it lacks) gets that row padded in as a full-measure rest or blank verse — it isn't clickable or selectable there, since no note/syllable actually sounds. Systems are otherwise packed purely by count, up to `max_measures_per_system` measures. Two things still start a new system line early: a `merge_duplicate_measures_across_parts=` change between measures — since that setting controls whether identical parts merge into one shared row, a change partway through would make the union ambiguous — and a `break` directive, which forces the boundary explicitly (see [Directive lines](#directive-lines)).
 
 ### Omitted lines — fill table
 

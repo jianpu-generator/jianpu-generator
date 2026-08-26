@@ -61,6 +61,7 @@ fn playback_cursor_targets_snap_to_bar_lines_at_measure_edges() {
         diagnostics: vec![],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        system_break: false,
         source_span: crate::error::Span::new(0, 0),
     };
 
@@ -145,6 +146,7 @@ fn playback_cursor_target_snaps_to_bar_line_despite_trailing_subdivision_padding
         diagnostics: vec![],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        system_break: false,
         source_span: crate::error::Span::new(0, 0),
     };
 
@@ -219,6 +221,7 @@ fn playback_cursor_target_extends_to_next_note_without_its_own_trailing_column()
         diagnostics: vec![],
         represents_measures: 1,
         merge_duplicate_measures_across_parts: true,
+        system_break: false,
         source_span: crate::error::Span::new(0, 0),
     };
 
