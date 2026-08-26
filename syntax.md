@@ -238,6 +238,8 @@ Soprano [s] = S1 S2 S3
 
 S1 and S3 both take the `[s]` broadcast unmodified and merge into one row labeled `s`; S2 overrides it and renders on its own row labeled `S2`.
 
+This also applies when a group rests as a whole rather than being explicitly broadcast to: if *every* member of a group is left unmentioned by any key line in a measure (so each implicit-fills to a rest — see "Parts not covered by any `[Key]` line" above), that's treated the same as an implicit `[GroupAbbrev]` broadcast of silence. So when those members' rows later merge with each other (or with an unrelated resting part), the merged row is still labeled with the group's abbreviation rather than every member's own abbreviation. If even one member of the group has its own line in that measure — even a rest — the group isn't considered wholly resting, and the other members' implicit rests are labeled individually as usual.
+
 **Example — only part C plays, A and B are not-mentioned:**
 
 ```jianpu

@@ -251,7 +251,34 @@ fn expand_keyed(
         context,
         recoverable_error,
     );
-    resolve_tracks(&key_map, declarations, context)
+    resolve_tracks(&key_map, declarations, resolved_groups, context)
+}
+
+/// The narrowest group (fewest members) in `resolved_groups` that `abbreviation`
+/// belongs to and whose *every* member is absent from `key_map` — i.e. a group
+/// that is, as a whole, implicitly resting this measure because none of its
+/// members were given a line (their own or a broadcast). Mirrors the
+/// `[GroupAbbrev]` broadcast provenance rule for the case where the "broadcast"
+/// is implicit silence rather than an actual `[GroupAbbrev]` line: a part that
+/// rests only because its whole group rests should still be labeled with the
+/// group's abbreviation once such members merge into one row downstream (see
+/// `grid_layout::layout_systems::resolve_label`), not listed individually.
+/// Narrowest-first mirrors `merge_group_broadcasts`' broader-loses-to-narrower
+/// precedence for nested groups.
+fn implicitly_resting_group<'a>(
+    abbreviation: &str,
+    key_map: &KeyMap,
+    resolved_groups: &'a [ResolvedGroup],
+) -> Option<&'a ResolvedGroup> {
+    resolved_groups
+        .iter()
+        .filter(|g| g.members.iter().any(|m| m == abbreviation))
+        .filter(|g| {
+            g.members
+                .iter()
+                .all(|m| !key_map.iter().any(|(k, _)| k == m))
+        })
+        .min_by_key(|g| g.members.len())
 }
 
 /// The score-line roles this part contributes to this specific measure group.
@@ -285,6 +312,7 @@ fn roles_for_group(
 fn resolve_tracks(
     key_map: &KeyMap,
     declarations: &[PartDecl],
+    resolved_groups: &[ResolvedGroup],
     context: &GroupContext,
 ) -> (Vec<SourceLine>, Vec<ScoreLineSlot>) {
     let mut resolved_per_track: Vec<Vec<SourceLine>> = Vec::with_capacity(declarations.len());
@@ -298,6 +326,10 @@ fn resolve_tracks(
             .iter()
             .find(|(k, _)| k == &decl.abbreviation)
             .map(|(_, v)| v.as_slice());
+        let resting_group = key_lines
+            .is_none()
+            .then(|| implicitly_resting_group(&decl.abbreviation, key_map, resolved_groups))
+            .flatten();
         let follow_target_index = decl.follow_target.as_ref().and_then(|target| {
             declarations
                 .get(..i)
@@ -330,7 +362,7 @@ fn resolve_tracks(
                 SourceLine {
                     content: implicit_fill(role, context.time_num),
                     offset: context.pad_offset,
-                    group: None,
+                    group: resting_group.map(|g| g.abbreviation.clone()),
                 }
             })
             .collect();
@@ -354,3 +386,7 @@ fn resolve_tracks(
 #[cfg(test)]
 #[path = "tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests_groups.rs"]
+mod tests_groups;

@@ -152,3 +152,34 @@ fn group_members_collapse_even_when_not_contiguous_in_row_order() {
     );
     assert_eq!(row_labels(source), vec!["S T".to_string()]);
 }
+
+#[test]
+fn implicitly_resting_groups_collapse_when_merged_with_an_outside_resting_part() {
+    // Regression test: S1/S2 (group "S") and A1/A2 (group "A") are never
+    // mentioned by any key line in this measure, so every one of them
+    // implicit-fills to a rest (see `desugar::tests::
+    // a_group_implicitly_resting_as_a_whole_tags_its_members_with_group_provenance`).
+    // T has its own explicit (but also resting) line. All five parts'
+    // identical rest content merges them into one row by default
+    // (`merge_duplicate_measures_across_parts`), and that row must still
+    // collapse each group's members to its own abbreviation ("S A T"), not
+    // list every member individually ("S1 S2 A1 A2 T") just because the
+    // "broadcast" S1/S2 and A1/A2 each share is implicit silence rather than
+    // an actual `[GroupAbbrev]` line.
+    let source = concat!(
+        "# parts\n",
+        "Soprano 1 [S1] = notes\n",
+        "Soprano 2 [S2] = notes\n",
+        "Alto 1 [A1] = notes\n",
+        "Alto 2 [A2] = notes\n",
+        "Tenor [T] = notes\n",
+        "\n",
+        "# groups\n",
+        "Soprano [S] = S1 S2\n",
+        "Alto [A] = A1 A2\n",
+        "\n",
+        "# score\n",
+        "[T] 0 0 0 0\n",
+    );
+    assert_eq!(row_labels(source), vec!["S A T".to_string()]);
+}
