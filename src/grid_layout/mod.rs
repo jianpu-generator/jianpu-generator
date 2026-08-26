@@ -39,3 +39,5 @@ mod tests_column_span_weight;
 mod tests_dot_spacing;
 #[cfg(test)]
 mod tests_measure_spacing;
+#[cfg(test)]
+mod tests_measure_spacing_multi_measure_rest;

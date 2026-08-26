@@ -5,12 +5,9 @@ use crate::grid_layout::types::{
 };
 use crate::grid_layout::PAGE_MARGIN;
 
+use super::click_targets::resolve_click_target_elements;
 use super::content_conversion::grid_to_absolute;
-use super::highlights::{
-    resolve_bar_number_click_target, resolve_error_highlights, resolve_lyric_click_target,
-    resolve_lyric_label_click_target, resolve_measure_click_target, resolve_measure_highlights,
-    resolve_note_click_target, resolve_part_label_click_target, resolve_playback_cursor_target,
-};
+use super::highlights::{resolve_error_highlights, resolve_measure_highlights};
 use super::post_arc_conversion::to_post_arc_content;
 
 /// Font sizes used to measure lyric syllable width.
@@ -277,62 +274,24 @@ fn resolve_span_marking(
     }
 }
 
-/// The collapsed multi-measure-rest bar spans its full custom column_span
-/// width starting at the column's left edge, rather than the generic
-/// per-column halign/valign math above.
+/// The collapsed multi-measure-rest bar spans its custom column_span width
+/// starting at the column's left edge, rather than the generic per-column
+/// halign/valign math above — but inset by `GLYPH_LEFT_PADDING` on both
+/// ends, mirroring the same clearance every other column keeps before
+/// whatever follows it, so the bar's own end ticks don't render flush
+/// against the enclosing measure dividers. `layout_spacing::multi_measure_rest_weight`
+/// reserves this same padding on both ends when sizing the block's column
+/// span, so the two can't drift apart.
 fn resolve_multi_measure_rest(count: u32, x_start: f32, width: f32, y: f32) -> AbsoluteElement {
+    let padding = crate::font_metrics::GLYPH_LEFT_PADDING;
     AbsoluteElement {
-        x: x_start,
+        x: x_start + padding,
         y,
-        content: AbsoluteContent::MultiMeasureRest { count, width },
+        content: AbsoluteContent::MultiMeasureRest {
+            count,
+            width: (width - padding * 2.0).max(0.0),
+        },
     }
-}
-
-/// Resolves every click/drag hit target on a page — measure, playback
-/// cursor, note, part-label, lyric, and lyric-label — appended in that order
-/// so later ones stay topmost for `elementFromPoint` hit-testing (e.g. a
-/// note click target over its enclosing measure's, and a lyric syllable's
-/// own target over the note click target that geometrically covers its
-/// row).
-fn resolve_click_target_elements(
-    page: &GridPage,
-    row_tops: &[f32],
-    usable_width: f32,
-    part_label_width_pt: f32,
-) -> Vec<AbsoluteElement> {
-    let mut elements: Vec<AbsoluteElement> = page
-        .measure_click_targets
-        .iter()
-        .filter_map(|t| {
-            resolve_measure_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
-        })
-        .collect();
-
-    elements.extend(page.playback_cursor_targets.iter().filter_map(|t| {
-        resolve_playback_cursor_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
-    }));
-
-    elements.extend(page.playback_cursor_targets.iter().filter_map(|t| {
-        resolve_note_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
-    }));
-
-    elements.extend(page.part_label_click_targets.iter().filter_map(|t| {
-        resolve_part_label_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
-    }));
-
-    elements.extend(page.lyric_click_targets.iter().filter_map(|t| {
-        resolve_lyric_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
-    }));
-
-    elements.extend(page.lyric_label_click_targets.iter().filter_map(|t| {
-        resolve_lyric_label_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
-    }));
-
-    elements.extend(page.bar_number_click_targets.iter().filter_map(|t| {
-        resolve_bar_number_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
-    }));
-
-    elements
 }
 
 fn resolve_page(

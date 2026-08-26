@@ -87,6 +87,29 @@ fn lyric_weight(text: &str, config: &RenderConfig) -> f32 {
     }
 }
 
+/// Real rendered width (in points) a merged rest run's block needs: at
+/// least enough to hold its count label (`render_multi_measure_rest`'s
+/// centered text, measured in the same monospace font/size as
+/// [`note_glyph_weight`] — see `render_multi_measure_rest` in
+/// `glyph_renderers.rs`), and never less than `MULTI_MEASURE_REST_WIDTH`
+/// note glyphs' worth of bar, so a short run (single/double-digit count)
+/// keeps its previous width. Also reserves [`font_metrics::GLYPH_LEFT_PADDING`]
+/// on both ends — the same clearance every other column keeps before
+/// whatever follows it — so the bar's own end ticks don't end up flush
+/// against the enclosing measure dividers; `resolve_multi_measure_rest`
+/// (`coordinate_resolver::resolve`) insets the drawn bar by that same amount
+/// so the two can't drift apart. Unlike the flat, unitless weight this
+/// replaces, every term here is a real point width — matching every other
+/// element's weight in this module — so a merged rest block sharing a
+/// system with real-point-weighted measures no longer gets squeezed down to
+/// a fraction of what its own label needs to render without overflowing.
+pub(super) fn multi_measure_rest_weight(count: usize, config: &RenderConfig) -> f32 {
+    let label_width =
+        font_metrics::monospace_text_width(&count.to_string(), config.notes_font_size());
+    let bar_floor = note_glyph_weight(config) * MULTI_MEASURE_REST_WIDTH as f32;
+    label_width.max(bar_floor) + font_metrics::GLYPH_LEFT_PADDING * 2.0
+}
+
 pub(super) fn column_weight(content: &ElementContent, config: &RenderConfig) -> f32 {
     match content {
         ElementContent::NoteHead {
@@ -146,9 +169,12 @@ pub(super) fn column_weight(content: &ElementContent, config: &RenderConfig) -> 
 /// bass note (e.g. `2m/5`) out-competes a bare-degree chord (e.g. `1`) for
 /// width. Weight is the max (not sum) across the block's part rows, so a
 /// measure isn't penalized for having many parts, only sized for its
-/// densest one. A collapsed `MultiMeasureRest` row gets a fixed weight
-/// matching its current fixed column allocation instead of being counted as
-/// one note. Clamped to a minimum of one note glyph's width
+/// densest one. A collapsed `MultiMeasureRest` row gets
+/// [`multi_measure_rest_weight`] instead of being counted as one note, so
+/// its own weight stays a real point width comparable to every other
+/// measure's — including growing with its count label's own rendered width
+/// — rather than an arbitrary flat number. Clamped to a minimum of one note
+/// glyph's width
 /// ([`note_glyph_weight`]) so an empty/rest-only measure never collapses to
 /// zero weight, and so two equal-density measures always compare equal
 /// regardless of which one happens to open the system (see
@@ -170,12 +196,12 @@ pub(super) fn measure_note_weight(block: &MeasureBlock, config: &RenderConfig) -
         .rows
         .iter()
         .map(|row| {
-            let has_multi_measure_rest = row
-                .elements
-                .iter()
-                .any(|e| matches!(e.content, ElementContent::MultiMeasureRest { .. }));
-            if has_multi_measure_rest {
-                MULTI_MEASURE_REST_WIDTH as f32
+            let multi_measure_rest_count = row.elements.iter().find_map(|e| match &e.content {
+                ElementContent::MultiMeasureRest { count } => Some(*count),
+                _ => None,
+            });
+            if let Some(count) = multi_measure_rest_count {
+                multi_measure_rest_weight(count, config)
             } else {
                 row.elements
                     .iter()

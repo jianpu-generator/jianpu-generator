@@ -1,7 +1,6 @@
 // ── Proportional (density-based) measure widths ──────────────────────────────
 
 use crate::ast::parsed::{JianPuPitch, Offset};
-use crate::compiler::types::MULTI_MEASURE_REST_WIDTH;
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
 use crate::font_metrics;
 use crate::grid_layout::expand::expand_system_to_rows;
@@ -68,35 +67,6 @@ fn make_block_with_notes(row_id: &str, note_count: u32, bar_col: u32) -> Measure
         decorations: vec![],
         diagnostics: vec![],
         represents_measures: 1,
-        merge_duplicate_measures_across_parts: true,
-        source_span: crate::error::Span::new(0, 0),
-    }
-}
-
-fn make_multi_measure_rest_block(row_id: &str, bar_col: u32, count: usize) -> MeasureBlock {
-    MeasureBlock {
-        rows: vec![MeasureRow {
-            absorbed_rows: Vec::new(),
-            id: RowId(row_id.to_string()),
-            group_provenance: None,
-            label: row_id.to_string(),
-            elements: vec![
-                ColumnElement {
-                    column: 0,
-                    content: ElementContent::MultiMeasureRest { count },
-                    note_id: None,
-                },
-                ColumnElement {
-                    column: bar_col,
-                    content: ElementContent::BarLine,
-                    note_id: None,
-                },
-            ],
-            source_part_index: 0,
-        }],
-        decorations: vec![],
-        diagnostics: vec![],
-        represents_measures: count,
         merge_duplicate_measures_across_parts: true,
         source_span: crate::error::Span::new(0, 0),
     }
@@ -201,27 +171,6 @@ fn measure_column_weights_takes_max_across_parts_not_sum() {
         .push(make_block_with_notes("B", 1, 2).rows.remove(0));
     let weights = measure_column_weights(&block, 3, &config);
     assert_eq!(weights[0], notehead_weight(&config));
-}
-
-#[test]
-fn measure_column_weights_gives_multi_measure_rest_uniform_weight() {
-    // Mirrors the real shape built by `merge_rest_run`: the rest's own span
-    // (columns `0..MULTI_MEASURE_REST_WIDTH`) plus one trailing `BarLine`
-    // column at `MULTI_MEASURE_REST_WIDTH`. This collapsed-rest special case
-    // keeps its previous flat/thin weights (`1.0`/`0.25`) rather than real
-    // font metrics — it isn't a glyph whose width changed.
-    let config = test_config();
-    let block = make_multi_measure_rest_block("S", MULTI_MEASURE_REST_WIDTH, 4);
-    let col_count = MULTI_MEASURE_REST_WIDTH + 1;
-    let weights = measure_column_weights(&block, col_count, &config);
-    let mut expected = vec![1.0; MULTI_MEASURE_REST_WIDTH as usize];
-    expected.push(0.25);
-    assert_eq!(
-        weights, expected,
-        "rest span columns should stay uniform, but the trailing bar-line \
-         column should keep its normal thin weight instead of ballooning to \
-         match a full rest column"
-    );
 }
 
 #[test]

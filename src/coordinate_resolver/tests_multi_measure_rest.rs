@@ -25,9 +25,12 @@ fn single_row_page(element: GridElement) -> GridPage {
 }
 
 #[test]
-fn multi_measure_rest_resolves_width_from_column_span() {
+fn multi_measure_rest_resolves_width_from_column_span_inset_by_glyph_left_padding() {
     // usable = 595 - 50 = 545, col_width = 545/10 = 54.5
-    // column=0, column_span=4 → x = x_start = 25.0, width = 4*54.5 = 218.0
+    // column=0, column_span=4 → x_start = 25.0, span_width = 4*54.5 = 218.0,
+    // then inset by GLYPH_LEFT_PADDING on both ends (see
+    // `resolve_multi_measure_rest`) so the drawn bar doesn't render flush
+    // against the enclosing measure dividers.
     let el = GridElement {
         column: 0,
         column_span: 4,
@@ -54,7 +57,8 @@ fn multi_measure_rest_resolves_width_from_column_span() {
         .find(|e| matches!(e.content, AbsoluteContent::MultiMeasureRest { .. }))
         .expect("should have MultiMeasureRest");
     let col_width = (595.0 - 50.0) / 10.0; // 54.5
-    let x_start = 25.0;
+    let padding = crate::font_metrics::GLYPH_LEFT_PADDING;
+    let x_start = 25.0 + padding;
     assert!(
         (rest.x - x_start).abs() < 0.01,
         "x={} expected={x_start}",
@@ -62,10 +66,10 @@ fn multi_measure_rest_resolves_width_from_column_span() {
     );
     if let AbsoluteContent::MultiMeasureRest { count, width } = rest.content {
         assert_eq!(count, 5);
+        let expected_width = col_width * 4.0 - padding * 2.0;
         assert!(
-            (width - col_width * 4.0).abs() < 0.01,
-            "width={width} expected={}",
-            col_width * 4.0
+            (width - expected_width).abs() < 0.01,
+            "width={width} expected={expected_width}"
         );
     } else {
         panic!("expected MultiMeasureRest content");

@@ -6,7 +6,7 @@ use std::collections::BTreeSet;
 
 #[path = "layout_spacing_weights.rs"]
 mod weights;
-use weights::{column_weight, measure_note_weight, THIN_MARK_WEIGHT};
+use weights::{column_weight, measure_note_weight, multi_measure_rest_weight, THIN_MARK_WEIGHT};
 
 /// Minimum floor a measure's column-region gets, in points, regardless of its
 /// spacing weight or its own columns' rods — a degenerate-case safety net
@@ -50,8 +50,12 @@ const BARLINE_MIN_WIDTH_PT: f32 = 4.0;
 /// width ([`column_weight`]) plus a little clearance
 /// ([`COLUMN_CLEARANCE_PT`]); a `BarLine` gets its own small dedicated floor
 /// ([`BARLINE_MIN_WIDTH_PT`]) since [`THIN_MARK_WEIGHT`] isn't a real width;
-/// `Underline`/`MultiMeasureRest` need no floor of their own, matching their
-/// zero spring weight.
+/// `Underline` needs no floor of its own, matching its zero spring weight.
+/// `MultiMeasureRest` never actually reaches this per-element match (its row
+/// is always caught by `measure_column_sizes`'s own early-return special
+/// case, since a `MultiMeasureRest` row never mixes with other content), but
+/// keeps a defensive `0.0` here rather than falling into the `_` arm's
+/// [`column_weight`], which has no case of its own for it either.
 fn column_rod(content: &ElementContent, config: &RenderConfig) -> f32 {
     match content {
         ElementContent::BarLine => BARLINE_MIN_WIDTH_PT,
@@ -82,25 +86,33 @@ fn measure_column_sizes(
     col_count: u32,
     config: &RenderConfig,
 ) -> Vec<ColumnSizing> {
-    let has_multi_measure_rest = block.rows.iter().any(|row| {
-        row.elements
-            .iter()
-            .any(|e| matches!(e.content, ElementContent::MultiMeasureRest { .. }))
+    let multi_measure_rest_count = block.rows.iter().find_map(|row| {
+        row.elements.iter().find_map(|e| match &e.content {
+            ElementContent::MultiMeasureRest { count } => Some(*count),
+            _ => None,
+        })
     });
-    if has_multi_measure_rest {
-        // Mirrors `measure_column_weights`'s own special case: the rest's
-        // span keeps its flat weight, and every column here (including the
-        // trailing bar line) gets rod `0.0` — the block's fixed
-        // `MULTI_MEASURE_REST_WIDTH` span already gives it real width, so no
-        // per-column floor is needed on top.
+    if let Some(count) = multi_measure_rest_count {
+        // Mirrors `measure_note_weight`'s own special case: the whole span's
+        // real-point-width need ([`weights::multi_measure_rest_weight`],
+        // which grows with the count label's own rendered width) is spread
+        // evenly across the bar's columns for `column_weights`, and
+        // concentrated on the span's own start column (column `0`) for its
+        // rod — matching `column_rod`'s "rod sits at the element's own start
+        // tick" rule elsewhere in this function — so the block's guaranteed
+        // minimum width actually grows to fit its label instead of staying
+        // pinned at `MIN_MEASURE_WIDTH_PT` regardless of digit count.
+        let total_weight = multi_measure_rest_weight(count, config);
+        let bar_column_count = col_count.saturating_sub(1).max(1);
+        let per_bar_column_weight = total_weight / bar_column_count as f32;
         return (0..col_count)
             .map(|col| ColumnSizing {
                 weight: if col + 1 == col_count {
                     THIN_MARK_WEIGHT
                 } else {
-                    1.0
+                    per_bar_column_weight
                 },
-                rod_pt: 0.0,
+                rod_pt: if col == 0 { total_weight } else { 0.0 },
             })
             .collect();
     }
@@ -168,8 +180,9 @@ fn measure_column_sizes(
 /// column's weight is the max [`column_weight`] of any row's element at
 /// that column, so a column isn't under-weighted just because one part
 /// sustains a dash there while another part has a fresh note. A collapsed
-/// `MultiMeasureRest` row gets a flat weight of `1.0` on every column of its
-/// own span instead, keeping its previous even (undifferentiated) sizing;
+/// `MultiMeasureRest` row instead gets [`multi_measure_rest_weight`]'s total
+/// spread evenly across every column of its own span, keeping its previous
+/// even (undifferentiated) sizing while still summing to a real point width;
 /// its trailing `BarLine` column still gets the usual thin weight.
 ///
 /// `col_count` is not divided by `block`'s tuplet `resolution_multiplier` before use here.
