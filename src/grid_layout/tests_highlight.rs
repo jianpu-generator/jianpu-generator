@@ -30,6 +30,7 @@ fn simple_block(col_count: u32) -> MeasureBlock {
         .collect();
     MeasureBlock {
         rows: vec![MeasureRow {
+            absorbed_rows: Vec::new(),
             id: RowId("S".to_string()),
             group_provenance: None,
             label: String::new(),

@@ -40,6 +40,7 @@ fn chord_weight(text: &str, config: &RenderConfig) -> f32 {
 
 fn row(id: &str, elements: Vec<ColumnElement>) -> MeasureRow {
     MeasureRow {
+        absorbed_rows: Vec::new(),
         id: RowId(id.to_string()),
         group_provenance: None,
         label: id.to_string(),

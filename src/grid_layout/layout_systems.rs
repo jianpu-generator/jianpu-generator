@@ -113,44 +113,59 @@ fn union_row_order(chunk: &[MeasureBlock]) -> Vec<MeasureRow> {
 }
 
 /// Builds a synthetic row standing in for `template_row`'s `RowId` in a block
-/// that's missing it: a full-measure rest (or blank verse, for a lyric row),
-/// sized to `block`'s own column width. Every element's `ColumnElement::note_id`
-/// is `None` so the padded cell produces no playback-cursor target or note
-/// click target (see `group_elements_by_note_id` in `playback_cursor.rs`).
-/// A padded lyric row's `Lyric` content carries empty `text`, which
-/// `compute_all_lyric_click_targets` in `click_targets_lyric.rs` checks for
-/// and skips — `ColumnElement::note_id` is always `None` for `Lyric` content,
-/// real or padded, so it can't be used as the "is this padding" signal there.
+/// that's missing it because that part is genuinely silent here: a
+/// full-measure rest (or blank verse, for a lyric row), sized to `block`'s own
+/// column width. Every element's `ColumnElement::note_id` is `None` so the
+/// padded cell produces no playback-cursor target or note click target (see
+/// `group_elements_by_note_id` in `playback_cursor.rs`). A padded lyric row's
+/// `Lyric` content carries empty `text`, which `compute_all_lyric_click_targets`
+/// in `click_targets_lyric.rs` checks for and skips — `ColumnElement::note_id`
+/// is always `None` for `Lyric` content, real or padded, so it can't be used
+/// as the "is this padding" signal there.
+///
+/// Only called once [`pad_chunk_to_union`] has ruled out the other reason a
+/// `RowId` can be missing from a block — that `consolidator::consolidate_rows`
+/// merged its (identical) content into another row of this same block (see
+/// `MeasureRow::absorbed_rows`) — since that case re-renders the part's own
+/// original row instead of padding at all.
 fn make_padding_row(template_row: &MeasureRow, block: &MeasureBlock) -> MeasureRow {
     let width = block_column_width(block);
     let bar_line_column = width.saturating_sub(1);
 
-    let mut elements = Vec::with_capacity(2);
-    if is_lyric_row(template_row) {
-        elements.push(ColumnElement {
-            column: 0,
-            content: ElementContent::Lyric {
-                text: String::new(),
-                verse: lyric_row_verse(template_row).unwrap_or(0),
-                note_id: 0,
+    let elements = if is_lyric_row(template_row) {
+        vec![
+            ColumnElement {
+                column: 0,
+                content: ElementContent::Lyric {
+                    text: String::new(),
+                    verse: lyric_row_verse(template_row).unwrap_or(0),
+                    note_id: 0,
+                },
+                note_id: None,
             },
-            note_id: None,
-        });
+            ColumnElement {
+                column: bar_line_column,
+                content: ElementContent::BarLine,
+                note_id: None,
+            },
+        ]
     } else {
-        elements.push(ColumnElement {
-            column: 0,
-            content: ElementContent::Rest {
-                dotted: false,
-                double_dotted: false,
+        vec![
+            ColumnElement {
+                column: 0,
+                content: ElementContent::Rest {
+                    dotted: false,
+                    double_dotted: false,
+                },
+                note_id: None,
             },
-            note_id: None,
-        });
-    }
-    elements.push(ColumnElement {
-        column: bar_line_column,
-        content: ElementContent::BarLine,
-        note_id: None,
-    });
+            ColumnElement {
+                column: bar_line_column,
+                content: ElementContent::BarLine,
+                note_id: None,
+            },
+        ]
+    };
 
     MeasureRow {
         id: template_row.id.clone(),
@@ -158,13 +173,19 @@ fn make_padding_row(template_row: &MeasureRow, block: &MeasureBlock) -> MeasureR
         elements,
         source_part_index: template_row.source_part_index,
         group_provenance: None,
+        absorbed_rows: Vec::new(),
     }
 }
 
 /// Rebuilds every block in `chunk` so its `rows` match `union` exactly, in
-/// order — cloning a block's existing row where present, otherwise
-/// synthesizing a padding row (via [`make_padding_row`]) off `union`'s own
-/// template for that `RowId`.
+/// order. For each `union` template's `RowId`, in priority order: a block's
+/// own matching row wins if present; otherwise, if some other row in this
+/// block absorbed it (recorded in that row's `MeasureRow::absorbed_rows` by
+/// `consolidator::consolidate_rows`), that original row is re-rendered on its
+/// own — it's genuinely this part's own real content (real `note_id`s, real
+/// click/playback targets), just also drawn merged into another row elsewhere
+/// in this same system; only when neither holds is the `RowId` genuinely
+/// absent here, padded via [`make_padding_row`].
 fn pad_chunk_to_union(chunk: &[MeasureBlock], union: &[MeasureRow]) -> Vec<MeasureBlock> {
     chunk
         .iter()
@@ -177,6 +198,14 @@ fn pad_chunk_to_union(chunk: &[MeasureBlock], union: &[MeasureRow]) -> Vec<Measu
                         .iter()
                         .find(|r| r.id == template.id)
                         .cloned()
+                        .or_else(|| {
+                            block.rows.iter().find_map(|r| {
+                                r.absorbed_rows
+                                    .iter()
+                                    .find(|absorbed| absorbed.id == template.id)
+                                    .cloned()
+                            })
+                        })
                         .unwrap_or_else(|| make_padding_row(template, block))
                 })
                 .collect();

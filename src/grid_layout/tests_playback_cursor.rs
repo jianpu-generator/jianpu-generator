@@ -25,6 +25,7 @@ fn no_header() -> Header {
 /// line, sharing `source_part_index` with `lyric_verse_row`.
 fn notes_row_with_two_notes() -> MeasureRow {
     MeasureRow {
+        absorbed_rows: Vec::new(),
         id: RowId("V".to_string()),
         group_provenance: None,
         label: String::new(),
@@ -66,6 +67,7 @@ fn notes_row_with_two_notes() -> MeasureRow {
 /// own row rather than the notes row's own elements.
 fn lyric_verse_row() -> MeasureRow {
     MeasureRow {
+        absorbed_rows: Vec::new(),
         id: RowId("V-lyrics-0".to_string()),
         group_provenance: None,
         label: String::new(),

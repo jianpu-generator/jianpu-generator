@@ -54,6 +54,18 @@ pub struct MeasureRow {
     /// Used by the consolidator to label a fully-merged unison row with the
     /// group's abbreviation instead of concatenating member labels.
     pub group_provenance: Option<String>,
+    /// Other parts' rows that `consolidator::consolidate_rows` merged into
+    /// this one because their content was identical (see
+    /// `merge_duplicate_measures_across_parts`), kept in full (not just their
+    /// `RowId`) so a later pass can re-render one on its own. Empty for a row
+    /// that wasn't merged with anything. Lets a later pass
+    /// (`grid_layout::layout_systems`'s union-of-parts system packing) tell
+    /// "this part's row is missing from this block because it's genuinely
+    /// absent" (pad with a rest) apart from "this part's notes are actually
+    /// right here, merged into another row" (re-render this row's own
+    /// original content instead — a rest would misreport it as resting, and
+    /// a blank row would misreport it as silent).
+    pub absorbed_rows: Vec<MeasureRow>,
 }
 
 impl MeasureRow {

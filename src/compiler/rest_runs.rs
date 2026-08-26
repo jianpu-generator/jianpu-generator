@@ -65,6 +65,7 @@ fn merge_rest_run(run: &[MeasureBlock]) -> MeasureBlock {
                     ],
                     source_part_index: row.source_part_index,
                     group_provenance: row.group_provenance.clone(),
+                    absorbed_rows: row.absorbed_rows.clone(),
                 })
                 .collect()
         })

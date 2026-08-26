@@ -80,3 +80,27 @@ Feature: Union-of-parts system packing
     And measure 1 has identical Melody and Harmony notes with merge_duplicate_measures_across_parts disabled
     When the score is laid out
     Then Melody's part label appears twice, once per system
+
+  Scenario: A part's notes merged into another part's row are not re-padded as a rest in that part's own row
+    Given max_measures_per_system is 4
+    And measure 0 has identical Melody and Harmony notes with merge_duplicate_measures_across_parts enabled
+    And measure 1 has different notes for Melody and Harmony
+    When the score is laid out
+    Then Harmony's part label spans measures 0 to 1 in one system
+    And measure 0 has no rest glyph in Harmony's row
+
+  Scenario: A part's notes merged into another part's row in a later measure still show in that part's own row
+    Given max_measures_per_system is 4
+    And measure 0 has different notes for Melody and Harmony
+    And measure 1 has identical Melody and Harmony notes with merge_duplicate_measures_across_parts enabled
+    When the score is laid out
+    Then Harmony's part label spans measures 0 to 1 in one system
+    And measure 1 has a note glyph in Harmony's row
+
+  Scenario: Cmd/Ctrl-clicking a part label to select the whole system highlights every note in that system
+    Given max_measures_per_system is 4
+    And measure 0 has different notes for Melody and Harmony
+    And measure 1 has identical Melody and Harmony notes with merge_duplicate_measures_across_parts enabled
+    When the score is laid out
+    And I Ctrl-click Melody's part label
+    Then all notes in the first system are highlighted

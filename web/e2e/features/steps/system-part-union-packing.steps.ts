@@ -119,6 +119,18 @@ Given(
   },
 )
 
+Given(
+  'measure {int} has different notes for Melody and Harmony',
+  async ({}, index: number) => {
+    // Distinct from `measure {int} has notes for Melody and Harmony`: this
+    // scenario's point is that Melody and Harmony are *not* mergeable here
+    // (unlike an earlier identical measure in the same system), so it's
+    // spelled out even though it currently sets the same default,
+    // non-matching NOTE_TOKENS as that step.
+    ensureMeasure(index).notesFor = ['Melody', 'Harmony']
+  },
+)
+
 When('the score is laid out', async ({ page }) => {
   const firstMeasureLine = await loadFixture(page)
   await page.goto('/')

@@ -73,6 +73,7 @@ fn notes_row(row: &MeasureRow) -> MeasureRow {
             .collect(),
         source_part_index: row.source_part_index,
         group_provenance: row.group_provenance.clone(),
+        absorbed_rows: row.absorbed_rows.clone(),
     }
 }
 
@@ -112,6 +113,7 @@ fn lyrics_rows(row: &MeasureRow) -> Vec<MeasureRow> {
                 elements,
                 source_part_index: row.source_part_index,
                 group_provenance: row.group_provenance.clone(),
+                absorbed_rows: row.absorbed_rows.clone(),
             }
         })
         .collect()
@@ -150,12 +152,22 @@ fn consolidate_rows(mut rows: Vec<MeasureRow>, merge_across_parts: bool) -> Vec<
                     .get(index)
                     .zip(rows.get(inner))
                     .map(|(left, right)| merge_labels(left, right));
+                let removed = rows.remove(inner);
                 if let (Some(row), Some((label, provenance))) = (rows.get_mut(index), merged_label)
                 {
                     row.label = label;
                     row.group_provenance = provenance;
+                    // `removed` disappears from `rows` entirely, so its own
+                    // content (and anything already merged into it) has to be
+                    // recorded here — otherwise a later pass has no way to
+                    // tell this part's content apart from one that's
+                    // genuinely absent, or to re-render it on its own (see
+                    // `MeasureRow::absorbed_rows`).
+                    let mut removed_own = removed;
+                    let nested = std::mem::take(&mut removed_own.absorbed_rows);
+                    row.absorbed_rows.push(removed_own);
+                    row.absorbed_rows.extend(nested);
                 }
-                rows.remove(inner);
                 merged = true;
                 break;
             }

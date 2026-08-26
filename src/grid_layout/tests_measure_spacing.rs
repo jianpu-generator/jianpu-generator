@@ -58,6 +58,7 @@ fn make_block_with_notes(row_id: &str, note_count: u32, bar_col: u32) -> Measure
     });
     MeasureBlock {
         rows: vec![MeasureRow {
+            absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
             group_provenance: None,
             label: row_id.to_string(),
@@ -75,6 +76,7 @@ fn make_block_with_notes(row_id: &str, note_count: u32, bar_col: u32) -> Measure
 fn make_multi_measure_rest_block(row_id: &str, bar_col: u32, count: usize) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
+            absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
             group_provenance: None,
             label: row_id.to_string(),
@@ -104,6 +106,7 @@ fn make_block_with_dash(row_id: &str, bar_col: u32) -> MeasureBlock {
     // A single half note (`NoteHead` followed by one `NoteDash`) plus a bar line.
     MeasureBlock {
         rows: vec![MeasureRow {
+            absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
             group_provenance: None,
             label: row_id.to_string(),
