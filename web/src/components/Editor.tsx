@@ -100,7 +100,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const onForceSaveRef = useRef(onForceSave)
   const onEditPartsClickRef = useRef(onEditPartsClick)
   const onEditMetadataClickRef = useRef(onEditMetadataClick)
-  const savedSelectionRef = useRef<ISelection | null>(null)
+  const savedSelectionsRef = useRef<ISelection[] | null>(null)
   const codeLensProviderRef = useRef<IDisposable | null>(null)
   useEffect(() => {
     onSelectionChangeRef.current = onSelectionChange
@@ -291,34 +291,42 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   // the cursor to the end of the document (forceMoveMarkers: true). The fix
   // has two parts:
   //
-  // 1. useLayoutEffect runs BEFORE the child's useEffect, so we snapshot the
-  //    cursor position here before executeEdits has a chance to move it.
+  // 1. useLayoutEffect runs BEFORE the child's useEffect, so we snapshot
+  //    every selection here (a multicursor drag-select can push more than
+  //    one) before executeEdits has a chance to move them.
   // 2. useEffect runs AFTER the child's useEffect (executeEdits + move), so
-  //    we restore the snapshotted position here.
+  //    we restore the snapshotted selections here.
   //
   // This runs unconditionally, even for edits that originated from the
   // user's own typing (echoed back down as this `value`): by the time this
   // effect pair runs, the model's text already matches `value` (Monaco
   // applied the keystroke synchronously before `onChange` fired), so
   // @monaco-editor/react's `value !== model.getValue()` check skips
-  // executeEdits and restoring the snapshotted selection is a no-op. An
-  // earlier version of this gated the snapshot/restore behind a
-  // same-origin flag to skip that no-op, but the flag was a single ref not
-  // scoped to a particular `value` transition — an external update (e.g.
-  // formatScore, part-declaration edits) landing while the flag was still
-  // set from a recent keystroke would skip the restore it actually needed,
-  // letting the cursor jump to the end and stick.
+  // executeEdits — but `setSelections` below still runs regardless, and is
+  // NOT a no-op: it must actively re-apply every snapshotted selection, or
+  // Monaco's own post-keystroke state (which already collapsed a
+  // multicursor edit down to N empty carets, one per edited range) would be
+  // left standing. An earlier version restored only the *primary* selection
+  // here (`getSelection()`/`setSelection()`, both singular), which for a
+  // single caret was an effective no-op but for a multicursor selection
+  // silently discarded every cursor but the first on every keystroke. An
+  // even earlier version gated the snapshot/restore behind a same-origin
+  // flag, but the flag was a single ref not scoped to a particular `value`
+  // transition — an external update (e.g. formatScore, part-declaration
+  // edits) landing while the flag was still set from a recent keystroke
+  // would skip the restore it actually needed, letting the cursor jump to
+  // the end and stick.
   // biome-ignore lint/correctness/useExhaustiveDependencies: value is the trigger; refs don't need to be listed
   useLayoutEffect(() => {
-    savedSelectionRef.current = editorRef.current?.getSelection() ?? null
+    savedSelectionsRef.current = editorRef.current?.getSelections() ?? null
   }, [value])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: value is the trigger; refs don't need to be listed
   useEffect(() => {
     const ed = editorRef.current
-    const saved = savedSelectionRef.current
-    if (ed && saved) {
-      ed.setSelection(saved)
+    const saved = savedSelectionsRef.current
+    if (ed && saved && saved.length > 0) {
+      ed.setSelections(saved)
     }
   }, [value])
 
