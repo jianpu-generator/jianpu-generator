@@ -131,10 +131,23 @@ pub fn generate_wav_for_measure_range(
 /// SVG via its `data-part-index`/`data-note-id` attributes. Returns:
 /// - `{ "status": "ok", "timings": [{ source_part_index, note_id, start_s, end_s }, ...] }`
 /// - `{ "status": "err", "diagnostics": [...] }`
+///
+/// `visible_tracks` must be the part-visibility toggle's own state — the
+/// same set physically removed before the rendered SVG's own render call —
+/// so a `source_part_index`/`note_id` (including a `MultiMeasureRest` run
+/// only created once a hidden sibling part's notes are removed) always
+/// agrees with the currently rendered SVG's `data-part-index`/`data-note-id`.
+/// `enabled_tracks` separately mutes playback down to a further, possibly
+/// narrower subset of those visible parts for this one call only (e.g. "play
+/// selection"), without affecting `source_part_index` or block structure.
 #[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
-pub fn list_note_timings(source: &str, enabled_tracks: Option<Vec<String>>) -> NoteTimingsResponse {
-    list_note_timings_response(source, enabled_tracks.as_deref())
+pub fn list_note_timings(
+    source: &str,
+    visible_tracks: Option<Vec<String>>,
+    enabled_tracks: Option<Vec<String>>,
+) -> NoteTimingsResponse {
+    list_note_timings_response(source, visible_tracks.as_deref(), enabled_tracks.as_deref())
 }
 
 /// Return the elapsed-seconds start/end of every sounding note/rest within a
@@ -149,7 +162,8 @@ pub fn list_note_timings(source: &str, enabled_tracks: Option<Vec<String>>) -> N
 /// Returns the same envelope as [`list_note_timings`].
 /// See [`generate_wav_for_measure_range`] for `extend_to_last_occurrence`,
 /// `respect_sequence`, and `sequence_entry_start_index`/
-/// `sequence_entry_end_index`.
+/// `sequence_entry_end_index`, and [`list_note_timings`] for how
+/// `visible_tracks` differs from `enabled_tracks`.
 #[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 #[wasm_bindgen]
 pub fn list_note_timings_for_range(
@@ -160,6 +174,7 @@ pub fn list_note_timings_for_range(
     respect_sequence: bool,
     sequence_entry_start_index: Option<usize>,
     sequence_entry_end_index: Option<usize>,
+    visible_tracks: Option<Vec<String>>,
     enabled_tracks: Option<Vec<String>>,
 ) -> NoteTimingsResponse {
     list_note_timings_for_range_response(
@@ -169,6 +184,7 @@ pub fn list_note_timings_for_range(
         extend_to_last_occurrence,
         respect_sequence,
         crate::sequence_entry_range(sequence_entry_start_index, sequence_entry_end_index),
+        visible_tracks.as_deref(),
         enabled_tracks.as_deref(),
     )
 }

@@ -64,7 +64,8 @@ fn note_ids_match_between_grid_layout_and_midi_timing() {
     let svg_ids = note_ids_in_svg(&render_output.svgs);
 
     let note_timings =
-        note_timings_from_source(source, "note_highlight_identity.jianpu", None, &[]).unwrap();
+        note_timings_from_source(source, "note_highlight_identity.jianpu", None, None, &[])
+            .unwrap();
     let timing_ids: HashSet<(usize, usize)> = note_timings
         .iter()
         .map(|t| (t.source_part_index, t.note_id))
@@ -112,9 +113,14 @@ fn note_ids_match_between_grid_layout_and_midi_timing_with_sequence() {
         render_svgs_from_source(source, "note_highlight_identity_sequence.jianpu", &[]).unwrap();
     let svg_ids = note_ids_in_svg(&render_output.svgs);
 
-    let note_timings =
-        note_timings_from_source(source, "note_highlight_identity_sequence.jianpu", None, &[])
-            .unwrap();
+    let note_timings = note_timings_from_source(
+        source,
+        "note_highlight_identity_sequence.jianpu",
+        None,
+        None,
+        &[],
+    )
+    .unwrap();
     let timing_ids: HashSet<(usize, usize)> = note_timings
         .iter()
         .map(|t| (t.source_part_index, t.note_id))

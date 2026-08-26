@@ -1,13 +1,9 @@
 import type {
   GenerateWavResponse,
-  ListPartsResponse,
   NoteTimingOut,
   NoteTimingsResponse,
-  PartOut,
 } from 'jianpu-wasm'
-import { GM_INSTRUMENTS } from '../utils/gmInstruments'
 import { computeNoteSelectionTrimWindow } from '../utils/noteSelectionTrim'
-import { remapNoteTimingsToVisiblePartIndex } from '../utils/noteTimingsPartIndex'
 import type { WorkerRequest, WorkerResponse } from './jianpu.worker'
 
 function binaryBufferFromResult(
@@ -20,31 +16,20 @@ function binaryBufferFromResult(
   return view.slice().buffer
 }
 
-type ListPartsFn =
-  | ((source: string, instruments: typeof GM_INSTRUMENTS) => ListPartsResponse)
-  | null
-
-/** Declaration-order parts, used only to rebuild the hidden-parts-compacted
- * index space `remapNoteTimingsToVisiblePartIndex` needs — see its doc
- * comment. */
-function visiblePartsFromSource(
-  listParts: ListPartsFn,
-  source: string,
-): PartOut[] {
-  if (!listParts) return []
-  const result = listParts(source, GM_INSTRUMENTS)
-  return result.status === 'ok' ? result.parts : []
-}
-
 function noteTimingsFromSource(
   listNoteTimings:
-    | ((source: string, enabledTracks?: string[]) => NoteTimingsResponse)
+    | ((
+        source: string,
+        visibleTracks?: string[],
+        enabledTracks?: string[],
+      ) => NoteTimingsResponse)
     | null,
   source: string,
+  visibleTracks: string[] | undefined,
   enabledTracks: string[] | undefined,
 ): NoteTimingOut[] {
   if (!listNoteTimings) return []
-  const result = listNoteTimings(source, enabledTracks)
+  const result = listNoteTimings(source, visibleTracks, enabledTracks)
   return result.status === 'ok' ? result.timings : []
 }
 
@@ -58,6 +43,7 @@ function noteTimingsForRangeFromSource(
         respectSequence: boolean,
         sequenceEntryStartIndex: number | undefined,
         sequenceEntryEndIndex: number | undefined,
+        visibleTracks?: string[],
         enabledTracks?: string[],
       ) => NoteTimingsResponse)
     | null,
@@ -68,6 +54,7 @@ function noteTimingsForRangeFromSource(
   respectSequence: boolean,
   sequenceEntryStartIndex: number | undefined,
   sequenceEntryEndIndex: number | undefined,
+  visibleTracks: string[] | undefined,
   enabledTracks: string[] | undefined,
 ): NoteTimingOut[] {
   if (!listNoteTimingsForRange) return []
@@ -79,6 +66,7 @@ function noteTimingsForRangeFromSource(
     respectSequence,
     sequenceEntryStartIndex,
     sequenceEntryEndIndex,
+    visibleTracks,
     enabledTracks,
   )
   return result.status === 'ok' ? result.timings : []
@@ -93,14 +81,17 @@ type GenerateWavFn =
   | null
 
 type ListNoteTimingsFn =
-  | ((source: string, enabledTracks?: string[]) => NoteTimingsResponse)
+  | ((
+      source: string,
+      visibleTracks?: string[],
+      enabledTracks?: string[],
+    ) => NoteTimingsResponse)
   | null
 
 export function handleGenerateAudio(
   msg: Extract<WorkerRequest, { type: 'generateAudio' }>,
   generateWav: GenerateWavFn,
   listNoteTimings: ListNoteTimingsFn,
-  listParts: ListPartsFn,
   loadedSoundfont: Uint8Array | null,
 ): void {
   if (!generateWav || !loadedSoundfont) {
@@ -110,13 +101,18 @@ export function handleGenerateAudio(
   const wavResult = generateWav(msg.source, msg.enabledTracks, loadedSoundfont)
   if (wavResult.status === 'ok' && wavResult.wav != null) {
     const wavBuffer = binaryBufferFromResult(wavResult.wav)
-    // `enabledTracks` here is always the part-visibility toggle's state
+    // `msg.enabledTracks` here is always the part-visibility toggle's state
     // (never a playback-only mute override — this handler has no such
-    // concept), so it doubles as the compaction basis.
-    const noteTimings = remapNoteTimingsToVisiblePartIndex(
-      noteTimingsFromSource(listNoteTimings, msg.source, msg.enabledTracks),
-      visiblePartsFromSource(listParts, msg.source),
+    // concept), so it doubles as `visibleTracks`. Passing it as Rust's own
+    // `visible_tracks` makes `source_part_index` already agree with the
+    // rendered SVG's `data-part-index` (including a `MultiMeasureRest` run
+    // only created once a hidden sibling part's notes are removed) — no
+    // further client-side remap needed.
+    const noteTimings = noteTimingsFromSource(
+      listNoteTimings,
+      msg.source,
       msg.enabledTracks,
+      undefined,
     )
     postMessage(
       {
@@ -158,6 +154,7 @@ type ListNoteTimingsForRangeFn =
       respectSequence: boolean,
       sequenceEntryStartIndex: number | undefined,
       sequenceEntryEndIndex: number | undefined,
+      visibleTracks?: string[],
       enabledTracks?: string[],
     ) => NoteTimingsResponse)
   | null
@@ -182,7 +179,6 @@ export function handleGenerateMeasureRangeAudio(
   msg: Extract<WorkerRequest, { type: 'generateMeasureRangeAudio' }>,
   generateWavForMeasureRange: GenerateWavForMeasureRangeFn,
   listNoteTimingsForRange: ListNoteTimingsForRangeFn,
-  listParts: ListPartsFn,
   loadedSoundfont: Uint8Array | null,
 ): void {
   if (!generateWavForMeasureRange || !loadedSoundfont) {
@@ -192,24 +188,24 @@ export function handleGenerateMeasureRangeAudio(
     } satisfies WorkerResponse)
     return
   }
-  // Rebuild the hidden-parts-compacted index space (matching the currently
-  // rendered SVG's `data-part-index`) before this clip's own, possibly
-  // narrower, playback mute (`msg.enabledTracks` — e.g. "play selection")
-  // gets applied — see `remapNoteTimingsToVisiblePartIndex`'s doc comment.
-  const fullRangeNoteTimings = remapNoteTimingsToVisiblePartIndex(
-    noteTimingsForRangeFromSource(
-      listNoteTimingsForRange,
-      msg.source,
-      msg.startMeasureIndex,
-      msg.endMeasureIndex,
-      msg.extendToLastOccurrence,
-      msg.respectSequence,
-      msg.sequenceEntryStartIndex,
-      msg.sequenceEntryEndIndex,
-      msg.enabledTracks,
-    ),
-    visiblePartsFromSource(listParts, msg.source),
+  // `msg.visibleTracks` (the part-visibility toggle's own state) is passed
+  // as Rust's own `visible_tracks`, so `source_part_index`/block structure
+  // (including a `MultiMeasureRest` run only created once a hidden sibling
+  // part's notes are removed) already agree with the currently rendered
+  // SVG's `data-part-index`/`data-note-id` — no client-side remap needed.
+  // `msg.enabledTracks` is this clip's own, possibly narrower, playback mute
+  // (e.g. "play selection"), applied on top without affecting either.
+  const fullRangeNoteTimings = noteTimingsForRangeFromSource(
+    listNoteTimingsForRange,
+    msg.source,
+    msg.startMeasureIndex,
+    msg.endMeasureIndex,
+    msg.extendToLastOccurrence,
+    msg.respectSequence,
+    msg.sequenceEntryStartIndex,
+    msg.sequenceEntryEndIndex,
     msg.visibleTracks,
+    msg.enabledTracks,
   )
   // "Play selection": narrow the clip Rust synthesizes down to exactly the
   // drag-selected notes' elapsed-seconds span (sample-accurate trim/fade —

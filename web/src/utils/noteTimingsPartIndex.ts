@@ -2,26 +2,22 @@ import type { NoteTimingOut, PartOut } from 'jianpu-wasm'
 
 /**
  * Rust's note-timing pipeline (`note_timings_seconds`, see
- * `src/midi/timing_note_timings.rs`) deliberately reports each
- * `NoteTiming.source_part_index` as the note's true *written* part index,
- * unaffected by whichever `enabled_tracks` mutes that particular clip's
- * audio (e.g. "play selection" narrowing playback down to a few drag-selected
- * parts) — so a repeated/muted clip still resolves `note_id`s consistently.
+ * `src/midi/timing_note_timings.rs`) takes a `visible_tracks` parameter
+ * (the part-visibility toggle's own state) that it applies *before*
+ * resolving each note's `source_part_index`/`note_id`, so when a caller
+ * passes it, the returned `source_part_index` already lands in the same
+ * hidden-parts-compacted index space the rendered SVG's `data-part-index`
+ * uses (`apply_track_filter` physically removes hidden parts before
+ * compiling — see `src/filters.rs`) — no further remapping needed.
+ * `worker/audioMessageHandlers.ts` does exactly that, so this function is no
+ * longer called from production code.
  *
- * But the rendered SVG's `data-part-index` — what `usePlaybackCursor`'s DOM
- * lookups and `computeNoteSelectionTrimWindow`'s cell matching both key off
- * — is compacted by whichever parts are currently *hidden* via the part
- * visibility toggle: `apply_track_filter` physically removes hidden parts
- * before compiling, so hiding an earlier part shifts every later part's
- * index down (see `src/filters.rs`). That compaction is unrelated to (and,
- * for "play selection", a strict superset of) whatever narrower subset a
- * given clip mutes its audio down to.
- *
- * This remaps each timing's `source_part_index` from the true written index
- * into that same hidden-parts-compacted space, so it lines up with the SVG
- * regardless of which (if any) further subset of visible parts this
- * particular clip muted for playback. `visibleTracks` must be the part
- * visibility toggle's current state (never a playback-only mute override) —
+ * This utility remains for the case where a caller only has `NoteTiming`s
+ * computed *without* a `visible_tracks` filter (`source_part_index` still
+ * the note's true *written* index) and needs them remapped into the
+ * hidden-parts-compacted space after the fact — e.g. against a differently
+ * fetched/cached timing set. `visibleTracks` must be the part visibility
+ * toggle's current state (never a playback-only mute override) —
  * `undefined` means no part is hidden, in which case written and compacted
  * indices already agree and no remapping is needed.
  */

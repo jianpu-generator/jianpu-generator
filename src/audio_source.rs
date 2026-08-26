@@ -124,22 +124,31 @@ pub fn measure_start_times_from_source(
 /// Follows the same `# sequence`/D.C.-al-Coda-Fine playback order as the
 /// actual audio (see [`crate::midi::note_timings_seconds`]), so a repeated
 /// or reordered written note is highlighted every time it's actually heard,
-/// not just its first pass — while `note_id`s themselves still agree with
-/// `ColumnElement::note_id`/the rendered SVG's `data-note-id`, since those
-/// are computed from the written score, not the expanded timeline.
+/// not just its first pass.
+///
+/// `visible_tracks` must be the part-visibility toggle's own state (the same
+/// set physically removed before the rendered SVG's own `compile()` call —
+/// see [`crate::filters::apply_track_filter`]), so `note_id`s and block
+/// structure (e.g. a `MultiMeasureRest` run only created once a sibling
+/// part's notes are hidden) agree with the rendered SVG's `data-note-id`.
+/// `enabled_tracks` separately mutes playback down to a further, possibly
+/// narrower subset of those visible parts for this one call only (e.g. the
+/// web app's note drag-select playback) without affecting `source_part_index`
+/// or block structure — see [`crate::midi::note_timings_seconds`].
 #[cfg(feature = "midi")]
 pub fn note_timings_from_source(
     source: &str,
     filename: &str,
+    visible_tracks: Option<&[String]>,
     enabled_tracks: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<crate::midi::NoteTiming>, IrrecoverableError> {
     let score = compile(source, filename, instruments)?;
     // `score` is deliberately left unfiltered here: `note_timings_seconds`
-    // applies `enabled_tracks` itself, after resolving each kept note's true
-    // written `source_part_index`, so it isn't renumbered by that part's
-    // position among the surviving parts (see `filter_expanded_tracks`).
-    crate::midi::note_timings_seconds(&score, enabled_tracks)
+    // applies `visible_tracks`/`enabled_tracks` itself, resolving each kept
+    // note's `source_part_index` against the visibility-filtered score (see
+    // `visible_score`) rather than the fully unfiltered written one.
+    crate::midi::note_timings_seconds(&score, visible_tracks, enabled_tracks)
 }
 
 /// Same as [`note_timings_from_source`], but scoped to a measure range and
@@ -148,19 +157,21 @@ pub fn note_timings_from_source(
 /// produces for the same range, not from the start of the whole piece).
 ///
 /// See [`MeasureRangeSelection`] for `extend_to_last_occurrence` and
-/// `respect_sequence`.
+/// `respect_sequence`, and [`note_timings_from_source`] for how
+/// `visible_tracks` differs from `enabled_tracks`.
 #[cfg(feature = "midi")]
 pub fn note_timings_for_range_from_source(
     source: &str,
     filename: &str,
     selection: &MeasureRangeSelection,
+    visible_tracks: Option<&[String]>,
     enabled_tracks: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<crate::midi::NoteTiming>, IrrecoverableError> {
     let score = compile(source, filename, instruments)?;
     // As in `note_timings_from_source`, `score` stays unfiltered — filtering
     // happens inside `note_timings_seconds_for_range`/`_for_literal_range` so
-    // `source_part_index` keeps its true written value.
+    // `source_part_index` keeps its true visibility-filtered value.
     let (_, start_pos, end_pos) = crate::midi::expand_for_measure_range(
         &score,
         *selection.range.start(),
@@ -174,10 +185,17 @@ pub fn note_timings_for_range_from_source(
             &score,
             start_pos,
             end_pos,
+            visible_tracks,
             enabled_tracks,
         );
     }
-    crate::midi::note_timings_seconds_for_range(&score, start_pos, end_pos, enabled_tracks)
+    crate::midi::note_timings_seconds_for_range(
+        &score,
+        start_pos,
+        end_pos,
+        visible_tracks,
+        enabled_tracks,
+    )
 }
 
 /// Parse, group, optionally filter tracks, and generate MIDI (SMF) bytes.

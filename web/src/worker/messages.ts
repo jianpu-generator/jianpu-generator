@@ -105,12 +105,13 @@ export type WorkerRequest =
        * (which "play selection" overrides down to just the drag-selected
        * parts, muting this clip's audio), this is always the same set the
        * currently-rendered SVG was compacted against, never a playback-only
-       * override. Needed to translate each returned `NoteTiming`'s
-       * `source_part_index` — which Rust reports as the note's true written
-       * index regardless of `enabledTracks` — back into the same
-       * hidden-parts-compacted index space as the SVG's `data-part-index`
-       * (see `remapNoteTimingsToVisiblePartIndex`). `undefined` means no
-       * part is hidden, so written and compacted indices already agree.
+       * override. Passed straight through to WASM's own `visible_tracks`
+       * parameter (see `list_note_timings_for_range`), so each returned
+       * `NoteTiming`'s `source_part_index` already agrees with the SVG's
+       * `data-part-index` — including block/note-id structure such as a
+       * `MultiMeasureRest` run only created once a hidden sibling part's
+       * notes are removed (see **Note identity** in `ARCHITECTURE.md`).
+       * `undefined` means no part is hidden.
        */
       visibleTracks?: string[]
       /**

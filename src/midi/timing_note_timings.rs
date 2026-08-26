@@ -1,5 +1,6 @@
 use crate::ast::grouped::Score;
 use crate::error::IrrecoverableError;
+use crate::filters::apply_track_filter;
 
 use super::navigation::{
     expand_navigation_with_note_positions, filter_expanded_tracks, ExpandedMeasureOrigin,
@@ -12,6 +13,31 @@ use super::timing_note_events::{
 use super::timing_range::build_measure_range_score;
 use super::TPQ;
 use crate::compiler::compile;
+
+/// Physically drops parts `visible_tracks` excludes, mirroring
+/// [`crate::filters::apply_track_filter`], the same removal the *rendered*
+/// SVG's `compile()` call sees (see `render_svgs_from_source_filtered_with_lyrics`).
+/// Timing/note-id bookkeeping must be built from a score shaped this way —
+/// not the fully unfiltered written score — so a leading all-rest run that's
+/// only all-rest once a hidden part's notes are removed collapses into the
+/// same single `MultiMeasureRest` block/`note_id` the render does (see
+/// `compiler::merge_rest_runs`). `None` returns `score` unchanged (no
+/// allocation).
+///
+/// Distinct from `enabled_tracks`/[`filter_expanded_tracks`]: that mutes a
+/// possibly-narrower subset of these *visible* parts for one clip's audio
+/// only (e.g. drag-select playback) without removing anything from the
+/// render, so it must never influence block/note_id structure — it's applied
+/// afterward, to the expanded timeline, on top of whatever this function
+/// already resolved.
+fn visible_score(score: &Score, visible_tracks: Option<&[String]>) -> Score {
+    if visible_tracks.is_none() {
+        return score.clone();
+    }
+    let mut score = score.clone();
+    apply_track_filter(&mut score, visible_tracks);
+    score
+}
 
 /// Identity of one sounding note/rest's elapsed-seconds extent, matching the
 /// `(source_part_index, note_id)` key stamped onto `ColumnElement`s by the
@@ -85,17 +111,31 @@ fn new_part_timing_cursors(score: &Score) -> Vec<PartTimingCursor> {
 /// (`MeasureRow::first_note_id`), rather than one entry per underlying
 /// measure.
 ///
-/// `enabled_tracks` mutes playback down to a subset of parts (e.g. the web
-/// app's note drag-select playback) without disturbing `source_part_index`:
-/// filtering is applied to the *expanded* timeline via
-/// [`filter_expanded_tracks`], after `note_id_lookup`/`written_blocks` are
-/// built from the full, unfiltered `score` — so a kept part still reports
-/// its true written index, matching the full-score render's `data-note-id`.
-/// `None` keeps every part.
+/// `visible_tracks` names which parts are actually rendered (the part
+/// visibility toggle's state, i.e. what `apply_track_filter` would remove
+/// before `compile()` for the SVG render — see [`visible_score`]).
+/// `note_id_lookup`/`written_blocks` are built from that visibility-filtered
+/// score, so a leading all-rest run that only becomes all-rest once a hidden
+/// part's notes are removed collapses into the same single
+/// `MultiMeasureRest` block/`note_id` the render does. `None` keeps every
+/// part (matching an unfiltered render).
+///
+/// `enabled_tracks` separately mutes playback down to a further, possibly
+/// narrower subset of the *visible* parts for this one clip only (e.g. the
+/// web app's note drag-select playback), without disturbing
+/// `source_part_index` or block structure: it's applied to the *expanded*
+/// timeline via [`filter_expanded_tracks`], strictly after the
+/// visibility-filtered `note_id_lookup`/`written_blocks` are built — so a
+/// kept part still reports the index it has in the visibility-filtered
+/// render, matching the rendered SVG's `data-note-id`. `None` keeps every
+/// visible part.
 pub fn note_timings_seconds(
     score: &Score,
+    visible_tracks: Option<&[String]>,
     enabled_tracks: Option<&[String]>,
 ) -> Result<Vec<NoteTiming>, IrrecoverableError> {
+    let score = visible_score(score, visible_tracks);
+    let score = &score;
     let note_id_lookup = build_written_note_id_lookup(score);
     let written_blocks = compile(score).blocks;
     let block_lookup = written_measure_to_block(&written_blocks);
@@ -154,21 +194,29 @@ pub fn note_timings_seconds(
 /// expanded (playback-order) timeline itself via
 /// [`expand_navigation_with_note_positions`] so it can look `note_id`s up
 /// against `build_written_note_id_lookup(score)`/`compile(score).blocks` —
-/// both computed once over the *written* score, so they agree with the
-/// `note_id` `ColumnElement`s carry in the full-score render regardless of
-/// how navigation reorders playback. If `end_pos` falls outside the expanded
-/// timeline (only possible if the caller derived `start_pos`/`end_pos` from a
-/// different score), this returns an empty result rather than panicking.
+/// both computed once over the *visibility-filtered* score (see
+/// [`visible_score`]), so they agree with the `note_id` `ColumnElement`s
+/// carry in the rendered SVG regardless of how navigation reorders playback,
+/// and so a leading all-rest run that's only all-rest once a hidden part is
+/// removed still collapses to the same `MultiMeasureRest` block/`note_id`
+/// the render sees. If `end_pos` falls outside the expanded timeline (only
+/// possible if the caller derived `start_pos`/`end_pos` from a different
+/// score), this returns an empty result rather than panicking. See
+/// [`note_timings_seconds`] for how `enabled_tracks` differs from
+/// `visible_tracks`.
 pub fn note_timings_seconds_for_range(
     score: &Score,
     start_pos: usize,
     end_pos: usize,
+    visible_tracks: Option<&[String]>,
     enabled_tracks: Option<&[String]>,
 ) -> Result<Vec<NoteTiming>, IrrecoverableError> {
     if score.measures.is_empty() || start_pos > end_pos {
         return Ok(Vec::new());
     }
 
+    let score = visible_score(score, visible_tracks);
+    let score = &score;
     let note_id_lookup = build_written_note_id_lookup(score);
     let written_blocks = compile(score).blocks;
     let block_lookup = written_measure_to_block(&written_blocks);
@@ -230,17 +278,22 @@ pub fn note_timings_seconds_for_range(
 /// happens to recur elsewhere in `# sequence` (e.g. selecting "C" when the
 /// sequence is `A, B, B, C`) still resolves to its own `note_id`s rather than
 /// to whichever measure occupies that same position in the expanded
-/// timeline.
+/// timeline. See [`note_timings_seconds`] for how `visible_tracks` (applied
+/// before `note_id_lookup`/`written_blocks` are built, see
+/// [`visible_score`]) differs from `enabled_tracks`.
 pub fn note_timings_seconds_for_literal_range(
     score: &Score,
     start_index: usize,
     end_index: usize,
+    visible_tracks: Option<&[String]>,
     enabled_tracks: Option<&[String]>,
 ) -> Result<Vec<NoteTiming>, IrrecoverableError> {
     if score.measures.is_empty() || start_index > end_index {
         return Ok(Vec::new());
     }
 
+    let score = visible_score(score, visible_tracks);
+    let score = &score;
     let note_id_lookup = build_written_note_id_lookup(score);
     let written_blocks = compile(score).blocks;
     let block_lookup = written_measure_to_block(&written_blocks);

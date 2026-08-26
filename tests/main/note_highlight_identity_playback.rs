@@ -4,7 +4,7 @@ use crate::note_highlight_identity::{
 };
 use jianpu_generator::{
     measure_start_times_from_source, note_timings_for_range_from_source, note_timings_from_source,
-    render_svgs_from_source, MeasureRangeSelection,
+    render_svgs_from_source, render_svgs_from_source_filtered, MeasureRangeSelection,
 };
 use std::collections::HashSet;
 
@@ -29,7 +29,7 @@ fn note_timings_with_track_filter_keep_original_part_indices() {
 
     let enabled_tracks = ["A".to_string(), "C".to_string()];
     let filtered_timings =
-        note_timings_from_source(source, filename, Some(&enabled_tracks), &[]).unwrap();
+        note_timings_from_source(source, filename, None, Some(&enabled_tracks), &[]).unwrap();
 
     assert!(
         !filtered_timings.is_empty(),
@@ -94,6 +94,7 @@ fn note_ids_match_between_grid_layout_and_midi_timing_with_merged_rest_run() {
         source,
         "note_highlight_identity_merged_rest.jianpu",
         None,
+        None,
         &[],
     )
     .unwrap();
@@ -136,6 +137,83 @@ fn note_ids_match_between_grid_layout_and_midi_timing_with_merged_rest_run() {
     );
 }
 
+/// Two parts, Melody and Harmony: Harmony alone has notes in the first two
+/// measures (Melody implicitly rests there), then Melody plays in the third
+/// measure (Harmony implicitly rests there). Hiding Harmony turns Melody's
+/// leading two measures into a genuinely all-rest run *only once Harmony is
+/// filtered out* — in the full, unfiltered score they aren't all-rest, since
+/// Harmony has real notes there. This is the filter-induced merge the
+/// full-score compile in `note_timings_seconds` used to miss entirely (see
+/// the "playback cursor rest collapse with hidden part" e2e regression).
+fn score_with_filter_induced_merged_rest_run() -> &'static str {
+    concat!(
+        "# metadata\n",
+        "title = \"note highlight identity filter induced merged rest\"\n",
+        "\n",
+        "# parts\n",
+        "Melody [M] = notes\n",
+        "Harmony [H] = notes\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[H] 1 2 3 4\n",
+        "\n",
+        "[H] 5 6 7 1\n",
+        "\n",
+        "[M] 1 2 3 4\n",
+    )
+}
+
+/// Regression test: hiding Harmony (the part-visibility toggle, e.g.
+/// `render_svgs_from_source_filtered`'s `enabled_tracks`, physically removed
+/// before `compile()`) turns Melody's first two measures into an all-rest
+/// run that only the *filtered* render's `compile()` call ever sees — the
+/// full, unfiltered score still has Harmony's real notes there, so a naive
+/// `note_timings_seconds` call over the unfiltered score would never collapse
+/// that span into one `MultiMeasureRest` block/`note_id`, disagreeing with
+/// what the filtered render actually shows (and permanently desyncing the
+/// playback cursor, since `usePlaybackCursor` looks elements up by that
+/// `note_id`). Passing the same visibility filter into `note_timings_from_source`
+/// must make the two agree exactly.
+#[test]
+fn note_timings_with_visibility_filter_match_filter_induced_merged_rest() {
+    let source = score_with_filter_induced_merged_rest_run();
+    let filename = "note_highlight_identity_visibility_filter_merged_rest.jianpu";
+
+    let visible_tracks = ["M".to_string()];
+    let render_output =
+        render_svgs_from_source_filtered(source, filename, Some(&visible_tracks), &[]).unwrap();
+    let svg_ids = note_ids_in_svg(&render_output.svgs);
+
+    let note_timings =
+        note_timings_from_source(source, filename, Some(&visible_tracks), None, &[]).unwrap();
+    let timing_ids: HashSet<(usize, usize)> = note_timings
+        .iter()
+        .map(|t| (t.source_part_index, t.note_id))
+        .collect();
+
+    assert!(
+        !svg_ids.is_empty(),
+        "expected at least one note group in the rendered (Harmony-hidden) SVG"
+    );
+    assert_eq!(
+        svg_ids, timing_ids,
+        "with Harmony hidden, the filtered render's (source_part_index, note_id) identities \
+         must match note_timings_from_source's exactly, including the filter-induced merged \
+         rest spanning Melody's first two measures: {svg_ids:?} vs {timing_ids:?}"
+    );
+
+    // Melody's two leading rest measures collapse into one merged-rest
+    // NoteTiming, plus its 4 real notes in measure 2 = 5 total, not 6 (which
+    // would mean the filter-induced merge never happened).
+    assert_eq!(
+        note_timings.len(),
+        5,
+        "Melody's two filter-induced all-rest measures should collapse into one NoteTiming, \
+         matching the filtered render's single MultiMeasureRest glyph"
+    );
+}
+
 /// Playing from a non-first measure (e.g. the web app's "play from here")
 /// must report note timings relative to the *clip*'s own start, not the
 /// whole score's, and must still agree with the full-score render's
@@ -148,7 +226,7 @@ fn note_timings_for_range_start_at_zero_and_match_full_score_ids() {
     let render_output = render_svgs_from_source(source, filename, &[]).unwrap();
     let svg_ids = note_ids_in_svg(&render_output.svgs);
 
-    let full_timings = note_timings_from_source(source, filename, None, &[]).unwrap();
+    let full_timings = note_timings_from_source(source, filename, None, None, &[]).unwrap();
     let measure_boundaries = measure_start_times_from_source(source, filename, None, &[]).unwrap();
 
     // Play from the second (last) written measure through the end.
@@ -162,6 +240,7 @@ fn note_timings_for_range_start_at_zero_and_match_full_score_ids() {
             respect_sequence: true,
             sequence_entry_range: None,
         },
+        None,
         None,
         &[],
     )
@@ -257,6 +336,7 @@ fn note_timings_for_range_ignore_sequence_use_written_index_identity() {
             respect_sequence: false,
             sequence_entry_range: None,
         },
+        None,
         None,
         &[],
     )

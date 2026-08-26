@@ -250,13 +250,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'generateAudio') {
-    handleGenerateAudio(
-      msg,
-      generateWav,
-      listNoteTimings,
-      list_parts,
-      loadedSoundfont,
-    )
+    handleGenerateAudio(msg, generateWav, listNoteTimings, loadedSoundfont)
     return
   }
 
@@ -265,7 +259,6 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       msg,
       generateWavForMeasureRange,
       listNoteTimingsForRange,
-      list_parts,
       loadedSoundfont,
     )
     return

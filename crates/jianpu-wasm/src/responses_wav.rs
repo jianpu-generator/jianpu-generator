@@ -64,9 +64,10 @@ pub(crate) fn generate_wav_for_measure_range_response(
 
 pub(crate) fn list_note_timings_response(
     source: &str,
+    visible_tracks: Option<&[String]>,
     enabled_tracks: Option<&[String]>,
 ) -> NoteTimingsResponse {
-    match note_timings_from_source(source, "input.jianpu", enabled_tracks, &[]) {
+    match note_timings_from_source(source, "input.jianpu", visible_tracks, enabled_tracks, &[]) {
         Ok(timings) => NoteTimingsResponse::Ok {
             timings: timings
                 .into_iter()
@@ -92,6 +93,7 @@ pub(crate) fn list_note_timings_for_range_response(
     extend_to_last_occurrence: bool,
     respect_sequence: bool,
     sequence_entry_range: Option<std::ops::RangeInclusive<usize>>,
+    visible_tracks: Option<&[String]>,
     enabled_tracks: Option<&[String]>,
 ) -> NoteTimingsResponse {
     match note_timings_for_range_from_source(
@@ -103,6 +105,7 @@ pub(crate) fn list_note_timings_for_range_response(
             respect_sequence,
             sequence_entry_range,
         },
+        visible_tracks,
         enabled_tracks,
         &[],
     ) {
