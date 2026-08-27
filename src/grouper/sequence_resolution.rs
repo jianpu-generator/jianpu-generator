@@ -1,7 +1,7 @@
-use crate::ast::grouped::{Score, SequenceSpan};
+use crate::ast::grouped::{PartFilterDisplay, Score, SequenceSpan};
 use crate::ast::parsed::PartDecl;
-use crate::error::{Diagnostic, RecoverableError};
-use crate::parser::sequence_parser::SequenceSection;
+use crate::error::{Diagnostic, RecoverableError, Span};
+use crate::parser::sequence_parser::{PartFilter, PartFilterKind, SequenceSection};
 
 /// Resolves a parsed `# sequence` section against `score.measures`' labels
 /// and stores the result on `score.sequence`, or leaves it `None` if the
@@ -15,10 +15,10 @@ use crate::parser::sequence_parser::SequenceSection;
 ///   document-level error; that entry is skipped but the rest of the
 ///   sequence still resolves.
 /// - A label defined but never referenced by `# sequence` is not an error.
-/// - An entry's `(-abbrev ...)` suffix referencing an abbreviation that
-///   matches no declared part is a recoverable document-level error; that
-///   abbreviation is dropped from the entry's omissions but the rest of the
-///   entry still resolves.
+/// - An entry's `(-abbrev ...)` / `(abbrev ...)` suffix referencing an
+///   abbreviation that matches no declared part is a recoverable
+///   document-level error; that abbreviation is dropped from the entry's
+///   filter but the rest of the entry still resolves.
 pub(super) fn resolve_sequence(
     score: &mut Score,
     sequence: Option<SequenceSection>,
@@ -87,7 +87,7 @@ fn build_spans(label_starts: &[(String, usize)], measure_count: usize) -> Vec<Se
                 start: *start,
                 end,
                 omit_parts: Vec::new(),
-                omit_parts_display: Vec::new(),
+                part_filter_display: None,
             }
         })
         .collect()
@@ -108,10 +108,10 @@ fn resolve_entries(
         .filter_map(
             |entry| match spans.iter().find(|span| span.label == entry.label) {
                 Some(span) => {
-                    let resolved = resolve_omit_parts(
+                    let resolved = resolve_part_filter(
                         score,
                         &entry.label,
-                        &entry.omit_parts,
+                        entry.part_filter.as_ref(),
                         entry.span,
                         declarations,
                     );
@@ -119,8 +119,8 @@ fn resolve_entries(
                         label: span.label.clone(),
                         start: span.start,
                         end: span.end,
-                        omit_parts: resolved.expanded,
-                        omit_parts_display: resolved.display,
+                        omit_parts: resolved.omit_parts,
+                        part_filter_display: resolved.display,
                     })
                 }
                 None => {
@@ -137,39 +137,69 @@ fn resolve_entries(
         .collect()
 }
 
-/// The result of resolving an entry's `(-abbrev ...)` suffix: the part
-/// abbreviations to filter out at MIDI-expansion time (`expanded`), and the
-/// abbreviations as written, for display (`display`).
-struct ResolvedOmitParts {
-    expanded: Vec<String>,
-    display: Vec<String>,
+/// The result of resolving an entry's `(-abbrev ...)` / `(abbrev ...)`
+/// suffix: the part abbreviations to filter out at MIDI-expansion time
+/// (`omit_parts`, already expanded from an `Only` filter to its complement
+/// against `# parts`), and the suffix as written, for display (`display`).
+struct ResolvedPartFilter {
+    omit_parts: Vec<String>,
+    display: Option<PartFilterDisplay>,
 }
 
-/// Validates each omitted abbreviation against the declared parts, attaching
-/// a recoverable error and dropping any abbreviation that matches none.
-fn resolve_omit_parts(
+/// Validates each abbreviation named in `part_filter` against the declared
+/// parts, attaching a recoverable error and dropping any abbreviation that
+/// matches none. An `Only` filter is then expanded to its complement against
+/// `declarations`, since that's the concrete set MIDI-expansion time omits.
+fn resolve_part_filter(
     score: &mut Score,
     label: &str,
-    omit_parts: &[String],
-    span: crate::error::Span,
+    part_filter: Option<&PartFilter>,
+    span: Span,
     declarations: &[PartDecl],
-) -> ResolvedOmitParts {
-    let mut expanded = Vec::new();
-    let mut display = Vec::new();
-    for abbreviation in omit_parts {
+) -> ResolvedPartFilter {
+    let Some(filter) = part_filter else {
+        return ResolvedPartFilter {
+            omit_parts: Vec::new(),
+            display: None,
+        };
+    };
+
+    let mut validated = Vec::new();
+    for abbreviation in &filter.parts {
         if is_declared(abbreviation, declarations) {
-            expanded.push(abbreviation.clone());
-            display.push(abbreviation.clone());
+            validated.push(abbreviation.clone());
         } else {
+            let verb = match filter.kind {
+                PartFilterKind::Omit => "omits",
+                PartFilterKind::Only => "keeps",
+            };
             score
                 .document_diagnostics
                 .push(Diagnostic::Error(RecoverableError::general(
                     span,
-                    format!("sequence entry \"{label}\" omits unknown part \"{abbreviation}\""),
+                    format!("sequence entry \"{label}\" {verb} unknown part \"{abbreviation}\""),
                 )));
         }
     }
-    ResolvedOmitParts { expanded, display }
+
+    let omit_parts = match filter.kind {
+        PartFilterKind::Omit => validated.clone(),
+        PartFilterKind::Only => declarations
+            .iter()
+            .map(|decl| decl.abbreviation.clone())
+            .filter(|abbreviation| !validated.contains(abbreviation))
+            .collect(),
+    };
+
+    let display = (!validated.is_empty()).then_some(PartFilterDisplay {
+        kind: filter.kind,
+        parts: validated,
+    });
+
+    ResolvedPartFilter {
+        omit_parts,
+        display,
+    }
 }
 
 #[cfg(test)]

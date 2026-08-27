@@ -133,3 +133,31 @@ fn part_omission_suffix_with_unknown_abbreviation_is_a_recoverable_error() {
         "expected an unknown-omission error, got: {messages:?}"
     );
 }
+
+#[test]
+fn part_only_suffix_resolves_to_the_complement_omit_parts_on_the_span() {
+    let score = parse_and_group(&source_with_voices(voices_body(), "Verse, Chorus(S)"));
+    let sequence = score.sequence.expect("expected a resolved sequence");
+    assert_eq!(sequence.len(), 2);
+    assert!(sequence[0].omit_parts.is_empty()); // Verse
+    assert_eq!(sequence[1].omit_parts, vec!["A2", "T"]); // Chorus(S) keeps only S
+}
+
+#[test]
+fn part_only_suffix_naming_every_declared_part_omits_nothing() {
+    let score = parse_and_group(&source_with_voices(voices_body(), "Chorus(S A2 T)"));
+    let sequence = score.sequence.expect("expected a resolved sequence");
+    assert!(sequence[0].omit_parts.is_empty());
+}
+
+#[test]
+fn part_only_suffix_with_unknown_abbreviation_is_a_recoverable_error() {
+    let score = parse_and_group(&source_with_voices(voices_body(), "Chorus(Bogus)"));
+    let messages = all_error_messages(&score);
+    assert!(
+        messages
+            .iter()
+            .any(|m| m.contains("keeps unknown part \"Bogus\"")),
+        "expected an unknown-only error, got: {messages:?}"
+    );
+}

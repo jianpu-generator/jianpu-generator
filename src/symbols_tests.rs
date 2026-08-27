@@ -104,6 +104,34 @@ time=4/4 key=C4 bpm=120 label="Verse"
 }
 
 #[test]
+fn sequence_only_parts_reference_is_collected() {
+    let source = r#"# metadata
+title = "t"
+
+# parts
+Soprano [S] = notes
+
+# sequence
+Verse(S)
+
+# score
+time=4/4 key=C4 bpm=120 label="Verse"
+1 2 3 4
+"#;
+    let doc = parse(source, "test.jianpu", &[]).unwrap();
+    let symbols = collect_symbols(&doc);
+    let soprano = symbols
+        .iter()
+        .find(|s| s.kind == SymbolKind::Abbreviation && s.name == "S")
+        .expect("expected symbol S");
+
+    assert!(soprano
+        .occurrences
+        .iter()
+        .any(|o| o.role == OccurrenceRole::Reference && span_text(source, o.span) == "S"));
+}
+
+#[test]
 fn rename_edits_produce_replacement_for_every_occurrence() {
     let source = r#"# metadata
 title = "t"

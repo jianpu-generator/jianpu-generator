@@ -187,10 +187,19 @@ pub(crate) fn list_measure_spans_response(source: &str) -> ListMeasureSpansRespo
                 .unwrap_or_default()
                 .into_iter()
                 .map(|entry| {
-                    let label = if entry.omit_parts_display.is_empty() {
-                        entry.label
-                    } else {
-                        format!("{}(-{})", entry.label, entry.omit_parts_display.join(" -"))
+                    let label = match &entry.part_filter_display {
+                        None => entry.label.clone(),
+                        Some(display) => {
+                            use jianpu_generator::parser::sequence_parser::PartFilterKind;
+                            match display.kind {
+                                PartFilterKind::Omit => {
+                                    format!("{}(-{})", entry.label, display.parts.join(" -"))
+                                }
+                                PartFilterKind::Only => {
+                                    format!("{}({})", entry.label, display.parts.join(" "))
+                                }
+                            }
+                        }
                     };
                     SequenceEntryOut {
                         label,

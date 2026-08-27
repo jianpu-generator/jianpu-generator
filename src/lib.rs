@@ -151,7 +151,12 @@ fn build_header(score: &Score, parts: &[PartInfo]) -> grid_layout::types::Header
             .iter()
             .map(|span| grid_layout::types::SequenceEntryInfo {
                 label: span.label.clone(),
-                omit_parts: span.omit_parts_display.clone(),
+                part_filter: span.part_filter_display.as_ref().map(|display| {
+                    grid_layout::types::SequenceEntryPartFilter {
+                        kind: display.kind,
+                        parts: display.parts.clone(),
+                    }
+                }),
             })
             .collect()
     });

@@ -5,6 +5,10 @@ use crate::compiler::types::ArcKind;
 mod click_target_types;
 pub use click_target_types::{BarNumberClickTarget, MeasureClickTarget, PartLabelClickTarget};
 
+#[path = "sequence_entry_info.rs"]
+mod sequence_entry_info;
+pub use sequence_entry_info::{SequenceEntryInfo, SequenceEntryPartFilter};
+
 #[derive(Debug, Clone)]
 pub struct GridPage {
     pub width_pt: f32,
@@ -209,16 +213,6 @@ pub enum GridContent {
         entries: Vec<SequenceEntryInfo>,
         font_size: f32,
     },
-}
-
-/// One `# sequence` entry as rendered on the "Sequence: ..." header line:
-/// a label, plus any part abbreviations that entry's `(-abbrev ...)` suffix
-/// omits from that occurrence's MIDI/WAV playback (rendered parenthetically
-/// next to the label; empty when the entry has no omissions).
-#[derive(Debug, Clone)]
-pub struct SequenceEntryInfo {
-    pub label: String,
-    pub omit_parts: Vec<String>,
 }
 
 /// `GridContent` after arc variants have been resolved.

@@ -300,6 +300,17 @@ Verse, Chorus(-S -A2), Verse, Chorus(-A2), Chorus
 - An abbreviation that matches no declared part is an error; that abbreviation is dropped and the rest of the entry (and sequence) still resolves.
 - The written-order rendering itself is unaffected — the score's written-out `Chorus` section always renders with every part, once, per the written-order rule above. However, the omissions **are** shown on the "Sequence: ..." summary line (SVG/PDF, first page), right after the label in plain (non-bold/non-italic) text: `Sequence: Verse › Chorus (-S -A2) › Verse › Chorus (-A2) › Chorus`. This is a reader-facing note only, telling a performer which voices tacet on which repeat — the underlying `Chorus` measures are not duplicated or altered.
 
+An entry may instead carry an `(abbrev abbrev ...)` suffix — the same abbreviations, but with no leading `-` — naming the **only** parts to keep for that occurrence (every other declared part is omitted), for the opposite case: a chorus written once but soloed down to a subset of voices on a later repeat:
+
+```
+# sequence
+Chorus, Verse, Chorus(S)
+```
+
+- Here the third `Chorus` plays only Soprano; every other declared part is silent for that occurrence. Naming every declared part (e.g. `Chorus(S A2 T)` when only those three parts exist) is equivalent to no suffix at all.
+- A suffix cannot mix `-abbrev` and `abbrev` tokens (e.g. `Chorus(S -A2)`) — that's an error, and the entry falls back to no suffix (plays every part).
+- Otherwise this suffix follows the same rules as the omit suffix above: an unknown abbreviation is an error and is dropped; the written-out section always renders every part; the summary line shows the suffix as written but without the dash, e.g. `Sequence: Chorus › Verse › Chorus (S)`.
+
 ---
 
 ## Notes syntax

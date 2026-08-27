@@ -124,7 +124,10 @@ fn collect_section_label_symbols(
             &entry.label,
             SymbolOccurrence::exact(entry.label_span, OccurrenceRole::Reference),
         );
-        for (part, part_span) in entry.omit_parts.iter().zip(&entry.omit_part_spans) {
+        let Some(filter) = &entry.part_filter else {
+            continue;
+        };
+        for (part, part_span) in filter.parts.iter().zip(&filter.part_spans) {
             push_occurrence(
                 abbreviations,
                 SymbolKind::Abbreviation,

@@ -237,11 +237,21 @@ pub struct SequenceSpan {
     /// Inclusive index into `Score.measures`.
     pub end: usize,
     /// Individual part abbreviations to omit from this occurrence's MIDI/WAV
-    /// playback (from a `# sequence` entry's `(-abbrev -abbrev ...)` suffix).
+    /// playback (from a `# sequence` entry's `(-abbrev ...)` omit suffix, or
+    /// the complement of an `(abbrev ...)` only suffix against `# parts`).
     pub omit_parts: Vec<String>,
-    /// The `(-abbrev ...)` suffix's abbreviations as written, for display on
-    /// the SVG/PDF "Sequence: ..." summary line.
-    pub omit_parts_display: Vec<String>,
+    /// The entry's `(-abbrev ...)` / `(abbrev ...)` suffix's abbreviations as
+    /// written, plus whether it's an omit or only suffix, for display on the
+    /// SVG/PDF "Sequence: ..." summary line. `None` when the entry has no
+    /// suffix.
+    pub part_filter_display: Option<PartFilterDisplay>,
+}
+
+/// A `# sequence` entry's `(...)` suffix, as written, for display purposes.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PartFilterDisplay {
+    pub kind: crate::parser::sequence_parser::PartFilterKind,
+    pub parts: Vec<String>,
 }
 
 // ── Intermediate grouper types (not part of the public API) ─────────────────
