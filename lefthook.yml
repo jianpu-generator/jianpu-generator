@@ -25,10 +25,12 @@ pre-commit:
       stage_fixed: true
 
     # All other checks run in parallel first; e2e-tests (the slowest job) only
-    # runs afterwards, once everything else has already passed. Piping this
-    # group also keeps web-typecheck and e2e-tests sequential relative to each
-    # other, since both invoke `pnpm run build:wasm` and would otherwise race
-    # wasm-pack/wasm-bindgen on their shared cache.
+    # runs afterwards, once everything else has already passed. web-typecheck
+    # is deliberately kept out of this group (and run sequentially below,
+    # before e2e-tests) because it invokes `pnpm run build:wasm`, which runs
+    # wasm-pack's own `cargo install wasm-bindgen-cli` — that races
+    # cargo-checks (and would race e2e-tests) for the shared Cargo
+    # package-cache lock and corrupts wasm-pack's install-tracking JSON.
     - group:
         parallel: true
         jobs:
@@ -53,9 +55,9 @@ pre-commit:
             glob: "web/**"
             run: cd web && pnpm run test:unit
 
-          - name: web-typecheck
-            glob: "{crates/jianpu-wasm/**,web/**}"
-            run: cd web && pnpm run build:wasm && python3 ../scripts/check-wasm-size.py && pnpm exec tsc -b
+    - name: web-typecheck
+      glob: "{crates/jianpu-wasm/**,web/**}"
+      run: cd web && pnpm run build:wasm && python3 ../scripts/check-wasm-size.py && pnpm exec tsc -b
 
     - name: e2e-tests
       glob: "{web/src/**,web/e2e/**,crates/**,src/**}"
