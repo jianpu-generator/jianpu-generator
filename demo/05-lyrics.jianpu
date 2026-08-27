@@ -3,30 +3,30 @@ title = "Lyrics"
 max_measures_per_system = 1
 
 # parts
-Melody [M] = notes+lyrics
+Melody [M] = notes
 
 # score
 label="CJK syllables"
 [M] 1 2 3 4
-[M] 春天来了
+春天来了
 
 label="Latin syllables"
 [M] 1 2 3 4
-[M] do re mi fa
+do re mi fa
 
 label="Syllable break (-)"
 [M] 1 1 5 5
-[M] twin- kle twin- kle
+twin- kle twin- kle
 
 label="Held syllable (-)"
 [M] 4~4 3 2
-[M] he - world
+he - world
 
 label="No-lyrics marker (_)"
 [M] 0
-[M] _
+_
 
 label="Multiple verses"
 [M] 1 2 3 4
-[M] do re mi fa
-[M] one two three four
+do re mi fa
+one two three four

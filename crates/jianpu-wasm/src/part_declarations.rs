@@ -10,10 +10,8 @@ fn part_declaration_mode_to_out(mode: &SourcePartMode) -> PartDeclarationModeOut
     match mode {
         SourcePartMode::Chords => PartDeclarationModeOut::Chords,
         SourcePartMode::Notes => PartDeclarationModeOut::Notes,
-        SourcePartMode::NotesLyrics => PartDeclarationModeOut::NotesLyrics,
         SourcePartMode::Percussion => PartDeclarationModeOut::Percussion,
         SourcePartMode::Follow => PartDeclarationModeOut::Follow,
-        SourcePartMode::Lyrics => PartDeclarationModeOut::Lyrics,
     }
 }
 

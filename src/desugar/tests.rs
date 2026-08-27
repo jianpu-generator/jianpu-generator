@@ -49,26 +49,11 @@ fn abbreviation_reference_span_covers_only_trimmed_key_text() {
 
 #[test]
 fn score_lines_are_passed_through_unchanged() {
-    let groups = vec![group(&["[A] 1 2 3 4", "[A] hello"])];
-    let declarations = vec![decl("A", PartKind::NotesWithLyrics)];
+    let groups = vec![group(&["[A] 1 2 3 4", "hello"])];
+    let declarations = vec![decl("A", PartKind::Notes)];
     let (result, _slots, _, _refs) = desugar_groups(groups, &declarations, 0).unwrap();
     assert_eq!(result[0][0].content, "1 2 3 4");
     assert_eq!(result[0][1].content, "hello");
-}
-
-#[test]
-fn omitted_trailing_lyrics_without_precedent_fills_with_no_lyrics_silently() {
-    let groups = vec![group(&["[A] 1 2 3 4"])];
-    let declarations = vec![decl("A", PartKind::NotesWithLyrics)];
-    let (result, _slots, errors, _refs) = desugar_groups(groups, &declarations, 0).unwrap();
-    assert_eq!(
-        result[0][1].content, "_",
-        "should fill in underscore placeholder"
-    );
-    assert!(
-        errors[0].is_none(),
-        "omitted lyrics with no precedent should not produce an error"
-    );
 }
 
 #[test]
@@ -170,62 +155,6 @@ fn follow_with_key_override_uses_key_content() {
 }
 
 #[test]
-fn follow_with_notes_lyrics_copies_both_slots_from_target() {
-    let groups = vec![group(&["[A] 1 2 3 4", "[A] do re mi fa"])];
-    let declarations = vec![
-        decl("A", PartKind::NotesWithLyrics),
-        decl_follow("B", PartKind::NotesWithLyrics, "A"),
-    ];
-    let (result, _slots, _, _refs) = desugar_groups(groups, &declarations, 0).unwrap();
-    assert_eq!(result[0][0].content, "1 2 3 4", "A notes");
-    assert_eq!(result[0][1].content, "do re mi fa", "A lyrics");
-    assert_eq!(result[0][2].content, "1 2 3 4", "B notes: copied from A");
-    assert_eq!(
-        result[0][3].content, "do re mi fa",
-        "B lyrics: copied from A"
-    );
-}
-
-#[test]
-fn follow_with_notes_key_override_copies_only_lyrics_from_target() {
-    // B follows A. One [B] key line overrides notes only; lyrics still copied from A.
-    let groups = vec![group(&["[A] 1 2 3 4", "[A] do re mi fa", "[B] 5 6 7 0"])];
-    let declarations = vec![
-        decl("A", PartKind::NotesWithLyrics),
-        decl_follow("B", PartKind::NotesWithLyrics, "A"),
-    ];
-    let (result, _slots, _, _refs) = desugar_groups(groups, &declarations, 0).unwrap();
-    assert_eq!(result[0][0].content, "1 2 3 4", "A notes");
-    assert_eq!(result[0][1].content, "do re mi fa", "A lyrics");
-    assert_eq!(result[0][2].content, "5 6 7 0", "B notes: key override");
-    assert_eq!(
-        result[0][3].content, "do re mi fa",
-        "B lyrics: copied from A via follow"
-    );
-}
-
-#[test]
-fn follow_with_both_key_overrides_uses_both() {
-    // B follows A. Two [B] key lines override both notes and lyrics.
-    let groups = vec![group(&[
-        "[A] 1 2 3 4",
-        "[A] do re mi fa",
-        "[B] 5 6 7 0",
-        "[B] sol la si do",
-    ])];
-    let declarations = vec![
-        decl("A", PartKind::NotesWithLyrics),
-        decl_follow("B", PartKind::NotesWithLyrics, "A"),
-    ];
-    let (result, _slots, _, _refs) = desugar_groups(groups, &declarations, 0).unwrap();
-    assert_eq!(result[0][2].content, "5 6 7 0", "B notes: key override");
-    assert_eq!(
-        result[0][3].content, "sol la si do",
-        "B lyrics: key override"
-    );
-}
-
-#[test]
 fn follow_chain_resolves_correctly() {
     // C follows B, B follows A.
     let groups = vec![group(&["[A] 1 2 3 4"])];
@@ -296,40 +225,6 @@ fn consecutive_bare_lines_become_successive_verses() {
     assert_eq!(result[0][0].content, "1 2 3 4");
     assert_eq!(result[0][1].content, "a b c d", "verse 1");
     assert_eq!(result[0][2].content, "one two three four", "verse 2");
-}
-
-#[test]
-fn bare_line_with_no_preceding_key_and_one_lyrics_part_is_standalone() {
-    let groups = vec![group(&["a caption", "[A] 1 2 3 4"])];
-    let declarations = vec![
-        decl("Caption", PartKind::Lyrics),
-        decl("A", PartKind::Notes),
-    ];
-    let (result, _slots, errors, _refs) = desugar_groups(groups, &declarations, 0).unwrap();
-    assert_eq!(result[0][0].content, "a caption", "attributed to Caption");
-    assert_eq!(result[0][1].content, "1 2 3 4", "A notes");
-    assert!(errors[0].is_none());
-}
-
-#[test]
-fn bare_line_with_no_preceding_key_and_two_lyrics_parts_is_ambiguous() {
-    // A trailing `[A]` line keeps `keyed` non-empty so the per-line error
-    // set for the leading bare line isn't masked by the "no data lines at
-    // all" fallback (see `bare_line_with_no_preceding_key_and_zero_lyrics_parts_keeps_missing_key_prefix_error`).
-    let groups = vec![group(&["a caption", "[A] 1 2 3 4"])];
-    let declarations = vec![
-        decl("Caption1", PartKind::Lyrics),
-        decl("Caption2", PartKind::Lyrics),
-        decl("A", PartKind::Notes),
-    ];
-    let (_result, _slots, errors, _refs) = desugar_groups(groups, &declarations, 0).unwrap();
-    let err = errors[0]
-        .as_ref()
-        .expect("ambiguous standalone target should be a recoverable error");
-    assert_eq!(
-        err.kind,
-        crate::error::RecoverableErrorKind::PositionalLyricsAmbiguousStandaloneTarget
-    );
 }
 
 #[test]

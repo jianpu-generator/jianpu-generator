@@ -112,18 +112,13 @@ pub fn format_score(source: &str) -> String {
 /// this measure group is a `Notes`/`Chord`-role or `Lyrics`-role slot, for a
 /// key that resolves to `decl`. Mirrors `desugar::roles_for_group`'s
 /// static-kind branch, computed directly from the raw per-key line count
-/// rather than through full slot resolution: `NotesWithLyrics` occurrence 0
-/// is Notes and every later occurrence is Lyrics; `Lyrics` is Lyrics at every
-/// occurrence; every other kind only has occurrence 0, which is
-/// Notes/Chord-role.
+/// rather than through full slot resolution: for `Chords`/`Notes`,
+/// occurrence 0 is Notes/Chord-role and every later occurrence (a positional
+/// lyrics verse) is Lyrics-role; `Percussion` only has occurrence 0, which is
+/// Notes-role.
 fn role_at_occurrence(decl: &PartDecl, occurrence_index: usize) -> Option<ScoreLineRole> {
     match decl.kind {
-        PartKind::NotesWithLyrics => Some(if occurrence_index == 0 {
-            ScoreLineRole::Notes
-        } else {
-            ScoreLineRole::Lyrics
-        }),
-        PartKind::Lyrics => Some(ScoreLineRole::Lyrics),
+        PartKind::Chords | PartKind::Notes if occurrence_index > 0 => Some(ScoreLineRole::Lyrics),
         PartKind::Chords | PartKind::Notes | PartKind::Percussion => (occurrence_index == 0)
             .then(|| decl.score_line_roles().first().copied())
             .flatten(),

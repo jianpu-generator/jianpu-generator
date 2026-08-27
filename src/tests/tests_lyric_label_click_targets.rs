@@ -41,13 +41,13 @@ const TWO_VERSE_INPUT: &str = concat!(
     "title = \"t\"\n",
     "\n",
     "# parts\n",
-    "Melody [M] = notes+lyrics\n",
+    "Melody [M] = notes\n",
     "\n",
     "# score\n",
     "time=4/4 key=C4 bpm=120\n",
     "[M] 1 2 3 4\n",
-    "[M] do re mi fa\n",
-    "[M] la ti da di\n",
+    "do re mi fa\n",
+    "la ti da di\n",
 );
 
 #[test]

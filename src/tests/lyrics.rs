@@ -9,21 +9,21 @@ fn explicit_lyrics_keep_lyric_row() {
         "author = \"a\"\n",
         "\n",
         "# parts\n",
-        "Soprano = notes+lyrics\n",
-        "Alto = notes+lyrics\n",
+        "Soprano = notes\n",
+        "Alto = notes\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Soprano] 1 2 3 4\n",
-        "[Soprano] do re mi fa\n",
+        "do re mi fa\n",
         "[Alto] 5 6 7 1\n",
-        "[Alto] la la la la\n",
+        "la la la la\n",
     );
     let score = compile(input, "test.jianpu", &[]).unwrap();
     for part in &score.measures[0].parts {
         let slice = part.slice();
         assert!(
-            matches!(slice.kind, PartKind::NotesWithLyrics),
+            matches!(slice.kind, PartKind::Notes),
             "explicit lyrics must keep the lyric row"
         );
         assert_eq!(slice.lyrics.len(), 1);
@@ -38,13 +38,13 @@ title = "t"
 author = "a"
 
 # parts
-Melody = notes+lyrics
+Melody = notes
 
 # score
 time=4/4 key=C4 bpm=120
 [Melody] 1 2 3 4
-[Melody] do re mi fa
-[Melody] one two three four
+do re mi fa
+one two three four
 "#;
     let score = compile(input, "test.jianpu", &[]).unwrap();
     let slice = score.measures[0].parts[0].slice();
@@ -108,16 +108,16 @@ title = "t"
 author = "a"
 
 # parts
-Melody = notes+lyrics
+Melody = notes
 
 # score
 time=4/4 key=C4 bpm=120
 [Melody] 1 2 3 4
-[Melody] do re mi fa
+do re mi fa
 
 [Melody] 5 6 7 1
-[Melody] one two three four
-[Melody] uno dos tres cuatro
+one two three four
+uno dos tres cuatro
 "#;
     let score = compile(input, "test.jianpu", &[]).unwrap();
     let compile_result = compiler::compile(&score);

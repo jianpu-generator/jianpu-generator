@@ -17,15 +17,15 @@ fn multi_track_input() -> &'static str {
         "author = \"tester\"\n",
         "\n",
         "# parts\n",
-        "Soprano 1 [S1] = notes+lyrics\n",
-        "Soprano 2 [S2] = notes+lyrics\n",
+        "Soprano 1 [S1] = notes\n",
+        "Soprano 2 [S2] = notes\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[S1] 1 2 3 4\n",
-        "[S1] do re mi fa\n",
+        "do re mi fa\n",
         "[S2] 5 6 7 1\n",
-        "[S2] sol la ti do\n",
+        "sol la ti do\n",
     )
 }
 
@@ -56,12 +56,12 @@ fn write_split_pdfs_from_source_single_part_uses_split_naming() {
         "author = \"a\"\n",
         "\n",
         "# parts\n",
-        "Melody = notes+lyrics\n",
+        "Melody = notes\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Melody] 1 2 3 4\n",
-        "[Melody] a b c d\n",
+        "a b c d\n",
     );
     let entries =
         write_split_pdfs_from_source(input, "test.jianpu", "song", &[], &test_pdf_fonts()).unwrap();

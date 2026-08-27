@@ -4,7 +4,7 @@ use jianpu_generator::render_config::RenderConfig;
 
 const SOURCE: &str = concat!(
     "# parts\n",
-    "Soprano [s1] = notes+lyrics\n",
+    "Soprano [s1] = notes\n",
     "Soprano [s2] = follow[s1]\n",
     "Alto 1[a1] = follow[s1]\n",
     "Alto 2 [a2] = follow[s1]\n",
@@ -29,11 +29,11 @@ const SOURCE: &str = concat!(
 ///
 /// Root cause: `s1` is an all-rest measure (`0`), so it's hidden by the
 /// default `hide_resting_parts` setting. But `s2`/`a1`/`a2`/`t` all
-/// `follow[s1]`, which also inherits `s1`'s `notes+lyrics` part kind — even
-/// though none of these parts, including `s1` itself, ever supplies lyric
-/// text anywhere in the score. Each follower still gets an implicit, empty
-/// lyric slot, and the identical empty lyric rows get merged into a single
-/// leftover row that renders as a blank gap with no visible content.
+/// `follow[s1]` — even though none of these parts, including `s1` itself,
+/// ever supplies lyric text anywhere in the score. Each follower must not
+/// get an implicit, empty lyric slot; identical empty lyric rows merging
+/// into a single leftover row would render as a blank gap with no visible
+/// content.
 #[test]
 fn no_orphan_empty_lyric_row_when_no_part_has_lyric_text() {
     let score = jianpu_generator::compile(SOURCE, "test.jianpu", &[]).unwrap();

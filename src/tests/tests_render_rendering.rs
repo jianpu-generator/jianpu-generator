@@ -9,12 +9,12 @@ fn render_svgs_from_source_smoke() {
         "author = \"a\"\n",
         "\n",
         "# parts\n",
-        "Melody = notes+lyrics\n",
+        "Melody = notes\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Melody] 1 2 3 4\n",
-        "[Melody] a b c d\n",
+        "a b c d\n",
     );
     let svgs = render_svgs_from_source(input, "test.jianpu", &[])
         .unwrap()
@@ -56,8 +56,8 @@ fn bpm_change_mid_score_renders_both_bpm_labels() {
 fn lyrics_underflow_render_returns_svgs_and_non_empty_errors() {
     let input = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b\n",
+        "# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b\n",
     );
     let output = render_svgs_from_source(input, "test.jianpu", &[])
         .expect("underflow must not abort the render");
@@ -340,7 +340,7 @@ fn tie_operator_on_notes_renders_exactly_two_arcs() {
     // 7_6=5=~5~5 has two ~ tie operators, so exactly 2 arcs should be rendered.
     let input = concat!(
         "# metadata\ntitle = \"Untitled\"\nauthor = \"\"\n\n",
-        "# parts\nMelody[m] = notes+lyrics\n\n",
+        "# parts\nMelody[m] = notes\n\n",
         "# score\n[m]7_6=5=~5~5\n",
     );
     let svgs = render_svgs_from_source(input, "test.jianpu", &[])

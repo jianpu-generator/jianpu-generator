@@ -19,13 +19,12 @@ fn expand_mixed_rows(rows: Vec<MeasureRow>) -> Vec<MeasureRow> {
             let has_note_or_rest = row_has_note_or_rest(&row);
             let verse_count = lyric_verse_count(&row);
             if has_note_or_rest && verse_count > 0 {
-                // A notes+lyrics row: split into the notes row plus one row per verse.
+                // A notes-with-lyrics row: split into the notes row plus one row per verse.
                 let mut expanded = vec![notes_row(&row)];
                 expanded.extend(lyrics_rows(&row));
                 expanded
             } else if !has_note_or_rest && verse_count > 1 {
-                // A standalone lyrics part (`PartKind::Lyrics`) with multiple verses:
-                // there's no notes row to split off, just one row per verse.
+                // No paired notes but multiple verses — one row per verse.
                 lyrics_rows(&row)
             } else {
                 vec![row]

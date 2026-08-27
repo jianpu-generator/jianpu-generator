@@ -146,7 +146,6 @@ export function PartRow({
           >
             <RadixSelectItem value="chords">chords</RadixSelectItem>
             <RadixSelectItem value="notes">notes</RadixSelectItem>
-            <RadixSelectItem value="notes+lyrics">notes+lyrics</RadixSelectItem>
             <RadixSelectItem value="percussion">percussion</RadixSelectItem>
             {!isFirstPart && (
               <RadixSelectItem value="follow">follow</RadixSelectItem>

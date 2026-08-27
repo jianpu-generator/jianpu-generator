@@ -268,32 +268,6 @@ mod tests {
     }
 
     #[test]
-    fn missing_lyrics_line_in_first_measure_is_silently_filled() {
-        // Omitted trailing lyrics with no ditto source: silently treated as no lyrics.
-        let input = concat!(
-            "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-            "# parts\nA = notes+lyrics\n\n",
-            "# score\n",
-            "[A] 1 2 3 4\n",
-            "\n",
-            "[A] 5 6 7 1\n",
-            "[A] la lo le li\n",
-        );
-        let doc = parser::parse(input, "test.jianpu", &[])
-            .expect("missing lyrics must not abort parsing");
-        let score = grouper::group(doc).expect("grouping must succeed");
-        assert_eq!(score.measures.len(), 2);
-        assert!(
-            score.measures[0].diagnostics.is_empty(),
-            "measure 1 should have no diagnostics when lyrics are silently omitted"
-        );
-        assert!(
-            score.measures[1].diagnostics.is_empty(),
-            "measure 2 should have no errors"
-        );
-    }
-
-    #[test]
     fn measure_source_span_is_nonzero_after_combine() {
         let measures = make_two_part_score("1 2 3 4", "5 6 7 1");
         assert_eq!(measures.len(), 1);

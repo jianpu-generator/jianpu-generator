@@ -252,7 +252,7 @@ pub fn list_part_declarations(
 
 /// Rewrite the mode, soundfont, volume, and octave of a named part declaration in `.jianpu` source.
 ///
-/// `new_mode` is one of `"chords"`, `"notes"`, `"notes+lyrics"`, or `"follow[<target>]"`.
+/// `new_mode` is one of `"chords"`, `"notes"`, `"percussion"`, or `"follow[<target>]"`.
 /// `new_soundfont` is a GM instrument label such as `"40: Violin"`, or `""` to omit soundfont.
 /// `new_volume` is `"47"` for 47%, or `""` to use the default (100%).
 /// `new_octave_offset` is `"+1"`, `"-2"`, or `""` to use the default (0).

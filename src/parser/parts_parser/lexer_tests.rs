@@ -8,7 +8,7 @@ fn token_values(tokens: &[Spanned<PartsToken>]) -> Vec<PartsToken> {
 
 #[test]
 fn lexes_lhs_with_brackets() {
-    let line = "Alto 1 & Tenor [A1&T] = notes+lyrics";
+    let line = "Alto 1 & Tenor [A1&T] = notes";
     let tokens = lex_line(line, 0, Span::new(0, line.len())).expect("lex");
     assert_eq!(
         token_values(&tokens),
@@ -18,7 +18,7 @@ fn lexes_lhs_with_brackets() {
             PartsToken::Abbreviation("A1&T".to_string()),
             PartsToken::RBracket,
             PartsToken::Equals,
-            PartsToken::Kind(PartKind::NotesWithLyrics),
+            PartsToken::Kind(PartKind::Notes),
         ]
     );
 }

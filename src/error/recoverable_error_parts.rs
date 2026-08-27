@@ -144,13 +144,6 @@ impl RecoverableError {
         }
     }
 
-    pub fn positional_lyrics_ambiguous_standalone_target(span: Span) -> Self {
-        Self {
-            span,
-            kind: RecoverableErrorKind::PositionalLyricsAmbiguousStandaloneTarget,
-        }
-    }
-
     pub fn tie_on_rest(span: Span) -> Self {
         Self {
             span,

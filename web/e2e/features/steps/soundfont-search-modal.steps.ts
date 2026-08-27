@@ -6,13 +6,12 @@ const SOURCE = [
   'title = "Test"',
   '',
   '# parts',
-  'Melody [M] = notes+lyrics',
+  'Melody [M] = notes',
   '',
   '# score',
   '(bpm=120 key=C4 time=4/4)',
-  '1 - - -',
-  '1 1 5 5',
-  'twin- kle',
+  '[M] 1 1 5 5',
+  'twin- kle twin- kle',
 ].join('\n')
 
 async function loadSource(page: import('@playwright/test').Page) {

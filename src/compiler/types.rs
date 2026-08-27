@@ -140,7 +140,7 @@ pub enum ElementContent {
         dotted: bool,
         double_dotted: bool,
     },
-    /// A syllable for one verse (0-indexed) of a `notes+lyrics` part.
+    /// A syllable for one verse (0-indexed) of a `notes`/`chords` part with lyrics.
     Lyric {
         text: String,
         verse: usize,
@@ -154,9 +154,12 @@ pub enum ElementContent {
         /// distinct from its note's (see `renderer::new_types::Tag::Lyric`).
         note_id: usize,
     },
-    /// One verse's (0-indexed) full text line for a standalone `lyrics` part —
-    /// adurational, not tied to any note, rendered as a single left-aligned
-    /// block spanning the whole measure rather than one syllable per column.
+    /// One verse's (0-indexed) full text line, adurational and not tied to
+    /// any note, rendered as a single left-aligned block spanning the whole
+    /// measure rather than one syllable per column. Currently unreachable:
+    /// nothing constructs this variant since the standalone `lyrics` part
+    /// kind was removed; kept for the downstream rendering machinery that
+    /// still consumes it, in case a future adurational-text feature needs it.
     LyricLine {
         text: String,
         verse: usize,

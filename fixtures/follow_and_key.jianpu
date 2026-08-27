@@ -3,9 +3,9 @@ title = "follow and key syntax examples"
 author = "test"
 
 # parts
-Soprano [S] = notes+lyrics
+Soprano [S] = notes
 Alto [A] = follow[S]
-Tenor [T] = notes+lyrics
+Tenor [T] = notes
 Bass [B] = notes
 
 # score
@@ -13,28 +13,28 @@ Bass [B] = notes
 label="Case 1: follow part not mentioned — row suppressed"
 time=4/4 key=C4 bpm=120
 [S] 1 2 3 4
-[S] do re mi fa
+do re mi fa
 
-label="Case 2: follow part with notes-only key override — lyrics copied from target"
+label="Case 2: follow part with notes-only key override — lyrics not copied from target"
 [S] 1 2 3 4
-[S] do re mi fa
+do re mi fa
 [A] 5 6 7 1
 
 label="Case 3: follow part with full key override — both rows shown"
 [S] 1 2 3 4
-[S] do re mi fa
+do re mi fa
 [A] 5 6 7 1
-[A] sol la si do
+sol la si do
 
 label="Case 4: non-follow non-first part explicitly mentioned"
 [S] 1 2 3 4
-[S] do re mi fa
+do re mi fa
 [T] 3 4 5 6
-[T] mi fa sol la
+mi fa sol la
 [B] 5 6 7 1
 
 label="Case 5: non-follow non-first part not mentioned — rest fill, suppressed"
 [S] 1 2 3 4
-[S] do re mi fa
+do re mi fa
 [T] 3 4 5 6
-[T] mi fa sol la
+mi fa sol la

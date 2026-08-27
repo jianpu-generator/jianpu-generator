@@ -13,17 +13,17 @@ title=\"t\"
 author=\"a\"
 
 # parts
-A = notes+lyrics
+A = notes
 B = chords
 
 # score
 time=4/4 key=C4 bpm=120
 [A] 1 2 3 4
-[A] la la la la
+la la la la
 
 hide_resting_parts=no
 [A] 5 6 7 1
-[A] lo lo lo lo
+lo lo lo lo
 ",
     );
     let result = compile(&score);

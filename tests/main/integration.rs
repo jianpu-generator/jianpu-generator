@@ -11,12 +11,12 @@ fn basic_jianpu_input() -> &'static str {
         "author = \"tester\"\n",
         "\n",
         "# parts\n",
-        "Melody = notes+lyrics\n",
+        "Melody = notes\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Melody] 1 2 3 4\n",
-        "[Melody] do re mi fa\n",
+        "do re mi fa\n",
     )
 }
 
@@ -123,15 +123,15 @@ fn multi_track_jianpu_input() -> &'static str {
         "author = \"tester\"\n",
         "\n",
         "# parts\n",
-        "Soprano 1 [S1] = notes+lyrics\n",
-        "Soprano 2 [S2] = notes+lyrics\n",
+        "Soprano 1 [S1] = notes\n",
+        "Soprano 2 [S2] = notes\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[S1] 1 2 3 4\n",
-        "[S1] do re mi fa\n",
+        "do re mi fa\n",
         "[S2] 5 6 7 1\n",
-        "[S2] sol la ti do\n",
+        "sol la ti do\n",
     )
 }
 

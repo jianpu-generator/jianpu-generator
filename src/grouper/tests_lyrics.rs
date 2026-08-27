@@ -6,8 +6,8 @@ fn lyrics_overflow_recovers_with_error_on_measure() {
     // 2 notes but 4 syllables → should not Err, should attach error to measure
     let input = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 0 0\n[Melody] a b c d e f\n",
+        "# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 0 0\na b c d e f\n",
     );
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).expect("overflow must not abort grouping");
@@ -27,8 +27,8 @@ fn lyrics_underflow_recovers_with_error_on_measure() {
     // 4 notes but only 2 syllables → should not Err, should attach error to measure
     let input = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b\n",
+        "# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b\n",
     );
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).expect("underflow must not abort grouping");
@@ -49,8 +49,8 @@ fn lyrics_underflow_error_span_covers_lyrics_line_not_notes() {
     // lyrics line ("a b"), not the notes line ("1 2 3 4").
     let input = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b\n",
+        "# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b\n",
     );
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).expect("underflow must not abort grouping");
@@ -77,8 +77,8 @@ fn lyrics_underflow_error_span_covers_lyrics_line_not_notes() {
 fn measures_without_lyrics_underflow_have_no_errors() {
     let input = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n",
+        "# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
     );
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();
@@ -92,8 +92,8 @@ fn explicit_no_lyrics_marker_produces_no_paired_syllables() {
     // syllables — otherwise it would render as a spurious empty lyric row.
     let input = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] _\n",
+        "# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n_\n",
     );
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();
@@ -120,7 +120,7 @@ fn follow_part_with_no_lyric_line_gets_no_implicit_syllables() {
     // unrelated parts in a real score.
     let input = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody [m] = notes+lyrics\nHarmony [h] = follow[m]\n\n",
+        "# parts\nMelody [m] = notes\nHarmony [h] = follow[m]\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[m] 1 2 3 4\n[h] 5 6 7 1\n",
     );
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
@@ -155,15 +155,15 @@ title="t"
 author="a"
 
 # parts
-Melody = notes+lyrics
+Melody = notes
 
 # score
 time=4/4 key=C4 bpm=120
 [Melody] 1 2 3 4~
-[Melody] la la la la
+la la la la
 
 [Melody] 4 5 6 7
-[Melody] ha ko da
+ha ko da
 "#;
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();
@@ -182,10 +182,10 @@ fn cross_measure_slur_note_consumes_syllable() {
     // so "hi ha ho" (3 syllables) is exactly sufficient — no underflow.
     let input = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody = notes+lyrics\n\n",
+        "# parts\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n",
-        "[Melody] 1 2 3 (5\n[Melody] fa fo fi fu\n\n",
-        "[Melody] 5) 6 7 0\n[Melody] hi ha ho\n",
+        "[Melody] 1 2 3 (5\nfa fo fi fu\n\n",
+        "[Melody] 5) 6 7 0\nhi ha ho\n",
     );
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();

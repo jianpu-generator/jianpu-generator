@@ -1,4 +1,4 @@
-use crate::ast::parsed::PartKind;
+use crate::ast::parsed::ParsedTrack;
 use crate::error::IrrecoverableError;
 use crate::gm_percussion;
 use crate::parser::parts_parser::{self, InstrumentInfo, SourcePartMode, SourceRawPartDecl};
@@ -11,7 +11,8 @@ pub struct PartInfo {
     pub abbreviation: String,
     /// Full display name from the declaration left-hand side.
     pub display_name: String,
-    /// Whether the part declaration includes a lyrics column.
+    /// Whether this part carries any lyric content (positionally attached
+    /// verse lines) anywhere in the score.
     pub has_lyrics: bool,
 }
 
@@ -114,13 +115,33 @@ pub fn list_parts_from_source(
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<PartInfo>, IrrecoverableError> {
     let doc = crate::parser::parse(source, filename, instruments)?;
+    let lyrics_by_abbreviation: std::collections::HashMap<&str, bool> = doc
+        .tracks
+        .iter()
+        .map(|track| {
+            let ParsedTrack::Timed(track) = track;
+            let has_lyrics = track.lyrics.as_ref().is_some_and(|lyrics| {
+                lyrics
+                    .measure_syllables
+                    .iter()
+                    .any(|verses| !verses.is_empty())
+            });
+            (track.abbreviation.as_str(), has_lyrics)
+        })
+        .collect();
     Ok(doc
         .declarations
         .into_iter()
-        .map(|d| PartInfo {
-            abbreviation: d.abbreviation,
-            display_name: d.display_name,
-            has_lyrics: matches!(d.kind, PartKind::NotesWithLyrics | PartKind::Lyrics),
+        .map(|d| {
+            let has_lyrics = lyrics_by_abbreviation
+                .get(d.abbreviation.as_str())
+                .copied()
+                .unwrap_or(false);
+            PartInfo {
+                abbreviation: d.abbreviation,
+                display_name: d.display_name,
+                has_lyrics,
+            }
         })
         .collect())
 }

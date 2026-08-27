@@ -78,11 +78,8 @@ pub struct PartOut {
 pub enum PartDeclarationModeOut {
     Chords,
     Notes,
-    #[serde(rename = "notes+lyrics")]
-    NotesLyrics,
     Percussion,
     Follow,
-    Lyrics,
 }
 
 #[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]

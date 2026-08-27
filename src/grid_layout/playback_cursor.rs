@@ -61,7 +61,7 @@ pub(crate) struct NoteRowSpan {
     pub click_row_end: usize,
 }
 
-/// A `notes+lyrics` part's verses are compiled as separate sibling rows in
+/// A `notes`/`chords` part with lyrics has its verses compiled as separate sibling rows in
 /// `first.rows` (one `is_lyric_row` entry per verse, immediately following
 /// the notes row, sharing its `source_part_index`) rather than being mixed
 /// into the notes row itself — see `ElementContent::Lyric`'s doc comment.

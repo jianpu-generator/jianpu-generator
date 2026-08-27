@@ -6,14 +6,14 @@ const SOURCE = [
   'title = "Test"',
   '',
   '# parts',
-  'Melody [M] = notes+lyrics',
+  'Melody [M] = notes',
   'Chords [C] = chords',
   '',
   '# score',
   '(bpm=120 key=C4 time=4/4)',
-  '1 - - -',
-  '1 1 5 5',
-  'twin- kle',
+  '[M] 1 1 5 5',
+  'twin- kle twin- kle',
+  '[C] 1 - - -',
 ].join('\n')
 
 const PERCUSSION_SOURCE = [
@@ -21,14 +21,13 @@ const PERCUSSION_SOURCE = [
   'title = "Test"',
   '',
   '# parts',
-  'Melody [M] = notes+lyrics',
+  'Melody [M] = notes',
   'Drums [D] = percussion',
   '',
   '# score',
   '(bpm=120 key=C4 time=4/4)',
-  '1 - - -',
-  '1 1 5 5',
-  'twin- kle',
+  '[M] 1 1 5 5',
+  'twin- kle twin- kle',
 ].join('\n')
 
 async function loadSource(

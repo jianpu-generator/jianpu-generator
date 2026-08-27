@@ -6,11 +6,11 @@ fn span_covers_each_syllables_own_source_text() {
 title = "t"
 
 # parts
-Melody [M] = notes+lyrics
+Melody [M] = notes
 
 # score
 [M] 1 2 3 4
-[M] a b c d
+a b c d
 "#;
     let spans = list_lyric_spans_from_source(source, "test.jianpu", None)
         .unwrap()
@@ -34,11 +34,11 @@ fn tie_continuation_note_consumes_no_extra_syllable() {
 title = "t"
 
 # parts
-Melody [M] = notes+lyrics
+Melody [M] = notes
 
 # score
 [M] 4~4 3 2
-[M] la di dum
+la di dum
 "#;
     let spans = list_lyric_spans_from_source(source, "test.jianpu", None)
         .unwrap()
@@ -65,12 +65,12 @@ fn multiple_verses_produce_separate_spans_sharing_note_id() {
 title = "t"
 
 # parts
-Melody [M] = notes+lyrics
+Melody [M] = notes
 
 # score
 [M] 1 2
-[M] a b
-[M] one two
+a b
+one two
 "#;
     let spans = list_lyric_spans_from_source(source, "test.jianpu", None)
         .unwrap()
@@ -91,26 +91,6 @@ Melody [M] = notes+lyrics
     );
     assert_eq!(&source[verse0[0].start..verse0[0].end], "a");
     assert_eq!(&source[verse1[0].start..verse1[0].end], "one");
-}
-
-#[test]
-fn standalone_lyrics_part_yields_no_spans() {
-    let source = r#"# metadata
-title = "t"
-
-# parts
-Melody [M] = notes
-Words [W] = lyrics
-
-# score
-[M] 1 2 3 4
-[W] full verse line here
-"#;
-    let spans = list_lyric_spans_from_source(source, "test.jianpu", None)
-        .unwrap()
-        .spans;
-
-    assert!(spans.is_empty());
 }
 
 fn span(

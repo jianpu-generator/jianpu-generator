@@ -122,7 +122,7 @@ fn start_line_includes_label_directive_line() {
     );
 }
 
-/// Regression: with multiple parts sharing a single notes+lyrics row per group,
+/// Regression: with multiple parts sharing a single notes row per group,
 /// the `start_line`/`end_line` of each measure span must not overlap adjacent
 /// measures.  Specifically, the notes line of group 3 (1-based line 23) must
 /// belong to exactly one measure span — measure index 2 — and measure index 1
@@ -135,24 +135,24 @@ author = ""
 
 # parts
 Chord = chords
-Alto 1 & Tenor (A1,T) = notes+lyrics
-Alto 2 (A2) = notes+lyrics
-Soprano 1 (S1) = notes+lyrics
-Soprano 2 (S2) = notes+lyrics
+Alto 1 & Tenor (A1,T) = notes
+Alto 2 (A2) = notes
+Soprano 1 (S1) = notes
+Soprano 2 (S2) = notes
 
 # score
 bpm=80 key=C4 time=4/4 label="Verse 1"
 [Chord] 1 - - -
 [A1,T] 5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_
-[A1,T] 白陽旗旛在大道盛宏
+白陽旗旛在大道盛宏
 
 [Chord] 6m/3
 [A1,T] 3_) (1_1-) 0_ 1= 1=
-[A1,T] 昌花花
+昌花花
 
 [Chord] 4
 [A1,T] 2. 3_ 4_ 3= 3= (2_1_)
-[A1,T] 草擺動道音歌-"#;
+草擺動道音歌-"#;
 
     // Line 23 (1-based) contains "2. 3_ 4_ 3= 3= (2_1_)" — the notes line of group 3.
     let caret_line: usize = 23;

@@ -23,8 +23,8 @@ pub(super) fn first_part_notes(score: &Score, measure_idx: usize) -> &Vec<NoteEv
 #[test]
 fn groups_four_four_into_single_measure() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
     ));
     assert_eq!(score.measures.len(), 1);
     assert_eq!(first_part_notes(&score, 0).len(), 4);
@@ -33,8 +33,8 @@ fn groups_four_four_into_single_measure() {
 #[test]
 fn splits_into_two_measures_at_bar_boundary() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n\n[Melody] 5 6 7 1\n[Melody] e f g h\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n\n[Melody] 5 6 7 1\ne f g h\n",
     ));
     assert_eq!(score.measures.len(), 2);
 }
@@ -42,8 +42,8 @@ fn splits_into_two_measures_at_bar_boundary() {
 #[test]
 fn extension_adds_to_previous_note_duration() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1- 3 4\n[Melody] a - b\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1- 3 4\na - b\n",
     ));
     match &first_part_notes(&score, 0)[0] {
         NoteEvent::Note(n) => assert_eq!(n.duration, 8),
@@ -55,9 +55,9 @@ fn extension_adds_to_previous_note_duration() {
 
 #[test]
 fn measure_omitted_lyrics_line_is_silently_filled() {
-    // One notes+lyrics part with only the notes line present: lyrics silently become empty (no error).
+    // A notes part with no lyrics line at all: no error, and simply no verse row.
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n",
     ));
     assert_eq!(score.measures.len(), 1);
@@ -70,8 +70,8 @@ fn measure_omitted_lyrics_line_is_silently_filled() {
 #[test]
 fn half_beat_notes_accumulate_correctly() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1_ 2_ 3_ 4_ 5_ 6_ 7_ 1_\n[Melody] a b c d e f g h\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1_ 2_ 3_ 4_ 5_ 6_ 7_ 1_\na b c d e f g h\n",
     ));
     assert_eq!(score.measures.len(), 1);
 }
@@ -101,8 +101,8 @@ fn beat_overflow_recovers_with_error_on_measure() {
 fn bpm_change_creates_new_measure() {
     // Bar 1 (bpm=120): 1 2 3 4; Bar 2 bpm=90: 5 6 7 1
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n\nbpm=90\n[Melody] 5 6 7 1\n[Melody] e f g h\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n\nbpm=90\n[Melody] 5 6 7 1\ne f g h\n",
     ));
     assert_eq!(score.measures.len(), 2);
     assert_eq!(score.measures[0].bpm, Some(120));
@@ -131,8 +131,8 @@ fn two_part_score_has_two_part_slices_per_measure() {
 #[test]
 fn lyrics_distributed_per_measure() {
     let input = concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n\n[Melody] 5 6 7 1\n[Melody] e f g h\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n\n[Melody] 5 6 7 1\ne f g h\n",
     );
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();

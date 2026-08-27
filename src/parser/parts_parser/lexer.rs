@@ -270,9 +270,7 @@ fn parse_kind_token(text: &str) -> Option<PartKind> {
     match text {
         "chords" => Some(PartKind::Chords),
         "notes" => Some(PartKind::Notes),
-        "notes+lyrics" => Some(PartKind::NotesWithLyrics),
         "percussion" => Some(PartKind::Percussion),
-        "lyrics" => Some(PartKind::Lyrics),
         _ => None,
     }
 }

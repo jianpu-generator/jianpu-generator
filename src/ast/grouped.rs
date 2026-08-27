@@ -276,7 +276,7 @@ pub(crate) struct GroupedMeasure {
     pub(crate) notes: Notes,
     pub(crate) source_span: Span,
     /// Tie-aware syllables paired to this measure's lyric slots, one entry per
-    /// verse. Set for `NotesWithLyrics` parts during grouping.
+    /// verse. Set for notes/chords parts with lyrics attached during grouping.
     pub(crate) paired_lyrics: Vec<Vec<Syllable>>,
     /// Recoverable lyrics underflow/overflow for this measure, one per verse that has one.
     pub(crate) lyrics_error: Vec<Warning>,

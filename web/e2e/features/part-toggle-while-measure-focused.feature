@@ -3,7 +3,7 @@ Feature: Toggling a part while a measure is focused
   # The default demo source (demo/01-pitches.jianpu) declares a single part:
   #
   #   # parts
-  #   Melody [M] = notes+lyrics
+  #   Melody [M] = notes
   #
   # Line 10 in the editor (`[M] 1 2 3 0`) is the first note line of measure 1.
   #

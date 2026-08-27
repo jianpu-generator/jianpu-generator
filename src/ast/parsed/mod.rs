@@ -52,9 +52,7 @@ pub struct PartDecl {
 pub enum PartKind {
     Chords,
     Notes,
-    NotesWithLyrics,
     Percussion,
-    Lyrics,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -75,9 +73,7 @@ impl PartDecl {
         match self.kind {
             PartKind::Chords => &[ScoreLineRole::Chord],
             PartKind::Notes => &[ScoreLineRole::Notes],
-            PartKind::NotesWithLyrics => &[ScoreLineRole::Notes, ScoreLineRole::Lyrics],
             PartKind::Percussion => &[ScoreLineRole::Notes],
-            PartKind::Lyrics => &[ScoreLineRole::Lyrics],
         }
     }
 }

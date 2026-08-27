@@ -5,9 +5,7 @@ use super::timed_unit::TimedUnit;
 use super::tuplet_spans::{finish_tuplet_spans, record_tuplet_tag, TupletSpanContext};
 use super::PartSliceResult;
 use crate::ast::grouped::{GroupedRest, NoteEvent, PartSlice};
-use crate::ast::parsed::PartKind;
 use crate::compiler::types::{ArcKind, ColumnElement, ElementContent, SlurSpan, TupletSpan};
-use itertools::Itertools;
 
 // ── Top-level entry point ─────────────────────────────────────────────────────
 
@@ -90,17 +88,6 @@ pub(super) fn compile_part_slice(
 }
 
 fn process_events(state: &mut PartState<'_>, slice: &PartSlice) {
-    if slice.kind == PartKind::Lyrics {
-        for (verse, lyrics) in slice.lyrics.iter().enumerate() {
-            let text = lyrics.syllables.iter().map(|s| &s.text).join(" ");
-            state.elements.push(ColumnElement {
-                column: *state.col,
-                content: ElementContent::LyricLine { text, verse },
-                note_id: None,
-            });
-        }
-        return;
-    }
     let mut lyrics_iters: Vec<_> = slice.lyrics.iter().map(|l| l.syllables.iter()).collect();
     for event in &slice.notes.events {
         let note_id = *state.next_note_id;

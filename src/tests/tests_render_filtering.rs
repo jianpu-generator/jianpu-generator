@@ -10,13 +10,13 @@ fn list_parts_from_source_returns_declarations() {
         "\n",
         "# parts\n",
         "main = chords\n",
-        "Alto 1 & Tenor [A1&T] = notes+lyrics\n",
+        "Alto 1 & Tenor [A1&T] = notes\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[main] 1m\n",
         "[A1&T] 1 2 3 4\n",
-        "[A1&T] a b c d\n",
+        "a b c d\n",
     );
     let parts = list_parts_from_source(input, "test.jianpu", &[]).unwrap();
     assert_eq!(parts.len(), 2);
@@ -36,15 +36,15 @@ fn hidden_lyrics_do_not_reserve_lyric_row_space() {
         "author = \"a\"\n",
         "\n",
         "# parts\n",
-        "Soprano = notes+lyrics\n",
-        "Alto = notes+lyrics\n",
+        "Soprano = notes\n",
+        "Alto = notes\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Soprano] 1 2 3 4\n",
-        "[Soprano] sop sop sop sop\n",
+        "sop sop sop sop\n",
         "[Alto] 5 6 7 1\n",
-        "[Alto] alt alt alt alt\n",
+        "alt alt alt alt\n",
     );
     let all = render_svgs_from_source(input, "test.jianpu", &[])
         .unwrap()
@@ -73,15 +73,15 @@ fn render_svgs_from_source_filtered_can_hide_lyrics_per_part() {
         "author = \"a\"\n",
         "\n",
         "# parts\n",
-        "Soprano = notes+lyrics\n",
-        "Alto = notes+lyrics\n",
+        "Soprano = notes\n",
+        "Alto = notes\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Soprano] 1 2 3 4\n",
-        "[Soprano] sop sop sop sop\n",
+        "sop sop sop sop\n",
         "[Alto] 5 6 7 1\n",
-        "[Alto] alt alt alt alt\n",
+        "alt alt alt alt\n",
     );
     let all = render_svgs_from_source(input, "test.jianpu", &[])
         .unwrap()
@@ -195,12 +195,12 @@ fn split_track_names_falls_back_to_part_declarations() {
         "author = \"a\"\n",
         "\n",
         "# parts\n",
-        "Melody = notes+lyrics\n",
+        "Melody = notes\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Melody] 1 2 3 4\n",
-        "[Melody] a b c d\n",
+        "a b c d\n",
     );
     let score = compile(input, "test.jianpu", &[]).unwrap();
     let names = split_track_names(input, "test.jianpu", &score, &[]).unwrap();
@@ -220,22 +220,22 @@ fn split_pdf_filename_sanitizes_track_name() {
 }
 
 #[test]
-fn apply_lyrics_filter_downgrades_kind_to_notes() {
+fn apply_lyrics_filter_clears_lyrics_for_filtered_part_only() {
     let input = concat!(
         "# metadata\n",
         "title = \"t\"\n",
         "author = \"a\"\n",
         "\n",
         "# parts\n",
-        "Soprano = notes+lyrics\n",
-        "Alto = notes+lyrics\n",
+        "Soprano = notes\n",
+        "Alto = notes\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Soprano] 1 2 3 4\n",
-        "[Soprano] do re mi fa\n",
+        "do re mi fa\n",
         "[Alto] 5 6 7 1\n",
-        "[Alto] alt alt alt alt\n",
+        "alt alt alt alt\n",
     );
     let mut score = compile(input, "test.jianpu", &[]).unwrap();
     apply_lyrics_filter(&mut score, Some(&["Soprano".into()]));
@@ -243,13 +243,16 @@ fn apply_lyrics_filter_downgrades_kind_to_notes() {
     assert_eq!(
         part_slice.kind,
         PartKind::Notes,
-        "apply_lyrics_filter should downgrade kind to Notes when lyrics are hidden"
+        "apply_lyrics_filter should not change a part's kind"
+    );
+    assert!(
+        part_slice.lyrics.is_empty(),
+        "apply_lyrics_filter should clear lyrics for the filtered-out part"
     );
     let alto_slice = score.measures[0].parts[1].slice();
-    assert_eq!(
-        alto_slice.kind,
-        PartKind::NotesWithLyrics,
-        "apply_lyrics_filter should leave untouched parts as NotesWithLyrics"
+    assert!(
+        !alto_slice.lyrics.is_empty(),
+        "apply_lyrics_filter should leave untouched parts' lyrics intact"
     );
 }
 

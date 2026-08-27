@@ -31,7 +31,7 @@ Given(
       '',
       '# parts',
       'Chord [C] = chords',
-      'Alto 1 & Tenor [A1,T] = notes+lyrics',
+      'Alto 1 & Tenor [A1,T] = notes',
       '',
       '',
       '# score',
@@ -40,11 +40,11 @@ Given(
       'bpm=80 key=C4 time=4/4 label="Verse 1"',
       '[C] 1 - - -',
       '[A1,T] 5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_',
-      '[A1,T] 白陽旗旛在大道盛宏',
+      '白陽旗旛在大道盛宏',
       '',
       '[C] 6m/3',
       '[A1,T] 3_) (1_1-) 0_ 1= 1=',
-      '[A1,T] 昌花花',
+      '昌花花',
     ].join('\n')
 
     await page.addInitScript((src) => {

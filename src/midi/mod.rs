@@ -93,7 +93,7 @@ fn channel_for_part(assignments: &[PartChannelAssignment], name: &Option<String>
 }
 
 fn is_melodic(kind: PartKind) -> bool {
-    matches!(kind, PartKind::Notes | PartKind::NotesWithLyrics)
+    matches!(kind, PartKind::Notes)
 }
 
 fn parts_matching(

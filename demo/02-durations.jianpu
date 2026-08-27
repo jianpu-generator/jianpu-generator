@@ -3,16 +3,16 @@ title = "Durations"
 max_measures_per_system = 1
 
 # parts
-Melody [M] = notes+lyrics
+Melody [M] = notes
 
 # score
 label="Eighth & sixteenth (_/=)"
 [M] 1_ 1_ 1= 1= 1= 1= 1 -
-[M] _
+_
 
 label="Dotted (.)"
 [M] 1. 2_ 1_. 2= 0
-[M] _
+_
 
 label="Extension (-)"
 [M] 1 - - -
@@ -22,4 +22,4 @@ label="Repeat (r, _, =)"
 [M] 1 r r -
 
 [M] __ 0 0 0
-[M] _
+_

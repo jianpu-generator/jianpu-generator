@@ -36,9 +36,7 @@ pub fn parse_parts(
 pub enum SourcePartMode {
     Chords,
     Notes,
-    NotesLyrics,
     Percussion,
-    Lyrics,
     Follow,
 }
 
@@ -88,9 +86,7 @@ fn raw_kind_to_source_mode(kind: &RawKind) -> (SourcePartMode, Option<String>) {
     match kind {
         RawKind::Concrete(PartKind::Chords) => (SourcePartMode::Chords, None),
         RawKind::Concrete(PartKind::Notes) => (SourcePartMode::Notes, None),
-        RawKind::Concrete(PartKind::NotesWithLyrics) => (SourcePartMode::NotesLyrics, None),
         RawKind::Concrete(PartKind::Percussion) => (SourcePartMode::Percussion, None),
-        RawKind::Concrete(PartKind::Lyrics) => (SourcePartMode::Lyrics, None),
         RawKind::Follow { target, .. } => (SourcePartMode::Follow, Some(target.clone())),
     }
 }

@@ -4,8 +4,8 @@ use crate::ast::parsed::NoteName;
 #[test]
 fn first_measure_has_bpm_some() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
     ));
     assert_eq!(score.measures[0].bpm, Some(120));
 }
@@ -13,8 +13,8 @@ fn first_measure_has_bpm_some() {
 #[test]
 fn bpm_change_sets_some_on_next_measure() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n\nbpm=90\n[Melody] 5 6 7 1\n[Melody] e f g h\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n\nbpm=90\n[Melody] 5 6 7 1\ne f g h\n",
     ));
     assert_eq!(score.measures[0].bpm, Some(120));
     assert_eq!(score.measures[1].bpm, Some(90));
@@ -23,8 +23,8 @@ fn bpm_change_sets_some_on_next_measure() {
 #[test]
 fn unchanged_bpm_is_none_on_second_measure() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n\n[Melody] 5 6 7 1\n[Melody] e f g h\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n\n[Melody] 5 6 7 1\ne f g h\n",
     ));
     assert_eq!(score.measures[0].bpm, Some(120));
     assert_eq!(score.measures[1].bpm, None);
@@ -33,8 +33,8 @@ fn unchanged_bpm_is_none_on_second_measure() {
 #[test]
 fn key_change_propagates() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=G4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=G4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
     ));
     assert_eq!(
         score.measures[0].key.as_ref().unwrap().note.name,
@@ -45,8 +45,8 @@ fn key_change_propagates() {
 #[test]
 fn row_height_defaults_to_24() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
     ));
     assert_eq!(score.metadata.row_height, 24);
 }
@@ -54,8 +54,8 @@ fn row_height_defaults_to_24() {
 #[test]
 fn max_measures_per_system_defaults_to_4() {
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes+lyrics\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n[Melody] a b c d\n",
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
     ));
     assert_eq!(score.metadata.max_measures_per_system, 4);
 }

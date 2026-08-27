@@ -1,16 +1,7 @@
-# Positional (unprefixed) lyrics attachment — see the design discussion this
-# encodes: a lyric line no longer needs a `[Key]` prefix. A bare line right
-# after a part's notes line attaches to that part (notes-following); a bare
-# line with no part line above it yet in the measure is a standalone,
-# adurational lyrics block instead.
-#
-# `notes+lyrics` / `lyrics` PartKinds are kept for backward compatibility
-# during this migration (see the `standalone lyrics row` scenarios, which
-# still declare a `= lyrics` part) and are expected to be phased out once
-# this feature is complete.
-#
-# NOTE: this syntax is not implemented yet. Every scenario below is expected
-# to FAIL until the parser/desugar work lands.
+# Positional (unprefixed) lyrics attachment: a lyric line no longer needs a
+# `[Key]` prefix. A bare line right after a part's notes line attaches to
+# that part (notes-following). This is now the only way to attach lyrics —
+# the `notes+lyrics` and standalone `lyrics` PartKinds have been removed.
 
 Feature: Positional lyrics attachment
 
@@ -135,51 +126,6 @@ Feature: Positional lyrics attachment
     Then part "Melody" measure 1 has 2 lyric verses
     And part "Melody" measure 1 verse 1 has syllables "a, b, c, d"
     And part "Melody" measure 1 verse 2 has syllables "one, two, three, four"
-
-  Scenario: A bare line with no part line above it is a standalone lyrics row
-    Given the score source:
-      """
-      # metadata
-      title = "t"
-      author = "a"
-
-      # parts
-      Caption = lyrics
-      Alto = notes
-      Tenor = notes
-
-      # score
-      time=4/4 key=C4 bpm=120
-      a caption for this measure unrelated to any note
-      [Alto] 1 2 3 4
-      [Tenor] 5 6 7 1
-      """
-    When it is compiled
-    Then part "Caption" measure 1 has 0 note events
-    And part "Caption" measure 1 has 1 lyric verse
-    And part "Caption" measure 1 verse 1 has syllables "a, caption, for, this, measure, unrelated, to, any, note"
-
-  Scenario: A standalone lyrics row still supports multiple verses
-    Given the score source:
-      """
-      # metadata
-      title = "t"
-      author = "a"
-
-      # parts
-      Caption = lyrics
-      Alto = notes
-
-      # score
-      time=4/4 key=C4 bpm=120
-      verse one caption
-      verse two caption
-      [Alto] 1 2 3 4
-      """
-    When it is compiled
-    Then part "Caption" measure 1 has 2 lyric verses
-    And part "Caption" measure 1 verse 1 has syllables "verse, one, caption"
-    And part "Caption" measure 1 verse 2 has syllables "verse, two, caption"
 
   Scenario: A lyric line trailing different parts across measures gives two separate rows
     Given the score source:

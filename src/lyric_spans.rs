@@ -46,10 +46,10 @@ struct PartCounterState {
 
 /// Return the source byte span of every lyric syllable in the compiled
 /// score, one entry per syllable, with note ids matching the compiled
-/// `ColumnElement::note_id` values. Only `notes+lyrics` parts carry
-/// per-syllable spans; a standalone `lyrics` part's whole-line verses (see
-/// `ElementContent::LyricLine`) have no per-note identity to key a syllable
-/// selection by, so they're never emitted here.
+/// `ColumnElement::note_id` values. Only notes/chords parts with lyrics
+/// carry per-syllable spans (`ElementContent::Lyric`); `ElementContent::LyricLine`
+/// (whole-line verses with no per-note identity) is currently unreachable —
+/// see its doc comment — so it's never emitted here.
 ///
 /// `enabled_tracks` must mirror whatever the caller passed to the render
 /// pipeline — see `note_spans::list_note_spans_from_source`'s doc comment

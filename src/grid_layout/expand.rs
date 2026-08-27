@@ -18,10 +18,9 @@ pub(crate) struct LyricPartParams<'a> {
     pub(crate) base: f32,
     pub(crate) column_count: u32,
     pub(crate) bar_height: f32,
-    /// False for a `notes+lyrics` verse row, which shares `part_idx` with its
-    /// own notes row — that row already drew the bar line, so drawing it
-    /// again here would duplicate/overshoot it. True for a standalone
-    /// `lyrics` part's row, which has no notes row to draw it instead.
+    /// False for a lyrics-verse row, which shares `part_idx` with its own
+    /// notes row — that row already drew the bar line, so drawing it again
+    /// here would duplicate/overshoot it.
     pub(crate) draw_bar_line: bool,
     pub(crate) measure_layout: &'a [MeasureColumnLayout],
 }

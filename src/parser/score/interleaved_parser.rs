@@ -1,6 +1,5 @@
 use crate::ast::parsed::{
-    AbbreviationReference, ParsedMeasureSlot, ParsedTrack, PartDecl, PartKind, ScoreEvent,
-    ScoreLineSlot,
+    AbbreviationReference, ParsedMeasureSlot, ParsedTrack, PartDecl, ScoreEvent, ScoreLineSlot,
 };
 use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Spanned};
 use crate::parser::score::token_parser::GroupStack;
@@ -21,7 +20,7 @@ use crate::desugar::SourceLine;
 use crate::parser::score::measure_group::collect_groups;
 use accumulators::{build_parse_result, build_slot_actions, init_accumulators};
 use beat_padding::{beats_per_measure, validate_and_pad_group_lines};
-use column_lines::{process_padded_columns, push_skipped_notes_measure};
+use column_lines::process_padded_columns;
 use directives::split_directive;
 
 /// One entry per bar group: all directive events emitted by that group's directive row.
@@ -51,7 +50,7 @@ enum TrackAccumulator {
         measure_slots: Vec<ParsedMeasureSlot>,
         /// Directive events received since the last finalized slot; prepended to the next Real slot.
         pending_events: Vec<Spanned<ScoreEvent>>,
-        /// Measure -> verse -> syllables, for `NotesWithLyrics` parts.
+        /// Measure -> verse -> syllables, for `Notes` parts with lyrics.
         syllables: Option<Vec<Vec<Vec<crate::ast::parsed::Syllable>>>>,
         /// Start byte offset of the lyrics line for each measure, in order.
         lyrics_line_starts: Vec<usize>,
@@ -74,8 +73,9 @@ struct BarGroupContext<'a> {
     base_offset: usize,
     declarations: &'a [PartDecl],
     /// This measure group's score-line slots. Reset at the top of each
-    /// `process_bar_group` call, since a `NotesWithLyrics` part's verse count
-    /// (and thus its slot list) can vary from one measure group to the next.
+    /// `process_bar_group` call, since a `Notes` part's positional-lyrics
+    /// verse count (and thus its slot list) can vary from one measure group
+    /// to the next.
     slots: Vec<ScoreLineSlot>,
     slot_actions: Vec<SlotAction>,
     time_num: &'a mut u8,
@@ -247,11 +247,9 @@ fn process_bar_group(
     }
     // Every syllable-carrying track gets one measure_syllables bucket per bar
     // group, whether or not it actually has a lyric line written in this
-    // group — a fixed-schema part (e.g. `notes`) with positionally-attached
-    // lyrics may have a `Lyrics` role in some groups and not others, unlike
-    // `NotesWithLyrics`/`Lyrics` parts, which always carry a (possibly
-    // implicit-fill) lyric line every group. `lyrics_line_starts`/`_ends` must
-    // stay aligned to that same per-group cadence (one entry per bar group)
+    // group — a `notes` part with positionally-attached lyrics may have a
+    // `Lyrics` role in some groups and not others. `lyrics_line_starts`/`_ends`
+    // must stay aligned to that same per-group cadence (one entry per bar group)
     // so `attach_paired_lyrics`'s zip against `measures` doesn't silently
     // truncate to however many groups actually had a written lyric line.
     // Placeholder start/end are overwritten in place (not pushed again) by
@@ -285,28 +283,6 @@ fn process_bar_group(
     let beats_expected = beats_per_measure(*ctx.time_num, *ctx.time_den);
     process_padded_columns(&padded_data, beats_expected, ctx)?;
 
-    // `Lyrics`-only parts have no `Notes` role, so nothing above ever pushes into
-    // their `measure_slots`. Push an empty slot per measure here instead, so this
-    // track's measure count still matches every other part's.
-    let group_span = group_lines
-        .first()
-        .map(|line| {
-            Span::new(
-                ctx.base_offset + line.offset,
-                ctx.base_offset + line.offset + line.content.len(),
-            )
-        })
-        .unwrap_or_else(|| Span::new(ctx.base_offset, ctx.base_offset));
-    let lyrics_track_indices: Vec<usize> = ctx
-        .declarations
-        .iter()
-        .enumerate()
-        .filter(|(_, decl)| decl.kind == PartKind::Lyrics)
-        .map(|(index, _)| index)
-        .collect();
-    for track_index in lyrics_track_indices {
-        push_skipped_notes_measure(ctx, track_index, group_span, None)?;
-    }
     Ok(())
 }
 

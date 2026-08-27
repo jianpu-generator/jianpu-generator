@@ -1,4 +1,4 @@
-use crate::ast::parsed::{PartDecl, PartKind};
+use crate::ast::parsed::PartDecl;
 use crate::error::{RecoverableError, Span};
 
 use super::attribution::KeyedLine;
@@ -47,11 +47,6 @@ pub(super) fn filter_keyed_into_key_map(
 
     for (abbrev, lines) in &key_map {
         if let Some(decl) = declarations.iter().find(|d| &d.abbreviation == abbrev) {
-            // `NotesWithLyrics` and `Lyrics` parts accept any number of lyric-verse
-            // lines, so only fixed-schema kinds are capacity-checked here.
-            if matches!(decl.kind, PartKind::NotesWithLyrics | PartKind::Lyrics) {
-                continue;
-            }
             // Positionally-attached bare lines don't count against a
             // fixed-schema part's slot count — they can be arbitrarily many
             // (one per lyric verse). Only genuinely duplicated `[Abbrev]`-

@@ -4,13 +4,13 @@ use crate::error::RecoverableErrorKind;
 
 #[test]
 fn parses_abbreviated_track() {
-    let content = "Alto 1 & Tenor [A1&T] = notes+lyrics\n";
+    let content = "Alto 1 & Tenor [A1&T] = notes\n";
     let (decls, errors) = parse_parts(content, 0, &[]);
     assert!(errors.is_empty());
     assert_eq!(decls.len(), 1);
     assert_eq!(decls[0].display_name, "Alto 1 & Tenor");
     assert_eq!(decls[0].abbreviation, "A1&T");
-    assert_eq!(decls[0].kind, PartKind::NotesWithLyrics);
+    assert_eq!(decls[0].kind, PartKind::Notes);
     assert_eq!(decls[0].follow_target, None);
 }
 
@@ -27,7 +27,7 @@ fn parses_chord_track() {
 
 #[test]
 fn omits_brackets_uses_name_as_abbreviation() {
-    let content = "Melody = notes+lyrics\n";
+    let content = "Melody = notes\n";
     let (decls, errors) = parse_parts(content, 0, &[]);
     assert!(errors.is_empty());
     assert_eq!(decls[0].abbreviation, "Melody");
@@ -45,16 +45,6 @@ fn skips_duplicate_abbreviation_and_keeps_first() {
         errors[0].kind,
         RecoverableErrorKind::PartsDuplicateAbbreviation { .. }
     ));
-}
-
-#[test]
-fn parses_standalone_lyrics_track() {
-    let content = "Caption [C] = lyrics\n";
-    let (decls, errors) = parse_parts(content, 0, &[]);
-    assert!(errors.is_empty());
-    assert_eq!(decls.len(), 1);
-    assert_eq!(decls[0].abbreviation, "C");
-    assert_eq!(decls[0].kind, PartKind::Lyrics);
 }
 
 #[test]
@@ -91,12 +81,12 @@ fn skips_bad_line_keeps_valid_declaration() {
 
 #[test]
 fn follow_copies_kind_from_target_and_sets_follow_target() {
-    let content = "Soprano [S] = notes+lyrics\nAlto [A] = follow[S]\n";
+    let content = "Soprano [S] = notes\nAlto [A] = follow[S]\n";
     let (decls, errors) = parse_parts(content, 0, &[]);
     assert!(errors.is_empty(), "unexpected errors: {errors:?}");
     assert_eq!(decls.len(), 2);
     assert_eq!(decls[1].abbreviation, "A");
-    assert_eq!(decls[1].kind, PartKind::NotesWithLyrics);
+    assert_eq!(decls[1].kind, PartKind::Notes);
     assert_eq!(decls[1].follow_target, Some("S".to_string()));
 }
 

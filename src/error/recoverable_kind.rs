@@ -86,11 +86,6 @@ pub enum RecoverableErrorKind {
     PartKeyUnknown { key: String },
     /// A score data line has no `[Abbrev]` prefix — the line is dropped.
     ScoreLineMissingKeyPrefix,
-    /// A bare (positional, unprefixed) lyrics line opens a measure with no
-    /// preceding `[Key]` line in this group, but the `# parts` section
-    /// declares more than one part of kind `Lyrics` — there is no single
-    /// unambiguous standalone target to attribute it to, so the line is dropped.
-    PositionalLyricsAmbiguousStandaloneTarget,
     /// `~` (tie-to-next) appeared on a rest — `~` is ignored, rest is emitted normally.
     TieOnRest,
     /// `~` appears on the last note of a part — there is no following note to tie to.
@@ -143,7 +138,7 @@ impl RecoverableErrorKind {
             Self::PartsEmptyAbbreviation => "abbreviation cannot be empty".to_string(),
             Self::PartsEmptyTrackName => "track name cannot be empty".to_string(),
             Self::PartsInvalidColumns { rhs } => format!(
-                "invalid track columns '{rhs}': expected 'chords', 'notes', 'notes+lyrics', or 'follow[X]'"
+                "invalid track columns '{rhs}': expected 'chords', 'notes', or 'follow[X]'"
             ),
             Self::SectionUnknown { name } => format!("unknown section: # {name}"),
             Self::SectionDuplicate { section } => format!("duplicate {} section", section.header()),
@@ -162,7 +157,6 @@ impl RecoverableErrorKind {
             Self::UnclosedGroupAtEnd { part } => format!("unclosed '(' group at end of score in part '{part}'"),
             Self::PartKeyUnknown { key } => format!("`[{key}]` does not match any declared part abbreviation; line dropped"),
             Self::ScoreLineMissingKeyPrefix => "score line has no [Abbrev] prefix; line dropped".to_string(),
-            Self::PositionalLyricsAmbiguousStandaloneTarget => "bare lyrics line has no preceding [Abbrev] line in this measure, and more than one part is declared as `lyrics`; ambiguous standalone target, line dropped".to_string(),
             Self::TieOnRest => "~ cannot be applied to a rest; ~ ignored".to_string(),
             Self::DanglingTie => "~ has no following note to tie to; ~ ignored".to_string(),
             Self::TiePitchMismatch { expected, got } => format!("tied notes must have the same pitch and octave; expected {expected}, got {got}; ~ ignored"),

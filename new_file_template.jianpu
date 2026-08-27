@@ -3,6 +3,6 @@ title = "Untitled"
 author = ""
 
 # parts
-Melody = notes+lyrics
+Melody = notes
 
 # score

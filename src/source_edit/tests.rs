@@ -13,16 +13,8 @@ fn test_basic_chord_to_notes() {
 }
 
 #[test]
-fn test_notes_to_notes_lyrics() {
-    let source = source_with_parts("Melody [M] = notes");
-    let result =
-        update_part_declaration(&source, "M", &PartMode::NotesLyrics, None, None, None).unwrap();
-    assert!(result.contains("Melody [M] = notes+lyrics"));
-}
-
-#[test]
-fn test_notes_lyrics_to_follow() {
-    let source = source_with_parts("Alto [A] = notes+lyrics");
+fn test_notes_to_follow() {
+    let source = source_with_parts("Alto [A] = notes");
     let result = update_part_declaration(
         &source,
         "A",
@@ -99,7 +91,7 @@ fn test_no_match_returns_none() {
 
 #[test]
 fn test_multi_part_only_target_changes() {
-    let source = source_with_parts("Melody [M] = notes\nAlto [A] = notes+lyrics");
+    let source = source_with_parts("Melody [M] = notes\nAlto [A] = notes");
     let result =
         update_part_declaration(&source, "A", &PartMode::Chords, None, None, None).unwrap();
     assert!(result.contains("Melody [M] = notes\n"));
@@ -108,11 +100,10 @@ fn test_multi_part_only_target_changes() {
 
 #[test]
 fn test_set_octave_on_notes() {
-    let source = source_with_parts("Melody [M] = notes+lyrics");
+    let source = source_with_parts("Melody [M] = notes");
     let result =
-        update_part_declaration(&source, "M", &PartMode::NotesLyrics, None, None, Some(-1))
-            .unwrap();
-    assert!(result.contains("Melody [M] = notes+lyrics -1"));
+        update_part_declaration(&source, "M", &PartMode::Notes, None, None, Some(-1)).unwrap();
+    assert!(result.contains("Melody [M] = notes -1"));
 }
 
 #[test]

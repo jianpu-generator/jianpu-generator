@@ -22,16 +22,16 @@ const source = [
   'max_measures_per_system = 48',
   '',
   '# parts',
-  'Melody [M] = notes+lyrics',
+  'Melody [M] = notes',
   '',
   '# score',
   '[M] 1 2', // measure 0
-  '[M] do re', // verse 0
-  '[M] fa sol', // verse 1
+  'do re', // verse 0
+  'fa sol', // verse 1
   '',
   '[M] 3 4', // measure 1
-  '[M] la ti', // verse 0
-  '[M] da di', // verse 1
+  'la ti', // verse 0
+  'da di', // verse 1
 ].join('\n')
 
 function verseLabel(page: import('@playwright/test').Page, verse: number) {

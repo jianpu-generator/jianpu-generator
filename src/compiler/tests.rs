@@ -197,14 +197,14 @@ title=\"t\"
 author=\"a\"
 
 # parts
-A = notes+lyrics
+A = notes
 B = chords
 C = notes
 
 # score
 time=4/4 key=C4 bpm=120
 [A] 1 2 3 4
-[A] la la la la
+la la la la
 [C] 1
 ",
     );
@@ -228,14 +228,14 @@ author=\"a\"
 hide_resting_parts = no
 
 # parts
-A = notes+lyrics
+A = notes
 B = chords
 C = notes
 
 # score
 time=4/4 key=C4 bpm=120
 [A] 1 2 3 4
-[A] la la la la
+la la la la
 [C] 1
 ",
     );

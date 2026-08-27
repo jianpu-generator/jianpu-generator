@@ -1,4 +1,3 @@
-use super::*;
 use crate::ast::parsed::{
     Accidental, JianPuPitch, ParsedChordNote, PartKind, ScoreEvent, TriadQuality,
 };
@@ -83,24 +82,9 @@ fn single_unnamed_part_no_lyrics() {
 }
 
 #[test]
-fn single_part_with_lyrics() {
-    let content = "time=4/4 key=C4 bpm=120\n[] 1 2 3 4\n[] do re mi fa\n";
-    let declarations = vec![decl("", PartKind::NotesWithLyrics)];
-    let tracks = parse(content, 0, &declarations).unwrap();
-    assert_eq!(tracks.len(), 1);
-    let notes = notes_track(&tracks, "");
-    assert!(notes.lyrics.is_some());
-    assert_eq!(
-        notes.lyrics.as_ref().unwrap().measure_syllables[0][0].len(),
-        4
-    );
-}
-
-#[test]
 fn plain_notes_part_accepts_positionally_attached_lyrics_line() {
-    // Unlike `single_part_with_lyrics` above (a `NotesWithLyrics` fixture),
-    // this declares a plain `notes` part; the trailing bare line has no
-    // `[Key]` prefix at all and attaches to it positionally.
+    // A plain `notes` part; the trailing bare line has no `[Key]` prefix at
+    // all and attaches to it positionally.
     let content = "time=4/4 key=C4 bpm=120\n[] 1 2 3 4\ndo re mi fa\n";
     let declarations = vec![decl("", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations).unwrap();
@@ -139,7 +123,7 @@ fn two_parts_two_bars() {
 fn too_many_lines_in_group_is_recoverable() {
     // Extra data line beyond what the declared parts expect must not abort parsing.
     let content = "time=4/4 key=C4 bpm=120\n1 2 3 4\na b c d\nextra line\n";
-    let declarations = vec![decl("", PartKind::NotesWithLyrics)];
+    let declarations = vec![decl("", PartKind::Notes)];
     assert!(
         parse(content, 0, &declarations).is_ok(),
         "extra data lines must not abort parsing"
@@ -149,12 +133,12 @@ fn too_many_lines_in_group_is_recoverable() {
 #[test]
 fn underscore_on_lyrics_line_means_no_lyrics_for_that_bar() {
     let content = concat!(
-        "time=4/4 key=C4 bpm=120\n[] 1 2 3 4\n[] a b c d\n",
+        "time=4/4 key=C4 bpm=120\n[] 1 2 3 4\na b c d\n",
         "\n",
         "[] 5 6 7 1\n",
-        "[] _\n",
+        "_\n",
     );
-    let declarations = vec![decl("", PartKind::NotesWithLyrics)];
+    let declarations = vec![decl("", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations).unwrap();
     let lyrics = notes_track(&tracks, "").lyrics.as_ref().unwrap();
     assert_eq!(lyrics.measure_syllables.len(), 2);
@@ -164,8 +148,8 @@ fn underscore_on_lyrics_line_means_no_lyrics_for_that_bar() {
 
 #[test]
 fn allows_too_few_lyrics_syllables_for_notes() {
-    let content = "time=4/4 key=C4 bpm=120\n[] 1 2 3 4\n[] a b c\n";
-    let declarations = vec![decl("", PartKind::NotesWithLyrics)];
+    let content = "time=4/4 key=C4 bpm=120\n[] 1 2 3 4\na b c\n";
+    let declarations = vec![decl("", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(
         notes_track(&tracks, "")
@@ -182,7 +166,7 @@ fn allows_too_few_lyrics_syllables_for_notes() {
 fn accepts_too_many_lyrics_syllables_for_notes() {
     // Overflow is recoverable — parsing succeeds and the grouper attaches an error to the measure.
     let content = "time=4/4 key=C4 bpm=120\n1 2 3 4\na b c d e\n";
-    let declarations = vec![decl("", PartKind::NotesWithLyrics)];
+    let declarations = vec![decl("", PartKind::Notes)];
     assert!(
         parse(content, 0, &declarations).is_ok(),
         "too many syllables must not abort parsing"
@@ -229,8 +213,8 @@ fn unclosed_paren_group_at_eof_is_recoverable() {
 
 #[test]
 fn tied_notes_share_one_lyric_slot_in_bar() {
-    let content = "time=4/4 key=C4 bpm=120\n[] (33) 1 2\n[] a b c\n";
-    let declarations = vec![decl("", PartKind::NotesWithLyrics)];
+    let content = "time=4/4 key=C4 bpm=120\n[] (33) 1 2\na b c\n";
+    let declarations = vec![decl("", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(
         notes_track(&tracks, "")
@@ -246,12 +230,12 @@ fn tied_notes_share_one_lyric_slot_in_bar() {
 #[test]
 fn cross_measure_tie_continuation_needs_fewer_lyrics() {
     let content = concat!(
-        "time=4/4 key=C4 bpm=120\n[] 0 0 0 (3\n[] a\n",
+        "time=4/4 key=C4 bpm=120\n[] 0 0 0 (3\na\n",
         "\n",
         "[] 3) 0 0 0\n",
-        "[] _\n",
+        "_\n",
     );
-    let declarations = vec![decl("", PartKind::NotesWithLyrics)];
+    let declarations = vec![decl("", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations).unwrap();
     let lyrics = notes_track(&tracks, "").lyrics.as_ref().unwrap();
     assert_eq!(lyrics.measure_syllables.len(), 2);
@@ -265,40 +249,16 @@ fn spaced_open_group_cross_measure_lyrics() {
         "time=4/4 key=C4 bpm=120\n",
         "[main] 1 - 6m -\n",
         "[S1] (6- 7-\n",
-        "[S1] 慈 -\n",
+        "慈 -\n",
         "\n",
         "[main] 1 - 6m -\n",
         "[S1] 7) 1 2 3\n",
-        "[S1] 光 - 光\n",
+        "光 - 光\n",
     );
-    let declarations = vec![
-        decl("main", PartKind::Chords),
-        decl("S1", PartKind::NotesWithLyrics),
-    ];
+    let declarations = vec![decl("main", PartKind::Chords), decl("S1", PartKind::Notes)];
     let tracks = parse(content, 0, &declarations).unwrap();
     let s1 = notes_track(&tracks, "S1");
     assert_eq!(total_lyrics_syllables(s1), 5);
-}
-
-#[test]
-fn omitted_trailing_lyrics_without_precedent_is_recoverable() {
-    // Measure 2 has no lyrics and no preceding lyrics in the same group to ditto from.
-    // Parsing must succeed; the missing lyrics become an empty (no-lyrics) measure.
-    let content = concat!(
-        "time=4/4 key=C4 bpm=120\n[] 1 2 3 4\n[] a b c d\n",
-        "\n",
-        "[] 5 6 7 1\n",
-    );
-    let declarations = vec![decl("", PartKind::NotesWithLyrics)];
-    let tracks = parse(content, 0, &declarations).expect("missing lyrics must not abort parsing");
-    let ParsedTrack::Timed(track) = &tracks[0];
-    let lyrics = track.lyrics.as_ref().expect("track should have lyrics");
-    assert_eq!(lyrics.measure_syllables.len(), 2);
-    assert_eq!(
-        lyrics.measure_syllables[1][0].len(),
-        0,
-        "measure 2 should have no syllables (treated as no lyrics)"
-    );
 }
 
 #[test]

@@ -1,6 +1,6 @@
 use super::{
     align_empty_note_measures, attach_paired_lyrics, GroupedPart, IrrecoverableError,
-    ParsedMeasureSlot, ParsedTimedTrack, PartGrouper, PartKind, PerMeasureErrors, Span,
+    ParsedMeasureSlot, ParsedTimedTrack, PartGrouper, PerMeasureErrors, Span,
 };
 use crate::ast::grouped::GroupedMeasure;
 use crate::tuplet::apply_resolution_multiplier;
@@ -31,7 +31,6 @@ pub(in crate::grouper) fn group_timed_track(
     let per_measure_lex_errors = part.per_measure_lex_errors.clone();
     let per_measure_lyrics_errors = part.per_measure_lyrics_errors.clone();
     let part_abbreviation = part.abbreviation.clone();
-    let part_kind = part.kind;
     let part_volume = part.volume;
     let part_octave_offset = part.octave_offset;
     let mut grouper = PartGrouper::new(&part);
@@ -82,7 +81,6 @@ pub(in crate::grouper) fn group_timed_track(
         measures,
     };
     attach_lyrics(
-        part_kind,
         &mut grouped.measures,
         measure_syllables,
         &lyrics_measure_starts,
@@ -92,40 +90,25 @@ pub(in crate::grouper) fn group_timed_track(
     Ok(grouped)
 }
 
-/// Attaches a track's parsed lyric syllables to its grouped measures. A
-/// standalone `Lyrics` part has no notes to pair against, so each verse's
-/// syllables just become that measure's rendered lyric line as-is. Every
-/// other kind (including `Notes` carrying positionally-attached lyrics, or
-/// `NotesWithLyrics`) tie-pairs each verse's syllables against its own notes
-/// whenever it actually has syllables to attach (see `attach_paired_lyrics`)
-/// — this is data-presence-based, not kind-based, so a plain `notes` part
-/// with no lyrics attached this pass carries none.
+/// Attaches a track's parsed lyric syllables to its grouped measures,
+/// tie-pairing each verse's syllables against its own notes whenever it
+/// actually has syllables to attach (see `attach_paired_lyrics`) — this is
+/// data-presence-based, so a plain `notes` part with no lyrics attached this
+/// pass carries none.
 fn attach_lyrics(
-    part_kind: PartKind,
     measures: &mut [GroupedMeasure],
     measure_syllables: Option<Vec<Vec<Vec<crate::ast::parsed::Syllable>>>>,
     lyrics_measure_starts: &[usize],
     lyrics_measure_ends: &[usize],
     part_abbreviation: &str,
 ) -> Result<(), IrrecoverableError> {
-    match part_kind {
-        PartKind::Lyrics => {
-            if let Some(measure_syllables) = measure_syllables {
-                for (measure, verses) in measures.iter_mut().zip(measure_syllables) {
-                    measure.paired_lyrics = verses;
-                }
-            }
-        }
-        _ => {
-            if measure_syllables.is_some() {
-                let lyrics_spans: Vec<Span> = lyrics_measure_starts
-                    .iter()
-                    .zip(lyrics_measure_ends.iter())
-                    .map(|(&start, &end)| Span::new(start, end))
-                    .collect();
-                attach_paired_lyrics(measures, measure_syllables, lyrics_spans, part_abbreviation)?;
-            }
-        }
+    if measure_syllables.is_some() {
+        let lyrics_spans: Vec<Span> = lyrics_measure_starts
+            .iter()
+            .zip(lyrics_measure_ends.iter())
+            .map(|(&start, &end)| Span::new(start, end))
+            .collect();
+        attach_paired_lyrics(measures, measure_syllables, lyrics_spans, part_abbreviation)?;
     }
     Ok(())
 }

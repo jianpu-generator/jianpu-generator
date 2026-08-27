@@ -32,20 +32,25 @@ Bass = notes
 fn keeps_a_non_trailing_all_rest_verse_when_a_later_verse_has_content() {
     let source = "\
 # parts
-Melody = notes+lyrics
+Melody = notes
 
 # score
 [Melody] 1 2 3 4
-[Melody] _ _ _ _
-[Melody] hel lo world here
+_ _ _ _
+hel lo world here
 ";
     let formatted = format_score(source);
     let score_section = formatted.split("# score").nth(1).unwrap();
     assert_eq!(
         score_section.matches("[Melody]").count(),
-        3,
+        1,
+        "the notes line keeps its [Melody] prefix; verse lines stay positional:\n{formatted}"
+    );
+    assert!(
+        score_section.contains("_ _ _ _"),
         "the earlier all-rest verse must survive since a later verse has real content:\n{formatted}"
     );
+    assert!(score_section.contains("hel lo world here"));
 }
 
 #[test]

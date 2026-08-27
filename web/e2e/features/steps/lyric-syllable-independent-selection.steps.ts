@@ -26,12 +26,12 @@ const multiVerseSource = [
   'max_measures_per_system = 48',
   '',
   '# parts',
-  'Melody [M] = notes+lyrics',
+  'Melody [M] = notes',
   '',
   '# score',
   '[M] 1 2 3 4', // measure 0 — line 9
-  '[M] do re mi fa', // verse 0 — line 10
-  '[M] uno dos tres cuatro', // verse 1 — line 11
+  'do re mi fa', // verse 0 — line 10
+  'uno dos tres cuatro', // verse 1 — line 11
 ].join('\n')
 
 function lyricRect(

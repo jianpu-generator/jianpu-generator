@@ -37,7 +37,7 @@ Feature: Edit Parts modal
     When I change the octave select for part "M" to "-1"
     Then the octave select for part "M" shows "-1"
     When I close the edit parts modal with Escape
-    Then the editor source and stored source both contain "Melody [M] = notes+lyrics -1", as seen in edit parts modal
+    Then the editor source and stored source both contain "Melody [M] = notes -1", as seen in edit parts modal
 
   Scenario: Volume slider changes the MIDI volume for a part
     Given the edit-parts-modal test fixture is loaded
@@ -46,7 +46,7 @@ Feature: Edit Parts modal
     When I focus the volume slider for part "M" and press Home
     Then the volume value for part "M" shows "1%"
     When I close the edit parts modal with Escape
-    Then the editor source and stored source both contain "Melody [M] = notes+lyrics 1%", as seen in edit parts modal
+    Then the editor source and stored source both contain "Melody [M] = notes 1%", as seen in edit parts modal
 
   Scenario: Follow target select changes the followed part
     Given the edit-parts-modal test fixture with multiple followable parts is loaded

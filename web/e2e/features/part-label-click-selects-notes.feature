@@ -18,14 +18,14 @@ Feature: Clicking or dragging part labels selects notes
     And the Melody label's click-target rect is marked drag-active
     And the Harmony label's click-target rect is not marked drag-active
 
-  Scenario: A plain click on a notes+lyrics part label does not also select the lyric row
-    Given the notes+lyrics click-test fixture is loaded
+  Scenario: A plain click on a notes-with-lyrics part label does not also select the lyric row
+    Given the notes-with-lyrics click-test fixture is loaded
     When I plain-click the Melody part label
     Then 4 notes are drag-selected in total
     And 0 lyrics are drag-selected in total
 
-  Scenario: A notes+lyrics part label does not visually overlap its own lyric label
-    Given the single-measure notes+lyrics fixture is loaded
+  Scenario: A notes-with-lyrics part label does not visually overlap its own lyric label
+    Given the single-measure notes-with-lyrics fixture is loaded
     Then the part label's click-target rect does not vertically overlap the lyric label's click-target rect
 
   Scenario: Dragging from one part label to another selects both parts notes

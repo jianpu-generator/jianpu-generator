@@ -3,17 +3,17 @@ title = "Pitches"
 max_measures_per_system = 1
 
 # parts
-Melody [M] = notes+lyrics
+Melody [M] = notes
 
 # score
 label="Scale degrees & rest"
 [M] 1 2 3 0
-[M] _
+_
 
 label="Accidentals (#/b)"
 [M] 7# 1b 4# 4b
-[M] _
+_
 
 label="Octave ('/,)"
 [M] 1' 2' 1, 2,
-[M] _
+_

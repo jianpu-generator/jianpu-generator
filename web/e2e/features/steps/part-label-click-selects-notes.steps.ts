@@ -79,93 +79,99 @@ Given('the two-part click-test fixture is loaded', async ({ page }) => {
   await primeMeasureSpans(page)
 })
 
-Given('the notes+lyrics click-test fixture is loaded', async ({ page }) => {
-  // Regression test: 'part-label' drag-selection unions in the lyric row
-  // underneath the swept part(s) — a real feature for drags (see
-  // `part-label-drag-selects-lyrics.spec.ts`) — but a plain click (zero
-  // pointer movement) used to go through that exact same code path and
-  // incorrectly pick up the lyric row too.
-  const lyricSource = [
-    '# metadata',
-    'title = "part label click no-lyric test"',
-    'max_measures_per_system = 48',
-    '',
-    '# parts',
-    'Melody [M] = notes+lyrics',
-    '',
-    '# score',
-    '[M] 1 2', // measure 0
-    '[M] do re', // verse 0
-    '',
-    '[M] 3 4', // measure 1
-    '[M] mi fa', // verse 0
-  ].join('\n')
+Given(
+  'the notes-with-lyrics click-test fixture is loaded',
+  async ({ page }) => {
+    // Regression test: 'part-label' drag-selection unions in the lyric row
+    // underneath the swept part(s) — a real feature for drags (see
+    // `part-label-drag-selects-lyrics.spec.ts`) — but a plain click (zero
+    // pointer movement) used to go through that exact same code path and
+    // incorrectly pick up the lyric row too.
+    const lyricSource = [
+      '# metadata',
+      'title = "part label click no-lyric test"',
+      'max_measures_per_system = 48',
+      '',
+      '# parts',
+      'Melody [M] = notes',
+      '',
+      '# score',
+      '[M] 1 2', // measure 0
+      'do re', // verse 0
+      '',
+      '[M] 3 4', // measure 1
+      'mi fa', // verse 0
+    ].join('\n')
 
-  await page.addInitScript((source) => {
-    localStorage.setItem(
-      'jianpu:files:v1',
-      JSON.stringify({
-        active: 'part-label-click-no-lyric-test.jianpu',
-        userFiles: { 'part-label-click-no-lyric-test.jianpu': source },
-        bin: {},
-        fileIds: {
-          'part-label-click-no-lyric-test.jianpu':
-            'part-label-click-no-lyric-test-id-001',
-        },
-      }),
-    )
-  }, lyricSource)
-  await page.goto('/')
+    await page.addInitScript((source) => {
+      localStorage.setItem(
+        'jianpu:files:v1',
+        JSON.stringify({
+          active: 'part-label-click-no-lyric-test.jianpu',
+          userFiles: { 'part-label-click-no-lyric-test.jianpu': source },
+          bin: {},
+          fileIds: {
+            'part-label-click-no-lyric-test.jianpu':
+              'part-label-click-no-lyric-test-id-001',
+          },
+        }),
+      )
+    }, lyricSource)
+    await page.goto('/')
 
-  await page.waitForSelector('[data-testid="play-measure-button"]', {
-    timeout: 15_000,
-  })
-  await page.waitForSelector('[data-tag="part-label"][data-part-index="0"]', {
-    timeout: 10_000,
-  })
-  await primeMeasureSpans(page)
-})
+    await page.waitForSelector('[data-testid="play-measure-button"]', {
+      timeout: 15_000,
+    })
+    await page.waitForSelector('[data-tag="part-label"][data-part-index="0"]', {
+      timeout: 10_000,
+    })
+    await primeMeasureSpans(page)
+  },
+)
 
-Given('the single-measure notes+lyrics fixture is loaded', async ({ page }) => {
-  // Regression test: the part label's click-target rect used to absorb its
-  // lyric verse row's height too, fully overlapping the `lyric-label` rect
-  // one row down — since `:hover` paints the whole rect, hovering the note
-  // label visually painted over the lyric label too.
-  const lyricSource = [
-    '# metadata',
-    'title = "part label no lyric-label overlap test"',
-    'max_measures_per_system = 48',
-    '',
-    '# parts',
-    'Melody [M] = notes+lyrics',
-    '',
-    '# score',
-    '[M] 1 2', // measure 0
-    '[M] do re', // verse 0
-  ].join('\n')
+Given(
+  'the single-measure notes-with-lyrics fixture is loaded',
+  async ({ page }) => {
+    // Regression test: the part label's click-target rect used to absorb its
+    // lyric verse row's height too, fully overlapping the `lyric-label` rect
+    // one row down — since `:hover` paints the whole rect, hovering the note
+    // label visually painted over the lyric label too.
+    const lyricSource = [
+      '# metadata',
+      'title = "part label no lyric-label overlap test"',
+      'max_measures_per_system = 48',
+      '',
+      '# parts',
+      'Melody [M] = notes',
+      '',
+      '# score',
+      '[M] 1 2', // measure 0
+      'do re', // verse 0
+    ].join('\n')
 
-  await page.addInitScript((source) => {
-    localStorage.setItem(
-      'jianpu:files:v1',
-      JSON.stringify({
-        active: 'part-label-no-overlap-test.jianpu',
-        userFiles: { 'part-label-no-overlap-test.jianpu': source },
-        bin: {},
-        fileIds: {
-          'part-label-no-overlap-test.jianpu':
-            'part-label-no-overlap-test-id-001',
-        },
-      }),
-    )
-  }, lyricSource)
-  await page.goto('/')
+    await page.addInitScript((source) => {
+      localStorage.setItem(
+        'jianpu:files:v1',
+        JSON.stringify({
+          active: 'part-label-no-overlap-test.jianpu',
+          userFiles: { 'part-label-no-overlap-test.jianpu': source },
+          bin: {},
+          fileIds: {
+            'part-label-no-overlap-test.jianpu':
+              'part-label-no-overlap-test-id-001',
+          },
+        }),
+      )
+    }, lyricSource)
+    await page.goto('/')
 
-  await page.waitForSelector('[data-testid="play-measure-button"]', {
-    timeout: 15_000,
-  })
-  await page.waitForSelector('[data-tag="part-label"][data-part-index="0"]')
-  await primeMeasureSpans(page)
-})
+    await page.waitForSelector('[data-testid="play-measure-button"]', {
+      timeout: 15_000,
+    })
+    await page.waitForSelector('[data-tag="part-label"][data-part-index="0"]')
+    await primeMeasureSpans(page)
+  },
+)
 
 When('I plain-click the Melody part label', async ({ page }) => {
   const label = melodyLabel(page)

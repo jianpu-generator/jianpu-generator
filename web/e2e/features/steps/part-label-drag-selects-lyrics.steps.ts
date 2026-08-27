@@ -17,16 +17,16 @@ const source = [
   'max_measures_per_system = 48',
   '',
   '# parts',
-  'Melody [M] = notes+lyrics',
+  'Melody [M] = notes',
   'Harmony [H] = notes',
   '',
   '# score',
   '[M] 1 2', // measure 0
-  '[M] do re', // verse 0
+  'do re', // verse 0
   '[H] 5 6',
   '',
   '[M] 3 4', // measure 1
-  '[M] mi fa', // verse 0
+  'mi fa', // verse 0
   "[H] 7 1'",
 ].join('\n')
 

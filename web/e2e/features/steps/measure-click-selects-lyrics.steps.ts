@@ -23,14 +23,14 @@ const clickTestSource = [
   'max_measures_per_system = 48',
   '',
   '# parts',
-  'Melody [M] = notes+lyrics',
+  'Melody [M] = notes',
   '',
   '# score',
   '[M] 1 2 3 4', // measure 0 — line 9
-  '[M] do re mi fa', // line 10
+  'do re mi fa', // line 10
   '',
   '[M] 5 6', // measure 1 — line 12
-  '[M] sol la', // line 13
+  'sol la', // line 13
 ].join('\n')
 
 async function loadClickTestFixture(page: import('@playwright/test').Page) {

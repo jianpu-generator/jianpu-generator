@@ -24,11 +24,11 @@ const dragTestSource = [
   'max_measures_per_system = 48',
   '',
   '# parts',
-  'Melody [M] = notes+lyrics',
+  'Melody [M] = notes',
   '',
   '# score',
   '[M] 1 2 3 4', // measure 0 — line 9
-  '[M] do re mi fa', // line 10
+  'do re mi fa', // line 10
 ].join('\n')
 
 function lyricTexts(page: import('@playwright/test').Page) {

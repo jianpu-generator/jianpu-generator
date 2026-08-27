@@ -3,12 +3,12 @@ title = "Slurs & Ties"
 max_measures_per_system = 1
 
 # parts
-Melody [M] = notes+lyrics
+Melody [M] = notes
 
 # score
 label="Slur group"
 [M] (1 2) (3 4)
-[M] _
+_
 
 label="Tie: basic"
 [M] 4~4 3 2
@@ -21,14 +21,14 @@ label="Tie: chained"
 
 label="Tie + repeat"
 [M] 5__~5 0 0
-[M] _
+_
 
 label="Tie inside slur"
 [M] (4~4 3) 2
 
 label="Nested slur"
 [M] ((1_ 2_) 3) 4
-[M] _
+_
 
 label="Cross-measure slur"
 [M] 1 2 3 (4
@@ -36,4 +36,4 @@ label="Cross-measure slur"
 
 
 [M] 5) 6 7 0
-[M] _
+_

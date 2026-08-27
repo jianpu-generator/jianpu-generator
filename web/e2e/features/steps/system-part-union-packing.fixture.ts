@@ -66,8 +66,7 @@ export const NOTE_TOKEN_COUNT = 4
  * "go to line" priming dance (see `primeMeasureSpans`) can put the cursor
  * somewhere guaranteed to fall inside a real measure span — a fixed line
  * number would be wrong across scenarios since the header's size (and thus
- * where the score content starts) varies with `hide_resting_parts` and
- * `notes+lyrics` vs `notes` part kinds. */
+ * where the score content starts) varies with `hide_resting_parts`. */
 function buildSource(): { source: string; firstMeasureLine: number } {
   const lines: string[] = [
     '# metadata',
@@ -79,10 +78,7 @@ function buildSource(): { source: string; firstMeasureLine: number } {
   }
   lines.push('')
   lines.push('# parts')
-  const usesLyrics = state.measures.some(
-    (m) => m.melodyVerses && m.melodyVerses.length > 0,
-  )
-  lines.push(`Melody [M] = ${usesLyrics ? 'notes+lyrics' : 'notes'}`)
+  lines.push('Melody [M] = notes')
   lines.push('Harmony [H] = notes')
   lines.push('Bass [B] = notes')
   lines.push('')
@@ -99,7 +95,7 @@ function buildSource(): { source: string; firstMeasureLine: number } {
       if (part === 'Melody' && measure.melodyVerses) {
         groupLines.push(`[M] ${NOTE_TOKENS.Melody}`)
         for (const verse of measure.melodyVerses) {
-          groupLines.push(`[M] ${verse.join(' ')}`)
+          groupLines.push(verse.join(' '))
         }
       } else if (measure.notesFor.includes(part)) {
         const abbrev = part === 'Melody' ? 'M' : part === 'Harmony' ? 'H' : 'B'

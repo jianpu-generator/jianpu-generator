@@ -13,7 +13,6 @@ fn share_payload_round_trips_through_brotli() {
         .chain([
             include_str!("../../../simple.jianpu"),
             include_str!("../../../fixtures/follow_and_key.jianpu"),
-            include_str!("../../../彌勒淨土鄉.jianpu"),
         ])
         .collect();
     for fixture in fixtures {

@@ -138,12 +138,7 @@ fn expand_measure_group(
     };
 
     let mut recoverable_error: Option<RecoverableError> = None;
-    let keyed = attribute_data_lines(
-        data_lines,
-        declarations,
-        base_offset,
-        &mut recoverable_error,
-    );
+    let keyed = attribute_data_lines(data_lines, base_offset, &mut recoverable_error);
 
     let abbreviation_references: Vec<AbbreviationReference> = keyed
         .iter()
@@ -165,7 +160,7 @@ fn expand_measure_group(
             .iter()
             .enumerate()
             .flat_map(|(track_index, decl)| {
-                roles_for_group(decl, None, None)
+                roles_for_group(decl, None)
                     .into_iter()
                     .map(move |role| ScoreLineSlot { track_index, role })
             })
@@ -200,38 +195,16 @@ fn expand_keyed(
 }
 
 /// The score-line roles this part contributes to this specific measure group.
-/// For `NotesWithLyrics`, the number of `Lyrics` roles is the number of
-/// consecutive `[Part]` lyric lines actually written after the notes line in
-/// this group (verses 1..N), defaulting to a single implicit-fill verse when
-/// no lyrics line was written at all.
 ///
-/// A `Notes`/`Chords` part (any fixed-schema, notes-bearing kind except
-/// `Percussion`, which is excluded from positional-lyrics eligibility — see
-/// module docs) picks up extra `Lyrics` roles the same way, but *without* the
-/// `NotesWithLyrics` floor: those extra lines only exist at all when the
-/// composer wrote positionally-attached bare lines after this part's notes
-/// line, so zero attached lines means zero verses, not one implicit-fill verse.
+/// A `Notes`/`Chords` part picks up extra `Lyrics` roles when the composer
+/// wrote positionally-attached bare lines (or repeated `[Key]` lines) after
+/// this part's notes line: zero attached lines means zero verses, one
+/// attached line means one verse, and so on. `Percussion` is excluded from
+/// positional-lyrics eligibility — see module docs.
 ///
 /// Other kinds keep their static role list.
-fn roles_for_group(
-    decl: &PartDecl,
-    key_lines: Option<&[SourceLine]>,
-    follow_target_roles: Option<&[ScoreLineRole]>,
-) -> Vec<ScoreLineRole> {
+fn roles_for_group(decl: &PartDecl, key_lines: Option<&[SourceLine]>) -> Vec<ScoreLineRole> {
     match (decl.kind, key_lines) {
-        (PartKind::NotesWithLyrics, Some(lines)) => {
-            let verse_count = lines.len().saturating_sub(1).max(1);
-            std::iter::once(ScoreLineRole::Notes)
-                .chain(itertools::repeat_n(ScoreLineRole::Lyrics, verse_count))
-                .collect()
-        }
-        (PartKind::NotesWithLyrics, None) => follow_target_roles
-            .map(|roles| roles.to_vec())
-            .unwrap_or_else(|| decl.score_line_roles().to_vec()),
-        (PartKind::Lyrics, Some(lines)) => {
-            let verse_count = lines.len().max(1);
-            itertools::repeat_n(ScoreLineRole::Lyrics, verse_count).collect()
-        }
         (PartKind::Notes | PartKind::Chords, Some(lines)) if lines.len() > 1 => {
             let verse_count = lines.len() - 1;
             let base_role = decl
@@ -271,13 +244,7 @@ fn resolve_tracks(
                 .position(|d| &d.abbreviation == target)
         });
 
-        let roles = roles_for_group(
-            decl,
-            key_lines,
-            follow_target_index
-                .and_then(|t| roles_per_track.get(t))
-                .map(Vec::as_slice),
-        );
+        let roles = roles_for_group(decl, key_lines);
 
         let track_lines: Vec<SourceLine> = roles
             .iter()

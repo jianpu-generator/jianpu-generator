@@ -106,7 +106,7 @@ mod tests {
             "author = \n",
             "\n",
             "# parts\n",
-            "Alto 1 & Tenor [A1,T] = notes+lyrics\n",
+            "Alto 1 & Tenor [A1,T] = notes\n",
             "Alto 2 [A2] = follow[A1,T]\n",
             "Soprano 1 [S1] = follow[A1,T]\n",
             "Soprano 2 [S2] = follow[S1]\n",
@@ -116,11 +116,11 @@ mod tests {
             "# score\n",
             "bpm=80 key=C4 time=4/4 label=\"Verse 1\"\n",
             "[A1,T] 5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_\n",
-            "[A1,T] la la la la la la la la la\n",
+            "la la la la la la la la la\n",
             "[C] 1\n",
             "\n",
             "[A1,T] 3_) (1_1-) 0_ 1= 1=\n",
-            "[A1,T] la la la\n",
+            "la la la\n",
             "[C] 6m/3\n",
         );
         let spans = list_measure_spans_from_source(source, "test.jianpu")
