@@ -77,7 +77,17 @@ ttf-parser = { version = "0.25.1", default-features = false, features = ["std"] 
 base64 = "0.22"
 
 [dev-dependencies]
+cucumber = "0.23.0"
 quickcheck = "1"
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros"] }
+
+[[test]]
+name = "cucumber"
+harness = false
+
+[[test]]
+name = "format_score_cucumber"
+harness = false
 
 [lints]
 workspace = true

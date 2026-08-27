@@ -1,5 +1,5 @@
 //! [`format_score`]: a best-effort formatter for the Zipped (normal) editor
-//! view. Two independent cleanups run per `# score` measure group:
+//! view. Three independent cleanups run per `# score` measure group:
 //!
 //! 1. **Redundant-line removal.** A `[Key]` data line is dropped when it is
 //!    exactly what the existing implicit-fill machinery
@@ -11,7 +11,12 @@
 //!    with real content, since that would shift the later verse into the
 //!    earlier one's slot. `follow[X]` parts are never touched (their
 //!    implicit fill is the follow target's content, not rest).
-//! 2. **Whitespace normalization.** Every directive line and surviving data
+//! 2. **Part-order sorting.** A key's surviving lines are moved together as
+//!    one block to the position matching that part's order in `# parts`,
+//!    regardless of how the lines were interleaved in the source. A key
+//!    that can't be resolved to a declared part keeps its original relative
+//!    position, ordered after every recognised part.
+//! 3. **Whitespace normalization.** Every directive line and surviving data
 //!    line has its runs of internal whitespace collapsed to one space
 //!    (quote-aware for directive lines, so `label="Two Words"` survives as a
 //!    single token).
@@ -57,15 +62,15 @@ pub fn format_score(source: &str) -> String {
         .map(|group| format_group(group, &declarations))
         .collect();
 
-    // Validate that the filtered groups still desugar cleanly (best-effort
-    // safety net — `desugar_groups` is not used for rendering here: it
-    // always materializes exactly one line per declared part per group
-    // regardless of whether that part had an explicit line, which would put
-    // every dropped fixed-schema (Notes/Chords/Percussion) rest line right
-    // back. The actual output is built directly from `filtered_groups`
-    // below, so intentionally-dropped lines stay dropped and real `.jianpu`
-    // parsing's own implicit-fill covers them, exactly as it already does
-    // for any measure group that omits a part's line.
+    // Validate that the filtered/reordered groups still desugar cleanly
+    // (best-effort safety net — `desugar_groups` is not used for rendering
+    // here: it always materializes exactly one line per declared part per
+    // group regardless of whether that part had an explicit line, which
+    // would put every dropped fixed-schema (Notes/Chords/Percussion) rest
+    // line right back. The actual output is built directly from
+    // `filtered_groups` below, so intentionally-dropped lines stay dropped
+    // and real `.jianpu` parsing's own implicit-fill covers them, exactly as
+    // it already does for any measure group that omits a part's line.
     if desugar::desugar_groups(filtered_groups.clone(), &declarations, score_offset).is_err() {
         return source.to_string();
     }
@@ -173,10 +178,11 @@ struct KeyLines<'a> {
     decl: Option<&'a PartDecl>,
 }
 
-/// Builds the filtered/whitespace-normalized raw measure group for `group`:
-/// directive line(s) normalized, unparseable data lines passed through
-/// untouched, and eligible trailing redundant `[Key]` lines dropped from the
-/// rest (see module docs).
+/// Builds the filtered/reordered/whitespace-normalized raw measure group for
+/// `group`: directive line(s) normalized, unparseable data lines passed
+/// through untouched, eligible trailing redundant `[Key]` lines dropped, and
+/// surviving `[Key]` blocks sorted into `# parts` declaration order (see
+/// module docs).
 fn format_group(group: &[RawSourceLine], declarations: &[PartDecl]) -> Vec<RawSourceLine> {
     let directive_count = parser::score::measure_group::directive_line_count(group);
     let directive_lines = group.get(..directive_count).unwrap_or(&[]);
@@ -232,25 +238,119 @@ fn format_group(group: &[RawSourceLine], declarations: &[PartDecl]) -> Vec<RawSo
         }
     }
 
+    let normalized_data_lines: Vec<RawSourceLine> = data_lines
+        .iter()
+        .zip(parsed.iter())
+        .map(|((line, offset), entry)| {
+            let normalized = match entry {
+                Some((key, content)) => format!("[{key}] {}", normalize_data_line(content)),
+                None => line.clone(),
+            };
+            (normalized, *offset)
+        })
+        .collect();
+
     let mut result: Vec<RawSourceLine> = directive_lines
         .iter()
         .map(|(content, offset)| (normalize_directive_line(content), *offset))
         .collect();
-    result.extend(
-        data_lines
-            .iter()
-            .zip(parsed.iter())
-            .zip(removable.iter())
-            .filter(|(_, drop)| !**drop)
-            .map(|(((line, offset), entry), _)| {
-                let normalized = match entry {
-                    Some((key, content)) => format!("[{key}] {}", normalize_data_line(content)),
-                    None => line.clone(),
-                };
-                (normalized, *offset)
-            }),
-    );
+    result.extend(sort_data_lines_by_declaration(
+        normalized_data_lines,
+        &parsed,
+        &removable,
+        declarations,
+    ));
     result
+}
+
+/// A key's surviving data lines, or one unparseable line, as a unit that
+/// moves together when reordering.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+enum DataLineBlockKey<'a> {
+    Key(&'a str),
+    /// Carries the line's original index so each unparseable line is its
+    /// own block, distinct from every other.
+    Unparsed(usize),
+}
+
+/// Groups surviving data lines into blocks — every occurrence of a key
+/// travels together, regardless of how interleaved with other keys' lines
+/// it was in the source — and orders the blocks by the part's position in
+/// `# parts`. A block for an unrecognised or unparseable key keeps its
+/// original relative position, ordered after every recognised part (its
+/// content isn't touched here; any resulting invalid document is caught by
+/// `format_score`'s `desugar_groups` safety net).
+fn sort_data_lines_by_declaration<'a>(
+    normalized_data_lines: Vec<RawSourceLine>,
+    parsed: &[Option<(&'a str, &'a str)>],
+    removable: &[bool],
+    declarations: &[PartDecl],
+) -> Vec<RawSourceLine> {
+    let attribution = positional_attribution_keys(parsed);
+
+    // Blocks in first-seen order; a linear scan per line is fine since a
+    // measure group only ever has a handful of distinct keys.
+    let mut blocks: Vec<(DataLineBlockKey<'a>, Vec<RawSourceLine>)> = Vec::new();
+    for (index, ((line, drop), attributed_key)) in normalized_data_lines
+        .into_iter()
+        .zip(removable.iter())
+        .zip(attribution.iter())
+        .enumerate()
+    {
+        if *drop {
+            continue;
+        }
+        let block_key = match attributed_key {
+            Some(key) => DataLineBlockKey::Key(key),
+            None => DataLineBlockKey::Unparsed(index),
+        };
+        match blocks
+            .iter_mut()
+            .find(|(existing, _)| *existing == block_key)
+        {
+            Some((_, lines)) => lines.push(line),
+            None => blocks.push((block_key, vec![line])),
+        }
+    }
+
+    // `sort_by_key` is stable, so blocks with equal rank (including every
+    // unrecognised-key block, which all rank `usize::MAX`) keep their
+    // first-seen relative order.
+    blocks.sort_by_key(|(block_key, _)| match block_key {
+        DataLineBlockKey::Key(key) => declaration_index(key, declarations).unwrap_or(usize::MAX),
+        DataLineBlockKey::Unparsed(_) => usize::MAX,
+    });
+
+    blocks.into_iter().flat_map(|(_, lines)| lines).collect()
+}
+
+/// A key's position in `# parts` declaration order, for sorting purposes.
+/// Unlike `decl_for_key`, this includes `follow[X]` parts (they still have a
+/// declared position to sort by) and returns `None` only for a genuinely
+/// unrecognised key.
+fn declaration_index(key: &str, declarations: &[PartDecl]) -> Option<usize> {
+    declarations.iter().position(|d| d.abbreviation == key)
+}
+
+/// Per data line, the key its content is attributed to for sort-block
+/// membership: an explicit `[Key]`-prefixed line's own key, or — for a bare
+/// (positional) line — whichever `[Key]` line most recently preceded it in
+/// this measure group, mirroring `desugar::attribution::attribute_data_lines`'s
+/// nearest-preceding-key rule. `None` for a bare line with no preceding
+/// `[Key]` line yet (a standalone lyrics caption): it isn't resolved to its
+/// target part here, so it stays its own unattached block.
+fn positional_attribution_keys<'a>(parsed: &[Option<(&'a str, &'a str)>]) -> Vec<Option<&'a str>> {
+    let mut current_key: Option<&'a str> = None;
+    parsed
+        .iter()
+        .map(|entry| match entry {
+            Some((key, _)) => {
+                current_key = Some(key);
+                Some(*key)
+            }
+            None => current_key,
+        })
+        .collect()
 }
 
 /// Collapses whitespace to single spaces, leaving unparseable lines and
