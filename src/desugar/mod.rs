@@ -1,8 +1,10 @@
 use crate::ast::parsed::{AbbreviationReference, PartDecl, PartKind, ScoreLineRole, ScoreLineSlot};
 use crate::error::{IrrecoverableError, RecoverableError, Span};
 use crate::parser::score::measure_group;
+use attribution::{attribute_data_lines, KeyedLine};
 use key_map::KeyMap;
 
+mod attribution;
 mod key_map;
 
 /// A raw, not-yet-desugared score line: `[Key] content`, paired with its byte offset.
@@ -18,6 +20,13 @@ pub(crate) struct SourceLine {
     /// the composer. Threaded through to `ParsedRest::implicit_fill` so an
     /// omitted part's filled-in rest renders with a distinct glyph.
     pub(crate) is_implicit_fill: bool,
+    /// True when this line was synthesized from a bare (unprefixed) data line
+    /// attributed to `key` by the positional-lyrics attribution algorithm,
+    /// rather than carrying a literal `[Abbrev]` prefix written by the
+    /// composer. Threaded through so `abbreviation_references` can exclude
+    /// it (there is no literal abbreviation token in source to reference)
+    /// and so `key_map.rs`'s fixed-schema capacity check can ignore it.
+    pub(crate) is_positional: bool,
 }
 
 type MeasureGroup = Vec<SourceLine>;
@@ -104,37 +113,6 @@ struct GroupContext {
     time_num: u8,
 }
 
-struct KeyedLine {
-    key: String,
-    content: String,
-    content_offset: usize,
-    key_prefix_span: Span,
-    /// Span of just the trimmed abbreviation text (excluding `[`/`]` and inner
-    /// whitespace), distinct from `key_prefix_span` which covers the whole
-    /// bracketed prefix and must keep doing so for `part_key_unknown`'s error span.
-    key_span: Span,
-}
-
-fn key_prefix_span_in_line(line: &str, line_offset: usize, base_offset: usize) -> Span {
-    let end = line
-        .find(']')
-        .map(|index| index + 1)
-        .unwrap_or_else(|| line.len().min(1));
-    Span::new(base_offset + line_offset, base_offset + line_offset + end)
-}
-
-/// Span of just the trimmed abbreviation text inside a `[Key]` prefix, e.g. for
-/// `[ Sop ] 1 2 3 4` this is the span of `Sop`, excluding brackets/whitespace.
-fn key_span_in_line(line: &str, line_offset: usize, base_offset: usize) -> Option<Span> {
-    let inner = line.strip_prefix('[')?;
-    let close = inner.find(']')?;
-    let raw_key = &inner[..close];
-    let leading_ws = raw_key.len() - raw_key.trim_start().len();
-    let trimmed = raw_key.trim();
-    let key_start = base_offset + line_offset + 1 + leading_ws;
-    Some(Span::new(key_start, key_start + trimmed.len()))
-}
-
 fn expand_measure_group(
     group: &[RawSourceLine],
     declarations: &[PartDecl],
@@ -160,32 +138,16 @@ fn expand_measure_group(
     };
 
     let mut recoverable_error: Option<RecoverableError> = None;
-    let mut keyed: Vec<KeyedLine> = Vec::new();
-
-    for (line, offset) in data_lines {
-        if let Some((key, content)) = parse_key_prefix(line) {
-            let prefix_length = line.len().saturating_sub(content.len());
-            let key_span = key_span_in_line(line, *offset, base_offset)
-                .unwrap_or_else(|| key_prefix_span_in_line(line, *offset, base_offset));
-            keyed.push(KeyedLine {
-                key: key.to_string(),
-                content: content.to_string(),
-                content_offset: *offset + prefix_length,
-                key_prefix_span: key_prefix_span_in_line(line, *offset, base_offset),
-                key_span,
-            });
-        } else {
-            recoverable_error.get_or_insert_with(|| {
-                RecoverableError::score_line_missing_key_prefix(Span::new(
-                    base_offset + offset,
-                    base_offset + offset + 1,
-                ))
-            });
-        }
-    }
+    let keyed = attribute_data_lines(
+        data_lines,
+        declarations,
+        base_offset,
+        &mut recoverable_error,
+    );
 
     let abbreviation_references: Vec<AbbreviationReference> = keyed
         .iter()
+        .filter(|line| !line.is_positional)
         .map(|line| AbbreviationReference {
             abbreviation: line.key.clone(),
             span: line.key_span,
@@ -219,6 +181,7 @@ fn expand_measure_group(
             content: content.clone(),
             offset: *offset,
             is_implicit_fill: false,
+            is_positional: false,
         })
         .collect();
     result.extend(result_data);
@@ -240,7 +203,16 @@ fn expand_keyed(
 /// For `NotesWithLyrics`, the number of `Lyrics` roles is the number of
 /// consecutive `[Part]` lyric lines actually written after the notes line in
 /// this group (verses 1..N), defaulting to a single implicit-fill verse when
-/// no lyrics line was written at all. Other kinds keep their static role list.
+/// no lyrics line was written at all.
+///
+/// A `Notes`/`Chords` part (any fixed-schema, notes-bearing kind except
+/// `Percussion`, which is excluded from positional-lyrics eligibility — see
+/// module docs) picks up extra `Lyrics` roles the same way, but *without* the
+/// `NotesWithLyrics` floor: those extra lines only exist at all when the
+/// composer wrote positionally-attached bare lines after this part's notes
+/// line, so zero attached lines means zero verses, not one implicit-fill verse.
+///
+/// Other kinds keep their static role list.
 fn roles_for_group(
     decl: &PartDecl,
     key_lines: Option<&[SourceLine]>,
@@ -259,6 +231,17 @@ fn roles_for_group(
         (PartKind::Lyrics, Some(lines)) => {
             let verse_count = lines.len().max(1);
             itertools::repeat_n(ScoreLineRole::Lyrics, verse_count).collect()
+        }
+        (PartKind::Notes | PartKind::Chords, Some(lines)) if lines.len() > 1 => {
+            let verse_count = lines.len() - 1;
+            let base_role = decl
+                .score_line_roles()
+                .first()
+                .copied()
+                .unwrap_or(ScoreLineRole::Notes);
+            std::iter::once(base_role)
+                .chain(itertools::repeat_n(ScoreLineRole::Lyrics, verse_count))
+                .collect()
         }
         _ => decl.score_line_roles().to_vec(),
     }
@@ -313,6 +296,7 @@ fn resolve_tracks(
                     content: implicit_fill(role, context.time_num),
                     offset: context.pad_offset,
                     is_implicit_fill: true,
+                    is_positional: false,
                 }
             })
             .collect();

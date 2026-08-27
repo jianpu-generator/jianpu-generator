@@ -1,7 +1,8 @@
 use crate::ast::parsed::{PartDecl, PartKind};
 use crate::error::{RecoverableError, Span};
 
-use super::{GroupContext, KeyedLine, SourceLine};
+use super::attribution::KeyedLine;
+use super::{GroupContext, SourceLine};
 
 pub(super) type KeyMap = Vec<(String, Vec<SourceLine>)>;
 
@@ -14,6 +15,7 @@ fn group_by_key(lines: Vec<KeyedLine>) -> KeyMap {
             content: line.content,
             offset: line.content_offset,
             is_implicit_fill: false,
+            is_positional: line.is_positional,
         };
         if let Some(existing) = map.iter_mut().find(|(k, _)| k == &line.key) {
             existing.1.push(entry);
@@ -50,8 +52,13 @@ pub(super) fn filter_keyed_into_key_map(
             if matches!(decl.kind, PartKind::NotesWithLyrics | PartKind::Lyrics) {
                 continue;
             }
+            // Positionally-attached bare lines don't count against a
+            // fixed-schema part's slot count — they can be arbitrarily many
+            // (one per lyric verse). Only genuinely duplicated `[Abbrev]`-
+            // prefixed lines trip this check.
+            let non_positional_count = lines.iter().filter(|l| !l.is_positional).count();
             let slot_count = decl.score_line_roles().len();
-            if let Some(excess) = lines.get(slot_count) {
+            if let Some(excess) = lines.iter().filter(|l| !l.is_positional).nth(slot_count) {
                 let line_span = Span::new(
                     context.base_offset + excess.offset,
                     context.base_offset + excess.offset + 1,
@@ -60,10 +67,7 @@ pub(super) fn filter_keyed_into_key_map(
                     RecoverableError::general(
                         line_span,
                         format!(
-                            "part [{}] has {} lines but only {} slot(s)",
-                            abbrev,
-                            lines.len(),
-                            slot_count
+                            "part [{abbrev}] has {non_positional_count} lines but only {slot_count} slot(s)"
                         ),
                     )
                 });

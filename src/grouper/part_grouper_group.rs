@@ -92,11 +92,14 @@ pub(in crate::grouper) fn group_timed_track(
     Ok(grouped)
 }
 
-/// Attaches a track's parsed lyric syllables to its grouped measures, per
-/// `part_kind`: a `NotesWithLyrics` part tie-pairs each verse's syllables
-/// against its own notes (see `attach_paired_lyrics`); a standalone `Lyrics`
-/// part has no notes to pair against, so each verse's syllables just become
-/// that measure's rendered lyric line as-is. Other kinds carry no lyrics.
+/// Attaches a track's parsed lyric syllables to its grouped measures. A
+/// standalone `Lyrics` part has no notes to pair against, so each verse's
+/// syllables just become that measure's rendered lyric line as-is. Every
+/// other kind (including `Notes` carrying positionally-attached lyrics, or
+/// `NotesWithLyrics`) tie-pairs each verse's syllables against its own notes
+/// whenever it actually has syllables to attach (see `attach_paired_lyrics`)
+/// — this is data-presence-based, not kind-based, so a plain `notes` part
+/// with no lyrics attached this pass carries none.
 fn attach_lyrics(
     part_kind: PartKind,
     measures: &mut [GroupedMeasure],
@@ -106,14 +109,6 @@ fn attach_lyrics(
     part_abbreviation: &str,
 ) -> Result<(), IrrecoverableError> {
     match part_kind {
-        PartKind::NotesWithLyrics => {
-            let lyrics_spans: Vec<Span> = lyrics_measure_starts
-                .iter()
-                .zip(lyrics_measure_ends.iter())
-                .map(|(&start, &end)| Span::new(start, end))
-                .collect();
-            attach_paired_lyrics(measures, measure_syllables, lyrics_spans, part_abbreviation)?;
-        }
         PartKind::Lyrics => {
             if let Some(measure_syllables) = measure_syllables {
                 for (measure, verses) in measures.iter_mut().zip(measure_syllables) {
@@ -121,7 +116,16 @@ fn attach_lyrics(
                 }
             }
         }
-        PartKind::Chords | PartKind::Notes | PartKind::Percussion => {}
+        _ => {
+            if measure_syllables.is_some() {
+                let lyrics_spans: Vec<Span> = lyrics_measure_starts
+                    .iter()
+                    .zip(lyrics_measure_ends.iter())
+                    .map(|(&start, &end)| Span::new(start, end))
+                    .collect();
+                attach_paired_lyrics(measures, measure_syllables, lyrics_spans, part_abbreviation)?;
+            }
+        }
     }
     Ok(())
 }

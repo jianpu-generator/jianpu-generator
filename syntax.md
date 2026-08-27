@@ -161,7 +161,7 @@ bpm=92 key=C4 time=4/4 label="Verse 1"
 ### Group layout
 
 1. **Optional directive line** — first line containing at least one directive keyword (`bpm=`, `key=`, `time=`, `label=`, `merge_duplicate_measures_across_parts=`, or `hide_resting_parts=`)
-2. **Data lines** — every data line **must** begin with a `[Abbrev]` prefix (see below); there are no unprefixed/positional lines
+2. **Data lines** — most data lines begin with a `[Abbrev]` prefix (see below); a bare line with no prefix is also allowed, as a **positional lyrics line** (see [Multiple verses](#multiple-verses) and [Standalone `lyrics` parts](#standalone-lyrics-parts))
 
 Lines are trimmed; leading/trailing spaces on a line are ignored. A completely empty line separates measure groups (it is not a data line).
 
@@ -173,11 +173,11 @@ Every data line must begin with `[Abbrev]` to route it to a specific part by abb
 [A2] 5 6 7 0
 ```
 
-- A data line with no `[Abbrev]` prefix is a recoverable error; the line is dropped.
 - Any number of `[Key]` lines may appear for the same part; they fill that part's slots in declaration order (first line → first slot, second line → second slot, …).
 - An unrecognised abbreviation is an error; the line is dropped.
 - Parts not covered by any `[Key]` line use their `follow[X]` target's content when declared as such, or are filled with implicit rests/no-lyrics otherwise.
-- A measure group with zero valid keyed lines is an error (`measure_no_data_lines`).
+- A data line with no `[Abbrev]` prefix is a **positional lyrics line**, not an error: it attaches to whichever part's `[Key]` line most recently preceded it in this measure group (or, if none preceded it, stands alone as a caption — see [Multiple verses](#multiple-verses) and [Standalone `lyrics` parts](#standalone-lyrics-parts)). Only if the measure group has no `[Key]` line above it *and* no declared `lyrics`-kind part to fall back on does it stay a `score_line_missing_key_prefix` error, dropped as before.
+- A measure group with zero valid keyed *and* zero positionally-attributed lines is an error (`measure_no_data_lines`).
 
 **Row label when parts render as one unison row:** when two or more parts' compiled content ends up identical for a system (a system being one printed line of music, spanning however many measures were packed onto it), the renderer merges them into a single row, labeled by concatenating the merged parts' own abbreviations with a space (e.g. `S1 S2`).
 
@@ -609,6 +609,25 @@ Each verse row also gets its own label at the left margin, showing the part's ab
 
 The number of verse lines is per-measure: one measure can have one verse while the next has two. A part's verse count changing from one measure to the next no longer forces a new system: a system's verse rows for a part are the union of every verse it has across the system's measures (see [Not-mentioned parts](#not-mentioned-parts) below), and a measure missing a verse renders that row blank for that measure only.
 
+### Positional (unprefixed) lyrics lines
+
+A verse line no longer needs a `[Key]` prefix, and no longer needs the part it's tied to be declared `notes+lyrics`. A bare (unprefixed) data line attaches to whichever part's `[Key]` line most recently preceded it in the measure group — this works for any notes-bearing declared kind (`notes`, `chords`; not `percussion`, which has no lyrics pairing), not just `notes+lyrics`:
+
+```
+# parts
+Melody = notes
+
+# score
+[Melody] 1 2 3 4
+la la la la
+```
+
+- Consecutive bare lines after the same `[Key]` line become verses 1, 2, … , the same way repeated `[Part]` lines do for `notes+lyrics` above.
+- When two parts' `[Key]` lines both precede a bare line, it attaches to the **nearer** one only (the most recent `[Key]` line, not every preceding one). To attach the same words to two parts, write the line twice, once after each part's `[Key]` line.
+- A bare line with no `[Key]` line above it yet in the measure is a **standalone** lyrics block instead — see below.
+- `notes+lyrics`/`lyrics` declared kinds are kept for backward compatibility and continue to work exactly as documented above; positional attachment is additive, not a replacement, and is expected to be the preferred form going forward.
+- One accepted trade-off: since any bare line is now valid syntax, a composer who forgets a second part's `[Key]` prefix (meaning to write that part's notes) no longer gets an error — the line is silently absorbed as a positionally-attached lyrics line instead. Previously this was a hard `score_line_missing_key_prefix` error.
+
 ### Standalone `lyrics` parts
 
 A `lyrics`-kind part (see [Right-hand side](#right-hand-side)) is lyrics-only and **adurational** — it has no notes of its own, so nothing to tie syllables to. Every `[Abbrev]` line for it is a full verse line, not a stream of per-note syllables: the whole line renders as **one** left-aligned text block spanning the entire measure's width, however many columns that measure's other parts need.
@@ -626,6 +645,22 @@ Caption [C] = lyrics
 - Unlike `notes+lyrics`, there is no leading notes line to pair against — every consecutive `[Abbrev]` line is itself a verse (verse 1, verse 2, …), the same way extra `notes+lyrics` verse lines work. Each verse row gets its own label too (the part's abbreviation, e.g. `C` on every row), clickable/drag-selectable the same way.
 - `tokenize_lyrics`' word/CJK-character splitting still applies, but only to decide the rendered text (syllables are rejoined with spaces) — a `lyrics` part has no per-syllable columns, no `-` held-syllable semantics, and no lyrics–notes tally check.
 - A wide `lyrics` line can widen its measure past what the other parts' notes alone would need, since the block competes for the measure's total pixel width even though it never affects the measure's column *count*.
+
+**Positional form:** a bare (unprefixed) line with no `[Key]` line above it yet in the measure group attaches the same way, *without* declaring a `lyrics`-kind part at all — as long as exactly one part is declared `lyrics`:
+
+```
+# parts
+Caption = lyrics
+Alto = notes
+Tenor = notes
+
+# score
+a caption for this measure unrelated to any note
+[Alto] 1 2 3 4
+[Tenor] 5 6 7 1
+```
+
+Here the bare first line attaches to `Caption` because it's the only `lyrics`-kind part declared. If the score declares **two or more** `lyrics`-kind parts, a leading bare line is ambiguous and is dropped with a recoverable error instead of guessing; if it declares **none**, the line falls back to the ordinary positional-attachment rule (nearest preceding `[Key]` line), and if there's no preceding `[Key]` line either, it's the same `score_line_missing_key_prefix` error as before this feature.
 
 ---
 
@@ -731,7 +766,8 @@ When a part is **not mentioned** in a measure (no `[Key]` line covers it), it is
 | Part not mentioned; declared as `follow[X]` | Copies X's content; row suppressed |
 | Part not mentioned; no follow target; notes/chord slot | Silently filled with rests (`0`) |
 | Part not mentioned; no follow target; lyrics slot | Silently filled with no-lyrics (`_`) |
-| Data line missing `[Abbrev]` prefix | Error; line dropped |
+| Data line missing `[Abbrev]` prefix, with a `[Key]` line earlier in the measure, or exactly one `lyrics`-kind part declared | Not an error — positional lyrics line (see [Positional (unprefixed) lyrics lines](#positional-unprefixed-lyrics-lines)) |
+| Data line missing `[Abbrev]` prefix, with no preceding `[Key]` line and zero or 2+ `lyrics`-kind parts declared | Error; line dropped (`score_line_missing_key_prefix`, or `positional_lyrics_ambiguous_standalone_target` for 2+) |
 | `[Key]` line with unrecognised abbreviation | Error; line dropped |
 | No valid keyed lines in a measure group | Error (`measure_no_data_lines`) |
 
@@ -762,6 +798,7 @@ Measure 2: A plays `1 - - -`, B plays `1 2 3 4`.
 | *(omitted)* | any | Rest fill or follow-target copy; row suppressed |
 | `(...)` | directive | Global bpm/key/time/label for this bar |
 | `[Abbrev] <content>` | notes, lyrics, chord | Key-based line targeting the named part by abbreviation |
+| `<content>` (no `[Abbrev]`) | lyrics | Positional lyrics line — attaches to the nearest preceding `[Key]` line's part, or stands alone if none precedes it (see [Positional (unprefixed) lyrics lines](#positional-unprefixed-lyrics-lines)) |
 
 ---
 

@@ -306,6 +306,7 @@ fn implicit_source_line(offset: usize) -> SourceLine {
         content: "_".to_string(),
         offset,
         is_implicit_fill: false,
+        is_positional: false,
     }
 }
 

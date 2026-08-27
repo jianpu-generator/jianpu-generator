@@ -245,9 +245,26 @@ fn process_bar_group(
     for counter in ctx.bar_lyric_verse_counters.iter_mut() {
         *counter = 0;
     }
+    // Every syllable-carrying track gets one measure_syllables bucket per bar
+    // group, whether or not it actually has a lyric line written in this
+    // group — a fixed-schema part (e.g. `notes`) with positionally-attached
+    // lyrics may have a `Lyrics` role in some groups and not others, unlike
+    // `NotesWithLyrics`/`Lyrics` parts, which always carry a (possibly
+    // implicit-fill) lyric line every group. `lyrics_line_starts`/`_ends` must
+    // stay aligned to that same per-group cadence (one entry per bar group)
+    // so `attach_paired_lyrics`'s zip against `measures` doesn't silently
+    // truncate to however many groups actually had a written lyric line.
+    // Placeholder start/end are overwritten in place (not pushed again) by
+    // `process_lyrics_column_line` if this group does turn out to have one.
+    let group_start_offset = group_lines
+        .first()
+        .map(|line| ctx.base_offset + line.offset)
+        .unwrap_or(ctx.base_offset);
     for acc in ctx.accumulators.iter_mut() {
-        if let Some((syllables_vec, ..)) = notes_syllables_mut(acc)? {
+        if let Some((syllables_vec, line_starts, line_ends)) = notes_syllables_mut(acc)? {
             syllables_vec.push(Vec::new());
+            line_starts.push(group_start_offset);
+            line_ends.push(group_start_offset);
         }
     }
 

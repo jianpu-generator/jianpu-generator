@@ -2,7 +2,6 @@ use crate::ast::grouped::{
     GroupedMeasure, GroupedScore, GroupedTrack, Lyrics, MeasureDirectives, MultiPartMeasure, Notes,
     PartRow, PartSlice, DEFAULT_HIDE_RESTING_PARTS, DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
 };
-use crate::ast::parsed::PartKind;
 use crate::error::{Diagnostic, RecoverableError, Span};
 
 fn collect_part_measure_diagnostics(m: Option<&GroupedMeasure>) -> Vec<Diagnostic> {
@@ -188,15 +187,12 @@ fn build_part_rows(
                     ));
                     continue;
                 };
-                let lyrics = match part.kind {
-                    PartKind::NotesWithLyrics | PartKind::Lyrics => measure
-                        .paired_lyrics
-                        .iter()
-                        .cloned()
-                        .map(|syllables| Lyrics { syllables })
-                        .collect(),
-                    PartKind::Chords | PartKind::Notes | PartKind::Percussion => Vec::new(),
-                };
+                let lyrics = measure
+                    .paired_lyrics
+                    .iter()
+                    .cloned()
+                    .map(|syllables| Lyrics { syllables })
+                    .collect();
                 let slice = PartSlice {
                     name: part.name.clone(),
                     kind: part.kind,

@@ -72,7 +72,13 @@ fn single_unnamed_part_no_lyrics() {
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(tracks.len(), 1);
     let notes = notes_track(&tracks, "");
-    assert!(notes.lyrics.is_none());
+    // `Notes` parts now always carry a (possibly empty) lyrics structure, so
+    // positionally-attached bare lines have somewhere to land; with none
+    // written here, every measure has zero verses.
+    assert!(notes
+        .lyrics
+        .as_ref()
+        .is_some_and(|l| l.measure_syllables.iter().all(Vec::is_empty)));
     assert_eq!(all_events(notes).len(), 7);
 }
 
@@ -88,6 +94,24 @@ fn single_part_with_lyrics() {
         notes.lyrics.as_ref().unwrap().measure_syllables[0][0].len(),
         4
     );
+}
+
+#[test]
+fn plain_notes_part_accepts_positionally_attached_lyrics_line() {
+    // Unlike `single_part_with_lyrics` above (a `NotesWithLyrics` fixture),
+    // this declares a plain `notes` part; the trailing bare line has no
+    // `[Key]` prefix at all and attaches to it positionally.
+    let content = "time=4/4 key=C4 bpm=120\n[] 1 2 3 4\ndo re mi fa\n";
+    let declarations = vec![decl("", PartKind::Notes)];
+    let tracks = parse(content, 0, &declarations).unwrap();
+    assert_eq!(tracks.len(), 1);
+    let notes = notes_track(&tracks, "");
+    assert!(notes.lyrics.is_some());
+    assert_eq!(
+        notes.lyrics.as_ref().unwrap().measure_syllables[0][0].len(),
+        4
+    );
+    assert_eq!(total_lyrics_syllables(notes), 4);
 }
 
 #[test]

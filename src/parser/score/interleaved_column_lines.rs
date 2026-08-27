@@ -110,9 +110,19 @@ fn process_lyrics_column_line(
             ));
         };
         current_measure.push(syllables);
+        // `line_starts`/`line_ends` already have a placeholder entry for this
+        // bar group (pushed once per group in `process_bar_group`, alongside
+        // this same track's `syllables_vec` bucket) — overwrite it in place
+        // rather than pushing again, so the two stay 1:1 with `measures`
+        // even for a group where this line is the track's first lyric line
+        // ever written.
         if verse == 0 {
-            line_starts.push(line_span.start);
-            line_ends.push(line_span.end);
+            if let Some(start) = line_starts.last_mut() {
+                *start = line_span.start;
+            }
+            if let Some(end) = line_ends.last_mut() {
+                *end = line_span.end;
+            }
         } else if let Some(end) = line_ends.last_mut() {
             *end = line_span.end;
         }

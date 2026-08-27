@@ -149,8 +149,17 @@ fn parses_two_named_parts() {
             ParsedTrack::Timed(_) => None,
         })
         .unwrap();
-    assert!(soprano.lyrics.is_none());
-    assert!(alto.lyrics.is_none());
+    // `Notes` parts now always carry a (possibly empty) lyrics structure, so
+    // positionally-attached bare lines have somewhere to land; with none
+    // written here, every measure has zero verses.
+    assert!(soprano
+        .lyrics
+        .as_ref()
+        .is_some_and(|l| l.measure_syllables.iter().all(Vec::is_empty)));
+    assert!(alto
+        .lyrics
+        .as_ref()
+        .is_some_and(|l| l.measure_syllables.iter().all(Vec::is_empty)));
 }
 
 #[test]
