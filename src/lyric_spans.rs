@@ -1,5 +1,4 @@
 use crate::ast::grouped::NoteEvent;
-use crate::ast::parsed::PartKind;
 use crate::compiler::visible_part_indices;
 use crate::error::IrrecoverableError;
 
@@ -106,9 +105,9 @@ pub fn list_lyric_spans_from_source(
                 };
 
                 // Mirrors `process_events`'s own gate exactly: only a
-                // non-tie-continuation `Note` event in a `notes+lyrics` part
+                // non-tie-continuation `Note` event on a part carrying lyrics
                 // ever consumes a syllable from each verse.
-                if slice.kind == PartKind::NotesWithLyrics
+                if !lyrics_iters.is_empty()
                     && !is_tie_continuation
                     && matches!(event, NoteEvent::Note(_))
                 {

@@ -64,6 +64,37 @@ time=4/4 key=C4 bpm=120
     assert_eq!(verse_texts(1), vec!["one", "two", "three", "four"]);
 }
 
+/// A plain `notes` part (not `notes+lyrics`) with a positionally-attached
+/// bare lyric line: exercises the full compile -> `PartSlice` path, catching
+/// any regression in `compiler::part_slice::process_events`'s gate that
+/// cucumber (which only inspects `PartSlice` fields directly, not rendering
+/// behavior) can't see.
+#[test]
+fn positional_lyrics_on_plain_notes_part_reach_part_slice() {
+    let input = r#"# metadata
+title = "t"
+author = "a"
+
+# parts
+Melody = notes
+
+# score
+time=4/4 key=C4 bpm=120
+[Melody] 1 2 3 4
+la la la la
+"#;
+    let score = compile(input, "test.jianpu", &[]).unwrap();
+    let slice = score.measures[0].parts[0].slice();
+    assert!(matches!(slice.kind, PartKind::Notes));
+    assert_eq!(slice.lyrics.len(), 1);
+    let verse_texts: Vec<String> = slice.lyrics[0]
+        .syllables
+        .iter()
+        .map(|s| s.text.clone())
+        .collect();
+    assert_eq!(verse_texts, vec!["la", "la", "la", "la"]);
+}
+
 /// A part whose verse count changes between two consecutive measures no
 /// longer forces a new system: systems pack purely by count, and a system's
 /// rows become the union of every verse used across its measures (see the

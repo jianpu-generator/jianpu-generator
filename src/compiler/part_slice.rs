@@ -109,7 +109,7 @@ fn process_events(state: &mut PartState<'_>, slice: &PartSlice) {
             NoteEvent::Note(note) => {
                 let is_tie_continuation = *state.prev_tie;
                 let lyrics: Vec<ElementContent> =
-                    if slice.kind == PartKind::NotesWithLyrics && !is_tie_continuation {
+                    if !lyrics_iters.is_empty() && !is_tie_continuation {
                         lyrics_iters
                             .iter_mut()
                             .enumerate()
