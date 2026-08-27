@@ -152,6 +152,28 @@ export function getBarLineMeasureAtPoint(
 }
 
 /**
+ * Resolves a click/drag point that's over a measure's own bar number (drawn
+ * in the directive row above the musical rows — `[data-tag="bar-number"]`,
+ * see `BarNumberClickTarget`/`Tag::BarNumber`) to that measure's range.
+ *
+ * A bar number sits outside every note's own click target, so without this
+ * check a plain click there falls through to the nearest-note fallback in
+ * `previewMouseDownHandler.ts` instead of selecting the whole measure. Kept
+ * as its own unconditional (no Cmd/Ctrl needed) check there, mirroring
+ * `getBarLineMeasureAtPoint`'s bar-line-handle check: landing on the bar
+ * number itself is an unambiguous request to select that measure.
+ */
+export function getBarNumberMeasureAtPoint(
+  x: number,
+  y: number,
+): MeasureRange | undefined {
+  const hit = document.elementFromPoint(x, y)
+  const group = hit?.closest('[data-tag="bar-number"]')
+  if (!group) return undefined
+  return measureRangeFromElement(group as HTMLElement)
+}
+
+/**
  * Elements a click/hover point can resolve a measure range from:
  * `[data-tag="measure"]` (a measure's own musical-row body) and
  * `[data-tag="bar-number"]` (that same measure's own bar number, drawn in

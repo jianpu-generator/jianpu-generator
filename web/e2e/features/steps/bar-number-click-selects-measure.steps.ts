@@ -104,15 +104,31 @@ When('I Cmd\\/Ctrl-click the bar number for measure 0', async ({ page }) => {
   if (!box) throw new Error('Could not get bounding box for the bar number.')
 
   // A Cmd/Ctrl-modified plain click (mousedown + mouseup at the same point,
-  // no drag) — a bar number is outside any note's own click target, so a
-  // plain click there now resolves to the nearest note instead of the whole
-  // measure (see `Preview.tsx`'s `onMouseDown`); Cmd/Ctrl is the only
-  // remaining way to reach whole-measure selection here.
+  // no drag) — a bar number's own click target always selects the whole
+  // measure regardless of the modifier (see
+  // `previewMouseDownHandler.ts`'s unconditional bar-number check), so this
+  // exercises the same path a modifier-free click would.
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
   await page.keyboard.down('Control')
   await page.mouse.down()
   await page.mouse.up()
   await page.keyboard.up('Control')
+})
+
+When('I plain-click the bar number for measure 0', async ({ page }) => {
+  await primeMeasureSpans(page)
+
+  const rect = barNumberRect(page)
+  await expect(rect).toBeVisible({ timeout: 5_000 })
+  const box = await rect.boundingBox()
+  if (!box) throw new Error('Could not get bounding box for the bar number.')
+
+  // A plain click (no modifier) — the bar number's own click target always
+  // selects the whole measure, no Cmd/Ctrl required (see
+  // `previewMouseDownHandler.ts`'s unconditional bar-number check).
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.up()
 })
 
 Then(

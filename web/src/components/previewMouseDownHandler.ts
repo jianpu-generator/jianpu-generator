@@ -18,6 +18,7 @@ import {
 } from './previewLabelSelection'
 import {
   getBarLineMeasureAtPoint,
+  getBarNumberMeasureAtPoint,
   getLyricAtPoint,
   getMeasureAtPoint,
   getNoteAtPoint,
@@ -149,6 +150,32 @@ export function handlePreviewMouseDown(
       applyPersistedLyricHighlights(
         container,
         lyricCellsInMeasureRange(lyricSpans, barLineRange),
+      )
+    }
+    e.preventDefault()
+    return
+  }
+  // Grabbing a measure's own bar number (drawn in the directive row above)
+  // always starts a measure-range drag too, no Cmd/Ctrl required — same
+  // rationale as the bar-line-handle check above: landing on the bar number
+  // itself is an unambiguous request to select that measure, unlike a click
+  // on a note/lyric/gutter pixel.
+  const barNumberRange = getBarNumberMeasureAtPoint(e.clientX, e.clientY)
+  if (barNumberRange !== undefined) {
+    dragStateRef.current = {
+      mode: 'measure',
+      anchor: barNumberRange,
+      current: barNumberRange,
+    }
+    const container = previewPagesRef.current
+    if (container) {
+      applyPersistedNoteHighlights(
+        container,
+        noteCellsInMeasureRange(noteSpans, barNumberRange),
+      )
+      applyPersistedLyricHighlights(
+        container,
+        lyricCellsInMeasureRange(lyricSpans, barNumberRange),
       )
     }
     e.preventDefault()
