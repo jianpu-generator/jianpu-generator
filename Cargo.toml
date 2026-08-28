@@ -93,5 +93,9 @@ harness = false
 name = "format_score_cucumber"
 harness = false
 
+[[test]]
+name = "lyric_hover_box_height_cucumber"
+harness = false
+
 [lints]
 workspace = true

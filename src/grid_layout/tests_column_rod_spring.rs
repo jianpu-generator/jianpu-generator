@@ -10,6 +10,7 @@ use crate::ast::parsed::{JianPuPitch, Offset};
 use crate::compiler::types::{
     ColumnElement, Decoration, ElementContent, MeasureBlock, MeasureRow, RowId,
 };
+use crate::coordinate_resolver::LyricFontSizes;
 use crate::grid_layout::expand::expand_system_to_rows;
 use crate::grid_layout::layout::{build_measure_column_layout, directive_line_rod_width};
 use crate::render_config::RenderConfig;
@@ -80,6 +81,10 @@ fn column_widths_and_rods(
         &HashMap::new(),
         &HashMap::new(),
         &measure_layout,
+        LyricFontSizes {
+            base: 18.0,
+            cjk: 21.6,
+        },
     );
     let geometry = rows[0].column_geometry(usable_width_pt, label_width_pt);
     measure_layout
@@ -190,6 +195,10 @@ fn measure_rod_widens_to_fit_a_long_directive_line() {
         &HashMap::new(),
         &HashMap::new(),
         &measure_layout,
+        LyricFontSizes {
+            base: 18.0,
+            cjk: 21.6,
+        },
     );
     let geometry = rows[0].column_geometry(usable_width, label_width);
     let m0 = &measure_layout[0];
@@ -250,6 +259,10 @@ fn two_adjacent_directive_lines_do_not_overlap() {
         &HashMap::new(),
         &HashMap::new(),
         &measure_layout,
+        LyricFontSizes {
+            base: 18.0,
+            cjk: 21.6,
+        },
     );
     let geometry = rows[0].column_geometry(usable_width, label_width);
 
@@ -285,6 +298,10 @@ fn dense_note_column_stays_clear_of_its_trailing_bar_line_even_when_tightly_pack
         &HashMap::new(),
         &HashMap::new(),
         &measure_layout,
+        LyricFontSizes {
+            base: 18.0,
+            cjk: 21.6,
+        },
     );
     let geometry = rows[0].column_geometry(usable_width, label_width);
 

@@ -50,7 +50,10 @@ function noteRects(page: import('@playwright/test').Page) {
 }
 
 function lyricTexts(page: import('@playwright/test').Page) {
-  return page.locator('svg text[dominant-baseline="hanging"]')
+  // Lyric syllables are the only text glyphs tagged with the "lyric" data
+  // variant (see `render_lyric`), so this selector picks them out reliably
+  // regardless of their actual text content.
+  return page.locator('svg text[data-variant="lyric"]')
 }
 
 Given(

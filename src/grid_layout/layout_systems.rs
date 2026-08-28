@@ -3,6 +3,7 @@ use super::{
     lyric_row_height, lyric_row_verse, note_part_height_pt,
 };
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
+use crate::coordinate_resolver::LyricFontSizes;
 use crate::grid_layout::types::GridElement;
 use crate::render_config::RenderConfig;
 use itertools::Itertools;
@@ -69,9 +70,19 @@ pub(crate) fn system_musical_height_pt(
         .sum()
 }
 
-/// Total height in points for lyric rows in a system.
-pub(crate) fn system_lyric_height_pt(block: &MeasureBlock, base: f32) -> f32 {
-    block.rows.iter().filter(|r| super::has_lyrics(r)).count() as f32 * lyric_row_height(base)
+/// Total height in points for lyric rows in a system. Sizes every row for
+/// the CJK lyric font size (always >= the Latin one, see
+/// `RenderConfig::lyric_cjk_font_size`) rather than scanning each row's
+/// actual syllables for CJK text — a deliberately conservative estimate, so
+/// a page never ends up packed tighter than what `expand_lyric_part` (which
+/// does look at each row's real syllables) goes on to render.
+pub(crate) fn system_lyric_height_pt(
+    block: &MeasureBlock,
+    base: f32,
+    lyric_font_sizes: LyricFontSizes,
+) -> f32 {
+    block.rows.iter().filter(|r| super::has_lyrics(r)).count() as f32
+        * lyric_row_height(base, lyric_font_sizes.cjk)
 }
 
 /// Internal sort key used by [`union_row_order`] to order a system's union of
@@ -343,8 +354,10 @@ pub(crate) fn compute_bar_height(
     first: &MeasureBlock,
     base: f32,
     tuplet_part_indices: &HashSet<usize>,
+    lyric_font_sizes: LyricFontSizes,
 ) -> f32 {
-    system_musical_height_pt(first, base, tuplet_part_indices) + system_lyric_height_pt(first, base)
+    system_musical_height_pt(first, base, tuplet_part_indices)
+        + system_lyric_height_pt(first, base, lyric_font_sizes)
 }
 
 pub(crate) fn system_has_any_decoration(system: &[MeasureBlock]) -> bool {

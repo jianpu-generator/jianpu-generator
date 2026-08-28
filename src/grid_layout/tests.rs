@@ -1,6 +1,6 @@
 use crate::ast::parsed::{JianPuPitch, Offset};
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureRow, RowId};
-use crate::grid_layout::types::{GridContent, GridRow};
+use crate::grid_layout::types::GridRow;
 use crate::render_config::RenderConfig;
 
 #[test]
@@ -119,12 +119,11 @@ fn lyric_row(id: &str) -> MeasureRow {
 
 use crate::compiler::types::MeasureBlock;
 use crate::grid_layout::layout::{
-    chord_part_sub_row_heights, expand_system_to_rows, is_chord_only_row, is_lyric_row,
-    note_part_sub_row_heights, pack_into_systems, system_lyric_height_pt, system_musical_height_pt,
+    chord_part_sub_row_heights, is_chord_only_row, is_lyric_row, note_part_sub_row_heights,
+    pack_into_systems,
 };
-use std::collections::{HashMap, HashSet};
 
-fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
+pub(crate) fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
             absorbed_rows: Vec::new(),
@@ -220,167 +219,10 @@ fn blocks_exceeding_max_measures_per_system_split_into_two_systems() {
     assert_eq!(systems[1].len(), 1);
 }
 
-fn make_system_single_note_block() -> Vec<MeasureBlock> {
-    vec![make_block("S", 3)] // 4 musical cols, bar at compiler col 3
-}
-
-#[test]
-fn note_block_expands_to_six_sub_rows_without_tuplet() {
-    let rows = expand_system_to_rows(
-        &make_system_single_note_block(),
-        30.0,
-        &HashMap::new(),
-        &HashMap::new(),
-        &[],
-    );
-    // 1 note part × 6 sub-rows (no `tuplet_bracket` sub-row reserved, since
-    // this system has no tuplet), no lyric.
-    assert_eq!(rows.len(), 6);
-}
-
-#[test]
-fn note_head_element_is_in_sub_row_index_2_without_tuplet() {
-    let rows = expand_system_to_rows(
-        &make_system_single_note_block(),
-        30.0,
-        &HashMap::new(),
-        &HashMap::new(),
-        &[],
-    );
-    let note_row = &rows[2]; // note-head sub-row (no tuplet_bracket sub-row ahead of it)
-    let has_note = note_row
-        .elements
-        .iter()
-        .any(|e| matches!(e.content, GridContent::NoteHead { .. }));
-    assert!(has_note, "note head should be in sub-row 2");
-}
-
-#[test]
-fn bar_line_element_has_positive_height_pt() {
-    let rows = expand_system_to_rows(
-        &make_system_single_note_block(),
-        30.0,
-        &HashMap::new(),
-        &HashMap::new(),
-        &[],
-    );
-    let bar = rows
-        .iter()
-        .flat_map(|r| r.elements.iter())
-        .find(|e| matches!(e.content, GridContent::BarLine { .. }));
-    let bar = bar.expect("should have a BarLine element");
-    if let GridContent::BarLine { height_pt } = bar.content {
-        assert!(height_pt > 0.0, "height_pt={height_pt}");
-    }
-}
-
-fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
-    MeasureBlock {
-        rows: vec![
-            MeasureRow {
-                absorbed_rows: Vec::new(),
-                id: RowId("note".to_string()),
-                label: "note".to_string(),
-                elements: vec![
-                    ColumnElement {
-                        column: 0,
-                        content: ElementContent::NoteHead {
-                            pitch: JianPuPitch::One,
-                            accidental: crate::ast::parsed::Accidental::Natural,
-                            octave: 0,
-                            dotted: false,
-                            double_dotted: false,
-                        },
-                        note_id: None,
-                    },
-                    ColumnElement {
-                        column: bar_col,
-                        content: ElementContent::BarLine,
-                        note_id: None,
-                    },
-                ],
-                source_part_index: 0,
-            },
-            MeasureRow {
-                absorbed_rows: Vec::new(),
-                id: RowId("lyric".to_string()),
-                label: "lyric".to_string(),
-                elements: vec![ColumnElement {
-                    column: 0,
-                    content: ElementContent::Lyric {
-                        text: "la".to_string(),
-                        verse: 0,
-                        note_id: 0,
-                    },
-                    note_id: None,
-                }],
-                source_part_index: 0,
-            },
-        ],
-        decorations: vec![],
-        diagnostics: vec![],
-        represents_measures: 1,
-        merge_duplicate_measures_across_parts: true,
-        system_break: false,
-        source_span: crate::error::Span::new(0, 0),
-    }
-}
-
-#[test]
-fn bar_line_height_includes_lyric_rows() {
-    let base = 30.0_f32;
-    let system = vec![make_block_with_lyric_part(3)];
-    let first = system.first().unwrap();
-    let expected_height = system_musical_height_pt(first, base, &HashSet::new())
-        + system_lyric_height_pt(first, base);
-
-    let rows = expand_system_to_rows(&system, base, &HashMap::new(), &HashMap::new(), &[]);
-    let bar = rows
-        .iter()
-        .flat_map(|r| r.elements.iter())
-        .find(|e| matches!(e.content, GridContent::BarLine { .. }))
-        .expect("should have a BarLine element");
-    let GridContent::BarLine { height_pt } = bar.content else {
-        panic!("expected BarLine content");
-    };
-    assert!(
-        (height_pt - expected_height).abs() < 0.001,
-        "bar height={height_pt}, expected={expected_height} (musical + lyric)"
-    );
-}
-
-#[test]
-fn row_label_is_in_note_head_sub_row_at_column_0_span_1() {
-    let rows = expand_system_to_rows(
-        &make_system_single_note_block(),
-        30.0,
-        &HashMap::new(),
-        &HashMap::new(),
-        &[],
-    );
-    let note_row = &rows[2]; // no tuplet in this system, so notehead is sub-row 2
-    let label = note_row
-        .elements
-        .iter()
-        .find(|e| matches!(e.content, GridContent::RowLabel(_)));
-    let label = label.expect("note-head row should have RowLabel");
-    assert_eq!(label.column, 0);
-    assert_eq!(label.column_span, 1);
-}
-
 #[cfg(test)]
 #[path = "tests_tuplets.rs"]
 mod tests_tuplets;
 
-#[test]
-fn column_count_is_label_cols_plus_musical_cols() {
-    let rows = expand_system_to_rows(
-        &make_system_single_note_block(),
-        30.0,
-        &HashMap::new(),
-        &HashMap::new(),
-        &[],
-    );
-    // 1 label col + 1 leading bar line col + 4 musical cols (bar at col 3 → block width=4)
-    assert_eq!(rows[0].column_count, 6);
-}
+#[cfg(test)]
+#[path = "tests_expand_system.rs"]
+mod tests_expand_system;

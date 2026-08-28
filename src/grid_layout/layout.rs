@@ -1,4 +1,5 @@
 use crate::compiler::types::{CompileResult, ElementContent, MeasureBlock, MeasureRow};
+use crate::coordinate_resolver::LyricFontSizes;
 use crate::error::{Diagnostic, Span, Warning};
 use crate::grid_layout::slur_placement::{build_measure_placements, resolve_slur_spans};
 use crate::grid_layout::tuplet_placement::resolve_tuplet_spans;
@@ -124,12 +125,13 @@ fn system_total_height(
     system: &[MeasureBlock],
     base: f32,
     tuplet_part_indices: &HashSet<usize>,
+    lyric_font_sizes: LyricFontSizes,
 ) -> f32 {
     let Some(first) = system.first() else {
         return 0.0;
     };
     let musical = system_musical_height_pt(first, base, tuplet_part_indices);
-    let lyric = system_lyric_height_pt(first, base);
+    let lyric = system_lyric_height_pt(first, base, lyric_font_sizes);
     let deco = if system_has_any_decoration(system) {
         crate::font_metrics::directive_line_row_height()
     } else {
@@ -241,6 +243,7 @@ fn build_page_rows(params: &PageRowsParams<'_>) -> PageRowsResult {
             &system_arcs,
             &system_tuplet_brackets,
             &measure_layout,
+            config.lyric_font_sizes(),
         ));
     }
     PageRowsResult { rows, diagnostics }
@@ -259,6 +262,7 @@ fn pack_page_systems(
     base: f32,
     usable_h: f32,
     hide_system_dividers: bool,
+    lyric_font_sizes: LyricFontSizes,
 ) -> Vec<Vec<Vec<MeasureBlock>>> {
     let mut page_systems: Vec<Vec<Vec<MeasureBlock>>> = Vec::new();
     let mut current_page: Vec<Vec<MeasureBlock>> = Vec::new();
@@ -266,7 +270,7 @@ fn pack_page_systems(
 
     for (abs_sys, system) in systems.into_iter().enumerate() {
         let tuplet_part_indices = system_tuplet_part_indices(&system, tuplet_bracket_map, abs_sys);
-        let sys_h = system_total_height(&system, base, &tuplet_part_indices);
+        let sys_h = system_total_height(&system, base, &tuplet_part_indices, lyric_font_sizes);
         let gap = if current_page.is_empty() || hide_system_dividers {
             0.0
         } else {
@@ -324,6 +328,7 @@ pub fn layout(
         base,
         usable_h,
         config.hide_system_dividers,
+        config.lyric_font_sizes(),
     );
 
     let highlight_and_click_infos =

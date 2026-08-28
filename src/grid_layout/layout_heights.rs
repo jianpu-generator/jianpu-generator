@@ -37,8 +37,32 @@ pub(crate) fn chord_part_sub_row_heights(base: f32) -> [f32; 4] {
     ]
 }
 
-pub(crate) fn lyric_row_height(base: f32) -> f32 {
-    base * 1.5
+/// Extra vertical padding (points) added on top of the lyric font's own
+/// measured ascender+descender span, so a syllable's click-target box
+/// leaves a small margin around the glyph instead of fitting it exactly
+/// flush. An explicit UX choice, not a font-geometry fact — additive (not
+/// multiplicative) so it doesn't overstate padding at large font sizes the
+/// way a ratio would.
+const LYRIC_CLICK_TARGET_VERTICAL_PADDING: f32 = 6.0;
+
+/// Height for a lyric verse row (and its click-target rect — see
+/// `coordinate_resolver::highlights::resolve_lyric_click_target`).
+/// `row_height * 1.5` is the row's normal vertical rhythm — unchanged from
+/// before, so a row with no CJK text and no `lyrics_font_size` override
+/// renders at exactly the height it always has. The other side of the
+/// `max` is a floor sized to actually contain the glyph: the pinned lyric
+/// font's real ascender+descender span at `font_size`, measured at runtime
+/// via `ttf_parser` (`font_metrics::lyric_vertical_extent`) rather than a
+/// hardcoded ratio, plus `LYRIC_CLICK_TARGET_VERTICAL_PADDING` for a small
+/// click-target margin — only the larger of the two applies, so this floor
+/// only kicks in once `font_size` (the largest resolved size — Latin or CJK,
+/// see `RenderConfig::lyric_font_size`/`lyric_cjk_font_size` — among the
+/// row's own syllables) grows large enough, relative to `row_height`, to
+/// actually risk overflowing the row's normal height.
+pub(crate) fn lyric_row_height(row_height: f32, font_size: f32) -> f32 {
+    (row_height * 1.5).max(
+        crate::font_metrics::lyric_vertical_extent(font_size) + LYRIC_CLICK_TARGET_VERTICAL_PADDING,
+    )
 }
 
 pub(crate) fn decoration_row_height(base: f32) -> f32 {

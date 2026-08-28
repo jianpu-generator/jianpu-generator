@@ -3,6 +3,7 @@
 use crate::ast::parsed::Offset;
 use crate::compiler::types::MULTI_MEASURE_REST_WIDTH;
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
+use crate::coordinate_resolver::LyricFontSizes;
 use crate::font_metrics;
 use crate::grid_layout::expand::expand_system_to_rows;
 use crate::grid_layout::layout::{build_measure_column_layout, measure_column_weights};
@@ -170,6 +171,10 @@ fn multi_measure_rest_block_renders_wide_enough_for_its_count_label_when_squeeze
         &HashMap::new(),
         &HashMap::new(),
         &measure_layout,
+        LyricFontSizes {
+            base: 18.0,
+            cjk: 21.6,
+        },
     );
     let row = &rows[0];
     let geometry = row.column_geometry(300.0, 40.0);
@@ -209,6 +214,10 @@ fn multi_measure_rest_block_keeps_horizontal_padding_even_when_squeezed_by_dense
         &HashMap::new(),
         &HashMap::new(),
         &measure_layout,
+        LyricFontSizes {
+            base: 18.0,
+            cjk: 21.6,
+        },
     );
     let row = &rows[0];
     let geometry = row.column_geometry(300.0, 40.0);

@@ -16,7 +16,7 @@ pub(in crate::renderer::new_renderer) fn render_lyric(
             content: s.to_string(),
             font_size: crate::font_metrics::lyric_font_size(s, *base_font_size, *cjk_font_size),
             anchor: TextAnchor::Start,
-            baseline: DominantBaseline::Hanging,
+            baseline: DominantBaseline::Middle,
             // `FontFamily::Title` — despite the name, shared with the song
             // title's font, not exclusive to it. See its doc comment in
             // `src/compositor/types.rs`.
@@ -44,7 +44,7 @@ pub(in crate::renderer::new_renderer) fn render_lyric_line(
             content: s.to_string(),
             font_size: crate::font_metrics::lyric_font_size(s, *base_font_size, *cjk_font_size),
             anchor: TextAnchor::Start,
-            baseline: DominantBaseline::Hanging,
+            baseline: DominantBaseline::Middle,
             font: FontFamily::Title,
             weight: FontWeight::Normal,
             italic: false,

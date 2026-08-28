@@ -40,6 +40,11 @@ const SYNTHETIC_BOLD_WIDTH_RATIO: f32 = 1.08;
 /// missing from the pinned font, or if the font failed to parse.
 const FALLBACK_ADVANCE_WIDTH_RATIO: f32 = 0.6;
 
+/// Fallback vertical extent (as a fraction of `font_size`) used only if the
+/// pinned lyric font fails to parse or isn't loaded yet — mirrors
+/// `FALLBACK_ADVANCE_WIDTH_RATIO`'s role for horizontal measurement.
+const FALLBACK_VERTICAL_EXTENT_RATIO: f32 = 1.0;
+
 /// Real advance width (in points) of one character at the given font size,
 /// measured from `face`'s `hmtx` table, or the fallback ratio if the
 /// character is missing from the font (or the font failed to parse).
@@ -73,12 +78,30 @@ fn face_glyph_left_bearing(
     bearing.unwrap_or(0.0)
 }
 
+/// Real vertical extent (in points, ascender to descender) of `face` at the
+/// given font size — `Face::height()` already equals
+/// `ascender() - descender()`. Falls back to `FALLBACK_VERTICAL_EXTENT_RATIO`
+/// if the font failed to parse or isn't loaded yet.
+fn face_vertical_extent(face: Option<&ttf_parser::Face<'static>>, font_size: f32) -> f32 {
+    let measured = face.map(|face| face.height() as f32 / face.units_per_em() as f32 * font_size);
+    measured.unwrap_or(font_size * FALLBACK_VERTICAL_EXTENT_RATIO)
+}
+
 /// Left-side bearing (in points) of one character in the pinned lyric font
 /// (see `lyric_font`), used to compensate `GLYPH_LEFT_PADDING` for CJK lyric
 /// syllables' own built-in inset — see
 /// `coordinate_resolver::resolve::flush_left_padding`.
 pub(crate) fn cjk_glyph_left_bearing(c: char, font_size: f32) -> f32 {
     face_glyph_left_bearing(font_source::lyric_font(), c, font_size)
+}
+
+/// Real vertical extent (in points, ascender to descender) of the pinned
+/// lyric font (see `lyric_font`) at the given font size — used to size a
+/// lyric syllable's click-target row tall enough for its actual glyph
+/// height instead of a hardcoded ratio (see `grid_layout::layout_heights::
+/// lyric_row_height`).
+pub(crate) fn lyric_vertical_extent(font_size: f32) -> f32 {
+    face_vertical_extent(font_source::lyric_font(), font_size)
 }
 
 /// Left-side bearing (in points) of one character in the pinned monospace

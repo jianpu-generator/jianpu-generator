@@ -32,10 +32,10 @@ const dragTestSource = [
 ].join('\n')
 
 function lyricTexts(page: import('@playwright/test').Page) {
-  // Lyric syllables are the only text glyphs rendered with a "hanging"
-  // baseline (see `render_lyric`), so this selector picks them out reliably
+  // Lyric syllables are the only text glyphs tagged with the "lyric" data
+  // variant (see `render_lyric`), so this selector picks them out reliably
   // regardless of their actual text content.
-  return page.locator('svg text[dominant-baseline="hanging"]')
+  return page.locator('svg text[data-variant="lyric"]')
 }
 
 Given(
