@@ -74,6 +74,10 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | `part_label_font_size` | no | `12` | Font size of a part's row label, e.g. "Soprano" (points) |
 | `page_number_font_size` | no | `row_height * 0.6` | Font size of the page number shown in the footer (points) |
 | `lyric_click_target_padding_pt` | no | `12` | Extra vertical padding (points) around a lyric syllable's hover/click-target box, added on top of the lyric font's own measured ascender+descender span |
+| `notes_horizontal_padding_pt` | no | `4` | Horizontal padding (points) reserved before each note head/rest/percussion hit, widening the spacing between elements (also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings) |
+| `chords_horizontal_padding_pt` | no | `4` | Horizontal padding (points) reserved before each chord symbol, widening the spacing between elements |
+| `lyrics_horizontal_padding_pt` | no | `4` | Horizontal padding (points) reserved before each lyric syllable, widening the spacing between elements |
+| `note_dash_horizontal_padding_pt` | no | `4` | Horizontal padding (points) reserved before each note dash (the sustain-beat `-` extension), widening the spacing between elements |
 | `merge_duplicate_measures_across_parts` | no | `yes` | Score-wide default for whether identical measures from different parts are merged into a single row (`yes`/`no`); can be overridden from a given measure onward with the `merge_duplicate_measures_across_parts=` directive line — see [Directive lines](#directive-lines) |
 | `hide_resting_parts` | no | `yes` | Score-wide default for whether an all-rest part is omitted from a measure where other parts have content (`yes`/`no`); can be overridden from a given measure onward with the `hide_resting_parts=` directive line — see [Directive lines](#directive-lines) |
 | `hide_system_dividers` | no | `no` | Whether the horizontal divider line between systems is omitted (`yes`/`no`) |

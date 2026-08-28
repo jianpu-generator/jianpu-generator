@@ -67,6 +67,15 @@ pub fn default_page_number_font_size(row_height: u32) -> u32 {
 /// Default `lyric_click_target_padding_pt`, used when unset in `# metadata`.
 pub const DEFAULT_LYRIC_CLICK_TARGET_PADDING_PT: u32 = 12;
 
+/// Default `notes_horizontal_padding_pt`, used when unset in `# metadata`.
+pub const DEFAULT_NOTES_HORIZONTAL_PADDING_PT: u32 = 4;
+/// Default `chords_horizontal_padding_pt`, used when unset in `# metadata`.
+pub const DEFAULT_CHORDS_HORIZONTAL_PADDING_PT: u32 = 4;
+/// Default `lyrics_horizontal_padding_pt`, used when unset in `# metadata`.
+pub const DEFAULT_LYRICS_HORIZONTAL_PADDING_PT: u32 = 4;
+/// Default `note_dash_horizontal_padding_pt`, used when unset in `# metadata`.
+pub const DEFAULT_NOTE_DASH_HORIZONTAL_PADDING_PT: u32 = 4;
+
 #[derive(Clone)]
 pub struct Metadata {
     pub title: Option<String>,
@@ -118,6 +127,21 @@ pub struct Metadata {
     /// click-target box on top of the font's own measured ascender+descender
     /// span (see `grid_layout::layout_heights::lyric_row_height`). Default: 12.
     pub lyric_click_target_padding_pt: u32,
+    /// Horizontal padding in points reserved before a note head/rest/percussion-hit
+    /// glyph, widening its column's spacing rod by the same amount (see
+    /// `grid_layout::layout_spacing::column_rod`); also used for the multi-measure-rest
+    /// bar's end insets and the tie/slur/underline/tuplet-bracket span anchors, all of
+    /// which key off a note column. Default: 4.
+    pub notes_horizontal_padding_pt: u32,
+    /// Horizontal padding in points reserved before a chord symbol, widening its
+    /// column's spacing rod by the same amount. Default: 4.
+    pub chords_horizontal_padding_pt: u32,
+    /// Horizontal padding in points reserved before a lyric syllable, widening its
+    /// column's spacing rod by the same amount. Default: 4.
+    pub lyrics_horizontal_padding_pt: u32,
+    /// Horizontal padding in points reserved before a note dash (the sustain-beat `-`
+    /// extension), widening its column's spacing rod by the same amount. Default: 4.
+    pub note_dash_horizontal_padding_pt: u32,
     /// Score-wide default for `merge_duplicate_measures_across_parts=`: when `false`,
     /// identical measure rows from different parts are no longer merged into one row
     /// (see `consolidator::consolidate`). Default: `true`. A `merge_duplicate_measures_across_parts=`

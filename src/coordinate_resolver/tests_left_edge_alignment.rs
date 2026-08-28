@@ -2,7 +2,7 @@
 //! syllable, and a CJK lyric syllable can all share the same column. Every
 //! one of these six flush-left content types now draws `TextAnchor::Start`
 //! at exactly the anchor `resolve()` computes (`x_start(column) +
-//! GLYPH_LEFT_PADDING - bearing(leading_char)` — see
+//! padding - bearing(leading_char)` — see
 //! `resolve::flush_left_padding`), so every ink-left-edge has the same
 //! shape: `anchor + bearing(leading_char)`. This test computes each
 //! element's predicted ink-left-edge that way and asserts they coincide for
@@ -13,7 +13,7 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compositor::types::AbsoluteContent;
 use crate::coordinate_resolver::resolve::{
-    resolve, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
+    resolve, ElementPaddings, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
 };
 use crate::font_metrics::{cjk_glyph_left_bearing, monospace_glyph_left_bearing};
 use crate::grid_layout::types::{GridContent, GridElement, GridPage, GridRow, HAlign, VAlign};
@@ -30,11 +30,18 @@ const LABEL_FONT_SIZES: LabelFontSizes = LabelFontSizes {
     section_label: 12.0,
     part_label: 12.0,
 };
+const ELEMENT_PADDINGS: ElementPaddings = ElementPaddings {
+    notes: 4.0,
+    chords: 4.0,
+    lyrics: 4.0,
+    note_dash: 4.0,
+};
 const RESOLVE_FONT_SIZES: ResolveFontSizes = ResolveFontSizes {
     lyric: LYRIC_FONT_SIZES,
     notes: NOTES_FONT_SIZE,
     chords: CHORDS_FONT_SIZE,
     labels: LABEL_FONT_SIZES,
+    paddings: ELEMENT_PADDINGS,
 };
 
 fn single_row_page(element: GridElement) -> GridPage {

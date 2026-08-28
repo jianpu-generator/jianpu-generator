@@ -10,19 +10,20 @@ use crate::grid_layout::PAGE_MARGIN;
 
 /// The collapsed multi-measure-rest bar spans its custom column_span width
 /// starting at the column's left edge, rather than the generic per-column
-/// halign/valign math above — but inset by `GLYPH_LEFT_PADDING` on both
-/// ends, mirroring the same clearance every other column keeps before
-/// whatever follows it, so the bar's own end ticks don't render flush
-/// against the enclosing measure dividers. `layout_spacing::multi_measure_rest_weight`
-/// reserves this same padding on both ends when sizing the block's column
-/// span, so the two can't drift apart.
+/// halign/valign math above — but inset by `padding` (the configured
+/// `notes_horizontal_padding_pt`) on both ends, mirroring the same clearance
+/// every other note-ish column keeps before whatever follows it, so the
+/// bar's own end ticks don't render flush against the enclosing measure
+/// dividers. `layout_spacing::multi_measure_rest_weight` reserves this same
+/// padding on both ends when sizing the block's column span, so the two
+/// can't drift apart.
 pub(super) fn resolve_multi_measure_rest(
     count: u32,
     x_start: f32,
     width: f32,
     y: f32,
+    padding: f32,
 ) -> AbsoluteElement {
-    let padding = crate::font_metrics::GLYPH_LEFT_PADDING;
     AbsoluteElement {
         x: x_start + padding,
         y,

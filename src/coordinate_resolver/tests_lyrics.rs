@@ -1,6 +1,14 @@
 use crate::compositor::types::AbsoluteContent;
 use crate::coordinate_resolver::resolve::{
-    resolve, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
+    resolve, ElementPaddings, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
+};
+
+/// Shared default padding used across this file's `ResolveFontSizes` literals, factored out to keep each test under clippy's line-count cap.
+const DEFAULT_PADDINGS: ElementPaddings = ElementPaddings {
+    notes: 4.0,
+    chords: 4.0,
+    lyrics: 4.0,
+    note_dash: 4.0,
 };
 use crate::grid_layout::types::{
     GridContent, GridElement, GridPage, GridRow, HAlign, MeasureColumnLayout, VAlign,
@@ -92,6 +100,7 @@ fn lyric_syllable_halign_center_is_independent_of_column_weight() {
                     section_label: 12.0,
                     part_label: 12.0,
                 },
+                paddings: DEFAULT_PADDINGS,
             },
         )
         .unwrap();
@@ -119,7 +128,7 @@ fn lyric_syllable_shares_the_note_head_padding_formula() {
     // the CJK font `render_lyric` always draws in (see
     // `resolve::flush_left_padding`) — a Latin leading character's bearing
     // in that font is nonzero too, so a Latin syllable's `x` sits left of
-    // the flat `GLYPH_LEFT_PADDING` value, the same shape as
+    // the flat configured padding value, the same shape as
     // `cjk_lyric_syllable_compensates_its_leading_glyphs_left_bearing`.
     let note_number_width = 12.0;
     let base_font_size = 14.4;
@@ -152,6 +161,7 @@ fn lyric_syllable_shares_the_note_head_padding_formula() {
                 section_label: 12.0,
                 part_label: 12.0,
             },
+            paddings: DEFAULT_PADDINGS,
         },
     )
     .unwrap();
@@ -162,7 +172,7 @@ fn lyric_syllable_shares_the_note_head_padding_formula() {
         .expect("should have Lyric");
     let x_start = 0.0; // column 0 starts at the row's own left edge
     let bearing = crate::font_metrics::cjk_glyph_left_bearing('l', base_font_size);
-    let expected_x = 25.0 + x_start + (crate::font_metrics::GLYPH_LEFT_PADDING - bearing).max(0.0);
+    let expected_x = 25.0 + x_start + (4.0f32 - bearing).max(0.0);
     assert!(
         (lyric.x - expected_x).abs() < 0.01,
         "x={} expected={expected_x} bearing={bearing}",
@@ -174,7 +184,7 @@ fn lyric_syllable_shares_the_note_head_padding_formula() {
 fn cjk_lyric_syllable_compensates_its_leading_glyphs_left_bearing() {
     // A CJK syllable's own leading character carries a built-in left-side
     // bearing, so its resolved x must sit `bearing` points left of what the
-    // plain `GLYPH_LEFT_PADDING` formula (see
+    // plain flat-padding formula (see
     // `lyric_syllable_shares_the_note_head_padding_formula`) would give a
     // Latin syllable at the same column.
     let note_number_width = 12.0;
@@ -208,6 +218,7 @@ fn cjk_lyric_syllable_compensates_its_leading_glyphs_left_bearing() {
                 section_label: 12.0,
                 part_label: 12.0,
             },
+            paddings: DEFAULT_PADDINGS,
         },
     )
     .unwrap();
@@ -219,7 +230,7 @@ fn cjk_lyric_syllable_compensates_its_leading_glyphs_left_bearing() {
 
     let x_start = 0.0; // column 0 starts at the row's own left edge
     let bearing = crate::font_metrics::cjk_glyph_left_bearing('漢', cjk_font_size);
-    let expected_x = 25.0 + x_start + (crate::font_metrics::GLYPH_LEFT_PADDING - bearing).max(0.0);
+    let expected_x = 25.0 + x_start + (4.0f32 - bearing).max(0.0);
     assert!(bearing > 0.0, "test is only meaningful if bearing > 0.0");
     assert!(
         (lyric.x - expected_x).abs() < 0.01,
@@ -227,7 +238,7 @@ fn cjk_lyric_syllable_compensates_its_leading_glyphs_left_bearing() {
         lyric.x
     );
     assert!(
-        lyric.x < 25.0 + x_start + crate::font_metrics::GLYPH_LEFT_PADDING,
-        "a CJK syllable's x should sit left of the flat GLYPH_LEFT_PADDING x"
+        lyric.x < 25.0 + x_start + 4.0,
+        "a CJK syllable's x should sit left of the flat configured-padding x"
     );
 }

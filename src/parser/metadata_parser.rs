@@ -106,6 +106,10 @@ struct MetadataAccumulator {
     part_label_font_size: Option<u32>,
     page_number_font_size: Option<u32>,
     lyric_click_target_padding_pt: Option<u32>,
+    notes_horizontal_padding_pt: Option<u32>,
+    chords_horizontal_padding_pt: Option<u32>,
+    lyrics_horizontal_padding_pt: Option<u32>,
+    note_dash_horizontal_padding_pt: Option<u32>,
     merge_duplicate_measures_across_parts: Option<bool>,
     hide_resting_parts: Option<bool>,
     hide_system_dividers: Option<bool>,
@@ -135,6 +139,10 @@ impl MetadataAccumulator {
             "part_label_font_size" => Some(&mut self.part_label_font_size),
             "page_number_font_size" => Some(&mut self.page_number_font_size),
             "lyric_click_target_padding_pt" => Some(&mut self.lyric_click_target_padding_pt),
+            "notes_horizontal_padding_pt" => Some(&mut self.notes_horizontal_padding_pt),
+            "chords_horizontal_padding_pt" => Some(&mut self.chords_horizontal_padding_pt),
+            "lyrics_horizontal_padding_pt" => Some(&mut self.lyrics_horizontal_padding_pt),
+            "note_dash_horizontal_padding_pt" => Some(&mut self.note_dash_horizontal_padding_pt),
             _ => None,
         }
     }
@@ -241,6 +249,10 @@ pub fn parse_metadata(
             part_label_font_size: accumulator.part_label_font_size,
             page_number_font_size: accumulator.page_number_font_size,
             lyric_click_target_padding_pt: accumulator.lyric_click_target_padding_pt,
+            notes_horizontal_padding_pt: accumulator.notes_horizontal_padding_pt,
+            chords_horizontal_padding_pt: accumulator.chords_horizontal_padding_pt,
+            lyrics_horizontal_padding_pt: accumulator.lyrics_horizontal_padding_pt,
+            note_dash_horizontal_padding_pt: accumulator.note_dash_horizontal_padding_pt,
             merge_duplicate_measures_across_parts: accumulator
                 .merge_duplicate_measures_across_parts,
             hide_resting_parts: accumulator.hide_resting_parts,

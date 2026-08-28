@@ -1,6 +1,14 @@
 use crate::compositor::types::AbsoluteContent;
 use crate::coordinate_resolver::resolve::{
-    resolve, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
+    resolve, ElementPaddings, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
+};
+
+/// Shared default padding used across this file's `ResolveFontSizes` literals, factored out to keep each test under clippy's line-count cap.
+const DEFAULT_PADDINGS: ElementPaddings = ElementPaddings {
+    notes: 4.0,
+    chords: 4.0,
+    lyrics: 4.0,
+    note_dash: 4.0,
 };
 use crate::grid_layout::types::{GridContent, GridElement, GridPage, GridRow, HAlign, VAlign};
 
@@ -30,7 +38,7 @@ fn single_row_page(element: GridElement) -> GridPage {
 fn multi_measure_rest_resolves_width_from_column_span_inset_by_glyph_left_padding() {
     // usable = 595 - 50 = 545, col_width = 545/10 = 54.5
     // column=0, column_span=4 → x_start = 25.0, span_width = 4*54.5 = 218.0,
-    // then inset by GLYPH_LEFT_PADDING on both ends (see
+    // then inset by the configured notes padding on both ends (see
     // `resolve_multi_measure_rest`) so the drawn bar doesn't render flush
     // against the enclosing measure dividers.
     let el = GridElement {
@@ -57,6 +65,7 @@ fn multi_measure_rest_resolves_width_from_column_span_inset_by_glyph_left_paddin
                 section_label: 12.0,
                 part_label: 12.0,
             },
+            paddings: DEFAULT_PADDINGS,
         },
     )
     .unwrap();
@@ -66,7 +75,7 @@ fn multi_measure_rest_resolves_width_from_column_span_inset_by_glyph_left_paddin
         .find(|e| matches!(e.content, AbsoluteContent::MultiMeasureRest { .. }))
         .expect("should have MultiMeasureRest");
     let col_width = (595.0 - 50.0) / 10.0; // 54.5
-    let padding = crate::font_metrics::GLYPH_LEFT_PADDING;
+    let padding = 4.0;
     let x_start = 25.0 + padding;
     assert!(
         (rest.x - x_start).abs() < 0.01,

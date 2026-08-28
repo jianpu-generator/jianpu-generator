@@ -93,10 +93,10 @@ fn lyric_weight(text: &str, config: &RenderConfig) -> f32 {
 /// [`note_glyph_weight`] — see `render_multi_measure_rest` in
 /// `glyph_renderers.rs`), and never less than `MULTI_MEASURE_REST_WIDTH`
 /// note glyphs' worth of bar, so a short run (single/double-digit count)
-/// keeps its previous width. Also reserves [`font_metrics::GLYPH_LEFT_PADDING`]
-/// on both ends — the same clearance every other column keeps before
-/// whatever follows it — so the bar's own end ticks don't end up flush
-/// against the enclosing measure dividers; `resolve_multi_measure_rest`
+/// keeps its previous width. Also reserves `config.notes_horizontal_padding_pt()`
+/// on both ends — the same clearance every other note-ish column keeps
+/// before whatever follows it — so the bar's own end ticks don't end up
+/// flush against the enclosing measure dividers; `resolve_multi_measure_rest`
 /// (`coordinate_resolver::resolve`) insets the drawn bar by that same amount
 /// so the two can't drift apart. Unlike the flat, unitless weight this
 /// replaces, every term here is a real point width — matching every other
@@ -107,7 +107,7 @@ pub(super) fn multi_measure_rest_weight(count: usize, config: &RenderConfig) -> 
     let label_width =
         font_metrics::monospace_text_width(&count.to_string(), config.notes_font_size());
     let bar_floor = note_glyph_weight(config) * MULTI_MEASURE_REST_WIDTH as f32;
-    label_width.max(bar_floor) + font_metrics::GLYPH_LEFT_PADDING * 2.0
+    label_width.max(bar_floor) + config.notes_horizontal_padding_pt() * 2.0
 }
 
 pub(super) fn column_weight(content: &ElementContent, config: &RenderConfig) -> f32 {

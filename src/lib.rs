@@ -217,6 +217,7 @@ fn render_svg_docs_with_parts(
                 section_label: config.section_label_font_size as f32,
                 part_label: config.part_label_font_size as f32,
             },
+            paddings: config.element_paddings(),
         },
     )?;
     Ok(SvgDocsResult {

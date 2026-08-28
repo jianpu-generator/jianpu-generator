@@ -44,6 +44,7 @@ fn render_documents(
                 section_label: config.section_label_font_size as f32,
                 part_label: config.part_label_font_size as f32,
             },
+            paddings: config.element_paddings(),
         },
     )?;
     Ok(DocumentsResult {
@@ -85,6 +86,7 @@ fn render_documents_with_range(
                 section_label: config.section_label_font_size as f32,
                 part_label: config.part_label_font_size as f32,
             },
+            paddings: config.element_paddings(),
         },
     )?;
     Ok(DocumentsResult {

@@ -1,4 +1,4 @@
-use crate::compositor::types::{AbsoluteContent, AbsoluteElement, AbsolutePage};
+use crate::compositor::types::{AbsoluteElement, AbsolutePage};
 use crate::error::IrrecoverableError;
 use crate::grid_layout::types::{
     ColumnGeometry, GridContent, GridElement, GridPage, GridRow, HAlign, VAlign,
@@ -10,6 +10,7 @@ use super::content_conversion::{grid_to_absolute, DirectiveLineFontSizes};
 use super::highlights::{resolve_error_highlights, resolve_measure_highlights};
 use super::post_arc_conversion::to_post_arc_content;
 use super::rest_run::{resolve_implicit_fill_rest, resolve_multi_measure_rest};
+use super::span_marking::resolve_span_marking;
 
 /// Font sizes used to measure lyric syllable width.
 #[derive(Clone, Copy)]
@@ -29,15 +30,32 @@ pub struct LabelFontSizes {
     pub part_label: f32,
 }
 
-/// Every font size `resolve`/`resolve_page` needs, bundled into one struct
-/// (rather than passed as individual arguments) so those two functions stay
-/// under the repo's max-argument-count lint.
+/// Horizontal padding in points reserved before each flush-left glyph type
+/// (see `is_flush_left_glyph`), customizable per `Metadata::*_horizontal_padding_pt`
+/// field (see `RenderConfig::element_paddings`). The same value widens that
+/// content type's `layout_spacing::column_rod`, so increasing it genuinely
+/// spreads elements apart rather than just nudging the glyph inside its
+/// existing column — the two can't drift apart since both read from this
+/// struct's `RenderConfig` source.
+#[derive(Clone, Copy)]
+pub struct ElementPaddings {
+    pub notes: f32,
+    pub chords: f32,
+    pub lyrics: f32,
+    pub note_dash: f32,
+}
+
+/// Every font size and per-element horizontal padding `resolve`/`resolve_page`
+/// needs, bundled into one struct (rather than passed as individual
+/// arguments) so those two functions stay under the repo's
+/// max-argument-count lint.
 #[derive(Clone, Copy)]
 pub struct ResolveFontSizes {
     pub lyric: LyricFontSizes,
     pub notes: f32,
     pub chords: f32,
     pub labels: LabelFontSizes,
+    pub paddings: ElementPaddings,
 }
 
 pub fn resolve(
@@ -53,11 +71,11 @@ pub fn resolve(
 }
 
 /// Content whose `HAlign::Center` anchor is flush-left at `x_start(column) +
-/// GLYPH_LEFT_PADDING`, rather than the plain column center used by bar
-/// lines/labels/text. Every glyph here shares the same padding, so it (and
-/// the tie/slur/underline/tuplet-bracket span markings that key off the same
-/// anchor in `resolve_span_marking`) lines up consistently regardless of
-/// what else shares its column.
+/// flush_left_padding(...)`, rather than the plain column center used by bar
+/// lines/labels/text. Every glyph here shares the notes-column padding (see
+/// `resolve_span_marking`'s own `padding`) for the tie/slur/underline/tuplet-
+/// bracket span markings that key off the same anchor, so those line up
+/// consistently regardless of what else shares its column.
 fn is_flush_left_glyph(content: &GridContent) -> bool {
     matches!(
         content,
@@ -70,50 +88,65 @@ fn is_flush_left_glyph(content: &GridContent) -> bool {
     )
 }
 
-/// The padding between a flush-left glyph's column and its anchor.
-/// `GLYPH_LEFT_PADDING` is reduced by the glyph's own leading character's
-/// left-side bearing (floored at `0.0`), so the *visible* gap from the bar
-/// line reads the same regardless of which glyph — note head, rest,
-/// percussion hit, chord symbol, note dash, or lyric syllable — happens to
-/// share the column, rather than stacking each font's own inset on top of
-/// the flat padding. Every flush-left renderer now draws `TextAnchor::Start`
-/// at exactly this anchor (see `glyph_renderers.rs`/
-/// `glyph_renderers_note_dash.rs`), so one formula (`padding - bearing`)
-/// covers all six content types; only the bearing's font/size/leading-char
-/// differ per type.
+/// The padding between a flush-left glyph's column and its anchor. Each
+/// content type's own `ElementPaddings` field (see `RowResolveConfig::paddings`)
+/// is reduced by the glyph's own leading character's left-side bearing
+/// (floored at `0.0`), so the *visible* gap from the bar line reads the same
+/// regardless of which glyph — note head, rest, percussion hit, chord
+/// symbol, note dash, or lyric syllable — happens to share the column,
+/// rather than stacking each font's own inset on top of the flat padding.
+/// Every flush-left renderer now draws `TextAnchor::Start` at exactly this
+/// anchor (see `glyph_renderers.rs`/`glyph_renderers_note_dash.rs`), so one
+/// formula (`padding - bearing`) covers all six content types; only the
+/// padding/bearing's font/size/leading-char differ per type.
 fn flush_left_padding(content: &GridContent, config: RowResolveConfig) -> f32 {
-    let bearing = match content {
-        GridContent::NoteHead { pitch, .. } => crate::font_metrics::monospace_glyph_left_bearing(
-            pitch.to_digit(),
-            config.notes_font_size,
+    let (padding, bearing) = match content {
+        GridContent::NoteHead { pitch, .. } => (
+            config.paddings.notes,
+            crate::font_metrics::monospace_glyph_left_bearing(
+                pitch.to_digit(),
+                config.notes_font_size,
+            ),
         ),
-        GridContent::Rest { .. } => {
-            crate::font_metrics::monospace_glyph_left_bearing('0', config.notes_font_size)
-        }
-        GridContent::PercussionHit => {
-            crate::font_metrics::monospace_glyph_left_bearing('x', config.notes_font_size)
-        }
+        GridContent::Rest { .. } => (
+            config.paddings.notes,
+            crate::font_metrics::monospace_glyph_left_bearing('0', config.notes_font_size),
+        ),
+        GridContent::PercussionHit => (
+            config.paddings.notes,
+            crate::font_metrics::monospace_glyph_left_bearing('x', config.notes_font_size),
+        ),
         GridContent::ChordSymbol { text, .. } => {
             let leading_char = text.chars().next().unwrap_or_default();
-            crate::font_metrics::monospace_glyph_left_bearing(leading_char, config.chords_font_size)
+            (
+                config.paddings.chords,
+                crate::font_metrics::monospace_glyph_left_bearing(
+                    leading_char,
+                    config.chords_font_size,
+                ),
+            )
         }
-        GridContent::NoteDash { .. } => {
-            crate::font_metrics::monospace_glyph_left_bearing('\u{2014}', config.notes_font_size)
-        }
+        GridContent::NoteDash { .. } => (
+            config.paddings.note_dash,
+            crate::font_metrics::monospace_glyph_left_bearing('\u{2014}', config.notes_font_size),
+        ),
         GridContent::LyricSyllable { text, .. } => {
             let Some(leading_char) = text.chars().next() else {
-                return crate::font_metrics::GLYPH_LEFT_PADDING;
+                return config.paddings.lyrics;
             };
             let font_size = crate::font_metrics::lyric_font_size(
                 text,
                 config.lyric_font_sizes.base,
                 config.lyric_font_sizes.cjk,
             );
-            crate::font_metrics::cjk_glyph_left_bearing(leading_char, font_size)
+            (
+                config.paddings.lyrics,
+                crate::font_metrics::cjk_glyph_left_bearing(leading_char, font_size),
+            )
         }
-        _ => return crate::font_metrics::GLYPH_LEFT_PADDING,
+        _ => return config.paddings.notes,
     };
-    (crate::font_metrics::GLYPH_LEFT_PADDING - bearing).max(0.0)
+    (padding - bearing).max(0.0)
 }
 
 /// Bundles the config threaded through row-element resolution, kept constant
@@ -122,12 +155,13 @@ fn flush_left_padding(content: &GridContent, config: RowResolveConfig) -> f32 {
 /// left-side-bearing correction (see `flush_left_padding`); `lyric_font_sizes`
 /// does the same for a lyric syllable's leading character.
 #[derive(Clone, Copy)]
-struct RowResolveConfig {
-    note_number_width: f32,
+pub(super) struct RowResolveConfig {
+    pub(super) note_number_width: f32,
     lyric_font_sizes: LyricFontSizes,
     notes_font_size: f32,
     chords_font_size: f32,
     label_font_sizes: LabelFontSizes,
+    pub(super) paddings: ElementPaddings,
 }
 
 fn resolve_row_element(
@@ -174,7 +208,11 @@ fn resolve_row_element(
     }
     match &el.content {
         GridContent::MultiMeasureRest { count } => Ok(Some(resolve_multi_measure_rest(
-            *count, x_start, span_width, y,
+            *count,
+            x_start,
+            span_width,
+            y,
+            config.paddings.notes,
         ))),
         GridContent::Rest {
             dotted,
@@ -207,107 +245,6 @@ fn resolve_row_element(
     }
 }
 
-/// The glyph anchor of a span's last column, mirroring `start_center`'s
-/// `geometry.glyph_left_anchor_x(el.column as f32, ...)` but for `el.column +
-/// el.column_span - 1`.
-fn span_end_center(geometry: &ColumnGeometry, el: &GridElement, padding: f32) -> f32 {
-    geometry.glyph_left_anchor_x(el.column as f32 + el.column_span as f32 - 1.0, padding)
-}
-
-/// Handles the underline/tie/slur variants, whose x-extent is defined in
-/// terms of column centers/edges rather than the halign/valign math above.
-/// Returns `None` for every other `GridContent` variant.
-fn resolve_span_marking(
-    el: &GridElement,
-    y: f32,
-    geometry: &ColumnGeometry,
-    config: RowResolveConfig,
-) -> Option<AbsoluteElement> {
-    // A span marking's own glyph anchor keys off the note's *center*, unlike
-    // the flush-left glyphs above (which draw `TextAnchor::Start` at exactly
-    // `GLYPH_LEFT_PADDING - bearing`). A span can cover notes of differing
-    // pitches/widths, so per-glyph bearing tracking isn't practical here;
-    // this approximates the note's center with the same flat
-    // `note_number_width` nominal box the renderer itself uses (see
-    // `center` in `glyph_renderers.rs::render_note_head`).
-    let padding = crate::font_metrics::GLYPH_LEFT_PADDING + config.note_number_width * 0.5;
-    match &el.content {
-        GridContent::Underline { level } => {
-            let start_center = geometry.glyph_left_anchor_x(el.column as f32, padding);
-            let end_center = span_end_center(geometry, el, padding);
-            // The half-`note_number_width` pad on each end assumes there's a
-            // neighboring note column to bleed into, same as any other note
-            // glyph. That's not true at a measure boundary — the column just
-            // past the span may belong to a `BarLine`, whose rod is far
-            // narrower than a note's — so clamp each end to the span's own
-            // column edges (`geometry.x_start`) rather than let the pad
-            // overshoot into whatever sits next door.
-            let span_left = geometry.x_start(el.column as f32);
-            let span_right = geometry.x_start(el.column as f32 + el.column_span as f32);
-            let ul_x = PAGE_MARGIN + (start_center - config.note_number_width * 0.5).max(span_left);
-            let ul_right =
-                PAGE_MARGIN + (end_center + config.note_number_width * 0.5).min(span_right);
-            Some(AbsoluteElement {
-                x: ul_x,
-                y,
-                content: AbsoluteContent::Underline {
-                    width: ul_right - ul_x,
-                    level: *level,
-                },
-            })
-        }
-        GridContent::TieOrSlur { kind } => {
-            let start_center = geometry.glyph_left_anchor_x(el.column as f32, padding);
-            let end_center = span_end_center(geometry, el, padding);
-            Some(AbsoluteElement {
-                x: PAGE_MARGIN + start_center,
-                y,
-                content: AbsoluteContent::TieOrSlur {
-                    kind: kind.clone(),
-                    width: end_center - start_center,
-                },
-            })
-        }
-        GridContent::TieOrSlurTail { kind } => {
-            let start_center = geometry.glyph_left_anchor_x(el.column as f32, padding);
-            let system_right_edge = geometry.x_start(el.column as f32 + el.column_span as f32);
-            Some(AbsoluteElement {
-                x: PAGE_MARGIN + start_center,
-                y,
-                content: AbsoluteContent::TieOrSlur {
-                    kind: kind.clone(),
-                    width: system_right_edge - start_center,
-                },
-            })
-        }
-        GridContent::TieOrSlurHead { kind } => {
-            let system_left_edge = geometry.x_start(el.column as f32);
-            let end_center = span_end_center(geometry, el, padding);
-            Some(AbsoluteElement {
-                x: PAGE_MARGIN + system_left_edge,
-                y,
-                content: AbsoluteContent::TieOrSlur {
-                    kind: kind.clone(),
-                    width: end_center - system_left_edge,
-                },
-            })
-        }
-        GridContent::TupletBracket { label } => {
-            let start_center = geometry.glyph_left_anchor_x(el.column as f32, padding);
-            let end_center = span_end_center(geometry, el, padding);
-            Some(AbsoluteElement {
-                x: PAGE_MARGIN + start_center,
-                y,
-                content: AbsoluteContent::TupletBracket {
-                    label: label.clone(),
-                    width: end_center - start_center,
-                },
-            })
-        }
-        _ => None,
-    }
-}
-
 fn resolve_page(
     page: &GridPage,
     note_number_width: f32,
@@ -325,6 +262,7 @@ fn resolve_page(
         notes_font_size: font_sizes.notes,
         chords_font_size: font_sizes.chords,
         label_font_sizes: font_sizes.labels,
+        paddings: font_sizes.paddings,
     };
     for row in &page.rows {
         row_tops.push(row_y);

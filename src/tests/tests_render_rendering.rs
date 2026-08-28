@@ -175,6 +175,7 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
                 section_label: config.section_label_font_size as f32,
                 part_label: config.part_label_font_size as f32,
             },
+            paddings: config.element_paddings(),
         },
     )
     .expect("coordinate resolver should not fail in tests");
@@ -259,6 +260,7 @@ fn density_fixture_page_elements() -> Vec<compositor::types::AbsoluteElement> {
                 section_label: config.section_label_font_size as f32,
                 part_label: config.part_label_font_size as f32,
             },
+            paddings: config.element_paddings(),
         },
     )
     .expect("coordinate resolver should not fail in tests");

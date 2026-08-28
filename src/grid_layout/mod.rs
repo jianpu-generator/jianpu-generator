@@ -32,6 +32,8 @@ mod tests;
 #[cfg(test)]
 mod tests_accidental_spacing;
 #[cfg(test)]
+mod tests_column_rod_directive_line;
+#[cfg(test)]
 mod tests_column_rod_spring;
 #[cfg(test)]
 mod tests_column_span_weight;

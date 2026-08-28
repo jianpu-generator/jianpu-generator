@@ -93,6 +93,22 @@ Defaults to \`row_height × 0.6\` when unset.`,
 
 Defaults to 12.`,
 
+  notes_horizontal_padding_pt: `Horizontal padding (points) reserved before each note head, rest, and percussion hit, widening the spacing between elements — not just a cosmetic nudge. Also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings, which all key off a note column.
+
+Defaults to 4.`,
+
+  chords_horizontal_padding_pt: `Horizontal padding (points) reserved before each chord symbol, widening the spacing between elements.
+
+Defaults to 4.`,
+
+  lyrics_horizontal_padding_pt: `Horizontal padding (points) reserved before each lyric syllable, widening the spacing between elements.
+
+Defaults to 4.`,
+
+  note_dash_horizontal_padding_pt: `Horizontal padding (points) reserved before each note dash (the sustain-beat \`-\` extension), widening the spacing between elements.
+
+Defaults to 4.`,
+
   merge_duplicate_measures_across_parts: `When on, measures with identical content across different parts are drawn as a single merged row instead of one row per part.
 
 Can be overridden from a specific measure onward with a

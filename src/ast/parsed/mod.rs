@@ -190,6 +190,20 @@ pub struct ParsedMetadata {
     /// span (see `grid_layout::layout_heights::lyric_row_height`). Default:
     /// `12`.
     pub lyric_click_target_padding_pt: Option<u32>,
+    /// Horizontal padding (points) reserved before a note head/rest/percussion hit,
+    /// widening its column's spacing rod by the same amount (see
+    /// `grid_layout::layout_spacing::column_rod`). Default: `4`.
+    pub notes_horizontal_padding_pt: Option<u32>,
+    /// Horizontal padding (points) reserved before a chord symbol, widening its
+    /// column's spacing rod by the same amount. Default: `4`.
+    pub chords_horizontal_padding_pt: Option<u32>,
+    /// Horizontal padding (points) reserved before a lyric syllable, widening its
+    /// column's spacing rod by the same amount. Default: `4`.
+    pub lyrics_horizontal_padding_pt: Option<u32>,
+    /// Horizontal padding (points) reserved before a note dash (the sustain-beat
+    /// `-` extension), widening its column's spacing rod by the same amount.
+    /// Default: `4`.
+    pub note_dash_horizontal_padding_pt: Option<u32>,
     /// When `false`, disables merging of identical measure rows that come from different
     /// parts (see `consolidator::consolidate`). Default: `true`.
     pub merge_duplicate_measures_across_parts: Option<bool>,

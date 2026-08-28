@@ -4,10 +4,13 @@ mod highlights;
 mod post_arc_conversion;
 pub mod resolve;
 mod rest_run;
-pub use resolve::{resolve, LabelFontSizes, LyricFontSizes, ResolveFontSizes};
+mod span_marking;
+pub use resolve::{resolve, ElementPaddings, LabelFontSizes, LyricFontSizes, ResolveFontSizes};
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_basic_resolve;
 #[cfg(test)]
 mod tests_highlights;
 #[cfg(test)]

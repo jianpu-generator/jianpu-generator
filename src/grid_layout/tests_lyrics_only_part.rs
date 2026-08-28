@@ -20,6 +20,10 @@ fn test_config() -> RenderConfig {
         part_label_font_size: 12,
         page_number_font_size: 18,
         lyric_click_target_padding_pt: 12,
+        notes_horizontal_padding_pt: 4,
+        chords_horizontal_padding_pt: 4,
+        lyrics_horizontal_padding_pt: 4,
+        note_dash_horizontal_padding_pt: 4,
     }
 }
 

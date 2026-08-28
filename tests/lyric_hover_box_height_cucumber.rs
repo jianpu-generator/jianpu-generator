@@ -66,6 +66,17 @@ fn given_lyric_syllable(world: &mut LyricHoverBoxWorld, syllable: String) {
     world.syllable_text = syllable;
 }
 
+/// Bundles `config`'s four `*_horizontal_padding_pt` accessors, factored out
+/// of `when_rendered` to keep that function under clippy's line-count cap.
+fn element_paddings(config: &RenderConfig) -> coordinate_resolver::ElementPaddings {
+    coordinate_resolver::ElementPaddings {
+        notes: config.notes_horizontal_padding_pt(),
+        chords: config.chords_horizontal_padding_pt(),
+        lyrics: config.lyrics_horizontal_padding_pt(),
+        note_dash: config.note_dash_horizontal_padding_pt(),
+    }
+}
+
 #[when(expr = "it is rendered")]
 fn when_rendered(world: &mut LyricHoverBoxWorld) {
     let mut metadata = String::from("# metadata\ntitle = \"t\"\n");
@@ -110,6 +121,7 @@ fn when_rendered(world: &mut LyricHoverBoxWorld) {
                 section_label: config.section_label_font_size as f32,
                 part_label: config.part_label_font_size as f32,
             },
+            paddings: element_paddings(&config),
         },
     )
     .unwrap_or_else(|err| panic!("coordinate resolver should not fail in tests: {err:?}"));

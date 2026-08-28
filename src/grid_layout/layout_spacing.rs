@@ -15,27 +15,41 @@ use weights::{column_weight, measure_note_weight, multi_measure_rest_weight, THI
 /// normally content-derived (see that field's doc comment).
 pub(crate) const MIN_MEASURE_WIDTH_PT: f32 = 24.0;
 
-/// Extra clearance (in points) added on top of a note-ish column's own
-/// [`column_weight`] to form its hard-minimum rod — the "spring and rod"
-/// model's rod is real content width plus a little breathing room, not just
-/// the bare glyph width, so a column never renders flush against whatever
-/// follows it (see **Rod and spring** in `ARCHITECTURE.md`).
+/// Per-content-type clearance (in points) added on top of a note-ish
+/// column's own [`column_weight`] to form its hard-minimum rod (see
+/// [`column_rod`]) — the "spring and rod" model's rod is real content width
+/// plus a little breathing room, not just the bare glyph width, so a column
+/// never renders flush against whatever follows it (see **Rod and spring**
+/// in `ARCHITECTURE.md`).
 ///
-/// This has to be [`font_metrics::GLYPH_LEFT_PADDING`], not some smaller
-/// hand-tuned value: every flush-left glyph (note head, rest, chord symbol,
-/// note dash, lyric syllable) is drawn starting `GLYPH_LEFT_PADDING`
-/// (minus its own left-side bearing) past the column's left edge —
-/// `coordinate_resolver::resolve::flush_left_padding`/
-/// `ColumnGeometry::glyph_left_anchor_x` — so a rod smaller than that
-/// leading offset plus the glyph's own width leaves the column's own rod
-/// too small to contain what actually gets drawn in it. That's invisible
-/// most of the time (slack usually pads columns well past their rod, and a
-/// glyph bleeding into a neighboring *note* column reads as normal
-/// spacing), but becomes visible ink-on-stroke overlap when the column is
-/// this tight *and* immediately followed by a `BarLine`, whose own rod
-/// ([`BARLINE_MIN_WIDTH_PT`]) is far smaller than a glyph needs to safely
-/// finish inside it.
-const COLUMN_CLEARANCE_PT: f32 = crate::font_metrics::GLYPH_LEFT_PADDING;
+/// This has to match the padding `coordinate_resolver::resolve::flush_left_padding`
+/// actually uses for that content type (`Metadata::notes_horizontal_padding_pt`/
+/// `chords_horizontal_padding_pt`/`lyrics_horizontal_padding_pt`/
+/// `note_dash_horizontal_padding_pt`), not some smaller hand-tuned value:
+/// every flush-left glyph (note head, rest, chord symbol, note dash, lyric
+/// syllable) is drawn starting that padding (minus its own left-side
+/// bearing) past the column's left edge — `ColumnGeometry::glyph_left_anchor_x`
+/// — so a rod smaller than that leading offset plus the glyph's own width
+/// leaves the column's own rod too small to contain what actually gets
+/// drawn in it. That's invisible most of the time (slack usually pads
+/// columns well past their rod, and a glyph bleeding into a neighboring
+/// *note* column reads as normal spacing), but becomes visible
+/// ink-on-stroke overlap when the column is this tight *and* immediately
+/// followed by a `BarLine`, whose own rod ([`BARLINE_MIN_WIDTH_PT`]) is far
+/// smaller than a glyph needs to safely finish inside it.
+///
+/// `BarLine`/`MultiMeasureRest`/`Underline` never reach this — `column_rod`
+/// special-cases them before falling into the `_` arm that calls this.
+fn element_clearance_pt(content: &ElementContent, config: &RenderConfig) -> f32 {
+    match content {
+        ElementContent::ChordSymbol { .. } => config.chords_horizontal_padding_pt(),
+        ElementContent::NoteDash { .. } => config.note_dash_horizontal_padding_pt(),
+        ElementContent::Lyric { .. } | ElementContent::LyricLine { .. } => {
+            config.lyrics_horizontal_padding_pt()
+        }
+        _ => config.notes_horizontal_padding_pt(),
+    }
+}
 
 /// Hard-minimum rod (in points) for a `BarLine` column. Unlike note-ish
 /// columns, a bar line's [`THIN_MARK_WEIGHT`] is an arbitrary relative ratio
@@ -49,7 +63,7 @@ const BARLINE_MIN_WIDTH_PT: f32 = 4.0;
 /// [`column_geometry`](super::geometry) gives that column regardless of how
 /// tightly its system is packed. Note-ish columns get their real rendered
 /// width ([`column_weight`]) plus a little clearance
-/// ([`COLUMN_CLEARANCE_PT`]); a `BarLine` gets its own small dedicated floor
+/// ([`element_clearance_pt`]); a `BarLine` gets its own small dedicated floor
 /// ([`BARLINE_MIN_WIDTH_PT`]) since [`THIN_MARK_WEIGHT`] isn't a real width;
 /// `Underline` needs no floor of its own, matching its zero spring weight.
 /// `MultiMeasureRest` never actually reaches this per-element match (its row
@@ -61,7 +75,7 @@ fn column_rod(content: &ElementContent, config: &RenderConfig) -> f32 {
     match content {
         ElementContent::BarLine => BARLINE_MIN_WIDTH_PT,
         ElementContent::MultiMeasureRest { .. } | ElementContent::Underline { .. } => 0.0,
-        _ => column_weight(content, config) + COLUMN_CLEARANCE_PT,
+        _ => column_weight(content, config) + element_clearance_pt(content, config),
     }
 }
 

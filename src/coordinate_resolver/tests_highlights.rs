@@ -1,6 +1,14 @@
 use crate::compositor::types::AbsoluteContent;
 use crate::coordinate_resolver::resolve::{
-    resolve, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
+    resolve, ElementPaddings, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
+};
+
+/// Shared default padding used across this file's `ResolveFontSizes` literals, factored out to keep each test under clippy's line-count cap.
+const DEFAULT_PADDINGS: ElementPaddings = ElementPaddings {
+    notes: 4.0,
+    chords: 4.0,
+    lyrics: 4.0,
+    note_dash: 4.0,
 };
 use crate::grid_layout::types::{
     BarNumberClickTarget, GridContent, GridElement, GridPage, GridRow, HAlign, MeasureColumnLayout,
@@ -58,6 +66,7 @@ fn measure_highlight_produces_prepended_rect_element() {
                 section_label: 12.0,
                 part_label: 12.0,
             },
+            paddings: DEFAULT_PADDINGS,
         },
     )
     .unwrap();
@@ -120,6 +129,7 @@ fn error_highlight_resolves_to_absolute_error_highlight() {
                 section_label: 12.0,
                 part_label: 12.0,
             },
+            paddings: DEFAULT_PADDINGS,
         },
     )
     .unwrap();
@@ -172,6 +182,7 @@ fn page_with_no_highlight_produces_no_extra_element() {
                 section_label: 12.0,
                 part_label: 12.0,
             },
+            paddings: DEFAULT_PADDINGS,
         },
     )
     .unwrap();
@@ -247,6 +258,7 @@ fn playback_cursor_reaches_final_bar_line_of_its_measure() {
                 section_label: 12.0,
                 part_label: 12.0,
             },
+            paddings: DEFAULT_PADDINGS,
         },
     )
     .unwrap();
@@ -321,6 +333,7 @@ fn bar_number_click_target_resolves_to_a_small_rect_sized_to_its_digits() {
                 section_label: 12.0,
                 part_label: 12.0,
             },
+            paddings: DEFAULT_PADDINGS,
         },
     )
     .unwrap();

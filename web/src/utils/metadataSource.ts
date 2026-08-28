@@ -20,6 +20,10 @@ export type MetadataKey =
   | 'part_label_font_size'
   | 'page_number_font_size'
   | 'lyric_click_target_padding_pt'
+  | 'notes_horizontal_padding_pt'
+  | 'chords_horizontal_padding_pt'
+  | 'lyrics_horizontal_padding_pt'
+  | 'note_dash_horizontal_padding_pt'
   | 'merge_duplicate_measures_across_parts'
   | 'hide_resting_parts'
   | 'hide_system_dividers'
@@ -47,6 +51,10 @@ export interface ParsedMetadataFields {
   part_label_font_size: number | null
   page_number_font_size: number | null
   lyric_click_target_padding_pt: number | null
+  notes_horizontal_padding_pt: number | null
+  chords_horizontal_padding_pt: number | null
+  lyrics_horizontal_padding_pt: number | null
+  note_dash_horizontal_padding_pt: number | null
   merge_duplicate_measures_across_parts: boolean | null
   hide_resting_parts: boolean | null
   hide_system_dividers: boolean | null
@@ -72,6 +80,10 @@ const numericKeys: MetadataKey[] = [
   'part_label_font_size',
   'page_number_font_size',
   'lyric_click_target_padding_pt',
+  'notes_horizontal_padding_pt',
+  'chords_horizontal_padding_pt',
+  'lyrics_horizontal_padding_pt',
+  'note_dash_horizontal_padding_pt',
 ]
 
 const unquotedKeys: MetadataKey[] = [
@@ -104,6 +116,10 @@ const canonicalKeyOrder: MetadataKey[] = [
   'part_label_font_size',
   'page_number_font_size',
   'lyric_click_target_padding_pt',
+  'notes_horizontal_padding_pt',
+  'chords_horizontal_padding_pt',
+  'lyrics_horizontal_padding_pt',
+  'note_dash_horizontal_padding_pt',
   'merge_duplicate_measures_across_parts',
   'hide_resting_parts',
   'hide_system_dividers',
@@ -196,6 +212,10 @@ export function parseMetadata(source: string): ParsedMetadataFields {
     part_label_font_size: null,
     page_number_font_size: null,
     lyric_click_target_padding_pt: null,
+    notes_horizontal_padding_pt: null,
+    chords_horizontal_padding_pt: null,
+    lyrics_horizontal_padding_pt: null,
+    note_dash_horizontal_padding_pt: null,
     merge_duplicate_measures_across_parts: null,
     hide_resting_parts: null,
     hide_system_dividers: null,
@@ -295,6 +315,26 @@ export function parseMetadata(source: string): ParsedMetadataFields {
   if (fieldMap.has('lyric_click_target_padding_pt'))
     result.lyric_click_target_padding_pt = parseInt(
       fieldMap.get('lyric_click_target_padding_pt') as string,
+      10,
+    )
+  if (fieldMap.has('notes_horizontal_padding_pt'))
+    result.notes_horizontal_padding_pt = parseInt(
+      fieldMap.get('notes_horizontal_padding_pt') as string,
+      10,
+    )
+  if (fieldMap.has('chords_horizontal_padding_pt'))
+    result.chords_horizontal_padding_pt = parseInt(
+      fieldMap.get('chords_horizontal_padding_pt') as string,
+      10,
+    )
+  if (fieldMap.has('lyrics_horizontal_padding_pt'))
+    result.lyrics_horizontal_padding_pt = parseInt(
+      fieldMap.get('lyrics_horizontal_padding_pt') as string,
+      10,
+    )
+  if (fieldMap.has('note_dash_horizontal_padding_pt'))
+    result.note_dash_horizontal_padding_pt = parseInt(
+      fieldMap.get('note_dash_horizontal_padding_pt') as string,
       10,
     )
   if (fieldMap.has('merge_duplicate_measures_across_parts'))

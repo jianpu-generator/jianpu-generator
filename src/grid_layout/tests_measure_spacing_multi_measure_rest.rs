@@ -28,6 +28,10 @@ fn test_config() -> RenderConfig {
         part_label_font_size: 12,
         page_number_font_size: 18,
         lyric_click_target_padding_pt: 12,
+        notes_horizontal_padding_pt: 4,
+        chords_horizontal_padding_pt: 4,
+        lyrics_horizontal_padding_pt: 4,
+        note_dash_horizontal_padding_pt: 4,
     }
 }
 
@@ -111,7 +115,7 @@ fn measure_column_weights_gives_multi_measure_rest_uniform_weight() {
     // column at `MULTI_MEASURE_REST_WIDTH`. A small count's label ("4") is
     // far narrower than the `MULTI_MEASURE_REST_WIDTH`-note-glyphs floor, so
     // the span's total weight stays at that floor (plus the fixed
-    // `GLYPH_LEFT_PADDING` clearance reserved on both ends — see
+    // configured notes-padding clearance reserved on both ends — see
     // `multi_measure_rest_weight`), spread evenly across its columns; the
     // trailing bar-line column keeps its normal thin weight.
     let config = test_config();
@@ -119,7 +123,7 @@ fn measure_column_weights_gives_multi_measure_rest_uniform_weight() {
     let col_count = MULTI_MEASURE_REST_WIDTH + 1;
     let weights = measure_column_weights(&block, col_count, &config);
     let per_column = (notehead_weight(&config) * MULTI_MEASURE_REST_WIDTH as f32
-        + font_metrics::GLYPH_LEFT_PADDING * 2.0)
+        + config.notes_horizontal_padding_pt() * 2.0)
         / MULTI_MEASURE_REST_WIDTH as f32;
     let mut expected = vec![per_column; MULTI_MEASURE_REST_WIDTH as usize];
     expected.push(0.25);
@@ -147,7 +151,7 @@ fn measure_column_weights_grows_multi_measure_rest_weight_with_a_wide_count_labe
     let bar_span_weight: f32 = weights[..MULTI_MEASURE_REST_WIDTH as usize].iter().sum();
     let label_width =
         font_metrics::monospace_text_width(&count.to_string(), config.notes_font_size())
-            + font_metrics::GLYPH_LEFT_PADDING * 2.0;
+            + config.notes_horizontal_padding_pt() * 2.0;
     assert!(
         (bar_span_weight - label_width).abs() < 0.01,
         "a wide count label's total column weight ({bar_span_weight}) should \
@@ -207,7 +211,7 @@ fn multi_measure_rest_block_renders_wide_enough_for_its_count_label_when_squeeze
 fn multi_measure_rest_block_keeps_horizontal_padding_even_when_squeezed_by_dense_neighbors() {
     // Regression test: even once `multi_measure_rest_block_renders_wide_enough_for_its_count_label_...`
     // holds, the bar's own drawn ink (`resolve_multi_measure_rest` insets it
-    // by `GLYPH_LEFT_PADDING` on both ends) must stay clear of its bar's
+    // by the configured notes padding on both ends) must stay clear of its bar's
     // *column region* by that same margin, or a tightly squeezed run renders
     // with its end ticks flush against the enclosing measure dividers.
     let config = test_config();
@@ -240,7 +244,7 @@ fn multi_measure_rest_block_keeps_horizontal_padding_even_when_squeezed_by_dense
         - geometry.x_start(rest.start_col as f32);
     let label_width =
         font_metrics::monospace_text_width(&count.to_string(), config.notes_font_size());
-    let padding = font_metrics::GLYPH_LEFT_PADDING;
+    let padding = config.notes_horizontal_padding_pt();
 
     assert!(
         rest_width >= label_width + padding * 2.0,

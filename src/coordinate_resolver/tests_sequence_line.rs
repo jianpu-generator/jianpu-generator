@@ -1,6 +1,14 @@
 use crate::compositor::types::AbsoluteContent;
 use crate::coordinate_resolver::resolve::{
-    resolve, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
+    resolve, ElementPaddings, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
+};
+
+/// Shared default padding used across this file's `ResolveFontSizes` literals, factored out to keep each test under clippy's line-count cap.
+const DEFAULT_PADDINGS: ElementPaddings = ElementPaddings {
+    notes: 4.0,
+    chords: 4.0,
+    lyrics: 4.0,
+    note_dash: 4.0,
 };
 use crate::grid_layout::types::{
     GridContent, GridElement, GridPage, GridRow, HAlign, SequenceEntryInfo,
@@ -71,6 +79,7 @@ fn sequence_line_renders_label_and_omit_parts_spans() {
                 section_label: 12.0,
                 part_label: 12.0,
             },
+            paddings: DEFAULT_PADDINGS,
         },
     )
     .unwrap();
@@ -127,6 +136,7 @@ fn sequence_line_renders_only_parts_suffix_without_a_dash() {
                 section_label: 12.0,
                 part_label: 12.0,
             },
+            paddings: DEFAULT_PADDINGS,
         },
     )
     .unwrap();

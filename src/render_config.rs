@@ -1,6 +1,6 @@
 use crate::ast::grouped::Metadata;
 use crate::ast::parsed::Offset;
-use crate::coordinate_resolver::LyricFontSizes;
+use crate::coordinate_resolver::{ElementPaddings, LyricFontSizes};
 use crate::grid_layout::layout::LyricSizing;
 
 #[derive(Debug, Clone)]
@@ -29,6 +29,18 @@ pub struct RenderConfig {
     /// Extra vertical padding in points around a lyric syllable's
     /// click-target box (see `Metadata::lyric_click_target_padding_pt`).
     pub lyric_click_target_padding_pt: u32,
+    /// Horizontal padding in points reserved before a note head/rest/percussion-hit
+    /// glyph (see `Metadata::notes_horizontal_padding_pt`).
+    pub notes_horizontal_padding_pt: u32,
+    /// Horizontal padding in points reserved before a chord symbol (see
+    /// `Metadata::chords_horizontal_padding_pt`).
+    pub chords_horizontal_padding_pt: u32,
+    /// Horizontal padding in points reserved before a lyric syllable (see
+    /// `Metadata::lyrics_horizontal_padding_pt`).
+    pub lyrics_horizontal_padding_pt: u32,
+    /// Horizontal padding in points reserved before a note dash (see
+    /// `Metadata::note_dash_horizontal_padding_pt`).
+    pub note_dash_horizontal_padding_pt: u32,
 }
 
 impl RenderConfig {
@@ -48,6 +60,10 @@ impl RenderConfig {
             part_label_font_size: meta.part_label_font_size,
             page_number_font_size: meta.page_number_font_size,
             lyric_click_target_padding_pt: meta.lyric_click_target_padding_pt,
+            notes_horizontal_padding_pt: meta.notes_horizontal_padding_pt,
+            chords_horizontal_padding_pt: meta.chords_horizontal_padding_pt,
+            lyrics_horizontal_padding_pt: meta.lyrics_horizontal_padding_pt,
+            note_dash_horizontal_padding_pt: meta.note_dash_horizontal_padding_pt,
         }
     }
 
@@ -94,6 +110,44 @@ impl RenderConfig {
             click_target_padding_pt: self.lyric_click_target_padding_pt(),
         }
     }
+
+    /// Horizontal padding in points reserved before a note head/rest/percussion-hit
+    /// glyph (see `Metadata::notes_horizontal_padding_pt`). Also backs the
+    /// multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket
+    /// span anchors, all of which key off a note column.
+    pub fn notes_horizontal_padding_pt(&self) -> f32 {
+        self.notes_horizontal_padding_pt as f32
+    }
+
+    /// Horizontal padding in points reserved before a chord symbol (see
+    /// `Metadata::chords_horizontal_padding_pt`).
+    pub fn chords_horizontal_padding_pt(&self) -> f32 {
+        self.chords_horizontal_padding_pt as f32
+    }
+
+    /// Horizontal padding in points reserved before a lyric syllable (see
+    /// `Metadata::lyrics_horizontal_padding_pt`).
+    pub fn lyrics_horizontal_padding_pt(&self) -> f32 {
+        self.lyrics_horizontal_padding_pt as f32
+    }
+
+    /// Horizontal padding in points reserved before a note dash (see
+    /// `Metadata::note_dash_horizontal_padding_pt`).
+    pub fn note_dash_horizontal_padding_pt(&self) -> f32 {
+        self.note_dash_horizontal_padding_pt as f32
+    }
+
+    /// Every `*_horizontal_padding_pt()` accessor bundled together, for the
+    /// `coordinate_resolver` functions that need all four (see
+    /// `ElementPaddings`).
+    pub(crate) fn element_paddings(&self) -> ElementPaddings {
+        ElementPaddings {
+            notes: self.notes_horizontal_padding_pt(),
+            chords: self.chords_horizontal_padding_pt(),
+            lyrics: self.lyrics_horizontal_padding_pt(),
+            note_dash: self.note_dash_horizontal_padding_pt(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -129,6 +183,10 @@ mod tests {
             part_label_font_size: 12,
             page_number_font_size: 18,
             lyric_click_target_padding_pt: 12,
+            notes_horizontal_padding_pt: 4,
+            chords_horizontal_padding_pt: 4,
+            lyrics_horizontal_padding_pt: 4,
+            note_dash_horizontal_padding_pt: 4,
         };
         let cfg = RenderConfig::from_metadata(&meta);
         assert_eq!(cfg.row_height, 30);
@@ -142,5 +200,9 @@ mod tests {
         assert_eq!(cfg.section_label_font_size, 12);
         assert_eq!(cfg.part_label_font_size, 12);
         assert_eq!(cfg.page_number_font_size, 18);
+        assert_eq!(cfg.notes_horizontal_padding_pt(), 4.0);
+        assert_eq!(cfg.chords_horizontal_padding_pt(), 4.0);
+        assert_eq!(cfg.lyrics_horizontal_padding_pt(), 4.0);
+        assert_eq!(cfg.note_dash_horizontal_padding_pt(), 4.0);
     }
 }

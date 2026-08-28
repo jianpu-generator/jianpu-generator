@@ -88,7 +88,8 @@ fn face_vertical_extent(face: Option<&ttf_parser::Face<'static>>, font_size: f32
 }
 
 /// Left-side bearing (in points) of one character in the pinned lyric font
-/// (see `lyric_font`), used to compensate `GLYPH_LEFT_PADDING` for CJK lyric
+/// (see `lyric_font`), used to compensate a lyric syllable's configured
+/// horizontal padding (`Metadata::lyrics_horizontal_padding_pt`) for CJK
 /// syllables' own built-in inset — see
 /// `coordinate_resolver::resolve::flush_left_padding`.
 pub(crate) fn cjk_glyph_left_bearing(c: char, font_size: f32) -> f32 {
@@ -178,18 +179,6 @@ pub(crate) fn cjk_text_width(s: &str, font_size: f32) -> f32 {
         .map(|c| face_char_advance_width(font_source::lyric_font(), c, font_size))
         .sum()
 }
-
-/// Fixed horizontal padding (in points) between a column's left edge and the
-/// anchor of every glyph inside it — note head, rest, percussion hit, chord
-/// symbol, note dash, and lyric syllable — plus the
-/// tie/slur/underline/tuplet-bracket span markings that key off the same
-/// anchor. A flat point value rather than a ratio of `note_number_width`:
-/// the padding should read as a fixed visual gap from the bar line/column
-/// edge, not shrink toward invisible as the user's configured note size
-/// shrinks. The same value everywhere so everything in a column lines up
-/// flush at one offset from `x_start`, regardless of the column's own width
-/// or what else shares it (see `ColumnGeometry::glyph_left_anchor_x`).
-pub(crate) const GLYPH_LEFT_PADDING: f32 = 4.0;
 
 /// The augmentation-dot(s) text (`.`/`..`, drawn as literal middle-dot
 /// characters) appended directly onto a note/rest/chord/dash glyph's own

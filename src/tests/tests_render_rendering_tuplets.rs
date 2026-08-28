@@ -45,6 +45,7 @@ fn triplet_of_sixteenth_notes_gets_double_underline_matching_written_duration() 
                 section_label: config.section_label_font_size as f32,
                 part_label: config.part_label_font_size as f32,
             },
+            paddings: config.element_paddings(),
         },
     )
     .expect("coordinate resolver should not fail in tests");

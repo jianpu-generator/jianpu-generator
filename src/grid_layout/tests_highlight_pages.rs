@@ -47,6 +47,10 @@ fn erroneous_measure_produces_error_highlight() {
         part_label_font_size: 12,
         page_number_font_size: 18,
         lyric_click_target_padding_pt: 12,
+        notes_horizontal_padding_pt: 4,
+        chords_horizontal_padding_pt: 4,
+        lyrics_horizontal_padding_pt: 4,
+        note_dash_horizontal_padding_pt: 4,
     };
     let pages = crate::grid_layout::layout(
         &crate::compiler::types::CompileResult {
@@ -97,6 +101,10 @@ fn click_target_row_start_skips_hidden_system_divider() {
         part_label_font_size: 12,
         page_number_font_size: 18,
         lyric_click_target_padding_pt: 12,
+        notes_horizontal_padding_pt: 4,
+        chords_horizontal_padding_pt: 4,
+        lyrics_horizontal_padding_pt: 4,
+        note_dash_horizontal_padding_pt: 4,
     };
     let shown_pages = crate::grid_layout::layout(
         &crate::compiler::types::CompileResult {
@@ -172,6 +180,10 @@ fn non_erroneous_measure_produces_no_error_highlight() {
         part_label_font_size: 12,
         page_number_font_size: 18,
         lyric_click_target_padding_pt: 12,
+        notes_horizontal_padding_pt: 4,
+        chords_horizontal_padding_pt: 4,
+        lyrics_horizontal_padding_pt: 4,
+        note_dash_horizontal_padding_pt: 4,
     };
     let pages = crate::grid_layout::layout(
         &crate::compiler::types::CompileResult {
