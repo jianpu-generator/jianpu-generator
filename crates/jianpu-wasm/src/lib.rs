@@ -65,8 +65,9 @@ pub(crate) fn sequence_entry_range(
 /// glyph-advance measurement during layout (see `font_metrics` in the core
 /// crate). `directive_line_font` backs the `sansSerif` role and `lyric_font`
 /// backs the `title` role (shared with the song title) — see
-/// `fonts/fonts.json` for which file each currently is (both Zhuque Fangsong
-/// right now) and `DIRECTIVE_LINE_FONT_FAMILY`/`TITLE_FONT_FAMILY` in
+/// `fonts/fonts.json` for which file each currently is (Source Han Sans SC
+/// and Zhuque Fangsong respectively) and
+/// `DIRECTIVE_LINE_FONT_FAMILY`/`TITLE_FONT_FAMILY` in
 /// `src/serializer/mod.rs`.
 /// The wasm binary doesn't embed these fonts at compile time — the caller
 /// fetches the same bytes it already needs for PDF export and passes them

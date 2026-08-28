@@ -18,10 +18,10 @@ export function useFontsLoader(): FontsLoaderState {
   // lyric font (see `FontFamily::Title` in src/compositor/types.rs),
   // despite the name; `tc` holds the `sansSerif` role's font, the separate
   // default/body font for everything else (directive line, part legend,
-  // footer) — currently the same Zhuque Fangsong file as `sc`, though the
-  // two roles can differ. Filenames/family names come from
-  // `fonts/fonts.json`, the single source of truth for which font backs
-  // each role — see its own comments and `src/fonts.rs` on the Rust side.
+  // footer) — currently Source Han Sans SC, a different file from `sc`'s
+  // Zhuque Fangsong. Filenames/family names come from `fonts/fonts.json`,
+  // the single source of truth for which font backs each role — see its own
+  // comments and `src/fonts.rs` on the Rust side.
   const sc = useAssetLoader(`/fonts/${fontsManifest.title.filename}`)
   const tc = useAssetLoader(`/fonts/${fontsManifest.sansSerif.filename}`)
   const mono = useAssetLoader(`/fonts/${fontsManifest.monospace.filename}`)

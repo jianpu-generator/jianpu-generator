@@ -10,9 +10,9 @@
     "familyCss": "\"Zhuque Fangsong (technical preview)\", sans-serif"
   },
   "sansSerif": {
-    "filename": "ZhuqueFangsong-Regular.ttf",
-    "name": "Zhuque Fangsong (technical preview)",
-    "familyCss": "\"Zhuque Fangsong (technical preview)\", sans-serif"
+    "filename": "SourceHanSansSC-Regular.otf",
+    "name": "Source Han Sans SC",
+    "familyCss": "\"Source Han Sans SC\", sans-serif"
   },
   "monospace": {
     "filename": "NotoSansMono-Regular.ttf",

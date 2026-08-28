@@ -101,14 +101,12 @@ use crate::fonts::SANS_SERIF_FONT_FAMILY_CSS as DIRECTIVE_LINE_FONT_FAMILY;
 /// `FontFamily::Title` — the song title, subtitle, and author (via
 /// `make_title_row`/`make_subtitle_author_row`) and lyric syllables/lines
 /// (`render_lyric`/`render_lyric_line`) — is pinned to whichever font backs
-/// the `title` role in `fonts/fonts.json` (currently Zhuque Fangsong, same
-/// file as `DIRECTIVE_LINE_FONT_FAMILY` right now). Kept as a separate
-/// constant from `DIRECTIVE_LINE_FONT_FAMILY` rather than merged into one,
-/// since the two roles are normally backed by different files — e.g. a
-/// calligraphic font for `Title`'s heading/lyric look, kept off the
-/// directive line/part legend/footer where its Latin glyphs would read too
-/// calligraphic — even though both happen to be the same file right now.
-/// Defined in `src/fonts.rs`.
+/// the `title` role in `fonts/fonts.json` (currently Zhuque Fangsong, a
+/// calligraphic font kept off the directive line/part legend/footer, where
+/// its Latin glyphs would read too calligraphic — see `DIRECTIVE_LINE_FONT_FAMILY`'s
+/// Source Han Sans SC above). Kept as a separate constant from
+/// `DIRECTIVE_LINE_FONT_FAMILY` rather than merged into one, since the two
+/// roles are backed by different files. Defined in `src/fonts.rs`.
 use crate::fonts::TITLE_FONT_FAMILY_CSS as TITLE_FONT_FAMILY;
 
 /// Every `FontFamily::Monospace` glyph (notehead, rest, chord symbol,

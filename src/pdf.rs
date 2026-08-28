@@ -17,15 +17,14 @@ pub struct PdfFonts {
     /// loaded here, not bound to a generic alias (see `fonts/fonts.json`'s
     /// comment on this).
     pub sans_serif_sc: Vec<u8>,
-    /// The `sansSerif` role's font bytes (currently also Zhuque Fangsong —
+    /// The `sansSerif` role's font bytes (currently Source Han Sans SC —
     /// see `fonts/fonts.json`) — the default/body CJK font PDF export
     /// resolves `sans-serif` to (see `set_sans_serif_family` below),
     /// covering everything except `FontFamily::Title`'s text (directive
     /// line, part legend, footer). Loaded separately from `sans_serif_sc`
     /// since the two roles can be backed by different font files (and
-    /// usually are — see `fonts/fonts.json`'s comment on why the split
-    /// exists), even though both happen to point at the same file right
-    /// now.
+    /// currently are — see `fonts/fonts.json`'s comment on why the split
+    /// exists).
     pub sans_serif_tc: Vec<u8>,
     pub monospace: Vec<u8>,
 }

@@ -11,8 +11,8 @@
 //! `src/serializer/mod.rs`: `directive_line_font()` (the `sansSerif` role in
 //! `fonts/fonts.json`) for the directive line's own text, and `lyric_font()`
 //! (the `title` role) for lyric syllables, which render in the same font as
-//! the song title instead — currently the same Zhuque Fangsong file as
-//! `directive_line_font()`, though the two roles can differ.
+//! the song title instead — currently Zhuque Fangsong, a different file from
+//! `directive_line_font()`'s Source Han Sans SC.
 //!
 //! Also used by `grid_layout::layout_spacing` for measure-spacing weights
 //! (notehead/rest/chord-symbol/note-dash/lyric glyph widths, via
