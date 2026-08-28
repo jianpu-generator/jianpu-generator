@@ -393,6 +393,7 @@ pub(crate) fn make_footer_row(
                 font_size: base * 0.6,
                 bold: false,
                 italic: false,
+                is_title: false,
             },
         }],
     }

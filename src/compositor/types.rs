@@ -229,7 +229,25 @@ pub enum DominantBaseline {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FontFamily {
     Monospace,
+    /// Everything not on `Title`: the directive line (bar number, section
+    /// label, key/bpm/time signature), part legend, and footer. Pinned to
+    /// whichever font backs the `sansSerif` role in `fonts/fonts.json`
+    /// (currently Zhuque Fangsong, same file as `Title` right now — see that
+    /// file's comment on why the two roles usually differ). See
+    /// `DIRECTIVE_LINE_FONT_FAMILY` in `src/serializer/mod.rs`.
     SansSerif,
+    /// The song title, subtitle, and author (`Header::title`/`subtitle`/
+    /// `author`, via `make_title_row`/`make_subtitle_author_row`) and lyric
+    /// syllables/lines (`render_lyric`/`render_lyric_line`) — pinned to
+    /// whichever font backs the `title` role in `fonts/fonts.json`
+    /// (currently Zhuque Fangsong). Despite the name, this variant isn't
+    /// title-exclusive; it's named for its original single use before the
+    /// other three joined it. Normally kept off a calligraphic font's Latin
+    /// glyphs for the part legend and footer (see `SansSerif` above) — not
+    /// currently in effect since both roles share a font, but the split
+    /// stays in place for whenever they diverge again. See
+    /// `TITLE_FONT_FAMILY` in `src/serializer/mod.rs`.
+    Title,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

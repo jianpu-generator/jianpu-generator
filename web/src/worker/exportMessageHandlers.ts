@@ -7,7 +7,14 @@ import type {
 } from 'jianpu-wasm'
 import type { WorkerRequest, WorkerResponse } from './jianpu.worker'
 
-type LoadedFonts = { sc: Uint8Array; tc: Uint8Array; mono: Uint8Array } | null
+// `sc` holds the `title` role's font — the song title/lyric font; `tc`
+// holds the `sansSerif` role's font, the default/body font for everything
+// else — see `fonts/fonts.json` and `useFontsLoader`.
+type LoadedFonts = {
+  sc: Uint8Array
+  tc: Uint8Array
+  mono: Uint8Array
+} | null
 
 function binaryBufferFromResult(
   bytes: Uint8Array | ArrayBuffer | ArrayLike<number>,

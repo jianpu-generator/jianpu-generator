@@ -4,7 +4,28 @@ use pdf_writer::{Content, Finish, Name, Pdf, Rect, Ref, TextStr};
 use std::collections::HashMap;
 
 pub struct PdfFonts {
+    /// The `title` role's font bytes (currently Zhuque Fangsong — see
+    /// `fonts/fonts.json`, the single source of truth for which file backs
+    /// each role) — despite the field's name, no longer Source Han Sans SC
+    /// or TW-Kai. Backs `FontFamily::Title` (the song title, subtitle,
+    /// author, and lyric syllables/lines, see its doc comment in
+    /// `src/compositor/types.rs`), addressed by its own literal family name
+    /// in the SVG's `font-family` (`TITLE_FONT_FAMILY` in
+    /// `src/serializer/mod.rs`) rather than via `set_sans_serif_family` —
+    /// `fontdb` resolves a literal name by matching a loaded font's own
+    /// name-table family, so whatever font backs this role just needs to be
+    /// loaded here, not bound to a generic alias (see `fonts/fonts.json`'s
+    /// comment on this).
     pub sans_serif_sc: Vec<u8>,
+    /// The `sansSerif` role's font bytes (currently also Zhuque Fangsong —
+    /// see `fonts/fonts.json`) — the default/body CJK font PDF export
+    /// resolves `sans-serif` to (see `set_sans_serif_family` below),
+    /// covering everything except `FontFamily::Title`'s text (directive
+    /// line, part legend, footer). Loaded separately from `sans_serif_sc`
+    /// since the two roles can be backed by different font files (and
+    /// usually are — see `fonts/fonts.json`'s comment on why the split
+    /// exists), even though both happen to point at the same file right
+    /// now.
     pub sans_serif_tc: Vec<u8>,
     pub monospace: Vec<u8>,
 }
@@ -30,8 +51,8 @@ pub fn write_pdf(
         db.load_font_data(fonts.sans_serif_sc.clone());
         db.load_font_data(fonts.sans_serif_tc.clone());
         db.load_font_data(fonts.monospace.clone());
-        db.set_sans_serif_family("Source Han Sans SC");
-        db.set_monospace_family("Noto Sans Mono");
+        db.set_sans_serif_family(crate::fonts::SANS_SERIF_FONT_NAME);
+        db.set_monospace_family(crate::fonts::MONOSPACE_FONT_NAME);
     }
 
     let conversion_options = svg2pdf::ConversionOptions::default();
@@ -123,9 +144,9 @@ mod tests {
             .unwrap()
             .svgs;
         let fonts = PdfFonts {
-            sans_serif_sc: include_bytes!("../fonts/SourceHanSansSC-Regular.otf").to_vec(),
-            sans_serif_tc: include_bytes!("../fonts/SourceHanSansTC-Regular.otf").to_vec(),
-            monospace: include_bytes!("../fonts/NotoSansMono-Regular.ttf").to_vec(),
+            sans_serif_sc: crate::fonts::TITLE_FONT_BYTES.to_vec(),
+            sans_serif_tc: crate::fonts::SANS_SERIF_FONT_BYTES.to_vec(),
+            monospace: crate::fonts::MONOSPACE_FONT_BYTES.to_vec(),
         };
         write_pdf(&svgs, &fonts, None).unwrap()
     }

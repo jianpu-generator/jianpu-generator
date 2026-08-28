@@ -199,12 +199,16 @@ pub enum GridContent {
         bpm: Option<u32>,
         time_signature: Option<(u32, u32)>,
     },
-    /// Generic styled text for header and footer rows.
+    /// Generic styled text for header and footer rows. `is_title` is set by
+    /// `make_title_row`/`make_subtitle_author_row` (title, subtitle,
+    /// author) — `false` for the part legend and footer — see
+    /// `FontFamily::Title`.
     Text {
         content: String,
         font_size: f32,
         bold: bool,
         italic: bool,
+        is_title: bool,
     },
     /// The resolved `# sequence` playback order, rendered as "Sequence: "
     /// followed by each label (styled like an inline section label) joined
@@ -274,6 +278,7 @@ pub enum PostArcGridContent {
         font_size: f32,
         bold: bool,
         italic: bool,
+        is_title: bool,
     },
     SequenceLine {
         entries: Vec<SequenceEntryInfo>,

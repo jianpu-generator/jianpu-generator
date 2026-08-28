@@ -61,6 +61,7 @@ fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) {
     let font_str = match font {
         FontFamily::Monospace => MONOSPACE_FONT_FAMILY,
         FontFamily::SansSerif => DIRECTIVE_LINE_FONT_FAMILY,
+        FontFamily::Title => TITLE_FONT_FAMILY,
     };
     let weight_str = match weight {
         FontWeight::Normal => "normal",
@@ -87,20 +88,35 @@ fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) {
 }
 
 /// Every `FontFamily::SansSerif` glyph (the directive line's bar number,
-/// section label, key/bpm/time signature, navigation markers, and CJK lyric
-/// syllables) is pinned to this concrete font family — the same one PDF
+/// section label, key/bpm/time signature, navigation markers, part legend,
+/// and footer) is pinned to this concrete font family — the same one PDF
 /// export already resolves `sans-serif` to (see `set_sans_serif_family` in
 /// `src/pdf.rs`) — rather than the generic `sans-serif` alias, so glyph
 /// widths are consistent between viewers that have this font installed and
 /// the PDF export path — see Task 1 of `PLAN-section-label-engraving-quality.md`.
-const DIRECTIVE_LINE_FONT_FAMILY: &str = r#""Source Han Sans SC", sans-serif"#;
+/// Defined in `src/fonts.rs`, the single source of truth for which font
+/// backs each `FontFamily` role.
+use crate::fonts::SANS_SERIF_FONT_FAMILY_CSS as DIRECTIVE_LINE_FONT_FAMILY;
+
+/// `FontFamily::Title` — the song title, subtitle, and author (via
+/// `make_title_row`/`make_subtitle_author_row`) and lyric syllables/lines
+/// (`render_lyric`/`render_lyric_line`) — is pinned to whichever font backs
+/// the `title` role in `fonts/fonts.json` (currently Zhuque Fangsong, same
+/// file as `DIRECTIVE_LINE_FONT_FAMILY` right now). Kept as a separate
+/// constant from `DIRECTIVE_LINE_FONT_FAMILY` rather than merged into one,
+/// since the two roles are normally backed by different files — e.g. a
+/// calligraphic font for `Title`'s heading/lyric look, kept off the
+/// directive line/part legend/footer where its Latin glyphs would read too
+/// calligraphic — even though both happen to be the same file right now.
+/// Defined in `src/fonts.rs`.
+use crate::fonts::TITLE_FONT_FAMILY_CSS as TITLE_FONT_FAMILY;
 
 /// Every `FontFamily::Monospace` glyph (notehead, rest, chord symbol,
 /// percussion, multi-measure-rest count, note dash, Latin lyric) is pinned to
 /// this concrete family so raw-SVG viewers render at the same width measured
 /// by `font_metrics::monospace_text_width`/`monospace_char_advance_width`,
-/// mirroring `DIRECTIVE_LINE_FONT_FAMILY` above.
-const MONOSPACE_FONT_FAMILY: &str = r#""Noto Sans Mono", monospace"#;
+/// mirroring `DIRECTIVE_LINE_FONT_FAMILY` above. Defined in `src/fonts.rs`.
+use crate::fonts::MONOSPACE_FONT_FAMILY_CSS as MONOSPACE_FONT_FAMILY;
 
 fn serialize_text_with_tspans(
     el: &SvgElement,

@@ -18,13 +18,14 @@ fn sans_serif_text(
     anchor: TextAnchor,
     weight: FontWeight,
     italic: bool,
+    font: FontFamily,
 ) -> AbsoluteContent {
     AbsoluteContent::Text {
         content,
         font_size,
         anchor,
         baseline: DominantBaseline::Middle,
-        font: FontFamily::SansSerif,
+        font,
         weight,
         italic,
     }
@@ -238,6 +239,7 @@ fn grid_text_to_absolute(
             TextAnchor::Middle,
             FontWeight::Normal,
             false,
+            FontFamily::SansSerif,
         )),
         PostArcGridContent::DirectiveLine { label, .. } => {
             let directive_line = directive_line_content(content);
@@ -255,6 +257,7 @@ fn grid_text_to_absolute(
             font_size,
             bold,
             italic,
+            is_title,
         } => Some(sans_serif_text(
             content.clone(),
             *font_size,
@@ -265,6 +268,11 @@ fn grid_text_to_absolute(
                 FontWeight::Normal
             },
             *italic,
+            if *is_title {
+                FontFamily::Title
+            } else {
+                FontFamily::SansSerif
+            },
         )),
         PostArcGridContent::HorizontalLine => {
             Some(AbsoluteContent::HorizontalLine { width: span_width })

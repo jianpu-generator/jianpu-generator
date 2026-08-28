@@ -4,6 +4,7 @@ import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import type { Plugin, ViteDevServer } from 'vite'
 import { defineConfig } from 'vitest/config'
+import fontsManifest from '../fonts/fonts.json'
 
 const WASM_PACK_ARGS = [
   'build',
@@ -134,12 +135,16 @@ function wasmDevPlugin(): Plugin {
   }
 }
 
+// `Set` dedupes in case two roles happen to point at the same font file (as
+// when experimenting with a single typeface for both title and sansSerif).
 const DEPLOYED_ASSET_FILES = [
-  'SourceHanSansSC-Regular.otf',
-  'SourceHanSansTC-Regular.otf',
-  'NotoSansMono-Regular.ttf',
-  'GeneralUser_GS.sf2',
-] as const
+  ...new Set([
+    fontsManifest.title.filename,
+    fontsManifest.sansSerif.filename,
+    fontsManifest.monospace.filename,
+    'GeneralUser_GS.sf2',
+  ]),
+]
 
 const fontsDir = path.resolve(__dirname, '..', 'fonts')
 

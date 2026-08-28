@@ -1,15 +1,47 @@
-import type { SvgDocumentOut, SvgElementOut, TagOut } from 'jianpu-wasm'
+import type {
+  FontFamilyOut,
+  SvgDocumentOut,
+  SvgElementOut,
+  TagOut,
+} from 'jianpu-wasm'
 import type { ReactNode } from 'react'
+import fontsManifest from '../../../fonts/fonts.json'
 
-// The directive line (bar number, section label, key/bpm/time signature,
-// navigation markers) is the sole user of the `textWithTspans` case below.
-// It's pinned to a specific font — loaded via the `@font-face` rule in
-// index.css, which points at the same font file bundled for PDF export
-// (see `set_sans_serif_family` in src/pdf.rs) — instead of the generic
+// Every `FontFamily::SansSerif` glyph — the directive line (bar number,
+// section label, key/bpm/time signature, navigation markers) via the
+// `textWithTspans` case below, and part-legend/footer via the plain `text`
+// case's non-title branch — is pinned to a specific font, mirroring
+// `DIRECTIVE_LINE_FONT_FAMILY` in `src/serializer/mod.rs` (the Rust-side
+// serializer backing exported .svg files and PDF export). Loaded via the
+// `@font-face` rules injected by `injectFontFaces` (see src/injectFontFaces.ts),
+// which point at the same font file bundled for PDF export (see
+// `set_sans_serif_family` in src/pdf.rs) — instead of the generic
 // `sans-serif` alias, so glyph widths stay consistent across viewers that
-// have the font available. See Task 1 of
-// PLAN-section-label-engraving-quality.md.
-const DIRECTIVE_LINE_FONT_FAMILY = '"Source Han Sans SC", sans-serif'
+// have the font available. See `fonts/fonts.json` (this constant's source)
+// and Task 1 of PLAN-section-label-engraving-quality.md.
+const DIRECTIVE_LINE_FONT_FAMILY = fontsManifest.sansSerif.familyCss
+
+// `FontFamily::Title` — the song title, subtitle, author, and lyric
+// syllables/lines (via the plain `text` case's `title` branch, shared by all
+// four roles) — is pinned to a separate, typically more calligraphic font
+// instead. Deliberately not used for `DIRECTIVE_LINE_FONT_FAMILY`'s text
+// (directive line, part legend, footer) — see `fonts/fonts.json` for why the
+// split exists. Mirrors `TITLE_FONT_FAMILY` in `src/serializer/mod.rs`.
+const TITLE_FONT_FAMILY = fontsManifest.title.familyCss
+
+/** Resolves a plain `text` element's `FontFamilyOut` to the CSS stack it
+ * should render with — the `textWithTspans` case (directive line) doesn't go
+ * through here since it's always `DIRECTIVE_LINE_FONT_FAMILY`. */
+function textFontFamily(font: FontFamilyOut): string {
+  switch (font) {
+    case 'monospace':
+      return 'monospace'
+    case 'sansSerif':
+      return DIRECTIVE_LINE_FONT_FAMILY
+    case 'title':
+      return TITLE_FONT_FAMILY
+  }
+}
 
 /** Stroke width (SVG units) of the invisible hit-line drawn over each bar
  * line — wide enough to be reliably hoverable/draggable (the real bar line
@@ -150,7 +182,7 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
                 ? 'hanging'
                 : 'ideographic'
           }
-          fontFamily={kind.font === 'monospace' ? 'monospace' : 'sans-serif'}
+          fontFamily={textFontFamily(kind.font)}
           fontWeight={kind.weight === 'normal' ? 'normal' : 'bold'}
           fontStyle={kind.italic ? 'italic' : undefined}
         >

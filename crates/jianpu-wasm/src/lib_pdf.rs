@@ -11,8 +11,9 @@ use crate::types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
 /// - `{ "status": "err", "diagnostics": [...] }`
 ///
 /// `sans_serif_sc`, `sans_serif_tc`, and `monospace` are raw font file bytes
-/// (OTF/TTF) used for text rendering. They are not embedded in the WASM binary
-/// and must be supplied by the caller (e.g. fetched from a CDN or local server).
+/// (OTF/TTF) used for text rendering. They are not embedded in the WASM
+/// binary and must be supplied by the caller (e.g. fetched from a CDN or
+/// local server).
 #[allow(clippy::needless_pass_by_value)]
 #[wasm_bindgen]
 pub fn generate_pdf(

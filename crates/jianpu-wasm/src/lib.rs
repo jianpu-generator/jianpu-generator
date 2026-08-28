@@ -61,14 +61,24 @@ pub(crate) fn sequence_entry_range(
     }
 }
 
-/// Supply the directive-line and monospace font bytes used for real
+/// Supply the directive-line, lyric, and monospace font bytes used for real
 /// glyph-advance measurement during layout (see `font_metrics` in the core
-/// crate). The wasm binary doesn't embed these fonts at compile time — the
-/// caller fetches the same bytes it already needs for PDF export and passes
-/// them here once, at startup.
+/// crate). `directive_line_font` backs the `sansSerif` role and `lyric_font`
+/// backs the `title` role (shared with the song title) — see
+/// `fonts/fonts.json` for which file each currently is (both Zhuque Fangsong
+/// right now) and `DIRECTIVE_LINE_FONT_FAMILY`/`TITLE_FONT_FAMILY` in
+/// `src/serializer/mod.rs`.
+/// The wasm binary doesn't embed these fonts at compile time — the caller
+/// fetches the same bytes it already needs for PDF export and passes them
+/// here once, at startup.
 #[wasm_bindgen]
-pub fn set_layout_fonts(directive_line_font: Vec<u8>, monospace_font: Vec<u8>) {
+pub fn set_layout_fonts(
+    directive_line_font: Vec<u8>,
+    lyric_font: Vec<u8>,
+    monospace_font: Vec<u8>,
+) {
     jianpu_generator::set_directive_line_font_bytes(directive_line_font);
+    jianpu_generator::set_lyric_font_bytes(lyric_font);
     jianpu_generator::set_monospace_font_bytes(monospace_font);
 }
 

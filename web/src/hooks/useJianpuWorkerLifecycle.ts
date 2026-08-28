@@ -13,7 +13,14 @@ export interface JianpuWorkerLifecycleDeps extends WorkerMessageHandlerDeps {
   measureWavUrlRef: RefObject<string | null>
   cursorOffsetTimerRef: RefObject<number | null>
   soundfontBytes: Uint8Array | null
-  fontBytes: { sc: Uint8Array; tc: Uint8Array; mono: Uint8Array } | null
+  /** `sc` holds the `title` role's font (the song title/lyric font); `tc`
+   * holds the `sansSerif` role's font, the default/body font for everything
+   * else — see `fonts/fonts.json` and `useFontsLoader`. */
+  fontBytes: {
+    sc: Uint8Array
+    tc: Uint8Array
+    mono: Uint8Array
+  } | null
 }
 
 /** Creates and tears down the render worker, wires up its message handler, and forwards

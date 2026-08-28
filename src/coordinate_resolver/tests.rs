@@ -240,6 +240,7 @@ fn halign_end_places_x_at_right_of_column_span() {
             font_size: 12.0,
             bold: false,
             italic: false,
+            is_title: false,
         },
     };
     let page = single_row_page(el);

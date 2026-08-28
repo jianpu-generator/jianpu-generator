@@ -1,17 +1,30 @@
+import fontsManifest from '../../../fonts/fonts.json'
 import type { AssetStatus } from './useAssetLoader'
 import { useAssetLoader } from './useAssetLoader'
 
 export interface FontsLoaderState {
-  fonts: { sc: Uint8Array; tc: Uint8Array; mono: Uint8Array } | null
+  fonts: {
+    sc: Uint8Array
+    tc: Uint8Array
+    mono: Uint8Array
+  } | null
   status: AssetStatus
   loadedBytes: number
   totalBytes: number
 }
 
 export function useFontsLoader(): FontsLoaderState {
-  const sc = useAssetLoader('/fonts/SourceHanSansSC-Regular.otf')
-  const tc = useAssetLoader('/fonts/SourceHanSansTC-Regular.otf')
-  const mono = useAssetLoader('/fonts/NotoSansMono-Regular.ttf')
+  // `sc` holds the `title` role's font — the song title/subtitle/author/
+  // lyric font (see `FontFamily::Title` in src/compositor/types.rs),
+  // despite the name; `tc` holds the `sansSerif` role's font, the separate
+  // default/body font for everything else (directive line, part legend,
+  // footer) — currently the same Zhuque Fangsong file as `sc`, though the
+  // two roles can differ. Filenames/family names come from
+  // `fonts/fonts.json`, the single source of truth for which font backs
+  // each role — see its own comments and `src/fonts.rs` on the Rust side.
+  const sc = useAssetLoader(`/fonts/${fontsManifest.title.filename}`)
+  const tc = useAssetLoader(`/fonts/${fontsManifest.sansSerif.filename}`)
+  const mono = useAssetLoader(`/fonts/${fontsManifest.monospace.filename}`)
 
   const status: AssetStatus =
     sc.status === 'error' || tc.status === 'error' || mono.status === 'error'

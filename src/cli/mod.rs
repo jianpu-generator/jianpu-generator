@@ -9,18 +9,11 @@ pub use generate::GenerateInput;
 pub static SF2_BYTES: &[u8] = include_bytes!("../../fonts/GeneralUser_GS.sf2");
 
 #[cfg(feature = "pdf")]
-static SANS_SERIF_SC_FONT: &[u8] = include_bytes!("../../fonts/SourceHanSansSC-Regular.otf");
-#[cfg(feature = "pdf")]
-static SANS_SERIF_TC_FONT: &[u8] = include_bytes!("../../fonts/SourceHanSansTC-Regular.otf");
-#[cfg(feature = "pdf")]
-static MONOSPACE_FONT: &[u8] = include_bytes!("../../fonts/NotoSansMono-Regular.ttf");
-
-#[cfg(feature = "pdf")]
 pub fn default_pdf_fonts() -> crate::pdf::PdfFonts {
     crate::pdf::PdfFonts {
-        sans_serif_sc: SANS_SERIF_SC_FONT.to_vec(),
-        sans_serif_tc: SANS_SERIF_TC_FONT.to_vec(),
-        monospace: MONOSPACE_FONT.to_vec(),
+        sans_serif_sc: crate::fonts::TITLE_FONT_BYTES.to_vec(),
+        sans_serif_tc: crate::fonts::SANS_SERIF_FONT_BYTES.to_vec(),
+        monospace: crate::fonts::MONOSPACE_FONT_BYTES.to_vec(),
     }
 }
 

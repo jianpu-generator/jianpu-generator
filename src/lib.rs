@@ -22,6 +22,7 @@ pub mod error;
 pub mod error_reporter;
 pub mod filters;
 mod font_metrics;
+pub mod fonts;
 pub mod format_source;
 mod gm_percussion;
 pub mod grid_layout;
@@ -111,6 +112,13 @@ pub fn compile(
 /// instead.
 pub fn set_directive_line_font_bytes(bytes: Vec<u8>) {
     font_metrics::set_directive_line_font_bytes(bytes);
+}
+
+/// Supply the lyric font's raw bytes for real glyph-advance measurement
+/// during layout. Only meaningful on `wasm32` — see
+/// [`set_directive_line_font_bytes`].
+pub fn set_lyric_font_bytes(bytes: Vec<u8>) {
+    font_metrics::set_lyric_font_bytes(bytes);
 }
 
 /// Supply the monospace font's raw bytes for real glyph-advance measurement

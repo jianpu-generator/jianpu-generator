@@ -3,9 +3,9 @@ use crate::types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
 
 fn test_pdf_fonts() -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     (
-        include_bytes!("../../../fonts/SourceHanSansSC-Regular.otf").to_vec(),
-        include_bytes!("../../../fonts/SourceHanSansTC-Regular.otf").to_vec(),
-        include_bytes!("../../../fonts/NotoSansMono-Regular.ttf").to_vec(),
+        jianpu_generator::fonts::TITLE_FONT_BYTES.to_vec(),
+        jianpu_generator::fonts::SANS_SERIF_FONT_BYTES.to_vec(),
+        jianpu_generator::fonts::MONOSPACE_FONT_BYTES.to_vec(),
     )
 }
 

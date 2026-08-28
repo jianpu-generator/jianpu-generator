@@ -207,6 +207,7 @@ fn make_title_row(header: &Header, base: f32) -> Option<GridRow> {
                 font_size: header.title_font_size,
                 bold: false,
                 italic: false,
+                is_title: true,
             },
         }],
     })
@@ -225,6 +226,7 @@ fn make_subtitle_author_row(header: &Header, base: f32) -> GridRow {
                 font_size: header.subtitle_font_size,
                 bold: false,
                 italic: true,
+                is_title: true,
             },
         });
     }
@@ -239,6 +241,7 @@ fn make_subtitle_author_row(header: &Header, base: f32) -> GridRow {
                 font_size: header.author_font_size,
                 bold: false,
                 italic: false,
+                is_title: true,
             },
         });
     }
@@ -306,6 +309,7 @@ fn make_part_list_rows(
                         font_size,
                         bold: false,
                         italic: false,
+                        is_title: false,
                     },
                 })
                 .collect(),

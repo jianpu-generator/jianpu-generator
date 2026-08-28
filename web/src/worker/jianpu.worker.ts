@@ -113,14 +113,27 @@ function ensureInit(): Promise<void> {
 // preview instead of a merely imprecise one.
 function applyCoreFontsWhenReady(fonts: {
   sc: Uint8Array
+  tc: Uint8Array
   mono: Uint8Array
 }): void {
-  ensureInit().then(() => set_layout_fonts(fonts.sc, fonts.mono))
+  // `set_layout_fonts(directive_line_font, lyric_font, monospace_font)` —
+  // directive-line text measures against `tc` (the `sansSerif` role's
+  // font), lyrics against `sc` (the `title` role's font, shared with the
+  // song title) — see `fonts/fonts.json` and
+  // `DIRECTIVE_LINE_FONT_FAMILY`/`TITLE_FONT_FAMILY` in
+  // src/serializer/mod.rs.
+  ensureInit().then(() => set_layout_fonts(fonts.tc, fonts.sc, fonts.mono))
 }
 
 let loadedSoundfont: Uint8Array | null = null
-let loadedFonts: { sc: Uint8Array; tc: Uint8Array; mono: Uint8Array } | null =
-  null
+// `sc` holds the `title` role's font — the song title/lyric font; `tc`
+// holds the `sansSerif` role's font, the default/body font for everything
+// else — see `fonts/fonts.json` and `useFontsLoader`.
+let loadedFonts: {
+  sc: Uint8Array
+  tc: Uint8Array
+  mono: Uint8Array
+} | null = null
 
 function modeToWasmString(mode: PartMode, followTarget: string | null): string {
   if (mode === 'follow') {
@@ -155,13 +168,10 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
   if (msg.type === 'loadPdfFonts') {
     const sc = new Uint8Array(msg.scFont)
+    const tc = new Uint8Array(msg.tcFont)
     const mono = new Uint8Array(msg.monoFont)
-    loadedFonts = {
-      sc,
-      tc: new Uint8Array(msg.tcFont),
-      mono,
-    }
-    applyCoreFontsWhenReady({ sc, mono })
+    loadedFonts = { sc, tc, mono }
+    applyCoreFontsWhenReady({ sc, tc, mono })
     return
   }
 

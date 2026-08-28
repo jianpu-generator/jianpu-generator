@@ -165,6 +165,7 @@ pub enum DominantBaselineOut {
 pub enum FontFamilyOut {
     Monospace,
     SansSerif,
+    Title,
 }
 
 #[derive(Debug, Clone, Tsify, Serialize)]
@@ -221,6 +222,7 @@ fn font_family_to_out(font: &FontFamily) -> FontFamilyOut {
     match font {
         FontFamily::Monospace => FontFamilyOut::Monospace,
         FontFamily::SansSerif => FontFamilyOut::SansSerif,
+        FontFamily::Title => FontFamilyOut::Title,
     }
 }
 
