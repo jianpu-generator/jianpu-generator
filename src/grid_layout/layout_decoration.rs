@@ -37,7 +37,11 @@ pub(crate) fn directive_line_should_emit(index: usize, dec: &Decoration) -> bool
 /// `coordinate_resolver/content_conversion.rs` if a directive field is ever
 /// added/changed — both build the same line from the same source data, one
 /// before layout, one after.
-pub(crate) fn directive_line_rod_width(dec: &Decoration) -> f32 {
+pub(crate) fn directive_line_rod_width(
+    dec: &Decoration,
+    measure_number_font_size: f32,
+    section_label_font_size: f32,
+) -> f32 {
     let Decoration::DirectiveLine {
         label,
         bar_number,
@@ -49,7 +53,7 @@ pub(crate) fn directive_line_rod_width(dec: &Decoration) -> f32 {
         content: n.to_string(),
         bold: false,
         italic: false,
-        font_size: 10.0,
+        font_size: measure_number_font_size,
     });
     let mut spans = Vec::new();
     if let Some(key_str) = key {
@@ -76,7 +80,12 @@ pub(crate) fn directive_line_rod_width(dec: &Decoration) -> f32 {
             font_size: 12.0,
         });
     }
-    crate::font_metrics::directive_line_width(bar_number_span.as_ref(), label.as_deref(), &spans)
+    crate::font_metrics::directive_line_width(
+        bar_number_span.as_ref(),
+        label.as_deref(),
+        &spans,
+        section_label_font_size,
+    )
 }
 
 fn directive_line_element(dec: &Decoration, col: u32) -> GridElement {

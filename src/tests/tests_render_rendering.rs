@@ -166,9 +166,16 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
         &grid_pages,
         config.note_number_width as f32,
         config.part_label_width_pt as f32,
-        config.lyric_font_sizes(),
-        config.notes_font_size(),
-        config.chords_font_size(),
+        coordinate_resolver::ResolveFontSizes {
+            lyric: config.lyric_font_sizes(),
+            notes: config.notes_font_size(),
+            chords: config.chords_font_size(),
+            labels: coordinate_resolver::LabelFontSizes {
+                measure_number: config.measure_number_font_size as f32,
+                section_label: config.section_label_font_size as f32,
+                part_label: config.part_label_font_size as f32,
+            },
+        },
     )
     .expect("coordinate resolver should not fail in tests");
 
@@ -243,9 +250,16 @@ fn density_fixture_page_elements() -> Vec<compositor::types::AbsoluteElement> {
         &grid_pages,
         config.note_number_width as f32,
         config.part_label_width_pt as f32,
-        config.lyric_font_sizes(),
-        config.notes_font_size(),
-        config.chords_font_size(),
+        coordinate_resolver::ResolveFontSizes {
+            lyric: config.lyric_font_sizes(),
+            notes: config.notes_font_size(),
+            chords: config.chords_font_size(),
+            labels: coordinate_resolver::LabelFontSizes {
+                measure_number: config.measure_number_font_size as f32,
+                section_label: config.section_label_font_size as f32,
+                part_label: config.part_label_font_size as f32,
+            },
+        },
     )
     .expect("coordinate resolver should not fail in tests");
     abs.swap_remove(0).elements

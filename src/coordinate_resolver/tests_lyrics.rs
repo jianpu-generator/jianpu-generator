@@ -1,5 +1,7 @@
 use crate::compositor::types::AbsoluteContent;
-use crate::coordinate_resolver::resolve::{resolve, LyricFontSizes};
+use crate::coordinate_resolver::resolve::{
+    resolve, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
+};
 use crate::grid_layout::types::{
     GridContent, GridElement, GridPage, GridRow, HAlign, MeasureColumnLayout, VAlign,
 };
@@ -78,12 +80,19 @@ fn lyric_syllable_halign_center_is_independent_of_column_weight() {
             &[make_page(column_weight)],
             12.0,
             40.0,
-            LyricFontSizes {
-                base: 14.4,
-                cjk: 17.28,
+            ResolveFontSizes {
+                lyric: LyricFontSizes {
+                    base: 14.4,
+                    cjk: 17.28,
+                },
+                notes: 12.0,
+                chords: 12.0,
+                labels: LabelFontSizes {
+                    measure_number: 10.0,
+                    section_label: 12.0,
+                    part_label: 12.0,
+                },
             },
-            12.0,
-            12.0,
         )
         .unwrap();
         abs[0]
@@ -131,12 +140,19 @@ fn lyric_syllable_shares_the_note_head_padding_formula() {
         &[page],
         note_number_width,
         40.0,
-        LyricFontSizes {
-            base: base_font_size,
-            cjk: 17.28,
+        ResolveFontSizes {
+            lyric: LyricFontSizes {
+                base: base_font_size,
+                cjk: 17.28,
+            },
+            notes: 12.0,
+            chords: 12.0,
+            labels: LabelFontSizes {
+                measure_number: 10.0,
+                section_label: 12.0,
+                part_label: 12.0,
+            },
         },
-        12.0,
-        12.0,
     )
     .unwrap();
     let lyric = abs[0]
@@ -180,12 +196,19 @@ fn cjk_lyric_syllable_compensates_its_leading_glyphs_left_bearing() {
         &[page],
         note_number_width,
         40.0,
-        LyricFontSizes {
-            base: 14.4,
-            cjk: cjk_font_size,
+        ResolveFontSizes {
+            lyric: LyricFontSizes {
+                base: 14.4,
+                cjk: cjk_font_size,
+            },
+            notes: 12.0,
+            chords: 12.0,
+            labels: LabelFontSizes {
+                measure_number: 10.0,
+                section_label: 12.0,
+                part_label: 12.0,
+            },
         },
-        12.0,
-        12.0,
     )
     .unwrap();
     let lyric = abs[0]

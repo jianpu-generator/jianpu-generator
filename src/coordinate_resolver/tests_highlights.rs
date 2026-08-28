@@ -1,5 +1,7 @@
 use crate::compositor::types::AbsoluteContent;
-use crate::coordinate_resolver::resolve::{resolve, LyricFontSizes};
+use crate::coordinate_resolver::resolve::{
+    resolve, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
+};
 use crate::grid_layout::types::{
     BarNumberClickTarget, GridContent, GridElement, GridPage, GridRow, HAlign, MeasureColumnLayout,
     MeasureHighlight, PlaybackCursorTarget, VAlign,
@@ -44,12 +46,19 @@ fn measure_highlight_produces_prepended_rect_element() {
         &[page],
         12.0,
         40.0,
-        LyricFontSizes {
-            base: 14.4,
-            cjk: 17.28,
+        ResolveFontSizes {
+            lyric: LyricFontSizes {
+                base: 14.4,
+                cjk: 17.28,
+            },
+            notes: 12.0,
+            chords: 12.0,
+            labels: LabelFontSizes {
+                measure_number: 10.0,
+                section_label: 12.0,
+                part_label: 12.0,
+            },
         },
-        12.0,
-        12.0,
     )
     .unwrap();
     assert!(!abs[0].elements.is_empty(), "should have elements");
@@ -99,12 +108,19 @@ fn error_highlight_resolves_to_absolute_error_highlight() {
         &[page],
         8.0,
         40.0,
-        LyricFontSizes {
-            base: 14.4,
-            cjk: 17.28,
+        ResolveFontSizes {
+            lyric: LyricFontSizes {
+                base: 14.4,
+                cjk: 17.28,
+            },
+            notes: 12.0,
+            chords: 12.0,
+            labels: LabelFontSizes {
+                measure_number: 10.0,
+                section_label: 12.0,
+                part_label: 12.0,
+            },
         },
-        12.0,
-        12.0,
     )
     .unwrap();
     let error_elements: Vec<_> = abs_pages[0]
@@ -144,12 +160,19 @@ fn page_with_no_highlight_produces_no_extra_element() {
         &[page],
         12.0,
         40.0,
-        LyricFontSizes {
-            base: 14.4,
-            cjk: 17.28,
+        ResolveFontSizes {
+            lyric: LyricFontSizes {
+                base: 14.4,
+                cjk: 17.28,
+            },
+            notes: 12.0,
+            chords: 12.0,
+            labels: LabelFontSizes {
+                measure_number: 10.0,
+                section_label: 12.0,
+                part_label: 12.0,
+            },
         },
-        12.0,
-        12.0,
     )
     .unwrap();
     assert!(abs[0].elements.is_empty());
@@ -212,12 +235,19 @@ fn playback_cursor_reaches_final_bar_line_of_its_measure() {
         &[page],
         8.0,
         40.0,
-        LyricFontSizes {
-            base: 14.4,
-            cjk: 17.28,
+        ResolveFontSizes {
+            lyric: LyricFontSizes {
+                base: 14.4,
+                cjk: 17.28,
+            },
+            notes: 12.0,
+            chords: 12.0,
+            labels: LabelFontSizes {
+                measure_number: 10.0,
+                section_label: 12.0,
+                part_label: 12.0,
+            },
         },
-        12.0,
-        12.0,
     )
     .unwrap();
 
@@ -279,12 +309,19 @@ fn bar_number_click_target_resolves_to_a_small_rect_sized_to_its_digits() {
         &[page],
         8.0,
         40.0,
-        LyricFontSizes {
-            base: 14.4,
-            cjk: 17.28,
+        ResolveFontSizes {
+            lyric: LyricFontSizes {
+                base: 14.4,
+                cjk: 17.28,
+            },
+            notes: 12.0,
+            chords: 12.0,
+            labels: LabelFontSizes {
+                measure_number: 10.0,
+                section_label: 12.0,
+                part_label: 12.0,
+            },
         },
-        12.0,
-        12.0,
     )
     .unwrap();
 

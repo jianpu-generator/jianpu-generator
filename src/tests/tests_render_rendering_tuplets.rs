@@ -36,9 +36,16 @@ fn triplet_of_sixteenth_notes_gets_double_underline_matching_written_duration() 
         &grid_pages,
         config.note_number_width as f32,
         config.part_label_width_pt as f32,
-        config.lyric_font_sizes(),
-        config.notes_font_size(),
-        config.chords_font_size(),
+        coordinate_resolver::ResolveFontSizes {
+            lyric: config.lyric_font_sizes(),
+            notes: config.notes_font_size(),
+            chords: config.chords_font_size(),
+            labels: coordinate_resolver::LabelFontSizes {
+                measure_number: config.measure_number_font_size as f32,
+                section_label: config.section_label_font_size as f32,
+                part_label: config.part_label_font_size as f32,
+            },
+        },
     )
     .expect("coordinate resolver should not fail in tests");
 

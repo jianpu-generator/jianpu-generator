@@ -167,6 +167,50 @@ When(
 )
 
 When(
+  'I fill the Measure Number Font Size numeric field with {string}',
+  async ({ page }, value: string) => {
+    const modal = editMetadataModal(page)
+    const input = modal
+      .locator('tr', { hasText: 'Measure Number Font Size' })
+      .locator('input[type="number"]')
+    await input.fill(value)
+  },
+)
+
+When(
+  'I fill the Section Label Font Size numeric field with {string}',
+  async ({ page }, value: string) => {
+    const modal = editMetadataModal(page)
+    const input = modal
+      .locator('tr', { hasText: 'Section Label Font Size' })
+      .locator('input[type="number"]')
+    await input.fill(value)
+  },
+)
+
+When(
+  'I fill the Part Label Font Size numeric field with {string}',
+  async ({ page }, value: string) => {
+    const modal = editMetadataModal(page)
+    const input = modal
+      .locator('tr', { hasText: 'Part Label Font Size' })
+      .locator('input[type="number"]')
+    await input.fill(value)
+  },
+)
+
+When(
+  'I fill the Page Number Font Size numeric field with {string}',
+  async ({ page }, value: string) => {
+    const modal = editMetadataModal(page)
+    const input = modal
+      .locator('tr', { hasText: 'Page Number Font Size' })
+      .locator('input[type="number"]')
+    await input.fill(value)
+  },
+)
+
+When(
   'I clear the second text input in the metadata modal',
   async ({ page }) => {
     const modal = editMetadataModal(page)

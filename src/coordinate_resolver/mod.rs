@@ -4,7 +4,7 @@ mod highlights;
 mod post_arc_conversion;
 pub mod resolve;
 mod rest_run;
-pub use resolve::{resolve, LyricFontSizes};
+pub use resolve::{resolve, LabelFontSizes, LyricFontSizes, ResolveFontSizes};
 
 #[cfg(test)]
 mod tests;

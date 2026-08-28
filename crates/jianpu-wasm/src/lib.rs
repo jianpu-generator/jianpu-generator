@@ -383,6 +383,12 @@ pub fn get_default_part_legend_font_size(row_height: u32) -> u32 {
     jianpu_generator::ast::grouped::default_part_legend_font_size(row_height)
 }
 
+/// The `page_number_font_size` default (60% of `row_height`) for a given `row_height`.
+#[wasm_bindgen]
+pub fn get_default_page_number_font_size(row_height: u32) -> u32 {
+    jianpu_generator::ast::grouped::default_page_number_font_size(row_height)
+}
+
 #[cfg(test)]
 #[path = "tests.rs"]
 mod tests;

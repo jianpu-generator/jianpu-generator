@@ -1,6 +1,7 @@
 import {
   get_default_author_font_size,
   get_default_lyrics_font_size,
+  get_default_page_number_font_size,
   get_default_part_legend_font_size,
   get_default_subtitle_font_size,
   get_default_title_font_size,
@@ -51,4 +52,11 @@ export async function defaultPartLegendFontSize(
 ): Promise<number> {
   await ensureWasmInit()
   return get_default_part_legend_font_size(rowHeight)
+}
+
+export async function defaultPageNumberFontSize(
+  rowHeight: number,
+): Promise<number> {
+  await ensureWasmInit()
+  return get_default_page_number_font_size(rowHeight)
 }

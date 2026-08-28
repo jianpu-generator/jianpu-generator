@@ -76,6 +76,34 @@ Feature: Edit Metadata modal
     And I close the metadata modal with Escape
     Then the editor source and stored source both contain "part_label_width_pt = 60"
 
+  Scenario: Editing measure_number_font_size updates the source
+    Given the edit-metadata-modal test fixture is loaded
+    When I open the Edit Metadata modal
+    And I fill the Measure Number Font Size numeric field with "14"
+    And I close the metadata modal with Escape
+    Then the editor source and stored source both contain "measure_number_font_size = 14"
+
+  Scenario: Editing section_label_font_size updates the source
+    Given the edit-metadata-modal test fixture is loaded
+    When I open the Edit Metadata modal
+    And I fill the Section Label Font Size numeric field with "16"
+    And I close the metadata modal with Escape
+    Then the editor source and stored source both contain "section_label_font_size = 16"
+
+  Scenario: Editing part_label_font_size updates the source
+    Given the edit-metadata-modal test fixture is loaded
+    When I open the Edit Metadata modal
+    And I fill the Part Label Font Size numeric field with "18"
+    And I close the metadata modal with Escape
+    Then the editor source and stored source both contain "part_label_font_size = 18"
+
+  Scenario: Editing page_number_font_size updates the source
+    Given the edit-metadata-modal test fixture is loaded
+    When I open the Edit Metadata modal
+    And I fill the Page Number Font Size numeric field with "20"
+    And I close the metadata modal with Escape
+    Then the editor source and stored source both contain "page_number_font_size = 20"
+
   Scenario: Editing directive_row_offset writes "x y" to the source
     Given the edit-metadata-modal test fixture is loaded
     When I open the Edit Metadata modal

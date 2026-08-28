@@ -73,6 +73,22 @@ Defaults to \`lyrics_font_size\` when unset.`,
 
 Defaults to 12.`,
 
+  measure_number_font_size: `Font size (points) of each measure's bar number.
+
+Defaults to 10.`,
+
+  section_label_font_size: `Font size (points) of an inline section label (the \`label="..."\` on a measure's directive line).
+
+Defaults to 12.`,
+
+  part_label_font_size: `Font size (points) of a part's row label (e.g. "Soprano").
+
+Defaults to 12.`,
+
+  page_number_font_size: `Font size (points) of the page number shown in the footer.
+
+Defaults to \`row_height × 0.6\` when unset.`,
+
   merge_duplicate_measures_across_parts: `When on, measures with identical content across different parts are drawn as a single merged row instead of one row per part.
 
 Can be overridden from a specific measure onward with a

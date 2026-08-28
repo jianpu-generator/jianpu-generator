@@ -11,6 +11,7 @@ fn labelless_directive_line_shifts_by_directive_row_offset() {
     let page = make_page(AbsoluteContent::DirectiveLine {
         bar_number: None,
         label: None,
+        label_font_size: 12.0,
         spans: vec![bpm_span()],
         spans_x_offset: 0.0,
         label_x_offset: 0.0,
@@ -32,6 +33,7 @@ fn sequence_header_ignores_directive_row_offset() {
     let page = make_page(AbsoluteContent::DirectiveLine {
         bar_number: None,
         label: None,
+        label_font_size: 12.0,
         spans: vec![bpm_span()],
         spans_x_offset: 0.0,
         label_x_offset: 0.0,
@@ -53,6 +55,7 @@ fn labeled_directive_line_moves_label_background_and_text_together() {
     let page = make_page(AbsoluteContent::DirectiveLine {
         bar_number: None,
         label: Some("Verse 1".to_string()),
+        label_font_size: 12.0,
         spans: vec![bpm_span()],
         spans_x_offset: 0.0,
         label_x_offset: 0.0,
@@ -86,7 +89,7 @@ fn labeled_directive_line_moves_label_background_and_text_together() {
         .expect("directive line text element should be present");
     assert_eq!(text.x, 100.0 + offset.x as f32);
     assert_eq!(text.y, 200.0 + offset.y as f32);
-    assert_eq!(background.x, text.x - section_label_box_padding());
+    assert_eq!(background.x, text.x - section_label_box_padding(12.0));
 }
 
 #[test]
@@ -94,6 +97,7 @@ fn label_background_starts_past_a_preceding_bar_number() {
     let page = make_page(AbsoluteContent::DirectiveLine {
         bar_number: None,
         label: Some("Verse 1".to_string()),
+        label_font_size: 12.0,
         spans: vec![bpm_span()],
         spans_x_offset: 0.0,
         label_x_offset: 30.0,
@@ -125,7 +129,10 @@ fn label_background_starts_past_a_preceding_bar_number() {
         .find(|e| e.variant == Some(SvgVariant::DirectiveLine))
         .expect("directive line text element should be present");
 
-    assert_eq!(background.x, text.x + 30.0 - section_label_box_padding());
+    assert_eq!(
+        background.x,
+        text.x + 30.0 - section_label_box_padding(12.0)
+    );
 }
 
 #[test]
@@ -138,6 +145,7 @@ fn cjk_label_gets_a_wider_background_than_an_equal_length_ascii_label() {
         // (see `DIRECTIVE_LINE_FONT` in `src/font_metrics.rs`) can't
         // out-measure a short CJK label and defeat this test's point.
         label: Some("abc".to_string()),
+        label_font_size: 12.0,
         spans: vec![bpm_span()],
         spans_x_offset: 0.0,
         label_x_offset: 0.0,
@@ -146,6 +154,7 @@ fn cjk_label_gets_a_wider_background_than_an_equal_length_ascii_label() {
     let page_cjk = make_page(AbsoluteContent::DirectiveLine {
         bar_number: None,
         label: Some("副歌一".to_string()),
+        label_font_size: 12.0,
         spans: vec![bpm_span()],
         spans_x_offset: 0.0,
         label_x_offset: 0.0,
@@ -195,7 +204,7 @@ fn label_background_width_matches_real_font_metrics() {
     let label = "Verse 1";
     let font_size = 12.0_f32;
     let synthetic_bold_ratio = 1.08_f32;
-    let padding = section_label_box_padding();
+    let padding = section_label_box_padding(12.0);
     let expected_text_width: f32 = label
         .chars()
         .map(|c| {
@@ -211,6 +220,7 @@ fn label_background_width_matches_real_font_metrics() {
     let page = make_page(AbsoluteContent::DirectiveLine {
         bar_number: None,
         label: Some(label.to_string()),
+        label_font_size: 12.0,
         spans: vec![bpm_span()],
         spans_x_offset: 0.0,
         label_x_offset: 0.0,

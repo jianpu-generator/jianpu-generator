@@ -35,9 +35,16 @@ fn render_documents(
         &grid_pages,
         config.note_number_width as f32,
         config.part_label_width_pt as f32,
-        config.lyric_font_sizes(),
-        config.notes_font_size(),
-        config.chords_font_size(),
+        crate::coordinate_resolver::ResolveFontSizes {
+            lyric: config.lyric_font_sizes(),
+            notes: config.notes_font_size(),
+            chords: config.chords_font_size(),
+            labels: crate::coordinate_resolver::LabelFontSizes {
+                measure_number: config.measure_number_font_size as f32,
+                section_label: config.section_label_font_size as f32,
+                part_label: config.part_label_font_size as f32,
+            },
+        },
     )?;
     Ok(DocumentsResult {
         documents: crate::renderer::new_renderer::render_new(&abs, &config),
@@ -69,9 +76,16 @@ fn render_documents_with_range(
         &grid_pages,
         config.note_number_width as f32,
         config.part_label_width_pt as f32,
-        config.lyric_font_sizes(),
-        config.notes_font_size(),
-        config.chords_font_size(),
+        crate::coordinate_resolver::ResolveFontSizes {
+            lyric: config.lyric_font_sizes(),
+            notes: config.notes_font_size(),
+            chords: config.chords_font_size(),
+            labels: crate::coordinate_resolver::LabelFontSizes {
+                measure_number: config.measure_number_font_size as f32,
+                section_label: config.section_label_font_size as f32,
+                part_label: config.part_label_font_size as f32,
+            },
+        },
     )?;
     Ok(DocumentsResult {
         documents: crate::renderer::new_renderer::render_new(&abs, &config),

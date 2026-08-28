@@ -1,6 +1,8 @@
 use crate::ast::parsed::JianPuPitch;
 use crate::compositor::types::AbsoluteContent;
-use crate::coordinate_resolver::resolve::{resolve, LyricFontSizes};
+use crate::coordinate_resolver::resolve::{
+    resolve, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
+};
 use crate::grid_layout::types::{
     GridContent, GridElement, GridPage, GridRow, HAlign, MeasureColumnLayout, VAlign,
 };
@@ -33,12 +35,19 @@ fn resolve_empty_pages_returns_empty() {
         &[],
         12.0,
         40.0,
-        LyricFontSizes {
-            base: 14.4,
-            cjk: 17.28,
+        ResolveFontSizes {
+            lyric: LyricFontSizes {
+                base: 14.4,
+                cjk: 17.28,
+            },
+            notes: 12.0,
+            chords: 12.0,
+            labels: LabelFontSizes {
+                measure_number: 10.0,
+                section_label: 12.0,
+                part_label: 12.0,
+            },
         },
-        12.0,
-        12.0,
     )
     .unwrap()
     .is_empty());
@@ -67,12 +76,19 @@ fn note_head_halign_center_is_flush_left_plus_fixed_padding() {
         &[page],
         note_number_width,
         40.0,
-        LyricFontSizes {
-            base: 14.4,
-            cjk: 17.28,
+        ResolveFontSizes {
+            lyric: LyricFontSizes {
+                base: 14.4,
+                cjk: 17.28,
+            },
+            notes: 12.0,
+            chords: 12.0,
+            labels: LabelFontSizes {
+                measure_number: 10.0,
+                section_label: 12.0,
+                part_label: 12.0,
+            },
         },
-        12.0,
-        12.0,
     )
     .unwrap();
     let note = abs[0]
@@ -144,12 +160,19 @@ fn note_head_halign_center_is_independent_of_column_weight() {
             &[make_page(column_weight)],
             12.0,
             40.0,
-            LyricFontSizes {
-                base: 14.4,
-                cjk: 17.28,
+            ResolveFontSizes {
+                lyric: LyricFontSizes {
+                    base: 14.4,
+                    cjk: 17.28,
+                },
+                notes: 12.0,
+                chords: 12.0,
+                labels: LabelFontSizes {
+                    measure_number: 10.0,
+                    section_label: 12.0,
+                    part_label: 12.0,
+                },
             },
-            12.0,
-            12.0,
         )
         .unwrap();
         abs[0]
@@ -211,12 +234,19 @@ fn valign_top_places_y_at_row_top() {
         &[page],
         12.0,
         40.0,
-        LyricFontSizes {
-            base: 14.4,
-            cjk: 17.28,
+        ResolveFontSizes {
+            lyric: LyricFontSizes {
+                base: 14.4,
+                cjk: 17.28,
+            },
+            notes: 12.0,
+            chords: 12.0,
+            labels: LabelFontSizes {
+                measure_number: 10.0,
+                section_label: 12.0,
+                part_label: 12.0,
+            },
         },
-        12.0,
-        12.0,
     )
     .unwrap();
     let line = abs[0]
@@ -248,12 +278,19 @@ fn halign_end_places_x_at_right_of_column_span() {
         &[page],
         12.0,
         40.0,
-        LyricFontSizes {
-            base: 14.4,
-            cjk: 17.28,
+        ResolveFontSizes {
+            lyric: LyricFontSizes {
+                base: 14.4,
+                cjk: 17.28,
+            },
+            notes: 12.0,
+            chords: 12.0,
+            labels: LabelFontSizes {
+                measure_number: 10.0,
+                section_label: 12.0,
+                part_label: 12.0,
+            },
         },
-        12.0,
-        12.0,
     )
     .unwrap();
     let text = abs[0]
@@ -286,12 +323,19 @@ fn octave_dot_grid_content_emits_nothing() {
         &[page],
         12.0,
         40.0,
-        LyricFontSizes {
-            base: 14.4,
-            cjk: 17.28,
+        ResolveFontSizes {
+            lyric: LyricFontSizes {
+                base: 14.4,
+                cjk: 17.28,
+            },
+            notes: 12.0,
+            chords: 12.0,
+            labels: LabelFontSizes {
+                measure_number: 10.0,
+                section_label: 12.0,
+                part_label: 12.0,
+            },
         },
-        12.0,
-        12.0,
     )
     .unwrap();
     assert!(

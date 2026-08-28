@@ -1,16 +1,10 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useState } from 'react'
 import type { MetadataDefaults } from '../utils/metadataDefaults'
-import {
-  defaultAuthorFontSize,
-  defaultLyricsFontSize,
-  defaultPartLegendFontSize,
-  defaultSubtitleFontSize,
-  defaultTitleFontSize,
-  loadMetadataDefaults,
-} from '../utils/metadataDefaults'
+import { loadMetadataDefaults } from '../utils/metadataDefaults'
 import { metadataFieldHelp } from '../utils/metadataFieldHelp'
 import type { MetadataKey, ParsedMetadataFields } from '../utils/metadataSource'
+import { useFontSizeDefaults } from '../utils/useFontSizeDefaults'
 import { FieldHelpModal } from './FieldHelpModal'
 import {
   CheckboxFieldRow,
@@ -46,21 +40,6 @@ export function EditMetadataModal({
   container,
 }: EditMetadataModalProps) {
   const [defaults, setDefaults] = useState<MetadataDefaults | null>(null)
-  const [lyricsFontSizeDefault, setLyricsFontSizeDefault] = useState<
-    number | null
-  >(null)
-  const [titleFontSizeDefault, setTitleFontSizeDefault] = useState<
-    number | null
-  >(null)
-  const [subtitleFontSizeDefault, setSubtitleFontSizeDefault] = useState<
-    number | null
-  >(null)
-  const [authorFontSizeDefault, setAuthorFontSizeDefault] = useState<
-    number | null
-  >(null)
-  const [partLegendFontSizeDefault, setPartLegendFontSizeDefault] = useState<
-    number | null
-  >(null)
   const [helpContent, setHelpContent] = useState<{
     label: string
     help: string
@@ -73,16 +52,14 @@ export function EditMetadataModal({
   }, [])
 
   const effectiveRowHeight = metadata.row_height ?? defaults?.row_height ?? null
-  useEffect(() => {
-    if (effectiveRowHeight === null) return
-    defaultLyricsFontSize(effectiveRowHeight).then(setLyricsFontSizeDefault)
-    defaultTitleFontSize(effectiveRowHeight).then(setTitleFontSizeDefault)
-    defaultSubtitleFontSize(effectiveRowHeight).then(setSubtitleFontSizeDefault)
-    defaultAuthorFontSize(effectiveRowHeight).then(setAuthorFontSizeDefault)
-    defaultPartLegendFontSize(effectiveRowHeight).then(
-      setPartLegendFontSizeDefault,
-    )
-  }, [effectiveRowHeight])
+  const {
+    lyricsFontSizeDefault,
+    titleFontSizeDefault,
+    subtitleFontSizeDefault,
+    authorFontSizeDefault,
+    partLegendFontSizeDefault,
+    pageNumberFontSizeDefault,
+  } = useFontSizeDefaults(effectiveRowHeight)
 
   const d = defaults
 
@@ -102,6 +79,9 @@ export function EditMetadataModal({
   const setYesNo =
     (key: MetadataKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
       onFieldChange(key, e.target.checked ? 'yes' : 'no')
+
+  const numOrUndef = (n: number | null | undefined): string | undefined =>
+    n != null ? String(n) : undefined
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange} modal={false}>
@@ -194,11 +174,7 @@ export function EditMetadataModal({
                   help={metadataFieldHelp.title_font_size}
                   onShowHelp={showHelp}
                   value={metadata.title_font_size ?? ''}
-                  placeholder={
-                    titleFontSizeDefault !== null
-                      ? String(titleFontSizeDefault)
-                      : undefined
-                  }
+                  placeholder={numOrUndef(titleFontSizeDefault)}
                   onChange={setNumber('title_font_size')}
                 />
                 <TextFieldRow
@@ -213,11 +189,7 @@ export function EditMetadataModal({
                   help={metadataFieldHelp.subtitle_font_size}
                   onShowHelp={showHelp}
                   value={metadata.subtitle_font_size ?? ''}
-                  placeholder={
-                    subtitleFontSizeDefault !== null
-                      ? String(subtitleFontSizeDefault)
-                      : undefined
-                  }
+                  placeholder={numOrUndef(subtitleFontSizeDefault)}
                   onChange={setNumber('subtitle_font_size')}
                 />
                 <TextFieldRow
@@ -232,11 +204,7 @@ export function EditMetadataModal({
                   help={metadataFieldHelp.author_font_size}
                   onShowHelp={showHelp}
                   value={metadata.author_font_size ?? ''}
-                  placeholder={
-                    authorFontSizeDefault !== null
-                      ? String(authorFontSizeDefault)
-                      : undefined
-                  }
+                  placeholder={numOrUndef(authorFontSizeDefault)}
                   onChange={setNumber('author_font_size')}
                 />
                 <NumberFieldRow
@@ -244,7 +212,7 @@ export function EditMetadataModal({
                   help={metadataFieldHelp.row_height}
                   onShowHelp={showHelp}
                   value={metadata.row_height ?? ''}
-                  placeholder={d ? String(d.row_height) : undefined}
+                  placeholder={numOrUndef(d?.row_height)}
                   onChange={setNumber('row_height')}
                 />
                 <NumberFieldRow
@@ -252,9 +220,7 @@ export function EditMetadataModal({
                   help={metadataFieldHelp.max_measures_per_system}
                   onShowHelp={showHelp}
                   value={metadata.max_measures_per_system ?? ''}
-                  placeholder={
-                    d ? String(d.max_measures_per_system) : undefined
-                  }
+                  placeholder={numOrUndef(d?.max_measures_per_system)}
                   onChange={setNumber('max_measures_per_system')}
                 />
                 <NumberFieldRow
@@ -262,7 +228,7 @@ export function EditMetadataModal({
                   help={metadataFieldHelp.note_number_width}
                   onShowHelp={showHelp}
                   value={metadata.note_number_width ?? ''}
-                  placeholder={d ? String(d.note_number_width) : undefined}
+                  placeholder={numOrUndef(d?.note_number_width)}
                   onChange={setNumber('note_number_width')}
                 />
                 <NumberFieldRow
@@ -270,7 +236,7 @@ export function EditMetadataModal({
                   help={metadataFieldHelp.part_label_width_pt}
                   onShowHelp={showHelp}
                   value={metadata.part_label_width_pt ?? ''}
-                  placeholder={d ? String(d.part_label_width_pt) : undefined}
+                  placeholder={numOrUndef(d?.part_label_width_pt)}
                   onChange={setNumber('part_label_width_pt')}
                 />
                 <NumberFieldRow
@@ -278,7 +244,7 @@ export function EditMetadataModal({
                   help={metadataFieldHelp.parts_list_columns}
                   onShowHelp={showHelp}
                   value={metadata.parts_list_columns ?? ''}
-                  placeholder={d ? String(d.parts_list_columns) : undefined}
+                  placeholder={numOrUndef(d?.parts_list_columns)}
                   onChange={setNumber('parts_list_columns')}
                 />
                 <NumberFieldRow
@@ -286,11 +252,7 @@ export function EditMetadataModal({
                   help={metadataFieldHelp.part_legend_font_size}
                   onShowHelp={showHelp}
                   value={metadata.part_legend_font_size ?? ''}
-                  placeholder={
-                    partLegendFontSizeDefault !== null
-                      ? String(partLegendFontSizeDefault)
-                      : undefined
-                  }
+                  placeholder={numOrUndef(partLegendFontSizeDefault)}
                   onChange={setNumber('part_legend_font_size')}
                 />
                 <NumberFieldRow
@@ -298,11 +260,7 @@ export function EditMetadataModal({
                   help={metadataFieldHelp.lyrics_font_size}
                   onShowHelp={showHelp}
                   value={metadata.lyrics_font_size ?? ''}
-                  placeholder={
-                    lyricsFontSizeDefault !== null
-                      ? String(lyricsFontSizeDefault)
-                      : undefined
-                  }
+                  placeholder={numOrUndef(lyricsFontSizeDefault)}
                   onChange={setNumber('lyrics_font_size')}
                 />
                 <NumberFieldRow
@@ -310,11 +268,7 @@ export function EditMetadataModal({
                   help={metadataFieldHelp.notes_font_size}
                   onShowHelp={showHelp}
                   value={metadata.notes_font_size ?? ''}
-                  placeholder={
-                    effectiveLyricsFontSize !== null
-                      ? String(effectiveLyricsFontSize)
-                      : undefined
-                  }
+                  placeholder={numOrUndef(effectiveLyricsFontSize)}
                   onChange={setNumber('notes_font_size')}
                 />
                 <NumberFieldRow
@@ -322,11 +276,7 @@ export function EditMetadataModal({
                   help={metadataFieldHelp.chords_font_size}
                   onShowHelp={showHelp}
                   value={metadata.chords_font_size ?? ''}
-                  placeholder={
-                    effectiveLyricsFontSize !== null
-                      ? String(effectiveLyricsFontSize)
-                      : undefined
-                  }
+                  placeholder={numOrUndef(effectiveLyricsFontSize)}
                   onChange={setNumber('chords_font_size')}
                 />
                 <NumberFieldRow
@@ -334,8 +284,40 @@ export function EditMetadataModal({
                   help={metadataFieldHelp.sequence_font_size}
                   onShowHelp={showHelp}
                   value={metadata.sequence_font_size ?? ''}
-                  placeholder={d ? String(d.sequence_font_size) : undefined}
+                  placeholder={numOrUndef(d?.sequence_font_size)}
                   onChange={setNumber('sequence_font_size')}
+                />
+                <NumberFieldRow
+                  label="Measure Number Font Size"
+                  help={metadataFieldHelp.measure_number_font_size}
+                  onShowHelp={showHelp}
+                  value={metadata.measure_number_font_size ?? ''}
+                  placeholder={numOrUndef(d?.measure_number_font_size)}
+                  onChange={setNumber('measure_number_font_size')}
+                />
+                <NumberFieldRow
+                  label="Section Label Font Size"
+                  help={metadataFieldHelp.section_label_font_size}
+                  onShowHelp={showHelp}
+                  value={metadata.section_label_font_size ?? ''}
+                  placeholder={numOrUndef(d?.section_label_font_size)}
+                  onChange={setNumber('section_label_font_size')}
+                />
+                <NumberFieldRow
+                  label="Part Label Font Size"
+                  help={metadataFieldHelp.part_label_font_size}
+                  onShowHelp={showHelp}
+                  value={metadata.part_label_font_size ?? ''}
+                  placeholder={numOrUndef(d?.part_label_font_size)}
+                  onChange={setNumber('part_label_font_size')}
+                />
+                <NumberFieldRow
+                  label="Page Number Font Size"
+                  help={metadataFieldHelp.page_number_font_size}
+                  onShowHelp={showHelp}
+                  value={metadata.page_number_font_size ?? ''}
+                  placeholder={numOrUndef(pageNumberFontSizeDefault)}
+                  onChange={setNumber('page_number_font_size')}
                 />
                 <CheckboxFieldRow
                   label="Merge Duplicate Measures Across Parts"

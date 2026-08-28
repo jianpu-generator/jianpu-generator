@@ -23,6 +23,7 @@ fn spans_to_tspans(spans: &[TextSpan]) -> Vec<TspanData> {
 pub(super) struct DirectiveLineArgs<'a> {
     pub bar_number: &'a Option<TextSpan>,
     pub label: &'a Option<String>,
+    pub label_font_size: f32,
     pub spans: &'a [TextSpan],
     pub spans_x_offset: f32,
     pub label_x_offset: f32,
@@ -73,6 +74,7 @@ pub(super) fn render_directive_line(
                 args.bar_number.as_ref(),
                 Some(label_str),
                 args.spans,
+                args.label_font_size,
             );
 
             vec![render_section_label_group(
@@ -82,6 +84,7 @@ pub(super) fn render_directive_line(
                     row_x,
                     row_y,
                     label_x: row_x + args.label_x_offset,
+                    label_font_size: args.label_font_size,
                     line_width,
                 },
                 SectionLabelSiblingElements {
@@ -111,6 +114,7 @@ struct SectionLabelGroupArgs<'a> {
     row_x: f32,
     row_y: f32,
     label_x: f32,
+    label_font_size: f32,
     line_width: f32,
 }
 
@@ -119,8 +123,9 @@ fn render_section_label_group(
     args: &SectionLabelGroupArgs,
     siblings: SectionLabelSiblingElements,
 ) -> SvgElement {
-    let bg_width = crate::font_metrics::section_label_box_width(args.label_str);
-    let bg_height = crate::font_metrics::section_label_box_height();
+    let bg_width =
+        crate::font_metrics::section_label_box_width(args.label_str, args.label_font_size);
+    let bg_height = crate::font_metrics::section_label_box_height(args.label_font_size);
     // Covers the whole directive line (bar number through trailing spans),
     // not just the label box, so the group has no unpainted gap for a click
     // to fall through — see `TransparentRectRole::SectionLabelClickTarget`.
@@ -139,7 +144,7 @@ fn render_section_label_group(
         y: args.row_y,
         variant: None,
         kind: SvgKind::TextWithTspans {
-            font_size: crate::font_metrics::SECTION_LABEL_FONT_SIZE,
+            font_size: args.label_font_size,
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
             spans: vec![TspanData {
@@ -153,7 +158,7 @@ fn render_section_label_group(
     let mut children: Vec<SvgElement> = vec![click_target];
     children.extend(siblings.bar_number_element);
     children.push(SvgElement {
-        x: args.label_x - crate::font_metrics::section_label_box_padding(),
+        x: args.label_x - crate::font_metrics::section_label_box_padding(args.label_font_size),
         y: args.row_y - bg_height / 2.0,
         variant: None,
         kind: SvgKind::TransparentRect {

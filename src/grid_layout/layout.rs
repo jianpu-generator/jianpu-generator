@@ -366,7 +366,7 @@ pub fn layout(
         rows.push(make_footer_row(
             page_idx as u32 + 1,
             total_pages,
-            base,
+            config.page_number_font_size as f32,
             remaining_height,
         ));
         abs_system_index_start += page_sys.len();

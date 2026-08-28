@@ -6,7 +6,7 @@ use crate::grid_layout::types::{
 use crate::grid_layout::PAGE_MARGIN;
 
 use super::click_targets::resolve_click_target_elements;
-use super::content_conversion::grid_to_absolute;
+use super::content_conversion::{grid_to_absolute, DirectiveLineFontSizes};
 use super::highlights::{resolve_error_highlights, resolve_measure_highlights};
 use super::post_arc_conversion::to_post_arc_content;
 use super::rest_run::{resolve_implicit_fill_rest, resolve_multi_measure_rest};
@@ -18,26 +18,37 @@ pub struct LyricFontSizes {
     pub cjk: f32,
 }
 
+/// Font sizes for the small overlay labels drawn around the score body:
+/// measure numbers, inline section labels, and part-name row labels (see
+/// `Metadata::measure_number_font_size`/`Metadata::section_label_font_size`/
+/// `Metadata::part_label_font_size`).
+#[derive(Clone, Copy)]
+pub struct LabelFontSizes {
+    pub measure_number: f32,
+    pub section_label: f32,
+    pub part_label: f32,
+}
+
+/// Every font size `resolve`/`resolve_page` needs, bundled into one struct
+/// (rather than passed as individual arguments) so those two functions stay
+/// under the repo's max-argument-count lint.
+#[derive(Clone, Copy)]
+pub struct ResolveFontSizes {
+    pub lyric: LyricFontSizes,
+    pub notes: f32,
+    pub chords: f32,
+    pub labels: LabelFontSizes,
+}
+
 pub fn resolve(
     pages: &[GridPage],
     note_number_width: f32,
     part_label_width_pt: f32,
-    lyric_font_sizes: LyricFontSizes,
-    notes_font_size: f32,
-    chords_font_size: f32,
+    font_sizes: ResolveFontSizes,
 ) -> Result<Vec<AbsolutePage>, IrrecoverableError> {
     pages
         .iter()
-        .map(|page| {
-            resolve_page(
-                page,
-                note_number_width,
-                part_label_width_pt,
-                lyric_font_sizes,
-                notes_font_size,
-                chords_font_size,
-            )
-        })
+        .map(|page| resolve_page(page, note_number_width, part_label_width_pt, font_sizes))
         .collect()
 }
 
@@ -116,6 +127,7 @@ struct RowResolveConfig {
     lyric_font_sizes: LyricFontSizes,
     notes_font_size: f32,
     chords_font_size: f32,
+    label_font_sizes: LabelFontSizes,
 }
 
 fn resolve_row_element(
@@ -180,8 +192,17 @@ fn resolve_row_element(
             let Some(post_arc_content) = to_post_arc_content(content) else {
                 return Ok(None);
             };
-            Ok(grid_to_absolute(&post_arc_content, span_width, el.halign)?
-                .map(|content| AbsoluteElement { x, y, content }))
+            Ok(grid_to_absolute(
+                &post_arc_content,
+                span_width,
+                el.halign,
+                config.label_font_sizes.part_label,
+                DirectiveLineFontSizes {
+                    measure_number: config.label_font_sizes.measure_number,
+                    section_label: config.label_font_sizes.section_label,
+                },
+            )?
+            .map(|content| AbsoluteElement { x, y, content }))
         }
     }
 }
@@ -291,9 +312,7 @@ fn resolve_page(
     page: &GridPage,
     note_number_width: f32,
     part_label_width_pt: f32,
-    lyric_font_sizes: LyricFontSizes,
-    notes_font_size: f32,
-    chords_font_size: f32,
+    font_sizes: ResolveFontSizes,
 ) -> Result<AbsolutePage, IrrecoverableError> {
     let usable_width = page.width_pt - 2.0 * PAGE_MARGIN;
     let mut elements: Vec<AbsoluteElement> = Vec::new();
@@ -302,9 +321,10 @@ fn resolve_page(
 
     let row_config = RowResolveConfig {
         note_number_width,
-        lyric_font_sizes,
-        notes_font_size,
-        chords_font_size,
+        lyric_font_sizes: font_sizes.lyric,
+        notes_font_size: font_sizes.notes,
+        chords_font_size: font_sizes.chords,
+        label_font_sizes: font_sizes.labels,
     };
     for row in &page.rows {
         row_tops.push(row_y);
@@ -338,6 +358,7 @@ fn resolve_page(
         &row_tops,
         usable_width,
         part_label_width_pt,
+        font_sizes.labels.measure_number,
     ));
 
     Ok(AbsolutePage {

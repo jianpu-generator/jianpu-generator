@@ -61,6 +61,64 @@ fn max_measures_per_system_defaults_to_4() {
 }
 
 #[test]
+fn measure_number_font_size_defaults_to_10() {
+    let score = parse_and_group(concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
+    ));
+    assert_eq!(
+        score.metadata.measure_number_font_size,
+        crate::ast::grouped::DEFAULT_MEASURE_NUMBER_FONT_SIZE
+    );
+}
+
+#[test]
+fn section_label_font_size_defaults_to_12() {
+    let score = parse_and_group(concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
+    ));
+    assert_eq!(
+        score.metadata.section_label_font_size,
+        crate::ast::grouped::DEFAULT_SECTION_LABEL_FONT_SIZE
+    );
+}
+
+#[test]
+fn part_label_font_size_defaults_to_12() {
+    let score = parse_and_group(concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
+    ));
+    assert_eq!(
+        score.metadata.part_label_font_size,
+        crate::ast::grouped::DEFAULT_PART_LABEL_FONT_SIZE
+    );
+}
+
+#[test]
+fn page_number_font_size_defaults_to_60_percent_of_row_height() {
+    let score = parse_and_group(concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
+    ));
+    assert_eq!(
+        score.metadata.page_number_font_size,
+        crate::ast::grouped::default_page_number_font_size(score.metadata.row_height)
+    );
+}
+
+#[test]
+fn measure_number_font_size_is_parsed_from_metadata() {
+    let score = parse_and_group(concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\nmeasure_number_font_size=8\n\n",
+        "# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
+    ));
+    assert_eq!(score.metadata.measure_number_font_size, 8);
+}
+
+#[test]
 fn label_directive_propagates_to_measure() {
     let score = parse_and_group(concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",

@@ -253,14 +253,17 @@ pub(super) fn resolve_bar_number_click_target(
     row_tops: &[f32],
     usable_width: f32,
     part_label_width_pt: f32,
+    measure_number_font_size: f32,
 ) -> Option<AbsoluteElement> {
     let row = rows.get(target.row)?;
     let y = *row_tops.get(target.row)?;
     let geometry = row.column_geometry(usable_width, part_label_width_pt);
     let x = PAGE_MARGIN + geometry.x_start(target.column as f32);
-    let digits_width = crate::font_metrics::span_width(
-        &super::content_conversion::bar_number_text_span(target.measure_index as u32 + 1),
-    );
+    let digits_width =
+        crate::font_metrics::span_width(&super::content_conversion::bar_number_text_span(
+            target.measure_index as u32 + 1,
+            measure_number_font_size,
+        ));
     Some(AbsoluteElement {
         x: x - BAR_NUMBER_CLICK_TARGET_HORIZONTAL_PADDING,
         y,

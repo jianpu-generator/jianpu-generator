@@ -50,13 +50,23 @@ fn section_label_span(label_text: &str, font_size: f32) -> TextSpan {
 /// shared with `highlights::resolve_bar_number_click_target`, which needs
 /// the identical span (content and `font_size`) to measure the same click
 /// target's width via `font_metrics::span_width`.
-pub(super) fn bar_number_text_span(n: u32) -> TextSpan {
+pub(super) fn bar_number_text_span(n: u32, font_size: f32) -> TextSpan {
     TextSpan {
         content: n.to_string(),
         bold: false,
         italic: false,
-        font_size: 10.0,
+        font_size,
     }
+}
+
+/// Font sizes for the small overlay labels drawn around the score body —
+/// measure numbers and inline section labels — threaded from
+/// `RenderConfig` down through `resolve`/`grid_to_absolute` (see
+/// `Metadata::measure_number_font_size`/`Metadata::section_label_font_size`).
+#[derive(Clone, Copy)]
+pub(super) struct DirectiveLineFontSizes {
+    pub(super) measure_number: f32,
+    pub(super) section_label: f32,
 }
 
 /// Result of [`directive_line_content`]: the line's text spans plus layout
@@ -94,7 +104,10 @@ struct DirectiveLineContent {
 /// that follow it, regardless of how short or long the bar number is (this
 /// ordering is a follow-up fix on top of the 5 tasks in
 /// `PLAN-section-label-engraving-quality.md`, not one of the tasks itself).
-fn directive_line_content(content: &PostArcGridContent) -> DirectiveLineContent {
+fn directive_line_content(
+    content: &PostArcGridContent,
+    font_sizes: DirectiveLineFontSizes,
+) -> DirectiveLineContent {
     let PostArcGridContent::DirectiveLine { label, .. } = content else {
         return DirectiveLineContent {
             bar_number: None,
@@ -104,7 +117,7 @@ fn directive_line_content(content: &PostArcGridContent) -> DirectiveLineContent 
         };
     };
 
-    let (bar_number_span, spans) = build_directive_line_spans(content);
+    let (bar_number_span, spans) = build_directive_line_spans(content, font_sizes.measure_number);
     let bar_number_width = bar_number_span
         .as_ref()
         .map(crate::font_metrics::span_width)
@@ -118,7 +131,7 @@ fn directive_line_content(content: &PostArcGridContent) -> DirectiveLineContent 
     let spans_x_offset = match label {
         Some(label_str) => {
             label_x_offset
-                + crate::font_metrics::section_label_box_width(label_str)
+                + crate::font_metrics::section_label_box_width(label_str, font_sizes.section_label)
                 + crate::font_metrics::DIRECTIVE_LINE_ELEMENT_GAP
         }
         None => bar_number_width,
@@ -136,7 +149,10 @@ fn directive_line_content(content: &PostArcGridContent) -> DirectiveLineContent 
 /// ordered logical elements — the bar number, plus key/bpm/time signature —
 /// with their content/style, but no positions — positions are assigned in
 /// pass 2.
-fn build_directive_line_spans(content: &PostArcGridContent) -> (Option<TextSpan>, Vec<TextSpan>) {
+fn build_directive_line_spans(
+    content: &PostArcGridContent,
+    measure_number_font_size: f32,
+) -> (Option<TextSpan>, Vec<TextSpan>) {
     let PostArcGridContent::DirectiveLine {
         bar_number,
         key,
@@ -147,7 +163,7 @@ fn build_directive_line_spans(content: &PostArcGridContent) -> (Option<TextSpan>
     else {
         return (None, Vec::new());
     };
-    let bar_number_span = bar_number.map(bar_number_text_span);
+    let bar_number_span = bar_number.map(|n| bar_number_text_span(n, measure_number_font_size));
     let mut spans: Vec<TextSpan> = Vec::new();
     if let Some(key_str) = key {
         spans.push(TextSpan {
@@ -224,6 +240,8 @@ fn grid_text_to_absolute(
     content: &PostArcGridContent,
     span_width: f32,
     halign: HAlign,
+    part_label_font_size: f32,
+    directive_font_sizes: DirectiveLineFontSizes,
 ) -> Option<AbsoluteContent> {
     match content {
         PostArcGridContent::NoteDash {
@@ -235,17 +253,18 @@ fn grid_text_to_absolute(
         }),
         PostArcGridContent::RowLabel(s) => Some(sans_serif_text(
             s.clone(),
-            12.0,
+            part_label_font_size,
             TextAnchor::Middle,
             FontWeight::Normal,
             false,
             FontFamily::SansSerif,
         )),
         PostArcGridContent::DirectiveLine { label, .. } => {
-            let directive_line = directive_line_content(content);
+            let directive_line = directive_line_content(content, directive_font_sizes);
             Some(AbsoluteContent::DirectiveLine {
                 bar_number: directive_line.bar_number,
                 label: label.clone(),
+                label_font_size: directive_font_sizes.section_label,
                 spans: directive_line.spans,
                 spans_x_offset: directive_line.spans_x_offset,
                 label_x_offset: directive_line.label_x_offset,
@@ -281,6 +300,7 @@ fn grid_text_to_absolute(
             Some(AbsoluteContent::DirectiveLine {
                 bar_number: None,
                 label: None,
+                label_font_size: *font_size,
                 spans: sequence_line_content(entries, *font_size),
                 spans_x_offset: 0.0,
                 label_x_offset: 0.0,
@@ -295,8 +315,16 @@ pub(super) fn grid_to_absolute(
     content: &PostArcGridContent,
     span_width: f32,
     halign: HAlign,
+    part_label_font_size: f32,
+    directive_font_sizes: DirectiveLineFontSizes,
 ) -> Result<Option<AbsoluteContent>, IrrecoverableError> {
-    if let Some(content) = grid_text_to_absolute(content, span_width, halign) {
+    if let Some(content) = grid_text_to_absolute(
+        content,
+        span_width,
+        halign,
+        part_label_font_size,
+        directive_font_sizes,
+    ) {
         return Ok(Some(content));
     }
 

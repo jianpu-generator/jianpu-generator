@@ -125,6 +125,70 @@ fn lyrics_font_size_defaults_to_none() {
 }
 
 #[test]
+fn parses_measure_number_font_size() {
+    let content = "title = \"t\"\nauthor = \"a\"\nmeasure_number_font_size = 8\n";
+    let (meta, errors) = parse_metadata(content, 0);
+    assert!(errors.is_empty());
+    assert_eq!(meta.measure_number_font_size, Some(8));
+}
+
+#[test]
+fn measure_number_font_size_defaults_to_none() {
+    let content = "title = \"t\"\nauthor = \"a\"\n";
+    let (meta, errors) = parse_metadata(content, 0);
+    assert!(errors.is_empty());
+    assert_eq!(meta.measure_number_font_size, None);
+}
+
+#[test]
+fn parses_section_label_font_size() {
+    let content = "title = \"t\"\nauthor = \"a\"\nsection_label_font_size = 16\n";
+    let (meta, errors) = parse_metadata(content, 0);
+    assert!(errors.is_empty());
+    assert_eq!(meta.section_label_font_size, Some(16));
+}
+
+#[test]
+fn section_label_font_size_defaults_to_none() {
+    let content = "title = \"t\"\nauthor = \"a\"\n";
+    let (meta, errors) = parse_metadata(content, 0);
+    assert!(errors.is_empty());
+    assert_eq!(meta.section_label_font_size, None);
+}
+
+#[test]
+fn parses_part_label_font_size() {
+    let content = "title = \"t\"\nauthor = \"a\"\npart_label_font_size = 16\n";
+    let (meta, errors) = parse_metadata(content, 0);
+    assert!(errors.is_empty());
+    assert_eq!(meta.part_label_font_size, Some(16));
+}
+
+#[test]
+fn part_label_font_size_defaults_to_none() {
+    let content = "title = \"t\"\nauthor = \"a\"\n";
+    let (meta, errors) = parse_metadata(content, 0);
+    assert!(errors.is_empty());
+    assert_eq!(meta.part_label_font_size, None);
+}
+
+#[test]
+fn parses_page_number_font_size() {
+    let content = "title = \"t\"\nauthor = \"a\"\npage_number_font_size = 9\n";
+    let (meta, errors) = parse_metadata(content, 0);
+    assert!(errors.is_empty());
+    assert_eq!(meta.page_number_font_size, Some(9));
+}
+
+#[test]
+fn page_number_font_size_defaults_to_none() {
+    let content = "title = \"t\"\nauthor = \"a\"\n";
+    let (meta, errors) = parse_metadata(content, 0);
+    assert!(errors.is_empty());
+    assert_eq!(meta.page_number_font_size, None);
+}
+
+#[test]
 fn parses_merge_duplicate_measures_across_parts() {
     let content = "title = \"t\"\nauthor = \"a\"\nmerge_duplicate_measures_across_parts = no\n";
     let (meta, errors) = parse_metadata(content, 0);

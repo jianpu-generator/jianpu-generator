@@ -185,6 +185,9 @@ pub enum AbsoluteContent {
         /// of `spans`'s tspans, so it doesn't need to know their combined
         /// rendered width.
         label: Option<String>,
+        /// Font size in points of `label` (see `Metadata::section_label_font_size`).
+        /// Meaningless when `label` is `None`.
+        label_font_size: f32,
         /// Key/bpm/time-signature spans, i.e. everything on the line except
         /// `bar_number` and `label`.
         spans: Vec<TextSpan>,

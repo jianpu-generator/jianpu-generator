@@ -202,6 +202,7 @@ fn render_overlay_element(
         AbsoluteContent::DirectiveLine {
             bar_number,
             label,
+            label_font_size,
             spans,
             spans_x_offset,
             label_x_offset,
@@ -211,6 +212,7 @@ fn render_overlay_element(
             &DirectiveLineArgs {
                 bar_number,
                 label,
+                label_font_size: *label_font_size,
                 spans,
                 spans_x_offset: *spans_x_offset,
                 label_x_offset: *label_x_offset,

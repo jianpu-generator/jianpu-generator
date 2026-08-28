@@ -1,10 +1,11 @@
 use jianpu_generator::ast::grouped::{
-    default_author_font_size, default_lyrics_font_size, default_part_legend_font_size,
-    default_subtitle_font_size, default_title_font_size, DEFAULT_DIRECTIVE_ROW_OFFSET,
-    DEFAULT_HIDE_RESTING_PARTS, DEFAULT_HIDE_SYSTEM_DIVIDERS, DEFAULT_MAX_MEASURES_PER_SYSTEM,
+    default_author_font_size, default_lyrics_font_size, default_page_number_font_size,
+    default_part_legend_font_size, default_subtitle_font_size, default_title_font_size,
+    DEFAULT_DIRECTIVE_ROW_OFFSET, DEFAULT_HIDE_RESTING_PARTS, DEFAULT_HIDE_SYSTEM_DIVIDERS,
+    DEFAULT_MAX_MEASURES_PER_SYSTEM, DEFAULT_MEASURE_NUMBER_FONT_SIZE,
     DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS, DEFAULT_NOTE_NUMBER_WIDTH,
-    DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_PART_LABEL_WIDTH_PT, DEFAULT_ROW_HEIGHT,
-    DEFAULT_SEQUENCE_FONT_SIZE,
+    DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_PART_LABEL_FONT_SIZE, DEFAULT_PART_LABEL_WIDTH_PT,
+    DEFAULT_ROW_HEIGHT, DEFAULT_SECTION_LABEL_FONT_SIZE, DEFAULT_SEQUENCE_FONT_SIZE,
 };
 use serde::Serialize;
 use tsify::Tsify;
@@ -26,6 +27,10 @@ pub struct MetadataDefaultsOut {
     pub author_font_size: u32,
     pub sequence_font_size: u32,
     pub part_legend_font_size: u32,
+    pub measure_number_font_size: u32,
+    pub section_label_font_size: u32,
+    pub part_label_font_size: u32,
+    pub page_number_font_size: u32,
     pub merge_duplicate_measures_across_parts: bool,
     pub hide_resting_parts: bool,
     pub hide_system_dividers: bool,
@@ -50,6 +55,10 @@ impl Default for MetadataDefaultsOut {
             author_font_size: default_author_font_size(DEFAULT_ROW_HEIGHT),
             sequence_font_size: DEFAULT_SEQUENCE_FONT_SIZE,
             part_legend_font_size: default_part_legend_font_size(DEFAULT_ROW_HEIGHT),
+            measure_number_font_size: DEFAULT_MEASURE_NUMBER_FONT_SIZE,
+            section_label_font_size: DEFAULT_SECTION_LABEL_FONT_SIZE,
+            part_label_font_size: DEFAULT_PART_LABEL_FONT_SIZE,
+            page_number_font_size: default_page_number_font_size(DEFAULT_ROW_HEIGHT),
             merge_duplicate_measures_across_parts: DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
             hide_resting_parts: DEFAULT_HIDE_RESTING_PARTS,
             hide_system_dividers: DEFAULT_HIDE_SYSTEM_DIVIDERS,

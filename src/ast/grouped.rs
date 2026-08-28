@@ -50,6 +50,20 @@ pub fn default_part_legend_font_size(row_height: u32) -> u32 {
     (row_height as f32 * 0.6).round() as u32
 }
 
+/// Default `measure_number_font_size` in points, used when unset in `# metadata`.
+pub const DEFAULT_MEASURE_NUMBER_FONT_SIZE: u32 = 10;
+
+/// Default `section_label_font_size` in points, used when unset in `# metadata`.
+pub const DEFAULT_SECTION_LABEL_FONT_SIZE: u32 = 12;
+
+/// Default `part_label_font_size` in points, used when unset in `# metadata`.
+pub const DEFAULT_PART_LABEL_FONT_SIZE: u32 = 12;
+
+/// Default `page_number_font_size` in points: 60% of `row_height`, used when unset in `# metadata`.
+pub fn default_page_number_font_size(row_height: u32) -> u32 {
+    (row_height as f32 * 0.6).round() as u32
+}
+
 #[derive(Clone)]
 pub struct Metadata {
     pub title: Option<String>,
@@ -85,6 +99,18 @@ pub struct Metadata {
     /// Font size in points of the part-name legend entries shown in the header
     /// (e.g. `V — Vocal (S1,S2,A1,A2)`). Default: 60% of `row_height`.
     pub part_legend_font_size: u32,
+    /// Font size in points of each measure's bar number, drawn at the start of
+    /// its directive line. Default: 10.
+    pub measure_number_font_size: u32,
+    /// Font size in points of an inline section label (`label="..."` on a
+    /// measure's directive line). Default: 12.
+    pub section_label_font_size: u32,
+    /// Font size in points of a part's row label (the instrument name shown
+    /// at the start of each system row, e.g. "Soprano"). Default: 12.
+    pub part_label_font_size: u32,
+    /// Font size in points of the page number shown in the footer. Default:
+    /// 60% of `row_height`.
+    pub page_number_font_size: u32,
     /// Score-wide default for `merge_duplicate_measures_across_parts=`: when `false`,
     /// identical measure rows from different parts are no longer merged into one row
     /// (see `consolidator::consolidate`). Default: `true`. A `merge_duplicate_measures_across_parts=`

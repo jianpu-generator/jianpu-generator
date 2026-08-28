@@ -12,7 +12,9 @@
 
 use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compositor::types::AbsoluteContent;
-use crate::coordinate_resolver::resolve::{resolve, LyricFontSizes};
+use crate::coordinate_resolver::resolve::{
+    resolve, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
+};
 use crate::font_metrics::{cjk_glyph_left_bearing, monospace_glyph_left_bearing};
 use crate::grid_layout::types::{GridContent, GridElement, GridPage, GridRow, HAlign, VAlign};
 
@@ -22,6 +24,17 @@ const CHORDS_FONT_SIZE: f32 = 12.0;
 const LYRIC_FONT_SIZES: LyricFontSizes = LyricFontSizes {
     base: 14.4,
     cjk: 17.28,
+};
+const LABEL_FONT_SIZES: LabelFontSizes = LabelFontSizes {
+    measure_number: 10.0,
+    section_label: 12.0,
+    part_label: 12.0,
+};
+const RESOLVE_FONT_SIZES: ResolveFontSizes = ResolveFontSizes {
+    lyric: LYRIC_FONT_SIZES,
+    notes: NOTES_FONT_SIZE,
+    chords: CHORDS_FONT_SIZE,
+    labels: LABEL_FONT_SIZES,
 };
 
 fn single_row_page(element: GridElement) -> GridPage {
@@ -57,15 +70,7 @@ fn resolve_anchor_x(content: GridContent) -> f32 {
         content,
     };
     let page = single_row_page(el);
-    let abs = resolve(
-        &[page],
-        NOTE_NUMBER_WIDTH,
-        40.0,
-        LYRIC_FONT_SIZES,
-        NOTES_FONT_SIZE,
-        CHORDS_FONT_SIZE,
-    )
-    .unwrap();
+    let abs = resolve(&[page], NOTE_NUMBER_WIDTH, 40.0, RESOLVE_FONT_SIZES).unwrap();
     abs[0]
         .elements
         .iter()

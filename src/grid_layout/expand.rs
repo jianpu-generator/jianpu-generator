@@ -249,7 +249,7 @@ pub(crate) fn expand_system_to_rows(
 pub(crate) fn make_footer_row(
     page_num: u32,
     total_pages: u32,
-    base: f32,
+    font_size: f32,
     height_pt: f32,
 ) -> GridRow {
     GridRow {
@@ -264,7 +264,7 @@ pub(crate) fn make_footer_row(
             valign: VAlign::Bottom,
             content: GridContent::Text {
                 content: format!("{page_num} / {total_pages}"),
-                font_size: base * 0.6,
+                font_size,
                 bold: false,
                 italic: false,
                 is_title: false,

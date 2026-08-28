@@ -27,6 +27,10 @@ fn test_config() -> RenderConfig {
         chords_font_size: 18,
         hide_system_dividers: false,
         directive_row_offset: Offset::default(),
+        measure_number_font_size: 10,
+        section_label_font_size: 12,
+        part_label_font_size: 12,
+        page_number_font_size: 18,
     }
 }
 
@@ -174,7 +178,11 @@ fn measure_rod_widens_to_fit_a_long_directive_line() {
     let ordinary_block = make_block_with_notes("S", 4, 4);
     let system = vec![wide_directive_block, ordinary_block];
 
-    let expected_directive_width = directive_line_rod_width(&decoration);
+    let expected_directive_width = directive_line_rod_width(
+        &decoration,
+        config.measure_number_font_size as f32,
+        config.section_label_font_size as f32,
+    );
     let measure_layout = build_measure_column_layout(&system, &config);
 
     assert!(
@@ -248,7 +256,11 @@ fn two_adjacent_directive_lines_do_not_overlap() {
     let decoration0 = block0.decorations[0].clone();
     let system = vec![block0, block1];
 
-    let expected_directive_width = directive_line_rod_width(&decoration0);
+    let expected_directive_width = directive_line_rod_width(
+        &decoration0,
+        config.measure_number_font_size as f32,
+        config.section_label_font_size as f32,
+    );
     let measure_layout = build_measure_column_layout(&system, &config);
     let total_rod: f32 = measure_layout.iter().map(|m| m.rod_pt).sum();
     let label_width = 40.0_f32;

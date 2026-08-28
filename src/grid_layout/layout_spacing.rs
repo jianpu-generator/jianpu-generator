@@ -256,7 +256,13 @@ pub(crate) fn build_measure_column_layout(
                 .decorations
                 .first()
                 .filter(|dec| directive_line_should_emit(idx, dec))
-                .map(directive_line_rod_width)
+                .map(|dec| {
+                    directive_line_rod_width(
+                        dec,
+                        config.measure_number_font_size as f32,
+                        config.section_label_font_size as f32,
+                    )
+                })
                 .unwrap_or(0.0);
             // The directive line draws starting at this block's own leading
             // anchor (the previous block's trailing bar line, or the

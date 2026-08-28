@@ -211,12 +211,6 @@ pub(crate) fn augmentation_dot_suffix(dotted: bool, double_dotted: bool) -> &'st
     }
 }
 
-/// Font size (points) of a section label's own text run, shared by the
-/// layout pass (`content_conversion.rs`, sizing the gap reserved before the
-/// directives that follow a label) and the renderer pass (`new_renderer.rs`,
-/// drawing the label's text and bounding box).
-pub(crate) const SECTION_LABEL_FONT_SIZE: f32 = 12.0;
-
 /// Horizontal padding between a section label's text and its bounding box,
 /// applied equally on both sides — expressed as a ratio of the label's font
 /// size, matching how real engraving software scales margins with the
@@ -229,24 +223,29 @@ const SECTION_LABEL_BOX_PADDING_RATIO: f32 = 1.0 / 3.0;
 /// `SECTION_LABEL_BOX_PADDING_RATIO`.
 const SECTION_LABEL_BOX_HEIGHT_RATIO: f32 = 1.5;
 
-pub(crate) fn section_label_box_padding() -> f32 {
-    SECTION_LABEL_FONT_SIZE * SECTION_LABEL_BOX_PADDING_RATIO
+/// `font_size` is the section label's own font size (see
+/// `Metadata::section_label_font_size`), shared by the layout pass
+/// (`content_conversion.rs`/`grid_layout::layout_decoration`, sizing the gap
+/// reserved before the directives that follow a label) and the renderer pass
+/// (`new_renderer.rs`, drawing the label's text and bounding box).
+pub(crate) fn section_label_box_padding(font_size: f32) -> f32 {
+    font_size * SECTION_LABEL_BOX_PADDING_RATIO
 }
 
-pub(crate) fn section_label_box_height() -> f32 {
-    SECTION_LABEL_FONT_SIZE * SECTION_LABEL_BOX_HEIGHT_RATIO
+pub(crate) fn section_label_box_height(font_size: f32) -> f32 {
+    font_size * SECTION_LABEL_BOX_HEIGHT_RATIO
 }
 
 /// Rendered width (in points) of a section label's bounding box, including
 /// padding on both sides, measured from real font-metrics glyph advances
 /// rather than a character-bucket heuristic. A section label is always bold
 /// (see `section_label_span` in `content_conversion.rs`).
-pub(crate) fn section_label_box_width(label: &str) -> f32 {
+pub(crate) fn section_label_box_width(label: &str, font_size: f32) -> f32 {
     label
         .chars()
-        .map(|c| char_advance_width(c, SECTION_LABEL_FONT_SIZE, true))
+        .map(|c| char_advance_width(c, font_size, true))
         .sum::<f32>()
-        + section_label_box_padding() * 2.0
+        + section_label_box_padding(font_size) * 2.0
 }
 
 /// Gap (points) reserved between adjacent directive-line elements (bar
@@ -267,6 +266,7 @@ pub(crate) fn directive_line_width(
     bar_number: Option<&TextSpan>,
     label: Option<&str>,
     spans: &[TextSpan],
+    section_label_font_size: f32,
 ) -> f32 {
     let bar_number_width = bar_number.map(span_width).unwrap_or(0.0);
     let spans_width: f32 = spans.iter().map(span_width).sum();
@@ -277,7 +277,8 @@ pub(crate) fn directive_line_width(
             } else {
                 0.0
             };
-            let label_box_right = label_x_offset + section_label_box_width(label_str);
+            let label_box_right =
+                label_x_offset + section_label_box_width(label_str, section_label_font_size);
             let spans_x_offset = label_box_right + DIRECTIVE_LINE_ELEMENT_GAP;
             bar_number_width
                 .max(label_box_right)

@@ -181,6 +181,10 @@ pub struct ParsedMetadata {
     pub author_font_size: Option<u32>,
     pub sequence_font_size: Option<u32>,
     pub part_legend_font_size: Option<u32>,
+    pub measure_number_font_size: Option<u32>,
+    pub section_label_font_size: Option<u32>,
+    pub part_label_font_size: Option<u32>,
+    pub page_number_font_size: Option<u32>,
     /// When `false`, disables merging of identical measure rows that come from different
     /// parts (see `consolidator::consolidate`). Default: `true`.
     pub merge_duplicate_measures_across_parts: Option<bool>,

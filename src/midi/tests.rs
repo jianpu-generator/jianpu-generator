@@ -32,6 +32,10 @@ fn default_test_metadata() -> Metadata {
         author_font_size: 14,
         sequence_font_size: 12,
         part_legend_font_size: 12,
+        measure_number_font_size: 10,
+        section_label_font_size: 12,
+        part_label_font_size: 12,
+        page_number_font_size: 14,
         merge_duplicate_measures_across_parts: true,
         hide_resting_parts: true,
         hide_system_dividers: false,
@@ -118,32 +122,11 @@ fn duration_half_note_is_960_ticks() {
 pub(super) fn one_measure_score() -> Score {
     use crate::ast::grouped::GroupedNote;
     use crate::ast::grouped::{
-        Metadata, MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
+        MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
     };
-    use crate::ast::parsed::{JianPuPitch, Offset, PartKind, Soundfont};
+    use crate::ast::parsed::{JianPuPitch, PartKind, Soundfont};
     Score {
-        metadata: Metadata {
-            title: None,
-            subtitle: None,
-            author: None,
-            row_height: 24,
-            max_measures_per_system: 28,
-            note_number_width: 8,
-            part_label_width_pt: 40,
-            parts_list_columns: 3,
-            lyrics_font_size: 14,
-            notes_font_size: 14,
-            chords_font_size: 14,
-            title_font_size: 36,
-            subtitle_font_size: 19,
-            author_font_size: 14,
-            sequence_font_size: 12,
-            part_legend_font_size: 12,
-            merge_duplicate_measures_across_parts: true,
-            hide_resting_parts: true,
-            hide_system_dividers: false,
-            directive_row_offset: Offset::default(),
-        },
+        metadata: default_test_metadata(),
         measures: vec![MultiPartMeasure {
             time_signature: Some(TimeSignature {
                 numerator: 4,
@@ -220,33 +203,12 @@ fn sharp_note_midi_pitch_is_one_semitone_higher_than_natural() {
 fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
     use crate::ast::grouped::GroupedNote;
     use crate::ast::grouped::{
-        Metadata, MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
+        MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
     };
-    use crate::ast::parsed::{JianPuPitch, Offset, PartKind, Soundfont};
+    use crate::ast::parsed::{JianPuPitch, PartKind, Soundfont};
 
     Score {
-        metadata: Metadata {
-            title: None,
-            subtitle: None,
-            author: None,
-            row_height: 24,
-            max_measures_per_system: 28,
-            note_number_width: 8,
-            part_label_width_pt: 40,
-            parts_list_columns: 3,
-            lyrics_font_size: 14,
-            notes_font_size: 14,
-            chords_font_size: 14,
-            title_font_size: 36,
-            subtitle_font_size: 19,
-            author_font_size: 14,
-            sequence_font_size: 12,
-            part_legend_font_size: 12,
-            merge_duplicate_measures_across_parts: true,
-            hide_resting_parts: true,
-            hide_system_dividers: false,
-            directive_row_offset: Offset::default(),
-        },
+        metadata: default_test_metadata(),
         measures: vec![MultiPartMeasure {
             time_signature: Some(TimeSignature {
                 numerator: 4,

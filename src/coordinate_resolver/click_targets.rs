@@ -18,6 +18,7 @@ pub(super) fn resolve_click_target_elements(
     row_tops: &[f32],
     usable_width: f32,
     part_label_width_pt: f32,
+    measure_number_font_size: f32,
 ) -> Vec<AbsoluteElement> {
     let mut elements: Vec<AbsoluteElement> = page
         .measure_click_targets
@@ -48,7 +49,14 @@ pub(super) fn resolve_click_target_elements(
     }));
 
     elements.extend(page.bar_number_click_targets.iter().filter_map(|t| {
-        resolve_bar_number_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
+        resolve_bar_number_click_target(
+            t,
+            &page.rows,
+            row_tops,
+            usable_width,
+            part_label_width_pt,
+            measure_number_font_size,
+        )
     }));
 
     elements

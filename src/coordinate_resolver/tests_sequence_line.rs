@@ -1,5 +1,7 @@
 use crate::compositor::types::AbsoluteContent;
-use crate::coordinate_resolver::resolve::{resolve, LyricFontSizes};
+use crate::coordinate_resolver::resolve::{
+    resolve, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
+};
 use crate::grid_layout::types::{
     GridContent, GridElement, GridPage, GridRow, HAlign, SequenceEntryInfo,
     SequenceEntryPartFilter, VAlign,
@@ -57,12 +59,19 @@ fn sequence_line_renders_label_and_omit_parts_spans() {
         &[page],
         12.0,
         40.0,
-        LyricFontSizes {
-            base: 14.4,
-            cjk: 17.28,
+        ResolveFontSizes {
+            lyric: LyricFontSizes {
+                base: 14.4,
+                cjk: 17.28,
+            },
+            notes: 12.0,
+            chords: 12.0,
+            labels: LabelFontSizes {
+                measure_number: 10.0,
+                section_label: 12.0,
+                part_label: 12.0,
+            },
         },
-        12.0,
-        12.0,
     )
     .unwrap();
     let AbsoluteContent::DirectiveLine { spans, .. } = &abs[0].elements[0].content else {
@@ -106,12 +115,19 @@ fn sequence_line_renders_only_parts_suffix_without_a_dash() {
         &[page],
         12.0,
         40.0,
-        LyricFontSizes {
-            base: 14.4,
-            cjk: 17.28,
+        ResolveFontSizes {
+            lyric: LyricFontSizes {
+                base: 14.4,
+                cjk: 17.28,
+            },
+            notes: 12.0,
+            chords: 12.0,
+            labels: LabelFontSizes {
+                measure_number: 10.0,
+                section_label: 12.0,
+                part_label: 12.0,
+            },
         },
-        12.0,
-        12.0,
     )
     .unwrap();
     let AbsoluteContent::DirectiveLine { spans, .. } = &abs[0].elements[0].content else {

@@ -101,6 +101,10 @@ struct MetadataAccumulator {
     author_font_size: Option<u32>,
     sequence_font_size: Option<u32>,
     part_legend_font_size: Option<u32>,
+    measure_number_font_size: Option<u32>,
+    section_label_font_size: Option<u32>,
+    part_label_font_size: Option<u32>,
+    page_number_font_size: Option<u32>,
     merge_duplicate_measures_across_parts: Option<bool>,
     hide_resting_parts: Option<bool>,
     hide_system_dividers: Option<bool>,
@@ -125,6 +129,10 @@ impl MetadataAccumulator {
             "author_font_size" => Some(&mut self.author_font_size),
             "sequence_font_size" => Some(&mut self.sequence_font_size),
             "part_legend_font_size" => Some(&mut self.part_legend_font_size),
+            "measure_number_font_size" => Some(&mut self.measure_number_font_size),
+            "section_label_font_size" => Some(&mut self.section_label_font_size),
+            "part_label_font_size" => Some(&mut self.part_label_font_size),
+            "page_number_font_size" => Some(&mut self.page_number_font_size),
             _ => None,
         }
     }
@@ -226,6 +234,10 @@ pub fn parse_metadata(
             author_font_size: accumulator.author_font_size,
             sequence_font_size: accumulator.sequence_font_size,
             part_legend_font_size: accumulator.part_legend_font_size,
+            measure_number_font_size: accumulator.measure_number_font_size,
+            section_label_font_size: accumulator.section_label_font_size,
+            part_label_font_size: accumulator.part_label_font_size,
+            page_number_font_size: accumulator.page_number_font_size,
             merge_duplicate_measures_across_parts: accumulator
                 .merge_duplicate_measures_across_parts,
             hide_resting_parts: accumulator.hide_resting_parts,

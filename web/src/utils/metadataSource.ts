@@ -15,6 +15,10 @@ export type MetadataKey =
   | 'author_font_size'
   | 'sequence_font_size'
   | 'part_legend_font_size'
+  | 'measure_number_font_size'
+  | 'section_label_font_size'
+  | 'part_label_font_size'
+  | 'page_number_font_size'
   | 'merge_duplicate_measures_across_parts'
   | 'hide_resting_parts'
   | 'hide_system_dividers'
@@ -37,6 +41,10 @@ export interface ParsedMetadataFields {
   author_font_size: number | null
   sequence_font_size: number | null
   part_legend_font_size: number | null
+  measure_number_font_size: number | null
+  section_label_font_size: number | null
+  part_label_font_size: number | null
+  page_number_font_size: number | null
   merge_duplicate_measures_across_parts: boolean | null
   hide_resting_parts: boolean | null
   hide_system_dividers: boolean | null
@@ -57,6 +65,10 @@ const numericKeys: MetadataKey[] = [
   'author_font_size',
   'sequence_font_size',
   'part_legend_font_size',
+  'measure_number_font_size',
+  'section_label_font_size',
+  'part_label_font_size',
+  'page_number_font_size',
 ]
 
 const unquotedKeys: MetadataKey[] = [
@@ -84,6 +96,10 @@ const canonicalKeyOrder: MetadataKey[] = [
   'author_font_size',
   'sequence_font_size',
   'part_legend_font_size',
+  'measure_number_font_size',
+  'section_label_font_size',
+  'part_label_font_size',
+  'page_number_font_size',
   'merge_duplicate_measures_across_parts',
   'hide_resting_parts',
   'hide_system_dividers',
@@ -171,6 +187,10 @@ export function parseMetadata(source: string): ParsedMetadataFields {
     author_font_size: null,
     sequence_font_size: null,
     part_legend_font_size: null,
+    measure_number_font_size: null,
+    section_label_font_size: null,
+    part_label_font_size: null,
+    page_number_font_size: null,
     merge_duplicate_measures_across_parts: null,
     hide_resting_parts: null,
     hide_system_dividers: null,
@@ -245,6 +265,26 @@ export function parseMetadata(source: string): ParsedMetadataFields {
   if (fieldMap.has('part_legend_font_size'))
     result.part_legend_font_size = parseInt(
       fieldMap.get('part_legend_font_size') as string,
+      10,
+    )
+  if (fieldMap.has('measure_number_font_size'))
+    result.measure_number_font_size = parseInt(
+      fieldMap.get('measure_number_font_size') as string,
+      10,
+    )
+  if (fieldMap.has('section_label_font_size'))
+    result.section_label_font_size = parseInt(
+      fieldMap.get('section_label_font_size') as string,
+      10,
+    )
+  if (fieldMap.has('part_label_font_size'))
+    result.part_label_font_size = parseInt(
+      fieldMap.get('part_label_font_size') as string,
+      10,
+    )
+  if (fieldMap.has('page_number_font_size'))
+    result.page_number_font_size = parseInt(
+      fieldMap.get('page_number_font_size') as string,
       10,
     )
   if (fieldMap.has('merge_duplicate_measures_across_parts'))

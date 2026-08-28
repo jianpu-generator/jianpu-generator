@@ -13,6 +13,18 @@ pub struct RenderConfig {
     pub chords_font_size: u32,
     pub hide_system_dividers: bool,
     pub directive_row_offset: Offset,
+    /// Font size in points of each measure's bar number (see
+    /// `Metadata::measure_number_font_size`).
+    pub measure_number_font_size: u32,
+    /// Font size in points of an inline section label (see
+    /// `Metadata::section_label_font_size`).
+    pub section_label_font_size: u32,
+    /// Font size in points of a part's row label (see
+    /// `Metadata::part_label_font_size`).
+    pub part_label_font_size: u32,
+    /// Font size in points of the footer page number (see
+    /// `Metadata::page_number_font_size`).
+    pub page_number_font_size: u32,
 }
 
 impl RenderConfig {
@@ -27,6 +39,10 @@ impl RenderConfig {
             chords_font_size: meta.chords_font_size,
             hide_system_dividers: meta.hide_system_dividers,
             directive_row_offset: meta.directive_row_offset,
+            measure_number_font_size: meta.measure_number_font_size,
+            section_label_font_size: meta.section_label_font_size,
+            part_label_font_size: meta.part_label_font_size,
+            page_number_font_size: meta.page_number_font_size,
         }
     }
 
@@ -87,6 +103,10 @@ mod tests {
             hide_resting_parts: true,
             hide_system_dividers: false,
             directive_row_offset: Offset::default(),
+            measure_number_font_size: 10,
+            section_label_font_size: 12,
+            part_label_font_size: 12,
+            page_number_font_size: 18,
         };
         let cfg = RenderConfig::from_metadata(&meta);
         assert_eq!(cfg.row_height, 30);
@@ -95,5 +115,9 @@ mod tests {
         assert_eq!(cfg.max_measures_per_system, 6);
         assert_eq!(cfg.lyrics_font_size, 18);
         assert_eq!(cfg.lyric_font_size(), 18.0);
+        assert_eq!(cfg.measure_number_font_size, 10);
+        assert_eq!(cfg.section_label_font_size, 12);
+        assert_eq!(cfg.part_label_font_size, 12);
+        assert_eq!(cfg.page_number_font_size, 18);
     }
 }
