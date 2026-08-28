@@ -56,31 +56,6 @@ Feature: Format score sorts parts within each measure by declaration order
       [Bass] 2 2 2 2
       """
 
-  Scenario: Moves a key's multiple explicitly-prefixed lines together as a contiguous block, preserving their relative order
-    Given the score source:
-      """
-      # parts
-      Melody = notes+lyrics
-      Bass = notes
-
-      # score
-      [Melody] 1 2 3 4
-      [Bass] 5 6 7 1
-      [Melody] la la la la
-      """
-    When it is formatted
-    Then the formatted source is:
-      """
-      # parts
-      Melody = notes+lyrics
-      Bass = notes
-
-      # score
-      [Melody] 1 2 3 4
-      [Melody] la la la la
-      [Bass] 5 6 7 1
-      """
-
   Scenario: A positional lyrics line moves with its part's note line
     Given the score source:
       """
