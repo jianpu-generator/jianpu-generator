@@ -64,6 +64,9 @@ pub fn default_page_number_font_size(row_height: u32) -> u32 {
     (row_height as f32 * 0.6).round() as u32
 }
 
+/// Default `lyric_click_target_padding_pt`, used when unset in `# metadata`.
+pub const DEFAULT_LYRIC_CLICK_TARGET_PADDING_PT: u32 = 12;
+
 #[derive(Clone)]
 pub struct Metadata {
     pub title: Option<String>,
@@ -111,6 +114,10 @@ pub struct Metadata {
     /// Font size in points of the page number shown in the footer. Default:
     /// 60% of `row_height`.
     pub page_number_font_size: u32,
+    /// Extra vertical padding in points added around a lyric syllable's
+    /// click-target box on top of the font's own measured ascender+descender
+    /// span (see `grid_layout::layout_heights::lyric_row_height`). Default: 12.
+    pub lyric_click_target_padding_pt: u32,
     /// Score-wide default for `merge_duplicate_measures_across_parts=`: when `false`,
     /// identical measure rows from different parts are no longer merged into one row
     /// (see `consolidator::consolidate`). Default: `true`. A `merge_duplicate_measures_across_parts=`

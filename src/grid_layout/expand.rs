@@ -1,8 +1,8 @@
 use crate::compiler::types::{MeasureBlock, MeasureRow};
-use crate::coordinate_resolver::LyricFontSizes;
 use crate::grid_layout::layout::{
     block_column_width, chord_part_sub_row_heights, compute_bar_height, has_lyrics,
-    is_chord_only_row, is_lyric_row, note_part_sub_row_heights, LABEL_COLS, MUSIC_START_COL,
+    is_chord_only_row, is_lyric_row, note_part_sub_row_heights, LyricSizing, LABEL_COLS,
+    MUSIC_START_COL,
 };
 use crate::grid_layout::types::{
     GridContent, GridElement, GridRow, HAlign, MeasureColumnLayout, VAlign,
@@ -183,7 +183,7 @@ pub(crate) fn expand_system_to_rows(
     system_arcs: &HashMap<usize, Vec<GridElement>>,
     system_tuplet_brackets: &HashMap<usize, Vec<GridElement>>,
     measure_layout: &[MeasureColumnLayout],
-    lyric_font_sizes: LyricFontSizes,
+    lyric_sizing: LyricSizing,
 ) -> Vec<GridRow> {
     let Some(first) = system.first() else {
         return vec![];
@@ -192,7 +192,7 @@ pub(crate) fn expand_system_to_rows(
     let column_count = MUSIC_START_COL + total_musical_cols;
     let tuplet_part_indices: std::collections::HashSet<usize> =
         system_tuplet_brackets.keys().copied().collect();
-    let bar_height = compute_bar_height(first, base, &tuplet_part_indices, lyric_font_sizes);
+    let bar_height = compute_bar_height(first, base, &tuplet_part_indices, lyric_sizing);
     let mut all_rows: Vec<GridRow> = Vec::new();
     for (part_idx, part_template) in first.rows.iter().enumerate() {
         if is_lyric_row(part_template) {
@@ -205,7 +205,7 @@ pub(crate) fn expand_system_to_rows(
                     bar_height,
                     draw_bar_line: true,
                     measure_layout,
-                    lyric_font_sizes,
+                    lyric_sizing,
                 },
             ));
         } else {
@@ -237,7 +237,7 @@ pub(crate) fn expand_system_to_rows(
                         bar_height,
                         draw_bar_line: false,
                         measure_layout,
-                        lyric_font_sizes,
+                        lyric_sizing,
                     },
                 ));
             }

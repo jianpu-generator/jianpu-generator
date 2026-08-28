@@ -73,6 +73,7 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | `section_label_font_size` | no | `12` | Font size of an inline section label (`label="..."` on a measure's directive line) (points) |
 | `part_label_font_size` | no | `12` | Font size of a part's row label, e.g. "Soprano" (points) |
 | `page_number_font_size` | no | `row_height * 0.6` | Font size of the page number shown in the footer (points) |
+| `lyric_click_target_padding_pt` | no | `12` | Extra vertical padding (points) around a lyric syllable's hover/click-target box, added on top of the lyric font's own measured ascender+descender span |
 | `merge_duplicate_measures_across_parts` | no | `yes` | Score-wide default for whether identical measures from different parts are merged into a single row (`yes`/`no`); can be overridden from a given measure onward with the `merge_duplicate_measures_across_parts=` directive line — see [Directive lines](#directive-lines) |
 | `hide_resting_parts` | no | `yes` | Score-wide default for whether an all-rest part is omitted from a measure where other parts have content (`yes`/`no`); can be overridden from a given measure onward with the `hide_resting_parts=` directive line — see [Directive lines](#directive-lines) |
 | `hide_system_dividers` | no | `no` | Whether the horizontal divider line between systems is omitted (`yes`/`no`) |

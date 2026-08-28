@@ -4,7 +4,7 @@
 use crate::compiler::types::{ElementContent, MeasureBlock};
 use crate::coordinate_resolver::LyricFontSizes;
 use crate::grid_layout::layout::{
-    block_column_width, lyric_row_height, lyric_row_verse, LABEL_COLS, MUSIC_START_COL,
+    block_column_width, lyric_row_height, lyric_row_verse, LyricSizing, LABEL_COLS, MUSIC_START_COL,
 };
 use crate::grid_layout::types::{
     GridContent, GridElement, GridRow, HAlign, MeasureColumnLayout, VAlign,
@@ -20,7 +20,7 @@ pub(crate) struct LyricPartParams<'a> {
     /// here would duplicate/overshoot it.
     pub(crate) draw_bar_line: bool,
     pub(crate) measure_layout: &'a [MeasureColumnLayout],
-    pub(crate) lyric_font_sizes: LyricFontSizes,
+    pub(crate) lyric_sizing: LyricSizing,
 }
 
 /// The largest resolved lyric font size (see `RenderConfig::lyric_font_size`/
@@ -101,9 +101,13 @@ pub(crate) fn expand_lyric_part(system: &[MeasureBlock], params: &LyricPartParam
     let column_count = params.column_count;
     let bar_height = params.bar_height;
     let draw_bar_line = params.draw_bar_line;
-    let font_size = lyric_part_max_font_size(system, part_idx, params.lyric_font_sizes);
+    let font_size = lyric_part_max_font_size(system, part_idx, params.lyric_sizing.font_sizes);
     let mut row = GridRow {
-        height_pt: lyric_row_height(params.base, font_size),
+        height_pt: lyric_row_height(
+            params.base,
+            font_size,
+            params.lyric_sizing.click_target_padding_pt,
+        ),
         column_count,
         has_label_region: true,
         measure_layout: params.measure_layout.to_vec(),

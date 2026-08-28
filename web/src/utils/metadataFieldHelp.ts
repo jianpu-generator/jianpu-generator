@@ -89,6 +89,10 @@ Defaults to 12.`,
 
 Defaults to \`row_height × 0.6\` when unset.`,
 
+  lyric_click_target_padding_pt: `Extra vertical padding (points) around a lyric syllable's hover/click-target box, added on top of the lyric font's own measured height.
+
+Defaults to 12.`,
+
   merge_duplicate_measures_across_parts: `When on, measures with identical content across different parts are drawn as a single merged row instead of one row per part.
 
 Can be overridden from a specific measure onward with a

@@ -12,7 +12,9 @@ use crate::compiler::types::{
 };
 use crate::coordinate_resolver::LyricFontSizes;
 use crate::grid_layout::expand::expand_system_to_rows;
-use crate::grid_layout::layout::{build_measure_column_layout, directive_line_rod_width};
+use crate::grid_layout::layout::{
+    build_measure_column_layout, directive_line_rod_width, LyricSizing,
+};
 use crate::render_config::RenderConfig;
 use std::collections::HashMap;
 
@@ -31,6 +33,7 @@ fn test_config() -> RenderConfig {
         section_label_font_size: 12,
         part_label_font_size: 12,
         page_number_font_size: 18,
+        lyric_click_target_padding_pt: 12,
     }
 }
 
@@ -85,9 +88,12 @@ fn column_widths_and_rods(
         &HashMap::new(),
         &HashMap::new(),
         &measure_layout,
-        LyricFontSizes {
-            base: 18.0,
-            cjk: 21.6,
+        LyricSizing {
+            font_sizes: LyricFontSizes {
+                base: 18.0,
+                cjk: 21.6,
+            },
+            click_target_padding_pt: 12.0,
         },
     );
     let geometry = rows[0].column_geometry(usable_width_pt, label_width_pt);
@@ -203,9 +209,12 @@ fn measure_rod_widens_to_fit_a_long_directive_line() {
         &HashMap::new(),
         &HashMap::new(),
         &measure_layout,
-        LyricFontSizes {
-            base: 18.0,
-            cjk: 21.6,
+        LyricSizing {
+            font_sizes: LyricFontSizes {
+                base: 18.0,
+                cjk: 21.6,
+            },
+            click_target_padding_pt: 12.0,
         },
     );
     let geometry = rows[0].column_geometry(usable_width, label_width);
@@ -271,9 +280,12 @@ fn two_adjacent_directive_lines_do_not_overlap() {
         &HashMap::new(),
         &HashMap::new(),
         &measure_layout,
-        LyricFontSizes {
-            base: 18.0,
-            cjk: 21.6,
+        LyricSizing {
+            font_sizes: LyricFontSizes {
+                base: 18.0,
+                cjk: 21.6,
+            },
+            click_target_padding_pt: 12.0,
         },
     );
     let geometry = rows[0].column_geometry(usable_width, label_width);
@@ -310,9 +322,12 @@ fn dense_note_column_stays_clear_of_its_trailing_bar_line_even_when_tightly_pack
         &HashMap::new(),
         &HashMap::new(),
         &measure_layout,
-        LyricFontSizes {
-            base: 18.0,
-            cjk: 21.6,
+        LyricSizing {
+            font_sizes: LyricFontSizes {
+                base: 18.0,
+                cjk: 21.6,
+            },
+            click_target_padding_pt: 12.0,
         },
     );
     let geometry = rows[0].column_geometry(usable_width, label_width);

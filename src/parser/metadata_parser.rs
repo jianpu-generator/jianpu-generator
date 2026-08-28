@@ -105,6 +105,7 @@ struct MetadataAccumulator {
     section_label_font_size: Option<u32>,
     part_label_font_size: Option<u32>,
     page_number_font_size: Option<u32>,
+    lyric_click_target_padding_pt: Option<u32>,
     merge_duplicate_measures_across_parts: Option<bool>,
     hide_resting_parts: Option<bool>,
     hide_system_dividers: Option<bool>,
@@ -133,6 +134,7 @@ impl MetadataAccumulator {
             "section_label_font_size" => Some(&mut self.section_label_font_size),
             "part_label_font_size" => Some(&mut self.part_label_font_size),
             "page_number_font_size" => Some(&mut self.page_number_font_size),
+            "lyric_click_target_padding_pt" => Some(&mut self.lyric_click_target_padding_pt),
             _ => None,
         }
     }
@@ -238,6 +240,7 @@ pub fn parse_metadata(
             section_label_font_size: accumulator.section_label_font_size,
             part_label_font_size: accumulator.part_label_font_size,
             page_number_font_size: accumulator.page_number_font_size,
+            lyric_click_target_padding_pt: accumulator.lyric_click_target_padding_pt,
             merge_duplicate_measures_across_parts: accumulator
                 .merge_duplicate_measures_across_parts,
             hide_resting_parts: accumulator.hide_resting_parts,

@@ -113,6 +113,7 @@ fn test_render_config() -> RenderConfig {
         section_label_font_size: 12,
         part_label_font_size: 12,
         page_number_font_size: 18,
+        lyric_click_target_padding_pt: 12,
     }
 }
 

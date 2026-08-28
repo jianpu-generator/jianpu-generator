@@ -189,6 +189,22 @@ fn page_number_font_size_defaults_to_none() {
 }
 
 #[test]
+fn parses_lyric_click_target_padding_pt() {
+    let content = "title = \"t\"\nauthor = \"a\"\nlyric_click_target_padding_pt = 24\n";
+    let (meta, errors) = parse_metadata(content, 0);
+    assert!(errors.is_empty());
+    assert_eq!(meta.lyric_click_target_padding_pt, Some(24));
+}
+
+#[test]
+fn lyric_click_target_padding_pt_defaults_to_none() {
+    let content = "title = \"t\"\nauthor = \"a\"\n";
+    let (meta, errors) = parse_metadata(content, 0);
+    assert!(errors.is_empty());
+    assert_eq!(meta.lyric_click_target_padding_pt, None);
+}
+
+#[test]
 fn parses_merge_duplicate_measures_across_parts() {
     let content = "title = \"t\"\nauthor = \"a\"\nmerge_duplicate_measures_across_parts = no\n";
     let (meta, errors) = parse_metadata(content, 0);

@@ -319,6 +319,14 @@ export function EditMetadataModal({
                   placeholder={numOrUndef(pageNumberFontSizeDefault)}
                   onChange={setNumber('page_number_font_size')}
                 />
+                <NumberFieldRow
+                  label="Lyric Click-Target Padding"
+                  help={metadataFieldHelp.lyric_click_target_padding_pt}
+                  onShowHelp={showHelp}
+                  value={metadata.lyric_click_target_padding_pt ?? ''}
+                  placeholder={numOrUndef(d?.lyric_click_target_padding_pt)}
+                  onChange={setNumber('lyric_click_target_padding_pt')}
+                />
                 <CheckboxFieldRow
                   label="Merge Duplicate Measures Across Parts"
                   help={metadataFieldHelp.merge_duplicate_measures_across_parts}

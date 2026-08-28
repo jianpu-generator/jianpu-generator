@@ -6,7 +6,7 @@ use crate::ast::parsed::JianPuPitch;
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
 use crate::coordinate_resolver::LyricFontSizes;
 use crate::grid_layout::layout::{
-    expand_system_to_rows, system_lyric_height_pt, system_musical_height_pt,
+    expand_system_to_rows, system_lyric_height_pt, system_musical_height_pt, LyricSizing,
 };
 use crate::grid_layout::types::GridContent;
 use std::collections::{HashMap, HashSet};
@@ -23,9 +23,12 @@ fn note_block_expands_to_six_sub_rows_without_tuplet() {
         &HashMap::new(),
         &HashMap::new(),
         &[],
-        LyricFontSizes {
-            base: 18.0,
-            cjk: 21.6,
+        LyricSizing {
+            font_sizes: LyricFontSizes {
+                base: 18.0,
+                cjk: 21.6,
+            },
+            click_target_padding_pt: 12.0,
         },
     );
     // 1 note part × 6 sub-rows (no `tuplet_bracket` sub-row reserved, since
@@ -41,9 +44,12 @@ fn note_head_element_is_in_sub_row_index_2_without_tuplet() {
         &HashMap::new(),
         &HashMap::new(),
         &[],
-        LyricFontSizes {
-            base: 18.0,
-            cjk: 21.6,
+        LyricSizing {
+            font_sizes: LyricFontSizes {
+                base: 18.0,
+                cjk: 21.6,
+            },
+            click_target_padding_pt: 12.0,
         },
     );
     let note_row = &rows[2]; // note-head sub-row (no tuplet_bracket sub-row ahead of it)
@@ -62,9 +68,12 @@ fn bar_line_element_has_positive_height_pt() {
         &HashMap::new(),
         &HashMap::new(),
         &[],
-        LyricFontSizes {
-            base: 18.0,
-            cjk: 21.6,
+        LyricSizing {
+            font_sizes: LyricFontSizes {
+                base: 18.0,
+                cjk: 21.6,
+            },
+            click_target_padding_pt: 12.0,
         },
     );
     let bar = rows
@@ -132,14 +141,17 @@ fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
 #[test]
 fn bar_line_height_includes_lyric_rows() {
     let base = 30.0_f32;
-    let lyric_font_sizes = LyricFontSizes {
-        base: 18.0,
-        cjk: 21.6,
+    let lyric_sizing = LyricSizing {
+        font_sizes: LyricFontSizes {
+            base: 18.0,
+            cjk: 21.6,
+        },
+        click_target_padding_pt: 12.0,
     };
     let system = vec![make_block_with_lyric_part(3)];
     let first = system.first().unwrap();
     let expected_height = system_musical_height_pt(first, base, &HashSet::new())
-        + system_lyric_height_pt(first, base, lyric_font_sizes);
+        + system_lyric_height_pt(first, base, lyric_sizing);
 
     let rows = expand_system_to_rows(
         &system,
@@ -147,7 +159,7 @@ fn bar_line_height_includes_lyric_rows() {
         &HashMap::new(),
         &HashMap::new(),
         &[],
-        lyric_font_sizes,
+        lyric_sizing,
     );
     let bar = rows
         .iter()
@@ -171,9 +183,12 @@ fn row_label_is_in_note_head_sub_row_at_column_0_span_1() {
         &HashMap::new(),
         &HashMap::new(),
         &[],
-        LyricFontSizes {
-            base: 18.0,
-            cjk: 21.6,
+        LyricSizing {
+            font_sizes: LyricFontSizes {
+                base: 18.0,
+                cjk: 21.6,
+            },
+            click_target_padding_pt: 12.0,
         },
     );
     let note_row = &rows[2]; // no tuplet in this system, so notehead is sub-row 2
@@ -194,9 +209,12 @@ fn column_count_is_label_cols_plus_musical_cols() {
         &HashMap::new(),
         &HashMap::new(),
         &[],
-        LyricFontSizes {
-            base: 18.0,
-            cjk: 21.6,
+        LyricSizing {
+            font_sizes: LyricFontSizes {
+                base: 18.0,
+                cjk: 21.6,
+            },
+            click_target_padding_pt: 12.0,
         },
     );
     // 1 label col + 1 leading bar line col + 4 musical cols (bar at col 3 → block width=4)

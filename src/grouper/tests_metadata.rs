@@ -109,6 +109,28 @@ fn page_number_font_size_defaults_to_60_percent_of_row_height() {
 }
 
 #[test]
+fn lyric_click_target_padding_pt_defaults_to_12() {
+    let score = parse_and_group(concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
+    ));
+    assert_eq!(
+        score.metadata.lyric_click_target_padding_pt,
+        crate::ast::grouped::DEFAULT_LYRIC_CLICK_TARGET_PADDING_PT
+    );
+}
+
+#[test]
+fn lyric_click_target_padding_pt_is_parsed_from_metadata() {
+    let score = parse_and_group(concat!(
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\nlyric_click_target_padding_pt=20\n\n",
+        "# parts\nMelody = notes\n\n",
+        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
+    ));
+    assert_eq!(score.metadata.lyric_click_target_padding_pt, 20);
+}
+
+#[test]
 fn measure_number_font_size_is_parsed_from_metadata() {
     let score = parse_and_group(concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\nmeasure_number_font_size=8\n\n",

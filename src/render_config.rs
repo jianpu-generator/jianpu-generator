@@ -1,6 +1,7 @@
 use crate::ast::grouped::Metadata;
 use crate::ast::parsed::Offset;
 use crate::coordinate_resolver::LyricFontSizes;
+use crate::grid_layout::layout::LyricSizing;
 
 #[derive(Debug, Clone)]
 pub struct RenderConfig {
@@ -25,6 +26,9 @@ pub struct RenderConfig {
     /// Font size in points of the footer page number (see
     /// `Metadata::page_number_font_size`).
     pub page_number_font_size: u32,
+    /// Extra vertical padding in points around a lyric syllable's
+    /// click-target box (see `Metadata::lyric_click_target_padding_pt`).
+    pub lyric_click_target_padding_pt: u32,
 }
 
 impl RenderConfig {
@@ -43,6 +47,7 @@ impl RenderConfig {
             section_label_font_size: meta.section_label_font_size,
             part_label_font_size: meta.part_label_font_size,
             page_number_font_size: meta.page_number_font_size,
+            lyric_click_target_padding_pt: meta.lyric_click_target_padding_pt,
         }
     }
 
@@ -72,6 +77,22 @@ impl RenderConfig {
     /// Font size used for chord symbols.
     pub fn chords_font_size(&self) -> f32 {
         self.chords_font_size as f32
+    }
+
+    /// Extra vertical padding around a lyric syllable's click-target box
+    /// (see `lyric_row_height`).
+    pub fn lyric_click_target_padding_pt(&self) -> f32 {
+        self.lyric_click_target_padding_pt as f32
+    }
+
+    /// `lyric_font_sizes()` plus `lyric_click_target_padding_pt()`, bundled
+    /// for the grid_layout functions that need both together (see
+    /// `LyricSizing`).
+    pub(crate) fn lyric_sizing(&self) -> LyricSizing {
+        LyricSizing {
+            font_sizes: self.lyric_font_sizes(),
+            click_target_padding_pt: self.lyric_click_target_padding_pt(),
+        }
     }
 }
 
@@ -107,6 +128,7 @@ mod tests {
             section_label_font_size: 12,
             part_label_font_size: 12,
             page_number_font_size: 18,
+            lyric_click_target_padding_pt: 12,
         };
         let cfg = RenderConfig::from_metadata(&meta);
         assert_eq!(cfg.row_height, 30);
@@ -115,6 +137,7 @@ mod tests {
         assert_eq!(cfg.max_measures_per_system, 6);
         assert_eq!(cfg.lyrics_font_size, 18);
         assert_eq!(cfg.lyric_font_size(), 18.0);
+        assert_eq!(cfg.lyric_click_target_padding_pt(), 12.0);
         assert_eq!(cfg.measure_number_font_size, 10);
         assert_eq!(cfg.section_label_font_size, 12);
         assert_eq!(cfg.part_label_font_size, 12);

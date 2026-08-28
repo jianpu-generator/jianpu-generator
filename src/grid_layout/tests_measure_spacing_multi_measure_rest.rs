@@ -6,7 +6,9 @@ use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, Measur
 use crate::coordinate_resolver::LyricFontSizes;
 use crate::font_metrics;
 use crate::grid_layout::expand::expand_system_to_rows;
-use crate::grid_layout::layout::{build_measure_column_layout, measure_column_weights};
+use crate::grid_layout::layout::{
+    build_measure_column_layout, measure_column_weights, LyricSizing,
+};
 use crate::render_config::RenderConfig;
 use std::collections::HashMap;
 
@@ -25,6 +27,7 @@ fn test_config() -> RenderConfig {
         section_label_font_size: 12,
         part_label_font_size: 12,
         page_number_font_size: 18,
+        lyric_click_target_padding_pt: 12,
     }
 }
 
@@ -175,9 +178,12 @@ fn multi_measure_rest_block_renders_wide_enough_for_its_count_label_when_squeeze
         &HashMap::new(),
         &HashMap::new(),
         &measure_layout,
-        LyricFontSizes {
-            base: 18.0,
-            cjk: 21.6,
+        LyricSizing {
+            font_sizes: LyricFontSizes {
+                base: 18.0,
+                cjk: 21.6,
+            },
+            click_target_padding_pt: 12.0,
         },
     );
     let row = &rows[0];
@@ -218,9 +224,12 @@ fn multi_measure_rest_block_keeps_horizontal_padding_even_when_squeezed_by_dense
         &HashMap::new(),
         &HashMap::new(),
         &measure_layout,
-        LyricFontSizes {
-            base: 18.0,
-            cjk: 21.6,
+        LyricSizing {
+            font_sizes: LyricFontSizes {
+                base: 18.0,
+                cjk: 21.6,
+            },
+            click_target_padding_pt: 12.0,
         },
     );
     let row = &rows[0];

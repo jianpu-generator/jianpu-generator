@@ -19,6 +19,7 @@ export type MetadataKey =
   | 'section_label_font_size'
   | 'part_label_font_size'
   | 'page_number_font_size'
+  | 'lyric_click_target_padding_pt'
   | 'merge_duplicate_measures_across_parts'
   | 'hide_resting_parts'
   | 'hide_system_dividers'
@@ -45,6 +46,7 @@ export interface ParsedMetadataFields {
   section_label_font_size: number | null
   part_label_font_size: number | null
   page_number_font_size: number | null
+  lyric_click_target_padding_pt: number | null
   merge_duplicate_measures_across_parts: boolean | null
   hide_resting_parts: boolean | null
   hide_system_dividers: boolean | null
@@ -69,6 +71,7 @@ const numericKeys: MetadataKey[] = [
   'section_label_font_size',
   'part_label_font_size',
   'page_number_font_size',
+  'lyric_click_target_padding_pt',
 ]
 
 const unquotedKeys: MetadataKey[] = [
@@ -100,6 +103,7 @@ const canonicalKeyOrder: MetadataKey[] = [
   'section_label_font_size',
   'part_label_font_size',
   'page_number_font_size',
+  'lyric_click_target_padding_pt',
   'merge_duplicate_measures_across_parts',
   'hide_resting_parts',
   'hide_system_dividers',
@@ -191,6 +195,7 @@ export function parseMetadata(source: string): ParsedMetadataFields {
     section_label_font_size: null,
     part_label_font_size: null,
     page_number_font_size: null,
+    lyric_click_target_padding_pt: null,
     merge_duplicate_measures_across_parts: null,
     hide_resting_parts: null,
     hide_system_dividers: null,
@@ -285,6 +290,11 @@ export function parseMetadata(source: string): ParsedMetadataFields {
   if (fieldMap.has('page_number_font_size'))
     result.page_number_font_size = parseInt(
       fieldMap.get('page_number_font_size') as string,
+      10,
+    )
+  if (fieldMap.has('lyric_click_target_padding_pt'))
+    result.lyric_click_target_padding_pt = parseInt(
+      fieldMap.get('lyric_click_target_padding_pt') as string,
       10,
     )
   if (fieldMap.has('merge_duplicate_measures_across_parts'))

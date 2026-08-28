@@ -36,6 +36,7 @@ fn default_test_metadata() -> Metadata {
         section_label_font_size: 12,
         part_label_font_size: 12,
         page_number_font_size: 14,
+        lyric_click_target_padding_pt: 12,
         merge_duplicate_measures_across_parts: true,
         hide_resting_parts: true,
         hide_system_dividers: false,

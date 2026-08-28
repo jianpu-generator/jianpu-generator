@@ -1,9 +1,8 @@
 use super::{
     block_column_width, chord_part_sub_row_heights, is_chord_only_row, is_lyric_row,
-    lyric_row_height, lyric_row_verse, note_part_height_pt,
+    lyric_row_height, lyric_row_verse, note_part_height_pt, LyricSizing,
 };
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
-use crate::coordinate_resolver::LyricFontSizes;
 use crate::grid_layout::types::GridElement;
 use crate::render_config::RenderConfig;
 use itertools::Itertools;
@@ -79,10 +78,14 @@ pub(crate) fn system_musical_height_pt(
 pub(crate) fn system_lyric_height_pt(
     block: &MeasureBlock,
     base: f32,
-    lyric_font_sizes: LyricFontSizes,
+    lyric_sizing: LyricSizing,
 ) -> f32 {
     block.rows.iter().filter(|r| super::has_lyrics(r)).count() as f32
-        * lyric_row_height(base, lyric_font_sizes.cjk)
+        * lyric_row_height(
+            base,
+            lyric_sizing.font_sizes.cjk,
+            lyric_sizing.click_target_padding_pt,
+        )
 }
 
 /// Internal sort key used by [`union_row_order`] to order a system's union of
@@ -354,10 +357,10 @@ pub(crate) fn compute_bar_height(
     first: &MeasureBlock,
     base: f32,
     tuplet_part_indices: &HashSet<usize>,
-    lyric_font_sizes: LyricFontSizes,
+    lyric_sizing: LyricSizing,
 ) -> f32 {
     system_musical_height_pt(first, base, tuplet_part_indices)
-        + system_lyric_height_pt(first, base, lyric_font_sizes)
+        + system_lyric_height_pt(first, base, lyric_sizing)
 }
 
 pub(crate) fn system_has_any_decoration(system: &[MeasureBlock]) -> bool {
