@@ -163,17 +163,16 @@ pub struct BassDegree {
     pub accidental: Accidental,
 }
 
-/// Parsed (all-optional) form of the four-component style object a single
-/// `<kind> = { font_size: N, horizontal_padding_pt: N, vertical_padding_pt: N,
-/// width_pt: N }` metadata line resolves to. See `crate::ast::grouped::TextStyle`
-/// for the fully-resolved (defaulted) counterpart and `syntax.md` for the
+/// Parsed (all-optional) form of the three-component style object a single
+/// `<kind> = { font_size: N, horizontal_padding_pt: N, vertical_padding_pt: N }`
+/// metadata line resolves to. See `crate::ast::grouped::TextStyle` for the
+/// fully-resolved (defaulted) counterpart and `syntax.md` for the
 /// object-literal grammar.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct TextStyle {
     pub font_size: Option<u32>,
     pub horizontal_padding_pt: Option<u32>,
     pub vertical_padding_pt: Option<u32>,
-    pub width_pt: Option<u32>,
 }
 
 #[derive(Debug, Default)]
@@ -185,8 +184,13 @@ pub struct ParsedMetadata {
     pub max_measures_per_system: Option<u32>,
     pub note_number_width: Option<u32>,
     pub parts_list_columns: Option<u32>,
-    /// Title text style: font size and reserved minimum box width (see
-    /// `TextStyle`).
+    /// Fixed width (points) of the part-label column at the start of each
+    /// system, shared by every system in the score (see
+    /// `Metadata::part_label_width_pt`). A flat scalar field, not part of
+    /// `part_label_style`, since it's a layout constant rather than a text
+    /// style component.
+    pub part_label_width_pt: Option<u32>,
+    /// Title text style.
     pub title_style: TextStyle,
     /// Subtitle text style.
     pub subtitle_style: TextStyle,
@@ -202,8 +206,7 @@ pub struct ParsedMetadata {
     pub section_label_style: TextStyle,
     /// Page-number footer text style.
     pub page_number_style: TextStyle,
-    /// Part row-label text style, including the reserved column width (see
-    /// `Metadata::part_label`).
+    /// Part row-label text style (see `Metadata::part_label`).
     pub part_label_style: TextStyle,
     /// Lyric syllable text style, including the click-target's extra vertical
     /// padding (formerly `lyric_click_target_padding_pt`).

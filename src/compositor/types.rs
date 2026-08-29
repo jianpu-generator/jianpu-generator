@@ -86,10 +86,6 @@ pub enum AbsoluteContent {
         font: FontFamily,
         weight: FontWeight,
         italic: bool,
-        /// The title's reserved box width in points (see
-        /// `Metadata::title_style.width_pt`, `font_metrics::title_box_width`)
-        /// — `0.0` for every non-title use of `Text`.
-        reserved_width_pt: f32,
     },
     MeasureHighlight {
         width: f32,

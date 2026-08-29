@@ -62,7 +62,6 @@ pub enum PostArcGridContent {
         bold: bool,
         italic: bool,
         is_title: bool,
-        min_width_pt: f32,
     },
     SequenceLine {
         entries: Vec<SequenceEntryInfo>,

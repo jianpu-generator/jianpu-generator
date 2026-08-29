@@ -7,10 +7,7 @@
 //! `.jianpu` document and run through the full pipeline —
 //! `compile` → `compiler::compile` → `consolidator::consolidate` →
 //! `grid_layout::layout` → `coordinate_resolver::resolve` →
-//! `renderer::new_renderer::render_new` — mirroring
-//! `title_width_pt_reserves_a_minimum_box_width` in
-//! `src/tests/tests_render_rendering.rs` (the unit test this harness
-//! generalizes into cucumber form). "Then" steps compare the configured run
+//! `renderer::new_renderer::render_new`. "Then" steps compare the configured run
 //! against a freshly rendered baseline (the same score with no metadata
 //! override) rather than a hardcoded expected number, since the effects
 //! being tested are relative ("differs from the default", "increases by at
@@ -77,7 +74,6 @@ fn render_source(metadata_lines: &[String], title: &str, score_body: &str) -> Re
         parts_list_columns: 3,
         sequence: None,
         title_font_size: score.metadata.title_style.font_size as f32,
-        title_min_width_pt: score.metadata.title_style.width_pt as f32,
         subtitle_font_size: score.metadata.subtitle_style.font_size as f32,
         author_font_size: score.metadata.author_style.font_size as f32,
         sequence_font_size: score.metadata.sequence.font_size as f32,
@@ -189,24 +185,6 @@ fn dash_font_size(result: &RenderResult) -> f32 {
         .expect("note dash element should be present")
 }
 
-/// `reserved_width_pt` off the resolved `AbsoluteContent::Text` whose
-/// content matches `title` (see `AbsoluteContent::Text::reserved_width_pt`).
-fn title_reserved_width_pt(result: &RenderResult, title: &str) -> f32 {
-    result
-        .abs_pages
-        .iter()
-        .flat_map(|p| p.elements.iter())
-        .find_map(|e| match &e.content {
-            AbsoluteContent::Text {
-                content,
-                reserved_width_pt,
-                ..
-            } if content == title => Some(*reserved_width_pt),
-            _ => None,
-        })
-        .expect("title text element should be present")
-}
-
 /// Total height in points of the first page's body rows, excluding the
 /// footer — the footer's `remaining_height` always expands to fill
 /// whatever the body doesn't use, so including it would cancel out exactly
@@ -303,20 +281,6 @@ fn then_dash_width_differs(world: &mut TextStyleRenderingWorld, configured_font_
         "dash width at font_size {padded_size} should differ from its width at the default \
          note_dash font size {default_size} — for a monospace glyph, a different font_size \
          necessarily measures a different width"
-    );
-}
-
-#[then(expr = "the title's reserved box width is at least {int}")]
-fn then_title_reserved_width(world: &mut TextStyleRenderingWorld, min_width_pt: i64) {
-    let rendered = &world
-        .rendered
-        .as_ref()
-        .expect("'it is rendered' must run first")
-        .0;
-    let reserved = title_reserved_width_pt(rendered, &world.title);
-    assert!(
-        reserved >= min_width_pt as f32,
-        "title's reserved box width should be at least {min_width_pt}pt, got {reserved}"
     );
 }
 

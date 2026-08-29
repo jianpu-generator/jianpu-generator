@@ -161,10 +161,6 @@ fn render_overlay_element(
             font,
             weight,
             italic,
-            // Not drawn — like `section_label_box_width`, this is purely a
-            // reserved layout quantity for callers to introspect, not a
-            // rendered element.
-            reserved_width_pt: _,
         } => vec![render_text_content(
             elem,
             content,

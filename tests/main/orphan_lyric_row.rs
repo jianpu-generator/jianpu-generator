@@ -48,7 +48,6 @@ fn no_orphan_empty_lyric_row_when_no_part_has_lyric_text() {
         parts_list_columns: 3,
         sequence: None,
         title_font_size: score.metadata.title_style.font_size as f32,
-        title_min_width_pt: score.metadata.title_style.width_pt as f32,
         subtitle_font_size: score.metadata.subtitle_style.font_size as f32,
         author_font_size: score.metadata.author_style.font_size as f32,
         sequence_font_size: score.metadata.sequence.font_size as f32,

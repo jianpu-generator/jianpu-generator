@@ -205,6 +205,14 @@ export function MetadataFieldsTableBody({
         placeholder={d?.part_label ?? null}
         onChange={setStyle('part_label')}
       />
+      <NumberFieldRow
+        label="Part Label Width"
+        help={metadataFieldHelp.part_label_width_pt}
+        onShowHelp={showHelp}
+        value={metadata.part_label_width_pt ?? ''}
+        placeholder={numOrUndef(d?.part_label_width_pt)}
+        onChange={setNumber('part_label_width_pt')}
+      />
       <TextStyleRow
         label="Page Number Style"
         help={metadataFieldHelp.page_number}

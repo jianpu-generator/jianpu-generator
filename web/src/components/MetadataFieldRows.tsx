@@ -78,6 +78,7 @@ export function NumberFieldRow({
         <input
           type="number"
           min="1"
+          aria-label={label}
           placeholder={placeholder}
           style={inputStyle}
           value={value}
@@ -113,10 +114,9 @@ const styleComponentOrder: TextStyleComponent[] = [
   'font_size',
   'horizontal_padding_pt',
   'vertical_padding_pt',
-  'width_pt',
 ]
 
-/** Sub-labels shown above each of a `TextStyleRow`'s four inline inputs —
+/** Sub-labels shown above each of a `TextStyleRow`'s three inline inputs —
  * also used to build each input's `aria-label` (`"${label} ${subLabel}"`),
  * so e2e tests can target one specific component by an accessible name
  * rather than positional `nth()` indexing. */
@@ -124,16 +124,16 @@ const styleComponentSubLabels: Record<TextStyleComponent, string> = {
   font_size: 'Font Size',
   horizontal_padding_pt: 'H. Padding',
   vertical_padding_pt: 'V. Padding',
-  width_pt: 'Width',
 }
 
 /** One `<kind> = { font_size: N, horizontal_padding_pt: N,
- * vertical_padding_pt: N, width_pt: N }` text-style kind's row: a single
- * label plus four inline number inputs, one per component (see
- * `TextStyleFields`). Replaces what used to be several separate flat-key
- * rows (`title_font_size`, `part_label_width_pt`, ...) with one row per
- * kind — see `syntax.md`'s "Text styles" section for the unified object
- * syntax this mirrors. */
+ * vertical_padding_pt: N }` text-style kind's row: a single label plus
+ * three inline number inputs, one per component (see `TextStyleFields`).
+ * Replaces what used to be several separate flat-key rows (`title_font_size`,
+ * ...) with one row per kind — see `syntax.md`'s "Text styles" section for
+ * the unified object syntax this mirrors. `part_label_width_pt` is a plain
+ * scalar field (see `NumberFieldRow`), not part of this object, since it's
+ * a layout constant rather than a text style component. */
 export function TextStyleRow({
   label,
   help,

@@ -21,19 +21,19 @@ fn parses_optional_row_height() {
 
 #[test]
 fn parses_optional_part_label_width_pt() {
-    let content = "title = \"t\"\nauthor = \"a\"\npart_label = { width_pt: 60 }\n";
+    let content = "title = \"t\"\nauthor = \"a\"\npart_label_width_pt = 60\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.part_label_style.width_pt, Some(60));
+    assert_eq!(meta.part_label_width_pt, Some(60));
 }
 
 #[test]
-fn old_flat_part_label_width_pt_key_is_rejected() {
-    let content = "title = \"t\"\nauthor = \"a\"\npart_label_width_pt = 60\n";
+fn part_label_width_pt_is_not_a_text_style_object_field() {
+    let content = "title = \"t\"\nauthor = \"a\"\npart_label = { width_pt: 60 }\n";
     let (_meta, errors) = parse_metadata(content, 0);
     assert!(errors.iter().any(|e| e
         .message()
-        .contains("unknown metadata field: part_label_width_pt")));
+        .contains("unknown metadata field: part_label.width_pt")));
 }
 
 #[test]

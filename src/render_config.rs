@@ -62,7 +62,7 @@ impl RenderConfig {
         RenderConfig {
             row_height: meta.row_height,
             note_number_width: meta.note_number_width,
-            part_label_width_pt: meta.part_label.width_pt,
+            part_label_width_pt: meta.part_label_width_pt,
             max_measures_per_system: meta.max_measures_per_system,
             lyrics_font_size: meta.lyrics.font_size,
             notes_font_size: meta.notes.font_size,
@@ -202,7 +202,6 @@ mod tests {
             font_size,
             horizontal_padding_pt: 4,
             vertical_padding_pt: 0,
-            width_pt: 0,
         }
     }
 
@@ -216,6 +215,7 @@ mod tests {
             note_number_width: 12,
             max_measures_per_system: 6,
             parts_list_columns: 3,
+            part_label_width_pt: 40,
             lyrics: crate::ast::grouped::TextStyle {
                 vertical_padding_pt: 12,
                 ..text_style(18)
@@ -240,10 +240,7 @@ mod tests {
                 vertical_padding_pt: 8,
                 ..text_style(12)
             },
-            part_label: crate::ast::grouped::TextStyle {
-                width_pt: 40,
-                ..text_style(12)
-            },
+            part_label: text_style(12),
             page_number: crate::ast::grouped::TextStyle {
                 vertical_padding_pt: 4,
                 ..text_style(18)

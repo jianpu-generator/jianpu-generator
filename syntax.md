@@ -60,6 +60,7 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | `row_height` | no | `24` | Vertical spacing of one part row (pixels) |
 | `note_number_width` | no | `8` | Horizontal space per note column (pixels) |
 | `parts_list_columns` | no | `4` | Number of columns in the parts list header |
+| `part_label_width_pt` | no | `40` | Fixed width (points) of the part-label column at the start of each system, shared by every system in the score regardless of how many measures/columns that system's music needs |
 | `merge_duplicate_measures_across_parts` | no | `yes` | Score-wide default for whether identical measures from different parts are merged into a single row (`yes`/`no`); can be overridden from a given measure onward with the `merge_duplicate_measures_across_parts=` directive line — see [Directive lines](#directive-lines) |
 | `hide_resting_parts` | no | `yes` | Score-wide default for whether an all-rest part is omitted from a measure where other parts have content (`yes`/`no`); can be overridden from a given measure onward with the `hide_resting_parts=` directive line — see [Directive lines](#directive-lines) |
 | `hide_system_dividers` | no | `no` | Whether the horizontal divider line between systems is omitted (`yes`/`no`) |
@@ -70,11 +71,11 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 Every rendered text kind — `title`, `subtitle`, `author`, `sequence`, `part_legend`, `measure_number`, `section_label`, `page_number`, `part_label`, `lyrics`, `notes`, `chords`, `note_dash` — is configured with the same object-literal syntax:
 
 ```
-<kind> = { font_size: N, horizontal_padding_pt: N, vertical_padding_pt: N, width_pt: N }
+<kind> = { font_size: N, horizontal_padding_pt: N, vertical_padding_pt: N }
 ```
 
 - `{` and `}` delimit the object; fields inside are separated by `,` and each field is `name: value`.
-- Keys are unquoted. Any subset of the four fields may be given, in any order; omitted fields fall back to their default.
+- Keys are unquoted. Any subset of the three fields may be given, in any order; omitted fields fall back to their default.
 - `title`, `subtitle`, and `author` are overloaded: a plain quoted string (`title = "My Song"`) sets the text content, while an object value (`title = { font_size: 32 }`) sets the style. Both may be set independently.
 
 | Component | Meaning |
@@ -82,39 +83,39 @@ Every rendered text kind — `title`, `subtitle`, `author`, `sequence`, `part_le
 | `font_size` | Font size in points |
 | `horizontal_padding_pt` | Horizontal padding (points) reserved before the element, widening its column's spacing |
 | `vertical_padding_pt` | Extra vertical padding (points) added above/below the element |
-| `width_pt` | Reserved/minimum box width (points) for the element |
 
 Defaults by kind:
 
-| Kind | `font_size` default | `horizontal_padding_pt` default | `vertical_padding_pt` default | `width_pt` default |
-|------|----------------------|----------------------------------|--------------------------------|----------------------|
-| `title` | `row_height * 1.5` | `0` | `0` | `0` |
-| `subtitle` | `row_height * 0.8` | `0` | `0` | `0` |
-| `author` | `row_height * 0.6` | `0` | `0` | `0` |
-| `sequence` | `12` | `0` | `0` | `0` |
-| `part_legend` | `row_height * 0.6` | `0` | `0` | `0` |
-| `measure_number` | `10` | `0` | `0` | `0` |
-| `section_label` | `12` | `0` | `0` | `0` |
-| `page_number` | `row_height * 0.6` | `0` | `0` | `0` |
-| `part_label` | `12` | `0` | `0` | `40` |
-| `lyrics` | `row_height * 0.6` | `4` | `12` | `0` |
-| `notes` | `lyrics.font_size` | `4` | `0` | `0` |
-| `chords` | `lyrics.font_size` | `4` | `0` | `0` |
-| `note_dash` | `notes.font_size` | `4` | `0` | `0` |
+| Kind | `font_size` default | `horizontal_padding_pt` default | `vertical_padding_pt` default |
+|------|----------------------|----------------------------------|--------------------------------|
+| `title` | `row_height * 1.5` | `0` | `0` |
+| `subtitle` | `row_height * 0.8` | `0` | `0` |
+| `author` | `row_height * 0.6` | `0` | `0` |
+| `sequence` | `12` | `0` | `0` |
+| `part_legend` | `row_height * 0.6` | `0` | `0` |
+| `measure_number` | `10` | `0` | `0` |
+| `section_label` | `12` | `0` | `0` |
+| `page_number` | `row_height * 0.6` | `0` | `0` |
+| `part_label` | `12` | `0` | `0` |
+| `lyrics` | `row_height * 0.6` | `4` | `12` |
+| `notes` | `lyrics.font_size` | `4` | `0` |
+| `chords` | `lyrics.font_size` | `4` | `0` |
+| `note_dash` | `notes.font_size` | `4` | `0` |
 
-`notes.horizontal_padding_pt` is also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings. `lyrics.vertical_padding_pt` is extra padding around a lyric syllable's hover/click-target box, added on top of the lyric font's own measured ascender+descender span. `part_label.width_pt` is the fixed width of the part-label column at the start of each system, shared by every system in the score regardless of how many measures/columns that system's music needs.
+`notes.horizontal_padding_pt` is also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings. `lyrics.vertical_padding_pt` is extra padding around a lyric syllable's hover/click-target box, added on top of the lyric font's own measured ascender+descender span. `part_label`'s reserved column width is the separate flat `part_label_width_pt` field (see the main metadata table above), not part of this object — it's a layout constant, not a text style component.
 
 Example:
 
 ```
 # metadata
 title = "My Song"
-title = { font_size: 32, width_pt: 300 }
+title = { font_size: 32 }
 lyrics = { font_size: 18, vertical_padding_pt: 6 }
 notes = { horizontal_padding_pt: 6 }
+part_label_width_pt = 60
 ```
 
-The old flat per-component keys (`lyrics_font_size`, `lyric_click_target_padding_pt`, `part_label_width_pt`, `notes_horizontal_padding_pt`, etc.) are **not supported** — using one is reported as an unknown metadata field.
+The old flat per-component keys (`lyrics_font_size`, `lyric_click_target_padding_pt`, `notes_horizontal_padding_pt`, etc.) are **not supported** — using one is reported as an unknown metadata field. `title.width_pt`/`part_label.width_pt` (the object-literal form) are also not supported: `title.width_pt` reserved a minimum box width for the rendered title but never actually affected layout, so it was removed outright; `part_label`'s width lives at the flat `part_label_width_pt` key instead, since it's a layout constant rather than a text style component.
 
 ---
 

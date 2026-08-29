@@ -115,7 +115,6 @@ fn halign_end_places_x_at_right_of_column_span() {
             bold: false,
             italic: false,
             is_title: false,
-            min_width_pt: 0.0,
         },
     };
     let page = single_row_page(el);

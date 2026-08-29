@@ -15,6 +15,7 @@ export const metadataFieldHelp: Record<
   | 'max_measures_per_system'
   | 'note_number_width'
   | 'parts_list_columns'
+  | 'part_label_width_pt'
   | 'merge_duplicate_measures_across_parts'
   | 'hide_resting_parts'
   | 'hide_system_dividers'
@@ -23,7 +24,7 @@ export const metadataFieldHelp: Record<
 > = {
   title: `Rendered as the large heading at the top of the score's first page.
 
-Its style row's **Font Size** defaults to \`row_height × 1.5\`; **Width** reserves a minimum box width for the rendered title (default: 0, no minimum).`,
+Its style row's **Font Size** defaults to \`row_height × 1.5\`.`,
 
   subtitle: `Rendered as a smaller line beneath the title in the header.
 
@@ -51,7 +52,11 @@ Its style row's **Font Size** defaults to \`row_height × 0.6\`.`,
 
   part_label: `Style of a part's row label (e.g. "Soprano"), shown at the start of each system row.
 
-**Font Size** defaults to 12. **Width** is the fixed width (points) of the part-label column at the start of each system, shared by every system in the score regardless of how many measures/columns that system's music needs (default: 40).`,
+**Font Size** defaults to 12. See **Part Label Width** below for the column's reserved width.`,
+
+  part_label_width_pt: `Fixed width (points) of the part-label column at the start of each system, shared by every system in the score regardless of how many measures/columns that system's music needs.
+
+Default: 40.`,
 
   page_number: `Style of the page number shown in the footer.
 

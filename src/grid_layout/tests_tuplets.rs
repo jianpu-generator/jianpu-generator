@@ -33,7 +33,6 @@ time=4/4
         parts_list_columns: 1,
         sequence: None,
         title_font_size: 36.0,
-        title_min_width_pt: 0.0,
         subtitle_font_size: 19.0,
         author_font_size: 14.0,
         sequence_font_size: 12.0,

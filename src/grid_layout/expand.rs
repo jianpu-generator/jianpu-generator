@@ -279,7 +279,6 @@ pub(crate) fn make_footer_row(
                 bold: false,
                 italic: false,
                 is_title: false,
-                min_width_pt: 0.0,
             },
         }],
     }

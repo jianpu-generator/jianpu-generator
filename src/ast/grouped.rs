@@ -32,8 +32,13 @@ pub struct Metadata {
     pub note_number_width: u32,
     /// Number of columns in the parts list header. Default: 4.
     pub parts_list_columns: u32,
-    /// Title text style. `font_size` default: 150% of `row_height`. `width_pt`
-    /// reserves a minimum box width for the rendered title (default: 0, no minimum).
+    /// Fixed width in points of the part-label column at the start of each
+    /// system row, shared by every system in the score regardless of that
+    /// system's musical density (see `grid_layout::types::GridRow::column_geometry`).
+    /// A flat scalar field, not part of `part_label`'s `TextStyle`, since
+    /// it's a layout constant rather than a text style component. Default: 40.
+    pub part_label_width_pt: u32,
+    /// Title text style. `font_size` default: 150% of `row_height`.
     pub title_style: TextStyle,
     /// Subtitle text style. `font_size` default: 80% of `row_height`.
     pub subtitle_style: TextStyle,
@@ -50,11 +55,8 @@ pub struct Metadata {
     /// line). `font_size` default: 12.
     pub section_label: TextStyle,
     /// Part row-label text style (the instrument name shown at the start of
-    /// each system row, e.g. "Soprano"). `font_size` default: 12. `width_pt` is
-    /// the fixed width in points of the part-label column at the start of each
-    /// system row, shared by every system in the score regardless of that
-    /// system's musical density (see `grid_layout::types::GridRow::column_geometry`).
-    /// Default: 40.
+    /// each system row, e.g. "Soprano"). `font_size` default: 12. See
+    /// `part_label_width_pt` for the column's reserved width.
     pub part_label: TextStyle,
     /// Page-number footer text style. `font_size` default: 60% of `row_height`.
     pub page_number: TextStyle,

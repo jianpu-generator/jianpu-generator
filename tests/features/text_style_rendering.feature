@@ -1,21 +1,14 @@
 Feature: Text style components have real rendering effects
 
-  Each of the four TextStyle components (font_size, horizontal_padding_pt,
-  vertical_padding_pt, width_pt — see text_style_metadata_syntax.feature)
-  must visibly affect layout/rendering for every kind, including kinds
-  that had no equivalent setting before this change:
+  Each of the three TextStyle components (font_size, horizontal_padding_pt,
+  vertical_padding_pt — see text_style_metadata_syntax.feature) must
+  visibly affect layout/rendering for every kind, including kinds that had
+  no equivalent setting before this change:
     - note_dash.font_size: `RenderConfig::note_dash_font_size` (sourced from
       `Metadata::note_dash.font_size`) is threaded through
       `new_renderer.rs`'s `RenderElementParams` into the `NoteDash` arm,
       and into `layout_spacing_weights.rs`'s column-width math, so the
       rendered dash and the column it reserves agree.
-    - title.width_pt: `font_metrics::title_box_width`/`title_box_padding`
-      compute `max(real text width + padding*2, min_width_pt)`, threaded
-      end-to-end as `Header::title_min_width_pt` →
-      `GridContent::Text::min_width_pt` →
-      `PostArcGridContent::Text::min_width_pt` →
-      `AbsoluteContent::Text::reserved_width_pt` — data only, never drawn
-      (mirrors `section_label_box_width`, also a pure spacing number).
     - <kind>.vertical_padding_pt: generalized across three kinds, each in
       its own layout subsystem — `notes` grows the note-head sub-row
       additively (`grid_layout::layout_heights::note_part_sub_row_heights`);
@@ -39,12 +32,6 @@ Feature: Text style components have real rendering effects
     And the score has a note followed by a dash
     When it is rendered
     Then the rendered dash width at font_size 12 differs from its width at the default note_dash font size
-
-  Scenario: title.width_pt reserves a minimum box width
-    Given "# metadata" sets "title" to "{ width_pt: 300 }"
-    And the score title is "Hi"
-    When it is rendered
-    Then the title's reserved box width is at least 300
 
   Scenario Outline: <kind>.vertical_padding_pt adds vertical space without moving other elements
     Given "# metadata" sets "<kind>" to "{ vertical_padding_pt: <padding> }"

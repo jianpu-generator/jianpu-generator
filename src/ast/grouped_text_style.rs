@@ -6,7 +6,7 @@ pub const DEFAULT_ROW_HEIGHT: u32 = 24;
 pub const DEFAULT_MAX_MEASURES_PER_SYSTEM: u32 = 4;
 /// Default `note_number_width` in points, used when unset in `# metadata`.
 pub const DEFAULT_NOTE_NUMBER_WIDTH: u32 = 8;
-/// Default `part_label.width_pt`, used when unset in `# metadata`.
+/// Default `part_label_width_pt`, used when unset in `# metadata`.
 pub const DEFAULT_PART_LABEL_WIDTH_PT: u32 = 40;
 /// Default `parts_list_columns`, used when unset in `# metadata`.
 pub const DEFAULT_PARTS_LIST_COLUMNS: u32 = 4;
@@ -76,7 +76,7 @@ pub const DEFAULT_LYRICS_HORIZONTAL_PADDING_PT: u32 = 4;
 pub const DEFAULT_NOTE_DASH_HORIZONTAL_PADDING_PT: u32 = 4;
 
 /// Fully-resolved (all components defaulted) per-kind text style: font size plus
-/// the three layout components every text kind now shares. See
+/// the two layout components every text kind now shares. See
 /// `crate::ast::parsed::TextStyle` for the parsed (`Option`-wrapped) counterpart
 /// and `resolve_text_style` for how a kind's default `font_size` is derived.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -90,22 +90,18 @@ pub struct TextStyle {
     /// Extra vertical padding in points added above/below this kind's element.
     /// Default: 0, except `lyrics` (12, formerly `lyric_click_target_padding_pt`).
     pub vertical_padding_pt: u32,
-    /// Reserved/minimum box width in points for this kind's element. Default: 0,
-    /// except `part_label` (40, formerly `part_label_width_pt`).
-    pub width_pt: u32,
 }
 
 /// Fills in each unset component of a parsed `<kind> = { ... }` style object
 /// with its default, producing the fully-resolved `TextStyle` a kind's
 /// `Metadata` field holds. `default_horizontal_padding_pt`/
-/// `default_vertical_padding_pt`/`default_width_pt` are `0` for every kind
-/// except where documented otherwise on `Metadata`'s per-kind fields.
+/// `default_vertical_padding_pt` are `0` for every kind except where
+/// documented otherwise on `Metadata`'s per-kind fields.
 pub(crate) fn resolve_text_style(
     parsed: crate::ast::parsed::TextStyle,
     default_font_size: u32,
     default_horizontal_padding_pt: u32,
     default_vertical_padding_pt: u32,
-    default_width_pt: u32,
 ) -> TextStyle {
     TextStyle {
         font_size: parsed.font_size.unwrap_or(default_font_size),
@@ -115,6 +111,5 @@ pub(crate) fn resolve_text_style(
         vertical_padding_pt: parsed
             .vertical_padding_pt
             .unwrap_or(default_vertical_padding_pt),
-        width_pt: parsed.width_pt.unwrap_or(default_width_pt),
     }
 }

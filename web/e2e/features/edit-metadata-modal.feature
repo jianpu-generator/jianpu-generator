@@ -69,12 +69,12 @@ Feature: Edit Metadata modal
     And I close the metadata modal with Escape
     Then the editor source and stored source both contain "hide_system_dividers = no"
 
-  Scenario: Editing the Part Label Style's Width updates the source
+  Scenario: Editing the Part Label Width updates the source
     Given the edit-metadata-modal test fixture is loaded
     When I open the Edit Metadata modal
-    And I fill the "Part Label Style Width" field with "60"
+    And I fill the "Part Label Width" field with "60"
     And I close the metadata modal with Escape
-    Then the editor source and stored source both contain "part_label = { width_pt: 60 }"
+    Then the editor source and stored source both contain "part_label_width_pt = 60"
 
   Scenario: Editing the Measure Number Style's Font Size updates the source
     Given the edit-metadata-modal test fixture is loaded

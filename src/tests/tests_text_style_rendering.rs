@@ -1,76 +1,6 @@
 use super::*;
 use compositor::types::AbsoluteContent;
 
-#[test]
-fn title_width_pt_reserves_a_minimum_box_width() {
-    // A short title ("Hi") whose real rendered width is far below 300pt —
-    // the box-width computation must widen it to the configured minimum
-    // rather than passing the real text width straight through.
-    let source = concat!(
-        "# metadata\ntitle = \"Hi\"\ntitle = { width_pt: 300 }\n\n",
-        "# parts\nS = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[S] 1\n",
-    );
-    let score = compile(source, "test", &[]).unwrap();
-    assert_eq!(score.metadata.title_style.width_pt, 300);
-    let config = render_config::RenderConfig::from_metadata(&score.metadata);
-    let header = grid_layout::types::Header {
-        title: score.metadata.title.clone(),
-        subtitle: score.metadata.subtitle.clone(),
-        author: score.metadata.author.clone(),
-        part_list: vec![],
-        parts_list_columns: 3,
-        sequence: None,
-        title_font_size: score.metadata.title_style.font_size as f32,
-        title_min_width_pt: score.metadata.title_style.width_pt as f32,
-        subtitle_font_size: score.metadata.subtitle_style.font_size as f32,
-        author_font_size: score.metadata.author_style.font_size as f32,
-        sequence_font_size: score.metadata.sequence.font_size as f32,
-        part_legend_font_size: score.metadata.part_legend.font_size as f32,
-    };
-    let compile_result = compiler::compile(&score);
-    let compile_result = consolidator::consolidate(compile_result);
-    let grid_pages =
-        grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None).pages;
-    let abs = coordinate_resolver::resolve(
-        &grid_pages,
-        config.note_number_width as f32,
-        config.part_label_width_pt as f32,
-        coordinate_resolver::ResolveFontSizes {
-            lyric: config.lyric_font_sizes(),
-            notes: config.notes_font_size(),
-            chords: config.chords_font_size(),
-            labels: coordinate_resolver::LabelFontSizes {
-                measure_number: config.measure_number_font_size as f32,
-                section_label: config.section_label_font_size as f32,
-                section_label_vertical_padding_pt: config.section_label_vertical_padding_pt(),
-                part_label: config.part_label_font_size as f32,
-            },
-            paddings: config.element_paddings(),
-            page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
-        },
-    )
-    .expect("coordinate resolver should not fail in tests");
-
-    let reserved_width_pt = abs[0]
-        .elements
-        .iter()
-        .find_map(|e| match &e.content {
-            AbsoluteContent::Text {
-                content,
-                reserved_width_pt,
-                ..
-            } if content == "Hi" => Some(*reserved_width_pt),
-            _ => None,
-        })
-        .expect("title text element should be present");
-
-    assert!(
-        reserved_width_pt >= 300.0,
-        "title's reserved box width should be at least 300pt, got {reserved_width_pt}"
-    );
-}
-
 /// Lays out a minimal single-note-part score, returning the total height in
 /// points of its one system's `GridRow`s — used by
 /// `notes_vertical_padding_pt_grows_the_note_head_sub_row` to compare a
@@ -89,7 +19,6 @@ fn single_note_system_height_pt(notes_metadata_line: &str) -> f32 {
         parts_list_columns: 3,
         sequence: None,
         title_font_size: score.metadata.title_style.font_size as f32,
-        title_min_width_pt: score.metadata.title_style.width_pt as f32,
         subtitle_font_size: score.metadata.subtitle_style.font_size as f32,
         author_font_size: score.metadata.author_style.font_size as f32,
         sequence_font_size: score.metadata.sequence.font_size as f32,
@@ -125,7 +54,6 @@ fn section_label_vertical_padding_pt_grows_the_label_box_height() {
             parts_list_columns: 3,
             sequence: None,
             title_font_size: score.metadata.title_style.font_size as f32,
-            title_min_width_pt: score.metadata.title_style.width_pt as f32,
             subtitle_font_size: score.metadata.subtitle_style.font_size as f32,
             author_font_size: score.metadata.author_style.font_size as f32,
             sequence_font_size: score.metadata.sequence.font_size as f32,
@@ -198,7 +126,6 @@ fn page_number_vertical_padding_pt_pushes_the_footer_text_up() {
             parts_list_columns: 3,
             sequence: None,
             title_font_size: score.metadata.title_style.font_size as f32,
-            title_min_width_pt: score.metadata.title_style.width_pt as f32,
             subtitle_font_size: score.metadata.subtitle_style.font_size as f32,
             author_font_size: score.metadata.author_style.font_size as f32,
             sequence_font_size: score.metadata.sequence.font_size as f32,

@@ -137,11 +137,10 @@ struct ResolvedTextStyles {
 }
 
 /// `resolve_text_style` for the common case of a kind with no non-zero
-/// horizontal/vertical padding or width default (every kind except
-/// `part_label`, `lyrics`, `notes`, `chords`, `note_dash` — see
-/// `resolve_text_styles`).
+/// horizontal/vertical padding default (every kind except `lyrics`, `notes`,
+/// `chords`, `note_dash` — see `resolve_text_styles`).
 fn simple_text_style(parsed: crate::ast::parsed::TextStyle, default_font_size: u32) -> TextStyle {
-    resolve_text_style(parsed, default_font_size, 0, 0, 0)
+    resolve_text_style(parsed, default_font_size, 0, 0)
 }
 
 /// Resolves the `TextStyle` fields whose only non-zero default is `font_size`
@@ -151,6 +150,7 @@ fn resolve_simple_text_styles(
     metadata: &ParsedMetadata,
     row_height: u32,
 ) -> (
+    TextStyle,
     TextStyle,
     TextStyle,
     TextStyle,
@@ -184,6 +184,7 @@ fn resolve_simple_text_styles(
             metadata.page_number_style,
             default_page_number_font_size(row_height),
         ),
+        simple_text_style(metadata.part_label_style, DEFAULT_PART_LABEL_FONT_SIZE),
     )
 }
 
@@ -200,6 +201,7 @@ fn resolve_text_styles(metadata: &ParsedMetadata, row_height: u32) -> ResolvedTe
         measure_number,
         section_label,
         page_number,
+        part_label,
     ) = resolve_simple_text_styles(metadata, row_height);
     let lyrics_font_size = metadata
         .lyrics_style
@@ -214,26 +216,18 @@ fn resolve_text_styles(metadata: &ParsedMetadata, row_height: u32) -> ResolvedTe
         part_legend,
         measure_number,
         section_label,
-        part_label: resolve_text_style(
-            metadata.part_label_style,
-            DEFAULT_PART_LABEL_FONT_SIZE,
-            0,
-            0,
-            DEFAULT_PART_LABEL_WIDTH_PT,
-        ),
+        part_label,
         page_number,
         lyrics: resolve_text_style(
             metadata.lyrics_style,
             lyrics_font_size,
             DEFAULT_LYRICS_HORIZONTAL_PADDING_PT,
             DEFAULT_LYRIC_CLICK_TARGET_PADDING_PT,
-            0,
         ),
         notes: resolve_text_style(
             metadata.notes_style,
             notes_font_size,
             DEFAULT_NOTES_HORIZONTAL_PADDING_PT,
-            0,
             0,
         ),
         chords: resolve_text_style(
@@ -241,13 +235,11 @@ fn resolve_text_styles(metadata: &ParsedMetadata, row_height: u32) -> ResolvedTe
             lyrics_font_size,
             DEFAULT_CHORDS_HORIZONTAL_PADDING_PT,
             0,
-            0,
         ),
         note_dash: resolve_text_style(
             metadata.note_dash_style,
             notes_font_size,
             DEFAULT_NOTE_DASH_HORIZONTAL_PADDING_PT,
-            0,
             0,
         ),
     }
@@ -271,6 +263,9 @@ fn resolve_metadata(metadata: ParsedMetadata) -> Metadata {
         parts_list_columns: metadata
             .parts_list_columns
             .unwrap_or(DEFAULT_PARTS_LIST_COLUMNS),
+        part_label_width_pt: metadata
+            .part_label_width_pt
+            .unwrap_or(DEFAULT_PART_LABEL_WIDTH_PT),
         title_style: styles.title_style,
         subtitle_style: styles.subtitle_style,
         author_style: styles.author_style,

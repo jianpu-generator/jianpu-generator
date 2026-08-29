@@ -202,15 +202,13 @@ pub enum GridContent {
     /// Generic styled text for header and footer rows. `is_title` is set by
     /// `make_title_row`/`make_subtitle_author_row` (title, subtitle,
     /// author) — `false` for the part legend and footer — see
-    /// `FontFamily::Title`. `min_width_pt` is only ever non-zero for the
-    /// title itself (see `Header::title_min_width_pt`); `0.0` elsewhere.
+    /// `FontFamily::Title`.
     Text {
         content: String,
         font_size: f32,
         bold: bool,
         italic: bool,
         is_title: bool,
-        min_width_pt: f32,
     },
     /// The resolved `# sequence` playback order, rendered as "Sequence: "
     /// followed by each label (styled like an inline section label) joined
@@ -244,10 +242,6 @@ pub struct Header {
     pub sequence: Option<Vec<SequenceEntryInfo>>,
     /// Font size in points for `title` (see `Metadata::title_font_size`).
     pub title_font_size: f32,
-    /// Minimum reserved box width in points for the title (see
-    /// `Metadata::title_style.width_pt`) — `0.0` means no configured
-    /// minimum. See `font_metrics::title_box_width`.
-    pub title_min_width_pt: f32,
     /// Font size in points for `subtitle` (see `Metadata::subtitle_font_size`).
     pub subtitle_font_size: f32,
     /// Font size in points for `author` (see `Metadata::author_font_size`).

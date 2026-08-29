@@ -3,25 +3,19 @@ Feature: Text style metadata object syntax
   Every text kind (title, subtitle, author, sequence, part_legend,
   measure_number, section_label, page_number, part_label, lyrics, notes,
   chords, note_dash) is configured as a single object-valued metadata key
-  with the same four components: font_size, horizontal_padding_pt,
-  vertical_padding_pt, width_pt (`Metadata::TextStyle` /
+  with the same three components: font_size, horizontal_padding_pt,
+  vertical_padding_pt (`Metadata::TextStyle` /
   `ParsedMetadata::TextStyle`, src/ast/grouped.rs / src/ast/parsed/mod.rs).
 
   Syntax: `<kind> = { field: value, field: value }` — unquoted keys, `{}`
-  and `:` as separators, comma-separated fields, any subset of the four
+  and `:` as separators, comma-separated fields, any subset of the three
   fields in any order.
 
   The old flat per-component keys (lyrics_font_size,
-  lyric_click_target_padding_pt, part_label_width_pt,
-  notes_horizontal_padding_pt, etc.) are retired outright — no backward
-  compatibility is preserved. Those keys now fail as unknown metadata
-  fields (regression coverage for that lives in metadata_parser_tests.rs,
-  not here).
-
-  This syntax and data model are not implemented yet. Every scenario in
-  this feature is expected to FAIL until the parser/AST work lands — do
-  not "fix" these tests by loosening their expectations; fix the
-  implementation.
+  lyric_click_target_padding_pt, notes_horizontal_padding_pt, etc.) are
+  retired outright — no backward compatibility is preserved. Those keys
+  now fail as unknown metadata fields (regression coverage for that lives
+  in metadata_parser_tests.rs, not here).
 
   Scenario Outline: A single component parses into the kind's TextStyle
     Given "# metadata" sets "<kind>" to "{ <field>: <value> }"
@@ -31,7 +25,6 @@ Feature: Text style metadata object syntax
     Examples:
       | kind          | field                 | value |
       | title         | font_size             | 32    |
-      | title         | width_pt              | 200   |
       | subtitle      | font_size             | 20    |
       | author        | font_size             | 16    |
       | sequence      | font_size             | 14    |
@@ -40,7 +33,6 @@ Feature: Text style metadata object syntax
       | section_label | font_size             | 16    |
       | page_number   | font_size             | 20    |
       | part_label    | font_size             | 18    |
-      | part_label    | width_pt              | 40    |
       | lyrics        | font_size             | 18    |
       | lyrics        | horizontal_padding_pt | 4     |
       | lyrics        | vertical_padding_pt   | 6     |

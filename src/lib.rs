@@ -176,7 +176,6 @@ fn build_header(score: &Score, parts: &[PartInfo]) -> grid_layout::types::Header
         parts_list_columns: score.metadata.parts_list_columns,
         sequence,
         title_font_size: score.metadata.title_style.font_size as f32,
-        title_min_width_pt: score.metadata.title_style.width_pt as f32,
         subtitle_font_size: score.metadata.subtitle_style.font_size as f32,
         author_font_size: score.metadata.author_style.font_size as f32,
         sequence_font_size: score.metadata.sequence.font_size as f32,

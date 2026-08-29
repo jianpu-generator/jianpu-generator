@@ -16,9 +16,8 @@ fn text_anchor(halign: HAlign) -> TextAnchor {
     }
 }
 
-/// Bundles `sans_serif_text`'s style params — split out once a 7th
-/// (`reserved_width_pt`) pushed the plain argument list over clippy's
-/// `too_many_arguments` limit.
+/// Bundles `sans_serif_text`'s style params — split out once a 6th field
+/// pushed the plain argument list over clippy's `too_many_arguments` limit.
 #[derive(Clone, Copy)]
 struct SansSerifTextStyle {
     font_size: f32,
@@ -26,9 +25,6 @@ struct SansSerifTextStyle {
     weight: FontWeight,
     italic: bool,
     font: FontFamily,
-    /// The title's reserved box width in points, or `0.0` for every
-    /// non-title use (see `AbsoluteContent::Text::reserved_width_pt`).
-    reserved_width_pt: f32,
 }
 
 fn sans_serif_text(content: String, style: SansSerifTextStyle) -> AbsoluteContent {
@@ -40,7 +36,6 @@ fn sans_serif_text(content: String, style: SansSerifTextStyle) -> AbsoluteConten
         font: style.font,
         weight: style.weight,
         italic: style.italic,
-        reserved_width_pt: style.reserved_width_pt,
     }
 }
 
@@ -95,7 +90,6 @@ fn grid_text_to_absolute(
                 weight: FontWeight::Normal,
                 italic: false,
                 font: FontFamily::SansSerif,
-                reserved_width_pt: 0.0,
             },
         )),
         PostArcGridContent::DirectiveLine { label, .. } => Some(directive_line_absolute(
@@ -109,7 +103,6 @@ fn grid_text_to_absolute(
             bold,
             italic,
             is_title,
-            min_width_pt,
         } => Some(sans_serif_text(
             content.clone(),
             SansSerifTextStyle {
@@ -125,11 +118,6 @@ fn grid_text_to_absolute(
                     FontFamily::Title
                 } else {
                     FontFamily::SansSerif
-                },
-                reserved_width_pt: if *min_width_pt > 0.0 {
-                    crate::font_metrics::title_box_width(content, *font_size, *min_width_pt)
-                } else {
-                    0.0
                 },
             },
         )),

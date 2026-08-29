@@ -20,13 +20,12 @@ export const textStyleKinds = [
 
 export type TextStyleKind = (typeof textStyleKinds)[number]
 
-/** A `<kind> = { ... }` object's four components (see `syntax.md`). Any
+/** A `<kind> = { ... }` object's three components (see `syntax.md`). Any
  * subset may be set in the source; an unset component is `null` here. */
 export const textStyleComponents = [
   'font_size',
   'horizontal_padding_pt',
   'vertical_padding_pt',
-  'width_pt',
 ] as const
 
 export type TextStyleComponent = (typeof textStyleComponents)[number]
@@ -35,7 +34,6 @@ export interface TextStyleFields {
   font_size: number | null
   horizontal_padding_pt: number | null
   vertical_padding_pt: number | null
-  width_pt: number | null
 }
 
 function emptyStyle(): TextStyleFields {
@@ -43,18 +41,19 @@ function emptyStyle(): TextStyleFields {
     font_size: null,
     horizontal_padding_pt: null,
     vertical_padding_pt: null,
-    width_pt: null,
   }
 }
 
 /** Scalar (non-text-style) `# metadata` keys — everything left over once
  * `title`/`subtitle`/`author`'s string content and the 13 `TextStyle` kinds
- * are accounted for. */
+ * are accounted for. `part_label_width_pt` is a flat scalar (a layout
+ * constant, not a text style component) rather than `part_label.width_pt`. */
 export type ScalarMetadataKey =
   | 'row_height'
   | 'max_measures_per_system'
   | 'note_number_width'
   | 'parts_list_columns'
+  | 'part_label_width_pt'
   | 'merge_duplicate_measures_across_parts'
   | 'hide_resting_parts'
   | 'hide_system_dividers'
@@ -65,6 +64,7 @@ const numericScalarKeys: ScalarMetadataKey[] = [
   'max_measures_per_system',
   'note_number_width',
   'parts_list_columns',
+  'part_label_width_pt',
 ]
 
 /** Every editable `# metadata` field: `title`/`subtitle`/`author`'s string
@@ -85,6 +85,7 @@ export interface ParsedMetadataFields {
   max_measures_per_system: number | null
   note_number_width: number | null
   parts_list_columns: number | null
+  part_label_width_pt: number | null
   merge_duplicate_measures_across_parts: boolean | null
   hide_resting_parts: boolean | null
   hide_system_dividers: boolean | null
@@ -101,6 +102,7 @@ function emptyParsedMetadata(): ParsedMetadataFields {
     max_measures_per_system: null,
     note_number_width: null,
     parts_list_columns: null,
+    part_label_width_pt: null,
     merge_duplicate_measures_across_parts: null,
     hide_resting_parts: null,
     hide_system_dividers: null,
@@ -202,6 +204,9 @@ export function parseMetadata(source: string): ParsedMetadataFields {
       case 'parts_list_columns':
         result.parts_list_columns = Number.parseInt(value, 10)
         break
+      case 'part_label_width_pt':
+        result.part_label_width_pt = Number.parseInt(value, 10)
+        break
       case 'merge_duplicate_measures_across_parts':
         result.merge_duplicate_measures_across_parts = value === 'yes'
         break
@@ -277,6 +282,9 @@ function applyFieldUpdate(
     case 'parts_list_columns':
       parsed.parts_list_columns = Number.parseInt(value, 10)
       break
+    case 'part_label_width_pt':
+      parsed.part_label_width_pt = Number.parseInt(value, 10)
+      break
     case 'merge_duplicate_measures_across_parts':
       parsed.merge_duplicate_measures_across_parts = value === 'yes'
       break
@@ -324,6 +332,8 @@ function emitCanonicalSection(parsed: ParsedMetadataFields): string[] {
     lines.push(`note_number_width = ${parsed.note_number_width}`)
   if (parsed.parts_list_columns !== null)
     lines.push(`parts_list_columns = ${parsed.parts_list_columns}`)
+  if (parsed.part_label_width_pt !== null)
+    lines.push(`part_label_width_pt = ${parsed.part_label_width_pt}`)
 
   for (const kind of textStyleKinds) {
     if (kind === 'title' || kind === 'subtitle' || kind === 'author') continue

@@ -129,7 +129,6 @@ fn parse_text_style_object(
             "font_size" => &mut target.font_size,
             "horizontal_padding_pt" => &mut target.horizontal_padding_pt,
             "vertical_padding_pt" => &mut target.vertical_padding_pt,
-            "width_pt" => &mut target.width_pt,
             _ => {
                 errors.push(RecoverableError::metadata_unknown_field(
                     key_span,
@@ -157,6 +156,7 @@ struct MetadataAccumulator {
     max_measures_per_system: Option<u32>,
     note_number_width: Option<u32>,
     parts_list_columns: Option<u32>,
+    part_label_width_pt: Option<u32>,
     title_style: TextStyle,
     subtitle_style: TextStyle,
     author_style: TextStyle,
@@ -185,6 +185,7 @@ impl MetadataAccumulator {
             "max_measures_per_system" => Some(&mut self.max_measures_per_system),
             "note_number_width" => Some(&mut self.note_number_width),
             "parts_list_columns" => Some(&mut self.parts_list_columns),
+            "part_label_width_pt" => Some(&mut self.part_label_width_pt),
             _ => None,
         }
     }
@@ -323,6 +324,7 @@ pub fn parse_metadata(
             max_measures_per_system: accumulator.max_measures_per_system,
             note_number_width: accumulator.note_number_width,
             parts_list_columns: accumulator.parts_list_columns,
+            part_label_width_pt: accumulator.part_label_width_pt,
             title_style: accumulator.title_style,
             subtitle_style: accumulator.subtitle_style,
             author_style: accumulator.author_style,

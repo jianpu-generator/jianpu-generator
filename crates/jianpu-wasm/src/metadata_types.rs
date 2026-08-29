@@ -14,7 +14,7 @@ use serde::Serialize;
 use tsify::Tsify;
 
 /// One text-style kind's default component values — mirrors
-/// `jianpu_generator::ast::grouped::TextStyle`'s four components (see
+/// `jianpu_generator::ast::grouped::TextStyle`'s three components (see
 /// `syntax.md`'s "Text styles" section), so the web layer's per-kind default
 /// lookups (`d.title.font_size`, `d.lyrics.vertical_padding_pt`, ...) read
 /// the same shape as the `.jianpu` source's own `<kind> = { ... }` object
@@ -31,7 +31,6 @@ pub struct TextStyleDefaultsOut {
     pub font_size: u32,
     pub horizontal_padding_pt: u32,
     pub vertical_padding_pt: u32,
-    pub width_pt: u32,
 }
 
 /// Default values applied to `# metadata` fields left unset in the source.
@@ -42,6 +41,10 @@ pub struct MetadataDefaultsOut {
     pub max_measures_per_system: u32,
     pub note_number_width: u32,
     pub parts_list_columns: u32,
+    /// Fixed width in points of the part-label column at the start of each
+    /// system row (see `jianpu_generator::ast::grouped::Metadata::part_label_width_pt`).
+    /// A flat scalar default, not part of `part_label`'s `TextStyleDefaultsOut`.
+    pub part_label_width_pt: u32,
     pub title: TextStyleDefaultsOut,
     pub subtitle: TextStyleDefaultsOut,
     pub author: TextStyleDefaultsOut,
@@ -63,7 +66,7 @@ pub struct MetadataDefaultsOut {
 }
 
 /// Builds one kind's `TextStyleDefaultsOut`, defaulting `horizontal_padding_pt`/
-/// `vertical_padding_pt`/`width_pt` to `0` (the common case — see
+/// `vertical_padding_pt` to `0` (the common case — see
 /// `MetadataDefaultsOut::default`, which overrides them via struct-update
 /// syntax for the handful of kinds documented otherwise in `syntax.md`'s
 /// defaults table).
@@ -72,7 +75,6 @@ fn text_style(font_size: u32) -> TextStyleDefaultsOut {
         font_size,
         horizontal_padding_pt: 0,
         vertical_padding_pt: 0,
-        width_pt: 0,
     }
 }
 
@@ -85,6 +87,7 @@ impl Default for MetadataDefaultsOut {
             max_measures_per_system: DEFAULT_MAX_MEASURES_PER_SYSTEM,
             note_number_width: DEFAULT_NOTE_NUMBER_WIDTH,
             parts_list_columns: DEFAULT_PARTS_LIST_COLUMNS,
+            part_label_width_pt: DEFAULT_PART_LABEL_WIDTH_PT,
             title: text_style(default_title_font_size(DEFAULT_ROW_HEIGHT)),
             subtitle: text_style(default_subtitle_font_size(DEFAULT_ROW_HEIGHT)),
             author: text_style(default_author_font_size(DEFAULT_ROW_HEIGHT)),
@@ -92,10 +95,7 @@ impl Default for MetadataDefaultsOut {
             part_legend: text_style(default_part_legend_font_size(DEFAULT_ROW_HEIGHT)),
             measure_number: text_style(DEFAULT_MEASURE_NUMBER_FONT_SIZE),
             section_label: text_style(DEFAULT_SECTION_LABEL_FONT_SIZE),
-            part_label: TextStyleDefaultsOut {
-                width_pt: DEFAULT_PART_LABEL_WIDTH_PT,
-                ..text_style(DEFAULT_PART_LABEL_FONT_SIZE)
-            },
+            part_label: text_style(DEFAULT_PART_LABEL_FONT_SIZE),
             page_number: text_style(default_page_number_font_size(DEFAULT_ROW_HEIGHT)),
             lyrics: TextStyleDefaultsOut {
                 horizontal_padding_pt: DEFAULT_LYRICS_HORIZONTAL_PADDING_PT,

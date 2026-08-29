@@ -1,9 +1,11 @@
 //! Cucumber harness for the unified per-kind text style metadata syntax
 //! (see `tests/features/text_style_metadata_syntax.feature`):
-//! `<kind> = { font_size: N, horizontal_padding_pt: N, vertical_padding_pt: N,
-//! width_pt: N }` replacing the old flat per-component keys
-//! (`lyrics_font_size`, `lyric_click_target_padding_pt`,
-//! `part_label_width_pt`, etc.) with one object-valued key per text kind.
+//! `<kind> = { font_size: N, horizontal_padding_pt: N, vertical_padding_pt: N }`
+//! replacing the old flat per-component keys (`lyrics_font_size`,
+//! `lyric_click_target_padding_pt`, `notes_horizontal_padding_pt`, etc.)
+//! with one object-valued key per text kind. `part_label_width_pt` is a
+//! separate flat scalar field (not part of any `TextStyle` object), since
+//! it's a layout constant rather than a text style component.
 //!
 //! Each scenario's `# metadata` lines are spliced into a minimal otherwise-valid
 //! `.jianpu` document and run through the public `compile` entry point, so
@@ -84,7 +86,6 @@ fn text_style_field(style: &TextStyle, field: &str) -> u32 {
         "font_size" => style.font_size,
         "horizontal_padding_pt" => style.horizontal_padding_pt,
         "vertical_padding_pt" => style.vertical_padding_pt,
-        "width_pt" => style.width_pt,
         other => panic!("unrecognized TextStyle field {other:?}"),
     }
 }
