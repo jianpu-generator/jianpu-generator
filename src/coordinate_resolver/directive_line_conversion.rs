@@ -22,6 +22,10 @@ pub(super) struct DirectiveLineFontSizes {
     pub(super) section_label_bold: bool,
     pub(super) section_label_italic: bool,
     pub(super) section_label_underline: bool,
+    /// See `Metadata::sequence`.
+    pub(super) sequence_bold: bool,
+    pub(super) sequence_italic: bool,
+    pub(super) sequence_underline: bool,
 }
 
 /// Result of [`directive_line_content`]: the line's text spans plus layout
@@ -163,8 +167,8 @@ fn build_directive_line_spans(
 }
 
 /// Builds the text spans for the `# sequence` header line: a plain
-/// "Sequence: " prefix, each label styled like an inline section label (see
-/// [`section_label_span`]) — followed by a plain, non-bold/italic
+/// "Sequence: " prefix, each label styled per `Metadata::sequence` (built via
+/// the shared [`section_label_span`] helper) — followed by a plain, non-bold/italic
 /// `(-abbrev -abbrev ...)` (omit) or `(abbrev abbrev ...)` (only) span when
 /// that entry's suffix restricts that occurrence's MIDI/WAV playback —
 /// joined by a plain " › ".
@@ -195,9 +199,9 @@ pub(super) fn sequence_line_content(
         spans.push(section_label_span(
             &entry.label,
             font_size,
-            directive_font_sizes.section_label_bold,
-            directive_font_sizes.section_label_italic,
-            directive_font_sizes.section_label_underline,
+            directive_font_sizes.sequence_bold,
+            directive_font_sizes.sequence_italic,
+            directive_font_sizes.sequence_underline,
         ));
         if let Some(filter) = &entry.part_filter {
             let content = match filter.kind {

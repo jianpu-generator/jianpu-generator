@@ -46,6 +46,10 @@ pub struct RenderConfig {
     pub note_dash_bold: bool,
     pub note_dash_italic: bool,
     pub note_dash_underline: bool,
+    /// See `Metadata::sequence`.
+    pub sequence_bold: bool,
+    pub sequence_italic: bool,
+    pub sequence_underline: bool,
     /// See `Metadata::measure_number_style`.
     pub measure_number_bold: bool,
     pub measure_number_italic: bool,
@@ -118,6 +122,9 @@ impl RenderConfig {
             note_dash_bold: meta.note_dash.bold,
             note_dash_italic: meta.note_dash.italic,
             note_dash_underline: meta.note_dash.underline,
+            sequence_bold: meta.sequence.bold,
+            sequence_italic: meta.sequence.italic,
+            sequence_underline: meta.sequence.underline,
             measure_number_bold: meta.measure_number.bold,
             measure_number_italic: meta.measure_number.italic,
             measure_number_underline: meta.measure_number.underline,

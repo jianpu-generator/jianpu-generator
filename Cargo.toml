@@ -105,5 +105,9 @@ harness = false
 name = "text_style_rendering_cucumber"
 harness = false
 
+[[test]]
+name = "text_style_bold_italic_underline_cucumber"
+harness = false
+
 [lints]
 workspace = true

@@ -26,6 +26,9 @@ const DEFAULT_LABELS: LabelFontSizes = LabelFontSizes {
     part_label_bold: false,
     part_label_italic: false,
     part_label_underline: false,
+    sequence_bold: false,
+    sequence_italic: false,
+    sequence_underline: false,
 };
 use crate::grid_layout::types::{
     BarNumberClickTarget, GridContent, GridElement, GridPage, GridRow, HAlign, MeasureColumnLayout,

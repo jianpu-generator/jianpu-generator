@@ -104,6 +104,80 @@ fn sequence_line_renders_label_and_omit_parts_spans() {
     assert!(!chorus_omit_span.italic);
 }
 
+/// `Metadata::sequence`'s `bold`/`italic`/`underline` must style the label
+/// spans on the `# sequence` summary line — previously the line was
+/// hardcoded to reuse `section_label`'s style, so `sequence`'s own toggles
+/// had no rendering effect (see `syntax.md`'s "Text styles" section).
+#[test]
+fn sequence_line_label_span_uses_the_sequence_style() {
+    let el = GridElement {
+        column: 0,
+        column_span: 1,
+        halign: HAlign::Start,
+        valign: VAlign::Center,
+        content: GridContent::SequenceLine {
+            entries: vec![SequenceEntryInfo {
+                label: "Verse".to_string(),
+                part_filter: None,
+            }],
+            font_size: 12.0,
+        },
+    };
+    let page = single_row_page(el);
+    let abs = resolve(
+        &[page],
+        12.0,
+        40.0,
+        ResolveFontSizes {
+            lyric: LyricFontSizes {
+                base: 14.4,
+                cjk: 17.28,
+            },
+            notes: 12.0,
+            chords: 12.0,
+            labels: LabelFontSizes {
+                measure_number: 10.0,
+                section_label: 12.0,
+                section_label_vertical_padding_pt: 0.0,
+                part_label: 12.0,
+                // Deliberately the opposite of `sequence_*` below, so a test
+                // failure that falls back to `section_label`'s style (the
+                // bug this test guards against) is unambiguous.
+                section_label_bold: false,
+                section_label_italic: false,
+                section_label_underline: false,
+                sequence_bold: true,
+                sequence_italic: true,
+                sequence_underline: true,
+                ..Default::default()
+            },
+            paddings: DEFAULT_PADDINGS,
+            page_number_vertical_padding_pt: 0.0,
+        },
+    )
+    .unwrap();
+    let AbsoluteContent::DirectiveLine { spans, .. } = &abs[0].elements[0].content else {
+        panic!(
+            "expected a DirectiveLine, got {:?}",
+            abs[0].elements[0].content
+        );
+    };
+    let label_span = &spans[1];
+    assert_eq!(label_span.content, "Verse");
+    assert!(
+        label_span.bold,
+        "label span should be bold per sequence_bold"
+    );
+    assert!(
+        label_span.italic,
+        "label span should be italic per sequence_italic"
+    );
+    assert!(
+        label_span.underline,
+        "label span should be underlined per sequence_underline"
+    );
+}
+
 #[test]
 fn sequence_line_renders_only_parts_suffix_without_a_dash() {
     let el = GridElement {

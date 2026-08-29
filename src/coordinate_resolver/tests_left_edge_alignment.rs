@@ -39,6 +39,9 @@ const LABEL_FONT_SIZES: LabelFontSizes = LabelFontSizes {
     part_label_bold: false,
     part_label_italic: false,
     part_label_underline: false,
+    sequence_bold: false,
+    sequence_italic: false,
+    sequence_underline: false,
 };
 const ELEMENT_PADDINGS: ElementPaddings = ElementPaddings {
     notes: 4.0,

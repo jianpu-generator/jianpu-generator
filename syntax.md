@@ -105,7 +105,7 @@ Defaults by kind:
 | `chords` | `lyrics.font_size` | `4` | `0` | `no` | `no` | `no` |
 | `note_dash` | `notes.font_size` | `4` | `0` | `no` | `no` | `no` |
 
-`notes.horizontal_padding_pt` is also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings. `lyrics.vertical_padding_pt` is extra padding around a lyric syllable's hover/click-target box, added on top of the lyric font's own measured ascender+descender span. `part_label`'s reserved column width is the separate flat `part_label_width_pt` field (see the main metadata table above), not part of this object — it's a layout constant, not a text style component. `sequence`'s `bold`/`italic`/`underline` have no rendering effect of their own: the `# sequence` summary line's per-label spans are always styled like `section_label` instead (matching how a directive line's own inline `label="..."` renders — see [Directive lines](#directive-lines)).
+`notes.horizontal_padding_pt` is also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings. `lyrics.vertical_padding_pt` is extra padding around a lyric syllable's hover/click-target box, added on top of the lyric font's own measured ascender+descender span. `part_label`'s reserved column width is the separate flat `part_label_width_pt` field (see the main metadata table above), not part of this object — it's a layout constant, not a text style component. `sequence`'s `bold`/`italic`/`underline` style the `# sequence` summary line's per-label spans (independent of `section_label`, even though a directive line's own inline `label="..."` renders with `section_label`'s style — see [Directive lines](#directive-lines)).
 
 Example:
 

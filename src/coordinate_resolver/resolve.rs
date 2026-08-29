@@ -45,6 +45,10 @@ pub struct LabelFontSizes {
     pub part_label_bold: bool,
     pub part_label_italic: bool,
     pub part_label_underline: bool,
+    /// See `Metadata::sequence`.
+    pub sequence_bold: bool,
+    pub sequence_italic: bool,
+    pub sequence_underline: bool,
 }
 
 impl LabelFontSizes {
@@ -74,6 +78,9 @@ impl LabelFontSizes {
             section_label_bold: self.section_label_bold,
             section_label_italic: self.section_label_italic,
             section_label_underline: self.section_label_underline,
+            sequence_bold: self.sequence_bold,
+            sequence_italic: self.sequence_italic,
+            sequence_underline: self.sequence_underline,
         }
     }
 }
