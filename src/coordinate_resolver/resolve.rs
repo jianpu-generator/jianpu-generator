@@ -24,7 +24,7 @@ pub struct LyricFontSizes {
 /// measure numbers, inline section labels, and part-name row labels (see
 /// `Metadata::measure_number_font_size`/`Metadata::section_label_font_size`/
 /// `Metadata::part_label_font_size`).
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct LabelFontSizes {
     pub measure_number: f32,
     pub section_label: f32,
@@ -33,6 +33,49 @@ pub struct LabelFontSizes {
     /// rendered background box (see `Metadata::section_label.vertical_padding_pt`
     /// / `font_metrics::section_label_box_height`).
     pub section_label_vertical_padding_pt: f32,
+    /// See `Metadata::measure_number_style`.
+    pub measure_number_bold: bool,
+    pub measure_number_italic: bool,
+    pub measure_number_underline: bool,
+    /// See `Metadata::section_label_style`.
+    pub section_label_bold: bool,
+    pub section_label_italic: bool,
+    pub section_label_underline: bool,
+    /// See `Metadata::part_label_style`.
+    pub part_label_bold: bool,
+    pub part_label_italic: bool,
+    pub part_label_underline: bool,
+}
+
+impl LabelFontSizes {
+    /// This kind's part-label style, bundled for `grid_to_absolute`'s
+    /// `RowLabel` arm — split out of `resolve_row_element` to keep it under
+    /// clippy's line-count limit.
+    pub(super) fn part_label_style(&self) -> super::content_conversion::PartLabelStyle {
+        super::content_conversion::PartLabelStyle {
+            font_size: self.part_label,
+            bold: self.part_label_bold,
+            italic: self.part_label_italic,
+            underline: self.part_label_underline,
+        }
+    }
+
+    /// This kind's measure-number/section-label style, bundled for
+    /// `grid_to_absolute`'s `DirectiveLine` arm — split out of
+    /// `resolve_row_element` to keep it under clippy's line-count limit.
+    pub(super) fn directive_line_font_sizes(&self) -> DirectiveLineFontSizes {
+        DirectiveLineFontSizes {
+            measure_number: self.measure_number,
+            section_label: self.section_label,
+            section_label_vertical_padding_pt: self.section_label_vertical_padding_pt,
+            measure_number_bold: self.measure_number_bold,
+            measure_number_italic: self.measure_number_italic,
+            measure_number_underline: self.measure_number_underline,
+            section_label_bold: self.section_label_bold,
+            section_label_italic: self.section_label_italic,
+            section_label_underline: self.section_label_underline,
+        }
+    }
 }
 
 /// Horizontal padding in points reserved before each flush-left glyph type
@@ -253,14 +296,8 @@ fn resolve_row_element(
                 &post_arc_content,
                 span_width,
                 el.halign,
-                config.label_font_sizes.part_label,
-                DirectiveLineFontSizes {
-                    measure_number: config.label_font_sizes.measure_number,
-                    section_label: config.label_font_sizes.section_label,
-                    section_label_vertical_padding_pt: config
-                        .label_font_sizes
-                        .section_label_vertical_padding_pt,
-                },
+                config.label_font_sizes.part_label_style(),
+                config.label_font_sizes.directive_line_font_sizes(),
             )?
             .map(|content| AbsoluteElement { x, y, content }))
         }
@@ -320,6 +357,11 @@ fn resolve_page(
         usable_width,
         part_label_width_pt,
         font_sizes.labels.measure_number,
+        crate::grid_layout::types::TextStyleFlags {
+            bold: font_sizes.labels.measure_number_bold,
+            italic: font_sizes.labels.measure_number_italic,
+            underline: font_sizes.labels.measure_number_underline,
+        },
     ));
 
     Ok(AbsolutePage {

@@ -249,20 +249,21 @@ const BAR_NUMBER_CLICK_TARGET_HORIZONTAL_PADDING: f32 = 6.0;
 /// width alone doesn't leave an unusably thin hit box.
 pub(super) fn resolve_bar_number_click_target(
     target: &crate::grid_layout::types::BarNumberClickTarget,
-    rows: &[GridRow],
-    row_tops: &[f32],
-    usable_width: f32,
-    part_label_width_pt: f32,
+    ctx: &RowLayoutContext,
     measure_number_font_size: f32,
+    measure_number_style: crate::grid_layout::types::TextStyleFlags,
 ) -> Option<AbsoluteElement> {
-    let row = rows.get(target.row)?;
-    let y = *row_tops.get(target.row)?;
-    let geometry = row.column_geometry(usable_width, part_label_width_pt);
+    let row = ctx.rows.get(target.row)?;
+    let y = *ctx.row_tops.get(target.row)?;
+    let geometry = row.column_geometry(ctx.usable_width, ctx.part_label_width_pt);
     let x = PAGE_MARGIN + geometry.x_start(target.column as f32);
     let digits_width =
         crate::font_metrics::span_width(&super::content_conversion::bar_number_text_span(
             target.measure_index as u32 + 1,
             measure_number_font_size,
+            measure_number_style.bold,
+            measure_number_style.italic,
+            measure_number_style.underline,
         ));
     Some(AbsoluteElement {
         x: x - BAR_NUMBER_CLICK_TARGET_HORIZONTAL_PADDING,

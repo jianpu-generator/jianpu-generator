@@ -9,6 +9,18 @@ pub use click_target_types::{BarNumberClickTarget, MeasureClickTarget, PartLabel
 mod sequence_entry_info;
 pub use sequence_entry_info::{SequenceEntryInfo, SequenceEntryPartFilter};
 
+/// Bundles a `GridContent::Text` element's bold/italic/underline — split out
+/// so callers building several such elements (e.g. `make_footer_row`,
+/// `layout_decoration::make_part_list_rows`) don't need one argument per
+/// component, which pushes their signatures over clippy's `too_many_arguments`
+/// limit.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct TextStyleFlags {
+    pub bold: bool,
+    pub italic: bool,
+    pub underline: bool,
+}
+
 #[derive(Debug, Clone)]
 pub struct GridPage {
     pub width_pt: f32,
@@ -208,6 +220,7 @@ pub enum GridContent {
         font_size: f32,
         bold: bool,
         italic: bool,
+        underline: bool,
         is_title: bool,
     },
     /// The resolved `# sequence` playback order, rendered as "Sequence: "
@@ -229,7 +242,7 @@ pub struct PartListEntry {
     pub display_name: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Header {
     pub title: Option<String>,
     pub subtitle: Option<String>,
@@ -252,6 +265,22 @@ pub struct Header {
     /// Font size in points for the part-name legend entries (see
     /// `Metadata::part_legend_font_size`).
     pub part_legend_font_size: f32,
+    /// See `Metadata::title_style`.
+    pub title_bold: bool,
+    pub title_italic: bool,
+    pub title_underline: bool,
+    /// See `Metadata::subtitle_style`.
+    pub subtitle_bold: bool,
+    pub subtitle_italic: bool,
+    pub subtitle_underline: bool,
+    /// See `Metadata::author_style`.
+    pub author_bold: bool,
+    pub author_italic: bool,
+    pub author_underline: bool,
+    /// See `Metadata::part_legend`.
+    pub part_legend_bold: bool,
+    pub part_legend_italic: bool,
+    pub part_legend_underline: bool,
 }
 
 #[derive(Debug, Clone)]

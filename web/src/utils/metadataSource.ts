@@ -1,48 +1,32 @@
-/** Every rendered text kind, matching `Metadata`'s per-kind `TextStyle`
- * fields on the Rust side (see `syntax.md`'s "Text styles" section) — the
- * order here is also the canonical emission order for their `<kind> = {...}`
- * lines. */
-export const textStyleKinds = [
-  'title',
-  'subtitle',
-  'author',
-  'sequence',
-  'part_legend',
-  'measure_number',
-  'section_label',
-  'part_label',
-  'page_number',
-  'lyrics',
-  'notes',
-  'chords',
-  'note_dash',
-] as const
+export type {
+  TextStyleBooleanComponent,
+  TextStyleComponent,
+  TextStyleFields,
+  TextStyleKind,
+  TextStyleNumericComponent,
+} from './textStyleFields'
+export {
+  emptyStyle,
+  isTextStyleBooleanComponent,
+  textStyleBooleanComponents,
+  textStyleComponents,
+  textStyleKinds,
+  textStyleNumericComponents,
+} from './textStyleFields'
 
-export type TextStyleKind = (typeof textStyleKinds)[number]
-
-/** A `<kind> = { ... }` object's three components (see `syntax.md`). Any
- * subset may be set in the source; an unset component is `null` here. */
-export const textStyleComponents = [
-  'font_size',
-  'horizontal_padding_pt',
-  'vertical_padding_pt',
-] as const
-
-export type TextStyleComponent = (typeof textStyleComponents)[number]
-
-export interface TextStyleFields {
-  font_size: number | null
-  horizontal_padding_pt: number | null
-  vertical_padding_pt: number | null
-}
-
-function emptyStyle(): TextStyleFields {
-  return {
-    font_size: null,
-    horizontal_padding_pt: null,
-    vertical_padding_pt: null,
-  }
-}
+import type {
+  TextStyleBooleanComponent,
+  TextStyleComponent,
+  TextStyleFields,
+  TextStyleKind,
+  TextStyleNumericComponent,
+} from './textStyleFields'
+import {
+  emptyStyle,
+  isTextStyleBooleanComponent,
+  textStyleComponents,
+  textStyleKinds,
+} from './textStyleFields'
 
 /** Scalar (non-text-style) `# metadata` keys — everything left over once
  * `title`/`subtitle`/`author`'s string content and the 13 `TextStyle` kinds
@@ -146,10 +130,18 @@ function parseStyleObject(rawValue: string): TextStyleFields {
     const colonIndex = entry.indexOf(':')
     if (colonIndex === -1) continue
     const component = entry.slice(0, colonIndex).trim()
-    const value = Number.parseInt(entry.slice(colonIndex + 1).trim(), 10)
-    if (Number.isNaN(value)) continue
-    if ((textStyleComponents as readonly string[]).includes(component)) {
-      style[component as TextStyleComponent] = value
+    if (!(textStyleComponents as readonly string[]).includes(component)) {
+      continue
+    }
+    const rawComponentValue = entry.slice(colonIndex + 1).trim()
+    if (isTextStyleBooleanComponent(component as TextStyleComponent)) {
+      if (rawComponentValue !== 'yes' && rawComponentValue !== 'no') continue
+      style[component as TextStyleBooleanComponent] =
+        rawComponentValue === 'yes'
+    } else {
+      const value = Number.parseInt(rawComponentValue, 10)
+      if (Number.isNaN(value)) continue
+      style[component as TextStyleNumericComponent] = value
     }
   }
   return style
@@ -246,12 +238,20 @@ function applyFieldUpdate(
   if (dotIndex !== -1) {
     const kind = key.slice(0, dotIndex) as TextStyleKind
     const component = key.slice(dotIndex + 1) as TextStyleComponent
-    const parsedNum =
-      value === null || value === '' ? null : Number.parseInt(value, 10)
+    const componentValue = isTextStyleBooleanComponent(component)
+      ? value === null || value === ''
+        ? null
+        : value === 'yes'
+      : (() => {
+          const parsedNum =
+            value === null || value === '' ? null : Number.parseInt(value, 10)
+          return parsedNum === null || Number.isNaN(parsedNum)
+            ? null
+            : parsedNum
+        })()
     parsed.styles[kind] = {
       ...parsed.styles[kind],
-      [component]:
-        parsedNum === null || Number.isNaN(parsedNum) ? null : parsedNum,
+      [component]: componentValue,
     }
     return
   }
@@ -305,7 +305,15 @@ function applyFieldUpdate(
 function formatStyleValue(style: TextStyleFields): string | null {
   const parts = textStyleComponents
     .filter((component) => style[component] !== null)
-    .map((component) => `${component}: ${style[component]}`)
+    .map((component) => {
+      const value = style[component]
+      const formatted = isTextStyleBooleanComponent(component)
+        ? value
+          ? 'yes'
+          : 'no'
+        : value
+      return `${component}: ${formatted}`
+    })
   return parts.length === 0 ? null : `{ ${parts.join(', ')} }`
 }
 

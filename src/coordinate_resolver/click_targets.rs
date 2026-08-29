@@ -1,10 +1,10 @@
 use crate::compositor::types::AbsoluteElement;
-use crate::grid_layout::types::GridPage;
+use crate::grid_layout::types::{GridPage, TextStyleFlags};
 
 use super::highlights::{
     resolve_bar_number_click_target, resolve_lyric_click_target, resolve_lyric_label_click_target,
     resolve_measure_click_target, resolve_note_click_target, resolve_part_label_click_target,
-    resolve_playback_cursor_target,
+    resolve_playback_cursor_target, RowLayoutContext,
 };
 
 /// Resolves every click/drag hit target on a page — measure, playback
@@ -19,6 +19,7 @@ pub(super) fn resolve_click_target_elements(
     usable_width: f32,
     part_label_width_pt: f32,
     measure_number_font_size: f32,
+    measure_number_style: TextStyleFlags,
 ) -> Vec<AbsoluteElement> {
     let mut elements: Vec<AbsoluteElement> = page
         .measure_click_targets
@@ -48,15 +49,14 @@ pub(super) fn resolve_click_target_elements(
         resolve_lyric_label_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
     }));
 
+    let row_ctx = RowLayoutContext {
+        rows: &page.rows,
+        row_tops,
+        usable_width,
+        part_label_width_pt,
+    };
     elements.extend(page.bar_number_click_targets.iter().filter_map(|t| {
-        resolve_bar_number_click_target(
-            t,
-            &page.rows,
-            row_tops,
-            usable_width,
-            part_label_width_pt,
-            measure_number_font_size,
-        )
+        resolve_bar_number_click_target(t, &row_ctx, measure_number_font_size, measure_number_style)
     }));
 
     elements

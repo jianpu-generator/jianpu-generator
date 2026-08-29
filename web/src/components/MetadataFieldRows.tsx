@@ -1,7 +1,3 @@
-import type {
-  TextStyleComponent,
-  TextStyleFields,
-} from '../utils/metadataSource'
 import { FieldLabel } from './FieldHelpModal'
 
 export const tdStyle: React.CSSProperties = {
@@ -70,7 +66,7 @@ interface NumberStepperProps {
  * (native `<input type="number">` always steps from `0` when empty). See
  * `HANDOFF-text-style-metadata.md`-adjacent context: `defaultValue` is the
  * same value shown today as the input's greyed-out `placeholder`. */
-function NumberStepper({
+export function NumberStepper({
   value,
   defaultValue,
   min,
@@ -128,7 +124,7 @@ function NumberStepper({
   )
 }
 
-interface FieldRowProps {
+export interface FieldRowProps {
   label: string
   help: string
   onShowHelp: (label: string, help: string) => void
@@ -195,92 +191,7 @@ export function NumberFieldRow({
   )
 }
 
-const styleInputsWrapperStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '4px',
-}
-
-const styleInputGroupStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '2px',
-  flex: 1,
-  minWidth: 0,
-}
-
-const styleInputSubLabelStyle: React.CSSProperties = {
-  fontSize: '10px',
-  color: '#888',
-  whiteSpace: 'nowrap',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-}
-
-const styleComponentOrder: TextStyleComponent[] = [
-  'font_size',
-  'horizontal_padding_pt',
-  'vertical_padding_pt',
-]
-
-/** Sub-labels shown above each of a `TextStyleRow`'s three inline inputs —
- * also used to build each input's `aria-label` (`"${label} ${subLabel}"`),
- * so e2e tests can target one specific component by an accessible name
- * rather than positional `nth()` indexing. */
-const styleComponentSubLabels: Record<TextStyleComponent, string> = {
-  font_size: 'Font Size',
-  horizontal_padding_pt: 'H. Padding',
-  vertical_padding_pt: 'V. Padding',
-}
-
-/** One `<kind> = { font_size: N, horizontal_padding_pt: N,
- * vertical_padding_pt: N }` text-style kind's row: a single label plus
- * three inline number inputs, one per component (see `TextStyleFields`).
- * Replaces what used to be several separate flat-key rows (`title_font_size`,
- * ...) with one row per kind — see `syntax.md`'s "Text styles" section for
- * the unified object syntax this mirrors. `part_label_width_pt` is a plain
- * scalar field (see `NumberFieldRow`), not part of this object, since it's
- * a layout constant rather than a text style component. */
-export function TextStyleRow({
-  label,
-  help,
-  onShowHelp,
-  value,
-  placeholder,
-  onChange,
-}: FieldRowProps & {
-  value: TextStyleFields
-  placeholder?: TextStyleFields | null
-  onChange: (component: TextStyleComponent) => (value: string) => void
-}) {
-  return (
-    <tr>
-      <td style={tdStyle}>
-        <FieldLabel label={label} help={help} onShowHelp={onShowHelp} />
-      </td>
-      <td style={tdStyle}>
-        <div style={styleInputsWrapperStyle}>
-          {styleComponentOrder.map((component) => (
-            <div key={component} style={styleInputGroupStyle}>
-              <span style={styleInputSubLabelStyle}>
-                {styleComponentSubLabels[component]}
-              </span>
-              <NumberStepper
-                value={value[component] ?? ''}
-                defaultValue={placeholder ? placeholder[component] : null}
-                min={0}
-                aria-label={`${label} ${styleComponentSubLabels[component]}`}
-                placeholder={
-                  placeholder ? String(placeholder[component]) : undefined
-                }
-                onChange={onChange(component)}
-              />
-            </div>
-          ))}
-        </div>
-      </td>
-    </tr>
-  )
-}
+export { TextStyleRow } from './TextStyleRow'
 
 export function CheckboxFieldRow({
   label,

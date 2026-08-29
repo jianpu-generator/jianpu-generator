@@ -79,6 +79,7 @@ pub(in crate::renderer::new_renderer) fn render_tuplet_bracket(
                 font: FontFamily::Monospace,
                 weight: FontWeight::Normal,
                 italic: false,
+                underline: false,
             },
         },
     ]

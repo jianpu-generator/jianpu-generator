@@ -49,6 +49,7 @@ pub enum SvgKindOut {
         font: FontFamilyOut,
         weight: FontWeightOut,
         italic: bool,
+        underline: bool,
     },
     Line {
         x2: f32,
@@ -100,6 +101,7 @@ pub struct TspanOut {
     pub content: String,
     pub bold: bool,
     pub italic: bool,
+    pub underline: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub font_size: Option<f32>,
 }
@@ -189,6 +191,7 @@ fn tspan_to_out(span: &TspanData) -> TspanOut {
         content: span.content.clone(),
         bold: span.bold,
         italic: span.italic,
+        underline: span.underline,
         font_size: span.font_size,
     }
 }
@@ -312,6 +315,7 @@ fn svg_kind_to_out(kind: &SvgKind) -> SvgKindOut {
             font,
             weight,
             italic,
+            underline,
         } => SvgKindOut::Text {
             content: content.clone(),
             font_size: *font_size,
@@ -320,6 +324,7 @@ fn svg_kind_to_out(kind: &SvgKind) -> SvgKindOut {
             font: font_family_to_out(font),
             weight: font_weight_to_out(weight),
             italic: *italic,
+            underline: *underline,
         },
         SvgKind::Line {
             x2,

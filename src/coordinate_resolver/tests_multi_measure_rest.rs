@@ -65,6 +65,7 @@ fn multi_measure_rest_resolves_width_from_column_span_inset_by_glyph_left_paddin
                 section_label: 12.0,
                 section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
+                ..Default::default()
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,

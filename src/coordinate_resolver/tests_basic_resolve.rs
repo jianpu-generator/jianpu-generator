@@ -87,6 +87,7 @@ fn valign_top_places_y_at_row_top() {
                 section_label: 12.0,
                 section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
+                ..Default::default()
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
@@ -114,6 +115,7 @@ fn halign_end_places_x_at_right_of_column_span() {
             font_size: 12.0,
             bold: false,
             italic: false,
+            underline: false,
             is_title: false,
         },
     };
@@ -134,6 +136,7 @@ fn halign_end_places_x_at_right_of_column_span() {
                 section_label: 12.0,
                 section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
+                ..Default::default()
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
@@ -182,6 +185,7 @@ fn octave_dot_grid_content_emits_nothing() {
                 section_label: 12.0,
                 section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
+                ..Default::default()
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,

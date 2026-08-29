@@ -275,6 +275,7 @@ pub(crate) fn build_measure_column_layout(
                         dec,
                         config.measure_number_font_size as f32,
                         config.section_label_font_size as f32,
+                        config.section_label_bold,
                     )
                 })
                 .unwrap_or(0.0);

@@ -31,6 +31,7 @@ fn erroneous_measure_produces_error_highlight() {
         author_font_size: 14.0,
         sequence_font_size: 12.0,
         part_legend_font_size: 12.0,
+        ..Default::default()
     };
     let config = crate::render_config::RenderConfig {
         row_height: 24,
@@ -55,6 +56,7 @@ fn erroneous_measure_produces_error_highlight() {
         chords_horizontal_padding_pt: 4,
         lyrics_horizontal_padding_pt: 4,
         note_dash_horizontal_padding_pt: 4,
+        ..Default::default()
     };
     let pages = crate::grid_layout::layout(
         &crate::compiler::types::CompileResult {
@@ -113,6 +115,7 @@ fn click_target_row_start_skips_hidden_system_divider() {
         chords_horizontal_padding_pt: 4,
         lyrics_horizontal_padding_pt: 4,
         note_dash_horizontal_padding_pt: 4,
+        ..Default::default()
     };
     let shown_pages = crate::grid_layout::layout(
         &crate::compiler::types::CompileResult {
@@ -172,6 +175,7 @@ fn non_erroneous_measure_produces_no_error_highlight() {
         author_font_size: 14.0,
         sequence_font_size: 12.0,
         part_legend_font_size: 12.0,
+        ..Default::default()
     };
     let config = crate::render_config::RenderConfig {
         row_height: 24,
@@ -196,6 +200,7 @@ fn non_erroneous_measure_produces_no_error_highlight() {
         chords_horizontal_padding_pt: 4,
         lyrics_horizontal_padding_pt: 4,
         note_dash_horizontal_padding_pt: 4,
+        ..Default::default()
     };
     let pages = crate::grid_layout::layout(
         &crate::compiler::types::CompileResult {

@@ -2,11 +2,23 @@ use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compositor::types::AbsoluteElement;
 use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
 use crate::font_metrics;
+use crate::renderer::new_renderer::GlyphStyle;
 use crate::renderer::new_types::{SvgElement, SvgKind, SvgVariant};
 
 pub(super) struct NoteRenderParams<'a> {
     pub(super) base_font_size: &'a f32,
     pub(super) note_number_width: &'a f32,
+    pub(super) bold: bool,
+    pub(super) italic: bool,
+    pub(super) underline: bool,
+}
+
+fn glyph_weight(bold: bool) -> FontWeight {
+    if bold {
+        FontWeight::Bold
+    } else {
+        FontWeight::Normal
+    }
 }
 
 /// Whether a note/rest/chord-symbol/note-dash carries a first and/or second
@@ -44,6 +56,7 @@ pub(super) fn dot_glyph(x: f32, y: f32, font_size: f32, variant: SvgVariant) -> 
             font: FontFamily::Monospace,
             weight: FontWeight::Normal,
             italic: false,
+            underline: false,
         },
     }
 }
@@ -59,6 +72,9 @@ pub(super) fn render_note_head(
     let NoteRenderParams {
         base_font_size,
         note_number_width,
+        bold,
+        italic,
+        underline,
     } = params;
     let mut results = Vec::new();
 
@@ -92,8 +108,9 @@ pub(super) fn render_note_head(
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
             font: FontFamily::Monospace,
-            weight: FontWeight::Normal,
-            italic: false,
+            weight: glyph_weight(*bold),
+            italic: *italic,
+            underline: *underline,
         },
     });
 
@@ -189,6 +206,7 @@ pub(super) fn render_multi_measure_rest(
                 font: FontFamily::Monospace,
                 weight: FontWeight::Bold,
                 italic: false,
+                underline: false,
             },
         },
     ]
@@ -197,6 +215,7 @@ pub(super) fn render_multi_measure_rest(
 pub(super) fn render_percussion_hit(
     elem: &AbsoluteElement,
     base_font_size: &f32,
+    style: GlyphStyle,
 ) -> Vec<SvgElement> {
     vec![SvgElement {
         x: elem.x,
@@ -208,8 +227,9 @@ pub(super) fn render_percussion_hit(
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
             font: FontFamily::Monospace,
-            weight: FontWeight::Normal,
-            italic: false,
+            weight: glyph_weight(style.bold),
+            italic: style.italic,
+            underline: style.underline,
         },
     }]
 }
@@ -219,6 +239,7 @@ pub(super) fn render_chord_symbol(
     s: &str,
     dots: &DotState,
     base_font_size: &f32,
+    style: GlyphStyle,
 ) -> Vec<SvgElement> {
     // `elem.x` is already corrected for this chord's own root character's
     // left-side bearing (see
@@ -243,8 +264,9 @@ pub(super) fn render_chord_symbol(
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
             font: FontFamily::Monospace,
-            weight: FontWeight::Normal,
-            italic: false,
+            weight: glyph_weight(style.bold),
+            italic: style.italic,
+            underline: style.underline,
         },
     }]
 }

@@ -163,6 +163,31 @@ title = "Song"
     expect(result).toContain('title = "Hello World"')
   })
 
+  it('formats a text-style bold/italic/underline component as yes/no', () => {
+    const result = updateMetadataField(sourceWithMetadata, 'title.bold', 'yes')
+    expect(result).toContain('title = { bold: yes }')
+  })
+
+  it('round-trips a text-style boolean component alongside numeric ones', () => {
+    const withFontSize = updateMetadataField(
+      sourceWithMetadata,
+      'title.font_size',
+      '32',
+    )
+    const result = updateMetadataField(withFontSize, 'title.italic', 'yes')
+    expect(result).toContain('title = { font_size: 32, italic: yes }')
+  })
+
+  it('clears a text-style boolean component back to unset', () => {
+    const withBold = updateMetadataField(
+      sourceWithMetadata,
+      'title.bold',
+      'yes',
+    )
+    const result = updateMetadataField(withBold, 'title.bold', '')
+    expect(result).not.toContain('bold')
+  })
+
   it('handles all fields present and sorted correctly', () => {
     const result = updateMetadataField(sourceWithAllFields, 'title', 'Updated')
     const lines = result.split('\n')

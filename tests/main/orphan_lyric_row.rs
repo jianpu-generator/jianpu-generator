@@ -52,6 +52,7 @@ fn no_orphan_empty_lyric_row_when_no_part_has_lyric_text() {
         author_font_size: score.metadata.author_style.font_size as f32,
         sequence_font_size: score.metadata.sequence.font_size as f32,
         part_legend_font_size: score.metadata.part_legend.font_size as f32,
+        ..Default::default()
     };
     let pages = jianpu_generator::grid_layout::layout(
         &compile_result,

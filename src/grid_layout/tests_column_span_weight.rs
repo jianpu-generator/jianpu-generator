@@ -38,6 +38,7 @@ fn test_config() -> RenderConfig {
         chords_horizontal_padding_pt: 4,
         lyrics_horizontal_padding_pt: 4,
         note_dash_horizontal_padding_pt: 4,
+        ..Default::default()
     }
 }
 

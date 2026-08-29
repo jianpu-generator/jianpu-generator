@@ -1,5 +1,7 @@
+use super::glyph_weight;
 use crate::compositor::types::AbsoluteElement;
-use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
+use crate::compositor::types::{DominantBaseline, FontFamily, TextAnchor};
+use crate::renderer::new_renderer::GlyphStyle;
 use crate::renderer::new_types::{SvgElement, SvgKind, SvgVariant};
 
 pub(in crate::renderer::new_renderer) fn render_lyric(
@@ -7,6 +9,7 @@ pub(in crate::renderer::new_renderer) fn render_lyric(
     s: &str,
     base_font_size: &f32,
     cjk_font_size: &f32,
+    style: GlyphStyle,
 ) -> Vec<SvgElement> {
     vec![SvgElement {
         x: elem.x,
@@ -21,8 +24,9 @@ pub(in crate::renderer::new_renderer) fn render_lyric(
             // title's font, not exclusive to it. See its doc comment in
             // `src/compositor/types.rs`.
             font: FontFamily::Title,
-            weight: FontWeight::Normal,
-            italic: false,
+            weight: glyph_weight(style.bold),
+            italic: style.italic,
+            underline: style.underline,
         },
     }]
 }
@@ -35,6 +39,7 @@ pub(in crate::renderer::new_renderer) fn render_lyric_line(
     s: &str,
     base_font_size: &f32,
     cjk_font_size: &f32,
+    style: GlyphStyle,
 ) -> Vec<SvgElement> {
     vec![SvgElement {
         x: elem.x,
@@ -46,8 +51,9 @@ pub(in crate::renderer::new_renderer) fn render_lyric_line(
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
             font: FontFamily::Title,
-            weight: FontWeight::Normal,
-            italic: false,
+            weight: glyph_weight(style.bold),
+            italic: style.italic,
+            underline: style.underline,
         },
     }]
 }

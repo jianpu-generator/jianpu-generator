@@ -100,6 +100,7 @@ fn lyric_syllable_halign_center_is_independent_of_column_weight() {
                     section_label: 12.0,
                     section_label_vertical_padding_pt: 0.0,
                     part_label: 12.0,
+                    ..Default::default()
                 },
                 paddings: DEFAULT_PADDINGS,
                 page_number_vertical_padding_pt: 0.0,
@@ -163,6 +164,7 @@ fn lyric_syllable_shares_the_note_head_padding_formula() {
                 section_label: 12.0,
                 section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
+                ..Default::default()
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
@@ -222,6 +224,7 @@ fn cjk_lyric_syllable_compensates_its_leading_glyphs_left_bearing() {
                 section_label: 12.0,
                 section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
+                ..Default::default()
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,

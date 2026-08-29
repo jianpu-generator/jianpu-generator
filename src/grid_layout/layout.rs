@@ -315,6 +315,11 @@ pub fn layout(
             page_idx as u32 + 1,
             total_pages,
             config.page_number_font_size as f32,
+            crate::grid_layout::types::TextStyleFlags {
+                bold: config.page_number_bold,
+                italic: config.page_number_italic,
+                underline: config.page_number_underline,
+            },
             remaining_height,
         ));
         abs_system_index_start += page_sys.len();

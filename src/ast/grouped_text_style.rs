@@ -79,7 +79,7 @@ pub const DEFAULT_NOTE_DASH_HORIZONTAL_PADDING_PT: u32 = 4;
 /// the two layout components every text kind now shares. See
 /// `crate::ast::parsed::TextStyle` for the parsed (`Option`-wrapped) counterpart
 /// and `resolve_text_style` for how a kind's default `font_size` is derived.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct TextStyle {
     pub font_size: u32,
     /// Horizontal padding in points reserved before this kind's glyph, widening
@@ -90,18 +90,28 @@ pub struct TextStyle {
     /// Extra vertical padding in points added above/below this kind's element.
     /// Default: 0, except `lyrics` (12, formerly `lyric_click_target_padding_pt`).
     pub vertical_padding_pt: u32,
+    /// Whether this kind renders bold. Default: `false`, except `section_label` (`true`).
+    pub bold: bool,
+    /// Whether this kind renders italic. Default: `false`, except `subtitle`
+    /// and `section_label` (`true`).
+    pub italic: bool,
+    /// Whether this kind renders underlined. Default: `false` for every kind.
+    pub underline: bool,
 }
 
 /// Fills in each unset component of a parsed `<kind> = { ... }` style object
 /// with its default, producing the fully-resolved `TextStyle` a kind's
 /// `Metadata` field holds. `default_horizontal_padding_pt`/
 /// `default_vertical_padding_pt` are `0` for every kind except where
-/// documented otherwise on `Metadata`'s per-kind fields.
+/// documented otherwise on `Metadata`'s per-kind fields; `underline` has no
+/// per-kind default and always falls back to `false`.
 pub(crate) fn resolve_text_style(
     parsed: crate::ast::parsed::TextStyle,
     default_font_size: u32,
     default_horizontal_padding_pt: u32,
     default_vertical_padding_pt: u32,
+    default_bold: bool,
+    default_italic: bool,
 ) -> TextStyle {
     TextStyle {
         font_size: parsed.font_size.unwrap_or(default_font_size),
@@ -111,5 +121,8 @@ pub(crate) fn resolve_text_style(
         vertical_padding_pt: parsed
             .vertical_padding_pt
             .unwrap_or(default_vertical_padding_pt),
+        bold: parsed.bold.unwrap_or(default_bold),
+        italic: parsed.italic.unwrap_or(default_italic),
+        underline: parsed.underline.unwrap_or(false),
     }
 }

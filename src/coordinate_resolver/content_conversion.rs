@@ -24,6 +24,7 @@ struct SansSerifTextStyle {
     anchor: TextAnchor,
     weight: FontWeight,
     italic: bool,
+    underline: bool,
     font: FontFamily,
 }
 
@@ -36,6 +37,7 @@ fn sans_serif_text(content: String, style: SansSerifTextStyle) -> AbsoluteConten
         font: style.font,
         weight: style.weight,
         italic: style.italic,
+        underline: style.underline,
     }
 }
 
@@ -45,11 +47,18 @@ fn sans_serif_text(content: String, style: SansSerifTextStyle) -> AbsoluteConten
 /// the directive line's own label is rendered as an independent text element
 /// (see [`AbsoluteContent::DirectiveLine`], `label`/`label_x_offset`) rather
 /// than through this span.
-pub(super) fn section_label_span(label_text: &str, font_size: f32) -> TextSpan {
+pub(super) fn section_label_span(
+    label_text: &str,
+    font_size: f32,
+    bold: bool,
+    italic: bool,
+    underline: bool,
+) -> TextSpan {
     TextSpan {
         content: label_text.to_string(),
-        bold: true,
-        italic: true,
+        bold,
+        italic,
+        underline,
         font_size,
     }
 }
@@ -58,20 +67,39 @@ pub(super) fn section_label_span(label_text: &str, font_size: f32) -> TextSpan {
 /// shared with `highlights::resolve_bar_number_click_target`, which needs
 /// the identical span (content and `font_size`) to measure the same click
 /// target's width via `font_metrics::span_width`.
-pub(super) fn bar_number_text_span(n: u32, font_size: f32) -> TextSpan {
+pub(super) fn bar_number_text_span(
+    n: u32,
+    font_size: f32,
+    bold: bool,
+    italic: bool,
+    underline: bool,
+) -> TextSpan {
     TextSpan {
         content: n.to_string(),
-        bold: false,
-        italic: false,
+        bold,
+        italic,
+        underline,
         font_size,
     }
+}
+
+/// Bundles [`grid_text_to_absolute`]/[`grid_to_absolute`]'s part-label style
+/// params — split out once `RowLabel`'s bold/italic/underline joined
+/// `part_label_font_size`, pushing the plain argument list over clippy's
+/// `too_many_arguments` limit.
+#[derive(Clone, Copy)]
+pub(super) struct PartLabelStyle {
+    pub(super) font_size: f32,
+    pub(super) bold: bool,
+    pub(super) italic: bool,
+    pub(super) underline: bool,
 }
 
 fn grid_text_to_absolute(
     content: &PostArcGridContent,
     span_width: f32,
     halign: HAlign,
-    part_label_font_size: f32,
+    part_label_style: PartLabelStyle,
     directive_font_sizes: DirectiveLineFontSizes,
 ) -> Option<AbsoluteContent> {
     match content {
@@ -85,10 +113,15 @@ fn grid_text_to_absolute(
         PostArcGridContent::RowLabel(s) => Some(sans_serif_text(
             s.clone(),
             SansSerifTextStyle {
-                font_size: part_label_font_size,
+                font_size: part_label_style.font_size,
                 anchor: TextAnchor::Middle,
-                weight: FontWeight::Normal,
-                italic: false,
+                weight: if part_label_style.bold {
+                    FontWeight::Bold
+                } else {
+                    FontWeight::Normal
+                },
+                italic: part_label_style.italic,
+                underline: part_label_style.underline,
                 font: FontFamily::SansSerif,
             },
         )),
@@ -102,6 +135,7 @@ fn grid_text_to_absolute(
             font_size,
             bold,
             italic,
+            underline,
             is_title,
         } => Some(sans_serif_text(
             content.clone(),
@@ -114,6 +148,7 @@ fn grid_text_to_absolute(
                     FontWeight::Normal
                 },
                 italic: *italic,
+                underline: *underline,
                 font: if *is_title {
                     FontFamily::Title
                 } else {
@@ -129,8 +164,11 @@ fn grid_text_to_absolute(
                 bar_number: None,
                 label: None,
                 label_font_size: *font_size,
+                label_bold: false,
+                label_italic: false,
+                label_underline: false,
                 label_box_height: 0.0,
-                spans: sequence_line_content(entries, *font_size),
+                spans: sequence_line_content(entries, *font_size, directive_font_sizes),
                 spans_x_offset: 0.0,
                 label_x_offset: 0.0,
                 apply_row_offset: false,
@@ -144,14 +182,14 @@ pub(super) fn grid_to_absolute(
     content: &PostArcGridContent,
     span_width: f32,
     halign: HAlign,
-    part_label_font_size: f32,
+    part_label_style: PartLabelStyle,
     directive_font_sizes: DirectiveLineFontSizes,
 ) -> Result<Option<AbsoluteContent>, IrrecoverableError> {
     if let Some(content) = grid_text_to_absolute(
         content,
         span_width,
         halign,
-        part_label_font_size,
+        part_label_style,
         directive_font_sizes,
     ) {
         return Ok(Some(content));

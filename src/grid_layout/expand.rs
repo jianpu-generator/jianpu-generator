@@ -261,6 +261,7 @@ pub(crate) fn make_footer_row(
     page_num: u32,
     total_pages: u32,
     font_size: f32,
+    style: crate::grid_layout::types::TextStyleFlags,
     height_pt: f32,
 ) -> GridRow {
     GridRow {
@@ -276,8 +277,9 @@ pub(crate) fn make_footer_row(
             content: GridContent::Text {
                 content: format!("{page_num} / {total_pages}"),
                 font_size,
-                bold: false,
-                italic: false,
+                bold: style.bold,
+                italic: style.italic,
+                underline: style.underline,
                 is_title: false,
             },
         }],

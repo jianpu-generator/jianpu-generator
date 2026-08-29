@@ -55,6 +55,7 @@ fn resolve_empty_pages_returns_empty() {
                 section_label: 12.0,
                 section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
+                ..Default::default()
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
@@ -99,6 +100,7 @@ fn note_head_halign_center_is_flush_left_plus_fixed_padding() {
                 section_label: 12.0,
                 section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
+                ..Default::default()
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
@@ -155,6 +157,7 @@ fn note_head_anchor_shifts_by_its_own_configured_padding_not_chords_or_lyrics() 
                 section_label: 12.0,
                 section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
+                ..Default::default()
             },
             paddings: ElementPaddings {
                 notes: 30.0,
@@ -246,6 +249,7 @@ fn note_head_halign_center_is_independent_of_column_weight() {
                     section_label: 12.0,
                     section_label_vertical_padding_pt: 0.0,
                     part_label: 12.0,
+                    ..Default::default()
                 },
                 paddings: DEFAULT_PADDINGS,
                 page_number_vertical_padding_pt: 0.0,

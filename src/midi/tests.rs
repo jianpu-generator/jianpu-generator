@@ -23,6 +23,7 @@ fn text_style(
         font_size,
         horizontal_padding_pt,
         vertical_padding_pt,
+        ..Default::default()
     }
 }
 

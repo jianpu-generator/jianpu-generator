@@ -14,6 +14,14 @@ pub(super) struct DirectiveLineFontSizes {
     /// See `Metadata::section_label.vertical_padding_pt` /
     /// `AbsoluteContent::DirectiveLine::label_box_height`.
     pub(super) section_label_vertical_padding_pt: f32,
+    /// See `Metadata::measure_number_style`.
+    pub(super) measure_number_bold: bool,
+    pub(super) measure_number_italic: bool,
+    pub(super) measure_number_underline: bool,
+    /// See `Metadata::section_label_style`.
+    pub(super) section_label_bold: bool,
+    pub(super) section_label_italic: bool,
+    pub(super) section_label_underline: bool,
 }
 
 /// Result of [`directive_line_content`]: the line's text spans plus layout
@@ -64,7 +72,7 @@ fn directive_line_content(
         };
     };
 
-    let (bar_number_span, spans) = build_directive_line_spans(content, font_sizes.measure_number);
+    let (bar_number_span, spans) = build_directive_line_spans(content, font_sizes);
     let bar_number_width = bar_number_span
         .as_ref()
         .map(crate::font_metrics::span_width)
@@ -78,7 +86,11 @@ fn directive_line_content(
     let spans_x_offset = match label {
         Some(label_str) => {
             label_x_offset
-                + crate::font_metrics::section_label_box_width(label_str, font_sizes.section_label)
+                + crate::font_metrics::section_label_box_width(
+                    label_str,
+                    font_sizes.section_label,
+                    font_sizes.section_label_bold,
+                )
                 + crate::font_metrics::DIRECTIVE_LINE_ELEMENT_GAP
         }
         None => bar_number_width,
@@ -98,7 +110,7 @@ fn directive_line_content(
 /// pass 2.
 fn build_directive_line_spans(
     content: &PostArcGridContent,
-    measure_number_font_size: f32,
+    font_sizes: DirectiveLineFontSizes,
 ) -> (Option<TextSpan>, Vec<TextSpan>) {
     let PostArcGridContent::DirectiveLine {
         bar_number,
@@ -110,13 +122,22 @@ fn build_directive_line_spans(
     else {
         return (None, Vec::new());
     };
-    let bar_number_span = bar_number.map(|n| bar_number_text_span(n, measure_number_font_size));
+    let bar_number_span = bar_number.map(|n| {
+        bar_number_text_span(
+            n,
+            font_sizes.measure_number,
+            font_sizes.measure_number_bold,
+            font_sizes.measure_number_italic,
+            font_sizes.measure_number_underline,
+        )
+    });
     let mut spans: Vec<TextSpan> = Vec::new();
     if let Some(key_str) = key {
         spans.push(TextSpan {
             content: format!("  {key_str}"),
             bold: false,
             italic: false,
+            underline: false,
             font_size: 12.0,
         });
     }
@@ -125,6 +146,7 @@ fn build_directive_line_spans(
             content: format!("  \u{2669}={b}"),
             bold: false,
             italic: false,
+            underline: false,
             font_size: 12.0,
         });
     }
@@ -133,6 +155,7 @@ fn build_directive_line_spans(
             content: format!("  {n}/{d}"),
             bold: false,
             italic: false,
+            underline: false,
             font_size: 12.0,
         });
     }
@@ -148,6 +171,7 @@ fn build_directive_line_spans(
 pub(super) fn sequence_line_content(
     entries: &[crate::grid_layout::types::SequenceEntryInfo],
     font_size: f32,
+    directive_font_sizes: DirectiveLineFontSizes,
 ) -> Vec<TextSpan> {
     use crate::parser::sequence_parser::PartFilterKind;
 
@@ -155,6 +179,7 @@ pub(super) fn sequence_line_content(
         content: "Sequence: ".to_string(),
         bold: false,
         italic: false,
+        underline: false,
         font_size,
     }];
     for (index, entry) in entries.iter().enumerate() {
@@ -163,10 +188,17 @@ pub(super) fn sequence_line_content(
                 content: " \u{203a} ".to_string(),
                 bold: false,
                 italic: false,
+                underline: false,
                 font_size,
             });
         }
-        spans.push(section_label_span(&entry.label, font_size));
+        spans.push(section_label_span(
+            &entry.label,
+            font_size,
+            directive_font_sizes.section_label_bold,
+            directive_font_sizes.section_label_italic,
+            directive_font_sizes.section_label_underline,
+        ));
         if let Some(filter) = &entry.part_filter {
             let content = match filter.kind {
                 PartFilterKind::Omit => format!(" (-{})", filter.parts.join(" -")),
@@ -176,6 +208,7 @@ pub(super) fn sequence_line_content(
                 content,
                 bold: false,
                 italic: false,
+                underline: false,
                 font_size,
             });
         }
@@ -199,6 +232,9 @@ pub(super) fn directive_line_absolute(
         bar_number: directive_line.bar_number,
         label: label.clone(),
         label_font_size: directive_font_sizes.section_label,
+        label_bold: directive_font_sizes.section_label_bold,
+        label_italic: directive_font_sizes.section_label_italic,
+        label_underline: directive_font_sizes.section_label_underline,
         label_box_height: crate::font_metrics::section_label_box_height(
             directive_font_sizes.section_label,
         ) + directive_font_sizes.section_label_vertical_padding_pt,

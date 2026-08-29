@@ -157,6 +157,7 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
         author_font_size: score.metadata.author_style.font_size as f32,
         sequence_font_size: score.metadata.sequence.font_size as f32,
         part_legend_font_size: score.metadata.part_legend.font_size as f32,
+        ..Default::default()
     };
     let compile_result = compiler::compile(&score);
     let compile_result = consolidator::consolidate(compile_result);
@@ -175,6 +176,7 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
                 section_label: config.section_label_font_size as f32,
                 section_label_vertical_padding_pt: config.section_label_vertical_padding_pt(),
                 part_label: config.part_label_font_size as f32,
+                ..Default::default()
             },
             paddings: config.element_paddings(),
             page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
@@ -244,6 +246,7 @@ fn density_fixture_page_elements() -> Vec<compositor::types::AbsoluteElement> {
         author_font_size: score.metadata.author_style.font_size as f32,
         sequence_font_size: score.metadata.sequence.font_size as f32,
         part_legend_font_size: score.metadata.part_legend.font_size as f32,
+        ..Default::default()
     };
     let compile_result = compiler::compile(&score);
     let compile_result = consolidator::consolidate(compile_result);
@@ -262,6 +265,7 @@ fn density_fixture_page_elements() -> Vec<compositor::types::AbsoluteElement> {
                 section_label: config.section_label_font_size as f32,
                 section_label_vertical_padding_pt: config.section_label_vertical_padding_pt(),
                 part_label: config.part_label_font_size as f32,
+                ..Default::default()
             },
             paddings: config.element_paddings(),
             page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),

@@ -77,6 +77,26 @@ fn element_paddings(config: &RenderConfig) -> coordinate_resolver::ElementPaddin
     }
 }
 
+/// Bundles `config`'s label/lyric/notes/chords font sizes into `resolve`'s
+/// `ResolveFontSizes`, factored out of `when_rendered` to keep that function
+/// under clippy's line-count cap.
+fn resolve_font_sizes(config: &RenderConfig) -> coordinate_resolver::ResolveFontSizes {
+    coordinate_resolver::ResolveFontSizes {
+        lyric: config.lyric_font_sizes(),
+        notes: config.notes_font_size(),
+        chords: config.chords_font_size(),
+        labels: coordinate_resolver::LabelFontSizes {
+            measure_number: config.measure_number_font_size as f32,
+            section_label: config.section_label_font_size as f32,
+            section_label_vertical_padding_pt: config.section_label_vertical_padding_pt(),
+            part_label: config.part_label_font_size as f32,
+            ..Default::default()
+        },
+        paddings: element_paddings(config),
+        page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
+    }
+}
+
 #[when(expr = "it is rendered")]
 fn when_rendered(world: &mut LyricHoverBoxWorld) {
     let mut metadata = String::from("# metadata\ntitle = \"t\"\n");
@@ -103,6 +123,7 @@ fn when_rendered(world: &mut LyricHoverBoxWorld) {
         author_font_size: score.metadata.author_style.font_size as f32,
         sequence_font_size: score.metadata.sequence.font_size as f32,
         part_legend_font_size: score.metadata.part_legend.font_size as f32,
+        ..Default::default()
     };
     let compile_result = jianpu_generator::compiler::compile(&score);
     let compile_result = jianpu_generator::consolidator::consolidate(compile_result);
@@ -112,19 +133,7 @@ fn when_rendered(world: &mut LyricHoverBoxWorld) {
         &grid_pages,
         config.note_number_width as f32,
         config.part_label_width_pt as f32,
-        coordinate_resolver::ResolveFontSizes {
-            lyric: config.lyric_font_sizes(),
-            notes: config.notes_font_size(),
-            chords: config.chords_font_size(),
-            labels: coordinate_resolver::LabelFontSizes {
-                measure_number: config.measure_number_font_size as f32,
-                section_label: config.section_label_font_size as f32,
-                section_label_vertical_padding_pt: config.section_label_vertical_padding_pt(),
-                part_label: config.part_label_font_size as f32,
-            },
-            paddings: element_paddings(&config),
-            page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
-        },
+        resolve_font_sizes(&config),
     )
     .unwrap_or_else(|err| panic!("coordinate resolver should not fail in tests: {err:?}"));
 

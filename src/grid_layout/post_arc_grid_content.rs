@@ -61,6 +61,7 @@ pub enum PostArcGridContent {
         font_size: f32,
         bold: bool,
         italic: bool,
+        underline: bool,
         is_title: bool,
     },
     SequenceLine {

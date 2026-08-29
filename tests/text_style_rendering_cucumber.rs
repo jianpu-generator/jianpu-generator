@@ -78,6 +78,7 @@ fn render_source(metadata_lines: &[String], title: &str, score_body: &str) -> Re
         author_font_size: score.metadata.author_style.font_size as f32,
         sequence_font_size: score.metadata.sequence.font_size as f32,
         part_legend_font_size: score.metadata.part_legend.font_size as f32,
+        ..Default::default()
     };
     let compile_result = jianpu_generator::compiler::compile(&score);
     let compile_result = jianpu_generator::consolidator::consolidate(compile_result);
@@ -96,6 +97,7 @@ fn render_source(metadata_lines: &[String], title: &str, score_body: &str) -> Re
                 section_label: config.section_label_font_size as f32,
                 section_label_vertical_padding_pt: config.section_label_vertical_padding_pt(),
                 part_label: config.part_label_font_size as f32,
+                ..Default::default()
             },
             paddings: element_paddings(&config),
             page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),

@@ -11,6 +11,7 @@ fn spans_to_tspans(spans: &[TextSpan]) -> Vec<TspanData> {
             content: s.content.clone(),
             bold: s.bold,
             italic: s.italic,
+            underline: s.underline,
             font_size: if (s.font_size - 12.0).abs() < 0.001 {
                 None
             } else {
@@ -24,6 +25,9 @@ pub(super) struct DirectiveLineArgs<'a> {
     pub bar_number: &'a Option<TextSpan>,
     pub label: &'a Option<String>,
     pub label_font_size: f32,
+    pub label_bold: bool,
+    pub label_italic: bool,
+    pub label_underline: bool,
     pub label_box_height: f32,
     pub spans: &'a [TextSpan],
     pub spans_x_offset: f32,
@@ -76,6 +80,7 @@ pub(super) fn render_directive_line(
                 Some(label_str),
                 args.spans,
                 args.label_font_size,
+                args.label_bold,
             );
 
             vec![render_section_label_group(
@@ -86,6 +91,9 @@ pub(super) fn render_directive_line(
                     row_y,
                     label_x: row_x + args.label_x_offset,
                     label_font_size: args.label_font_size,
+                    label_bold: args.label_bold,
+                    label_italic: args.label_italic,
+                    label_underline: args.label_underline,
                     label_box_height: args.label_box_height,
                     line_width,
                 },
@@ -117,6 +125,9 @@ struct SectionLabelGroupArgs<'a> {
     row_y: f32,
     label_x: f32,
     label_font_size: f32,
+    label_bold: bool,
+    label_italic: bool,
+    label_underline: bool,
     /// See `AbsoluteContent::DirectiveLine::label_box_height` — already
     /// includes `Metadata::section_label.vertical_padding_pt`, so this is
     /// the box's real drawn height, not just `section_label_box_height`'s
@@ -130,8 +141,11 @@ fn render_section_label_group(
     args: &SectionLabelGroupArgs,
     siblings: SectionLabelSiblingElements,
 ) -> SvgElement {
-    let bg_width =
-        crate::font_metrics::section_label_box_width(args.label_str, args.label_font_size);
+    let bg_width = crate::font_metrics::section_label_box_width(
+        args.label_str,
+        args.label_font_size,
+        args.label_bold,
+    );
     let bg_height = args.label_box_height;
     // Covers the whole directive line (bar number through trailing spans),
     // not just the label box, so the group has no unpainted gap for a click
@@ -156,8 +170,9 @@ fn render_section_label_group(
             baseline: DominantBaseline::Middle,
             spans: vec![TspanData {
                 content: args.label_str.to_string(),
-                bold: true,
-                italic: true,
+                bold: args.label_bold,
+                italic: args.label_italic,
+                underline: args.label_underline,
                 font_size: None,
             }],
         },

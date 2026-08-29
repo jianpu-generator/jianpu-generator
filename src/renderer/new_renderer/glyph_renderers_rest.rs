@@ -1,7 +1,8 @@
-use super::{dot_glyph, DotState};
+use super::{dot_glyph, glyph_weight, DotState};
 use crate::compositor::types::AbsoluteElement;
-use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
+use crate::compositor::types::{DominantBaseline, FontFamily, TextAnchor};
 use crate::font_metrics;
+use crate::renderer::new_renderer::GlyphStyle;
 use crate::renderer::new_types::{SvgElement, SvgKind, SvgVariant};
 
 pub(in crate::renderer::new_renderer) fn render_rest(
@@ -9,6 +10,7 @@ pub(in crate::renderer::new_renderer) fn render_rest(
     dots: &DotState,
     base_font_size: &f32,
     implicit_fill: bool,
+    style: GlyphStyle,
 ) -> Vec<SvgElement> {
     if implicit_fill {
         return render_omitted_part_rest(elem, dots, *base_font_size);
@@ -29,8 +31,9 @@ pub(in crate::renderer::new_renderer) fn render_rest(
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
             font: FontFamily::Monospace,
-            weight: FontWeight::Normal,
-            italic: false,
+            weight: glyph_weight(style.bold),
+            italic: style.italic,
+            underline: style.underline,
         },
     }]
 }

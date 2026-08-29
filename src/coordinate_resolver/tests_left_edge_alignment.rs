@@ -30,6 +30,15 @@ const LABEL_FONT_SIZES: LabelFontSizes = LabelFontSizes {
     section_label: 12.0,
     section_label_vertical_padding_pt: 0.0,
     part_label: 12.0,
+    measure_number_bold: false,
+    measure_number_italic: false,
+    measure_number_underline: false,
+    section_label_bold: false,
+    section_label_italic: false,
+    section_label_underline: false,
+    part_label_bold: false,
+    part_label_italic: false,
+    part_label_underline: false,
 };
 const ELEMENT_PADDINGS: ElementPaddings = ElementPaddings {
     notes: 4.0,

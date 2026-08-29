@@ -18,6 +18,7 @@ fn no_header() -> Header {
         author_font_size: 14.0,
         sequence_font_size: 12.0,
         part_legend_font_size: 12.0,
+        ..Default::default()
     }
 }
 
@@ -45,6 +46,7 @@ fn test_render_config() -> RenderConfig {
         chords_horizontal_padding_pt: 4,
         lyrics_horizontal_padding_pt: 4,
         note_dash_horizontal_padding_pt: 4,
+        ..Default::default()
     }
 }
 

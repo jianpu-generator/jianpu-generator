@@ -83,69 +83,10 @@ fn parse_bool_field(
     }
 }
 
-/// Parses a `{ field: value, field: value, ... }` object literal into `target`'s
-/// components. `key` is the metadata key the object was assigned to (e.g. `lyrics`),
-/// used to qualify unknown-field errors as `<key>.<field>`.
-fn parse_text_style_object(
-    target: &mut TextStyle,
-    key: &str,
-    key_span: Span,
-    value: &str,
-    value_span: &Span,
-    errors: &mut Vec<RecoverableError>,
-) {
-    let trimmed = value.trim();
-    if !trimmed.starts_with('{') || !trimmed.ends_with('}') || trimmed.len() < 2 {
-        errors.push(RecoverableError::metadata_malformed_line(
-            *value_span,
-            value,
-        ));
-        return;
-    }
-    let inner = &trimmed[1..trimmed.len() - 1];
-    for part in inner.split(',') {
-        let part = part.trim();
-        if part.is_empty() {
-            continue;
-        }
-        let Some((field_name, field_value)) = part.split_once(':') else {
-            errors.push(RecoverableError::metadata_malformed_line(
-                *value_span,
-                value,
-            ));
-            continue;
-        };
-        let field_name = field_name.trim();
-        let field_value = field_value.trim();
-        if field_value.is_empty() {
-            errors.push(RecoverableError::metadata_malformed_line(
-                *value_span,
-                value,
-            ));
-            continue;
-        }
-        let qualified_field = format!("{key}.{field_name}");
-        let field_target = match field_name {
-            "font_size" => &mut target.font_size,
-            "horizontal_padding_pt" => &mut target.horizontal_padding_pt,
-            "vertical_padding_pt" => &mut target.vertical_padding_pt,
-            _ => {
-                errors.push(RecoverableError::metadata_unknown_field(
-                    key_span,
-                    &qualified_field,
-                ));
-                continue;
-            }
-        };
-        parse_numeric_field(
-            field_target,
-            &qualified_field,
-            field_value,
-            value_span,
-            errors,
-        );
-    }
-}
+use text_style_parser::parse_text_style_object;
+
+#[path = "text_style_parser.rs"]
+mod text_style_parser;
 
 #[derive(Default)]
 struct MetadataAccumulator {

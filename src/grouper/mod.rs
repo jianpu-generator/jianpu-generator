@@ -139,8 +139,20 @@ struct ResolvedTextStyles {
 /// `resolve_text_style` for the common case of a kind with no non-zero
 /// horizontal/vertical padding default (every kind except `lyrics`, `notes`,
 /// `chords`, `note_dash` — see `resolve_text_styles`).
-fn simple_text_style(parsed: crate::ast::parsed::TextStyle, default_font_size: u32) -> TextStyle {
-    resolve_text_style(parsed, default_font_size, 0, 0)
+fn simple_text_style(
+    parsed: crate::ast::parsed::TextStyle,
+    default_font_size: u32,
+    default_bold: bool,
+    default_italic: bool,
+) -> TextStyle {
+    resolve_text_style(
+        parsed,
+        default_font_size,
+        0,
+        0,
+        default_bold,
+        default_italic,
+    )
 }
 
 /// Resolves the `TextStyle` fields whose only non-zero default is `font_size`
@@ -161,30 +173,60 @@ fn resolve_simple_text_styles(
     TextStyle,
 ) {
     (
-        simple_text_style(metadata.title_style, default_title_font_size(row_height)),
+        simple_text_style(
+            metadata.title_style,
+            default_title_font_size(row_height),
+            false,
+            false,
+        ),
         simple_text_style(
             metadata.subtitle_style,
             default_subtitle_font_size(row_height),
+            false,
+            true,
         ),
-        simple_text_style(metadata.author_style, default_author_font_size(row_height)),
-        simple_text_style(metadata.sequence_style, DEFAULT_SEQUENCE_FONT_SIZE),
+        simple_text_style(
+            metadata.author_style,
+            default_author_font_size(row_height),
+            false,
+            false,
+        ),
+        simple_text_style(
+            metadata.sequence_style,
+            DEFAULT_SEQUENCE_FONT_SIZE,
+            false,
+            false,
+        ),
         simple_text_style(
             metadata.part_legend_style,
             default_part_legend_font_size(row_height),
+            false,
+            false,
         ),
         simple_text_style(
             metadata.measure_number_style,
             DEFAULT_MEASURE_NUMBER_FONT_SIZE,
+            false,
+            false,
         ),
         simple_text_style(
             metadata.section_label_style,
             DEFAULT_SECTION_LABEL_FONT_SIZE,
+            true,
+            true,
         ),
         simple_text_style(
             metadata.page_number_style,
             default_page_number_font_size(row_height),
+            false,
+            false,
         ),
-        simple_text_style(metadata.part_label_style, DEFAULT_PART_LABEL_FONT_SIZE),
+        simple_text_style(
+            metadata.part_label_style,
+            DEFAULT_PART_LABEL_FONT_SIZE,
+            false,
+            false,
+        ),
     )
 }
 
@@ -223,24 +265,32 @@ fn resolve_text_styles(metadata: &ParsedMetadata, row_height: u32) -> ResolvedTe
             lyrics_font_size,
             DEFAULT_LYRICS_HORIZONTAL_PADDING_PT,
             DEFAULT_LYRIC_CLICK_TARGET_PADDING_PT,
+            false,
+            false,
         ),
         notes: resolve_text_style(
             metadata.notes_style,
             notes_font_size,
             DEFAULT_NOTES_HORIZONTAL_PADDING_PT,
             0,
+            false,
+            false,
         ),
         chords: resolve_text_style(
             metadata.chords_style,
             lyrics_font_size,
             DEFAULT_CHORDS_HORIZONTAL_PADDING_PT,
             0,
+            false,
+            false,
         ),
         note_dash: resolve_text_style(
             metadata.note_dash_style,
             notes_font_size,
             DEFAULT_NOTE_DASH_HORIZONTAL_PADDING_PT,
             0,
+            false,
+            false,
         ),
     }
 }

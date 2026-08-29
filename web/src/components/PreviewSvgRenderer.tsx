@@ -185,6 +185,7 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           fontFamily={textFontFamily(kind.font)}
           fontWeight={kind.weight === 'normal' ? 'normal' : 'bold'}
           fontStyle={kind.italic ? 'italic' : undefined}
+          textDecoration={kind.underline ? 'underline' : undefined}
         >
           {kind.content}
         </text>
@@ -219,6 +220,7 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
               key={spanIndex}
               fontWeight={span.bold ? 'bold' : undefined}
               fontStyle={span.italic ? 'italic' : undefined}
+              textDecoration={span.underline ? 'underline' : undefined}
               fontSize={span.font_size ?? undefined}
             >
               {span.content}

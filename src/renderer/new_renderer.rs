@@ -1,24 +1,19 @@
 use crate::ast::parsed::Offset;
-use crate::compositor::types::{
-    AbsoluteContent, AbsoluteElement, AbsolutePage, DominantBaseline, TextAnchor,
-};
+use crate::compositor::types::{AbsoluteContent, AbsoluteElement, AbsolutePage};
 use crate::render_config::RenderConfig;
-use crate::renderer::new_types::{SvgDocument, SvgElement, SvgKind, SvgVariant};
-use click_targets::{
-    render_measure_click_target, render_note_click_target, render_playback_cursor_target,
-    render_secondary_click_target,
-};
-use directive_line::{render_directive_line, DirectiveLineArgs};
+use crate::renderer::new_types::{SvgDocument, SvgElement};
 use glyph_renderers::{
     render_bar_line, render_chord_symbol, render_horizontal_line, render_lyric, render_lyric_line,
     render_multi_measure_rest, render_note_dash, render_note_head, render_percussion_hit,
     render_rest, render_tie_or_slur, render_tuplet_bracket, render_underline, DotState,
     NoteRenderParams,
 };
+use overlay::render_overlay_element;
 
 mod click_targets;
 mod directive_line;
 mod glyph_renderers;
+mod overlay;
 
 pub fn render_new(pages: &[AbsolutePage], config: &RenderConfig) -> Vec<SvgDocument> {
     pages.iter().map(|page| render_page(page, config)).collect()
@@ -42,6 +37,26 @@ fn render_page(page: &AbsolutePage, config: &RenderConfig) -> SvgDocument {
         note_dash_font_size,
         note_number_width,
         directive_row_offset: config.directive_row_offset,
+        notes_style: GlyphStyle {
+            bold: config.notes_bold,
+            italic: config.notes_italic,
+            underline: config.notes_underline,
+        },
+        chords_style: GlyphStyle {
+            bold: config.chords_bold,
+            italic: config.chords_italic,
+            underline: config.chords_underline,
+        },
+        lyrics_style: GlyphStyle {
+            bold: config.lyrics_bold,
+            italic: config.lyrics_italic,
+            underline: config.lyrics_underline,
+        },
+        note_dash_style: GlyphStyle {
+            bold: config.note_dash_bold,
+            italic: config.note_dash_italic,
+            underline: config.note_dash_underline,
+        },
     };
 
     let elements = page
@@ -57,6 +72,15 @@ fn render_page(page: &AbsolutePage, config: &RenderConfig) -> SvgDocument {
     }
 }
 
+/// A glyph kind's bold/italic/underline, read from `RenderConfig` (see
+/// `Metadata::notes_style`/`chords_style`/`lyrics_style`/`note_dash_style`).
+#[derive(Clone, Copy)]
+struct GlyphStyle {
+    bold: bool,
+    italic: bool,
+    underline: bool,
+}
+
 struct RenderElementParams {
     row_height: f32,
     lyric_font_size: f32,
@@ -66,6 +90,10 @@ struct RenderElementParams {
     note_dash_font_size: f32,
     note_number_width: f32,
     directive_row_offset: Offset,
+    notes_style: GlyphStyle,
+    chords_style: GlyphStyle,
+    lyrics_style: GlyphStyle,
+    note_dash_style: GlyphStyle,
 }
 
 fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<SvgElement> {
@@ -75,11 +103,76 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
         cjk_font_size,
         notes_font_size,
         chords_font_size,
-        note_dash_font_size,
-        note_number_width,
         directive_row_offset,
+        notes_style,
+        chords_style,
+        lyrics_style,
+        ..
     } = params;
     match &elem.content {
+        AbsoluteContent::NoteHead { .. }
+        | AbsoluteContent::Rest { .. }
+        | AbsoluteContent::NoteDash { .. } => render_note_glyph(elem, &elem.content, params),
+        AbsoluteContent::ChordSymbol {
+            text,
+            dotted,
+            double_dotted,
+        } => render_chord_symbol(
+            elem,
+            text,
+            &DotState::new(*dotted, *double_dotted),
+            chords_font_size,
+            *chords_style,
+        ),
+        AbsoluteContent::PercussionHit => {
+            render_percussion_hit(elem, notes_font_size, *notes_style)
+        }
+        AbsoluteContent::Lyric { text, .. } => {
+            render_lyric(elem, text, lyric_font_size, cjk_font_size, *lyrics_style)
+        }
+        AbsoluteContent::LyricLine(s) => {
+            render_lyric_line(elem, s, lyric_font_size, cjk_font_size, *lyrics_style)
+        }
+        AbsoluteContent::MultiMeasureRest { .. }
+        | AbsoluteContent::Underline { .. }
+        | AbsoluteContent::TieOrSlur { .. }
+        | AbsoluteContent::TupletBracket { .. }
+        | AbsoluteContent::BarLine { .. }
+        | AbsoluteContent::HorizontalLine { .. } => {
+            render_simple_glyph(elem, &elem.content, row_height, notes_font_size)
+        }
+        AbsoluteContent::Text { .. }
+        | AbsoluteContent::MeasureHighlight { .. }
+        | AbsoluteContent::ErrorHighlight { .. }
+        | AbsoluteContent::MeasureClickTarget { .. }
+        | AbsoluteContent::BarNumberClickTarget { .. }
+        | AbsoluteContent::PlaybackCursorTarget { .. }
+        | AbsoluteContent::NoteClickTarget { .. }
+        | AbsoluteContent::PartLabelClickTarget { .. }
+        | AbsoluteContent::LyricClickTarget { .. }
+        | AbsoluteContent::LyricLabelClickTarget { .. }
+        | AbsoluteContent::DirectiveLine { .. } => {
+            render_overlay_element(elem, &elem.content, *directive_row_offset)
+        }
+    }
+}
+
+/// The `NoteHead`/`Rest`/`NoteDash` arms of [`render_element`]'s dispatch —
+/// split out to keep that function under clippy's line-count limit.
+fn render_note_glyph(
+    elem: &AbsoluteElement,
+    content: &AbsoluteContent,
+    params: &RenderElementParams,
+) -> Vec<SvgElement> {
+    let RenderElementParams {
+        notes_font_size,
+        note_dash_font_size,
+        note_number_width,
+        notes_style,
+        note_dash_style,
+        ..
+    } = params;
+    match content {
         AbsoluteContent::NoteHead {
             pitch,
             accidental,
@@ -95,6 +188,9 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
             &NoteRenderParams {
                 base_font_size: notes_font_size,
                 note_number_width,
+                bold: notes_style.bold,
+                italic: notes_style.italic,
+                underline: notes_style.underline,
             },
         ),
         AbsoluteContent::Rest {
@@ -106,6 +202,7 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
             &DotState::new(*dotted, *double_dotted),
             notes_font_size,
             *implicit_fill,
+            *notes_style,
         ),
         AbsoluteContent::NoteDash {
             dotted,
@@ -114,21 +211,29 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
             elem,
             &DotState::new(*dotted, *double_dotted),
             *note_dash_font_size,
+            *note_dash_style,
         ),
+        // `render_element`'s outer match exhaustively lists every variant
+        // routed to `render_note_glyph` (just `NoteHead`/`Rest`/`NoteDash`),
+        // so a future `AbsoluteContent` variant fails to compile there
+        // before it could ever reach this arm.
+        _ => Vec::new(),
+    }
+}
+
+/// The glyph-shaped variants of [`render_element`]'s dispatch that need only
+/// `row_height`/`notes_font_size` (no per-kind bold/italic/underline style) —
+/// split out to keep `render_element` under clippy's line-count limit.
+fn render_simple_glyph(
+    elem: &AbsoluteElement,
+    content: &AbsoluteContent,
+    row_height: &f32,
+    notes_font_size: &f32,
+) -> Vec<SvgElement> {
+    match content {
         AbsoluteContent::MultiMeasureRest { count, width } => {
             render_multi_measure_rest(elem, *count, *width, row_height, notes_font_size)
         }
-        AbsoluteContent::ChordSymbol {
-            text,
-            dotted,
-            double_dotted,
-        } => render_chord_symbol(
-            elem,
-            text,
-            &DotState::new(*dotted, *double_dotted),
-            chords_font_size,
-        ),
-        AbsoluteContent::PercussionHit => render_percussion_hit(elem, notes_font_size),
         AbsoluteContent::Underline { width, level: _ } => render_underline(elem, width),
         AbsoluteContent::TieOrSlur { kind: _, width } => {
             render_tie_or_slur(elem, width, row_height)
@@ -138,143 +243,8 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
         }
         AbsoluteContent::BarLine { height } => render_bar_line(elem, height),
         AbsoluteContent::HorizontalLine { width } => render_horizontal_line(elem, width),
-        AbsoluteContent::Lyric { text, .. } => {
-            render_lyric(elem, text, lyric_font_size, cjk_font_size)
-        }
-        AbsoluteContent::LyricLine(s) => render_lyric_line(elem, s, lyric_font_size, cjk_font_size),
-        content => render_overlay_element(elem, content, *directive_row_offset),
-    }
-}
-
-/// The text/overlay half of [`render_element`]'s dispatch, split out for length.
-fn render_overlay_element(
-    elem: &AbsoluteElement,
-    content: &AbsoluteContent,
-    directive_row_offset: Offset,
-) -> Vec<SvgElement> {
-    match content {
-        AbsoluteContent::Text {
-            content,
-            font_size,
-            anchor,
-            baseline,
-            font,
-            weight,
-            italic,
-        } => vec![render_text_content(
-            elem,
-            content,
-            TextContentStyle {
-                font_size: *font_size,
-                anchor: *anchor,
-                baseline: *baseline,
-                font: *font,
-                weight: *weight,
-                italic: *italic,
-            },
-        )],
-        AbsoluteContent::MeasureHighlight { width, height } => {
-            vec![render_highlight_rect(elem, *width, *height, false)]
-        }
-        AbsoluteContent::ErrorHighlight { width, height } => {
-            vec![render_highlight_rect(elem, *width, *height, true)]
-        }
-        AbsoluteContent::MeasureClickTarget {
-            width,
-            height,
-            measure_index,
-            measure_index_end,
-        } => render_measure_click_target(elem, *width, *height, *measure_index, *measure_index_end),
-        AbsoluteContent::PlaybackCursorTarget {
-            width,
-            height,
-            source_part_index,
-            note_id,
-        } => render_playback_cursor_target(elem, *width, *height, *source_part_index, *note_id),
-        AbsoluteContent::NoteClickTarget {
-            width,
-            height,
-            source_part_index,
-            note_id,
-        } => render_note_click_target(elem, *width, *height, *source_part_index, *note_id),
-        AbsoluteContent::PartLabelClickTarget { .. }
-        | AbsoluteContent::LyricClickTarget { .. }
-        | AbsoluteContent::LyricLabelClickTarget { .. }
-        | AbsoluteContent::BarNumberClickTarget { .. } => {
-            render_secondary_click_target(elem, content)
-        }
-        AbsoluteContent::DirectiveLine {
-            bar_number,
-            label,
-            label_font_size,
-            label_box_height,
-            spans,
-            spans_x_offset,
-            label_x_offset,
-            apply_row_offset,
-        } => render_directive_line(
-            elem,
-            &DirectiveLineArgs {
-                bar_number,
-                label,
-                label_font_size: *label_font_size,
-                label_box_height: *label_box_height,
-                spans,
-                spans_x_offset: *spans_x_offset,
-                label_x_offset: *label_x_offset,
-                apply_row_offset: *apply_row_offset,
-                directive_row_offset,
-            },
-        ),
+        // See the matching comment in `render_note_glyph`: `render_element`'s
+        // outer match exhaustively routes this fixed set of variants here.
         _ => Vec::new(),
-    }
-}
-
-#[derive(Clone, Copy)]
-struct TextContentStyle {
-    font_size: f32,
-    anchor: TextAnchor,
-    baseline: DominantBaseline,
-    font: crate::compositor::types::FontFamily,
-    weight: crate::compositor::types::FontWeight,
-    italic: bool,
-}
-
-fn render_text_content(
-    elem: &AbsoluteElement,
-    content: &str,
-    style: TextContentStyle,
-) -> SvgElement {
-    SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: Some(SvgVariant::Text),
-        kind: SvgKind::Text {
-            content: content.to_string(),
-            font_size: style.font_size,
-            anchor: style.anchor,
-            baseline: style.baseline,
-            font: style.font,
-            weight: style.weight,
-            italic: style.italic,
-        },
-    }
-}
-
-fn render_highlight_rect(
-    elem: &AbsoluteElement,
-    width: f32,
-    height: f32,
-    is_error: bool,
-) -> SvgElement {
-    SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: None,
-        kind: if is_error {
-            SvgKind::ErrorRect { width, height }
-        } else {
-            SvgKind::Rect { width, height }
-        },
     }
 }

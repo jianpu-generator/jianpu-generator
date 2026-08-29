@@ -41,6 +41,7 @@ fn test_config() -> RenderConfig {
         chords_horizontal_padding_pt: 4,
         lyrics_horizontal_padding_pt: 4,
         note_dash_horizontal_padding_pt: 4,
+        ..Default::default()
     }
 }
 
@@ -103,6 +104,7 @@ fn measure_rod_widens_to_fit_a_long_directive_line() {
         &decoration,
         config.measure_number_font_size as f32,
         config.section_label_font_size as f32,
+        config.section_label_bold,
     );
     let measure_layout = build_measure_column_layout(&system, &config);
 
@@ -185,6 +187,7 @@ fn two_adjacent_directive_lines_do_not_overlap() {
         &decoration0,
         config.measure_number_font_size as f32,
         config.section_label_font_size as f32,
+        config.section_label_bold,
     );
     let measure_layout = build_measure_column_layout(&system, &config);
     let total_rod: f32 = measure_layout.iter().map(|m| m.rod_pt).sum();

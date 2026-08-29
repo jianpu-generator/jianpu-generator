@@ -31,6 +31,7 @@ pub(super) fn cfg() -> RenderConfig {
         chords_horizontal_padding_pt: 4,
         lyrics_horizontal_padding_pt: 4,
         note_dash_horizontal_padding_pt: 4,
+        ..Default::default()
     }
 }
 
@@ -46,6 +47,7 @@ pub(super) fn bpm_span() -> TextSpan {
         content: "120".to_string(),
         bold: false,
         italic: false,
+        underline: false,
         font_size: 12.0,
     }
 }

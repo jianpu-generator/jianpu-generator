@@ -20,6 +20,7 @@ fn resolve_test_score(input: &str) -> Vec<compositor::types::AbsolutePage> {
         author_font_size: score.metadata.author_style.font_size as f32,
         sequence_font_size: score.metadata.sequence.font_size as f32,
         part_legend_font_size: score.metadata.part_legend.font_size as f32,
+        ..Default::default()
     };
     let compile_result = compiler::compile(&score);
     let compile_result = consolidator::consolidate(compile_result);
@@ -38,6 +39,7 @@ fn resolve_test_score(input: &str) -> Vec<compositor::types::AbsolutePage> {
                 section_label: config.section_label_font_size as f32,
                 section_label_vertical_padding_pt: config.section_label_vertical_padding_pt(),
                 part_label: config.part_label_font_size as f32,
+                ..Default::default()
             },
             paddings: config.element_paddings(),
             page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),

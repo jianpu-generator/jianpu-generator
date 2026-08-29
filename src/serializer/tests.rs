@@ -20,6 +20,7 @@ fn text_doc(content: &str) -> SvgDocument {
                 font: FontFamily::SansSerif,
                 weight: FontWeight::Normal,
                 italic: false,
+                underline: false,
             },
         }],
     }

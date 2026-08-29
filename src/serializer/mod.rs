@@ -44,6 +44,7 @@ fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) {
         font,
         weight,
         italic,
+        underline,
     } = kind
     else {
         return;
@@ -72,8 +73,13 @@ fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) {
     } else {
         ""
     };
+    let decoration_str = if *underline {
+        "text-decoration=\"underline\" "
+    } else {
+        ""
+    };
     out.push_str(&format!(
-        r#"<text x="{:.1}" y="{:.1}"{} font-size="{:.1}" text-anchor="{}" dominant-baseline="{}" font-family='{}' font-weight="{}" {}>{}</text>"#,
+        r#"<text x="{:.1}" y="{:.1}"{} font-size="{:.1}" text-anchor="{}" dominant-baseline="{}" font-family='{}' font-weight="{}" {}{}>{}</text>"#,
         el.x,
         el.y,
         variant_attr(el.variant),
@@ -83,6 +89,7 @@ fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) {
         font_str,
         weight_str,
         style_str,
+        decoration_str,
         escape_xml(content)
     ));
 }
@@ -151,6 +158,9 @@ fn serialize_text_with_tspans(
         }
         if span.italic {
             attrs.push_str(r#" font-style="italic""#);
+        }
+        if span.underline {
+            attrs.push_str(r#" text-decoration="underline""#);
         }
         if let Some(fs) = span.font_size {
             attrs.push_str(&format!(r#" font-size="{fs:.1}""#));

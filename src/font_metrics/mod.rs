@@ -227,12 +227,13 @@ pub(crate) fn section_label_box_height(font_size: f32) -> f32 {
 
 /// Rendered width (in points) of a section label's bounding box, including
 /// padding on both sides, measured from real font-metrics glyph advances
-/// rather than a character-bucket heuristic. A section label is always bold
-/// (see `section_label_span` in `content_conversion.rs`).
-pub(crate) fn section_label_box_width(label: &str, font_size: f32) -> f32 {
+/// rather than a character-bucket heuristic. `bold` must match the weight
+/// the label is actually rendered with (see `section_label_span` in
+/// `content_conversion.rs`) so the reserved/drawn box matches the glyphs.
+pub(crate) fn section_label_box_width(label: &str, font_size: f32, bold: bool) -> f32 {
     label
         .chars()
-        .map(|c| char_advance_width(c, font_size, true))
+        .map(|c| char_advance_width(c, font_size, bold))
         .sum::<f32>()
         + section_label_box_padding(font_size) * 2.0
 }
@@ -256,6 +257,7 @@ pub(crate) fn directive_line_width(
     label: Option<&str>,
     spans: &[TextSpan],
     section_label_font_size: f32,
+    section_label_bold: bool,
 ) -> f32 {
     let bar_number_width = bar_number.map(span_width).unwrap_or(0.0);
     let spans_width: f32 = spans.iter().map(span_width).sum();
@@ -266,8 +268,8 @@ pub(crate) fn directive_line_width(
             } else {
                 0.0
             };
-            let label_box_right =
-                label_x_offset + section_label_box_width(label_str, section_label_font_size);
+            let label_box_right = label_x_offset
+                + section_label_box_width(label_str, section_label_font_size, section_label_bold);
             let spans_x_offset = label_box_right + DIRECTIVE_LINE_ELEMENT_GAP;
             bar_number_width
                 .max(label_box_right)

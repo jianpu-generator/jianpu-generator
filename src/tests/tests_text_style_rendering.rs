@@ -23,6 +23,7 @@ fn single_note_system_height_pt(notes_metadata_line: &str) -> f32 {
         author_font_size: score.metadata.author_style.font_size as f32,
         sequence_font_size: score.metadata.sequence.font_size as f32,
         part_legend_font_size: score.metadata.part_legend.font_size as f32,
+        ..Default::default()
     };
     let compile_result = compiler::compile(&score);
     let compile_result = consolidator::consolidate(compile_result);
@@ -58,6 +59,7 @@ fn section_label_vertical_padding_pt_grows_the_label_box_height() {
             author_font_size: score.metadata.author_style.font_size as f32,
             sequence_font_size: score.metadata.sequence.font_size as f32,
             part_legend_font_size: score.metadata.part_legend.font_size as f32,
+            ..Default::default()
         };
         let compile_result = compiler::compile(&score);
         let compile_result = consolidator::consolidate(compile_result);
@@ -76,6 +78,7 @@ fn section_label_vertical_padding_pt_grows_the_label_box_height() {
                     section_label: config.section_label_font_size as f32,
                     section_label_vertical_padding_pt: config.section_label_vertical_padding_pt(),
                     part_label: config.part_label_font_size as f32,
+                    ..Default::default()
                 },
                 paddings: config.element_paddings(),
                 page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
@@ -130,6 +133,7 @@ fn page_number_vertical_padding_pt_pushes_the_footer_text_up() {
             author_font_size: score.metadata.author_style.font_size as f32,
             sequence_font_size: score.metadata.sequence.font_size as f32,
             part_legend_font_size: score.metadata.part_legend.font_size as f32,
+            ..Default::default()
         };
         let compile_result = compiler::compile(&score);
         let compile_result = consolidator::consolidate(compile_result);
@@ -148,6 +152,7 @@ fn page_number_vertical_padding_pt_pushes_the_footer_text_up() {
                     section_label: config.section_label_font_size as f32,
                     section_label_vertical_padding_pt: config.section_label_vertical_padding_pt(),
                     part_label: config.part_label_font_size as f32,
+                    ..Default::default()
                 },
                 paddings: config.element_paddings(),
                 page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),

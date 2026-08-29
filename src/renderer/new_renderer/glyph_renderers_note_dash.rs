@@ -1,13 +1,15 @@
-use super::DotState;
+use super::{glyph_weight, DotState};
 use crate::compositor::types::AbsoluteElement;
-use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
+use crate::compositor::types::{DominantBaseline, FontFamily, TextAnchor};
 use crate::font_metrics;
+use crate::renderer::new_renderer::GlyphStyle;
 use crate::renderer::new_types::{SvgElement, SvgKind, SvgVariant};
 
 pub(in crate::renderer::new_renderer) fn render_note_dash(
     elem: &AbsoluteElement,
     dots: &DotState,
     notes_font_size: f32,
+    style: GlyphStyle,
 ) -> Vec<SvgElement> {
     // The dash and its augmentation dot(s), if any, draw as one flush-left
     // text run, matching `render_note_head`/`render_rest`/
@@ -29,8 +31,9 @@ pub(in crate::renderer::new_renderer) fn render_note_dash(
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
             font: FontFamily::Monospace,
-            weight: FontWeight::Normal,
-            italic: false,
+            weight: glyph_weight(style.bold),
+            italic: style.italic,
+            underline: style.underline,
         },
     }]
 }

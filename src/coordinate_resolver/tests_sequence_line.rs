@@ -79,6 +79,7 @@ fn sequence_line_renders_label_and_omit_parts_spans() {
                 section_label: 12.0,
                 section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
+                ..Default::default()
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
@@ -138,6 +139,7 @@ fn sequence_line_renders_only_parts_suffix_without_a_dash() {
                 section_label: 12.0,
                 section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
+                ..Default::default()
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,

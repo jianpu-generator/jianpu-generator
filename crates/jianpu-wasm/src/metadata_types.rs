@@ -31,6 +31,9 @@ pub struct TextStyleDefaultsOut {
     pub font_size: u32,
     pub horizontal_padding_pt: u32,
     pub vertical_padding_pt: u32,
+    pub bold: bool,
+    pub italic: bool,
+    pub underline: bool,
 }
 
 /// Default values applied to `# metadata` fields left unset in the source.
@@ -75,6 +78,9 @@ fn text_style(font_size: u32) -> TextStyleDefaultsOut {
         font_size,
         horizontal_padding_pt: 0,
         vertical_padding_pt: 0,
+        bold: false,
+        italic: false,
+        underline: false,
     }
 }
 
@@ -89,12 +95,19 @@ impl Default for MetadataDefaultsOut {
             parts_list_columns: DEFAULT_PARTS_LIST_COLUMNS,
             part_label_width_pt: DEFAULT_PART_LABEL_WIDTH_PT,
             title: text_style(default_title_font_size(DEFAULT_ROW_HEIGHT)),
-            subtitle: text_style(default_subtitle_font_size(DEFAULT_ROW_HEIGHT)),
+            subtitle: TextStyleDefaultsOut {
+                italic: true,
+                ..text_style(default_subtitle_font_size(DEFAULT_ROW_HEIGHT))
+            },
             author: text_style(default_author_font_size(DEFAULT_ROW_HEIGHT)),
             sequence: text_style(DEFAULT_SEQUENCE_FONT_SIZE),
             part_legend: text_style(default_part_legend_font_size(DEFAULT_ROW_HEIGHT)),
             measure_number: text_style(DEFAULT_MEASURE_NUMBER_FONT_SIZE),
-            section_label: text_style(DEFAULT_SECTION_LABEL_FONT_SIZE),
+            section_label: TextStyleDefaultsOut {
+                bold: true,
+                italic: true,
+                ..text_style(DEFAULT_SECTION_LABEL_FONT_SIZE)
+            },
             part_label: text_style(DEFAULT_PART_LABEL_FONT_SIZE),
             page_number: text_style(default_page_number_font_size(DEFAULT_ROW_HEIGHT)),
             lyrics: TextStyleDefaultsOut {

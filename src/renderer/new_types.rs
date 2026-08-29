@@ -183,6 +183,7 @@ pub enum SvgKind {
         font: FontFamily,
         weight: FontWeight,
         italic: bool,
+        underline: bool,
     },
     Line {
         x2: f32,
@@ -239,5 +240,6 @@ pub struct TspanData {
     pub content: String,
     pub bold: bool,
     pub italic: bool,
+    pub underline: bool,
     pub font_size: Option<f32>,
 }

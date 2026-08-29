@@ -21,6 +21,7 @@ fn hdr() -> Header {
         author_font_size: 18.0,
         sequence_font_size: 12.0,
         part_legend_font_size: 12.0,
+        ..Default::default()
     }
 }
 
@@ -48,6 +49,7 @@ fn cfg_wide() -> RenderConfig {
         chords_horizontal_padding_pt: 4,
         lyrics_horizontal_padding_pt: 4,
         note_dash_horizontal_padding_pt: 4,
+        ..Default::default()
     }
 }
 

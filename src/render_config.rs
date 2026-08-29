@@ -3,7 +3,7 @@ use crate::ast::parsed::Offset;
 use crate::coordinate_resolver::{ElementPaddings, LyricFontSizes};
 use crate::grid_layout::layout::LyricSizing;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct RenderConfig {
     pub row_height: u32,
     pub note_number_width: u32,
@@ -30,6 +30,38 @@ pub struct RenderConfig {
     /// Font size in points of the footer page number (see
     /// `Metadata::page_number_font_size`).
     pub page_number_font_size: u32,
+    /// See `Metadata::notes_style`.
+    pub notes_bold: bool,
+    pub notes_italic: bool,
+    pub notes_underline: bool,
+    /// See `Metadata::chords_style`.
+    pub chords_bold: bool,
+    pub chords_italic: bool,
+    pub chords_underline: bool,
+    /// See `Metadata::lyrics_style`.
+    pub lyrics_bold: bool,
+    pub lyrics_italic: bool,
+    pub lyrics_underline: bool,
+    /// See `Metadata::note_dash_style`.
+    pub note_dash_bold: bool,
+    pub note_dash_italic: bool,
+    pub note_dash_underline: bool,
+    /// See `Metadata::measure_number_style`.
+    pub measure_number_bold: bool,
+    pub measure_number_italic: bool,
+    pub measure_number_underline: bool,
+    /// See `Metadata::section_label_style`.
+    pub section_label_bold: bool,
+    pub section_label_italic: bool,
+    pub section_label_underline: bool,
+    /// See `Metadata::part_label_style`.
+    pub part_label_bold: bool,
+    pub part_label_italic: bool,
+    pub part_label_underline: bool,
+    /// See `Metadata::page_number_style`.
+    pub page_number_bold: bool,
+    pub page_number_italic: bool,
+    pub page_number_underline: bool,
     /// Extra vertical padding in points around a lyric syllable's
     /// click-target box (see `Metadata::lyric_click_target_padding_pt`).
     pub lyric_click_target_padding_pt: u32,
@@ -74,6 +106,30 @@ impl RenderConfig {
             section_label_font_size: meta.section_label.font_size,
             part_label_font_size: meta.part_label.font_size,
             page_number_font_size: meta.page_number.font_size,
+            notes_bold: meta.notes.bold,
+            notes_italic: meta.notes.italic,
+            notes_underline: meta.notes.underline,
+            chords_bold: meta.chords.bold,
+            chords_italic: meta.chords.italic,
+            chords_underline: meta.chords.underline,
+            lyrics_bold: meta.lyrics.bold,
+            lyrics_italic: meta.lyrics.italic,
+            lyrics_underline: meta.lyrics.underline,
+            note_dash_bold: meta.note_dash.bold,
+            note_dash_italic: meta.note_dash.italic,
+            note_dash_underline: meta.note_dash.underline,
+            measure_number_bold: meta.measure_number.bold,
+            measure_number_italic: meta.measure_number.italic,
+            measure_number_underline: meta.measure_number.underline,
+            section_label_bold: meta.section_label.bold,
+            section_label_italic: meta.section_label.italic,
+            section_label_underline: meta.section_label.underline,
+            part_label_bold: meta.part_label.bold,
+            part_label_italic: meta.part_label.italic,
+            part_label_underline: meta.part_label.underline,
+            page_number_bold: meta.page_number.bold,
+            page_number_italic: meta.page_number.italic,
+            page_number_underline: meta.page_number.underline,
             lyric_click_target_padding_pt: meta.lyrics.vertical_padding_pt,
             notes_vertical_padding_pt: meta.notes.vertical_padding_pt,
             section_label_vertical_padding_pt: meta.section_label.vertical_padding_pt,
@@ -202,6 +258,7 @@ mod tests {
             font_size,
             horizontal_padding_pt: 4,
             vertical_padding_pt: 0,
+            ..Default::default()
         }
     }
 

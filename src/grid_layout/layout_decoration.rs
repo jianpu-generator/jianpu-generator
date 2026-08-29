@@ -6,7 +6,8 @@ use crate::grid_layout::layout::{
     MUSIC_START_COL,
 };
 use crate::grid_layout::types::{
-    GridContent, GridElement, GridRow, HAlign, Header, MeasureColumnLayout, PartListEntry, VAlign,
+    GridContent, GridElement, GridRow, HAlign, Header, MeasureColumnLayout, PartListEntry,
+    TextStyleFlags, VAlign,
 };
 
 /// Whether `block`'s (index `index` within its system) `DirectiveLine`
@@ -41,6 +42,7 @@ pub(crate) fn directive_line_rod_width(
     dec: &Decoration,
     measure_number_font_size: f32,
     section_label_font_size: f32,
+    section_label_bold: bool,
 ) -> f32 {
     let Decoration::DirectiveLine {
         label,
@@ -53,6 +55,7 @@ pub(crate) fn directive_line_rod_width(
         content: n.to_string(),
         bold: false,
         italic: false,
+        underline: false,
         font_size: measure_number_font_size,
     });
     let mut spans = Vec::new();
@@ -61,6 +64,7 @@ pub(crate) fn directive_line_rod_width(
             content: format!("  {key_str}"),
             bold: false,
             italic: false,
+            underline: false,
             font_size: 12.0,
         });
     }
@@ -69,6 +73,7 @@ pub(crate) fn directive_line_rod_width(
             content: format!("  \u{2669}={b}"),
             bold: false,
             italic: false,
+            underline: false,
             font_size: 12.0,
         });
     }
@@ -77,6 +82,7 @@ pub(crate) fn directive_line_rod_width(
             content: format!("  {n}/{d}"),
             bold: false,
             italic: false,
+            underline: false,
             font_size: 12.0,
         });
     }
@@ -85,6 +91,7 @@ pub(crate) fn directive_line_rod_width(
         label.as_deref(),
         &spans,
         section_label_font_size,
+        section_label_bold,
     )
 }
 
@@ -214,8 +221,9 @@ fn make_title_row(header: &Header, base: f32) -> Option<GridRow> {
             content: GridContent::Text {
                 content: title.clone(),
                 font_size: header.title_font_size,
-                bold: false,
-                italic: false,
+                bold: header.title_bold,
+                italic: header.title_italic,
+                underline: header.title_underline,
                 is_title: true,
             },
         }],
@@ -233,8 +241,9 @@ fn make_subtitle_author_row(header: &Header, base: f32) -> GridRow {
             content: GridContent::Text {
                 content: subtitle.clone(),
                 font_size: header.subtitle_font_size,
-                bold: false,
-                italic: true,
+                bold: header.subtitle_bold,
+                italic: header.subtitle_italic,
+                underline: header.subtitle_underline,
                 is_title: true,
             },
         });
@@ -248,8 +257,9 @@ fn make_subtitle_author_row(header: &Header, base: f32) -> GridRow {
             content: GridContent::Text {
                 content: author.clone(),
                 font_size: header.author_font_size,
-                bold: false,
-                italic: false,
+                bold: header.author_bold,
+                italic: header.author_italic,
+                underline: header.author_underline,
                 is_title: true,
             },
         });
@@ -279,6 +289,11 @@ pub(crate) fn make_header_rows(
             base,
             header.parts_list_columns,
             header.part_legend_font_size,
+            TextStyleFlags {
+                bold: header.part_legend_bold,
+                italic: header.part_legend_italic,
+                underline: header.part_legend_underline,
+            },
         )
     } else {
         vec![]
@@ -297,6 +312,7 @@ fn make_part_list_rows(
     base: f32,
     columns: u32,
     font_size: f32,
+    style: TextStyleFlags,
 ) -> Vec<GridRow> {
     entries
         .chunks(columns as usize)
@@ -316,8 +332,9 @@ fn make_part_list_rows(
                     content: GridContent::Text {
                         content: format!("{} \u{2014} {}", entry.abbreviation, entry.display_name),
                         font_size,
-                        bold: false,
-                        italic: false,
+                        bold: style.bold,
+                        italic: style.italic,
+                        underline: style.underline,
                         is_title: false,
                     },
                 })

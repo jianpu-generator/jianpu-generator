@@ -25,6 +25,7 @@ fn header() -> Header {
         author_font_size: 18.0,
         sequence_font_size: 12.0,
         part_legend_font_size: 12.0,
+        ..Default::default()
     }
 }
 

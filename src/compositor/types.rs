@@ -86,6 +86,7 @@ pub enum AbsoluteContent {
         font: FontFamily,
         weight: FontWeight,
         italic: bool,
+        underline: bool,
     },
     MeasureHighlight {
         width: f32,
@@ -188,6 +189,10 @@ pub enum AbsoluteContent {
         /// Font size in points of `label` (see `Metadata::section_label_font_size`).
         /// Meaningless when `label` is `None`.
         label_font_size: f32,
+        /// See `Metadata::section_label_style`. Meaningless when `label` is `None`.
+        label_bold: bool,
+        label_italic: bool,
+        label_underline: bool,
         /// Height in points of `label`'s rendered background box (see
         /// `font_metrics::section_label_box_height`), already including
         /// `Metadata::section_label.vertical_padding_pt`. Meaningless when
@@ -217,6 +222,7 @@ pub struct TextSpan {
     pub content: String,
     pub bold: bool,
     pub italic: bool,
+    pub underline: bool,
     pub font_size: f32,
 }
 
