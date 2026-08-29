@@ -1,4 +1,4 @@
-use crate::ast::parsed::{Offset, ParsedMetadata};
+use crate::ast::parsed::{Offset, ParsedMetadata, TextStyle};
 use crate::error::{RecoverableError, Span};
 
 fn span_of_key_in_line(byte_offset: usize, line: &str, key_raw: &str, key: &str) -> Span {
@@ -83,6 +83,71 @@ fn parse_bool_field(
     }
 }
 
+/// Parses a `{ field: value, field: value, ... }` object literal into `target`'s
+/// components. `key` is the metadata key the object was assigned to (e.g. `lyrics`),
+/// used to qualify unknown-field errors as `<key>.<field>`.
+fn parse_text_style_object(
+    target: &mut TextStyle,
+    key: &str,
+    key_span: Span,
+    value: &str,
+    value_span: &Span,
+    errors: &mut Vec<RecoverableError>,
+) {
+    let trimmed = value.trim();
+    if !trimmed.starts_with('{') || !trimmed.ends_with('}') || trimmed.len() < 2 {
+        errors.push(RecoverableError::metadata_malformed_line(
+            *value_span,
+            value,
+        ));
+        return;
+    }
+    let inner = &trimmed[1..trimmed.len() - 1];
+    for part in inner.split(',') {
+        let part = part.trim();
+        if part.is_empty() {
+            continue;
+        }
+        let Some((field_name, field_value)) = part.split_once(':') else {
+            errors.push(RecoverableError::metadata_malformed_line(
+                *value_span,
+                value,
+            ));
+            continue;
+        };
+        let field_name = field_name.trim();
+        let field_value = field_value.trim();
+        if field_value.is_empty() {
+            errors.push(RecoverableError::metadata_malformed_line(
+                *value_span,
+                value,
+            ));
+            continue;
+        }
+        let qualified_field = format!("{key}.{field_name}");
+        let field_target = match field_name {
+            "font_size" => &mut target.font_size,
+            "horizontal_padding_pt" => &mut target.horizontal_padding_pt,
+            "vertical_padding_pt" => &mut target.vertical_padding_pt,
+            "width_pt" => &mut target.width_pt,
+            _ => {
+                errors.push(RecoverableError::metadata_unknown_field(
+                    key_span,
+                    &qualified_field,
+                ));
+                continue;
+            }
+        };
+        parse_numeric_field(
+            field_target,
+            &qualified_field,
+            field_value,
+            value_span,
+            errors,
+        );
+    }
+}
+
 #[derive(Default)]
 struct MetadataAccumulator {
     title: Option<String>,
@@ -91,25 +156,20 @@ struct MetadataAccumulator {
     row_height: Option<u32>,
     max_measures_per_system: Option<u32>,
     note_number_width: Option<u32>,
-    part_label_width_pt: Option<u32>,
     parts_list_columns: Option<u32>,
-    lyrics_font_size: Option<u32>,
-    notes_font_size: Option<u32>,
-    chords_font_size: Option<u32>,
-    title_font_size: Option<u32>,
-    subtitle_font_size: Option<u32>,
-    author_font_size: Option<u32>,
-    sequence_font_size: Option<u32>,
-    part_legend_font_size: Option<u32>,
-    measure_number_font_size: Option<u32>,
-    section_label_font_size: Option<u32>,
-    part_label_font_size: Option<u32>,
-    page_number_font_size: Option<u32>,
-    lyric_click_target_padding_pt: Option<u32>,
-    notes_horizontal_padding_pt: Option<u32>,
-    chords_horizontal_padding_pt: Option<u32>,
-    lyrics_horizontal_padding_pt: Option<u32>,
-    note_dash_horizontal_padding_pt: Option<u32>,
+    title_style: TextStyle,
+    subtitle_style: TextStyle,
+    author_style: TextStyle,
+    sequence_style: TextStyle,
+    part_legend_style: TextStyle,
+    measure_number_style: TextStyle,
+    section_label_style: TextStyle,
+    page_number_style: TextStyle,
+    part_label_style: TextStyle,
+    lyrics_style: TextStyle,
+    notes_style: TextStyle,
+    chords_style: TextStyle,
+    note_dash_style: TextStyle,
     merge_duplicate_measures_across_parts: Option<bool>,
     hide_resting_parts: Option<bool>,
     hide_system_dividers: Option<bool>,
@@ -124,25 +184,26 @@ impl MetadataAccumulator {
             "row_height" => Some(&mut self.row_height),
             "max_measures_per_system" => Some(&mut self.max_measures_per_system),
             "note_number_width" => Some(&mut self.note_number_width),
-            "part_label_width_pt" => Some(&mut self.part_label_width_pt),
             "parts_list_columns" => Some(&mut self.parts_list_columns),
-            "lyrics_font_size" => Some(&mut self.lyrics_font_size),
-            "notes_font_size" => Some(&mut self.notes_font_size),
-            "chords_font_size" => Some(&mut self.chords_font_size),
-            "title_font_size" => Some(&mut self.title_font_size),
-            "subtitle_font_size" => Some(&mut self.subtitle_font_size),
-            "author_font_size" => Some(&mut self.author_font_size),
-            "sequence_font_size" => Some(&mut self.sequence_font_size),
-            "part_legend_font_size" => Some(&mut self.part_legend_font_size),
-            "measure_number_font_size" => Some(&mut self.measure_number_font_size),
-            "section_label_font_size" => Some(&mut self.section_label_font_size),
-            "part_label_font_size" => Some(&mut self.part_label_font_size),
-            "page_number_font_size" => Some(&mut self.page_number_font_size),
-            "lyric_click_target_padding_pt" => Some(&mut self.lyric_click_target_padding_pt),
-            "notes_horizontal_padding_pt" => Some(&mut self.notes_horizontal_padding_pt),
-            "chords_horizontal_padding_pt" => Some(&mut self.chords_horizontal_padding_pt),
-            "lyrics_horizontal_padding_pt" => Some(&mut self.lyrics_horizontal_padding_pt),
-            "note_dash_horizontal_padding_pt" => Some(&mut self.note_dash_horizontal_padding_pt),
+            _ => None,
+        }
+    }
+
+    /// Text-kind keys that are *only* ever assigned a `{ ... }` style object (unlike
+    /// `title`/`subtitle`/`author`, which are also assigned a plain string for their
+    /// text content — see `apply_field`).
+    fn text_style_only_field_mut(&mut self, key: &str) -> Option<&mut TextStyle> {
+        match key {
+            "sequence" => Some(&mut self.sequence_style),
+            "part_legend" => Some(&mut self.part_legend_style),
+            "measure_number" => Some(&mut self.measure_number_style),
+            "section_label" => Some(&mut self.section_label_style),
+            "page_number" => Some(&mut self.page_number_style),
+            "part_label" => Some(&mut self.part_label_style),
+            "lyrics" => Some(&mut self.lyrics_style),
+            "notes" => Some(&mut self.notes_style),
+            "chords" => Some(&mut self.chords_style),
+            "note_dash" => Some(&mut self.note_dash_style),
             _ => None,
         }
     }
@@ -158,9 +219,36 @@ impl MetadataAccumulator {
         if let Some(target) = self.numeric_field_mut(key) {
             return parse_numeric_field(target, key, value, value_span, errors);
         }
+        if let Some(target) = self.text_style_only_field_mut(key) {
+            return parse_text_style_object(target, key, key_span, value, value_span, errors);
+        }
         match key {
+            "title" if value.trim_start().starts_with('{') => parse_text_style_object(
+                &mut self.title_style,
+                key,
+                key_span,
+                value,
+                value_span,
+                errors,
+            ),
             "title" => self.title = Some(value.to_string()),
+            "subtitle" if value.trim_start().starts_with('{') => parse_text_style_object(
+                &mut self.subtitle_style,
+                key,
+                key_span,
+                value,
+                value_span,
+                errors,
+            ),
             "subtitle" => self.subtitle = Some(value.to_string()),
+            "author" if value.trim_start().starts_with('{') => parse_text_style_object(
+                &mut self.author_style,
+                key,
+                key_span,
+                value,
+                value_span,
+                errors,
+            ),
             "author" => self.author = Some(value.to_string()),
             "merge_duplicate_measures_across_parts" => parse_bool_field(
                 &mut self.merge_duplicate_measures_across_parts,
@@ -234,25 +322,20 @@ pub fn parse_metadata(
             row_height: accumulator.row_height,
             max_measures_per_system: accumulator.max_measures_per_system,
             note_number_width: accumulator.note_number_width,
-            part_label_width_pt: accumulator.part_label_width_pt,
             parts_list_columns: accumulator.parts_list_columns,
-            lyrics_font_size: accumulator.lyrics_font_size,
-            notes_font_size: accumulator.notes_font_size,
-            chords_font_size: accumulator.chords_font_size,
-            title_font_size: accumulator.title_font_size,
-            subtitle_font_size: accumulator.subtitle_font_size,
-            author_font_size: accumulator.author_font_size,
-            sequence_font_size: accumulator.sequence_font_size,
-            part_legend_font_size: accumulator.part_legend_font_size,
-            measure_number_font_size: accumulator.measure_number_font_size,
-            section_label_font_size: accumulator.section_label_font_size,
-            part_label_font_size: accumulator.part_label_font_size,
-            page_number_font_size: accumulator.page_number_font_size,
-            lyric_click_target_padding_pt: accumulator.lyric_click_target_padding_pt,
-            notes_horizontal_padding_pt: accumulator.notes_horizontal_padding_pt,
-            chords_horizontal_padding_pt: accumulator.chords_horizontal_padding_pt,
-            lyrics_horizontal_padding_pt: accumulator.lyrics_horizontal_padding_pt,
-            note_dash_horizontal_padding_pt: accumulator.note_dash_horizontal_padding_pt,
+            title_style: accumulator.title_style,
+            subtitle_style: accumulator.subtitle_style,
+            author_style: accumulator.author_style,
+            sequence_style: accumulator.sequence_style,
+            part_legend_style: accumulator.part_legend_style,
+            measure_number_style: accumulator.measure_number_style,
+            section_label_style: accumulator.section_label_style,
+            page_number_style: accumulator.page_number_style,
+            part_label_style: accumulator.part_label_style,
+            lyrics_style: accumulator.lyrics_style,
+            notes_style: accumulator.notes_style,
+            chords_style: accumulator.chords_style,
+            note_dash_style: accumulator.note_dash_style,
             merge_duplicate_measures_across_parts: accumulator
                 .merge_duplicate_measures_across_parts,
             hide_resting_parts: accumulator.hide_resting_parts,

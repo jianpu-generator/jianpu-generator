@@ -1,10 +1,19 @@
-import type { MetadataDefaults } from '../utils/metadataDefaults'
+import type {
+  MetadataDefaults,
+  TextStyleDefaults,
+} from '../utils/metadataDefaults'
 import { metadataFieldHelp } from '../utils/metadataFieldHelp'
-import type { MetadataKey, ParsedMetadataFields } from '../utils/metadataSource'
+import type {
+  MetadataFieldKey,
+  ParsedMetadataFields,
+  TextStyleComponent,
+  TextStyleKind,
+} from '../utils/metadataSource'
 import {
   CheckboxFieldRow,
   NumberFieldRow,
   TextFieldRow,
+  TextStyleRow,
 } from './MetadataFieldRows'
 
 export interface MetadataFieldsTableBodyProps {
@@ -13,13 +22,18 @@ export interface MetadataFieldsTableBodyProps {
   showHelp: (label: string, help: string) => void
   onTitleChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   setText: (
-    key: MetadataKey,
+    key: MetadataFieldKey,
   ) => (e: React.ChangeEvent<HTMLInputElement>) => void
   setNumber: (
-    key: MetadataKey,
+    key: MetadataFieldKey,
   ) => (e: React.ChangeEvent<HTMLInputElement>) => void
   setYesNo: (
-    key: MetadataKey,
+    key: MetadataFieldKey,
+  ) => (e: React.ChangeEvent<HTMLInputElement>) => void
+  setStyle: (
+    kind: TextStyleKind,
+  ) => (
+    component: TextStyleComponent,
   ) => (e: React.ChangeEvent<HTMLInputElement>) => void
   numOrUndef: (n: number | null | undefined) => string | undefined
   titleFontSizeDefault: number | null
@@ -28,7 +42,24 @@ export interface MetadataFieldsTableBodyProps {
   partLegendFontSizeDefault: number | null
   lyricsFontSizeDefault: number | null
   effectiveLyricsFontSize: number | null
+  effectiveNotesFontSize: number | null
   pageNumberFontSizeDefault: number | null
+}
+
+/** Overrides one kind's static `d?.<kind>` default with a live,
+ * `row_height`- (or `lyrics_font_size`-) aware `font_size`, for the kinds
+ * whose real default isn't a flat constant (see
+ * `MetadataFieldsTableBodyProps`'s `*FontSizeDefault`/`effective*FontSize`
+ * fields, resolved by `useFontSizeDefaults`/`EditMetadataModal`). Falls
+ * back to the static snapshot (or `null`) when the live value isn't known
+ * yet.
+ */
+function stylePlaceholder(
+  base: TextStyleDefaults | undefined,
+  liveFontSize?: number | null,
+): TextStyleDefaults | null {
+  if (!base) return null
+  return liveFontSize == null ? base : { ...base, font_size: liveFontSize }
 }
 
 /** The `<tbody>` of `EditMetadataModal`'s field table — split out to keep
@@ -41,6 +72,7 @@ export function MetadataFieldsTableBody({
   setText,
   setNumber,
   setYesNo,
+  setStyle,
   numOrUndef,
   titleFontSizeDefault,
   subtitleFontSizeDefault,
@@ -48,6 +80,7 @@ export function MetadataFieldsTableBody({
   partLegendFontSizeDefault,
   lyricsFontSizeDefault,
   effectiveLyricsFontSize,
+  effectiveNotesFontSize,
   pageNumberFontSizeDefault,
 }: MetadataFieldsTableBodyProps) {
   return (
@@ -59,13 +92,13 @@ export function MetadataFieldsTableBody({
         value={metadata.title}
         onChange={onTitleChange}
       />
-      <NumberFieldRow
-        label="Title Font Size"
-        help={metadataFieldHelp.title_font_size}
+      <TextStyleRow
+        label="Title Style"
+        help={metadataFieldHelp.title}
         onShowHelp={showHelp}
-        value={metadata.title_font_size ?? ''}
-        placeholder={numOrUndef(titleFontSizeDefault)}
-        onChange={setNumber('title_font_size')}
+        value={metadata.styles.title}
+        placeholder={stylePlaceholder(d?.title, titleFontSizeDefault)}
+        onChange={setStyle('title')}
       />
       <TextFieldRow
         label="Subtitle"
@@ -74,13 +107,13 @@ export function MetadataFieldsTableBody({
         value={metadata.subtitle ?? ''}
         onChange={setText('subtitle')}
       />
-      <NumberFieldRow
-        label="Subtitle Font Size"
-        help={metadataFieldHelp.subtitle_font_size}
+      <TextStyleRow
+        label="Subtitle Style"
+        help={metadataFieldHelp.subtitle}
         onShowHelp={showHelp}
-        value={metadata.subtitle_font_size ?? ''}
-        placeholder={numOrUndef(subtitleFontSizeDefault)}
-        onChange={setNumber('subtitle_font_size')}
+        value={metadata.styles.subtitle}
+        placeholder={stylePlaceholder(d?.subtitle, subtitleFontSizeDefault)}
+        onChange={setStyle('subtitle')}
       />
       <TextFieldRow
         label="Author"
@@ -89,13 +122,13 @@ export function MetadataFieldsTableBody({
         value={metadata.author ?? ''}
         onChange={setText('author')}
       />
-      <NumberFieldRow
-        label="Author Font Size"
-        help={metadataFieldHelp.author_font_size}
+      <TextStyleRow
+        label="Author Style"
+        help={metadataFieldHelp.author}
         onShowHelp={showHelp}
-        value={metadata.author_font_size ?? ''}
-        placeholder={numOrUndef(authorFontSizeDefault)}
-        onChange={setNumber('author_font_size')}
+        value={metadata.styles.author}
+        placeholder={stylePlaceholder(d?.author, authorFontSizeDefault)}
+        onChange={setStyle('author')}
       />
       <NumberFieldRow
         label="Row Height"
@@ -122,14 +155,6 @@ export function MetadataFieldsTableBody({
         onChange={setNumber('note_number_width')}
       />
       <NumberFieldRow
-        label="Part Label Width (pt)"
-        help={metadataFieldHelp.part_label_width_pt}
-        onShowHelp={showHelp}
-        value={metadata.part_label_width_pt ?? ''}
-        placeholder={numOrUndef(d?.part_label_width_pt)}
-        onChange={setNumber('part_label_width_pt')}
-      />
-      <NumberFieldRow
         label="Parts List Columns"
         help={metadataFieldHelp.parts_list_columns}
         onShowHelp={showHelp}
@@ -137,117 +162,91 @@ export function MetadataFieldsTableBody({
         placeholder={numOrUndef(d?.parts_list_columns)}
         onChange={setNumber('parts_list_columns')}
       />
-      <NumberFieldRow
-        label="Part Legend Font Size"
-        help={metadataFieldHelp.part_legend_font_size}
+      <TextStyleRow
+        label="Sequence Style"
+        help={metadataFieldHelp.sequence}
         onShowHelp={showHelp}
-        value={metadata.part_legend_font_size ?? ''}
-        placeholder={numOrUndef(partLegendFontSizeDefault)}
-        onChange={setNumber('part_legend_font_size')}
+        value={metadata.styles.sequence}
+        placeholder={d?.sequence ?? null}
+        onChange={setStyle('sequence')}
       />
-      <NumberFieldRow
-        label="Lyrics Font Size"
-        help={metadataFieldHelp.lyrics_font_size}
+      <TextStyleRow
+        label="Part Legend Style"
+        help={metadataFieldHelp.part_legend}
         onShowHelp={showHelp}
-        value={metadata.lyrics_font_size ?? ''}
-        placeholder={numOrUndef(lyricsFontSizeDefault)}
-        onChange={setNumber('lyrics_font_size')}
+        value={metadata.styles.part_legend}
+        placeholder={stylePlaceholder(
+          d?.part_legend,
+          partLegendFontSizeDefault,
+        )}
+        onChange={setStyle('part_legend')}
       />
-      <NumberFieldRow
-        label="Notes Font Size"
-        help={metadataFieldHelp.notes_font_size}
+      <TextStyleRow
+        label="Measure Number Style"
+        help={metadataFieldHelp.measure_number}
         onShowHelp={showHelp}
-        value={metadata.notes_font_size ?? ''}
-        placeholder={numOrUndef(effectiveLyricsFontSize)}
-        onChange={setNumber('notes_font_size')}
+        value={metadata.styles.measure_number}
+        placeholder={d?.measure_number ?? null}
+        onChange={setStyle('measure_number')}
       />
-      <NumberFieldRow
-        label="Chords Font Size"
-        help={metadataFieldHelp.chords_font_size}
+      <TextStyleRow
+        label="Section Label Style"
+        help={metadataFieldHelp.section_label}
         onShowHelp={showHelp}
-        value={metadata.chords_font_size ?? ''}
-        placeholder={numOrUndef(effectiveLyricsFontSize)}
-        onChange={setNumber('chords_font_size')}
+        value={metadata.styles.section_label}
+        placeholder={d?.section_label ?? null}
+        onChange={setStyle('section_label')}
       />
-      <NumberFieldRow
-        label="Sequence Font Size"
-        help={metadataFieldHelp.sequence_font_size}
+      <TextStyleRow
+        label="Part Label Style"
+        help={metadataFieldHelp.part_label}
         onShowHelp={showHelp}
-        value={metadata.sequence_font_size ?? ''}
-        placeholder={numOrUndef(d?.sequence_font_size)}
-        onChange={setNumber('sequence_font_size')}
+        value={metadata.styles.part_label}
+        placeholder={d?.part_label ?? null}
+        onChange={setStyle('part_label')}
       />
-      <NumberFieldRow
-        label="Measure Number Font Size"
-        help={metadataFieldHelp.measure_number_font_size}
+      <TextStyleRow
+        label="Page Number Style"
+        help={metadataFieldHelp.page_number}
         onShowHelp={showHelp}
-        value={metadata.measure_number_font_size ?? ''}
-        placeholder={numOrUndef(d?.measure_number_font_size)}
-        onChange={setNumber('measure_number_font_size')}
+        value={metadata.styles.page_number}
+        placeholder={stylePlaceholder(
+          d?.page_number,
+          pageNumberFontSizeDefault,
+        )}
+        onChange={setStyle('page_number')}
       />
-      <NumberFieldRow
-        label="Section Label Font Size"
-        help={metadataFieldHelp.section_label_font_size}
+      <TextStyleRow
+        label="Lyrics Style"
+        help={metadataFieldHelp.lyrics}
         onShowHelp={showHelp}
-        value={metadata.section_label_font_size ?? ''}
-        placeholder={numOrUndef(d?.section_label_font_size)}
-        onChange={setNumber('section_label_font_size')}
+        value={metadata.styles.lyrics}
+        placeholder={stylePlaceholder(d?.lyrics, lyricsFontSizeDefault)}
+        onChange={setStyle('lyrics')}
       />
-      <NumberFieldRow
-        label="Part Label Font Size"
-        help={metadataFieldHelp.part_label_font_size}
+      <TextStyleRow
+        label="Notes Style"
+        help={metadataFieldHelp.notes}
         onShowHelp={showHelp}
-        value={metadata.part_label_font_size ?? ''}
-        placeholder={numOrUndef(d?.part_label_font_size)}
-        onChange={setNumber('part_label_font_size')}
+        value={metadata.styles.notes}
+        placeholder={stylePlaceholder(d?.notes, effectiveLyricsFontSize)}
+        onChange={setStyle('notes')}
       />
-      <NumberFieldRow
-        label="Page Number Font Size"
-        help={metadataFieldHelp.page_number_font_size}
+      <TextStyleRow
+        label="Chords Style"
+        help={metadataFieldHelp.chords}
         onShowHelp={showHelp}
-        value={metadata.page_number_font_size ?? ''}
-        placeholder={numOrUndef(pageNumberFontSizeDefault)}
-        onChange={setNumber('page_number_font_size')}
+        value={metadata.styles.chords}
+        placeholder={stylePlaceholder(d?.chords, effectiveLyricsFontSize)}
+        onChange={setStyle('chords')}
       />
-      <NumberFieldRow
-        label="Lyric Click-Target Padding"
-        help={metadataFieldHelp.lyric_click_target_padding_pt}
+      <TextStyleRow
+        label="Note Dash Style"
+        help={metadataFieldHelp.note_dash}
         onShowHelp={showHelp}
-        value={metadata.lyric_click_target_padding_pt ?? ''}
-        placeholder={numOrUndef(d?.lyric_click_target_padding_pt)}
-        onChange={setNumber('lyric_click_target_padding_pt')}
-      />
-      <NumberFieldRow
-        label="Notes Horizontal Padding"
-        help={metadataFieldHelp.notes_horizontal_padding_pt}
-        onShowHelp={showHelp}
-        value={metadata.notes_horizontal_padding_pt ?? ''}
-        placeholder={numOrUndef(d?.notes_horizontal_padding_pt)}
-        onChange={setNumber('notes_horizontal_padding_pt')}
-      />
-      <NumberFieldRow
-        label="Chords Horizontal Padding"
-        help={metadataFieldHelp.chords_horizontal_padding_pt}
-        onShowHelp={showHelp}
-        value={metadata.chords_horizontal_padding_pt ?? ''}
-        placeholder={numOrUndef(d?.chords_horizontal_padding_pt)}
-        onChange={setNumber('chords_horizontal_padding_pt')}
-      />
-      <NumberFieldRow
-        label="Lyrics Horizontal Padding"
-        help={metadataFieldHelp.lyrics_horizontal_padding_pt}
-        onShowHelp={showHelp}
-        value={metadata.lyrics_horizontal_padding_pt ?? ''}
-        placeholder={numOrUndef(d?.lyrics_horizontal_padding_pt)}
-        onChange={setNumber('lyrics_horizontal_padding_pt')}
-      />
-      <NumberFieldRow
-        label="Note Dash Horizontal Padding"
-        help={metadataFieldHelp.note_dash_horizontal_padding_pt}
-        onShowHelp={showHelp}
-        value={metadata.note_dash_horizontal_padding_pt ?? ''}
-        placeholder={numOrUndef(d?.note_dash_horizontal_padding_pt)}
-        onChange={setNumber('note_dash_horizontal_padding_pt')}
+        value={metadata.styles.note_dash}
+        placeholder={stylePlaceholder(d?.note_dash, effectiveNotesFontSize)}
+        onChange={setStyle('note_dash')}
       />
       <CheckboxFieldRow
         label="Merge Duplicate Measures Across Parts"

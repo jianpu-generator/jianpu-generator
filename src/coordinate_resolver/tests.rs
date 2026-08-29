@@ -53,9 +53,11 @@ fn resolve_empty_pages_returns_empty() {
             labels: LabelFontSizes {
                 measure_number: 10.0,
                 section_label: 12.0,
+                section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
             },
             paddings: DEFAULT_PADDINGS,
+            page_number_vertical_padding_pt: 0.0,
         },
     )
     .unwrap()
@@ -95,9 +97,11 @@ fn note_head_halign_center_is_flush_left_plus_fixed_padding() {
             labels: LabelFontSizes {
                 measure_number: 10.0,
                 section_label: 12.0,
+                section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
             },
             paddings: DEFAULT_PADDINGS,
+            page_number_vertical_padding_pt: 0.0,
         },
     )
     .unwrap();
@@ -149,6 +153,7 @@ fn note_head_anchor_shifts_by_its_own_configured_padding_not_chords_or_lyrics() 
             labels: LabelFontSizes {
                 measure_number: 10.0,
                 section_label: 12.0,
+                section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
             },
             paddings: ElementPaddings {
@@ -157,6 +162,7 @@ fn note_head_anchor_shifts_by_its_own_configured_padding_not_chords_or_lyrics() 
                 lyrics: 4.0,
                 note_dash: 4.0,
             },
+            page_number_vertical_padding_pt: 0.0,
         },
     )
     .unwrap();
@@ -238,9 +244,11 @@ fn note_head_halign_center_is_independent_of_column_weight() {
                 labels: LabelFontSizes {
                     measure_number: 10.0,
                     section_label: 12.0,
+                    section_label_vertical_padding_pt: 0.0,
                     part_label: 12.0,
                 },
                 paddings: DEFAULT_PADDINGS,
+                page_number_vertical_padding_pt: 0.0,
             },
         )
         .unwrap();

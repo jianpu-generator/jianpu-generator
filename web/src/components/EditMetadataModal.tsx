@@ -2,7 +2,12 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useState } from 'react'
 import type { MetadataDefaults } from '../utils/metadataDefaults'
 import { loadMetadataDefaults } from '../utils/metadataDefaults'
-import type { MetadataKey, ParsedMetadataFields } from '../utils/metadataSource'
+import type {
+  MetadataFieldKey,
+  ParsedMetadataFields,
+  TextStyleComponent,
+  TextStyleKind,
+} from '../utils/metadataSource'
 import { useFontSizeDefaults } from '../utils/useFontSizeDefaults'
 import { FieldHelpModal } from './FieldHelpModal'
 import { MetadataFieldsTableBody } from './MetadataFieldsTableBody'
@@ -11,7 +16,7 @@ export interface EditMetadataModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   metadata: ParsedMetadataFields
-  onFieldChange: (key: MetadataKey, value: string | null) => void
+  onFieldChange: (key: MetadataFieldKey, value: string | null) => void
   /** Element to confine the modal to (e.g. the editor pane), so it doesn't
    * cover the preview pane. Falls back to viewport-centered when null. */
   container?: HTMLElement | null
@@ -58,22 +63,36 @@ export function EditMetadataModal({
 
   const d = defaults
 
-  // notes_font_size/chords_font_size default to the *effective* lyrics font
-  // size — either the explicit override or its own row_height-derived default.
+  // notes/chords styles' font_size default to the *effective* lyrics font
+  // size — either the explicit override or its own row_height-derived
+  // default; note_dash's font_size then defaults to that effective notes
+  // font size, one level further down the cascade (see `syntax.md`'s
+  // "Text styles" defaults table).
   const effectiveLyricsFontSize =
-    metadata.lyrics_font_size ?? lyricsFontSizeDefault
+    metadata.styles.lyrics.font_size ?? lyricsFontSizeDefault
+  const effectiveNotesFontSize =
+    metadata.styles.notes.font_size ?? effectiveLyricsFontSize
 
   const setText =
-    (key: MetadataKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    (key: MetadataFieldKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
       onFieldChange(key, e.target.value === '' ? null : e.target.value)
 
   const setNumber =
-    (key: MetadataKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    (key: MetadataFieldKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
       onFieldChange(key, e.target.value === '' ? null : e.target.value)
 
   const setYesNo =
-    (key: MetadataKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    (key: MetadataFieldKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
       onFieldChange(key, e.target.checked ? 'yes' : 'no')
+
+  const setStyle =
+    (kind: TextStyleKind) =>
+    (component: TextStyleComponent) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      onFieldChange(
+        `${kind}.${component}`,
+        e.target.value === '' ? null : e.target.value,
+      )
 
   const numOrUndef = (n: number | null | undefined): string | undefined =>
     n != null ? String(n) : undefined
@@ -164,6 +183,7 @@ export function EditMetadataModal({
                 setText={setText}
                 setNumber={setNumber}
                 setYesNo={setYesNo}
+                setStyle={setStyle}
                 numOrUndef={numOrUndef}
                 titleFontSizeDefault={titleFontSizeDefault}
                 subtitleFontSizeDefault={subtitleFontSizeDefault}
@@ -171,6 +191,7 @@ export function EditMetadataModal({
                 partLegendFontSizeDefault={partLegendFontSizeDefault}
                 lyricsFontSizeDefault={lyricsFontSizeDefault}
                 effectiveLyricsFontSize={effectiveLyricsFontSize}
+                effectiveNotesFontSize={effectiveNotesFontSize}
                 pageNumberFontSizeDefault={pageNumberFontSizeDefault}
               />
             </table>

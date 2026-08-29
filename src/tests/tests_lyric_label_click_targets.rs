@@ -15,11 +15,12 @@ fn resolve_test_score(input: &str) -> Vec<compositor::types::AbsolutePage> {
         part_list: vec![],
         parts_list_columns: 3,
         sequence: None,
-        title_font_size: score.metadata.title_font_size as f32,
-        subtitle_font_size: score.metadata.subtitle_font_size as f32,
-        author_font_size: score.metadata.author_font_size as f32,
-        sequence_font_size: score.metadata.sequence_font_size as f32,
-        part_legend_font_size: score.metadata.part_legend_font_size as f32,
+        title_font_size: score.metadata.title_style.font_size as f32,
+        title_min_width_pt: score.metadata.title_style.width_pt as f32,
+        subtitle_font_size: score.metadata.subtitle_style.font_size as f32,
+        author_font_size: score.metadata.author_style.font_size as f32,
+        sequence_font_size: score.metadata.sequence.font_size as f32,
+        part_legend_font_size: score.metadata.part_legend.font_size as f32,
     };
     let compile_result = compiler::compile(&score);
     let compile_result = consolidator::consolidate(compile_result);
@@ -36,9 +37,11 @@ fn resolve_test_score(input: &str) -> Vec<compositor::types::AbsolutePage> {
             labels: coordinate_resolver::LabelFontSizes {
                 measure_number: config.measure_number_font_size as f32,
                 section_label: config.section_label_font_size as f32,
+                section_label_vertical_padding_pt: config.section_label_vertical_padding_pt(),
                 part_label: config.part_label_font_size as f32,
             },
             paddings: config.element_paddings(),
+            page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
         },
     )
     .expect("coordinate resolver should not fail in tests")

@@ -14,6 +14,20 @@ mod tests_timing;
 #[path = "tests_tuplets.rs"]
 mod tests_tuplets;
 
+fn text_style(
+    font_size: u32,
+    horizontal_padding_pt: u32,
+    vertical_padding_pt: u32,
+    width_pt: u32,
+) -> crate::ast::grouped::TextStyle {
+    crate::ast::grouped::TextStyle {
+        font_size,
+        horizontal_padding_pt,
+        vertical_padding_pt,
+        width_pt,
+    }
+}
+
 fn default_test_metadata() -> Metadata {
     Metadata {
         title: None,
@@ -22,25 +36,20 @@ fn default_test_metadata() -> Metadata {
         row_height: 24,
         max_measures_per_system: 28,
         note_number_width: 8,
-        part_label_width_pt: 40,
         parts_list_columns: 3,
-        lyrics_font_size: 14,
-        notes_font_size: 14,
-        chords_font_size: 14,
-        title_font_size: 36,
-        subtitle_font_size: 19,
-        author_font_size: 14,
-        sequence_font_size: 12,
-        part_legend_font_size: 12,
-        measure_number_font_size: 10,
-        section_label_font_size: 12,
-        part_label_font_size: 12,
-        page_number_font_size: 14,
-        lyric_click_target_padding_pt: 12,
-        notes_horizontal_padding_pt: 4,
-        chords_horizontal_padding_pt: 4,
-        lyrics_horizontal_padding_pt: 4,
-        note_dash_horizontal_padding_pt: 4,
+        lyrics: text_style(14, 4, 12, 0),
+        notes: text_style(14, 4, 0, 0),
+        chords: text_style(14, 4, 0, 0),
+        note_dash: text_style(14, 4, 0, 0),
+        title_style: text_style(36, 0, 0, 0),
+        subtitle_style: text_style(19, 0, 0, 0),
+        author_style: text_style(14, 0, 0, 0),
+        sequence: text_style(12, 0, 0, 0),
+        part_legend: text_style(12, 0, 0, 0),
+        measure_number: text_style(10, 0, 0, 0),
+        section_label: text_style(12, 0, 0, 0),
+        part_label: text_style(12, 0, 0, 40),
+        page_number: text_style(14, 0, 0, 0),
         merge_duplicate_measures_across_parts: true,
         hide_resting_parts: true,
         hide_system_dividers: false,

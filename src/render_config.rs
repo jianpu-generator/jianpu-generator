@@ -12,6 +12,10 @@ pub struct RenderConfig {
     pub lyrics_font_size: u32,
     pub notes_font_size: u32,
     pub chords_font_size: u32,
+    /// Font size in points of a note dash (see `Metadata::note_dash_font_size`).
+    /// Previously note dashes always rendered at `notes_font_size`, ignoring
+    /// this field entirely — see `note_dash_font_size()`.
+    pub note_dash_font_size: u32,
     pub hide_system_dividers: bool,
     pub directive_row_offset: Offset,
     /// Font size in points of each measure's bar number (see
@@ -29,6 +33,16 @@ pub struct RenderConfig {
     /// Extra vertical padding in points around a lyric syllable's
     /// click-target box (see `Metadata::lyric_click_target_padding_pt`).
     pub lyric_click_target_padding_pt: u32,
+    /// Extra vertical padding in points added to a note/chord part's
+    /// note-head sub-row (see `Metadata::notes.vertical_padding_pt`).
+    pub notes_vertical_padding_pt: u32,
+    /// Extra vertical padding in points added to an inline section label's
+    /// rendered box (see `Metadata::section_label.vertical_padding_pt`).
+    pub section_label_vertical_padding_pt: u32,
+    /// Extra vertical padding in points, offsetting the footer page number
+    /// upward from the page's bottom edge (see
+    /// `Metadata::page_number.vertical_padding_pt`).
+    pub page_number_vertical_padding_pt: u32,
     /// Horizontal padding in points reserved before a note head/rest/percussion-hit
     /// glyph (see `Metadata::notes_horizontal_padding_pt`).
     pub notes_horizontal_padding_pt: u32,
@@ -48,22 +62,26 @@ impl RenderConfig {
         RenderConfig {
             row_height: meta.row_height,
             note_number_width: meta.note_number_width,
-            part_label_width_pt: meta.part_label_width_pt,
+            part_label_width_pt: meta.part_label.width_pt,
             max_measures_per_system: meta.max_measures_per_system,
-            lyrics_font_size: meta.lyrics_font_size,
-            notes_font_size: meta.notes_font_size,
-            chords_font_size: meta.chords_font_size,
+            lyrics_font_size: meta.lyrics.font_size,
+            notes_font_size: meta.notes.font_size,
+            chords_font_size: meta.chords.font_size,
+            note_dash_font_size: meta.note_dash.font_size,
             hide_system_dividers: meta.hide_system_dividers,
             directive_row_offset: meta.directive_row_offset,
-            measure_number_font_size: meta.measure_number_font_size,
-            section_label_font_size: meta.section_label_font_size,
-            part_label_font_size: meta.part_label_font_size,
-            page_number_font_size: meta.page_number_font_size,
-            lyric_click_target_padding_pt: meta.lyric_click_target_padding_pt,
-            notes_horizontal_padding_pt: meta.notes_horizontal_padding_pt,
-            chords_horizontal_padding_pt: meta.chords_horizontal_padding_pt,
-            lyrics_horizontal_padding_pt: meta.lyrics_horizontal_padding_pt,
-            note_dash_horizontal_padding_pt: meta.note_dash_horizontal_padding_pt,
+            measure_number_font_size: meta.measure_number.font_size,
+            section_label_font_size: meta.section_label.font_size,
+            part_label_font_size: meta.part_label.font_size,
+            page_number_font_size: meta.page_number.font_size,
+            lyric_click_target_padding_pt: meta.lyrics.vertical_padding_pt,
+            notes_vertical_padding_pt: meta.notes.vertical_padding_pt,
+            section_label_vertical_padding_pt: meta.section_label.vertical_padding_pt,
+            page_number_vertical_padding_pt: meta.page_number.vertical_padding_pt,
+            notes_horizontal_padding_pt: meta.notes.horizontal_padding_pt,
+            chords_horizontal_padding_pt: meta.chords.horizontal_padding_pt,
+            lyrics_horizontal_padding_pt: meta.lyrics.horizontal_padding_pt,
+            note_dash_horizontal_padding_pt: meta.note_dash.horizontal_padding_pt,
         }
     }
 
@@ -95,19 +113,43 @@ impl RenderConfig {
         self.chords_font_size as f32
     }
 
+    /// Font size used for note dashes (see `Metadata::note_dash_font_size`).
+    pub fn note_dash_font_size(&self) -> f32 {
+        self.note_dash_font_size as f32
+    }
+
     /// Extra vertical padding around a lyric syllable's click-target box
     /// (see `lyric_row_height`).
     pub fn lyric_click_target_padding_pt(&self) -> f32 {
         self.lyric_click_target_padding_pt as f32
     }
 
-    /// `lyric_font_sizes()` plus `lyric_click_target_padding_pt()`, bundled
-    /// for the grid_layout functions that need both together (see
-    /// `LyricSizing`).
+    /// Extra vertical padding around a note/chord part's note-head sub-row
+    /// (see `note_part_sub_row_heights`).
+    pub fn notes_vertical_padding_pt(&self) -> f32 {
+        self.notes_vertical_padding_pt as f32
+    }
+
+    /// Extra vertical padding around an inline section label's rendered box
+    /// (see `font_metrics::section_label_box_height`).
+    pub fn section_label_vertical_padding_pt(&self) -> f32 {
+        self.section_label_vertical_padding_pt as f32
+    }
+
+    /// Extra vertical padding offsetting the footer page number upward from
+    /// the page's bottom edge (see `coordinate_resolver::resolve`).
+    pub fn page_number_vertical_padding_pt(&self) -> f32 {
+        self.page_number_vertical_padding_pt as f32
+    }
+
+    /// `lyric_font_sizes()` plus `lyric_click_target_padding_pt()` plus
+    /// `notes_vertical_padding_pt()`, bundled for the grid_layout functions
+    /// that need all three together (see `LyricSizing`).
     pub(crate) fn lyric_sizing(&self) -> LyricSizing {
         LyricSizing {
             font_sizes: self.lyric_font_sizes(),
             click_target_padding_pt: self.lyric_click_target_padding_pt(),
+            notes_vertical_padding_pt: self.notes_vertical_padding_pt(),
         }
     }
 
@@ -155,6 +197,15 @@ mod tests {
     use super::*;
     use crate::ast::grouped::Metadata;
 
+    fn text_style(font_size: u32) -> crate::ast::grouped::TextStyle {
+        crate::ast::grouped::TextStyle {
+            font_size,
+            horizontal_padding_pt: 4,
+            vertical_padding_pt: 0,
+            width_pt: 0,
+        }
+    }
+
     #[test]
     fn from_metadata_copies_fields() {
         let meta = Metadata {
@@ -163,30 +214,40 @@ mod tests {
             author: None,
             row_height: 30,
             note_number_width: 12,
-            part_label_width_pt: 40,
             max_measures_per_system: 6,
             parts_list_columns: 3,
-            lyrics_font_size: 18,
-            notes_font_size: 18,
-            chords_font_size: 18,
-            title_font_size: 45,
-            subtitle_font_size: 24,
-            author_font_size: 18,
-            sequence_font_size: 12,
-            part_legend_font_size: 12,
+            lyrics: crate::ast::grouped::TextStyle {
+                vertical_padding_pt: 12,
+                ..text_style(18)
+            },
+            notes: crate::ast::grouped::TextStyle {
+                vertical_padding_pt: 5,
+                ..text_style(18)
+            },
+            chords: text_style(18),
+            note_dash: text_style(18),
+            title_style: text_style(45),
+            subtitle_style: text_style(24),
+            author_style: text_style(18),
+            sequence: text_style(12),
+            part_legend: text_style(12),
             merge_duplicate_measures_across_parts: true,
             hide_resting_parts: true,
             hide_system_dividers: false,
             directive_row_offset: Offset::default(),
-            measure_number_font_size: 10,
-            section_label_font_size: 12,
-            part_label_font_size: 12,
-            page_number_font_size: 18,
-            lyric_click_target_padding_pt: 12,
-            notes_horizontal_padding_pt: 4,
-            chords_horizontal_padding_pt: 4,
-            lyrics_horizontal_padding_pt: 4,
-            note_dash_horizontal_padding_pt: 4,
+            measure_number: text_style(10),
+            section_label: crate::ast::grouped::TextStyle {
+                vertical_padding_pt: 8,
+                ..text_style(12)
+            },
+            part_label: crate::ast::grouped::TextStyle {
+                width_pt: 40,
+                ..text_style(12)
+            },
+            page_number: crate::ast::grouped::TextStyle {
+                vertical_padding_pt: 4,
+                ..text_style(18)
+            },
         };
         let cfg = RenderConfig::from_metadata(&meta);
         assert_eq!(cfg.row_height, 30);
@@ -195,6 +256,7 @@ mod tests {
         assert_eq!(cfg.max_measures_per_system, 6);
         assert_eq!(cfg.lyrics_font_size, 18);
         assert_eq!(cfg.lyric_font_size(), 18.0);
+        assert_eq!(cfg.note_dash_font_size(), 18.0);
         assert_eq!(cfg.lyric_click_target_padding_pt(), 12.0);
         assert_eq!(cfg.measure_number_font_size, 10);
         assert_eq!(cfg.section_label_font_size, 12);
@@ -204,5 +266,8 @@ mod tests {
         assert_eq!(cfg.chords_horizontal_padding_pt(), 4.0);
         assert_eq!(cfg.lyrics_horizontal_padding_pt(), 4.0);
         assert_eq!(cfg.note_dash_horizontal_padding_pt(), 4.0);
+        assert_eq!(cfg.notes_vertical_padding_pt(), 5.0);
+        assert_eq!(cfg.section_label_vertical_padding_pt(), 8.0);
+        assert_eq!(cfg.page_number_vertical_padding_pt(), 4.0);
     }
 }

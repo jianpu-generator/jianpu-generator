@@ -1,25 +1,77 @@
-import type { MetadataKey } from './metadataSource'
+import type { TextStyleKind } from './metadataSource'
 
-/** Markdown help text shown in the field-help modal, describing precisely
- * which rendering/layout aspects each Edit Metadata field affects. */
-export const metadataFieldHelp: Record<MetadataKey, string> = {
-  title: `Rendered as the large heading at the top of the score's first page.`,
+/** Markdown help text shown in the field-help modal. Keyed by the text
+ * content fields (`title`/`subtitle`/`author`), the 13 `TextStyleKind`s
+ * (shared by both the content row and its style row, for the three that
+ * have both), the scalar fields, and the checkbox fields — describing
+ * precisely which rendering/layout aspects each Edit Metadata field
+ * affects. */
+export const metadataFieldHelp: Record<
+  | 'title'
+  | 'subtitle'
+  | 'author'
+  | TextStyleKind
+  | 'row_height'
+  | 'max_measures_per_system'
+  | 'note_number_width'
+  | 'parts_list_columns'
+  | 'merge_duplicate_measures_across_parts'
+  | 'hide_resting_parts'
+  | 'hide_system_dividers'
+  | 'directive_row_offset',
+  string
+> = {
+  title: `Rendered as the large heading at the top of the score's first page.
 
-  subtitle: `Rendered as a smaller line beneath the title in the header.`,
+Its style row's **Font Size** defaults to \`row_height × 1.5\`; **Width** reserves a minimum box width for the rendered title (default: 0, no minimum).`,
 
-  author: `Rendered in the header, below the title/subtitle.`,
+  subtitle: `Rendered as a smaller line beneath the title in the header.
 
-  title_font_size: `Font size (points) of the title text.
+Its style row's **Font Size** defaults to \`row_height × 0.8\`.`,
 
-Defaults to \`row_height × 1.5\` when unset.`,
+  author: `Rendered in the header, below the title/subtitle.
 
-  subtitle_font_size: `Font size (points) of the subtitle text.
+Its style row's **Font Size** defaults to \`row_height × 0.6\`.`,
 
-Defaults to \`row_height × 0.8\` when unset.`,
+  sequence: `Style of the \`# sequence\` summary line rendered near the top of the score.
 
-  author_font_size: `Font size (points) of the author text.
+**Font Size** defaults to 12.`,
 
-Defaults to \`row_height × 0.6\` when unset.`,
+  part_legend: `Style of the part-name legend entries shown in the header.
+
+**Font Size** defaults to \`row_height × 0.6\`.`,
+
+  measure_number: `Style of each measure's bar number.
+
+**Font Size** defaults to 10.`,
+
+  section_label: `Style of an inline section label (the \`label="..."\` on a measure's directive line).
+
+**Font Size** defaults to 12.`,
+
+  part_label: `Style of a part's row label (e.g. "Soprano"), shown at the start of each system row.
+
+**Font Size** defaults to 12. **Width** is the fixed width (points) of the part-label column at the start of each system, shared by every system in the score regardless of how many measures/columns that system's music needs (default: 40).`,
+
+  page_number: `Style of the page number shown in the footer.
+
+**Font Size** defaults to \`row_height × 0.6\`. **V. Padding** pushes the page number upward from the page's bottom edge, without moving anything else.`,
+
+  lyrics: `Style of lyric syllable text under notes.
+
+**Font Size** defaults to \`row_height × 0.6\` and also affects how far a syllable is allowed to shift horizontally to avoid overlapping its neighbors. **H. Padding** defaults to 4 (widens spacing between syllables). **V. Padding** is extra padding around a lyric syllable's hover/click-target box, on top of the lyric font's own measured height (default: 12).`,
+
+  notes: `Style of note heads, rests, percussion hits, and tuplet brackets.
+
+**Font Size** defaults to \`lyrics.font_size\` and also affects the width allotted to a note column, since these glyphs render as monospace characters. **H. Padding** (default: 4) is also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings, which all key off a note column. **V. Padding** adds vertical space around the note-head row.`,
+
+  chords: `Style of chord symbol text.
+
+**Font Size** defaults to \`lyrics.font_size\` and also affects the width allotted to a chord symbol's column. **H. Padding** defaults to 4.`,
+
+  note_dash: `Style of a note dash (the sustain-beat \`-\` extension).
+
+**Font Size** defaults to \`notes.font_size\` and scales the rendered dash's width. **H. Padding** defaults to 4.`,
 
   row_height: `Vertical spacing (points) of one part row.
 
@@ -28,7 +80,7 @@ Affects:
 - Octave and duration dots
 - Tie/slur arc height
 - Bar-line and multi-measure-rest thickness
-- The default \`lyrics_font_size\` (unless that field is set explicitly), as \`row_height × 0.6\``,
+- The default \`lyrics\` style's font size (unless set explicitly), as \`row_height × 0.6\``,
 
   max_measures_per_system: `Maximum number of measures placed on one system (row) before wrapping to a new system line.`,
 
@@ -41,73 +93,7 @@ Affects:
 
 Does **not** change the spacing between note columns — that comes from the available page width instead.`,
 
-  part_label_width_pt: `Fixed width (points) of the part-label column at the start of each system.
-
-This width is the same for every system in the score, regardless of how many measures or columns that system's music needs — so the part name lines up at the same horizontal position on every row.`,
-
   parts_list_columns: `Number of columns used to lay out the part-name legend shown in the header.`,
-
-  part_legend_font_size: `Font size (points) of the part-name legend entries shown in the header.
-
-Defaults to \`row_height × 0.6\` when unset.`,
-
-  lyrics_font_size: `Font size (points) of lyric syllable text under notes.
-
-Also affects how far a syllable is allowed to shift horizontally to avoid overlapping its neighbors.
-
-Defaults to \`row_height × 0.6\` when unset.`,
-
-  notes_font_size: `Font size (points) of note heads, rests, percussion hits, and tuplet brackets.
-
-Also affects the width allotted to a note column, since these glyphs render as monospace characters.
-
-Defaults to \`lyrics_font_size\` when unset.`,
-
-  chords_font_size: `Font size (points) of chord symbol text.
-
-Also affects the width allotted to a chord symbol's column.
-
-Defaults to \`lyrics_font_size\` when unset.`,
-
-  sequence_font_size: `Font size (points) of the \`# sequence\` summary line rendered near the top of the score.
-
-Defaults to 12.`,
-
-  measure_number_font_size: `Font size (points) of each measure's bar number.
-
-Defaults to 10.`,
-
-  section_label_font_size: `Font size (points) of an inline section label (the \`label="..."\` on a measure's directive line).
-
-Defaults to 12.`,
-
-  part_label_font_size: `Font size (points) of a part's row label (e.g. "Soprano").
-
-Defaults to 12.`,
-
-  page_number_font_size: `Font size (points) of the page number shown in the footer.
-
-Defaults to \`row_height × 0.6\` when unset.`,
-
-  lyric_click_target_padding_pt: `Extra vertical padding (points) around a lyric syllable's hover/click-target box, added on top of the lyric font's own measured height.
-
-Defaults to 12.`,
-
-  notes_horizontal_padding_pt: `Horizontal padding (points) reserved before each note head, rest, and percussion hit, widening the spacing between elements — not just a cosmetic nudge. Also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings, which all key off a note column.
-
-Defaults to 4.`,
-
-  chords_horizontal_padding_pt: `Horizontal padding (points) reserved before each chord symbol, widening the spacing between elements.
-
-Defaults to 4.`,
-
-  lyrics_horizontal_padding_pt: `Horizontal padding (points) reserved before each lyric syllable, widening the spacing between elements.
-
-Defaults to 4.`,
-
-  note_dash_horizontal_padding_pt: `Horizontal padding (points) reserved before each note dash (the sustain-beat \`-\` extension), widening the spacing between elements.
-
-Defaults to 4.`,
 
   merge_duplicate_measures_across_parts: `When on, measures with identical content across different parts are drawn as a single merged row instead of one row per part.
 

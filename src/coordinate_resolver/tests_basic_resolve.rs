@@ -85,9 +85,11 @@ fn valign_top_places_y_at_row_top() {
             labels: LabelFontSizes {
                 measure_number: 10.0,
                 section_label: 12.0,
+                section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
             },
             paddings: DEFAULT_PADDINGS,
+            page_number_vertical_padding_pt: 0.0,
         },
     )
     .unwrap();
@@ -113,6 +115,7 @@ fn halign_end_places_x_at_right_of_column_span() {
             bold: false,
             italic: false,
             is_title: false,
+            min_width_pt: 0.0,
         },
     };
     let page = single_row_page(el);
@@ -130,9 +133,11 @@ fn halign_end_places_x_at_right_of_column_span() {
             labels: LabelFontSizes {
                 measure_number: 10.0,
                 section_label: 12.0,
+                section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
             },
             paddings: DEFAULT_PADDINGS,
+            page_number_vertical_padding_pt: 0.0,
         },
     )
     .unwrap();
@@ -176,9 +181,11 @@ fn octave_dot_grid_content_emits_nothing() {
             labels: LabelFontSizes {
                 measure_number: 10.0,
                 section_label: 12.0,
+                section_label_vertical_padding_pt: 0.0,
                 part_label: 12.0,
             },
             paddings: DEFAULT_PADDINGS,
+            page_number_vertical_padding_pt: 0.0,
         },
     )
     .unwrap();

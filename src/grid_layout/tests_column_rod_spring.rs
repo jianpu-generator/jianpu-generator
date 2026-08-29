@@ -22,6 +22,7 @@ fn test_config() -> RenderConfig {
         max_measures_per_system: 48,
         lyrics_font_size: 18,
         notes_font_size: 18,
+        note_dash_font_size: 18,
         chords_font_size: 18,
         hide_system_dividers: false,
         directive_row_offset: Offset::default(),
@@ -30,6 +31,9 @@ fn test_config() -> RenderConfig {
         part_label_font_size: 12,
         page_number_font_size: 18,
         lyric_click_target_padding_pt: 12,
+        notes_vertical_padding_pt: 0,
+        section_label_vertical_padding_pt: 0,
+        page_number_vertical_padding_pt: 0,
         notes_horizontal_padding_pt: 4,
         chords_horizontal_padding_pt: 4,
         lyrics_horizontal_padding_pt: 4,
@@ -94,6 +98,7 @@ fn column_widths_and_rods(
                 cjk: 21.6,
             },
             click_target_padding_pt: 12.0,
+            notes_vertical_padding_pt: 0.0,
         },
     );
     let geometry = rows[0].column_geometry(usable_width_pt, label_width_pt);
@@ -189,6 +194,7 @@ fn dense_note_column_stays_clear_of_its_trailing_bar_line_even_when_tightly_pack
                 cjk: 21.6,
             },
             click_target_padding_pt: 12.0,
+            notes_vertical_padding_pt: 0.0,
         },
     );
     let geometry = rows[0].column_geometry(usable_width, label_width);

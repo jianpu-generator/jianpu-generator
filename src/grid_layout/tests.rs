@@ -166,6 +166,7 @@ fn cfg() -> RenderConfig {
         max_measures_per_system: 2,
         lyrics_font_size: 18,
         notes_font_size: 18,
+        note_dash_font_size: 18,
         chords_font_size: 18,
         hide_system_dividers: false,
         directive_row_offset: Offset::default(),
@@ -174,6 +175,9 @@ fn cfg() -> RenderConfig {
         part_label_font_size: 12,
         page_number_font_size: 18,
         lyric_click_target_padding_pt: 12,
+        notes_vertical_padding_pt: 0,
+        section_label_vertical_padding_pt: 0,
+        page_number_vertical_padding_pt: 0,
         notes_horizontal_padding_pt: 4,
         chords_horizontal_padding_pt: 4,
         lyrics_horizontal_padding_pt: 4,
@@ -196,7 +200,7 @@ fn is_chord_only_row_detects_chord() {
 
 #[test]
 fn note_part_sub_row_heights_sums_correctly() {
-    let heights = note_part_sub_row_heights(30.0);
+    let heights = note_part_sub_row_heights(30.0, 0.0);
     // tuplet_bracket + arc + above_dot + note_head + below_dot + ul + ul
     // = 30.0 + 9.0 + 7.5 + 30.0 + 7.5 + 4.5 + 4.5 = 93.0
     let sum: f32 = heights.iter().sum();

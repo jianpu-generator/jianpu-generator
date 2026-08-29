@@ -1,5 +1,6 @@
 mod click_targets;
 mod content_conversion;
+mod directive_line_conversion;
 mod highlights;
 mod post_arc_conversion;
 pub mod resolve;

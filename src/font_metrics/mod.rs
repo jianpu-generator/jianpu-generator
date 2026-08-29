@@ -237,6 +237,29 @@ pub(crate) fn section_label_box_width(label: &str, font_size: f32) -> f32 {
         + section_label_box_padding(font_size) * 2.0
 }
 
+/// Horizontal padding between the song title's text and its reserved box,
+/// applied equally on both sides — same reasoning as
+/// `SECTION_LABEL_BOX_PADDING_RATIO`.
+const TITLE_BOX_PADDING_RATIO: f32 = 1.0 / 3.0;
+
+pub(crate) fn title_box_padding(font_size: f32) -> f32 {
+    font_size * TITLE_BOX_PADDING_RATIO
+}
+
+/// Rendered width (in points) of the title's reserved box: its real text
+/// width (measured against the `Title`-role font — see `cjk_text_width`,
+/// which despite its name backs every `FontFamily::Title` use, title
+/// included) plus padding on both sides, floored at `min_width_pt` (see
+/// `Metadata::title_style.width_pt`, threaded in via `Header::title_min_width_pt`
+/// / `GridContent::Text::min_width_pt` / `AbsoluteContent::Text::reserved_width_pt`).
+/// `min_width_pt` of `0.0` means "no configured minimum" and this still
+/// returns the real text width plus padding — callers only set the field
+/// downstream when `min_width_pt > 0.0` (see `content_conversion.rs`).
+pub(crate) fn title_box_width(title: &str, font_size: f32, min_width_pt: f32) -> f32 {
+    let text_width = cjk_text_width(title, font_size) + title_box_padding(font_size) * 2.0;
+    text_width.max(min_width_pt)
+}
+
 /// Gap (points) reserved between adjacent directive-line elements (bar
 /// number, section label, key/bpm/time-signature spans) — shared by
 /// `coordinate_resolver::content_conversion` (positions them) and

@@ -24,6 +24,7 @@ pub(super) struct DirectiveLineArgs<'a> {
     pub bar_number: &'a Option<TextSpan>,
     pub label: &'a Option<String>,
     pub label_font_size: f32,
+    pub label_box_height: f32,
     pub spans: &'a [TextSpan],
     pub spans_x_offset: f32,
     pub label_x_offset: f32,
@@ -85,6 +86,7 @@ pub(super) fn render_directive_line(
                     row_y,
                     label_x: row_x + args.label_x_offset,
                     label_font_size: args.label_font_size,
+                    label_box_height: args.label_box_height,
                     line_width,
                 },
                 SectionLabelSiblingElements {
@@ -115,6 +117,11 @@ struct SectionLabelGroupArgs<'a> {
     row_y: f32,
     label_x: f32,
     label_font_size: f32,
+    /// See `AbsoluteContent::DirectiveLine::label_box_height` — already
+    /// includes `Metadata::section_label.vertical_padding_pt`, so this is
+    /// the box's real drawn height, not just `section_label_box_height`'s
+    /// font-size-scaled figure.
+    label_box_height: f32,
     line_width: f32,
 }
 
@@ -125,7 +132,7 @@ fn render_section_label_group(
 ) -> SvgElement {
     let bg_width =
         crate::font_metrics::section_label_box_width(args.label_str, args.label_font_size);
-    let bg_height = crate::font_metrics::section_label_box_height(args.label_font_size);
+    let bg_height = args.label_box_height;
     // Covers the whole directive line (bar number through trailing spans),
     // not just the label box, so the group has no unpainted gap for a click
     // to fall through — see `TransparentRectRole::SectionLabelClickTarget`.

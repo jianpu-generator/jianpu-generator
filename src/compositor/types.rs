@@ -86,6 +86,10 @@ pub enum AbsoluteContent {
         font: FontFamily,
         weight: FontWeight,
         italic: bool,
+        /// The title's reserved box width in points (see
+        /// `Metadata::title_style.width_pt`, `font_metrics::title_box_width`)
+        /// — `0.0` for every non-title use of `Text`.
+        reserved_width_pt: f32,
     },
     MeasureHighlight {
         width: f32,
@@ -188,6 +192,11 @@ pub enum AbsoluteContent {
         /// Font size in points of `label` (see `Metadata::section_label_font_size`).
         /// Meaningless when `label` is `None`.
         label_font_size: f32,
+        /// Height in points of `label`'s rendered background box (see
+        /// `font_metrics::section_label_box_height`), already including
+        /// `Metadata::section_label.vertical_padding_pt`. Meaningless when
+        /// `label` is `None`.
+        label_box_height: f32,
         /// Key/bpm/time-signature spans, i.e. everything on the line except
         /// `bar_number` and `label`.
         spans: Vec<TextSpan>,

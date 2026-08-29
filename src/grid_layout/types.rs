@@ -202,13 +202,15 @@ pub enum GridContent {
     /// Generic styled text for header and footer rows. `is_title` is set by
     /// `make_title_row`/`make_subtitle_author_row` (title, subtitle,
     /// author) — `false` for the part legend and footer — see
-    /// `FontFamily::Title`.
+    /// `FontFamily::Title`. `min_width_pt` is only ever non-zero for the
+    /// title itself (see `Header::title_min_width_pt`); `0.0` elsewhere.
     Text {
         content: String,
         font_size: f32,
         bold: bool,
         italic: bool,
         is_title: bool,
+        min_width_pt: f32,
     },
     /// The resolved `# sequence` playback order, rendered as "Sequence: "
     /// followed by each label (styled like an inline section label) joined
@@ -219,72 +221,9 @@ pub enum GridContent {
     },
 }
 
-/// `GridContent` after arc variants have been resolved.
-/// Used in the coordinate-resolver layer; arc variants are handled before this point.
-#[derive(Debug, Clone)]
-pub enum PostArcGridContent {
-    NoteHead {
-        pitch: JianPuPitch,
-        accidental: Accidental,
-        octave: i8,
-        dotted: bool,
-        double_dotted: bool,
-    },
-    Rest {
-        dotted: bool,
-        double_dotted: bool,
-        implicit_fill: bool,
-    },
-    /// A single wide rest bar standing in for `count` consecutive
-    /// all-rest source measures.
-    MultiMeasureRest {
-        count: u32,
-    },
-    NoteDash {
-        dotted: bool,
-        double_dotted: bool,
-    },
-    OctaveDot,
-    ChordSymbol {
-        text: String,
-        dotted: bool,
-        double_dotted: bool,
-    },
-    PercussionHit,
-    Underline {
-        level: u32,
-    },
-    BarLine {
-        height_pt: f32,
-    },
-    HorizontalLine,
-    RowLabel(String),
-    LyricSyllable {
-        text: String,
-        source_part_index: usize,
-        note_id: usize,
-        verse: usize,
-    },
-    LyricLine(String),
-    DirectiveLine {
-        label: Option<String>,
-        bar_number: Option<u32>,
-        key: Option<String>,
-        bpm: Option<u32>,
-        time_signature: Option<(u32, u32)>,
-    },
-    Text {
-        content: String,
-        font_size: f32,
-        bold: bool,
-        italic: bool,
-        is_title: bool,
-    },
-    SequenceLine {
-        entries: Vec<SequenceEntryInfo>,
-        font_size: f32,
-    },
-}
+#[path = "post_arc_grid_content.rs"]
+mod post_arc_grid_content;
+pub use post_arc_grid_content::PostArcGridContent;
 
 #[derive(Debug, Clone)]
 pub struct PartListEntry {
@@ -305,6 +244,10 @@ pub struct Header {
     pub sequence: Option<Vec<SequenceEntryInfo>>,
     /// Font size in points for `title` (see `Metadata::title_font_size`).
     pub title_font_size: f32,
+    /// Minimum reserved box width in points for the title (see
+    /// `Metadata::title_style.width_pt`) — `0.0` means no configured
+    /// minimum. See `font_metrics::title_box_width`.
+    pub title_min_width_pt: f32,
     /// Font size in points for `subtitle` (see `Metadata::subtitle_font_size`).
     pub subtitle_font_size: f32,
     /// Font size in points for `author` (see `Metadata::author_font_size`).

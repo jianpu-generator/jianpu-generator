@@ -217,6 +217,7 @@ fn make_title_row(header: &Header, base: f32) -> Option<GridRow> {
                 bold: false,
                 italic: false,
                 is_title: true,
+                min_width_pt: header.title_min_width_pt,
             },
         }],
     })
@@ -236,6 +237,7 @@ fn make_subtitle_author_row(header: &Header, base: f32) -> GridRow {
                 bold: false,
                 italic: true,
                 is_title: true,
+                min_width_pt: 0.0,
             },
         });
     }
@@ -251,6 +253,7 @@ fn make_subtitle_author_row(header: &Header, base: f32) -> GridRow {
                 bold: false,
                 italic: false,
                 is_title: true,
+                min_width_pt: 0.0,
             },
         });
     }
@@ -319,6 +322,7 @@ fn make_part_list_rows(
                         bold: false,
                         italic: false,
                         is_title: false,
+                        min_width_pt: 0.0,
                     },
                 })
                 .collect(),

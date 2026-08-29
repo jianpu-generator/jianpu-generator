@@ -97,5 +97,13 @@ harness = false
 name = "lyric_hover_box_height_cucumber"
 harness = false
 
+[[test]]
+name = "text_style_metadata_cucumber"
+harness = false
+
+[[test]]
+name = "text_style_rendering_cucumber"
+harness = false
+
 [lints]
 workspace = true

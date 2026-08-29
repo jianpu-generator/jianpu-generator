@@ -30,6 +30,7 @@ fn render_page(page: &AbsolutePage, config: &RenderConfig) -> SvgDocument {
     let cjk_font_size = config.lyric_cjk_font_size();
     let notes_font_size = config.notes_font_size();
     let chords_font_size = config.chords_font_size();
+    let note_dash_font_size = config.note_dash_font_size();
     let note_number_width = config.note_number_width as f32;
 
     let params = RenderElementParams {
@@ -38,6 +39,7 @@ fn render_page(page: &AbsolutePage, config: &RenderConfig) -> SvgDocument {
         cjk_font_size,
         notes_font_size,
         chords_font_size,
+        note_dash_font_size,
         note_number_width,
         directive_row_offset: config.directive_row_offset,
     };
@@ -61,6 +63,7 @@ struct RenderElementParams {
     cjk_font_size: f32,
     notes_font_size: f32,
     chords_font_size: f32,
+    note_dash_font_size: f32,
     note_number_width: f32,
     directive_row_offset: Offset,
 }
@@ -72,6 +75,7 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
         cjk_font_size,
         notes_font_size,
         chords_font_size,
+        note_dash_font_size,
         note_number_width,
         directive_row_offset,
     } = params;
@@ -109,7 +113,7 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
         } => render_note_dash(
             elem,
             &DotState::new(*dotted, *double_dotted),
-            *notes_font_size,
+            *note_dash_font_size,
         ),
         AbsoluteContent::MultiMeasureRest { count, width } => {
             render_multi_measure_rest(elem, *count, *width, row_height, notes_font_size)
@@ -157,6 +161,10 @@ fn render_overlay_element(
             font,
             weight,
             italic,
+            // Not drawn — like `section_label_box_width`, this is purely a
+            // reserved layout quantity for callers to introspect, not a
+            // rendered element.
+            reserved_width_pt: _,
         } => vec![render_text_content(
             elem,
             content,
@@ -203,6 +211,7 @@ fn render_overlay_element(
             bar_number,
             label,
             label_font_size,
+            label_box_height,
             spans,
             spans_x_offset,
             label_x_offset,
@@ -213,6 +222,7 @@ fn render_overlay_element(
                 bar_number,
                 label,
                 label_font_size: *label_font_size,
+                label_box_height: *label_box_height,
                 spans,
                 spans_x_offset: *spans_x_offset,
                 label_x_offset: *label_x_offset,

@@ -15,6 +15,7 @@ pub(super) fn cfg() -> RenderConfig {
         max_measures_per_system: 16,
         lyrics_font_size: 18,
         notes_font_size: 18,
+        note_dash_font_size: 18,
         chords_font_size: 18,
         hide_system_dividers: false,
         directive_row_offset: Offset::default(),
@@ -23,6 +24,9 @@ pub(super) fn cfg() -> RenderConfig {
         part_label_font_size: 12,
         page_number_font_size: 18,
         lyric_click_target_padding_pt: 12,
+        notes_vertical_padding_pt: 0,
+        section_label_vertical_padding_pt: 0,
+        page_number_vertical_padding_pt: 0,
         notes_horizontal_padding_pt: 4,
         chords_horizontal_padding_pt: 4,
         lyrics_horizontal_padding_pt: 4,
@@ -142,6 +146,32 @@ fn sharp_accidental_renders_as_part_of_the_note_s_own_text_run() {
         matches!(&note_head.kind, SvgKind::Text { content, anchor, .. }
             if content == "1♯" && *anchor == TextAnchor::Start),
         "note head should render digit and accidental as one flush-left text run"
+    );
+}
+
+#[test]
+fn note_dash_renders_at_its_own_font_size_not_notes_font_size() {
+    // note_dash and notes are configured with distinct font sizes here so
+    // the assertion can't pass by coincidence: the dash must use
+    // `note_dash_font_size`, never fall back to `notes_font_size`.
+    let config = RenderConfig {
+        notes_font_size: 18,
+        note_dash_font_size: 30,
+        ..cfg()
+    };
+    let page = make_page(AbsoluteContent::NoteDash {
+        dotted: false,
+        double_dotted: false,
+    });
+    let docs = render_new(&[page], &config);
+    let dash = docs[0]
+        .elements
+        .iter()
+        .find(|e| matches!(&e.kind, SvgKind::Text { content, .. } if content == "\u{2014}"))
+        .expect("note dash element should be present");
+    assert!(
+        matches!(&dash.kind, SvgKind::Text { font_size, .. } if *font_size == 30.0),
+        "note dash should render at note_dash_font_size (30), not notes_font_size (18)"
     );
 }
 

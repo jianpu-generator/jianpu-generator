@@ -14,6 +14,7 @@ fn test_config() -> RenderConfig {
         max_measures_per_system: 48,
         lyrics_font_size: 18,
         notes_font_size: 18,
+        note_dash_font_size: 18,
         chords_font_size: 18,
         hide_system_dividers: false,
         directive_row_offset: Offset::default(),
@@ -22,6 +23,9 @@ fn test_config() -> RenderConfig {
         part_label_font_size: 12,
         page_number_font_size: 18,
         lyric_click_target_padding_pt: 12,
+        notes_vertical_padding_pt: 0,
+        section_label_vertical_padding_pt: 0,
+        page_number_vertical_padding_pt: 0,
         notes_horizontal_padding_pt: 4,
         chords_horizontal_padding_pt: 4,
         lyrics_horizontal_padding_pt: 4,
@@ -35,10 +39,10 @@ fn notehead_weight(config: &RenderConfig) -> f32 {
     font_metrics::monospace_char_advance_width('0', config.notes_font_size())
 }
 
-/// Real rendered width of the note-dash glyph at `config`'s notes font size,
-/// mirroring `layout_spacing::dash_weight`.
+/// Real rendered width of the note-dash glyph at `config`'s note-dash font
+/// size, mirroring `layout_spacing::dash_weight`.
 fn dash_weight(config: &RenderConfig) -> f32 {
-    font_metrics::monospace_char_advance_width('\u{2014}', config.notes_font_size())
+    font_metrics::monospace_char_advance_width('\u{2014}', config.note_dash_font_size())
 }
 
 /// Independently recomputed expected extra weight of a dotted note/rest/
@@ -156,15 +160,22 @@ fn dotted_rest_column_reserves_exactly_its_dot_s_own_rendered_width() {
 }
 
 #[test]
-fn dotted_note_dash_column_reserves_its_dot_s_own_rendered_width_at_notes_font_size() {
-    // `render_note_dash` draws its dot(s) at `config`'s notes font size, so
-    // the dash's own extra weight must be measured at that size to match
-    // what's actually drawn.
-    let config = test_config();
+fn dotted_note_dash_column_reserves_its_dot_s_own_rendered_width_at_note_dash_font_size() {
+    // `render_note_dash` draws its dot(s) at `config`'s note-dash font size
+    // (not `notes_font_size` — see `Metadata::note_dash.font_size`), so the
+    // dash's own extra weight must be measured at that size to match what's
+    // actually drawn. notes/note_dash are given distinct sizes here so this
+    // can't pass by coincidence.
+    let config = RenderConfig {
+        notes_font_size: 18,
+        note_dash_font_size: 30,
+        ..test_config()
+    };
     let dotted = make_block("S", note_dash(true, false), 1);
     let dotted_weight = measure_column_weights(&dotted, 2, &config)[0];
 
-    let expected = dash_weight(&config) + expected_dot_extra_weight(1, config.notes_font_size());
+    let expected =
+        dash_weight(&config) + expected_dot_extra_weight(1, config.note_dash_font_size());
     assert!(
         (dotted_weight - expected).abs() < 0.001,
         "dotted_weight={dotted_weight}"

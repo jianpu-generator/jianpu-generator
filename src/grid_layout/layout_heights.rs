@@ -9,19 +9,31 @@ pub(crate) struct LyricSizing {
     pub(crate) font_sizes: LyricFontSizes,
     /// See `Metadata::lyric_click_target_padding_pt` / `lyric_row_height`.
     pub(crate) click_target_padding_pt: f32,
+    /// Extra vertical padding in points added to a note/chord part's
+    /// note-head sub-row (see `Metadata::notes.vertical_padding_pt` /
+    /// `note_part_sub_row_heights`). Bundled onto this struct — despite its
+    /// lyric-specific name — purely to stay under the grid_layout threading
+    /// functions' max-argument-count lint: `LyricSizing` already flows
+    /// everywhere a system's per-part vertical sizing needs to reach, so
+    /// riding along on it avoids adding a new parameter at every hop.
+    pub(crate) notes_vertical_padding_pt: f32,
 }
 
 /// Returns the 7 sub-row_heights for a Note/Chord part, in order:
 /// [tuplet_bracket, arc, above_dot, note_head, below_dot, half_ul, quarter_ul]
-pub(crate) fn note_part_sub_row_heights(base: f32) -> [f32; 7] {
+/// `vertical_padding_pt` (see `Metadata::notes.vertical_padding_pt`) is added
+/// on top of the note-head band only, additively — so a score with no
+/// override (`vertical_padding_pt == 0.0`) renders at exactly the height it
+/// always has.
+pub(crate) fn note_part_sub_row_heights(base: f32, vertical_padding_pt: f32) -> [f32; 7] {
     [
-        base * 1.0,  // tuplet bracket (label + short bracket path)
-        base * 0.30, // tie/slur arc
-        base * 0.25, // above-octave dots
-        base,        // note head (main)
-        base * 0.25, // below-octave dots
-        base * 0.15, // half-beat underline
-        base * 0.15, // quarter-beat underline
+        base * 1.0,                 // tuplet bracket (label + short bracket path)
+        base * 0.30,                // tie/slur arc
+        base * 0.25,                // above-octave dots
+        base + vertical_padding_pt, // note head (main)
+        base * 0.25,                // below-octave dots
+        base * 0.15,                // half-beat underline
+        base * 0.15,                // quarter-beat underline
     ]
 }
 
@@ -30,8 +42,12 @@ pub(crate) fn note_part_sub_row_heights(base: f32) -> [f32; 7] {
 /// system — so a part without a tuplet doesn't reserve dead space for a
 /// bracket it never draws (see `expand_note_part`, which mirrors this by
 /// skipping the sub-row itself).
-pub(crate) fn note_part_height_pt(base: f32, has_tuplet_bracket: bool) -> f32 {
-    let heights = note_part_sub_row_heights(base);
+pub(crate) fn note_part_height_pt(
+    base: f32,
+    has_tuplet_bracket: bool,
+    vertical_padding_pt: f32,
+) -> f32 {
+    let heights = note_part_sub_row_heights(base, vertical_padding_pt);
     if has_tuplet_bracket {
         heights.iter().sum()
     } else {

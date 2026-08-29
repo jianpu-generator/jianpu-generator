@@ -6,7 +6,8 @@ use crate::grid_layout::types::{
 use crate::grid_layout::PAGE_MARGIN;
 
 use super::click_targets::resolve_click_target_elements;
-use super::content_conversion::{grid_to_absolute, DirectiveLineFontSizes};
+use super::content_conversion::grid_to_absolute;
+use super::directive_line_conversion::DirectiveLineFontSizes;
 use super::highlights::{resolve_error_highlights, resolve_measure_highlights};
 use super::post_arc_conversion::to_post_arc_content;
 use super::rest_run::{resolve_implicit_fill_rest, resolve_multi_measure_rest};
@@ -28,6 +29,10 @@ pub struct LabelFontSizes {
     pub measure_number: f32,
     pub section_label: f32,
     pub part_label: f32,
+    /// Extra vertical padding in points added to an inline section label's
+    /// rendered background box (see `Metadata::section_label.vertical_padding_pt`
+    /// / `font_metrics::section_label_box_height`).
+    pub section_label_vertical_padding_pt: f32,
 }
 
 /// Horizontal padding in points reserved before each flush-left glyph type
@@ -56,6 +61,10 @@ pub struct ResolveFontSizes {
     pub chords: f32,
     pub labels: LabelFontSizes,
     pub paddings: ElementPaddings,
+    /// Extra vertical padding in points, offsetting the footer page number
+    /// upward from the page's bottom edge (see
+    /// `Metadata::page_number.vertical_padding_pt`).
+    pub page_number_vertical_padding_pt: f32,
 }
 
 pub fn resolve(
@@ -162,6 +171,8 @@ pub(super) struct RowResolveConfig {
     chords_font_size: f32,
     label_font_sizes: LabelFontSizes,
     pub(super) paddings: ElementPaddings,
+    /// See `Metadata::page_number.vertical_padding_pt` / `resolve_row_element`.
+    page_number_vertical_padding_pt: f32,
 }
 
 fn resolve_row_element(
@@ -194,6 +205,14 @@ fn resolve_row_element(
     };
     let bottom_padding = if matches!(el.content, GridContent::DirectiveLine { .. }) {
         crate::font_metrics::DIRECTIVE_LINE_BOTTOM_PADDING
+    } else if el.valign == VAlign::Bottom && matches!(el.content, GridContent::Text { .. }) {
+        // The only `GridContent::Text` element ever bottom-aligned is the
+        // footer page number (see `make_footer_row`) — push it up from the
+        // page's bottom edge by `page_number.vertical_padding_pt` instead of
+        // growing the footer row itself, which already fills all remaining
+        // page height regardless of this padding (see
+        // `Metadata::page_number.vertical_padding_pt`).
+        config.page_number_vertical_padding_pt
     } else {
         0.0
     };
@@ -238,6 +257,9 @@ fn resolve_row_element(
                 DirectiveLineFontSizes {
                     measure_number: config.label_font_sizes.measure_number,
                     section_label: config.label_font_sizes.section_label,
+                    section_label_vertical_padding_pt: config
+                        .label_font_sizes
+                        .section_label_vertical_padding_pt,
                 },
             )?
             .map(|content| AbsoluteElement { x, y, content }))
@@ -263,6 +285,7 @@ fn resolve_page(
         chords_font_size: font_sizes.chords,
         label_font_sizes: font_sizes.labels,
         paddings: font_sizes.paddings,
+        page_number_vertical_padding_pt: font_sizes.page_number_vertical_padding_pt,
     };
     for row in &page.rows {
         row_tops.push(row_y);

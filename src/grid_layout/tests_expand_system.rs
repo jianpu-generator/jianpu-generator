@@ -29,6 +29,7 @@ fn note_block_expands_to_six_sub_rows_without_tuplet() {
                 cjk: 21.6,
             },
             click_target_padding_pt: 12.0,
+            notes_vertical_padding_pt: 0.0,
         },
     );
     // 1 note part × 6 sub-rows (no `tuplet_bracket` sub-row reserved, since
@@ -50,6 +51,7 @@ fn note_head_element_is_in_sub_row_index_2_without_tuplet() {
                 cjk: 21.6,
             },
             click_target_padding_pt: 12.0,
+            notes_vertical_padding_pt: 0.0,
         },
     );
     let note_row = &rows[2]; // note-head sub-row (no tuplet_bracket sub-row ahead of it)
@@ -74,6 +76,7 @@ fn bar_line_element_has_positive_height_pt() {
                 cjk: 21.6,
             },
             click_target_padding_pt: 12.0,
+            notes_vertical_padding_pt: 0.0,
         },
     );
     let bar = rows
@@ -147,11 +150,16 @@ fn bar_line_height_includes_lyric_rows() {
             cjk: 21.6,
         },
         click_target_padding_pt: 12.0,
+        notes_vertical_padding_pt: 0.0,
     };
     let system = vec![make_block_with_lyric_part(3)];
     let first = system.first().unwrap();
-    let expected_height = system_musical_height_pt(first, base, &HashSet::new())
-        + system_lyric_height_pt(first, base, lyric_sizing);
+    let expected_height = system_musical_height_pt(
+        first,
+        base,
+        &HashSet::new(),
+        lyric_sizing.notes_vertical_padding_pt,
+    ) + system_lyric_height_pt(first, base, lyric_sizing);
 
     let rows = expand_system_to_rows(
         &system,
@@ -189,6 +197,7 @@ fn row_label_is_in_note_head_sub_row_at_column_0_span_1() {
                 cjk: 21.6,
             },
             click_target_padding_pt: 12.0,
+            notes_vertical_padding_pt: 0.0,
         },
     );
     let note_row = &rows[2]; // no tuplet in this system, so notehead is sub-row 2
@@ -215,6 +224,7 @@ fn column_count_is_label_cols_plus_musical_cols() {
                 cjk: 21.6,
             },
             click_target_padding_pt: 12.0,
+            notes_vertical_padding_pt: 0.0,
         },
     );
     // 1 label col + 1 leading bar line col + 4 musical cols (bar at col 3 → block width=4)

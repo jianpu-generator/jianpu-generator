@@ -30,6 +30,8 @@ pub(crate) struct NotePartParams<'a> {
     /// which has no `tuplet_bracket` sub-row.
     pub(crate) part_tuplet_brackets: &'a [GridElement],
     pub(crate) measure_layout: &'a [MeasureColumnLayout],
+    /// See `Metadata::notes.vertical_padding_pt` / `note_part_sub_row_heights`.
+    pub(crate) notes_vertical_padding_pt: f32,
 }
 
 /// A part's sub-rows before any elements are pushed into them, plus the
@@ -53,16 +55,23 @@ fn build_part_sub_rows(
     base: f32,
     column_count: u32,
     measure_layout: &[MeasureColumnLayout],
+    notes_vertical_padding_pt: f32,
 ) -> PartSubRows {
     let (sub_heights, sub_count): (Vec<f32>, usize) = if is_chord_only {
         (chord_part_sub_row_heights(base).to_vec(), 4)
     } else if has_tuplet {
-        (note_part_sub_row_heights(base).to_vec(), 7)
+        (
+            note_part_sub_row_heights(base, notes_vertical_padding_pt).to_vec(),
+            7,
+        )
     } else {
         // No tuplet in this system for this part: drop the `tuplet_bracket`
         // sub-row entirely rather than reserving its height unused (see
         // `note_part_height_pt`, which mirrors this for system-height math).
-        (note_part_sub_row_heights(base)[1..].to_vec(), 6)
+        (
+            note_part_sub_row_heights(base, notes_vertical_padding_pt)[1..].to_vec(),
+            6,
+        )
     };
     let rows: Vec<GridRow> = sub_heights
         .iter()
@@ -112,6 +121,7 @@ pub(crate) fn expand_note_part(
         base,
         column_count,
         params.measure_layout,
+        params.notes_vertical_padding_pt,
     );
     if !part_template.label.is_empty() {
         if let Some(row) = sub_rows.get_mut(head_sub) {
@@ -225,6 +235,7 @@ pub(crate) fn expand_system_to_rows(
                     part_arcs,
                     part_tuplet_brackets,
                     measure_layout,
+                    notes_vertical_padding_pt: lyric_sizing.notes_vertical_padding_pt,
                 },
             ));
             if has_lyrics(part_template) {
@@ -268,6 +279,7 @@ pub(crate) fn make_footer_row(
                 bold: false,
                 italic: false,
                 is_title: false,
+                min_width_pt: 0.0,
             },
         }],
     }

@@ -1,33 +1,81 @@
-export type MetadataKey =
-  | 'title'
-  | 'subtitle'
-  | 'author'
+/** Every rendered text kind, matching `Metadata`'s per-kind `TextStyle`
+ * fields on the Rust side (see `syntax.md`'s "Text styles" section) — the
+ * order here is also the canonical emission order for their `<kind> = {...}`
+ * lines. */
+export const textStyleKinds = [
+  'title',
+  'subtitle',
+  'author',
+  'sequence',
+  'part_legend',
+  'measure_number',
+  'section_label',
+  'part_label',
+  'page_number',
+  'lyrics',
+  'notes',
+  'chords',
+  'note_dash',
+] as const
+
+export type TextStyleKind = (typeof textStyleKinds)[number]
+
+/** A `<kind> = { ... }` object's four components (see `syntax.md`). Any
+ * subset may be set in the source; an unset component is `null` here. */
+export const textStyleComponents = [
+  'font_size',
+  'horizontal_padding_pt',
+  'vertical_padding_pt',
+  'width_pt',
+] as const
+
+export type TextStyleComponent = (typeof textStyleComponents)[number]
+
+export interface TextStyleFields {
+  font_size: number | null
+  horizontal_padding_pt: number | null
+  vertical_padding_pt: number | null
+  width_pt: number | null
+}
+
+function emptyStyle(): TextStyleFields {
+  return {
+    font_size: null,
+    horizontal_padding_pt: null,
+    vertical_padding_pt: null,
+    width_pt: null,
+  }
+}
+
+/** Scalar (non-text-style) `# metadata` keys — everything left over once
+ * `title`/`subtitle`/`author`'s string content and the 13 `TextStyle` kinds
+ * are accounted for. */
+export type ScalarMetadataKey =
   | 'row_height'
   | 'max_measures_per_system'
   | 'note_number_width'
-  | 'part_label_width_pt'
   | 'parts_list_columns'
-  | 'lyrics_font_size'
-  | 'notes_font_size'
-  | 'chords_font_size'
-  | 'title_font_size'
-  | 'subtitle_font_size'
-  | 'author_font_size'
-  | 'sequence_font_size'
-  | 'part_legend_font_size'
-  | 'measure_number_font_size'
-  | 'section_label_font_size'
-  | 'part_label_font_size'
-  | 'page_number_font_size'
-  | 'lyric_click_target_padding_pt'
-  | 'notes_horizontal_padding_pt'
-  | 'chords_horizontal_padding_pt'
-  | 'lyrics_horizontal_padding_pt'
-  | 'note_dash_horizontal_padding_pt'
   | 'merge_duplicate_measures_across_parts'
   | 'hide_resting_parts'
   | 'hide_system_dividers'
   | 'directive_row_offset'
+
+const numericScalarKeys: ScalarMetadataKey[] = [
+  'row_height',
+  'max_measures_per_system',
+  'note_number_width',
+  'parts_list_columns',
+]
+
+/** Every editable `# metadata` field: `title`/`subtitle`/`author`'s string
+ * content, a scalar key, or one `<kind>.<component>` pair addressing a
+ * single component of a kind's `<kind> = { ... }` style object. */
+export type MetadataFieldKey =
+  | 'title'
+  | 'subtitle'
+  | 'author'
+  | ScalarMetadataKey
+  | `${TextStyleKind}.${TextStyleComponent}`
 
 export interface ParsedMetadataFields {
   title: string
@@ -36,98 +84,35 @@ export interface ParsedMetadataFields {
   row_height: number | null
   max_measures_per_system: number | null
   note_number_width: number | null
-  part_label_width_pt: number | null
   parts_list_columns: number | null
-  lyrics_font_size: number | null
-  notes_font_size: number | null
-  chords_font_size: number | null
-  title_font_size: number | null
-  subtitle_font_size: number | null
-  author_font_size: number | null
-  sequence_font_size: number | null
-  part_legend_font_size: number | null
-  measure_number_font_size: number | null
-  section_label_font_size: number | null
-  part_label_font_size: number | null
-  page_number_font_size: number | null
-  lyric_click_target_padding_pt: number | null
-  notes_horizontal_padding_pt: number | null
-  chords_horizontal_padding_pt: number | null
-  lyrics_horizontal_padding_pt: number | null
-  note_dash_horizontal_padding_pt: number | null
   merge_duplicate_measures_across_parts: boolean | null
   hide_resting_parts: boolean | null
   hide_system_dividers: boolean | null
   directive_row_offset: string | null
+  styles: Record<TextStyleKind, TextStyleFields>
 }
 
-const numericKeys: MetadataKey[] = [
-  'row_height',
-  'max_measures_per_system',
-  'note_number_width',
-  'part_label_width_pt',
-  'parts_list_columns',
-  'lyrics_font_size',
-  'notes_font_size',
-  'chords_font_size',
-  'title_font_size',
-  'subtitle_font_size',
-  'author_font_size',
-  'sequence_font_size',
-  'part_legend_font_size',
-  'measure_number_font_size',
-  'section_label_font_size',
-  'part_label_font_size',
-  'page_number_font_size',
-  'lyric_click_target_padding_pt',
-  'notes_horizontal_padding_pt',
-  'chords_horizontal_padding_pt',
-  'lyrics_horizontal_padding_pt',
-  'note_dash_horizontal_padding_pt',
-]
+function emptyParsedMetadata(): ParsedMetadataFields {
+  return {
+    title: '',
+    subtitle: null,
+    author: null,
+    row_height: null,
+    max_measures_per_system: null,
+    note_number_width: null,
+    parts_list_columns: null,
+    merge_duplicate_measures_across_parts: null,
+    hide_resting_parts: null,
+    hide_system_dividers: null,
+    directive_row_offset: null,
+    styles: Object.fromEntries(
+      textStyleKinds.map((kind) => [kind, emptyStyle()]),
+    ) as Record<TextStyleKind, TextStyleFields>,
+  }
+}
 
-const unquotedKeys: MetadataKey[] = [
-  ...numericKeys,
-  'merge_duplicate_measures_across_parts',
-  'hide_resting_parts',
-  'hide_system_dividers',
-  'directive_row_offset',
-]
-
-const canonicalKeyOrder: MetadataKey[] = [
-  'title',
-  'subtitle',
-  'author',
-  'row_height',
-  'max_measures_per_system',
-  'note_number_width',
-  'part_label_width_pt',
-  'parts_list_columns',
-  'lyrics_font_size',
-  'notes_font_size',
-  'chords_font_size',
-  'title_font_size',
-  'subtitle_font_size',
-  'author_font_size',
-  'sequence_font_size',
-  'part_legend_font_size',
-  'measure_number_font_size',
-  'section_label_font_size',
-  'part_label_font_size',
-  'page_number_font_size',
-  'lyric_click_target_padding_pt',
-  'notes_horizontal_padding_pt',
-  'chords_horizontal_padding_pt',
-  'lyrics_horizontal_padding_pt',
-  'note_dash_horizontal_padding_pt',
-  'merge_duplicate_measures_across_parts',
-  'hide_resting_parts',
-  'hide_system_dividers',
-  'directive_row_offset',
-]
-
-function isUnquotedKey(key: MetadataKey): boolean {
-  return unquotedKeys.includes(key)
+function isTextStyleKind(key: string): key is TextStyleKind {
+  return (textStyleKinds as readonly string[]).includes(key)
 }
 
 function findMetadataSection(lines: string[]): {
@@ -148,226 +133,238 @@ function findMetadataSection(lines: string[]): {
   return { startIndex, endIndex }
 }
 
-function parseSectionIntoMap(
-  lines: string[],
-  startIndex: number,
-  endIndex: number,
-): Map<MetadataKey, string> {
-  const map = new Map<MetadataKey, string>()
-
-  for (let i = startIndex + 1; i < endIndex; i++) {
-    const line = lines[i]
-    const trimmed = line.trim()
-    if (trimmed === '') continue
-
-    const eqIndex = line.indexOf('=')
-    if (eqIndex === -1) continue
-
-    const key = line.slice(0, eqIndex).trim() as MetadataKey
-    const rawValue = line.slice(eqIndex + 1).trim()
-    const value = rawValue.replace(/^"(.*)"$/, '$1')
-
-    map.set(key, value)
+/** Parses a `<kind> = { font_size: N, ... }` object literal's inner text
+ * (with or without the surrounding braces) into a `TextStyleFields` — any
+ * component not present, or whose value doesn't parse as an integer, stays
+ * `null`. */
+function parseStyleObject(rawValue: string): TextStyleFields {
+  const style = emptyStyle()
+  const inner = rawValue.trim().replace(/^\{/, '').replace(/\}$/, '')
+  for (const entry of inner.split(',')) {
+    const colonIndex = entry.indexOf(':')
+    if (colonIndex === -1) continue
+    const component = entry.slice(0, colonIndex).trim()
+    const value = Number.parseInt(entry.slice(colonIndex + 1).trim(), 10)
+    if (Number.isNaN(value)) continue
+    if ((textStyleComponents as readonly string[]).includes(component)) {
+      style[component as TextStyleComponent] = value
+    }
   }
-
-  return map
-}
-
-function formatMetadataLine(key: MetadataKey, value: string): string {
-  return isUnquotedKey(key) ? `${key} = ${value}` : `${key} = "${value}"`
-}
-
-function emitCanonicalSection(fieldMap: Map<MetadataKey, string>): string[] {
-  return [
-    ...canonicalKeyOrder
-      .filter((key) => fieldMap.has(key))
-      .map((key) => formatMetadataLine(key, fieldMap.get(key) as string)),
-    '',
-  ]
+  return style
 }
 
 export function parseMetadata(source: string): ParsedMetadataFields {
   const lines = source.split('\n')
   const { startIndex, endIndex } = findMetadataSection(lines)
-
-  const result: ParsedMetadataFields = {
-    title: '',
-    subtitle: null,
-    author: null,
-    row_height: null,
-    max_measures_per_system: null,
-    note_number_width: null,
-    part_label_width_pt: null,
-    parts_list_columns: null,
-    lyrics_font_size: null,
-    notes_font_size: null,
-    chords_font_size: null,
-    title_font_size: null,
-    subtitle_font_size: null,
-    author_font_size: null,
-    sequence_font_size: null,
-    part_legend_font_size: null,
-    measure_number_font_size: null,
-    section_label_font_size: null,
-    part_label_font_size: null,
-    page_number_font_size: null,
-    lyric_click_target_padding_pt: null,
-    notes_horizontal_padding_pt: null,
-    chords_horizontal_padding_pt: null,
-    lyrics_horizontal_padding_pt: null,
-    note_dash_horizontal_padding_pt: null,
-    merge_duplicate_measures_across_parts: null,
-    hide_resting_parts: null,
-    hide_system_dividers: null,
-    directive_row_offset: null,
-  }
-
+  const result = emptyParsedMetadata()
   if (startIndex === -1) return result
 
-  const fieldMap = parseSectionIntoMap(lines, startIndex, endIndex)
+  for (let i = startIndex + 1; i < endIndex; i++) {
+    const line = lines[i]
+    if (line.trim() === '') continue
 
-  if (fieldMap.has('title')) result.title = fieldMap.get('title') as string
-  if (fieldMap.has('subtitle'))
-    result.subtitle = fieldMap.get('subtitle') as string
-  if (fieldMap.has('author')) result.author = fieldMap.get('author') as string
-  if (fieldMap.has('row_height'))
-    result.row_height = parseInt(fieldMap.get('row_height') as string, 10)
-  if (fieldMap.has('max_measures_per_system'))
-    result.max_measures_per_system = parseInt(
-      fieldMap.get('max_measures_per_system') as string,
-      10,
-    )
-  if (fieldMap.has('note_number_width'))
-    result.note_number_width = parseInt(
-      fieldMap.get('note_number_width') as string,
-      10,
-    )
-  if (fieldMap.has('part_label_width_pt'))
-    result.part_label_width_pt = parseInt(
-      fieldMap.get('part_label_width_pt') as string,
-      10,
-    )
-  if (fieldMap.has('parts_list_columns'))
-    result.parts_list_columns = parseInt(
-      fieldMap.get('parts_list_columns') as string,
-      10,
-    )
-  if (fieldMap.has('lyrics_font_size'))
-    result.lyrics_font_size = parseInt(
-      fieldMap.get('lyrics_font_size') as string,
-      10,
-    )
-  if (fieldMap.has('notes_font_size'))
-    result.notes_font_size = parseInt(
-      fieldMap.get('notes_font_size') as string,
-      10,
-    )
-  if (fieldMap.has('chords_font_size'))
-    result.chords_font_size = parseInt(
-      fieldMap.get('chords_font_size') as string,
-      10,
-    )
-  if (fieldMap.has('title_font_size'))
-    result.title_font_size = parseInt(
-      fieldMap.get('title_font_size') as string,
-      10,
-    )
-  if (fieldMap.has('subtitle_font_size'))
-    result.subtitle_font_size = parseInt(
-      fieldMap.get('subtitle_font_size') as string,
-      10,
-    )
-  if (fieldMap.has('author_font_size'))
-    result.author_font_size = parseInt(
-      fieldMap.get('author_font_size') as string,
-      10,
-    )
-  if (fieldMap.has('sequence_font_size'))
-    result.sequence_font_size = parseInt(
-      fieldMap.get('sequence_font_size') as string,
-      10,
-    )
-  if (fieldMap.has('part_legend_font_size'))
-    result.part_legend_font_size = parseInt(
-      fieldMap.get('part_legend_font_size') as string,
-      10,
-    )
-  if (fieldMap.has('measure_number_font_size'))
-    result.measure_number_font_size = parseInt(
-      fieldMap.get('measure_number_font_size') as string,
-      10,
-    )
-  if (fieldMap.has('section_label_font_size'))
-    result.section_label_font_size = parseInt(
-      fieldMap.get('section_label_font_size') as string,
-      10,
-    )
-  if (fieldMap.has('part_label_font_size'))
-    result.part_label_font_size = parseInt(
-      fieldMap.get('part_label_font_size') as string,
-      10,
-    )
-  if (fieldMap.has('page_number_font_size'))
-    result.page_number_font_size = parseInt(
-      fieldMap.get('page_number_font_size') as string,
-      10,
-    )
-  if (fieldMap.has('lyric_click_target_padding_pt'))
-    result.lyric_click_target_padding_pt = parseInt(
-      fieldMap.get('lyric_click_target_padding_pt') as string,
-      10,
-    )
-  if (fieldMap.has('notes_horizontal_padding_pt'))
-    result.notes_horizontal_padding_pt = parseInt(
-      fieldMap.get('notes_horizontal_padding_pt') as string,
-      10,
-    )
-  if (fieldMap.has('chords_horizontal_padding_pt'))
-    result.chords_horizontal_padding_pt = parseInt(
-      fieldMap.get('chords_horizontal_padding_pt') as string,
-      10,
-    )
-  if (fieldMap.has('lyrics_horizontal_padding_pt'))
-    result.lyrics_horizontal_padding_pt = parseInt(
-      fieldMap.get('lyrics_horizontal_padding_pt') as string,
-      10,
-    )
-  if (fieldMap.has('note_dash_horizontal_padding_pt'))
-    result.note_dash_horizontal_padding_pt = parseInt(
-      fieldMap.get('note_dash_horizontal_padding_pt') as string,
-      10,
-    )
-  if (fieldMap.has('merge_duplicate_measures_across_parts'))
-    result.merge_duplicate_measures_across_parts =
-      fieldMap.get('merge_duplicate_measures_across_parts') === 'yes'
-  if (fieldMap.has('hide_resting_parts'))
-    result.hide_resting_parts = fieldMap.get('hide_resting_parts') === 'yes'
-  if (fieldMap.has('hide_system_dividers'))
-    result.hide_system_dividers = fieldMap.get('hide_system_dividers') === 'yes'
-  if (fieldMap.has('directive_row_offset'))
-    result.directive_row_offset = fieldMap.get('directive_row_offset') as string
+    const eqIndex = line.indexOf('=')
+    if (eqIndex === -1) continue
+
+    const key = line.slice(0, eqIndex).trim()
+    const rawValue = line.slice(eqIndex + 1).trim()
+
+    if (rawValue.startsWith('{')) {
+      if (isTextStyleKind(key)) {
+        result.styles[key] = {
+          ...result.styles[key],
+          ...parseStyleObject(rawValue),
+        }
+      }
+      continue
+    }
+
+    const value = rawValue.replace(/^"(.*)"$/, '$1')
+    switch (key) {
+      case 'title':
+        result.title = value
+        break
+      case 'subtitle':
+        result.subtitle = value
+        break
+      case 'author':
+        result.author = value
+        break
+      case 'row_height':
+        result.row_height = Number.parseInt(value, 10)
+        break
+      case 'max_measures_per_system':
+        result.max_measures_per_system = Number.parseInt(value, 10)
+        break
+      case 'note_number_width':
+        result.note_number_width = Number.parseInt(value, 10)
+        break
+      case 'parts_list_columns':
+        result.parts_list_columns = Number.parseInt(value, 10)
+        break
+      case 'merge_duplicate_measures_across_parts':
+        result.merge_duplicate_measures_across_parts = value === 'yes'
+        break
+      case 'hide_resting_parts':
+        result.hide_resting_parts = value === 'yes'
+        break
+      case 'hide_system_dividers':
+        result.hide_system_dividers = value === 'yes'
+        break
+      case 'directive_row_offset':
+        result.directive_row_offset = value
+        break
+      default:
+        break
+    }
+  }
 
   return result
 }
 
+function applyFieldUpdate(
+  parsed: ParsedMetadataFields,
+  key: MetadataFieldKey,
+  value: string | null,
+): void {
+  if (key === 'title' || key === 'subtitle' || key === 'author') {
+    const content = value === null ? null : value
+    if (key === 'title') {
+      parsed.title = content ?? ''
+    } else {
+      parsed[key] = content === '' ? null : content
+    }
+    return
+  }
+
+  const dotIndex = key.indexOf('.')
+  if (dotIndex !== -1) {
+    const kind = key.slice(0, dotIndex) as TextStyleKind
+    const component = key.slice(dotIndex + 1) as TextStyleComponent
+    const parsedNum =
+      value === null || value === '' ? null : Number.parseInt(value, 10)
+    parsed.styles[kind] = {
+      ...parsed.styles[kind],
+      [component]:
+        parsedNum === null || Number.isNaN(parsedNum) ? null : parsedNum,
+    }
+    return
+  }
+
+  const scalarKey = key as ScalarMetadataKey
+  if (value === null || value === '') {
+    // Checkboxes always write an explicit yes/no (see `setYesNo` in
+    // `EditMetadataModal`), so a null/empty value here only clears
+    // `directive_row_offset` or one of the numeric scalars.
+    if (scalarKey === 'directive_row_offset') {
+      parsed.directive_row_offset = null
+    } else if (numericScalarKeys.includes(scalarKey)) {
+      ;(parsed[scalarKey] as number | null) = null
+    }
+    return
+  }
+
+  switch (scalarKey) {
+    case 'row_height':
+      parsed.row_height = Number.parseInt(value, 10)
+      break
+    case 'max_measures_per_system':
+      parsed.max_measures_per_system = Number.parseInt(value, 10)
+      break
+    case 'note_number_width':
+      parsed.note_number_width = Number.parseInt(value, 10)
+      break
+    case 'parts_list_columns':
+      parsed.parts_list_columns = Number.parseInt(value, 10)
+      break
+    case 'merge_duplicate_measures_across_parts':
+      parsed.merge_duplicate_measures_across_parts = value === 'yes'
+      break
+    case 'hide_resting_parts':
+      parsed.hide_resting_parts = value === 'yes'
+      break
+    case 'hide_system_dividers':
+      parsed.hide_system_dividers = value === 'yes'
+      break
+    case 'directive_row_offset':
+      parsed.directive_row_offset = value
+      break
+    default:
+      break
+  }
+}
+
+function formatStyleValue(style: TextStyleFields): string | null {
+  const parts = textStyleComponents
+    .filter((component) => style[component] !== null)
+    .map((component) => `${component}: ${style[component]}`)
+  return parts.length === 0 ? null : `{ ${parts.join(', ')} }`
+}
+
+function emitCanonicalSection(parsed: ParsedMetadataFields): string[] {
+  const lines: string[] = []
+
+  const titleStyle = formatStyleValue(parsed.styles.title)
+  if (parsed.title !== '') lines.push(`title = "${parsed.title}"`)
+  if (titleStyle) lines.push(`title = ${titleStyle}`)
+
+  const subtitleStyle = formatStyleValue(parsed.styles.subtitle)
+  if (parsed.subtitle !== null) lines.push(`subtitle = "${parsed.subtitle}"`)
+  if (subtitleStyle) lines.push(`subtitle = ${subtitleStyle}`)
+
+  const authorStyle = formatStyleValue(parsed.styles.author)
+  if (parsed.author !== null) lines.push(`author = "${parsed.author}"`)
+  if (authorStyle) lines.push(`author = ${authorStyle}`)
+
+  if (parsed.row_height !== null)
+    lines.push(`row_height = ${parsed.row_height}`)
+  if (parsed.max_measures_per_system !== null)
+    lines.push(`max_measures_per_system = ${parsed.max_measures_per_system}`)
+  if (parsed.note_number_width !== null)
+    lines.push(`note_number_width = ${parsed.note_number_width}`)
+  if (parsed.parts_list_columns !== null)
+    lines.push(`parts_list_columns = ${parsed.parts_list_columns}`)
+
+  for (const kind of textStyleKinds) {
+    if (kind === 'title' || kind === 'subtitle' || kind === 'author') continue
+    const value = formatStyleValue(parsed.styles[kind])
+    if (value) lines.push(`${kind} = ${value}`)
+  }
+
+  if (parsed.merge_duplicate_measures_across_parts !== null)
+    lines.push(
+      `merge_duplicate_measures_across_parts = ${
+        parsed.merge_duplicate_measures_across_parts ? 'yes' : 'no'
+      }`,
+    )
+  if (parsed.hide_resting_parts !== null)
+    lines.push(
+      `hide_resting_parts = ${parsed.hide_resting_parts ? 'yes' : 'no'}`,
+    )
+  if (parsed.hide_system_dividers !== null)
+    lines.push(
+      `hide_system_dividers = ${parsed.hide_system_dividers ? 'yes' : 'no'}`,
+    )
+  if (parsed.directive_row_offset !== null)
+    lines.push(`directive_row_offset = ${parsed.directive_row_offset}`)
+
+  lines.push('')
+  return lines
+}
+
 export function updateMetadataField(
   source: string,
-  key: MetadataKey,
+  key: MetadataFieldKey,
   value: string | null,
 ): string {
   const lines = source.split('\n')
   const { startIndex, endIndex } = findMetadataSection(lines)
   if (startIndex === -1) return source
 
-  const fieldMap = parseSectionIntoMap(lines, startIndex, endIndex)
+  const parsed = parseMetadata(source)
+  applyFieldUpdate(parsed, key, value)
 
-  if (value === null || value === '') {
-    fieldMap.delete(key)
-  } else {
-    fieldMap.set(key, value)
-  }
-
-  const canonicalLines = emitCanonicalSection(fieldMap)
+  const canonicalLines = emitCanonicalSection(parsed)
 
   const updated = [
     ...lines.slice(0, startIndex + 1),

@@ -42,9 +42,11 @@ fn render_documents(
             labels: crate::coordinate_resolver::LabelFontSizes {
                 measure_number: config.measure_number_font_size as f32,
                 section_label: config.section_label_font_size as f32,
+                section_label_vertical_padding_pt: config.section_label_vertical_padding_pt(),
                 part_label: config.part_label_font_size as f32,
             },
             paddings: config.element_paddings(),
+            page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
         },
     )?;
     Ok(DocumentsResult {
@@ -84,9 +86,11 @@ fn render_documents_with_range(
             labels: crate::coordinate_resolver::LabelFontSizes {
                 measure_number: config.measure_number_font_size as f32,
                 section_label: config.section_label_font_size as f32,
+                section_label_vertical_padding_pt: config.section_label_vertical_padding_pt(),
                 part_label: config.part_label_font_size as f32,
             },
             paddings: config.element_paddings(),
+            page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
         },
     )?;
     Ok(DocumentsResult {

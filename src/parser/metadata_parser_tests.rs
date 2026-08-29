@@ -21,10 +21,19 @@ fn parses_optional_row_height() {
 
 #[test]
 fn parses_optional_part_label_width_pt() {
-    let content = "title = \"t\"\nauthor = \"a\"\npart_label_width_pt = 60\n";
+    let content = "title = \"t\"\nauthor = \"a\"\npart_label = { width_pt: 60 }\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.part_label_width_pt, Some(60));
+    assert_eq!(meta.part_label_style.width_pt, Some(60));
+}
+
+#[test]
+fn old_flat_part_label_width_pt_key_is_rejected() {
+    let content = "title = \"t\"\nauthor = \"a\"\npart_label_width_pt = 60\n";
+    let (_meta, errors) = parse_metadata(content, 0);
+    assert!(errors.iter().any(|e| e
+        .message()
+        .contains("unknown metadata field: part_label_width_pt")));
 }
 
 #[test]
@@ -110,10 +119,10 @@ fn subtitle_defaults_to_none() {
 
 #[test]
 fn parses_lyrics_font_size() {
-    let content = "title = \"t\"\nauthor = \"a\"\nlyrics_font_size = 14\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nlyrics = { font_size: 14 }\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.lyrics_font_size, Some(14));
+    assert_eq!(meta.lyrics_style.font_size, Some(14));
 }
 
 #[test]
@@ -121,15 +130,24 @@ fn lyrics_font_size_defaults_to_none() {
     let content = "title = \"t\"\nauthor = \"a\"\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.lyrics_font_size, None);
+    assert_eq!(meta.lyrics_style.font_size, None);
+}
+
+#[test]
+fn old_flat_lyrics_font_size_key_is_rejected() {
+    let content = "title = \"t\"\nauthor = \"a\"\nlyrics_font_size = 14\n";
+    let (_meta, errors) = parse_metadata(content, 0);
+    assert!(errors.iter().any(|e| e
+        .message()
+        .contains("unknown metadata field: lyrics_font_size")));
 }
 
 #[test]
 fn parses_measure_number_font_size() {
-    let content = "title = \"t\"\nauthor = \"a\"\nmeasure_number_font_size = 8\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nmeasure_number = { font_size: 8 }\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.measure_number_font_size, Some(8));
+    assert_eq!(meta.measure_number_style.font_size, Some(8));
 }
 
 #[test]
@@ -137,15 +155,15 @@ fn measure_number_font_size_defaults_to_none() {
     let content = "title = \"t\"\nauthor = \"a\"\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.measure_number_font_size, None);
+    assert_eq!(meta.measure_number_style.font_size, None);
 }
 
 #[test]
 fn parses_section_label_font_size() {
-    let content = "title = \"t\"\nauthor = \"a\"\nsection_label_font_size = 16\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nsection_label = { font_size: 16 }\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.section_label_font_size, Some(16));
+    assert_eq!(meta.section_label_style.font_size, Some(16));
 }
 
 #[test]
@@ -153,15 +171,15 @@ fn section_label_font_size_defaults_to_none() {
     let content = "title = \"t\"\nauthor = \"a\"\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.section_label_font_size, None);
+    assert_eq!(meta.section_label_style.font_size, None);
 }
 
 #[test]
 fn parses_part_label_font_size() {
-    let content = "title = \"t\"\nauthor = \"a\"\npart_label_font_size = 16\n";
+    let content = "title = \"t\"\nauthor = \"a\"\npart_label = { font_size: 16 }\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.part_label_font_size, Some(16));
+    assert_eq!(meta.part_label_style.font_size, Some(16));
 }
 
 #[test]
@@ -169,15 +187,15 @@ fn part_label_font_size_defaults_to_none() {
     let content = "title = \"t\"\nauthor = \"a\"\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.part_label_font_size, None);
+    assert_eq!(meta.part_label_style.font_size, None);
 }
 
 #[test]
 fn parses_page_number_font_size() {
-    let content = "title = \"t\"\nauthor = \"a\"\npage_number_font_size = 9\n";
+    let content = "title = \"t\"\nauthor = \"a\"\npage_number = { font_size: 9 }\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.page_number_font_size, Some(9));
+    assert_eq!(meta.page_number_style.font_size, Some(9));
 }
 
 #[test]
@@ -185,15 +203,15 @@ fn page_number_font_size_defaults_to_none() {
     let content = "title = \"t\"\nauthor = \"a\"\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.page_number_font_size, None);
+    assert_eq!(meta.page_number_style.font_size, None);
 }
 
 #[test]
 fn parses_lyric_click_target_padding_pt() {
-    let content = "title = \"t\"\nauthor = \"a\"\nlyric_click_target_padding_pt = 24\n";
+    let content = "title = \"t\"\nauthor = \"a\"\nlyrics = { vertical_padding_pt: 24 }\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.lyric_click_target_padding_pt, Some(24));
+    assert_eq!(meta.lyrics_style.vertical_padding_pt, Some(24));
 }
 
 #[test]
@@ -201,7 +219,25 @@ fn lyric_click_target_padding_pt_defaults_to_none() {
     let content = "title = \"t\"\nauthor = \"a\"\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
-    assert_eq!(meta.lyric_click_target_padding_pt, None);
+    assert_eq!(meta.lyrics_style.vertical_padding_pt, None);
+}
+
+#[test]
+fn old_flat_lyric_click_target_padding_pt_key_is_rejected() {
+    let content = "title = \"t\"\nauthor = \"a\"\nlyric_click_target_padding_pt = 24\n";
+    let (_meta, errors) = parse_metadata(content, 0);
+    assert!(errors.iter().any(|e| e
+        .message()
+        .contains("unknown metadata field: lyric_click_target_padding_pt")));
+}
+
+#[test]
+fn old_flat_notes_horizontal_padding_pt_key_is_rejected() {
+    let content = "title = \"t\"\nauthor = \"a\"\nnotes_horizontal_padding_pt = 4\n";
+    let (_meta, errors) = parse_metadata(content, 0);
+    assert!(errors.iter().any(|e| e
+        .message()
+        .contains("unknown metadata field: notes_horizontal_padding_pt")));
 }
 
 #[test]

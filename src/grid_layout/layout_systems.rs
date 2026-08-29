@@ -53,6 +53,7 @@ pub(crate) fn system_musical_height_pt(
     block: &MeasureBlock,
     base: f32,
     tuplet_part_indices: &HashSet<usize>,
+    notes_vertical_padding_pt: f32,
 ) -> f32 {
     block
         .rows
@@ -63,7 +64,11 @@ pub(crate) fn system_musical_height_pt(
             if is_chord_only_row(r) {
                 chord_part_sub_row_heights(base).iter().sum::<f32>()
             } else {
-                note_part_height_pt(base, tuplet_part_indices.contains(&idx))
+                note_part_height_pt(
+                    base,
+                    tuplet_part_indices.contains(&idx),
+                    notes_vertical_padding_pt,
+                )
             }
         })
         .sum()
@@ -359,8 +364,12 @@ pub(crate) fn compute_bar_height(
     tuplet_part_indices: &HashSet<usize>,
     lyric_sizing: LyricSizing,
 ) -> f32 {
-    system_musical_height_pt(first, base, tuplet_part_indices)
-        + system_lyric_height_pt(first, base, lyric_sizing)
+    system_musical_height_pt(
+        first,
+        base,
+        tuplet_part_indices,
+        lyric_sizing.notes_vertical_padding_pt,
+    ) + system_lyric_height_pt(first, base, lyric_sizing)
 }
 
 pub(crate) fn system_has_any_decoration(system: &[MeasureBlock]) -> bool {

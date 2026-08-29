@@ -163,7 +163,20 @@ pub struct BassDegree {
     pub accidental: Accidental,
 }
 
-#[derive(Debug)]
+/// Parsed (all-optional) form of the four-component style object a single
+/// `<kind> = { font_size: N, horizontal_padding_pt: N, vertical_padding_pt: N,
+/// width_pt: N }` metadata line resolves to. See `crate::ast::grouped::TextStyle`
+/// for the fully-resolved (defaulted) counterpart and `syntax.md` for the
+/// object-literal grammar.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct TextStyle {
+    pub font_size: Option<u32>,
+    pub horizontal_padding_pt: Option<u32>,
+    pub vertical_padding_pt: Option<u32>,
+    pub width_pt: Option<u32>,
+}
+
+#[derive(Debug, Default)]
 pub struct ParsedMetadata {
     pub title: Option<String>,
     pub subtitle: Option<String>,
@@ -171,39 +184,36 @@ pub struct ParsedMetadata {
     pub row_height: Option<u32>,
     pub max_measures_per_system: Option<u32>,
     pub note_number_width: Option<u32>,
-    pub part_label_width_pt: Option<u32>,
     pub parts_list_columns: Option<u32>,
-    pub lyrics_font_size: Option<u32>,
-    pub notes_font_size: Option<u32>,
-    pub chords_font_size: Option<u32>,
-    pub title_font_size: Option<u32>,
-    pub subtitle_font_size: Option<u32>,
-    pub author_font_size: Option<u32>,
-    pub sequence_font_size: Option<u32>,
-    pub part_legend_font_size: Option<u32>,
-    pub measure_number_font_size: Option<u32>,
-    pub section_label_font_size: Option<u32>,
-    pub part_label_font_size: Option<u32>,
-    pub page_number_font_size: Option<u32>,
-    /// Extra vertical padding (points) added around a lyric syllable's
-    /// click-target box on top of the font's own measured ascender+descender
-    /// span (see `grid_layout::layout_heights::lyric_row_height`). Default:
-    /// `12`.
-    pub lyric_click_target_padding_pt: Option<u32>,
-    /// Horizontal padding (points) reserved before a note head/rest/percussion hit,
-    /// widening its column's spacing rod by the same amount (see
-    /// `grid_layout::layout_spacing::column_rod`). Default: `4`.
-    pub notes_horizontal_padding_pt: Option<u32>,
-    /// Horizontal padding (points) reserved before a chord symbol, widening its
-    /// column's spacing rod by the same amount. Default: `4`.
-    pub chords_horizontal_padding_pt: Option<u32>,
-    /// Horizontal padding (points) reserved before a lyric syllable, widening its
-    /// column's spacing rod by the same amount. Default: `4`.
-    pub lyrics_horizontal_padding_pt: Option<u32>,
-    /// Horizontal padding (points) reserved before a note dash (the sustain-beat
-    /// `-` extension), widening its column's spacing rod by the same amount.
-    /// Default: `4`.
-    pub note_dash_horizontal_padding_pt: Option<u32>,
+    /// Title text style: font size and reserved minimum box width (see
+    /// `TextStyle`).
+    pub title_style: TextStyle,
+    /// Subtitle text style.
+    pub subtitle_style: TextStyle,
+    /// Author text style.
+    pub author_style: TextStyle,
+    /// `# sequence` summary line text style.
+    pub sequence_style: TextStyle,
+    /// Part-name legend entry text style.
+    pub part_legend_style: TextStyle,
+    /// Measure bar-number text style.
+    pub measure_number_style: TextStyle,
+    /// Inline section-label text style.
+    pub section_label_style: TextStyle,
+    /// Page-number footer text style.
+    pub page_number_style: TextStyle,
+    /// Part row-label text style, including the reserved column width (see
+    /// `Metadata::part_label`).
+    pub part_label_style: TextStyle,
+    /// Lyric syllable text style, including the click-target's extra vertical
+    /// padding (formerly `lyric_click_target_padding_pt`).
+    pub lyrics_style: TextStyle,
+    /// Note head/rest/percussion-hit text style.
+    pub notes_style: TextStyle,
+    /// Chord symbol text style.
+    pub chords_style: TextStyle,
+    /// Note-dash (sustain-beat `-` extension) text style.
+    pub note_dash_style: TextStyle,
     /// When `false`, disables merging of identical measure rows that come from different
     /// parts (see `consolidator::consolidate`). Default: `true`.
     pub merge_duplicate_measures_across_parts: Option<bool>,

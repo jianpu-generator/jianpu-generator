@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { PartMode, SoundfontValue } from '../types'
-import type { MetadataKey } from '../utils/metadataSource'
+import type { MetadataFieldKey } from '../utils/metadataSource'
 import { parseMetadata, updateMetadataField } from '../utils/metadataSource'
 
 /** Open/closed state for the edit-parts, edit-metadata, storage-settings,
@@ -55,7 +55,7 @@ export function useAppPanels(
   const parsedMetadata = useMemo(() => parseMetadata(source), [source])
 
   const handleMetadataFieldChange = useCallback(
-    (key: MetadataKey, value: string | null) => {
+    (key: MetadataFieldKey, value: string | null) => {
       handleSourceChange(updateMetadataField(source, key, value))
     },
     [source, handleSourceChange],

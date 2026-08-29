@@ -175,11 +175,12 @@ fn build_header(score: &Score, parts: &[PartInfo]) -> grid_layout::types::Header
         part_list,
         parts_list_columns: score.metadata.parts_list_columns,
         sequence,
-        title_font_size: score.metadata.title_font_size as f32,
-        subtitle_font_size: score.metadata.subtitle_font_size as f32,
-        author_font_size: score.metadata.author_font_size as f32,
-        sequence_font_size: score.metadata.sequence_font_size as f32,
-        part_legend_font_size: score.metadata.part_legend_font_size as f32,
+        title_font_size: score.metadata.title_style.font_size as f32,
+        title_min_width_pt: score.metadata.title_style.width_pt as f32,
+        subtitle_font_size: score.metadata.subtitle_style.font_size as f32,
+        author_font_size: score.metadata.author_style.font_size as f32,
+        sequence_font_size: score.metadata.sequence.font_size as f32,
+        part_legend_font_size: score.metadata.part_legend.font_size as f32,
     }
 }
 
@@ -215,9 +216,11 @@ fn render_svg_docs_with_parts(
             labels: coordinate_resolver::LabelFontSizes {
                 measure_number: config.measure_number_font_size as f32,
                 section_label: config.section_label_font_size as f32,
+                section_label_vertical_padding_pt: config.section_label_vertical_padding_pt(),
                 part_label: config.part_label_font_size as f32,
             },
             paddings: config.element_paddings(),
+            page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
         },
     )?;
     Ok(SvgDocsResult {

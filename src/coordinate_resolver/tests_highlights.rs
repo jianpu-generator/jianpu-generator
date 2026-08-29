@@ -10,6 +10,14 @@ const DEFAULT_PADDINGS: ElementPaddings = ElementPaddings {
     lyrics: 4.0,
     note_dash: 4.0,
 };
+
+/// Shared default label font sizes used across this file's `ResolveFontSizes` literals, factored out to keep each test under clippy's line-count cap.
+const DEFAULT_LABELS: LabelFontSizes = LabelFontSizes {
+    measure_number: 10.0,
+    section_label: 12.0,
+    section_label_vertical_padding_pt: 0.0,
+    part_label: 12.0,
+};
 use crate::grid_layout::types::{
     BarNumberClickTarget, GridContent, GridElement, GridPage, GridRow, HAlign, MeasureColumnLayout,
     MeasureHighlight, PlaybackCursorTarget, VAlign,
@@ -61,12 +69,9 @@ fn measure_highlight_produces_prepended_rect_element() {
             },
             notes: 12.0,
             chords: 12.0,
-            labels: LabelFontSizes {
-                measure_number: 10.0,
-                section_label: 12.0,
-                part_label: 12.0,
-            },
+            labels: DEFAULT_LABELS,
             paddings: DEFAULT_PADDINGS,
+            page_number_vertical_padding_pt: 0.0,
         },
     )
     .unwrap();
@@ -124,12 +129,9 @@ fn error_highlight_resolves_to_absolute_error_highlight() {
             },
             notes: 12.0,
             chords: 12.0,
-            labels: LabelFontSizes {
-                measure_number: 10.0,
-                section_label: 12.0,
-                part_label: 12.0,
-            },
+            labels: DEFAULT_LABELS,
             paddings: DEFAULT_PADDINGS,
+            page_number_vertical_padding_pt: 0.0,
         },
     )
     .unwrap();
@@ -177,12 +179,9 @@ fn page_with_no_highlight_produces_no_extra_element() {
             },
             notes: 12.0,
             chords: 12.0,
-            labels: LabelFontSizes {
-                measure_number: 10.0,
-                section_label: 12.0,
-                part_label: 12.0,
-            },
+            labels: DEFAULT_LABELS,
             paddings: DEFAULT_PADDINGS,
+            page_number_vertical_padding_pt: 0.0,
         },
     )
     .unwrap();
@@ -253,12 +252,9 @@ fn playback_cursor_reaches_final_bar_line_of_its_measure() {
             },
             notes: 12.0,
             chords: 12.0,
-            labels: LabelFontSizes {
-                measure_number: 10.0,
-                section_label: 12.0,
-                part_label: 12.0,
-            },
+            labels: DEFAULT_LABELS,
             paddings: DEFAULT_PADDINGS,
+            page_number_vertical_padding_pt: 0.0,
         },
     )
     .unwrap();
@@ -328,12 +324,9 @@ fn bar_number_click_target_resolves_to_a_small_rect_sized_to_its_digits() {
             },
             notes: 12.0,
             chords: 12.0,
-            labels: LabelFontSizes {
-                measure_number: 10.0,
-                section_label: 12.0,
-                part_label: 12.0,
-            },
+            labels: DEFAULT_LABELS,
             paddings: DEFAULT_PADDINGS,
+            page_number_vertical_padding_pt: 0.0,
         },
     )
     .unwrap();

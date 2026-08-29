@@ -155,57 +155,18 @@ When(
   },
 )
 
+// One `TextStyleRow` (see `MetadataFieldRows.tsx`) has four inline number
+// inputs, one per component — each is given an `aria-label` of
+// `"${rowLabel} ${componentSubLabel}"` (e.g. "Part Label Style Width",
+// "Measure Number Style Font Size") specifically so a single generic step
+// can target any one of them by accessible name, rather than needing a
+// bespoke step (and a `tr`-text/`nth()` locator, ambiguous now that a row
+// has four number inputs instead of one) per field.
 When(
-  'I fill the Part Label Width \\(pt\\) numeric field with {string}',
-  async ({ page }, value: string) => {
+  'I fill the {string} field with {string}',
+  async ({ page }, ariaLabel: string, value: string) => {
     const modal = editMetadataModal(page)
-    const partLabelWidthInput = modal
-      .locator('tr', { hasText: 'Part Label Width (pt)' })
-      .locator('input[type="number"]')
-    await partLabelWidthInput.fill(value)
-  },
-)
-
-When(
-  'I fill the Measure Number Font Size numeric field with {string}',
-  async ({ page }, value: string) => {
-    const modal = editMetadataModal(page)
-    const input = modal
-      .locator('tr', { hasText: 'Measure Number Font Size' })
-      .locator('input[type="number"]')
-    await input.fill(value)
-  },
-)
-
-When(
-  'I fill the Section Label Font Size numeric field with {string}',
-  async ({ page }, value: string) => {
-    const modal = editMetadataModal(page)
-    const input = modal
-      .locator('tr', { hasText: 'Section Label Font Size' })
-      .locator('input[type="number"]')
-    await input.fill(value)
-  },
-)
-
-When(
-  'I fill the Part Label Font Size numeric field with {string}',
-  async ({ page }, value: string) => {
-    const modal = editMetadataModal(page)
-    const input = modal
-      .locator('tr', { hasText: 'Part Label Font Size' })
-      .locator('input[type="number"]')
-    await input.fill(value)
-  },
-)
-
-When(
-  'I fill the Page Number Font Size numeric field with {string}',
-  async ({ page }, value: string) => {
-    const modal = editMetadataModal(page)
-    const input = modal
-      .locator('tr', { hasText: 'Page Number Font Size' })
-      .locator('input[type="number"]')
+    const input = modal.getByLabel(ariaLabel, { exact: true })
     await input.fill(value)
   },
 )

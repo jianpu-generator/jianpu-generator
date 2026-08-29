@@ -69,40 +69,47 @@ Feature: Edit Metadata modal
     And I close the metadata modal with Escape
     Then the editor source and stored source both contain "hide_system_dividers = no"
 
-  Scenario: Editing part_label_width_pt updates the source
+  Scenario: Editing the Part Label Style's Width updates the source
     Given the edit-metadata-modal test fixture is loaded
     When I open the Edit Metadata modal
-    And I fill the Part Label Width (pt) numeric field with "60"
+    And I fill the "Part Label Style Width" field with "60"
     And I close the metadata modal with Escape
-    Then the editor source and stored source both contain "part_label_width_pt = 60"
+    Then the editor source and stored source both contain "part_label = { width_pt: 60 }"
 
-  Scenario: Editing measure_number_font_size updates the source
+  Scenario: Editing the Measure Number Style's Font Size updates the source
     Given the edit-metadata-modal test fixture is loaded
     When I open the Edit Metadata modal
-    And I fill the Measure Number Font Size numeric field with "14"
+    And I fill the "Measure Number Style Font Size" field with "14"
     And I close the metadata modal with Escape
-    Then the editor source and stored source both contain "measure_number_font_size = 14"
+    Then the editor source and stored source both contain "measure_number = { font_size: 14 }"
 
-  Scenario: Editing section_label_font_size updates the source
+  Scenario: Editing the Section Label Style's Font Size updates the source
     Given the edit-metadata-modal test fixture is loaded
     When I open the Edit Metadata modal
-    And I fill the Section Label Font Size numeric field with "16"
+    And I fill the "Section Label Style Font Size" field with "16"
     And I close the metadata modal with Escape
-    Then the editor source and stored source both contain "section_label_font_size = 16"
+    Then the editor source and stored source both contain "section_label = { font_size: 16 }"
 
-  Scenario: Editing part_label_font_size updates the source
+  Scenario: Editing the Part Label Style's Font Size updates the source
     Given the edit-metadata-modal test fixture is loaded
     When I open the Edit Metadata modal
-    And I fill the Part Label Font Size numeric field with "18"
+    And I fill the "Part Label Style Font Size" field with "18"
     And I close the metadata modal with Escape
-    Then the editor source and stored source both contain "part_label_font_size = 18"
+    Then the editor source and stored source both contain "part_label = { font_size: 18 }"
 
-  Scenario: Editing page_number_font_size updates the source
+  Scenario: Editing the Page Number Style's Font Size updates the source
     Given the edit-metadata-modal test fixture is loaded
     When I open the Edit Metadata modal
-    And I fill the Page Number Font Size numeric field with "20"
+    And I fill the "Page Number Style Font Size" field with "20"
     And I close the metadata modal with Escape
-    Then the editor source and stored source both contain "page_number_font_size = 20"
+    Then the editor source and stored source both contain "page_number = { font_size: 20 }"
+
+  Scenario: Editing the Lyrics Style's V. Padding updates the source
+    Given the edit-metadata-modal test fixture is loaded
+    When I open the Edit Metadata modal
+    And I fill the "Lyrics Style V. Padding" field with "20"
+    And I close the metadata modal with Escape
+    Then the editor source and stored source both contain "lyrics = { vertical_padding_pt: 20 }"
 
   Scenario: Editing directive_row_offset writes "x y" to the source
     Given the edit-metadata-modal test fixture is loaded

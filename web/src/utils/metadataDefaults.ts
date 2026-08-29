@@ -7,10 +7,12 @@ import {
   get_default_title_font_size,
   get_metadata_defaults,
   type MetadataDefaultsOut,
+  type TextStyleDefaultsOut,
 } from 'jianpu-wasm'
 import { ensureWasmInit } from '../wasmInit'
 
 export type MetadataDefaults = MetadataDefaultsOut
+export type TextStyleDefaults = TextStyleDefaultsOut
 
 let cached: Promise<MetadataDefaults> | null = null
 

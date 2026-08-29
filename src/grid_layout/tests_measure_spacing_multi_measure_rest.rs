@@ -20,6 +20,7 @@ fn test_config() -> RenderConfig {
         max_measures_per_system: 48,
         lyrics_font_size: 18,
         notes_font_size: 18,
+        note_dash_font_size: 18,
         chords_font_size: 18,
         hide_system_dividers: false,
         directive_row_offset: Offset::default(),
@@ -28,6 +29,9 @@ fn test_config() -> RenderConfig {
         part_label_font_size: 12,
         page_number_font_size: 18,
         lyric_click_target_padding_pt: 12,
+        notes_vertical_padding_pt: 0,
+        section_label_vertical_padding_pt: 0,
+        page_number_vertical_padding_pt: 0,
         notes_horizontal_padding_pt: 4,
         chords_horizontal_padding_pt: 4,
         lyrics_horizontal_padding_pt: 4,
@@ -188,6 +192,7 @@ fn multi_measure_rest_block_renders_wide_enough_for_its_count_label_when_squeeze
                 cjk: 21.6,
             },
             click_target_padding_pt: 12.0,
+            notes_vertical_padding_pt: 0.0,
         },
     );
     let row = &rows[0];
@@ -234,6 +239,7 @@ fn multi_measure_rest_block_keeps_horizontal_padding_even_when_squeezed_by_dense
                 cjk: 21.6,
             },
             click_target_padding_pt: 12.0,
+            notes_vertical_padding_pt: 0.0,
         },
     );
     let row = &rows[0];

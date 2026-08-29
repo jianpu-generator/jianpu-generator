@@ -28,6 +28,7 @@ const LYRIC_FONT_SIZES: LyricFontSizes = LyricFontSizes {
 const LABEL_FONT_SIZES: LabelFontSizes = LabelFontSizes {
     measure_number: 10.0,
     section_label: 12.0,
+    section_label_vertical_padding_pt: 0.0,
     part_label: 12.0,
 };
 const ELEMENT_PADDINGS: ElementPaddings = ElementPaddings {
@@ -42,6 +43,7 @@ const RESOLVE_FONT_SIZES: ResolveFontSizes = ResolveFontSizes {
     chords: CHORDS_FONT_SIZE,
     labels: LABEL_FONT_SIZES,
     paddings: ELEMENT_PADDINGS,
+    page_number_vertical_padding_pt: 0.0,
 };
 
 fn single_row_page(element: GridElement) -> GridPage {

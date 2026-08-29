@@ -15,7 +15,10 @@ import type {
   PartMode,
   SoundfontValue,
 } from '../types'
-import type { MetadataKey, ParsedMetadataFields } from '../utils/metadataSource'
+import type {
+  MetadataFieldKey,
+  ParsedMetadataFields,
+} from '../utils/metadataSource'
 import { EditMetadataModal } from './EditMetadataModal'
 import { Editor } from './Editor'
 import { EditPartsModal } from './EditPartsModal'
@@ -93,7 +96,10 @@ interface AppWorkspaceProps {
   previewAudioPlaying: boolean
   editMetadataOpen: boolean
   parsedMetadata: ParsedMetadataFields
-  handleMetadataFieldChange: (key: MetadataKey, value: string | null) => void
+  handleMetadataFieldChange: (
+    key: MetadataFieldKey,
+    value: string | null,
+  ) => void
   documents: SvgDocumentOut[]
   highlightedDocuments: SvgDocumentOut[]
   rendering: boolean

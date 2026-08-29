@@ -4,6 +4,10 @@ use crate::compositor::types::{
 use crate::error::IrrecoverableError;
 use crate::grid_layout::types::{HAlign, PostArcGridContent};
 
+use super::directive_line_conversion::{
+    directive_line_absolute, sequence_line_content, DirectiveLineFontSizes,
+};
+
 fn text_anchor(halign: HAlign) -> TextAnchor {
     match halign {
         HAlign::Start => TextAnchor::Start,
@@ -12,22 +16,31 @@ fn text_anchor(halign: HAlign) -> TextAnchor {
     }
 }
 
-fn sans_serif_text(
-    content: String,
+/// Bundles `sans_serif_text`'s style params — split out once a 7th
+/// (`reserved_width_pt`) pushed the plain argument list over clippy's
+/// `too_many_arguments` limit.
+#[derive(Clone, Copy)]
+struct SansSerifTextStyle {
     font_size: f32,
     anchor: TextAnchor,
     weight: FontWeight,
     italic: bool,
     font: FontFamily,
-) -> AbsoluteContent {
+    /// The title's reserved box width in points, or `0.0` for every
+    /// non-title use (see `AbsoluteContent::Text::reserved_width_pt`).
+    reserved_width_pt: f32,
+}
+
+fn sans_serif_text(content: String, style: SansSerifTextStyle) -> AbsoluteContent {
     AbsoluteContent::Text {
         content,
-        font_size,
-        anchor,
+        font_size: style.font_size,
+        anchor: style.anchor,
         baseline: DominantBaseline::Middle,
-        font,
-        weight,
-        italic,
+        font: style.font,
+        weight: style.weight,
+        italic: style.italic,
+        reserved_width_pt: style.reserved_width_pt,
     }
 }
 
@@ -37,7 +50,7 @@ fn sans_serif_text(
 /// the directive line's own label is rendered as an independent text element
 /// (see [`AbsoluteContent::DirectiveLine`], `label`/`label_x_offset`) rather
 /// than through this span.
-fn section_label_span(label_text: &str, font_size: f32) -> TextSpan {
+pub(super) fn section_label_span(label_text: &str, font_size: f32) -> TextSpan {
     TextSpan {
         content: label_text.to_string(),
         bold: true,
@@ -59,183 +72,6 @@ pub(super) fn bar_number_text_span(n: u32, font_size: f32) -> TextSpan {
     }
 }
 
-/// Font sizes for the small overlay labels drawn around the score body —
-/// measure numbers and inline section labels — threaded from
-/// `RenderConfig` down through `resolve`/`grid_to_absolute` (see
-/// `Metadata::measure_number_font_size`/`Metadata::section_label_font_size`).
-#[derive(Clone, Copy)]
-pub(super) struct DirectiveLineFontSizes {
-    pub(super) measure_number: f32,
-    pub(super) section_label: f32,
-}
-
-/// Result of [`directive_line_content`]: the line's text spans plus layout
-/// hints for elements positioned separately from the monolithic `<text>`
-/// (the bar number, the section-label bounding box).
-struct DirectiveLineContent {
-    /// Bar-number span, rendered as its own text element at the line's
-    /// start (offset 0).
-    bar_number: Option<TextSpan>,
-    spans: Vec<TextSpan>,
-    /// X offset (in points, from the line's start) where `spans` begins:
-    /// see the field of the same name on
-    /// [`crate::compositor::types::AbsoluteContent::DirectiveLine`].
-    spans_x_offset: f32,
-    /// X offset (in points, from the line's start) where the label's own,
-    /// independently-positioned text element begins: past `bar_number`'s
-    /// measured width (plus a gap) when one is present, zero otherwise.
-    label_x_offset: f32,
-}
-
-/// Builds the text spans for a directive line (excluding the bar number
-/// and section label, which are rendered as their own independent text
-/// elements — see `bar_number`/`label_x_offset`), plus layout hints for the
-/// section-label box (see [`DirectiveLineContent`]).
-///
-/// Two explicit passes, per Task 4 of
-/// `PLAN-section-label-engraving-quality.md`: pass 1
-/// ([`build_directive_line_spans`]) builds the line's logical elements
-/// (content/style only, no positions); pass 2 below walks that list once,
-/// measuring each element with real font-metrics glyph advances (see
-/// [`crate::font_metrics`]), since actual text layout happens in the
-/// browser and isn't otherwise available here. Elements are laid out left
-/// to right in a fixed order — bar number, then section label, then the
-/// rest of the directives — so a label never intersects the directives
-/// that follow it, regardless of how short or long the bar number is (this
-/// ordering is a follow-up fix on top of the 5 tasks in
-/// `PLAN-section-label-engraving-quality.md`, not one of the tasks itself).
-fn directive_line_content(
-    content: &PostArcGridContent,
-    font_sizes: DirectiveLineFontSizes,
-) -> DirectiveLineContent {
-    let PostArcGridContent::DirectiveLine { label, .. } = content else {
-        return DirectiveLineContent {
-            bar_number: None,
-            spans: Vec::new(),
-            spans_x_offset: 0.0,
-            label_x_offset: 0.0,
-        };
-    };
-
-    let (bar_number_span, spans) = build_directive_line_spans(content, font_sizes.measure_number);
-    let bar_number_width = bar_number_span
-        .as_ref()
-        .map(crate::font_metrics::span_width)
-        .unwrap_or(0.0);
-
-    let label_x_offset = if label.is_some() && bar_number_span.is_some() {
-        bar_number_width + crate::font_metrics::DIRECTIVE_LINE_ELEMENT_GAP
-    } else {
-        0.0
-    };
-    let spans_x_offset = match label {
-        Some(label_str) => {
-            label_x_offset
-                + crate::font_metrics::section_label_box_width(label_str, font_sizes.section_label)
-                + crate::font_metrics::DIRECTIVE_LINE_ELEMENT_GAP
-        }
-        None => bar_number_width,
-    };
-
-    DirectiveLineContent {
-        bar_number: bar_number_span,
-        spans,
-        spans_x_offset,
-        label_x_offset,
-    }
-}
-
-/// Pass 1 of [`directive_line_content`]: builds the directive line's
-/// ordered logical elements — the bar number, plus key/bpm/time signature —
-/// with their content/style, but no positions — positions are assigned in
-/// pass 2.
-fn build_directive_line_spans(
-    content: &PostArcGridContent,
-    measure_number_font_size: f32,
-) -> (Option<TextSpan>, Vec<TextSpan>) {
-    let PostArcGridContent::DirectiveLine {
-        bar_number,
-        key,
-        bpm,
-        time_signature,
-        ..
-    } = content
-    else {
-        return (None, Vec::new());
-    };
-    let bar_number_span = bar_number.map(|n| bar_number_text_span(n, measure_number_font_size));
-    let mut spans: Vec<TextSpan> = Vec::new();
-    if let Some(key_str) = key {
-        spans.push(TextSpan {
-            content: format!("  {key_str}"),
-            bold: false,
-            italic: false,
-            font_size: 12.0,
-        });
-    }
-    if let Some(b) = bpm {
-        spans.push(TextSpan {
-            content: format!("  \u{2669}={b}"),
-            bold: false,
-            italic: false,
-            font_size: 12.0,
-        });
-    }
-    if let Some((n, d)) = time_signature {
-        spans.push(TextSpan {
-            content: format!("  {n}/{d}"),
-            bold: false,
-            italic: false,
-            font_size: 12.0,
-        });
-    }
-    (bar_number_span, spans)
-}
-
-/// Builds the text spans for the `# sequence` header line: a plain
-/// "Sequence: " prefix, each label styled like an inline section label (see
-/// [`section_label_span`]) — followed by a plain, non-bold/italic
-/// `(-abbrev -abbrev ...)` (omit) or `(abbrev abbrev ...)` (only) span when
-/// that entry's suffix restricts that occurrence's MIDI/WAV playback —
-/// joined by a plain " › ".
-fn sequence_line_content(
-    entries: &[crate::grid_layout::types::SequenceEntryInfo],
-    font_size: f32,
-) -> Vec<TextSpan> {
-    use crate::parser::sequence_parser::PartFilterKind;
-
-    let mut spans = vec![TextSpan {
-        content: "Sequence: ".to_string(),
-        bold: false,
-        italic: false,
-        font_size,
-    }];
-    for (index, entry) in entries.iter().enumerate() {
-        if index > 0 {
-            spans.push(TextSpan {
-                content: " \u{203a} ".to_string(),
-                bold: false,
-                italic: false,
-                font_size,
-            });
-        }
-        spans.push(section_label_span(&entry.label, font_size));
-        if let Some(filter) = &entry.part_filter {
-            let content = match filter.kind {
-                PartFilterKind::Omit => format!(" (-{})", filter.parts.join(" -")),
-                PartFilterKind::Only => format!(" ({})", filter.parts.join(" ")),
-            };
-            spans.push(TextSpan {
-                content,
-                bold: false,
-                italic: false,
-                font_size,
-            });
-        }
-    }
-    spans
-}
-
 fn grid_text_to_absolute(
     content: &PostArcGridContent,
     span_width: f32,
@@ -253,44 +89,48 @@ fn grid_text_to_absolute(
         }),
         PostArcGridContent::RowLabel(s) => Some(sans_serif_text(
             s.clone(),
-            part_label_font_size,
-            TextAnchor::Middle,
-            FontWeight::Normal,
-            false,
-            FontFamily::SansSerif,
+            SansSerifTextStyle {
+                font_size: part_label_font_size,
+                anchor: TextAnchor::Middle,
+                weight: FontWeight::Normal,
+                italic: false,
+                font: FontFamily::SansSerif,
+                reserved_width_pt: 0.0,
+            },
         )),
-        PostArcGridContent::DirectiveLine { label, .. } => {
-            let directive_line = directive_line_content(content, directive_font_sizes);
-            Some(AbsoluteContent::DirectiveLine {
-                bar_number: directive_line.bar_number,
-                label: label.clone(),
-                label_font_size: directive_font_sizes.section_label,
-                spans: directive_line.spans,
-                spans_x_offset: directive_line.spans_x_offset,
-                label_x_offset: directive_line.label_x_offset,
-                apply_row_offset: true,
-            })
-        }
+        PostArcGridContent::DirectiveLine { label, .. } => Some(directive_line_absolute(
+            content,
+            label,
+            directive_font_sizes,
+        )),
         PostArcGridContent::Text {
             content,
             font_size,
             bold,
             italic,
             is_title,
+            min_width_pt,
         } => Some(sans_serif_text(
             content.clone(),
-            *font_size,
-            text_anchor(halign),
-            if *bold {
-                FontWeight::Bold
-            } else {
-                FontWeight::Normal
-            },
-            *italic,
-            if *is_title {
-                FontFamily::Title
-            } else {
-                FontFamily::SansSerif
+            SansSerifTextStyle {
+                font_size: *font_size,
+                anchor: text_anchor(halign),
+                weight: if *bold {
+                    FontWeight::Bold
+                } else {
+                    FontWeight::Normal
+                },
+                italic: *italic,
+                font: if *is_title {
+                    FontFamily::Title
+                } else {
+                    FontFamily::SansSerif
+                },
+                reserved_width_pt: if *min_width_pt > 0.0 {
+                    crate::font_metrics::title_box_width(content, *font_size, *min_width_pt)
+                } else {
+                    0.0
+                },
             },
         )),
         PostArcGridContent::HorizontalLine => {
@@ -301,6 +141,7 @@ fn grid_text_to_absolute(
                 bar_number: None,
                 label: None,
                 label_font_size: *font_size,
+                label_box_height: 0.0,
                 spans: sequence_line_content(entries, *font_size),
                 spans_x_offset: 0.0,
                 label_x_offset: 0.0,

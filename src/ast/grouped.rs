@@ -3,80 +3,23 @@ use crate::error::{Diagnostic, RecoverableError, Span, Warning};
 
 // ── Public final types ────────────────────────────────────────────────────────
 
-/// Default `row_height` in points, used when unset in `# metadata`.
-pub const DEFAULT_ROW_HEIGHT: u32 = 24;
-/// Default `max_measures_per_system`, used when unset in `# metadata`.
-pub const DEFAULT_MAX_MEASURES_PER_SYSTEM: u32 = 4;
-/// Default `note_number_width` in points, used when unset in `# metadata`.
-pub const DEFAULT_NOTE_NUMBER_WIDTH: u32 = 8;
-/// Default `part_label_width_pt`, used when unset in `# metadata`.
-pub const DEFAULT_PART_LABEL_WIDTH_PT: u32 = 40;
-/// Default `parts_list_columns`, used when unset in `# metadata`.
-pub const DEFAULT_PARTS_LIST_COLUMNS: u32 = 4;
-/// Default `merge_duplicate_measures_across_parts`, used when unset in `# metadata`.
-pub const DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS: bool = true;
-/// Default `hide_resting_parts`, used when unset in `# metadata`.
-pub const DEFAULT_HIDE_RESTING_PARTS: bool = true;
-/// Default `hide_system_dividers`, used when unset in `# metadata`.
-pub const DEFAULT_HIDE_SYSTEM_DIVIDERS: bool = false;
-/// Default `directive_row_offset`, used when unset in `# metadata`.
-pub const DEFAULT_DIRECTIVE_ROW_OFFSET: Offset = Offset { x: 0, y: 0 };
+#[path = "grouped_text_style.rs"]
+mod grouped_text_style;
+pub(crate) use grouped_text_style::resolve_text_style;
+pub use grouped_text_style::{
+    default_author_font_size, default_lyrics_font_size, default_page_number_font_size,
+    default_part_legend_font_size, default_subtitle_font_size, default_title_font_size, TextStyle,
+    DEFAULT_CHORDS_HORIZONTAL_PADDING_PT, DEFAULT_DIRECTIVE_ROW_OFFSET, DEFAULT_HIDE_RESTING_PARTS,
+    DEFAULT_HIDE_SYSTEM_DIVIDERS, DEFAULT_LYRICS_HORIZONTAL_PADDING_PT,
+    DEFAULT_LYRIC_CLICK_TARGET_PADDING_PT, DEFAULT_MAX_MEASURES_PER_SYSTEM,
+    DEFAULT_MEASURE_NUMBER_FONT_SIZE, DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
+    DEFAULT_NOTES_HORIZONTAL_PADDING_PT, DEFAULT_NOTE_DASH_HORIZONTAL_PADDING_PT,
+    DEFAULT_NOTE_NUMBER_WIDTH, DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_PART_LABEL_FONT_SIZE,
+    DEFAULT_PART_LABEL_WIDTH_PT, DEFAULT_ROW_HEIGHT, DEFAULT_SECTION_LABEL_FONT_SIZE,
+    DEFAULT_SEQUENCE_FONT_SIZE,
+};
 
-/// Default `lyrics_font_size` in points: 60% of `row_height`, used when unset in `# metadata`.
-pub fn default_lyrics_font_size(row_height: u32) -> u32 {
-    (row_height as f32 * 0.6).round() as u32
-}
-
-/// Default `title_font_size` in points: 150% of `row_height`, used when unset in `# metadata`.
-pub fn default_title_font_size(row_height: u32) -> u32 {
-    (row_height as f32 * 1.5).round() as u32
-}
-
-/// Default `subtitle_font_size` in points: 80% of `row_height`, used when unset in `# metadata`.
-pub fn default_subtitle_font_size(row_height: u32) -> u32 {
-    (row_height as f32 * 0.8).round() as u32
-}
-
-/// Default `author_font_size` in points: 60% of `row_height`, used when unset in `# metadata`.
-pub fn default_author_font_size(row_height: u32) -> u32 {
-    (row_height as f32 * 0.6).round() as u32
-}
-
-/// Default `sequence_font_size` in points, used when unset in `# metadata`.
-pub const DEFAULT_SEQUENCE_FONT_SIZE: u32 = 12;
-
-/// Default `part_legend_font_size` in points: 60% of `row_height`, used when unset in `# metadata`.
-pub fn default_part_legend_font_size(row_height: u32) -> u32 {
-    (row_height as f32 * 0.6).round() as u32
-}
-
-/// Default `measure_number_font_size` in points, used when unset in `# metadata`.
-pub const DEFAULT_MEASURE_NUMBER_FONT_SIZE: u32 = 10;
-
-/// Default `section_label_font_size` in points, used when unset in `# metadata`.
-pub const DEFAULT_SECTION_LABEL_FONT_SIZE: u32 = 12;
-
-/// Default `part_label_font_size` in points, used when unset in `# metadata`.
-pub const DEFAULT_PART_LABEL_FONT_SIZE: u32 = 12;
-
-/// Default `page_number_font_size` in points: 60% of `row_height`, used when unset in `# metadata`.
-pub fn default_page_number_font_size(row_height: u32) -> u32 {
-    (row_height as f32 * 0.6).round() as u32
-}
-
-/// Default `lyric_click_target_padding_pt`, used when unset in `# metadata`.
-pub const DEFAULT_LYRIC_CLICK_TARGET_PADDING_PT: u32 = 12;
-
-/// Default `notes_horizontal_padding_pt`, used when unset in `# metadata`.
-pub const DEFAULT_NOTES_HORIZONTAL_PADDING_PT: u32 = 4;
-/// Default `chords_horizontal_padding_pt`, used when unset in `# metadata`.
-pub const DEFAULT_CHORDS_HORIZONTAL_PADDING_PT: u32 = 4;
-/// Default `lyrics_horizontal_padding_pt`, used when unset in `# metadata`.
-pub const DEFAULT_LYRICS_HORIZONTAL_PADDING_PT: u32 = 4;
-/// Default `note_dash_horizontal_padding_pt`, used when unset in `# metadata`.
-pub const DEFAULT_NOTE_DASH_HORIZONTAL_PADDING_PT: u32 = 4;
-
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Metadata {
     pub title: Option<String>,
     pub subtitle: Option<String>,
@@ -87,61 +30,55 @@ pub struct Metadata {
     pub max_measures_per_system: u32,
     /// Estimated rendered width of a single digit note number (0–9) in points. Default: 8.
     pub note_number_width: u32,
-    /// Fixed width in points of the part-label column at the start of each system row,
-    /// shared by every system in the score regardless of that system's musical density
-    /// (see `grid_layout::types::GridRow::column_geometry`). Default: 40.
-    pub part_label_width_pt: u32,
     /// Number of columns in the parts list header. Default: 4.
     pub parts_list_columns: u32,
-    /// Lyrics font size in points. Default: 60% of row_height.
-    pub lyrics_font_size: u32,
-    /// Note head/rest/percussion-hit/tuplet-bracket font size in points. Default: `lyrics_font_size`.
-    pub notes_font_size: u32,
-    /// Chord symbol font size in points. Default: `lyrics_font_size`.
-    pub chords_font_size: u32,
-    /// Title font size in points. Default: 150% of `row_height`.
-    pub title_font_size: u32,
-    /// Subtitle font size in points. Default: 80% of `row_height`.
-    pub subtitle_font_size: u32,
-    /// Author font size in points. Default: 60% of `row_height`.
-    pub author_font_size: u32,
-    /// Font size in points of the `# sequence` summary line rendered near the
-    /// top of the score. Default: 12.
-    pub sequence_font_size: u32,
-    /// Font size in points of the part-name legend entries shown in the header
-    /// (e.g. `V — Vocal (S1,S2,A1,A2)`). Default: 60% of `row_height`.
-    pub part_legend_font_size: u32,
-    /// Font size in points of each measure's bar number, drawn at the start of
-    /// its directive line. Default: 10.
-    pub measure_number_font_size: u32,
-    /// Font size in points of an inline section label (`label="..."` on a
-    /// measure's directive line). Default: 12.
-    pub section_label_font_size: u32,
-    /// Font size in points of a part's row label (the instrument name shown
-    /// at the start of each system row, e.g. "Soprano"). Default: 12.
-    pub part_label_font_size: u32,
-    /// Font size in points of the page number shown in the footer. Default:
-    /// 60% of `row_height`.
-    pub page_number_font_size: u32,
-    /// Extra vertical padding in points added around a lyric syllable's
-    /// click-target box on top of the font's own measured ascender+descender
-    /// span (see `grid_layout::layout_heights::lyric_row_height`). Default: 12.
-    pub lyric_click_target_padding_pt: u32,
-    /// Horizontal padding in points reserved before a note head/rest/percussion-hit
-    /// glyph, widening its column's spacing rod by the same amount (see
-    /// `grid_layout::layout_spacing::column_rod`); also used for the multi-measure-rest
-    /// bar's end insets and the tie/slur/underline/tuplet-bracket span anchors, all of
-    /// which key off a note column. Default: 4.
-    pub notes_horizontal_padding_pt: u32,
-    /// Horizontal padding in points reserved before a chord symbol, widening its
-    /// column's spacing rod by the same amount. Default: 4.
-    pub chords_horizontal_padding_pt: u32,
-    /// Horizontal padding in points reserved before a lyric syllable, widening its
-    /// column's spacing rod by the same amount. Default: 4.
-    pub lyrics_horizontal_padding_pt: u32,
-    /// Horizontal padding in points reserved before a note dash (the sustain-beat `-`
-    /// extension), widening its column's spacing rod by the same amount. Default: 4.
-    pub note_dash_horizontal_padding_pt: u32,
+    /// Title text style. `font_size` default: 150% of `row_height`. `width_pt`
+    /// reserves a minimum box width for the rendered title (default: 0, no minimum).
+    pub title_style: TextStyle,
+    /// Subtitle text style. `font_size` default: 80% of `row_height`.
+    pub subtitle_style: TextStyle,
+    /// Author text style. `font_size` default: 60% of `row_height`.
+    pub author_style: TextStyle,
+    /// `# sequence` summary line text style. `font_size` default: 12.
+    pub sequence: TextStyle,
+    /// Part-name legend entry text style (e.g. `V — Vocal (S1,S2,A1,A2)`).
+    /// `font_size` default: 60% of `row_height`.
+    pub part_legend: TextStyle,
+    /// Measure bar-number text style. `font_size` default: 10.
+    pub measure_number: TextStyle,
+    /// Inline section-label text style (`label="..."` on a measure's directive
+    /// line). `font_size` default: 12.
+    pub section_label: TextStyle,
+    /// Part row-label text style (the instrument name shown at the start of
+    /// each system row, e.g. "Soprano"). `font_size` default: 12. `width_pt` is
+    /// the fixed width in points of the part-label column at the start of each
+    /// system row, shared by every system in the score regardless of that
+    /// system's musical density (see `grid_layout::types::GridRow::column_geometry`).
+    /// Default: 40.
+    pub part_label: TextStyle,
+    /// Page-number footer text style. `font_size` default: 60% of `row_height`.
+    pub page_number: TextStyle,
+    /// Lyric syllable text style. `font_size` default: 60% of `row_height`.
+    /// `horizontal_padding_pt` default: 4. `vertical_padding_pt` (formerly
+    /// `lyric_click_target_padding_pt`) is extra padding added around a lyric
+    /// syllable's click-target box on top of the font's own measured
+    /// ascender+descender span (see
+    /// `grid_layout::layout_heights::lyric_row_height`); default: 12.
+    pub lyrics: TextStyle,
+    /// Note head/rest/percussion-hit/tuplet-bracket text style. `font_size`
+    /// default: `lyrics.font_size`. `horizontal_padding_pt` widens the note
+    /// column's spacing rod (see `grid_layout::layout_spacing::column_rod`);
+    /// also used for the multi-measure-rest bar's end insets and the
+    /// tie/slur/underline/tuplet-bracket span anchors, all of which key off a
+    /// note column. Default: 4.
+    pub notes: TextStyle,
+    /// Chord symbol text style. `font_size` default: `lyrics.font_size`.
+    /// `horizontal_padding_pt` default: 4.
+    pub chords: TextStyle,
+    /// Note-dash (sustain-beat `-` extension) text style. `font_size` default:
+    /// `notes.font_size`; scales the rendered dash's width. `horizontal_padding_pt`
+    /// default: 4.
+    pub note_dash: TextStyle,
     /// Score-wide default for `merge_duplicate_measures_across_parts=`: when `false`,
     /// identical measure rows from different parts are no longer merged into one row
     /// (see `consolidator::consolidate`). Default: `true`. A `merge_duplicate_measures_across_parts=`
