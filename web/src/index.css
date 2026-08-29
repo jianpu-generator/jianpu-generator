@@ -67,3 +67,25 @@ rect[data-variant="lyric-label-click-target-rect"]:hover,
 rect[data-variant="lyric-label-click-target-rect"][data-lyric-label-drag-active] {
   fill: rgba(37, 99, 235, 0.12);
 }
+
+/* Hide native number-input spinners: EditMetadataModal's `NumberStepper`
+   (see src/components/MetadataFieldRows.tsx) renders its own always-visible
+   +/- buttons instead, since native spinner arrows are hover-only in some
+   browsers. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.number-stepper-button {
+  background: #f5f5f5;
+}
+
+.number-stepper-button:hover {
+  background: #e2e8f0;
+}
+
+.number-stepper-button:active {
+  background: #cbd5e0;
+}

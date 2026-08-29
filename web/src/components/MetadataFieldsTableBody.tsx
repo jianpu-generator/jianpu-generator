@@ -20,21 +20,15 @@ export interface MetadataFieldsTableBodyProps {
   metadata: ParsedMetadataFields
   defaults: MetadataDefaults | null
   showHelp: (label: string, help: string) => void
-  onTitleChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-  setText: (
-    key: MetadataFieldKey,
-  ) => (e: React.ChangeEvent<HTMLInputElement>) => void
-  setNumber: (
-    key: MetadataFieldKey,
-  ) => (e: React.ChangeEvent<HTMLInputElement>) => void
+  onTitleChange: (value: string) => void
+  setText: (key: MetadataFieldKey) => (value: string) => void
+  setNumber: (key: MetadataFieldKey) => (value: string) => void
   setYesNo: (
     key: MetadataFieldKey,
   ) => (e: React.ChangeEvent<HTMLInputElement>) => void
   setStyle: (
     kind: TextStyleKind,
-  ) => (
-    component: TextStyleComponent,
-  ) => (e: React.ChangeEvent<HTMLInputElement>) => void
+  ) => (component: TextStyleComponent) => (value: string) => void
   numOrUndef: (n: number | null | undefined) => string | undefined
   titleFontSizeDefault: number | null
   subtitleFontSizeDefault: number | null

@@ -73,13 +73,11 @@ export function EditMetadataModal({
   const effectiveNotesFontSize =
     metadata.styles.notes.font_size ?? effectiveLyricsFontSize
 
-  const setText =
-    (key: MetadataFieldKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
-      onFieldChange(key, e.target.value === '' ? null : e.target.value)
+  const setText = (key: MetadataFieldKey) => (value: string) =>
+    onFieldChange(key, value === '' ? null : value)
 
-  const setNumber =
-    (key: MetadataFieldKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
-      onFieldChange(key, e.target.value === '' ? null : e.target.value)
+  const setNumber = (key: MetadataFieldKey) => (value: string) =>
+    onFieldChange(key, value === '' ? null : value)
 
   const setYesNo =
     (key: MetadataFieldKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -88,11 +86,8 @@ export function EditMetadataModal({
   const setStyle =
     (kind: TextStyleKind) =>
     (component: TextStyleComponent) =>
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      onFieldChange(
-        `${kind}.${component}`,
-        e.target.value === '' ? null : e.target.value,
-      )
+    (value: string) =>
+      onFieldChange(`${kind}.${component}`, value === '' ? null : value)
 
   const numOrUndef = (n: number | null | undefined): string | undefined =>
     n != null ? String(n) : undefined
@@ -179,7 +174,7 @@ export function EditMetadataModal({
                 metadata={metadata}
                 defaults={d}
                 showHelp={showHelp}
-                onTitleChange={(e) => onFieldChange('title', e.target.value)}
+                onTitleChange={(value) => onFieldChange('title', value)}
                 setText={setText}
                 setNumber={setNumber}
                 setYesNo={setYesNo}

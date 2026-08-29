@@ -21,6 +21,113 @@ export const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 }
 
+const numberStepperWrapperStyle: React.CSSProperties = {
+  display: 'flex',
+  width: '100%',
+}
+
+const numberStepperInputStyle: React.CSSProperties = {
+  ...inputStyle,
+  minWidth: 0,
+  flex: 1,
+  borderTopRightRadius: 0,
+  borderBottomRightRadius: 0,
+}
+
+const numberStepperButtonsStyle: React.CSSProperties = {
+  display: 'flex',
+  flexShrink: 0,
+}
+
+const numberStepperButtonStyle: React.CSSProperties = {
+  width: '18px',
+  height: '20px',
+  lineHeight: 1,
+  fontSize: '12px',
+  padding: 0,
+  border: '1px solid #cbd5e0',
+  borderLeft: 'none',
+  color: '#444',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}
+
+interface NumberStepperProps {
+  value: number | ''
+  defaultValue: number | null | undefined
+  min: number
+  step?: number
+  'aria-label': string
+  placeholder?: string
+  onChange: (value: string) => void
+}
+
+/** `[input][-][+]` numeric field: always-visible stepper buttons (native
+ * spinner arrows are hover-only in some browsers), and stepping from an
+ * empty field applies the field's default rather than starting from `0`
+ * (native `<input type="number">` always steps from `0` when empty). See
+ * `HANDOFF-text-style-metadata.md`-adjacent context: `defaultValue` is the
+ * same value shown today as the input's greyed-out `placeholder`. */
+function NumberStepper({
+  value,
+  defaultValue,
+  min,
+  step = 1,
+  'aria-label': ariaLabel,
+  placeholder,
+  onChange,
+}: NumberStepperProps) {
+  const stepBy = (delta: number) => {
+    const base = value === '' ? (defaultValue ?? min) : value
+    onChange(String(Math.max(min, base + delta)))
+  }
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      stepBy(step)
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      stepBy(-step)
+    }
+  }
+  return (
+    <div style={numberStepperWrapperStyle}>
+      <input
+        type="number"
+        min={min}
+        aria-label={ariaLabel}
+        placeholder={placeholder}
+        style={numberStepperInputStyle}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={handleKeyDown}
+      />
+      <div style={numberStepperButtonsStyle}>
+        <button
+          type="button"
+          className="number-stepper-button"
+          aria-label={`${ariaLabel} decrease`}
+          style={numberStepperButtonStyle}
+          onClick={() => stepBy(-step)}
+        >
+          −
+        </button>
+        <button
+          type="button"
+          className="number-stepper-button"
+          aria-label={`${ariaLabel} increase`}
+          style={{ ...numberStepperButtonStyle, borderLeft: 'none' }}
+          onClick={() => stepBy(step)}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  )
+}
+
 interface FieldRowProps {
   label: string
   help: string
@@ -37,7 +144,7 @@ export function TextFieldRow({
 }: FieldRowProps & {
   value: string
   placeholder?: string
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onChange: (value: string) => void
 }) {
   return (
     <tr>
@@ -50,7 +157,7 @@ export function TextFieldRow({
           placeholder={placeholder}
           style={inputStyle}
           value={value}
-          onChange={onChange}
+          onChange={(e) => onChange(e.target.value)}
         />
       </td>
     </tr>
@@ -67,7 +174,7 @@ export function NumberFieldRow({
 }: FieldRowProps & {
   value: number | ''
   placeholder?: string
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onChange: (value: string) => void
 }) {
   return (
     <tr>
@@ -75,13 +182,12 @@ export function NumberFieldRow({
         <FieldLabel label={label} help={help} onShowHelp={onShowHelp} />
       </td>
       <td style={tdStyle}>
-        <input
-          type="number"
-          min="1"
+        <NumberStepper
+          value={value}
+          defaultValue={placeholder != null ? Number(placeholder) : null}
+          min={1}
           aria-label={label}
           placeholder={placeholder}
-          style={inputStyle}
-          value={value}
           onChange={onChange}
         />
       </td>
@@ -91,7 +197,7 @@ export function NumberFieldRow({
 
 const styleInputsWrapperStyle: React.CSSProperties = {
   display: 'flex',
-  gap: '6px',
+  gap: '4px',
 }
 
 const styleInputGroupStyle: React.CSSProperties = {
@@ -144,9 +250,7 @@ export function TextStyleRow({
 }: FieldRowProps & {
   value: TextStyleFields
   placeholder?: TextStyleFields | null
-  onChange: (
-    component: TextStyleComponent,
-  ) => (e: React.ChangeEvent<HTMLInputElement>) => void
+  onChange: (component: TextStyleComponent) => (value: string) => void
 }) {
   return (
     <tr>
@@ -160,15 +264,14 @@ export function TextStyleRow({
               <span style={styleInputSubLabelStyle}>
                 {styleComponentSubLabels[component]}
               </span>
-              <input
-                type="number"
-                min="0"
+              <NumberStepper
+                value={value[component] ?? ''}
+                defaultValue={placeholder ? placeholder[component] : null}
+                min={0}
                 aria-label={`${label} ${styleComponentSubLabels[component]}`}
                 placeholder={
                   placeholder ? String(placeholder[component]) : undefined
                 }
-                style={inputStyle}
-                value={value[component] ?? ''}
                 onChange={onChange(component)}
               />
             </div>
