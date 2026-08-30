@@ -7,6 +7,7 @@ mod note_selection_types;
 mod part_declarations;
 mod responses;
 mod svg_types;
+mod svg_types_convert;
 mod symbols;
 mod types;
 #[cfg(any(feature = "wav", feature = "pdf", feature = "midi"))]

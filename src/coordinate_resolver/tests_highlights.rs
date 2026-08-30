@@ -1,4 +1,4 @@
-use crate::compositor::types::AbsoluteContent;
+use crate::compositor::types::{AbsoluteContent, FontFamily};
 use crate::coordinate_resolver::resolve::{
     resolve, ElementPaddings, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
 };
@@ -20,15 +20,19 @@ const DEFAULT_LABELS: LabelFontSizes = LabelFontSizes {
     measure_number_bold: false,
     measure_number_italic: false,
     measure_number_underline: false,
+    measure_number_font_family: FontFamily::SansSerif,
     section_label_bold: false,
     section_label_italic: false,
     section_label_underline: false,
+    section_label_font_family: FontFamily::SansSerif,
     part_label_bold: false,
     part_label_italic: false,
     part_label_underline: false,
+    part_label_font_family: FontFamily::SansSerif,
     sequence_bold: false,
     sequence_italic: false,
     sequence_underline: false,
+    sequence_font_family: FontFamily::SansSerif,
 };
 use crate::grid_layout::types::{
     BarNumberClickTarget, GridContent, GridElement, GridPage, GridRow, HAlign, MeasureColumnLayout,

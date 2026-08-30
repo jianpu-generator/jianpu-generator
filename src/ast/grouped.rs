@@ -5,7 +5,6 @@ use crate::error::{Diagnostic, RecoverableError, Span, Warning};
 
 #[path = "grouped_text_style.rs"]
 mod grouped_text_style;
-pub(crate) use grouped_text_style::resolve_text_style;
 pub use grouped_text_style::{
     default_author_font_size, default_lyrics_font_size, default_page_number_font_size,
     default_part_legend_font_size, default_subtitle_font_size, default_title_font_size, TextStyle,
@@ -18,6 +17,7 @@ pub use grouped_text_style::{
     DEFAULT_PART_LABEL_WIDTH_PT, DEFAULT_ROW_HEIGHT, DEFAULT_SECTION_LABEL_FONT_SIZE,
     DEFAULT_SEQUENCE_FONT_SIZE,
 };
+pub(crate) use grouped_text_style::{resolve_text_style, TextStyleDefaults};
 
 #[derive(Debug, Clone)]
 pub struct Metadata {

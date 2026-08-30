@@ -42,9 +42,22 @@ export const textStyleBooleanComponents = [
 export type TextStyleBooleanComponent =
   (typeof textStyleBooleanComponents)[number]
 
+/** A `<kind> = { ... }` object's `font_family` value (see `syntax.md`) —
+ * which of the three globally-embedded font roles the kind's glyphs render
+ * in. Not accepted on `notes`/`chords`/`note_dash` — see
+ * `TextStyleRow`'s `showFontFamily` prop. */
+export const fontFamilyValues = ['title', 'sans_serif', 'monospace'] as const
+
+export type FontFamilyValue = (typeof fontFamilyValues)[number]
+
+export const textStyleEnumComponents = ['font_family'] as const
+
+export type TextStyleEnumComponent = (typeof textStyleEnumComponents)[number]
+
 export const textStyleComponents = [
   ...textStyleNumericComponents,
   ...textStyleBooleanComponents,
+  ...textStyleEnumComponents,
 ] as const
 
 export type TextStyleComponent = (typeof textStyleComponents)[number]
@@ -55,6 +68,12 @@ export function isTextStyleBooleanComponent(
   return (textStyleBooleanComponents as readonly string[]).includes(component)
 }
 
+export function isTextStyleEnumComponent(
+  component: TextStyleComponent,
+): component is TextStyleEnumComponent {
+  return (textStyleEnumComponents as readonly string[]).includes(component)
+}
+
 export interface TextStyleFields {
   font_size: number | null
   horizontal_padding_pt: number | null
@@ -62,6 +81,7 @@ export interface TextStyleFields {
   bold: boolean | null
   italic: boolean | null
   underline: boolean | null
+  font_family: FontFamilyValue | null
 }
 
 export function emptyStyle(): TextStyleFields {
@@ -72,5 +92,6 @@ export function emptyStyle(): TextStyleFields {
     bold: null,
     italic: null,
     underline: null,
+    font_family: null,
   }
 }

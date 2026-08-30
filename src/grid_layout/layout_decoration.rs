@@ -224,7 +224,7 @@ fn make_title_row(header: &Header, base: f32) -> Option<GridRow> {
                 bold: header.title_bold,
                 italic: header.title_italic,
                 underline: header.title_underline,
-                is_title: true,
+                font_family: header.title_font_family,
             },
         }],
     })
@@ -244,7 +244,7 @@ fn make_subtitle_author_row(header: &Header, base: f32) -> GridRow {
                 bold: header.subtitle_bold,
                 italic: header.subtitle_italic,
                 underline: header.subtitle_underline,
-                is_title: true,
+                font_family: header.subtitle_font_family,
             },
         });
     }
@@ -260,7 +260,7 @@ fn make_subtitle_author_row(header: &Header, base: f32) -> GridRow {
                 bold: header.author_bold,
                 italic: header.author_italic,
                 underline: header.author_underline,
-                is_title: true,
+                font_family: header.author_font_family,
             },
         });
     }
@@ -294,6 +294,7 @@ pub(crate) fn make_header_rows(
                 italic: header.part_legend_italic,
                 underline: header.part_legend_underline,
             },
+            header.part_legend_font_family,
         )
     } else {
         vec![]
@@ -313,6 +314,7 @@ fn make_part_list_rows(
     columns: u32,
     font_size: f32,
     style: TextStyleFlags,
+    font_family: crate::compositor::types::FontFamily,
 ) -> Vec<GridRow> {
     entries
         .chunks(columns as usize)
@@ -335,7 +337,7 @@ fn make_part_list_rows(
                         bold: style.bold,
                         italic: style.italic,
                         underline: style.underline,
-                        is_title: false,
+                        font_family,
                     },
                 })
                 .collect(),

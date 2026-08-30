@@ -192,3 +192,71 @@ fn notes_vertical_padding_pt_grows_the_note_head_sub_row() {
         "padded system height ({padded}) should be at least 5pt taller than unpadded ({unpadded})"
     );
 }
+
+/// Renders a minimal single-note-part score (with a title, so `title`'s own
+/// text element is present) with `metadata_line` spliced into `# metadata`,
+/// returning the concatenated raw SVG(s).
+fn render_with_metadata_line(metadata_line: &str) -> String {
+    let source = format!(
+        "# metadata\ntitle = \"T\"\n{metadata_line}\n\n# parts\nS = notes\n\n# score\ntime=4/4 key=C4 bpm=120\n[S] 1\n",
+    );
+    render_svgs_from_source(&source, "test", &[])
+        .unwrap_or_else(|err| panic!("compile returned an irrecoverable error: {}", err.message()))
+        .svgs
+        .join("")
+}
+
+/// The `font-family='...'` attribute value of the first `<text ...>T</text>`
+/// element in `svg` (the title, given `render_with_metadata_line`'s fixture).
+fn title_font_family_attr(svg: &str) -> String {
+    let needle = ">T</text>";
+    let body_end = svg
+        .find(needle)
+        .expect("expected the title's <text>T</text> element in the rendered SVG");
+    let open = svg[..body_end]
+        .rfind("<text")
+        .expect("expected an opening <text before the title's body");
+    let tag = &svg[open..body_end];
+    let attr_start = tag
+        .find("font-family='")
+        .expect("expected a font-family attribute on the title's <text> element")
+        + "font-family='".len();
+    let attr_end = tag[attr_start..]
+        .find('\'')
+        .expect("expected a closing quote on font-family");
+    tag[attr_start..attr_start + attr_end].to_string()
+}
+
+#[test]
+fn title_font_family_override_changes_the_rendered_font_family() {
+    // `title` defaults to the `Title` role; overriding it to `sans_serif`
+    // must change the rendered `font-family` attribute, proving the
+    // metadata field has a real effect rather than being parsed and
+    // ignored.
+    let default_svg = render_with_metadata_line("");
+    let overridden_svg = render_with_metadata_line("title = { font_family: sans_serif }");
+    let default_family = title_font_family_attr(&default_svg);
+    let overridden_family = title_font_family_attr(&overridden_svg);
+    assert_ne!(
+        default_family, overridden_family,
+        "expected title's font-family to change when font_family: sans_serif overrides its Title default"
+    );
+}
+
+#[test]
+fn font_family_is_rejected_as_a_metadata_error_on_notes_chords_and_note_dash() {
+    for kind in ["notes", "chords", "note_dash"] {
+        let source = format!(
+            "# metadata\n{kind} = {{ font_family: monospace }}\n\n# parts\nS = notes\n\n# score\ntime=4/4 key=C4 bpm=120\n[S] 1\n",
+        );
+        let score = compile(&source, "test", &[]).expect("compile should not irrecoverably fail");
+        assert!(
+            score
+                .document_diagnostics
+                .iter()
+                .any(|d| d.message().contains(&format!("{kind}.font_family"))),
+            "expected a metadata error mentioning `{kind}.font_family`, got: {:?}",
+            score.document_diagnostics
+        );
+    }
+}

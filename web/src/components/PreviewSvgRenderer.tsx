@@ -7,10 +7,10 @@ import type {
 import type { ReactNode } from 'react'
 import fontsManifest from '../../../fonts/fonts.json'
 
-// Every `FontFamily::SansSerif` glyph — the directive line (bar number,
-// section label, key/bpm/time signature, navigation markers) via the
-// `textWithTspans` case below, and part-legend/footer via the plain `text`
-// case's non-title branch — is pinned to a specific font, mirroring
+// `FontFamily::SansSerif`'s backing font — the default role for the
+// directive line (bar number, section label, key/bpm/time signature,
+// navigation markers), part legend, and footer, but overridable per-kind via
+// `Metadata::*.font_family` (see `textFontFamily` below), mirroring
 // `DIRECTIVE_LINE_FONT_FAMILY` in `src/serializer/mod.rs` (the Rust-side
 // serializer backing exported .svg files and PDF export). Loaded via the
 // `@font-face` rules injected by `injectFontFaces` (see src/injectFontFaces.ts),
@@ -21,17 +21,16 @@ import fontsManifest from '../../../fonts/fonts.json'
 // and Task 1 of PLAN-section-label-engraving-quality.md.
 const DIRECTIVE_LINE_FONT_FAMILY = fontsManifest.sansSerif.familyCss
 
-// `FontFamily::Title` — the song title, subtitle, author, and lyric
-// syllables/lines (via the plain `text` case's `title` branch, shared by all
-// four roles) — is pinned to a separate, typically more calligraphic font
-// instead. Deliberately not used for `DIRECTIVE_LINE_FONT_FAMILY`'s text
-// (directive line, part legend, footer) — see `fonts/fonts.json` for why the
-// split exists. Mirrors `TITLE_FONT_FAMILY` in `src/serializer/mod.rs`.
+// `FontFamily::Title`'s backing font — the default role for the song title,
+// subtitle, author, and lyric syllables/lines, but likewise overridable
+// per-kind — is pinned to a separate, typically more calligraphic font
+// instead. Mirrors `TITLE_FONT_FAMILY` in `src/serializer/mod.rs`.
 const TITLE_FONT_FAMILY = fontsManifest.title.familyCss
 
-/** Resolves a plain `text` element's `FontFamilyOut` to the CSS stack it
- * should render with — the `textWithTspans` case (directive line) doesn't go
- * through here since it's always `DIRECTIVE_LINE_FONT_FAMILY`. */
+/** Resolves an element's `FontFamilyOut` (`text`'s `font`, or
+ * `textWithTspans`'s own `font` — see `Metadata::measure_number_style`/
+ * `section_label_style`/`sequence`'s `font_family`) to the CSS stack it
+ * should render with. */
 function textFontFamily(font: FontFamilyOut): string {
   switch (font) {
     case 'monospace':
@@ -212,7 +211,7 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
                 ? 'hanging'
                 : 'ideographic'
           }
-          fontFamily={DIRECTIVE_LINE_FONT_FAMILY}
+          fontFamily={textFontFamily(kind.font)}
         >
           {kind.spans.map((span, spanIndex) => (
             <tspan

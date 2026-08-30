@@ -93,6 +93,7 @@ pub(super) struct PartLabelStyle {
     pub(super) bold: bool,
     pub(super) italic: bool,
     pub(super) underline: bool,
+    pub(super) font_family: FontFamily,
 }
 
 fn grid_text_to_absolute(
@@ -122,7 +123,7 @@ fn grid_text_to_absolute(
                 },
                 italic: part_label_style.italic,
                 underline: part_label_style.underline,
-                font: FontFamily::SansSerif,
+                font: part_label_style.font_family,
             },
         )),
         PostArcGridContent::DirectiveLine { label, .. } => Some(directive_line_absolute(
@@ -136,7 +137,7 @@ fn grid_text_to_absolute(
             bold,
             italic,
             underline,
-            is_title,
+            font_family,
         } => Some(sans_serif_text(
             content.clone(),
             SansSerifTextStyle {
@@ -149,11 +150,7 @@ fn grid_text_to_absolute(
                 },
                 italic: *italic,
                 underline: *underline,
-                font: if *is_title {
-                    FontFamily::Title
-                } else {
-                    FontFamily::SansSerif
-                },
+                font: *font_family,
             },
         )),
         PostArcGridContent::HorizontalLine => {
@@ -162,13 +159,16 @@ fn grid_text_to_absolute(
         PostArcGridContent::SequenceLine { entries, font_size } => {
             Some(AbsoluteContent::DirectiveLine {
                 bar_number: None,
+                bar_number_font_family: FontFamily::SansSerif,
                 label: None,
                 label_font_size: *font_size,
                 label_bold: false,
                 label_italic: false,
                 label_underline: false,
+                label_font_family: FontFamily::SansSerif,
                 label_box_height: 0.0,
                 spans: sequence_line_content(entries, *font_size, directive_font_sizes),
+                spans_font_family: directive_font_sizes.sequence_font_family,
                 spans_x_offset: 0.0,
                 label_x_offset: 0.0,
                 apply_row_offset: false,

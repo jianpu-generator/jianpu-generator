@@ -1,5 +1,6 @@
 use crate::ast::grouped::Metadata;
 use crate::ast::parsed::Offset;
+use crate::compositor::types::FontFamily;
 use crate::coordinate_resolver::{ElementPaddings, LyricFontSizes};
 use crate::grid_layout::layout::LyricSizing;
 
@@ -42,6 +43,7 @@ pub struct RenderConfig {
     pub lyrics_bold: bool,
     pub lyrics_italic: bool,
     pub lyrics_underline: bool,
+    pub lyrics_font_family: FontFamily,
     /// See `Metadata::note_dash_style`.
     pub note_dash_bold: bool,
     pub note_dash_italic: bool,
@@ -50,22 +52,27 @@ pub struct RenderConfig {
     pub sequence_bold: bool,
     pub sequence_italic: bool,
     pub sequence_underline: bool,
+    pub sequence_font_family: FontFamily,
     /// See `Metadata::measure_number_style`.
     pub measure_number_bold: bool,
     pub measure_number_italic: bool,
     pub measure_number_underline: bool,
+    pub measure_number_font_family: FontFamily,
     /// See `Metadata::section_label_style`.
     pub section_label_bold: bool,
     pub section_label_italic: bool,
     pub section_label_underline: bool,
+    pub section_label_font_family: FontFamily,
     /// See `Metadata::part_label_style`.
     pub part_label_bold: bool,
     pub part_label_italic: bool,
     pub part_label_underline: bool,
+    pub part_label_font_family: FontFamily,
     /// See `Metadata::page_number_style`.
     pub page_number_bold: bool,
     pub page_number_italic: bool,
     pub page_number_underline: bool,
+    pub page_number_font_family: FontFamily,
     /// Extra vertical padding in points around a lyric syllable's
     /// click-target box (see `Metadata::lyric_click_target_padding_pt`).
     pub lyric_click_target_padding_pt: u32,
@@ -119,24 +126,30 @@ impl RenderConfig {
             lyrics_bold: meta.lyrics.bold,
             lyrics_italic: meta.lyrics.italic,
             lyrics_underline: meta.lyrics.underline,
+            lyrics_font_family: meta.lyrics.font_family,
             note_dash_bold: meta.note_dash.bold,
             note_dash_italic: meta.note_dash.italic,
             note_dash_underline: meta.note_dash.underline,
             sequence_bold: meta.sequence.bold,
             sequence_italic: meta.sequence.italic,
             sequence_underline: meta.sequence.underline,
+            sequence_font_family: meta.sequence.font_family,
             measure_number_bold: meta.measure_number.bold,
             measure_number_italic: meta.measure_number.italic,
             measure_number_underline: meta.measure_number.underline,
+            measure_number_font_family: meta.measure_number.font_family,
             section_label_bold: meta.section_label.bold,
             section_label_italic: meta.section_label.italic,
             section_label_underline: meta.section_label.underline,
+            section_label_font_family: meta.section_label.font_family,
             part_label_bold: meta.part_label.bold,
             part_label_italic: meta.part_label.italic,
             part_label_underline: meta.part_label.underline,
+            part_label_font_family: meta.part_label.font_family,
             page_number_bold: meta.page_number.bold,
             page_number_italic: meta.page_number.italic,
             page_number_underline: meta.page_number.underline,
+            page_number_font_family: meta.page_number.font_family,
             lyric_click_target_padding_pt: meta.lyrics.vertical_padding_pt,
             notes_vertical_padding_pt: meta.notes.vertical_padding_pt,
             section_label_vertical_padding_pt: meta.section_label.vertical_padding_pt,

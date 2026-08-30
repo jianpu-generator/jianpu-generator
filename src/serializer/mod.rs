@@ -59,11 +59,7 @@ fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) {
         DominantBaseline::Hanging => "hanging",
         DominantBaseline::Ideographic => "ideographic",
     };
-    let font_str = match font {
-        FontFamily::Monospace => MONOSPACE_FONT_FAMILY,
-        FontFamily::SansSerif => DIRECTIVE_LINE_FONT_FAMILY,
-        FontFamily::Title => TITLE_FONT_FAMILY,
-    };
+    let font_str = font_family_css(*font);
     let weight_str = match weight {
         FontWeight::Normal => "normal",
         FontWeight::Bold => "bold",
@@ -123,20 +119,40 @@ use crate::fonts::TITLE_FONT_FAMILY_CSS as TITLE_FONT_FAMILY;
 /// mirroring `DIRECTIVE_LINE_FONT_FAMILY` above. Defined in `src/fonts.rs`.
 use crate::fonts::MONOSPACE_FONT_FAMILY_CSS as MONOSPACE_FONT_FAMILY;
 
+/// Maps a resolved [`FontFamily`] role onto the literal CSS `font-family`
+/// value that backs it (see the constants above) — shared by [`serialize_text`]
+/// and [`serialize_text_with_tspans`].
+fn font_family_css(font: FontFamily) -> &'static str {
+    match font {
+        FontFamily::Monospace => MONOSPACE_FONT_FAMILY,
+        FontFamily::SansSerif => DIRECTIVE_LINE_FONT_FAMILY,
+        FontFamily::Title => TITLE_FONT_FAMILY,
+    }
+}
+
+/// Bundles [`serialize_text_with_tspans`]'s per-element style params — split
+/// out once `font` pushed the plain argument list over clippy's
+/// `too_many_arguments` limit.
+#[derive(Clone, Copy)]
+struct TextWithTspansStyle<'a> {
+    font_size: f32,
+    anchor: &'a TextAnchor,
+    baseline: &'a DominantBaseline,
+    font: FontFamily,
+}
+
 fn serialize_text_with_tspans(
     el: &SvgElement,
     out: &mut String,
-    font_size: f32,
-    anchor: &TextAnchor,
-    baseline: &DominantBaseline,
+    style: TextWithTspansStyle,
     spans: &[TspanData],
 ) {
-    let anchor_str = match anchor {
+    let anchor_str = match style.anchor {
         TextAnchor::Start => "start",
         TextAnchor::Middle => "middle",
         TextAnchor::End => "end",
     };
-    let baseline_str = match baseline {
+    let baseline_str = match style.baseline {
         DominantBaseline::Middle => "middle",
         DominantBaseline::Hanging => "hanging",
         DominantBaseline::Ideographic => "ideographic",
@@ -146,10 +162,10 @@ fn serialize_text_with_tspans(
         el.x,
         el.y,
         variant_attr(el.variant),
-        font_size,
+        style.font_size,
         anchor_str,
         baseline_str,
-        DIRECTIVE_LINE_FONT_FAMILY
+        font_family_css(style.font)
     ));
     for span in spans {
         let mut attrs = String::new();
@@ -292,8 +308,19 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
             font_size,
             anchor,
             baseline,
+            font,
             spans,
-        } => serialize_text_with_tspans(el, out, *font_size, anchor, baseline, spans),
+        } => serialize_text_with_tspans(
+            el,
+            out,
+            TextWithTspansStyle {
+                font_size: *font_size,
+                anchor,
+                baseline,
+                font: *font,
+            },
+            spans,
+        ),
         SvgKind::Group { children, tag } => serialize_group(out, children, tag),
     }
 }

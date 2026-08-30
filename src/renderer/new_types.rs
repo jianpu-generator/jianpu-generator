@@ -231,6 +231,7 @@ pub enum SvgKind {
         font_size: f32,
         anchor: TextAnchor,
         baseline: DominantBaseline,
+        font: FontFamily,
         spans: Vec<TspanData>,
     },
 }

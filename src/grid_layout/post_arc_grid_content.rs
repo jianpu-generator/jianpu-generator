@@ -1,4 +1,5 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
+use crate::compositor::types::FontFamily;
 
 use crate::grid_layout::types::SequenceEntryInfo;
 
@@ -62,7 +63,7 @@ pub enum PostArcGridContent {
         bold: bool,
         italic: bool,
         underline: bool,
-        is_title: bool,
+        font_family: FontFamily,
     },
     SequenceLine {
         entries: Vec<SequenceEntryInfo>,

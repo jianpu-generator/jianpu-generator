@@ -71,11 +71,11 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 Every rendered text kind — `title`, `subtitle`, `author`, `sequence`, `part_legend`, `measure_number`, `section_label`, `page_number`, `part_label`, `lyrics`, `notes`, `chords`, `note_dash` — is configured with the same object-literal syntax:
 
 ```
-<kind> = { font_size: N, horizontal_padding_pt: N, vertical_padding_pt: N, bold: yes/no, italic: yes/no, underline: yes/no }
+<kind> = { font_size: N, horizontal_padding_pt: N, vertical_padding_pt: N, bold: yes/no, italic: yes/no, underline: yes/no, font_family: title/sans_serif/monospace }
 ```
 
 - `{` and `}` delimit the object; fields inside are separated by `,` and each field is `name: value`.
-- Keys are unquoted. Any subset of the six fields may be given, in any order; omitted fields fall back to their default.
+- Keys are unquoted. Any subset of the seven fields may be given, in any order; omitted fields fall back to their default.
 - `title`, `subtitle`, and `author` are overloaded: a plain quoted string (`title = "My Song"`) sets the text content, while an object value (`title = { font_size: 32 }`) sets the style. Both may be set independently.
 
 | Component | Meaning |
@@ -86,26 +86,27 @@ Every rendered text kind — `title`, `subtitle`, `author`, `sequence`, `part_le
 | `bold` | Whether the element renders bold (`yes`/`no`) |
 | `italic` | Whether the element renders italic (`yes`/`no`) |
 | `underline` | Whether the element renders underlined (`yes`/`no`) |
+| `font_family` | Which of the app's three embedded font roles the element renders in: `title`, `sans_serif`, or `monospace`. **Not accepted** on `notes`, `chords`, or `note_dash` — those three kinds' glyph widths are measured in a fixed monospace font as part of column layout, so overriding the font there would desync rendered glyph widths from the widths layout already computed; setting it is a metadata error on those kinds. |
 
 Defaults by kind:
 
-| Kind | `font_size` default | `horizontal_padding_pt` default | `vertical_padding_pt` default | `bold` default | `italic` default | `underline` default |
-|------|----------------------|----------------------------------|--------------------------------|-----------------|-------------------|----------------------|
-| `title` | `row_height * 1.5` | `0` | `0` | `no` | `no` | `no` |
-| `subtitle` | `row_height * 0.8` | `0` | `0` | `no` | `yes` | `no` |
-| `author` | `row_height * 0.6` | `0` | `0` | `no` | `no` | `no` |
-| `sequence` | `12` | `0` | `0` | `no` | `no` | `no` |
-| `part_legend` | `row_height * 0.6` | `0` | `0` | `no` | `no` | `no` |
-| `measure_number` | `10` | `0` | `0` | `no` | `no` | `no` |
-| `section_label` | `12` | `0` | `0` | `yes` | `yes` | `no` |
-| `page_number` | `row_height * 0.6` | `0` | `0` | `no` | `no` | `no` |
-| `part_label` | `12` | `0` | `0` | `no` | `no` | `no` |
-| `lyrics` | `row_height * 0.6` | `4` | `12` | `no` | `no` | `no` |
-| `notes` | `lyrics.font_size` | `4` | `0` | `no` | `no` | `no` |
-| `chords` | `lyrics.font_size` | `4` | `0` | `no` | `no` | `no` |
-| `note_dash` | `notes.font_size` | `4` | `0` | `no` | `no` | `no` |
+| Kind | `font_size` default | `horizontal_padding_pt` default | `vertical_padding_pt` default | `bold` default | `italic` default | `underline` default | `font_family` default |
+|------|----------------------|----------------------------------|--------------------------------|-----------------|-------------------|----------------------|-------------------------|
+| `title` | `row_height * 1.5` | `0` | `0` | `no` | `no` | `no` | `title` |
+| `subtitle` | `row_height * 0.8` | `0` | `0` | `no` | `yes` | `no` | `title` |
+| `author` | `row_height * 0.6` | `0` | `0` | `no` | `no` | `no` | `title` |
+| `sequence` | `12` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
+| `part_legend` | `row_height * 0.6` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
+| `measure_number` | `10` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
+| `section_label` | `12` | `0` | `0` | `yes` | `yes` | `no` | `sans_serif` |
+| `page_number` | `row_height * 0.6` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
+| `part_label` | `12` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
+| `lyrics` | `row_height * 0.6` | `4` | `12` | `no` | `no` | `no` | `title` |
+| `notes` | `lyrics.font_size` | `4` | `0` | `no` | `no` | `no` | `monospace` (fixed) |
+| `chords` | `lyrics.font_size` | `4` | `0` | `no` | `no` | `no` | `monospace` (fixed) |
+| `note_dash` | `notes.font_size` | `4` | `0` | `no` | `no` | `no` | `monospace` (fixed) |
 
-`notes.horizontal_padding_pt` is also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings. `lyrics.vertical_padding_pt` is extra padding around a lyric syllable's hover/click-target box, added on top of the lyric font's own measured ascender+descender span. `part_label`'s reserved column width is the separate flat `part_label_width_pt` field (see the main metadata table above), not part of this object — it's a layout constant, not a text style component. `sequence`'s `bold`/`italic`/`underline` style the `# sequence` summary line's per-label spans (independent of `section_label`, even though a directive line's own inline `label="..."` renders with `section_label`'s style — see [Directive lines](#directive-lines)).
+`notes.horizontal_padding_pt` is also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings. `lyrics.vertical_padding_pt` is extra padding around a lyric syllable's hover/click-target box, added on top of the lyric font's own measured ascender+descender span. `part_label`'s reserved column width is the separate flat `part_label_width_pt` field (see the main metadata table above), not part of this object — it's a layout constant, not a text style component. `sequence`'s `bold`/`italic`/`underline`/`font_family` style the `# sequence` summary line's per-label spans (independent of `section_label`, even though a directive line's own inline `label="..."` renders with `section_label`'s style — see [Directive lines](#directive-lines)).
 
 Example:
 
@@ -113,7 +114,7 @@ Example:
 # metadata
 title = "My Song"
 title = { font_size: 32, bold: yes }
-lyrics = { font_size: 18, vertical_padding_pt: 6 }
+lyrics = { font_size: 18, vertical_padding_pt: 6, font_family: sans_serif }
 notes = { horizontal_padding_pt: 6, italic: yes }
 part_label_width_pt = 60
 ```

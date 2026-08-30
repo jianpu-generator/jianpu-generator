@@ -8,7 +8,7 @@ use jianpu_generator::{
 use crate::diagnostics::{
     diagnostic_from_diagnostic, diagnostic_from_error, group_diagnostics_into_view_zones,
 };
-use crate::svg_types::svg_document_to_out;
+use crate::svg_types_convert::svg_document_to_out;
 use crate::types::{
     GroupLyricSelectionResponse, GroupNoteSelectionResponse, ListLyricSpansResponse,
     ListMeasureSpansResponse, ListNoteSpansResponse, LyricCellIn, LyricSelectionRunOut,

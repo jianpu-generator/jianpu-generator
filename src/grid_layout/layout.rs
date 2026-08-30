@@ -311,15 +311,10 @@ pub fn layout(
         diagnostics.extend(page_diagnostics);
         let body_height: f32 = rows.iter().map(|r| r.height_pt).sum();
         let remaining_height = page_height_pt - 2.0 * super::PAGE_MARGIN - body_height;
-        rows.push(make_footer_row(
+        rows.push(page_footer_row(
+            config,
             page_idx as u32 + 1,
             total_pages,
-            config.page_number_font_size as f32,
-            crate::grid_layout::types::TextStyleFlags {
-                bold: config.page_number_bold,
-                italic: config.page_number_italic,
-                underline: config.page_number_underline,
-            },
             remaining_height,
         ));
         abs_system_index_start += page_sys.len();
@@ -339,6 +334,28 @@ pub fn layout(
         });
     }
     LayoutOutput { pages, diagnostics }
+}
+
+/// Builds a page's footer row from `config`'s page-number style — split out
+/// of [`layout`] to keep it under clippy's line-count limit.
+fn page_footer_row(
+    config: &RenderConfig,
+    page_num: u32,
+    total_pages: u32,
+    remaining_height: f32,
+) -> GridRow {
+    make_footer_row(
+        page_num,
+        total_pages,
+        config.page_number_font_size as f32,
+        crate::grid_layout::types::TextStyleFlags {
+            bold: config.page_number_bold,
+            italic: config.page_number_italic,
+            underline: config.page_number_underline,
+        },
+        config.page_number_font_family,
+        remaining_height,
+    )
 }
 
 #[path = "layout_page_targets.rs"]

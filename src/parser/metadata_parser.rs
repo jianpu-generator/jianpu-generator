@@ -83,6 +83,27 @@ fn parse_bool_field(
     }
 }
 
+fn parse_font_family_field(
+    target: &mut Option<crate::ast::parsed::FontFamilyChoice>,
+    key: &str,
+    value: &str,
+    value_span: &Span,
+    errors: &mut Vec<RecoverableError>,
+) {
+    use crate::ast::parsed::FontFamilyChoice;
+    match value {
+        "title" => *target = Some(FontFamilyChoice::Title),
+        "sans_serif" => *target = Some(FontFamilyChoice::SansSerif),
+        "monospace" => *target = Some(FontFamilyChoice::Monospace),
+        _ => errors.push(RecoverableError::metadata_invalid_enum(
+            *value_span,
+            key,
+            value,
+            "title, sans_serif, monospace",
+        )),
+    }
+}
+
 use text_style_parser::parse_text_style_object;
 
 #[path = "text_style_parser.rs"]

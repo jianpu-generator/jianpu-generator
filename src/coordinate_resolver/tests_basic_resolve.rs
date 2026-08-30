@@ -116,7 +116,7 @@ fn halign_end_places_x_at_right_of_column_span() {
             bold: false,
             italic: false,
             underline: false,
-            is_title: false,
+            font_family: crate::compositor::types::FontFamily::SansSerif,
         },
     };
     let page = single_row_page(el);

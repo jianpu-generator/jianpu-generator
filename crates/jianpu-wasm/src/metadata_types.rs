@@ -34,6 +34,21 @@ pub struct TextStyleDefaultsOut {
     pub bold: bool,
     pub italic: bool,
     pub underline: bool,
+    pub font_family: FontFamilyDefaultOut,
+}
+
+/// A text-style kind's default `font_family` (see `TextStyleDefaultsOut`),
+/// serialized as the same `title`/`sans_serif`/`monospace` literals the
+/// `.jianpu` `font_family:` syntax itself uses — distinct from
+/// `crate::svg_types::FontFamilyOut`, which serializes camelCase for the
+/// rendered-SVG wire format instead.
+#[derive(Debug, Clone, Copy, Tsify, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+#[tsify(into_wasm_abi)]
+pub enum FontFamilyDefaultOut {
+    Title,
+    SansSerif,
+    Monospace,
 }
 
 /// Default values applied to `# metadata` fields left unset in the source.
@@ -81,6 +96,7 @@ fn text_style(font_size: u32) -> TextStyleDefaultsOut {
         bold: false,
         italic: false,
         underline: false,
+        font_family: FontFamilyDefaultOut::SansSerif,
     }
 }
 
@@ -94,12 +110,19 @@ impl Default for MetadataDefaultsOut {
             note_number_width: DEFAULT_NOTE_NUMBER_WIDTH,
             parts_list_columns: DEFAULT_PARTS_LIST_COLUMNS,
             part_label_width_pt: DEFAULT_PART_LABEL_WIDTH_PT,
-            title: text_style(default_title_font_size(DEFAULT_ROW_HEIGHT)),
+            title: TextStyleDefaultsOut {
+                font_family: FontFamilyDefaultOut::Title,
+                ..text_style(default_title_font_size(DEFAULT_ROW_HEIGHT))
+            },
             subtitle: TextStyleDefaultsOut {
                 italic: true,
+                font_family: FontFamilyDefaultOut::Title,
                 ..text_style(default_subtitle_font_size(DEFAULT_ROW_HEIGHT))
             },
-            author: text_style(default_author_font_size(DEFAULT_ROW_HEIGHT)),
+            author: TextStyleDefaultsOut {
+                font_family: FontFamilyDefaultOut::Title,
+                ..text_style(default_author_font_size(DEFAULT_ROW_HEIGHT))
+            },
             sequence: text_style(DEFAULT_SEQUENCE_FONT_SIZE),
             part_legend: text_style(default_part_legend_font_size(DEFAULT_ROW_HEIGHT)),
             measure_number: text_style(DEFAULT_MEASURE_NUMBER_FONT_SIZE),
@@ -113,18 +136,22 @@ impl Default for MetadataDefaultsOut {
             lyrics: TextStyleDefaultsOut {
                 horizontal_padding_pt: DEFAULT_LYRICS_HORIZONTAL_PADDING_PT,
                 vertical_padding_pt: DEFAULT_LYRIC_CLICK_TARGET_PADDING_PT,
+                font_family: FontFamilyDefaultOut::Title,
                 ..text_style(lyrics_font_size)
             },
             notes: TextStyleDefaultsOut {
                 horizontal_padding_pt: DEFAULT_NOTES_HORIZONTAL_PADDING_PT,
+                font_family: FontFamilyDefaultOut::Monospace,
                 ..text_style(notes_font_size)
             },
             chords: TextStyleDefaultsOut {
                 horizontal_padding_pt: DEFAULT_CHORDS_HORIZONTAL_PADDING_PT,
+                font_family: FontFamilyDefaultOut::Monospace,
                 ..text_style(lyrics_font_size)
             },
             note_dash: TextStyleDefaultsOut {
                 horizontal_padding_pt: DEFAULT_NOTE_DASH_HORIZONTAL_PADDING_PT,
+                font_family: FontFamilyDefaultOut::Monospace,
                 ..text_style(notes_font_size)
             },
             merge_duplicate_measures_across_parts: DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,

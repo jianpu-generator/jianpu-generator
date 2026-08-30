@@ -181,6 +181,8 @@ pub enum AbsoluteContent {
         /// line's start (offset 0) so it always precedes `label` and
         /// `spans`, regardless of their widths.
         bar_number: Option<TextSpan>,
+        /// See `Metadata::measure_number_style`. Meaningless when `bar_number` is `None`.
+        bar_number_font_family: FontFamily,
         /// Section-label text, rendered as its own text/box element
         /// independent of `spans` (see `label_x_offset`) rather than as one
         /// of `spans`'s tspans, so it doesn't need to know their combined
@@ -193,6 +195,8 @@ pub enum AbsoluteContent {
         label_bold: bool,
         label_italic: bool,
         label_underline: bool,
+        /// See `Metadata::section_label_style`. Meaningless when `label` is `None`.
+        label_font_family: FontFamily,
         /// Height in points of `label`'s rendered background box (see
         /// `font_metrics::section_label_box_height`), already including
         /// `Metadata::section_label.vertical_padding_pt`. Meaningless when
@@ -201,6 +205,11 @@ pub enum AbsoluteContent {
         /// Key/bpm/time-signature spans, i.e. everything on the line except
         /// `bar_number` and `label`.
         spans: Vec<TextSpan>,
+        /// Font family for `spans`. `SansSerif` for an ordinary directive
+        /// line's key/bpm/time-signature text (not a configurable text-style
+        /// kind); `Metadata::sequence.font_family` for the `# sequence`
+        /// summary line's spans (see `PostArcGridContent::SequenceLine`).
+        spans_font_family: FontFamily,
         /// X offset (in points, from the line's start) where `spans`
         /// begins: right after `bar_number` when there is no `label`, or
         /// past `label`'s bounding box when there is, so the three
@@ -240,7 +249,7 @@ pub enum DominantBaseline {
     Ideographic,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FontFamily {
     Monospace,
     /// Everything not on `Title`: the directive line (bar number, section
@@ -248,7 +257,9 @@ pub enum FontFamily {
     /// whichever font backs the `sansSerif` role in `fonts/fonts.json`
     /// (currently Source Han Sans SC — see that file's comment on why the
     /// two roles differ). See `DIRECTIVE_LINE_FONT_FAMILY` in
-    /// `src/serializer/mod.rs`.
+    /// `src/serializer/mod.rs`. The default role for kinds without an
+    /// explicit `font_family` override.
+    #[default]
     SansSerif,
     /// The song title, subtitle, and author (`Header::title`/`subtitle`/
     /// `author`, via `make_title_row`/`make_subtitle_author_row`) and lyric

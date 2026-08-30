@@ -98,14 +98,14 @@ fn to_post_arc_text_content(content: &GridContent) -> Option<PostArcGridContent>
             bold,
             italic,
             underline,
-            is_title,
+            font_family,
         } => Some(PostArcGridContent::Text {
             content: content.clone(),
             font_size: *font_size,
             bold: *bold,
             italic: *italic,
             underline: *underline,
-            is_title: *is_title,
+            font_family: *font_family,
         }),
         GridContent::SequenceLine { entries, font_size } => {
             Some(PostArcGridContent::SequenceLine {

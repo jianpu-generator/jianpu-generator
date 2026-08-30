@@ -97,6 +97,25 @@ pub struct TextStyle {
     pub italic: bool,
     /// Whether this kind renders underlined. Default: `false` for every kind.
     pub underline: bool,
+    /// Which embedded font role this kind's glyphs render in. Default:
+    /// `Title` for `title`/`subtitle`/`author`/`lyrics`, `SansSerif` for
+    /// every other kind. Always `Monospace` for `notes`/`chords`/`note_dash`
+    /// and cannot be overridden there (see
+    /// `RecoverableErrorKind::MetadataFontFamilyUnsupportedOnKind`) — those
+    /// kinds' glyph widths are baked into the grid layout's column spacing.
+    pub font_family: crate::compositor::types::FontFamily,
+}
+
+/// Bundles [`resolve_text_style`]'s `default_bold`/`default_italic`/
+/// `default_font_family` — split out once `font_family` pushed the plain
+/// argument list over clippy's `too_many_arguments` limit. `default_bold`/
+/// `default_italic` are `false` for every kind except where documented
+/// otherwise on `Metadata`'s per-kind fields.
+#[derive(Clone, Copy)]
+pub(crate) struct TextStyleDefaults {
+    pub(crate) bold: bool,
+    pub(crate) italic: bool,
+    pub(crate) font_family: crate::compositor::types::FontFamily,
 }
 
 /// Fills in each unset component of a parsed `<kind> = { ... }` style object
@@ -110,8 +129,7 @@ pub(crate) fn resolve_text_style(
     default_font_size: u32,
     default_horizontal_padding_pt: u32,
     default_vertical_padding_pt: u32,
-    default_bold: bool,
-    default_italic: bool,
+    defaults: TextStyleDefaults,
 ) -> TextStyle {
     TextStyle {
         font_size: parsed.font_size.unwrap_or(default_font_size),
@@ -121,8 +139,17 @@ pub(crate) fn resolve_text_style(
         vertical_padding_pt: parsed
             .vertical_padding_pt
             .unwrap_or(default_vertical_padding_pt),
-        bold: parsed.bold.unwrap_or(default_bold),
-        italic: parsed.italic.unwrap_or(default_italic),
+        bold: parsed.bold.unwrap_or(defaults.bold),
+        italic: parsed.italic.unwrap_or(defaults.italic),
         underline: parsed.underline.unwrap_or(false),
+        font_family: parsed.font_family.map_or(defaults.font_family, |choice| {
+            use crate::ast::parsed::FontFamilyChoice;
+            use crate::compositor::types::FontFamily;
+            match choice {
+                FontFamilyChoice::Title => FontFamily::Title,
+                FontFamilyChoice::SansSerif => FontFamily::SansSerif,
+                FontFamilyChoice::Monospace => FontFamily::Monospace,
+            }
+        }),
     }
 }

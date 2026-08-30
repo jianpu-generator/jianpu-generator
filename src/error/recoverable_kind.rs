@@ -37,6 +37,15 @@ pub enum RecoverableErrorKind {
     MetadataInvalidBoolean { field: String, value: String },
     /// A metadata `x y` integer-pair field is malformed — the field keeps its default.
     MetadataInvalidIntegerPair { field: String, value: String },
+    /// A metadata enum field's value isn't one of its allowed literals — the field keeps its default.
+    MetadataInvalidEnum {
+        field: String,
+        value: String,
+        allowed: String,
+    },
+    /// `font_family` was set on a kind whose glyphs are layout-measured in a fixed
+    /// monospace font (`notes`/`chords`/`note_dash`) — the field is rejected outright.
+    MetadataFontFamilyUnsupportedOnKind { field: String },
     /// A parts declaration line does not contain `=` — the line is skipped.
     PartsMalformedLine { line: String },
     /// A parts abbreviation is used by more than one declaration — the duplicate is skipped.
@@ -131,6 +140,8 @@ impl RecoverableErrorKind {
             Self::MetadataMustBePositive { field } => format!("{field} must be greater than zero"),
             Self::MetadataInvalidBoolean { field, value } => format!("{field} must be 'yes' or 'no', got: {value}"),
             Self::MetadataInvalidIntegerPair { field, value } => format!("{field} must be two integers separated by a space, e.g. \"0 0\", got: {value}"),
+            Self::MetadataInvalidEnum { field, value, allowed } => format!("{field} must be one of {allowed}, got: {value}"),
+            Self::MetadataFontFamilyUnsupportedOnKind { field } => format!("{field} is not supported: this kind's glyphs are measured in a fixed monospace font, so font_family cannot be overridden"),
             Self::PartsMalformedLine { line } => format!("expected track declaration, got: {line}"),
             Self::PartsDuplicateAbbreviation { abbrev } => format!("duplicate abbreviation: {abbrev}"),
             Self::PartsEmptySection => "expected at least one track in # parts section".to_string(),

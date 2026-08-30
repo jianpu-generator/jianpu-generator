@@ -1,5 +1,7 @@
 use crate::ast::parsed::Offset;
-use crate::compositor::types::{AbsoluteElement, DominantBaseline, TextAnchor, TextSpan};
+use crate::compositor::types::{
+    AbsoluteElement, DominantBaseline, FontFamily, TextAnchor, TextSpan,
+};
 use crate::renderer::new_types::{
     SvgElement, SvgKind, SvgVariant, Tag, TransparentRectRole, TspanData,
 };
@@ -23,13 +25,16 @@ fn spans_to_tspans(spans: &[TextSpan]) -> Vec<TspanData> {
 
 pub(super) struct DirectiveLineArgs<'a> {
     pub bar_number: &'a Option<TextSpan>,
+    pub bar_number_font_family: FontFamily,
     pub label: &'a Option<String>,
     pub label_font_size: f32,
     pub label_bold: bool,
     pub label_italic: bool,
     pub label_underline: bool,
+    pub label_font_family: FontFamily,
     pub label_box_height: f32,
     pub spans: &'a [TextSpan],
+    pub spans_font_family: FontFamily,
     pub spans_x_offset: f32,
     pub label_x_offset: f32,
     pub apply_row_offset: bool,
@@ -57,6 +62,7 @@ pub(super) fn render_directive_line(
             font_size: 12.0,
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
+            font: args.bar_number_font_family,
             spans: spans_to_tspans(std::slice::from_ref(span)),
         },
     });
@@ -69,6 +75,7 @@ pub(super) fn render_directive_line(
             font_size: 12.0,
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
+            font: args.spans_font_family,
             spans: spans_to_tspans(args.spans),
         },
     };
@@ -94,6 +101,7 @@ pub(super) fn render_directive_line(
                     label_bold: args.label_bold,
                     label_italic: args.label_italic,
                     label_underline: args.label_underline,
+                    label_font_family: args.label_font_family,
                     label_box_height: args.label_box_height,
                     line_width,
                 },
@@ -128,6 +136,7 @@ struct SectionLabelGroupArgs<'a> {
     label_bold: bool,
     label_italic: bool,
     label_underline: bool,
+    label_font_family: FontFamily,
     /// See `AbsoluteContent::DirectiveLine::label_box_height` — already
     /// includes `Metadata::section_label.vertical_padding_pt`, so this is
     /// the box's real drawn height, not just `section_label_box_height`'s
@@ -168,6 +177,7 @@ fn render_section_label_group(
             font_size: args.label_font_size,
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
+            font: args.label_font_family,
             spans: vec![TspanData {
                 content: args.label_str.to_string(),
                 bold: args.label_bold,

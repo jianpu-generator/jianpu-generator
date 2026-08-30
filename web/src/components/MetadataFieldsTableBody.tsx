@@ -233,6 +233,7 @@ export function MetadataFieldsTableBody({
         value={metadata.styles.notes}
         placeholder={stylePlaceholder(d?.notes, effectiveLyricsFontSize)}
         onChange={setStyle('notes')}
+        showFontFamily={false}
       />
       <TextStyleRow
         label="Chords Style"
@@ -241,6 +242,7 @@ export function MetadataFieldsTableBody({
         value={metadata.styles.chords}
         placeholder={stylePlaceholder(d?.chords, effectiveLyricsFontSize)}
         onChange={setStyle('chords')}
+        showFontFamily={false}
       />
       <TextStyleRow
         label="Note Dash Style"
@@ -249,6 +251,7 @@ export function MetadataFieldsTableBody({
         value={metadata.styles.note_dash}
         placeholder={stylePlaceholder(d?.note_dash, effectiveNotesFontSize)}
         onChange={setStyle('note_dash')}
+        showFontFamily={false}
       />
       <CheckboxFieldRow
         label="Merge Duplicate Measures Across Parts"

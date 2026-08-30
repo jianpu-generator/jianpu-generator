@@ -211,17 +211,17 @@ pub enum GridContent {
         bpm: Option<u32>,
         time_signature: Option<(u32, u32)>,
     },
-    /// Generic styled text for header and footer rows. `is_title` is set by
-    /// `make_title_row`/`make_subtitle_author_row` (title, subtitle,
-    /// author) — `false` for the part legend and footer — see
-    /// `FontFamily::Title`.
+    /// Generic styled text for header and footer rows. `font_family` is set
+    /// by each caller (`make_title_row`/`make_subtitle_author_row`/
+    /// `make_part_list_rows`/`expand::make_footer_row`) from that kind's
+    /// resolved `Metadata::*.font_family` — see `FontFamily`.
     Text {
         content: String,
         font_size: f32,
         bold: bool,
         italic: bool,
         underline: bool,
-        is_title: bool,
+        font_family: crate::compositor::types::FontFamily,
     },
     /// The resolved `# sequence` playback order, rendered as "Sequence: "
     /// followed by each label (styled like an inline section label) joined
@@ -269,18 +269,22 @@ pub struct Header {
     pub title_bold: bool,
     pub title_italic: bool,
     pub title_underline: bool,
+    pub title_font_family: crate::compositor::types::FontFamily,
     /// See `Metadata::subtitle_style`.
     pub subtitle_bold: bool,
     pub subtitle_italic: bool,
     pub subtitle_underline: bool,
+    pub subtitle_font_family: crate::compositor::types::FontFamily,
     /// See `Metadata::author_style`.
     pub author_bold: bool,
     pub author_italic: bool,
     pub author_underline: bool,
+    pub author_font_family: crate::compositor::types::FontFamily,
     /// See `Metadata::part_legend`.
     pub part_legend_bold: bool,
     pub part_legend_italic: bool,
     pub part_legend_underline: bool,
+    pub part_legend_font_family: crate::compositor::types::FontFamily,
 }
 
 #[derive(Debug, Clone)]

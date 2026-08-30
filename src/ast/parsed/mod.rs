@@ -143,6 +143,18 @@ pub struct ParsedDocument {
     pub sequence_parse_errors: Vec<RecoverableError>,
 }
 
+/// A `font_family` text-style value: which of the three globally-embedded
+/// font roles (see `crate::compositor::types::FontFamily`) a text kind's
+/// glyphs render in. Kept as its own parse-level type rather than reusing
+/// `compositor::types::FontFamily` directly, to preserve the parser/compositor
+/// layering — `resolve_text_style` maps it 1:1 onto the compositor enum.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FontFamilyChoice {
+    Title,
+    SansSerif,
+    Monospace,
+}
+
 /// Parsed (all-optional) form of the three-component style object a single
 /// `<kind> = { font_size: N, horizontal_padding_pt: N, vertical_padding_pt: N }`
 /// metadata line resolves to. See `crate::ast::grouped::TextStyle` for the
@@ -156,6 +168,11 @@ pub struct TextStyle {
     pub bold: Option<bool>,
     pub italic: Option<bool>,
     pub underline: Option<bool>,
+    /// Which embedded font role (`title`/`sans_serif`/`monospace`) this kind's
+    /// glyphs render in. Not accepted on `notes`/`chords`/`note_dash`, whose
+    /// glyphs are layout-measured in a fixed monospace font — see
+    /// `RecoverableErrorKind::MetadataFontFamilyUnsupportedOnKind`.
+    pub font_family: Option<FontFamilyChoice>,
 }
 
 #[derive(Debug, Default)]

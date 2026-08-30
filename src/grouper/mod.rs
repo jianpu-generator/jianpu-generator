@@ -1,7 +1,7 @@
 use crate::ast::grouped::{
     default_author_font_size, default_lyrics_font_size, default_page_number_font_size,
     default_part_legend_font_size, default_subtitle_font_size, default_title_font_size,
-    resolve_text_style, GroupedScore, GroupedTrack, Metadata, Score, TextStyle,
+    resolve_text_style, GroupedScore, GroupedTrack, Metadata, Score, TextStyle, TextStyleDefaults,
     DEFAULT_CHORDS_HORIZONTAL_PADDING_PT, DEFAULT_DIRECTIVE_ROW_OFFSET, DEFAULT_HIDE_RESTING_PARTS,
     DEFAULT_HIDE_SYSTEM_DIVIDERS, DEFAULT_LYRICS_HORIZONTAL_PADDING_PT,
     DEFAULT_LYRIC_CLICK_TARGET_PADDING_PT, DEFAULT_MAX_MEASURES_PER_SYSTEM,
@@ -142,17 +142,9 @@ struct ResolvedTextStyles {
 fn simple_text_style(
     parsed: crate::ast::parsed::TextStyle,
     default_font_size: u32,
-    default_bold: bool,
-    default_italic: bool,
+    defaults: TextStyleDefaults,
 ) -> TextStyle {
-    resolve_text_style(
-        parsed,
-        default_font_size,
-        0,
-        0,
-        default_bold,
-        default_italic,
-    )
+    resolve_text_style(parsed, default_font_size, 0, 0, defaults)
 }
 
 /// Resolves the `TextStyle` fields whose only non-zero default is `font_size`
@@ -172,60 +164,57 @@ fn resolve_simple_text_styles(
     TextStyle,
     TextStyle,
 ) {
+    use crate::compositor::types::FontFamily;
+    let defaults = |bold: bool, italic: bool, font_family: FontFamily| TextStyleDefaults {
+        bold,
+        italic,
+        font_family,
+    };
     (
         simple_text_style(
             metadata.title_style,
             default_title_font_size(row_height),
-            false,
-            false,
+            defaults(false, false, FontFamily::Title),
         ),
         simple_text_style(
             metadata.subtitle_style,
             default_subtitle_font_size(row_height),
-            false,
-            true,
+            defaults(false, true, FontFamily::Title),
         ),
         simple_text_style(
             metadata.author_style,
             default_author_font_size(row_height),
-            false,
-            false,
+            defaults(false, false, FontFamily::Title),
         ),
         simple_text_style(
             metadata.sequence_style,
             DEFAULT_SEQUENCE_FONT_SIZE,
-            false,
-            false,
+            defaults(false, false, FontFamily::SansSerif),
         ),
         simple_text_style(
             metadata.part_legend_style,
             default_part_legend_font_size(row_height),
-            false,
-            false,
+            defaults(false, false, FontFamily::SansSerif),
         ),
         simple_text_style(
             metadata.measure_number_style,
             DEFAULT_MEASURE_NUMBER_FONT_SIZE,
-            false,
-            false,
+            defaults(false, false, FontFamily::SansSerif),
         ),
         simple_text_style(
             metadata.section_label_style,
             DEFAULT_SECTION_LABEL_FONT_SIZE,
-            true,
-            true,
+            defaults(true, true, FontFamily::SansSerif),
         ),
         simple_text_style(
             metadata.page_number_style,
             default_page_number_font_size(row_height),
-            false,
-            false,
+            defaults(false, false, FontFamily::SansSerif),
         ),
         simple_text_style(
             metadata.part_label_style,
             DEFAULT_PART_LABEL_FONT_SIZE,
-            false,
-            false,
+            defaults(false, false, FontFamily::SansSerif),
         ),
     )
 }
@@ -265,32 +254,44 @@ fn resolve_text_styles(metadata: &ParsedMetadata, row_height: u32) -> ResolvedTe
             lyrics_font_size,
             DEFAULT_LYRICS_HORIZONTAL_PADDING_PT,
             DEFAULT_LYRIC_CLICK_TARGET_PADDING_PT,
-            false,
-            false,
+            TextStyleDefaults {
+                bold: false,
+                italic: false,
+                font_family: crate::compositor::types::FontFamily::Title,
+            },
         ),
         notes: resolve_text_style(
             metadata.notes_style,
             notes_font_size,
             DEFAULT_NOTES_HORIZONTAL_PADDING_PT,
             0,
-            false,
-            false,
+            TextStyleDefaults {
+                bold: false,
+                italic: false,
+                font_family: crate::compositor::types::FontFamily::Monospace,
+            },
         ),
         chords: resolve_text_style(
             metadata.chords_style,
             lyrics_font_size,
             DEFAULT_CHORDS_HORIZONTAL_PADDING_PT,
             0,
-            false,
-            false,
+            TextStyleDefaults {
+                bold: false,
+                italic: false,
+                font_family: crate::compositor::types::FontFamily::Monospace,
+            },
         ),
         note_dash: resolve_text_style(
             metadata.note_dash_style,
             notes_font_size,
             DEFAULT_NOTE_DASH_HORIZONTAL_PADDING_PT,
             0,
-            false,
-            false,
+            TextStyleDefaults {
+                bold: false,
+                italic: false,
+                font_family: crate::compositor::types::FontFamily::Monospace,
+            },
         ),
     }
 }

@@ -185,6 +185,26 @@ impl RecoverableError {
             },
         }
     }
+
+    pub fn metadata_invalid_enum(span: Span, field: &str, value: &str, allowed: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::MetadataInvalidEnum {
+                field: field.to_string(),
+                value: value.to_string(),
+                allowed: allowed.to_string(),
+            },
+        }
+    }
+
+    pub fn metadata_font_family_unsupported_on_kind(span: Span, field: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::MetadataFontFamilyUnsupportedOnKind {
+                field: field.to_string(),
+            },
+        }
+    }
 }
 
 #[path = "recoverable_error_parts.rs"]

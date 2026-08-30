@@ -1,5 +1,5 @@
 use crate::ast::parsed::Offset;
-use crate::compositor::types::{AbsoluteContent, AbsolutePage};
+use crate::compositor::types::{AbsoluteContent, AbsolutePage, FontFamily};
 use crate::font_metrics::section_label_box_padding;
 use crate::renderer::new_renderer::render_new;
 use crate::renderer::new_tests::{bpm_span, cfg, cfg_with_directive_row_offset, make_page};
@@ -10,13 +10,16 @@ fn labelless_directive_line_shifts_by_directive_row_offset() {
     let offset = Offset { x: 5, y: 12 };
     let page = make_page(AbsoluteContent::DirectiveLine {
         bar_number: None,
+        bar_number_font_family: FontFamily::SansSerif,
         label: None,
         label_font_size: 12.0,
         label_bold: false,
         label_italic: false,
         label_underline: false,
+        label_font_family: FontFamily::SansSerif,
         label_box_height: crate::font_metrics::section_label_box_height(12.0),
         spans: vec![bpm_span()],
+        spans_font_family: FontFamily::SansSerif,
         spans_x_offset: 0.0,
         label_x_offset: 0.0,
         apply_row_offset: true,
@@ -36,13 +39,16 @@ fn sequence_header_ignores_directive_row_offset() {
     let offset = Offset { x: 5, y: 12 };
     let page = make_page(AbsoluteContent::DirectiveLine {
         bar_number: None,
+        bar_number_font_family: FontFamily::SansSerif,
         label: None,
         label_font_size: 12.0,
         label_bold: false,
         label_italic: false,
         label_underline: false,
+        label_font_family: FontFamily::SansSerif,
         label_box_height: crate::font_metrics::section_label_box_height(12.0),
         spans: vec![bpm_span()],
+        spans_font_family: FontFamily::SansSerif,
         spans_x_offset: 0.0,
         label_x_offset: 0.0,
         apply_row_offset: false,
@@ -62,13 +68,16 @@ fn labeled_directive_line_moves_label_background_and_text_together() {
     let offset = Offset { x: 5, y: 12 };
     let page = make_page(AbsoluteContent::DirectiveLine {
         bar_number: None,
+        bar_number_font_family: FontFamily::SansSerif,
         label: Some("Verse 1".to_string()),
         label_font_size: 12.0,
         label_bold: false,
         label_italic: false,
         label_underline: false,
+        label_font_family: FontFamily::SansSerif,
         label_box_height: crate::font_metrics::section_label_box_height(12.0),
         spans: vec![bpm_span()],
+        spans_font_family: FontFamily::SansSerif,
         spans_x_offset: 0.0,
         label_x_offset: 0.0,
         apply_row_offset: true,
@@ -108,13 +117,16 @@ fn labeled_directive_line_moves_label_background_and_text_together() {
 fn label_background_starts_past_a_preceding_bar_number() {
     let page = make_page(AbsoluteContent::DirectiveLine {
         bar_number: None,
+        bar_number_font_family: FontFamily::SansSerif,
         label: Some("Verse 1".to_string()),
         label_font_size: 12.0,
         label_bold: false,
         label_italic: false,
         label_underline: false,
+        label_font_family: FontFamily::SansSerif,
         label_box_height: crate::font_metrics::section_label_box_height(12.0),
         spans: vec![bpm_span()],
+        spans_font_family: FontFamily::SansSerif,
         spans_x_offset: 0.0,
         label_x_offset: 30.0,
         apply_row_offset: false,
@@ -155,6 +167,7 @@ fn label_background_starts_past_a_preceding_bar_number() {
 fn cjk_label_gets_a_wider_background_than_an_equal_length_ascii_label() {
     let page_ascii = make_page(AbsoluteContent::DirectiveLine {
         bar_number: None,
+        bar_number_font_family: FontFamily::SansSerif,
         // Same character count as the CJK label below (3) rather than a
         // longer ASCII label like "Verse" (5 chars), so a difference in
         // per-glyph width between the pinned font's Latin and CJK glyphs
@@ -165,21 +178,26 @@ fn cjk_label_gets_a_wider_background_than_an_equal_length_ascii_label() {
         label_bold: false,
         label_italic: false,
         label_underline: false,
+        label_font_family: FontFamily::SansSerif,
         label_box_height: crate::font_metrics::section_label_box_height(12.0),
         spans: vec![bpm_span()],
+        spans_font_family: FontFamily::SansSerif,
         spans_x_offset: 0.0,
         label_x_offset: 0.0,
         apply_row_offset: false,
     });
     let page_cjk = make_page(AbsoluteContent::DirectiveLine {
         bar_number: None,
+        bar_number_font_family: FontFamily::SansSerif,
         label: Some("副歌一".to_string()),
         label_font_size: 12.0,
         label_bold: false,
         label_italic: false,
         label_underline: false,
+        label_font_family: FontFamily::SansSerif,
         label_box_height: crate::font_metrics::section_label_box_height(12.0),
         spans: vec![bpm_span()],
+        spans_font_family: FontFamily::SansSerif,
         spans_x_offset: 0.0,
         label_x_offset: 0.0,
         apply_row_offset: false,
@@ -243,13 +261,16 @@ fn label_background_width_matches_real_font_metrics() {
 
     let page = make_page(AbsoluteContent::DirectiveLine {
         bar_number: None,
+        bar_number_font_family: FontFamily::SansSerif,
         label: Some(label.to_string()),
         label_font_size: 12.0,
         label_bold: true,
         label_italic: false,
         label_underline: false,
+        label_font_family: FontFamily::SansSerif,
         label_box_height: crate::font_metrics::section_label_box_height(12.0),
         spans: vec![bpm_span()],
+        spans_font_family: FontFamily::SansSerif,
         spans_x_offset: 0.0,
         label_x_offset: 0.0,
         apply_row_offset: false,

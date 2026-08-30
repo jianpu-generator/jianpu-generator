@@ -1,4 +1,4 @@
-use crate::compositor::types::{AbsoluteElement, AbsolutePage};
+use crate::compositor::types::{AbsoluteElement, AbsolutePage, FontFamily};
 use crate::error::IrrecoverableError;
 use crate::grid_layout::types::{
     ColumnGeometry, GridContent, GridElement, GridPage, GridRow, HAlign, VAlign,
@@ -37,18 +37,22 @@ pub struct LabelFontSizes {
     pub measure_number_bold: bool,
     pub measure_number_italic: bool,
     pub measure_number_underline: bool,
+    pub measure_number_font_family: FontFamily,
     /// See `Metadata::section_label_style`.
     pub section_label_bold: bool,
     pub section_label_italic: bool,
     pub section_label_underline: bool,
+    pub section_label_font_family: FontFamily,
     /// See `Metadata::part_label_style`.
     pub part_label_bold: bool,
     pub part_label_italic: bool,
     pub part_label_underline: bool,
+    pub part_label_font_family: FontFamily,
     /// See `Metadata::sequence`.
     pub sequence_bold: bool,
     pub sequence_italic: bool,
     pub sequence_underline: bool,
+    pub sequence_font_family: FontFamily,
 }
 
 impl LabelFontSizes {
@@ -61,6 +65,7 @@ impl LabelFontSizes {
             bold: self.part_label_bold,
             italic: self.part_label_italic,
             underline: self.part_label_underline,
+            font_family: self.part_label_font_family,
         }
     }
 
@@ -75,12 +80,15 @@ impl LabelFontSizes {
             measure_number_bold: self.measure_number_bold,
             measure_number_italic: self.measure_number_italic,
             measure_number_underline: self.measure_number_underline,
+            measure_number_font_family: self.measure_number_font_family,
             section_label_bold: self.section_label_bold,
             section_label_italic: self.section_label_italic,
             section_label_underline: self.section_label_underline,
+            section_label_font_family: self.section_label_font_family,
             sequence_bold: self.sequence_bold,
             sequence_italic: self.sequence_italic,
             sequence_underline: self.sequence_underline,
+            sequence_font_family: self.sequence_font_family,
         }
     }
 }

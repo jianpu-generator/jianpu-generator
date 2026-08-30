@@ -1,4 +1,4 @@
-use crate::compositor::types::{AbsoluteContent, TextSpan};
+use crate::compositor::types::{AbsoluteContent, FontFamily, TextSpan};
 use crate::grid_layout::types::PostArcGridContent;
 
 use super::content_conversion::{bar_number_text_span, section_label_span};
@@ -18,14 +18,17 @@ pub(super) struct DirectiveLineFontSizes {
     pub(super) measure_number_bold: bool,
     pub(super) measure_number_italic: bool,
     pub(super) measure_number_underline: bool,
+    pub(super) measure_number_font_family: FontFamily,
     /// See `Metadata::section_label_style`.
     pub(super) section_label_bold: bool,
     pub(super) section_label_italic: bool,
     pub(super) section_label_underline: bool,
+    pub(super) section_label_font_family: FontFamily,
     /// See `Metadata::sequence`.
     pub(super) sequence_bold: bool,
     pub(super) sequence_italic: bool,
     pub(super) sequence_underline: bool,
+    pub(super) sequence_font_family: FontFamily,
 }
 
 /// Result of [`directive_line_content`]: the line's text spans plus layout
@@ -234,15 +237,18 @@ pub(super) fn directive_line_absolute(
     let directive_line = directive_line_content(content, directive_font_sizes);
     AbsoluteContent::DirectiveLine {
         bar_number: directive_line.bar_number,
+        bar_number_font_family: directive_font_sizes.measure_number_font_family,
         label: label.clone(),
         label_font_size: directive_font_sizes.section_label,
         label_bold: directive_font_sizes.section_label_bold,
         label_italic: directive_font_sizes.section_label_italic,
         label_underline: directive_font_sizes.section_label_underline,
+        label_font_family: directive_font_sizes.section_label_font_family,
         label_box_height: crate::font_metrics::section_label_box_height(
             directive_font_sizes.section_label,
         ) + directive_font_sizes.section_label_vertical_padding_pt,
         spans: directive_line.spans,
+        spans_font_family: FontFamily::SansSerif,
         spans_x_offset: directive_line.spans_x_offset,
         label_x_offset: directive_line.label_x_offset,
         apply_row_offset: true,

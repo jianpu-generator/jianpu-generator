@@ -353,3 +353,39 @@ fn collects_error_for_old_section_label_offset_key() {
     let (_meta, errors) = parse_metadata(content, 0);
     assert!(!errors.is_empty());
 }
+
+#[test]
+fn parses_font_family_on_lyrics() {
+    let content = "title = \"t\"\nauthor = \"a\"\nlyrics = { font_family: sans_serif }\n";
+    let (meta, errors) = parse_metadata(content, 0);
+    assert!(errors.is_empty());
+    assert_eq!(
+        meta.lyrics_style.font_family,
+        Some(crate::ast::parsed::FontFamilyChoice::SansSerif)
+    );
+}
+
+#[test]
+fn collects_error_for_invalid_font_family_value() {
+    let content = "title = \"t\"\nauthor = \"a\"\nlyrics = { font_family: comic_sans }\n";
+    let (meta, errors) = parse_metadata(content, 0);
+    assert_eq!(meta.lyrics_style.font_family, None);
+    assert!(errors
+        .iter()
+        .any(|e| e.message().contains("lyrics.font_family")));
+}
+
+#[test]
+fn font_family_is_rejected_on_notes_chords_and_note_dash() {
+    for kind in ["notes", "chords", "note_dash"] {
+        let content =
+            format!("title = \"t\"\nauthor = \"a\"\n{kind} = {{ font_family: monospace }}\n");
+        let (_meta, errors) = parse_metadata(&content, 0);
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.message().contains(&format!("{kind}.font_family"))),
+            "expected {kind}.font_family to be rejected, got errors: {errors:?}"
+        );
+    }
+}

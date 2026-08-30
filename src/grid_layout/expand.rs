@@ -262,6 +262,7 @@ pub(crate) fn make_footer_row(
     total_pages: u32,
     font_size: f32,
     style: crate::grid_layout::types::TextStyleFlags,
+    font_family: crate::compositor::types::FontFamily,
     height_pt: f32,
 ) -> GridRow {
     GridRow {
@@ -280,7 +281,7 @@ pub(crate) fn make_footer_row(
                 bold: style.bold,
                 italic: style.italic,
                 underline: style.underline,
-                is_title: false,
+                font_family,
             },
         }],
     }

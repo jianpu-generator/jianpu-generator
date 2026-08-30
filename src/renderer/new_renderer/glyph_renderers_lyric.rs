@@ -10,6 +10,7 @@ pub(in crate::renderer::new_renderer) fn render_lyric(
     base_font_size: &f32,
     cjk_font_size: &f32,
     style: GlyphStyle,
+    font_family: FontFamily,
 ) -> Vec<SvgElement> {
     vec![SvgElement {
         x: elem.x,
@@ -20,10 +21,11 @@ pub(in crate::renderer::new_renderer) fn render_lyric(
             font_size: crate::font_metrics::lyric_font_size(s, *base_font_size, *cjk_font_size),
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
-            // `FontFamily::Title` — despite the name, shared with the song
-            // title's font, not exclusive to it. See its doc comment in
-            // `src/compositor/types.rs`.
-            font: FontFamily::Title,
+            // Defaults to `FontFamily::Title` — despite the name, shared with
+            // the song title's font, not exclusive to it (see its doc comment
+            // in `src/compositor/types.rs`) — but overridable via
+            // `Metadata::lyrics.font_family`.
+            font: font_family,
             weight: glyph_weight(style.bold),
             italic: style.italic,
             underline: style.underline,
@@ -40,6 +42,7 @@ pub(in crate::renderer::new_renderer) fn render_lyric_line(
     base_font_size: &f32,
     cjk_font_size: &f32,
     style: GlyphStyle,
+    font_family: FontFamily,
 ) -> Vec<SvgElement> {
     vec![SvgElement {
         x: elem.x,
@@ -50,7 +53,7 @@ pub(in crate::renderer::new_renderer) fn render_lyric_line(
             font_size: crate::font_metrics::lyric_font_size(s, *base_font_size, *cjk_font_size),
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
-            font: FontFamily::Title,
+            font: font_family,
             weight: glyph_weight(style.bold),
             italic: style.italic,
             underline: style.underline,

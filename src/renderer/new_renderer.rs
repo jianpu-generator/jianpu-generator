@@ -1,5 +1,5 @@
 use crate::ast::parsed::Offset;
-use crate::compositor::types::{AbsoluteContent, AbsoluteElement, AbsolutePage};
+use crate::compositor::types::{AbsoluteContent, AbsoluteElement, AbsolutePage, FontFamily};
 use crate::render_config::RenderConfig;
 use crate::renderer::new_types::{SvgDocument, SvgElement};
 use glyph_renderers::{
@@ -57,6 +57,7 @@ fn render_page(page: &AbsolutePage, config: &RenderConfig) -> SvgDocument {
             italic: config.note_dash_italic,
             underline: config.note_dash_underline,
         },
+        lyrics_font_family: config.lyrics_font_family,
     };
 
     let elements = page
@@ -94,6 +95,8 @@ struct RenderElementParams {
     chords_style: GlyphStyle,
     lyrics_style: GlyphStyle,
     note_dash_style: GlyphStyle,
+    /// See `Metadata::lyrics.font_family`.
+    lyrics_font_family: FontFamily,
 }
 
 fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<SvgElement> {
@@ -107,6 +110,7 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
         notes_style,
         chords_style,
         lyrics_style,
+        lyrics_font_family,
         ..
     } = params;
     match &elem.content {
@@ -127,12 +131,22 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
         AbsoluteContent::PercussionHit => {
             render_percussion_hit(elem, notes_font_size, *notes_style)
         }
-        AbsoluteContent::Lyric { text, .. } => {
-            render_lyric(elem, text, lyric_font_size, cjk_font_size, *lyrics_style)
-        }
-        AbsoluteContent::LyricLine(s) => {
-            render_lyric_line(elem, s, lyric_font_size, cjk_font_size, *lyrics_style)
-        }
+        AbsoluteContent::Lyric { text, .. } => render_lyric(
+            elem,
+            text,
+            lyric_font_size,
+            cjk_font_size,
+            *lyrics_style,
+            *lyrics_font_family,
+        ),
+        AbsoluteContent::LyricLine(s) => render_lyric_line(
+            elem,
+            s,
+            lyric_font_size,
+            cjk_font_size,
+            *lyrics_style,
+            *lyrics_font_family,
+        ),
         AbsoluteContent::MultiMeasureRest { .. }
         | AbsoluteContent::Underline { .. }
         | AbsoluteContent::TieOrSlur { .. }

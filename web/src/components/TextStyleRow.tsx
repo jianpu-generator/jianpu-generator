@@ -1,9 +1,11 @@
 import type {
+  FontFamilyValue,
   TextStyleBooleanComponent,
   TextStyleComponent,
   TextStyleFields,
   TextStyleNumericComponent,
 } from '../utils/metadataSource'
+import { fontFamilyValues } from '../utils/metadataSource'
 import { FieldLabel } from './FieldHelpModal'
 import { type FieldRowProps, NumberStepper, tdStyle } from './MetadataFieldRows'
 
@@ -103,6 +105,23 @@ const styleTogglesWrapperStyle: React.CSSProperties = {
   alignItems: 'flex-end',
 }
 
+/** Display label for each `font_family` option, shown in the `<select>`
+ * (see `TextStyleRow`'s `showFontFamily` prop). */
+const fontFamilyOptionLabels: Record<FontFamilyValue, string> = {
+  title: 'Title',
+  sans_serif: 'Sans Serif',
+  monospace: 'Monospace',
+}
+
+const fontFamilySelectStyle: React.CSSProperties = {
+  height: '22px',
+  fontSize: '11px',
+  border: '1px solid #cbd5e0',
+  borderRadius: '3px',
+  background: '#fff',
+  color: '#444',
+}
+
 /** One `B`/`I`/`U` toggle button for a single boolean style component:
  * `checked` reflects the effective value (the field's own override, falling
  * back to its default when unset — same fallback `NumberStepper` shows via
@@ -152,10 +171,15 @@ export function TextStyleRow({
   value,
   placeholder,
   onChange,
+  showFontFamily = true,
 }: FieldRowProps & {
   value: TextStyleFields
   placeholder?: TextStyleFields | null
   onChange: (component: TextStyleComponent) => (value: string) => void
+  /** `false` for `notes`/`chords`/`note_dash`, whose glyph widths are
+   * layout-measured in a fixed monospace font — `font_family` isn't
+   * accepted on those kinds (see `syntax.md`). */
+  showFontFamily?: boolean
 }) {
   return (
     <tr>
@@ -196,6 +220,23 @@ export function TextStyleRow({
               )
             })}
           </div>
+          {showFontFamily && (
+            <div style={styleInputGroupStyle}>
+              <span style={styleInputSubLabelStyle}>Font</span>
+              <select
+                aria-label={`${label} Font Family`}
+                style={fontFamilySelectStyle}
+                value={value.font_family ?? placeholder?.font_family ?? ''}
+                onChange={(e) => onChange('font_family')(e.target.value)}
+              >
+                {fontFamilyValues.map((option) => (
+                  <option key={option} value={option}>
+                    {fontFamilyOptionLabels[option]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </td>
     </tr>
