@@ -21,11 +21,11 @@ import fontsManifest from '../../../fonts/fonts.json'
 // and Task 1 of PLAN-section-label-engraving-quality.md.
 const DIRECTIVE_LINE_FONT_FAMILY = fontsManifest.sansSerif.familyCss
 
-// `FontFamily::Title`'s backing font — the default role for the song title,
+// `FontFamily::Serif`'s backing font — the default role for the song title,
 // subtitle, author, and lyric syllables/lines, but likewise overridable
 // per-kind — is pinned to a separate, typically more calligraphic font
-// instead. Mirrors `TITLE_FONT_FAMILY` in `src/serializer/mod.rs`.
-const TITLE_FONT_FAMILY = fontsManifest.title.familyCss
+// instead. Mirrors `SERIF_FONT_FAMILY` in `src/serializer/mod.rs`.
+const SERIF_FONT_FAMILY = fontsManifest.serif.familyCss
 
 /** Resolves an element's `FontFamilyOut` (`text`'s `font`, or
  * `textWithTspans`'s own `font` — see `Metadata::measure_number_style`/
@@ -37,8 +37,8 @@ function textFontFamily(font: FontFamilyOut): string {
       return 'monospace'
     case 'sansSerif':
       return DIRECTIVE_LINE_FONT_FAMILY
-    case 'title':
-      return TITLE_FONT_FAMILY
+    case 'serif':
+      return SERIF_FONT_FAMILY
   }
 }
 

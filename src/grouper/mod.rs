@@ -174,17 +174,17 @@ fn resolve_simple_text_styles(
         simple_text_style(
             metadata.title_style,
             default_title_font_size(row_height),
-            defaults(false, false, FontFamily::Title),
+            defaults(false, false, FontFamily::Serif),
         ),
         simple_text_style(
             metadata.subtitle_style,
             default_subtitle_font_size(row_height),
-            defaults(false, true, FontFamily::Title),
+            defaults(false, true, FontFamily::Serif),
         ),
         simple_text_style(
             metadata.author_style,
             default_author_font_size(row_height),
-            defaults(false, false, FontFamily::Title),
+            defaults(false, false, FontFamily::Serif),
         ),
         simple_text_style(
             metadata.sequence_style,
@@ -257,7 +257,7 @@ fn resolve_text_styles(metadata: &ParsedMetadata, row_height: u32) -> ResolvedTe
             TextStyleDefaults {
                 bold: false,
                 italic: false,
-                font_family: crate::compositor::types::FontFamily::Title,
+                font_family: crate::compositor::types::FontFamily::Serif,
             },
         ),
         notes: resolve_text_style(

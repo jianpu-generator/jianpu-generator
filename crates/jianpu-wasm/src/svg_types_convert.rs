@@ -59,7 +59,7 @@ fn font_family_to_out(font: &FontFamily) -> FontFamilyOut {
     match font {
         FontFamily::Monospace => FontFamilyOut::Monospace,
         FontFamily::SansSerif => FontFamilyOut::SansSerif,
-        FontFamily::Title => FontFamilyOut::Title,
+        FontFamily::Serif => FontFamilyOut::Serif,
     }
 }
 

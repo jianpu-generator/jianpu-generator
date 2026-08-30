@@ -98,7 +98,7 @@ pub struct TextStyle {
     /// Whether this kind renders underlined. Default: `false` for every kind.
     pub underline: bool,
     /// Which embedded font role this kind's glyphs render in. Default:
-    /// `Title` for `title`/`subtitle`/`author`/`lyrics`, `SansSerif` for
+    /// `Serif` for `title`/`subtitle`/`author`/`lyrics`, `SansSerif` for
     /// every other kind. Always `Monospace` for `notes`/`chords`/`note_dash`
     /// and cannot be overridden there (see
     /// `RecoverableErrorKind::MetadataFontFamilyUnsupportedOnKind`) — those
@@ -146,7 +146,7 @@ pub(crate) fn resolve_text_style(
             use crate::ast::parsed::FontFamilyChoice;
             use crate::compositor::types::FontFamily;
             match choice {
-                FontFamilyChoice::Title => FontFamily::Title,
+                FontFamilyChoice::Serif => FontFamily::Serif,
                 FontFamilyChoice::SansSerif => FontFamily::SansSerif,
                 FontFamilyChoice::Monospace => FontFamily::Monospace,
             }

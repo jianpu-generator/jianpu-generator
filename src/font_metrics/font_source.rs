@@ -16,21 +16,21 @@ mod imp {
     /// A character missing from it measures via
     /// `FALLBACK_ADVANCE_WIDTH_RATIO` instead of a fallback font's real
     /// advance, since this single-face measurement has no fallback chain of
-    /// its own. `FontFamily::Title` (see `lyric_font` below) isn't measured
+    /// its own. `FontFamily::Serif` (see `lyric_font` below) isn't measured
     /// here — see its doc comment in `src/compositor/types.rs`.
     static DIRECTIVE_LINE_FONT: std::sync::LazyLock<Option<ttf_parser::Face<'static>>> =
         std::sync::LazyLock::new(|| {
             ttf_parser::Face::parse(crate::fonts::SANS_SERIF_FONT_BYTES, 0).ok()
         });
 
-    /// The font pinned for lyric syllables/lines (see `TITLE_FONT_FAMILY` in
+    /// The font pinned for lyric syllables/lines (see `SERIF_FONT_FAMILY` in
     /// `src/serializer/mod.rs` — lyrics share the song title's font), parsed
     /// once for the same real-glyph-advance reason as `DIRECTIVE_LINE_FONT`.
     /// The song title itself isn't measured here — see its doc comment in
     /// `src/compositor/types.rs`.
     static LYRIC_FONT: std::sync::LazyLock<Option<ttf_parser::Face<'static>>> =
         std::sync::LazyLock::new(|| {
-            ttf_parser::Face::parse(crate::fonts::TITLE_FONT_BYTES, 0).ok()
+            ttf_parser::Face::parse(crate::fonts::SERIF_FONT_BYTES, 0).ok()
         });
 
     /// The font pinned for monospace glyphs (notehead digits, rests, chord

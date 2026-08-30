@@ -4,13 +4,13 @@ use pdf_writer::{Content, Finish, Name, Pdf, Rect, Ref, TextStr};
 use std::collections::HashMap;
 
 pub struct PdfFonts {
-    /// The `title` role's font bytes (currently Zhuque Fangsong — see
+    /// The `serif` role's font bytes (currently Zhuque Fangsong — see
     /// `fonts/fonts.json`, the single source of truth for which file backs
     /// each role) — despite the field's name, no longer Source Han Sans SC
-    /// or TW-Kai. Backs `FontFamily::Title` (the song title, subtitle,
+    /// or TW-Kai. Backs `FontFamily::Serif` (the song title, subtitle,
     /// author, and lyric syllables/lines, see its doc comment in
     /// `src/compositor/types.rs`), addressed by its own literal family name
-    /// in the SVG's `font-family` (`TITLE_FONT_FAMILY` in
+    /// in the SVG's `font-family` (`SERIF_FONT_FAMILY` in
     /// `src/serializer/mod.rs`) rather than via `set_sans_serif_family` —
     /// `fontdb` resolves a literal name by matching a loaded font's own
     /// name-table family, so whatever font backs this role just needs to be
@@ -20,7 +20,7 @@ pub struct PdfFonts {
     /// The `sansSerif` role's font bytes (currently Source Han Sans SC —
     /// see `fonts/fonts.json`) — the default/body CJK font PDF export
     /// resolves `sans-serif` to (see `set_sans_serif_family` below),
-    /// covering everything except `FontFamily::Title`'s text (directive
+    /// covering everything except `FontFamily::Serif`'s text (directive
     /// line, part legend, footer). Loaded separately from `sans_serif_sc`
     /// since the two roles can be backed by different font files (and
     /// currently are — see `fonts/fonts.json`'s comment on why the split
@@ -143,7 +143,7 @@ mod tests {
             .unwrap()
             .svgs;
         let fonts = PdfFonts {
-            sans_serif_sc: crate::fonts::TITLE_FONT_BYTES.to_vec(),
+            sans_serif_sc: crate::fonts::SERIF_FONT_BYTES.to_vec(),
             sans_serif_tc: crate::fonts::SANS_SERIF_FONT_BYTES.to_vec(),
             monospace: crate::fonts::MONOSPACE_FONT_BYTES.to_vec(),
         };

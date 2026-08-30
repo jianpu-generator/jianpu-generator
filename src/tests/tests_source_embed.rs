@@ -35,7 +35,7 @@ mod pdf_embedding {
 
     fn test_pdf_fonts() -> pdf::PdfFonts {
         pdf::PdfFonts {
-            sans_serif_sc: fonts::TITLE_FONT_BYTES.to_vec(),
+            sans_serif_sc: fonts::SERIF_FONT_BYTES.to_vec(),
             sans_serif_tc: fonts::SANS_SERIF_FONT_BYTES.to_vec(),
             monospace: fonts::MONOSPACE_FONT_BYTES.to_vec(),
         }

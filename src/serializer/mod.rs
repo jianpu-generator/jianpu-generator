@@ -101,16 +101,16 @@ fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) {
 /// backs each `FontFamily` role.
 use crate::fonts::SANS_SERIF_FONT_FAMILY_CSS as DIRECTIVE_LINE_FONT_FAMILY;
 
-/// `FontFamily::Title` — the song title, subtitle, and author (via
+/// `FontFamily::Serif` — the song title, subtitle, and author (via
 /// `make_title_row`/`make_subtitle_author_row`) and lyric syllables/lines
 /// (`render_lyric`/`render_lyric_line`) — is pinned to whichever font backs
-/// the `title` role in `fonts/fonts.json` (currently Zhuque Fangsong, a
+/// the `serif` role in `fonts/fonts.json` (currently Zhuque Fangsong, a
 /// calligraphic font kept off the directive line/part legend/footer, where
 /// its Latin glyphs would read too calligraphic — see `DIRECTIVE_LINE_FONT_FAMILY`'s
 /// Source Han Sans SC above). Kept as a separate constant from
 /// `DIRECTIVE_LINE_FONT_FAMILY` rather than merged into one, since the two
 /// roles are backed by different files. Defined in `src/fonts.rs`.
-use crate::fonts::TITLE_FONT_FAMILY_CSS as TITLE_FONT_FAMILY;
+use crate::fonts::SERIF_FONT_FAMILY_CSS as SERIF_FONT_FAMILY;
 
 /// Every `FontFamily::Monospace` glyph (notehead, rest, chord symbol,
 /// percussion, multi-measure-rest count, note dash, Latin lyric) is pinned to
@@ -126,7 +126,7 @@ fn font_family_css(font: FontFamily) -> &'static str {
     match font {
         FontFamily::Monospace => MONOSPACE_FONT_FAMILY,
         FontFamily::SansSerif => DIRECTIVE_LINE_FONT_FAMILY,
-        FontFamily::Title => TITLE_FONT_FAMILY,
+        FontFamily::Serif => SERIF_FONT_FAMILY,
     }
 }
 

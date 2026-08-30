@@ -46,7 +46,7 @@ export type TextStyleBooleanComponent =
  * which of the three globally-embedded font roles the kind's glyphs render
  * in. Not accepted on `notes`/`chords`/`note_dash` — see
  * `TextStyleRow`'s `showFontFamily` prop. */
-export const fontFamilyValues = ['title', 'sans_serif', 'monospace'] as const
+export const fontFamilyValues = ['serif', 'sans_serif', 'monospace'] as const
 
 export type FontFamilyValue = (typeof fontFamilyValues)[number]
 

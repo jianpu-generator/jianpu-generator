@@ -3,7 +3,7 @@ use crate::types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
 
 fn test_pdf_fonts() -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     (
-        jianpu_generator::fonts::TITLE_FONT_BYTES.to_vec(),
+        jianpu_generator::fonts::SERIF_FONT_BYTES.to_vec(),
         jianpu_generator::fonts::SANS_SERIF_FONT_BYTES.to_vec(),
         jianpu_generator::fonts::MONOSPACE_FONT_BYTES.to_vec(),
     )

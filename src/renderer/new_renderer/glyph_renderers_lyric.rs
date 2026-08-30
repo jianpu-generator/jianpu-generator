@@ -21,7 +21,7 @@ pub(in crate::renderer::new_renderer) fn render_lyric(
             font_size: crate::font_metrics::lyric_font_size(s, *base_font_size, *cjk_font_size),
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
-            // Defaults to `FontFamily::Title` — despite the name, shared with
+            // Defaults to `FontFamily::Serif` — despite the name, shared with
             // the song title's font, not exclusive to it (see its doc comment
             // in `src/compositor/types.rs`) — but overridable via
             // `Metadata::lyrics.font_family`.

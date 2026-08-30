@@ -164,7 +164,7 @@ pub enum DominantBaselineOut {
 pub enum FontFamilyOut {
     Monospace,
     SansSerif,
-    Title,
+    Serif,
 }
 
 #[derive(Debug, Clone, Tsify, Serialize)]

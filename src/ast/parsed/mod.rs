@@ -150,7 +150,7 @@ pub struct ParsedDocument {
 /// layering — `resolve_text_style` maps it 1:1 onto the compositor enum.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FontFamilyChoice {
-    Title,
+    Serif,
     SansSerif,
     Monospace,
 }
@@ -168,7 +168,7 @@ pub struct TextStyle {
     pub bold: Option<bool>,
     pub italic: Option<bool>,
     pub underline: Option<bool>,
-    /// Which embedded font role (`title`/`sans_serif`/`monospace`) this kind's
+    /// Which embedded font role (`serif`/`sans_serif`/`monospace`) this kind's
     /// glyphs render in. Not accepted on `notes`/`chords`/`note_dash`, whose
     /// glyphs are layout-measured in a fixed monospace font — see
     /// `RecoverableErrorKind::MetadataFontFamilyUnsupportedOnKind`.

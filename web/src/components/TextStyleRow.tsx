@@ -108,7 +108,7 @@ const styleTogglesWrapperStyle: React.CSSProperties = {
 /** Display label for each `font_family` option, shown in the `<select>`
  * (see `TextStyleRow`'s `showFontFamily` prop). */
 const fontFamilyOptionLabels: Record<FontFamilyValue, string> = {
-  title: 'Title',
+  serif: 'Serif',
   sans_serif: 'Sans Serif',
   monospace: 'Monospace',
 }

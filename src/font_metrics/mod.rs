@@ -7,10 +7,10 @@
 //! `PLAN-section-label-engraving-quality.md`).
 //!
 //! Two separate pinned faces back this, mirroring the
-//! `DIRECTIVE_LINE_FONT_FAMILY`/`TITLE_FONT_FAMILY` split in
+//! `DIRECTIVE_LINE_FONT_FAMILY`/`SERIF_FONT_FAMILY` split in
 //! `src/serializer/mod.rs`: `directive_line_font()` (the `sansSerif` role in
 //! `fonts/fonts.json`) for the directive line's own text, and `lyric_font()`
-//! (the `title` role) for lyric syllables, which render in the same font as
+//! (the `serif` role) for lyric syllables, which render in the same font as
 //! the song title instead — currently Zhuque Fangsong, a different file from
 //! `directive_line_font()`'s Source Han Sans SC.
 //!

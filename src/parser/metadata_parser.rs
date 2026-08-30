@@ -92,14 +92,14 @@ fn parse_font_family_field(
 ) {
     use crate::ast::parsed::FontFamilyChoice;
     match value {
-        "title" => *target = Some(FontFamilyChoice::Title),
+        "serif" => *target = Some(FontFamilyChoice::Serif),
         "sans_serif" => *target = Some(FontFamilyChoice::SansSerif),
         "monospace" => *target = Some(FontFamilyChoice::Monospace),
         _ => errors.push(RecoverableError::metadata_invalid_enum(
             *value_span,
             key,
             value,
-            "title, sans_serif, monospace",
+            "serif, sans_serif, monospace",
         )),
     }
 }

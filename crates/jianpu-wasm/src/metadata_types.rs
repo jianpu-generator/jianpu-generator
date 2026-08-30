@@ -38,7 +38,7 @@ pub struct TextStyleDefaultsOut {
 }
 
 /// A text-style kind's default `font_family` (see `TextStyleDefaultsOut`),
-/// serialized as the same `title`/`sans_serif`/`monospace` literals the
+/// serialized as the same `serif`/`sans_serif`/`monospace` literals the
 /// `.jianpu` `font_family:` syntax itself uses — distinct from
 /// `crate::svg_types::FontFamilyOut`, which serializes camelCase for the
 /// rendered-SVG wire format instead.
@@ -46,7 +46,7 @@ pub struct TextStyleDefaultsOut {
 #[serde(rename_all = "snake_case")]
 #[tsify(into_wasm_abi)]
 pub enum FontFamilyDefaultOut {
-    Title,
+    Serif,
     SansSerif,
     Monospace,
 }
@@ -111,16 +111,16 @@ impl Default for MetadataDefaultsOut {
             parts_list_columns: DEFAULT_PARTS_LIST_COLUMNS,
             part_label_width_pt: DEFAULT_PART_LABEL_WIDTH_PT,
             title: TextStyleDefaultsOut {
-                font_family: FontFamilyDefaultOut::Title,
+                font_family: FontFamilyDefaultOut::Serif,
                 ..text_style(default_title_font_size(DEFAULT_ROW_HEIGHT))
             },
             subtitle: TextStyleDefaultsOut {
                 italic: true,
-                font_family: FontFamilyDefaultOut::Title,
+                font_family: FontFamilyDefaultOut::Serif,
                 ..text_style(default_subtitle_font_size(DEFAULT_ROW_HEIGHT))
             },
             author: TextStyleDefaultsOut {
-                font_family: FontFamilyDefaultOut::Title,
+                font_family: FontFamilyDefaultOut::Serif,
                 ..text_style(default_author_font_size(DEFAULT_ROW_HEIGHT))
             },
             sequence: text_style(DEFAULT_SEQUENCE_FONT_SIZE),
@@ -136,7 +136,7 @@ impl Default for MetadataDefaultsOut {
             lyrics: TextStyleDefaultsOut {
                 horizontal_padding_pt: DEFAULT_LYRICS_HORIZONTAL_PADDING_PT,
                 vertical_padding_pt: DEFAULT_LYRIC_CLICK_TARGET_PADDING_PT,
-                font_family: FontFamilyDefaultOut::Title,
+                font_family: FontFamilyDefaultOut::Serif,
                 ..text_style(lyrics_font_size)
             },
             notes: TextStyleDefaultsOut {

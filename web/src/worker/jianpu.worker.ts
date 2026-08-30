@@ -118,15 +118,15 @@ function applyCoreFontsWhenReady(fonts: {
 }): void {
   // `set_layout_fonts(directive_line_font, lyric_font, monospace_font)` —
   // directive-line text measures against `tc` (the `sansSerif` role's
-  // font), lyrics against `sc` (the `title` role's font, shared with the
+  // font), lyrics against `sc` (the `serif` role's font, shared with the
   // song title) — see `fonts/fonts.json` and
-  // `DIRECTIVE_LINE_FONT_FAMILY`/`TITLE_FONT_FAMILY` in
+  // `DIRECTIVE_LINE_FONT_FAMILY`/`SERIF_FONT_FAMILY` in
   // src/serializer/mod.rs.
   ensureInit().then(() => set_layout_fonts(fonts.tc, fonts.sc, fonts.mono))
 }
 
 let loadedSoundfont: Uint8Array | null = null
-// `sc` holds the `title` role's font — the song title/lyric font; `tc`
+// `sc` holds the `serif` role's font — the song title/lyric font; `tc`
 // holds the `sansSerif` role's font, the default/body font for everything
 // else — see `fonts/fonts.json` and `useFontsLoader`.
 let loadedFonts: {

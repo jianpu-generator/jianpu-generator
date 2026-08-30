@@ -25,7 +25,7 @@
 
 use cucumber::{given, then, when, World as _};
 use jianpu_generator::compositor::types::{AbsoluteContent, DominantBaseline};
-use jianpu_generator::fonts::TITLE_FONT_BYTES;
+use jianpu_generator::fonts::SERIF_FONT_BYTES;
 use jianpu_generator::render_config::RenderConfig;
 use jianpu_generator::renderer::new_renderer::render_new;
 use jianpu_generator::renderer::new_types::SvgKind;
@@ -228,7 +228,7 @@ fn then_glyph_contained_in_click_target(world: &mut LyricHoverBoxWorld) {
     // calling the private production helper, which isn't reachable from
     // this external test crate) to compute the glyph's real vertical span
     // at the resolved font size.
-    let face = ttf_parser::Face::parse(TITLE_FONT_BYTES, 0)
+    let face = ttf_parser::Face::parse(SERIF_FONT_BYTES, 0)
         .unwrap_or_else(|err| panic!("failed to parse pinned title font: {err}"));
     let vertical_extent = face.height() as f32 / face.units_per_em() as f32 * font_size;
 

@@ -136,10 +136,10 @@ function wasmDevPlugin(): Plugin {
 }
 
 // `Set` dedupes in case two roles happen to point at the same font file (as
-// when experimenting with a single typeface for both title and sansSerif).
+// when experimenting with a single typeface for both serif and sansSerif).
 const DEPLOYED_ASSET_FILES = [
   ...new Set([
-    fontsManifest.title.filename,
+    fontsManifest.serif.filename,
     fontsManifest.sansSerif.filename,
     fontsManifest.monospace.filename,
     'GeneralUser_GS.sf2',

@@ -1,7 +1,7 @@
 //! Generates `src/fonts.rs`'s actual constants from `fonts/fonts.json` (the
 //! single source of truth for which font file backs each `FontFamily`
 //! role — see that file's own comments for the full picture, including the
-//! Title-vs-alias asymmetry). Output lands in `OUT_DIR/fonts_generated.rs`,
+//! Serif-vs-alias asymmetry). Output lands in `OUT_DIR/fonts_generated.rs`,
 //! `include!`-d by `src/fonts.rs`.
 
 use serde::Deserialize;
@@ -19,14 +19,14 @@ struct FontEntry {
 
 #[derive(Deserialize)]
 struct FontsManifest {
-    title: FontEntry,
+    serif: FontEntry,
     #[serde(rename = "sansSerif")]
     sans_serif: FontEntry,
     monospace: FontEntry,
 }
 
 /// Emits one role's constants into `out`. `bytes_const_doc` documents the
-/// `_FONT_BYTES` const; `name_const` is `None` for the `title` role, which
+/// `_FONT_BYTES` const; `name_const` is `None` for the `serif` role, which
 /// has no `fontdb` generic-alias name (see the manifest's own comment).
 fn emit_role(
     out: &mut String,
@@ -65,7 +65,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let manifest: FontsManifest = serde_json::from_str(&manifest_json)?;
 
     let mut out = String::new();
-    emit_role(&mut out, &manifest_dir, "TITLE", &manifest.title)?;
+    emit_role(&mut out, &manifest_dir, "SERIF", &manifest.serif)?;
     emit_role(&mut out, &manifest_dir, "SANS_SERIF", &manifest.sans_serif)?;
     emit_role(&mut out, &manifest_dir, "MONOSPACE", &manifest.monospace)?;
 
