@@ -65,6 +65,37 @@ const styleBooleanComponentOrder: TextStyleBooleanComponent[] = [
   'underline',
 ]
 
+/** Whether a `bold`/`italic` toggle actually changes anything for a given
+ * `font_family` role — `underline` is `text-decoration`, not a font face, so
+ * it always works and isn't checked here.
+ *
+ * - `serif` (Zhuque Fangsong) and `sans_serif` (Source Han Sans SC) each
+ *   bundle only their Regular file (see `fonts/fonts.json`), rendered via a
+ *   dedicated `@font-face` pinned to that one file (`injectFontFaces.ts`),
+ *   with `font-synthesis: none` set app-wide (`index.css`) — so there's no
+ *   real bold/italic face for the browser to pick, and no synthesis to fake
+ *   one. PDF export (`src/pdf.rs`) loads the same single Regular file into
+ *   `usvg`'s `fontdb`, which never synthesizes either, so bold/italic are a
+ *   no-op there too. Real bold/italic files don't currently exist upstream
+ *   for either typeface.
+ * - `monospace` renders in the preview with the bare CSS `monospace`
+ *   keyword rather than a pinned custom font (see `textFontFamily` in
+ *   PreviewSvgRenderer.tsx), so it resolves to the viewer's real system
+ *   monospace font — which typically ships genuine bold/italic faces the
+ *   browser can pick directly, no synthesis needed. (PDF export is the
+ *   exception: it loads only `NotoSansMono-Regular.ttf`, so exported bold/
+ *   italic monospace text is still a no-op there — a separate, currently
+ *   undocumented preview/export mismatch.)
+ */
+const fontFamilyStyleCapabilities: Record<
+  FontFamilyValue,
+  { bold: boolean; italic: boolean }
+> = {
+  serif: { bold: false, italic: false },
+  sans_serif: { bold: false, italic: false },
+  monospace: { bold: true, italic: true },
+}
+
 /** Sub-labels shown as this table's column headers — also used to build
  * each numeric input's `aria-label` (`"${rowLabel} ${subLabel}"`), so e2e
  * tests can target one specific component by an accessible name rather
@@ -113,6 +144,14 @@ const styleToggleButtonPressedStyle: React.CSSProperties = {
   color: '#1a202c',
 }
 
+const styleToggleButtonDisabledStyle: React.CSSProperties = {
+  ...styleToggleButtonStyle,
+  background: '#f5f5f5',
+  borderColor: '#e2e8f0',
+  color: '#bbb',
+  cursor: 'not-allowed',
+}
+
 const styleToggleGlyphStyle: Record<
   TextStyleBooleanComponent,
   React.CSSProperties
@@ -149,20 +188,34 @@ const fontFamilySelectStyle: React.CSSProperties = {
 function StyleToggleButton({
   component,
   checked,
+  disabledReason,
   ariaLabel,
   onClick,
 }: {
   component: TextStyleBooleanComponent
   checked: boolean
+  /** When set, the toggle renders disabled and this becomes its `title`
+   * (e.g. explaining that the row's current font has no real bold/italic
+   * face — see `fontFamilyStyleCapabilities`). */
+  disabledReason?: string
   ariaLabel: string
   onClick: () => void
 }) {
+  const disabled = disabledReason != null
   return (
     <button
       type="button"
       aria-label={ariaLabel}
       aria-pressed={checked}
-      style={checked ? styleToggleButtonPressedStyle : styleToggleButtonStyle}
+      disabled={disabled}
+      title={disabledReason}
+      style={
+        disabled
+          ? styleToggleButtonDisabledStyle
+          : checked
+            ? styleToggleButtonPressedStyle
+            : styleToggleButtonStyle
+      }
       onClick={onClick}
     >
       <span style={styleToggleGlyphStyle[component]}>
@@ -182,6 +235,13 @@ function StyleTableRow({
   onChange: (component: TextStyleComponent) => (value: string) => void
 }) {
   const { label, help, value, placeholder, showFontFamily = true } = row
+  // Rows without a font-family selector (notes/chords/note_dash) are always
+  // measured in a fixed monospace font (see `StyleRowSpec.showFontFamily`'s
+  // doc comment), which does support bold/italic — so only look up a
+  // capability restriction when the row actually offers the selector.
+  const effectiveFontFamily = showFontFamily
+    ? (value.font_family ?? placeholder?.font_family ?? null)
+    : null
   return (
     <tr>
       <td style={tdLabelStyle}>
@@ -203,11 +263,19 @@ function StyleTableRow({
       ))}
       {styleBooleanComponentOrder.map((component) => {
         const checked = value[component] ?? placeholder?.[component] ?? false
+        const unsupported =
+          (component === 'bold' || component === 'italic') &&
+          effectiveFontFamily != null &&
+          !fontFamilyStyleCapabilities[effectiveFontFamily][component]
+        const disabledReason = unsupported
+          ? `${fontFamilyOptionLabels[effectiveFontFamily as FontFamilyValue]} has no ${component} face, so this has no visible effect`
+          : undefined
         return (
           <td key={component} style={{ ...tdStyle, textAlign: 'center' }}>
             <StyleToggleButton
               component={component}
               checked={checked}
+              disabledReason={disabledReason}
               ariaLabel={`${label} ${styleBooleanComponentLabels[component]}`}
               onClick={() => onChange(component)(checked ? 'no' : 'yes')}
             />
