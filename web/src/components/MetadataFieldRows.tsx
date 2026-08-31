@@ -191,8 +191,6 @@ export function NumberFieldRow({
   )
 }
 
-export { TextStyleRow } from './TextStyleRow'
-
 export function CheckboxFieldRow({
   label,
   help,

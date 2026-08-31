@@ -1,7 +1,11 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useState } from 'react'
-import type { MetadataDefaults } from '../utils/metadataDefaults'
+import type {
+  MetadataDefaults,
+  TextStyleDefaults,
+} from '../utils/metadataDefaults'
 import { loadMetadataDefaults } from '../utils/metadataDefaults'
+import { metadataFieldHelp } from '../utils/metadataFieldHelp'
 import type {
   MetadataFieldKey,
   ParsedMetadataFields,
@@ -11,6 +15,8 @@ import type {
 import { useFontSizeDefaults } from '../utils/useFontSizeDefaults'
 import { FieldHelpModal } from './FieldHelpModal'
 import { MetadataFieldsTableBody } from './MetadataFieldsTableBody'
+import type { StyleRowSpec } from './MetadataStylesTable'
+import { MetadataStylesTable } from './MetadataStylesTable'
 
 export interface EditMetadataModalProps {
   open: boolean
@@ -92,6 +98,116 @@ export function EditMetadataModal({
   const numOrUndef = (n: number | null | undefined): string | undefined =>
     n != null ? String(n) : undefined
 
+  // Overrides one kind's static `d?.<kind>` default with a live,
+  // `row_height`- (or `lyrics_font_size`-) aware `font_size`, for the kinds
+  // whose real default isn't a flat constant (see `useFontSizeDefaults`
+  // above). Falls back to the static snapshot (or `null`) when the live
+  // value isn't known yet.
+  const stylePlaceholder = (
+    base: TextStyleDefaults | undefined,
+    liveFontSize?: number | null,
+  ): TextStyleDefaults | null => {
+    if (!base) return null
+    return liveFontSize == null ? base : { ...base, font_size: liveFontSize }
+  }
+
+  const styleRows: StyleRowSpec[] = [
+    {
+      kind: 'title',
+      label: 'Title Style',
+      help: metadataFieldHelp.title,
+      value: metadata.styles.title,
+      placeholder: stylePlaceholder(d?.title, titleFontSizeDefault),
+    },
+    {
+      kind: 'subtitle',
+      label: 'Subtitle Style',
+      help: metadataFieldHelp.subtitle,
+      value: metadata.styles.subtitle,
+      placeholder: stylePlaceholder(d?.subtitle, subtitleFontSizeDefault),
+    },
+    {
+      kind: 'author',
+      label: 'Author Style',
+      help: metadataFieldHelp.author,
+      value: metadata.styles.author,
+      placeholder: stylePlaceholder(d?.author, authorFontSizeDefault),
+    },
+    {
+      kind: 'sequence',
+      label: 'Sequence Style',
+      help: metadataFieldHelp.sequence,
+      value: metadata.styles.sequence,
+      placeholder: d?.sequence ?? null,
+    },
+    {
+      kind: 'part_legend',
+      label: 'Part Legend Style',
+      help: metadataFieldHelp.part_legend,
+      value: metadata.styles.part_legend,
+      placeholder: stylePlaceholder(d?.part_legend, partLegendFontSizeDefault),
+    },
+    {
+      kind: 'measure_number',
+      label: 'Measure Number Style',
+      help: metadataFieldHelp.measure_number,
+      value: metadata.styles.measure_number,
+      placeholder: d?.measure_number ?? null,
+    },
+    {
+      kind: 'section_label',
+      label: 'Section Label Style',
+      help: metadataFieldHelp.section_label,
+      value: metadata.styles.section_label,
+      placeholder: d?.section_label ?? null,
+    },
+    {
+      kind: 'part_label',
+      label: 'Part Label Style',
+      help: metadataFieldHelp.part_label,
+      value: metadata.styles.part_label,
+      placeholder: d?.part_label ?? null,
+    },
+    {
+      kind: 'page_number',
+      label: 'Page Number Style',
+      help: metadataFieldHelp.page_number,
+      value: metadata.styles.page_number,
+      placeholder: stylePlaceholder(d?.page_number, pageNumberFontSizeDefault),
+    },
+    {
+      kind: 'lyrics',
+      label: 'Lyrics Style',
+      help: metadataFieldHelp.lyrics,
+      value: metadata.styles.lyrics,
+      placeholder: stylePlaceholder(d?.lyrics, lyricsFontSizeDefault),
+    },
+    {
+      kind: 'notes',
+      label: 'Notes Style',
+      help: metadataFieldHelp.notes,
+      value: metadata.styles.notes,
+      placeholder: stylePlaceholder(d?.notes, effectiveLyricsFontSize),
+      showFontFamily: false,
+    },
+    {
+      kind: 'chords',
+      label: 'Chords Style',
+      help: metadataFieldHelp.chords,
+      value: metadata.styles.chords,
+      placeholder: stylePlaceholder(d?.chords, effectiveLyricsFontSize),
+      showFontFamily: false,
+    },
+    {
+      kind: 'note_dash',
+      label: 'Note Dash Style',
+      help: metadataFieldHelp.note_dash,
+      value: metadata.styles.note_dash,
+      placeholder: stylePlaceholder(d?.note_dash, effectiveNotesFontSize),
+      showFontFamily: false,
+    },
+  ]
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange} modal={false}>
       <Dialog.Portal container={container ?? undefined}>
@@ -154,6 +270,13 @@ export function EditMetadataModal({
             </Dialog.Close>
           </div>
           <div style={{ overflowY: 'auto', flex: 1 }}>
+            <div style={{ overflowX: 'auto' }}>
+              <MetadataStylesTable
+                rows={styleRows}
+                showHelp={showHelp}
+                onChange={setStyle}
+              />
+            </div>
             <table
               style={{
                 width: '100%',
@@ -179,16 +302,7 @@ export function EditMetadataModal({
                 setText={setText}
                 setNumber={setNumber}
                 setYesNo={setYesNo}
-                setStyle={setStyle}
                 numOrUndef={numOrUndef}
-                titleFontSizeDefault={titleFontSizeDefault}
-                subtitleFontSizeDefault={subtitleFontSizeDefault}
-                authorFontSizeDefault={authorFontSizeDefault}
-                partLegendFontSizeDefault={partLegendFontSizeDefault}
-                lyricsFontSizeDefault={lyricsFontSizeDefault}
-                effectiveLyricsFontSize={effectiveLyricsFontSize}
-                effectiveNotesFontSize={effectiveNotesFontSize}
-                pageNumberFontSizeDefault={pageNumberFontSizeDefault}
               />
             </table>
           </div>
