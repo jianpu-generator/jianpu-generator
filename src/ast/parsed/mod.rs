@@ -169,9 +169,11 @@ pub struct TextStyle {
     pub italic: Option<bool>,
     pub underline: Option<bool>,
     /// Which embedded font role (`serif`/`sans_serif`/`monospace`) this kind's
-    /// glyphs render in. Not accepted on `notes`/`chords`/`note_dash`, whose
-    /// glyphs are layout-measured in a fixed monospace font — see
-    /// `RecoverableErrorKind::MetadataFontFamilyUnsupportedOnKind`.
+    /// glyphs render in, including `notes`/`chords`/`note_dash` — those three
+    /// kinds' glyph widths are re-measured against whichever font this
+    /// resolves to (`font_metrics::advance_width_for_family` and friends), so
+    /// overriding it here can never desync layout from what actually
+    /// renders.
     pub font_family: Option<FontFamilyChoice>,
 }
 

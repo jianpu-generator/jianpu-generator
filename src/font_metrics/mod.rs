@@ -21,7 +21,7 @@
 //! placement, note-dash font size), so a measure's computed layout width and
 //! its actually-rendered glyph widths can't drift apart.
 
-use crate::compositor::types::TextSpan;
+use crate::compositor::types::{FontFamily, TextSpan};
 
 mod font_source;
 #[cfg(test)]
@@ -105,14 +105,6 @@ pub(crate) fn lyric_vertical_extent(font_size: f32) -> f32 {
     face_vertical_extent(font_source::lyric_font(), font_size)
 }
 
-/// Left-side bearing (in points) of one character in the pinned monospace
-/// font (see `font_source::monospace_font`), used to compensate a
-/// centered/flush-left glyph's anchor for its own leading character's
-/// built-in inset — the monospace counterpart to `cjk_glyph_left_bearing`.
-pub(crate) fn monospace_glyph_left_bearing(c: char, font_size: f32) -> f32 {
-    face_glyph_left_bearing(font_source::monospace_font(), c, font_size)
-}
-
 /// Whether `c` falls in the CJK Unified Ideographs block, the single check
 /// shared by every place that needs to pick a CJK-sized font/glyph metric
 /// for a character or decide a string counts as CJK (a lyric syllable's
@@ -168,6 +160,46 @@ pub(crate) fn monospace_text_width(s: &str, font_size: f32) -> f32 {
     s.chars()
         .map(|c| monospace_char_advance_width(c, font_size))
         .sum()
+}
+
+/// The pinned face backing `family` — the same three-way split
+/// `font_source` already exposes by role (`monospace_font`/
+/// `directive_line_font`/`lyric_font`), just addressed by the
+/// `FontFamily` a `notes`/`chords`/`note_dash` style resolves to instead of
+/// by a fixed call site, so those three kinds' glyph widths can be measured
+/// against whichever font their `font_family` override actually renders in.
+fn face_for_family(family: FontFamily) -> Option<&'static ttf_parser::Face<'static>> {
+    match family {
+        FontFamily::Monospace => font_source::monospace_font(),
+        FontFamily::SansSerif => font_source::directive_line_font(),
+        FontFamily::Serif => font_source::lyric_font(),
+    }
+}
+
+/// Real advance width (in points) of one character in `family`'s pinned
+/// font, at the given font size — the `notes`/`chords`/`note_dash`
+/// counterpart to `monospace_char_advance_width`, family-aware since those
+/// three kinds now accept a `font_family` override (see
+/// `RenderConfig::glyph_font_families`).
+pub(crate) fn advance_width_for_family(family: FontFamily, c: char, font_size: f32) -> f32 {
+    face_char_advance_width(face_for_family(family), c, font_size)
+}
+
+/// Real rendered width (in points) of a string in `family`'s pinned font,
+/// summing `advance_width_for_family` for each character.
+pub(crate) fn text_width_for_family(family: FontFamily, s: &str, font_size: f32) -> f32 {
+    s.chars()
+        .map(|c| advance_width_for_family(family, c, font_size))
+        .sum()
+}
+
+/// Left-side bearing (in points) of one character in `family`'s pinned font
+/// at `font_size`, used to compensate a centered/flush-left glyph's anchor
+/// for its own leading character's built-in inset — the `notes`/`chords`/
+/// `note_dash` counterpart to `cjk_glyph_left_bearing`, family-aware for the
+/// same reason as `advance_width_for_family`.
+pub(crate) fn glyph_left_bearing_for_family(family: FontFamily, c: char, font_size: f32) -> f32 {
+    face_glyph_left_bearing(face_for_family(family), c, font_size)
 }
 
 /// Real rendered width (in points) of a string in the pinned lyric font (see

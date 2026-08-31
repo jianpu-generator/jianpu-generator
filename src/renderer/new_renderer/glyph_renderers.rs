@@ -11,6 +11,7 @@ pub(super) struct NoteRenderParams<'a> {
     pub(super) bold: bool,
     pub(super) italic: bool,
     pub(super) underline: bool,
+    pub(super) font_family: FontFamily,
 }
 
 fn glyph_weight(bold: bool) -> FontWeight {
@@ -42,7 +43,10 @@ impl DotState {
 /// `render_note_head`'s `octave` loop). A note/rest/chord/dash's
 /// *augmentation* dot(s) are handled differently: appended directly onto the
 /// glyph's own text run (see `font_metrics::augmentation_dot_suffix`)
-/// instead of drawn as a separate positioned glyph like this one.
+/// instead of drawn as a separate positioned glyph like this one. Always
+/// draws in `FontFamily::Monospace`, deliberately not following `notes`'s own
+/// configured `font_family` — decorative, not "the kind's own text" (same
+/// reasoning that keeps this glyph's bold/italic/underline fixed too).
 pub(super) fn dot_glyph(x: f32, y: f32, font_size: f32, variant: SvgVariant) -> SvgElement {
     SvgElement {
         x,
@@ -75,6 +79,7 @@ pub(super) fn render_note_head(
         bold,
         italic,
         underline,
+        font_family,
     } = params;
     let mut results = Vec::new();
 
@@ -107,7 +112,7 @@ pub(super) fn render_note_head(
             font_size: **base_font_size,
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
-            font: FontFamily::Monospace,
+            font: *font_family,
             weight: glyph_weight(*bold),
             italic: *italic,
             underline: *underline,
@@ -226,7 +231,7 @@ pub(super) fn render_percussion_hit(
             font_size: *base_font_size,
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
-            font: FontFamily::Monospace,
+            font: style.font_family,
             weight: glyph_weight(style.bold),
             italic: style.italic,
             underline: style.underline,
@@ -263,7 +268,7 @@ pub(super) fn render_chord_symbol(
             font_size: *base_font_size,
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
-            font: FontFamily::Monospace,
+            font: style.font_family,
             weight: glyph_weight(style.bold),
             italic: style.italic,
             underline: style.underline,

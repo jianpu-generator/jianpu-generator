@@ -69,6 +69,7 @@ fn multi_measure_rest_resolves_width_from_column_span_inset_by_glyph_left_paddin
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
+            ..Default::default()
         },
     )
     .unwrap();

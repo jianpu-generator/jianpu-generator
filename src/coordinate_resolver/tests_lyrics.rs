@@ -104,6 +104,7 @@ fn lyric_syllable_halign_center_is_independent_of_column_weight() {
                 },
                 paddings: DEFAULT_PADDINGS,
                 page_number_vertical_padding_pt: 0.0,
+                ..Default::default()
             },
         )
         .unwrap();
@@ -168,6 +169,7 @@ fn lyric_syllable_shares_the_note_head_padding_formula() {
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
+            ..Default::default()
         },
     )
     .unwrap();
@@ -228,6 +230,7 @@ fn cjk_lyric_syllable_compensates_its_leading_glyphs_left_bearing() {
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
+            ..Default::default()
         },
     )
     .unwrap();

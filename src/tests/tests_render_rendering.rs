@@ -180,6 +180,7 @@ fn adjacent_beat_group_underlines_have_gap_between_them() {
             },
             paddings: config.element_paddings(),
             page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
+            ..Default::default()
         },
     )
     .expect("coordinate resolver should not fail in tests");
@@ -269,6 +270,7 @@ fn density_fixture_page_elements() -> Vec<compositor::types::AbsoluteElement> {
             },
             paddings: config.element_paddings(),
             page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
+            ..Default::default()
         },
     )
     .expect("coordinate resolver should not fail in tests");

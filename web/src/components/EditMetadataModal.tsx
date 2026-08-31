@@ -188,7 +188,6 @@ export function EditMetadataModal({
       help: metadataFieldHelp.notes,
       value: metadata.styles.notes,
       placeholder: stylePlaceholder(d?.notes, effectiveLyricsFontSize),
-      showFontFamily: false,
     },
     {
       kind: 'chords',
@@ -196,7 +195,6 @@ export function EditMetadataModal({
       help: metadataFieldHelp.chords,
       value: metadata.styles.chords,
       placeholder: stylePlaceholder(d?.chords, effectiveLyricsFontSize),
-      showFontFamily: false,
     },
     {
       kind: 'note_dash',
@@ -204,7 +202,6 @@ export function EditMetadataModal({
       help: metadataFieldHelp.note_dash,
       value: metadata.styles.note_dash,
       placeholder: stylePlaceholder(d?.note_dash, effectiveNotesFontSize),
-      showFontFamily: false,
     },
   ]
 

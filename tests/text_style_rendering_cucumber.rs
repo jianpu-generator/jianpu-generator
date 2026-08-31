@@ -101,6 +101,7 @@ fn render_source(metadata_lines: &[String], title: &str, score_body: &str) -> Re
             },
             paddings: element_paddings(&config),
             page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
+            ..Default::default()
         },
     )
     .unwrap_or_else(|err| panic!("coordinate resolver should not fail in tests: {err:?}"));

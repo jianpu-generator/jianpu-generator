@@ -82,6 +82,7 @@ fn section_label_vertical_padding_pt_grows_the_label_box_height() {
                 },
                 paddings: config.element_paddings(),
                 page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
+                ..Default::default()
             },
         )
         .expect("coordinate resolver should not fail in tests");
@@ -156,6 +157,7 @@ fn page_number_vertical_padding_pt_pushes_the_footer_text_up() {
                 },
                 paddings: config.element_paddings(),
                 page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
+                ..Default::default()
             },
         )
         .expect("coordinate resolver should not fail in tests");
@@ -206,20 +208,20 @@ fn render_with_metadata_line(metadata_line: &str) -> String {
         .join("")
 }
 
-/// The `font-family='...'` attribute value of the first `<text ...>T</text>`
-/// element in `svg` (the title, given `render_with_metadata_line`'s fixture).
-fn title_font_family_attr(svg: &str) -> String {
-    let needle = ">T</text>";
-    let body_end = svg
-        .find(needle)
-        .expect("expected the title's <text>T</text> element in the rendered SVG");
+/// The `font-family='...'` attribute value of the first `<text ...>{needle's
+/// body}` element in `svg` whose body ends with `needle` (e.g. `">T</text>"`
+/// for the title, given `render_with_metadata_line`'s fixture).
+fn font_family_attr(svg: &str, needle: &str) -> String {
+    let body_end = svg.find(needle).unwrap_or_else(|| {
+        panic!("expected a text element ending with {needle:?} in the rendered SVG")
+    });
     let open = svg[..body_end]
         .rfind("<text")
-        .expect("expected an opening <text before the title's body");
+        .expect("expected an opening <text before the element's body");
     let tag = &svg[open..body_end];
     let attr_start = tag
         .find("font-family='")
-        .expect("expected a font-family attribute on the title's <text> element")
+        .expect("expected a font-family attribute on the <text> element")
         + "font-family='".len();
     let attr_end = tag[attr_start..]
         .find('\'')
@@ -235,28 +237,58 @@ fn title_font_family_override_changes_the_rendered_font_family() {
     // ignored.
     let default_svg = render_with_metadata_line("");
     let overridden_svg = render_with_metadata_line("title = { font_family: sans_serif }");
-    let default_family = title_font_family_attr(&default_svg);
-    let overridden_family = title_font_family_attr(&overridden_svg);
+    let default_family = font_family_attr(&default_svg, ">T</text>");
+    let overridden_family = font_family_attr(&overridden_svg, ">T</text>");
     assert_ne!(
         default_family, overridden_family,
         "expected title's font-family to change when font_family: sans_serif overrides its Title default"
     );
 }
 
+/// Renders a note, a chord symbol, and a note dash (with a title, so the
+/// same `font_family_attr` needle-matching approach `render_with_metadata_line`
+/// uses works here too) with `metadata_line` spliced into `# metadata`,
+/// returning the concatenated raw SVG(s).
+fn render_notes_chords_note_dash_with_metadata_line(metadata_line: &str) -> String {
+    let source = format!(
+        "# metadata\ntitle = \"T\"\n{metadata_line}\n\n# parts\nMelody = notes\nHarmony = chords\n\n# score\ntime=4/4 key=C4 bpm=120\n[Harmony] 5m\n[Melody] 1 - - -\n",
+    );
+    render_svgs_from_source(&source, "test", &[])
+        .unwrap_or_else(|err| panic!("compile returned an irrecoverable error: {}", err.message()))
+        .svgs
+        .join("")
+}
+
 #[test]
-fn font_family_is_rejected_as_a_metadata_error_on_notes_chords_and_note_dash() {
-    for kind in ["notes", "chords", "note_dash"] {
-        let source = format!(
-            "# metadata\n{kind} = {{ font_family: monospace }}\n\n# parts\nS = notes\n\n# score\ntime=4/4 key=C4 bpm=120\n[S] 1\n",
-        );
-        let score = compile(&source, "test", &[]).expect("compile should not irrecoverably fail");
-        assert!(
-            score
-                .document_diagnostics
-                .iter()
-                .any(|d| d.message().contains(&format!("{kind}.font_family"))),
-            "expected a metadata error mentioning `{kind}.font_family`, got: {:?}",
-            score.document_diagnostics
-        );
-    }
+fn notes_chords_note_dash_font_family_override_changes_the_rendered_font_family() {
+    // `notes`/`chords`/`note_dash` default to the `Monospace` role, but —
+    // unlike every other kind — their glyph widths are also re-measured
+    // against whatever font_family they resolve to (see
+    // `font_metrics::advance_width_for_family` and
+    // `RenderConfig::glyph_font_families`), so this only asserts the
+    // rendered `font-family` attribute changes; the layout-desync worry that
+    // font_family used to be rejected outright to avoid is covered by
+    // `font_metrics`'s own family-aware measurement functions instead.
+    let default_svg = render_notes_chords_note_dash_with_metadata_line("");
+    let overridden_svg = render_notes_chords_note_dash_with_metadata_line(
+        "notes = { font_family: serif }\nchords = { font_family: serif }\nnote_dash = { font_family: serif }\n",
+    );
+    let default_note = font_family_attr(&default_svg, ">1</text>");
+    let overridden_note = font_family_attr(&overridden_svg, ">1</text>");
+    assert_ne!(
+        default_note, overridden_note,
+        "expected notes' font-family to change when font_family: serif overrides its Monospace default"
+    );
+    let default_chord = font_family_attr(&default_svg, ">5m</text>");
+    let overridden_chord = font_family_attr(&overridden_svg, ">5m</text>");
+    assert_ne!(
+        default_chord, overridden_chord,
+        "expected chords' font-family to change when font_family: serif overrides its Monospace default"
+    );
+    let default_dash = font_family_attr(&default_svg, "\u{2014}</text>");
+    let overridden_dash = font_family_attr(&overridden_svg, "\u{2014}</text>");
+    assert_ne!(
+        default_dash, overridden_dash,
+        "expected note_dash's font-family to change when font_family: serif overrides its Monospace default"
+    );
 }

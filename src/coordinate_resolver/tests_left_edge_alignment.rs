@@ -11,11 +11,11 @@
 //! approximately.
 
 use crate::ast::parsed::{Accidental, JianPuPitch};
-use crate::compositor::types::{AbsoluteContent, FontFamily};
+use crate::compositor::types::{AbsoluteContent, FontFamily, GlyphFontFamilies};
 use crate::coordinate_resolver::resolve::{
     resolve, ElementPaddings, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
 };
-use crate::font_metrics::{cjk_glyph_left_bearing, monospace_glyph_left_bearing};
+use crate::font_metrics::{cjk_glyph_left_bearing, glyph_left_bearing_for_family};
 use crate::grid_layout::types::{GridContent, GridElement, GridPage, GridRow, HAlign, VAlign};
 
 const NOTE_NUMBER_WIDTH: f32 = 12.0;
@@ -53,6 +53,11 @@ const ELEMENT_PADDINGS: ElementPaddings = ElementPaddings {
     lyrics: 4.0,
     note_dash: 4.0,
 };
+const GLYPH_FONT_FAMILIES: GlyphFontFamilies = GlyphFontFamilies {
+    notes: FontFamily::Monospace,
+    chords: FontFamily::Monospace,
+    note_dash: FontFamily::Monospace,
+};
 const RESOLVE_FONT_SIZES: ResolveFontSizes = ResolveFontSizes {
     lyric: LYRIC_FONT_SIZES,
     notes: NOTES_FONT_SIZE,
@@ -60,6 +65,7 @@ const RESOLVE_FONT_SIZES: ResolveFontSizes = ResolveFontSizes {
     labels: LABEL_FONT_SIZES,
     paddings: ELEMENT_PADDINGS,
     page_number_vertical_padding_pt: 0.0,
+    glyph_font_families: GLYPH_FONT_FAMILIES,
 };
 
 fn single_row_page(element: GridElement) -> GridPage {
@@ -137,7 +143,7 @@ fn note_head_and_latin_lyric_syllable_have_the_same_ink_left_edge_in_one_column(
 
     let note_ink_left = ink_left_edge(
         note_anchor,
-        monospace_glyph_left_bearing('1', NOTES_FONT_SIZE),
+        glyph_left_bearing_for_family(FontFamily::Monospace, '1', NOTES_FONT_SIZE),
     );
     let lyric_ink_left = ink_left_edge(
         lyric_anchor,
@@ -170,7 +176,7 @@ fn note_head_and_cjk_lyric_syllable_have_the_same_ink_left_edge_in_one_column() 
 
     let note_ink_left = ink_left_edge(
         note_anchor,
-        monospace_glyph_left_bearing('1', NOTES_FONT_SIZE),
+        glyph_left_bearing_for_family(FontFamily::Monospace, '1', NOTES_FONT_SIZE),
     );
     let lyric_ink_left = ink_left_edge(
         lyric_anchor,
@@ -201,11 +207,11 @@ fn note_head_and_chord_symbol_have_the_same_ink_left_edge_in_one_column() {
 
     let note_ink_left = ink_left_edge(
         note_anchor,
-        monospace_glyph_left_bearing('1', NOTES_FONT_SIZE),
+        glyph_left_bearing_for_family(FontFamily::Monospace, '1', NOTES_FONT_SIZE),
     );
     let chord_ink_left = ink_left_edge(
         chord_anchor,
-        monospace_glyph_left_bearing('1', CHORDS_FONT_SIZE),
+        glyph_left_bearing_for_family(FontFamily::Monospace, '1', CHORDS_FONT_SIZE),
     );
 
     assert!(

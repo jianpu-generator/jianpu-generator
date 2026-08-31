@@ -3,18 +3,11 @@ use crate::error::{RecoverableError, Span};
 
 use super::{parse_bool_field, parse_font_family_field, parse_numeric_field};
 
-/// Kinds whose glyph widths are baked into the grid layout's column spacing
-/// (measured in a fixed monospace font) — `font_family` is rejected outright
-/// rather than accepted and silently ignored. See
-/// `RecoverableErrorKind::MetadataFontFamilyUnsupportedOnKind`.
-const KINDS_WITHOUT_FONT_FAMILY: [&str; 3] = ["notes", "chords", "note_dash"];
-
 /// Bundles [`apply_text_style_field`]'s per-field-pair context — split out
 /// once the plain argument list pushed that function's signature over
 /// clippy's `too_many_arguments` limit.
 #[derive(Clone, Copy)]
 struct TextStyleFieldContext<'a> {
-    kind: &'a str,
     qualified_field: &'a str,
     key_span: Span,
     field_value: &'a str,
@@ -31,7 +24,6 @@ fn apply_text_style_field(
     errors: &mut Vec<RecoverableError>,
 ) {
     let TextStyleFieldContext {
-        kind,
         qualified_field,
         key_span,
         field_value,
@@ -80,12 +72,6 @@ fn apply_text_style_field(
             value_span,
             errors,
         ),
-        "font_family" if KINDS_WITHOUT_FONT_FAMILY.contains(&kind) => {
-            errors.push(RecoverableError::metadata_font_family_unsupported_on_kind(
-                *value_span,
-                qualified_field,
-            ))
-        }
         "font_family" => parse_font_family_field(
             &mut target.font_family,
             qualified_field,
@@ -146,7 +132,6 @@ pub(super) fn parse_text_style_object(
             target,
             field_name,
             TextStyleFieldContext {
-                kind: key,
                 qualified_field: &qualified_field,
                 key_span,
                 field_value,

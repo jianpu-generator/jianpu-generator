@@ -273,6 +273,32 @@ pub enum FontFamily {
     Serif,
 }
 
+/// Which `FontFamily` each of the three glyph-measured kinds — `notes`,
+/// `chords`, `note_dash` — renders in, bundled since every caller sets/reads
+/// all three together (see `RenderConfig::glyph_font_families`,
+/// `coordinate_resolver::resolve::ResolveFontSizes::glyph_font_families`).
+/// Its `Default` is `Monospace` for every field, matching those three kinds'
+/// real text-style default (`grouper::resolve_simple_text_styles`) rather
+/// than the derived per-field `FontFamily::default()` (`SansSerif`) — so
+/// `..Default::default()` in a test fixture matches production's default
+/// without spelling it out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GlyphFontFamilies {
+    pub notes: FontFamily,
+    pub chords: FontFamily,
+    pub note_dash: FontFamily,
+}
+
+impl Default for GlyphFontFamilies {
+    fn default() -> Self {
+        Self {
+            notes: FontFamily::Monospace,
+            chords: FontFamily::Monospace,
+            note_dash: FontFamily::Monospace,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FontWeight {
     Normal,

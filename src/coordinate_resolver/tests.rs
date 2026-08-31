@@ -59,6 +59,7 @@ fn resolve_empty_pages_returns_empty() {
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
+            ..Default::default()
         },
     )
     .unwrap()
@@ -104,6 +105,7 @@ fn note_head_halign_center_is_flush_left_plus_fixed_padding() {
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
+            ..Default::default()
         },
     )
     .unwrap();
@@ -113,7 +115,11 @@ fn note_head_halign_center_is_flush_left_plus_fixed_padding() {
         .find(|e| matches!(e.content, AbsoluteContent::NoteHead { .. }))
         .expect("should have NoteHead");
     let x_start = 0.0; // column 0 starts at the row's own left edge
-    let bearing = crate::font_metrics::monospace_glyph_left_bearing('1', 12.0);
+    let bearing = crate::font_metrics::glyph_left_bearing_for_family(
+        crate::compositor::types::FontFamily::Monospace,
+        '1',
+        12.0,
+    );
     let expected_x = 25.0 + x_start + 4.0 - bearing;
     assert!(
         (note.x - expected_x).abs() < 0.01,
@@ -166,6 +172,7 @@ fn note_head_anchor_shifts_by_its_own_configured_padding_not_chords_or_lyrics() 
                 note_dash: 4.0,
             },
             page_number_vertical_padding_pt: 0.0,
+            ..Default::default()
         },
     )
     .unwrap();
@@ -174,7 +181,11 @@ fn note_head_anchor_shifts_by_its_own_configured_padding_not_chords_or_lyrics() 
         .iter()
         .find(|e| matches!(e.content, AbsoluteContent::NoteHead { .. }))
         .expect("should have NoteHead");
-    let bearing = crate::font_metrics::monospace_glyph_left_bearing('1', 12.0);
+    let bearing = crate::font_metrics::glyph_left_bearing_for_family(
+        crate::compositor::types::FontFamily::Monospace,
+        '1',
+        12.0,
+    );
     let expected_x = 25.0 + 30.0 - bearing;
     assert!(
         (note.x - expected_x).abs() < 0.01,
@@ -253,6 +264,7 @@ fn note_head_halign_center_is_independent_of_column_weight() {
                 },
                 paddings: DEFAULT_PADDINGS,
                 page_number_vertical_padding_pt: 0.0,
+                ..Default::default()
             },
         )
         .unwrap();

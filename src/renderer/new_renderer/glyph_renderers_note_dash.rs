@@ -1,6 +1,6 @@
 use super::{glyph_weight, DotState};
 use crate::compositor::types::AbsoluteElement;
-use crate::compositor::types::{DominantBaseline, FontFamily, TextAnchor};
+use crate::compositor::types::{DominantBaseline, TextAnchor};
 use crate::font_metrics;
 use crate::renderer::new_renderer::GlyphStyle;
 use crate::renderer::new_types::{SvgElement, SvgKind, SvgVariant};
@@ -30,7 +30,7 @@ pub(in crate::renderer::new_renderer) fn render_note_dash(
             font_size: notes_font_size,
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
-            font: FontFamily::Monospace,
+            font: style.font_family,
             weight: glyph_weight(style.bold),
             italic: style.italic,
             underline: style.underline,

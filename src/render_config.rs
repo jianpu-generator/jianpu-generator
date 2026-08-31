@@ -1,6 +1,6 @@
 use crate::ast::grouped::Metadata;
 use crate::ast::parsed::Offset;
-use crate::compositor::types::FontFamily;
+use crate::compositor::types::{FontFamily, GlyphFontFamilies};
 use crate::coordinate_resolver::{ElementPaddings, LyricFontSizes};
 use crate::grid_layout::layout::LyricSizing;
 
@@ -48,6 +48,12 @@ pub struct RenderConfig {
     pub note_dash_bold: bool,
     pub note_dash_italic: bool,
     pub note_dash_underline: bool,
+    /// Which `FontFamily` each of `notes`/`chords`/`note_dash` renders in
+    /// (see `Metadata::notes_style`/`chords_style`/`note_dash_style`'s own
+    /// `font_family`) — bundled since `font_metrics`'s glyph-width
+    /// measurement and the renderer both need all three together to keep a
+    /// measure's computed layout width in sync with what actually renders.
+    pub glyph_font_families: GlyphFontFamilies,
     /// See `Metadata::sequence`.
     pub sequence_bold: bool,
     pub sequence_italic: bool,
@@ -130,6 +136,11 @@ impl RenderConfig {
             note_dash_bold: meta.note_dash.bold,
             note_dash_italic: meta.note_dash.italic,
             note_dash_underline: meta.note_dash.underline,
+            glyph_font_families: GlyphFontFamilies {
+                notes: meta.notes.font_family,
+                chords: meta.chords.font_family,
+                note_dash: meta.note_dash.font_family,
+            },
             sequence_bold: meta.sequence.bold,
             sequence_italic: meta.sequence.italic,
             sequence_underline: meta.sequence.underline,

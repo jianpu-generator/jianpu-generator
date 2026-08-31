@@ -17,9 +17,11 @@ export interface StyleRowSpec {
   help: string
   value: TextStyleFields
   placeholder: TextStyleDefaults | null
-  /** `false` for `notes`/`chords`/`note_dash`, whose glyph widths are
-   * layout-measured in a fixed monospace font — `font_family` isn't
-   * accepted on those kinds (see `syntax.md`). */
+  /** No row currently sets this `false` — every kind, including
+   * `notes`/`chords`/`note_dash` (whose glyph widths are re-measured
+   * against whichever font `font_family` resolves to, see `syntax.md`),
+   * accepts a `font_family` override. Kept as an escape hatch in case a
+   * future kind needs to opt out again. */
   showFontFamily?: boolean
 }
 
@@ -235,10 +237,10 @@ function StyleTableRow({
   onChange: (component: TextStyleComponent) => (value: string) => void
 }) {
   const { label, help, value, placeholder, showFontFamily = true } = row
-  // Rows without a font-family selector (notes/chords/note_dash) are always
-  // measured in a fixed monospace font (see `StyleRowSpec.showFontFamily`'s
-  // doc comment), which does support bold/italic — so only look up a
-  // capability restriction when the row actually offers the selector.
+  // A row that opts out of the font-family selector (see
+  // `StyleRowSpec.showFontFamily`'s doc comment) has no way to change away
+  // from its fixed default face, so there's no capability restriction to
+  // look up for it either.
   const effectiveFontFamily = showFontFamily
     ? (value.font_family ?? placeholder?.font_family ?? null)
     : null

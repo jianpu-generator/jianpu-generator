@@ -252,6 +252,7 @@ fn render_svg_docs_with_parts(
             },
             paddings: config.element_paddings(),
             page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
+            glyph_font_families: config.glyph_font_families,
         },
     )?;
     Ok(SvgDocsResult {

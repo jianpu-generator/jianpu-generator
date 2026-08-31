@@ -50,6 +50,7 @@ fn triplet_of_sixteenth_notes_gets_double_underline_matching_written_duration() 
             },
             paddings: config.element_paddings(),
             page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
+            ..Default::default()
         },
     )
     .expect("coordinate resolver should not fail in tests");

@@ -196,15 +196,6 @@ impl RecoverableError {
             },
         }
     }
-
-    pub fn metadata_font_family_unsupported_on_kind(span: Span, field: &str) -> Self {
-        Self {
-            span,
-            kind: RecoverableErrorKind::MetadataFontFamilyUnsupportedOnKind {
-                field: field.to_string(),
-            },
-        }
-    }
 }
 
 #[path = "recoverable_error_parts.rs"]

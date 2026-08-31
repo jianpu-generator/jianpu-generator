@@ -91,6 +91,7 @@ fn valign_top_places_y_at_row_top() {
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
+            ..Default::default()
         },
     )
     .unwrap();
@@ -140,6 +141,7 @@ fn halign_end_places_x_at_right_of_column_span() {
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
+            ..Default::default()
         },
     )
     .unwrap();
@@ -189,6 +191,7 @@ fn octave_dot_grid_content_emits_nothing() {
             },
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
+            ..Default::default()
         },
     )
     .unwrap();

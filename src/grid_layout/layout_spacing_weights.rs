@@ -5,6 +5,7 @@
 
 use crate::ast::parsed::Accidental;
 use crate::compiler::types::{ElementContent, MeasureBlock, MULTI_MEASURE_REST_WIDTH};
+use crate::compositor::types::FontFamily;
 use crate::font_metrics;
 use crate::render_config::RenderConfig;
 
@@ -17,13 +18,18 @@ use crate::render_config::RenderConfig;
 pub(super) const THIN_MARK_WEIGHT: f32 = 0.25;
 
 /// Real advance width (in points) of one notehead/rest/percussion-hit digit
-/// glyph at `config`'s notes font size — the unit every other weight below
-/// is expressed in relative terms of, since notehead/rest/percussion glyphs
-/// all render as a single monospace character (see `render_note_head`/
-/// `render_rest`/`render_percussion_hit` in `glyph_renderers.rs`), so any one
-/// of their digits/`0`/`x` characters measures the same.
+/// glyph at `config`'s notes font size and `font_family` — the unit every
+/// other weight below is expressed in relative terms of, since notehead/
+/// rest/percussion glyphs all render as a single character in that same
+/// font (see `render_note_head`/`render_rest`/`render_percussion_hit` in
+/// `glyph_renderers.rs`), so any one of their digits/`0`/`x` characters
+/// measures the same.
 fn note_glyph_weight(config: &RenderConfig) -> f32 {
-    font_metrics::monospace_char_advance_width('0', config.notes_font_size())
+    font_metrics::advance_width_for_family(
+        config.glyph_font_families.notes,
+        '0',
+        config.notes_font_size(),
+    )
 }
 
 /// Extra weight given to a dotted `NoteHead`/`Rest`/`NoteDash`/`ChordSymbol`
@@ -34,9 +40,18 @@ fn note_glyph_weight(config: &RenderConfig) -> f32 {
 /// rather than drawing them as a separately-positioned glyph, so the extra
 /// width they need is exactly their own real rendered width — no clearance
 /// or reach-vs-base-glyph reconciliation needed, since they're simply new
-/// characters appended after the glyph's own.
-fn dot_extra_weight(dotted: bool, double_dotted: bool, dot_font_size: f32) -> f32 {
-    font_metrics::monospace_text_width(
+/// characters appended after the glyph's own. `family` must match the
+/// glyph the dot(s) are appended to (`config.glyph_font_families.notes` for
+/// a `NoteHead`/`Rest`, `.chords` for a `ChordSymbol`, `.note_dash` for a
+/// `NoteDash`), same as the font it actually renders in.
+fn dot_extra_weight(
+    dotted: bool,
+    double_dotted: bool,
+    dot_font_size: f32,
+    family: FontFamily,
+) -> f32 {
+    font_metrics::text_width_for_family(
+        family,
         font_metrics::augmentation_dot_suffix(dotted, double_dotted),
         dot_font_size,
     )
@@ -45,9 +60,9 @@ fn dot_extra_weight(dotted: bool, double_dotted: bool, dot_font_size: f32) -> f3
 /// Extra weight given to a `NoteHead` column carrying a sharp/flat
 /// accidental, to make room for the `♯`/`♭` glyph — `render_note_head`
 /// (`glyph_renderers.rs`) appends it directly onto the note digit's own text
-/// run, at the same font size as the digit, rather than drawing it as its
-/// own separately-positioned, larger glyph — so the extra width needed is
-/// exactly the accidental's own real rendered width. `Natural` renders no
+/// run, at the same font size/family as the digit, rather than drawing it as
+/// its own separately-positioned, larger glyph — so the extra width needed
+/// is exactly the accidental's own real rendered width. `Natural` renders no
 /// glyph, so it needs no extra weight either.
 pub(super) fn accidental_extra_weight(accidental: &Accidental, config: &RenderConfig) -> f32 {
     let symbol = match accidental {
@@ -55,24 +70,36 @@ pub(super) fn accidental_extra_weight(accidental: &Accidental, config: &RenderCo
         Accidental::Flat => "\u{266D}",
         Accidental::Natural => return 0.0,
     };
-    font_metrics::monospace_text_width(symbol, config.notes_font_size())
+    font_metrics::text_width_for_family(
+        config.glyph_font_families.notes,
+        symbol,
+        config.notes_font_size(),
+    )
 }
 
 /// Real advance width (in points) of the note-dash glyph (`—`), measured at
-/// `config`'s note-dash font size, matching what `render_note_dash` actually
-/// draws.
+/// `config`'s note-dash font size/family, matching what `render_note_dash`
+/// actually draws.
 fn dash_weight(config: &RenderConfig) -> f32 {
-    font_metrics::monospace_char_advance_width('\u{2014}', config.note_dash_font_size())
+    font_metrics::advance_width_for_family(
+        config.glyph_font_families.note_dash,
+        '\u{2014}',
+        config.note_dash_font_size(),
+    )
 }
 
 /// Width weight for a chord symbol's own glyph, measured from its real
-/// rendered width in the monospace font (chord symbols render as monospace
-/// text — see `render_chord_symbol`). Floored at [`note_glyph_weight`] so a
+/// rendered width in `config`'s chords font family (see
+/// `render_chord_symbol`). Floored at [`note_glyph_weight`] so a
 /// single-character chord (e.g. `1`) keeps the same weight as any other
 /// note-like event.
 fn chord_symbol_weight(symbol: &str, config: &RenderConfig) -> f32 {
-    font_metrics::monospace_text_width(symbol, config.chords_font_size())
-        .max(note_glyph_weight(config))
+    font_metrics::text_width_for_family(
+        config.glyph_font_families.chords,
+        symbol,
+        config.chords_font_size(),
+    )
+    .max(note_glyph_weight(config))
 }
 
 /// Width weight for a lyric syllable, measured from its real rendered width
@@ -120,7 +147,12 @@ pub(super) fn column_weight(content: &ElementContent, config: &RenderConfig) -> 
         } => {
             note_glyph_weight(config)
                 + accidental_extra_weight(accidental, config)
-                + dot_extra_weight(*dotted, *double_dotted, config.notes_font_size())
+                + dot_extra_weight(
+                    *dotted,
+                    *double_dotted,
+                    config.notes_font_size(),
+                    config.glyph_font_families.notes,
+                )
         }
         ElementContent::Rest {
             dotted,
@@ -128,7 +160,12 @@ pub(super) fn column_weight(content: &ElementContent, config: &RenderConfig) -> 
             ..
         } => {
             note_glyph_weight(config)
-                + dot_extra_weight(*dotted, *double_dotted, config.notes_font_size())
+                + dot_extra_weight(
+                    *dotted,
+                    *double_dotted,
+                    config.notes_font_size(),
+                    config.glyph_font_families.notes,
+                )
         }
         ElementContent::ChordSymbol {
             text,
@@ -136,7 +173,12 @@ pub(super) fn column_weight(content: &ElementContent, config: &RenderConfig) -> 
             double_dotted,
         } => {
             chord_symbol_weight(text, config)
-                + dot_extra_weight(*dotted, *double_dotted, config.chords_font_size())
+                + dot_extra_weight(
+                    *dotted,
+                    *double_dotted,
+                    config.chords_font_size(),
+                    config.glyph_font_families.chords,
+                )
         }
         ElementContent::PercussionHit => note_glyph_weight(config),
         ElementContent::NoteDash {
@@ -144,7 +186,12 @@ pub(super) fn column_weight(content: &ElementContent, config: &RenderConfig) -> 
             double_dotted,
         } => {
             dash_weight(config)
-                + dot_extra_weight(*dotted, *double_dotted, config.note_dash_font_size())
+                + dot_extra_weight(
+                    *dotted,
+                    *double_dotted,
+                    config.note_dash_font_size(),
+                    config.glyph_font_families.note_dash,
+                )
         }
         ElementContent::Lyric { text, .. } => lyric_weight(text, config),
         // A `LyricLine` spans the whole measure via `column_span` rather than

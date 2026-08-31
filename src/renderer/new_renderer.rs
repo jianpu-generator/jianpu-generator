@@ -41,21 +41,30 @@ fn render_page(page: &AbsolutePage, config: &RenderConfig) -> SvgDocument {
             bold: config.notes_bold,
             italic: config.notes_italic,
             underline: config.notes_underline,
+            font_family: config.glyph_font_families.notes,
         },
         chords_style: GlyphStyle {
             bold: config.chords_bold,
             italic: config.chords_italic,
             underline: config.chords_underline,
+            font_family: config.glyph_font_families.chords,
         },
         lyrics_style: GlyphStyle {
             bold: config.lyrics_bold,
             italic: config.lyrics_italic,
             underline: config.lyrics_underline,
+            // Lyrics' font family is threaded separately as
+            // `lyrics_font_family` below (`render_lyric`/`render_lyric_line`
+            // take it as a standalone argument, not via `GlyphStyle`), so
+            // this field is unused for the lyrics glyph — set to match
+            // anyway for `GlyphStyle`'s own consistency.
+            font_family: config.lyrics_font_family,
         },
         note_dash_style: GlyphStyle {
             bold: config.note_dash_bold,
             italic: config.note_dash_italic,
             underline: config.note_dash_underline,
+            font_family: config.glyph_font_families.note_dash,
         },
         lyrics_font_family: config.lyrics_font_family,
     };
@@ -73,13 +82,17 @@ fn render_page(page: &AbsolutePage, config: &RenderConfig) -> SvgDocument {
     }
 }
 
-/// A glyph kind's bold/italic/underline, read from `RenderConfig` (see
-/// `Metadata::notes_style`/`chords_style`/`lyrics_style`/`note_dash_style`).
+/// A glyph kind's bold/italic/underline/font_family, read from `RenderConfig`
+/// (see `Metadata::notes_style`/`chords_style`/`lyrics_style`/`note_dash_style`).
+/// `font_family` is unused for `lyrics_style` specifically — `render_lyric`/
+/// `render_lyric_line` take `RenderElementParams::lyrics_font_family` as its
+/// own argument instead (see `render_page`).
 #[derive(Clone, Copy)]
 struct GlyphStyle {
     bold: bool,
     italic: bool,
     underline: bool,
+    font_family: FontFamily,
 }
 
 struct RenderElementParams {
@@ -205,6 +218,7 @@ fn render_note_glyph(
                 bold: notes_style.bold,
                 italic: notes_style.italic,
                 underline: notes_style.underline,
+                font_family: notes_style.font_family,
             },
         ),
         AbsoluteContent::Rest {

@@ -94,6 +94,7 @@ fn resolve_font_sizes(config: &RenderConfig) -> coordinate_resolver::ResolveFont
         },
         paddings: element_paddings(config),
         page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
+        ..Default::default()
     }
 }
 

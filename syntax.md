@@ -86,7 +86,7 @@ Every rendered text kind — `title`, `subtitle`, `author`, `sequence`, `part_le
 | `bold` | Whether the element renders bold (`yes`/`no`) |
 | `italic` | Whether the element renders italic (`yes`/`no`) |
 | `underline` | Whether the element renders underlined (`yes`/`no`) |
-| `font_family` | Which of the app's three embedded font roles the element renders in: `serif`, `sans_serif`, or `monospace`. **Not accepted** on `notes`, `chords`, or `note_dash` — those three kinds' glyph widths are measured in a fixed monospace font as part of column layout, so overriding the font there would desync rendered glyph widths from the widths layout already computed; setting it is a metadata error on those kinds. |
+| `font_family` | Which of the app's three embedded font roles the element renders in: `serif`, `sans_serif`, or `monospace`. Accepted on every kind, including `notes`/`chords`/`note_dash` — those three kinds' glyph widths are re-measured against whichever font this resolves to, as part of column layout, so an override there can't desync rendered glyph widths from the widths layout computes. |
 
 Defaults by kind:
 
@@ -102,9 +102,9 @@ Defaults by kind:
 | `page_number` | `row_height * 0.6` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
 | `part_label` | `12` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
 | `lyrics` | `row_height * 0.6` | `4` | `12` | `no` | `no` | `no` | `serif` |
-| `notes` | `lyrics.font_size` | `4` | `0` | `no` | `no` | `no` | `monospace` (fixed) |
-| `chords` | `lyrics.font_size` | `4` | `0` | `no` | `no` | `no` | `monospace` (fixed) |
-| `note_dash` | `notes.font_size` | `4` | `0` | `no` | `no` | `no` | `monospace` (fixed) |
+| `notes` | `lyrics.font_size` | `4` | `0` | `no` | `no` | `no` | `monospace` |
+| `chords` | `lyrics.font_size` | `4` | `0` | `no` | `no` | `no` | `monospace` |
+| `note_dash` | `notes.font_size` | `4` | `0` | `no` | `no` | `no` | `monospace` |
 
 `notes.horizontal_padding_pt` is also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings. `lyrics.vertical_padding_pt` is extra padding around a lyric syllable's hover/click-target box, added on top of the lyric font's own measured ascender+descender span. `part_label`'s reserved column width is the separate flat `part_label_width_pt` field (see the main metadata table above), not part of this object — it's a layout constant, not a text style component. `sequence`'s `bold`/`italic`/`underline`/`font_family` style the `# sequence` summary line's per-label spans (independent of `section_label`, even though a directive line's own inline `label="..."` renders with `section_label`'s style — see [Directive lines](#directive-lines)).
 

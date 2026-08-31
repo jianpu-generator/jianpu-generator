@@ -99,10 +99,12 @@ pub struct TextStyle {
     pub underline: bool,
     /// Which embedded font role this kind's glyphs render in. Default:
     /// `Serif` for `title`/`subtitle`/`author`/`lyrics`, `SansSerif` for
-    /// every other kind. Always `Monospace` for `notes`/`chords`/`note_dash`
-    /// and cannot be overridden there (see
-    /// `RecoverableErrorKind::MetadataFontFamilyUnsupportedOnKind`) — those
-    /// kinds' glyph widths are baked into the grid layout's column spacing.
+    /// every other kind, `Monospace` for `notes`/`chords`/`note_dash` — all
+    /// overridable, including the three `Monospace`-default kinds (see
+    /// `RenderConfig::glyph_font_families`, `font_metrics::
+    /// advance_width_for_family`, which re-measures their glyph widths
+    /// against whichever font this resolves to, so an override can't desync
+    /// layout from what actually renders).
     pub font_family: crate::compositor::types::FontFamily,
 }
 

@@ -376,16 +376,19 @@ fn collects_error_for_invalid_font_family_value() {
 }
 
 #[test]
-fn font_family_is_rejected_on_notes_chords_and_note_dash() {
-    for kind in ["notes", "chords", "note_dash"] {
-        let content =
-            format!("title = \"t\"\nauthor = \"a\"\n{kind} = {{ font_family: monospace }}\n");
-        let (_meta, errors) = parse_metadata(&content, 0);
-        assert!(
-            errors
-                .iter()
-                .any(|e| e.message().contains(&format!("{kind}.font_family"))),
-            "expected {kind}.font_family to be rejected, got errors: {errors:?}"
-        );
-    }
+fn parses_font_family_on_notes_chords_and_note_dash() {
+    use crate::ast::parsed::FontFamilyChoice;
+
+    let content = "title = \"t\"\nauthor = \"a\"\nnotes = { font_family: serif }\nchords = { font_family: sans_serif }\nnote_dash = { font_family: serif }\n";
+    let (meta, errors) = parse_metadata(content, 0);
+    assert!(errors.is_empty(), "expected no errors, got: {errors:?}");
+    assert_eq!(meta.notes_style.font_family, Some(FontFamilyChoice::Serif));
+    assert_eq!(
+        meta.chords_style.font_family,
+        Some(FontFamilyChoice::SansSerif)
+    );
+    assert_eq!(
+        meta.note_dash_style.font_family,
+        Some(FontFamilyChoice::Serif)
+    );
 }

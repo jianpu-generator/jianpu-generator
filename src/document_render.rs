@@ -63,6 +63,7 @@ fn render_documents(
             },
             paddings: config.element_paddings(),
             page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
+            glyph_font_families: config.glyph_font_families,
         },
     )?;
     Ok(DocumentsResult {
@@ -123,6 +124,7 @@ fn render_documents_with_range(
             },
             paddings: config.element_paddings(),
             page_number_vertical_padding_pt: config.page_number_vertical_padding_pt(),
+            glyph_font_families: config.glyph_font_families,
         },
     )?;
     Ok(DocumentsResult {

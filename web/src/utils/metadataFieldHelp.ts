@@ -68,15 +68,15 @@ Default: 40.`,
 
   notes: `Style of note heads, rests, percussion hits, and tuplet brackets.
 
-**Font Size** defaults to \`lyrics.font_size\` and also affects the width allotted to a note column, since these glyphs render as monospace characters. **H. Padding** (default: 4) is also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings, which all key off a note column. **V. Padding** adds vertical space around the note-head row.`,
+**Font Size** defaults to \`lyrics.font_size\` and also affects the width allotted to a note column, since the note column's width is measured against these glyphs' own font (Monospace by default, but **Font** below can override it). **H. Padding** (default: 4) is also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings, which all key off a note column. **V. Padding** adds vertical space around the note-head row.`,
 
   chords: `Style of chord symbol text.
 
-**Font Size** defaults to \`lyrics.font_size\` and also affects the width allotted to a chord symbol's column. **H. Padding** defaults to 4.`,
+**Font Size** defaults to \`lyrics.font_size\` and also affects the width allotted to a chord symbol's column, measured against its own font (Monospace by default, but **Font** below can override it). **H. Padding** defaults to 4.`,
 
   note_dash: `Style of a note dash (the sustain-beat \`-\` extension).
 
-**Font Size** defaults to \`notes.font_size\` and scales the rendered dash's width. **H. Padding** defaults to 4.`,
+**Font Size** defaults to \`notes.font_size\` and scales the rendered dash's width, measured against its own font (Monospace by default, but **Font** below can override it). **H. Padding** defaults to 4.`,
 
   row_height: `Vertical spacing (points) of one part row.
 

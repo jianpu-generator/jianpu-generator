@@ -88,6 +88,7 @@ fn measure_highlight_produces_prepended_rect_element() {
             labels: DEFAULT_LABELS,
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
+            ..Default::default()
         },
     )
     .unwrap();
@@ -148,6 +149,7 @@ fn error_highlight_resolves_to_absolute_error_highlight() {
             labels: DEFAULT_LABELS,
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
+            ..Default::default()
         },
     )
     .unwrap();
@@ -198,6 +200,7 @@ fn page_with_no_highlight_produces_no_extra_element() {
             labels: DEFAULT_LABELS,
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
+            ..Default::default()
         },
     )
     .unwrap();
@@ -271,6 +274,7 @@ fn playback_cursor_reaches_final_bar_line_of_its_measure() {
             labels: DEFAULT_LABELS,
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
+            ..Default::default()
         },
     )
     .unwrap();
@@ -343,6 +347,7 @@ fn bar_number_click_target_resolves_to_a_small_rect_sized_to_its_digits() {
             labels: DEFAULT_LABELS,
             paddings: DEFAULT_PADDINGS,
             page_number_vertical_padding_pt: 0.0,
+            ..Default::default()
         },
     )
     .unwrap();
