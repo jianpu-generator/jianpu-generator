@@ -176,6 +176,43 @@ ha ko da
 }
 
 #[test]
+fn tie_state_does_not_leak_across_a_lyric_less_measure() {
+    // Measure 1 ends on a genuine tie (`2~`). Measure 2 has no lyric line of
+    // its own and does not tie into measure 3 — its last note (`3`) has no
+    // `~`. Measure 3 has its own lyrics and should pair 1:1 against its own
+    // notes (`4`->`c`, `5`->`d`), since the tie from measure 1 was already
+    // resolved by measure 2's own (lyric-less) notes and must not leak
+    // through untouched into measure 3.
+    let input = r#"# metadata
+title="t"
+author="a"
+
+# parts
+Melody = notes
+
+# score
+time=4/4 key=C4 bpm=120
+[Melody] 1 2~
+a b
+
+[Melody] 2 3
+
+[Melody] 4 5
+c d
+"#;
+    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let score = group(doc).unwrap();
+    assert_eq!(score.measures.len(), 3);
+    assert!(
+        score.measures[2].diagnostics.is_empty(),
+        "measure 3 must not report a lyrics overflow: the tie from measure 1 \
+         is resolved by measure 2's own untied notes and must not leak \
+         through the lyric-less measure 2, got: {:?}",
+        score.measures[2].diagnostics
+    );
+}
+
+#[test]
 fn cross_measure_slur_note_consumes_syllable() {
     // (5 ... 5) is a slur, not a tie — the closing 5) still plays as its own
     // note and must consume a lyric syllable. Measure 2 has notes 5, 6, 7, 0 (rest),
