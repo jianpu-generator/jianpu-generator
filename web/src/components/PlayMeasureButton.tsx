@@ -1,3 +1,5 @@
+import { PauseIcon, PlayIcon } from './icons/PlaybackIcons'
+
 interface PlayMeasureButtonProps {
   disabled: boolean
   loading: boolean
@@ -74,7 +76,8 @@ export function PlayMeasureButton({
           onClick={onPause}
           aria-label={label ? `Pause ${label}` : 'Pause playback'}
         >
-          {label ? `⏸ ${label}` : '⏸'}
+          <PauseIcon className="play-btn-icon" />
+          {label ? ` ${label}` : null}
         </button>
         <Tooltip shortcutLabel={shortcutLabel} text="Pause playback" />
       </div>
@@ -91,7 +94,7 @@ export function PlayMeasureButton({
         onClick={onClick}
         aria-label={
           label
-            ? `▶ ${label}`
+            ? `Play ${label}`
             : noteSelectionActive
               ? 'Play selection'
               : 'Play selected measure(s)'
@@ -99,10 +102,11 @@ export function PlayMeasureButton({
       >
         {loading ? (
           <span className="play-measure-spinner" aria-hidden="true" />
-        ) : label !== null ? (
-          `▶ ${label}`
         ) : (
-          '▶'
+          <>
+            <PlayIcon className="play-btn-icon" />
+            {label !== null ? ` ${label}` : null}
+          </>
         )}
       </button>
       <Tooltip

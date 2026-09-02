@@ -261,6 +261,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 3px;
   padding: 2px 8px;
   font-size: 12px;
   border: 1px solid #ccc;
@@ -270,6 +271,12 @@
   min-width: 28px;
   height: 24px;
   white-space: nowrap;
+}
+
+.play-btn-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
 .play-measure-btn:disabled,

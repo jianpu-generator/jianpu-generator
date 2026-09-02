@@ -1,3 +1,5 @@
+import { PauseIcon, PlayIcon } from './icons/PlaybackIcons'
+
 interface PlayAllButtonProps {
   disabled: boolean
   loading: boolean
@@ -23,7 +25,7 @@ export function PlayAllButton({
           onClick={onPause}
           aria-label="Pause playback"
         >
-          ⏸ All
+          <PauseIcon className="play-btn-icon" /> All
         </button>
         <div className="play-measure-tooltip" role="tooltip">
           <span className="play-measure-tooltip-text">Pause playback</span>
@@ -45,7 +47,9 @@ export function PlayAllButton({
         {loading ? (
           <span className="play-measure-spinner" aria-hidden="true" />
         ) : (
-          '▶ All'
+          <>
+            <PlayIcon className="play-btn-icon" /> All
+          </>
         )}
       </button>
       <div className="play-measure-tooltip" role="tooltip">

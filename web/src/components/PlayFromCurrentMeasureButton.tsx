@@ -1,3 +1,5 @@
+import { PauseIcon, PlayIcon, TrackNextIcon } from './icons/PlaybackIcons'
+
 interface PlayFromCurrentMeasureButtonProps {
   disabled: boolean
   loading: boolean
@@ -58,7 +60,8 @@ export function PlayFromCurrentMeasureButton({
           onClick={onPause}
           aria-label="Pause playback"
         >
-          ⏸ →⏭
+          <PauseIcon className="play-btn-icon" />
+          <TrackNextIcon className="play-btn-icon" />
         </button>
         <Tooltip shortcutLabel={shortcutLabel} text="Pause playback" />
       </div>
@@ -80,7 +83,10 @@ export function PlayFromCurrentMeasureButton({
         {loading ? (
           <span className="play-measure-spinner" aria-hidden="true" />
         ) : (
-          '▶⏭'
+          <>
+            <PlayIcon className="play-btn-icon" />
+            <TrackNextIcon className="play-btn-icon" />
+          </>
         )}
       </button>
       <Tooltip
