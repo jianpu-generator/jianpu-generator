@@ -236,6 +236,7 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
         new Blob([msg.mp3], { type: 'audio/mpeg' }),
       )
       deps.setNextMp3Url(url)
+      deps.setNoteTimings(msg.noteTimings)
       return
     }
 

@@ -234,7 +234,7 @@ export type WorkerResponse =
   | { type: 'splitMidiErr'; id: number; diagnostics: Diagnostic[] }
   | { type: 'splitWav'; id: number; zip: ArrayBuffer }
   | { type: 'splitWavErr'; id: number; diagnostics: Diagnostic[] }
-  | { type: 'mp3'; id: number; mp3: ArrayBuffer }
+  | { type: 'mp3'; id: number; mp3: ArrayBuffer; noteTimings: NoteTimingOut[] }
   | { type: 'mp3Err'; id: number; diagnostics: Diagnostic[] }
   | { type: 'splitMp3'; id: number; zip: ArrayBuffer }
   | { type: 'splitMp3Err'; id: number; diagnostics: Diagnostic[] }

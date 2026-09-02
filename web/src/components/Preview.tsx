@@ -31,7 +31,7 @@ interface PreviewProps {
   mp3Exporting?: boolean
   mp3Url?: string | null
   mp3Filename?: string
-  /** Elapsed-seconds start/end of every sounding note/rest for `wavUrl`'s audio, keyed by `(source_part_index, note_id)`. */
+  /** Elapsed-seconds start/end of every sounding note/rest for whichever of `wavUrl`/`mp3Url` is set, keyed by `(source_part_index, note_id)`. */
   noteTimings?: NoteTimingOut[]
   /** Elapsed-seconds start/end of every sounding note/rest for the selected range's audio, keyed by `(source_part_index, note_id)`. */
   measureAudioNoteTimings?: NoteTimingOut[]
@@ -147,13 +147,14 @@ export function Preview({
 
   // wavUrl/mp3Url are mutually exclusive (see `useJianpuWorkerAudioActions`),
   // so whichever is set is the one inline player below renders. noteTimings
-  // only applies to the WAV audio, so it's dropped when MP3 is what's
-  // showing (an MP3 export carries no timing data — see the worker's `mp3`
-  // response).
+  // applies to whichever format that is — the worker's `audio`/`mp3`
+  // responses each pair their bytes with a matching `noteTimings` computed
+  // straight from source (codec-independent), so the cursor animates the
+  // same way regardless of format.
   const audioUrl = wavUrl ?? mp3Url
   const audioFilename = wavUrl ? wavFilename : mp3Filename
   const audioBusy = wavUrl ? audioGenerating : mp3Exporting
-  const audioNoteTimings = wavUrl ? noteTimings : undefined
+  const audioNoteTimings = audioUrl ? noteTimings : undefined
 
   usePlaybackCursor(previewPagesRef, audioElement, audioNoteTimings)
   usePlaybackCursor(

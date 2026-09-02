@@ -233,7 +233,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'generateMp3') {
-    handleGenerateMp3(msg, generateMp3, loadedSoundfont)
+    handleGenerateMp3(msg, generateMp3, listNoteTimings, loadedSoundfont)
     return
   }
 

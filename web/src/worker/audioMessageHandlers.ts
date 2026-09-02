@@ -263,13 +263,16 @@ type GenerateMp3Fn =
   | null
 
 /**
- * One-shot MP3 export — unlike [`handleGenerateAudio`], this doesn't need
- * note timings: MP3 export is a plain download, not the WAV preview's
- * interactive playback cursor.
+ * One-shot MP3 export — like [`handleGenerateAudio`], this also produces the
+ * WAV preview's interactive playback cursor: MP3 gets the same inline
+ * player, so it needs the same note timings. `listNoteTimings` runs off the
+ * source alone (see `noteTimingsFromSource`), independent of the audio
+ * codec, so this reuses it exactly as the WAV path does.
  */
 export function handleGenerateMp3(
   msg: Extract<WorkerRequest, { type: 'generateMp3' }>,
   generateMp3: GenerateMp3Fn,
+  listNoteTimings: ListNoteTimingsFn,
   loadedSoundfont: Uint8Array | null,
 ): void {
   if (!generateMp3 || !loadedSoundfont) {
@@ -291,11 +294,18 @@ export function handleGenerateMp3(
   const result = generateMp3(msg.source, msg.enabledTracks, loadedSoundfont)
   if (result.status === 'ok') {
     const mp3Buffer = binaryBufferFromResult(result.mp3)
+    const noteTimings = noteTimingsFromSource(
+      listNoteTimings,
+      msg.source,
+      msg.enabledTracks,
+      undefined,
+    )
     postMessage(
       {
         type: 'mp3',
         id: msg.id,
         mp3: mp3Buffer,
+        noteTimings,
       } satisfies WorkerResponse,
       { transfer: [mp3Buffer] },
     )
