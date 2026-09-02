@@ -1,8 +1,6 @@
 import type { RefObject } from 'react'
 import type { LyricSpan, NoteSpan } from '../types'
 import {
-  applyLyricDragHighlights,
-  applyNoteDragHighlights,
   applyPersistedLyricHighlights,
   applyPersistedNoteHighlights,
 } from './previewDragHighlights'
@@ -19,6 +17,10 @@ import {
   lyricCellsForPartLabels,
   noteCellsForPartLabels,
 } from './previewLabelSelection'
+import {
+  applyLyricRangeSelection,
+  applyNoteRangeSelection,
+} from './previewRangeSelection'
 import {
   getMeasureAtPoint,
   type LyricCell,
@@ -88,14 +90,15 @@ export function resolveSelection(
   const current = point ?? dragState.anchor
 
   if (dragState.mode === 'note') {
-    let noteCells = container
-      ? applyNoteDragHighlights(container, dragState.anchor, current)
-      : []
-    // The marquee can also cover lyric syllables underneath — union them in,
-    // mirroring 'measure' mode's combined note+lyric resolution above.
-    let lyricCells = container
-      ? applyLyricDragHighlights(container, dragState.anchor, current)
-      : []
+    let { noteCells, lyricCells } = container
+      ? applyNoteRangeSelection(
+          container,
+          noteSpans,
+          dragState.noteCellAtAnchor,
+          dragState.anchor,
+          current,
+        )
+      : { noteCells: [], lyricCells: [] }
     if (noteCells.length === 0) {
       // The resolved point missed every note's click target (e.g. it landed
       // back on the anchor note, or on a bar-line/gutter pixel) — fall back
@@ -112,14 +115,15 @@ export function resolveSelection(
   }
 
   if (dragState.mode === 'lyric') {
-    const lyricCells = container
-      ? applyLyricDragHighlights(container, dragState.anchor, current)
-      : []
-    // Symmetric to 'note' mode above — union in whatever notes the marquee
-    // also covers.
-    const noteCells = container
-      ? applyNoteDragHighlights(container, dragState.anchor, current)
-      : []
+    const { noteCells, lyricCells } = container
+      ? applyLyricRangeSelection(
+          container,
+          lyricSpans,
+          dragState.lyricCellAtAnchor,
+          dragState.anchor,
+          current,
+        )
+      : { noteCells: [], lyricCells: [] }
     return { noteCells, lyricCells }
   }
 

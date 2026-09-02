@@ -1,5 +1,5 @@
 import type { DragPoint } from './previewDragHighlights'
-import type { MeasureRange, NoteCell } from './previewSelection'
+import type { LyricCell, MeasureRange, NoteCell } from './previewSelection'
 
 // One discriminated ref rather than a separate measure-select and note-select
 // ref: a single click can only ever anchor one mode (see
@@ -90,5 +90,11 @@ export type PreviewDragState =
       mode: 'lyric'
       anchor: DragPoint
       current: DragPoint
+      /** The syllable cell the anchoring click landed on — drives
+       * `applyLyricRangeSelection`'s same-part-and-verse check, so a second
+       * click that lands directly on another syllable in the same verse
+       * resolves by `noteId` order instead of pixel geometry (see
+       * `previewRangeSelection.ts`). */
+      lyricCellAtAnchor: LyricCell
     }
   | null

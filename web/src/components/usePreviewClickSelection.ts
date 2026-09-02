@@ -3,8 +3,6 @@ import { useEffect, useRef } from 'react'
 import type { LyricSpan, NoteSpan } from '../types'
 import { cancelAnchor } from './previewClickHandler'
 import {
-  applyLyricDragHighlights,
-  applyNoteDragHighlights,
   applyPersistedLyricHighlights,
   applyPersistedNoteHighlights,
 } from './previewDragHighlights'
@@ -21,6 +19,10 @@ import {
   lyricCellsForPartLabels,
   noteCellsForPartLabels,
 } from './previewLabelSelection'
+import {
+  applyLyricRangeSelection,
+  applyNoteRangeSelection,
+} from './previewRangeSelection'
 import {
   getMeasureAtPoint,
   type LyricCell,
@@ -85,17 +87,25 @@ export function usePreviewClickSelection(
 
       if (dragState.mode === 'note') {
         dragState.current = { x: e.clientX, y: e.clientY }
-        applyNoteDragHighlights(container, dragState.anchor, dragState.current)
-        applyLyricDragHighlights(container, dragState.anchor, dragState.current)
+        applyNoteRangeSelection(
+          container,
+          noteSpansRef.current,
+          dragState.noteCellAtAnchor,
+          dragState.anchor,
+          dragState.current,
+        )
         return
       }
 
       if (dragState.mode === 'lyric') {
         dragState.current = { x: e.clientX, y: e.clientY }
-        applyLyricDragHighlights(container, dragState.anchor, dragState.current)
-        // Symmetric to 'note' mode above — a lyric hover preview can also
-        // sweep over the notes above it, so union those in too.
-        applyNoteDragHighlights(container, dragState.anchor, dragState.current)
+        applyLyricRangeSelection(
+          container,
+          lyricSpansRef.current,
+          dragState.lyricCellAtAnchor,
+          dragState.anchor,
+          dragState.current,
+        )
         return
       }
 

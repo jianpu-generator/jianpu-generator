@@ -201,7 +201,12 @@ function handleAnchorClick(
     const point = { x: e.clientX, y: e.clientY }
     anchorAndCommit(
       dragStateRef,
-      { mode: 'lyric', anchor: point, current: point },
+      {
+        mode: 'lyric',
+        anchor: point,
+        current: point,
+        lyricCellAtAnchor: lyricCell,
+      },
       args,
     )
     e.preventDefault()
