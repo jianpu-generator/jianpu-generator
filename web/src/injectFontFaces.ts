@@ -34,7 +34,11 @@ function bareFamilyName(familyCss: string): string {
   return match[1]
 }
 
-export function injectFontFaces(): void {
+/** Builds the `@font-face` rules as a plain string — split out from
+ * `injectFontFaces` so the URL-prefixing logic is unit-testable without a
+ * DOM (see injectFontFaces.test.ts). `baseUrl` must be Vite's
+ * `import.meta.env.BASE_URL`-shaped value: an absolute path ending in `/`. */
+export function buildFontFaceCss(baseUrl: string): string {
   // Only `serif`/`sansSerif` get a `@font-face` rule, matching the static
   // rules this replaces: the preview SVG renders monospace-role glyphs with
   // the plain CSS `monospace` keyword rather than a `FontFamilyOut` family
@@ -45,7 +49,7 @@ export function injectFontFaces(): void {
   // experimenting with a single typeface for both) — dedupe by family name
   // so that doesn't produce two identical `@font-face` rules.
   const seenFamilyNames = new Set<string>()
-  const rules = roles
+  return roles
     .map((role) => {
       const familyName = bareFamilyName(role.familyCss)
       const format = fontFormat(role.filename)
@@ -61,13 +65,17 @@ export function injectFontFaces(): void {
     .map(
       ({ familyName, format, filename }) => `@font-face {
   font-family: "${familyName}";
-  src: url("/fonts/${filename}") format("${format}");
+  src: url("${baseUrl}fonts/${filename}") format("${format}");
   font-display: swap;
 }`,
     )
     .join('\n\n')
+}
 
+export function injectFontFaces(
+  baseUrl: string = import.meta.env.BASE_URL,
+): void {
   const style = document.createElement('style')
-  style.textContent = rules
+  style.textContent = buildFontFaceCss(baseUrl)
   document.head.appendChild(style)
 }
