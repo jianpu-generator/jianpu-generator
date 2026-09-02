@@ -88,10 +88,7 @@ When(
 When(
   'I select the {string} storage radio option',
   async ({ page }, label: string) => {
-    await page
-      .locator('label', { hasText: label })
-      .locator('input[type="radio"]')
-      .check()
+    await page.getByRole('button', { name: label }).click()
   },
 )
 

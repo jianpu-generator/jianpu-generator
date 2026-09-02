@@ -116,7 +116,7 @@ When('I open the storage settings modal for OAuth', async ({ page }) => {
 When(
   'I select the {string} storage option',
   async ({ page }, label: string) => {
-    await page.getByLabel(label).check()
+    await page.getByRole('button', { name: label }).click()
     await expect(page.getByTestId('github-connect')).toBeVisible()
   },
 )
@@ -174,7 +174,10 @@ Then('the app no longer shows as connected', async ({ page }) => {
 Then(
   'the {string} storage option is checked',
   async ({ page }, label: string) => {
-    await expect(page.getByLabel(label)).toBeChecked()
+    await expect(page.getByRole('button', { name: label })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
   },
 )
 

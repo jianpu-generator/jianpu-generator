@@ -1,5 +1,6 @@
 import { Octokit } from '@octokit/rest'
 import * as Dialog from '@radix-ui/react-dialog'
+import { GitHubLogoIcon, LaptopIcon } from '@radix-ui/react-icons'
 import { useEffect, useState } from 'react'
 import type { FileStoreState } from '../fileStore'
 import {
@@ -23,6 +24,8 @@ import {
   resolveGithubConflict,
 } from './storageSettingsModalHelpers'
 import {
+  backendButtonSelectedStyle,
+  backendButtonStyle,
   bannerStyle,
   bodyStyle,
   buttonStyle,
@@ -231,28 +234,34 @@ export function StorageSettingsModal({
             ) : null}
 
             <div style={optionRowStyle}>
-              <label
-                style={{ display: 'flex', gap: '6px', alignItems: 'center' }}
+              <button
+                type="button"
+                aria-pressed={selectedKind === 'local'}
+                aria-label="This browser"
+                style={
+                  selectedKind === 'local'
+                    ? backendButtonSelectedStyle
+                    : backendButtonStyle
+                }
+                onClick={handleSelectLocal}
               >
-                <input
-                  type="radio"
-                  name="storage-backend"
-                  checked={selectedKind === 'local'}
-                  onChange={handleSelectLocal}
-                />
+                <LaptopIcon width={28} height={28} />
                 This browser
-              </label>
-              <label
-                style={{ display: 'flex', gap: '6px', alignItems: 'center' }}
+              </button>
+              <button
+                type="button"
+                aria-pressed={selectedKind === 'github'}
+                aria-label="GitHub repository"
+                style={
+                  selectedKind === 'github'
+                    ? backendButtonSelectedStyle
+                    : backendButtonStyle
+                }
+                onClick={() => void handleSelectGithub(username)}
               >
-                <input
-                  type="radio"
-                  name="storage-backend"
-                  checked={selectedKind === 'github'}
-                  onChange={() => void handleSelectGithub(username)}
-                />
+                <GitHubLogoIcon width={28} height={28} />
                 GitHub repository
-              </label>
+              </button>
             </div>
 
             {selectedKind === 'github' ? (

@@ -46,6 +46,29 @@ export const optionRowStyle: React.CSSProperties = {
   gap: '12px',
 }
 
+export const backendButtonStyle: React.CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: '8px',
+  padding: '16px 12px',
+  borderRadius: '8px',
+  border: '1px solid #ddd',
+  background: '#fff',
+  cursor: 'pointer',
+  fontSize: '13px',
+  fontFamily: 'inherit',
+  color: 'inherit',
+}
+
+export const backendButtonSelectedStyle: React.CSSProperties = {
+  ...backendButtonStyle,
+  border: '1px solid var(--accent-selected-border)',
+  background: 'var(--accent-selected-bg)',
+  color: 'var(--accent-selected-text)',
+}
+
 export const bannerStyle: React.CSSProperties = {
   padding: '8px 10px',
   borderRadius: '4px',
