@@ -3,6 +3,7 @@ import * as Toast from '@radix-ui/react-toast'
 import { useCallback, useRef, useState } from 'react'
 import { useDismissableOpen } from '../hooks/useDismissableOpen'
 import { useFixedMenuPosition } from '../hooks/useFixedMenuPosition'
+import { FixedMenuPortal } from './FixedMenuPortal'
 
 interface GoLiveButtonProps {
   isLive: boolean
@@ -22,7 +23,8 @@ export function GoLiveButton({
   const [toastOpen, setToastOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
-  const [menuOpen, setMenuOpen] = useDismissableOpen(containerRef)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [menuOpen, setMenuOpen] = useDismissableOpen(containerRef, menuRef)
   const menuStyle = useFixedMenuPosition(buttonRef, isLive && menuOpen)
 
   const copyUrl = useCallback(async (url: string) => {
@@ -66,42 +68,49 @@ export function GoLiveButton({
         )}
       </button>
       {isLive && menuOpen ? (
-        <div className="export-menu-list" role="menu" style={menuStyle}>
-          <button
-            type="button"
-            role="menuitem"
-            className="export-menu-item"
-            data-testid="copy-live-link-button"
-            onClick={() => {
-              setMenuOpen(false)
-              if (liveUrl) void copyUrl(liveUrl)
-            }}
+        <FixedMenuPortal>
+          <div
+            className="export-menu-list"
+            role="menu"
+            style={menuStyle}
+            ref={menuRef}
           >
-            <Link2Icon aria-hidden="true" />
-            Copy Live Link
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="export-menu-item"
-            data-testid="stop-live-button"
-            onClick={() => {
-              setMenuOpen(false)
-              onStopLive()
-            }}
-          >
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 15 15"
-              fill="currentColor"
-              aria-hidden="true"
+            <button
+              type="button"
+              role="menuitem"
+              className="export-menu-item"
+              data-testid="copy-live-link-button"
+              onClick={() => {
+                setMenuOpen(false)
+                if (liveUrl) void copyUrl(liveUrl)
+              }}
             >
-              <rect x="2" y="2" width="11" height="11" rx="1.5" />
-            </svg>
-            Stop Live
-          </button>
-        </div>
+              <Link2Icon aria-hidden="true" />
+              Copy Live Link
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="export-menu-item"
+              data-testid="stop-live-button"
+              onClick={() => {
+                setMenuOpen(false)
+                onStopLive()
+              }}
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 15 15"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <rect x="2" y="2" width="11" height="11" rx="1.5" />
+              </svg>
+              Stop Live
+            </button>
+          </div>
+        </FixedMenuPortal>
       ) : null}
       <Toast.Provider swipeDirection="right" duration={3000}>
         <Toast.Root

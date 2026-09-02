@@ -22,6 +22,7 @@ import { useDismissableOpen } from '../hooks/useDismissableOpen'
 import { useFixedMenuPosition } from '../hooks/useFixedMenuPosition'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import { FileTabName } from './FileTabName'
+import { FixedMenuPortal } from './FixedMenuPortal'
 import { ImportButton } from './ImportButton'
 import { SaveStatusBadge } from './SaveStatusBadge'
 import { ShareButton } from './ShareButton'
@@ -93,7 +94,11 @@ export function FileSwitcher({
 
   const filesContainerRef = useRef<HTMLDivElement>(null)
   const filesButtonRef = useRef<HTMLButtonElement>(null)
-  const [filesOpen, setFilesOpen] = useDismissableOpen(filesContainerRef)
+  const filesMenuRef = useRef<HTMLDivElement>(null)
+  const [filesOpen, setFilesOpen] = useDismissableOpen(
+    filesContainerRef,
+    filesMenuRef,
+  )
   const filesMenuStyle = useFixedMenuPosition(filesButtonRef, filesOpen)
   const [demoOpen, setDemoOpen] = useState(false)
   useEffect(() => {
@@ -102,7 +107,11 @@ export function FileSwitcher({
 
   const actionsContainerRef = useRef<HTMLDivElement>(null)
   const actionsButtonRef = useRef<HTMLButtonElement>(null)
-  const [actionsOpen, setActionsOpen] = useDismissableOpen(actionsContainerRef)
+  const actionsMenuRef = useRef<HTMLDivElement>(null)
+  const [actionsOpen, setActionsOpen] = useDismissableOpen(
+    actionsContainerRef,
+    actionsMenuRef,
+  )
   const actionsMenuStyle = useFixedMenuPosition(actionsButtonRef, actionsOpen)
 
   return (
@@ -128,84 +137,87 @@ export function FileSwitcher({
           )}
         </button>
         {filesOpen ? (
-          <div
-            className="export-menu-list file-tab-bar-files-list"
-            style={filesMenuStyle}
-          >
-            {isLoadingGithub ? (
-              <p className="file-tab-bar-hint">Loading files from GitHub…</p>
-            ) : showEmptyHint ? (
-              <p className="file-tab-bar-hint">
-                No files yet — click New to create one.
-              </p>
-            ) : null}
-            <ul className="file-tabs" aria-label="Files">
-              {names.map((name) => {
-                const active = name === store.active
-
-                return (
-                  <li
-                    key={name}
-                    className={`file-tab${active ? ' file-tab--active' : ''}`}
-                  >
-                    <FileTabName
-                      name={name}
-                      active={active}
-                      onSelect={(selected) => {
-                        onSelect(selected)
-                        setFilesOpen(false)
-                      }}
-                      onRename={onRename}
-                      renaming={renamingName === name}
-                    />
-                  </li>
-                )
-              })}
-            </ul>
-            <div className="file-tab-bar-demo-section">
-              <button
-                type="button"
-                className="file-tab-bar-demo-toggle"
-                aria-haspopup="menu"
-                aria-expanded={demoOpen}
-                onClick={() => setDemoOpen((prev) => !prev)}
-              >
-                {demoOpen ? (
-                  <ChevronDownIcon aria-hidden="true" />
-                ) : (
-                  <ChevronRightIcon aria-hidden="true" />
-                )}
-                Demo
-              </button>
-              {demoOpen ? (
-                <ul
-                  className="file-tabs file-tab-bar-demo-list"
-                  aria-label="Demo files"
-                >
-                  {DEMO_FILE_NAMES.map((name) => {
-                    const active = name === store.active
-
-                    return (
-                      <li
-                        key={name}
-                        className={`file-tab${active ? ' file-tab--active' : ''}`}
-                      >
-                        <FileTabName
-                          name={name}
-                          active={active}
-                          onSelect={(selected) => {
-                            onSelect(selected)
-                            setFilesOpen(false)
-                          }}
-                          onRename={onRename}
-                        />
-                      </li>
-                    )
-                  })}
-                </ul>
+          <FixedMenuPortal>
+            <div
+              className="export-menu-list file-tab-bar-files-list"
+              style={filesMenuStyle}
+              ref={filesMenuRef}
+            >
+              {isLoadingGithub ? (
+                <p className="file-tab-bar-hint">Loading files from GitHub…</p>
+              ) : showEmptyHint ? (
+                <p className="file-tab-bar-hint">
+                  No files yet — click New to create one.
+                </p>
               ) : null}
+              <ul className="file-tabs" aria-label="Files">
+                {names.map((name) => {
+                  const active = name === store.active
+
+                  return (
+                    <li
+                      key={name}
+                      className={`file-tab${active ? ' file-tab--active' : ''}`}
+                    >
+                      <FileTabName
+                        name={name}
+                        active={active}
+                        onSelect={(selected) => {
+                          onSelect(selected)
+                          setFilesOpen(false)
+                        }}
+                        onRename={onRename}
+                        renaming={renamingName === name}
+                      />
+                    </li>
+                  )
+                })}
+              </ul>
+              <div className="file-tab-bar-demo-section">
+                <button
+                  type="button"
+                  className="file-tab-bar-demo-toggle"
+                  aria-haspopup="menu"
+                  aria-expanded={demoOpen}
+                  onClick={() => setDemoOpen((prev) => !prev)}
+                >
+                  {demoOpen ? (
+                    <ChevronDownIcon aria-hidden="true" />
+                  ) : (
+                    <ChevronRightIcon aria-hidden="true" />
+                  )}
+                  Demo
+                </button>
+                {demoOpen ? (
+                  <ul
+                    className="file-tabs file-tab-bar-demo-list"
+                    aria-label="Demo files"
+                  >
+                    {DEMO_FILE_NAMES.map((name) => {
+                      const active = name === store.active
+
+                      return (
+                        <li
+                          key={name}
+                          className={`file-tab${active ? ' file-tab--active' : ''}`}
+                        >
+                          <FileTabName
+                            name={name}
+                            active={active}
+                            onSelect={(selected) => {
+                              onSelect(selected)
+                              setFilesOpen(false)
+                            }}
+                            onRename={onRename}
+                          />
+                        </li>
+                      )
+                    })}
+                  </ul>
+                ) : null}
+              </div>
             </div>
-          </div>
+          </FixedMenuPortal>
         ) : null}
       </div>
       <div className="export-menu" ref={actionsContainerRef}>
@@ -221,122 +233,125 @@ export function FileSwitcher({
           <DotsHorizontalIcon aria-hidden="true" />
         </button>
         {actionsOpen ? (
-          <div
-            className="export-menu-list"
-            role="menu"
-            style={actionsMenuStyle}
-          >
-            <button
-              type="button"
-              role="menuitem"
-              className="export-menu-item"
-              disabled={creating}
-              onClick={async () => {
-                await onCreate()
-                setActionsOpen(false)
-              }}
+          <FixedMenuPortal>
+            <div
+              className="export-menu-list"
+              role="menu"
+              style={actionsMenuStyle}
+              ref={actionsMenuRef}
             >
-              <PlusIcon aria-hidden="true" />
-              <SpinnerLabel pending={creating} label="New" />
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              className="export-menu-item"
-              disabled={duplicating}
-              onClick={async () => {
-                await onDuplicate()
-                setActionsOpen(false)
-              }}
-            >
-              <CopyIcon aria-hidden="true" />
-              <SpinnerLabel pending={duplicating} label="Duplicate" />
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              className="export-menu-item"
-              disabled={
-                isReadOnlyFile(store.active) || renamingName === store.active
-              }
-              onClick={async () => {
-                const next = window.prompt(
-                  'Rename file',
-                  displayFileName(store.active),
-                )
-                const trimmed = next?.trim()
-                if (!trimmed || trimmed === store.active) return
-                await onRename(store.active, trimmed)
-                setActionsOpen(false)
-              }}
-            >
-              <Pencil1Icon aria-hidden="true" />
-              <SpinnerLabel
-                pending={renamingName === store.active}
-                label="Rename"
-              />
-            </button>
-            <ShareButton
-              filename={store.active}
-              content={fileContent(store, store.active)}
-              className="export-menu-item"
-            />
-            {onImportFile ? (
-              <ImportButton
-                disabled={isLoadingGithub}
-                importing={importing}
-                onImportFile={(file) => {
-                  onImportFile(file)
-                  setActionsOpen(false)
-                }}
-              />
-            ) : null}
-            <button
-              type="button"
-              role="menuitem"
-              className="export-menu-item export-menu-item--danger"
-              disabled={
-                isReadOnlyFile(store.active) || deletingName === store.active
-              }
-              onClick={async () => {
-                await onDelete(store.active)
-                setActionsOpen(false)
-              }}
-            >
-              <TrashIcon aria-hidden="true" />
-              <SpinnerLabel
-                pending={deletingName === store.active}
-                label="Delete"
-              />
-            </button>
-            {binNames.length > 0 ? (
               <button
                 type="button"
                 role="menuitem"
-                className="export-menu-item file-tab-bar-bin-trigger"
-                aria-haspopup="dialog"
-                onClick={() => {
+                className="export-menu-item"
+                disabled={creating}
+                onClick={async () => {
+                  await onCreate()
                   setActionsOpen(false)
-                  onOpenBin()
                 }}
               >
-                <ArchiveIcon aria-hidden="true" />
-                {`Bin (${binNames.length})`}
+                <PlusIcon aria-hidden="true" />
+                <SpinnerLabel pending={creating} label="New" />
               </button>
-            ) : null}
-            <button
-              type="button"
-              role="menuitem"
-              className="export-menu-item"
-              onClick={() => {
-                setActionsOpen(false)
-                onOpenStorageSettings()
-              }}
-            >
-              <GearIcon aria-hidden="true" />
-              Storage…
-            </button>
-          </div>
+              <button
+                type="button"
+                role="menuitem"
+                className="export-menu-item"
+                disabled={duplicating}
+                onClick={async () => {
+                  await onDuplicate()
+                  setActionsOpen(false)
+                }}
+              >
+                <CopyIcon aria-hidden="true" />
+                <SpinnerLabel pending={duplicating} label="Duplicate" />
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="export-menu-item"
+                disabled={
+                  isReadOnlyFile(store.active) || renamingName === store.active
+                }
+                onClick={async () => {
+                  const next = window.prompt(
+                    'Rename file',
+                    displayFileName(store.active),
+                  )
+                  const trimmed = next?.trim()
+                  if (!trimmed || trimmed === store.active) return
+                  await onRename(store.active, trimmed)
+                  setActionsOpen(false)
+                }}
+              >
+                <Pencil1Icon aria-hidden="true" />
+                <SpinnerLabel
+                  pending={renamingName === store.active}
+                  label="Rename"
+                />
+              </button>
+              <ShareButton
+                filename={store.active}
+                content={fileContent(store, store.active)}
+                className="export-menu-item"
+              />
+              {onImportFile ? (
+                <ImportButton
+                  disabled={isLoadingGithub}
+                  importing={importing}
+                  onImportFile={(file) => {
+                    onImportFile(file)
+                    setActionsOpen(false)
+                  }}
+                />
+              ) : null}
+              <button
+                type="button"
+                role="menuitem"
+                className="export-menu-item export-menu-item--danger"
+                disabled={
+                  isReadOnlyFile(store.active) || deletingName === store.active
+                }
+                onClick={async () => {
+                  await onDelete(store.active)
+                  setActionsOpen(false)
+                }}
+              >
+                <TrashIcon aria-hidden="true" />
+                <SpinnerLabel
+                  pending={deletingName === store.active}
+                  label="Delete"
+                />
+              </button>
+              {binNames.length > 0 ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="export-menu-item file-tab-bar-bin-trigger"
+                  aria-haspopup="dialog"
+                  onClick={() => {
+                    setActionsOpen(false)
+                    onOpenBin()
+                  }}
+                >
+                  <ArchiveIcon aria-hidden="true" />
+                  {`Bin (${binNames.length})`}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                role="menuitem"
+                className="export-menu-item"
+                onClick={() => {
+                  setActionsOpen(false)
+                  onOpenStorageSettings()
+                }}
+              >
+                <GearIcon aria-hidden="true" />
+                Storage…
+              </button>
+            </div>
+          </FixedMenuPortal>
         ) : null}
       </div>
     </div>
