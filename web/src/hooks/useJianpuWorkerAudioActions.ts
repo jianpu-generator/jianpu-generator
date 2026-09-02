@@ -1,6 +1,7 @@
 import type { RefObject } from 'react'
 import { useCallback } from 'react'
 import type { WorkerRequest } from '../worker/jianpu.worker'
+import { postAfterPaint } from './workerHelpers'
 
 interface UseJianpuWorkerAudioActionsParams {
   workerRef: RefObject<Worker | null>
@@ -74,7 +75,7 @@ export function useJianpuWorkerAudioActions({
     const id = ++audioRequestIdRef.current
     latestAudioIdRef.current = id
     setAudioGenerating(true)
-    worker.postMessage({
+    postAfterPaint(worker, {
       type: 'generateAudio',
       source: sourceRef.current,
       id,

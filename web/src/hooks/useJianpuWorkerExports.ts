@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import type { WorkerRequest } from '../worker/jianpu.worker'
-import { baseNameFromActiveFile } from './workerHelpers'
+import { baseNameFromActiveFile, postAfterPaint } from './workerHelpers'
 
 interface UseJianpuWorkerExportsParams {
   workerRef: React.RefObject<Worker | null>
@@ -88,7 +88,7 @@ export function useJianpuWorkerExports({
       enabledTracks: enabledTracksRef.current,
       disabledLyrics: disabledLyricsRef.current,
     }
-    worker.postMessage(payload)
+    postAfterPaint(worker, payload)
   }, [
     pdfExporting,
     splitPdfExporting,
@@ -115,7 +115,7 @@ export function useJianpuWorkerExports({
       id,
       baseName: baseNameFromActiveFile(activeFileRef.current),
     }
-    worker.postMessage(payload)
+    postAfterPaint(worker, payload)
   }, [
     pdfExporting,
     splitPdfExporting,
@@ -141,7 +141,7 @@ export function useJianpuWorkerExports({
       id,
       enabledTracks: enabledTracksRef.current,
     }
-    worker.postMessage(payload)
+    postAfterPaint(worker, payload)
   }, [
     midiExporting,
     workerRef,
@@ -166,7 +166,7 @@ export function useJianpuWorkerExports({
       id,
       baseName: baseNameFromActiveFile(activeFileRef.current),
     }
-    worker.postMessage(payload)
+    postAfterPaint(worker, payload)
   }, [
     splitMidiExporting,
     workerRef,
@@ -191,7 +191,7 @@ export function useJianpuWorkerExports({
       id,
       baseName: baseNameFromActiveFile(activeFileRef.current),
     }
-    worker.postMessage(payload)
+    postAfterPaint(worker, payload)
   }, [
     splitWavExporting,
     workerRef,
@@ -216,7 +216,7 @@ export function useJianpuWorkerExports({
       id,
       enabledTracks: enabledTracksRef.current,
     }
-    worker.postMessage(payload)
+    postAfterPaint(worker, payload)
   }, [
     mp3Exporting,
     workerRef,
@@ -241,7 +241,7 @@ export function useJianpuWorkerExports({
       id,
       baseName: baseNameFromActiveFile(activeFileRef.current),
     }
-    worker.postMessage(payload)
+    postAfterPaint(worker, payload)
   }, [
     splitMp3Exporting,
     workerRef,

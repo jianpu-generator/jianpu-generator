@@ -168,6 +168,19 @@ export function zipFilenameFromActiveFile(
   return suffix ? `${base} (${suffix}).zip` : `${base}.zip`
 }
 
+/** Posts `payload` to `worker` only after the browser has had a chance to
+ * paint — use this right after flipping an "…Exporting" flag to `true` so
+ * the resulting loading toast is guaranteed at least one visible frame
+ * before the worker's response can flip it back to `false`. Without this,
+ * a fast enough response (e.g. encoding a tiny fixture, or a paint delayed
+ * by CPU contention from other work) can let both state flips land in the
+ * same frame, so the toast never actually renders. `requestAnimationFrame`
+ * fires right before the next paint, so by the time it runs, any commit
+ * from the earlier `setState` call has already had its chance to paint. */
+export function postAfterPaint(worker: Worker, payload: unknown) {
+  requestAnimationFrame(() => worker.postMessage(payload))
+}
+
 export function baseNameFromActiveFile(activeFile: string): string {
   if (activeFile.endsWith('.jianpu')) {
     return activeFile.replace(/\.jianpu$/, '')

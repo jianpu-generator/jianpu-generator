@@ -36,7 +36,13 @@ export default defineConfig({
             // generated spec files don't support a per-scenario
             // `test.use({ launchOptions })` override, and the flags are
             // harmless for tests that don't hit large assets.
-            '--disk-cache-dir=/tmp/chromium-e2e-cache',
+            //
+            // Each worker runs in its own process, so `process.pid` gives
+            // every worker's Chromium instance a distinct cache dir — with
+            // `fullyParallel`, workers previously shared one dir and
+            // stomped on each other's cache writes/reads, causing
+            // intermittent slowdowns and timeouts under parallel runs.
+            `--disk-cache-dir=/tmp/chromium-e2e-cache-${process.pid}`,
             '--disable-http-cache',
           ],
         },
