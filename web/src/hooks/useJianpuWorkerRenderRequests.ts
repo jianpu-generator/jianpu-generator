@@ -15,6 +15,7 @@ interface UseJianpuWorkerRenderRequestsParams {
   disabledLyricsTracks: string[] | undefined
   setDocuments: (value: SvgDocumentOut[]) => void
   setNextWavUrl: (value: string | null) => void
+  setNextMp3Url: (value: string | null) => void
   setDiagnostics: (value: Diagnostic[]) => void
   setPartsLoading: (value: boolean) => void
   partsRequestIdRef: RefObject<number>
@@ -69,6 +70,7 @@ export function useJianpuWorkerRenderRequests({
   disabledLyricsTracks,
   setDocuments,
   setNextWavUrl,
+  setNextMp3Url,
   setDiagnostics,
   setPartsLoading,
   partsRequestIdRef,
@@ -104,8 +106,9 @@ export function useJianpuWorkerRenderRequests({
   useEffect(() => {
     setDocuments([])
     setNextWavUrl(null)
+    setNextMp3Url(null)
     setDiagnostics([])
-  }, [activeFile, setNextWavUrl])
+  }, [activeFile, setNextWavUrl, setNextMp3Url])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: source is intentional trigger
   useEffect(() => {

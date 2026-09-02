@@ -2,6 +2,7 @@ import type {
   GenerateMidiResponse,
   GeneratePdfResponse,
   GenerateSplitMidisResponse,
+  GenerateSplitMp3sResponse,
   GenerateSplitPdfsResponse,
   GenerateSplitWavsResponse,
 } from 'jianpu-wasm'
@@ -306,6 +307,66 @@ export function handleGenerateSplitWav(
 
   postMessage({
     type: 'splitWavErr',
+    id: msg.id,
+    diagnostics: result.diagnostics,
+  } satisfies WorkerResponse)
+}
+
+export function handleGenerateSplitMp3(
+  msg: Extract<WorkerRequest, { type: 'generateSplitMp3' }>,
+  generateSplitMp3s:
+    | ((
+        source: string,
+        baseName: string,
+        soundfont: Uint8Array,
+      ) => GenerateSplitMp3sResponse)
+    | null,
+  loadedSoundfont: Uint8Array | null,
+): void {
+  if (!generateSplitMp3s) {
+    postMessage({
+      type: 'splitMp3Err',
+      id: msg.id,
+      diagnostics: [
+        {
+          severity: 'error',
+          message: 'Split MP3 export is not available in this build.',
+          span: { start: 0, end: 0 },
+        },
+      ],
+    } satisfies WorkerResponse)
+    return
+  }
+  if (!loadedSoundfont) {
+    postMessage({
+      type: 'splitMp3Err',
+      id: msg.id,
+      diagnostics: [
+        {
+          severity: 'error',
+          message: 'Soundfont is not yet loaded.',
+          span: { start: 0, end: 0 },
+        },
+      ],
+    } satisfies WorkerResponse)
+    return
+  }
+  const result = generateSplitMp3s(msg.source, msg.baseName, loadedSoundfont)
+  if (result.status === 'ok') {
+    const zipBuffer = binaryBufferFromResult(result.zip)
+    postMessage(
+      {
+        type: 'splitMp3',
+        id: msg.id,
+        zip: zipBuffer,
+      } satisfies WorkerResponse,
+      { transfer: [zipBuffer] },
+    )
+    return
+  }
+
+  postMessage({
+    type: 'splitMp3Err',
     id: msg.id,
     diagnostics: result.diagnostics,
   } satisfies WorkerResponse)

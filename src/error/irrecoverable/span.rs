@@ -18,6 +18,7 @@ fn export_span(kind: &IrrecoverableErrorKind) -> Option<&Span> {
         | IrrecoverableErrorKind::WavWriterCreateFailed { span, .. }
         | IrrecoverableErrorKind::WavWriteSampleFailed { span, .. }
         | IrrecoverableErrorKind::WavFinalizeFailed { span, .. }
+        | IrrecoverableErrorKind::Mp3EncodeFailed { span, .. }
         | IrrecoverableErrorKind::PdfSvgParseFailed { span, .. }
         | IrrecoverableErrorKind::PdfSvgConversionFailed { span, .. }
         | IrrecoverableErrorKind::ZipStartFileFailed { span, .. }

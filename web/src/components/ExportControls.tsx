@@ -31,6 +31,12 @@ interface ExportControlsProps {
   audioAvailable?: boolean
   splitWavExporting?: boolean
   onExportSplitWav?: () => void
+  mp3Available?: boolean
+  mp3Exporting?: boolean
+  mp3Url?: string | null
+  onExportMp3?: () => void
+  splitMp3Exporting?: boolean
+  onExportSplitMp3?: () => void
   partsCount?: number
   isLoadingGithub?: boolean
 }
@@ -56,6 +62,12 @@ export function ExportControls({
   audioAvailable = false,
   splitWavExporting = false,
   onExportSplitWav,
+  mp3Available = false,
+  mp3Exporting = false,
+  mp3Url = null,
+  onExportMp3,
+  splitMp3Exporting = false,
+  onExportSplitMp3,
   partsCount = 0,
   isLoadingGithub = false,
 }: ExportControlsProps) {
@@ -96,8 +108,17 @@ export function ExportControls({
     !splitWavExporting &&
     !audioGenerating &&
     !isLoadingGithub
+  const canExportMp3 =
+    mp3Available && soundfontReady && !mp3Exporting && !isLoadingGithub
+  const canExportSplitMp3 =
+    mp3Available &&
+    soundfontReady &&
+    partsCount > 0 &&
+    !splitMp3Exporting &&
+    !isLoadingGithub
 
-  const canExport = pdfAvailable || midiAvailable || audioAvailable
+  const canExport =
+    pdfAvailable || midiAvailable || audioAvailable || mp3Available
   const canExportParts = canExport && (partsCount > 1 || isLoadingGithub)
 
   const exportItems: ExportMenuItem[] = [
@@ -140,6 +161,19 @@ export function ExportControls({
           },
         ]
       : []),
+    ...(mp3Available
+      ? [
+          {
+            key: 'mp3',
+            label: mp3Url ? 'MP3 (regenerate)' : 'MP3',
+            busyLabel: 'Generating MP3…',
+            busy: mp3Exporting,
+            disabled: !canExportMp3,
+            onSelect: () => onExportMp3?.(),
+            icon: <SpeakerLoudIcon aria-hidden="true" />,
+          },
+        ]
+      : []),
   ]
 
   const exportPartsItems: ExportMenuItem[] = [
@@ -179,6 +213,19 @@ export function ExportControls({
             disabled: !canExportSplitMidi,
             onSelect: () => onExportSplitMidi?.(),
             icon: <DiscIcon aria-hidden="true" />,
+          },
+        ]
+      : []),
+    ...(mp3Available
+      ? [
+          {
+            key: 'mp3-parts',
+            label: 'MP3 (ZIP)',
+            busyLabel: 'Exporting…',
+            busy: splitMp3Exporting,
+            disabled: !canExportSplitMp3,
+            onSelect: () => onExportSplitMp3?.(),
+            icon: <SpeakerLoudIcon aria-hidden="true" />,
           },
         ]
       : []),

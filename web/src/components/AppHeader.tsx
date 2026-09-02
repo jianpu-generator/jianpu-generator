@@ -86,6 +86,12 @@ interface AppHeaderProps {
   onExportSplitMidi?: () => void
   splitWavExporting?: boolean
   onExportSplitWav?: () => void
+  mp3Available?: boolean
+  mp3Exporting?: boolean
+  mp3Url?: string | null
+  onExportMp3?: () => void
+  splitMp3Exporting?: boolean
+  onExportSplitMp3?: () => void
   partsCount?: number
   importing?: boolean
   onImportFile?: (file: File) => void
@@ -140,6 +146,12 @@ export function AppHeader({
   onExportSplitMidi,
   splitWavExporting,
   onExportSplitWav,
+  mp3Available,
+  mp3Exporting,
+  mp3Url,
+  onExportMp3,
+  splitMp3Exporting,
+  onExportSplitMp3,
   partsCount,
   importing,
   onImportFile,
@@ -263,6 +275,12 @@ export function AppHeader({
           audioAvailable={audioAvailable}
           splitWavExporting={splitWavExporting}
           onExportSplitWav={onExportSplitWav}
+          mp3Available={mp3Available}
+          mp3Exporting={mp3Exporting}
+          mp3Url={mp3Url}
+          onExportMp3={onExportMp3}
+          splitMp3Exporting={splitMp3Exporting}
+          onExportSplitMp3={onExportSplitMp3}
           partsCount={partsCount}
           isLoadingGithub={isLoadingGithub}
         />

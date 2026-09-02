@@ -65,6 +65,8 @@ export default function App() {
     documents,
     wavUrl,
     wavFilename,
+    mp3Url,
+    mp3Filename,
     noteTimings,
     audioAvailable,
     pdfAvailable,
@@ -83,6 +85,11 @@ export default function App() {
     exportSplitMidi,
     splitWavExporting,
     exportSplitWav,
+    mp3Available,
+    mp3Exporting,
+    exportMp3,
+    splitMp3Exporting,
+    exportSplitMp3,
     generateFullAudio,
     selectedMeasureRange,
     measureAudioGenerating,
@@ -213,6 +220,12 @@ export default function App() {
         onExportSplitMidi={exportSplitMidi}
         splitWavExporting={splitWavExporting}
         onExportSplitWav={exportSplitWav}
+        mp3Available={mp3Available}
+        mp3Exporting={mp3Exporting}
+        mp3Url={mp3Url}
+        onExportMp3={exportMp3}
+        splitMp3Exporting={splitMp3Exporting}
+        onExportSplitMp3={exportSplitMp3}
         partsCount={parts.length}
         importing={importingFile}
         onImportFile={handleImportFile}
@@ -236,7 +249,23 @@ export default function App() {
         onRestore={handleRestore}
         restoringFileName={restoringFileName}
       />
-      <ExportAudioToast open={audioGenerating} />
+      <ExportAudioToast
+        open={
+          audioGenerating ||
+          mp3Exporting ||
+          splitWavExporting ||
+          splitMp3Exporting
+        }
+        label={
+          audioGenerating
+            ? 'Generating WAV…'
+            : mp3Exporting
+              ? 'Generating MP3…'
+              : splitWavExporting
+                ? 'Exporting WAV (ZIP)…'
+                : 'Exporting MP3 (ZIP)…'
+        }
+      />
       <SectionJumpToolbar {...sectionJumpToolbarProps} />
       <SequenceJumpToolbar {...sequenceJumpToolbarProps} />
       <PartToggles
@@ -302,6 +331,9 @@ export default function App() {
         audioGenerating={audioGenerating}
         wavUrl={wavUrl}
         wavFilename={wavFilename}
+        mp3Exporting={mp3Exporting}
+        mp3Url={mp3Url}
+        mp3Filename={mp3Filename}
         noteTimings={noteTimings}
         measureAudioNoteTimings={measureAudioNoteTimings}
         measureAudioElement={measureAudioElement}

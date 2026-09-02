@@ -5,15 +5,16 @@
   "type": "module",
   "packageManager": "pnpm@10.12.1",
   "scripts": {
-    "build:wasm": "wasm-pack build ../crates/jianpu-wasm --target web --out-dir pkg --no-opt -- --features wav,pdf,midi",
-    "build:wasm:audio": "wasm-pack build ../crates/jianpu-wasm --target web --out-dir pkg --no-opt -- --features wav",
-    "predev": "wasm-pack build ../crates/jianpu-wasm --target web --out-dir pkg --no-opt -- --features wav,pdf,midi",
+    "build:wasm": "wasm-pack build ../crates/jianpu-wasm --target web --out-dir pkg --no-opt -- --features wav,mp3,pdf,midi",
+    "build:wasm:audio": "wasm-pack build ../crates/jianpu-wasm --target web --out-dir pkg --no-opt -- --features wav,mp3",
+    "predev": "wasm-pack build ../crates/jianpu-wasm --target web --out-dir pkg --no-opt -- --features wav,mp3,pdf,midi",
     "dev": "vite",
-    "prebuild": "wasm-pack build ../crates/jianpu-wasm --target web --out-dir pkg --no-opt -- --features wav,pdf,midi",
+    "prebuild": "wasm-pack build ../crates/jianpu-wasm --target web --out-dir pkg --no-opt -- --features wav,mp3,pdf,midi",
     "build": "tsc -b && vite build",
     "check": "knip --include files,dependencies",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
+    "lint:ast-grep": "ast-grep scan --config sgconfig.yml src",
     "format": "biome format --write .",
     "preview": "vite preview",
     "test:e2e": "bddgen && playwright test",
@@ -44,6 +45,7 @@
     "usehooks-ts": "^3.1.1"
   },
   "devDependencies": {
+    "@ast-grep/cli": "^0.45.3",
     "@biomejs/biome": "^2.4.16",
     "@playwright/test": "^1.60.0",
     "@types/node": "^24.10.1",
@@ -59,6 +61,7 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "@ast-grep/cli",
       "esbuild",
       "wasm-pack"
     ]

@@ -202,6 +202,10 @@ Then(
   },
 )
 
+Then('only one inline audio player is visible', async ({ page }) => {
+  await expect(page.locator('.preview-audio-player')).toHaveCount(1)
+})
+
 Then(
   'the export menu shows a {string} item',
   async ({ page }, itemName: string) => {
@@ -230,3 +234,10 @@ Then(
 Then('the downloaded file is named {string}', async ({}, filename: string) => {
   expect(lastDownload?.suggestedFilename()).toBe(filename)
 })
+
+When(
+  'I wait for the download to finish, as seen in export audio',
+  async ({ page }) => {
+    await page.waitForEvent('download', { timeout: 30_000 })
+  },
+)

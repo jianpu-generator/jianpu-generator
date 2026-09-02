@@ -265,3 +265,33 @@ pub fn write_split_wavs_from_source(
     }
     Ok(entries)
 }
+
+/// Parse once, synthesize one MP3 file per track.
+///
+/// `tracks_filter`: empty → all tracks; non-empty → only listed abbreviations.
+#[cfg(feature = "mp3")]
+pub fn write_split_mp3s_from_source(
+    source: &str,
+    filename: &str,
+    base_name: &str,
+    tracks_filter: &[String],
+    sf2_bytes: &[u8],
+) -> Result<Vec<SplitFileEntry>, IrrecoverableError> {
+    let score = crate::compile(source, filename, &[])?;
+    let track_names = split_track_names(source, filename, &score, tracks_filter)?;
+    let display_names = part_display_name_map(source, filename)?;
+    let mut entries = Vec::with_capacity(track_names.len());
+    for track in track_names {
+        let mut score_clone = score.clone();
+        filter_tracks(&mut score_clone, std::slice::from_ref(&track));
+        let midi_bytes = crate::midi::write_midi(&score_clone)?;
+        let mp3 = crate::wav::write_mp3(&midi_bytes, sf2_bytes, None)?;
+        let label = split_track_label(&display_names, &track);
+        entries.push(SplitFileEntry {
+            track_name: track.clone(),
+            filename: split_track_filename(base_name, &label, "mp3"),
+            bytes: mp3,
+        });
+    }
+    Ok(entries)
+}

@@ -21,6 +21,25 @@ pub fn write_wav_from_source_filtered(
     crate::wav::write_wav(&midi_bytes, sf2_bytes, None)
 }
 
+/// Parse, group, optionally filter tracks, and synthesize MP3 bytes.
+///
+/// When `enabled_tracks` is `None`, all parts are included.
+/// When `Some(tracks)` is empty, no parts are included.
+#[cfg(feature = "mp3")]
+pub fn write_mp3_from_source_filtered(
+    source: &str,
+    filename: &str,
+    enabled_tracks: Option<&[String]>,
+    sf2_bytes: &[u8],
+    instruments: &[InstrumentInfo],
+) -> Result<Vec<u8>, IrrecoverableError> {
+    let mut score = compile(source, filename, instruments)?;
+    apply_track_filter(&mut score, enabled_tracks);
+    let score = crate::midi::expand_navigation(&score)?;
+    let midi_bytes = crate::midi::write_midi(&score)?;
+    crate::wav::write_mp3(&midi_bytes, sf2_bytes, None)
+}
+
 /// A measure range to synthesize, plus how its end measure should be
 /// resolved when it recurs later in the performance (due to a repeat/jump).
 ///
@@ -96,6 +115,32 @@ pub fn write_wav_for_measure_range_from_source(
     )?;
     let midi_bytes = crate::midi::write_midi_for_measure_range(&score, start, end)?;
     crate::wav::write_wav(&midi_bytes, sf2_bytes, options.trim)
+}
+
+/// Parse, group, optionally filter tracks, and synthesize MP3 for a consecutive measure range.
+///
+/// BPM and key context is accumulated from all measures before the range's start.
+#[cfg(feature = "mp3")]
+pub fn write_mp3_for_measure_range_from_source(
+    source: &str,
+    filename: &str,
+    selection: &MeasureRangeSelection,
+    options: &MeasureRangeAudioOptions,
+    sf2_bytes: &[u8],
+    instruments: &[InstrumentInfo],
+) -> Result<Vec<u8>, IrrecoverableError> {
+    let mut score = compile(source, filename, instruments)?;
+    apply_track_filter(&mut score, options.enabled_tracks);
+    let (score, start, end) = crate::midi::expand_for_measure_range(
+        &score,
+        *selection.range.start(),
+        *selection.range.end(),
+        selection.extend_to_last_occurrence,
+        selection.respect_sequence,
+        selection.sequence_entry_range.clone(),
+    )?;
+    let midi_bytes = crate::midi::write_midi_for_measure_range(&score, start, end)?;
+    crate::wav::write_mp3(&midi_bytes, sf2_bytes, options.trim)
 }
 
 /// Parse, group, optionally filter tracks, and compute the elapsed-seconds

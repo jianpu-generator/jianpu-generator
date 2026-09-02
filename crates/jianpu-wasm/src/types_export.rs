@@ -113,3 +113,31 @@ pub enum GenerateSplitWavsResponse {
         diagnostics: Vec<DiagnosticOut>,
     },
 }
+
+#[cfg(feature = "mp3")]
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[serde(tag = "status", rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum GenerateMp3Response {
+    Ok {
+        #[tsify(type = "Uint8Array")]
+        mp3: Vec<u8>,
+    },
+    Err {
+        diagnostics: Vec<DiagnosticOut>,
+    },
+}
+
+#[cfg(feature = "mp3")]
+#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[serde(tag = "status", rename_all = "camelCase")]
+#[tsify(into_wasm_abi)]
+pub enum GenerateSplitMp3sResponse {
+    Ok {
+        #[tsify(type = "Uint8Array")]
+        zip: Vec<u8>,
+    },
+    Err {
+        diagnostics: Vec<DiagnosticOut>,
+    },
+}

@@ -30,6 +30,11 @@ export interface JianpuWorkerState {
   documents: SvgDocumentOut[]
   wavUrl: string | null
   wavFilename: string
+  /** The full-score preview MP3 URL, mirroring `wavUrl` — mutually exclusive
+   * with it (generating one revokes and clears the other), so `Preview`
+   * shows whichever was most recently generated. */
+  mp3Url: string | null
+  mp3Filename: string
   /** Elapsed-seconds start/end of every sounding note/rest for `wavUrl`'s audio, keyed by `(source_part_index, note_id)`. Drives the per-part, per-note playback cursor. */
   noteTimings: NoteTimingOut[]
   audioAvailable: boolean
@@ -40,6 +45,9 @@ export interface JianpuWorkerState {
   midiExporting: boolean
   splitMidiExporting: boolean
   splitWavExporting: boolean
+  mp3Available: boolean
+  mp3Exporting: boolean
+  splitMp3Exporting: boolean
   diagnostics: Diagnostic[]
   diagnosticViewZones: DiagnosticViewZone[]
   rendering: boolean
@@ -49,6 +57,8 @@ export interface JianpuWorkerState {
   exportMidi: () => void
   exportSplitMidi: () => void
   exportSplitWav: () => void
+  exportMp3: () => void
+  exportSplitMp3: () => void
   generateFullAudio: () => void
   selectedMeasureRange: {
     start: number

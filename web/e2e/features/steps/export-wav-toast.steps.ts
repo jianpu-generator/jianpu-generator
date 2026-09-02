@@ -62,8 +62,8 @@ When(
 )
 
 Then(
-  'the export menu closes immediately after choosing WAV',
-  async ({ page }) => {
+  'the export menu closes immediately after choosing {string}',
+  async ({ page }, _itemName: string) => {
     // Clicking the menu item closes the dropdown immediately (ExportMenuButton
     // sets `open` to false on select), so the toast is the only place a user
     // can observe that export is still running.
@@ -71,11 +71,15 @@ Then(
   },
 )
 
-Then('the WAV export toast is visible with a spinner', async ({ page }) => {
-  const toast = page.getByTestId('wav-export-toast')
-  await expect(toast).toBeVisible({ timeout: 5_000 })
-  await expect(toast.locator('.file-tab-bar-spinner')).toBeVisible()
-})
+Then(
+  'the export toast is visible with a spinner and says {string}',
+  async ({ page }, label: string) => {
+    const toast = page.getByTestId('export-audio-toast')
+    await expect(toast).toBeVisible({ timeout: 5_000 })
+    await expect(toast.locator('.file-tab-bar-spinner')).toBeVisible()
+    await expect(toast).toHaveText(label)
+  },
+)
 
 Then('the inline audio player eventually becomes visible', async ({ page }) => {
   const audioPlayer = page.locator('.preview-audio-player')
@@ -83,10 +87,10 @@ Then('the inline audio player eventually becomes visible', async ({ page }) => {
 })
 
 Then(
-  'the WAV export toast goes away once generation finishes',
+  'the export toast goes away once generation finishes',
   async ({ page }) => {
     // Once generation finishes the toast should go away rather than linger.
-    const toast = page.getByTestId('wav-export-toast')
+    const toast = page.getByTestId('export-audio-toast')
     await expect(toast).not.toBeVisible({ timeout: 5_000 })
   },
 )

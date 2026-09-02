@@ -150,6 +150,16 @@ export function wavFilenameFromActiveFile(
   return withEnabledPartsSuffix(base, enabledPartNames)
 }
 
+export function mp3FilenameFromActiveFile(
+  activeFile: string,
+  enabledPartNames?: string[],
+): string {
+  const base = activeFile.endsWith('.jianpu')
+    ? activeFile.replace(/\.jianpu$/, '.mp3')
+    : `${activeFile}.mp3`
+  return withEnabledPartsSuffix(base, enabledPartNames)
+}
+
 export function zipFilenameFromActiveFile(
   activeFile: string,
   suffix?: string,

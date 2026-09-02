@@ -28,6 +28,10 @@ pub enum IrrecoverableErrorKind {
         span: Span,
         source: String,
     },
+    Mp3EncodeFailed {
+        span: Span,
+        source: String,
+    },
     PdfSvgParseFailed {
         span: Span,
         detail: String,

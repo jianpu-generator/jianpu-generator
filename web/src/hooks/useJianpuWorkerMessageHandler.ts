@@ -27,6 +27,7 @@ export interface WorkerMessageHandlerDeps {
   setAudioAvailable: (value: boolean) => void
   setPdfAvailable: (value: boolean) => void
   setMidiAvailable: (value: boolean) => void
+  setMp3Available: (value: boolean) => void
   latestPartsIdRef: RefObject<number>
   setPartsLoading: (value: boolean) => void
   setParts: (value: PartInfo[]) => void
@@ -53,6 +54,10 @@ export interface WorkerMessageHandlerDeps {
   setSplitMidiExporting: (value: boolean) => void
   latestSplitWavIdRef: RefObject<number>
   setSplitWavExporting: (value: boolean) => void
+  latestMp3IdRef: RefObject<number>
+  setMp3Exporting: (value: boolean) => void
+  latestSplitMp3IdRef: RefObject<number>
+  setSplitMp3Exporting: (value: boolean) => void
   latestRenderIdRef: RefObject<number>
   setRendering: (value: boolean) => void
   setDocuments: (value: SvgDocumentOut[]) => void
@@ -60,6 +65,7 @@ export interface WorkerMessageHandlerDeps {
   latestAudioIdRef: RefObject<number>
   setAudioGenerating: (value: boolean) => void
   setNextWavUrl: (value: string | null) => void
+  setNextMp3Url: (value: string | null) => void
   setNoteTimings: (value: NoteTimingOut[]) => void
   latestMeasureAudioIdRef: RefObject<number>
   setMeasureAudioGenerating: (value: boolean) => void
@@ -96,6 +102,7 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       deps.setAudioAvailable(msg.audioAvailable)
       deps.setPdfAvailable(msg.pdfAvailable)
       deps.setMidiAvailable(msg.midiAvailable)
+      deps.setMp3Available(msg.mp3Available)
       return
     }
 
@@ -218,6 +225,40 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
     if (msg.type === 'splitWavErr') {
       if (msg.id !== deps.latestSplitWavIdRef.current) return
       deps.setSplitWavExporting(false)
+      deps.setDiagnostics(msg.diagnostics)
+      return
+    }
+
+    if (msg.type === 'mp3') {
+      if (msg.id !== deps.latestMp3IdRef.current) return
+      deps.setMp3Exporting(false)
+      const url = URL.createObjectURL(
+        new Blob([msg.mp3], { type: 'audio/mpeg' }),
+      )
+      deps.setNextMp3Url(url)
+      return
+    }
+
+    if (msg.type === 'mp3Err') {
+      if (msg.id !== deps.latestMp3IdRef.current) return
+      deps.setMp3Exporting(false)
+      deps.setDiagnostics(msg.diagnostics)
+      return
+    }
+
+    if (msg.type === 'splitMp3') {
+      if (msg.id !== deps.latestSplitMp3IdRef.current) return
+      deps.setSplitMp3Exporting(false)
+      downloadZip(
+        msg.zip,
+        zipFilenameFromActiveFile(deps.activeFileRef.current, 'MP3 parts'),
+      )
+      return
+    }
+
+    if (msg.type === 'splitMp3Err') {
+      if (msg.id !== deps.latestSplitMp3IdRef.current) return
+      deps.setSplitMp3Exporting(false)
       deps.setDiagnostics(msg.diagnostics)
       return
     }

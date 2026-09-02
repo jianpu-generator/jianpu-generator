@@ -139,6 +139,9 @@ interface AppWorkspaceProps {
   audioGenerating: boolean
   wavUrl: string | null
   wavFilename: string
+  mp3Exporting: boolean
+  mp3Url: string | null
+  mp3Filename: string
   noteTimings: NoteTimingOut[]
   measureAudioNoteTimings: NoteTimingOut[]
   measureAudioElement: HTMLAudioElement | null
@@ -199,6 +202,9 @@ export function AppWorkspace({
   audioGenerating,
   wavUrl,
   wavFilename,
+  mp3Exporting,
+  mp3Url,
+  mp3Filename,
   noteTimings,
   measureAudioNoteTimings,
   measureAudioElement,
@@ -354,6 +360,9 @@ export function AppWorkspace({
           audioGenerating={audioGenerating}
           wavUrl={wavUrl}
           wavFilename={wavFilename}
+          mp3Exporting={mp3Exporting}
+          mp3Url={mp3Url}
+          mp3Filename={mp3Filename}
           noteTimings={noteTimings}
           measureAudioNoteTimings={measureAudioNoteTimings}
           measureAudioElement={measureAudioElement}

@@ -22,6 +22,12 @@ mod responses_wav;
 #[cfg(feature = "wav")]
 pub(crate) use responses_wav::*;
 
+#[cfg(feature = "mp3")]
+#[path = "responses_mp3.rs"]
+mod responses_mp3;
+#[cfg(feature = "mp3")]
+pub(crate) use responses_mp3::*;
+
 #[cfg(feature = "pdf")]
 #[path = "responses_pdf.rs"]
 mod responses_pdf;

@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
-use jianpu_generator::cli::generate::{generate_midi, generate_pdf, generate_svg, generate_wav};
+use jianpu_generator::cli::generate::{
+    generate_midi, generate_mp3, generate_pdf, generate_svg, generate_wav,
+};
 use jianpu_generator::cli::{check, GenerateInput};
 use jianpu_generator::{self as jg, error_reporter};
 use std::path::PathBuf;
@@ -62,6 +64,18 @@ enum GenerateFormat {
         split_tracks: bool,
     },
     Wav {
+        input: PathBuf,
+        #[arg(long, help = "Output file stem (extension is added automatically)")]
+        output: Option<PathBuf>,
+        #[arg(long, value_delimiter = ',', num_args = 0.., help = "Comma-separated list of track names to include (e.g. --tracks S1,S2)")]
+        tracks: Vec<String>,
+        #[arg(
+            long,
+            help = "Generate one file per track instead of a single combined file"
+        )]
+        split_tracks: bool,
+    },
+    Mp3 {
         input: PathBuf,
         #[arg(long, help = "Output file stem (extension is added automatically)")]
         output: Option<PathBuf>,
@@ -147,6 +161,17 @@ fn run_generate(format: GenerateFormat) -> Result<(), jg::error::IrrecoverableEr
             tracks,
             split_tracks,
         } => generate_wav(&GenerateInput {
+            input,
+            output,
+            tracks,
+            split_tracks,
+        }),
+        GenerateFormat::Mp3 {
+            input,
+            output,
+            tracks,
+            split_tracks,
+        } => generate_mp3(&GenerateInput {
             input,
             output,
             tracks,

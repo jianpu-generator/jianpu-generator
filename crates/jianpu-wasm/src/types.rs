@@ -12,6 +12,8 @@ pub(crate) use crate::note_selection_types::{
 
 #[cfg(feature = "midi")]
 pub(crate) use crate::types_export::{GenerateMidiResponse, GenerateSplitMidisResponse};
+#[cfg(feature = "mp3")]
+pub(crate) use crate::types_export::{GenerateMp3Response, GenerateSplitMp3sResponse};
 #[cfg(feature = "pdf")]
 pub(crate) use crate::types_export::{GeneratePdfResponse, GenerateSplitPdfsResponse};
 #[cfg(feature = "wav")]

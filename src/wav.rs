@@ -13,6 +13,12 @@ mod wav_trim;
 use wav_trim::trim_and_fade;
 pub use wav_trim::TrimWindow;
 
+#[cfg(feature = "mp3")]
+#[path = "wav_mp3.rs"]
+mod wav_mp3;
+#[cfg(feature = "mp3")]
+use wav_mp3::encode_mp3;
+
 fn init_synth(sf2_bytes: &[u8]) -> Result<Synth, IrrecoverableError> {
     let mut synth = Synth::new(SynthDescriptor {
         sample_rate: SAMPLE_RATE as f32,
@@ -100,11 +106,15 @@ fn render_track(
     }
 }
 
-pub fn write_wav(
+/// Parse MIDI, render it through the synth, render a decay tail, optionally
+/// trim/fade to a window, and normalize peak level. Shared by [`write_wav`]
+/// and (behind the `mp3` feature) [`write_mp3`] — the two differ only in how
+/// the resulting `(left, right)` samples are encoded to bytes.
+fn render_score_to_samples(
     midi_bytes: &[u8],
     sf2_bytes: &[u8],
     trim: Option<TrimWindow>,
-) -> Result<Vec<u8>, IrrecoverableError> {
+) -> Result<(Vec<f32>, Vec<f32>), IrrecoverableError> {
     let smf = Smf::parse(midi_bytes).map_err(|_| {
         IrrecoverableError::new(IrrecoverableErrorKind::WavInvalidMidiBytes {
             span: Span::new(0, 0),
@@ -135,7 +145,32 @@ pub fn write_wav(
     }
 
     normalize_peak(&mut all_l, &mut all_r);
+    Ok((all_l, all_r))
+}
+
+pub fn write_wav(
+    midi_bytes: &[u8],
+    sf2_bytes: &[u8],
+    trim: Option<TrimWindow>,
+) -> Result<Vec<u8>, IrrecoverableError> {
+    let (all_l, all_r) = render_score_to_samples(midi_bytes, sf2_bytes, trim)?;
     encode_wav(&all_l, &all_r)
+}
+
+/// Synthesize a score to 128kbps CBR MP3 bytes — the same rendering pipeline
+/// as [`write_wav`], only the final encode step differs. No user-facing
+/// bitrate knob: this project's scores are small and largely monophonic, so
+/// a fixed rate is enough.
+///
+/// Available only when the `mp3` feature is enabled at build time.
+#[cfg(feature = "mp3")]
+pub fn write_mp3(
+    midi_bytes: &[u8],
+    sf2_bytes: &[u8],
+    trim: Option<TrimWindow>,
+) -> Result<Vec<u8>, IrrecoverableError> {
+    let (all_l, all_r) = render_score_to_samples(midi_bytes, sf2_bytes, trim)?;
+    encode_mp3(&all_l, &all_r)
 }
 
 pub fn write_preview_wav(

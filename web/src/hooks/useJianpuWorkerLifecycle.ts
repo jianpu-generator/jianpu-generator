@@ -10,6 +10,7 @@ import {
 export interface JianpuWorkerLifecycleDeps extends WorkerMessageHandlerDeps {
   workerRef: RefObject<Worker | null>
   wavUrlRef: RefObject<string | null>
+  mp3UrlRef: RefObject<string | null>
   measureWavUrlRef: RefObject<string | null>
   cursorOffsetTimerRef: RefObject<number | null>
   soundfontBytes: Uint8Array | null
@@ -26,7 +27,13 @@ export interface JianpuWorkerLifecycleDeps extends WorkerMessageHandlerDeps {
 /** Creates and tears down the render worker, wires up its message handler, and forwards
  * the soundfont/PDF fonts to it once they've loaded. */
 export function useJianpuWorkerLifecycle(deps: JianpuWorkerLifecycleDeps) {
-  const { workerRef, wavUrlRef, measureWavUrlRef, cursorOffsetTimerRef } = deps
+  const {
+    workerRef,
+    wavUrlRef,
+    mp3UrlRef,
+    measureWavUrlRef,
+    cursorOffsetTimerRef,
+  } = deps
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: deps are stable refs/setters from sibling hooks
   useEffect(() => {
@@ -56,6 +63,10 @@ export function useJianpuWorkerLifecycle(deps: JianpuWorkerLifecycleDeps) {
         URL.revokeObjectURL(wavUrlRef.current)
         wavUrlRef.current = null
       }
+      if (mp3UrlRef.current) {
+        URL.revokeObjectURL(mp3UrlRef.current)
+        mp3UrlRef.current = null
+      }
       if (measureWavUrlRef.current) {
         URL.revokeObjectURL(measureWavUrlRef.current)
         measureWavUrlRef.current = null
@@ -64,7 +75,7 @@ export function useJianpuWorkerLifecycle(deps: JianpuWorkerLifecycleDeps) {
         window.clearTimeout(cursorOffsetTimerRef.current)
       }
     }
-  }, [deps.setNextWavUrl, deps.setNextMeasureWavUrl])
+  }, [deps.setNextWavUrl, deps.setNextMp3Url, deps.setNextMeasureWavUrl])
 
   useEffect(() => {
     const worker = workerRef.current

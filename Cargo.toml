@@ -2,6 +2,14 @@
 members = [".", "crates/jianpu-wasm", "tools/dead-pub-check"]
 resolver = "2"
 
+[patch.crates-io]
+# `rusty_mp3` 0.7.0's stage profiler calls `std::time::Instant::now()`
+# unconditionally on every encode/decode step, which panics at runtime on
+# wasm32-unknown-unknown (no time source there). Vendored copy with the
+# profiler cfg-gated to skip timing on wasm32 instead of aborting.
+# See vendor/rusty_mp3/src/{encode,decode}/mod.rs.
+rusty_mp3 = { path = "vendor/rusty_mp3" }
+
 [workspace.lints.rust]
 unsafe_code = "forbid"
 unreachable_pub = "deny"
@@ -55,10 +63,11 @@ required-features = ["cli"]
 
 [features]
 default = ["cli"]
-cli = ["dep:clap", "pdf", "midi", "wav"]
+cli = ["dep:clap", "pdf", "midi", "wav", "mp3"]
 pdf = ["dep:svg2pdf", "dep:pdf-writer", "dep:zip"]
 midi = ["dep:midly", "dep:zip"]
 wav = ["midi", "dep:oxisynth", "dep:hound"]
+mp3 = ["wav", "dep:rusty_mp3"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -72,6 +81,7 @@ pdf-writer = { version = "0.12", optional = true }
 midly = { version = "0.5", optional = true }
 oxisynth = { version = "0.0.5", optional = true }
 hound = { version = "3", optional = true }
+rusty_mp3 = { version = "0.7", optional = true }
 zip = { version = "2", default-features = false, features = ["deflate"], optional = true }
 ttf-parser = { version = "0.25.1", default-features = false, features = ["std"] }
 base64 = "0.22"

@@ -10,12 +10,16 @@ mod svg_types;
 mod svg_types_convert;
 mod symbols;
 mod types;
-#[cfg(any(feature = "wav", feature = "pdf", feature = "midi"))]
+#[cfg(any(feature = "wav", feature = "mp3", feature = "pdf", feature = "midi"))]
 mod types_export;
 
 #[cfg(feature = "wav")]
 #[path = "lib_wav.rs"]
 pub mod lib_wav;
+
+#[cfg(feature = "mp3")]
+#[path = "lib_mp3.rs"]
+pub mod lib_mp3;
 
 #[cfg(feature = "pdf")]
 #[path = "lib_pdf.rs"]

@@ -11,6 +11,7 @@ crate-type = ["cdylib", "rlib"]
 default = []
 midi = ["jianpu-generator/midi"]
 wav = ["midi", "jianpu-generator/wav"]
+mp3 = ["wav", "jianpu-generator/mp3"]
 pdf = ["jianpu-generator/pdf"]
 
 [dependencies]

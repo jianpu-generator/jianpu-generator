@@ -2,22 +2,18 @@ import { useCallback, useRef, useState } from 'react'
 import { fileIdForName, selectFile } from '../fileStore'
 import type { EditorHandle } from '../types'
 import { useAppPanels } from './useAppPanels'
+import { useAppSelectionAndNavigation } from './useAppSelectionAndNavigation'
 import { useAssetLoader } from './useAssetLoader'
 import { useFileImport } from './useFileImport'
 import { useFileOperations } from './useFileOperations'
 import { useFontsLoader } from './useFontsLoader'
 import { useJianpuWorker } from './useJianpuWorker'
-import { useLyricSelection } from './useLyricSelection'
-import { useMeasureRangeSelection } from './useMeasureRangeSelection'
-import { useNoteSelection } from './useNoteSelection'
 import { usePartTogglePruning } from './usePartTogglePruning'
 import {
   noPartsSelected as computeNoPartsSelected,
   usePartToggles,
 } from './usePartToggles'
 import { useScoreSource } from './useScoreSource'
-import { useSectionNavigation } from './useSectionNavigation'
-import { useSequenceNavigation } from './useSequenceNavigation'
 import { useStorageBackend } from './useStorageBackend'
 import { useUrlFileSync } from './useUrlFileSync'
 import { useWasmLoader } from './useWasmLoader'
@@ -106,6 +102,8 @@ export function useAppController() {
     documents,
     wavUrl,
     wavFilename,
+    mp3Url,
+    mp3Filename,
     noteTimings,
     audioAvailable,
     pdfAvailable,
@@ -124,6 +122,11 @@ export function useAppController() {
     exportSplitMidi,
     splitWavExporting,
     exportSplitWav,
+    mp3Available,
+    mp3Exporting,
+    exportMp3,
+    splitMp3Exporting,
+    exportSplitMp3,
     generateFullAudio,
     selectedMeasureRange,
     measureAudioGenerating,
@@ -212,59 +215,34 @@ export function useAppController() {
     handleSourceChange,
   )
 
-  const { setSelectedLineRange, handleSectionJump, sectionJumpToolbarProps } =
-    useSectionNavigation(sectionRanges, editorRef, notifySelection)
-
-  const { selectedSequenceRange, sequenceJumpToolbarProps } =
-    useSequenceNavigation(
-      sequenceEntries,
-      measureSpans,
-      editorRef,
-      notifySelection,
-      selectedSequenceRangeRef,
-    )
-
   const {
+    setSelectedLineRange,
+    handleSectionJump,
+    sectionJumpToolbarProps,
+    selectedSequenceRange,
+    sequenceJumpToolbarProps,
     handleNoteRangeSelect,
     handleEditorSelectionChange,
     selectedNoteRangePlaybackInfo,
     selectedNoteCells,
-    applyNoteSelectionSilently,
-  } = useNoteSelection(
+    handleLyricRangeSelect,
+    handleLyricEditorSelectionChange,
+    selectedLyricCells,
+    handleMeasureRangeSelect,
+    handlePlayNoteSelection,
+  } = useAppSelectionAndNavigation(
+    sectionRanges,
+    editorRef,
+    notifySelection,
+    sequenceEntries,
+    measureSpans,
+    selectedSequenceRangeRef,
     noteSpans,
     parts,
     enabledTracks,
-    editorRef,
-    measureSpans,
-    notifySelection,
-  )
-
-  const {
-    handleLyricRangeSelect,
-    handleEditorSelectionChange: handleLyricEditorSelectionChange,
-    selectedLyricCells,
-    applyLyricSelectionSilently,
-  } = useLyricSelection(lyricSpans, editorRef)
-
-  const handleMeasureRangeSelect = useMeasureRangeSelection(
-    editorRef,
-    noteSpans,
     lyricSpans,
-    handleNoteRangeSelect,
-    handleLyricRangeSelect,
-    applyNoteSelectionSilently,
-    applyLyricSelectionSilently,
+    playNoteSelection,
   )
-
-  const handlePlayNoteSelection = useCallback(() => {
-    if (selectedNoteRangePlaybackInfo === null) return
-    playNoteSelection(
-      selectedNoteRangePlaybackInfo.minMeasureIndex,
-      selectedNoteRangePlaybackInfo.maxMeasureIndex,
-      selectedNoteRangePlaybackInfo.selectedPartNames,
-      selectedNoteCells,
-    )
-  }, [selectedNoteRangePlaybackInfo, selectedNoteCells, playNoteSelection])
 
   const noPartsSelected = computeNoPartsSelected(
     parts,
@@ -320,6 +298,8 @@ export function useAppController() {
     documents,
     wavUrl,
     wavFilename,
+    mp3Url,
+    mp3Filename,
     noteTimings,
     audioAvailable,
     pdfAvailable,
@@ -338,6 +318,11 @@ export function useAppController() {
     exportSplitMidi,
     splitWavExporting,
     exportSplitWav,
+    mp3Available,
+    mp3Exporting,
+    exportMp3,
+    splitMp3Exporting,
+    exportSplitMp3,
     generateFullAudio,
     selectedMeasureRange,
     measureAudioGenerating,

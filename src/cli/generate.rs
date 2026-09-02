@@ -284,3 +284,39 @@ pub fn generate_wav(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
     println!("written to {output_path:?}");
     Ok(())
 }
+
+#[cfg(feature = "mp3")]
+pub fn generate_mp3(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableError> {
+    let score = super::parse_and_group(&opts.input)?;
+    if opts.split_tracks {
+        let display_names = read_display_names(&opts.input)?;
+        let split = try_split_tracks(
+            &score,
+            &opts.input,
+            opts.output.as_deref(),
+            &opts.tracks,
+            &display_names,
+            |score_clone, _, label, base, base_name| {
+                let midi_bytes = jg::midi::write_midi(score_clone)?;
+                let mp3_bytes = jg::wav::write_mp3(&midi_bytes, super::SF2_BYTES, None)?;
+                let track_path = track_output_path(base, base_name, label, "mp3");
+                super::write_file(&track_path, &mp3_bytes)?;
+                println!("written to {track_path:?}");
+                Ok(())
+            },
+        )?;
+        if split {
+            return Ok(());
+        }
+    }
+
+    let mut score = score;
+    jg::filter_tracks(&mut score, &opts.tracks);
+    let midi_bytes = jg::midi::write_midi(&score)?;
+    let mp3_bytes = jg::wav::write_mp3(&midi_bytes, super::SF2_BYTES, None)?;
+    let output_path =
+        output_stem(&opts.input, &opts.tracks, opts.output.as_deref()).with_extension("mp3");
+    super::write_file(&output_path, &mp3_bytes)?;
+    println!("written to {output_path:?}");
+    Ok(())
+}

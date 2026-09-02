@@ -17,68 +17,40 @@ import { GM_INSTRUMENTS } from '../utils/gmInstruments'
 import {
   handleGenerateAudio,
   handleGenerateMeasureRangeAudio,
+  handleGenerateMp3,
 } from './audioMessageHandlers'
 import {
   handleGenerateMidi,
   handleGeneratePdf,
   handleGenerateSplitMidi,
+  handleGenerateSplitMp3,
   handleGenerateSplitPdf,
   handleGenerateSplitWav,
 } from './exportMessageHandlers'
 import { handleImportFromFile } from './importMessageHandlers'
 import type { WorkerRequest, WorkerResponse } from './messages'
 import {
+  generateInstrumentPreviewWav,
+  generateMidi,
+  generateMp3,
+  generatePdf,
+  generatePercussionPreviewWav,
+  generateSplitMidis,
+  generateSplitMp3s,
+  generateSplitPdfs,
+  generateSplitWavs,
+  generateWav,
+  generateWavForMeasureRange,
+  listNoteTimings,
+  listNoteTimingsForRange,
+  renderWithHighlightRange,
+} from './optionalWasmExports'
+import {
   handlePreviewInstrument,
   handlePreviewPercussion,
 } from './previewMessageHandlers'
 
 export type { WorkerRequest, WorkerResponse } from './messages'
-
-const generateWav =
-  'generate_wav' in jianpuWasm ? jianpuWasm.generate_wav : null
-
-const generateWavForMeasureRange =
-  'generate_wav_for_measure_range' in jianpuWasm
-    ? jianpuWasm.generate_wav_for_measure_range
-    : null
-
-const listNoteTimings =
-  'list_note_timings' in jianpuWasm ? jianpuWasm.list_note_timings : null
-
-const listNoteTimingsForRange =
-  'list_note_timings_for_range' in jianpuWasm
-    ? jianpuWasm.list_note_timings_for_range
-    : null
-
-const renderWithHighlightRange =
-  'render_with_highlight_range' in jianpuWasm
-    ? jianpuWasm.render_with_highlight_range
-    : null
-
-const generatePdf =
-  'generate_pdf' in jianpuWasm ? jianpuWasm.generate_pdf : null
-
-const generateSplitPdfs =
-  'generate_split_pdfs' in jianpuWasm ? jianpuWasm.generate_split_pdfs : null
-
-const generateMidi =
-  'generate_midi' in jianpuWasm ? jianpuWasm.generate_midi : null
-
-const generateSplitMidis =
-  'generate_split_midis' in jianpuWasm ? jianpuWasm.generate_split_midis : null
-
-const generateSplitWavs =
-  'generate_split_wavs' in jianpuWasm ? jianpuWasm.generate_split_wavs : null
-
-const generateInstrumentPreviewWav =
-  'generate_instrument_preview_wav' in jianpuWasm
-    ? jianpuWasm.generate_instrument_preview_wav
-    : null
-
-const generatePercussionPreviewWav =
-  'generate_percussion_preview_wav' in jianpuWasm
-    ? jianpuWasm.generate_percussion_preview_wav
-    : null
 
 let resolveWasmModule: (module: WebAssembly.Module) => void
 const wasmModulePromise = new Promise<WebAssembly.Module>((resolve) => {
@@ -97,6 +69,7 @@ function ensureInit(): Promise<void> {
           audioAvailable: generateWav !== null,
           pdfAvailable: generatePdf !== null,
           midiAvailable: generateMidi !== null,
+          mp3Available: generateMp3 !== null,
         } satisfies WorkerResponse)
       })
   }
@@ -256,6 +229,16 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
   if (msg.type === 'generateSplitWav') {
     handleGenerateSplitWav(msg, generateSplitWavs, loadedSoundfont)
+    return
+  }
+
+  if (msg.type === 'generateMp3') {
+    handleGenerateMp3(msg, generateMp3, loadedSoundfont)
+    return
+  }
+
+  if (msg.type === 'generateSplitMp3') {
+    handleGenerateSplitMp3(msg, generateSplitMp3s, loadedSoundfont)
     return
   }
 

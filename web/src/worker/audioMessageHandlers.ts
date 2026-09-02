@@ -1,4 +1,5 @@
 import type {
+  GenerateMp3Response,
   GenerateWavResponse,
   NoteTimingOut,
   NoteTimingsResponse,
@@ -250,5 +251,59 @@ export function handleGenerateMeasureRangeAudio(
   postMessage({
     type: 'measureRangeAudioErr',
     id: msg.id,
+  } satisfies WorkerResponse)
+}
+
+type GenerateMp3Fn =
+  | ((
+      source: string,
+      enabledTracks: string[] | undefined,
+      soundfont: Uint8Array,
+    ) => GenerateMp3Response)
+  | null
+
+/**
+ * One-shot MP3 export — unlike [`handleGenerateAudio`], this doesn't need
+ * note timings: MP3 export is a plain download, not the WAV preview's
+ * interactive playback cursor.
+ */
+export function handleGenerateMp3(
+  msg: Extract<WorkerRequest, { type: 'generateMp3' }>,
+  generateMp3: GenerateMp3Fn,
+  loadedSoundfont: Uint8Array | null,
+): void {
+  if (!generateMp3 || !loadedSoundfont) {
+    postMessage({
+      type: 'mp3Err',
+      id: msg.id,
+      diagnostics: [
+        {
+          severity: 'error',
+          message: loadedSoundfont
+            ? 'MP3 export is not available in this build.'
+            : 'Soundfont is not yet loaded.',
+          span: { start: 0, end: 0 },
+        },
+      ],
+    } satisfies WorkerResponse)
+    return
+  }
+  const result = generateMp3(msg.source, msg.enabledTracks, loadedSoundfont)
+  if (result.status === 'ok') {
+    const mp3Buffer = binaryBufferFromResult(result.mp3)
+    postMessage(
+      {
+        type: 'mp3',
+        id: msg.id,
+        mp3: mp3Buffer,
+      } satisfies WorkerResponse,
+      { transfer: [mp3Buffer] },
+    )
+    return
+  }
+  postMessage({
+    type: 'mp3Err',
+    id: msg.id,
+    diagnostics: result.diagnostics,
   } satisfies WorkerResponse)
 }

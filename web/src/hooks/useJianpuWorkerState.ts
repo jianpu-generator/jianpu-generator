@@ -16,6 +16,7 @@ import {
   disabledLyricsForRender,
   enabledPartNamesForFilename,
   enabledTracksForRender,
+  mp3FilenameFromActiveFile,
   wavFilenameFromActiveFile,
 } from './workerHelpers'
 
@@ -38,6 +39,7 @@ export function useJianpuWorkerState(
   const [partsLoading, setPartsLoading] = useState(false)
   const [documents, setDocuments] = useState<SvgDocumentOut[]>([])
   const [wavUrl, setWavUrl] = useState<string | null>(null)
+  const [mp3Url, setMp3Url] = useState<string | null>(null)
   const [noteTimings, setNoteTimings] = useState<NoteTimingOut[]>([])
   const [audioAvailable, setAudioAvailable] = useState(false)
   const [pdfAvailable, setPdfAvailable] = useState(false)
@@ -47,6 +49,9 @@ export function useJianpuWorkerState(
   const [midiExporting, setMidiExporting] = useState(false)
   const [splitMidiExporting, setSplitMidiExporting] = useState(false)
   const [splitWavExporting, setSplitWavExporting] = useState(false)
+  const [mp3Available, setMp3Available] = useState(false)
+  const [mp3Exporting, setMp3Exporting] = useState(false)
+  const [splitMp3Exporting, setSplitMp3Exporting] = useState(false)
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([])
   const [diagnosticViewZones, setDiagnosticViewZones] = useState<
     DiagnosticViewZone[]
@@ -82,6 +87,7 @@ export function useJianpuWorkerState(
   const latestLyricSpansIdRef = useRef(0)
   const workerRef = useRef<Worker | null>(null)
   const wavUrlRef = useRef<string | null>(null)
+  const mp3UrlRef = useRef<string | null>(null)
   const partsRequestIdRef = useRef(0)
   const updatePartDeclarationRequestIdRef = useRef(0)
   const latestUpdatePartDeclarationIdRef = useRef(0)
@@ -112,6 +118,8 @@ export function useJianpuWorkerState(
   const midiRequestIdRef = useRef(0)
   const splitMidiRequestIdRef = useRef(0)
   const splitWavRequestIdRef = useRef(0)
+  const mp3RequestIdRef = useRef(0)
+  const splitMp3RequestIdRef = useRef(0)
   const latestPartsIdRef = useRef(0)
   const latestRenderIdRef = useRef(0)
   const latestAudioIdRef = useRef(0)
@@ -120,6 +128,8 @@ export function useJianpuWorkerState(
   const latestMidiIdRef = useRef(0)
   const latestSplitMidiIdRef = useRef(0)
   const latestSplitWavIdRef = useRef(0)
+  const latestMp3IdRef = useRef(0)
+  const latestSplitMp3IdRef = useRef(0)
   const sourceRef = useRef(source)
   const activeFileRef = useRef(activeFile)
   const enabledTracksRef = useRef<string[] | undefined>(undefined)
@@ -159,6 +169,10 @@ export function useJianpuWorkerState(
     () => wavFilenameFromActiveFile(activeFile, enabledPartNames),
     [activeFile, enabledPartNames],
   )
+  const mp3Filename = useMemo(
+    () => mp3FilenameFromActiveFile(activeFile, enabledPartNames),
+    [activeFile, enabledPartNames],
+  )
 
   sourceRef.current = source
   activeFileRef.current = activeFile
@@ -178,6 +192,8 @@ export function useJianpuWorkerState(
     setDocuments,
     wavUrl,
     setWavUrl,
+    mp3Url,
+    setMp3Url,
     noteTimings,
     setNoteTimings,
     audioAvailable,
@@ -196,6 +212,12 @@ export function useJianpuWorkerState(
     setSplitMidiExporting,
     splitWavExporting,
     setSplitWavExporting,
+    mp3Available,
+    setMp3Available,
+    mp3Exporting,
+    setMp3Exporting,
+    splitMp3Exporting,
+    setSplitMp3Exporting,
     diagnostics,
     setDiagnostics,
     diagnosticViewZones,
@@ -229,6 +251,7 @@ export function useJianpuWorkerState(
     latestLyricSpansIdRef,
     workerRef,
     wavUrlRef,
+    mp3UrlRef,
     partsRequestIdRef,
     updatePartDeclarationRequestIdRef,
     latestUpdatePartDeclarationIdRef,
@@ -246,6 +269,8 @@ export function useJianpuWorkerState(
     midiRequestIdRef,
     splitMidiRequestIdRef,
     splitWavRequestIdRef,
+    mp3RequestIdRef,
+    splitMp3RequestIdRef,
     latestPartsIdRef,
     latestRenderIdRef,
     latestAudioIdRef,
@@ -254,6 +279,8 @@ export function useJianpuWorkerState(
     latestMidiIdRef,
     latestSplitMidiIdRef,
     latestSplitWavIdRef,
+    latestMp3IdRef,
+    latestSplitMp3IdRef,
     sourceRef,
     activeFileRef,
     enabledTracksRef,
@@ -266,5 +293,6 @@ export function useJianpuWorkerState(
     enabledPartNames,
     disabledLyricsTracks,
     wavFilename,
+    mp3Filename,
   }
 }

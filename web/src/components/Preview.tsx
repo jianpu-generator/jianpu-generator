@@ -24,6 +24,13 @@ interface PreviewProps {
   audioGenerating?: boolean
   wavUrl?: string | null
   wavFilename?: string
+  /** Mirrors `audioGenerating`/`wavUrl`/`wavFilename` for the MP3 format —
+   * mutually exclusive with the WAV trio (only one of `wavUrl`/`mp3Url` is
+   * ever non-null), so the inline player below always shows whichever
+   * format was most recently generated. */
+  mp3Exporting?: boolean
+  mp3Url?: string | null
+  mp3Filename?: string
   /** Elapsed-seconds start/end of every sounding note/rest for `wavUrl`'s audio, keyed by `(source_part_index, note_id)`. */
   noteTimings?: NoteTimingOut[]
   /** Elapsed-seconds start/end of every sounding note/rest for the selected range's audio, keyed by `(source_part_index, note_id)`. */
@@ -112,6 +119,9 @@ export function Preview({
   audioGenerating = false,
   wavUrl = null,
   wavFilename = 'audio.wav',
+  mp3Exporting = false,
+  mp3Url = null,
+  mp3Filename = 'audio.mp3',
   noteTimings,
   measureAudioNoteTimings,
   measureAudioElement,
@@ -135,7 +145,17 @@ export function Preview({
   const lyricSpansRef = useRef(lyricSpans)
   lyricSpansRef.current = lyricSpans
 
-  usePlaybackCursor(previewPagesRef, audioElement, noteTimings)
+  // wavUrl/mp3Url are mutually exclusive (see `useJianpuWorkerAudioActions`),
+  // so whichever is set is the one inline player below renders. noteTimings
+  // only applies to the WAV audio, so it's dropped when MP3 is what's
+  // showing (an MP3 export carries no timing data — see the worker's `mp3`
+  // response).
+  const audioUrl = wavUrl ?? mp3Url
+  const audioFilename = wavUrl ? wavFilename : mp3Filename
+  const audioBusy = wavUrl ? audioGenerating : mp3Exporting
+  const audioNoteTimings = wavUrl ? noteTimings : undefined
+
+  usePlaybackCursor(previewPagesRef, audioElement, audioNoteTimings)
   usePlaybackCursor(
     previewPagesRef,
     measureAudioElement,
@@ -153,11 +173,11 @@ export function Preview({
   onSectionLabelClickRef.current = onSectionLabelClick
 
   useEffect(() => {
-    if (!audioGenerating) return
+    if (!audioBusy) return
     if (audioElement && !audioElement.paused) {
       audioElement.pause()
     }
-  }, [audioGenerating, audioElement])
+  }, [audioBusy, audioElement])
 
   // Scrolls the preview to the current selection. Prefers the amber
   // caret-only highlight rect (present only when `highlightedDocuments` is
@@ -231,28 +251,28 @@ export function Preview({
 
   return (
     <div className="preview">
-      {wavUrl ? (
+      {audioUrl ? (
         <div
           className={
-            audioGenerating
+            audioBusy
               ? 'preview-audio preview-audio--generating'
               : 'preview-audio'
           }
-          aria-busy={audioGenerating || undefined}
+          aria-busy={audioBusy || undefined}
         >
           {/* biome-ignore lint/a11y/useMediaCaption: synthesized score preview has no captions track */}
           <audio
             ref={setAudioElement}
             className="preview-audio-player"
             controls
-            src={wavUrl}
-            tabIndex={audioGenerating ? -1 : undefined}
+            src={audioUrl}
+            tabIndex={audioBusy ? -1 : undefined}
           />
           <a
             className="preview-audio-download"
-            href={wavUrl}
-            download={wavFilename}
-            tabIndex={audioGenerating ? -1 : undefined}
+            href={audioUrl}
+            download={audioFilename}
+            tabIndex={audioBusy ? -1 : undefined}
           >
             Download
           </a>

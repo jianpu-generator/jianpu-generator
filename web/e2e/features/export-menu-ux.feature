@@ -7,11 +7,11 @@ Feature: Export menu UX
     And the export menu has no "All Parts" section
     And the export menu has no "PDF (ZIP)" item
 
-  Scenario: Export menu lists PDF, WAV, and MIDI for a single-part score
+  Scenario: Export menu lists PDF, WAV, MIDI, and MP3 for a single-part score
     Given the single-part export menu source is loaded
     When I open the export menu, as seen in export menu ux
     Then the export menu is visible
-    And the export menu items are exactly "PDF, WAV, MIDI"
+    And the export menu items are exactly "PDF, WAV, MIDI, MP3"
 
   Scenario: Export menu lists Visible Parts and All Parts sections for a multi-part score
     Given the multi-part export menu source is loaded
@@ -19,7 +19,7 @@ Feature: Export menu UX
     Then the export menu is visible
     And the export menu shows a "Visible Parts" section
     And the export menu shows an "All Parts" section
-    And the export menu items are exactly "PDF, WAV, MIDI, PDF (ZIP), WAV (ZIP), MIDI (ZIP)"
+    And the export menu items are exactly "PDF, WAV, MIDI, MP3, PDF (ZIP), WAV (ZIP), MIDI (ZIP), MP3 (ZIP)"
 
   Scenario: Pressing Escape closes an open export menu
     Given the single-part export menu source is loaded

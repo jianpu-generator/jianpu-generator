@@ -27,6 +27,9 @@ pub(super) fn write(
         IrrecoverableErrorKind::WavFinalizeFailed { source, .. } => {
             Some(write!(formatter, "failed to finalize WAV file: {source}"))
         }
+        IrrecoverableErrorKind::Mp3EncodeFailed { source, .. } => {
+            Some(write!(formatter, "failed to encode MP3: {source}"))
+        }
         IrrecoverableErrorKind::PdfSvgParseFailed { detail, .. } => {
             Some(write!(formatter, "SVG parse error: {detail}"))
         }
