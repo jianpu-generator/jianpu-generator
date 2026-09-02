@@ -116,7 +116,7 @@ function measureRangeFromElement(el: HTMLElement): MeasureRange | undefined {
  * Returns `undefined` when `x`/`y` isn't over a bar-line handle at all, so
  * callers can fall through to the generic point-based lookup.
  *
- * Exported so `previewMouseDownHandler.ts` can check for a bar-line hit
+ * Exported so `previewClickHandler.ts` can check for a bar-line hit
  * *before* its Cmd/Ctrl gate: grabbing the divider itself is an unambiguous
  * request to select measures, unlike a click on a note/lyric/gutter pixel
  * (which is ambiguous enough to need the modifier) — see that file's
@@ -158,7 +158,7 @@ export function getBarLineMeasureAtPoint(
  *
  * A bar number sits outside every note's own click target, so without this
  * check a plain click there falls through to the nearest-note fallback in
- * `previewMouseDownHandler.ts` instead of selecting the whole measure. Kept
+ * `previewClickHandler.ts` instead of selecting the whole measure. Kept
  * as its own unconditional (no Cmd/Ctrl needed) check there, mirroring
  * `getBarLineMeasureAtPoint`'s bar-line-handle check: landing on the bar
  * number itself is an unambiguous request to select that measure.

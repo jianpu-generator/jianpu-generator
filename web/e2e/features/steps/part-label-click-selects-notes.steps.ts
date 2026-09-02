@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { clickAndClickSelect } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -199,17 +200,13 @@ When(
       throw new Error('Could not get bounding boxes for the part labels.')
     }
 
-    await page.mouse.move(
+    await clickAndClickSelect(
+      page,
       melodyBox.x + melodyBox.width / 2,
       melodyBox.y + melodyBox.height / 2,
-    )
-    await page.mouse.down()
-    await page.mouse.move(
       harmonyBox.x + harmonyBox.width / 2,
       harmonyBox.y + harmonyBox.height / 2,
-      { steps: 10 },
     )
-    await page.mouse.up()
   },
 )
 
@@ -251,11 +248,13 @@ When(
       throw new Error('Could not get bounding boxes for the part labels.')
     }
 
-    // Start the drag on Melody, then move the pointer onto Harmony — Melody
-    // is the label the drag started on, and per the vertical-drag part-label
-    // shortcut it stays part of the selection while the pointer is anywhere
-    // in the column, not just while literally over its own rect.
+    // Click Melody to anchor the gesture, then hover the pointer onto Harmony
+    // without a second click yet — Melody is the label the gesture anchored
+    // on, and per the vertical-sweep part-label shortcut it stays part of
+    // the selection while the pointer is anywhere in the column, not just
+    // while literally over its own rect.
     await page.mouse.down()
+    await page.mouse.up()
     await page.mouse.move(
       harmonyBox.x + harmonyBox.width / 2,
       harmonyBox.y + harmonyBox.height / 2,
@@ -392,6 +391,5 @@ Then(
       (el) => getComputedStyle(el).fill,
     )
     expect(fillWhileDraggingAway).toBe(hoveredFill)
-    await page.mouse.up()
   },
 )

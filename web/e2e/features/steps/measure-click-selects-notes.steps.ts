@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { clickAndClickSelect } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -162,18 +163,19 @@ When(
     }
 
     // Notes fully tile their measure's width (no gaps between click-target
-    // rects), so a mousedown anywhere inside a measure always lands on some
-    // note and this drag follows the raw note-marquee path (see
-    // `Preview.tsx`'s 'pending' → 'note' arming) — drag corner-to-corner
-    // rather than center-to-center so the marquee's bounding box fully covers
-    // every note between measure 0 and measure 2, not just the ones between
-    // their two center points.
-    await page.mouse.move(box0.x + 1, box0.y + 1)
-    await page.mouse.down()
-    await page.mouse.move(box2.x + box2.width - 1, box2.y + box2.height - 1, {
-      steps: 10,
-    })
-    await page.mouse.up()
+    // rects), so a click anywhere inside a measure always lands on some note
+    // and this gesture follows the raw note-marquee path (see
+    // `previewClickHandler.ts`'s 'note' mode) — click corner-to-corner rather
+    // than center-to-center so the marquee's bounding box fully covers every
+    // note between measure 0 and measure 2, not just the ones between their
+    // two center points.
+    await clickAndClickSelect(
+      page,
+      box0.x + 1,
+      box0.y + 1,
+      box2.x + box2.width - 1,
+      box2.y + box2.height - 1,
+    )
   },
 )
 

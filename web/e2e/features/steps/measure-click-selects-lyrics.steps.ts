@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { clickAndClickSelect } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -138,23 +139,20 @@ When(
       throw new Error('Could not get bounding boxes for measures 0 and 1.')
     }
 
-    // As above, drag from/to points on the note row rather than the lyric row
-    // — this drag's anchor point actually misses every note/lyric click
+    // As above, click points on the note row rather than the lyric row —
+    // this gesture's anchor point actually misses every note/lyric click
     // target (the lyric row's presence shifts the note row's own click-target
     // down slightly), so without Cmd/Ctrl it would now resolve through the
-    // nearest-note fallback into a plain note-marquee drag instead of the
-    // whole-measure-range shortcut this test means to exercise.
-    await page.mouse.move(box0.x + 1, box0.y + 1)
+    // nearest-note fallback into a plain note-marquee selection instead of
+    // the whole-measure-range shortcut this test means to exercise.
     await page.keyboard.down('Control')
-    await page.mouse.down()
-    await page.mouse.move(
+    await clickAndClickSelect(
+      page,
+      box0.x + 1,
+      box0.y + 1,
       box1.x + box1.width - 1,
       box1.y + box1.height * 0.25,
-      {
-        steps: 10,
-      },
     )
-    await page.mouse.up()
     await page.keyboard.up('Control')
   },
 )

@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { clickAndClickSelect } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -108,12 +109,13 @@ When(
     const end = await lyricRect(page, toNoteId, verse).boundingBox()
     if (!start || !end) throw new Error('no box')
 
-    await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2)
-    await page.mouse.down()
-    await page.mouse.move(end.x + end.width / 2, end.y + end.height / 2, {
-      steps: 10,
-    })
-    await page.mouse.up()
+    await clickAndClickSelect(
+      page,
+      start.x + start.width / 2,
+      start.y + start.height / 2,
+      end.x + end.width / 2,
+      end.y + end.height / 2,
+    )
     await page.waitForTimeout(200)
   },
 )

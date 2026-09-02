@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { clickAndClickSelect } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -113,18 +114,14 @@ When(
       )
     }
 
-    await page.mouse.move(
+    await page.keyboard.down('Control')
+    await clickAndClickSelect(
+      page,
       startBox.x + startBox.width / 2,
       startBox.y + startBox.height / 2,
-    )
-    await page.keyboard.down('Control')
-    await page.mouse.down()
-    await page.mouse.move(
       endBox.x + endBox.width / 2,
       endBox.y + endBox.height / 2,
-      { steps: 10 },
     )
-    await page.mouse.up()
     await page.keyboard.up('Control')
   },
 )

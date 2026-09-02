@@ -133,24 +133,6 @@ const lyricDragSpec: DragHighlightSpec<LyricCell> = {
   datasetFlag: 'lyricDragSelected',
 }
 
-/** Screen-pixel distance a mousedown that started on a note must travel
- * before it's treated as a genuine note-drag rather than a plain click on
- * that note (see `dragStateRef`'s 'pending' mode). */
-export const NOTE_DRAG_ARM_THRESHOLD_PX = 4
-
-/** Whether `anchor`→`current` is close enough to count as "didn't really
- * move" — i.e. a plain click rather than a drag. Shared by 'pending' mode's
- * note-drag arming and 'part-label' mode's click/drag distinction. */
-export function isBelowDragArmThreshold(
-  anchor: DragPoint,
-  current: DragPoint,
-): boolean {
-  return (
-    Math.hypot(current.x - anchor.x, current.y - anchor.y) <
-    NOTE_DRAG_ARM_THRESHOLD_PX
-  )
-}
-
 /**
  * Every note/rest cell whose click-target rect overlaps the axis-aligned
  * marquee spanned by `anchor`/`current` (real screen geometry, not column

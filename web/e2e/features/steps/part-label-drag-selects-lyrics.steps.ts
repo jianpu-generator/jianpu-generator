@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { clickAndClickSelect } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -91,17 +92,13 @@ When(
       throw new Error('Could not get bounding boxes for the part labels.')
     }
 
-    await page.mouse.move(
+    await clickAndClickSelect(
+      page,
       melodyBox.x + melodyBox.width / 2,
       melodyBox.y + melodyBox.height / 2,
-    )
-    await page.mouse.down()
-    await page.mouse.move(
       harmonyBox.x + harmonyBox.width / 2,
       harmonyBox.y + harmonyBox.height / 2,
-      { steps: 10 },
     )
-    await page.mouse.up()
   },
 )
 

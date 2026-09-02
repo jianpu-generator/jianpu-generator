@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { clickAndClickSelect } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -124,19 +125,13 @@ When(
       throw new Error('Could not get bounding boxes for the verse labels.')
     }
 
-    await page.mouse.move(
+    await clickAndClickSelect(
+      page,
       fromBox.x + fromBox.width / 2,
       fromBox.y + fromBox.height / 2,
-    )
-    await page.mouse.down()
-    await page.mouse.move(
       toBox.x + toBox.width / 2,
       toBox.y + toBox.height / 2,
-      {
-        steps: 10,
-      },
     )
-    await page.mouse.up()
   },
 )
 

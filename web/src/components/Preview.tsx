@@ -2,6 +2,7 @@ import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import { useEffect, useRef, useState } from 'react'
 import type { LyricSpan, NoteSpan } from '../types'
 import { renderSvgDocument } from './PreviewSvgRenderer'
+import { handlePreviewClick } from './previewClickHandler'
 import {
   applyPersistedLyricHighlights,
   applyPersistedNoteHighlights,
@@ -10,10 +11,9 @@ import {
   applyPersistedLyricLabelHighlights,
   applyPersistedPartLabelHighlights,
 } from './previewLabelDragHighlights'
-import { handlePreviewMouseDown } from './previewMouseDownHandler'
 import type { LyricCell, NoteCell } from './previewSelection'
 import { usePlaybackCursor } from './usePlaybackCursor'
-import { usePreviewDragSelection } from './usePreviewDragSelection'
+import { usePreviewClickSelection } from './usePreviewClickSelection'
 
 export type { LyricCell, NoteCell } from './previewSelection'
 
@@ -43,11 +43,12 @@ interface PreviewProps {
    * see `PendingDownload` in `useJianpuWorkerTypes.ts`. */
   onRequestAudioDownload?: (url: string, filename: string) => void
   onSectionLabelClick?: (label: string) => void
-  /** Fired on mouseup after a note-level drag-select (see `getNoteAtPoint`),
-   * with every note/rest cell the drag's marquee overlapped — but only when
-   * `onMeasureRangeSelect` isn't supplied (see `onLyricRangeSelect` below for
-   * why: a note drag's marquee can also cover lyric syllables underneath
-   * it, which then routes through `onMeasureRangeSelect` instead). */
+  /** Fired on the commit click of a note-level click-and-click select (see
+   * `getNoteAtPoint`), with every note/rest cell the gesture's marquee
+   * overlapped — but only when `onMeasureRangeSelect` isn't supplied (see
+   * `onLyricRangeSelect` below for why: a note selection's marquee can also
+   * cover lyric syllables underneath it, which then routes through
+   * `onMeasureRangeSelect` instead). */
   onNoteRangeSelect?: (selectedCells: NoteCell[]) => void
   /** The note/rest cells from the most recent note drag-select (see
    * `onNoteRangeSelect`), echoed back so the highlight can be re-applied
@@ -59,17 +60,17 @@ interface PreviewProps {
    * used by `noteCellsInMeasureRange` to resolve a measure click/drag into
    * every note cell it contains by index rather than pixel geometry. */
   noteSpans?: NoteSpan[]
-  /** Fired on mouseup after a lyric-syllable drag-select (see
-   * `getLyricAtPoint`), with every syllable cell the drag's marquee
+  /** Fired on the commit click of a lyric-syllable click-and-click select
+   * (see `getLyricAtPoint`), with every syllable cell the gesture's marquee
    * overlapped — but only when `onMeasureRangeSelect` isn't supplied. A
-   * lyric drag's marquee can also visually cover notes above it (and vice
-   * versa for a note drag), so whenever `onMeasureRangeSelect` is wired up
-   * it's used instead — with both the note cells and the lyric cells the
-   * marquee overlapped, empty array or not — since a mounted editor's Monaco
-   * selection can only take one combined push per gesture rather than one
-   * from each of this and `onNoteRangeSelect` independently (see
-   * `usePreviewDragSelection`'s mouseup handler and `onMeasureRangeSelect`
-   * below). */
+   * lyric selection's marquee can also visually cover notes above it (and
+   * vice versa for a note selection), so whenever `onMeasureRangeSelect` is
+   * wired up it's used instead — with both the note cells and the lyric
+   * cells the marquee overlapped, empty array or not — since a mounted
+   * editor's Monaco selection can only take one combined push per gesture
+   * rather than one from each of this and `onNoteRangeSelect` independently
+   * (see `usePreviewClickSelection`'s commit handling and
+   * `onMeasureRangeSelect` below). */
   onLyricRangeSelect?: (selectedCells: LyricCell[]) => void
   /** The lyric syllable cells from the most recent lyric drag-select (see
    * `onLyricRangeSelect`), echoed back so the highlight can be re-applied
@@ -80,9 +81,9 @@ interface PreviewProps {
    * selects the verse lyrics under it, alongside `noteSpans` for notes. */
   lyricSpans?: LyricSpan[]
   /** Fired instead of `onNoteRangeSelect`/`onLyricRangeSelect` for a
-   * measure/bar-line click or drag, and also for a note- or lyric-level
-   * drag/click whose marquee visually covers the other cell type too (see
-   * `usePreviewDragSelection`), with every note cell and every lyric cell
+   * measure/bar-line click, and also for a note- or lyric-level click
+   * whose marquee visually covers the other cell type too (see
+   * `usePreviewClickSelection`), with every note cell and every lyric cell
    * the gesture resolved to. Any of the three gestures can select both cell
    * types at once, so this is a single combined callback rather than one
    * call to each of the other two — see `useAppController`'s
@@ -167,7 +168,7 @@ export function Preview({
     measureAudioElement,
     measureAudioNoteTimings,
   )
-  const dragStateRef = usePreviewDragSelection(
+  const dragStateRef = usePreviewClickSelection(
     previewPagesRef,
     noteSpans,
     onNoteRangeSelect,
@@ -286,17 +287,20 @@ export function Preview({
         </div>
       ) : null}
       <div className="preview-pages-wrapper">
-        {/* biome-ignore lint/a11y/noStaticElementInteractions: drag/click-to-select notes uses mousedown, mousemove, mouseup — not a standard interactive role */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: click-and-click select notes uses mousedown (not the browser's synthesized `click` — see `handlePreviewClick`'s doc comment for why) plus a document-level mousemove for the hover preview — not a standard interactive role */}
         <div
           className="preview-pages"
           ref={previewPagesRef}
           onMouseDown={(e) =>
-            handlePreviewMouseDown(e, {
+            handlePreviewClick(e, {
               dragStateRef,
               previewPagesRef,
               noteSpans,
               lyricSpans,
               onSectionLabelClick: onSectionLabelClickRef.current,
+              onNoteRangeSelect,
+              onLyricRangeSelect,
+              onMeasureRangeSelect,
             })
           }
         >

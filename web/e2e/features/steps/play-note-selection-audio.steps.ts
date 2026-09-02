@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { clickAndClickSelect } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -90,12 +91,13 @@ When('I drag-select the first three notes in the measure', async ({ page }) => {
         'Ensure the SVG preview has rendered.',
     )
   }
-  await page.mouse.move(box0.x + box0.width / 2, box0.y + box0.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(box2.x + box2.width / 2, box2.y + box2.height / 2, {
-    steps: 10,
-  })
-  await page.mouse.up()
+  await clickAndClickSelect(
+    page,
+    box0.x + box0.width / 2,
+    box0.y + box0.height / 2,
+    box2.x + box2.width / 2,
+    box2.y + box2.height / 2,
+  )
 })
 
 Then(

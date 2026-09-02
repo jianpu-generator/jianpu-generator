@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { clickAndClickSelect } from '../../dragSelectHelpers'
 import { fileSwitcherTrigger } from '../../fileSwitcherHelpers'
 import { Then, When } from './fixtures'
 import {
@@ -98,22 +99,17 @@ When(
       )
     }
 
-    // Drag from measure 0 to measure 2 in the read-only viewer — a shortcut
-    // for selecting every note/rest cell across those measures, same as it is
-    // in the editable app (see `Preview.tsx`'s `noteCellsInMeasureRange`).
-    await state.viewerPage.mouse.move(
+    // Click-and-click from measure 0 to measure 2 in the read-only viewer —
+    // a shortcut for selecting every note/rest cell across those measures,
+    // same as it is in the editable app (see `previewSelection.ts`'s
+    // `noteCellsInMeasureRange`).
+    await clickAndClickSelect(
+      state.viewerPage,
       boxFrom.x + boxFrom.width / 2,
       boxFrom.y + boxFrom.height / 2,
-    )
-    await state.viewerPage.mouse.down()
-    await state.viewerPage.mouse.move(
       boxTo.x + boxTo.width / 2,
       boxTo.y + boxTo.height / 2,
-      {
-        steps: 10,
-      },
     )
-    await state.viewerPage.mouse.up()
   },
 )
 

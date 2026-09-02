@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { clickAndClickSelect } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -96,11 +97,8 @@ When(
     const endX = box2.x + box2.width / 2
     const endY = box2.y + box2.height / 2
 
-    // Drag a marquee across the first three notes.
-    await page.mouse.move(startX, startY)
-    await page.mouse.down()
-    await page.mouse.move(endX, endY, { steps: 10 })
-    await page.mouse.up()
+    // Click-and-click a marquee across the first three notes.
+    await clickAndClickSelect(page, startX, startY, endX, endY)
   },
 )
 

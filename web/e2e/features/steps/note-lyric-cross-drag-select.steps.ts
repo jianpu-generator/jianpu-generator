@@ -1,30 +1,30 @@
 import { expect } from '@playwright/test'
+import { clickAndClickSelect } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
- * Regression test for a marquee drag that starts on one cell type (note or
- * lyric) and is dragged across the other type never selecting that other
- * type at all.
+ * Regression test for a marquee selection that starts on one cell type (note
+ * or lyric) and whose second click lands across the other type never
+ * selecting that other type at all.
  *
- * `PreviewDragState` (see `usePreviewDragSelection.ts`) is a discriminated
- * union that commits to exactly one mode on mousedown — a mousedown that
- * lands on a note arms `'note'` mode (via `'pending'`, see `Preview.tsx`),
- * and a mousedown that lands on a lyric syllable arms `'lyric'` mode. For
- * the rest of the gesture, `usePreviewDragSelection.ts`'s
- * `handleMouseMove`/`handleMouseUp` call only that one mode's highlighter —
- * `applyNoteDragHighlights` for `'note'` mode, `applyLyricDragHighlights`
- * for `'lyric'` mode — never both.
+ * `PreviewDragState` (see `previewDragState.ts`) is a discriminated union
+ * that commits to exactly one mode on the anchoring click — a click that
+ * lands on a note anchors `'note'` mode, and a click that lands on a lyric
+ * syllable anchors `'lyric'` mode. For the rest of the gesture,
+ * `previewClickHandler.ts`'s resolution calls only that one mode's
+ * highlighter — `applyNoteDragHighlights` for `'note'` mode,
+ * `applyLyricDragHighlights` for `'lyric'` mode — never both.
  *
- * That's a real behavioral gap: dragging a marquee that starts on a NOTE
- * downward, so it visually covers the lyric syllables underneath, does NOT
- * select those syllables. The symmetric case — starting on a LYRIC syllable
- * and dragging up over the notes above it — does not select those notes
- * either.
+ * That's a real behavioral gap: a marquee that starts on a NOTE and whose
+ * second click lands below it, so it visually covers the lyric syllables
+ * underneath, does NOT select those syllables. The symmetric case — starting
+ * on a LYRIC syllable with the second click above it over the notes — does
+ * not select those notes either.
  *
- * Contrast with `'measure'` mode (a drag starting on empty space or a bare
- * bar line), which unions both: its move/up handlers call
+ * Contrast with `'measure'` mode (a gesture starting on empty space or a
+ * bare bar line), which unions both: its resolution calls
  * `noteCellsInMeasureRange` and `lyricCellsInMeasureRange` together and
- * apply both highlight sets (see `usePreviewDragSelection.ts`).
+ * applies both highlight sets (see `previewClickHandler.ts`).
  *
  * Self-contained source (not a demo file) with a generous "max measures per
  * system" and four single-beat notes with one syllable each, so all four
@@ -113,14 +113,7 @@ When(
     const endX = lyricBox2.x + lyricBox2.width / 2
     const endY = lyricBox2.y + lyricBox2.height / 2
 
-    await page.mouse.move(startX, startY)
-    await page.mouse.down()
-    // Past the note-drag arm threshold and down into the lyric row, in
-    // several steps so the marquee's bounding box genuinely sweeps over both
-    // rows rather than jumping straight to the end point.
-    await page.mouse.move(startX, endY, { steps: 5 })
-    await page.mouse.move(endX, endY, { steps: 5 })
-    await page.mouse.up()
+    await clickAndClickSelect(page, startX, startY, endX, endY)
   },
 )
 
@@ -143,11 +136,7 @@ When(
     const endX = noteBox2.x + noteBox2.width / 2
     const endY = noteBox2.y + noteBox2.height / 2
 
-    await page.mouse.move(startX, startY)
-    await page.mouse.down()
-    await page.mouse.move(startX, endY, { steps: 5 })
-    await page.mouse.move(endX, endY, { steps: 5 })
-    await page.mouse.up()
+    await clickAndClickSelect(page, startX, startY, endX, endY)
   },
 )
 

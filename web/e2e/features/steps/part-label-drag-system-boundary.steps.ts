@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { clickAndClickSelect } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -98,21 +99,17 @@ When(
       )
     }
 
-    // Drag straight down from system 0's Melody label to system 1's Melody
-    // label — a vertical drag, same gesture the "drag from one part label to
-    // another" test uses within a single system, but this one crosses a
-    // system boundary.
-    await page.mouse.move(
+    // Click-and-click straight down from system 0's Melody label to system
+    // 1's Melody label — a vertical sweep, same gesture the "drag from one
+    // part label to another" test uses within a single system, but this one
+    // crosses a system boundary.
+    await clickAndClickSelect(
+      page,
       startBox.x + startBox.width / 2,
       startBox.y + startBox.height / 2,
-    )
-    await page.mouse.down()
-    await page.mouse.move(
       endBox.x + endBox.width / 2,
       endBox.y + endBox.height / 2,
-      { steps: 10 },
     )
-    await page.mouse.up()
   },
 )
 

@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { clickAndClickSelect } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -128,19 +129,18 @@ When(
       throw new Error('Could not get bounding boxes for measures 0 and 1.')
     }
 
-    // Start the drag exactly on measure 0's left bar line and drag into
-    // measure 1's interior — a measure-mode drag spanning both systems. Held
-    // under Cmd/Ctrl, the only way to reach 'measure' mode now (see
-    // `Preview.tsx`'s `onMouseDown`).
-    await page.mouse.move(firstBox.x, firstBox.y + firstBox.height / 2)
+    // Click-and-click starting exactly on measure 0's left bar line and
+    // ending in measure 1's interior — a measure-mode selection spanning
+    // both systems. Held under Cmd/Ctrl, the only way to reach 'measure'
+    // mode now (see `previewClickHandler.ts`'s `handlePreviewClick`).
     await page.keyboard.down('Control')
-    await page.mouse.down()
-    await page.mouse.move(
+    await clickAndClickSelect(
+      page,
+      firstBox.x,
+      firstBox.y + firstBox.height / 2,
       lastBox.x + lastBox.width / 2,
       lastBox.y + lastBox.height / 2,
-      { steps: 10 },
     )
-    await page.mouse.up()
     await page.keyboard.up('Control')
   },
 )

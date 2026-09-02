@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { clickAndClickSelect } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -118,16 +119,18 @@ When(
       throw new Error('Could not get bounding boxes for measures 1 and 2.')
     }
 
-    // Start the drag exactly on the bar line between measure 0 and measure 1
-    // (measure 1's own left edge), then drag into measure 2's interior. Held
-    // under Cmd/Ctrl (see this file's top-of-file comment).
-    await page.mouse.move(box1.x, box1.y + box1.height / 2)
+    // Click-and-click starting exactly on the bar line between measure 0 and
+    // measure 1 (measure 1's own left edge), then into measure 2's interior.
+    // Held under Cmd/Ctrl (see this file's top-of-file comment).
     await page.keyboard.down('Control')
-    await page.mouse.down()
-    await page.mouse.move(box2.x + box2.width / 2, box2.y + box2.height / 2, {
-      steps: 8,
-    })
-    await page.mouse.up()
+    await clickAndClickSelect(
+      page,
+      box1.x,
+      box1.y + box1.height / 2,
+      box2.x + box2.width / 2,
+      box2.y + box2.height / 2,
+      8,
+    )
     await page.keyboard.up('Control')
   },
 )
@@ -152,15 +155,17 @@ When(
       throw new Error('Could not get bounding boxes for measures 1 and 2.')
     }
 
-    // Same drag as the Cmd/Ctrl scenario above, but with no modifier key held
-    // — grabbing the bar line's own divider is an unambiguous request to
+    // Same gesture as the Cmd/Ctrl scenario above, but with no modifier key
+    // held — grabbing the bar line's own divider is an unambiguous request to
     // select measures on its own, regardless of modifier keys.
-    await page.mouse.move(box1.x, box1.y + box1.height / 2)
-    await page.mouse.down()
-    await page.mouse.move(box2.x + box2.width / 2, box2.y + box2.height / 2, {
-      steps: 8,
-    })
-    await page.mouse.up()
+    await clickAndClickSelect(
+      page,
+      box1.x,
+      box1.y + box1.height / 2,
+      box2.x + box2.width / 2,
+      box2.y + box2.height / 2,
+      8,
+    )
   },
 )
 

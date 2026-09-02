@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { clickAndClickSelect } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -95,19 +96,19 @@ When(
       )
     }
 
-    // A plain click already selects just the rest itself (see
-    // `usePreviewDragSelection.ts`'s 'pending' mode) — this drags just past
-    // the note-drag arm threshold instead, while staying inside the rest's own
-    // click target, to exercise the 'note' drag-marquee path specifically
-    // rather than the plain-click path.
-    await page.mouse.move(restBox.x + 2, restBox.y + restBox.height / 2)
-    await page.mouse.down()
-    await page.mouse.move(
+    // A single click already selects just the rest itself (see
+    // `previewClickHandler.ts`'s 'note' mode) — this clicks twice instead,
+    // staying inside the rest's own click target both times, to exercise the
+    // 'note' marquee-resolution path specifically rather than the
+    // first-click self-commit path.
+    await clickAndClickSelect(
+      page,
+      restBox.x + 2,
+      restBox.y + restBox.height / 2,
       restBox.x + restBox.width - 2,
       restBox.y + restBox.height / 2,
-      { steps: 5 },
+      5,
     )
-    await page.mouse.up()
   },
 )
 
