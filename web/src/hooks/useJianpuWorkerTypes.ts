@@ -23,11 +23,37 @@ export interface TextRequestTracker {
   pendingRequestsRef: RefObject<Map<number, (source: string) => void>>
 }
 
+/** One export's bytes, staged behind the rename-before-download modal until
+ * the user confirms or cancels — see `useJianpuWorkerState.ts`'s
+ * `requestDownload`/`confirmPendingDownload`/`cancelPendingDownload`. */
+export interface PendingDownload {
+  url: string
+  filename: string
+  /** Revoke `url` once the modal closes (confirmed or cancelled) — true for
+   * one-shot export blobs (PDF/MIDI/zip) created solely for this download;
+   * false for the WAV/MP3 preview's persistent object URL, which the
+   * `<audio>` element still uses after the modal closes. */
+  revokeOnClose: boolean
+}
+
 export interface JianpuWorkerState {
   parts: PartInfo[]
   partDeclarations: PartDeclaration[]
   partsLoading: boolean
   documents: SvgDocumentOut[]
+  pendingDownload: PendingDownload | null
+  /** Opens the rename-before-download modal for `url`/`filename` — see
+   * `PendingDownload`'s `revokeOnClose` doc comment for what that flag
+   * controls. Exposed for `App.tsx` to wire the WAV/MP3 preview player's
+   * "Download" button, which builds its own object URL upstream of this
+   * hook's own export message handlers. */
+  requestDownload: (
+    url: string,
+    filename: string,
+    revokeOnClose: boolean,
+  ) => void
+  confirmPendingDownload: (filename: string) => void
+  cancelPendingDownload: () => void
   wavUrl: string | null
   wavFilename: string
   /** The full-score preview MP3 URL, mirroring `wavUrl` — mutually exclusive

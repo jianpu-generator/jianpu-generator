@@ -87,15 +87,22 @@ export function disabledLyricsForRender(
   return disabled
 }
 
-export function downloadPdf(bytes: ArrayBuffer, filename: string) {
-  const url = URL.createObjectURL(
-    new Blob([bytes], { type: 'application/pdf' }),
-  )
+/** Wraps export bytes in an object URL of the given MIME type — the URL is
+ * the caller's to revoke once it's no longer needed (see `requestDownload`/
+ * `cancelPendingDownload`/`confirmPendingDownload` in
+ * `useJianpuWorkerState.ts`). */
+export function objectUrlForBytes(bytes: ArrayBuffer, mimeType: string) {
+  return URL.createObjectURL(new Blob([bytes], { type: mimeType }))
+}
+
+/** Fires a browser download for `url` under `filename` via a throwaway
+ * anchor click — the one primitive every export format's download funnels
+ * through. Does not revoke `url`; the caller owns its lifetime. */
+export function triggerAnchorDownload(url: string, filename: string) {
   const anchor = document.createElement('a')
   anchor.href = url
   anchor.download = filename
   anchor.click()
-  URL.revokeObjectURL(url)
 }
 
 // When only some parts are enabled, mark that in the filename so exports
@@ -129,15 +136,6 @@ export function midiFilenameFromActiveFile(
     ? activeFile.replace(/\.jianpu$/, '.mid')
     : `${activeFile}.mid`
   return withEnabledPartsSuffix(base, enabledPartNames)
-}
-
-export function downloadMidi(bytes: ArrayBuffer, filename: string) {
-  const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/midi' }))
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-  URL.revokeObjectURL(url)
 }
 
 export function wavFilenameFromActiveFile(
@@ -175,15 +173,4 @@ export function baseNameFromActiveFile(activeFile: string): string {
     return activeFile.replace(/\.jianpu$/, '')
   }
   return activeFile
-}
-
-export function downloadZip(bytes: ArrayBuffer, filename: string) {
-  const url = URL.createObjectURL(
-    new Blob([bytes], { type: 'application/zip' }),
-  )
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-  URL.revokeObjectURL(url)
 }

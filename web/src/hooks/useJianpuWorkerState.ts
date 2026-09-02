@@ -11,12 +11,16 @@ import type {
   SectionRange,
   SequenceEntry,
 } from '../types'
-import type { TextRequestTracker } from './useJianpuWorkerTypes'
+import type {
+  PendingDownload,
+  TextRequestTracker,
+} from './useJianpuWorkerTypes'
 import {
   disabledLyricsForRender,
   enabledPartNamesForFilename,
   enabledTracksForRender,
   mp3FilenameFromActiveFile,
+  triggerAnchorDownload,
   wavFilenameFromActiveFile,
 } from './workerHelpers'
 
@@ -38,6 +42,8 @@ export function useJianpuWorkerState(
   )
   const [partsLoading, setPartsLoading] = useState(false)
   const [documents, setDocuments] = useState<SvgDocumentOut[]>([])
+  const [pendingDownload, setPendingDownload] =
+    useState<PendingDownload | null>(null)
   const [wavUrl, setWavUrl] = useState<string | null>(null)
   const [mp3Url, setMp3Url] = useState<string | null>(null)
   const [noteTimings, setNoteTimings] = useState<NoteTimingOut[]>([])
@@ -144,6 +150,35 @@ export function useJianpuWorkerState(
     revealLine: number
   } | null>(null)
 
+  /** Opens the rename-before-download modal for `url`/`filename` instead of
+   * downloading immediately — see `PendingDownload`'s doc comment for what
+   * `revokeOnClose` controls. */
+  function requestDownload(
+    url: string,
+    filename: string,
+    revokeOnClose: boolean,
+  ) {
+    setPendingDownload({ url, filename, revokeOnClose })
+  }
+
+  /** User confirmed the modal (Download button or Enter) — fires the
+   * download under the (possibly edited) `filename`, then revokes the
+   * object URL and clears the pending state. */
+  function confirmPendingDownload(filename: string) {
+    if (!pendingDownload) return
+    triggerAnchorDownload(pendingDownload.url, filename)
+    if (pendingDownload.revokeOnClose) URL.revokeObjectURL(pendingDownload.url)
+    setPendingDownload(null)
+  }
+
+  /** User cancelled the modal (Cancel/Escape/overlay click) — no download,
+   * just cleanup. */
+  function cancelPendingDownload() {
+    if (!pendingDownload) return
+    if (pendingDownload.revokeOnClose) URL.revokeObjectURL(pendingDownload.url)
+    setPendingDownload(null)
+  }
+
   const effectiveDisabledParts = useMemo(() => {
     if (soloedParts.size === 0) return disabledParts
     return new Set(
@@ -190,6 +225,10 @@ export function useJianpuWorkerState(
     setPartsLoading,
     documents,
     setDocuments,
+    pendingDownload,
+    requestDownload,
+    confirmPendingDownload,
+    cancelPendingDownload,
     wavUrl,
     setWavUrl,
     mp3Url,

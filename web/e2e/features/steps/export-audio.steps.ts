@@ -123,10 +123,14 @@ When(
 
     const item = page.getByRole('menuitem', { name: itemName, exact: true })
     await expect(item).toBeEnabled({ timeout: 30_000 })
+    await item.click()
+
+    const confirmButton = page.getByTestId('download-rename-confirm')
+    await expect(confirmButton).toBeVisible({ timeout: 30_000 })
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      item.click(),
+      confirmButton.click(),
     ])
 
     const downloadPath = await download.path()
@@ -216,15 +220,6 @@ Then(
 )
 
 Then(
-  'the audio download link is visible with download name {string}',
-  async ({ page }, filename: string) => {
-    const downloadLink = page.locator('.preview-audio-download')
-    await expect(downloadLink).toBeVisible({ timeout: 15_000 })
-    await expect(downloadLink).toHaveAttribute('download', filename)
-  },
-)
-
-Then(
   'the downloaded zip file is larger than {int} bytes',
   async ({}, size: number) => {
     expect(lastDownloadStats?.size).toBeGreaterThan(size)
@@ -238,6 +233,11 @@ Then('the downloaded file is named {string}', async ({}, filename: string) => {
 When(
   'I wait for the download to finish, as seen in export audio',
   async ({ page }) => {
-    await page.waitForEvent('download', { timeout: 30_000 })
+    const confirmButton = page.getByTestId('download-rename-confirm')
+    await expect(confirmButton).toBeVisible({ timeout: 30_000 })
+    await Promise.all([
+      page.waitForEvent('download', { timeout: 30_000 }),
+      confirmButton.click(),
+    ])
   },
 )

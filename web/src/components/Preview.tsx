@@ -38,6 +38,10 @@ interface PreviewProps {
   /** The `<audio>` element currently playing the selected measure range, if any. */
   measureAudioElement?: HTMLAudioElement | null
   emptyMessage?: string
+  /** Opens the rename-before-download modal for the inline audio player's
+   * "Download" button, instead of downloading `audioUrl` immediately —
+   * see `PendingDownload` in `useJianpuWorkerTypes.ts`. */
+  onRequestAudioDownload?: (url: string, filename: string) => void
   onSectionLabelClick?: (label: string) => void
   /** Fired on mouseup after a note-level drag-select (see `getNoteAtPoint`),
    * with every note/rest cell the drag's marquee overlapped — but only when
@@ -126,6 +130,7 @@ export function Preview({
   measureAudioNoteTimings,
   measureAudioElement,
   emptyMessage = 'No preview yet.',
+  onRequestAudioDownload,
   onSectionLabelClick,
   onNoteRangeSelect,
   selectedNoteCells = [],
@@ -269,14 +274,15 @@ export function Preview({
             src={audioUrl}
             tabIndex={audioBusy ? -1 : undefined}
           />
-          <a
+          <button
+            type="button"
             className="preview-audio-download"
-            href={audioUrl}
-            download={audioFilename}
+            data-testid="preview-audio-download-button"
+            onClick={() => onRequestAudioDownload?.(audioUrl, audioFilename)}
             tabIndex={audioBusy ? -1 : undefined}
           >
             Download
-          </a>
+          </button>
         </div>
       ) : null}
       <div className="preview-pages-wrapper">

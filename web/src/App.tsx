@@ -63,6 +63,10 @@ export default function App() {
     parts,
     partDeclarations,
     documents,
+    pendingDownload,
+    requestDownload,
+    confirmPendingDownload,
+    cancelPendingDownload,
     wavUrl,
     wavFilename,
     mp3Url,
@@ -248,6 +252,9 @@ export default function App() {
         setBinOpen={setBinOpen}
         onRestore={handleRestore}
         restoringFileName={restoringFileName}
+        pendingDownload={pendingDownload}
+        onConfirmDownload={confirmPendingDownload}
+        onCancelDownload={cancelPendingDownload}
       />
       <ExportAudioToast
         open={
@@ -334,6 +341,9 @@ export default function App() {
         mp3Exporting={mp3Exporting}
         mp3Url={mp3Url}
         mp3Filename={mp3Filename}
+        onRequestAudioDownload={(url, filename) =>
+          requestDownload(url, filename, false)
+        }
         noteTimings={noteTimings}
         measureAudioNoteTimings={measureAudioNoteTimings}
         measureAudioElement={measureAudioElement}

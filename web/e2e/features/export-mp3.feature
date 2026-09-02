@@ -4,7 +4,8 @@ Feature: Export MP3
   # directly — see export-audio.feature. "MP3 (ZIP)" (parts export) has no
   # inline-player equivalent and stays a direct download.
   Scenario: Export Parts > MP3 (ZIP) produces a non-empty downloaded zip for a multi-part score
-    Given the multi-part MP3 export source is loaded
+    Given the export test timeout is extended to 60 seconds
+    And the multi-part MP3 export source is loaded
     When I export "MP3 (ZIP)" and capture the download, as seen in export mp3
     Then the downloaded MP3 file is larger than 0 bytes
     And the downloaded file is named "test (MP3 parts).zip", as seen in export mp3

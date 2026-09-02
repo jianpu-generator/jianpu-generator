@@ -1,12 +1,14 @@
 import type { FileStoreState } from '../fileStore'
 import { sortedBinNames } from '../fileStore'
 import type { FileOpError } from '../hooks/useFileOperations'
+import type { PendingDownload } from '../hooks/useJianpuWorkerTypes'
 import type {
   StorageBackendPreference,
   StorageBackendTarget,
 } from '../hooks/useStorageBackend'
 import type { StorageBackend } from '../storage/types'
 import { BinModal } from './BinModal'
+import { DownloadRenameModal } from './DownloadRenameModal'
 import { ErrorModal } from './ErrorModal'
 import { StorageSettingsModal } from './StorageSettingsModal'
 
@@ -29,6 +31,9 @@ interface AppOverlaysProps {
   setBinOpen: (open: boolean) => void
   onRestore: (name: string) => void
   restoringFileName?: string | null
+  pendingDownload: PendingDownload | null
+  onConfirmDownload: (filename: string) => void
+  onCancelDownload: () => void
 }
 
 /** Modals and the hidden test-probe span that sit above the main
@@ -51,6 +56,9 @@ export function AppOverlays({
   setBinOpen,
   onRestore,
   restoringFileName,
+  pendingDownload,
+  onConfirmDownload,
+  onCancelDownload,
 }: AppOverlaysProps) {
   return (
     <>
@@ -80,6 +88,11 @@ export function AppOverlays({
         binNames={sortedBinNames(store)}
         onRestore={onRestore}
         restoringName={restoringFileName}
+      />
+      <DownloadRenameModal
+        pending={pendingDownload}
+        onConfirm={onConfirmDownload}
+        onCancel={onCancelDownload}
       />
       <span
         data-testid="selected-measure-range"

@@ -96,10 +96,14 @@ When(
 
     const item = page.getByRole('menuitem', { name: itemName, exact: true })
     await expect(item).toBeEnabled({ timeout: 30_000 })
+    await item.click()
+
+    const confirmButton = page.getByTestId('download-rename-confirm')
+    await expect(confirmButton).toBeVisible({ timeout: 30_000 })
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      item.click(),
+      confirmButton.click(),
     ])
 
     const downloadPath = await download.path()

@@ -35,14 +35,18 @@ Feature: Export audio (WAV and MP3)
     Then only one inline audio player is visible
     And the inline audio player's blob src changes to a new blob url
 
-  Scenario: Audio download link filename includes only the enabled parts when a part is hidden
+  Scenario: Audio download button's rename modal filename includes only the enabled parts when a part is hidden
     Given the export test timeout is extended to 60 seconds
     And the multi-part export source is loaded
     And I hide the "H" part via its eye toggle
     When I open the export menu and choose "WAV"
-    Then the audio download link is visible with download name "test (Melody).wav"
-    When I open the export menu and choose "MP3"
-    Then the audio download link is visible with download name "test (Melody).mp3"
+    And I click the inline audio player's Download button
+    Then the rename modal shows the input pre-filled with "test (Melody).wav"
+    When I click the modal's Cancel button
+    And I open the export menu and choose "MP3"
+    And I click the inline audio player's Download button
+    Then the rename modal shows the input pre-filled with "test (Melody).mp3"
+    When I click the modal's Cancel button
 
   Scenario: Export Parts > WAV (ZIP) produces a non-empty downloaded zip for a multi-part score
     Given the export test timeout is extended to 60 seconds

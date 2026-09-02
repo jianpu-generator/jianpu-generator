@@ -142,6 +142,7 @@ interface AppWorkspaceProps {
   mp3Exporting: boolean
   mp3Url: string | null
   mp3Filename: string
+  onRequestAudioDownload: (url: string, filename: string) => void
   noteTimings: NoteTimingOut[]
   measureAudioNoteTimings: NoteTimingOut[]
   measureAudioElement: HTMLAudioElement | null
@@ -205,6 +206,7 @@ export function AppWorkspace({
   mp3Exporting,
   mp3Url,
   mp3Filename,
+  onRequestAudioDownload,
   noteTimings,
   measureAudioNoteTimings,
   measureAudioElement,
@@ -363,6 +365,7 @@ export function AppWorkspace({
           mp3Exporting={mp3Exporting}
           mp3Url={mp3Url}
           mp3Filename={mp3Filename}
+          onRequestAudioDownload={onRequestAudioDownload}
           noteTimings={noteTimings}
           measureAudioNoteTimings={measureAudioNoteTimings}
           measureAudioElement={measureAudioElement}

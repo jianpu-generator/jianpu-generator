@@ -12,15 +12,8 @@ import type {
   SequenceEntry,
 } from '../types'
 import type { WorkerResponse } from '../worker/jianpu.worker'
+import { handleExportMessage } from './useJianpuWorkerExportMessages'
 import type { TextRequestTracker } from './useJianpuWorkerTypes'
-import {
-  downloadMidi,
-  downloadPdf,
-  downloadZip,
-  midiFilenameFromActiveFile,
-  pdfFilenameFromActiveFile,
-  zipFilenameFromActiveFile,
-} from './workerHelpers'
 
 export interface WorkerMessageHandlerDeps {
   audioAvailableRef: RefObject<boolean>
@@ -92,11 +85,23 @@ export interface WorkerMessageHandlerDeps {
       { resolve: (source: string) => void; reject: (error: Error) => void }
     >
   >
+  /** Opens the rename-before-download modal instead of downloading
+   * immediately — see `PendingDownload` in `useJianpuWorkerTypes.ts`. */
+  requestDownload: (
+    url: string,
+    filename: string,
+    revokeOnClose: boolean,
+  ) => void
 }
 
 export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
   return (event: MessageEvent<WorkerResponse>) => {
     const msg = event.data
+    // The twelve pdf/midi/wav/mp3 export-finished and export-failed message
+    // pairs live in their own module — see `handleExportMessage`'s doc
+    // comment for why.
+    if (handleExportMessage(msg, deps)) return
+
     if (msg.type === 'ready') {
       deps.audioAvailableRef.current = msg.audioAvailable
       deps.setAudioAvailable(msg.audioAvailable)
@@ -138,97 +143,6 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
       return
     }
 
-    if (msg.type === 'pdf') {
-      if (msg.id !== deps.latestPdfIdRef.current) return
-      deps.setPdfExporting(false)
-      downloadPdf(
-        msg.pdf,
-        pdfFilenameFromActiveFile(
-          deps.activeFileRef.current,
-          deps.enabledPartNamesRef.current,
-        ),
-      )
-      return
-    }
-
-    if (msg.type === 'pdfErr') {
-      if (msg.id !== deps.latestPdfIdRef.current) return
-      deps.setPdfExporting(false)
-      deps.setDiagnostics(msg.diagnostics)
-      return
-    }
-
-    if (msg.type === 'splitPdf') {
-      if (msg.id !== deps.latestSplitPdfIdRef.current) return
-      deps.setSplitPdfExporting(false)
-      downloadZip(
-        msg.zip,
-        zipFilenameFromActiveFile(deps.activeFileRef.current),
-      )
-      return
-    }
-
-    if (msg.type === 'splitPdfErr') {
-      if (msg.id !== deps.latestSplitPdfIdRef.current) return
-      deps.setSplitPdfExporting(false)
-      deps.setDiagnostics(msg.diagnostics)
-      return
-    }
-
-    if (msg.type === 'midi') {
-      if (msg.id !== deps.latestMidiIdRef.current) return
-      deps.setMidiExporting(false)
-      downloadMidi(
-        msg.midi,
-        midiFilenameFromActiveFile(
-          deps.activeFileRef.current,
-          deps.enabledPartNamesRef.current,
-        ),
-      )
-      return
-    }
-
-    if (msg.type === 'midiErr') {
-      if (msg.id !== deps.latestMidiIdRef.current) return
-      deps.setMidiExporting(false)
-      deps.setDiagnostics(msg.diagnostics)
-      return
-    }
-
-    if (msg.type === 'splitMidi') {
-      if (msg.id !== deps.latestSplitMidiIdRef.current) return
-      deps.setSplitMidiExporting(false)
-      downloadZip(
-        msg.zip,
-        zipFilenameFromActiveFile(deps.activeFileRef.current, 'MIDI parts'),
-      )
-      return
-    }
-
-    if (msg.type === 'splitMidiErr') {
-      if (msg.id !== deps.latestSplitMidiIdRef.current) return
-      deps.setSplitMidiExporting(false)
-      deps.setDiagnostics(msg.diagnostics)
-      return
-    }
-
-    if (msg.type === 'splitWav') {
-      if (msg.id !== deps.latestSplitWavIdRef.current) return
-      deps.setSplitWavExporting(false)
-      downloadZip(
-        msg.zip,
-        zipFilenameFromActiveFile(deps.activeFileRef.current, 'WAV parts'),
-      )
-      return
-    }
-
-    if (msg.type === 'splitWavErr') {
-      if (msg.id !== deps.latestSplitWavIdRef.current) return
-      deps.setSplitWavExporting(false)
-      deps.setDiagnostics(msg.diagnostics)
-      return
-    }
-
     if (msg.type === 'mp3') {
       if (msg.id !== deps.latestMp3IdRef.current) return
       deps.setMp3Exporting(false)
@@ -243,23 +157,6 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
     if (msg.type === 'mp3Err') {
       if (msg.id !== deps.latestMp3IdRef.current) return
       deps.setMp3Exporting(false)
-      deps.setDiagnostics(msg.diagnostics)
-      return
-    }
-
-    if (msg.type === 'splitMp3') {
-      if (msg.id !== deps.latestSplitMp3IdRef.current) return
-      deps.setSplitMp3Exporting(false)
-      downloadZip(
-        msg.zip,
-        zipFilenameFromActiveFile(deps.activeFileRef.current, 'MP3 parts'),
-      )
-      return
-    }
-
-    if (msg.type === 'splitMp3Err') {
-      if (msg.id !== deps.latestSplitMp3IdRef.current) return
-      deps.setSplitMp3Exporting(false)
       deps.setDiagnostics(msg.diagnostics)
       return
     }

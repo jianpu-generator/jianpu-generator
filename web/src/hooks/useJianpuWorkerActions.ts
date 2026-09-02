@@ -162,6 +162,7 @@ export function useJianpuWorkerActions({
     currentPreviewAudioRef,
     setPreviewAudioPlaying,
     pendingImportsRef: state.pendingImportsRef,
+    requestDownload: state.requestDownload,
   })
 
   const { notifySelection } = useJianpuWorkerRenderRequests({

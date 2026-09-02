@@ -97,10 +97,14 @@ When(
 
     const item = page.getByRole('menuitem', { name: itemName, exact: true })
     await expect(item).toBeEnabled({ timeout: 30_000 })
+    await item.click()
+
+    const confirmButton = page.getByTestId('download-rename-confirm')
+    await expect(confirmButton).toBeVisible({ timeout: 30_000 })
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      item.click(),
+      confirmButton.click(),
     ])
 
     const downloadPath = await download.path()
@@ -130,12 +134,19 @@ When(
     // reach the handler before React can re-render the menu as closed,
     // exercising the `pdfExporting`/`splitPdfExporting` re-entrancy guard in
     // `exportPdf` (useJianpuWorker.ts) rather than relying on real user timing.
+    // The dedup happens before `requestDownload` is ever called twice, so
+    // only a single rename modal opens.
+    await item.evaluate((el: HTMLElement) => {
+      el.click()
+      el.click()
+    })
+
+    const confirmButton = page.getByTestId('download-rename-confirm')
+    await expect(confirmButton).toBeVisible({ timeout: 30_000 })
+
     const [download] = await Promise.all([
       page.waitForEvent('download', { timeout: 30_000 }),
-      item.evaluate((el: HTMLElement) => {
-        el.click()
-        el.click()
-      }),
+      confirmButton.click(),
     ])
     lastDownload = download
 

@@ -56,10 +56,14 @@ When('I export the active file as a PDF', async ({ page }) => {
   await exportButton.click()
   const pdfItem = page.getByRole('menuitem', { name: 'PDF', exact: true })
   await expect(pdfItem).toBeEnabled({ timeout: 30_000 })
+  await pdfItem.click()
+
+  const confirmButton = page.getByTestId('download-rename-confirm')
+  await expect(confirmButton).toBeVisible({ timeout: 30_000 })
 
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    pdfItem.click(),
+    confirmButton.click(),
   ])
   const pdfPath = await download.path()
   expect(pdfPath).toBeTruthy()

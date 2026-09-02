@@ -72,8 +72,19 @@ When(
     pageErrorPromise.catch(() => {})
 
     await item.click()
-    const download = await Promise.race([
-      page.waitForEvent('download'),
+
+    const confirmButton = page.getByTestId('download-rename-confirm')
+    await Promise.race([
+      expect(confirmButton).toBeVisible({ timeout: 30_000 }),
+      pageErrorPromise,
+    ])
+
+    // Register the download listener *before* clicking — the modal can
+    // resolve fast enough that the download fires before a `waitForEvent`
+    // registered after the click ever starts listening, which would hang
+    // forever waiting for an event that already happened.
+    const [download] = await Promise.race([
+      Promise.all([page.waitForEvent('download'), confirmButton.click()]),
       pageErrorPromise,
     ])
 
@@ -112,6 +123,15 @@ When(
       })
     pageErrorPromise.catch(() => {})
 
-    await Promise.race([page.waitForEvent('download'), pageErrorPromise])
+    const confirmButton = page.getByTestId('download-rename-confirm')
+    await Promise.race([
+      expect(confirmButton).toBeVisible({ timeout: 30_000 }),
+      pageErrorPromise,
+    ])
+
+    await Promise.race([
+      Promise.all([page.waitForEvent('download'), confirmButton.click()]),
+      pageErrorPromise,
+    ])
   },
 )
