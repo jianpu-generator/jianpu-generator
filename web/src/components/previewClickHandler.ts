@@ -34,6 +34,11 @@ function anchorAndCommit(
   args: HandlePreviewClickArgs,
 ): void {
   dragStateRef.current = newState
+  // Arms the one-shot reveal suppression (see `HandlePreviewClickArgs`'s
+  // `suppressNextRevealRef` doc comment) — set here, ahead of `fireCommit`,
+  // so it's already armed by the time this self-commit's Monaco selection
+  // round-trip debounces into `Preview.tsx`'s scroll-to-selection effect.
+  args.suppressNextRevealRef.current = true
   fireCommit(resolveSelection(newState, undefined, args), args)
 }
 

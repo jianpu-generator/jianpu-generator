@@ -34,6 +34,19 @@ import {
  * gesture needs to resolve, highlight, and commit a selection. */
 export interface HandlePreviewClickArgs {
   dragStateRef: RefObject<PreviewDragState>
+  /** Armed by a gesture's anchoring (first) click — see
+   * `previewClickHandler.ts`'s `anchorAndCommit` — and consumed once by
+   * `Preview.tsx`'s scroll-to-selection effect, so that self-commit's own
+   * debounced Monaco-selection round-trip doesn't auto-scroll the preview
+   * out from under a user still moving toward a second click (e.g. onto
+   * another page) to widen the gesture into a range. Deliberately a
+   * one-shot flag rather than a persistent "is a gesture anchored" check:
+   * a click-and-click gesture's anchor stays live indefinitely (until a
+   * second click or Escape), so gating on that directly would silently
+   * suppress every *later*, unrelated reveal too (e.g. a keyboard
+   * navigation) for as long as an old anchor from a single, never-followed-up
+   * click happens to still be sitting there. */
+  suppressNextRevealRef: RefObject<boolean>
   previewPagesRef: RefObject<HTMLDivElement | null>
   noteSpans: NoteSpan[]
   lyricSpans: LyricSpan[]

@@ -36,13 +36,15 @@ export type { PreviewDragState } from './previewDragState'
 /** Owns the note/measure/part-label click-and-click selection gesture for
  * `Preview`: a first click (handled by `Preview` itself via
  * `handlePreviewClick`, which writes the anchored mode into the returned
- * ref) anchors one of `PreviewDragState`'s modes, and the document-level
- * `mousemove` listener registered here live-updates the hover preview
- * between the anchor and the pointer for mouse users (a no-op for touch,
- * which has no hover) until a second click — also routed through
+ * `dragStateRef`) anchors one of `PreviewDragState`'s modes, and the
+ * document-level `mousemove` listener registered here live-updates the hover
+ * preview between the anchor and the pointer for mouse users (a no-op for
+ * touch, which has no hover) until a second click — also routed through
  * `handlePreviewClick` — resolves and commits it. A document-level
  * `keydown` listener cancels the anchored gesture back to idle on Escape,
  * the click-click model's equivalent of releasing a held button to abort.
+ * Also returns `suppressNextRevealRef` — see `HandlePreviewClickArgs`'s doc
+ * comment — for `Preview.tsx`'s scroll-to-selection effect to consume.
  * Split out of `Preview` to keep that component under its line-count cap. */
 export function usePreviewClickSelection(
   previewPagesRef: RefObject<HTMLDivElement | null>,
@@ -77,6 +79,11 @@ export function usePreviewClickSelection(
   onMeasureRangeSelectRef.current = onMeasureRangeSelect
 
   const dragStateRef = useRef<PreviewDragState>(null)
+  // See `HandlePreviewClickArgs`'s doc comment — owned here (alongside
+  // `dragStateRef`) so `Preview.tsx`'s scroll-to-selection effect can
+  // consume it, and passed through to every `HandlePreviewClickArgs` built
+  // below.
+  const suppressNextRevealRef = useRef(false)
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -191,6 +198,7 @@ export function usePreviewClickSelection(
       if (!dragState) return
       cancelAnchor(dragStateRef, dragState, {
         dragStateRef,
+        suppressNextRevealRef,
         previewPagesRef,
         noteSpans: noteSpansRef.current,
         lyricSpans: lyricSpansRef.current,
@@ -209,5 +217,5 @@ export function usePreviewClickSelection(
     }
   }, [previewPagesRef])
 
-  return dragStateRef
+  return { dragStateRef, suppressNextRevealRef }
 }

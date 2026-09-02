@@ -168,7 +168,7 @@ export function Preview({
     measureAudioElement,
     measureAudioNoteTimings,
   )
-  const dragStateRef = usePreviewClickSelection(
+  const { dragStateRef, suppressNextRevealRef } = usePreviewClickSelection(
     previewPagesRef,
     noteSpans,
     onNoteRangeSelect,
@@ -197,9 +197,28 @@ export function Preview({
   // because a chain selection's own `start` is wherever the chain's
   // earliest entry sits in document order, not necessarily where the user
   // navigated to (see `measureRangeInSpanWithReveal`).
+  //
+  // Skipped once whenever `suppressNextRevealRef` is armed (see
+  // `HandlePreviewClickArgs`'s doc comment): a click-and-click gesture's
+  // anchoring click self-commits a Monaco selection just like any other,
+  // which — after `notifySelection`'s debounce — lands here and would
+  // otherwise auto-scroll the preview back to the anchor's own measure.
+  // That fights the user's manual scroll toward their second click (e.g.
+  // onto another page), silently relocating whatever's under their pointer
+  // before that second click lands — see
+  // `note-range-select-crosses-page.feature`'s regression coverage. A
+  // one-shot flag rather than a persistent `dragStateRef.current !== null`
+  // check: the anchor stays live until a second click or Escape, so gating
+  // on that directly would keep suppressing every *later*, unrelated reveal
+  // too, for as long as an old anchor from a single, never-followed-up
+  // click happens to still be sitting there.
   // biome-ignore lint/correctness/useExhaustiveDependencies: documents/highlightedDocuments aren't read in the body, but must stay listed so this re-runs after they swap in fresh SVG DOM (see comment above effect near the top of this file).
   useEffect(() => {
     if (selectedMeasureRange === null) return
+    if (suppressNextRevealRef.current) {
+      suppressNextRevealRef.current = false
+      return
+    }
     const targetMeasureIndex = selectedMeasureRange.revealMeasureIndex
 
     const frameId = requestAnimationFrame(() => {
@@ -294,6 +313,7 @@ export function Preview({
           onMouseDown={(e) =>
             handlePreviewClick(e, {
               dragStateRef,
+              suppressNextRevealRef,
               previewPagesRef,
               noteSpans,
               lyricSpans,
