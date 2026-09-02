@@ -67,23 +67,43 @@ const errorStyle: React.CSSProperties = {
   margin: 0,
 }
 
-const cancelButtonStyle: React.CSSProperties = {
+const buttonStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
   padding: '6px 12px',
   fontSize: '13px',
-  border: '1px solid #ccc',
   borderRadius: '4px',
-  background: '#fff',
   cursor: 'pointer',
 }
 
+const cancelButtonStyle: React.CSSProperties = {
+  ...buttonStyle,
+  border: '1px solid #ccc',
+  background: '#fff',
+}
+
 const confirmButtonStyle: React.CSSProperties = {
-  padding: '6px 12px',
-  fontSize: '13px',
+  ...buttonStyle,
   border: '1px solid #2563eb',
-  borderRadius: '4px',
   background: '#2563eb',
   color: '#fff',
-  cursor: 'pointer',
+}
+
+const keyHintStyle: React.CSSProperties = {
+  fontFamily: 'var(--mono, monospace)',
+  fontSize: '11px',
+  lineHeight: 1,
+  padding: '2px 5px',
+  borderRadius: '3px',
+  background: 'rgba(0,0,0,0.06)',
+  color: '#666',
+}
+
+const confirmKeyHintStyle: React.CSSProperties = {
+  ...keyHintStyle,
+  background: 'rgba(255,255,255,0.22)',
+  color: '#fff',
 }
 
 /** Base-name length of `filename` (everything before its final `.ext`) —
@@ -241,6 +261,7 @@ export function DownloadRenameModal({
                 onClick={onCancel}
               >
                 Cancel
+                <span style={keyHintStyle}>Esc</span>
               </button>
               <button
                 type="submit"
@@ -248,6 +269,7 @@ export function DownloadRenameModal({
                 style={confirmButtonStyle}
               >
                 Download
+                <span style={confirmKeyHintStyle}>Enter</span>
               </button>
             </div>
           </form>

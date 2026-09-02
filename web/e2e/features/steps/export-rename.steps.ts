@@ -163,7 +163,9 @@ When(
 
 When("I click the modal's {string} button", async ({ page }, label: string) => {
   const confirmButton = renameConfirmButton(page)
-  await expect(confirmButton).toHaveText(label)
+  // Contains rather than exact match: the button also carries an "Enter"
+  // key-hint badge alongside the label text.
+  await expect(confirmButton).toContainText(label)
 
   // Registered before the click so a download that fires immediately isn't
   // missed — but not awaited here, since an invalid name rejects the
