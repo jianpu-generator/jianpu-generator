@@ -1,4 +1,5 @@
 use crate::ast::grouped::Score;
+use crate::ast::parsed::KeyChange;
 use crate::error::IrrecoverableError;
 
 /// Rebuilds `score.measures` to reflect a `# sequence` section's resolved
@@ -74,6 +75,37 @@ pub fn expand_navigation_with_note_positions(
     Ok((score.clone(), origins))
 }
 
+/// For every written measure index, the BPM/key that was already in effect
+/// immediately *before* that measure (i.e. accumulated from every earlier
+/// written measure's own `bpm=`/`key=`, not including this measure's own).
+/// `None` until the first measure that sets one.
+///
+/// [`build_expanded`] uses this to backfill a played measure's missing
+/// `bpm`/`key` when `# sequence` navigation skips over the written measures
+/// between it and the previous played one (e.g. an intro before the
+/// sequence's first listed section, or a gap between two labeled sections):
+/// without a written measure actually being processed there, nothing would
+/// otherwise carry an earlier `bpm=`/`key=` change forward into what does
+/// get played. Mirrors [`super::timing_range::build_measure_range_score`]'s
+/// same accumulate-then-backfill treatment for a measure-range selection.
+fn accumulated_context_before(score: &Score) -> (Vec<Option<u32>>, Vec<Option<KeyChange>>) {
+    let mut bpm_before = Vec::with_capacity(score.measures.len());
+    let mut key_before = Vec::with_capacity(score.measures.len());
+    let mut current_bpm = None;
+    let mut current_key: Option<KeyChange> = None;
+    for measure in &score.measures {
+        bpm_before.push(current_bpm);
+        key_before.push(current_key.clone());
+        if let Some(bpm) = measure.bpm {
+            current_bpm = Some(bpm);
+        }
+        if let Some(key) = &measure.key {
+            current_key = Some(key.clone());
+        }
+    }
+    (bpm_before, key_before)
+}
+
 /// Clones `score.measures` at each `(index, omit_parts)` pair (playback
 /// order) into a new `Score`, dropping any part whose abbreviation appears
 /// in that occurrence's `omit_parts`, alongside origin info for each
@@ -83,11 +115,18 @@ fn build_expanded(
     score: &Score,
     idx: &[(usize, &[String])],
 ) -> (Score, Vec<ExpandedMeasureOrigin>) {
+    let (bpm_before, key_before) = accumulated_context_before(score);
     let mut origins = Vec::with_capacity(idx.len());
     let measures = idx
         .iter()
         .filter_map(|&(i, omit_parts)| {
             let mut measure = score.measures.get(i).cloned()?;
+            if measure.bpm.is_none() {
+                measure.bpm = bpm_before.get(i).copied().flatten();
+            }
+            if measure.key.is_none() {
+                measure.key = key_before.get(i).cloned().flatten();
+            }
             let mut part_written_indices = Vec::with_capacity(measure.parts.len());
             let mut written_idx = 0usize;
             measure.parts.retain(|part| {
