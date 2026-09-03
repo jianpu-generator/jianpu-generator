@@ -84,12 +84,19 @@ Given(
 
     await expect(noteRects(page)).toHaveCount(4, { timeout: 10_000 })
     await expect(lyricTexts(page)).toHaveCount(4, { timeout: 10_000 })
-    // Let layout fully settle (e.g. web-font metrics finishing load can still
-    // reflow the note/lyric rows' vertical position after the counts above
-    // are already satisfied) before reading any bounding boxes below — this
+    // Let layout fully settle before reading any bounding boxes below — this
     // drag crosses the note/lyric row boundary, so it's sensitive to exactly
-    // where that boundary lands, unlike a same-row drag. Same fixture-settle
-    // pattern as `lyric-syllable-independent-selection.feature`'s Background.
+    // where that boundary lands, unlike a same-row drag. A fixed timeout
+    // alone (this file's original 200ms) is not reliable here: web-font
+    // metrics finishing load can reflow the note/lyric rows' vertical
+    // position well after the note/lyric *counts* above are already
+    // satisfied, shifting a row by tens of pixels and making the drag miss
+    // its intended note/lyric entirely — waiting on `document.fonts.ready`
+    // first closes that window; the short timeout after it is now just a
+    // final safety margin for any post-font reflow (e.g. layout-affecting
+    // React state settling), same fixture-settle pattern as
+    // `lyric-syllable-independent-selection.feature`'s Background.
+    await page.evaluate(() => document.fonts.ready)
     await page.waitForTimeout(200)
   },
 )

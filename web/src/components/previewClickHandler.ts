@@ -1,5 +1,4 @@
 import type { MouseEvent, RefObject } from 'react'
-import type { NoteSpan } from '../types'
 import type { PreviewDragState } from './previewDragState'
 import {
   getLyricLabelAtPoint,
@@ -12,11 +11,15 @@ import {
   getMeasureAtPoint,
   getNoteAtPoint,
   getSectionLabelAtPoint,
-  nearestNoteCellInMeasureRange,
 } from './previewSelection'
 import {
   fireCommit,
   type HandlePreviewClickArgs,
+  lyricClickableElementId,
+  lyricLabelClickableElementId,
+  measureClickableElementId,
+  noteClickableElementId,
+  partLabelClickableElementId,
   resolveSelection,
 } from './previewSelectionResolver'
 
@@ -39,7 +42,7 @@ function anchorAndCommit(
   // so it's already armed by the time this self-commit's Monaco selection
   // round-trip debounces into `Preview.tsx`'s scroll-to-selection effect.
   args.suppressNextRevealRef.current = true
-  fireCommit(resolveSelection(newState, undefined, args), args)
+  fireCommit(resolveSelection(newState, undefined, undefined, args), args)
 }
 
 /** Resets `dragStateRef` to idle and re-applies the highlight `dragState`'s
@@ -52,7 +55,7 @@ export function cancelAnchor(
   dragState: NonNullable<PreviewDragState>,
   args: HandlePreviewClickArgs,
 ): void {
-  resolveSelection(dragState, undefined, args)
+  resolveSelection(dragState, undefined, undefined, args)
   dragStateRef.current = null
 }
 
@@ -63,7 +66,7 @@ export function cancelAnchor(
  * `handleAnchorClick` uses for a first click, since anything that would
  * anchor a *new* gesture also counts as a recognizable target for
  * *resolving* one already in progress. */
-function isEmptySpace(x: number, y: number, noteSpans: NoteSpan[]): boolean {
+function isEmptySpace(x: number, y: number): boolean {
   if (getSectionLabelAtPoint(x, y) !== undefined) return false
   if (getPartLabelAtPoint(x, y) !== undefined) return false
   if (getLyricLabelAtPoint(x, y) !== undefined) return false
@@ -71,9 +74,7 @@ function isEmptySpace(x: number, y: number, noteSpans: NoteSpan[]): boolean {
   if (getBarNumberMeasureAtPoint(x, y) !== undefined) return false
   if (getLyricAtPoint(x, y) !== undefined) return false
   if (getNoteAtPoint(x, y) !== undefined) return false
-  const range = getMeasureAtPoint(x, y)
-  if (range === undefined) return true
-  return nearestNoteCellInMeasureRange(noteSpans, range, x, y) === undefined
+  return getMeasureAtPoint(x, y) === undefined
 }
 
 /** The first click of a click-and-click gesture: figures out what got
@@ -86,7 +87,7 @@ function handleAnchorClick(
   e: MouseEvent<HTMLDivElement>,
   args: HandlePreviewClickArgs,
 ): void {
-  const { dragStateRef, noteSpans, onSectionLabelClick } = args
+  const { dragStateRef, onSectionLabelClick } = args
   const sectionLabel = getSectionLabelAtPoint(e.clientX, e.clientY)
   if (sectionLabel !== undefined) {
     onSectionLabelClick?.(sectionLabel)
@@ -115,10 +116,7 @@ function handleAnchorClick(
         mode: 'part-label',
         anchor: point,
         current: point,
-        anchorSystem: {
-          measureIndexStart: partLabel.measureIndexStart,
-          measureIndexEnd: partLabel.measureIndexEnd,
-        },
+        anchorId: partLabelClickableElementId(partLabel),
       },
       args,
     )
@@ -136,10 +134,7 @@ function handleAnchorClick(
         mode: 'lyric-label',
         anchor: point,
         current: point,
-        anchorSystem: {
-          measureIndexStart: lyricLabel.measureIndexStart,
-          measureIndexEnd: lyricLabel.measureIndexEnd,
-        },
+        anchorId: lyricLabelClickableElementId(lyricLabel),
       },
       args,
     )
@@ -148,15 +143,20 @@ function handleAnchorClick(
   }
   // Grabbing a bar line's own divider always anchors a measure-range
   // selection, no Cmd/Ctrl required: the divider is a dedicated click
-  // handle (see `renderBarLineDragHandle`), so landing on it is an
-  // unambiguous request to select measures, unlike a plain click on a
-  // note/lyric/gutter pixel (ambiguous enough to need the modifier gate
-  // below).
+  // target (`Tag::BarLine`/`AbsoluteContent::BarLineClickTarget`), so
+  // landing on it is an unambiguous request to select measures, unlike a
+  // plain click on a note/lyric/gutter pixel (ambiguous enough to need the
+  // modifier gate below).
   const barLineRange = getBarLineMeasureAtPoint(e.clientX, e.clientY)
   if (barLineRange !== undefined) {
     anchorAndCommit(
       dragStateRef,
-      { mode: 'measure', anchor: barLineRange, current: barLineRange },
+      {
+        mode: 'measure',
+        anchor: barLineRange,
+        current: barLineRange,
+        anchorId: measureClickableElementId(barLineRange),
+      },
       args,
     )
     e.preventDefault()
@@ -171,7 +171,12 @@ function handleAnchorClick(
   if (barNumberRange !== undefined) {
     anchorAndCommit(
       dragStateRef,
-      { mode: 'measure', anchor: barNumberRange, current: barNumberRange },
+      {
+        mode: 'measure',
+        anchor: barNumberRange,
+        current: barNumberRange,
+        anchorId: measureClickableElementId(barNumberRange),
+      },
       args,
     )
     e.preventDefault()
@@ -189,7 +194,12 @@ function handleAnchorClick(
     if (range !== undefined) {
       anchorAndCommit(
         dragStateRef,
-        { mode: 'measure', anchor: range, current: range },
+        {
+          mode: 'measure',
+          anchor: range,
+          current: range,
+          anchorId: measureClickableElementId(range),
+        },
         args,
       )
       e.preventDefault()
@@ -210,7 +220,7 @@ function handleAnchorClick(
         mode: 'lyric',
         anchor: point,
         current: point,
-        lyricCellAtAnchor: lyricCell,
+        anchorId: lyricClickableElementId(lyricCell),
       },
       args,
     )
@@ -226,7 +236,7 @@ function handleAnchorClick(
         mode: 'note',
         anchor: point,
         current: point,
-        noteCellAtAnchor: noteCell,
+        anchorId: noteClickableElementId(noteCell),
       },
       args,
     )
@@ -234,28 +244,18 @@ function handleAnchorClick(
     return
   }
   // Missed every note/lyric click target (e.g. a bar-line or the gutter
-  // around notes) — rather than no-op or fall back to whole-measure
-  // selection (now Cmd/Ctrl-gated above), resolve to the nearest note/chord
-  // cell in whatever measure was clicked, via the same 'note' mode a direct
-  // note hit anchors. Its real screen-coordinate anchor still lets a second
-  // click from here resolve into 'note' mode's marquee normally.
+  // around notes) but still landed inside a measure — falls back to
+  // selecting that whole measure, the same 'measure' mode the bar-line/
+  // bar-number handle checks above anchor unconditionally.
   const range = getMeasureAtPoint(e.clientX, e.clientY)
   if (range === undefined) return
-  const nearestCell = nearestNoteCellInMeasureRange(
-    noteSpans,
-    range,
-    e.clientX,
-    e.clientY,
-  )
-  if (nearestCell === undefined) return
-  const point = { x: e.clientX, y: e.clientY }
   anchorAndCommit(
     dragStateRef,
     {
-      mode: 'note',
-      anchor: point,
-      current: point,
-      noteCellAtAnchor: nearestCell,
+      mode: 'measure',
+      anchor: range,
+      current: range,
+      anchorId: measureClickableElementId(range),
     },
     args,
   )
@@ -274,14 +274,14 @@ function handleCommitClick(
   dragState: NonNullable<PreviewDragState>,
   args: HandlePreviewClickArgs,
 ): void {
-  const { dragStateRef, noteSpans } = args
-  if (isEmptySpace(e.clientX, e.clientY, noteSpans)) {
+  const { dragStateRef } = args
+  if (isEmptySpace(e.clientX, e.clientY)) {
     cancelAnchor(dragStateRef, dragState, args)
     e.preventDefault()
     return
   }
   const point = { x: e.clientX, y: e.clientY }
-  fireCommit(resolveSelection(dragState, point, args), args)
+  fireCommit(resolveSelection(dragState, point, undefined, args), args)
   dragStateRef.current = null
   e.preventDefault()
 }
@@ -293,8 +293,8 @@ function handleCommitClick(
  * → a second click resolves and commits the range between the anchor and
  * this click, or cancels the gesture (leaving the first click's own commit
  * in place) if it misses every recognizable target (`handleCommitClick`).
- * `usePreviewClickSelection`'s `mousemove` listener live-updates the
- * highlight between the two clicks for mouse users; a touch tap synthesizes
+ * `usePreviewClickSelection`'s `mouseover`/`mouseout` listeners live-update
+ * the highlight between the two clicks for mouse users; a touch tap synthesizes
  * `mousedown`/`mouseup` with no intervening movement, so the same two
  * dispatches cover both input types.
  *

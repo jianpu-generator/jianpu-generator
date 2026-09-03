@@ -6,6 +6,7 @@ mod metadata_types;
 mod note_selection_types;
 mod part_declarations;
 mod responses;
+pub mod selection_range;
 mod svg_types;
 mod svg_types_convert;
 mod symbols;
@@ -53,8 +54,7 @@ use wasm_bindgen::prelude::*;
 /// Combines a `# sequence` entry index pair from the wasm boundary (where
 /// `Option<RangeInclusive<usize>>` can't cross directly) back into the range
 /// [`jianpu_generator::MeasureRangeSelection::sequence_entry_range`] expects.
-/// `None` unless both bounds are present, since a partial pair can't name a
-/// range.
+/// `None` unless both bounds are present, since a partial pair can't name a range.
 #[cfg(any(feature = "wav", feature = "midi"))]
 pub(crate) fn sequence_entry_range(
     start: Option<usize>,

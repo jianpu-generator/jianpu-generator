@@ -142,9 +142,10 @@ When(
     // As above, click points on the note row rather than the lyric row —
     // this gesture's anchor point actually misses every note/lyric click
     // target (the lyric row's presence shifts the note row's own click-target
-    // down slightly), so without Cmd/Ctrl it would now resolve through the
-    // nearest-note fallback into a plain note-marquee selection instead of
-    // the whole-measure-range shortcut this test means to exercise.
+    // down slightly). It now falls back to whole-measure selection either
+    // way (see `previewClickHandler.ts`'s `handleAnchorClick`), but Cmd/Ctrl
+    // is kept here for parity with the general "select this measure"
+    // gesture this test means to exercise.
     await page.keyboard.down('Control')
     await clickAndClickSelect(
       page,

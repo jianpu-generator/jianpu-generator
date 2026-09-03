@@ -1,33 +1,27 @@
 import type { RefObject } from 'react'
 import type { LyricSpan, NoteSpan } from '../types'
-import {
-  applyPersistedLyricHighlights,
-  applyPersistedNoteHighlights,
-} from './previewDragHighlights'
+import type { ClickableElementId } from './clickableElementId'
 import type { PreviewDragState } from './previewDragState'
+import type { LyricCell, NoteCell } from './previewSelection'
+
+export {
+  lyricClickableElementId,
+  lyricLabelClickableElementId,
+  measureClickableElementId,
+  noteClickableElementId,
+  partLabelClickableElementId,
+} from './previewClickableElementIdBuilders'
+
 import {
-  applyPersistedLyricLabelHighlights,
-  applyPersistedPartLabelHighlights,
-  lyricLabelsInMarquee,
-  partLabelsInMarquee,
-  partLabelsInMarqueeAcrossSystems,
-} from './previewLabelDragHighlights'
+  resolveLyricLabelSelection,
+  resolvePartLabelSelection,
+  resolvePartLabelSystemSelection,
+} from './previewSelectionResolveLabelModes'
 import {
-  lyricCellsForLyricLabels,
-  lyricCellsForPartLabels,
-  noteCellsForPartLabels,
-} from './previewLabelSelection'
-import {
-  applyLyricRangeSelection,
-  applyNoteRangeSelection,
-} from './previewRangeSelection'
-import {
-  getMeasureAtPoint,
-  type LyricCell,
-  lyricCellsInMeasureRange,
-  type NoteCell,
-  noteCellsInMeasureRange,
-} from './previewSelection'
+  resolveLyricSelection,
+  resolveMeasureSelection,
+  resolveNoteSelection,
+} from './previewSelectionResolveModes'
 
 /** Shared by `previewClickHandler.ts`'s idle/anchored dispatch and
  * `usePreviewClickSelection`'s Escape handler — everything a click-and-click
@@ -73,134 +67,56 @@ export interface ResolvedSelection {
  * the anchor→current marquee — pass `undefined` to resolve against the
  * anchor itself (i.e. zero movement), which is exactly what the first
  * click's own self-commit and a cancelled second click's revert both need.
+ *
+ * `currentIdHint`, when given, is used as `current`'s `ClickableElementId`
+ * directly instead of re-deriving one from `point` via
+ * `anyClickableElementIdAtPoint`/`getMeasureAtPoint` — `usePreviewClickSelection`'s
+ * `mouseover`/`mouseout` hover listener already resolves the hovered
+ * element's own ID off its `dataset` (no pixel hit-test needed) and passes
+ * it straight through here, unifying the live hover preview onto the exact
+ * same resolution the commit path uses. Every other caller (the first
+ * click's self-commit, a second click's final commit, `cancelAnchor`)
+ * passes `undefined`, keeping their point-based resolution unchanged.
+ *
  * Applies the resulting highlight to the DOM as a side effect and returns
  * the cells it resolved, but never fires a callback or touches
  * `dragStateRef` — callers own that.
+ *
+ * Dispatches to one per-mode resolver — `resolveMeasureSelection`/
+ * `resolveNoteSelection`/`resolveLyricSelection` in
+ * `previewSelectionResolveModes.ts`, `resolvePartLabelSelection`/
+ * `resolvePartLabelSystemSelection`/`resolveLyricLabelSelection` in
+ * `previewSelectionResolveLabelModes.ts` — split out once each mode's own
+ * branch grew too long to keep inline here.
  */
 export function resolveSelection(
   dragState: NonNullable<PreviewDragState>,
   point: { x: number; y: number } | undefined,
+  currentIdHint: ClickableElementId | undefined,
   { previewPagesRef, noteSpans, lyricSpans }: HandlePreviewClickArgs,
 ): ResolvedSelection {
-  const container = previewPagesRef.current
-
-  if (dragState.mode === 'measure') {
-    const finalRange = point
-      ? (getMeasureAtPoint(point.x, point.y) ?? dragState.current)
-      : dragState.anchor
-    const min = Math.min(dragState.anchor.start, finalRange.start)
-    const max = Math.max(dragState.anchor.end, finalRange.end)
-    const measureRange = { start: min, end: max }
-    const noteCells = noteCellsInMeasureRange(noteSpans, measureRange)
-    const lyricCells = lyricCellsInMeasureRange(lyricSpans, measureRange)
-    if (container) {
-      applyPersistedNoteHighlights(container, noteCells)
-      applyPersistedLyricHighlights(container, lyricCells)
-    }
-    return { noteCells, lyricCells }
+  const args = {
+    container: previewPagesRef.current,
+    point,
+    currentIdHint,
+    noteSpans,
+    lyricSpans,
   }
 
-  const current = point ?? dragState.anchor
-
-  if (dragState.mode === 'note') {
-    let { noteCells, lyricCells } = container
-      ? applyNoteRangeSelection(
-          container,
-          noteSpans,
-          dragState.noteCellAtAnchor,
-          dragState.anchor,
-          current,
-        )
-      : { noteCells: [], lyricCells: [] }
-    if (noteCells.length === 0) {
-      // The resolved point missed every note's click target (e.g. it landed
-      // back on the anchor note, or on a bar-line/gutter pixel) — fall back
-      // to the cell the anchoring click resolved, so the gesture still
-      // collapses to a single selection instead of an empty one.
-      noteCells = [dragState.noteCellAtAnchor]
-      lyricCells = []
-      if (container) {
-        applyPersistedNoteHighlights(container, noteCells)
-        applyPersistedLyricHighlights(container, [])
-      }
-    }
-    return { noteCells, lyricCells }
+  switch (dragState.mode) {
+    case 'measure':
+      return resolveMeasureSelection(dragState, args)
+    case 'note':
+      return resolveNoteSelection(dragState, args)
+    case 'lyric':
+      return resolveLyricSelection(dragState, args)
+    case 'part-label':
+      return resolvePartLabelSelection(dragState, args)
+    case 'part-label-system':
+      return resolvePartLabelSystemSelection(dragState, args)
+    case 'lyric-label':
+      return resolveLyricLabelSelection(dragState, args)
   }
-
-  if (dragState.mode === 'lyric') {
-    const { noteCells, lyricCells } = container
-      ? applyLyricRangeSelection(
-          container,
-          lyricSpans,
-          dragState.lyricCellAtAnchor,
-          dragState.anchor,
-          current,
-        )
-      : { noteCells: [], lyricCells: [] }
-    return { noteCells, lyricCells }
-  }
-
-  if (dragState.mode === 'part-label') {
-    const hits = container
-      ? partLabelsInMarquee(
-          container,
-          dragState.anchor,
-          current,
-          dragState.anchorSystem,
-        )
-      : []
-    const noteCells = noteCellsForPartLabels(noteSpans, hits)
-    // Only union in the lyric row underneath when the resolved point actually
-    // swept past a different label — a plain click that resolves back to
-    // the same single label it anchored on selects just that part's notes,
-    // not its lyrics too (see the "does not also select the lyric row"
-    // regression test in `part-label-click-selects-notes.feature`).
-    const lyricCells =
-      hits.length > 1 ? lyricCellsForPartLabels(lyricSpans, hits) : []
-    if (container) {
-      applyPersistedNoteHighlights(container, noteCells)
-      applyPersistedLyricHighlights(container, lyricCells)
-      // Replaces the transient hover-driven fill with the persisted one
-      // immediately, rather than waiting for `selectedNoteCells` to
-      // round-trip back down as a prop — otherwise every swept label's fill
-      // would flash off for a frame between commit and that round-trip
-      // landing.
-      applyPersistedPartLabelHighlights(container, noteSpans, noteCells)
-    }
-    return { noteCells, lyricCells }
-  }
-
-  if (dragState.mode === 'part-label-system') {
-    const hits = container
-      ? partLabelsInMarqueeAcrossSystems(container, dragState.anchor, current)
-      : []
-    const noteCells = noteCellsForPartLabels(noteSpans, hits)
-    const lyricCells = lyricCellsForPartLabels(lyricSpans, hits)
-    if (container) {
-      applyPersistedNoteHighlights(container, noteCells)
-      applyPersistedLyricHighlights(container, lyricCells)
-      // Mirrors 'part-label' mode's own resolution above — see its comment.
-      applyPersistedPartLabelHighlights(container, noteSpans, noteCells)
-    }
-    return { noteCells, lyricCells }
-  }
-
-  // 'lyric-label' mode.
-  const hits = container
-    ? lyricLabelsInMarquee(
-        container,
-        dragState.anchor,
-        current,
-        dragState.anchorSystem,
-      )
-    : []
-  const lyricCells = lyricCellsForLyricLabels(lyricSpans, hits)
-  if (container) {
-    applyPersistedLyricHighlights(container, lyricCells)
-    // Mirrors 'part-label' mode's own resolution above — see its comment.
-    applyPersistedLyricLabelHighlights(container, lyricSpans, lyricCells)
-  }
-  return { noteCells: [], lyricCells }
 }
 
 /** Fires whichever of `onNoteRangeSelect`/`onLyricRangeSelect`/

@@ -1,4 +1,5 @@
 import type { LyricSpan, NoteSpan } from '../types'
+import { clickableElementIdFromElement } from './clickableElementId'
 
 /** One rendered note/rest, keyed the same way as `Tag::Note`'s
  * `data-part-index`/`data-note-id` SVG attributes. */
@@ -7,39 +8,19 @@ export interface NoteCell {
   noteId: number
 }
 
-/** Shape driving `getCellAtPoint`: which `data-tag` group to look up, and how
- * to parse a `Cell` out of that group's `dataset`. */
-export interface CellAtPointSpec<Cell> {
-  tag: string
-  parseCell: (dataset: DOMStringMap) => Cell | undefined
-}
-
 /**
  * Generic hit-test behind `getNoteAtPoint`/`getLyricAtPoint`/
  * `getPartLabelAtPoint`/`getLyricLabelAtPoint`: reads the element under
- * `(x, y)`, walks up to its nearest `[data-tag="{spec.tag}"]` ancestor
- * group, and parses a `Cell` out of that group's `dataset` via
- * `spec.parseCell`.
+ * `(x, y)`, walks up to its nearest `[data-tag="{tag}"]` ancestor group, and
+ * resolves a `ClickableElementId` off it via `clickableElementIdFromElement`
+ * — the point-based counterpart of that function's own delegated-event use
+ * (`mouseover`'s `event.target.closest(...)` in `usePreviewClickSelection.ts`).
  */
-export function getCellAtPoint<Cell>(
-  x: number,
-  y: number,
-  spec: CellAtPointSpec<Cell>,
-): Cell | undefined {
+function getClickableElementIdAtPoint(x: number, y: number, tag: string) {
   const el = document.elementFromPoint(x, y)
-  if (!el) return undefined
-  const group = el.closest(`[data-tag="${spec.tag}"]`)
+  const group = el?.closest(`[data-tag="${tag}"]`)
   if (!group) return undefined
-  return spec.parseCell((group as HTMLElement).dataset)
-}
-
-/** Parses a `dataset` string into an integer, or `undefined` if the string is
- * missing or not a valid integer — the common per-field step behind every
- * `parseCell` below (and in `previewLabelSelection.ts`). */
-export function parseDatasetInt(value: string | undefined): number | undefined {
-  if (value === undefined) return undefined
-  const parsed = Number.parseInt(value, 10)
-  return Number.isNaN(parsed) ? undefined : parsed
+  return clickableElementIdFromElement(group)
 }
 
 export function getSectionLabelAtPoint(
@@ -58,97 +39,39 @@ export interface MeasureRange {
   end: number
 }
 
-/**
- * The measure range under the given point. A merged multi-measure rest bar
- * carries a `start`/`end` wider than a single measure, so clicking anywhere
- * on it resolves to every source measure it represents.
- *
- * Deliberately does *not* use `elementFromPoint`/`elementsFromPoint`: a
- * measure's click-target rect touches its neighbors' flush (no gap — see
- * `resolve_measure_click_target`/`measure_column_bounds`), so a point
- * exactly on that shared edge is, in exact geometry, on the boundary of
- * *two* rects at once. Which of those two `elementsFromPoint` lists first is
- * an artifact of paint/z-order and sub-pixel rounding, not something this
- * code controls — so it isn't a reliable tie-break, and picking whichever
- * rect happens to win could resolve a click to the wrong (previous or next)
- * measure. Scanning every measure rect directly and keeping the one with the
- * *largest* left edge at or before `x` sidesteps that: since measures
- * fully tile each row with no gaps, that's always the unique correct answer
- * regardless of which rect's right edge also happens to reach past `x` from
- * sub-pixel rounding.
- *
- * `x`/`y` (from `MouseEvent.clientX`/`clientY`) are always whole CSS pixels,
- * but a measure boundary can land at a fractional one (measure column widths
- * come from proportional text-layout math, not integer grid snapping) — so
- * the boundary rounds `Math.round(rect.left)` for the comparison too, rather
- * than the raw fractional value: without it, a click on the fractional
- * pixel just below a measure's true left edge (e.g. `x=972` against
- * `rect.left=972.15`) would fail `x >= rect.left` and silently fall back to
- * the previous measure, even though that's the nearest whole pixel to where
- * the boundary actually renders.
- */
-function measureRangeFromElement(el: HTMLElement): MeasureRange | undefined {
-  const { measureIndex, measureIndexEnd } = el.dataset
-  if (measureIndex === undefined) return undefined
-  const start = Number.parseInt(measureIndex, 10)
-  const end = Number.parseInt(measureIndexEnd ?? measureIndex, 10)
-  if (Number.isNaN(start) || Number.isNaN(end)) return undefined
-  return { start, end }
+/** Adapts a `ClickableElementId`'s `'measure'` variant to this module's own
+ * `MeasureRange` shape, or `undefined` if `id` resolved to some other kind —
+ * shared by every measure-flavored hit-test below. */
+function measureRangeFromId(
+  id: ReturnType<typeof clickableElementIdFromElement>,
+): MeasureRange | undefined {
+  if (id?.kind !== 'measure') return undefined
+  return { start: id.measureIndexStart, end: id.measureIndexEnd }
 }
 
 /**
- * Resolves a click/drag point that's actually over a bar line's invisible
- * `.bar-line-drag-handle` (see `PreviewSvgRenderer.tsx`'s
- * `renderBarLineDragHandle`) to a measure range. A bar line visually
- * introduces the measure *after* it, so that's what it always selects —
- * except a system's *last* bar line (its closing line, with no following
- * measure on the same row), which has nothing after it to introduce and so
- * falls back to the measure *before* it instead.
+ * Resolves a click/drag point that's over a bar line's own click target
+ * (`[data-tag="bar-line"]`, see `Tag::BarLine`/
+ * `AbsoluteContent::BarLineClickTarget`) to a measure range, purely from the
+ * server-computed `data-measure-index-next`/`data-measure-index-prev`
+ * identity carried on that group (see `clickableElementIdFromElement`'s
+ * `'bar-line'` case) — no pixel geometry involved beyond the initial
+ * `elementFromPoint`.
  *
- * Deliberately re-derives the true boundary from the handle element's own
- * `getBoundingClientRect()` rather than trusting `x` directly: the handle is
- * `BAR_LINE_HIT_WIDTH` pixels wide precisely so a real mouse doesn't have to
- * land on the exact boundary pixel, but that padding means `x` can fall a
- * couple of pixels to either side of the true boundary — enough to flip
- * which measure `getMeasureAtPoint`'s plain geometry scan below would
- * otherwise resolve to.
- *
- * Returns `undefined` when `x`/`y` isn't over a bar-line handle at all, so
- * callers can fall through to the generic point-based lookup.
+ * Returns `undefined` when `x`/`y` isn't over a bar-line click target at
+ * all, so callers can fall through to the generic point-based lookup.
  *
  * Exported so `previewClickHandler.ts` can check for a bar-line hit
  * *before* its Cmd/Ctrl gate: grabbing the divider itself is an unambiguous
  * request to select measures, unlike a click on a note/lyric/gutter pixel
  * (which is ambiguous enough to need the modifier) — see that file's
- * unconditional bar-line-handle check.
+ * unconditional bar-line check.
  */
 export function getBarLineMeasureAtPoint(
   x: number,
   y: number,
 ): MeasureRange | undefined {
-  const hit = document.elementFromPoint(x, y)
-  const handle = hit?.closest('.bar-line-drag-handle')
-  if (!handle) return undefined
-  const lineRect = handle.getBoundingClientRect()
-  const boundaryX = Math.round((lineRect.left + lineRect.right) / 2)
-  const centerY = (lineRect.top + lineRect.bottom) / 2
-
-  let next: { rect: DOMRect; el: HTMLElement } | undefined
-  let prev: { rect: DOMRect; el: HTMLElement } | undefined
-  for (const el of document.querySelectorAll<HTMLElement>(
-    '[data-tag="measure"]',
-  )) {
-    const rect = el.getBoundingClientRect()
-    if (centerY < rect.top || centerY >= rect.bottom) continue
-    const left = Math.round(rect.left)
-    if (left >= boundaryX) {
-      if (!next || left < next.rect.left) next = { rect, el }
-    } else if (!prev || rect.left > prev.rect.left) {
-      prev = { rect, el }
-    }
-  }
-  const chosen = next ?? prev
-  return chosen && measureRangeFromElement(chosen.el)
+  return measureRangeFromId(getClickableElementIdAtPoint(x, y, 'bar-line'))
 }
 
 /**
@@ -156,21 +79,18 @@ export function getBarLineMeasureAtPoint(
  * in the directive row above the musical rows — `[data-tag="bar-number"]`,
  * see `BarNumberClickTarget`/`Tag::BarNumber`) to that measure's range.
  *
- * A bar number sits outside every note's own click target, so without this
- * check a plain click there falls through to the nearest-note fallback in
- * `previewClickHandler.ts` instead of selecting the whole measure. Kept
- * as its own unconditional (no Cmd/Ctrl needed) check there, mirroring
- * `getBarLineMeasureAtPoint`'s bar-line-handle check: landing on the bar
- * number itself is an unambiguous request to select that measure.
+ * A bar number sits outside every note's own click target. Kept as its own
+ * unconditional (no Cmd/Ctrl needed) check in `previewClickHandler.ts`,
+ * mirroring `getBarLineMeasureAtPoint`'s bar-line-handle check: landing on
+ * the bar number itself is an unambiguous request to select that measure,
+ * checked ahead of the Cmd/Ctrl gate rather than left to fall through to the
+ * gutter-miss measure fallback further down.
  */
 export function getBarNumberMeasureAtPoint(
   x: number,
   y: number,
 ): MeasureRange | undefined {
-  const hit = document.elementFromPoint(x, y)
-  const group = hit?.closest('[data-tag="bar-number"]')
-  if (!group) return undefined
-  return measureRangeFromElement(group as HTMLElement)
+  return measureRangeFromId(getClickableElementIdAtPoint(x, y, 'bar-number'))
 }
 
 /**
@@ -191,19 +111,21 @@ export function getMeasureAtPoint(
   const barLineRange = getBarLineMeasureAtPoint(x, y)
   if (barLineRange) return barLineRange
 
-  let best: { rect: DOMRect; el: HTMLElement } | undefined
-  for (const el of document.querySelectorAll<HTMLElement>(
-    MEASURE_RANGE_SELECTOR,
-  )) {
-    const rect = el.getBoundingClientRect()
-    if (y < rect.top || y >= rect.bottom) continue
-    if (x < Math.round(rect.left)) continue
-    if (!best || rect.left > best.rect.left) {
-      best = { rect, el }
+  // A measure's click-target rect is a sibling of the note/lyric click
+  // targets drawn over the same region (see `render_measure_click_target`/
+  // `render_note_click_target`), not their ancestor — so a point over a
+  // note or lyric returns *that* element from `elementFromPoint`, and
+  // `closest` never reaches the measure group underneath it. Scanning the
+  // full `elementsFromPoint` stack instead finds the measure regardless of
+  // what's painted on top of it at this point.
+  for (const el of document.elementsFromPoint(x, y)) {
+    const group = el.closest<HTMLElement>(MEASURE_RANGE_SELECTOR)
+    if (group) {
+      const range = measureRangeFromId(clickableElementIdFromElement(group))
+      if (range) return range
     }
   }
-  if (!best) return undefined
-  return measureRangeFromElement(best.el)
+  return undefined
 }
 
 /**
@@ -241,50 +163,9 @@ export function noteCellsInMeasureRange(
  * `renderer::new_renderer::render_note_click_target`), which sits on top of
  * the `pointer-events: none` playback cursor rect for the same note. */
 export function getNoteAtPoint(x: number, y: number): NoteCell | undefined {
-  return getCellAtPoint(x, y, {
-    tag: 'note',
-    parseCell: ({ partIndex, noteId }) => {
-      const sourcePartIndex = parseDatasetInt(partIndex)
-      const id = parseDatasetInt(noteId)
-      if (sourcePartIndex === undefined || id === undefined) return undefined
-      return { sourcePartIndex, noteId: id }
-    },
-  })
-}
-
-/**
- * The note/chord cell in `range` whose click-target group is geometrically
- * closest (by rect-center distance) to `(x, y)`. Used as the fallback for a
- * plain click that lands on a bar-line/gutter point rather than directly on
- * a note's own click target — since plain clicks no longer expand to the
- * whole measure (see `PreviewDragState`'s doc comment), this resolves such a
- * click to *something* selectable in that measure instead of a no-op.
- *
- * Only ever runs on that rare "missed every note/lyric click target" path,
- * so a `querySelector` per candidate is fine — no need for a precomputed
- * index.
- */
-export function nearestNoteCellInMeasureRange(
-  noteSpans: NoteSpan[],
-  range: MeasureRange,
-  x: number,
-  y: number,
-): NoteCell | undefined {
-  let best: { cell: NoteCell; distance: number } | undefined
-  for (const cell of noteCellsInMeasureRange(noteSpans, range)) {
-    const group = document.querySelector<HTMLElement>(
-      `[data-tag="note"][data-part-index="${cell.sourcePartIndex}"][data-note-id="${cell.noteId}"]`,
-    )
-    if (!group) continue
-    const rect = group.getBoundingClientRect()
-    const centerX = (rect.left + rect.right) / 2
-    const centerY = (rect.top + rect.bottom) / 2
-    const distance = Math.hypot(centerX - x, centerY - y)
-    if (!best || distance < best.distance) {
-      best = { cell, distance }
-    }
-  }
-  return best?.cell
+  const id = getClickableElementIdAtPoint(x, y, 'note')
+  if (id?.kind !== 'note') return undefined
+  return { sourcePartIndex: id.sourcePartIndex, noteId: id.noteId }
 }
 
 /** One rendered lyric syllable, keyed the same way as `Tag::Lyric`'s
@@ -306,21 +187,13 @@ export interface LyricCell {
  * lyric row, so a click that lands on the syllable's own rect always
  * resolves here rather than to `getNoteAtPoint`. */
 export function getLyricAtPoint(x: number, y: number): LyricCell | undefined {
-  return getCellAtPoint(x, y, {
-    tag: 'lyric',
-    parseCell: ({ partIndex, noteId, verse }) => {
-      const sourcePartIndex = parseDatasetInt(partIndex)
-      const id = parseDatasetInt(noteId)
-      const verseIndex = parseDatasetInt(verse)
-      if (
-        sourcePartIndex === undefined ||
-        id === undefined ||
-        verseIndex === undefined
-      )
-        return undefined
-      return { sourcePartIndex, noteId: id, verse: verseIndex }
-    },
-  })
+  const id = getClickableElementIdAtPoint(x, y, 'lyric')
+  if (id?.kind !== 'lyric') return undefined
+  return {
+    sourcePartIndex: id.sourcePartIndex,
+    noteId: id.noteId,
+    verse: id.verse,
+  }
 }
 
 /** Every lyric syllable cell belonging to the given measure range, resolved

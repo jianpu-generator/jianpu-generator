@@ -64,7 +64,8 @@ pub(super) fn render_overlay_element(
         AbsoluteContent::PartLabelClickTarget { .. }
         | AbsoluteContent::LyricClickTarget { .. }
         | AbsoluteContent::LyricLabelClickTarget { .. }
-        | AbsoluteContent::BarNumberClickTarget { .. } => {
+        | AbsoluteContent::BarNumberClickTarget { .. }
+        | AbsoluteContent::BarLineClickTarget { .. } => {
             render_secondary_click_target(elem, content)
         }
         AbsoluteContent::DirectiveLine { .. } => {

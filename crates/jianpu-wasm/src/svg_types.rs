@@ -31,6 +31,7 @@ pub enum TransparentRectRoleOut {
     PartLabelClickTarget,
     LyricClickTarget,
     LyricLabelClickTarget,
+    BarLineClickTarget,
 }
 
 #[derive(Debug, Clone, Tsify, Serialize)]
@@ -137,6 +138,10 @@ pub enum TagOut {
         verse: usize,
         measure_index_start: usize,
         measure_index_end: usize,
+    },
+    BarLine {
+        measure_index_next: Option<usize>,
+        measure_index_prev: Option<usize>,
     },
 }
 

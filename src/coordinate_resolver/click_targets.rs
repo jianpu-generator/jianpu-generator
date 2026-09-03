@@ -1,11 +1,12 @@
 use crate::compositor::types::AbsoluteElement;
 use crate::grid_layout::types::{GridPage, TextStyleFlags};
 
-use super::highlights::{
-    resolve_bar_number_click_target, resolve_lyric_click_target, resolve_lyric_label_click_target,
-    resolve_measure_click_target, resolve_note_click_target, resolve_part_label_click_target,
-    resolve_playback_cursor_target, RowLayoutContext,
+use super::highlight_click_targets::{
+    resolve_bar_line_click_target, resolve_bar_number_click_target, resolve_lyric_click_target,
+    resolve_lyric_label_click_target, resolve_measure_click_target, resolve_note_click_target,
+    resolve_part_label_click_target,
 };
+use super::highlights::{resolve_playback_cursor_target, RowLayoutContext};
 
 /// Resolves every click/drag hit target on a page — measure, playback
 /// cursor, note, part-label, lyric, and lyric-label — appended in that order
@@ -57,6 +58,14 @@ pub(super) fn resolve_click_target_elements(
     };
     elements.extend(page.bar_number_click_targets.iter().filter_map(|t| {
         resolve_bar_number_click_target(t, &row_ctx, measure_number_font_size, measure_number_style)
+    }));
+
+    // Painted last (topmost for `elementFromPoint` hit-testing) so a bar
+    // line's own narrow hit target always wins over the wider
+    // `MeasureClickTarget` rects that flank it on either side — no pixel
+    // tie-break needed at a measure boundary.
+    elements.extend(page.bar_line_click_targets.iter().filter_map(|t| {
+        resolve_bar_line_click_target(t, &page.rows, row_tops, usable_width, part_label_width_pt)
     }));
 
     elements

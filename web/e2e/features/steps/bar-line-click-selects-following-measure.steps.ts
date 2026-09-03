@@ -3,16 +3,21 @@ import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
- * Cmd/Ctrl-clicking anywhere on a bar line's wide `.bar-line-drag-handle`
- * (see `PreviewSvgRenderer.tsx`'s `renderBarLineDragHandle`) must resolve to
- * the measure *after* that line, never the one before — the handle is
- * padded several pixels wider than the visible stroke specifically so a real
- * mouse doesn't have to land on the exact boundary pixel, and that padding
- * must not flip which measure the click resolves to (see
- * `previewSelection.ts`'s `getBarLineMeasureAtPoint`). The Cmd/Ctrl modifier
- * is required since these tests click a bar line's own gutter, not a note's
- * click target, and a plain click there now resolves to the nearest note
- * instead of the whole measure (see `Preview.tsx`'s `onMouseDown`).
+ * Cmd/Ctrl-clicking anywhere on a bar line's own click target
+ * (`[data-tag="bar-line"]`, see `Tag::BarLine`/
+ * `AbsoluteContent::BarLineClickTarget`) must resolve to the measure *after*
+ * that line, never the one before — the click target is a fixed-width rect
+ * padded wider than the visible stroke specifically so a real mouse doesn't
+ * have to land on the exact boundary pixel, and that padding must not flip
+ * which measure the click resolves to, since resolution reads the target's
+ * own `data-measure-index-next`/`data-measure-index-prev` identity rather
+ * than pixel geometry (see `previewSelection.ts`'s
+ * `getBarLineMeasureAtPoint`). The Cmd/Ctrl modifier is kept on these tests
+ * for parity with the general "select this measure" gesture, though it's no
+ * longer load-bearing for the fallback case: a click that misses the
+ * bar-line's own padded click target now resolves to the whole measure
+ * regardless of the modifier (see `previewClickHandler.ts`'s
+ * `handleAnchorClick`).
  *
  * The sole exception is a system's *last* bar line — its closing line, with
  * no following measure on the same row — which resolves to the measure

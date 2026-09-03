@@ -8,7 +8,8 @@ import { Given, Then, When } from './fixtures'
  * reliable, hoverable drag handle for measure-range selection: a drag
  * starting exactly on the divider pixel between measure 0 and measure 1 must
  * select whole measures, not fall into a per-note marquee drag (see
- * `PreviewSvgRenderer.tsx`'s `renderBarLineDragHandle`). Grabbing the divider
+ * `Tag::BarLine`/`AbsoluteContent::BarLineClickTarget`, consumed by
+ * `PreviewSvgRenderer.tsx`'s `groupAttrsForTag`). Grabbing the divider
  * itself always starts this gesture, with or without Cmd/Ctrl held — a plain
  * drag elsewhere (off the divider) resolves to note/chord/syllable
  * granularity instead, and needs Cmd/Ctrl to reach whole-measure selection
@@ -95,7 +96,9 @@ When(
 )
 
 Then('the bar-line drag handle shows a col-resize cursor', async ({ page }) => {
-  const handle = page.locator('line.bar-line-drag-handle').first()
+  const handle = page
+    .locator('rect[data-variant="bar-line-click-target-rect"]')
+    .first()
   await expect(handle).toHaveCSS('cursor', 'col-resize')
 })
 

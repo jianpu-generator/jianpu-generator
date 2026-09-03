@@ -40,6 +40,30 @@ pub struct BarNumberClickTarget {
 /// `measure_index_end` give that system's full measure range, mirroring how
 /// `MeasureClickTarget::measure_index`/`measure_index_end` scope a measure
 /// click.
+/// Invisible hit target laid over one bar line, spanning the same row range
+/// as `MeasureClickTarget` (the whole system, not just one row) so the
+/// handle is easy to grab vertically. `column` is the bar line's exact grid
+/// column, same units as `MeasureClickTarget::column_start`/`column_end` —
+/// unlike a `BarNumberClickTarget`, whose width is measured from rendered
+/// glyphs, this one gets a fixed hit width baked in at resolve time (see
+/// `coordinate_resolver::highlights::resolve_bar_line_click_target`).
+///
+/// `measure_index_next`/`measure_index_prev` identify which measure(s) this
+/// bar line is adjacent to: a system's leading bar line has no `prev`, a
+/// system's closing bar line has no `next`, every interior bar line has
+/// both. Resolving "which measure does this bar line select" is `next ??
+/// prev` (see `syntax.md`/frontend `previewSelection.ts`), so clicking a
+/// bar line always selects the measure it introduces, falling back to the
+/// measure it closes only when there's nothing after it.
+#[derive(Debug, Clone)]
+pub struct BarLineClickTarget {
+    pub row_start: usize,
+    pub row_end: usize,
+    pub column: f32,
+    pub measure_index_next: Option<usize>,
+    pub measure_index_prev: Option<usize>,
+}
+
 #[derive(Debug, Clone)]
 pub struct PartLabelClickTarget {
     pub row_start: usize,

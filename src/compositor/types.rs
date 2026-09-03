@@ -120,6 +120,19 @@ pub enum AbsoluteContent {
         measure_index: usize,
         measure_index_end: usize,
     },
+    /// Invisible click/drag hit target for one bar line (see
+    /// `grid_layout::types::BarLineClickTarget`), spanning the whole system
+    /// vertically but a fixed, narrow width horizontally (baked in at
+    /// resolve time — the old TS-side `BAR_LINE_HIT_WIDTH` constant this
+    /// replaces). Carries both adjacent measures' indices so the frontend
+    /// can resolve "which measure does this bar line select" as `next ??
+    /// prev` without any pixel geometry.
+    BarLineClickTarget {
+        width: f32,
+        height: f32,
+        measure_index_next: Option<usize>,
+        measure_index_prev: Option<usize>,
+    },
     /// Background rect behind one part's sounding note/rest, toggled at
     /// playback time by the frontend rather than filled here (see
     /// `renderer::new_types::SvgKind::PlaybackCursorRect`).

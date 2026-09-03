@@ -116,12 +116,12 @@ When(
 Then(
   '{int} drag-selected notes belong to part index {int}, as seen in part label drag system boundary',
   async ({ page }, count: number, partIndex: number) => {
-    // Melody has 2 notes per system (4 total across both systems). Only
-    // system 0's 2 should be selected — the drag must not reach into system
-    // 1's Melody notes just because the pointer ended up over that label.
-    // Harmony's system-0 row sits between the two Melody labels on screen, so
-    // the vertical drag legitimately sweeps over it too — that's the normal
-    // "select more parts within the same system" shortcut, still allowed.
+    // Melody has 2 notes per system (4 total across both systems) — both
+    // systems' Melody notes are selected now that `PartLabel ↔ PartLabel` is
+    // system-agnostic (see the feature file's header comment). Harmony's
+    // system-0 row sits between the two Melody labels on screen, but the
+    // range is derived from each label's own `sourcePartIndex`, not a pixel
+    // sweep, so Harmony is never picked up by this drag.
     await expect(
       page.locator(
         `[data-tag="note"][data-note-drag-selected][data-part-index="${partIndex}"]`,
@@ -142,8 +142,6 @@ Then(
 Then(
   "system 0's Melody label's click-target rect is marked drag-active, as seen in part label drag system boundary",
   async ({ page }) => {
-    // Only system 0's labels stay visually selected; system 1's Melody label
-    // — the one the pointer physically ended the drag on — must not.
     await expect(
       partLabel(page, 0, 0).locator(
         'rect[data-variant="part-label-click-target-rect"]',
@@ -153,23 +151,26 @@ Then(
 )
 
 Then(
-  "system 0's Harmony label's click-target rect is marked drag-active, as seen in part label drag system boundary",
+  "system 0's Harmony label's click-target rect is not marked drag-active, as seen in part label drag system boundary",
   async ({ page }) => {
+    // Harmony was never swept — see the feature file's header comment.
     await expect(
       partLabel(page, 1, 0).locator(
         'rect[data-variant="part-label-click-target-rect"]',
       ),
-    ).toHaveAttribute('data-part-label-drag-active', '')
+    ).not.toHaveAttribute('data-part-label-drag-active', '')
   },
 )
 
 Then(
-  "system 1's Melody label's click-target rect is not marked drag-active",
+  "system 1's Melody label's click-target rect is marked drag-active, as seen in part label drag system boundary",
   async ({ page }) => {
+    // The drag's own `current` endpoint — now included since the range
+    // spans both systems' Melody notes.
     await expect(
       partLabel(page, 0, 1).locator(
         'rect[data-variant="part-label-click-target-rect"]',
       ),
-    ).not.toHaveAttribute('data-part-label-drag-active', '')
+    ).toHaveAttribute('data-part-label-drag-active', '')
   },
 )

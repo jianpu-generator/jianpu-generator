@@ -1,11 +1,7 @@
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
-use crate::grid_layout::click_targets::{
-    compute_all_bar_number_click_targets, compute_all_measure_click_targets,
-};
+use crate::grid_layout::click_targets::compute_all_measure_click_targets;
 use crate::grid_layout::highlight::compute_measure_highlights_for_range;
-use crate::grid_layout::layout::{
-    block_column_width, compute_measure_highlight_location, LABEL_COLS,
-};
+use crate::grid_layout::layout::compute_measure_highlight_location;
 use crate::grid_layout::types::{Header, MeasureRange};
 use std::collections::HashMap;
 
@@ -275,106 +271,6 @@ fn global_measure_index_accounts_for_a_merged_block() {
     );
 }
 
-fn block_with_directive(col_count: u32, label: Option<&str>, bar_number: u32) -> MeasureBlock {
-    let mut block = simple_block(col_count);
-    block.decorations = vec![crate::compiler::types::Decoration::DirectiveLine {
-        label: label.map(str::to_string),
-        bar_number: Some(bar_number),
-        key: None,
-        bpm: None,
-        time_signature: None,
-    }];
-    block
-}
-
-#[test]
-fn bar_number_click_target_sits_in_the_directive_row_above_the_musical_rows() {
-    // A block's bar number is drawn in its system's shared directive row
-    // (see `make_decoration_row`), which sits above the musical rows
-    // `MeasureClickTarget` covers — so its own click target needs its own
-    // row, not `MeasureClickTarget::row_start`/`row_end`.
-    //
-    // `no_header()` still emits one row (the always-present, possibly-empty
-    // subtitle/author row — see `make_header_rows`), so the layout here is:
-    // row 0 = header, row 1 = directive line (bar number).
-    let page_systems: Vec<Vec<Vec<MeasureBlock>>> =
-        vec![vec![vec![block_with_directive(4, None, 1)]]];
-
-    let targets = compute_all_bar_number_click_targets(
-        &page_systems,
-        &HashMap::new(),
-        &no_header(),
-        20.0,
-        false,
-    );
-
-    let (_, target) = targets.first().expect("one bar-number click target");
-    assert_eq!(target.row, 1, "should sit in the directive row, not row 0");
-    assert_eq!(
-        target.column, LABEL_COLS,
-        "the system's first block's bar number sits at its leading barline column"
-    );
-    assert_eq!(target.measure_index, 0);
-    assert_eq!(target.measure_index_end, 0);
-}
-
-#[test]
-fn bar_number_click_target_skips_a_later_block_with_no_directive_change() {
-    // `make_decoration_row` only draws a later block's bar number when it
-    // also changes a label/key/bpm/time-signature — an otherwise-plain
-    // mid-system measure's bar number is never drawn, so it shouldn't get a
-    // click target either.
-    let page_systems: Vec<Vec<Vec<MeasureBlock>>> = vec![vec![vec![
-        block_with_directive(4, None, 1),
-        block_with_directive(4, None, 2),
-    ]]];
-
-    let targets = compute_all_bar_number_click_targets(
-        &page_systems,
-        &HashMap::new(),
-        &no_header(),
-        20.0,
-        false,
-    );
-
-    let measure_indices: Vec<usize> = targets.iter().map(|(_, t)| t.measure_index).collect();
-    assert_eq!(
-        measure_indices,
-        vec![0],
-        "only the system's first block draws a bar number here"
-    );
-}
-
-#[test]
-fn bar_number_click_target_includes_a_later_block_with_a_label() {
-    let page_systems: Vec<Vec<Vec<MeasureBlock>>> = vec![vec![vec![
-        block_with_directive(4, None, 1),
-        block_with_directive(4, Some("B"), 2),
-    ]]];
-
-    let targets = compute_all_bar_number_click_targets(
-        &page_systems,
-        &HashMap::new(),
-        &no_header(),
-        20.0,
-        false,
-    );
-
-    let measure_indices: Vec<usize> = targets.iter().map(|(_, t)| t.measure_index).collect();
-    assert_eq!(
-        measure_indices,
-        vec![0, 1],
-        "the second block draws its own bar number since it also carries a label"
-    );
-    let (_, second) = &targets[1];
-    assert_eq!(
-        second.column,
-        LABEL_COLS + block_column_width(&simple_block(4)),
-        "the second block's bar number sits at its own leading barline column, \
-         past the first block's width"
-    );
-}
-
 #[cfg(test)]
 #[path = "tests_highlight_pages.rs"]
 mod tests_highlight_pages;
@@ -382,3 +278,7 @@ mod tests_highlight_pages;
 #[cfg(test)]
 #[path = "tests_highlight_disjoint_ranges.rs"]
 mod tests_highlight_disjoint_ranges;
+
+#[cfg(test)]
+#[path = "tests_highlight_click_targets.rs"]
+mod tests_highlight_click_targets;

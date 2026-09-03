@@ -242,12 +242,11 @@
   fill: rgba(100, 160, 255, 0.2);
 }
 
-.preview-page svg line.bar-line-drag-handle {
-  cursor: col-resize;
-}
-
-.preview-page svg line.bar-line-drag-handle:hover {
-  stroke: rgba(100, 160, 255, 0.45);
+.preview-page
+  svg
+  g[data-tag="bar-line"]:hover
+  > rect[data-variant="bar-line-click-target-rect"] {
+  fill: rgba(100, 160, 255, 0.45);
 }
 
 .play-measure-wrapper {

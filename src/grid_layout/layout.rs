@@ -331,6 +331,7 @@ pub fn layout(
             lyric_click_targets: page_targets.lyric_click_targets,
             lyric_label_click_targets: page_targets.lyric_label_click_targets,
             bar_number_click_targets: page_targets.bar_number_click_targets,
+            bar_line_click_targets: page_targets.bar_line_click_targets,
         });
     }
     LayoutOutput { pages, diagnostics }

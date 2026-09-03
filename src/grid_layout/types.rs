@@ -3,7 +3,9 @@ use crate::compiler::types::ArcKind;
 
 #[path = "click_target_types.rs"]
 mod click_target_types;
-pub use click_target_types::{BarNumberClickTarget, MeasureClickTarget, PartLabelClickTarget};
+pub use click_target_types::{
+    BarLineClickTarget, BarNumberClickTarget, MeasureClickTarget, PartLabelClickTarget,
+};
 
 #[path = "sequence_entry_info.rs"]
 mod sequence_entry_info;
@@ -34,6 +36,7 @@ pub struct GridPage {
     pub lyric_click_targets: Vec<LyricClickTarget>,
     pub lyric_label_click_targets: Vec<LyricLabelClickTarget>,
     pub bar_number_click_targets: Vec<BarNumberClickTarget>,
+    pub bar_line_click_targets: Vec<BarLineClickTarget>,
 }
 
 /// One measure's extent within a `GridRow`'s musical column range, plus its

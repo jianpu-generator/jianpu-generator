@@ -119,6 +119,13 @@ fn tag_to_out(tag: &Tag) -> TagOut {
             measure_index_start: *measure_index_start,
             measure_index_end: *measure_index_end,
         },
+        Tag::BarLine {
+            measure_index_next,
+            measure_index_prev,
+        } => TagOut::BarLine {
+            measure_index_next: *measure_index_next,
+            measure_index_prev: *measure_index_prev,
+        },
     }
 }
 
@@ -136,6 +143,7 @@ fn transparent_rect_role_to_out(role: &TransparentRectRole) -> TransparentRectRo
         TransparentRectRole::PartLabelClickTarget => TransparentRectRoleOut::PartLabelClickTarget,
         TransparentRectRole::LyricClickTarget => TransparentRectRoleOut::LyricClickTarget,
         TransparentRectRole::LyricLabelClickTarget => TransparentRectRoleOut::LyricLabelClickTarget,
+        TransparentRectRole::BarLineClickTarget => TransparentRectRoleOut::BarLineClickTarget,
     }
 }
 

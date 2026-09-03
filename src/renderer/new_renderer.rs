@@ -173,6 +173,7 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
         | AbsoluteContent::ErrorHighlight { .. }
         | AbsoluteContent::MeasureClickTarget { .. }
         | AbsoluteContent::BarNumberClickTarget { .. }
+        | AbsoluteContent::BarLineClickTarget { .. }
         | AbsoluteContent::PlaybackCursorTarget { .. }
         | AbsoluteContent::NoteClickTarget { .. }
         | AbsoluteContent::PartLabelClickTarget { .. }

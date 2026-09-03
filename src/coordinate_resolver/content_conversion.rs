@@ -64,7 +64,7 @@ pub(super) fn section_label_span(
 }
 
 /// The bar-number `TextSpan` a `DirectiveLine`'s `bar_number` renders as —
-/// shared with `highlights::resolve_bar_number_click_target`, which needs
+/// shared with `highlight_click_targets::resolve_bar_number_click_target`, which needs
 /// the identical span (content and `font_size`) to measure the same click
 /// target's width via `font_metrics::span_width`.
 pub(super) fn bar_number_text_span(

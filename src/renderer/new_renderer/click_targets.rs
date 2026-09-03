@@ -82,6 +82,18 @@ pub(super) fn render_secondary_click_target(
             *measure_index,
             *measure_index_end,
         ),
+        AbsoluteContent::BarLineClickTarget {
+            width,
+            height,
+            measure_index_next,
+            measure_index_prev,
+        } => render_bar_line_click_target(
+            elem,
+            *width,
+            *height,
+            *measure_index_next,
+            *measure_index_prev,
+        ),
         _ => Vec::new(),
     }
 }
@@ -261,6 +273,31 @@ pub(super) fn render_bar_number_click_target(
         Tag::BarNumber {
             index: measure_index,
             end: measure_index_end,
+        },
+    )
+}
+
+/// Sibling click target to one bar line, exactly like `BarNumberClickTarget`
+/// is a sibling of `MeasureClickTarget` — a separate group laid over the
+/// bar line, never a change to `render_bar_line`/`glyph_renderers.rs`
+/// itself. See `compositor::types::AbsoluteContent::BarLineClickTarget`.
+pub(super) fn render_bar_line_click_target(
+    elem: &AbsoluteElement,
+    width: f32,
+    height: f32,
+    measure_index_next: Option<usize>,
+    measure_index_prev: Option<usize>,
+) -> Vec<SvgElement> {
+    wrap_click_target(
+        elem,
+        SvgKind::TransparentRect {
+            width,
+            height,
+            role: TransparentRectRole::BarLineClickTarget,
+        },
+        Tag::BarLine {
+            measure_index_next,
+            measure_index_prev,
         },
     )
 }

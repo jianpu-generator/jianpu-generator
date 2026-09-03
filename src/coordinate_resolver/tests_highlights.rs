@@ -69,6 +69,7 @@ fn measure_highlight_produces_prepended_rect_element() {
         error_highlights: vec![],
         measure_click_targets: vec![],
         bar_number_click_targets: vec![],
+        bar_line_click_targets: vec![],
         playback_cursor_targets: vec![],
         part_label_click_targets: vec![],
         lyric_click_targets: vec![],
@@ -130,6 +131,7 @@ fn error_highlight_resolves_to_absolute_error_highlight() {
         }],
         measure_click_targets: vec![],
         bar_number_click_targets: vec![],
+        bar_line_click_targets: vec![],
         playback_cursor_targets: vec![],
         part_label_click_targets: vec![],
         lyric_click_targets: vec![],
@@ -181,6 +183,7 @@ fn page_with_no_highlight_produces_no_extra_element() {
         error_highlights: vec![],
         measure_click_targets: vec![],
         bar_number_click_targets: vec![],
+        bar_line_click_targets: vec![],
         playback_cursor_targets: vec![],
         part_label_click_targets: vec![],
         lyric_click_targets: vec![],
@@ -241,6 +244,7 @@ fn playback_cursor_reaches_final_bar_line_of_its_measure() {
         error_highlights: vec![],
         measure_click_targets: vec![],
         bar_number_click_targets: vec![],
+        bar_line_click_targets: vec![],
         // `column_end` is snapped to the bar line's own rendered position
         // (`bar_line_col + 1.0` for an `End`-aligned bar line — see
         // `compute_all_playback_cursor_targets` in
@@ -328,6 +332,7 @@ fn bar_number_click_target_resolves_to_a_small_rect_sized_to_its_digits() {
             measure_index: 41,
             measure_index_end: 41,
         }],
+        bar_line_click_targets: vec![],
         playback_cursor_targets: vec![],
         part_label_click_targets: vec![],
         lyric_click_targets: vec![],

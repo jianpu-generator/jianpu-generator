@@ -1,10 +1,16 @@
 import type { LyricSpan, NoteSpan } from '../types'
-import {
-  getCellAtPoint,
-  type LyricCell,
-  type NoteCell,
-  parseDatasetInt,
-} from './previewSelection'
+import { clickableElementIdFromElement } from './clickableElementId'
+import type { LyricCell, NoteCell } from './previewSelection'
+
+/** The point-based counterpart of `clickableElementIdFromElement` used by
+ * both label hit-tests below — mirrors `previewSelection.ts`'s own private
+ * `getClickableElementIdAtPoint`. */
+function getClickableElementIdAtPoint(x: number, y: number, tag: string) {
+  const el = document.elementFromPoint(x, y)
+  const group = el?.closest(`[data-tag="${tag}"]`)
+  if (!group) return undefined
+  return clickableElementIdFromElement(group)
+}
 
 /** One rendered part-label click target, keyed the same way as
  * `Tag::PartLabel`'s `data-part-index`/`data-measure-index-start`/
@@ -22,25 +28,13 @@ export function getPartLabelAtPoint(
   x: number,
   y: number,
 ): PartLabelHit | undefined {
-  return getCellAtPoint(x, y, {
-    tag: 'part-label',
-    parseCell: ({ partIndex, measureIndexStart, measureIndexEnd }) => {
-      const sourcePartIndex = parseDatasetInt(partIndex)
-      const start = parseDatasetInt(measureIndexStart)
-      const end = parseDatasetInt(measureIndexEnd)
-      if (
-        sourcePartIndex === undefined ||
-        start === undefined ||
-        end === undefined
-      )
-        return undefined
-      return {
-        sourcePartIndex,
-        measureIndexStart: start,
-        measureIndexEnd: end,
-      }
-    },
-  })
+  const id = getClickableElementIdAtPoint(x, y, 'part-label')
+  if (id?.kind !== 'partLabel') return undefined
+  return {
+    sourcePartIndex: id.sourcePartIndex,
+    measureIndexStart: id.measureIndexStart,
+    measureIndexEnd: id.measureIndexEnd,
+  }
 }
 
 /** Every note/rest cell belonging to the given part-label hits — each hit
@@ -107,28 +101,14 @@ export function getLyricLabelAtPoint(
   x: number,
   y: number,
 ): LyricLabelHit | undefined {
-  return getCellAtPoint(x, y, {
-    tag: 'lyric-label',
-    parseCell: ({ partIndex, verse, measureIndexStart, measureIndexEnd }) => {
-      const sourcePartIndex = parseDatasetInt(partIndex)
-      const verseIndex = parseDatasetInt(verse)
-      const start = parseDatasetInt(measureIndexStart)
-      const end = parseDatasetInt(measureIndexEnd)
-      if (
-        sourcePartIndex === undefined ||
-        verseIndex === undefined ||
-        start === undefined ||
-        end === undefined
-      )
-        return undefined
-      return {
-        sourcePartIndex,
-        verse: verseIndex,
-        measureIndexStart: start,
-        measureIndexEnd: end,
-      }
-    },
-  })
+  const id = getClickableElementIdAtPoint(x, y, 'lyric-label')
+  if (id?.kind !== 'lyricLabel') return undefined
+  return {
+    sourcePartIndex: id.sourcePartIndex,
+    verse: id.verse,
+    measureIndexStart: id.measureIndexStart,
+    measureIndexEnd: id.measureIndexEnd,
+  }
 }
 
 /** Every lyric syllable cell belonging to the given lyric-label hits — each

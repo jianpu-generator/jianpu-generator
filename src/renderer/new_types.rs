@@ -80,6 +80,11 @@ pub enum TransparentRectRole {
     /// Invisible rect layered over one verse's `RowLabel` text, giving it a
     /// clickable/draggable hit target — see `Tag::LyricLabel`.
     LyricLabelClickTarget,
+    /// Invisible rect for one bar line's own click/drag hit target — see
+    /// `Tag::BarLine`. Given its own role (rather than reusing
+    /// `MeasureClickTarget`'s) purely for distinct hover styling, the same
+    /// reason `BarNumberClickTarget` has its own.
+    BarLineClickTarget,
 }
 
 impl TransparentRectRole {
@@ -93,6 +98,7 @@ impl TransparentRectRole {
             Self::PartLabelClickTarget => "part-label-click-target-rect",
             Self::LyricClickTarget => "lyric-click-target-rect",
             Self::LyricLabelClickTarget => "lyric-label-click-target-rect",
+            Self::BarLineClickTarget => "bar-line-click-target-rect",
         }
     }
 }
@@ -169,6 +175,16 @@ pub enum Tag {
         verse: usize,
         measure_index_start: usize,
         measure_index_end: usize,
+    },
+    /// Identifies one bar line's own click target — see
+    /// `AbsoluteContent::BarLineClickTarget`. `measure_index_next`/
+    /// `measure_index_prev` name the measure(s) this bar line sits between;
+    /// a system's leading bar line has no `prev`, a system's closing bar
+    /// line has no `next`. Resolving "which measure does this select" is
+    /// `next ?? prev`.
+    BarLine {
+        measure_index_next: Option<usize>,
+        measure_index_prev: Option<usize>,
     },
 }
 

@@ -6,8 +6,9 @@ use crate::grid_layout::layout::{
 use crate::grid_layout::playback_cursor::{compute_all_playback_cursor_targets, note_row_spans};
 use crate::grid_layout::system_walk::for_each_system;
 use crate::grid_layout::types::{
-    BarNumberClickTarget, GridElement, Header, LyricClickTarget, LyricLabelClickTarget,
-    MeasureClickTarget, MeasureHighlight, MeasureRange, PartLabelClickTarget, PlaybackCursorTarget,
+    BarLineClickTarget, BarNumberClickTarget, GridElement, Header, LyricClickTarget,
+    LyricLabelClickTarget, MeasureClickTarget, MeasureHighlight, MeasureRange,
+    PartLabelClickTarget, PlaybackCursorTarget,
 };
 use std::collections::HashMap;
 
@@ -127,6 +128,75 @@ pub(crate) fn compute_all_bar_number_click_targets(
     results
 }
 
+/// One [`BarLineClickTarget`] per bar line actually drawn in every system —
+/// one before the first block (leading, `prev = None`) plus one after every
+/// block (trailing, `next = None` only for the last) — `system.len() + 1`
+/// per system. Walks `page_systems` in the same order and with the same
+/// `global_measure_index`/`col_offset` accumulation as
+/// `compute_all_measure_click_targets`, so a boundary's `column` always
+/// lines up with the measures it sits between.
+///
+/// The actual rendered bar-line glyph at a system boundary doesn't sit at
+/// the raw `col_offset` value — it's drawn at the same column
+/// `measure_column_bounds` uses for the flanking measures' own click-target
+/// edge there (a leading system divider is padded a full column left of
+/// `col_offset`, an internal one half a column left, a closing one sits
+/// exactly at `col_offset`), so `column` mirrors that same
+/// `is_first_block`/`is_last_block` adjustment rather than the plain
+/// accumulator, or this target's rect would be centered off the real line.
+pub(crate) fn compute_all_bar_line_click_targets(
+    page_systems: &[Vec<Vec<MeasureBlock>>],
+    tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
+    header: &Header,
+    base: f32,
+    hide_system_dividers: bool,
+) -> Vec<(usize, BarLineClickTarget)> {
+    let mut global_measure_index: usize = 0;
+    let mut results: Vec<(usize, BarLineClickTarget)> = Vec::new();
+
+    for_each_system(
+        page_systems,
+        tuplet_bracket_map,
+        header,
+        base,
+        hide_system_dividers,
+        |page_idx, system, row_offset, _tuplet_part_indices, musical_row_count| {
+            let row_start = row_offset;
+            let row_end = row_offset + musical_row_count.saturating_sub(1);
+            let mut col_offset: u32 = MUSIC_START_COL;
+
+            results.push((
+                page_idx,
+                BarLineClickTarget {
+                    row_start,
+                    row_end,
+                    column: col_offset as f32 - 1.0,
+                    measure_index_next: Some(global_measure_index),
+                    measure_index_prev: None,
+                },
+            ));
+
+            let last_block_idx = system.len().saturating_sub(1);
+            for (block_idx, block) in system.iter().enumerate() {
+                col_offset += block_column_width(block);
+                global_measure_index += block.represents_measures;
+                let is_last_block = block_idx == last_block_idx;
+                results.push((
+                    page_idx,
+                    BarLineClickTarget {
+                        row_start,
+                        row_end,
+                        column: col_offset as f32 - if is_last_block { 0.0 } else { 0.5 },
+                        measure_index_next: (!is_last_block).then_some(global_measure_index),
+                        measure_index_prev: Some(global_measure_index.saturating_sub(1)),
+                    },
+                ));
+            }
+        },
+    );
+    results
+}
+
 /// Filters a `compute_all_*_click_target`/`compute_all_playback_cursor_targets`
 /// result down to the entries for one page — shared by every `*_on_page` call
 /// site in `grid_layout/layout.rs`.
@@ -219,6 +289,7 @@ pub(crate) struct HighlightAndClickInfos {
     pub(crate) all_lyric_click_target_infos: Vec<(usize, LyricClickTarget)>,
     pub(crate) all_lyric_label_click_target_infos: Vec<(usize, LyricLabelClickTarget)>,
     pub(crate) all_bar_number_click_target_infos: Vec<(usize, BarNumberClickTarget)>,
+    pub(crate) all_bar_line_click_target_infos: Vec<(usize, BarLineClickTarget)>,
 }
 
 pub(crate) struct HighlightAndClickInfosParams<'a> {
@@ -296,6 +367,7 @@ pub(crate) fn compute_highlight_and_click_infos(
     let all_lyric_click_target_infos = compute_all!(compute_all_lyric_click_targets);
     let all_lyric_label_click_target_infos = compute_all!(compute_all_lyric_label_click_targets);
     let all_bar_number_click_target_infos = compute_all!(compute_all_bar_number_click_targets);
+    let all_bar_line_click_target_infos = compute_all!(compute_all_bar_line_click_targets);
 
     HighlightAndClickInfos {
         highlight_infos,
@@ -306,5 +378,6 @@ pub(crate) fn compute_highlight_and_click_infos(
         all_lyric_click_target_infos,
         all_lyric_label_click_target_infos,
         all_bar_number_click_target_infos,
+        all_bar_line_click_target_infos,
     }
 }

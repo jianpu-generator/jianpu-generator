@@ -4,8 +4,8 @@
 use crate::grid_layout::click_targets::{targets_on_page, HighlightAndClickInfos};
 use crate::grid_layout::highlight::measure_highlights_on_page;
 use crate::grid_layout::types::{
-    BarNumberClickTarget, LyricClickTarget, LyricLabelClickTarget, MeasureClickTarget,
-    MeasureHighlight, PartLabelClickTarget, PlaybackCursorTarget,
+    BarLineClickTarget, BarNumberClickTarget, LyricClickTarget, LyricLabelClickTarget,
+    MeasureClickTarget, MeasureHighlight, PartLabelClickTarget, PlaybackCursorTarget,
 };
 
 /// One page's slice of every `HighlightAndClickInfos` list, filtered by
@@ -20,6 +20,7 @@ pub(super) struct PageHighlightsAndTargets {
     pub(super) lyric_click_targets: Vec<LyricClickTarget>,
     pub(super) lyric_label_click_targets: Vec<LyricLabelClickTarget>,
     pub(super) bar_number_click_targets: Vec<BarNumberClickTarget>,
+    pub(super) bar_line_click_targets: Vec<BarLineClickTarget>,
 }
 
 impl PageHighlightsAndTargets {
@@ -43,6 +44,10 @@ impl PageHighlightsAndTargets {
             ),
             bar_number_click_targets: targets_on_page(
                 &infos.all_bar_number_click_target_infos,
+                page_idx,
+            ),
+            bar_line_click_targets: targets_on_page(
+                &infos.all_bar_line_click_target_infos,
                 page_idx,
             ),
         }
