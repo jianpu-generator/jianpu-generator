@@ -65,7 +65,10 @@ export function cancelAnchor(
  * and this module's `handleCommitClick`). Mirrors the same hit-test chain
  * `handleAnchorClick` uses for a first click, since anything that would
  * anchor a *new* gesture also counts as a recognizable target for
- * *resolving* one already in progress. */
+ * *resolving* one already in progress — including the deliberate absence of
+ * a measure-bounding-box fallback (see `handleAnchorClick`'s trailing
+ * comment): missing every specific target cancels the gesture even if the
+ * point is still inside some measure's bounding box. */
 function isEmptySpace(x: number, y: number): boolean {
   if (getSectionLabelAtPoint(x, y) !== undefined) return false
   if (getPartLabelAtPoint(x, y) !== undefined) return false
@@ -74,7 +77,7 @@ function isEmptySpace(x: number, y: number): boolean {
   if (getBarNumberMeasureAtPoint(x, y) !== undefined) return false
   if (getLyricAtPoint(x, y) !== undefined) return false
   if (getNoteAtPoint(x, y) !== undefined) return false
-  return getMeasureAtPoint(x, y) === undefined
+  return true
 }
 
 /** The first click of a click-and-click gesture: figures out what got
@@ -243,23 +246,15 @@ function handleAnchorClick(
     e.preventDefault()
     return
   }
-  // Missed every note/lyric click target (e.g. a bar-line or the gutter
-  // around notes) but still landed inside a measure — falls back to
-  // selecting that whole measure, the same 'measure' mode the bar-line/
-  // bar-number handle checks above anchor unconditionally.
-  const range = getMeasureAtPoint(e.clientX, e.clientY)
-  if (range === undefined) return
-  anchorAndCommit(
-    dragStateRef,
-    {
-      mode: 'measure',
-      anchor: range,
-      current: range,
-      anchorId: measureClickableElementId(range),
-    },
-    args,
-  )
-  e.preventDefault()
+  // Missed every note/lyric/label/bar-line/bar-number click target — even if
+  // this still landed inside a measure's bounding box (e.g. the gutter
+  // around a note), that's deliberately *not* treated as "select the whole
+  // measure": on a mouse that gutter miss is rare, but on touch it's the
+  // common case (imprecise taps around small note/lyric hit rects), which
+  // made a plain tap feel like it always selected the whole measure. Bar
+  // lines and bar numbers remain unconditional whole-measure targets (see
+  // the checks above); everywhere else, missing every specific target is a
+  // no-op rather than a measure-wide fallback.
 }
 
 /** The second click of a click-and-click gesture: resolves the range between
