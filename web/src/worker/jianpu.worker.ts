@@ -26,7 +26,7 @@ import {
   shift_part_octave,
   update_part_declaration,
 } from '../jianpuWasm'
-import type { PartDeclaration, PartMode } from '../types'
+import type { PartDeclaration } from '../types'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
 import { instantiateWasmComponentFromModule } from '../wasmInit'
 import {
@@ -108,13 +108,6 @@ let loadedFonts: {
   mono: Uint8Array
 } | null = null
 
-function modeToWasmString(mode: PartMode, followTarget: string | null): string {
-  if (mode === 'follow') {
-    return `follow[${followTarget ?? ''}]`
-  }
-  return mode
-}
-
 function octaveOffsetToWasmString(octaveOffset: number | null): string {
   if (octaveOffset == null || octaveOffset === 0) return ''
   return octaveOffset > 0 ? `+${octaveOffset}` : String(octaveOffset)
@@ -174,7 +167,8 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const newSource = update_part_declaration(
       msg.source,
       msg.abbreviation,
-      modeToWasmString(msg.mode, msg.followTarget),
+      msg.mode,
+      msg.followTarget ?? '',
       msg.soundfont ?? '',
       msg.volume != null ? String(msg.volume) : '',
       octaveOffsetToWasmString(msg.octaveOffset),

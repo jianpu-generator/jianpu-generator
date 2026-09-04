@@ -409,7 +409,13 @@ world jianpu-wasm {
     // isn't found), so this is just a plain string-returning export next to
     // `list-part-declarations` above, per the task's "add whatever shape is
     // simplest" note.
-    export update-part-declaration: func(source: string, abbreviation: string, new-mode: string, new-soundfont: string, new-volume: string, new-octave-offset: string) -> string;
+    //
+    // `new-mode` is the `part-declaration-mode` enum above (not a
+    // hand-built string) so this call site can't drift from
+    // `part-declaration`'s `mode` field; `new-follow-target` mirrors
+    // `part-declaration.follow-target` and is only consulted when
+    // `new-mode` is `follow` (empty string otherwise).
+    export update-part-declaration: func(source: string, abbreviation: string, new-mode: part-declaration-mode, new-follow-target: string, new-soundfont: string, new-volume: string, new-octave-offset: string) -> string;
 
     enum symbol-kind {
         abbreviation,

@@ -80,17 +80,18 @@ pub(crate) fn list_parts_response(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn update_part_declaration_source(
     source: &str,
     abbreviation: &str,
-    new_mode: &str,
+    new_mode: SourcePartMode,
+    new_follow_target: &str,
     new_soundfont: &str,
     new_volume: &str,
     new_octave_offset: &str,
 ) -> String {
-    let Some(mode) = source_edit::PartMode::parse(new_mode) else {
-        return source.to_owned();
-    };
+    let follow_target = (!new_follow_target.is_empty()).then(|| new_follow_target.to_owned());
+    let mode = source_edit::PartMode::from_source_mode(new_mode, follow_target);
     let soundfont = if new_soundfont.is_empty() {
         None
     } else {

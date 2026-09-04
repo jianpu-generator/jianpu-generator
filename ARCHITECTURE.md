@@ -275,7 +275,7 @@ a runtime `JsValue`/`any` surprise.
 |--------|---------|
 | `list_parts(source, raw_instruments)` | Part summaries for preview toggles **and** `declarations: PartDeclarationOut[]` for the Edit Parts modal |
 | `list_part_declarations(source, raw_instruments)` | Declarations only (re-list after a write) |
-| `update_part_declaration(source, abbreviation, new_mode, new_soundfont, new_volume, new_octave_offset)` | Returns updated source; empty strings for soundfont/volume/octave mean “omit / default” |
+| `update_part_declaration(source, abbreviation, new_mode, new_follow_target, new_soundfont, new_volume, new_octave_offset)` | Returns updated source; `new_mode` is the `part-declaration-mode` enum (`chords`/`notes`/`percussion`/`follow`), not a hand-built string; `new_follow_target` is only consulted when `new_mode` is `follow`; empty strings for follow-target/soundfont/volume/octave mean “omit / default” |
 | `shift_part_octave(source, abbreviation, delta)` | Rewrites `'`/`,` octave markers on every note in the named part by `delta` octaves (see **Source editing**); returns the updated source directly, no response envelope (same infallible shape as `update_part_declaration`) |
 | `compress_share_payload(payload) -> Vec<u8>` | Brotli-compresses a share-link JSON payload (quality 11); caller base64url-encodes the result |
 | `decompress_share_payload(bytes) -> Option<String>` | Inverse of the above; `None` if `bytes` isn't valid brotli or decodes to invalid UTF-8 |

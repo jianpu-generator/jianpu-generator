@@ -314,7 +314,8 @@ impl Guest for Component {
     fn update_part_declaration(
         source: String,
         abbreviation: String,
-        new_mode: String,
+        new_mode: PartDeclarationMode,
+        new_follow_target: String,
         new_soundfont: String,
         new_volume: String,
         new_octave_offset: String,
@@ -323,6 +324,7 @@ impl Guest for Component {
             source,
             abbreviation,
             new_mode,
+            new_follow_target,
             new_soundfont,
             new_volume,
             new_octave_offset,

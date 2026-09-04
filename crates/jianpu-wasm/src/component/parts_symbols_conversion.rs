@@ -32,6 +32,18 @@ pub(super) fn part_declaration_mode_to_wit(
     }
 }
 
+pub(super) fn part_declaration_mode_from_wit(
+    mode: PartDeclarationMode,
+) -> jianpu_generator::parser::parts_parser::SourcePartMode {
+    use jianpu_generator::parser::parts_parser::SourcePartMode;
+    match mode {
+        PartDeclarationMode::Chords => SourcePartMode::Chords,
+        PartDeclarationMode::Notes => SourcePartMode::Notes,
+        PartDeclarationMode::Percussion => SourcePartMode::Percussion,
+        PartDeclarationMode::Follow => SourcePartMode::Follow,
+    }
+}
+
 pub(super) fn part_declaration_to_wit(
     declaration: &crate::types::PartDeclarationOut,
 ) -> PartDeclaration {

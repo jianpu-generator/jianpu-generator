@@ -1,6 +1,8 @@
 mod octave_shift;
 pub use octave_shift::shift_part_octave;
 
+use crate::parser::parts_parser::SourcePartMode;
+
 pub enum PartMode {
     Chords,
     Notes,
@@ -9,16 +11,19 @@ pub enum PartMode {
 }
 
 impl PartMode {
-    pub fn parse(s: &str) -> Option<Self> {
-        match s {
-            "chords" => Some(Self::Chords),
-            "notes" => Some(Self::Notes),
-            "percussion" => Some(Self::Percussion),
-            _ if s.starts_with("follow[") && s.ends_with(']') => {
-                let target = s["follow[".len()..s.len() - 1].to_owned();
-                Some(Self::Follow { target })
-            }
-            _ => None,
+    /// Builds a `PartMode` from the same [`SourcePartMode`] tags the
+    /// parser produces (and the wasm boundary's `part-declaration-mode`
+    /// enum mirrors) instead of hand-parsing a `"chords"`/"follow[...]"`
+    /// wire string — see item 3 of `TODO-cross-boundary-invariants.md`.
+    /// `follow_target` is only consulted for `SourcePartMode::Follow`.
+    pub fn from_source_mode(kind: SourcePartMode, follow_target: Option<String>) -> Self {
+        match kind {
+            SourcePartMode::Chords => Self::Chords,
+            SourcePartMode::Notes => Self::Notes,
+            SourcePartMode::Percussion => Self::Percussion,
+            SourcePartMode::Follow => Self::Follow {
+                target: follow_target.unwrap_or_default(),
+            },
         }
     }
 
