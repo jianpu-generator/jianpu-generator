@@ -1,5 +1,3 @@
-use wasm_bindgen::prelude::*;
-
 mod helpers;
 mod lyric_label;
 mod lyric_lyric;
@@ -11,44 +9,16 @@ mod part_label;
 mod types;
 
 use crate::types::{LyricSpanOut, NoteSpanOut};
-use types::{ClickableElementId, ResolveSelectionRangeResponse};
-
-/// Resolves the click-and-click range between two clickable elements — the
-/// ID-based replacement for pixel-marquee range resolution (see
-/// `PLAN-clickable-element-id-selection.md`). Pure grouping over the
-/// already-fetched `note_spans`/`lyric_spans`, called directly on the main
-/// thread like `group_note_selection`. `raw_anchor`/`raw_current` each
-/// decode to a `ClickableElementId`. `Err` covers a malformed `JsValue` and
-/// any `(anchor, current)` combination not yet ID-resolvable (caller must
-/// fall back to the pixel-marquee path) — `Measure ↔ Measure`, `Note ↔ Note`
-/// (same part and cross-part), `Note ↔ Lyric` (cross-row, either ordering),
-/// `Lyric ↔ Lyric` (every scope — same part+verse, same part cross-verse,
-/// and cross-part), `PartLabel ↔ PartLabel` (any system), `LyricLabel ↔
-/// LyricLabel` (same verse, any system), and every label-mixed pair
-/// (`Note ↔ PartLabel`, `Lyric ↔ LyricLabel`, `Note ↔ LyricLabel`,
-/// `Lyric ↔ PartLabel`, `PartLabel ↔ LyricLabel`) are implemented so far —
-/// every `(anchor, current)` discriminant pair this plan ever scoped now
-/// resolves without `Err`, other than a malformed `JsValue` or a
-/// same-system-but-different-verse `LyricLabel ↔ LyricLabel` pair.
-#[wasm_bindgen]
-pub fn resolve_selection_range(
-    raw_note_spans: JsValue,
-    raw_lyric_spans: JsValue,
-    raw_anchor: JsValue,
-    raw_current: JsValue,
-) -> ResolveSelectionRangeResponse {
-    let note_spans: Vec<NoteSpanOut> =
-        serde_wasm_bindgen::from_value(raw_note_spans).unwrap_or_default();
-    let lyric_spans: Vec<LyricSpanOut> =
-        serde_wasm_bindgen::from_value(raw_lyric_spans).unwrap_or_default();
-    let (Ok(anchor), Ok(current)) = (
-        serde_wasm_bindgen::from_value::<ClickableElementId>(raw_anchor),
-        serde_wasm_bindgen::from_value::<ClickableElementId>(raw_current),
-    ) else {
-        return ResolveSelectionRangeResponse::Err;
-    };
-    resolve_selection_range_response(&note_spans, &lyric_spans, &anchor, &current)
-}
+// `pub(crate)`, not plain `use`: `component.rs` (a sibling module of this
+// one, both children of `lib.rs`) needs `ClickableElementId`/
+// `ResolveSelectionRangeResponse`/`NoteCellOut`/`LyricCellOut` to convert the
+// WIT-generated shapes to/from these crate types — a private `use` here
+// wouldn't propagate through `crate::selection_range::` far enough for
+// `component.rs` to reach them, since `mod types;` below is itself
+// module-private.
+pub(crate) use types::{
+    ClickableElementId, LyricCellOut, NoteCellOut, ResolveSelectionRangeResponse,
+};
 
 /// Resolves the click-and-click range between two clickable elements into
 /// the note/lyric cells it covers — the ID-based replacement for

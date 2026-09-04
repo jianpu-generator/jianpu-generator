@@ -20,7 +20,7 @@ export type {
   SectionRangeOut as SectionRange,
   SequenceEntryOut as SequenceEntry,
   SpanOut as ByteSpan,
-} from 'jianpu-wasm'
+} from './jianpuWasm'
 
 // Format: "N: Instrument Name" e.g. "48: String Ensemble 1"
 export type SoundfontValue = string

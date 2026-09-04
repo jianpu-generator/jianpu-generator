@@ -1,4 +1,4 @@
-import type { NoteTimingOut } from 'jianpu-wasm'
+import type { NoteTimingOut } from '../jianpuWasm'
 
 export interface ActiveNote {
   sourcePartIndex: number

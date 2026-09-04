@@ -1,5 +1,5 @@
-import type { NoteTimingOut, PartOut } from 'jianpu-wasm'
 import { describe, expect, it } from 'vitest'
+import type { NoteTimingOut, PartOut } from '../jianpuWasm'
 import { remapNoteTimingsToVisiblePartIndex } from './noteTimingsPartIndex'
 
 function part(abbreviation: string): PartOut {

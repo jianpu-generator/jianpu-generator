@@ -1,5 +1,5 @@
-import type { NoteTimingOut } from 'jianpu-wasm'
 import { describe, expect, it } from 'vitest'
+import type { NoteTimingOut } from '../jianpuWasm'
 import { computeNoteSelectionTrimWindow } from './noteSelectionTrim'
 
 function timing(

@@ -48,6 +48,18 @@ let_underscore_untyped = "deny"
 [profile.release]
 debug = true
 
+# `cargo component build --release` otherwise inherits the plain `release`
+# profile above, whose `debug = true` (kept for native CLI debugging) makes
+# the component build enormous (~140 MiB vs. wasm-pack's ~7 MiB) since wasm
+# builds carry no equivalent post-processing strip step by default. Scoped
+# to just the wasm/component build via `--profile release-wasm` so the
+# native `release` profile (and wasm-pack's own build, which still uses
+# plain `release`) are unaffected.
+[profile.release-wasm]
+inherits = "release"
+debug = false
+strip = true
+
 [package]
 name = "jianpu-generator"
 version = "0.1.0"

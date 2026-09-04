@@ -1,16 +1,13 @@
 use serde::Serialize;
-use tsify::Tsify;
 
-#[derive(Debug, Clone, Tsify, Serialize)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Serialize)]
 pub struct SvgDocumentOut {
     pub width_pt: f32,
     pub height_pt: f32,
     pub elements: Vec<SvgElementOut>,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Serialize)]
 pub struct SvgElementOut {
     pub x: f32,
     pub y: f32,
@@ -19,9 +16,8 @@ pub struct SvgElementOut {
     pub kind: SvgKindOut,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum TransparentRectRoleOut {
     MeasureClickTarget,
     BarNumberClickTarget,
@@ -34,9 +30,8 @@ pub enum TransparentRectRoleOut {
     BarLineClickTarget,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum SvgKindOut {
     Text {
         content: String,
@@ -93,8 +88,7 @@ pub enum SvgKindOut {
     },
 }
 
-#[derive(Debug, Clone, Tsify, Serialize)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Serialize)]
 pub struct TspanOut {
     pub content: String,
     pub bold: bool,
@@ -104,9 +98,8 @@ pub struct TspanOut {
     pub font_size: Option<f32>,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum TagOut {
     Measure {
         index: usize,
@@ -145,36 +138,32 @@ pub enum TagOut {
     },
 }
 
-#[derive(Debug, Clone, Tsify, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum TextAnchorOut {
     Start,
     Middle,
     End,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum DominantBaselineOut {
     Middle,
     Hanging,
     Ideographic,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum FontFamilyOut {
     Monospace,
     SansSerif,
     Serif,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum FontWeightOut {
     Normal,
     Bold,

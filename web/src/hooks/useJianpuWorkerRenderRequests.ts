@@ -1,6 +1,6 @@
-import type { SvgDocumentOut } from 'jianpu-wasm'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef } from 'react'
+import type { SvgDocumentOut } from '../jianpuWasm'
 import type { Diagnostic, MeasureSpan } from '../types'
 import type { WorkerRequest } from '../worker/jianpu.worker'
 import { measureRangeInSpanWithReveal } from './workerHelpers'

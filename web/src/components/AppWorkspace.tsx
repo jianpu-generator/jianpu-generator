@@ -1,8 +1,8 @@
-import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import { AlignLeft } from 'lucide-react'
 import type { RefObject } from 'react'
 import { useEffect, useState } from 'react'
 import { MOBILE_BREAKPOINT_QUERY, useMediaQuery } from '../hooks/useMediaQuery'
+import type { NoteTimingOut, SvgDocumentOut } from '../jianpuWasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,

@@ -1,6 +1,6 @@
-import type { NoteTimingOut } from 'jianpu-wasm'
 import type { RefObject } from 'react'
 import { useCallback, useRef, useState } from 'react'
+import type { NoteTimingOut } from '../jianpuWasm'
 import type { NoteCell } from '../utils/noteSpanSelection'
 import type { WorkerRequest } from '../worker/jianpu.worker'
 

@@ -1,5 +1,5 @@
-import type { NoteTimingOut } from 'jianpu-wasm'
 import { useEffect } from 'react'
+import type { NoteTimingOut } from '../jianpuWasm'
 import {
   groupNoteTimingsByPart,
   resolveActiveNotes,

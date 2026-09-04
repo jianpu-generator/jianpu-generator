@@ -1,11 +1,11 @@
+import type { ReactNode } from 'react'
+import fontsManifest from '../../../fonts/fonts.json'
 import type {
   FontFamilyOut,
   SvgDocumentOut,
   SvgElementOut,
   TagOut,
-} from 'jianpu-wasm'
-import type { ReactNode } from 'react'
-import fontsManifest from '../../../fonts/fonts.json'
+} from '../jianpuWasm'
 
 // `FontFamily::SansSerif`'s backing font — the default role for the
 // directive line (bar number, section label, key/bpm/time signature,

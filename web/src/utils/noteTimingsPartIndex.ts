@@ -1,4 +1,4 @@
-import type { NoteTimingOut, PartOut } from 'jianpu-wasm'
+import type { NoteTimingOut, PartOut } from '../jianpuWasm'
 
 /**
  * Rust's note-timing pipeline (`note_timings_seconds`, see

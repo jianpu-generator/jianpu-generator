@@ -1,25 +1,17 @@
 use serde::Serialize;
-use tsify::Tsify;
 
 use crate::types::DiagnosticOut;
 
 #[cfg(feature = "wav")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum GenerateWavResponse {
-    Ok {
-        #[tsify(type = "Uint8Array")]
-        wav: Vec<u8>,
-    },
-    Err {
-        diagnostics: Vec<DiagnosticOut>,
-    },
+    Ok { wav: Vec<u8> },
+    Err { diagnostics: Vec<DiagnosticOut> },
 }
 
 #[cfg(feature = "wav")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct NoteTimingOut {
     pub source_part_index: usize,
     pub note_id: usize,
@@ -28,9 +20,8 @@ pub struct NoteTimingOut {
 }
 
 #[cfg(feature = "wav")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum NoteTimingsResponse {
     Ok {
         /// Elapsed-seconds start/end of every sounding note/rest, keyed by
@@ -45,99 +36,57 @@ pub enum NoteTimingsResponse {
 }
 
 #[cfg(feature = "pdf")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum GeneratePdfResponse {
-    Ok {
-        #[tsify(type = "Uint8Array")]
-        pdf: Vec<u8>,
-    },
-    Err {
-        diagnostics: Vec<DiagnosticOut>,
-    },
+    Ok { pdf: Vec<u8> },
+    Err { diagnostics: Vec<DiagnosticOut> },
 }
 
 #[cfg(feature = "pdf")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum GenerateSplitPdfsResponse {
-    Ok {
-        #[tsify(type = "Uint8Array")]
-        zip: Vec<u8>,
-    },
-    Err {
-        diagnostics: Vec<DiagnosticOut>,
-    },
+    Ok { zip: Vec<u8> },
+    Err { diagnostics: Vec<DiagnosticOut> },
 }
 
 #[cfg(feature = "midi")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum GenerateMidiResponse {
-    Ok {
-        #[tsify(type = "Uint8Array")]
-        midi: Vec<u8>,
-    },
-    Err {
-        diagnostics: Vec<DiagnosticOut>,
-    },
+    Ok { midi: Vec<u8> },
+    Err { diagnostics: Vec<DiagnosticOut> },
 }
 
 #[cfg(feature = "midi")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum GenerateSplitMidisResponse {
-    Ok {
-        #[tsify(type = "Uint8Array")]
-        zip: Vec<u8>,
-    },
-    Err {
-        diagnostics: Vec<DiagnosticOut>,
-    },
+    Ok { zip: Vec<u8> },
+    Err { diagnostics: Vec<DiagnosticOut> },
 }
 
 #[cfg(feature = "wav")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum GenerateSplitWavsResponse {
-    Ok {
-        #[tsify(type = "Uint8Array")]
-        zip: Vec<u8>,
-    },
-    Err {
-        diagnostics: Vec<DiagnosticOut>,
-    },
+    Ok { zip: Vec<u8> },
+    Err { diagnostics: Vec<DiagnosticOut> },
 }
 
 #[cfg(feature = "mp3")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum GenerateMp3Response {
-    Ok {
-        #[tsify(type = "Uint8Array")]
-        mp3: Vec<u8>,
-    },
-    Err {
-        diagnostics: Vec<DiagnosticOut>,
-    },
+    Ok { mp3: Vec<u8> },
+    Err { diagnostics: Vec<DiagnosticOut> },
 }
 
 #[cfg(feature = "mp3")]
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum GenerateSplitMp3sResponse {
-    Ok {
-        #[tsify(type = "Uint8Array")]
-        zip: Vec<u8>,
-    },
-    Err {
-        diagnostics: Vec<DiagnosticOut>,
-    },
+    Ok { zip: Vec<u8> },
+    Err { diagnostics: Vec<DiagnosticOut> },
 }

@@ -1,4 +1,6 @@
 use super::*;
+use crate::responses::render_response;
+use crate::types::RenderResponse;
 use types::DiagnosticSeverity;
 
 #[test]

@@ -1,4 +1,4 @@
-import type { NoteTimingOut } from 'jianpu-wasm'
+import type { NoteTimingOut } from '../jianpuWasm'
 import type { NoteCell } from './noteSpanSelection'
 
 /** Elapsed-seconds window, relative to the start of a generated audio clip. */

@@ -6,22 +6,32 @@ import type { Plugin, ViteDevServer } from 'vite'
 import { defineConfig } from 'vitest/config'
 import fontsManifest from '../fonts/fonts.json'
 
-const WASM_PACK_ARGS = [
+const CARGO_COMPONENT_ARGS = [
+  'component',
   'build',
-  '../crates/jianpu-wasm',
-  '--target',
-  'web',
-  '--out-dir',
-  'pkg',
-  '--no-opt',
-  '--',
+  '--manifest-path',
+  '../crates/jianpu-wasm/Cargo.toml',
+  '--profile',
+  'release-wasm',
+  '--no-default-features',
   '--features',
-  'wav,pdf',
+  'wav,mp3,pdf,midi',
+  '--target',
+  'wasm32-unknown-unknown',
 ] as const
 
-const WASM_PKG_JS = path.resolve(
+const JCO_TRANSPILE_ARGS = [
+  'transpile',
+  '../target/wasm32-unknown-unknown/release-wasm/jianpu_wasm.wasm',
+  '--instantiation',
+  'async',
+  '-o',
+  '../crates/jianpu-wasm/pkg-component',
+] as const
+
+const WASM_COMPONENT_JS = path.resolve(
   __dirname,
-  '../crates/jianpu-wasm/pkg/jianpu_wasm.js',
+  '../crates/jianpu-wasm/pkg-component/jianpu_wasm.js',
 )
 
 function isRustSource(file: string): boolean {
@@ -40,16 +50,9 @@ function wasmDevPlugin(): Plugin {
 
   const repoRoot = path.resolve(__dirname, '..')
 
-  function runWasmPack(): Promise<void> {
-    const wasmPackBin = path.join(
-      __dirname,
-      'node_modules',
-      '.bin',
-      process.platform === 'win32' ? 'wasm-pack.cmd' : 'wasm-pack',
-    )
-
+  function runCargoComponentBuild(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const child = spawn(wasmPackBin, [...WASM_PACK_ARGS], {
+      const child = spawn('cargo', [...CARGO_COMPONENT_ARGS], {
         cwd: __dirname,
         stdio: 'inherit',
       })
@@ -59,7 +62,34 @@ function wasmDevPlugin(): Plugin {
           resolve()
           return
         }
-        reject(new Error(`wasm-pack exited with code ${code ?? 'unknown'}`))
+        reject(
+          new Error(`cargo component exited with code ${code ?? 'unknown'}`),
+        )
+      })
+      child.on('error', reject)
+    })
+  }
+
+  function runJcoTranspile(): Promise<void> {
+    const jcoBin = path.join(
+      __dirname,
+      'node_modules',
+      '.bin',
+      process.platform === 'win32' ? 'jco.cmd' : 'jco',
+    )
+
+    return new Promise((resolve, reject) => {
+      const child = spawn(jcoBin, [...JCO_TRANSPILE_ARGS], {
+        cwd: __dirname,
+        stdio: 'inherit',
+      })
+
+      child.on('exit', (code) => {
+        if (code === 0) {
+          resolve()
+          return
+        }
+        reject(new Error(`jco transpile exited with code ${code ?? 'unknown'}`))
       })
       child.on('error', reject)
     })
@@ -74,10 +104,11 @@ function wasmDevPlugin(): Plugin {
     building = true
     try {
       console.log('[jianpu-wasm] Rebuilding...')
-      await runWasmPack()
+      await runCargoComponentBuild()
+      await runJcoTranspile()
       console.log('[jianpu-wasm] Rebuild complete')
 
-      const wasmModule = server?.moduleGraph.getModuleById(WASM_PKG_JS)
+      const wasmModule = server?.moduleGraph.getModuleById(WASM_COMPONENT_JS)
       if (wasmModule) {
         server?.moduleGraph.invalidateModule(wasmModule)
       }
@@ -217,14 +248,6 @@ function serveFontsPlugin(): Plugin {
 export default defineConfig({
   base: process.env.VITE_BASE_PATH ?? '/',
   plugins: [react(), wasmDevPlugin(), serveFontsPlugin(), copyFontsPlugin()],
-  resolve: {
-    alias: {
-      'jianpu-wasm': path.resolve(
-        __dirname,
-        '../crates/jianpu-wasm/pkg/jianpu_wasm.js',
-      ),
-    },
-  },
   worker: {
     format: 'es',
   },

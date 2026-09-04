@@ -8,7 +8,7 @@ import {
   get_metadata_defaults,
   type MetadataDefaultsOut,
   type TextStyleDefaultsOut,
-} from 'jianpu-wasm'
+} from '../jianpuWasm'
 import { ensureWasmInit } from '../wasmInit'
 
 export type MetadataDefaults = MetadataDefaultsOut

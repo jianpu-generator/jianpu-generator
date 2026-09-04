@@ -2,7 +2,7 @@
 """Reject a built wasm binary that exceeds MAX_BYTES.
 
 Guards against accidentally re-embedding a large asset (e.g. a CJK font) into
-`jianpu_wasm_bg.wasm` instead of loading it at runtime (see `src/font_metrics.rs`).
+`jianpu_wasm.core.wasm` instead of loading it at runtime (see `src/font_metrics.rs`).
 """
 
 from __future__ import annotations
@@ -11,7 +11,10 @@ import sys
 from pathlib import Path
 
 MAX_BYTES = 8 * 1024 * 1024
-WASM_PATH = Path(__file__).resolve().parent.parent / "crates/jianpu-wasm/pkg/jianpu_wasm_bg.wasm"
+WASM_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "crates/jianpu-wasm/pkg-component/jianpu_wasm.core.wasm"
+)
 
 
 def main() -> int:
@@ -25,7 +28,9 @@ def main() -> int:
     )
     print(
         "If this is from a new embedded asset, load it at runtime instead "
-        "(see set_layout_fonts in crates/jianpu-wasm/src/lib.rs for the pattern)."
+        "(see set_layout_fonts in "
+        "crates/jianpu-wasm/src/component/guest_metadata_and_misc.rs for the "
+        "pattern)."
     )
     return 1
 

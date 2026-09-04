@@ -1,6 +1,6 @@
-import { group_note_selection } from 'jianpu-wasm'
 import type { RefObject } from 'react'
 import { useCallback, useMemo } from 'react'
+import { group_note_selection } from '../jianpuWasm'
 import type { EditorHandle, MeasureSpan, NoteSpan, PartInfo } from '../types'
 import type { NoteCell, NoteSelectionRun } from '../utils/noteSpanSelection'
 import { ensureWasmInit } from '../wasmInit'

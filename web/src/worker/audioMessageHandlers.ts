@@ -3,7 +3,7 @@ import type {
   GenerateWavResponse,
   NoteTimingOut,
   NoteTimingsResponse,
-} from 'jianpu-wasm'
+} from '../jianpuWasm'
 import { computeNoteSelectionTrimWindow } from '../utils/noteSelectionTrim'
 import type { WorkerRequest, WorkerResponse } from './jianpu.worker'
 

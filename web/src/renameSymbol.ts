@@ -3,7 +3,7 @@ import {
   rename_symbol,
   type SymbolKindOut,
   type SymbolOut,
-} from 'jianpu-wasm'
+} from './jianpuWasm'
 import { GM_INSTRUMENTS } from './utils/gmInstruments'
 import { ensureWasmInit } from './wasmInit'
 

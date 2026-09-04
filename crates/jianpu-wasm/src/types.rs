@@ -1,5 +1,4 @@
 use serde::Serialize;
-use tsify::Tsify;
 
 use crate::svg_types::SvgDocumentOut;
 
@@ -21,8 +20,7 @@ pub(crate) use crate::types_export::{
     GenerateSplitWavsResponse, GenerateWavResponse, NoteTimingOut, NoteTimingsResponse,
 };
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct SpanOut {
     /// UTF-8 byte offset (inclusive).
     pub start: usize,
@@ -50,33 +48,29 @@ impl From<MeasureRangeIn> for jianpu_generator::grid_layout::MeasureRange {
     }
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
-#[tsify(into_wasm_abi)]
 pub enum DiagnosticSeverity {
     Error,
     Warning,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct DiagnosticOut {
     pub severity: DiagnosticSeverity,
     pub message: String,
     pub span: SpanOut,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct PartOut {
     pub abbreviation: String,
     pub display_name: String,
     pub has_lyrics: bool,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum PartDeclarationModeOut {
     Chords,
     Notes,
@@ -84,9 +78,8 @@ pub enum PartDeclarationModeOut {
     Follow,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub struct PartDeclarationOut {
     pub abbreviation: String,
     pub display_name: String,
@@ -102,9 +95,8 @@ pub struct PartDeclarationOut {
     pub octave_offset: Option<i8>,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum RenderResponse {
     Ok {
         documents: Vec<SvgDocumentOut>,
@@ -117,9 +109,8 @@ pub enum RenderResponse {
     },
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum ListPartsResponse {
     Ok {
         parts: Vec<PartOut>,
@@ -130,9 +121,8 @@ pub enum ListPartsResponse {
     },
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum ListPartDeclarationsResponse {
     Ok {
         declarations: Vec<PartDeclarationOut>,
@@ -142,24 +132,21 @@ pub enum ListPartDeclarationsResponse {
     },
 }
 
-#[derive(Debug, Clone, Copy, Tsify, Serialize, serde::Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, serde::Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum SymbolKindOut {
     Abbreviation,
     SectionLabel,
 }
 
-#[derive(Debug, Clone, Copy, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum OccurrenceRoleOut {
     Declaration,
     Reference,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct SymbolOccurrenceOut {
     pub span: SpanOut,
     /// The region a caret may rest in to trigger a rename of this occurrence;
@@ -171,47 +158,41 @@ pub struct SymbolOccurrenceOut {
     pub role: OccurrenceRoleOut,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct SymbolOut {
     pub name: String,
     pub kind: SymbolKindOut,
     pub occurrences: Vec<SymbolOccurrenceOut>,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum ListSymbolsResponse {
     Ok { symbols: Vec<SymbolOut> },
     Err { diagnostics: Vec<DiagnosticOut> },
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TextEditOut {
     pub span: SpanOut,
     pub replacement: String,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum RenameSymbolResponse {
     Ok { edits: Vec<TextEditOut> },
     Err { diagnostics: Vec<DiagnosticOut> },
 }
 
-#[derive(Debug, Clone, Tsify, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum MeasureAtOffsetResponse {
     Ok { measure_index: usize },
     NotInMeasure,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct MeasureSpanOut {
     /// Inclusive start of note content (for cursor/selection mapping).
     pub start: usize,
@@ -228,9 +209,8 @@ pub struct MeasureSpanOut {
     pub end_line: usize,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, serde::Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, serde::Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub struct NoteSpanOut {
     /// Index into the compiled score's parts, matching the SVG's
     /// `data-part-index` attribute on a `Tag::Note` group.
@@ -248,17 +228,15 @@ pub struct NoteSpanOut {
     pub end: Option<usize>,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum ListNoteSpansResponse {
     Ok { spans: Vec<NoteSpanOut> },
     Err,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, serde::Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, serde::Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub struct LyricSpanOut {
     /// Index into the compiled score's parts, matching the SVG's
     /// `data-part-index` attribute on a `Tag::Lyric` group.
@@ -275,33 +253,29 @@ pub struct LyricSpanOut {
     pub end: usize,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum ListLyricSpansResponse {
     Ok { spans: Vec<LyricSpanOut> },
     Err,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Serialize)]
 pub struct SectionRangeOut {
     pub first_line: usize,
     pub last_line: usize,
     pub labels: Vec<String>,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct SequenceEntryOut {
     pub label: String,
     pub start_measure_index: usize,
     pub end_measure_index: usize,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum ListMeasureSpansResponse {
     Ok {
         spans: Vec<MeasureSpanOut>,
@@ -311,14 +285,12 @@ pub enum ListMeasureSpansResponse {
     Err,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct DiagnosticMessageOut {
     pub message: String,
 }
 
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct DiagnosticViewZoneOut {
     pub severity: DiagnosticSeverity,
     /// 1-based line number; view zone is inserted after this line.

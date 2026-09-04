@@ -1,5 +1,5 @@
-import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import type { RefObject } from 'react'
+import type { NoteTimingOut, SvgDocumentOut } from '../jianpuWasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,

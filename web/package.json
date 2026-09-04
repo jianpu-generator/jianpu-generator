@@ -5,11 +5,10 @@
   "type": "module",
   "packageManager": "pnpm@10.12.1",
   "scripts": {
-    "build:wasm": "wasm-pack build ../crates/jianpu-wasm --target web --out-dir pkg --no-opt -- --features wav,mp3,pdf,midi",
-    "build:wasm:audio": "wasm-pack build ../crates/jianpu-wasm --target web --out-dir pkg --no-opt -- --features wav,mp3",
-    "predev": "wasm-pack build ../crates/jianpu-wasm --target web --out-dir pkg --no-opt -- --features wav,mp3,pdf,midi",
+    "build:wasm-component": "cargo component build --manifest-path ../crates/jianpu-wasm/Cargo.toml --profile release-wasm --no-default-features --features wav,mp3,pdf,midi --target wasm32-unknown-unknown && jco transpile ../target/wasm32-unknown-unknown/release-wasm/jianpu_wasm.wasm --instantiation async -o ../crates/jianpu-wasm/pkg-component",
+    "predev": "pnpm run build:wasm-component",
     "dev": "vite",
-    "prebuild": "wasm-pack build ../crates/jianpu-wasm --target web --out-dir pkg --no-opt -- --features wav,mp3,pdf,midi",
+    "prebuild": "pnpm run build:wasm-component",
     "build": "tsc -b && vite build",
     "check": "knip --include files,dependencies",
     "lint": "biome check .",
@@ -47,6 +46,7 @@
   "devDependencies": {
     "@ast-grep/cli": "^0.45.3",
     "@biomejs/biome": "^2.4.16",
+    "@bytecodealliance/jco": "^1.32.1",
     "@playwright/test": "^1.60.0",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
@@ -56,14 +56,12 @@
     "playwright-bdd": "^9.2.0",
     "typescript": "~7.0.2",
     "vite": "^7.3.1",
-    "vitest": "^4.1.9",
-    "wasm-pack": "^0.15.0"
+    "vitest": "^4.1.9"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
       "@ast-grep/cli",
-      "esbuild",
-      "wasm-pack"
+      "esbuild"
     ]
   }
 }

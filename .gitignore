@@ -4,7 +4,8 @@
 package-lock.json
 /web/package-lock.json
 /web/dist
-/crates/jianpu-wasm/pkg
+/crates/jianpu-wasm/pkg-component
+/crates/jianpu-wasm/src/bindings.rs
 
 # Generated SVG output from `cargo run -- generate svg`
 /*.svg

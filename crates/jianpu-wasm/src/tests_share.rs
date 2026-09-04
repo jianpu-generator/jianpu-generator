@@ -1,5 +1,5 @@
 use super::*;
-use crate::share_payload::{compress_share_payload, decompress_share_payload};
+use crate::{compress_share_payload_bytes, decompress_share_payload_bytes};
 
 #[test]
 fn share_payload_round_trips_through_brotli() {
@@ -16,13 +16,13 @@ fn share_payload_round_trips_through_brotli() {
         ])
         .collect();
     for fixture in fixtures {
-        let compressed = compress_share_payload(fixture);
-        let decompressed = decompress_share_payload(&compressed);
+        let compressed = compress_share_payload_bytes(fixture);
+        let decompressed = decompress_share_payload_bytes(&compressed);
         assert_eq!(decompressed.as_deref(), Some(fixture));
     }
 }
 
 #[test]
 fn decompress_share_payload_rejects_garbage() {
-    assert_eq!(decompress_share_payload(b"not brotli"), None);
+    assert_eq!(decompress_share_payload_bytes(b"not brotli"), None);
 }

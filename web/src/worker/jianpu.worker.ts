@@ -1,19 +1,34 @@
-import init, * as jianpuWasm from 'jianpu-wasm'
+import * as jianpuWasm from '../jianpuWasm'
 import {
   extract_source_from_pdf,
   extract_source_from_svg,
   format_score,
+  generate_instrument_preview_wav as generateInstrumentPreviewWav,
+  generate_midi as generateMidi,
+  generate_mp3 as generateMp3,
+  generate_pdf as generatePdf,
+  generate_percussion_preview_wav as generatePercussionPreviewWav,
+  generate_split_midis as generateSplitMidis,
+  generate_split_mp3s as generateSplitMp3s,
+  generate_split_pdfs as generateSplitPdfs,
+  generate_split_wavs as generateSplitWavs,
+  generate_wav as generateWav,
+  generate_wav_for_measure_range as generateWavForMeasureRange,
   list_lyric_spans,
   list_measure_spans,
   list_note_spans,
   list_parts,
+  list_note_timings as listNoteTimings,
+  list_note_timings_for_range as listNoteTimingsForRange,
   render,
+  render_with_highlight_range as renderWithHighlightRange,
   set_layout_fonts,
   shift_part_octave,
   update_part_declaration,
-} from 'jianpu-wasm'
+} from '../jianpuWasm'
 import type { PartDeclaration, PartMode } from '../types'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
+import { instantiateWasmComponentFromModule } from '../wasmInit'
 import {
   handleGenerateAudio,
   handleGenerateMeasureRangeAudio,
@@ -29,22 +44,6 @@ import {
 } from './exportMessageHandlers'
 import { handleImportFromFile } from './importMessageHandlers'
 import type { WorkerRequest, WorkerResponse } from './messages'
-import {
-  generateInstrumentPreviewWav,
-  generateMidi,
-  generateMp3,
-  generatePdf,
-  generatePercussionPreviewWav,
-  generateSplitMidis,
-  generateSplitMp3s,
-  generateSplitPdfs,
-  generateSplitWavs,
-  generateWav,
-  generateWavForMeasureRange,
-  listNoteTimings,
-  listNoteTimingsForRange,
-  renderWithHighlightRange,
-} from './optionalWasmExports'
 import {
   handlePreviewInstrument,
   handlePreviewPercussion,
@@ -62,14 +61,15 @@ let initPromise: Promise<void> | null = null
 function ensureInit(): Promise<void> {
   if (!initPromise) {
     initPromise = wasmModulePromise
-      .then((module) => init({ module_or_path: module }))
-      .then(() => {
+      .then((module) => instantiateWasmComponentFromModule(module))
+      .then((root) => {
+        jianpuWasm.setWasmRoot(root)
         postMessage({
           type: 'ready',
-          audioAvailable: generateWav !== null,
-          pdfAvailable: generatePdf !== null,
-          midiAvailable: generateMidi !== null,
-          mp3Available: generateMp3 !== null,
+          audioAvailable: true,
+          pdfAvailable: true,
+          midiAvailable: true,
+          mp3Available: true,
         } satisfies WorkerResponse)
       })
   }
@@ -121,7 +121,6 @@ function octaveOffsetToWasmString(octaveOffset: number | null): string {
 }
 
 function listDeclarationsFromSource(source: string): PartDeclaration[] {
-  if (!('list_part_declarations' in jianpuWasm)) return []
   const result = jianpuWasm.list_part_declarations(source, GM_INSTRUMENTS)
   return result.status === 'ok' ? result.declarations : []
 }
@@ -268,21 +267,6 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'renderWithHighlightRange') {
-    if (!renderWithHighlightRange) {
-      postMessage({
-        type: 'highlightRangeErr',
-        id: msg.id,
-        diagnostics: [
-          {
-            severity: 'error',
-            message:
-              'render_with_highlight_range is not available in this build.',
-            span: { start: 0, end: 0 },
-          },
-        ],
-      } satisfies WorkerResponse)
-      return
-    }
     const result = renderWithHighlightRange(
       msg.source,
       msg.ranges,

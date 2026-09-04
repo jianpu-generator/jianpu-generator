@@ -1,5 +1,5 @@
-import type { NoteTimingOut, SvgDocumentOut } from 'jianpu-wasm'
 import { useEffect, useRef, useState } from 'react'
+import type { NoteTimingOut, SvgDocumentOut } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import { renderSvgDocument } from './PreviewSvgRenderer'
 import { handlePreviewClick } from './previewClickHandler'

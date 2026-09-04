@@ -1,4 +1,6 @@
 use super::*;
+use crate::responses::{get_measure_at_offset_response, list_measure_spans_response};
+use crate::types::{ListMeasureSpansResponse, ListPartsResponse, MeasureAtOffsetResponse};
 
 #[test]
 fn list_parts_response_returns_declarations() {

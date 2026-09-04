@@ -1,4 +1,4 @@
-import type { GenerateWavResponse } from 'jianpu-wasm'
+import type { GenerateWavResponse } from '../jianpuWasm'
 import type { WorkerRequest, WorkerResponse } from './jianpu.worker'
 
 function binaryBufferFromResult(

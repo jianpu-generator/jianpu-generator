@@ -1,6 +1,6 @@
-import { group_lyric_selection } from 'jianpu-wasm'
 import type { RefObject } from 'react'
 import type { LyricCell } from '../components/previewSelection'
+import { group_lyric_selection } from '../jianpuWasm'
 import type { EditorHandle, LyricSpan } from '../types'
 import { ensureWasmInit } from '../wasmInit'
 import { useByteRangeSelectionCore } from './useByteRangeSelectionCore'

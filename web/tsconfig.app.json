@@ -15,9 +15,6 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
-    "paths": {
-      "jianpu-wasm": ["../crates/jianpu-wasm/pkg"]
-    },
 
     /* Linting */
     "noUnusedLocals": true,

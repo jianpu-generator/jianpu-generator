@@ -5,7 +5,7 @@ import type {
   GenerateSplitMp3sResponse,
   GenerateSplitPdfsResponse,
   GenerateSplitWavsResponse,
-} from 'jianpu-wasm'
+} from '../jianpuWasm'
 import type { WorkerRequest, WorkerResponse } from './jianpu.worker'
 
 // `sc` holds the `title` role's font — the song title/lyric font; `tc`

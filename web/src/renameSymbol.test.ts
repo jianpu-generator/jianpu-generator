@@ -1,5 +1,5 @@
-import type { SymbolOut } from 'jianpu-wasm'
 import { describe, expect, it } from 'vitest'
+import type { SymbolOut } from './jianpuWasm'
 import { symbolAtByteOffset } from './renameSymbol'
 
 function makeSymbol(name: string, spans: Array<[number, number]>): SymbolOut {

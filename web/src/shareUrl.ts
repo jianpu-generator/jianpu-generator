@@ -1,5 +1,5 @@
-import { compress_share_payload, decompress_share_payload } from 'jianpu-wasm'
 import LZString from 'lz-string'
+import { compress_share_payload, decompress_share_payload } from './jianpuWasm'
 import { ensureWasmInit } from './wasmInit'
 
 export interface SharePayload {

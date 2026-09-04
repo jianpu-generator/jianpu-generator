@@ -1,4 +1,4 @@
-import { resolve_selection_range } from 'jianpu-wasm'
+import { resolve_selection_range } from '../jianpuWasm'
 import { anyClickableElementIdAtPoint } from './previewClickableElementIdBuilders'
 import {
   applyPersistedLyricHighlights,

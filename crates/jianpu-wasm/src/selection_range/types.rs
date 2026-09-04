@@ -1,5 +1,4 @@
 use serde::Serialize;
-use tsify::Tsify;
 
 /// Identifies one clickable rendered element by exactly the `data-*` fields
 /// TS already reads off it (`getNoteAtPoint`/`getLyricAtPoint`/
@@ -9,7 +8,6 @@ use tsify::Tsify;
 /// hand-written TS mirror lives in
 /// `web/src/components/clickableElementId.ts`. Decoded from JS via
 /// `serde_wasm_bindgen`, like [`crate::note_selection_types::NoteCellIn`];
-/// only ever comes *in*, so no `Tsify`/`into_wasm_abi`.
 /// `#[serde(rename_all = "camelCase")]` on the enum itself only renames the
 /// `kind` tag values (`Note` → `"note"`, `PartLabel` → `"partLabel"`, ...) —
 /// it does *not* cascade into each struct variant's own field names, so
@@ -57,9 +55,8 @@ pub(crate) enum ClickableElementId {
 /// One resolved `(source_part_index, note_id)` cell — output mirror of
 /// [`crate::note_selection_types::NoteCellIn`], matching TS's `NoteCell`
 /// (`previewSelection.ts`).
-#[derive(Debug, Clone, Copy, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub struct NoteCellOut {
     pub source_part_index: usize,
     pub note_id: usize,
@@ -68,9 +65,8 @@ pub struct NoteCellOut {
 /// One resolved `(source_part_index, note_id, verse)` cell — output mirror
 /// of [`crate::lyric_selection_types::LyricCellIn`], matching TS's
 /// `LyricCell` (`previewSelection.ts`).
-#[derive(Debug, Clone, Copy, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub struct LyricCellOut {
     pub source_part_index: usize,
     pub note_id: usize,
@@ -83,9 +79,8 @@ pub struct LyricCellOut {
 /// `(anchor, current)` combination not yet ported to ID-based resolution
 /// (see `PLAN-clickable-element-id-selection.md`'s Phase 1 table): callers
 /// must fall back to the existing pixel-marquee resolution for those.
-#[derive(Debug, Clone, Tsify, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
-#[tsify(into_wasm_abi)]
 pub enum ResolveSelectionRangeResponse {
     Ok {
         note_cells: Vec<NoteCellOut>,

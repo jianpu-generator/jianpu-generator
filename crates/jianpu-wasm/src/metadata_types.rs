@@ -11,7 +11,6 @@ use jianpu_generator::ast::grouped::{
     DEFAULT_SEQUENCE_FONT_SIZE,
 };
 use serde::Serialize;
-use tsify::Tsify;
 
 /// One text-style kind's default component values — mirrors
 /// `jianpu_generator::ast::grouped::TextStyle`'s three components (see
@@ -25,8 +24,7 @@ use tsify::Tsify;
 /// (`title`, `subtitle`, `author`, `lyrics`, `part_legend`, `page_number`),
 /// the web layer re-resolves a live, `row_height`-aware value itself (see
 /// `useFontSizeDefaults`) rather than trusting this snapshot.
-#[derive(Debug, Clone, Copy, Tsify, Serialize, PartialEq, Eq)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 pub struct TextStyleDefaultsOut {
     pub font_size: u32,
     pub horizontal_padding_pt: u32,
@@ -42,9 +40,8 @@ pub struct TextStyleDefaultsOut {
 /// `.jianpu` `font_family:` syntax itself uses — distinct from
 /// `crate::svg_types::FontFamilyOut`, which serializes camelCase for the
 /// rendered-SVG wire format instead.
-#[derive(Debug, Clone, Copy, Tsify, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-#[tsify(into_wasm_abi)]
 pub enum FontFamilyDefaultOut {
     Serif,
     SansSerif,
@@ -52,8 +49,7 @@ pub enum FontFamilyDefaultOut {
 }
 
 /// Default values applied to `# metadata` fields left unset in the source.
-#[derive(Debug, Clone, Tsify, Serialize, PartialEq, Eq)]
-#[tsify(into_wasm_abi)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct MetadataDefaultsOut {
     pub row_height: u32,
     pub max_measures_per_system: u32,

@@ -1,0 +1,911 @@
+package jianpu:wasm;
+
+// Phase 2 of PLAN-wit-bindgen-migration.md: type schema only, ported from
+// `crates/jianpu-wasm/src/{types,note_selection_types,lyric_selection_types,
+// metadata_types,svg_types,types_export,responses*,selection_range/types}.rs`.
+// No functions are exported from these types yet beyond Phase 1's
+// `greet` sanity check — Phase 3 wires real `#[wasm_bindgen] fn`s to
+// `Guest` methods using these shapes one at a time.
+//
+// Mapping conventions used throughout this file (matching the plan):
+//   - Rust `usize` -> WIT `u32`. Not a narrowing compromise: this crate
+//     only ever targets `wasm32-unknown-unknown` (32-bit), where `usize`
+//     already *is* 32 bits, so this is the exact width, not an approximation.
+//   - Rust `i8`/`i32` -> WIT `s8`/`s32`.
+//   - `Option<T>` -> `option<T>`.
+//   - `Vec<u8>` binary payloads -> `list<u8>` (confirmed byte-exact,
+//     maps to a real `Uint8Array` in the generated `.d.ts` — see the
+//     plan's "Resolved risks" section).
+//   - `Vec<T>` -> `list<T>`.
+//   - The `#[serde(tag = "status")] enum { Ok { .. }, Err { .. } }` pattern
+//     -> a WIT `variant` with `ok`/`err` cases, each carrying a record with
+//     the same field names as the original struct-like variant. A bare
+//     `Ok`/`Err` case with no fields (e.g. `ListNoteSpansResponse::Err`)
+//     stays a payload-less variant case.
+//   - Several `Err` cases across unrelated responses share the exact same
+//     shape (`{ diagnostics: list<diagnostic> }`); those reuse one
+//     `diagnostics-error` record instead of repeating an identical record
+//     under a different name per response. This is not a shape change —
+//     each such `Err` case still carries exactly the fields the original
+//     Rust `Err { diagnostics: Vec<DiagnosticOut> }` variant did.
+//   - Field names stay `kebab-case` — `jco` auto-converts to `camelCase`
+//     in the generated `.d.ts`, matching every existing
+//     `#[serde(rename_all = "camelCase")]` struct with no extra config.
+//   - Flat world-level type declarations, not `interface`-grouped (Phase 2's
+//     explicit decision — see the plan's "Guest trait ergonomics" section).
+//     Revisit only if this file becomes hard to navigate at full function
+//     count.
+//   - WIT type declarations must appear before their first use (no forward
+//     references within a world), unlike Rust — this only changes ordering
+//     of the sections below relative to their originating `.rs` files, not
+//     any type's shape. `svg_types.rs` is ported first because
+//     `RenderResponse::Ok` (from `types.rs`) embeds `SvgDocumentOut`.
+
+world jianpu-wasm {
+    // ---- Phase 1 sanity check (kept as-is) ----
+    export greet: func(name: string) -> string;
+
+    // ==================== svg_types.rs ====================
+
+    enum text-anchor {
+        start,
+        middle,
+        end,
+    }
+
+    enum dominant-baseline {
+        middle,
+        hanging,
+        ideographic,
+    }
+
+    enum font-family {
+        monospace,
+        sans-serif,
+        serif,
+    }
+
+    enum font-weight {
+        normal,
+        bold,
+    }
+
+    enum transparent-rect-role {
+        measure-click-target,
+        bar-number-click-target,
+        section-label-background,
+        section-label-click-target,
+        note-click-target,
+        part-label-click-target,
+        lyric-click-target,
+        lyric-label-click-target,
+        bar-line-click-target,
+    }
+
+    record tspan {
+        content: string,
+        bold: bool,
+        italic: bool,
+        underline: bool,
+        font-size: option<f32>,
+    }
+
+    record tag-measure {
+        index: u32,
+        end: u32,
+    }
+
+    record tag-bar-number {
+        index: u32,
+        end: u32,
+    }
+
+    record tag-section-label {
+        label: string,
+    }
+
+    record tag-note {
+        source-part-index: u32,
+        note-id: u32,
+    }
+
+    record tag-part-label {
+        source-part-index: u32,
+        measure-index-start: u32,
+        measure-index-end: u32,
+    }
+
+    record tag-lyric {
+        source-part-index: u32,
+        note-id: u32,
+        verse: u32,
+    }
+
+    record tag-lyric-label {
+        source-part-index: u32,
+        verse: u32,
+        measure-index-start: u32,
+        measure-index-end: u32,
+    }
+
+    record tag-bar-line {
+        measure-index-next: option<u32>,
+        measure-index-prev: option<u32>,
+    }
+
+    variant tag {
+        measure(tag-measure),
+        bar-number(tag-bar-number),
+        section-label(tag-section-label),
+        note(tag-note),
+        part-label(tag-part-label),
+        lyric(tag-lyric),
+        lyric-label(tag-lyric-label),
+        bar-line(tag-bar-line),
+    }
+
+    record svg-text-kind {
+        content: string,
+        font-size: f32,
+        anchor: text-anchor,
+        baseline: dominant-baseline,
+        font: font-family,
+        weight: font-weight,
+        italic: bool,
+        underline: bool,
+    }
+
+    record svg-line-kind {
+        x2: f32,
+        y2: f32,
+        stroke-width: f32,
+    }
+
+    record svg-circle-kind {
+        r: f32,
+    }
+
+    record svg-path-kind {
+        control-x: f32,
+        control-y: f32,
+        end-x: f32,
+        end-y: f32,
+        stroke-width: f32,
+    }
+
+    record svg-rect-kind {
+        width: f32,
+        height: f32,
+    }
+
+    record svg-error-rect-kind {
+        width: f32,
+        height: f32,
+    }
+
+    record svg-playback-cursor-rect-kind {
+        width: f32,
+        height: f32,
+    }
+
+    record svg-transparent-rect-kind {
+        width: f32,
+        height: f32,
+        role: transparent-rect-role,
+    }
+
+    record svg-text-with-tspans-kind {
+        font-size: f32,
+        anchor: text-anchor,
+        baseline: dominant-baseline,
+        font: font-family,
+        spans: list<tspan>,
+    }
+
+    // `SvgKindOut::Group { children: Vec<SvgElementOut>, .. }` makes
+    // `SvgElementOut` a recursive tree (an element can contain a `Group`
+    // element, which contains more elements). WIT records/variants must
+    // have a statically bounded flattened ABI shape — the component model
+    // has no support for a directly self-referential type, confirmed here
+    // (`cargo component build` rejects it outright: "type `svg-element`
+    // depends on itself"). So this is *not* a shape-for-shape port: a
+    // group's children are indices into the flat `elements` arena on
+    // `svg-document` (pre-order-flattened) rather than nested elements
+    // directly. See `svg-document`'s doc comment for the flattening
+    // contract Phase 3's conversion code must produce.
+    record svg-group-kind {
+        child-indices: list<u32>,
+        tag: option<tag>,
+    }
+
+    variant svg-kind {
+        text(svg-text-kind),
+        line(svg-line-kind),
+        circle(svg-circle-kind),
+        path(svg-path-kind),
+        rect(svg-rect-kind),
+        error-rect(svg-error-rect-kind),
+        playback-cursor-rect(svg-playback-cursor-rect-kind),
+        transparent-rect(svg-transparent-rect-kind),
+        text-with-tspans(svg-text-with-tspans-kind),
+        group(svg-group-kind),
+    }
+
+    // `variant` is a reserved WIT keyword, so the field named `variant` in
+    // `SvgElementOut` (an optional CSS-class-like variant tag, unrelated to
+    // WIT's `variant` type construct) is ported as `variant-tag` instead.
+    record svg-element {
+        x: f32,
+        y: f32,
+        variant-tag: option<string>,
+        kind: svg-kind,
+    }
+
+    // `elements` is a flat, pre-order-flattened arena holding every
+    // `svg-element` in the document at any nesting depth exactly once (see
+    // `svg-group-kind`'s doc comment for why: WIT can't represent the
+    // original recursive `Vec<SvgElementOut>` nesting directly).
+    // `root-element-indices` holds the indices, into `elements`, of the
+    // document's direct (top-level) children — this is what
+    // `SvgDocumentOut.elements` held directly before flattening.
+    record svg-document {
+        width-pt: f32,
+        height-pt: f32,
+        elements: list<svg-element>,
+        root-element-indices: list<u32>,
+    }
+
+    // ==================== types.rs ====================
+
+    record span {
+        start: u32,
+        end: u32,
+    }
+
+    // `MeasureRangeIn` — input-only, decoded via serde_wasm_bindgen today.
+    record measure-range-in {
+        start: u32,
+        end: u32,
+    }
+
+    enum diagnostic-severity {
+        error,
+        warning,
+    }
+
+    record diagnostic {
+        severity: diagnostic-severity,
+        message: string,
+        span: span,
+    }
+
+    record part {
+        abbreviation: string,
+        display-name: string,
+        has-lyrics: bool,
+    }
+
+    enum part-declaration-mode {
+        chords,
+        notes,
+        percussion,
+        follow,
+    }
+
+    record part-declaration {
+        abbreviation: string,
+        display-name: string,
+        line-number: u32,
+        mode: part-declaration-mode,
+        follow-target: option<string>,
+        soundfont: option<string>,
+        volume: option<u8>,
+        octave-offset: option<s8>,
+    }
+
+    record diagnostic-message {
+        message: string,
+    }
+
+    record diagnostic-view-zone {
+        severity: diagnostic-severity,
+        after-line-number: u32,
+        messages: list<diagnostic-message>,
+    }
+
+    record render-response-ok {
+        documents: list<svg-document>,
+        diagnostics: list<diagnostic>,
+        diagnostic-view-zones: list<diagnostic-view-zone>,
+    }
+
+    record render-response-err {
+        diagnostics: list<diagnostic>,
+        diagnostic-view-zones: list<diagnostic-view-zone>,
+    }
+
+    variant render-response {
+        ok(render-response-ok),
+        err(render-response-err),
+    }
+
+    // Shared shape for every response whose `Err` case is just
+    // `{ diagnostics: Vec<DiagnosticOut> }` — see the mapping-conventions
+    // note at the top of this file.
+    record diagnostics-error {
+        diagnostics: list<diagnostic>,
+    }
+
+    record list-parts-response-ok {
+        parts: list<part>,
+        declarations: list<part-declaration>,
+    }
+
+    variant list-parts-response {
+        ok(list-parts-response-ok),
+        err(diagnostics-error),
+    }
+
+    // `InstrumentInfo` (`jianpu_generator::parser::parts_parser::InstrumentInfo`)
+    // — input-only, decoded today via
+    // `serde_wasm_bindgen::from_value::<Vec<InstrumentInfo>>(...)`. Plain
+    // all-`String` record, no `Option` fields.
+    record instrument-info {
+        value: string,
+        category: string,
+        source: string,
+        role: string,
+        articulation: string,
+    }
+
+    // Phase 3, group 4 of PLAN-wit-bindgen-migration.md. Placed here, not
+    // immediately after `render-response`'s own `variant` declaration
+    // further up this file, since both exports also need `instrument-info`
+    // (declared just above) and `measure-range-in` (declared much earlier,
+    // near `types.rs`'s section) — WIT requires every type an export
+    // references to already be declared, so this is the earliest point in
+    // the file where all three are available.
+    //
+    // Named `render-svg`/`render-svg-with-highlight-range`, not
+    // `render`/`render-with-highlight-range` matching `wasm_boundary.rs`'s
+    // exact fn names (group 3's convention) — deliberately deviates here:
+    // `render` is a single word, so its kebab-case WIT form and its
+    // snake_case Rust form are the *same literal string*, and
+    // `wit-bindgen`'s raw ABI export uses that literal string as the actual
+    // `#[export_name = "..."]` on `wasm32-unknown-unknown` — colliding with
+    // `#[wasm_bindgen] pub fn render`'s own identically-named export and
+    // breaking the link step (confirmed: both `cargo build --target
+    // wasm32-unknown-unknown --features wav,mp3,pdf,midi` and the real
+    // `wasm-pack build` failed with "symbol `render` is already defined").
+    // Every multi-word name ported so far (`group-note-selection`,
+    // `list-note-spans`, `rename-symbol`, ...) was safe by accident, since
+    // hyphens vs. underscores kept the two mechanisms' literal export names
+    // distinct — this was the first single-word export.
+    export render-svg: func(source: string, enabled-tracks: option<list<string>>, disabled-lyrics: option<list<string>>, raw-instruments: list<instrument-info>) -> render-response;
+
+    export render-svg-with-highlight-range: func(source: string, raw-measure-ranges: list<measure-range-in>, enabled-tracks: option<list<string>>, disabled-lyrics: option<list<string>>, raw-instruments: list<instrument-info>) -> render-response;
+
+    // Phase 3, group 3 of PLAN-wit-bindgen-migration.md.
+    export list-parts: func(source: string, raw-instruments: list<instrument-info>) -> list-parts-response;
+
+    record list-part-declarations-response-ok {
+        declarations: list<part-declaration>,
+    }
+
+    variant list-part-declarations-response {
+        ok(list-part-declarations-response-ok),
+        err(diagnostics-error),
+    }
+
+    // Phase 3, group 7 of PLAN-wit-bindgen-migration.md.
+    export list-part-declarations: func(source: string, raw-instruments: list<instrument-info>) -> list-part-declarations-response;
+
+    // `update_part_declaration_source` has no response-shaped type of its
+    // own (a plain source-string round-trip, unchanged if the abbreviation
+    // isn't found), so this is just a plain string-returning export next to
+    // `list-part-declarations` above, per the task's "add whatever shape is
+    // simplest" note.
+    export update-part-declaration: func(source: string, abbreviation: string, new-mode: string, new-soundfont: string, new-volume: string, new-octave-offset: string) -> string;
+
+    enum symbol-kind {
+        abbreviation,
+        section-label,
+    }
+
+    enum occurrence-role {
+        declaration,
+        reference,
+    }
+
+    record symbol-occurrence {
+        span: span,
+        hit-span: span,
+        role: occurrence-role,
+    }
+
+    record symbol {
+        name: string,
+        kind: symbol-kind,
+        occurrences: list<symbol-occurrence>,
+    }
+
+    record list-symbols-response-ok {
+        symbols: list<symbol>,
+    }
+
+    variant list-symbols-response {
+        ok(list-symbols-response-ok),
+        err(diagnostics-error),
+    }
+
+    // Phase 3, group 3 of PLAN-wit-bindgen-migration.md.
+    export list-symbols: func(source: string, raw-instruments: list<instrument-info>) -> list-symbols-response;
+
+    record text-edit {
+        span: span,
+        replacement: string,
+    }
+
+    record rename-symbol-response-ok {
+        edits: list<text-edit>,
+    }
+
+    variant rename-symbol-response {
+        ok(rename-symbol-response-ok),
+        err(diagnostics-error),
+    }
+
+    // Phase 3, group 3 of PLAN-wit-bindgen-migration.md.
+    export rename-symbol: func(source: string, kind: symbol-kind, old-name: string, new-name: string, raw-instruments: list<instrument-info>) -> rename-symbol-response;
+
+    record measure-at-offset-response-ok {
+        measure-index: u32,
+    }
+
+    variant measure-at-offset-response {
+        ok(measure-at-offset-response-ok),
+        not-in-measure,
+    }
+
+    // Phase 3, group 3 of PLAN-wit-bindgen-migration.md. Named to match
+    // `wasm_boundary.rs`'s `get_measure_index_at_offset`, not the plan
+    // prose's `measure_at_offset` shorthand.
+    export get-measure-index-at-offset: func(source: string, byte-offset: u32) -> measure-at-offset-response;
+
+    record measure-span {
+        start: u32,
+        end: u32,
+        view-zone-start: u32,
+        section-label: option<string>,
+        start-line: u32,
+        end-line: u32,
+    }
+
+    record note-span {
+        source-part-index: u32,
+        note-id: u32,
+        measure-index: u32,
+        start: option<u32>,
+        end: option<u32>,
+    }
+
+    record list-note-spans-response-ok {
+        spans: list<note-span>,
+    }
+
+    variant list-note-spans-response {
+        ok(list-note-spans-response-ok),
+        err,
+    }
+
+    // Phase 3, group 2 of PLAN-wit-bindgen-migration.md.
+    export list-note-spans: func(source: string, enabled-tracks: option<list<string>>) -> list-note-spans-response;
+
+    record lyric-span {
+        source-part-index: u32,
+        note-id: u32,
+        verse: u32,
+        measure-index: u32,
+        start: u32,
+        end: u32,
+    }
+
+    record list-lyric-spans-response-ok {
+        spans: list<lyric-span>,
+    }
+
+    variant list-lyric-spans-response {
+        ok(list-lyric-spans-response-ok),
+        err,
+    }
+
+    // Phase 3, group 2 of PLAN-wit-bindgen-migration.md.
+    export list-lyric-spans: func(source: string, enabled-tracks: option<list<string>>) -> list-lyric-spans-response;
+
+    record section-range {
+        first-line: u32,
+        last-line: u32,
+        labels: list<string>,
+    }
+
+    record sequence-entry {
+        label: string,
+        start-measure-index: u32,
+        end-measure-index: u32,
+    }
+
+    record list-measure-spans-response-ok {
+        spans: list<measure-span>,
+        section-ranges: list<section-range>,
+        sequence-entries: list<sequence-entry>,
+    }
+
+    variant list-measure-spans-response {
+        ok(list-measure-spans-response-ok),
+        err,
+    }
+
+    // Phase 3, group 2 of PLAN-wit-bindgen-migration.md.
+    export list-measure-spans: func(source: string) -> list-measure-spans-response;
+
+    // ==================== note_selection_types.rs ====================
+
+    // `NoteCellIn` — input-only, decoded via serde_wasm_bindgen today.
+    record note-cell-in {
+        source-part-index: u32,
+        note-id: u32,
+    }
+
+    record note-selection-run {
+        source-part-index: u32,
+        measure-index: u32,
+        start-byte: u32,
+        end-byte: u32,
+    }
+
+    record group-note-selection-response-ok {
+        runs: list<note-selection-run>,
+    }
+
+    variant group-note-selection-response {
+        ok(group-note-selection-response-ok),
+        err,
+    }
+
+    // ==================== lyric_selection_types.rs ====================
+
+    // `LyricCellIn` — input-only, decoded via serde_wasm_bindgen today.
+    record lyric-cell-in {
+        source-part-index: u32,
+        note-id: u32,
+        verse: u32,
+    }
+
+    record lyric-selection-run {
+        source-part-index: u32,
+        measure-index: u32,
+        start-byte: u32,
+        end-byte: u32,
+    }
+
+    record group-lyric-selection-response-ok {
+        runs: list<lyric-selection-run>,
+    }
+
+    variant group-lyric-selection-response {
+        ok(group-lyric-selection-response-ok),
+        err,
+    }
+
+    // Phase 3, group 1 of PLAN-wit-bindgen-migration.md: the first two real
+    // functions ported from the `wasm-bindgen` boundary (`wasm_boundary.rs`)
+    // to `wit-bindgen`. Both coexist with their `#[wasm_bindgen] fn`
+    // originals until Phase 6's cutover.
+    export group-note-selection: func(note-spans: list<note-span>, selected-cells: list<note-cell-in>) -> group-note-selection-response;
+    export group-lyric-selection: func(lyric-spans: list<lyric-span>, selected-cells: list<lyric-cell-in>) -> group-lyric-selection-response;
+
+    // ==================== metadata_types.rs ====================
+
+    enum font-family-default {
+        serif,
+        sans-serif,
+        monospace,
+    }
+
+    record text-style-defaults {
+        font-size: u32,
+        horizontal-padding-pt: u32,
+        vertical-padding-pt: u32,
+        bold: bool,
+        italic: bool,
+        underline: bool,
+        font-family: font-family-default,
+    }
+
+    record metadata-defaults {
+        row-height: u32,
+        max-measures-per-system: u32,
+        note-number-width: u32,
+        parts-list-columns: u32,
+        part-label-width-pt: u32,
+        title: text-style-defaults,
+        subtitle: text-style-defaults,
+        author: text-style-defaults,
+        sequence: text-style-defaults,
+        part-legend: text-style-defaults,
+        measure-number: text-style-defaults,
+        section-label: text-style-defaults,
+        part-label: text-style-defaults,
+        page-number: text-style-defaults,
+        lyrics: text-style-defaults,
+        notes: text-style-defaults,
+        chords: text-style-defaults,
+        note-dash: text-style-defaults,
+        merge-duplicate-measures-across-parts: bool,
+        hide-resting-parts: bool,
+        hide-system-dividers: bool,
+        directive-row-offset-x: s32,
+        directive-row-offset-y: s32,
+    }
+
+    // Phase 3, group 7 of PLAN-wit-bindgen-migration.md. Plain
+    // value-returning exports, no response-shaped wrapper — `get-metadata-
+    // defaults` returns the record above directly (`MetadataDefaultsOut`
+    // has no `Result`-like `Ok`/`Err` shape today), and the six font-size
+    // getters are `u32 -> u32` functions with no record at all.
+    export get-metadata-defaults: func() -> metadata-defaults;
+
+    export get-default-lyrics-font-size: func(row-height: u32) -> u32;
+
+    export get-default-title-font-size: func(row-height: u32) -> u32;
+
+    export get-default-subtitle-font-size: func(row-height: u32) -> u32;
+
+    export get-default-author-font-size: func(row-height: u32) -> u32;
+
+    export get-default-part-legend-font-size: func(row-height: u32) -> u32;
+
+    export get-default-page-number-font-size: func(row-height: u32) -> u32;
+
+    // `set_layout_fonts` supplies the raw font bytes used for layout glyph
+    // measurement — no return value, so this is the first `export` in this
+    // file with no return type at all (a plain `func(...)`, matching the old
+    // `#[wasm_bindgen] fn`'s `()` return).
+    export set-layout-fonts: func(directive-line-font: list<u8>, lyric-font: list<u8>, monospace-font: list<u8>);
+
+    // `shift_part_octave`/`format_score` are both plain source-string
+    // rewrites with no response-shaped type, same reasoning as
+    // `update-part-declaration` above.
+    export shift-part-octave: func(source: string, abbreviation: string, delta: s32) -> string;
+
+    export format-score: func(source: string) -> string;
+
+    // ==================== types_export.rs (wav/pdf/midi/mp3) ====================
+
+    record generate-wav-response-ok {
+        wav: list<u8>,
+    }
+
+    variant generate-wav-response {
+        ok(generate-wav-response-ok),
+        err(diagnostics-error),
+    }
+
+    // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
+    export generate-wav: func(source: string, enabled-tracks: option<list<string>>, soundfont: list<u8>) -> generate-wav-response;
+
+    // Phase 3, group 6 of PLAN-wit-bindgen-migration.md. Plain scalar params
+    // (not wrapped in a record), matching group 3/4's convention for
+    // multi-param exports rather than introducing a new
+    // `measure-range-selection`-shaped record. `sequence-entry-start-index`/
+    // `sequence-entry-end-index` mirror `render-svg-with-highlight-range`'s
+    // sibling functions' `Option<usize>` pair (recombined into a
+    // `RangeInclusive` on the Rust side via `crate::sequence_entry_range`);
+    // `trim-start-s`/`trim-end-s`/`trim-next-note-start-s` likewise recombine
+    // via `crate::trim_window` — both helpers were previously reachable only
+    // from the `wasm-bindgen` boundary (gated on `wasm-bindgen-boundary`) and
+    // had to be ungated the same way group 5 ungated `types_export.rs`/
+    // `responses_*.rs` — see PLAN-wit-bindgen-migration.md's Status section.
+    export generate-wav-for-measure-range: func(source: string, start-index: u32, end-index: u32, extend-to-last-occurrence: bool, respect-sequence: bool, sequence-entry-start-index: option<u32>, sequence-entry-end-index: option<u32>, enabled-tracks: option<list<string>>, trim-start-s: option<f64>, trim-end-s: option<f64>, trim-next-note-start-s: option<f64>, soundfont: list<u8>) -> generate-wav-response;
+
+    // Phase 3, group 6 of PLAN-wit-bindgen-migration.md.
+    export generate-instrument-preview-wav: func(program-number: u8, soundfont: list<u8>) -> generate-wav-response;
+
+    // Phase 3, group 6 of PLAN-wit-bindgen-migration.md.
+    export generate-percussion-preview-wav: func(key: u8, soundfont: list<u8>) -> generate-wav-response;
+
+    record note-timing {
+        source-part-index: u32,
+        note-id: u32,
+        start-s: f64,
+        end-s: f64,
+    }
+
+    record note-timings-response-ok {
+        timings: list<note-timing>,
+    }
+
+    variant note-timings-response {
+        ok(note-timings-response-ok),
+        err(diagnostics-error),
+    }
+
+    // Phase 3, group 6 of PLAN-wit-bindgen-migration.md.
+    export list-note-timings: func(source: string, visible-tracks: option<list<string>>, enabled-tracks: option<list<string>>) -> note-timings-response;
+
+    // Phase 3, group 6 of PLAN-wit-bindgen-migration.md. See
+    // `generate-wav-for-measure-range`'s doc comment above for
+    // `sequence-entry-start-index`/`sequence-entry-end-index`.
+    export list-note-timings-for-range: func(source: string, start-index: u32, end-index: u32, extend-to-last-occurrence: bool, respect-sequence: bool, sequence-entry-start-index: option<u32>, sequence-entry-end-index: option<u32>, visible-tracks: option<list<string>>, enabled-tracks: option<list<string>>) -> note-timings-response;
+
+    record generate-pdf-response-ok {
+        pdf: list<u8>,
+    }
+
+    variant generate-pdf-response {
+        ok(generate-pdf-response-ok),
+        err(diagnostics-error),
+    }
+
+    // Phase 3, group 5 of PLAN-wit-bindgen-migration.md. `sans-serif-sc`/
+    // `sans-serif-tc`/`monospace` are raw OTF/TTF font bytes, same semantics
+    // as the `#[wasm_bindgen] fn generate_pdf` original.
+    export generate-pdf: func(source: string, enabled-tracks: option<list<string>>, disabled-lyrics: option<list<string>>, sans-serif-sc: list<u8>, sans-serif-tc: list<u8>, monospace: list<u8>) -> generate-pdf-response;
+
+    record generate-split-pdfs-response-ok {
+        zip: list<u8>,
+    }
+
+    variant generate-split-pdfs-response {
+        ok(generate-split-pdfs-response-ok),
+        err(diagnostics-error),
+    }
+
+    // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
+    export generate-split-pdfs: func(source: string, base-name: string, sans-serif-sc: list<u8>, sans-serif-tc: list<u8>, monospace: list<u8>) -> generate-split-pdfs-response;
+
+    record generate-midi-response-ok {
+        midi: list<u8>,
+    }
+
+    variant generate-midi-response {
+        ok(generate-midi-response-ok),
+        err(diagnostics-error),
+    }
+
+    // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
+    export generate-midi: func(source: string, enabled-tracks: option<list<string>>) -> generate-midi-response;
+
+    record generate-split-midis-response-ok {
+        zip: list<u8>,
+    }
+
+    variant generate-split-midis-response {
+        ok(generate-split-midis-response-ok),
+        err(diagnostics-error),
+    }
+
+    // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
+    export generate-split-midis: func(source: string, base-name: string) -> generate-split-midis-response;
+
+    record generate-split-wavs-response-ok {
+        zip: list<u8>,
+    }
+
+    variant generate-split-wavs-response {
+        ok(generate-split-wavs-response-ok),
+        err(diagnostics-error),
+    }
+
+    // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
+    export generate-split-wavs: func(source: string, base-name: string, soundfont: list<u8>) -> generate-split-wavs-response;
+
+    record generate-mp3-response-ok {
+        mp3: list<u8>,
+    }
+
+    variant generate-mp3-response {
+        ok(generate-mp3-response-ok),
+        err(diagnostics-error),
+    }
+
+    // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
+    export generate-mp3: func(source: string, enabled-tracks: option<list<string>>, soundfont: list<u8>) -> generate-mp3-response;
+
+    // Phase 3, group 6 of PLAN-wit-bindgen-migration.md. See
+    // `generate-wav-for-measure-range`'s doc comment above for
+    // `sequence-entry-start-index`/`sequence-entry-end-index`/
+    // `trim-start-s`/`trim-end-s`/`trim-next-note-start-s` — this mirrors it
+    // exactly, only encoding to MP3 instead of WAV.
+    export generate-mp3-for-measure-range: func(source: string, start-index: u32, end-index: u32, extend-to-last-occurrence: bool, respect-sequence: bool, sequence-entry-start-index: option<u32>, sequence-entry-end-index: option<u32>, enabled-tracks: option<list<string>>, trim-start-s: option<f64>, trim-end-s: option<f64>, trim-next-note-start-s: option<f64>, soundfont: list<u8>) -> generate-mp3-response;
+
+    record generate-split-mp3s-response-ok {
+        zip: list<u8>,
+    }
+
+    variant generate-split-mp3s-response {
+        ok(generate-split-mp3s-response-ok),
+        err(diagnostics-error),
+    }
+
+    // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
+    export generate-split-mp3s: func(source: string, base-name: string, soundfont: list<u8>) -> generate-split-mp3s-response;
+
+    // ==================== lib_import.rs ====================
+    // Phase 3, group 7 of PLAN-wit-bindgen-migration.md.
+
+    export extract-source-from-svg: func(svg-bytes: list<u8>) -> option<string>;
+
+    export extract-source-from-pdf: func(pdf-bytes: list<u8>) -> option<string>;
+
+    // ==================== share_payload.rs ====================
+
+    export compress-share-payload: func(payload: string) -> list<u8>;
+
+    export decompress-share-payload: func(bytes: list<u8>) -> option<string>;
+
+    // ==================== selection_range/types.rs ====================
+
+    // `ClickableElementId` — input-only, decoded via serde_wasm_bindgen
+    // today; the `kind` tag becomes the variant case name.
+    record clickable-element-id-note {
+        source-part-index: u32,
+        note-id: u32,
+    }
+
+    record clickable-element-id-lyric {
+        source-part-index: u32,
+        note-id: u32,
+        verse: u32,
+    }
+
+    record clickable-element-id-measure {
+        measure-index-start: u32,
+        measure-index-end: u32,
+    }
+
+    record clickable-element-id-part-label {
+        source-part-index: u32,
+        measure-index-start: u32,
+        measure-index-end: u32,
+    }
+
+    record clickable-element-id-lyric-label {
+        source-part-index: u32,
+        verse: u32,
+        measure-index-start: u32,
+        measure-index-end: u32,
+    }
+
+    variant clickable-element-id {
+        note(clickable-element-id-note),
+        lyric(clickable-element-id-lyric),
+        measure(clickable-element-id-measure),
+        part-label(clickable-element-id-part-label),
+        lyric-label(clickable-element-id-lyric-label),
+    }
+
+    record note-cell-out {
+        source-part-index: u32,
+        note-id: u32,
+    }
+
+    record lyric-cell-out {
+        source-part-index: u32,
+        note-id: u32,
+        verse: u32,
+    }
+
+    record resolve-selection-range-response-ok {
+        note-cells: list<note-cell-out>,
+        lyric-cells: list<lyric-cell-out>,
+    }
+
+    variant resolve-selection-range-response {
+        ok(resolve-selection-range-response-ok),
+        err,
+    }
+
+    // Phase 3, group 7 of PLAN-wit-bindgen-migration.md.
+    export resolve-selection-range: func(note-spans: list<note-span>, lyric-spans: list<lyric-span>, anchor: clickable-element-id, current: clickable-element-id) -> resolve-selection-range-response;
+}
