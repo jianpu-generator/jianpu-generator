@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { DATA_VARIANT } from '../dataVariant'
 import type { NoteTimingOut } from '../jianpuWasm'
 import {
   groupNoteTimingsByPart,
@@ -47,7 +48,7 @@ export function clearStaleHighlights(
   keep: Set<string>,
 ): void {
   const highlighted = container.querySelectorAll(
-    `[data-tag="note"] rect[data-variant="playback-cursor-rect"][fill="${PLAYBACK_CURSOR_FILL}"]`,
+    `[data-tag="note"] rect[data-variant="${DATA_VARIANT.playbackCursorRect}"][fill="${PLAYBACK_CURSOR_FILL}"]`,
   )
   for (const rect of highlighted) {
     const group = rect.closest('[data-tag="note"]')
@@ -89,7 +90,7 @@ export function usePlaybackCursor(
       on: boolean,
     ) => {
       const rects = container.querySelectorAll<SVGRectElement>(
-        `[data-tag="note"][data-part-index="${sourcePartIndex}"][data-note-id="${noteId}"] rect[data-variant="playback-cursor-rect"]`,
+        `[data-tag="note"][data-part-index="${sourcePartIndex}"][data-note-id="${noteId}"] rect[data-variant="${DATA_VARIANT.playbackCursorRect}"]`,
       )
       for (const rect of rects) {
         rect.setAttribute('fill', on ? PLAYBACK_CURSOR_FILL : 'transparent')
@@ -101,7 +102,7 @@ export function usePlaybackCursor(
       noteId: number,
     ) => {
       const rect = container.querySelector<SVGRectElement>(
-        `[data-tag="note"][data-part-index="${sourcePartIndex}"][data-note-id="${noteId}"] rect[data-variant="playback-cursor-rect"]`,
+        `[data-tag="note"][data-part-index="${sourcePartIndex}"][data-note-id="${noteId}"] rect[data-variant="${DATA_VARIANT.playbackCursorRect}"]`,
       )
       if (!rect) return
       const noteBounds = rect.getBoundingClientRect()

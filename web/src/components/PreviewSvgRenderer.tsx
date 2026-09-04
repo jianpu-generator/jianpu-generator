@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react'
 import fontsManifest from '../../../fonts/fonts.json'
+import { DATA_VARIANT } from '../dataVariant'
 import type {
   FontFamilyOut,
   SvgDocumentOut,
   SvgElementOut,
   TagOut,
+  TransparentRectRoleOut,
 } from '../jianpuWasm'
 
 // `FontFamily::SansSerif`'s backing font — the default role for the
@@ -43,37 +45,9 @@ function textFontFamily(font: FontFamilyOut): string {
 }
 
 function transparentRectRoleToDataVariant(
-  role:
-    | 'measureClickTarget'
-    | 'sectionLabelBackground'
-    | 'sectionLabelClickTarget'
-    | 'noteClickTarget'
-    | 'partLabelClickTarget'
-    | 'lyricClickTarget'
-    | 'lyricLabelClickTarget'
-    | 'barNumberClickTarget'
-    | 'barLineClickTarget',
+  role: TransparentRectRoleOut,
 ): string {
-  switch (role) {
-    case 'measureClickTarget':
-      return 'measure-click-target-rect'
-    case 'sectionLabelBackground':
-      return 'section-label-bg'
-    case 'sectionLabelClickTarget':
-      return 'section-label-click-target-rect'
-    case 'noteClickTarget':
-      return 'note-click-target-rect'
-    case 'partLabelClickTarget':
-      return 'part-label-click-target-rect'
-    case 'lyricClickTarget':
-      return 'lyric-click-target-rect'
-    case 'lyricLabelClickTarget':
-      return 'lyric-label-click-target-rect'
-    case 'barNumberClickTarget':
-      return 'bar-number-click-target-rect'
-    case 'barLineClickTarget':
-      return 'bar-line-click-target-rect'
-  }
+  return DATA_VARIANT[role]
 }
 
 interface GroupTagAttrs {
@@ -305,7 +279,7 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
       return (
         <rect
           key={key}
-          data-variant="playback-cursor-rect"
+          data-variant={DATA_VARIANT.playbackCursorRect}
           x={el.x}
           y={el.y}
           width={kind.width}

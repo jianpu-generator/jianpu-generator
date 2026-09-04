@@ -1,3 +1,4 @@
+import { DATA_VARIANT } from '../dataVariant'
 import type { LyricSpan, NoteSpan } from '../types'
 import type { DragPoint } from './previewDragHighlights'
 import {
@@ -35,7 +36,7 @@ export function partLabelsInMarquee(
   const hits: PartLabelHit[] = []
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(
-      'rect[data-variant="part-label-click-target-rect"]',
+      `rect[data-variant="${DATA_VARIANT.partLabelClickTarget}"]`,
     ),
   )) {
     const bounds = rect.getBoundingClientRect()
@@ -97,7 +98,7 @@ export function partLabelsInMarqueeAcrossSystems(
   const touchedSystems = new Set<string>()
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(
-      'rect[data-variant="part-label-click-target-rect"]',
+      `rect[data-variant="${DATA_VARIANT.partLabelClickTarget}"]`,
     ),
   )) {
     const group = rect.closest('[data-tag="part-label"]')
@@ -151,7 +152,7 @@ export function applyPartLabelDragHighlight(
   )
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(
-      'rect[data-variant="part-label-click-target-rect"]',
+      `rect[data-variant="${DATA_VARIANT.partLabelClickTarget}"]`,
     ),
   )) {
     const group = rect.closest('[data-tag="part-label"]') as HTMLElement | null
@@ -186,7 +187,7 @@ export function lyricLabelsInMarquee(
   const hits: LyricLabelHit[] = []
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(
-      'rect[data-variant="lyric-label-click-target-rect"]',
+      `rect[data-variant="${DATA_VARIANT.lyricLabelClickTarget}"]`,
     ),
   )) {
     const bounds = rect.getBoundingClientRect()
@@ -240,7 +241,7 @@ export function applyLyricLabelDragHighlight(
   )
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(
-      'rect[data-variant="lyric-label-click-target-rect"]',
+      `rect[data-variant="${DATA_VARIANT.lyricLabelClickTarget}"]`,
     ),
   )) {
     const group = rect.closest('[data-tag="lyric-label"]') as HTMLElement | null
@@ -273,7 +274,7 @@ export function applyPersistedLyricLabelHighlights(
   )
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(
-      'rect[data-variant="lyric-label-click-target-rect"]',
+      `rect[data-variant="${DATA_VARIANT.lyricLabelClickTarget}"]`,
     ),
   )) {
     const group = rect.closest('[data-tag="lyric-label"]') as HTMLElement | null
@@ -328,7 +329,7 @@ export function applyPersistedPartLabelHighlights(
   )
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(
-      'rect[data-variant="part-label-click-target-rect"]',
+      `rect[data-variant="${DATA_VARIANT.partLabelClickTarget}"]`,
     ),
   )) {
     const group = rect.closest('[data-tag="part-label"]') as HTMLElement | null

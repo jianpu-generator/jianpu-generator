@@ -1,3 +1,4 @@
+import { DATA_VARIANT } from '../dataVariant'
 import type { LyricCell, NoteCell } from './previewSelection'
 
 export interface DragPoint {
@@ -104,7 +105,7 @@ function applyDragHighlights<Cell>(
 }
 
 const noteDragSpec: DragHighlightSpec<NoteCell> = {
-  rectSelector: 'rect[data-variant="note-click-target-rect"]',
+  rectSelector: `rect[data-variant="${DATA_VARIANT.noteClickTarget}"]`,
   tag: 'note',
   parseCell: ({ partIndex, noteId }) => {
     if (partIndex === undefined || noteId === undefined) return undefined
@@ -118,7 +119,7 @@ const noteDragSpec: DragHighlightSpec<NoteCell> = {
 }
 
 const lyricDragSpec: DragHighlightSpec<LyricCell> = {
-  rectSelector: 'rect[data-variant="lyric-click-target-rect"]',
+  rectSelector: `rect[data-variant="${DATA_VARIANT.lyricClickTarget}"]`,
   tag: 'lyric',
   parseCell: ({ partIndex, noteId, verse }) => {
     if (partIndex === undefined || noteId === undefined || verse === undefined)
