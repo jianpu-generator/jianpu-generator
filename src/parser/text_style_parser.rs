@@ -3,6 +3,24 @@ use crate::error::{RecoverableError, Span};
 
 use super::{parse_bool_field, parse_font_family_field, parse_numeric_field};
 
+/// The `<kind> = { field: value, ... }` field names [`apply_text_style_field`]
+/// recognizes, kept in one place so the cross-boundary test in
+/// `text_style_field_names_tests.rs` can check them against the hand-mirrored
+/// list in `web/src/utils/textStyleFields.ts` — see item 4 of
+/// `TODO-cross-boundary-invariants.md`. Must be kept in sync with the `match`
+/// arms in [`apply_text_style_field`] below (that test also catches the two
+/// going out of sync with each other, not just with the TS side).
+#[cfg(test)]
+pub(crate) const TEXT_STYLE_FIELD_NAMES: [&str; 7] = [
+    "font_size",
+    "horizontal_padding_pt",
+    "vertical_padding_pt",
+    "bold",
+    "italic",
+    "underline",
+    "font_family",
+];
+
 /// Bundles [`apply_text_style_field`]'s per-field-pair context — split out
 /// once the plain argument list pushed that function's signature over
 /// clippy's `too_many_arguments` limit.
@@ -141,3 +159,7 @@ pub(super) fn parse_text_style_object(
         );
     }
 }
+
+#[cfg(test)]
+#[path = "text_style_field_names_tests.rs"]
+mod text_style_field_names_tests;

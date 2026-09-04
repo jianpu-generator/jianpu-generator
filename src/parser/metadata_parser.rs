@@ -83,6 +83,14 @@ fn parse_bool_field(
     }
 }
 
+/// The `font_family` component's accepted values, kept in one place so the
+/// cross-boundary test in `text_style_field_names_tests.rs` can check them
+/// against `web/src/utils/textStyleFields.ts`'s `fontFamilyValues` — see item
+/// 4 of `TODO-cross-boundary-invariants.md`. Must be kept in sync with the
+/// `match` arms in [`parse_font_family_field`] below.
+#[cfg(test)]
+pub(crate) const FONT_FAMILY_CHOICE_NAMES: [&str; 3] = ["serif", "sans_serif", "monospace"];
+
 fn parse_font_family_field(
     target: &mut Option<crate::ast::parsed::FontFamilyChoice>,
     key: &str,
@@ -137,6 +145,31 @@ struct MetadataAccumulator {
     hide_system_dividers: Option<bool>,
     directive_row_offset: Option<Offset>,
 }
+
+/// Every `# metadata` key that carries a `TextStyle` (a `<kind> = { ... }` object
+/// literal, and for `title`/`subtitle`/`author` also a plain string) — kept in one
+/// place so the cross-boundary test in `text_style_field_names_tests.rs` can check
+/// it against the hand-mirrored `textStyleKinds` list in
+/// `web/src/utils/textStyleFields.ts` — see item 4 of `TODO-cross-boundary-invariants.md`.
+/// Must be kept in sync with [`MetadataAccumulator::text_style_only_field_mut`]'s
+/// `match` arms plus the `title`/`subtitle`/`author` arms in
+/// [`MetadataAccumulator::apply_field`] below.
+#[cfg(test)]
+pub(crate) const TEXT_STYLE_KIND_NAMES: [&str; 13] = [
+    "title",
+    "subtitle",
+    "author",
+    "sequence",
+    "part_legend",
+    "measure_number",
+    "section_label",
+    "page_number",
+    "part_label",
+    "lyrics",
+    "notes",
+    "chords",
+    "note_dash",
+];
 
 impl MetadataAccumulator {
     /// Numeric fields all share the same `parse_numeric_field` handling, so this maps a key
