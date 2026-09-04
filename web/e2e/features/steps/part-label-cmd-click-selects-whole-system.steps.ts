@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -88,7 +88,7 @@ When("I Ctrl-click system 0's Melody part label", async ({ page }) => {
   const system0Melody = partLabel(page, 0, 0)
   await expect(system0Melody).toBeVisible({ timeout: 5_000 })
 
-  const box = await system0Melody.boundingBox()
+  const box = await stableBoundingBox(system0Melody)
   if (!box) throw new Error('Could not get bounding box for system 0 Melody.')
 
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
@@ -106,8 +106,8 @@ When(
     await expect(system0Melody).toBeVisible({ timeout: 5_000 })
     await expect(system1Melody).toBeVisible({ timeout: 5_000 })
 
-    const startBox = await system0Melody.boundingBox()
-    const endBox = await system1Melody.boundingBox()
+    const startBox = await stableBoundingBox(system0Melody)
+    const endBox = await stableBoundingBox(system1Melody)
     if (!startBox || !endBox) {
       throw new Error(
         'Could not get bounding boxes for the system 0/1 Melody labels.',

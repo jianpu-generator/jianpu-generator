@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 const SOURCE = [
@@ -272,8 +273,8 @@ Then(
   'the metadata modal stays within the editor pane and does not cover the preview pane',
   async ({ page }) => {
     const modal = editMetadataModal(page)
-    const modalBox = await modal.boundingBox()
-    const previewBox = await page.locator('.pane--preview').boundingBox()
+    const modalBox = await stableBoundingBox(modal)
+    const previewBox = await stableBoundingBox(page.locator('.pane--preview'))
     if (!modalBox || !previewBox) {
       throw new Error('expected modal and preview pane to have bounding boxes')
     }

@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -86,8 +86,8 @@ When(
     await expect(melodyLabel).toBeVisible({ timeout: 5_000 })
     await expect(harmonyLabel).toBeVisible({ timeout: 5_000 })
 
-    const melodyBox = await melodyLabel.boundingBox()
-    const harmonyBox = await harmonyLabel.boundingBox()
+    const melodyBox = await stableBoundingBox(melodyLabel)
+    const harmonyBox = await stableBoundingBox(harmonyLabel)
     if (!melodyBox || !harmonyBox) {
       throw new Error('Could not get bounding boxes for the part labels.')
     }

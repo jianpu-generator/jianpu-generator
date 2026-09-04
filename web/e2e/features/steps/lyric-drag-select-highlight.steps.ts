@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -69,8 +69,8 @@ Given(
 When(
   'I drag a marquee from lyric syllable {int} to lyric syllable {int}',
   async ({ page }, from: number, to: number) => {
-    const boxFrom = await lyricTexts(page).nth(from).boundingBox()
-    const boxTo = await lyricTexts(page).nth(to).boundingBox()
+    const boxFrom = await stableBoundingBox(lyricTexts(page).nth(from))
+    const boxTo = await stableBoundingBox(lyricTexts(page).nth(to))
     if (!boxFrom || !boxTo) {
       throw new Error(
         `Could not get bounding boxes for lyric syllables ${from} and ${to}.`,
@@ -92,7 +92,7 @@ When(
   async ({ page }, index: number) => {
     // A plain click (mousedown + mouseup at the same point, no drag) selects
     // just this syllable.
-    const box = await lyricTexts(page).nth(index).boundingBox()
+    const box = await stableBoundingBox(lyricTexts(page).nth(index))
     if (!box) throw new Error('no box')
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
     await page.mouse.down()

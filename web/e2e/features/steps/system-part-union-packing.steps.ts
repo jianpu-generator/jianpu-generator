@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 import {
   ensureMeasure,
@@ -222,8 +223,8 @@ Then(
     const secondLabel = partLabelsFor(page, second).first()
     await expect(firstLabel).toBeVisible({ timeout: 10_000 })
     await expect(secondLabel).toBeVisible({ timeout: 10_000 })
-    const firstBox = await firstLabel.boundingBox()
-    const secondBox = await secondLabel.boundingBox()
+    const firstBox = await stableBoundingBox(firstLabel)
+    const secondBox = await stableBoundingBox(secondLabel)
     if (!firstBox || !secondBox) {
       throw new Error(
         `Could not get bounding boxes for ${first}/${second} labels.`,
@@ -240,7 +241,7 @@ Then(
     for (const part of [first, second, third]) {
       const label = partLabelsFor(page, part).first()
       await expect(label).toBeVisible({ timeout: 10_000 })
-      const box = await label.boundingBox()
+      const box = await stableBoundingBox(label)
       if (!box) {
         throw new Error(`Could not get bounding box for ${part} label.`)
       }

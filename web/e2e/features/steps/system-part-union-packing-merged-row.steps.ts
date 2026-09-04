@@ -1,10 +1,11 @@
 import { expect } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { Then, When } from './fixtures'
 import { partLabelsFor } from './system-part-union-packing.fixture'
 
 When("I Ctrl-click {word}'s part label", async ({ page }, part: string) => {
   const label = partLabelsFor(page, part).first()
-  const box = await label.boundingBox()
+  const box = await stableBoundingBox(label)
   if (!box) throw new Error(`Could not get bounding box for ${part}'s label.`)
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
   await page.keyboard.down('Control')
@@ -36,7 +37,7 @@ Then('all notes in the first system are highlighted', async ({ page }) => {
   let systemEnd = 0
   for (let i = 0; i < labelCount; i++) {
     const label = firstSystemLabels.nth(i)
-    const box = await label.boundingBox()
+    const box = await stableBoundingBox(label)
     if (!box) continue
     rowBoxes.push(box)
     const end = await label.getAttribute('data-measure-index-end')
@@ -45,9 +46,9 @@ Then('all notes in the first system are highlighted', async ({ page }) => {
 
   const measureBoxes: { x: number; width: number }[] = []
   for (let m = 0; m <= systemEnd; m++) {
-    const box = await page
-      .locator(`[data-tag="measure"][data-measure-index="${m}"]`)
-      .boundingBox()
+    const box = await stableBoundingBox(
+      page.locator(`[data-tag="measure"][data-measure-index="${m}"]`),
+    )
     if (box) measureBoxes.push(box)
   }
 
@@ -67,7 +68,7 @@ Then('all notes in the first system are highlighted', async ({ page }) => {
   const glyphCount = await digitGlyphs.count()
   let checked = 0
   for (let i = 0; i < glyphCount; i++) {
-    const box = await digitGlyphs.nth(i).boundingBox()
+    const box = await stableBoundingBox(digitGlyphs.nth(i))
     if (!box) continue
     const centerX = box.x + box.width / 2
     const centerY = box.y + box.height / 2
@@ -99,10 +100,10 @@ Then(
     // geometric way as the rest-glyph check: does any digit-1-7 glyph's
     // center fall inside the intersection of this measure's column and this
     // part's row?
-    const measureBox = await page
-      .locator(`[data-tag="measure"][data-measure-index="${index}"]`)
-      .boundingBox()
-    const rowBox = await partLabelsFor(page, part).first().boundingBox()
+    const measureBox = await stableBoundingBox(
+      page.locator(`[data-tag="measure"][data-measure-index="${index}"]`),
+    )
+    const rowBox = await stableBoundingBox(partLabelsFor(page, part).first())
     if (!measureBox || !rowBox) {
       throw new Error(
         `Could not get bounding boxes for measure ${index} / ${part}'s row.`,
@@ -112,7 +113,7 @@ Then(
     const count = await notes.count()
     let found = false
     for (let i = 0; i < count; i++) {
-      const box = await notes.nth(i).boundingBox()
+      const box = await stableBoundingBox(notes.nth(i))
       if (!box) continue
       const centerX = box.x + box.width / 2
       const centerY = box.y + box.height / 2
@@ -145,10 +146,10 @@ Then(
     // the intersection of this measure's column (x-range, from the
     // `[data-tag="measure"]` click-target rect) and this part's row
     // (y-range, from its part-label click-target rect)?
-    const measureBox = await page
-      .locator(`[data-tag="measure"][data-measure-index="${index}"]`)
-      .boundingBox()
-    const rowBox = await partLabelsFor(page, part).first().boundingBox()
+    const measureBox = await stableBoundingBox(
+      page.locator(`[data-tag="measure"][data-measure-index="${index}"]`),
+    )
+    const rowBox = await stableBoundingBox(partLabelsFor(page, part).first())
     if (!measureBox || !rowBox) {
       throw new Error(
         `Could not get bounding boxes for measure ${index} / ${part}'s row.`,
@@ -157,7 +158,7 @@ Then(
     const rests = page.locator('text').getByText('0', { exact: true })
     const count = await rests.count()
     for (let i = 0; i < count; i++) {
-      const box = await rests.nth(i).boundingBox()
+      const box = await stableBoundingBox(rests.nth(i))
       if (!box) continue
       const centerX = box.x + box.width / 2
       const centerY = box.y + box.height / 2

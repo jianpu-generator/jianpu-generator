@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -125,8 +126,8 @@ Then(
 
     await expect(highlightRect).toBeVisible({ timeout: 5_000 })
 
-    const groupBox = await lastMeasureGroup.boundingBox()
-    const highlightBox = await highlightRect.boundingBox()
+    const groupBox = await stableBoundingBox(lastMeasureGroup)
+    const highlightBox = await stableBoundingBox(highlightRect)
     if (!groupBox || !highlightBox) {
       throw new Error('Could not get bounding boxes for the last measure.')
     }

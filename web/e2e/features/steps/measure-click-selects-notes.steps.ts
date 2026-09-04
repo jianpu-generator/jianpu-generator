@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -86,7 +86,7 @@ When('I plain-click the center of measure 1', async ({ page }) => {
     .locator('[data-tag="measure"][data-measure-index="1"]')
     .first()
   await expect(measure1).toBeVisible({ timeout: 5_000 })
-  const box = await measure1.boundingBox()
+  const box = await stableBoundingBox(measure1)
   if (!box) throw new Error('Could not get bounding box for measure 1.')
 
   // A plain click (mousedown + mouseup at the same point, no drag). Notes
@@ -103,7 +103,7 @@ When('I Cmd\\/Ctrl-click the center of measure 1', async ({ page }) => {
     .locator('[data-tag="measure"][data-measure-index="1"]')
     .first()
   await expect(measure1).toBeVisible({ timeout: 5_000 })
-  const box = await measure1.boundingBox()
+  const box = await stableBoundingBox(measure1)
   if (!box) throw new Error('Could not get bounding box for measure 1.')
 
   // A Cmd/Ctrl-modified plain click (mousedown + mouseup at the same point,
@@ -121,7 +121,7 @@ When("I Cmd\\/Ctrl-click measure 1's own left edge pixel", async ({ page }) => {
     .locator('[data-tag="measure"][data-measure-index="1"]')
     .first()
   await expect(measure1).toBeVisible({ timeout: 5_000 })
-  const box = await measure1.boundingBox()
+  const box = await stableBoundingBox(measure1)
   if (!box) throw new Error('Could not get bounding box for measure 1.')
 
   // Click exactly at measure 1's own reported left edge — the pixel where
@@ -156,8 +156,8 @@ When(
     await expect(measure0).toBeVisible({ timeout: 5_000 })
     await expect(measure2).toBeVisible({ timeout: 5_000 })
 
-    const box0 = await measure0.boundingBox()
-    const box2 = await measure2.boundingBox()
+    const box0 = await stableBoundingBox(measure0)
+    const box2 = await stableBoundingBox(measure2)
     if (!box0 || !box2) {
       throw new Error('Could not get bounding boxes for measures 0 and 2.')
     }
@@ -307,7 +307,7 @@ When(
     const mergedBar = page.locator(
       '[data-tag="measure"][data-measure-index="1"][data-measure-index-end="3"]',
     )
-    const box = await mergedBar.first().boundingBox()
+    const box = await stableBoundingBox(mergedBar.first())
     if (!box) {
       throw new Error('Could not get bounding box for the merged rest bar.')
     }

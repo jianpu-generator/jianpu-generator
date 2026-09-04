@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -86,7 +86,7 @@ When(
       .locator('[data-tag="measure"][data-measure-index="1"]')
       .first()
     await expect(measure1).toBeVisible({ timeout: 5_000 })
-    const box = await measure1.boundingBox()
+    const box = await stableBoundingBox(measure1)
     if (!box) throw new Error('Could not get bounding box for measure 1.')
 
     // A plain click (mousedown + mouseup at the same point, no drag). Clicks
@@ -107,7 +107,7 @@ When(
       .locator('[data-tag="measure"][data-measure-index="1"]')
       .first()
     await expect(measure1).toBeVisible({ timeout: 5_000 })
-    const box = await measure1.boundingBox()
+    const box = await stableBoundingBox(measure1)
     if (!box) throw new Error('Could not get bounding box for measure 1.')
 
     // A Cmd/Ctrl-modified plain click (mousedown + mouseup at the same point,
@@ -133,8 +133,8 @@ When(
     await expect(measure0).toBeVisible({ timeout: 5_000 })
     await expect(measure1).toBeVisible({ timeout: 5_000 })
 
-    const box0 = await measure0.boundingBox()
-    const box1 = await measure1.boundingBox()
+    const box0 = await stableBoundingBox(measure0)
+    const box1 = await stableBoundingBox(measure1)
     if (!box0 || !box1) {
       throw new Error('Could not get bounding boxes for measures 0 and 1.')
     }

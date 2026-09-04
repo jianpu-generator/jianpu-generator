@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -78,7 +79,7 @@ function barNumberRect(page: import('@playwright/test').Page) {
 When('I hover the bar number for measure 0', async ({ page }) => {
   const rect = barNumberRect(page)
   await expect(rect).toBeVisible({ timeout: 5_000 })
-  const box = await rect.boundingBox()
+  const box = await stableBoundingBox(rect)
   if (!box) throw new Error('Could not get bounding box for the bar number.')
 
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
@@ -100,7 +101,7 @@ When('I Cmd\\/Ctrl-click the bar number for measure 0', async ({ page }) => {
 
   const rect = barNumberRect(page)
   await expect(rect).toBeVisible({ timeout: 5_000 })
-  const box = await rect.boundingBox()
+  const box = await stableBoundingBox(rect)
   if (!box) throw new Error('Could not get bounding box for the bar number.')
 
   // A Cmd/Ctrl-modified plain click (mousedown + mouseup at the same point,
@@ -120,7 +121,7 @@ When('I plain-click the bar number for measure 0', async ({ page }) => {
 
   const rect = barNumberRect(page)
   await expect(rect).toBeVisible({ timeout: 5_000 })
-  const box = await rect.boundingBox()
+  const box = await stableBoundingBox(rect)
   if (!box) throw new Error('Could not get bounding box for the bar number.')
 
   // A plain click (no modifier) — the bar number's own click target always

@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 // Lines (1-based):
@@ -128,10 +129,11 @@ Then(
     await expect(highlightRects).toHaveCount(2, { timeout: 3_000 })
 
     const measureBox = async (measureIndex: number) =>
-      page
-        .locator(`[data-tag="measure"][data-measure-index="${measureIndex}"]`)
-        .first()
-        .boundingBox()
+      stableBoundingBox(
+        page
+          .locator(`[data-tag="measure"][data-measure-index="${measureIndex}"]`)
+          .first(),
+      )
 
     const cBox = await measureBox(2)
     const aBox = await measureBox(0)

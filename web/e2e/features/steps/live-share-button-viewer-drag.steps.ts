@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { fileSwitcherTrigger } from '../../fileSwitcherHelpers'
 import { Then, When } from './fixtures'
 import {
@@ -91,8 +91,8 @@ When(
     await expect(measureFrom).toBeVisible()
     await expect(measureTo).toBeVisible()
 
-    const boxFrom = await measureFrom.boundingBox()
-    const boxTo = await measureTo.boundingBox()
+    const boxFrom = await stableBoundingBox(measureFrom)
+    const boxTo = await stableBoundingBox(measureTo)
     if (!boxFrom || !boxTo) {
       throw new Error(
         `Could not get bounding boxes for measures ${fromIndex} and ${toIndex}.`,

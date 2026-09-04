@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then } from './fixtures'
 
 /**
@@ -73,8 +74,8 @@ Then(
       .locator('[data-tag="lyric"][data-note-id="0"][data-verse="0"]')
       .locator('rect')
 
-    const noteBox = await noteClickRect.boundingBox()
-    const lyricBox = await lyricRect.boundingBox()
+    const noteBox = await stableBoundingBox(noteClickRect)
+    const lyricBox = await stableBoundingBox(lyricRect)
     expect(noteBox).not.toBeNull()
     expect(lyricBox).not.toBeNull()
     if (!noteBox || !lyricBox) return

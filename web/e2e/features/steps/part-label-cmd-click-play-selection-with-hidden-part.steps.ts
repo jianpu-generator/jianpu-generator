@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -131,7 +132,7 @@ When('I Ctrl-click the Melody part label', async ({ page }) => {
   )
   await expect(melodyLabel).toBeVisible({ timeout: 5_000 })
 
-  const box = await melodyLabel.boundingBox()
+  const box = await stableBoundingBox(melodyLabel)
   if (!box) throw new Error('Could not get bounding box for Melody label.')
 
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)

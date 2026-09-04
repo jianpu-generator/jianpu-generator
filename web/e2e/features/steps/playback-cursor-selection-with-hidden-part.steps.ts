@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -113,8 +113,8 @@ When(
       '[data-tag="note"][data-part-index="1"] rect[data-variant="note-click-target-rect"]',
     )
     await expect(bassNotes).toHaveCount(2)
-    const firstBox = await bassNotes.nth(0).boundingBox()
-    const secondBox = await bassNotes.nth(1).boundingBox()
+    const firstBox = await stableBoundingBox(bassNotes.nth(0))
+    const secondBox = await stableBoundingBox(bassNotes.nth(1))
     if (!firstBox || !secondBox) {
       throw new Error("Could not get bounding boxes for Bass's notes.")
     }

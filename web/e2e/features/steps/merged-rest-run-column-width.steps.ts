@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 type MeasureSpec = { kind: 'dense'; noteCount: number } | { kind: 'rest' }
@@ -166,10 +167,9 @@ Then(
   "the count label's rendered width is no wider than the merged rest bar's rendered width",
   async ({ page }) => {
     const barBox = await mergedRestBarBoundingBox(page)
-    const labelBox = await mergedRestCountLabel(
-      page,
-      String(mergedRestRunCount()),
-    ).boundingBox()
+    const labelBox = await stableBoundingBox(
+      mergedRestCountLabel(page, String(mergedRestRunCount())),
+    )
     if (!labelBox)
       throw new Error('Could not get bounding box for the count label.')
     expect(labelBox.width).toBeLessThanOrEqual(barBox.width)
@@ -178,12 +178,13 @@ Then(
 
 async function mergedRestMeasureBox(page: import('@playwright/test').Page) {
   const { start, end } = mergedRestMeasureIndexRange()
-  const measureBox = await page
-    .locator(
-      `[data-tag="measure"][data-measure-index="${start}"][data-measure-index-end="${end}"]`,
-    )
-    .first()
-    .boundingBox()
+  const measureBox = await stableBoundingBox(
+    page
+      .locator(
+        `[data-tag="measure"][data-measure-index="${start}"][data-measure-index-end="${end}"]`,
+      )
+      .first(),
+  )
   if (!measureBox) {
     throw new Error('Could not get bounding box for the merged rest measure.')
   }
@@ -194,10 +195,9 @@ Then(
   "the count label stays within the merged rest measure's own click-target bounds",
   async ({ page }) => {
     const measureBox = await mergedRestMeasureBox(page)
-    const labelBox = await mergedRestCountLabel(
-      page,
-      String(mergedRestRunCount()),
-    ).boundingBox()
+    const labelBox = await stableBoundingBox(
+      mergedRestCountLabel(page, String(mergedRestRunCount())),
+    )
     if (!labelBox)
       throw new Error('Could not get bounding box for the count label.')
 

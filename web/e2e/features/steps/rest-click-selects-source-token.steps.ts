@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -88,7 +88,7 @@ When(
       'rect[data-variant="note-click-target-rect"]',
     )
     // Note index 1 is the rest ("0" in "1 0 3 4").
-    const restBox = await noteRects.nth(1).boundingBox()
+    const restBox = await stableBoundingBox(noteRects.nth(1))
     if (!restBox) {
       throw new Error(
         'Could not get bounding box for the rest note. ' +

@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -91,8 +91,8 @@ When(
     await expect(fromLyric).toBeVisible({ timeout: 5_000 })
     await expect(toLyric).toBeVisible({ timeout: 5_000 })
 
-    const fromBox = await fromLyric.boundingBox()
-    const toBox = await toLyric.boundingBox()
+    const fromBox = await stableBoundingBox(fromLyric)
+    const toBox = await stableBoundingBox(toLyric)
     if (!fromBox || !toBox) {
       throw new Error(
         'Could not get bounding boxes for the cross-verse lyric syllables.',

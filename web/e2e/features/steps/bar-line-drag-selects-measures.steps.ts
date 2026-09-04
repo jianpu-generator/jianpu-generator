@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -86,7 +86,7 @@ When(
     const measure1 = page
       .locator('[data-tag="measure"][data-measure-index="1"]')
       .first()
-    const box = await measure1.boundingBox()
+    const box = await stableBoundingBox(measure1)
     if (!box) throw new Error('Could not get bounding box for measure 1.')
 
     // The bar line between measure 0 and measure 1 sits at measure 1's own
@@ -116,8 +116,8 @@ When(
     const measure2 = page
       .locator('[data-tag="measure"][data-measure-index="2"]')
       .first()
-    const box1 = await measure1.boundingBox()
-    const box2 = await measure2.boundingBox()
+    const box1 = await stableBoundingBox(measure1)
+    const box2 = await stableBoundingBox(measure2)
     if (!box1 || !box2) {
       throw new Error('Could not get bounding boxes for measures 1 and 2.')
     }
@@ -152,8 +152,8 @@ When(
     const measure2 = page
       .locator('[data-tag="measure"][data-measure-index="2"]')
       .first()
-    const box1 = await measure1.boundingBox()
-    const box2 = await measure2.boundingBox()
+    const box1 = await stableBoundingBox(measure1)
+    const box2 = await stableBoundingBox(measure2)
     if (!box1 || !box2) {
       throw new Error('Could not get bounding boxes for measures 1 and 2.')
     }

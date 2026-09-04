@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -101,7 +102,7 @@ When(
     const measure1 = page
       .locator('[data-tag="measure"][data-measure-index="1"]')
       .first()
-    const box1 = await measure1.boundingBox()
+    const box1 = await stableBoundingBox(measure1)
     if (!box1) throw new Error('Could not get bounding box for measure 1.')
 
     // Click a couple pixels to the *left* of measure 1's true left edge —
@@ -126,7 +127,7 @@ When(
     const measure1 = page
       .locator('[data-tag="measure"][data-measure-index="1"]')
       .first()
-    const box1 = await measure1.boundingBox()
+    const box1 = await stableBoundingBox(measure1)
     if (!box1) throw new Error('Could not get bounding box for measure 1.')
 
     // The bar line closing system 0 sits at measure 1's own right edge. Held

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -83,8 +83,8 @@ Then(
 When('I drag-select the first three notes in the measure', async ({ page }) => {
   const noteRects = noteClickTargets(page)
   // Drag a marquee across the first three notes.
-  const box0 = await noteRects.nth(0).boundingBox()
-  const box2 = await noteRects.nth(2).boundingBox()
+  const box0 = await stableBoundingBox(noteRects.nth(0))
+  const box2 = await stableBoundingBox(noteRects.nth(2))
   if (!box0 || !box2) {
     throw new Error(
       'Could not get bounding boxes for notes 0 and 2. ' +

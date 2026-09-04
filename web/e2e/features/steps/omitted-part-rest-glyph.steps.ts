@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /** Harmony is declared second, so it's `source_part_index` 1. */
@@ -92,18 +93,22 @@ async function harmonyRowRegion(
   page: import('@playwright/test').Page,
   index: number,
 ) {
-  const measureBox = await page
-    .locator(
-      `[data-tag="measure"][data-measure-index="${index}"][data-measure-index-end="${index}"]`,
-    )
-    .first()
-    .boundingBox()
+  const measureBox = await stableBoundingBox(
+    page
+      .locator(
+        `[data-tag="measure"][data-measure-index="${index}"][data-measure-index-end="${index}"]`,
+      )
+      .first(),
+  )
   if (!measureBox) throw new Error(`Could not find measure ${index}.`)
 
-  const labelBox = await page
-    .locator(`[data-tag="part-label"][data-part-index="${HARMONY_PART_INDEX}"]`)
-    .first()
-    .boundingBox()
+  const labelBox = await stableBoundingBox(
+    page
+      .locator(
+        `[data-tag="part-label"][data-part-index="${HARMONY_PART_INDEX}"]`,
+      )
+      .first(),
+  )
   if (!labelBox) throw new Error('Could not find the Harmony part label.')
 
   return {

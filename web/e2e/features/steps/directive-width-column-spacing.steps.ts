@@ -1,4 +1,5 @@
 import { expect, type Locator } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then } from './fixtures'
 
 /**
@@ -81,10 +82,14 @@ Then(
     }
 
     const firstMeasureBoxes = (
-      await Promise.all([0, 1].map((i) => directiveTexts.nth(i).boundingBox()))
+      await Promise.all(
+        [0, 1].map((i) => stableBoundingBox(directiveTexts.nth(i))),
+      )
     ).map(requireBox)
     const secondMeasureBoxes = (
-      await Promise.all([2, 3].map((i) => directiveTexts.nth(i).boundingBox()))
+      await Promise.all(
+        [2, 3].map((i) => stableBoundingBox(directiveTexts.nth(i))),
+      )
     ).map(requireBox)
 
     const firstMeasureRightEdge = Math.max(
@@ -189,7 +194,7 @@ Then(
           ...(await group
             .locator('rect[data-variant="section-label-click-target-rect"]')
             .all()),
-        ].map((locator) => locator.boundingBox()),
+        ].map((locator) => stableBoundingBox(locator)),
       )
       return boxes.filter(
         (box): box is NonNullable<typeof box> =>

@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -92,7 +92,7 @@ Given(
 When(
   'I click syllable {int} of verse {int} without dragging',
   async ({ page }, noteId: number, verse: number) => {
-    const box = await lyricRect(page, noteId, verse).boundingBox()
+    const box = await stableBoundingBox(lyricRect(page, noteId, verse))
     if (!box) throw new Error('no box')
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
     await page.mouse.down()
@@ -105,8 +105,8 @@ When(
 When(
   'I drag from syllable {int} to syllable {int} of verse {int}',
   async ({ page }, fromNoteId: number, toNoteId: number, verse: number) => {
-    const start = await lyricRect(page, fromNoteId, verse).boundingBox()
-    const end = await lyricRect(page, toNoteId, verse).boundingBox()
+    const start = await stableBoundingBox(lyricRect(page, fromNoteId, verse))
+    const end = await stableBoundingBox(lyricRect(page, toNoteId, verse))
     if (!start || !end) throw new Error('no box')
 
     await clickAndClickSelect(
@@ -131,7 +131,7 @@ When(
     const noteRect = page
       .locator(`[data-tag="note"][data-note-id="${noteId}"]`)
       .locator('rect[data-variant="note-click-target-rect"]')
-    const box = await noteRect.boundingBox()
+    const box = await stableBoundingBox(noteRect)
     if (!box) throw new Error('no box')
     await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.15)
     await page.mouse.down()
@@ -152,7 +152,7 @@ When(
     const noteRect = page
       .locator(`[data-tag="note"][data-note-id="${noteId}"]`)
       .locator('rect[data-variant="note-click-target-rect"]')
-    const box = await noteRect.boundingBox()
+    const box = await stableBoundingBox(noteRect)
     if (!box) throw new Error('no box')
     await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.15)
     await page.keyboard.down('Control')

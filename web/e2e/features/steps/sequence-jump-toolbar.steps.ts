@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -146,8 +147,8 @@ When(
     const from = buttons.nth(fromIndex)
     const to = buttons.nth(toIndex)
 
-    const fromBox = await from.boundingBox()
-    const toBox = await to.boundingBox()
+    const fromBox = await stableBoundingBox(from)
+    const toBox = await stableBoundingBox(to)
     if (!fromBox || !toBox) {
       throw new Error(
         'Could not get bounding boxes for sequence entry buttons.',
@@ -192,8 +193,8 @@ When(
     const buttonFrom = buttons.nth(fromIndex)
     const buttonTo = buttons.nth(toIndex)
 
-    const fromBox = await buttonFrom.boundingBox()
-    const toBox = await buttonTo.boundingBox()
+    const fromBox = await stableBoundingBox(buttonFrom)
+    const toBox = await stableBoundingBox(buttonTo)
     if (!fromBox || !toBox) {
       throw new Error(
         'Could not get bounding boxes for sequence entry buttons.',

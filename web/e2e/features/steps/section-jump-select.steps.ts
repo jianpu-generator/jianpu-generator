@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -65,8 +66,8 @@ async function dragBetweenSectionButtons(
   from: import('@playwright/test').Locator,
   to: import('@playwright/test').Locator,
 ) {
-  const fromBox = await from.boundingBox()
-  const toBox = await to.boundingBox()
+  const fromBox = await stableBoundingBox(from)
+  const toBox = await stableBoundingBox(to)
   if (!fromBox || !toBox) {
     throw new Error('Could not get bounding boxes for section buttons.')
   }
@@ -108,8 +109,8 @@ async function dragBetweenSectionButtonsWithTouch(
   from: import('@playwright/test').Locator,
   to: import('@playwright/test').Locator,
 ) {
-  const fromBox = await from.boundingBox()
-  const toBox = await to.boundingBox()
+  const fromBox = await stableBoundingBox(from)
+  const toBox = await stableBoundingBox(to)
   if (!fromBox || !toBox) {
     throw new Error('Could not get bounding boxes for section buttons.')
   }

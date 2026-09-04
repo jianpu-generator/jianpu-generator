@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 const PLAYBACK_CURSOR_FILL = 'rgba(220,38,38,0.25)'
@@ -148,12 +149,13 @@ Then(
     // any other note. Find it by its bounding box falling inside measures
     // 0-1's merged bar, the same way the later steps locate measure 2's
     // first note by position rather than assuming DOM order.
-    const mergedRestBox = await page
-      .locator(
-        '[data-tag="measure"][data-measure-index="0"][data-measure-index-end="1"]',
-      )
-      .first()
-      .boundingBox()
+    const mergedRestBox = await stableBoundingBox(
+      page
+        .locator(
+          '[data-tag="measure"][data-measure-index="0"][data-measure-index-end="1"]',
+        )
+        .first(),
+    )
     if (!mergedRestBox) {
       throw new Error('Could not get bounding box for the merged rest bar.')
     }
@@ -165,7 +167,7 @@ Then(
     let partIndex: string | null = null
     for (let i = 0; i < rectCount; i += 1) {
       const rect = noteRects.nth(i)
-      const box = await rect.boundingBox()
+      const box = await stableBoundingBox(rect)
       if (
         box &&
         box.x >= mergedRestBox.x - 1 &&
@@ -199,10 +201,9 @@ Then(
 Then(
   "Melody's first note in measure 2 shows the playback cursor highlight",
   async ({ page }) => {
-    const measure2Box = await page
-      .locator('[data-tag="measure"][data-measure-index="2"]')
-      .first()
-      .boundingBox()
+    const measure2Box = await stableBoundingBox(
+      page.locator('[data-tag="measure"][data-measure-index="2"]').first(),
+    )
     if (!measure2Box)
       throw new Error('Could not get bounding box for measure 2.')
 
@@ -218,7 +219,7 @@ Then(
     let partIndex: string | null = null
     for (let i = 0; i < rectCount; i += 1) {
       const rect = noteRects.nth(i)
-      const box = await rect.boundingBox()
+      const box = await stableBoundingBox(rect)
       if (
         box &&
         box.x >= measure2Box.x - 1 &&

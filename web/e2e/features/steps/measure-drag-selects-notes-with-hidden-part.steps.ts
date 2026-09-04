@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -121,10 +121,9 @@ When(
   "I Cmd\\/Ctrl-drag from measure 0's left bar line into measure 1's interior",
   async ({ page }) => {
     const measures = page.locator('[data-tag="measure"]')
-    const firstBox = await measures.nth(0).boundingBox()
-    const lastBox = await measures
-      .nth((await measures.count()) - 1)
-      .boundingBox()
+    const firstBox = await stableBoundingBox(measures.nth(0))
+    const lastMeasureIndex = (await measures.count()) - 1
+    const lastBox = await stableBoundingBox(measures.nth(lastMeasureIndex))
     if (!firstBox || !lastBox) {
       throw new Error('Could not get bounding boxes for measures 0 and 1.')
     }

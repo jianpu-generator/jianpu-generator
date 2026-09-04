@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -77,43 +78,6 @@ Given(
       .toBeGreaterThanOrEqual(2)
   },
 )
-
-/**
- * The initial page load carries its own async highlight re-render (the
- * editor's default cursor position round-trips through the same
- * `notifySelection` → debounce → `highlightedDocuments` swap machinery a
- * click-and-click gesture's own commit does — see `Preview.tsx`'s
- * `selectedMeasureRange` effect), which can still be settling when this
- * fixture's `Given` step resolves. Polls a locator's `boundingBox()` until
- * two reads back-to-back agree, so this file's coordinate-based clicks
- * aren't computed against a box that's about to move out from under them —
- * independent of (and a precondition for testing) the scroll/anchor bug
- * this feature is actually regression-covering.
- */
-async function stableBoundingBox(locator: import('@playwright/test').Locator) {
-  let previous = await locator.boundingBox()
-  let matches = 0
-  for (let i = 0; i < 30; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 50))
-    const current = await locator.boundingBox()
-    if (
-      previous &&
-      current &&
-      previous.x === current.x &&
-      previous.y === current.y
-    ) {
-      // Requires 3 consecutive agreeing reads, not just 2 — under heavy
-      // parallel-worker CPU contention, two reads can land in a brief lull
-      // between two separate layout-shifting events and falsely agree.
-      matches++
-      if (matches >= 2) return current
-    } else {
-      matches = 0
-    }
-    previous = current
-  }
-  return previous
-}
 
 When(
   'I click-and-click select the first note on page 1 then the third note on page 2, scrolling the second note into view first',

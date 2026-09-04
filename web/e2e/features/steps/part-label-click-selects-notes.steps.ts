@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -177,7 +177,7 @@ Given(
 When('I plain-click the Melody part label', async ({ page }) => {
   const label = melodyLabel(page)
   await expect(label).toBeVisible({ timeout: 5_000 })
-  const box = await label.boundingBox()
+  const box = await stableBoundingBox(label)
   if (!box) throw new Error('Could not get bounding box for the Melody label.')
 
   // A plain click (mousedown + mouseup at the same point, no drag).
@@ -194,8 +194,8 @@ When(
     await expect(melody).toBeVisible({ timeout: 5_000 })
     await expect(harmony).toBeVisible({ timeout: 5_000 })
 
-    const melodyBox = await melody.boundingBox()
-    const harmonyBox = await harmony.boundingBox()
+    const melodyBox = await stableBoundingBox(melody)
+    const harmonyBox = await stableBoundingBox(harmony)
     if (!melodyBox || !harmonyBox) {
       throw new Error('Could not get bounding boxes for the part labels.')
     }
@@ -224,7 +224,7 @@ When(
 
 When('I hover the Melody part label without dragging', async ({ page }) => {
   const melody = melodyLabel(page)
-  const melodyBox = await melody.boundingBox()
+  const melodyBox = await stableBoundingBox(melody)
   if (!melodyBox) {
     throw new Error('Could not get bounding box for the Melody label.')
   }
@@ -242,8 +242,8 @@ When(
   async ({ page }) => {
     const melody = melodyLabel(page)
     const harmony = harmonyLabel(page)
-    const melodyBox = await melody.boundingBox()
-    const harmonyBox = await harmony.boundingBox()
+    const melodyBox = await stableBoundingBox(melody)
+    const harmonyBox = await stableBoundingBox(harmony)
     if (!melodyBox || !harmonyBox) {
       throw new Error('Could not get bounding boxes for the part labels.')
     }
@@ -356,8 +356,8 @@ Then(
         '[data-tag="lyric-label"][data-part-index="0"][data-verse="0"] rect[data-variant="lyric-label-click-target-rect"]',
       )
       .first()
-    const partBox = await partLabelRect.boundingBox()
-    const lyricBox = await lyricLabelRect.boundingBox()
+    const partBox = await stableBoundingBox(partLabelRect)
+    const lyricBox = await stableBoundingBox(lyricLabelRect)
     if (!partBox || !lyricBox) {
       throw new Error('Could not get bounding boxes for the label rects.')
     }

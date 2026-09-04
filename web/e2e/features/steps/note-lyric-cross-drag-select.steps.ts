@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -107,8 +107,8 @@ When(
     // Anchor the drag on note 0's own click-target rect, and drag down/across
     // to lyric syllable 2 ("mi") — a marquee that visually spans notes 0-2 and
     // their lyric row underneath.
-    const noteBox0 = await noteRects(page).nth(noteIndex).boundingBox()
-    const lyricBox2 = await lyricTexts(page).nth(lyricIndex).boundingBox()
+    const noteBox0 = await stableBoundingBox(noteRects(page).nth(noteIndex))
+    const lyricBox2 = await stableBoundingBox(lyricTexts(page).nth(lyricIndex))
     if (!noteBox0 || !lyricBox2) {
       throw new Error(
         `Could not get bounding boxes for note ${noteIndex} and lyric syllable ${lyricIndex}.`,
@@ -130,8 +130,8 @@ When(
     // Anchor the drag on lyric syllable 0 ("do"), and drag up/across to note
     // 2's click-target rect — the symmetric case, a marquee that visually
     // spans the lyric row and notes 0-2 above it.
-    const lyricBox0 = await lyricTexts(page).nth(lyricIndex).boundingBox()
-    const noteBox2 = await noteRects(page).nth(noteIndex).boundingBox()
+    const lyricBox0 = await stableBoundingBox(lyricTexts(page).nth(lyricIndex))
+    const noteBox2 = await stableBoundingBox(noteRects(page).nth(noteIndex))
     if (!lyricBox0 || !noteBox2) {
       throw new Error(
         `Could not get bounding boxes for lyric syllable ${lyricIndex} and note ${noteIndex}.`,

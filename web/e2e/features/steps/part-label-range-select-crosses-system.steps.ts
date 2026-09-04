@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -89,8 +89,8 @@ When(
     await expect(fromLabel).toBeVisible({ timeout: 5_000 })
     await expect(toLabel).toBeVisible({ timeout: 5_000 })
 
-    const fromBox = await fromLabel.boundingBox()
-    const toBox = await toLabel.boundingBox()
+    const fromBox = await stableBoundingBox(fromLabel)
+    const toBox = await stableBoundingBox(toLabel)
     if (!fromBox || !toBox) {
       throw new Error(
         'Could not get bounding boxes for the cross-system Melody labels.',

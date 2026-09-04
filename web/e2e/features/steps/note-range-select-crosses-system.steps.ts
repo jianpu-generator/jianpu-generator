@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { stableBoundingBox } from '../../dragSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -78,7 +79,7 @@ Given(
 When(
   'I click-and-click select the note at index {int} then the note at index {int}',
   async ({ page }, from: number, to: number) => {
-    const box0 = await noteRects(page).nth(from).boundingBox()
+    const box0 = await stableBoundingBox(noteRects(page).nth(from))
     if (!box0) {
       throw new Error(`Could not get bounding box for note ${from}.`)
     }
@@ -94,7 +95,7 @@ When(
     // isn't captured mid-swap.
     await page.waitForTimeout(400)
 
-    const box1 = await noteRects(page).nth(to).boundingBox()
+    const box1 = await stableBoundingBox(noteRects(page).nth(to))
     if (!box1) {
       throw new Error(`Could not get bounding box for note ${to}.`)
     }

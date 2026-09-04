@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect } from '../../dragSelectHelpers'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -91,8 +91,8 @@ When(
     await expect(system0Melody).toBeVisible({ timeout: 5_000 })
     await expect(system1Melody).toBeVisible({ timeout: 5_000 })
 
-    const startBox = await system0Melody.boundingBox()
-    const endBox = await system1Melody.boundingBox()
+    const startBox = await stableBoundingBox(system0Melody)
+    const endBox = await stableBoundingBox(system1Melody)
     if (!startBox || !endBox) {
       throw new Error(
         'Could not get bounding boxes for the system 0/1 Melody labels.',
