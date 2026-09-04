@@ -66,14 +66,7 @@ export function useAppSelectionAndNavigation(
     selectedNoteRangePlaybackInfo,
     selectedNoteCells,
     applyNoteSelectionSilently,
-  } = useNoteSelection(
-    noteSpans,
-    parts,
-    enabledTracks,
-    editorRef,
-    measureSpans,
-    notifySelection,
-  )
+  } = useNoteSelection(noteSpans, parts, enabledTracks, editorRef)
 
   const {
     handleLyricRangeSelect,
@@ -86,10 +79,10 @@ export function useAppSelectionAndNavigation(
     editorRef,
     noteSpans,
     lyricSpans,
-    handleNoteRangeSelect,
-    handleLyricRangeSelect,
     applyNoteSelectionSilently,
     applyLyricSelectionSilently,
+    measureSpans,
+    notifySelection,
   )
 
   const handlePlayNoteSelection = useCallback(() => {

@@ -1,7 +1,7 @@
 import type { RefObject } from 'react'
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import { group_note_selection } from '../jianpuWasm'
-import type { EditorHandle, MeasureSpan, NoteSpan, PartInfo } from '../types'
+import type { EditorHandle, NoteSpan, PartInfo } from '../types'
 import type { NoteCell, NoteSelectionRun } from '../utils/noteSpanSelection'
 import { ensureWasmInit } from '../wasmInit'
 import { useByteRangeSelectionCore } from './useByteRangeSelectionCore'
@@ -64,37 +64,22 @@ export function useNoteSelection(
    * enabled. */
   enabledTracks: string[] | undefined,
   editorRef: RefObject<EditorHandle | null>,
-  measureSpans: MeasureSpan[],
-  notifySelection: (
-    startLine: number,
-    endLine: number,
-    isEmpty: boolean,
-    revealLine?: number,
-    measureRanges?: { start: number; end: number }[],
-  ) => void,
 ) {
   // Live/shared views never mount an Editor, so there's no Monaco
-  // selection to round-trip through `handleEditorSelectionChange` and
-  // no note-selection playback UI to drive either — fall back to a
-  // plain measure-range selection via `notifySelection` directly,
-  // matching the pre-note-drag behavior (see `useSectionNavigation`'s
-  // `selectSectionRange`), so the selection still lands.
-  const onNoMountedEditor = useCallback(
-    (runs: NoteSelectionRun[]) => {
-      if (runs.length === 0) return
-      const measureIndices = runs.map((run) => run.measureIndex)
-      const startSpan = measureSpans[Math.min(...measureIndices)]
-      const endSpan = measureSpans[Math.max(...measureIndices)]
-      if (!startSpan || !endSpan) return
-      // No mounted editor here (Live/shared view) to show a Monaco
-      // selection, so the amber measure-background highlight is this
-      // fallback's only visual feedback for the drag — keep it on by
-      // reporting the range as caret-only, unlike the editor-mounted path
-      // below where the Monaco selection itself is the feedback.
-      notifySelection(startSpan.start_line, endSpan.end_line, true)
-    },
-    [measureSpans, notifySelection],
-  )
+  // selection to round-trip through `handleEditorSelectionChange` — but a
+  // plain note tap still has its own precise blue highlight (painted
+  // directly on the SVG by `resolveNoteSelection`, independent of any
+  // editor), so no fallback is needed here: `useByteRangeSelectionCore`'s
+  // default no-mounted-editor behavior (just recording `selectedCells`/
+  // `runs`) is exactly right. This used to report the tap as a caret-only
+  // `notifySelection` covering the whole enclosing measure — appropriate
+  // back when this fallback was the *only* visual feedback (see
+  // `useSectionNavigation`'s `selectSectionRange`), but left over after
+  // per-note highlighting made it redundant, it painted a spurious
+  // whole-measure amber background under every single-note tap in Live/
+  // shared view (see the mobile bug report this comment accompanies).
+  // `useMeasureRangeSelection`'s own no-mounted-editor branch still does
+  // this deliberately for an actual measure/bar-line selection.
 
   const {
     selectedCells: lastSelectedCells,
@@ -108,7 +93,6 @@ export function useNoteSelection(
     groupSelectedNotesIntoContiguousRuns,
     cellFromNoteSpan,
     noteRunByteRange,
-    onNoMountedEditor,
   )
 
   const selectedNoteRangePlaybackInfo =

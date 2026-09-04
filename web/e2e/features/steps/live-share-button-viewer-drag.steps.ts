@@ -117,7 +117,7 @@ Then("the viewer's measure highlight is visible", async () => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
   // The selection must still land even on a run where the drag handler has
   // no mounted `editorRef` to push a Monaco selection through (see
-  // `useNoteSelection`'s fallback to `notifySelection` directly).
+  // `useMeasureRangeSelection`'s fallback to `notifySelection` directly).
   await expect(
     state.viewerPage
       .locator('.preview-page [data-testid="measure-highlight"]')

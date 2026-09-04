@@ -1,7 +1,7 @@
 import type { RefObject } from 'react'
 import { useCallback } from 'react'
 import type { LyricCell, NoteCell } from '../components/previewSelection'
-import type { EditorHandle, LyricSpan, NoteSpan } from '../types'
+import type { EditorHandle, LyricSpan, MeasureSpan, NoteSpan } from '../types'
 import {
   groupSelectedLyricsIntoContiguousRuns,
   lyricRunByteRange,
@@ -32,8 +32,6 @@ export function useMeasureRangeSelection(
   editorRef: RefObject<EditorHandle | null>,
   noteSpans: NoteSpan[],
   lyricSpans: LyricSpan[],
-  handleNoteRangeSelect: (cells: NoteCell[]) => Promise<void>,
-  handleLyricRangeSelect: (cells: LyricCell[]) => Promise<void>,
   applyNoteSelectionSilently: (
     cells: NoteCell[],
     runs: Awaited<ReturnType<typeof groupSelectedNotesIntoContiguousRuns>>,
@@ -42,18 +40,41 @@ export function useMeasureRangeSelection(
     cells: LyricCell[],
     runs: Awaited<ReturnType<typeof groupSelectedLyricsIntoContiguousRuns>>,
   ) => void,
+  measureSpans: MeasureSpan[],
+  notifySelection: (
+    startLine: number,
+    endLine: number,
+    isEmpty: boolean,
+  ) => void,
 ) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: editorRef is a ref object with a stable identity across renders (standard React convention); listing editorRef.current/.setSelections would stale-capture the ref's value at callback-creation time instead of reading it live on each call.
   return useCallback(
     async (noteCells: NoteCell[], lyricCells: LyricCell[]) => {
       if (!editorRef.current) {
-        // No mounted editor (Live/shared view) — no Monaco selection for the
-        // two pushes to conflict over, so the ordinary independent path is
-        // safe (and reuses `useNoteSelection`'s measure-range fallback).
-        await Promise.all([
-          handleNoteRangeSelect(noteCells),
-          handleLyricRangeSelect(lyricCells),
-        ])
+        // No mounted editor (Live/shared view) — deliberately doesn't route
+        // through `handleNoteRangeSelect`/`handleLyricRangeSelect` here (each
+        // would populate `selectedCells`, flipping `noteSelectionActive` on
+        // and hijacking the play-measure button's "Measures N–M" label into
+        // "Selection" — see `PlayMeasureButton`'s doc comment): the note/
+        // lyric cells themselves already got their own precise blue/lyric
+        // highlight painted directly on the SVG (`resolveMeasureSelection`),
+        // so all that's left is this mode's own whole-measure indicator —
+        // reporting the range as a caret-only `notifySelection` to paint the
+        // amber measure-background highlight, the pre-note-drag behavior
+        // this mode has always had (see `useSectionNavigation`'s
+        // `selectSectionRange`).
+        const noteRuns = await groupSelectedNotesIntoContiguousRuns(
+          noteCells,
+          noteSpans,
+        )
+        if (noteRuns.length > 0) {
+          const measureIndices = noteRuns.map((run) => run.measureIndex)
+          const startSpan = measureSpans[Math.min(...measureIndices)]
+          const endSpan = measureSpans[Math.max(...measureIndices)]
+          if (startSpan && endSpan) {
+            notifySelection(startSpan.start_line, endSpan.end_line, true)
+          }
+        }
         return
       }
       const [noteRuns, lyricRuns] = await Promise.all([
@@ -72,8 +93,8 @@ export function useMeasureRangeSelection(
     [
       noteSpans,
       lyricSpans,
-      handleNoteRangeSelect,
-      handleLyricRangeSelect,
+      measureSpans,
+      notifySelection,
       applyNoteSelectionSilently,
       applyLyricSelectionSilently,
     ],
