@@ -32,14 +32,7 @@ pub struct SourcePartDeclaration {
 fn instrument_program_to_label(program: u8, instruments: &[InstrumentInfo]) -> String {
     instruments
         .iter()
-        .find(|instrument| {
-            instrument
-                .value
-                .split(':')
-                .next()
-                .and_then(|prefix| prefix.trim().parse::<u8>().ok())
-                == Some(program)
-        })
+        .find(|instrument| instrument.program == program)
         .map(|instrument| instrument.value.clone())
         .unwrap_or_else(|| format!("{program}: Unknown"))
 }

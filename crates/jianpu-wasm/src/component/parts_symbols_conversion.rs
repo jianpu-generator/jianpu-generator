@@ -5,6 +5,7 @@ pub(super) fn instrument_info_from_wit(
 ) -> jianpu_generator::parser::parts_parser::InstrumentInfo {
     jianpu_generator::parser::parts_parser::InstrumentInfo {
         value: info.value,
+        program: info.program,
         category: info.category,
         source: info.source,
         role: info.role,

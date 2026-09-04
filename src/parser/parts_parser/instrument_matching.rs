@@ -4,6 +4,7 @@ use crate::error::{RecoverableError, Span};
 #[derive(serde::Deserialize)]
 pub struct InstrumentInfo {
     pub value: String,
+    pub program: u8,
     pub category: String,
     pub source: String,
     pub role: String,

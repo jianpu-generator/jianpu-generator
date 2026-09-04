@@ -348,10 +348,14 @@ world jianpu-wasm {
 
     // `InstrumentInfo` (`jianpu_generator::parser::parts_parser::InstrumentInfo`)
     // — input-only, decoded today via
-    // `serde_wasm_bindgen::from_value::<Vec<InstrumentInfo>>(...)`. Plain
-    // all-`String` record, no `Option` fields.
+    // `serde_wasm_bindgen::from_value::<Vec<InstrumentInfo>>(...)`. `program`
+    // is the GM program number as a real field — the source of truth for
+    // matching by number — rather than being re-derived by splitting the
+    // leading `"N: "` off of `value` (see TODO-cross-boundary-invariants.md
+    // item 1).
     record instrument-info {
         value: string,
+        program: u8,
         category: string,
         source: string,
         role: string,

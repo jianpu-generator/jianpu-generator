@@ -83,8 +83,7 @@ export function SoundfontSearchModal({
         }).sort((a, b) => b.score - a.score)
       : []
 
-  function handlePlay(value: SoundfontValue) {
-    const number = parseInt(value.split(':')[0], 10)
+  function handlePlay(number: number) {
     if (previewingNumber === number && previewAudioPlaying) {
       stopPreviewInstrument()
       setPreviewingNumber(null)
@@ -198,24 +197,21 @@ export function SoundfontSearchModal({
               onSelect={() => onSelect(null)}
               onTagClick={toggleTag}
             />
-            {filteredInstruments.map(({ instrument }) => {
-              const programNumber = parseInt(instrument.value.split(':')[0], 10)
-              return (
-                <SoundfontSearchRow
-                  key={instrument.value}
-                  label={instrument.value}
-                  tags={instrument}
-                  activeTags={activeTags}
-                  isSelected={currentValue === instrument.value}
-                  isPreviewing={
-                    previewingNumber === programNumber && previewAudioPlaying
-                  }
-                  onPlay={() => handlePlay(instrument.value)}
-                  onSelect={() => onSelect(instrument.value)}
-                  onTagClick={toggleTag}
-                />
-              )
-            })}
+            {filteredInstruments.map(({ instrument }) => (
+              <SoundfontSearchRow
+                key={instrument.value}
+                label={instrument.value}
+                tags={instrument}
+                activeTags={activeTags}
+                isSelected={currentValue === instrument.value}
+                isPreviewing={
+                  previewingNumber === instrument.program && previewAudioPlaying
+                }
+                onPlay={() => handlePlay(instrument.program)}
+                onSelect={() => onSelect(instrument.value)}
+                onTagClick={toggleTag}
+              />
+            ))}
             {filteredPercussion.map(({ entry }) => (
               <SoundfontSearchRow
                 key={entry.value}
@@ -226,7 +222,7 @@ export function SoundfontSearchModal({
                 isPreviewing={
                   previewingNumber === entry.key && previewAudioPlaying
                 }
-                onPlay={() => handlePlay(entry.value)}
+                onPlay={() => handlePlay(entry.key)}
                 onSelect={() => onSelect(entry.value)}
                 onTagClick={toggleTag}
               />

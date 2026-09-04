@@ -284,6 +284,7 @@ fn source_level_follow_soundfont_is_explicit_only() {
 
     let instruments = [InstrumentInfo {
         value: "40: Violin".to_owned(),
+        program: 40,
         category: String::new(),
         source: String::new(),
         role: String::new(),

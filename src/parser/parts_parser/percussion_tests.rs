@@ -21,6 +21,7 @@ fn percussion_soundfont_number_skips_instrument_catalog_validation() {
     // fuzzy-suggested against.
     let instruments = [InstrumentInfo {
         value: "52: Choir Aahs".to_owned(),
+        program: 52,
         category: String::new(),
         source: String::new(),
         role: String::new(),
