@@ -196,6 +196,18 @@ export function usePreviewClickSelection(
       if (e.key !== 'Escape') return
       const dragState = dragStateRef.current
       if (!dragState) return
+      // Stops the event here, ahead of Monaco's own keybinding service: with
+      // focus still sitting in the editor (see the capture-phase comment
+      // above), an unstopped Escape falls through to Monaco's default
+      // "collapse selection to the cursor" command, which fires its own
+      // `onDidChangeCursorSelection` and empties `selectedNoteCells`/
+      // `selectedLyricCells` right back out from under the revert this
+      // handler is about to apply (see `cancelAnchor`) — even though that
+      // revert itself succeeds, the very next render's declarative
+      // highlight effect (`Preview.tsx`) then re-applies the now-empty
+      // selection over it.
+      e.preventDefault()
+      e.stopPropagation()
       cancelAnchor(dragStateRef, dragState, argsForHover())
     }
 

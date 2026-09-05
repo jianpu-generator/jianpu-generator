@@ -168,7 +168,12 @@ export function Preview({
     measureAudioElement,
     measureAudioNoteTimings,
   )
-  const { dragStateRef, suppressNextRevealRef } = usePreviewClickSelection(
+  const {
+    dragStateRef,
+    suppressNextRevealRef,
+    pendingSecondClick,
+    setPendingSecondClick,
+  } = usePreviewClickSelection(
     previewPagesRef,
     noteSpans,
     onNoteRangeSelect,
@@ -306,6 +311,14 @@ export function Preview({
         </div>
       ) : null}
       <div className="preview-pages-wrapper">
+        {pendingSecondClick ? (
+          <div
+            className="pending-second-click-banner"
+            data-testid="pending-second-click-banner"
+          >
+            Click again to select a range
+          </div>
+        ) : null}
         {/* biome-ignore lint/a11y/noStaticElementInteractions: click-and-click select notes uses mousedown (not the browser's synthesized `click` — see `handlePreviewClick`'s doc comment for why) plus a document-level mousemove for the hover preview — not a standard interactive role */}
         <div
           className="preview-pages"
@@ -315,6 +328,7 @@ export function Preview({
               dragStateRef,
               suppressNextRevealRef,
               previewPagesRef,
+              onPendingSecondClickChange: setPendingSecondClick,
               noteSpans,
               lyricSpans,
               onSectionLabelClick: onSectionLabelClickRef.current,
