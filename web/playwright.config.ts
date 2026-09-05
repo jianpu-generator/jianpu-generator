@@ -9,7 +9,12 @@ const testDir = defineBddConfig({
 export default defineConfig({
   testDir,
   fullyParallel: true,
-  retries: 2,
+  // No in-run retries: a flaky test masked here would just report "passed"
+  // with no record that it ever failed. Flakiness is instead resolved across
+  // whole-suite passes by scripts/resolve-e2e-flakes.mjs (see
+  // `test:e2e:resolve`), which reruns only the tests still failing after
+  // each pass until the same set fails 3 times in a row.
+  retries: 0,
   use: {
     baseURL: 'http://localhost:5173',
   },
