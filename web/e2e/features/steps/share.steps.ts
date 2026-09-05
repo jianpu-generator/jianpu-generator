@@ -249,6 +249,59 @@ Then(
   },
 )
 
+// Mirrors `section-jump-select.steps.ts`'s two-section fixture, used there
+// to cover the same section-label click against a mounted editor — this
+// covers the no-mounted-editor (shared-preview) counterpart, where a
+// section jump has no Monaco selection to echo a highlight back from (see
+// `useSectionNavigation.selectSectionRange`'s doc comment).
+const TWO_SECTION_SHARED_SOURCE = [
+  '# metadata',
+  'title = "Shared Score"',
+  '',
+  '# parts',
+  'Melody [M] = notes',
+  '',
+  '# score',
+  'time=4/4 key=C4 bpm=120 label="A"',
+  '[M] 1 2 3 4',
+  '',
+  "[M] 5 6 7 1'",
+  '',
+  'label="B"',
+  "[M] 1' 7 6 5",
+  '',
+  '[M] 4 3 2 1',
+].join('\n')
+
+When(
+  'I open a shared preview with a two-section score, as seen in share',
+  async ({ page }) => {
+    await gotoShareUrl(page, SHARED_FILENAME, TWO_SECTION_SHARED_SOURCE)
+  },
+)
+
+When(
+  'I click the section label {string} in the SVG preview, as seen in share',
+  async ({ page }, label: string) => {
+    const svgLabel = page
+      .locator(
+        `.preview-pages g[data-tag="section-label"][data-section-label="${label}"]`,
+      )
+      .first()
+    await svgLabel.waitFor({ timeout: 15_000 })
+    await svgLabel.click()
+  },
+)
+
+Then(
+  "section B's measures are amber-highlighted, as seen in share",
+  async ({ page }) => {
+    await expect(
+      page.locator('.preview-page [data-testid="measure-highlight"]'),
+    ).toHaveCount(2, { timeout: 5_000 })
+  },
+)
+
 Then('the share button shows {string}', async ({ page }, text: string) => {
   await expect(page.getByTestId('share-button')).toHaveText(text)
 })

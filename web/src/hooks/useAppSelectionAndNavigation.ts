@@ -95,6 +95,7 @@ export function useAppSelectionAndNavigation(
     useSectionNavigation(
       sectionRanges,
       editorRef,
+      measureSpans,
       notifySelection,
       clearNoMountedEditorHighlights,
     )

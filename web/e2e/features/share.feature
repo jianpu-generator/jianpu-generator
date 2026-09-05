@@ -43,6 +43,12 @@ Feature: Share links
     Then the tapped note is highlighted, as seen in share
     And the measure highlight is not shown, as seen in share
 
+  Scenario: Clicking a section label in a shared preview highlights that section
+    Given local storage is cleared, as seen in share
+    When I open a shared preview with a two-section score, as seen in share
+    And I click the section label "B" in the SVG preview, as seen in share
+    Then section B's measures are amber-highlighted, as seen in share
+
   Scenario: Share button copies a compressed link that opens as a preview
     Given clipboard permissions are granted, as seen in share
     And a user file "shared-test.jianpu" is seeded in local storage

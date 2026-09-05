@@ -1,10 +1,15 @@
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { EditorHandle, SectionRange } from '../types'
+import type { EditorHandle, MeasureSpan, SectionRange } from '../types'
+import { measureRangeInSpan } from './workerHelpers'
 
 export function useSectionNavigation(
   sectionRanges: SectionRange[],
   editorRef: RefObject<EditorHandle | null>,
+  /** Resolves a section's line range to its own measure-index range, so a
+   * no-mounted-editor jump (below) can hand it to `notifySelection` as an
+   * explicit highlight range — see that branch's own comment. */
+  measureSpans: MeasureSpan[],
   notifySelection: (
     firstLine: number,
     lastLine: number,
@@ -65,16 +70,41 @@ export function useSectionNavigation(
         // bar-line click's highlight would otherwise keep painting over the
         // section it just jumped to.
         clearNoMountedEditorHighlights()
+        setSelectedLineRange({ firstLine, lastLine })
+        // With no Monaco selection to echo back a highlight from, this is
+        // the *only* paint this jump gets — unlike the editor-mounted
+        // branch below, where `setSelectionByLines` round-trips through
+        // `handleEditorSelectionChange` to blue-highlight the section's
+        // notes/lyrics. Passing an explicit measure range here (mirroring
+        // `useSequenceNavigation`'s own `measureRanges` argument) makes
+        // `notifySelection` paint the amber whole-measure background for
+        // it instead, bypassing the caret-only gate that would otherwise
+        // leave a section jump invisible in this view.
+        const measureRange = measureRangeInSpan(
+          measureSpans,
+          firstLine,
+          lastLine,
+        )
+        notifySelection(
+          firstLine,
+          lastLine,
+          false,
+          undefined,
+          measureRange ? [measureRange] : undefined,
+        )
+        return
       }
-      editorRef.current?.setSelectionByLines(firstLine, lastLine)
-      editorRef.current?.focus()
+      editorRef.current.setSelectionByLines(firstLine, lastLine)
+      editorRef.current.focus()
       setSelectedLineRange({ firstLine, lastLine })
       // A section jump selects a real (non-empty) line range, so the
-      // preview's caret-only measure-background highlight stays off; the
-      // section buttons carry their own highlighting for this.
+      // preview's caret-only measure-background highlight stays off here;
+      // the Monaco selection echo above blue-highlights the section's
+      // notes/lyrics instead, and the section buttons carry their own
+      // highlighting too.
       notifySelection(firstLine, lastLine, false)
     },
-    [editorRef, notifySelection, clearNoMountedEditorHighlights],
+    [editorRef, measureSpans, notifySelection, clearNoMountedEditorHighlights],
   )
 
   const handleSectionRangeSelect = useCallback(
