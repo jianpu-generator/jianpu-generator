@@ -131,6 +131,9 @@ export function useSequenceNavigation(
    * without a circular dependency between the two hooks.
    */
   selectedSequenceRangeRef: RefObject<SelectedSequenceRange | null>,
+  /** Mirrors `useSectionNavigation`'s param of the same name — see its doc
+   * comment. */
+  clearNoMountedEditorHighlights: () => void,
 ) {
   const [dragStartIndex, setDragStartIndex] = useState<number | null>(null)
   const [dragCurrentIndex, setDragCurrentIndex] = useState<number | null>(null)
@@ -180,6 +183,9 @@ export function useSequenceNavigation(
       const start = Math.min(indexA, indexB)
       const end = Math.max(indexA, indexB)
       setSelectedIndexRange({ start, end })
+      // See `useSectionNavigation`'s matching call for why this only matters
+      // (and only fires) with no mounted editor.
+      if (!editorRef.current) clearNoMountedEditorHighlights()
 
       // A sequence entry only carries measure indices, not lines, so
       // resolve each selected entry to its own source line range via
@@ -242,7 +248,13 @@ export function useSequenceNavigation(
         measureRanges,
       )
     },
-    [sequenceEntries, measureSpans, editorRef, notifySelection],
+    [
+      sequenceEntries,
+      measureSpans,
+      editorRef,
+      notifySelection,
+      clearNoMountedEditorHighlights,
+    ],
   )
 
   const handleSequenceEntryClick = useCallback(

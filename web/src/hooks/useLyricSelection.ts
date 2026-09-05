@@ -74,6 +74,7 @@ export function useLyricSelection(
     handleRangeSelect: handleLyricRangeSelect,
     handleEditorSelectionChange,
     applySelectionSilently: applyLyricSelectionSilently,
+    clearSelection: clearLyricSelection,
   } = useByteRangeSelectionCore<LyricCell, LyricSpan, LyricSelectionRun>(
     lyricSpans,
     editorRef,
@@ -87,5 +88,6 @@ export function useLyricSelection(
     handleEditorSelectionChange,
     selectedLyricCells: lastSelectedCells,
     applyLyricSelectionSilently,
+    clearLyricSelection,
   }
 }

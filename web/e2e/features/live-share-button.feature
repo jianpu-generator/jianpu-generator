@@ -104,6 +104,17 @@ Feature: Live share button
     When the viewer taps a bar line
     Then the viewer's measure highlight is not shown
 
+  Scenario: Clicking a section label in a live viewer after a bar-line tap clears the bar line's stale note highlight
+    Given clipboard permissions are granted
+    And the file store is seeded with a two-section live score
+    When the owner loads the app and clicks "Go Live"
+    Then a live-link-copied toast is shown
+    When a viewer opens the copied live link in a new page and waits for measures to render
+    Then the viewer's parts toolbar is visible and no Monaco editor is mounted
+    When the viewer taps a bar line
+    And the viewer clicks the section label "B" in the SVG preview
+    Then the viewer's note highlight is cleared
+
   Scenario: Re-going-live on the same file reproduces the same link, so it never needs re-sharing
     Given clipboard permissions are granted
     And local storage is cleared

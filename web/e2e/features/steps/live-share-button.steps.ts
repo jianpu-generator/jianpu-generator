@@ -55,6 +55,45 @@ Given(
   },
 )
 
+Given(
+  'the file store is seeded with a two-section live score',
+  async ({ page }) => {
+    // Mirrors `section-jump-select.steps.ts`'s two-section fixture, but with
+    // `[M]`-prefixed lines (not the bare `M = notes` shorthand) so each note
+    // gets its own click-target rect — needed here so a bar-line tap
+    // actually paints a per-note highlight to prove stale afterward (see
+    // this hook's own doc comment: the bare shorthand renders no individual
+    // note click targets at all, so `applyPersistedNoteHighlights` would
+    // have nothing to flag either way, silently passing regardless of the
+    // bug this scenario guards against).
+    const sectionFilename = 'live-section-test.jianpu'
+    const sectionSource = [
+      '# metadata',
+      'title = "Live Section Score"',
+      '',
+      '# parts',
+      'Melody [M] = notes',
+      '',
+      '# score',
+      'time=4/4 key=C4 bpm=120 label="A"',
+      '[M] 1 2 3 4',
+      '',
+      "[M] 5 6 7 1'",
+      '',
+      'label="B"',
+      "[M] 1' 7 6 5",
+      '',
+      '[M] 4 3 2 1',
+    ].join('\n')
+    await seedFileStore(
+      page,
+      sectionFilename,
+      sectionSource,
+      'live-section-test-id',
+    )
+  },
+)
+
 Given('local storage is cleared', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.clear()

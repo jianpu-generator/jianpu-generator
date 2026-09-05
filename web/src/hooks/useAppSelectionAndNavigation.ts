@@ -48,24 +48,13 @@ export function useAppSelectionAndNavigation(
     selectedCells: NoteCell[],
   ) => void,
 ) {
-  const { setSelectedLineRange, handleSectionJump, sectionJumpToolbarProps } =
-    useSectionNavigation(sectionRanges, editorRef, notifySelection)
-
-  const { selectedSequenceRange, sequenceJumpToolbarProps } =
-    useSequenceNavigation(
-      sequenceEntries,
-      measureSpans,
-      editorRef,
-      notifySelection,
-      selectedSequenceRangeRef,
-    )
-
   const {
     handleNoteRangeSelect,
     handleEditorSelectionChange,
     selectedNoteRangePlaybackInfo,
     selectedNoteCells: noteSelectionCells,
     applyNoteSelectionSilently,
+    clearNoteSelection,
   } = useNoteSelection(noteSpans, parts, enabledTracks, editorRef)
 
   const {
@@ -73,12 +62,14 @@ export function useAppSelectionAndNavigation(
     handleEditorSelectionChange: handleLyricEditorSelectionChange,
     selectedLyricCells: lyricSelectionCells,
     applyLyricSelectionSilently,
+    clearLyricSelection,
   } = useLyricSelection(lyricSpans, editorRef)
 
   const {
     handleMeasureRangeSelect,
     measureRangeNoteCells,
     measureRangeLyricCells,
+    clearMeasureRangeSelection,
   } = useMeasureRangeSelection(
     editorRef,
     noteSpans,
@@ -88,6 +79,35 @@ export function useAppSelectionAndNavigation(
     measureSpans,
     notifySelection,
   )
+
+  // Fed to `useSectionNavigation`/`useSequenceNavigation` below — a section
+  // or sequence jump replaces whatever a prior no-mounted-editor (Live/
+  // shared view) note/lyric tap or measure/bar-line click left painted,
+  // rather than layering on top of it (see those hooks' own
+  // `clearNoMountedEditorHighlights` param doc comment).
+  const clearNoMountedEditorHighlights = useCallback(() => {
+    clearNoteSelection()
+    clearLyricSelection()
+    clearMeasureRangeSelection()
+  }, [clearNoteSelection, clearLyricSelection, clearMeasureRangeSelection])
+
+  const { setSelectedLineRange, handleSectionJump, sectionJumpToolbarProps } =
+    useSectionNavigation(
+      sectionRanges,
+      editorRef,
+      notifySelection,
+      clearNoMountedEditorHighlights,
+    )
+
+  const { selectedSequenceRange, sequenceJumpToolbarProps } =
+    useSequenceNavigation(
+      sequenceEntries,
+      measureSpans,
+      editorRef,
+      notifySelection,
+      selectedSequenceRangeRef,
+      clearNoMountedEditorHighlights,
+    )
 
   // Merged purely for `Preview.tsx`'s highlight painting: an editor-mounted
   // drag/click populates `noteSelectionCells`/`lyricSelectionCells` and

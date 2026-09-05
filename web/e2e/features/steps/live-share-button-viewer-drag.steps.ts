@@ -158,6 +158,38 @@ When('the viewer taps a bar line', async ({}) => {
   )
 })
 
+When(
+  'the viewer clicks the section label {string} in the SVG preview',
+  async ({}, label: string) => {
+    if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
+    // Mirrors `section-jump-select.steps.ts`'s same-named step against the
+    // owner's page — the SVG's `<g data-tag="section-label">` group is
+    // clickable identically in a no-mounted-editor Live/shared viewer.
+    const svgLabel = state.viewerPage
+      .locator(
+        `.preview-pages g[data-tag="section-label"][data-section-label="${label}"]`,
+      )
+      .first()
+    await svgLabel.waitFor({ timeout: 15_000 })
+    await svgLabel.click()
+  },
+)
+
+Then("the viewer's note highlight is cleared", async () => {
+  if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
+  // Regression coverage for the no-mounted-editor (Live/shared) analogue of
+  // the section-label-swallow bug: a bar-line tap anchors 'measure' mode and
+  // paints its own blue note highlight via `measureRangeNoteCells` (see
+  // `useMeasureRangeSelection`'s doc comment); clicking a section label right
+  // after it must jump to that section instead of leaving the bar line's
+  // stale highlight sitting there with nothing to ever clear it (there's no
+  // Monaco selection in this view to round-trip back through
+  // `handleEditorSelectionChange` and naturally re-derive it empty).
+  await expect(
+    state.viewerPage.locator('[data-tag="note"][data-note-drag-selected]'),
+  ).toHaveCount(0, { timeout: 5_000 })
+})
+
 Then("the viewer's tapped note is highlighted", async () => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
   await expect(

@@ -30,6 +30,13 @@ export interface UseMeasureRangeSelectionResult {
    * wrong here). */
   measureRangeNoteCells: NoteCell[]
   measureRangeLyricCells: LyricCell[]
+  /** Resets `measureRangeNoteCells`/`measureRangeLyricCells` back to empty —
+   * for a caller that needs to drop a stale no-mounted-editor measure/
+   * bar-line highlight this hook is still holding (e.g. a section/sequence
+   * jump in a Live/shared view; see those hooks' own callers). A no-op once
+   * an editor is mounted, since that path never populates these in the first
+   * place. */
+  clearMeasureRangeSelection: () => void
 }
 
 /**
@@ -149,9 +156,15 @@ export function useMeasureRangeSelection(
     ],
   )
 
+  const clearMeasureRangeSelection = useCallback(() => {
+    setMeasureRangeNoteCells([])
+    setMeasureRangeLyricCells([])
+  }, [])
+
   return {
     handleMeasureRangeSelect,
     measureRangeNoteCells,
     measureRangeLyricCells,
+    clearMeasureRangeSelection,
   }
 }

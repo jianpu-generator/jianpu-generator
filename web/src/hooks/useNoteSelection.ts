@@ -87,6 +87,7 @@ export function useNoteSelection(
     handleRangeSelect: handleNoteRangeSelect,
     handleEditorSelectionChange,
     applySelectionSilently: applyNoteSelectionSilently,
+    clearSelection: clearNoteSelection,
   } = useByteRangeSelectionCore<NoteCell, NoteSpan, NoteSelectionRun>(
     noteSpans,
     editorRef,
@@ -127,5 +128,6 @@ export function useNoteSelection(
     selectedNoteRangePlaybackInfo,
     selectedNoteCells: lastSelectedCells,
     applyNoteSelectionSilently,
+    clearNoteSelection,
   }
 }

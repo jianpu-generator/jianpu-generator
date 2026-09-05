@@ -31,6 +31,13 @@ export interface ByteRangeSelectionCore<Cell, Run> {
    * re-derive (and typically empty out) `selectedCells` from whatever byte
    * range the *other* core's cells happened to land on. */
   applySelectionSilently: (cells: Cell[], runs: Run[]) => void
+  /** Resets `selectedCells`/`runs` back to empty with no Monaco round-trip —
+   * for a caller that needs to drop a stale no-mounted-editor highlight this
+   * core is still holding (e.g. a section/sequence jump in a Live/shared
+   * view, which replaces whatever a prior note/lyric tap left painted rather
+   * than extending it). A no-op once an editor is mounted, since that path
+   * never leaves a highlight this core owns lying around uncleared. */
+  clearSelection: () => void
 }
 
 /**
@@ -152,11 +159,17 @@ export function useByteRangeSelectionCore<
     [],
   )
 
+  const clearSelection = useCallback(() => {
+    setSelectedCells([])
+    setRuns([])
+  }, [])
+
   return {
     selectedCells,
     runs,
     handleRangeSelect,
     handleEditorSelectionChange,
     applySelectionSilently,
+    clearSelection,
   }
 }

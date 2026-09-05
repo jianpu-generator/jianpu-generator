@@ -12,6 +12,14 @@ export function useSectionNavigation(
     revealLine?: number,
     measureRanges?: { start: number; end: number }[],
   ) => void,
+  /** Drops whatever stale note/lyric/measure highlight a prior no-mounted-
+   * editor (Live/shared view) tap or bar-line click left painted — see
+   * `useAppSelectionAndNavigation`'s wiring. A section jump replaces that
+   * highlight entirely rather than layering on top of it, but (unlike the
+   * editor-mounted path, where pushing a real Monaco selection round-trips
+   * back through `handleEditorSelectionChange` and naturally re-derives
+   * these) there's no Monaco selection here to do that for it. */
+  clearNoMountedEditorHighlights: () => void,
 ) {
   const [dragStartLabel, setDragStartLabel] = useState<string | null>(null)
   const [dragCurrentLabel, setDragCurrentLabel] = useState<string | null>(null)
@@ -49,6 +57,15 @@ export function useSectionNavigation(
 
   const selectSectionRange = useCallback(
     (firstLine: number, lastLine: number) => {
+      if (!editorRef.current) {
+        // No mounted editor (Live/shared view): there's no Monaco selection
+        // round-trip to re-derive note/lyric/measure highlighting from (see
+        // this hook's own `clearNoMountedEditorHighlights` param doc
+        // comment), so this jump must clear it itself, or a prior tap/
+        // bar-line click's highlight would otherwise keep painting over the
+        // section it just jumped to.
+        clearNoMountedEditorHighlights()
+      }
       editorRef.current?.setSelectionByLines(firstLine, lastLine)
       editorRef.current?.focus()
       setSelectedLineRange({ firstLine, lastLine })
@@ -57,7 +74,7 @@ export function useSectionNavigation(
       // section buttons carry their own highlighting for this.
       notifySelection(firstLine, lastLine, false)
     },
-    [editorRef, notifySelection],
+    [editorRef, notifySelection, clearNoMountedEditorHighlights],
   )
 
   const handleSectionRangeSelect = useCallback(
