@@ -113,18 +113,6 @@ When(
   },
 )
 
-Then("the viewer's measure highlight is visible", async () => {
-  if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
-  // The selection must still land even on a run where the drag handler has
-  // no mounted `editorRef` to push a Monaco selection through (see
-  // `useMeasureRangeSelection`'s fallback to `notifySelection` directly).
-  await expect(
-    state.viewerPage
-      .locator('.preview-page [data-testid="measure-highlight"]')
-      .first(),
-  ).toBeVisible({ timeout: 5_000 })
-})
-
 When('the viewer taps the first note', async ({}) => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
   const noteRect = state.viewerPage
@@ -147,6 +135,29 @@ When('the viewer taps the first note', async ({}) => {
   )
 })
 
+When('the viewer taps a bar line', async ({}) => {
+  if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
+  const barLineRect = state.viewerPage
+    .locator('rect[data-variant="bar-line-click-target-rect"]')
+    .first()
+  await expect(barLineRect).toBeVisible()
+  const box = await stableBoundingBox(barLineRect)
+  if (!box) throw new Error('Could not get bounding box for the bar line.')
+  // A bar-line tap always anchors 'measure' mode (see
+  // `previewClickHandler.ts`'s `handleAnchorClick`) — the mobile bug this
+  // guards against: tapping a bar line in this no-mounted-editor viewer
+  // still painted the amber whole-measure overlay after 45a815d fixed the
+  // same overlay for plain note/lyric taps (see
+  // `useMeasureRangeSelection`'s doc comment).
+  await clickAndClickSelect(
+    state.viewerPage,
+    box.x + box.width / 2,
+    box.y + box.height / 2,
+    box.x + box.width / 2,
+    box.y + box.height / 2,
+  )
+})
+
 Then("the viewer's tapped note is highlighted", async () => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
   await expect(
@@ -156,6 +167,11 @@ Then("the viewer's tapped note is highlighted", async () => {
 
 Then("the viewer's measure highlight is not shown", async () => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
+  // The amber whole-measure background is reserved for an actual Monaco
+  // caret (see `useMeasureRangeSelection`'s no-mounted-editor branch) — this
+  // no-editor viewer never mounts one, so no SVG gesture here (a single-note
+  // tap or a multi-measure drag) ever paints it, even though the drag still
+  // updates the play-measure button's range (see the sibling step above).
   await expect(
     state.viewerPage.locator('.preview-page [data-testid="measure-highlight"]'),
   ).toHaveCount(0)

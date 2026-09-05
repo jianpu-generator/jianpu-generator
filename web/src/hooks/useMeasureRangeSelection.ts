@@ -1,6 +1,5 @@
 import type { RefObject } from 'react'
 import { useCallback } from 'react'
-import type { PreviewDragState } from '../components/previewDragState'
 import type { LyricCell, NoteCell } from '../components/previewSelection'
 import type { EditorHandle, LyricSpan, MeasureSpan, NoteSpan } from '../types'
 import {
@@ -50,11 +49,7 @@ export function useMeasureRangeSelection(
 ) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: editorRef is a ref object with a stable identity across renders (standard React convention); listing editorRef.current/.setSelections would stale-capture the ref's value at callback-creation time instead of reading it live on each call.
   return useCallback(
-    async (
-      noteCells: NoteCell[],
-      lyricCells: LyricCell[],
-      mode: NonNullable<PreviewDragState>['mode'],
-    ) => {
+    async (noteCells: NoteCell[], lyricCells: LyricCell[]) => {
       if (!editorRef.current) {
         // No mounted editor (Live/shared view) — deliberately doesn't route
         // through `handleNoteRangeSelect`/`handleLyricRangeSelect` here (each
@@ -63,22 +58,17 @@ export function useMeasureRangeSelection(
         // "Selection" — see `PlayMeasureButton`'s doc comment): the note/
         // lyric cells themselves already got their own precise blue/lyric
         // highlight painted directly on the SVG (`resolveMeasureSelection`),
-        // so the amber whole-measure indicator below is only warranted for a
-        // gesture that actually needs one:
-        //
-        // - a 'measure'/bar-line/label-anchored gesture (`mode` anything but
-        //   'note'/'lyric') has no other visual feedback for what it
-        //   selected, so it always gets the amber overlay — the pre-note-drag
-        //   behavior this mode has always had (see `useSectionNavigation`'s
-        //   `selectSectionRange`).
-        // - a 'note'/'lyric'-anchored gesture already painted its own
-        //   precise blue/lyric highlight directly on the SVG, so a
-        //   single-measure tap doesn't need the amber overlay too — it only
-        //   earns it once the drag actually spans more than one measure,
-        //   which the blue/lyric highlight alone doesn't make obvious (see
-        //   the mobile bug report this comment accompanies, and the sibling
-        //   e2e coverage for a plain single-note tap vs. a cross-measure
-        //   note drag in a no-mounted-editor view).
+        // and the amber whole-measure background is reserved for an actual
+        // Monaco caret (see `useJianpuWorkerRenderRequests.ts`'s
+        // `notifySelection` — only a caret-only report paints it, same
+        // convention `useSectionNavigation.selectSectionRange` relies on).
+        // There's no Monaco caret in this view at all, so `notifySelection`
+        // below is always called with `isEmpty: false`: it still updates
+        // `selectedMeasureRange` for the play-measure button's "Measures
+        // N–M" label/badge and playback range, but never paints the amber
+        // background itself (see the mobile bug report this comment
+        // accompanies: a bar-line tap in a mobile Live/shared viewer
+        // shouldn't paint it either).
         const [noteRuns, lyricRuns] = await Promise.all([
           groupSelectedNotesIntoContiguousRuns(noteCells, noteSpans),
           groupSelectedLyricsIntoContiguousRuns(lyricCells, lyricSpans),
@@ -88,15 +78,10 @@ export function useMeasureRangeSelection(
           ...lyricRuns.map((run) => run.measureIndex),
         ]
         if (measureIndices.length === 0) return
-        const isWholeMeasureGesture = mode !== 'note' && mode !== 'lyric'
-        const spansMultipleMeasures =
-          Math.min(...measureIndices) !== Math.max(...measureIndices)
-        if (isWholeMeasureGesture || spansMultipleMeasures) {
-          const startSpan = measureSpans[Math.min(...measureIndices)]
-          const endSpan = measureSpans[Math.max(...measureIndices)]
-          if (startSpan && endSpan) {
-            notifySelection(startSpan.start_line, endSpan.end_line, true)
-          }
+        const startSpan = measureSpans[Math.min(...measureIndices)]
+        const endSpan = measureSpans[Math.max(...measureIndices)]
+        if (startSpan && endSpan) {
+          notifySelection(startSpan.start_line, endSpan.end_line, false)
         }
         return
       }

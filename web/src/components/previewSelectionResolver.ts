@@ -48,11 +48,7 @@ export interface HandlePreviewClickArgs {
   onNoteRangeSelect: ((selectedCells: NoteCell[]) => void) | undefined
   onLyricRangeSelect: ((selectedCells: LyricCell[]) => void) | undefined
   onMeasureRangeSelect:
-    | ((
-        noteCells: NoteCell[],
-        lyricCells: LyricCell[],
-        mode: NonNullable<PreviewDragState>['mode'],
-      ) => void)
+    | ((noteCells: NoteCell[], lyricCells: LyricCell[]) => void)
     | undefined
 }
 
@@ -126,26 +122,13 @@ export function resolveSelection(
 /** Fires whichever of `onNoteRangeSelect`/`onLyricRangeSelect`/
  * `onMeasureRangeSelect` is wired up for a resolved selection — shared by
  * the first click's immediate self-commit and a second click's final
- * commit.
- *
- * `mode` is the gesture's own `PreviewDragState['mode']` (from the
- * `dragState` `resolveSelection` was just called with) — threaded through to
- * `onMeasureRangeSelect` itself (see `useMeasureRangeSelection`'s
- * no-mounted-editor branch) rather than used to choose a callback here:
- * `onMeasureRangeSelect`, when wired up, still fires for every mode (a plain
- * note/lyric click included), same as before this parameter existed — it's
- * the one callback that can push a single *combined* note+lyric Monaco
- * selection (see its own doc comment on why calling `onNoteRangeSelect`/
- * `onLyricRangeSelect` back-to-back doesn't work), so a genuine multi-measure
- * note/lyric drag still depends on it even though its own `mode` is 'note'
- * or 'lyric', not 'measure'. */
+ * commit. */
 export function fireCommit(
   { noteCells, lyricCells }: ResolvedSelection,
-  mode: NonNullable<PreviewDragState>['mode'],
   args: HandlePreviewClickArgs,
 ): void {
   if (args.onMeasureRangeSelect) {
-    args.onMeasureRangeSelect(noteCells, lyricCells, mode)
+    args.onMeasureRangeSelect(noteCells, lyricCells)
   } else {
     args.onNoteRangeSelect?.(noteCells)
     args.onLyricRangeSelect?.(lyricCells)

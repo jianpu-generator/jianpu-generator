@@ -24,7 +24,6 @@ import { Editor } from './Editor'
 import { EditPartsModal } from './EditPartsModal'
 import type { LyricCell, NoteCell } from './Preview'
 import { Preview } from './Preview'
-import type { PreviewDragState } from './previewDragState'
 
 interface MeasureRange {
   start: number
@@ -136,7 +135,6 @@ interface AppWorkspaceProps {
   handleMeasureRangeSelect: (
     noteCells: NoteCell[],
     lyricCells: LyricCell[],
-    mode: NonNullable<PreviewDragState>['mode'],
   ) => void
   audioGenerating: boolean
   wavUrl: string | null

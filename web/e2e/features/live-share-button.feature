@@ -71,7 +71,7 @@ Feature: Live share button
     And the viewer's page URL has no hash
     And the viewer's file switcher shows the live filename
 
-  Scenario: Dragging across measures in a live viewer highlights them, even without a mounted editor to round-trip the selection through
+  Scenario: Dragging across measures in a live viewer updates the play range, even without a mounted editor to round-trip the selection through
     Given clipboard permissions are granted
     And the file store is seeded with a multi-measure live drag score
     When the owner loads the app and clicks "Go Live"
@@ -79,8 +79,8 @@ Feature: Live share button
     When a viewer opens the copied live link in a new page and waits for measures to render
     Then the viewer's parts toolbar is visible and no Monaco editor is mounted
     When the viewer drags from measure 0 to measure 2
-    Then the viewer's measure highlight is visible
-    And the viewer's play-measure button reads "Measures 1-3"
+    Then the viewer's play-measure button reads "Measures 1-3"
+    And the viewer's measure highlight is not shown
 
   Scenario: Tapping a single note in a live viewer only highlights that note, not its whole measure
     Given clipboard permissions are granted
@@ -92,6 +92,16 @@ Feature: Live share button
     When the viewer taps the first note
     Then the viewer's tapped note is highlighted
     And the viewer's measure highlight is not shown
+
+  Scenario: Tapping a bar line in a live viewer never paints the amber measure highlight
+    Given clipboard permissions are granted
+    And the file store is seeded with a multi-measure live drag score
+    When the owner loads the app and clicks "Go Live"
+    Then a live-link-copied toast is shown
+    When a viewer opens the copied live link in a new page and waits for measures to render
+    Then the viewer's parts toolbar is visible and no Monaco editor is mounted
+    When the viewer taps a bar line
+    Then the viewer's measure highlight is not shown
 
   Scenario: Re-going-live on the same file reproduces the same link, so it never needs re-sharing
     Given clipboard permissions are granted

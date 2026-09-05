@@ -7,7 +7,6 @@ import {
   applyPersistedLyricHighlights,
   applyPersistedNoteHighlights,
 } from './previewDragHighlights'
-import type { PreviewDragState } from './previewDragState'
 import {
   applyPersistedLyricLabelHighlights,
   applyPersistedPartLabelHighlights,
@@ -93,7 +92,6 @@ interface PreviewProps {
   onMeasureRangeSelect?: (
     noteCells: NoteCell[],
     lyricCells: LyricCell[],
-    mode: NonNullable<PreviewDragState>['mode'],
   ) => void
   /** The measure range backing the current selection (caret or range),
    * regardless of whether it's caret-only — used to scroll the preview to
