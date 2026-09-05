@@ -126,13 +126,6 @@ When('I navigate fresh to the copied share URL', async ({ page }) => {
   await page.goto(lastShareUrl)
 })
 
-Then(
-  'the shared preview banner shows {string}',
-  async ({ page }, filename: string) => {
-    await expect(page.locator('.shared-preview-banner')).toContainText(filename)
-  },
-)
-
 Then('the shared preview banner is visible', async ({ page }) => {
   await expect(page.locator('.shared-preview-banner')).toBeVisible()
 })

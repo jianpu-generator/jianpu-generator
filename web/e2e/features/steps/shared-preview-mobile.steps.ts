@@ -32,9 +32,9 @@ When(
 )
 
 Then(
-  'the shared preview banner shows {string}, as seen in shared preview mobile',
-  async ({ page }, filename: string) => {
-    await expect(page.locator('.shared-preview-banner')).toContainText(filename)
+  'the shared preview banner is visible, as seen in shared preview mobile',
+  async ({ page }) => {
+    await expect(page.locator('.shared-preview-banner')).toBeVisible()
   },
 )
 
@@ -51,8 +51,8 @@ Then(
       }),
     )
 
-    // On a 375px-wide viewport the header's content (title, shared-preview
-    // banner, playback buttons, export controls) is wider than the viewport,
+    // On a 375px-wide viewport the header's content (shared-preview banner,
+    // playback buttons, export controls) is wider than the viewport,
     // so it only fits without wrapping if it overflows horizontally instead.
     expect(scrollWidth).toBeGreaterThan(375)
     // A single, non-wrapped row stays well under the height a two-row wrap

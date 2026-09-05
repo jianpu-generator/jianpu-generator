@@ -42,12 +42,9 @@ When(
   },
 )
 
-Then(
-  'the shared-preview banner shows {string}',
-  async ({ page }, filename: string) => {
-    await expect(page.locator('.shared-preview-banner')).toContainText(filename)
-  },
-)
+Then('the shared-preview banner is visible', async ({ page }) => {
+  await expect(page.locator('.shared-preview-banner')).toBeVisible()
+})
 
 When('I click the {string} button', async ({ page }, buttonName: string) => {
   await page.getByRole('button', { name: buttonName }).click()

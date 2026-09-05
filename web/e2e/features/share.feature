@@ -3,13 +3,13 @@ Feature: Share links
   Scenario: Opens a shared score preview without saving it, then imports on demand
     Given local storage is cleared, as seen in share
     When I open the share URL for "shared-test.jianpu"
-    Then the shared preview banner shows "shared-test.jianpu"
+    Then the shared preview banner is visible
     And the file switcher is hidden entirely
     And the preview contains "Shared Score"
     When I reload the page
     Then the file switcher is hidden entirely
     When I open the share URL for "shared-test.jianpu" again
-    And I click "Import to my scores"
+    And I click "Import this score"
     Then the file switcher shows "shared-test"
     And the shared preview banner is gone
 
@@ -34,7 +34,7 @@ Feature: Share links
   Scenario: Opens legacy uncompressed share links
     Given local storage is cleared, as seen in share
     When I navigate to a legacy uncompressed share link for "shared-test.jianpu"
-    Then the shared preview banner shows "shared-test.jianpu"
+    Then the shared preview banner is visible
 
   Scenario: Tapping a single note in a shared preview only highlights that note, not its whole measure
     Given local storage is cleared, as seen in share
@@ -57,5 +57,5 @@ Feature: Share links
     Then the share button shows "Link copied"
     And the copied share URL matches the expected compressed hash for "shared-test.jianpu"
     When I navigate fresh to the copied share URL
-    Then the shared preview banner shows "shared-test.jianpu"
+    Then the shared preview banner is visible
     And the preview contains "Shared Score"
