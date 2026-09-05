@@ -165,6 +165,24 @@ Then("the viewer's tapped note is highlighted", async () => {
   ).toHaveCount(1, { timeout: 5_000 })
 })
 
+Then("the viewer's note highlight still shows after settling", async () => {
+  if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
+  // Regression coverage: a no-mounted-editor measure/bar-line selection
+  // used to paint its blue note highlight instantly, then lose it entirely
+  // once `notifySelection`'s debounce (`useJianpuWorkerRenderRequests.ts`,
+  // 300ms default) fired and re-ran `Preview.tsx`'s persisted-highlight
+  // effect from `selectedNoteCells`/`selectedLyricCells` — which this
+  // no-mounted-editor gesture never updated (see
+  // `useMeasureRangeSelection`'s `measureRangeNoteCells`/
+  // `measureRangeLyricCells`). Waits well past that debounce before
+  // asserting the highlight is still there.
+  await state.viewerPage.waitForTimeout(800)
+  const highlightedNotes = state.viewerPage.locator(
+    '[data-tag="note"][data-note-drag-selected]',
+  )
+  await expect(highlightedNotes.first()).toBeVisible()
+})
+
 Then("the viewer's measure highlight is not shown", async () => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
   // The amber whole-measure background is reserved for an actual Monaco

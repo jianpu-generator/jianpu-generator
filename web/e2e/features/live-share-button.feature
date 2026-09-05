@@ -81,6 +81,7 @@ Feature: Live share button
     When the viewer drags from measure 0 to measure 2
     Then the viewer's play-measure button reads "Measures 1-3"
     And the viewer's measure highlight is not shown
+    And the viewer's note highlight still shows after settling
 
   Scenario: Tapping a single note in a live viewer only highlights that note, not its whole measure
     Given clipboard permissions are granted

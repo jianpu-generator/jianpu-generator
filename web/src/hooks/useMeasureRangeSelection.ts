@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import type { LyricCell, NoteCell } from '../components/previewSelection'
 import type { EditorHandle, LyricSpan, MeasureSpan, NoteSpan } from '../types'
 import {
@@ -10,6 +10,27 @@ import {
   groupSelectedNotesIntoContiguousRuns,
   noteRunByteRange,
 } from './useNoteSelection'
+
+export interface UseMeasureRangeSelectionResult {
+  handleMeasureRangeSelect: (
+    noteCells: NoteCell[],
+    lyricCells: LyricCell[],
+  ) => Promise<void>
+  /** The note/lyric cells behind the most recent no-mounted-editor
+   * measure/bar-line selection — `[]` once an editor is mounted, since that
+   * path pushes into `applyNoteSelectionSilently`/`applyLyricSelectionSilently`
+   * instead (see this hook's own doc comment). Callers merge these into
+   * whatever `useNoteSelection`/`useLyricSelection` themselves are tracking
+   * (see `useAppSelectionAndNavigation`) purely so `Preview.tsx`'s
+   * persisted-highlight effect has *something* non-stale to re-paint from on
+   * every render — deliberately kept out of `useNoteSelection`/
+   * `useLyricSelection`'s own `selectedCells`/`runs`, which also drive the
+   * play-measure button's "Selection" label and Monaco playback (see the
+   * no-mounted-editor branch below for why routing through those would be
+   * wrong here). */
+  measureRangeNoteCells: NoteCell[]
+  measureRangeLyricCells: LyricCell[]
+}
 
 /**
  * Turns a measure/bar-line click or drag (see `Preview.tsx`'s
@@ -46,9 +67,16 @@ export function useMeasureRangeSelection(
     endLine: number,
     isEmpty: boolean,
   ) => void,
-) {
+): UseMeasureRangeSelectionResult {
+  const [measureRangeNoteCells, setMeasureRangeNoteCells] = useState<
+    NoteCell[]
+  >([])
+  const [measureRangeLyricCells, setMeasureRangeLyricCells] = useState<
+    LyricCell[]
+  >([])
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: editorRef is a ref object with a stable identity across renders (standard React convention); listing editorRef.current/.setSelections would stale-capture the ref's value at callback-creation time instead of reading it live on each call.
-  return useCallback(
+  const handleMeasureRangeSelect = useCallback(
     async (noteCells: NoteCell[], lyricCells: LyricCell[]) => {
       if (!editorRef.current) {
         // No mounted editor (Live/shared view) — deliberately doesn't route
@@ -69,6 +97,19 @@ export function useMeasureRangeSelection(
         // background itself (see the mobile bug report this comment
         // accompanies: a bar-line tap in a mobile Live/shared viewer
         // shouldn't paint it either).
+        //
+        // Still records `noteCells`/`lyricCells` here (via
+        // `measureRangeNoteCells`/`measureRangeLyricCells`, *not*
+        // `applyNoteSelectionSilently`/`applyLyricSelectionSilently`) so
+        // `Preview.tsx` has a live React value to re-paint the SVG highlight
+        // from on every render — the direct DOM paint `resolveMeasureSelection`
+        // already did is otherwise silently wiped the moment `notifySelection`
+        // below causes any re-render (even one that changes nothing visible,
+        // e.g. `highlightedDocuments` flipping to a new empty-array
+        // reference), since that re-render re-applies the (until now
+        // permanently stale/empty) persisted-highlight state instead.
+        setMeasureRangeNoteCells(noteCells)
+        setMeasureRangeLyricCells(lyricCells)
         const [noteRuns, lyricRuns] = await Promise.all([
           groupSelectedNotesIntoContiguousRuns(noteCells, noteSpans),
           groupSelectedLyricsIntoContiguousRuns(lyricCells, lyricSpans),
@@ -107,4 +148,10 @@ export function useMeasureRangeSelection(
       applyLyricSelectionSilently,
     ],
   )
+
+  return {
+    handleMeasureRangeSelect,
+    measureRangeNoteCells,
+    measureRangeLyricCells,
+  }
 }

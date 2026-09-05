@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import type {
   EditorHandle,
   LyricSpan,
@@ -64,18 +64,22 @@ export function useAppSelectionAndNavigation(
     handleNoteRangeSelect,
     handleEditorSelectionChange,
     selectedNoteRangePlaybackInfo,
-    selectedNoteCells,
+    selectedNoteCells: noteSelectionCells,
     applyNoteSelectionSilently,
   } = useNoteSelection(noteSpans, parts, enabledTracks, editorRef)
 
   const {
     handleLyricRangeSelect,
     handleEditorSelectionChange: handleLyricEditorSelectionChange,
-    selectedLyricCells,
+    selectedLyricCells: lyricSelectionCells,
     applyLyricSelectionSilently,
   } = useLyricSelection(lyricSpans, editorRef)
 
-  const handleMeasureRangeSelect = useMeasureRangeSelection(
+  const {
+    handleMeasureRangeSelect,
+    measureRangeNoteCells,
+    measureRangeLyricCells,
+  } = useMeasureRangeSelection(
     editorRef,
     noteSpans,
     lyricSpans,
@@ -85,15 +89,31 @@ export function useAppSelectionAndNavigation(
     notifySelection,
   )
 
+  // Merged purely for `Preview.tsx`'s highlight painting: an editor-mounted
+  // drag/click populates `noteSelectionCells`/`lyricSelectionCells` and
+  // leaves `measureRangeNoteCells`/`measureRangeLyricCells` at `[]`; a
+  // no-mounted-editor (Live/shared) measure/bar-line gesture does the
+  // opposite (see `useMeasureRangeSelection`'s doc comment) — the two never
+  // hold cells at the same time, so concatenating is a safe union, not an
+  // accidental widening of either state's own meaning.
+  const selectedNoteCells = useMemo(
+    () => [...noteSelectionCells, ...measureRangeNoteCells],
+    [noteSelectionCells, measureRangeNoteCells],
+  )
+  const selectedLyricCells = useMemo(
+    () => [...lyricSelectionCells, ...measureRangeLyricCells],
+    [lyricSelectionCells, measureRangeLyricCells],
+  )
+
   const handlePlayNoteSelection = useCallback(() => {
     if (selectedNoteRangePlaybackInfo === null) return
     playNoteSelection(
       selectedNoteRangePlaybackInfo.minMeasureIndex,
       selectedNoteRangePlaybackInfo.maxMeasureIndex,
       selectedNoteRangePlaybackInfo.selectedPartNames,
-      selectedNoteCells,
+      noteSelectionCells,
     )
-  }, [selectedNoteRangePlaybackInfo, selectedNoteCells, playNoteSelection])
+  }, [selectedNoteRangePlaybackInfo, noteSelectionCells, playNoteSelection])
 
   return {
     setSelectedLineRange,
