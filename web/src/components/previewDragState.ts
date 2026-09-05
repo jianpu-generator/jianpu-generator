@@ -42,6 +42,22 @@ export type PreviewDragState =
       anchorId: Extract<ClickableElementId, { kind: 'measure' }>
     }
   | {
+      // A bar number's own click target anchors this instead of plain
+      // 'measure' mode — the bar-number-side mirror of 'part-label-system'
+      // above. `anchor`/`current` stay `MeasureRange`s exactly like
+      // 'measure' mode (a single-measure range at anchor time), but
+      // resolution (`resolveBarNumberSystemSelection`) expands both ends
+      // out to their whole *system* before selecting — every part, in
+      // every system from the anchor's system through the resolved second
+      // click's system — rather than stopping at the exact measure the
+      // second click landed in. See
+      // `bar-number-click-and-click-selects-whole-systems.feature`.
+      mode: 'bar-number-system'
+      anchor: MeasureRange
+      current: MeasureRange
+      anchorId: Extract<ClickableElementId, { kind: 'measure' }>
+    }
+  | {
       mode: 'note'
       anchor: DragPoint
       current: DragPoint

@@ -104,6 +104,37 @@ export function getBarNumberMeasureAtPoint(
  */
 const MEASURE_RANGE_SELECTOR = '[data-tag="measure"], [data-tag="bar-number"]'
 
+/**
+ * The `MeasureRange` of the whole *system* that `measureIndex` belongs to —
+ * used to expand a 'bar-number-system' gesture's endpoints out to their
+ * full system before selecting (see `resolveBarNumberSystemSelection`).
+ *
+ * Reads it off `[data-tag="part-label"]`'s own `measureIndexStart`/
+ * `measureIndexEnd` dataset pair rather than any dedicated "which system is
+ * this measure in" lookup — every part label in a given system shares that
+ * pair (one `PartLabelClickTarget` per part *per system*, see
+ * `previewLabelDragHighlights.ts`'s own doc comments), so scanning for the
+ * one whose range contains `measureIndex` reliably identifies its system.
+ * Returns `undefined` if no part label's range covers it (e.g. no parts are
+ * rendered at all) — callers fall back to the bare measure range instead.
+ */
+export function systemRangeContainingMeasure(
+  container: HTMLElement,
+  measureIndex: number,
+): MeasureRange | undefined {
+  for (const label of Array.from(
+    container.querySelectorAll<HTMLElement>('[data-tag="part-label"]'),
+  )) {
+    const { measureIndexStart, measureIndexEnd } = label.dataset
+    if (measureIndexStart === undefined || measureIndexEnd === undefined)
+      continue
+    const start = Number.parseInt(measureIndexStart, 10)
+    const end = Number.parseInt(measureIndexEnd, 10)
+    if (measureIndex >= start && measureIndex <= end) return { start, end }
+  }
+  return undefined
+}
+
 export function getMeasureAtPoint(
   x: number,
   y: number,

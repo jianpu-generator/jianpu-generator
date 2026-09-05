@@ -42,6 +42,11 @@ function anchorAndCommit(
   // so it's already armed by the time this self-commit's Monaco selection
   // round-trip debounces into `Preview.tsx`'s scroll-to-selection effect.
   args.suppressNextRevealRef.current = true
+  // Flips on the pending-second-click banner/color (see
+  // `HandlePreviewClickArgs`'s `onPendingSecondClickChange` doc comment)
+  // ahead of the self-commit below, same ordering rationale as
+  // `suppressNextRevealRef` above.
+  args.onPendingSecondClickChange?.(true)
   fireCommit(resolveSelection(newState, undefined, undefined, args), args)
 }
 
@@ -57,6 +62,7 @@ export function cancelAnchor(
 ): void {
   resolveSelection(dragState, undefined, undefined, args)
   dragStateRef.current = null
+  args.onPendingSecondClickChange?.(false)
 }
 
 /** Whether `(x, y)` doesn't land on anything this gesture can resolve a
@@ -161,16 +167,21 @@ function handleAnchorClick(
     return
   }
   // Grabbing a measure's own bar number (drawn in the directive row above)
-  // always anchors a measure-range selection too, no Cmd/Ctrl required —
-  // same rationale as the bar-line-handle check above: landing on the bar
-  // number itself is an unambiguous request to select that measure, unlike
-  // a click on a note/lyric/gutter pixel.
+  // always anchors a selection too, no Cmd/Ctrl required — same rationale
+  // as the bar-line-handle check above: landing on the bar number itself is
+  // an unambiguous request to select by measure/system, unlike a click on a
+  // note/lyric/gutter pixel. Anchors 'bar-number-system' rather than plain
+  // 'measure' mode, though: a bar number is the click-and-click gesture's
+  // system-selection entry point (see that mode's doc comment in
+  // `previewDragState.ts`), escalating a second click anywhere into "every
+  // part, every system from here through there" instead of stopping at the
+  // exact measure the second click landed in.
   const barNumberRange = getBarNumberMeasureAtPoint(e.clientX, e.clientY)
   if (barNumberRange !== undefined) {
     anchorAndCommit(
       dragStateRef,
       {
-        mode: 'measure',
+        mode: 'bar-number-system',
         anchor: barNumberRange,
         current: barNumberRange,
         anchorId: measureClickableElementId(barNumberRange),
@@ -273,6 +284,7 @@ function handleCommitClick(
   const point = { x: e.clientX, y: e.clientY }
   fireCommit(resolveSelection(dragState, point, undefined, args), args)
   dragStateRef.current = null
+  args.onPendingSecondClickChange?.(false)
   e.preventDefault()
 }
 

@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { LyricSpan, NoteSpan } from '../types'
 import type { ClickableElementId } from './clickableElementId'
 import { clickableElementIdFromElement } from './clickableElementId'
@@ -47,7 +47,7 @@ function hoveredElementId(
  * `event.target.closest('[data-tag]')` identifies the hovered element
  * directly off its own `data-*` attributes (`clickableElementIdFromElement`),
  * with no `elementFromPoint`/`elementsFromPoint` pixel scan — except for
- * 'measure' mode, the one documented exception (see
+ * 'measure' and 'bar-number-system' modes, the documented exceptions (see
  * `PLAN-clickable-element-id-selection.md`'s hover-migration entry and
  * `clickableElementIdFromElement`'s own doc comment for why a note/lyric's
  * click-target rect, being a DOM *sibling* of the measure/bar-line group
@@ -101,6 +101,33 @@ export function usePreviewClickSelection(
   // below.
   const suppressNextRevealRef = useRef(false)
 
+  // Whether a click-and-click gesture is anchored and waiting on its second
+  // click — real React state (unlike `dragStateRef` itself) since
+  // `Preview.tsx` needs a render to show/hide the "click again to select a
+  // range" banner. `previewClickHandler.ts`'s anchor/commit/cancel paths
+  // flip this via `onPendingSecondClickChange` (see `HandlePreviewClickArgs`)
+  // rather than `Preview.tsx` deriving it from `dragStateRef` itself, since a
+  // ref mutation alone triggers no re-render.
+  const [pendingSecondClick, setPendingSecondClick] = useState(false)
+
+  // Mirrors `pendingSecondClick` onto the preview container as a `data-*`
+  // attribute so `index.css` can paint the anchor's own highlight in a
+  // distinct "pending" color (`[data-pending-selection] ...`) instead of the
+  // normal committed-selection color — every mode's resolver ultimately
+  // paints through `applyPersistedNoteHighlights`/`applyPersistedLyricHighlights`
+  // (see `previewSelectionResolveModes.ts`/`previewSelectionResolveLabelModes.ts`),
+  // so a single ancestor attribute here covers all of them without touching
+  // each resolver individually.
+  useEffect(() => {
+    const container = previewPagesRef.current
+    if (!container) return
+    if (pendingSecondClick) {
+      container.dataset.pendingSelection = ''
+    } else {
+      delete container.dataset.pendingSelection
+    }
+  }, [pendingSecondClick, previewPagesRef])
+
   useEffect(() => {
     const container = previewPagesRef.current
     if (!container) return
@@ -109,6 +136,7 @@ export function usePreviewClickSelection(
       dragStateRef,
       suppressNextRevealRef,
       previewPagesRef,
+      onPendingSecondClickChange: setPendingSecondClick,
       noteSpans: noteSpansRef.current,
       lyricSpans: lyricSpansRef.current,
       onSectionLabelClick: undefined,
@@ -122,12 +150,18 @@ export function usePreviewClickSelection(
       if (!dragState) return
       const point = { x: e.clientX, y: e.clientY }
 
-      if (dragState.mode === 'measure') {
+      if (
+        dragState.mode === 'measure' ||
+        dragState.mode === 'bar-number-system'
+      ) {
         // The one exception to pure element delegation (see this hook's own
         // doc comment) — keeps the point-based `getMeasureAtPoint` lookup
         // `resolveSelection` itself would otherwise fall back to anyway, so
         // `dragState.current` (its own miss-fallback) stays fresh across
         // hover ticks the same way the old `mousemove` listener kept it.
+        // 'bar-number-system' shares this: it resolves off the same
+        // point→measure lookup before expanding to a system range, so it
+        // needs the identical hover-side priming.
         const range = getMeasureAtPoint(e.clientX, e.clientY)
         if (range !== undefined) dragState.current = range
         resolveSelection(dragState, point, undefined, argsForHover())
@@ -167,13 +201,27 @@ export function usePreviewClickSelection(
 
     container.addEventListener('mouseover', handleMouseOver)
     container.addEventListener('mouseout', handleMouseOut)
-    document.addEventListener('keydown', handleKeyDown)
+    // Capture phase, not bubble: a preview click never blurs Monaco (its
+    // `mousedown` handler calls `preventDefault()` — see
+    // `previewClickHandler.ts` — which suppresses the browser's default
+    // focus-shift-on-mousedown too), so the editor keeps focus through an
+    // entire click-and-click gesture. Monaco's own keybinding service
+    // intercepts Escape on its DOM node and stops it from bubbling, which
+    // would otherwise mean this listener never sees it. Capture fires
+    // top-down before that, so it sees Escape regardless of where in the
+    // page focus sits.
+    document.addEventListener('keydown', handleKeyDown, true)
     return () => {
       container.removeEventListener('mouseover', handleMouseOver)
       container.removeEventListener('mouseout', handleMouseOut)
-      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('keydown', handleKeyDown, true)
     }
   }, [previewPagesRef])
 
-  return { dragStateRef, suppressNextRevealRef }
+  return {
+    dragStateRef,
+    suppressNextRevealRef,
+    pendingSecondClick,
+    setPendingSecondClick,
+  }
 }

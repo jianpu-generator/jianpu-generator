@@ -18,6 +18,7 @@ import {
   resolvePartLabelSystemSelection,
 } from './previewSelectionResolveLabelModes'
 import {
+  resolveBarNumberSystemSelection,
   resolveLyricSelection,
   resolveMeasureSelection,
   resolveNoteSelection,
@@ -42,6 +43,16 @@ export interface HandlePreviewClickArgs {
    * click happens to still be sitting there. */
   suppressNextRevealRef: RefObject<boolean>
   previewPagesRef: RefObject<HTMLDivElement | null>
+  /** Notified `true` the instant a click-and-click gesture anchors (a first
+   * click sets `dragStateRef`) and `false` the instant it resolves — a
+   * second click's commit or a cancellation (empty-space click, Escape, a
+   * section-label jump interrupting it; see `cancelAnchor`). Drives both the
+   * "click again to select a range" banner and the pending-selection
+   * highlight color (see `data-pending-selection` in `index.css`) —
+   * `usePreviewClickSelection` owns the backing state and passes its setter
+   * through here so `previewClickHandler.ts`'s anchor/commit/cancel paths
+   * can flip it without needing React state of their own. */
+  onPendingSecondClickChange: ((pending: boolean) => void) | undefined
   noteSpans: NoteSpan[]
   lyricSpans: LyricSpan[]
   onSectionLabelClick: ((label: string) => void) | undefined
@@ -83,11 +94,11 @@ export interface ResolvedSelection {
  * `dragStateRef` — callers own that.
  *
  * Dispatches to one per-mode resolver — `resolveMeasureSelection`/
- * `resolveNoteSelection`/`resolveLyricSelection` in
- * `previewSelectionResolveModes.ts`, `resolvePartLabelSelection`/
- * `resolvePartLabelSystemSelection`/`resolveLyricLabelSelection` in
- * `previewSelectionResolveLabelModes.ts` — split out once each mode's own
- * branch grew too long to keep inline here.
+ * `resolveBarNumberSystemSelection`/`resolveNoteSelection`/
+ * `resolveLyricSelection` in `previewSelectionResolveModes.ts`,
+ * `resolvePartLabelSelection`/`resolvePartLabelSystemSelection`/
+ * `resolveLyricLabelSelection` in `previewSelectionResolveLabelModes.ts` —
+ * split out once each mode's own branch grew too long to keep inline here.
  */
 export function resolveSelection(
   dragState: NonNullable<PreviewDragState>,
@@ -106,6 +117,8 @@ export function resolveSelection(
   switch (dragState.mode) {
     case 'measure':
       return resolveMeasureSelection(dragState, args)
+    case 'bar-number-system':
+      return resolveBarNumberSystemSelection(dragState, args)
     case 'note':
       return resolveNoteSelection(dragState, args)
     case 'lyric':

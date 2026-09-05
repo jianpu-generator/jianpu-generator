@@ -20,6 +20,7 @@ import {
   lyricCellsInMeasureRange,
   type NoteCell,
   noteCellsInMeasureRange,
+  systemRangeContainingMeasure,
 } from './previewSelection'
 import type { ResolvedSelection } from './previewSelectionResolver'
 
@@ -40,6 +41,10 @@ export interface ResolveModeArgs {
 type MeasureDragState = Extract<
   NonNullable<PreviewDragState>,
   { mode: 'measure' }
+>
+type BarNumberSystemDragState = Extract<
+  NonNullable<PreviewDragState>,
+  { mode: 'bar-number-system' }
 >
 type NoteDragState = Extract<NonNullable<PreviewDragState>, { mode: 'note' }>
 type LyricDragState = Extract<NonNullable<PreviewDragState>, { mode: 'lyric' }>
@@ -81,6 +86,53 @@ export function resolveMeasureSelection(
     noteCells = noteCellsInMeasureRange(noteSpans, measureRange)
     lyricCells = lyricCellsInMeasureRange(lyricSpans, measureRange)
   }
+  if (container) {
+    applyPersistedNoteHighlights(container, noteCells)
+    applyPersistedLyricHighlights(container, lyricCells)
+  }
+  return { noteCells, lyricCells }
+}
+
+/**
+ * The bar-number-anchored sibling of `resolveMeasureSelection` above: instead
+ * of selecting the exact measure-index range between the anchor and the
+ * second click, expands *both* ends out to their own whole system first (via
+ * `systemRangeContainingMeasure`), then selects the union of every measure in
+ * between — every part, in every system from the anchor's system through the
+ * resolved second click's system, regardless of what the second click landed
+ * on (a note, a lyric syllable, another bar number, plain measure space —
+ * `getMeasureAtPoint` already resolves any of those to a measure index, see
+ * its own doc comment on scanning the full `elementsFromPoint` stack).
+ *
+ * Deliberately bypasses `resolve_selection_range`'s wasm path (unlike
+ * `resolveMeasureSelection`): that path only knows about the exact measure
+ * pair, not the system geometry doing the expansion here needs, and this
+ * mode's whole point is to escalate past it — mirroring
+ * `resolvePartLabelSystemSelection`'s own pure-TS, no-wasm resolution for the
+ * same reason.
+ */
+export function resolveBarNumberSystemSelection(
+  dragState: BarNumberSystemDragState,
+  { container, point, noteSpans, lyricSpans }: ResolveModeArgs,
+): ResolvedSelection {
+  const finalRange = point
+    ? (getMeasureAtPoint(point.x, point.y) ?? dragState.current)
+    : dragState.anchor
+
+  const anchorSystem =
+    (container &&
+      systemRangeContainingMeasure(container, dragState.anchor.start)) ||
+    dragState.anchor
+  const finalSystem =
+    (container && systemRangeContainingMeasure(container, finalRange.start)) ||
+    finalRange
+
+  const measureRange = {
+    start: Math.min(anchorSystem.start, finalSystem.start),
+    end: Math.max(anchorSystem.end, finalSystem.end),
+  }
+  const noteCells = noteCellsInMeasureRange(noteSpans, measureRange)
+  const lyricCells = lyricCellsInMeasureRange(lyricSpans, measureRange)
   if (container) {
     applyPersistedNoteHighlights(container, noteCells)
     applyPersistedLyricHighlights(container, lyricCells)
