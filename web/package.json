@@ -16,7 +16,6 @@
     "lint:ast-grep": "ast-grep scan --config sgconfig.yml src",
     "format": "biome format --write .",
     "preview": "vite preview",
-    "test:e2e": "bddgen && playwright test",
     "test:e2e:resolve": "node scripts/resolve-e2e-flakes.mjs",
     "test:unit": "vitest run"
   },

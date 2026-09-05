@@ -24,6 +24,10 @@ Do not manually run `cargo build`/`cargo test`/the e2e suite as a pre-commit che
 
 The pre-commit hook runs the full e2e (Playwright) suite plus cargo checks, which regularly takes a few minutes — longer than the default 2-minute Bash tool timeout. A plain `git commit` will hit that timeout even though the hook itself is still running to completion in the background. Always pass an explicit `timeout` of at least 300000ms (5 minutes), and prefer 480000ms (8 minutes) to be safe, on the `git commit` Bash call to avoid wasting a turn on a false timeout.
 
+## Running e2e tests
+
+Whenever you need to run Playwright e2e tests yourself — full suite or scoped with `--grep` — always run `cd web && pnpm test:e2e:resolve [-- --grep ...]`, never `pnpm test:e2e` or a raw `playwright test` invocation. The suite has known flaky tests; `test:e2e:resolve` (`web/scripts/resolve-e2e-flakes.mjs`) re-runs only the still-failing subset across passes until it settles, so you get a real pass/fail signal instead of getting stuck chasing flakes across manual re-runs. This applies everywhere e2e tests are run by hand, not just in the pre-commit hook.
+
 Avoid using uncommon abbreviations when naming (e.g. `TimedRdParser` for "recursive descent" — spell it out as `TimedRecursiveDescentParser` instead). Widely understood abbreviations (e.g. `Ast`, `Id`, `Http`) are fine.
 
 Test cases should not be inlined with the source code, they should live in separate files.
