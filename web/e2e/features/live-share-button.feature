@@ -82,6 +82,17 @@ Feature: Live share button
     Then the viewer's measure highlight is visible
     And the viewer's play-measure button reads "Measures 1-3"
 
+  Scenario: Tapping a single note in a live viewer only highlights that note, not its whole measure
+    Given clipboard permissions are granted
+    And the file store is seeded with a multi-measure live drag score
+    When the owner loads the app and clicks "Go Live"
+    Then a live-link-copied toast is shown
+    When a viewer opens the copied live link in a new page and waits for measures to render
+    Then the viewer's parts toolbar is visible and no Monaco editor is mounted
+    When the viewer taps the first note
+    Then the viewer's tapped note is highlighted
+    And the viewer's measure highlight is not shown
+
   Scenario: Re-going-live on the same file reproduces the same link, so it never needs re-sharing
     Given clipboard permissions are granted
     And local storage is cleared

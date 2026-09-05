@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { fileSwitcherTrigger, openFileActions } from '../../fileSwitcherHelpers'
 import { encodeShareHashOnPage, gotoShareUrl } from '../../shareUrlHelper'
 import { Given, Then, When } from './fixtures'
@@ -183,6 +184,70 @@ Then('the pane-divider toggle is visible again', async ({ page }) => {
   // user re-expand the editor pane manually.
   await expect(page.locator('.pane-divider-toggle')).toBeVisible()
 })
+
+// A self-contained single-measure score, distinct from `SHARED_SOURCE`
+// above: every data line here is `[Melody]`-prefixed (see syntax.md's "Every
+// data line must begin with `[Abbrev]`"), so the note actually renders
+// instead of erroring out as a positional-lyrics line with no preceding
+// `[Key]` line.
+const NOTE_TAP_SHARED_SOURCE = [
+  '# metadata',
+  'title = "Shared Score"',
+  '',
+  '# parts',
+  'Melody = notes',
+  '',
+  '# score',
+  'time=4/4 key=C4 bpm=120',
+  '[Melody] 1 2 3 4',
+].join('\n')
+
+When(
+  'I open a shared preview with a valid tappable note, as seen in share',
+  async ({ page }) => {
+    await gotoShareUrl(page, SHARED_FILENAME, NOTE_TAP_SHARED_SOURCE)
+  },
+)
+
+When('I tap the first note, as seen in share', async ({ page }) => {
+  await page.waitForSelector('[data-tag="measure"][data-measure-index="0"]', {
+    timeout: 15_000,
+  })
+  const noteRect = page
+    .locator('rect[data-variant="note-click-target-rect"]')
+    .first()
+  await expect(noteRect).toBeVisible()
+  const box = await stableBoundingBox(noteRect)
+  if (!box) throw new Error('Could not get bounding box for the first note.')
+  // A single click-and-click at the same point selects just that one note
+  // (see `clickAndClickSelect`'s doc comment) — the regression this guards
+  // against is a plain tap also painting the whole-measure amber overlay in
+  // this no-mounted-editor viewer (see `fireCommit`'s and
+  // `useMeasureRangeSelection`'s doc comments).
+  await clickAndClickSelect(
+    page,
+    box.x + box.width / 2,
+    box.y + box.height / 2,
+    box.x + box.width / 2,
+    box.y + box.height / 2,
+  )
+})
+
+Then('the tapped note is highlighted, as seen in share', async ({ page }) => {
+  await expect(
+    page.locator('[data-tag="note"][data-note-drag-selected]'),
+  ).toHaveCount(1, { timeout: 5_000 })
+})
+
+Then(
+  'the measure highlight is not shown, as seen in share',
+  async ({ page }) => {
+    await page.waitForTimeout(1000)
+    await expect(
+      page.locator('.preview-page [data-testid="measure-highlight"]'),
+    ).toHaveCount(0)
+  },
+)
 
 Then('the share button shows {string}', async ({ page }, text: string) => {
   await expect(page.getByTestId('share-button')).toHaveText(text)

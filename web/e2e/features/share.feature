@@ -36,6 +36,13 @@ Feature: Share links
     When I navigate to a legacy uncompressed share link for "shared-test.jianpu"
     Then the shared preview banner shows "shared-test.jianpu"
 
+  Scenario: Tapping a single note in a shared preview only highlights that note, not its whole measure
+    Given local storage is cleared, as seen in share
+    When I open a shared preview with a valid tappable note, as seen in share
+    When I tap the first note, as seen in share
+    Then the tapped note is highlighted, as seen in share
+    And the measure highlight is not shown, as seen in share
+
   Scenario: Share button copies a compressed link that opens as a preview
     Given clipboard permissions are granted, as seen in share
     And a user file "shared-test.jianpu" is seeded in local storage

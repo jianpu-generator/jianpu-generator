@@ -125,6 +125,42 @@ Then("the viewer's measure highlight is visible", async () => {
   ).toBeVisible({ timeout: 5_000 })
 })
 
+When('the viewer taps the first note', async ({}) => {
+  if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
+  const noteRect = state.viewerPage
+    .locator('rect[data-variant="note-click-target-rect"]')
+    .first()
+  await expect(noteRect).toBeVisible()
+  const box = await stableBoundingBox(noteRect)
+  if (!box) throw new Error('Could not get bounding box for the first note.')
+  // A single click-and-click at the same point selects just that one note
+  // (see `clickAndClickSelect`'s doc comment) — the regression this guards
+  // against is a plain tap also painting the whole-measure amber overlay in
+  // this no-mounted-editor viewer (see `fireCommit`'s and
+  // `useMeasureRangeSelection`'s doc comments).
+  await clickAndClickSelect(
+    state.viewerPage,
+    box.x + box.width / 2,
+    box.y + box.height / 2,
+    box.x + box.width / 2,
+    box.y + box.height / 2,
+  )
+})
+
+Then("the viewer's tapped note is highlighted", async () => {
+  if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
+  await expect(
+    state.viewerPage.locator('[data-tag="note"][data-note-drag-selected]'),
+  ).toHaveCount(1, { timeout: 5_000 })
+})
+
+Then("the viewer's measure highlight is not shown", async () => {
+  if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
+  await expect(
+    state.viewerPage.locator('.preview-page [data-testid="measure-highlight"]'),
+  ).toHaveCount(0)
+})
+
 Then(
   "the viewer's play-measure button reads {string}",
   async ({}, label: string) => {

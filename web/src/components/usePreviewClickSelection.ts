@@ -77,6 +77,7 @@ export function usePreviewClickSelection(
   onMeasureRangeSelect?: (
     noteCells: NoteCell[],
     lyricCells: LyricCell[],
+    mode: NonNullable<PreviewDragState>['mode'],
   ) => void,
 ) {
   // The mouseover/mouseout/keydown handlers below live in a

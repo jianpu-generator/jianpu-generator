@@ -42,7 +42,11 @@ function anchorAndCommit(
   // so it's already armed by the time this self-commit's Monaco selection
   // round-trip debounces into `Preview.tsx`'s scroll-to-selection effect.
   args.suppressNextRevealRef.current = true
-  fireCommit(resolveSelection(newState, undefined, undefined, args), args)
+  fireCommit(
+    resolveSelection(newState, undefined, undefined, args),
+    newState.mode,
+    args,
+  )
 }
 
 /** Resets `dragStateRef` to idle and re-applies the highlight `dragState`'s
@@ -276,7 +280,11 @@ function handleCommitClick(
     return
   }
   const point = { x: e.clientX, y: e.clientY }
-  fireCommit(resolveSelection(dragState, point, undefined, args), args)
+  fireCommit(
+    resolveSelection(dragState, point, undefined, args),
+    dragState.mode,
+    args,
+  )
   dragStateRef.current = null
   e.preventDefault()
 }
