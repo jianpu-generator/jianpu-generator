@@ -57,3 +57,9 @@ Feature: Section jump select
     When I click the section label "B" in the SVG preview
     Then the section jump selected measure range is "2-3"
     And the section jump Monaco selection spans lines 13 to 16
+
+  Scenario: Clicking a bar line then a section label in the SVG preview still jumps to that section
+    When I click a bar line in the SVG preview
+    And I click the section label "B" in the SVG preview
+    Then the section jump selected measure range is "2-3"
+    And the section jump Monaco selection spans lines 13 to 16

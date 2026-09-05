@@ -70,7 +70,6 @@ export function cancelAnchor(
  * comment): missing every specific target cancels the gesture even if the
  * point is still inside some measure's bounding box. */
 function isEmptySpace(x: number, y: number): boolean {
-  if (getSectionLabelAtPoint(x, y) !== undefined) return false
   if (getPartLabelAtPoint(x, y) !== undefined) return false
   if (getLyricLabelAtPoint(x, y) !== undefined) return false
   if (getBarLineMeasureAtPoint(x, y) !== undefined) return false
@@ -81,22 +80,18 @@ function isEmptySpace(x: number, y: number): boolean {
 }
 
 /** The first click of a click-and-click gesture: figures out what got
- * clicked (a section label, a part/lyric label, a note/chord, a lyric
- * syllable, or plain measure space), anchors `dragStateRef` with the mode
- * that gesture should carry through, and self-commits that single-target
- * selection immediately (see `anchorAndCommit`). `handlePreviewClick`
- * dispatches here when `dragStateRef` is idle. */
+ * clicked (a part/lyric label, a note/chord, a lyric syllable, or plain
+ * measure space — a section label is handled ahead of this, in
+ * `handlePreviewClick` itself, since it's never part of the click-and-click
+ * gesture below), anchors `dragStateRef` with the mode that gesture should
+ * carry through, and self-commits that single-target selection immediately
+ * (see `anchorAndCommit`). `handlePreviewClick` dispatches here when
+ * `dragStateRef` is idle. */
 function handleAnchorClick(
   e: MouseEvent<HTMLDivElement>,
   args: HandlePreviewClickArgs,
 ): void {
-  const { dragStateRef, onSectionLabelClick } = args
-  const sectionLabel = getSectionLabelAtPoint(e.clientX, e.clientY)
-  if (sectionLabel !== undefined) {
-    onSectionLabelClick?.(sectionLabel)
-    e.preventDefault()
-    return
-  }
+  const { dragStateRef } = args
   const partLabel = getPartLabelAtPoint(e.clientX, e.clientY)
   if (partLabel !== undefined) {
     const point = { x: e.clientX, y: e.clientY }
@@ -293,6 +288,15 @@ function handleCommitClick(
  * `mousedown`/`mouseup` with no intervening movement, so the same two
  * dispatches cover both input types.
  *
+ * A section label is checked ahead of both, unconditionally — it's a jump
+ * to somewhere else entirely, never one of the click-and-click gesture's own
+ * targets, so it always fires `onSectionLabelClick` immediately rather than
+ * anchoring or (if a gesture is already anchored) getting swallowed as that
+ * gesture's second click. An anchored gesture is cancelled first (mirroring
+ * Escape — see `cancelAnchor`), reverting to whatever the anchoring click
+ * already committed, since the section jump replaces it rather than
+ * extending it.
+ *
  * Wired to `mousedown` rather than the browser's synthesized `click` event
  * deliberately: on this codebase's target platforms, a Cmd/Ctrl-held primary
  * click doesn't reliably fire `click` at all (it's the OS-level secondary-
@@ -306,7 +310,16 @@ export function handlePreviewClick(
   e: MouseEvent<HTMLDivElement>,
   args: HandlePreviewClickArgs,
 ): void {
-  const dragState = args.dragStateRef.current
+  const { dragStateRef, onSectionLabelClick } = args
+  const sectionLabel = getSectionLabelAtPoint(e.clientX, e.clientY)
+  if (sectionLabel !== undefined) {
+    const dragState = dragStateRef.current
+    if (dragState !== null) cancelAnchor(dragStateRef, dragState, args)
+    onSectionLabelClick?.(sectionLabel)
+    e.preventDefault()
+    return
+  }
+  const dragState = dragStateRef.current
   if (dragState === null) {
     handleAnchorClick(e, args)
     return

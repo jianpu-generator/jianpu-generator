@@ -212,6 +212,23 @@ When('I release the mouse button', async ({ page }) => {
   await page.mouse.up()
 })
 
+// Anchors an ordinary click-and-click 'measure' gesture (see
+// `previewClickHandler.ts`'s `handleAnchorClick`) by clicking a bar line, so
+// the next step's section label click lands while `dragStateRef` is still
+// non-null — reproducing the "section label click swallowed as this
+// gesture's second click" regression instead of the always-idle state every
+// other scenario here starts from. (A note click would anchor the same way,
+// but this fixture's part uses the bare "M = notes"/unprefixed-line shorthand,
+// which renders no individual note click targets — bar lines always get
+// one regardless.)
+When('I click a bar line in the SVG preview', async ({ page }) => {
+  const barLine = page
+    .locator('rect[data-variant="bar-line-click-target-rect"]')
+    .first()
+  await expect(barLine).toHaveCount(1, { timeout: 15_000 })
+  await barLine.click()
+})
+
 When(
   'I click the section label {string} in the SVG preview',
   async ({ page }, label: string) => {
