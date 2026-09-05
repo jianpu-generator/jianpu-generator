@@ -160,10 +160,8 @@ export function AppHeader({
   const { sharedPreview, viewerActive: liveViewerActive } = liveShare
   return (
     <header className="app-header">
-      <h1>簡譜</h1>
       {sharedPreview ? (
         <SharedPreviewBanner
-          filename={sharedPreview.filename}
           onImport={liveShare.onImportShared}
           onDiscard={liveShare.onDismissShared}
         />
@@ -198,7 +196,7 @@ export function AppHeader({
           shortcutLabel={shortcutLabel}
         />
       )}
-      {audioAvailable && (
+      {audioAvailable && selectedSequenceRange !== null && (
         <PlayFromCurrentMeasureButton
           disabled={
             selectedSequenceRange === null ||

@@ -41,10 +41,12 @@ Given(
     }, source)
 
     await page.goto('/')
-    await page.waitForSelector(
-      '[data-testid="play-from-current-measure-button"]',
-      { timeout: 15_000 },
-    )
+    // The play-from-current-measure button only renders once a sequence
+    // toolbar entry is selected, so wait on a button that's always present
+    // to confirm the app has finished loading.
+    await page.waitForSelector('[data-testid="play-measure-button"]', {
+      timeout: 15_000,
+    })
   },
 )
 

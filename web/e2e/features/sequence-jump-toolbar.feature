@@ -7,7 +7,7 @@ Feature: Sequence jump toolbar
     Then the sequence toolbar shows buttons "A, B, B" in order
 
   Scenario: Clicking the "A" entry enables playback from measure 1
-    Then the play-from-current-measure button is disabled
+    Then the play-from-current-measure button is hidden
     When I click the sequence toolbar button at index 0
     Then the play-from-current-measure button aria-label says "Play sequence from Measure 1"
 

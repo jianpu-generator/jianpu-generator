@@ -65,12 +65,12 @@ Given(
 
     await page.goto('/')
 
-    // The play-from-current-measure button only renders once audio is
-    // available (i.e. the worker has finished processing the source).
-    await page.waitForSelector(
-      '[data-testid="play-from-current-measure-button"]',
-      { timeout: 15_000 },
-    )
+    // The play-from-current-measure button only renders once a sequence
+    // entry is selected, so wait on a button that's always present (once
+    // audio is available) to confirm the app has finished loading.
+    await page.waitForSelector('[data-testid="play-measure-button"]', {
+      timeout: 15_000,
+    })
     // Sequence buttons appear once the worker returns resolved sequence
     // entries, which lands slightly after the play button.
     await expect(sequenceToolbarButtons(page)).toHaveCount(3, {
@@ -90,9 +90,9 @@ Then(
   },
 )
 
-Then('the play-from-current-measure button is disabled', async ({ page }) => {
+Then('the play-from-current-measure button is hidden', async ({ page }) => {
   const playBtn = page.getByTestId('play-from-current-measure-button')
-  await expect(playBtn).toBeDisabled()
+  await expect(playBtn).toHaveCount(0)
 })
 
 When(
