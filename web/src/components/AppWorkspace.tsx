@@ -1,3 +1,4 @@
+import * as Tooltip from '@radix-ui/react-tooltip'
 import { AlignLeft } from 'lucide-react'
 import type { RefObject } from 'react'
 import { useEffect, useState } from 'react'
@@ -21,6 +22,7 @@ import type {
 } from '../utils/metadataSource'
 import { EditMetadataModal } from './EditMetadataModal'
 import { Editor } from './Editor'
+import { EditorToolbarButton } from './EditorToolbarButton'
 import { EditPartsModal } from './EditPartsModal'
 import type { LyricCell, NoteCell } from './Preview'
 import { Preview } from './Preview'
@@ -254,6 +256,15 @@ export function AppWorkspace({
                 path={fileId}
                 value={source}
                 onChange={handleSourceChange}
+                toolbar={
+                  <Tooltip.Provider delayDuration={0}>
+                    <EditorToolbarButton
+                      label="Format score"
+                      icon={<AlignLeft size={14} aria-hidden="true" />}
+                      onClick={handleFormatScore}
+                    />
+                  </Tooltip.Provider>
+                }
                 readOnly={readOnly}
                 diagnostics={diagnostics}
                 diagnosticViewZones={diagnosticViewZones}
@@ -307,15 +318,6 @@ export function AppWorkspace({
       <div className="pane-divider">
         {hideEditor ? null : (
           <div className="pane-divider-toggles">
-            <button
-              type="button"
-              className="pane-divider-format-toggle"
-              onClick={handleFormatScore}
-              title="Format score"
-              aria-label="Format score"
-            >
-              <AlignLeft size={12} aria-hidden="true" />
-            </button>
             <button
               type="button"
               className="pane-divider-toggle"

@@ -94,7 +94,7 @@ When(
 )
 
 When('I click the format-score toolbar toggle', async ({ page }) => {
-  await page.click('.pane-divider-format-toggle')
+  await page.click('.editor-toolbar-button[aria-label="Format score"]')
 })
 
 Then(
