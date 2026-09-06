@@ -282,6 +282,14 @@ function handleCommitClick(
     return
   }
   const point = { x: e.clientX, y: e.clientY }
+  // Arms the one-shot reveal suppression (see `HandlePreviewClickArgs`'s
+  // `suppressNextRevealRef` doc comment and `anchorAndCommit`'s identical
+  // arming above) — without this, this second click's own self-committed
+  // Monaco selection round-trips back through `Preview.tsx`'s
+  // scroll-to-selection effect and re-scrolls the SVG to the range this
+  // click just made, fighting whatever scroll position the user is already
+  // looking at.
+  args.suppressNextRevealRef.current = true
   fireCommit(resolveSelection(dragState, point, undefined, args), args)
   dragStateRef.current = null
   args.onPendingSecondClickChange?.(false)

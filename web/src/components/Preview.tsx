@@ -150,6 +150,9 @@ export function Preview({
   noteSpansRef.current = noteSpans
   const lyricSpansRef = useRef(lyricSpans)
   lyricSpansRef.current = lyricSpans
+  // See the scroll-to-selection effect below for why this exists alongside
+  // `suppressNextRevealRef`.
+  const suppressedRangeRef = useRef<typeof selectedMeasureRange>(null)
 
   // wavUrl/mp3Url are mutually exclusive (see `useJianpuWorkerAudioActions`),
   // so whichever is set is the one inline player below renders. noteTimings
@@ -217,13 +220,36 @@ export function Preview({
   // on that directly would keep suppressing every *later*, unrelated reveal
   // too, for as long as an old anchor from a single, never-followed-up
   // click happens to still be sitting there.
+  //
+  // The one-shot flag alone isn't enough, though: `selectedMeasureRange`
+  // landing is only the *first* of potentially several effect re-runs that
+  // one self-commit sets off — `useJianpuWorkerRenderRequests`'s
+  // highlight-render effect reacts to that same `selectedMeasureRange`
+  // change and (whether or not it ends up posting a worker request) calls
+  // `setHighlightedDocuments`, which is this effect's other dependency and
+  // so re-runs it a second time with the flag already consumed. Consuming
+  // the flag once would let that second run scroll unsuppressed, right back
+  // to wherever the (empty, until this commit) `selectedMeasureRange` was
+  // last pointing — see `click-and-click-range-selection-preserves-scroll.feature`'s
+  // regression coverage. `suppressedRangeRef` remembers *which*
+  // `selectedMeasureRange` the flag was armed for and keeps suppressing
+  // every re-run that still carries that same reference, however many
+  // ticks the commit's `documents`/`highlightedDocuments` settling takes —
+  // only a genuinely different `selectedMeasureRange` (a new, unrelated
+  // selection) clears it and lets reveals resume.
   // biome-ignore lint/correctness/useExhaustiveDependencies: documents/highlightedDocuments aren't read in the body, but must stay listed so this re-runs after they swap in fresh SVG DOM (see comment above effect near the top of this file).
   useEffect(() => {
-    if (selectedMeasureRange === null) return
-    if (suppressNextRevealRef.current) {
-      suppressNextRevealRef.current = false
+    if (selectedMeasureRange === null) {
+      suppressedRangeRef.current = null
       return
     }
+    if (suppressNextRevealRef.current) {
+      suppressNextRevealRef.current = false
+      suppressedRangeRef.current = selectedMeasureRange
+      return
+    }
+    if (suppressedRangeRef.current === selectedMeasureRange) return
+    suppressedRangeRef.current = null
     const targetMeasureIndex = selectedMeasureRange.revealMeasureIndex
 
     const frameId = requestAnimationFrame(() => {
