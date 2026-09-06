@@ -43,10 +43,10 @@ export default function App() {
     handleDelete,
     handleRestore,
     sharedPreview,
-    liveViewerActive,
+    syncedShareViewerActive,
     source,
     readOnly,
-    liveShare,
+    syncedShare,
     fileId,
     editorRef,
     soundfont,
@@ -233,7 +233,7 @@ export default function App() {
         partsCount={parts.length}
         importing={importingFile}
         onImportFile={handleImportFile}
-        liveShare={liveShare}
+        syncedShare={syncedShare}
       />
       <AppOverlays
         fileOpError={fileOpError}
@@ -287,7 +287,7 @@ export default function App() {
       <AppWorkspace
         editorCollapsed={editorCollapsed}
         setEditorCollapsed={setEditorCollapsed}
-        hideEditor={sharedPreview !== null || liveViewerActive}
+        hideEditor={sharedPreview !== null || syncedShareViewerActive}
         editorRef={editorRef}
         fileId={fileId}
         source={source}

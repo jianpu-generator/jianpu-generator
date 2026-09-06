@@ -3,19 +3,20 @@ import { clickAndClickSelect, stableBoundingBox } from '../../dragSelectHelpers'
 import { fileSwitcherTrigger } from '../../fileSwitcherHelpers'
 import { Then, When } from './fixtures'
 import {
-  LIVE_FILENAME,
-  liveShareButtonState as state,
-} from './live-share-button-state'
+  SYNCED_FILENAME,
+  syncedShareButtonState as state,
+} from './synced-share-button-state'
 
 When(
-  'a separate browser context opens the copied live link as a viewer',
+  'a separate browser context opens the copied sync link as a viewer',
   async ({ browser }) => {
-    if (!state.liveUrl) throw new Error('liveUrl was not captured yet')
+    if (!state.syncedShareLink)
+      throw new Error('syncedShareLink was not captured yet')
     // A separate browser context, since a real viewer is a different browser
     // that doesn't share the owner's localStorage.
     state.viewerContext = await browser.newContext()
     state.viewerPage = await state.viewerContext.newPage()
-    await state.viewerPage.goto(state.liveUrl)
+    await state.viewerPage.goto(state.syncedShareLink)
     await state.viewerPage.waitForSelector('.preview-page', {
       timeout: 15_000,
     })
@@ -39,19 +40,20 @@ Then("the viewer's page URL has no hash", async () => {
   expect(new URL(state.viewerPage.url()).hash).toEqual('')
 })
 
-Then("the viewer's file switcher shows the live filename", async () => {
+Then("the viewer's file switcher shows the synced filename", async () => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
   await expect(fileSwitcherTrigger(state.viewerPage)).toContainText(
-    LIVE_FILENAME.replace(/\.jianpu$/, ''),
+    SYNCED_FILENAME.replace(/\.jianpu$/, ''),
   )
 })
 
 When(
-  'a viewer opens the copied live link in a new page and waits for measures to render',
+  'a viewer opens the copied sync link in a new page and waits for measures to render',
   async ({ context }) => {
-    if (!state.liveUrl) throw new Error('liveUrl was not captured yet')
+    if (!state.syncedShareLink)
+      throw new Error('syncedShareLink was not captured yet')
     state.viewerPage = await context.newPage()
-    await state.viewerPage.goto(state.liveUrl)
+    await state.viewerPage.goto(state.syncedShareLink)
     await state.viewerPage.waitForSelector(
       '[data-tag="measure"][data-measure-index="2"]',
       { timeout: 15_000 },
@@ -70,7 +72,7 @@ Then(
       state: 'visible',
       timeout: 15_000,
     })
-    // `liveViewerActive` (and the `hideEditor` it drives) flips true async,
+    // `syncedShareViewerActive` (and the `hideEditor` it drives) flips true async,
     // just after the score itself renders — wait for the Editor to actually
     // unmount before dragging, otherwise the drag can race a still-mounted
     // Editor and take the Monaco-selection path this test isn't about.
@@ -164,7 +166,7 @@ When(
     if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
     // Mirrors `section-jump-select.steps.ts`'s same-named step against the
     // owner's page — the SVG's `<g data-tag="section-label">` group is
-    // clickable identically in a no-mounted-editor Live/shared viewer.
+    // clickable identically in a no-mounted-editor Synced/shared viewer.
     const svgLabel = state.viewerPage
       .locator(
         `.preview-pages g[data-tag="section-label"][data-section-label="${label}"]`,
@@ -177,7 +179,7 @@ When(
 
 Then("the viewer's note highlight is cleared", async () => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
-  // Regression coverage for the no-mounted-editor (Live/shared) analogue of
+  // Regression coverage for the no-mounted-editor (Synced/shared) analogue of
   // the section-label-swallow bug: a bar-line tap anchors 'measure' mode and
   // paints its own blue note highlight via `measureRangeNoteCells` (see
   // `useMeasureRangeSelection`'s doc comment); clicking a section label right

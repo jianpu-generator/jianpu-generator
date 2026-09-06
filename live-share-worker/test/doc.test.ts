@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { applyWrite, EMPTY_DOC, type StoredDoc, toPublicDoc } from '../src/doc'
 
 describe('toPublicDoc', () => {
-  it('reads a never-shared room the same as one that was shared then stopped', () => {
+  it('reads a share with no KV entry yet the same as one that was shared then stopped', () => {
     expect(toPublicDoc(null)).toEqual(EMPTY_DOC)
   })
 
@@ -24,7 +24,7 @@ describe('toPublicDoc', () => {
 })
 
 describe('applyWrite', () => {
-  it("lets the first update on a room claim ownership and store the doc", () => {
+  it("lets the first update on a share claim ownership and store the doc", () => {
     const result = applyWrite(null, {
       type: 'update',
       ownerToken: 'token-a',
@@ -83,7 +83,7 @@ describe('applyWrite', () => {
     })
   })
 
-  it('marks the room ended on stop, keeping the doc so a later update reproduces it', () => {
+  it('marks the share ended on stop, keeping the doc so a later update reproduces it', () => {
     const existing: StoredDoc = {
       ownerToken: 'token-a',
       ended: false,

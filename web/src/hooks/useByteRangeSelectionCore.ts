@@ -33,7 +33,7 @@ export interface ByteRangeSelectionCore<Cell, Run> {
   applySelectionSilently: (cells: Cell[], runs: Run[]) => void
   /** Resets `selectedCells`/`runs` back to empty with no Monaco round-trip —
    * for a caller that needs to drop a stale no-mounted-editor highlight this
-   * core is still holding (e.g. a section/sequence jump in a Live/shared
+   * core is still holding (e.g. a section/sequence jump in a Synced/shared
    * view, which replaces whatever a prior note/lyric tap left painted rather
    * than extending it). A no-op once an editor is mounted, since that path
    * never leaves a highlight this core owns lying around uncleared. */
@@ -55,7 +55,7 @@ export interface ByteRangeSelectionCore<Cell, Run> {
  *
  * @param spans The full flat span list (`NoteSpan[]`/`LyricSpan[]`) selected
  *   cells are resolved against.
- * @param editorRef The mounted editor, if any — `null` in Live/shared views.
+ * @param editorRef The mounted editor, if any — `null` in Synced/shared views.
  * @param groupSelectedCellsIntoRuns Groups selected cells into contiguous
  *   byte runs (the wasm `group_note_selection`/`group_lyric_selection` call).
  * @param cellFromSpan Builds a `Cell` from one span — used by
@@ -63,7 +63,7 @@ export interface ByteRangeSelectionCore<Cell, Run> {
  * @param runByteRange Extracts a `Run`'s byte range, for pushing into Monaco.
  * @param onNoMountedEditor Called with the freshly-grouped runs when no
  *   editor is mounted, instead of pushing a Monaco selection — e.g.
- *   `useNoteSelection`'s Live/shared-view fallback to a plain measure-range
+ *   `useNoteSelection`'s Synced/shared-view fallback to a plain measure-range
  *   selection. `useLyricSelection` passes none, preserving its no-op
  *   behavior in that case.
  */
@@ -95,7 +95,7 @@ export function useByteRangeSelectionCore<
     async (cells: Cell[]) => {
       const newRuns = await groupSelectedCellsIntoRuns(cells, spans)
       if (!editorRef.current) {
-        // No mounted editor (e.g. a Live/shared view): a caller supplying
+        // No mounted editor (e.g. a Synced/shared view): a caller supplying
         // `onNoMountedEditor` handles this case entirely itself (see
         // `useNoteSelection`'s measure-range fallback) and deliberately
         // leaves `selectedCells`/`runs` untouched rather than reflecting a

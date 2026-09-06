@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FileStoreState } from '../fileStore'
 import { selectFile } from '../fileStore'
-import { parseLiveShareFromHash } from '../liveShareUrl'
+import { parseSyncedShareFromHash } from '../syncedShareUrl'
 import { readFileNameFromUrl, writeFileNameToUrl } from '../urlFileParam'
 
 /**
@@ -19,9 +19,9 @@ import { readFileNameFromUrl, writeFileNameToUrl } from '../urlFileParam'
  * active file, never a stale default it would otherwise briefly (or, if the
  * URL's file turns out not to exist, permanently) overwrite the URL with.
  *
- * Skipped entirely while a `#live=` link is open: a viewer's `store.active`
+ * Skipped entirely while a `#synced=` link is open: a viewer's `store.active`
  * is just whatever local file happened to be selected before/independent of
- * the live session, and it must not leak into the address bar as `?file=`.
+ * the synced share, and it must not leak into the address bar as `?file=`.
  */
 export function useUrlFileSync(
   store: FileStoreState,
@@ -32,19 +32,23 @@ export function useUrlFileSync(
 ): void {
   const initialUrlFileAppliedRef = useRef(false)
   const [initialSelectionReady, setInitialSelectionReady] = useState(false)
-  const isLiveViewer = parseLiveShareFromHash() !== null
+  const isSyncedShareViewer = parseSyncedShareFromHash() !== null
 
   useEffect(() => {
-    if (initialUrlFileAppliedRef.current || isLoadingGithub || isLiveViewer)
+    if (
+      initialUrlFileAppliedRef.current ||
+      isLoadingGithub ||
+      isSyncedShareViewer
+    )
       return
     initialUrlFileAppliedRef.current = true
     const urlFile = readFileNameFromUrl()
     if (urlFile) setStore((prev) => selectFile(prev, urlFile))
     setInitialSelectionReady(true)
-  }, [isLoadingGithub, isLiveViewer, setStore])
+  }, [isLoadingGithub, isSyncedShareViewer, setStore])
 
   useEffect(() => {
-    if (!initialSelectionReady || isLiveViewer) return
+    if (!initialSelectionReady || isSyncedShareViewer) return
     writeFileNameToUrl(store.active)
-  }, [initialSelectionReady, isLiveViewer, store.active])
+  }, [initialSelectionReady, isSyncedShareViewer, store.active])
 }

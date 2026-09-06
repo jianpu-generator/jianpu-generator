@@ -1,18 +1,18 @@
 import { applyWrite, type StoredDoc, toPublicDoc } from './doc'
-import type { LiveWriteRequest } from './protocol'
+import type { SyncedWriteRequest } from './protocol'
 
 export interface Env {
   SHARES: KVNamespace
 }
 
-// e.g. `/rooms/AbCdEfGhIjK` — see `ROOM_ID_PATTERN` in
-// `web/src/liveShareUrl.ts` for the id shape this must accept.
-const ROOM_PATH = /^\/rooms\/([0-9A-Za-z_-]+)$/
+// e.g. `/shares/AbCdEfGhIjK` — see `SHARE_ID_PATTERN` in
+// `web/src/syncedShareUrl.ts` for the id shape this must accept.
+const SHARE_PATH = /^\/shares\/([0-9A-Za-z_-]+)$/
 
 // The web app calls this worker cross-origin (a different host than the
 // site itself), so every response — including the preflight this triggers
 // for `POST`'s JSON body — needs these. `*` is fine: there's no cookie/
-// session auth here, just an unguessable room id plus a bearer-style
+// session auth here, just an unguessable share id plus a bearer-style
 // `ownerToken` in the request body, neither of which `Access-Control-
 // Allow-Origin` exposes to a origin that doesn't already have them.
 const CORS_HEADERS = {
@@ -29,8 +29,8 @@ function withCors(response: Response): Response {
   return new Response(response.body, { status: response.status, headers })
 }
 
-function roomKey(roomId: string): string {
-  return `room:${roomId}`
+function shareKey(shareId: string): string {
+  return `share:${shareId}`
 }
 
 export default {
@@ -40,9 +40,9 @@ export default {
     }
 
     const url = new URL(request.url)
-    const match = ROOM_PATH.exec(url.pathname)
+    const match = SHARE_PATH.exec(url.pathname)
     if (!match) return withCors(new Response('Not Found', { status: 404 }))
-    const key = roomKey(match[1])
+    const key = shareKey(match[1])
 
     if (request.method === 'GET') {
       const stored = await env.SHARES.get<StoredDoc>(key, 'json')
@@ -50,7 +50,7 @@ export default {
     }
 
     if (request.method === 'POST') {
-      let body: LiveWriteRequest
+      let body: SyncedWriteRequest
       try {
         body = await request.json()
       } catch {

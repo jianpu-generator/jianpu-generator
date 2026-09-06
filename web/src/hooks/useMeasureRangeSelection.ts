@@ -33,7 +33,7 @@ export interface UseMeasureRangeSelectionResult {
   /** Resets `measureRangeNoteCells`/`measureRangeLyricCells` back to empty —
    * for a caller that needs to drop a stale no-mounted-editor measure/
    * bar-line highlight this hook is still holding (e.g. a section/sequence
-   * jump in a Live/shared view; see those hooks' own callers). A no-op once
+   * jump in a Synced/shared view; see those hooks' own callers). A no-op once
    * an editor is mounted, since that path never populates these in the first
    * place. */
   clearMeasureRangeSelection: () => void
@@ -86,7 +86,7 @@ export function useMeasureRangeSelection(
   const handleMeasureRangeSelect = useCallback(
     async (noteCells: NoteCell[], lyricCells: LyricCell[]) => {
       if (!editorRef.current) {
-        // No mounted editor (Live/shared view) — deliberately doesn't route
+        // No mounted editor (Synced/shared view) — deliberately doesn't route
         // through `handleNoteRangeSelect`/`handleLyricRangeSelect` here (each
         // would populate `selectedCells`, flipping `noteSelectionActive` on
         // and hijacking the play-measure button's "Measures N–M" label into
@@ -102,7 +102,7 @@ export function useMeasureRangeSelection(
         // `selectedMeasureRange` for the play-measure button's "Measures
         // N–M" label/badge and playback range, but never paints the amber
         // background itself (see the mobile bug report this comment
-        // accompanies: a bar-line tap in a mobile Live/shared viewer
+        // accompanies: a bar-line tap in a mobile Synced/shared viewer
         // shouldn't paint it either).
         //
         // Still records `noteCells`/`lyricCells` here (via

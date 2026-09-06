@@ -4,7 +4,7 @@
   "main": "src/index.ts",
   "compatibility_date": "2024-09-23",
   // v1 created the `LiveShareServer` Durable Object class; v2 decommissions
-  // it now that the room is plain KV (see `src/index.ts`) — a deletion
+  // it now that a share is plain KV (see `src/index.ts`) — a deletion
   // migration is required to remove a class that had SQLite storage, it
   // can't just be dropped from the config.
   "migrations": [

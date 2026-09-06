@@ -1,14 +1,14 @@
 import { expect } from '@playwright/test'
 import { AfterScenario, Given, Then, When } from './fixtures'
 import {
-  LIVE_FILENAME,
-  LIVE_SOURCE,
+  SYNCED_FILENAME,
+  SYNCED_SOURCE,
   seedFileStore,
-  liveShareButtonState as state,
-} from './live-share-button-state'
+  syncedShareButtonState as state,
+} from './synced-share-button-state'
 
 // Mirrors `useStorageBackend.ts`'s `AUTOSAVE_DEBOUNCE_MS`, which
-// `useLiveOwner.ts`'s `broadcastContent` also debounces at. Not imported
+// `useSyncedShareOwner.ts`'s `broadcastContent` also debounces at. Not imported
 // directly — that module transitively pulls in `fileStore.ts`'s Vite-only
 // `?raw` import, which Playwright's test loader can't resolve (see the same
 // note in `autosave-github.steps.ts`).
@@ -27,25 +27,25 @@ AfterScenario(async () => {
 })
 
 Given('clipboard permissions are granted', async ({ context }) => {
-  state.liveUrl = undefined
-  state.originalLiveUrl = undefined
+  state.syncedShareLink = undefined
+  state.originalSyncedLink = undefined
   state.viewerPage = undefined
   state.lateViewerPage = undefined
   state.viewerContext = undefined
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
 })
 
-Given('the file store is seeded with the live score', async ({ page }) => {
-  await seedFileStore(page, LIVE_FILENAME, LIVE_SOURCE)
+Given('the file store is seeded with the synced score', async ({ page }) => {
+  await seedFileStore(page, SYNCED_FILENAME, SYNCED_SOURCE)
 })
 
 Given(
-  'the file store is seeded with a multi-measure live drag score',
+  'the file store is seeded with a multi-measure synced drag score',
   async ({ page }) => {
-    const dragFilename = 'live-drag-test.jianpu'
+    const dragFilename = 'synced-drag-test.jianpu'
     const dragSource = [
       '# metadata',
-      'title = "Live Drag Score"',
+      'title = "Synced Drag Score"',
       'max_measures_per_system = 48',
       '',
       '# parts',
@@ -58,12 +58,12 @@ Given(
       '',
       '[M] 1 - - -',
     ].join('\n')
-    await seedFileStore(page, dragFilename, dragSource, 'live-drag-test-id')
+    await seedFileStore(page, dragFilename, dragSource, 'synced-drag-test-id')
   },
 )
 
 Given(
-  'the file store is seeded with a two-section live score',
+  'the file store is seeded with a two-section synced score',
   async ({ page }) => {
     // Mirrors `section-jump-select.steps.ts`'s two-section fixture, but with
     // `[M]`-prefixed lines (not the bare `M = notes` shorthand) so each note
@@ -73,10 +73,10 @@ Given(
     // note click targets at all, so `applyPersistedNoteHighlights` would
     // have nothing to flag either way, silently passing regardless of the
     // bug this scenario guards against).
-    const sectionFilename = 'live-section-test.jianpu'
+    const sectionFilename = 'synced-section-test.jianpu'
     const sectionSource = [
       '# metadata',
-      'title = "Live Section Score"',
+      'title = "Synced Section Score"',
       '',
       '# parts',
       'Melody [M] = notes',
@@ -96,7 +96,7 @@ Given(
       page,
       sectionFilename,
       sectionSource,
-      'live-section-test-id',
+      'synced-section-test-id',
     )
   },
 )
@@ -110,31 +110,32 @@ Given('local storage is cleared', async ({ page }) => {
 When(
   'the owner loads the app and clicks {string}',
   async ({ page }, label: string) => {
-    expect(label).toBe('Go Live')
+    expect(label).toBe('Sync')
     await page.goto('/')
-    await page.getByTestId('go-live-button').click()
+    await page.getByTestId('synced-share-button').click()
   },
 )
 
-Then('a live-link-copied toast is shown', async ({ page }) => {
-  await expect(page.getByTestId('live-link-copied-toast')).toBeVisible()
-  state.liveUrl = await page.evaluate(async () => {
+Then('a sync-link-copied toast is shown', async ({ page }) => {
+  await expect(page.getByTestId('sync-link-copied-toast')).toBeVisible()
+  state.syncedShareLink = await page.evaluate(async () => {
     return navigator.clipboard.readText()
   })
-  if (state.originalLiveUrl === undefined) {
-    state.originalLiveUrl = state.liveUrl
+  if (state.originalSyncedLink === undefined) {
+    state.originalSyncedLink = state.syncedShareLink
   }
 })
 
 When(
-  'a viewer opens the copied live link in a new page',
+  'a viewer opens the copied sync link in a new page',
   async ({ context }) => {
-    if (!state.liveUrl) throw new Error('liveUrl was not captured yet')
+    if (!state.syncedShareLink)
+      throw new Error('syncedShareLink was not captured yet')
     state.viewerPage = await context.newPage()
-    await state.viewerPage.goto(state.liveUrl)
+    await state.viewerPage.goto(state.syncedShareLink)
 
-    // No edit was made on the owner's side — the room's initial doc must
-    // still arrive as soon as the owner's socket connects.
+    // No edit was made on the owner's side — the share's initial doc must
+    // still arrive from that first fetch.
     await state.viewerPage.waitForSelector('.preview-page', {
       timeout: 15_000,
     })
@@ -151,11 +152,12 @@ Then("the viewer's preview contains {string}", async ({}, text: string) => {
 })
 
 Then(
-  'the copied live link contains the filename as a human-readable suffix',
+  'the copied sync link contains the filename as a human-readable suffix',
   async () => {
-    if (!state.liveUrl) throw new Error('liveUrl was not captured yet')
-    expect(state.liveUrl).toContain(
-      `--${LIVE_FILENAME.replace(/\.jianpu$/, '')}`,
+    if (!state.syncedShareLink)
+      throw new Error('syncedShareLink was not captured yet')
+    expect(state.syncedShareLink).toContain(
+      `--${SYNCED_FILENAME.replace(/\.jianpu$/, '')}`,
     )
   },
 )
@@ -165,55 +167,54 @@ Then("the viewer's page URL has no query string", async () => {
   expect(new URL(state.viewerPage.url()).search).toEqual('')
 })
 
-Then('the copied live link matches the live URL hash format', async () => {
-  if (!state.liveUrl) throw new Error('liveUrl was not captured yet')
-  expect(state.liveUrl).toMatch(/#live=[0-9A-Za-z_-]{11}(--.+)?$/)
+Then('the copied sync link matches the synced URL hash format', async () => {
+  if (!state.syncedShareLink)
+    throw new Error('syncedShareLink was not captured yet')
+  expect(state.syncedShareLink).toMatch(/#synced=[0-9A-Za-z_-]{11}(--.+)?$/)
+})
+
+Then('the sync button now reads {string}', async ({ page }, text: string) => {
+  // Once synced, the trigger becomes a dropdown offering Copy / Stop.
+  await expect(page.getByTestId('synced-share-button')).toHaveText(text)
+})
+
+When('the owner clicks the sync button again', async ({ page }) => {
+  await page.getByTestId('synced-share-button').click()
 })
 
 Then(
-  'the go-live button now reads {string}',
-  async ({ page }, text: string) => {
-    // Once live, the trigger becomes a dropdown offering Copy / Stop.
-    await expect(page.getByTestId('go-live-button')).toHaveText(text)
-  },
-)
-
-When('the owner clicks the go-live button again', async ({ page }) => {
-  await page.getByTestId('go-live-button').click()
-})
-
-Then(
-  'the copy-live-link and stop-live buttons are visible',
+  'the copy-sync-link and stop-sync buttons are visible',
   async ({ page }) => {
-    await expect(page.getByTestId('copy-live-link-button')).toBeVisible()
-    await expect(page.getByTestId('stop-live-button')).toBeVisible()
+    await expect(page.getByTestId('copy-sync-link-button')).toBeVisible()
+    await expect(page.getByTestId('stop-sync-button')).toBeVisible()
   },
 )
 
-When('the owner clicks the copy-live-link button', async ({ page }) => {
-  await page.getByTestId('copy-live-link-button').click()
+When('the owner clicks the copy-sync-link button', async ({ page }) => {
+  await page.getByTestId('copy-sync-link-button').click()
 })
 
 Then('the copied link is unchanged from before', async ({ page }) => {
-  if (!state.liveUrl) throw new Error('liveUrl was not captured yet')
+  if (!state.syncedShareLink)
+    throw new Error('syncedShareLink was not captured yet')
   const copiedAgain = await page.evaluate(() => navigator.clipboard.readText())
-  expect(copiedAgain).toEqual(state.liveUrl)
+  expect(copiedAgain).toEqual(state.syncedShareLink)
 })
 
 When(
-  'the owner clicks the go-live button and then the stop-live button',
+  'the owner clicks the sync button and then the stop-sync button',
   async ({ page }) => {
-    await page.getByTestId('go-live-button').click()
-    await page.getByTestId('stop-live-button').click()
+    await page.getByTestId('synced-share-button').click()
+    await page.getByTestId('stop-sync-button').click()
   },
 )
 
-Then('the stop-live button disappears', async ({ page }) => {
-  await expect(page.getByTestId('stop-live-button')).toHaveCount(0)
+Then('the stop-sync button disappears', async ({ page }) => {
+  await expect(page.getByTestId('stop-sync-button')).toHaveCount(0)
 })
 
-Then('the go-live button reads {string}', async ({ page }, text: string) => {
-  await expect(page.getByTestId('go-live-button')).toHaveText(text)
+Then('the sync button reads {string}', async ({ page }, text: string) => {
+  await expect(page.getByTestId('synced-share-button')).toHaveText(text)
 })
 
 Then('the viewer sees the preview page', async () => {
@@ -239,13 +240,14 @@ Then(
 )
 
 When(
-  'a late viewer opens the copied live link in a new page',
+  'a late viewer opens the copied sync link in a new page',
   async ({ context }) => {
-    if (!state.liveUrl) throw new Error('liveUrl was not captured yet')
+    if (!state.syncedShareLink)
+      throw new Error('syncedShareLink was not captured yet')
     // A fresh viewer opening the same link after the stop must not see the
     // score either — the link doesn't quietly stay viewable forever.
     state.lateViewerPage = await context.newPage()
-    await state.lateViewerPage.goto(state.liveUrl)
+    await state.lateViewerPage.goto(state.syncedShareLink)
   },
 )
 
@@ -267,18 +269,18 @@ Then(
 )
 
 When('the owner clicks {string} again', async ({ page }, label: string) => {
-  expect(label).toBe('Go Live')
-  // Going live again reproduces the same link and revives the room.
-  await page.getByTestId('go-live-button').click()
+  expect(label).toBe('Sync')
+  // Syncing again reproduces the same link and revives the share.
+  await page.getByTestId('synced-share-button').click()
 })
 
 Then(
-  'the revived live link is identical to the original link',
+  'the revived sync link is identical to the original link',
   async ({ page }) => {
-    if (!state.originalLiveUrl)
-      throw new Error('originalLiveUrl was not captured yet')
+    if (!state.originalSyncedLink)
+      throw new Error('originalSyncedLink was not captured yet')
     const revivedUrl = await page.evaluate(() => navigator.clipboard.readText())
-    expect(revivedUrl).toEqual(state.originalLiveUrl)
+    expect(revivedUrl).toEqual(state.originalSyncedLink)
   },
 )
 
@@ -309,8 +311,8 @@ When('the viewer reloads the page', async () => {
   await state.viewerPage.reload()
 })
 
-// Installed on the owner's page only — the live-share push this guards is
-// entirely owner-side (`useLiveOwner.ts`'s debounced `broadcastContent`), so
+// Installed on the owner's page only — the synced-share push this guards is
+// entirely owner-side (`useSyncedShareOwner.ts`'s debounced `broadcastContent`), so
 // there is nothing for the viewer's clock to affect.
 Given('the clock is under test control', async ({ page }) => {
   await page.clock.install()
@@ -321,12 +323,12 @@ Given('the clock is under test control', async ({ page }) => {
 // appending text) — a title change needs to replace an existing line, not
 // just append after it. `setValue` still fires the model's change event, so
 // this exercises the same `onChange` -> `handleSourceChange` ->
-// `liveOwner.broadcastContent` path a real edit would.
+// `syncedShareOwner.broadcastContent` path a real edit would.
 When(
-  "the owner edits the live score's title to {string}",
+  "the owner edits the synced score's title to {string}",
   async ({ page }, title: string) => {
-    const edited = LIVE_SOURCE.replace(
-      'title = "Live Score"',
+    const edited = SYNCED_SOURCE.replace(
+      'title = "Synced Score"',
       `title = "${title}"`,
     )
     await page.evaluate((value) => {

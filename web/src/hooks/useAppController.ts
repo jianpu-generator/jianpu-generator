@@ -57,11 +57,11 @@ export function useAppController() {
 
   const {
     sharedPreview,
-    liveOwner,
-    liveViewerActive,
+    syncedShareOwner,
+    syncedShareViewerActive,
     source,
     readOnly,
-    liveShare,
+    syncedShare,
   } = useScoreSource(
     store,
     backend,
@@ -178,9 +178,9 @@ export function useAppController() {
   const handleSourceChange = useCallback(
     (value: string) => {
       setStore((prev) => backend.updateActiveContent(prev, value))
-      if (liveOwner.isLive) liveOwner.broadcastContent(value)
+      if (syncedShareOwner.isSynced) syncedShareOwner.broadcastContent(value)
     },
-    [setStore, backend, liveOwner],
+    [setStore, backend, syncedShareOwner],
   )
   const handleSelect = useCallback(
     (name: string) => {
@@ -280,10 +280,10 @@ export function useAppController() {
     handleDelete,
     handleRestore,
     sharedPreview,
-    liveViewerActive,
+    syncedShareViewerActive,
     source,
     readOnly,
-    liveShare,
+    syncedShare,
     fileId,
     editorRef,
     soundfont,

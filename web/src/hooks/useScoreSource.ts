@@ -5,9 +5,9 @@ import {
   isReadOnlyFile,
 } from '../fileStore'
 import type { StorageBackend } from '../storage/types'
-import { useLiveOwner } from './useLiveOwner'
-import { useLiveViewer } from './useLiveViewer'
 import { useSharedPreview } from './useSharedPreview'
+import { useSyncedShareOwner } from './useSyncedShareOwner'
+import { useSyncedShareViewer } from './useSyncedShareViewer'
 
 interface FileOpError {
   title: string
@@ -16,11 +16,11 @@ interface FileOpError {
 }
 
 /**
- * Combines `useSharedPreview` (`#share=` links) and `useLiveViewer`
- * (`#live=` links) into the single `source`/`readOnly` derivation the editor
+ * Combines `useSharedPreview` (`#share=` links) and `useSyncedShareViewer`
+ * (`#synced=` links) into the single `source`/`readOnly` derivation the editor
  * and preview panes consume. A static `#share=` link takes precedence over a
- * `#live=` one if both are somehow present at once — documented edge case in
- * the Live Share plan, not handled beyond this. `ended` also counts as
+ * `#synced=` one if both are somehow present at once — a documented edge
+ * case, not handled beyond this. `ended` also counts as
  * active (banner + hidden editor stay up) even though the owner stopping
  * clears the preview content along with it.
  */
@@ -42,44 +42,55 @@ export function useScoreSource(
       setEditorCollapsed,
     )
 
-  const liveOwner = useLiveOwner(
+  const syncedShareOwner = useSyncedShareOwner(
     store.active,
     fileIdForName(store, store.active),
     fileContent(store, store.active),
   )
-  const { liveViewerPreview, liveViewerStatus, handleImportLive } =
-    useLiveViewer(setEditorCollapsed, store, backend, setStore, setFileOpError)
+  const {
+    syncedShareViewerPreview,
+    syncedShareViewerStatus,
+    handleImportSyncedShare,
+  } = useSyncedShareViewer(
+    setEditorCollapsed,
+    store,
+    backend,
+    setStore,
+    setFileOpError,
+  )
 
-  const liveViewerActive =
+  const syncedShareViewerActive =
     sharedPreview === null &&
-    (liveViewerPreview !== null || liveViewerStatus === 'ended')
+    (syncedShareViewerPreview !== null || syncedShareViewerStatus === 'ended')
 
   const source = sharedPreview
     ? sharedPreview.content
-    : liveViewerActive
-      ? (liveViewerPreview?.content ?? '')
+    : syncedShareViewerActive
+      ? (syncedShareViewerPreview?.content ?? '')
       : fileContent(store, store.active)
   const readOnly =
-    sharedPreview !== null || liveViewerActive || isReadOnlyFile(store.active)
+    sharedPreview !== null ||
+    syncedShareViewerActive ||
+    isReadOnlyFile(store.active)
 
   return {
     sharedPreview,
-    liveOwner,
-    liveViewerActive,
+    syncedShareOwner,
+    syncedShareViewerActive,
     source,
     readOnly,
-    liveShare: {
+    syncedShare: {
       sharedPreview,
       onImportShared: handleImportShared,
       onDismissShared: handleDismissShared,
-      viewerActive: liveViewerActive,
-      viewerStatus: liveViewerStatus,
-      viewerFilename: liveViewerPreview?.filename ?? null,
-      onImportLive: handleImportLive,
-      isLive: liveOwner.isLive,
-      liveUrl: liveOwner.liveUrl,
-      onStartLive: liveOwner.startLive,
-      onStopLive: liveOwner.stopLive,
+      viewerActive: syncedShareViewerActive,
+      viewerStatus: syncedShareViewerStatus,
+      viewerFilename: syncedShareViewerPreview?.filename ?? null,
+      onImportSyncedShare: handleImportSyncedShare,
+      isSynced: syncedShareOwner.isSynced,
+      syncedShareLink: syncedShareOwner.syncedShareLink,
+      onStartSync: syncedShareOwner.startSync,
+      onStopSync: syncedShareOwner.stopSync,
     },
   }
 }

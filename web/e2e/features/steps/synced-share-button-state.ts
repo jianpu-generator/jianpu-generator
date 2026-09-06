@@ -1,10 +1,10 @@
 import type { BrowserContext, Page } from '@playwright/test'
 
 export const FILE_STORE_KEY = 'jianpu:files:v1'
-export const LIVE_FILENAME = 'live-test.jianpu'
-export const LIVE_SOURCE = [
+export const SYNCED_FILENAME = 'synced-test.jianpu'
+export const SYNCED_SOURCE = [
   '# metadata',
-  'title = "Live Score"',
+  'title = "Synced Score"',
   '',
   '# parts',
   'Melody = notes',
@@ -18,7 +18,7 @@ export async function seedFileStore(
   page: Page,
   filename: string,
   source: string,
-  fileId = 'live-test-id',
+  fileId = 'synced-test-id',
 ): Promise<void> {
   await page.addInitScript(
     ({
@@ -46,25 +46,25 @@ export async function seedFileStore(
   )
 }
 
-// Cross-step state shared between live-share-button.steps.ts and
-// live-share-button-viewer-drag.steps.ts (split out of one file to stay under
+// Cross-step state shared between synced-share-button.steps.ts and
+// synced-share-button-viewer-drag.steps.ts (split out of one file to stay under
 // the repo's max-file-lines limit). Each scenario's first Given resets this
-// so state never leaks across scenarios. `liveUrl` always holds the most
-// recently copied link; `originalLiveUrl` is pinned to the very first link
+// so state never leaks across scenarios. `syncedShareLink` always holds the most
+// recently copied link; `originalSyncedLink` is pinned to the very first link
 // copied in the scenario, so later "revived link" assertions can compare a
 // fresh clipboard read against it without it having been clobbered by an
 // intervening copy of what should be the same link.
-export interface LiveShareButtonState {
-  liveUrl: string | undefined
-  originalLiveUrl: string | undefined
+export interface SyncedShareButtonState {
+  syncedShareLink: string | undefined
+  originalSyncedLink: string | undefined
   viewerPage: Page | undefined
   lateViewerPage: Page | undefined
   viewerContext: BrowserContext | undefined
 }
 
-export const liveShareButtonState: LiveShareButtonState = {
-  liveUrl: undefined,
-  originalLiveUrl: undefined,
+export const syncedShareButtonState: SyncedShareButtonState = {
+  syncedShareLink: undefined,
+  originalSyncedLink: undefined,
   viewerPage: undefined,
   lateViewerPage: undefined,
   viewerContext: undefined,

@@ -81,7 +81,7 @@ export function useAppSelectionAndNavigation(
   )
 
   // Fed to `useSectionNavigation`/`useSequenceNavigation` below — a section
-  // or sequence jump replaces whatever a prior no-mounted-editor (Live/
+  // or sequence jump replaces whatever a prior no-mounted-editor (Synced/
   // shared view) note/lyric tap or measure/bar-line click left painted,
   // rather than layering on top of it (see those hooks' own
   // `clearNoMountedEditorHighlights` param doc comment).
@@ -113,7 +113,7 @@ export function useAppSelectionAndNavigation(
   // Merged purely for `Preview.tsx`'s highlight painting: an editor-mounted
   // drag/click populates `noteSelectionCells`/`lyricSelectionCells` and
   // leaves `measureRangeNoteCells`/`measureRangeLyricCells` at `[]`; a
-  // no-mounted-editor (Live/shared) measure/bar-line gesture does the
+  // no-mounted-editor (Synced/shared) measure/bar-line gesture does the
   // opposite (see `useMeasureRangeSelection`'s doc comment) — the two never
   // hold cells at the same time, so concatenating is a safe union, not an
   // accidental widening of either state's own meaning.

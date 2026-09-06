@@ -1,8 +1,8 @@
 {
-  "name": "jianpu-live-party",
+  "name": "jianpu-live-share-worker",
   "private": true,
   "version": "0.0.0",
-  "description": "Cloudflare Worker for Live Share: stores an owner's saved score in Workers KV for viewers to fetch, self-hosted on our own Cloudflare account via wrangler (not the shared PartyKit platform). Not part of the web/ build.",
+  "description": "Cloudflare Worker for Synced Share: stores an owner's saved score in Workers KV for viewers to fetch, self-hosted on our own Cloudflare account via wrangler. Not part of the web/ build.",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",

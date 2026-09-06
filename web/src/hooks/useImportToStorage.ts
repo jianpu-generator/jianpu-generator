@@ -11,8 +11,9 @@ interface FileOpError {
 /**
  * Imports a filename/content pair into the active file store via the
  * backend, surfacing failures through `setFileOpError`. Shared by
- * `useSharedPreview` (`#share=` links) and the live-view import action
- * (`#live=` links), which both hand it the same `{filename, content}` shape.
+ * `useSharedPreview` (`#share=` links) and the synced-share-view import
+ * action (`#synced=` links), which both hand it the same `{filename,
+ * content}` shape.
  */
 export function useImportToStorage(
   store: FileStoreState,

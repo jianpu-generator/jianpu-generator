@@ -41,7 +41,7 @@ interface MeasureRange {
 interface AppWorkspaceProps {
   editorCollapsed: boolean
   setEditorCollapsed: (updater: (collapsed: boolean) => boolean) => void
-  /** True while viewing a `#share=` or `#live=` read-only preview — hides
+  /** True while viewing a `#share=` or `#synced=` read-only preview — hides
    * the `Editor` entirely and the pane-divider toggle, since there is
    * nothing to edit or expand back into. */
   hideEditor: boolean

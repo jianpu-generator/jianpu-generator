@@ -1,37 +1,37 @@
 import type { FileStoreState } from '../fileStore'
 import { sortedBinNames } from '../fileStore'
-import type { LiveViewerStatus } from '../hooks/useLiveViewer'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
+import type { SyncedShareViewerStatus } from '../hooks/useSyncedShareViewer'
 import type { SharePayload } from '../shareUrl'
 import { ExportControls } from './ExportControls'
 import { FileSwitcher } from './FileSwitcher'
-import { GoLiveButton } from './GoLiveButton'
-import { LiveShareBanner } from './LiveShareBanner'
 import { PlayAllButton } from './PlayAllButton'
 import { PlayFromCurrentMeasureButton } from './PlayFromCurrentMeasureButton'
 import { PlayMeasureButton } from './PlayMeasureButton'
 import { SharedPreviewBanner } from './SharedPreviewBanner'
+import { SyncedShareBanner } from './SyncedShareBanner'
+import { SyncedShareButton } from './SyncedShareButton'
 
 interface MeasureRange {
   start: number
   end: number
 }
 
-interface LiveShareHeaderProps {
+interface SyncedShareHeaderProps {
   sharedPreview: SharePayload | null
   onImportShared: () => void
   onDismissShared: () => void
-  /** Non-null while a `#live=` link is being viewed. Takes a back seat to
-   * `sharedPreview` if both are somehow present at once (documented edge
-   * case in the Live Share plan). */
+  /** Non-null while a `#synced=` link is being viewed. Takes a back seat to
+   * `sharedPreview` if both are somehow present at once (a documented edge
+   * case, not expected in practice). */
   viewerActive: boolean
-  viewerStatus: LiveViewerStatus
+  viewerStatus: SyncedShareViewerStatus
   viewerFilename: string | null
-  onImportLive: () => void
-  isLive: boolean
-  liveUrl: string | null
-  onStartLive: () => string
-  onStopLive: () => void
+  onImportSyncedShare: () => void
+  isSynced: boolean
+  syncedShareLink: string | null
+  onStartSync: () => string
+  onStopSync: () => void
 }
 
 interface AppHeaderProps {
@@ -95,7 +95,7 @@ interface AppHeaderProps {
   partsCount?: number
   importing?: boolean
   onImportFile?: (file: File) => void
-  liveShare: LiveShareHeaderProps
+  syncedShare: SyncedShareHeaderProps
 }
 
 export function AppHeader({
@@ -155,22 +155,22 @@ export function AppHeader({
   partsCount,
   importing,
   onImportFile,
-  liveShare,
+  syncedShare,
 }: AppHeaderProps) {
-  const { sharedPreview, viewerActive: liveViewerActive } = liveShare
+  const { sharedPreview, viewerActive: syncedShareViewerActive } = syncedShare
   return (
     <header className="app-header">
       {sharedPreview ? (
         <SharedPreviewBanner
-          onImport={liveShare.onImportShared}
-          onDiscard={liveShare.onDismissShared}
+          onImport={syncedShare.onImportShared}
+          onDiscard={syncedShare.onDismissShared}
         />
       ) : (
-        liveViewerActive && (
-          <LiveShareBanner
-            status={liveShare.viewerStatus}
-            filename={liveShare.viewerFilename}
-            onImport={liveShare.onImportLive}
+        syncedShareViewerActive && (
+          <SyncedShareBanner
+            status={syncedShare.viewerStatus}
+            filename={syncedShare.viewerFilename}
+            onImport={syncedShare.onImportSyncedShare}
           />
         )
       )}
@@ -221,7 +221,7 @@ export function AppHeader({
         />
       )}
       <div className="app-header-actions">
-        {!sharedPreview && !liveViewerActive && (
+        {!sharedPreview && !syncedShareViewerActive && (
           <FileSwitcher
             store={store}
             triggerLabel={store.active}
@@ -244,12 +244,12 @@ export function AppHeader({
             onOpenBin={onOpenBin}
           />
         )}
-        {!sharedPreview && !liveViewerActive && (
-          <GoLiveButton
-            isLive={liveShare.isLive}
-            liveUrl={liveShare.liveUrl}
-            onStartLive={liveShare.onStartLive}
-            onStopLive={liveShare.onStopLive}
+        {!sharedPreview && !syncedShareViewerActive && (
+          <SyncedShareButton
+            isSynced={syncedShare.isSynced}
+            syncedShareLink={syncedShare.syncedShareLink}
+            onStartSync={syncedShare.onStartSync}
+            onStopSync={syncedShare.onStopSync}
           />
         )}
         <ExportControls

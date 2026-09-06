@@ -18,7 +18,7 @@ export function useSectionNavigation(
     measureRanges?: { start: number; end: number }[],
   ) => void,
   /** Drops whatever stale note/lyric/measure highlight a prior no-mounted-
-   * editor (Live/shared view) tap or bar-line click left painted — see
+   * editor (Synced/shared view) tap or bar-line click left painted — see
    * `useAppSelectionAndNavigation`'s wiring. A section jump replaces that
    * highlight entirely rather than layering on top of it, but (unlike the
    * editor-mounted path, where pushing a real Monaco selection round-trips
@@ -63,7 +63,7 @@ export function useSectionNavigation(
   const selectSectionRange = useCallback(
     (firstLine: number, lastLine: number) => {
       if (!editorRef.current) {
-        // No mounted editor (Live/shared view): there's no Monaco selection
+        // No mounted editor (Synced/shared view): there's no Monaco selection
         // round-trip to re-derive note/lyric/measure highlighting from (see
         // this hook's own `clearNoMountedEditorHighlights` param doc
         // comment), so this jump must clear it itself, or a prior tap/

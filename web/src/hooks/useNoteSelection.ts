@@ -65,7 +65,7 @@ export function useNoteSelection(
   enabledTracks: string[] | undefined,
   editorRef: RefObject<EditorHandle | null>,
 ) {
-  // Live/shared views never mount an Editor, so there's no Monaco
+  // Synced/shared views never mount an Editor, so there's no Monaco
   // selection to round-trip through `handleEditorSelectionChange` — but a
   // plain note tap still has its own precise blue highlight (painted
   // directly on the SVG by `resolveNoteSelection`, independent of any
@@ -76,7 +76,7 @@ export function useNoteSelection(
   // back when this fallback was the *only* visual feedback (see
   // `useSectionNavigation`'s `selectSectionRange`), but left over after
   // per-note highlighting made it redundant, it painted a spurious
-  // whole-measure amber background under every single-note tap in Live/
+  // whole-measure amber background under every single-note tap in Synced/
   // shared view (see the mobile bug report this comment accompanies).
   // `useMeasureRangeSelection`'s own no-mounted-editor branch still does
   // this deliberately for an actual measure/bar-line selection.
