@@ -1,0 +1,73 @@
+/* ResponsiveMenu — the vaul drawer its Content renders into on mobile,
+ * covering the full viewport instead of floating near the trigger. */
+
+.responsive-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgb(0 0 0 / 0.4);
+}
+
+.responsive-menu-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 31;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  outline: none;
+}
+
+.responsive-menu-drawer-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  padding: 0.5rem 0.75rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.responsive-menu-drawer-handle {
+  width: 2.5rem;
+  height: 0.25rem;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.responsive-menu-drawer-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.responsive-menu-drawer-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 0.75rem 1rem;
+}
+
+/* Menu content sized for a small floating panel (export-menu-list and its
+ * file-tab-bar counterpart) needs to relax to fill the full-screen drawer
+ * instead. */
+.responsive-menu-drawer-body.export-menu-list,
+.responsive-menu-drawer-body.file-tab-bar-files-list,
+.responsive-menu-drawer-body .file-tabs {
+  min-width: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+.responsive-menu-drawer-body.export-menu-list {
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.responsive-menu-drawer-body .export-menu-item,
+.responsive-menu-drawer-body .file-tab-name,
+.responsive-menu-drawer-body .file-tab-bar-demo-toggle {
+  padding-block: 0.65rem;
+  font-size: 0.95rem;
+}

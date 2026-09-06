@@ -1,6 +1,6 @@
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { ChevronDownIcon } from '@radix-ui/react-icons'
 import type { ReactNode } from 'react'
+import { ResponsiveMenu } from './ResponsiveMenu'
 
 export interface ExportMenuItem {
   key: string
@@ -34,8 +34,8 @@ export function ExportMenuButton({
 }: ExportMenuButtonProps) {
   return (
     <div className="export-menu">
-      <DropdownMenu.Root modal={false}>
-        <DropdownMenu.Trigger asChild>
+      <ResponsiveMenu.Root>
+        <ResponsiveMenu.Trigger asChild>
           <button
             type="button"
             className="preview-export-btn"
@@ -45,36 +45,35 @@ export function ExportMenuButton({
             {label}
             <ChevronDownIcon className="export-menu-caret" aria-hidden="true" />
           </button>
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Portal>
-          <DropdownMenu.Content
-            className="export-menu-list"
-            align="end"
-            sideOffset={4}
-          >
-            {sections.map((section, index) => (
-              <div className="export-menu-section" key={section.title ?? index}>
-                {section.title ? (
-                  <DropdownMenu.Label className="export-menu-section-title">
-                    {section.title}
-                  </DropdownMenu.Label>
-                ) : null}
-                {section.items.map((item) => (
-                  <DropdownMenu.Item
-                    key={item.key}
-                    className="export-menu-item"
-                    disabled={item.disabled}
-                    onSelect={() => item.onSelect()}
-                  >
-                    {item.icon}
-                    {item.busy ? item.busyLabel : item.label}
-                  </DropdownMenu.Item>
-                ))}
-              </div>
-            ))}
-          </DropdownMenu.Content>
-        </DropdownMenu.Portal>
-      </DropdownMenu.Root>
+        </ResponsiveMenu.Trigger>
+        <ResponsiveMenu.Content
+          className="export-menu-list"
+          align="end"
+          sideOffset={4}
+          title={label}
+        >
+          {sections.map((section, index) => (
+            <div className="export-menu-section" key={section.title ?? index}>
+              {section.title ? (
+                <ResponsiveMenu.Label className="export-menu-section-title">
+                  {section.title}
+                </ResponsiveMenu.Label>
+              ) : null}
+              {section.items.map((item) => (
+                <ResponsiveMenu.Item
+                  key={item.key}
+                  className="export-menu-item"
+                  disabled={item.disabled}
+                  onSelect={() => item.onSelect()}
+                >
+                  {item.icon}
+                  {item.busy ? item.busyLabel : item.label}
+                </ResponsiveMenu.Item>
+              ))}
+            </div>
+          ))}
+        </ResponsiveMenu.Content>
+      </ResponsiveMenu.Root>
     </div>
   )
 }

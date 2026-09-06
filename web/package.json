@@ -41,7 +41,8 @@
     "remark-gfm": "^4.0.1",
     "remeda": "^2.39.0",
     "use-debounce": "^10.1.1",
-    "usehooks-ts": "^3.1.1"
+    "usehooks-ts": "^3.1.1",
+    "vaul": "^1.1.2"
   },
   "devDependencies": {
     "@ast-grep/cli": "^0.45.3",

@@ -128,12 +128,14 @@ When('I open the Export dropdown menu', async ({ page }) => {
 Then(
   'every export menu item is within the mobile viewport',
   async ({ page }) => {
-    const menu = page.getByRole('menu')
+    // The header scrolls horizontally on mobile (see previous test), which
+    // would clip a Radix `DropdownMenu`'s vertical overflow too, trapping it
+    // inside the ~48px-tall header strip instead of floating over the page.
+    // Below the mobile breakpoint the menu renders as a full-screen drawer
+    // (role="dialog") instead, sidestepping that entirely.
+    const menu = page.getByRole('dialog')
     await expect(menu).toBeVisible()
 
-    // The header scrolls horizontally on mobile (see previous test), which
-    // implicitly clips the dropdown's vertical overflow too, trapping it
-    // inside the ~48px-tall header strip instead of floating over the page.
     const items = await menu.getByRole('menuitem').all()
     expect(items.length).toBeGreaterThan(0)
     for (const item of items) {

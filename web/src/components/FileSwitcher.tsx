@@ -1,4 +1,3 @@
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
   ArchiveIcon,
   ChevronDownIcon,
@@ -22,6 +21,7 @@ import {
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import { FileTabName } from './FileTabName'
 import { ImportButton } from './ImportButton'
+import { ResponsiveMenu } from './ResponsiveMenu'
 import { SaveStatusBadge } from './SaveStatusBadge'
 import { ShareButton } from './ShareButton'
 import { SpinnerLabel } from './SpinnerLabel'
@@ -105,12 +105,8 @@ export function FileSwitcher({
         autosaveDeadline={autosaveDeadline}
       />
       <div className="export-menu">
-        <DropdownMenu.Root
-          modal={false}
-          open={filesOpen}
-          onOpenChange={setFilesOpen}
-        >
-          <DropdownMenu.Trigger asChild>
+        <ResponsiveMenu.Root open={filesOpen} onOpenChange={setFilesOpen}>
+          <ResponsiveMenu.Trigger asChild>
             <button type="button" className="preview-export-btn">
               {displayFileName(triggerLabel)}
               {isLoadingGithub ? (
@@ -122,97 +118,92 @@ export function FileSwitcher({
                 />
               )}
             </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              className="export-menu-list file-tab-bar-files-list"
-              align="end"
-              sideOffset={4}
-            >
-              {isLoadingGithub ? (
-                <p className="file-tab-bar-hint">Loading files from GitHub…</p>
-              ) : showEmptyHint ? (
-                <p className="file-tab-bar-hint">
-                  No files yet — click New to create one.
-                </p>
-              ) : null}
-              <ul className="file-tabs" aria-label="Files">
-                {names.map((name) => {
-                  const active = name === store.active
+          </ResponsiveMenu.Trigger>
+          <ResponsiveMenu.Content
+            className="export-menu-list file-tab-bar-files-list"
+            align="end"
+            sideOffset={4}
+            title="Files"
+          >
+            {isLoadingGithub ? (
+              <p className="file-tab-bar-hint">Loading files from GitHub…</p>
+            ) : showEmptyHint ? (
+              <p className="file-tab-bar-hint">
+                No files yet — click New to create one.
+              </p>
+            ) : null}
+            <ul className="file-tabs" aria-label="Files">
+              {names.map((name) => {
+                const active = name === store.active
 
-                  return (
-                    <li
-                      key={name}
-                      className={`file-tab${active ? ' file-tab--active' : ''}`}
-                    >
-                      <FileTabName
-                        name={name}
-                        active={active}
-                        onSelect={(selected) => {
-                          onSelect(selected)
-                          setFilesOpen(false)
-                        }}
-                        onRename={onRename}
-                        renaming={renamingName === name}
-                      />
-                    </li>
-                  )
-                })}
-              </ul>
-              <div className="file-tab-bar-demo-section">
-                <button
-                  type="button"
-                  className="file-tab-bar-demo-toggle"
-                  aria-haspopup="menu"
-                  aria-expanded={demoOpen}
-                  onClick={() => setDemoOpen((prev) => !prev)}
-                >
-                  {demoOpen ? (
-                    <ChevronDownIcon aria-hidden="true" />
-                  ) : (
-                    <ChevronRightIcon aria-hidden="true" />
-                  )}
-                  Demo
-                </button>
-                {demoOpen ? (
-                  <ul
-                    className="file-tabs file-tab-bar-demo-list"
-                    aria-label="Demo files"
+                return (
+                  <li
+                    key={name}
+                    className={`file-tab${active ? ' file-tab--active' : ''}`}
                   >
-                    {DEMO_FILE_NAMES.map((name) => {
-                      const active = name === store.active
+                    <FileTabName
+                      name={name}
+                      active={active}
+                      onSelect={(selected) => {
+                        onSelect(selected)
+                        setFilesOpen(false)
+                      }}
+                      onRename={onRename}
+                      renaming={renamingName === name}
+                    />
+                  </li>
+                )
+              })}
+            </ul>
+            <div className="file-tab-bar-demo-section">
+              <button
+                type="button"
+                className="file-tab-bar-demo-toggle"
+                aria-haspopup="menu"
+                aria-expanded={demoOpen}
+                onClick={() => setDemoOpen((prev) => !prev)}
+              >
+                {demoOpen ? (
+                  <ChevronDownIcon aria-hidden="true" />
+                ) : (
+                  <ChevronRightIcon aria-hidden="true" />
+                )}
+                Demo
+              </button>
+              {demoOpen ? (
+                <ul
+                  className="file-tabs file-tab-bar-demo-list"
+                  aria-label="Demo files"
+                >
+                  {DEMO_FILE_NAMES.map((name) => {
+                    const active = name === store.active
 
-                      return (
-                        <li
-                          key={name}
-                          className={`file-tab${active ? ' file-tab--active' : ''}`}
-                        >
-                          <FileTabName
-                            name={name}
-                            active={active}
-                            onSelect={(selected) => {
-                              onSelect(selected)
-                              setFilesOpen(false)
-                            }}
-                            onRename={onRename}
-                          />
-                        </li>
-                      )
-                    })}
-                  </ul>
-                ) : null}
-              </div>
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
+                    return (
+                      <li
+                        key={name}
+                        className={`file-tab${active ? ' file-tab--active' : ''}`}
+                      >
+                        <FileTabName
+                          name={name}
+                          active={active}
+                          onSelect={(selected) => {
+                            onSelect(selected)
+                            setFilesOpen(false)
+                          }}
+                          onRename={onRename}
+                        />
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : null}
+            </div>
+          </ResponsiveMenu.Content>
+        </ResponsiveMenu.Root>
       </div>
       <div className="export-menu">
-        <DropdownMenu.Root
-          modal={false}
-          open={actionsOpen}
-          onOpenChange={setActionsOpen}
-        >
-          <DropdownMenu.Trigger asChild>
+        <ResponsiveMenu.Root open={actionsOpen} onOpenChange={setActionsOpen}>
+          <ResponsiveMenu.Trigger asChild>
             <button
               type="button"
               className="preview-export-btn"
@@ -220,126 +211,125 @@ export function FileSwitcher({
             >
               <DotsHorizontalIcon aria-hidden="true" />
             </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              className="export-menu-list"
-              align="end"
-              sideOffset={4}
+          </ResponsiveMenu.Trigger>
+          <ResponsiveMenu.Content
+            className="export-menu-list"
+            align="end"
+            sideOffset={4}
+            title="File actions"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              className="export-menu-item"
+              disabled={creating}
+              onClick={async () => {
+                await onCreate()
+                setActionsOpen(false)
+              }}
             >
-              <button
-                type="button"
-                role="menuitem"
-                className="export-menu-item"
-                disabled={creating}
-                onClick={async () => {
-                  await onCreate()
-                  setActionsOpen(false)
-                }}
-              >
-                <PlusIcon aria-hidden="true" />
-                <SpinnerLabel pending={creating} label="New" />
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="export-menu-item"
-                disabled={duplicating}
-                onClick={async () => {
-                  await onDuplicate()
-                  setActionsOpen(false)
-                }}
-              >
-                <CopyIcon aria-hidden="true" />
-                <SpinnerLabel pending={duplicating} label="Duplicate" />
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="export-menu-item"
-                disabled={
-                  isReadOnlyFile(store.active) || renamingName === store.active
-                }
-                onClick={async () => {
-                  const next = window.prompt(
-                    'Rename file',
-                    displayFileName(store.active),
-                  )
-                  const trimmed = next?.trim()
-                  if (!trimmed || trimmed === store.active) return
-                  await onRename(store.active, trimmed)
-                  setActionsOpen(false)
-                }}
-              >
-                <Pencil1Icon aria-hidden="true" />
-                <SpinnerLabel
-                  pending={renamingName === store.active}
-                  label="Rename"
-                />
-              </button>
-              <ShareButton
-                filename={store.active}
-                content={fileContent(store, store.active)}
-                className="export-menu-item"
+              <PlusIcon aria-hidden="true" />
+              <SpinnerLabel pending={creating} label="New" />
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="export-menu-item"
+              disabled={duplicating}
+              onClick={async () => {
+                await onDuplicate()
+                setActionsOpen(false)
+              }}
+            >
+              <CopyIcon aria-hidden="true" />
+              <SpinnerLabel pending={duplicating} label="Duplicate" />
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="export-menu-item"
+              disabled={
+                isReadOnlyFile(store.active) || renamingName === store.active
+              }
+              onClick={async () => {
+                const next = window.prompt(
+                  'Rename file',
+                  displayFileName(store.active),
+                )
+                const trimmed = next?.trim()
+                if (!trimmed || trimmed === store.active) return
+                await onRename(store.active, trimmed)
+                setActionsOpen(false)
+              }}
+            >
+              <Pencil1Icon aria-hidden="true" />
+              <SpinnerLabel
+                pending={renamingName === store.active}
+                label="Rename"
               />
-              {onImportFile ? (
-                <ImportButton
-                  disabled={isLoadingGithub}
-                  importing={importing}
-                  onImportFile={(file) => {
-                    onImportFile(file)
-                    setActionsOpen(false)
-                  }}
-                />
-              ) : null}
-              <button
-                type="button"
-                role="menuitem"
-                className="export-menu-item export-menu-item--danger"
-                disabled={
-                  isReadOnlyFile(store.active) || deletingName === store.active
-                }
-                onClick={async () => {
-                  await onDelete(store.active)
+            </button>
+            <ShareButton
+              filename={store.active}
+              content={fileContent(store, store.active)}
+              className="export-menu-item"
+            />
+            {onImportFile ? (
+              <ImportButton
+                disabled={isLoadingGithub}
+                importing={importing}
+                onImportFile={(file) => {
+                  onImportFile(file)
                   setActionsOpen(false)
                 }}
-              >
-                <TrashIcon aria-hidden="true" />
-                <SpinnerLabel
-                  pending={deletingName === store.active}
-                  label="Delete"
-                />
-              </button>
-              {binNames.length > 0 ? (
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="export-menu-item file-tab-bar-bin-trigger"
-                  aria-haspopup="dialog"
-                  onClick={() => {
-                    setActionsOpen(false)
-                    onOpenBin()
-                  }}
-                >
-                  <ArchiveIcon aria-hidden="true" />
-                  {`Bin (${binNames.length})`}
-                </button>
-              ) : null}
+              />
+            ) : null}
+            <button
+              type="button"
+              role="menuitem"
+              className="export-menu-item export-menu-item--danger"
+              disabled={
+                isReadOnlyFile(store.active) || deletingName === store.active
+              }
+              onClick={async () => {
+                await onDelete(store.active)
+                setActionsOpen(false)
+              }}
+            >
+              <TrashIcon aria-hidden="true" />
+              <SpinnerLabel
+                pending={deletingName === store.active}
+                label="Delete"
+              />
+            </button>
+            {binNames.length > 0 ? (
               <button
                 type="button"
                 role="menuitem"
-                className="export-menu-item"
+                className="export-menu-item file-tab-bar-bin-trigger"
+                aria-haspopup="dialog"
                 onClick={() => {
                   setActionsOpen(false)
-                  onOpenStorageSettings()
+                  onOpenBin()
                 }}
               >
-                <GearIcon aria-hidden="true" />
-                Storage…
+                <ArchiveIcon aria-hidden="true" />
+                {`Bin (${binNames.length})`}
               </button>
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
+            ) : null}
+            <button
+              type="button"
+              role="menuitem"
+              className="export-menu-item"
+              onClick={() => {
+                setActionsOpen(false)
+                onOpenStorageSettings()
+              }}
+            >
+              <GearIcon aria-hidden="true" />
+              Storage…
+            </button>
+          </ResponsiveMenu.Content>
+        </ResponsiveMenu.Root>
       </div>
     </div>
   )
