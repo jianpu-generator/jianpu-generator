@@ -1,9 +1,7 @@
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { ChevronDownIcon, Link2Icon, VideoIcon } from '@radix-ui/react-icons'
 import * as Toast from '@radix-ui/react-toast'
-import { useCallback, useRef, useState } from 'react'
-import { useDismissableOpen } from '../hooks/useDismissableOpen'
-import { useFixedMenuPosition } from '../hooks/useFixedMenuPosition'
-import { FixedMenuPortal } from './FixedMenuPortal'
+import { useCallback, useState } from 'react'
 
 interface GoLiveButtonProps {
   isLive: boolean
@@ -21,11 +19,7 @@ export function GoLiveButton({
   className = 'preview-export-btn',
 }: GoLiveButtonProps) {
   const [toastOpen, setToastOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const [menuOpen, setMenuOpen] = useDismissableOpen(containerRef, menuRef)
-  const menuStyle = useFixedMenuPosition(buttonRef, isLive && menuOpen)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const copyUrl = useCallback(async (url: string) => {
     try {
@@ -36,82 +30,85 @@ export function GoLiveButton({
     }
   }, [])
 
-  const handleTriggerClick = useCallback(() => {
-    if (isLive) {
-      setMenuOpen((prev) => !prev)
-    } else {
-      void copyUrl(onStartLive())
-    }
-  }, [isLive, onStartLive, copyUrl, setMenuOpen])
-
   return (
-    <div className="export-menu" ref={containerRef}>
-      <button
-        type="button"
-        ref={buttonRef}
-        className={className}
-        data-testid="go-live-button"
-        aria-haspopup={isLive ? 'menu' : undefined}
-        aria-expanded={isLive ? menuOpen : undefined}
-        aria-label={isLive ? 'Live options' : 'Go live'}
-        title={
-          isLive
-            ? undefined
-            : "Anyone with this link can view your score live. Don't share it publicly."
-        }
-        onClick={handleTriggerClick}
-      >
-        <VideoIcon aria-hidden="true" />
-        {isLive ? 'Live' : 'Go Live'}
-        {isLive && (
-          <ChevronDownIcon className="export-menu-caret" aria-hidden="true" />
-        )}
-      </button>
-      {isLive && menuOpen ? (
-        <FixedMenuPortal>
-          <div
-            className="export-menu-list"
-            role="menu"
-            style={menuStyle}
-            ref={menuRef}
-          >
+    <div className="export-menu">
+      {isLive ? (
+        // Radix's DropdownMenuTrigger opens the menu on `pointerdown` and
+        // `preventDefault()`s it whenever the menu is currently closed —
+        // which, per spec, suppresses the `click` event that would
+        // otherwise follow. So a Trigger can only ever toggle its own
+        // menu; it can't also carry a "start live" click handler for the
+        // not-live state below. Rendering the plain "Go Live" button
+        // outside any Trigger, and only wrapping this "Live" button in one
+        // once there's a menu for it to open, sidesteps that entirely.
+        <DropdownMenu.Root
+          modal={false}
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
+        >
+          <DropdownMenu.Trigger asChild>
             <button
               type="button"
-              role="menuitem"
-              className="export-menu-item"
-              data-testid="copy-live-link-button"
-              onClick={() => {
-                setMenuOpen(false)
-                if (liveUrl) void copyUrl(liveUrl)
-              }}
+              className={className}
+              data-testid="go-live-button"
+              aria-label="Live options"
             >
-              <Link2Icon aria-hidden="true" />
-              Copy Live Link
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              className="export-menu-item"
-              data-testid="stop-live-button"
-              onClick={() => {
-                setMenuOpen(false)
-                onStopLive()
-              }}
-            >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 15 15"
-                fill="currentColor"
+              <VideoIcon aria-hidden="true" />
+              Live
+              <ChevronDownIcon
+                className="export-menu-caret"
                 aria-hidden="true"
-              >
-                <rect x="2" y="2" width="11" height="11" rx="1.5" />
-              </svg>
-              Stop Live
+              />
             </button>
-          </div>
-        </FixedMenuPortal>
-      ) : null}
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              className="export-menu-list"
+              align="end"
+              sideOffset={4}
+            >
+              <DropdownMenu.Item
+                className="export-menu-item"
+                data-testid="copy-live-link-button"
+                onSelect={() => {
+                  if (liveUrl) void copyUrl(liveUrl)
+                }}
+              >
+                <Link2Icon aria-hidden="true" />
+                Copy Live Link
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                className="export-menu-item"
+                data-testid="stop-live-button"
+                onSelect={onStopLive}
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 15 15"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <rect x="2" y="2" width="11" height="11" rx="1.5" />
+                </svg>
+                Stop Live
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
+      ) : (
+        <button
+          type="button"
+          className={className}
+          data-testid="go-live-button"
+          aria-label="Go live"
+          title="Anyone with this link can view your score live. Don't share it publicly."
+          onClick={() => void copyUrl(onStartLive())}
+        >
+          <VideoIcon aria-hidden="true" />
+          Go Live
+        </button>
+      )}
       <Toast.Provider swipeDirection="right" duration={3000}>
         <Toast.Root
           className="export-audio-toast"

@@ -1,9 +1,6 @@
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { ChevronDownIcon } from '@radix-ui/react-icons'
 import type { ReactNode } from 'react'
-import { useRef } from 'react'
-import { useDismissableOpen } from '../hooks/useDismissableOpen'
-import { useFixedMenuPosition } from '../hooks/useFixedMenuPosition'
-import { FixedMenuPortal } from './FixedMenuPortal'
 
 export interface ExportMenuItem {
   key: string
@@ -35,66 +32,49 @@ export function ExportMenuButton({
   sections,
   disabled = false,
 }: ExportMenuButtonProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const [open, setOpen] = useDismissableOpen(containerRef, menuRef)
-  const menuStyle = useFixedMenuPosition(buttonRef, open)
-
   return (
-    <div className="export-menu" ref={containerRef}>
-      <button
-        type="button"
-        ref={buttonRef}
-        className="preview-export-btn"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        disabled={disabled}
-        onClick={() => setOpen((prev) => !prev)}
-      >
-        {icon}
-        {label}
-        <ChevronDownIcon className="export-menu-caret" aria-hidden="true" />
-      </button>
-      {open && !disabled ? (
-        <FixedMenuPortal>
-          <div
+    <div className="export-menu">
+      <DropdownMenu.Root modal={false}>
+        <DropdownMenu.Trigger asChild>
+          <button
+            type="button"
+            className="preview-export-btn"
+            disabled={disabled}
+          >
+            {icon}
+            {label}
+            <ChevronDownIcon className="export-menu-caret" aria-hidden="true" />
+          </button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
             className="export-menu-list"
-            role="menu"
-            style={menuStyle}
-            ref={menuRef}
+            align="end"
+            sideOffset={4}
           >
             {sections.map((section, index) => (
               <div className="export-menu-section" key={section.title ?? index}>
                 {section.title ? (
-                  <div
-                    className="export-menu-section-title"
-                    role="presentation"
-                  >
+                  <DropdownMenu.Label className="export-menu-section-title">
                     {section.title}
-                  </div>
+                  </DropdownMenu.Label>
                 ) : null}
                 {section.items.map((item) => (
-                  <button
+                  <DropdownMenu.Item
                     key={item.key}
-                    type="button"
-                    role="menuitem"
                     className="export-menu-item"
                     disabled={item.disabled}
-                    onClick={() => {
-                      setOpen(false)
-                      item.onSelect()
-                    }}
+                    onSelect={() => item.onSelect()}
                   >
                     {item.icon}
                     {item.busy ? item.busyLabel : item.label}
-                  </button>
+                  </DropdownMenu.Item>
                 ))}
               </div>
             ))}
-          </div>
-        </FixedMenuPortal>
-      ) : null}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
     </div>
   )
 }

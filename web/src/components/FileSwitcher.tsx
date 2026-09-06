@@ -1,3 +1,4 @@
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
   ArchiveIcon,
   ChevronDownIcon,
@@ -9,7 +10,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from '@radix-ui/react-icons'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   DEMO_FILE_NAMES,
   displayFileName,
@@ -18,11 +19,8 @@ import {
   isReadOnlyFile,
   sortedUserFileNames,
 } from '../fileStore'
-import { useDismissableOpen } from '../hooks/useDismissableOpen'
-import { useFixedMenuPosition } from '../hooks/useFixedMenuPosition'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import { FileTabName } from './FileTabName'
-import { FixedMenuPortal } from './FixedMenuPortal'
 import { ImportButton } from './ImportButton'
 import { SaveStatusBadge } from './SaveStatusBadge'
 import { ShareButton } from './ShareButton'
@@ -92,27 +90,13 @@ export function FileSwitcher({
   const names = sortedUserFileNames(store)
   const showEmptyHint = !isLoadingGithub && names.length === 0
 
-  const filesContainerRef = useRef<HTMLDivElement>(null)
-  const filesButtonRef = useRef<HTMLButtonElement>(null)
-  const filesMenuRef = useRef<HTMLDivElement>(null)
-  const [filesOpen, setFilesOpen] = useDismissableOpen(
-    filesContainerRef,
-    filesMenuRef,
-  )
-  const filesMenuStyle = useFixedMenuPosition(filesButtonRef, filesOpen)
+  const [filesOpen, setFilesOpen] = useState(false)
   const [demoOpen, setDemoOpen] = useState(false)
   useEffect(() => {
     if (!filesOpen) setDemoOpen(false)
   }, [filesOpen])
 
-  const actionsContainerRef = useRef<HTMLDivElement>(null)
-  const actionsButtonRef = useRef<HTMLButtonElement>(null)
-  const actionsMenuRef = useRef<HTMLDivElement>(null)
-  const [actionsOpen, setActionsOpen] = useDismissableOpen(
-    actionsContainerRef,
-    actionsMenuRef,
-  )
-  const actionsMenuStyle = useFixedMenuPosition(actionsButtonRef, actionsOpen)
+  const [actionsOpen, setActionsOpen] = useState(false)
 
   return (
     <div className="file-tab-bar">
@@ -120,28 +104,30 @@ export function FileSwitcher({
         status={saveStatus}
         autosaveDeadline={autosaveDeadline}
       />
-      <div className="export-menu" ref={filesContainerRef}>
-        <button
-          type="button"
-          ref={filesButtonRef}
-          className="preview-export-btn"
-          aria-haspopup="menu"
-          aria-expanded={filesOpen}
-          onClick={() => setFilesOpen((prev) => !prev)}
+      <div className="export-menu">
+        <DropdownMenu.Root
+          modal={false}
+          open={filesOpen}
+          onOpenChange={setFilesOpen}
         >
-          {displayFileName(triggerLabel)}
-          {isLoadingGithub ? (
-            <span className="file-tab-bar-spinner" aria-hidden="true" />
-          ) : (
-            <ChevronDownIcon className="export-menu-caret" aria-hidden="true" />
-          )}
-        </button>
-        {filesOpen ? (
-          <FixedMenuPortal>
-            <div
+          <DropdownMenu.Trigger asChild>
+            <button type="button" className="preview-export-btn">
+              {displayFileName(triggerLabel)}
+              {isLoadingGithub ? (
+                <span className="file-tab-bar-spinner" aria-hidden="true" />
+              ) : (
+                <ChevronDownIcon
+                  className="export-menu-caret"
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
               className="export-menu-list file-tab-bar-files-list"
-              style={filesMenuStyle}
-              ref={filesMenuRef}
+              align="end"
+              sideOffset={4}
             >
               {isLoadingGithub ? (
                 <p className="file-tab-bar-hint">Loading files from GitHub…</p>
@@ -216,29 +202,30 @@ export function FileSwitcher({
                   </ul>
                 ) : null}
               </div>
-            </div>
-          </FixedMenuPortal>
-        ) : null}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       </div>
-      <div className="export-menu" ref={actionsContainerRef}>
-        <button
-          type="button"
-          ref={actionsButtonRef}
-          className="preview-export-btn"
-          aria-haspopup="menu"
-          aria-expanded={actionsOpen}
-          aria-label="File actions"
-          onClick={() => setActionsOpen((prev) => !prev)}
+      <div className="export-menu">
+        <DropdownMenu.Root
+          modal={false}
+          open={actionsOpen}
+          onOpenChange={setActionsOpen}
         >
-          <DotsHorizontalIcon aria-hidden="true" />
-        </button>
-        {actionsOpen ? (
-          <FixedMenuPortal>
-            <div
+          <DropdownMenu.Trigger asChild>
+            <button
+              type="button"
+              className="preview-export-btn"
+              aria-label="File actions"
+            >
+              <DotsHorizontalIcon aria-hidden="true" />
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
               className="export-menu-list"
-              role="menu"
-              style={actionsMenuStyle}
-              ref={actionsMenuRef}
+              align="end"
+              sideOffset={4}
             >
               <button
                 type="button"
@@ -350,9 +337,9 @@ export function FileSwitcher({
                 <GearIcon aria-hidden="true" />
                 Storage…
               </button>
-            </div>
-          </FixedMenuPortal>
-        ) : null}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       </div>
     </div>
   )
