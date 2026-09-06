@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { Given, Then, When } from './fixtures'
+import { Given, Then } from './fixtures'
 
 /**
  * Regression fixture for the click-and-click note-range gesture's new
