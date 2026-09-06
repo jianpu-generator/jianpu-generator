@@ -41,7 +41,7 @@ Feature: Live share button
     Then the stop-live button disappears
     And the go-live button reads "Go Live"
 
-  Scenario: Stopping live ends the link for viewers, and going live again on the same link revives it
+  Scenario: Stopping live marks the link ended for future loads, but a viewer already on the page isn't pushed to
     Given clipboard permissions are granted
     And the file store is seeded with the live score
     When the owner loads the app and clicks "Go Live"
@@ -49,6 +49,8 @@ Feature: Live share button
     When a viewer opens the copied live link in a new page
     Then the viewer sees the preview page
     When the owner clicks the go-live button and then the stop-live button
+    Then the viewer's preview contains "Live Score"
+    When the viewer reloads the page
     Then the viewer sees "This live session has ended."
     And the viewer's preview no longer contains "Live Score"
     When a late viewer opens the copied live link in a new page
@@ -59,6 +61,22 @@ Feature: Live share button
     And the revived live link is identical to the original link
     When the late viewer reloads the page
     Then the late viewer's preview contains "Live Score"
+
+  Scenario: Editing while live does not push to the viewer until the autosave debounce fires
+    Given clipboard permissions are granted
+    And the file store is seeded with the live score
+    And the clock is under test control
+    When the owner loads the app and clicks "Go Live"
+    Then a live-link-copied toast is shown
+    When a viewer opens the copied live link in a new page
+    Then the viewer's preview contains "Live Score"
+    When the owner edits the live score's title to "Edited Live Score"
+    And the viewer reloads the page
+    Then the viewer's preview contains "Live Score"
+    And the viewer's preview no longer contains "Edited Live Score"
+    When the owner's autosave debounce interval elapses
+    And the viewer reloads the page
+    Then the viewer's preview contains "Edited Live Score"
 
   Scenario: A viewer importing the live score clears the #live= hash and focuses the imported file
     Given clipboard permissions are granted

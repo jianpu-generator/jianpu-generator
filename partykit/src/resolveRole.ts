@@ -1,4 +1,4 @@
-import type { LiveRole } from './protocol'
+export type LiveRole = 'owner' | 'viewer'
 
 /**
  * The entire write-guard for the room, extracted as a pure function so the

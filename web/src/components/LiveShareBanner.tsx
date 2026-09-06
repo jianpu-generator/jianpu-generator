@@ -20,7 +20,8 @@ export function LiveShareBanner({
             Live: <strong>{filename}</strong>
           </>
         )}
-        {status === 'disconnected' && 'Connection lost — reconnecting…'}
+        {status === 'disconnected' &&
+          'Could not load this live session — try reloading.'}
         {status === 'ended' && 'This live session has ended.'}
       </p>
       {filename && (

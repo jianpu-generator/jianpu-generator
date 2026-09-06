@@ -7,6 +7,13 @@ import {
   liveShareButtonState as state,
 } from './live-share-button-state'
 
+// Mirrors `useStorageBackend.ts`'s `AUTOSAVE_DEBOUNCE_MS`, which
+// `useLiveOwner.ts`'s `broadcastContent` also debounces at. Not imported
+// directly — that module transitively pulls in `fileStore.ts`'s Vite-only
+// `?raw` import, which Playwright's test loader can't resolve (see the same
+// note in `autosave-github.steps.ts`).
+const AUTOSAVE_DEBOUNCE_MS = 20_000
+
 // `viewerContext` comes from `browser.newContext()`, which — unlike the
 // per-test `context`/`page` fixtures — Playwright never closes on its own,
 // so every scenario that opens one must close it itself once done. Doing
@@ -296,3 +303,43 @@ Then(
     expect(previewContent).toContain(text)
   },
 )
+
+When('the viewer reloads the page', async () => {
+  if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
+  await state.viewerPage.reload()
+})
+
+// Installed on the owner's page only — the live-share push this guards is
+// entirely owner-side (`useLiveOwner.ts`'s debounced `broadcastContent`), so
+// there is nothing for the viewer's clock to affect.
+Given('the clock is under test control', async ({ page }) => {
+  await page.clock.install()
+})
+
+// Edits the owner's editor content directly via the Monaco model rather
+// than typing character-by-character (as `typeAtEditorEnd` does for
+// appending text) — a title change needs to replace an existing line, not
+// just append after it. `setValue` still fires the model's change event, so
+// this exercises the same `onChange` -> `handleSourceChange` ->
+// `liveOwner.broadcastContent` path a real edit would.
+When(
+  "the owner edits the live score's title to {string}",
+  async ({ page }, title: string) => {
+    const edited = LIVE_SOURCE.replace(
+      'title = "Live Score"',
+      `title = "${title}"`,
+    )
+    await page.evaluate((value) => {
+      const editor = (
+        window as unknown as {
+          monaco?: typeof import('monaco-editor')
+        }
+      ).monaco?.editor.getEditors()[0]
+      editor?.getModel()?.setValue(value)
+    }, edited)
+  },
+)
+
+When("the owner's autosave debounce interval elapses", async ({ page }) => {
+  await page.clock.fastForward(AUTOSAVE_DEBOUNCE_MS)
+})

@@ -1,7 +1,6 @@
-import PartySocket from 'partysocket'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { FileStoreState } from '../fileStore'
-import type { LiveServerMessage } from '../live/protocol'
+import type { LiveDoc } from '../live/protocol'
 import { clearLiveShareHash, parseLiveShareFromHash } from '../liveShareUrl'
 import type { SharePayload } from '../shareUrl'
 import type { StorageBackend } from '../storage/types'
@@ -16,11 +15,16 @@ interface FileOpError {
 }
 
 /**
- * Parses a `#live=` URL hash (if present) on mount and, for its lifetime,
- * keeps a read-only WebSocket connection open to the PartyKit room it names.
- * Produces the same `{filename, content}` shape `useSharedPreview` does, so
- * it plugs into the identical `source`/`readOnly` derivation in `App.tsx`.
- * Also collapses the editor pane, mirroring `useSharedPreview`.
+ * Parses a `#live=` URL hash (if present) on mount and fetches the KV-backed
+ * room's current doc once. Produces the same `{filename, content}` shape
+ * `useSharedPreview` does, so it plugs into the identical `source`/
+ * `readOnly` derivation in `App.tsx`. Also collapses the editor pane,
+ * mirroring `useSharedPreview`.
+ *
+ * There is no live push: an owner's later edits only reach a viewer that
+ * reloads the page (see `useLiveOwner.broadcastContent`), by design — the
+ * sharer is expected to tell viewers to refresh when they want an update
+ * seen.
  */
 export function useLiveViewer(
   setEditorCollapsed: (collapsed: boolean) => void,
@@ -41,8 +45,6 @@ export function useLiveViewer(
     setStore,
     setFileOpError,
   )
-  const socketRef = useRef<PartySocket | null>(null)
-  const importedRef = useRef(false)
   const handleImportLive = useCallback(async () => {
     if (!liveViewerPreview) return
     try {
@@ -50,8 +52,6 @@ export function useLiveViewer(
         liveViewerPreview.filename,
         liveViewerPreview.content,
       )
-      importedRef.current = true
-      socketRef.current?.close()
       clearLiveShareHash()
       setLiveViewerPreview(null)
     } catch {
@@ -67,51 +67,29 @@ export function useLiveViewer(
 
     setEditorCollapsed(true)
 
-    const socket = new PartySocket({ host, room: parsed.roomId })
-    socketRef.current = socket
-
-    const handleOpen = () =>
-      setLiveViewerStatus((prev) => (prev === 'ended' ? prev : 'live'))
-    const handleClose = () =>
-      setLiveViewerStatus((prev) => (prev === 'ended' ? prev : 'disconnected'))
-    const handleMessage = (event: MessageEvent<string>) => {
-      if (importedRef.current) return
-      const message: LiveServerMessage = JSON.parse(event.data)
-      if (message.type === 'sync') {
-        if (message.ended) {
+    let cancelled = false
+    void fetch(`https://${host}/rooms/${parsed.roomId}`)
+      .then((response) => {
+        if (!response.ok)
+          throw new Error(`Unexpected status ${response.status}`)
+        return response.json() as Promise<LiveDoc>
+      })
+      .then((doc) => {
+        if (cancelled) return
+        if (doc.ended) {
           setLiveViewerPreview(null)
           setLiveViewerStatus('ended')
           return
         }
+        setLiveViewerPreview({ filename: doc.filename, content: doc.content })
         setLiveViewerStatus('live')
-        setLiveViewerPreview({
-          filename: message.filename,
-          content: message.content,
-        })
-      } else if (message.type === 'update') {
-        setLiveViewerPreview({
-          filename: message.filename,
-          content: message.content,
-        })
-      } else if (message.type === 'ended') {
-        setLiveViewerPreview(null)
-        setLiveViewerStatus('ended')
-        socket.close()
-      }
-    }
-
-    socket.addEventListener('open', handleOpen)
-    socket.addEventListener('close', handleClose)
-    socket.addEventListener('error', handleClose)
-    socket.addEventListener('message', handleMessage)
+      })
+      .catch(() => {
+        if (!cancelled) setLiveViewerStatus('disconnected')
+      })
 
     return () => {
-      socket.removeEventListener('open', handleOpen)
-      socket.removeEventListener('close', handleClose)
-      socket.removeEventListener('error', handleClose)
-      socket.removeEventListener('message', handleMessage)
-      socket.close()
-      socketRef.current = null
+      cancelled = true
     }
   }, [setEditorCollapsed])
 

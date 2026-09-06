@@ -2,15 +2,12 @@
   "name": "jianpu-live-party",
   "private": true,
   "version": "0.0.0",
-  "description": "Cloudflare Worker for Live Share: fans out an owner's edits to read-only viewers over a Durable Object-backed WebSocket room, self-hosted on our own Cloudflare account via wrangler (not the shared PartyKit platform). Not part of the web/ build.",
+  "description": "Cloudflare Worker for Live Share: stores an owner's saved score in Workers KV for viewers to fetch, self-hosted on our own Cloudflare account via wrangler (not the shared PartyKit platform). Not part of the web/ build.",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
-  },
-  "dependencies": {
-    "partyserver": "^0.5.8"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260424.1",
