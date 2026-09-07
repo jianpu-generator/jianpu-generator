@@ -97,11 +97,13 @@ marquee or the sibling same-part `Note ↔ Note`/`Lyric ↔ Lyric` arms'
 `note_id`-range rules. Cross-part cross-row has no shared `note_id` axis
 across parts, so it does fall back to the measure-range pattern, accepting
 the same coarseness tradeoff cross-part `Note ↔ Note` already accepts. Both
-scopes restrict `lyric_cells` to the `Lyric` endpoint's own verse — the only
-verse row a real drag actually swept — mirroring `LyricLabel ↔ LyricLabel`'s
-single-verse scoping rather than `PartLabel ↔ PartLabel`'s "every verse"
-(a part-label sweep has no verse of its own to scope by; a `Lyric` endpoint
-does). With `Note ↔ Lyric` resolved, `previewSelectionResolver.ts`'s 'note'
+scopes restrict `lyric_cells` to verse `0` through the `Lyric` endpoint's own
+verse, rather than that verse alone: the note row renders above every verse
+row (a `Note` endpoint has no verse of its own), so a sweep from it down to
+some verse `V` always visually crosses verses `0` through `V`, not just row
+`V` in isolation — this was a real bug (see
+`note-lyric-range-select-crosses-verse.feature`) fixed after the original
+single-verse scoping shipped. With `Note ↔ Lyric` resolved, `previewSelectionResolver.ts`'s 'note'
 and 'lyric' modes now only fall back to the pixel marquee when `current`
 misses a click target of *either* type altogether (answering this row's
 "Next question to answer" from before: yes for the pattern's general shape,

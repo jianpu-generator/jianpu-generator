@@ -101,9 +101,13 @@ pub(crate) fn resolve(
 /// attached to — see the same-part-and-verse `Lyric ↔ Lyric` arm), so
 /// ranging both `note_spans` and `lyric_spans` by the same `[min, max]` of
 /// the two endpoints' `note_id`s works without a measure lookup at all.
-/// `lyric_cells` is additionally restricted to the `Lyric` endpoint's own
-/// `verse` — the only verse row this selection actually covered, mirroring
-/// `LyricLabel ↔ LyricLabel`'s single-verse scoping.
+/// `lyric_cells` is additionally restricted to verse `0` through the `Lyric`
+/// endpoint's own `verse` — the note row renders above every verse row (there
+/// is no "verse" a `Note` endpoint sits in), so a vertical sweep from the
+/// `Note` endpoint down to some verse `V` always visually crosses every verse
+/// row from `0` through `V` too, not just row `V` in isolation. See
+/// `note-lyric-range-select-crosses-verse.feature` for the regression this
+/// range guards.
 fn same_part(
     note_spans: &[NoteSpanOut],
     lyric_spans: &[LyricSpanOut],
@@ -131,7 +135,7 @@ fn same_part(
         .iter()
         .filter(|span| {
             span.source_part_index == part
-                && span.verse == verse
+                && span.verse <= verse
                 && span.note_id >= range_start
                 && span.note_id <= range_end
         })
@@ -167,6 +171,11 @@ fn same_part(
 /// measure are in range *and* its own within-measure position falls in
 /// `[position_start, position_end]`, evaluated per measure/part
 /// independently (same staggered-rhythm tradeoff as the `Note ↔ Note` arm).
+///
+/// `lyric_cells` is additionally restricted to verse `0` through the `Lyric`
+/// endpoint's own `verse` — same reasoning as [`same_part`]'s own verse
+/// range: the note row sits above every verse row, so the sweep always
+/// visually crosses verses `0` through `V`, not just verse `V` alone.
 ///
 /// `Err` if either endpoint's own span can't be found (shouldn't happen for
 /// a valid click-derived ID; guarded rather than panicking, mirroring the
@@ -226,7 +235,7 @@ fn cross_part(
         .filter(|span| {
             span.source_part_index >= part_start
                 && span.source_part_index <= part_end
-                && span.verse == lyric.verse
+                && span.verse <= lyric.verse
                 && span.measure_index >= measure_start
                 && span.measure_index <= measure_end
                 && lyric_position_in_measure(

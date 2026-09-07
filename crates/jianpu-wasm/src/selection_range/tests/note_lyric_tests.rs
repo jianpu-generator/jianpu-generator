@@ -3,13 +3,15 @@ use crate::selection_range::types::{
     ClickableElementId, LyricCellOut, NoteCellOut, ResolveSelectionRangeResponse,
 };
 
-use super::test_helpers::{fixture, lyric, lyric_cell, lyric_span, note, note_cell, note_span};
+use super::test_helpers::{
+    cross_verse_lyric_fixture, fixture, lyric, lyric_cell, lyric_span, note, note_cell, note_span,
+};
 
 /// Table-driven case: given `(anchor, current)`, resolving a `Note ↔ Lyric`
 /// cross-row range must produce exactly the expected note/lyric cells —
 /// `note_cells` unrestricted by verse (there's only one row of notes),
-/// `lyric_cells` restricted to the `Lyric` endpoint's own verse (see
-/// `note_lyric::cross_part`'s doc comment) — regardless of which side is
+/// `lyric_cells` restricted to verse `0` through the `Lyric` endpoint's own
+/// verse (see `note_lyric::cross_part`'s doc comment) — regardless of which side is
 /// the `Note` and which is the `Lyric`, and regardless of anchor/current
 /// order.
 fn assert_note_lyric_range(
@@ -85,8 +87,8 @@ fn same_part_note_lyric_range_uses_note_id_not_measure_index() {
     ];
     let mut lyric_spans = vec![lyric_span(0, 0, 0, 0), lyric_span(0, 1, 0, 1)];
     // A verse-1 syllable on note_id 1 (in range) also proves `lyric_cells`
-    // stays scoped to the `Lyric` endpoint's own verse — mirrors
-    // `LyricLabel ↔ LyricLabel`'s single-verse scoping.
+    // stays scoped to verse 0 through the `Lyric` endpoint's own verse (0
+    // here), excluding anything above it.
     lyric_spans.push(lyric_span(0, 1, 1, 1));
     // A verse-0 syllable on note_id 5 (out of range) proves the range check
     // itself, not just the verse filter, excludes it.
@@ -103,6 +105,39 @@ fn same_part_note_lyric_range_uses_note_id_not_measure_index() {
         } => {
             assert_eq!(note_cells, vec![note_cell(0, 0), note_cell(0, 1)]);
             assert_eq!(lyric_cells, vec![lyric_cell(0, 0, 0), lyric_cell(0, 1, 0)]);
+        }
+        ResolveSelectionRangeResponse::Err => panic!("expected Ok, got Err"),
+    }
+}
+
+#[test]
+fn same_part_note_lyric_range_crosses_intervening_verses() {
+    // Regression: a `Note` anchor with a `Lyric` current landing on verse 1
+    // must also pick up verse 0's lyrics on the same note_id range, since the
+    // note row sits above every verse row — a sweep down to verse 1 visually
+    // crosses verse 0 on the way there. Before the fix, `lyric_cells` was
+    // wrongly scoped to the `Lyric` endpoint's own verse alone, dropping
+    // verse 0 entirely.
+    let (note_spans, lyric_spans) = cross_verse_lyric_fixture();
+    let anchor = note(0, 0);
+    let current = lyric(0, 1, 1);
+
+    let response = resolve_selection_range_response(&note_spans, &lyric_spans, &anchor, &current);
+
+    match response {
+        ResolveSelectionRangeResponse::Ok {
+            note_cells,
+            lyric_cells,
+        } => {
+            assert_eq!(note_cells, vec![note_cell(0, 0), note_cell(0, 1)]);
+            assert_eq!(
+                lyric_cells,
+                vec![
+                    lyric_cell(0, 0, 0),
+                    lyric_cell(0, 1, 0),
+                    lyric_cell(0, 1, 1),
+                ]
+            );
         }
         ResolveSelectionRangeResponse::Err => panic!("expected Ok, got Err"),
     }
@@ -184,8 +219,8 @@ fn cross_part_note_lyric_range_within_same_measure_uses_position_not_whole_measu
 #[test]
 fn cross_part_note_lyric_range_excludes_other_verses() {
     // A verse-1 syllable sitting inside the swept measure/part range is
-    // still excluded — the selection only ever covered the `Lyric` endpoint's
-    // own verse-0 row, not every verse.
+    // still excluded — the `Lyric` endpoint's own verse is 0 here, so the
+    // verse range [0, 0] never reaches verse 1.
     let (mut note_spans, mut lyric_spans) = fixture();
     note_spans.push(note_span(1, 4, 1));
     lyric_spans.push(lyric_span(1, 4, 1, 1));
