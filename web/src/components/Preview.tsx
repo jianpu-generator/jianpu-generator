@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { measureGroupSelector } from '../dataAttributes'
 import type { NoteTimingOut, SvgDocumentOut } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import { renderSvgDocument } from './PreviewSvgRenderer'
@@ -260,7 +261,7 @@ export function Preview({
       const target =
         container.querySelector('[data-testid="measure-highlight"]') ??
         container.querySelector(
-          `[data-tag="measure"][data-measure-index="${targetMeasureIndex}"]`,
+          measureGroupSelector({ index: targetMeasureIndex }),
         )
       target?.scrollIntoView({
         block: 'center',

@@ -1,11 +1,10 @@
 import type { ReactNode } from 'react'
 import fontsManifest from '../../../fonts/fonts.json'
-import { DATA_VARIANT } from '../dataVariant'
+import { DATA_VARIANT, groupAttrsForTag } from '../dataAttributes'
 import type {
   FontFamilyOut,
   SvgDocumentOut,
   SvgElementOut,
-  TagOut,
   TransparentRectRoleOut,
 } from '../jianpuWasm'
 
@@ -48,91 +47,6 @@ function transparentRectRoleToDataVariant(
   role: TransparentRectRoleOut,
 ): string {
   return DATA_VARIANT[role]
-}
-
-interface GroupTagAttrs {
-  dataTag?: string
-  dataMeasureIndex?: number
-  dataMeasureIndexEnd?: number
-  dataSectionLabel?: string
-  dataPartIndex?: number
-  dataNoteId?: number
-  dataVerse?: number
-  dataMeasureIndexStart?: number
-  dataMeasureIndexNext?: number
-  dataMeasureIndexPrev?: number
-  cursor: boolean
-}
-
-function groupAttrsForTag(tag: TagOut | undefined): GroupTagAttrs {
-  if (!tag) return { cursor: false }
-  switch (tag.type) {
-    case 'measure':
-      return {
-        dataTag: 'measure',
-        dataMeasureIndex: tag.index,
-        dataMeasureIndexEnd: tag.end,
-        cursor: true,
-      }
-    case 'barNumber':
-      return {
-        dataTag: 'bar-number',
-        dataMeasureIndex: tag.index,
-        dataMeasureIndexEnd: tag.end,
-        cursor: true,
-      }
-    case 'sectionLabel':
-      return {
-        dataTag: 'section-label',
-        dataSectionLabel: tag.label,
-        cursor: true,
-      }
-    case 'note':
-      return {
-        dataTag: 'note',
-        dataPartIndex: tag.source_part_index,
-        dataNoteId: tag.note_id,
-        cursor: false,
-      }
-    case 'partLabel':
-      return {
-        dataTag: 'part-label',
-        dataPartIndex: tag.source_part_index,
-        dataMeasureIndexStart: tag.measure_index_start,
-        dataMeasureIndexEnd: tag.measure_index_end,
-        cursor: true,
-      }
-    case 'lyric':
-      return {
-        dataTag: 'lyric',
-        dataPartIndex: tag.source_part_index,
-        dataNoteId: tag.note_id,
-        dataVerse: tag.verse,
-        cursor: false,
-      }
-    case 'lyricLabel':
-      return {
-        dataTag: 'lyric-label',
-        dataPartIndex: tag.source_part_index,
-        dataVerse: tag.verse,
-        dataMeasureIndexStart: tag.measure_index_start,
-        dataMeasureIndexEnd: tag.measure_index_end,
-        cursor: true,
-      }
-    case 'barLine':
-      return {
-        dataTag: 'bar-line',
-        dataMeasureIndexNext: tag.measure_index_next,
-        dataMeasureIndexPrev: tag.measure_index_prev,
-        cursor: true,
-      }
-    default: {
-      const exhaustiveCheck: never = tag
-      throw new Error(
-        `Unhandled Tag variant: ${JSON.stringify(exhaustiveCheck)}`,
-      )
-    }
-  }
 }
 
 function renderSvgElement(el: SvgElementOut, key: number): ReactNode {

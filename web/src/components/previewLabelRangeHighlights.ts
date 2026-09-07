@@ -1,4 +1,9 @@
-import { DATA_VARIANT } from '../dataVariant'
+import {
+  DATA_RANGE_ACTIVE_FLAG,
+  DATA_VARIANT,
+  groupTagSelector,
+  tagFromElement,
+} from '../dataAttributes'
 import type { LyricSpan, NoteSpan } from '../types'
 import type { AnchorPoint } from './previewRangeHighlights'
 import {
@@ -8,6 +13,31 @@ import {
   type PartLabelHit,
 } from './previewLabelSelection'
 import type { LyricCell, NoteCell } from './previewSelection'
+
+/** Narrows a part-label group's own `TagOut` (already known to be
+ * `'partLabel'`, via `tagFromElement`) into a `PartLabelHit`, or `undefined`
+ * if it isn't one — shared by every part-label hit-test/highlight below. */
+function partLabelHitFromGroup(group: Element): PartLabelHit | undefined {
+  const tag = tagFromElement(group)
+  if (tag?.type !== 'partLabel') return undefined
+  return {
+    sourcePartIndex: tag.source_part_index,
+    measureIndexStart: tag.measure_index_start,
+    measureIndexEnd: tag.measure_index_end,
+  }
+}
+
+/** The lyric-label mirror of `partLabelHitFromGroup`. */
+function lyricLabelHitFromGroup(group: Element): LyricLabelHit | undefined {
+  const tag = tagFromElement(group)
+  if (tag?.type !== 'lyricLabel') return undefined
+  return {
+    sourcePartIndex: tag.source_part_index,
+    verse: tag.verse,
+    measureIndexStart: tag.measure_index_start,
+    measureIndexEnd: tag.measure_index_end,
+  }
+}
 
 /** Every part-label click target whose rect overlaps the axis-aligned
  * marquee spanned by `anchor`/`current`, restricted to `anchorSystem` — the
@@ -46,29 +76,15 @@ export function partLabelsInMarquee(
       bounds.top < maxY &&
       bounds.bottom > minY
     if (!intersects) continue
-    const group = rect.closest('[data-tag="part-label"]')
-    if (!group) continue
-    const { partIndex, measureIndexStart, measureIndexEnd } = (
-      group as HTMLElement
-    ).dataset
+    const group = rect.closest(groupTagSelector('partLabel'))
+    const hit = group && partLabelHitFromGroup(group)
+    if (!hit) continue
     if (
-      partIndex === undefined ||
-      measureIndexStart === undefined ||
-      measureIndexEnd === undefined
+      hit.measureIndexStart !== anchorSystem.measureIndexStart ||
+      hit.measureIndexEnd !== anchorSystem.measureIndexEnd
     )
       continue
-    const start = Number.parseInt(measureIndexStart, 10)
-    const end = Number.parseInt(measureIndexEnd, 10)
-    if (
-      start !== anchorSystem.measureIndexStart ||
-      end !== anchorSystem.measureIndexEnd
-    )
-      continue
-    hits.push({
-      sourcePartIndex: Number.parseInt(partIndex, 10),
-      measureIndexStart: start,
-      measureIndexEnd: end,
-    })
+    hits.push(hit)
   }
   return hits
 }
@@ -101,31 +117,18 @@ export function partLabelsInMarqueeAcrossSystems(
       `rect[data-variant="${DATA_VARIANT.partLabelClickTarget}"]`,
     ),
   )) {
-    const group = rect.closest('[data-tag="part-label"]')
-    if (!group) continue
-    const { partIndex, measureIndexStart, measureIndexEnd } = (
-      group as HTMLElement
-    ).dataset
-    if (
-      partIndex === undefined ||
-      measureIndexStart === undefined ||
-      measureIndexEnd === undefined
-    )
-      continue
-    const start = Number.parseInt(measureIndexStart, 10)
-    const end = Number.parseInt(measureIndexEnd, 10)
-    allHits.push({
-      sourcePartIndex: Number.parseInt(partIndex, 10),
-      measureIndexStart: start,
-      measureIndexEnd: end,
-    })
+    const group = rect.closest(groupTagSelector('partLabel'))
+    const hit = group && partLabelHitFromGroup(group)
+    if (!hit) continue
+    allHits.push(hit)
     const bounds = rect.getBoundingClientRect()
     const intersects =
       bounds.left < maxX &&
       bounds.right > minX &&
       bounds.top < maxY &&
       bounds.bottom > minY
-    if (intersects) touchedSystems.add(`${start}:${end}`)
+    if (intersects)
+      touchedSystems.add(`${hit.measureIndexStart}:${hit.measureIndexEnd}`)
   }
   return allHits.filter((hit) =>
     touchedSystems.has(`${hit.measureIndexStart}:${hit.measureIndexEnd}`),
@@ -133,8 +136,8 @@ export function partLabelsInMarqueeAcrossSystems(
 }
 
 /** Marks every part-label click-target rect belonging to `hits` with
- * `data-part-label-range-active`, clearing it from every other one. Driven
- * from JS state rather than left to pure CSS `:hover` — the label a
+ * `DATA_RANGE_ACTIVE_FLAG.partLabel`, clearing it from every other one.
+ * Driven from JS state rather than left to pure CSS `:hover` — the label a
  * part-label selection started on must keep showing the hovered fill for the
  * whole gesture, even once the pointer has moved off its rect onto another
  * label's (or off every label entirely), matching how `partLabelsInMarquee`
@@ -155,14 +158,15 @@ export function applyPartLabelRangeHighlight(
       `rect[data-variant="${DATA_VARIANT.partLabelClickTarget}"]`,
     ),
   )) {
-    const group = rect.closest('[data-tag="part-label"]') as HTMLElement | null
-    if (!group) continue
-    const { partIndex, measureIndexStart, measureIndexEnd } = group.dataset
-    const key = `${partIndex}:${measureIndexStart}:${measureIndexEnd}`
-    if (activeKeys.has(key)) {
-      rect.setAttribute('data-part-label-range-active', '')
+    const group = rect.closest(groupTagSelector('partLabel'))
+    const hit = group && partLabelHitFromGroup(group)
+    const key =
+      hit &&
+      `${hit.sourcePartIndex}:${hit.measureIndexStart}:${hit.measureIndexEnd}`
+    if (typeof key === 'string' && activeKeys.has(key)) {
+      rect.setAttribute(DATA_RANGE_ACTIVE_FLAG.partLabel, '')
     } else {
-      rect.removeAttribute('data-part-label-range-active')
+      rect.removeAttribute(DATA_RANGE_ACTIVE_FLAG.partLabel)
     }
   }
 }
@@ -197,38 +201,22 @@ export function lyricLabelsInMarquee(
       bounds.top < maxY &&
       bounds.bottom > minY
     if (!intersects) continue
-    const group = rect.closest('[data-tag="lyric-label"]')
-    if (!group) continue
-    const { partIndex, verse, measureIndexStart, measureIndexEnd } = (
-      group as HTMLElement
-    ).dataset
+    const group = rect.closest(groupTagSelector('lyricLabel'))
+    const hit = group && lyricLabelHitFromGroup(group)
+    if (!hit) continue
     if (
-      partIndex === undefined ||
-      verse === undefined ||
-      measureIndexStart === undefined ||
-      measureIndexEnd === undefined
+      hit.measureIndexStart !== anchorSystem.measureIndexStart ||
+      hit.measureIndexEnd !== anchorSystem.measureIndexEnd
     )
       continue
-    const start = Number.parseInt(measureIndexStart, 10)
-    const end = Number.parseInt(measureIndexEnd, 10)
-    if (
-      start !== anchorSystem.measureIndexStart ||
-      end !== anchorSystem.measureIndexEnd
-    )
-      continue
-    hits.push({
-      sourcePartIndex: Number.parseInt(partIndex, 10),
-      verse: Number.parseInt(verse, 10),
-      measureIndexStart: start,
-      measureIndexEnd: end,
-    })
+    hits.push(hit)
   }
   return hits
 }
 
 /** Marks every lyric-label click-target rect belonging to `hits` with
- * `data-lyric-label-range-active`, clearing it from every other one — the
- * lyric-side mirror of `applyPartLabelRangeHighlight`. */
+ * `DATA_RANGE_ACTIVE_FLAG.lyricLabel`, clearing it from every other one —
+ * the lyric-side mirror of `applyPartLabelRangeHighlight`. */
 export function applyLyricLabelRangeHighlight(
   container: HTMLElement,
   hits: LyricLabelHit[],
@@ -244,15 +232,15 @@ export function applyLyricLabelRangeHighlight(
       `rect[data-variant="${DATA_VARIANT.lyricLabelClickTarget}"]`,
     ),
   )) {
-    const group = rect.closest('[data-tag="lyric-label"]') as HTMLElement | null
-    if (!group) continue
-    const { partIndex, verse, measureIndexStart, measureIndexEnd } =
-      group.dataset
-    const key = `${partIndex}:${verse}:${measureIndexStart}:${measureIndexEnd}`
-    if (activeKeys.has(key)) {
-      rect.setAttribute('data-lyric-label-range-active', '')
+    const group = rect.closest(groupTagSelector('lyricLabel'))
+    const hit = group && lyricLabelHitFromGroup(group)
+    const key =
+      hit &&
+      `${hit.sourcePartIndex}:${hit.verse}:${hit.measureIndexStart}:${hit.measureIndexEnd}`
+    if (typeof key === 'string' && activeKeys.has(key)) {
+      rect.setAttribute(DATA_RANGE_ACTIVE_FLAG.lyricLabel, '')
     } else {
-      rect.removeAttribute('data-lyric-label-range-active')
+      rect.removeAttribute(DATA_RANGE_ACTIVE_FLAG.lyricLabel)
     }
   }
 }
@@ -277,23 +265,9 @@ export function applyPersistedLyricLabelHighlights(
       `rect[data-variant="${DATA_VARIANT.lyricLabelClickTarget}"]`,
     ),
   )) {
-    const group = rect.closest('[data-tag="lyric-label"]') as HTMLElement | null
-    if (!group) continue
-    const { partIndex, verse, measureIndexStart, measureIndexEnd } =
-      group.dataset
-    if (
-      partIndex === undefined ||
-      verse === undefined ||
-      measureIndexStart === undefined ||
-      measureIndexEnd === undefined
-    )
-      continue
-    const hit: LyricLabelHit = {
-      sourcePartIndex: Number.parseInt(partIndex, 10),
-      verse: Number.parseInt(verse, 10),
-      measureIndexStart: Number.parseInt(measureIndexStart, 10),
-      measureIndexEnd: Number.parseInt(measureIndexEnd, 10),
-    }
+    const group = rect.closest(groupTagSelector('lyricLabel'))
+    const hit = group && lyricLabelHitFromGroup(group)
+    if (!hit) continue
     const cells = lyricCellsForLyricLabels(lyricSpans, [hit])
     const fullySelected =
       cells.length > 0 &&
@@ -303,9 +277,9 @@ export function applyPersistedLyricLabelHighlights(
         ),
       )
     if (fullySelected) {
-      rect.setAttribute('data-lyric-label-range-active', '')
+      rect.setAttribute(DATA_RANGE_ACTIVE_FLAG.lyricLabel, '')
     } else {
-      rect.removeAttribute('data-lyric-label-range-active')
+      rect.removeAttribute(DATA_RANGE_ACTIVE_FLAG.lyricLabel)
     }
   }
 }
@@ -332,20 +306,9 @@ export function applyPersistedPartLabelHighlights(
       `rect[data-variant="${DATA_VARIANT.partLabelClickTarget}"]`,
     ),
   )) {
-    const group = rect.closest('[data-tag="part-label"]') as HTMLElement | null
-    if (!group) continue
-    const { partIndex, measureIndexStart, measureIndexEnd } = group.dataset
-    if (
-      partIndex === undefined ||
-      measureIndexStart === undefined ||
-      measureIndexEnd === undefined
-    )
-      continue
-    const hit: PartLabelHit = {
-      sourcePartIndex: Number.parseInt(partIndex, 10),
-      measureIndexStart: Number.parseInt(measureIndexStart, 10),
-      measureIndexEnd: Number.parseInt(measureIndexEnd, 10),
-    }
+    const group = rect.closest(groupTagSelector('partLabel'))
+    const hit = group && partLabelHitFromGroup(group)
+    if (!hit) continue
     const cells = noteCellsForPartLabels(noteSpans, [hit])
     const fullySelected =
       cells.length > 0 &&
@@ -353,9 +316,9 @@ export function applyPersistedPartLabelHighlights(
         selectedKeys.has(`${cell.sourcePartIndex}:${cell.noteId}`),
       )
     if (fullySelected) {
-      rect.setAttribute('data-part-label-range-active', '')
+      rect.setAttribute(DATA_RANGE_ACTIVE_FLAG.partLabel, '')
     } else {
-      rect.removeAttribute('data-part-label-range-active')
+      rect.removeAttribute(DATA_RANGE_ACTIVE_FLAG.partLabel)
     }
   }
 }

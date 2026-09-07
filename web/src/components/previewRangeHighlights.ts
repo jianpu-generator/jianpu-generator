@@ -1,4 +1,9 @@
-import { DATA_VARIANT } from '../dataVariant'
+import {
+  DATA_VARIANT,
+  groupTagSelector,
+  tagFromElement,
+} from '../dataAttributes'
+import type { TagOut } from '../jianpuWasm'
 import type { LyricCell, NoteCell } from './previewSelection'
 
 export interface AnchorPoint {
@@ -20,11 +25,13 @@ interface RangeHighlightSpec<Cell> {
   /** CSS selector for each candidate hit-target rect, e.g.
    * `rect[data-variant="note-click-target-rect"]`. */
   rectSelector: string
-  /** `data-tag` of the rect's enclosing group, e.g. `'note'`. */
-  tag: string
-  /** Parses a `Cell` out of that group's `dataset`, or `undefined` if a
+  /** `TagOut['type']` of the rect's enclosing group, e.g. `'note'` — the
+   * selector itself is built from this via `groupTagSelector`. */
+  tagType: TagOut['type']
+  /** Narrows the enclosing group's own `TagOut` (already known to be
+   * `tagType`, via `tagFromElement`) into a `Cell`, or `undefined` if a
    * required field is missing. */
-  parseCell: (dataset: DOMStringMap) => Cell | undefined
+  parseCell: (tag: TagOut) => Cell | undefined
   /** A string uniquely identifying `cell`, used to test set membership. */
   cellKey: (cell: Cell) => string
   /** `dataset` property (camelCase) toggled on the enclosing group to mark it
@@ -55,9 +62,10 @@ function cellsInMarquee<Cell>(
       bounds.top < maxY &&
       bounds.bottom > minY
     if (!intersects) continue
-    const group = rect.closest(`[data-tag="${spec.tag}"]`)
+    const group = rect.closest(groupTagSelector(spec.tagType))
     if (!group) continue
-    const cell = spec.parseCell((group as HTMLElement).dataset)
+    const tag = tagFromElement(group)
+    const cell = tag && spec.parseCell(tag)
     if (cell === undefined) continue
     cells.push(cell)
   }
@@ -79,9 +87,12 @@ function applyPersistedHighlights<Cell>(
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(spec.rectSelector),
   )) {
-    const group = rect.closest(`[data-tag="${spec.tag}"]`) as HTMLElement | null
+    const group = rect.closest(
+      groupTagSelector(spec.tagType),
+    ) as HTMLElement | null
     if (!group) continue
-    const cell = spec.parseCell(group.dataset)
+    const tag = tagFromElement(group)
+    const cell = tag && spec.parseCell(tag)
     const selected = cell !== undefined && selectedKeys.has(spec.cellKey(cell))
     if (selected) {
       group.dataset[spec.datasetFlag] = ''
@@ -106,13 +117,10 @@ function applyRangeHighlights<Cell>(
 
 const noteRangeSpec: RangeHighlightSpec<NoteCell> = {
   rectSelector: `rect[data-variant="${DATA_VARIANT.noteClickTarget}"]`,
-  tag: 'note',
-  parseCell: ({ partIndex, noteId }) => {
-    if (partIndex === undefined || noteId === undefined) return undefined
-    return {
-      sourcePartIndex: Number.parseInt(partIndex, 10),
-      noteId: Number.parseInt(noteId, 10),
-    }
+  tagType: 'note',
+  parseCell: (tag) => {
+    if (tag.type !== 'note') return undefined
+    return { sourcePartIndex: tag.source_part_index, noteId: tag.note_id }
   },
   cellKey: (c) => `${c.sourcePartIndex}:${c.noteId}`,
   datasetFlag: 'noteRangeSelected',
@@ -120,14 +128,13 @@ const noteRangeSpec: RangeHighlightSpec<NoteCell> = {
 
 const lyricRangeSpec: RangeHighlightSpec<LyricCell> = {
   rectSelector: `rect[data-variant="${DATA_VARIANT.lyricClickTarget}"]`,
-  tag: 'lyric',
-  parseCell: ({ partIndex, noteId, verse }) => {
-    if (partIndex === undefined || noteId === undefined || verse === undefined)
-      return undefined
+  tagType: 'lyric',
+  parseCell: (tag) => {
+    if (tag.type !== 'lyric') return undefined
     return {
-      sourcePartIndex: Number.parseInt(partIndex, 10),
-      noteId: Number.parseInt(noteId, 10),
-      verse: Number.parseInt(verse, 10),
+      sourcePartIndex: tag.source_part_index,
+      noteId: tag.note_id,
+      verse: tag.verse,
     }
   },
   cellKey: (c) => `${c.sourcePartIndex}:${c.noteId}:${c.verse}`,

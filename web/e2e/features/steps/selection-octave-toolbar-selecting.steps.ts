@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { DATA_VARIANT } from '../../../src/dataVariant'
+import { DATA_VARIANT } from '../../../src/dataAttributes'
 import { Given, When } from './fixtures'
 
 const SINGLE_MEASURE_SOURCE = [

@@ -1,3 +1,5 @@
+import { groupTagSelector } from '../dataAttributes'
+import type { TagOut } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import { clickableElementIdFromElement } from './clickableElementId'
 import type { LyricCell, NoteCell } from './previewSelection'
@@ -5,9 +7,13 @@ import type { LyricCell, NoteCell } from './previewSelection'
 /** The point-based counterpart of `clickableElementIdFromElement` used by
  * both label hit-tests below — mirrors `previewSelection.ts`'s own private
  * `getClickableElementIdAtPoint`. */
-function getClickableElementIdAtPoint(x: number, y: number, tag: string) {
+function getClickableElementIdAtPoint(
+  x: number,
+  y: number,
+  tagType: TagOut['type'],
+) {
   const el = document.elementFromPoint(x, y)
-  const group = el?.closest(`[data-tag="${tag}"]`)
+  const group = el?.closest(groupTagSelector(tagType))
   if (!group) return undefined
   return clickableElementIdFromElement(group)
 }
@@ -28,7 +34,7 @@ export function getPartLabelAtPoint(
   x: number,
   y: number,
 ): PartLabelHit | undefined {
-  const id = getClickableElementIdAtPoint(x, y, 'part-label')
+  const id = getClickableElementIdAtPoint(x, y, 'partLabel')
   if (id?.kind !== 'partLabel') return undefined
   return {
     sourcePartIndex: id.sourcePartIndex,
@@ -102,7 +108,7 @@ export function getLyricLabelAtPoint(
   x: number,
   y: number,
 ): LyricLabelHit | undefined {
-  const id = getClickableElementIdAtPoint(x, y, 'lyric-label')
+  const id = getClickableElementIdAtPoint(x, y, 'lyricLabel')
   if (id?.kind !== 'lyricLabel') return undefined
   return {
     sourcePartIndex: id.sourcePartIndex,
