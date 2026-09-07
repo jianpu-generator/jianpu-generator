@@ -1,6 +1,9 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect, stableBoundingBox } from '../../rangeSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
+import {
+  clickAndClickSelect,
+  stableBoundingBox,
+} from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -96,12 +99,15 @@ When(
   },
 )
 
-Then('the bar-line click-target shows a col-resize cursor', async ({ page }) => {
-  const handle = page
-    .locator('rect[data-variant="bar-line-click-target-rect"]')
-    .first()
-  await expect(handle).toHaveCSS('cursor', 'col-resize')
-})
+Then(
+  'the bar-line click-target shows a col-resize cursor',
+  async ({ page }) => {
+    const handle = page
+      .locator('rect[data-variant="bar-line-click-target-rect"]')
+      .first()
+    await expect(handle).toHaveCSS('cursor', 'col-resize')
+  },
+)
 
 When(
   "I Cmd\\/Ctrl-click-and-click from the bar line before measure 1 into measure 2's interior",

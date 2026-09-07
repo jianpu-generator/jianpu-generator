@@ -1,6 +1,7 @@
 import { resolve_selection_range } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import type { ClickableElementId } from './clickableElementId'
+import type { PreviewAnchorState } from './previewAnchorState'
 import {
   anyClickableElementIdAtPoint,
   measureClickableElementId,
@@ -9,7 +10,6 @@ import {
   applyPersistedLyricHighlights,
   applyPersistedNoteHighlights,
 } from './previewRangeHighlights'
-import type { PreviewAnchorState } from './previewAnchorState'
 import {
   applyLyricRangeSelection,
   applyNoteRangeSelection,
@@ -46,8 +46,14 @@ type BarNumberSystemAnchorState = Extract<
   NonNullable<PreviewAnchorState>,
   { mode: 'bar-number-system' }
 >
-type NoteAnchorState = Extract<NonNullable<PreviewAnchorState>, { mode: 'note' }>
-type LyricAnchorState = Extract<NonNullable<PreviewAnchorState>, { mode: 'lyric' }>
+type NoteAnchorState = Extract<
+  NonNullable<PreviewAnchorState>,
+  { mode: 'note' }
+>
+type LyricAnchorState = Extract<
+  NonNullable<PreviewAnchorState>,
+  { mode: 'lyric' }
+>
 
 export function resolveMeasureSelection(
   anchorState: MeasureAnchorState,

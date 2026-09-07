@@ -5,13 +5,13 @@ import type { LyricSpan, NoteSpan } from '../types'
 import { renderSvgDocument } from './PreviewSvgRenderer'
 import { handlePreviewClick } from './previewClickHandler'
 import {
-  applyPersistedLyricHighlights,
-  applyPersistedNoteHighlights,
-} from './previewRangeHighlights'
-import {
   applyPersistedLyricLabelHighlights,
   applyPersistedPartLabelHighlights,
 } from './previewLabelRangeHighlights'
+import {
+  applyPersistedLyricHighlights,
+  applyPersistedNoteHighlights,
+} from './previewRangeHighlights'
 import type { LyricCell, NoteCell } from './previewSelection'
 import { usePlaybackCursor } from './usePlaybackCursor'
 import { usePreviewClickSelection } from './usePreviewClickSelection'

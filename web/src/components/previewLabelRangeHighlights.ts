@@ -5,13 +5,13 @@ import {
   tagFromElement,
 } from '../dataAttributes'
 import type { LyricSpan, NoteSpan } from '../types'
-import type { AnchorPoint } from './previewRangeHighlights'
 import {
   type LyricLabelHit,
   lyricCellsForLyricLabels,
   noteCellsForPartLabels,
   type PartLabelHit,
 } from './previewLabelSelection'
+import type { AnchorPoint } from './previewRangeHighlights'
 import type { LyricCell, NoteCell } from './previewSelection'
 
 /** Narrows a part-label group's own `TagOut` (already known to be

@@ -1,5 +1,8 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect, stableBoundingBox } from '../../rangeSelectHelpers'
+import {
+  clickAndClickSelect,
+  stableBoundingBox,
+} from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -87,19 +90,16 @@ When(
   },
 )
 
-When(
-  'I click lyric syllable {int} once',
-  async ({ page }, index: number) => {
-    // A plain click (mousedown + mouseup at the same point, not a
-    // click-and-click range) selects just this syllable.
-    const box = await stableBoundingBox(lyricTexts(page).nth(index))
-    if (!box) throw new Error('no box')
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
-    await page.mouse.down()
-    await page.waitForTimeout(50)
-    await page.mouse.up()
-  },
-)
+When('I click lyric syllable {int} once', async ({ page }, index: number) => {
+  // A plain click (mousedown + mouseup at the same point, not a
+  // click-and-click range) selects just this syllable.
+  const box = await stableBoundingBox(lyricTexts(page).nth(index))
+  if (!box) throw new Error('no box')
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.waitForTimeout(50)
+  await page.mouse.up()
+})
 
 Then(
   'lyric syllables {int}, {int} and {int} are range-selected',

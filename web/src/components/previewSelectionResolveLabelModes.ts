@@ -1,10 +1,6 @@
 import { resolve_selection_range } from '../jianpuWasm'
-import { anyClickableElementIdAtPoint } from './previewClickableElementIdBuilders'
-import {
-  applyPersistedLyricHighlights,
-  applyPersistedNoteHighlights,
-} from './previewRangeHighlights'
 import type { PreviewAnchorState } from './previewAnchorState'
+import { anyClickableElementIdAtPoint } from './previewClickableElementIdBuilders'
 import {
   applyPersistedLyricLabelHighlights,
   applyPersistedPartLabelHighlights,
@@ -18,6 +14,10 @@ import {
   noteCellsForPartLabels,
   type PartLabelHit,
 } from './previewLabelSelection'
+import {
+  applyPersistedLyricHighlights,
+  applyPersistedNoteHighlights,
+} from './previewRangeHighlights'
 import type { LyricCell, NoteCell } from './previewSelection'
 import type { ResolveModeArgs } from './previewSelectionResolveModes'
 import type { ResolvedSelection } from './previewSelectionResolver'

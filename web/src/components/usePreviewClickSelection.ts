@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { LyricSpan, NoteSpan } from '../types'
 import type { ClickableElementId } from './clickableElementId'
 import { clickableElementIdFromElement } from './clickableElementId'
-import { cancelAnchor } from './previewClickHandler'
 import type { PreviewAnchorState } from './previewAnchorState'
+import { cancelAnchor } from './previewClickHandler'
 import {
   getMeasureAtPoint,
   type LyricCell,

@@ -1,6 +1,9 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect, stableBoundingBox } from '../../rangeSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
+import {
+  clickAndClickSelect,
+  stableBoundingBox,
+} from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -61,18 +64,21 @@ async function primeMeasureSpans(page: import('@playwright/test').Page) {
   ).toBeVisible({ timeout: 5_000 })
 }
 
-Given('the part-label lyric-range-select fixture is loaded', async ({ page }) => {
-  await loadFixture(page)
-  await page.goto('/')
+Given(
+  'the part-label lyric-range-select fixture is loaded',
+  async ({ page }) => {
+    await loadFixture(page)
+    await page.goto('/')
 
-  await page.waitForSelector('[data-testid="play-measure-button"]', {
-    timeout: 15_000,
-  })
-  await page.waitForSelector('[data-tag="part-label"][data-part-index="1"]', {
-    timeout: 10_000,
-  })
-  await primeMeasureSpans(page)
-})
+    await page.waitForSelector('[data-testid="play-measure-button"]', {
+      timeout: 15_000,
+    })
+    await page.waitForSelector('[data-tag="part-label"][data-part-index="1"]', {
+      timeout: 10_000,
+    })
+    await primeMeasureSpans(page)
+  },
+)
 
 When(
   'I click-and-click select from the Melody part label to the Harmony part label, as seen in part label click selects lyrics',

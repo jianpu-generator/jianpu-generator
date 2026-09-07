@@ -1,6 +1,9 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect, stableBoundingBox } from '../../rangeSelectHelpers'
 import { fileSwitcherTrigger } from '../../fileSwitcherHelpers'
+import {
+  clickAndClickSelect,
+  stableBoundingBox,
+} from '../../rangeSelectHelpers'
 import { Then, When } from './fixtures'
 import {
   SYNCED_FILENAME,

@@ -1,9 +1,9 @@
 import { expect } from '@playwright/test'
+import { focusEditor } from '../../fileSwitcherHelpers'
 import {
   clickThenStableClick,
   stableBoundingBox,
 } from '../../rangeSelectHelpers'
-import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**

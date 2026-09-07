@@ -1,6 +1,9 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect, stableBoundingBox } from '../../rangeSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
+import {
+  clickAndClickSelect,
+  stableBoundingBox,
+} from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -222,23 +225,20 @@ When(
   },
 )
 
-When(
-  'I hover the Melody part label without clicking it',
-  async ({ page }) => {
-    const melody = melodyLabel(page)
-    const melodyBox = await stableBoundingBox(melody)
-    if (!melodyBox) {
-      throw new Error('Could not get bounding box for the Melody label.')
-    }
-    // Hover the Melody label (no click yet) and record the fill its
-    // `:hover` rule paints — this is the "hovered" look the anchor label
-    // must keep showing for the rest of the gesture.
-    await page.mouse.move(
-      melodyBox.x + melodyBox.width / 2,
-      melodyBox.y + melodyBox.height / 2,
-    )
-  },
-)
+When('I hover the Melody part label without clicking it', async ({ page }) => {
+  const melody = melodyLabel(page)
+  const melodyBox = await stableBoundingBox(melody)
+  if (!melodyBox) {
+    throw new Error('Could not get bounding box for the Melody label.')
+  }
+  // Hover the Melody label (no click yet) and record the fill its
+  // `:hover` rule paints — this is the "hovered" look the anchor label
+  // must keep showing for the rest of the gesture.
+  await page.mouse.move(
+    melodyBox.x + melodyBox.width / 2,
+    melodyBox.y + melodyBox.height / 2,
+  )
+})
 
 When(
   'I click the Melody label and move the pointer onto the Harmony label without clicking it',

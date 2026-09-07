@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test'
-import { clickThenStableClick } from '../../rangeSelectHelpers'
 import { focusEditor } from '../../fileSwitcherHelpers'
+import { clickThenStableClick } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
 /**

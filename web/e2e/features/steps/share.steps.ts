@@ -1,6 +1,9 @@
 import { expect } from '@playwright/test'
-import { clickAndClickSelect, stableBoundingBox } from '../../rangeSelectHelpers'
 import { fileSwitcherTrigger, openFileActions } from '../../fileSwitcherHelpers'
+import {
+  clickAndClickSelect,
+  stableBoundingBox,
+} from '../../rangeSelectHelpers'
 import { encodeShareHashOnPage, gotoShareUrl } from '../../shareUrlHelper'
 import { Given, Then, When } from './fixtures'
 

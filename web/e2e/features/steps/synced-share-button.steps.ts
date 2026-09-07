@@ -58,7 +58,12 @@ Given(
       '',
       '[M] 1 - - -',
     ].join('\n')
-    await seedFileStore(page, rangeFilename, rangeSource, 'synced-range-test-id')
+    await seedFileStore(
+      page,
+      rangeFilename,
+      rangeSource,
+      'synced-range-test-id',
+    )
   },
 )
 
