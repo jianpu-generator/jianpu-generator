@@ -1,6 +1,6 @@
 use crate::types::{LyricSpanOut, NoteSpanOut};
 
-use super::helpers::note_measure_index;
+use super::helpers::{note_measure_index, note_position_in_measure};
 use super::types::{ClickableElementId, NoteCellOut, ResolveSelectionRangeResponse};
 
 /// `Note ↔ Note`, both scopes — same-part (ranged by `note_id`) and
@@ -90,15 +90,23 @@ fn same_part(
 /// range. No lyric cells — consistent with `same_part`, an index/measure
 /// range has no notion of a lyric row.
 ///
-/// This is a new Phase 2 rule, not a preserved port of `cellsInMarquee`'s
-/// old pixel behavior — it may select a coarser/different set of notes
-/// than the old marquee did in a staggered-rhythm case (e.g. one part with
-/// eighth notes, another with quarter notes, same measure range: this arm
-/// selects every note in both parts across the whole measure range, not
-/// just the ones the old marquee's rectangle happened to visually
-/// overlap). That's an accepted tradeoff for eliminating the
-/// click-scroll-click staleness bug (see the plan's "Why" section), not a
-/// bug in this arm.
+/// The measure range alone would make both endpoints landing in the same
+/// measure select that whole measure in both parts — surprising for the
+/// common case of two single-measure clicks (e.g. note 1 of `1 2 3` and
+/// note 2 of `4 5 6` selecting only `1 2`/`4 5`, not the full measures).
+/// So there's a second, finer axis: [`note_position_in_measure`], each
+/// endpoint's own rank within its `(part, measure)` group. A span only
+/// qualifies once its part and measure are in range *and* its own
+/// within-measure position falls in `[position_start, position_end]` — the
+/// position bounds apply per measure independently, so a shorter measure
+/// elsewhere in the range simply contributes however many of its own notes
+/// fall in that position span (or none, or all of them), rather than
+/// forcing every measure to the same note count. When a part has a
+/// different rhythm than the other endpoint's part, this position range is
+/// still evaluated per measure/part — an accepted tradeoff (this is a new
+/// Phase 2 rule, not a preserved port of `cellsInMarquee`'s old pixel
+/// behavior) rather than an attempt to line up beats across differing
+/// rhythms.
 ///
 /// `Err` if either endpoint's own span can't be found — shouldn't happen
 /// for a valid click-derived ID, but guarded rather than panicking,
@@ -118,10 +126,21 @@ fn cross_part(
         return ResolveSelectionRangeResponse::Err;
     };
 
+    let anchor_position =
+        note_position_in_measure(note_spans, anchor_part, anchor_measure, anchor_id);
+    let current_position =
+        note_position_in_measure(note_spans, current_part, current_measure, current_id);
+    let (Some(anchor_position), Some(current_position)) = (anchor_position, current_position)
+    else {
+        return ResolveSelectionRangeResponse::Err;
+    };
+
     let part_start = anchor_part.min(current_part);
     let part_end = anchor_part.max(current_part);
     let measure_start = anchor_measure.min(current_measure);
     let measure_end = anchor_measure.max(current_measure);
+    let position_start = anchor_position.min(current_position);
+    let position_end = anchor_position.max(current_position);
 
     let note_cells = note_spans
         .iter()
@@ -130,6 +149,13 @@ fn cross_part(
                 && span.source_part_index <= part_end
                 && span.measure_index >= measure_start
                 && span.measure_index <= measure_end
+                && note_position_in_measure(
+                    note_spans,
+                    span.source_part_index,
+                    span.measure_index,
+                    span.note_id,
+                )
+                .is_some_and(|position| position >= position_start && position <= position_end)
         })
         .map(|span| NoteCellOut {
             source_part_index: span.source_part_index,

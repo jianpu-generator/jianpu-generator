@@ -58,6 +58,26 @@ pub(crate) fn note_measure_index(
         .map(|span| span.measure_index)
 }
 
+/// A `Note` endpoint's position among its own `(source_part_index,
+/// measure_index)` group, in score order — e.g. the 2nd note written in
+/// measure 3 of part 0 has position `1`. Used as the column axis (within a
+/// measure) by the cross-part `Note ↔ Note` arm, alongside `measure_index`
+/// as the coarser column axis (which measure): together they keep a
+/// same-measure cross-part range from ballooning into the whole measure on
+/// both sides just because the two endpoints happen to share a
+/// `measure_index`.
+pub(crate) fn note_position_in_measure(
+    note_spans: &[NoteSpanOut],
+    part: usize,
+    measure: usize,
+    note_id: usize,
+) -> Option<usize> {
+    note_spans
+        .iter()
+        .filter(|span| span.source_part_index == part && span.measure_index == measure)
+        .position(|span| span.note_id == note_id)
+}
+
 /// The `Lyric`-endpoint analog of `note_measure_index`, additionally keyed
 /// by `verse`.
 pub(crate) fn lyric_measure_index(

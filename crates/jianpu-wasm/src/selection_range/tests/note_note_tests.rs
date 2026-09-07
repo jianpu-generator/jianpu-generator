@@ -112,6 +112,47 @@ fn cross_part_note_range_measure_with_no_notes_in_one_part_contributes_nothing()
 }
 
 #[test]
+fn cross_part_note_range_within_same_measure_uses_position_not_whole_measure() {
+    // Two parts, three notes each, all in measure 0 (mirrors `1 2 3` /
+    // `4 5 6` on separate parts). Anchor is part 0's first note (position
+    // 0), current is part 1's second note (position 1) — the rectangle
+    // should stop at position 1 in both parts (`1 2` / `4 5`), not sweep
+    // the whole shared measure (`1 2 3` / `4 5 6`).
+    let note_spans = vec![
+        note_span(0, 0, 0),
+        note_span(0, 1, 0),
+        note_span(0, 2, 0),
+        note_span(1, 3, 0),
+        note_span(1, 4, 0),
+        note_span(1, 5, 0),
+    ];
+    let lyric_spans = Vec::new();
+    let anchor = note(0, 0);
+    let current = note(1, 4);
+
+    let response = resolve_selection_range_response(&note_spans, &lyric_spans, &anchor, &current);
+
+    match response {
+        ResolveSelectionRangeResponse::Ok {
+            note_cells,
+            lyric_cells,
+        } => {
+            assert_eq!(
+                note_cells,
+                vec![
+                    note_cell(0, 0),
+                    note_cell(0, 1),
+                    note_cell(1, 3),
+                    note_cell(1, 4),
+                ]
+            );
+            assert_eq!(lyric_cells, Vec::new());
+        }
+        ResolveSelectionRangeResponse::Err => panic!("expected Ok, got Err"),
+    }
+}
+
+#[test]
 fn same_part_note_range_uses_note_id_not_measure_index() {
     // Distinguishes the guarded same-part arm (note_id-based) from the
     // cross-part arm below it (measure_index-based): note_id 5 shares

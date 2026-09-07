@@ -464,6 +464,16 @@ across whatever it happens to cover):
   a staggered-rhythm case (different note density per part in the same
   measure range) — accepted tradeoff, not a bug (see that arm's doc
   comment). The remaining rows below still need the fuller model.
+  **Update:** the measure-only range had a sharper edge than intended —
+  two clicks landing in the *same* measure on different parts (the common
+  case) selected that whole measure on both sides regardless of where in
+  the measure either click actually landed. Fixed by adding a second,
+  finer axis alongside `measure_index`: each endpoint's own rank within
+  its `(part, measure)` group (`note_position_in_measure`), so e.g. `1 2 3`
+  / `4 5 6` on two parts with a click on `1` then `5` now selects `1 2` /
+  `4 5`, not the whole two measures. The staggered-rhythm tradeoff above
+  still applies — the position range is evaluated per measure/part
+  independently, not aligned by beat across differing rhythms.
 - ~~Note ↔ Lyric (cross-row drag)~~ — **shipped**, in both orderings and
   both same-part/cross-part scope. Answer to the "Next question" this row
   used to pose (below): the cross-part `Note ↔ Note` arm's pattern
