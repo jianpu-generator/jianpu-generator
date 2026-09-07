@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 import { defineBddConfig } from 'playwright-bdd'
+import { CHROMIUM_CACHE_DIR_PREFIX } from './e2e/chromiumCachePrefix'
 
 const testDir = defineBddConfig({
   features: 'e2e/features/**/*.feature',
@@ -9,6 +10,10 @@ const testDir = defineBddConfig({
 export default defineConfig({
   testDir,
   fullyParallel: true,
+  // Cleans up the per-worker Chromium cache dirs created below (via
+  // `--disk-cache-dir`) after the run finishes. Runs regardless of whether
+  // tests pass, fail, or time out.
+  globalTeardown: './e2e/global-teardown.ts',
   // No in-run retries: a flaky test masked here would just report "passed"
   // with no record that it ever failed. Flakiness is instead resolved across
   // whole-suite passes by scripts/resolve-e2e-flakes.mjs (see
@@ -75,7 +80,7 @@ export default defineConfig({
             // `fullyParallel`, workers previously shared one dir and
             // stomped on each other's cache writes/reads, causing
             // intermittent slowdowns and timeouts under parallel runs.
-            `--disk-cache-dir=/tmp/chromium-e2e-cache-${process.pid}`,
+            `--disk-cache-dir=${CHROMIUM_CACHE_DIR_PREFIX}${process.pid}`,
             '--disable-http-cache',
           ],
         },
