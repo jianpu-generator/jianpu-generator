@@ -153,6 +153,80 @@ fn cross_part_note_range_within_same_measure_uses_position_not_whole_measure() {
 }
 
 #[test]
+fn cross_part_note_range_across_measures_bounds_only_the_boundary_measures() {
+    // Regression for a bug in `note_position_in_measure`'s first landing:
+    // applying `[position_start, position_end]` to *every* measure in
+    // range (rather than only the two boundary measures, one-sided each)
+    // let a rest ahead of one endpoint's note — which pushes that note's
+    // own position further into its measure — wrongly truncate an
+    // unrelated, earlier measure that has no such rest.
+    //
+    // Two parts, two measures. Measure 0: each part's first note (position
+    // 0) is a real note, followed by three rests (positions 1-3) — a
+    // whole measure. Measure 1: each part opens with a rest (position 0),
+    // then a real note (position 1), then two more rests (positions 2-3).
+    //
+    // Anchor is part 0's measure-0 note (position 0), current is part 1's
+    // measure-1 note (position 1). Expected: measure 0 selected in full
+    // (all four positions, both parts) and only positions 0-1 of measure 1
+    // (both parts) — not measure 1's positions 2-3.
+    let note_spans = vec![
+        // measure 0, part 0: note, rest, rest, rest
+        note_span(0, 0, 0),
+        note_span(0, 1, 0),
+        note_span(0, 2, 0),
+        note_span(0, 3, 0),
+        // measure 0, part 1: note, rest, rest, rest
+        note_span(1, 4, 0),
+        note_span(1, 5, 0),
+        note_span(1, 6, 0),
+        note_span(1, 7, 0),
+        // measure 1, part 0: rest, note, rest, rest
+        note_span(0, 8, 1),
+        note_span(0, 9, 1),
+        note_span(0, 10, 1),
+        note_span(0, 11, 1),
+        // measure 1, part 1: rest, note, rest, rest
+        note_span(1, 12, 1),
+        note_span(1, 13, 1),
+        note_span(1, 14, 1),
+        note_span(1, 15, 1),
+    ];
+    let lyric_spans = Vec::new();
+    let anchor = note(0, 0);
+    let current = note(1, 13);
+
+    let response = resolve_selection_range_response(&note_spans, &lyric_spans, &anchor, &current);
+
+    match response {
+        ResolveSelectionRangeResponse::Ok {
+            note_cells,
+            lyric_cells,
+        } => {
+            assert_eq!(
+                note_cells,
+                vec![
+                    note_cell(0, 0),
+                    note_cell(0, 1),
+                    note_cell(0, 2),
+                    note_cell(0, 3),
+                    note_cell(1, 4),
+                    note_cell(1, 5),
+                    note_cell(1, 6),
+                    note_cell(1, 7),
+                    note_cell(0, 8),
+                    note_cell(0, 9),
+                    note_cell(1, 12),
+                    note_cell(1, 13),
+                ]
+            );
+            assert_eq!(lyric_cells, Vec::new());
+        }
+        ResolveSelectionRangeResponse::Err => panic!("expected Ok, got Err"),
+    }
+}
+
+#[test]
 fn same_part_note_range_uses_note_id_not_measure_index() {
     // Distinguishes the guarded same-part arm (note_id-based) from the
     // cross-part arm below it (measure_index-based): note_id 5 shares
