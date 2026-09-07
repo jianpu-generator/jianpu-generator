@@ -107,6 +107,22 @@ misses a click target of *either* type altogether (answering this row's
 "Next question to answer" from before: yes for the pattern's general shape,
 no for reusing `measure_index` unconditionally — see above).
 
+**Update:** cross-part `Note ↔ Lyric` had the same sharper-than-intended
+edge the cross-part `Note ↔ Note` arm's own "Update" above describes — two
+clicks landing in the *same* measure on different parts (e.g. a note in one
+part and a lyric syllable in another) selected that whole measure's notes
+and syllables on both sides regardless of where in the measure either click
+landed. Fixed the same way: a second, finer axis alongside `measure_index`
+for each endpoint's own rank within its `(part, measure)` group —
+`note_position_in_measure` for the `Note` endpoint, and a new
+`lyric_position_in_measure` (additionally keyed by `verse`) for the `Lyric`
+endpoint — so e.g. `1 2 3`/"do re mi" and `4 5 6`/"fa so la" on two parts
+with a click on note 0 then syllable "so" now selects "1 2"/"do re" and
+"4 5"/"fa so", not the whole two measures' notes and syllables. Same
+staggered-rhythm tradeoff as the `Note ↔ Note` arm: the position range is
+evaluated per measure/part independently, not aligned by beat across
+differing rhythms.
+
 `PartLabel ↔ PartLabel` was made system-agnostic next, the same way
 `LyricLabel ↔ LyricLabel` already was (see the design-principle note
 above) — the plain drag no longer needs a Cmd/Ctrl modifier to cross a

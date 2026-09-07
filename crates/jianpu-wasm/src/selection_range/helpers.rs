@@ -93,3 +93,26 @@ pub(crate) fn lyric_measure_index(
         })
         .map(|span| span.measure_index)
 }
+
+/// The `Lyric`-endpoint analog of [`note_position_in_measure`], additionally
+/// keyed by `verse` — a syllable's position among its own
+/// `(source_part_index, verse, measure_index)` group, in score order. Used
+/// alongside `note_position_in_measure` by the cross-part `Note ↔ Lyric` arm
+/// so a same-measure cross-part pair stops at each endpoint's own
+/// within-measure position instead of sweeping the whole measure on both
+/// sides (mirrors the cross-part `Note ↔ Note` arm's fix for the same
+/// issue).
+pub(crate) fn lyric_position_in_measure(
+    lyric_spans: &[LyricSpanOut],
+    part: usize,
+    verse: usize,
+    measure: usize,
+    note_id: usize,
+) -> Option<usize> {
+    lyric_spans
+        .iter()
+        .filter(|span| {
+            span.source_part_index == part && span.verse == verse && span.measure_index == measure
+        })
+        .position(|span| span.note_id == note_id)
+}

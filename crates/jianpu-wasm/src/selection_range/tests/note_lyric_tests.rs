@@ -125,6 +125,63 @@ fn cross_part_note_lyric_range() {
 }
 
 #[test]
+fn cross_part_note_lyric_range_within_same_measure_uses_position_not_whole_measure() {
+    // Two parts, three notes and three verse-0 syllables each, all in
+    // measure 0 (mirrors `1 2 3`/"do re mi" and `4 5 6`/"fa so la" on
+    // separate parts). Anchor is part 0's first note (position 0), current
+    // is part 1's second syllable (position 1) — the rectangle should stop
+    // at position 1 in both parts' notes and syllables, not sweep the whole
+    // shared measure.
+    let note_spans = vec![
+        note_span(0, 0, 0),
+        note_span(0, 1, 0),
+        note_span(0, 2, 0),
+        note_span(1, 3, 0),
+        note_span(1, 4, 0),
+        note_span(1, 5, 0),
+    ];
+    let lyric_spans = vec![
+        lyric_span(0, 0, 0, 0),
+        lyric_span(0, 1, 0, 0),
+        lyric_span(0, 2, 0, 0),
+        lyric_span(1, 3, 0, 0),
+        lyric_span(1, 4, 0, 0),
+        lyric_span(1, 5, 0, 0),
+    ];
+    let anchor = note(0, 0);
+    let current = lyric(1, 4, 0);
+
+    let response = resolve_selection_range_response(&note_spans, &lyric_spans, &anchor, &current);
+
+    match response {
+        ResolveSelectionRangeResponse::Ok {
+            note_cells,
+            lyric_cells,
+        } => {
+            assert_eq!(
+                note_cells,
+                vec![
+                    note_cell(0, 0),
+                    note_cell(0, 1),
+                    note_cell(1, 3),
+                    note_cell(1, 4),
+                ]
+            );
+            assert_eq!(
+                lyric_cells,
+                vec![
+                    lyric_cell(0, 0, 0),
+                    lyric_cell(0, 1, 0),
+                    lyric_cell(1, 3, 0),
+                    lyric_cell(1, 4, 0),
+                ]
+            );
+        }
+        ResolveSelectionRangeResponse::Err => panic!("expected Ok, got Err"),
+    }
+}
+
+#[test]
 fn cross_part_note_lyric_range_excludes_other_verses() {
     // A verse-1 syllable sitting inside the swept measure/part range is
     // still excluded — the selection only ever covered the `Lyric` endpoint's
