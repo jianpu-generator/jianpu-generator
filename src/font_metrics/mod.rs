@@ -212,16 +212,16 @@ pub(crate) fn cjk_text_width(s: &str, font_size: f32) -> f32 {
         .sum()
 }
 
-/// The augmentation-dot(s) text (`.`/`..`, drawn as literal middle-dot
-/// characters) appended directly onto a note/rest/chord/dash glyph's own
-/// text run — `render_note_head`/`render_rest`/`render_note_dash`/
-/// `render_chord_symbol` all append this to their glyph's own `content`
-/// string rather than drawing the dot(s) as a separately-positioned glyph,
-/// so the dot's position falls out of normal flush-left text flow instead
-/// of a hand-computed offset. Shared with the layout pass (`column_weight`
-/// measures the combined string's real rendered width via
-/// `monospace_text_width`) so the two can't silently drift apart. `""` if
-/// not dotted.
+/// A stand-in string (`.`/`..`, measured as literal middle-dot characters)
+/// representing a note/rest/chord/dash glyph's augmentation dot(s) for
+/// width-measurement purposes only — `dot_extra_weight`
+/// (`grid_layout::layout_spacing_weights`) measures this string's real
+/// rendered width to size the extra column space the dot(s) need, and
+/// `glyph_renderers::augmentation_dot_glyphs` places each drawn dot circle
+/// within exactly one of this string's characters' worth of that same
+/// measured width, so the two can't silently drift apart. Not actually
+/// appended to any glyph's rendered text anymore (the dots are drawn as
+/// circles instead — see `augmentation_dot_glyphs`). `""` if not dotted.
 pub(crate) fn augmentation_dot_suffix(dotted: bool, double_dotted: bool) -> &'static str {
     if !dotted {
         ""

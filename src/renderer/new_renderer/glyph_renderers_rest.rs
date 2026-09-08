@@ -1,7 +1,6 @@
-use super::{dot_glyph, glyph_weight, DotState};
+use super::{augmentation_dot_glyphs, dot_glyph, glyph_weight, AugmentationDotParams, DotState};
 use crate::compositor::types::AbsoluteElement;
 use crate::compositor::types::{DominantBaseline, TextAnchor};
-use crate::font_metrics;
 use crate::renderer::new_renderer::GlyphStyle;
 use crate::renderer::new_types::{SvgElement, SvgKind, SvgVariant};
 
@@ -16,17 +15,14 @@ pub(in crate::renderer::new_renderer) fn render_rest(
         return render_omitted_part_rest(elem, dots, *base_font_size);
     }
 
-    let content = format!(
-        "0{}",
-        font_metrics::augmentation_dot_suffix(dots.dotted, dots.double_dotted)
-    );
+    let content = "0";
 
-    vec![SvgElement {
+    let mut results = vec![SvgElement {
         x: elem.x,
         y: elem.y,
         variant: Some(SvgVariant::Rest),
         kind: SvgKind::Text {
-            content,
+            content: content.to_string(),
             font_size: *base_font_size,
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
@@ -35,7 +31,21 @@ pub(in crate::renderer::new_renderer) fn render_rest(
             italic: style.italic,
             underline: style.underline,
         },
-    }]
+    }];
+
+    results.extend(augmentation_dot_glyphs(
+        &AugmentationDotParams {
+            x: elem.x,
+            y: elem.y,
+            base_content: content,
+            font_size: *base_font_size,
+            family: style.font_family,
+            variant: SvgVariant::Rest,
+        },
+        dots,
+    ));
+
+    results
 }
 
 /// Glyph for a rest that fills a part not mentioned in this measure, standing
@@ -94,12 +104,13 @@ fn render_omitted_part_rest(
         },
     ];
 
+    let dot_radius = base_font_size * 0.1;
     let dot_x = center_x + cap_half_width + base_font_size * 0.35;
     if dots.dotted {
         elements.push(dot_glyph(
             dot_x,
             elem.y,
-            base_font_size,
+            dot_radius,
             SvgVariant::OmittedPartRest,
         ));
     }
@@ -107,7 +118,7 @@ fn render_omitted_part_rest(
         elements.push(dot_glyph(
             dot_x + base_font_size * 0.25,
             elem.y,
-            base_font_size,
+            dot_radius,
             SvgVariant::OmittedPartRest,
         ));
     }

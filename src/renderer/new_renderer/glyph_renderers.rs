@@ -38,31 +38,70 @@ impl DotState {
     }
 }
 
-/// A middle dot (`·`) rendered as its own centered text glyph, used only for
-/// a note's *octave* dots (drawn above/below the digit — see
-/// `render_note_head`'s `octave` loop). A note/rest/chord/dash's
-/// *augmentation* dot(s) are handled differently: appended directly onto the
-/// glyph's own text run (see `font_metrics::augmentation_dot_suffix`)
-/// instead of drawn as a separate positioned glyph like this one. Always
-/// draws in `FontFamily::Monospace`, deliberately not following `notes`'s own
-/// configured `font_family` — decorative, not "the kind's own text" (same
-/// reasoning that keeps this glyph's bold/italic/underline fixed too).
-pub(super) fn dot_glyph(x: f32, y: f32, font_size: f32, variant: SvgVariant) -> SvgElement {
+/// A filled circle — the shared primitive behind both a note's *octave* dots
+/// (drawn above/below the digit, see `render_note_head`'s `octave` loop) and
+/// a note/rest/chord/dash's *augmentation* dot(s) (see
+/// `augmentation_dot_glyphs`). Drawn as a vector shape rather than a font
+/// glyph (e.g. `·`) so it renders as a true circle regardless of
+/// font/renderer, instead of whatever shape a given font happens to draw its
+/// middle-dot character as.
+pub(super) fn dot_glyph(x: f32, y: f32, radius: f32, variant: SvgVariant) -> SvgElement {
     SvgElement {
         x,
         y,
         variant: Some(variant),
-        kind: SvgKind::Text {
-            content: "\u{b7}".to_string(),
-            font_size,
-            anchor: TextAnchor::Middle,
-            baseline: DominantBaseline::Middle,
-            font: FontFamily::Monospace,
-            weight: FontWeight::Normal,
-            italic: false,
-            underline: false,
-        },
+        kind: SvgKind::Circle { r: radius },
     }
+}
+
+/// Parameters for [`augmentation_dot_glyphs`], bundled because that
+/// function's own logic needs more of them than a plain argument list can
+/// hold under this crate's `clippy::too_many_arguments` limit.
+pub(super) struct AugmentationDotParams<'a> {
+    pub(super) x: f32,
+    pub(super) y: f32,
+    pub(super) base_content: &'a str,
+    pub(super) font_size: f32,
+    pub(super) family: FontFamily,
+    pub(super) variant: SvgVariant,
+}
+
+/// A note/rest/chord/note-dash's augmentation dot(s) (`.`/`..`), drawn as
+/// filled circles immediately after `base_content`'s own rendered width,
+/// rather than appended as `·` character(s) onto the glyph's text run — same
+/// motivation as `dot_glyph`: a real circle regardless of font/renderer,
+/// instead of whatever shape a font draws its middle-dot character as. Each
+/// dot is placed within exactly one `augmentation_dot_suffix` character's
+/// worth of advance width, matching what `dot_extra_weight`
+/// (`grid_layout::layout_spacing_weights`) already reserves for it in column
+/// layout, so this needs no accompanying change there. `family`/`font_size`
+/// must match `base_content`'s own rendered font/size, the same requirement
+/// `dot_extra_weight` documents.
+pub(super) fn augmentation_dot_glyphs(
+    params: &AugmentationDotParams<'_>,
+    dots: &DotState,
+) -> Vec<SvgElement> {
+    if !dots.dotted {
+        return Vec::new();
+    }
+    let &AugmentationDotParams {
+        x,
+        y,
+        base_content,
+        font_size,
+        family,
+        variant,
+    } = params;
+    let base_width = font_metrics::text_width_for_family(family, base_content, font_size);
+    let single_dot_width = font_metrics::text_width_for_family(family, "\u{b7}", font_size);
+    let dot_radius = font_size * 0.1;
+    let count = if dots.double_dotted { 2 } else { 1 };
+    (0..count)
+        .map(|i| {
+            let dot_center_x = x + base_width + single_dot_width * (i as f32 + 0.5);
+            dot_glyph(dot_center_x, y, dot_radius, variant)
+        })
+        .collect()
 }
 
 pub(super) fn render_note_head(
@@ -89,26 +128,22 @@ pub(super) fn render_note_head(
         Accidental::Natural => "",
     };
 
-    // The digit, its sharp/flat accidental (if any), and its augmentation
-    // dot(s) (if any) all draw as one flush-left text run at `elem.x` (see
-    // `coordinate_resolver::resolve::flush_left_padding`, which already
-    // corrects `elem.x` for this glyph's own left-side bearing) — the
-    // accidental and dot(s) simply fall out of normal text flow immediately
-    // after the digit, rather than each being drawn as its own
-    // separately-positioned glyph at a hand-computed offset.
-    let content = format!(
-        "{}{}{}",
-        pitch.to_digit(),
-        accidental_symbol,
-        font_metrics::augmentation_dot_suffix(dots.dotted, dots.double_dotted)
-    );
+    // The digit and its sharp/flat accidental (if any) draw as one flush-left
+    // text run at `elem.x` (see `coordinate_resolver::resolve::flush_left_padding`,
+    // which already corrects `elem.x` for this glyph's own left-side bearing)
+    // — the accidental simply falls out of normal text flow immediately
+    // after the digit, rather than being drawn as its own separately-positioned
+    // glyph at a hand-computed offset. The augmentation dot(s), if any, are
+    // drawn separately as circles (see `augmentation_dot_glyphs`) rather than
+    // appended onto this text run.
+    let content = format!("{}{}", pitch.to_digit(), accidental_symbol);
 
     results.push(SvgElement {
         x: elem.x,
         y: elem.y,
         variant: Some(SvgVariant::NoteHead),
         kind: SvgKind::Text {
-            content,
+            content: content.clone(),
             font_size: **base_font_size,
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
@@ -118,6 +153,18 @@ pub(super) fn render_note_head(
             underline: *underline,
         },
     });
+
+    results.extend(augmentation_dot_glyphs(
+        &AugmentationDotParams {
+            x: elem.x,
+            y: elem.y,
+            base_content: &content,
+            font_size: **base_font_size,
+            family: *font_family,
+            variant: SvgVariant::NoteHead,
+        },
+        dots,
+    ));
 
     // Every decoration below still wants to sit relative to the digit's
     // nominal center, so `center` reconstructs that from the flat,
@@ -137,12 +184,7 @@ pub(super) fn render_note_head(
         } else {
             elem.y + *base_font_size / 2.0 + offset
         };
-        results.push(dot_glyph(
-            center,
-            dot_y,
-            **base_font_size,
-            SvgVariant::NoteHead,
-        ));
+        results.push(dot_glyph(center, dot_y, dot_radius, SvgVariant::NoteHead));
     }
 
     results
@@ -251,20 +293,14 @@ pub(super) fn render_chord_symbol(
     // `coordinate_resolver::resolve::flush_left_padding`), so the string can
     // draw flush-left at `elem.x` directly, exactly like `render_lyric` —
     // no renderer-side recentering needed. The augmentation dot(s), if any,
-    // are appended directly onto the chord text itself so they fall out of
-    // normal text flow rather than being drawn as separately-positioned
-    // glyphs.
-    let content = format!(
-        "{s}{}",
-        font_metrics::augmentation_dot_suffix(dots.dotted, dots.double_dotted)
-    );
-
-    vec![SvgElement {
+    // are drawn separately as circles (see `augmentation_dot_glyphs`) rather
+    // than appended onto the chord text itself.
+    let mut results = vec![SvgElement {
         x: elem.x,
         y: elem.y,
         variant: Some(SvgVariant::ChordSymbol),
         kind: SvgKind::Text {
-            content,
+            content: s.to_string(),
             font_size: *base_font_size,
             anchor: TextAnchor::Start,
             baseline: DominantBaseline::Middle,
@@ -273,7 +309,21 @@ pub(super) fn render_chord_symbol(
             italic: style.italic,
             underline: style.underline,
         },
-    }]
+    }];
+
+    results.extend(augmentation_dot_glyphs(
+        &AugmentationDotParams {
+            x: elem.x,
+            y: elem.y,
+            base_content: s,
+            font_size: *base_font_size,
+            family: style.font_family,
+            variant: SvgVariant::ChordSymbol,
+        },
+        dots,
+    ));
+
+    results
 }
 
 pub(super) fn render_horizontal_line(elem: &AbsoluteElement, width: &f32) -> Vec<SvgElement> {

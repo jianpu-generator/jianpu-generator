@@ -190,9 +190,41 @@ fn upper_octave_note_produces_dot_glyph() {
     let has_dot = docs[0]
         .elements
         .iter()
-        .any(|e| matches!(&e.kind, SvgKind::Text { content, .. } if content == "\u{b7}"));
+        .any(|e| matches!(&e.kind, SvgKind::Circle { .. }));
     assert!(
         has_dot,
         "upper octave note should produce an octave dot glyph"
+    );
+}
+
+#[test]
+fn dotted_note_produces_dot_circles_not_appended_text() {
+    let page = make_page(AbsoluteContent::NoteHead {
+        pitch: JianPuPitch::One,
+        accidental: crate::ast::parsed::Accidental::Natural,
+        octave: 0,
+        dotted: true,
+        double_dotted: true,
+    });
+    let docs = render_new(&[page], &cfg());
+    let note_head = docs[0]
+        .elements
+        .iter()
+        .find(|e| e.variant == Some(SvgVariant::NoteHead) && matches!(e.kind, SvgKind::Text { .. }))
+        .expect("note head text element should be present");
+    assert!(
+        matches!(&note_head.kind, SvgKind::Text { content, .. } if content == "1"),
+        "digit's own text run should not carry the augmentation dot(s) as appended characters"
+    );
+    let dot_circle_count = docs[0]
+        .elements
+        .iter()
+        .filter(|e| {
+            e.variant == Some(SvgVariant::NoteHead) && matches!(e.kind, SvgKind::Circle { .. })
+        })
+        .count();
+    assert_eq!(
+        dot_circle_count, 2,
+        "double-dotted note should produce exactly two augmentation dot circles"
     );
 }

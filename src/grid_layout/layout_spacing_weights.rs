@@ -35,15 +35,16 @@ fn note_glyph_weight(config: &RenderConfig) -> f32 {
 /// Extra weight given to a dotted `NoteHead`/`Rest`/`NoteDash`/`ChordSymbol`
 /// column to make room for its augmentation dot(s) — `render_note_head`/
 /// `render_rest`/`render_note_dash`/`render_chord_symbol` (`glyph_renderers.rs`,
-/// `glyph_renderers_note_dash.rs`) all append the dot(s) directly onto the
-/// glyph's own text run (see [`font_metrics::augmentation_dot_suffix`])
-/// rather than drawing them as a separately-positioned glyph, so the extra
-/// width they need is exactly their own real rendered width — no clearance
-/// or reach-vs-base-glyph reconciliation needed, since they're simply new
-/// characters appended after the glyph's own. `family` must match the
-/// glyph the dot(s) are appended to (`config.glyph_font_families.notes` for
-/// a `NoteHead`/`Rest`, `.chords` for a `ChordSymbol`, `.note_dash` for a
-/// `NoteDash`), same as the font it actually renders in.
+/// `glyph_renderers_note_dash.rs`) draw the dot(s) as circles positioned
+/// immediately after the glyph's own rendered width (see
+/// `glyph_renderers::augmentation_dot_glyphs`), each one given exactly one
+/// [`font_metrics::augmentation_dot_suffix`] character's worth of advance
+/// width — so the extra column width needed is exactly that measured text
+/// width, with no clearance or reach-vs-base-glyph reconciliation needed.
+/// `family` must match the glyph the dot(s) are drawn after
+/// (`config.glyph_font_families.notes` for a `NoteHead`/`Rest`, `.chords`
+/// for a `ChordSymbol`, `.note_dash` for a `NoteDash`), same as the font it
+/// actually renders in.
 fn dot_extra_weight(
     dotted: bool,
     double_dotted: bool,
