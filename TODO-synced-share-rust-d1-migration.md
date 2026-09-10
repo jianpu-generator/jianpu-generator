@@ -376,10 +376,15 @@ banner).
   separate `users` row until an actual linking feature is built (out of
   scope here).
 - [ ] Open items carried over, still to decide during implementation:
-      whether `revision` still acts as an optimistic-concurrency guard on
-      writes (it did in the old `StoredDoc`), whether `login` is worth
-      caching for "shared by @username" UI, and whether `owner_user_id`
-      needs an index for a possible future "my shares" list.
+      ~~whether `revision` still acts as an optimistic-concurrency guard on
+      writes (it did in the old `StoredDoc`)~~ — **Resolved: no.** Decided
+      in §8's "`revision` is not enforced as an optimistic-concurrency
+      guard on writes" item: kept as last-write-wins, matching the old TS
+      worker, since the design already assumes exactly one writer (the
+      owner) per share; revisit only if a future feature needs real
+      conflict detection. Still open: whether `login` is worth caching for
+      "shared by @username" UI, and whether `owner_user_id` needs an index
+      for a possible future "my shares" list.
 - [x] Write the schema as plain `.sql` migration files (shared source for
       both real D1 via `wrangler d1 migrations apply` and the local shadow
       SQLite used for SQLx compile-time checks).
@@ -697,14 +702,19 @@ listed here as their own follow-up items.
       `web/src/syncedShareUrl.ts`'s fixed-length `SHARE_ID_PATTERN`. Kept a
       true loop (not a fixed attempt count) rather than looping/regenerating
       with a cap, since a second collision is still vanishingly unlikely.
-- [ ] **`revision` is not enforced as an optimistic-concurrency guard on
+- [x] **`revision` is not enforced as an optimistic-concurrency guard on
       writes** — a client-sent `revision` is stored as-is, never compared
       against the existing row's `revision` before being overwritten.
       Confirmed this matches the OLD TS worker's behavior too (checked
       `live-share-worker/src/doc.ts` in git history as of commit
       `860e756`), so this is not a regression from the migration — carried
       over from the original design, which assumes exactly one writer (the
-      owner) per share. Listed here only because §1's "open items" bullet
-      flagged it as still-undecided; leaving unchecked/unresolved is fine
-      unless a future feature (e.g. multi-device sync from the same owner)
-      needs real conflict detection.
+      owner) per share.
+      (**Resolved: leave unenforced**, decided explicitly by the user —
+      no feature currently needs real conflict detection, and enforcing it
+      now would add rejection-handling complexity to `doc::apply_write`
+      and `handlers.rs`'s write dispatch with no client depending on it.
+      §1's "open items" bullet updated to point back here instead of
+      flagging this as still-undecided. Revisit if a future feature, e.g.
+      multi-device sync from the same owner, needs real conflict
+      detection.)
