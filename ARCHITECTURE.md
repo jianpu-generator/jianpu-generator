@@ -318,10 +318,14 @@ directory, `src/{resolveRole,doc,index,protocol}.ts`, deployed as
 `jianpu-live`) and its anonymous device-secret ownership scheme
 (`getOrCreateDeviceSecret`/`deriveSyncedShareIdentity`) have been retired
 (`TODO-synced-share-rust-d1-migration.md` task 11) — that source is deleted,
-not kept as reference. The Rust crate below is not yet deployed as the live
-worker (rollout is a later task); the top-level `live-share-worker/`
-directory now holds only the shared D1 schema migrations (see "Storage"
-below), nothing else.
+not kept as reference. The real D1 database (`jianpu-live-share`, region
+APAC) exists and is migrated as of task 12 (`crates/live-share-worker/wrangler.toml`'s
+`database_id`), but the Rust worker itself is not yet deployed as the live
+worker — that step is still blocked on the Synced Share GitHub OAuth App's
+client id/secret (`wrangler.toml`'s `SYNCED_SHARE_GITHUB_CLIENT_ID` is still
+a placeholder), see the TODO's §7 for the remaining manual steps. The
+top-level `live-share-worker/` directory now holds only the shared D1 schema
+migrations (see "Storage" below), nothing else.
 
 - Crate: `crates/live-share-worker` (target `wasm32-unknown-unknown`,
   built as a `worker`-crate Cloudflare Worker). Entry point: `#[event(fetch)]

@@ -39,11 +39,13 @@ command = "cargo install worker-build && worker-build --release"
 [[d1_databases]]
 binding = "DB"
 database_name = "jianpu-live-share"
-# Placeholder: the real database (and its id) is created in task 12/§7
-# ("Rollout") via `wrangler d1 create --location apac`. Fill in the real id
-# here once that command has been run -- do not create the database as part
-# of this task.
-database_id = "REPLACE_AT_ROLLOUT"
+# Created in task 12/§7 ("Rollout") via:
+#   wrangler d1 create jianpu-live-share --location apac
+# (region: APAC -- closest available location hint to Kuala Lumpur; D1
+# location hints are broad regions, not city-level, so users far from APAC
+# will see extra round-trip latency on writes -- accepted per §7, not a
+# launch blocker given this project's actual user base).
+database_id = "2761bae0-e553-47e8-af04-6e4a12aab1fa"
 # Points `wrangler d1 migrations apply`/`wrangler dev`'s local D1 emulation
 # at the shared migration source (see `build.rs`'s doc comment for why the
 # schema lives at this path, a sibling of `crates/`, rather than under this

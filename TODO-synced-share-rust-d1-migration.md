@@ -287,9 +287,21 @@ off in both places.
       mount/reload, defeating the autosave-debounce scenario. All 15
       Synced Share scenarios pass via
       `pnpm test:e2e:resolve -- --grep Synced`.)
-- [ ] **12. Rollout** — `wrangler d1 create --location apac`, decide
+- [x] **12. Rollout** — `wrangler d1 create --location apac`, decide
       staging-vs-direct-to-prod cutover (§7). Scope: `live-share-worker`.
-      Depends on: 11.
+      Depends on: 11. (Real D1 database `jianpu-live-share` created in
+      region APAC — `database_id = "2761bae0-e553-47e8-af04-6e4a12aab1fa"`,
+      filled into `crates/live-share-worker/wrangler.toml`, migrations
+      applied via `wrangler d1 migrations apply jianpu-live-share --remote`
+      and verified (`users`/`user_identities`/`oauth_sessions`/`docs` tables
+      all present). Cutover decision: direct-to-prod, no staging, per §0/§7
+      and this task's explicit instruction. **Not done**: actually deploying
+      the worker (`wrangler deploy`) — `SYNCED_SHARE_GITHUB_CLIENT_ID` in
+      `wrangler.toml` is still the `REPLACE_AT_ROLLOUT` placeholder and the
+      `SYNCED_SHARE_GITHUB_CLIENT_SECRET` Worker secret has never been set,
+      so deploying now would ship a Worker whose GitHub sign-in is broken.
+      This is a manual step left for the user — see §7 below for the exact
+      remaining commands.)
 
 Mockup reference for 8–10: `synced-share-screens` artifact (5 screens:
 sign-in prompt, OAuth popup, synced/owned state, error dialog, viewer
@@ -532,14 +544,73 @@ banner).
 
 ## 7. Rollout
 
-- [ ] Create the D1 database with `wrangler d1 create --location apac` —
+- [x] Create the D1 database with `wrangler d1 create --location apac` —
       the nearest available location hint to Kuala Lumpur (D1 location
       hints are broad regions — `wnam`/`enam`/`sam`/`weur`/`eeur`/`apac`/`oc`
       — not city-level, so `apac` is the closest available choice, not a
       guarantee of KL-adjacency). Note the latency tradeoff for
       geographically distant users in the rollout notes, not as a launch
-      blocker.
-- [ ] Decide staging vs. direct-to-prod cutover for the worker rewrite.
-- [ ] No rollback/compat plan needed (per §0) — direct cutover, old worker
+      blocker. (Ran `npx wrangler d1 create jianpu-live-share --location
+      apac` — confirmed authenticated against a real Cloudflare account
+      first via `npx wrangler whoami`, and `npx wrangler d1 list --json`
+      showed no pre-existing databases, so this was a genuinely new
+      resource, not a duplicate. Created `jianpu-live-share`,
+      `database_id = "2761bae0-e553-47e8-af04-6e4a12aab1fa"`, region APAC
+      — `wrangler d1 execute ... "SELECT name FROM sqlite_master..."`
+      afterward reported `served_by_region: "APAC"`, `served_by_colo:
+      "HKG"` (Hong Kong), i.e. genuinely APAC-local, not KL-local — the
+      latency tradeoff this bullet calls out is real for e.g. European/
+      American users but accepted, not a blocker, given this project's
+      actual user base. `database_id` filled into
+      `crates/live-share-worker/wrangler.toml`, replacing the
+      `REPLACE_AT_ROLLOUT` placeholder. Migrations applied with `wrangler
+      d1 migrations apply jianpu-live-share --remote` from
+      `crates/live-share-worker/` and verified present:
+      `users`/`user_identities`/`oauth_sessions`/`docs`.)
+- [x] Decide staging vs. direct-to-prod cutover for the worker rewrite.
+      (Direct-to-prod, no staging environment — decided by the user
+      explicitly for this task.)
+- [x] No rollback/compat plan needed (per §0) — direct cutover, old worker
       retired once the new one is verified. Existing share link(s) will stop
-      working and can be recreated.
+      working and can be recreated. (Old worker source already deleted in
+      task 11; its live Cloudflare deployment, if still running under the
+      name `jianpu-live`, was deliberately left untouched by this task —
+      decommissioning it is a separate, explicitly-destructive step not
+      taken unprompted, see the note below.)
+- [ ] **Deploy the new worker to production** — NOT done in this task; left
+      as a manual step. Blocked on two things this task deliberately did
+      not do, since they involve either creating a real GitHub OAuth App or
+      an outward-facing production deploy the user should confirm directly:
+      1. Create (or reuse, per §0) the dedicated Synced Share GitHub OAuth
+         App, then fill its client id into
+         `crates/live-share-worker/wrangler.toml`'s
+         `SYNCED_SHARE_GITHUB_CLIENT_ID` (currently still
+         `REPLACE_AT_ROLLOUT`) and set the secret:
+         ```sh
+         cd crates/live-share-worker
+         npx wrangler secret put SYNCED_SHARE_GITHUB_CLIENT_SECRET
+         ```
+      2. Deploy the worker itself:
+         ```sh
+         cd crates/live-share-worker
+         cargo install worker-build   # if not already installed
+         npx wrangler deploy
+         ```
+         This deploys under the name in `wrangler.toml`
+         (`jianpu-live-share-worker-rs`), a **distinct** Cloudflare Worker
+         from the old, already-retired-in-source `jianpu-live` — deploying
+         it will not touch/overwrite/replace the old worker's still-running
+         Cloudflare-side deployment (if any). Confirm the deployed name in
+         the Cloudflare dashboard or `npx wrangler deployments list` after
+         running this.
+      3. Point the web app at the new worker's URL (wherever its base URL
+         is currently configured for Synced Share) and verify a real
+         create-share round trip end-to-end before calling the cutover
+         complete.
+      4. **Follow-up, not done here**: once the new worker is verified
+         live, the OLD worker's Cloudflare-side deployment (`jianpu-live`)
+         is still running (only its source was deleted, task 11) and should
+         eventually be decommissioned (`npx wrangler delete jianpu-live` or
+         via the dashboard) — flagged here as a follow-up, deliberately
+         **not** done as part of this task since deleting a real, currently
+         serving production Worker needs explicit user confirmation.
