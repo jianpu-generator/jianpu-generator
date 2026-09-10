@@ -213,10 +213,27 @@ off in both places.
       token-/hash-shaped text even though `VerificationFailure` has no such
       field by construction. No worker change was needed -- its existing
       `401` body already carried enough for this.)
-- [ ] **10. Viewer attribution + response scrubbing** — "Shared by
+- [x] **10. Viewer attribution + response scrubbing** — "Shared by
       @username" on `SyncedShareBanner` (mockup Screen 5), confirm the
       public doc response never leaks token/hash/internal ids (§6). Scope:
-      `synced-share-ui`. Depends on: 7.
+      `synced-share-ui`. Depends on: 7. (Audited `doc::to_public_doc` /
+      `handlers::get_share` first: the response already never carried
+      `owner_user_id`, `share_id`, timestamps, or any token/hash — this was
+      already satisfied by task 7's work, not a leak to fix. What was
+      missing was `login` itself not being threaded through at all: added
+      `queries/get_owner_login.sql` + `db::get_owner_login` (best-effort
+      `user_identities.login` lookup by `owner_user_id`, D1-free from
+      `to_public_doc`'s own signature — the login is passed in as a plain
+      `Option<String>` parameter so that function stays unit-testable),
+      `protocol::SyncedDoc::owner_login` (new field, `None`/`null` when
+      uncached — never any other internal id), and `get_share` now fetches
+      it alongside the doc row. Threaded through the client:
+      `web/src/syncedShare/protocol.ts`'s `SyncedDoc.ownerLogin` ->
+      `useSyncedShareViewer.ts`'s `syncedShareViewerOwnerLogin` ->
+      `useScoreSource.ts` -> `AppHeader.tsx` -> `SyncedShareBanner.tsx`,
+      which renders "Shared by @{ownerLogin}" next to the synced filename
+      when present. `ARCHITECTURE.md` updated (Synced Share worker section
+      + glossary).)
 - [ ] **11. Retire the old path** — delete
       `getOrCreateDeviceSecret`/`deriveSyncedShareIdentity`/
       `SyncedShareIdentity` and the old TypeScript worker source; update
@@ -450,9 +467,16 @@ banner).
 - [x] `resolveRole`-equivalent logic: owner = resolved `user_id` matches
       `docs.owner_user_id` exactly. Any mismatch or verification failure
       (after retries) is rejected outright. No other cases exist.
-- [ ] Ensure the public doc response (`toPublicDoc`-equivalent) never leaks
+- [x] Ensure the public doc response (`toPublicDoc`-equivalent) never leaks
       the raw token, its hash, or internal `user_id`/`user_identities` rows
       beyond what the UI actually needs (e.g. a cached `login` for display).
+      (Already satisfied as of task 7 for token/hash/`owner_user_id`/
+      `share_id`/timestamps — `doc::to_public_doc` never took or emitted
+      any of those. Task 10 added the one deliberate exception this bullet
+      calls out: `owner_login`, sourced from `db::get_owner_login`
+      (`user_identities.login` only, never `user_id` or any other column)
+      and passed into `to_public_doc` as a plain value, not a row/struct —
+      see task 10's note above.)
 - [ ] Delete `getOrCreateDeviceSecret`/`deriveSyncedShareIdentity` and the
       `SyncedShareIdentity` type from `web/src/syncedShareUrl.ts` — no
       longer used anywhere.

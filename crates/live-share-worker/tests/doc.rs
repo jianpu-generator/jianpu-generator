@@ -22,19 +22,35 @@ fn sample_doc() -> StoredDoc {
 
 #[test]
 fn a_share_with_no_docs_row_reads_the_same_as_one_shared_then_stopped() {
-    assert_eq!(to_public_doc(None), empty_doc());
+    assert_eq!(to_public_doc(None, None), empty_doc());
 }
 
 #[test]
 fn never_leaks_owner_user_id_to_the_caller() {
     let stored = sample_doc();
     assert_eq!(
-        to_public_doc(Some(&stored)),
+        to_public_doc(Some(&stored), Some("octocat".to_string())),
         SyncedDoc {
             ended: false,
             filename: "song.jianpu".to_string(),
             content: "[M] 1".to_string(),
             revision: 1,
+            owner_login: Some("octocat".to_string()),
+        }
+    );
+}
+
+#[test]
+fn carries_no_owner_login_when_none_is_cached() {
+    let stored = sample_doc();
+    assert_eq!(
+        to_public_doc(Some(&stored), None),
+        SyncedDoc {
+            ended: false,
+            filename: "song.jianpu".to_string(),
+            content: "[M] 1".to_string(),
+            revision: 1,
+            owner_login: None,
         }
     );
 }

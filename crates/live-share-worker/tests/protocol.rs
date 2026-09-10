@@ -42,11 +42,29 @@ fn serializes_synced_doc_with_camel_case_fields() -> Result<(), serde_json::Erro
         filename: "song.jianpu".to_string(),
         content: "[M] 1".to_string(),
         revision: 1,
+        owner_login: Some("octocat".to_string()),
     };
 
     let json = serde_json::to_string(&doc)?;
 
     assert!(json.contains("\"filename\":\"song.jianpu\""));
     assert!(json.contains("\"revision\":1"));
+    assert!(json.contains("\"ownerLogin\":\"octocat\""));
+    Ok(())
+}
+
+#[test]
+fn serializes_synced_doc_owner_login_as_null_when_absent() -> Result<(), serde_json::Error> {
+    let doc = SyncedDoc {
+        ended: true,
+        filename: String::new(),
+        content: String::new(),
+        revision: 0,
+        owner_login: None,
+    };
+
+    let json = serde_json::to_string(&doc)?;
+
+    assert!(json.contains("\"ownerLogin\":null"));
     Ok(())
 }

@@ -50,6 +50,7 @@ export function useScoreSource(
   const {
     syncedShareViewerPreview,
     syncedShareViewerStatus,
+    syncedShareViewerOwnerLogin,
     handleImportSyncedShare,
   } = useSyncedShareViewer(
     setEditorCollapsed,
@@ -86,6 +87,7 @@ export function useScoreSource(
       viewerActive: syncedShareViewerActive,
       viewerStatus: syncedShareViewerStatus,
       viewerFilename: syncedShareViewerPreview?.filename ?? null,
+      viewerOwnerLogin: syncedShareViewerOwnerLogin,
       onImportSyncedShare: handleImportSyncedShare,
       isSynced: syncedShareOwner.isSynced,
       syncedShareLink: syncedShareOwner.syncedShareLink,

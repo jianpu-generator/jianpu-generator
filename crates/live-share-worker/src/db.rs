@@ -34,6 +34,7 @@ const INSERT_USER: &str = include_str!("../queries/insert_user.sql");
 const INSERT_USER_IDENTITY: &str = include_str!("../queries/insert_user_identity.sql");
 const GET_OAUTH_SESSION: &str = include_str!("../queries/get_oauth_session.sql");
 const UPSERT_OAUTH_SESSION: &str = include_str!("../queries/upsert_oauth_session.sql");
+const GET_OWNER_LOGIN: &str = include_str!("../queries/get_owner_login.sql");
 
 /// Raw row shape from `get_doc_by_share_id.sql` -- SQLite/D1 has no native
 /// boolean column type, so `ended` comes back as an integer and is
@@ -184,6 +185,18 @@ pub(crate) async fn get_oauth_session(
     db.prepare(GET_OAUTH_SESSION)
         .bind(&[JsValue::from_str(token_hash)])?
         .first(None)
+        .await
+}
+
+/// Best-effort cached display name for a share's owner (`user_identities.login`),
+/// used only to build the public "Shared by @login" viewer attribution --
+/// see `crate::doc::to_public_doc`. `None` covers both "no identity row"
+/// and "identity row with a `NULL` login"; callers treat both the same
+/// (nothing to show).
+pub(crate) async fn get_owner_login(db: &D1Database, user_id: &str) -> Result<Option<String>> {
+    db.prepare(GET_OWNER_LOGIN)
+        .bind(&[JsValue::from_str(user_id)])?
+        .first(Some("login"))
         .await
 }
 

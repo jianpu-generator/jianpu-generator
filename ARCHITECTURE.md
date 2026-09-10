@@ -315,10 +315,9 @@ A separate Cloudflare Worker, not part of the `web/` build or the
 backend the web app's Synced Share feature calls cross-origin, deployed on
 its own (not yet actually deployed as of this section; see
 `TODO-synced-share-rust-d1-migration.md`). This section covers only the
-state that exists today; tasks after this one (client sign-in/owner UI,
-public-response scrubbing, retiring the old TS worker and its
-device-secret ownership scheme) are deliberately not documented here as
-done.
+state that exists today; tasks after this one (retiring the old TS worker
+and its device-secret ownership scheme) are deliberately not documented
+here as done.
 
 - Crate: `crates/live-share-worker` (target `wasm32-unknown-unknown`,
   built as a `worker`-crate Cloudflare Worker). Entry point: `#[event(fetch)]
@@ -349,9 +348,17 @@ done.
 - Key types: `doc::StoredDoc` (a full `docs` row, replacing the old KV
   `StoredDoc`'s doc-plus-bearer-`ownerToken` shape — `owner_user_id` here
   is an internal `users.id`, never sent to a client; `doc::to_public_doc`
-  strips it, mirroring the old `toPublicDoc`); `protocol::SyncedDoc` /
-  `protocol::SyncedWriteRequest` (the `GET`/`POST` wire shapes, ported from
-  the old TS `protocol.ts`, camelCase on the wire); `resolve_role::SyncedRole`
+  strips it, mirroring the old `toPublicDoc`, and takes the owner's cached
+  `user_identities.login` — fetched separately by `handlers::get_share` via
+  `db::get_owner_login` — as an explicit parameter so it stays D1-free and
+  unit-testable); `protocol::SyncedDoc` (the `GET /shares/:share_id`
+  response shape: `ended`/`filename`/`content`/`revision` plus
+  `owner_login` — the one field from `user_identities` deliberately exposed
+  to a viewer, for the "Shared by @login" attribution on
+  `web/`'s `SyncedShareBanner`, task 10; no token, hash, or other internal
+  id is ever present) / `protocol::SyncedWriteRequest` (the `POST` wire
+  shape, ported from the old TS `protocol.ts`, camelCase on the wire);
+  `resolve_role::SyncedRole`
   / `resolve_role::resolve_role` (the write-guard, ported from the old TS
   `resolveRole.ts`); `identity::IdentityProvider` (the identity-resolution
   seam) / `identity::resolve_verified_user_id` (the cache-then-verify
@@ -523,3 +530,4 @@ away from the wasm build both times:
 | **VerificationFailure** | `verification::VerificationFailure { reason, failed_at, attempts }`: the structured, UI-surfaceable shape a failed (post-retry) verification is reported as — `handlers.rs` returns it as a `401` JSON body. Never carries the token or its hash, by construction. |
 | **owner_user_id** | A share's fixed owner, set once at creation (`docs.owner_user_id`, an internal `users.id`) — replaces the old KV model's bearer `ownerToken`, which any first writer could claim. |
 | **Synced Share sign-in connection** | The dedicated, minimally-scoped "sign in with GitHub" OAuth connection (`web/src/storage/syncedShareGithubAuth.ts` client-side, `src/oauth.rs`'s `POST /auth/github/callback` Worker-side) used only to verify Synced Share ownership — distinct from `githubAuth.ts`'s broad-scope storage-backend connection. |
+| **owner_login / "Shared by @login"** | `protocol::SyncedDoc::owner_login`: the owning user's cached `user_identities.login`, fetched by `handlers::get_share` via `db::get_owner_login` and passed into `doc::to_public_doc` — the one field from `user_identities` deliberately exposed on the anonymous `GET /shares/:share_id` response, rendered by `web/`'s `SyncedShareBanner` as "Shared by @login". `null` when the owner has no cached login. |

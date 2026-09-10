@@ -59,6 +59,10 @@ const QUERIES: &[(&str, &str)] = &[
         "upsert_oauth_session.sql",
         include_str!("../queries/upsert_oauth_session.sql"),
     ),
+    (
+        "get_owner_login.sql",
+        include_str!("../queries/get_owner_login.sql"),
+    ),
 ];
 
 #[tokio::test]

@@ -46,6 +46,8 @@ export function useSyncedShareViewer(
     useState<SharePayload | null>(null)
   const [syncedShareViewerStatus, setSyncedShareViewerStatus] =
     useState<SyncedShareViewerStatus>('loading')
+  const [syncedShareViewerOwnerLogin, setSyncedShareViewerOwnerLogin] =
+    useState<string | null>(null)
   const importToStorage = useImportToStorage(
     store,
     backend,
@@ -83,6 +85,7 @@ export function useSyncedShareViewer(
       })
       .then((doc) => {
         if (cancelled) return
+        setSyncedShareViewerOwnerLogin(doc.ownerLogin ?? null)
         if (doc.ended) {
           setSyncedShareViewerPreview(null)
           setSyncedShareViewerStatus('ended')
@@ -106,6 +109,7 @@ export function useSyncedShareViewer(
   return {
     syncedShareViewerPreview,
     syncedShareViewerStatus,
+    syncedShareViewerOwnerLogin,
     handleImportSyncedShare,
   }
 }

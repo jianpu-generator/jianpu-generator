@@ -30,6 +30,10 @@ interface SyncedShareHeaderProps {
   viewerActive: boolean
   viewerStatus: SyncedShareViewerStatus
   viewerFilename: string | null
+  /** The owning user's cached GitHub login (`user_identities.login`),
+   * for the "Shared by @username" attribution -- task 10. `null` when the
+   * worker has none cached for this share's owner. */
+  viewerOwnerLogin: string | null
   onImportSyncedShare: () => void
   isSynced: boolean
   syncedShareLink: string | null
@@ -184,6 +188,7 @@ export function AppHeader({
           <SyncedShareBanner
             status={syncedShare.viewerStatus}
             filename={syncedShare.viewerFilename}
+            ownerLogin={syncedShare.viewerOwnerLogin}
             onImport={syncedShare.onImportSyncedShare}
           />
         )

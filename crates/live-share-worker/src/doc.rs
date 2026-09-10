@@ -32,13 +32,19 @@ pub fn empty_doc() -> SyncedDoc {
         filename: String::new(),
         content: String::new(),
         revision: 0,
+        owner_login: None,
     }
 }
 
 /// Strips everything but the public shape before a doc goes back over the
-/// wire -- `owner_user_id`, `share_id`, and the timestamps never leave the
-/// server (mirrors the old `toPublicDoc`).
-pub fn to_public_doc(stored: Option<&StoredDoc>) -> SyncedDoc {
+/// wire -- `owner_user_id`, `share_id`, the timestamps, and any token/hash
+/// never leave the server (mirrors the old `toPublicDoc`). `owner_login` is
+/// passed in by the caller (`crate::handlers::get_share`, via
+/// `crate::db::get_owner_login`) rather than looked up here, keeping this
+/// function D1-free and unit-testable -- it's the one field from
+/// `user_identities` that IS meant to reach the client, for the "Shared by
+/// @login" viewer attribution (task 10).
+pub fn to_public_doc(stored: Option<&StoredDoc>, owner_login: Option<String>) -> SyncedDoc {
     match stored {
         None => empty_doc(),
         Some(doc) => SyncedDoc {
@@ -46,6 +52,7 @@ pub fn to_public_doc(stored: Option<&StoredDoc>) -> SyncedDoc {
             filename: doc.filename.clone(),
             content: doc.content.clone(),
             revision: doc.revision,
+            owner_login,
         },
     }
 }

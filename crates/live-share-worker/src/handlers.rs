@@ -49,7 +49,11 @@ async fn get_share(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
 
     let d1 = ctx.d1(D1_BINDING)?;
     let existing = db::get_doc_by_share_id(&d1, &share_id).await?;
-    Response::from_json(&doc::to_public_doc(existing.as_ref()))
+    let owner_login = match existing.as_ref() {
+        Some(doc) => db::get_owner_login(&d1, &doc.owner_user_id).await?,
+        None => None,
+    };
+    Response::from_json(&doc::to_public_doc(existing.as_ref(), owner_login))
 }
 
 /// `POST /shares` -- the new "create share" endpoint (TODO §1): generates a

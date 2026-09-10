@@ -14,8 +14,12 @@ use serde::{Deserialize, Serialize};
 /// pressed "Stop Sync" -- the `docs` row keeps existing (same `share_id`,
 /// same `owner_user_id`) so a later "Sync" click reproduces the same link,
 /// but a viewer must not treat `content`/`filename` as current once this is
-/// true. Never carries `owner_user_id`, `share_id`, or any other internal
-/// id -- see `crate::doc::to_public_doc`.
+/// true. Never carries `owner_user_id`, `share_id`, any token/hash, or any
+/// other internal id -- see `crate::doc::to_public_doc`. `owner_login` is
+/// the one deliberate exception: `user_identities.login` (a cached, public
+/// GitHub display name, not an internal id) is exposed here specifically so
+/// the viewer-facing `SyncedShareBanner` can show "Shared by @login"; it's
+/// `None` when the owner has no cached login (task 10).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncedDoc {
@@ -23,6 +27,7 @@ pub struct SyncedDoc {
     pub filename: String,
     pub content: String,
     pub revision: i64,
+    pub owner_login: Option<String>,
 }
 
 /// Body of `POST /shares/:share_id` -- only the share's owner is ever

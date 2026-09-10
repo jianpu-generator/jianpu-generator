@@ -15,6 +15,13 @@ export interface SyncedDoc {
   filename: string
   content: string
   revision: number
+  // Mirrors the Rust worker's `protocol::SyncedDoc::owner_login` (task 10):
+  // the owning user's cached `user_identities.login`, exposed deliberately
+  // for the viewer-facing "Shared by @username" attribution
+  // (`SyncedShareBanner`). `null`/absent when the owner has no cached
+  // login. No other internal id, token, or hash is ever present on this
+  // response -- see `crate::doc::to_public_doc`.
+  ownerLogin?: string | null
 }
 
 // `identityToken` mirrors the Rust worker's `SyncedWriteRequest::identity_token`
