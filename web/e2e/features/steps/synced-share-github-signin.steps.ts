@@ -33,7 +33,16 @@ Given(
           return
         }
         const target = new URL(redirectUri)
-        target.searchParams.set('code', 'e2e-fake-authorization-code')
+        // Unique per attempt, not a fixed string: the mock token-exchange
+        // server (`mock-github-oauth-server.mjs`) enforces real GitHub's
+        // single-use-code behavior, and that server process (and its
+        // used-codes set) persists across the whole suite run -- a fixed
+        // code would make one scenario's exchange poison every other
+        // scenario's (or retry's) use of this same route.
+        target.searchParams.set(
+          'code',
+          `e2e-fake-authorization-code-${crypto.randomUUID()}`,
+        )
         target.searchParams.set('state', state)
         await route.fulfill({
           status: 302,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { completeSyncedShareGithubSignInFromCallback } from '../storage/syncedShareGithubAuth'
 
 /**
@@ -19,8 +19,21 @@ import { completeSyncedShareGithubSignInFromCallback } from '../storage/syncedSh
 export function SyncedShareGithubCallbackPage() {
   const [status, setStatus] = useState<'working' | 'done' | 'failed'>('working')
   const [message, setMessage] = useState<string | null>(null)
+  // GitHub authorization codes are single-use: the token exchange must run
+  // at most once per popup round-trip. `StrictMode` (see `main.tsx`) mounts
+  // this effect, cleans it up, then mounts it again in dev -- without this
+  // guard that fires the exchange twice for the same `code`, and GitHub
+  // honors only the first request, failing the second with "The code passed
+  // is incorrect or expired". A plain effect-scoped `cancelled` flag doesn't
+  // prevent this: it only suppresses acting on a stale *result*, not the
+  // second *fetch* itself -- this ref persists across the double-mount
+  // (StrictMode preserves component state/refs, it only re-runs effects) so
+  // the second effect run sees it's already started and skips the call.
+  const startedRef = useRef(false)
 
   useEffect(() => {
+    if (startedRef.current) return
+    startedRef.current = true
     let cancelled = false
     const host = import.meta.env.VITE_SYNCED_SHARE_HOST ?? ''
     void completeSyncedShareGithubSignInFromCallback({ host }).then(

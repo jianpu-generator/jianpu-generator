@@ -41,6 +41,15 @@ function sendJson(res, status, body) {
   res.end(text)
 }
 
+// Authorization codes are single-use on real GitHub -- exchanging an
+// already-consumed code responds `200 OK` with an `error`/`error_description`
+// pair instead of `access_token` (see `oauth.rs`'s `GithubTokenResponse` doc
+// comment). Enforcing that here lets e2e reproduce the double-token-exchange
+// regression (`SyncedShareGithubCallbackPage`'s `useEffect` firing the
+// exchange twice under `StrictMode`) instead of masking it by accepting any
+// code repeatedly.
+const usedCodes = new Set()
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://localhost:${PORT}`)
 
@@ -53,7 +62,23 @@ const server = createServer(async (req, res) => {
   }
 
   if (req.method === 'POST' && url.pathname === '/login/oauth/access_token') {
-    await readBody(req) // Body is ignored -- any code/verifier is accepted.
+    const raw = await readBody(req)
+    let code
+    try {
+      code = JSON.parse(raw)?.code
+    } catch {
+      code = undefined
+    }
+    if (typeof code === 'string' && usedCodes.has(code)) {
+      sendJson(res, 200, {
+        error: 'bad_verification_code',
+        error_description: 'The code passed is incorrect or expired.',
+      })
+      return
+    }
+    if (typeof code === 'string') {
+      usedCodes.add(code)
+    }
     sendJson(res, 200, { access_token: 'mock-github-access-token' })
     return
   }
