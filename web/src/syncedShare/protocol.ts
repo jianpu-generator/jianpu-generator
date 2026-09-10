@@ -17,9 +17,21 @@ export interface SyncedDoc {
   revision: number
 }
 
+// `identityToken` mirrors the Rust worker's `SyncedWriteRequest::identity_token`
+// (`crates/live-share-worker/src/protocol.rs`) -- the Synced Share GitHub
+// sign-in token (`syncedShareGithubAuth.ts`), sent alongside the still-live
+// `ownerToken` field per task 8: the old device-secret/`ownerToken` path is
+// untouched here (its removal is task 11), this is purely additive. Present
+// only once the Synced Share GitHub connection exists; omitted otherwise
+// (the deployed worker at that point is still the old KV one, which ignores
+// unknown fields).
+export interface SyncedIdentityFields {
+  identityToken?: string
+}
+
 // Owner -> server. Whole-content, not a diff/delta format — correct-by-
 // construction with exactly one writer.
-export interface SyncedUpdateRequest {
+export interface SyncedUpdateRequest extends SyncedIdentityFields {
   type: 'update'
   ownerToken: string
   filename: string
@@ -30,7 +42,7 @@ export interface SyncedUpdateRequest {
 // Owner -> server. Marks the share ended (see `SyncedDoc.ended`) without
 // discarding the stored doc/ownerToken, so the share — and therefore the
 // link — survives to be reused by a later "Sync" click on the same file.
-export interface SyncedStopRequest {
+export interface SyncedStopRequest extends SyncedIdentityFields {
   type: 'stop'
   ownerToken: string
 }

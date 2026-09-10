@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
+import {
+  openSyncedShareGithubSignInPopup,
+  type SyncedShareGithubAuthResult,
+  useSyncedShareGithubAuth,
+} from '../storage/syncedShareGithubAuth'
 import type {
   SyncedStopRequest,
   SyncedUpdateRequest,
@@ -11,6 +16,13 @@ import {
   type SyncedShareIdentity,
 } from '../syncedShareUrl'
 import { AUTOSAVE_DEBOUNCE_MS } from './useStorageBackend'
+
+/** Public Synced Share GitHub OAuth App client id -- reused from the same
+ * registered app as `githubAuth.ts`'s device flow (per §0), only the
+ * requested scope and flow differ. Not a secret: it's visible in every
+ * authorization request the browser sends. */
+const SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID =
+  import.meta.env.VITE_GITHUB_OAUTH_CLIENT_ID ?? ''
 
 function activeFlagKey(fileId: string): string {
   return `jianpu:synced-share-active:v1:${fileId}`
@@ -27,14 +39,31 @@ function syncedShareEndpointUrl(host: string, shareId: string): string {
 export interface UseSyncedShareOwnerResult {
   isSynced: boolean
   syncedShareLink: string | null
+  /** Whether the dedicated Synced Share GitHub sign-in connection
+   * (`syncedShareGithubAuth.ts`, distinct from `githubAuth.ts`'s
+   * storage-backend connection) currently has a stored token. */
+  isGithubConnected: boolean
+  /** Cached GitHub username from that connection, for the "Synced as
+   * @username" identity chip -- `null` until connected. */
+  githubLogin: string | null
   /** Marks the file as synced and returns its viewer link — returned
    * synchronously so the caller can copy it to the clipboard in the same
    * click handler that starts the session. The link is deterministic (see
    * `deriveSyncedShareIdentity`), so this reproduces the same link every time
-   * rather than minting a new one. */
-  startSync: () => string
+   * rather than minting a new one.
+   *
+   * Per §0's "no seamless OAuth-then-continue flow" decision, this is a
+   * no-op (returns `null`) while the Synced Share GitHub connection isn't
+   * present -- it never itself starts the sign-in popup. Callers (e.g.
+   * `SyncedShareButton`) are expected to check `isGithubConnected` first and
+   * show the sign-in prompt (mockup Screen 1) instead of calling this. */
+  startSync: () => string | null
   stopSync: () => void
   broadcastContent: (content: string) => void
+  /** Opens the popup "sign in with GitHub" flow for the dedicated Synced
+   * Share connection. Resolving this promise never itself starts a share --
+   * per §0, the user must click "start sync" again once connected. */
+  signInWithGithub: () => Promise<SyncedShareGithubAuthResult>
 }
 
 /**
@@ -55,6 +84,9 @@ export function useSyncedShareOwner(
   content: string,
 ): UseSyncedShareOwnerResult {
   const [isActive, setIsActive] = useState(() => readActiveFlag(fileId))
+  const [githubAuth] = useSyncedShareGithubAuth()
+  const isGithubConnected = githubAuth !== null
+  const githubLogin = githubAuth?.login ?? null
   const [identity, setIdentity] = useState<SyncedShareIdentity | null>(null)
   // Mirrors `identity` for the click handler below, which needs to read it
   // synchronously (state updates aren't visible until the next render).
@@ -96,6 +128,10 @@ export function useSyncedShareOwner(
         filename,
         content,
         revision: revisionRef.current,
+        // Sent whenever the Synced Share GitHub connection is present, per
+        // task 8 -- see `SyncedIdentityFields` in `syncedShare/protocol.ts`.
+        // The old `ownerToken` field above is untouched (task 11's job).
+        ...(githubAuth ? { identityToken: githubAuth.token } : {}),
       }
       void fetch(syncedShareEndpointUrl(host, session.shareId), {
         method: 'POST',
@@ -103,7 +139,7 @@ export function useSyncedShareOwner(
         body: JSON.stringify(request),
       })
     },
-    [filename, session],
+    [filename, session, githubAuth],
   )
 
   // Pushes the initial doc the moment a session starts syncing (including a
@@ -124,7 +160,13 @@ export function useSyncedShareOwner(
     AUTOSAVE_DEBOUNCE_MS,
   )
 
-  const startSync = useCallback((): string => {
+  const startSync = useCallback((): string | null => {
+    // Per §0's "no seamless OAuth-then-continue flow" decision: this never
+    // triggers the sign-in popup itself, it just declines to start a share.
+    // `SyncedShareButton` checks `isGithubConnected` up front and shows the
+    // sign-in prompt (mockup Screen 1) instead of calling this in that case
+    // -- this check is a defensive backstop, not the primary gate.
+    if (!isGithubConnected) return null
     // In practice always populated by the time a user can click: derivation
     // starts on mount and resolves in well under a millisecond.
     const current = identityRef.current
@@ -135,7 +177,7 @@ export function useSyncedShareOwner(
     revisionRef.current = 0
     setIsActive(true)
     return buildSyncedShareUrl(current.shareId, filename)
-  }, [fileId, filename])
+  }, [fileId, filename, isGithubConnected])
 
   const stopSync = useCallback(() => {
     const host = import.meta.env.VITE_SYNCED_SHARE_HOST
@@ -146,21 +188,31 @@ export function useSyncedShareOwner(
     const stop: SyncedStopRequest = {
       type: 'stop',
       ownerToken: current.ownerToken,
+      ...(githubAuth ? { identityToken: githubAuth.token } : {}),
     }
     void fetch(syncedShareEndpointUrl(host, current.shareId), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(stop),
     })
-  }, [fileId, session])
+  }, [fileId, session, githubAuth])
+
+  const signInWithGithub = useCallback((): Promise<SyncedShareGithubAuthResult> => {
+    return openSyncedShareGithubSignInPopup({
+      clientId: SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID,
+    })
+  }, [])
 
   return {
     isSynced: session !== null,
     syncedShareLink: session
       ? buildSyncedShareUrl(session.shareId, filename)
       : null,
+    isGithubConnected,
+    githubLogin,
     startSync,
     stopSync,
     broadcastContent,
+    signInWithGithub,
   }
 }

@@ -182,10 +182,22 @@ off in both places.
       turn a `VerificationFailure` into a `401` JSON response carrying only
       `reason`/`failedAt`/`attempts` -- never the token or its hash.
       `ARCHITECTURE.md` updated in the same commit.)
-- [ ] **8. Client sign-in + owner UI** — popup OAuth flow, "Sync" popover
+- [x] **8. Client sign-in + owner UI** — popup OAuth flow, "Sync" popover
       when disconnected, "Synced as @username" identity chip, send the
       token on every write (mockup Screens 1–3). Scope: `synced-share-ui`.
-      Depends on: 6.
+      Depends on: 6. (`syncedShareGithubAuth.ts`'s `openSyncedShareGithubSignInPopup`
+      drives the whole popup round trip; `SyncedShareGithubCallbackPage.tsx`
+      -- rendered by `main.tsx` at `SYNCED_SHARE_GITHUB_REDIRECT_PATH` --
+      completes the exchange and relays the result to the opener via
+      `postMessage`. `oauth.rs`'s `POST /auth/github/callback` response now
+      also carries a best-effort `login`. `useSyncedShareOwner.ts` wires
+      this in: `startSync` stays a no-op returning `null` when disconnected
+      rather than itself opening the popup; `SyncedShareButton.tsx` shows a
+      "Sign in with GitHub" popover in that case and a "Synced as
+      @username" chip once connected + synced. Every write
+      (`SyncedUpdateRequest`/`SyncedStopRequest`) now carries `identityToken`
+      alongside the still-live `ownerToken`, per `SyncedIdentityFields` in
+      `syncedShare/protocol.ts`.)
 - [ ] **9. Client error dialog** — full-screen verbose failure dialog with
       the one hard redaction (token/hash), "file a GitHub issue" link
       (mockup Screen 4). Scope: `synced-share-ui`. Depends on: 7, 8.
@@ -409,7 +421,7 @@ banner).
       doc comment. `IdentityProvider` trait already existed from task 4;
       this task adds `identity::github::GithubIdentityProvider` as its real
       implementation, not yet wired into any write path.)
-- [ ] Client (`useSyncedShareOwner.ts`): "start sync" stays enabled always;
+- [x] Client (`useSyncedShareOwner.ts`): "start sync" stays enabled always;
       if this Synced Share GitHub connection isn't present, clicking it
       starts the redirect + PKCE sign-in flow but does not auto-continue
       afterward (per §0 — user clicks "start sync" again once connected).

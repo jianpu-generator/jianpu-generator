@@ -107,6 +107,47 @@
   background: var(--error-bg);
 }
 
+.synced-share-identity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-right: 0.5rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.synced-share-identity-chip svg {
+  width: 0.85em;
+  height: 0.85em;
+}
+
+.synced-share-signin-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.synced-share-signin-prompt {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  max-width: 15rem;
+  gap: 0.4rem;
+  padding: 0.6rem;
+}
+
+.synced-share-signin-prompt p {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.synced-share-signin-prompt-error {
+  color: var(--error);
+}
+
 .preview-audio {
   display: flex;
   align-items: center;

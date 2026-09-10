@@ -3,6 +3,7 @@ import { sortedBinNames } from '../fileStore'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SyncedShareViewerStatus } from '../hooks/useSyncedShareViewer'
 import type { SharePayload } from '../shareUrl'
+import type { SyncedShareGithubAuthResult } from '../storage/syncedShareGithubAuth'
 import { ExportControls } from './ExportControls'
 import { FileSwitcher } from './FileSwitcher'
 import { PlayAllButton } from './PlayAllButton'
@@ -30,8 +31,15 @@ interface SyncedShareHeaderProps {
   onImportSyncedShare: () => void
   isSynced: boolean
   syncedShareLink: string | null
-  onStartSync: () => string
+  /** Whether the dedicated Synced Share GitHub sign-in connection is
+   * present -- see `useSyncedShareOwner.ts`. */
+  isGithubConnected: boolean
+  /** Cached GitHub username for the "Synced as @username" identity chip;
+   * `null` until connected. */
+  githubLogin: string | null
+  onStartSync: () => string | null
   onStopSync: () => void
+  onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
 }
 
 interface AppHeaderProps {
@@ -248,8 +256,11 @@ export function AppHeader({
           <SyncedShareButton
             isSynced={syncedShare.isSynced}
             syncedShareLink={syncedShare.syncedShareLink}
+            isGithubConnected={syncedShare.isGithubConnected}
+            githubLogin={syncedShare.githubLogin}
             onStartSync={syncedShare.onStartSync}
             onStopSync={syncedShare.onStopSync}
+            onSignInWithGithub={syncedShare.onSignInWithGithub}
           />
         )}
         <ExportControls

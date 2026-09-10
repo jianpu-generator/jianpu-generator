@@ -75,6 +75,16 @@ impl IdentityProvider for GithubIdentityProvider {
     }
 }
 
+/// Calls `GET /user` with `identity_token` and returns just the `login`,
+/// for `oauth::github_oauth_callback`'s best-effort identity-chip response
+/// (task 8) -- a thin, crate-visible wrapper since `GithubUser` and
+/// `fetch_github_user` itself stay private to this module.
+pub(crate) async fn fetch_github_login(identity_token: &str) -> Result<String> {
+    fetch_github_user(identity_token)
+        .await
+        .map(|user| user.login)
+}
+
 /// Calls `GET https://api.github.com/user` with `identity_token` as a
 /// bearer token. No retry/backoff here (that's the §0 policy task 7 wraps
 /// around the *cached* verification path) -- a single failed call here is

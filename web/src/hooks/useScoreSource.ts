@@ -89,8 +89,11 @@ export function useScoreSource(
       onImportSyncedShare: handleImportSyncedShare,
       isSynced: syncedShareOwner.isSynced,
       syncedShareLink: syncedShareOwner.syncedShareLink,
+      isGithubConnected: syncedShareOwner.isGithubConnected,
+      githubLogin: syncedShareOwner.githubLogin,
       onStartSync: syncedShareOwner.startSync,
       onStopSync: syncedShareOwner.stopSync,
+      onSignInWithGithub: syncedShareOwner.signInWithGithub,
     },
   }
 }

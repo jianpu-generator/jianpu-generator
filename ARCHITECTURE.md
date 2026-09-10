@@ -428,25 +428,60 @@ their tokens independently and are never conflated (per
 GitHub OAuth App (`client_id` is public and shared), just requesting
 different scopes and using different flows.
 
-- Client (`web/src/storage/syncedShareGithubAuth.ts`): uses `oauth4webapi`
-  to generate a PKCE `code_verifier`/`code_challenge` and a `state`,
-  persists them to `sessionStorage`
-  (`SYNCED_SHARE_GITHUB_PKCE_STORAGE_KEY`), and redirects the browser to
-  GitHub's authorization endpoint (`startSyncedShareGithubSignIn`). This
-  module only starts the flow — reading the redirect-back `?code=`/`?state=`
-  and completing the exchange is wired into `useSyncedShareOwner.ts` in a
-  later task, per §0's "no seamless OAuth-then-continue" decision.
+- Client (`web/src/storage/syncedShareGithubAuth.ts`): drives the whole
+  round trip as a **popup**, not a full-page redirect (mockup's "OAuth
+  popup" screen). `openSyncedShareGithubSignInPopup` uses `oauth4webapi` to
+  generate a PKCE `code_verifier`/`code_challenge` and a `state`, persists
+  them to `sessionStorage` (`SYNCED_SHARE_GITHUB_PKCE_STORAGE_KEY`), and
+  opens a `window.open` popup at GitHub's authorization endpoint; it
+  resolves once the popup either relays a result via `postMessage` or is
+  closed before completing (resolved as a `'cancelled'` failure — never
+  hangs on an abandoned attempt), or resolves immediately as `'blocked'` if
+  the browser refused to open the popup at all.
+  `web/src/components/SyncedShareGithubCallbackPage.tsx`, rendered by
+  `main.tsx` at `SYNCED_SHARE_GITHUB_REDIRECT_PATH` (short-circuiting past
+  `<App/>` for that one path), is what the popup itself lands on: it calls
+  `completeSyncedShareGithubSignInFromCallback`, which validates the
+  returned `state`, exchanges the code via the Worker's
+  `POST /auth/github/callback`, persists the resulting token (a
+  `StoredSyncedShareGithubAuth { token, login }`, under its own
+  `localStorage` key — see `useSyncedShareGithubAuth`), relays the outcome
+  to the opener window via `postMessage` (scoped to this app's own origin),
+  then closes itself. Resolving the popup promise never itself starts a
+  share — per §0's "no seamless OAuth-then-continue" decision, wiring that
+  result into "start sync" is `useSyncedShareOwner.ts`'s job (see "Client
+  owner UI" below).
 - Worker (`src/oauth.rs`, route `POST /auth/github/callback`): exchanges an
   authorization code plus its PKCE `code_verifier` for a GitHub access
   token, using the OAuth App's client secret (`SYNCED_SHARE_GITHUB_CLIENT_SECRET`,
   a Worker secret binding — never committed) and client id
   (`SYNCED_SHARE_GITHUB_CLIENT_ID`, a plain `[vars]` entry in
-  `wrangler.toml`, since it isn't secret). Returns only the access token —
-  resolving it to a `user_id`, or persisting anything, is a later task's
-  job. `oauth4webapi` cannot run in this `wasm32-unknown-unknown` Worker (it
-  targets browser/Fetch-API JS runtimes); this route makes the equivalent
-  plain `POST` itself instead, matching this crate's existing
-  `worker::Fetch`-based HTTP calling convention.
+  `wrangler.toml`, since it isn't secret). Returns
+  `GithubOauthCallbackResponse { access_token, login }`: `access_token` is
+  the only field the client needs to act as this identity (resolving it to
+  a `user_id`, or persisting anything server-side, stays a separate concern
+  — `identity::resolve_verified_user_id`, above); `login` is a best-effort
+  convenience for the client's "Synced as @username" identity chip, fetched
+  via one extra `GET /user` call with the freshly issued token and omitted
+  (not failed) if that call errors. `oauth4webapi` cannot run in this
+  `wasm32-unknown-unknown` Worker (it targets browser/Fetch-API JS
+  runtimes); this route makes the equivalent plain `POST` itself instead,
+  matching this crate's existing `worker::Fetch`-based HTTP calling
+  convention.
+- Client owner UI (`web/src/hooks/useSyncedShareOwner.ts`,
+  `web/src/components/SyncedShareButton.tsx`): "start sync" stays enabled
+  even when this connection isn't present (§0 — no seamless
+  OAuth-then-continue). Clicking "Sync" while disconnected shows a sign-in
+  prompt popover (mockup Screen 1) instead of starting a share; its own
+  "Sign in with GitHub" button is what actually opens the popup. Once
+  connected, `useSyncedShareOwner`'s `startSync` behaves as before, and
+  every write (`SyncedUpdateRequest`/`SyncedStopRequest`) additionally
+  carries `identityToken` (`SyncedIdentityFields`,
+  `web/src/syncedShare/protocol.ts`) set to this connection's token,
+  alongside the still-live `ownerToken` field from the old device-secret
+  path (untouched here — its removal is a later task). While synced and
+  connected, `SyncedShareButton` shows a small "Synced as @username" chip
+  next to the button, sourced from the cached `login`.
 - `identity::github::GithubIdentityProvider`: the production
   `IdentityProvider` implementation, resolving this connection's token to
   `(provider, provider_user_id)` via a direct `GET /user` call (also caching

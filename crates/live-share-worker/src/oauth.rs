@@ -6,13 +6,16 @@
 //! see `CLIENT_SECRET_BINDING` below) -- set via `wrangler secret put`,
 //! never committed to this repo.
 //!
-//! Scope note: this module only performs the token exchange itself. It does
+//! Scope note: this module only performs the token exchange itself (plus,
+//! as of task 8, a best-effort `GET /user` call to hand the client a
+//! `login` to display -- see `GithubOauthCallbackResponse::login`). It does
 //! not verify or cache the resulting token, nor resolve it to an internal
-//! `user_id` -- that is `identity::github::GithubIdentityProvider` (usable
-//! standalone already) plus the hashed-token caching and write-path wiring
-//! that land in task 7. It also does not persist anything: the exchanged
-//! access token is simply returned to the caller (the browser), which owns
-//! storing it and sending it as `identity_token` on writes (task 8).
+//! `user_id` -- that is `identity::github::GithubIdentityProvider` plus the
+//! hashed-token caching and write-path wiring from task 7, which every
+//! write still goes through regardless of what this route returns. It also
+//! does not persist anything: the exchanged access token is simply returned
+//! to the caller (the browser), which owns storing it and sending it as
+//! `identity_token` on writes (task 8).
 //!
 //! `oauth4webapi` (the library TODO §0 names for this connection) is a
 //! browser/Fetch-API-oriented JS library with no Rust equivalent runnable
@@ -54,13 +57,21 @@ pub(crate) struct GithubOauthCallbackRequest {
     pub redirect_uri: String,
 }
 
-/// Response of `POST /auth/github/callback` on success. Deliberately just
-/// the access token GitHub issued -- resolving it to a `user_id` is a
-/// separate, later concern (task 7), not this route's job.
+/// Response of `POST /auth/github/callback` on success. `access_token` is
+/// the only field the client actually needs to act as this identity
+/// (resolving it to a `user_id` is a separate, later concern -- task 7's
+/// `identity::resolve_verified_user_id`, which every write still goes
+/// through, not this route's job). `login` is a best-effort convenience for
+/// the client's "Synced as @username" identity chip (task 8) -- fetched via
+/// one extra `GET /user` call with the freshly issued token; `None` if that
+/// call fails, since a missing display name shouldn't fail a successful
+/// sign-in.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct GithubOauthCallbackResponse {
     pub access_token: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub login: Option<String>,
 }
 
 /// Raw shape of GitHub's token-endpoint JSON response. GitHub can respond
@@ -92,7 +103,18 @@ pub(crate) async fn github_oauth_callback(
         exchange_code_for_token(&client_id.to_string(), &client_secret.to_string(), &body).await?;
 
     match token_response.access_token {
-        Some(access_token) => Response::from_json(&GithubOauthCallbackResponse { access_token }),
+        Some(access_token) => {
+            // Best-effort only: a failed `GET /user` here must not fail an
+            // otherwise-successful sign-in, so `login` degrades to `None`
+            // rather than propagating the error.
+            let login = crate::identity::github::fetch_github_login(&access_token)
+                .await
+                .ok();
+            Response::from_json(&GithubOauthCallbackResponse {
+                access_token,
+                login,
+            })
+        }
         None => {
             let reason = token_response
                 .error_description
