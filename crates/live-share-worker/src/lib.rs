@@ -25,11 +25,11 @@ mod db;
 mod handlers;
 mod identity;
 mod oauth;
-mod share_id;
 
 pub mod doc;
 pub mod protocol;
 pub mod resolve_role;
+pub mod share_id;
 pub mod verification;
 
 use worker::{event, Context, Cors, Env, Method, Request, Response, Result};

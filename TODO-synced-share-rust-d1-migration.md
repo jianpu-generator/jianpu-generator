@@ -687,20 +687,16 @@ listed here as their own follow-up items.
       cutover (cache the new worker's URL + decommission the old one, per
       bullet 4 above) should happen promptly once started, not left
       half-done.
-- [ ] **`shareId` collision fallback can mint an id the client can't parse
-      back out of a link.** `crates/live-share-worker/src/share_id.rs`'s
-      `generate_unique_share_id` appends one extra character (12 chars
-      total) on the astronomically-unlikely case of a collision at the
-      normal `SHARE_ID_LENGTH` (11), per the belt-and-suspenders collision
-      handling decided in §1. But `web/src/syncedShareUrl.ts`'s
-      `SHARE_ID_PATTERN` is `^[0-9A-Za-z_-]{11}$` — a fixed 11-char match —
-      so a share link built from a 12-char fallback id would fail to parse
-      client-side. Low probability (this only triggers on an actual
-      collision), but a real, currently-unfixed inconsistency. Fix is
-      small: either loosen the client pattern to `{11,12}`, or drop the
-      length-extension fallback server-side and just re-roll a fresh
-      11-char id on collision instead (still not a loop in practice, since
-      a second collision is vanishingly unlikely).
+- [x] **`shareId` collision fallback can mint an id the client can't parse
+      back out of a link.** Fixed by dropping the length-extension
+      fallback: `share_id.rs`'s collision handling (now the generic,
+      D1-free `generate_unique_id`, unit-tested in `tests/share_id.rs`)
+      re-rolls a brand new candidate at the same `SHARE_ID_LENGTH` (11) on
+      each collision instead of appending a character, so every `share_id`
+      this crate mints stays exactly 11 characters and always matches
+      `web/src/syncedShareUrl.ts`'s fixed-length `SHARE_ID_PATTERN`. Kept a
+      true loop (not a fixed attempt count) rather than looping/regenerating
+      with a cap, since a second collision is still vanishingly unlikely.
 - [ ] **`revision` is not enforced as an optimistic-concurrency guard on
       writes** — a client-sent `revision` is stored as-is, never compared
       against the existing row's `revision` before being overwritten.
