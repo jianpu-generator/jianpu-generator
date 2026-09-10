@@ -4,6 +4,7 @@ import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SyncedShareViewerStatus } from '../hooks/useSyncedShareViewer'
 import type { SharePayload } from '../shareUrl'
 import type { SyncedShareGithubAuthResult } from '../storage/syncedShareGithubAuth'
+import type { SyncedShareFailure } from '../syncedShare/errors'
 import { ExportControls } from './ExportControls'
 import { FileSwitcher } from './FileSwitcher'
 import { PlayAllButton } from './PlayAllButton'
@@ -12,6 +13,7 @@ import { PlayMeasureButton } from './PlayMeasureButton'
 import { SharedPreviewBanner } from './SharedPreviewBanner'
 import { SyncedShareBanner } from './SyncedShareBanner'
 import { SyncedShareButton } from './SyncedShareButton'
+import { SyncedShareErrorDialog } from './SyncedShareErrorDialog'
 
 interface MeasureRange {
   start: number
@@ -40,6 +42,10 @@ interface SyncedShareHeaderProps {
   onStartSync: () => string | null
   onStopSync: () => void
   onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
+  /** Drives the full-screen error dialog (task 9) -- non-null while a
+   * Synced Share write has failed. */
+  syncFailure: SyncedShareFailure | null
+  onDismissSyncFailure: () => void
 }
 
 interface AppHeaderProps {
@@ -263,6 +269,10 @@ export function AppHeader({
             onSignInWithGithub={syncedShare.onSignInWithGithub}
           />
         )}
+        <SyncedShareErrorDialog
+          failure={syncedShare.syncFailure}
+          onDismiss={syncedShare.onDismissSyncFailure}
+        />
         <ExportControls
           hasDocuments={hasDocuments}
           rendering={rendering}

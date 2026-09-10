@@ -5,6 +5,11 @@ import {
   type SyncedShareGithubAuthResult,
   useSyncedShareGithubAuth,
 } from '../storage/syncedShareGithubAuth'
+import {
+  buildSyncedShareNetworkFailure,
+  buildSyncedShareResponseFailure,
+  type SyncedShareFailure,
+} from '../syncedShare/errors'
 import type {
   SyncedStopRequest,
   SyncedUpdateRequest,
@@ -64,6 +69,13 @@ export interface UseSyncedShareOwnerResult {
    * Share connection. Resolving this promise never itself starts a share --
    * per §0, the user must click "start sync" again once connected. */
   signInWithGithub: () => Promise<SyncedShareGithubAuthResult>
+  /** Set whenever a write (an "update" push or a "stop") fails -- a `401`
+   * GitHub-verification failure from the worker, a non-2xx response, or a
+   * network-level error. Drives the full-screen error dialog (task 9);
+   * `null` means no failure is currently being shown. There is no automatic
+   * retry -- dismissing it (`dismissSyncFailure`) just returns to idle. */
+  syncFailure: SyncedShareFailure | null
+  dismissSyncFailure: () => void
 }
 
 /**
@@ -84,6 +96,9 @@ export function useSyncedShareOwner(
   content: string,
 ): UseSyncedShareOwnerResult {
   const [isActive, setIsActive] = useState(() => readActiveFlag(fileId))
+  const [syncFailure, setSyncFailure] = useState<SyncedShareFailure | null>(
+    null,
+  )
   const [githubAuth] = useSyncedShareGithubAuth()
   const isGithubConnected = githubAuth !== null
   const githubLogin = githubAuth?.login ?? null
@@ -138,6 +153,15 @@ export function useSyncedShareOwner(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
       })
+        .then(async (response) => {
+          if (response.ok) return
+          setSyncFailure(
+            await buildSyncedShareResponseFailure('update', response),
+          )
+        })
+        .catch((error: unknown) => {
+          setSyncFailure(buildSyncedShareNetworkFailure('update', error))
+        })
     },
     [filename, session, githubAuth],
   )
@@ -195,7 +219,18 @@ export function useSyncedShareOwner(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(stop),
     })
+      .then(async (response) => {
+        if (response.ok) return
+        setSyncFailure(await buildSyncedShareResponseFailure('stop', response))
+      })
+      .catch((error: unknown) => {
+        setSyncFailure(buildSyncedShareNetworkFailure('stop', error))
+      })
   }, [fileId, session, githubAuth])
+
+  const dismissSyncFailure = useCallback(() => {
+    setSyncFailure(null)
+  }, [])
 
   const signInWithGithub = useCallback((): Promise<SyncedShareGithubAuthResult> => {
     return openSyncedShareGithubSignInPopup({
@@ -214,5 +249,7 @@ export function useSyncedShareOwner(
     stopSync,
     broadcastContent,
     signInWithGithub,
+    syncFailure,
+    dismissSyncFailure,
   }
 }

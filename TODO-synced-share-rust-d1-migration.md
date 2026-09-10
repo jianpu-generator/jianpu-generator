@@ -198,9 +198,21 @@ off in both places.
       (`SyncedUpdateRequest`/`SyncedStopRequest`) now carries `identityToken`
       alongside the still-live `ownerToken`, per `SyncedIdentityFields` in
       `syncedShare/protocol.ts`.)
-- [ ] **9. Client error dialog** — full-screen verbose failure dialog with
+- [x] **9. Client error dialog** — full-screen verbose failure dialog with
       the one hard redaction (token/hash), "file a GitHub issue" link
       (mockup Screen 4). Scope: `synced-share-ui`. Depends on: 7, 8.
+      (`SyncedShareErrorDialog.tsx`: a full-screen Radix `Dialog` showing the
+      worker's `401` `VerificationFailure` fields (reason/failedAt/attempts)
+      verbosely, plus a "file a GitHub issue" link to
+      `https://github.com/jianpu-generator/jianpu-generator/issues/new`;
+      dismissing it returns to idle with no auto-retry.
+      `web/src/syncedShare/errors.ts` builds the structured failure from a
+      non-ok write response or a thrown network error in
+      `useSyncedShareOwner.ts` (`syncFailure`/`dismissSyncFailure`), and
+      `redactSecrets` there is the defensive backstop redacting any
+      token-/hash-shaped text even though `VerificationFailure` has no such
+      field by construction. No worker change was needed -- its existing
+      `401` body already carried enough for this.)
 - [ ] **10. Viewer attribution + response scrubbing** — "Shared by
       @username" on `SyncedShareBanner` (mockup Screen 5), confirm the
       public doc response never leaks token/hash/internal ids (§6). Scope:
