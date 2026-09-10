@@ -19,6 +19,13 @@ import { Given, Then, When } from './fixtures'
 // hits the real local Synced Share worker, which is itself pointed at
 // `e2e/mock-github-oauth-server.mjs` (see `playwright.config.ts`) for the
 // token exchange and `GET /user` calls that happen worker-side.
+// Captured by the route mock below and asserted against by "the GitHub
+// authorization request forces a fresh login prompt" -- module-level since
+// each scenario runs in its own worker process, matching the established
+// `let ... = ...` capture pattern used across the other `.steps.ts` files
+// (e.g. `putBodies` in `autosave-github.steps.ts`).
+let lastAuthorizationRequestUrl: URL | null = null
+
 Given(
   'the GitHub authorization popup is mocked to redirect back successfully',
   async ({ context }) => {
@@ -26,6 +33,7 @@ Given(
       'https://github.com/login/oauth/authorize**',
       async (route) => {
         const requestUrl = new URL(route.request().url())
+        lastAuthorizationRequestUrl = requestUrl
         const state = requestUrl.searchParams.get('state') ?? ''
         const redirectUri = requestUrl.searchParams.get('redirect_uri')
         if (!redirectUri) {
@@ -77,6 +85,19 @@ When(
   'the owner clicks "Sign in with GitHub" in the prompt',
   async ({ page }) => {
     await page.getByTestId('synced-share-sign-in-with-github-button').click()
+  },
+)
+
+Then(
+  'the GitHub authorization request forces a fresh login prompt',
+  async () => {
+    // `prompt=login` is what makes GitHub re-show its login/consent screen
+    // even when the browser still has a live github.com session and a
+    // prior grant for this app -- without it, GitHub silently re-issues a
+    // code with no prompt at all (see `syncedShareGithubAuth.ts`).
+    expect(lastAuthorizationRequestUrl?.searchParams.get('prompt')).toBe(
+      'login',
+    )
   },
 )
 

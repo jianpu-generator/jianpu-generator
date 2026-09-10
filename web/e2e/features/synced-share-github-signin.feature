@@ -19,6 +19,14 @@ Feature: Synced Share GitHub sign-in
     Then a sync-link-copied toast is shown
     And the synced share identity chip reads "Synced as @e2e-test-user"
 
+  Scenario: Signing in with GitHub always forces a fresh GitHub login prompt, even if the browser still has a GitHub session
+    Given clipboard permissions are granted
+    And the GitHub authorization popup is mocked to redirect back successfully
+    When the owner loads the app and clicks "Sync"
+    Then the sign-in prompt is shown
+    When the owner clicks "Sign in with GitHub" in the prompt
+    Then the GitHub authorization request forces a fresh login prompt
+
   Scenario: The GitHub sign-in still succeeds when the callback page's effect runs twice (React StrictMode double-invoke)
     Given clipboard permissions are granted
     And the GitHub authorization popup is mocked to redirect back successfully
