@@ -28,6 +28,16 @@ Feature: Synced Share GitHub sign-in
     Then the sign-in prompt is gone
     And the sync button still reads "Sync"
 
+  Scenario: Clicking the identity chip and logging out disconnects GitHub and stops the sync
+    Given clipboard permissions are granted
+    And the owner is signed in with GitHub as "e2e-test-user"
+    When the owner loads the app and clicks "Sync"
+    And the owner clicks the synced share identity chip
+    Then the identity chip menu is shown
+    When the owner clicks "Log out" in the identity chip menu
+    Then the synced share identity chip is gone
+    And the sync button still reads "Sync"
+
   Scenario: A GitHub verification failure while creating a share shows the full-screen error dialog, with no automatic retry
     Given clipboard permissions are granted
     And the owner is signed in with GitHub as "e2e-test-user"

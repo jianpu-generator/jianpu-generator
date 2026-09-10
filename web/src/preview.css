@@ -118,6 +118,12 @@
   background: var(--surface);
   font-size: 0.75rem;
   color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.synced-share-identity-chip:hover {
+  background: var(--hover, rgba(128, 128, 128, 0.15));
 }
 
 .synced-share-identity-chip svg {

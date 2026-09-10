@@ -46,6 +46,9 @@ interface SyncedShareHeaderProps {
   onStartSync: () => Promise<string | null>
   onStopSync: () => void
   onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
+  /** Logs out of the Synced Share GitHub connection, stopping any active
+   * sync first -- offered from the "Synced as @username" chip's dropdown. */
+  onDisconnectGithub: () => void
   /** Drives the full-screen error dialog (task 9) -- non-null while a
    * Synced Share write has failed. */
   syncFailure: SyncedShareFailure | null
@@ -272,6 +275,7 @@ export function AppHeader({
             onStartSync={syncedShare.onStartSync}
             onStopSync={syncedShare.onStopSync}
             onSignInWithGithub={syncedShare.onSignInWithGithub}
+            onDisconnectGithub={syncedShare.onDisconnectGithub}
           />
         )}
         <SyncedShareErrorDialog

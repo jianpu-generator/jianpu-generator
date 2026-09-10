@@ -96,6 +96,7 @@ export function useScoreSource(
       onStartSync: syncedShareOwner.startSync,
       onStopSync: syncedShareOwner.stopSync,
       onSignInWithGithub: syncedShareOwner.signInWithGithub,
+      onDisconnectGithub: syncedShareOwner.disconnectGithub,
       syncFailure: syncedShareOwner.syncFailure,
       onDismissSyncFailure: syncedShareOwner.dismissSyncFailure,
     },

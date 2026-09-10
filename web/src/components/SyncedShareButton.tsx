@@ -1,5 +1,6 @@
 import {
   ChevronDownIcon,
+  ExitIcon,
   GitHubLogoIcon,
   Link2Icon,
   UpdateIcon,
@@ -26,6 +27,9 @@ interface SyncedShareButtonProps {
   /** Opens the popup "sign in with GitHub" flow. Never itself starts a
    * share -- per §0, the user must click "Sync" again once connected. */
   onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
+  /** Logs out of the Synced Share GitHub connection, offered from the
+   * identity chip's dropdown. */
+  onDisconnectGithub: () => void
   className?: string
 }
 
@@ -43,10 +47,15 @@ export function SyncedShareButton({
   onStartSync,
   onStopSync,
   onSignInWithGithub,
+  onDisconnectGithub,
   className = 'preview-export-btn',
 }: SyncedShareButtonProps) {
   const [toastOpen, setToastOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  // Controls the "Synced as @username" chip's own dropdown (logout /
+  // disconnect), kept separate from `menuOpen` above (the "Synced" button's
+  // copy-link/stop-sync menu) since the two triggers are independent.
+  const [identityMenuOpen, setIdentityMenuOpen] = useState(false)
   // Controls the "Sync" popover shown when the user clicks "Sync" without
   // being GitHub-connected yet (mockup Screen 1). Kept separate from
   // `menuOpen` above, which is the *synced* state's own dropdown.
@@ -97,13 +106,41 @@ export function SyncedShareButton({
   return (
     <div className="export-menu">
       {isSynced && githubLogin && (
-        <span
-          className="synced-share-identity-chip"
-          data-testid="synced-share-identity-chip"
+        <ResponsiveMenu.Root
+          open={identityMenuOpen}
+          onOpenChange={setIdentityMenuOpen}
         >
-          <GitHubLogoIcon aria-hidden="true" />
-          Synced as @{githubLogin}
-        </span>
+          <ResponsiveMenu.Trigger asChild>
+            <button
+              type="button"
+              className="synced-share-identity-chip"
+              data-testid="synced-share-identity-chip"
+              aria-label="Synced share account options"
+            >
+              <GitHubLogoIcon aria-hidden="true" />
+              Synced as @{githubLogin}
+              <ChevronDownIcon
+                className="export-menu-caret"
+                aria-hidden="true"
+              />
+            </button>
+          </ResponsiveMenu.Trigger>
+          <ResponsiveMenu.Content
+            className="export-menu-list"
+            align="end"
+            sideOffset={4}
+            title="Synced share account options"
+          >
+            <ResponsiveMenu.Item
+              className="export-menu-item export-menu-item--danger"
+              data-testid="disconnect-github-button"
+              onSelect={onDisconnectGithub}
+            >
+              <ExitIcon aria-hidden="true" />
+              Log out
+            </ResponsiveMenu.Item>
+          </ResponsiveMenu.Content>
+        </ResponsiveMenu.Root>
       )}
       {isSynced ? (
         // Radix's DropdownMenuTrigger opens the menu on `pointerdown` and
