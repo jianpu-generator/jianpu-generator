@@ -26,6 +26,16 @@ Prefer Radix UI primitives over DIY implementations for interactive controls (sl
   `PathBuf == str` type error in `sqruff-cli-lib`), and newer releases
   require a rustc version ahead of this repo's. The pre-commit job skips
   with a message rather than failing if `sqruff` isn't on `PATH`.
+- `worker-build` (Cloudflare's build tool that compiles a `workers-rs`
+  crate — `crates/live-share-worker` — to the wasm bundle `wrangler`
+  expects, per `crates/live-share-worker/wrangler.toml`'s `[build] command`):
+  install with `cargo install worker-build`. Only needed to actually build
+  the deployable bundle (e.g. via `wrangler dev`/`deploy`, or running
+  `worker-build` directly to sanity-check the wrangler config) — the
+  pre-commit `live-share-worker-wasm-check` job doesn't need it, since it
+  only runs `cargo check --target wasm32-unknown-unknown`, and skips with a
+  message rather than failing if the `wasm32-unknown-unknown` target isn't
+  installed (`rustup target add wasm32-unknown-unknown`).
 
 ## Cross-boundary invariants (Rust ↔ TS)
 

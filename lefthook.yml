@@ -68,6 +68,27 @@ pre-commit:
               fi
               sqruff lint {staged_files}
 
+          - name: live-share-worker-wasm-check
+            # Confirms the Rust Synced Share worker (`crates/live-share-worker`,
+            # see `TODO-synced-share-rust-d1-migration.md` task 5) still
+            # compiles for the actual Workers target. Scoped to that crate
+            # so it's a no-op on unrelated commits. Deliberately just
+            # `cargo check`, not the full `worker-build` bundle build:
+            # `worker-build` runs a full wasm-pack-style build+bindgen
+            # pipeline (and needs a separate cargo-installable tool, see
+            # AGENTS.md) that's too slow for this fast parallel group
+            # ([[feedback_lefthook_e2e_ordering]] — keep fast checks fast);
+            # a real `worker-build` bundle verification is left as future
+            # work for a CI workflow once actual deployment is being wired
+            # (task 11/12), not built here.
+            glob: "crates/live-share-worker/**"
+            run: |
+              if ! rustup target list --installed 2>/dev/null | grep -q wasm32-unknown-unknown; then
+                echo "wasm32-unknown-unknown target not installed, skipping (rustup target add wasm32-unknown-unknown)"
+                exit 0
+              fi
+              cargo check --target wasm32-unknown-unknown -p live-share-worker
+
           - name: syntax-md-examples
             glob: "{syntax.md,src/parser/**,src/desugar.rs}"
             run: python3 scripts/check-syntax-md-examples.py

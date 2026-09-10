@@ -137,10 +137,20 @@ off in both places.
       (no real GitHub verification yet); update `ARCHITECTURE.md` in the
       **same commit** per this repo's docs rule (§4, §5). Scope:
       `live-share-worker`. Depends on: 2.
-- [ ] **5. Wrangler + CI wiring** — `wrangler.toml` D1 binding and
+- [x] **5. Wrangler + CI wiring** — `wrangler.toml` D1 binding and
       `worker-build`, CI/pre-commit build of the new crate for
       `wasm32-unknown-unknown` (§4). Scope: `live-share-worker`. Depends
-      on: 4.
+      on: 4. (`crates/live-share-worker/wrangler.toml`, `[[d1_databases]]`
+      binding `DB` matching `D1_BINDING` in `src/handlers.rs`, placeholder
+      `database_id = "REPLACE_AT_ROLLOUT"` filled in at task 12; `worker`
+      name `jianpu-live-share-worker-rs`, distinct from the live TS
+      worker's `jianpu-live`, not deployed yet. `worker-build` documented in
+      `AGENTS.md`'s "Local tooling" section. Pre-commit:
+      `live-share-worker-wasm-check` job in `lefthook.yml`'s fast parallel
+      group, glob-scoped to `crates/live-share-worker/**`, running `cargo
+      check --target wasm32-unknown-unknown -p live-share-worker` --
+      full `worker-build` bundle verification left as future work for a CI
+      workflow once deployment is wired, task 11/12.)
 - [ ] **6. Dedicated GitHub sign-in plumbing** — `IdentityProvider` trait +
       `GithubIdentityProvider`, PKCE module (`oauth4webapi`), Worker
       callback route + client-secret binding (§6). Scope:
@@ -334,10 +344,17 @@ banner).
       `syncedShareUrl.ts`, `useSyncedShareOwner.ts`,
       `useSyncedShareViewer.ts`, `web/src/syncedShare/protocol.ts` -- are
       explicitly out of scope for task 4, tasks 8-11.)
-- [ ] Update `wrangler.toml`: build command pointing at `worker-build`
+- [x] Update `wrangler.toml`: build command pointing at `worker-build`
       (or equivalent), D1 binding instead of the KV namespace binding.
-- [ ] Update CI/pre-commit to build the new crate for `wasm32-unknown-unknown`
-      as part of the existing `cargo build`/`cargo test` gate.
+      (`crates/live-share-worker/wrangler.toml`, not the old
+      `live-share-worker/wrangler.jsonc` — this is a new file for the Rust
+      crate, not deployed yet.)
+- [x] Update CI/pre-commit to build the new crate for `wasm32-unknown-unknown`
+      as part of the existing `cargo build`/`cargo test` gate. (Landed as a
+      dedicated `live-share-worker-wasm-check` job in `lefthook.yml` rather
+      than folded into `cargo-checks`, since that job's workspace-wide
+      `cargo clippy`/`cargo test` build for the host target, not
+      `wasm32-unknown-unknown` — see task 5 above.)
 - [ ] Run the existing Playwright e2e suite against the new worker via
       `pnpm test:e2e:resolve` ([[feedback_use_e2e_resolve_script]]), updating
       scenarios for the new GitHub-required create-share flow.

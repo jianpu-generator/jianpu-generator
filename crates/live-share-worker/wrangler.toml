@@ -1,0 +1,46 @@
+# Wrangler config for the Rust rewrite of the Synced Share worker (see
+# `TODO-synced-share-rust-d1-migration.md`, task 5). This is NOT deployed
+# yet -- the old TypeScript worker (`live-share-worker/wrangler.jsonc`,
+# deployed by `.github/workflows/live-share-worker.yml`) is still the live
+# one until task 11 retires it. This file exists so the crate can be built
+# with `wrangler`/`worker-build` locally (and eventually `wrangler dev`, per
+# the TODO's §0 testing decision) ahead of cutover.
+#
+# `name` deliberately does NOT reuse the old worker's name (`jianpu-live`,
+# see `live-share-worker/wrangler.jsonc`) since deploying this would create
+# a second, separate Worker rather than replacing the old one. The final
+# name (reusing `jianpu-live` vs. something else) gets decided/reconciled
+# with the old worker at cutover (task 11/12), not here.
+name = "jianpu-live-share-worker-rs"
+
+# `worker-build`'s default output layout: a `build/` dir at this file's
+# location (i.e. `crates/live-share-worker/build/`) containing a JS shim
+# entry point plus the compiled `.wasm` module, per the `worker` crate
+# 0.8 README's "Getting Started" / D1 sections and `worker-build`'s own
+# conventions (see `cargo generate cloudflare/workers-rs` templates).
+main = "build/worker/shim.mjs"
+
+compatibility_date = "2024-09-23"
+
+[build]
+# `worker-build` (crates.io: `worker-build`) is Cloudflare's build tool that
+# compiles a `workers-rs` crate to the wasm bundle wrangler expects; not
+# vendored as a Cargo dependency, so `cargo install`-ing it here keeps this
+# self-contained the same way the old TS worker's `wrangler dev`/`deploy`
+# scripts are self-contained. See AGENTS.md's "Local tooling" section for
+# the same tool documented for local development, and the `sqruff` job in
+# `lefthook.yml` for the precedent this follows (gracefully skip if a
+# cargo-installable external tool isn't on `PATH`, rather than failing).
+command = "cargo install worker-build && worker-build --release"
+
+# D1 binding. Name ("DB") must match `D1_BINDING` in
+# `src/handlers.rs` (`ctx.d1(D1_BINDING)?`) -- do not rename one without the
+# other.
+[[d1_databases]]
+binding = "DB"
+database_name = "jianpu-live-share"
+# Placeholder: the real database (and its id) is created in task 12/§7
+# ("Rollout") via `wrangler d1 create --location apac`. Fill in the real id
+# here once that command has been run -- do not create the database as part
+# of this task.
+database_id = "REPLACE_AT_ROLLOUT"
