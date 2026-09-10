@@ -1,4 +1,9 @@
-import { ChevronDownIcon, GitHubLogoIcon, Link2Icon, UpdateIcon } from '@radix-ui/react-icons'
+import {
+  ChevronDownIcon,
+  GitHubLogoIcon,
+  Link2Icon,
+  UpdateIcon,
+} from '@radix-ui/react-icons'
 import * as Toast from '@radix-ui/react-toast'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SyncedShareGithubAuthResult } from '../storage/syncedShareGithubAuth'
@@ -15,7 +20,7 @@ interface SyncedShareButtonProps {
   /** Cached GitHub username for the "Synced as @username" identity chip
    * (mockup Screen 3); `null` until connected. */
   githubLogin: string | null
-  onStartSync: () => string | null
+  onStartSync: () => Promise<string | null>
   onStopSync: () => void
   /** Opens the popup "sign in with GitHub" flow. Never itself starts a
    * share -- per §0, the user must click "Sync" again once connected. */
@@ -87,8 +92,9 @@ export function SyncedShareButton({
 
   const handleSyncClick = useCallback(() => {
     if (isGithubConnected) {
-      const link = onStartSync()
-      if (link) void copyUrl(link)
+      void onStartSync().then((link) => {
+        if (link) void copyUrl(link)
+      })
       return
     }
     setSignInStatus({ kind: 'idle' })

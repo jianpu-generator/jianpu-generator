@@ -1,6 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { redactSecrets } from '../syncedShare/errors'
 import type { SyncedShareFailure } from '../syncedShare/errors'
+import { redactSecrets } from '../syncedShare/errors'
 
 const NEW_ISSUE_URL =
   'https://github.com/jianpu-generator/jianpu-generator/issues/new'
@@ -203,7 +203,10 @@ export function SyncedShareErrorDialog({
                   <div style={{ ...fieldLabelStyle, marginBottom: '4px' }}>
                     Raw response body
                   </div>
-                  <pre style={preStyle} data-testid="synced-share-error-dialog-raw-body">
+                  <pre
+                    style={preStyle}
+                    data-testid="synced-share-error-dialog-raw-body"
+                  >
                     {redactSecrets(failure.rawResponseBody)}
                   </pre>
                 </div>

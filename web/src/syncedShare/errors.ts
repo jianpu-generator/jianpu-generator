@@ -9,7 +9,7 @@
 // backstop for any other failure shape (a raw non-2xx body, a thrown network
 // error) that might somehow echo one back.
 
-export type SyncedShareOperation = 'update' | 'stop'
+export type SyncedShareOperation = 'create' | 'update' | 'stop'
 
 export interface SyncedShareFailure {
   operation: SyncedShareOperation

@@ -234,12 +234,59 @@ off in both places.
       which renders "Shared by @{ownerLogin}" next to the synced filename
       when present. `ARCHITECTURE.md` updated (Synced Share worker section
       + glossary).)
-- [ ] **11. Retire the old path** — delete
+- [x] **11. Retire the old path** — delete
       `getOrCreateDeviceSecret`/`deriveSyncedShareIdentity`/
       `SyncedShareIdentity` and the old TypeScript worker source; update
       Playwright scenarios for the new create-share flow, run via
       `pnpm test:e2e:resolve` ([[feedback_use_e2e_resolve_script]]) (§4,
       §6). Scope: `synced-share`. Depends on: 8, 9, 10 verified working.
+      (Deleted `getOrCreateDeviceSecret`/`deriveSyncedShareIdentity`/
+      `SyncedShareIdentity` from `web/src/syncedShareUrl.ts`, the `ownerToken`
+      field from `web/src/syncedShare/protocol.ts`
+      (`SyncedUpdateRequest`/`SyncedStopRequest` now carry only
+      `identityToken`, required), and every remaining reference in
+      `useSyncedShareOwner.ts`/its tests. `useSyncedShareOwner.ts` rewired
+      around the new server-side create-share flow: `startSync` is now
+      async, calling the worker's `POST /shares` (new `CreateShareRequest`/
+      `CreateShareResponse` types) the first time a file syncs and
+      persisting the returned `shareId` locally per file
+      (`jianpu:synced-share-id:v1:<fileId>`, §1's "client persists the
+      returned shareId" bullet), reusing it on later "Sync" clicks with no
+      network call. `SyncedShareButton`/`AppHeader`'s `onStartSync` type
+      updated to `Promise<string | null>` to match. Deleted the old
+      top-level `live-share-worker/` TypeScript/KV source
+      (`src/{doc,index,protocol,resolveRole}.ts`, `test/`, `package.json`,
+      `wrangler.jsonc`, `tsconfig.json`) and its deploy workflow
+      (`.github/workflows/live-share-worker.yml`) -- kept
+      `live-share-worker/migrations/` in place, since that's the *new* D1
+      schema's shared source of truth (`crates/live-share-worker/build.rs`
+      depends on that exact path), not old-worker code. `ARCHITECTURE.md`
+      updated in the same commit (old-worker/KV language removed from the
+      Synced Share worker section, `ownerToken` references updated).
+      Rust worker's GitHub token-exchange/`GET /user` endpoints made
+      env-var-overridable (`SYNCED_SHARE_GITHUB_TOKEN_URL`/
+      `SYNCED_SHARE_GITHUB_USER_URL`, unset in production) so e2e never
+      makes a real GitHub call -- `web/e2e/mock-github-oauth-server.mjs` is
+      a tiny local mock of both endpoints, wired into
+      `web/playwright.config.ts`'s webServer list alongside a `wrangler dev`
+      run of `crates/live-share-worker` (replacing the old worker's
+      webServer entry; migrations applied to local D1 first). The popup's
+      navigation to GitHub's real authorization endpoint is still mocked
+      via `context.route` (browser-level), per this repo's existing OAuth
+      e2e pattern. Updated `synced-share-button.feature`
+      (every scenario now signs the owner in via a pre-seeded Synced Share
+      GitHub connection, exercising the real create-share flow) and added
+      `synced-share-github-signin.feature` (the sign-in-prompt/popup
+      OAuth/identity-chip flow and the full-screen verification-failure
+      dialog). Also switched the viewer/late-viewer "opens the copied sync
+      link" steps to isolated `browser.newContext()`s instead of
+      `context.newPage()` -- sharing the owner's localStorage let the
+      viewer page's own `useSyncedShareOwner` instance (rendered
+      regardless of role) see the same "actively synced" flag and
+      re-push the local file store's latest content on its own
+      mount/reload, defeating the autosave-debounce scenario. All 15
+      Synced Share scenarios pass via
+      `pnpm test:e2e:resolve -- --grep Synced`.)
 - [ ] **12. Rollout** — `wrangler d1 create --location apac`, decide
       staging-vs-direct-to-prod cutover (§7). Scope: `live-share-worker`.
       Depends on: 11.
@@ -418,10 +465,12 @@ banner).
       than folded into `cargo-checks`, since that job's workspace-wide
       `cargo clippy`/`cargo test` build for the host target, not
       `wasm32-unknown-unknown` — see task 5 above.)
-- [ ] Run the existing Playwright e2e suite against the new worker via
+- [x] Run the existing Playwright e2e suite against the new worker via
       `pnpm test:e2e:resolve` ([[feedback_use_e2e_resolve_script]]), updating
-      scenarios for the new GitHub-required create-share flow.
-- [ ] Remove the old TypeScript worker source once parity is verified.
+      scenarios for the new GitHub-required create-share flow. (Task 11.)
+- [x] Remove the old TypeScript worker source once parity is verified.
+      (Task 11 — `live-share-worker/migrations/` kept, as the new D1
+      schema's shared source of truth.)
 
 ## 5. Update project docs (required by this repo's rules, same commit as §4)
 
@@ -477,9 +526,9 @@ banner).
       (`user_identities.login` only, never `user_id` or any other column)
       and passed into `to_public_doc` as a plain value, not a row/struct —
       see task 10's note above.)
-- [ ] Delete `getOrCreateDeviceSecret`/`deriveSyncedShareIdentity` and the
+- [x] Delete `getOrCreateDeviceSecret`/`deriveSyncedShareIdentity` and the
       `SyncedShareIdentity` type from `web/src/syncedShareUrl.ts` — no
-      longer used anywhere.
+      longer used anywhere. (Task 11.)
 
 ## 7. Rollout
 

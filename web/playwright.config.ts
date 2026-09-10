@@ -40,22 +40,45 @@ export default defineConfig({
         // `https://`, see `syncedShareEndpointUrl`/`useSyncedShareViewer`)
         // at the local `live-share-worker` below instead of the real,
         // deployed one — otherwise every Synced Share scenario would burn
-        // real Workers KV writes/reads (and its 1,000/day free-tier write
-        // quota) on every e2e run.
+        // real Cloudflare D1 writes/reads on every e2e run.
         VITE_SYNCED_SHARE_HOST: 'localhost:8787',
       },
     },
     {
+      // Mock of the two GitHub HTTP endpoints the Synced Share worker calls
+      // server-side (token exchange + `GET /user`) -- see
+      // `e2e/mock-github-oauth-server.mjs`'s own doc comment for why this
+      // has to be a real local server rather than `page.route()`
+      // interception (those calls happen inside the `wrangler dev` process
+      // below, not the browser). Ensures no Synced Share e2e run ever makes
+      // a real GitHub API call (task 11).
+      command: 'node e2e/mock-github-oauth-server.mjs',
+      url: 'http://localhost:8788/health',
+      reuseExistingServer: true,
+      timeout: 15_000,
+    },
+    {
       // `--local-protocol https` is required: the app code always fetches
       // `https://${host}/...` (see above), and plain `wrangler dev` only
-      // serves HTTP. Runs against Miniflare's in-memory KV emulation (no
-      // real Cloudflare account involved), so it's free to hit as often as
-      // the suite wants and needs no `wrangler login`.
-      command: 'npx wrangler dev --local-protocol https --port 8787',
-      cwd: '../live-share-worker',
+      // serves HTTP. Runs against Miniflare's local D1 emulation (no real
+      // Cloudflare account involved), so it's free to hit as often as the
+      // suite wants and needs no `wrangler login`. Runs the new Rust worker
+      // (`crates/live-share-worker`, task 11 retired the old TypeScript/KV
+      // one) -- migrations are applied first since Miniflare's local D1
+      // starts empty (idempotent: a no-op once already applied, so this is
+      // cheap on every subsequent run). The `--var` overrides point the
+      // worker's GitHub calls at the mock server above instead of real
+      // GitHub -- see `crates/live-share-worker/src/oauth.rs` and
+      // `src/identity/github.rs` for the env vars they read.
+      command:
+        'npx wrangler d1 migrations apply DB --local && ' +
+        'npx wrangler dev --local-protocol https --port 8787 ' +
+        '--var SYNCED_SHARE_GITHUB_USER_URL:http://localhost:8788/user ' +
+        '--var SYNCED_SHARE_GITHUB_TOKEN_URL:http://localhost:8788/login/oauth/access_token',
+      cwd: '../crates/live-share-worker',
       port: 8787,
       reuseExistingServer: true,
-      timeout: 30_000,
+      timeout: 60_000,
     },
   ],
   projects: [

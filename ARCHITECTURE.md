@@ -312,12 +312,16 @@ Worker messages: `listParts` → `{ parts, declarations }`; `updatePartDeclarati
 
 A separate Cloudflare Worker, not part of the `web/` build or the
 `jianpu-wasm` component boundary above — it's a small standalone HTTP
-backend the web app's Synced Share feature calls cross-origin, deployed on
-its own (not yet actually deployed as of this section; see
-`TODO-synced-share-rust-d1-migration.md`). This section covers only the
-state that exists today; tasks after this one (retiring the old TS worker
-and its device-secret ownership scheme) are deliberately not documented
-here as done.
+backend the web app's Synced Share feature calls cross-origin. The old
+TypeScript, KV-backed worker (formerly the top-level `live-share-worker/`
+directory, `src/{resolveRole,doc,index,protocol}.ts`, deployed as
+`jianpu-live`) and its anonymous device-secret ownership scheme
+(`getOrCreateDeviceSecret`/`deriveSyncedShareIdentity`) have been retired
+(`TODO-synced-share-rust-d1-migration.md` task 11) — that source is deleted,
+not kept as reference. The Rust crate below is not yet deployed as the live
+worker (rollout is a later task); the top-level `live-share-worker/`
+directory now holds only the shared D1 schema migrations (see "Storage"
+below), nothing else.
 
 - Crate: `crates/live-share-worker` (target `wasm32-unknown-unknown`,
   built as a `worker`-crate Cloudflare Worker). Entry point: `#[event(fetch)]
@@ -326,12 +330,6 @@ here as done.
   response uniformly around whatever `handlers::router()` (a `worker::Router`
   routing `GET /shares/:share_id`, `POST /shares/:share_id`, `POST /shares`,
   `POST /auth/github/callback`) returns.
-- This crate coexists with the pre-migration TypeScript worker at the
-  top-level `live-share-worker/` directory (`src/{resolveRole,doc,index,
-  protocol}.ts`), which is still the one actually deployed — the old
-  source is intentionally left in place as reference until the Rust
-  version has parity and is verified end-to-end (a later task), not
-  deleted by this one.
 - Storage: D1 (SQLite), not the old KV namespace. Schema in
   `live-share-worker/migrations/0001_init.sql` (shared, as plain `.sql`,
   between real D1 migrations and a local shadow SQLite database
@@ -481,14 +479,17 @@ different scopes and using different flows.
   OAuth-then-continue). Clicking "Sync" while disconnected shows a sign-in
   prompt popover (mockup Screen 1) instead of starting a share; its own
   "Sign in with GitHub" button is what actually opens the popup. Once
-  connected, `useSyncedShareOwner`'s `startSync` behaves as before, and
-  every write (`SyncedUpdateRequest`/`SyncedStopRequest`) additionally
-  carries `identityToken` (`SyncedIdentityFields`,
-  `web/src/syncedShare/protocol.ts`) set to this connection's token,
-  alongside the still-live `ownerToken` field from the old device-secret
-  path (untouched here — its removal is a later task). While synced and
-  connected, `SyncedShareButton` shows a small "Synced as @username" chip
-  next to the button, sourced from the cached `login`.
+  connected, `startSync` is async: it reuses a `shareId` persisted locally
+  per file (`jianpu:synced-share-id:v1:<fileId>`) if one exists, otherwise
+  calls `POST /shares` (`CreateShareRequest`/`CreateShareResponse` in
+  `web/src/syncedShare/protocol.ts`) to mint one, gated on this connection's
+  token — there is no more client-side share-id derivation or `ownerToken`
+  (task 11 deleted `getOrCreateDeviceSecret`/`deriveSyncedShareIdentity` and
+  the `ownerToken` field entirely). Every write
+  (`SyncedUpdateRequest`/`SyncedStopRequest`) carries only `identityToken`,
+  set to this connection's token. While synced and connected,
+  `SyncedShareButton` shows a small "Synced as @username" chip next to the
+  button, sourced from the cached `login`.
 - `identity::github::GithubIdentityProvider`: the production
   `IdentityProvider` implementation, resolving this connection's token to
   `(provider, provider_user_id)` via a direct `GET /user` call (also caching
@@ -496,6 +497,13 @@ different scopes and using different flows.
   every write and the create-share endpoint via
   `identity::resolve_verified_user_id` — see "Verification cache + retry
   policy" above.
+- Both the token-exchange endpoint (`oauth.rs`) and the `GET /user` endpoint
+  (`identity::github::user_endpoint_from_env`) resolve their target URL from
+  an optional `[vars]` override (`SYNCED_SHARE_GITHUB_TOKEN_URL`/
+  `SYNCED_SHARE_GITHUB_USER_URL`), falling back to the real GitHub endpoints
+  when unset. Unset in production; Playwright e2e's local `wrangler dev` run
+  points both at `web/e2e/mock-github-oauth-server.mjs` (task 11) so no e2e
+  run ever makes a real GitHub API call.
 
 ### D1 query checking
 

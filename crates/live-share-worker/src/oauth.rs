@@ -32,7 +32,13 @@ use worker::wasm_bindgen::JsValue;
 use worker::{Error, Fetch, Headers, Method, Request, RequestInit, Response, Result};
 use worker::{RouteContext, Var};
 
-const GITHUB_TOKEN_URL: &str = "https://github.com/login/oauth/access_token";
+const DEFAULT_GITHUB_TOKEN_URL: &str = "https://github.com/login/oauth/access_token";
+
+/// Optional `[vars]` override for the token-exchange endpoint, mirroring
+/// `identity::github`'s `GITHUB_USER_URL_VAR` -- unset in production, set by
+/// e2e's local `wrangler dev` run to a mock GitHub server so no Playwright
+/// run ever makes a real GitHub API call (task 11).
+const GITHUB_TOKEN_URL_VAR: &str = "SYNCED_SHARE_GITHUB_TOKEN_URL";
 
 /// Worker binding names this route expects. `CLIENT_ID` is not secret --
 /// GitHub OAuth client ids are public, the browser already sends the same
@@ -98,16 +104,26 @@ pub(crate) async fn github_oauth_callback(
 
     let client_id: Var = ctx.var(CLIENT_ID_BINDING)?;
     let client_secret = ctx.secret(CLIENT_SECRET_BINDING)?;
+    let token_url = ctx
+        .var(GITHUB_TOKEN_URL_VAR)
+        .map(|value| value.to_string())
+        .unwrap_or_else(|_| DEFAULT_GITHUB_TOKEN_URL.to_string());
+    let user_endpoint = crate::identity::github::user_endpoint_from_env(&ctx);
 
-    let token_response =
-        exchange_code_for_token(&client_id.to_string(), &client_secret.to_string(), &body).await?;
+    let token_response = exchange_code_for_token(
+        &token_url,
+        &client_id.to_string(),
+        &client_secret.to_string(),
+        &body,
+    )
+    .await?;
 
     match token_response.access_token {
         Some(access_token) => {
             // Best-effort only: a failed `GET /user` here must not fail an
             // otherwise-successful sign-in, so `login` degrades to `None`
             // rather than propagating the error.
-            let login = crate::identity::github::fetch_github_login(&access_token)
+            let login = crate::identity::github::fetch_github_login(&user_endpoint, &access_token)
                 .await
                 .ok();
             Response::from_json(&GithubOauthCallbackResponse {
@@ -126,6 +142,7 @@ pub(crate) async fn github_oauth_callback(
 }
 
 async fn exchange_code_for_token(
+    token_url: &str,
     client_id: &str,
     client_secret: &str,
     body: &GithubOauthCallbackRequest,
@@ -147,7 +164,7 @@ async fn exchange_code_for_token(
         .with_headers(headers)
         .with_body(Some(JsValue::from_str(&payload.to_string())));
 
-    let request = Request::new_with_init(GITHUB_TOKEN_URL, &init)?;
+    let request = Request::new_with_init(token_url, &init)?;
     let mut response = Fetch::Request(request).send().await?;
 
     if response.status_code() != 200 {

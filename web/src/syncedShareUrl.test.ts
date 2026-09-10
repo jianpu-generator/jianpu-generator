@@ -1,19 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import {
-  deriveSyncedShareIdentity,
-  parseSyncedShareFromHash,
-} from './syncedShareUrl'
+import { parseSyncedShareFromHash } from './syncedShareUrl'
 
-const SECRET_A = 'secret-a'
-const SECRET_B = 'secret-b'
+// A well-formed, 11-char share id (matches `SHARE_ID_LENGTH`/`SHARE_ID_PATTERN`
+// in `syncedShareUrl.ts`) -- shareIds are generated server-side now (task
+// 11), so tests use a fixed sample instead of deriving one.
+const SAMPLE_SHARE_ID = 'abcDEF123_-'
 
 describe('syncedShareUrl', () => {
-  it('round-trips a derived share id through the #synced= hash format', async () => {
-    const { shareId } = await deriveSyncedShareIdentity(
-      SECRET_A,
-      'some-file-id',
-    )
-    expect(parseSyncedShareFromHash(`#synced=${shareId}`)).toEqual({ shareId })
+  it('round-trips a share id through the #synced= hash format', () => {
+    expect(parseSyncedShareFromHash(`#synced=${SAMPLE_SHARE_ID}`)).toEqual({
+      shareId: SAMPLE_SHARE_ID,
+    })
   })
 
   it('rejects a missing #synced= prefix', () => {
@@ -26,68 +23,31 @@ describe('syncedShareUrl', () => {
     expect(parseSyncedShareFromHash('#synced=')).toBeNull()
   })
 
-  it('derives the same identity for the same secret and file id', async () => {
-    const a = await deriveSyncedShareIdentity(SECRET_A, 'file-a')
-    const b = await deriveSyncedShareIdentity(SECRET_A, 'file-a')
-    expect(a).toEqual(b)
-  })
-
-  it('derives distinct identities for distinct file ids', async () => {
-    const a = await deriveSyncedShareIdentity(SECRET_A, 'file-a')
-    const b = await deriveSyncedShareIdentity(SECRET_A, 'file-b')
-    expect(a.shareId).not.toEqual(b.shareId)
-    expect(a.ownerToken).not.toEqual(b.ownerToken)
-  })
-
-  it('derives distinct identities for distinct device secrets', async () => {
-    const a = await deriveSyncedShareIdentity(SECRET_A, 'file-a')
-    const b = await deriveSyncedShareIdentity(SECRET_B, 'file-a')
-    expect(a.shareId).not.toEqual(b.shareId)
-    expect(a.ownerToken).not.toEqual(b.ownerToken)
-  })
-
-  it('derives a url-safe owner token', async () => {
-    const { ownerToken } = await deriveSyncedShareIdentity(SECRET_A, 'file-a')
-    expect(ownerToken).toMatch(/^[A-Za-z0-9_-]+$/)
-  })
-
-  it('parses a --filename suffix after the fixed-length share id, appending .jianpu', async () => {
-    const { shareId } = await deriveSyncedShareIdentity(
-      SECRET_A,
-      'some-file-id',
-    )
-    expect(parseSyncedShareFromHash(`#synced=${shareId}--My Song`)).toEqual({
-      shareId,
+  it('parses a --filename suffix after the fixed-length share id, appending .jianpu', () => {
+    expect(
+      parseSyncedShareFromHash(`#synced=${SAMPLE_SHARE_ID}--My Song`),
+    ).toEqual({
+      shareId: SAMPLE_SHARE_ID,
       filename: 'My Song.jianpu',
     })
   })
 
-  it('leaves CJK and other non-ASCII filenames, and any character, unescaped', async () => {
-    const { shareId } = await deriveSyncedShareIdentity(
-      SECRET_A,
-      'some-file-id',
-    )
-    const hash = `#synced=${shareId}--快樂天堂 100% A & B -- more`
+  it('leaves CJK and other non-ASCII filenames, and any character, unescaped', () => {
+    const hash = `#synced=${SAMPLE_SHARE_ID}--快樂天堂 100% A & B -- more`
     expect(parseSyncedShareFromHash(hash)).toEqual({
-      shareId,
+      shareId: SAMPLE_SHARE_ID,
       filename: '快樂天堂 100% A & B -- more.jianpu',
     })
   })
 
-  it('omits filename from the payload when no --suffix is present', async () => {
-    const { shareId } = await deriveSyncedShareIdentity(
-      SECRET_A,
-      'some-file-id',
-    )
-    expect(parseSyncedShareFromHash(`#synced=${shareId}`)).toEqual({ shareId })
+  it('omits filename from the payload when no --suffix is present', () => {
+    expect(parseSyncedShareFromHash(`#synced=${SAMPLE_SHARE_ID}`)).toEqual({
+      shareId: SAMPLE_SHARE_ID,
+    })
   })
 
-  it('rejects trailing content that is not a --filename suffix', async () => {
-    const { shareId } = await deriveSyncedShareIdentity(
-      SECRET_A,
-      'some-file-id',
-    )
-    expect(parseSyncedShareFromHash(`#synced=${shareId}foo`)).toBeNull()
+  it('rejects trailing content that is not a --filename suffix', () => {
+    expect(parseSyncedShareFromHash(`#synced=${SAMPLE_SHARE_ID}foo`)).toBeNull()
   })
 
   it('still rejects a malformed share id even with a --filename suffix', () => {

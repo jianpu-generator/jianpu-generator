@@ -17,9 +17,7 @@ import { completeSyncedShareGithubSignInFromCallback } from '../storage/syncedSh
  * built for, but this page must never leave the user staring at nothing).
  */
 export function SyncedShareGithubCallbackPage() {
-  const [status, setStatus] = useState<'working' | 'done' | 'failed'>(
-    'working',
-  )
+  const [status, setStatus] = useState<'working' | 'done' | 'failed'>('working')
   const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {

@@ -43,7 +43,7 @@ interface SyncedShareHeaderProps {
   /** Cached GitHub username for the "Synced as @username" identity chip;
    * `null` until connected. */
   githubLogin: string | null
-  onStartSync: () => string | null
+  onStartSync: () => Promise<string | null>
   onStopSync: () => void
   onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
   /** Drives the full-screen error dialog (task 9) -- non-null while a

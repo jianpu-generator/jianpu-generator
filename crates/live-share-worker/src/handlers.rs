@@ -66,8 +66,9 @@ async fn create_share(mut req: Request, ctx: RouteContext<()>) -> Result<Respons
     };
 
     let d1 = ctx.d1(D1_BINDING)?;
+    let identity_provider = GithubIdentityProvider::from_env(&ctx);
     let owner_user_id =
-        match resolve_verified_user_id(&d1, &GithubIdentityProvider, &body.identity_token).await? {
+        match resolve_verified_user_id(&d1, &identity_provider, &body.identity_token).await? {
             Ok(user_id) => user_id,
             Err(failure) => return verification_failure_response(&failure),
         };
@@ -107,16 +108,12 @@ async fn post_share(mut req: Request, ctx: RouteContext<()>) -> Result<Response>
 
     // Never trust a client-asserted identity directly (TODO §6) -- always
     // resolve it through the verified, cached path.
-    let resolved_user_id = match resolve_verified_user_id(
-        &d1,
-        &GithubIdentityProvider,
-        body.identity_token(),
-    )
-    .await?
-    {
-        Ok(user_id) => user_id,
-        Err(failure) => return verification_failure_response(&failure),
-    };
+    let identity_provider = GithubIdentityProvider::from_env(&ctx);
+    let resolved_user_id =
+        match resolve_verified_user_id(&d1, &identity_provider, body.identity_token()).await? {
+            Ok(user_id) => user_id,
+            Err(failure) => return verification_failure_response(&failure),
+        };
     let now = worker::Date::now().as_millis() as i64;
 
     match doc::apply_write(&existing, Some(&resolved_user_id), &body, now) {

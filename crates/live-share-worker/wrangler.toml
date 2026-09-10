@@ -44,6 +44,12 @@ database_name = "jianpu-live-share"
 # here once that command has been run -- do not create the database as part
 # of this task.
 database_id = "REPLACE_AT_ROLLOUT"
+# Points `wrangler d1 migrations apply`/`wrangler dev`'s local D1 emulation
+# at the shared migration source (see `build.rs`'s doc comment for why the
+# schema lives at this path, a sibling of `crates/`, rather than under this
+# crate) -- used by e2e (task 11, `web/playwright.config.ts`) to seed the
+# local D1 database before `wrangler dev` starts.
+migrations_dir = "../../live-share-worker/migrations"
 
 # `POST /auth/github/callback` (`src/oauth.rs`, task 6) needs the dedicated
 # Synced Share sign-in GitHub OAuth App's client id and secret to exchange

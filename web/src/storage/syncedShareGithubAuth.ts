@@ -40,7 +40,8 @@ import { useLocalStorage } from 'usehooks-ts'
  * (per the HTML spec), taken at the moment it's opened -- since this value
  * is written before the popup opens (see `openSyncedShareGithubSignInPopup`),
  * the popup's own read of this same key sees it too. */
-export const SYNCED_SHARE_GITHUB_PKCE_STORAGE_KEY = 'jianpu:synced-share-github-pkce:v1'
+export const SYNCED_SHARE_GITHUB_PKCE_STORAGE_KEY =
+  'jianpu:synced-share-github-pkce:v1'
 
 /** Path (relative to the app's own origin) GitHub redirects back to once
  * the user approves or denies the request. `SyncedShareGithubCallbackPage`
@@ -53,12 +54,14 @@ export const SYNCED_SHARE_GITHUB_REDIRECT_PATH = '/synced-share/github-callback'
  * token -- deliberately a different key from `githubAuth.ts`'s
  * `GITHUB_AUTH_STORAGE_KEY`, per this module's doc comment: the two
  * connections' tokens are never conflated. */
-export const SYNCED_SHARE_GITHUB_AUTH_STORAGE_KEY = 'jianpu:synced-share-github-auth:v1'
+export const SYNCED_SHARE_GITHUB_AUTH_STORAGE_KEY =
+  'jianpu:synced-share-github-auth:v1'
 
 /** `postMessage` type tag the callback popup uses to relay its result back
  * to the opener window. Scoped to this app's own origin on both send and
  * receive (see `openSyncedShareGithubSignInPopup`). */
-const SYNCED_SHARE_GITHUB_AUTH_MESSAGE_TYPE = 'jianpu:synced-share-github-auth-result'
+const SYNCED_SHARE_GITHUB_AUTH_MESSAGE_TYPE =
+  'jianpu:synced-share-github-auth-result'
 
 const GITHUB_AUTHORIZATION_ENDPOINT = 'https://github.com/login/oauth/authorize'
 
@@ -159,9 +162,14 @@ function readSyncedShareGithubPkceState(): SyncedShareGithubPkceState | null {
   }
 }
 
-function writeSyncedShareGithubPkceState(value: SyncedShareGithubPkceState): void {
+function writeSyncedShareGithubPkceState(
+  value: SyncedShareGithubPkceState,
+): void {
   try {
-    sessionStorage.setItem(SYNCED_SHARE_GITHUB_PKCE_STORAGE_KEY, JSON.stringify(value))
+    sessionStorage.setItem(
+      SYNCED_SHARE_GITHUB_PKCE_STORAGE_KEY,
+      JSON.stringify(value),
+    )
   } catch {
     // Ignore write failures (e.g. private-browsing storage quotas); the
     // in-flight sign-in attempt simply won't be completable after the
@@ -362,7 +370,8 @@ async function runSyncedShareGithubCallback(
     return {
       ok: false,
       reason: 'error',
-      error: 'The sign-in state did not match -- possible CSRF or a stale/expired attempt.',
+      error:
+        'The sign-in state did not match -- possible CSRF or a stale/expired attempt.',
     }
   }
 

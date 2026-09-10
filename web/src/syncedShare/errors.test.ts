@@ -51,7 +51,8 @@ describe('buildSyncedShareResponseFailure', () => {
 
   it('redacts a token-shaped value even inside a recognized VerificationFailure body', async () => {
     const body = JSON.stringify({
-      reason: 'unexpected token gho_abcdefghijklmnopqrstuvwxyz012345 in response',
+      reason:
+        'unexpected token gho_abcdefghijklmnopqrstuvwxyz012345 in response',
       failedAt: 1,
       attempts: 1,
     })
