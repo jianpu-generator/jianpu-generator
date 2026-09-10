@@ -48,7 +48,16 @@ function main() {
 
   // Extra CLI args (e.g. --grep) scope the first pass; --last-failed reruns
   // are already scoped to that pass's failures, so they don't need repeating.
+  // `pnpm test:e2e:resolve -- --grep ...` forwards that separating `--`
+  // itself as a literal arg (unlike `npm run`, which swallows it) -- left
+  // in, it becomes `playwright test -- --grep ...`, and Playwright treats
+  // everything after a `--` as positional file-path filters rather than
+  // flags, silently discarding `--grep` and running the whole suite
+  // instead of just the scoped test. Stripping a single leading `--` here
+  // keeps both `pnpm run` (which already swallows it) and `pnpm` (which
+  // doesn't) working the same way.
   const extraArgs = process.argv.slice(2)
+  if (extraArgs[0] === '--') extraArgs.shift()
   run(extraArgs)
   let failing = readFailingSet()
   if (failing === null) {
