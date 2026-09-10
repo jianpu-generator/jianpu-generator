@@ -301,7 +301,15 @@ off in both places.
       `SYNCED_SHARE_GITHUB_CLIENT_SECRET` Worker secret has never been set,
       so deploying now would ship a Worker whose GitHub sign-in is broken.
       This is a manual step left for the user — see §7 below for the exact
-      remaining commands.)
+      remaining commands. **Update**: a CI/CD deploy pipeline now exists at
+      `.github/workflows/live-share-worker.yml` (builds with `worker-build`,
+      applies D1 migrations via `wrangler d1 migrations apply
+      jianpu-live-share --remote`, then `wrangler deploy`, triggered on
+      every push to `master` touching `crates/live-share-worker/**` or
+      `live-share-worker/migrations/**`), so the manual one-off `wrangler
+      deploy` in §7 below is no longer the way this ships — once the GitHub
+      OAuth App secrets are set (the one remaining manual prerequisite), a
+      normal push to `master` deploys automatically.)
 
 Mockup reference for 8–10: `synced-share-screens` artifact (5 screens:
 sign-in prompt, OAuth popup, synced/owned state, error dialog, viewer
@@ -578,9 +586,9 @@ banner).
       decommissioning it is a separate, explicitly-destructive step not
       taken unprompted, see the note below.)
 - [ ] **Deploy the new worker to production** — NOT done in this task; left
-      as a manual step. Blocked on two things this task deliberately did
-      not do, since they involve either creating a real GitHub OAuth App or
-      an outward-facing production deploy the user should confirm directly:
+      as a manual step, though now largely automated (see below). Blocked
+      on one thing this task deliberately did not do, since it involves
+      creating a real GitHub OAuth App:
       1. Create (or reuse, per §0) the dedicated Synced Share GitHub OAuth
          App, then fill its client id into
          `crates/live-share-worker/wrangler.toml`'s
@@ -590,19 +598,25 @@ banner).
          cd crates/live-share-worker
          npx wrangler secret put SYNCED_SHARE_GITHUB_CLIENT_SECRET
          ```
-      2. Deploy the worker itself:
-         ```sh
-         cd crates/live-share-worker
-         cargo install worker-build   # if not already installed
-         npx wrangler deploy
-         ```
-         This deploys under the name in `wrangler.toml`
+      2. **Update**: deploying the worker itself no longer needs a manual
+         `wrangler deploy` — `.github/workflows/live-share-worker.yml` now
+         does this automatically on every push to `master` that touches
+         `crates/live-share-worker/**` or `live-share-worker/migrations/**`
+         (installs Rust + `wasm32-unknown-unknown`, `cargo install
+         worker-build`, builds, runs `wrangler d1 migrations apply
+         jianpu-live-share --remote` (idempotent), then `wrangler deploy`,
+         authenticating with the same `CLOUDFLARE_API_TOKEN`/
+         `CLOUDFLARE_ACCOUNT_ID` repo secrets `oauth-proxy.yml` already
+         uses). It can also be run on demand via `workflow_dispatch`. This
+         deploys under the name in `wrangler.toml`
          (`jianpu-live-share-worker-rs`), a **distinct** Cloudflare Worker
          from the old, already-retired-in-source `jianpu-live` — deploying
          it will not touch/overwrite/replace the old worker's still-running
          Cloudflare-side deployment (if any). Confirm the deployed name in
          the Cloudflare dashboard or `npx wrangler deployments list` after
-         running this.
+         it runs. The pipeline will still ship a Worker whose GitHub
+         sign-in is broken until step 1 above is done once, by hand — that
+         remains the one manual prerequisite.
       3. Point the web app at the new worker's URL (wherever its base URL
          is currently configured for Synced Share) and verify a real
          create-share round trip end-to-end before calling the cutover

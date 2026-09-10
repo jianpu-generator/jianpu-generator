@@ -320,10 +320,14 @@ directory, `src/{resolveRole,doc,index,protocol}.ts`, deployed as
 (`TODO-synced-share-rust-d1-migration.md` task 11) — that source is deleted,
 not kept as reference. The real D1 database (`jianpu-live-share`, region
 APAC) exists and is migrated as of task 12 (`crates/live-share-worker/wrangler.toml`'s
-`database_id`), but the Rust worker itself is not yet deployed as the live
-worker — that step is still blocked on the Synced Share GitHub OAuth App's
-client id/secret (`wrangler.toml`'s `SYNCED_SHARE_GITHUB_CLIENT_ID` is still
-a placeholder), see the TODO's §7 for the remaining manual steps. The
+`database_id`), and a deploy pipeline now exists to ship it
+(`.github/workflows/live-share-worker.yml` — builds with `worker-build`,
+applies D1 migrations, then `wrangler deploy`, on every push to `master`
+touching `crates/live-share-worker/**`/`live-share-worker/migrations/**`) —
+but the Rust worker itself has not yet had a first deploy run, since that
+pipeline's GitHub sign-in still depends on the Synced Share GitHub OAuth
+App's client id/secret (`wrangler.toml`'s `SYNCED_SHARE_GITHUB_CLIENT_ID` is
+still a placeholder), see the TODO's §7 for the remaining manual step. The
 top-level `live-share-worker/` directory now holds only the shared D1 schema
 migrations (see "Storage" below), nothing else.
 
