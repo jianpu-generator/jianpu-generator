@@ -64,7 +64,7 @@ jobs:
           # secret (exposed client-side regardless), but only ever set in
           # the gitignored `web/.env.local` for local dev, so it's absent
           # here unless declared explicitly.
-          VITE_SYNCED_SHARE_HOST: jianpu-live.hou32hou.workers.dev
+          VITE_SYNCED_SHARE_HOST: jianpu-live-share-worker-rs.hou32hou.workers.dev
         run: pnpm build
 
       - name: Add .nojekyll
@@ -123,7 +123,7 @@ jobs:
           VITE_BASE_PATH: /
           VITE_GITHUB_OAUTH_PROXY_URL: https://jianpu-oauth-proxy.pages.dev
           VITE_GITHUB_OAUTH_CLIENT_ID: placeholder-client-id
-          VITE_SYNCED_SHARE_HOST: jianpu-live.hou32hou.workers.dev
+          VITE_SYNCED_SHARE_HOST: jianpu-live-share-worker-rs.hou32hou.workers.dev
         run: pnpm build
 
       - name: Deploy to Cloudflare Pages

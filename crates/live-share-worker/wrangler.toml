@@ -1,16 +1,17 @@
 # Wrangler config for the Rust rewrite of the Synced Share worker (see
-# `TODO-synced-share-rust-d1-migration.md`, task 5). This is NOT deployed
-# yet -- the old TypeScript worker (`live-share-worker/wrangler.jsonc`,
-# deployed by `.github/workflows/live-share-worker.yml`) is still the live
-# one until task 11 retires it. This file exists so the crate can be built
-# with `wrangler`/`worker-build` locally (and eventually `wrangler dev`, per
-# the TODO's §0 testing decision) ahead of cutover.
+# `TODO-synced-share-rust-d1-migration.md`, task 5). `.github/workflows/
+# live-share-worker.yml` deploys this on every push to master touching
+# `crates/live-share-worker/**`. The old TypeScript worker's source
+# (`live-share-worker/`) was already deleted (task 11); its Cloudflare-side
+# deployment (`jianpu-live`) is still running, source-orphaned, until it's
+# explicitly decommissioned (see TODO §7 bullet 4/§8).
 #
-# `name` deliberately does NOT reuse the old worker's name (`jianpu-live`,
-# see `live-share-worker/wrangler.jsonc`) since deploying this would create
-# a second, separate Worker rather than replacing the old one. The final
-# name (reusing `jianpu-live` vs. something else) gets decided/reconciled
-# with the old worker at cutover (task 11/12), not here.
+# `name` deliberately does NOT reuse the old worker's name (`jianpu-live`)
+# — decided (§8) to keep them as distinct Workers so deploying this one
+# never silently overwrites the still-running old one. Decommissioning the
+# old worker stays a separate, explicit step. `web/.env`, `web/.env.local`,
+# and `.github/workflows/pages.yml`'s `VITE_SYNCED_SHARE_HOST` point at
+# this worker's real `*.workers.dev` hostname built from this name.
 name = "jianpu-live-share-worker-rs"
 
 # `worker-build`'s default output layout: a `build/` dir at this file's

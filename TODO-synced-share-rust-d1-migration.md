@@ -628,3 +628,87 @@ banner).
          via the dashboard) — flagged here as a follow-up, deliberately
          **not** done as part of this task since deleting a real, currently
          serving production Worker needs explicit user confirmation.
+
+## 8. Gaps found in post-implementation review (not yet done)
+
+Found by re-reading the finished implementation end-to-end after task 12,
+looking specifically for what would stop this from actually working once
+deployed. None of these were done as part of any numbered task above —
+listed here as their own follow-up items.
+
+- [x] **`VITE_SYNCED_SHARE_HOST` still points at the OLD worker — nothing
+      routes traffic to the new Rust worker yet.** This is the sharper,
+      concrete version of bullet 3 above. Confirmed by tracing every call
+      site: `web/src/hooks/useSyncedShareOwner.ts`,
+      `web/src/hooks/useSyncedShareViewer.ts`, and
+      `web/src/storage/syncedShareGithubAuth.ts` (via
+      `SyncedShareGithubCallbackPage.tsx`) all build their request URLs from
+      `import.meta.env.VITE_SYNCED_SHARE_HOST`. That var is currently set
+      to `jianpu-live.hou32hou.workers.dev` — the old TS/KV worker's host —
+      in three places: `web/.env` (default), `web/.env.local` (gitignored
+      local override, currently duplicating the same value), and
+      `.github/workflows/pages.yml` (lines 67 and 126, the CI/prod Pages
+      build). The new Rust worker deploys under a deliberately different
+      name, `jianpu-live-share-worker-rs` (see its own `wrangler.toml`
+      comment — chosen on purpose so deploying it wouldn't silently replace
+      the old worker). **This naming question was never actually decided**:
+      either (a) rename/repoint the Rust worker's Cloudflare deployment to
+      reuse the `jianpu-live` name so the existing env var keeps working, or
+      (b) keep `jianpu-live-share-worker-rs` and update `VITE_SYNCED_SHARE_HOST`
+      in all three locations above to its real `*.workers.dev` hostname (or
+      a custom domain, if one gets set up) once it's deployed. Whichever is
+      chosen, do it together with the OAuth App step above and verify a
+      real create-share round trip against the *new* worker before calling
+      cutover done — right now a prod deploy of the new worker would go
+      live with zero web traffic ever reaching it.
+      (**Resolved: (b)**, decided explicitly by the user — chosen because it
+      keeps the old worker's live deployment completely untouched, matching
+      the already-stated intent in §7 bullet 4 that decommissioning it stay
+      a separate, explicit step rather than an incidental side effect of a
+      routine CI deploy. `VITE_SYNCED_SHARE_HOST` updated in all three
+      locations to `jianpu-live-share-worker-rs.hou32hou.workers.dev`
+      (`.hou32hou` account subdomain matched from the old worker's host,
+      `*.workers.dev` default domain — no custom domain set up).
+      `crates/live-share-worker/wrangler.toml`'s comment updated to reflect
+      the resolved decision instead of describing it as still-undecided.
+      This is config/wiring only — a real create-share round trip against
+      the new worker is still blocked on the open OAuth App prerequisite in
+      §7 (`SYNCED_SHARE_GITHUB_CLIENT_ID`/`SECRET` are still
+      `REPLACE_AT_ROLLOUT`/unset), so end-to-end verification was
+      deliberately not attempted here and remains open.)
+- [ ] **Consequence of the above, worth naming explicitly**: the Synced
+      Share feature currently *live* in production is still the old TS/KV
+      worker, whose source was already deleted in task 11 and whose old
+      deploy pipeline no longer exists (`.github/workflows/live-share-worker.yml`
+      now builds/deploys the *new* Rust worker instead). So the currently-
+      serving production worker is source-orphaned — if it broke or needed
+      a fix before cutover, there is no way to rebuild/redeploy it. Not a
+      regression introduced by any single task, just worth knowing: the
+      cutover (cache the new worker's URL + decommission the old one, per
+      bullet 4 above) should happen promptly once started, not left
+      half-done.
+- [ ] **`shareId` collision fallback can mint an id the client can't parse
+      back out of a link.** `crates/live-share-worker/src/share_id.rs`'s
+      `generate_unique_share_id` appends one extra character (12 chars
+      total) on the astronomically-unlikely case of a collision at the
+      normal `SHARE_ID_LENGTH` (11), per the belt-and-suspenders collision
+      handling decided in §1. But `web/src/syncedShareUrl.ts`'s
+      `SHARE_ID_PATTERN` is `^[0-9A-Za-z_-]{11}$` — a fixed 11-char match —
+      so a share link built from a 12-char fallback id would fail to parse
+      client-side. Low probability (this only triggers on an actual
+      collision), but a real, currently-unfixed inconsistency. Fix is
+      small: either loosen the client pattern to `{11,12}`, or drop the
+      length-extension fallback server-side and just re-roll a fresh
+      11-char id on collision instead (still not a loop in practice, since
+      a second collision is vanishingly unlikely).
+- [ ] **`revision` is not enforced as an optimistic-concurrency guard on
+      writes** — a client-sent `revision` is stored as-is, never compared
+      against the existing row's `revision` before being overwritten.
+      Confirmed this matches the OLD TS worker's behavior too (checked
+      `live-share-worker/src/doc.ts` in git history as of commit
+      `860e756`), so this is not a regression from the migration — carried
+      over from the original design, which assumes exactly one writer (the
+      owner) per share. Listed here only because §1's "open items" bullet
+      flagged it as still-undecided; leaving unchecked/unresolved is fine
+      unless a future feature (e.g. multi-device sync from the same owner)
+      needs real conflict detection.
