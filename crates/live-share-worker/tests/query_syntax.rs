@@ -51,6 +51,14 @@ const QUERIES: &[(&str, &str)] = &[
         "insert_user_identity.sql",
         include_str!("../queries/insert_user_identity.sql"),
     ),
+    (
+        "get_oauth_session.sql",
+        include_str!("../queries/get_oauth_session.sql"),
+    ),
+    (
+        "upsert_oauth_session.sql",
+        include_str!("../queries/upsert_oauth_session.sql"),
+    ),
 ];
 
 #[tokio::test]

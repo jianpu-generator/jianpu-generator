@@ -313,11 +313,12 @@ Worker messages: `listParts` → `{ parts, declarations }`; `updatePartDeclarati
 A separate Cloudflare Worker, not part of the `web/` build or the
 `jianpu-wasm` component boundary above — it's a small standalone HTTP
 backend the web app's Synced Share feature calls cross-origin, deployed on
-its own (wrangler wiring is a separate, later task — not yet done as of
-this section; see `TODO-synced-share-rust-d1-migration.md`). This section
-covers only the state that exists today; tasks after this one (real GitHub
-OAuth, `wrangler.toml`/CI wiring, retiring the old TS worker) are
-deliberately not documented here as done.
+its own (not yet actually deployed as of this section; see
+`TODO-synced-share-rust-d1-migration.md`). This section covers only the
+state that exists today; tasks after this one (client sign-in/owner UI,
+public-response scrubbing, retiring the old TS worker and its
+device-secret ownership scheme) are deliberately not documented here as
+done.
 
 - Crate: `crates/live-share-worker` (target `wasm32-unknown-unknown`,
   built as a `worker`-crate Cloudflare Worker). Entry point: `#[event(fetch)]
@@ -342,8 +343,9 @@ deliberately not documented here as done.
   `user_identities` (`provider`, `provider_user_id`, `user_id`, `login`,
   `linked_at` — provider-agnostic, so a future non-GitHub identity
   provider can link into the same `users` table), and `oauth_sessions`
-  (hashed-token verification cache, unused until the real GitHub provider
-  lands).
+  (`token_hash`, `provider`, `provider_user_id`, `verified_at` — the
+  hashed-token verification cache described in "Verification cache + retry
+  policy" below).
 - Key types: `doc::StoredDoc` (a full `docs` row, replacing the old KV
   `StoredDoc`'s doc-plus-bearer-`ownerToken` shape — `owner_user_id` here
   is an internal `users.id`, never sent to a client; `doc::to_public_doc`
@@ -352,9 +354,12 @@ deliberately not documented here as done.
   the old TS `protocol.ts`, camelCase on the wire); `resolve_role::SyncedRole`
   / `resolve_role::resolve_role` (the write-guard, ported from the old TS
   `resolveRole.ts`); `identity::IdentityProvider` (the identity-resolution
-  seam, see below); `oauth::github_oauth_callback` (the
-  `POST /auth/github/callback` handler, see "Dedicated GitHub sign-in"
-  below); `db` (crate-private raw D1 query functions, one
+  seam) / `identity::resolve_verified_user_id` (the cache-then-verify
+  wiring every write calls, see below); `verification::retry_with_backoff`
+  / `verification::VerificationFailure` (the D1-free retry policy and its
+  UI-surfaceable failure shape, see below); `oauth::github_oauth_callback`
+  (the `POST /auth/github/callback` handler, see "Dedicated GitHub
+  sign-in" below); `db` (crate-private raw D1 query functions, one
   `.sql` file per query under `queries/`, loaded via `include_str!`).
 - Ownership model: a share's `owner_user_id` is set once, at
   `POST /shares` creation time, and never changes — there is no more
@@ -373,20 +378,44 @@ deliberately not documented here as done.
   fixed-length client pattern — a known, accepted edge case, not something
   this crate changes `web/` to handle).
 
-### IdentityProvider stub
+### Verification cache + retry policy
 
-`identity::IdentityProvider` is the seam real GitHub OAuth verification
-(a later task) plugs into: a trait resolving whatever identity a caller
-presents to an internal `users.id`, doing create-on-first-sight
-`users`/`user_identities` rows. `identity::stub::StubIdentityProvider` is
-its only implementation today, and is explicitly **not secure**: it treats
-the request's `identity_token` string directly as a stable pseudo
-`provider_user_id` under a `"stub"` provider, with no verification
-whatsoever — anyone can claim any identity by sending any string.
-Re-sending the same string round-trips to the same `user_id` (via
-create-on-first-sight against `user_identities`), which is enough to
-exercise every other layer (`resolve_role`, `doc::apply_write`, the D1
-writes) end-to-end ahead of the real provider landing.
+`identity::IdentityProvider` is the seam GitHub OAuth verification plugs
+into: a trait resolving whatever identity a caller presents to an internal
+`users.id`, doing create-on-first-sight `users`/`user_identities` rows.
+Every write and the create-share endpoint (`handlers.rs`) never trust a
+client-asserted identity directly — they always call
+`identity::resolve_verified_user_id(db, identity_provider, identity_token)`,
+which:
+
+1. Hashes `identity_token` (SHA-256, `identity::hash_token`) and looks up
+   `oauth_sessions` by that hash. A hit whose `verified_at` is still fresh
+   (`verification::session_is_fresh`, TTL `verification::SESSION_TTL_MILLIS`
+   ≈ 1hr, checked in app code per the schema comment) resolves straight to
+   `user_id` via the cached `(provider, provider_user_id)` — no GitHub call.
+2. On a cache miss or a stale entry, calls `identity_provider` (production:
+   `identity::github::GithubIdentityProvider`, real `GET /user`
+   verification) through `verification::retry_with_backoff` — TODO §0's
+   policy: `verification::MAX_RETRIES` (2) retries with the `backoff`
+   crate's exponential delay, capped at `verification::MAX_TOTAL_WAIT`
+   (~2s) total wait. `retry_with_backoff` is D1-/worker-free and generic
+   over both the operation and the sleep function, so it's directly
+   unit-tested (`tests/verification.rs`) with a fake operation and an
+   instant sleep instead of hitting real GitHub or a real timer, per §0's
+   testing decision; the wired-in call from `identity.rs` supplies
+   `worker::Delay` as the real sleep.
+3. On success, refreshes/inserts the `oauth_sessions` row
+   (`db::upsert_oauth_session`) and returns the resolved `user_id`. On
+   failure (all retries exhausted), returns
+   `verification::VerificationFailure { reason, failed_at, attempts }` —
+   `handlers.rs` turns this into a `401` JSON response carrying exactly
+   those three fields, per TODO §0's "maximally verbose, except the
+   token/hash" decision; `VerificationFailure` has no token/hash field to
+   leak, by construction.
+
+`resolve_role`'s owner check runs on whatever `user_id`
+`resolve_verified_user_id` returns (or `None` on failure) — a mismatch or a
+verification failure are both rejected outright, with no fallback.
 
 ### Dedicated GitHub sign-in
 
@@ -420,13 +449,11 @@ different scopes and using different flows.
   `worker::Fetch`-based HTTP calling convention.
 - `identity::github::GithubIdentityProvider`: the production
   `IdentityProvider` implementation, resolving this connection's token to
-  `(provider, provider_user_id)` via a direct `GET /user` call, then the
-  same create-on-first-sight `users`/`user_identities` path
-  `identity::stub::StubIdentityProvider` uses. Not yet wired into any write
-  path — `handlers.rs` still resolves every write through
-  `StubIdentityProvider` until a later task adds hashed-token caching
-  against `oauth_sessions`, the retry/backoff policy from §0, and the
-  `resolveRole`-equivalent wiring itself.
+  `(provider, provider_user_id)` via a direct `GET /user` call (also caching
+  `login` into `user_identities.login` on create-on-first-sight), wired into
+  every write and the create-share endpoint via
+  `identity::resolve_verified_user_id` — see "Verification cache + retry
+  policy" above.
 
 ### D1 query checking
 
@@ -455,6 +482,9 @@ away from the wasm build both times:
 | Term | Definition |
 |------|-----------|
 | **Synced Share worker** | The standalone Cloudflare Worker (`crates/live-share-worker`) backing the Synced Share feature's `GET`/`POST /shares[/:share_id]` HTTP API, described above. |
-| **IdentityProvider** | The trait (`identity::IdentityProvider`) resolving a request's opaque identity token to an internal `users.id`, with create-on-first-sight `users`/`user_identities` rows. `identity::stub::StubIdentityProvider` (insecure, no verification) and `identity::github::GithubIdentityProvider` (real `GET /user` verification, not yet wired into any write path) are its two implementations. |
+| **IdentityProvider** | The trait (`identity::IdentityProvider`) resolving a request's opaque identity token to an internal `users.id`, with create-on-first-sight `users`/`user_identities` rows. `identity::github::GithubIdentityProvider` (real `GET /user` verification) is its production implementation, called only on a cache miss/stale entry — see `resolve_verified_user_id`. |
+| **resolve_verified_user_id** | `identity::resolve_verified_user_id`: the hashed-token-cache-then-verify wiring every write and the create-share endpoint call instead of ever trusting a client-asserted identity directly — see "Verification cache + retry policy". |
+| **oauth_sessions cache** | The `oauth_sessions` D1 table: a hashed-token (`token_hash`, never the raw token) verification cache with a `verified_at` TTL (`verification::SESSION_TTL_MILLIS`, ≈1hr) checked in app code, so a fresh identity doesn't require re-hitting GitHub on every write. |
+| **VerificationFailure** | `verification::VerificationFailure { reason, failed_at, attempts }`: the structured, UI-surfaceable shape a failed (post-retry) verification is reported as — `handlers.rs` returns it as a `401` JSON body. Never carries the token or its hash, by construction. |
 | **owner_user_id** | A share's fixed owner, set once at creation (`docs.owner_user_id`, an internal `users.id`) — replaces the old KV model's bearer `ownerToken`, which any first writer could claim. |
 | **Synced Share sign-in connection** | The dedicated, minimally-scoped "sign in with GitHub" OAuth connection (`web/src/storage/syncedShareGithubAuth.ts` client-side, `src/oauth.rs`'s `POST /auth/github/callback` Worker-side) used only to verify Synced Share ownership — distinct from `githubAuth.ts`'s broad-scope storage-backend connection. |

@@ -1,4 +1,5 @@
-//! Raw D1 queries against the `docs` / `users` / `user_identities` tables.
+//! Raw D1 queries against the `docs` / `users` / `user_identities` /
+//! `oauth_sessions` tables.
 //! Each query lives in its own file under `queries/`, loaded here via
 //! `include_str!` for the actual `D1Database::prepare()` calls -- this
 //! module is the only place those files are read.
@@ -31,6 +32,8 @@ const SHARE_ID_EXISTS: &str = include_str!("../queries/share_id_exists.sql");
 const GET_USER_IDENTITY: &str = include_str!("../queries/get_user_identity.sql");
 const INSERT_USER: &str = include_str!("../queries/insert_user.sql");
 const INSERT_USER_IDENTITY: &str = include_str!("../queries/insert_user_identity.sql");
+const GET_OAUTH_SESSION: &str = include_str!("../queries/get_oauth_session.sql");
+const UPSERT_OAUTH_SESSION: &str = include_str!("../queries/upsert_oauth_session.sql");
 
 /// Raw row shape from `get_doc_by_share_id.sql` -- SQLite/D1 has no native
 /// boolean column type, so `ended` comes back as an integer and is
@@ -140,14 +143,14 @@ pub(crate) async fn insert_user(db: &D1Database, user_id: &str, created_at: i64)
     Ok(())
 }
 
-/// `login` is always bound as `NULL` for now -- no display name is cached
-/// by the stub provider; the real GitHub provider (task 6/7) can populate
-/// it from `GET /user`.
+/// `login` is a best-effort cached display name (nullable -- a future
+/// non-GitHub provider that can't offer one binds `NULL`).
 pub(crate) async fn insert_user_identity(
     db: &D1Database,
     provider: &str,
     provider_user_id: &str,
     user_id: &str,
+    login: Option<&str>,
     linked_at: i64,
 ) -> Result<()> {
     db.prepare(INSERT_USER_IDENTITY)
@@ -155,8 +158,50 @@ pub(crate) async fn insert_user_identity(
             JsValue::from_str(provider),
             JsValue::from_str(provider_user_id),
             JsValue::from_str(user_id),
-            JsValue::NULL,
+            login.map(JsValue::from_str).unwrap_or(JsValue::NULL),
             JsValue::from_f64(linked_at as f64),
+        ])?
+        .run()
+        .await?;
+    Ok(())
+}
+
+/// Raw row shape from `get_oauth_session.sql`.
+#[derive(Deserialize)]
+pub(crate) struct OauthSession {
+    pub provider: String,
+    pub provider_user_id: String,
+    pub verified_at: i64,
+}
+
+/// Hashed-token cache lookup against `oauth_sessions` (TODO §0/§6, task 7).
+/// `token_hash` is a SHA-256 hex digest of the identity token -- the raw
+/// token is never bound here or anywhere else against this table.
+pub(crate) async fn get_oauth_session(
+    db: &D1Database,
+    token_hash: &str,
+) -> Result<Option<OauthSession>> {
+    db.prepare(GET_OAUTH_SESSION)
+        .bind(&[JsValue::from_str(token_hash)])?
+        .first(None)
+        .await
+}
+
+/// Refreshes (or inserts) the cached verification for a token hash after a
+/// successful GitHub verification.
+pub(crate) async fn upsert_oauth_session(
+    db: &D1Database,
+    token_hash: &str,
+    provider: &str,
+    provider_user_id: &str,
+    verified_at: i64,
+) -> Result<()> {
+    db.prepare(UPSERT_OAUTH_SESSION)
+        .bind(&[
+            JsValue::from_str(token_hash),
+            JsValue::from_str(provider),
+            JsValue::from_str(provider_user_id),
+            JsValue::from_f64(verified_at as f64),
         ])?
         .run()
         .await?;

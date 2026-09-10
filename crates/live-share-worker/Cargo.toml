@@ -18,6 +18,19 @@ serde = { version = "1", features = ["derive"] }
 # normal dependency on `wasm32-unknown-unknown`. Used only to build the
 # GitHub token-exchange request body in `src/oauth.rs`.
 serde_json = "1"
+# Pure-Rust SHA-256 (no C build), used to hash the Synced Share sign-in
+# token before it is ever written to `oauth_sessions.token_hash` -- the raw
+# token itself must never be persisted (TODO §0).
+sha2 = "0.10"
+# Executor-agnostic exponential backoff for the GitHub verification retry
+# policy (TODO §0): its `future` module awaits a supplied future rather than
+# owning its own tokio-based timer, which is required here since Workers run
+# on `wasm-bindgen-futures`, not tokio. The "wasm-bindgen" feature switches
+# its internal sleep to `gloo-timers`' wasm-bindgen-based timer instead of
+# `tokio::time::sleep`.
+backoff = { version = "0.4", default-features = false, features = [
+    "wasm-bindgen",
+] }
 
 # `sqlx` is deliberately NOT a normal `[dependencies]` entry here, even
 # though task breakdown item 2 calls for "worker + sqlx deps". Reasoning:

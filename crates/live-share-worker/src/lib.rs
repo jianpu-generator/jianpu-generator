@@ -4,17 +4,22 @@
 //!
 //! Ports `live-share-worker/src/{resolveRole,doc,index,protocol}.ts` to
 //! Rust, retargeted from Workers KV + an anonymous `ownerToken` to D1 +
-//! GitHub-required ownership (`docs.owner_user_id`). Identity resolution is
-//! stubbed for now -- see `identity::stub` -- real GitHub OAuth
-//! verification is task 6/7.
+//! GitHub-required ownership (`docs.owner_user_id`). Identity resolution
+//! routes every write through `identity::resolve_verified_user_id`, a
+//! hashed-token cache in front of `identity::github::GithubIdentityProvider`
+//! (real `GET /user` verification), per
+//! `TODO-synced-share-rust-d1-migration.md` §0/§6.
 //!
-//! `doc`, `protocol`, and `resolve_role` are `pub` (and D1/JsValue-free) so
-//! `tests/*.rs` can unit-test them directly, per this repo's convention of
-//! keeping tests in separate files rather than inline `#[cfg(test)]`
-//! modules. Everything else here is D1- or wasm-runtime-facing and stays
-//! crate-private -- it isn't exercised by host-side `cargo test` (per
-//! `TODO-synced-share-rust-d1-migration.md` §0: real D1 integration testing
-//! is deferred to `wrangler dev`, not built here).
+//! `doc`, `protocol`, `resolve_role`, and `verification` are `pub` (and
+//! D1/JsValue-free) so `tests/*.rs` can unit-test them directly, per this
+//! repo's convention of keeping tests in separate files rather than inline
+//! `#[cfg(test)]` modules. Everything else here is D1- or
+//! wasm-runtime-facing and stays crate-private -- it isn't exercised by
+//! host-side `cargo test` (per `TODO-synced-share-rust-d1-migration.md` §0:
+//! real D1 integration testing is deferred to `wrangler dev`, not built
+//! here; the GitHub verification call itself is mocked in `verification`'s
+//! unit tests instead of hit for real, per that section's testing
+//! decision).
 
 mod db;
 mod handlers;
@@ -25,6 +30,7 @@ mod share_id;
 pub mod doc;
 pub mod protocol;
 pub mod resolve_role;
+pub mod verification;
 
 use worker::{event, Context, Cors, Env, Method, Request, Response, Result};
 

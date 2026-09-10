@@ -164,11 +164,24 @@ off in both places.
       PKCE-initiation module `web/src/storage/syncedShareGithubAuth.ts`,
       using `oauth4webapi`, distinct from `githubAuth.ts` -- starts the
       redirect only; completing the flow is task 8.)
-- [ ] **7. Verification + caching in the worker** — hashed-token lookup
+- [x] **7. Verification + caching in the worker** — hashed-token lookup
       against `oauth_sessions`, backoff-wrapped GitHub call on miss/stale,
       create-on-first-sight `user_identities` row, wired into
       `resolveRole`-equivalent ownership check (§6). Scope:
-      `synced-share-auth`. Depends on: 4, 6.
+      `synced-share-auth`. Depends on: 4, 6. (`identity::resolve_verified_user_id`
+      in `crates/live-share-worker/src/identity.rs`: SHA-256 hashed-token
+      lookup against `oauth_sessions` with a ~1hr TTL
+      (`verification::session_is_fresh`), falling through to
+      `identity::github::GithubIdentityProvider` (now the only
+      `IdentityProvider` -- the insecure `StubIdentityProvider` from task 4
+      is deleted) wrapped in `verification::retry_with_backoff` (2 retries,
+      `backoff` crate's exponential delay, capped ~2s, D1-/worker-free and
+      unit-tested with a fake operation + instant sleep in
+      `tests/verification.rs`, per §0's testing decision). `handlers.rs`'s
+      `create_share`/`post_share` now call this instead of the stub, and
+      turn a `VerificationFailure` into a `401` JSON response carrying only
+      `reason`/`failedAt`/`attempts` -- never the token or its hash.
+      `ARCHITECTURE.md` updated in the same commit.)
 - [ ] **8. Client sign-in + owner UI** — popup OAuth flow, "Sync" popover
       when disconnected, "Synced as @username" identity chip, send the
       token on every write (mockup Screens 1–3). Scope: `synced-share-ui`.
@@ -402,7 +415,7 @@ banner).
       afterward (per §0 — user clicks "start sync" again once connected).
       Send this connection's token with every write. No device-token code
       path exists any more.
-- [ ] Worker: on every write, check `oauth_sessions` for a fresh verified
+- [x] Worker: on every write, check `oauth_sessions` for a fresh verified
       identity (hashed-token lookup); on miss/stale, call the
       `IdentityProvider` (GitHub's `GET /user` today) to resolve
       `(provider, provider_user_id)`, refresh the cache, and look up (or
@@ -410,7 +423,7 @@ banner).
       `user_id`. On failure, retry via the backoff policy (§0), then reject
       (fail closed) with a specific, UI-surfaced error. Never trust a
       client-asserted identity directly.
-- [ ] `resolveRole`-equivalent logic: owner = resolved `user_id` matches
+- [x] `resolveRole`-equivalent logic: owner = resolved `user_id` matches
       `docs.owner_user_id` exactly. Any mismatch or verification failure
       (after retries) is rejected outright. No other cases exist.
 - [ ] Ensure the public doc response (`toPublicDoc`-equivalent) never leaks
