@@ -1,0 +1,62 @@
+[package]
+name = "live-share-worker"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Cloudflare Workers build a `cdylib` (loaded as a wasm module); `rlib` is
+# kept too so this crate can be built/checked with plain `cargo check`/`cargo
+# test` on the host target as well (needed for the native-only shadow-SQLite
+# build step below, and for any future native unit tests).
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+worker = "0.8"
+
+# `sqlx` is deliberately NOT a normal `[dependencies]` entry here, even
+# though task breakdown item 2 calls for "worker + sqlx deps". Reasoning:
+#
+# `sqlx`'s "sqlite" feature pulls in `libsqlite3-sys`, which compiles
+# SQLite's C amalgamation via `cc`. That C build assumes a hosted C
+# environment (libc headers like `stdio.h`), which `wasm32-unknown-unknown`
+# does not provide (unlike `wasm32-wasi`) -- confirmed by actually trying it:
+# `cargo check --target wasm32-unknown-unknown` fails inside
+# `libsqlite3-sys`'s build script with `fatal error: 'stdio.h' file not
+# found`. This is a real, unavoidable incompatibility, not a version
+# question -- no combination of `sqlx` feature flags avoids linking
+# `libsqlite3-sys` once the "sqlite" feature is on, because sqlx's SQLite
+# row/type decoding (used even by the `query_file!` macros in offline mode)
+# depends on the `sqlx-sqlite` driver crate, not just its async runtime.
+#
+# So `sqlx` (with the "sqlite" feature) is scoped as a `[build-dependencies]`
+# entry instead: it is used only by `build.rs`, which always compiles and
+# runs on the host toolchain regardless of the crate's own `--target`, to
+# create/refresh the local shadow SQLite database from
+# `../../live-share-worker/migrations/*.sql` at build time (see `build.rs`).
+# Build-dependencies are never linked into this crate's own compiled
+# artifact, so this keeps `sqlx` (and its C build of SQLite) entirely off
+# the `wasm32-unknown-unknown` compile path while still using `sqlx` for the
+# thing it's meant for here: applying the migrations against the shadow DB
+# that a later task's `sqlx::query_file!` compile-time checks will run
+# against.
+#
+# When task 4 adds real `sqlx::query_file!` calls to this crate's own
+# source, it will hit the same `libsqlite3-sys`-on-wasm32 wall described
+# above if `sqlx` becomes a normal dependency of this crate. The likely
+# resolution then is to keep query compile-checking in a separate,
+# native-only crate/test/xtask that isn't part of the wasm-compiled binary,
+# with the wasm binary itself only ever using `include_str!` + D1's
+# `prepare()` at runtime (per the TODO's `queries/` design) -- not a
+# frozen decision here, just the option this scaffold's structure keeps
+# open.
+[build-dependencies]
+sqlx = { version = "0.8", default-features = false, features = [
+    "sqlite",
+    "runtime-tokio",
+    "migrate",
+] }
+tokio = { version = "1", features = ["rt"] }
+
+[lints]
+workspace = true

@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "crates/jianpu-wasm", "tools/dead-pub-check"]
+members = [".", "crates/jianpu-wasm", "crates/live-share-worker", "tools/dead-pub-check"]
 resolver = "2"
 
 [patch.crates-io]

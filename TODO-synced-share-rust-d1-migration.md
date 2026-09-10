@@ -127,7 +127,7 @@ off in both places.
 - [x] **1. Schema migrations** — `.sql` files for `users` /
       `user_identities` / `oauth_sessions` / `docs` (§1). Scope: `schema`.
       Depends on: nothing.
-- [ ] **2. Rust crate scaffold** — new `live-share-worker` crate,
+- [x] **2. Rust crate scaffold** — new `live-share-worker` crate,
       `wasm32-unknown-unknown` target, `worker` + `sqlx` deps, shadow-SQLite
       build step (§2). Scope: `live-share-worker`. Depends on: 1.
 - [ ] **3. `sqruff` pre-commit** — lint/format gate scoped to `queries/` and
@@ -246,19 +246,31 @@ banner).
 
 ## 2. Set up Rust + SQLx + shadow SQLite (no Diesel)
 
-- [ ] Add `live-share-worker` as a new crate in the Rust workspace, target
+- [x] Add `live-share-worker` as a new crate in the Rust workspace, target
       `wasm32-unknown-unknown`, depending on `worker` (Cloudflare's crate)
       and `sqlx` (SQLite feature only, for compile-time query checking).
-- [ ] Set up local shadow `.sqlite` file, populated from the same migration
+      Lives at `crates/live-share-worker/` (see task 2's naming note: the
+      top-level `live-share-worker/` dir still holds the old TS worker).
+      `sqlx` ended up scoped to `[build-dependencies]` rather than a normal
+      dependency — see the comment on that entry in
+      `crates/live-share-worker/Cargo.toml` for why (its "sqlite" feature
+      pulls in `libsqlite3-sys`, whose C build doesn't compile for
+      `wasm32-unknown-unknown`, confirmed by trying it directly).
+- [x] Set up local shadow `.sqlite` file, populated from the same migration
       files as §1, for `sqlx::query_file!` to check against at build time.
+      (`crates/live-share-worker/shadow.sqlite`, gitignored; no
+      `query_file!` calls exist yet since there are no real queries until
+      task 4 — this only proves the DB gets created/migrated correctly.)
 - [ ] Write one `.sql` file per query under a `queries/` dir; each query
       read once via `query_file!` (compile-time check) and again via
       `include_str!` for the actual `D1Database::prepare()` call at
       runtime, so both share one source of truth.
-- [ ] Wire up whatever build-order step (build script or documented dev
+- [x] Wire up whatever build-order step (build script or documented dev
       command) ensures the shadow DB is migrated before `cargo build`/`cargo
       check` runs, so the compile-time query check has something to check
-      against.
+      against. (`crates/live-share-worker/build.rs`, using `sqlx` +
+      `tokio` as build-dependencies, applies
+      `live-share-worker/migrations/*.sql` in order via `sqlx::migrate`.)
 - [ ] Add integration tests run against `wrangler dev` (per §0 testing
       decision) as a backstop for D1-vs-SQLite dialect differences the
       shadow-SQLite check can't catch.
