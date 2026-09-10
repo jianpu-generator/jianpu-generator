@@ -307,3 +307,111 @@ a runtime `JsValue`/`any` surprise.
 The worker (`web/src/worker/jianpu.worker.ts`) gates its `render`/`renderWithHighlightRange` handlers on `ensureCoreFontsApplied()`, which awaits both wasm init and the SC+mono font bytes (resolved from the `loadPdfFonts` message the app already sends at boot — see `web/src/hooks/useFontsLoader.ts`) before calling `set_layout_fonts`; other handlers that don't reach the layout/render chain (`listParts`, `updatePartDeclaration`, `listMeasureSpans`, export handlers) aren't gated on it.
 
 Worker messages: `listParts` → `{ parts, declarations }`; `updatePartDeclaration` → `{ source, declarations }` (hook updates `partDeclarations` immediately, without waiting for the debounced re-render); `importFromFile { bytes, kind: 'svg' | 'pdf' }` → `importOk { source }` / `importErr` (`web/src/worker/importMessageHandlers.ts` calls `extract_source_from_svg`/`extract_source_from_pdf`; `useJianpuWorkerImport.ts`'s `importFromFile(file: File) -> Promise<string>` is the promise-based wrapper `App.tsx`'s Import button uses, resolved/rejected from `useJianpuWorkerMessageHandler.ts`'s `pendingImportsRef` map keyed by request id, mirroring `updatePartDeclaration`'s pending-map pattern).
+
+## Synced Share worker (`crates/live-share-worker`)
+
+A separate Cloudflare Worker, not part of the `web/` build or the
+`jianpu-wasm` component boundary above — it's a small standalone HTTP
+backend the web app's Synced Share feature calls cross-origin, deployed on
+its own (wrangler wiring is a separate, later task — not yet done as of
+this section; see `TODO-synced-share-rust-d1-migration.md`). This section
+covers only the state that exists today; tasks after this one (real GitHub
+OAuth, `wrangler.toml`/CI wiring, retiring the old TS worker) are
+deliberately not documented here as done.
+
+- Crate: `crates/live-share-worker` (target `wasm32-unknown-unknown`,
+  built as a `worker`-crate Cloudflare Worker). Entry point: `#[event(fetch)]
+  async fn fetch` in `src/lib.rs` — applies CORS (`Access-Control-Allow-*`,
+  via the `worker` crate's `Cors` builder) and the `OPTIONS` preflight
+  response uniformly around whatever `handlers::router()` (a `worker::Router`
+  routing `GET /shares/:share_id`, `POST /shares/:share_id`,
+  `POST /shares`) returns.
+- This crate coexists with the pre-migration TypeScript worker at the
+  top-level `live-share-worker/` directory (`src/{resolveRole,doc,index,
+  protocol}.ts`), which is still the one actually deployed — the old
+  source is intentionally left in place as reference until the Rust
+  version has parity and is verified end-to-end (a later task), not
+  deleted by this one.
+- Storage: D1 (SQLite), not the old KV namespace. Schema in
+  `live-share-worker/migrations/0001_init.sql` (shared, as plain `.sql`,
+  between real D1 migrations and a local shadow SQLite database
+  `crates/live-share-worker/build.rs` builds at build time for query
+  checking — see below). Tables: `docs` (one row per share: `share_id`,
+  `owner_user_id`, `filename`, `content`, `revision`, `ended`,
+  `created_at`, `updated_at`), `users` (`id`, `created_at`),
+  `user_identities` (`provider`, `provider_user_id`, `user_id`, `login`,
+  `linked_at` — provider-agnostic, so a future non-GitHub identity
+  provider can link into the same `users` table), and `oauth_sessions`
+  (hashed-token verification cache, unused until the real GitHub provider
+  lands).
+- Key types: `doc::StoredDoc` (a full `docs` row, replacing the old KV
+  `StoredDoc`'s doc-plus-bearer-`ownerToken` shape — `owner_user_id` here
+  is an internal `users.id`, never sent to a client; `doc::to_public_doc`
+  strips it, mirroring the old `toPublicDoc`); `protocol::SyncedDoc` /
+  `protocol::SyncedWriteRequest` (the `GET`/`POST` wire shapes, ported from
+  the old TS `protocol.ts`, camelCase on the wire); `resolve_role::SyncedRole`
+  / `resolve_role::resolve_role` (the write-guard, ported from the old TS
+  `resolveRole.ts`); `identity::IdentityProvider` (the identity-resolution
+  seam, see below); `db` (crate-private raw D1 query functions, one
+  `.sql` file per query under `queries/`, loaded via `include_str!`).
+- Ownership model: a share's `owner_user_id` is set once, at
+  `POST /shares` creation time, and never changes — there is no more
+  "unpinned, first write claims ownership" state the old KV `ownerToken`
+  scheme had. A write to `POST /shares/:share_id` is accepted only when the
+  identity resolved from the request's `identity_token` matches the
+  share's `owner_user_id` exactly (`resolve_role`); any mismatch, or a
+  share with no `docs` row yet, is rejected.
+- `share_id` generation moved server-side (`share_id::generate_unique_share_id`):
+  no more client-derived id. Uses the same charset/length
+  (`SHARE_ID_LENGTH = 11`, `[0-9A-Za-z_-]`) as `SHARE_ID_PATTERN` in
+  `web/src/syncedShareUrl.ts`; on the astronomically unlikely case of a
+  collision against an existing row, appends exactly one extra character
+  from the same charset rather than looping/regenerating (a fallback id
+  one character longer than `SHARE_ID_LENGTH`, which would not match that
+  fixed-length client pattern — a known, accepted edge case, not something
+  this crate changes `web/` to handle).
+
+### IdentityProvider stub
+
+`identity::IdentityProvider` is the seam real GitHub OAuth verification
+(a later task) plugs into: a trait resolving whatever identity a caller
+presents to an internal `users.id`, doing create-on-first-sight
+`users`/`user_identities` rows. `identity::stub::StubIdentityProvider` is
+its only implementation today, and is explicitly **not secure**: it treats
+the request's `identity_token` string directly as a stable pseudo
+`provider_user_id` under a `"stub"` provider, with no verification
+whatsoever — anyone can claim any identity by sending any string.
+Re-sending the same string round-trips to the same `user_id` (via
+create-on-first-sight against `user_identities`), which is enough to
+exercise every other layer (`resolve_role`, `doc::apply_write`, the D1
+writes) end-to-end ahead of the real provider landing.
+
+### D1 query checking
+
+`sqlx`'s "sqlite" feature can't be a normal dependency of this crate — its
+`libsqlite3-sys` C build doesn't target `wasm32-unknown-unknown` (see the
+long comment on the `[build-dependencies] sqlx` entry in
+`crates/live-share-worker/Cargo.toml`). So `sqlx` appears twice, scoped
+away from the wasm build both times:
+
+- As a `[build-dependencies]` entry, used only by `build.rs` to apply
+  `live-share-worker/migrations/*.sql` to a local shadow SQLite database
+  (`crates/live-share-worker/shadow.sqlite`, gitignored) at build time.
+- As a `[dev-dependencies]` entry, used only by
+  `crates/live-share-worker/tests/query_syntax.rs` (a native-only test,
+  not run for `wasm32-unknown-unknown`) to *prepare* (not execute) each
+  `.sql` file under `queries/` against that shadow database — the same
+  `include_str!`-loaded query text `src/db.rs` uses for real
+  `D1Database::prepare()` calls at runtime. This is the pragmatic stand-in
+  for `sqlx::query_file!`'s compile-time type-checking, which this crate's
+  wasm-targeted compile can't use: it catches a broken/typo'd query
+  (unknown table/column, invalid SQL) but not bound-parameter-type or
+  result-column-name mismatches, and not D1-vs-SQLite dialect drift.
+
+### Glossary additions
+
+| Term | Definition |
+|------|-----------|
+| **Synced Share worker** | The standalone Cloudflare Worker (`crates/live-share-worker`) backing the Synced Share feature's `GET`/`POST /shares[/:share_id]` HTTP API, described above. |
+| **IdentityProvider** | The trait (`identity::IdentityProvider`) resolving a request's opaque identity token to an internal `users.id`, with create-on-first-sight `users`/`user_identities` rows. `identity::stub::StubIdentityProvider` is the only, explicitly-insecure implementation until real GitHub OAuth verification lands. |
+| **owner_user_id** | A share's fixed owner, set once at creation (`docs.owner_user_id`, an internal `users.id`) — replaces the old KV model's bearer `ownerToken`, which any first writer could claim. |

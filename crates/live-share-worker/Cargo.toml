@@ -12,7 +12,8 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-worker = "0.8"
+worker = { version = "0.8", features = ["d1"] }
+serde = { version = "1", features = ["derive"] }
 
 # `sqlx` is deliberately NOT a normal `[dependencies]` entry here, even
 # though task breakdown item 2 calls for "worker + sqlx deps". Reasoning:
@@ -50,6 +51,13 @@ worker = "0.8"
 # `prepare()` at runtime (per the TODO's `queries/` design) -- not a
 # frozen decision here, just the option this scaffold's structure keeps
 # open.
+#
+# Task 4 landed exactly that resolution: `src/db.rs` loads each file under
+# `queries/` via `include_str!` and calls it through `D1Database::prepare()`
+# at runtime (wasm-only, `JsValue`-based, never exercised by host tests).
+# The `sqlx` dev-dependency below is the native-only substitute for
+# `query_file!`'s compile-time check -- see `tests/query_syntax.rs` and the
+# doc comment at the top of `src/db.rs` for what it does and doesn't catch.
 [build-dependencies]
 sqlx = { version = "0.8", default-features = false, features = [
     "sqlite",
@@ -57,6 +65,14 @@ sqlx = { version = "0.8", default-features = false, features = [
     "migrate",
 ] }
 tokio = { version = "1", features = ["rt"] }
+
+[dev-dependencies]
+sqlx = { version = "0.8", default-features = false, features = [
+    "sqlite",
+    "runtime-tokio",
+] }
+tokio = { version = "1", features = ["rt", "macros"] }
+serde_json = "1"
 
 [lints]
 workspace = true

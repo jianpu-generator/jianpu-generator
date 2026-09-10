@@ -132,7 +132,7 @@ off in both places.
       build step (§2). Scope: `live-share-worker`. Depends on: 1.
 - [x] **3. `sqruff` pre-commit** — lint/format gate scoped to `queries/` and
       migration `.sql` files (§3). Scope: `lint`. Depends on: 1.
-- [ ] **4. Port worker logic to Rust** — `resolveRole`/`doc`/`index`/
+- [x] **4. Port worker logic to Rust** — `resolveRole`/`doc`/`index`/
       `protocol` against the new schema, with identity resolution stubbed
       (no real GitHub verification yet); update `ARCHITECTURE.md` in the
       **same commit** per this repo's docs rule (§4, §5). Scope:
@@ -261,10 +261,18 @@ banner).
       (`crates/live-share-worker/shadow.sqlite`, gitignored; no
       `query_file!` calls exist yet since there are no real queries until
       task 4 — this only proves the DB gets created/migrated correctly.)
-- [ ] Write one `.sql` file per query under a `queries/` dir; each query
+- [x] Write one `.sql` file per query under a `queries/` dir; each query
       read once via `query_file!` (compile-time check) and again via
       `include_str!` for the actual `D1Database::prepare()` call at
-      runtime, so both share one source of truth.
+      runtime, so both share one source of truth. (`query_file!` itself
+      isn't usable in this crate's wasm-targeted compile -- see the
+      scaffold's own comment on this; landed instead as: `src/db.rs` reads
+      each `queries/*.sql` file via `include_str!` for real
+      `D1Database::prepare()` calls, and `tests/query_syntax.rs` --
+      native-only, `sqlx` as a dev-dependency -- reads the same files to
+      *prepare* (not execute) them against the shadow SQLite database as a
+      substitute syntax check. See `ARCHITECTURE.md`'s "D1 query checking"
+      section for what this does and doesn't catch.)
 - [x] Wire up whatever build-order step (build script or documented dev
       command) ensures the shadow DB is migrated before `cargo build`/`cargo
       check` runs, so the compile-time query check has something to check
@@ -309,14 +317,23 @@ banner).
 
 ## 4. Migrate TS worker logic to Rust
 
-- [ ] Port `resolveRole.ts`, `doc.ts`, `index.ts`, `protocol.ts` to Rust,
+- [x] Port `resolveRole.ts`, `doc.ts`, `index.ts`, `protocol.ts` to Rust,
       targeting the new `docs` table from §1 directly, and rewritten around
       GitHub-required ownership (no device-token code path to port at all).
-- [ ] Add the new "create share" endpoint from §1, gated on GitHub
+      (`crates/live-share-worker/src/{resolve_role,doc,handlers,protocol}.rs`;
+      identity resolution stubbed per §0/§6 -- `src/identity/stub.rs`, not
+      real GitHub verification, which is task 6/7.)
+- [x] Add the new "create share" endpoint from §1, gated on GitHub
       verification; update `web/src/syncedShareUrl.ts` (device-secret logic
       deleted per §0), `useSyncedShareOwner.ts`, `useSyncedShareViewer.ts`,
       and `web/src/syncedShare/protocol.ts` for the new flow. No
       byte-compatibility constraint with the old protocol (per §0).
+      (`POST /shares` added in `crates/live-share-worker/src/handlers.rs`,
+      gated on the *stub* identity resolver for now -- real GitHub
+      verification is task 6/7. The `web/` changes in this bullet --
+      `syncedShareUrl.ts`, `useSyncedShareOwner.ts`,
+      `useSyncedShareViewer.ts`, `web/src/syncedShare/protocol.ts` -- are
+      explicitly out of scope for task 4, tasks 8-11.)
 - [ ] Update `wrangler.toml`: build command pointing at `worker-build`
       (or equivalent), D1 binding instead of the KV namespace binding.
 - [ ] Update CI/pre-commit to build the new crate for `wasm32-unknown-unknown`
@@ -328,7 +345,7 @@ banner).
 
 ## 5. Update project docs (required by this repo's rules, same commit as §4)
 
-- [ ] Update `ARCHITECTURE.md`: new entry point/module paths for the
+- [x] Update `ARCHITECTURE.md`: new entry point/module paths for the
       Rust worker, any key types added/removed/renamed (e.g. `StoredDoc`
       → whatever the Rust struct is named), the KV→D1 terminology change,
       the GitHub-required create-share flow, and the retirement of the

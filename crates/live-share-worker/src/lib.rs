@@ -1,15 +1,53 @@
-//! Scaffold for the Rust rewrite of the Synced Share Worker (see
-//! `TODO-synced-share-rust-d1-migration.md`, task 2). This crate is
-//! deliberately a stub: it only proves the `worker` dependency and the
-//! shadow-SQLite build step (`build.rs`) work end to end for
-//! `wasm32-unknown-unknown`. The actual `resolveRole`/`doc`/`index`/
-//! `protocol` logic ported from the TypeScript worker under
-//! `live-share-worker/src/*.ts` lands in a later task.
+//! Entry point for the Rust rewrite of the Synced Share Worker (see
+//! `TODO-synced-share-rust-d1-migration.md`, task 4, and the "Synced Share
+//! worker" section of `ARCHITECTURE.md` for the full picture).
+//!
+//! Ports `live-share-worker/src/{resolveRole,doc,index,protocol}.ts` to
+//! Rust, retargeted from Workers KV + an anonymous `ownerToken` to D1 +
+//! GitHub-required ownership (`docs.owner_user_id`). Identity resolution is
+//! stubbed for now -- see `identity::stub` -- real GitHub OAuth
+//! verification is task 6/7.
+//!
+//! `doc`, `protocol`, and `resolve_role` are `pub` (and D1/JsValue-free) so
+//! `tests/*.rs` can unit-test them directly, per this repo's convention of
+//! keeping tests in separate files rather than inline `#[cfg(test)]`
+//! modules. Everything else here is D1- or wasm-runtime-facing and stays
+//! crate-private -- it isn't exercised by host-side `cargo test` (per
+//! `TODO-synced-share-rust-d1-migration.md` §0: real D1 integration testing
+//! is deferred to `wrangler dev`, not built here).
 
-use worker::{event, Context, Env, Request, Response, Result};
+mod db;
+mod handlers;
+mod identity;
+mod share_id;
+
+pub mod doc;
+pub mod protocol;
+pub mod resolve_role;
+
+use worker::{event, Context, Cors, Env, Method, Request, Response, Result};
+
+/// The web app calls this worker cross-origin, so every response --
+/// including the `OPTIONS` preflight a `POST`'s JSON body triggers -- needs
+/// these. `*` is fine: there's no cookie/session auth here, just an
+/// unguessable `share_id` plus an `identity_token` in the request body,
+/// neither of which `Access-Control-Allow-Origin` exposes to an origin that
+/// doesn't already have them (same reasoning as the old TS `index.ts`).
+fn cors_config() -> Cors {
+    Cors::new()
+        .with_origins(["*"])
+        .with_methods([Method::Get, Method::Post, Method::Options])
+        .with_allowed_headers(["Content-Type"])
+}
 
 #[event(fetch)]
-async fn fetch(_req: Request, _env: Env, _ctx: Context) -> Result<Response> {
-    // Placeholder handler -- real request routing lands in a later task.
-    Response::ok("live-share-worker: not yet implemented")
+async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
+    let cors = cors_config();
+
+    if req.method() == Method::Options {
+        return Response::empty()?.with_status(204).with_cors(&cors);
+    }
+
+    let response = handlers::router().run(req, env).await?;
+    response.with_cors(&cors)
 }
