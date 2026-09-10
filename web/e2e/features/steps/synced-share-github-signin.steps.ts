@@ -93,6 +93,25 @@ Then('the sync button still reads {string}', async ({ page }, text: string) => {
   await expect(page.getByTestId('synced-share-button')).toHaveText(text)
 })
 
+When('the owner clicks the synced share identity chip', async ({ page }) => {
+  await page.getByTestId('synced-share-identity-chip').click()
+})
+
+Then('the identity chip menu is shown', async ({ page }) => {
+  await expect(page.getByTestId('disconnect-github-button')).toBeVisible()
+})
+
+When(
+  'the owner clicks "Log out" in the identity chip menu',
+  async ({ page }) => {
+    await page.getByTestId('disconnect-github-button').click()
+  },
+)
+
+Then('the synced share identity chip is gone', async ({ page }) => {
+  await expect(page.getByTestId('synced-share-identity-chip')).toHaveCount(0)
+})
+
 // The owner's browser-side fetch straight to the Synced Share worker's
 // `POST /shares` (see `useSyncedShareOwner.ts`'s `createShare`) -- unlike
 // the worker's own outbound GitHub calls (mocked via a real local server,
@@ -102,7 +121,7 @@ Then('the sync button still reads {string}', async ({ page }, text: string) => {
 Given(
   'the Synced Share worker rejects the next create-share request with a verification failure',
   async ({ page }) => {
-    await page.route('https://localhost:8787/shares', async (route) => {
+    await page.route('http://localhost:8787/shares', async (route) => {
       if (route.request().method() !== 'POST') {
         await route.continue()
         return

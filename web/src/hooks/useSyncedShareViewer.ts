@@ -3,6 +3,7 @@ import type { FileStoreState } from '../fileStore'
 import type { SharePayload } from '../shareUrl'
 import type { StorageBackend } from '../storage/types'
 import type { SyncedDoc } from '../syncedShare/protocol'
+import { syncedShareWorkerOrigin } from '../syncedShare/workerUrl'
 import {
   clearSyncedShareHash,
   parseSyncedShareFromHash,
@@ -77,7 +78,7 @@ export function useSyncedShareViewer(
     setEditorCollapsed(true)
 
     let cancelled = false
-    void fetch(`https://${host}/shares/${parsed.shareId}`)
+    void fetch(`${syncedShareWorkerOrigin(host)}/shares/${parsed.shareId}`)
       .then((response) => {
         if (!response.ok)
           throw new Error(`Unexpected status ${response.status}`)

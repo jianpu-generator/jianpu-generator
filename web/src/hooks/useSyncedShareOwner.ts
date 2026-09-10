@@ -90,6 +90,12 @@ export interface UseSyncedShareOwnerResult {
    * Share connection. Resolving this promise never itself starts a share --
    * per §0, the user must click "start sync" again once connected. */
   signInWithGithub: () => Promise<SyncedShareGithubAuthResult>
+  /** Logs out of the dedicated Synced Share GitHub connection -- clears the
+   * stored token/login (so the "Synced as @username" chip disappears and
+   * `isGithubConnected` goes back to `false`), stopping any active sync
+   * first (mirrors clicking "Stop Sync": a sync can't keep pushing updates
+   * without a verified identity to sign them with). */
+  disconnectGithub: () => void
   /** Set whenever a write (a "create", "update" push, or a "stop") fails --
    * a `401` GitHub-verification failure from the worker, a non-2xx
    * response, or a network-level error. Drives the full-screen error dialog
@@ -126,7 +132,7 @@ export function useSyncedShareOwner(
   const [syncFailure, setSyncFailure] = useState<SyncedShareFailure | null>(
     null,
   )
-  const [githubAuth] = useSyncedShareGithubAuth()
+  const [githubAuth, setGithubAuth] = useSyncedShareGithubAuth()
   const isGithubConnected = githubAuth !== null
   const githubLogin = githubAuth?.login ?? null
   const [shareId, setShareId] = useState<string | null>(() =>
@@ -286,6 +292,11 @@ export function useSyncedShareOwner(
       })
     }, [])
 
+  const disconnectGithub = useCallback(() => {
+    if (session) stopSync()
+    setGithubAuth(null)
+  }, [session, stopSync, setGithubAuth])
+
   return {
     isSynced: session !== null,
     syncedShareLink: session ? buildSyncedShareUrl(session, filename) : null,
@@ -295,6 +306,7 @@ export function useSyncedShareOwner(
     stopSync,
     broadcastContent,
     signInWithGithub,
+    disconnectGithub,
     syncFailure,
     dismissSyncFailure,
   }

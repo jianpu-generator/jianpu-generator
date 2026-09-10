@@ -1,5 +1,6 @@
 import * as oauth from 'oauth4webapi'
 import { useLocalStorage } from 'usehooks-ts'
+import { syncedShareWorkerOrigin } from '../syncedShare/workerUrl'
 
 /**
  * Dedicated, minimally-scoped "sign in with GitHub" connection used only to
@@ -395,15 +396,18 @@ async function runSyncedShareGithubCallback(
 
   let response: Response
   try {
-    response = await fetch(`https://${options.host}/auth/github/callback`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        code,
-        codeVerifier: pending.codeVerifier,
-        redirectUri: pending.redirectUri,
-      }),
-    })
+    response = await fetch(
+      `${syncedShareWorkerOrigin(options.host)}/auth/github/callback`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          codeVerifier: pending.codeVerifier,
+          redirectUri: pending.redirectUri,
+        }),
+      },
+    )
   } catch (error) {
     return {
       ok: false,

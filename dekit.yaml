@@ -9,13 +9,22 @@
 #   SYNCED_SHARE_GITHUB_CLIENT_SECRET there first).
 # - web: the Vite dev server, pointed at the local worker via
 #   web/.env.local's VITE_SYNCED_SHARE_HOST=localhost:8787.
+#
+# Deliberately plain HTTP here (no `--local-protocol https`): wrangler dev's
+# HTTPS mode serves a self-signed cert that a browser silently rejects
+# (fetch() surfaces it as an opaque "Failed to fetch") until you visit the
+# origin directly and click through the cert warning -- a step that has to
+# be repeated for every new browser profile/device. Nothing in the worker
+# needs HTTPS locally (no `Secure` cookies, no secure-context check), so
+# `web/src/syncedShare/workerUrl.ts` only uses `https://` for the real
+# `*.workers.dev` host and plain `http://` for localhost.
 procs:
   worker:
     cwd: crates/live-share-worker
     shell: >
       set -a && . ./.env.local && set +a &&
       npx wrangler d1 migrations apply DB --local &&
-      npx wrangler dev --local-protocol https --port 8787
+      npx wrangler dev --port 8787
       --var SYNCED_SHARE_GITHUB_CLIENT_ID:Ov23li8p4uHEd5uQOjkn
       --var SYNCED_SHARE_GITHUB_CLIENT_SECRET:$SYNCED_SHARE_GITHUB_CLIENT_SECRET
   web:
