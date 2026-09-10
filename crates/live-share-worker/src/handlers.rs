@@ -1,7 +1,9 @@
 //! HTTP routing for the Synced Share worker, ported from the old TS
 //! `live-share-worker/src/index.ts`. CORS and the `OPTIONS` preflight are
 //! handled once in `lib.rs` around whatever this router returns; this
-//! module only owns the `/shares` routes themselves.
+//! module owns the `/shares` routes plus the `/auth/github/callback` route
+//! (task 6, see `crate::oauth`) added for the dedicated Synced Share
+//! sign-in connection.
 
 use worker::{Request, RouteContext, Router};
 use worker::{Response, Result};
@@ -10,6 +12,7 @@ use crate::db;
 use crate::doc;
 use crate::identity::stub::StubIdentityProvider;
 use crate::identity::IdentityProvider;
+use crate::oauth;
 use crate::protocol::{CreateShareRequest, CreateShareResponse, SyncedWriteRequest};
 use crate::share_id;
 
@@ -23,6 +26,7 @@ pub(crate) fn router() -> Router<'static, ()> {
         .get_async("/shares/:share_id", get_share)
         .post_async("/shares/:share_id", post_share)
         .post_async("/shares", create_share)
+        .post_async("/auth/github/callback", oauth::github_oauth_callback)
 }
 
 /// `GET /shares/:share_id` -- fully anonymous, matching the old behavior:

@@ -19,6 +19,7 @@
 mod db;
 mod handlers;
 mod identity;
+mod oauth;
 mod share_id;
 
 pub mod doc;

@@ -151,10 +151,19 @@ off in both places.
       check --target wasm32-unknown-unknown -p live-share-worker` --
       full `worker-build` bundle verification left as future work for a CI
       workflow once deployment is wired, task 11/12.)
-- [ ] **6. Dedicated GitHub sign-in plumbing** — `IdentityProvider` trait +
+- [x] **6. Dedicated GitHub sign-in plumbing** — `IdentityProvider` trait +
       `GithubIdentityProvider`, PKCE module (`oauth4webapi`), Worker
       callback route + client-secret binding (§6). Scope:
-      `synced-share-auth`. Depends on: 2.
+      `synced-share-auth`. Depends on: 2. (`identity::github::GithubIdentityProvider`
+      in `crates/live-share-worker/src/identity/github.rs`, not yet wired
+      into any write path -- that's task 7. `POST /auth/github/callback` in
+      `crates/live-share-worker/src/oauth.rs`, reading
+      `SYNCED_SHARE_GITHUB_CLIENT_ID` (plain `[vars]`) and
+      `SYNCED_SHARE_GITHUB_CLIENT_SECRET` (Worker secret binding, not
+      committed) from `crates/live-share-worker/wrangler.toml`. Client-side
+      PKCE-initiation module `web/src/storage/syncedShareGithubAuth.ts`,
+      using `oauth4webapi`, distinct from `githubAuth.ts` -- starts the
+      redirect only; completing the flow is task 8.)
 - [ ] **7. Verification + caching in the worker** — hashed-token lookup
       against `oauth_sessions`, backoff-wrapped GitHub call on miss/stale,
       create-on-first-sight `user_identities` row, wired into
@@ -371,7 +380,7 @@ banner).
 
 ## 6. Implement GitHub-required ownership
 
-- [ ] Build the new dedicated, minimally-scoped "sign in with GitHub"
+- [x] Build the new dedicated, minimally-scoped "sign in with GitHub"
       connection for Synced Share identity (per §0), using `oauth4webapi`
       for authorization-code + PKCE (redirect-based) — a new module
       distinct from `githubAuth.ts`'s device-flow code, storing its own
@@ -379,7 +388,14 @@ banner).
       route for the redirect callback + token exchange (holding the client
       secret as a Worker secret binding). Define the `IdentityProvider`
       trait discussed, with one `GithubIdentityProvider` implementation for
-      now.
+      now. (Client-side redirect+PKCE start only, in
+      `web/src/storage/syncedShareGithubAuth.ts` -- `oauth4webapi` is a
+      browser/Fetch-API JS library with no wasm32 Rust equivalent, so the
+      Worker-side token exchange in `crates/live-share-worker/src/oauth.rs`
+      makes the equivalent plain HTTP call itself instead, per that file's
+      doc comment. `IdentityProvider` trait already existed from task 4;
+      this task adds `identity::github::GithubIdentityProvider` as its real
+      implementation, not yet wired into any write path.)
 - [ ] Client (`useSyncedShareOwner.ts`): "start sync" stays enabled always;
       if this Synced Share GitHub connection isn't present, clicking it
       starts the redirect + PKCE sign-in flow but does not auto-continue

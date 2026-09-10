@@ -324,8 +324,8 @@ deliberately not documented here as done.
   async fn fetch` in `src/lib.rs` — applies CORS (`Access-Control-Allow-*`,
   via the `worker` crate's `Cors` builder) and the `OPTIONS` preflight
   response uniformly around whatever `handlers::router()` (a `worker::Router`
-  routing `GET /shares/:share_id`, `POST /shares/:share_id`,
-  `POST /shares`) returns.
+  routing `GET /shares/:share_id`, `POST /shares/:share_id`, `POST /shares`,
+  `POST /auth/github/callback`) returns.
 - This crate coexists with the pre-migration TypeScript worker at the
   top-level `live-share-worker/` directory (`src/{resolveRole,doc,index,
   protocol}.ts`), which is still the one actually deployed — the old
@@ -352,7 +352,9 @@ deliberately not documented here as done.
   the old TS `protocol.ts`, camelCase on the wire); `resolve_role::SyncedRole`
   / `resolve_role::resolve_role` (the write-guard, ported from the old TS
   `resolveRole.ts`); `identity::IdentityProvider` (the identity-resolution
-  seam, see below); `db` (crate-private raw D1 query functions, one
+  seam, see below); `oauth::github_oauth_callback` (the
+  `POST /auth/github/callback` handler, see "Dedicated GitHub sign-in"
+  below); `db` (crate-private raw D1 query functions, one
   `.sql` file per query under `queries/`, loaded via `include_str!`).
 - Ownership model: a share's `owner_user_id` is set once, at
   `POST /shares` creation time, and never changes — there is no more
@@ -386,6 +388,46 @@ create-on-first-sight against `user_identities`), which is enough to
 exercise every other layer (`resolve_role`, `doc::apply_write`, the D1
 writes) end-to-end ahead of the real provider landing.
 
+### Dedicated GitHub sign-in
+
+A separate, minimally-scoped "sign in with GitHub" connection used only to
+verify Synced Share ownership (`GET /user`, no other scope) — distinct from
+`web/src/storage/githubAuth.ts`'s broad-scope, opt-in device-flow connection
+for the storage backend's Contents API access. The two connections store
+their tokens independently and are never conflated (per
+`TODO-synced-share-rust-d1-migration.md` §0). Both may register the same
+GitHub OAuth App (`client_id` is public and shared), just requesting
+different scopes and using different flows.
+
+- Client (`web/src/storage/syncedShareGithubAuth.ts`): uses `oauth4webapi`
+  to generate a PKCE `code_verifier`/`code_challenge` and a `state`,
+  persists them to `sessionStorage`
+  (`SYNCED_SHARE_GITHUB_PKCE_STORAGE_KEY`), and redirects the browser to
+  GitHub's authorization endpoint (`startSyncedShareGithubSignIn`). This
+  module only starts the flow — reading the redirect-back `?code=`/`?state=`
+  and completing the exchange is wired into `useSyncedShareOwner.ts` in a
+  later task, per §0's "no seamless OAuth-then-continue" decision.
+- Worker (`src/oauth.rs`, route `POST /auth/github/callback`): exchanges an
+  authorization code plus its PKCE `code_verifier` for a GitHub access
+  token, using the OAuth App's client secret (`SYNCED_SHARE_GITHUB_CLIENT_SECRET`,
+  a Worker secret binding — never committed) and client id
+  (`SYNCED_SHARE_GITHUB_CLIENT_ID`, a plain `[vars]` entry in
+  `wrangler.toml`, since it isn't secret). Returns only the access token —
+  resolving it to a `user_id`, or persisting anything, is a later task's
+  job. `oauth4webapi` cannot run in this `wasm32-unknown-unknown` Worker (it
+  targets browser/Fetch-API JS runtimes); this route makes the equivalent
+  plain `POST` itself instead, matching this crate's existing
+  `worker::Fetch`-based HTTP calling convention.
+- `identity::github::GithubIdentityProvider`: the production
+  `IdentityProvider` implementation, resolving this connection's token to
+  `(provider, provider_user_id)` via a direct `GET /user` call, then the
+  same create-on-first-sight `users`/`user_identities` path
+  `identity::stub::StubIdentityProvider` uses. Not yet wired into any write
+  path — `handlers.rs` still resolves every write through
+  `StubIdentityProvider` until a later task adds hashed-token caching
+  against `oauth_sessions`, the retry/backoff policy from §0, and the
+  `resolveRole`-equivalent wiring itself.
+
 ### D1 query checking
 
 `sqlx`'s "sqlite" feature can't be a normal dependency of this crate — its
@@ -413,5 +455,6 @@ away from the wasm build both times:
 | Term | Definition |
 |------|-----------|
 | **Synced Share worker** | The standalone Cloudflare Worker (`crates/live-share-worker`) backing the Synced Share feature's `GET`/`POST /shares[/:share_id]` HTTP API, described above. |
-| **IdentityProvider** | The trait (`identity::IdentityProvider`) resolving a request's opaque identity token to an internal `users.id`, with create-on-first-sight `users`/`user_identities` rows. `identity::stub::StubIdentityProvider` is the only, explicitly-insecure implementation until real GitHub OAuth verification lands. |
+| **IdentityProvider** | The trait (`identity::IdentityProvider`) resolving a request's opaque identity token to an internal `users.id`, with create-on-first-sight `users`/`user_identities` rows. `identity::stub::StubIdentityProvider` (insecure, no verification) and `identity::github::GithubIdentityProvider` (real `GET /user` verification, not yet wired into any write path) are its two implementations. |
 | **owner_user_id** | A share's fixed owner, set once at creation (`docs.owner_user_id`, an internal `users.id`) — replaces the old KV model's bearer `ownerToken`, which any first writer could claim. |
+| **Synced Share sign-in connection** | The dedicated, minimally-scoped "sign in with GitHub" OAuth connection (`web/src/storage/syncedShareGithubAuth.ts` client-side, `src/oauth.rs`'s `POST /auth/github/callback` Worker-side) used only to verify Synced Share ownership — distinct from `githubAuth.ts`'s broad-scope storage-backend connection. |

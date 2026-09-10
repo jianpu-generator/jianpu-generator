@@ -44,3 +44,17 @@ database_name = "jianpu-live-share"
 # here once that command has been run -- do not create the database as part
 # of this task.
 database_id = "REPLACE_AT_ROLLOUT"
+
+# `POST /auth/github/callback` (`src/oauth.rs`, task 6) needs the dedicated
+# Synced Share sign-in GitHub OAuth App's client id and secret to exchange
+# an authorization code for a token. The client id is not secret (the
+# browser already sends the same one to build the authorization URL, see
+# `web/src/storage/syncedShareGithubAuth.ts`), so it's a plain `[vars]`
+# entry; fill it in once that OAuth App exists (may reuse the same app as
+# `githubAuth.ts`'s device flow, per TODO §0).
+[vars]
+SYNCED_SHARE_GITHUB_CLIENT_ID = "REPLACE_AT_ROLLOUT"
+
+# The client secret is NEVER put in this file. Set it once via:
+#   wrangler secret put SYNCED_SHARE_GITHUB_CLIENT_SECRET
+# (binding name must match `CLIENT_SECRET_BINDING` in `src/oauth.rs`.)

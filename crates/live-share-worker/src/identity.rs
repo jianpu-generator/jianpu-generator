@@ -1,11 +1,12 @@
 //! Identity resolution seam for Synced Share ownership.
 //!
-//! Real GitHub OAuth verification (`GithubIdentityProvider`, hashed-token
-//! caching against `oauth_sessions`, retry/backoff) lands in task 6/7 of
-//! `TODO-synced-share-rust-d1-migration.md` §6. This trait is the seam that
-//! work will plug into; `stub` provides the only implementation for now,
-//! and it is explicitly **not secure** -- see its doc comment.
+//! `github::GithubIdentityProvider` (task 6) resolves a real GitHub identity
+//! via `GET /user`, but is not wired into any write path yet -- hashed-token
+//! caching against `oauth_sessions` and the retry/backoff policy that wraps
+//! it are task 7. Every write still goes through `stub::StubIdentityProvider`
+//! until then, which is explicitly **not secure** -- see its doc comment.
 
+pub(crate) mod github;
 pub(crate) mod stub;
 
 use worker::{D1Database, Result};
