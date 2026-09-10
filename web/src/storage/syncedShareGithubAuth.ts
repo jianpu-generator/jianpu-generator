@@ -43,12 +43,30 @@ import { useLocalStorage } from 'usehooks-ts'
 export const SYNCED_SHARE_GITHUB_PKCE_STORAGE_KEY =
   'jianpu:synced-share-github-pkce:v1'
 
-/** Path (relative to the app's own origin) GitHub redirects back to once
+/** Path (relative to the app's own *base path*, not its origin -- see
+ * `syncedShareGithubCallbackPathname` below) GitHub redirects back to once
  * the user approves or denies the request. `SyncedShareGithubCallbackPage`
  * (rendered at this path -- see `main.tsx`) is responsible for completing
  * the flow via `completeSyncedShareGithubSignInFromCallback` below -- this
  * module does not render anything itself. */
 export const SYNCED_SHARE_GITHUB_REDIRECT_PATH = '/synced-share/github-callback'
+
+/** Full pathname (including the app's configured base path) that GitHub
+ * should redirect back to. `import.meta.env.BASE_URL` is Vite's resolved
+ * `base` config (`VITE_BASE_PATH` in `vite.config.ts`) -- `/` on Cloudflare
+ * Pages (served from the domain root) but `/jianpu-generator/` on GitHub
+ * Pages (served under a repo-name subpath, the currently-primary
+ * deployment). Building the redirect URI from `window.location.origin`
+ * alone, as this used to, silently drops that subpath and produces a
+ * `redirect_uri` GitHub Pages has no content at -- this repo has no
+ * SPA-fallback `404.html`, so that would be a genuine 404, not a routing
+ * quirk the app could recover from client-side. */
+export function syncedShareGithubCallbackPathname(): string {
+  const base = import.meta.env.BASE_URL.endsWith('/')
+    ? import.meta.env.BASE_URL
+    : `${import.meta.env.BASE_URL}/`
+  return `${base}${SYNCED_SHARE_GITHUB_REDIRECT_PATH.replace(/^\//, '')}`
+}
 
 /** `localStorage` key holding the persisted Synced Share GitHub sign-in
  * token -- deliberately a different key from `githubAuth.ts`'s
@@ -201,7 +219,7 @@ async function buildSyncedShareGithubAuthorizationUrl(
   const codeChallenge = await oauth.calculatePKCECodeChallenge(codeVerifier)
   const state = oauth.generateRandomState()
   const redirectUri = new URL(
-    SYNCED_SHARE_GITHUB_REDIRECT_PATH,
+    syncedShareGithubCallbackPathname(),
     window.location.origin,
   ).toString()
 

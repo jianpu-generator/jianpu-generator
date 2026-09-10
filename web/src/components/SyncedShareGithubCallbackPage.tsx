@@ -3,7 +3,7 @@ import { completeSyncedShareGithubSignInFromCallback } from '../storage/syncedSh
 
 /**
  * Rendered (by `main.tsx`, based on `window.location.pathname`) at
- * `SYNCED_SHARE_GITHUB_REDIRECT_PATH` -- the page GitHub's popup redirects
+ * `syncedShareGithubCallbackPathname()` -- the page GitHub's popup redirects
  * back to once the user approves or denies the Synced Share sign-in
  * request. Its only job is to run `completeSyncedShareGithubSignInFromCallback`
  * (which exchanges the code, persists the token, and `postMessage`s the

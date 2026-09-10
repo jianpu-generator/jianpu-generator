@@ -718,3 +718,32 @@ listed here as their own follow-up items.
       flagging this as still-undecided. Revisit if a future feature, e.g.
       multi-device sync from the same owner, needs real conflict
       detection.)
+- [x] **Redirect URI dropped the GitHub Pages base path.** Found while
+      preparing to register `crates/live-share-worker`'s OAuth App callback
+      URL: GitHub Pages (the currently-primary deployment, at
+      `https://jianpu-generator.github.io/jianpu-generator/`) serves this
+      app under a `/jianpu-generator/` subpath (`VITE_BASE_PATH` in
+      `.github/workflows/pages.yml`'s `build` job), but
+      `syncedShareGithubAuth.ts`'s `buildSyncedShareGithubAuthorizationUrl`
+      built the redirect URI from `window.location.origin` alone, dropping
+      that subpath -- and `main.tsx`'s pathname check had the same blind
+      spot. Cloudflare Pages (served from the domain root) was unaffected,
+      which is why this wasn't caught by the e2e suite (`wrangler
+      dev`/Playwright serve the app from `/`, matching neither production
+      GitHub Pages base path nor exposing the bug). There is no
+      SPA-fallback `404.html` in this repo, so on GitHub Pages this was a
+      genuine dead-end 404, not a client-side-recoverable routing quirk.
+      Fixed by adding `syncedShareGithubCallbackPathname()` (joins
+      `import.meta.env.BASE_URL` with `SYNCED_SHARE_GITHUB_REDIRECT_PATH`),
+      used by both the redirect-URI builder and `main.tsx`'s check; unit
+      tests in `syncedShareGithubAuth.test.ts` cover both base-path shapes.
+- [ ] **§2's "integration tests against `wrangler dev`" item is still
+      undone.** Confirmed by searching `crates/live-share-worker` for any
+      such test file — none exists. This was called out in §2 as the
+      backstop for D1-vs-SQLite dialect differences the shadow-SQLite
+      compile-time check can't catch (real D1's SQLite dialect vs. the
+      shadow SQLite used by `sqlx::migrate`/`query_file!`-adjacent checks in
+      `build.rs`/`tests/query_syntax.rs`). Not exercised anywhere else
+      either — task 11's Playwright e2e suite runs against `wrangler dev`
+      too, but only through the app's HTTP surface, not as a dedicated
+      integration-test target for this specific dialect-drift concern.
