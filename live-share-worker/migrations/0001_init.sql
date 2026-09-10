@@ -15,7 +15,7 @@ CREATE TABLE users (
 
 CREATE TABLE user_identities (
     provider TEXT NOT NULL,           -- 'github' today; future: others
-    provider_user_id TEXT NOT NULL,   -- TEXT: not every provider's id is numeric
+    provider_user_id TEXT NOT NULL,   -- TEXT: not every provider id is numeric
     user_id TEXT NOT NULL REFERENCES users(id),
     login TEXT,                       -- best-effort cached display name
     linked_at INTEGER NOT NULL,

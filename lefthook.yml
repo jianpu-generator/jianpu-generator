@@ -49,6 +49,25 @@ pre-commit:
             glob: "{src/**,crates/jianpu-wasm/src/**,tests/**}"
             run: cargo run -p dead-pub-check --quiet
 
+          - name: sqruff
+            # Scoped to the Synced Share (Rust + D1) migration/query SQL —
+            # see .sqruff for the config (SQLite dialect) and why LT01/LT02
+            # are excluded. `crates/live-share-worker/queries/` doesn't
+            # exist yet (lands in a later task); the glob just pre-covers
+            # where those files will go.
+            glob: "{live-share-worker/migrations/**/*.sql,crates/live-share-worker/queries/**/*.sql}"
+            # Lint-only, not `sqruff fix`: fix reflows this SQL's
+            # intentionally column-aligned trailing comments (see .sqruff).
+            # `sqruff` is installed via `cargo install sqruff --locked
+            # --version 0.29.3` (see AGENTS.md); skip with a clear message
+            # rather than failing the commit if it isn't on PATH.
+            run: |
+              if ! command -v sqruff >/dev/null 2>&1; then
+                echo "sqruff not installed, skipping SQL lint (cargo install sqruff --locked --version 0.29.3)"
+                exit 0
+              fi
+              sqruff lint {staged_files}
+
           - name: syntax-md-examples
             glob: "{syntax.md,src/parser/**,src/desugar.rs}"
             run: python3 scripts/check-syntax-md-examples.py

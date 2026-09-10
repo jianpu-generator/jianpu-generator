@@ -130,7 +130,7 @@ off in both places.
 - [x] **2. Rust crate scaffold** — new `live-share-worker` crate,
       `wasm32-unknown-unknown` target, `worker` + `sqlx` deps, shadow-SQLite
       build step (§2). Scope: `live-share-worker`. Depends on: 1.
-- [ ] **3. `sqruff` pre-commit** — lint/format gate scoped to `queries/` and
+- [x] **3. `sqruff` pre-commit** — lint/format gate scoped to `queries/` and
       migration `.sql` files (§3). Scope: `lint`. Depends on: 1.
 - [ ] **4. Port worker logic to Rust** — `resolveRole`/`doc`/`index`/
       `protocol` against the new schema, with identity resolution stubbed
@@ -277,15 +277,35 @@ banner).
 
 ## 3. Set up `sqruff` in pre-commit
 
-- [ ] Add `sqruff` (Rust-native SQL linter/formatter) as a pre-commit step
+- [x] Add `sqruff` (Rust-native SQL linter/formatter) as a pre-commit step
       in the lefthook config, scoped to the new `queries/`/migrations `.sql`
-      files.
-- [ ] Spot-check `sqruff`'s SQLite dialect handling against the actual query
+      files. Installed via `cargo install sqruff --locked --version 0.29.3`
+      (documented in `AGENTS.md`) — pinned because 0.34.1 fails to compile
+      from crates.io (a `PathBuf == str` type error in `sqruff-cli-lib`)
+      and newer releases need a rustc ahead of this repo's; the lefthook
+      job (`sqruff` in the parallel validation group) skips with a message
+      instead of failing the commit if the binary isn't on `PATH`. Config
+      lives in `.sqruff` at repo root, dialect `sqlite`, with `LT01`/`LT02`
+      excluded and a comment explaining why (they fight this repo's
+      intentional no-space-before-paren and column-aligned trailing
+      comment conventions, not SQLite dialect issues). Runs `sqruff lint`
+      only, not `fix` — `fix` reflows the aligned trailing comments in
+      `0001_init.sql` in a way not worth auto-applying on every commit.
+- [x] Spot-check `sqruff`'s SQLite dialect handling against the actual query
       files before relying on it as a gate (flagged earlier as newer/less
-      battle-tested than `sqlfluff`).
-- [ ] Confirm ordering: per project convention, keep this fast enough to
+      battle-tested than `sqlfluff`). Ran `sqruff lint`/`fix` directly
+      against `live-share-worker/migrations/0001_init.sql`: it parses
+      standard SQLite `CREATE TABLE`/`CREATE INDEX` syntax with no
+      dialect-related false positives; all findings were generic style
+      rules (indent, spacing, line length), not dialect bugs. Shortened one
+      over-80-char comment line in that file to satisfy `LT05`.
+- [x] Confirm ordering: per project convention, keep this fast enough to
       run before/alongside the fast checks, not mixed into the slow e2e
-      stage ([[feedback_lefthook_e2e_ordering]]).
+      stage ([[feedback_lefthook_e2e_ordering]]). Added as `sqruff` in the
+      existing `parallel: true` fast-validation group in `lefthook.yml`
+      (alongside `dead-pub-check` etc.), scoped by `glob` to just the SQL
+      paths so it's a no-op on unrelated commits — not mixed into the
+      `e2e-tests` stage.
 
 ## 4. Migrate TS worker logic to Rust
 
