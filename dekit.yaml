@@ -1,0 +1,23 @@
+# Local dev process runner (dekit: https://github.com/pvolok/dekit, run in
+# its mprocs-compat mode -- its own config format isn't finalized yet).
+# Run with: dekit  (or: mprocs -c dekit.yaml, since it's mprocs-compatible)
+#
+# Starts both halves of local dev needed to test "Sign in with GitHub"
+# against the real GitHub OAuth App:
+# - worker: `wrangler dev` for crates/live-share-worker, real GitHub OAuth
+#   creds sourced from that crate's gitignored .env.local (fill in
+#   SYNCED_SHARE_GITHUB_CLIENT_SECRET there first).
+# - web: the Vite dev server, pointed at the local worker via
+#   web/.env.local's VITE_SYNCED_SHARE_HOST=localhost:8787.
+procs:
+  worker:
+    cwd: crates/live-share-worker
+    shell: >
+      set -a && . ./.env.local && set +a &&
+      npx wrangler d1 migrations apply DB --local &&
+      npx wrangler dev --local-protocol https --port 8787
+      --var SYNCED_SHARE_GITHUB_CLIENT_ID:Ov23li8p4uHEd5uQOjkn
+      --var SYNCED_SHARE_GITHUB_CLIENT_SECRET:$SYNCED_SHARE_GITHUB_CLIENT_SECRET
+  web:
+    cwd: web
+    shell: pnpm dev

@@ -1,0 +1,5 @@
+# Real local-dev secret for testing "Sign in with GitHub" against the real
+# GitHub OAuth App (as opposed to the mocked e2e flow, which uses the
+# committed `.dev.vars`'s fake e2e-test-client-secret). Never commit real
+# secrets here -- see dekit.yaml at the repo root for how this is sourced.
+.env.local
