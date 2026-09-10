@@ -125,15 +125,7 @@
   height: 0.85em;
 }
 
-.synced-share-signin-anchor {
-  position: relative;
-  display: inline-flex;
-}
-
 .synced-share-signin-prompt {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
   max-width: 15rem;
   gap: 0.4rem;
   padding: 0.6rem;

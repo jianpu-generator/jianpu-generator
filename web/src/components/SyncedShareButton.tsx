@@ -4,8 +4,9 @@ import {
   Link2Icon,
   UpdateIcon,
 } from '@radix-ui/react-icons'
+import * as Popover from '@radix-ui/react-popover'
 import * as Toast from '@radix-ui/react-toast'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { SyncedShareGithubAuthResult } from '../storage/syncedShareGithubAuth'
 import { ResponsiveMenu } from './ResponsiveMenu'
 
@@ -53,33 +54,6 @@ export function SyncedShareButton({
   const [signInStatus, setSignInStatus] = useState<SignInPromptStatus>({
     kind: 'idle',
   })
-  const signInPromptRef = useRef<HTMLDivElement>(null)
-
-  // Closes the sign-in prompt on an outside click/Escape, mirroring the
-  // dismiss behavior Radix's `DropdownMenu` gives the "Synced" state's own
-  // menu for free -- this popover is a plain positioned `div` (not a
-  // `DropdownMenu`) since only `@radix-ui/react-popover`'s `Anchor`
-  // supports positioning content next to an element that itself keeps a
-  // plain, always-live `onClick` (a `DropdownMenu.Trigger`'s `onClick`
-  // would be swallowed while the menu is closed), and that package isn't a
-  // dependency of this project.
-  useEffect(() => {
-    if (!signInPromptOpen) return
-    function handlePointerDown(event: PointerEvent) {
-      if (!signInPromptRef.current?.contains(event.target as Node)) {
-        setSignInPromptOpen(false)
-      }
-    }
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setSignInPromptOpen(false)
-    }
-    document.addEventListener('pointerdown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [signInPromptOpen])
 
   const copyUrl = useCallback(async (url: string) => {
     try {
@@ -194,28 +168,34 @@ export function SyncedShareButton({
         // Not a `ResponsiveMenu`/`DropdownMenu.Trigger` (which opens on
         // `pointerdown`, unconditionally, per the comment on the "Synced"
         // branch above) -- the click must go straight to `handleSyncClick`
-        // so the GitHub-connected case can start a share directly. The
-        // sign-in prompt below is a plain positioned `div`, closed on an
-        // outside click/Escape (see the effect above), rather than a
-        // Radix primitive that supports anchoring next to an element with
-        // its own live `onClick`.
-        <div className="synced-share-signin-anchor" ref={signInPromptRef}>
-          <button
-            type="button"
-            className={className}
-            data-testid="synced-share-button"
-            aria-label="Sync"
-            title="Anyone with this link can view your latest saved score after reloading. Don't share it publicly."
-            onClick={handleSyncClick}
-          >
-            <UpdateIcon aria-hidden="true" />
-            Sync
-          </button>
-          {signInPromptOpen && (
-            <div
+        // so the GitHub-connected case can start a share directly. Radix's
+        // `Popover.Anchor` is used purely for positioning here (it renders
+        // no DOM of its own beyond `asChild`, and never intercepts the
+        // button's own `onClick`) while `Popover.Content` still portals to
+        // `document.body` -- unlike a plain positioned `div`, that escapes
+        // `.app-header`'s `overflow-y: hidden` instead of being clipped by
+        // it when the header wraps to a second row.
+        <Popover.Root open={signInPromptOpen} onOpenChange={setSignInPromptOpen}>
+          <Popover.Anchor asChild>
+            <button
+              type="button"
+              className={className}
+              data-testid="synced-share-button"
+              aria-label="Sync"
+              title="Anyone with this link can view your latest saved score after reloading. Don't share it publicly."
+              onClick={handleSyncClick}
+            >
+              <UpdateIcon aria-hidden="true" />
+              Sync
+            </button>
+          </Popover.Anchor>
+          <Popover.Portal>
+            <Popover.Content
               className="export-menu-list synced-share-signin-prompt"
               data-testid="synced-share-signin-prompt"
-              role="dialog"
+              align="end"
+              sideOffset={4}
+              onOpenAutoFocus={(event) => event.preventDefault()}
             >
               {signInStatus.kind === 'done' ? (
                 <p>
@@ -247,9 +227,9 @@ export function SyncedShareButton({
                   </button>
                 </>
               )}
-            </div>
-          )}
-        </div>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
       )}
       <Toast.Provider swipeDirection="right" duration={3000}>
         <Toast.Root
