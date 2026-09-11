@@ -16,6 +16,7 @@ import type {
   SyncedStopRequest,
   SyncedUpdateRequest,
 } from '../syncedShare/protocol'
+import { syncedShareWorkerOrigin } from '../syncedShare/workerUrl'
 import { buildSyncedShareUrl } from '../syncedShareUrl'
 import { AUTOSAVE_DEBOUNCE_MS } from './useStorageBackend'
 
@@ -57,11 +58,11 @@ function writeStoredShareId(fileId: string, shareId: string): void {
 }
 
 function syncedShareEndpointUrl(host: string, shareId: string): string {
-  return `https://${host}/shares/${shareId}`
+  return `${syncedShareWorkerOrigin(host)}/shares/${shareId}`
 }
 
 function createShareEndpointUrl(host: string): string {
-  return `https://${host}/shares`
+  return `${syncedShareWorkerOrigin(host)}/shares`
 }
 
 export interface UseSyncedShareOwnerResult {
