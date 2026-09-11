@@ -25,7 +25,7 @@ procs:
       set -a && . ./.env.local && set +a &&
       npx wrangler d1 migrations apply DB --local &&
       npx wrangler dev --port 8787
-      --var SYNCED_SHARE_GITHUB_CLIENT_ID:Ov23li8p4uHEd5uQOjkn
+      --var SYNCED_SHARE_GITHUB_CLIENT_ID:Ov23liFN0gIJmZ2VREGm
       --var SYNCED_SHARE_GITHUB_CLIENT_SECRET:$SYNCED_SHARE_GITHUB_CLIENT_SECRET
   web:
     cwd: web

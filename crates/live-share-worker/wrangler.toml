@@ -59,10 +59,14 @@ migrations_dir = "../../live-share-worker/migrations"
 # an authorization code for a token. The client id is not secret (the
 # browser already sends the same one to build the authorization URL, see
 # `web/src/storage/syncedShareGithubAuth.ts`), so it's a plain `[vars]`
-# entry; fill it in once that OAuth App exists (may reuse the same app as
-# `githubAuth.ts`'s device flow, per TODO §0).
+# entry. This is its own registered OAuth App, separate from
+# `githubAuth.ts`'s storage-backend app -- §0 originally allowed reusing that
+# app's client id, but doing so leaked the storage app's full `repo` grant
+# onto this identity-only sign-in's consent screen (GitHub grants scope per
+# app per user, not per request), so §0 was revised to require full
+# isolation.
 [vars]
-SYNCED_SHARE_GITHUB_CLIENT_ID = "REPLACE_AT_ROLLOUT"
+SYNCED_SHARE_GITHUB_CLIENT_ID = "Ov23liFN0gIJmZ2VREGm"
 
 # The client secret is NEVER put in this file. Set it once via:
 #   wrangler secret put SYNCED_SHARE_GITHUB_CLIENT_SECRET

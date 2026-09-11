@@ -13,9 +13,17 @@ import { syncedShareWorkerOrigin } from '../syncedShare/workerUrl'
  * this connection's token on a write must never imply Contents API access,
  * and vice versa.
  *
- * Per that same decision, this can reuse the *same registered GitHub OAuth
- * App* (`client_id`) as `githubAuth.ts` -- only the requested `scope` (none,
- * here) and the flow (redirect + PKCE, not device flow) differ.
+ * Per that same decision, this originally reused the *same registered
+ * GitHub OAuth App* (`client_id`) as `githubAuth.ts`, differing only in the
+ * requested `scope` (none, here) and the flow (redirect + PKCE, not device
+ * flow). That was revised: GitHub grants OAuth App scope per app per user,
+ * not per individual authorization request, so sharing a `client_id` meant
+ * this identity-only sign-in's consent (and later reauthorization) screen
+ * surfaced the storage app's full existing `repo` grant as "existing
+ * access" once a user had ever connected the storage backend -- exactly the
+ * broad-scope over-ask this dedicated connection exists to avoid. This now
+ * uses its own separate registered OAuth App and `client_id`
+ * (`VITE_SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID`), giving it full isolation.
  *
  * This module now covers the whole flow (task 8): opening the authorization
  * request as a **popup** (not a full-page redirect, per the mockup's "OAuth
@@ -252,8 +260,8 @@ async function buildSyncedShareGithubAuthorizationUrl(
 
 export interface OpenSyncedShareGithubSignInPopupOptions {
   /** The Synced Share GitHub OAuth App's client id (public, not secret --
-   * reused from the same registered app as `githubAuth.ts`'s device flow,
-   * per §0). */
+   * its own dedicated, registered app, separate from `githubAuth.ts`'s
+   * storage-backend device flow, per §0). */
   clientId: string
 }
 

@@ -56,12 +56,18 @@ simply be recreated after cutover if lost. Share links will look different
       necessary. Instead: a **dedicated, minimally-scoped "sign in with
       GitHub" connection** used only for identity verification (no more
       scope than `GET /user` needs), independent of whether the user ever
-      connects the storage backend. Implementation-wise this can reuse the
-      *same registered GitHub OAuth App* (`client_id`), just requesting a
-      different, minimal `scope` for this flow and storing its token
-      separately from the storage-backend token — a second registered app
-      is not required unless full isolation (independent rate limits/
-      revocation) is later wanted.
+      connects the storage backend. Originally implemented by reusing the
+      *same registered GitHub OAuth App* (`client_id`) as the storage
+      backend, requesting a different, minimal `scope` and storing its token
+      separately. **Revised**: this leaked the storage app's full `repo`
+      grant onto the sign-in's consent/reauthorization screen, because
+      GitHub grants OAuth App scope per app per user, not per request — a
+      user who'd ever connected the storage backend saw "Full control of
+      private repositories" as "existing access" on what was supposed to be
+      an identity-only sign-in. Now uses a **second, separate registered
+      GitHub OAuth App**, giving full isolation (independent client id,
+      rate limits, revocation) as originally flagged as the fallback if this
+      exact problem showed up.
 - [x] **This new sign-in uses standard authorization-code + PKCE
       (redirect-based), not device flow** — decided over reusing the
       existing `@octokit/auth-oauth-device` pattern because sign-in is now

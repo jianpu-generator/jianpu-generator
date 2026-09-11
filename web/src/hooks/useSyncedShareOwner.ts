@@ -19,12 +19,16 @@ import type {
 import { buildSyncedShareUrl } from '../syncedShareUrl'
 import { AUTOSAVE_DEBOUNCE_MS } from './useStorageBackend'
 
-/** Public Synced Share GitHub OAuth App client id -- reused from the same
- * registered app as `githubAuth.ts`'s device flow (per §0), only the
- * requested scope and flow differ. Not a secret: it's visible in every
- * authorization request the browser sends. */
+/** Public Synced Share GitHub OAuth App client id -- a dedicated app,
+ * separate from `githubAuth.ts`'s storage-backend device flow. Originally
+ * this reused that same app's client id (per §0), but doing so meant
+ * GitHub's consent screen for this identity-only sign-in surfaced the
+ * storage app's full existing `repo` grant as "existing access", defeating
+ * the point of keeping this connection minimally-scoped -- so §0 was
+ * revised to require full isolation (a second registered app). Not a
+ * secret: it's visible in every authorization request the browser sends. */
 const SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID =
-  import.meta.env.VITE_GITHUB_OAUTH_CLIENT_ID ?? ''
+  import.meta.env.VITE_SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID ?? ''
 
 function activeFlagKey(fileId: string): string {
   return `jianpu:synced-share-active:v1:${fileId}`
