@@ -1,0 +1,73 @@
+# Wrangler config for the Rust rewrite of the Synced Share worker (see
+# `TODO-synced-share-rust-d1-migration.md`, task 5). `.github/workflows/
+# live-share-worker.yml` deploys this on every push to master touching
+# `crates/live-share-worker/**`. The old TypeScript worker's source
+# (`live-share-worker/`) was already deleted (task 11); its Cloudflare-side
+# deployment (`jianpu-live`) is still running, source-orphaned, until it's
+# explicitly decommissioned (see TODO §7 bullet 4/§8).
+#
+# `name` deliberately does NOT reuse the old worker's name (`jianpu-live`)
+# — decided (§8) to keep them as distinct Workers so deploying this one
+# never silently overwrites the still-running old one. Decommissioning the
+# old worker stays a separate, explicit step. `web/.env`, `web/.env.local`,
+# and `.github/workflows/pages.yml`'s `VITE_SYNCED_SHARE_HOST` point at
+# this worker's real `*.workers.dev` hostname built from this name.
+name = "jianpu-live-share-worker-rs"
+
+# `worker-build`'s default output layout: a `build/` dir at this file's
+# location (i.e. `crates/live-share-worker/build/`) containing a JS shim
+# entry point plus the compiled `.wasm` module, per the `worker` crate
+# 0.8 README's "Getting Started" / D1 sections and `worker-build`'s own
+# conventions (see `cargo generate cloudflare/workers-rs` templates).
+main = "build/worker/shim.mjs"
+
+compatibility_date = "2024-09-23"
+
+[build]
+# `worker-build` (crates.io: `worker-build`) is Cloudflare's build tool that
+# compiles a `workers-rs` crate to the wasm bundle wrangler expects; not
+# vendored as a Cargo dependency, so `cargo install`-ing it here keeps this
+# self-contained the same way the old TS worker's `wrangler dev`/`deploy`
+# scripts are self-contained. See AGENTS.md's "Local tooling" section for
+# the same tool documented for local development, and the `sqruff` job in
+# `lefthook.yml` for the precedent this follows (gracefully skip if a
+# cargo-installable external tool isn't on `PATH`, rather than failing).
+command = "cargo install worker-build && worker-build --release"
+
+# D1 binding. Name ("DB") must match `D1_BINDING` in
+# `src/handlers.rs` (`ctx.d1(D1_BINDING)?`) -- do not rename one without the
+# other.
+[[d1_databases]]
+binding = "DB"
+database_name = "jianpu-live-share"
+# Created in task 12/§7 ("Rollout") via:
+#   wrangler d1 create jianpu-live-share --location apac
+# (region: APAC -- closest available location hint to Kuala Lumpur; D1
+# location hints are broad regions, not city-level, so users far from APAC
+# will see extra round-trip latency on writes -- accepted per §7, not a
+# launch blocker given this project's actual user base).
+database_id = "2761bae0-e553-47e8-af04-6e4a12aab1fa"
+# Points `wrangler d1 migrations apply`/`wrangler dev`'s local D1 emulation
+# at the shared migration source (see `build.rs`'s doc comment for why the
+# schema lives at this path, a sibling of `crates/`, rather than under this
+# crate) -- used by e2e (task 11, `web/playwright.config.ts`) to seed the
+# local D1 database before `wrangler dev` starts.
+migrations_dir = "../../live-share-worker/migrations"
+
+# `POST /auth/github/callback` (`src/oauth.rs`, task 6) needs the dedicated
+# Synced Share sign-in GitHub OAuth App's client id and secret to exchange
+# an authorization code for a token. The client id is not secret (the
+# browser already sends the same one to build the authorization URL, see
+# `web/src/storage/syncedShareGithubAuth.ts`), so it's a plain `[vars]`
+# entry. This is its own registered OAuth App, separate from
+# `githubAuth.ts`'s storage-backend app -- §0 originally allowed reusing that
+# app's client id, but doing so leaked the storage app's full `repo` grant
+# onto this identity-only sign-in's consent screen (GitHub grants scope per
+# app per user, not per request), so §0 was revised to require full
+# isolation.
+[vars]
+SYNCED_SHARE_GITHUB_CLIENT_ID = "Ov23liFN0gIJmZ2VREGm"
+
+# The client secret is NEVER put in this file. Set it once via:
+#   wrangler secret put SYNCED_SHARE_GITHUB_CLIENT_SECRET
+# (binding name must match `CLIENT_SECRET_BINDING` in `src/oauth.rs`.)

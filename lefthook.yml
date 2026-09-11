@@ -49,6 +49,46 @@ pre-commit:
             glob: "{src/**,crates/jianpu-wasm/src/**,tests/**}"
             run: cargo run -p dead-pub-check --quiet
 
+          - name: sqruff
+            # Scoped to the Synced Share (Rust + D1) migration/query SQL —
+            # see .sqruff for the config (SQLite dialect) and why LT01/LT02
+            # are excluded. `crates/live-share-worker/queries/` doesn't
+            # exist yet (lands in a later task); the glob just pre-covers
+            # where those files will go.
+            glob: "{live-share-worker/migrations/**/*.sql,crates/live-share-worker/queries/**/*.sql}"
+            # Lint-only, not `sqruff fix`: fix reflows this SQL's
+            # intentionally column-aligned trailing comments (see .sqruff).
+            # `sqruff` is installed via `cargo install sqruff --locked
+            # --version 0.29.3` (see AGENTS.md); skip with a clear message
+            # rather than failing the commit if it isn't on PATH.
+            run: |
+              if ! command -v sqruff >/dev/null 2>&1; then
+                echo "sqruff not installed, skipping SQL lint (cargo install sqruff --locked --version 0.29.3)"
+                exit 0
+              fi
+              sqruff lint {staged_files}
+
+          - name: live-share-worker-wasm-check
+            # Confirms the Rust Synced Share worker (`crates/live-share-worker`,
+            # see `TODO-synced-share-rust-d1-migration.md` task 5) still
+            # compiles for the actual Workers target. Scoped to that crate
+            # so it's a no-op on unrelated commits. Deliberately just
+            # `cargo check`, not the full `worker-build` bundle build:
+            # `worker-build` runs a full wasm-pack-style build+bindgen
+            # pipeline (and needs a separate cargo-installable tool, see
+            # AGENTS.md) that's too slow for this fast parallel group
+            # ([[feedback_lefthook_e2e_ordering]] — keep fast checks fast);
+            # a real `worker-build` bundle verification is left as future
+            # work for a CI workflow once actual deployment is being wired
+            # (task 11/12), not built here.
+            glob: "crates/live-share-worker/**"
+            run: |
+              if ! rustup target list --installed 2>/dev/null | grep -q wasm32-unknown-unknown; then
+                echo "wasm32-unknown-unknown target not installed, skipping (rustup target add wasm32-unknown-unknown)"
+                exit 0
+              fi
+              cargo check --target wasm32-unknown-unknown -p live-share-worker
+
           - name: syntax-md-examples
             glob: "{syntax.md,src/parser/**,src/desugar.rs}"
             run: python3 scripts/check-syntax-md-examples.py

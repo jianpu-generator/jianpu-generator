@@ -24,6 +24,10 @@ AfterScenario(async () => {
     await state.viewerContext.close()
     state.viewerContext = undefined
   }
+  if (state.lateViewerContext) {
+    await state.lateViewerContext.close()
+    state.lateViewerContext = undefined
+  }
 })
 
 Given('clipboard permissions are granted', async ({ context }) => {
@@ -32,6 +36,7 @@ Given('clipboard permissions are granted', async ({ context }) => {
   state.viewerPage = undefined
   state.lateViewerPage = undefined
   state.viewerContext = undefined
+  state.lateViewerContext = undefined
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
 })
 
@@ -112,6 +117,28 @@ Given('local storage is cleared', async ({ page }) => {
   })
 })
 
+// Pre-seeds a signed-in Synced Share GitHub connection (bypassing the real
+// popup OAuth round trip -- that flow has its own dedicated coverage in
+// synced-share-github-signin.feature) so "Sync" starts a share directly via
+// the new `POST /shares` create-share flow (task 11), matching how these
+// scenarios behaved before GitHub sign-in was required. Must be registered
+// (via `addInitScript`) after any "local storage is cleared" step in the
+// same scenario -- see this feature file's own Background comment.
+Given(
+  'the owner is signed in with GitHub as {string}',
+  async ({ page }, login: string) => {
+    await page.addInitScript(
+      ({ login }: { login: string }) => {
+        localStorage.setItem(
+          'jianpu:synced-share-github-auth:v1',
+          JSON.stringify({ token: 'e2e-fake-synced-share-token', login }),
+        )
+      },
+      { login },
+    )
+  },
+)
+
 When(
   'the owner loads the app and clicks {string}',
   async ({ page }, label: string) => {
@@ -133,10 +160,14 @@ Then('a sync-link-copied toast is shown', async ({ page }) => {
 
 When(
   'a viewer opens the copied sync link in a new page',
-  async ({ context }) => {
+  async ({ browser }) => {
     if (!state.syncedShareLink)
       throw new Error('syncedShareLink was not captured yet')
-    state.viewerPage = await context.newPage()
+    // An isolated browser context, not `context.newPage()` -- see the
+    // `viewerContext` field's own comment in `synced-share-button-state.ts`
+    // for why sharing the owner's localStorage would be wrong here.
+    state.viewerContext = await browser.newContext()
+    state.viewerPage = await state.viewerContext.newPage()
     await state.viewerPage.goto(state.syncedShareLink)
 
     // No edit was made on the owner's side — the share's initial doc must
@@ -248,12 +279,15 @@ Then(
 
 When(
   'a late viewer opens the copied sync link in a new page',
-  async ({ context }) => {
+  async ({ browser }) => {
     if (!state.syncedShareLink)
       throw new Error('syncedShareLink was not captured yet')
     // A fresh viewer opening the same link after the stop must not see the
-    // score either — the link doesn't quietly stay viewable forever.
-    state.lateViewerPage = await context.newPage()
+    // score either — the link doesn't quietly stay viewable forever. An
+    // isolated browser context, not `context.newPage()` -- see
+    // `viewerContext`'s comment in `synced-share-button-state.ts`.
+    state.lateViewerContext = await browser.newContext()
+    state.lateViewerPage = await state.lateViewerContext.newPage()
     await state.lateViewerPage.goto(state.syncedShareLink)
   },
 )

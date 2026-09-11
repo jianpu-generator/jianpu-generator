@@ -52,10 +52,13 @@ Then("the viewer's file switcher shows the synced filename", async () => {
 
 When(
   'a viewer opens the copied sync link in a new page and waits for measures to render',
-  async ({ context }) => {
+  async ({ browser }) => {
     if (!state.syncedShareLink)
       throw new Error('syncedShareLink was not captured yet')
-    state.viewerPage = await context.newPage()
+    // An isolated browser context, not `context.newPage()` -- see
+    // `viewerContext`'s comment in `synced-share-button-state.ts`.
+    state.viewerContext = await browser.newContext()
+    state.viewerPage = await state.viewerContext.newPage()
     await state.viewerPage.goto(state.syncedShareLink)
     await state.viewerPage.waitForSelector(
       '[data-tag="measure"][data-measure-index="2"]',

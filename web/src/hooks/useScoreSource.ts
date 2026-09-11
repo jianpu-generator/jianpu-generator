@@ -50,6 +50,7 @@ export function useScoreSource(
   const {
     syncedShareViewerPreview,
     syncedShareViewerStatus,
+    syncedShareViewerOwnerLogin,
     handleImportSyncedShare,
   } = useSyncedShareViewer(
     setEditorCollapsed,
@@ -86,11 +87,18 @@ export function useScoreSource(
       viewerActive: syncedShareViewerActive,
       viewerStatus: syncedShareViewerStatus,
       viewerFilename: syncedShareViewerPreview?.filename ?? null,
+      viewerOwnerLogin: syncedShareViewerOwnerLogin,
       onImportSyncedShare: handleImportSyncedShare,
       isSynced: syncedShareOwner.isSynced,
       syncedShareLink: syncedShareOwner.syncedShareLink,
+      isGithubConnected: syncedShareOwner.isGithubConnected,
+      githubLogin: syncedShareOwner.githubLogin,
       onStartSync: syncedShareOwner.startSync,
       onStopSync: syncedShareOwner.stopSync,
+      onSignInWithGithub: syncedShareOwner.signInWithGithub,
+      onDisconnectGithub: syncedShareOwner.disconnectGithub,
+      syncFailure: syncedShareOwner.syncFailure,
+      onDismissSyncFailure: syncedShareOwner.dismissSyncFailure,
     },
   }
 }

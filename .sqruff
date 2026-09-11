@@ -1,0 +1,29 @@
+[sqruff]
+# Synced Share (Rust + D1) SQL lint/format config. Scoped by lefthook.yml's
+# `sqruff` job glob to:
+#   - live-share-worker/migrations/**/*.sql   (task 1 schema migrations)
+#   - crates/live-share-worker/queries/**/*.sql  (task 4+ per-query .sql
+#     files; directory does not exist yet as of this commit)
+#
+# D1 is SQLite-based, so lint against the sqlite dialect specifically (see
+# TODO-synced-share-rust-d1-migration.md §0/§3 — sqruff's SQLite dialect
+# support is newer/less battle-tested than sqlfluff's, so this was spot
+# checked against the real live-share-worker/migrations/0001_init.sql file
+# before being relied on as a gate: it parses standard SQLite
+# CREATE TABLE/CREATE INDEX syntax without any false-positive dialect
+# errors).
+dialect = sqlite
+
+# LT01 (layout.spacing) and LT02 (layout.indent) are excluded, not because
+# they're SQLite-dialect false positives, but because they actively fight
+# two formatting conventions this codebase's SQL already uses on purpose:
+#   - LT01 wants a space before "(" in things like `REFERENCES users(id)`
+#     and `CREATE INDEX ... ON t(col)`; this repo writes those tight
+#     (no space), which is a common, unambiguous SQL style.
+#   - LT02 wants trailing column comments reflowed onto their own line
+#     above the column, which breaks this migration's intentionally
+#     column-aligned trailing comments (see 0001_init.sql). `sqruff fix`
+#     with these rules enabled rewrites that alignment away, which is why
+#     this job runs lint-only (not fix) in lefthook.yml.
+# All other default rules stay enabled.
+exclude_rules = LT01, LT02

@@ -15,6 +15,8 @@ import {
 import './App.css'
 import './file-switcher.css'
 import './preview.css'
+import './preview-toolbar.css'
+import './preview-play-controls.css'
 
 export default function App() {
   const {

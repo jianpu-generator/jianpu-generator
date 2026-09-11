@@ -59,7 +59,17 @@ export interface SyncedShareButtonState {
   originalSyncedLink: string | undefined
   viewerPage: Page | undefined
   lateViewerPage: Page | undefined
+  // Isolated browser contexts (not `context.newPage()`) for the viewer/late
+  // viewer -- a real viewer is a different browser that doesn't share the
+  // owner's localStorage. Sharing the owner's context would make the
+  // viewer page's own `useSyncedShareOwner` instance (rendered regardless
+  // of viewer/owner role, since it's keyed off the shared local file store)
+  // see the same "this file is actively synced" flag and immediately
+  // re-push whatever the local file store currently holds on its own
+  // mount/reload -- bypassing the owner's autosave debounce entirely and
+  // making "does not push until the debounce fires" unTestable.
   viewerContext: BrowserContext | undefined
+  lateViewerContext: BrowserContext | undefined
 }
 
 export const syncedShareButtonState: SyncedShareButtonState = {
@@ -68,4 +78,5 @@ export const syncedShareButtonState: SyncedShareButtonState = {
   viewerPage: undefined,
   lateViewerPage: undefined,
   viewerContext: undefined,
+  lateViewerContext: undefined,
 }

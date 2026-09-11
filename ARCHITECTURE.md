@@ -307,3 +307,243 @@ a runtime `JsValue`/`any` surprise.
 The worker (`web/src/worker/jianpu.worker.ts`) gates its `render`/`renderWithHighlightRange` handlers on `ensureCoreFontsApplied()`, which awaits both wasm init and the SC+mono font bytes (resolved from the `loadPdfFonts` message the app already sends at boot — see `web/src/hooks/useFontsLoader.ts`) before calling `set_layout_fonts`; other handlers that don't reach the layout/render chain (`listParts`, `updatePartDeclaration`, `listMeasureSpans`, export handlers) aren't gated on it.
 
 Worker messages: `listParts` → `{ parts, declarations }`; `updatePartDeclaration` → `{ source, declarations }` (hook updates `partDeclarations` immediately, without waiting for the debounced re-render); `importFromFile { bytes, kind: 'svg' | 'pdf' }` → `importOk { source }` / `importErr` (`web/src/worker/importMessageHandlers.ts` calls `extract_source_from_svg`/`extract_source_from_pdf`; `useJianpuWorkerImport.ts`'s `importFromFile(file: File) -> Promise<string>` is the promise-based wrapper `App.tsx`'s Import button uses, resolved/rejected from `useJianpuWorkerMessageHandler.ts`'s `pendingImportsRef` map keyed by request id, mirroring `updatePartDeclaration`'s pending-map pattern).
+
+## Synced Share worker (`crates/live-share-worker`)
+
+A separate Cloudflare Worker, not part of the `web/` build or the
+`jianpu-wasm` component boundary above — it's a small standalone HTTP
+backend the web app's Synced Share feature calls cross-origin. The old
+TypeScript, KV-backed worker (formerly the top-level `live-share-worker/`
+directory, `src/{resolveRole,doc,index,protocol}.ts`, deployed as
+`jianpu-live`) and its anonymous device-secret ownership scheme
+(`getOrCreateDeviceSecret`/`deriveSyncedShareIdentity`) have been retired
+(`TODO-synced-share-rust-d1-migration.md` task 11) — that source is deleted,
+not kept as reference. The real D1 database (`jianpu-live-share`, region
+APAC) exists and is migrated as of task 12 (`crates/live-share-worker/wrangler.toml`'s
+`database_id`), and a deploy pipeline now exists to ship it
+(`.github/workflows/live-share-worker.yml` — builds with `worker-build`,
+applies D1 migrations, then `wrangler deploy`, on every push to `master`
+touching `crates/live-share-worker/**`/`live-share-worker/migrations/**`) —
+but the Rust worker itself has not yet had a first deploy run, since that
+pipeline's GitHub sign-in still depends on the Synced Share GitHub OAuth
+App's client id/secret (`wrangler.toml`'s `SYNCED_SHARE_GITHUB_CLIENT_ID` is
+still a placeholder), see the TODO's §7 for the remaining manual step. The
+top-level `live-share-worker/` directory now holds only the shared D1 schema
+migrations (see "Storage" below), nothing else.
+
+- Crate: `crates/live-share-worker` (target `wasm32-unknown-unknown`,
+  built as a `worker`-crate Cloudflare Worker). Entry point: `#[event(fetch)]
+  async fn fetch` in `src/lib.rs` — applies CORS (`Access-Control-Allow-*`,
+  via the `worker` crate's `Cors` builder) and the `OPTIONS` preflight
+  response uniformly around whatever `handlers::router()` (a `worker::Router`
+  routing `GET /shares/:share_id`, `POST /shares/:share_id`, `POST /shares`,
+  `POST /auth/github/callback`) returns.
+- Storage: D1 (SQLite), not the old KV namespace. Schema in
+  `live-share-worker/migrations/0001_init.sql` (shared, as plain `.sql`,
+  between real D1 migrations and a local shadow SQLite database
+  `crates/live-share-worker/build.rs` builds at build time for query
+  checking — see below). Tables: `docs` (one row per share: `share_id`,
+  `owner_user_id`, `filename`, `content`, `revision`, `ended`,
+  `created_at`, `updated_at`), `users` (`id`, `created_at`),
+  `user_identities` (`provider`, `provider_user_id`, `user_id`, `login`,
+  `linked_at` — provider-agnostic, so a future non-GitHub identity
+  provider can link into the same `users` table), and `oauth_sessions`
+  (`token_hash`, `provider`, `provider_user_id`, `verified_at` — the
+  hashed-token verification cache described in "Verification cache + retry
+  policy" below).
+- Key types: `doc::StoredDoc` (a full `docs` row, replacing the old KV
+  `StoredDoc`'s doc-plus-bearer-`ownerToken` shape — `owner_user_id` here
+  is an internal `users.id`, never sent to a client; `doc::to_public_doc`
+  strips it, mirroring the old `toPublicDoc`, and takes the owner's cached
+  `user_identities.login` — fetched separately by `handlers::get_share` via
+  `db::get_owner_login` — as an explicit parameter so it stays D1-free and
+  unit-testable); `protocol::SyncedDoc` (the `GET /shares/:share_id`
+  response shape: `ended`/`filename`/`content`/`revision` plus
+  `owner_login` — the one field from `user_identities` deliberately exposed
+  to a viewer, for the "Shared by @login" attribution on
+  `web/`'s `SyncedShareBanner`, task 10; no token, hash, or other internal
+  id is ever present) / `protocol::SyncedWriteRequest` (the `POST` wire
+  shape, ported from the old TS `protocol.ts`, camelCase on the wire);
+  `resolve_role::SyncedRole`
+  / `resolve_role::resolve_role` (the write-guard, ported from the old TS
+  `resolveRole.ts`); `identity::IdentityProvider` (the identity-resolution
+  seam) / `identity::resolve_verified_user_id` (the cache-then-verify
+  wiring every write calls, see below); `verification::retry_with_backoff`
+  / `verification::VerificationFailure` (the D1-free retry policy and its
+  UI-surfaceable failure shape, see below); `oauth::github_oauth_callback`
+  (the `POST /auth/github/callback` handler, see "Dedicated GitHub
+  sign-in" below); `db` (crate-private raw D1 query functions, one
+  `.sql` file per query under `queries/`, loaded via `include_str!`).
+- Ownership model: a share's `owner_user_id` is set once, at
+  `POST /shares` creation time, and never changes — there is no more
+  "unpinned, first write claims ownership" state the old KV `ownerToken`
+  scheme had. A write to `POST /shares/:share_id` is accepted only when the
+  identity resolved from the request's `identity_token` matches the
+  share's `owner_user_id` exactly (`resolve_role`); any mismatch, or a
+  share with no `docs` row yet, is rejected.
+- `share_id` generation moved server-side (`share_id::generate_unique_share_id`):
+  no more client-derived id. Uses the same charset/length
+  (`SHARE_ID_LENGTH = 11`, `[0-9A-Za-z_-]`) as `SHARE_ID_PATTERN` in
+  `web/src/syncedShareUrl.ts`; on the astronomically unlikely case of a
+  collision against an existing row, appends exactly one extra character
+  from the same charset rather than looping/regenerating (a fallback id
+  one character longer than `SHARE_ID_LENGTH`, which would not match that
+  fixed-length client pattern — a known, accepted edge case, not something
+  this crate changes `web/` to handle).
+
+### Verification cache + retry policy
+
+`identity::IdentityProvider` is the seam GitHub OAuth verification plugs
+into: a trait resolving whatever identity a caller presents to an internal
+`users.id`, doing create-on-first-sight `users`/`user_identities` rows.
+Every write and the create-share endpoint (`handlers.rs`) never trust a
+client-asserted identity directly — they always call
+`identity::resolve_verified_user_id(db, identity_provider, identity_token)`,
+which:
+
+1. Hashes `identity_token` (SHA-256, `identity::hash_token`) and looks up
+   `oauth_sessions` by that hash. A hit whose `verified_at` is still fresh
+   (`verification::session_is_fresh`, TTL `verification::SESSION_TTL_MILLIS`
+   ≈ 1hr, checked in app code per the schema comment) resolves straight to
+   `user_id` via the cached `(provider, provider_user_id)` — no GitHub call.
+2. On a cache miss or a stale entry, calls `identity_provider` (production:
+   `identity::github::GithubIdentityProvider`, real `GET /user`
+   verification) through `verification::retry_with_backoff` — TODO §0's
+   policy: `verification::MAX_RETRIES` (2) retries with the `backoff`
+   crate's exponential delay, capped at `verification::MAX_TOTAL_WAIT`
+   (~2s) total wait. `retry_with_backoff` is D1-/worker-free and generic
+   over both the operation and the sleep function, so it's directly
+   unit-tested (`tests/verification.rs`) with a fake operation and an
+   instant sleep instead of hitting real GitHub or a real timer, per §0's
+   testing decision; the wired-in call from `identity.rs` supplies
+   `worker::Delay` as the real sleep.
+3. On success, refreshes/inserts the `oauth_sessions` row
+   (`db::upsert_oauth_session`) and returns the resolved `user_id`. On
+   failure (all retries exhausted), returns
+   `verification::VerificationFailure { reason, failed_at, attempts }` —
+   `handlers.rs` turns this into a `401` JSON response carrying exactly
+   those three fields, per TODO §0's "maximally verbose, except the
+   token/hash" decision; `VerificationFailure` has no token/hash field to
+   leak, by construction.
+
+`resolve_role`'s owner check runs on whatever `user_id`
+`resolve_verified_user_id` returns (or `None` on failure) — a mismatch or a
+verification failure are both rejected outright, with no fallback.
+
+### Dedicated GitHub sign-in
+
+A separate, minimally-scoped "sign in with GitHub" connection used only to
+verify Synced Share ownership (`GET /user`, no other scope) — distinct from
+`web/src/storage/githubAuth.ts`'s broad-scope, opt-in device-flow connection
+for the storage backend's Contents API access. The two connections store
+their tokens independently and are never conflated (per
+`TODO-synced-share-rust-d1-migration.md` §0). Both may register the same
+GitHub OAuth App (`client_id` is public and shared), just requesting
+different scopes and using different flows.
+
+- Client (`web/src/storage/syncedShareGithubAuth.ts`): drives the whole
+  round trip as a **popup**, not a full-page redirect (mockup's "OAuth
+  popup" screen). `openSyncedShareGithubSignInPopup` uses `oauth4webapi` to
+  generate a PKCE `code_verifier`/`code_challenge` and a `state`, persists
+  them to `sessionStorage` (`SYNCED_SHARE_GITHUB_PKCE_STORAGE_KEY`), and
+  opens a `window.open` popup at GitHub's authorization endpoint; it
+  resolves once the popup either relays a result via `postMessage` or is
+  closed before completing (resolved as a `'cancelled'` failure — never
+  hangs on an abandoned attempt), or resolves immediately as `'blocked'` if
+  the browser refused to open the popup at all.
+  `web/src/components/SyncedShareGithubCallbackPage.tsx`, rendered by
+  `main.tsx` at `SYNCED_SHARE_GITHUB_REDIRECT_PATH` (short-circuiting past
+  `<App/>` for that one path), is what the popup itself lands on: it calls
+  `completeSyncedShareGithubSignInFromCallback`, which validates the
+  returned `state`, exchanges the code via the Worker's
+  `POST /auth/github/callback`, persists the resulting token (a
+  `StoredSyncedShareGithubAuth { token, login }`, under its own
+  `localStorage` key — see `useSyncedShareGithubAuth`), relays the outcome
+  to the opener window via `postMessage` (scoped to this app's own origin),
+  then closes itself. Resolving the popup promise never itself starts a
+  share — per §0's "no seamless OAuth-then-continue" decision, wiring that
+  result into "start sync" is `useSyncedShareOwner.ts`'s job (see "Client
+  owner UI" below).
+- Worker (`src/oauth.rs`, route `POST /auth/github/callback`): exchanges an
+  authorization code plus its PKCE `code_verifier` for a GitHub access
+  token, using the OAuth App's client secret (`SYNCED_SHARE_GITHUB_CLIENT_SECRET`,
+  a Worker secret binding — never committed) and client id
+  (`SYNCED_SHARE_GITHUB_CLIENT_ID`, a plain `[vars]` entry in
+  `wrangler.toml`, since it isn't secret). Returns
+  `GithubOauthCallbackResponse { access_token, login }`: `access_token` is
+  the only field the client needs to act as this identity (resolving it to
+  a `user_id`, or persisting anything server-side, stays a separate concern
+  — `identity::resolve_verified_user_id`, above); `login` is a best-effort
+  convenience for the client's "Synced as @username" identity chip, fetched
+  via one extra `GET /user` call with the freshly issued token and omitted
+  (not failed) if that call errors. `oauth4webapi` cannot run in this
+  `wasm32-unknown-unknown` Worker (it targets browser/Fetch-API JS
+  runtimes); this route makes the equivalent plain `POST` itself instead,
+  matching this crate's existing `worker::Fetch`-based HTTP calling
+  convention.
+- Client owner UI (`web/src/hooks/useSyncedShareOwner.ts`,
+  `web/src/components/SyncedShareButton.tsx`): "start sync" stays enabled
+  even when this connection isn't present (§0 — no seamless
+  OAuth-then-continue). Clicking "Sync" while disconnected shows a sign-in
+  prompt popover (mockup Screen 1) instead of starting a share; its own
+  "Sign in with GitHub" button is what actually opens the popup. Once
+  connected, `startSync` is async: it reuses a `shareId` persisted locally
+  per file (`jianpu:synced-share-id:v1:<fileId>`) if one exists, otherwise
+  calls `POST /shares` (`CreateShareRequest`/`CreateShareResponse` in
+  `web/src/syncedShare/protocol.ts`) to mint one, gated on this connection's
+  token — there is no more client-side share-id derivation or `ownerToken`
+  (task 11 deleted `getOrCreateDeviceSecret`/`deriveSyncedShareIdentity` and
+  the `ownerToken` field entirely). Every write
+  (`SyncedUpdateRequest`/`SyncedStopRequest`) carries only `identityToken`,
+  set to this connection's token. While synced and connected,
+  `SyncedShareButton` shows a small "Synced as @username" chip next to the
+  button, sourced from the cached `login`.
+- `identity::github::GithubIdentityProvider`: the production
+  `IdentityProvider` implementation, resolving this connection's token to
+  `(provider, provider_user_id)` via a direct `GET /user` call (also caching
+  `login` into `user_identities.login` on create-on-first-sight), wired into
+  every write and the create-share endpoint via
+  `identity::resolve_verified_user_id` — see "Verification cache + retry
+  policy" above.
+- Both the token-exchange endpoint (`oauth.rs`) and the `GET /user` endpoint
+  (`identity::github::user_endpoint_from_env`) resolve their target URL from
+  an optional `[vars]` override (`SYNCED_SHARE_GITHUB_TOKEN_URL`/
+  `SYNCED_SHARE_GITHUB_USER_URL`), falling back to the real GitHub endpoints
+  when unset. Unset in production; Playwright e2e's local `wrangler dev` run
+  points both at `web/e2e/mock-github-oauth-server.mjs` (task 11) so no e2e
+  run ever makes a real GitHub API call.
+
+### D1 query checking
+
+`sqlx`'s "sqlite" feature can't be a normal dependency of this crate — its
+`libsqlite3-sys` C build doesn't target `wasm32-unknown-unknown` (see the
+long comment on the `[build-dependencies] sqlx` entry in
+`crates/live-share-worker/Cargo.toml`). So `sqlx` appears twice, scoped
+away from the wasm build both times:
+
+- As a `[build-dependencies]` entry, used only by `build.rs` to apply
+  `live-share-worker/migrations/*.sql` to a local shadow SQLite database
+  (`crates/live-share-worker/shadow.sqlite`, gitignored) at build time.
+- As a `[dev-dependencies]` entry, used only by
+  `crates/live-share-worker/tests/query_syntax.rs` (a native-only test,
+  not run for `wasm32-unknown-unknown`) to *prepare* (not execute) each
+  `.sql` file under `queries/` against that shadow database — the same
+  `include_str!`-loaded query text `src/db.rs` uses for real
+  `D1Database::prepare()` calls at runtime. This is the pragmatic stand-in
+  for `sqlx::query_file!`'s compile-time type-checking, which this crate's
+  wasm-targeted compile can't use: it catches a broken/typo'd query
+  (unknown table/column, invalid SQL) but not bound-parameter-type or
+  result-column-name mismatches, and not D1-vs-SQLite dialect drift.
+
+### Glossary additions
+
+| Term | Definition |
+|------|-----------|
+| **Synced Share worker** | The standalone Cloudflare Worker (`crates/live-share-worker`) backing the Synced Share feature's `GET`/`POST /shares[/:share_id]` HTTP API, described above. |
+| **IdentityProvider** | The trait (`identity::IdentityProvider`) resolving a request's opaque identity token to an internal `users.id`, with create-on-first-sight `users`/`user_identities` rows. `identity::github::GithubIdentityProvider` (real `GET /user` verification) is its production implementation, called only on a cache miss/stale entry — see `resolve_verified_user_id`. |
+| **resolve_verified_user_id** | `identity::resolve_verified_user_id`: the hashed-token-cache-then-verify wiring every write and the create-share endpoint call instead of ever trusting a client-asserted identity directly — see "Verification cache + retry policy". |
+| **oauth_sessions cache** | The `oauth_sessions` D1 table: a hashed-token (`token_hash`, never the raw token) verification cache with a `verified_at` TTL (`verification::SESSION_TTL_MILLIS`, ≈1hr) checked in app code, so a fresh identity doesn't require re-hitting GitHub on every write. |
+| **VerificationFailure** | `verification::VerificationFailure { reason, failed_at, attempts }`: the structured, UI-surfaceable shape a failed (post-retry) verification is reported as — `handlers.rs` returns it as a `401` JSON body. Never carries the token or its hash, by construction. |
+| **owner_user_id** | A share's fixed owner, set once at creation (`docs.owner_user_id`, an internal `users.id`) — replaces the old KV model's bearer `ownerToken`, which any first writer could claim. |
+| **Synced Share sign-in connection** | The dedicated, minimally-scoped "sign in with GitHub" OAuth connection (`web/src/storage/syncedShareGithubAuth.ts` client-side, `src/oauth.rs`'s `POST /auth/github/callback` Worker-side) used only to verify Synced Share ownership — distinct from `githubAuth.ts`'s broad-scope storage-backend connection. |
+| **owner_login / "Shared by @login"** | `protocol::SyncedDoc::owner_login`: the owning user's cached `user_identities.login`, fetched by `handlers::get_share` via `db::get_owner_login` and passed into `doc::to_public_doc` — the one field from `user_identities` deliberately exposed on the anonymous `GET /shares/:share_id` response, rendered by `web/`'s `SyncedShareBanner` as "Shared by @login". `null` when the owner has no cached login. |

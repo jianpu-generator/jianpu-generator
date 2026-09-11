@@ -160,6 +160,12 @@
   order: 1;
 }
 
+.shared-preview-banner p {
+  /* Override the <p>'s default block margin, which otherwise inflates the
+     flex row's height beyond the header's other items. */
+  margin: 0;
+}
+
 .shared-preview-actions {
   display: flex;
   gap: 0.4rem;
