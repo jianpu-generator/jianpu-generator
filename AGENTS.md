@@ -16,6 +16,10 @@ Prefer functional programming style:
 
 Prefer Radix UI primitives over DIY implementations for interactive controls (sliders, selects, dialogs, checkboxes, tooltips, etc.). Available packages: `@radix-ui/react-dialog`, `@radix-ui/react-select`, `@radix-ui/react-slider`, `@radix-ui/react-tooltip`, `@radix-ui/react-progress`. Install additional Radix packages as needed rather than rolling custom components.
 
+## Local dev
+
+To run local dev, use `mprocs -c dekit.yaml`.
+
 ## Local tooling
 
 - `sqruff` (SQL linter/formatter, used by the pre-commit `sqruff` job on
