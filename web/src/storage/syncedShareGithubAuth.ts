@@ -442,7 +442,24 @@ async function runSyncedShareGithubCallback(
     }
   }
 
-  const body = (await response.json()) as GithubOauthCallbackResponse
+  let body: GithubOauthCallbackResponse
+  try {
+    body = (await response.json()) as GithubOauthCallbackResponse
+  } catch (error) {
+    // A `2xx` response with a body that isn't valid JSON (e.g. a truncated
+    // response from a worker restarting mid-request, or a proxy's HTML error
+    // page served with a `200`) must not throw out of this function -- see
+    // `completeSyncedShareGithubSignInFromCallback`'s caller
+    // (`SyncedShareGithubCallbackPage`), which has no `.catch` on this
+    // promise and would otherwise leave the popup stuck on "Signing in with
+    // GitHub…" forever (an unhandled rejection, not a resolved failure the
+    // UI can render).
+    return {
+      ok: false,
+      reason: 'error',
+      error: `GitHub token exchange returned an unreadable response: ${error instanceof Error ? error.message : String(error)}`,
+    }
+  }
   const login = body.login ?? ''
   writeStoredSyncedShareGithubAuth({ token: body.accessToken, login })
   return { ok: true, login }

@@ -110,6 +110,52 @@ Then(
   },
 )
 
+// Regression coverage for a bug where a `200 OK` response from the worker's
+// `POST /auth/github/callback` with a body that couldn't be parsed as JSON
+// (e.g. a truncated response mid-restart) threw out of `response.json()`
+// uncaught inside the popup, and that rejection went unhandled -- the popup
+// never reached the code that flips its status and calls `window.close()`,
+// so it sat on "Signing in with GitHub…" forever and the opener's own button
+// never left its "Signing in…" state either (see
+// `syncedShareGithubAuth.ts`/`SyncedShareGithubCallbackPage.tsx`). This
+// fetch runs inside the popup page, a separate `Page` from the opener within
+// the same `BrowserContext`, so `context.route` (not `page.route`) is what
+// catches it -- same reasoning as "the GitHub authorization popup is mocked
+// to redirect back successfully" above.
+Given(
+  'the Synced Share worker returns an unparseable body from the next GitHub token exchange',
+  async ({ context }) => {
+    await context.route(
+      'http://localhost:8787/auth/github/callback',
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: 'not json',
+        })
+      },
+    )
+  },
+)
+
+Then(
+  'the sign-in prompt shows a sign-in error containing {string}',
+  async ({ page }, text: string) => {
+    await expect(page.getByTestId('synced-share-signin-error')).toContainText(
+      text,
+    )
+  },
+)
+
+Then(
+  'the "Sign in with GitHub" button is no longer stuck signing in',
+  async ({ page }) => {
+    const button = page.getByTestId('synced-share-sign-in-with-github-button')
+    await expect(button).toHaveText('Sign in with GitHub')
+    await expect(button).toBeEnabled()
+  },
+)
+
 Then(
   'the synced share identity chip reads {string}',
   async ({ page }, text: string) => {

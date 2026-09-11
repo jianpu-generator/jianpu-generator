@@ -36,19 +36,39 @@ export function SyncedShareGithubCallbackPage() {
     startedRef.current = true
     let cancelled = false
     const host = import.meta.env.VITE_SYNCED_SHARE_HOST ?? ''
+    const finish = (
+      result:
+        | Awaited<
+            ReturnType<typeof completeSyncedShareGithubSignInFromCallback>
+          >
+        | { ok: false; error: string },
+    ) => {
+      if (cancelled) return
+      if (result.ok) {
+        setStatus('done')
+      } else {
+        setStatus('failed')
+        setMessage(result.error)
+      }
+      // Only closes itself when opened as a popup via `window.open` --
+      // browsers refuse to close a window the script didn't open, so this
+      // is a no-op (not an error) if the user navigated here directly.
+      window.close()
+    }
     void completeSyncedShareGithubSignInFromCallback({ host }).then(
-      (result) => {
-        if (cancelled) return
-        if (result.ok) {
-          setStatus('done')
-        } else {
-          setStatus('failed')
-          setMessage(result.error)
-        }
-        // Only closes itself when opened as a popup via `window.open` --
-        // browsers refuse to close a window the script didn't open, so this
-        // is a no-op (not an error) if the user navigated here directly.
-        window.close()
+      finish,
+      // `completeSyncedShareGithubSignInFromCallback` shouldn't itself
+      // reject (every failure path inside it resolves a `{ ok: false }`
+      // result instead) -- this `onRejected` is a last-resort backstop, not
+      // the primary handling. Without it, any exception that does slip
+      // through becomes an unhandled rejection and this page is stuck
+      // rendering "Signing in with GitHub…" forever (the state update and
+      // `window.close()` above never run) -- exactly the bug this guards.
+      (error: unknown) => {
+        finish({
+          ok: false,
+          error: `Unexpected error completing GitHub sign-in: ${error instanceof Error ? error.message : String(error)}`,
+        })
       },
     )
     return () => {

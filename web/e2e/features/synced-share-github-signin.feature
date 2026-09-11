@@ -35,6 +35,16 @@ Feature: Synced Share GitHub sign-in
     When the owner clicks "Sign in with GitHub" in the prompt
     Then the sign-in prompt shows signed in as "e2e-test-user"
 
+  Scenario: An unparseable response from the GitHub token exchange fails cleanly instead of leaving the popup stuck "Signing in…"
+    Given clipboard permissions are granted
+    And the GitHub authorization popup is mocked to redirect back successfully
+    And the Synced Share worker returns an unparseable body from the next GitHub token exchange
+    When the owner loads the app and clicks "Sync"
+    Then the sign-in prompt is shown
+    When the owner clicks "Sign in with GitHub" in the prompt
+    Then the sign-in prompt shows a sign-in error containing "unreadable response"
+    And the "Sign in with GitHub" button is no longer stuck signing in
+
   Scenario: A blocked GitHub sign-in popup returns to idle with no share created
     Given clipboard permissions are granted
     And the GitHub sign-in popup is blocked by the browser
