@@ -3,6 +3,7 @@ import type { FileStoreState } from '../fileStore'
 import type { SharePayload } from '../shareUrl'
 import type { StorageBackend } from '../storage/types'
 import type { SyncedDoc } from '../syncedShare/protocol'
+import { syncedShareWorkerOrigin } from '../syncedShare/workerUrl'
 import {
   clearSyncedShareHash,
   parseSyncedShareFromHash,
@@ -46,6 +47,8 @@ export function useSyncedShareViewer(
     useState<SharePayload | null>(null)
   const [syncedShareViewerStatus, setSyncedShareViewerStatus] =
     useState<SyncedShareViewerStatus>('loading')
+  const [syncedShareViewerOwnerLogin, setSyncedShareViewerOwnerLogin] =
+    useState<string | null>(null)
   const importToStorage = useImportToStorage(
     store,
     backend,
@@ -75,7 +78,7 @@ export function useSyncedShareViewer(
     setEditorCollapsed(true)
 
     let cancelled = false
-    void fetch(`https://${host}/shares/${parsed.shareId}`)
+    void fetch(`${syncedShareWorkerOrigin(host)}/shares/${parsed.shareId}`)
       .then((response) => {
         if (!response.ok)
           throw new Error(`Unexpected status ${response.status}`)
@@ -83,6 +86,7 @@ export function useSyncedShareViewer(
       })
       .then((doc) => {
         if (cancelled) return
+        setSyncedShareViewerOwnerLogin(doc.ownerLogin ?? null)
         if (doc.ended) {
           setSyncedShareViewerPreview(null)
           setSyncedShareViewerStatus('ended')
@@ -106,6 +110,7 @@ export function useSyncedShareViewer(
   return {
     syncedShareViewerPreview,
     syncedShareViewerStatus,
+    syncedShareViewerOwnerLogin,
     handleImportSyncedShare,
   }
 }

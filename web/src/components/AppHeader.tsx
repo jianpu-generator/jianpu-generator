@@ -3,6 +3,8 @@ import { sortedBinNames } from '../fileStore'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SyncedShareViewerStatus } from '../hooks/useSyncedShareViewer'
 import type { SharePayload } from '../shareUrl'
+import type { SyncedShareGithubAuthResult } from '../storage/syncedShareGithubAuth'
+import type { SyncedShareFailure } from '../syncedShare/errors'
 import { ExportControls } from './ExportControls'
 import { FileSwitcher } from './FileSwitcher'
 import { PlayAllButton } from './PlayAllButton'
@@ -11,6 +13,7 @@ import { PlayMeasureButton } from './PlayMeasureButton'
 import { SharedPreviewBanner } from './SharedPreviewBanner'
 import { SyncedShareBanner } from './SyncedShareBanner'
 import { SyncedShareButton } from './SyncedShareButton'
+import { SyncedShareErrorDialog } from './SyncedShareErrorDialog'
 
 interface MeasureRange {
   start: number
@@ -27,11 +30,29 @@ interface SyncedShareHeaderProps {
   viewerActive: boolean
   viewerStatus: SyncedShareViewerStatus
   viewerFilename: string | null
+  /** The owning user's cached GitHub login (`user_identities.login`),
+   * for the "Shared by @username" attribution -- task 10. `null` when the
+   * worker has none cached for this share's owner. */
+  viewerOwnerLogin: string | null
   onImportSyncedShare: () => void
   isSynced: boolean
   syncedShareLink: string | null
-  onStartSync: () => string
+  /** Whether the dedicated Synced Share GitHub sign-in connection is
+   * present -- see `useSyncedShareOwner.ts`. */
+  isGithubConnected: boolean
+  /** Cached GitHub username for the "Synced as @username" identity chip;
+   * `null` until connected. */
+  githubLogin: string | null
+  onStartSync: () => Promise<string | null>
   onStopSync: () => void
+  onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
+  /** Logs out of the Synced Share GitHub connection, stopping any active
+   * sync first -- offered from the "Synced as @username" chip's dropdown. */
+  onDisconnectGithub: () => void
+  /** Drives the full-screen error dialog (task 9) -- non-null while a
+   * Synced Share write has failed. */
+  syncFailure: SyncedShareFailure | null
+  onDismissSyncFailure: () => void
 }
 
 interface AppHeaderProps {
@@ -170,6 +191,7 @@ export function AppHeader({
           <SyncedShareBanner
             status={syncedShare.viewerStatus}
             filename={syncedShare.viewerFilename}
+            ownerLogin={syncedShare.viewerOwnerLogin}
             onImport={syncedShare.onImportSyncedShare}
           />
         )
@@ -248,10 +270,18 @@ export function AppHeader({
           <SyncedShareButton
             isSynced={syncedShare.isSynced}
             syncedShareLink={syncedShare.syncedShareLink}
+            isGithubConnected={syncedShare.isGithubConnected}
+            githubLogin={syncedShare.githubLogin}
             onStartSync={syncedShare.onStartSync}
             onStopSync={syncedShare.onStopSync}
+            onSignInWithGithub={syncedShare.onSignInWithGithub}
+            onDisconnectGithub={syncedShare.onDisconnectGithub}
           />
         )}
+        <SyncedShareErrorDialog
+          failure={syncedShare.syncFailure}
+          onDismiss={syncedShare.onDismissSyncFailure}
+        />
         <ExportControls
           hasDocuments={hasDocuments}
           rendering={rendering}

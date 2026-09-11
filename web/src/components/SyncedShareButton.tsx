@@ -1,25 +1,68 @@
-import { ChevronDownIcon, Link2Icon, UpdateIcon } from '@radix-ui/react-icons'
+import {
+  ChevronDownIcon,
+  ExitIcon,
+  GitHubLogoIcon,
+  Link2Icon,
+  UpdateIcon,
+} from '@radix-ui/react-icons'
+import * as Popover from '@radix-ui/react-popover'
 import * as Toast from '@radix-ui/react-toast'
 import { useCallback, useState } from 'react'
+import type { SyncedShareGithubAuthResult } from '../storage/syncedShareGithubAuth'
 import { ResponsiveMenu } from './ResponsiveMenu'
 
 interface SyncedShareButtonProps {
   isSynced: boolean
   syncedShareLink: string | null
-  onStartSync: () => string
+  /** Whether the dedicated Synced Share GitHub sign-in connection is
+   * present -- see `useSyncedShareOwner.ts`. Gates whether clicking "Sync"
+   * starts a share directly or shows the sign-in prompt below (mockup
+   * Screen 1). */
+  isGithubConnected: boolean
+  /** Cached GitHub username for the "Synced as @username" identity chip
+   * (mockup Screen 3); `null` until connected. */
+  githubLogin: string | null
+  onStartSync: () => Promise<string | null>
   onStopSync: () => void
+  /** Opens the popup "sign in with GitHub" flow. Never itself starts a
+   * share -- per §0, the user must click "Sync" again once connected. */
+  onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
+  /** Logs out of the Synced Share GitHub connection, offered from the
+   * identity chip's dropdown. */
+  onDisconnectGithub: () => void
   className?: string
 }
+
+type SignInPromptStatus =
+  | { kind: 'idle' }
+  | { kind: 'signing-in' }
+  | { kind: 'done'; login: string }
+  | { kind: 'failed'; error: string }
 
 export function SyncedShareButton({
   isSynced,
   syncedShareLink,
+  isGithubConnected,
+  githubLogin,
   onStartSync,
   onStopSync,
+  onSignInWithGithub,
+  onDisconnectGithub,
   className = 'preview-export-btn',
 }: SyncedShareButtonProps) {
   const [toastOpen, setToastOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  // Controls the "Synced as @username" chip's own dropdown (logout /
+  // disconnect), kept separate from `menuOpen` above (the "Synced" button's
+  // copy-link/stop-sync menu) since the two triggers are independent.
+  const [identityMenuOpen, setIdentityMenuOpen] = useState(false)
+  // Controls the "Sync" popover shown when the user clicks "Sync" without
+  // being GitHub-connected yet (mockup Screen 1). Kept separate from
+  // `menuOpen` above, which is the *synced* state's own dropdown.
+  const [signInPromptOpen, setSignInPromptOpen] = useState(false)
+  const [signInStatus, setSignInStatus] = useState<SignInPromptStatus>({
+    kind: 'idle',
+  })
 
   const copyUrl = useCallback(async (url: string) => {
     try {
@@ -30,8 +73,75 @@ export function SyncedShareButton({
     }
   }, [])
 
+  const handleSyncClick = useCallback(() => {
+    if (isGithubConnected) {
+      void onStartSync().then((link) => {
+        if (link) void copyUrl(link)
+      })
+      return
+    }
+    setSignInStatus({ kind: 'idle' })
+    setSignInPromptOpen(true)
+  }, [isGithubConnected, onStartSync, copyUrl])
+
+  const handleSignInWithGithub = useCallback(() => {
+    setSignInStatus({ kind: 'signing-in' })
+    void onSignInWithGithub().then((result) => {
+      // Per §0's "no seamless OAuth-then-continue flow" decision: this never
+      // starts a share on its own, regardless of outcome -- the user must
+      // click "Sync" again once connected. A `'cancelled'`/`'blocked'`
+      // outcome (popup closed/abandoned) just returns the prompt to idle,
+      // matching "no dangling state".
+      if (result.ok) {
+        setSignInStatus({ kind: 'done', login: result.login })
+      } else if (result.reason === 'error') {
+        setSignInStatus({ kind: 'failed', error: result.error })
+      } else {
+        setSignInPromptOpen(false)
+        setSignInStatus({ kind: 'idle' })
+      }
+    })
+  }, [onSignInWithGithub])
+
   return (
     <div className="export-menu">
+      {isSynced && githubLogin && (
+        <ResponsiveMenu.Root
+          open={identityMenuOpen}
+          onOpenChange={setIdentityMenuOpen}
+        >
+          <ResponsiveMenu.Trigger asChild>
+            <button
+              type="button"
+              className="synced-share-identity-chip"
+              data-testid="synced-share-identity-chip"
+              aria-label="Synced share account options"
+            >
+              <GitHubLogoIcon aria-hidden="true" />
+              Synced as @{githubLogin}
+              <ChevronDownIcon
+                className="export-menu-caret"
+                aria-hidden="true"
+              />
+            </button>
+          </ResponsiveMenu.Trigger>
+          <ResponsiveMenu.Content
+            className="export-menu-list"
+            align="end"
+            sideOffset={4}
+            title="Synced share account options"
+          >
+            <ResponsiveMenu.Item
+              className="export-menu-item export-menu-item--danger"
+              data-testid="disconnect-github-button"
+              onSelect={onDisconnectGithub}
+            >
+              <ExitIcon aria-hidden="true" />
+              Log out
+            </ResponsiveMenu.Item>
+          </ResponsiveMenu.Content>
+        </ResponsiveMenu.Root>
+      )}
       {isSynced ? (
         // Radix's DropdownMenuTrigger opens the menu on `pointerdown` and
         // `preventDefault()`s it whenever the menu is currently closed —
@@ -92,17 +202,71 @@ export function SyncedShareButton({
           </ResponsiveMenu.Content>
         </ResponsiveMenu.Root>
       ) : (
-        <button
-          type="button"
-          className={className}
-          data-testid="synced-share-button"
-          aria-label="Sync"
-          title="Anyone with this link can view your latest saved score after reloading. Don't share it publicly."
-          onClick={() => void copyUrl(onStartSync())}
-        >
-          <UpdateIcon aria-hidden="true" />
-          Sync
-        </button>
+        // Not a `ResponsiveMenu`/`DropdownMenu.Trigger` (which opens on
+        // `pointerdown`, unconditionally, per the comment on the "Synced"
+        // branch above) -- the click must go straight to `handleSyncClick`
+        // so the GitHub-connected case can start a share directly. Radix's
+        // `Popover.Anchor` is used purely for positioning here (it renders
+        // no DOM of its own beyond `asChild`, and never intercepts the
+        // button's own `onClick`) while `Popover.Content` still portals to
+        // `document.body` -- unlike a plain positioned `div`, that escapes
+        // `.app-header`'s `overflow-y: hidden` instead of being clipped by
+        // it when the header wraps to a second row.
+        <Popover.Root open={signInPromptOpen} onOpenChange={setSignInPromptOpen}>
+          <Popover.Anchor asChild>
+            <button
+              type="button"
+              className={className}
+              data-testid="synced-share-button"
+              aria-label="Sync"
+              title="Anyone with this link can view your latest saved score after reloading. Don't share it publicly."
+              onClick={handleSyncClick}
+            >
+              <UpdateIcon aria-hidden="true" />
+              Sync
+            </button>
+          </Popover.Anchor>
+          <Popover.Portal>
+            <Popover.Content
+              className="export-menu-list synced-share-signin-prompt"
+              data-testid="synced-share-signin-prompt"
+              align="end"
+              sideOffset={4}
+              onOpenAutoFocus={(event) => event.preventDefault()}
+            >
+              {signInStatus.kind === 'done' ? (
+                <p>
+                  Signed in as @{signInStatus.login}. Click "Sync" again to
+                  start sharing.
+                </p>
+              ) : (
+                <>
+                  <p>Sign in with GitHub to start a Synced Share.</p>
+                  {signInStatus.kind === 'failed' && (
+                    <p
+                      className="synced-share-signin-prompt-error"
+                      data-testid="synced-share-signin-error"
+                    >
+                      {signInStatus.error}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    className="export-menu-item"
+                    data-testid="synced-share-sign-in-with-github-button"
+                    disabled={signInStatus.kind === 'signing-in'}
+                    onClick={handleSignInWithGithub}
+                  >
+                    <GitHubLogoIcon aria-hidden="true" />
+                    {signInStatus.kind === 'signing-in'
+                      ? 'Signing in…'
+                      : 'Sign in with GitHub'}
+                  </button>
+                </>
+              )}
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
       )}
       <Toast.Provider swipeDirection="right" duration={3000}>
         <Toast.Root
