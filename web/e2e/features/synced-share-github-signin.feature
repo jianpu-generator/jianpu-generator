@@ -19,6 +19,15 @@ Feature: Synced Share GitHub sign-in
     Then a sync-link-copied toast is shown
     And the synced share identity chip reads "Synced as @e2e-test-user"
 
+  Scenario: The GitHub sign-in popup closes itself automatically once sign-in completes
+    Given clipboard permissions are granted
+    And the GitHub authorization popup is mocked to redirect back successfully
+    When the owner loads the app and clicks "Sync"
+    Then the sign-in prompt is shown
+    When the owner clicks "Sign in with GitHub" in the prompt
+    Then the sign-in prompt shows signed in as "e2e-test-user"
+    And the GitHub sign-in popup has closed itself
+
   Scenario: Signing in with GitHub always forces a fresh GitHub login prompt, even if the browser still has a GitHub session
     Given clipboard permissions are granted
     And the GitHub authorization popup is mocked to redirect back successfully

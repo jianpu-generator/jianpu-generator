@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 import { Given, Then, When } from './fixtures'
 
 // Covers the Synced Share GitHub sign-in UI itself
@@ -25,6 +25,17 @@ import { Given, Then, When } from './fixtures'
 // `let ... = ...` capture pattern used across the other `.steps.ts` files
 // (e.g. `putBodies` in `autosave-github.steps.ts`).
 let lastAuthorizationRequestUrl: URL | null = null
+
+// Captured by "the owner clicks 'Sign in with GitHub' in the prompt" below
+// and asserted against by "the GitHub sign-in popup has closed itself" --
+// regression coverage for a bug where `SyncedShareGithubCallbackPage`'s
+// `window.close()` call is silently refused by the browser once the popup
+// has navigated across origins more than once (about:blank -> GitHub's
+// authorization endpoint -> back to this app's own callback page), leaving
+// the popup sitting on "Signed in. You can close this window." forever
+// instead of closing itself as the user expects. Module-level for the same
+// reason as `lastAuthorizationRequestUrl` above.
+let lastSignInPopup: Page | null = null
 
 Given(
   'the GitHub authorization popup is mocked to redirect back successfully',
@@ -83,8 +94,12 @@ Then('the sign-in prompt is gone', async ({ page }) => {
 
 When(
   'the owner clicks "Sign in with GitHub" in the prompt',
-  async ({ page }) => {
-    await page.getByTestId('synced-share-sign-in-with-github-button').click()
+  async ({ page, context }) => {
+    const [popup] = await Promise.all([
+      context.waitForEvent('page'),
+      page.getByTestId('synced-share-sign-in-with-github-button').click(),
+    ])
+    lastSignInPopup = popup
   },
 )
 
@@ -109,6 +124,19 @@ Then(
     )
   },
 )
+
+Then('the GitHub sign-in popup has closed itself', async () => {
+  if (!lastSignInPopup) {
+    throw new Error(
+      'no GitHub sign-in popup was captured -- did "the owner clicks \\"Sign in with GitHub\\" in the prompt" run first?',
+    )
+  }
+  const popup = lastSignInPopup
+  if (!popup.isClosed()) {
+    await popup.waitForEvent('close', { timeout: 5_000 }).catch(() => {})
+  }
+  expect(popup.isClosed()).toBe(true)
+})
 
 // Regression coverage for a bug where a `200 OK` response from the worker's
 // `POST /auth/github/callback` with a body that couldn't be parsed as JSON
