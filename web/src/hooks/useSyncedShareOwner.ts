@@ -5,6 +5,7 @@ import {
   openSyncedShareGithubSignInPopup,
   type SyncedShareGithubAuthResult,
 } from '../storage/syncedShareGithubAuthPopup'
+import { revokeSyncedShareGithubGrant } from '../storage/syncedShareGithubAuthRevoke'
 import {
   buildSyncedShareNetworkFailure,
   buildSyncedShareResponseFailure,
@@ -106,7 +107,9 @@ export interface UseSyncedShareOwnerResult {
    * response, or a network-level error. Drives the full-screen error dialog
    * (task 9); `null` means no failure is currently being shown. There is no
    * automatic retry -- dismissing it (`dismissSyncFailure`) just returns to
-   * idle. */
+   * idle. A `401` additionally clears the stored GitHub connection (see
+   * `recordSyncFailure`), so the next "Sync" click re-prompts sign-in
+   * instead of resending the same now-invalid token forever. */
   syncFailure: SyncedShareFailure | null
   dismissSyncFailure: () => void
 }
@@ -162,6 +165,23 @@ export function useSyncedShareOwner(
 
   const session = isActive ? shareId : null
 
+  /** Records a write failure and, if it's a `401` (the worker's
+   * `VerificationFailure` -- GitHub itself rejected the stored identity
+   * token as revoked/invalid, not merely a transient network blip), also
+   * clears the stored Synced Share GitHub auth. Mirrors `githubAuth.ts`'s
+   * `checkGithubAuthStatus`, which does the same for the separate
+   * storage-backend connection: without this, a token that's gone stale
+   * (e.g. its GitHub grant was revoked) keeps being resent forever, and
+   * every retry just reproduces the same 401 and re-shows this dialog
+   * instead of prompting a fresh sign-in. */
+  const recordSyncFailure = useCallback(
+    (failure: SyncedShareFailure) => {
+      setSyncFailure(failure)
+      if (failure.httpStatus === 401) setGithubAuth(null)
+    },
+    [setGithubAuth],
+  )
+
   const pushUpdate = useCallback(
     (content: string) => {
       const host = import.meta.env.VITE_SYNCED_SHARE_HOST
@@ -181,15 +201,15 @@ export function useSyncedShareOwner(
       })
         .then(async (response) => {
           if (response.ok) return
-          setSyncFailure(
+          recordSyncFailure(
             await buildSyncedShareResponseFailure('update', response),
           )
         })
         .catch((error: unknown) => {
-          setSyncFailure(buildSyncedShareNetworkFailure('update', error))
+          recordSyncFailure(buildSyncedShareNetworkFailure('update', error))
         })
     },
-    [filename, session, githubAuth],
+    [filename, session, githubAuth, recordSyncFailure],
   )
 
   // Pushes the initial doc the moment a session starts syncing (including a
@@ -222,7 +242,7 @@ export function useSyncedShareOwner(
           body: JSON.stringify(request),
         })
         if (!response.ok) {
-          setSyncFailure(
+          recordSyncFailure(
             await buildSyncedShareResponseFailure('create', response),
           )
           return null
@@ -230,11 +250,11 @@ export function useSyncedShareOwner(
         const body = (await response.json()) as CreateShareResponse
         return body.shareId
       } catch (error) {
-        setSyncFailure(buildSyncedShareNetworkFailure('create', error))
+        recordSyncFailure(buildSyncedShareNetworkFailure('create', error))
         return null
       }
     },
-    [],
+    [recordSyncFailure],
   )
 
   const startSync = useCallback(async (): Promise<string | null> => {
@@ -279,12 +299,14 @@ export function useSyncedShareOwner(
     })
       .then(async (response) => {
         if (response.ok) return
-        setSyncFailure(await buildSyncedShareResponseFailure('stop', response))
+        recordSyncFailure(
+          await buildSyncedShareResponseFailure('stop', response),
+        )
       })
       .catch((error: unknown) => {
-        setSyncFailure(buildSyncedShareNetworkFailure('stop', error))
+        recordSyncFailure(buildSyncedShareNetworkFailure('stop', error))
       })
-  }, [fileId, session, githubAuth])
+  }, [fileId, session, githubAuth, recordSyncFailure])
 
   const dismissSyncFailure = useCallback(() => {
     setSyncFailure(null)
@@ -299,8 +321,21 @@ export function useSyncedShareOwner(
 
   const disconnectGithub = useCallback(() => {
     if (session) stopSync()
+    // GitHub's real `/authorize` endpoint has no "force fresh consent"
+    // parameter -- revoking this app's authorization grant now is the only
+    // genuine way to make the *next* sign-in re-show GitHub's consent
+    // screen instead of silently reusing this one. Fire-and-forget, same as
+    // `stopSync`'s own network call above: local state always wins, a
+    // failed revocation never blocks logging out.
+    if (githubAuth) {
+      const host = import.meta.env.VITE_SYNCED_SHARE_HOST ?? ''
+      void revokeSyncedShareGithubGrant({
+        host,
+        identityToken: githubAuth.token,
+      })
+    }
     setGithubAuth(null)
-  }, [session, stopSync, setGithubAuth])
+  }, [session, stopSync, githubAuth, setGithubAuth])
 
   return {
     isSynced: session !== null,

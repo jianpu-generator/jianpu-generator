@@ -83,6 +83,19 @@ const server = createServer(async (req, res) => {
     return
   }
 
+  if (
+    req.method === 'DELETE' &&
+    url.pathname === '/applications/e2e-test-client-id/grant'
+  ) {
+    // Real GitHub responds `204 No Content` on a successful grant
+    // revocation; this mock doesn't bother validating the Basic-auth header
+    // or body, matching the scope of what these e2e scenarios need to
+    // exercise (see `oauth.rs`'s `revoke_grant`).
+    res.writeHead(204)
+    res.end()
+    return
+  }
+
   if (req.method === 'GET' && url.pathname === '/user') {
     // A real `GET /user` call requires an `Authorization` header; this mock
     // doesn't bother validating its value (any bearer token resolves to the

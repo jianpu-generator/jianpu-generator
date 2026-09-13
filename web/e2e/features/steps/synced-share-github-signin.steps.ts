@@ -19,22 +19,18 @@ import { Given, Then, When } from './fixtures'
 // hits the real local Synced Share worker, which is itself pointed at
 // `e2e/mock-github-oauth-server.mjs` (see `playwright.config.ts`) for the
 // token exchange and `GET /user` calls that happen worker-side.
-// Captured by the route mock below and asserted against by "the GitHub
-// authorization request forces a fresh login prompt" -- module-level since
-// each scenario runs in its own worker process, matching the established
-// `let ... = ...` capture pattern used across the other `.steps.ts` files
-// (e.g. `putBodies` in `autosave-github.steps.ts`).
-let lastAuthorizationRequestUrl: URL | null = null
 
-// Captured by "the owner clicks 'Sign in with GitHub' in the prompt" below
+// Captured by "the owner clicks \"Sign in with GitHub\" in the prompt" below
 // and asserted against by "the GitHub sign-in popup has closed itself" --
 // regression coverage for a bug where `SyncedShareGithubCallbackPage`'s
 // `window.close()` call is silently refused by the browser once the popup
 // has navigated across origins more than once (about:blank -> GitHub's
 // authorization endpoint -> back to this app's own callback page), leaving
 // the popup sitting on "Signed in. You can close this window." forever
-// instead of closing itself as the user expects. Module-level for the same
-// reason as `lastAuthorizationRequestUrl` above.
+// instead of closing itself as the user expects. Module-level since each
+// scenario runs in its own worker process, matching the established
+// `let ... = ...` capture pattern used across the other `.steps.ts` files
+// (e.g. `putBodies` in `autosave-github.steps.ts`).
 let lastSignInPopup: Page | null = null
 
 Given(
@@ -44,7 +40,6 @@ Given(
       'https://github.com/login/oauth/authorize**',
       async (route) => {
         const requestUrl = new URL(route.request().url())
-        lastAuthorizationRequestUrl = requestUrl
         const state = requestUrl.searchParams.get('state') ?? ''
         const redirectUri = requestUrl.searchParams.get('redirect_uri')
         if (!redirectUri) {
@@ -108,19 +103,6 @@ When(
       page.getByTestId('synced-share-sign-in-with-github-button').click(),
     ])
     lastSignInPopup = popup
-  },
-)
-
-Then(
-  'the GitHub authorization request forces a fresh login prompt',
-  async () => {
-    // `prompt=login` is what makes GitHub re-show its login/consent screen
-    // even when the browser still has a live github.com session and a
-    // prior grant for this app -- without it, GitHub silently re-issues a
-    // code with no prompt at all (see `syncedShareGithubAuthPopup.ts`).
-    expect(lastAuthorizationRequestUrl?.searchParams.get('prompt')).toBe(
-      'login',
-    )
   },
 )
 
@@ -223,6 +205,31 @@ When(
 Then('the synced share identity chip is gone', async ({ page }) => {
   await expect(page.getByTestId('synced-share-identity-chip')).toHaveCount(0)
 })
+
+// This fetch (`revokeSyncedShareGithubGrant`, fired from `disconnectGithub`
+// in `useSyncedShareOwner.ts`) runs on the opener page itself, not inside a
+// popup -- so `page.route`, not `context.route`, is what catches it (same
+// reasoning as the create-share mock further down this file). Module-level
+// capture, matching this file's established pattern (e.g.
+// `lastSignInPopup` above).
+let lastRevokeRequestBody: { identityToken?: string } | null = null
+
+Given('the GitHub grant-revocation endpoint is mocked', async ({ page }) => {
+  await page.route(
+    'http://localhost:8787/auth/github/revoke',
+    async (route) => {
+      lastRevokeRequestBody = route.request().postDataJSON()
+      await route.fulfill({ status: 200, body: '' })
+    },
+  )
+})
+
+Then(
+  'the worker was asked to revoke the GitHub grant for {string}',
+  async ({}, token: string) => {
+    expect(lastRevokeRequestBody?.identityToken).toBe(token)
+  },
+)
 
 // The owner's browser-side fetch straight to the Synced Share worker's
 // `POST /shares` (see `useSyncedShareOwner.ts`'s `createShare`) -- unlike

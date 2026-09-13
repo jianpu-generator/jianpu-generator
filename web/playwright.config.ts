@@ -74,7 +74,8 @@ export default defineConfig({
         'npx wrangler d1 migrations apply DB --local && ' +
         'npx wrangler dev --port 8787 ' +
         '--var SYNCED_SHARE_GITHUB_USER_URL:http://localhost:8788/user ' +
-        '--var SYNCED_SHARE_GITHUB_TOKEN_URL:http://localhost:8788/login/oauth/access_token',
+        '--var SYNCED_SHARE_GITHUB_TOKEN_URL:http://localhost:8788/login/oauth/access_token ' +
+        '--var SYNCED_SHARE_GITHUB_GRANT_URL:http://localhost:8788/applications/{client_id}/grant',
       cwd: '../crates/live-share-worker',
       port: 8787,
       reuseExistingServer: true,

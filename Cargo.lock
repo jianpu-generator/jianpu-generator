@@ -1465,6 +1465,7 @@ name = "live-share-worker"
 version = "0.1.0"
 dependencies = [
  "backoff",
+ "base64",
  "serde",
  "serde_json",
  "sha2",

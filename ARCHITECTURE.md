@@ -337,7 +337,7 @@ migrations (see "Storage" below), nothing else.
   via the `worker` crate's `Cors` builder) and the `OPTIONS` preflight
   response uniformly around whatever `handlers::router()` (a `worker::Router`
   routing `GET /shares/:share_id`, `POST /shares/:share_id`, `POST /shares`,
-  `POST /auth/github/callback`) returns.
+  `POST /auth/github/callback`, `POST /auth/github/revoke`) returns.
 - Storage: D1 (SQLite), not the old KV namespace. Schema in
   `live-share-worker/migrations/0001_init.sql` (shared, as plain `.sql`,
   between real D1 migrations and a local shadow SQLite database
@@ -371,8 +371,9 @@ migrations (see "Storage" below), nothing else.
   wiring every write calls, see below); `verification::retry_with_backoff`
   / `verification::VerificationFailure` (the D1-free retry policy and its
   UI-surfaceable failure shape, see below); `oauth::github_oauth_callback`
-  (the `POST /auth/github/callback` handler, see "Dedicated GitHub
-  sign-in" below); `db` (crate-private raw D1 query functions, one
+  (the `POST /auth/github/callback` handler) / `oauth::github_revoke` (the
+  `POST /auth/github/revoke` handler, see "Dedicated GitHub sign-in"
+  below); `db` (crate-private raw D1 query functions, one
   `.sql` file per query under `queries/`, loaded via `include_str!`).
 - Ownership model: a share's `owner_user_id` is set once, at
   `POST /shares` creation time, and never changes — there is no more
@@ -498,6 +499,23 @@ different scopes and using different flows.
   set to this connection's token. While synced and connected,
   `SyncedShareButton` shows a small "Synced as @username" chip next to the
   button, sourced from the cached `login`.
+- Forced re-consent (`src/oauth.rs`, route `POST /auth/github/revoke`;
+  client `web/src/storage/syncedShareGithubAuthRevoke.ts`): GitHub's real
+  `/authorize` endpoint has no request parameter that forces a fresh
+  login/consent screen (only `client_id`, `redirect_uri`, `login`, `scope`,
+  `state`, `allow_signup`, plus PKCE fields are supported) — so with a live
+  github.com session and a prior grant, GitHub always silently redirects
+  back with a code, no prompt at all. The only genuine mechanism is
+  revoking this app's authorization grant server-side
+  (`DELETE /applications/{client_id}/grant`, HTTP Basic auth with
+  `client_id:client_secret`), which makes GitHub's *next* `/authorize` call
+  genuinely re-show consent. This fires from `disconnectGithub`
+  (`useSyncedShareOwner.ts`), not from sign-in itself — the button that
+  opens the sign-in popup only ever renders while this connection has no
+  stored token, so there is never a token to revoke at that point. The
+  client call is fire-and-forget (never awaited, never blocks logging out);
+  the worker route's own response is a genuine, non-swallowed error on
+  failure, matching `github_oauth_callback`'s error shape.
 - `identity::github::GithubIdentityProvider`: the production
   `IdentityProvider` implementation, resolving this connection's token to
   `(provider, provider_user_id)` via a direct `GET /user` call (also caching

@@ -28,14 +28,6 @@ Feature: Synced Share GitHub sign-in
     Then the sign-in prompt shows signed in as "e2e-test-user"
     And the GitHub sign-in popup has closed itself
 
-  Scenario: Signing in with GitHub always forces a fresh GitHub login prompt, even if the browser still has a GitHub session
-    Given clipboard permissions are granted
-    And the GitHub authorization popup is mocked to redirect back successfully
-    When the owner loads the app and clicks "Sync"
-    Then the sign-in prompt is shown
-    When the owner clicks "Sign in with GitHub" in the prompt
-    Then the GitHub authorization request forces a fresh login prompt
-
   Scenario: The GitHub sign-in still succeeds when the callback page's effect runs twice (React StrictMode double-invoke)
     Given clipboard permissions are granted
     And the GitHub authorization popup is mocked to redirect back successfully
@@ -73,6 +65,15 @@ Feature: Synced Share GitHub sign-in
     Then the synced share identity chip is gone
     And the sync button still reads "Sync"
 
+  Scenario: Logging out of the Synced Share GitHub connection revokes the grant, so a later sign-in genuinely needs fresh consent
+    Given clipboard permissions are granted
+    And the owner is signed in with GitHub as "e2e-test-user"
+    And the GitHub grant-revocation endpoint is mocked
+    When the owner loads the app and clicks "Sync"
+    And the owner clicks the synced share identity chip
+    And the owner clicks "Log out" in the identity chip menu
+    Then the worker was asked to revoke the GitHub grant for "e2e-fake-synced-share-token"
+
   Scenario: A GitHub verification failure while creating a share shows the full-screen error dialog, with no automatic retry
     Given clipboard permissions are granted
     And the owner is signed in with GitHub as "e2e-test-user"
@@ -83,3 +84,13 @@ Feature: Synced Share GitHub sign-in
     When the owner dismisses the synced share error dialog
     Then the synced share error dialog is gone
     And the sync button still reads "Sync"
+
+  Scenario: A GitHub verification failure clears the stale connection, so retrying prompts a fresh sign-in instead of repeating the same failure
+    Given clipboard permissions are granted
+    And the owner is signed in with GitHub as "e2e-test-user"
+    And the Synced Share worker rejects the next create-share request with a verification failure
+    When the owner loads the app and clicks "Sync"
+    Then the synced share error dialog is shown with a "file a GitHub issue" link
+    When the owner dismisses the synced share error dialog
+    And the owner clicks the sync button again
+    Then the sign-in prompt is shown

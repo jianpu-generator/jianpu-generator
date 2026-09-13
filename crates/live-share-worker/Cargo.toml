@@ -31,6 +31,11 @@ sha2 = "0.10"
 backoff = { version = "0.4", default-features = false, features = [
     "wasm-bindgen",
 ] }
+# Pure-Rust (no C build), safe on `wasm32-unknown-unknown`. Used only to
+# build the `Authorization: Basic` header for `src/oauth.rs`'s GitHub
+# grant-revocation call, which -- unlike the token exchange -- needs HTTP
+# Basic auth (`client_id:client_secret`) rather than a JSON body field.
+base64 = "0.22"
 
 # `sqlx` is deliberately NOT a normal `[dependencies]` entry here, even
 # though task breakdown item 2 calls for "worker + sqlx deps". Reasoning:

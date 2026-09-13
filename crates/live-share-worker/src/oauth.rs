@@ -26,7 +26,16 @@
 //! functions would, using this crate's existing `worker::Fetch`-based HTTP
 //! calling convention (see `identity::github::fetch_github_user` for the
 //! same pattern against `GET /user`).
+//!
+//! Also home to `POST /auth/github/revoke` (`github_revoke` below): GitHub's
+//! real `/authorize` endpoint has no "force fresh consent" parameter, so the
+//! only genuine way to make a *later* sign-in re-show the consent screen is
+//! revoking this app's authorization grant now, via GitHub's
+//! `DELETE /applications/{client_id}/grant`. Called from logout
+//! (`disconnectGithub` in `useSyncedShareOwner.ts`), not from sign-in
+//! itself -- see `github_revoke`'s own doc comment.
 
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use worker::wasm_bindgen::JsValue;
 use worker::{Error, Fetch, Headers, Method, Request, RequestInit, Response, Result};
@@ -39,6 +48,26 @@ const DEFAULT_GITHUB_TOKEN_URL: &str = "https://github.com/login/oauth/access_to
 /// e2e's local `wrangler dev` run to a mock GitHub server so no Playwright
 /// run ever makes a real GitHub API call (task 11).
 const GITHUB_TOKEN_URL_VAR: &str = "SYNCED_SHARE_GITHUB_TOKEN_URL";
+
+/// Optional `[vars]` override for the grant-revocation endpoint, same
+/// mocking purpose as `GITHUB_TOKEN_URL_VAR` above. `{client_id}` in the
+/// resolved value is substituted with the real client id (see
+/// `grant_url_from_env`) since GitHub's revoke endpoint embeds it in the
+/// path, not the query string or body.
+const GITHUB_GRANT_URL_VAR: &str = "SYNCED_SHARE_GITHUB_GRANT_URL";
+const DEFAULT_GITHUB_GRANT_URL_TEMPLATE: &str =
+    "https://api.github.com/applications/{client_id}/grant";
+
+/// Resolves the grant-revocation endpoint to call, substituting `client_id`
+/// into the `{client_id}` placeholder -- GitHub's real revoke endpoint
+/// embeds it in the URL path itself.
+fn grant_url_from_env(ctx: &RouteContext<()>, client_id: &str) -> String {
+    let template = ctx
+        .var(GITHUB_GRANT_URL_VAR)
+        .map(|v| v.to_string())
+        .unwrap_or_else(|_| DEFAULT_GITHUB_GRANT_URL_TEMPLATE.to_string());
+    template.replace("{client_id}", client_id)
+}
 
 /// Worker binding names this route expects. `CLIENT_ID` is not secret --
 /// GitHub OAuth client ids are public, the browser already sends the same
@@ -176,4 +205,90 @@ async fn exchange_code_for_token(
     }
 
     response.json::<GithubTokenResponse>().await
+}
+
+/// Body of `POST /auth/github/revoke`: the token being disconnected, so its
+/// underlying GitHub grant can be revoked server-side. Sent from
+/// `disconnectGithub` (`useSyncedShareOwner.ts`) at logout time -- see the
+/// module doc comment for why that's the only place a token to revoke ever
+/// exists.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct GithubRevokeRequest {
+    pub identity_token: String,
+}
+
+/// `POST /auth/github/revoke` -- GitHub OAuth Apps have no "force consent"
+/// request parameter (confirmed against GitHub's docs: `/login/oauth/authorize`
+/// only supports `client_id`, `redirect_uri`, `login`, `scope`, `state`,
+/// `allow_signup`, plus PKCE fields). The only real mechanism for forcing a
+/// fresh consent screen on a *later* sign-in is deleting this app's
+/// authorization grant now, via `DELETE /applications/{client_id}/grant` --
+/// so this route is called from logout (`disconnectGithub`), not from
+/// sign-in itself, where no token to revoke exists yet.
+///
+/// This is a genuine (non-swallowed) error response on failure; the client
+/// treats the call as best-effort (never awaited, never blocks the local
+/// logout), but this route's own contract stays honest/debuggable, matching
+/// `github_oauth_callback`'s error shape.
+pub(crate) async fn github_revoke(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let Ok(body) = req.json::<GithubRevokeRequest>().await else {
+        return Response::error("Bad Request", 400);
+    };
+
+    let client_id: Var = ctx.var(CLIENT_ID_BINDING)?;
+    let client_secret = ctx.secret(CLIENT_SECRET_BINDING)?;
+    let grant_url = grant_url_from_env(&ctx, &client_id.to_string());
+
+    match revoke_grant(
+        &grant_url,
+        &client_id.to_string(),
+        &client_secret.to_string(),
+        &body.identity_token,
+    )
+    .await
+    {
+        Ok(()) => Response::empty(),
+        Err(error) => Response::error(format!("GitHub grant revocation failed: {error}"), 502),
+    }
+}
+
+/// Calls `DELETE {grant_url}` with HTTP Basic auth (`client_id:client_secret`)
+/// and a JSON body of `{"access_token": identity_token}`, matching GitHub's
+/// real revoke-grant API. GitHub responds `204 No Content` on success; `200`
+/// is also accepted defensively. Same `Headers`/`RequestInit`/`Fetch::Request`
+/// pattern as `identity::github::fetch_github_user`.
+async fn revoke_grant(
+    grant_url: &str,
+    client_id: &str,
+    client_secret: &str,
+    identity_token: &str,
+) -> Result<()> {
+    let credentials =
+        base64::engine::general_purpose::STANDARD.encode(format!("{client_id}:{client_secret}"));
+    let payload = serde_json::json!({ "access_token": identity_token });
+
+    let headers = Headers::new();
+    headers.set("Authorization", &format!("Basic {credentials}"))?;
+    headers.set("Content-Type", "application/json")?;
+    headers.set("Accept", "application/vnd.github+json")?;
+    headers.set("User-Agent", "jianpu-generator-live-share-worker")?;
+
+    let mut init = RequestInit::new();
+    init.with_method(Method::Delete)
+        .with_headers(headers)
+        .with_body(Some(JsValue::from_str(&payload.to_string())));
+
+    let request = Request::new_with_init(grant_url, &init)?;
+    let mut response = Fetch::Request(request).send().await?;
+
+    match response.status_code() {
+        204 | 200 => Ok(()),
+        status => {
+            let text = response.text().await.unwrap_or_default();
+            Err(Error::RustError(format!(
+                "GitHub grant revocation request failed: status={status}, body={text}"
+            )))
+        }
+    }
 }
