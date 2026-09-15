@@ -153,7 +153,11 @@ export function PartRow({
           </RadixSelect>
           {declaration.mode === 'follow' && precedingParts.length > 0 && (
             <RadixSelect
-              value={declaration.followTarget ?? precedingParts[0].abbreviation}
+              value={
+                declaration.followTarget ??
+                precedingParts[0]?.abbreviation ??
+                ''
+              }
               onValueChange={handleFollowTargetChange}
               placeholder="target"
               testId={`follow-target-select-${declaration.abbreviation}`}
@@ -215,7 +219,9 @@ export function PartRow({
             max={100}
             step={1}
             value={[declaration.volume ?? 100]}
-            onValueChange={([v]) => handleVolumeChange(v)}
+            onValueChange={([v]) => {
+              if (v !== undefined) handleVolumeChange(v)
+            }}
             data-testid={`volume-slider-${declaration.abbreviation}`}
             style={{
               position: 'relative',

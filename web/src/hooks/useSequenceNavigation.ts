@@ -198,7 +198,8 @@ export function useSequenceNavigation(
         start,
         end,
       )
-      if (lineRanges.length === 0) return
+      const [firstLineRange] = lineRanges
+      if (!firstLineRange) return
       const envelope = envelopeOfLineRanges(lineRanges)
       if (!envelope) return
 
@@ -223,7 +224,7 @@ export function useSequenceNavigation(
       // whichever one happens to sit first in the chain.
       const revealRange =
         resolveEntryLineRange(sequenceEntries, measureSpans, indexB) ??
-        lineRanges[0]
+        firstLineRange
 
       // The actual Monaco selection: one disjoint range per entry.
       editorRef.current?.setSelectionsByLines(lineRanges, revealRange.startLine)

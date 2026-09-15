@@ -74,7 +74,8 @@ export function createEditorImperativeHandle(
         model,
       )
       ed.setSelections(selections)
-      ed.revealRangeInCenter(selections[0])
+      const [firstSelection] = selections
+      if (firstSelection) ed.revealRangeInCenter(firstSelection)
       ed.focus()
     },
     replaceContentWithSelections(
@@ -114,7 +115,8 @@ export function createEditorImperativeHandle(
         model,
       )
       ed.setSelections(selections)
-      ed.revealRangeInCenter(selections[0])
+      const [firstSelection] = selections
+      if (firstSelection) ed.revealRangeInCenter(firstSelection)
     },
     setSelectionByLines(startLine: number, endLine: number) {
       const ed = editorRef.current
@@ -143,7 +145,12 @@ export function createEditorImperativeHandle(
           ),
       )
       ed.setSelections(selections)
-      ed.revealLineInCenter(revealStartLine ?? ranges[0].startLine)
+      const [firstRange] = ranges
+      if (revealStartLine !== undefined) {
+        ed.revealLineInCenter(revealStartLine)
+      } else if (firstRange) {
+        ed.revealLineInCenter(firstRange.startLine)
+      }
       ed.focus()
     },
     jumpToOffset(charOffset: number) {

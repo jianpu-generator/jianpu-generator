@@ -68,6 +68,7 @@ export function SectionJumpToolbar({
           onTouchMove={(e) => {
             if (dragStartLabel === null) return
             const touch = e.touches[0]
+            if (!touch) return
             const target = document.elementFromPoint(
               touch.clientX,
               touch.clientY,

@@ -200,7 +200,7 @@ export function createGithubBackend(
       // `runOp`/`saveContentImpl`) no longer applies.
       status = 'idle'
       lastError = null
-      return { active: DEMO_FILE_NAMES[0], userFiles, bin, fileIds }
+      return { active: DEMO_FILE_NAMES[0] ?? '', userFiles, bin, fileIds }
     },
 
     async createFile(state: FileStoreState): Promise<FileStoreState> {

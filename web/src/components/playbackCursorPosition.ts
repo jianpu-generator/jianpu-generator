@@ -43,7 +43,9 @@ function findLastTimingStartingAtOrBefore(
   let result = -1
   while (lo <= hi) {
     const mid = (lo + hi) >> 1
-    if (timings[mid].start_s <= t) {
+    const midTiming = timings[mid]
+    if (midTiming === undefined) break
+    if (midTiming.start_s <= t) {
       result = mid
       lo = mid + 1
     } else {
@@ -70,7 +72,7 @@ export function resolveActiveNotes(
     const index = findLastTimingStartingAtOrBefore(timings, t)
     if (index === -1) continue
     const timing = timings[index]
-    if (t >= timing.end_s) continue
+    if (timing === undefined || t >= timing.end_s) continue
     active.push({ sourcePartIndex, noteId: timing.note_id })
   }
   return active

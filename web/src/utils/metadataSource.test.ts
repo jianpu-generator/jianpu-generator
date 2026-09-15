@@ -77,7 +77,7 @@ subtitle = "Sub"
     )
     const metadataLines = lines
       .slice(metadataStart + 1, metadataEnd)
-      .map((l) => l.split('=')[0].trim())
+      .map((l) => (l.split('=')[0] ?? '').trim())
       .filter((k) => k !== '')
 
     expect(metadataLines).toEqual([
@@ -197,7 +197,7 @@ title = "Song"
     )
     const keys = lines
       .slice(metadataStart + 1, metadataEnd)
-      .map((l) => l.split('=')[0].trim())
+      .map((l) => (l.split('=')[0] ?? '').trim())
       .filter((k) => k !== '')
 
     expect(keys).toEqual([

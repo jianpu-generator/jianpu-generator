@@ -32,7 +32,7 @@ function normalizeState(parsed: Partial<FileStoreState>): FileStoreState {
   }
 
   const state: FileStoreState = {
-    active: parsed.active ?? DEMO_FILE_NAMES[0],
+    active: parsed.active ?? DEMO_FILE_NAMES[0] ?? '',
     userFiles,
     bin,
     fileIds: ensureFileIds(userFiles, bin, parsed.fileIds),
@@ -40,7 +40,9 @@ function normalizeState(parsed: Partial<FileStoreState>): FileStoreState {
   const names = [...DEMO_FILE_NAMES, ...sortedUserFileNames(state)]
   return {
     ...state,
-    active: names.includes(state.active) ? state.active : DEMO_FILE_NAMES[0],
+    active: names.includes(state.active)
+      ? state.active
+      : (DEMO_FILE_NAMES[0] ?? ''),
   }
 }
 

@@ -123,7 +123,7 @@ describe('createGithubBackend: sha-refetch-before-write', () => {
 
     expect(getContent).not.toHaveBeenCalled()
     expect(createOrUpdateFileContents).toHaveBeenCalledTimes(1)
-    expect(createOrUpdateFileContents.mock.calls[0][0]).not.toHaveProperty(
+    expect(createOrUpdateFileContents.mock.calls[0]?.[0]).not.toHaveProperty(
       'sha',
     )
   })
@@ -173,7 +173,7 @@ describe('createGithubBackend: rename as create-then-delete', () => {
 
     // Renaming to a (read-only) demo file's name is rejected by the pure
     // fileStore transform, so no API calls should happen at all.
-    await backend.renameFile(state, 'a.jianpu', DEMO_FILE_NAMES[0])
+    await backend.renameFile(state, 'a.jianpu', DEMO_FILE_NAMES[0] ?? '')
 
     expect(createOrUpdateFileContents).not.toHaveBeenCalled()
     expect(deleteFile).not.toHaveBeenCalled()
@@ -252,11 +252,11 @@ describe('createGithubBackend: offline retry-on-reconnect', () => {
     expect(backend.status()).toBe('offline')
     expect(backend.lastError()).toEqual({ kind: 'network' })
 
-    listeners.online()
+    listeners.online?.()
     await vi.waitFor(() => expect(backend.status()).toBe('idle'))
 
     expect(createOrUpdateFileContents).toHaveBeenCalledTimes(2)
-    expect(createOrUpdateFileContents.mock.calls[1][0]).toMatchObject({
+    expect(createOrUpdateFileContents.mock.calls[1]?.[0]).toMatchObject({
       path: 'scores/a.jianpu',
       content: encodeBase64('new content'),
     })

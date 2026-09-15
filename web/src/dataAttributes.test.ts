@@ -17,9 +17,9 @@ function fileContents(path: string): string {
 // updating the CSS, the stale literal left behind fails this test instead of
 // silently matching nothing at runtime.
 function dataVariantLiteralsIn(cssPath: string): string[] {
-  return [...fileContents(cssPath).matchAll(/data-variant="([^"]+)"/g)].map(
-    (match) => match[1],
-  )
+  return [...fileContents(cssPath).matchAll(/data-variant="([^"]+)"/g)]
+    .map((match) => match[1])
+    .filter((literal) => literal !== undefined)
 }
 
 describe('data-variant literals in CSS', () => {
@@ -45,9 +45,9 @@ describe('data-variant literals in CSS', () => {
 // this asserts every `data-*-range-active` literal the CSS contains is still
 // one of `DATA_RANGE_ACTIVE_FLAG`'s current values.
 function dataRangeActiveFlagLiteralsIn(cssPath: string): string[] {
-  return [
-    ...fileContents(cssPath).matchAll(/\[(data-[\w-]+-range-active)\]/g),
-  ].map((match) => match[1])
+  return [...fileContents(cssPath).matchAll(/\[(data-[\w-]+-range-active)\]/g)]
+    .map((match) => match[1])
+    .filter((literal) => literal !== undefined)
 }
 
 describe('data-*-range-active literals in CSS', () => {

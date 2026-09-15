@@ -118,7 +118,8 @@ export function findMetadataSection(lines: string[]): {
 
   let endIndex = lines.length
   for (let i = startIndex + 1; i < lines.length; i++) {
-    if (lines[i].trimStart().startsWith('#')) {
+    const line = lines[i]
+    if (line?.trimStart().startsWith('#')) {
       endIndex = i
       break
     }
@@ -167,7 +168,7 @@ export function parseMetadata(source: string): ParsedMetadataFields {
 
   for (let i = startIndex + 1; i < endIndex; i++) {
     const line = lines[i]
-    if (line.trim() === '') continue
+    if (line === undefined || line.trim() === '') continue
 
     const eqIndex = line.indexOf('=')
     if (eqIndex === -1) continue

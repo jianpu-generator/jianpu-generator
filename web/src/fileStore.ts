@@ -17,7 +17,7 @@ export const FILE_STORE_KEY = 'jianpu:files:v1'
 export const STORAGE_KEY = 'jianpu:source:v5'
 
 export const DEFAULT_FILE_STORE: FileStoreState = {
-  active: DEMO_FILE_NAMES[0],
+  active: DEMO_FILE_NAMES[0] ?? '',
   userFiles: {},
   bin: {},
   fileIds: {},
@@ -36,8 +36,7 @@ export interface FileStoreState {
 }
 
 export function fileIdForName(state: FileStoreState, name: string): string {
-  if (isDemoFile(name)) return DEMO_FILE_IDS[name]
-  const id = state.fileIds[name]
+  const id = isDemoFile(name) ? DEMO_FILE_IDS[name] : state.fileIds[name]
   if (!id) throw new Error(`Missing file ID for ${name}`)
   return id
 }
@@ -175,7 +174,9 @@ export function deleteFile(
   const { [name]: _, ...rest } = state.userFiles
   const remaining = sortedUserFileNames({ ...state, userFiles: rest })
   const nextActive =
-    state.active === name ? (remaining[0] ?? DEMO_FILE_NAMES[0]) : state.active
+    state.active === name
+      ? (remaining[0] ?? DEMO_FILE_NAMES[0] ?? '')
+      : state.active
 
   return {
     ...state,
@@ -271,19 +272,20 @@ export function mergeBackendResult(
       prev.userFiles,
       base.userFiles,
       next.userFiles,
-      (key) => findMovedSource(next.userFiles[key]) ?? next.userFiles[key],
+      (key) =>
+        findMovedSource(next.userFiles[key] ?? '') ?? next.userFiles[key] ?? '',
     ),
     bin: mergeAddedRemoved(
       prev.bin,
       base.bin,
       next.bin,
-      (key) => findMovedSource(next.bin[key]) ?? next.bin[key],
+      (key) => findMovedSource(next.bin[key] ?? '') ?? next.bin[key] ?? '',
     ),
     fileIds: mergeAddedRemoved(
       prev.fileIds,
       base.fileIds,
       next.fileIds,
-      (key) => next.fileIds[key],
+      (key) => next.fileIds[key] ?? '',
     ),
   }
 }

@@ -28,10 +28,11 @@ function fontFormat(filename: string): string {
  * own `font-family` declaration needs. */
 function bareFamilyName(familyCss: string): string {
   const match = /^"([^"]+)"/.exec(familyCss)
-  if (match == null) {
+  const name = match?.[1]
+  if (name == null) {
     throw new Error(`injectFontFaces: unexpected familyCss "${familyCss}"`)
   }
-  return match[1]
+  return name
 }
 
 /** Builds the `@font-face` rules as a plain string — split out from

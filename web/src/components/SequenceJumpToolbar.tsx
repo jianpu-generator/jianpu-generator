@@ -69,6 +69,7 @@ export function SequenceJumpToolbar({
           onTouchMove={(e) => {
             if (dragStartIndex === null) return
             const touch = e.touches[0]
+            if (!touch) return
             const target = document.elementFromPoint(
               touch.clientX,
               touch.clientY,
