@@ -483,22 +483,22 @@ different scopes and using different flows.
   matching this crate's existing `worker::Fetch`-based HTTP calling
   convention.
 - Client owner UI (`web/src/hooks/useSyncedShareOwner.ts`,
-  `web/src/components/SyncedShareButton.tsx`): "start sync" stays enabled
+  `web/src/components/ShareModal.tsx`): "start sync" stays enabled
   even when this connection isn't present (§0 — no seamless
-  OAuth-then-continue). Clicking "Sync" while disconnected shows a sign-in
-  prompt popover (mockup Screen 1) instead of starting a share; its own
-  "Sign in with GitHub" button is what actually opens the popup. Once
-  connected, `startSync` is async: it reuses a `shareId` persisted locally
-  per file (`jianpu:synced-share-id:v1:<fileId>`) if one exists, otherwise
-  calls `POST /shares` (`CreateShareRequest`/`CreateShareResponse` in
+  OAuth-then-continue). Clicking "Start Sync" while disconnected instead
+  shows the modal's sign-in state; its own "Sign in with GitHub" button is
+  what actually opens the popup. Once connected, `startSync` is async: it
+  reuses a `shareId` persisted locally per file
+  (`jianpu:synced-share-id:v1:<fileId>`) if one exists, otherwise calls
+  `POST /shares` (`CreateShareRequest`/`CreateShareResponse` in
   `web/src/syncedShare/protocol.ts`) to mint one, gated on this connection's
   token — there is no more client-side share-id derivation or `ownerToken`
   (task 11 deleted `getOrCreateDeviceSecret`/`deriveSyncedShareIdentity` and
   the `ownerToken` field entirely). Every write
   (`SyncedUpdateRequest`/`SyncedStopRequest`) carries only `identityToken`,
   set to this connection's token. While synced and connected,
-  `SyncedShareButton` shows a small "Synced as @username" chip next to the
-  button, sourced from the cached `login`.
+  `ShareModal`'s Synced-link tab shows a small "Synced as @username"
+  identity row, sourced from the cached `login`.
 - Forced re-consent (`src/oauth.rs`, route `POST /auth/github/revoke`;
   client `web/src/storage/syncedShareGithubAuthRevoke.ts`): GitHub's real
   `/authorize` endpoint has no request parameter that forces a fresh

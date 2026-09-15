@@ -5,6 +5,7 @@ import {
   CopyIcon,
   DotsHorizontalIcon,
   GearIcon,
+  Link2Icon,
   Pencil1Icon,
   PlusIcon,
   TrashIcon,
@@ -19,11 +20,12 @@ import {
   sortedUserFileNames,
 } from '../fileStore'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
+import type { SyncedShareGithubAuthResult } from '../storage/syncedShareGithubAuthPopup'
 import { FileTabName } from './FileTabName'
 import { ImportButton } from './ImportButton'
 import { ResponsiveMenu } from './ResponsiveMenu'
 import { SaveStatusBadge } from './SaveStatusBadge'
-import { ShareButton } from './ShareButton'
+import { ShareModal } from './ShareModal'
 import { SpinnerLabel } from './SpinnerLabel'
 
 export interface FileSwitcherProps {
@@ -64,6 +66,18 @@ export interface FileSwitcherProps {
   binNames: string[]
   /** Opens the Bin modal, which lists `binNames` and handles restoring. */
   onOpenBin: () => void
+  isSynced: boolean
+  syncedShareLink: string | null
+  /** Whether the dedicated Synced Share GitHub sign-in connection is
+   * present -- see `useSyncedShareOwner.ts`. */
+  isGithubConnected: boolean
+  /** Cached GitHub username for the "Synced as @username" identity row;
+   * `null` until connected. */
+  githubLogin: string | null
+  onStartSync: () => Promise<string | null>
+  onStopSync: () => void
+  onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
+  onDisconnectGithub: () => void
 }
 
 export function FileSwitcher({
@@ -86,6 +100,14 @@ export function FileSwitcher({
   onImportFile,
   binNames,
   onOpenBin,
+  isSynced,
+  syncedShareLink,
+  isGithubConnected,
+  githubLogin,
+  onStartSync,
+  onStopSync,
+  onSignInWithGithub,
+  onDisconnectGithub,
 }: FileSwitcherProps) {
   const names = sortedUserFileNames(store)
   const showEmptyHint = !isLoadingGithub && names.length === 0
@@ -97,6 +119,7 @@ export function FileSwitcher({
   }, [filesOpen])
 
   const [actionsOpen, setActionsOpen] = useState(false)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
 
   return (
     <div className="file-tab-bar">
@@ -268,11 +291,19 @@ export function FileSwitcher({
                 label="Rename"
               />
             </button>
-            <ShareButton
-              filename={store.active}
-              content={fileContent(store, store.active)}
+            <button
+              type="button"
+              role="menuitem"
               className="export-menu-item"
-            />
+              data-testid="share-button"
+              onClick={() => {
+                setActionsOpen(false)
+                setShareModalOpen(true)
+              }}
+            >
+              <Link2Icon aria-hidden="true" />
+              Share
+            </button>
             {onImportFile ? (
               <ImportButton
                 disabled={isLoadingGithub}
@@ -331,6 +362,20 @@ export function FileSwitcher({
           </ResponsiveMenu.Content>
         </ResponsiveMenu.Root>
       </div>
+      <ShareModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        filename={store.active}
+        content={fileContent(store, store.active)}
+        isSynced={isSynced}
+        syncedShareLink={syncedShareLink}
+        isGithubConnected={isGithubConnected}
+        githubLogin={githubLogin}
+        onStartSync={onStartSync}
+        onStopSync={onStopSync}
+        onSignInWithGithub={onSignInWithGithub}
+        onDisconnectGithub={onDisconnectGithub}
+      />
     </div>
   )
 }

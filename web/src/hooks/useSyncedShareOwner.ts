@@ -85,8 +85,8 @@ export interface UseSyncedShareOwnerResult {
    * Per §0's "no seamless OAuth-then-continue flow" decision, this is a
    * no-op (resolves `null`) while the Synced Share GitHub connection isn't
    * present -- it never itself starts the sign-in popup. Callers (e.g.
-   * `SyncedShareButton`) are expected to check `isGithubConnected` first and
-   * show the sign-in prompt (mockup Screen 1) instead of calling this. A
+   * `ShareModal`) are expected to check `isGithubConnected` first and
+   * show its sign-in state instead of calling this. A
    * failed `POST /shares` (e.g. GitHub verification failure) resolves
    * `null` too, surfaced instead via `syncFailure` below. */
   startSync: () => Promise<string | null>
@@ -260,9 +260,9 @@ export function useSyncedShareOwner(
   const startSync = useCallback(async (): Promise<string | null> => {
     // Per §0's "no seamless OAuth-then-continue flow" decision: this never
     // triggers the sign-in popup itself, it just declines to start a share.
-    // `SyncedShareButton` checks `isGithubConnected` up front and shows the
-    // sign-in prompt (mockup Screen 1) instead of calling this in that case
-    // -- this check is a defensive backstop, not the primary gate.
+    // `ShareModal` checks `isGithubConnected` up front and shows its
+    // sign-in state instead of calling this in that case -- this check is
+    // a defensive backstop, not the primary gate.
     if (!isGithubConnected || !githubAuth) return null
     const host = import.meta.env.VITE_SYNCED_SHARE_HOST
     if (!host) return null

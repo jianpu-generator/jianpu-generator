@@ -9,7 +9,7 @@ import { completeSyncedShareGithubSignInFromCallback } from '../storage/syncedSh
  * (which exchanges the code, persists the token, and `postMessage`s the
  * outcome to the opener window per `syncedShareGithubAuth.ts`) and then
  * close itself -- the opener's own UI (`useSyncedShareOwner.ts` /
- * `SyncedShareButton`) is what actually reacts to the result.
+ * `ShareModal`) is what actually reacts to the result.
  *
  * The status text below matters whenever `window.close()` is refused --
  * not just the "opened directly, not as a popup" case, but also the popup

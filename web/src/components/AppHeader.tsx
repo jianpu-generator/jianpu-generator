@@ -12,7 +12,6 @@ import { PlayFromCurrentMeasureButton } from './PlayFromCurrentMeasureButton'
 import { PlayMeasureButton } from './PlayMeasureButton'
 import { SharedPreviewBanner } from './SharedPreviewBanner'
 import { SyncedShareBanner } from './SyncedShareBanner'
-import { SyncedShareButton } from './SyncedShareButton'
 import { SyncedShareErrorDialog } from './SyncedShareErrorDialog'
 
 interface MeasureRange {
@@ -264,10 +263,6 @@ export function AppHeader({
             onImportFile={onImportFile}
             binNames={sortedBinNames(store)}
             onOpenBin={onOpenBin}
-          />
-        )}
-        {!sharedPreview && !syncedShareViewerActive && (
-          <SyncedShareButton
             isSynced={syncedShare.isSynced}
             syncedShareLink={syncedShare.syncedShareLink}
             isGithubConnected={syncedShare.isGithubConnected}

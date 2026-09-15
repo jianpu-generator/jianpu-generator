@@ -116,6 +116,10 @@ When(
   },
 )
 
+When('I click the copy static link button', async ({ page }) => {
+  await page.getByTestId('share-modal-copy-static-link').click()
+})
+
 When('I navigate fresh to the copied share URL', async ({ page }) => {
   if (!lastShareUrl) {
     throw new Error('lastShareUrl was not captured before this step')
@@ -298,9 +302,14 @@ Then(
   },
 )
 
-Then('the share button shows {string}', async ({ page }, text: string) => {
-  await expect(page.getByTestId('share-button')).toHaveText(text)
-})
+Then(
+  'the copy static link button shows {string}',
+  async ({ page }, text: string) => {
+    await expect(page.getByTestId('share-modal-copy-static-link')).toHaveText(
+      text,
+    )
+  },
+)
 
 Then(
   'the copied share URL matches the expected compressed hash for {string}',

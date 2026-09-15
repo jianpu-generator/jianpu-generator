@@ -17,7 +17,7 @@ Feature: Synced share button
     Given the owner is signed in with GitHub as "e2e-test-user"
     And the file store is seeded with the synced score
     When the owner loads the app and clicks "Sync"
-    Then a sync-link-copied toast is shown
+    Then the synced link is copied
     When a viewer opens the copied sync link in a new page
     Then the viewer's preview contains "Synced Score"
 
@@ -25,7 +25,7 @@ Feature: Synced share button
     Given the owner is signed in with GitHub as "e2e-test-user"
     And the file store is seeded with the synced score
     When the owner loads the app and clicks "Sync"
-    Then a sync-link-copied toast is shown
+    Then the synced link is copied
     And the copied sync link contains the filename as a human-readable suffix
     When a viewer opens the copied sync link in a new page
     Then the viewer's preview contains "Synced Score"
@@ -34,34 +34,31 @@ Feature: Synced share button
     Given the owner is signed in with GitHub as "e2e-test-user"
     And the file store is seeded with the synced score
     When the owner loads the app and clicks "Sync"
-    Then a sync-link-copied toast is shown
+    Then the synced link is copied
     When a viewer opens the copied sync link in a new page
     Then the viewer's page URL has no query string
 
-  Scenario: Sync button copies a #synced= link and shows a toast, then a dropdown offers copy/stop
+  Scenario: Sync button copies a #synced= link, then the modal offers copy/stop
     Given local storage is cleared
     And the owner is signed in with GitHub as "e2e-test-user"
     When the owner loads the app and clicks "Sync"
-    Then a sync-link-copied toast is shown
+    Then the synced link is copied
     And the copied sync link matches the synced URL hash format
-    And the sync button now reads "Synced"
-    When the owner clicks the sync button again
-    Then the copy-sync-link and stop-sync buttons are visible
-    When the owner clicks the copy-sync-link button
-    Then a sync-link-copied toast is shown
+    And the share modal shows the stop-sync button
+    When the owner clicks the copy-synced-link button
+    Then the synced link is copied
     And the copied link is unchanged from before
-    When the owner clicks the sync button and then the stop-sync button
-    Then the stop-sync button disappears
-    And the sync button reads "Sync"
+    When the owner clicks the stop-sync button
+    Then the share modal shows the start-sync button
 
   Scenario: Stopping sync marks the link ended for future loads, but a viewer already on the page isn't pushed to
     Given the owner is signed in with GitHub as "e2e-test-user"
     And the file store is seeded with the synced score
     When the owner loads the app and clicks "Sync"
-    Then a sync-link-copied toast is shown
+    Then the synced link is copied
     When a viewer opens the copied sync link in a new page
     Then the viewer sees the preview page
-    When the owner clicks the sync button and then the stop-sync button
+    When the owner clicks the stop-sync button
     Then the viewer's preview contains "Synced Score"
     When the viewer reloads the page
     Then the viewer sees "This synced share has ended."
@@ -70,7 +67,7 @@ Feature: Synced share button
     Then the late viewer sees "This synced share has ended."
     And the late viewer's preview no longer contains "Synced Score"
     When the owner clicks "Sync" again
-    Then a sync-link-copied toast is shown
+    Then the synced link is copied
     And the revived sync link is identical to the original link
     When the late viewer reloads the page
     Then the late viewer's preview contains "Synced Score"
@@ -80,7 +77,7 @@ Feature: Synced share button
     And the file store is seeded with the synced score
     And the clock is under test control
     When the owner loads the app and clicks "Sync"
-    Then a sync-link-copied toast is shown
+    Then the synced link is copied
     When a viewer opens the copied sync link in a new page
     Then the viewer's preview contains "Synced Score"
     When the owner edits the synced score's title to "Edited Synced Score"
@@ -95,7 +92,7 @@ Feature: Synced share button
     Given the owner is signed in with GitHub as "e2e-test-user"
     And the file store is seeded with the synced score
     When the owner loads the app and clicks "Sync"
-    Then a sync-link-copied toast is shown
+    Then the synced link is copied
     When a separate browser context opens the copied sync link as a viewer
     And the viewer clicks "Import to my scores"
     Then the viewer's shared preview banner is gone
@@ -106,7 +103,7 @@ Feature: Synced share button
     Given the owner is signed in with GitHub as "e2e-test-user"
     And the file store is seeded with a multi-measure synced range-select score
     When the owner loads the app and clicks "Sync"
-    Then a sync-link-copied toast is shown
+    Then the synced link is copied
     When a viewer opens the copied sync link in a new page and waits for measures to render
     Then the viewer's parts toolbar is visible and no Monaco editor is mounted
     When the viewer clicks-and-clicks from measure 0 to measure 2
@@ -118,7 +115,7 @@ Feature: Synced share button
     Given the owner is signed in with GitHub as "e2e-test-user"
     And the file store is seeded with a multi-measure synced range-select score
     When the owner loads the app and clicks "Sync"
-    Then a sync-link-copied toast is shown
+    Then the synced link is copied
     When a viewer opens the copied sync link in a new page and waits for measures to render
     Then the viewer's parts toolbar is visible and no Monaco editor is mounted
     When the viewer taps the first note
@@ -129,7 +126,7 @@ Feature: Synced share button
     Given the owner is signed in with GitHub as "e2e-test-user"
     And the file store is seeded with a multi-measure synced range-select score
     When the owner loads the app and clicks "Sync"
-    Then a sync-link-copied toast is shown
+    Then the synced link is copied
     When a viewer opens the copied sync link in a new page and waits for measures to render
     Then the viewer's parts toolbar is visible and no Monaco editor is mounted
     When the viewer taps a bar line
@@ -139,7 +136,7 @@ Feature: Synced share button
     Given the owner is signed in with GitHub as "e2e-test-user"
     And the file store is seeded with a two-section synced score
     When the owner loads the app and clicks "Sync"
-    Then a sync-link-copied toast is shown
+    Then the synced link is copied
     When a viewer opens the copied sync link in a new page and waits for measures to render
     Then the viewer's parts toolbar is visible and no Monaco editor is mounted
     When the viewer taps a bar line
@@ -150,9 +147,9 @@ Feature: Synced share button
     Given local storage is cleared
     And the owner is signed in with GitHub as "e2e-test-user"
     When the owner loads the app and clicks "Sync"
-    Then a sync-link-copied toast is shown
-    When the owner clicks the sync button and then the stop-sync button
-    Then the stop-sync button disappears
+    Then the synced link is copied
+    When the owner clicks the stop-sync button
+    Then the share modal shows the start-sync button
     When the owner clicks "Sync" again
-    Then a sync-link-copied toast is shown
+    Then the synced link is copied
     And the revived sync link is identical to the original link

@@ -54,7 +54,8 @@ Feature: Share links
     And a user file "shared-test.jianpu" is seeded in local storage
     When the app loads, as seen in share
     And I open the file actions menu and click the share button
-    Then the share button shows "Link copied"
+    And I click the copy static link button
+    Then the copy static link button shows "Link copied"
     And the copied share URL matches the expected compressed hash for "shared-test.jianpu"
     When I navigate fresh to the copied share URL
     Then the shared preview banner is visible

@@ -1,9 +1,10 @@
 import { expect, type Page } from '@playwright/test'
 import { Given, Then, When } from './fixtures'
+import { openSyncedTab } from './synced-share-button.steps'
 
 // Covers the Synced Share GitHub sign-in UI itself
 // (synced-share-github-signin.feature) -- the popup OAuth round trip, the
-// "Synced as @username" identity chip, and the full-screen verification
+// "Synced as @username" identity row, and the full-screen verification
 // failure dialog. Kept in its own steps file (not
 // synced-share-button.steps.ts) since these steps mock the sign-in/worker
 // network layer directly rather than reusing a pre-seeded connection.
@@ -80,11 +81,7 @@ Given(
 )
 
 Then('the sign-in prompt is shown', async ({ page }) => {
-  await expect(page.getByTestId('synced-share-signin-prompt')).toBeVisible()
-})
-
-Then('the sign-in prompt is gone', async ({ page }) => {
-  await expect(page.getByTestId('synced-share-signin-prompt')).toHaveCount(0)
+  await expect(page.getByTestId('share-modal-signin-state')).toBeVisible()
 })
 
 When(
@@ -100,16 +97,16 @@ When(
     // never asserts against it.
     const [popup] = await Promise.all([
       context.waitForEvent('page', { timeout: 2_000 }).catch(() => null),
-      page.getByTestId('synced-share-sign-in-with-github-button').click(),
+      page.getByTestId('share-modal-sign-in-with-github').click(),
     ])
     lastSignInPopup = popup
   },
 )
 
 Then(
-  'the sign-in prompt shows signed in as {string}',
+  'the identity row shows signed in as {string}',
   async ({ page }, login: string) => {
-    await expect(page.getByTestId('synced-share-signin-prompt')).toContainText(
+    await expect(page.getByTestId('share-modal-identity')).toContainText(
       `Signed in as @${login}`,
     )
   },
@@ -159,7 +156,7 @@ Given(
 Then(
   'the sign-in prompt shows a sign-in error containing {string}',
   async ({ page }, text: string) => {
-    await expect(page.getByTestId('synced-share-signin-error')).toContainText(
+    await expect(page.getByTestId('share-modal-signin-error')).toContainText(
       text,
     )
   },
@@ -168,42 +165,21 @@ Then(
 Then(
   'the "Sign in with GitHub" button is no longer stuck signing in',
   async ({ page }) => {
-    const button = page.getByTestId('synced-share-sign-in-with-github-button')
+    const button = page.getByTestId('share-modal-sign-in-with-github')
     await expect(button).toHaveText('Sign in with GitHub')
     await expect(button).toBeEnabled()
   },
 )
 
 Then(
-  'the synced share identity chip reads {string}',
+  'the synced share identity row reads {string}',
   async ({ page }, text: string) => {
-    await expect(page.getByTestId('synced-share-identity-chip')).toHaveText(
-      text,
-    )
+    await expect(page.getByTestId('share-modal-identity')).toContainText(text)
   },
 )
 
-Then('the sync button still reads {string}', async ({ page }, text: string) => {
-  await expect(page.getByTestId('synced-share-button')).toHaveText(text)
-})
-
-When('the owner clicks the synced share identity chip', async ({ page }) => {
-  await page.getByTestId('synced-share-identity-chip').click()
-})
-
-Then('the identity chip menu is shown', async ({ page }) => {
-  await expect(page.getByTestId('disconnect-github-button')).toBeVisible()
-})
-
-When(
-  'the owner clicks "Log out" in the identity chip menu',
-  async ({ page }) => {
-    await page.getByTestId('disconnect-github-button').click()
-  },
-)
-
-Then('the synced share identity chip is gone', async ({ page }) => {
-  await expect(page.getByTestId('synced-share-identity-chip')).toHaveCount(0)
+When('the owner clicks "Log out" in the identity row', async ({ page }) => {
+  await page.getByTestId('share-modal-logout').click()
 })
 
 // This fetch (`revokeSyncedShareGithubGrant`, fired from `disconnectGithub`
@@ -283,4 +259,13 @@ When('the owner dismisses the synced share error dialog', async ({ page }) => {
 
 Then('the synced share error dialog is gone', async ({ page }) => {
   await expect(page.getByTestId('synced-share-error-dialog')).toHaveCount(0)
+})
+
+// The error dialog closes the share modal as a side effect of opening --
+// two independent Radix `Dialog.Root`s open at once fight over the focus
+// trap, and the error dialog wins (see `openSyncedTab`'s doc comment in
+// `synced-share-button.steps.ts`) -- so scenarios that need to inspect the
+// modal's state afterwards must explicitly re-open it first.
+When('the owner reopens the share modal', async ({ page }) => {
+  await openSyncedTab(page)
 })

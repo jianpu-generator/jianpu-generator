@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { openFileActions } from '../../fileSwitcherHelpers'
 import { AfterScenario, Given, Then, When } from './fixtures'
 import {
   SYNCED_FILENAME,
@@ -6,6 +7,24 @@ import {
   seedFileStore,
   syncedShareButtonState as state,
 } from './synced-share-button-state'
+
+/** Opens the share modal's Synced-link tab -- opening the file-actions menu
+ * and clicking "Share" first if the modal isn't already open (it's left
+ * open across several steps within one scenario, since only the viewer's
+ * page reloads, not the owner's -- except when a `SyncedShareErrorDialog`
+ * has opened on top of it, which closes it: two independent Radix
+ * `Dialog.Root`s open at once fight over the focus trap, and the newer one
+ * wins, so the share modal's `onOpenChange` fires with `false`. Exported for
+ * `synced-share-github-signin.steps.ts`, which re-opens the modal after
+ * dismissing that error dialog for the same reason). */
+export async function openSyncedTab(page: import('@playwright/test').Page) {
+  const modal = page.getByTestId('share-modal')
+  if ((await modal.count()) === 0) {
+    await openFileActions(page)
+    await page.getByTestId('share-button').click()
+  }
+  await page.getByTestId('share-modal-synced-tab').click()
+}
 
 // Mirrors `useStorageBackend.ts`'s `AUTOSAVE_DEBOUNCE_MS`, which
 // `useSyncedShareOwner.ts`'s `broadcastContent` also debounces at. Not imported
@@ -144,12 +163,20 @@ When(
   async ({ page }, label: string) => {
     expect(label).toBe('Sync')
     await page.goto('/')
-    await page.getByTestId('synced-share-button').click()
+    await openSyncedTab(page)
+    // When disconnected, the Synced-link tab shows its sign-in state
+    // instead of a "Start Sync" button (see
+    // synced-share-github-signin.feature) -- this shared step just opens
+    // the tab in that case and leaves the sign-in flow to the caller.
+    const startSync = page.getByTestId('share-modal-start-sync')
+    if (await startSync.count()) await startSync.click()
   },
 )
 
-Then('a sync-link-copied toast is shown', async ({ page }) => {
-  await expect(page.getByTestId('synced-share-link-copied-toast')).toBeVisible()
+Then('the synced link is copied', async ({ page }) => {
+  await expect(page.getByTestId('share-modal-copy-synced-link')).toHaveText(
+    'Link copied',
+  )
   state.syncedShareLink = await page.evaluate(async () => {
     return navigator.clipboard.readText()
   })
@@ -209,27 +236,16 @@ Then('the copied sync link matches the synced URL hash format', async () => {
   expect(state.syncedShareLink).toMatch(/#synced=[0-9A-Za-z_-]{11}(--.+)?$/)
 })
 
-Then('the sync button now reads {string}', async ({ page }, text: string) => {
-  // Once synced, the trigger becomes a dropdown offering Copy / Stop.
-  await expect(page.getByTestId('synced-share-button')).toHaveText(text)
+Then('the share modal shows the stop-sync button', async ({ page }) => {
+  await expect(page.getByTestId('share-modal-stop-sync')).toBeVisible()
 })
 
-When('the owner clicks the sync button again', async ({ page }) => {
-  await page.getByTestId('synced-share-button').click()
+Then('the share modal shows the start-sync button', async ({ page }) => {
+  await expect(page.getByTestId('share-modal-start-sync')).toBeVisible()
 })
 
-Then(
-  'the copy-sync-link and stop-sync buttons are visible',
-  async ({ page }) => {
-    await expect(
-      page.getByTestId('copy-synced-share-link-button'),
-    ).toBeVisible()
-    await expect(page.getByTestId('stop-sync-button')).toBeVisible()
-  },
-)
-
-When('the owner clicks the copy-sync-link button', async ({ page }) => {
-  await page.getByTestId('copy-synced-share-link-button').click()
+When('the owner clicks the copy-synced-link button', async ({ page }) => {
+  await page.getByTestId('share-modal-copy-synced-link').click()
 })
 
 Then('the copied link is unchanged from before', async ({ page }) => {
@@ -239,20 +255,8 @@ Then('the copied link is unchanged from before', async ({ page }) => {
   expect(copiedAgain).toEqual(state.syncedShareLink)
 })
 
-When(
-  'the owner clicks the sync button and then the stop-sync button',
-  async ({ page }) => {
-    await page.getByTestId('synced-share-button').click()
-    await page.getByTestId('stop-sync-button').click()
-  },
-)
-
-Then('the stop-sync button disappears', async ({ page }) => {
-  await expect(page.getByTestId('stop-sync-button')).toHaveCount(0)
-})
-
-Then('the sync button reads {string}', async ({ page }, text: string) => {
-  await expect(page.getByTestId('synced-share-button')).toHaveText(text)
+When('the owner clicks the stop-sync button', async ({ page }) => {
+  await page.getByTestId('share-modal-stop-sync').click()
 })
 
 Then('the viewer sees the preview page', async () => {
@@ -311,8 +315,11 @@ Then(
 
 When('the owner clicks {string} again', async ({ page }, label: string) => {
   expect(label).toBe('Sync')
-  // Syncing again reproduces the same link and revives the share.
-  await page.getByTestId('synced-share-button').click()
+  // Syncing again reproduces the same link and revives the share. The
+  // modal is already open on the Synced-link tab (only the viewer's page
+  // reloaded in between, not the owner's), now back in its "not synced"
+  // state after the stop, so Start Sync is clickable directly.
+  await page.getByTestId('share-modal-start-sync').click()
 })
 
 Then(
