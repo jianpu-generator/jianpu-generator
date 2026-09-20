@@ -54,8 +54,16 @@ export type SyncedWriteRequest = SyncedUpdateRequest | SyncedStopRequest
 // Body of `POST /shares` — creates a brand-new, server-generated share
 // (TODO §1: `shareId` generation moved server-side, no more client-derived
 // id). Requires a resolved GitHub identity.
+//
+// `externalFileId` is set only for a GitHub-backed file (the
+// `owner/repo/scores/name` Contents API path, computed in
+// `useScoreSource.ts`) — omitted for a local-only file. When present, the
+// worker makes this call idempotent per (owner, externalFileId): re-sharing
+// the same file as the same GitHub account reproduces the same share
+// instead of minting a second one.
 export interface CreateShareRequest {
   identityToken: string
+  externalFileId?: string
 }
 
 // Response of `POST /shares`.

@@ -74,10 +74,19 @@ impl SyncedWriteRequest {
 /// moved server-side). Requires a resolved identity; unlike the old TS
 /// `index.ts`, there is no more implicit "first POST to a client-chosen id
 /// creates it" behavior.
+///
+/// `external_file_id` is `Some` only for a GitHub-backed file (the client's
+/// `owner/repo/scores/name` Contents API path, computed in
+/// `web/src/hooks/useScoreSource.ts`); `None`/absent for a local-only file.
+/// When present, `crate::handlers::create_share` makes this call idempotent
+/// per `(owner_user_id, external_file_id)` -- see
+/// `crate::share_creation::resolve_share_id` -- instead of always minting a
+/// fresh share.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateShareRequest {
     pub identity_token: String,
+    pub external_file_id: Option<String>,
 }
 
 /// Response of `POST /shares`.

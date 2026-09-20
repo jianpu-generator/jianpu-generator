@@ -33,6 +33,10 @@ const QUERIES: &[(&str, &str)] = &[
         "get_doc_by_share_id.sql",
         include_str!("../queries/get_doc_by_share_id.sql"),
     ),
+    (
+        "get_doc_by_owner_and_external_file.sql",
+        include_str!("../queries/get_doc_by_owner_and_external_file.sql"),
+    ),
     ("insert_doc.sql", include_str!("../queries/insert_doc.sql")),
     ("update_doc.sql", include_str!("../queries/update_doc.sql")),
     (

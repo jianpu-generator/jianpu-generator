@@ -344,13 +344,18 @@ migrations (see "Storage" below), nothing else.
   `crates/live-share-worker/build.rs` builds at build time for query
   checking — see below). Tables: `docs` (one row per share: `share_id`,
   `owner_user_id`, `filename`, `content`, `revision`, `ended`,
-  `created_at`, `updated_at`), `users` (`id`, `created_at`),
+  `created_at`, `updated_at`, `external_file_id` — see
+  **external_file_id** in the glossary), `users` (`id`, `created_at`),
   `user_identities` (`provider`, `provider_user_id`, `user_id`, `login`,
   `linked_at` — provider-agnostic, so a future non-GitHub identity
   provider can link into the same `users` table), and `oauth_sessions`
   (`token_hash`, `provider`, `provider_user_id`, `verified_at` — the
   hashed-token verification cache described in "Verification cache + retry
-  policy" below).
+  policy" below). `live-share-worker/migrations/0002_docs_external_file_id.sql`
+  adds `docs.external_file_id` plus a partial unique index on
+  `(owner_user_id, external_file_id) WHERE external_file_id IS NOT NULL`
+  (nullable column, so local-only shares with no `external_file_id` are
+  unconstrained).
 - Key types: `doc::StoredDoc` (a full `docs` row, replacing the old KV
   `StoredDoc`'s doc-plus-bearer-`ownerToken` shape — `owner_user_id` here
   is an internal `users.id`, never sent to a client; `doc::to_public_doc`
@@ -374,7 +379,15 @@ migrations (see "Storage" below), nothing else.
   (the `POST /auth/github/callback` handler) / `oauth::github_revoke` (the
   `POST /auth/github/revoke` handler, see "Dedicated GitHub sign-in"
   below); `db` (crate-private raw D1 query functions, one
-  `.sql` file per query under `queries/`, loaded via `include_str!`).
+  `.sql` file per query under `queries/`, loaded via `include_str!`);
+  `share_creation::resolve_share_id` (the pure, D1-free idempotent-create
+  decision generic over injected `lookup`/`create` async closures, same
+  technique as `share_id::generate_unique_id` — see **external_file_id**)
+  / `share_creation::ResolveShareIdError` (its `Upstream`/
+  `LocalCreateConflicted`/`ConflictWithNoWinner` result, shaped this way
+  specifically to avoid `unreachable!`/`.expect()` on the "should never
+  happen" states, since the workspace's deny-level clippy lints reject
+  those).
 - Ownership model: a share's `owner_user_id` is set once, at
   `POST /shares` creation time, and never changes — there is no more
   "unpinned, first write claims ownership" state the old KV `ownerToken`
@@ -565,3 +578,4 @@ away from the wasm build both times:
 | **owner_user_id** | A share's fixed owner, set once at creation (`docs.owner_user_id`, an internal `users.id`) — replaces the old KV model's bearer `ownerToken`, which any first writer could claim. |
 | **Synced Share sign-in connection** | The dedicated, minimally-scoped "sign in with GitHub" OAuth connection (`web/src/storage/syncedShareGithubAuth.ts` client-side, `src/oauth.rs`'s `POST /auth/github/callback` Worker-side) used only to verify Synced Share ownership — distinct from `githubAuth.ts`'s broad-scope storage-backend connection. |
 | **owner_login / "Shared by @login"** | `protocol::SyncedDoc::owner_login`: the owning user's cached `user_identities.login`, fetched by `handlers::get_share` via `db::get_owner_login` and passed into `doc::to_public_doc` — the one field from `user_identities` deliberately exposed on the anonymous `GET /shares/:share_id` response, rendered by `web/`'s `SyncedShareBanner` as "Shared by @login". `null` when the owner has no cached login. |
+| **external_file_id** | `docs.external_file_id` (`protocol::CreateShareRequest::external_file_id`, wire `externalFileId`): a GitHub-backed file's `owner/repo/scores/name` Contents API path (`web/src/hooks/useScoreSource.ts`'s `externalFileIdFor`, built via `githubBackend.ts`'s own `joinPath`/`SCORES_DIR` rather than a second path convention), `null` for a local-only file. Makes `POST /shares` idempotent per (GitHub account, file) — `handlers::create_share` looks it up via `share_creation::resolve_share_id` before minting a new `share_id`, so re-sharing the same file as the same GitHub account from any device/browser/origin resolves to the same share, not just the same-device `localStorage` cache `useSyncedShareOwner.ts` already had. Enforced by a partial unique index on `(owner_user_id, external_file_id)` — see the Storage bullet above. |

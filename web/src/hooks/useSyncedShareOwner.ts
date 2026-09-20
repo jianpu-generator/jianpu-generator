@@ -130,11 +130,24 @@ export interface UseSyncedShareOwnerResult {
  * Ownership is always a verified GitHub identity (§0) -- there is no more
  * anonymous/device-secret ownership path (task 11 deleted
  * `getOrCreateDeviceSecret`/`deriveSyncedShareIdentity`).
+ *
+ * `externalFileId` (for a GitHub-backed file) makes a *fresh* "Sync" click
+ * idempotent server-side, keyed by (GitHub account, file) rather than just
+ * this device's local cache -- see the param's own doc comment. The local
+ * `shareId` cache above still short-circuits a same-device resume with no
+ * network round trip either way.
  */
 export function useSyncedShareOwner(
   filename: string,
   fileId: string,
   content: string,
+  /** The file's `owner/repo/scores/name` Contents API path when the active
+   * storage backend is GitHub (see `useScoreSource.ts`'s
+   * `externalFileIdFor`), `null` for a local-only file. Threaded straight
+   * into `createShare`'s request body so the worker can make the call
+   * idempotent per (GitHub account, file) -- see
+   * `crates/live-share-worker/src/handlers.rs::create_share`. */
+  externalFileId: string | null,
 ): UseSyncedShareOwnerResult {
   const [isActive, setIsActive] = useState(() => readActiveFlag(fileId))
   const [syncFailure, setSyncFailure] = useState<SyncedShareFailure | null>(
@@ -234,7 +247,10 @@ export function useSyncedShareOwner(
    * (§1). Failures are surfaced via `syncFailure`, same as a write. */
   const createShare = useCallback(
     async (host: string, identityToken: string): Promise<string | null> => {
-      const request: CreateShareRequest = { identityToken }
+      const request: CreateShareRequest = {
+        identityToken,
+        externalFileId: externalFileId ?? undefined,
+      }
       try {
         const response = await fetch(createShareEndpointUrl(host), {
           method: 'POST',
@@ -254,7 +270,7 @@ export function useSyncedShareOwner(
         return null
       }
     },
-    [recordSyncFailure],
+    [recordSyncFailure, externalFileId],
   )
 
   const startSync = useCallback(async (): Promise<string | null> => {

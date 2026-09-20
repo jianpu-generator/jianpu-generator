@@ -2,7 +2,7 @@
 //! `live-share-worker/test/protocol.test.ts`.
 #![allow(clippy::disallowed_macros)]
 
-use live_share_worker::protocol::{SyncedDoc, SyncedWriteRequest};
+use live_share_worker::protocol::{CreateShareRequest, SyncedDoc, SyncedWriteRequest};
 
 #[test]
 fn deserializes_an_update_request_from_camel_case_wire_fields() -> Result<(), serde_json::Error> {
@@ -66,5 +66,31 @@ fn serializes_synced_doc_owner_login_as_null_when_absent() -> Result<(), serde_j
     let json = serde_json::to_string(&doc)?;
 
     assert!(json.contains("\"ownerLogin\":null"));
+    Ok(())
+}
+
+#[test]
+fn deserializes_a_create_share_request_with_an_external_file_id() -> Result<(), serde_json::Error> {
+    let json = r#"{"identityToken":"tok-a","externalFileId":"octocat/jianpu-generator-storage/scores/song.jianpu"}"#;
+
+    let request: CreateShareRequest = serde_json::from_str(json)?;
+
+    assert_eq!(request.identity_token, "tok-a");
+    assert_eq!(
+        request.external_file_id.as_deref(),
+        Some("octocat/jianpu-generator-storage/scores/song.jianpu")
+    );
+    Ok(())
+}
+
+#[test]
+fn deserializes_a_create_share_request_with_no_external_file_id_as_none(
+) -> Result<(), serde_json::Error> {
+    let json = r#"{"identityToken":"tok-a"}"#;
+
+    let request: CreateShareRequest = serde_json::from_str(json)?;
+
+    assert_eq!(request.identity_token, "tok-a");
+    assert_eq!(request.external_file_id, None);
     Ok(())
 }

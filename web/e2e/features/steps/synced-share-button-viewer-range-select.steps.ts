@@ -4,11 +4,40 @@ import {
   clickAndClickSelect,
   stableBoundingBox,
 } from '../../rangeSelectHelpers'
-import { Then, When } from './fixtures'
+import { Given, Then, When } from './fixtures'
 import {
   SYNCED_FILENAME,
+  seedFileStore,
   syncedShareButtonState as state,
 } from './synced-share-button-state'
+
+Given(
+  'the file store is seeded with a multi-measure synced range-select score',
+  async ({ page }) => {
+    const rangeFilename = 'synced-range-test.jianpu'
+    const rangeSource = [
+      '# metadata',
+      'title = "Synced Range-Select Score"',
+      'max_measures_per_system = 48',
+      '',
+      '# parts',
+      'Melody [M] = notes',
+      '',
+      '# score',
+      '[M] 1_ 1_ 1= 1= 1= 1= 1 -',
+      '',
+      '[M] 1. 2_ 1_. 2= 0',
+      '',
+      '[M] 1 - - -',
+    ].join('\n')
+    await seedFileStore(
+      page,
+      rangeFilename,
+      rangeSource,
+      'synced-range-test-id',
+    )
+  },
+)
 
 When(
   'a separate browser context opens the copied sync link as a viewer',

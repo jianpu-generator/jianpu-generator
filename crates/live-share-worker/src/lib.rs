@@ -10,8 +10,9 @@
 //! (real `GET /user` verification), per
 //! `TODO-synced-share-rust-d1-migration.md` §0/§6.
 //!
-//! `doc`, `protocol`, `resolve_role`, and `verification` are `pub` (and
-//! D1/JsValue-free) so `tests/*.rs` can unit-test them directly, per this
+//! `doc`, `protocol`, `resolve_role`, `share_creation`, `share_id`, and
+//! `verification` are `pub` (and D1/JsValue-free) so `tests/*.rs` can
+//! unit-test them directly, per this
 //! repo's convention of keeping tests in separate files rather than inline
 //! `#[cfg(test)]` modules. Everything else here is D1- or
 //! wasm-runtime-facing and stays crate-private -- it isn't exercised by
@@ -29,6 +30,7 @@ mod oauth;
 pub mod doc;
 pub mod protocol;
 pub mod resolve_role;
+pub mod share_creation;
 pub mod share_id;
 pub mod verification;
 

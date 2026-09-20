@@ -7,10 +7,10 @@ use crate::protocol::SyncedDoc;
 use crate::protocol::SyncedWriteRequest;
 use crate::resolve_role::{resolve_role, SyncedRole};
 
-/// Mirrors a `docs` row (see `live-share-worker/migrations/0001_init.sql`).
-/// Unlike the old KV `StoredDoc`, `owner_user_id` is an internal,
-/// provider-agnostic `users.id`, never sent back to a client -- see
-/// `to_public_doc`.
+/// Mirrors a `docs` row (see `live-share-worker/migrations/0001_init.sql`,
+/// `0002_docs_external_file_id.sql`). Unlike the old KV `StoredDoc`,
+/// `owner_user_id` is an internal, provider-agnostic `users.id`, never sent
+/// back to a client -- see `to_public_doc`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StoredDoc {
     pub share_id: String,
@@ -21,6 +21,13 @@ pub struct StoredDoc {
     pub ended: bool,
     pub created_at: i64,
     pub updated_at: i64,
+    /// The client-derived `owner/repo/scores/name` Contents API path for a
+    /// GitHub-backed file (see `web/src/hooks/useScoreSource.ts`), `None`
+    /// for a local-only file. Keys the idempotent-creation invariant --
+    /// migration 0002's partial unique index on `(owner_user_id,
+    /// external_file_id)` -- see `crate::share_creation::resolve_share_id`.
+    /// Never sent back to a client, same as `owner_user_id`.
+    pub external_file_id: Option<String>,
 }
 
 /// A share id with no `docs` row yet reads the same as one that was shared

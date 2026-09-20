@@ -26,6 +26,8 @@ use worker::{D1Database, Result};
 use crate::doc::StoredDoc;
 
 const GET_DOC_BY_SHARE_ID: &str = include_str!("../queries/get_doc_by_share_id.sql");
+const GET_DOC_BY_OWNER_AND_EXTERNAL_FILE: &str =
+    include_str!("../queries/get_doc_by_owner_and_external_file.sql");
 const INSERT_DOC: &str = include_str!("../queries/insert_doc.sql");
 const UPDATE_DOC: &str = include_str!("../queries/update_doc.sql");
 const SHARE_ID_EXISTS: &str = include_str!("../queries/share_id_exists.sql");
@@ -49,6 +51,7 @@ struct StoredDocRow {
     ended: i64,
     created_at: i64,
     updated_at: i64,
+    external_file_id: Option<String>,
 }
 
 impl From<StoredDocRow> for StoredDoc {
@@ -62,6 +65,7 @@ impl From<StoredDocRow> for StoredDoc {
             ended: row.ended != 0,
             created_at: row.created_at,
             updated_at: row.updated_at,
+            external_file_id: row.external_file_id,
         }
     }
 }
@@ -78,6 +82,22 @@ pub(crate) async fn get_doc_by_share_id(
     Ok(row.map(StoredDoc::from))
 }
 
+/// Idempotent-create lookup: an existing `share_id` for this owner +
+/// external file, if any -- see `crate::share_creation::resolve_share_id`.
+pub(crate) async fn get_doc_by_owner_and_external_file(
+    db: &D1Database,
+    owner_user_id: &str,
+    external_file_id: &str,
+) -> Result<Option<String>> {
+    db.prepare(GET_DOC_BY_OWNER_AND_EXTERNAL_FILE)
+        .bind(&[
+            JsValue::from_str(owner_user_id),
+            JsValue::from_str(external_file_id),
+        ])?
+        .first(Some("share_id"))
+        .await
+}
+
 pub(crate) async fn insert_doc(db: &D1Database, doc: &StoredDoc) -> Result<()> {
     db.prepare(INSERT_DOC)
         .bind(&[
@@ -89,6 +109,10 @@ pub(crate) async fn insert_doc(db: &D1Database, doc: &StoredDoc) -> Result<()> {
             JsValue::from_f64(if doc.ended { 1.0 } else { 0.0 }),
             JsValue::from_f64(doc.created_at as f64),
             JsValue::from_f64(doc.updated_at as f64),
+            doc.external_file_id
+                .as_deref()
+                .map(JsValue::from_str)
+                .unwrap_or(JsValue::NULL),
         ])?
         .run()
         .await?;

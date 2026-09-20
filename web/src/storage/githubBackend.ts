@@ -26,9 +26,11 @@ import type { SaveStatus, StorageBackend } from './types'
 /**
  * Fixed top-level folder the app's files live under within the target repo,
  * alongside future siblings like `trash`/`metadata` — keeps the repo root
- * free for those rather than mixing everything in together.
+ * free for those rather than mixing everything in together. Exported so
+ * `useScoreSource.ts` can build the same Contents API path for a share's
+ * `externalFileId` rather than hand-rolling a second path convention.
  */
-const SCORES_DIR = 'scores'
+export const SCORES_DIR = 'scores'
 const TRASH_DIR = 'trash'
 
 export interface GithubBackendConfig {
@@ -54,6 +56,11 @@ export type GithubBackendError =
 
 export interface GithubBackend extends StorageBackend {
   readonly kind: 'github'
+  /** The repo this backend targets — exposed (alongside `repo`) so
+   * `useScoreSource.ts` can derive a Synced Share `externalFileId` without
+   * threading `GithubBackendConfig` through separately. */
+  readonly owner: string
+  readonly repo: string
   /** Detail behind the most recent `'error'`/`'offline'` status, if any. */
   lastError(): GithubBackendError | null
 }
@@ -182,6 +189,8 @@ export function createGithubBackend(
 
   return {
     kind: 'github',
+    owner,
+    repo,
 
     async load(): Promise<FileStoreState> {
       const [userFiles, bin] = await Promise.all([

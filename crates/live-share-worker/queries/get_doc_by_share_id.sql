@@ -8,6 +8,7 @@ SELECT share_id,
        revision,
        ended,
        created_at,
-       updated_at
+       updated_at,
+       external_file_id
 FROM docs
 WHERE share_id = ?1;

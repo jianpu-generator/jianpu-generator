@@ -17,6 +17,7 @@ fn sample_doc() -> StoredDoc {
         ended: false,
         created_at: 1_000,
         updated_at: 1_000,
+        external_file_id: None,
     }
 }
 

@@ -13,14 +13,20 @@
 // webServer command). Ensures no Synced Share e2e run ever makes a real
 // GitHub API call (task 11).
 //
-// Accepts any bearer token/code and always resolves to the same fixed test
-// identity -- Synced Share e2e scenarios don't need multiple distinct
-// GitHub identities, only "is a verified identity present or not".
+// Resolves the bearer token sent to `GET /user` to one of a small set of
+// known fixed test identities (see `mockGithubIdentity.mjs`) -- needed so
+// idempotent-share e2e scenarios can prove two different GitHub accounts
+// don't collide, not just "is a verified identity present or not".
 import { createServer } from 'node:http'
+import {
+  DEFAULT_MOCK_GITHUB_LOGIN,
+  DEFAULT_MOCK_GITHUB_USER_ID,
+  identityForSyncedShareToken,
+} from './mockGithubIdentity.mjs'
 
 const PORT = Number(process.env.MOCK_GITHUB_PORT ?? 8788)
-export const MOCK_GITHUB_LOGIN = 'e2e-test-user'
-export const MOCK_GITHUB_USER_ID = 987654321
+export const MOCK_GITHUB_LOGIN = DEFAULT_MOCK_GITHUB_LOGIN
+export const MOCK_GITHUB_USER_ID = DEFAULT_MOCK_GITHUB_USER_ID
 
 function readBody(req) {
   return new Promise((resolve) => {
@@ -98,14 +104,17 @@ const server = createServer(async (req, res) => {
 
   if (req.method === 'GET' && url.pathname === '/user') {
     // A real `GET /user` call requires an `Authorization` header; this mock
-    // doesn't bother validating its value (any bearer token resolves to the
-    // same fixed identity), matching the scope of what these e2e scenarios
-    // need to exercise.
-    if (!req.headers.authorization) {
+    // doesn't bother validating the *scheme* (e.g. `Bearer `-prefix), only
+    // resolving the token value to a known identity, matching the scope of
+    // what these e2e scenarios need to exercise.
+    const authorization = req.headers.authorization
+    if (!authorization) {
       sendJson(res, 401, { message: 'Requires authentication' })
       return
     }
-    sendJson(res, 200, { id: MOCK_GITHUB_USER_ID, login: MOCK_GITHUB_LOGIN })
+    const token = authorization.replace(/^Bearer\s+/i, '')
+    const { id, login } = identityForSyncedShareToken(token)
+    sendJson(res, 200, { id, login })
     return
   }
 

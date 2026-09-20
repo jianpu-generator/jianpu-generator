@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test'
 import { openFileActions } from '../../fileSwitcherHelpers'
+import { syncedShareIdentityTokenFor } from '../../mockGithubIdentity.mjs'
 import { AfterScenario, Given, Then, When } from './fixtures'
 import {
   SYNCED_FILENAME,
@@ -64,34 +65,6 @@ Given('the file store is seeded with the synced score', async ({ page }) => {
 })
 
 Given(
-  'the file store is seeded with a multi-measure synced range-select score',
-  async ({ page }) => {
-    const rangeFilename = 'synced-range-test.jianpu'
-    const rangeSource = [
-      '# metadata',
-      'title = "Synced Range-Select Score"',
-      'max_measures_per_system = 48',
-      '',
-      '# parts',
-      'Melody [M] = notes',
-      '',
-      '# score',
-      '[M] 1_ 1_ 1= 1= 1= 1= 1 -',
-      '',
-      '[M] 1. 2_ 1_. 2= 0',
-      '',
-      '[M] 1 - - -',
-    ].join('\n')
-    await seedFileStore(
-      page,
-      rangeFilename,
-      rangeSource,
-      'synced-range-test-id',
-    )
-  },
-)
-
-Given(
   'the file store is seeded with a two-section synced score',
   async ({ page }) => {
     // Mirrors `section-jump-select.steps.ts`'s two-section fixture, but with
@@ -147,13 +120,13 @@ Given(
   'the owner is signed in with GitHub as {string}',
   async ({ page }, login: string) => {
     await page.addInitScript(
-      ({ login }: { login: string }) => {
+      ({ login, token }: { login: string; token: string }) => {
         localStorage.setItem(
           'jianpu:synced-share-github-auth:v1',
-          JSON.stringify({ token: 'e2e-fake-synced-share-token', login }),
+          JSON.stringify({ token, login }),
         )
       },
-      { login },
+      { login, token: syncedShareIdentityTokenFor(login) },
     )
   },
 )
@@ -162,7 +135,17 @@ When(
   'the owner loads the app and clicks {string}',
   async ({ page }, label: string) => {
     expect(label).toBe('Sync')
-    await page.goto('/')
+    // Skip navigating if a prior step already loaded the app on this page
+    // (e.g. "the app loads the GitHub-backed file list ..." + "I select the
+    // ... tab ..." for a GitHub-backed scenario) -- a second `page.goto('/')`
+    // is a full reload that would discard whichever file tab was just
+    // selected, resetting the GitHub backend's active file back to the demo
+    // default. A fresh Playwright `page` fixture starts at `about:blank`;
+    // checking that (rather than e.g. the URL's trailing slash) is robust to
+    // `urlFileParam.ts`'s `writeFileNameToUrl` adding a `?file=...` query
+    // param once a tab has been selected, which would otherwise make this
+    // look like a fresh page again.
+    if (page.url() === 'about:blank') await page.goto('/')
     await openSyncedTab(page)
     // When disconnected, the Synced-link tab shows its sign-in state
     // instead of a "Start Sync" button (see
@@ -315,10 +298,15 @@ Then(
 
 When('the owner clicks {string} again', async ({ page }, label: string) => {
   expect(label).toBe('Sync')
-  // Syncing again reproduces the same link and revives the share. The
-  // modal is already open on the Synced-link tab (only the viewer's page
-  // reloaded in between, not the owner's), now back in its "not synced"
-  // state after the stop, so Start Sync is clickable directly.
+  // Syncing again reproduces the same link and revives the share. Usually
+  // the modal is already open on the Synced-link tab (only the viewer's
+  // page reloaded in between, not the owner's), now back in its "not
+  // synced" state after the stop, so Start Sync is clickable directly --
+  // except for a scenario that closed the modal in between to interact with
+  // the header (e.g. switching to a different file tab), which reopening
+  // here accounts for.
+  const startSync = page.getByTestId('share-modal-start-sync')
+  if ((await startSync.count()) === 0) await openSyncedTab(page)
   await page.getByTestId('share-modal-start-sync').click()
 })
 
