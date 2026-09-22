@@ -78,7 +78,9 @@ export function useSyncedShareViewer(
     setEditorCollapsed(true)
 
     let cancelled = false
-    void fetch(`${syncedShareWorkerOrigin(host)}/shares/${parsed.shareId}`)
+    void fetch(`${syncedShareWorkerOrigin(host)}/shares/${parsed.shareId}`, {
+      cache: 'no-store',
+    })
       .then((response) => {
         if (!response.ok)
           throw new Error(`Unexpected status ${response.status}`)

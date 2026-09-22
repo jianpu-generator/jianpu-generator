@@ -27,7 +27,13 @@ pub(super) async fn get_share(_req: Request, ctx: RouteContext<()>) -> Result<Re
         Some(doc) => db::get_owner_login(&d1, &doc.owner_user_id).await?,
         None => None,
     };
-    Response::from_json(&doc::to_public_doc(existing.as_ref(), owner_login))
+    let mut response = Response::from_json(&doc::to_public_doc(existing.as_ref(), owner_login))?;
+    // A viewer's page reload is the only way they ever see an owner's later
+    // edit (see `useSyncedShareViewer.ts`'s doc comment) -- letting the
+    // browser cache this response would mean that reload sometimes doesn't
+    // actually re-fetch, forcing repeated reloads before the update shows.
+    response.headers_mut().set("Cache-Control", "no-store")?;
+    Ok(response)
 }
 
 /// `POST /shares` -- the "create share" endpoint (TODO §1): generates a
