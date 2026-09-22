@@ -1,0 +1,119 @@
+/* ProfileControl: the header's persistent account chip -- see
+ * HANDOFF-account-chip.md for the design rationale. Replaces an earlier
+ * abandoned attempt at this same chip (the now-deleted
+ * `.synced-share-identity-chip` / `.synced-share-signin-prompt` rules that
+ * used to live in preview-toolbar.css but were never wired into any
+ * component). */
+
+.account-chip-signin-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.account-chip-signin-error {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 10;
+  max-width: 14rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--error-bg);
+  color: var(--error);
+  font-size: 0.7rem;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
+}
+
+.account-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 1.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.account-chip:hover {
+  background: var(--hover, rgba(128, 128, 128, 0.15));
+}
+
+.account-chip svg {
+  width: 0.85em;
+  height: 0.85em;
+  flex: none;
+}
+
+.account-chip-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.account-popover {
+  width: 13.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 10px 26px -8px rgb(0 0 0 / 0.28);
+  font-size: 0.78rem;
+  overflow: hidden;
+  z-index: 1000;
+}
+
+.account-popover-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.7rem 0.8rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.account-popover-login {
+  font-weight: 600;
+}
+
+.account-popover-sub {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.account-popover-link,
+.account-popover-signout {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  color: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.account-popover-link:hover,
+.account-popover-signout:hover {
+  background: var(--hover, rgba(128, 128, 128, 0.15));
+}
+
+.account-popover-signout {
+  color: var(--error);
+  border-top: 1px solid var(--border);
+}
+
+.account-popover-link svg,
+.account-popover-signout svg {
+  width: 0.95em;
+  height: 0.95em;
+  flex: none;
+}

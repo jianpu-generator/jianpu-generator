@@ -86,3 +86,29 @@ export const buttonStyle: React.CSSProperties = {
   background: '#f5f5f5',
   cursor: 'pointer',
 }
+
+/** Shared accent-blue "primary action" button style -- originally defined
+ * in `ShareModal.tsx` alone, hoisted here so `StorageSettingsModal`'s "Sign
+ * in with GitHub" button matches it too instead of the two dialogs each
+ * styling the same action differently (see `HANDOFF-account-chip.md`). */
+export const primaryButtonStyle: React.CSSProperties = {
+  ...buttonStyle,
+  width: '100%',
+  padding: '8px 12px',
+  fontSize: '13px',
+  border: '1px solid var(--accent-selected-border)',
+  background: 'var(--accent-selected-bg)',
+  color: 'var(--accent-selected-text)',
+}
+
+/** Plain "signed in as @login" status line -- what both dialogs render once
+ * connected, now that sign-out lives only in the header's account chip
+ * (see `HANDOFF-account-chip.md`). */
+export const statusLineStyle: React.CSSProperties = {
+  margin: 0,
+  display: 'flex',
+  alignItems: 'center',
+  gap: '4px',
+  color: '#444',
+  fontSize: '13px',
+}

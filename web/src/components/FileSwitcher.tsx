@@ -77,7 +77,6 @@ export interface FileSwitcherProps {
   onStartSync: () => Promise<string | null>
   onStopSync: () => void
   onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
-  onDisconnectGithub: () => void
 }
 
 export function FileSwitcher({
@@ -107,7 +106,6 @@ export function FileSwitcher({
   onStartSync,
   onStopSync,
   onSignInWithGithub,
-  onDisconnectGithub,
 }: FileSwitcherProps) {
   const names = sortedUserFileNames(store)
   const showEmptyHint = !isLoadingCloud && names.length === 0
@@ -374,7 +372,6 @@ export function FileSwitcher({
         onStartSync={onStartSync}
         onStopSync={onStopSync}
         onSignInWithGithub={onSignInWithGithub}
-        onDisconnectGithub={onDisconnectGithub}
       />
     </div>
   )

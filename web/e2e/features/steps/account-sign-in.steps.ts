@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 import { CLOUD_WORKER_ORIGIN } from '../../cloudFileHelpers'
 import {
   fileTabByExactName,
@@ -118,21 +118,33 @@ Then(
   },
 )
 
+// Disconnecting switches the active file to the read-only reference/demo
+// file (`isReadOnlyFile` in `fileStore.ts`), so this attempted edit is a
+// no-op in the editor itself -- the assertion afterwards only cares that
+// force-saving doesn't hit the worker, regardless of whether the keystrokes
+// changed anything. Exported so `account-chip.steps.ts` can reuse it for its
+// own "signing out while cloud storage is active" scenario (that one signs
+// out via the header chip directly, with no storage-settings modal to close
+// first) -- mirrors this file's own `openSyncedTab` cross-import pattern in
+// `synced-share-github-signin.steps.ts`.
+export async function attemptEditAndForceSave(page: Page) {
+  await focusEditor(page)
+  await page.keyboard.press('Control+End')
+  await page.keyboard.type(' edited')
+  await page.keyboard.press('Meta+s')
+}
+
 When(
   'I close the storage settings modal and attempt to edit and force-save',
   async ({ page }) => {
     await page.keyboard.press('Escape')
-    // Disconnecting switches the active file to the read-only reference/demo
-    // file (`isReadOnlyFile` in `fileStore.ts`), so this attempted edit is a
-    // no-op in the editor itself -- the assertion below only cares that
-    // force-saving afterwards doesn't hit the worker, regardless of whether
-    // the keystrokes changed anything.
-    await focusEditor(page)
-    await page.keyboard.press('Control+End')
-    await page.keyboard.type(' edited')
-    await page.keyboard.press('Meta+s')
+    await attemptEditAndForceSave(page)
   },
 )
+
+When('I attempt to edit and force-save', async ({ page }) => {
+  await attemptEditAndForceSave(page)
+})
 
 Then(
   'no content request is sent to the worker after disconnecting',

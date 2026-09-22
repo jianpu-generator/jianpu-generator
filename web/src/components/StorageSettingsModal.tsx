@@ -11,7 +11,6 @@ import {
   openSyncedShareGithubSignInPopup,
   type SyncedShareGithubAuthResult,
 } from '../storage/accountAuthPopup'
-import { revokeSyncedShareGithubGrant } from '../storage/accountAuthRevoke'
 import type { StorageBackend } from '../storage/types'
 import {
   type ConflictResolution,
@@ -29,6 +28,8 @@ import {
   headerStyle,
   optionRowStyle,
   overlayStyle,
+  primaryButtonStyle,
+  statusLineStyle,
 } from './storageSettingsModalStyles'
 
 export {
@@ -78,7 +79,7 @@ export function StorageSettingsModal({
   setStore,
   refreshSaveStatus,
 }: StorageSettingsModalProps) {
-  const [accountAuth, setAccountAuth] = useAccountAuth()
+  const [accountAuth] = useAccountAuth()
   const [selectedKind, setSelectedKind] = useState<'local' | 'cloud'>(
     preference.backend,
   )
@@ -106,19 +107,6 @@ export function StorageSettingsModal({
       }
     })
   }, [])
-
-  function handleDisconnect() {
-    if (accountAuth) {
-      const host = import.meta.env.VITE_SYNCED_SHARE_HOST ?? ''
-      void revokeSyncedShareGithubGrant({
-        host,
-        identityToken: accountAuth.token,
-      })
-    }
-    setAccountAuth(null)
-    setSelectedKind('local')
-    void switchBackend({ kind: 'local' })
-  }
 
   async function handleSelectLocal() {
     setSelectedKind('local')
@@ -245,15 +233,8 @@ export function StorageSettingsModal({
                 }}
                 data-testid="account-connected"
               >
-                <p style={{ margin: 0 }}>
-                  Connected as{' '}
-                  <a
-                    href={`https://github.com/${accountAuth.login}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <strong>@{accountAuth.login}</strong>
-                  </a>
+                <p style={statusLineStyle}>
+                  Cloud storage uses <strong>@{accountAuth.login}</strong>
                 </p>
                 {selectedKind === 'cloud' && isLoadingCloud ? (
                   <p
@@ -270,13 +251,6 @@ export function StorageSettingsModal({
                     Loading files from the cloud…
                   </p>
                 ) : null}
-                <button
-                  type="button"
-                  style={{ ...buttonStyle, alignSelf: 'flex-start' }}
-                  onClick={handleDisconnect}
-                >
-                  Disconnect
-                </button>
               </div>
             ) : (
               <div
@@ -292,7 +266,7 @@ export function StorageSettingsModal({
                 </p>
                 <button
                   type="button"
-                  style={buttonStyle}
+                  style={primaryButtonStyle}
                   onClick={handleSignIn}
                   disabled={signInStatus.kind === 'signing-in'}
                 >

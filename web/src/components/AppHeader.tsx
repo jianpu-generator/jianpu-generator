@@ -10,6 +10,7 @@ import { FileSwitcher } from './FileSwitcher'
 import { PlayAllButton } from './PlayAllButton'
 import { PlayFromCurrentMeasureButton } from './PlayFromCurrentMeasureButton'
 import { PlayMeasureButton } from './PlayMeasureButton'
+import { ProfileControl } from './ProfileControl'
 import { SharedPreviewBanner } from './SharedPreviewBanner'
 import { SyncedShareBanner } from './SyncedShareBanner'
 import { SyncedShareErrorDialog } from './SyncedShareErrorDialog'
@@ -116,6 +117,10 @@ interface AppHeaderProps {
   importing?: boolean
   onImportFile?: (file: File) => void
   syncedShare: SyncedShareHeaderProps
+  /** The header account chip's only action -- see `App.tsx`'s
+   * `handleAccountSignOut`. Everything else `ProfileControl` needs comes
+   * off `syncedShare`. */
+  onSignOut: () => void
 }
 
 export function AppHeader({
@@ -176,6 +181,7 @@ export function AppHeader({
   importing,
   onImportFile,
   syncedShare,
+  onSignOut,
 }: AppHeaderProps) {
   const { sharedPreview, viewerActive: syncedShareViewerActive } = syncedShare
   return (
@@ -270,7 +276,6 @@ export function AppHeader({
             onStartSync={syncedShare.onStartSync}
             onStopSync={syncedShare.onStopSync}
             onSignInWithGithub={syncedShare.onSignInWithGithub}
-            onDisconnectGithub={syncedShare.onDisconnectGithub}
           />
         )}
         <SyncedShareErrorDialog
@@ -306,6 +311,13 @@ export function AppHeader({
           onExportSplitMp3={onExportSplitMp3}
           partsCount={partsCount}
           isLoadingCloud={isLoadingCloud}
+        />
+        <ProfileControl
+          isGithubConnected={syncedShare.isGithubConnected}
+          githubLogin={syncedShare.githubLogin}
+          isSynced={syncedShare.isSynced}
+          onSignInWithGithub={syncedShare.onSignInWithGithub}
+          onSignOut={onSignOut}
         />
       </div>
     </header>

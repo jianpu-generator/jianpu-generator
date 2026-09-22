@@ -57,20 +57,25 @@ Feature: Synced Share GitHub sign-in
     Then the sign-in prompt is shown
     And the "Sign in with GitHub" button is no longer stuck signing in
 
-  Scenario: Logging out disconnects GitHub and stops the sync
+  Scenario: Signing out disconnects GitHub and stops the sync
     Given clipboard permissions are granted
     And the owner is signed in with GitHub as "e2e-test-user"
     When the owner loads the app and clicks "Sync"
     Then the synced link is copied
-    When the owner clicks "Log out" in the identity row
+    When the owner closes the share modal
+    And the owner clicks the account chip
+    And the owner clicks "Sign out" in the profile popover
+    When the owner reopens the share modal
     Then the sign-in prompt is shown
 
-  Scenario: Logging out of the Synced Share GitHub connection revokes the grant, so a later sign-in genuinely needs fresh consent
+  Scenario: Signing out of the account revokes the grant, so a later sign-in genuinely needs fresh consent
     Given clipboard permissions are granted
     And the owner is signed in with GitHub as "e2e-test-user"
     And the GitHub grant-revocation endpoint is mocked
     When the owner loads the app and clicks "Sync"
-    And the owner clicks "Log out" in the identity row
+    And the owner closes the share modal
+    And the owner clicks the account chip
+    And the owner clicks "Sign out" in the profile popover
     Then the worker was asked to revoke the GitHub grant for "e2e-fake-synced-share-token"
 
   Scenario: A GitHub verification failure while creating a share shows the full-screen error dialog, with no automatic retry

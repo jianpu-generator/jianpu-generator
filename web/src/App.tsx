@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { AppHeader } from './components/AppHeader'
 import { AppOverlays } from './components/AppOverlays'
 import { AppWorkspace } from './components/AppWorkspace'
@@ -150,6 +151,11 @@ export default function App() {
     noPartsSelected,
   } = useAppController()
 
+  const handleAccountSignOut = useCallback(() => {
+    syncedShare.onDisconnectGithub()
+    if (preference.backend === 'cloud') void switchBackend({ kind: 'local' })
+  }, [syncedShare, preference, switchBackend])
+
   useKeyboardShortcuts({
     measureAudioPlaying,
     measureAudioGenerating,
@@ -237,6 +243,7 @@ export default function App() {
         importing={importingFile}
         onImportFile={handleImportFile}
         syncedShare={syncedShare}
+        onSignOut={handleAccountSignOut}
       />
       <AppOverlays
         fileOpError={fileOpError}

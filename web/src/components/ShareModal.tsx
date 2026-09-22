@@ -12,6 +12,8 @@ import {
   headerStyle,
   optionRowStyle,
   overlayStyle,
+  primaryButtonStyle,
+  statusLineStyle,
 } from './storageSettingsModalStyles'
 
 export interface ShareModalProps {
@@ -33,8 +35,6 @@ export interface ShareModalProps {
   /** Opens the popup "sign in with GitHub" flow. Never itself starts a
    * share -- the user must click "Start Sync" again once connected. */
   onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
-  /** Logs out of the Synced Share GitHub connection. */
-  onDisconnectGithub: () => void
 }
 
 type Tab = 'static' | 'synced'
@@ -44,16 +44,6 @@ type SignInStatus =
   | { kind: 'signing-in' }
   | { kind: 'done'; login: string }
   | { kind: 'failed'; error: string }
-
-const primaryButtonStyle: React.CSSProperties = {
-  ...buttonStyle,
-  width: '100%',
-  padding: '8px 12px',
-  fontSize: '13px',
-  border: '1px solid var(--accent-selected-border)',
-  background: 'var(--accent-selected-bg)',
-  color: 'var(--accent-selected-text)',
-}
 
 const dangerButtonStyle: React.CSSProperties = {
   ...buttonStyle,
@@ -87,13 +77,6 @@ const linkFieldStyle: React.CSSProperties = {
   color: 'inherit',
 }
 
-const identityRowStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: '8px',
-}
-
 /** Generalizes `ShareButton`'s clipboard/fallback-prompt copy logic to take
  * a URL param, so each tab of `ShareModal` can own its own "Copy" ->
  * "Link copied" flash without one tab's flash leaking into the other. */
@@ -125,7 +108,6 @@ export function ShareModal({
   onStartSync,
   onStopSync,
   onSignInWithGithub,
-  onDisconnectGithub,
 }: ShareModalProps) {
   const [tab, setTab] = useState<Tab>('static')
   const [staticLink, setStaticLink] = useState('')
@@ -291,20 +273,9 @@ export function ShareModal({
               <div
                 style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
               >
-                <div
-                  style={identityRowStyle}
-                  data-testid="share-modal-identity"
-                >
-                  <span>Signed in as @{githubLogin}</span>
-                  <button
-                    type="button"
-                    style={buttonStyle}
-                    data-testid="share-modal-logout"
-                    onClick={onDisconnectGithub}
-                  >
-                    Log out
-                  </button>
-                </div>
+                <p style={statusLineStyle} data-testid="share-modal-identity">
+                  Signed in as <strong>@{githubLogin}</strong>
+                </p>
                 <p style={helpTextStyle}>
                   Anyone with this link sees your latest save. Don't share it
                   publicly.
@@ -322,20 +293,9 @@ export function ShareModal({
               <div
                 style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
               >
-                <div
-                  style={identityRowStyle}
-                  data-testid="share-modal-identity"
-                >
-                  <span>Synced as @{githubLogin}</span>
-                  <button
-                    type="button"
-                    style={buttonStyle}
-                    data-testid="share-modal-logout"
-                    onClick={onDisconnectGithub}
-                  >
-                    Log out
-                  </button>
-                </div>
+                <p style={statusLineStyle} data-testid="share-modal-identity">
+                  Synced as <strong>@{githubLogin}</strong>
+                </p>
                 <div style={linkRowStyle}>
                   <input
                     type="text"

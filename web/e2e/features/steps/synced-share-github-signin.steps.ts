@@ -178,10 +178,6 @@ Then(
   },
 )
 
-When('the owner clicks "Log out" in the identity row', async ({ page }) => {
-  await page.getByTestId('share-modal-logout').click()
-})
-
 // This fetch (`revokeSyncedShareGithubGrant`, fired from `disconnectGithub`
 // in `useSyncedShareOwner.ts`) runs on the opener page itself, not inside a
 // popup -- so `page.route`, not `context.route`, is what catches it (same
