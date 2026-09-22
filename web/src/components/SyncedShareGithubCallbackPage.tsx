@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { completeSyncedShareGithubSignInFromCallback } from '../storage/syncedShareGithubAuthCallback'
+import { completeSyncedShareGithubSignInFromCallback } from '../storage/accountAuthCallback'
 
 /**
  * Rendered (by `main.tsx`, based on `window.location.pathname`) at
@@ -7,7 +7,7 @@ import { completeSyncedShareGithubSignInFromCallback } from '../storage/syncedSh
  * back to once the user approves or denies the Synced Share sign-in
  * request. Its only job is to run `completeSyncedShareGithubSignInFromCallback`
  * (which exchanges the code, persists the token, and `postMessage`s the
- * outcome to the opener window per `syncedShareGithubAuth.ts`) and then
+ * outcome to the opener window per `accountAuth.ts`) and then
  * close itself -- the opener's own UI (`useSyncedShareOwner.ts` /
  * `ShareModal`) is what actually reacts to the result.
  *

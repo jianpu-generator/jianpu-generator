@@ -23,7 +23,7 @@ export default function App() {
     store,
     setStore,
     backend,
-    isLoadingGithub,
+    isLoadingCloud,
     saveStatus,
     autosaveDeadline,
     preference,
@@ -207,7 +207,7 @@ export default function App() {
         deletingFileName={deletingFileName}
         duplicatingFile={duplicatingFile}
         renamingFileName={renamingFileName}
-        isLoadingGithub={isLoadingGithub}
+        isLoadingCloud={isLoadingCloud}
         onOpenBin={() => setBinOpen(true)}
         hasDocuments={documents.length > 0}
         rendering={rendering}
@@ -244,7 +244,7 @@ export default function App() {
         storageSettingsOpen={storageSettingsOpen}
         setStorageSettingsOpen={setStorageSettingsOpen}
         backend={backend}
-        isLoadingGithub={isLoadingGithub}
+        isLoadingCloud={isLoadingCloud}
         preference={preference}
         switchBackend={switchBackend}
         store={store}

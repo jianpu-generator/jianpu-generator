@@ -1,8 +1,16 @@
 import type { Browser, Page } from '@playwright/test'
 import { expect } from '@playwright/test'
-import { fileSwitcherTrigger, openFileList } from '../../fileSwitcherHelpers'
-import { mockGithubContentsApi, OWNER } from '../../github-contents-mock'
-import { syncedShareIdentityTokenFor } from '../../mockGithubIdentity.mjs'
+import { CLOUD_WORKER_ORIGIN, seedCloudFile } from '../../cloudFileHelpers'
+import {
+  fileSwitcherTrigger,
+  fileTabByExactName,
+  openFileList,
+} from '../../fileSwitcherHelpers'
+import {
+  DEFAULT_MOCK_GITHUB_LOGIN,
+  syncedShareIdentityTokenFor,
+} from '../../mockGithubIdentity.mjs'
+import { gotoCloudApp } from './cloud-account-helpers'
 import { AfterScenario, BeforeScenario, Given, Then, When } from './fixtures'
 import { openSyncedTab } from './synced-share-button.steps'
 import { syncedShareButtonState as sharedState } from './synced-share-button-state'
@@ -12,19 +20,7 @@ import {
   idempotentCreateState as state,
 } from './synced-share-idempotent-create-state'
 
-// Node-process-level state shared across the `Given` steps below --
-// accumulates every file seeded so far *within one scenario* (scenario 3
-// seeds two), since each `mockGithubContentsApi` call registers a fresh
-// `page.route()` handler that fully shadows any earlier one for the same
-// URL pattern (no `route.fallback()` call) -- passing the whole accumulated
-// map on every call keeps the latest (and only effective) registration
-// serving every file seeded so far. Reset via `BeforeScenario`, not at the
-// top of the seed step itself, since resetting there would also wipe out
-// scenario 3's *first* seed call when its second one runs.
-let seededFiles: Record<string, string> = {}
-
 BeforeScenario(async () => {
-  seededFiles = {}
   resetIdempotentCreateState()
 })
 
@@ -36,17 +32,21 @@ AfterScenario(async () => {
 })
 
 Given(
-  'the GitHub repo is seeded with a file named {string} for idempotent sharing',
-  async ({ page }, path: string) => {
-    seededFiles[path] = idempotentSharingSource(path)
-    await mockGithubContentsApi(page, seededFiles)
+  'a cloud file named {string} is seeded for idempotent sharing',
+  async ({}, name: string) => {
+    const file = await seedCloudFile(
+      DEFAULT_MOCK_GITHUB_LOGIN,
+      name,
+      idempotentSharingSource(name),
+    )
+    state.seededFileIds[name.replace(/\.jianpu$/, '')] = file.id
   },
 )
 
 When(
-  'the app loads the GitHub-backed file list for idempotent sharing',
+  'the app loads the cloud-backed file list for idempotent sharing',
   async ({ page }) => {
-    await page.goto('/')
+    await gotoCloudApp(page)
     await openFileList(page)
   },
 )
@@ -71,7 +71,12 @@ When(
   async ({ page }, name: string) => {
     await closeShareModalIfOpen(page)
     await openFileList(page)
-    const tab = page.locator('.file-tab-name', { hasText: name })
+    // Exact-name match, not a substring `hasText` locator -- the cloud
+    // account backing this feature is real and shared across the whole
+    // e2e suite run (see `fileTabByExactName`'s own doc comment), so
+    // "idempotent" seeded here can otherwise ambiguously match another
+    // scenario's "idempotent-a"/"idempotent-b" tabs too.
+    const tab = fileTabByExactName(page, name)
     await tab.waitFor({ timeout: 15_000 })
     await tab.click()
     await expect(fileSwitcherTrigger(page)).toContainText(name)
@@ -83,13 +88,55 @@ When(
   },
 )
 
-/** Seeds a second browser context's `localStorage` the same way
- * `seedGithubAuth` (storage backend) and "the owner is signed in with
- * GitHub as ..." (Synced Share identity) do for the main page, then opens
- * the given GitHub-backed tab and the share modal's Synced-link tab.
- * `context.addInitScript` (not `page.addInitScript`) so it applies before
- * this context's very first navigation. */
-async function loadSecondContextOnGithubFile(
+/** Injects a synthetic `/files/list` entry carrying *another* account's
+ * real D1 file id -- see `loadSecondContextOnCloudFile`'s doc comment for
+ * why this is the only way to drive the "different account, same
+ * `external_file_id`" idempotency case through the real worker: D1's
+ * `files.id` is a globally unique primary key, so two different owners can
+ * never really share one row, but `create_share` treats `external_file_id`
+ * as an opaque client-supplied string (`handlers.rs::create_share` never
+ * validates it against the `files` table) -- this mock exercises exactly
+ * the request shape a client that really owned such a row would send,
+ * without needing D1 to allow the impossible. */
+async function mockCloudFileListWithForeignFile(
+  page: Page,
+  fileId: string,
+  tabName: string,
+): Promise<void> {
+  await page.route(`${CLOUD_WORKER_ORIGIN}/files/list`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        files: [
+          {
+            id: fileId,
+            name: `${tabName}.jianpu`,
+            content: idempotentSharingSource(tabName),
+            revision: 0,
+            trashedAt: null,
+          },
+        ],
+      },
+    })
+  })
+}
+
+/** Seeds a second browser context's `localStorage` the same way "a cloud
+ * file ... is seeded for idempotent sharing" (storage backend) and "the
+ * owner is signed in with GitHub as ..." (Synced Share identity) do for
+ * the main page, then opens the given cloud-backed tab and the share
+ * modal's Synced-link tab. `context.addInitScript` (not
+ * `page.addInitScript`) so it applies before this context's very first
+ * navigation.
+ *
+ * When `login` is the same account that owns the seeded file, this loads
+ * the file through the real cloud backend, same as the owner's own page --
+ * a real D1 row, a real `/files/list` fetch. When `login` differs, no real
+ * account can see another account's row (D1 file ownership is strictly
+ * per-owner), so `mockCloudFileListWithForeignFile` above hands this
+ * context a synthetic listing carrying the original owner's real file id
+ * instead -- see that function's doc comment. */
+async function loadSecondContextOnCloudFile(
   browser: Browser,
   login: string,
   tabName: string,
@@ -97,39 +144,31 @@ async function loadSecondContextOnGithubFile(
   const context = await browser.newContext()
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await context.addInitScript(
-    ({
-      owner,
-      login,
-      token,
-    }: {
-      owner: string
-      login: string
-      token: string
-    }) => {
+    ({ login, token }: { login: string; token: string }) => {
       localStorage.setItem(
         'jianpu:storage-backend:v1',
-        JSON.stringify({ backend: 'github', github: { owner } }),
-      )
-      localStorage.setItem(
-        'jianpu:github-auth:v1',
-        JSON.stringify({ token: 'fake-token', scopes: ['repo'] }),
+        JSON.stringify({ backend: 'cloud' }),
       )
       localStorage.setItem(
         'jianpu:synced-share-github-auth:v1',
         JSON.stringify({ token, login }),
       )
     },
-    { owner: OWNER, login, token: syncedShareIdentityTokenFor(login) },
+    { login, token: syncedShareIdentityTokenFor(login) },
   )
   const page = await context.newPage()
-  // A separate device seeing "the same real GitHub repo" -- its own
-  // in-memory files map, seeded with the same content as the owner's. This
-  // tests the *worker's* idempotent-create logic, not GitHub Contents API
-  // fidelity, so a second independent mock with matching seed data is fine.
-  await mockGithubContentsApi(page, seededFiles)
+  if (login !== DEFAULT_MOCK_GITHUB_LOGIN) {
+    const fileId = state.seededFileIds[tabName]
+    if (!fileId) {
+      throw new Error(
+        `loadSecondContextOnCloudFile: no seeded cloud file id tracked for tab ${JSON.stringify(tabName)}`,
+      )
+    }
+    await mockCloudFileListWithForeignFile(page, fileId, tabName)
+  }
   await page.goto('/')
   await openFileList(page)
-  const tab = page.locator('.file-tab-name', { hasText: tabName })
+  const tab = fileTabByExactName(page, tabName)
   await tab.waitFor({ timeout: 15_000 })
   await tab.click()
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
@@ -139,9 +178,9 @@ async function loadSecondContextOnGithubFile(
   return page
 }
 
-/** Same as `loadSecondContextOnGithubFile` but for a local-only file --
- * no storage-backend/GitHub-auth localStorage, no Contents API mock, just
- * the Synced Share identity. */
+/** Same as `loadSecondContextOnCloudFile` but for a local-only file -- no
+ * storage-backend localStorage, no cloud seeding, just the Synced Share
+ * identity. */
 async function loadSecondContextOnLocalApp(
   browser: Browser,
   login: string,
@@ -166,22 +205,22 @@ async function loadSecondContextOnLocalApp(
 }
 
 When(
-  'a separate browser context loads the same GitHub-backed file, signed in as the same GitHub account {string}',
+  'a separate browser context loads the same cloud-backed file, signed in as the same GitHub account {string}',
   async ({ browser }, login: string) => {
     if (!state.activeTabName) {
-      throw new Error('no GitHub-backed tab has been selected yet')
+      throw new Error('no cloud-backed tab has been selected yet')
     }
-    await loadSecondContextOnGithubFile(browser, login, state.activeTabName)
+    await loadSecondContextOnCloudFile(browser, login, state.activeTabName)
   },
 )
 
 When(
-  'a separate browser context loads the same GitHub-backed file, signed in as a different GitHub account {string}',
+  'a separate browser context loads the same cloud-backed file, signed in as a different GitHub account {string}',
   async ({ browser }, login: string) => {
     if (!state.activeTabName) {
-      throw new Error('no GitHub-backed tab has been selected yet')
+      throw new Error('no cloud-backed tab has been selected yet')
     }
-    await loadSecondContextOnGithubFile(browser, login, state.activeTabName)
+    await loadSecondContextOnCloudFile(browser, login, state.activeTabName)
   },
 )
 
@@ -193,9 +232,9 @@ When(
 )
 
 When(
-  'a separate browser context loads the GitHub-backed file at its renamed path, signed in as the same GitHub account {string}',
+  'a separate browser context loads the cloud-backed file at its renamed path, signed in as the same GitHub account {string}',
   async ({ browser }, login: string) => {
-    await loadSecondContextOnGithubFile(browser, login, 'renamed')
+    await loadSecondContextOnCloudFile(browser, login, 'renamed')
   },
 )
 
@@ -266,24 +305,12 @@ When(
     const input = page.locator('.file-tab--active input.file-tab-name')
     await input.fill(newName)
     await input.press('Enter')
-
-    // Mirror the rename into `seededFiles` too, so a later "a separate
-    // browser context loads the GitHub-backed file at its renamed path ..."
-    // step -- a different device fetching a fresh listing -- sees the file
-    // at its new path, matching what a real rename (create-at-new-path +
-    // delete-at-old-path against the real Contents API) actually leaves on
-    // GitHub. The owner's own page's mock already reflects this on its own
-    // (its `mockGithubContentsApi` closure was mutated directly by the
-    // rename's real PUT/DELETE calls) -- this only updates the snapshot
-    // future `mockGithubContentsApi(page, seededFiles)` calls seed from.
-    if (state.activeTabName) {
-      const oldPath = `scores/${state.activeTabName}.jianpu`
-      const content = seededFiles[oldPath]
-      if (content !== undefined) {
-        delete seededFiles[oldPath]
-        seededFiles[`scores/${newName}.jianpu`] = content
-      }
-    }
+    // Unlike the deleted GitHub-mock version of this step, there's no
+    // in-memory seed map to keep in sync -- this is a real rename against
+    // the running worker+D1 (`cloudBackend.ts`'s `renameFile`), so a later
+    // "a separate browser context loads the cloud-backed file at its
+    // renamed path ..." step (same account) sees the new name simply by
+    // fetching a fresh `/files/list` for real.
     state.activeTabName = newName
   },
 )

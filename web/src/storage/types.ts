@@ -2,16 +2,16 @@ import type { FileStoreState } from '../fileStore'
 
 /**
  * Persistence/save-indicator state exposed by a backend. `'offline'` and
- * `'error'` are only reachable once network-backed backends (e.g. GitHub)
+ * `'error'` are only reachable once network-backed backends (e.g. cloud)
  * exist; the local backend is always `'idle'`.
  */
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline'
 
 /**
- * A pluggable storage backend for the file store. Both the browser
- * `localStorage` backend and a future GitHub backend implement this
- * interface, so `FileStoreState` mutations are backend-agnostic from the
- * hook/UI layer's perspective.
+ * A pluggable storage backend for the file store. The browser
+ * `localStorage` backend and the D1-backed `'cloud'` backend
+ * (`cloudBackend.ts`) both implement this interface, so `FileStoreState`
+ * mutations are backend-agnostic from the hook/UI layer's perspective.
  *
  * `updateActiveContent` is a plain synchronous state setter with no
  * persistence side effect; `saveContent` is the explicit call that persists
@@ -20,7 +20,7 @@ export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline'
  * mechanisms with unclear ownership.
  */
 export interface StorageBackend {
-  readonly kind: 'local' | 'github'
+  readonly kind: 'local' | 'cloud'
   load(): Promise<FileStoreState>
   createFile(state: FileStoreState): Promise<FileStoreState>
   duplicateFile(state: FileStoreState): Promise<FileStoreState>

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
-import { useSyncedShareGithubAuth } from '../storage/syncedShareGithubAuth'
+import { useAccountAuth } from '../storage/accountAuth'
 import {
   openSyncedShareGithubSignInPopup,
   type SyncedShareGithubAuthResult,
-} from '../storage/syncedShareGithubAuthPopup'
-import { revokeSyncedShareGithubGrant } from '../storage/syncedShareGithubAuthRevoke'
+} from '../storage/accountAuthPopup'
+import { revokeSyncedShareGithubGrant } from '../storage/accountAuthRevoke'
 import {
   buildSyncedShareNetworkFailure,
   buildSyncedShareResponseFailure,
@@ -22,7 +22,7 @@ import { buildSyncedShareUrl } from '../syncedShareUrl'
 import { AUTOSAVE_DEBOUNCE_MS } from './useStorageBackend'
 
 /** Public Synced Share GitHub OAuth App client id -- a dedicated app,
- * separate from `githubAuth.ts`'s storage-backend device flow. Originally
+ * separate from the deleted storage-backend device flow. Originally
  * this reused that same app's client id (per §0), but doing so meant
  * GitHub's consent screen for this identity-only sign-in surfaced the
  * storage app's full existing `repo` grant as "existing access", defeating
@@ -70,8 +70,7 @@ export interface UseSyncedShareOwnerResult {
   isSynced: boolean
   syncedShareLink: string | null
   /** Whether the dedicated Synced Share GitHub sign-in connection
-   * (`syncedShareGithubAuth.ts`, distinct from `githubAuth.ts`'s
-   * storage-backend connection) currently has a stored token. */
+   * (`accountAuth.ts`) currently has a stored token. */
   isGithubConnected: boolean
   /** Cached GitHub username from that connection, for the "Synced as
    * @username" identity chip -- `null` until connected. */
@@ -153,7 +152,7 @@ export function useSyncedShareOwner(
   const [syncFailure, setSyncFailure] = useState<SyncedShareFailure | null>(
     null,
   )
-  const [githubAuth, setGithubAuth] = useSyncedShareGithubAuth()
+  const [githubAuth, setGithubAuth] = useAccountAuth()
   const isGithubConnected = githubAuth !== null
   const githubLogin = githubAuth?.login ?? null
   const [shareId, setShareId] = useState<string | null>(() =>
@@ -181,12 +180,10 @@ export function useSyncedShareOwner(
   /** Records a write failure and, if it's a `401` (the worker's
    * `VerificationFailure` -- GitHub itself rejected the stored identity
    * token as revoked/invalid, not merely a transient network blip), also
-   * clears the stored Synced Share GitHub auth. Mirrors `githubAuth.ts`'s
-   * `checkGithubAuthStatus`, which does the same for the separate
-   * storage-backend connection: without this, a token that's gone stale
-   * (e.g. its GitHub grant was revoked) keeps being resent forever, and
-   * every retry just reproduces the same 401 and re-shows this dialog
-   * instead of prompting a fresh sign-in. */
+   * clears the stored Synced Share GitHub auth: without this, a token
+   * that's gone stale (e.g. its GitHub grant was revoked) keeps being
+   * resent forever, and every retry just reproduces the same 401 and
+   * re-shows this dialog instead of prompting a fresh sign-in. */
   const recordSyncFailure = useCallback(
     (failure: SyncedShareFailure) => {
       setSyncFailure(failure)

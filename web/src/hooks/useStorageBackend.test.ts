@@ -17,7 +17,7 @@ describe('shouldScheduleAutosave', () => {
 
   it('does not schedule on the very first render (no previous snapshot)', () => {
     expect(
-      shouldScheduleAutosave('github', null, {
+      shouldScheduleAutosave('cloud', null, {
         active: 'a.jianpu',
         content: 'new',
       }),
@@ -27,7 +27,7 @@ describe('shouldScheduleAutosave', () => {
   it('does not schedule when switching the active file, even though content differs', () => {
     expect(
       shouldScheduleAutosave(
-        'github',
+        'cloud',
         { active: 'a.jianpu', content: 'content of a' },
         { active: 'b.jianpu', content: 'content of b' },
       ),
@@ -37,17 +37,17 @@ describe('shouldScheduleAutosave', () => {
   it('does not schedule when the same active file has unchanged content', () => {
     expect(
       shouldScheduleAutosave(
-        'github',
+        'cloud',
         { active: 'a.jianpu', content: 'same' },
         { active: 'a.jianpu', content: 'same' },
       ),
     ).toBe(false)
   })
 
-  it('schedules a save when the same active file has edited content on GitHub', () => {
+  it('schedules a save when the same active file has edited content on the cloud backend', () => {
     expect(
       shouldScheduleAutosave(
-        'github',
+        'cloud',
         { active: 'a.jianpu', content: 'old' },
         { active: 'a.jianpu', content: 'new' },
       ),
@@ -60,19 +60,19 @@ describe('shouldWarnBeforeUnload', () => {
     expect(shouldWarnBeforeUnload('local', true, 'saving')).toBe(false)
   })
 
-  it('does not warn on GitHub when idle with nothing pending', () => {
-    expect(shouldWarnBeforeUnload('github', false, 'idle')).toBe(false)
+  it('does not warn on the cloud backend when idle with nothing pending', () => {
+    expect(shouldWarnBeforeUnload('cloud', false, 'idle')).toBe(false)
   })
 
-  it('does not warn on GitHub once a save has landed', () => {
-    expect(shouldWarnBeforeUnload('github', false, 'saved')).toBe(false)
+  it('does not warn on the cloud backend once a save has landed', () => {
+    expect(shouldWarnBeforeUnload('cloud', false, 'saved')).toBe(false)
   })
 
-  it('warns on GitHub while a debounced save is still armed', () => {
-    expect(shouldWarnBeforeUnload('github', true, 'idle')).toBe(true)
+  it('warns on the cloud backend while a debounced save is still armed', () => {
+    expect(shouldWarnBeforeUnload('cloud', true, 'idle')).toBe(true)
   })
 
-  it('warns on GitHub while a save request is in flight', () => {
-    expect(shouldWarnBeforeUnload('github', false, 'saving')).toBe(true)
+  it('warns on the cloud backend while a save request is in flight', () => {
+    expect(shouldWarnBeforeUnload('cloud', false, 'saving')).toBe(true)
   })
 })

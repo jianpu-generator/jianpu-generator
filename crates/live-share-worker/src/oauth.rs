@@ -1,5 +1,7 @@
-//! Worker-side leg of the dedicated Synced Share "sign in with GitHub"
-//! connection (`TODO-synced-share-rust-d1-migration.md` §0/§6, task 6): the
+//! Worker-side leg of the account's dedicated "sign in with GitHub"
+//! connection -- shared by both file storage (`/files/*`) and Synced Share
+//! (`/shares/*`), not specific to either
+//! (`TODO-synced-share-rust-d1-migration.md` §0/§6, task 6): the
 //! authorization-code + PKCE token exchange, which needs the OAuth App's
 //! client secret and so cannot run in the browser. The client secret is
 //! read from a Worker secret binding (`SYNCED_SHARE_GITHUB_CLIENT_SECRET`,
@@ -12,10 +14,10 @@
 //! not verify or cache the resulting token, nor resolve it to an internal
 //! `user_id` -- that is `identity::github::GithubIdentityProvider` plus the
 //! hashed-token caching and write-path wiring from task 7, which every
-//! write still goes through regardless of what this route returns. It also
-//! does not persist anything: the exchanged access token is simply returned
-//! to the caller (the browser), which owns storing it and sending it as
-//! `identity_token` on writes (task 8).
+//! write (storage or sharing) still goes through regardless of what this
+//! route returns. It also does not persist anything: the exchanged access
+//! token is simply returned to the caller (the browser), which owns storing
+//! it and sending it as `identity_token` on writes (task 8).
 //!
 //! `oauth4webapi` (the library TODO §0 names for this connection) is a
 //! browser/Fetch-API-oriented JS library with no Rust equivalent runnable
@@ -33,7 +35,9 @@
 //! revoking this app's authorization grant now, via GitHub's
 //! `DELETE /applications/{client_id}/grant`. Called from logout
 //! (`disconnectGithub` in `useSyncedShareOwner.ts`), not from sign-in
-//! itself -- see `github_revoke`'s own doc comment.
+//! itself -- see `github_revoke`'s own doc comment. This disconnects the
+//! account as a whole (both storage and sharing), since it is one shared
+//! sign-in.
 
 use base64::Engine;
 use serde::{Deserialize, Serialize};
@@ -97,10 +101,10 @@ pub(crate) struct GithubOauthCallbackRequest {
 /// (resolving it to a `user_id` is a separate, later concern -- task 7's
 /// `identity::resolve_verified_user_id`, which every write still goes
 /// through, not this route's job). `login` is a best-effort convenience for
-/// the client's "Synced as @username" identity chip (task 8) -- fetched via
-/// one extra `GET /user` call with the freshly issued token; `None` if that
-/// call fails, since a missing display name shouldn't fail a successful
-/// sign-in.
+/// the client's signed-in-as-@username identity chip (task 8, shown by both
+/// the storage and Synced Share UIs) -- fetched via one extra `GET /user`
+/// call with the freshly issued token; `None` if that call fails, since a
+/// missing display name shouldn't fail a successful sign-in.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct GithubOauthCallbackResponse {

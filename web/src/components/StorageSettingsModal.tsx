@@ -1,27 +1,23 @@
-import { Octokit } from '@octokit/rest'
 import * as Dialog from '@radix-ui/react-dialog'
-import { GitHubLogoIcon, LaptopIcon } from '@radix-ui/react-icons'
-import { useEffect, useState } from 'react'
+import { GitHubLogoIcon, LaptopIcon, UploadIcon } from '@radix-ui/react-icons'
+import { useCallback, useEffect, useState } from 'react'
 import type { FileStoreState } from '../fileStore'
-import {
-  GITHUB_STORAGE_REPO,
-  type StorageBackendPreference,
-  type StorageBackendTarget,
+import type {
+  StorageBackendPreference,
+  StorageBackendTarget,
 } from '../hooks/useStorageBackend'
+import { useAccountAuth } from '../storage/accountAuth'
 import {
-  checkGithubAuthStatus,
-  clearStoredGithubAuth,
-  connectWithDeviceFlow,
-  type GithubDeviceVerification,
-  readStoredGithubAuth,
-} from '../storage/githubAuth'
+  openSyncedShareGithubSignInPopup,
+  type SyncedShareGithubAuthResult,
+} from '../storage/accountAuthPopup'
+import { revokeSyncedShareGithubGrant } from '../storage/accountAuthRevoke'
 import type { StorageBackend } from '../storage/types'
 import {
   type ConflictResolution,
-  ensureStorageRepo,
   errorBannerMessage,
-  isGithubBackend,
-  resolveGithubConflict,
+  isCloudBackend,
+  resolveCloudConflict,
 } from './storageSettingsModalHelpers'
 import {
   backendButtonSelectedStyle,
@@ -37,15 +33,14 @@ import {
 
 export {
   type ConflictResolution,
-  ensureStorageRepo,
-  resolveGithubConflict,
+  resolveCloudConflict,
 } from './storageSettingsModalHelpers'
 
 export interface StorageSettingsModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   backend: StorageBackend
-  isLoadingGithub: boolean
+  isLoadingCloud: boolean
   preference: StorageBackendPreference
   switchBackend: (target: StorageBackendTarget) => Promise<void>
   store: FileStoreState
@@ -53,98 +48,75 @@ export interface StorageSettingsModalProps {
     value: FileStoreState | ((prev: FileStoreState) => FileStoreState),
   ) => void
   /** Re-syncs `useStorageBackend`'s `saveStatus` state after a conflict
-   * resolution mutates the `GithubBackend`'s status directly (via
-   * `resolveGithubConflict`'s `saveContent`/`load` calls, which bypass the
-   * hook's own `runSave`), so the tab bar's "Saved" badge stops showing the
-   * conflict's stale error status once resolved. */
+   * resolution mutates the `CloudBackend`'s status directly (via
+   * `resolveCloudConflict`'s `forceOverwrite`/`load` calls, which bypass
+   * the hook's own `runSave`), so the tab bar's "Saved" badge stops showing
+   * the conflict's stale error status once resolved. */
   refreshSaveStatus: (syncedStore?: FileStoreState) => void
 }
 
-/** Public GitHub OAuth App client ID; not a secret (it's visible in every
- * device-flow request), so it's fine to bake in at build time. The actual
- * value sent to GitHub is injected server-side by the Cloudflare proxy (see
- * `cf-oauth-proxy/functions/device/code.ts`) regardless of what's sent here
- * — this is only required because `@octokit/auth-oauth-device` insists on a
- * non-empty `clientId` to construct its requests. */
-const GITHUB_OAUTH_CLIENT_ID = import.meta.env.VITE_GITHUB_OAUTH_CLIENT_ID ?? ''
+/** Public "account" GitHub OAuth App client id used for the unified
+ * sign-in — the same dedicated, minimally-scoped app (`GET /user` only)
+ * `useSyncedShareOwner.ts` uses for Synced Share ownership. Not a secret:
+ * it's visible in every authorization request the browser sends. */
+const ACCOUNT_GITHUB_OAUTH_CLIENT_ID =
+  import.meta.env.VITE_SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID ?? ''
 
-const GITHUB_OAUTH_PROXY_URL = import.meta.env.VITE_GITHUB_OAUTH_PROXY_URL ?? ''
+type SignInStatus =
+  | { kind: 'idle' }
+  | { kind: 'signing-in' }
+  | { kind: 'failed'; error: string }
 
 export function StorageSettingsModal({
   open,
   onOpenChange,
   backend,
-  isLoadingGithub,
+  isLoadingCloud,
   preference,
   switchBackend,
   store,
   setStore,
   refreshSaveStatus,
 }: StorageSettingsModalProps) {
-  const [selectedKind, setSelectedKind] = useState<'local' | 'github'>(
+  const [accountAuth, setAccountAuth] = useAccountAuth()
+  const [selectedKind, setSelectedKind] = useState<'local' | 'cloud'>(
     preference.backend,
   )
-  const [username, setUsername] = useState<string | null>(
-    preference.github?.owner ?? null,
-  )
-  const [connecting, setConnecting] = useState(false)
-  const [verification, setVerification] =
-    useState<GithubDeviceVerification | null>(null)
-  const [connectError, setConnectError] = useState<string | null>(null)
+  const [signInStatus, setSignInStatus] = useState<SignInStatus>({
+    kind: 'idle',
+  })
 
   useEffect(() => {
     if (!open) return
     setSelectedKind(preference.backend)
-    setConnectError(null)
-    setVerification(null)
+    setSignInStatus({ kind: 'idle' })
   }, [open, preference])
 
-  useEffect(() => {
-    if (!open) return
-    if (!readStoredGithubAuth()) {
-      setUsername(null)
-      return
-    }
-    let cancelled = false
-    checkGithubAuthStatus().then((status) => {
-      if (cancelled) return
-      if (status.state === 'connected') setUsername(status.username)
-      else setUsername(null)
+  const handleSignIn = useCallback(() => {
+    setSignInStatus({ kind: 'signing-in' })
+    void openSyncedShareGithubSignInPopup({
+      clientId: ACCOUNT_GITHUB_OAUTH_CLIENT_ID,
+    }).then((result: SyncedShareGithubAuthResult) => {
+      if (result.ok) {
+        setSignInStatus({ kind: 'idle' })
+      } else if (result.reason === 'error') {
+        setSignInStatus({ kind: 'failed', error: result.error })
+      } else {
+        setSignInStatus({ kind: 'idle' })
+      }
     })
-    return () => {
-      cancelled = true
-    }
-  }, [open])
-
-  async function handleConnect() {
-    setConnecting(true)
-    setConnectError(null)
-    setVerification(null)
-    try {
-      await connectWithDeviceFlow({
-        clientId: GITHUB_OAUTH_CLIENT_ID,
-        proxyBaseUrl: GITHUB_OAUTH_PROXY_URL,
-        scopes: ['repo'],
-        onVerification: (v) => setVerification(v),
-      })
-      const stored = readStoredGithubAuth()
-      if (!stored) throw new Error('Connection did not persist a token')
-      const octokit = new Octokit({ auth: stored.token })
-      const { data: user } = await octokit.rest.users.getAuthenticated()
-      await ensureStorageRepo(octokit, user.login)
-      setUsername(user.login)
-      await switchBackend({ kind: 'github', owner: user.login })
-    } catch (error) {
-      setConnectError(error instanceof Error ? error.message : String(error))
-    } finally {
-      setConnecting(false)
-      setVerification(null)
-    }
-  }
+  }, [])
 
   function handleDisconnect() {
-    clearStoredGithubAuth()
-    setUsername(null)
+    if (accountAuth) {
+      const host = import.meta.env.VITE_SYNCED_SHARE_HOST ?? ''
+      void revokeSyncedShareGithubGrant({
+        host,
+        identityToken: accountAuth.token,
+      })
+    }
+    setAccountAuth(null)
+    setSelectedKind('local')
     void switchBackend({ kind: 'local' })
   }
 
@@ -153,23 +125,23 @@ export function StorageSettingsModal({
     await switchBackend({ kind: 'local' })
   }
 
-  async function handleSelectGithub(currentUsername: string | null) {
-    setSelectedKind('github')
-    if (currentUsername) {
-      await switchBackend({ kind: 'github', owner: currentUsername })
+  async function handleSelectCloud() {
+    setSelectedKind('cloud')
+    if (accountAuth) {
+      await switchBackend({ kind: 'cloud' })
     }
   }
 
-  const githubBackendError = isGithubBackend(backend)
-    ? backend.lastError()
-    : null
-  const bannerMessage = errorBannerMessage(githubBackendError)
-  const conflictPath =
-    githubBackendError?.kind === 'conflict' ? githubBackendError.path : null
+  const cloudBackendError = isCloudBackend(backend) ? backend.lastError() : null
+  const bannerMessage = errorBannerMessage(cloudBackendError)
+  const conflictRevision =
+    cloudBackendError?.kind === 'conflict'
+      ? cloudBackendError.currentRevision
+      : null
 
   async function handleResolveConflict(resolution: ConflictResolution) {
-    if (!isGithubBackend(backend)) return
-    const nextStore = await resolveGithubConflict(resolution, backend, store)
+    if (!isCloudBackend(backend)) return
+    const nextStore = await resolveCloudConflict(resolution, backend, store)
     setStore(nextStore)
     refreshSaveStatus(nextStore)
   }
@@ -203,10 +175,10 @@ export function StorageSettingsModal({
             </Dialog.Close>
           </div>
           <div style={bodyStyle}>
-            {conflictPath ? (
+            {conflictRevision !== null ? (
               <div style={bannerStyle} data-testid="conflict-banner">
                 <p style={{ margin: '0 0 6px' }}>
-                  "{conflictPath}" changed on GitHub since your last save.
+                  This file changed in the cloud since your last save.
                 </p>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
@@ -250,130 +222,92 @@ export function StorageSettingsModal({
               </button>
               <button
                 type="button"
-                aria-pressed={selectedKind === 'github'}
-                aria-label="GitHub repository"
+                aria-pressed={selectedKind === 'cloud'}
+                aria-label="Cloud storage"
                 style={
-                  selectedKind === 'github'
+                  selectedKind === 'cloud'
                     ? backendButtonSelectedStyle
                     : backendButtonStyle
                 }
-                onClick={() => void handleSelectGithub(username)}
+                onClick={() => void handleSelectCloud()}
               >
-                <GitHubLogoIcon width={28} height={28} />
-                GitHub repository
+                <UploadIcon width={28} height={28} />
+                Cloud storage
               </button>
             </div>
 
-            {selectedKind === 'github' ? (
-              username ? (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                  }}
-                  data-testid="github-connected"
-                >
-                  <p style={{ margin: 0 }}>
-                    Connected as{' '}
-                    <a
-                      href={`https://github.com/${username}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <strong>@{username}</strong>
-                    </a>
-                  </p>
-                  <p style={{ margin: 0, color: '#666' }}>
-                    Storing files in{' '}
-                    <a
-                      href={`https://github.com/${username}/${GITHUB_STORAGE_REPO}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {username}/{GITHUB_STORAGE_REPO}
-                    </a>
-                    <code>/scores</code>
-                  </p>
-                  {isLoadingGithub ? (
-                    <p
-                      style={{
-                        margin: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        color: '#666',
-                      }}
-                      data-testid="github-loading-spinner"
-                    >
-                      <span
-                        className="file-tab-bar-spinner"
-                        aria-hidden="true"
-                      />
-                      Loading files from GitHub…
-                    </p>
-                  ) : null}
-                  <button
-                    type="button"
-                    style={{ ...buttonStyle, alignSelf: 'flex-start' }}
-                    onClick={handleDisconnect}
+            {accountAuth ? (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                }}
+                data-testid="account-connected"
+              >
+                <p style={{ margin: 0 }}>
+                  Connected as{' '}
+                  <a
+                    href={`https://github.com/${accountAuth.login}`}
+                    target="_blank"
+                    rel="noreferrer"
                   >
-                    Disconnect
-                  </button>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                  }}
-                  data-testid="github-connect"
+                    <strong>@{accountAuth.login}</strong>
+                  </a>
+                </p>
+                {selectedKind === 'cloud' && isLoadingCloud ? (
+                  <p
+                    style={{
+                      margin: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      color: '#666',
+                    }}
+                    data-testid="cloud-loading-spinner"
+                  >
+                    <span className="file-tab-bar-spinner" aria-hidden="true" />
+                    Loading files from the cloud…
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  style={{ ...buttonStyle, alignSelf: 'flex-start' }}
+                  onClick={handleDisconnect}
                 >
-                  {verification ? (
-                    <div data-testid="device-verification">
-                      <p style={{ margin: '0 0 4px' }}>
-                        Go to{' '}
-                        <a
-                          href={verification.verification_uri}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {verification.verification_uri}
-                        </a>{' '}
-                        and enter this code:
-                      </p>
-                      <p
-                        style={{
-                          fontSize: '18px',
-                          fontWeight: 700,
-                          margin: '0 0 4px',
-                        }}
-                      >
-                        {verification.user_code}
-                      </p>
-                      <p style={{ margin: 0, color: '#666' }}>
-                        Waiting for authorization…
-                      </p>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      style={buttonStyle}
-                      onClick={handleConnect}
-                      disabled={connecting}
-                    >
-                      {connecting ? 'Connecting…' : 'Connect GitHub'}
-                    </button>
-                  )}
-                  {connectError ? (
-                    <p style={{ color: '#b00020', margin: 0 }}>
-                      {connectError}
-                    </p>
-                  ) : null}
-                </div>
-              )
-            ) : null}
+                  Disconnect
+                </button>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                }}
+                data-testid="account-sign-in"
+              >
+                <p style={{ margin: 0, color: '#666' }}>
+                  Sign in with GitHub to enable cloud storage.
+                </p>
+                <button
+                  type="button"
+                  style={buttonStyle}
+                  onClick={handleSignIn}
+                  disabled={signInStatus.kind === 'signing-in'}
+                >
+                  <GitHubLogoIcon aria-hidden="true" />{' '}
+                  {signInStatus.kind === 'signing-in'
+                    ? 'Signing in…'
+                    : 'Sign in with GitHub'}
+                </button>
+                {signInStatus.kind === 'failed' ? (
+                  <p style={{ color: '#b00020', margin: 0 }}>
+                    {signInStatus.error}
+                  </p>
+                ) : null}
+              </div>
+            )}
           </div>
         </Dialog.Content>
       </Dialog.Portal>

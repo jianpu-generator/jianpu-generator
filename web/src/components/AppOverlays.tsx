@@ -18,7 +18,7 @@ interface AppOverlaysProps {
   storageSettingsOpen: boolean
   setStorageSettingsOpen: (open: boolean) => void
   backend: StorageBackend
-  isLoadingGithub: boolean
+  isLoadingCloud: boolean
   preference: StorageBackendPreference
   switchBackend: (target: StorageBackendTarget) => Promise<void>
   store: FileStoreState
@@ -45,7 +45,7 @@ export function AppOverlays({
   storageSettingsOpen,
   setStorageSettingsOpen,
   backend,
-  isLoadingGithub,
+  isLoadingCloud,
   preference,
   switchBackend,
   store,
@@ -75,7 +75,7 @@ export function AppOverlays({
         open={storageSettingsOpen}
         onOpenChange={setStorageSettingsOpen}
         backend={backend}
-        isLoadingGithub={isLoadingGithub}
+        isLoadingCloud={isLoadingCloud}
         preference={preference}
         switchBackend={switchBackend}
         store={store}

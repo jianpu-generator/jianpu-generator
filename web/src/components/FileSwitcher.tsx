@@ -20,7 +20,7 @@ import {
   sortedUserFileNames,
 } from '../fileStore'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
-import type { SyncedShareGithubAuthResult } from '../storage/syncedShareGithubAuthPopup'
+import type { SyncedShareGithubAuthResult } from '../storage/accountAuthPopup'
 import { FileTabName } from './FileTabName'
 import { ImportButton } from './ImportButton'
 import { ResponsiveMenu } from './ResponsiveMenu'
@@ -56,9 +56,9 @@ export interface FileSwitcherProps {
   /** Name of the file currently being renamed, if any — disables and spins
    * just that file's tab name rather than the whole tab bar. */
   renamingName?: string | null
-  /** Whether the GitHub backend is still fetching its file list — shows a
+  /** Whether the cloud backend is still fetching its file list — shows a
    * spinner on the trigger and a loading hint instead of the demo hint. */
-  isLoadingGithub?: boolean
+  isLoadingCloud?: boolean
   importing?: boolean
   onImportFile?: (file: File) => void
   /** Names of files currently in the trash — used for the "Bin (N)" menu
@@ -95,7 +95,7 @@ export function FileSwitcher({
   deletingName = null,
   duplicating = false,
   renamingName = null,
-  isLoadingGithub = false,
+  isLoadingCloud = false,
   importing = false,
   onImportFile,
   binNames,
@@ -110,7 +110,7 @@ export function FileSwitcher({
   onDisconnectGithub,
 }: FileSwitcherProps) {
   const names = sortedUserFileNames(store)
-  const showEmptyHint = !isLoadingGithub && names.length === 0
+  const showEmptyHint = !isLoadingCloud && names.length === 0
 
   const [filesOpen, setFilesOpen] = useState(false)
   const [demoOpen, setDemoOpen] = useState(false)
@@ -132,7 +132,7 @@ export function FileSwitcher({
           <ResponsiveMenu.Trigger asChild>
             <button type="button" className="preview-export-btn">
               {displayFileName(triggerLabel)}
-              {isLoadingGithub ? (
+              {isLoadingCloud ? (
                 <span className="file-tab-bar-spinner" aria-hidden="true" />
               ) : (
                 <ChevronDownIcon
@@ -148,8 +148,8 @@ export function FileSwitcher({
             sideOffset={4}
             title="Files"
           >
-            {isLoadingGithub ? (
-              <p className="file-tab-bar-hint">Loading files from GitHub…</p>
+            {isLoadingCloud ? (
+              <p className="file-tab-bar-hint">Loading files from the cloud…</p>
             ) : showEmptyHint ? (
               <p className="file-tab-bar-hint">
                 No files yet — click New to create one.
@@ -306,7 +306,7 @@ export function FileSwitcher({
             </button>
             {onImportFile ? (
               <ImportButton
-                disabled={isLoadingGithub}
+                disabled={isLoadingCloud}
                 importing={importing}
                 onImportFile={(file) => {
                   onImportFile(file)

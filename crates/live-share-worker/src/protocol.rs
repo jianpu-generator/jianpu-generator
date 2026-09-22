@@ -95,3 +95,109 @@ pub struct CreateShareRequest {
 pub struct CreateShareResponse {
     pub share_id: String,
 }
+
+// -- `/files/*` (cloud storage backend) -------------------------------------
+//
+// Unlike `SyncedDoc` above (a wire shape distinct from the pure
+// `crate::doc::StoredDoc`), the public wire shape for a file is
+// `crate::files::PublicFile` itself -- it already derives `Serialize` +
+// `Deserialize` with `camelCase` renaming, so these request/response types
+// reuse it directly instead of duplicating an identical `PublicFileWire`
+// struct here.
+//
+// Every `/files/*` route requires a resolved identity (see
+// `crate::handlers`'s module doc comment) -- `identity_token` appears in
+// every request body below, same convention as `CreateShareRequest`/
+// `SyncedWriteRequest` above.
+
+/// Body of `POST /files/list`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListFilesRequest {
+    pub identity_token: String,
+}
+
+/// Response of `POST /files/list` -- every file (active and trashed alike)
+/// owned by the resolved caller; the client partitions this by
+/// `trashedAt` into its file list vs. bin (see `cloudBackend.ts`'s
+/// `load()`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListFilesResponse {
+    pub files: Vec<crate::files::PublicFile>,
+}
+
+/// Body of `POST /files` -- creates a new file row (new file / duplicate /
+/// import). `id` is client-generated (`fileStore.ts`'s
+/// `generateFileId()`) -- safe because every write is additionally gated on
+/// the resolved `owner_user_id` server-side. Response is the created
+/// `crate::files::PublicFile` itself; a name collision against the
+/// caller's other files (active or trashed) is instead reported as `409
+/// {code: "name_taken"}`, distinct from this module's `ConflictResponse`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateFileRequest {
+    pub identity_token: String,
+    pub id: String,
+    pub name: String,
+    pub content: String,
+}
+
+/// Body of `POST /files/:id/content` -- the atomic CAS content save. See
+/// `crate::files::classify_content_write` for how `expected_revision` gates
+/// the write.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateFileContentRequest {
+    pub identity_token: String,
+    pub content: String,
+    pub expected_revision: i64,
+}
+
+/// `200` response of `POST /files/:id/content`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateFileContentResponse {
+    pub revision: i64,
+}
+
+/// `409` response of `POST /files/:id/content` when the row moved on since
+/// the caller last saw it -- feeds the existing "Overwrite mine"/"Discard
+/// mine" UI. Distinct in shape from the `409 {code: "name_taken"}` name-
+/// collision response (create/rename/restore).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConflictResponse {
+    pub current_revision: i64,
+}
+
+/// Body of `POST /files/:id/rename`. No revision gate -- rename has no
+/// conflict semantics (matches the old GitHub backend's actual behavior,
+/// decision #3). `404` on zero rows affected; a name collision maps to
+/// `409 {code: "name_taken"}`, same as `CreateFileRequest`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RenameFileRequest {
+    pub identity_token: String,
+    pub name: String,
+}
+
+/// Body of `POST /files/:id/delete` -- moves the file to the bin
+/// (`trashed_at`). No revision gate; `404` on zero rows affected.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteFileRequest {
+    pub identity_token: String,
+}
+
+/// Body of `POST /files/:id/restore`. `name` is supplied by the caller
+/// (already recomputed client-side to be unique, per `fileStore.ts`'s
+/// `uniqueName`/`reservedNames`) -- can still race into a `409 {code:
+/// "name_taken"}`, same as `CreateFileRequest`/`RenameFileRequest`. `404` on
+/// zero rows affected (no such trashed file for this caller).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RestoreFileRequest {
+    pub identity_token: String,
+    pub name: String,
+}

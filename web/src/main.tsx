@@ -5,7 +5,7 @@ import './index.css'
 import App from './App.tsx'
 import { SyncedShareGithubCallbackPage } from './components/SyncedShareGithubCallbackPage.tsx'
 import { injectFontFaces } from './injectFontFaces.ts'
-import { syncedShareGithubCallbackPathname } from './storage/syncedShareGithubAuthPopup.ts'
+import { syncedShareGithubCallbackPathname } from './storage/accountAuthPopup.ts'
 
 injectFontFaces()
 
@@ -15,7 +15,7 @@ if (root == null) {
 }
 
 // The Synced Share GitHub sign-in popup redirects here once GitHub approves
-// or denies the request (see `syncedShareGithubAuthPopup.ts`) -- this path is
+// or denies the request (see `accountAuthPopup.ts`) -- this path is
 // never the main app, so it short-circuits straight to the completion page
 // instead of mounting `<App/>`. Compared against the base-path-aware
 // pathname (not the bare `SYNCED_SHARE_GITHUB_REDIRECT_PATH`), since this

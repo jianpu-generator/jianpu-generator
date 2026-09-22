@@ -1,6 +1,6 @@
 // Builds the origin for the Synced Share worker from `VITE_SYNCED_SHARE_HOST`
 // (a bare host, no scheme -- see that env var's doc comments in
-// `useSyncedShareOwner.ts`/`syncedShareGithubAuthCallback.ts`).
+// `useSyncedShareOwner.ts`/`accountAuthCallback.ts`).
 //
 // Local dev points this at `localhost:8787` (`wrangler dev`, see
 // `dekit.yaml`), which serves plain HTTP -- `wrangler dev` only serves HTTPS

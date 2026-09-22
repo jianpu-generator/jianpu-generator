@@ -4,31 +4,25 @@ import {
   fileIdForName,
   isReadOnlyFile,
 } from '../fileStore'
-import { type GithubBackend, SCORES_DIR } from '../storage/githubBackend'
-import { joinPath } from '../storage/githubBackendUtils'
 import type { StorageBackend } from '../storage/types'
 import { useSharedPreview } from './useSharedPreview'
 import { useSyncedShareOwner } from './useSyncedShareOwner'
 import { useSyncedShareViewer } from './useSyncedShareViewer'
 
-function isGithubBackend(backend: StorageBackend): backend is GithubBackend {
-  return backend.kind === 'github'
-}
-
-/** The Synced Share idempotent-creation key for a GitHub-backed file (see
+/** The Synced Share idempotent-creation key for a cloud-backed file (see
  * `useSyncedShareOwner`'s `externalFileId` param and
- * `crates/live-share-worker/src/handlers.rs::create_share`): the file's
- * actual `owner/repo/scores/name` Contents API location, built with the
- * same `joinPath`/`SCORES_DIR` `githubBackend.ts` itself uses for Contents
- * API requests rather than a second, hand-rolled path convention. `null`
- * for a local-only file — there's no account-independent identity to key
- * off for those. */
+ * `crates/live-share-worker/src/handlers.rs::create_share`): the file's own
+ * D1 `files.id` for a cloud-backed file, `None`/`null` for a local-only
+ * file — a local file's id is a random client-only value with no
+ * account-scoped identity, so it still can't correctly key cross-device
+ * idempotent sharing; only a `cloud` (account-owned) file can. */
 function externalFileIdFor(
   backend: StorageBackend,
+  state: FileStoreState,
   activeFilename: string,
 ): string | null {
-  if (!isGithubBackend(backend)) return null
-  return joinPath(backend.owner, backend.repo, SCORES_DIR, activeFilename)
+  if (backend.kind !== 'cloud') return null
+  return fileIdForName(state, activeFilename)
 }
 
 interface FileOpError {
@@ -68,7 +62,7 @@ export function useScoreSource(
     store.active,
     fileIdForName(store, store.active),
     fileContent(store, store.active),
-    externalFileIdFor(backend, store.active),
+    externalFileIdFor(backend, store, store.active),
   )
   const {
     syncedShareViewerPreview,

@@ -3,7 +3,7 @@ import { sortedBinNames } from '../fileStore'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SyncedShareViewerStatus } from '../hooks/useSyncedShareViewer'
 import type { SharePayload } from '../shareUrl'
-import type { SyncedShareGithubAuthResult } from '../storage/syncedShareGithubAuthPopup'
+import type { SyncedShareGithubAuthResult } from '../storage/accountAuthPopup'
 import type { SyncedShareFailure } from '../syncedShare/errors'
 import { ExportControls } from './ExportControls'
 import { FileSwitcher } from './FileSwitcher'
@@ -86,7 +86,7 @@ interface AppHeaderProps {
   deletingFileName?: string | null
   duplicatingFile?: boolean
   renamingFileName?: string | null
-  isLoadingGithub?: boolean
+  isLoadingCloud?: boolean
   onOpenBin: () => void
   hasDocuments: boolean
   rendering: boolean
@@ -146,7 +146,7 @@ export function AppHeader({
   deletingFileName,
   duplicatingFile,
   renamingFileName,
-  isLoadingGithub,
+  isLoadingCloud,
   onOpenBin,
   hasDocuments,
   rendering,
@@ -258,7 +258,7 @@ export function AppHeader({
             deletingName={deletingFileName}
             duplicating={duplicatingFile}
             renamingName={renamingFileName}
-            isLoadingGithub={isLoadingGithub}
+            isLoadingCloud={isLoadingCloud}
             importing={importing}
             onImportFile={onImportFile}
             binNames={sortedBinNames(store)}
@@ -305,7 +305,7 @@ export function AppHeader({
           splitMp3Exporting={splitMp3Exporting}
           onExportSplitMp3={onExportSplitMp3}
           partsCount={partsCount}
-          isLoadingGithub={isLoadingGithub}
+          isLoadingCloud={isLoadingCloud}
         />
       </div>
     </header>

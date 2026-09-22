@@ -27,7 +27,7 @@ export function useAppController() {
     store,
     setStore,
     backend,
-    isLoadingGithub,
+    isLoadingCloud,
     saveStatus,
     autosaveDeadline,
     preference,
@@ -38,7 +38,7 @@ export function useAppController() {
   } = useStorageBackend()
   const [editorCollapsed, setEditorCollapsed] = useState(false)
 
-  useUrlFileSync(store, setStore, isLoadingGithub)
+  useUrlFileSync(store, setStore, isLoadingCloud)
 
   const {
     creatingFile,
@@ -262,7 +262,7 @@ export function useAppController() {
     store,
     setStore,
     backend,
-    isLoadingGithub,
+    isLoadingCloud,
     saveStatus,
     autosaveDeadline,
     preference,

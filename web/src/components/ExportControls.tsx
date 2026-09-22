@@ -38,7 +38,7 @@ interface ExportControlsProps {
   splitMp3Exporting?: boolean
   onExportSplitMp3?: () => void
   partsCount?: number
-  isLoadingGithub?: boolean
+  isLoadingCloud?: boolean
 }
 
 export function ExportControls({
@@ -69,7 +69,7 @@ export function ExportControls({
   splitMp3Exporting = false,
   onExportSplitMp3,
   partsCount = 0,
-  isLoadingGithub = false,
+  isLoadingCloud = false,
 }: ExportControlsProps) {
   const exporting =
     pdfExporting || splitPdfExporting || midiExporting || splitMidiExporting
@@ -79,47 +79,43 @@ export function ExportControls({
     hasDocuments &&
     !rendering &&
     !exporting &&
-    !isLoadingGithub
+    !isLoadingCloud
   const canExportSplitPdf =
     pdfAvailable &&
     pdfFontsReady &&
     partsCount > 0 &&
     !rendering &&
     !exporting &&
-    !isLoadingGithub
+    !isLoadingCloud
   const canExportMidi =
-    midiAvailable &&
-    hasDocuments &&
-    !rendering &&
-    !exporting &&
-    !isLoadingGithub
+    midiAvailable && hasDocuments && !rendering && !exporting && !isLoadingCloud
   const canExportSplitMidi =
     midiAvailable &&
     partsCount > 0 &&
     !rendering &&
     !exporting &&
-    !isLoadingGithub
+    !isLoadingCloud
   const canExportWav =
-    audioAvailable && soundfontReady && !audioGenerating && !isLoadingGithub
+    audioAvailable && soundfontReady && !audioGenerating && !isLoadingCloud
   const canExportSplitWav =
     audioAvailable &&
     soundfontReady &&
     partsCount > 0 &&
     !splitWavExporting &&
     !audioGenerating &&
-    !isLoadingGithub
+    !isLoadingCloud
   const canExportMp3 =
-    mp3Available && soundfontReady && !mp3Exporting && !isLoadingGithub
+    mp3Available && soundfontReady && !mp3Exporting && !isLoadingCloud
   const canExportSplitMp3 =
     mp3Available &&
     soundfontReady &&
     partsCount > 0 &&
     !splitMp3Exporting &&
-    !isLoadingGithub
+    !isLoadingCloud
 
   const canExport =
     pdfAvailable || midiAvailable || audioAvailable || mp3Available
-  const canExportParts = canExport && (partsCount > 1 || isLoadingGithub)
+  const canExportParts = canExport && (partsCount > 1 || isLoadingCloud)
 
   const exportItems: ExportMenuItem[] = [
     ...(pdfAvailable

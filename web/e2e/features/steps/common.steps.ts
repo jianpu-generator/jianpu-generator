@@ -10,10 +10,3 @@ Given(
     await focusEditor()
   },
 )
-
-Given(
-  'GitHub auth is seeded for the mocked owner',
-  async ({ seedGithubAuth }) => {
-    await seedGithubAuth()
-  },
-)

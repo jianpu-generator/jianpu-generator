@@ -21,10 +21,15 @@
 procs:
   worker:
     cwd: crates/live-share-worker
+    # `-y` on both `npx wrangler` calls: without it, npx prompts
+    # ("Need to install the following packages: wrangler@X. Ok to
+    # proceed? (y)") the first time it's run on a machine without
+    # wrangler cached, and mprocs doesn't forward keystrokes into this
+    # pane -- the prompt just sits there forever, hanging `just dev`.
     shell: >
       set -a && . ./.env.local && set +a &&
-      npx wrangler d1 migrations apply DB --local &&
-      npx wrangler dev --port 8787
+      npx -y wrangler d1 migrations apply DB --local &&
+      npx -y wrangler dev --port 8787
       --var SYNCED_SHARE_GITHUB_CLIENT_ID:Ov23liFN0gIJmZ2VREGm
       --var SYNCED_SHARE_GITHUB_CLIENT_SECRET:$SYNCED_SHARE_GITHUB_CLIENT_SECRET
   web:

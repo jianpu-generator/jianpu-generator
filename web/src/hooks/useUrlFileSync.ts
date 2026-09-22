@@ -10,8 +10,8 @@ import { readFileNameFromUrl, writeFileNameToUrl } from '../urlFileParam'
  * URL updated to whichever file is active, so reloading the page lands back
  * on the same file instead of the picker/default file.
  *
- * Initial selection is deferred until `isLoadingGithub` is false (relevant
- * for the GitHub backend, whose file list isn't known synchronously) so the
+ * Initial selection is deferred until `isLoadingCloud` is false (relevant
+ * for the cloud backend, whose file list isn't known synchronously) so the
  * file is actually found rather than silently skipped — `selectFile`
  * no-ops for an unknown name. The "ready" flag is set in the same effect
  * invocation as the `setStore` call, so React batches them into a single
@@ -28,7 +28,7 @@ export function useUrlFileSync(
   setStore: (
     value: FileStoreState | ((prev: FileStoreState) => FileStoreState),
   ) => void,
-  isLoadingGithub: boolean,
+  isLoadingCloud: boolean,
 ): void {
   const initialUrlFileAppliedRef = useRef(false)
   const [initialSelectionReady, setInitialSelectionReady] = useState(false)
@@ -37,7 +37,7 @@ export function useUrlFileSync(
   useEffect(() => {
     if (
       initialUrlFileAppliedRef.current ||
-      isLoadingGithub ||
+      isLoadingCloud ||
       isSyncedShareViewer
     )
       return
@@ -45,7 +45,7 @@ export function useUrlFileSync(
     const urlFile = readFileNameFromUrl()
     if (urlFile) setStore((prev) => selectFile(prev, urlFile))
     setInitialSelectionReady(true)
-  }, [isLoadingGithub, isSyncedShareViewer, setStore])
+  }, [isLoadingCloud, isSyncedShareViewer, setStore])
 
   useEffect(() => {
     if (!initialSelectionReady || isSyncedShareViewer) return

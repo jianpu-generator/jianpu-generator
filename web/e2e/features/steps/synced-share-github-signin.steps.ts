@@ -10,7 +10,7 @@ import { openSyncedTab } from './synced-share-button.steps'
 // network layer directly rather than reusing a pre-seeded connection.
 
 // The popup navigates to GitHub's real authorization endpoint
-// (`GITHUB_AUTHORIZATION_ENDPOINT` in `syncedShareGithubAuthPopup.ts`) -- a
+// (`GITHUB_AUTHORIZATION_ENDPOINT` in `accountAuthPopup.ts`) -- a
 // top-level browser navigation, so `context.route` (not `page.route`, which
 // only covers the opener's own page) can intercept it. Fulfilling with a
 // redirect straight back to the app's own callback URL (echoing the real
@@ -132,7 +132,7 @@ Then('the GitHub sign-in popup has closed itself', async () => {
 // never reached the code that flips its status and calls `window.close()`,
 // so it sat on "Signing in with GitHub…" forever and the opener's own button
 // never left its "Signing in…" state either (see
-// `syncedShareGithubAuthCallback.ts`/`SyncedShareGithubCallbackPage.tsx`). This
+// `accountAuthCallback.ts`/`SyncedShareGithubCallbackPage.tsx`). This
 // fetch runs inside the popup page, a separate `Page` from the opener within
 // the same `BrowserContext`, so `context.route` (not `page.route`) is what
 // catches it -- same reasoning as "the GitHub authorization popup is mocked

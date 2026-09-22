@@ -1,0 +1,66 @@
+import { expect } from '@playwright/test'
+import { CLOUD_WORKER_ORIGIN } from '../../cloudFileHelpers'
+import {
+  fileSwitcherTrigger,
+  fileTabByExactName,
+  openFileList,
+} from '../../fileSwitcherHelpers'
+import { gotoCloudApp } from './cloud-account-helpers'
+import { Given, Then, When } from './fixtures'
+
+Given(
+  'the cloud file-list request is delayed by 1 second for the file switcher',
+  async ({ page }) => {
+    // Delays the `/files/list` request `backend.load()` issues so the
+    // spinner has a window to be observed before the listing resolves.
+    await page.route(`${CLOUD_WORKER_ORIGIN}/files/list`, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await route.continue()
+    })
+  },
+)
+
+When(
+  'the app loads with the editor ready while cloud files load',
+  async ({ page }) => {
+    await gotoCloudApp(page)
+    await page.waitForSelector('.monaco-editor .view-lines', {
+      timeout: 15_000,
+    })
+  },
+)
+
+Then('the file switcher trigger shows a loading spinner', async ({ page }) => {
+  const trigger = fileSwitcherTrigger(page)
+  await expect(trigger.locator('.file-tab-bar-spinner')).toBeVisible({
+    timeout: 5_000,
+  })
+})
+
+Then(
+  'opening the file list shows the hint {string}',
+  async ({ page }, hint: string) => {
+    await openFileList(page)
+    await expect(page.locator('.file-tab-bar-hint')).toHaveText(hint)
+  },
+)
+
+When('the cloud file-list request resolves', async ({ page }) => {
+  const trigger = fileSwitcherTrigger(page)
+  await expect(trigger.locator('.file-tab-bar-spinner')).toHaveCount(0, {
+    timeout: 15_000,
+  })
+})
+
+Then(
+  'the file switcher trigger spinner is gone and the caret is visible',
+  async ({ page }) => {
+    const trigger = fileSwitcherTrigger(page)
+    await expect(trigger.locator('.export-menu-caret')).toBeVisible()
+  },
+)
+
+Then('the file list shows {string}', async ({ page }, name: string) => {
+  await openFileList(page)
+  await expect(fileTabByExactName(page, name)).toBeVisible()
+})

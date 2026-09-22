@@ -28,6 +28,7 @@ mod identity;
 mod oauth;
 
 pub mod doc;
+pub mod files;
 pub mod protocol;
 pub mod resolve_role;
 pub mod share_creation;

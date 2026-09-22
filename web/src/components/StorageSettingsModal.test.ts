@@ -1,64 +1,7 @@
-import type { Octokit } from '@octokit/rest'
 import { describe, expect, it, vi } from 'vitest'
 import type { FileStoreState } from '../fileStore'
-import type { GithubBackend } from '../storage/githubBackend'
-import {
-  ensureStorageRepo,
-  resolveGithubConflict,
-} from './StorageSettingsModal'
-
-function notFound(): Promise<never> {
-  return Promise.reject(Object.assign(new Error('Not Found'), { status: 404 }))
-}
-
-function makeOctokit(overrides: {
-  get?: () => Promise<unknown>
-  create?: () => Promise<unknown>
-}): Octokit {
-  return {
-    rest: {
-      repos: {
-        get: vi.fn(overrides.get ?? (() => Promise.resolve({ data: {} }))),
-        createForAuthenticatedUser: vi.fn(
-          overrides.create ?? (() => Promise.resolve({ data: {} })),
-        ),
-      },
-    },
-  } as unknown as Octokit
-}
-
-describe('ensureStorageRepo', () => {
-  it('does nothing when the repo already exists', async () => {
-    const octokit = makeOctokit({})
-    await ensureStorageRepo(octokit, 'octo')
-
-    expect(octokit.rest.repos.get).toHaveBeenCalledWith({
-      owner: 'octo',
-      repo: 'jianpu-generator-storage',
-    })
-    expect(octokit.rest.repos.createForAuthenticatedUser).not.toHaveBeenCalled()
-  })
-
-  it('creates the repo as private when a 404 is returned', async () => {
-    const octokit = makeOctokit({ get: notFound })
-    await ensureStorageRepo(octokit, 'octo')
-
-    expect(octokit.rest.repos.createForAuthenticatedUser).toHaveBeenCalledWith({
-      name: 'jianpu-generator-storage',
-      private: true,
-    })
-  })
-
-  it('rethrows non-404 errors without attempting to create', async () => {
-    const octokit = makeOctokit({
-      get: () =>
-        Promise.reject(Object.assign(new Error('boom'), { status: 500 })),
-    })
-
-    await expect(ensureStorageRepo(octokit, 'octo')).rejects.toThrow('boom')
-    expect(octokit.rest.repos.createForAuthenticatedUser).not.toHaveBeenCalled()
-  })
-})
+import type { CloudBackend } from '../storage/cloudBackend'
+import { resolveCloudConflict } from './StorageSettingsModal'
 
 function makeStore(active: string, content: string): FileStoreState {
   return {
@@ -69,15 +12,15 @@ function makeStore(active: string, content: string): FileStoreState {
   }
 }
 
-describe('resolveGithubConflict', () => {
-  it('overwrite-mine re-pushes the current in-memory content and keeps the store unchanged', async () => {
-    const saveContent = vi.fn().mockResolvedValue(undefined)
-    const backend = { saveContent } as unknown as GithubBackend
+describe('resolveCloudConflict', () => {
+  it('overwrite-mine realigns the revision and re-pushes the current in-memory content, keeping the store unchanged', async () => {
+    const forceOverwrite = vi.fn().mockResolvedValue(undefined)
+    const backend = { forceOverwrite } as unknown as CloudBackend
     const store = makeStore('a.jianpu', 'mine')
 
-    const result = await resolveGithubConflict('overwrite-mine', backend, store)
+    const result = await resolveCloudConflict('overwrite-mine', backend, store)
 
-    expect(saveContent).toHaveBeenCalledWith(store)
+    expect(forceOverwrite).toHaveBeenCalledWith(store)
     expect(result).toBe(store)
   })
 
@@ -94,10 +37,10 @@ describe('resolveGithubConflict', () => {
         userFiles: { ...state.userFiles, [state.active]: content },
       }),
     )
-    const backend = { load, updateActiveContent } as unknown as GithubBackend
+    const backend = { load, updateActiveContent } as unknown as CloudBackend
     const store = makeStore('a.jianpu', 'mine')
 
-    const result = await resolveGithubConflict('discard-mine', backend, store)
+    const result = await resolveCloudConflict('discard-mine', backend, store)
 
     expect(load).toHaveBeenCalled()
     expect(updateActiveContent).toHaveBeenCalledWith(store, 'theirs')

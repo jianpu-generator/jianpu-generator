@@ -141,6 +141,21 @@ export async function selectDemoFile(page: Page, name: string) {
   await page.locator('.file-tab-name', { hasText: name }).click()
 }
 
+/** Locates a single file-switcher tab whose *entire* display name matches
+ * `name` exactly (anchored regex), not merely contains it as a substring.
+ * Needed wherever many scenarios seed files into one shared, real,
+ * non-isolated account (the cloud storage backend's e2e coverage, backed
+ * by a real local D1 instance) rather than each getting its own mocked
+ * in-memory store: a plain `hasText: name` string match can then resolve
+ * to more than one tab once another concurrently-seeded file's name
+ * happens to contain `name` as a substring (e.g. `"a"` also matches
+ * `"auto"`; `"banner"` also matches `"banner-reconnect"`), which Playwright
+ * treats as a strict-mode error. */
+export function fileTabByExactName(page: Page, name: string) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return page.locator('.file-tab-name', { hasText: new RegExp(`^${escaped}$`) })
+}
+
 /** Opens the "⋯" file-actions dropdown (New / Duplicate / Share / Storage…)
  * in the header. Idempotent — the trigger toggles open/closed, so this is a
  * no-op if already open. */

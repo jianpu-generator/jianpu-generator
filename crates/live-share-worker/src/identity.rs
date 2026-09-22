@@ -1,10 +1,12 @@
-//! Identity resolution seam for Synced Share ownership, and the
-//! hashed-token cache + backoff-wrapped verification wiring that sits in
-//! front of it (`TODO-synced-share-rust-d1-migration.md` §0/§6, task 7).
+//! Account identity resolution shared by both file storage (`/files/*`) and
+//! Synced Share (`/shares/*`), plus the hashed-token cache + backoff-wrapped
+//! verification wiring that sits in front of it
+//! (`TODO-synced-share-rust-d1-migration.md` §0/§6, task 7).
 //!
-//! `resolve_verified_user_id` is what every write (and the create-share
-//! endpoint) calls in `handlers.rs`: it never trusts a client-asserted
-//! identity directly, always routing through an `IdentityProvider` --
+//! `resolve_verified_user_id` is what every write in `handlers.rs` calls,
+//! whether it's a Synced Share write (create-share, write-doc) or a
+//! `/files/*` storage write: it never trusts a client-asserted identity
+//! directly, always routing through an `IdentityProvider` --
 //! `github::GithubIdentityProvider` in production -- fronted by a
 //! hashed-token cache against `oauth_sessions` so a fresh verification
 //! doesn't re-hit GitHub on every request.

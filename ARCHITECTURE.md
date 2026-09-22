@@ -163,13 +163,14 @@ The React app (`web/`) runs the compiler in a dedicated worker (`web/src/worker/
 ### Storage abstraction
 
 - Module: `web/src/storage/`
-- Key types: `StorageBackend` (`web/src/storage/types.ts`) — the interface both the browser-`localStorage` backend and a future GitHub backend implement; `FileStoreState` (`web/src/fileStore.ts`) remains the canonical in-memory shape used by every backend. `StorageBackend.load`/`createFile`/`duplicateFile`/`renameFile`/`deleteFile`/`restoreFile`/`saveContent` are async (to accommodate network-backed backends); `updateActiveContent` is sync with no persistence side effect. `saveContent` is the explicit call that persists the active file's content — debounce ownership lives in the hook layer, not the backend.
-- `web/src/storage/localBackend.ts` — the only `StorageBackend` implementation so far. Thin async adapter over `fileStore.ts`'s pure, synchronous functions (`createFile`, `duplicateFile`, `renameFile`, `deleteFile`, `restoreFile`, `updateActiveContent`). Its `saveContent` is a no-op since `useLocalStorage` already persists on every state change.
-- `web/src/storage/githubBackend.ts` — `GithubBackend` (extends `StorageBackend`), backed by GitHub's Contents API via `Octokit`. Config (`GithubBackendConfig`): `token`, `owner`, `repo` (always the fixed `jianpu-generator-storage`, see below), optional `branch`. Files always live under the fixed `scores/` top-level folder, with deleted files moved to a sibling top-level `trash/` folder, so further top-level siblings (e.g. `metadata`) can be added without a folder picker. No sha cache (refetches immediately before each write); rename/delete/restore are two sequential Contents API calls, not one atomic commit. Exposes a non-interface `lastError(): GithubBackendError | null` (`'conflict' | 'rate-limited' | 'network' | 'unknown'`) so the settings UI can render specific banners/prompts beyond the shared `SaveStatus`.
-- `web/src/storage/githubAuth.ts` — OAuth device-flow auth, via `@octokit/auth-oauth-device` with a minimal duck-typed `request` stub that routes only the two CORS-blocked device-flow calls (`POST /login/device/code`, `POST /login/oauth/access_token`) through the Cloudflare proxy (see below); everything else (Contents API, `/user`, `/repos/...`) is called directly against `api.github.com`. `connectWithDeviceFlow(options)` runs the flow to completion and persists the token; `checkGithubAuthStatus()` validates a stored token against `GET /user`; `readStoredGithubAuth()`/`clearStoredGithubAuth()` are imperative accessors (for non-component callers) and `useGithubAuthToken()` is the reactive hook equivalent (for the settings UI). Disconnecting only clears the local token — it does not revoke it on GitHub's side.
-- Entry: `useStorageBackend()` in `web/src/hooks/useStorageBackend.ts` — holds the `FileStoreState` in React state and exposes `store`/`setStore`/`backend`/`saveStatus`/`preference`/`switchBackend()`/`forceSave()`/`flushPendingSave()`. `local`'s state lives in `useLocalStorage` (seeded synchronously through `localBackend`'s local-only read helpers); `github`'s state is fetched via `backend.load()` into a plain `useState` whenever the backend identity (kind/owner/token) changes. Callers `await backend.xxxFile(store)` for structural operations (create/duplicate/rename/delete/restore — hit the backend immediately), then `setStore` the result; content edits go through the existing `setStore`/`backend.updateActiveContent` path and are separately debounced (`AUTOSAVE_DEBOUNCE_MS`, ~20s, via `use-debounce`'s `useDebouncedCallback`) into a `backend.saveContent()` call — one shared cadence for both backends, immaterial for `local` (no-op `saveContent`), kept low-frequency for `github`. `switchBackend(target)` persists the choice under `jianpu:storage-backend:v1` (`{ backend, github?: { owner } }`), force-flushing (and awaiting) any pending GitHub save first, and always lands on the demo file — there is no per-backend "last active file" memory. `flushPendingSave()` similarly force-flushes a pending GitHub save without cancelling the debounce timer or switching backend; `App.tsx`'s `handleSelect` calls it before changing the active file tab, since `shouldScheduleAutosave` deliberately does not schedule a new save on such switches.
-- `web/src/components/StorageSettingsModal.tsx` — the settings UI that makes the GitHub backend reachable: a Radix Dialog offering "This browser" vs. "GitHub repository", an inline device-flow connect step (rendering `githubAuth.ts`'s `onVerification` `user_code`/`verification_uri`) when GitHub is selected but not connected, and, once connected, `@username` / repo-in-use (`<repo>/scores`) / "Disconnect". Repo selection is fully automatic: `ensureStorageRepo(octokit, owner)` (exported from this file) calls `octokit.rest.repos.get()` for the fixed `jianpu-generator-storage` repo name and creates it (private) on `404` — no picker, no confirmation prompt. Also renders `githubBackend.ts`'s `lastError()` as a rate-limit/offline banner, and resolves `409` conflicts via `resolveGithubConflict()` (also exported), a minimal "overwrite mine" (retry `saveContent`) vs. "discard mine" (`backend.load()` then `updateActiveContent` with the remote content) choice — no 3-way merge. `FileList.tsx`'s `FileTabBar` exposes the entry point (a "Storage…" button plus a saving/saved/offline status badge, `onOpenStorageSettings`/`saveStatus` props); `App.tsx` owns the modal's open state and threads `backend`/`preference`/`switchBackend`/`saveStatus` from `useStorageBackend()` down to both.
-- **`cf-oauth-proxy/`** — a separate Cloudflare Pages Functions project, **not** part of `web/`'s build (Vite/pnpm never sees it; it's deployed as its own Cloudflare Pages project per `cf-oauth-proxy/README.md`). It exists solely to relay the two GitHub OAuth device-flow calls that don't send CORS headers (`POST /login/device/code` → `/device/code`, `POST /login/oauth/access_token` → `/oauth/token`), injecting the OAuth App's client secret server-side; every other GitHub API call the app makes goes straight from the browser to `api.github.com`. `web/`'s build points at a deployed instance of it via the `VITE_GITHUB_OAUTH_PROXY_URL` env var (set in `.github/workflows/pages.yml`); there is no revoke/disconnect endpoint in v1.
+- Key types: `StorageBackend` (`web/src/storage/types.ts`) — the interface both the browser-`localStorage` backend and the D1-backed cloud backend implement; `FileStoreState` (`web/src/fileStore.ts`) remains the canonical in-memory shape used by every backend. `StorageBackend.load`/`createFile`/`duplicateFile`/`renameFile`/`deleteFile`/`restoreFile`/`saveContent` are async (to accommodate network-backed backends); `updateActiveContent` is sync with no persistence side effect. `saveContent` is the explicit call that persists the active file's content — debounce ownership lives in the hook layer, not the backend.
+- `web/src/storage/localBackend.ts` — thin async adapter over `fileStore.ts`'s pure, synchronous functions (`createFile`, `duplicateFile`, `renameFile`, `deleteFile`, `restoreFile`, `updateActiveContent`). Its `saveContent` is a no-op since `useLocalStorage` already persists on every state change.
+- `web/src/storage/cloudBackend.ts` — `createCloudBackend(config: CloudBackendConfig) -> CloudBackend` (`CloudBackend` extends `StorageBackend`), backed by `crates/live-share-worker`'s `/files/*` HTTP routes (D1-backed — see **Synced Share worker**'s "Storage" bullet's `files` table), the replacement for the deleted GitHub Contents API backend. `CloudBackendConfig` is just `{ token, workerHost }`: `token` is the shared account sign-in token from `accountAuth.ts` below (sent as `identityToken` on every request body, never as a header/query param, matching this worker's existing `SyncedWriteRequest`/`CreateShareRequest` convention), and `workerHost` resolves to an origin via `syncedShareWorkerOrigin` — there is no repo/owner concept to configure, unlike the deleted GitHub backend. Contrasted with that backend: no sha-refetch-before-write — `revisionByFileId` tracks each file's last-known `revision` (populated by `load()`, advanced after every successful save) and is sent as `expectedRevision` on the next content save, with the server's atomic `UPDATE ... WHERE revision = ?` as the real CAS guard (`crate::files::classify_content_write`); rename/delete/restore are each a single atomic server-side `UPDATE`, not two sequential calls, so there's no "left at both paths" window to recover from; and a file's id is the real, durable D1 `files.id` straight from the server, not a client-side name→UUID shim. Exposes a non-interface `lastError(): CloudBackendError | null` (`{ kind: 'conflict'; currentRevision } | { kind: 'auth' } | { kind: 'network' } | { kind: 'unknown'; message }` — `'auth'` is a `401`, meaning the account sign-in token was revoked/expired; this worker has no rate limiting of its own, unlike the deleted GitHub backend's `'rate-limited'`) and a non-interface `forceOverwrite(state)` ("Overwrite mine": realigns `revisionByFileId` to the server's last-reported `currentRevision`, then retries the save so the CAS write that previously lost the race now succeeds).
+- `web/src/storage/accountAuth.ts` — the persisted-token half of a single, dedicated, minimally-scoped "sign in with GitHub" connection (`GET /user`, no other scope) used to verify identity for **both** cloud file storage and Synced Share ownership — one unified account, not two separate connections (see **Account sign-in** below). `useAccountAuth()` is the reactive hook (`useLocalStorage` under the hood) exposing the stored `StoredSyncedShareGithubAuth { token, login }`; `readStoredSyncedShareGithubAuth()`/`writeStoredSyncedShareGithubAuth()`/`clearStoredSyncedShareGithubAuth()` are the imperative equivalents for non-component callers (e.g. `cloudBackend.ts`'s config, `useStorageBackend.ts`'s memoized `backend`). The `localStorage` key literal, `jianpu:synced-share-github-auth:v1` (`SYNCED_SHARE_GITHUB_AUTH_STORAGE_KEY`), and every exported symbol's internal name are deliberately unchanged from before this module's `syncedShareGithubAuth.ts → accountAuth.ts` rename — a byte-for-byte mechanical rename of the file/hook only, so already-signed-in users' stored tokens keep resolving after the rename ships.
+- `web/src/storage/accountAuthPopup.ts` — drives the sign-in round trip as a **popup**, not a full-page redirect: `openSyncedShareGithubSignInPopup({ clientId })` uses `oauth4webapi` to generate a PKCE `code_verifier`/`code_challenge` and a `state`, persists them to `sessionStorage`, and opens a `window.open` popup at GitHub's authorization endpoint; it resolves once the popup relays a result (via `postMessage`, with a same-origin `localStorage` relay as a `Cross-Origin-Opener-Policy`-safe fallback for closing the popup — see the module's `SYNCED_SHARE_GITHUB_AUTH_RELAY_STORAGE_KEY` doc comment), or is closed before completing (resolved as a `'cancelled'` failure — never hangs on an abandoned attempt), or resolves immediately as `'blocked'` if the browser refused to open the popup at all. `web/src/components/SyncedShareGithubCallbackPage.tsx` is what the popup itself lands on, exchanging the code for a token via the Worker's `POST /auth/github/callback` and persisting it through `accountAuth.ts`. Resolving the popup's promise never itself switches the active storage backend or starts a Synced Share sync — callers (`StorageSettingsModal.tsx`'s "Sign in with GitHub" button, `useSyncedShareOwner.ts`'s "Start Sync") each act on the result themselves.
+- Entry: `useStorageBackend()` in `web/src/hooks/useStorageBackend.ts` — holds the `FileStoreState` in React state and exposes `store`/`setStore`/`backend`/`isLoadingCloud`/`saveStatus`/`preference`/`switchBackend()`/`forceSave()`/`flushPendingSave()`/`refreshSaveStatus()`. `local`'s state lives in `useLocalStorage` (seeded synchronously through `localBackend`'s local-only read helpers); `cloud`'s state is fetched via `backend.load()` into a plain `useState` whenever the backend identity (kind/token) changes. Callers `await backend.xxxFile(store)` for structural operations (create/duplicate/rename/delete/restore — hit the backend immediately), then `setStore` the result; content edits go through the existing `setStore`/`backend.updateActiveContent` path and are separately debounced (`AUTOSAVE_DEBOUNCE_MS`, ~20s, via `use-debounce`'s `useDebouncedCallback`) into a `backend.saveContent()` call — one shared cadence for both backends, immaterial for `local` (no-op `saveContent`), kept low-frequency for `cloud`. `switchBackend(target)` persists the choice under `jianpu:storage-backend:v1` (now just `{ backend: 'local' | 'cloud' }` — no repo/owner concept to carry alongside it, since a `cloud` backend is entirely reconstructed from the one shared `accountAuth.ts` token), force-flushing (and awaiting) any pending cloud save first, and always lands on the demo file — there is no per-backend "last active file" memory. `local` vs. `cloud` is an explicit, independent choice from sign-in state: signing in via `accountAuth.ts` never itself switches `preference` — it only makes `'cloud'` selectable; losing either one (switching back to `local`, or the token being cleared by a disconnect anywhere in the app) falls back to `localBackend` on the very next render, with no extra plumbing needed. `flushPendingSave()` similarly force-flushes a pending cloud save without cancelling the debounce timer or switching backend; `App.tsx`'s `handleSelect` calls it before changing the active file tab, since `shouldScheduleAutosave` deliberately does not schedule a new save on such switches.
+- `web/src/components/StorageSettingsModal.tsx` — the settings UI that makes the cloud backend reachable: a Radix Dialog offering "This browser" vs. "Cloud storage", and, when not signed in (`useAccountAuth()` returns `null`), a "Sign in with GitHub" button driving `accountAuthPopup.ts`'s popup flow; once signed in, `@username` (linked to the GitHub profile) plus "Disconnect". Selecting "Cloud storage" while already signed in calls `switchBackend({ kind: 'cloud' })` directly — there is no further per-backend connect step, unlike the deleted GitHub backend's repo picker (there is no repo/owner concept left to pick). "Disconnect" (`handleDisconnect`) fires a fire-and-forget `revokeSyncedShareGithubGrant()` (`accountAuthRevoke.ts`, `POST /auth/github/revoke`) so GitHub's *next* `/authorize` call genuinely re-shows consent (GitHub's endpoint has no "force fresh consent" parameter otherwise), clears the stored `accountAuth` token, and switches back to `local` — this disconnects the account as a whole, taking down cloud storage and Synced Share ownership together, since both share the one sign-in. Also renders `cloudBackend.ts`'s `lastError()` as a status banner (`storageSettingsModalHelpers.ts`'s `errorBannerMessage`), and resolves `409` conflicts via `resolveCloudConflict()` (also from that helpers file), a minimal "Overwrite mine" (`CloudBackend.forceOverwrite`) vs. "Discard mine" (`backend.load()` then `updateActiveContent` with the remote content) choice — no 3-way merge. `FileSwitcher.tsx`'s file tab bar exposes the entry point (a "Storage…" button plus a saving/saved/offline status badge); `App.tsx` owns the modal's open state and threads `backend`/`isLoadingCloud`/`preference`/`switchBackend`/`refreshSaveStatus` from `useStorageBackend()` down to it.
+- The device-flow OAuth proxy that the deleted GitHub backend depended on (`cf-oauth-proxy/`, a separate Cloudflare Pages Functions project relaying GitHub's two CORS-blocked device-flow calls) no longer exists — deleted along with the GitHub backend itself, since the popup-based `accountAuthPopup.ts`/`accountAuthCallback.ts` flow above needs no such proxy (its token exchange goes through `crates/live-share-worker`'s own `POST /auth/github/callback`, which already runs server-side). `.github/workflows/oauth-proxy.yml` and the `VITE_GITHUB_OAUTH_PROXY_URL` env var are likewise gone.
 
 ### Source editing
 
@@ -377,7 +378,7 @@ migrations (see "Storage" below), nothing else.
   / `verification::VerificationFailure` (the D1-free retry policy and its
   UI-surfaceable failure shape, see below); `oauth::github_oauth_callback`
   (the `POST /auth/github/callback` handler) / `oauth::github_revoke` (the
-  `POST /auth/github/revoke` handler, see "Dedicated GitHub sign-in"
+  `POST /auth/github/revoke` handler, see "Account sign-in"
   below); `db` (crate-private raw D1 query functions, one
   `.sql` file per query under `queries/`, loaded via `include_str!`);
   `share_creation::resolve_share_id` (the pure, D1-free idempotent-create
@@ -444,24 +445,37 @@ which:
 `resolve_verified_user_id` returns (or `None` on failure) — a mismatch or a
 verification failure are both rejected outright, with no fallback.
 
-### Dedicated GitHub sign-in
+### Account sign-in
 
-A separate, minimally-scoped "sign in with GitHub" connection used only to
-verify Synced Share ownership (`GET /user`, no other scope) — distinct from
-`web/src/storage/githubAuth.ts`'s broad-scope, opt-in device-flow connection
-for the storage backend's Contents API access. The two connections store
-their tokens independently and are never conflated (per
-`TODO-synced-share-rust-d1-migration.md` §0). Both may register the same
-GitHub OAuth App (`client_id` is public and shared), just requesting
-different scopes and using different flows.
+A single, dedicated, minimally-scoped "sign in with GitHub" connection
+(`GET /user`, no other scope) used to verify identity for **both** cloud
+file storage (`cloudBackend.ts`'s `/files/*` calls, see "Storage
+abstraction" above) and Synced Share ownership — one unified account, not
+the two independent connections (a broad-scope, opt-in device-flow storage
+connection plus a separate minimally-scoped sharing connection) this used to
+be split into. Unifying them means signing in once makes *both* cloud
+storage and Synced Share usable, and disconnecting logs out of both
+together; it also means the storage backend no longer needs its own
+broad-scope `repo` grant at all, now that storage goes through this
+worker's own `/files/*` routes instead of GitHub's Contents API directly.
+This connection registers its own dedicated GitHub OAuth App
+(`client_id` is public, not secret) — separate from the OAuth App the now-
+deleted device-flow storage connection used to register, so that app's
+broad `repo` grant never surfaces as "existing access" on this connection's
+consent screen.
 
-- Client (`web/src/storage/syncedShareGithubAuth.ts`): drives the whole
-  round trip as a **popup**, not a full-page redirect (mockup's "OAuth
+- Client (`web/src/storage/accountAuth.ts` for the persisted token;
+  `web/src/storage/accountAuthPopup.ts` for opening the sign-in request;
+  `web/src/storage/accountAuthCallback.ts` for completing it): drives the
+  whole round trip as a **popup**, not a full-page redirect (mockup's "OAuth
   popup" screen). `openSyncedShareGithubSignInPopup` uses `oauth4webapi` to
   generate a PKCE `code_verifier`/`code_challenge` and a `state`, persists
   them to `sessionStorage` (`SYNCED_SHARE_GITHUB_PKCE_STORAGE_KEY`), and
   opens a `window.open` popup at GitHub's authorization endpoint; it
-  resolves once the popup either relays a result via `postMessage` or is
+  resolves once the popup either relays a result via `postMessage` (with a
+  same-origin `localStorage` relay, `SYNCED_SHARE_GITHUB_AUTH_RELAY_STORAGE_KEY`,
+  as a fallback for closing the popup once GitHub's
+  `Cross-Origin-Opener-Policy` header has severed `window.opener`) or is
   closed before completing (resolved as a `'cancelled'` failure — never
   hangs on an abandoned attempt), or resolves immediately as `'blocked'` if
   the browser refused to open the popup at all.
@@ -471,13 +485,16 @@ different scopes and using different flows.
   `completeSyncedShareGithubSignInFromCallback`, which validates the
   returned `state`, exchanges the code via the Worker's
   `POST /auth/github/callback`, persists the resulting token (a
-  `StoredSyncedShareGithubAuth { token, login }`, under its own
-  `localStorage` key — see `useSyncedShareGithubAuth`), relays the outcome
-  to the opener window via `postMessage` (scoped to this app's own origin),
-  then closes itself. Resolving the popup promise never itself starts a
-  share — per §0's "no seamless OAuth-then-continue" decision, wiring that
-  result into "start sync" is `useSyncedShareOwner.ts`'s job (see "Client
-  owner UI" below).
+  `StoredSyncedShareGithubAuth { token, login }`, under `accountAuth.ts`'s
+  `jianpu:synced-share-github-auth:v1` `localStorage` key — see
+  `useAccountAuth`), relays the outcome to the opener window via
+  `postMessage`/the storage relay, then closes itself. Resolving the popup
+  promise never itself starts a share or switches the active storage
+  backend — signing in only makes `'cloud'` selectable in
+  `StorageSettingsModal`/wires `startSync` up in `useSyncedShareOwner.ts`;
+  the user still takes a separate, explicit action (selecting "Cloud
+  storage", or clicking "Start Sync" again) to actually use the connection
+  for either.
 - Worker (`src/oauth.rs`, route `POST /auth/github/callback`): exchanges an
   authorization code plus its PKCE `code_verifier` for a GitHub access
   token, using the OAuth App's client secret (`SYNCED_SHARE_GITHUB_CLIENT_SECRET`,
@@ -487,53 +504,56 @@ different scopes and using different flows.
   `GithubOauthCallbackResponse { access_token, login }`: `access_token` is
   the only field the client needs to act as this identity (resolving it to
   a `user_id`, or persisting anything server-side, stays a separate concern
-  — `identity::resolve_verified_user_id`, above); `login` is a best-effort
-  convenience for the client's "Synced as @username" identity chip, fetched
-  via one extra `GET /user` call with the freshly issued token and omitted
-  (not failed) if that call errors. `oauth4webapi` cannot run in this
-  `wasm32-unknown-unknown` Worker (it targets browser/Fetch-API JS
-  runtimes); this route makes the equivalent plain `POST` itself instead,
-  matching this crate's existing `worker::Fetch`-based HTTP calling
-  convention.
+  — `identity::resolve_verified_user_id`, shared by every `/files/*` and
+  `/shares/*` write, above); `login` is a best-effort convenience for the
+  client's signed-in-as-@username identity chip (shown by both the storage
+  settings UI and Synced Share's owner UI), fetched via one extra
+  `GET /user` call with the freshly issued token and omitted (not failed) if
+  that call errors. `oauth4webapi` cannot run in this `wasm32-unknown-unknown`
+  Worker (it targets browser/Fetch-API JS runtimes); this route makes the
+  equivalent plain `POST` itself instead, matching this crate's existing
+  `worker::Fetch`-based HTTP calling convention.
 - Client owner UI (`web/src/hooks/useSyncedShareOwner.ts`,
-  `web/src/components/ShareModal.tsx`): "start sync" stays enabled
-  even when this connection isn't present (§0 — no seamless
-  OAuth-then-continue). Clicking "Start Sync" while disconnected instead
-  shows the modal's sign-in state; its own "Sign in with GitHub" button is
-  what actually opens the popup. Once connected, `startSync` is async: it
-  reuses a `shareId` persisted locally per file
-  (`jianpu:synced-share-id:v1:<fileId>`) if one exists, otherwise calls
-  `POST /shares` (`CreateShareRequest`/`CreateShareResponse` in
+  `web/src/components/ShareModal.tsx`): "start sync" stays enabled even when
+  this connection isn't present. Clicking "Start Sync" while disconnected
+  instead shows the modal's sign-in state; its own "Sign in with GitHub"
+  button is what actually opens the popup (the same
+  `accountAuthPopup.ts` popup `StorageSettingsModal.tsx` uses for cloud
+  storage). Once connected, `startSync` is async: it reuses a `shareId`
+  persisted locally per file (`jianpu:synced-share-id:v1:<fileId>`) if one
+  exists, otherwise calls `POST /shares`
+  (`CreateShareRequest`/`CreateShareResponse` in
   `web/src/syncedShare/protocol.ts`) to mint one, gated on this connection's
-  token — there is no more client-side share-id derivation or `ownerToken`
-  (task 11 deleted `getOrCreateDeviceSecret`/`deriveSyncedShareIdentity` and
-  the `ownerToken` field entirely). Every write
-  (`SyncedUpdateRequest`/`SyncedStopRequest`) carries only `identityToken`,
-  set to this connection's token. While synced and connected,
-  `ShareModal`'s Synced-link tab shows a small "Synced as @username"
-  identity row, sourced from the cached `login`.
+  token — there is no client-side share-id derivation or `ownerToken`. Every
+  write (`SyncedUpdateRequest`/`SyncedStopRequest`) carries only
+  `identityToken`, set to this connection's token. While synced and
+  connected, `ShareModal`'s Synced-link tab shows a small "Synced as
+  @username" identity row, sourced from the cached `login`.
 - Forced re-consent (`src/oauth.rs`, route `POST /auth/github/revoke`;
-  client `web/src/storage/syncedShareGithubAuthRevoke.ts`): GitHub's real
-  `/authorize` endpoint has no request parameter that forces a fresh
-  login/consent screen (only `client_id`, `redirect_uri`, `login`, `scope`,
-  `state`, `allow_signup`, plus PKCE fields are supported) — so with a live
-  github.com session and a prior grant, GitHub always silently redirects
-  back with a code, no prompt at all. The only genuine mechanism is
-  revoking this app's authorization grant server-side
-  (`DELETE /applications/{client_id}/grant`, HTTP Basic auth with
-  `client_id:client_secret`), which makes GitHub's *next* `/authorize` call
-  genuinely re-show consent. This fires from `disconnectGithub`
-  (`useSyncedShareOwner.ts`), not from sign-in itself — the button that
-  opens the sign-in popup only ever renders while this connection has no
-  stored token, so there is never a token to revoke at that point. The
-  client call is fire-and-forget (never awaited, never blocks logging out);
-  the worker route's own response is a genuine, non-swallowed error on
-  failure, matching `github_oauth_callback`'s error shape.
+  client `web/src/storage/accountAuthRevoke.ts`'s
+  `revokeSyncedShareGithubGrant`): GitHub's real `/authorize` endpoint has no
+  request parameter that forces a fresh login/consent screen (only
+  `client_id`, `redirect_uri`, `login`, `scope`, `state`, `allow_signup`,
+  plus PKCE fields are supported) — so with a live github.com session and a
+  prior grant, GitHub always silently redirects back with a code, no prompt
+  at all. The only genuine mechanism is revoking this app's authorization
+  grant server-side (`DELETE /applications/{client_id}/grant`, HTTP Basic
+  auth with `client_id:client_secret`), which makes GitHub's *next*
+  `/authorize` call genuinely re-show consent. This fires from
+  `disconnectGithub` (`useSyncedShareOwner.ts`) and from
+  `StorageSettingsModal.tsx`'s "Disconnect" — both disconnect the one shared
+  account, taking down cloud storage and Synced Share ownership together —
+  not from sign-in itself, since the button that opens the sign-in popup
+  only ever renders while this connection has no stored token, so there is
+  never a token to revoke at that point. The client call is fire-and-forget
+  (never awaited, never blocks logging out); the worker route's own
+  response is a genuine, non-swallowed error on failure, matching
+  `github_oauth_callback`'s error shape.
 - `identity::github::GithubIdentityProvider`: the production
   `IdentityProvider` implementation, resolving this connection's token to
   `(provider, provider_user_id)` via a direct `GET /user` call (also caching
   `login` into `user_identities.login` on create-on-first-sight), wired into
-  every write and the create-share endpoint via
+  every `/files/*` and `/shares/*` write and the create-share endpoint via
   `identity::resolve_verified_user_id` — see "Verification cache + retry
   policy" above.
 - Both the token-exchange endpoint (`oauth.rs`) and the `GET /user` endpoint
@@ -559,7 +579,7 @@ away from the wasm build both times:
   `crates/live-share-worker/tests/query_syntax.rs` (a native-only test,
   not run for `wasm32-unknown-unknown`) to *prepare* (not execute) each
   `.sql` file under `queries/` against that shadow database — the same
-  `include_str!`-loaded query text `src/db.rs` uses for real
+  `include_str!`-loaded query text `src/db/`'s submodules use for real
   `D1Database::prepare()` calls at runtime. This is the pragmatic stand-in
   for `sqlx::query_file!`'s compile-time type-checking, which this crate's
   wasm-targeted compile can't use: it catches a broken/typo'd query
@@ -571,11 +591,11 @@ away from the wasm build both times:
 | Term | Definition |
 |------|-----------|
 | **Synced Share worker** | The standalone Cloudflare Worker (`crates/live-share-worker`) backing the Synced Share feature's `GET`/`POST /shares[/:share_id]` HTTP API, described above. |
-| **IdentityProvider** | The trait (`identity::IdentityProvider`) resolving a request's opaque identity token to an internal `users.id`, with create-on-first-sight `users`/`user_identities` rows. `identity::github::GithubIdentityProvider` (real `GET /user` verification) is its production implementation, called only on a cache miss/stale entry — see `resolve_verified_user_id`. |
+| **IdentityProvider** | The trait (`identity::IdentityProvider`) resolving a request's opaque identity token to an internal `users.id`, with create-on-first-sight `users`/`user_identities` rows. Shared by every write this worker handles — both `/files/*` (cloud storage) and `/shares/*` (Synced Share) — not specific to either. `identity::github::GithubIdentityProvider` (real `GET /user` verification) is its production implementation, called only on a cache miss/stale entry — see `resolve_verified_user_id`. |
 | **resolve_verified_user_id** | `identity::resolve_verified_user_id`: the hashed-token-cache-then-verify wiring every write and the create-share endpoint call instead of ever trusting a client-asserted identity directly — see "Verification cache + retry policy". |
 | **oauth_sessions cache** | The `oauth_sessions` D1 table: a hashed-token (`token_hash`, never the raw token) verification cache with a `verified_at` TTL (`verification::SESSION_TTL_MILLIS`, ≈1hr) checked in app code, so a fresh identity doesn't require re-hitting GitHub on every write. |
 | **VerificationFailure** | `verification::VerificationFailure { reason, failed_at, attempts }`: the structured, UI-surfaceable shape a failed (post-retry) verification is reported as — `handlers.rs` returns it as a `401` JSON body. Never carries the token or its hash, by construction. |
 | **owner_user_id** | A share's fixed owner, set once at creation (`docs.owner_user_id`, an internal `users.id`) — replaces the old KV model's bearer `ownerToken`, which any first writer could claim. |
-| **Synced Share sign-in connection** | The dedicated, minimally-scoped "sign in with GitHub" OAuth connection (`web/src/storage/syncedShareGithubAuth.ts` client-side, `src/oauth.rs`'s `POST /auth/github/callback` Worker-side) used only to verify Synced Share ownership — distinct from `githubAuth.ts`'s broad-scope storage-backend connection. |
+| **Account sign-in connection** | The single, dedicated, minimally-scoped "sign in with GitHub" OAuth connection (`web/src/storage/accountAuth.ts`/`accountAuthPopup.ts`/`accountAuthCallback.ts` client-side, `src/oauth.rs`'s `POST /auth/github/callback` Worker-side) used to verify identity for **both** cloud file storage and Synced Share ownership — one unified account, not the two independent connections (a broad-scope storage connection plus a separate sharing-only one) this used to be split into. `accountAuth.ts`'s persisted `localStorage` key literal, `jianpu:synced-share-github-auth:v1`, is unchanged from before that unification (a mechanical file/hook rename only) so already-signed-in users' tokens keep resolving. See "Account sign-in" above. |
 | **owner_login / "Shared by @login"** | `protocol::SyncedDoc::owner_login`: the owning user's cached `user_identities.login`, fetched by `handlers::get_share` via `db::get_owner_login` and passed into `doc::to_public_doc` — the one field from `user_identities` deliberately exposed on the anonymous `GET /shares/:share_id` response, rendered by `web/`'s `SyncedShareBanner` as "Shared by @login". `null` when the owner has no cached login. |
-| **external_file_id** | `docs.external_file_id` (`protocol::CreateShareRequest::external_file_id`, wire `externalFileId`): a GitHub-backed file's `owner/repo/scores/name` Contents API path (`web/src/hooks/useScoreSource.ts`'s `externalFileIdFor`, built via `githubBackend.ts`'s own `joinPath`/`SCORES_DIR` rather than a second path convention), `null` for a local-only file. Makes `POST /shares` idempotent per (GitHub account, file) — `handlers::create_share` looks it up via `share_creation::resolve_share_id` before minting a new `share_id`, so re-sharing the same file as the same GitHub account from any device/browser/origin resolves to the same share, not just the same-device `localStorage` cache `useSyncedShareOwner.ts` already had. Enforced by a partial unique index on `(owner_user_id, external_file_id)` — see the Storage bullet above. |
+| **external_file_id** | `docs.external_file_id` (`protocol::CreateShareRequest::external_file_id`, wire `externalFileId`): a cloud-backed file's own `files.id` — the real D1 row id `cloudBackend.ts` already tracks (`web/src/hooks/useScoreSource.ts`'s `externalFileIdFor`), scoped to that file's owner — `null` for a local file, since a local file's id is a random client-only value with no account-scoped identity and so still can't correctly key cross-device idempotent sharing. Before the cloud storage backend replaced the GitHub Contents API backend, this held a GitHub-backed file's `owner/repo/scores/name` Contents API path instead; the *meaning* changed with that migration, but the field's role is unchanged: it makes `POST /shares` idempotent per (account, file) — `handlers::create_share` looks it up via `share_creation::resolve_share_id` before minting a new `share_id`, so re-sharing the same cloud file from any device/browser/origin resolves to the same share, not just the same-device `localStorage` cache `useSyncedShareOwner.ts` already had. Enforced by a partial unique index on `(owner_user_id, external_file_id)` — see the Storage bullet above. |

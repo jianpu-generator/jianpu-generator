@@ -3,12 +3,12 @@
 //! from `live-share-worker/migrations/`.
 //!
 //! This is the pragmatic substitute for `sqlx::query_file!`'s compile-time
-//! checking described in `src/db.rs`'s doc comment and the
+//! checking described in `src/db/mod.rs`'s doc comment and the
 //! `[build-dependencies] sqlx` comment in `Cargo.toml`: those macros can't
 //! run inside this crate's own wasm-targeted compile (the
 //! `libsqlite3-sys`-on-`wasm32-unknown-unknown` problem), so instead this
 //! test loads the exact same `include_str!`-embedded query text used by
-//! `src/db.rs` at runtime and asks `sqlx` (here a dev-dependency, so it
+//! `src/db/`'s submodules at runtime and asks `sqlx` (here a dev-dependency, so it
 //! never touches the wasm build) to *prepare* -- not execute -- each one
 //! against the shadow schema. Preparing (rather than executing) means no
 //! dummy bound values are needed and `NOT NULL`/foreign-key constraints

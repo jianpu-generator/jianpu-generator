@@ -26,7 +26,7 @@ export interface SyncedDoc {
 
 // Owner -> server. Whole-content, not a diff/delta format — correct-by-
 // construction with exactly one writer. `identityToken` is the Synced Share
-// GitHub sign-in token (`syncedShareGithubAuthCallback.ts`); the worker never trusts
+// GitHub sign-in token (`accountAuthCallback.ts`); the worker never trusts
 // it directly, always resolving it through GitHub verification (task 7).
 // There is no more `ownerToken`/device-secret path (task 11) -- GitHub
 // sign-in is the only way to own a share.

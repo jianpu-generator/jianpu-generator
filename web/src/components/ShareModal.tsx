@@ -2,7 +2,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { GitHubLogoIcon, Link2Icon, UpdateIcon } from '@radix-ui/react-icons'
 import { useCallback, useEffect, useState } from 'react'
 import { buildShareUrl } from '../shareUrl'
-import type { SyncedShareGithubAuthResult } from '../storage/syncedShareGithubAuthPopup'
+import type { SyncedShareGithubAuthResult } from '../storage/accountAuthPopup'
 import {
   backendButtonSelectedStyle,
   backendButtonStyle,

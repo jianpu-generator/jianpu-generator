@@ -7,8 +7,8 @@ import {
   type FileStoreState,
   fileContent,
 } from '../fileStore'
-import { useGithubAuthToken } from '../storage/githubAuth'
-import { createGithubBackend } from '../storage/githubBackend'
+import { useAccountAuth } from '../storage/accountAuth'
+import { createCloudBackend } from '../storage/cloudBackend'
 import {
   deserializeStoreSync,
   localBackend,
@@ -22,34 +22,27 @@ import type { SaveStatus, StorageBackend } from '../storage/types'
  * `localBackend` (whose `saveContent` is a no-op, since `useLocalStorage`
  * already persists every state change) — so there is a single autosave
  * cadence instead of a redundant per-backend config knob. Chosen to keep
- * GitHub commit frequency low while a file is being actively edited.
+ * write frequency to the cloud backend low while a file is being actively
+ * edited.
  */
 export const AUTOSAVE_DEBOUNCE_MS = 20_000
-
-/**
- * Fixed name of the repo the GitHub backend always targets, under the
- * authenticated user's own account. See `StorageSettingsModal.tsx`'s
- * `ensureStorageRepo` for the get-or-create logic that ensures it exists.
- */
-export const GITHUB_STORAGE_REPO = 'jianpu-generator-storage'
 
 const STORAGE_BACKEND_PREFERENCE_KEY = 'jianpu:storage-backend:v1'
 
 /**
- * Persisted choice of backend plus the GitHub-specific connection details
- * needed to reconstruct a `GithubBackend` synchronously on reload. The OAuth
- * token itself is stored separately under `githubAuth.ts`'s own key so it
- * can be shared with `checkGithubAuthStatus`/`useGithubAuthToken`.
+ * Persisted choice of backend. Unlike the old GitHub backend, `'cloud'`
+ * carries no connection details of its own — it's entirely reconstructed
+ * from the one shared `accountAuth.ts` token (see `backend` below), so
+ * there's no repo/owner concept to persist alongside the choice.
  */
 export interface StorageBackendPreference {
-  backend: 'local' | 'github'
-  github?: { owner: string }
+  backend: 'local' | 'cloud'
 }
 
 const DEFAULT_PREFERENCE: StorageBackendPreference = { backend: 'local' }
 
 /** Placeholder `FileStoreState` shown for the brief window between
- * selecting the GitHub backend and `backend.load()` resolving. Identical in
+ * selecting the cloud backend and `backend.load()` resolving. Identical in
  * shape to `fileStore.ts`'s own `DEFAULT_FILE_STORE` (not exported from
  * there, so reconstructed here). */
 const EMPTY_STORE: FileStoreState = {
@@ -59,9 +52,7 @@ const EMPTY_STORE: FileStoreState = {
   fileIds: {},
 }
 
-export type StorageBackendTarget =
-  | { kind: 'local' }
-  | { kind: 'github'; owner: string }
+export type StorageBackendTarget = { kind: 'local' } | { kind: 'cloud' }
 
 /**
  * `SaveStatus` plus a UI-only `'unsaved'` state: a debounced edit is pending
@@ -78,12 +69,12 @@ export interface UseStorageBackendResult {
     value: FileStoreState | ((prev: FileStoreState) => FileStoreState),
   ) => void
   backend: StorageBackend
-  /** True from the moment the `github` backend becomes active until its
-   * `load()` resolves and populates `githubStore` — the window during which
+  /** True from the moment the `cloud` backend becomes active until its
+   * `load()` resolves and populates `cloudStore` — the window during which
    * `store` is the `EMPTY_STORE` placeholder rather than the real listing.
    * Lets `StorageSettingsModal` show a loading spinner instead of briefly
    * flashing an empty file list. */
-  isLoadingGithub: boolean
+  isLoadingCloud: boolean
   saveStatus: DisplaySaveStatus
   /** `Date.now()`-comparable timestamp at which the pending debounced
    * autosave will fire, or `null` when no save is pending. Lets the UI show
@@ -96,9 +87,10 @@ export interface UseStorageBackendResult {
    * `backend.kind` alone. */
   preference: StorageBackendPreference
   /**
-   * Switches the active backend. If leaving GitHub with a pending debounced
-   * save, forces it to flush (and awaits it) before switching. Always lands
-   * on the demo file — there is no per-backend "last active file" memory.
+   * Switches the active backend. If leaving the cloud backend with a
+   * pending debounced save, forces it to flush (and awaits it) before
+   * switching. Always lands on the demo file — there is no per-backend
+   * "last active file" memory.
    */
   switchBackend: (target: StorageBackendTarget) => Promise<void>
   /**
@@ -121,7 +113,7 @@ export interface UseStorageBackendResult {
   flushPendingSave: () => void
   /**
    * Re-reads `backend.status()` into `saveStatus`. Needed after callers that
-   * mutate a `GithubBackend`'s status by calling `saveContent`/`load`
+   * mutate a `CloudBackend`'s status by calling `saveContent`/`load`
    * directly rather than through `runSave` — namely
    * `StorageSettingsModal`'s conflict-resolution flow — so the "Saved"
    * badge in `FileTabBar` doesn't keep showing a stale status (e.g. the
@@ -145,10 +137,11 @@ export interface UseStorageBackendResult {
  * is only warranted when the *same* active file's content actually changed
  * — not merely when the user switched which file is active (whose content
  * naturally differs from the previously active file's) — and never for a
- * non-GitHub backend, since only GitHub's `saveContent` does real work. A
- * switch away from a file with a still-*pending* debounced save is not
- * covered by "already saved" — that's instead handled by `flushPendingSave`,
- * which callers should invoke before changing the active file.
+ * non-cloud backend, since only the cloud backend's `saveContent` does real
+ * work. A switch away from a file with a still-*pending* debounced save is
+ * not covered by "already saved" — that's instead handled by
+ * `flushPendingSave`, which callers should invoke before changing the
+ * active file.
  */
 type ContentSnapshot = { active: string; content: string }
 
@@ -161,7 +154,7 @@ export function shouldScheduleAutosave(
   previous: ContentSnapshot | null,
   next: ContentSnapshot,
 ): boolean {
-  if (backendKind !== 'github') return false
+  if (backendKind !== 'cloud') return false
   if (!previous) return false
   return previous.active === next.active && previous.content !== next.content
 }
@@ -171,16 +164,16 @@ export function shouldScheduleAutosave(
  * changes. Pure for the same testability reason as `shouldScheduleAutosave`.
  * True in two disjoint windows: `isPending` (a debounced save is armed but
  * hasn't fired yet) and `saveStatus === 'saving'` (it fired — via the debounce
- * timer, `flush()`, or `forceSave()` — but the underlying multi-request
- * Octokit call hasn't resolved). Never true for `localBackend`, which has no
- * debounce and no in-flight network call to lose.
+ * timer, `flush()`, or `forceSave()` — but the underlying network call
+ * hasn't resolved). Never true for `localBackend`, which has no debounce and
+ * no in-flight network call to lose.
  */
 export function shouldWarnBeforeUnload(
   backendKind: StorageBackend['kind'],
   isPending: boolean,
   saveStatus: SaveStatus,
 ): boolean {
-  if (backendKind !== 'github') return false
+  if (backendKind !== 'cloud') return false
   return isPending || saveStatus === 'saving'
 }
 
@@ -198,7 +191,7 @@ function displaySaveStatus(status: SaveStatus): SaveStatus {
 
 /**
  * Holds the file store's in-memory state and wires it to a `StorageBackend`,
- * switchable between `local` and `github`. `store`/`setStore` keep the same
+ * switchable between `local` and `cloud`. `store`/`setStore` keep the same
  * ergonomics `useFileStore` used to expose, so callers still perform sync
  * updates (e.g. selecting a file, or applying `backend.updateActiveContent`)
  * via `setStore`. Structural operations (create/duplicate/rename/delete/
@@ -209,44 +202,52 @@ function displaySaveStatus(status: SaveStatus): SaveStatus {
  * would discard any edits made to `prev` while the await was in flight.
  * Those calls hit the backend immediately, unlike content edits (see
  * `AUTOSAVE_DEBOUNCE_MS`).
+ *
+ * `local` vs. `cloud` is an explicit, independent choice from sign-in
+ * state: signing in via `accountAuth.ts` never itself switches `preference`
+ * — it only makes `'cloud'` selectable (see `StorageSettingsModal.tsx`).
+ * The `cloud` backend below is only ever constructed once both `preference`
+ * asks for it *and* an `accountAuth` token is present; losing either one
+ * (switching back to local, or the token being cleared by a disconnect
+ * anywhere in the app) falls back to `localBackend` on the very next
+ * render, with no extra plumbing needed.
  */
 export function useStorageBackend(): UseStorageBackendResult {
   const [preference, setPreference] = useLocalStorage<StorageBackendPreference>(
     STORAGE_BACKEND_PREFERENCE_KEY,
     DEFAULT_PREFERENCE,
   )
-  const [authToken] = useGithubAuthToken()
+  const [accountAuth] = useAccountAuth()
 
   const [localStore, setLocalStore] = useLocalStorage<FileStoreState>(
     FILE_STORE_KEY,
     readInitialStoreSync,
     { deserializer: deserializeStoreSync },
   )
-  const [githubStore, setGithubStore] = useState<FileStoreState | null>(null)
+  const [cloudStore, setCloudStore] = useState<FileStoreState | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [autosaveDeadline, setAutosaveDeadline] = useState<number | null>(null)
 
   const backend = useMemo<StorageBackend>(() => {
-    if (preference.backend === 'github' && authToken && preference.github) {
-      return createGithubBackend({
-        token: authToken.token,
-        owner: preference.github.owner,
-        repo: GITHUB_STORAGE_REPO,
+    if (preference.backend === 'cloud' && accountAuth) {
+      return createCloudBackend({
+        token: accountAuth.token,
+        workerHost: import.meta.env.VITE_SYNCED_SHARE_HOST ?? '',
       })
     }
     return localBackend
-  }, [preference, authToken])
+  }, [preference, accountAuth])
 
-  // (Re)loads the GitHub listing whenever the backend identity changes
-  // (kind, owner, or token) — exactly when a fresh listing is
-  // needed. `localBackend`'s state instead lives in `localStore` above,
-  // seeded synchronously, so no such effect is needed for it.
+  // (Re)loads the cloud listing whenever the backend identity changes (kind
+  // or token) — exactly when a fresh listing is needed. `localBackend`'s
+  // state instead lives in `localStore` above, seeded synchronously, so no
+  // such effect is needed for it.
   useEffect(() => {
-    if (backend.kind !== 'github') return
+    if (backend.kind !== 'cloud') return
     let cancelled = false
-    setGithubStore(null)
+    setCloudStore(null)
     backend.load().then((state) => {
-      if (!cancelled) setGithubStore(state)
+      if (!cancelled) setCloudStore(state)
     })
     return () => {
       cancelled = true
@@ -258,13 +259,13 @@ export function useStorageBackend(): UseStorageBackendResult {
   }, [backend])
 
   const store =
-    backend.kind === 'github' ? (githubStore ?? EMPTY_STORE) : localStore
-  const isLoadingGithub = backend.kind === 'github' && githubStore === null
+    backend.kind === 'cloud' ? (cloudStore ?? EMPTY_STORE) : localStore
+  const isLoadingCloud = backend.kind === 'cloud' && cloudStore === null
 
   const setStore = useCallback(
     (value: FileStoreState | ((prev: FileStoreState) => FileStoreState)) => {
-      if (backend.kind === 'github') {
-        setGithubStore((prev) => {
+      if (backend.kind === 'cloud') {
+        setCloudStore((prev) => {
           const base = prev ?? EMPTY_STORE
           return typeof value === 'function' ? value(base) : value
         })
@@ -320,13 +321,12 @@ export function useStorageBackend(): UseStorageBackendResult {
     }
   }, [debouncedSave])
 
-  // Warns before closing/reloading the tab if a GitHub save hasn't landed
+  // Warns before closing/reloading the tab if a cloud save hasn't landed
   // yet — the blur/visibilitychange flush above only *starts* the save; it
-  // can't guarantee the underlying multi-request Octokit call (fetch sha,
-  // then PUT) finishes before the page actually unloads. Native
-  // confirmation is the only backstop for that gap. No-op (and thus no
-  // dialog) whenever nothing is pending or in flight, including for
-  // `localBackend`, which never has a pending save.
+  // can't guarantee the underlying request finishes before the page
+  // actually unloads. Native confirmation is the only backstop for that
+  // gap. No-op (and thus no dialog) whenever nothing is pending or in
+  // flight, including for `localBackend`, which never has a pending save.
   useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => {
       if (
@@ -349,7 +349,7 @@ export function useStorageBackend(): UseStorageBackendResult {
   }, [debouncedSave, runSave, store])
 
   const flushPendingSave = useCallback(() => {
-    if (backend.kind === 'github' && debouncedSave.isPending()) {
+    if (backend.kind === 'cloud' && debouncedSave.isPending()) {
       debouncedSave.flush()
     }
   }, [backend, debouncedSave])
@@ -367,7 +367,7 @@ export function useStorageBackend(): UseStorageBackendResult {
 
   const switchBackend = useCallback(
     async (target: StorageBackendTarget) => {
-      if (backend.kind === 'github' && debouncedSave.isPending()) {
+      if (backend.kind === 'cloud' && debouncedSave.isPending()) {
         debouncedSave.flush()
         await pendingSaveRef.current
       }
@@ -375,10 +375,7 @@ export function useStorageBackend(): UseStorageBackendResult {
         setPreference({ backend: 'local' })
         setLocalStore((prev) => ({ ...prev, active: DEMO_FILE_NAMES[0] ?? '' }))
       } else {
-        setPreference({
-          backend: 'github',
-          github: { owner: target.owner },
-        })
+        setPreference({ backend: 'cloud' })
       }
     },
     [backend, debouncedSave, setPreference, setLocalStore],
@@ -388,7 +385,7 @@ export function useStorageBackend(): UseStorageBackendResult {
     store,
     setStore,
     backend,
-    isLoadingGithub,
+    isLoadingCloud,
     saveStatus: autosaveDeadline !== null ? 'unsaved' : saveStatus,
     autosaveDeadline,
     preference,
