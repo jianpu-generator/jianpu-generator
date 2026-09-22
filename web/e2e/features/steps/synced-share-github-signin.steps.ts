@@ -80,6 +80,54 @@ Given(
   },
 )
 
+// Regression coverage for a bug where `openSyncedShareGithubSignInPopup`
+// (`accountAuthPopup.ts`) called `window.open` only after `await`ing the
+// PKCE challenge setup (a `crypto.subtle.digest` call) -- WebKit (Safari,
+// and so also Arc, which is required to use WebKit's engine on iOS per
+// Apple's App Store rules) only honors `window.open` as a genuine user
+// gesture when it's called *synchronously*, within the same task as the
+// click that triggered it; once real async work runs first, WebKit's popup
+// silently never appears at all (no blocked-popup indicator either -- a
+// stricter refusal than the plain "popup blocked" case above). Chromium
+// (this suite's only browser project -- see `playwright.config.ts`) has no
+// such restriction, so this stubs `window.open` to reproduce it: a
+// capturing `click` listener on `window` marks a synchronous-gesture
+// "ticket" true, then clears it on the next macrotask (`setTimeout(0)`)
+// rather than the next microtask -- real WebKit's transient user activation
+// is task-scoped, not microtask-scoped, so it survives one or more
+// microtask turns (e.g. a React click handler invoked from a capture-phase
+// listener via a microtask boundary) and is only consumed once an API like
+// `window.open` actually uses it, or once a new macrotask (timer, I/O) runs
+// without it being consumed. Clearing on a microtask made this stub
+// stricter than real WebKit and produced a false failure even against
+// correct app code. Fails against the pre-fix code (which awaited the PKCE
+// setup before calling `window.open`, well past any macrotask boundary) and
+// passes against the fix (which opens the popup blank, synchronously, then
+// navigates it once the PKCE setup resolves).
+Given(
+  'window.open only succeeds when called synchronously from a user gesture',
+  async ({ page }) => {
+    await page.addInitScript(() => {
+      const realOpen = window.open.bind(window)
+      let gestureTicket = false
+      window.addEventListener(
+        'click',
+        () => {
+          gestureTicket = true
+          setTimeout(() => {
+            gestureTicket = false
+          }, 0)
+        },
+        true,
+      )
+      window.open = (...args: Parameters<typeof window.open>) => {
+        if (!gestureTicket) return null
+        return realOpen(...args)
+      }
+    })
+  },
+)
+
 Then('the sign-in prompt is shown', async ({ page }) => {
   await expect(page.getByTestId('share-modal-signin-state')).toBeVisible()
 })

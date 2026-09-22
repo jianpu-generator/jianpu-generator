@@ -148,18 +148,31 @@ export function clearPendingSyncedShareGithubSignIn(): void {
   }
 }
 
-async function buildSyncedShareGithubAuthorizationUrl(
-  clientId: string,
-): Promise<string> {
+/** The synchronous half of building the authorization URL: generating the
+ * PKCE verifier/state and persisting them to `sessionStorage` (see
+ * `SYNCED_SHARE_GITHUB_PKCE_STORAGE_KEY`'s doc comment -- this write must
+ * happen before `window.open`, while `calculatePKCECodeChallenge` below
+ * needs `crypto.subtle.digest`, which is async, so this step is split out
+ * to run before the popup opens rather than after). */
+function prepareSyncedShareGithubPkceState(): SyncedShareGithubPkceState {
   const codeVerifier = oauth.generateRandomCodeVerifier()
-  const codeChallenge = await oauth.calculatePKCECodeChallenge(codeVerifier)
   const state = oauth.generateRandomState()
   const redirectUri = new URL(
     syncedShareGithubCallbackPathname(),
     window.location.origin,
   ).toString()
 
-  writeSyncedShareGithubPkceState({ codeVerifier, state, redirectUri })
+  const pkceState = { codeVerifier, state, redirectUri }
+  writeSyncedShareGithubPkceState(pkceState)
+  return pkceState
+}
+
+async function buildSyncedShareGithubAuthorizationUrl(
+  clientId: string,
+  pkceState: SyncedShareGithubPkceState,
+): Promise<string> {
+  const { codeVerifier, state, redirectUri } = pkceState
+  const codeChallenge = await oauth.calculatePKCECodeChallenge(codeVerifier)
 
   const authorizationUrl = new URL(GITHUB_AUTHORIZATION_ENDPOINT)
   authorizationUrl.searchParams.set('client_id', clientId)
@@ -208,12 +221,30 @@ export interface OpenSyncedShareGithubSignInPopupOptions {
 export async function openSyncedShareGithubSignInPopup(
   options: OpenSyncedShareGithubSignInPopupOptions,
 ): Promise<SyncedShareGithubAuthResult> {
-  const authorizationUrl = await buildSyncedShareGithubAuthorizationUrl(
-    options.clientId,
-  )
+  // The PKCE verifier/state must be written to `sessionStorage` before
+  // `window.open` below -- the popup's own copy of this origin's
+  // `sessionStorage` is a snapshot taken at the moment it's opened (see
+  // `SYNCED_SHARE_GITHUB_PKCE_STORAGE_KEY`'s doc comment), so writing it any
+  // later leaves the popup unable to complete the exchange once GitHub
+  // redirects it back.
+  const pkceState = prepareSyncedShareGithubPkceState()
 
+  // Opened here, synchronously within the click handler's call stack, and
+  // only navigated (below) once the async code-challenge computation
+  // finishes -- not opened directly at `authorizationUrl` after awaiting
+  // that, as this used to. WebKit (Safari, and so also Arc, which is
+  // required to use WebKit's engine on iOS per Apple's App Store rules)
+  // only honors `window.open` as triggered by a genuine user gesture when
+  // it's called *synchronously* from the event handler;
+  // `buildSyncedShareGithubAuthorizationUrl`'s
+  // `await oauth.calculatePKCECodeChallenge` (a `crypto.subtle.digest` call)
+  // pushes past that same tick, so a `window.open` placed after it silently
+  // produces no popup at all on those browsers -- no blocked-popup
+  // indicator, just nothing, which was the bug this ordering fixes. Desktop
+  // Chrome/Firefox tolerate the delay either way, so this reordering is
+  // free there.
   const popup = window.open(
-    authorizationUrl,
+    'about:blank',
     'jianpu-synced-share-github-auth',
     'width=600,height=720,noopener=no',
   )
@@ -226,6 +257,12 @@ export async function openSyncedShareGithubSignInPopup(
       error: 'The GitHub sign-in popup was blocked by the browser.',
     }
   }
+
+  const authorizationUrl = await buildSyncedShareGithubAuthorizationUrl(
+    options.clientId,
+    pkceState,
+  )
+  popup.location.href = authorizationUrl
 
   return new Promise<SyncedShareGithubAuthResult>((resolve) => {
     let settled = false
