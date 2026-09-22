@@ -16,7 +16,7 @@
     "lint:ast-grep": "ast-grep scan --config sgconfig.yml src",
     "format": "biome format --write .",
     "preview": "vite preview",
-    "test:e2e:resolve": "node scripts/resolve-e2e-flakes.mjs",
+    "test:e2e:resolve": "node scripts/reset-e2e-cloud-db.mjs && node scripts/resolve-e2e-flakes.mjs",
     "test:e2e:pages": "env VITE_BASE_PATH=/jianpu-generator/ pnpm build && cp dist/index.html dist/404.html && pnpm exec bddgen --config=playwright.pages.config.ts && playwright test --config=playwright.pages.config.ts",
     "test:unit": "vitest run"
   },

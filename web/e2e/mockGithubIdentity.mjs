@@ -18,6 +18,18 @@ export const DEFAULT_MOCK_GITHUB_USER_ID = 987654321
 const KNOWN_GITHUB_USER_IDS = {
   [DEFAULT_MOCK_GITHUB_LOGIN]: DEFAULT_MOCK_GITHUB_USER_ID,
   'e2e-test-user-two': 987654322,
+  // Dedicated to `file-op-error-cloud.feature`'s failed-create scenario --
+  // that scenario asserts no file named exactly "untitled" exists for the
+  // signed-in account after a failed create, but the app-assigned default
+  // name for every "New" click is that same literal "untitled" regardless
+  // of which scenario clicked it. Sharing `DEFAULT_MOCK_GITHUB_LOGIN` with
+  // `files-cloud-backend.feature`'s "Creating a file persists it to the
+  // cloud backend" scenario (which legitimately creates a file named
+  // "untitled" via the same button) is a real cross-scenario race once
+  // `fullyParallel` runs both in different workers at once: whichever
+  // scenario's "untitled" file lands first is visible to the other's
+  // assertion too, since both would otherwise share one cloud account.
+  'e2e-test-user-create-error': 987654323,
 }
 
 /** The bearer token `'the owner is signed in with GitHub as {string}'`
