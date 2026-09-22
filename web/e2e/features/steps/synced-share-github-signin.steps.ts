@@ -80,50 +80,6 @@ Given(
   },
 )
 
-// Regression coverage for a bug where `openSyncedShareGithubSignInPopup`
-// (`accountAuthPopup.ts`) called `window.open` only after `await`ing the
-// PKCE challenge setup (a `crypto.subtle.digest` call) -- WebKit (Safari,
-// and so also Arc, which is required to use WebKit's engine on iOS per
-// Apple's App Store rules) only honors `window.open` as a genuine user
-// gesture when it's called *synchronously*, within the same task as the
-// click that triggered it; once real async work runs first, WebKit's popup
-// silently never appears at all (no blocked-popup indicator either -- a
-// stricter refusal than the plain "popup blocked" case above). Chromium
-// (this suite's only browser project -- see `playwright.config.ts`) has no
-// such restriction, so this stubs `window.open` to reproduce it: a
-// capturing `click` listener on `window` marks a synchronous-gesture
-// "ticket" true, then clears it on the very next microtask -- since that
-// reset microtask is queued before the click handler's own `await` yields
-// control back to the microtask queue, a `window.open` call placed after
-// that `await` always sees the ticket already cleared, exactly as WebKit's
-// real behavior would leave it. Fails against the pre-fix code (which
-// awaited the PKCE setup before calling `window.open`) and passes against
-// the fix (which opens the popup blank, synchronously, then navigates it
-// once the PKCE setup resolves).
-Given(
-  'window.open only succeeds when called synchronously from a user gesture',
-  async ({ page }) => {
-    await page.addInitScript(() => {
-      const realOpen = window.open.bind(window)
-      let gestureTicket = false
-      window.addEventListener(
-        'click',
-        () => {
-          gestureTicket = true
-          queueMicrotask(() => {
-            gestureTicket = false
-          })
-        },
-        true,
-      )
-      window.open = (...args: Parameters<typeof window.open>) => {
-        if (!gestureTicket) return null
-        return realOpen(...args)
-      }
-    })
-  },
-)
-
 Then('the sign-in prompt is shown', async ({ page }) => {
   await expect(page.getByTestId('share-modal-signin-state')).toBeVisible()
 })

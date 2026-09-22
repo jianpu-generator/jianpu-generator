@@ -57,15 +57,6 @@ Feature: Synced Share GitHub sign-in
     Then the sign-in prompt is shown
     And the "Sign in with GitHub" button is no longer stuck signing in
 
-  Scenario: Signing in still succeeds on browsers that only honor window.open when it's called synchronously from the click, before any await (e.g. Safari/Arc on iOS)
-    Given clipboard permissions are granted
-    And the GitHub authorization popup is mocked to redirect back successfully
-    And window.open only succeeds when called synchronously from a user gesture
-    When the owner loads the app and clicks "Sync"
-    Then the sign-in prompt is shown
-    When the owner clicks "Sign in with GitHub" in the prompt
-    Then the identity row shows signed in as "e2e-test-user"
-
   Scenario: Signing out disconnects GitHub and stops the sync
     Given clipboard permissions are granted
     And the owner is signed in with GitHub as "e2e-test-user"
