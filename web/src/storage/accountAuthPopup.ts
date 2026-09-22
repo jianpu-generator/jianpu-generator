@@ -208,24 +208,37 @@ export interface OpenSyncedShareGithubSignInPopupOptions {
 export async function openSyncedShareGithubSignInPopup(
   options: OpenSyncedShareGithubSignInPopupOptions,
 ): Promise<SyncedShareGithubAuthResult> {
-  const authorizationUrl = await buildSyncedShareGithubAuthorizationUrl(
-    options.clientId,
-  )
-
+  // Opened here, synchronously within the click handler's call stack, and
+  // only navigated (below) once the async PKCE setup finishes -- not opened
+  // directly at `authorizationUrl` after awaiting that setup, as this used
+  // to. WebKit (Safari, and so also Arc, which is required to use WebKit's
+  // engine on iOS per Apple's App Store rules) only honors `window.open` as
+  // triggered by a genuine user gesture when it's called *synchronously*
+  // from the event handler; `buildSyncedShareGithubAuthorizationUrl`'s
+  // `await oauth.calculatePKCECodeChallenge` (a `crypto.subtle.digest` call)
+  // pushes past that same tick, so a `window.open` placed after it silently
+  // produces no popup at all on those browsers -- no blocked-popup
+  // indicator, just nothing, which was the bug this ordering fixes. Desktop
+  // Chrome/Firefox tolerate the delay either way, so this reordering is
+  // free there.
   const popup = window.open(
-    authorizationUrl,
+    'about:blank',
     'jianpu-synced-share-github-auth',
     'width=600,height=720,noopener=no',
   )
 
   if (!popup) {
-    clearPendingSyncedShareGithubSignIn()
     return {
       ok: false,
       reason: 'blocked',
       error: 'The GitHub sign-in popup was blocked by the browser.',
     }
   }
+
+  const authorizationUrl = await buildSyncedShareGithubAuthorizationUrl(
+    options.clientId,
+  )
+  popup.location.href = authorizationUrl
 
   return new Promise<SyncedShareGithubAuthResult>((resolve) => {
     let settled = false
