@@ -32,6 +32,9 @@ interface UseMeasureAudioPlaybackParams {
   /** Total measures in the score (`measureSpans.length`), used by `playAll`
    * to span from the first measure through the last written one. */
   totalMeasures: number
+  /** Number of `# sequence` entries (`0` when the score has none), used by
+   * `playAll` to play every entry in `# sequence` order. */
+  sequenceEntryCount: number
 }
 
 /** Manages generating and playing back audio for a range of measures (e.g. the currently selected measures). */
@@ -43,6 +46,7 @@ export function useMeasureAudioPlayback({
   selectedSequenceRangeRef,
   measureRangeSelectedPartNamesRef,
   totalMeasures,
+  sequenceEntryCount,
 }: UseMeasureAudioPlaybackParams) {
   const [measureAudioGenerating, setMeasureAudioGenerating] = useState(false)
   const [measureAudioPlaying, setMeasureAudioPlaying] = useState(false)
@@ -192,15 +196,28 @@ export function useMeasureAudioPlayback({
     )
   }, [playMeasureRange])
 
-  // Plays the whole score from its first measure, following any D.C./D.S./
-  // `# sequence` repeat structure through to the last occurrence of the
-  // final written measure — the same performance `generateFullAudio`
+  // Plays the whole score — the same performance `generateFullAudio`
   // (Export WAV) renders, but through this hook's autoplay + cursor-sync
-  // channel instead of a static downloadable player.
+  // channel instead of a static downloadable player. With a `# sequence`,
+  // every entry is passed as an explicit entry range: resolving the written
+  // first/last measures by occurrence instead would clip (or fall back to
+  // written order) whenever the sequence doesn't start at the first written
+  // measure or end at the last one (e.g. `B, A`).
   const playAll = useCallback(() => {
     if (totalMeasures === 0) return
+    if (sequenceEntryCount > 0) {
+      playMeasureRange(
+        0,
+        totalMeasures - 1,
+        true,
+        true,
+        0,
+        sequenceEntryCount - 1,
+      )
+      return
+    }
     playMeasureRange(0, totalMeasures - 1, true, true)
-  }, [playMeasureRange, totalMeasures])
+  }, [playMeasureRange, totalMeasures, sequenceEntryCount])
 
   // Plays only the range-selected parts (see `useNoteSelection`), muting
   // every other part, then trims the generated clip down to exactly the

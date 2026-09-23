@@ -89,6 +89,7 @@ export function useJianpuWorkerActions({
     selectedSequenceRangeRef,
     measureRangeSelectedPartNamesRef,
     totalMeasures: state.measureSpans.length,
+    sequenceEntryCount: state.sequenceEntries.length,
   })
 
   const {
