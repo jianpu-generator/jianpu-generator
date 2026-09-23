@@ -45,11 +45,12 @@ export interface AppWorkspaceProps {
   /** "Format" toolbar action: drops redundant `# score` lines and
    * normalizes whitespace. */
   handleFormatScore: () => void
-  /** "Octave up"/"Octave down"/"Slur/Unslur" toolbar actions: applies
-   * `operation` to every note whose span overlaps any of `ranges` — the
-   * editor's current selection, which a multicursor selection (e.g. a
+  /** "Octave up"/"Octave down"/"Slur/Unslur"/"Tie/Untie" toolbar actions:
+   * applies `operation` to every note whose span overlaps any of `ranges` —
+   * the editor's current selection, which a multicursor selection (e.g. a
    * clicked part label) surfaces as a disjoint set rather than one span (see
-   * `source_edit::shift_range_octave`/`source_edit::toggle_range_slur`). */
+   * `source_edit::shift_range_octave`/`source_edit::toggle_range_slur`/
+   * `source_edit::toggle_range_tie`). */
   handleEditSelection: (
     ranges: EditorSelection[],
     operation: RangeEditOperation,

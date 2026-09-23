@@ -83,6 +83,12 @@ pub(super) fn toggle_range_slur(source: String, ranges: Vec<ByteRange>) -> Range
     to_range_edit_response(result)
 }
 
+pub(super) fn toggle_range_tie(source: String, ranges: Vec<ByteRange>) -> RangeEditResponse {
+    let ranges = to_source_edit_ranges(ranges);
+    let result = jianpu_generator::source_edit::toggle_range_tie(&source, &ranges);
+    to_range_edit_response(result)
+}
+
 fn to_source_edit_ranges(ranges: Vec<ByteRange>) -> Vec<jianpu_generator::source_edit::ByteRange> {
     ranges
         .into_iter()

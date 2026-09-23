@@ -32,11 +32,13 @@ export interface EditorSelection {
 
 /** A selection-scoped editor toolbar action applied to the current
  * (possibly multicursor) selection: "Octave up"/"Octave down"
- * (`source_edit::shift_range_octave`) or "Slur/Unslur"
- * (`source_edit::toggle_range_slur`). */
+ * (`source_edit::shift_range_octave`), "Slur/Unslur"
+ * (`source_edit::toggle_range_slur`) or "Tie/Untie"
+ * (`source_edit::toggle_range_tie`). */
 export type RangeEditOperation =
   | { kind: 'shiftOctave'; delta: number }
   | { kind: 'toggleSlur' }
+  | { kind: 'toggleTie' }
 
 export interface EditorHandle {
   /** Insert text at the current cursor, replacing any selection. */

@@ -26,6 +26,7 @@ import {
   shift_part_octave,
   shift_range_octave,
   toggle_range_slur,
+  toggle_range_tie,
   update_part_declaration,
 } from '../jianpuWasm'
 import type { PartDeclaration } from '../types'
@@ -203,10 +204,13 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'editRange') {
+    const { operation } = msg
     const result =
-      msg.operation.kind === 'shiftOctave'
-        ? shift_range_octave(msg.source, msg.ranges, msg.operation.delta)
-        : toggle_range_slur(msg.source, msg.ranges)
+      operation.kind === 'shiftOctave'
+        ? shift_range_octave(msg.source, msg.ranges, operation.delta)
+        : operation.kind === 'toggleSlur'
+          ? toggle_range_slur(msg.source, msg.ranges)
+          : toggle_range_tie(msg.source, msg.ranges)
     postMessage({
       type: 'rangeEdited',
       id: msg.id,

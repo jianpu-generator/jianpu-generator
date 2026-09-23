@@ -308,6 +308,10 @@ impl Guest for Component {
         toggle_range_slur(source, ranges)
     }
 
+    fn toggle_range_tie(source: String, ranges: Vec<ByteRange>) -> RangeEditResponse {
+        toggle_range_tie(source, ranges)
+    }
+
     fn format_score(source: String) -> String {
         format_score(source)
     }

@@ -33,6 +33,22 @@ const SINGLE_MEASURE_TIED_REPEAT_NOTE_SOURCE = [
   '[Melody] 1~ _ 5 5',
 ].join('\n')
 
+// Same shape as `SINGLE_MEASURE_SOURCE`, but each part has a pair of
+// adjacent same-pitch notes the "Tie/Untie" toolbar action can tie.
+const SINGLE_MEASURE_REPEATED_PITCH_SOURCE = [
+  '# metadata',
+  'title = "Test"',
+  '',
+  '# parts',
+  'Melody = notes',
+  'Bass = notes',
+  '',
+  '# score',
+  '(bpm=120 key=C4 time=4/4)',
+  '[Melody] 1 3 3 4',
+  '[Bass] 5 5 7 1',
+].join('\n')
+
 const TWO_MEASURE_SOURCE = [
   '# metadata',
   'title = "Test"',
@@ -171,6 +187,15 @@ Given('the single-measure melody-bass fixture is loaded', async ({ page }) => {
 })
 
 Given(
+  'the single-measure repeated-pitch fixture is loaded',
+  async ({ page }) => {
+    await loadSource(page, SINGLE_MEASURE_REPEATED_PITCH_SOURCE)
+    await page.goto('/')
+    await waitForEditor(page)
+  },
+)
+
+Given(
   'the single-measure tied-repeat-note fixture is loaded',
   async ({ page }) => {
     await loadSource(page, SINGLE_MEASURE_TIED_REPEAT_NOTE_SOURCE)
@@ -287,6 +312,13 @@ When(
   'I precisely select from {string} to {string} spanning the two measures',
   async ({ page }, startNeedle: string, endNeedle: string) => {
     await selectPreciselyBetween(page, startNeedle, endNeedle)
+  },
+)
+
+When(
+  'I precisely select {string} on the Melody line',
+  async ({ page }, text: string) => {
+    await selectPreciselyBetween(page, text, text)
   },
 )
 

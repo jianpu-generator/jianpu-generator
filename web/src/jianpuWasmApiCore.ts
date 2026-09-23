@@ -344,6 +344,15 @@ export function toggle_range_slur(
   )
 }
 
+export function toggle_range_tie(
+  source: string,
+  ranges: SelectionRange[],
+): { source: string; ranges: SelectionRange[] } {
+  return fromRangeEditResponse(
+    root().toggleRangeTie(source, toWasmByteRanges(ranges)),
+  )
+}
+
 export function format_score(source: string): string {
   return root().formatScore(source)
 }

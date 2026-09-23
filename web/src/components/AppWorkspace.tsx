@@ -10,6 +10,7 @@ import { EditorToolbarButton } from './EditorToolbarButton'
 import { EditPartsModal } from './EditPartsModal'
 import { Preview } from './Preview'
 import { SlurIcon } from './SlurIcon'
+import { TieIcon } from './TieIcon'
 
 export function AppWorkspace({
   editorCollapsed,
@@ -167,6 +168,17 @@ export function AppWorkspace({
                         if (selectionByteRanges === null) return
                         handleEditSelection(selectionByteRanges, {
                           kind: 'toggleSlur',
+                        })
+                      }}
+                    />
+                    <EditorToolbarButton
+                      label="Tie/Untie"
+                      icon={<TieIcon size={14} />}
+                      disabled={selectionByteRanges === null}
+                      onClick={() => {
+                        if (selectionByteRanges === null) return
+                        handleEditSelection(selectionByteRanges, {
+                          kind: 'toggleTie',
                         })
                       }}
                     />

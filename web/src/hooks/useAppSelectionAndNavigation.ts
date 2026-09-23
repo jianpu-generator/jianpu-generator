@@ -49,7 +49,7 @@ export function useAppSelectionAndNavigation(
     selectedPartNames: string[],
     selectedCells: NoteCell[],
   ) => void,
-  /** The selection-scoped edit worker call (octave shift / slur toggle, see
+  /** The selection-scoped edit worker call (octave shift / slur toggle / tie toggle, see
    * `source_edit::RangeEditResult`) and the source-change setter it
    * resolves into — threaded through so `handleEditSelection` below
    * can re-derive and restore the note selection afterward. */
@@ -160,7 +160,7 @@ export function useAppSelectionAndNavigation(
     [lyricSelectionCells, measureRangeLyricCells],
   )
 
-  // The "Octave up"/"Octave down"/"Slur/Unslur" toolbar actions. A byte-offset selection
+  // The "Octave up"/"Octave down"/"Slur/Unslur"/"Tie/Untie" toolbar actions. A byte-offset selection
   // can't be blindly restored across this edit the way `Editor.tsx`'s
   // generic post-edit restore does for ordinary typing: a multicursor
   // selection (e.g. one from clicking a part label, which selects every
@@ -171,7 +171,8 @@ export function useAppSelectionAndNavigation(
   // that's exactly what collapsed a whole-system selection down to (part
   // of) its first measure after one octave shift.
   //
-  // (Likewise a slur toggle inserts/removes `(`/`)` characters.)
+  // (Likewise a slur toggle inserts/removes `(`/`)` characters, and a tie
+  // toggle `~` characters.)
   //
   // The fix has to be synchronous: `source_edit::shift_range_octave` already
   // knows, byte-for-byte, exactly which spans it rewrote and by how much
@@ -195,7 +196,7 @@ export function useAppSelectionAndNavigation(
   // still the *old* source's spans. Overlap-testing new-source ranges against
   // old-source spans produces garbage (the SVG selection collapsing/shifting
   // to the wrong notes). Since an octave shift only rewrites `'`/`,` marker
-  // runs, and a slur toggle only inserts/removes `(`/`)` — neither ever
+  // runs, and a slur/tie toggle only inserts/removes `(`/`)`/`~` — none ever
   // adds/removes/reorders notes — the selected `(sourcePartIndex,
   // noteId)` cells themselves are unaffected by the shift, so the fix is to
   // just keep them as-is: `applyNoteSelectionSilently` re-commits the same

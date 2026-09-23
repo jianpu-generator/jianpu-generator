@@ -208,7 +208,9 @@ export interface JianpuWorkerState {
    * `'`/`,` octave marker by `delta` octaves (see
    * `source_edit::shift_range_octave`), `toggleSlur` removes the `(…)`
    * groups the selection touches or wraps each part's selected notes in a
-   * new one (see `source_edit::toggle_range_slur`). `ranges` is a disjoint
+   * new one (see `source_edit::toggle_range_slur`), `toggleTie` removes
+   * the selected notes' `~` ties or ties their same-pitch neighbours (see
+   * `source_edit::toggle_range_tie`). `ranges` is a disjoint
    * set, not one min/max span, so a multicursor selection (e.g. a clicked
    * part label's notes spanning every measure in its system) edits every
    * one of its pieces without also sweeping in unrelated notes/parts
