@@ -16,6 +16,15 @@ Prefer functional programming style:
 
 Prefer Radix UI primitives over DIY implementations for interactive controls (sliders, selects, dialogs, checkboxes, tooltips, etc.). Available packages: `@radix-ui/react-dialog`, `@radix-ui/react-select`, `@radix-ui/react-slider`, `@radix-ui/react-tooltip`, `@radix-ui/react-progress`. Install additional Radix packages as needed rather than rolling custom components.
 
+## Browser storage
+
+`localStorage`/`sessionStorage` in the web app is only for:
+- **transient relays** (e.g. the GitHub sign-in popup's PKCE verifier and auth-result handoff),
+- **local files** (the `local` storage backend's file store),
+- **per-device preferences** (e.g. storage backend choice, part toggles, the sign-in token).
+
+Anything else, especially state that must agree across devices (e.g. whether a file is shared, which share belongs to which file), lives in the database and is derived from it, never mirrored into browser storage.
+
 ## Local dev
 
 To run local dev, use `mprocs -c dekit.yaml`.

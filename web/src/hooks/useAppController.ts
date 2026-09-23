@@ -4,6 +4,7 @@ import type { EditorHandle } from '../types'
 import { useAppPanels } from './useAppPanels'
 import { useAppSelectionAndNavigation } from './useAppSelectionAndNavigation'
 import { useAssetLoader } from './useAssetLoader'
+import { useDocumentTitle } from './useDocumentTitle'
 import { useFileImport } from './useFileImport'
 import { useFileOperations } from './useFileOperations'
 import { useFontsLoader } from './useFontsLoader'
@@ -69,6 +70,7 @@ export function useAppController() {
     setEditorCollapsed,
   )
   const fileId = fileIdForName(store, store.active)
+  useDocumentTitle(store.active)
 
   const editorRef = useRef<EditorHandle>(null)
   const selectedSequenceRangeRef = useRef<{
