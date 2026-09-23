@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useDebouncedCallback } from 'use-debounce'
 import { useAccountAuth } from '../storage/accountAuth'
 import {
   openSyncedShareGithubSignInPopup,
@@ -10,16 +9,15 @@ import {
   buildSyncedShareNetworkFailure,
   buildSyncedShareResponseFailure,
   type SyncedShareFailure,
+  type SyncedShareOperation,
 } from '../syncedShare/errors'
 import type {
-  CreateShareRequest,
-  CreateShareResponse,
-  SyncedStopRequest,
-  SyncedUpdateRequest,
+  FileShareRequest,
+  FileShareResponse,
+  ShareStatusResponse,
 } from '../syncedShare/protocol'
 import { syncedShareWorkerOrigin } from '../syncedShare/workerUrl'
 import { buildSyncedShareUrl } from '../syncedShareUrl'
-import { AUTOSAVE_DEBOUNCE_MS } from './useStorageBackend'
 
 /** Public Synced Share GitHub OAuth App client id -- a dedicated app,
  * separate from the deleted storage-backend device flow. Originally
@@ -32,41 +30,37 @@ import { AUTOSAVE_DEBOUNCE_MS } from './useStorageBackend'
 const SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID =
   import.meta.env.VITE_SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID ?? ''
 
-function activeFlagKey(fileId: string): string {
-  return `jianpu:synced-share-active:v1:${fileId}`
+/** The worker path suffix (under `/files/:id/share`) for each owner-side
+ * operation. */
+const OPERATION_PATH: Record<SyncedShareOperation, string> = {
+  start: '',
+  stop: '/stop',
+  status: '/status',
 }
 
-function readActiveFlag(fileId: string): boolean {
-  return localStorage.getItem(activeFlagKey(fileId)) === 'true'
+function fileShareEndpointUrl(
+  host: string,
+  fileId: string,
+  operation: SyncedShareOperation,
+): string {
+  return `${syncedShareWorkerOrigin(host)}/files/${encodeURIComponent(fileId)}/share${OPERATION_PATH[operation]}`
 }
 
-/** Persists the server-generated `shareId` for a file (§1: "Client persists
- * the returned shareId locally (keyed by file) so stopping/resuming sync on
- * the same file reuses the same link"), keyed the same way as
- * `activeFlagKey` above. There is no more client-side derivation
- * (`deriveSyncedShareIdentity`, deleted task 11) -- the id only ever comes
- * from the worker's `POST /shares` response. */
-function shareIdStorageKey(fileId: string): string {
-  return `jianpu:synced-share-id:v1:${fileId}`
-}
-
-function readStoredShareId(fileId: string): string | null {
-  return localStorage.getItem(shareIdStorageKey(fileId))
-}
-
-function writeStoredShareId(fileId: string, shareId: string): void {
-  localStorage.setItem(shareIdStorageKey(fileId), shareId)
-}
-
-function syncedShareEndpointUrl(host: string, shareId: string): string {
-  return `${syncedShareWorkerOrigin(host)}/shares/${shareId}`
-}
-
-function createShareEndpointUrl(host: string): string {
-  return `${syncedShareWorkerOrigin(host)}/shares`
+/** A file's share state as last reported by the worker. Tagged with the
+ * `fileId` it belongs to, so a response for a file the owner has since
+ * switched away from can never be read as the current file's state. */
+interface FileShareStatus {
+  fileId: string
+  shareId: string
+  ended: boolean
 }
 
 export interface UseSyncedShareOwnerResult {
+  /** Whether a live link is possible for the current file at all: only a
+   * cloud-stored (account-owned) file can be shared live, since the link
+   * points at its `files` row. Local and demo files get the static
+   * `#share=` link only. */
+  canSync: boolean
   isSynced: boolean
   syncedShareLink: string | null
   /** Whether the dedicated Synced Share GitHub sign-in connection
@@ -75,33 +69,29 @@ export interface UseSyncedShareOwnerResult {
   /** Cached GitHub username from that connection, for the "Synced as
    * @username" identity chip -- `null` until connected. */
   githubLogin: string | null
-  /** Starts (or resumes) syncing this file and returns its viewer link, or
-   * `null` if it couldn't. Async because starting a share now requires a
-   * `POST /shares` round trip to the worker the first time (no more
-   * client-side derivation) -- a resumed share (persisted `shareId` already
-   * on this device) still resolves immediately with no network call.
+  /** Starts (or resumes) sharing this file and returns its viewer link, or
+   * `null` if it couldn't. The worker always hands back the file's one
+   * share id, so re-sharing -- from any device -- reproduces the same link.
    *
    * Per §0's "no seamless OAuth-then-continue flow" decision, this is a
    * no-op (resolves `null`) while the Synced Share GitHub connection isn't
    * present -- it never itself starts the sign-in popup. Callers (e.g.
    * `ShareModal`) are expected to check `isGithubConnected` first and
-   * show its sign-in state instead of calling this. A
-   * failed `POST /shares` (e.g. GitHub verification failure) resolves
-   * `null` too, surfaced instead via `syncFailure` below. */
+   * show its sign-in state instead of calling this. A failed request (e.g.
+   * GitHub verification failure) resolves `null` too, surfaced instead via
+   * `syncFailure` below. */
   startSync: () => Promise<string | null>
   stopSync: () => void
-  broadcastContent: (content: string) => void
   /** Opens the popup "sign in with GitHub" flow for the dedicated Synced
    * Share connection. Resolving this promise never itself starts a share --
    * per §0, the user must click "start sync" again once connected. */
   signInWithGithub: () => Promise<SyncedShareGithubAuthResult>
   /** Logs out of the dedicated Synced Share GitHub connection -- clears the
    * stored token/login (so the "Synced as @username" chip disappears and
-   * `isGithubConnected` goes back to `false`), stopping any active sync
-   * first (mirrors clicking "Stop Sync": a sync can't keep pushing updates
-   * without a verified identity to sign them with). */
+   * `isGithubConnected` goes back to `false`), stopping the current file's
+   * live share first (mirrors clicking "Stop Sync"). */
   disconnectGithub: () => void
-  /** Set whenever a write (a "create", "update" push, or a "stop") fails --
+  /** Set whenever a request (start, stop, or the status lookup) fails --
    * a `401` GitHub-verification failure from the worker, a non-2xx
    * response, or a network-level error. Drives the full-screen error dialog
    * (task 9); `null` means no failure is currently being shown. There is no
@@ -114,70 +104,52 @@ export interface UseSyncedShareOwnerResult {
 }
 
 /**
- * Owns the owner side of a Synced Share session for a single file. `fileId`
- * (stable across renames, unlike `filename`) keys both the persisted
- * `shareId` (see `shareIdStorageKey`) and the "is this file synced" flag, so
- * a session survives a rename and reproduces the same link across
- * stop/start cycles.
+ * Owns the owner side of a Synced Share for the current file. A share is a
+ * pointer to the file's cloud `files` row (see
+ * `crates/live-share-worker/src/share.rs`): viewers read the file's saved
+ * content directly, so this hook never sends content anywhere -- the
+ * ordinary cloud autosave is the only write path.
  *
- * There is no persistent connection: `broadcastContent` just `POST`s the
- * current content to the share's `docs` row, debounced at the same
- * `AUTOSAVE_DEBOUNCE_MS` cadence as a regular save (not on every keystroke)
- * — a viewer only sees a push once they reload, so there is no benefit to
- * pushing more often than the content is actually persisted.
+ * Whether the file is shared lives on the server, fetched from `POST
+ * /files/:id/share/status` whenever the file or the signed-in identity
+ * changes, so every device the owner signs in on sees the same live/stopped
+ * state and link. `isSynced` is derived from that status (and only counts
+ * when it's tagged with the current file), never mirrored into separate
+ * state, so a file switch can't briefly pair one file with another's share.
  *
- * Ownership is always a verified GitHub identity (§0) -- there is no more
- * anonymous/device-secret ownership path (task 11 deleted
- * `getOrCreateDeviceSecret`/`deriveSyncedShareIdentity`).
- *
- * `externalFileId` (for a GitHub-backed file) makes a *fresh* "Sync" click
- * idempotent server-side, keyed by (GitHub account, file) rather than just
- * this device's local cache -- see the param's own doc comment. The local
- * `shareId` cache above still short-circuits a same-device resume with no
- * network round trip either way.
+ * Ownership is always a verified GitHub identity (§0) -- there is no
+ * anonymous/device-secret ownership path.
  */
 export function useSyncedShareOwner(
   filename: string,
-  fileId: string,
-  content: string,
-  /** The file's `owner/repo/scores/name` Contents API path when the active
-   * storage backend is GitHub (see `useScoreSource.ts`'s
-   * `externalFileIdFor`), `null` for a local-only file. Threaded straight
-   * into `createShare`'s request body so the worker can make the call
-   * idempotent per (GitHub account, file) -- see
-   * `crates/live-share-worker/src/handlers.rs::create_share`. */
-  externalFileId: string | null,
+  /** The current file's cloud `files.id` (see `useScoreSource.ts`'s
+   * `cloudFileIdFor`), `null` for a local or demo file, which can't be
+   * shared live. */
+  cloudFileId: string | null,
 ): UseSyncedShareOwnerResult {
-  const [isActive, setIsActive] = useState(() => readActiveFlag(fileId))
+  const [status, setStatus] = useState<FileShareStatus | null>(null)
   const [syncFailure, setSyncFailure] = useState<SyncedShareFailure | null>(
     null,
   )
   const [githubAuth, setGithubAuth] = useAccountAuth()
   const isGithubConnected = githubAuth !== null
   const githubLogin = githubAuth?.login ?? null
-  const [shareId, setShareId] = useState<string | null>(() =>
-    readStoredShareId(fileId),
+  const identityToken = githubAuth?.token ?? null
+
+  // The file currently on screen, read by async completions below so a
+  // response that lands after the owner switched files is dropped instead
+  // of overwriting the new file's status.
+  const cloudFileIdRef = useRef(cloudFileId)
+  cloudFileIdRef.current = cloudFileId
+
+  const applyStatusFor = useCallback(
+    (fileId: string, next: FileShareStatus | null) => {
+      if (cloudFileIdRef.current === fileId) setStatus(next)
+    },
+    [],
   )
-  // Mirrors `shareId` for the click handler below, which needs to read it
-  // synchronously (state updates aren't visible until the next render).
-  const shareIdRef = useRef<string | null>(shareId)
-  const revisionRef = useRef(0)
-  // Mirrors the latest `content` prop so the "just started syncing" effect
-  // below (which can't see React props at the time it fires) can push the
-  // share's very first doc without waiting for the owner to make an edit.
-  const contentRef = useRef(content)
-  contentRef.current = content
 
-  useEffect(() => {
-    const stored = readStoredShareId(fileId)
-    setIsActive(readActiveFlag(fileId))
-    shareIdRef.current = stored
-    setShareId(stored)
-  }, [fileId])
-
-  const session = isActive ? shareId : null
-
-  /** Records a write failure and, if it's a `401` (the worker's
+  /** Records a request failure and, if it's a `401` (the worker's
    * `VerificationFailure` -- GitHub itself rejected the stored identity
    * token as revoked/invalid, not merely a transient network blip), also
    * clears the stored Synced Share GitHub auth: without this, a token
@@ -192,83 +164,52 @@ export function useSyncedShareOwner(
     [setGithubAuth],
   )
 
-  const pushUpdate = useCallback(
-    (content: string) => {
+  /** Sends one owner-side request for `fileId`'s share. Resolves the ok
+   * `Response`, or `null` after recording the failure. */
+  const requestFileShare = useCallback(
+    async (
+      operation: SyncedShareOperation,
+      fileId: string,
+      token: string,
+    ): Promise<Response | null> => {
       const host = import.meta.env.VITE_SYNCED_SHARE_HOST
-      if (!session || !host || !githubAuth) return
-      revisionRef.current += 1
-      const request: SyncedUpdateRequest = {
-        type: 'update',
-        identityToken: githubAuth.token,
-        filename,
-        content,
-        revision: revisionRef.current,
-      }
-      void fetch(syncedShareEndpointUrl(host, session), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request),
-      })
-        .then(async (response) => {
-          if (response.ok) return
-          recordSyncFailure(
-            await buildSyncedShareResponseFailure('update', response),
-          )
-        })
-        .catch((error: unknown) => {
-          recordSyncFailure(buildSyncedShareNetworkFailure('update', error))
-        })
-    },
-    [filename, session, githubAuth, recordSyncFailure],
-  )
-
-  // Pushes the initial doc the moment a session starts syncing (including a
-  // page reload while already syncing), so a viewer opening the link right
-  // away doesn't find an empty share from before the owner's first edit.
-  useEffect(() => {
-    if (!session) return
-    pushUpdate(contentRef.current)
-    // `pushUpdate` itself only changes identity when `filename`/`session` do
-    // (see its own `useCallback` deps), so listing it here doesn't cause
-    // this to re-run on every content change — it still only fires on
-    // session identity change, deliberately not on every edit. See
-    // `broadcastContent` below for the debounced path edits actually take.
-  }, [session, pushUpdate])
-
-  const broadcastContent = useDebouncedCallback(
-    pushUpdate,
-    AUTOSAVE_DEBOUNCE_MS,
-  )
-
-  /** Calls `POST /shares` to mint a brand-new server-generated share id
-   * (§1). Failures are surfaced via `syncFailure`, same as a write. */
-  const createShare = useCallback(
-    async (host: string, identityToken: string): Promise<string | null> => {
-      const request: CreateShareRequest = {
-        identityToken,
-        externalFileId: externalFileId ?? undefined,
-      }
+      if (!host) return null
+      const request: FileShareRequest = { identityToken: token }
       try {
-        const response = await fetch(createShareEndpointUrl(host), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(request),
-        })
-        if (!response.ok) {
-          recordSyncFailure(
-            await buildSyncedShareResponseFailure('create', response),
-          )
-          return null
-        }
-        const body = (await response.json()) as CreateShareResponse
-        return body.shareId
+        const response = await fetch(
+          fileShareEndpointUrl(host, fileId, operation),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(request),
+          },
+        )
+        if (response.ok) return response
+        recordSyncFailure(
+          await buildSyncedShareResponseFailure(operation, response),
+        )
+        return null
       } catch (error) {
-        recordSyncFailure(buildSyncedShareNetworkFailure('create', error))
+        recordSyncFailure(buildSyncedShareNetworkFailure(operation, error))
         return null
       }
     },
-    [recordSyncFailure, externalFileId],
+    [recordSyncFailure],
   )
+
+  useEffect(() => {
+    if (!cloudFileId || !identityToken) return
+    void requestFileShare('status', cloudFileId, identityToken).then(
+      async (response) => {
+        if (!response) return
+        const { share } = (await response.json()) as ShareStatusResponse
+        applyStatusFor(
+          cloudFileId,
+          share ? { fileId: cloudFileId, ...share } : null,
+        )
+      },
+    )
+  }, [cloudFileId, identityToken, requestFileShare, applyStatusFor])
 
   const startSync = useCallback(async (): Promise<string | null> => {
     // Per §0's "no seamless OAuth-then-continue flow" decision: this never
@@ -276,50 +217,40 @@ export function useSyncedShareOwner(
     // `ShareModal` checks `isGithubConnected` up front and shows its
     // sign-in state instead of calling this in that case -- this check is
     // a defensive backstop, not the primary gate.
-    if (!isGithubConnected || !githubAuth) return null
-    const host = import.meta.env.VITE_SYNCED_SHARE_HOST
-    if (!host) return null
+    if (!cloudFileId || !identityToken) return null
+    const response = await requestFileShare('start', cloudFileId, identityToken)
+    if (!response) return null
+    const { shareId } = (await response.json()) as FileShareResponse
+    applyStatusFor(cloudFileId, {
+      fileId: cloudFileId,
+      shareId,
+      ended: false,
+    })
+    return buildSyncedShareUrl(shareId, filename)
+  }, [cloudFileId, identityToken, filename, requestFileShare, applyStatusFor])
 
-    let currentShareId = shareIdRef.current
-    if (!currentShareId) {
-      currentShareId = await createShare(host, githubAuth.token)
-      if (!currentShareId) return null
-      shareIdRef.current = currentShareId
-      setShareId(currentShareId)
-      writeStoredShareId(fileId, currentShareId)
-    }
-
-    localStorage.setItem(activeFlagKey(fileId), 'true')
-    revisionRef.current = 0
-    setIsActive(true)
-    return buildSyncedShareUrl(currentShareId, filename)
-  }, [fileId, filename, isGithubConnected, githubAuth, createShare])
+  const isSynced =
+    cloudFileId !== null &&
+    identityToken !== null &&
+    status?.fileId === cloudFileId &&
+    !status.ended
 
   const stopSync = useCallback(() => {
-    const host = import.meta.env.VITE_SYNCED_SHARE_HOST
-    const current = session
-    localStorage.setItem(activeFlagKey(fileId), 'false')
-    setIsActive(false)
-    if (!current || !host || !githubAuth) return
-    const stop: SyncedStopRequest = {
-      type: 'stop',
-      identityToken: githubAuth.token,
-    }
-    void fetch(syncedShareEndpointUrl(host, current), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(stop),
-    })
-      .then(async (response) => {
-        if (response.ok) return
-        recordSyncFailure(
-          await buildSyncedShareResponseFailure('stop', response),
-        )
-      })
-      .catch((error: unknown) => {
-        recordSyncFailure(buildSyncedShareNetworkFailure('stop', error))
-      })
-  }, [fileId, session, githubAuth, recordSyncFailure])
+    if (!isSynced || !cloudFileId || !identityToken || !status) return
+    const stopped = { ...status, ended: true }
+    void requestFileShare('stop', cloudFileId, identityToken).then(
+      (response) => {
+        if (response) applyStatusFor(cloudFileId, stopped)
+      },
+    )
+  }, [
+    isSynced,
+    cloudFileId,
+    identityToken,
+    status,
+    requestFileShare,
+    applyStatusFor,
+  ])
 
   const dismissSyncFailure = useCallback(() => {
     setSyncFailure(null)
@@ -333,13 +264,12 @@ export function useSyncedShareOwner(
     }, [])
 
   const disconnectGithub = useCallback(() => {
-    if (session) stopSync()
+    stopSync()
     // GitHub's real `/authorize` endpoint has no "force fresh consent"
     // parameter -- revoking this app's authorization grant now is the only
     // genuine way to make the *next* sign-in re-show GitHub's consent
-    // screen instead of silently reusing this one. Fire-and-forget, same as
-    // `stopSync`'s own network call above: local state always wins, a
-    // failed revocation never blocks logging out.
+    // screen instead of silently reusing this one. Fire-and-forget: local
+    // state always wins, a failed revocation never blocks logging out.
     if (githubAuth) {
       const host = import.meta.env.VITE_SYNCED_SHARE_HOST ?? ''
       void revokeSyncedShareGithubGrant({
@@ -347,17 +277,19 @@ export function useSyncedShareOwner(
         identityToken: githubAuth.token,
       })
     }
+    setStatus(null)
     setGithubAuth(null)
-  }, [session, stopSync, githubAuth, setGithubAuth])
+  }, [stopSync, githubAuth, setGithubAuth])
 
   return {
-    isSynced: session !== null,
-    syncedShareLink: session ? buildSyncedShareUrl(session, filename) : null,
+    canSync: cloudFileId !== null,
+    isSynced,
+    syncedShareLink:
+      isSynced && status ? buildSyncedShareUrl(status.shareId, filename) : null,
     isGithubConnected,
     githubLogin,
     startSync,
     stopSync,
-    broadcastContent,
     signInWithGithub,
     disconnectGithub,
     syncFailure,

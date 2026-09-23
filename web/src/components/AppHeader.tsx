@@ -35,6 +35,9 @@ interface SyncedShareHeaderProps {
    * worker has none cached for this share's owner. */
   viewerOwnerLogin: string | null
   onImportSyncedShare: () => void
+  /** Whether the active file can have a live link (cloud files only) --
+   * see `useSyncedShareOwner.ts`. */
+  canSync: boolean
   isSynced: boolean
   syncedShareLink: string | null
   /** Whether the dedicated Synced Share GitHub sign-in connection is
@@ -50,7 +53,7 @@ interface SyncedShareHeaderProps {
    * sync first -- offered from the "Synced as @username" chip's dropdown. */
   onDisconnectGithub: () => void
   /** Drives the full-screen error dialog (task 9) -- non-null while a
-   * Synced Share write has failed. */
+   * Synced Share request has failed. */
   syncFailure: SyncedShareFailure | null
   onDismissSyncFailure: () => void
 }
@@ -269,6 +272,7 @@ export function AppHeader({
             onImportFile={onImportFile}
             binNames={sortedBinNames(store)}
             onOpenBin={onOpenBin}
+            canSync={syncedShare.canSync}
             isSynced={syncedShare.isSynced}
             syncedShareLink={syncedShare.syncedShareLink}
             isGithubConnected={syncedShare.isGithubConnected}

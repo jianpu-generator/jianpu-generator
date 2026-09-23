@@ -15,6 +15,8 @@ import { AfterScenario, BeforeScenario, Given, Then, When } from './fixtures'
 import { openSyncedTab } from './synced-share-button.steps'
 import { syncedShareButtonState as sharedState } from './synced-share-button-state'
 import {
+  actualNameFor,
+  assignActualName,
   idempotentSharingSource,
   resetIdempotentCreateState,
   idempotentCreateState as state,
@@ -34,12 +36,13 @@ AfterScenario(async () => {
 Given(
   'a cloud file named {string} is seeded for idempotent sharing',
   async ({}, name: string) => {
+    const displayName = name.replace(/\.jianpu$/, '')
     const file = await seedCloudFile(
       DEFAULT_MOCK_GITHUB_LOGIN,
-      name,
+      `${assignActualName(displayName)}.jianpu`,
       idempotentSharingSource(name),
     )
-    state.seededFileIds[name.replace(/\.jianpu$/, '')] = file.id
+    state.seededFileIds[displayName] = file.id
   },
 )
 
@@ -76,10 +79,11 @@ When(
     // e2e suite run (see `fileTabByExactName`'s own doc comment), so
     // "idempotent" seeded here can otherwise ambiguously match another
     // scenario's "idempotent-a"/"idempotent-b" tabs too.
-    const tab = fileTabByExactName(page, name)
+    const actualName = actualNameFor(name)
+    const tab = fileTabByExactName(page, actualName)
     await tab.waitFor({ timeout: 15_000 })
     await tab.click()
-    await expect(fileSwitcherTrigger(page)).toContainText(name)
+    await expect(fileSwitcherTrigger(page)).toContainText(actualName)
     await page.waitForSelector('.monaco-editor .view-lines', {
       timeout: 15_000,
     })
@@ -90,14 +94,9 @@ When(
 
 /** Injects a synthetic `/files/list` entry carrying *another* account's
  * real D1 file id -- see `loadSecondContextOnCloudFile`'s doc comment for
- * why this is the only way to drive the "different account, same
- * `external_file_id`" idempotency case through the real worker: D1's
- * `files.id` is a globally unique primary key, so two different owners can
- * never really share one row, but `create_share` treats `external_file_id`
- * as an opaque client-supplied string (`handlers.rs::create_share` never
- * validates it against the `files` table) -- this mock exercises exactly
- * the request shape a client that really owned such a row would send,
- * without needing D1 to allow the impossible. */
+ * why this is the only way to send a share request for someone else's file
+ * through the real worker: D1's `files.id` is a globally unique primary
+ * key, so two different owners can never really share one row. */
 async function mockCloudFileListWithForeignFile(
   page: Page,
   fileId: string,
@@ -110,7 +109,7 @@ async function mockCloudFileListWithForeignFile(
         files: [
           {
             id: fileId,
-            name: `${tabName}.jianpu`,
+            name: `${actualNameFor(tabName)}.jianpu`,
             content: idempotentSharingSource(tabName),
             revision: 0,
             trashedAt: null,
@@ -168,36 +167,10 @@ async function loadSecondContextOnCloudFile(
   }
   await page.goto('/')
   await openFileList(page)
-  const tab = fileTabByExactName(page, tabName)
+  const tab = fileTabByExactName(page, actualNameFor(tabName))
   await tab.waitFor({ timeout: 15_000 })
   await tab.click()
   await page.waitForSelector('.preview-page', { timeout: 15_000 })
-  await openSyncedTab(page)
-  state.secondContext = context
-  state.secondPage = page
-  return page
-}
-
-/** Same as `loadSecondContextOnCloudFile` but for a local-only file -- no
- * storage-backend localStorage, no cloud seeding, just the Synced Share
- * identity. */
-async function loadSecondContextOnLocalApp(
-  browser: Browser,
-  login: string,
-): Promise<Page> {
-  const context = await browser.newContext()
-  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-  await context.addInitScript(
-    ({ login, token }: { login: string; token: string }) => {
-      localStorage.setItem(
-        'jianpu:synced-share-github-auth:v1',
-        JSON.stringify({ token, login }),
-      )
-    },
-    { login, token: syncedShareIdentityTokenFor(login) },
-  )
-  const page = await context.newPage()
-  await page.goto('/')
   await openSyncedTab(page)
   state.secondContext = context
   state.secondPage = page
@@ -225,13 +198,6 @@ When(
 )
 
 When(
-  'a separate browser context loads the app, signed in as the same GitHub account {string}',
-  async ({ browser }, login: string) => {
-    await loadSecondContextOnLocalApp(browser, login)
-  },
-)
-
-When(
   'a separate browser context loads the cloud-backed file at its renamed path, signed in as the same GitHub account {string}',
   async ({ browser }, login: string) => {
     await loadSecondContextOnCloudFile(browser, login, 'renamed')
@@ -244,8 +210,11 @@ When(
     expect(label).toBe('Sync')
     const page = state.secondPage
     if (!page) throw new Error('second browser context was not opened yet')
+    // The file may already be live (the server holds its share state), in
+    // which case the modal offers the copy button instead of Start Sync.
     const startSync = page.getByTestId('share-modal-start-sync')
     if (await startSync.count()) await startSync.click()
+    else await page.getByTestId('share-modal-copy-synced-link').click()
     await expect(page.getByTestId('share-modal-copy-synced-link')).toHaveText(
       'Link copied',
     )
@@ -269,7 +238,40 @@ Then(
 )
 
 Then(
-  'the synced link copied in the separate browser context is different from the original link',
+  "the separate browser context's share modal already shows the stop-sync button",
+  async () => {
+    const page = state.secondPage
+    if (!page) throw new Error('second browser context was not opened yet')
+    await expect(page.getByTestId('share-modal-stop-sync')).toBeVisible()
+  },
+)
+
+When(
+  'the other account clicks {string} in that separate browser context',
+  async ({}, label: string) => {
+    expect(label).toBe('Start Sync')
+    const page = state.secondPage
+    if (!page) throw new Error('second browser context was not opened yet')
+    await page.getByTestId('share-modal-start-sync').click()
+  },
+)
+
+Then(
+  'the separate browser context shows the synced share error dialog',
+  async () => {
+    const page = state.secondPage
+    if (!page) throw new Error('second browser context was not opened yet')
+    await expect(page.getByTestId('synced-share-error-dialog')).toBeVisible()
+  },
+)
+
+Then('the share modal shows the cloud-only message', async ({ page }) => {
+  await expect(page.getByTestId('share-modal-synced-cloud-only')).toBeVisible()
+  await expect(page.getByTestId('share-modal-start-sync')).toHaveCount(0)
+})
+
+Then(
+  'the synced link copied in the separate browser context has the same share id as the original link',
   async () => {
     if (!sharedState.originalSyncedLink) {
       throw new Error('originalSyncedLink was not captured yet')
@@ -277,8 +279,8 @@ Then(
     if (!state.secondSyncedShareLink) {
       throw new Error('secondSyncedShareLink was not captured yet')
     }
-    expect(state.secondSyncedShareLink).not.toEqual(
-      sharedState.originalSyncedLink,
+    expect(syncedShareId(state.secondSyncedShareLink)).toEqual(
+      syncedShareId(sharedState.originalSyncedLink),
     )
   },
 )
@@ -303,7 +305,7 @@ When(
     const activeTab = page.locator('.file-tab--active .file-tab-name')
     await activeTab.dblclick()
     const input = page.locator('.file-tab--active input.file-tab-name')
-    await input.fill(newName)
+    await input.fill(assignActualName(newName))
     await input.press('Enter')
     // Unlike the deleted GitHub-mock version of this step, there's no
     // in-memory seed map to keep in sync -- this is a real rename against

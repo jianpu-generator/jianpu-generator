@@ -57,7 +57,6 @@ export function useAppController() {
 
   const {
     sharedPreview,
-    syncedShareOwner,
     syncedShareViewerActive,
     source,
     readOnly,
@@ -183,9 +182,8 @@ export function useAppController() {
   const handleSourceChange = useCallback(
     (value: string) => {
       setStore((prev) => backend.updateActiveContent(prev, value))
-      if (syncedShareOwner.isSynced) syncedShareOwner.broadcastContent(value)
     },
-    [setStore, backend, syncedShareOwner],
+    [setStore, backend],
   )
   const handleSelect = useCallback(
     (name: string) => {

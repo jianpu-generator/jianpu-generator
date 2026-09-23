@@ -7,8 +7,9 @@ import type { BrowserContext, Page } from '@playwright/test'
 // the second ("separate browser context") owner session, which cloud-backed
 // tab is currently active (so a later "a separate browser context loads the
 // same cloud-backed file ..." step knows which file to open without
-// threading it through every step's params), and each seeded file's real
-// D1 id (see `seededFileIds` below).
+// threading it through every step's params), each seeded file's real D1 id
+// (see `seededFileIds` below), and its real, per-scenario unique name (see
+// `actualNames`).
 export interface IdempotentCreateState {
   activeTabName: string | undefined
   secondContext: BrowserContext | undefined
@@ -18,15 +19,18 @@ export interface IdempotentCreateState {
    * stripped) to its real D1 `files.id`, as returned by `seedCloudFile`.
    * Captured so the "different account" scenario can hand a *different*
    * signed-in account a synthetic `/files/list` entry carrying that exact
-   * id -- `create_share` treats `external_file_id` as an opaque
-   * client-supplied string (`handlers.rs::create_share` never checks it
-   * against the `files` table), but `files.id` is a globally unique
-   * primary key (`0003_files.sql`), so two different accounts can never
-   * really own a row with the same id -- this is the only way to drive
-   * that exact "same external_file_id, different owner" request shape
-   * through the real worker instead of an impossible D1 state. See
+   * id -- `files.id` is a globally unique primary key (`0003_files.sql`),
+   * so two different accounts can never really own a row with the same id,
+   * and this is the only way to send `POST /files/:id/share` for someone
+   * else's file through the real worker. See
    * `loadSecondContextOnCloudFile`'s own doc comment. */
   seededFileIds: Record<string, string>
+  /** Maps each display name a scenario uses (extension stripped, e.g.
+   * "idempotent") to the real file name it stands for (e.g.
+   * "idempotent-1a2b3c4d") -- scenarios run `fullyParallel` against one
+   * shared account, so a fixed name would let one scenario share, or
+   * rename, another's file. */
+  actualNames: Record<string, string>
 }
 
 export const idempotentCreateState: IdempotentCreateState = {
@@ -35,6 +39,7 @@ export const idempotentCreateState: IdempotentCreateState = {
   secondPage: undefined,
   secondSyncedShareLink: undefined,
   seededFileIds: {},
+  actualNames: {},
 }
 
 export function resetIdempotentCreateState(): void {
@@ -43,6 +48,26 @@ export function resetIdempotentCreateState(): void {
   idempotentCreateState.secondPage = undefined
   idempotentCreateState.secondSyncedShareLink = undefined
   idempotentCreateState.seededFileIds = {}
+  idempotentCreateState.actualNames = {}
+}
+
+/** The real, per-scenario unique file name (extension stripped) behind a
+ * display name -- see `actualNames`. */
+export function actualNameFor(displayName: string): string {
+  const actual = idempotentCreateState.actualNames[displayName]
+  if (!actual) {
+    throw new Error(
+      `no cloud file name tracked for ${JSON.stringify(displayName)}`,
+    )
+  }
+  return actual
+}
+
+/** Records a fresh, unique real name for `displayName` and returns it. */
+export function assignActualName(displayName: string): string {
+  const actual = `${displayName}-${crypto.randomUUID().slice(0, 8)}`
+  idempotentCreateState.actualNames[displayName] = actual
+  return actual
 }
 
 /** Deterministic per-name content for a cloud file seeded by "a cloud file

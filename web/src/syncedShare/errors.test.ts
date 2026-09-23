@@ -38,9 +38,9 @@ describe('buildSyncedShareResponseFailure', () => {
       status: 401,
       statusText: 'Unauthorized',
     })
-    const failure = await buildSyncedShareResponseFailure('update', response)
+    const failure = await buildSyncedShareResponseFailure('start', response)
     expect(failure).toEqual({
-      operation: 'update',
+      operation: 'start',
       reason: 'GitHub verification failed: 401 Unauthorized',
       failedAt: 1_700_000_000_000,
       attempts: 3,
@@ -57,13 +57,13 @@ describe('buildSyncedShareResponseFailure', () => {
       attempts: 1,
     })
     const response = new Response(body, { status: 401 })
-    const failure = await buildSyncedShareResponseFailure('update', response)
+    const failure = await buildSyncedShareResponseFailure('start', response)
     expect(failure.reason).not.toContain('gho_')
     expect(failure.reason).toContain('[redacted]')
   })
 
   it('falls back to raw status/body (redacted) for an unrecognized failure shape', async () => {
-    const response = new Response('internal error, hash=' + 'b'.repeat(40), {
+    const response = new Response(`internal error, hash=${'b'.repeat(40)}`, {
       status: 500,
       statusText: 'Internal Server Error',
     })
@@ -80,10 +80,10 @@ describe('buildSyncedShareResponseFailure', () => {
 describe('buildSyncedShareNetworkFailure', () => {
   it('describes a thrown Error', () => {
     const failure = buildSyncedShareNetworkFailure(
-      'update',
+      'start',
       new TypeError('Failed to fetch'),
     )
-    expect(failure.operation).toBe('update')
+    expect(failure.operation).toBe('start')
     expect(failure.reason).toContain('Failed to fetch')
     expect(failure.attempts).toBeUndefined()
   })

@@ -8,16 +8,20 @@ Feature: Synced Share GitHub sign-in
   # connection instead of exercising this UI, to keep their focus on the
   # sync/viewer behavior. Every scenario opens the share modal's Synced-link
   # tab first, via the shared "the owner loads the app and clicks 'Sync'"
-  # step (see synced-share-button.steps.ts's `openSyncedTab`).
+  # step (see synced-share-button.steps.ts's `openSyncedTab`). Scenarios that
+  # go on to start a share seed a cloud file first, since only a cloud file
+  # can be shared live.
 
   Scenario: Clicking Sync without a GitHub connection shows a sign-in prompt, and completing the popup lets a second click start syncing with an identity row shown
     Given clipboard permissions are granted
     And the GitHub authorization popup is mocked to redirect back successfully
+    And the file store is seeded with the synced score
     When the owner loads the app and clicks "Sync"
     Then the sign-in prompt is shown
     When the owner clicks "Sign in with GitHub" in the prompt
     Then the identity row shows signed in as "e2e-test-user"
-    When the owner clicks "Sync" again
+    When the owner reopens the app on the seeded synced file
+    And the owner clicks "Sync" again
     Then the synced link is copied
     And the synced share identity row reads "Synced as @e2e-test-user"
 
@@ -69,6 +73,7 @@ Feature: Synced Share GitHub sign-in
   Scenario: Signing out disconnects GitHub and stops the sync
     Given clipboard permissions are granted
     And the owner is signed in with GitHub as "e2e-test-user"
+    And the file store is seeded with the synced score
     When the owner loads the app and clicks "Sync"
     Then the synced link is copied
     When the owner closes the share modal
@@ -87,10 +92,11 @@ Feature: Synced Share GitHub sign-in
     And the owner clicks "Sign out" in the profile popover
     Then the worker was asked to revoke the GitHub grant for "e2e-fake-synced-share-token"
 
-  Scenario: A GitHub verification failure while creating a share shows the full-screen error dialog, with no automatic retry
+  Scenario: A GitHub verification failure while starting a share shows the full-screen error dialog, with no automatic retry
     Given clipboard permissions are granted
     And the owner is signed in with GitHub as "e2e-test-user"
-    And the Synced Share worker rejects the next create-share request with a verification failure
+    And the file store is seeded with the synced score
+    And the Synced Share worker rejects the next start-share request with a verification failure
     When the owner loads the app and clicks "Sync"
     Then the synced share error dialog is shown with a "file a GitHub issue" link
     And the synced share error dialog shows the reason "GitHub verification failed"
@@ -102,8 +108,9 @@ Feature: Synced Share GitHub sign-in
   Scenario: A GitHub verification failure clears the stale connection, so retrying prompts a fresh sign-in instead of repeating the same failure
     Given clipboard permissions are granted
     And the owner is signed in with GitHub as "e2e-test-user"
+    And the file store is seeded with the synced score
     And the GitHub authorization popup is mocked to redirect back successfully
-    And the Synced Share worker rejects the next create-share request with a verification failure
+    And the Synced Share worker rejects the next start-share request with a verification failure
     When the owner loads the app and clicks "Sync"
     Then the synced share error dialog is shown with a "file a GitHub issue" link
     When the owner dismisses the synced share error dialog

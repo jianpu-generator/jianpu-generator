@@ -337,65 +337,66 @@ migrations (see "Storage" below), nothing else.
   async fn fetch` in `src/lib.rs` — applies CORS (`Access-Control-Allow-*`,
   via the `worker` crate's `Cors` builder) and the `OPTIONS` preflight
   response uniformly around whatever `handlers::router()` (a `worker::Router`
-  routing `GET /shares/:share_id`, `POST /shares/:share_id`, `POST /shares`,
+  routing `GET /shares/:share_id`, the owner-only `POST /files/:id/share`
+  (start), `POST /files/:id/share/stop` and `POST /files/:id/share/status`,
+  the rest of the `/files/*` cloud storage routes, and
   `POST /auth/github/callback`, `POST /auth/github/revoke`) returns.
 - Storage: D1 (SQLite), not the old KV namespace. Schema in
   `live-share-worker/migrations/0001_init.sql` (shared, as plain `.sql`,
   between real D1 migrations and a local shadow SQLite database
   `crates/live-share-worker/build.rs` builds at build time for query
-  checking — see below). Tables: `docs` (one row per share: `share_id`,
-  `owner_user_id`, `filename`, `content`, `revision`, `ended`,
-  `created_at`, `updated_at`, `external_file_id` — see
-  **external_file_id** in the glossary), `users` (`id`, `created_at`),
+  checking — see below). Tables: `shares` (one row per shared file:
+  `share_id`, `file_id` — unique, `REFERENCES files(id)` — `ended_at`,
+  `created_at`; see **share** in the glossary), `users` (`id`, `created_at`),
   `user_identities` (`provider`, `provider_user_id`, `user_id`, `login`,
   `linked_at` — provider-agnostic, so a future non-GitHub identity
   provider can link into the same `users` table), and `oauth_sessions`
   (`token_hash`, `provider`, `provider_user_id`, `verified_at` — the
   hashed-token verification cache described in "Verification cache + retry
-  policy" below). `live-share-worker/migrations/0002_docs_external_file_id.sql`
-  adds `docs.external_file_id` plus a partial unique index on
-  `(owner_user_id, external_file_id) WHERE external_file_id IS NOT NULL`
-  (nullable column, so local-only shares with no `external_file_id` are
-  unconstrained).
-- Key types: `doc::StoredDoc` (a full `docs` row, replacing the old KV
-  `StoredDoc`'s doc-plus-bearer-`ownerToken` shape — `owner_user_id` here
-  is an internal `users.id`, never sent to a client; `doc::to_public_doc`
-  strips it, mirroring the old `toPublicDoc`, and takes the owner's cached
-  `user_identities.login` — fetched separately by `handlers::get_share` via
-  `db::get_owner_login` — as an explicit parameter so it stays D1-free and
-  unit-testable); `protocol::SyncedDoc` (the `GET /shares/:share_id`
-  response shape: `ended`/`filename`/`content`/`revision` plus
-  `owner_login` — the one field from `user_identities` deliberately exposed
-  to a viewer, for the "Shared by @login" attribution on
-  `web/`'s `SyncedShareBanner`, task 10; no token, hash, or other internal
-  id is ever present) / `protocol::SyncedWriteRequest` (the `POST` wire
-  shape, ported from the old TS `protocol.ts`, camelCase on the wire);
-  `resolve_role::SyncedRole`
-  / `resolve_role::resolve_role` (the write-guard, ported from the old TS
-  `resolveRole.ts`); `identity::IdentityProvider` (the identity-resolution
-  seam) / `identity::resolve_verified_user_id` (the cache-then-verify
-  wiring every write calls, see below); `verification::retry_with_backoff`
-  / `verification::VerificationFailure` (the D1-free retry policy and its
-  UI-surfaceable failure shape, see below); `oauth::github_oauth_callback`
-  (the `POST /auth/github/callback` handler) / `oauth::github_revoke` (the
-  `POST /auth/github/revoke` handler, see "Account sign-in"
-  below); `db` (crate-private raw D1 query functions, one
-  `.sql` file per query under `queries/`, loaded via `include_str!`);
-  `share_creation::resolve_share_id` (the pure, D1-free idempotent-create
-  decision generic over injected `lookup`/`create` async closures, same
-  technique as `share_id::generate_unique_id` — see **external_file_id**)
-  / `share_creation::ResolveShareIdError` (its `Upstream`/
-  `LocalCreateConflicted`/`ConflictWithNoWinner` result, shaped this way
-  specifically to avoid `unreachable!`/`.expect()` on the "should never
-  happen" states, since the workspace's deny-level clippy lints reject
-  those).
-- Ownership model: a share's `owner_user_id` is set once, at
-  `POST /shares` creation time, and never changes — there is no more
-  "unpinned, first write claims ownership" state the old KV `ownerToken`
-  scheme had. A write to `POST /shares/:share_id` is accepted only when the
-  identity resolved from the request's `identity_token` matches the
-  share's `owner_user_id` exactly (`resolve_role`); any mismatch, or a
-  share with no `docs` row yet, is rejected.
+  policy" below). `live-share-worker/migrations/0004_shares_reference_files.sql`
+  replaced the old `docs` table (a share's own copy of
+  `filename`/`content`/`revision`, pushed by the owner's browser separately
+  from autosave — a stale-render race in that push could write one file's
+  content to another file's link) with `shares`, carrying over only the
+  `docs` rows whose `external_file_id` was a `files.id` owned by the same
+  user.
+- Key types: `share::ShareView` (what `queries/get_share_view.sql` returns
+  for a share id — the share's `ended_at` plus the pointed-at file's
+  `trashed_at`/`filename`/`content`/`revision` and its owner's cached
+  `user_identities.login`; never the file id or `owner_user_id`) /
+  `share::to_public_doc` (builds the public response from it, D1-free and
+  unit-testable; an ended share — stopped, or its file in the bin — keeps
+  only `ended` and `owner_login`, with empty `filename`/`content`) /
+  `share::empty_doc` (the response for an unknown share id);
+  `protocol::SyncedDoc` (the `GET /shares/:share_id` response shape:
+  `ended`/`filename`/`content`/`revision` plus `owner_login` — the one
+  field from `user_identities` deliberately exposed to a viewer, for the
+  "Shared by @login" attribution on `web/`'s `SyncedShareBanner`; no token,
+  hash, or other internal id is ever present);
+  `protocol::FileShareRequest` (the owner routes' body, just
+  `identityToken`) / `protocol::FileShareResponse` (`shareId`) /
+  `protocol::ShareStatusResponse` (`share: ShareStatus { shareId, ended } |
+  null`), camelCase on the wire; `identity::IdentityProvider` (the
+  identity-resolution seam) / `identity::resolve_verified_user_id` (the
+  cache-then-verify wiring every owner route calls, see below);
+  `verification::retry_with_backoff` / `verification::VerificationFailure`
+  (the D1-free retry policy and its UI-surfaceable failure shape, see
+  below); `oauth::github_oauth_callback` (the `POST /auth/github/callback`
+  handler) / `oauth::github_revoke` (the `POST /auth/github/revoke`
+  handler, see "Account sign-in" below); `db` (crate-private raw D1 query
+  functions, one `.sql` file per query under `queries/`, loaded via
+  `include_str!`).
+- Ownership model: a share has no owner column of its own — its owner is
+  the pointed-at file's `files.owner_user_id`, so the two can never drift.
+  `POST /files/:id/share` answers `404` unless the resolved caller owns
+  that file and it isn't in the bin; `stop`/`status` are owner-scoped in
+  SQL the same way (`queries/end_share.sql`,
+  `queries/get_share_status_by_file.sql`). Starting is idempotent:
+  `queries/upsert_share.sql` inserts on first share and otherwise clears
+  `ended_at` on the existing row (`ON CONFLICT(file_id)`), returning the
+  file's one `share_id` — so re-sharing, from any device, reproduces the
+  same link. There is no share-side content write at all: the owner's
+  ordinary autosave (`POST /files/:id/content`) is what a viewer sees.
 - `share_id` generation moved server-side (`share_id::generate_unique_share_id`):
   no more client-derived id. Uses the same charset/length
   (`SHARE_ID_LENGTH = 11`, `[0-9A-Za-z_-]`) as `SHARE_ID_PATTERN` in
@@ -411,7 +412,7 @@ migrations (see "Storage" below), nothing else.
 `identity::IdentityProvider` is the seam GitHub OAuth verification plugs
 into: a trait resolving whatever identity a caller presents to an internal
 `users.id`, doing create-on-first-sight `users`/`user_identities` rows.
-Every write and the create-share endpoint (`handlers.rs`) never trust a
+Every write and owner-only share route (`handlers/`) never trust a
 client-asserted identity directly — they always call
 `identity::resolve_verified_user_id(db, identity_provider, identity_token)`,
 which:
@@ -441,9 +442,10 @@ which:
    token/hash" decision; `VerificationFailure` has no token/hash field to
    leak, by construction.
 
-`resolve_role`'s owner check runs on whatever `user_id`
-`resolve_verified_user_id` returns (or `None` on failure) — a mismatch or a
-verification failure are both rejected outright, with no fallback.
+The owner-scoped share queries run on whatever `user_id`
+`resolve_verified_user_id` returns — a verification failure is rejected
+outright (`401`), and a caller who doesn't own the file just finds no row
+(`404`), with no fallback.
 
 ### Account sign-in
 
@@ -504,8 +506,8 @@ consent screen.
   `GithubOauthCallbackResponse { access_token, login }`: `access_token` is
   the only field the client needs to act as this identity (resolving it to
   a `user_id`, or persisting anything server-side, stays a separate concern
-  — `identity::resolve_verified_user_id`, shared by every `/files/*` and
-  `/shares/*` write, above); `login` is a best-effort convenience for the
+  — `identity::resolve_verified_user_id`, shared by every `/files/*`
+  route, above); `login` is a best-effort convenience for the
   client's signed-in-as-@username identity chip (shown by both the storage
   settings UI and Synced Share's owner UI), fetched via one extra
   `GET /user` call with the freshly issued token and omitted (not failed) if
@@ -519,14 +521,18 @@ consent screen.
   instead shows the modal's sign-in state; its own "Sign in with GitHub"
   button is what actually opens the popup (the same
   `accountAuthPopup.ts` popup `StorageSettingsModal.tsx` uses for cloud
-  storage). Once connected, `startSync` is async: it reuses a `shareId`
-  persisted locally per file (`jianpu:synced-share-id:v1:<fileId>`) if one
-  exists, otherwise calls `POST /shares`
-  (`CreateShareRequest`/`CreateShareResponse` in
-  `web/src/syncedShare/protocol.ts`) to mint one, gated on this connection's
-  token — there is no client-side share-id derivation or `ownerToken`. Every
-  write (`SyncedUpdateRequest`/`SyncedStopRequest`) carries only
-  `identityToken`, set to this connection's token. While synced and
+  storage). Entry: `useSyncedShareOwner(filename, cloudFileId)` —
+  `cloudFileId` is the active file's `files.id` (`useScoreSource.ts`'s
+  `cloudFileIdFor`), `null` for a local or demo file, in which case
+  `canSync` is false and the Synced-link tab says live links are only for
+  cloud files. The hook holds no share state of its own beyond the last
+  `POST /files/:id/share/status` answer (re-fetched whenever the file or the
+  token changes, and dropped if it lands after a file switch), so every
+  device sees the same live/stopped state and link; `startSync` calls
+  `POST /files/:id/share` and `stopSync` `POST /files/:id/share/stop`
+  (`FileShareRequest`/`FileShareResponse`/`ShareStatusResponse` in
+  `web/src/syncedShare/protocol.ts`), each carrying only `identityToken`,
+  set to this connection's token. It never sends content. While synced and
   connected, `ShareModal`'s Synced-link tab shows a small "Synced as
   @username" identity row, sourced from the cached `login`.
 - Forced re-consent (`src/oauth.rs`, route `POST /auth/github/revoke`;
@@ -553,7 +559,7 @@ consent screen.
   `IdentityProvider` implementation, resolving this connection's token to
   `(provider, provider_user_id)` via a direct `GET /user` call (also caching
   `login` into `user_identities.login` on create-on-first-sight), wired into
-  every `/files/*` and `/shares/*` write and the create-share endpoint via
+  every `/files/*` route (including the owner's share routes) via
   `identity::resolve_verified_user_id` — see "Verification cache + retry
   policy" above.
 - Both the token-exchange endpoint (`oauth.rs`) and the `GET /user` endpoint
@@ -590,12 +596,12 @@ away from the wasm build both times:
 
 | Term | Definition |
 |------|-----------|
-| **Synced Share worker** | The standalone Cloudflare Worker (`crates/live-share-worker`) backing the Synced Share feature's `GET`/`POST /shares[/:share_id]` HTTP API, described above. |
-| **IdentityProvider** | The trait (`identity::IdentityProvider`) resolving a request's opaque identity token to an internal `users.id`, with create-on-first-sight `users`/`user_identities` rows. Shared by every write this worker handles — both `/files/*` (cloud storage) and `/shares/*` (Synced Share) — not specific to either. `identity::github::GithubIdentityProvider` (real `GET /user` verification) is its production implementation, called only on a cache miss/stale entry — see `resolve_verified_user_id`. |
-| **resolve_verified_user_id** | `identity::resolve_verified_user_id`: the hashed-token-cache-then-verify wiring every write and the create-share endpoint call instead of ever trusting a client-asserted identity directly — see "Verification cache + retry policy". |
+| **Synced Share worker** | The standalone Cloudflare Worker (`crates/live-share-worker`) backing the Synced Share feature's anonymous `GET /shares/:share_id` and owner-only `POST /files/:id/share[/stop|/status]` routes, as well as the cloud storage backend's `/files/*` API, described above. |
+| **IdentityProvider** | The trait (`identity::IdentityProvider`) resolving a request's opaque identity token to an internal `users.id`, with create-on-first-sight `users`/`user_identities` rows. Shared by every authenticated route this worker handles — the cloud storage `/files/*` routes and the Synced Share owner routes nested under them — not specific to either. `identity::github::GithubIdentityProvider` (real `GET /user` verification) is its production implementation, called only on a cache miss/stale entry — see `resolve_verified_user_id`. |
+| **resolve_verified_user_id** | `identity::resolve_verified_user_id`: the hashed-token-cache-then-verify wiring every authenticated route calls instead of ever trusting a client-asserted identity directly — see "Verification cache + retry policy". |
 | **oauth_sessions cache** | The `oauth_sessions` D1 table: a hashed-token (`token_hash`, never the raw token) verification cache with a `verified_at` TTL (`verification::SESSION_TTL_MILLIS`, ≈1hr) checked in app code, so a fresh identity doesn't require re-hitting GitHub on every write. |
 | **VerificationFailure** | `verification::VerificationFailure { reason, failed_at, attempts }`: the structured, UI-surfaceable shape a failed (post-retry) verification is reported as — `handlers.rs` returns it as a `401` JSON body. Never carries the token or its hash, by construction. |
-| **owner_user_id** | A share's fixed owner, set once at creation (`docs.owner_user_id`, an internal `users.id`) — replaces the old KV model's bearer `ownerToken`, which any first writer could claim. |
+| **owner_user_id** | A file's owner (`files.owner_user_id`, an internal `users.id`), and so also the owner of that file's share — `shares` has no owner column of its own. Replaced the old KV model's bearer `ownerToken`, which any first writer could claim. |
 | **Account sign-in connection** | The single, dedicated, minimally-scoped "sign in with GitHub" OAuth connection (`web/src/storage/accountAuth.ts`/`accountAuthPopup.ts`/`accountAuthCallback.ts` client-side, `src/oauth.rs`'s `POST /auth/github/callback` Worker-side) used to verify identity for **both** cloud file storage and Synced Share ownership — one unified account, not the two independent connections (a broad-scope storage connection plus a separate sharing-only one) this used to be split into. `accountAuth.ts`'s persisted `localStorage` key literal, `jianpu:synced-share-github-auth:v1`, is unchanged from before that unification (a mechanical file/hook rename only) so already-signed-in users' tokens keep resolving. See "Account sign-in" above. |
-| **owner_login / "Shared by @login"** | `protocol::SyncedDoc::owner_login`: the owning user's cached `user_identities.login`, fetched by `handlers::get_share` via `db::get_owner_login` and passed into `doc::to_public_doc` — the one field from `user_identities` deliberately exposed on the anonymous `GET /shares/:share_id` response, rendered by `web/`'s `SyncedShareBanner` as "Shared by @login". `null` when the owner has no cached login. |
-| **external_file_id** | `docs.external_file_id` (`protocol::CreateShareRequest::external_file_id`, wire `externalFileId`): a cloud-backed file's own `files.id` — the real D1 row id `cloudBackend.ts` already tracks (`web/src/hooks/useScoreSource.ts`'s `externalFileIdFor`), scoped to that file's owner — `null` for a local file, since a local file's id is a random client-only value with no account-scoped identity and so still can't correctly key cross-device idempotent sharing. Before the cloud storage backend replaced the GitHub Contents API backend, this held a GitHub-backed file's `owner/repo/scores/name` Contents API path instead; the *meaning* changed with that migration, but the field's role is unchanged: it makes `POST /shares` idempotent per (account, file) — `handlers::create_share` looks it up via `share_creation::resolve_share_id` before minting a new `share_id`, so re-sharing the same cloud file from any device/browser/origin resolves to the same share, not just the same-device `localStorage` cache `useSyncedShareOwner.ts` already had. Enforced by a partial unique index on `(owner_user_id, external_file_id)` — see the Storage bullet above. |
+| **owner_login / "Shared by @login"** | `protocol::SyncedDoc::owner_login`: the owning user's cached `user_identities.login`, selected by `queries/get_share_view.sql` alongside the shared file and passed through `share::to_public_doc` — the one field from `user_identities` deliberately exposed on the anonymous `GET /shares/:share_id` response, rendered by `web/`'s `SyncedShareBanner` as "Shared by @login". `null` when the owner has no cached login. |
+| **share** | A `shares` row: a pointer from a `share_id` (the `#synced=` link) to one cloud `files` row, not a copy of its content. A viewer reads the file's saved content directly, so the owner's autosave is the only write path and a link can only ever show its own file. At most one per file (`shares.file_id` is unique), so re-sharing reproduces the same link; stopping sets `ended_at` rather than deleting, and a binned file reads as ended until restored. Only cloud files can be shared this way. |

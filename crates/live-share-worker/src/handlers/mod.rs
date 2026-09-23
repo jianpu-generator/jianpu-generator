@@ -1,13 +1,14 @@
 //! HTTP routing for the Synced Share worker, ported from the old TS
 //! `live-share-worker/src/index.ts`. CORS and the `OPTIONS` preflight are
 //! handled once in `lib.rs` around whatever this router returns; this
-//! module owns the `/shares` routes (`shares` submodule), the `/files`
-//! routes (the cloud storage backend, see `crate::files`; `files`
+//! module owns the Synced Share routes (`GET /shares/:share_id` and
+//! `POST /files/:id/share{,/stop,/status}`; `shares` submodule), the
+//! `/files` routes (the cloud storage backend, see `crate::files`; `files`
 //! submodule), plus the `/auth/github/callback` and `/auth/github/revoke`
 //! routes (see `crate::oauth`) added for the dedicated Synced Share sign-in
 //! connection.
 //!
-//! Every write (and the create-share endpoint) resolves its caller's
+//! Every write (including starting/stopping a share) resolves its caller's
 //! identity via `identity::resolve_verified_user_id`, fronted by
 //! `identity::github::GithubIdentityProvider` -- never the client's own
 //! claim -- per `TODO-synced-share-rust-d1-migration.md` §0/§6 (task 7). A
@@ -15,8 +16,9 @@
 //! request closed with a structured `verification::VerificationFailure`
 //! body (401): reason, timestamp, attempt count, and deliberately nothing
 //! else -- the token/hash must never appear in this response. Every
-//! `/files/*` route requires a resolved identity too -- unlike `GET
-//! /shares/:share_id`, there is no anonymous read path for a file.
+//! `/files/*` route requires a resolved identity too. The only anonymous
+//! read of a file's content is `GET /shares/:share_id`, and only while that
+//! file's share is live and the file isn't in the bin.
 //!
 //! Helpers below (`D1_BINDING`, `verification_failure_response`,
 //! `is_unique_constraint_violation`, `resolve_files_caller`,
@@ -43,8 +45,6 @@ const D1_BINDING: &str = "DB";
 pub(crate) fn router() -> Router<'static, ()> {
     Router::new()
         .get_async("/shares/:share_id", shares::get_share)
-        .post_async("/shares/:share_id", shares::post_share)
-        .post_async("/shares", shares::create_share)
         .post_async("/auth/github/callback", oauth::github_oauth_callback)
         .post_async("/auth/github/revoke", oauth::github_revoke)
         .post_async("/files/list", files::list_files)
@@ -53,6 +53,9 @@ pub(crate) fn router() -> Router<'static, ()> {
         .post_async("/files/:id/rename", files::rename_file)
         .post_async("/files/:id/delete", files::delete_file)
         .post_async("/files/:id/restore", files::restore_file)
+        .post_async("/files/:id/share", shares::start_share)
+        .post_async("/files/:id/share/stop", shares::stop_share)
+        .post_async("/files/:id/share/status", shares::share_status)
 }
 
 /// Turns a failed verification (GitHub call failed even after the
@@ -67,10 +70,7 @@ fn verification_failure_response(failure: &VerificationFailure) -> Result<Respon
 
 /// D1 surfaces a SQLite `UNIQUE constraint failed` violation as a plain
 /// stringly-typed `worker::Error`, not a structured error code -- so this
-/// checks the message text. Exact matching here is an implementation
-/// detail of this defense-in-depth path, not part of `share_creation`'s
-/// design: `resolve_share_id` only needs to know "created" vs "conflict",
-/// never which real error this maps from.
+/// checks the message text.
 fn is_unique_constraint_violation(error: &worker::Error) -> bool {
     error.to_string().contains("UNIQUE constraint failed")
 }

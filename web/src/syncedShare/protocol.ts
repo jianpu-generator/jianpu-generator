@@ -2,14 +2,16 @@
 // `crates/live-share-worker/src/protocol.rs` — keep the two in sync by hand
 // when changing either.
 //
-// Plain request/response now (D1-backed, no persistent connection) — there
-// is no more "message" being pushed to anyone, just a doc a viewer fetches
-// on load and an owner overwrites on save.
+// A synced share is a pointer to a cloud `files` row, not a copy of its
+// content: a viewer fetches the file itself, and the owner's ordinary cloud
+// autosave is the only write path. The owner-side routes below only start,
+// stop and report on that pointer.
 
-// What a `GET /shares/:shareId` returns. `ended` mirrors the owner having
-// pressed "Stop Sync" — the `docs` row keeps existing (same id, same owner)
-// so a later "Sync" click reproduces the same link, but a viewer must not
-// treat `content`/`filename` as current once this is true.
+// What a `GET /shares/:shareId` returns. `filename`/`content`/`revision`
+// are the shared file's current saved state. `ended` is true when the owner
+// pressed "Stop Sync" or the file is in the bin — the share keeps existing
+// (same id) so a later "Sync" click reproduces the same link, and while
+// ended `filename`/`content` come back empty.
 export interface SyncedDoc {
   ended: boolean
   filename: string
@@ -20,53 +22,33 @@ export interface SyncedDoc {
   // for the viewer-facing "Shared by @username" attribution
   // (`SyncedShareBanner`). `null`/absent when the owner has no cached
   // login. No other internal id, token, or hash is ever present on this
-  // response -- see `crate::doc::to_public_doc`.
+  // response -- see `crate::share::to_public_doc`.
   ownerLogin?: string | null
 }
 
-// Owner -> server. Whole-content, not a diff/delta format — correct-by-
-// construction with exactly one writer. `identityToken` is the Synced Share
-// GitHub sign-in token (`accountAuthCallback.ts`); the worker never trusts
-// it directly, always resolving it through GitHub verification (task 7).
-// There is no more `ownerToken`/device-secret path (task 11) -- GitHub
-// sign-in is the only way to own a share.
-export interface SyncedUpdateRequest {
-  type: 'update'
-  identityToken: string
-  filename: string
-  content: string
-  revision: number
-}
-
-// Owner -> server. Marks the share ended (see `SyncedDoc.ended`) without
-// discarding the stored doc, so the share — and therefore the link —
-// survives to be reused by a later "Sync" click on the same file.
-export interface SyncedStopRequest {
-  type: 'stop'
+// Body of `POST /files/:id/share`, `POST /files/:id/share/stop` and
+// `POST /files/:id/share/status`. `identityToken` is the Synced Share GitHub
+// sign-in token (`accountAuthCallback.ts`); the worker never trusts it
+// directly, always resolving it through GitHub verification (task 7), and
+// only lets the file's owner act on its share.
+export interface FileShareRequest {
   identityToken: string
 }
 
-// Body of `POST /shares/:shareId` — only the owner is ever allowed to send
-// these (enforced server-side by `resolve_role`, keyed on the identity
-// resolved from `identityToken`).
-export type SyncedWriteRequest = SyncedUpdateRequest | SyncedStopRequest
-
-// Body of `POST /shares` — creates a brand-new, server-generated share
-// (TODO §1: `shareId` generation moved server-side, no more client-derived
-// id). Requires a resolved GitHub identity.
-//
-// `externalFileId` is set only for a GitHub-backed file (the
-// `owner/repo/scores/name` Contents API path, computed in
-// `useScoreSource.ts`) — omitted for a local-only file. When present, the
-// worker makes this call idempotent per (owner, externalFileId): re-sharing
-// the same file as the same GitHub account reproduces the same share
-// instead of minting a second one.
-export interface CreateShareRequest {
-  identityToken: string
-  externalFileId?: string
-}
-
-// Response of `POST /shares`.
-export interface CreateShareResponse {
+// Response of `POST /files/:id/share` — the file's one share id, the same
+// every time the file is shared.
+export interface FileShareResponse {
   shareId: string
+}
+
+// A file's share as its owner sees it.
+interface ShareStatus {
+  shareId: string
+  ended: boolean
+}
+
+// Response of `POST /files/:id/share/status` — `share` is `null` when the
+// file has never been shared.
+export interface ShareStatusResponse {
+  share: ShareStatus | null
 }

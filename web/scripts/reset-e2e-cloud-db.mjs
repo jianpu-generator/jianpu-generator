@@ -39,11 +39,16 @@ const workerDir = fileURLToPath(
 // listed here too, or its leftover rows won't be cleaned up.
 const SYNTHETIC_GITHUB_USER_IDS = [987654321, 987654322, 987654323]
 
-const sql = `DELETE FROM files WHERE owner_user_id IN (
-  SELECT user_id FROM user_identities
+const syntheticOwners = `SELECT user_id FROM user_identities
   WHERE provider = 'github'
-    AND provider_user_id IN (${SYNTHETIC_GITHUB_USER_IDS.join(',')})
-)`
+    AND provider_user_id IN (${SYNTHETIC_GITHUB_USER_IDS.join(',')})`
+
+// `shares.file_id` references `files(id)`, so a file's share has to go
+// before the file itself or D1's foreign-key check rejects the delete.
+const sql = `DELETE FROM shares WHERE file_id IN (
+  SELECT id FROM files WHERE owner_user_id IN (${syntheticOwners})
+);
+DELETE FROM files WHERE owner_user_id IN (${syntheticOwners});`
 
 try {
   execFileSync(

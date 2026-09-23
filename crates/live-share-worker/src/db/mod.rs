@@ -1,5 +1,5 @@
-//! Raw D1 queries against the `docs` / `users` / `user_identities` /
-//! `oauth_sessions` / `files` tables, split by table into `docs`, `identity`,
+//! Raw D1 queries against the `shares` / `users` / `user_identities` /
+//! `oauth_sessions` / `files` tables, split by table into `shares`, `identity`,
 //! and `files` submodules (re-exported here so every call site keeps using
 //! the flat `db::function_name` form regardless of which table it hits).
 //! Each query lives in its own file under `queries/`, loaded via
@@ -21,10 +21,10 @@
 //! drift is still uncaught -- but it's an honest, reasonable substitute
 //! given the constraint above, not a silent downgrade.
 
-mod docs;
 mod files;
 mod identity;
+mod shares;
 
-pub(crate) use docs::*;
 pub(crate) use files::*;
 pub(crate) use identity::*;
+pub(crate) use shares::*;

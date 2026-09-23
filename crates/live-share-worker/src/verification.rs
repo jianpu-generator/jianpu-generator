@@ -5,7 +5,7 @@
 //! (hashing the token, reading/writing `oauth_sessions`, calling the real
 //! `IdentityProvider`) lives in `crate::identity` and is not exercised by
 //! host-side `cargo test`, matching this crate's existing split between
-//! pure/testable modules (`doc`, `protocol`, `resolve_role`) and
+//! pure/testable modules (`share`, `protocol`, `files`) and
 //! D1-/wasm-runtime-facing ones -- see `lib.rs`'s module doc comment.
 //!
 //! `retry_with_backoff` is generic over the operation and the sleep

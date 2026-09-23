@@ -18,6 +18,7 @@ Feature: Account chip in the header
   Scenario: A file currently syncing shows a live indicator on the chip
     Given clipboard permissions are granted
     And the owner is signed in with GitHub as "e2e-test-user"
+    And the file store is seeded with the synced score
     When the owner loads the app and clicks "Sync"
     Then the synced link is copied
     And the header account chip shows the syncing indicator
@@ -25,6 +26,7 @@ Feature: Account chip in the header
   Scenario: Signing out from the profile popover clears the account everywhere at once
     Given clipboard permissions are granted
     And the owner is signed in with GitHub as "e2e-test-user"
+    And the file store is seeded with the synced score
     And the GitHub grant-revocation endpoint is mocked
     When the owner loads the app and clicks "Sync"
     Then the synced link is copied

@@ -6,15 +6,13 @@ import {
 } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 import {
-  SYNCED_FILENAME,
-  seedFileStore,
+  seedSyncedCloudFile,
   syncedShareButtonState as state,
 } from './synced-share-button-state'
 
 Given(
   'the file store is seeded with a multi-measure synced range-select score',
   async ({ page }) => {
-    const rangeFilename = 'synced-range-test.jianpu'
     const rangeSource = [
       '# metadata',
       'title = "Synced Range-Select Score"',
@@ -30,12 +28,7 @@ Given(
       '',
       '[M] 1 - - -',
     ].join('\n')
-    await seedFileStore(
-      page,
-      rangeFilename,
-      rangeSource,
-      'synced-range-test-id',
-    )
+    await seedSyncedCloudFile(page, 'synced-range-test', rangeSource)
   },
 )
 
@@ -74,8 +67,9 @@ Then("the viewer's page URL has no hash", async () => {
 
 Then("the viewer's file switcher shows the synced filename", async () => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
+  if (!state.ownerFileName) throw new Error('ownerFileName was not seeded yet')
   await expect(fileSwitcherTrigger(state.viewerPage)).toContainText(
-    SYNCED_FILENAME.replace(/\.jianpu$/, ''),
+    state.ownerFileName.replace(/\.jianpu$/, ''),
   )
 })
 

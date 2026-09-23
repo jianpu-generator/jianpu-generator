@@ -66,6 +66,8 @@ export interface FileSwitcherProps {
   binNames: string[]
   /** Opens the Bin modal, which lists `binNames` and handles restoring. */
   onOpenBin: () => void
+  /** See `ShareModalProps.canSync`. */
+  canSync: boolean
   isSynced: boolean
   syncedShareLink: string | null
   /** Whether the dedicated Synced Share GitHub sign-in connection is
@@ -99,6 +101,7 @@ export function FileSwitcher({
   onImportFile,
   binNames,
   onOpenBin,
+  canSync,
   isSynced,
   syncedShareLink,
   isGithubConnected,
@@ -365,6 +368,7 @@ export function FileSwitcher({
         onOpenChange={setShareModalOpen}
         filename={store.active}
         content={fileContent(store, store.active)}
+        canSync={canSync}
         isSynced={isSynced}
         syncedShareLink={syncedShareLink}
         isGithubConnected={isGithubConnected}

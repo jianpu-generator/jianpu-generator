@@ -2,7 +2,7 @@ import { expect } from '@playwright/test'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 import {
-  seedFileStore,
+  seedSyncedCloudFile,
   syncedShareButtonState as state,
 } from './synced-share-button-state'
 
@@ -72,11 +72,10 @@ async function captureEnabledTracks(page: import('@playwright/test').Page) {
 Given(
   'the file store is seeded with a two-part synced range-select score',
   async ({ page }) => {
-    await seedFileStore(
+    await seedSyncedCloudFile(
       page,
-      'synced-two-part-range-test.jianpu',
+      'synced-two-part-range-test',
       twoPartRangeSource,
-      'synced-two-part-range-test-id',
     )
   },
 )

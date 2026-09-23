@@ -9,19 +9,17 @@ import { useSharedPreview } from './useSharedPreview'
 import { useSyncedShareOwner } from './useSyncedShareOwner'
 import { useSyncedShareViewer } from './useSyncedShareViewer'
 
-/** The Synced Share idempotent-creation key for a cloud-backed file (see
- * `useSyncedShareOwner`'s `externalFileId` param and
- * `crates/live-share-worker/src/handlers.rs::create_share`): the file's own
- * D1 `files.id` for a cloud-backed file, `None`/`null` for a local-only
- * file — a local file's id is a random client-only value with no
- * account-scoped identity, so it still can't correctly key cross-device
- * idempotent sharing; only a `cloud` (account-owned) file can. */
-function externalFileIdFor(
+/** The file a synced share would point at (see `useSyncedShareOwner`'s
+ * `cloudFileId` param): the active file's own D1 `files.id` when it's
+ * stored in the cloud backend, `null` otherwise. A local file has no
+ * server-side row for a viewer to read, and a built-in demo file isn't the
+ * user's to share live, so both only get the static `#share=` link. */
+function cloudFileIdFor(
   backend: StorageBackend,
   state: FileStoreState,
   activeFilename: string,
 ): string | null {
-  if (backend.kind !== 'cloud') return null
+  if (backend.kind !== 'cloud' || isReadOnlyFile(activeFilename)) return null
   return fileIdForName(state, activeFilename)
 }
 
@@ -60,9 +58,7 @@ export function useScoreSource(
 
   const syncedShareOwner = useSyncedShareOwner(
     store.active,
-    fileIdForName(store, store.active),
-    fileContent(store, store.active),
-    externalFileIdFor(backend, store, store.active),
+    cloudFileIdFor(backend, store, store.active),
   )
   const {
     syncedShareViewerPreview,
@@ -93,7 +89,6 @@ export function useScoreSource(
 
   return {
     sharedPreview,
-    syncedShareOwner,
     syncedShareViewerActive,
     source,
     readOnly,
@@ -106,6 +101,7 @@ export function useScoreSource(
       viewerFilename: syncedShareViewerPreview?.filename ?? null,
       viewerOwnerLogin: syncedShareViewerOwnerLogin,
       onImportSyncedShare: handleImportSyncedShare,
+      canSync: syncedShareOwner.canSync,
       isSynced: syncedShareOwner.isSynced,
       syncedShareLink: syncedShareOwner.syncedShareLink,
       isGithubConnected: syncedShareOwner.isGithubConnected,

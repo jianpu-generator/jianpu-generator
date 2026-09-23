@@ -1,4 +1,4 @@
-// Structured failure info for a Synced Share write (owner side), surfaced by
+// Structured failure info for a Synced Share request (owner side), surfaced by
 // `useSyncedShareOwner.ts` and rendered by `SyncedShareErrorDialog.tsx`.
 // Implements task 9 in TODO-synced-share-rust-d1-migration.md: errors here
 // are meant to be maximally verbose (per §0) EXCEPT for one hard exception --
@@ -9,7 +9,7 @@
 // backstop for any other failure shape (a raw non-2xx body, a thrown network
 // error) that might somehow echo one back.
 
-export type SyncedShareOperation = 'create' | 'update' | 'stop'
+export type SyncedShareOperation = 'start' | 'stop' | 'status'
 
 export interface SyncedShareFailure {
   operation: SyncedShareOperation

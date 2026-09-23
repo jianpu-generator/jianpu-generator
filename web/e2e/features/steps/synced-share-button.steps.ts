@@ -1,11 +1,11 @@
-import { expect } from '@playwright/test'
-import { openFileActions } from '../../fileSwitcherHelpers'
+import { expect, type Page } from '@playwright/test'
+import { fileSwitcherTrigger, openFileActions } from '../../fileSwitcherHelpers'
 import { syncedShareIdentityTokenFor } from '../../mockGithubIdentity.mjs'
 import { AfterScenario, Given, Then, When } from './fixtures'
 import {
-  SYNCED_FILENAME,
+  SYNCED_FILE_BASE_NAME,
   SYNCED_SOURCE,
-  seedFileStore,
+  seedSyncedCloudFile,
   syncedShareButtonState as state,
 } from './synced-share-button-state'
 
@@ -18,7 +18,7 @@ import {
  * wins, so the share modal's `onOpenChange` fires with `false`. Exported for
  * `synced-share-github-signin.steps.ts`, which re-opens the modal after
  * dismissing that error dialog for the same reason). */
-export async function openSyncedTab(page: import('@playwright/test').Page) {
+export async function openSyncedTab(page: Page) {
   const modal = page.getByTestId('share-modal')
   if ((await modal.count()) === 0) {
     await openFileActions(page)
@@ -27,8 +27,8 @@ export async function openSyncedTab(page: import('@playwright/test').Page) {
   await page.getByTestId('share-modal-synced-tab').click()
 }
 
-// Mirrors `useStorageBackend.ts`'s `AUTOSAVE_DEBOUNCE_MS`, which
-// `useSyncedShareOwner.ts`'s `broadcastContent` also debounces at. Not imported
+// Mirrors `useStorageBackend.ts`'s `AUTOSAVE_DEBOUNCE_MS` -- the cloud
+// autosave is the only thing that ever changes what a viewer sees. Not imported
 // directly — that module transitively pulls in `fileStore.ts`'s Vite-only
 // `?raw` import, which Playwright's test loader can't resolve (see the same
 // note in `autosave-github.steps.ts`).
@@ -53,6 +53,8 @@ AfterScenario(async () => {
 Given('clipboard permissions are granted', async ({ context }) => {
   state.syncedShareLink = undefined
   state.originalSyncedLink = undefined
+  state.ownerFileName = undefined
+  state.ownerFileId = undefined
   state.viewerPage = undefined
   state.lateViewerPage = undefined
   state.viewerContext = undefined
@@ -61,7 +63,7 @@ Given('clipboard permissions are granted', async ({ context }) => {
 })
 
 Given('the file store is seeded with the synced score', async ({ page }) => {
-  await seedFileStore(page, SYNCED_FILENAME, SYNCED_SOURCE)
+  await seedSyncedCloudFile(page, SYNCED_FILE_BASE_NAME, SYNCED_SOURCE)
 })
 
 Given(
@@ -75,7 +77,6 @@ Given(
     // note click targets at all, so `applyPersistedNoteHighlights` would
     // have nothing to flag either way, silently passing regardless of the
     // bug this scenario guards against).
-    const sectionFilename = 'synced-section-test.jianpu'
     const sectionSource = [
       '# metadata',
       'title = "Synced Section Score"',
@@ -94,12 +95,7 @@ Given(
       '',
       '[M] 4 3 2 1',
     ].join('\n')
-    await seedFileStore(
-      page,
-      sectionFilename,
-      sectionSource,
-      'synced-section-test-id',
-    )
+    await seedSyncedCloudFile(page, 'synced-section-test', sectionSource)
   },
 )
 
@@ -112,10 +108,10 @@ Given('local storage is cleared', async ({ page }) => {
 // Pre-seeds a signed-in Synced Share GitHub connection (bypassing the real
 // popup OAuth round trip -- that flow has its own dedicated coverage in
 // synced-share-github-signin.feature) so "Sync" starts a share directly via
-// the new `POST /shares` create-share flow (task 11), matching how these
-// scenarios behaved before GitHub sign-in was required. Must be registered
-// (via `addInitScript`) after any "local storage is cleared" step in the
-// same scenario -- see this feature file's own Background comment.
+// `POST /files/:id/share`. The same connection signs the cloud backend in,
+// so a seeded cloud file loads too. Must be registered (via
+// `addInitScript`) after any "local storage is cleared" step in the same
+// scenario, which would otherwise wipe it.
 Given(
   'the owner is signed in with GitHub as {string}',
   async ({ page }, login: string) => {
@@ -131,6 +127,23 @@ Given(
   },
 )
 
+/** Waits until the scenario's seeded cloud file (if any) is the one on
+ * screen -- until the cloud listing loads the active file is a demo, whose
+ * modal shows the cloud-only message rather than "Start Sync". Skipped
+ * while signed out: the cloud backend (and so the seeded file) only loads
+ * once signed in. Exported for `synced-share-github-signin.steps.ts`. */
+export async function waitForSeededSyncedFile(page: Page): Promise<void> {
+  if (!state.ownerFileName) return
+  const signedIn = await page.evaluate(
+    () => localStorage.getItem('jianpu:synced-share-github-auth:v1') !== null,
+  )
+  if (!signedIn) return
+  await expect(fileSwitcherTrigger(page)).toContainText(
+    state.ownerFileName.replace(/\.jianpu$/, ''),
+    { timeout: 15_000 },
+  )
+}
+
 When(
   'the owner loads the app and clicks {string}',
   async ({ page }, label: string) => {
@@ -145,7 +158,14 @@ When(
     // `urlFileParam.ts`'s `writeFileNameToUrl` adding a `?file=...` query
     // param once a tab has been selected, which would otherwise make this
     // look like a fresh page again.
-    if (page.url() === 'about:blank') await page.goto('/')
+    if (page.url() === 'about:blank') {
+      await page.goto(
+        state.ownerFileName
+          ? `/?file=${encodeURIComponent(state.ownerFileName)}`
+          : '/',
+      )
+    }
+    await waitForSeededSyncedFile(page)
     await openSyncedTab(page)
     // When disconnected, the Synced-link tab shows its sign-in state
     // instead of a "Start Sync" button (see
@@ -190,11 +210,11 @@ When(
 
 Then("the viewer's preview contains {string}", async ({}, text: string) => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
-  const previewContent = await state.viewerPage
-    .locator('.preview-page')
-    .first()
-    .innerHTML()
-  expect(previewContent).toContain(text)
+  // Retrying, not a one-shot read: right after a reload `.preview-page` can
+  // still be the placeholder score until the share fetch lands.
+  await expect(state.viewerPage.locator('.preview-page').first()).toContainText(
+    text,
+  )
 })
 
 Then(
@@ -202,8 +222,10 @@ Then(
   async () => {
     if (!state.syncedShareLink)
       throw new Error('syncedShareLink was not captured yet')
+    if (!state.ownerFileName)
+      throw new Error('ownerFileName was not seeded yet')
     expect(state.syncedShareLink).toContain(
-      `--${SYNCED_FILENAME.replace(/\.jianpu$/, '')}`,
+      `--${state.ownerFileName.replace(/\.jianpu$/, '')}`,
     )
   },
 )
@@ -264,92 +286,14 @@ Then(
   },
 )
 
-When(
-  'a late viewer opens the copied sync link in a new page',
-  async ({ browser }) => {
-    if (!state.syncedShareLink)
-      throw new Error('syncedShareLink was not captured yet')
-    // A fresh viewer opening the same link after the stop must not see the
-    // score either — the link doesn't quietly stay viewable forever. An
-    // isolated browser context, not `context.newPage()` -- see
-    // `viewerContext`'s comment in `synced-share-button-state.ts`.
-    state.lateViewerContext = await browser.newContext()
-    state.lateViewerPage = await state.lateViewerContext.newPage()
-    await state.lateViewerPage.goto(state.syncedShareLink)
-  },
-)
-
-Then('the late viewer sees {string}', async ({}, text: string) => {
-  if (!state.lateViewerPage)
-    throw new Error('lateViewerPage was not opened yet')
-  await expect(state.lateViewerPage.getByText(text)).toBeVisible()
-})
-
-Then(
-  "the late viewer's preview no longer contains {string}",
-  async ({}, text: string) => {
-    if (!state.lateViewerPage)
-      throw new Error('lateViewerPage was not opened yet')
-    await expect(
-      state.lateViewerPage.locator('.preview-page'),
-    ).not.toContainText(text)
-  },
-)
-
-When('the owner clicks {string} again', async ({ page }, label: string) => {
-  expect(label).toBe('Sync')
-  // Syncing again reproduces the same link and revives the share. Usually
-  // the modal is already open on the Synced-link tab (only the viewer's
-  // page reloaded in between, not the owner's), now back in its "not
-  // synced" state after the stop, so Start Sync is clickable directly --
-  // except for a scenario that closed the modal in between to interact with
-  // the header (e.g. switching to a different file tab), which reopening
-  // here accounts for.
-  const startSync = page.getByTestId('share-modal-start-sync')
-  if ((await startSync.count()) === 0) await openSyncedTab(page)
-  await page.getByTestId('share-modal-start-sync').click()
-})
-
-Then(
-  'the revived sync link is identical to the original link',
-  async ({ page }) => {
-    if (!state.originalSyncedLink)
-      throw new Error('originalSyncedLink was not captured yet')
-    const revivedUrl = await page.evaluate(() => navigator.clipboard.readText())
-    expect(revivedUrl).toEqual(state.originalSyncedLink)
-  },
-)
-
-When('the late viewer reloads the page', async () => {
-  if (!state.lateViewerPage)
-    throw new Error('lateViewerPage was not opened yet')
-  await state.lateViewerPage.reload()
-  await state.lateViewerPage.waitForSelector('.preview-page', {
-    timeout: 15_000,
-  })
-})
-
-Then(
-  "the late viewer's preview contains {string}",
-  async ({}, text: string) => {
-    if (!state.lateViewerPage)
-      throw new Error('lateViewerPage was not opened yet')
-    const previewContent = await state.lateViewerPage
-      .locator('.preview-page')
-      .first()
-      .innerHTML()
-    expect(previewContent).toContain(text)
-  },
-)
-
 When('the viewer reloads the page', async () => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
   await state.viewerPage.reload()
 })
 
-// Installed on the owner's page only — the synced-share push this guards is
-// entirely owner-side (`useSyncedShareOwner.ts`'s debounced `broadcastContent`), so
-// there is nothing for the viewer's clock to affect.
+// Installed on the owner's page only — the autosave this guards is entirely
+// owner-side (viewers just read the file's saved content), so there is
+// nothing for the viewer's clock to affect.
 Given('the clock is under test control', async ({ page }) => {
   await page.clock.install()
 })
@@ -358,8 +302,7 @@ Given('the clock is under test control', async ({ page }) => {
 // than typing character-by-character (as `typeAtEditorEnd` does for
 // appending text) — a title change needs to replace an existing line, not
 // just append after it. `setValue` still fires the model's change event, so
-// this exercises the same `onChange` -> `handleSourceChange` ->
-// `syncedShareOwner.broadcastContent` path a real edit would.
+// this exercises the same `onChange` -> autosave path a real edit would.
 When(
   "the owner edits the synced score's title to {string}",
   async ({ page }, title: string) => {
@@ -379,5 +322,14 @@ When(
 )
 
 When("the owner's autosave debounce interval elapses", async ({ page }) => {
-  await page.clock.fastForward(AUTOSAVE_DEBOUNCE_MS)
+  // Waits for the save itself to land, not just the timer -- the viewer
+  // reads whatever the worker has stored, so reloading it before the
+  // `POST /files/:id/content` response would race the write.
+  await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        /\/files\/[^/]+\/content$/.test(response.url()) && response.ok(),
+    ),
+    page.clock.fastForward(AUTOSAVE_DEBOUNCE_MS),
+  ])
 })

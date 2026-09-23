@@ -2,38 +2,9 @@
 //! `live-share-worker/test/protocol.test.ts`.
 #![allow(clippy::disallowed_macros)]
 
-use live_share_worker::protocol::{CreateShareRequest, SyncedDoc, SyncedWriteRequest};
-
-#[test]
-fn deserializes_an_update_request_from_camel_case_wire_fields() -> Result<(), serde_json::Error> {
-    let json = r#"{"type":"update","identityToken":"tok-a","filename":"song.jianpu","content":"[M] 1","revision":1}"#;
-
-    let request: SyncedWriteRequest = serde_json::from_str(json)?;
-
-    assert_eq!(request.identity_token(), "tok-a");
-    assert!(matches!(request, SyncedWriteRequest::Update { .. }));
-    Ok(())
-}
-
-#[test]
-fn deserializes_a_stop_request_from_camel_case_wire_fields() -> Result<(), serde_json::Error> {
-    let json = r#"{"type":"stop","identityToken":"tok-a"}"#;
-
-    let request: SyncedWriteRequest = serde_json::from_str(json)?;
-
-    assert_eq!(request.identity_token(), "tok-a");
-    assert!(matches!(request, SyncedWriteRequest::Stop { .. }));
-    Ok(())
-}
-
-#[test]
-fn rejects_a_write_request_with_an_unknown_type_tag() {
-    let json = r#"{"type":"delete","identityToken":"tok-a"}"#;
-
-    let result: Result<SyncedWriteRequest, serde_json::Error> = serde_json::from_str(json);
-
-    assert!(result.is_err());
-}
+use live_share_worker::protocol::{
+    FileShareRequest, FileShareResponse, ShareStatus, ShareStatusResponse, SyncedDoc,
+};
 
 #[test]
 fn serializes_synced_doc_with_camel_case_fields() -> Result<(), serde_json::Error> {
@@ -70,27 +41,49 @@ fn serializes_synced_doc_owner_login_as_null_when_absent() -> Result<(), serde_j
 }
 
 #[test]
-fn deserializes_a_create_share_request_with_an_external_file_id() -> Result<(), serde_json::Error> {
-    let json = r#"{"identityToken":"tok-a","externalFileId":"octocat/jianpu-generator-storage/scores/song.jianpu"}"#;
+fn deserializes_a_file_share_request_from_camel_case_wire_fields() -> Result<(), serde_json::Error>
+{
+    let json = r#"{"identityToken":"tok-a"}"#;
 
-    let request: CreateShareRequest = serde_json::from_str(json)?;
+    let request: FileShareRequest = serde_json::from_str(json)?;
 
     assert_eq!(request.identity_token, "tok-a");
+    Ok(())
+}
+
+#[test]
+fn serializes_a_file_share_response_with_camel_case_fields() -> Result<(), serde_json::Error> {
+    let response = FileShareResponse {
+        share_id: "abcdefghijk".to_string(),
+    };
+
     assert_eq!(
-        request.external_file_id.as_deref(),
-        Some("octocat/jianpu-generator-storage/scores/song.jianpu")
+        serde_json::to_string(&response)?,
+        r#"{"shareId":"abcdefghijk"}"#
     );
     Ok(())
 }
 
 #[test]
-fn deserializes_a_create_share_request_with_no_external_file_id_as_none(
-) -> Result<(), serde_json::Error> {
-    let json = r#"{"identityToken":"tok-a"}"#;
+fn serializes_a_share_status_response_with_a_share() -> Result<(), serde_json::Error> {
+    let response = ShareStatusResponse {
+        share: Some(ShareStatus {
+            share_id: "abcdefghijk".to_string(),
+            ended: true,
+        }),
+    };
 
-    let request: CreateShareRequest = serde_json::from_str(json)?;
+    assert_eq!(
+        serde_json::to_string(&response)?,
+        r#"{"share":{"shareId":"abcdefghijk","ended":true}}"#
+    );
+    Ok(())
+}
 
-    assert_eq!(request.identity_token, "tok-a");
-    assert_eq!(request.external_file_id, None);
+#[test]
+fn serializes_a_share_status_response_without_a_share_as_null() -> Result<(), serde_json::Error> {
+    let response = ShareStatusResponse { share: None };
+
+    assert_eq!(serde_json::to_string(&response)?, r#"{"share":null}"#);
     Ok(())
 }

@@ -4,7 +4,7 @@
 //! Synced Share. See `live-share-worker/migrations/0003_files.sql` for the
 //! schema this mirrors.
 //!
-//! Unlike `crate::doc`, there is no single "apply a write" entry point --
+//! There is no single "apply a write" entry point --
 //! `crate::handlers`'s `/files/*` routes each perform their own atomic D1
 //! `UPDATE`/`INSERT` (see `crate::db`), because rename/delete/restore are
 //! unconditional (no revision gate, per the old GitHub backend's actual
@@ -16,8 +16,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Mirrors a `files` row (see `live-share-worker/migrations/0003_files.sql`).
-/// Like `crate::doc::StoredDoc`, `owner_user_id` is an internal,
-/// provider-agnostic `users.id`, never sent back to a client -- see
+/// `owner_user_id` is an internal, provider-agnostic `users.id`, never sent back to a client -- see
 /// `to_public_file`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StoredFile {
@@ -33,7 +32,7 @@ pub struct StoredFile {
 
 /// The public shape of a `files` row -- strips `owner_user_id` and the
 /// timestamps before a file goes back over the wire, same reasoning as
-/// `crate::doc::to_public_doc`.
+/// `crate::share::to_public_doc`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicFile {
@@ -80,8 +79,7 @@ pub enum ContentWriteOutcome {
 /// attempt (`current`, from `queries/get_file_by_id.sql` -- `None` if the
 /// row doesn't exist or the caller isn't its owner, since that query is
 /// scoped by `id` + `owner_user_id`). Pure so the CAS logic is
-/// unit-testable without a real D1 database, mirroring
-/// `crate::share_creation`'s injected-closure style.
+/// unit-testable without a real D1 database.
 ///
 /// - `Applied`: the `UPDATE` matched a row (it was at `expected_revision`,
 ///   active, and owned by the caller) -- `new_revision` is

@@ -17,7 +17,7 @@ import {
 export interface CompleteSyncedShareGithubSignInFromCallbackOptions {
   /** Host (no scheme) of the Synced Share worker's `/auth/github/callback`
    * route -- the same `VITE_SYNCED_SHARE_HOST` env var
-   * `useSyncedShareOwner.ts` uses for the `/shares/...` routes. */
+   * `useSyncedShareOwner.ts` uses for the `/files/:id/share` routes. */
   host: string
   /** Defaults to `window.location.search`; overridable for tests. */
   search?: string

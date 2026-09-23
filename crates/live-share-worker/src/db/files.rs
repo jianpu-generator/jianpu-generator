@@ -14,8 +14,8 @@ const RENAME_FILE: &str = include_str!("../../queries/rename_file.sql");
 const TRASH_FILE: &str = include_str!("../../queries/trash_file.sql");
 const RESTORE_FILE: &str = include_str!("../../queries/restore_file.sql");
 
-/// Raw row shape from the `files` queries below -- unlike `StoredDocRow`,
-/// no column needs converting (D1/SQLite's `INTEGER` maps straight onto
+/// Raw row shape from the `files` queries below -- no column needs
+/// converting (D1/SQLite's `INTEGER` maps straight onto
 /// `Option<i64>` for `trashed_at`), but a separate row type is kept anyway
 /// so `crate::files` (the pure, D1-free module) never has to derive
 /// `serde::Deserialize` for D1's sake.
@@ -64,8 +64,7 @@ pub(crate) async fn list_files_by_owner(
 /// Creates a new file row (new file / duplicate / import). Propagates a D1
 /// error as-is, including a `idx_files_owner_name` unique-constraint
 /// violation on a name-collision race -- `crate::handlers` maps that one to
-/// a `409 name_taken` response via `is_unique_constraint_violation`, same
-/// pattern as `insert_doc`/`create_doc`.
+/// a `409 name_taken` response via `is_unique_constraint_violation`.
 pub(crate) async fn insert_file(db: &D1Database, file: &StoredFile) -> Result<()> {
     db.prepare(INSERT_FILE)
         .bind(&[

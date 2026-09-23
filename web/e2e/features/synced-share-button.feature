@@ -7,9 +7,9 @@ Feature: Synced share button
   # directly, same as before this connection existed) rather than exercising
   # the sign-in UI itself. That UI (prompt-when-disconnected, popup OAuth
   # flow, identity chip, error dialog) has its own dedicated coverage in
-  # synced-share-github-signin.feature. It's placed after "local storage is
-  # cleared" wherever both appear in one scenario -- that step wipes all of
-  # localStorage, which would otherwise erase the just-seeded sign-in too.
+  # synced-share-github-signin.feature. A live link can only point at a
+  # cloud file, so every scenario also seeds its score as a cloud file
+  # owned by that account (under a name unique to the scenario).
   Background:
     Given clipboard permissions are granted
 
@@ -39,8 +39,8 @@ Feature: Synced share button
     Then the viewer's page URL has no query string
 
   Scenario: Sync button copies a #synced= link, then the modal offers copy/stop
-    Given local storage is cleared
-    And the owner is signed in with GitHub as "e2e-test-user"
+    Given the owner is signed in with GitHub as "e2e-test-user"
+    And the file store is seeded with the synced score
     When the owner loads the app and clicks "Sync"
     Then the synced link is copied
     And the copied sync link matches the synced URL hash format
@@ -72,7 +72,7 @@ Feature: Synced share button
     When the late viewer reloads the page
     Then the late viewer's preview contains "Synced Score"
 
-  Scenario: Editing while synced does not push to the viewer until the autosave debounce fires
+  Scenario: A viewer sees the owner's edit only once the autosave has saved it
     Given the owner is signed in with GitHub as "e2e-test-user"
     And the file store is seeded with the synced score
     And the clock is under test control
@@ -144,8 +144,8 @@ Feature: Synced share button
     Then the viewer's note highlight is cleared
 
   Scenario: Re-syncing on the same file reproduces the same link, so it never needs re-sharing
-    Given local storage is cleared
-    And the owner is signed in with GitHub as "e2e-test-user"
+    Given the owner is signed in with GitHub as "e2e-test-user"
+    And the file store is seeded with the synced score
     When the owner loads the app and clicks "Sync"
     Then the synced link is copied
     When the owner clicks the stop-sync button

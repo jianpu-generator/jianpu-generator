@@ -24,15 +24,16 @@ interface FileOpError {
 
 /**
  * Parses a `#synced=` URL hash (if present) on mount and fetches the
- * KV-backed share's current doc once. Produces the same `{filename,
+ * share's current doc once — the shared cloud file's last saved content,
+ * read by the worker straight from its `files` row. Produces the same `{filename,
  * content}` shape `useSharedPreview` does, so it plugs into the identical
  * `source`/`readOnly` derivation in `App.tsx`. Also collapses the editor
  * pane, mirroring `useSharedPreview`.
  *
  * There is no push from the server: an owner's later edits only reach a
- * viewer that reloads the page (see
- * `useSyncedShareOwner.broadcastContent`), by design — the sharer is
- * expected to tell viewers to refresh when they want an update seen.
+ * viewer that reloads the page after the owner's cloud autosave has landed,
+ * by design — the sharer is expected to tell viewers to refresh when they
+ * want an update seen.
  */
 export function useSyncedShareViewer(
   setEditorCollapsed: (collapsed: boolean) => void,

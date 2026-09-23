@@ -2,18 +2,18 @@
 //! `TODO-synced-share-rust-d1-migration.md`, task 4, and the "Synced Share
 //! worker" section of `ARCHITECTURE.md` for the full picture).
 //!
-//! Ports `live-share-worker/src/{resolveRole,doc,index,protocol}.ts` to
-//! Rust, retargeted from Workers KV + an anonymous `ownerToken` to D1 +
-//! GitHub-required ownership (`docs.owner_user_id`). Identity resolution
+//! Ported from the old TS `live-share-worker/src/*.ts` (Workers KV + an
+//! anonymous `ownerToken`) to D1 + GitHub-required ownership. A share is a
+//! pointer to a cloud `files` row (`shares.file_id`), owned through
+//! `files.owner_user_id` -- see `share`. Identity resolution
 //! routes every write through `identity::resolve_verified_user_id`, a
 //! hashed-token cache in front of `identity::github::GithubIdentityProvider`
 //! (real `GET /user` verification), per
 //! `TODO-synced-share-rust-d1-migration.md` §0/§6.
 //!
-//! `doc`, `protocol`, `resolve_role`, `share_creation`, `share_id`, and
-//! `verification` are `pub` (and D1/JsValue-free) so `tests/*.rs` can
-//! unit-test them directly, per this
-//! repo's convention of keeping tests in separate files rather than inline
+//! `files`, `protocol`, `share`, `share_id`, and `verification` are `pub`
+//! (and D1/JsValue-free) so `tests/*.rs` can unit-test them directly, per
+//! this repo's convention of keeping tests in separate files rather than inline
 //! `#[cfg(test)]` modules. Everything else here is D1- or
 //! wasm-runtime-facing and stays crate-private -- it isn't exercised by
 //! host-side `cargo test` (per `TODO-synced-share-rust-d1-migration.md` §0:
@@ -27,11 +27,9 @@ mod handlers;
 mod identity;
 mod oauth;
 
-pub mod doc;
 pub mod files;
 pub mod protocol;
-pub mod resolve_role;
-pub mod share_creation;
+pub mod share;
 pub mod share_id;
 pub mod verification;
 

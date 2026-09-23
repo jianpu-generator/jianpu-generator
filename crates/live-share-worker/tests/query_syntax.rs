@@ -30,15 +30,18 @@ use sqlx::{ConnectOptions, Executor};
 
 const QUERIES: &[(&str, &str)] = &[
     (
-        "get_doc_by_share_id.sql",
-        include_str!("../queries/get_doc_by_share_id.sql"),
+        "get_share_view.sql",
+        include_str!("../queries/get_share_view.sql"),
     ),
     (
-        "get_doc_by_owner_and_external_file.sql",
-        include_str!("../queries/get_doc_by_owner_and_external_file.sql"),
+        "upsert_share.sql",
+        include_str!("../queries/upsert_share.sql"),
     ),
-    ("insert_doc.sql", include_str!("../queries/insert_doc.sql")),
-    ("update_doc.sql", include_str!("../queries/update_doc.sql")),
+    ("end_share.sql", include_str!("../queries/end_share.sql")),
+    (
+        "get_share_status_by_file.sql",
+        include_str!("../queries/get_share_status_by_file.sql"),
+    ),
     (
         "share_id_exists.sql",
         include_str!("../queries/share_id_exists.sql"),
@@ -64,8 +67,29 @@ const QUERIES: &[(&str, &str)] = &[
         include_str!("../queries/upsert_oauth_session.sql"),
     ),
     (
-        "get_owner_login.sql",
-        include_str!("../queries/get_owner_login.sql"),
+        "list_files_by_owner.sql",
+        include_str!("../queries/list_files_by_owner.sql"),
+    ),
+    (
+        "insert_file.sql",
+        include_str!("../queries/insert_file.sql"),
+    ),
+    (
+        "get_file_by_id.sql",
+        include_str!("../queries/get_file_by_id.sql"),
+    ),
+    (
+        "update_file_content.sql",
+        include_str!("../queries/update_file_content.sql"),
+    ),
+    (
+        "rename_file.sql",
+        include_str!("../queries/rename_file.sql"),
+    ),
+    ("trash_file.sql", include_str!("../queries/trash_file.sql")),
+    (
+        "restore_file.sql",
+        include_str!("../queries/restore_file.sql"),
     ),
 ];
 

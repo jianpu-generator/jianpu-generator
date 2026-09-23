@@ -5,20 +5,23 @@
 //! this was ported from).
 //!
 //! JSON field names use `camelCase` on the wire (matching the old TS
-//! convention, e.g. `ownerToken`), even though Rust field names stay
+//! convention, e.g. `identityToken`), even though Rust field names stay
 //! `snake_case`.
 
 use serde::{Deserialize, Serialize};
 
-/// What `GET /shares/:share_id` returns. `ended` mirrors the owner having
-/// pressed "Stop Sync" -- the `docs` row keeps existing (same `share_id`,
-/// same `owner_user_id`) so a later "Sync" click reproduces the same link,
-/// but a viewer must not treat `content`/`filename` as current once this is
-/// true. Never carries `owner_user_id`, `share_id`, any token/hash, or any
-/// other internal id -- see `crate::doc::to_public_doc`. `owner_login` is
-/// the one deliberate exception: `user_identities.login` (a cached, public
-/// GitHub display name, not an internal id) is exposed here specifically so
-/// the viewer-facing `SyncedShareBanner` can show "Shared by @login"; it's
+/// What `GET /shares/:share_id` returns. `filename`/`content`/`revision`
+/// are the pointed-at `files` row's current `name`/`content`/`revision` --
+/// a share holds no copy of its own (see `crate::share`). `ended` is true
+/// when the owner pressed "Stop Sync" or the file is in the bin; the
+/// `shares` row keeps existing either way so a later start reproduces the
+/// same link, and while ended `filename`/`content` are empty so a stopped
+/// link can't leak the live file. Never carries `owner_user_id`,
+/// `share_id`, the file id, any token/hash, or any other internal id -- see
+/// `crate::share::to_public_doc`. `owner_login` is the one deliberate
+/// exception: `user_identities.login` (a cached, public GitHub display
+/// name, not an internal id) is exposed here specifically so the
+/// viewer-facing `SyncedShareBanner` can show "Shared by @login"; it's
 /// `None` when the owner has no cached login (task 10).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -30,76 +33,45 @@ pub struct SyncedDoc {
     pub owner_login: Option<String>,
 }
 
-/// Body of `POST /shares/:share_id` -- only the share's owner is ever
-/// allowed to have a write applied (enforced server-side by
-/// `crate::resolve_role::resolve_role`, keyed on the identity resolved from
-/// `identity_token`, see `crate::identity`).
-///
-/// `identity_token` is opaque at this layer: for now it's whatever
-/// `crate::identity::stub::StubIdentityProvider` accepts (not a real OAuth
-/// token -- see that module's doc comment). Struct-style enum variants
-/// (never tuple variants, per this repo's no-tuple-in-new-data-structures
-/// convention) mirror the old TS `SyncedUpdateRequest` / `SyncedStopRequest`
-/// union members, tagged the same way (`type: "update" | "stop"`).
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(
-    tag = "type",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
-pub enum SyncedWriteRequest {
-    Update {
-        identity_token: String,
-        filename: String,
-        content: String,
-        revision: i64,
-    },
-    Stop {
-        identity_token: String,
-    },
-}
-
-impl SyncedWriteRequest {
-    /// The opaque identity token every write carries, regardless of variant.
-    pub fn identity_token(&self) -> &str {
-        match self {
-            SyncedWriteRequest::Update { identity_token, .. }
-            | SyncedWriteRequest::Stop { identity_token } => identity_token,
-        }
-    }
-}
-
-/// Body of `POST /shares` -- creates a brand-new, server-generated share
-/// (see `TODO-synced-share-rust-d1-migration.md` §1: `shareId` generation
-/// moved server-side). Requires a resolved identity; unlike the old TS
-/// `index.ts`, there is no more implicit "first POST to a client-chosen id
-/// creates it" behavior.
-///
-/// `external_file_id` is `Some` only for a GitHub-backed file (the client's
-/// `owner/repo/scores/name` Contents API path, computed in
-/// `web/src/hooks/useScoreSource.ts`); `None`/absent for a local-only file.
-/// When present, `crate::handlers::create_share` makes this call idempotent
-/// per `(owner_user_id, external_file_id)` -- see
-/// `crate::share_creation::resolve_share_id` -- instead of always minting a
-/// fresh share.
+/// Body of `POST /files/:id/share`, `POST /files/:id/share/stop` and `POST
+/// /files/:id/share/status` -- all three only need the caller's identity;
+/// the file is named by the path, and ownership is checked server-side
+/// against the resolved identity (never the client's own claim).
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateShareRequest {
+pub struct FileShareRequest {
     pub identity_token: String,
-    pub external_file_id: Option<String>,
 }
 
-/// Response of `POST /shares`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+/// Response of `POST /files/:id/share` -- the file's one share id, the same
+/// one every time the file is shared (`shares.file_id` is unique).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateShareResponse {
+pub struct FileShareResponse {
     pub share_id: String,
+}
+
+/// Response of `POST /files/:id/share/status` -- `share` is `None` when the
+/// caller has never shared this file.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShareStatusResponse {
+    pub share: Option<ShareStatus>,
+}
+
+/// A file's share as its owner sees it: the link's id and whether it's been
+/// stopped.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShareStatus {
+    pub share_id: String,
+    pub ended: bool,
 }
 
 // -- `/files/*` (cloud storage backend) -------------------------------------
 //
 // Unlike `SyncedDoc` above (a wire shape distinct from the pure
-// `crate::doc::StoredDoc`), the public wire shape for a file is
+// `crate::share::ShareView`), the public wire shape for a file is
 // `crate::files::PublicFile` itself -- it already derives `Serialize` +
 // `Deserialize` with `camelCase` renaming, so these request/response types
 // reuse it directly instead of duplicating an identical `PublicFileWire`
@@ -107,8 +79,7 @@ pub struct CreateShareResponse {
 //
 // Every `/files/*` route requires a resolved identity (see
 // `crate::handlers`'s module doc comment) -- `identity_token` appears in
-// every request body below, same convention as `CreateShareRequest`/
-// `SyncedWriteRequest` above.
+// every request body below, same convention as `FileShareRequest` above.
 
 /// Body of `POST /files/list`.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]

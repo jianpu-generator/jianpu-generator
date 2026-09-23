@@ -1,7 +1,8 @@
 import type { BrowserContext, Page } from '@playwright/test'
+import { seedCloudFile } from '../../cloudFileHelpers'
+import { DEFAULT_MOCK_GITHUB_LOGIN } from '../../mockGithubIdentity.mjs'
 
-export const FILE_STORE_KEY = 'jianpu:files:v1'
-export const SYNCED_FILENAME = 'synced-test.jianpu'
+export const SYNCED_FILE_BASE_NAME = 'synced-test'
 export const SYNCED_SOURCE = [
   '# metadata',
   'title = "Synced Score"',
@@ -14,36 +15,29 @@ export const SYNCED_SOURCE = [
   '1 2 3 4',
 ].join('\n')
 
-export async function seedFileStore(
+/** Seeds `baseName` as a real cloud file owned by the default mock GitHub
+ * account, under a per-scenario unique name (the scenarios run
+ * `fullyParallel` against one shared account, and a live link belongs to
+ * exactly one `files` row -- two scenarios seeding the same name would share,
+ * and stop, each other's share), and makes the owner's page load onto the
+ * cloud backend. A live link can only point at a cloud file, so every synced
+ * scenario starts here. "the owner loads the app and clicks Sync" then opens
+ * the app on this file via `?file=`. */
+export async function seedSyncedCloudFile(
   page: Page,
-  filename: string,
+  baseName: string,
   source: string,
-  fileId = 'synced-test-id',
 ): Promise<void> {
-  await page.addInitScript(
-    ({
-      key,
-      filename,
-      source,
-      fileId,
-    }: {
-      key: string
-      filename: string
-      source: string
-      fileId: string
-    }) => {
-      localStorage.setItem(
-        key,
-        JSON.stringify({
-          active: filename,
-          userFiles: { [filename]: source },
-          bin: {},
-          fileIds: { [filename]: fileId },
-        }),
-      )
-    },
-    { key: FILE_STORE_KEY, filename, source, fileId },
-  )
+  const name = `${baseName}-${crypto.randomUUID().slice(0, 8)}.jianpu`
+  const file = await seedCloudFile(DEFAULT_MOCK_GITHUB_LOGIN, name, source)
+  syncedShareButtonState.ownerFileName = name
+  syncedShareButtonState.ownerFileId = file.id
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'jianpu:storage-backend:v1',
+      JSON.stringify({ backend: 'cloud' }),
+    )
+  })
 }
 
 // Cross-step state shared between synced-share-button.steps.ts and
@@ -59,15 +53,14 @@ export interface SyncedShareButtonState {
   originalSyncedLink: string | undefined
   viewerPage: Page | undefined
   lateViewerPage: Page | undefined
+  /** The owner's seeded cloud file (see `seedSyncedCloudFile`), unique per
+   * scenario. */
+  ownerFileName: string | undefined
+  ownerFileId: string | undefined
   // Isolated browser contexts (not `context.newPage()`) for the viewer/late
-  // viewer -- a real viewer is a different browser that doesn't share the
-  // owner's localStorage. Sharing the owner's context would make the
-  // viewer page's own `useSyncedShareOwner` instance (rendered regardless
-  // of viewer/owner role, since it's keyed off the shared local file store)
-  // see the same "this file is actively synced" flag and immediately
-  // re-push whatever the local file store currently holds on its own
-  // mount/reload -- bypassing the owner's autosave debounce entirely and
-  // making "does not push until the debounce fires" unTestable.
+  // viewer -- a real viewer is a different, signed-out browser that doesn't
+  // share the owner's localStorage (and so never loads the owner's cloud
+  // files or edits them itself).
   viewerContext: BrowserContext | undefined
   lateViewerContext: BrowserContext | undefined
 }
@@ -75,6 +68,8 @@ export interface SyncedShareButtonState {
 export const syncedShareButtonState: SyncedShareButtonState = {
   syncedShareLink: undefined,
   originalSyncedLink: undefined,
+  ownerFileName: undefined,
+  ownerFileId: undefined,
   viewerPage: undefined,
   lateViewerPage: undefined,
   viewerContext: undefined,

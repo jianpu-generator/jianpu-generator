@@ -21,11 +21,15 @@ export interface ShareModalProps {
   onOpenChange: (open: boolean) => void
   filename: string
   content: string
+  /** Whether the current file can have a live link at all -- only a file
+   * saved to cloud storage can, since the link points at its cloud row
+   * (see `useSyncedShareOwner.ts`). */
+  canSync: boolean
   isSynced: boolean
   syncedShareLink: string | null
   /** Whether the dedicated Synced Share GitHub sign-in connection is
    * present -- see `useSyncedShareOwner.ts`. Gates which of the Synced-link
-   * tab's three states renders. */
+   * tab's states renders. */
   isGithubConnected: boolean
   /** Cached GitHub username for the "Synced as @username" identity row;
    * `null` until connected. */
@@ -101,6 +105,7 @@ export function ShareModal({
   onOpenChange,
   filename,
   content,
+  canSync,
   isSynced,
   syncedShareLink,
   isGithubConnected,
@@ -246,7 +251,7 @@ export function ShareModal({
               >
                 <p style={helpTextStyle}>
                   Sign in with GitHub to share a link that always shows your
-                  latest save.
+                  latest cloud save.
                 </p>
                 {signInStatus.kind === 'failed' && (
                   <p
@@ -269,6 +274,20 @@ export function ShareModal({
                     : 'Sign in with GitHub'}
                 </button>
               </div>
+            ) : !canSync ? (
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
+              >
+                <p style={statusLineStyle} data-testid="share-modal-identity">
+                  Signed in as <strong>@{githubLogin}</strong>
+                </p>
+                <p
+                  style={helpTextStyle}
+                  data-testid="share-modal-synced-cloud-only"
+                >
+                  Live links are available for files saved to cloud storage.
+                </p>
+              </div>
             ) : !isSynced ? (
               <div
                 style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
@@ -277,8 +296,8 @@ export function ShareModal({
                   Signed in as <strong>@{githubLogin}</strong>
                 </p>
                 <p style={helpTextStyle}>
-                  Anyone with this link sees your latest save. Don't share it
-                  publicly.
+                  Anyone with this link sees this file as last saved to the
+                  cloud. Don't share it publicly.
                 </p>
                 <button
                   type="button"

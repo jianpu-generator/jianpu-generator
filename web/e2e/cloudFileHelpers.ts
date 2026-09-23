@@ -141,6 +141,19 @@ export async function trashCloudFile(login: string, id: string): Promise<void> {
   })
 }
 
+/** Restores a previously trashed file out of the bin under `name`, by its
+ * real D1 id. */
+export async function restoreCloudFile(
+  login: string,
+  id: string,
+  name: string,
+): Promise<void> {
+  await postToWorker(`/files/${id}/restore`, {
+    identityToken: syncedShareIdentityTokenFor(login),
+    name,
+  })
+}
+
 /** Convenience: seeds a file and immediately trashes it, for scenarios that
  * need a file to load straight into the bin with no prior UI delete step. */
 export async function seedTrashedCloudFile(

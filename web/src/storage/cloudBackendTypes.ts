@@ -6,7 +6,7 @@ export interface CloudBackendConfig {
    * token already used to prove
    * ownership of a Synced Share link, sent as `identityToken` on every
    * `/files/*` request body (never as a header/query param — matches this
-   * worker's existing `SyncedWriteRequest`/`CreateShareRequest` convention). */
+   * worker's `FileShareRequest` convention). */
   token: string
   /** Bare host (no scheme), same shape as `useSyncedShareOwner.ts`'s
    * `VITE_SYNCED_SHARE_HOST` — turned into an origin via

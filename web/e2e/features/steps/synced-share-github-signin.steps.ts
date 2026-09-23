@@ -1,6 +1,10 @@
 import { expect, type Page } from '@playwright/test'
 import { Given, Then, When } from './fixtures'
-import { openSyncedTab } from './synced-share-button.steps'
+import {
+  openSyncedTab,
+  waitForSeededSyncedFile,
+} from './synced-share-button.steps'
+import { syncedShareButtonState } from './synced-share-button-state'
 
 // Covers the Synced Share GitHub sign-in UI itself
 // (synced-share-github-signin.feature) -- the popup OAuth round trip, the
@@ -229,7 +233,7 @@ Then(
 // This fetch (`revokeSyncedShareGithubGrant`, fired from `disconnectGithub`
 // in `useSyncedShareOwner.ts`) runs on the opener page itself, not inside a
 // popup -- so `page.route`, not `context.route`, is what catches it (same
-// reasoning as the create-share mock further down this file). Module-level
+// reasoning as the start-share mock further down this file). Module-level
 // capture, matching this file's established pattern (e.g.
 // `lastSignInPopup` above).
 let lastRevokeRequestBody: { identityToken?: string } | null = null
@@ -252,15 +256,17 @@ Then(
 )
 
 // The owner's browser-side fetch straight to the Synced Share worker's
-// `POST /shares` (see `useSyncedShareOwner.ts`'s `createShare`) -- unlike
+// `POST /files/:id/share` (see `useSyncedShareOwner.ts`'s `startSync`) --
+// matched exactly, so the `/share/status` lookup on load isn't rejected
+// too. Unlike
 // the worker's own outbound GitHub calls (mocked via a real local server,
 // see `synced-share-github-signin.feature`'s doc comment), this one runs in
 // the browser itself, so `page.route` can intercept it directly without
 // needing the real worker involved at all.
 Given(
-  'the Synced Share worker rejects the next create-share request with a verification failure',
+  'the Synced Share worker rejects the next start-share request with a verification failure',
   async ({ page }) => {
-    await page.route('http://localhost:8787/shares', async (route) => {
+    await page.route(/\/files\/[^/]+\/share$/, async (route) => {
       if (route.request().method() !== 'POST') {
         await route.continue()
         return
@@ -313,3 +319,16 @@ Then('the synced share error dialog is gone', async ({ page }) => {
 When('the owner reopens the share modal', async ({ page }) => {
   await openSyncedTab(page)
 })
+
+// Signing in switches a cloud-preferring page onto the cloud backend, but
+// the page is left on whatever file it was showing while signed out --
+// reopen it on the seeded cloud file, the way a returning owner would.
+When(
+  'the owner reopens the app on the seeded synced file',
+  async ({ page }) => {
+    const name = syncedShareButtonState.ownerFileName
+    if (!name) throw new Error('no synced cloud file was seeded')
+    await page.goto(`/?file=${encodeURIComponent(name)}`)
+    await waitForSeededSyncedFile(page)
+  },
+)
