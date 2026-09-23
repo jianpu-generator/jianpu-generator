@@ -123,24 +123,25 @@ pub(super) fn render_note_head(
     } = params;
     let mut results = Vec::new();
 
-    let accidental_symbol = match accidental {
-        Accidental::Sharp => "♯",
-        Accidental::Flat => "♭",
-        Accidental::Natural => "",
-    };
-
-    // The digit and its sharp/flat accidental (if any) draw as one flush-left
-    // text run at `elem.x` (see `coordinate_resolver::resolve::flush_left_padding`,
-    // which already corrects `elem.x` for this glyph's own left-side bearing)
-    // — the accidental simply falls out of normal text flow immediately
-    // after the digit, rather than being drawn as its own separately-positioned
-    // glyph at a hand-computed offset. The augmentation dot(s), if any, are
-    // drawn separately as circles (see `augmentation_dot_glyphs`) rather than
-    // appended onto this text run.
-    let content = format!("{}{}", pitch.to_digit(), accidental_symbol);
+    // The sharp/flat accidental (if any) and its digit draw as one text run,
+    // with the accidental leading, so the digit itself still lands at
+    // `elem.x` (see `coordinate_resolver::resolve::flush_left_padding`,
+    // which already corrects `elem.x` for the digit's own left-side
+    // bearing). The run starts one accidental-width earlier, in the room the
+    // layout pass reserved ahead of every glyph in this column (see
+    // `ColumnGeometry::glyph_left_anchor_x`). The augmentation dot(s), if
+    // any, are drawn separately as circles (see `augmentation_dot_glyphs`)
+    // rather than appended onto this text run.
+    let content = format!(
+        "{}{}",
+        font_metrics::accidental_symbol(accidental),
+        pitch.to_digit()
+    );
+    let run_x = elem.x
+        - font_metrics::accidental_width_for_family(*font_family, accidental, **base_font_size);
 
     results.push(SvgElement {
-        x: elem.x,
+        x: run_x,
         y: elem.y,
         variant: Some(SvgVariant::NoteHead),
         kind: SvgKind::Text {
@@ -157,7 +158,7 @@ pub(super) fn render_note_head(
 
     results.extend(augmentation_dot_glyphs(
         &AugmentationDotParams {
-            x: elem.x,
+            x: run_x,
             y: elem.y,
             base_content: &content,
             font_size: **base_font_size,

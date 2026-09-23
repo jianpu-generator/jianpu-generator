@@ -212,11 +212,10 @@ fn page_with_no_highlight_produces_no_extra_element() {
 
 #[test]
 fn playback_cursor_reaches_final_bar_line_of_its_measure() {
-    // One system row: a note in music column 1, followed by its measure's
-    // trailing bar-line column (column 2), rendered `HAlign::End` — i.e.
-    // flush to the right edge of its own column, exactly like the final bar
-    // line of a system in `expand_elements.rs`. The bar-line column is much
-    // thinner than the note column, mirroring `THIN_MARK_WEIGHT`.
+    // One system row: a note in music column 1, then its measure's trailing
+    // bar-line column (column 2), rendered `HAlign::End` (flush right, like a
+    // system's final bar line in `expand_elements.rs`). The bar-line column
+    // is much thinner than the note column, mirroring `THIN_MARK_WEIGHT`.
     let page = GridPage {
         width_pt: 595.0,
         height_pt: 842.0,
@@ -231,6 +230,7 @@ fn playback_cursor_reaches_final_bar_line_of_its_measure() {
                 column_weights: vec![1.0, 0.25],
                 rod_pt: 24.0,
                 column_rods: vec![1.0, 0.25],
+                column_accidental_leads: vec![0.0, 0.0],
             }],
             elements: vec![GridElement {
                 column: 2,

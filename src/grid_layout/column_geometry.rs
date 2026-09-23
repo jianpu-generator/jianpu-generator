@@ -32,6 +32,7 @@ impl GridRow {
                         col_count: music_cols as f32,
                         col_width: (usable_width_pt - label_width_pt) / music_cols as f32,
                         x_start: label_width_pt,
+                        accidental_lead: 0.0,
                     },
                     rest_segments: Vec::new(),
                 };
@@ -56,14 +57,16 @@ impl GridRow {
                     m.column_weights
                         .iter()
                         .zip(&m.column_rods)
+                        .zip(&m.column_accidental_leads)
                         .enumerate()
-                        .map(|(i, (&w, &rod))| {
+                        .map(|(i, ((&w, &rod), &accidental_lead))| {
                             let col_width = rod + measure_slack * w / column_weight_sum;
                             let seg = ColumnSegment {
                                 start_col: m.start_col as f32 + i as f32,
                                 col_count: 1.0,
                                 col_width,
                                 x_start: x,
+                                accidental_lead,
                             };
                             x += col_width;
                             seg
@@ -77,6 +80,7 @@ impl GridRow {
                 col_count: 0.0,
                 col_width: 0.0,
                 x_start: label_width_pt,
+                accidental_lead: 0.0,
             });
             ColumnGeometry {
                 label_cols: LABEL_COLS,
@@ -94,6 +98,7 @@ impl GridRow {
                     col_count: self.column_count as f32,
                     col_width,
                     x_start: 0.0,
+                    accidental_lead: 0.0,
                 },
                 rest_segments: Vec::new(),
             }
@@ -112,6 +117,10 @@ struct ColumnSegment {
     col_width: f32,
     /// x-offset (from the row's left edge) of this segment's start.
     x_start: f32,
+    /// The column's accidental lead (see
+    /// `MeasureColumnLayout::column_accidental_leads`); always `0.0` for a
+    /// multi-column segment.
+    accidental_lead: f32,
 }
 
 /// Resolves a grid column index to a pixel x-offset (from the row's left
@@ -169,9 +178,21 @@ impl ColumnGeometry {
     }
 
     /// x-offset of a glyph's anchor within `column` — flush at the column's
-    /// left edge plus `padding`, the same for every glyph regardless of the
-    /// column's own width or what else shares it.
+    /// left edge plus its accidental lead plus `padding`, the same for every
+    /// glyph regardless of the column's own width or what else shares it.
+    /// The lead leaves room for a sharp/flat drawn ahead of a note digit
+    /// (see `render_note_head`), and applies to every glyph in the column so
+    /// all parts' digits (and the ties/underlines keyed off them) stay
+    /// vertically aligned on the same beat.
     pub fn glyph_left_anchor_x(&self, column: f32, padding: f32) -> f32 {
-        self.x_start(column) + padding
+        self.x_start(column) + self.accidental_lead(column) + padding
+    }
+
+    fn accidental_lead(&self, column: f32) -> f32 {
+        if column < self.label_cols as f32 {
+            0.0
+        } else {
+            self.segment_for(column).accidental_lead
+        }
     }
 }

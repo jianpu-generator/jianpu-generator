@@ -123,12 +123,11 @@ fn rest_produces_zero_text() {
 }
 
 #[test]
-fn sharp_accidental_renders_as_part_of_the_note_s_own_text_run() {
-    // The accidental is appended directly onto the note digit's own text
-    // run (see `render_note_head`) rather than drawn as its own
-    // separately-positioned glyph, so it shows up as part of the single
-    // `NoteHead`-variant text element's content instead of a distinct
-    // element.
+fn sharp_accidental_renders_left_of_the_digit_in_the_note_s_own_text_run() {
+    // The accidental leads the note digit's own text run (see
+    // `render_note_head`) rather than being drawn as its own
+    // separately-positioned glyph, and the run starts one accidental-width
+    // before `elem.x`, so the digit itself still lands on the note's anchor.
     let page = make_page(AbsoluteContent::NoteHead {
         pitch: JianPuPitch::One,
         accidental: crate::ast::parsed::Accidental::Sharp,
@@ -137,17 +136,24 @@ fn sharp_accidental_renders_as_part_of_the_note_s_own_text_run() {
         double_dotted: false,
     });
     let note_x = 100.0_f32;
-    let docs = render_new(&[page], &cfg());
+    let config = cfg();
+    let docs = render_new(&[page], &config);
     let note_head = docs[0]
         .elements
         .iter()
         .find(|e| e.variant == Some(SvgVariant::NoteHead))
         .expect("note head element should be present");
-    assert_eq!(note_head.x, note_x);
+    let sharp_width = crate::font_metrics::accidental_width_for_family(
+        config.glyph_font_families.notes,
+        &crate::ast::parsed::Accidental::Sharp,
+        config.notes_font_size(),
+    );
+    assert!(sharp_width > 0.0);
+    assert!((note_head.x - (note_x - sharp_width)).abs() < 0.001);
     assert!(
         matches!(&note_head.kind, SvgKind::Text { content, anchor, .. }
-            if content == "1♯" && *anchor == TextAnchor::Start),
-        "note head should render digit and accidental as one flush-left text run"
+            if content == "\u{266F}1" && *anchor == TextAnchor::Start),
+        "note head should render accidental then digit as one flush-left text run"
     );
 }
 

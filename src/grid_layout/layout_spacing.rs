@@ -7,7 +7,10 @@ use std::collections::BTreeSet;
 
 #[path = "layout_spacing_weights.rs"]
 mod weights;
-use weights::{column_weight, measure_note_weight, multi_measure_rest_weight, THIN_MARK_WEIGHT};
+use weights::{
+    accidental_extra_weight, column_weight, measure_note_weight, multi_measure_rest_weight,
+    THIN_MARK_WEIGHT,
+};
 
 /// Minimum floor a measure's column-region gets, in points, regardless of its
 /// spacing weight or its own columns' rods — a degenerate-case safety net
@@ -83,10 +86,27 @@ fn column_rod(content: &ElementContent, config: &RenderConfig) -> f32 {
 /// of any slack left after every column's rod is satisfied — see
 /// [`column_weight`]), `rod_pt` is its hard-minimum floor in points (see
 /// [`column_rod`]). See **Rod and spring** in `ARCHITECTURE.md`.
+/// `accidental_lead_pt` is the column's accidental lead: the widest
+/// sharp/flat glyph any part's note head draws ahead of its digit in this
+/// column (see [`accidental_lead`]).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct ColumnSizing {
     pub weight: f32,
     pub rod_pt: f32,
+    pub accidental_lead_pt: f32,
+}
+
+/// Room (in points) `content` needs ahead of its own digit for a sharp/flat
+/// accidental — `render_note_head` draws the accidental immediately before
+/// the digit, so every flush-left glyph in the column is pushed right by the
+/// column's widest such lead (see `ColumnGeometry::glyph_left_anchor_x`),
+/// keeping every part's digits vertically aligned on the same beat. `0.0`
+/// for anything but an accidental-carrying `NoteHead`.
+fn accidental_lead(content: &ElementContent, config: &RenderConfig) -> f32 {
+    match content {
+        ElementContent::NoteHead { accidental, .. } => accidental_extra_weight(accidental, config),
+        _ => 0.0,
+    }
 }
 
 /// Per-column [`ColumnSizing`] across `block`'s `col_count` columns — the
@@ -128,6 +148,7 @@ fn measure_column_sizes(
                     per_bar_column_weight
                 },
                 rod_pt: if col == 0 { total_weight } else { 0.0 },
+                accidental_lead_pt: 0.0,
             })
             .collect();
     }
@@ -143,7 +164,13 @@ fn measure_column_sizes(
         .collect();
 
     let mut weight_by_col = vec![0.0f32; col_count as usize];
-    let mut rod_by_col = vec![0.0f32; col_count as usize];
+    // A column's rod is its widest element's rod *excluding* that element's
+    // own accidental, plus the column's widest accidental lead: the lead
+    // pushes every flush-left glyph in the column right (not just the
+    // accidental's own note head), so e.g. a wide chord symbol sharing the
+    // column with a sharp note needs the lead *and* its own width.
+    let mut bare_rod_by_col = vec![0.0f32; col_count as usize];
+    let mut lead_by_col = vec![0.0f32; col_count as usize];
     for row in &block.rows {
         let mut elements: Vec<&ColumnElement> = row.elements.iter().collect();
         elements.sort_by_key(|e| e.column);
@@ -154,8 +181,12 @@ fn measure_column_sizes(
             // tick — a wide glyph genuinely needs that much *contiguous*
             // space before anything else can safely start (see **Rod and
             // spring** in `ARCHITECTURE.md`).
-            if let Some(rod) = rod_by_col.get_mut(e.column as usize) {
-                *rod = rod.max(column_rod(&e.content, config));
+            let lead = accidental_lead(&e.content, config);
+            if let Some(rod) = bare_rod_by_col.get_mut(e.column as usize) {
+                *rod = rod.max(column_rod(&e.content, config) - lead);
+            }
+            if let Some(max_lead) = lead_by_col.get_mut(e.column as usize) {
+                *max_lead = max_lead.max(lead);
             }
 
             // Weight, by contrast, is shared across every *active* column
@@ -182,9 +213,14 @@ fn measure_column_sizes(
     }
 
     (0..col_count)
-        .map(|col| ColumnSizing {
-            weight: weight_by_col.get(col as usize).copied().unwrap_or(0.0),
-            rod_pt: rod_by_col.get(col as usize).copied().unwrap_or(0.0),
+        .map(|col| {
+            let accidental_lead_pt = lead_by_col.get(col as usize).copied().unwrap_or(0.0);
+            ColumnSizing {
+                weight: weight_by_col.get(col as usize).copied().unwrap_or(0.0),
+                rod_pt: bare_rod_by_col.get(col as usize).copied().unwrap_or(0.0)
+                    + accidental_lead_pt,
+                accidental_lead_pt,
+            }
         })
         .collect()
 }
@@ -266,6 +302,8 @@ pub(crate) fn build_measure_column_layout(
             let mut column_rods = vec![0.0; leading_extra as usize];
             column_rods.extend(sizes.iter().map(|s| s.rod_pt));
             let content_rod: f32 = column_rods.iter().sum();
+            let mut column_accidental_leads = vec![0.0; leading_extra as usize];
+            column_accidental_leads.extend(sizes.iter().map(|s| s.accidental_lead_pt));
             let directive_width_pt = block
                 .decorations
                 .first()
@@ -321,6 +359,7 @@ pub(crate) fn build_measure_column_layout(
                 weight: measure_note_weight(block, config),
                 column_weights,
                 column_rods,
+                column_accidental_leads,
                 rod_pt,
             };
             start_col += col_count;

@@ -39,11 +39,10 @@ fn single_row_page(element: GridElement) -> GridPage {
 
 #[test]
 fn lyric_syllable_halign_center_is_independent_of_column_weight() {
-    // Same shape as `note_head_halign_center_is_independent_of_column_weight`
-    // (see tests.rs), but for a lyric syllable: under flush-left anchoring, a
-    // syllable's anchor must land at the same offset from the column's left
-    // edge regardless of how much unrelated weight (e.g. a wide chord symbol
-    // sharing the column) inflates the column's total width.
+    // Like `note_head_halign_center_is_independent_of_column_weight` (tests.rs)
+    // but for a lyric syllable: under flush-left anchoring, its anchor must land
+    // at the same offset from the column's left edge regardless of how much
+    // unrelated weight (e.g. a wide chord symbol) inflates the column's width.
     let make_page = |column_weight: f32| -> GridPage {
         let el = GridElement {
             column: 2,
@@ -71,6 +70,7 @@ fn lyric_syllable_halign_center_is_independent_of_column_weight() {
                     column_weights: vec![column_weight],
                     rod_pt: 24.0,
                     column_rods: vec![column_weight],
+                    column_accidental_leads: vec![0.0],
                 }],
                 elements: vec![el],
             }],
@@ -105,7 +105,6 @@ fn lyric_syllable_halign_center_is_independent_of_column_weight() {
                     ..Default::default()
                 },
                 paddings: DEFAULT_PADDINGS,
-                page_number_vertical_padding_pt: 0.0,
                 ..Default::default()
             },
         )

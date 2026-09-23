@@ -21,6 +21,7 @@
 //! placement, note-dash font size), so a measure's computed layout width and
 //! its actually-rendered glyph widths can't drift apart.
 
+use crate::ast::parsed::Accidental;
 use crate::compositor::types::{FontFamily, TextSpan};
 
 mod font_source;
@@ -191,6 +192,29 @@ pub(crate) fn text_width_for_family(family: FontFamily, s: &str, font_size: f32)
     s.chars()
         .map(|c| advance_width_for_family(family, c, font_size))
         .sum()
+}
+
+/// The glyph `render_note_head` draws immediately before a note head's digit
+/// for `accidental` — empty for `Natural`, which renders no glyph.
+pub(crate) fn accidental_symbol(accidental: &Accidental) -> &'static str {
+    match accidental {
+        Accidental::Sharp => "\u{266F}",
+        Accidental::Flat => "\u{266D}",
+        Accidental::Natural => "",
+    }
+}
+
+/// Real rendered width (in points) of `accidental`'s glyph in `family`'s
+/// pinned font — shared by the layout pass (which reserves exactly this much
+/// room ahead of the digit, see `grid_layout::layout_spacing`) and
+/// `render_note_head` (which draws the glyph into that room), so the two
+/// can't drift apart.
+pub(crate) fn accidental_width_for_family(
+    family: FontFamily,
+    accidental: &Accidental,
+    font_size: f32,
+) -> f32 {
+    text_width_for_family(family, accidental_symbol(accidental), font_size)
 }
 
 /// Left-side bearing (in points) of one character in `family`'s pinned font

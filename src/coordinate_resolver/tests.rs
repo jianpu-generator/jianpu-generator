@@ -228,6 +228,7 @@ fn column_weight_test_page(column_weight: f32) -> GridPage {
                 column_weights: vec![column_weight],
                 rod_pt: 24.0,
                 column_rods: vec![column_weight],
+                column_accidental_leads: vec![0.0],
             }],
             elements: vec![el],
         }],

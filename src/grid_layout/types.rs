@@ -78,6 +78,12 @@ pub struct MeasureColumnLayout {
     /// what the columns' own content needs, `build_measure_column_layout`
     /// scales every entry up proportionally rather than leaving a gap.
     pub column_rods: Vec<f32>,
+    /// Per-column accidental lead in points (see `measure_column_sizes`),
+    /// parallel to `column_weights`: the widest sharp/flat glyph any part
+    /// draws ahead of its note digit in that column. Already included in
+    /// `column_rods`; `ColumnGeometry::glyph_left_anchor_x` shifts every
+    /// glyph anchor in the column right by it to make room for the glyph.
+    pub column_accidental_leads: Vec<f32>,
 }
 
 #[derive(Debug, Clone)]

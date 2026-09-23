@@ -60,20 +60,17 @@ fn dot_extra_weight(
 
 /// Extra weight given to a `NoteHead` column carrying a sharp/flat
 /// accidental, to make room for the `♯`/`♭` glyph — `render_note_head`
-/// (`glyph_renderers.rs`) appends it directly onto the note digit's own text
-/// run, at the same font size/family as the digit, rather than drawing it as
-/// its own separately-positioned, larger glyph — so the extra width needed
-/// is exactly the accidental's own real rendered width. `Natural` renders no
-/// glyph, so it needs no extra weight either.
+/// (`glyph_renderers.rs`) draws it immediately *before* the note digit, at
+/// the same font size/family as the digit — so the extra width needed is
+/// exactly the accidental's own real rendered width. `Natural` renders no
+/// glyph, so it needs no extra weight either. Also the column's accidental
+/// lead (see `layout_spacing::measure_column_sizes`), the room every
+/// flush-left glyph in the column is pushed right by so the accidental has
+/// somewhere to draw.
 pub(super) fn accidental_extra_weight(accidental: &Accidental, config: &RenderConfig) -> f32 {
-    let symbol = match accidental {
-        Accidental::Sharp => "\u{266F}",
-        Accidental::Flat => "\u{266D}",
-        Accidental::Natural => return 0.0,
-    };
-    font_metrics::text_width_for_family(
+    font_metrics::accidental_width_for_family(
         config.glyph_font_families.notes,
-        symbol,
+        accidental,
         config.notes_font_size(),
     )
 }

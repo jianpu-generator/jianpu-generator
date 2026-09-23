@@ -3,7 +3,8 @@
 use crate::ast::parsed::{Accidental, JianPuPitch, Offset};
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
 use crate::font_metrics;
-use crate::grid_layout::layout::measure_column_weights;
+use crate::grid_layout::layout::{build_measure_column_layout, measure_column_weights};
+use crate::grid_layout::types::GridRow;
 use crate::render_config::RenderConfig;
 
 fn test_config() -> RenderConfig {
@@ -114,4 +115,88 @@ fn measure_column_weights_gives_sharp_or_flat_note_wider_weight_than_plain_note(
     );
     assert_eq!(sharp_weight, accidental_note_weight("\u{266F}", &config));
     assert_eq!(flat_weight, accidental_note_weight("\u{266D}", &config));
+}
+
+/// Real rendered width of `accidental`'s glyph at `config`'s notes font
+/// size/family — the accidental lead `render_note_head` draws into.
+fn accidental_width(accidental: &Accidental, config: &RenderConfig) -> f32 {
+    font_metrics::accidental_width_for_family(
+        config.glyph_font_families.notes,
+        accidental,
+        config.notes_font_size(),
+    )
+}
+
+#[test]
+fn a_sharp_note_s_column_gets_an_accidental_lead_included_in_its_rod() {
+    // The sharp draws to the left of its digit, so its column reserves the
+    // sharp's width as a lead ahead of every glyph, on top of the same rod a
+    // plain note would need. A large notes font keeps even the plain
+    // one-note measure's content rod above `MIN_MEASURE_WIDTH_PT`, so no
+    // proportional rescale distorts the per-column rods compared here.
+    let config = RenderConfig {
+        notes_font_size: 40,
+        ..test_config()
+    };
+    let plain = build_measure_column_layout(
+        &[make_block_with_accidental_note("S", Accidental::Natural, 1)],
+        &config,
+    );
+    let sharp = build_measure_column_layout(
+        &[make_block_with_accidental_note("S", Accidental::Sharp, 1)],
+        &config,
+    );
+    // Skip the system's leading placeholder column (see
+    // `build_measure_column_layout`), which never carries a lead.
+    let leading_extra = sharp[0].column_rods.len() - 2;
+    let note_col = leading_extra;
+    let sharp_width = accidental_width(&Accidental::Sharp, &config);
+
+    assert_eq!(plain[0].column_accidental_leads[note_col], 0.0);
+    assert_eq!(sharp[0].column_accidental_leads[note_col], sharp_width);
+    assert!(
+        (sharp[0].column_rods[note_col] - (plain[0].column_rods[note_col] + sharp_width)).abs()
+            < 0.001
+    );
+    assert!(sharp[0].column_accidental_leads[..note_col]
+        .iter()
+        .chain(&sharp[0].column_accidental_leads[note_col + 1..])
+        .all(|&lead| lead == 0.0));
+}
+
+#[test]
+fn glyph_left_anchor_x_shifts_right_by_the_column_s_accidental_lead() {
+    // Every glyph anchor in a sharp note's column (the digit itself, plus
+    // anything else sharing the column, and the ties/underlines keyed off
+    // it) moves right by the lead, so the sharp has room to its left and
+    // the digit stays aligned with other parts' digits on the same beat.
+    let config = test_config();
+    let system = [make_block_with_accidental_note("S", Accidental::Sharp, 1)];
+    let measure_layout = build_measure_column_layout(&system, &config);
+    let start_col = measure_layout[0].start_col;
+    let leading_extra = measure_layout[0].column_rods.len() - 2;
+    let note_col = (start_col as usize + leading_extra) as f32;
+    let row = GridRow {
+        height_pt: 30.0,
+        column_count: start_col + measure_layout[0].col_count,
+        has_label_region: true,
+        measure_layout,
+        elements: Vec::new(),
+    };
+    let geometry = row.column_geometry(500.0, 40.0);
+    let padding = 4.0;
+
+    assert!(
+        (geometry.glyph_left_anchor_x(note_col, padding)
+            - (geometry.x_start(note_col)
+                + accidental_width(&Accidental::Sharp, &config)
+                + padding))
+            .abs()
+            < 0.001
+    );
+    let bar_col = note_col + 1.0;
+    assert_eq!(
+        geometry.glyph_left_anchor_x(bar_col, padding),
+        geometry.x_start(bar_col) + padding
+    );
 }
