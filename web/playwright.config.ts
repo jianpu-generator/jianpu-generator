@@ -21,14 +21,25 @@ export default defineConfig({
   // each pass until the same set fails 3 times in a row.
   retries: 0,
   use: {
-    baseURL: 'http://localhost:5173',
+    // Deliberately NOT `just dev`'s port (5173, see `dekit.yaml`): with
+    // `reuseExistingServer: true` below, running e2e while `just dev` is
+    // active would otherwise silently attach to dev's Vite/worker instead
+    // of spawning e2e's own — and dev's `wrangler dev` (see next webServer
+    // entry) doesn't carry the `--var SYNCED_SHARE_GITHUB_*_URL` overrides
+    // e2e needs to redirect GitHub calls at the mock server below, so any
+    // GitHub-sign-in scenario would silently try to hit real GitHub. A
+    // dedicated port means e2e always starts (or reuses) its own instance,
+    // regardless of whether `just dev` happens to be running.
+    baseURL: 'http://localhost:5183',
   },
   webServer: [
     {
       // Skip `predev` (the cargo-component/jco build) since pkg-component is
-      // already built; just start Vite.
-      command: 'pnpm exec vite',
-      url: 'http://localhost:5173',
+      // already built; just start Vite. `--strictPort` so Playwright's `url`
+      // check below fails fast instead of hanging if 5183 is somehow taken,
+      // rather than Vite silently falling back to the next free port.
+      command: 'pnpm exec vite --port 5183 --strictPort',
+      url: 'http://localhost:5183',
       reuseExistingServer: true,
       timeout: 60_000,
       env: {
@@ -37,7 +48,7 @@ export default defineConfig({
         // at the local `live-share-worker` below instead of the real,
         // deployed one — otherwise every Synced Share scenario would burn
         // real Cloudflare D1 writes/reads on every e2e run.
-        VITE_SYNCED_SHARE_HOST: 'localhost:8787',
+        VITE_SYNCED_SHARE_HOST: 'localhost:8797',
       },
     },
     {
@@ -70,14 +81,24 @@ export default defineConfig({
       // server above instead of real GitHub -- see
       // `crates/live-share-worker/src/oauth.rs` and
       // `src/identity/github.rs` for the env vars they read.
+      //
+      // Deliberately NOT port 8787 (`just dev`'s port, see `dekit.yaml`) and
+      // deliberately NOT the default `--persist-to` D1 state dir: both are
+      // isolated from `just dev`'s own `wrangler dev` instance so that
+      // running e2e while `just dev` is active never attaches to dev's
+      // worker (which lacks the `--var` overrides above and would send
+      // GitHub-sign-in scenarios at real GitHub) or shares/pollutes dev's
+      // local D1 data. Both `.wrangler/*` paths are already covered by the
+      // repo-root `.gitignore`'s `/crates/live-share-worker/.wrangler`
+      // entry.
       command:
-        'npx wrangler d1 migrations apply DB --local && ' +
-        'npx wrangler dev --port 8787 ' +
+        'npx wrangler d1 migrations apply DB --local --persist-to .wrangler/e2e-state && ' +
+        'npx wrangler dev --port 8797 --persist-to .wrangler/e2e-state ' +
         '--var SYNCED_SHARE_GITHUB_USER_URL:http://localhost:8788/user ' +
         '--var SYNCED_SHARE_GITHUB_TOKEN_URL:http://localhost:8788/login/oauth/access_token ' +
         '--var SYNCED_SHARE_GITHUB_GRANT_URL:http://localhost:8788/applications/{client_id}/grant',
       cwd: '../crates/live-share-worker',
-      port: 8787,
+      port: 8797,
       reuseExistingServer: true,
       timeout: 60_000,
     },

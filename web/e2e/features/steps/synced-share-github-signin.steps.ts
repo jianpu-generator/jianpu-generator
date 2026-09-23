@@ -193,7 +193,7 @@ Given(
   'the Synced Share worker returns an unparseable body from the next GitHub token exchange',
   async ({ context }) => {
     await context.route(
-      'http://localhost:8787/auth/github/callback',
+      'http://localhost:8797/auth/github/callback',
       async (route) => {
         await route.fulfill({
           status: 200,
@@ -240,7 +240,7 @@ let lastRevokeRequestBody: { identityToken?: string } | null = null
 
 Given('the GitHub grant-revocation endpoint is mocked', async ({ page }) => {
   await page.route(
-    'http://localhost:8787/auth/github/revoke',
+    'http://localhost:8797/auth/github/revoke',
     async (route) => {
       lastRevokeRequestBody = route.request().postDataJSON()
       await route.fulfill({ status: 200, body: '' })

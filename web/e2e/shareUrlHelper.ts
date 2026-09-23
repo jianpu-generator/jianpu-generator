@@ -26,8 +26,8 @@ export async function gotoShareUrl(
   filename: string,
   content: string,
 ): Promise<void> {
-  await page.goto('http://localhost:5173/')
+  await page.goto('http://localhost:5183/')
   const hash = await encodeShareHashOnPage(page, filename, content)
   await page.goto('about:blank')
-  await page.goto(`http://localhost:5173/#share=${hash}`)
+  await page.goto(`http://localhost:5183/#share=${hash}`)
 }

@@ -6,10 +6,13 @@
 // Why this exists: unlike CI (`.github/workflows/pages.yml`), which never
 // runs this suite at all and wouldn't have this problem anyway since every
 // run starts from a throwaway checkout, a local run reuses the same
-// `crates/live-share-worker/.wrangler/state` D1 file across every
-// invocation (`playwright.config.ts`'s `reuseExistingServer`, plus `just
-// dev`/`dekit.yaml` pointing the same `wrangler dev --port 8787` at that
-// same file for manual dev browsing). Scenarios that create files under
+// `crates/live-share-worker/.wrangler/e2e-state` D1 file across every
+// invocation (`playwright.config.ts`'s `reuseExistingServer`). That D1
+// state is isolated from `just dev`'s own `wrangler dev` instance (see
+// `playwright.config.ts`'s worker `webServer` entry) so e2e never shares
+// data with, or collides with, manual dev browsing -- but repeated e2e
+// runs still accumulate rows in *that* file across invocations, which is
+// what this script cleans up. Scenarios that create files under
 // app-assigned default names (`files-cloud-backend.feature`'s "untitled"/
 // "source 2"-style duplicates) leave real rows behind with no UI path to
 // hard-delete them -- `fileStore.ts`'s `reservedNames()` treats binned
@@ -53,7 +56,17 @@ DELETE FROM files WHERE owner_user_id IN (${syntheticOwners});`
 try {
   execFileSync(
     'npx',
-    ['wrangler', 'd1', 'execute', 'DB', '--local', '--command', sql],
+    [
+      'wrangler',
+      'd1',
+      'execute',
+      'DB',
+      '--local',
+      '--persist-to',
+      '.wrangler/e2e-state',
+      '--command',
+      sql,
+    ],
     { cwd: workerDir, stdio: 'inherit' },
   )
 } catch {

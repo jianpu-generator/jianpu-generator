@@ -11,8 +11,9 @@ import { syncedShareIdentityTokenFor } from './mockGithubIdentity.mjs'
 // this file's request bodies mirror exactly).
 
 /** Same origin `playwright.config.ts` points the app's own `VITE_SYNCED_SHARE_HOST`
- * at -- see that file's `webServer` entry for `wrangler dev --port 8787`. */
-export const CLOUD_WORKER_ORIGIN = 'http://localhost:8787'
+ * at -- see that file's `webServer` entry for `wrangler dev --port 8797`
+ * (deliberately not `just dev`'s 8787, see that entry's comment). */
+export const CLOUD_WORKER_ORIGIN = 'http://localhost:8797'
 
 /** Wire shape of `crate::files::PublicFile` (`camelCase`), same shape
  * `cloudBackend.ts`'s own `PublicFileWire` mirrors. */

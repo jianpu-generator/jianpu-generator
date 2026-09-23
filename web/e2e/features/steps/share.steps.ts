@@ -56,7 +56,7 @@ When(
     const legacyPayload = encodeURIComponent(
       JSON.stringify({ filename: SHARED_FILENAME, content: SHARED_SOURCE }),
     )
-    await page.goto(`http://localhost:5173/#share=${legacyPayload}`)
+    await page.goto(`http://localhost:5183/#share=${legacyPayload}`)
   },
 )
 
