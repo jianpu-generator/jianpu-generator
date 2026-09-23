@@ -20,7 +20,10 @@ pub(crate) struct LyricSizing {
 }
 
 /// Returns the 7 sub-row_heights for a Note/Chord part, in order:
-/// [tuplet_bracket, arc, above_dot, note_head, below_dot, half_ul, quarter_ul]
+/// [tuplet_bracket, arc, above_dot, note_head, half_ul, quarter_ul, below_dot]
+/// The underline bands sit directly under the note head so that below-octave
+/// dots of an underlined note hang beneath its underlines, per jianpu
+/// engraving convention (see `GridContent::LowOctaveDots`).
 /// `vertical_padding_pt` (see `Metadata::notes.vertical_padding_pt`) is added
 /// on top of the note-head band only, additively — so a score with no
 /// override (`vertical_padding_pt == 0.0`) renders at exactly the height it
@@ -31,9 +34,9 @@ pub(crate) fn note_part_sub_row_heights(base: f32, vertical_padding_pt: f32) -> 
         base * 0.30,                // tie/slur arc
         base * 0.25,                // above-octave dots
         base + vertical_padding_pt, // note head (main)
-        base * 0.25,                // below-octave dots
         base * 0.15,                // half-beat underline
         base * 0.15,                // quarter-beat underline
+        base * 0.25,                // below-octave dots
     ]
 }
 

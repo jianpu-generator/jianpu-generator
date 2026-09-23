@@ -125,8 +125,10 @@ pub enum VAlign {
 #[derive(Debug, Clone)]
 pub enum GridContent {
     /// Note head. `octave > 0` = dots above, `octave < 0` = dots below,
-    /// `octave.abs()` = dot count. Octave rendered inline by the renderer;
-    /// OctaveDot sub-rows exist for vertical spacing only.
+    /// `octave.abs()` = dot count, all rendered inline by the renderer.
+    /// An underlined note's below-octave dots are split out into a separate
+    /// `LowOctaveDots` element instead (with `octave` left at 0 here), since
+    /// they must hang beneath its underlines rather than the digit.
     NoteHead {
         pitch: JianPuPitch,
         accidental: Accidental,
@@ -148,8 +150,14 @@ pub enum GridContent {
         dotted: bool,
         double_dotted: bool,
     },
-    /// Spacing-only row for octave dots. Resolver emits nothing for this.
-    OctaveDot,
+    /// `count` below-octave dots of an underlined note, placed in the sub-row
+    /// of that note's lowest underline so they hang beneath it. `pitch` is
+    /// the note's own digit, only so this anchors to the same flush-left x
+    /// as its `NoteHead` (see `flush_left_padding`).
+    LowOctaveDots {
+        count: u8,
+        pitch: JianPuPitch,
+    },
     ChordSymbol {
         text: String,
         dotted: bool,

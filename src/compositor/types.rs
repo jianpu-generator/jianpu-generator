@@ -43,6 +43,12 @@ pub enum AbsoluteContent {
         double_dotted: bool,
     },
     PercussionHit,
+    /// Below-octave dots hanging beneath an underlined note's lowest
+    /// underline; `y` is that underline's own y. See
+    /// `GridContent::LowOctaveDots`.
+    LowOctaveDots {
+        count: u8,
+    },
     Underline {
         width: f32,
         level: u32,

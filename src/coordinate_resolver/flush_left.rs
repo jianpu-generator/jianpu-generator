@@ -17,6 +17,7 @@ pub(super) fn is_flush_left_glyph(content: &GridContent) -> bool {
             | GridContent::ChordSymbol { .. }
             | GridContent::NoteDash { .. }
             | GridContent::LyricSyllable { .. }
+            | GridContent::LowOctaveDots { .. }
     )
 }
 
@@ -29,11 +30,12 @@ pub(super) fn is_flush_left_glyph(content: &GridContent) -> bool {
 /// rather than stacking each font's own inset on top of the flat padding.
 /// Every flush-left renderer now draws `TextAnchor::Start` at exactly this
 /// anchor (see `glyph_renderers.rs`/`glyph_renderers_note_dash.rs`), so one
-/// formula (`padding - bearing`) covers all six content types; only the
+/// formula (`padding - bearing`) covers them all (plus `LowOctaveDots`, which
+/// borrows its note head's digit bearing to stay centered on it); only the
 /// padding/bearing's font/size/leading-char differ per type.
 pub(super) fn flush_left_padding(content: &GridContent, config: RowResolveConfig) -> f32 {
     let (padding, bearing) = match content {
-        GridContent::NoteHead { pitch, .. } => (
+        GridContent::NoteHead { pitch, .. } | GridContent::LowOctaveDots { pitch, .. } => (
             config.paddings.notes,
             crate::font_metrics::glyph_left_bearing_for_family(
                 config.glyph_font_families.notes,

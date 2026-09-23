@@ -1,3 +1,4 @@
+use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compositor::types::AbsoluteContent;
 use crate::coordinate_resolver::resolve::{
     resolve, ElementPaddings, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
@@ -164,15 +165,29 @@ fn halign_end_places_x_at_right_of_column_span() {
 }
 
 #[test]
-fn octave_dot_grid_content_emits_nothing() {
+fn low_octave_dots_resolve_to_the_same_x_as_their_note_head() {
     let el = GridElement {
         column: 0,
         column_span: 1,
         halign: HAlign::Center,
         valign: VAlign::Center,
-        content: GridContent::OctaveDot,
+        content: GridContent::LowOctaveDots {
+            count: 1,
+            pitch: JianPuPitch::Five,
+        },
     };
-    let page = single_row_page(el);
+    let note_head = GridElement {
+        content: GridContent::NoteHead {
+            pitch: JianPuPitch::Five,
+            accidental: Accidental::Natural,
+            octave: 0,
+            dotted: false,
+            double_dotted: false,
+        },
+        ..el
+    };
+    let mut page = single_row_page(el);
+    page.rows[0].elements.push(note_head);
     let abs = resolve(
         &[page],
         12.0,
@@ -197,8 +212,18 @@ fn octave_dot_grid_content_emits_nothing() {
         },
     )
     .unwrap();
-    assert!(
-        abs[0].elements.is_empty(),
-        "OctaveDot should emit no AbsoluteElement"
+    let [dots, head] = abs[0].elements.as_slice() else {
+        panic!(
+            "expected the dots and the note head, got {:?}",
+            abs[0].elements
+        );
+    };
+    assert!(matches!(
+        dots.content,
+        AbsoluteContent::LowOctaveDots { count: 1 }
+    ));
+    assert_eq!(
+        dots.x, head.x,
+        "the dots must center on the digit exactly as the head's own inline dots do"
     );
 }

@@ -42,7 +42,9 @@ pub(super) fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridCo
             dotted: *dotted,
             double_dotted: *double_dotted,
         }),
-        GridContent::OctaveDot => Some(PostArcGridContent::OctaveDot),
+        GridContent::LowOctaveDots { count, .. } => {
+            Some(PostArcGridContent::LowOctaveDots { count: *count })
+        }
         GridContent::ChordSymbol {
             text,
             dotted,

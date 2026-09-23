@@ -3,10 +3,10 @@ use crate::compositor::types::{AbsoluteContent, AbsoluteElement, AbsolutePage, F
 use crate::render_config::RenderConfig;
 use crate::renderer::new_types::{SvgDocument, SvgElement};
 use glyph_renderers::{
-    render_bar_line, render_chord_symbol, render_horizontal_line, render_lyric, render_lyric_line,
-    render_multi_measure_rest, render_note_dash, render_note_head, render_percussion_hit,
-    render_rest, render_tie_or_slur, render_tuplet_bracket, render_underline, DotState,
-    NoteRenderParams,
+    render_bar_line, render_chord_symbol, render_horizontal_line, render_low_octave_dots,
+    render_lyric, render_lyric_line, render_multi_measure_rest, render_note_dash, render_note_head,
+    render_percussion_hit, render_rest, render_tie_or_slur, render_tuplet_bracket,
+    render_underline, DotState, NoteRenderParams,
 };
 use overlay::render_overlay_element;
 
@@ -129,7 +129,8 @@ fn render_element(elem: &AbsoluteElement, params: &RenderElementParams) -> Vec<S
     match &elem.content {
         AbsoluteContent::NoteHead { .. }
         | AbsoluteContent::Rest { .. }
-        | AbsoluteContent::NoteDash { .. } => render_note_glyph(elem, &elem.content, params),
+        | AbsoluteContent::NoteDash { .. }
+        | AbsoluteContent::LowOctaveDots { .. } => render_note_glyph(elem, &elem.content, params),
         AbsoluteContent::ChordSymbol {
             text,
             dotted,
@@ -242,8 +243,12 @@ fn render_note_glyph(
             *note_dash_font_size,
             *note_dash_style,
         ),
+        AbsoluteContent::LowOctaveDots { count } => {
+            render_low_octave_dots(elem, *count, notes_font_size, note_number_width)
+        }
         // `render_element`'s outer match exhaustively lists every variant
-        // routed to `render_note_glyph` (just `NoteHead`/`Rest`/`NoteDash`),
+        // routed to `render_note_glyph` (just `NoteHead`/`Rest`/`NoteDash`/
+        // `LowOctaveDots`),
         // so a future `AbsoluteContent` variant fails to compile there
         // before it could ever reach this arm.
         _ => Vec::new(),

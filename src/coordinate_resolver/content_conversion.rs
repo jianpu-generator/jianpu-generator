@@ -222,7 +222,9 @@ pub(super) fn grid_to_absolute(
             count: *count,
             width: span_width,
         }),
-        PostArcGridContent::OctaveDot => None,
+        PostArcGridContent::LowOctaveDots { count } => {
+            Some(AbsoluteContent::LowOctaveDots { count: *count })
+        }
         PostArcGridContent::ChordSymbol {
             text,
             dotted,

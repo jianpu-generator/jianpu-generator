@@ -36,15 +36,13 @@ pub(crate) struct NotePartParams<'a> {
 
 /// A part's sub-rows before any elements are pushed into them, plus the
 /// `(arc_sub, head_sub)` indices locating its arc/note-head bands within
-/// them, and the `sub_count` used by `expand_measure_elements` to derive the
-/// underline sub-rows. A chord-only row has no `tuplet_bracket` sub-row, so
+/// them. A chord-only row has no `tuplet_bracket` sub-row, so
 /// its topmost row (index 0) is the arc row. A note row without a tuplet in
 /// this system also drops that sub-row, so its arc row is index 0 too. A
 /// note row with a tuplet keeps `tuplet_bracket` as index 0, pushing its arc
 /// row to index 1 (see `note_part_sub_row_heights`).
 struct PartSubRows {
     rows: Vec<GridRow>,
-    sub_count: usize,
     arc_sub: usize,
     head_sub: usize,
 }
@@ -57,21 +55,15 @@ fn build_part_sub_rows(
     measure_layout: &[MeasureColumnLayout],
     notes_vertical_padding_pt: f32,
 ) -> PartSubRows {
-    let (sub_heights, sub_count): (Vec<f32>, usize) = if is_chord_only {
-        (chord_part_sub_row_heights(base).to_vec(), 4)
+    let sub_heights: Vec<f32> = if is_chord_only {
+        chord_part_sub_row_heights(base).to_vec()
     } else if has_tuplet {
-        (
-            note_part_sub_row_heights(base, notes_vertical_padding_pt).to_vec(),
-            7,
-        )
+        note_part_sub_row_heights(base, notes_vertical_padding_pt).to_vec()
     } else {
         // No tuplet in this system for this part: drop the `tuplet_bracket`
         // sub-row entirely rather than reserving its height unused (see
         // `note_part_height_pt`, which mirrors this for system-height math).
-        (
-            note_part_sub_row_heights(base, notes_vertical_padding_pt)[1..].to_vec(),
-            6,
-        )
+        note_part_sub_row_heights(base, notes_vertical_padding_pt)[1..].to_vec()
     };
     let rows: Vec<GridRow> = sub_heights
         .iter()
@@ -92,7 +84,6 @@ fn build_part_sub_rows(
     };
     PartSubRows {
         rows,
-        sub_count,
         arc_sub,
         head_sub,
     }
@@ -112,7 +103,6 @@ pub(crate) fn expand_note_part(
     let has_tuplet = !params.part_tuplet_brackets.is_empty();
     let PartSubRows {
         rows: mut sub_rows,
-        sub_count,
         arc_sub,
         head_sub,
     } = build_part_sub_rows(
@@ -164,7 +154,6 @@ pub(crate) fn expand_note_part(
                 measure_col_offset,
                 &MeasureRenderParams {
                     head_sub,
-                    sub_count,
                     bar_height,
                     part_idx,
                     is_last_block: block_idx == last_block_idx,

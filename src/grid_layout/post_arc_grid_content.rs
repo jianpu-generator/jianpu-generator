@@ -28,7 +28,9 @@ pub enum PostArcGridContent {
         dotted: bool,
         double_dotted: bool,
     },
-    OctaveDot,
+    LowOctaveDots {
+        count: u8,
+    },
     ChordSymbol {
         text: String,
         dotted: bool,

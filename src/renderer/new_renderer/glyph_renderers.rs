@@ -39,7 +39,8 @@ impl DotState {
 }
 
 /// A filled circle — the shared primitive behind both a note's *octave* dots
-/// (drawn above/below the digit, see `render_note_head`'s `octave` loop) and
+/// (drawn above/below the digit, see `render_note_head`'s `octave` loop, or
+/// beneath an underlined note's underlines, see `render_low_octave_dots`) and
 /// a note/rest/chord/dash's *augmentation* dot(s) (see
 /// `augmentation_dot_glyphs`). Drawn as a vector shape rather than a font
 /// glyph (e.g. `·`) so it renders as a true circle regardless of
@@ -171,24 +172,15 @@ pub(super) fn render_note_head(
     // user-configurable `note_number_width` box, exactly as before this
     // glyph was flush-left anchored.
     let center = elem.x + *note_number_width * 0.5;
-    let dot_radius = *base_font_size * 0.1;
-
-    // Octave-up dots sit above the digit and need extra clearance (`gap`) that
-    // octave-down dots, sitting below, don't.
-    let dot_spacing = dot_radius * 3.0;
-    let gap = dot_radius * 2.0;
-    for i in 0..octave.unsigned_abs() {
-        let offset = dot_radius + (i as f32) * dot_spacing;
-        let dot_y = if octave > 0 {
-            elem.y - *base_font_size / 2.0 - offset - gap
-        } else {
-            elem.y + *base_font_size / 2.0 + offset
-        };
-        results.push(dot_glyph(center, dot_y, dot_radius, SvgVariant::NoteHead));
-    }
+    results.extend(inline_octave_dots(center, elem.y, octave, **base_font_size));
 
     results
 }
+
+#[path = "glyph_renderers_octave_dots.rs"]
+mod octave_dots;
+use octave_dots::inline_octave_dots;
+pub(super) use octave_dots::render_low_octave_dots;
 
 #[path = "glyph_renderers_note_dash.rs"]
 mod note_dash;

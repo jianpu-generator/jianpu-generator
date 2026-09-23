@@ -31,7 +31,6 @@ pub(crate) fn push_head(
 
 pub(crate) struct MeasureRenderParams {
     pub(crate) head_sub: usize,
-    pub(crate) sub_count: usize,
     pub(crate) bar_height: f32,
     pub(crate) part_idx: usize,
     /// True when this measure is the last one in its system, so its closing
@@ -124,7 +123,6 @@ pub(crate) fn expand_measure_elements(
     sub_rows: &mut [GridRow],
 ) {
     let head_sub = params.head_sub;
-    let sub_count = params.sub_count;
     let mut elements = row.elements.iter().peekable();
     while let Some(el) = elements.next() {
         // A run's first `Rest` is destructured here (rather than reusing
@@ -166,7 +164,7 @@ pub(crate) fn expand_measure_elements(
                 ..
             } => {
                 let span = last_head_column.saturating_sub(*from_column) + 1;
-                let ul_sub = (sub_count - 2) + *level as usize;
+                let ul_sub = underline_sub_row(head_sub, *level);
                 if let Some(row) = sub_rows.get_mut(ul_sub) {
                     row.elements.push(GridElement {
                         column: MUSIC_START_COL + measure_col_offset + from_column,
@@ -188,9 +186,92 @@ pub(crate) fn expand_measure_elements(
                 }
             }
             ElementContent::Lyric { .. } | ElementContent::LyricLine { .. } => {} // handled in lyric-row branch above
+            ElementContent::NoteHead { octave, .. } if *octave < 0 => {
+                push_low_octave_note_head(
+                    sub_rows,
+                    head_sub,
+                    grid_col,
+                    &el.content,
+                    underline_depth(row, el.column),
+                );
+            }
             content => push_note_element(sub_rows, head_sub, grid_col, content),
         }
     }
+}
+
+/// The sub-row holding underlines of `level` (0 = half-beat, 1 =
+/// quarter-beat), which sit directly under the note head band (see
+/// `note_part_sub_row_heights` / `chord_part_sub_row_heights`).
+fn underline_sub_row(head_sub: usize, level: u32) -> usize {
+    head_sub + 1 + level as usize
+}
+
+/// How many underlines run beneath the note head at `column`: one more than
+/// the deepest `Underline` level whose span covers it, or 0 if none does.
+fn underline_depth(row: &MeasureRow, column: u32) -> u32 {
+    row.elements
+        .iter()
+        .filter_map(|el| match &el.content {
+            ElementContent::Underline {
+                from_column,
+                last_head_column,
+                level,
+                ..
+            } if (*from_column..=*last_head_column).contains(&column) => Some(level + 1),
+            _ => None,
+        })
+        .max()
+        .unwrap_or(0)
+}
+
+/// A below-octave note head. Without underlines its dots are drawn inline
+/// under the digit, as usual. With underlines, jianpu convention puts the
+/// dots beneath the underlines instead, so they're split out into a
+/// `LowOctaveDots` element in the lowest underline's sub-row, and the head
+/// itself is pushed with no octave dots of its own.
+fn push_low_octave_note_head(
+    sub_rows: &mut [GridRow],
+    head_sub: usize,
+    grid_col: u32,
+    content: &ElementContent,
+    underline_depth: u32,
+) {
+    let ElementContent::NoteHead {
+        pitch,
+        accidental,
+        octave,
+        dotted,
+        double_dotted,
+    } = content
+    else {
+        return;
+    };
+    if underline_depth == 0 {
+        push_note_element(sub_rows, head_sub, grid_col, content);
+        return;
+    }
+    push_head(
+        sub_rows,
+        head_sub,
+        grid_col,
+        GridContent::NoteHead {
+            pitch: pitch.clone(),
+            accidental: accidental.clone(),
+            octave: 0,
+            dotted: *dotted,
+            double_dotted: *double_dotted,
+        },
+    );
+    push_head(
+        sub_rows,
+        underline_sub_row(head_sub, underline_depth - 1),
+        grid_col,
+        GridContent::LowOctaveDots {
+            count: octave.unsigned_abs(),
+            pitch: pitch.clone(),
+        },
+    );
 }
 
 /// The note/rest/chord-symbol half of [`expand_measure_elements`]'s dispatch,
